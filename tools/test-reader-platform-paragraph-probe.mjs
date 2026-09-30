@@ -18,7 +18,7 @@ assert.match(declarations, /paint\(canvas: drawing\.Canvas, x: number, y: number
 assert.match(declarations, /getLineMetrics\(\): Array<LineMetrics>/);
 assert.match(textDeclarations, /getLayoutManager\(\): LayoutManager/);
 
-const probeUrl = new URL('../evidence/2026-09-20-seamless-entry-implementation/prototype/ReaderPlatformParagraphProbe.ts', import.meta.url);
+const probeUrl = new URL('./fixtures/ReaderPlatformParagraphProbe.ts', import.meta.url);
 const probe = await readFile(
   probeUrl,
   'utf8',
