@@ -1,6 +1,6 @@
 {
   "app": {
-    "bundleName": "io.reader.harmonyos",
+    "bundleName": "io.reader.minliny",
     "vendor": "Reader",
     "versionCode": 1000000,
     "versionName": "1.0.0",

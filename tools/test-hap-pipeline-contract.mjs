@@ -118,24 +118,24 @@ assert.equal(deploymentRoute({ targetKind: 'vm',
   'a matching nonempty appIdentifier supports legitimate signing key renewal');
 assert.throws(() => parseBundleMetadata('Connect server failed'), /absence is not established/);
 assert.throws(() => parseBundleMetadata('error: failed to get bundle info'), /absence is not established/);
-assert.equal(parseBundleMetadata('error: bundle [io.reader.harmonyos] not found').bundlePresent, false);
+assert.equal(parseBundleMetadata('error: bundle [io.reader.minliny] not found').bundlePresent, false);
 const missingBundle = 'error: failed to get information and the parameters may be wrong.';
 assert.equal(parseBundleMetadata(missingBundle, 'ID: 100:\n\tcom.ohos.sceneboard\n\tohos.global.systemres').bundlePresent, false,
   'the device generic lookup error needs an independent successful inventory to prove absence');
 for (const inventory of ['', 'Connect server failed', 'ID: 100:',
-  'ID: 100:\n\tio.reader.harmonyos', 'ID: 100:\n\tcom.ohos.sceneboard\nerror: timeout',
+  'ID: 100:\n\tio.reader.minliny', 'ID: 100:\n\tcom.ohos.sceneboard\nerror: timeout',
   'com.ohos.sceneboard']) {
   assert.throws(() => parseBundleMetadata(missingBundle, inventory), /absence is not established/);
 }
-const installedMetadata = parseBundleMetadata('io.reader.harmonyos:\n' + JSON.stringify({
-  name: 'io.reader.harmonyos', appId: 'io.reader.harmonyos_', appIdentifier: '',
+const installedMetadata = parseBundleMetadata('io.reader.minliny:\n' + JSON.stringify({
+  name: 'io.reader.minliny', appId: 'io.reader.minliny_', appIdentifier: '',
   versionCode: 1000000, versionName: '1.0.0',
-  applicationInfo: { bundleName: 'io.reader.harmonyos', appSignType: 'none', appProvisionType: 'debug' },
+  applicationInfo: { bundleName: 'io.reader.minliny', appSignType: 'none', appProvisionType: 'debug' },
 }));
 assert.equal(installedMetadata.bundlePresent, true);
 assert.equal(installedMetadata.appIdentifierSha256, '');
 assert.equal(deploymentRoute({ targetKind: 'vm', installed: installedMetadata, artifact: signedDebug }).allowed, false);
-assert.doesNotMatch(JSON.stringify(installedMetadata), /io\.reader\.harmonyos_/,
+assert.doesNotMatch(JSON.stringify(installedMetadata), /io\.reader\.minliny_/,
   'raw installed application identities must not enter deployment evidence');
 
 const certificateFixture = mkdtempSync(join(tmpdir(), 'reader-profile-identity-test-'));
@@ -153,11 +153,11 @@ try {
     // P-256 SPKI wraps the 65-byte uncompressed point; RSA wraps PKCS#1.
     const publicBytes = algorithm === 'ec' ? spki.subarray(-65) :
       cert.publicKey.export({ format: 'der', type: 'pkcs1' });
-    const info = { 'bundle-name': 'io.reader.harmonyos', 'development-certificate': pem,
+    const info = { 'bundle-name': 'io.reader.minliny', 'development-certificate': pem,
       'app-identifier': 'stable-fixture-id' };
     const identity = profileIdentity({ 'bundle-info': info });
-    assert.equal(identity.appIdSha256, hash(`io.reader.harmonyos_${publicBytes.toString('base64')}`));
-    assert.notEqual(identity.appIdSha256, hash(`io.reader.harmonyos_${spki.toString('base64')}`));
+    assert.equal(identity.appIdSha256, hash(`io.reader.minliny_${publicBytes.toString('base64')}`));
+    assert.notEqual(identity.appIdSha256, hash(`io.reader.minliny_${spki.toString('base64')}`));
     assert.equal(identity.appIdentifierSha256, hash('stable-fixture-id'));
     assert.equal(identity.certificateSha256, hash(cert.raw));
     assert.deepEqual(profileIdentity({ 'bundle-info': { ...info,

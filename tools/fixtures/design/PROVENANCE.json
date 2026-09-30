@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Independent design regression inputs extracted from archived project evidence; not device acceptance.",
+  "records": [
+    {
+      "fixture": "session-launch.json",
+      "originalPath": "evidence/2026-09-13-current-gap-register/capsule-figma-live.json",
+      "originalSha256": "5ca1df6ec6a19b69f5bf907494580def2839592be5ed08685d186359c8dead7b",
+      "fixtureSha256": "753ed2a33dede0ee2ab71a5344b4c22ca8987c28e16fc1c882abb050187520d2"
+    },
+    {
+      "fixture": "appearance-reference.json",
+      "originalPath": "evidence/2026-09-11-appearance-make-v9/make-v9-reference.json",
+      "originalSha256": "6158bcf2953005f487dbe315917158eff654c05375d373384ae13564d399dfdc",
+      "fixtureSha256": "c5ff7c44809ae4a3146c1fb137b309701f1eeeeee44a11c7eb90896b521c4acb"
+    },
+    {
+      "fixture": "theme-consumers.json",
+      "originalPath": "evidence/2026-09-13-current-gap-register/theme-consumer-bindings.json",
+      "originalSha256": "c11f49dbf0bbdad7d08c6990645e61fa2670bdf51f07aafab63152f118446f98",
+      "fixtureSha256": "3d34bff081be13908f09ff829dd40d113c7e5f3293444c705cbad90a3ceee6c4"
+    },
+    {
+      "fixture": "tts-waveform-reference.tsx",
+      "originalPath": "evidence/2026-09-11-make-style-parity/tts-reference/src/PhoneScreen.tsx",
+      "originalSha256": "731582c1ac493d48f1ebdaae1e5527de5dfe3f391d37d8c85a51643ce72b4a3c",
+      "fixtureSha256": "d4717990d87ede83ed13bd91dd2d6d75aa5d82063a65e553325a2dc63bf06a81"
+    }
+  ]
+}

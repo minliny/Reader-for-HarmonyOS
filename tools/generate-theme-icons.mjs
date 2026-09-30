@@ -34,6 +34,7 @@ if(!process.argv.includes('--check')){
  // Reusing an existing role must not rewrite the registry (or its bound hash).
  if(JSON.stringify(registry)!==registryBefore)fs.writeFileSync(registryPath,JSON.stringify(registry,null,2)+'\n');
  fs.writeFileSync(path.join(root,'tools/theme-svg-variants.json'),JSON.stringify(manifest.sort(),null,2)+'\n');
- fs.writeFileSync(path.resolve(root,'evidence/2026-09-13-current-gap-register/theme-icon-bindings.json'),JSON.stringify(manifest.sort(),null,2)+'\n');
+ fs.mkdirSync(path.resolve(root,'.reader-local/design'),{recursive:true});
+ fs.writeFileSync(path.resolve(root,'.reader-local/design/theme-icon-bindings.json'),JSON.stringify(manifest.sort(),null,2)+'\n');
 }
 console.log('Theme SVG adapters:',manifest.length,'; geometry/path/opacity unchanged.');

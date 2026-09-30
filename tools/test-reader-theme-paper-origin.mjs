@@ -8,7 +8,7 @@ import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 // Keep the independent Make V9 / PH43 baseline as historical source. PH67
 // is a user-approved change to four light bases, not a correction to that source.
 // These expected values are independent of the live registry and its consumers.
-const reference = JSON.parse(readFileSync(new URL('../evidence/2026-09-11-appearance-make-v9/make-v9-reference.json', import.meta.url), 'utf8'));
+const reference = JSON.parse(readFileSync(new URL('./fixtures/design/appearance-reference.json', import.meta.url), 'utf8'));
 const historicalBases = {day:'#FCF8F0',warm:'#F4E3BF',night:'#2B2823',warmNight:'#413020',
   paper:'#EBDABB',green:'#D7E8CF',paperNight:'#26313F',greenNight:'#24382C'};
 const approvedBases = {day:'#F7F3EA',warm:'#F2E8D3',night:'#2B2823',warmNight:'#413020',

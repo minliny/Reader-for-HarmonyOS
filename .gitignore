@@ -53,3 +53,15 @@ SKILL.md
 **/.github/instructions/
 **/.github/copilot-instructions.md
 /branch-archives/
+
+# Raw history and locally built Native inputs stay on FnOS.
+/evidence/
+/entry/libs/arm64-v8a/libreader_core_napi.so
+.env
+.env.*
+!.env.example
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.p7b

@@ -27,8 +27,8 @@ Core dirty=false
 Harmony dirty=false
 acceptanceEligible=true
 Core buildId=1222bb399406be531fab23cd512ed4ce2f05e64ac18dd2290c9d94aae88263fd
-NAPI input sha256=7670e0e7f7a0d80b8e64280d263cdf1135406d65ba7999313c767806a402ef6f
-HAP embedded stripped NAPI sha256=d233d0b610c5ef51e41a32950a4be700abd14f3e456b6f19b80a9d1ecc8dbe8a
+Native input SHA-256: 7670e0e7f7a0d80b8e64280d263cdf1135406d65ba7999313c767806a402ef6f
+HAP embedded stripped Native SHA-256: d233d0b610c5ef51e41a32950a4be700abd14f3e456b6f19b80a9d1ecc8dbe8a
 ```
 
 本摘要的文档提交不改变上述产物归因。

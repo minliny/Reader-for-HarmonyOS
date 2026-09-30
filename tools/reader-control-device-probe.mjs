@@ -26,7 +26,7 @@ import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
 import { acquireLease, canonicalServerKey, releaseLease, targetRef as serverRefHash } from './reader-hdc-lease.mjs';
 
-const BUNDLE = 'io.reader.harmonyos';
+const BUNDLE = 'io.reader.minliny';
 const TIMEOUT_MS = 30000;
 const MAX_OUTPUT = 4 * 1024 * 1024;
 // Reviewed standalone diagnostic only; never accept an arbitrary executable

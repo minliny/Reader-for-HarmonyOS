@@ -1,0 +1,44 @@
+{
+  "themes": [
+    {
+      "id": "day",
+      "label": "日间",
+      "swatch": "#FCF8F0"
+    },
+    {
+      "id": "warm",
+      "label": "暖白",
+      "swatch": "#F4E3BF"
+    },
+    {
+      "id": "night",
+      "label": "夜间",
+      "swatch": "#2B2823"
+    },
+    {
+      "id": "warmNight",
+      "label": "暖夜",
+      "swatch": "#413020"
+    },
+    {
+      "id": "paper",
+      "label": "纸纹",
+      "swatch": "#EBDABB"
+    },
+    {
+      "id": "green",
+      "label": "青叶纹",
+      "swatch": "#D7E8CF"
+    },
+    {
+      "id": "paperNight",
+      "label": "靛夜",
+      "swatch": "#26313F"
+    },
+    {
+      "id": "greenNight",
+      "label": "林夜纹",
+      "swatch": "#24382C"
+    }
+  ]
+}

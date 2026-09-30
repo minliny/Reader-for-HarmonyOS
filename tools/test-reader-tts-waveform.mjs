@@ -5,7 +5,7 @@ import { readerAppearanceCubicBezierProgress as bezier } from '../entry/src/main
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const ease = p => bezier(p, .25, .1, .25, 1), easeInOut = p => bezier(p, .42, 0, .58, 1);
 const curves = { ease, easeInOut };
-const reference = readFileSync(new URL('../evidence/2026-09-11-make-style-parity/tts-reference/src/PhoneScreen.tsx', import.meta.url), 'utf8');
+const reference = readFileSync(new URL('./fixtures/design/tts-waveform-reference.tsx', import.meta.url), 'utf8');
 const heights = reference.match(/function EqualiserBar[\s\S]*?const bars = \[([^\]]+)\]/)[1].split(',').map(Number);
 assert.deepEqual(READER_TTS_WAVEFORM_HEIGHTS, heights);
 assert.match(reference, /width: 2\.5/); assert.match(reference, /h-\[26px\]/);

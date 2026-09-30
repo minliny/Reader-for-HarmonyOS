@@ -1,9 +1,0 @@
-{
-  "ReaderControlRuntime.ts": true,
-  "ReaderControlSessionState.ts": true,
-  "ReaderControlMorphScroll.ts": true,
-  "ReaderControlPlaybackGeometry.ts": true,
-  "ReaderControlAppearanceGeometry.ts": true,
-  "ReaderControlMotionGeometry.ts": true,
-  "ReaderControlGestureDriver.ts": true
-}

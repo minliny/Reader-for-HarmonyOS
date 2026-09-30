@@ -5,7 +5,7 @@ import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 // Snapshot of the actual replaced local constants, captured before migration.
 // Verify authored Day/alpha and the live consumers, not just registry presence.
-const rows = JSON.parse(readFileSync(new URL('../evidence/2026-09-13-current-gap-register/theme-consumer-bindings.json', import.meta.url)))
+const rows = JSON.parse(readFileSync(new URL('./fixtures/design/theme-consumers.json', import.meta.url)))
   .filter(row => row.originalConstant !== undefined);
 assert.equal(new Set(rows.map(row => row.role)).size, 46);
 assert.equal(new Set(rows.map(row => row.file)).size, 11);

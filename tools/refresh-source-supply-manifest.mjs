@@ -22,11 +22,12 @@ import {
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const coreRepo = resolve(repo, '../Reader-Core-Native');
-const workspaceRoot = resolve(repo, '..');
 const evidenceRelative = 'reports/tooling/corpus-batch-live-full-1945-v5-2026-07-09.json';
-const evidenceFile = resolve(coreRepo, evidenceRelative);
+const privateEvidence = process.env.READER_PRIVATE_SOURCE_EVIDENCE;
+if (!privateEvidence) throw new Error('Set READER_PRIVATE_SOURCE_EVIDENCE to the private archived workspace; raw supply evidence is not a checkout dependency');
+const evidenceFile = resolve(privateEvidence, 'Reader-Core-Native', evidenceRelative);
 const admittedEvidenceRelative = 'evidence/2026-08-31-five-line/supply-admission-results.json';
-const admittedEvidenceFile = resolve(workspaceRoot, admittedEvidenceRelative);
+const admittedEvidenceFile = resolve(privateEvidence, 'Reader-for-HarmonyOS', admittedEvidenceRelative);
 const legacyBundledRelative = 'entry/src/main/resources/rawfile/reader-test-book-sources.json';
 const rawFile = resolve(repo,
   'entry/src/main/resources/rawfile/reader-tested-book-source-collection.json');
@@ -68,7 +69,7 @@ function runGit(repository, args, allowFailure = false) {
 
 function readTestedSource(sourceFile) {
   const relative = `tests/fixtures/corpus/sources/${sourceFile}`;
-  const current = resolve(coreRepo, relative);
+  const current = resolve(privateEvidence, 'Reader-Core-Native', relative);
   if (existsSync(current)) {
     return JSON.parse(readFileSync(current, 'utf8'));
   }

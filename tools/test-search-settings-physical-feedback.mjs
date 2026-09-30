@@ -92,7 +92,7 @@ await check('PH7 real theme actions signal accepted defaults and reject wrong da
   owner.fullInput = () => false; night.onClick(); assert.equal(requests.length, 2, 'morphing cannot dispatch default updates');
 });
 await check('PH67 SDK previews use four approved light bases and retain four original night bases', () => {
-  const reference = JSON.parse(readFileSync(new URL('../evidence/2026-09-11-appearance-make-v9/make-v9-reference.json', import.meta.url), 'utf8'));
+  const reference = JSON.parse(readFileSync(new URL('./fixtures/design/appearance-reference.json', import.meta.url), 'utf8'));
   const source = read('features/reading/ReaderControlAppearanceContent.ets');
   const { owner } = createReaderBuilderProbe(source, ['themeSwatch'], style);
   Object.assign(owner, { frame: () => sampleReaderControlAppearance(1, 338, 666), snapshot: createDefaultReaderAppearanceSnapshot(),

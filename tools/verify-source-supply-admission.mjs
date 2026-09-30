@@ -28,7 +28,7 @@ const sourcePath = resolve(repo,
   'entry/src/main/resources/rawfile/reader-tested-book-source-collection.json');
 const evidenceIndex = process.argv.indexOf('--evidence-dir');
 const evidenceDir = evidenceIndex >= 0 ? resolve(repo, process.argv[evidenceIndex + 1]) :
-  resolve(repo, '../evidence/2026-08-31-five-line');
+  resolve(repo, '.reader-local/source-admission');
 
 // Ordered per-source keyword pools. The first three that produce a live pass
 // become the verified keyword set; misses fall through to later candidates.

@@ -143,13 +143,17 @@ export type CapabilityCancellationHandler = (
  *     Legado idiom `resp.raw().request().url()`. Omit when no redirect was
  *     observed and Core will fall back to the request URL.
  */
-export interface HttpFetch {
-  fetch(request: {
+export interface HttpFetchRequest {
     url: string;
     method: string;
     headers: Record<string, string>;
     body?: string;
-  }): Promise<JsonObject>;
+    /** Shared transport ceiling, including redirects and retries. */
+    timeoutMs?: number;
+}
+
+export interface HttpFetch {
+  fetch(request: HttpFetchRequest): Promise<JsonObject>;
 }
 
 export class CapabilityRouter {
@@ -226,7 +230,14 @@ export class CapabilityRouter {
       }
     }
     const body = typeof params.body === "string" ? params.body : undefined;
-    return this.httpFetch.fetch({ url, method, headers, body });
+    const request: HttpFetchRequest = { url, method, headers, body };
+    if (params.timeoutMs !== undefined) {
+      if (typeof params.timeoutMs !== "number" || !Number.isSafeInteger(params.timeoutMs) || params.timeoutMs <= 0) {
+        throw new Error("http.execute timeoutMs must be a positive integer");
+      }
+      request.timeoutMs = params.timeoutMs;
+    }
+    return this.httpFetch.fetch(request);
   }
 }
 

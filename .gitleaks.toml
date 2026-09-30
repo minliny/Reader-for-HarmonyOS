@@ -1,0 +1,47 @@
+title = "Reader reviewed non-secret constants"
+[extend]
+useDefault = true
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Figma document identifier, not an API credential"
+condition = "AND"
+regexTarget = "secret"
+regexes = ["^klhs2jMM4MncaJFqZMfqEK$"]
+paths = ["(?:^|/)docs/ui\\-design/SVG_PROVENANCE\\.json$", "(?:^|/)tools/fixtures/reader\\-appearance\\-motion\\-figma\\-n\\-o\\.json$", "(?:^|/)tools/fixtures/reader\\-control\\-bookmark\\-live\\-20260906\\.json$", "(?:^|/)tools/fixtures/reader\\-control\\-playback\\-live\\-20260905\\.json$", "(?:^|/)tools/fixtures/reader\\-control\\-restored\\-baseline\\-20260905\\.json$", "(?:^|/)tools/fixtures/reader\\-control\\-search\\-results\\-clip\\-live\\-20260906\\.json$", "(?:^|/)tools/fixtures/reader\\-control\\-search\\-settings\\-live\\-20260905\\.json$", "(?:^|/)tools/fixtures/reader\\-control\\-shared\\-layer\\-live\\-20260906\\.json$", "(?:^|/)tools/fixtures/reader\\-directory\\-toolbar\\-hierarchy\\-20260905\\.json$", "(?:^|/)tools/svg\\-provenance\\.config\\.mjs$", "(?:^|/)tools/test\\-reader\\-appearance\\-motion\\-fixture\\.mjs$", "(?:^|/)tools/test\\-reader\\-control\\-bookmark\\-content\\.mjs$", "(?:^|/)tools/test\\-reader\\-control\\-directory\\-content\\.mjs$", "(?:^|/)tools/test\\-reader\\-control\\-search\\-settings\\-content\\.mjs$"]
+
+[[rules.allowlists]]
+description = "Figma document identifier, not an API credential"
+condition = "AND"
+regexTarget = "secret"
+regexes = ["^LOYUJr93KwespD5j7N6icw$"]
+paths = ["(?:^|/)docs/ui\\-design/SVG_PROVENANCE\\.json$", "(?:^|/)tools/svg\\-provenance\\.config\\.mjs$"]
+
+[[rules.allowlists]]
+description = "Figma document identifier, not an API credential"
+condition = "AND"
+regexTarget = "secret"
+regexes = ["^DEu3TuYhaJPLMEdSxorhwE$"]
+paths = ["(?:^|/)docs/ui\\-design/SVG_PROVENANCE\\.json$", "(?:^|/)tools/svg\\-provenance\\.config\\.mjs$"]
+
+[[rules.allowlists]]
+description = "Existing shared source-rule signing constant; no user or account identity"
+condition = "AND"
+regexTarget = "secret"
+regexes = ["^d3dGiJc651gSQ8w1$"]
+paths = ["(?:^|/)entry/src/main/resources/rawfile/bundled\\-sources/51c98043d70b25c4cb428178e0e0be994a0940c169c607386c71d9bdeee3f1b8\\.json$", "(?:^|/)entry/src/main/resources/rawfile/bundled\\-sources/8d028086f6809098b50c922c00c44aabcc3814f9f3ce26e12dcb9904782a5bed\\.json$", "(?:^|/)entry/src/main/resources/rawfile/bundled\\-sources/a973ad4b9b42e5e7f3da9735a81ee450c1aa8b7690db1d06b452d1303c30b433\\.json$", "(?:^|/)entry/src/main/resources/rawfile/bundled\\-sources/dfbd818e6f7415e487deca06618b6c36a892316c65c4fa5c710e35e0142fe367\\.json$", "(?:^|/)entry/src/main/resources/rawfile/bundled\\-sources/ee5993366c325da95d6c3528b59a7a3c8b06fc729fecbf59c15ced731f6bd2f4\\.json$", "(?:^|/)entry/src/main/resources/rawfile/reader\\-tested\\-book\\-source\\-collection\\.json$"]
+
+[[rules.allowlists]]
+description = "Fixed cryptographic vector or content-decoding constant, not account authentication"
+condition = "AND"
+regexTarget = "secret"
+regexes = ["^tH1rU6qZ4vU1sK7pN1wO7mX4bY6dQ9gX$"]
+paths = ["(?:^|/)entry/src/main/resources/rawfile/bundled\\-sources/9618ddb255f346b83692c65cc7ab5b5c03fd0e60b78849d965ea258db0cecdbe\\.json$", "(?:^|/)entry/src/main/resources/rawfile/reader\\-tested\\-book\\-source\\-collection\\.json$"]
+
+[[rules.allowlists]]
+description = "Fixed cryptographic vector or content-decoding constant, not account authentication"
+condition = "AND"
+regexTarget = "secret"
+regexes = ["^AES/CBC/PKCS7Padding$"]
+paths = ["(?:^|/)entry/src/main/resources/rawfile/bundled\\-sources/f5ec8712c59eb1f2a55b3a206a8322ac3b02be3ba39dc5d77e8a48bc0e7026a1\\.json$", "(?:^|/)entry/src/main/resources/rawfile/reader\\-tested\\-book\\-source\\-collection\\.json$"]

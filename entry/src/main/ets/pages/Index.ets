@@ -1,4 +1,3 @@
-import { readerDirectoryObserveMissingNavigation, readerDirectoryTakeMissingNavigation, backfillRetainedReaderDirectoryNavigation } from '../features/reading/ReaderDirectoryNavigation';
 import type { RemoteReadingPositionScope } from '../features/reading/RemoteReadingPositionMigration';
 import { FrameCallback } from '@kit.ArkUI';
 import { readerAppColor } from '../features/common/ReaderThemeRegistry';
