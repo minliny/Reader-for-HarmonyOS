@@ -1,6 +1,6 @@
 # 换源真实页面替换：根因与纠偏记录
 
-日期：2026-09-30 至 2026-10-01。当前状态：真实页面已替换并安装到 VM，详情和阅读两个原入口均已实测；Core 搜索准入修复已安装。最后一项 DNS 分类修复仅在分支通过定向回归，全量门禁超时，尚未打包/安装。动态刷新完整 VM 验证、正文成功和用户验收保持 OPEN。
+日期：2026-09-30 至 2026-10-01。当前状态：真实换源页面和 Core 搜索准入修复已安装，两个原入口已有 VM 证据。随后发现的空书架标题/间距问题已修复，`c6ac46d3` 新包通过 385 项门禁并保数据覆盖安装，VM 像素与布局核对通过；此包也包含此前未安装的 DNS 分类修复。动态换源完整 VM 旅程、正文成功和用户验收保持 OPEN。最新身份与书架证据见 [bookshelf-empty-fix-result.json](bookshelf-empty-fix-result.json)；下文各旧 run 保留其当时边界。
 
 ## 问题与根因
 
@@ -135,3 +135,9 @@ DNS 修复后的 `0d2402ce` 门禁再次在 120 秒停止，361 PASS / 24 cancel
 生产修复后，真实 SDK Builder 回归由 18 PASS / 2 FAIL 转为 20/20 PASS（0.76 秒）：空态确实挂载共享原生文字顶栏，Scroll 显式顶部对齐；非空顶栏、58 vp 高度、20 vp 边距、分隔线及两个 44 vp 搜索/更多按钮的实际回调同时保留。`phone-layout-figma-regressions`、`app-shell-safe-geometry`、`bookshelf-more-layout`、`reader-font-demand`、`reader-typography-architecture` 五项通过，diff 空白检查通过。没有修改公共 Builder probe，也没有模拟原生几何来声称像素通过。
 
 本次最小 VM 取证只回答代码无法单独证明的原生字体像素、标题最终坐标及空态 Scroll 实际布局。现有 Mate 80 Pro 实例只读预检：唯一 HDC target、guest boot completed、Emulator 的 Guest OS Boot Completed 日志、SceneBoard PID 1450/start tick 1022 均成立，当前 2000 行日志未发现已知启动循环风险。保持现有实例和数据，构建后按同一签名覆盖安装。
+
+修复提交 `c6ac46d3` 的规范 iteration 构建通过：385 项门禁全部 PASS，68.626 秒，无失败/取消；正式编译和签名 31.570 秒。发布 run `20260930T163930Z-c6ac46d3-a0ec9f03`，signed HAP SHA-256 `e8e2416f8dbb00479ea7b8a69255bb969d4ece29fa9ab3669874ef8062e10ee4`，证书仍为指定 `minliny_HarmonyOS`、debug Profile。Harmony clean，Core 仍为既有 `e2a2db0b` dirty 快照，没有为书架修改 Core 或 Native。
+
+同一现有 VM 的规范 inspect、保数据覆盖安装和普通启动全部 PASS。实际 [VM 截图](bookshelf-empty-fixed-vm.jpeg) 与布局确认：标题节点为原生 Text，范围 `[70,180][839,313]`，左边距 20 vp；Scroll 仍为 `[0,339][1280,2496]`，内容顶部由 y=506 恢复到 y=339，消除 167 px（47.7 vp）居中空隙。分组行由 y=534 移至 y=367，与顶栏只隔既有 8 vp padding；底部导航坐标不变。清晰度和位置符合本轮修复目标，用户验收单独保持 OPEN。没有操作真机、修改书架数据或合并主工作区。
+
+前文 DNS 分类修复在此包中已安装，不再是“仅代码未打包”；本次只进行了书架最小像素核验，仍不将其升级为动态查源、延迟排序或正文成功的完整 VM 验证。
