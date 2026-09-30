@@ -2,6 +2,7 @@
   "src": [
     "pages/Index",
     "pages/ReaderControlMotionVerification",
-    "pages/ReaderRendererPilot"
+    "pages/ReaderRendererPilot",
+    "pages/SourceSwitchDemo"
   ]
 }

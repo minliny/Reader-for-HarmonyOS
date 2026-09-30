@@ -2,7 +2,8 @@
  * Production EntryAbility has one default cold-start page. Diagnostic pages
  * are admitted only for an exact debug cold start used by the local VM probe.
  */
-export type ReaderColdStartPage = 'pages/Index' | 'pages/ReaderControlMotionVerification' | 'pages/ReaderRendererPilot';
+export type ReaderColdStartPage = 'pages/Index' | 'pages/ReaderControlMotionVerification' | 'pages/ReaderRendererPilot' |
+  'pages/SourceSwitchDemo';
 
 /**
  * Cold-start-only allowlist. Only primitive boolean true is accepted, and
@@ -11,11 +12,14 @@ export type ReaderColdStartPage = 'pages/Index' | 'pages/ReaderControlMotionVeri
  */
 export function readerControlVerificationColdStartPage(debug: boolean,
   buildModeName: string, parameterValue: Object | undefined,
-  rendererParameterValue: Object | undefined = undefined): ReaderColdStartPage {
+  rendererParameterValue: Object | undefined = undefined,
+  sourceSwitchParameterValue: Object | undefined = undefined): ReaderColdStartPage {
   if (debug !== true || buildModeName !== 'debug') return 'pages/Index';
   const motion = parameterValue === true;
   const renderer = rendererParameterValue === true;
-  if (motion && renderer) return 'pages/Index';
+  const sourceSwitch = sourceSwitchParameterValue === true;
+  if ((motion && renderer) || (motion && sourceSwitch) || (renderer && sourceSwitch)) return 'pages/Index';
+  if (sourceSwitch) return 'pages/SourceSwitchDemo';
   if (renderer) return 'pages/ReaderRendererPilot';
   if (motion) return 'pages/ReaderControlMotionVerification';
   return 'pages/Index';
