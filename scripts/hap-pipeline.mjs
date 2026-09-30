@@ -12,23 +12,28 @@ import {
   readFileSync,
   readdirSync,
   readlinkSync,
+  realpathSync,
   renameSync,
   rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
-import { basename, dirname, join, relative, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { contentSnapshot } from '../../Reader-Core-Native/scripts/build-input-snapshot.mjs';
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const REPO_ROOT = resolve(dirname(SCRIPT_PATH), '..');
 const WORKSPACE_ROOT = resolve(REPO_ROOT, '..');
 const CORE_ROOT = resolve(WORKSPACE_ROOT, 'Reader-Core-Native');
 const DEFAULT_ARTIFACT_ROOT = resolve(REPO_ROOT, '.reader-artifacts/hap');
+const DEFAULT_RETAIN_RUNS = 10;
+const ARTIFACT_LOCK = join(process.platform === 'darwin' ? '/private/tmp' : tmpdir(), 'reader-harmony-hap-build.lock');
 const DEFAULT_SIGNING_PROFILE = resolve(REPO_ROOT, '.reader-local/signing/build-profile.json5');
 const DEFAULT_HVIGORW = '/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw';
+const DEFAULT_OHPM = '/Applications/DevEco-Studio.app/Contents/tools/ohpm/bin/ohpm';
 const DEFAULT_HDC = '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc';
 const DEFAULT_SIGN_TOOL =
   '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/lib/hap-sign-tool.jar';
@@ -64,6 +69,8 @@ const HARMONY_GATE_INPUTS = [
   'tools',
 ];
 const WORKSPACE_CONTRACT_INPUTS = [
+  'Reader-Core-Native/governance/workspace',
+  'Reader-Core-Native/scripts/sync-workspace.mjs',
   'README.md',
   'ARCHITECTURE.md',
   'HAP_BUILD_SYSTEM.md',
@@ -129,7 +136,7 @@ function parseOptions(argv) {
   const options = new Map();
   for (let index = 0; index < argv.length; index += 1) {
     const key = argv[index];
-    if (key === '--live-sources' || key === '--no-launch') {
+    if (key === '--live-sources' || key === '--no-launch' || key === '--apply') {
       options.set(key, true);
       continue;
     }
@@ -151,6 +158,128 @@ function requiredOption(options, key) {
   return value;
 }
 
+function retentionLimit(options) {
+  const value = option(options, '--keep-runs', process.env.READER_HAP_KEEP_RUNS ?? String(DEFAULT_RETAIN_RUNS));
+  if (!/^[1-9]\d*$/.test(value) || Number(value) > 100) fail('--keep-runs must be 1..100', 2);
+  return Number(value);
+}
+
+function regularFile(path) {
+  const stat = lstatSync(path);
+  if (!stat.isFile() || stat.isSymbolicLink()) fail(`retention refuses non-regular file: ${path}`);
+  return stat;
+}
+
+function retentionJson(path) {
+  if (regularFile(path).size > 16 * 1024 * 1024) fail(`retention metadata exceeds budget: ${path}`);
+  return JSON.parse(readFileSync(path, 'utf8'));
+}
+
+/** Pure inventory/decision; only manifest-owned HAP files can be selected. */
+export function planHapRetention(root, keepRuns = DEFAULT_RETAIN_RUNS, reserve = 0) {
+  root = resolve(root);
+  if (!Number.isInteger(keepRuns) || keepRuns < 1 || keepRuns > 100 || ![0, 1].includes(reserve))
+    fail('invalid HAP retention budget');
+  const runs = [];
+  const deployed = new Map();
+  const protectedRuns = new Set();
+  if (!existsSync(root)) return { root, keepRuns, reserve, retained: [], remove: [], bytes: 0 };
+  if (!lstatSync(root).isDirectory() || lstatSync(root).isSymbolicLink()) fail('retention root must be a real directory');
+  const pinsPath = resolve(root, 'retention-pins.json');
+  const pins = existsSync(pinsPath) ? retentionJson(pinsPath) : { runIds: [] };
+  if (!Array.isArray(pins.runIds) || pins.runIds.some(id => typeof id !== 'string' || basename(id) !== id || id.startsWith('.')))
+    fail('invalid retention-pins.json runIds');
+  for (const id of pins.runIds) protectedRuns.add(id);
+  for (const name of readdirSync(root)) {
+    if (name.startsWith('.') || name === 'retention-pins.json') continue;
+    const directory = resolve(root, name);
+    const stat = lstatSync(directory);
+    if (!stat.isDirectory() || stat.isSymbolicLink()) fail(`unrecognized artifact-root entry: ${name}`);
+    const manifest = retentionJson(resolve(directory, 'manifest.json'));
+    if (manifest.schemaVersion !== 2 || manifest.name !== 'reader-harmonyos-hap-run' || manifest.runId !== name ||
+        !Array.isArray(manifest.artifacts) || !Number.isFinite(Date.parse(manifest.finishedAt)))
+      fail(`invalid retention manifest: ${name}`);
+    const files = [];
+    const names = new Set();
+    for (const artifact of manifest.artifacts) {
+      if (!/^entry-default-(signed|unsigned)\.hap$/.test(artifact.path) || names.has(artifact.path) ||
+          !/^[a-f0-9]{64}$/.test(artifact.sha256)) fail(`invalid retention artifact: ${name}`);
+      names.add(artifact.path);
+      const path = resolve(directory, artifact.path);
+      if (existsSync(path)) files.push({ path, bytes: regularFile(path).size, sha256: artifact.sha256 });
+    }
+    // Unknown packages must be resolved by the owner rather than silently ignored.
+    for (const entry of readdirSync(directory)) {
+      if (entry.endsWith('.hap') && !names.has(entry)) fail(`unowned HAP in run: ${name}/${entry}`);
+      if (/^retention-install-.*\.json$/.test(entry)) {
+        const pin = retentionJson(resolve(directory, entry));
+        if (pin.name !== 'reader-hap-install-protection' || pin.runId !== name)
+          fail(`invalid incomplete-install protection: ${name}/${entry}`);
+        protectedRuns.add(name);
+      }
+      if (!/^deploy-.*\.json$/.test(entry)) continue;
+      const receipt = retentionJson(resolve(directory, entry));
+      if (receipt.name !== 'reader-harmonyos-deployment-receipt' || receipt.runId !== name ||
+          receipt.install !== 'PASS' || !Number.isFinite(Date.parse(receipt.completedAt)) ||
+          typeof receipt.targetRef !== 'string' || !['vm', 'physical'].includes(receipt.targetKind))
+        fail(`invalid deployment receipt: ${name}/${entry}`);
+      const target = `${receipt.targetKind}:${receipt.targetRef}`;
+      const history = deployed.get(target) ?? [];
+      history.push({ runId: name, time: Date.parse(receipt.completedAt) });
+      deployed.set(target, history);
+    }
+    runs.push({ runId: name, time: Date.parse(manifest.finishedAt), files });
+  }
+  // The two newest distinct successful deployments per target are the current
+  // and rollback candidates. A receipt is historical evidence, not live state.
+  for (const history of deployed.values()) {
+    const ids = [...new Set(history.sort((a, b) => b.time - a.time || b.runId.localeCompare(a.runId)).map(row => row.runId))];
+    for (const id of ids.slice(0, 2)) protectedRuns.add(id);
+  }
+  for (const id of pins.runIds) {
+    if (!runs.some(run => run.runId === id && run.files.length > 0)) fail(`pinned recovery package is missing: ${id}`);
+  }
+  const available = runs.filter(run => run.files.length > 0);
+  const latestCandidate = [...available].sort((a, b) => b.time - a.time || b.runId.localeCompare(a.runId))[0];
+  if (latestCandidate) protectedRuns.add(latestCandidate.runId);
+  const protectedAvailable = available.filter(run => protectedRuns.has(run.runId));
+  if (protectedAvailable.length + reserve > keepRuns)
+    fail(`HAP retention budget ${keepRuns} cannot fit ${protectedAvailable.length} protected runs plus ${reserve} new run; review pins/deployment recovery or raise --keep-runs`);
+  const retained = new Set(protectedAvailable.map(run => run.runId));
+  for (const run of available.sort((a, b) => b.time - a.time || b.runId.localeCompare(a.runId))) {
+    if (retained.size < keepRuns - reserve) retained.add(run.runId);
+  }
+  const remove = available.filter(run => !retained.has(run.runId));
+  return { root, keepRuns, reserve, retained: [...retained], remove,
+    bytes: remove.reduce((sum, run) => sum + run.files.reduce((total, file) => total + file.bytes, 0), 0) };
+}
+
+/** Caller holds ARTIFACT_LOCK, shared with build and install. Keep all evidence. */
+export function applyHapRetention(plan) {
+  // Verify every candidate before deleting any file. Never trust arbitrary paths
+  // passed back by a caller or a stale dry-run plan.
+  const current = planHapRetention(plan.root, plan.keepRuns, plan.reserve);
+  if (JSON.stringify(current) !== JSON.stringify(plan)) fail('HAP retention inventory changed; retry planning');
+  for (const run of current.remove) for (const file of run.files) {
+    if (sha256Bytes(readFileSync(file.path)) !== file.sha256) fail(`retention artifact hash changed: ${file.path}`);
+  }
+  for (const run of current.remove) {
+    for (const file of run.files) rmSync(file.path);
+    writeJson(resolve(current.root, run.runId, 'retention-receipt.json'), {
+      schemaVersion: 1, name: 'reader-hap-retention-receipt', runId: run.runId,
+      removedAt: new Date().toISOString(), keepRuns: current.keepRuns,
+      artifacts: run.files.map(file => ({ path: basename(file.path), sha256: file.sha256, bytes: file.bytes })),
+      packageAvailable: false, manifestAndEvidencePreserved: true,
+    });
+  }
+  return { removedRuns: current.remove.map(run => run.runId), removedBytes: current.bytes };
+}
+
+function withArtifactLock(action) {
+  acquireLock(ARTIFACT_LOCK, { pid: process.pid, repo: REPO_ROOT, startedAt: new Date().toISOString() });
+  try { return action(); } finally { rmSync(ARTIFACT_LOCK, { recursive: true, force: true }); }
+}
+
 function gitRecord(repo) {
   const commit = capture('git', ['-C', repo, 'rev-parse', 'HEAD']);
   const statusText = capture('git', [
@@ -164,54 +293,40 @@ function gitRecord(repo) {
   };
 }
 
-function visitBuildInput(root, absolute, records) {
-  const stat = lstatSync(absolute);
-  const relativePath = relative(root, absolute);
-  if (stat.isSymbolicLink()) {
-    const target = readlinkSync(absolute);
-    records.push({ path: relativePath, type: 'symlink', target, sha256: sha256Bytes(target) });
-    return;
-  }
-  if (stat.isDirectory()) {
-    for (const name of readdirSync(absolute).sort()) {
-      visitBuildInput(root, resolve(absolute, name), records);
-    }
-    return;
-  }
-  if (!stat.isFile()) return;
-  const bytes = readFileSync(absolute);
-  records.push({
-    path: relativePath,
-    type: 'file',
-    mode: stat.mode & 0o777,
-    bytes: bytes.length,
-    sha256: sha256Bytes(bytes),
-  });
-}
-
-function contentSnapshot(root, inputs) {
-  const records = [];
-  for (const input of inputs) {
-    const absolute = resolve(root, input);
-    if (existsSync(absolute)) visitBuildInput(root, absolute, records);
-  }
-  records.sort((left, right) => left.path.localeCompare(right.path));
-  const hash = createHash('sha256');
-  for (const record of records) {
-    hash.update(JSON.stringify(record));
-    hash.update('\n');
-  }
-  return {
-    schemaVersion: 1,
-    inputs,
-    fileCount: records.length,
-    fingerprint: hash.digest('hex'),
-    files: records,
-  };
-}
 
 export function sourceSnapshot(repo = REPO_ROOT) {
   return contentSnapshot(repo, BUILD_INPUTS);
+}
+
+export function assertResolvedCorePackage(sandboxRepo) {
+  const modules = realpathSync(resolve(sandboxRepo, 'entry/oh_modules'));
+  const installed = realpathSync(resolve(modules, '@reader/core-harmony'));
+  // In a full Hvigor project OHPM hoists local packages to root/oh_modules;
+  // standalone entry fixtures use entry/oh_modules. Both are freshly created
+  // in this build sandbox, and neither may resolve into another checkout.
+  const roots = [modules];
+  const hoisted = resolve(sandboxRepo, 'oh_modules');
+  if (existsSync(hoisted)) roots.push(realpathSync(hoisted));
+  const sandbox = realpathSync(sandboxRepo);
+  for (const root of roots) {
+    const within = relative(sandbox, root);
+    if (!within || within === '..' || within.startsWith(`..${sep}`) || isAbsolute(within)) {
+      fail('resolved Core package escapes the isolated dependency directory');
+    }
+  }
+  const contained = roots.some(root => {
+    const within = relative(root, installed);
+    return within !== '..' && !within.startsWith(`..${sep}`) && !isAbsolute(within);
+  });
+  if (!contained) {
+    fail('resolved Core package escapes the isolated dependency directory');
+  }
+  const vendor = contentSnapshot(resolve(sandboxRepo, 'entry/vendor/core-harmony'), ['.']);
+  const resolvedPackage = contentSnapshot(installed, ['.']);
+  if ([...vendor.files, ...resolvedPackage.files].some(file => file.type !== 'file')) {
+    fail('resolved Core package must contain regular files, not unbound symlink targets');
+  }
+  assertSnapshotUnchanged(vendor, resolvedPackage, 'resolved Core package');
 }
 
 function assertSnapshotUnchanged(before, after, label) {
@@ -241,6 +356,7 @@ function copySourceSandbox(source, destination) {
     'entry/build',
     'entry/.cxx',
     'node_modules',
+    'oh_modules',
     'evidence',
   ];
   const args = ['-a', '--delete'];
@@ -544,6 +660,7 @@ function requireAcceptanceInputs() {
   const base = resolve(CORE_ROOT, 'target/harmony-napi/arm64-v8a');
   const inputs = {
     identity: resolve(base, 'core-build-identity.json'),
+    inputSnapshot: resolve(base, 'core-input-snapshot.json'),
     packageManifest: resolve(base, 'harmony-package-manifest.sha256'),
     buildEvidence: resolve(base, 'harmony-napi-build-evidence.txt'),
     nativeSo: resolve(base, 'package/libs/arm64-v8a/libreader_core_napi.so'),
@@ -554,24 +671,29 @@ function requireAcceptanceInputs() {
   return inputs;
 }
 
-function generateAcceptanceProvenance(runDir, signedHap, hvigorVersion, buildCommand) {
+function nativeProvenanceArguments() {
   const inputs = requireAcceptanceInputs();
+  return [
+    '--core-repo', CORE_ROOT, '--harmony-repo', REPO_ROOT,
+    '--core-identity', inputs.identity, '--core-input-snapshot', inputs.inputSnapshot,
+    '--napi-manifest', inputs.packageManifest, '--native-so', inputs.nativeSo,
+    '--app-native-so', resolve(REPO_ROOT, 'entry/libs/arm64-v8a/libreader_core_napi.so'),
+    '--harmony-vendor', resolve(REPO_ROOT, 'entry/vendor/core-harmony'),
+    '--core-build-evidence', inputs.buildEvidence,
+  ];
+}
+
+function generateAcceptanceProvenance(runDir, signedHap, hvigorVersion, buildCommand, buildClass) {
   const generator = resolve(REPO_ROOT, 'tools/generate-build-provenance-manifest.mjs');
   const stripTool = process.env.NATIVE_STRIP_TOOL || DEFAULT_STRIP_TOOL;
   if (!existsSync(stripTool)) fail(`native strip tool is missing: ${stripTool}`);
-  const output = resolve(runDir, 'acceptance-provenance.json');
+  const output = resolve(runDir, `${buildClass}-${basename(signedHap, '.hap')}-provenance.json`);
   run(process.execPath, [
     generator,
-    '--core-repo', CORE_ROOT,
-    '--harmony-repo', REPO_ROOT,
-    '--core-identity', inputs.identity,
-    '--napi-manifest', inputs.packageManifest,
-    '--native-so', inputs.nativeSo,
-    '--app-native-so', resolve(REPO_ROOT, 'entry/libs/arm64-v8a/libreader_core_napi.so'),
-    '--harmony-vendor', resolve(REPO_ROOT, 'entry/vendor/core-harmony'),
+    ...nativeProvenanceArguments(),
+    ...(buildClass === 'iteration' ? ['--allow-dirty'] : []),
     '--hap', signedHap,
     '--output', output,
-    '--core-build-evidence', inputs.buildEvidence,
     '--native-strip-tool', stripTool,
     '--build-command', buildCommand,
     '--hvigor-version', hvigorVersion,
@@ -606,7 +728,7 @@ function build(options) {
   const coreGit = gitRecord(CORE_ROOT);
   requireCleanAcceptance(buildClass, harmonyGit, coreGit, signingMode);
 
-  const lockDir = join(process.platform === 'darwin' ? '/private/tmp' : tmpdir(), 'reader-harmony-hap-build.lock');
+  const lockDir = ARTIFACT_LOCK;
   acquireLock(lockDir, {
     pid: process.pid,
     repo: REPO_ROOT,
@@ -616,6 +738,14 @@ function build(options) {
   const sandboxRoot = mkdtempSync(join(tmpdir(), 'reader-hap-build-'));
   let unpublishedRunDir = null;
   try {
+    run(process.execPath, [resolve(REPO_ROOT, 'tools/generate-build-provenance-manifest.mjs'),
+      ...nativeProvenanceArguments(), '--preflight', '--output', resolve(sandboxRoot, 'native-preflight.json'),
+      ...(buildClass === 'iteration' ? ['--allow-dirty'] : []),
+    ]);
+    const artifactRoot = resolve(option(options, '--artifact-root', DEFAULT_ARTIFACT_ROOT));
+    const keepRuns = retentionLimit(options);
+    const retention = applyHapRetention(planHapRetention(artifactRoot, keepRuns, 1));
+    console.log(JSON.stringify({ stage: 'artifactRetention', keepRuns, ...retention }));
     const harmonyGateBefore = contentSnapshot(REPO_ROOT, HARMONY_GATE_INPUTS);
     const workspaceContractBefore = contentSnapshot(WORKSPACE_ROOT, WORKSPACE_CONTRACT_INPUTS);
     run(process.execPath, [resolve(WORKSPACE_ROOT, 'scripts/check-hap-build-system.mjs')], {
@@ -649,6 +779,18 @@ function build(options) {
       token: pipelineToken, profileSha256: effectiveProfile.sha256,
     }), { mode: 0o600 });
     const sandboxBefore = sourceSnapshot(sandboxRepo);
+
+    // Fresh worktrees have no generated oh_modules. Resolve the declared local
+    // Core package inside this sandbox rather than inheriting a developer's
+    // links (which may point into another checkout or contain stale SDK bytes).
+    const ohpm = process.env.OHPM || DEFAULT_OHPM;
+    if (!existsSync(ohpm)) fail(`OHPM is missing: ${ohpm}`);
+    run(ohpm, ['install', '--no-link', '--cache', resolve(sandboxRoot, 'ohpm-cache')], {
+      cwd: resolve(sandboxRepo, 'entry'),
+      stdio: 'inherit',
+    });
+    assertSnapshotUnchanged(sandboxBefore, sourceSnapshot(sandboxRepo), 'dependency manifests and source inputs');
+    assertResolvedCorePackage(sandboxRepo);
 
     const hvigorw = process.env.HVIGORW || DEFAULT_HVIGORW;
     if (!existsSync(hvigorw)) fail(`Hvigor is missing: ${hvigorw}`);
@@ -692,6 +834,7 @@ function build(options) {
 
     const sandboxAfter = sourceSnapshot(sandboxRepo);
     assertSnapshotUnchanged(sandboxBefore, sandboxAfter, 'isolated build inputs');
+    assertResolvedCorePackage(sandboxRepo);
     const sourceAfter = sourceSnapshot(REPO_ROOT);
     assertSnapshotUnchanged(sourceBefore, sourceAfter, 'source worktree build inputs');
     assertSnapshotUnchanged(
@@ -710,7 +853,6 @@ function build(options) {
     const outputDir = resolve(sandboxRepo, 'entry/build/default/outputs/default');
     const builtNames = findBuiltHaps(outputDir, signingMode);
     const runId = `${timestampId()}-${sourceGitBefore.commit.slice(0, 8)}-${sourceBefore.fingerprint.slice(0, 8)}`;
-    const artifactRoot = resolve(option(options, '--artifact-root', DEFAULT_ARTIFACT_ROOT));
     const publishedRunDir = resolve(artifactRoot, runId);
     const runDir = resolve(artifactRoot, `.staging-${runId}-${process.pid}`);
     if (existsSync(publishedRunDir) || existsSync(runDir)) {
@@ -747,14 +889,17 @@ function build(options) {
       env: buildEnvironment,
     });
     let acceptanceProvenance = null;
-    if (buildClass === 'acceptance') {
-      const signed = artifacts.find((artifact) => artifact.kind === 'signed');
-      acceptanceProvenance = generateAcceptanceProvenance(
+    const nativeProvenance = [];
+    for (const artifact of artifacts) {
+      const provenance = generateAcceptanceProvenance(
         runDir,
-        resolve(runDir, signed.path),
+        resolve(runDir, artifact.path),
         hvigorVersion,
         buildCommand,
+        buildClass,
       );
+      nativeProvenance.push(provenance);
+      if (buildClass === 'acceptance' && artifact.kind === 'signed') acceptanceProvenance = provenance;
     }
     const vendoredNapi = fileRecord(
       resolve(REPO_ROOT, 'entry/libs/arm64-v8a/libreader_core_napi.so'),
@@ -763,6 +908,7 @@ function build(options) {
     const manifest = {
       schemaVersion: 2,
       name: 'reader-harmonyos-hap-run',
+      nativeProvenance,
       runId,
       buildClass,
       acceptanceEligible: buildClass === 'acceptance',
@@ -1073,6 +1219,12 @@ function installDeployment(options) {
   try {
     const resolved = resolveDeployment(options);
     if (!resolved.route.allowed) fail(`deployment stopped: ${resolved.route.reason}`, 3);
+    // A successful install followed by a failed launch must still protect the
+    // package. Keep this marker across errors/crashes until a full receipt exists.
+    const installProtection = resolve(resolved.verified.directory,
+      `retention-install-${resolved.targetKind}-${resolved.targetRef}.json`);
+    writeJson(installProtection, { name: 'reader-hap-install-protection',
+      runId: resolved.verified.manifest.runId, startedAt: new Date().toISOString() });
     const install = runTargetHdc(resolved.hdc, resolved.target, [
       '-t', resolved.target, 'install', '-r', resolved.artifactPath,
     ], { allowFailure: true });
@@ -1128,6 +1280,7 @@ function installDeployment(options) {
       `deploy-${resolved.targetKind}-${resolved.targetRef}-${timestampId()}.json`,
     );
     writeJson(receiptPath, receipt);
+    rmSync(installProtection);
     console.log(JSON.stringify({ status: 'PASS', receipt: receiptPath, dataPreserved: true }));
   } finally {
     rmSync(lockDir, { recursive: true, force: true });
@@ -1136,7 +1289,8 @@ function installDeployment(options) {
 
 function usage() {
   console.error(`Usage:
-  node scripts/hap-pipeline.mjs build [--class iteration|acceptance] [--signing auto|local|unsigned] [--live-sources]
+  node scripts/hap-pipeline.mjs build [--class iteration|acceptance] [--signing auto|local|unsigned] [--live-sources] [--keep-runs 10]
+  node scripts/hap-pipeline.mjs prune [--artifact-root <directory>] [--keep-runs 10] [--apply]
   node scripts/hap-pipeline.mjs sync-signing [--profile <private-local-profile.json5>]
   node scripts/hap-pipeline.mjs verify --manifest <manifest.json>
   node scripts/hap-pipeline.mjs inspect --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical
@@ -1162,7 +1316,11 @@ function main() {
       })),
     }));
   } else if (command === 'inspect') inspectDeployment(options);
-  else if (command === 'install') installDeployment(options);
+  else if (command === 'install') withArtifactLock(() => installDeployment(options));
+  else if (command === 'prune') withArtifactLock(() => {
+    const plan = planHapRetention(resolve(option(options, '--artifact-root', DEFAULT_ARTIFACT_ROOT)), retentionLimit(options));
+    console.log(JSON.stringify(options.get('--apply') === true ? applyHapRetention(plan) : plan, null, 2));
+  });
   else {
     usage();
     fail(`unknown command: ${command}`, 2);

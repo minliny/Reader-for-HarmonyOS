@@ -9,17 +9,18 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
-  statSync,
+  lstatSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve } from 'node:path';
+import { verifyCoreBuildSnapshot } from '../../Reader-Core-Native/scripts/build-input-snapshot.mjs';
 
 function parseArgs(argv) {
   const values = new Map();
   for (let index = 0; index < argv.length; index += 1) {
     const name = argv[index];
-    if (name === '--allow-dirty') {
+    if (name === '--allow-dirty' || name === '--preflight') {
       values.set(name, true);
       continue;
     }
@@ -104,15 +105,19 @@ function parseBuildEvidence(path) {
 }
 
 function treeRecord(root) {
+  if (!lstatSync(root).isDirectory()) throw new Error('vendored SDK root must be a real directory');
   const files = [];
   function visit(directory) {
     for (const name of readdirSync(directory).sort()) {
       const path = resolve(directory, name);
-      const stat = statSync(path);
+      const stat = lstatSync(path);
+      if (stat.isSymbolicLink()) throw new Error('vendored SDK must not contain symbolic links');
       if (stat.isDirectory()) {
         visit(path);
       } else if (stat.isFile()) {
         files.push(path);
+      } else {
+        throw new Error('vendored SDK must contain only regular files and directories');
       }
     }
   }
@@ -163,10 +168,12 @@ const napiManifestPath = requireArg(args, '--napi-manifest');
 const nativeSoPath = requireArg(args, '--native-so');
 const appNativeSoPath = requireArg(args, '--app-native-so');
 const vendorRoot = requireArg(args, '--harmony-vendor');
-const hapPath = requireArg(args, '--hap');
+const preflight = args.get('--preflight') === true;
+const hapPath = preflight ? undefined : requireArg(args, '--hap');
 const outputPath = requireArg(args, '--output');
 const buildEvidencePath = requireArg(args, '--core-build-evidence');
-const nativeStripToolPath = requireArg(args, '--native-strip-tool');
+const nativeStripToolPath = preflight ? undefined : requireArg(args, '--native-strip-tool');
+const coreInputPath = requireArg(args, '--core-input-snapshot');
 const allowDirty = args.get('--allow-dirty') === true;
 
 const coreIdentity = JSON.parse(readFileSync(identityPath, 'utf8'));
@@ -184,6 +191,15 @@ const nativeSo = fileRecord(nativeSoPath);
 const appNativeSo = fileRecord(appNativeSoPath);
 const identityArtifact = fileRecord(identityPath);
 const buildEvidence = parseBuildEvidence(buildEvidencePath);
+const coreInputArtifact = fileRecord(coreInputPath);
+const coreInputSnapshot = JSON.parse(readFileSync(coreInputPath, 'utf8'));
+verifyCoreBuildSnapshot(coreRepo, coreInputSnapshot);
+if (buildEvidence.values['core_input_snapshot_sha256'] !== coreInputArtifact.sha256) {
+  throw new Error('Core build evidence does not bind the actual source input snapshot');
+}
+if (buildEvidence.values['sdk_smoke'] !== 'pass') {
+  throw new Error('Native SDK smoke must pass; missing or skipped is not compatible evidence');
+}
 if (buildEvidence.values['artifact_sha256'] !== nativeSo.sha256 ||
     buildEvidence.values['artifact_bytes'] !== String(nativeSo.bytes) ||
     buildEvidence.values['core_build_identity_sha256'] !== identityArtifact.sha256) {
@@ -193,9 +209,27 @@ if (nativeSo.sha256 !== appNativeSo.sha256 || nativeSo.bytes !== appNativeSo.byt
   throw new Error('Harmony app native input does not match the NAPI package native library');
 }
 const napiPackage = parsePackageManifest(napiManifestPath);
+if (fileRecord(napiManifestPath).sha256 !== buildEvidence.values['package_manifest_sha256']) {
+  throw new Error('Core build evidence does not bind the NAPI package manifest');
+}
+const vendor = treeRecord(vendorRoot);
+const packageSdk = napiPackage.entries.filter(entry => !entry.path.startsWith('libs/'));
+if (new Set(packageSdk.map(entry => entry.path)).size !== packageSdk.length ||
+    packageSdk.length !== vendor.entries.length || vendor.entries.some(entry => !packageSdk.some(expected =>
+      entry.path === expected.path && entry.sha256 === expected.sha256 && entry.bytes === expected.bytes))) {
+  throw new Error('Harmony vendored SDK does not match the NAPI package manifest');
+}
 const packageNative = napiPackage.entries.find((entry) => entry.path === 'libs/arm64-v8a/libreader_core_napi.so');
 if (packageNative === undefined || packageNative.sha256 !== nativeSo.sha256 || packageNative.bytes !== nativeSo.bytes) {
   throw new Error('NAPI package manifest does not bind the supplied native library');
+}
+if (preflight) {
+  mkdirSync(dirname(outputPath), { recursive: true });
+  writeFileSync(outputPath, JSON.stringify({ schemaVersion: 1, name: 'reader-native-preflight',
+    coreGit, harmonyGit, coreInputArtifact, coreInputFingerprint: coreInputSnapshot.fingerprint,
+    buildId: coreIdentity.buildId, nativeSo, vendor, napiPackage }, null, 2) + '\n');
+  console.log(JSON.stringify({ status: 'PASS', output: outputPath, nativeInputSha256: nativeSo.sha256 }));
+  process.exit(0);
 }
 const embeddedNative = archiveEntryRecord(hapPath, 'libs/arm64-v8a/libreader_core_napi.so');
 const packagedNative = stripAllRecord(appNativeSoPath, nativeStripToolPath);
@@ -212,6 +246,8 @@ const manifest = {
     git: coreGit,
     buildIdentity: coreIdentity,
     buildIdentityArtifact: identityArtifact,
+    buildInputSnapshot: coreInputArtifact,
+    buildInputFingerprint: coreInputSnapshot.fingerprint,
     buildEvidence,
   },
   napi: {
@@ -220,7 +256,7 @@ const manifest = {
   },
   harmony: {
     git: harmonyGit,
-    vendor: treeRecord(vendorRoot),
+    vendor,
     nativeInput: appNativeSo,
     nativePackaging: {
       tool: fileRecord(nativeStripToolPath),
