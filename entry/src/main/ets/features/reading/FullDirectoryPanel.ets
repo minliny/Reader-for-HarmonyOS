@@ -1,3 +1,5 @@
+import { readerDirectoryScopeKey } from './ReaderDirectoryNavigation';
+import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
@@ -192,8 +194,8 @@ export struct FullDirectoryPanel {
   // R-LOCAL-TOC-01: allow the owning flow to react to a chapter tap so the
   // full-directory can be wired back into the actual reading flow.
   onSelectChapter: (index: number) => void = (_index: number): void => {};
-  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope) => void =
-    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope: RemoteReadingPositionScope): void => {};
+  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: JsonObject): void => {};
   onDownloadChapter: (index: number) => void = (_index: number): void => {};
   // The marker is chapter-level while Core identities are bookmark-level.
   // Forward every existing identity represented by the marker so the owner
@@ -634,19 +636,20 @@ export struct FullDirectoryPanel {
     // Quick viewport moves every row below the Stage's Quick clip.
     Stack({ alignContent: Alignment.TopStart }) {
       Column() {
-        if (this.bookmarkIdentity?.sourceId === 'local') {
+        if (this.bookmarkIdentity !== undefined) {
           ReaderDirectoryNavigationSurface({
-            bookId: this.bookmarkIdentity.bookId, query: this.searchQuery, ascending: this.ascending,
+            sourceId: this.bookmarkIdentity.sourceId, bookId: this.bookmarkIdentity.bookId, query: this.searchQuery, ascending: this.ascending,
             currentChapterIndex: this.currentChapterIndex, openRevision: this.listSessionKey,
             interacted: this.navigationInteracted, rowHeight: this.directoryListRowHeight(),
             interactionEnabled: !this.motionActive,
             listPaddingX: this.directoryListPaddingX(), listPaddingY: this.embeddedInControl ? 0 : 5,
             edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
             chapterEntries: this.admittedEntries,
+            chapterDownloadEnabled: this.chapterDownloadEnabled,
             chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
             fallbackBuilder: (): void => { this.flatChapterList(); },
-            onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope): void => {
-              this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope);
+            onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void => {
+              this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
             },
             onFirstLayout: (): void => this.onListFirstLayout(),
             onUserScrollIntent: (): void => this.onListUserScroll(),
@@ -655,6 +658,7 @@ export struct FullDirectoryPanel {
               if (active) this.initialListPositionReady = true;
             },
             onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
+            onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
             onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
               this.onCreateChapterStartBookmark(request),
           });
@@ -899,8 +903,8 @@ export struct FullDirectoryPanel {
       return;
     }
     if (kind === 'top') {
-      const localBookId = this.activeTab === 'directory' && this.bookmarkIdentity?.sourceId === 'local' ?
-        this.bookmarkIdentity.bookId : undefined;
+      const localBookId = this.activeTab === 'directory' && this.bookmarkIdentity !== undefined ?
+        readerDirectoryScopeKey(this.bookmarkIdentity.sourceId, this.bookmarkIdentity.bookId) : undefined;
       if (localBookId !== undefined) readerDirectorySignalScrollIntent(localBookId);
       this.cancelProjectionTopScroll();
       this.listScroller.scrollEdge(Edge.Top);
@@ -908,8 +912,8 @@ export struct FullDirectoryPanel {
       return;
     }
     if (kind === 'bottom') {
-      const localBookId = this.activeTab === 'directory' && this.bookmarkIdentity?.sourceId === 'local' ?
-        this.bookmarkIdentity.bookId : undefined;
+      const localBookId = this.activeTab === 'directory' && this.bookmarkIdentity !== undefined ?
+        readerDirectoryScopeKey(this.bookmarkIdentity.sourceId, this.bookmarkIdentity.bookId) : undefined;
       if (localBookId !== undefined) readerDirectorySignalScrollIntent(localBookId);
       this.cancelProjectionTopScroll();
       this.listScroller.scrollEdge(Edge.Bottom);
@@ -1639,12 +1643,12 @@ export struct FullDirectoryPanel {
       return '';
     }
     let ordinal = 0;
-    for (let index = 0; index < this.admittedEntries.length; index += 1) {
-      if (this.admittedEntries[index].index === entry.index) {
-        ordinal = index + 1;
-        break;
-      }
+    let count = 0;
+    for (const chapter of this.admittedEntries) {
+      if (chapter.navigable === false) continue;
+      count += 1;
+      if (chapter.index === entry.index) ordinal = count;
     }
-    return ordinal === 0 ? '' : `${ordinal} / ${this.admittedEntries.length}`;
+    return ordinal === 0 ? '' : `${ordinal} / ${count}`;
   }
 }

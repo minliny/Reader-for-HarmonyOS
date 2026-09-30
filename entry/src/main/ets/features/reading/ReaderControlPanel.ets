@@ -1,3 +1,4 @@
+import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import { readerTtsWaveformSnapshot } from './ReaderTtsWaveform';
 import type { ReaderTtsWaveformSample } from './ReaderTtsWaveformModel';
@@ -240,6 +241,7 @@ export struct ReaderControlPanel {
   @Prop sourceName: string = '';
   @Prop progressPercent: number = 0;
   @Prop totalChapters: number = 0;
+  @Prop readableChapterPosition: number = -1;
   @Prop @Watch('onLayoutChanged') layout: ReaderControlLayoutSnapshot = createDefaultReaderControlLayout();
   @Prop tocEntries: LocalReadingTocEntry[] = [];
   @Prop catalogComplete: boolean = true;
@@ -301,8 +303,8 @@ export struct ReaderControlPanel {
   onPageChange: (page: ReaderControlPage) => void = (_page: ReaderControlPage): void => {};
   onModuleSelect: (module: string) => void = (_module: string): void => {};
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
-  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope) => void =
-    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope: RemoteReadingPositionScope): void => {};
+  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: JsonObject): void => {};
   // Bookmark tab precise-anchor wiring: undefined keeps the panel's legacy
   // chapter-start fallback, so this stays a zero-regression opt-in.
   onSelectBookmark: ((bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope) => void) | undefined =
@@ -1092,8 +1094,8 @@ export struct ReaderControlPanel {
         interactionEnabled: false, status: this.launchSourceAutoStatus,
         speedSeconds: this.autoPageSpeedSeconds, timerSummaryText: this.autoPageTimerSummaryText,
         timerMinutes: this.autoPageTimerMinutes, timerSeconds: this.autoPageTimerSeconds,
-        followHighlight: this.autoPageFollowHighlight, canPreviousChapter: this.currentChapterIndex > 0,
-        canNextChapter: this.currentChapterIndex >= 0 && this.currentChapterIndex < this.totalChapters - 1,
+        followHighlight: this.autoPageFollowHighlight, canPreviousChapter: this.canStepChapter(-1),
+        canNextChapter: this.canStepChapter(1),
       });
     } else {
       ReaderControlTtsContent({
@@ -1205,6 +1207,7 @@ export struct ReaderControlPanel {
           entries: this.tocEntries, currentChapterIndex: this.currentChapterIndex,
           catalogComplete: this.catalogComplete, catalogChapterCount: this.catalogChapterCount,
           catalogCurrentPosition: this.catalogCurrentPosition,
+          catalogReadableChapterCount: this.totalChapters, catalogReadablePosition: this.readableChapterPosition,
           onRequireCompleteCatalog: (): void => this.onRequireCompleteCatalog(),
           bookmarkLoadFailed: this.bookmarkLoadFailed,
           bookmarkLoadMessage: this.bookmarkLoadMessage,
@@ -1222,8 +1225,8 @@ export struct ReaderControlPanel {
               tab === 'bookmarks' ? 'bookmarks' : 'directory'));
           },
           onSelectChapter: (index: number): void => this.onSelectChapter(index),
-          onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope): void =>
-            this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope),
+          onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+            this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
           onSelectBookmark: this.onSelectBookmark,
           onDownloadChapter: (index: number): void => this.onDownloadChapter(index),
           onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
@@ -1405,8 +1408,8 @@ export struct ReaderControlPanel {
           availableWidth: this.contentMotionWidth,
           availableHeight: this.contentMotionHeight,
           interactionEnabled: this.secondaryModuleInputEnabled('autoPage'),
-          canPreviousChapter: this.currentChapterIndex > 0,
-          canNextChapter: this.currentChapterIndex >= 0 && this.currentChapterIndex < this.totalChapters - 1,
+          canPreviousChapter: this.canStepChapter(-1),
+          canNextChapter: this.canStepChapter(1),
           status: this.autoPageStatus, speedSeconds: this.autoPageSpeedSeconds,
           timerMinutes: this.autoPageTimerMinutes, timerSeconds: this.autoPageTimerSeconds,
           timerSummaryText: this.autoPageTimerSummaryText, followHighlight: this.autoPageFollowHighlight,
@@ -1980,11 +1983,16 @@ export struct ReaderControlPanel {
   }
 
   private canStepChapter(delta: number): boolean {
+    if (this.readableChapterPosition >= 0) {
+      const target = this.readableChapterPosition + delta;
+      return target >= 0 && target < this.totalChapters;
+    }
     for (let position = 0; position < this.tocEntries.length; position += 1) {
-      if (this.tocEntries[position].index === this.currentChapterIndex) {
-        const target = position + delta;
-        return target >= 0 && target < this.tocEntries.length;
+      if (this.tocEntries[position].index !== this.currentChapterIndex) continue;
+      for (let target = position + delta; target >= 0 && target < this.tocEntries.length; target += delta) {
+        if (this.tocEntries[target].navigable !== false) return true;
       }
+      return false;
     }
     return false;
   }

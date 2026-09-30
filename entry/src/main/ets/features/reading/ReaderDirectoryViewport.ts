@@ -1,3 +1,4 @@
+import { readerDirectoryBookState, clearReaderDirectoryBookStates } from './ReaderDirectorySessionState.ts';
 /** Session-only visible tree row. Fractions survive Quick/Full row-height
  * changes without trusting a virtual List's estimated total offset. */
 export interface ReaderDirectoryViewportAnchor {
@@ -9,12 +10,11 @@ export interface ReaderDirectoryViewportAnchor {
   rowFraction: number;
 }
 
-const anchors: Map<string, ReaderDirectoryViewportAnchor> = new Map<string, ReaderDirectoryViewportAnchor>();
 const scrollIntentObservers: Map<string, Set<() => void>> = new Map<string, Set<() => void>>();
 const scrollCommandObservers: Map<string, Set<() => void>> = new Map<string, Set<() => void>>();
 
 export function readerDirectoryViewportAnchor(bookId: string): ReaderDirectoryViewportAnchor | undefined {
-  return anchors.get(bookId);
+  return readerDirectoryBookState(bookId)?.anchor;
 }
 
 export function readerDirectorySaveViewportAnchor(anchor: ReaderDirectoryViewportAnchor): void {
@@ -24,12 +24,11 @@ export function readerDirectorySaveViewportAnchor(anchor: ReaderDirectoryViewpor
   const retained: ReaderDirectoryViewportAnchor = { ...anchor,
     rowFraction: Math.max(0, Math.min(0.999999, anchor.rowFraction)) };
   // Refresh insertion order; keep only books visited in this UI session.
-  anchors.delete(anchor.bookId);
-  anchors.set(anchor.bookId, retained);
-  if (anchors.size > 8) anchors.delete(anchors.keys().next().value as string);
+  const state = readerDirectoryBookState(anchor.bookId, true);
+  if (state !== undefined) state.anchor = retained;
 }
 
-export function readerDirectoryClearViewportAnchors(): void { anchors.clear(); }
+export function readerDirectoryClearViewportAnchors(): void { clearReaderDirectoryBookStates(); }
 
 /** Toolbar Top/Bottom is user navigation even though List does not report a
  * native drag. Notify the mounted tree before Scroller moves its viewport. */

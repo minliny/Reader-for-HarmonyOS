@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 import {
   READER_PRODUCT_PROFILE,
@@ -53,3 +54,31 @@ assert.match(generalBuilder[1], /isReaderProductSurfaceEnabled\('unimplementedSe
   'local-only preference, permission, and reset surfaces must be gated');
 
 console.log('reader product scope contract: PASS');
+
+// Execute direct/recovery entry points with the real shipping profile. An empty
+// receiver makes any state access or I/O before admission fail deterministically.
+const guarded = [...index.matchAll(/private (?:async )?(\w+)\([^{}]*?\): (?:void|Promise<void>) \{\s*if \(!isReaderProductSurfaceEnabled\(/g)]
+  .map(match => match[1]);
+assert.ok(guarded.length >= 38);
+const Closed = productionMotionMethods(new URL('pages/Index.ets', root), guarded, {
+  isReaderProductSurfaceEnabled,
+});
+for (const method of guarded) {
+  const receiver = Object.create(null);
+  await Closed.prototype[method].call(receiver);
+  assert.deepEqual(Object.keys(receiver), [], `${method} cannot mutate a closed surface`);
+}
+for (const route of ['rss', 'rssSubscriptionManagement', 'rssSubscriptionEditor', 'rssSourceFeed',
+  'rssEntryDetail', 'discover', 'sync']) {
+  const surface = route.startsWith('rss') ? 'rss' : route;
+  assert.ok(index.includes(`isReaderProductSurfaceEnabled('${surface}') && this.route === '${route}'`),
+    `${route} must reject restored/direct route rendering`);
+}
+// Development flow remains callable when its explicit scope is admitted.
+const Open = productionMotionMethods(new URL('pages/Index.ets', root), ['onSyncTriggerBackup'], {
+  isReaderProductSurfaceEnabled: surface => surface === 'sync',
+});
+let backups = 0;
+Open.prototype.onSyncTriggerBackup.call({ getSyncOrchestrator: () => ({ triggerBackup: () => backups++ }) });
+assert.equal(backups, 1);
+console.log(`reader product scope direct/recovery boundary: ${guarded.length} methods PASS`);

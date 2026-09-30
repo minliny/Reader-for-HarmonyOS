@@ -17,6 +17,8 @@ export type BookSource = {
   checkState?: 'unchecked' | 'checking' | 'passed' | 'failed';
   checkLevels?: string[];
   checkMessage?: string;
+  checkReports?: SourceCheckHistoryEntry[];
+  lastCheckSummary?: string;
 };
 
 export type SourcePatch = {
@@ -50,11 +52,39 @@ export type SourceCheckOutcome = {
   mode?: 'search' | 'explore';
   requestedLevels?: string[];
   capabilities?: SourceCapabilityCheck[];
+  report?: SourceCheckReport;
+};
+
+export type SourceCheckReportStatus = 'pass' | 'fail' | 'not_requested' | 'not_supported' | 'blocked' | 'cancelled';
+
+export type SourceCheckReportStep = {
+  level: string;
+  requested: boolean;
+  executed: boolean;
+  status: SourceCheckReportStatus;
+  durationMs: number;
+  reason?: string;
+};
+
+export type SourceCheckReport = {
+  version: number;
+  mode: 'legacy' | 'search' | 'explore';
+  traceId: string;
+  ruleDigest?: string;
+  inputDigest: string;
+  steps: SourceCheckReportStep[];
+  contentKind?: string;
+};
+
+export type SourceCheckHistoryEntry = {
+  checkedAtMs: number;
+  stale: boolean;
+  report: SourceCheckReport;
 };
 
 export type SourceCapabilityCheck = {
   level: string;
-  state: 'passed' | 'failed' | 'blocked' | 'notRequested';
+  state: 'passed' | 'failed' | 'blocked' | 'notRequested' | 'notSupported' | 'cancelled';
 };
 
 export type SourceExportResult = {
@@ -120,8 +150,11 @@ export class SourceGateway {
     return sources;
   }
 
-  async loadSources(sourceId?: string): Promise<BookSource[]> {
-    const result = await this.runtimeOwner.request('source.list', sourceId === undefined ? {} : { sourceId });
+  async loadSources(sourceId?: string, includeReports: boolean = false): Promise<BookSource[]> {
+    const params: JsonObject = sourceId === undefined ? {} : { sourceId };
+    const wantsReports = includeReports && this.runtimeOwner.supportsCoreCapability('source.check.report.v1');
+    if (wantsReports) params['includeCheckReports'] = true;
+    const result = await this.runtimeOwner.request('source.list', params);
     const rawSources = result.data['sources'];
     if (!Array.isArray(rawSources)) {
       throw new Error('source.list returned invalid data');
@@ -151,7 +184,18 @@ export class SourceGateway {
       if (sourceId === undefined || name === undefined) {
         continue;
       }
-      sources.push({
+      const checkReports = wantsReports ? this.readCheckHistory(source['checkReports'], this.optionalString(source, 'sourceVersion')) : undefined;
+      const latest = checkReports !== undefined && checkReports.length > 0 ? checkReports[0] : undefined;
+      let lastCheckSummary: string | undefined = undefined;
+      if (latest !== undefined) {
+        const selected = latest.report.steps.filter((step: SourceCheckReportStep): boolean => step.requested);
+        const levels = selected.map((step: SourceCheckReportStep): string => step.level).join('、');
+        const passed = selected.every((step: SourceCheckReportStep): boolean => step.status === 'pass');
+        const mode = latest.report.mode === 'explore' ? '发现' : latest.report.mode === 'search' ? '搜索' : '旧版';
+        lastCheckSummary = `${latest.stale ? '已过期' : '历史'} · ${mode} ${levels} ${passed ? '通过' : '未通过'} · ` +
+          new Date(latest.checkedAtMs).toLocaleString();
+      }
+      const entry: BookSource = {
         sourceId,
         name,
         baseUrl: baseUrl ?? '',
@@ -160,7 +204,10 @@ export class SourceGateway {
         group,
         category: classifyReaderSource({ bookSourceType, name, group, sourceId, baseUrl }),
         loginUrl,
-      });
+      };
+      if (checkReports !== undefined) entry.checkReports = checkReports;
+      if (lastCheckSummary !== undefined) entry.lastCheckSummary = lastCheckSummary;
+      sources.push(entry);
     }
     return sources;
   }
@@ -417,12 +464,17 @@ export class SourceGateway {
       !['L1', 'L2', 'L3', 'L4', 'L5'].includes(level))) {
       throw new Error('source.check.run requires known selected levels');
     }
+    if (!this.runtimeOwner.supportsCoreCapability('source.check.mode.v1')) {
+      throw new Error('当前 Core 不支持分项书源检测，请使用配套 Native；不会将发现检测降级为搜索');
+    }
     const params: JsonObject = {
       sourceIds: [sourceId],
       timeoutMs: 180000,
       mode,
       levels: selectedLevels,
     };
+    const wantsReport = this.runtimeOwner.supportsCoreCapability('source.check.report.v1');
+    if (wantsReport) params['reportVersion'] = 1;
     const normalizedKeyword = keyword?.trim();
     if (normalizedKeyword !== undefined && normalizedKeyword.length > 0) {
       params['keyword'] = normalizedKeyword;
@@ -465,6 +517,8 @@ export class SourceGateway {
     if (!available && (failureReason === undefined || failureReason.trim().length === 0)) {
       throw new Error('source.check.run failed without a failure reason');
     }
+    const report = wantsReport ? this.readCheckReport(outcome['report'], mode, traceId,
+      selectedLevels, levelsPassed, durationMs) : undefined;
     const rawCoreLogs = outcome['debugLogs'];
     if (!Array.isArray(rawCoreLogs) || rawCoreLogs.length === 0) {
       throw new Error('source.check.run returned no structured Core debug logs');
@@ -535,7 +589,13 @@ export class SourceGateway {
       levelsPassed,
       mode,
       requestedLevels: selectedLevels,
-      capabilities: ['L1', 'L2', 'L3', 'L4', 'L5'].map((level: string): SourceCapabilityCheck => ({
+      report,
+      capabilities: report !== undefined ? report.steps.map((step: SourceCheckReportStep): SourceCapabilityCheck => ({
+        level: step.level,
+        state: !step.requested ? 'notRequested' : step.status === 'pass' ? 'passed' :
+          step.status === 'fail' ? 'failed' : step.status === 'not_supported' ? 'notSupported' :
+          step.status === 'cancelled' ? 'cancelled' : 'blocked',
+      })) : ['L1', 'L2', 'L3', 'L4', 'L5'].map((level: string): SourceCapabilityCheck => ({
         level,
         state: !selectedLevels.includes(level) ? 'notRequested' :
           levelsPassed.includes(level) ? 'passed' :
@@ -546,6 +606,82 @@ export class SourceGateway {
       hostEvidenceCount: hostLogs.length,
       logs: coreLogs.concat(hostLogs),
     };
+  }
+
+  private readCheckHistory(value: unknown, sourceVersion: string | undefined): SourceCheckHistoryEntry[] {
+    if (!Array.isArray(value) || value.length > 8) throw new Error('source.list returned invalid checkReports');
+    if (sourceVersion === undefined || !/^[a-f0-9]{64}$/.test(sourceVersion)) throw new Error('source.list omitted current rule version');
+    return value.map((item: unknown): SourceCheckHistoryEntry => {
+      const row = this.requireObject(item, 'source check history');
+      const checkedAtMs = row['checkedAtMs'];
+      const stale = row['stale'];
+      const raw = this.requireObject(row['report'], 'source check history report');
+      const mode = raw['mode'];
+      const trace = this.optionalString(raw, 'traceId');
+      const steps = raw['steps'];
+      if (typeof checkedAtMs !== 'number' || !Number.isSafeInteger(checkedAtMs) || checkedAtMs < 0 ||
+        typeof stale !== 'boolean' || typeof mode !== 'string' || !['legacy', 'search', 'explore'].includes(mode) ||
+        trace === undefined || trace.trim().length === 0 || trace.length > 128 || !Array.isArray(steps)) throw new Error('source.list returned invalid check history');
+      const selected: string[] = [];
+      const passed: string[] = [];
+      let duration = 0;
+      for (const item of steps) {
+        const step = this.requireObject(item, 'source check history step');
+        const level = this.optionalString(step, 'level') ?? '';
+        if (step['requested'] === true) {
+          selected.push(level);
+          if (step['status'] === 'pass') passed.push(level);
+        }
+        if (typeof step['durationMs'] === 'number') duration += step['durationMs'] as number;
+      }
+      if (selected.length === 0) throw new Error('source.list history has no selected capabilities');
+      const report = this.readCheckReport(raw, mode as 'legacy' | 'search' | 'explore', trace, selected, passed, duration);
+      if (stale !== (report.ruleDigest !== sourceVersion)) throw new Error('source.list history version mismatch');
+      return { checkedAtMs, stale, report };
+    });
+  }
+
+  private readCheckReport(value: unknown, mode: 'legacy' | 'search' | 'explore', traceId: string,
+    selected: string[], passed: string[], durationMs: number): SourceCheckReport {
+    const raw = this.requireObject(value, 'source.check.run report');
+    const ruleDigest = this.optionalString(raw, 'ruleDigest');
+    const inputDigest = this.optionalString(raw, 'inputDigest');
+    const contentKind = this.optionalString(raw, 'contentKind');
+    const steps = raw['steps'];
+    if (raw['version'] !== 1 || raw['mode'] !== mode || raw['traceId'] !== traceId ||
+      inputDigest === undefined || !/^[a-f0-9]{64}$/.test(inputDigest) ||
+      (ruleDigest !== undefined && !/^[a-f0-9]{64}$/.test(ruleDigest)) ||
+      (contentKind !== undefined && !['text', 'url_only', 'image', 'audio', 'empty', 'unsupported'].includes(contentKind)) ||
+      !Array.isArray(steps) || steps.length !== 5) {
+      throw new Error('source.check.run returned an invalid report');
+    }
+    let elapsed = 0;
+    const parsed = steps.map((value: unknown, index: number): SourceCheckReportStep => {
+      const step = this.requireObject(value, 'source.check.run report step');
+      const level = `L${index + 1}`;
+      const requested = step['requested'];
+      const executed = step['executed'];
+      const status = step['status'];
+      const time = step['durationMs'];
+      const reason = this.optionalString(step, 'reason');
+      if (step['level'] !== level || requested !== selected.includes(level) ||
+        typeof executed !== 'boolean' || typeof status !== 'string' ||
+        !['pass', 'fail', 'not_requested', 'not_supported', 'blocked', 'cancelled'].includes(status) ||
+        typeof time !== 'number' || !Number.isSafeInteger(time) || time < 0 ||
+        (requested && (status === 'pass') !== passed.includes(level)) ||
+        (status === 'not_requested' && (requested || executed)) ||
+        (['pass', 'fail', 'not_supported'].includes(status) && !executed) ||
+        (!executed && time !== 0) || (reason !== undefined && reason.length > 128)) {
+        throw new Error('source.check.run returned inconsistent report steps');
+      }
+      elapsed += time;
+      return { level, requested, executed, status: status as SourceCheckReportStatus, durationMs: time, reason };
+    });
+    if (elapsed > durationMs) throw new Error('source.check.run report exceeds total duration');
+    if (parsed[0].status === 'pass' && ruleDigest === undefined) {
+      throw new Error('source.check.run report omitted frozen rule digest');
+    }
+    return { version: 1, mode, traceId, ruleDigest, inputDigest, contentKind, steps: parsed };
   }
 
   private optionalString(value: JsonObject, key: string): string | undefined {

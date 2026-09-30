@@ -1,3 +1,5 @@
+import { readerDirectoryScopeKey } from './ReaderDirectoryNavigation';
+import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
@@ -66,6 +68,8 @@ export struct ReaderControlDirectoryContent {
   @Prop @Watch('refreshData') catalogComplete: boolean = true;
   @Prop @Watch('refreshData') catalogChapterCount: number = 0;
   @Prop @Watch('refreshData') catalogCurrentPosition: number = -1;
+  @Prop @Watch('refreshData') catalogReadableChapterCount: number = 0;
+  @Prop @Watch('refreshData') catalogReadablePosition: number = -1;
   onRequireCompleteCatalog: () => void = (): void => {};
   @Prop @Watch('refreshData') currentChapterIndex: number = -1;
   @Prop @Watch('openList') tab: string = 'directory';
@@ -81,8 +85,8 @@ export struct ReaderControlDirectoryContent {
   @Prop bookmarkLoadMessage: string = '';
   onTabChange: (tab: string) => void = (_tab: string): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
-  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope) => void =
-    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope: RemoteReadingPositionScope): void => {};
+  onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: JsonObject): void => {};
   onSelectBookmark: ((id: string, index: number, offset: number, positionScope?: RemoteReadingPositionScope) => void) | undefined = undefined;
   onDownloadChapter: (index: number) => void = (_index: number): void => {};
   onDeleteBookmarks: (times: number[]) => void = (_times: number[]): void => {};
@@ -95,7 +99,7 @@ export struct ReaderControlDirectoryContent {
     readerControlDirectorySnapshot([], 'directory', '', true, -1);
   @State private navigationInteracted: boolean = false;
   @State private navigationActive: boolean = false;
-  private query: string = '';
+  @State private query: string = '';
   private pendingCatalogAction: string = '';
   private scroller: Scroller = new Scroller();
   private dataSource: ControlDirectoryDataSource = new ControlDirectoryDataSource();
@@ -134,7 +138,8 @@ export struct ReaderControlDirectoryContent {
     const next = readerControlDirectorySnapshot(this.entries, this.tab, this.query,
       this.ascending, this.currentChapterIndex, this.bookmarkIdentity, {
         complete: this.catalogComplete, chapterCount: this.catalogChapterCount,
-        currentPosition: this.catalogCurrentPosition });
+        currentPosition: this.catalogCurrentPosition, readableChapterCount: this.catalogReadableChapterCount,
+        readablePosition: this.catalogReadablePosition });
     if (this.leadingKey !== undefined) {
       const index = next.rows.findIndex((row: ReaderControlDirectoryRow): boolean => row.key === this.leadingKey);
       this.leadingRow = index < 0 ? undefined : index + this.leadingFraction;
@@ -296,8 +301,8 @@ export struct ReaderControlDirectoryContent {
 
   private scrollCatalogEdge(bottom: boolean): void {
     if (this.deferCatalogAction(bottom ? 'bottom' : 'top')) return;
-    const localBookId = this.tab === 'directory' && this.bookmarkIdentity?.sourceId === 'local' ?
-      this.bookmarkIdentity.bookId : undefined;
+    const localBookId = this.tab === 'directory' && this.bookmarkIdentity !== undefined ?
+      readerDirectoryScopeKey(this.bookmarkIdentity.sourceId, this.bookmarkIdentity.bookId) : undefined;
     if (localBookId !== undefined) readerDirectorySignalScrollIntent(localBookId);
     this.userScroll(); this.scroller.scrollEdge(bottom ? Edge.Bottom : Edge.Top);
     if (localBookId !== undefined) readerDirectorySignalScrollCommand(localBookId);
@@ -392,17 +397,18 @@ export struct ReaderControlDirectoryContent {
     } else if (this.snapshot.rows.length === 0 && this.tab === 'bookmarks') {
       ReaderBookmarkEmptyState({ onReturnToDirectory: (): void => this.onTabChange('directory') });
     } else if (this.snapshot.rows.length === 0 && !this.navigationActive &&
-      !(this.tab === 'directory' && this.bookmarkIdentity?.sourceId === 'local')) {
+      !(this.tab === 'directory' && this.bookmarkIdentity !== undefined)) {
       Text('没有匹配的章节').fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).fontSize(12);
     } else {
-      if (this.tab === 'directory' && this.bookmarkIdentity?.sourceId === 'local') {
+      if (this.tab === 'directory' && this.bookmarkIdentity !== undefined) {
         ReaderDirectoryNavigationSurface({
-          bookId: this.bookmarkIdentity.bookId, query: this.query, ascending: this.ascending,
+          sourceId: this.bookmarkIdentity.sourceId, bookId: this.bookmarkIdentity.bookId, query: this.query, ascending: this.ascending,
           currentChapterIndex: this.currentChapterIndex, openRevision: this.sessionKey,
           interacted: this.navigationInteracted, rowHeight: this.rowHeight(),
           listPaddingX: this.rowPadding(), listPaddingY: 0,
           edgeEffectMode: EdgeEffect.Spring, interactionEnabled: this.interactionEnabled,
           chapterEntries: this.entries,
+          chapterDownloadEnabled: this.chapterDownloadEnabled,
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           scroller: this.scroller, fallbackBuilder: (): void => {
             if (this.snapshot.rows.length === 0) {
@@ -411,13 +417,14 @@ export struct ReaderControlDirectoryContent {
               this.flatList();
             }
           },
-          onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope): void => {
-            this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope);
+          onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void => {
+            this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
           },
           onUserScrollIntent: (): void => this.userScroll(),
           onFirstLayout: (): void => this.queuePosition(),
           onTreeStateChange: (active: boolean): void => { this.navigationActive = active; },
           onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
+          onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
             this.onCreateChapterStartBookmark(request),
         });

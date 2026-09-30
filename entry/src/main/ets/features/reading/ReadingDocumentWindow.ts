@@ -52,7 +52,8 @@ export async function readReadingDocumentWindow(runtime: ReadingGatewayRuntime, 
   if (data['sourceId'] !== scope.sourceId || data['bookId'] !== scope.bookId || data['chapterIndex'] !== scope.chapterIndex)
     throw new Error('reading document window identity mismatch');
   if (data['kind'] === 'missing') {
-    if (data['reason'] !== 'documentMissing' && data['reason'] !== 'sourceSwitchPending') throw new Error('invalid document window miss');
+    if (data['reason'] !== 'documentMissing' && data['reason'] !== 'sourceSwitchPending' &&
+      data['reason'] !== 'directoryNodeNotReadable') throw new Error('invalid document window miss');
     return undefined;
   }
   if (data['kind'] !== 'ready') throw new Error('invalid document window result');

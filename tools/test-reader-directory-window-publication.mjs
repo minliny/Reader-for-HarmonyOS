@@ -7,7 +7,7 @@ const Owner=productionMotionMethods(source,['refreshData','search','sort','defer
 });
 const entries=Array.from({length:1368},(_,index)=>({index,title:`第${index+1}章`,downloadState:'cached'}));
 function owner(){const callbacks=[],scrolls=[];let requests=0;const o=Object.assign(new Owner(),{
- entries:entries.slice(697,704),catalogComplete:false,catalogChapterCount:1368,catalogCurrentPosition:700,
+ entries:entries.slice(697,704),catalogComplete:false,catalogChapterCount:1368,catalogCurrentPosition:700,catalogReadableChapterCount:1368,catalogReadablePosition:700,
  currentChapterIndex:700,tab:'directory',query:'',draft:'',ascending:true,sessionKey:'book:1',lifecycle:1,mounted:true,
  pendingCatalogAction:'',placement:new ReaderControlDirectoryPosition(),dataSource:{replace(rows){o.rows=rows;}},scroller:{scrollEdge(edge){scrolls.push(edge);}},
  getUIContext:()=>({postFrameCallback(frame){callbacks.push(frame.action);}}),queuePosition(){},queueLeadingCorrection(){},userScroll(){},

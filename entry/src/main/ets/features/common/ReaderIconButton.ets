@@ -1,8 +1,11 @@
+import { ReaderPressFeedback } from './ReaderPressFeedback';
+
 // 方形/圆形图标按钮: boxSize 命中区内居中一枚 iconSize 图标, radius 控制圆角
 // (0 = 方形, boxSize/2 = 圆形), 点击回调可选。
 // 供 Search 返回、Source Mgmt 顶栏、BookshelfEmpty/Discover 动作、Bookshelf 顶栏按钮复用。
 @Component
 export struct ReaderIconButton {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop icon: Resource;
   @Prop boxSize: number;
   @Prop iconSize: number;
@@ -17,7 +20,7 @@ export struct ReaderIconButton {
     }
     .width(this.boxSize)
     .height(this.boxSize)
-    .borderRadius(this.radius)
+    .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, this.radius, 12))
     .onClick((): void => this.onTap());
   }
 }

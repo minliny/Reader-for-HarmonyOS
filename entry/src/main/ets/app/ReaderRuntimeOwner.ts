@@ -17,7 +17,7 @@ import {
   type PendingLocalImportFinalize,
   ReaderHostRegistry,
 } from './ReaderHostRegistry';
-import { errorMessageOf, httpResponseFailureSummary } from './ErrorMessage';
+import { errorMessageOf, httpResponseFailureSummary, coreAdmissionFailureSummary } from './ErrorMessage';
 import { HarmonySystemTtsHost } from './HarmonySystemTtsHost';
 import { HarmonyHttpTtsHost } from './HarmonyHttpTtsHost';
 import { HarmonyTtsHostRouter } from './HarmonyTtsHostRouter';
@@ -320,6 +320,9 @@ export class ReaderRuntimeOwner {
         shouldCancel: options.shouldCancel,
       });
     } catch (error) {
+      const admissionFailure = coreAdmissionFailureSummary(error, method);
+      if (admissionFailure !== undefined)
+        hilog.warn(LOG_DOMAIN, 'Reader', 'Core command not admitted: %{public}s', admissionFailure);
       const responseFailure = httpResponseFailureSummary(error);
       if (responseFailure !== undefined)
         // This helper admits only stage, hostname and status; URL paths,
@@ -778,7 +781,7 @@ export class ReaderRuntimeOwner {
     try {
       this.host.setResponseAssetBridge(runtime.assetBridge());
       runtime.setCapabilityRouter(this.host.createCapabilityRouter());
-      await ReaderStartupTrace.measure('startup.host-capabilities', (): Promise<ReaderCoreResultEvent> => runtime.request('runtime.setHostCapabilities', {
+      const hostCapabilities: JsonObject = {
         capabilities: [
           'persistence.get',
           'persistence.put',
@@ -788,7 +791,9 @@ export class ReaderRuntimeOwner {
           'webview.evaluateJavaScript',
         ],
         platform: 'harmonyos',
-      }, { timeoutMs: 5000 }));
+      };
+      await ReaderStartupTrace.measure('startup.host-capabilities', (): Promise<ReaderCoreResultEvent> =>
+        runtime.request('runtime.setHostCapabilities', hostCapabilities, { timeoutMs: 5000 }));
       // Build identity and the Host migration marker are independent reads.
       // Settle them together before the optional restore barrier.
       const startupReads = await Promise.all([
@@ -805,6 +810,10 @@ export class ReaderRuntimeOwner {
         }
       }
       const buildIdentity = this.requireCoreBuildIdentity(coreInfo.data['buildIdentity']);
+      if (this.supportsCoreCapability('host.http.timeout.v1')) {
+        hostCapabilities['extensions'] = ['http.execute.timeoutMs.v1'];
+        await runtime.request('runtime.setHostCapabilities', hostCapabilities, { timeoutMs: 5000 });
+      }
       hilog.info(LOG_DOMAIN, 'Reader', 'Core build identity: %{public}s', JSON.stringify(buildIdentity));
       if (startupReads[1]) {
         await ReaderStartupTrace.measure('startup.legacy-restore', (): Promise<ReaderCoreResultEvent> =>

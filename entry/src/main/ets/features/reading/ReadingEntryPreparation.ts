@@ -24,6 +24,7 @@ export interface ReadingEntrySnapshot {
   /** True means toc contains only the entry window, never a complete catalog. */
   catalogPending?: boolean;
   navigation?: ReadingEntryNavigation;
+  resumeOnly?: boolean;
   requestedScalar?: number;
   progress: LocalReadingProgressState;
   chapter: ReadingSessionChapter;
@@ -646,12 +647,12 @@ export class ReadingEntryPreparation {
       const navigation = snapshot.navigation;
       const toc: LocalReadingToc = { bookId: seed.bookId, entries: navigation === undefined ?
         [{ index: snapshot.chapter.chapterIndex, title: snapshot.chapter.chapterTitle,
-          downloadState: 'unknown', navigable: true }] :
+          downloadState: 'unknown', navigable: snapshot.resumeOnly !== true }] :
         [...navigation.before, navigation.current, ...navigation.after] };
       // The work cancellation closure ends on pause/take. Retained data uses
       // the mutation proof instead; it must survive a foreground handoff.
       return { sourceId: seed.sourceId, bookId: seed.bookId, gateway, toc,
-        progress: snapshot.progress, chapter: snapshot.chapter, navigation, requestedScalar: snapshot.requestedScalar,
+        progress: snapshot.progress, chapter: snapshot.chapter, navigation, resumeOnly: snapshot.resumeOnly, requestedScalar: snapshot.requestedScalar,
         catalogPending: true, isCurrent: valid };
     }
     if (seed.sourceId !== 'local') {

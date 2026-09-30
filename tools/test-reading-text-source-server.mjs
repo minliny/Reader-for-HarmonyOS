@@ -1,4 +1,9 @@
 import http from 'node:http';
+import { isIP } from 'node:net';
+import { readFileSync } from 'node:fs';
+const directoryFixture = JSON.parse(readFileSync(new URL('./fixtures/reading-directory-volume.json', import.meta.url), 'utf8'));
+const listenAddress = process.argv.find((value, index) => index > 0 && process.argv[index - 1] === '--listen') ?? '127.0.0.1';
+if (!isIP(listenAddress)) throw new Error('--listen requires an explicit IP address');
 
 const port = Number.parseInt(process.argv[2] ?? '18084', 10);
 const baseIp = process.argv.find((value, index) => index > 0 && process.argv[index - 1] === '--base-ip')
@@ -8,10 +13,14 @@ const slowMs = Number.parseInt(
     ?? '25000',
   10,
 );
-const base = `http://${baseIp}:${port}`;
+let base = `http://${baseIp}:${port}`;
+const pathCounts = new Map();
+let omittedPathCount = 0;
 let online = true;
 const evidence = {
   requests: 0,
+  directoryVolumeRequests: 0,
+  directoryChapterRequests: 0,
   searches: 0,
   sourceADetailLoads: 0,
   sourceBDetailLoads: 0,
@@ -24,6 +33,7 @@ const evidence = {
 
 function resetEvidence() {
   online = true;
+  pathCounts.clear(); omittedPathCount = 0;
   for (const key of Object.keys(evidence)) evidence[key] = 0;
 }
 
@@ -76,8 +86,8 @@ const server = http.createServer((request, response) => {
     send(response, 200, 'reset', 'text/plain; charset=utf-8');
     return;
   }
-  if (requestUrl.pathname === '/status') {
-    send(response, 200, JSON.stringify({ online, ...evidence }), 'application/json; charset=utf-8');
+  if (requestUrl.pathname === '/status' || requestUrl.pathname === '/export-evidence.json') {
+    send(response, 200, JSON.stringify({ online, ...evidence, pathCounts: Object.fromEntries(pathCounts), omittedPathCount }), 'application/json; charset=utf-8');
     return;
   }
   if (requestUrl.pathname === '/mode') {
@@ -93,7 +103,20 @@ const server = http.createServer((request, response) => {
     return;
   }
 
+  if (requestUrl.pathname === '/reading-directory-sources.json') {
+    const grouped = source('directory');
+    grouped.bookSourceUrl = `${base}#reading-directory-volume`;
+    grouped.bookSourceName = directoryFixture.title;
+    grouped.searchUrl = `${base}/directory/search?key={{key}}`;
+    grouped.ruleToc.isVolume = 'span.volume@text';
+    send(response, 200, JSON.stringify([grouped], null, 2), 'application/json; charset=utf-8',
+      { 'Content-Disposition': 'attachment; filename="reading-directory-sources.json"' });
+    return;
+  }
   evidence.requests += 1;
+  const countKey = `${request.method} ${requestUrl.pathname}`;
+  if (pathCounts.has(countKey) || pathCounts.size < 256) pathCounts.set(countKey, (pathCounts.get(countKey) ?? 0) + 1);
+  else omittedPathCount += 1;
   process.stdout.write(`${JSON.stringify({ method: request.method, path: requestUrl.pathname,
     source: variantOf(request), online })}\n`);
   if (!online) {
@@ -102,6 +125,21 @@ const server = http.createServer((request, response) => {
     return;
   }
 
+  if (requestUrl.pathname === '/directory/search') {
+    send(response, 200, `<ul><li class="book"><span class="name">${directoryFixture.title}</span><span class="author">Reader</span><a class="detail" href="/directory/book">详情</a></li></ul>`); return;
+  }
+  if (requestUrl.pathname === '/directory/book') {
+    send(response, 200, `<h1>${directoryFixture.title}</h1><a class="toc" href="/directory/toc">目录</a>`); return;
+  }
+  if (requestUrl.pathname === '/directory/toc') { send(response, 200, directoryFixture.tocHtml); return; }
+  if (/^\/directory\/volume\/[12]$/.test(requestUrl.pathname)) {
+    evidence.directoryVolumeRequests += 1;
+    send(response, 409, 'DIRECTORY_GROUP_MUST_NOT_FETCH_BODY', 'text/plain; charset=utf-8'); return;
+  }
+  if (/^\/directory\/chapter\/[12]$/.test(requestUrl.pathname)) {
+    evidence.directoryChapterRequests += 1;
+    send(response, 200, body('a', `分组真实章节 ${requestUrl.pathname.endsWith('/1') ? '一' : '二'}`)); return;
+  }
   const variant = variantOf(request);
   if (requestUrl.pathname === '/text/search') {
     evidence.searches += 1;
@@ -164,6 +202,7 @@ const server = http.createServer((request, response) => {
   send(response, 404, 'not found', 'text/plain; charset=utf-8');
 });
 
-server.listen(port, '127.0.0.1', () => {
-  process.stdout.write(`reading-text-source-server ready ${base}\n`);
+server.listen(port, listenAddress, () => {
+  base = `http://${baseIp.includes(':') ? `[${baseIp}]` : baseIp}:${server.address().port}`;
+  process.stdout.write(`reading-text-source-server ready ${base} listen=${listenAddress}\n`);
 });

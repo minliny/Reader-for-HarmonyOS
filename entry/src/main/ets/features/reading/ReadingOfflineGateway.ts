@@ -110,8 +110,9 @@ export class ReadingOfflineGateway {
     const readableIndexes = new Set<number>();
     for (let position = 0; position < session.entries.length; position += 1) {
       const tocEntry = session.entries[position];
-      if (tocEntry.url.trim().length === 0) {
-        entries.push({ index: tocEntry.index, title: tocEntry.title, downloadState: 'unknown', navigable: false });
+      if (tocEntry.navigable === false || tocEntry.url.trim().length === 0) {
+        entries.push({ index: tocEntry.index, title: tocEntry.title,
+          ...(tocEntry.level === undefined ? {} : { level: tocEntry.level }), downloadState: 'unknown', navigable: false });
         continue;
       }
       readableIndexes.add(tocEntry.index);
@@ -124,7 +125,8 @@ export class ReadingOfflineGateway {
         // manifest capability, images have not been proven offline-safe.
         state = 'cached';
       }
-      entries.push({ index: tocEntry.index, title: tocEntry.title, downloadState: state, navigable: true });
+      entries.push({ index: tocEntry.index, title: tocEntry.title,
+        ...(tocEntry.level === undefined ? {} : { level: tocEntry.level }), downloadState: state, navigable: true });
     }
     await this.forEachConcurrent(manifestChecks, READER_OFFLINE_MANIFEST_CONCURRENCY,
       async (position: number): Promise<void> => {
@@ -244,7 +246,7 @@ export class ReadingOfflineGateway {
     isCurrent?: OfflineRequestGuard,
     onProgress?: (progress: ReadingOfflineBookProgress) => void,
   ): Promise<LocalReadingTocEntry[]> {
-    const totalChapters = session.entries.filter(entry => entry.url.trim().length > 0).length;
+    const totalChapters = session.entries.filter(entry => entry.navigable !== false && entry.url.trim().length > 0).length;
     if (totalChapters === 0) {
       return this.loadProjection(session, isCurrent);
     }
@@ -259,7 +261,7 @@ export class ReadingOfflineGateway {
       const result = await this.prefetchRangeResult(session, startInclusive, endExclusive, isCurrent, proofs);
       projection = result.entries;
       this.assertCurrent(isCurrent);
-      processedChapters += session.entries.slice(startInclusive, endExclusive).filter(entry => entry.url.trim().length > 0).length;
+      processedChapters += session.entries.slice(startInclusive, endExclusive).filter(entry => entry.navigable !== false && entry.url.trim().length > 0).length;
       onProgress?.({
         ...result,
         processedChapters,
@@ -325,7 +327,7 @@ export class ReadingOfflineGateway {
     const projectionSession: RemoteReadingSession = projectWindowOnly ? {
       ...session, entries: session.entries.slice(startInclusive, endExclusive), preparedChapter: undefined,
     } : session;
-    if (!session.entries.some(entry => entry.index >= startInclusive && entry.index < endExclusive && entry.url.trim().length > 0)) {
+    if (!session.entries.some(entry => entry.index >= startInclusive && entry.index < endExclusive && entry.navigable !== false && entry.url.trim().length > 0)) {
       return this.loadProjectionResult(projectionSession, isCurrent, proofs);
     }
     const result = await this.runtime.request('cache.book.prefetch', {
@@ -545,7 +547,7 @@ export class ReadingOfflineGateway {
       const chapterIndex = this.requireNonNegativeInteger(raw['chapterIndex'], 'chapterIndex');
       const token = raw['token'];
       if (chapterIndex < startInclusive || chapterIndex >= endExclusive ||
-        !session.entries.some(entry => entry.index === chapterIndex && entry.url.trim().length > 0) ||
+        !session.entries.some(entry => entry.index === chapterIndex && entry.navigable !== false && entry.url.trim().length > 0) ||
         seenIndexes.has(chapterIndex) || typeof token !== 'string' || token.trim().length === 0) {
         throw new Error('cache.book.prefetch returned an invalid materialization lease');
       }

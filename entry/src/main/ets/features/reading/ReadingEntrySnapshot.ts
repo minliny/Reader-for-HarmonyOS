@@ -5,7 +5,7 @@ import { readingChapterLayoutMap, sliceReadingChapterText, type ReadingDocumentR
 import type { ReadingSessionChapter } from './ReadingChapterWindow';
 import type { LocalReadingProgressState, LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import { materializeReadingDocument, materializePreparedReadingDocument, type MaterializedReadingDocument } from './ReadingDocumentProjection';
-import { captureRemotePositionContext, encodeRemotePositionContext, decodeRemotePositionMigration, decodeRemotePositionScope, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
+import { appendReadingSelectionContext, captureRemotePositionContext, encodeRemotePositionContext, decodeRemotePositionMigration, decodeRemotePositionScope, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 
 export type ReadingEntryNavigationItem = LocalReadingTocEntry & { position: number; readablePosition?: number };
 export type ReadingEntryNavigation = {
@@ -14,6 +14,8 @@ export type ReadingEntryNavigation = {
 };
 export type ReadingEntrySnapshot = {
   chapter: ReadingSessionChapter; progress: LocalReadingProgressState;
+  /** Core proved only the durable current cached position, never a new target. */
+  resumeOnly?: boolean;
   navigation?: ReadingEntryNavigation;
   requestedScalar?: number;
   isCurrent: () => boolean;
@@ -33,7 +35,7 @@ export async function readReadingEntrySnapshot(runtime: ReadingGatewayRuntime, s
   if (windowRequested) params['windowScalarLimit'] = windowScalarLimit as number;
   if (chapterIndex !== undefined) params['chapterIndex'] = chapterIndex;
   const context = captureRemotePositionContext(positionContext);
-  if (context !== undefined) params['positionContext'] = encodeRemotePositionContext(context);
+  appendReadingSelectionContext(params, context);
   const result = await runtime.request('reading.entry.snapshot', params, { shouldCancel: (): boolean => !current() });
   if (!current()) throw new Error('reading entry snapshot was cancelled');
   const data = result.data;
@@ -75,7 +77,8 @@ export function readPreparedReadingEntrySnapshot(runtime: ReadingGatewayRuntime,
   const params: JsonObject = { sourceId, bookId, windowScalarLimit: limit };
   if (chapterIndex !== undefined) params['chapterIndex'] = chapterIndex;
   const context = captureRemotePositionContext(positionContext);
-  if (context !== undefined) params['positionContext'] = encodeRemotePositionContext(context);
+  if (context?.directoryTargetProof !== undefined) return undefined;
+  appendReadingSelectionContext(params, context);
   const data = runtime.readPreparedEntry(params);
   if (!current()) return undefined;
   if (data['sourceId'] !== sourceId || data['bookId'] !== bookId) throw new Error('prepared entry identity mismatch');
@@ -84,7 +87,7 @@ export function readPreparedReadingEntrySnapshot(runtime: ReadingGatewayRuntime,
   if (data['sourceCorrectionRequired'] === true) return undefined;
   if (data['kind'] === 'unavailable') {
     if (!['storageUnsupported', 'storageBusy', 'runtimeClosed', 'catalogMissing', 'documentMissing',
-      'sourceSwitchPending', 'positionUnresolved', 'resourceLimit', 'corruptDocument'].includes(string(data, 'reason')))
+      'sourceSwitchPending', 'positionUnresolved', 'resourceLimit', 'corruptDocument', 'directoryNodeNotReadable'].includes(string(data, 'reason')))
       throw new Error('unknown prepared entry outcome');
     return undefined;
   }
@@ -99,7 +102,7 @@ function decodeEntrySnapshot(data: JsonObject, sourceId: string, bookId: string,
   materialized?: MaterializedReadingDocument): ReadingEntrySnapshot | undefined {
   if (data['sourceId'] !== sourceId || data['bookId'] !== bookId) throw new Error('reading entry identity mismatch');
   if (data['kind'] === 'missing') {
-    if (!['catalogMissing', 'contentMissing', 'sourceSwitchPending', 'leadingContentEmpty'].includes(string(data, 'reason'))) throw new Error('unknown reading entry miss');
+    if (!['catalogMissing', 'contentMissing', 'sourceSwitchPending', 'leadingContentEmpty', 'directoryNodeNotReadable'].includes(string(data, 'reason'))) throw new Error('unknown reading entry miss');
     return undefined;
   }
   if (data['kind'] !== 'ready') throw new Error('invalid reading entry result');
@@ -128,6 +131,7 @@ function decodeEntrySnapshot(data: JsonObject, sourceId: string, bookId: string,
   const document = materialized ?? materializePreparedReadingDocument(data, documentRange?.startScalar ?? 0, contentVersion, documentRange);
   if (!current()) throw new Error('reading entry snapshot was cancelled');
   const chapter: ReadingSessionChapter = { sourceId, bookId, chapterIndex: index,
+    ...(context?.directoryTargetProof === undefined ? {} : { directoryTargetProof: context.directoryTargetProof }),
     chapterTitle: string(data, 'chapterTitle'), chapterUrl: string(data, 'baseUrl') || undefined,
     content: document.content, documentRange: documentRange !== undefined &&
       (documentRange.startScalar !== 0 || documentRange.endScalar !== documentRange.totalScalars) ? documentRange : undefined,
@@ -172,7 +176,12 @@ function decodeEntrySnapshot(data: JsonObject, sourceId: string, bookId: string,
     }
     if (navigation.current.index !== index || navigation.revision.length === 0) throw new Error('reading navigation identity mismatch');
   }
-  return { chapter, progress, navigation, requestedScalar: windowAnchor, isCurrent: current };
+  if (data['resumeOnly'] !== undefined && typeof data['resumeOnly'] !== 'boolean') throw new Error('invalid entry resume permission');
+  const resumeOnly = data['resumeOnly'] === true;
+  if (resumeOnly && (chapterIndex !== undefined || context?.directoryTargetProof !== undefined ||
+    progress.kind !== 'restored' || progress.progress.chapterIndex !== index ||
+    navigation?.current.navigable === true)) throw new Error('invalid entry resume proof');
+  return { chapter, progress, navigation, resumeOnly, requestedScalar: windowAnchor, isCurrent: current };
 }
 function navigationItem(value: unknown): ReadingEntryNavigationItem {
   const raw = object(value);

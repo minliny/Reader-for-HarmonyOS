@@ -1,6 +1,5 @@
 import { readerAppColor } from './ReaderThemeRegistry';
 import {
-  TOK_INK,
   TOK_SPACE_CONTROL_INLINE,
 } from './ReaderTokens';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
@@ -20,8 +19,8 @@ export struct PageBackBar {
   title: string = '';
   /** 默认 `search_back`;详情页等可传其他返回图标。 */
   backIcon?: Resource;
-  /** 标题颜色,默认 ink #1F1B17;个别页(Sync)用更深 #1A1612。 */
-  titleColor: string = readerAppColor('TOK_INK', this.appThemeScheme);
+  /** 可选父页面颜色；默认颜色在渲染时读取当前主题，不能冻结在构造阶段。 */
+  @Prop titleColor: string = '';
   onBack: () => void = (): void => {};
   /** 可选尾部槽 (如 SourceManagement 的 44×44 more 钮); 未传时不渲染。 */
   @BuilderParam trailing?: () => void;
@@ -43,7 +42,7 @@ export struct PageBackBar {
         .fontWeight(TYPE_PAGE_TITLE.fontWeight)
         .fontSize(TYPE_PAGE_TITLE.fontSizeFp)
         .lineHeight(TYPE_PAGE_TITLE.lineHeightFp as number)
-        .fontColor(this.titleColor)
+        .fontColor(this.titleColor.length > 0 ? this.titleColor : readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .layoutWeight(1);

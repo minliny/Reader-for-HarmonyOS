@@ -1,19 +1,32 @@
+import { FrameCallback } from '@kit.ArkUI';
+import { ReaderDirectoryTrace } from './ReaderDirectoryTrace';
+import { readerAppColor } from '../common/ReaderThemeRegistry';
+import type { JsonObject } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
-import { ReaderDirectoryNavigationGateway, openReaderDirectoryNavigation,
+import { ReaderDirectoryNavigationGateway, readerDirectoryScopeKey, openReaderDirectoryNavigation,
   readerDirectoryNoteMissingNavigation, readerDirectoryToggleCollapsed,
   type ReaderDirectoryNavigationNode, type ReaderDirectoryNavigationReady,
   type ReaderDirectoryNavigationPreparedPage } from './ReaderDirectoryNavigation';
-import { ReaderDirectoryNavigationList } from './ReaderDirectoryNavigationList';
+import { ReaderDirectoryNavigationList, cacheReaderDirectoryNavigationPage } from './ReaderDirectoryNavigationList';
 import { readerDirectoryObserveScrollIntent, readerDirectoryViewportAnchor } from './ReaderDirectoryViewport';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 
+class ReaderDirectoryTraceFrame extends FrameCallback {
+  private action: () => void;
+  constructor(action: () => void) { super(); this.action = action; }
+  onFrame(_time: number): void { this.action(); }
+  onIdle(_remaining: number): void {}
+}
+
 /** A directory opening is admitted once. If navigation is absent or an index
  * is not ready, the supplied chapter list stays visible for this opening. */
 @Component
 export struct ReaderDirectoryNavigationSurface {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop @Watch('onIdentityChanged') bookId: string = '';
+  @Prop @Watch('onIdentityChanged') sourceId: string = 'local';
   @Prop @Watch('onViewInputsChanged') query: string = '';
   @Prop @Watch('onViewInputsChanged') ascending: boolean = true;
   @Prop @Watch('onViewInputsChanged') currentChapterIndex: number = -1;
@@ -25,14 +38,16 @@ export struct ReaderDirectoryNavigationSurface {
   @Prop edgeEffectMode: EdgeEffect = EdgeEffect.None;
   @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
   @Prop chapterEntries: LocalReadingTocEntry[] = [];
+  @Prop chapterDownloadEnabled: boolean = false;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   scroller: Scroller | undefined = undefined;
-  onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope) => void =
-    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope: RemoteReadingPositionScope): void => {};
+  onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: JsonObject): void => {};
   onUserScrollIntent: () => void = (): void => {};
   onFirstLayout: () => void = (): void => {};
   onTreeStateChange: (active: boolean) => void = (_active: boolean): void => {};
   onDeleteBookmarks: (times: number[]) => void = (_times: number[]): void => {};
+  onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
   @BuilderParam fallbackBuilder: () => void;
@@ -45,6 +60,7 @@ export struct ReaderDirectoryNavigationSurface {
   private pendingRefresh: boolean = false;
   private pendingQueryRefresh: boolean = false;
   private queryTimer: number = -1;
+  private queryTrace: ReaderDirectoryTrace | undefined = undefined;
   private lastQuery: string = '';
   private lastAscending: boolean = true;
   private lastChapterIndex: number = -1;
@@ -52,7 +68,7 @@ export struct ReaderDirectoryNavigationSurface {
 
   aboutToAppear(): void {
     this.mounted = true;
-    this.scrollIntentUnsubscribe = readerDirectoryObserveScrollIntent(this.bookId,
+    this.scrollIntentUnsubscribe = readerDirectoryObserveScrollIntent(readerDirectoryScopeKey(this.sourceId, this.bookId),
       (): void => this.onProgrammaticScrollIntent());
     this.lastQuery = this.query;
     this.lastAscending = this.ascending;
@@ -81,7 +97,7 @@ export struct ReaderDirectoryNavigationSurface {
     this.pendingRefresh = false;
     this.pendingQueryRefresh = false;
     this.scrollIntentUnsubscribe?.();
-    this.scrollIntentUnsubscribe = readerDirectoryObserveScrollIntent(this.bookId,
+    this.scrollIntentUnsubscribe = readerDirectoryObserveScrollIntent(readerDirectoryScopeKey(this.sourceId, this.bookId),
       (): void => this.onProgrammaticScrollIntent());
     this.lastQuery = this.query;
     this.lastAscending = this.ascending;
@@ -106,7 +122,7 @@ export struct ReaderDirectoryNavigationSurface {
       return;
     }
     if (queryChanged && !otherChanged) this.scheduleQueryOpen();
-    else this.openTree(this.view === undefined);
+    else this.openTree(this.view === undefined, 'sort-or-position');
   }
 
   private onInteractionChanged(): void {
@@ -137,20 +153,28 @@ export struct ReaderDirectoryNavigationSurface {
     if (this.queryTimer < 0) return;
     clearTimeout(this.queryTimer);
     this.queryTimer = -1;
+    this.queryTrace?.step('cancelled', 'cancelled');
+    this.queryTrace = undefined;
   }
 
   private scheduleQueryOpen(): void {
     const generation = this.generation;
     const bookId = this.bookId;
+    const trace = new ReaderDirectoryTrace('search');
+    this.queryTrace = trace;
     this.queryTimer = setTimeout((): void => {
       this.queryTimer = -1;
-      if (!this.mounted || this.settledFlat || this.generation !== generation || this.bookId !== bookId) return;
+      this.queryTrace = undefined;
+      if (!this.mounted || this.settledFlat || this.generation !== generation || this.bookId !== bookId) {
+        trace.step('discarded', 'stale');
+        return;
+      }
       if (!this.interactionEnabled) {
         this.pendingRefresh = true;
         this.pendingQueryRefresh = true;
         return;
       }
-      this.openTree(this.view === undefined);
+      this.openTree(this.view === undefined, 'search', trace);
     }, 150);
   }
 
@@ -196,7 +220,9 @@ export struct ReaderDirectoryNavigationSurface {
     if (ready.nodes.length !== Math.min(pageSize, ready.visibleTotal))
       throw new Error('directory first page is incomplete');
     if (ready.visibleTotal === 0) return [];
-    const anchor = readerDirectoryViewportAnchor(bookId);
+    cacheReaderDirectoryNavigationPage(ready, 0, { viewId: ready.viewId, visibleTotal: ready.visibleTotal, nodes: ready.nodes, nextOffset: ready.nextOffset });
+    ready.nodes = [];
+    const anchor = readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, bookId));
     const sameRevision = anchor?.navigationRevision === ready.navigationRevision;
     const target = sameRevision && ready.anchorVisibleIndex !== undefined ? ready.anchorVisibleIndex :
       (ready.currentVisibleIndex ?? 0);
@@ -219,23 +245,35 @@ export struct ReaderDirectoryNavigationSurface {
       if (!isCurrent() || page.viewId !== ready.viewId || page.visibleTotal !== ready.visibleTotal ||
         page.nodes.length !== Math.min(pageSize, ready.visibleTotal - offset))
         throw new Error('directory prepared page is stale or incomplete');
-      return { offset, page };
+      return { offset, page: cacheReaderDirectoryNavigationPage(ready, offset, page) };
     }));
   }
 
-  private openTree(first: boolean): void {
+  private openTree(first: boolean, reason: string = 'open', pendingTrace?: ReaderDirectoryTrace): void {
     const gateway = this.gateway;
     const bookId = this.bookId;
     if (gateway === undefined || bookId.length === 0) return;
     const generation = ++this.generation;
+    if (!this.interactionEnabled) {
+      // A Surface may mount inside the initial Quick/Full transition. Keep
+      // its ready flat rows visible and admit the tree at the motion endpoint.
+      // This is not a missing-navigation or user-interaction flat decision.
+      this.openingGeneration = -1;
+      this.pendingRefresh = true;
+      this.pendingQueryRefresh = false;
+      pendingTrace?.step('deferred', 'motion');
+      return;
+    }
+    const trace = pendingTrace ?? new ReaderDirectoryTrace(reason);
     this.openingGeneration = generation;
     const query = this.query, descending = !this.ascending;
-    const anchorNodeId = readerDirectoryViewportAnchor(bookId)?.nodeId;
+    const anchorNodeId = readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, bookId))?.nodeId;
     const chapterIndex = this.currentChapterIndex >= 0 ? this.currentChapterIndex : undefined;
-    void openReaderDirectoryNavigation(gateway, { bookId, query, descending, chapterIndex, anchorNodeId, limit: 256 },
+    void openReaderDirectoryNavigation(gateway, { sourceId: this.sourceId, bookId, query, descending, chapterIndex, anchorNodeId, limit: 256 },
       (): boolean => this.mounted && generation === this.generation && this.bookId === bookId,
-      (reason: string): void => readerDirectoryNoteMissingNavigation(bookId, reason))
+      (reason: string): void => { if (this.sourceId === 'local') readerDirectoryNoteMissingNavigation(bookId, reason); })
       .then(async (ready: ReaderDirectoryNavigationReady | undefined): Promise<void> => {
+        trace.step('response', ready === undefined ? 'unavailable' : 'ready');
         if (!this.mounted || generation !== this.generation || this.bookId !== bookId) return;
         if (ready === undefined) {
           this.openingGeneration = -1;
@@ -246,22 +284,42 @@ export struct ReaderDirectoryNavigationSurface {
           }
           return;
         }
-        if (this.settledFlat || (first && (this.interacted || !this.interactionEnabled))) {
+        if (this.settledFlat || (first && this.interacted)) {
           this.openingGeneration = -1;
           this.settledFlat = true;
+          return;
+        }
+        if (!this.interactionEnabled) {
+          this.openingGeneration = -1;
+          this.pendingRefresh = true;
+          this.pendingQueryRefresh = false;
           return;
         }
         ready.preparedPages = await this.prepareVisiblePages(gateway, bookId, ready, generation);
         if (!this.mounted || generation !== this.generation || this.bookId !== bookId) return;
         this.openingGeneration = -1;
-        if (this.settledFlat || (first && (this.interacted || !this.interactionEnabled))) {
+        if (this.settledFlat || (first && this.interacted)) {
           this.settledFlat = true;
+          return;
+        }
+        if (!this.interactionEnabled) {
+          this.pendingRefresh = true;
+          this.pendingQueryRefresh = false;
           return;
         }
         this.view = ready;
         this.onTreeStateChange(true);
+        trace.step('published');
+        if (trace.isEnabled()) try {
+          this.getUIContext().postFrameCallback(new ReaderDirectoryTraceFrame((): void => {
+            trace.step('frame-callback', this.mounted && generation === this.generation && this.view?.viewId === ready.viewId
+              ? 'ready' : 'stale');
+          }));
+        } catch (_error) { trace.step('frame-callback', 'unavailable'); }
       }).catch((_error: Error): void => {
-        if (!this.mounted || generation !== this.generation || this.bookId !== bookId) return;
+        const current = this.mounted && generation === this.generation && this.bookId === bookId;
+        trace.step('response', current ? 'failed' : 'cancelled');
+        if (!current) return;
         this.openingGeneration = -1;
         if (first) this.settledFlat = true;
       });
@@ -273,8 +331,8 @@ export struct ReaderDirectoryNavigationSurface {
     this.cancelQueryTimer();
     this.pendingRefresh = false;
     this.pendingQueryRefresh = false;
-    readerDirectoryToggleCollapsed(this.bookId, view.navigationRevision, node.nodeId);
-    this.openTree(false);
+    readerDirectoryToggleCollapsed(readerDirectoryScopeKey(this.sourceId, this.bookId), view.navigationRevision, node.nodeId);
+    this.openTree(false, 'fold');
   }
 
   private invalidate(): void {
@@ -289,24 +347,34 @@ export struct ReaderDirectoryNavigationSurface {
     if (this.view === undefined) {
       this.fallbackBuilder();
     } else {
-      ReaderDirectoryNavigationList({
-        view: this.view, bookId: this.bookId, rowHeight: this.rowHeight,
-        listPaddingX: this.listPaddingX, listPaddingY: this.listPaddingY,
-        edgeEffectMode: this.edgeEffectMode, interactionEnabled: this.interactionEnabled,
-        chapterEntries: this.chapterEntries,
-        chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
-        scroller: this.scroller,
-        onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope): void =>
-          this.onSelectTarget(chapterIndex, chapterOffsetScalar, positionScope),
-        onToggleNode: (node: ReaderDirectoryNavigationNode): void => this.toggle(node),
-        onUserScrollIntent: (): void => this.onTreeUserScrollIntent(),
-        onScrollSettled: (): void => this.onTreeScrollSettled(),
-        onFirstLayout: (): void => this.onFirstLayout(),
-        onInvalidated: (): void => this.invalidate(),
-        onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
-        onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
-          this.onCreateChapterStartBookmark(request),
-      });
+      Stack({ alignContent: Alignment.Center }) {
+        ReaderDirectoryNavigationList({
+          view: this.view, sourceId: this.sourceId, bookId: this.bookId, rowHeight: this.rowHeight,
+          listPaddingX: this.listPaddingX, listPaddingY: this.listPaddingY,
+          edgeEffectMode: this.edgeEffectMode, interactionEnabled: this.interactionEnabled,
+          chapterEntries: this.chapterEntries,
+          chapterDownloadEnabled: this.chapterDownloadEnabled,
+          chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+          scroller: this.scroller,
+          onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+            this.onSelectTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
+          onToggleNode: (node: ReaderDirectoryNavigationNode): void => this.toggle(node),
+          onUserScrollIntent: (): void => this.onTreeUserScrollIntent(),
+          onScrollSettled: (): void => this.onTreeScrollSettled(),
+          onFirstLayout: (): void => this.onFirstLayout(),
+          onInvalidated: (): void => this.invalidate(),
+          onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
+          onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
+          onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
+            this.onCreateChapterStartBookmark(request),
+        });
+        if (this.view.visibleTotal === 0) {
+          Text('没有匹配的目录项')
+            .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
+            .fontSize(12)
+            .hitTestBehavior(HitTestMode.None);
+        }
+      }.width('100%').height('100%');
     }
   }
 }

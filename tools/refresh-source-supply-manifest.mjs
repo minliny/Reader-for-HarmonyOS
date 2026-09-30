@@ -8,6 +8,7 @@ import { spawnSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { applyReadingAssistantMetadataCorrection } from './reading-assistant-source-correction.mjs';
+import { applyQidianDirectoryCorrection } from './qidian-directory-source-correction.mjs';
 import { applyPopofreeQuoteCorrection } from './popofree-source-correction.mjs';
 import {
   BUILTIN_VERSION,
@@ -291,6 +292,7 @@ const ordered = [
 const sources = ordered.map(record => record.source);
 applyReadingAssistantMetadataCorrection(sources);
 applyPopofreeQuoteCorrection(sources);
+applyQidianDirectoryCorrection(sources);
 
 // Keep the portable collection comfortably below the product's bounded JSON
 // import limit. The payload remains ordinary JSON and can be pretty-printed by

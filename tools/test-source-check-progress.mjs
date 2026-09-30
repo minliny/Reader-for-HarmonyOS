@@ -103,6 +103,7 @@ function controlledOwner(sources) {
   };
   return {
     state,
+    supportsCoreCapability: capability => capability === 'source.check.mode.v1',
     request(method, params, options) {
       if (method === 'source.list') {
         return Promise.resolve({ data: { sources: sources.map(rawSource) } });

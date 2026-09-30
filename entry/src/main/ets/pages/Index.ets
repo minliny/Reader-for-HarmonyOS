@@ -1,3 +1,4 @@
+import { readerDirectoryObserveMissingNavigation, readerDirectoryTakeMissingNavigation, backfillRetainedReaderDirectoryNavigation } from '../features/reading/ReaderDirectoryNavigation';
 import type { RemoteReadingPositionScope } from '../features/reading/RemoteReadingPositionMigration';
 import { FrameCallback } from '@kit.ArkUI';
 import { readerAppColor } from '../features/common/ReaderThemeRegistry';
@@ -30,6 +31,7 @@ import {
   type BookshelfRemoveOutcome,
 } from '../features/bookshelf/BookshelfFlowGateway';
 import { BookshelfPage } from '../features/bookshelf/BookshelfPage';
+import { BookRemovalDialog } from '../features/bookshelf/BookRemovalDialog';
 import { BookshelfMultiSelectPage } from '../features/bookshelf/BookshelfMultiSelectPage';
 import { BookshelfManagementPage } from '../features/bookshelf/BookshelfManagementPage';
 import {
@@ -82,6 +84,7 @@ import {
   type RemoteReadingBookSeed,
   type RemoteReadingProgressState,
   type RemoteReadingSession,
+  type RemoteReadingTocEntry,
 } from '../features/reading/RemoteReadingFlowGateway';
 import { ReadingSessionFlowGateway } from '../features/reading/ReadingSessionFlowGateway';
 import { canAppendRemoteReadingCatalog, sameRemoteSessionEvidence, preparedRemoteChapterMatches, preparedRemoteChapterPositionMatches, withPreparedRemoteChapter, copyRemoteReadingSession } from '../features/reading/RemoteReadingEvidence';
@@ -361,7 +364,7 @@ struct Index {
   private shelfEntryTraceStartedAt: number = -1;
   private shelfEntryTraceGeneration: number = -1;
   private startupEntryId: number = 0;
-  private readingReadyGeneration: number = 0;
+  @State private readingReadyGeneration: number = 0;
   private navigationBackfillAttempted: Set<string> = new Set<string>();
   private navigationBackfillObservedKey: string = '';
   private navigationBackfillObserverDisposer: (() => void) | undefined;
@@ -412,6 +415,9 @@ struct Index {
   private remoteCacheNoticeGeneration: number = -1;
   private remoteContentProbeGeneration: number = 0;
   private remoteSessionGeneration: number = 0;
+  private remoteReadableToc: RemoteReadingTocEntry[] | undefined = undefined;
+  private remoteReadableChapterIndexes: number[] = [];
+  private remoteReadableChapterPositions: Map<number, number> = new Map();
   private remoteReadabilityProjectionRevision: number = -1;
   private pendingRemoteDirectoryProjection: (() => void) | undefined = undefined;
   private pendingLocalDirectoryProjection: (() => void) | undefined = undefined;
@@ -493,6 +499,23 @@ struct Index {
   @State private bookshelfAdditionError: string = '';
   private bookshelfAdditionGeneration: number = 0;
   private bookshelfBatchRemovalGeneration: number = 0;
+  @State private bookRemovalMessage: string = '';
+  private bookRemovalDialogOpen: boolean = false;
+  private bookRemovalConfirmAction: (() => void) | undefined = undefined;
+  private bookRemovalDialogController: CustomDialogController = new CustomDialogController({
+    builder: BookRemovalDialog({
+      message: this.bookRemovalMessage,
+      onCancel: (): void => this.dismissBookRemovalDialog(),
+      onConfirm: (): void => this.confirmBookRemovalDialog(),
+    }),
+    alignment: DialogAlignment.Center,
+    customStyle: true,
+    autoCancel: true,
+    cancel: (): void => {
+      this.bookRemovalDialogOpen = false;
+      this.bookRemovalConfirmAction = undefined;
+    },
+  });
   /** Rejects a late shelf read after a newer import/refresh has completed. */
   private bookshelfLoadGeneration: number = 0;
   private bookshelfSourceNameRequest: number = 0;
@@ -603,6 +626,7 @@ struct Index {
   }
 
   aboutToDisappear(): void {
+    this.dismissBookRemovalDialog();
     this.navigationBackfillObserverDisposer?.();
     this.navigationBackfillObserverDisposer = undefined;
     this.navigationBackfillObservedKey = '';
@@ -623,6 +647,10 @@ struct Index {
   }
 
   onBackPress(): boolean {
+    if (this.bookRemovalDialogOpen) {
+      this.dismissBookRemovalDialog();
+      return true;
+    }
     if (this.jsonImportVisible) {
       this.dismissJsonImport();
       return true;
@@ -895,7 +923,7 @@ struct Index {
           onRetry: (): void => this.retrySearch(),
           onManageSources: (): void => this.manageSourcesFromSearch(),
         });
-      } else if (this.route === 'rss') {
+      } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rss') {
         RssPage({
           presentation: this.rssPresentation,
           isTablet: deviceInfo.deviceType === 'tablet',
@@ -910,7 +938,7 @@ struct Index {
           onSettingsRequested: (): void => this.openSettings(),
           onDiscoverRequested: (): void => this.openDiscover(),
         });
-      } else if (this.route === 'rssSubscriptionManagement') {
+      } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssSubscriptionManagement') {
         RssSubscriptionManagementPage({
           items: this.rssSubscriptionManagementItems(),
           isTablet: deviceInfo.deviceType === 'tablet',
@@ -926,7 +954,7 @@ struct Index {
           onRefresh: (id: string): void => this.getRssOrchestrator().refreshSubscription(id),
           onDelete: (id: string): void => this.requestRssSubscriptionDelete(id),
         });
-      } else if (this.route === 'rssSubscriptionEditor') {
+      } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssSubscriptionEditor') {
         RssSubscriptionEditorPage({
           snapshot: this.rssEditorSnapshot,
           onBack: (): void => this.returnToRssSubscriptionManagement(),
@@ -939,7 +967,7 @@ struct Index {
             this.getRssEditorOrchestrator().updateSourceField(field, value),
           onSave: (): void => this.getRssEditorOrchestrator().save(),
         });
-      } else if (this.route === 'rssSourceFeed' && this.selectedRssSubscription !== undefined) {
+      } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssSourceFeed' && this.selectedRssSubscription !== undefined) {
         RssSourceFeedPage({
           subscription: this.selectedRssSubscription,
           items: this.selectedRssItems,
@@ -952,7 +980,7 @@ struct Index {
           onSourceOperations: (): void =>
             this.openRssManagementForSubscription(this.selectedRssSubscription?.subscriptionId),
         });
-      } else if (this.route === 'rssEntryDetail' && this.selectedRssSubscription !== undefined &&
+      } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssEntryDetail' && this.selectedRssSubscription !== undefined &&
         this.selectedRssItem !== undefined) {
         RssEntryDetailPage({
           subscription: this.selectedRssSubscription,
@@ -967,7 +995,7 @@ struct Index {
             this.openRssManagementForSubscription(this.selectedRssSubscription?.subscriptionId),
           onOpenOriginal: (): void => this.onRssOpenOriginalRequested(),
         });
-      } else if (this.route === 'discover') {
+      } else if (isReaderProductSurfaceEnabled('discover') && this.route === 'discover') {
         DiscoverPage({
           presentation: this.discoverPresentation,
           isTablet: deviceInfo.deviceType === 'tablet',
@@ -1057,7 +1085,7 @@ struct Index {
             this.getSourceToolsOrchestrator().updateCheckSelection(mode, depth),
           onDebugSource: (sourceId: string): void => this.getSourceToolsOrchestrator().debugSource(sourceId),
         });
-      } else if (this.route === 'sync') {
+      } else if (isReaderProductSurfaceEnabled('sync') && this.route === 'sync') {
         if (this.syncSnapshotReady) {
           SyncPage({
             snapshot: this.syncSnapshot,
@@ -1133,7 +1161,9 @@ struct Index {
           onExit: (): void => this.onReaderExited(),
           onExitCancelled: (): void => this.cancelReaderExitDestination(),
           onOpenBookInfo: (): void => this.requestReaderBookInfo(),
-          onReadingReady: this.readingReadyCallback(this.detailBook.sourceId, this.detailBook.bookId, this.readingReadyGeneration),
+          readingReadyGeneration: this.readingReadyGeneration,
+          onReadingReady: (chapterIndex: number, sourceId: string, bookId: string, generation: number): void =>
+            this.readingReadyCallback(sourceId, bookId, generation)(chapterIndex),
           onReadingCommitted: (commit: ReadingCommit): void => this.applyReadingCommit(commit),
           onReadingFailure: (sourceId: string, bookId: string, message: string,
             failureKind?: RemoteReadingFailureKind): void =>
@@ -1143,8 +1173,8 @@ struct Index {
           },
           onSelectChapter: (chapterIndex: number): void => this.onDirectoryChapterSelected(chapterIndex),
           onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number,
-            positionScope: RemoteReadingPositionScope): void =>
-            this.onDirectoryNavigationTargetSelected(chapterIndex, chapterOffsetScalar, positionScope),
+            positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+            this.onDirectoryNavigationTargetSelected(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
           onSelectBookmark: (bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void =>
             this.onReaderBookmarkSelected(bookmarkId, chapterIndex, chapterOffset, positionScope),
           onDownloadChapter: (chapterIndex: number): void => this.downloadDirectoryChapter(chapterIndex),
@@ -1288,13 +1318,14 @@ struct Index {
       BookDirectoryPage({
         sourceId: this.detailBook.sourceId,
         bookId: this.detailBook.bookId,
+        bookKind: this.detailBook.kind ?? '',
         entries: this.detailToc,
         catalogMessage: this.detailLoadingMessage,
         chapterStartBookmarkCreationEnabled: true,
         onSelectChapter: (index: number): void => this.onDirectoryChapterSelected(index),
         onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number,
-          positionScope: RemoteReadingPositionScope): void =>
-          this.onDirectoryNavigationTargetSelected(chapterIndex, chapterOffsetScalar, positionScope),
+          positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+          this.onDirectoryNavigationTargetSelected(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
         onDownloadChapter: (index: number): void => this.downloadDirectoryChapter(index),
         onDeleteBookmarks: (times: number[]): void => this.deleteDirectoryBookmarks(times),
         onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
@@ -1557,22 +1588,37 @@ struct Index {
   }
 
   private onSyncSaveConfig(url: string, user: string, pass: string, backupPass: string, path: string): void {
+    if (!isReaderProductSurfaceEnabled('sync')) {
+      return;
+    }
     this.getSyncOrchestrator().saveConfig(url, user, pass, backupPass, path);
   }
 
   private onSyncTestConnection(url: string, user: string, pass: string, path: string): void {
+    if (!isReaderProductSurfaceEnabled('sync')) {
+      return;
+    }
     this.getSyncOrchestrator().testConnection(url, user, pass, path);
   }
 
   private onSyncTriggerBackup(): void {
+    if (!isReaderProductSurfaceEnabled('sync')) {
+      return;
+    }
     this.getSyncOrchestrator().triggerBackup();
   }
 
   private onSyncRestoreLatest(): void {
+    if (!isReaderProductSurfaceEnabled('sync')) {
+      return;
+    }
     this.getSyncOrchestrator().restoreLatest();
   }
 
   private onSyncResolveRestore(overwriteLocal: boolean): void {
+    if (!isReaderProductSurfaceEnabled('sync')) {
+      return;
+    }
     this.getSyncOrchestrator().resolveRestore(overwriteLocal);
   }
 
@@ -1921,6 +1967,9 @@ struct Index {
   }
 
   private refreshRss(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     // The registered Figma boundary keeps RSS as a placeholder-only page.
     // Do not start a real rss.subscription.refresh transaction and then label
     // its stale/cache outcome as a user-visible refresh.
@@ -1928,6 +1977,9 @@ struct Index {
   }
 
   private onRssManage(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     this.nextNavigationGeneration();
     this.selectedRssSubscription = undefined;
     this.selectedRssItems = [];
@@ -1966,6 +2018,9 @@ struct Index {
   }
 
   private onRssManagementViewArticles(subscriptionId: string): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     this.onRssSubscriptionSelected(subscriptionId, 'rssSubscriptionManagement');
   }
 
@@ -1973,6 +2028,9 @@ struct Index {
     subscriptionId: string,
     returnTarget: RssSourceFeedReturnTarget = 'rss',
   ): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     const subscription = this.rssSubscriptions().find(
       (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId,
     );
@@ -1992,12 +2050,18 @@ struct Index {
   }
 
   private onRssSubscriptionAddRequested(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     this.nextNavigationGeneration();
     this.route = 'rssSubscriptionEditor';
     this.getRssEditorOrchestrator().openCreate();
   }
 
   private onRssSubscriptionEditRequested(subscriptionId: string): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     if (!this.rssSubscriptions().some(
       (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId,
     )) {
@@ -2009,6 +2073,9 @@ struct Index {
   }
 
   private finishRssSubscriptionEdit(subscriptionId: string): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     if (this.route !== 'rssSubscriptionEditor') {
       return;
     }
@@ -2019,12 +2086,18 @@ struct Index {
   }
 
   private returnToRssSubscriptionManagement(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     this.nextNavigationGeneration();
     this.route = 'rssSubscriptionManagement';
     this.getRssOrchestrator().open();
   }
 
   private requestRssSubscriptionDelete(subscriptionId: string): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     const subscription = this.rssSubscriptions().find(
       (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId,
     );
@@ -2049,6 +2122,9 @@ struct Index {
   }
 
   private requestRssSourceImport(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     if (this.route !== 'rssSubscriptionManagement') {
       return;
     }
@@ -2069,6 +2145,9 @@ struct Index {
   }
 
   private importRssSources(replaceExisting: boolean, onlineUrl?: string): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     this.getRssOrchestrator().importSources(
       replaceExisting,
       (result: RssSourceImportResult | undefined): void => {
@@ -2082,6 +2161,9 @@ struct Index {
   }
 
   private exportRssSources(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     this.getRssOrchestrator().exportSources(
       (result: RssSourceExportResult): void => {
         if (result.destination !== undefined) {
@@ -2093,6 +2175,9 @@ struct Index {
   }
 
   private showRssOperationResult(title: string, message: string): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     if (this.route !== 'rssSubscriptionManagement') {
       return;
     }
@@ -2108,6 +2193,9 @@ struct Index {
   }
 
   private confirmRssSubscriptionDelete(subscriptionId: string): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     const stillPresent = this.rssSubscriptions().some(
       (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId,
     );
@@ -2118,6 +2206,9 @@ struct Index {
   }
 
   private loadRssSourceItems(generation: number, subscriptionId: string): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     const isCurrent = (): boolean => this.isCurrentRssSourceFeed(generation, subscriptionId);
     this.getRssOrchestrator().loadSourceFeed(
       subscriptionId,
@@ -2131,6 +2222,9 @@ struct Index {
   }
 
   private refreshRssSourceFeed(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     const subscriptionId = this.selectedRssSubscription?.subscriptionId;
     if (subscriptionId === undefined || this.route !== 'rssSourceFeed') {
       return;
@@ -2154,12 +2248,18 @@ struct Index {
   }
 
   private applyRssSourceSnapshot(snapshot: RssSourceSnapshot): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     this.rssPresentation = this.feedPresentation(snapshot.subscriptions, []);
     this.selectedRssSubscription = snapshot.subscription;
     this.selectedRssItems = snapshot.items;
   }
 
   private onRssItemSelected(subscriptionId: string, guid: string): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     const item = this.rssRecentUnread().find(
       (candidate: RssItem): boolean => candidate.subscriptionId === subscriptionId &&
         candidate.guid === guid,
@@ -2173,6 +2273,9 @@ struct Index {
   }
 
   private onRssSourceItemSelected(item: RssItem): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     const selected = this.selectedRssItems.find(
       (candidate: RssItem): boolean => candidate.subscriptionId === item.subscriptionId &&
         candidate.guid === item.guid,
@@ -2183,6 +2286,9 @@ struct Index {
   }
 
   private openRssEntryDetail(item: RssItem, returnTarget: RssDetailReturnTarget): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     const subscription = this.selectedRssSubscription?.subscriptionId === item.subscriptionId
       ? this.selectedRssSubscription
       : this.rssSubscriptions().find(
@@ -2214,6 +2320,9 @@ struct Index {
   }
 
   private onRssEntryFavoriteRequested(favorite: boolean): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     const item = this.selectedRssItem;
     if (item === undefined || this.route !== 'rssEntryDetail' ||
       (this.selectedRssFavoriteState !== 'favorited' &&
@@ -2248,6 +2357,9 @@ struct Index {
   }
 
   private applyRssEntrySnapshot(snapshot: RssEntrySnapshot): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     this.rssPresentation = this.feedPresentation(snapshot.subscriptions, []);
     this.selectedRssSubscription = snapshot.subscription;
     this.selectedRssItems = snapshot.items;
@@ -2256,6 +2368,9 @@ struct Index {
   }
 
   private failRssEntryOperation(action: string, error: Error): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     this.selectedRssFavoriteState = 'unavailable';
     hilog.error(DOMAIN, 'Reader',
       'RSS EntryDetail %{private}s failed; no optimistic state applied: %{private}s',
@@ -2263,6 +2378,9 @@ struct Index {
   }
 
   private returnFromRssEntryDetail(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     if (this.rssDetailReturnTarget === 'rssSourceFeed') {
       this.returnToRssSourceFeed();
       return;
@@ -2271,6 +2389,9 @@ struct Index {
   }
 
   private returnToRssSourceFeed(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     if (this.selectedRssSubscription === undefined) {
       this.returnToRss();
       return;
@@ -2285,6 +2406,9 @@ struct Index {
   }
 
   private returnFromRssSourceFeed(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     if (this.rssSourceFeedReturnTarget === 'rssSubscriptionManagement') {
       const focusedSubscriptionId = this.selectedRssSubscription?.subscriptionId ?? '';
       this.nextNavigationGeneration();
@@ -2303,6 +2427,9 @@ struct Index {
   }
 
   private returnToRss(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     this.nextNavigationGeneration();
     this.selectedRssSubscription = undefined;
     this.selectedRssItems = [];
@@ -2315,6 +2442,9 @@ struct Index {
   }
 
   private openRssManagementForSubscription(subscriptionId: string | undefined): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     if (subscriptionId === undefined || !this.rssSubscriptions().some(
       (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId,
     )) {
@@ -2333,6 +2463,9 @@ struct Index {
   }
 
   private onRssOpenOriginalRequested(): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     if (this.selectedRssItem?.link === undefined ||
       this.selectedRssItem.link.trim().length === 0) {
       hilog.warn(DOMAIN, 'Reader', 'RSS original link intent ignored because the entry has no link');
@@ -2343,6 +2476,9 @@ struct Index {
   }
 
   private onRssModeRequested(mode: RssMode): void {
+    if (!isReaderProductSurfaceEnabled('rss')) {
+      return;
+    }
     if (mode === 'sources') {
       return;
     }
@@ -2454,13 +2590,13 @@ struct Index {
       const owner = ReaderRuntimeOwner.current();
       const projectionRevision = owner.bookAcquisitions().readingProjectionRevision();
       const result = await owner.request('search-book.get', { origin: book.sourceId, bookUrl: book.bookId });
-      const row = result.data['book'] as JsonObject | undefined;
+      const row: JsonObject | undefined = result.data['book'] as JsonObject | undefined;
       if (!current() || row === undefined || row === null) return;
       if (projectionRevision !== owner.bookAcquisitions().readingProjectionRevision()) {
         this.bookProjectionAgain = true;
         return;
       }
-      const facts = row['acquisition'] as JsonObject | undefined;
+      const facts: JsonObject | undefined = row['acquisition'] as JsonObject | undefined;
       if (facts === undefined) return;
       if (facts['stale'] === true) {
         const admitted = this.remoteReadingSession;
@@ -2966,7 +3102,7 @@ struct Index {
         validatedSession.identity.bookId === seed.bookId) {
         this.installRemoteReadingSession(validatedSession);
         this.detailToc = validatedSession.entries.map((entry): LocalReadingTocEntry => ({ index: entry.index,
-          title: entry.title, navigable: entry.url.trim().length > 0, downloadState: 'unknown' }));
+          title: entry.title, level: entry.level, navigable: entry.navigable !== false && entry.url.trim().length > 0, downloadState: 'unknown' }));
       }
       this.openReading(undefined);
       return;
@@ -3022,7 +3158,7 @@ struct Index {
         lastChapter: session.book.lastChapter,
       };
       this.detailToc = session.entries.map((entry): LocalReadingTocEntry => ({ index: entry.index,
-        title: entry.title, navigable: entry.url.trim().length > 0, downloadState: 'unknown' }));
+        title: entry.title, level: entry.level, navigable: entry.navigable !== false && entry.url.trim().length > 0, downloadState: 'unknown' }));
       this.detailLoadingMessage = '';
       this.remoteContentVerdict = 'verifying';
     };
@@ -3091,7 +3227,7 @@ struct Index {
         this.detailToc = session.entries.map((entry): LocalReadingTocEntry => ({
           index: entry.index,
           title: entry.title,
-          navigable: entry.url.trim().length > 0,
+          navigable: entry.navigable !== false && entry.url.trim().length > 0,
           downloadState: 'unknown',
         }));
         this.detailLoadingMessage = '';
@@ -3237,7 +3373,7 @@ struct Index {
         this.detailToc = refreshed.entries.map((entry): LocalReadingTocEntry => ({
           index: entry.index,
           title: entry.title,
-          navigable: entry.url.trim().length > 0,
+          navigable: entry.navigable !== false && entry.url.trim().length > 0,
           downloadState: 'unknown',
         }));
         void this.loadRemoteDirectoryProjection(
@@ -3352,11 +3488,11 @@ struct Index {
       this.showOfflineDownloadFeedback('章节下载正在进行，请在目录查看进度');
       return;
     }
-    if (session === undefined || !session.entries.some(entry => entry.url.trim().length > 0)) {
+    if (session === undefined || !session.entries.some(entry => entry.navigable !== false && entry.url.trim().length > 0)) {
       this.showOfflineDownloadFeedback('当前书籍没有可下载的在线章节');
       return;
     }
-    const total = session.entries.filter(entry => entry.url.trim().length > 0).length;
+    const total = session.entries.filter(entry => entry.navigable !== false && entry.url.trim().length > 0).length;
     const generation = ++this.offlineMutationGeneration;
     const key = `${session.identity.sourceId}\u0000${session.identity.bookId}\u0000all`;
     this.offlineMutationActiveKey = key;
@@ -3649,6 +3785,32 @@ struct Index {
       });
   }
 
+  private openBookRemovalDialog(message: string, action: () => void): void {
+    if (this.bookRemovalDialogOpen) return;
+    const generation = this.navigationGeneration;
+    this.bookRemovalMessage = message;
+    this.bookRemovalConfirmAction = (): void => {
+      if (generation === this.navigationGeneration) action();
+    };
+    this.bookRemovalDialogOpen = true;
+    this.bookRemovalDialogController.open();
+  }
+
+  private dismissBookRemovalDialog(): void {
+    const wasOpen = this.bookRemovalDialogOpen;
+    this.bookRemovalDialogOpen = false;
+    this.bookRemovalConfirmAction = undefined;
+    if (wasOpen) this.bookRemovalDialogController.close();
+  }
+
+  private confirmBookRemovalDialog(): void {
+    if (!this.bookRemovalDialogOpen) return;
+    const action = this.bookRemovalConfirmAction;
+    // Consume the confirmation before dispatch, including repeated taps.
+    this.dismissBookRemovalDialog();
+    action?.();
+  }
+
   private requestRemoveDetailBook(): void {
     const book = this.detailBook;
     if (book === undefined || !this.canRemoveDetailBook(book)) {
@@ -3657,23 +3819,10 @@ struct Index {
     const message = book.sourceId === LOCAL_SOURCE_ID ?
       `确定将“${book.title}”从书架移除吗？应用内解析内容、阅读进度和离线任务将一并删除；系统中的原始文件不受影响。` :
       `确定将“${book.title}”从书架移除吗？书源、阅读进度和已缓存正文不会删除，可再次通过搜索加入书架。`;
-    this.getUIContext().showAlertDialog({
-      title: '移除书架',
-      message,
-      autoCancel: true,
-      primaryButton: {
-        value: '取消',
-        action: (): void => {},
-      },
-      secondaryButton: {
-        value: '移除',
-        fontColor: readerAppColor('app.Index.requestRemoveDetailBook.showAlertDialog.FFB42318', this.appThemeScheme),
-        action: (): void => {
-          if (this.canRemoveDetailBook(book)) {
-            this.removeDetailBook(book);
-          }
-        },
-      },
+    this.openBookRemovalDialog(message, (): void => {
+      if (this.canRemoveDetailBook(book)) {
+        this.removeDetailBook(book);
+      }
     });
   }
 
@@ -3684,23 +3833,10 @@ struct Index {
     const message = book.sourceId === LOCAL_SOURCE_ID ?
       `确定将“${book.title}”从书架移除吗？应用内解析内容、阅读进度和离线任务将一并删除；系统中的原始文件不受影响。` :
       `确定将“${book.title}”从书架移除吗？书源、阅读进度和已缓存正文不会删除，可再次通过搜索加入书架。`;
-    this.getUIContext().showAlertDialog({
-      title: '移除书架',
-      message,
-      autoCancel: true,
-      primaryButton: {
-        value: '取消',
-        action: (): void => {},
-      },
-      secondaryButton: {
-        value: '移除',
-        fontColor: readerAppColor('app.Index.requestRemoveShelfBook.showAlertDialog.FFB42318', this.appThemeScheme),
-        action: (): void => {
-          if (this.canRemoveShelfBook(book)) {
-            this.removeShelfBook(book);
-          }
-        },
-      },
+    this.openBookRemovalDialog(message, (): void => {
+      if (this.canRemoveShelfBook(book)) {
+        this.removeShelfBook(book);
+      }
     });
   }
 
@@ -3713,23 +3849,10 @@ struct Index {
     if (selected.length === 0) {
       return;
     }
-    this.getUIContext().showAlertDialog({
-      title: '移除书架',
-      message: `确定将已选择的 ${selected.length} 本书移出书架吗？本地原始文件不受影响。`,
-      autoCancel: true,
-      primaryButton: {
-        value: '取消',
-        action: (): void => {},
-      },
-      secondaryButton: {
-        value: '移除',
-        fontColor: readerAppColor('app.Index.requestRemoveShelfBooks.showAlertDialog.FFB42318', this.appThemeScheme),
-        action: (): void => {
-          if (this.route === 'bookshelfMultiSelect' && !this.bookshelfBatchRemovalBusy) {
-            this.removeShelfBooks(selected);
-          }
-        },
-      },
+    this.openBookRemovalDialog(`确定将已选择的 ${selected.length} 本书移出书架吗？本地原始文件不受影响。`, (): void => {
+      if (this.route === 'bookshelfMultiSelect' && !this.bookshelfBatchRemovalBusy) {
+        this.removeShelfBooks(selected);
+      }
     });
   }
 
@@ -4056,7 +4179,7 @@ struct Index {
     // until `onChapterCommitted` reports the new chapter.
   }
 
-  private onReaderBookmarkSelected(bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope): void {
+  private onReaderBookmarkSelected(bookmarkId: string, chapterIndex: number, chapterOffset: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void {
     // 书签 tab 的精确锚点回流, 镜像 onDirectoryChapterSelected 的准入与路由语义。
     if (!this.isKnownDetailChapter(chapterIndex)) {
       return;
@@ -4095,22 +4218,19 @@ struct Index {
     }
     this.bookmarkAnchorRequestId += 1;
     this.requestedBookmarkAnchor =
-      new ReaderBookmarkAnchorRequest(this.bookmarkAnchorRequestId, chapterIndex, chapterOffset, positionScope);
+      new ReaderBookmarkAnchorRequest(this.bookmarkAnchorRequestId, chapterIndex, chapterOffset, positionScope, directoryTargetProof);
   }
 
   private onDirectoryNavigationTargetSelected(chapterIndex: number, chapterOffsetScalar: number,
-    positionScope: RemoteReadingPositionScope): void {
-    // Both chapter starts and in-chapter EPUB links carry Core's exact body
-    // and processing versions into the reader's existing scoped anchor path.
-    // Reimport or rule edits after target resolution must not reuse a stale
-    // chapter index or scalar offset.
+    positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void {
     const book = this.detailBook;
-    if (book?.sourceId !== LOCAL_SOURCE_ID ||
-      !Number.isSafeInteger(chapterOffsetScalar) || chapterOffsetScalar < 0 ||
-      positionScope === undefined ||
-      positionScope.sourceId !== LOCAL_SOURCE_ID || positionScope.bookId !== book.bookId ||
-      positionScope.chapterIndex !== chapterIndex) return;
-    this.onReaderBookmarkSelected('', chapterIndex, chapterOffsetScalar, positionScope);
+    if (book === undefined || !Number.isSafeInteger(chapterOffsetScalar) || chapterOffsetScalar < 0) return;
+    if (positionScope !== undefined && (positionScope.sourceId !== book.sourceId ||
+      positionScope.bookId !== book.bookId || positionScope.chapterIndex !== chapterIndex)) return;
+    if (directoryTargetProof !== undefined && (directoryTargetProof['sourceId'] !== book.sourceId ||
+      directoryTargetProof['bookId'] !== book.bookId)) return;
+    if (positionScope === undefined && directoryTargetProof === undefined) return;
+    this.onReaderBookmarkSelected('', chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
   }
 
   private openFullDirectory(): void {
@@ -4156,32 +4276,39 @@ struct Index {
     // readable first frame is being admitted.
     if (!this.readingSessionActive || this.route !== 'reading' || sourceId !== LOCAL_SOURCE_ID ||
       this.detailBook?.sourceId !== sourceId || this.detailBook?.bookId !== bookId ||
-      this.detailBook.kind?.trim().toLowerCase() !== 'epub') return;
-    const key = `${sourceId}\u0000${bookId}\u0000${generation}`;
+      !['epub', 'txt', 'local', 'mobi', 'azw', 'azw3', 'kf8'].includes(this.detailBook.kind?.trim().toLowerCase() ?? '')) return;
+    const navigationGeneration = this.navigationGeneration;
+    const key = `${sourceId}\u0000${bookId}\u0000${generation}\u0000${navigationGeneration}`;
     if (this.navigationBackfillObservedKey === key) return;
     this.navigationBackfillObservedKey = key;
+    hilog.info(DOMAIN, 'Reader', 'Directory backfill stage=queued generation=%{public}d', generation);
     const owner = ReaderRuntimeOwner.current();
-    const navigationGeneration = this.navigationGeneration;
     const isCurrent = (): boolean => this.systemFileOpenMounted && this.readingSessionActive &&
       this.readingReadyGeneration === generation && this.navigationGeneration === navigationGeneration &&
       this.detailBook?.sourceId === sourceId && this.detailBook?.bookId === bookId &&
-      this.detailBook.kind?.trim().toLowerCase() === 'epub' && ReaderRuntimeOwner.current() === owner;
+      ReaderRuntimeOwner.current() === owner;
     try {
       this.getUIContext().postFrameCallback(new ReaderNavigationBackfillFrame((): void => {
         if (!isCurrent()) {
           if (this.navigationBackfillObservedKey === key) this.navigationBackfillObservedKey = '';
           return;
         }
+        hilog.info(DOMAIN, 'Reader', 'Directory backfill stage=frame generation=%{public}d', generation);
         this.navigationBackfillObserverDisposer?.();
         this.navigationBackfillObserverDisposer = readerDirectoryObserveMissingNavigation(bookId, (): void => {
           if (!isCurrent() || this.navigationBackfillAttempted.has(key) ||
             !readerDirectoryTakeMissingNavigation(bookId)) return;
+          hilog.info(DOMAIN, 'Reader', 'Directory backfill stage=missing generation=%{public}d', generation);
           this.navigationBackfillAttempted.add(key);
           if (this.navigationBackfillAttempted.size > 16) {
             this.navigationBackfillAttempted.delete(this.navigationBackfillAttempted.values().next().value as string);
           }
-          void backfillRetainedReaderDirectoryNavigation(owner, bookId, isCurrent)
-            .catch((_error: Error): void => { /* Preserve the flat directory and every user record. */ });
+          void backfillRetainedReaderDirectoryNavigation(owner, bookId, isCurrent, this.detailBook?.kind?.trim().toLowerCase() ?? '')
+            .then((status: string): void => {
+              hilog.info(DOMAIN, 'Reader', 'Directory backfill result=%{public}s current=%{public}d', status, isCurrent() ? 1 : 0);
+            }).catch((_error: Error): void => {
+              hilog.warn(DOMAIN, 'Reader', 'Directory backfill result=error current=%{public}d', isCurrent() ? 1 : 0);
+            });
         });
       }));
     } catch (_error) {
@@ -4456,7 +4583,7 @@ struct Index {
       '部分书签已更新，剩余结果未确认，请重新载入核对，不要重复操作' :
       '书签操作结果未确认，请重新载入核对，不要重复操作';
     this.detailToc = this.detailToc.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => ({
-      index: entry.index, title: entry.title, navigable: entry.navigable, downloadState: entry.downloadState,
+      index: entry.index, title: entry.title, level: entry.level, navigable: entry.navigable, downloadState: entry.downloadState,
       bookmarks: undefined,
     }));
   }
@@ -4663,7 +4790,7 @@ struct Index {
     let entries: LocalReadingTocEntry[] = session.entries.map((entry): LocalReadingTocEntry => ({
       index: entry.index,
       title: entry.title,
-      navigable: entry.url.trim().length > 0,
+      navigable: entry.navigable !== false && entry.url.trim().length > 0,
       downloadState: 'unknown',
     }));
     try {
@@ -5159,10 +5286,10 @@ struct Index {
         error.event.error.details?.['transactionId'] !== transaction.transactionId) throw error as Error;
       const records = await gateway.listPendingSwitches(ownsRollback);
       if (!ownsRollback() || records.some((record: PendingSourceSwitch): boolean =>
-        record.transactionId === transaction.transactionId)) throw error;
+        record.transactionId === transaction.transactionId)) throw error as Error;
       const canonical = await new ReaderCoreGateway(ReaderRuntimeOwner.current())
         .loadShelfBook(transaction.targetSourceId, transaction.targetBookId);
-      if (!ownsRollback() || canonical === undefined) throw error;
+      if (!ownsRollback() || canonical === undefined) throw error as Error;
       restored = canonical;
     }
     if (!ownsRollback()) throw new Error('source switch aborted');
@@ -5356,7 +5483,7 @@ struct Index {
       kind: session.book.kind, coverUrl: session.book.coverUrl, intro: session.book.intro,
       lastChapter: session.book.lastChapter };
     this.detailToc = session.entries.map((entry): LocalReadingTocEntry => ({ index: entry.index,
-      title: entry.title, navigable: entry.url.trim().length > 0, downloadState: 'unknown' }));
+      title: entry.title, level: entry.level, navigable: entry.navigable !== false && entry.url.trim().length > 0, downloadState: 'unknown' }));
     this.detailLoadingMessage = '';
     if (this.directoryCurrentChapterIndex >= 0 && this.isRemoteCatalogNearEnd(session, this.directoryCurrentChapterIndex)) {
       this.refreshRemoteCatalogNearEnd(session);
@@ -5392,6 +5519,7 @@ struct Index {
     }
     if (session === undefined) {
       this.remoteReadingSession = undefined;
+      this.updateRemoteReadableChapterOrder(undefined);
       this.remoteReadabilityProjectionRevision = -1;
       return;
     }
@@ -5405,7 +5533,8 @@ struct Index {
     } else {
       this.remoteReadingSession = session;
     }
-    const facts = readableProjection?.['acquisition'] as JsonObject | undefined;
+    this.updateRemoteReadableChapterOrder(this.remoteReadingSession);
+    const facts: JsonObject | undefined = readableProjection?.['acquisition'] as JsonObject | undefined;
     // Only a stable Core projection for this exact canonical session can
     // preserve the gate. It supplies no reusable materialized chapter.
     const confirmed = readableProjectionRevision === revision && facts?.['schemaVersion'] === 2 &&
@@ -5454,7 +5583,7 @@ struct Index {
       return prepared?.chapter.chapterIndex;
     }
     this.remoteContentVerdict = 'verifying';
-    const readableEntries = session.entries.filter((entry): boolean => entry.url.trim().length > 0);
+    const readableEntries = session.entries.filter((entry): boolean => entry.navigable !== false && entry.url.trim().length > 0);
     let start = 0;
     let limit = Math.min(3, readableEntries.length);
     if (preferredChapterIndex !== undefined) {
@@ -5919,25 +6048,34 @@ struct Index {
   private async prefetchReadingWindow(
     session: RemoteReadingSession,
     preferredChapterIndex: number | undefined = undefined,
+    shelfCurrent?: () => boolean,
   ): Promise<void> {
     const owner = ReaderRuntimeOwner.current();
     const navigation = this.navigationGeneration;
     const contentCurrent = owner.captureReadingContentValidity?.(session.identity.sourceId, session.identity.bookId);
-    const readerOwned = preferredChapterIndex !== undefined;
+    const sessionGeneration = this.remoteSessionGeneration;
+    const readerOwned = shelfCurrent === undefined && preferredChapterIndex !== undefined;
     const ownerCurrent = (): boolean => ReaderRuntimeOwner.current() === owner &&
-      navigation === this.navigationGeneration && contentCurrent?.() !== false &&
-      (!readerOwned || (this.readingSessionActive && sameRemoteSessionEvidence(this.remoteReadingSession, session)));
+      navigation === this.navigationGeneration && contentCurrent?.() !== false && shelfCurrent?.() !== false &&
+      (!readerOwned || (sessionGeneration === this.remoteSessionGeneration && this.readingSessionActive &&
+        sameRemoteSessionEvidence(this.remoteReadingSession, session)));
     if (!ownerCurrent() || session.entries.length === 0) return;
+    if (readerOwned) this.updateRemoteReadableChapterOrder(session);
+    const indexes = readerOwned ? this.remoteReadableChapterIndexes :
+      session.entries.filter((entry: RemoteReadingTocEntry): boolean => entry.navigable !== false && entry.url.trim().length > 0)
+        .map((entry: RemoteReadingTocEntry): number => entry.index);
     let chapterIndex = preferredChapterIndex;
     if (chapterIndex === undefined) {
       const progress = await new RemoteReadingFlowGateway(owner)
-        .loadProgress(session.identity);
+        .loadProgress(session.identity, ownerCurrent);
       if (!ownerCurrent()) return;
-      chapterIndex = progress.kind === 'restored' ? progress.progress.chapterIndex : 0;
+      chapterIndex = progress.kind === 'restored' ? progress.progress.chapterIndex : indexes[0];
     }
-    const boundedIndex = Math.min(Math.max(chapterIndex, 0), session.entries.length - 1);
-    const startInclusive = Math.max(0, boundedIndex - READING_CACHE_BEFORE);
-    const endExclusive = Math.min(session.entries.length, boundedIndex + READING_CACHE_AFTER + 1);
+    if (chapterIndex === undefined) return;
+    const position = readerOwned ? this.remoteReadableChapterPosition(session, chapterIndex) : indexes.indexOf(chapterIndex);
+    if (position === undefined || position < 0) return;
+    const startInclusive = indexes[Math.max(0, position - READING_CACHE_BEFORE)];
+    const endExclusive = indexes[Math.min(indexes.length - 1, position + READING_CACHE_AFTER)] + 1;
     const publish = (entries: LocalReadingTocEntry[], intended: RemoteReadingSession, current: () => boolean): void => {
       if (!current() || !sameRemoteSessionEvidence(this.remoteReadingSession, intended)) return;
       let next: LocalReadingTocEntry[] | undefined;
@@ -6016,15 +6154,29 @@ struct Index {
   }
 
   private isRemoteCatalogNearEnd(session: RemoteReadingSession, chapterIndex: number): boolean {
-    let remaining = 0;
-    for (let position = session.entries.length - 1; position >= 0; position -= 1) {
-      const entry = session.entries[position];
-      if (entry.url.trim().length === 0) continue;
-      if (entry.index === chapterIndex) return true;
-      remaining += 1;
-      if (remaining > CATALOG_REFRESH_NEAR_END) return false;
+    this.updateRemoteReadableChapterOrder(session);
+    const position = this.remoteReadableChapterPosition(session, chapterIndex);
+    return position !== undefined && this.remoteReadableChapterIndexes.length - position - 1 <= CATALOG_REFRESH_NEAR_END;
+  }
+
+  /** Rebuilt only when an admitted session supplies a different TOC array. */
+  private updateRemoteReadableChapterOrder(session: RemoteReadingSession | undefined): void {
+    if (this.remoteReadableToc === session?.entries) return;
+    this.remoteReadableToc = session?.entries;
+    this.remoteReadableChapterIndexes = [];
+    this.remoteReadableChapterPositions = new Map();
+    if (session === undefined) return;
+    for (const entry of session.entries) {
+      if (entry.navigable === false || entry.url.trim().length === 0) continue;
+      this.remoteReadableChapterPositions.set(entry.index, this.remoteReadableChapterIndexes.length);
+      this.remoteReadableChapterIndexes.push(entry.index);
     }
-    return false;
+  }
+
+  private remoteReadableChapterPosition(session: RemoteReadingSession, chapterIndex: number): number | undefined {
+    // Narrow/unknown catalog positions cannot be clamped to an unrelated row.
+    if (this.remoteReadableToc !== session.entries) return undefined;
+    return this.remoteReadableChapterPositions.get(chapterIndex);
   }
 
   private refreshRemoteCatalogNearEnd(session: RemoteReadingSession): void {
@@ -6240,7 +6392,7 @@ struct Index {
 
   private isKnownDetailChapter(chapterIndex: number | undefined): boolean {
     if (this.detailBook?.sourceId !== LOCAL_SOURCE_ID && this.remoteReadingSession !== undefined) {
-      return this.remoteReadingSession.entries.some((entry): boolean => entry.url.trim().length > 0 &&
+      return this.remoteReadingSession.entries.some((entry): boolean => entry.navigable !== false && entry.url.trim().length > 0 &&
         (chapterIndex === undefined || entry.index === chapterIndex));
     }
     return this.detailToc.some((entry: LocalReadingTocEntry): boolean =>
@@ -6565,7 +6717,7 @@ struct Index {
         { forceRefresh: true, isCurrent, canDispatch: isCurrent }, automatic ? 'background' : 'foreground');
       // Automatic update checks catalogs only. Reader/add/search preparation
       // owns body acquisition; a shelf sweep must not compete for all bodies.
-      if (!automatic) await this.prefetchReadingWindow(session);
+      if (!automatic) await this.prefetchReadingWindow(session, undefined, isCurrent);
     } catch (error) {
       // Per-book failures do not abort remaining bookshelf updates. Existing
       // local TOC/bodies stay authoritative and the next interval retries.

@@ -1,6 +1,7 @@
+import type { JsonObject } from '@reader/core-harmony';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
-import { ReaderDirectoryNavigationGateway, type ReaderDirectoryNavigationNode,
+import { ReaderDirectoryNavigationGateway, readerDirectoryScopeKey, type ReaderDirectoryNavigationNode,
   type ReaderDirectoryNavigationReady, type ReaderDirectoryNavigationPage } from './ReaderDirectoryNavigation';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
@@ -12,6 +13,35 @@ import { readerDirectoryObserveScrollCommand, readerDirectorySaveViewportAnchor,
 
 const DIRECTORY_PAGE_SIZE: number = 256;
 const DIRECTORY_RETAINED_PAGES: number = 12;
+
+// One platform LRU across Quick, Full, detail and their prepared windows.
+const directoryPages: util.LRUCache<string, ReaderDirectoryNavigationNode[]> =
+  new util.LRUCache<string, ReaderDirectoryNavigationNode[]>(DIRECTORY_RETAINED_PAGES);
+
+function directoryPagePrefix(view: ReaderDirectoryNavigationReady): string {
+  const identity = view.identity;
+  return `${JSON.stringify([readerDirectoryScopeKey(identity?.sourceId ?? 'local', identity?.bookId ?? ''), view.navigationRevision, view.viewId])}:`;
+}
+
+/** Prepared and motion-deferred pages consume the same global 12-page budget. */
+export function cacheReaderDirectoryNavigationPage(view: ReaderDirectoryNavigationReady, offset: number,
+  page: ReaderDirectoryNavigationPage): ReaderDirectoryNavigationPage {
+  if (page.nodes.length > 0) directoryPages.put(`${directoryPagePrefix(view)}${offset}`, page.nodes);
+  return { viewId: page.viewId, visibleTotal: page.visibleTotal, nextOffset: page.nextOffset, nodes: [] };
+}
+
+class ReaderDirectoryPageWindow {
+  private prefix: string = '';
+  bind(view: ReaderDirectoryNavigationReady): void {
+    this.prefix = directoryPagePrefix(view);
+  }
+  get(offset: number): ReaderDirectoryNavigationNode[] | undefined { return directoryPages.get(`${this.prefix}${offset}`); }
+  put(offset: number, nodes: ReaderDirectoryNavigationNode[]): void { directoryPages.put(`${this.prefix}${offset}`, nodes); }
+  keys(): number[] {
+    return directoryPages.keys().filter((key: string): boolean => key.startsWith(this.prefix))
+      .map((key: string): number => Number(key.substring(this.prefix.length)));
+  }
+}
 
 interface ReaderDirectoryNavigationItem {
   key: string;
@@ -33,8 +63,7 @@ interface ReaderDirectoryPositionPlan {
 
 class ReaderDirectoryNavigationDataSource implements IDataSource {
   private view: ReaderDirectoryNavigationReady | undefined = undefined;
-  private pages: util.LRUCache<number, ReaderDirectoryNavigationNode[]> =
-    new util.LRUCache<number, ReaderDirectoryNavigationNode[]>(DIRECTORY_RETAINED_PAGES);
+  private pages: ReaderDirectoryPageWindow = new ReaderDirectoryPageWindow();
   private pending: Set<number> = new Set<number>();
   private listeners: DataChangeListener[] = [];
   private load: (offset: number) => void;
@@ -75,13 +104,16 @@ class ReaderDirectoryNavigationDataSource implements IDataSource {
       this.loadedNode(this.view.currentVisibleIndex);
     if (oldCurrent !== undefined) highlighted.add(oldCurrent.nodeId);
     this.view = view;
-    this.pages.clear(); this.pending.clear();
+    this.pages.bind(view); this.pending.clear();
     if (view.nodes.length > 0) this.pages.put(0, view.nodes);
     for (const prepared of view.preparedPages ?? []) {
       if (prepared.offset <= 0 || prepared.page.viewId !== view.viewId ||
         prepared.page.visibleTotal !== view.visibleTotal) continue;
-      this.pages.put(prepared.offset, prepared.page.nodes);
+      if (prepared.page.nodes.length > 0) this.pages.put(prepared.offset, prepared.page.nodes);
     }
+    // Pages are now owned solely by the bounded process cache.
+    view.nodes = [];
+    view.preparedPages = undefined;
     if (view.currentAncestorNodeId !== undefined) highlighted.add(view.currentAncestorNodeId);
     const newCurrent = view.currentVisibleIndex === undefined ? undefined : this.loadedNode(view.currentVisibleIndex);
     if (newCurrent !== undefined) highlighted.add(newCurrent.nodeId);
@@ -106,6 +138,11 @@ class ReaderDirectoryNavigationDataSource implements IDataSource {
   admit(offset: number, page: ReaderDirectoryNavigationPage): void {
     if (this.view === undefined || page.viewId !== this.view.viewId || page.visibleTotal !== this.view.visibleTotal) return;
     this.pending.delete(offset);
+    if (page.nodes.length === 0) {
+      const cached = this.pages.get(offset);
+      if (cached === undefined) { this.load(offset); return; }
+      page = { viewId: page.viewId, visibleTotal: page.visibleTotal, nextOffset: page.nextOffset, nodes: cached };
+    }
     const previousPage = this.pages.get(offset);
     if (page.nodes.length > 0 && previousPage === undefined) this.pages.put(offset, page.nodes);
     page.nodes.forEach((node: ReaderDirectoryNavigationNode, index: number): void => {
@@ -134,22 +171,25 @@ export struct ReaderDirectoryNavigationList {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop @Watch('onViewChanged') view: ReaderDirectoryNavigationReady;
   @Prop bookId: string = '';
+  @Prop sourceId: string = 'local';
   @Prop rowHeight: number = 40;
   @Prop listPaddingX: number = 10;
   @Prop listPaddingY: number = 5;
   @Prop edgeEffectMode: EdgeEffect = EdgeEffect.None;
   @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
   @Prop @Watch('onChapterEntriesChanged') chapterEntries: LocalReadingTocEntry[] = [];
+  @Prop chapterDownloadEnabled: boolean = false;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   scroller: Scroller | undefined = undefined;
-  onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope: RemoteReadingPositionScope) => void =
-    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope: RemoteReadingPositionScope): void => {};
+  onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
+    (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: JsonObject): void => {};
   onToggleNode: (node: ReaderDirectoryNavigationNode) => void = (_node: ReaderDirectoryNavigationNode): void => {};
   onUserScrollIntent: () => void = (): void => {};
   onScrollSettled: () => void = (): void => {};
   onFirstLayout: () => void = (): void => {};
   onInvalidated: () => void = (): void => {};
   onDeleteBookmarks: (times: number[]) => void = (_times: number[]): void => {};
+  onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
   private dataSource: ReaderDirectoryNavigationDataSource =
@@ -175,7 +215,7 @@ export struct ReaderDirectoryNavigationList {
     this.initialPositionPending = true;
     this.pendingPages = [];
     this.gateway = new ReaderDirectoryNavigationGateway(ReaderRuntimeOwner.current());
-    this.scrollCommandUnsubscribe = readerDirectoryObserveScrollCommand(this.bookId,
+    this.scrollCommandUnsubscribe = readerDirectoryObserveScrollCommand(readerDirectoryScopeKey(this.sourceId, this.bookId),
       (): void => this.onScrollCommand());
     this.dataSource.replace(this.view);
     this.positionPlan = this.planPosition();
@@ -227,7 +267,7 @@ export struct ReaderDirectoryNavigationList {
       const pages = this.pendingPages;
       this.pendingPages = [];
       for (const item of pages) this.dataSource.admit(item.offset, item.page);
-      const anchor = readerDirectoryViewportAnchor(this.bookId);
+      const anchor = readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, this.bookId));
       if (anchor !== undefined && anchor.viewId === this.view.viewId &&
         anchor.navigationRevision === this.view.navigationRevision) {
         this.positionPlan = { viewId: this.view.viewId, index: anchor.visibleIndex,
@@ -246,7 +286,7 @@ export struct ReaderDirectoryNavigationList {
     try {
       const rect = this.scroller.getItemRect(index);
       if (!Number.isFinite(rect.y) || !Number.isFinite(rect.height) || rect.height <= 0) return;
-      const anchor: ReaderDirectoryViewportAnchor = { bookId: this.bookId,
+      const anchor: ReaderDirectoryViewportAnchor = { bookId: readerDirectoryScopeKey(this.sourceId, this.bookId),
         navigationRevision: view.navigationRevision, viewId: view.viewId,
         nodeId: node.nodeId, visibleIndex: index, rowFraction: -rect.y / rect.height };
       readerDirectorySaveViewportAnchor(anchor);
@@ -254,7 +294,7 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private planPosition(): ReaderDirectoryPositionPlan | undefined {
-    const anchor = readerDirectoryViewportAnchor(this.bookId);
+    const anchor = readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, this.bookId));
     if (anchor !== undefined && anchor.navigationRevision === this.view.navigationRevision) {
       const index = this.view.anchorVisibleIndex ??
         (anchor.viewId === this.view.viewId ? anchor.visibleIndex : undefined);
@@ -286,7 +326,7 @@ export struct ReaderDirectoryNavigationList {
     this.chapterByIndex.clear();
     for (const chapter of this.chapterEntries) {
       this.chapterByIndex.set(chapter.index, chapter);
-      const signature = `${chapter.title}:${chapter.bookmarks === undefined ? '?' :
+      const signature = `${chapter.title}:${chapter.navigable}:${chapter.downloadState}:${chapter.bookmarks === undefined ? '?' :
         chapter.bookmarks.map((bookmark): number => bookmark.time).join(',')}`;
       next.set(chapter.index, signature);
       if (previous.get(chapter.index) !== signature) changed.add(chapter.index);
@@ -297,6 +337,7 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private marker(chapter: LocalReadingTocEntry): void {
+    if (this.interactionEnabled === false) return;
     const state = readerDirectoryBookmarkMarkerState(chapter);
     if (state.kind === 'bookmarked') this.onDeleteBookmarks(state.bookmarkTimes);
     else if (state.kind === 'empty' && this.chapterStartBookmarkCreationEnabled)
@@ -304,8 +345,31 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private toggleNode(node: ReaderDirectoryNavigationNode): void {
+    if (this.interactionEnabled === false) return;
     this.captureViewportAnchor();
     this.onToggleNode(node);
+  }
+
+  private canDownloadTarget(node: ReaderDirectoryNavigationNode): boolean {
+    if (!this.interactionEnabled || !this.chapterDownloadEnabled || node.kind !== 'target' || node.chapterIndex === undefined) return false;
+    const chapter = this.chapterByIndex.get(node.chapterIndex);
+    return chapter !== undefined && chapter.navigable !== false &&
+      (chapter.downloadState === 'missing' || chapter.downloadState === 'cached' ||
+        chapter.downloadState === 'failed' || chapter.downloadState === 'cancelled');
+  }
+
+  private downloadTarget(node: ReaderDirectoryNavigationNode): void {
+    if (!this.canDownloadTarget(node) || this.gateway === undefined) return;
+    const generation = this.generation, viewId = this.view.viewId, bookId = this.bookId, sourceId = this.sourceId;
+    const current = (): boolean => this.mounted && generation === this.generation && viewId === this.view.viewId &&
+      bookId === this.bookId && sourceId === this.sourceId;
+    // Download the canonical chapter only after the same Core revision/target
+    // proof used by reading selection succeeds. This never changes progress.
+    void this.gateway.resolveTarget(bookId, viewId, node.nodeId, current)
+      .then((target): void => {
+        if (!current() || target.chapterIndex !== node.chapterIndex || !this.canDownloadTarget(node)) return;
+        this.onDownloadChapter(target.chapterIndex);
+      }).catch((_error: Error): void => { if (current()) this.onInvalidated(); });
   }
 
   private positionInitialCurrent(): void {
@@ -325,7 +389,7 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private selectTarget(node: ReaderDirectoryNavigationNode): void {
-    if (node.kind !== 'target' || node.chapterIndex === undefined || this.gateway === undefined) return;
+    if (this.interactionEnabled === false || node.kind !== 'target' || node.chapterIndex === undefined || this.gateway === undefined) return;
     const generation = this.generation;
     const selection = ++this.selectionGeneration;
     const viewId = this.view.viewId, bookId = this.bookId;
@@ -335,7 +399,7 @@ export struct ReaderDirectoryNavigationList {
       .then((target): void => {
         if (!this.mounted || generation !== this.generation || selection !== this.selectionGeneration ||
           viewId !== this.view.viewId || bookId !== this.bookId) return;
-        this.onSelectTarget(target.chapterIndex, target.chapterOffsetScalar, target.positionScope);
+        this.onSelectTarget(target.chapterIndex, target.chapterOffsetScalar, target.positionScope, target.directoryTargetProof);
       }).catch((_error: Error): void => {
         if (this.mounted && generation === this.generation && selection === this.selectionGeneration)
           this.onInvalidated();
@@ -358,7 +422,7 @@ export struct ReaderDirectoryNavigationList {
           if (!this.mounted || generation !== this.generation || viewId !== this.view.viewId) return;
           if (this.interactionEnabled) this.dataSource.admit(offset, page);
           else {
-            const pending: ReaderDirectoryNavigationPendingPage = { offset, page };
+            const pending: ReaderDirectoryNavigationPendingPage = { offset, page: cacheReaderDirectoryNavigationPage(this.view, offset, page) };
             this.pendingPages.push(pending);
           }
         }).catch((_error: Error): void => {
@@ -376,6 +440,18 @@ export struct ReaderDirectoryNavigationList {
     return current !== undefined && this.dataSource.loadedNode(current)?.nodeId === nodeId;
   }
 
+  /** LazyForEach retains a Builder closure for the same key. Recreate only
+   * the row whose expand affordance changed; viewport identity stays nodeId. */
+  private rowKey(item: ReaderDirectoryNavigationItem): string {
+    return `reader-navigation:${JSON.stringify([item.key,
+      item.node?.hasChildren === true ? item.node.expanded : null])}`;
+  }
+
+  private displayLevel(node: ReaderDirectoryNavigationNode): number {
+    // v2 facts use zero-based depth; the legacy v1 view is already one-based.
+    return this.view.identity === undefined ? Math.max(1, node.depth) : node.depth + 1;
+  }
+
   @Builder
   private row(item: ReaderDirectoryNavigationItem) {
     Row() {
@@ -388,13 +464,13 @@ export struct ReaderDirectoryNavigationList {
         }
         Text(item.node.title)
           .layoutWeight(1)
-          .padding({ left: 9 + Math.min(3, Math.max(0, item.node.depth - 1)) * 12, right: 9 })
+          .padding({ left: 9 + Math.min(3, this.displayLevel(item.node) - 1) * 12, right: 9 })
           .fontFamily('ReaderNotoSansSC').fontSize(11).fontWeight(500)
-          .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
+          .fontColor(readerAppColor(item.node.kind === 'disabled' ? 'TOK_READ_MUTED' : 'TOK_READ_INK', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-          .accessibilityText(item.node.kind === 'group' ?
-            `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此组，' : ''}第${item.node.depth}级分组：${item.node.title}，${item.node.expanded ? '已展开' : '已折叠'}` :
-            `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此标题下，' : ''}第${item.node.depth}级，打开${item.node.title}`)
+          .accessibilityText(item.node.kind === 'disabled' ? `${item.node.title}，目标不可用` : item.node.kind === 'group' ?
+            `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此组，' : ''}第${this.displayLevel(item.node)}级分组：${item.node.title}，${item.node.expanded ? '已展开' : '已折叠'}` :
+            `${item.node.nodeId === this.view.currentAncestorNodeId ? '当前章在此标题下，' : ''}第${this.displayLevel(item.node)}级，打开${item.node.title}`)
           .onClick((): void => {
             const node = item.node;
             if (node === undefined) return;
@@ -408,6 +484,20 @@ export struct ReaderDirectoryNavigationList {
             .textAlign(TextAlign.Center)
             .accessibilityText(`${item.node.expanded ? '折叠' : '展开'}${item.node.title}子目录`)
             .onClick((): void => { if (item.node !== undefined) this.toggleNode(item.node); });
+        }
+        if (item.node.kind === 'target' && item.node.chapterIndex !== undefined && this.chapterDownloadEnabled &&
+          this.chapterByIndex.get(item.node.chapterIndex) !== undefined &&
+          this.chapterByIndex.get(item.node.chapterIndex)?.navigable !== false &&
+          this.chapterByIndex.get(item.node.chapterIndex)?.downloadState !== 'unknown') {
+          Stack() {
+            Image(this.chapterByIndex.get(item.node.chapterIndex)?.downloadState === 'completed' ?
+              (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_check_theme_night') : $r('app.media.reader_directory_marker_check')) :
+              (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_download_theme_night') : $r('app.media.reader_directory_marker_download')))
+              .width(15).height(15);
+          }.width(26).height(this.rowHeight)
+            .accessibilityText(this.chapterByIndex.get(item.node.chapterIndex)?.downloadState === 'completed' ? '已下载' : '下载章节')
+            .enabled(this.canDownloadTarget(item.node))
+            .onClick((): void => { if (item.node !== undefined) this.downloadTarget(item.node); });
         }
         if (item.node.kind === 'target' && item.node.chapterIndex !== undefined &&
           this.chapterByIndex.get(item.node.chapterIndex)?.bookmarks !== undefined) {
@@ -435,7 +525,7 @@ export struct ReaderDirectoryNavigationList {
     List({ space: 0, scroller: this.scroller }) {
       LazyForEach(this.dataSource, (item: ReaderDirectoryNavigationItem) => {
         ListItem() { this.row(item); }.width('100%').height(this.rowHeight);
-      }, (item: ReaderDirectoryNavigationItem): string => `reader-navigation:${item.key}`);
+      }, (item: ReaderDirectoryNavigationItem): string => this.rowKey(item));
     }
     .width('100%').height('100%')
     .padding({ left: this.listPaddingX, right: this.listPaddingX,

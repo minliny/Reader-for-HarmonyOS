@@ -269,6 +269,7 @@ assert.deepEqual(await listGateway.loadSources(), [{
 // source.check.run command; no second empty-response replay is needed.
 let checkParams;
 const checkGateway = new SourceGateway({
+  supportsCoreCapability: capability => capability === 'source.check.mode.v1',
   request: async (method, params) => {
     assert.equal(method, 'source.check.run');
     checkParams = params;
@@ -313,6 +314,7 @@ const checkGateway = new SourceGateway({
   },
 });
 const checked = await checkGateway.checkSource(single.bookSourceUrl, () => true, '读者');
+assert.equal(checkParams.reportVersion, undefined, 'old Core report shape remains unchanged');
 assert.equal(checkParams.keyword, '读者');
 assert.equal(checkParams.mode, 'search');
 assert.deepEqual(checkParams.levels, ['L1', 'L2']);
@@ -325,11 +327,66 @@ assert.match(checked.logs[0].message, /\[Core\] L2 搜索解析完成/);
 assert.equal(checked.logs[0].extractedCount, 1);
 assert.match(checked.logs[2].message, /\[Host\] L2 GET https:\/\/source-a\.example\/search → HTTP 200/);
 assert.ok(checked.logs.every((log) => log.traceId === checked.traceId));
+
+const reportFixture = () => ({
+  version: 1, mode: 'explore', traceId: 'report-trace', ruleDigest: 'a'.repeat(64), inputDigest: 'b'.repeat(64),
+  steps: ['L1', 'L2', 'L3', 'L4', 'L5'].map((level, index) => ({
+    level, requested: level === 'L2', executed: index < 2,
+    status: index < 2 ? 'pass' : 'not_requested', durationMs: index < 2 ? 2 : 0,
+  })),
+});
+const reportGateway = mutate => new SourceGateway({
+  supportsCoreCapability: capability => ['source.check.mode.v1', 'source.check.report.v1'].includes(capability),
+  request: async (method, params) => {
+    assert.equal(params.reportVersion, 1);
+    const report = reportFixture();
+    mutate?.(report);
+    return { requestId: 93, data: { traceId: 'report-trace', results: [{
+      sourceId: single.bookSourceUrl, available: true, levelsPassed: ['L2'], durationMs: 4, report,
+      debugLogs: [{ state: 1000, msg: 'completed', timestampMs: 4 }],
+    }] } };
+  },
+  takeSourceHttpDiagnostics: () => [],
+});
+const reported = await reportGateway().checkSource(single.bookSourceUrl, () => true, 'test', 'explore', ['L2']);
+assert.equal(reported.report.steps[0].executed, true, 'actual prerequisite is retained separately');
+assert.equal(reported.capabilities[0].state, 'notRequested');
+assert.equal(reported.capabilities[1].state, 'passed');
+const historyGateway = stale => new SourceGateway({
+  supportsCoreCapability: capability => capability === 'source.check.report.v1',
+  request: async (method, params) => {
+    assert.equal(method, 'source.list');
+    assert.equal(params.includeCheckReports, true);
+    return { requestId: 94, data: { sources: [{ sourceId: single.bookSourceUrl,
+      name: 'History', baseUrl: single.bookSourceUrl, enabled: false, enabledExplore: false,
+      sourceVersion: 'c'.repeat(64),
+      checkReports: [{ checkedAtMs: 1000, stale, report: reportFixture() }],
+    }] } };
+  },
+});
+const historySources = await historyGateway(true).loadSources(undefined, true);
+assert.equal(historySources[0].checkState, undefined, 'historical L2 does not become a current whole-source verdict');
+assert.equal(historySources[0].enabled, false);
+assert.match(historySources[0].lastCheckSummary, /^已过期/);
+assert.equal(historySources[0].checkReports[0].report.steps[1].status, 'pass');
+await assert.rejects(() => historyGateway(false).loadSources(undefined, true), /version mismatch/);
+for (const corrupt of [
+  report => { report.traceId = 'stale'; },
+  report => { report.mode = 'search'; },
+  report => { report.steps[1].status = 'blocked'; },
+  report => { report.steps[2].executed = true; },
+  report => { report.steps[1].durationMs = 50; },
+  report => { delete report.ruleDigest; },
+]) {
+  await assert.rejects(() => reportGateway(corrupt).checkSource(single.bookSourceUrl,
+    () => true, 'test', 'explore', ['L2']), /report/);
+}
 await checkGateway.checkSource(single.bookSourceUrl, () => true, '读者', 'explore', ['L1', 'L2', 'L3']);
 assert.equal(checkParams.mode, 'explore');
 assert.deepEqual(checkParams.levels, ['L1', 'L2', 'L3']);
 await assert.rejects(() => checkGateway.checkSource(single.bookSourceUrl, () => true, '', 'search', ['unknown']), /known selected levels/);
 const incompleteGateway = new SourceGateway({
+  supportsCoreCapability: capability => capability === 'source.check.mode.v1',
   request: async () => ({ requestId: 1, data: { traceId: 'test', results: [{
     sourceId: single.bookSourceUrl, available: true, levelsPassed: ['L1'], durationMs: 1,
   }] } }),
@@ -338,6 +395,7 @@ const incompleteGateway = new SourceGateway({
 await assert.rejects(() => incompleteGateway.checkSource(single.bookSourceUrl), /incomplete selected capabilities/);
 
 const mismatchGateway = new SourceGateway({
+  supportsCoreCapability: capability => capability === 'source.check.mode.v1',
   request: async () => ({
     requestId: 92,
     data: {
@@ -370,6 +428,14 @@ await assert.rejects(
 );
 
 // Host: one JSON picker, bounded bytes, chunked read, fatal UTF-8, no staging.
+const oldNativeGateway = new SourceGateway({
+  supportsCoreCapability: () => false,
+  request: async () => assert.fail('unsupported modes must never reach an old Native'),
+});
+for (const mode of ['search', 'explore']) {
+  await assert.rejects(() => oldNativeGateway.checkSource(single.bookSourceUrl, () => true, '', mode), /配套 Native/);
+}
+
 assert.match(host, /selectBoundedJsonDocument\('Legado 书源 JSON'\)/);
 assert.match(host, /fileSuffixFilters = \[`\$\{label\}\|\.json`\]/);
 assert.match(host, /options\.maxSelectNumber = 1/);

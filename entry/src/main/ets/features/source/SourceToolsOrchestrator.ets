@@ -143,7 +143,7 @@ export class SourceToolsOrchestrator {
     this.publish({ busy: true, statusMessage: '正在读取 Core 书源工具数据…' });
     this.enqueue(async (): Promise<void> => {
       try {
-        const sources = await this.gateway.loadSources();
+        const sources = await this.gateway.loadSources(undefined, true);
         if (this.isCurrentSession(session)) {
           this.publish({ sources, busy: false, statusMessage: '已读取 Core 数据' });
         }
@@ -226,7 +226,7 @@ export class SourceToolsOrchestrator {
             }
           }
         }
-        const sources = await this.gateway.loadSources();
+        const sources = await this.gateway.loadSources(undefined, true);
         if (this.isCurrentSession(session)) {
           this.publish({
             sources,
@@ -240,7 +240,7 @@ export class SourceToolsOrchestrator {
         // atomic Core command. If an item fails, reload durable truth so the
         // page never hides an already-applied prefix.
         try {
-          const sources = await this.gateway.loadSources();
+          const sources = await this.gateway.loadSources(undefined, true);
           if (this.isCurrentSession(session)) {
             this.publish({
               sources,
@@ -403,7 +403,7 @@ export class SourceToolsOrchestrator {
       this.publishIfCurrent(session, { busy: true, statusMessage: `正在删除 ${selection.length} 个书源…` });
       try {
         const deleted = await this.gateway.deleteSources(selection);
-        const sources = await this.gateway.loadSources();
+        const sources = await this.gateway.loadSources(undefined, true);
         if (this.isCurrentSession(session)) {
           const cleanup = deleted.cookieCleanupFailures === 0 ? '' :
             `；${deleted.cookieCleanupFailures} 个 Host 登录会话清理失败`;
@@ -460,7 +460,7 @@ export class SourceToolsOrchestrator {
       this.publishIfCurrent(session, { busy: true, statusMessage: '正在由 Core 校验并保存…' });
       try {
         await this.gateway.saveEditableSource(sourceId, text);
-        const sources = await this.gateway.loadSources();
+        const sources = await this.gateway.loadSources(undefined, true);
         if (this.isCurrentSession(session)) {
           this.publish({
             sources,

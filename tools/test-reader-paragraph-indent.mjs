@@ -56,6 +56,21 @@ for (const mode of ['lineSeparated', 'blankLineSeparated']) {
   assert.deepEqual(collectReadingParagraphUtf16Ranges('\r\n \t\r\n', mode), []);
   assert.deepEqual(collectReadingParagraphUtf16Ranges('', mode), []);
 }
+// VM regression: a processed EPUB chapter ends in one logical break. ArkUI
+// reports the final empty line [22,23) over the previous line's end 23.
+// Keep source offsets/content intact, but do not shape its EOF separator.
+for (const newline of ['\n', '\r', '\r\n']) {
+  for (const suffix of ['', ' \t']) {
+    const paragraph = '这是独立的目录验证样书，不包含用户内容。🙂';
+    const body = `第一章${newline}${newline}${paragraph}${newline}${suffix}`;
+    const ranges = collectReadingParagraphUtf16Ranges(body, 'blankLineSeparated');
+    assert.deepEqual(ranges.map(range => body.slice(range.startUtf16, range.endUtf16)), ['第一章', paragraph]);
+    assert.equal(ranges[1].startUtf16, body.indexOf(paragraph));
+    assert.equal(ranges[1].endUtf16, body.indexOf(paragraph) + paragraph.length);
+    assert.equal(body.slice(ranges[1].endUtf16), newline + suffix, 'original separator stays in canonical content');
+  }
+}
+
 const untrimmed = '甲\r\n\r\n  乙';
 assert.deepEqual(collectReadingParagraphUtf16Ranges(untrimmed, 'blankLineSeparated')
   .map(range => untrimmed.slice(range.startUtf16, range.endUtf16)), ['甲', '  乙']);

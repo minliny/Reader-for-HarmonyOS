@@ -303,7 +303,13 @@ export class HttpExecuteHost {
     // argument remains the sole operation key for host.complete / host.error.
     const diagnostic = this.parseSourceDiagnostic(params['diagnostic']);
     const diagnosticStartedAt = Date.now();
-    const deadline = this.createDeadline(TOTAL_DEADLINE_MS);
+    const requestedTimeout = params['timeoutMs'];
+    if (requestedTimeout !== undefined && (typeof requestedTimeout !== 'number' ||
+      !Number.isSafeInteger(requestedTimeout) || requestedTimeout <= 0)) {
+      throw new Error('http.execute: timeoutMs must be a positive integer');
+    }
+    const deadline = this.createDeadline(typeof requestedTimeout === 'number' ?
+      Math.min(TOTAL_DEADLINE_MS, requestedTimeout) : TOTAL_DEADLINE_MS);
     deadline.binarySink = binarySink;
     deadline.responseMaxBytes = responseMaxBytes;
     deadline.httpsOnly = httpsOnly === true;

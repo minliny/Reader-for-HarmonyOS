@@ -497,6 +497,14 @@ export struct SourceToolsPage {
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
+            if (row.source.lastCheckSummary !== undefined) {
+              Text(row.source.lastCheckSummary)
+                .width('100%')
+                .fontSize(10)
+                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis });
+            }
           }
           .layoutWeight(1)
           .alignItems(HorizontalAlign.Start);

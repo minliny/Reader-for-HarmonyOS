@@ -45,6 +45,9 @@ for (const chapterIndex of [20, 30, 40, 50]) {
     'the last three readable successors ignore trailing volume headings');
 }
 for (const chapterIndex of [60, 99]) assert.equal(catalogBoundary.isRemoteCatalogNearEnd(sparseCatalog, chapterIndex), false);
+// Groups consume canonical indexes but never the readable-neighbour budget.
+// Execute the real refresh/prefetch and independent shelf-owner regressions.
+await import('./test-reader-directory-business-boundaries.mjs');
 assert.match(index, /for \(let start = 0; start < books\.length; start \+= 2\)[\s\S]*Promise\.all\(batch\.map/,
   'bookshelf updates must use a bounded two-book batch');
 // PH116 explicitly keeps failures and recovery in the normal reading page.

@@ -10,7 +10,7 @@ const repairs = [];
 const frames = [];
 const Index = productionMotionMethods(indexPath,
   ['readingReadyCallback', 'scheduleNavigationBackfillAfterReady'], {
-    LOCAL_SOURCE_ID: 'local',
+    LOCAL_SOURCE_ID: 'local', DOMAIN: 0x5244, hilog: { info() {}, warn() {} },
     ReaderRuntimeOwner: { current: () => owner },
     ReaderNavigationBackfillFrame: class { constructor(action) { this.action = action; } onFrame() { this.action(); } },
     backfillRetainedReaderDirectoryNavigation: async (_owner, bookId, isCurrent) => {
@@ -67,8 +67,56 @@ function reader(bookId, kind = 'epub') {
   const { page } = reader('local-txt', 'txt');
   readerDirectoryNoteMissingNavigation('local-txt', 'navigationMissingOrStale');
   page.readingReadyCallback('local', 'local-txt', 7)(0);
-  assert.equal(frames.length, 0, 'known non-EPUB never schedules archive backfill');
+  assert.equal(frames.length, 1, 'TXT preparation is deferred until a readable frame');
   assert.deepEqual(repairs, ['old-epub', 'late-epub']);
+  frames.shift().onFrame();
+  assert.deepEqual(repairs, ['old-epub', 'late-epub', 'local-txt']);
+  page.navigationBackfillObserverDisposer?.();
 }
 
 console.log('PH42 retained EPUB backfill only after directory miss and readable frame: PASS');
+
+for (const kind of ['local', ' LOCAL ', ' TxT ']) {
+  const bookId = `production-txt-${kind}`;
+  const { page } = reader(bookId, kind);
+  const before = repairs.length;
+  readerDirectoryNoteMissingNavigation(bookId, 'navigationMissingOrStale');
+  page.readingReadyCallback('local', bookId, 7)(0);
+  assert.equal(repairs.length, before, 'production TXT aliases never prepare before visible frame');
+  assert.equal(frames.length, 1);
+  frames.shift().onFrame();
+  assert.deepEqual(repairs.slice(before), [bookId]);
+  page.navigationBackfillObserverDisposer?.();
+  const staleId = `${bookId}-stale`, stale = reader(staleId, kind).page;
+  readerDirectoryNoteMissingNavigation(staleId, 'navigationMissingOrStale');
+  stale.readingReadyCallback('local', staleId, 7)(0);
+  stale.navigationGeneration += 1;
+  frames.shift().onFrame();
+  assert.equal(repairs.length, before + 1, 'stale alias session cannot prepare');
+}
+{
+  const { page } = reader('unsupported-local-pdf', 'pdf');
+  readerDirectoryNoteMissingNavigation('unsupported-local-pdf', 'navigationMissingOrStale');
+  page.readingReadyCallback('local', 'unsupported-local-pdf', 7)(0);
+  assert.equal(frames.length, 0, 'unsupported formats do not enter TXT preparation');
+}
+console.log('PASS production TXT local/TXT tags, case/whitespace normalization, visible-frame admission and stale-session rejection');
+
+{
+  const { page } = reader('chapter-navigation-generation', 'local');
+  page.readingReadyCallback('local', 'chapter-navigation-generation', 7)(0);
+  frames.shift().onFrame();
+  const before = repairs.length;
+  // A manual chapter selection advances navigationGeneration while retaining
+  // the same reading entry, book, and readingReadyGeneration.
+  page.navigationGeneration += 1;
+  page.readingReadyCallback('local', 'chapter-navigation-generation', 7)(1);
+  assert.equal(frames.length, 1, 'new committed chapter must rearm a stale observer');
+  frames.shift().onFrame();
+  readerDirectoryNoteMissingNavigation('chapter-navigation-generation', 'navigationMissingOrStale');
+  assert.deepEqual(repairs.slice(before), ['chapter-navigation-generation']);
+  page.readingReadyCallback('local', 'chapter-navigation-generation', 7)(1);
+  assert.equal(frames.length, 0, 'same committed generation does not repeat preparation');
+  page.navigationBackfillObserverDisposer?.();
+}
+console.log('PASS same-book manual chapter generation rearms navigation backfill');

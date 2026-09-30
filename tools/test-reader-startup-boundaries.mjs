@@ -3,13 +3,13 @@ import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {ReaderStartupTrace} from '../entry/src/main/ets/app/ReaderStartupTrace.ts';
 const tick=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
-function fixture(){
- const clock=[],events=[],native=deferred(),cleanup=deferred();let createError=false;
+function fixture(capabilities=[]){
+ const clock=[],events=[],requests=[],native=deferred(),cleanup=deferred();let createError=false;
  let migrationStarted=false, migrationResult=Promise.resolve(false);
  const runtime={assetBridge:()=>({}),setCapabilityRouter(){},close(){events.push('native.close');},
-  async request(method){events.push(method);return{data:{capabilities:[],buildIdentity:{},recovered:0}};}};
+  async request(method,params){events.push(method);requests.push({method,params:structuredClone(params)});return{data:{capabilities,buildIdentity:{},recovered:0}};}};
  const Owner=productionMotionMethods(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url),
- ['startRuntime','scheduleImportFinalizeCleanup'],{ReaderStartupTrace,LOG_DOMAIN:0,hilog:{info(){},error(){},warn(){}},errorMessageOf:e=>e.message,
+ ['startRuntime','scheduleImportFinalizeCleanup','supportsCoreCapability'],{ReaderStartupTrace,LOG_DOMAIN:0,hilog:{info(){},error(){},warn(){}},errorMessageOf:e=>e.message,
   setTimeout:fn=>{clock.push(fn);return clock.length;},createReaderCoreRuntimeAsync:async(_config,current)=>{
    if(createError)throw Error('open failed');await native.promise;
    if(!current()){runtime.close();throw Error('startup cancelled');}return runtime;
@@ -21,7 +21,7 @@ function fixture(){
   requireCoreBuildIdentity:value=>value,requireSourceSwitchRecoveryCount:value=>value,
   async recoverPendingLocalImportFinalizes(){events.push('cleanup');await cleanup.promise;},
   async installBundledBookSourceCollection(){return{collectionRecords:0,uniqueSourceIds:0,processed:0,installedOrUpgraded:0,failed:0,interrupted:false};}});
- return{owner,runtime,native,cleanup,events,clock,fail(){createError=true;},
+ return{owner,runtime,native,cleanup,events,requests,clock,fail(){createError=true;},
   migrationStarted:()=>migrationStarted, migration(value){migrationResult=value;}};
 }
 {
@@ -64,5 +64,13 @@ function fixture(){
  assert.equal(f.owner.state,'new');assert.equal(f.owner.runtime,undefined);
  assert.equal(f.events.at(-1),'native.close');
  assert.ok(!f.events.includes('source.switch.recover'),'failed marker read cannot bypass restore decision');
+}
+for (const negotiated of [false,true]) {
+ const f=fixture(negotiated?['host.http.timeout.v1']:[]);f.native.resolve();await f.owner.startRuntime();
+ const manifests=f.requests.filter(request=>request.method==='runtime.setHostCapabilities');
+ assert.equal(manifests.length,negotiated?2:1);
+ assert.equal(Object.hasOwn(manifests[0].params,'extensions'),false,'initial legacy manifest stays strict');
+ if(negotiated)assert.deepEqual(manifests[1].params.extensions,['http.execute.timeoutMs.v1']);
+ assert.equal(f.owner.state,'ready');
 }
 console.log('startup boundaries: parallel Host marker/native open, restore barrier/order and marker failure cleanup; async admission, failed-open retry, close-before-ready release, post-ready cleanup and undispatched receipt preservation PASS');

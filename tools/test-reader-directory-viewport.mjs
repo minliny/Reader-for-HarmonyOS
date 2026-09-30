@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { stripTypeScriptTypes } from 'node:module';
+import { readerDirectoryScopeKey } from '../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { readerDirectoryClearViewportAnchors, readerDirectorySaveViewportAnchor,
   readerDirectoryViewportAnchor, readerDirectoryObserveScrollIntent,
@@ -13,6 +15,7 @@ const timers = [];
 const ScrollAlign = { START: 'start', CENTER: 'center' };
 const List = productionMotionMethods(path, ['captureViewportAnchor', 'planPosition', 'schedulePosition',
   'positionInitialCurrent', 'onViewChanged', 'onInteractionChanged', 'aboutToDisappear', 'onScrollCommand'], {
+  readerDirectoryScopeKey: (_source, book) => book,
   readerDirectoryViewportAnchor, readerDirectorySaveViewportAnchor, ScrollAlign,
   LengthMetrics: { vp: value => ({ value }) }, setTimeout: action => timers.push(action),
 });
@@ -106,11 +109,16 @@ readerDirectoryClearViewportAnchors();
     keys() { return [...this.entries.keys()]; }
     get length() { return this.entries.size; }
   }
+  const sharedPages = new FakePlatformLRUCache(12);
+  const pageWindowSource = source.slice(source.indexOf('function directoryPagePrefix('), source.indexOf('interface ReaderDirectoryNavigationItem'));
+  const pageCode = stripTypeScriptTypes(pageWindowSource.replace('export function ', 'function '));
+  const { ReaderDirectoryPageWindow, cacheReaderDirectoryNavigationPage } = new Function('directoryPages', 'readerDirectoryScopeKey',
+    `${pageCode}; return { ReaderDirectoryPageWindow, cacheReaderDirectoryNavigationPage };`)(sharedPages, readerDirectoryScopeKey);
   const DataSource = productionMotionMethods(path,
     ['totalCount', 'getData', 'replace', 'admit', 'loadedNode', 'currentView'],
     { DIRECTORY_PAGE_SIZE: 256, util: { LRUCache: FakePlatformLRUCache },
       setTimeout: action => notificationTimers.push(action) });
-  const data = Object.assign(new DataSource(), { view: undefined, pages: new FakePlatformLRUCache(12),
+  const data = Object.assign(new DataSource(), { view: undefined, pages: new ReaderDirectoryPageWindow(),
     pending: new Set(), listeners: [], load: offset => loads.push(offset) });
   const first = Array.from({ length: 256 }, (_, index) => node(`first-${index}`));
   data.replace({ viewId: 'large', visibleTotal: 50000, nodes: first });
@@ -118,7 +126,13 @@ readerDirectoryClearViewportAnchors();
     const offset = page * 256;
     data.admit(offset, { viewId: 'large', visibleTotal: 50000,
       nodes: Array.from({ length: 256 }, (_, index) => node(`page-${page}-${index}`)) });
-    assert.ok(data.pages.length <= 12, 'platform LRU retains at most 12 pages for a 50k-node catalog');
+    assert.ok(sharedPages.length <= 12, 'platform LRU retains at most 12 pages for a 50k-node catalog');
+  }
+  for (let i=0;i<20;i++) {
+    const view = { viewId:`prepared-${i}`, navigationRevision:'revision', identity:{sourceId:`source:${i}`,bookId:'same-book'} };
+    const detached = cacheReaderDirectoryNavigationPage(view,0,{viewId:view.viewId,visibleTotal:1,nodes:[node(`prepared-node-${i}`)]});
+    assert.deepEqual(detached.nodes, [], 'prepared metadata does not retain nodes outside the shared cache');
+    assert.ok(sharedPages.length <=12, 'prepared pages from all scopes share the total budget');
   }
   assert.equal(data.loadedNode(0), undefined);
   assert.equal(data.getData(0).key, 'loading:0');
@@ -130,7 +144,7 @@ readerDirectoryClearViewportAnchors();
   const preparedTarget = Array.from({ length: 256 }, (_, index) => node(`target-${index}`));
   preparedTarget[5000 - 4864] = node('stable-visible');
   const preparedPhysical = Array.from({ length: 256 }, (_, index) => node(`physical-${index}`));
-  const deep = Object.assign(new DataSource(), { view: undefined, pages: new FakePlatformLRUCache(12),
+  const deep = Object.assign(new DataSource(), { view: undefined, pages: new ReaderDirectoryPageWindow(),
     pending: new Set(), listeners: [], load: offset => loads.push(offset) });
   deep.replace({ viewId: 'old-deep', navigationRevision: 'rev', visibleTotal: 10001, nodes: first });
   deep.admit(5888, { viewId: 'old-deep', visibleTotal: 10001, nodes: oldPage });
@@ -138,16 +152,20 @@ readerDirectoryClearViewportAnchors();
   deep.listeners.push({ onDataChanged() {}, onDataReloaded() {
     reloadKeys.push([deep.getData(5000).key, deep.getData(6000).key]);
   } });
-  deep.replace({ viewId: 'folded-deep', navigationRevision: 'rev', visibleTotal: 10001, nodes: first,
-    preparedPages: [
-      { offset: 4864, page: { viewId: 'folded-deep', visibleTotal: 10001, nodes: preparedTarget } },
-      { offset: 5888, page: { viewId: 'folded-deep', visibleTotal: 10001, nodes: preparedPhysical } },
-    ] });
+  const folded = { viewId: 'folded-deep', navigationRevision: 'rev', visibleTotal: 10001, nodes: first };
+  folded.preparedPages = [
+    { offset: 4864, page: cacheReaderDirectoryNavigationPage(folded, 4864,
+      { viewId: folded.viewId, visibleTotal: folded.visibleTotal, nodes: preparedTarget }) },
+    { offset: 5888, page: cacheReaderDirectoryNavigationPage(folded, 5888,
+      { viewId: folded.viewId, visibleTotal: folded.visibleTotal, nodes: preparedPhysical }) },
+  ];
+  assert.deepEqual(folded.preparedPages.map(item => item.page.nodes), [[], []]);
+  deep.replace(folded);
   assert.deepEqual(reloadKeys, [['stable-visible', 'physical-112']],
     '10k-node fold presents stable node keys at the new rank and resolved old physical viewport before reload');
 
   const changed = [];
-  const changing = Object.assign(new DataSource(), { view: undefined, pages: new FakePlatformLRUCache(12),
+  const changing = Object.assign(new DataSource(), { view: undefined, pages: new ReaderDirectoryPageWindow(),
     pending: new Set(), listeners: [{ onDataReloaded: () => changed.push('reload'),
       onDataChanged: index => changed.push(index) }], load: () => {} });
   const parent = node('parent'), unrelated = node('unrelated'), current = node('current');
@@ -176,6 +194,6 @@ assert.match(source, /\.onScrollStop\(\(\): void => \{ this\.captureViewportAnch
   'row offset is captured after an in-row drag stops');
 assert.match(source, /当前章在此组/,
   'collapsed visible ancestor announces where the current chapter resides');
-assert.match(source, /new util\.LRUCache<number, ReaderDirectoryNavigationNode\[\]>\(DIRECTORY_RETAINED_PAGES\)/,
+assert.match(source, /new util\.LRUCache<string, ReaderDirectoryNavigationNode\[\]>\(DIRECTORY_RETAINED_PAGES\)/,
   'production delegates generic page eviction to the platform LRUCache');
 console.log('PH42 tree viewport continuity, ancestor accessibility and bounded page cache: PASS');

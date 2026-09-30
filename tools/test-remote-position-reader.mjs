@@ -336,3 +336,17 @@ console.log('PH93 actual reader fresh-body/fallback admission, refresh results, 
  }
 }
 console.log('PH93 actual Index: superseded mark read is retired; current IO failure remains retryable and visible PASS');
+{
+ const {p}=page(async()=>old);const selections=[];
+ p.selectChapterAnchor=(...args)=>selections.push(args);p.clearTtsChapterEndTimer=()=>{};
+ p.getUIContext=()=>({getPromptAction:()=>({showToast(){}})});
+ const proof={sourceId:'s',bookId:'b',catalogRevision:'c',structureRevision:'n',nodeId:'leaf',url:'/0'};
+ p.selectBookmarkAnchor(0,0,undefined,proof);
+ assert.deepEqual(selections.at(-1)[8],{anchors:[],directoryTargetProof:proof},'chapterStart has independent directory authority and no fabricated body version');
+ const scope={sourceId:'s',bookId:'b',chapterIndex:0,bodyVersion:'old',processingVersion:'old-p'};
+ p.selectBookmarkAnchor(0,0,scope,proof);
+ assert.deepEqual(selections.at(-1)[8],{bodyVersion:'old',processingVersion:'old-p',anchors:[{id:'requested',offset:0}],directoryTargetProof:proof},'exact zero preserves both original body proof and directory authority');
+ const before=selections.length;p.selectBookmarkAnchor(0,0,undefined,{...proof,sourceId:'other'});
+ assert.equal(selections.length,before,'foreign source proof cannot start a selection');
+}
+console.log('actual reader directory chapterStart/exact-zero/scope selection proof PASS');

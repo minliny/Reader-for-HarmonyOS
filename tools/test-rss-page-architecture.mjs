@@ -132,7 +132,7 @@ assert.match(index, /onToggle: \(id: string, enabled: boolean\): void =>[\s\S]*t
 assert.match(index, /onRefresh: \(id: string\): void => this\.getRssOrchestrator\(\)\.refreshSubscription\(id\)/);
 assert.match(index, /showAlertDialog\(\{[\s\S]*primaryButton:[\s\S]*value: '取消'[\s\S]*secondaryButton:[\s\S]*value: '删除'/);
 assert.match(index, /private confirmRssSubscriptionDelete\(subscriptionId: string\): void \{[\s\S]*removeSubscription\(subscriptionId\);/);
-assert.match(index, /private onRssManagementViewArticles\(subscriptionId: string\): void \{\s*this\.onRssSubscriptionSelected\(subscriptionId, 'rssSubscriptionManagement'\);/);
+assert.match(index, /private onRssManagementViewArticles\(subscriptionId: string\): void \{\s*if \(!isReaderProductSurfaceEnabled\('rss'\)\) \{\s*return;\s*\}\s*this\.onRssSubscriptionSelected\(subscriptionId, 'rssSubscriptionManagement'\);/);
 assert.match(index, /private returnFromRssSourceFeed\(\): void \{[\s\S]*this\.route = 'rssSubscriptionManagement';/);
 assert.match(orchestrator, /private mutationChain: Promise<void> = Promise\.resolve\(\)/);
 assert.match(orchestrator, /this\.mutationChain = this\.mutationChain[\s\S]*this\.applyMutation/);

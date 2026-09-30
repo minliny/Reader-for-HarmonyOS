@@ -134,16 +134,16 @@ export struct SettingsPage {
   @Builder
   private buildHome() {
     CategorySection({ title: '设置' }) {
-      this.navRow('通用设置', (this.appThemeScheme === 'night' ? $r('app.media.settings_row_general_theme_night') : $r('app.media.settings_row_general')), (): void => {
+      this.navRow('通用设置', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_general_theme_night') : $r('app.media.settings_row_general')), (): void => {
         this.onSectionChange('general');
       });
-      this.navRow('书源管理', (this.appThemeScheme === 'night' ? $r('app.media.settings_row_source_theme_night') : $r('app.media.settings_row_source')), (): void => this.onOpenSourceManagement());
+      this.navRow('书源管理', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_source_theme_night') : $r('app.media.settings_row_source')), (): void => this.onOpenSourceManagement());
       if (isReaderProductSurfaceEnabled('sync')) {
-        this.navRow('同步与备份', (this.appThemeScheme === 'night' ? $r('app.media.settings_row_sync_theme_night') : $r('app.media.settings_row_sync')), (): void => this.onOpenSync());
+        this.navRow('同步与备份', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_sync_theme_night') : $r('app.media.settings_row_sync')), (): void => this.onOpenSync());
       }
-      this.navRow('书架设置', (this.appThemeScheme === 'night' ? $r('app.media.settings_row_shelf_search_theme_night') : $r('app.media.settings_row_shelf_search')), this.onOpenBookshelfSettings);
+      this.navRow('书架设置', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_shelf_search_theme_night') : $r('app.media.settings_row_shelf_search')), this.onOpenBookshelfSettings);
       if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
-        this.navRow('关于与反馈', (this.appThemeScheme === 'night' ? $r('app.media.settings_row_about_theme_night') : $r('app.media.settings_row_about')), (): void => {});
+        this.navRow('关于与反馈', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_about_theme_night') : $r('app.media.settings_row_about')), (): void => {});
       }
     }
   }
@@ -165,11 +165,11 @@ export struct SettingsPage {
   @Builder
   private preferenceCard() {
     CategorySection({ title: '基础偏好' }) {
-      this.segmentRow('App主题', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_theme_theme_night') : $r('app.media.settings_gen_theme')));
+      this.segmentRow('App主题', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_theme_theme_night') : $r('app.media.settings_gen_theme')));
       if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
-      this.selectRow('语言', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_language_theme_night') : $r('app.media.settings_gen_language')), 'language',
+      this.selectRow('语言', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_language_theme_night') : $r('app.media.settings_gen_language')), 'language',
         ['简体中文', '繁體中文', 'English', '日本語', '한국어']);
-      this.selectRow('启动时打开', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_startup_theme_night') : $r('app.media.settings_gen_startup')), 'startup',
+      this.selectRow('启动时打开', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_startup_theme_night') : $r('app.media.settings_gen_startup')), 'startup',
         ['书架', '发现', 'RSS', '设置']);
       }
     }
@@ -178,12 +178,12 @@ export struct SettingsPage {
   @Builder
   private behaviorCard() {
     CategorySection({ title: '行为与反馈' }) {
-      this.switchRow('自动检查更新', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_update_theme_night') : $r('app.media.settings_gen_update')), 'autoCheckUpdate');
-      this.switchRow('减少动态效果', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_motion_theme_night') : $r('app.media.settings_gen_motion')), 'reduceMotion');
+      this.switchRow('自动检查更新', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_update_theme_night') : $r('app.media.settings_gen_update')), 'autoCheckUpdate');
+      this.switchRow('减少动态效果', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_motion_theme_night') : $r('app.media.settings_gen_motion')), 'reduceMotion');
       if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
-        this.switchRow('点击当前底栏回顶部', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_tap_top_theme_night') : $r('app.media.settings_gen_tap_top')), 'tapBottomScrollTop');
-        this.switchRow('崩溃日志', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_crash_theme_night') : $r('app.media.settings_gen_crash')), 'crashLog');
-        this.selectRow('动画效果', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_animation_theme_night') : $r('app.media.settings_gen_animation')), 'animation', ['标准', '减弱', '关闭']);
+        this.switchRow('点击当前底栏回顶部', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_tap_top_theme_night') : $r('app.media.settings_gen_tap_top')), 'tapBottomScrollTop');
+        this.switchRow('崩溃日志', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_crash_theme_night') : $r('app.media.settings_gen_crash')), 'crashLog');
+        this.selectRow('动画效果', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_animation_theme_night') : $r('app.media.settings_gen_animation')), 'animation', ['标准', '减弱', '关闭']);
       }
       this.cacheActionRow();
     }
@@ -192,26 +192,26 @@ export struct SettingsPage {
   @Builder
   private permissionCard() {
     CategorySection({ title: '系统权限' }) {
-      this.permissionRow('文件访问', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_file_theme_night') : $r('app.media.settings_gen_file')), readerAppColor('app.SettingsPage.permissionCard.permissionRow.212B895C', this.appThemeScheme), readerAppColor('app.SettingsPage.permissionCard.permissionRow.FF28704E', this.appThemeScheme));
-      this.permissionRow('通知权限', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_notification_theme_night') : $r('app.media.settings_gen_notification')), readerAppColor('app.SettingsPage.permissionCard.permissionRow.24B0661D', this.appThemeScheme), readerAppColor('app.SettingsPage.permissionCard.permissionRow.FF8C521D', this.appThemeScheme));
-      this.permissionRow('电池优化', (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_battery_theme_night') : $r('app.media.settings_gen_battery')), readerAppColor('app.SettingsPage.permissionCard.permissionRow.212379A4', this.appThemeScheme), readerAppColor('TOK_GREEN', this.appThemeScheme));
+      this.permissionRow('文件访问', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_file_theme_night') : $r('app.media.settings_gen_file')), readerAppColor('app.SettingsPage.permissionCard.permissionRow.212B895C', this.appThemeScheme), readerAppColor('app.SettingsPage.permissionCard.permissionRow.FF28704E', this.appThemeScheme));
+      this.permissionRow('通知权限', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_notification_theme_night') : $r('app.media.settings_gen_notification')), readerAppColor('app.SettingsPage.permissionCard.permissionRow.24B0661D', this.appThemeScheme), readerAppColor('app.SettingsPage.permissionCard.permissionRow.FF8C521D', this.appThemeScheme));
+      this.permissionRow('电池优化', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_battery_theme_night') : $r('app.media.settings_gen_battery')), readerAppColor('app.SettingsPage.permissionCard.permissionRow.212379A4', this.appThemeScheme), readerAppColor('TOK_GREEN', this.appThemeScheme));
     }
   }
 
   // 导航行: CategoryRow + 尾部 chevron。
   @Builder
-  private navRow(label: string, icon: Resource, action: () => void) {
-    CategoryRow({ icon: icon, label: label, onRowClick: action }) {
+  private navRow(label: string, icon: () => Resource, action: () => void) {
+    CategoryRow({ icon: icon(), label: label, onRowClick: action }) {
       Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'))).width(14).height(14);
     }
   }
 
   // 开关行: CategoryRow + 尾部 ReaderToggle。
   @Builder
-  private switchRow(label: string, icon: Resource, key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
+  private switchRow(label: string, icon: () => Resource, key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
   ) {
     CategoryRow({
-      icon: icon,
+      icon: icon(),
       label: label,
       // The shared row already owns the topmost tap gesture. Wire the same
       // idempotent target value here so both the row and the visual toggle are
@@ -271,7 +271,7 @@ export struct SettingsPage {
   // 使触发盒始终与 label 中线对齐。展开面板由 buildOverlay 在 SettingsShell 根 Stack
   // (全高 overlay 宿主) 内定位渲染 → 面板所有选项可点, 行固定高 → 页面不拉伸。
   @Builder
-  private selectRow(label: string, icon: Resource, key: SettingsSelectField, options: string[]) {
+  private selectRow(label: string, icon: () => Resource, key: SettingsSelectField, options: string[]) {
     Row({ space: 12 }) {
       this.labelColumn(label, icon);
 
@@ -308,7 +308,7 @@ export struct SettingsPage {
 
   // 分段控件行 (App主题): labelColumn + ReaderSegmentedControl, 垂直居中。
   @Builder
-  private segmentRow(label: string, icon: Resource) {
+  private segmentRow(label: string, icon: () => Resource) {
     Row({ space: 12 }) {
       this.labelColumn(label, icon);
 
@@ -330,7 +330,7 @@ export struct SettingsPage {
 
   // 行内左列: icon 盒 + label, 间距统一 12 (与 CategoryRow 同构)。
   @Builder
-  private labelColumn(label: string, icon: Resource) {
+  private labelColumn(label: string, icon: () => Resource) {
     Row({ space: 12 }) {
       this.iconBox(icon);
       Text(label)
@@ -392,8 +392,8 @@ export struct SettingsPage {
   }
 
   @Builder
-  private permissionRow(label: string, icon: Resource, badgeBg: string, badgeDot: string) {
-    CategoryRow({ icon: icon, label: label }) {
+  private permissionRow(label: string, icon: () => Resource, badgeBg: string, badgeDot: string) {
+    CategoryRow({ icon: icon(), label: label }) {
       // Figma Article trailing 是 fit-content 聚簇 (状态徽标 + 去设置 + chevron), 6 间距。
       Row({ space: 6 }) {
         this.statusBadge(badgeBg, badgeDot);
@@ -409,9 +409,11 @@ export struct SettingsPage {
   }
 
   @Builder
-  private iconBox(icon: Resource) {
+  // Resolve inside the retained observer; a preselected Resource freezes the
+  // theme when it crosses an ArkUI @Builder argument boundary.
+  private iconBox(icon: () => Resource) {
     Stack({ alignContent: Alignment.Center }) {
-      Image(icon).width(15).height(15);
+      Image(icon()).width(15).height(15);
     }
     .width(28)
     .height(28)
