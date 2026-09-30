@@ -1,0 +1,50 @@
+name: Harmony contract gate
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contract-gate:
+    # Ephemeral GitHub runner; do not execute untrusted PRs on the fnOS NAS.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: Reader-for-HarmonyOS
+      - uses: actions/checkout@v4
+        with:
+          repository: minliny/Reader-Core-Native
+          ref: ${{ vars.READER_CORE_REF || 'main' }}
+          path: Reader-Core-Native
+          token: ${{ secrets.READER_CI_READ_TOKEN || github.token }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: Reader-Core-Native
+      - run: sudo apt-get update && sudo apt-get install -y clang libclang-dev
+      - name: Build offline fixture CLI from checked-out Core
+        working-directory: Reader-Core-Native
+        run: cargo build --locked -p reader-cli
+      - name: Prepare licensed Harmony command-line tools
+        env:
+          HARMONY_TOOLS_URL: ${{ secrets.HARMONY_TOOLS_URL }}
+          HARMONY_TOOLS_SHA256: ${{ vars.HARMONY_TOOLS_SHA256 }}
+        run: bash Reader-for-HarmonyOS/scripts/prepare-ci-sdk.sh
+      - name: Source contracts, production probes and native geometry
+        working-directory: Reader-for-HarmonyOS
+        run: bash scripts/check-local.sh
+      - name: Hvigor package manager audit
+        working-directory: Reader-for-HarmonyOS
+        run: |
+          node tools/reader-build-tools.mjs --install
+          npm audit --prefix "$HOME/.hvigor/wrapper/tools" --audit-level=moderate

@@ -11,12 +11,7 @@
 // generation's terminal frame.
 //
 // Build (from entry/src/main/cpp):
-//   c++ -std=c++17 -O2 -Wall -Wextra -Werror \
-//       -I bookturn -I tests/glmock -I tests/mocksdk \
-//       tests/bookturn_present_barrier_test.cpp tests/mocksdk/ohos_host_mocks.cpp \
-//       tests/glmock/gl_mock.cpp bookturn/bookturn_host.cpp bookturn/bookturn_motion.cpp \
-//       bookturn/bookturn_renderer.cpp bookturn/bookturn_solver.cpp \
-//       -o /tmp/bookturn_barrier_test
+//   c++ -std=c++17 -O2 -Wall -Wextra -Werror -I bookturn -I tests/glmock -I tests/mocksdk tests/bookturn_present_barrier_test.cpp tests/mocksdk/ohos_host_mocks.cpp tests/glmock/gl_mock.cpp bookturn/bookturn_host.cpp bookturn/bookturn_motion.cpp bookturn/bookturn_renderer.cpp bookturn/bookturn_solver.cpp -o /tmp/bookturn_barrier_test
 // Run:
 //   /tmp/bookturn_barrier_test
 #include "bookturn_host.h"

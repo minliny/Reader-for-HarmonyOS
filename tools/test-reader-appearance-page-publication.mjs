@@ -1,3 +1,4 @@
+import { tmpdir } from 'node:os';
 import { installReaderMeasurementOwner } from './lib/reader-measurement-owner-fixture.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -23,7 +24,7 @@ function actualClass(source, name, dependencies = {}) {
   assert.ok(node, name);
   return new Function(...Object.keys(dependencies), stripTypeScriptTypes(node.getText(tree)).replace(/^export /, '') + `;return ${name};`)(...Object.values(dependencies));
 }
-const PhysicalReadingPage = actualClass(lreSource, 'PhysicalReadingPage');
+const PhysicalReadingPage = actualClass(readFileSync(new URL('ReadingMeasurementModels.ets', lreFile), 'utf8'), 'PhysicalReadingPage');
 const CoreReadingAnchor = actualClass(lreSource, 'CoreReadingAnchor');
 const ReaderPageTurnRenderPage = actualClass(stageSource, 'ReaderPageTurnRenderPage', { ReaderPageChromeSnapshot });
 const snapshot = size => ({ ...createDefaultReaderAppearanceSnapshot(), fontSize: size });
@@ -256,7 +257,7 @@ const bad = stageProbe(oldBinding);
 assert.throws(() => assert.deepEqual(bad.fonts(), [20, 19]), /deep-equal/);
 assert.deepEqual(bad.fonts(), [21, 21], 'negative control reproduces new-font/old-lines mismatch');
 const oldPublication = lreSource.replace('if (measuredLayoutSignature !== this.paginationLayoutSignature()) {', 'if (false) {');
-const mutantFile = '/private/tmp/reader-appearance-obsolete-page-publication.ets'; writeFileSync(mutantFile, oldPublication);
+const mutantFile = `${tmpdir()}/reader-appearance-obsolete-page-publication.ets`; writeFileSync(mutantFile, oldPublication);
 const stale = fixture({ file: mutantFile }); stale.start(21); const pending = stale.finish(21); await settle(); stale.start(22); stale.ack(); await pending;
 assert.notEqual(stale.owner.visiblePage, stale.old, 'negative control exposes obsolete page publication');
 assert.equal(stale.owner.visiblePage.measuredAppearance.fontSize, 21);

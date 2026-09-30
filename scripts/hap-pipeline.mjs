@@ -21,6 +21,10 @@ import { homedir, tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { readSigningAuthority, assertSigningMaterialAuthority, assertSigningCertificateAuthority } from '../tools/reader-signing-authority.mjs';
+
+import { assertBuildTools } from '../tools/reader-build-tools.mjs';
+import { assertCoreInputs, syncCoreInputs } from '../tools/reader-core-inputs.mjs';
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const REPO_ROOT = resolve(dirname(SCRIPT_PATH), '..');
@@ -36,7 +40,7 @@ const DEFAULT_STRIP_TOOL =
   '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/llvm/bin/llvm-objcopy';
 const HDC_LEASE_SCRIPT = resolve(REPO_ROOT, 'tools/reader-hdc-lease.mjs');
 const HDC_SERVER = process.env.READER_HDC_SERVER_KEY ?? '::ffff:127.0.0.1:8710';
-const BUNDLE_NAME = 'io.reader.harmonyos';
+const BUNDLE_NAME = 'io.reader.minliny';
 const EXPECTED_NATIVE_ENTRIES = [
   'libs/arm64-v8a/libc++_shared.so',
   'libs/arm64-v8a/libreader_bookturn_napi.so',
@@ -241,6 +245,7 @@ function copySourceSandbox(source, destination) {
     'entry/build',
     'entry/.cxx',
     'node_modules',
+    'oh_modules',
     'evidence',
   ];
   const args = ['-a', '--delete'];
@@ -311,8 +316,9 @@ function verifySignature(hapPath) {
     if (result.status === 0 && output.includes('verify-app success') &&
         output.includes('verify codesign success') && output.includes('Digest verify result: true')) {
       const profile = output.match(/profile type is:\s*([^\s]+)/i)?.[1]?.toLowerCase() ?? 'unknown';
-      return { status: 'signed', verified: true, profileType: profile,
-        ...verifiedProfileIdentity(resolve(verifyRoot, 'profile.p7b')) };
+      const identity = verifiedProfileIdentity(resolve(verifyRoot, 'profile.p7b'));
+      assertSigningCertificateAuthority(identity.certificateSha256);
+      return { status: 'signed', verified: true, profileType: profile, ...identity };
     }
     if (/signature not found|No Hap Signing Block/i.test(output)) {
       return { status: 'unsigned', verified: false, profileType: 'none' };
@@ -414,7 +420,7 @@ function validateLocalSigningProfile(path) {
 function parseBuildProfile(path) {
   // Use the JSON5 parser bundled with the official build tools, including
   // DevEco's comments/trailing commas; never echo parser excerpts of secrets.
-  const plugin = '/Applications/DevEco-Studio.app/Contents/tools/hvigor/hvigor-ohos-plugin/package.json';
+  const plugin = process.env.READER_HVIGOR_PLUGIN_PACKAGE || '/Applications/DevEco-Studio.app/Contents/tools/hvigor/hvigor-ohos-plugin/package.json';
   try { return createRequire(plugin)('json5').parse(readFileSync(path, 'utf8')); }
   catch { fail('signing build profile could not be parsed; no secret content was logged'); }
 }
@@ -513,6 +519,7 @@ function syncSigning(options) {
   if (existsSync(destination)) validateLocalSigningProfile(destination);
   const before = fileRecord(source, 'signing-config').sha256;
   const composed = composeSigningProfile(parseBuildProfile(resolve(REPO_ROOT, 'build-profile.json5')), parseBuildProfile(source));
+  assertSigningMaterialAuthority(composed, verifiedProfileIdentity);
   // Keep an independent copy, so a later DevEco auto-generation cannot replace
   // the keystore underneath this configuration's matching password fields.
   const frozen = freezeSigningMaterial(composed, resolve(dirname(destination), 'materials'));
@@ -554,12 +561,12 @@ function requireAcceptanceInputs() {
   return inputs;
 }
 
-function generateAcceptanceProvenance(runDir, signedHap, hvigorVersion, buildCommand) {
+function generateAcceptanceProvenance(runDir, signedHap, hvigorVersion, buildCommand, allowDirty = false) {
   const inputs = requireAcceptanceInputs();
   const generator = resolve(REPO_ROOT, 'tools/generate-build-provenance-manifest.mjs');
   const stripTool = process.env.NATIVE_STRIP_TOOL || DEFAULT_STRIP_TOOL;
   if (!existsSync(stripTool)) fail(`native strip tool is missing: ${stripTool}`);
-  const output = resolve(runDir, 'acceptance-provenance.json');
+  const output = resolve(runDir, allowDirty ? 'native-provenance.json' : 'acceptance-provenance.json');
   run(process.execPath, [
     generator,
     '--core-repo', CORE_ROOT,
@@ -576,6 +583,7 @@ function generateAcceptanceProvenance(runDir, signedHap, hvigorVersion, buildCom
     '--build-command', buildCommand,
     '--hvigor-version', hvigorVersion,
     '--sdk-version', 'HarmonyOS 6.1.0(23)',
+    ...(allowDirty ? ['--allow-dirty'] : []),
   ]);
   return basename(output);
 }
@@ -587,6 +595,7 @@ function build(options) {
   if (!['auto', 'local', 'unsigned'].includes(requestedSigning)) {
     fail('--signing must be auto, local, or unsigned', 2);
   }
+  if (requestedSigning !== 'unsigned') readSigningAuthority();
   const localProfile = resolve(process.env.READER_HARMONY_SIGNING_PROFILE || DEFAULT_SIGNING_PROFILE);
   const signingMode = resolveSigningMode(requestedSigning, existsSync(localProfile));
   if (signingMode === 'local' && !existsSync(localProfile)) {
@@ -598,6 +607,7 @@ function build(options) {
     validateLocalSigningProfile(localProfile);
     signingProfile = composeSigningProfile(parseBuildProfile(resolve(REPO_ROOT, 'build-profile.json5')),
       parseBuildProfile(localProfile));
+    assertSigningMaterialAuthority(signingProfile, verifiedProfileIdentity);
     signingBefore = { configuration: fileRecord(localProfile, 'local-signing-config'),
       material: signingMaterialSnapshot(signingProfile) };
   }
@@ -606,7 +616,7 @@ function build(options) {
   const coreGit = gitRecord(CORE_ROOT);
   requireCleanAcceptance(buildClass, harmonyGit, coreGit, signingMode);
 
-  const lockDir = '/private/tmp/reader-harmony-hap-build.lock';
+  const lockDir = join(tmpdir(), 'reader-harmony-hap-build.lock');
   acquireLock(lockDir, {
     pid: process.pid,
     repo: REPO_ROOT,
@@ -630,6 +640,7 @@ function build(options) {
       });
     }
 
+    const coreInputsBefore = assertCoreInputs();
     const sourceBefore = sourceSnapshot(REPO_ROOT);
     const sourceGitBefore = gitRecord(REPO_ROOT);
     const coreGitBefore = gitRecord(CORE_ROOT);
@@ -649,6 +660,14 @@ function build(options) {
       token: pipelineToken, profileSha256: effectiveProfile.sha256,
     }), { mode: 0o600 });
     const sandboxBefore = sourceSnapshot(sandboxRepo);
+    const ohpm = process.env.OHPM || resolve(dirname(process.env.HVIGORW || DEFAULT_HVIGORW), '../../ohpm/bin/ohpm');
+    run(ohpm, ['install', '--cache', resolve(sandboxRoot, 'ohpm-cache')], {
+      cwd: resolve(sandboxRepo, 'entry'), stdio: 'inherit',
+    });
+    assertSnapshotUnchanged(sandboxBefore, sourceSnapshot(sandboxRepo), 'OHPM dependency inputs');
+    run('diff', ['-qr', resolve(sandboxRepo, 'entry/vendor/core-harmony'),
+      resolve(sandboxRepo, 'entry/oh_modules/@reader/core-harmony')]);
+    process.stdout.write('Isolated OHPM Core SDK resolution and byte comparison: PASS\n');
 
     const hvigorw = process.env.HVIGORW || DEFAULT_HVIGORW;
     if (!existsSync(hvigorw)) fail(`Hvigor is missing: ${hvigorw}`);
@@ -666,6 +685,7 @@ function build(options) {
     if (!existsSync(sharedHvigorTools)) {
       fail(`prepared Hvigor wrapper tools are missing: ${sharedHvigorTools}`);
     }
+    const packageManager = assertBuildTools(sharedHvigorTools);
     const isolatedHvigorTools = resolve(hvigorUserHome, 'wrapper/tools');
     mkdirSync(isolatedHvigorTools, { recursive: true });
     run('rsync', ['-a', `${sharedHvigorTools}/`, `${isolatedHvigorTools}/`]);
@@ -706,6 +726,9 @@ function build(options) {
     );
     assertGitRecordUnchanged(sourceGitBefore, gitRecord(REPO_ROOT), 'Harmony source worktree');
     assertGitRecordUnchanged(coreGitBefore, gitRecord(CORE_ROOT), 'Core source worktree');
+    if (JSON.stringify(assertCoreInputs()) !== JSON.stringify(coreInputsBefore)) {
+      fail('Core inputs changed during HAP build');
+    }
 
     const outputDir = resolve(sandboxRepo, 'entry/build/default/outputs/default');
     const builtNames = findBuiltHaps(outputDir, signingMode);
@@ -740,22 +763,21 @@ function build(options) {
     }
 
     writeJson(resolve(runDir, 'source-snapshot.json'), sourceBefore);
+    const compiledSourceSnapshot = JSON.parse(readFileSync(
+      resolve(CORE_ROOT, 'target/harmony-napi/arm64-v8a/core-source-snapshot.json'), 'utf8'));
+    writeJson(resolve(runDir, 'core-source-snapshot.json'), compiledSourceSnapshot);
+    const compiledSourceRecord = fileRecord(resolve(runDir, 'core-source-snapshot.json'), 'core-source-snapshot.json');
     writeJson(resolve(runDir, 'controller-snapshot.json'), harmonyGateBefore);
     writeJson(resolve(runDir, 'workspace-contract-snapshot.json'), workspaceContractBefore);
     const hvigorVersion = capture(hvigorw, ['--version'], {
       cwd: sandboxRepo,
       env: buildEnvironment,
     });
-    let acceptanceProvenance = null;
-    if (buildClass === 'acceptance') {
-      const signed = artifacts.find((artifact) => artifact.kind === 'signed');
-      acceptanceProvenance = generateAcceptanceProvenance(
-        runDir,
-        resolve(runDir, signed.path),
-        hvigorVersion,
-        buildCommand,
-      );
-    }
+    const provenanceArtifact = artifacts.find(artifact => artifact.kind === 'signed') ?? artifacts[0];
+    const provenancePath = generateAcceptanceProvenance(runDir, resolve(runDir, provenanceArtifact.path),
+      hvigorVersion, buildCommand, buildClass !== 'acceptance');
+    const acceptanceProvenance = buildClass === 'acceptance' ? provenancePath : null;
+    const nativeProvenance = fileRecord(resolve(runDir, provenancePath), provenancePath);
     const vendoredNapi = fileRecord(
       resolve(REPO_ROOT, 'entry/libs/arm64-v8a/libreader_core_napi.so'),
       'entry/libs/arm64-v8a/libreader_core_napi.so',
@@ -783,6 +805,7 @@ function build(options) {
           secretMaterialArchived: false,
         },
         vendoredCoreNapi: vendoredNapi,
+        compiledCoreInputs: { ...coreInputsBefore, snapshot: compiledSourceRecord },
       },
       gates: {
         harmonyContracts: 'PASS',
@@ -808,12 +831,14 @@ function build(options) {
         bundledSourceBytes: 'PASS',
       },
       toolchain: {
+        packageManager,
         hvigorw,
         hvigorVersion,
         buildCommand,
       },
       artifacts,
       acceptanceProvenance,
+      nativeProvenance,
       evidenceBoundary: {
         packageBuild: 'PASS',
         vmInstall: 'OPEN',
@@ -913,6 +938,28 @@ function verifyManifest(path) {
     }
     verified.push(current);
   }
+  if (loaded.manifest.nativeProvenance) {
+    const compiled = loaded.manifest.source.compiledCoreInputs;
+    if (compiled?.snapshot?.path !== 'core-source-snapshot.json') fail('Core source snapshot missing');
+    const sourceFile = resolve(loaded.directory, compiled.snapshot.path);
+    const sourceRecord = fileRecord(sourceFile, compiled.snapshot.path);
+    const coreSnapshot = JSON.parse(readFileSync(sourceFile, 'utf8'));
+    if (sourceRecord.sha256 !== compiled.snapshot.sha256 || sourceRecord.bytes !== compiled.snapshot.bytes ||
+        coreSnapshot.fingerprint !== compiled.fingerprint || coreSnapshot.fileCount !== compiled.fileCount ||
+        sha256Bytes(Buffer.from(JSON.stringify(coreSnapshot.files))) !== compiled.fingerprint) {
+      fail('Compiled Core source snapshot identity mismatch');
+    }
+    const expected = loaded.manifest.nativeProvenance;
+    if (!['native-provenance.json', 'acceptance-provenance.json'].includes(expected.path)) fail('Invalid Native provenance path');
+    const actual = fileRecord(resolve(loaded.directory, expected.path), expected.path);
+    if (actual.sha256 !== expected.sha256 || actual.bytes !== expected.bytes) fail('Native provenance identity mismatch');
+    const provenance = JSON.parse(readFileSync(resolve(loaded.directory, expected.path), 'utf8'));
+    if (!verified.some(artifact => artifact.sha256 === provenance.hap.sha256) ||
+        verified.some(artifact => artifact.embeddedCoreNapi.sha256 !== provenance.hap.embeddedNative.sha256) ||
+        loaded.manifest.source.compiledCoreInputs.nativeSha256 !== provenance.napi.nativeInput.sha256) {
+      fail('HAP Native differs from its source provenance');
+    }
+  }
   return { ...loaded, artifacts: verified };
 }
 
@@ -928,7 +975,7 @@ function bundleListConfirmsAbsence(output) {
 }
 
 export function parseBundleMetadata(output, bundleListOutput = '') {
-  if (/^error: bundle \[io\.reader\.harmonyos\] not found\.?$/i.test(output.trim()) ||
+  if (/^error: bundle \[io\.reader\.minliny\] not found\.?$/i.test(output.trim()) ||
       (output.trim() === BUNDLE_LOOKUP_UNAVAILABLE && bundleListConfirmsAbsence(bundleListOutput))) {
     return { bundlePresent: false, bundleName: '' };
   }
@@ -1063,7 +1110,7 @@ function installDeployment(options) {
   const target = requiredOption(options, '--target');
   const targetKind = requiredOption(options, '--target-kind');
   const targetRef = targetReference(target);
-  const lockDir = `/private/tmp/reader-harmony-target-${targetRef}.lock`;
+  const lockDir = join(tmpdir(), `reader-harmony-target-${targetRef}.lock`);
   acquireLock(lockDir, {
     pid: process.pid,
     targetKind,
@@ -1137,6 +1184,7 @@ function installDeployment(options) {
 function usage() {
   console.error(`Usage:
   node scripts/hap-pipeline.mjs build [--class iteration|acceptance] [--signing auto|local|unsigned] [--live-sources]
+  node scripts/hap-pipeline.mjs sync-core
   node scripts/hap-pipeline.mjs sync-signing [--profile <private-local-profile.json5>]
   node scripts/hap-pipeline.mjs verify --manifest <manifest.json>
   node scripts/hap-pipeline.mjs inspect --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical
@@ -1151,6 +1199,7 @@ function main() {
   }
   const options = parseOptions(process.argv.slice(3));
   if (command === 'build') build(options);
+  else if (command === 'sync-core') console.log(JSON.stringify({ status: 'PASS', ...syncCoreInputs() }));
   else if (command === 'sync-signing') syncSigning(options);
   else if (command === 'verify') {
     const verified = verifyManifest(requiredOption(options, '--manifest'));

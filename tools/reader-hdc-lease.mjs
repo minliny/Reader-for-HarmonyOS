@@ -25,8 +25,9 @@ import {
   rmSync, writeFileSync,
 } from 'node:fs';
 import { isAbsolute, parse, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 
-const DEFAULT_ROOT = '/private/tmp/reader-hdc-target-leases';
+const DEFAULT_ROOT = resolve(tmpdir(), 'reader-hdc-target-leases');
 const DEFAULT_WAIT_MS = 30000;
 const DEFAULT_SERVER_KEY = '127.0.0.1:8710';
 const POLL_MS = 100;

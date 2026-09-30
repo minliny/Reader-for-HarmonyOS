@@ -1,7 +1,7 @@
 {
   "UniformDataTypeDeclarations": [
     {
-      "TypeId": "io.reader.harmonyos.kf8",
+      "TypeId": "io.reader.minliny.kf8",
       "BelongingToTypes": [
         "com.amazon.azw3"
       ],

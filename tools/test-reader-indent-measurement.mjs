@@ -11,7 +11,7 @@ import {
 // Execute production measurement with controlled ArkUI UTF-16 line metrics.
 // This verifies scalar/continuation semantics, not actual platform line wrapping.
 const reading = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
-const host = readFileSync(new URL('LocalReadingExperience.ets', reading), 'utf8');
+const host = readFileSync(new URL('ReadingMeasurementModels.ets', reading), 'utf8').replaceAll('export class ', 'class ') + readFileSync(new URL('LocalReadingExperience.ets', reading), 'utf8');
 const lineClass = host.slice(host.indexOf('class MeasuredReadingLine {'), host.indexOf('class PhysicalReadingPage {'));
 const MeasuredReadingLine = new Function(stripTypeScriptTypes(lineClass) + ';return MeasuredReadingLine;')();
 function method(name) {

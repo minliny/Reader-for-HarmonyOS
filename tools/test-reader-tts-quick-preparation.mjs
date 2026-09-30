@@ -1,3 +1,4 @@
+import { tmpdir } from 'node:os';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
@@ -63,7 +64,7 @@ function readySchedulesAfterObservers(file = lre) {
 }
 // Negative control reconstructs the installed omission: ready never scheduled
 // preparation. This must fail the same production-method assertion.
-const mutant = '/private/tmp/reader-ph44-no-ready-preparation.ets';
+const mutant = `${tmpdir()}/reader-ph44-no-ready-preparation.ets`;
 const warmupCall = 'this.scheduleTtsPresentationWarmup();';
 assert.equal(source.split(warmupCall).length, 2, 'the negative control removes the one production scheduling call');
 writeFileSync(mutant, source.replace(warmupCall, 'void 0;'));

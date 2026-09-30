@@ -2,12 +2,14 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 
+const sdkRoot = process.env.OHOS_SDK_HOME ? `${process.env.OHOS_SDK_HOME}/openharmony/ets` : '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets';
+
 const declarations = await readFile(
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/api/@ohos.graphics.text.d.ts',
+  `${sdkRoot}/api/@ohos.graphics.text.d.ts`,
   'utf8',
 );
 const textDeclarations = await readFile(
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader/declarations/text.d.ts',
+  `${sdkRoot}/build-tools/ets-loader/declarations/text.d.ts`,
   'utf8',
 );
 assert.match(declarations, /interface ParagraphStyle/);
@@ -31,7 +33,7 @@ assert.match(probe, /indentPx/);
 assert.match(probe, /paragraph\.layoutSync/);
 assert.match(probe, /paragraph\.paint/);
 
-const sdkRoot = '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets';
+
 const ts = createRequire(import.meta.url)(`${sdkRoot}/build-tools/ets-loader/node_modules/typescript`);
 const adapterPath = probeUrl.pathname;
 const options = { noEmit: true, allowJs: false, skipLibCheck: true,
