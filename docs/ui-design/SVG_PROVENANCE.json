@@ -7238,51 +7238,6 @@
       "sha256": "d3ce2d35413c17f5a601ff457d17b33b3f74aacedc8a011b45a12ad40a8214ad"
     },
     {
-      "file": "source_switch_close.svg",
-      "semanticRole": "source switch close",
-      "originType": "figma-component-derived",
-      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
-      "figmaPageNodeId": "259:4",
-      "figmaNodeId": "271:142",
-      "componentName": "Icon/Close",
-      "upstreamName": "Close",
-      "upstreamVersion": "3.44.0",
-      "license": "MIT",
-      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Close.svg",
-      "sourceSha256": "6032f75a2241549e2da953c09c5567b8030135b0fd03016b9c410134eb0ea066",
-      "transform": {
-        "pathMutation": "none",
-        "recolor": "#332C25",
-        "rotationDegrees": 0
-      },
-      "sha256": "2257fb57f6c058b9a19617e23d27c6e6e61a857912259ff1d045179a42e7f42f"
-    },
-    {
-      "file": "source_switch_close_theme_night.svg",
-      "semanticRole": "source_switch_close night app palette",
-      "originType": "theme-palette-derived",
-      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
-      "figmaPageNodeId": "259:4",
-      "figmaNodeId": "271:142",
-      "componentName": "Icon/Close",
-      "upstreamName": "Close",
-      "upstreamVersion": "3.44.0",
-      "license": "MIT",
-      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Close.svg",
-      "sourceSha256": "6032f75a2241549e2da953c09c5567b8030135b0fd03016b9c410134eb0ea066",
-      "transform": {
-        "pathMutation": "none",
-        "palette": "night",
-        "colorRoles": [
-          "app.icon.source_switch_close.332C25"
-        ]
-      },
-      "baseAsset": "source_switch_close.svg",
-      "baseSha256": "2257fb57f6c058b9a19617e23d27c6e6e61a857912259ff1d045179a42e7f42f",
-      "themeRegistrySha256": "a5eb4a3f8d62b6e168d14c2e1ba29fa3f244d110b5cc8a00dbcc6077dfb4841e",
-      "sha256": "e9ad0f5d9d4eeb4523744b5c20bcb3bf3f6cabe7fd543660c238f8e237457fcc"
-    },
-    {
       "file": "sync_account.svg",
       "semanticRole": "webdav account",
       "originType": "figma-component-derived",

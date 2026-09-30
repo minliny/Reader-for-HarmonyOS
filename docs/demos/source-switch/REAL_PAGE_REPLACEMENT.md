@@ -54,3 +54,7 @@
 撤回独立入口后，以下 6 项定向本地回归通过：`test-reader-control-verification-launch`、`test-reader-optional-entry-memory-launch`、`test-reader-startup-selected-font`、`test-reader-startup-reading-settings`、`test-reader-startup-boundaries`、`test-system-file-open`；相关 diff 空白检查通过。生产 entry、tools、scripts 和 AppScope 已无撤回的专用入口及 fixture 引用。
 
 这些结果只覆盖入口恢复和原启动边界。真实共享 UI、流式候选、搜索耗时排序、点选事务及全页系统栏接线，需要以本轮最终源码继续进行对应定向验证。HAP 构建、VM 覆盖安装、两个真实入口交互、阅读数据保留和用户验收分别保持 OPEN；旧 `85bd874a` 产物及独立页截图不能证明新源码。
+
+## 首轮全量门禁（fd8a78b3）
+
+385 个合同在 90.70 秒内执行，383 通过、2 失败，未进入打包。已定位为本次页面替换后的两处旧结构约束：`test-reader-control-p0` 仍要求 Shell 只有 2 处 reduceMotion 透传，新换源页成为第 3 处；`test-svg-provenance` 检出旧弹窗专用 close 图标已无生产引用。处理方式是更新第三个真实消费方断言、移除无用生产图标与对应配方/清单，不降低资源来源门禁。修复后需重新执行整批合同和正式构建。

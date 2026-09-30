@@ -199,7 +199,6 @@ const icons = [
   icon('source_add', 'Plus', '#FFFAF4', 'source management add'),
   icon('source_group_folder', 'Folder', '#2D4A3E', 'source management group', { fillNone: true }),
   icon('source_group_chevron', 'Chevron', '#5B5046', 'source group select chevron', { rotation: 90 }),
-  icon('source_switch_close', 'Close', '#332C25', 'source switch close'),
 
   icon('sync_account', 'People', '#2D4A3E', 'webdav account', { fillNone: true }),
   icon('sync_backup_password', 'Lock', '#2D4A3E', 'webdav backup encryption password', { fillNone: true }),

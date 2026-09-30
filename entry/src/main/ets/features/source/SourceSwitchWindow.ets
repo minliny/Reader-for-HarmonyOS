@@ -337,8 +337,10 @@ export struct SourceSwitchWindow {
   @Builder
   private header() {
     Row() {
-      Button('‹', { type: ButtonType.Normal }).width(44).height(44).fontSize(30)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).backgroundColor(Color.Transparent)
+      Button({ type: ButtonType.Normal }) {
+        Image(this.appThemeScheme === 'night' ? $r('app.media.search_back_theme_night') : $r('app.media.search_back'))
+          .width(20).height(20);
+      }.width(44).height(44).backgroundColor(Color.Transparent)
         .accessibilityText('返回').enabled(!this.busy() && !this.rollbackRequired()).onClick((): void => this.onClose());
       Text('更换书源').fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold).fontSize(20)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).layoutWeight(1);
