@@ -7,11 +7,12 @@ import { fileURLToPath } from 'node:url';
 const cpp = fileURLToPath(new URL('../entry/src/main/cpp/', import.meta.url));
 const scratch = mkdtempSync(path.join(tmpdir(), 'reader-bookturn-runtime-'));
 try {
-  for (const name of ['motion', 'render_state', 'present_barrier']) {
+  // The dedicated test-reader-book-turn-present-barrier.mjs owns the barrier
+  // executable with the same sources and flags; do not compile/run it twice.
+  for (const name of ['motion', 'render_state']) {
     const sources = [`tests/bookturn_${name}_test.cpp`, 'bookturn/bookturn_solver.cpp'];
     if (name !== 'render_state') sources.push('bookturn/bookturn_motion.cpp');
     if (name !== 'motion') sources.push('bookturn/bookturn_renderer.cpp', 'tests/glmock/gl_mock.cpp');
-    if (name === 'present_barrier') sources.push('bookturn/bookturn_host.cpp', 'tests/mocksdk/ohos_host_mocks.cpp');
     const binary = path.join(scratch, name);
     const compiled = spawnSync('c++', ['-std=c++17', '-O2', '-Wall', '-Wextra', '-Werror',
       '-I', 'bookturn', '-I', 'tests/glmock', '-I', 'tests/mocksdk', ...sources, '-o', binary],

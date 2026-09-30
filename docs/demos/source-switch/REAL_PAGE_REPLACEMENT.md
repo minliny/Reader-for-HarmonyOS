@@ -86,3 +86,11 @@ SDK 对同步发送拒绝立即读取 Core `lastError`，只附加已审计的�
 构建使用 Rust/Cargo 1.97.1。首次红测曾写入主 Core 的 Cargo target 缓存（没有改主 Core 源码）；之后将其 `deps`、`build`、`.fingerprint` 以独立 CoW 副本复制到隔离 Core，绿测和后续 Native 构建均使用隔离 target。缓存不是新的产物证据，正式 Native 必须重新通过构建和源码身份校验。
 
 窄审计确认 `book.toc` 已有发布前预留；`book.detail` 的大返回结果仍有同类预算缺口，本轮尚未复现或修复，作为独立未决记录，不将正常小详情一次成功升级为该边界通过。
+
+## 修复包的有界门禁阻塞
+
+Core Native 重新构建通过（ARM64 release 编译 4 分 07 秒；Host 真 NAPI 检查通过；65 项 SDK 测试通过）。`sync-core` 校验新源码 fingerprint `4c77f6b85e0e3c2e17d1a96f48d8e0ca1763620f213d9acd1a8669e0e8c42f98` 与 NAPI SHA-256 `6b09806856bcae6260cb5bfc3bbe57775134813c7f8f358d9038bd735e8c5707` 后成功。旧版 build ID 不含 dirty 内容，因此相同 build ID 不能替代该 fingerprint/二进制哈希。
+
+Harmony `13e59f1b` 的两轮 gate 均在 120 秒硬上限取消，分别为 264 PASS / 121 cancelled、338 PASS / 47 cancelled，断言失败均为 0；两轮均未打包或发布 HAP。首次耗时突增后已只读检查系统负载，第二次后停止原执行方式。
+
+代码审计找到 `test-reader-book-turn-host-runtime.mjs` 与专门的 `test-reader-book-turn-present-barrier.mjs` 重复编译执行完全相同的 7 个 C++ 源文件、编译选项和 23 场景/754 断言。保留专门测试，删除前者重复执行；motion/render_state 的 1435 项断言定向验证通过。根据 10 物理核、当时仍有空闲 CPU 且 4 worker 持续饱和的证据，把并发上限调整为 6，继续保留 process isolation、全部 385 文件和 120 秒硬上限，不提升为 8/10，也不延长截止时间。低余量内存仍可能影响耗时，不能预先宣称修正后的门禁通过。

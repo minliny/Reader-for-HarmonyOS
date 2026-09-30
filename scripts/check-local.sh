@@ -35,7 +35,7 @@ signal.addEventListener('abort', () => {
   process.exitCode = 1;
   console.error('Harmony contract gate exceeded its 120-second wall-clock budget');
 }, { once: true });
-const results = run({ files, concurrency: 4, isolation: 'process', signal });
+const results = run({ files, concurrency: 6, isolation: 'process', signal });
 let passedFiles = 0;
 results.on('test:pass', event => {
   if (event.nesting === 0 && !event.skip && !event.todo) passedFiles++;
