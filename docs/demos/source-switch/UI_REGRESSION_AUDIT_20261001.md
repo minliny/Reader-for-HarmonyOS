@@ -127,3 +127,11 @@
 崩溃进一步定位：`ReadingSurface` 标题子 actor 在标题消失后、真实卸载前仍收到属性更新；参数直接取已转为中段的 live fragments，因此给 recipe 传入 undefined，真实 SDK Prop reset 同步触发 production @Watch prepare，读取 key 抛错。`ReaderContinuousReadingStage` 的 titleRecipeProvider 路径存在同类问题。仓库原生 paragraph actor 调用只在这两份生产文件；正文已有按 fragment 绑定的 ForEach，没有本次直接读取可消失标题的路径。
 
 分页和连续模式均用真实 SDK 精确先红（0.47秒/0.45秒、相同 key undefined 栈）后绿；窄修把标题 actor 与有效的自身 recipe/key 绑定，保留 live provider 对当前列表的权威，允许旧 actor 在卸载完成前读自己的有效数据。没有向 ReaderNativeParagraphView.prepare 添加吞错/可空 guard，没有改 seek 或 Core 算法。原有两项标题回归按当前 actor 与历史 actor 的边界增强，相关检查及新包/VM复验结果另记。
+
+## 第四次全量检查（旧签名断言，未交付）
+
+两处新修复提交 `ac2a5c19` 后，397文件中396通过、1失败、0取消/skip，40.622秒；未生成HAP。唯一失败为 `test-phone-layout-figma-regressions` 写死按值 Builder 签名，宽度表达式仍为原来的响应式 shelfContentWidth。测试改为提取实际方法，明确检查 live provider 签名并保留方法内同一宽度断言；定向通过。证据 `ui-regression-full-gate-fourth-result.json`。
+
+该轮发现一份来源未确定的较旧 untracked `tools/test-reader-paragraph-indent 2.mjs`（9,113 bytes，mtime 09-30 20:58，SHA239d3053…）；不擅自编辑、删除、提交或排除，全量发现397中包含此文件。当前分支源码与控制器快照将精确记账为迭代产物，原配套 Core dirty 同样保留。此前394 +两项新专项 +这份额外输入=397，不把额外输入当作新增功能测试。
+
+安装前只读预检第一次使用不存在的 sys.boot_completed 参数及空 pidof，不算通过；第二次进程表列位置解析错误也不算通过。最终使用 `param get bootevent.boot.completed`=true，SceneBoard数字PID1450且stat start tick1022，现有Emulator40666。失败查询记录与正确记录分别保留；未重建VM、修改权限或清除数据。
