@@ -74,6 +74,7 @@ const HARMONY_GATE_INPUTS = [
 const WORKSPACE_CONTRACT_INPUTS = [
   'Reader-Core-Native/governance/workspace',
   'Reader-Core-Native/scripts/sync-workspace.mjs',
+  'Reader-Core-Native/scripts/validate-workspace.py',
   'README.md',
   'ARCHITECTURE.md',
   'HAP_BUILD_SYSTEM.md',
@@ -297,8 +298,47 @@ function gitRecord(repo) {
 }
 
 
+function regularInputSnapshot(repo, inputs, label) {
+  repo = resolve(repo);
+  // rsync -a preserves links. Reject them before hashing/copying so a clean
+  // tracked link cannot leave the real build input outside this snapshot.
+  // contentSnapshot omits special nodes; inspect their types before any reads
+  // so FIFOs, sockets and devices cannot be copied as unbound build inputs.
+  const assertRegularInput = path => {
+    const stat = lstatSync(path, { throwIfNoEntry: false });
+    if (!stat) return;
+    if (stat.isSymbolicLink()) fail(`${label} must not contain symbolic links`);
+    if (stat.isDirectory()) {
+      for (const name of readdirSync(path)) assertRegularInput(resolve(path, name));
+    } else if (!stat.isFile()) {
+      fail(`${label} must contain only regular files and directories`);
+    }
+  };
+  for (const input of inputs) {
+    for (let path = resolve(repo, input); ; path = dirname(path)) {
+      const stat = lstatSync(path, { throwIfNoEntry: false });
+      if (stat?.isSymbolicLink()) fail(`${label} must not contain symbolic links`);
+      if (path === repo) break;
+    }
+    assertRegularInput(resolve(repo, input));
+  }
+  const snapshot = contentSnapshot(repo, inputs);
+  if (snapshot.files.some(file => file.type !== 'file')) {
+    fail(`${label} must not contain symbolic links`);
+  }
+  return snapshot;
+}
+
 export function sourceSnapshot(repo = REPO_ROOT) {
-  return contentSnapshot(repo, BUILD_INPUTS);
+  return regularInputSnapshot(repo, BUILD_INPUTS, 'Host build inputs');
+}
+
+export function controllerSnapshot(repo = REPO_ROOT) {
+  return regularInputSnapshot(repo, HARMONY_GATE_INPUTS, 'Host controller inputs');
+}
+
+export function workspaceContractSnapshot(workspace = WORKSPACE_ROOT) {
+  return regularInputSnapshot(workspace, WORKSPACE_CONTRACT_INPUTS, 'Workspace contract inputs');
 }
 
 export function assertResolvedCorePackage(sandboxRepo) {
@@ -345,7 +385,23 @@ function assertGitRecordUnchanged(before, after, label) {
   }
 }
 
-function copySourceSandbox(source, destination) {
+export function copySourceSandbox(source, destination, sandboxRoot = tmpdir()) {
+  const before = sourceSnapshot(source);
+  destination = resolve(destination);
+  sandboxRoot = resolve(sandboxRoot);
+  const within = relative(sandboxRoot, destination);
+  if (!within || within === '..' || within.startsWith(`..${sep}`) || isAbsolute(within)) {
+    fail('sandbox destination must be inside its temporary root');
+  }
+  // Validate before rsync --delete can write through a destination link. The
+  // caller owns sandboxRoot (fresh mkdtemp in builds); tmpdir's platform alias
+  // is a trusted boundary rather than an arbitrary destination parent.
+  for (let path = destination; path !== sandboxRoot; path = dirname(path)) {
+    const stat = lstatSync(path, { throwIfNoEntry: false });
+    if (stat && (!stat.isDirectory() || stat.isSymbolicLink())) {
+      fail('sandbox destination must contain real directories, not symbolic links');
+    }
+  }
   mkdirSync(destination, { recursive: true });
   const excludes = [
     '.git',
@@ -366,6 +422,8 @@ function copySourceSandbox(source, destination) {
   for (const excluded of excludes) args.push(`--exclude=${excluded}`);
   args.push(`${source}/`, `${destination}/`);
   run('rsync', args);
+  assertSnapshotUnchanged(before, sourceSnapshot(source), 'source inputs during sandbox copy');
+  assertSnapshotUnchanged(before, sourceSnapshot(destination), 'copied sandbox inputs');
 }
 
 // BMS appId uses i2d_PublicKey bytes, not SubjectPublicKeyInfo DER.
@@ -810,8 +868,8 @@ function build(options) {
     const keepRuns = retentionLimit(options);
     const retention = applyHapRetention(planHapRetention(artifactRoot, keepRuns, 1));
     console.log(JSON.stringify({ stage: 'artifactRetention', keepRuns, ...retention }));
-    const harmonyGateBefore = contentSnapshot(REPO_ROOT, HARMONY_GATE_INPUTS);
-    const workspaceContractBefore = contentSnapshot(WORKSPACE_ROOT, WORKSPACE_CONTRACT_INPUTS);
+    const harmonyGateBefore = controllerSnapshot();
+    const workspaceContractBefore = workspaceContractSnapshot();
     run(process.execPath, [resolve(WORKSPACE_ROOT, 'scripts/check-hap-build-system.mjs')], {
       cwd: WORKSPACE_ROOT,
       stdio: 'inherit',
@@ -832,7 +890,7 @@ function build(options) {
     }
 
     const sandboxRepo = resolve(sandboxRoot, 'Reader-for-HarmonyOS');
-    copySourceSandbox(REPO_ROOT, sandboxRepo);
+    copySourceSandbox(REPO_ROOT, sandboxRepo, sandboxRoot);
     if (signingMode === 'local') {
       writeFileSync(resolve(sandboxRepo, 'build-profile.json5'), JSON.stringify(signingProfile, null, 2) + '\n');
       chmodSync(resolve(sandboxRepo, 'build-profile.json5'), 0o600);
@@ -904,12 +962,12 @@ function build(options) {
     assertSnapshotUnchanged(sourceBefore, sourceAfter, 'source worktree build inputs');
     assertSnapshotUnchanged(
       harmonyGateBefore,
-      contentSnapshot(REPO_ROOT, HARMONY_GATE_INPUTS),
+      controllerSnapshot(),
       'Harmony build controller and gate inputs',
     );
     assertSnapshotUnchanged(
       workspaceContractBefore,
-      contentSnapshot(WORKSPACE_ROOT, WORKSPACE_CONTRACT_INPUTS),
+      workspaceContractSnapshot(),
       'workspace HAP contract and skill inputs',
     );
     assertGitRecordUnchanged(sourceGitBefore, gitRecord(REPO_ROOT), 'Harmony source worktree');

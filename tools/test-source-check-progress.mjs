@@ -38,7 +38,7 @@ globalThis.hilog = {
 };
 
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(executable).toString('base64')}`;
-const { SourceToolsOrchestrator } = await import(moduleUrl);
+const { SourceGateway, SourceToolsOrchestrator } = await import(moduleUrl);
 
 const tick = () => new Promise((resolveTick) => setTimeout(resolveTick, 0));
 
@@ -399,4 +399,110 @@ for (const mode of ['search', 'explore']) {
     'normalizing a 1,777-source selection must use O(1) duplicate membership checks');
 }
 
-console.log('source check streaming progress contract: PASS');
+// Execute the production DTO/capability boundary with controlled Core receipts.
+// This proves negotiation and rejection behavior, not a network/device result.
+function reportEnvelope(sourceId, version, timeoutMs) {
+  const envelope = checkEnvelope(sourceId, true, 55);
+  if (version !== undefined) {
+    const report = {
+      version, mode: 'search', traceId: envelope.data.traceId,
+      ruleDigest: 'a'.repeat(64), inputDigest: 'b'.repeat(64),
+      steps: ['L1', 'L2', 'L3', 'L4', 'L5'].map((level, index) => ({
+        level, requested: index < 2, executed: index < 2,
+        status: index < 2 ? 'pass' : 'not_requested', durationMs: index === 0 ? 1 : index === 1 ? 23 : 0,
+      })),
+    };
+    if (version === 2) {
+      report.executionOptions = { timeoutMs };
+      report.executionOptionsDigest = 'c'.repeat(64);
+    }
+    envelope.data.results[0].report = report;
+  }
+  return envelope;
+}
+
+function reportOwner(version, mutate = () => {}, history = []) {
+  const calls = [];
+  return {
+    calls,
+    supportsCoreCapability: capability => capability === 'source.check.mode.v1' ||
+      (version !== undefined && capability === `source.check.report.v${version}`),
+    async request(method, params, options) {
+      calls.push({ method, params: structuredClone(params), options });
+      if (method === 'source.list') return { data: { sources: [{
+        ...rawSource(source('report-source', '报告源')), sourceVersion: 'a'.repeat(64), checkReports: history,
+      }] } };
+      assert.equal(method, 'source.check.run');
+      const envelope = reportEnvelope(params.sourceIds[0], version, params.timeoutMs);
+      mutate(envelope);
+      return envelope;
+    },
+    takeSourceHttpDiagnostics() { return []; },
+  };
+}
+
+for (const version of [undefined, 1, 2]) {
+  const owner = reportOwner(version);
+  const gateway = new SourceGateway(owner);
+  const outcome = await gateway.checkSource('report-source', () => true, undefined, 'search', ['L1', 'L2'], 1234);
+  assert.equal(owner.calls[0].params.reportVersion, version);
+  assert.equal(owner.calls[0].params.timeoutMs, 1234);
+  assert.equal(owner.calls[0].options.timeoutMs, 6234);
+  assert.equal(outcome.report?.version, version);
+  assert.equal(outcome.report?.executionOptions?.timeoutMs, version === 2 ? 1234 : undefined);
+  await gateway.loadSources(undefined, true);
+  assert.equal(owner.calls[1].params.includeCheckReports, version === undefined ? undefined : true);
+  assert.equal(owner.calls[1].params.checkReportVersion, version === 2 ? 2 : undefined,
+    'older Core never receives a new parameter');
+}
+
+const reportMutationCases = [
+  report => { delete report.executionOptions; },
+  report => { delete report.executionOptionsDigest; },
+  report => { report.executionOptions.timeoutMs = 1235; },
+  report => { report.executionOptions.timeoutMs = 1.5; },
+  report => { report.executionOptions.timeoutMs = -1; },
+  report => { report.executionOptions.timeoutMs = 4294967296; },
+  report => { report.executionOptions.cookie = 'PRIVATE'; },
+  report => { report.executionOptionsDigest = 'not-a-digest'; },
+  report => { report.version = 1; },
+  report => { report.version = 3; },
+  report => { report.rawBody = 'PRIVATE'; },
+  report => { report.steps[0].header = 'PRIVATE'; },
+];
+for (const mutate of reportMutationCases) {
+  const owner = reportOwner(2, envelope => mutate(envelope.data.results[0].report));
+  await assert.rejects(new SourceGateway(owner).checkSource('report-source', () => true, undefined,
+    'search', ['L1', 'L2'], 1234), /report|execution options/);
+}
+for (const field of ['executionOptions', 'executionOptionsDigest']) {
+  const owner = reportOwner(1, envelope => { envelope.data.results[0].report[field] = null; });
+  await assert.rejects(new SourceGateway(owner).checkSource('report-source'), /unknown fields/,
+    'strict v1 rejects v2-only fields even when null');
+}
+for (const timeout of [0, -1, 1.5, 4294967296, NaN]) {
+  const owner = reportOwner(2);
+  await assert.rejects(new SourceGateway(owner).checkSource('report-source', () => true, undefined,
+    'search', ['L1', 'L2'], timeout), /Core budget/);
+  assert.equal(owner.calls.length, 0, 'invalid budget is rejected before dispatch');
+}
+
+const legacyHistory = { checkedAtMs: 10, stale: false, report: reportEnvelope('report-source', 1, 1234).data.results[0].report };
+const currentHistory = { checkedAtMs: 20, stale: false, report: reportEnvelope('report-source', 2, 1234).data.results[0].report };
+{
+  const owner = reportOwner(2, undefined, [currentHistory, legacyHistory]);
+  const sources = await new SourceGateway(owner).loadSources(undefined, true);
+  assert.deepEqual(sources[0].checkReports.map(row => row.report.version), [2, 1]);
+  assert.match(sources[0].lastCheckSummary, /Core 预算 1234ms/);
+  const legacy = await new SourceGateway(reportOwner(1, undefined, [legacyHistory])).loadSources(undefined, true);
+  assert.match(legacy[0].lastCheckSummary, /预算未知（旧版记录）/);
+  await assert.rejects(new SourceGateway(reportOwner(1, undefined, [currentHistory])).loadSources(undefined, true),
+    /unrequested report version/);
+  const ordinaryOwner = reportOwner(2, undefined, [null]);
+  delete ordinaryOwner.supportsCoreCapability;
+  const ignored = await new SourceGateway(ordinaryOwner).loadSources();
+  assert.equal(ignored[0].checkReports, undefined, 'history remains opt-in');
+  assert.deepEqual(ordinaryOwner.calls[0].params, {}, 'ordinary listing never requires diagnostic capability negotiation');
+}
+
+console.log('source check streaming progress and versioned report options contract: PASS');
