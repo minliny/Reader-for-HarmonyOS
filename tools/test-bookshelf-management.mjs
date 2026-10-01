@@ -34,7 +34,7 @@ assert.doesNotMatch(gateway, /preferences|relationalStore|fileIo/);
 assert.match(page, /export struct BookshelfManagementPage/);
 // Historical CRUD remains preserved after removing the shelf group-selector entry.
 assert.match(page, /在此新建分组、为书籍设置归属；分组会出现在书架的筛选行中/);
-assert.match(shelfPage, /onManageRequested: \(\) => void/);
+assert.doesNotMatch(shelfPage, /onManageRequested:/, 'content-only shelf no longer retains an unused legacy menu callback');
 assert.doesNotMatch(shelfPage, /this\.sectionAction\('bookshelf_settings'/,
   'the removed section gear must not retain a hidden callback');
 assert.doesNotMatch(shelfPage, /BookshelfGroupSelector\(/,

@@ -69,6 +69,14 @@ for (const newline of ['\n', '\r', '\r\n']) {
     assert.equal(ranges[1].endUtf16, body.indexOf(paragraph) + paragraph.length);
     assert.equal(body.slice(ranges[1].endUtf16), newline + suffix, 'original separator stays in canonical content');
   }
+  const internal = `甲😀${newline} \t乙e\u0301`;
+  assert.deepEqual(collectReadingParagraphUtf16Ranges(internal, 'blankLineSeparated'),
+    [{ startUtf16: 0, endUtf16: internal.length }],
+    'a single logical break followed by text remains inside the original paragraph');
+  const withTerminalBreak = internal + newline + ' \t';
+  assert.deepEqual(collectReadingParagraphUtf16Ranges(withTerminalBreak, 'blankLineSeparated'),
+    [{ startUtf16: 0, endUtf16: internal.length }],
+    'only the terminal separator is excluded; the internal break and spaces remain');
 }
 
 const untrimmed = '甲\r\n\r\n  乙';

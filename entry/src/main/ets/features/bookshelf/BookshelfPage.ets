@@ -1,3 +1,4 @@
+import { BOOKSHELF_WIDE_BREAKPOINT } from './BookshelfShell';
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderPressFeedback } from '../common/ReaderPressFeedback';
@@ -31,12 +32,8 @@ import {
 } from '../common/ReaderTokens';
 
 import { NoCoverCover } from './NoCoverCover';
-import { MainTabShell } from '../shell/MainTabShell';
-import { ReaderIconButton } from '../common/ReaderIconButton';
-import { AppTopBar } from '../common/AppTopBar';
 import { registerReaderShelfFonts } from '../common/ReaderFonts';
 import { BookshelfBookActionSheet } from './BookshelfBookActionSheet';
-import { BookshelfMoreMenu } from './BookshelfMoreMenu';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
   SurfaceHorizontalFrame,
@@ -64,7 +61,6 @@ const PHONE_LIST_COVER_WIDTH = 48;
 const PHONE_LIST_COVER_HEIGHT = 80;
 const TABLET_LIST_COVER_WIDTH = 64;
 const TABLET_LIST_COVER_HEIGHT = 104;
-const BOOKSHELF_WIDE_BREAKPOINT = 600;
 const TABLET_RAIL_WIDTH = 82;
 const TABLET_RAIL_LEFT_GAP = 17;
 const TABLET_RAIL_CONTENT_GAP = 20;
@@ -149,35 +145,20 @@ export struct BookshelfPage {
   @StorageLink('readerBookshelfSourceFilter') @Watch('onShelfFiltersChanged') private sourceFilter: string = 'all';
   @Prop @Watch('onBooksChanged') books: ShelfBook[];
   @Prop serverFiltered: boolean = false;
-  @Prop unfilteredOnlineBooks: boolean = false;
   onNextPageRequested: () => void = (): void => {};
   onPreviousPageRequested: () => void = (): void => {};
   onFilterRequested: (readingState: string, sourceKind: string) => void = (_readingState: string, _sourceKind: string): void => {};
   @Prop continueReading: ShelfBook | undefined;
   @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
-  onImportRequested: () => void = (): void => {};
-  onSearchRequested: () => void = (): void => {};
   onRssRequested: () => void = (): void => {};
   onSettingsRequested: () => void = (): void => {};
   onDiscoverRequested: () => void = (): void => {};
-  onManageRequested: () => void = (): void => {};
-  onBatchManageRequested: () => void = (): void => {};
-  // Keep bookshelf settings separate from Core group/read-record management.
-  // The host owns the settings route; this page only emits the semantic action.
-  onBookshelfSettingsRequested: () => void = (): void => {};
   onBookSelected: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
   onVisibleBooksChanged: (books: ShelfBook[]) => void = (_books: ShelfBook[]): void => {};
   onBookMultiSelectRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
   onBookGroupRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
   onBookInfoRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
   onBookRemoveRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
-  // SHF-03: the host runs the foreground update queue; the page only emits
-  // the intent and mirrors the sweep progress the host pushes back down.
-  onCheckUpdatesRequested: () => void = (): void => {};
-  @Prop updateRunning: boolean = false;
-  @Prop backgroundUpdateRunning: boolean = false;
-  @Prop updateProgressDone: number = 0;
-  @Prop updateProgressTotal: number = 0;
   @State private viewportWidth: number = 0;
   @State private viewMode: BookshelfViewMode = 'cover';
   @State private viewSwitchRunning: boolean = false;
@@ -196,13 +177,7 @@ export struct BookshelfPage {
   private requestedViewMode: BookshelfViewMode = 'cover';
   private viewModeReadFailed: boolean = false;
   @State private actionBook: ShelfBook | undefined = undefined;
-  @State private moreMenuVisible: boolean = false;
-  @State private moreAnchorRight: number = 0;
-  @State private moreAnchorBottom: number = 0;
-  @State private overlayOriginX: number = 0;
-  @State private overlayOriginY: number = 0;
   @State private visibleBookCount: number = 0;
-  @State private hasOnlineBooks: boolean = false;
   private readonly viewMotion: BookshelfViewMotionContract = bookshelfViewMotionContract();
   private pendingViewMode: BookshelfViewMode = 'cover';
   private viewSwitchToken: number = 0;
@@ -275,74 +250,26 @@ export struct BookshelfPage {
   }
 
   build() {
-    MainTabShell({
-      activeTab: 'bookshelf',
-      showBottomNav: !this.isWideViewport(),
-      onMainTab: (key: string): void => this.onMainTab(key),
-    }) {
-      this.bookshelfTabContent();
-    }
+    this.bookshelfTabContent();
   }
 
   @Builder
   private bookshelfTabContent() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Column() {
-        this.topBar();
-        Stack({ alignContent: Alignment.TopStart }) {
-          if (this.isWideViewport()) {
-            this.tabletContent();
-            this.tabletNavigation();
-          } else {
-            this.phoneContent();
-          }
-        }
-        .layoutWeight(1)
-        .width('100%')
-        .onAreaChange((_oldValue: Area, newValue: Area): void => {
-          const width = this.numericAreaLength(newValue.width);
-          if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
-            this.viewportWidth = width;
-          }
-        });
-      }
-      .width('100%')
-      .height('100%');
-
-      if (this.moreMenuVisible) {
-        BookshelfMoreMenu({
-          anchorRight: this.moreAnchorRight - this.overlayOriginX,
-          anchorBottom: this.moreAnchorBottom - this.overlayOriginY,
-          reduceMotion: this.reduceMotion,
-          canCheckUpdates: this.hasOnlineBooks,
-          updateRunning: this.updateRunning,
-          backgroundUpdateRunning: this.backgroundUpdateRunning,
-          updateProgressDone: this.updateProgressDone,
-          updateProgressTotal: this.updateProgressTotal,
-          onCheckUpdates: (): void => this.requestCheckUpdates(),
-          onBatchManage: (): void => {
-            this.moreMenuVisible = false;
-            this.onBatchManageRequested();
-          },
-          onLocalImport: (): void => {
-            this.moreMenuVisible = false;
-            this.onImportRequested();
-          },
-          onBookshelfSettings: (): void => {
-            this.moreMenuVisible = false;
-            this.onBookshelfSettingsRequested();
-          },
-          onDismiss: (): void => {
-            this.moreMenuVisible = false;
-          },
-        });
+      if (this.isWideViewport()) {
+        this.tabletContent();
+        this.tabletNavigation();
+      } else {
+        this.phoneContent();
       }
     }
     .width('100%')
     .height('100%')
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
-      this.overlayOriginX = Number(newValue.globalPosition.x);
-      this.overlayOriginY = Number(newValue.globalPosition.y);
+      const width = this.numericAreaLength(newValue.width);
+      if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
+        this.viewportWidth = width;
+      }
     })
     .bindSheet(this.actionBook !== undefined, this.bookActionSheetContent, {
       height: 270,
@@ -371,36 +298,6 @@ export struct BookshelfPage {
   }
 
   @Builder
-  private topBar() {
-    AppTopBar({ title: '书架', divider: true }) {
-      Row({ space: 18 }) {
-        ReaderIconButton({
-          icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_search_theme_night') : $r('app.media.bookshelf_search')),
-          boxSize: 44,
-          iconSize: 24,
-          radius: 22,
-          onTap: (): void => this.onSearchRequested(),
-        });
-
-        ReaderIconButton({
-          icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more')),
-          boxSize: 44,
-          iconSize: 44,
-          radius: 22,
-          onTap: (): void => {
-            this.moreMenuVisible = true;
-          },
-        })
-          .accessibilityText('更多')
-          .onAreaChange((_oldValue: Area, newValue: Area): void => {
-            this.moreAnchorRight = Number(newValue.globalPosition.x) + Number(newValue.width);
-            this.moreAnchorBottom = Number(newValue.globalPosition.y) + Number(newValue.height);
-          });
-      }
-    }
-  }
-
-  @Builder
   private phoneContent() {
     Column() {
       this.bookshelfList(false);
@@ -421,10 +318,10 @@ export struct BookshelfPage {
   }
 
   @Builder
-  private continueReadingCard(book: ShelfBook, isTablet: boolean) {
+  private continueReadingCard(bookProvider: () => ShelfBook | undefined, isTablet: boolean) {
     Row({ space: TOK_SPACE_CARD_PADDING }) {
-      if (this.hasCover(book)) {
-        Image(book.coverUrl as string)
+      if (this.hasCover(bookProvider())) {
+        Image(bookProvider()?.coverUrl ?? '')
           .width(62)
           .height(93)
           .objectFit(ImageFit.Cover)
@@ -449,7 +346,7 @@ export struct BookshelfPage {
 
         Blank().height(6);
 
-        Text(book.title)
+        Text(bookProvider()?.title ?? '')
           .width('100%')
           .fontFamily('ReaderNotoSerifSCBold')
           .fontWeight(FontWeight.Bold)
@@ -461,7 +358,7 @@ export struct BookshelfPage {
 
         Blank().height(5);
 
-        Text(book.author)
+        Text(bookProvider()?.author ?? '')
           .width('100%')
           .fontFamily('ReaderInter')
           .fontWeight(FontWeight.Regular)
@@ -495,7 +392,10 @@ export struct BookshelfPage {
     .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(8)
-    .onClick((): void => this.onBookSelected(book));
+    .onClick((): void => {
+      const book = bookProvider();
+      if (book !== undefined) this.onBookSelected(book);
+    });
   }
 
   @Builder
@@ -503,7 +403,9 @@ export struct BookshelfPage {
     List({ space: TOK_SPACE_CONTROL_INLINE, scroller: this.shelfScroller }) {
       if (this.continueReading !== undefined) {
         ListItem() {
-          this.continueReadingCard(this.continueReading, isTablet);
+          // Retained Builder observers must read the live Prop instead of
+          // capturing the book that happened to be current when mounted.
+          this.continueReadingCard((): ShelfBook | undefined => this.continueReading, isTablet);
         }
       }
       ListItem() {
@@ -715,12 +617,6 @@ export struct BookshelfPage {
       this.projectionQueued = false;
       this.rebuildShelfProjection();
     });
-  }
-
-  private requestCheckUpdates(): void {
-    if (!this.hasOnlineBooks || this.updateRunning || this.backgroundUpdateRunning) return;
-    this.moreMenuVisible = false;
-    this.onCheckUpdatesRequested();
   }
 
   // @Builder value parameters are not observed: the active variant must be
@@ -1212,7 +1108,6 @@ export struct BookshelfPage {
   private rebuildShelfProjection(): void {
     const visible = this.serverFiltered ? this.books : ShelfBookPresentation.visible(this.books, '', this.readingFilter, this.sourceFilter);
     this.visibleBookCount = visible.length;
-    this.hasOnlineBooks = this.serverFiltered ? this.unfilteredOnlineBooks : this.books.some((book: ShelfBook): boolean => book.sourceId !== 'local');
     const rows: ShelfBook[][] = [];
     for (let index = 0; index < visible.length; index += 3) {
       rows.push(visible.slice(index, index + 3));
@@ -1456,8 +1351,8 @@ export struct BookshelfPage {
     return coverHeight + titleAndAuthor + progress;
   }
 
-  private hasCover(book: ShelfBook): boolean {
-    if (book.coverUrl === undefined) {
+  private hasCover(book: ShelfBook | undefined): boolean {
+    if (book?.coverUrl === undefined) {
       return false;
     }
     return /^(https?:\/\/|data:image\/(png|jpeg|bmp|webp);base64,|file:\/\/)/.test(book.coverUrl.trim());

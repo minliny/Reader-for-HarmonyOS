@@ -17,11 +17,19 @@ const {captureRemotePositionContext}=await import('../entry/src/main/ets/feature
 const {RemoteChapterCacheRefreshError}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 
 const source = readFileSync(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'utf8');
-function method(name) {
-  const start = source.indexOf(`  private ${name}`);
-  assert.ok(start >= 0, name);
-  const end = source.indexOf('\n  private ', start + 1);
-  return source.slice(start, end).replace(/\n  \/\*\*[\s\S]*$/, '');
+const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require = createRequire(import.meta.url), ts = require(`${sdk}/node_modules/typescript`);
+const sdkOptions = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
+const parseComponent = text => ts.createSourceFile('/tmp/ReaderInfoAssembly.ets', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, sdkOptions);
+const indexTree = parseComponent(source);
+assert.equal(indexTree.parseDiagnostics.length, 0, 'production Index parses with the SDK');
+const indexType = indexTree.statements.find(node => node.name?.getText(indexTree) === 'Index');
+function method(signature) {
+  const name = signature.replace(/^async /, '').replace(/\($/, '');
+  const member = indexType.members.find(node => ts.isMethodDeclaration(node) && node.name?.getText(indexTree) === name);
+  assert.ok(member, `production Index method ${name}`);
+  assert.equal(ts.getAllDecorators(member).length, 0, 'ordinary reading harness excludes neighboring UI builders');
+  return member.getText(indexTree);
 }
 const methods = [
   'installRemoteReadingSession(', 'updateRemoteReadableChapterOrder(', 'onRemoteSessionReady(', 'openShelfBook(', 'openShelfBookInfo(', 'openLocalBookDetail(', 'openRemoteBookDetail(',
@@ -34,7 +42,7 @@ const methods = [
   'onSearchResultSelected(', 'searchAcquisitionCandidate(', 'remoteSeedForSearchBook(',
   ...(source.includes('  private cancelReaderExitDestination(') ? ['cancelReaderExitDestination('] : []),
 ].map(method).join('\n');
-const back = source.slice(source.indexOf('  onBackPress(): boolean {'), source.indexOf('\n  build() {'));
+const back = method('onBackPress(');
 const harnessCode = stripTypeScriptTypes(`class Harness { ${methods}\n${back} }`);
 const deferred = () => {
   let resolve, reject;
@@ -261,11 +269,7 @@ const invokeInfo = new Function(`return function () { ${infoBinding[1]}; };`)();
 const shellFile = new URL('../entry/src/main/ets/features/shell/ReaderShell.ets', import.meta.url);
 const shellSource = readFileSync(shellFile, 'utf8');
 const ShellIdentity = productionMotionMethods(shellFile, ['readingIdentityKey']);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
-const require = createRequire(import.meta.url), ts = require(`${sdk}/node_modules/typescript`);
-const sdkOptions = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-const parseComponent = text => ts.createSourceFile('/tmp/ReaderInfoAssembly.ets', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, sdkOptions);
-const indexTree = parseComponent(source), shellTree = parseComponent(shellSource), readingTree = parseComponent(readingSource);
+const shellTree = parseComponent(shellSource), readingTree = parseComponent(readingSource);
 const callbacks = ['onExitRequestHandler', 'onExit', 'onExitCancelled', 'onOpenBookInfo'];
 function exitCallbacksAt(tree, receiverTree, childName, owner) {
   let call;

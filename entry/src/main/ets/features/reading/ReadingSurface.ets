@@ -355,7 +355,13 @@ export struct ReadingSurface {
       Column({ space: this.layout.titleToBodySpacingVp }) {
         if (this.showChapterTitle) {
           if (this.renderFragments()[0]?.nativeTitle !== undefined) {
-            ReaderNativeParagraphView({ recipe: this.renderFragments()[0].nativeTitle!, inkColor: this.themeStyle().ink, selectionEnabled: false });
+            // An outgoing title may update before ArkUI removes its branch.
+            // Bind its recipe to its keyed fragment, just like body actors;
+            // the live provider may already point to a page without a title.
+            ForEach(this.renderFragments().slice(0, 1).filter((fragment: ReadingSurfacePageFragment): boolean =>
+              fragment.nativeTitle !== undefined), (fragment: ReadingSurfacePageFragment) => {
+              ReaderNativeParagraphView({ recipe: fragment.nativeTitle!, inkColor: this.themeStyle().ink, selectionEnabled: false });
+            }, (fragment: ReadingSurfacePageFragment): string => fragment.nativeTitle!.key);
           } else {
           Text(this.chapterTitle)
             .width('100%')

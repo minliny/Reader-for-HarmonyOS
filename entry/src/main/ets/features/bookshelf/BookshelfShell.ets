@@ -1,0 +1,159 @@
+import { MainTabShell } from '../shell/MainTabShell';
+import { AppTopBar } from '../common/AppTopBar';
+import { ReaderIconButton } from '../common/ReaderIconButton';
+import { registerReaderShelfFonts } from '../common/ReaderFonts';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { BookshelfMoreMenu } from './BookshelfMoreMenu';
+
+export const BOOKSHELF_WIDE_BREAKPOINT = 600;
+
+// Index mounts this shell once for the bookshelf route. Core readiness only
+// changes the content slot, preserving the title, navigation and menu anchor.
+@Component
+export struct BookshelfShell {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @Prop populated: boolean = false;
+  @Prop reduceMotion: boolean = false;
+  @Prop canCheckUpdates: boolean = false;
+  @Prop updateRunning: boolean = false;
+  @Prop backgroundUpdateRunning: boolean = false;
+  @Prop updateProgressDone: number = 0;
+  @Prop updateProgressTotal: number = 0;
+  onSearchRequested: () => void = (): void => {};
+  onImportRequested: () => void = (): void => {};
+  onBatchManageRequested: () => void = (): void => {};
+  onBookshelfSettingsRequested: () => void = (): void => {};
+  onCheckUpdatesRequested: () => void = (): void => {};
+  onMainTab: (key: string) => void = (_key: string): void => {};
+  @BuilderParam content: () => void;
+  @State private viewportWidth: number = 0;
+  @State private moreMenuVisible: boolean = false;
+  @State private moreAnchorRight: number = 0;
+  @State private moreAnchorBottom: number = 0;
+  @State private overlayOriginX: number = 0;
+  @State private overlayOriginY: number = 0;
+
+  aboutToAppear(): void {
+    registerReaderShelfFonts(this.getUIContext().getFont());
+  }
+
+  build() {
+    MainTabShell({
+      activeTab: 'bookshelf',
+      showBottomNav: this.showBottomNav(),
+      onMainTab: (key: string): void => this.onMainTab(key),
+    }) {
+      this.shellContent();
+    }
+  }
+
+  @Builder
+  private shellContent() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Column() {
+        this.topBar();
+        Stack({ alignContent: Alignment.TopStart }) {
+          this.content();
+        }
+        .width('100%')
+        .layoutWeight(1);
+      }
+      .width('100%')
+      .height('100%');
+
+      if (this.moreMenuVisible) {
+        BookshelfMoreMenu({
+          anchorRight: this.moreAnchorRight - this.overlayOriginX,
+          anchorBottom: this.moreAnchorBottom - this.overlayOriginY,
+          reduceMotion: this.reduceMotion,
+          canCheckUpdates: this.canCheckUpdates,
+          updateRunning: this.updateRunning,
+          backgroundUpdateRunning: this.backgroundUpdateRunning,
+          updateProgressDone: this.updateProgressDone,
+          updateProgressTotal: this.updateProgressTotal,
+          onCheckUpdates: (): void => this.requestCheckUpdates(),
+          onBatchManage: (): void => {
+            this.moreMenuVisible = false;
+            this.onBatchManageRequested();
+          },
+          onLocalImport: (): void => {
+            this.moreMenuVisible = false;
+            this.onImportRequested();
+          },
+          onBookshelfSettings: (): void => {
+            this.moreMenuVisible = false;
+            this.onBookshelfSettingsRequested();
+          },
+          onDismiss: (): void => {
+            this.moreMenuVisible = false;
+          },
+        });
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .onAreaChange((_oldValue: Area, newValue: Area): void => {
+      const width = this.numericAreaLength(newValue.width);
+      if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
+        this.viewportWidth = width;
+      }
+      this.overlayOriginX = Number(newValue.globalPosition.x);
+      this.overlayOriginY = Number(newValue.globalPosition.y);
+    });
+  }
+
+  @Builder
+  private topBar() {
+    AppTopBar({ title: '书架', divider: true }) {
+      Row({ space: 18 }) {
+        ReaderIconButton({
+          icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_search_theme_night') : $r('app.media.bookshelf_search')),
+          boxSize: 44,
+          iconSize: 24,
+          radius: 22,
+          onTap: (): void => this.onSearchRequested(),
+        });
+
+        ReaderIconButton({
+          icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more')),
+          boxSize: 44,
+          iconSize: 44,
+          radius: 22,
+          onTap: (): void => {
+            this.moreMenuVisible = true;
+          },
+        })
+          .accessibilityText('更多')
+          .onAreaChange((_oldValue: Area, newValue: Area): void => {
+            this.moreAnchorRight = Number(newValue.globalPosition.x) + Number(newValue.width);
+            this.moreAnchorBottom = Number(newValue.globalPosition.y) + Number(newValue.height);
+          });
+      }
+    }
+  }
+
+  private requestCheckUpdates(): void {
+    if (!this.canCheckUpdates || this.updateRunning || this.backgroundUpdateRunning) return;
+    this.moreMenuVisible = false;
+    this.onCheckUpdatesRequested();
+  }
+
+  private numericAreaLength(value: Length): number {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    if (typeof value === 'string') {
+      const parsed = Number.parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    return 0;
+  }
+
+  private showBottomNav(): boolean {
+    if (!this.populated) return true;
+    if (this.readerWindowMetricsRevision < 0) return true;
+    const width = this.viewportWidth > 0 ? this.viewportWidth : ReaderWindowCoordinator.metrics().windowRect.width;
+    // Only the populated shelf has an approved tablet rail. Other states
+    // retain the existing phone navigation assembly at larger widths.
+    return width < BOOKSHELF_WIDE_BREAKPOINT;
+  }
+}

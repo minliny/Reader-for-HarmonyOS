@@ -25,7 +25,12 @@ assert.equal(surface.renderFragments(), fallback);
 
 const source = readFileSync(file, 'utf8');
 assert.doesNotMatch(source, /this\.pageFragments\[0\]/, 'title must not bypass the body authority');
-assert.match(source, /recipe: this\.renderFragments\(\)\[0\]\.nativeTitle!/);
+assert.match(source, /ForEach\(this\.renderFragments\(\)\.slice\(0, 1\)\.filter/,
+  'title key selection keeps the same authoritative fragment owner as the body');
+assert.match(source, /recipe: fragment\.nativeTitle!/,
+  'a pending outgoing title actor reads its own keyed fragment');
+assert.doesNotMatch(source, /recipe: this\.renderFragments\(\)\[0\]\.nativeTitle!/,
+  'a pending outgoing actor cannot fetch an absent incoming title');
 
 const Experience = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
   ['isChapterFirstPageStart', 'isMeasurementChapterFirstPageStart']);

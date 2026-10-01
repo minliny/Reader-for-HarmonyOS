@@ -47,10 +47,18 @@ assert.equal(completeReadingParagraphWindow('A'.repeat(32000),'lineSeparated',fa
 assert.deepEqual(completeReadingParagraphWindow('完整 é אבג 😀','lineSeparated',true,true,4),{startUtf16:0,endUtf16:12});
 // A terminal break is excluded from shaping, but a range ending mid-chapter
 // still cannot claim its last semantic paragraph is complete.
-assert.deepEqual(completeReadingParagraphWindow('正文😀\n','blankLineSeparated',true,true,5),
- {startUtf16:0,endUtf16:4});
-assert.equal(completeReadingParagraphWindow('正文😀\n','blankLineSeparated',true,false,2),undefined);
-assert.equal(completeReadingParagraphWindow('tail\n\n正文😀\n','blankLineSeparated',false,false,7),undefined);
+for (const newline of ['\n','\r','\r\n']) {
+ for (const suffix of ['', ' \t']) {
+  const body = '正文😀' + newline + suffix;
+  assert.deepEqual(completeReadingParagraphWindow(body,'blankLineSeparated',true,true,body.length),
+   {startUtf16:0,endUtf16:4});
+  assert.equal(completeReadingParagraphWindow(body,'blankLineSeparated',true,false,2),undefined,
+   'a terminal break in a resident window is not proof of the chapter end');
+  const middle = 'tail' + newline + newline + body;
+  assert.equal(completeReadingParagraphWindow(middle,'blankLineSeparated',false,false,middle.indexOf('正文')),undefined,
+   'a partial window cannot publish its trailing paragraph as complete');
+ }
+}
 const structured='tail\nline\n\n完整\nBR\n\nhead';
 const projected=completeReadingParagraphWindow(structured,'blankLineSeparated',false,false,13);
 assert.equal(structured.slice(projected.startUtf16,projected.endUtf16),'完整\nBR');
