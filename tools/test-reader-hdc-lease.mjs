@@ -10,6 +10,8 @@ import { canonicalServerKey } from './reader-hdc-lease.mjs';
 const here = dirname(fileURLToPath(import.meta.url));
 const lease = resolve(here, 'reader-hdc-lease.mjs');
 const root = mkdtempSync(resolve(tmpdir(), 'reader-hdc-lease-test-'));
+const ACQUIRE_HANDSHAKE_TIMEOUT_MS = 2000;
+const ACQUIRE_HANDSHAKE_POLL_MS = 10;
 const run = args => new Promise((resolveRun, rejectRun) => {
   const child = spawn(process.execPath, [lease, ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
   let stdout = '', stderr = '';
@@ -18,12 +20,41 @@ const run = args => new Promise((resolveRun, rejectRun) => {
   child.on('error', rejectRun);
   child.on('close', code => resolveRun({ code, stdout, stderr }));
 });
+const waitForAcquire = async agentId => {
+  const eventsPath = resolve(root, 'events.jsonl');
+  const deadline = Date.now() + ACQUIRE_HANDSHAKE_TIMEOUT_MS;
+  for (;;) {
+    try {
+      const events = readFileSync(eventsPath, 'utf8').split('\n');
+      for (const line of events) {
+        if (!line) continue;
+        try {
+          const event = JSON.parse(line);
+          if (event.type === 'acquire' && event.agentId === agentId) return;
+        } catch (_) {
+          // A concurrent append may expose a partial final line; poll again.
+        }
+      }
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+    }
+    if (Date.now() >= deadline) {
+      throw new Error(`timed out waiting for ${agentId} acquire handshake after ${ACQUIRE_HANDSHAKE_TIMEOUT_MS}ms`);
+    }
+    await new Promise(resolveWait => setTimeout(resolveWait, ACQUIRE_HANDSHAKE_POLL_MS));
+  }
+};
 
 try {
   assert.equal(canonicalServerKey('::ffff:127.0.0.1:8710'), '127.0.0.1:8710');
   const base = ['--target', 'test-device:5555', '--hdc', process.execPath, '--lock-root', root, '--wait-ms', '2000'];
   const first = run([...base, '--agent-id', 'a', '--', '-e', 'setTimeout(() => {}, 300)']);
-  await new Promise(resolveWait => setTimeout(resolveWait, 40));
+  try {
+    await waitForAcquire('a');
+  } catch (error) {
+    await first;
+    throw error;
+  }
   const second = run([...base, '--agent-id', 'b', '--', '-e', 'setTimeout(() => {}, 1)']);
   const [a, b] = await Promise.all([first, second]);
   assert.equal(a.code, 0, a.stderr);
@@ -37,7 +68,12 @@ try {
   // these overlap; the server-level lock must serialize them as well.
   const otherBase = ['--target', 'other-device:5555', '--hdc', process.execPath, '--lock-root', root, '--wait-ms', '2000'];
   const crossFirst = run([...otherBase, '--agent-id', 'd', '--', '-e', 'setTimeout(() => {}, 300)']);
-  await new Promise(resolveWait => setTimeout(resolveWait, 40));
+  try {
+    await waitForAcquire('d');
+  } catch (error) {
+    await crossFirst;
+    throw error;
+  }
   const crossSecond = run([...base, '--agent-id', 'e', '--', '-e', 'setTimeout(() => {}, 1)']);
   const [d, e] = await Promise.all([crossFirst, crossSecond]);
   assert.equal(d.code, 0, d.stderr);
