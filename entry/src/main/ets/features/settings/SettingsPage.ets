@@ -108,6 +108,7 @@ export struct SettingsPage {
   build() {
     SettingsShell({
       activeSection: this.activeSection,
+      tapBottomScrollTop: this.tapBottomScrollTopValue,
       onSectionChange: (section: 'home' | 'general'): void => {
         this.onSectionChange(section);
       },
