@@ -114,6 +114,7 @@ import {
 } from './ReaderLayoutGeometry';
 import {
   TYPE_READER_CONTROL_BOOK_TITLE,
+  TYPE_READER_CONTROL_CHAPTER_TITLE,
   TYPE_READER_CONTROL_CHAPTER_SOURCE,
   TYPE_READER_CONTROL_SOURCE_ACTION,
 } from '../common/ReaderTypography';
@@ -1477,6 +1478,8 @@ export struct ReaderControlPanel {
           .fontFamily(TYPE_READER_CONTROL_BOOK_TITLE.fontFamily)
           .fontWeight(TYPE_READER_CONTROL_BOOK_TITLE.fontWeight)
           .fontSize(TYPE_READER_CONTROL_BOOK_TITLE.fontSizeFp)
+          .lineHeight(TYPE_READER_CONTROL_BOOK_TITLE.lineHeightFp)
+          .letterSpacing(TYPE_READER_CONTROL_BOOK_TITLE.letterSpacingFp)
           .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -1484,6 +1487,8 @@ export struct ReaderControlPanel {
           .fontFamily(TYPE_READER_CONTROL_CHAPTER_SOURCE.fontFamily)
           .fontWeight(TYPE_READER_CONTROL_CHAPTER_SOURCE.fontWeight)
           .fontSize(TYPE_READER_CONTROL_CHAPTER_SOURCE.fontSizeFp)
+          .lineHeight(TYPE_READER_CONTROL_CHAPTER_SOURCE.lineHeightFp)
+          .letterSpacing(TYPE_READER_CONTROL_CHAPTER_SOURCE.letterSpacingFp)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -1502,6 +1507,8 @@ export struct ReaderControlPanel {
           .fontFamily(TYPE_READER_CONTROL_SOURCE_ACTION.fontFamily)
           .fontWeight(TYPE_READER_CONTROL_SOURCE_ACTION.fontWeight, { enableVariableFontWeight: true })
           .fontSize(TYPE_READER_CONTROL_SOURCE_ACTION.fontSizeFp)
+          .lineHeight(TYPE_READER_CONTROL_SOURCE_ACTION.lineHeightFp)
+          .letterSpacing(TYPE_READER_CONTROL_SOURCE_ACTION.letterSpacingFp)
           .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
           .maxLines(1);
       }
@@ -1656,10 +1663,11 @@ export struct ReaderControlPanel {
       Text(this.chapterTitle)
         .layoutWeight(1)
         .height(34)
-        .fontFamily('ReaderInter')
-        .fontWeight(700)
-        .fontSize(13)
-        .lineHeight(16.25)
+        .fontFamily(TYPE_READER_CONTROL_CHAPTER_TITLE.fontFamily)
+        .fontWeight(TYPE_READER_CONTROL_CHAPTER_TITLE.fontWeight)
+        .fontSize(TYPE_READER_CONTROL_CHAPTER_TITLE.fontSizeFp)
+        .lineHeight(TYPE_READER_CONTROL_CHAPTER_TITLE.lineHeightFp)
+        .letterSpacing(TYPE_READER_CONTROL_CHAPTER_TITLE.letterSpacingFp)
         .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1)

@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
+import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import './test-surface-repair.mjs';
 const read=f=>readFileSync(new URL(`../entry/src/main/ets/${f}`,import.meta.url),'utf8');
 const shelf=read('features/bookshelf/BookshelfPage.ets');
@@ -11,6 +13,9 @@ const menu=read('features/bookshelf/BookshelfMoreMenu.ets');
 const action=read('features/bookshelf/BookshelfBookActionSheet.ets');
 const dialog=read('features/bookshelf/LocalImportDialog.ets');
 const index=read('pages/Index.ets');
+const typographySource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets',import.meta.url),'utf8');
+const typographyRoles=new Function(...Object.keys(fontFamilies),
+ `${stripTypeScriptTypes(typographySource.replace(/import[\s\S]*?from '[^']+';/g,'').replace(/\bexport /g,''))}; return {TYPE_SHELF_LIST_TITLE,TYPE_SHELF_LIST_AUTHOR,TYPE_SHELF_LIST_CHAPTER,TYPE_SHELF_LIST_STATUS};`)(...Object.values(fontFamilies));
 // The section gear is removed; the four semantic More actions remain.
 assert.doesNotMatch(shelf,/sectionAction\('bookshelf_settings'/);
 assert.doesNotMatch(shelf,/BookshelfGroupSelector\(/);
@@ -21,8 +26,8 @@ for(const source of [shelf,batch]) {
  assert.match(source,/ShelfBookListDetails\(\{ book \}\)/);
  assert.match(source,/ShelfBookPresentation.visible\(/,'ordinary/batch share exact order and filter');
 }
-for(const [size,lineHeight] of [[15,18.3],[12,15],[11,13.75],[10,12]]) {
- assert.match(list,new RegExp(`fontSize\\(${size}\\)[\\s\\S]*?lineHeight\\(${lineHeight}\\)`));
+for(const role of ['TYPE_SHELF_LIST_TITLE', 'TYPE_SHELF_LIST_AUTHOR', 'TYPE_SHELF_LIST_CHAPTER', 'TYPE_SHELF_LIST_STATUS']) {
+ assert.match(list,new RegExp(`${role}\\.fontSizeFp[\\s\\S]*?${role}\\.lineHeightFp`));
 }
 assert.match(list,/textAlign\(TextAlign.Start\)/);
 assert.match(list,/this.statusPill\(true\);\s*this.statusPill\(false\)/,'progress left and source right');
@@ -33,7 +38,9 @@ assert.match(list,/maxLines\(1\).textOverflow\(\{ overflow: TextOverflow.Ellipsi
 // Rename only the entry method so the existing Builder probe can invoke it.
 const probeSource=list.replace('  build() {', '  build() { Column() {} }\n  @Builder\n  shelfDetails() {');
 const Blank=new Proxy({name:'Blank'},{get:(target,key)=>key==='name'?target.name:()=>{}});
-const {owner:details}=createReaderBuilderProbe(probeSource,['shelfDetails','statusPill'],{ShelfBookPresentation,Blank});
+const {owner:details}=createReaderBuilderProbe(probeSource,['shelfDetails','statusPill'],{
+ ShelfBookPresentation,Blank,...typographyRoles,
+});
 details.appThemeScheme='day';
 details.book={sourceId:'local',bookId:'empty-author',title:'书名',author:'',lastChapter:'最新章节',readProgress:0};
 details.shelfDetails();

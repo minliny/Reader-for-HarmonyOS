@@ -1,6 +1,7 @@
 import {
   READER_FONT_INTER,
   READER_FONT_NOTO_SANS_SC,
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR,
   READER_FONT_NOTO_SERIF_SC_BOLD,
   READER_FONT_NOTO_SERIF_SC_REGULAR,
 } from './ReaderFontFamilies.ts';
@@ -92,11 +93,36 @@ export const TYPE_SEARCH_RSS_HINT = new ReaderTextStyle(
 export const TYPE_READER_CHAPTER_TITLE = new ReaderTextStyle(
   READER_FONT_NOTO_SERIF_SC_BOLD, 700, 23, undefined, undefined, 'system', 'figmaNode');
 export const TYPE_READER_CONTROL_BOOK_TITLE = new ReaderTextStyle(
-  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 16, undefined, undefined, 'system', 'figmaNode');
+  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 16, 19.2, 0, 'system', 'figmaNode');
 export const TYPE_READER_CONTROL_CHAPTER_SOURCE = new ReaderTextStyle(
-  READER_FONT_NOTO_SERIF_SC_REGULAR, 400, 12, undefined, undefined, 'system', 'figmaNode');
+  READER_FONT_NOTO_SERIF_SC_REGULAR, 400, 12, 14.4, 0, 'system', 'figmaNode');
 export const TYPE_READER_CONTROL_SOURCE_ACTION = new ReaderTextStyle(
-  READER_FONT_NOTO_SANS_SC, 700, 12, undefined, undefined, 'system', 'figmaNode');
+  READER_FONT_NOTO_SANS_SC, 700, 12, 14.4, 0, 'system', 'figmaNode');
+// The chapter switch row is a compact control role, separate from the
+// top-bar chapter/source metadata. Its explicit line box prevents ArkUI from
+// choosing a different auto baseline when the retained control tree is
+// translated during the open/close morph.
+export const TYPE_READER_CONTROL_CHAPTER_TITLE = new ReaderTextStyle(
+  READER_FONT_INTER, 700, 13, 16.25, 0, 'system', 'figmaNode');
+
+// Bookshelf metadata stays on fixed physical families and explicit line boxes.
+// These roles preserve the current Cover/List baseline while preventing the
+// retained projection's opacity/translate transition from inheriting ArkUI's
+// variable-font auto baseline for small author/chapter labels.
+export const TYPE_SHELF_LIST_TITLE = new ReaderTextStyle(
+  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 15, 18.3, 0, 'system', 'figmaNode');
+export const TYPE_SHELF_LIST_AUTHOR = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 12, 15, 0, 'system', 'figmaNode');
+export const TYPE_SHELF_LIST_CHAPTER = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 11, 13.75, 0, 'system', 'figmaNode');
+export const TYPE_SHELF_LIST_STATUS = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 10, 12, 0, 'system', 'figmaNode');
+export const TYPE_SHELF_CONTINUE_TITLE = new ReaderTextStyle(
+  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 20, 24, 0, 'system', 'figmaNode');
+export const TYPE_SHELF_CONTINUE_AUTHOR = new ReaderTextStyle(
+  READER_FONT_INTER, 400, 14, 16.8, 0, 'system', 'figmaNode');
+export const TYPE_SHELF_ACTION = new ReaderTextStyle(
+  READER_FONT_INTER, 800, 13, 15.6, 0, 'system', 'figmaNode');
 
 // Immersive page chrome. These roles currently share the Figma
 // `Reader/ImmersiveMeta` tuple, but remain separate semantic contracts so a

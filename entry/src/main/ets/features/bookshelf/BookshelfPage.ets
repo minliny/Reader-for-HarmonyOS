@@ -1,6 +1,14 @@
 import { BOOKSHELF_WIDE_BREAKPOINT } from './BookshelfShell';
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import {
+  TYPE_SHELF_ACTION,
+  TYPE_SHELF_CONTINUE_AUTHOR,
+  TYPE_SHELF_CONTINUE_TITLE,
+  TYPE_SHELF_LIST_AUTHOR,
+  TYPE_SHELF_LIST_STATUS,
+  TYPE_SHELF_LIST_TITLE,
+} from '../common/ReaderTypography';
 import { ReaderPressFeedback } from '../common/ReaderPressFeedback';
 import { ShelfBookListDetails } from './ShelfBookListDetails';
 import { ShelfBookPresentation } from './ShelfBookPresentation';
@@ -353,10 +361,11 @@ export struct BookshelfPage {
 
         Text(bookProvider()?.title ?? '')
           .width('100%')
-          .fontFamily('ReaderNotoSerifSCBold')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(20)
-          .lineHeight(24)
+          .fontFamily(TYPE_SHELF_CONTINUE_TITLE.fontFamily)
+          .fontWeight(TYPE_SHELF_CONTINUE_TITLE.fontWeight)
+          .fontSize(TYPE_SHELF_CONTINUE_TITLE.fontSizeFp)
+          .lineHeight(TYPE_SHELF_CONTINUE_TITLE.lineHeightFp)
+          .letterSpacing(TYPE_SHELF_CONTINUE_TITLE.letterSpacingFp)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -365,10 +374,11 @@ export struct BookshelfPage {
 
         Text(bookProvider()?.author ?? '')
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(14)
-          .lineHeight(16.8)
+          .fontFamily(TYPE_SHELF_CONTINUE_AUTHOR.fontFamily)
+          .fontWeight(TYPE_SHELF_CONTINUE_AUTHOR.fontWeight)
+          .fontSize(TYPE_SHELF_CONTINUE_AUTHOR.fontSizeFp)
+          .lineHeight(TYPE_SHELF_CONTINUE_AUTHOR.lineHeightFp)
+          .letterSpacing(TYPE_SHELF_CONTINUE_AUTHOR.letterSpacingFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -379,10 +389,11 @@ export struct BookshelfPage {
 
       Stack({ alignContent: Alignment.Center }) {
         Text('阅读')
-          .fontFamily('ReaderInter')
-          .fontWeight(800)
-          .fontSize(13)
-          .lineHeight(15.6)
+          .fontFamily(TYPE_SHELF_ACTION.fontFamily)
+          .fontWeight(TYPE_SHELF_ACTION.fontWeight)
+          .fontSize(TYPE_SHELF_ACTION.fontSizeFp)
+          .lineHeight(TYPE_SHELF_ACTION.lineHeightFp)
+          .letterSpacing(TYPE_SHELF_ACTION.letterSpacingFp)
           .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
       }
       .width(82)
@@ -824,27 +835,32 @@ export struct BookshelfPage {
     Column({ space: 6 }) {
       Text(book.title)
         .width(this.shelfBookCardWidth(isTablet))
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(15)
-        .lineHeight(18.3)
+        .fontFamily(TYPE_SHELF_LIST_TITLE.fontFamily)
+        .fontWeight(TYPE_SHELF_LIST_TITLE.fontWeight)
+        .fontSize(TYPE_SHELF_LIST_TITLE.fontSizeFp)
+        .lineHeight(TYPE_SHELF_LIST_TITLE.lineHeightFp)
+        .letterSpacing(TYPE_SHELF_LIST_TITLE.letterSpacingFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       Text(book.author)
         .width(this.shelfBookCardWidth(isTablet))
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(12)
-        .lineHeight(15)
+        .fontFamily(TYPE_SHELF_LIST_AUTHOR.fontFamily)
+        .fontWeight(TYPE_SHELF_LIST_AUTHOR.fontWeight)
+        .fontSize(TYPE_SHELF_LIST_AUTHOR.fontSizeFp)
+        .lineHeight(TYPE_SHELF_LIST_AUTHOR.lineHeightFp)
+        .letterSpacing(TYPE_SHELF_LIST_AUTHOR.letterSpacingFp)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       if ((book.readProgress ?? 0) > 0) {
         Text(this.gridProgressLabel(book))
           .width(this.shelfBookCardWidth(isTablet))
-          .fontFamily('ReaderInter')
-          .fontSize(10)
+          .fontFamily(TYPE_SHELF_LIST_STATUS.fontFamily)
+          .fontWeight(TYPE_SHELF_LIST_STATUS.fontWeight)
+          .fontSize(TYPE_SHELF_LIST_STATUS.fontSizeFp)
+          .lineHeight(TYPE_SHELF_LIST_STATUS.lineHeightFp)
+          .letterSpacing(TYPE_SHELF_LIST_STATUS.letterSpacingFp)
           .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
           .maxLines(1);
       }
