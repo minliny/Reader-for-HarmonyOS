@@ -77,7 +77,7 @@ export struct LocalBookDetail {
       // stack placed it at the top edge on HarmonyOS.
       Stack({ alignContent: Alignment.Bottom }) {
         this.actionArea();
-      }.width('100%').height('100%');
+      }.width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent);
     }.width('100%').height('100%')
       .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
       .onAreaChange((_old: Area, area: Area): void => {
