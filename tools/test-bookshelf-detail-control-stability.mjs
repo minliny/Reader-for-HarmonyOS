@@ -79,6 +79,11 @@ for (const theme of ['day', 'night']) {
 // Detail is a presentation component. Metadata/progress refreshes must keep
 // its two existing actors; only an active shelf mutation gates reading.
 const detailSource = readFileSync(file('features/bookshelf/LocalBookDetail.ets'), 'utf8');
+const actionAreaSource = detailSource.slice(detailSource.indexOf('private actionArea()'), detailSource.indexOf('\n  private contentFrame()'));
+assert.match(actionAreaSource, /Stack\(\{ alignContent: Alignment\.Center \}\)/,
+  'detail action dock centers its button row inside the painted capsule');
+assert.doesNotMatch(actionAreaSource, /\.align\(Alignment\.Bottom\)/,
+  'detail action dock must not bottom-align its inner row a second time');
 const { owner: detail } = createReaderBuilderProbe(detailSource, ['actionArea',
   'readingActionLabel', 'shelfActionLabel'], {
     GradientDirection: { Bottom: 'bottom' },

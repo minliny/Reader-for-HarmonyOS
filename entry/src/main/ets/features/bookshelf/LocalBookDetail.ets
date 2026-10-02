@@ -246,15 +246,14 @@ export struct LocalBookDetail {
             }
           });
       }.width('100%').height(48).alignItems(VerticalAlign.Center);
-    // The design dock reserves 9vp on every side. Keeping the vertical
-    // padding on the painted Stack prevents ArkUI from bottom-aligning the
-    // 48vp row against the outer capsule when this builder is mounted inside
-    // the viewport-bottom Stack.
+    // The design dock reserves 9vp on every side. The viewport-bottom owner
+    // aligns this entire 68vp surface; this Stack centers the 48vp row inside
+    // the painted capsule and must not apply a second bottom alignment.
     }.width(this.dockFrame().width).height(68).padding(9)
       .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme)).borderRadius(24)
       .border({ width: 0.5, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .shadow({ radius: this.appThemeScheme === 'night' ? 0 : 18, color: '#14000000', offsetY: 5 })
-      .align(Alignment.Bottom).margin({ bottom: this.bottomInset() + 12 });
+      .margin({ bottom: this.bottomInset() + 12 });
   }
 
   private contentFrame(): SurfaceHorizontalFrame {
