@@ -8,7 +8,6 @@ import {
   readerInteractiveSafeLeft,
   readerInteractiveSafeRight,
 } from './ReaderWindowMetrics';
-import { READER_FONT_NOTO_SANS_SC } from './ReaderFontFamilies';
 import { TYPE_PAGE_TITLE } from './ReaderTypography';
 
 // 二级页面统一返回栏:44×44 圆角返回钮 + 24px 思源宋体标题,58 高、20vp 内边距。
@@ -42,7 +41,7 @@ export struct PageBackBar {
       .onClick((): void => this.onBack());
 
       Text(this.title)
-        .fontFamily(this.floating ? READER_FONT_NOTO_SANS_SC : TYPE_PAGE_TITLE.fontFamily)
+        .fontFamily(this.floating ? 'ReaderNotoSansSC' : TYPE_PAGE_TITLE.fontFamily)
         .fontWeight(this.floating ? 650 : TYPE_PAGE_TITLE.fontWeight)
         .fontSize(this.floating ? 19 : TYPE_PAGE_TITLE.fontSizeFp)
         .lineHeight(this.floating ? 28 : TYPE_PAGE_TITLE.lineHeightFp as number)

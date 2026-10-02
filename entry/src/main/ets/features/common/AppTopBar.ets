@@ -10,7 +10,6 @@ import {
   readerInteractiveSafeLeft,
   readerInteractiveSafeRight,
 } from './ReaderWindowMetrics';
-import { READER_FONT_NOTO_SANS_SC } from './ReaderFontFamilies';
 import { TYPE_APP_HOME_TITLE } from './ReaderTypography';
 
 // AppTopBar —— 首页顶部标题栏统一组件 (Figma HomeTopBar): 58 高、左右 20 + 顶部 6
@@ -55,7 +54,7 @@ export struct AppTopBar {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .textAlign(TextAlign.Center)
-          .fontFamily(READER_FONT_NOTO_SANS_SC)
+          .fontFamily('ReaderNotoSansSC')
           .fontWeight(650)
           .fontSize(19)
           .lineHeight(28)
