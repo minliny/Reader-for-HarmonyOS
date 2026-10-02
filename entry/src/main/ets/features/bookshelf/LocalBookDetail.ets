@@ -88,11 +88,15 @@ export struct LocalBookDetail {
 
   @Builder
   private hero() {
-    Row({ space: 18 }) {
+    Row({ space: this.book.contentKind === 'manga' ? 16 : 18 }) {
       if (this.hasCover()) {
-        Image(this.book.coverUrl as string).width(84).height(122).objectFit(ImageFit.Cover).borderRadius(8);
+        Image(this.book.coverUrl as string)
+          .width(this.book.contentKind === 'manga' ? 104 : 84)
+          .height(this.book.contentKind === 'manga' ? 150 : 122)
+          .objectFit(ImageFit.Cover).borderRadius(this.book.contentKind === 'manga' ? 10 : 8);
       } else {
-        NoCoverCover({ coverWidth: 84, coverHeight: 122 });
+        NoCoverCover({ coverWidth: this.book.contentKind === 'manga' ? 104 : 84,
+          coverHeight: this.book.contentKind === 'manga' ? 150 : 122 });
       }
       Column({ space: 8 }) {
         Text(this.book.title).width('100%').fontFamily('ReaderNotoSerifSCBold')
@@ -107,7 +111,7 @@ export struct LocalBookDetail {
           this.metadataTag(this.book.sourceId === 'local' ? '本地' : '在线');
         }.width('100%');
       }.layoutWeight(1).constraintSize({ minWidth: 0 }).alignItems(HorizontalAlign.Start);
-    }.width('100%').constraintSize({ minHeight: 122 }).alignItems(VerticalAlign.Top);
+    }.width('100%').constraintSize({ minHeight: this.book.contentKind === 'manga' ? 150 : 122 }).alignItems(VerticalAlign.Top);
   }
 
   @Builder
@@ -251,7 +255,8 @@ export struct LocalBookDetail {
     // the painted capsule and must not apply a second bottom alignment.
     }.width(this.dockFrame().width).height(68).padding(9)
       .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme)).borderRadius(24)
-      .border({ width: 0.5, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
+      .clip(true)
       .shadow({ radius: this.appThemeScheme === 'night' ? 0 : 18, color: '#14000000', offsetY: 5 })
       .margin({ bottom: this.bottomInset() + 12 });
   }

@@ -29,7 +29,8 @@ const deps = { projectReaderDirectoryEntries, snapshotReaderDirectoryData, sameR
 const methods = ['aboutToAppear', 'aboutToDisappear', 'identity', 'rowIsCurrent', 'onIdentityChanged',
   'supportsDirectoryRules', 'onRulesKindChanged',
   'onEntriesChanged', 'admitEntries', 'applySearch', 'toggleSort', 'scheduleTopScroll', 'scrollToEdge',
-  'emptyMessage', 'contentFrame', 'topInset', 'bottomInset', 'publishProjection', 'onListFirstLayout', 'onListUserScroll', 'flushPendingScroll'];
+  'emptyMessage', 'contentFrame', 'topInset', 'bottomInset', 'mangaCurrentTitle', 'mangaCurrentPosition',
+  'publishProjection', 'onListFirstLayout', 'onListUserScroll', 'flushPendingScroll'];
 const Page = productionMotionMethods(path, methods, deps);
 const entries = Array.from({ length: 3000 }, (_, i) => ({ index: i * 2 + 1, title: `Chapter ${i + 1}`,
   navigable: i !== 2, downloadState: 'missing', bookmarks: [] }));
@@ -180,7 +181,9 @@ class Child { constructor(owner, params, _storage, id) { Object.assign(this, { o
   owner.aboutToDisappear(); toolbar.params.onTop(); row.params.onDownloadChapter(1);
   assert.deepEqual(result.downloaded, [1]);
   assert.doesNotMatch(output, /ReaderFullDirectory|FullDirectoryPanel|ReaderShell|ReadingExperience/);
-  assert.doesNotMatch(source, /Text\('(?:书签|当前章节|收起)'\)/);
+  const standardPageSource = source.slice(source.indexOf('private standardPage'), source.indexOf('private mangaPage'));
+  assert.doesNotMatch(standardPageSource, /Text\('(?:书签|当前章节|收起)'\)/,
+    'standalone catalog keeps manga-only current chapter footer out of the text branch');
 }
 console.log('PH119 standalone BookDirectoryPage actual methods and SDK Builder: PASS');
 

@@ -493,7 +493,7 @@ export struct BookshelfPage {
     .alignItems(VerticalAlign.Center)
     .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-    .borderRadius(8)
+    .borderRadius(18)
     .onClick((): void => this.onBookSelected(book));
   }
 

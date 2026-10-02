@@ -181,7 +181,7 @@ export struct BookDirectoryPage {
           rowHeight: 58, listPaddingX: this.contentFrame().left,
           listPaddingRight: this.contentFrame().right,
           listPaddingY: 8, listPaddingTop: this.topInset() + 150,
-          listPaddingBottom: this.bottomInset() + 24,
+          listPaddingBottom: this.bottomInset() + 72,
           edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
           chapterEntries: this.admittedEntries,
           fallbackBuilder: (): void => { this.mangaFlatList(identity); },
@@ -213,6 +213,42 @@ export struct BookDirectoryPage {
       }.width(this.contentFrame().width).height(76)
         .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme)).borderRadius(14)
         .align(Alignment.Top).margin({ top: this.topInset() + 66 });
+      Stack({ alignContent: Alignment.Bottom }) {
+        Row({ space: 10 }) {
+          Text('当前章节')
+            .flexShrink(0)
+            .fontFamily('ReaderNotoSansSC')
+            .fontSize(10)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(1);
+          Text(this.mangaCurrentTitle())
+            .layoutWeight(1)
+            .constraintSize({ minWidth: 0 })
+            .fontFamily('ReaderNotoSansSC')
+            .fontWeight(FontWeight.Medium)
+            .fontSize(12)
+            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
+          Text(this.mangaCurrentPosition())
+            .flexShrink(0)
+            .fontFamily('ReaderInter')
+            .fontSize(10)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(1)
+            .textAlign(TextAlign.End);
+        }
+        .width(this.contentFrame().width)
+        .height(48)
+        .padding({ left: 13, right: 13 })
+        .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+        .border({ width: 1, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+        .borderRadius(14)
+        .margin({ left: this.contentFrame().left, right: this.contentFrame().right, bottom: this.bottomInset() + 12 });
+      }
+      .width('100%')
+      .height('100%')
+      .hitTestBehavior(HitTestMode.Transparent);
     }.width('100%').height('100%')
       .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
       .onAreaChange((_old: Area, area: Area): void => {
@@ -280,6 +316,23 @@ export struct BookDirectoryPage {
       if (row.navigable === false) group = row;
     }
     return undefined;
+  }
+
+  private mangaCurrentTitle(): string {
+    const entry = this.admittedEntries.find((row: LocalReadingTocEntry): boolean => row.index === this.currentChapterIndex);
+    return entry?.title ?? '尚未开始阅读';
+  }
+
+  private mangaCurrentPosition(): string {
+    if (this.currentChapterIndex < 0) return '—';
+    let ordinal = 0;
+    let total = 0;
+    for (const entry of this.admittedEntries) {
+      if (entry.navigable === false) continue;
+      total += 1;
+      if (entry.index === this.currentChapterIndex) ordinal = total;
+    }
+    return ordinal > 0 ? `${ordinal} / ${total}` : '—';
   }
 
   private mangaVisibleEntries(): LocalReadingTocEntry[] {

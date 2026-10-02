@@ -92,7 +92,7 @@ detail.initialRender();
 const bar = [...detail.children.values()].find(value => value.params.title === '书籍详情');
 assert.equal(bar.params.centered, true); assert.equal(bar.params.floating, true);
 const cover = [...detail.children.values()].find(value => value.params.coverWidth);
-assert.equal(cover.params.coverWidth, 84); assert.equal(cover.params.coverHeight, 122);
+assert.equal(cover.params.coverWidth, 104); assert.equal(cover.params.coverHeight, 150);
 const scroll = [...detail.nodes.values()].find(value => value.type === 'Scroll');
 assert.equal(scroll.width, '100%'); assert.equal(scroll.height, '100%', 'floating bars never subtract the native scroll viewport');
 const title = [...detail.nodes.values()].find(value => value.type === 'Text' && value.create === detail.book.title);
@@ -101,4 +101,4 @@ const intro = [...detail.nodes.values()].find(value => value.type === 'Text' && 
 assert.equal(intro.maxLines, 3);
 const dock = [...detail.nodes.values()].find(value => (value.type === 'Stack' || value.type === 'Row') && value.height === 68);
 assert.equal(dock.width, 330); assert.equal(dock.borderRadius, 24);
-console.log('PASS actual detail SDK Builder: full scroll viewport, 84×122 cover, centered floating header, two-line title, folded intro and floating dock');
+console.log('PASS actual detail SDK Builder: full scroll viewport, 104×150 manga cover, centered floating header, two-line title, folded intro and floating dock');

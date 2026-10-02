@@ -20,6 +20,7 @@ import type { RemoteReadingPositionScope } from '../reading/RemoteReadingPositio
 import { mangaUsesPersistentDirectory, mangaDirectoryColumnWidth } from './MangaLayoutPolicy';
 import { MangaBookPresentation } from './MangaBookPresentation';
 import { readerBrightnessControlPercent, readerBrightnessWindowValue } from '../reading/ReaderBrightnessCurve';
+import { TOK_BORDER_W } from '../common/ReaderTokens';
 
 interface MangaViewportAnchor { ordinal: number; y: number; x?: number; }
 interface MangaConfirmedPosition { controller: MangaSessionController; manifest: MangaManifest; identity: string; anchor: MangaViewportAnchor; }
@@ -930,7 +931,10 @@ export struct MangaReadingSurface {
           this.iconAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_switch_theme_night') : $r('app.media.reader_directory_switch')), '换源', (): void => { void this.openSourceSwitch(); });
           this.iconAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_more_theme_night') : $r('app.media.reader_directory_more')), '更多', (): void => { void this.openPanel('more'); });
         }.width(88);
-      }.height(52).width('100%').backgroundColor(this.surfaceColor()).borderRadius(18);
+      }.height(52).width('100%').backgroundColor(this.surfaceColor())
+        .border({ width: TOK_BORDER_W, color: this.lineColor() }).borderRadius(18).clip(true)
+        .shadow({ radius: this.appThemeScheme === 'night' ? 0 : 18,
+          color: this.appThemeScheme === 'night' ? '#22000000' : '#1A594632', offsetX: 0, offsetY: 5 });
       if (this.recovering) {
         Button('内容已更新，确认从当前页继续').fontSize(12).height(44).onClick((): void => {
           if (this.data.totalCount() > this.first) {
@@ -968,7 +972,9 @@ export struct MangaReadingSurface {
         this.footerAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_settings_nav_active_theme_night') : $r('app.media.reader_settings_nav_active')), '设置', 'settings');
       }.width('100%').height(62).border({ width: { top: 1 }, color: this.lineColor() });
     }.width(Math.max(1, this.viewportWidth - 32)).padding({ left: 8, right: 8, top: 4, bottom: 4 })
-      .backgroundColor(this.surfaceColor()).borderRadius(24).margin({ left: 16, right: 16, bottom: 12 })
+      .backgroundColor(this.surfaceColor()).borderRadius(24)
+      .border({ width: TOK_BORDER_W, color: this.lineColor() }).clip(true)
+      .margin({ left: 16, right: 16, bottom: 12 })
       .align(Alignment.Bottom).constraintSize({ maxWidth: 560 });
   }
   @Builder
@@ -997,7 +1003,8 @@ export struct MangaReadingSurface {
             }.width('100%').padding(20);
           }.layoutWeight(1).width('100%').scrollBar(BarState.Off);
         }
-      }.width(this.panelWidth()).height(this.panelHeight()).backgroundColor(this.surfaceColor()).borderRadius(this.widePanel() ? 18 : 24);
+      }.width(this.panelWidth()).height(this.panelHeight()).backgroundColor(this.surfaceColor())
+        .borderRadius(this.widePanel() ? 18 : 24).clip(true);
     }.width('100%').height('100%');
   }
   @Builder

@@ -187,18 +187,24 @@ export struct SourceManagementPage {
 
   @Builder
   private backBar() {
-    PageBackBar({
-      title: '书源管理',
-      onBack: (): void => this.onBack(),
-    }) {
-      Stack({ alignContent: Alignment.Center }) {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more'))).width(20).height(20);
+    Row() {
+      PageBackBar({
+        title: '书源管理',
+        floating: true,
+        centered: true,
+        onBack: (): void => this.onBack(),
+      }) {
+        Stack({ alignContent: Alignment.Center }) {
+          Image((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more'))).width(20).height(20);
+        }
+        .width(44)
+        .height(44)
+        .borderRadius(22)
+        .onClick((): void => this.onOpenTools());
       }
-      .width(44)
-      .height(44)
-      .borderRadius(22)
-      .onClick((): void => this.onOpenTools());
     }
+    .width('100%')
+    .padding({ left: 16, right: 16, top: 8 });
   }
 
   @Builder
@@ -554,8 +560,8 @@ export struct SourceManagementPage {
           .maxLines(1);
       }
       .layoutWeight(1)
-      .height(44)
-      .borderRadius(8)
+      .height(48)
+      .borderRadius(16)
       .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('app.SourceManagementPage.SEARCH_FIELD_BORDER', this.appThemeScheme) })
       .onClick((): void => this.onOpenTools());
@@ -575,13 +581,13 @@ export struct SourceManagementPage {
         .alignItems(VerticalAlign.Center);
       }
       .layoutWeight(1)
-      .height(44)
-      .borderRadius(8)
+      .height(48)
+      .borderRadius(16)
       .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
       .onClick((): void => this.onAddSource());
     }
     .width(this.contentFrame().width)
-    .height(44)
+    .height(48)
     .alignItems(VerticalAlign.Center)
     .margin({ top: TOK_SPACE_SM, bottom: TOK_SPACE_MD });
   }
