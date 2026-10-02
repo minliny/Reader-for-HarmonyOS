@@ -787,6 +787,19 @@ export struct MangaReadingSurface {
   private panelTitle(): string {
     return this.panel === 'directory' ? '章节目录' : this.panel === 'mode' ? '阅读方式' : this.panel === 'settings' ? '漫画设置' : '更多';
   }
+  private chapterEndLabel(): string {
+    const title = this.title.trim();
+    const separator = title.indexOf(' · ');
+    return separator > 0 ? title.slice(0, separator) : title || '本话';
+  }
+  private adjacentLabel(): string {
+    const entry = this.adjacentChapter(1);
+    return entry === undefined ? '' : entry.title.includes('卷') ? `下一卷 · ${entry.title}` : `下一话 · ${entry.title}`;
+  }
+  private adjacentActionLabel(): string {
+    const entry = this.adjacentChapter(1);
+    return entry === undefined || !entry.title.includes('卷') ? '继续阅读下一话' : '继续阅读下一卷';
+  }
   private directoryEntries(): LocalReadingTocEntry[] {
     return (this.remoteSession?.entries ?? []).map((entry: RemoteReadingTocEntry): LocalReadingTocEntry =>
       ({ index: entry.index, title: entry.title, level: entry.level, navigable: entry.navigable, downloadState: 'unknown' }));
@@ -926,9 +939,14 @@ export struct MangaReadingSurface {
             .fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold).fontSize(17).fontColor(this.inkColor())
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
           Text(this.title).fontSize(11).fontColor(this.mutedColor()).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-        }.layoutWeight(1);
+        }.layoutWeight(1).alignItems(HorizontalAlign.Center);
         Row() {
-          this.iconAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_switch_theme_night') : $r('app.media.reader_directory_switch')), '换源', (): void => { void this.openSourceSwitch(); });
+          Column({ space: 2 }) {
+            Image((this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_switch_theme_night') : $r('app.media.reader_directory_switch')))
+              .width(18).height(18);
+            Text('换源').fontSize(10).fontColor(this.inkColor()).maxLines(1);
+          }.width(44).height(42).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)
+            .accessibilityText('换源').onClick((): void => { void this.openSourceSwitch(); });
           this.iconAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_more_theme_night') : $r('app.media.reader_directory_more')), '更多', (): void => { void this.openPanel('more'); });
         }.width(88);
       }.height(52).width('100%').backgroundColor(this.surfaceColor())
@@ -961,20 +979,22 @@ export struct MangaReadingSurface {
         Slider({ value: this.pageOrdinal() + 1, min: 1, max: Math.max(1, this.horizontalPageCount), step: 1 })
           .layoutWeight(1).selectedColor('#2D4A3E').trackColor(this.lineColor()).enabled(this.opened && this.horizontalPageCount > 1)
           .onChange((value: number, mode: SliderChangeMode): void => { if (mode === SliderChangeMode.End) void this.seekPage(Math.round(value) - 1); });
-        Text(this.opened ? `${this.pageOrdinal() + 1} / ${this.horizontalPageCount}` : '—')
-          .fontSize(12).fontColor(this.mutedColor()).width(60).textAlign(TextAlign.Center);
         Button('›').height(44).width(44).fontSize(24).fontColor(this.inkColor()).backgroundColor(Color.Transparent)
           .enabled(this.opened).onClick((): void => { void this.stepPage(1); });
       }.width('100%').height(44);
+      Text(this.opened ? `${this.pageOrdinal() + 1} / ${this.horizontalPageCount} 页` : '—')
+        .fontSize(12).fontColor(this.mutedColor()).width('100%').textAlign(TextAlign.Center).height(20);
       Row() {
         this.footerAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_directory_theme_night') : $r('app.media.reader_directory_directory')), '目录', 'directory');
-        this.footerAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_settings_header_theme_night') : $r('app.media.reader_settings_header')), '阅读方式', 'mode');
-        this.footerAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_settings_nav_active_theme_night') : $r('app.media.reader_settings_nav_active')), '设置', 'settings');
+        this.footerAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_appearance_header_theme_night') : $r('app.media.reader_appearance_header')), '阅读方式', 'mode');
+        this.footerAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_settings_header_theme_night') : $r('app.media.reader_settings_header')), '设置', 'settings');
       }.width('100%').height(62).border({ width: { top: 1 }, color: this.lineColor() });
-    }.width(Math.max(1, this.viewportWidth - 32)).padding({ left: 8, right: 8, top: 4, bottom: 4 })
+    }.width(Math.max(1, this.viewportWidth - 32)).padding({ left: 8, right: 8, top: 6, bottom: 6 })
       .backgroundColor(this.surfaceColor()).borderRadius(24)
       .border({ width: TOK_BORDER_W, color: this.lineColor() }).clip(true)
       .margin({ left: 16, right: 16, bottom: 12 })
+      .shadow({ radius: this.appThemeScheme === 'night' ? 8 : 18,
+        color: this.appThemeScheme === 'night' ? '#44000000' : '#1A594632', offsetX: 0, offsetY: -4 })
       .align(Alignment.Bottom).constraintSize({ maxWidth: 560 });
   }
   @Builder
@@ -992,7 +1012,7 @@ export struct MangaReadingSurface {
         Row() {
           Text(this.panelTitle()).fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold).fontSize(19).fontColor(this.inkColor()).layoutWeight(1);
           this.iconAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_back_theme_night') : $r('app.media.reader_directory_back')), '关闭面板', (): void => { this.panel = ''; });
-        }.width('100%').height(60).padding({ left: 20, right: 8 }).border({ width: { bottom: 1 }, color: this.lineColor() });
+      }.width('100%').height(60).padding({ left: 20, right: 8 }).border({ width: { bottom: 1 }, color: this.lineColor() });
         if (this.panel === 'directory') { this.directoryPanel(); }
         else {
           Scroll() {
@@ -1004,7 +1024,10 @@ export struct MangaReadingSurface {
           }.layoutWeight(1).width('100%').scrollBar(BarState.Off);
         }
       }.width(this.panelWidth()).height(this.panelHeight()).backgroundColor(this.surfaceColor())
-        .borderRadius(this.widePanel() ? 18 : 24).clip(true);
+        .borderRadius(this.widePanel() ? 18 : 24)
+        .border({ width: TOK_BORDER_W, color: this.lineColor() }).clip(true)
+        .shadow({ radius: this.appThemeScheme === 'night' ? 8 : 18,
+          color: this.appThemeScheme === 'night' ? '#55000000' : '#24594632', offsetX: 0, offsetY: 4 });
     }.width('100%').height('100%');
   }
   @Builder
@@ -1040,8 +1063,8 @@ export struct MangaReadingSurface {
   private modePanel() {
     Text('阅读方向').fontSize(13).fontColor(this.mutedColor()).width('100%');
     Row({ space: 8 }) {
-      this.option('竖向连续', !this.horizontal, (): void => { if (this.horizontal) this.toggleDirection(); }, 47);
-      this.option('横向单图', this.horizontal, (): void => { if (!this.horizontal) this.toggleDirection(); }, 47);
+      this.option('竖向连续', !this.horizontal, (): void => { if (this.horizontal) this.toggleDirection(); }, 46);
+      this.option('横向单图', this.horizontal, (): void => { if (!this.horizontal) this.toggleDirection(); }, 46);
     }.width('100%');
     Text('图片适配').fontSize(13).fontColor(this.mutedColor()).width('100%');
     Column({ space: 8 }) {
@@ -1065,9 +1088,9 @@ export struct MangaReadingSurface {
   private settingsPanel() {
     Text('阅读底色').fontSize(13).fontColor(this.mutedColor()).width('100%');
     Row({ space: 8 }) {
-      this.option('暖纸', this.backgroundPreference === 'paper', (): void => this.setBackground('paper'), 31);
-      this.option('素白', this.backgroundPreference === 'white', (): void => this.setBackground('white'), 31);
-      this.option('深墨', this.backgroundPreference === 'ink', (): void => this.setBackground('ink'), 31);
+      this.option('暖纸', this.backgroundPreference === 'paper', (): void => this.setBackground('paper'), 30);
+      this.option('素白', this.backgroundPreference === 'white', (): void => this.setBackground('white'), 30);
+      this.option('深墨', this.backgroundPreference === 'ink', (): void => this.setBackground('ink'), 30);
     }.width('100%');
     Row() {
       Text('亮度').fontSize(13).fontColor(this.inkColor()); Blank();
@@ -1100,18 +1123,38 @@ export struct MangaReadingSurface {
   }
   @Builder
   private chapterEndContent() {
-    Column({ space: 18 }) {
-      Text('本篇完').fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold).fontSize(28).fontColor(this.inkColor());
-      Text(this.title).fontSize(14).fontColor(this.mutedColor()).maxLines(2).textAlign(TextAlign.Center);
-      if (this.adjacentChapter(1) !== undefined) {
-        Text(`接下来 · ${this.adjacentChapter(1)?.title ?? ''}`).fontSize(14).fontColor(this.mutedColor()).maxLines(2).textAlign(TextAlign.Center);
-        Button('继续阅读').height(48).width(220).fontColor('#FFFFFF').backgroundColor('#1F3528').borderRadius(16)
-          .onClick((): void => { void this.selectAdjacentChapter(1); });
-      }
-      Button('返回目录').height(44).width(220).fontColor(this.inkColor()).backgroundColor(this.surfaceColor()).borderRadius(16)
-        .onClick((): void => { void this.openPanel('directory'); });
-      Button('返回正文').height(44).width(220).fontColor(this.mutedColor()).backgroundColor(Color.Transparent)
-        .onClick((): void => { this.chapterEnd = false; });
-    }.width('100%').height('100%').padding(24).justifyContent(FlexAlign.Center).backgroundColor(this.paperColor());
+    Stack({ alignContent: Alignment.Bottom }) {
+      Column() {
+        Blank().layoutWeight(1);
+        Column({ space: 10 }) {
+          Image(this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_marker_check_theme_night') : $r('app.media.reader_directory_marker_check'))
+            .width(24).height(24);
+          Text(`${this.chapterEndLabel()} 完`).fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold)
+            .fontSize(23).fontColor(this.inkColor()).textAlign(TextAlign.Center);
+          if (this.adjacentChapter(1) !== undefined) {
+            Text(this.adjacentLabel()).fontSize(13).fontColor(this.mutedColor()).maxLines(2).textAlign(TextAlign.Center);
+            Row({ space: 12 }) {
+              Button(this.adjacentActionLabel()).layoutWeight(1).height(44).fontSize(13)
+                .fontColor('#FFFFFF').backgroundColor('#2F6373').borderRadius(16)
+                .onClick((): void => { void this.selectAdjacentChapter(1); });
+              Button('返回目录').layoutWeight(1).height(44).fontSize(13).fontColor(this.inkColor())
+                .backgroundColor(this.paperColor()).borderRadius(16)
+                .onClick((): void => { void this.openPanel('directory'); });
+            }.width('100%');
+          } else {
+            Text('已读到本书末尾').fontSize(13).fontColor(this.mutedColor()).textAlign(TextAlign.Center);
+            Button('返回目录').height(44).width(220).fontSize(13).fontColor(this.inkColor())
+              .backgroundColor(this.paperColor()).borderRadius(16).onClick((): void => { void this.openPanel('directory'); });
+          }
+        }.width('100%').padding(20).backgroundColor(this.surfaceColor()).borderRadius(20)
+          .border({ width: TOK_BORDER_W, color: this.lineColor() })
+          .shadow({ radius: this.appThemeScheme === 'night' ? 0 : 16,
+            color: this.appThemeScheme === 'night' ? '#44000000' : '#1A594632', offsetX: 0, offsetY: 4 });
+      }.width('100%').height('100%').padding({ left: 12, right: 12, bottom: 48 });
+      Text(`${this.pageOrdinal() + 1} / ${this.horizontalPageCount}`)
+        .fontSize(11).fontColor(this.backgroundPreference === 'ink' ? '#EAE7DE' : '#FFFCF8')
+        .padding({ left: 10, right: 10, top: 5, bottom: 5 }).backgroundColor('#66251F1B').borderRadius(12)
+        .align(Alignment.BottomEnd).margin({ right: 12, bottom: 12 }).hitTestBehavior(HitTestMode.None);
+    }.width('100%').height('100%');
   }
 }
