@@ -71,7 +71,13 @@ export struct LocalBookDetail {
           onBack: (): void => this.onBack() });
       }.width('100%').padding({ left: 16 + this.safeLeft(), right: 16 + this.safeRight(), top: this.topInset() + 8 })
         .align(Alignment.Top).hitTestBehavior(HitTestMode.Transparent);
-      this.actionArea();
+      // Keep the action dock in a full-viewport bottom-aligned owner. The
+      // detail surface itself is top-aligned so the scroll and header retain
+      // their coordinate space; aligning the dock row directly against that
+      // stack placed it at the top edge on HarmonyOS.
+      Stack({ alignContent: Alignment.Bottom }) {
+        this.actionArea();
+      }.width('100%').height('100%');
     }.width('100%').height('100%')
       .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
       .onAreaChange((_old: Area, area: Area): void => {
