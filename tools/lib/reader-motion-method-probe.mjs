@@ -1,6 +1,7 @@
 import { readingChapterLayoutMap } from '../../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
 import { hasKnownReadingImageGeometry } from '../../entry/src/main/ets/features/reading/ReadingChapterWindow.ts';
 import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { errorMessageOf } from '../../entry/src/main/ets/app/ErrorMessage.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -13,7 +14,7 @@ const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
  * Native-node cleanup is instrumented; platform geometry has its separate SDK/VM suite.
  * This does not simulate ArkUI layout, reactive delivery, or compositor pixels. */
 export function productionMotionMethods(file, names, dependencies = {}) {
-  dependencies = { readerAppColor, readerThemeDefinition, readingChapterLayoutMap, hasKnownReadingImageGeometry,
+  dependencies = { readerAppColor, readerThemeDefinition, readingChapterLayoutMap, hasKnownReadingImageGeometry, errorMessageOf,
     ReaderRuntimeOwner: { current: () => ({ captureReadingContentValidity: () => () => true,
       waitForReadingContentIdle: async () => {} }) }, ...dependencies };
   const source = readFileSync(file, 'utf8');

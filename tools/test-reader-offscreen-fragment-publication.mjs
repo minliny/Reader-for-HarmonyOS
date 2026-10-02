@@ -15,6 +15,7 @@ const inputClass = textureSource.slice(textureSource.indexOf('export class BookT
 const BookTurnTextureBuildInput = new Function(`${stripTypeScriptTypes(inputClass.replace('export class', 'class'))}; return BookTurnTextureBuildInput;`)();
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const require = createRequire(import.meta.url);
+const ts = require(`${sdk}/node_modules/typescript`);
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 for (const [name, source] of [['ReadingSurface', wholeSurface], ['ReaderNativeParagraphView', read('ReaderNativeParagraphView')],
   ['ReaderPageChrome', read('ReaderPageChrome')], ['ReaderReadingTextFragment', wholeSurface], ['ReaderPaperBackground', read('ReaderPaperBackground')]]) {
@@ -22,12 +23,18 @@ for (const [name, source] of [['ReadingSurface', wholeSurface], ['ReaderNativePa
   syntax.propCollection.set(name, new Set([...source.matchAll(/@Prop(?:\s+@\w+(?:\([^)]*\))?)*\s+(\w+)\s*:/g)].map(match => match[1])));
 }
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
+const measurementSource = read('ReaderNativeTextMeasurement');
+const geometryJs = ts.transpileModule(measurementSource.replace(/^import.*$/gm, '').replace(/^export /gm, ''),
+  { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+const readerNativeTextGeometryKey = new Function(geometryJs + ';return readerNativeTextGeometryKey;')();
 const layout = { widthClass: 'compact', contentTop: 72, contentRight: 32, contentBottom: 48, contentLeft: 32,
   titleLineHeightFp: 32, titleToBodySpacingVp: 18 };
 const appearance = { activeTheme: 'paper', paragraphSpacing: 16 };
 const title = key => ({ key, text: key, firstLine: 0, lastLine: 0, style: { lineHeight: 32 } });
+const nativeStyle = { widthVp: 300, fontFamily: 'ReaderNotoSansSC', fontSize: 16, fontWeight: 400,
+  lineHeight: 24, letterSpacing: 0, alignment: 'start', breakAll: true };
 const text = (id, nativeTitle) => ({ id, text: id, nativeTitle, imageHeight: 0, nativeParagraphFirst: true,
-  nativeParagraph: { key: id, text: id } });
+  nativeParagraph: { key: id, text: id, style: nativeStyle } });
 const image = (id, nativeTitle) => ({ id, text: '', nativeTitle, imageHeight: 80,
   imageWidthBasisPoints: 10000, fileUri: `file:///${id}.png` });
 const page = (identity, fragments, extra = {}) => ({ identity, textureIdentity: identity, renderRevision: 7,
@@ -45,6 +52,7 @@ function reactiveSurface(params, source = surfaceSource) {
       Canvas: new Proxy({ name: 'Canvas' }, { get: (target, key) => key === 'name' ? target.name : () => {} }),
       BlendMode: { SRC_OVER: 'over', MULTIPLY: 'multiply' }, BlendApplyType: { FAST: 'fast' },
       ImageFit: { Contain: 'contain' }, ImageInterpolation: { High: 'high' },
+      readerNativeTextGeometryKey,
     }, { ...runtime.hooks, allowEmptyBranchAdmission: true, initialParams: params });
   Object.assign(owner, { pageParagraphs: [], snapshotSynchronousImages: true, bottomJustifyGap: 0, staticSnapshotId: '',
     layout, appearance, themeStyle: () => ({ ink: '#222', sourcePaperLighting: false, paperTexture: false }),
@@ -61,7 +69,10 @@ function reactiveSurface(params, source = surfaceSource) {
   owner.initialRender();
   return { owner, runtime, lists,
     body: () => lists.at(-1) ?? [],
-    title: () => [...owner.children.values()].find(child => child.params.recipe?.style?.lineHeight !== undefined)?.params.recipe.key,
+    // The probe retains historical body actors while a Builder branch is
+    // replaced.  Identify the semantic title by its production title line
+    // box, rather than returning the first stale paragraph actor.
+    title: () => [...owner.children.values()].find(child => child.params.recipe?.style?.lineHeight === 32)?.params.recipe.key,
     images: () => [...owner.nodes.values()].filter(node => node.type === 'Image').map(node => ({ uri: node.create, sync: node.syncLoad })),
   };
 }

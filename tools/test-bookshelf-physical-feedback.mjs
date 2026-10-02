@@ -19,6 +19,12 @@ for (const name of ['NoCoverCover', 'StatusBadge', 'ReaderToggle']) syntax.compo
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
 class HeaderChild extends Child {}
 class IconButtonChild extends Child {}
+const shelfTypography = {
+  TYPE_SHELF_LIST_TITLE: { fontFamily: 'ReaderNotoSerifSCBold', fontWeight: 700, fontSizeFp: 15, lineHeightFp: 18.3, letterSpacingFp: 0 },
+  TYPE_SHELF_LIST_AUTHOR: { fontFamily: 'ReaderNotoSansSCUIRegular', fontWeight: 400, fontSizeFp: 12, lineHeightFp: 15, letterSpacingFp: 0 },
+  TYPE_SHELF_LIST_CHAPTER: { fontFamily: 'ReaderNotoSansSCUIRegular', fontWeight: 400, fontSizeFp: 11, lineHeightFp: 13.75, letterSpacingFp: 0 },
+  TYPE_SHELF_LIST_STATUS: { fontFamily: 'ReaderNotoSansSCUIRegular', fontWeight: 400, fontSizeFp: 10, lineHeightFp: 12, letterSpacingFp: 0 },
+};
 const builders = require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
 for (const [name, path, slot] of [
   ['AppTopBar', 'common/AppTopBar.ets', 'trailing'],
@@ -160,7 +166,7 @@ check('empty shelf actual Scroll pins short contents to the viewport top', () =>
 });
 const list = read('bookshelf/ShelfBookListDetails.ets').replace('  build() {', '  build() { Column() {} }\n  @Builder\n  shelfDetails() {');
 check('PH61 progress/source retain equal left/right slots and live progress after row reuse', () => {
-  const { owner } = createReaderBuilderProbe(list, ['shelfDetails', 'statusPill'], { ShelfBookPresentation: Projection, Blank: stub('Blank') });
+  const { owner } = createReaderBuilderProbe(list, ['shelfDetails', 'statusPill'], { ShelfBookPresentation: Projection, Blank: stub('Blank'), ...shelfTypography });
   owner.book = { title: '书名', author: '', sourceId: 'online', sourceName: '非常长的实际书源名称', lastChapter: '最新章节', readProgress: 8765 };
   owner.appThemeScheme = 'day'; owner.shelfDetails();
   const nodes = texts(owner), source = nodes.find(n => n.create === '非常长的实际书源名称'), progress = nodes.find(n => n.create === '已读 87%');

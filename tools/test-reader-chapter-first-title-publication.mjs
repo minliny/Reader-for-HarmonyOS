@@ -21,6 +21,14 @@ class Child { constructor(owner, params, _storage, id) { Object.assign(this, { o
 const layout = { widthClass: 'compact', contentTop: 72, contentRight: 32, contentBottom: 48, contentLeft: 32,
   titleLineHeightFp: 32, titleToBodySpacingVp: 18 };
 const measuredHeights = new Map();
+// The production ReadingSurface forwards the geometry identity of the native
+// paragraph into its retained child.  Keep the probe bound to the same
+// implementation instead of leaving the generated Builder closure with an
+// undeclared global.
+const measurementSource = read('ReaderNativeTextMeasurement');
+const geometryJs = ts.transpileModule(measurementSource.replace(/^import.*$/gm, '').replace(/^export /gm, ''),
+  { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+const readerNativeTextGeometryKey = new Function(geometryJs + ';return readerNativeTextGeometryKey;')();
 const nativeOwnerJs = ts.transpileModule(read('ReaderNativeParagraph').replace(/^import.*$/gm, '').replace(/^export /gm, ''),
   { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
 const { NativeResource, NativeController } = new Function('NodeController', 'ReaderNativeTextMeasurement', nativeOwnerJs +
@@ -61,6 +69,7 @@ function slot(provider, revision = 1, params = {}) {
 function surface(params, source = surfaceSource) {
   const owner = createReaderBuilderProbe(source, ['build', 'renderFragments', 'contentInsets', 'usesHighlightCanvas', 'dynamicHighlightBlend'], {
     ReaderPageChrome: Child, ReaderNativeParagraphView: Child, ReaderReadingTextFragment: Child, ReaderPaperBackground: Child,
+    readerNativeTextGeometryKey,
     TYPE_READER_CHAPTER_TITLE: { fontFamily: 'ReaderNotoSansSC', fontWeight: 500, fontSizeFp: 24 },
     WordBreak: { BREAK_ALL: 'breakAll' }, GradientDirection: { Bottom: 'bottom' },
     Canvas: new Proxy({ name: 'Canvas' }, { get: (target, key) => key === 'name' ? target.name : () => {} }),

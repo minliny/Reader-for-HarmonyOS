@@ -5,10 +5,11 @@ import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThem
 const read = name => readFileSync(new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url), 'utf8');
 const capsule = read('ReaderSessionCapsule');
 for (const type of ['autoPage', 'tts']) {
-  const { owner } = createReaderBuilderProbe(capsule, ['build'], {
+  const { owner } = createReaderBuilderProbe(capsule, ['build', 'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor'], {
     TYPE_READER_SESSION_COUNTDOWN: {}, TYPE_READER_SESSION_LABEL: {}, readerSessionCapsuleMinimumWidth: () => 96,
   });
-  Object.assign(owner, { type, countdown: 8, capsuleWidth: 96, primaryColor: 'primary', onPrimaryColor: 'onPrimary' });
+  Object.assign(owner, { type, countdown: 8, capsuleWidth: 96, textColor: '', themeScheme: 'day',
+    primaryColor: 'primary', onPrimaryColor: 'onPrimary' });
   owner.initialRender();
   const nodes = [...owner.nodes.values()];
   const row = nodes.find(n => n.type === 'Row');

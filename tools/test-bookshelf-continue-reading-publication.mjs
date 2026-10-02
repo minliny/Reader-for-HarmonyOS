@@ -18,6 +18,11 @@ for (const [name, source] of [['BookshelfPage', pageSource], ['BookshelfEmptyPag
   syntax.propCollection.set(name, new Set([...source.matchAll(/@Prop(?:\s+@\w+(?:\([^)]*\))?)*\s+(\w+)\s*:/g)].map(match => match[1])));
 }
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
+const shelfTypography = {
+  TYPE_SHELF_CONTINUE_TITLE: { fontFamily: 'ReaderNotoSerifSCBold', fontWeight: 700, fontSizeFp: 20, lineHeightFp: 24, letterSpacingFp: 0 },
+  TYPE_SHELF_CONTINUE_AUTHOR: { fontFamily: 'ReaderInter', fontWeight: 400, fontSizeFp: 14, lineHeightFp: 16.8, letterSpacingFp: 0 },
+  TYPE_SHELF_ACTION: { fontFamily: 'ReaderInter', fontWeight: 800, fontSizeFp: 13, lineHeightFp: 15.6, letterSpacingFp: 0 },
+};
 const results = [];
 for (const withCover of [true, false]) {
 const runtime = createArkUIPropertyRuntimeProbe();
@@ -32,6 +37,7 @@ const hooks = { ...runtime.hooks, onObserverExit(owner, id) {
 const { Component: Page } = createReaderBuilderProbe(pageSource,
   ['continueReading', 'bookshelfList', 'continueReadingCard', 'hasCover'], {
     READER_FLOATING_TOP_BAR_HEIGHT: 58,
+    ...shelfTypography,
     ...runtime.sdk, NoCoverCover: Child, ImageFit: { Cover: 'cover' },
     LazyForEach: { create() {}, pop() {} }, ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
   }, hooks);
