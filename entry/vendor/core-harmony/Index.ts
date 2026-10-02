@@ -26,7 +26,6 @@ export {
   type CapabilityHandler,
   type HostRequestHandler,
   type HttpFetch,
-  type HttpFetchRequest,
   type JsonObject,
   type NativeReaderCoreModule,
   type NativeRuntimeHandle,
