@@ -11,12 +11,12 @@ import {
   resolveHorizontalFrame,
 } from '../common/SurfaceHorizontalGeometry';
 import {
-  TOK_BORDER,
   TOK_BORDER_W,
-  TOK_CARD_BG,
   TOK_MUTED,
   TOK_ON_PRIMARY,
   TOK_PRIMARY_DARK,
+  TOK_SURFACE_ELEVATED,
+  TOK_SURFACE_PANEL,
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
 import { readerFloatingTabBottomInset } from '../common/ReaderFloatingBarMetrics';
@@ -27,7 +27,7 @@ import { isReaderMainTabEnabled } from '../../app/ReaderProductScope';
 // 公共主导航 —— 数据驱动的 tab 栏。四个主页面（书架/发现/RSS/设置）复用。
 // tab 列表来自单一配置（MAIN_TABS）：增删 tab 只改配置，宽度按数量自适应平分。
 // 选中态由 current 驱动；点击非当前 tab 回调 onSelect(key)，由宿主页映射到各自回调。
-// Figma 重绘版：Phone 360×68、Tablet 82×332，r24 bg #E6FFFCF8 border #C1C7CD；
+// Figma 重绘版：Phone 196×68 (two tabs)、Tablet 82×332，r34 translucent surface;
 // 选中 bg #1F3528 + 文字 #FFFAF4，未选中文字 #756F69；icon 24，标签 Noto Sans SC Bold 11。
 // 颜色直接使用 TOK_* 语义 token (无二次别名)。
 
@@ -78,10 +78,15 @@ export struct MainTabBar {
     .width(this.bottomBarFrame().width)
     .height(68)
     .padding(8)
-    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
+    // The design surface is a translucent paper pill; using the shared panel
+    // token keeps the paper visible around the rounded corners during scroll.
+    .backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_SURFACE_ELEVATED', this.appThemeScheme) })
     .borderRadius(34)
     .clip(true)
+    .shadow({ radius: 18,
+      color: readerAppColor('app.BookshelfPage.projectionBookCoverLayer.color.1A594632', this.appThemeScheme),
+      offsetX: 0, offsetY: 5 })
     .hitTestBehavior(HitTestMode.Transparent)
     .margin({ bottom: readerFloatingTabBottomInset(ReaderWindowCoordinator.metrics()) })
     .translate({ x: this.bottomBarTranslateX() });

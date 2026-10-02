@@ -7,6 +7,7 @@ import {
   readerInteractiveSafeLeft,
   readerInteractiveSafeRight,
 } from './ReaderWindowMetrics';
+import { READER_FONT_NOTO_SANS_SC } from './ReaderFontFamilies';
 import { TYPE_PAGE_TITLE } from './ReaderTypography';
 
 // 二级页面统一返回栏:44×44 圆角返回钮 + 24px 思源宋体标题,58 高、20vp 内边距。
@@ -40,8 +41,8 @@ export struct PageBackBar {
       .onClick((): void => this.onBack());
 
       Text(this.title)
-        .fontFamily(TYPE_PAGE_TITLE.fontFamily)
-        .fontWeight(TYPE_PAGE_TITLE.fontWeight)
+        .fontFamily(this.floating ? READER_FONT_NOTO_SANS_SC : TYPE_PAGE_TITLE.fontFamily)
+        .fontWeight(this.floating ? 650 : TYPE_PAGE_TITLE.fontWeight)
         .fontSize(this.floating ? 19 : TYPE_PAGE_TITLE.fontSizeFp)
         .lineHeight(this.floating ? 28 : TYPE_PAGE_TITLE.lineHeightFp as number)
         .fontColor(this.titleColor.length > 0 ? this.titleColor : readerAppColor('TOK_INK', this.appThemeScheme))
@@ -61,8 +62,13 @@ export struct PageBackBar {
     .padding({ left: this.leftInset(), right: this.rightInset() })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(this.floating ? readerAppColor('TOK_CARD_BG', this.appThemeScheme) : Color.Transparent)
+    .border({ width: this.floating ? 1 : 0,
+      color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .borderRadius(this.floating ? 18 : 0)
     .clip(this.floating)
+    .shadow(this.floating ? { radius: 18,
+      color: readerAppColor('app.BookshelfPage.projectionBookCoverLayer.color.1A594632', this.appThemeScheme),
+      offsetX: 0, offsetY: 5 } : { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 })
     .hitTestBehavior(HitTestMode.Transparent);
   }
 

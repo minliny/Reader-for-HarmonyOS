@@ -371,16 +371,8 @@ export struct BookshelfPage {
   @Builder
   private topBar() {
     Row() {
-    AppTopBar({ title: '书架', floating: true }) {
-      Row({ space: 18 }) {
-        ReaderIconButton({
-          icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_search_theme_night') : $r('app.media.bookshelf_search')),
-          boxSize: 44,
-          iconSize: 24,
-          radius: 22,
-          onTap: (): void => this.onSearchRequested(),
-        });
-
+    AppTopBar({ title: '书架', floating: true, centered: true, showLeadingSearch: true,
+      onLeadingTap: (): void => this.onSearchRequested() }) {
         ReaderIconButton({
           icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more')),
           boxSize: 44,
@@ -395,10 +387,9 @@ export struct BookshelfPage {
             this.moreAnchorRight = Number(newValue.globalPosition.x) + Number(newValue.width);
             this.moreAnchorBottom = Number(newValue.globalPosition.y) + Number(newValue.height);
           });
-      }
     }
     }.padding({ left: Math.max(16, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics())),
-      right: Math.max(16, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics())) }).width('100%');
+      right: Math.max(16, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics())), top: 8 }).width('100%');
   }
 
   @Builder
