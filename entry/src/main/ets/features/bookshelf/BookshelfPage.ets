@@ -389,7 +389,11 @@ export struct BookshelfPage {
           });
     }
     }.padding({ left: Math.max(16, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics())),
-      right: Math.max(16, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics())), top: 8 }).width('100%');
+      right: Math.max(16, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics())), top: 8 }).width('100%')
+      // The wrapper only supplies safe-area padding. Keep its transparent
+      // rectangle from becoming a full-width gesture shield outside the
+      // rounded AppTopBar paint; AppTopBar owns the actual button hit targets.
+      .hitTestBehavior(HitTestMode.Transparent);
   }
 
   @Builder
