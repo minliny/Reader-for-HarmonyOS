@@ -1,6 +1,7 @@
 import { readerAppColor } from './ReaderThemeRegistry';
 import {
   TOK_SPACE_CONTROL_INLINE,
+  TOK_SURFACE_SOLID,
 } from './ReaderTokens';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
@@ -61,7 +62,7 @@ export struct PageBackBar {
     .height(this.floating ? 52 : 58)
     .padding({ left: this.leftInset(), right: this.rightInset() })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(this.floating ? readerAppColor('TOK_CARD_BG', this.appThemeScheme) : Color.Transparent)
+    .backgroundColor(this.floating ? readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme) : Color.Transparent)
     .border({ width: this.floating ? 1 : 0,
       color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .borderRadius(this.floating ? 18 : 0)

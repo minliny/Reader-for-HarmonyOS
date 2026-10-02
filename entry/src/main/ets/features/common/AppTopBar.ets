@@ -2,6 +2,7 @@ import { readerAppColor } from './ReaderThemeRegistry';
 import {
   TOK_HOME_TOP_BAR_INSET,
   TOK_INK,
+  TOK_SURFACE_SOLID,
 } from './ReaderTokens';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { ReaderIconButton } from './ReaderIconButton';
@@ -85,7 +86,7 @@ export struct AppTopBar {
     .height(this.floating ? 52 : 58)
     .padding({ left: this.floating ? 4 : this.leftInset(), right: this.floating ? 4 : this.rightInset(), top: this.floating ? 0 : 6 })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(this.floating ? readerAppColor('TOK_CARD_BG', this.appThemeScheme) : this.divider ? readerAppColor('TOK_PAPER', this.appThemeScheme) : Color.Transparent)
+    .backgroundColor(this.floating ? readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme) : this.divider ? readerAppColor('TOK_PAPER', this.appThemeScheme) : Color.Transparent)
     .border({ width: this.floating ? 1 : { bottom: this.divider ? 1 : 0 },
       color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
     .borderRadius(this.floating ? 18 : 0)
