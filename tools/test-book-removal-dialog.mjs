@@ -181,6 +181,15 @@ assert.deepEqual(buttons.map(b => b.responseRegion), [
 ], 'each action cell carries the extended region');
 assert.deepEqual(surface.bodyActionsInnerMargin(), { bottom: 30 },
   'the 30vp body-to-actions spacing is an inner gap, never an outer negative margin');
+const removalBodyColumns = surfaceNodes.filter(node => node.type === 'Column' && node.margin !== undefined);
+assert.equal(removalBodyColumns.length, 1,
+  'book-removal has exactly one spacing-owning inner body wrapper');
+assert.deepEqual(removalBodyColumns[0].margin, { bottom: 30 },
+  'book-removal writes the 30vp gap onto the rendered inner body node');
+const removalFrame = surfaceNodes.find(node => node.type === 'Column' && node.width === 306);
+assert.ok(removalFrame, 'book-removal rendered a framed root column');
+assert.equal(removalFrame.margin, undefined,
+  'the framed root never receives the body gap as an outer margin');
 assert.equal(surface.spec().hasBorder, true, 'book-removal keeps the original 1vp border');
 metrics.windowRect = new ReaderRectVp(0, 0, 280, 300);
 metrics.systemInsets = new ReaderInsetsVp(8, 24, 12, 20);
@@ -229,6 +238,17 @@ assert.ok(surfaceNodes.some(n => n.type === 'Text' && n.create === '移除书架
     'json-import actions keep their own 44vp bounds, no legacy extended region');
   assert.deepEqual(jsonSurface.bodyActionsInnerMargin(), {},
     'json-import body-to-actions spacing is a plain gap, no margin ownership');
+  const jsonBodyColumns = [...jsonSurface.nodes.values()]
+    .filter(node => node.type === 'Column' && node.margin !== undefined);
+  assert.equal(jsonBodyColumns.length, 1,
+    'json-import has one inner body wrapper and keeps the gap out of the outer frame');
+  assert.deepEqual(jsonBodyColumns[0].margin, {},
+    'json-import does not inherit the book-removal inner margin');
+  const jsonFrame = [...jsonSurface.nodes.values()]
+    .find(node => node.type === 'Column' && node.width === 350);
+  assert.ok(jsonFrame, 'json-import rendered the resolved card-inset frame at phone width');
+  assert.equal(jsonFrame.margin, undefined,
+    'json-import keeps card spacing out of the framed root');
   assert.equal(jsonSpec.hasBorder, true, 'json-import keeps the original 1vp border');
   // The json-import actions are full-width primary cells using the spec's own
   // dark-primary surface, not the shared 'primary'/TOK_ACCENT default.
@@ -292,6 +312,11 @@ assert.doesNotMatch(indexSource, /\.padding\(20\)\.width\('75%'\)/,
   assert.deepEqual(groupSurface.bodyActionsInnerMargin(), {},
     'no actions row means no spacing ownership');
   const groupNodes = [...groupSurface.nodes.values()];
+  const groupBodyColumns = groupNodes.filter(node => node.type === 'Column' && node.margin !== undefined);
+  assert.equal(groupBodyColumns.length, 1,
+    'shelf-group keeps its empty body wrapper inside the shared surface');
+  assert.deepEqual(groupBodyColumns[0].margin, {},
+    'shelf-group has no action gap to apply to its body wrapper');
   assert.equal(groupNodes.filter(n => n.type === 'Button').length, 0,
     'an empty actions array renders no action cells');
   assert.ok(!groupNodes.some(n => n.type === 'Text' && n.create === '关闭'),
