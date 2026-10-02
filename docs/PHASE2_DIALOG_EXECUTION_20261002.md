@@ -33,6 +33,8 @@ worktree：`/Users/minliny/Documents/Reader/.reader-isolated/phase2-dialog-20261
 
 另外通过四项静态交付门禁：`test-hap-pipeline-contract.mjs`、`test-native-input-preflight.mjs`、`test-build-input-safety.mjs` 和 `test-hap-source-inputs.mjs`。这些只证明输入、签名身份绑定和流水线防护仍可执行，不生成新的 HAP，也不改变当前 VM 安装。
 
+曾运行 `node tools/run-contract-tests.mjs --full`。该套件在 `test-reading-directory-fixture.mjs` 启动本地 fixture 时被当前执行环境拒绝监听 `127.0.0.1`（`EPERM`）而停止；此前已运行的 Dialog/响应式/源码合同没有失败。full integration 因平台承载限制保持 OPEN，不能从这次结果推出全量通过。
+
 ## 未关闭出口
 
 WP04 仍是候选状态。完整 ArkTS/SDK parent integration、规范 HAP、VM 运行表现、视觉比较、用户接受和主树合入尚未在本回执中关闭。下一步应在同一 worktree 继续做完整 parent integration 与适用 Dialog 对账；只有这些证据分层闭合后才允许合并。
