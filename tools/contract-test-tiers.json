@@ -13,6 +13,7 @@
     "test-bookshelf-tablet-navigation.mjs",
     "test-bundled-source-host-boundary.mjs",
     "test-contract-test-tiers.mjs",
+    "test-dialog-consumer-boundary.mjs",
     "test-cookie-security-policy.mjs",
     "test-core-build-identity.mjs",
     "test-discover-product-flow.mjs",
