@@ -28,6 +28,36 @@ export type DialogFrameMode = 'cap' | 'inset' | 'card-inset';
  * primary actions stacked vertically. */
 export type DialogActionsLayout = 'row' | 'stack';
 
+/** Named ArkTS contract for the registry entries. ArkTS rejects inline object
+ * literal type declarations in constructor parameters, while a named
+ * interface keeps the data-only registry readable and compiler-safe. */
+export interface DialogSurfaceSpecInit {
+  maxWidth: number;
+  edgeGap: number;
+  widthPercent: number;
+  frameMode: DialogFrameMode;
+  usesKeyboardSafeArea: boolean;
+  padding: number;
+  borderRadius: number;
+  backgroundRole: ReaderAppColorRole;
+  hasShadow: boolean;
+  hasBorder: boolean;
+  headerFontSize: number;
+  headerFontFamily: DialogHeaderFontFamily;
+  headerTextAlign: TextAlign;
+  headerLineHeight: number;
+  headerGap: number;
+  bodyActionsGap: number;
+  bodyActionsOwnMargin: number;
+  actionsLayout: DialogActionsLayout;
+  actionHeight: number;
+  actionBorderRadius: number;
+  actionUsesPressFeedback: boolean;
+  actionExtendsTouchRegion: boolean;
+  actionPrimarySurfaceRole: ReaderAppColorRole;
+  actionPrimaryLabelRole: ReaderAppColorRole;
+}
+
 export class DialogSurfaceSpec {
   readonly maxWidth: number;
   readonly edgeGap: number;
@@ -54,32 +84,7 @@ export class DialogSurfaceSpec {
   readonly actionPrimarySurfaceRole: ReaderAppColorRole;
   readonly actionPrimaryLabelRole: ReaderAppColorRole;
 
-  constructor(init: {
-    maxWidth: number;
-    edgeGap: number;
-    widthPercent: number;
-    frameMode: DialogFrameMode;
-    usesKeyboardSafeArea: boolean;
-    padding: number;
-    borderRadius: number;
-    backgroundRole: ReaderAppColorRole;
-    hasShadow: boolean;
-    hasBorder: boolean;
-    headerFontSize: number;
-    headerFontFamily: DialogHeaderFontFamily;
-    headerTextAlign: TextAlign;
-    headerLineHeight: number;
-    headerGap: number;
-    bodyActionsGap: number;
-    bodyActionsOwnMargin: number;
-    actionsLayout: DialogActionsLayout;
-    actionHeight: number;
-    actionBorderRadius: number;
-    actionUsesPressFeedback: boolean;
-    actionExtendsTouchRegion: boolean;
-    actionPrimarySurfaceRole: ReaderAppColorRole;
-    actionPrimaryLabelRole: ReaderAppColorRole;
-  }) {
+  constructor(init: DialogSurfaceSpecInit) {
     this.maxWidth = init.maxWidth;
     this.edgeGap = init.edgeGap;
     this.widthPercent = init.widthPercent;
