@@ -6,7 +6,7 @@ import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { PageBackBar } from '../common/PageBackBar';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
-import { readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../common/ReaderWindowMetrics';
+import { readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop } from '../common/ReaderWindowMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from '../common/SurfaceHorizontalGeometry';
 import { TOK_CONTENT_MAX_W_TABLET } from '../common/ReaderTokens';
 import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';
@@ -30,6 +30,8 @@ export struct BookDirectoryPage {
   @Prop @Watch('onRulesKindChanged') bookKind: string = '';
   @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];
   @Prop catalogMessage: string = '';
+  @Prop contentKind: string = 'text';
+  @Prop currentChapterIndex: number = -1;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   onBack: () => void = (): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
@@ -48,6 +50,8 @@ export struct BookDirectoryPage {
   @State private viewportWidth: number = 0;
   @State private navigationInteracted: boolean = false;
   @State private navigationActive: boolean = false;
+  @State private locateCurrentRevision: number = 0;
+  @State private mangaCollapsedGroups: number[] = [];
   private admittedEntries: LocalReadingTocEntry[] = [];
   @State private admittedIdentity: string = '';
   private mounted: boolean = false;
@@ -75,6 +79,15 @@ export struct BookDirectoryPage {
   }
 
   build() {
+    if (this.contentKind === 'manga') {
+      this.mangaPage();
+    } else {
+      this.standardPage();
+    }
+  }
+
+  @Builder
+  private standardPage() {
     Column() {
       PageBackBar({ title: '目录', onBack: (): void => this.onBack() });
       if (this.supportsDirectoryRules() && ReaderRuntimeOwner.current().supportsCoreCapability('reading.directory.view.v2')) {
@@ -102,7 +115,7 @@ export struct BookDirectoryPage {
             if (this.sourceId.length > 0) {
               ReaderDirectoryNavigationSurface({
                 sourceId: this.sourceId, bookId: this.bookId, query: this.searchQuery, ascending: this.ascending,
-                currentChapterIndex: -1, openRevision: `${identity}:${this.rulesRevision}`,
+                currentChapterIndex: this.currentChapterIndex, openRevision: `${identity}:${this.rulesRevision}`,
                 interacted: this.navigationInteracted,
                 rowHeight: 40, listPaddingX: 10, listPaddingY: 5,
                 edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
@@ -154,6 +167,150 @@ export struct BookDirectoryPage {
         this.viewportWidth = width;
       }
     });
+  }
+
+  @Builder
+  private mangaPage() {
+    Stack({ alignContent: Alignment.Top }) {
+      ForEach([this.admittedIdentity], (identity: string) => {
+        ReaderDirectoryNavigationSurface({
+          sourceId: this.sourceId, bookId: this.bookId, query: this.searchQuery, ascending: this.ascending,
+          currentChapterIndex: this.currentChapterIndex, openRevision: `${identity}:${this.rulesRevision}`,
+          locateCurrentRevision: this.locateCurrentRevision,
+          interacted: this.navigationInteracted, mangaDisplay: true,
+          rowHeight: 58, listPaddingX: this.contentFrame().left,
+          listPaddingRight: this.contentFrame().right,
+          listPaddingY: 8, listPaddingTop: this.topInset() + 150,
+          listPaddingBottom: this.bottomInset() + 24,
+          edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
+          chapterEntries: this.admittedEntries,
+          fallbackBuilder: (): void => { this.mangaFlatList(identity); },
+          onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number,
+            positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void => {
+            if (this.mounted && identity === this.admittedIdentity && identity === this.identity())
+              this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
+          },
+          onFirstLayout: (): void => this.onListFirstLayout(identity),
+          onUserScrollIntent: (): void => this.onListUserScroll(),
+          onTreeStateChange: (active: boolean): void => { this.navigationActive = active; this.listReady = false; },
+        }).width('100%').height('100%');
+      }, (identity: string): string => identity);
+      Row() {
+        PageBackBar({ title: '目录', floating: true, centered: true, onBack: (): void => this.onBack() });
+      }.width('100%').padding({ left: this.contentFrame().left, right: this.contentFrame().right, top: this.topInset() + 6 })
+        .align(Alignment.Top).hitTestBehavior(HitTestMode.Transparent);
+      Column() {
+        ReaderDirectoryToolbar({ text: this.searchDraft, placeholder: '搜索话／卷名称', ascending: this.ascending,
+          showChapterTools: true, onTextChange: (value: string): void => { this.searchDraft = value; },
+          onSearch: (): void => this.applySearch(), onTop: (): void => this.scrollToEdge(Edge.Top),
+          onBottom: (): void => this.scrollToEdge(Edge.Bottom), onToggleSort: (): void => this.toggleSort() });
+        Row() {
+          Text('可读条目与卷组').layoutWeight(1).fontSize(11).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+          Text('定位当前').height(24).fontSize(12).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
+            .enabled(this.currentChapterIndex >= 0).opacity(this.currentChapterIndex >= 0 ? 1 : 0.4)
+            .onClick((): void => this.locateCurrent());
+        }.width('100%').height(24).padding({ left: 10, right: 10 });
+      }.width(this.contentFrame().width).height(76)
+        .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme)).borderRadius(14)
+        .align(Alignment.Top).margin({ top: this.topInset() + 66 });
+    }.width('100%').height('100%')
+      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
+      .onAreaChange((_old: Area, area: Area): void => {
+        const width = Number(area.width);
+        if (Number.isFinite(width) && width > 0) this.viewportWidth = width;
+      });
+  }
+
+  @Builder
+  private mangaFlatList(identity: string) {
+    ReaderDirectoryList({
+      entries: this.mangaVisibleEntries(), rowHeight: 58, naturalRowHeight: true,
+      listPaddingX: this.contentFrame().left, listPaddingY: 8,
+      listPaddingRight: this.contentFrame().right,
+      listPaddingTop: this.topInset() + 150, listPaddingBottom: this.bottomInset() + 24,
+      edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
+      onFirstLayout: (): void => this.onListFirstLayout(identity),
+      onUserScrollIntent: (): void => this.onListUserScroll(),
+      rowBuilder: (item: RepeatItem<LocalReadingTocEntry>) => { this.mangaFlatRow(item.item, identity); },
+    }).width('100%').height('100%');
+    if (this.projectedEntries.length === 0) {
+      Text(this.emptyMessage()).width('100%').padding({ top: this.topInset() + 166, left: 24, right: 24 })
+        .fontSize(13).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).hitTestBehavior(HitTestMode.None);
+    }
+  }
+
+  @Builder
+  private mangaFlatRow(entry: LocalReadingTocEntry, identity: string) {
+    Row({ space: 8 }) {
+      Column({ space: 3 }) {
+        Text(entry.title).width('100%').fontSize(14).lineHeight(22)
+          .fontWeight(entry.navigable === false ? FontWeight.Medium : FontWeight.Regular)
+          .fontColor(readerAppColor(entry.navigable === false ? 'TOK_MUTED' : 'TOK_INK', this.appThemeScheme));
+        if (this.searchQuery.length > 0 && this.mangaGroupFor(entry) !== undefined) {
+          Text(this.mangaGroupFor(entry)?.title ?? '').width('100%').fontSize(11).lineHeight(16)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        }
+      }.layoutWeight(1).alignItems(HorizontalAlign.Start);
+      if (entry.navigable === false) {
+        Text(this.mangaCollapsedGroups.includes(entry.index) ? '›' : '⌄').width(24).fontSize(18)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+      } else if (entry.index === this.currentChapterIndex) {
+        Text('正在读').fontSize(11).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
+      }
+    }.width('100%').constraintSize({ minHeight: entry.navigable === false ? 44 : 58 })
+      .padding({ left: this.mangaGroupFor(entry) === undefined ? 10 : 26, right: 10, top: 10, bottom: 10 })
+      .backgroundColor(entry.navigable !== false && entry.index === this.currentChapterIndex ?
+        readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) :
+        entry.navigable === false ? readerAppColor('TOK_CARD_BG', this.appThemeScheme) : Color.Transparent)
+      .borderRadius(8).onClick((): void => {
+        if (!this.mounted || identity !== this.identity() || identity !== this.admittedIdentity ||
+          !sameReaderDirectoryData(this.admittedEntries, this.entries)) return;
+        if (entry.navigable === false) {
+          this.mangaCollapsedGroups = this.mangaCollapsedGroups.includes(entry.index) ?
+            this.mangaCollapsedGroups.filter((index: number): boolean => index !== entry.index) : [...this.mangaCollapsedGroups, entry.index];
+        } else if (this.rowIsCurrent(entry, identity)) this.onSelectChapter(entry.index);
+      });
+  }
+
+  private mangaGroupFor(entry: LocalReadingTocEntry): LocalReadingTocEntry | undefined {
+    if (entry.navigable === false) return undefined;
+    let group: LocalReadingTocEntry | undefined;
+    for (const row of this.admittedEntries) {
+      if (row.index === entry.index) return group;
+      if (row.navigable === false) group = row;
+    }
+    return undefined;
+  }
+
+  private mangaVisibleEntries(): LocalReadingTocEntry[] {
+    // Search reveals matches and their original volume path even when folded.
+    if (this.searchQuery.length > 0) return this.projectedEntries;
+    return this.projectedEntries.filter((entry: LocalReadingTocEntry): boolean => {
+      const group = this.mangaGroupFor(entry);
+      return group === undefined || !this.mangaCollapsedGroups.includes(group.index);
+    });
+  }
+
+  private topInset(): number {
+    if (this.readerWindowMetricsRevision < 0) return 0;
+    return readerInteractiveSafeTop(ReaderWindowCoordinator.metrics());
+  }
+
+  private locateCurrent(): void {
+    if (this.currentChapterIndex < 0) return;
+    this.searchDraft = '';
+    this.searchQuery = '';
+    const currentEntry = this.admittedEntries.find((entry: LocalReadingTocEntry): boolean => entry.index === this.currentChapterIndex);
+    const group = currentEntry === undefined ? undefined : this.mangaGroupFor(currentEntry);
+    if (group !== undefined) this.mangaCollapsedGroups = this.mangaCollapsedGroups.filter((index: number): boolean => index !== group.index);
+    this.publishProjection(projectReaderDirectoryEntries(this.admittedEntries, '', this.ascending));
+    this.locateCurrentRevision += 1;
+    const generation = ++this.scrollGeneration;
+    setTimeout((): void => {
+      if (!this.mounted || generation !== this.scrollGeneration || this.navigationActive) return;
+      const index = this.mangaVisibleEntries().findIndex((entry: LocalReadingTocEntry): boolean => entry.index === this.currentChapterIndex);
+      if (index >= 0 && this.listReady) this.listScroller.scrollToIndex(index, false, ScrollAlign.CENTER);
+    }, 0);
   }
 
   @Builder
@@ -217,6 +374,8 @@ export struct BookDirectoryPage {
   private onIdentityChanged(): void {
     this.rulesExpanded = false;
     this.rulesRevision = 0;
+    this.mangaCollapsedGroups = [];
+    this.locateCurrentRevision = 0;
     // The identity comparison blocks old-row callbacks immediately; publish
     // the next keyed List and projection together after reconciliation.
     this.onEntriesChanged();

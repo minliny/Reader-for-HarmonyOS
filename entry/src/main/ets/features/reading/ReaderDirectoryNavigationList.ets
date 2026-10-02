@@ -173,8 +173,14 @@ export struct ReaderDirectoryNavigationList {
   @Prop bookId: string = '';
   @Prop sourceId: string = 'local';
   @Prop rowHeight: number = 40;
+  @Prop mangaDisplay: boolean = false;
+  @Prop mangaScheme: string = '';
+  @Prop currentChapterIndex: number = -1;
   @Prop listPaddingX: number = 10;
+  @Prop listPaddingRight: number = -1;
   @Prop listPaddingY: number = 5;
+  @Prop listPaddingTop: number = -1;
+  @Prop listPaddingBottom: number = -1;
   @Prop edgeEffectMode: EdgeEffect = EdgeEffect.None;
   @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
   @Prop @Watch('onChapterEntriesChanged') chapterEntries: LocalReadingTocEntry[] = [];
@@ -294,6 +300,9 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private planPosition(): ReaderDirectoryPositionPlan | undefined {
+    if (this.view.locateCurrent && this.view.currentVisibleIndex !== undefined)
+      return { viewId: this.view.viewId, index: this.view.currentVisibleIndex,
+        rowFraction: 0, align: ScrollAlign.CENTER };
     const anchor = readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, this.bookId));
     if (anchor !== undefined && anchor.navigationRevision === this.view.navigationRevision) {
       const index = this.view.anchorVisibleIndex ??
@@ -379,7 +388,7 @@ export struct ReaderDirectoryNavigationList {
     try {
       if (plan.align === ScrollAlign.START) {
         this.scroller.scrollToIndex(plan.index, false, ScrollAlign.START,
-          { extraOffset: LengthMetrics.vp(plan.rowFraction * this.rowHeight) });
+          { extraOffset: LengthMetrics.vp(plan.rowFraction * (this.mangaDisplay ? this.positionRowHeight(plan.index) : this.rowHeight)) });
       } else {
         this.scroller.scrollToIndex(plan.index, false, ScrollAlign.CENTER);
       }
@@ -450,6 +459,57 @@ export struct ReaderDirectoryNavigationList {
   private displayLevel(node: ReaderDirectoryNavigationNode): number {
     // v2 facts use zero-based depth; the legacy v1 view is already one-based.
     return this.view.identity === undefined ? Math.max(1, node.depth) : node.depth + 1;
+  }
+
+  private positionRowHeight(index: number): number {
+    if (!this.mangaDisplay) return this.rowHeight;
+    try {
+      const rect = this.scroller?.getItemRect(index);
+      if (rect !== undefined && Number.isFinite(rect.height) && rect.height > 0) return rect.height;
+    } catch (_error) { /* A row outside the materialized viewport uses its minimum. */ }
+    return this.dataSource.loadedNode(index)?.kind === 'group' ? 44 : 58;
+  }
+
+  private isCurrentMangaNode(item: ReaderDirectoryNavigationItem): boolean {
+    return item.node?.kind === 'target' && this.currentChapterIndex >= 0 &&
+      item.node.chapterIndex === this.currentChapterIndex;
+  }
+
+  @Builder
+  private mangaRow(item: ReaderDirectoryNavigationItem) {
+    Row({ space: 8 }) {
+      if (item.node === undefined) {
+        Text('…').fontSize(13).fontColor(readerAppColor('TOK_READ_MUTED', this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme));
+      } else {
+        Text(item.node.title).layoutWeight(1).constraintSize({ minWidth: 0 })
+          .fontFamily('ReaderNotoSansSC').fontSize(14).lineHeight(22)
+          .fontWeight(item.node.kind === 'group' ? FontWeight.Medium : FontWeight.Regular)
+          .fontColor(readerAppColor(item.node.kind === 'target' ? 'TOK_READ_INK' : 'TOK_READ_MUTED', this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme));
+        if (item.node.kind === 'group' && item.node.hasChildren) {
+          Text(item.node.expanded ? '⌄' : '›').width(24).fontSize(18)
+            .fontColor(readerAppColor('TOK_READ_MUTED', this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme));
+        } else if (item.node.kind === 'target' && this.isCurrentMangaNode(item)) {
+          Text('正在读').fontSize(11).fontColor(readerAppColor('TOK_GREEN', this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme));
+        }
+      }
+    }.width('100%').constraintSize({ minHeight: item.node?.kind === 'group' ? 44 : 58 })
+      .padding({ left: 10 + Math.min(4, Math.max(0, (item.node?.depth ?? 1) - 1)) * 16,
+        right: 10, top: 10, bottom: 10 })
+      .border({ width: { bottom: 0.5 }, color: { bottom: readerAppColor('TOK_CHAPTER_DIVIDER', this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme) } })
+      .borderRadius(8)
+      .backgroundColor(item.node?.kind === 'target' && this.isCurrentMangaNode(item) ?
+        readerAppColor('TOK_READ_ACTIVE_SOFT', this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme) :
+        item.node?.kind === 'group' ? readerAppColor('TOK_SURFACE_PANEL_SOFT', this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme) : Color.Transparent)
+      .enabled(this.interactionEnabled && item.node?.kind !== 'disabled')
+      .accessibilityText(item.node === undefined ? '目录加载中' : item.node.kind === 'group' ?
+        `${item.node.title}，分组，${item.node.expanded ? '已展开' : '已折叠'}` :
+        `${item.node.title}${this.isCurrentMangaNode(item) ? '，正在读' : ''}`)
+      .onClick((): void => {
+        const node = item.node;
+        if (node === undefined) return;
+        if (node.kind === 'group') this.toggleNode(node);
+        else this.selectTarget(node);
+      });
   }
 
   @Builder
@@ -524,12 +584,18 @@ export struct ReaderDirectoryNavigationList {
   build() {
     List({ space: 0, scroller: this.scroller }) {
       LazyForEach(this.dataSource, (item: ReaderDirectoryNavigationItem) => {
-        ListItem() { this.row(item); }.width('100%').height(this.rowHeight);
+        ListItem() {
+          if (this.mangaDisplay) this.mangaRow(item);
+          else this.row(item);
+        }.width('100%');
       }, (item: ReaderDirectoryNavigationItem): string => this.rowKey(item));
     }
     .width('100%').height('100%')
-    .padding({ left: this.listPaddingX, right: this.listPaddingX,
-      top: this.listPaddingY, bottom: this.listPaddingY })
+    .padding({ left: this.listPaddingX, right: this.listPaddingRight >= 0 ? this.listPaddingRight : this.listPaddingX,
+      top: this.mangaDisplay ? 0 : this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY,
+      bottom: this.mangaDisplay ? 0 : this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY })
+    .contentStartOffset(this.mangaDisplay ? (this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY) : 0)
+    .contentEndOffset(this.mangaDisplay ? (this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY) : 0)
     .scrollBar(BarState.Off).edgeEffect(this.edgeEffectMode)
     .enableScrollInteraction(this.interactionEnabled)
     .cachedCount(4)

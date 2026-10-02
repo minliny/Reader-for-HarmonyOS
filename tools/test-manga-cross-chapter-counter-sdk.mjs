@@ -1,3 +1,4 @@
+import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
@@ -22,28 +23,28 @@ const boundary=new Proxy({}, {get:()=>()=>{}});
 class ListScroller {getItemRect(){return {x:0,y:0};}scrollToIndex(){}scrollBy(){}}
 class Scroller {currentOffset(){return {xOffset:0};}scrollTo(){}}
 const {owner}=createReaderBuilderProbe(source,names,{
-  ...properties.sdk,MangaStripDataSource:DataSource,ListScroller,Scroller,PhotoViewScaleModel:class {},
+  ...properties.sdk,...mangaSurfaceSdkDependencies,MangaStripDataSource:DataSource,ListScroller,Scroller,PhotoViewScaleModel:class {},
   ReaderWindowCoordinator:{metrics:()=>createDefaultReaderWindowMetrics()},readerInteractiveSafeInsets,
   ScrollAlign:{START:0},ImageFit:{Fill:0},ScrollDirection:{Horizontal:0},TouchType:{Down:0},
-  LazyForEach:boundary,Gesture:boundary,GestureGroup:boundary,PinchGesture:boundary,SwipeGesture:boundary,
-  globalThis:{Gesture:boundary,GestureGroup:boundary,PinchGesture:boundary,SwipeGesture:boundary},
+  LazyForEach:boundary,Gesture:boundary,GestureGroup:boundary,PinchGesture:boundary,SwipeGesture:boundary,TapGesture:boundary,
+  globalThis:{Gesture:boundary,GestureGroup:boundary,PinchGesture:boundary,SwipeGesture:boundary,TapGesture:boundary},
   GesturePriority:{Parallel:0},GestureMode:{Exclusive:0},SwipeDirection:{Horizontal:0},
 },properties.hooks);
-owner.horizontal=true;
+owner.horizontal=true;owner.controlsVisible=true;
 owner.mounted=true;
 owner.controller={chapter:undefined,totalPages:0};
 owner.initialRender();
 const pager=()=>[...owner.nodes.values()].find(node=>node.type==='Text'&&/^1 \/ /.test(node.create))?.create;
 const button=label=>[...owner.nodes.values()].find(node=>node.type==='Button'&&node.createWithLabel===label);
-assert.equal(pager(),'1 / 0','the initial pending view has no admitted page count');
-assert.equal(button('下一图')?.enabled,false);
+assert.equal(pager(),undefined,'pending pixels do not fabricate an admitted page count');
+assert.equal(button('›')?.enabled,false);
 const manifest={chapter:{sourceId:'s',bookId:'b',chapterId:'/second'},manifestVersion:'second-v',
   pages:[{ordinal:0,pageId:'second-p0',resourceRef:'manga:second-p0'}]};
 owner.controller={chapter:{manifest,chapterTitle:'2.姐姐2'},totalPages:23,displayedOrdinal:0,
   savedLocation:null,recoveryRequired:false,pageAt:ordinal=>manifest.pages[ordinal],
   pageGeometry:()=>undefined};
-owner.publish();
+owner.restore=()=>{};owner.opened=true;owner.publish();
 properties.flush();
 assert.equal(pager(),'1 / 23','admitted second-chapter page count must update without turning page zero');
-assert.equal(button('下一图')?.enabled,true,'the next-image control follows the admitted count');
+assert.equal(button('›')?.enabled,true,'the next-image control follows the admitted count');
 console.log('PASS actual SDK lowered manga counter and button react to chapter admission at unchanged ordinal zero');

@@ -1,3 +1,4 @@
+import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
@@ -36,13 +37,13 @@ function fixture({tiles=12,height=750}={}) {
   }
   class Scroller {currentOffset(){return {xOffset:0};}scrollTo(...args){scrolls.push(['horizontal',...args]);}}
   const {owner}=createReaderBuilderProbe(source,names,{
-    ...properties.sdk,...frameDeps,MangaStripDataSource:DataSource,ListScroller,Scroller,PhotoViewScaleModel:class {},
+    ...properties.sdk,...mangaSurfaceSdkDependencies,...frameDeps,MangaStripDataSource:DataSource,ListScroller,Scroller,PhotoViewScaleModel:class {},
     ReaderWindowCoordinator:{metrics:()=>createDefaultReaderWindowMetrics()},readerInteractiveSafeInsets,
     setTimeout:callback=>{timers.push(callback);return timers.length;},
     uiContext:{postFrameCallback:frame=>frames.push(frame)},
     ScrollAlign:{START:'start'},ImageFit:{Fill:0},ScrollDirection:{Horizontal:0},TouchType:{Down:0},
-    LazyForEach:boundary,Gesture:boundary,GestureGroup:boundary,PinchGesture:boundary,SwipeGesture:boundary,
-    globalThis:{Gesture:boundary,GestureGroup:boundary,PinchGesture:boundary,SwipeGesture:boundary},
+    LazyForEach:boundary,Gesture:boundary,GestureGroup:boundary,PinchGesture:boundary,SwipeGesture:boundary,TapGesture:boundary,
+    globalThis:{Gesture:boundary,GestureGroup:boundary,PinchGesture:boundary,SwipeGesture:boundary,TapGesture:boundary},
     GesturePriority:{Parallel:0},GestureMode:{Exclusive:0},SwipeDirection:{Horizontal:0},
   },properties.hooks);
   owner.initialRender();

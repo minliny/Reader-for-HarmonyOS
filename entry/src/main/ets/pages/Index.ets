@@ -1,3 +1,4 @@
+import { MangaBookPresentation } from '../features/manga/MangaBookPresentation';
 import { readerDirectoryObserveMissingNavigation, readerDirectoryTakeMissingNavigation, backfillRetainedReaderDirectoryNavigation } from '../features/reading/ReaderDirectoryNavigation';
 import type { RemoteReadingPositionScope } from '../features/reading/RemoteReadingPositionMigration';
 import { FrameCallback } from '@kit.ArkUI';
@@ -342,6 +343,16 @@ class ReaderNavigationBackfillFrame extends FrameCallback {
   onIdle(_remaining: number): void {}
 }
 
+interface MangaPositionProjectionJob {
+  book: ShelfBook;
+  owner: ReaderRuntimeOwner;
+  generation: number;
+  navigationGeneration: number;
+  shelfGeneration: number;
+  route: ReaderRoute;
+  detailIdentity: string;
+}
+
 @Entry
 @Component
 struct Index {
@@ -477,6 +488,12 @@ struct Index {
   private sourceSwitchReconciliationGeneration: number = 0;
   /** The original reader owns loading, layout, errors and first-page commit. */
   @State private readingSessionActive: boolean = false;
+  private mangaShelfMutationAfterExit: string | undefined = undefined;
+  private shelfContentFilter: string = 'all';
+  private mangaProjectionQueue: MangaPositionProjectionJob[] = [];
+  private mangaProjectionWorkers: number = 0;
+  private mangaProjectionGeneration: number = 0;
+  private mangaProjectionSignature: string = '';
   private navigationGeneration: number = 0;
   private mangaLoginTask: Promise<void> | undefined;
   /** Prevents repeated marker taps from issuing duplicate bookmark mutations. */
@@ -751,8 +768,8 @@ struct Index {
           unfilteredOnlineBooks: this.shelfHasOnlineBooks,
           onNextPageRequested: (): void => this.loadNextShelfPage(),
           onPreviousPageRequested: (): void => this.loadPreviousShelfPage(),
-          onFilterRequested: (readingState: string, sourceKind: string): void => {
-            this.shelfReadingFilter = readingState; this.shelfSourceFilter = sourceKind;
+          onFilterRequested: (readingState: string, sourceKind: string, contentKind?: string): void => {
+            this.shelfReadingFilter = readingState; this.shelfSourceFilter = sourceKind; this.shelfContentFilter = contentKind ?? 'all';
             this.bookshelfViewState.anchorKey = ''; this.bookshelfViewState.anchorOffset = 0;
             this.refreshBookshelf();
           },
@@ -1083,9 +1100,12 @@ struct Index {
       if (this.readingSessionActive && this.detailBook !== undefined) {
         ReaderShell({
           contentKind: this.readingContentKind,
+          inBookshelf: this.detailInBookshelf,
+          onToggleShelf: (): void => this.requestMangaShelfMutation(),
           onMangaLogin: (): Promise<void> => this.loginMangaSource(),
           bookId: this.detailBook.bookId,
           bookTitle: this.detailBook.title,
+          bookAuthor: this.detailBook.author, bookCoverUrl: this.detailBook.coverUrl ?? '',
           sourceId: this.detailBook.sourceId,
           sourceName: this.detailBook.sourceName,
           bookKind: this.detailBook.kind,
@@ -1164,6 +1184,7 @@ struct Index {
           onCloseSourceSwitch: (): void => this.closeSourceSwitch(),
           onRetrySourceSwitch: (): void => this.retrySourceSwitch(),
           onRefreshSourceSwitch: (): void => this.refreshSourceSwitch(),
+          onStopSourceSwitch: (): void => this.stopSourceDiscovery(),
           onPickSource: (candidate: SourceSwitchCandidate): void => this.onPickSource(candidate),
           onRollbackSourceSwitch: (): void => this.onRollbackSourceSwitch(),
         });
@@ -1179,6 +1200,11 @@ struct Index {
           SourceSwitchPanel({
             state: this.sourceSwitchState,
             currentSourceId: this.detailBook.sourceId,
+            bookTitle: this.detailBook.title, author: this.detailBook.author,
+            coverUrl: this.detailBook.coverUrl ?? '', currentSourceName: this.detailBook.sourceName,
+            currentChapterTitle: this.directoryChapterTitle || this.detailBook.mangaPosition?.chapterTitle || '',
+            reduceMotion: this.settingsSnapshot.reduceMotion, consumeTopInset: this.readerOwnsWindowEdges(),
+            onStop: (): void => this.stopSourceDiscovery(),
             onClose: (): void => this.closeSourceSwitch(),
             onRetry: (): void => this.retrySourceSwitch(),
             onRefresh: (): void => this.refreshSourceSwitch(),
@@ -1287,6 +1313,8 @@ struct Index {
         sourceId: this.detailBook.sourceId,
         bookId: this.detailBook.bookId,
         bookKind: this.detailBook.kind ?? '',
+        contentKind: this.detailBook.contentKind === 'manga' ? 'manga' : 'text',
+        currentChapterIndex: this.detailBook.mangaPosition?.chapterIndex ?? this.directoryCurrentChapterIndex,
         entries: this.detailToc,
         catalogMessage: this.detailLoadingMessage,
         chapterStartBookmarkCreationEnabled: true,
@@ -1304,6 +1332,10 @@ struct Index {
   }
 
   private readerOwnsWindowEdges(): boolean {
+    // New floating detail/catalog owns its single safe-top inset inside the
+    // full-viewport surface, exactly as the image reader does.
+    if (this.detailBook !== undefined && (this.route === 'detail' ||
+      (this.route === 'directory' && this.directoryReturnTarget === 'detail' && this.detailBook.contentKind === 'manga'))) return true;
     // Only a visible reader/control owns edge-to-edge geometry. Detail's
     // ordinary catalog inherits the same single App safe-top inset as Detail.
     return this.readingSessionActive && (this.route === 'reading' ||
@@ -2509,7 +2541,7 @@ struct Index {
       }
       const title = typeof row['name'] === 'string' ? row['name'] as string : book.title;
       const author = typeof row['author'] === 'string' ? row['author'] as string : book.author;
-      this.detailBook = { sourceId: book.sourceId, sourceName: book.sourceName, bookId: book.bookId, title, author,
+      this.detailBook = { ...book, sourceId: book.sourceId, sourceName: book.sourceName, bookId: book.bookId, title, author,
         intro: typeof row['intro'] === 'string' ? row['intro'] as string : book.intro,
         coverUrl: typeof row['coverUrl'] === 'string' ? row['coverUrl'] as string : book.coverUrl,
         kind: typeof row['kind'] === 'string' ? row['kind'] as string : book.kind,
@@ -2798,9 +2830,79 @@ struct Index {
       });
   }
 
+  private hydrateMangaPositions(books: ShelfBook[]): void {
+    if (this.readingSessionActive || this.sourceSwitchVisible ||
+      !['bookshelf', 'detail', 'directory'].includes(this.route)) return;
+    const owner = ReaderRuntimeOwner.current();
+    const before = MangaBookPresentation.revision;
+    MangaBookPresentation.useOwner(owner);
+    if (before !== MangaBookPresentation.revision) this.mangaProjectionSignature = '';
+    const retained = this.shelfBooks.slice(0, 144).map((book: ShelfBook): { sourceId: string; bookId: string } =>
+      ({ sourceId: book.sourceId, bookId: book.bookId }));
+    if (this.detailBook?.contentKind === 'manga') retained.push({ sourceId: this.detailBook.sourceId,
+      bookId: this.detailBook.bookId });
+    MangaBookPresentation.retainIdentities(retained);
+    if (before !== MangaBookPresentation.revision) AppStorage.setOrCreate('readerMangaPresentationRevision',
+      MangaBookPresentation.revision);
+    const candidates = books.filter((book: ShelfBook): boolean => book.contentKind === 'manga').slice(0, 24);
+    const detailIdentity = this.detailBook === undefined ? '' : JSON.stringify([this.detailBook.sourceId, this.detailBook.bookId]);
+    const signature = JSON.stringify([this.navigationGeneration, this.bookshelfLoadGeneration, this.route,
+      detailIdentity, candidates.map((book: ShelfBook): string[] => [book.sourceId, book.bookId])]);
+    if (this.mangaProjectionSignature === signature) return;
+    this.mangaProjectionSignature = signature;
+    const generation = ++this.mangaProjectionGeneration;
+    this.mangaProjectionQueue = candidates.map((book: ShelfBook): MangaPositionProjectionJob => ({ book, owner,
+      generation, navigationGeneration: this.navigationGeneration, shelfGeneration: this.bookshelfLoadGeneration,
+      route: this.route, detailIdentity }));
+    this.pumpMangaPositionProjections();
+  }
+
+  private mangaPositionProjectionCurrent(job: MangaPositionProjectionJob): boolean {
+    return job.generation === this.mangaProjectionGeneration && job.owner === ReaderRuntimeOwner.current() &&
+      job.navigationGeneration === this.navigationGeneration && job.shelfGeneration === this.bookshelfLoadGeneration &&
+      job.route === this.route && !this.readingSessionActive && !this.sourceSwitchVisible &&
+      (job.route === 'bookshelf' || job.detailIdentity === (this.detailBook === undefined ? '' :
+        JSON.stringify([this.detailBook.sourceId, this.detailBook.bookId])));
+  }
+
+  private pumpMangaPositionProjections(): void {
+    while (this.mangaProjectionWorkers < 2 && this.mangaProjectionQueue.length > 0) {
+      const job = this.mangaProjectionQueue.shift();
+      if (job === undefined || !this.mangaPositionProjectionCurrent(job)) continue;
+      this.mangaProjectionWorkers += 1;
+      void this.projectMangaPosition(job).finally((): void => {
+        this.mangaProjectionWorkers -= 1;
+        this.pumpMangaPositionProjections();
+      });
+    }
+  }
+
+  private async projectMangaPosition(job: MangaPositionProjectionJob): Promise<void> {
+    const current = (): boolean => this.mangaPositionProjectionCurrent(job);
+    const book = job.book;
+    const gateway = new MangaSessionGateway(job.owner);
+    try {
+      const entry = await gateway.entry(book.sourceId, book.bookId, undefined, current);
+      if (!current()) return;
+      const before = MangaBookPresentation.revision;
+      const accepted = MangaBookPresentation.admitEntry(book.sourceId, book.bookId, entry);
+      if (!accepted) {
+        const progress = await gateway.progress(book.sourceId, book.bookId, current);
+        if (!current()) return;
+        MangaBookPresentation.admitProgress(book.sourceId, book.bookId, progress);
+      }
+      if (!current() || before === MangaBookPresentation.revision) return;
+      AppStorage.setOrCreate('readerMangaPresentationRevision', MangaBookPresentation.revision);
+      if (this.detailBook?.sourceId === book.sourceId && this.detailBook.bookId === book.bookId)
+        this.detailBook = { ...this.detailBook, contentKind: 'manga',
+          mangaPosition: MangaBookPresentation.get(book.sourceId, book.bookId) };
+    } catch (_error) { /* Optional display projection; unknown remains unknown. */ }
+  }
+
   private prepareVisibleReadingBooks(books: ShelfBook[]): void {
     if (this.route !== 'bookshelf' || this.readingSessionActive || !this.searchAppForeground) return;
     const owner = ReaderRuntimeOwner.current();
+    this.hydrateMangaPositions(books);
     const entries: ReadingEntrySeed[] = books.filter((book: ShelfBook): boolean => book.contentKind !== 'manga').map((book: ShelfBook): ReadingEntrySeed => {
       if (book.sourceId === LOCAL_SOURCE_ID) return { sourceId: book.sourceId, bookId: book.bookId, bookKind: book.kind };
       return { sourceId: book.sourceId, bookId: book.bookId, bookKind: book.kind,
@@ -2987,6 +3089,8 @@ struct Index {
     // The selected item is enough to show its reading or detail surface.
     // Body/catalog acquisition belongs to whichever surface the user opens.
     this.detailBook = this.readingDetailForRemoteSeed(seed, sourceName);
+    if (this.readingContentKind === 'manga' && !resumeImmediately) this.hydrateMangaPositions([
+      { sourceId: seed.sourceId, bookId: seed.bookId, title: seed.title, author: seed.author, contentKind: 'manga', addedAt: 0 }]);
     this.detailToc = [];
     this.detailInBookshelf = shelfSnapshot !== undefined;
     this.detailLoadingMessage = shelfSnapshot === undefined ? '正在获取在线目录…' : '正在读取本地目录…';
@@ -3055,6 +3159,8 @@ struct Index {
         title: session.book.title,
         author: session.book.author,
         kind: session.book.kind,
+        contentKind: session.contentKind,
+        mangaPosition: session.contentKind === 'manga' ? MangaBookPresentation.get(session.identity.sourceId, session.identity.bookId) : undefined,
         coverUrl: session.book.coverUrl,
         intro: session.book.intro,
         lastChapter: session.book.lastChapter,
@@ -3122,6 +3228,8 @@ struct Index {
           title: session.book.title,
           author: session.book.author,
           kind: session.book.kind,
+        contentKind: session.contentKind,
+        mangaPosition: session.contentKind === 'manga' ? MangaBookPresentation.get(session.identity.sourceId, session.identity.bookId) : undefined,
           coverUrl: session.book.coverUrl,
           intro: session.book.intro,
           lastChapter: session.book.lastChapter,
@@ -3269,6 +3377,8 @@ struct Index {
           title: refreshed.book.title,
           author: refreshed.book.author,
           kind: refreshed.book.kind,
+          contentKind: refreshed.contentKind,
+          mangaPosition: refreshed.contentKind === 'manga' ? MangaBookPresentation.get(refreshed.identity.sourceId, refreshed.identity.bookId) : undefined,
           coverUrl: refreshed.book.coverUrl,
           intro: refreshed.book.intro,
           lastChapter: refreshed.book.lastChapter,
@@ -3331,6 +3441,7 @@ struct Index {
           if (current !== undefined && current.sourceId === session.identity.sourceId &&
             current.bookId === session.identity.bookId) {
             this.detailBook = {
+              ...current,
               sourceId: current.sourceId,
               sourceName: source.name,
               bookId: current.bookId,
@@ -4185,8 +4296,8 @@ struct Index {
     this.requestedBookmarkAnchor = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryReturnTarget = 'detail';
-    this.directoryCurrentChapterIndex = -1;
-    this.directoryChapterTitle = '';
+    this.directoryCurrentChapterIndex = this.detailBook.mangaPosition?.chapterIndex ?? -1;
+    this.directoryChapterTitle = this.detailBook.mangaPosition?.chapterTitle ?? '';
     this.route = 'directory';
   }
 
@@ -4308,6 +4419,12 @@ struct Index {
     }
   }
 
+  private requestMangaShelfMutation(): void {
+    if (this.readingContentKind !== 'manga' || !this.readingSessionActive || this.detailBook === undefined) return;
+    this.mangaShelfMutationAfterExit = `${this.detailBook.sourceId}\u0000${this.detailBook.bookId}`;
+    this.requestReaderBookInfo();
+  }
+
   private requestReaderBookInfo(): void {
     const book = this.detailBook;
     const requestExit = this.readingExitRequest;
@@ -4320,6 +4437,7 @@ struct Index {
     if (this.systemFileOpenExitId > 0) ReaderSystemFileOpenHost.acknowledge(this.systemFileOpenExitId);
     this.systemFileOpenExitId = 0;
     this.bookInfoAfterReaderExit = undefined;
+    this.mangaShelfMutationAfterExit = undefined;
     this.openRulesManagementAfterReaderExit = false;
     this.exitToDetailOriginAfterReader = false;
   }
@@ -4342,6 +4460,11 @@ struct Index {
       // the visible-page commit; viewing information does not acquire a book.
       this.readingOriginRoute = 'detail';
       this.returnToReadingOrigin();
+      const shelfMutation = this.mangaShelfMutationAfterExit;
+      this.mangaShelfMutationAfterExit = undefined;
+      if (shelfMutation === bookInfoIdentity) this.requestDetailShelfMutation();
+      if (this.detailBook?.contentKind === 'manga') this.hydrateMangaPositions([{ sourceId: this.detailBook.sourceId,
+        bookId: this.detailBook.bookId, title: this.detailBook.title, author: this.detailBook.author, contentKind: 'manga', addedAt: 0 }]);
       return;
     }
     if (this.openRulesManagementAfterReaderExit) {
@@ -4861,6 +4984,18 @@ struct Index {
     this.startSourceDiscovery(generation, false, true);
   }
 
+  private stopSourceDiscovery(): void {
+    const state = this.sourceSwitchState;
+    if (!this.sourceSwitchVisible || (state.kind !== 'discovering' &&
+      !(state.kind === 'candidates' && state.refreshing === true))) return;
+    this.nextNavigationGeneration();
+    this.sourceSwitchUnsubscribe?.();
+    this.sourceSwitchUnsubscribe = undefined;
+    this.sourceSwitchState = state.kind === 'candidates'
+      ? { kind: 'candidates', candidates: state.candidates, refreshing: false, stopped: true }
+      : { kind: 'empty', stopped: true };
+  }
+
   private startSourceDiscovery(
     generation: number,
     autoPickFirst: boolean = false,
@@ -4929,16 +5064,19 @@ struct Index {
       ? this.sourceSwitchState.candidates
       : [];
     if (forceRefresh && previousCandidates.length > 0) {
-      this.sourceSwitchState = { kind: 'candidates', candidates: previousCandidates, refreshing: true };
+      this.sourceSwitchState = { kind: 'candidates', candidates: gateway.withoutSearchTiming(previousCandidates), refreshing: true };
     }
+    const onProgress = (candidates: SourceSwitchCandidate[]): void => {
+      if (isCurrent()) this.sourceSwitchState = { kind: 'candidates', candidates, refreshing: true };
+    };
     const load = forceRefresh
-      ? gateway.refreshCandidates(query, isCurrent)
+      ? gateway.refreshCandidates(query, isCurrent, [], onProgress, gateway.withoutSearchTiming(previousCandidates))
       : gateway.loadCachedCandidates(query, isCurrent, known)
-        .then((cached: SourceSwitchCandidate[]): Promise<SourceSwitchDiscoveryOutcome> |
-          SourceSwitchDiscoveryOutcome => cached.length > 0
-          ? { kind: 'sources', candidates: cached }
-          : gateway.refreshCandidates(query, isCurrent,
-            this.detailReturnRoute === 'search' ? this.searchOrchestrator?.searchedSourceIds() ?? [] : []));
+        .then((cached: SourceSwitchCandidate[]): Promise<SourceSwitchDiscoveryOutcome> => {
+          if (isCurrent()) this.sourceSwitchState = { kind: 'candidates', candidates: cached, refreshing: true };
+          return gateway.refreshCandidates(query, isCurrent,
+            this.detailReturnRoute === 'search' ? this.searchOrchestrator?.searchedSourceIds() ?? [] : [], onProgress, cached);
+        });
     load
       .then((outcome: SourceSwitchDiscoveryOutcome): void => {
         if (!isCurrent()) {
@@ -4986,7 +5124,7 @@ struct Index {
     const session = this.remoteReadingSession?.identity.sourceId === book.sourceId &&
       this.remoteReadingSession?.identity.bookId === book.bookId ? this.remoteReadingSession : undefined;
     if (this.detailToc.length === 0) {
-      return { contentKind: session?.contentKind === 'manga' ? 'manga' : 'text', sourceId: book.sourceId, bookId: book.bookId, bookName: book.title, author: book.author, authorIdentity: session?.book.authorIdentity, sourceVersion: session?.sourceVersion,
+      return { contentKind: (session?.contentKind ?? book.contentKind) === 'manga' ? 'manga' : 'text', sourceId: book.sourceId, bookId: book.bookId, bookName: book.title, author: book.author, authorIdentity: session?.book.authorIdentity, sourceVersion: session?.sourceVersion,
         currentChapterIndex: 0, currentChapterTitle: '' };
     }
     let anchor = this.detailToc[this.detailToc.length - 1];
@@ -5002,7 +5140,7 @@ struct Index {
       }
     }
     return {
-      contentKind: session?.contentKind === 'manga' ? 'manga' : 'text',
+      contentKind: (session?.contentKind ?? book.contentKind) === 'manga' ? 'manga' : 'text',
       sourceId: book.sourceId,
       bookId: book.bookId,
       bookName: book.title,
@@ -5051,7 +5189,9 @@ struct Index {
       });
       return;
     }
-    if (this.remoteReadingSession?.contentKind === 'manga') {
+    const session = this.remoteReadingSession?.identity.sourceId === book.sourceId &&
+      this.remoteReadingSession?.identity.bookId === book.bookId ? this.remoteReadingSession : undefined;
+    if ((session?.contentKind ?? book.contentKind) === 'manga') {
       void this.switchMangaSource(candidate, isCurrent);
       return;
     }
@@ -5143,8 +5283,9 @@ struct Index {
 
   private async switchMangaSource(candidate: SourceSwitchCandidate, current: () => boolean): Promise<void> {
     const original = this.detailBook;
-    const previous = this.remoteReadingSession;
-    if (original === undefined || previous?.contentKind !== 'manga') return;
+    if (original === undefined) return;
+    let previous = this.remoteReadingSession?.identity.sourceId === original.sourceId &&
+      this.remoteReadingSession?.identity.bookId === original.bookId ? this.remoteReadingSession : undefined;
     const owner = ReaderRuntimeOwner.current();
     const shelf = new ReaderCoreGateway(owner);
     let target: RemoteReadingSession | undefined = undefined;
@@ -5152,6 +5293,14 @@ struct Index {
     let commitStarted = false;
     try {
       if (candidate.category !== 'comic') throw new Error('漫画只能切换至漫画书源');
+      if (previous === undefined) {
+        previous = await new RemoteReadingFlowGateway(owner).openCachedCatalogSession({ contentKind: 'manga',
+          sourceId: original.sourceId, bookId: original.bookId, detailUrl: original.bookId,
+          title: original.title, author: original.author, coverUrl: original.coverUrl, intro: original.intro }, current);
+        if (!current()) return;
+      }
+      if (previous.contentKind !== 'manga' || previous.identity.sourceId !== original.sourceId ||
+        previous.identity.bookId !== original.bookId) throw new Error('当前漫画目录尚未就绪，请打开章节后重试');
       const saved = await new MangaSessionGateway(owner).progress(original.sourceId, original.bookId, current);
       const entry = previous.entries.find(row => row.url === saved.location?.chapter.chapterId);
       if (entry === undefined) throw new Error('当前漫画阅读位置尚未保存，请先打开对应章节后重试');
@@ -5163,19 +5312,9 @@ struct Index {
         throw new Error('阅读位置已变化，请重新选择书源');
       }
       chapterIndex = proposal.firstImage.chapterIndex;
-      const accepted = await new Promise<boolean>((resolve): void => {
-        this.getUIContext().showAlertDialog({ title: '确认漫画换源',
-          message: `目标：${proposal.chapterTitle}，第 ${proposal.targetPageOrdinal + 1} 页。不同书源的章节和分页可能不同，此位置为近似对应，将从该页顶部继续。原书源缓存和阅读记录会保留。`,
-          autoCancel: false,
-          primaryButton: { value: '确认近似位置', action: (): void => resolve(true) },
-          secondaryButton: { value: '保留原书源', action: (): void => resolve(false) } });
-      });
+      // Selecting a candidate authorizes the prepared approximate position.
+      // Core still checks the preview image, progress CAS and exact proposal.
       if (!current()) return;
-      if (!accepted) {
-        this.sourceSwitchState = { kind: 'discovering' };
-        this.closeSourceSwitch();
-        return;
-      }
       commitStarted = true;
       await gateway.commit(proposal, true, current);
       this.refreshBookshelf();
@@ -5205,7 +5344,7 @@ struct Index {
   private async switchPreviewSource(candidate: SourceSwitchCandidate, isCurrent: () => boolean): Promise<void> {
     const detailReturnRoute = this.detailReturnRoute;
     const owner = ReaderRuntimeOwner.current();
-    const seed: RemoteReadingBookSeed = { sourceId: candidate.sourceId, bookId: candidate.bookUrl,
+    const seed: RemoteReadingBookSeed = { contentKind: candidate.category === 'comic' ? 'manga' : 'text', sourceId: candidate.sourceId, bookId: candidate.bookUrl,
       detailUrl: candidate.bookUrl, title: candidate.bookName, author: candidate.author ?? '',
       sourceVersion: candidate.sourceVersion, authorIdentity: candidate.authorIdentity,
       coverUrl: candidate.coverUrl, searchVariables: candidate.searchVariables };
@@ -5476,6 +5615,8 @@ struct Index {
     this.installRemoteReadingSession(session);
     this.detailBook = { sourceId: session.identity.sourceId, bookId: session.identity.bookId,
       sourceName: book.sourceName, title: session.book.title, author: session.book.author,
+      contentKind: session.contentKind,
+      mangaPosition: session.contentKind === 'manga' ? MangaBookPresentation.get(session.identity.sourceId, session.identity.bookId) : undefined,
       kind: session.book.kind, coverUrl: session.book.coverUrl, intro: session.book.intro,
       lastChapter: session.book.lastChapter };
     this.detailToc = session.entries.map((entry): LocalReadingTocEntry => ({ index: entry.index,
@@ -6004,6 +6145,8 @@ struct Index {
       title: book.title,
       author: book.author,
       kind: book.kind,
+      contentKind: book.contentKind,
+      mangaPosition: book.contentKind === 'manga' ? MangaBookPresentation.get(book.sourceId, book.bookId) : undefined,
       coverUrl: book.coverUrl,
       intro: book.intro,
       lastChapter: book.lastChapter,
@@ -6041,6 +6184,8 @@ struct Index {
       title: seed.title,
       author: seed.author,
       kind: seed.kind,
+      contentKind: seed.contentKind ?? (this.readingContentKind === 'manga' ? 'manga' : 'text'),
+      mangaPosition: this.readingContentKind === 'manga' ? MangaBookPresentation.get(seed.sourceId, seed.bookId) : undefined,
       coverUrl: seed.coverUrl,
       intro: seed.intro,
       lastChapter: seed.lastChapter,
@@ -6160,6 +6305,8 @@ struct Index {
           title: refreshed.book.title,
           author: refreshed.book.author,
           kind: refreshed.book.kind,
+          contentKind: refreshed.contentKind,
+          mangaPosition: refreshed.contentKind === 'manga' ? MangaBookPresentation.get(refreshed.identity.sourceId, refreshed.identity.bookId) : undefined,
           coverUrl: refreshed.book.coverUrl,
           intro: refreshed.book.intro,
           lastChapter: refreshed.book.lastChapter,
@@ -6224,7 +6371,7 @@ struct Index {
   }
 
   private shelfFilter(): BookshelfFilter {
-    return { readingState: this.shelfReadingFilter, sourceKind: this.shelfSourceFilter };
+    return { readingState: this.shelfReadingFilter, sourceKind: this.shelfSourceFilter, contentKind: this.shelfContentFilter };
   }
 
   private refreshSearchShelfMembership(): void {
@@ -6414,7 +6561,7 @@ struct Index {
       this.hydrateShelfSourceNames(this.bookshelfLoadGeneration);
     }
     if (this.shelfProjectionRevision.length === 0 ||
-      (this.shelfReadingFilter === 'all' && this.shelfSourceFilter === 'all' && this.shelfBooks.length === this.shelfMatchedTotal)) {
+      (this.shelfReadingFilter === 'all' && this.shelfSourceFilter === 'all' && this.shelfContentFilter === 'all' && this.shelfBooks.length === this.shelfMatchedTotal)) {
       this.shelfMembershipGeneration += 1;
       this.searchPublication.updateShelf(this.shelfBooks);
       this.searchPublicationRevision += 1;

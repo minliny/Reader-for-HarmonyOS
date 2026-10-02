@@ -16,7 +16,7 @@ import type { LocalBookPreparation } from '../../app/ReaderHostRegistry';
  * exclusive bookshelf facts derived from the restored Core state; neither
  * value carries a layout or presentation decision.
  */
-export type BookshelfFilter = { readingState: string; sourceKind: string };
+export type BookshelfFilter = { readingState: string; sourceKind: string; contentKind?: string };
 export const BOOKSHELF_PAGE_SIZE = 48;
 
 export type BookshelfDataState =
@@ -63,7 +63,7 @@ export class BookshelfFlowGateway {
       const shelf = await this.bookshelf.loadBookshelf({ sortBy: 'lastReadAt', sortDirection: 'descending' });
       return this.classify(shelf, shelf.books.find((book: ShelfBook): boolean => book.currentChapterIndex !== undefined));
     }
-    if (this.filter.readingState === 'all' && this.filter.sourceKind === 'all') {
+    if (this.filter.readingState === 'all' && this.filter.sourceKind === 'all' && (this.filter.contentKind ?? 'all') === 'all') {
       const shelf = await this.loadPage(0);
       // Both Core projections use lastReadAt descending and the same
       // composite-key tie break. readingPosition proves a progress record;
@@ -92,6 +92,7 @@ export class BookshelfFlowGateway {
     const params: BookshelfListParams = { pageProjection: true, membershipOnly,
       sortBy: 'lastReadAt', sortDirection: 'descending', limit: BOOKSHELF_PAGE_SIZE, offset,
       readingState: membershipOnly ? 'all' : this.filter.readingState,
+      contentKind: membershipOnly ? 'all' : this.filter.contentKind ?? 'all',
       sourceKind: membershipOnly ? 'all' : this.filter.sourceKind };
     if (projectionRevision !== undefined) params.projectionRevision = projectionRevision;
     const page = await this.bookshelf.loadBookshelf(params, isCurrent, this.background);
@@ -106,7 +107,7 @@ export class BookshelfFlowGateway {
     if (!this.bookshelf.supportsShelfAnchorPages()) return this.loadPage(0, undefined, false, isCurrent);
     const page = await this.bookshelf.loadBookshelf({ pageProjection: true, anchor,
       sortBy: 'lastReadAt', sortDirection: 'descending', limit: BOOKSHELF_PAGE_SIZE,
-      offset: fallbackOffset, readingState: this.filter.readingState, sourceKind: this.filter.sourceKind }, isCurrent);
+      offset: fallbackOffset, readingState: this.filter.readingState, sourceKind: this.filter.sourceKind, contentKind: this.filter.contentKind ?? 'all' }, isCurrent);
     if (!isCurrent()) return undefined;
     if (page.changed) throw new Error('BOOKSHELF_PROJECTION_CHANGED');
     return page;

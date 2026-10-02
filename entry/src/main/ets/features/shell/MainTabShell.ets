@@ -44,11 +44,11 @@ export struct MainTabShell {
       .height('100%')
       .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
     } else {
-      Column() {
+      Stack({ alignContent: Alignment.Bottom }) {
         Stack({ alignContent: Alignment.TopStart }) {
           this.content();
         }
-        .layoutWeight(1)
+        .height('100%')
         .width('100%');
 
         if (this.showBottomNav) {

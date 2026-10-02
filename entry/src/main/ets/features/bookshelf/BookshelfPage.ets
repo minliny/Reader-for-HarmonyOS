@@ -1,3 +1,4 @@
+import { readerFloatingTabContentInset } from '../common/ReaderFloatingBarMetrics';
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ShelfBookListDetails } from './ShelfBookListDetails';
@@ -60,7 +61,7 @@ const PHONE_BOOK_HEIGHT_RATIO = 145.443 / PHONE_BOOK_WIDTH;
 const TABLET_BOOK_WIDTH = 186.672;
 const TABLET_BOOK_HEIGHT_RATIO = 280 / TABLET_BOOK_WIDTH;
 const PHONE_LIST_COVER_WIDTH = 48;
-const PHONE_LIST_COVER_HEIGHT = 80;
+const PHONE_LIST_COVER_HEIGHT = 72;
 const TABLET_LIST_COVER_WIDTH = 64;
 const TABLET_LIST_COVER_HEIGHT = 104;
 const BOOKSHELF_WIDE_BREAKPOINT = 600;
@@ -145,13 +146,14 @@ export struct BookshelfPage {
   // Retire the removed group selector's transient filter without changing book groups.
   @StorageLink('readerBookshelfSelectedGroup') private storedSelectedGroup: string = '';
   @StorageLink('readerBookshelfReadingFilter') @Watch('onShelfFiltersChanged') private readingFilter: string = 'all';
+  @StorageLink('readerBookshelfContentFilter') @Watch('onShelfFiltersChanged') private contentFilter: string = 'all';
   @StorageLink('readerBookshelfSourceFilter') @Watch('onShelfFiltersChanged') private sourceFilter: string = 'all';
   @Prop @Watch('onBooksChanged') books: ShelfBook[];
   @Prop serverFiltered: boolean = false;
   @Prop unfilteredOnlineBooks: boolean = false;
   onNextPageRequested: () => void = (): void => {};
   onPreviousPageRequested: () => void = (): void => {};
-  onFilterRequested: (readingState: string, sourceKind: string) => void = (_readingState: string, _sourceKind: string): void => {};
+  onFilterRequested: (readingState: string, sourceKind: string, contentKind?: string) => void = (_readingState: string, _sourceKind: string, _contentKind?: string): void => {};
   @Prop continueReading: ShelfBook | undefined;
   @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
   onImportRequested: () => void = (): void => {};
@@ -286,9 +288,7 @@ export struct BookshelfPage {
   @Builder
   private bookshelfTabContent() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Column() {
-        this.topBar();
-        Stack({ alignContent: Alignment.TopStart }) {
+      Stack({ alignContent: Alignment.TopStart }) {
           if (this.isWideViewport()) {
             this.tabletContent();
             this.tabletNavigation();
@@ -296,7 +296,7 @@ export struct BookshelfPage {
             this.phoneContent();
           }
         }
-        .layoutWeight(1)
+        .height('100%')
         .width('100%')
         .onAreaChange((_oldValue: Area, newValue: Area): void => {
           const width = this.numericAreaLength(newValue.width);
@@ -304,10 +304,8 @@ export struct BookshelfPage {
             this.viewportWidth = width;
           }
         });
-      }
-      .width('100%')
-      .height('100%');
 
+      this.topBar();
       if (this.moreMenuVisible) {
         BookshelfMoreMenu({
           anchorRight: this.moreAnchorRight - this.overlayOriginX,
@@ -371,7 +369,8 @@ export struct BookshelfPage {
 
   @Builder
   private topBar() {
-    AppTopBar({ title: '书架', divider: true }) {
+    Row() {
+    AppTopBar({ title: '书架', floating: true }) {
       Row({ space: 18 }) {
         ReaderIconButton({
           icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_search_theme_night') : $r('app.media.bookshelf_search')),
@@ -397,6 +396,8 @@ export struct BookshelfPage {
           });
       }
     }
+    }.padding({ left: Math.max(16, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics())),
+      right: Math.max(16, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics())) }).width('100%');
   }
 
   @Builder
@@ -570,7 +571,8 @@ export struct BookshelfPage {
     }
     .width(this.shelfContentWidth(isTablet))
     .height('100%')
-    .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_MD })
+    .contentStartOffset(74)
+    .contentEndOffset(this.isWideViewport() ? 24 : readerFloatingTabContentInset(ReaderWindowCoordinator.metrics()))
     .scrollBar(BarState.Off)
     .maintainVisibleContentPosition(true)
     .onScrollIndex((start: number): void => {
@@ -646,16 +648,15 @@ export struct BookshelfPage {
         Text('筛选').fontSize(12).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).layoutWeight(1);
         Text('清除').fontSize(12).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
           .height(28).enabled(this.hasActiveFilters()).opacity(this.hasActiveFilters() ? 1 : 0.5)
-          .onClick((): void => this.clearFilters()).accessibilityText('清除阅读状态和类型筛选');
+          .onClick((): void => this.clearFilters()).accessibilityText('清除内容类型和来源筛选');
       }.width('100%');
-      Text('阅读状态').width('100%').fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+      Text('内容类型').width('100%').fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
-        this.filterChip('reading', 'all', '全部');
-        this.filterChip('reading', 'unread', '未读');
-        this.filterChip('reading', 'reading', '在读');
-        this.filterChip('reading', 'finished', '已读');
+        this.filterChip('content', 'all', '全部');
+        this.filterChip('content', 'text', '小说');
+        this.filterChip('content', 'manga', '漫画');
       }.width('100%');
-      Text('书籍类型').width('100%').fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+      Text('来源').width('100%').fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
         this.filterChip('source', 'all', '全部');
         this.filterChip('source', 'local', '本地');
@@ -675,31 +676,33 @@ export struct BookshelfPage {
       .borderRadius(999).margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
       .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).constraintSize({ maxWidth: 160 })
       .onClick((): void => this.selectFilter(dimension, value))
-      .accessibilityText(`${dimension === 'reading' ? '阅读状态' : '书籍类型'}:${label}${this.isFilterSelected(dimension, value) ? '，已选' : ''}`);
+      .accessibilityText(`${dimension === 'content' ? '内容类型' : dimension === 'reading' ? '阅读状态' : '来源'}:${label}${this.isFilterSelected(dimension, value) ? '，已选' : ''}`);
   }
 
   private isFilterSelected(dimension: string, value: string): boolean {
-    return (dimension === 'reading' ? this.readingFilter : this.sourceFilter) === value;
+    return (dimension === 'content' ? this.contentFilter : dimension === 'reading' ? this.readingFilter : this.sourceFilter) === value;
   }
 
   private hasActiveFilters(): boolean {
-    return this.readingFilter !== 'all' || this.sourceFilter !== 'all';
+    return this.contentFilter !== 'all' || this.sourceFilter !== 'all';
   }
 
   private selectFilter(dimension: string, value: string): void {
-    if (dimension === 'reading') this.readingFilter = value;
+    if (dimension === 'content') { this.contentFilter = value; this.readingFilter = 'all'; }
+    else if (dimension === 'reading') this.readingFilter = value;
     else this.sourceFilter = value;
     this.queueShelfProjection();
   }
 
   private clearFilters(): void {
     this.readingFilter = 'all';
+    this.contentFilter = 'all';
     this.sourceFilter = 'all';
     this.queueShelfProjection();
   }
 
   private onShelfFiltersChanged(): void {
-    if (this.mounted && this.serverFiltered) this.onFilterRequested(this.readingFilter, this.sourceFilter);
+    if (this.mounted && this.serverFiltered) this.onFilterRequested('all', this.sourceFilter, this.contentFilter);
     this.queueShelfProjection();
   }
 
@@ -1209,7 +1212,7 @@ export struct BookshelfPage {
   }
 
   private rebuildShelfProjection(): void {
-    const visible = this.serverFiltered ? this.books : ShelfBookPresentation.visible(this.books, '', this.readingFilter, this.sourceFilter);
+    const visible = this.serverFiltered ? this.books : ShelfBookPresentation.visible(this.books, '', 'all', this.sourceFilter).filter((book: ShelfBook): boolean => this.contentFilter === 'all' || (book.contentKind === 'manga' ? 'manga' : 'text') === this.contentFilter);
     this.visibleBookCount = visible.length;
     this.hasOnlineBooks = this.serverFiltered ? this.unfilteredOnlineBooks : this.books.some((book: ShelfBook): boolean => book.sourceId !== 'local');
     const rows: ShelfBook[][] = [];
@@ -1415,7 +1418,7 @@ export struct BookshelfPage {
   }
 
   private projectionCoverScale(isTablet: boolean, index: number): number {
-    const list = isTablet ? this.listCoverWidth(isTablet) / this.shelfBookCardWidth(isTablet) : .495;
+    const list = this.listCoverWidth(isTablet) / this.shelfBookCardWidth(isTablet);
     return 1 + (list - 1) * this.projectionListProgress(index, true);
   }
 

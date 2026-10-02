@@ -1,3 +1,4 @@
+import deviceInfo from '@ohos.deviceInfo';
 import hilog from '@ohos.hilog';
 import { FrameCallback } from '@kit.ArkUI';
 import type { JsonObject } from '@reader/core-harmony';
@@ -6,12 +7,19 @@ import { readerInteractiveSafeInsets, type ReaderInsetsVp } from '../common/Read
 import { mangaUserError } from './MangaUserError';
 import type { ReaderSettingsGateway } from '../reading/ReaderSettingsGateway';
 import type { ReadingGatewayRuntime } from '../reading/ReadingGatewayRuntime';
-import { RemoteReadingFlowGateway, type RemoteReadingBookSeed, type RemoteReadingSession } from '../reading/RemoteReadingFlowGateway';
+import { RemoteReadingFlowGateway, type RemoteReadingBookSeed, type RemoteReadingSession, type RemoteReadingTocEntry } from '../reading/RemoteReadingFlowGateway';
 import { MangaSessionGateway } from './MangaSessionGateway';
 import type { MangaManifest } from './MangaContract';
 import { MangaSessionController, MangaTileRequest } from './MangaSessionController';
 import { PhotoViewScaleModel } from './vendor/photoview/PhotoViewScaleModel';
 import { MangaStripProjection, MangaStripRow } from './MangaStripProjection';
+import { ReaderIconButton } from '../common/ReaderIconButton';
+import { ReaderDirectoryNavigationSurface } from '../reading/ReaderDirectoryNavigationSurface';
+import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';
+import type { RemoteReadingPositionScope } from '../reading/RemoteReadingPositionMigration';
+import { mangaUsesPersistentDirectory, mangaDirectoryColumnWidth } from './MangaLayoutPolicy';
+import { MangaBookPresentation } from './MangaBookPresentation';
+import { readerBrightnessControlPercent, readerBrightnessWindowValue } from '../reading/ReaderBrightnessCurve';
 
 interface MangaViewportAnchor { ordinal: number; y: number; x?: number; }
 interface MangaConfirmedPosition { controller: MangaSessionController; manifest: MangaManifest; identity: string; anchor: MangaViewportAnchor; }
@@ -58,6 +66,12 @@ export struct MangaReadingSurface {
   onSaveFailure: (message: string) => void = (_message: string): void => {};
   onBack: () => void = (): void => {};
   onDirectory: () => void = (): void => {};
+  @Prop bookTitle: string = '';
+  @Prop inBookshelf: boolean = true;
+  onDetail: () => void = (): void => {};
+  onToggleShelf: () => void = (): void => {};
+  onDownloadChapter: () => void = (): void => {};
+  onSelectDirectoryTarget: (chapterIndex: number, proof?: JsonObject) => void = (_index: number, _proof?: JsonObject): void => {};
   onSwitchSource: () => void = (): void => {};
   onLoginSource: () => Promise<void> = async (): Promise<void> => {};
   @Prop mangaBackgroundColor: string = '#111111';
@@ -103,12 +117,36 @@ export struct MangaReadingSurface {
   private pendingTurnOrdinal: number | undefined;
   private mountedTurnRowKey: string = '';
   private exiting: boolean = false;
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @State private controlsVisible: boolean = false;
+  @State private panel: string = '';
+  @State private chapterEnd: boolean = false;
+  @State private displayedPage: number = 0;
+  @State private backgroundPreference: 'paper' | 'white' | 'ink' = 'paper';
+  @State private showPageNumbers: boolean = true;
+  @State private directoryQuery: string = '';
+  @State private directoryAscending: boolean = true;
+  @State private directoryRevision: number = 0;
+  @State private brightnessPercent: number = 50;
+  @State private automaticBrightness: boolean = true;
+  private brightnessOwner: number = 0;
+  private brightnessGeneration: number = 0;
+  private seekingPage: number | undefined;
+  @State private stageWidth: number = 1;
+  @State private stageHeight: number = 1;
 
   aboutToAppear(): void {
     if (this.runtime === undefined) { this.error = 'MANGA_RESOURCE_HOST_UNAVAILABLE'; return; }
     this.mounted = true;
+    const presentationRevision = MangaBookPresentation.revision;
+    MangaBookPresentation.useOwner(this.runtime);
+    if (MangaBookPresentation.revision !== presentationRevision)
+      AppStorage.setOrCreate('readerMangaPresentationRevision', MangaBookPresentation.revision);
     this.horizontal = this.settingsGateway?.current()?.mangaDirection === 'horizontal';
     this.fitPreference = this.settingsGateway?.current()?.mangaFit ?? 'source';
+    this.backgroundPreference = this.settingsGateway?.current()?.mangaBackground ?? (this.appThemeScheme === 'night' ? 'ink' : 'paper');
+    this.showPageNumbers = this.settingsGateway?.current()?.mangaPageNumbers !== false;
+    this.loadBrightness();
     this.onExitRequestHandler((): void => {
       if (this.mounted) void this.handleBack();
     });
@@ -118,6 +156,8 @@ export struct MangaReadingSurface {
     this.open(controller);
   }
   aboutToDisappear(): void {
+    const brightnessOwner = this.brightnessOwner; this.brightnessOwner = 0; this.brightnessGeneration++;
+    if (brightnessOwner > 0) void ReaderWindowCoordinator.brightness().release(brightnessOwner).catch((): void => {});
     this.mounted = false; this.layoutGeneration++; this.viewportGeneration++; this.loginGeneration++; this.presentationGeneration++;
     this.confirmedPosition = undefined;
     this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
@@ -143,6 +183,10 @@ export struct MangaReadingSurface {
           await controller.setPreviewMode(this.fitPreference === 'contain' || (this.fitPreference === 'source' && prepared.chapter.manifest.displayHints?.fit === 'contain'));
           await controller.openPrepared(prepared, this.offline);
           if (!current()) return;
+          const presentationRevision = MangaBookPresentation.revision;
+          MangaBookPresentation.admitEntry(this.sourceId, this.bookId, prepared);
+          if (MangaBookPresentation.revision !== presentationRevision)
+            AppStorage.setOrCreate('readerMangaPresentationRevision', MangaBookPresentation.revision);
           this.opened = true; this.recovering = controller.recoveryRequired;
           this.publish();
           const saved = controller.savedLocation;
@@ -256,6 +300,7 @@ export struct MangaReadingSurface {
       // as ArkUI state even when a new chapter starts at the same ordinal 0.
       this.horizontalPageCount = this.controller?.totalPages ?? 0;
       this.title = chapter.chapterTitle;
+      this.displayedPage = anchor?.ordinal ?? this.controller?.displayedOrdinal ?? 0;
       this.data.notify(changed, this.first, this.requestedLast());
       if (this.mountedTurnRowKey.length > 0 && this.data.totalCount() > 0) this.confirmMountedTurn(this.data.getData(0));
       if (changed && this.opened && anchor !== undefined) this.restore(anchor.ordinal, anchor.y, anchor.x ?? 0);
@@ -285,6 +330,8 @@ export struct MangaReadingSurface {
       const manifest = this.controller?.chapter?.manifest;
       if (identity.length === 0 || this.controller === undefined || manifest === undefined) return false;
       this.confirmedPosition = { controller: this.controller, manifest, identity, anchor: this.visibleAnchor };
+      this.displayedPage = row.ordinal;
+      if (this.seekingPage === row.ordinal) this.seekingPage = undefined;
       return true;
     } catch (_error) {
       // Unknown geometry must not erase an already measured intra-image anchor.
@@ -328,11 +375,13 @@ export struct MangaReadingSurface {
     }));
   }
   private onViewportScroll(): void {
+    if (this.visibleAnchor !== undefined) this.displayedPage = this.visibleAnchor.ordinal;
     if (!this.restoringAnchor) { this.rememberVisible(); return; }
     if (this.appliedLayoutGeneration !== this.layoutGeneration || !this.measureVisibleWindow()) return;
     if (this.rememberVisible(true)) this.restoringAnchor = false;
   }
   private onViewportTouch(): void {
+    this.seekingPage = undefined;
     this.presentationGeneration++;
     this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
     const generation = ++this.layoutGeneration;
@@ -348,6 +397,7 @@ export struct MangaReadingSurface {
   private onRowAppear(index: number): void {
     if (!this.mounted || index < 0 || index >= this.data.totalCount()) return;
     const row = this.data.getData(index);
+    if (this.seekingPage !== undefined && row.ordinal !== this.seekingPage) return;
     if (this.horizontal && this.pendingTurnOrdinal === row.ordinal && row.tileIndex === 0) {
       this.mountedTurnRowKey = row.key;
       this.confirmMountedTurn(row);
@@ -439,7 +489,17 @@ export struct MangaReadingSurface {
         (this.horizontal && confirmed.anchor.ordinal !== this.horizontalPage)) return;
       const anchor = confirmed.anchor;
       const presentationGeneration = this.presentationGeneration;
-      await this.controller.savePosition(anchor.ordinal, anchor.x ?? 0, anchor.y).catch((error: Error): void => {
+      await this.controller.savePosition(anchor.ordinal, anchor.x ?? 0, anchor.y).then((): void => {
+        const controller = confirmed.controller;
+        const chapter = controller.chapter;
+        const location = controller.savedLocation;
+        if (chapter !== undefined && chapter.manifest === confirmed.manifest && location !== undefined && location !== null) {
+          const presentationRevision = MangaBookPresentation.revision;
+          MangaBookPresentation.admitConfirmedLocation(this.sourceId, this.bookId, location, chapter, controller.totalPages, controller.pageAt(location.pageOrdinalFallback));
+          if (MangaBookPresentation.revision !== presentationRevision)
+            AppStorage.setOrCreate('readerMangaPresentationRevision', MangaBookPresentation.revision);
+        }
+      }).catch((error: Error): void => {
         if (error.message !== 'MANGA_POSITION_NOT_VISIBLE') {
           // The old page's content fence may be revoked while a later image is
           // already mounted. Do not attribute that cancellation to the new page.
@@ -475,7 +535,7 @@ export struct MangaReadingSurface {
   private visibleX(row: MangaStripRow): number {
     return Math.max(0, Math.min(1, (this.horizontalScroller.currentOffset().xOffset - this.rowDisplayLeft(row)) / this.rowDisplayWidth(row)));
   }
-  private async changeFit(): Promise<void> {
+  private async changeFit(requestedFit?: 'source' | 'width' | 'contain'): Promise<void> {
     this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
     this.rememberVisible();
     const anchor = this.visibleAnchor;
@@ -485,7 +545,7 @@ export struct MangaReadingSurface {
     const generation = ++this.presentationGeneration;
     this.layoutGeneration++; this.appliedLayoutGeneration = -1; this.restoringAnchor = true;
     const chapter = this.controller?.chapter;
-    this.fitPreference = this.fitPreference === 'source' ? 'width' : this.fitPreference === 'width' ? 'contain' : 'source';
+    this.fitPreference = requestedFit ?? (this.fitPreference === 'source' ? 'width' : this.fitPreference === 'width' ? 'contain' : 'source');
     this.settingsGateway?.updateMangaFit(this.fitPreference).catch((error: Error): void => { if (this.mounted) this.error = error.message; });
     const controller = this.controller;
     try { await controller?.setPreviewMode(this.effectiveFit() === 'contain', anchor?.ordinal ?? this.horizontalPage); }
@@ -565,6 +625,8 @@ export struct MangaReadingSurface {
       tile?.image?.fileUri ?? '', tile?.image?.revision ?? '', tile?.error ?? pageError ?? '']);
   }
   private async handleBack(): Promise<void> {
+    if (this.panel.length > 0) { this.panel = ''; return; }
+    if (this.chapterEnd) { this.chapterEnd = false; return; }
     if (this.zoom > 1) { this.changeZoom(1); return; }
     if (this.exiting) return;
     this.exiting = true;
@@ -617,7 +679,7 @@ export struct MangaReadingSurface {
   }
   private async openDirectory(): Promise<void> {
     await this.saveVisible();
-    if (this.mounted) this.onDirectory();
+    if (this.mounted) { this.controlsVisible = true; this.panel = this.persistentDirectory() ? '' : 'directory'; this.directoryRevision += 1; }
   }
   private async openSourceSwitch(): Promise<void> {
     await this.saveVisible();
@@ -627,43 +689,186 @@ export struct MangaReadingSurface {
     const task = row.known ? this.controller?.retryTile(row.ordinal, row.tileIndex) : this.controller?.retry(row.ordinal);
     task?.then((): void => { this.updateViewport(); }).catch((error: Error): void => { if (this.mounted) this.error = error.message; });
   }
+  private toggleControls(): void {
+    if (this.panel.length > 0 || this.chapterEnd) return;
+    this.controlsVisible = !this.controlsVisible;
+  }
+  private pageOrdinal(): number {
+    return this.horizontal ? this.horizontalPage : this.displayedPage;
+  }
+  private async seekPage(ordinal: number): Promise<void> {
+    const controller = this.controller;
+    const chapter = controller?.chapter;
+    if (controller === undefined || chapter === undefined || !this.opened ||
+      !Number.isSafeInteger(ordinal) || ordinal < 0 || ordinal >= controller.totalPages) return;
+    if (this.horizontal) { await this.turnPage(ordinal - this.horizontalPage); return; }
+    const generation = ++this.presentationGeneration;
+    await this.saveVisible();
+    if (!this.mounted || this.controller !== controller || controller.chapter !== chapter || generation !== this.presentationGeneration) return;
+    // Freeze the explicit seek anchor before async geometry publication.
+    // Existing publish/restore fencing must not re-adopt the old native row.
+    this.seekingPage = ordinal;
+    this.visibleAnchor = { ordinal, x: 0, y: 0 };
+    this.restoringAnchor = true;
+    this.appliedLayoutGeneration = -1;
+    this.layoutGeneration++;
+    this.first = this.data.projection.index(ordinal, 0); this.last = this.first;
+    try { await controller.setVisible(ordinal); }
+    catch (error) {
+      const message = error instanceof Error ? error.message : '图片加载失败';
+      if (this.mounted && generation === this.presentationGeneration && message !== 'MANGA_SESSION_CANCELLED') { this.seekingPage = undefined; this.error = message; }
+      return;
+    }
+    if (!this.mounted || this.controller !== controller || controller.chapter !== chapter || generation !== this.presentationGeneration) return;
+    this.restore(ordinal, 0, 0);
+  }
+  private async stepPage(direction: number): Promise<void> {
+    const ordinal = this.pageOrdinal() + direction;
+    if (ordinal >= this.horizontalPageCount) { await this.openChapterEnd(); return; }
+    await this.seekPage(ordinal);
+  }
+  private adjacentChapter(direction: number): RemoteReadingTocEntry | undefined {
+    const current = this.controller?.chapter;
+    const session = this.remoteSession;
+    if (current === undefined || session?.contentKind !== 'manga' ||
+      session.identity.sourceId !== this.sourceId || session.identity.bookId !== this.bookId ||
+      session.requiresContextRefresh === true) return undefined;
+    const position = session.entries.findIndex((entry: RemoteReadingTocEntry): boolean =>
+      entry.index === current.chapterIndex && entry.url === current.manifest.chapter.chapterId);
+    if (position < 0) return undefined;
+    const entries = direction > 0 ? session.entries.slice(position + 1) : session.entries.slice(0, position).reverse();
+    return entries.find((entry: RemoteReadingTocEntry): boolean => entry.navigable !== false &&
+      entry.url.trim().length > 0 && entry.url !== current.manifest.chapter.chapterId);
+  }
+  private async openChapterEnd(): Promise<void> {
+    if (!this.opened || this.pageOrdinal() + 1 !== this.horizontalPageCount ||
+      this.confirmedPosition?.anchor.ordinal !== this.pageOrdinal()) return;
+    await this.saveVisible();
+    if (this.mounted) { this.panel = ''; this.chapterEnd = true; }
+  }
+  private async selectAdjacentChapter(direction: number): Promise<void> {
+    if (this.adjacentChapter(direction) === undefined) return;
+    await this.saveVisible();
+    if (this.mounted) { this.panel = ''; this.chapterEnd = false; this.onChapter(direction); }
+  }
+  private async selectDirectoryTarget(index: number, proof?: JsonObject): Promise<void> {
+    await this.saveVisible();
+    if (this.mounted) { this.panel = ''; this.chapterEnd = false; this.onSelectDirectoryTarget(index, proof); }
+  }
+  private async openPanel(panel: string): Promise<void> {
+    await this.saveVisible();
+    if (this.mounted) {
+      this.controlsVisible = true; this.chapterEnd = false; this.panel = panel;
+      if (panel === 'directory') {
+        this.directoryQuery = ''; this.directoryRevision += 1;
+        if (this.persistentDirectory()) this.panel = '';
+      }
+    }
+  }
+  private async showDetail(): Promise<void> {
+    await this.saveVisible();
+    if (this.mounted) { this.panel = ''; this.onDetail(); }
+  }
+  private paperColor(): string {
+    return this.backgroundPreference === 'ink' ? '#1C1E1A' : this.backgroundPreference === 'white' ? '#FFFFFF' : '#F8F4EC';
+  }
+  private surfaceColor(): string { return this.backgroundPreference === 'ink' ? '#282C25' : '#FFFCF8'; }
+  private inkColor(): string { return this.backgroundPreference === 'ink' ? '#EAE7DE' : '#1F1B17'; }
+  private mutedColor(): string { return this.backgroundPreference === 'ink' ? '#ABA99F' : '#756F69'; }
+  private lineColor(): string { return this.backgroundPreference === 'ink' ? '#45483F' : '#E7E0D5'; }
+  private persistentDirectory(): boolean {
+    return mangaUsesPersistentDirectory(this.stageWidth, this.stageHeight, deviceInfo.deviceType === 'tablet');
+  }
+  private directoryColumnWidth(): number { return mangaDirectoryColumnWidth(this.stageWidth); }
+  private widePanel(): boolean { return this.viewportWidth >= 600 || this.viewportWidth > this.viewportHeight; }
+  private panelWidth(): number | string { return this.widePanel() ? Math.min(360, this.viewportWidth * 0.45) : '100%'; }
+  private panelHeight(): number { return this.widePanel() ? this.viewportHeight : Math.min(this.viewportHeight * 0.78, 620); }
+  private panelTitle(): string {
+    return this.panel === 'directory' ? '章节目录' : this.panel === 'mode' ? '阅读方式' : this.panel === 'settings' ? '漫画设置' : '更多';
+  }
+  private directoryEntries(): LocalReadingTocEntry[] {
+    return (this.remoteSession?.entries ?? []).map((entry: RemoteReadingTocEntry): LocalReadingTocEntry =>
+      ({ index: entry.index, title: entry.title, level: entry.level, navigable: entry.navigable, downloadState: 'unknown' }));
+  }
+  private loadBrightness(): void {
+    this.brightnessOwner = ReaderWindowCoordinator.brightness().claim();
+    const owner = this.brightnessOwner;
+    void ReaderWindowCoordinator.brightness().read(owner).then((result): void => {
+      if (!this.mounted || owner !== this.brightnessOwner || !result.applied) return;
+      this.automaticBrightness = result.value < 0;
+      if (result.value >= 0) this.brightnessPercent = readerBrightnessControlPercent(result.value);
+    }).catch((error: Error): void => { if (this.mounted) this.error = error.message; });
+  }
+  private setBrightness(percent: number, automatic: boolean = false): void {
+    if (this.brightnessOwner === 0 || !this.mounted) return;
+    const owner = this.brightnessOwner;
+    const generation = ++this.brightnessGeneration;
+    this.automaticBrightness = automatic;
+    this.brightnessPercent = Math.max(1, Math.min(100, percent));
+    void ReaderWindowCoordinator.brightness().request(owner, automatic ? -1 : readerBrightnessWindowValue(this.brightnessPercent))
+      .catch((error: Error): void => { if (this.mounted && owner === this.brightnessOwner && generation === this.brightnessGeneration) this.error = error.message; });
+  }
+  private setBackground(background: 'paper' | 'white' | 'ink'): void {
+    this.backgroundPreference = background;
+    this.settingsGateway?.updateMangaPreferences({ mangaBackground: background })
+      .catch((error: Error): void => { if (this.mounted) this.error = error.message; });
+  }
+  private setPageNumbers(enabled: boolean): void {
+    this.showPageNumbers = enabled;
+    this.settingsGateway?.updateMangaPreferences({ mangaPageNumbers: enabled })
+      .catch((error: Error): void => { if (this.mounted) this.error = error.message; });
+  }
+  private async resetMangaPreferences(): Promise<void> {
+    if (this.horizontal) this.toggleDirection();
+    await this.changeFit('source');
+    this.backgroundPreference = 'paper'; this.showPageNumbers = true;
+    this.setBrightness(this.brightnessPercent, true);
+    await this.settingsGateway?.updateMangaPreferences({ mangaDirection: 'vertical', mangaFit: 'source', mangaBackground: 'paper', mangaPageNumbers: true });
+  }
   private interactiveInsets(_revision: number): ReaderInsetsVp {
     return readerInteractiveSafeInsets(ReaderWindowCoordinator.metrics());
   }
   build() {
     Column() {
       Row() {
-        Button('返回').onClick((): void => { void this.handleBack(); })
-        Text(this.title).maxLines(1).layoutWeight(1).fontColor(this.mangaForegroundColor)
-      }.width('100%')
-      if (this.offlineProbeStatus.length > 0) {
-        Text(this.offlineProbeStatus).fontSize(10).maxLines(4).fontColor(this.mangaForegroundColor).id('reader-manga-offline-probe-status')
-      }
+        if (this.persistentDirectory()) { this.tabletDirectory(); }
+        Stack({ alignContent: Alignment.Center }) {
+        this.imageViewport();
+        if (this.opened && this.showPageNumbers && !this.controlsVisible && !this.chapterEnd) {
+          Text(`${this.pageOrdinal() + 1} / ${this.horizontalPageCount}`)
+            .fontSize(11).fontColor(this.mutedColor()).padding({ left: 10, right: 10, top: 5, bottom: 5 })
+            .backgroundColor(this.surfaceColor()).borderRadius(12).align(Alignment.BottomEnd).margin(12)
+            .hitTestBehavior(HitTestMode.None);
+        }
+        if ((this.controlsVisible || this.error.length > 0 || this.recovering || this.loginRequired()) && !this.chapterEnd) {
+          this.topControls();
+          this.bottomControls();
+        }
+        if (this.chapterEnd) { this.chapterEndContent(); }
+        if (this.panel.length > 0) { this.panelOverlay(); }
+        }.layoutWeight(1).height('100%');
+      }.width('100%').height('100%').onAreaChange((_old: Area, area: Area): void => {
+        const width = Number(area.width), height = Number(area.height);
+        if (Number.isFinite(width) && width > 0) this.stageWidth = width;
+        if (Number.isFinite(height) && height > 0) this.stageHeight = height;
+      });
+    }.width('100%').height('100%').backgroundColor(this.paperColor())
+      // The image viewport keeps one owner; floating controls never resize it.
+      .padding(this.interactiveInsets(this.windowMetricsRevision));
+  }
+  @Builder
+  private tabletDirectory() {
+    Column() {
       Row() {
-        Button('目录与下载').onClick((): void => { void this.openDirectory(); })
-        Button('换源').onClick((): void => { void this.openSourceSwitch(); })
-      }.width('100%').justifyContent(FlexAlign.SpaceBetween)
-      if (this.recovering) {
-        Button('章节内容已更新，确认从当前页继续').onClick((): void => {
-          const row = this.data.getData(this.first);
-          this.controller?.selectPage(row.ordinal).then((): void => { this.recovering = false; this.saveVisible(); });
-        })
-      }
-      if (this.error.length > 0) { Text(this.displayError(this.error)).fontColor(this.errorColor).maxLines(3) }
-      if (this.loginRequired()) { Button(this.loggingIn ? '登录处理中' : '登录书源后重试').enabled(!this.loggingIn).onClick((): void => { void this.loginAndRetry(); }) }
-      if (this.opened && !this.offline) {
-        Button('重新获取本章图片').onClick((): void => {
-          this.refreshImages().catch((error: Error): void => { if (this.mounted) this.error = error.message; });
-        })
-      }
-      Row() {
-        Button(this.horizontal ? '切换纵向' : '切换横向').onClick((): void => this.toggleDirection())
-        Button('缩小').onClick((): void => this.changeZoom(this.zoom - 0.5))
-        Button(`${Math.round(this.zoom * 100)}%`).onClick((): void => this.changeZoom(1))
-        Button('放大').onClick((): void => this.changeZoom(this.zoom + 0.5))
-      }.width('100%')
-      Button(this.fitPreference === 'source' ? '尺寸：跟随书源' : this.fitPreference === 'width' ? '尺寸：适合宽度' : '尺寸：完整图片').onClick((): void => { void this.changeFit(); })
-      Scroll(this.horizontalScroller) {
+        Text('章节目录').fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold).fontSize(19).fontColor(this.inkColor());
+      }.width('100%').height(60).padding({ left: 20, right: 20 }).border({ width: { bottom: 1 }, color: this.lineColor() });
+      this.directoryPanel();
+    }.width(this.directoryColumnWidth()).height('100%').backgroundColor(this.surfaceColor())
+      .border({ width: { right: 1 }, color: this.lineColor() });
+  }
+  @Builder
+  private imageViewport() {
+    Scroll(this.horizontalScroller) {
       List({ scroller: this.scroller, space: 0 }) {
         LazyForEach(this.data, (row: MangaStripRow, index: number) => {
           ListItem() {
@@ -685,39 +890,221 @@ export struct MangaReadingSurface {
       }.height('100%').width(this.viewportWidth * this.zoom).cachedCount(0)
         .onScroll((): void => { this.onViewportScroll(); })
         .onScrollIndex((first: number, last: number): void => {
+          if (this.seekingPage !== undefined && first >= 0 && first < this.data.totalCount() &&
+            this.data.getData(first).ordinal !== this.seekingPage) return;
           this.first = first; this.last = last;
           if (!this.restoringAnchor) { this.layoutGeneration++; this.updateViewport(); }
           else this.onViewportScroll();
         })
-        .onTouch((event: TouchEvent): void => {
-          if (event.type === TouchType.Down) this.onViewportTouch();
-        })
+        .onTouch((event: TouchEvent): void => { if (event.type === TouchType.Down) this.onViewportTouch(); })
         .onScrollStop((): void => { this.onViewportScroll(); this.saveVisible(); })
-      }.layoutWeight(1).width('100%').scrollable(ScrollDirection.Horizontal)
-        .onAreaChange((_old: Area, area: Area): void => { this.resizeViewport(Number(area.width), Number(area.height)); })
-        .onScroll((): void => { this.onViewportScroll(); })
-        .onScrollStop((): void => { this.onViewportScroll(); this.saveVisible(); })
-        .parallelGesture(GestureGroup(GestureMode.Exclusive, PinchGesture({ fingers: 2 })
-          .onActionStart((): void => { this.rememberVisible(); this.pinchAnchor = this.visibleAnchor; this.pinchStartScale = this.zoom; })
-          .onActionUpdate((event: GestureEvent): void => { this.changeZoom(this.pinchStartScale * event.scale); })
-          .onActionEnd((): void => { this.pinchAnchor = undefined; this.saveVisible(); })
-          .onActionCancel((): void => { this.pinchAnchor = undefined; }),
-          SwipeGesture({ direction: SwipeDirection.Horizontal }).onAction((event: GestureEvent): void => {
-            if (this.horizontal && this.zoom === 1) this.turnPage(Math.abs(event.angle) > 90 ? 1 : -1);
-          })))
-      if (this.horizontal) {
-        Row() {
-          Button('上一图').enabled(this.horizontalPage > 0 && this.horizontalPageCount > 0).onClick((): void => { this.turnPage(-1); })
-          Text(`${this.horizontalPage + 1} / ${this.horizontalPageCount}`).fontColor(this.mangaForegroundColor)
-          Button('下一图').enabled(this.horizontalPage + 1 < this.horizontalPageCount).onClick((): void => { this.turnPage(1); })
-        }.width('100%').justifyContent(FlexAlign.SpaceBetween)
-      }
+    }.height('100%').width('100%').scrollable(ScrollDirection.Horizontal)
+      .onAreaChange((_old: Area, area: Area): void => { this.resizeViewport(Number(area.width), Number(area.height)); })
+      .onScroll((): void => { this.onViewportScroll(); })
+      .onScrollStop((): void => { this.onViewportScroll(); this.saveVisible(); })
+      .parallelGesture(GestureGroup(GestureMode.Exclusive, PinchGesture({ fingers: 2 })
+        .onActionStart((): void => { this.rememberVisible(); this.pinchAnchor = this.visibleAnchor; this.pinchStartScale = this.zoom; })
+        .onActionUpdate((event: GestureEvent): void => { this.changeZoom(this.pinchStartScale * event.scale); })
+        .onActionEnd((): void => { this.pinchAnchor = undefined; this.saveVisible(); })
+        .onActionCancel((): void => { this.pinchAnchor = undefined; }),
+        SwipeGesture({ direction: SwipeDirection.Horizontal }).onAction((event: GestureEvent): void => {
+          if (this.horizontal && this.zoom === 1) {
+            if (this.horizontalPage + 1 === this.horizontalPageCount && Math.abs(event.angle) > 90) void this.openChapterEnd();
+            else this.turnPage(Math.abs(event.angle) > 90 ? 1 : -1);
+          }
+        }),
+        TapGesture({ count: 1 }).onAction((): void => this.toggleControls())));
+  }
+  @Builder
+  private topControls() {
+    Column({ space: 8 }) {
       Row() {
-        Button('上一章').onClick((): void => { this.saveVisible().then((): void => this.onChapter(-1)); })
-        Button('下一章').onClick((): void => { this.saveVisible().then((): void => this.onChapter(1)); })
-      }.width('100%').justifyContent(FlexAlign.SpaceBetween)
-    }.width('100%').height('100%').backgroundColor(this.mangaBackgroundColor)
-      // Shell owns the full-window background; this content owns its safe rect.
-      .padding(this.interactiveInsets(this.windowMetricsRevision))
+        Row() { this.iconAction((this.backgroundPreference === 'ink' ? $r('app.media.book_detail_back_theme_night') : $r('app.media.book_detail_back')), '返回', (): void => { void this.handleBack(); }); Blank().width(44); }.width(88);
+        Column({ space: 1 }) {
+          Text(this.bookTitle || this.remoteSession?.book.title || this.remoteBookSeed?.title || '漫画阅读')
+            .fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold).fontSize(17).fontColor(this.inkColor())
+            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+          Text(this.title).fontSize(11).fontColor(this.mutedColor()).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+        }.layoutWeight(1);
+        Row() {
+          this.iconAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_switch_theme_night') : $r('app.media.reader_directory_switch')), '换源', (): void => { void this.openSourceSwitch(); });
+          this.iconAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_more_theme_night') : $r('app.media.reader_directory_more')), '更多', (): void => { void this.openPanel('more'); });
+        }.width(88);
+      }.height(52).width('100%').backgroundColor(this.surfaceColor()).borderRadius(18);
+      if (this.recovering) {
+        Button('内容已更新，确认从当前页继续').fontSize(12).height(44).onClick((): void => {
+          if (this.data.totalCount() > this.first) {
+            const row = this.data.getData(this.first);
+            this.controller?.selectPage(row.ordinal).then((): void => { this.recovering = false; this.saveVisible(); });
+          }
+        });
+      }
+      if (this.error.length > 0) { Text(this.displayError(this.error)).fontSize(12).fontColor(this.errorColor).maxLines(3).padding(8).backgroundColor(this.surfaceColor()).borderRadius(12); }
+      if (this.loginRequired()) { Button(this.loggingIn ? '登录处理中' : '登录书源后重试').height(44).enabled(!this.loggingIn).onClick((): void => { void this.loginAndRetry(); }); }
+      if (this.offlineProbeStatus.length > 0) { Text(this.offlineProbeStatus).fontSize(10).maxLines(4).fontColor(this.mutedColor()).id('reader-manga-offline-probe-status'); }
+    }.width('100%').padding({ left: 16, right: 16, top: 10 }).align(Alignment.Top);
+  }
+  @Builder
+  private iconAction(icon: Resource, label: string, action: () => void) {
+    ReaderIconButton({ icon, boxSize: 44, iconSize: 22, radius: 22, onTap: action }).accessibilityText(label);
+  }
+  @Builder
+  private bottomControls() {
+    Column({ space: 4 }) {
+      Row({ space: 4 }) {
+        Button('‹').height(44).width(44).fontSize(24).fontColor(this.inkColor()).backgroundColor(Color.Transparent)
+          .enabled(this.opened && this.pageOrdinal() > 0).onClick((): void => { void this.stepPage(-1); });
+        Slider({ value: this.pageOrdinal() + 1, min: 1, max: Math.max(1, this.horizontalPageCount), step: 1 })
+          .layoutWeight(1).selectedColor('#2D4A3E').trackColor(this.lineColor()).enabled(this.opened && this.horizontalPageCount > 1)
+          .onChange((value: number, mode: SliderChangeMode): void => { if (mode === SliderChangeMode.End) void this.seekPage(Math.round(value) - 1); });
+        Text(this.opened ? `${this.pageOrdinal() + 1} / ${this.horizontalPageCount}` : '—')
+          .fontSize(12).fontColor(this.mutedColor()).width(60).textAlign(TextAlign.Center);
+        Button('›').height(44).width(44).fontSize(24).fontColor(this.inkColor()).backgroundColor(Color.Transparent)
+          .enabled(this.opened).onClick((): void => { void this.stepPage(1); });
+      }.width('100%').height(44);
+      Row() {
+        this.footerAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_directory_theme_night') : $r('app.media.reader_directory_directory')), '目录', 'directory');
+        this.footerAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_settings_header_theme_night') : $r('app.media.reader_settings_header')), '阅读方式', 'mode');
+        this.footerAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_settings_nav_active_theme_night') : $r('app.media.reader_settings_nav_active')), '设置', 'settings');
+      }.width('100%').height(62).border({ width: { top: 1 }, color: this.lineColor() });
+    }.width(Math.max(1, this.viewportWidth - 32)).padding({ left: 8, right: 8, top: 4, bottom: 4 })
+      .backgroundColor(this.surfaceColor()).borderRadius(24).margin({ left: 16, right: 16, bottom: 12 })
+      .align(Alignment.Bottom).constraintSize({ maxWidth: 560 });
+  }
+  @Builder
+  private footerAction(icon: Resource, label: string, panel: string) {
+    Column({ space: 4 }) {
+      Image(icon).width(22).height(22);
+      Text(label).fontSize(11).fontColor(this.inkColor());
+    }.layoutWeight(1).height(58).justifyContent(FlexAlign.Center).onClick((): void => { void this.openPanel(panel); }).accessibilityText(label);
+  }
+  @Builder
+  private panelOverlay() {
+    Stack({ alignContent: this.widePanel() ? Alignment.CenterEnd : Alignment.Bottom }) {
+      Column().width('100%').height('100%').backgroundColor('#52000000').onClick((): void => { this.panel = ''; });
+      Column() {
+        Row() {
+          Text(this.panelTitle()).fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold).fontSize(19).fontColor(this.inkColor()).layoutWeight(1);
+          this.iconAction((this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_back_theme_night') : $r('app.media.reader_directory_back')), '关闭面板', (): void => { this.panel = ''; });
+        }.width('100%').height(60).padding({ left: 20, right: 8 }).border({ width: { bottom: 1 }, color: this.lineColor() });
+        if (this.panel === 'directory') { this.directoryPanel(); }
+        else {
+          Scroll() {
+            Column({ space: 20 }) {
+              if (this.panel === 'mode') { this.modePanel(); }
+              else if (this.panel === 'settings') { this.settingsPanel(); }
+              else { this.morePanel(); }
+            }.width('100%').padding(20);
+          }.layoutWeight(1).width('100%').scrollBar(BarState.Off);
+        }
+      }.width(this.panelWidth()).height(this.panelHeight()).backgroundColor(this.surfaceColor()).borderRadius(this.widePanel() ? 18 : 24);
+    }.width('100%').height('100%');
+  }
+  @Builder
+  private directoryPanel() {
+    Column({ space: 10 }) {
+      TextInput({ text: this.directoryQuery, placeholder: '搜索话／卷名称' }).height(44).fontSize(13)
+        .fontColor(this.inkColor()).backgroundColor(this.paperColor()).onChange((text: string): void => { this.directoryQuery = text; });
+      Row() {
+        Button('定位当前').fontSize(12).height(40).onClick((): void => { this.directoryQuery = ''; this.directoryRevision += 1; });
+        Blank();
+        Button(this.directoryAscending ? '正序' : '倒序').fontSize(12).height(40).onClick((): void => { this.directoryAscending = !this.directoryAscending; });
+      }.width('100%');
+      ReaderDirectoryNavigationSurface({
+        sourceId: this.sourceId, bookId: this.bookId, query: this.directoryQuery, ascending: this.directoryAscending,
+        currentChapterIndex: this.controller?.chapter?.chapterIndex ?? -1, openRevision: `${this.publishedManifestVersion}:${this.directoryRevision}`,
+        locateCurrentRevision: this.directoryRevision, mangaDisplay: true, mangaScheme: this.backgroundPreference === 'ink' ? 'night' : 'day', rowHeight: 58, listPaddingX: 0, listPaddingY: 0, chapterEntries: this.directoryEntries(),
+        chapterStartBookmarkCreationEnabled: false, chapterDownloadEnabled: false,
+        fallbackBuilder: (): void => { this.directoryFallback(); },
+        onSelectTarget: (chapterIndex: number, _offset: number, _scope?: RemoteReadingPositionScope, proof?: JsonObject): void => {
+          void this.selectDirectoryTarget(chapterIndex, proof);
+        },
+      }).layoutWeight(1).width('100%');
+    }.layoutWeight(1).width('100%').padding({ left: 20, right: 20, top: 12, bottom: 12 });
+  }
+  @Builder
+  private directoryFallback() {
+    Column({ space: 12 }) {
+      Text('当前目录结构暂不可用').fontSize(13).fontColor(this.mutedColor());
+      Button('打开完整目录').height(44).onClick((): void => { this.panel = ''; this.onDirectory(); });
+    }.width('100%').padding(20);
+  }
+  @Builder
+  private modePanel() {
+    Text('阅读方向').fontSize(13).fontColor(this.mutedColor()).width('100%');
+    Row({ space: 8 }) {
+      this.option('竖向连续', !this.horizontal, (): void => { if (this.horizontal) this.toggleDirection(); }, 47);
+      this.option('横向单图', this.horizontal, (): void => { if (!this.horizontal) this.toggleDirection(); }, 47);
+    }.width('100%');
+    Text('图片适配').fontSize(13).fontColor(this.mutedColor()).width('100%');
+    Column({ space: 8 }) {
+      this.option('跟随书源', this.fitPreference === 'source', (): void => { void this.changeFit('source'); });
+      this.option('适合宽度', this.fitPreference === 'width', (): void => { void this.changeFit('width'); });
+      this.option('完整图片', this.fitPreference === 'contain', (): void => { void this.changeFit('contain'); });
+    }.width('100%');
+    Row({ space: 8 }) {
+      Button('−').width(44).height(44).onClick((): void => this.changeZoom(this.zoom - 0.5));
+      Button(`${Math.round(this.zoom * 100)}%`).layoutWeight(1).height(44).onClick((): void => this.changeZoom(1));
+      Button('+').width(44).height(44).onClick((): void => this.changeZoom(this.zoom + 0.5));
+    }.width('100%');
+  }
+  @Builder
+  private option(label: string, selected: boolean, action: () => void, widthPercent: number = 100) {
+    Button(label).height(48).width(`${widthPercent}%`).fontSize(13).fontWeight(selected ? FontWeight.Bold : FontWeight.Regular)
+      .fontColor(selected ? '#FFFFFF' : this.inkColor()).backgroundColor(selected ? '#1F3528' : this.paperColor())
+      .borderRadius(14).onClick(action);
+  }
+  @Builder
+  private settingsPanel() {
+    Text('阅读底色').fontSize(13).fontColor(this.mutedColor()).width('100%');
+    Row({ space: 8 }) {
+      this.option('暖纸', this.backgroundPreference === 'paper', (): void => this.setBackground('paper'), 31);
+      this.option('素白', this.backgroundPreference === 'white', (): void => this.setBackground('white'), 31);
+      this.option('深墨', this.backgroundPreference === 'ink', (): void => this.setBackground('ink'), 31);
+    }.width('100%');
+    Row() {
+      Text('亮度').fontSize(13).fontColor(this.inkColor()); Blank();
+      Text(this.automaticBrightness ? '跟随系统' : `${Math.round(this.brightnessPercent)}%`).fontSize(12).fontColor(this.mutedColor());
+    }.width('100%');
+    Slider({ value: this.brightnessPercent, min: 1, max: 100, step: 1 }).width('100%').selectedColor('#2D4A3E')
+      .onChange((value: number): void => this.setBrightness(value));
+    Row() {
+      Text('跟随系统亮度').fontSize(13).fontColor(this.inkColor()).layoutWeight(1);
+      Toggle({ type: ToggleType.Switch, isOn: this.automaticBrightness }).selectedColor('#1F3528')
+        .onChange((enabled: boolean): void => this.setBrightness(this.brightnessPercent, enabled));
+    }.width('100%').height(44);
+    Row() {
+      Text('始终显示页码').fontSize(13).fontColor(this.inkColor()).layoutWeight(1);
+      Toggle({ type: ToggleType.Switch, isOn: this.showPageNumbers }).selectedColor('#1F3528')
+        .onChange((enabled: boolean): void => this.setPageNumbers(enabled));
+    }.width('100%').height(44);
+    Button('恢复漫画默认设置').width('100%').height(44).fontSize(13).fontColor(this.mutedColor()).backgroundColor(this.paperColor())
+      .onClick((): void => { this.resetMangaPreferences().catch((error: Error): void => { if (this.mounted) this.error = error.message; }); });
+  }
+  @Builder
+  private morePanel() {
+    this.option('更换书源', false, (): void => { this.panel = ''; void this.openSourceSwitch(); });
+    Button('缓存本章').width('100%').height(48).enabled(this.opened && !this.offline).fontColor(this.inkColor()).backgroundColor(this.paperColor())
+      .onClick((): void => { this.panel = ''; this.onDownloadChapter(); });
+    Button('重新获取本章图片').width('100%').height(48).enabled(this.opened && !this.offline).fontColor(this.inkColor()).backgroundColor(this.paperColor())
+      .onClick((): void => { this.panel = ''; this.refreshImages().catch((error: Error): void => { if (this.mounted) this.error = error.message; }); });
+    this.option('漫画详情', false, (): void => { void this.showDetail(); });
+    this.option(this.inBookshelf ? '移出书架' : '加入书架', false, (): void => { this.panel = ''; this.onToggleShelf(); });
+  }
+  @Builder
+  private chapterEndContent() {
+    Column({ space: 18 }) {
+      Text('本篇完').fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold).fontSize(28).fontColor(this.inkColor());
+      Text(this.title).fontSize(14).fontColor(this.mutedColor()).maxLines(2).textAlign(TextAlign.Center);
+      if (this.adjacentChapter(1) !== undefined) {
+        Text(`接下来 · ${this.adjacentChapter(1)?.title ?? ''}`).fontSize(14).fontColor(this.mutedColor()).maxLines(2).textAlign(TextAlign.Center);
+        Button('继续阅读').height(48).width(220).fontColor('#FFFFFF').backgroundColor('#1F3528').borderRadius(16)
+          .onClick((): void => { void this.selectAdjacentChapter(1); });
+      }
+      Button('返回目录').height(44).width(220).fontColor(this.inkColor()).backgroundColor(this.surfaceColor()).borderRadius(16)
+        .onClick((): void => { void this.openPanel('directory'); });
+      Button('返回正文').height(44).width(220).fontColor(this.mutedColor()).backgroundColor(Color.Transparent)
+        .onClick((): void => { this.chapterEnd = false; });
+    }.width('100%').height('100%').padding(24).justifyContent(FlexAlign.Center).backgroundColor(this.paperColor());
   }
 }

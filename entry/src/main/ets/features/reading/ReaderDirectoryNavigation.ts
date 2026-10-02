@@ -33,6 +33,8 @@ export interface ReaderDirectoryNavigationReady {
   nextOffset?: number;
   /** Host-only pages prefetched before this immutable view is published. */
   preparedPages?: ReaderDirectoryNavigationPreparedPage[];
+  /** Host-only intent: ignore a retained viewport once and center the actual target. */
+  locateCurrent?: boolean;
 }
 
 export interface ReaderDirectoryNavigationUnavailable {
@@ -72,6 +74,7 @@ export interface ReaderDirectoryNavigationQuery {
   chapterOffsetScalar?: number;
   anchorNodeId?: string;
   limit?: number;
+  locateCurrent?: boolean;
 }
 
 const DIRECTORY_PAGE_LIMIT: number = 256;
@@ -378,6 +381,11 @@ export async function openReaderDirectoryNavigation(gateway: ReaderDirectoryNavi
   query: ReaderDirectoryNavigationQuery, isCurrent: () => boolean,
   onUnavailable?: (reason: string) => void): Promise<ReaderDirectoryNavigationReady | undefined> {
   const stateKey = readerDirectoryScopeKey(query.sourceId ?? 'local', query.bookId);
+  if (query.locateCurrent) {
+    const state = readerDirectoryBookState(stateKey);
+    if (state !== undefined) state.anchor = undefined;
+    query = { ...query, anchorNodeId: undefined };
+  }
   const collapsedNodeIds = readerDirectoryCollapsedIds(stateKey);
   let opened = await gateway.open({ ...query, collapsedNodeIds }, isCurrent);
   if (opened.status !== 'ready' || !isCurrent()) {
@@ -393,6 +401,17 @@ export async function openReaderDirectoryNavigation(gateway: ReaderDirectoryNavi
       return undefined;
     }
     readerDirectoryAdmitRevision(stateKey, opened.navigationRevision);
+  }
+  if (query.locateCurrent) {
+    // Core supplies the nearest visible ancestor of a collapsed target.
+    // Expand only that ancestry; unrelated groups and books keep their folds.
+    for (let depth = 0; depth < 33 && opened.currentAncestorNodeId !== undefined; depth += 1) {
+      const state = readerDirectoryBookState(stateKey);
+      if (state === undefined || !state.ids.delete(opened.currentAncestorNodeId)) break;
+      opened = await gateway.open({ ...query, collapsedNodeIds: Array.from(state.ids) }, isCurrent);
+      if (opened.status !== 'ready' || !isCurrent()) return undefined;
+    }
+    opened.locateCurrent = true;
   }
   return opened;
 }

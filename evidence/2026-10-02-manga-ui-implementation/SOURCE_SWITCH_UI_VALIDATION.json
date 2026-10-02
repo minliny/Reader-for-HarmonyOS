@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-02",
+  "scope": "shared source-switch chain read-only audit; Index callbacks -> SourceSwitchGateway/Window -> Manga prepare/commit/reconcile",
+  "productionSourceSha256": {
+    "entry/src/main/ets/pages/Index.ets": "f07a63729585c3b407b5629e901c53dae8ee1cd9fb572c4dca979b204c494702",
+    "entry/src/main/ets/features/source/SourceSwitchGateway.ts": "c2c022d75eaae37b255a162236b4a0dddb4638b5157eb6dd10b0c036190b4cd5",
+    "entry/src/main/ets/features/source/SourceSwitchWindow.ets": "d742af4ee465e5e62d1bcbd8b6ca07b2cbcb9946b1a899ec5b6071422f944b9b",
+    "entry/src/main/ets/features/manga/MangaSourceSwitchGateway.ts": "fe152cb4a9b01931103dd17a4c417d5d8ccc4d0a58a37946382da95953760245"
+  },
+  "testSourceSha256": {
+    "tools/test-manga-ui-source-switch-discovery.mjs": "44998ca4b0ddd97aff0638b8ff2027044d42eb556db80a3278cb82ac5f52bd79",
+    "tools/test-manga-ui-source-switch-window.mjs": "1a9202f3ef8c863d9f019a9de95ebba296525c7fc7ed42aaab67fbb5c51fc254",
+    "tools/test-source-switch-gateway.mjs": "bcab97013203c3109a8c06f59a31bcda84de256033a1677861b601234c403b94",
+    "tools/test-source-switch-transaction.mjs": "34b92cf140189e6b596248ad28ccb123f66ae16e9b6ed15e82218da5eba791dc",
+    "tools/test-manga-source-switch.mjs": "59b612fb5636cf3e8bae9ff1d990b75949efc832b2b3bd6065676a7af6d1ba12"
+  },
+  "finalFocusedTests": [
+    {
+      "test": "tools/test-manga-ui-source-switch-discovery.mjs",
+      "exit": 0,
+      "timeout": false,
+      "log": "evidence/2026-10-02-manga-ui-implementation/source-switch-ui-logs/test-manga-ui-source-switch-discovery-final3.log"
+    },
+    {
+      "test": "tools/test-manga-ui-source-switch-window.mjs",
+      "exit": 0,
+      "timeout": false,
+      "log": "evidence/2026-10-02-manga-ui-implementation/source-switch-ui-logs/test-manga-ui-source-switch-window-final3.log"
+    },
+    {
+      "test": "tools/test-source-switch-gateway.mjs",
+      "exit": 0,
+      "timeout": false,
+      "log": "evidence/2026-10-02-manga-ui-implementation/source-switch-ui-logs/test-source-switch-gateway-final3.log"
+    },
+    {
+      "test": "tools/test-source-switch-transaction.mjs",
+      "exit": 0,
+      "timeout": false,
+      "log": "evidence/2026-10-02-manga-ui-implementation/source-switch-ui-logs/test-source-switch-transaction-final3.log"
+    },
+    {
+      "test": "tools/test-manga-source-switch.mjs",
+      "exit": 0,
+      "timeout": false,
+      "log": "evidence/2026-10-02-manga-ui-implementation/source-switch-ui-logs/test-manga-source-switch-final3.log"
+    }
+  ],
+  "initialFindings": {
+    "gatewayKnownSeedLoss": {
+      "initialExit": 1,
+      "status": "fixed by root; refreshCandidates initialCandidates preserves cached/previous rows",
+      "initialLog": "source-switch-ui-logs/test-source-switch-gateway-initial.log"
+    },
+    "staleTransactionAssertions": {
+      "initialExit": 1,
+      "status": "tests updated to current live Window/conditional action; exact identity/rollback assertions retained",
+      "initialLog": "source-switch-ui-logs/test-source-switch-transaction-initial.log"
+    },
+    "oldSecondConsentAssertion": {
+      "initialExit": 1,
+      "status": "tests updated to direct selection contract; Manga prepare/image/CAS/lost-response checks retained",
+      "initialLog": "source-switch-ui-logs/test-manga-source-switch-initial.log"
+    }
+  },
+  "acceptanceBoundary": {
+    "nodeProductionMethodTests": "pass",
+    "etsParseViaProbe": "pass",
+    "nativeBuild": "not run",
+    "vmDevice": "not run",
+    "userAcceptance": "not claimed"
+  }
+}

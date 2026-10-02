@@ -23,6 +23,7 @@ export struct AppTopBar {
   title: string = '';
   /** Visible boundary for a fixed header, requested by the bookshelf review. */
   divider: boolean = false;
+  @Prop floating: boolean = false;
   /** 可选尾部槽 (图标钮簇);未传时不渲染。 */
   @BuilderParam trailing?: () => void;
 
@@ -46,12 +47,16 @@ export struct AppTopBar {
     .height(58)
     .padding({ left: this.leftInset(), right: this.rightInset(), top: 6 })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(this.divider ? readerAppColor('TOK_PAPER', this.appThemeScheme) : Color.Transparent)
-    .border({ width: { bottom: this.divider ? 1 : 0 },
-      color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) });
+    .backgroundColor(this.floating ? readerAppColor('TOK_CARD_BG', this.appThemeScheme) : this.divider ? readerAppColor('TOK_PAPER', this.appThemeScheme) : Color.Transparent)
+    .border({ width: { bottom: this.divider && !this.floating ? 1 : 0 },
+      color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
+    .borderRadius(this.floating ? 18 : 0)
+    .clip(this.floating)
+    .hitTestBehavior(HitTestMode.Transparent);
   }
 
   private leftInset(): number {
+    if (this.floating) return TOK_HOME_TOP_BAR_INSET;
     if (this.readerWindowMetricsRevision < 0) {
       return TOK_HOME_TOP_BAR_INSET;
     }
@@ -62,6 +67,7 @@ export struct AppTopBar {
   }
 
   private rightInset(): number {
+    if (this.floating) return TOK_HOME_TOP_BAR_INSET;
     if (this.readerWindowMetricsRevision < 0) {
       return TOK_HOME_TOP_BAR_INSET;
     }

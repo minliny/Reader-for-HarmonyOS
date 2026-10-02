@@ -30,11 +30,17 @@ export struct ReaderDirectoryNavigationSurface {
   @Prop @Watch('onViewInputsChanged') query: string = '';
   @Prop @Watch('onViewInputsChanged') ascending: boolean = true;
   @Prop @Watch('onViewInputsChanged') currentChapterIndex: number = -1;
+  @Prop @Watch('onLocateCurrent') locateCurrentRevision: number = 0;
   @Prop @Watch('onIdentityChanged') openRevision: string = '';
   @Prop interacted: boolean = false;
   @Prop rowHeight: number = 40;
+  @Prop mangaDisplay: boolean = false;
+  @Prop mangaScheme: string = '';
   @Prop listPaddingX: number = 10;
+  @Prop listPaddingRight: number = -1;
   @Prop listPaddingY: number = 5;
+  @Prop listPaddingTop: number = -1;
+  @Prop listPaddingBottom: number = -1;
   @Prop edgeEffectMode: EdgeEffect = EdgeEffect.None;
   @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
   @Prop chapterEntries: LocalReadingTocEntry[] = [];
@@ -64,6 +70,7 @@ export struct ReaderDirectoryNavigationSurface {
   private lastQuery: string = '';
   private lastAscending: boolean = true;
   private lastChapterIndex: number = -1;
+  private locateCurrentPending: boolean = false;
   private scrollIntentUnsubscribe: (() => void) | undefined = undefined;
 
   aboutToAppear(): void {
@@ -123,6 +130,14 @@ export struct ReaderDirectoryNavigationSurface {
     }
     if (queryChanged && !otherChanged) this.scheduleQueryOpen();
     else this.openTree(this.view === undefined, 'sort-or-position');
+  }
+
+  private onLocateCurrent(): void {
+    if (!this.mounted || this.currentChapterIndex < 0) return;
+    this.cancelQueryTimer();
+    this.locateCurrentPending = true;
+    this.settledFlat = false;
+    this.openTree(false, 'locate-current');
   }
 
   private onInteractionChanged(): void {
@@ -222,7 +237,7 @@ export struct ReaderDirectoryNavigationSurface {
     if (ready.visibleTotal === 0) return [];
     cacheReaderDirectoryNavigationPage(ready, 0, { viewId: ready.viewId, visibleTotal: ready.visibleTotal, nodes: ready.nodes, nextOffset: ready.nextOffset });
     ready.nodes = [];
-    const anchor = readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, bookId));
+    const anchor = ready.locateCurrent ? undefined : readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, bookId));
     const sameRevision = anchor?.navigationRevision === ready.navigationRevision;
     const target = sameRevision && ready.anchorVisibleIndex !== undefined ? ready.anchorVisibleIndex :
       (ready.currentVisibleIndex ?? 0);
@@ -267,9 +282,10 @@ export struct ReaderDirectoryNavigationSurface {
     const trace = pendingTrace ?? new ReaderDirectoryTrace(reason);
     this.openingGeneration = generation;
     const query = this.query, descending = !this.ascending;
-    const anchorNodeId = readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, bookId))?.nodeId;
+    const locateCurrent = this.locateCurrentPending;
+    const anchorNodeId = locateCurrent ? undefined : readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, bookId))?.nodeId;
     const chapterIndex = this.currentChapterIndex >= 0 ? this.currentChapterIndex : undefined;
-    void openReaderDirectoryNavigation(gateway, { sourceId: this.sourceId, bookId, query, descending, chapterIndex, anchorNodeId, limit: 256 },
+    void openReaderDirectoryNavigation(gateway, { sourceId: this.sourceId, bookId, query, descending, chapterIndex, anchorNodeId, limit: 256, locateCurrent },
       (): boolean => this.mounted && generation === this.generation && this.bookId === bookId,
       (reason: string): void => { if (this.sourceId === 'local') readerDirectoryNoteMissingNavigation(bookId, reason); })
       .then(async (ready: ReaderDirectoryNavigationReady | undefined): Promise<void> => {
@@ -308,6 +324,7 @@ export struct ReaderDirectoryNavigationSurface {
           return;
         }
         this.view = ready;
+        this.locateCurrentPending = false;
         this.onTreeStateChange(true);
         trace.step('published');
         if (trace.isEnabled()) try {
@@ -350,7 +367,11 @@ export struct ReaderDirectoryNavigationSurface {
       Stack({ alignContent: Alignment.Center }) {
         ReaderDirectoryNavigationList({
           view: this.view, sourceId: this.sourceId, bookId: this.bookId, rowHeight: this.rowHeight,
+          mangaDisplay: this.mangaDisplay, mangaScheme: this.mangaScheme,
+          currentChapterIndex: this.currentChapterIndex,
           listPaddingX: this.listPaddingX, listPaddingY: this.listPaddingY,
+          listPaddingRight: this.listPaddingRight,
+          listPaddingTop: this.listPaddingTop, listPaddingBottom: this.listPaddingBottom,
           edgeEffectMode: this.edgeEffectMode, interactionEnabled: this.interactionEnabled,
           chapterEntries: this.chapterEntries,
           chapterDownloadEnabled: this.chapterDownloadEnabled,
@@ -370,7 +391,7 @@ export struct ReaderDirectoryNavigationSurface {
         });
         if (this.view.visibleTotal === 0) {
           Text('没有匹配的目录项')
-            .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
+            .fontColor(readerAppColor('TOK_READ_MUTED', this.mangaDisplay && this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme))
             .fontSize(12)
             .hitTestBehavior(HitTestMode.None);
         }

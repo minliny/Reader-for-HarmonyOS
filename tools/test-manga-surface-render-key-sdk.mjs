@@ -1,3 +1,4 @@
+import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
@@ -43,13 +44,13 @@ class RetainedItems {
   onDataChange(index){if(this.visible.includes(index))this.reconcile([index]);}
 }
 const built=createReaderBuilderProbe(source,names,{
-  ...properties.sdk,MangaStripDataSource:DataSource,ListScroller,Scroller,PhotoViewScaleModel:class {},
+  ...properties.sdk,...mangaSurfaceSdkDependencies,MangaStripDataSource:DataSource,ListScroller,Scroller,PhotoViewScaleModel:class {},
   ReaderWindowCoordinator:{metrics:()=>createDefaultReaderWindowMetrics()},readerInteractiveSafeInsets,mangaUserError,
   hilog:{warn(){},error(){}},
   ScrollAlign:{START:0},ImageFit:{Fill:0},ScrollDirection:{Horizontal:0},TouchType:{Down:0,Up:1},
   LazyForEach:{create(_id,generatedOwner,data,item,key){assert.equal(generatedOwner,owner);assert.equal(typeof item,'function');assert.equal(typeof key,'function');
     if(lazy===undefined){lazy=new RetainedItems(data,item,key);data.registerDataChangeListener(lazy);}lazy.reconcile();},pop(){}},
-  Gesture:boundary,GestureGroup:boundary,PinchGesture:boundary,SwipeGesture:boundary,
+  Gesture:boundary,GestureGroup:boundary,PinchGesture:boundary,SwipeGesture:boundary,TapGesture:boundary,
   GesturePriority:{Parallel:0},GestureMode:{Exclusive:0},SwipeDirection:{Horizontal:0},
 },properties.hooks);
 owner=built.owner;

@@ -12,6 +12,13 @@ import {
   type ReaderSettingsSnapshotV4,
 } from './ReaderSettingsState';
 
+export interface ReaderMangaPreferences {
+  mangaDirection?: 'vertical' | 'horizontal';
+  mangaFit?: 'source' | 'width' | 'contain';
+  mangaBackground?: 'paper' | 'white' | 'ink';
+  mangaPageNumbers?: boolean;
+}
+
 const READER_SETTINGS_PREFERENCES_NAME = 'reader_reading_settings_v1';
 const READER_SETTINGS_SNAPSHOT_KEY = 'snapshot';
 
@@ -76,6 +83,8 @@ export class ReaderSettingsGateway {
         const latest = this.current() ?? await this.readSnapshot(store);
         if (latest.mangaDirection !== undefined) requestedSnapshot.mangaDirection = latest.mangaDirection;
         if (latest.mangaFit !== undefined) requestedSnapshot.mangaFit = latest.mangaFit;
+        if (latest.mangaBackground !== undefined) requestedSnapshot.mangaBackground = latest.mangaBackground;
+        if (latest.mangaPageNumbers !== undefined) requestedSnapshot.mangaPageNumbers = latest.mangaPageNumbers;
       }
       try {
         await store.put(READER_SETTINGS_SNAPSHOT_KEY, JSON.stringify(requestedSnapshot));
@@ -89,40 +98,34 @@ export class ReaderSettingsGateway {
     });
   }
 
-  /** Manga preference shares the existing settings owner and serialized snapshot. */
+  /** Narrow manga writes share the existing queue and preserve novel controls. */
   async updateMangaDirection(horizontal: boolean): Promise<void> {
-    await ReaderThemeHost.prepareUserChange();
-    return this.withSettingsAccess(async (): Promise<void> => {
-      const store = await this.ensureStore();
-      const previous = await store.get(READER_SETTINGS_SNAPSHOT_KEY, '');
-      const snapshot = await this.readSnapshot(store);
-      snapshot.mangaDirection = horizontal ? 'horizontal' : 'vertical';
-      try {
-        await store.put(READER_SETTINGS_SNAPSHOT_KEY, JSON.stringify(snapshot));
-        await store.flush();
-      } catch (error) {
-        await store.put(READER_SETTINGS_SNAPSHOT_KEY, previous);
-        throw error;
-      }
-      ReaderSettingsGateway.snapshots.set(this.runtimeOwner, snapshot);
-    });
+    await this.updateMangaPreferences({ mangaDirection: horizontal ? 'horizontal' : 'vertical' });
   }
 
   async updateMangaFit(fit: 'source' | 'width' | 'contain'): Promise<void> {
+    await this.updateMangaPreferences({ mangaFit: fit });
+  }
+
+  async updateMangaPreferences(patch: ReaderMangaPreferences): Promise<void> {
     await ReaderThemeHost.prepareUserChange();
     return this.withSettingsAccess(async (): Promise<void> => {
       const store = await this.ensureStore();
       const previous = await store.get(READER_SETTINGS_SNAPSHOT_KEY, '');
       const snapshot = await this.readSnapshot(store);
-      snapshot.mangaFit = fit;
+      if (patch.mangaDirection !== undefined) snapshot.mangaDirection = patch.mangaDirection;
+      if (patch.mangaFit !== undefined) snapshot.mangaFit = patch.mangaFit;
+      if (patch.mangaBackground !== undefined) snapshot.mangaBackground = patch.mangaBackground;
+      if (patch.mangaPageNumbers !== undefined) snapshot.mangaPageNumbers = patch.mangaPageNumbers;
+      const normalized = normalizeReaderSettingsSnapshot(snapshot);
       try {
-        await store.put(READER_SETTINGS_SNAPSHOT_KEY, JSON.stringify(snapshot));
+        await store.put(READER_SETTINGS_SNAPSHOT_KEY, JSON.stringify(normalized));
         await store.flush();
       } catch (error) {
         await store.put(READER_SETTINGS_SNAPSHOT_KEY, previous);
         throw error;
       }
-      ReaderSettingsGateway.snapshots.set(this.runtimeOwner, snapshot);
+      ReaderSettingsGateway.snapshots.set(this.runtimeOwner, normalized);
     });
   }
 

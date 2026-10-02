@@ -1,0 +1,49 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: a TOC-backed probe uses the exact active session content kind
+    at file:///Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/tools/test-source-switch-transaction.mjs:120:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'private sourceSwitchProbeQuery(): SourceSwitchProbeQuery {\n' +
+    '    const book = this.detailBook;\n' +
+    "    if (book === undefined) throw new Error('换源需要当前书籍');\n" +
+    '    const session = this.remoteReadingSession?.identity.sourceId === book.sourceId &&\n' +
+    '      this.remoteReadingSession?.identity.bookId === book.bookId ? this.remoteReadingSession : undefined;\n' +
+    '    if (this.detailToc.length === 0) {\n' +
+    "      return { contentKind: (session?.contentKind ?? book.contentKind) === 'manga' ? 'manga' : 'text', sourceId: book.sourceId, bookId: book.bookId, bookName: book.title, author: book.author, authorIdentity: session?.book.authorIdentity, sourceVersion: session?.sourceVersion,\n" +
+    "        currentChapterIndex: 0, currentChapterTitle: '' };\n" +
+    '    }\n' +
+    '    let anchor = this.detailToc[this.detailToc.length - 1];\n' +
+    '    if (this.readingSessionActive) {\n' +
+    '      const requestedIndex = this.directoryCurrentChapterIndex >= 0\n' +
+    '        ? this.directoryCurrentChapterIndex\n' +
+    '        : this.requestedChapterIndex ?? this.detailToc[0].index;\n' +
+    '      for (const entry of this.detailToc) {\n' +
+    '        if (entry.index === requestedIndex) {\n' +
+    '          anchor = entry;\n' +
+    '          break;\n' +
+    '        }\n' +
+    '      }\n' +
+    '    }\n' +
+    '    return {\n' +
+    "      contentKind: (session?.contentKind ?? book.contentKind) === 'manga' ? 'manga' : 'text',\n" +
+    '      sourceId: book.sourceId,\n' +
+    '      bookId: book.bookId,\n' +
+    '      bookName: book.title,\n' +
+    '      author: book.author,\n' +
+    '      authorIdentity: session?.book.authorIdentity, sourceVersion: session?.sourceVersion,\n' +
+    '      currentChapterIndex: anchor.index,\n' +
+    '      currentChapterTitle: anchor.title,\n' +
+    '    };\n' +
+    '  }\n',
+  expected: /contentKind: session\?\.contentKind === 'manga' \? 'manga' : 'text'/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

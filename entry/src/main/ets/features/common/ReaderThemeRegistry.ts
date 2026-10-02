@@ -1,5 +1,5 @@
 // Generated from Reader-UI/theme/registry.json. Do not edit.
-// SHA256 24800a91cb39e4e4f9820e7087a5dcb25233a08beab5b0f904cf84597ab9a084
+// SHA256 a43add8df6b036a217d2b3af4c3d9aaf2ddce5005456dcfecdbe153f0b0422f2
 export type ReaderThemeScheme = 'day' | 'night';
 export type ReaderAppThemeMode = ReaderThemeScheme | 'system';
 export type ReaderThemeId = "day" | "warm" | "night" | "warmNight" | "paper" | "green" | "paperNight" | "greenNight";
@@ -593,23 +593,23 @@ const DAY: Record<ReaderAppColorRole, string> = {
 const NIGHT: Record<ReaderAppColorRole, string> = {
   "TOK_ACCENT": "#FFD69B5F",
   "TOK_ACTION_DIVIDER": "#47E2D1B9",
-  "TOK_BORDER": "#FFE2D1B9",
+  "TOK_BORDER": "#FF41483B",
   "TOK_BOTTOM_BG": "#FF221F1C",
-  "TOK_CARD_BG": "#E62A2622",
-  "TOK_CARD_BG_HI": "#EB2A2622",
+  "TOK_CARD_BG": "#FF282C25",
+  "TOK_CARD_BG_HI": "#FF282C25",
   "TOK_CHAPTER_DIVIDER": "#33E2D1B9",
   "TOK_CONTROL_INK": "#FFEADFCE",
   "TOK_DANGER": "#FFD62222",
   "TOK_FIELD_SURFACE": "#D12C2824",
   "TOK_GREEN": "#FFD2BD96",
-  "TOK_INK": "#FFEADFCE",
-  "TOK_LINE": "#2EE2D1B9",
+  "TOK_INK": "#FFEAE7DE",
+  "TOK_LINE": "#FF41483B",
   "TOK_LINE_HARD": "#66E2D1B9",
   "TOK_LINE_STRONG": "#57E2D1B9",
   "TOK_META_BG": "#FF2C2824",
-  "TOK_MUTED": "#FFBAAD9C",
+  "TOK_MUTED": "#FFABA99F",
   "TOK_ON_PRIMARY": "#FFFFFAF4",
-  "TOK_PAPER": "#FF24211E",
+  "TOK_PAPER": "#FF1C1E1A",
   "TOK_PRIMARY_BG": "#1FD2BD96",
   "TOK_PRIMARY_BORDER": "#6BD2BD96",
   "TOK_PRIMARY_DARK": "#FF7A684F",
@@ -627,7 +627,7 @@ const NIGHT: Record<ReaderAppColorRole, string> = {
   "TOK_READ_PRIMARY": "#FFD2BD96",
   "TOK_READ_SURFACE": "#FA2A2622",
   "TOK_READ_UNREAD": "#FFBAAD9C",
-  "TOK_ROW_DIVIDER": "#2EE2D1B9",
+  "TOK_ROW_DIVIDER": "#FF41483B",
   "TOK_SETTING_ACTION_BG": "#2E2379A4",
   "TOK_SETTING_ICON_BG": "#292379A4",
   "TOK_SS_CLOSE_BG": "#80554D45",
@@ -1172,8 +1172,8 @@ const NIGHT: Record<ReaderAppColorRole, string> = {
   "app.toggle.offTrack": "#57E2D1B9",
   "app.tts.onPrimary": "#FF1C1A18",
   "app.tts.thumb": "#FFEADFCE",
-  "app.window.background": "#FF24211E",
-  "app.window.foreground": "#FFEADFCE"
+  "app.window.background": "#FF1C1E1A",
+  "app.window.foreground": "#FFEAE7DE"
 };
 export function readerAppColor(role: ReaderAppColorRole, scheme: string): string {
   return scheme === 'night' ? NIGHT[role] : DAY[role];

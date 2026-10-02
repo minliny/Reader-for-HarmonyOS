@@ -2,7 +2,6 @@ import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderShelfFonts } from '../common/ReaderFonts';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
-  readerInteractiveSafeBottom,
   readerInteractiveSafeLeft,
   readerInteractiveSafeRight,
 } from '../common/ReaderWindowMetrics';
@@ -20,6 +19,7 @@ import {
   TOK_PRIMARY_DARK,
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
+import { readerFloatingTabBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { TYPE_MAIN_TAB_LABEL } from '../common/ReaderTypography';
 import { isReaderMainTabEnabled } from '../../app/ReaderProductScope';
 
@@ -70,18 +70,20 @@ export struct MainTabBar {
 
   @Builder
   private bottomBar() {
-    Row() {
+    Row({ space: 8 }) {
       ForEach(MAIN_TABS, (tab: MainTabDef) => {
         this.bottomTabItem(tab, this.current === tab.key);
       }, (tab: MainTabDef): string => `main-tab-${tab.key}`);
     }
     .width(this.bottomBarFrame().width)
     .height(68)
-    .padding(TOK_SPACE_XS)
+    .padding(8)
     .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-    .borderRadius(24)
-    .margin({ bottom: Math.max(15, this.interactiveBottom()) })
+    .borderRadius(34)
+    .clip(true)
+    .hitTestBehavior(HitTestMode.Transparent)
+    .margin({ bottom: readerFloatingTabBottomInset(ReaderWindowCoordinator.metrics()) })
     .translate({ x: this.bottomBarTranslateX() });
   }
 
@@ -119,11 +121,12 @@ export struct MainTabBar {
         .fontColor(active ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme));
     }
     .layoutWeight(1)
-    .height(54)
+    .height(50)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(active ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : Color.Transparent)
-    .borderRadius(24)
+    .borderRadius(25)
+    .accessibilityText(`${tab.label}${active ? '，已选中' : ''}`)
     .onClick((): void => {
       if (!active) {
         this.onSelect(tab.key);
@@ -152,7 +155,8 @@ export struct MainTabBar {
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(active ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : Color.Transparent)
-    .borderRadius(24)
+    .borderRadius(25)
+    .accessibilityText(`${tab.label}${active ? '，已选中' : ''}`)
     .onClick((): void => {
       if (!active) {
         this.onSelect(tab.key);
@@ -192,17 +196,13 @@ export struct MainTabBar {
       width,
       readerInteractiveSafeLeft(metrics),
       readerInteractiveSafeRight(metrics),
-      new SurfaceWidthSpec(360, 15, 15, 'center'),
+      new SurfaceWidthSpec(Math.min(360, 98 * MAIN_TABS.length), 32, 32, 'center'),
     );
   }
 
   private bottomBarTranslateX(): number {
     const frame = this.bottomBarFrame();
     return (frame.left - frame.right) / 2;
-  }
-
-  private interactiveBottom(): number {
-    return readerInteractiveSafeBottom(ReaderWindowCoordinator.metrics());
   }
 
   private liveWindowWidth(): number {

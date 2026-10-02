@@ -1,3 +1,4 @@
+import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire, registerHooks, stripTypeScriptTypes} from 'node:module';
@@ -36,11 +37,11 @@ assert.equal(stopCallbacks.length, 2);
 function stop(owner, index) {
   new Function(`${stripTypeScriptTypes(`const callback = ${stopCallbacks[index]};`)}\nreturn callback;`).call(owner)();
 }
-const methods = ['publish', 'requestedLast', 'saveVisible', 'rememberVisible', 'positionIdentity', 'effectiveFit', 'rowDisplayWidth', 'rowDisplayHeight', 'rowDisplayTop', 'rowDisplayLeft', 'visibleX', 'changeZoom', 'restore', 'finishLayout', 'onViewportScroll', 'onViewportTouch', 'measureVisibleWindow', 'onRowAppear', 'confirmMountedTurn', 'changeFit', 'toggleDirection', 'turnPage', 'handleBack', 'refreshImages', 'aboutToDisappear'];
+const methods = ['publish', 'requestedLast', 'saveVisible', 'rememberVisible', 'positionIdentity', 'effectiveFit', 'rowDisplayWidth', 'rowDisplayHeight', 'rowDisplayTop', 'rowDisplayLeft', 'visibleX', 'changeZoom', 'restore', 'finishLayout', 'onViewportScroll', 'onViewportTouch', 'measureVisibleWindow', 'onRowAppear', 'confirmMountedTurn', 'changeFit', 'toggleDirection', 'turnPage', 'seekPage', 'handleBack', 'refreshImages', 'aboutToDisappear'];
 const timers = [];
 // Optional baseline path executes the pre-fix methods against the same assertions.
 const Surface = productionMotionMethods(surfaceURL, methods.filter(name => memberNames.has(name)), {
-  setTimeout: callback => timers.push(callback), ScrollAlign: {START: 0}, MangaLayoutFrame
+  setTimeout: callback => timers.push(callback), ScrollAlign: {START: 0}, MangaLayoutFrame, MangaBookPresentation, AppStorage:{setOrCreate(){}}
 });
 const pages = [0, 1, 2].map(ordinal => ({ordinal, pageId: `mp1:${String(ordinal).repeat(64)}`, resourceRef: `manga:mp1:${String(ordinal).repeat(64)}`}));
 const entry = {chapter: {manifest: {chapter: {sourceId: 's', bookId: 'b', chapterId: '/c'}, sourceRuleVersion: 'r', manifestVersion: 'v', decodeRevision: 'identity-v1', pages}, chapterIndex: 0, chapterTitle: 'c', totalPages: 3, pageStart: 0, cached: true, resources: []}, targetOrdinal: 1, recoveryRequired: false, progress: {token: {epoch: 1, revision: 0}, location: null}};
@@ -72,7 +73,7 @@ async function fixture(horizontal = false, offline = true) {
   const native = {first: projection.index(1, 0.5), y: -100, width: 1000, height: 1000, xOffset: 100};
   const surface = Object.assign(new Surface(), {controller, runtime,
     data: {projection, totalCount: () => projection.totalCount(), getData: index => projection.row(index), notify() {}},
-    first: native.first, last: native.first, mounted: true, opened: true, recovering: false,
+    first: native.first, last: native.first, panel:'', chapterEnd:false, brightnessOwner:0, mounted: true, opened: true, recovering: false,
     horizontal, horizontalPage: 1, zoom: 2, scalePolicy: new Scale(), viewportWidth: 500, viewportHeight: 900,
     fitPreference: 'width', layoutGeneration: 0, viewportGeneration: 0, presentationGeneration: 0, appliedLayoutGeneration: -1, loginGeneration: 0,
     restoringAnchor: false, error: '', settingsGateway: {updateMangaDirection: async () => {}, updateMangaFit: async () => {}},
@@ -287,3 +288,16 @@ for (const scenario of ['same-manifest', 'changed-exact', 'changed-unresolved', 
   f.close();
   console.log(`PASS actual refresh lifecycle: ${scenario}`);
 }
+
+{
+  const f = await fixture(false);
+  f.surface.publishedManifestVersion = 'v';
+  f.controller.onChange = () => f.surface.publish();
+  await f.surface.seekPage(2);
+  assert.equal(f.controller.displayedOrdinal, 2);
+  assert.equal(f.surface.visibleAnchor.ordinal, 2, 'async geometry publication retains the explicit vertical seek anchor');
+  assert.equal(f.projection.row(f.surface.first).ordinal, 2, 'old mounted rows cannot supersede the target while seeking');
+  assert.deepEqual(f.writes.map(write => write.location.pageOrdinalFallback), [1], 'seeking does not save unpainted target pixels');
+  f.close();
+}
+console.log('PASS real controller vertical seek retains explicit anchor through image publication and never persists an unpainted target');

@@ -64,12 +64,23 @@ function checkRenderWiring(text) {
     'row-height updates must carry a lifecycle generation');
   assert.match(text, /private scheduleRowHeightFlush\(\): void \{[\s\S]*?setTimeout\(\(\): void => \{/,
     'row-height extent writes must be deferred to the next turn');
-  assert.equal((text.match(/\.childrenMainSize\(this\.itemSizes\)/g) ?? []).length, 1,
+  assert.equal((text.match(/\.childrenMainSize\(this\.naturalRowHeight \? undefined : this\.itemSizes\)/g) ?? []).length, 1,
     'the actual List receives exactly one shared extent container');
-  assert.equal((text.match(/\.height\(this\.rowHeight\)/g) ?? []).length, 1,
+  assert.equal((text.match(/\.height\(this\.naturalRowHeight \? undefined : this\.rowHeight\)/g) ?? []).length, 1,
     'materialized ListItem height uses the same source as virtual extent');
   assert.match(text, /LazyForEach\(this\.dataSource/,
     'extent correction must preserve lazy rows and a notified data source');
+  // Manga natural rows keep the native List viewport intact: top/bottom
+  // clearance belongs to the List content offsets, while the text branch
+  // keeps its legacy fixed row padding and extent.
+  assert.match(text, /\.padding\(\{[\s\S]*?top: this\.naturalRowHeight \? 0 : this\.listPaddingTop/,
+    'manga natural rows must not shrink the native viewport with List padding');
+  assert.match(text, /\.contentStartOffset\(this\.naturalRowHeight \? \(this\.listPaddingTop >= 0 \? this\.listPaddingTop : this\.listPaddingY\) : 0\)/,
+    'manga top clearance is a content offset rather than viewport padding');
+  assert.match(text, /\.contentEndOffset\(this\.naturalRowHeight \? \(this\.listPaddingBottom >= 0 \? this\.listPaddingBottom : this\.listPaddingY\) : 0\)/,
+    'manga bottom clearance is a content offset rather than viewport padding');
+  assert.match(text, /top: this\.naturalRowHeight \? 0 : this\.listPaddingTop >= 0 \? this\.listPaddingTop : this\.listPaddingY,\n      bottom: this\.naturalRowHeight \? 0 : this\.listPaddingBottom >= 0 \? this\.listPaddingBottom : this\.listPaddingY/,
+    'text directory retains the existing explicit List padding branch');
 }
 
 checkLifecycle(loadList());
@@ -107,7 +118,7 @@ assert.throws(() => checkLifecycle(loadList(source.replace(
 assert.throws(() => checkLifecycle(loadList(source.replace(
   'this.itemSizes.childDefaultSize = initialSize;', 'this.itemSizes.childDefaultSize = 40;'))),
   'missing initial Quick extent synchronization is detected');
-assert.throws(() => checkRenderWiring(source.replace('.childrenMainSize(this.itemSizes)', '')),
+assert.throws(() => checkRenderWiring(source.replace('.childrenMainSize(this.naturalRowHeight ? undefined : this.itemSizes)', '')),
   'disconnected native List extent is detected');
 
 console.log('reader directory extent: production lifecycle + wiring passed (not native virtualization/anchor acceptance)');

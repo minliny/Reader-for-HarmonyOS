@@ -1,4 +1,5 @@
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
+import { MangaBookPresentation } from '../manga/MangaBookPresentation.ts';
 
 /** Shared, display-only projection. It never changes Core metadata or order. */
 export class ShelfBookPresentation {
@@ -19,14 +20,33 @@ export class ShelfBookPresentation {
   }
 
   static progress(book: ShelfBook): string {
+    // Manga's persisted location is a page identity, not the novel scalar
+    // basis-points field. No reliable whole-book manga denominator is exposed.
+    if (book.contentKind === 'manga') return '*%';
     const value = this.progressPercent(book);
     if (value <= 0) return '未读';
     return value < 1 ? '已读 <1%' : `已读 ${Math.floor(value)}%`;
   }
 
   static progressPercent(book: ShelfBook): number {
+    if (book.contentKind === 'manga') return 0;
     const value = book.readProgress ?? 0;
     return Number.isFinite(value) ? Math.max(0, Math.min(10000, value)) / 100 : 0;
+  }
+
+  static readingPosition(book: ShelfBook): string {
+    if (book.contentKind === 'manga') {
+      return MangaBookPresentation.label(MangaBookPresentation.get(book.sourceId, book.bookId));
+    }
+    return book.currentChapterTitle?.trim() || '尚未阅读';
+  }
+
+  static contentLabel(book: ShelfBook): string {
+    return book.contentKind === 'manga' ? '漫画' : book.contentKind === 'audio' ? '有声' : '小说';
+  }
+
+  static originLabel(book: ShelfBook): string {
+    return book.sourceId === 'local' ? '本地' : '在线';
   }
 
   static visible(books: ShelfBook[], selectedGroup: string,
@@ -35,7 +55,11 @@ export class ShelfBookPresentation {
       const group = book.group?.trim() ?? '';
       const inGroup = selectedGroup === '' || (selectedGroup === '默认' ? group === '' || group === '默认' : group === selectedGroup);
       const progress = this.progressPercent(book);
-      const inState = readingState === 'unread' ? progress === 0 :
+      const mangaHasPosition = book.contentKind === 'manga' &&
+        MangaBookPresentation.get(book.sourceId, book.bookId) !== undefined;
+      const inState = book.contentKind === 'manga' ? (readingState === 'unread' ? !mangaHasPosition :
+        readingState === 'reading' ? mangaHasPosition : readingState === 'finished' ? false : true) :
+        readingState === 'unread' ? progress === 0 :
         readingState === 'reading' ? progress > 0 && progress < 100 :
         readingState === 'finished' ? progress === 100 : true;
       const inKind = sourceKind === 'local' ? book.sourceId === 'local' :

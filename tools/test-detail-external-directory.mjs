@@ -16,8 +16,8 @@ function index(sourceId='local'){
  return host;
 }
 for(const sourceId of ['local','remote']){
- const host=index(sourceId);host.openFullDirectory();
- assert.equal(host.route,'directory');assert.equal(host.readingSessionActive,false);assert.equal(host.navigationGeneration,1,'catalog viewing retains detail admission generation');assert.equal(host.readerOwnsWindowEdges(),false);
+ const host=index(sourceId);assert.equal(host.readerOwnsWindowEdges(),true,'detail floating bars and scroll share one edge owner');host.openFullDirectory();
+ assert.equal(host.route,'directory');assert.equal(host.readingSessionActive,false);assert.equal(host.navigationGeneration,1,'catalog viewing retains detail admission generation');assert.equal(host.readerOwnsWindowEdges(),false,'ordinary text catalog keeps the existing single App safe-top owner');
  assert.equal(host.onBackPress(),true);assert.equal(host.route,'detail');assert.equal(host.readingSessionActive,false);assert.equal(host.navigationGeneration,1);
  host.openFullDirectory();host.onDirectoryChapterSelected(19);
  assert.equal(host.readingSessionActive,true);assert.equal(host.requestedChapterIndex,19);assert.equal(host.route,'reading','PH116 selection enters the normal reader immediately');
@@ -25,6 +25,11 @@ for(const sourceId of ['local','remote']){
  host.directoryCurrentChapterIndex=19;host.openReaderControlDirectory();assert.equal(host.directoryReturnTarget,'readerControl');assert.equal(host.route,'directory');
  host.onDirectoryChapterSelected(19);assert.equal(host.route,'reading','reader current chapter is revealed without a new session');
  host.openReaderControlDirectory();host.closeDirectory();assert.equal(host.route,'reading');assert.equal(host.readingSessionActive,true);
+}
+{
+ const host=index('remote');host.detailBook.contentKind='manga';host.openFullDirectory();
+ assert.equal(host.readerOwnsWindowEdges(),true,'manga external directory applies safe clearance inside its full-viewport list');
+ host.closeDirectory();assert.equal(host.readerOwnsWindowEdges(),true,'the retained detail keeps its own single safe inset');
 }
 const proof={sourceId:'remote',bookId:'book',chapterIndex:19,bodyVersion:'body',processingVersion:'processing'};
 const localProof={...proof,sourceId:'local'};

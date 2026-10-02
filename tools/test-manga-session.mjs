@@ -166,7 +166,7 @@ console.log('PASS nonblocking disposal: pixel leases released immediately, admit
  const ControllerSurface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],{MangaSessionGateway});
  const controller=new Controller(rt);
  const surface=Object.assign(new ControllerSurface(),{mounted:true,controller,runtime:rt,sourceId:'s',bookId:'b',offline:false,
-  remoteBookSeed:{},publish:()=>phases.push('published'),restore:()=>phases.push('restored'),onRemoteSessionReady:()=>phases.push('catalog-ready')});
+  remoteBookSeed:{},opened:false,publish:()=>phases.push('published'),restore:()=>phases.push('restored'),onRemoteSessionReady:()=>phases.push('catalog-ready')});
  await surface.open(controller);assert.equal(surface.opened,true);assert.ok(phases.indexOf('published')<phases.indexOf('catalog-start'));assert.equal(phases.includes('catalog-ready'),false);
  surface.mounted=false;controller.close();finishCatalog({});await new Promise(r=>setImmediate(r));assert.equal(phases.includes('catalog-ready'),false);
 }

@@ -16,23 +16,23 @@ const target={contentKind:'manga',sourceVersion:'s',identity:{sourceId:'target',
 {const f=fixture();const p=await f.gateway.prepare('old','a',target,'C',5,f.current);assert.equal(p.mapping,'approximate');assert.equal(p.targetPageOrdinal,1);assert.equal(f.releases.length,2);assert.equal(f.calls.filter(c=>c[0]==='image').length,2);await assert.rejects(f.gateway.commit(p,false,f.current),/CONFIRMATION/);assert.equal(f.calls.some(c=>c[0]==='manga.sourceSwitch.commit'),false);await f.gateway.commit(p,true,f.current);assert.equal(f.calls.at(-1)[1].expectedFrom.revision,1);}
 {const f=fixture();f.fail();await assert.rejects(f.gateway.prepare('old','a',target,'C',3,f.current),/image failed/);assert.equal(f.calls.some(c=>c[0]==='manga.sourceSwitch.commit'),false);}
 {const f=fixture();const p=await f.gateway.prepare('old','a',target,'C',3,f.current);f.cancel();await assert.rejects(f.gateway.commit(p,true,f.current),/CONFIRMATION/);}
-console.log('PASS manga switch requires consent, checks first and landing image, retains old shelf on failed image, fences cancellation');
+console.log('PASS manga switch directly selects after saved-position and first/landing-image validation, retains old shelf on failed image, fences cancellation');
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
 for(const mode of ['success','cancel','image-fail','lost-response','navigation-away']){
- let committed=false,refresh=0,installed=0,consent=false,current=true;
+ let committed=false,refresh=0,installed=0,consent=mode!=='cancel',current=mode!=='cancel';
  const proposal={expectedFrom:{epoch:2,revision:1},firstImage:{chapterIndex:3},chapterTitle:'C',targetPageOrdinal:1};
  class Sessions {async progress(){return {token:{epoch:2,revision:1},location:{chapter:{chapterId:'/old'}}};}}
  class Switch {async prepare(){if(mode==='image-fail')throw Error('image failed');return proposal;}async commit(_p,accepted){assert.equal(accepted,true);assert.equal(consent,true);committed=true;if(mode==='navigation-away')current=false;if(mode==='lost-response')throw Error('response lost');}}
  class Shelf {async loadShelfBook(source){return source==='old'?(committed?undefined:{sourceId:'old',bookId:'a'}):(committed?{sourceId:'target',bookId:'b',contentKind:'manga'}:undefined);}}
  const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),['switchMangaSource'],{MangaSessionGateway:Sessions,MangaSourceSwitchGateway:Switch,ReaderCoreGateway:Shelf,ReaderRuntimeOwner:{current:()=>({})},errorMessageOf:e=>e.message});
- const owner=Object.assign(new Index(),{detailBook:{sourceId:'old',bookId:'a'},remoteReadingSession:{contentKind:'manga',entries:[{url:'/old',title:'Saved Chapter',index:8}]},
- getSourceSwitchGateway:()=>({fetchTargetToc:async()=>({readingSession:target})}),getUIContext:()=>({showAlertDialog:dialog=>{assert.match(dialog.message,/近似/);consent=mode!=='cancel';(consent?dialog.primaryButton:dialog.secondaryButton).action();}}),refreshBookshelf:()=>refresh++,performSourceSwitchSeam:()=>installed++,closeSourceSwitch:()=>{},presentSourceSwitchAcquisitionFailure:()=>{}});
+ const owner=Object.assign(new Index(),{detailBook:{sourceId:'old',bookId:'a'},remoteReadingSession:{contentKind:'manga',identity:{sourceId:'old',bookId:'a'},entries:[{url:'/old',title:'Saved Chapter',index:8}]},
+ getSourceSwitchGateway:()=>({fetchTargetToc:async()=>({readingSession:target})}),refreshBookshelf:()=>refresh++,performSourceSwitchSeam:()=>installed++,closeSourceSwitch:()=>{},presentSourceSwitchAcquisitionFailure:()=>{}});
  await owner.switchMangaSource({sourceId:'target',bookUrl:'b',category:'comic'},()=>current);
  assert.equal(committed,!['cancel','image-fail'].includes(mode));
  assert.equal(installed,['success','lost-response'].includes(mode)?1:0);
  if(committed)assert.ok(refresh>0);
 }
-console.log('PASS actual Index manga switch: saved chapter, explicit approximation consent, cancelled/failed preparation, lost commit response reconciliation and navigation fence');
+console.log('PASS actual Index manga switch: saved chapter, direct selection with first/landing-image validation, cancelled/failed preparation, lost commit response reconciliation and navigation fence');
 {
  const f=fixture();const grouped={...target,entries:[{index:5,title:'C',url:'/group',navigable:false},...target.entries]};
  const proposal=await f.gateway.prepare('old','a',grouped,'C',5,f.current);

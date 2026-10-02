@@ -73,6 +73,7 @@ export type BookshelfListParams = {
   projectionRevision?: string;
   readingState?: string;
   sourceKind?: string;
+  contentKind?: string;
   offset?: number;
   hasReadingProgress?: boolean;
   sortBy?: 'manual' | 'addedAt' | 'lastReadAt' | 'title' | 'author';
@@ -106,6 +107,10 @@ export class ReaderCoreGateway {
 
   async loadBookshelf(params: BookshelfListParams = {}, isCurrent?: () => boolean, background: boolean = false): Promise<BookshelfState> {
     if (isCurrent?.() === false) throw new Error('BOOKSHELF_READ_CANCELLED');
+    if (params.contentKind !== undefined && params.contentKind !== 'all' &&
+      this.runtimeOwner.supportsCoreCapability?.('bookshelf.contentKindFilter.v1') !== true)
+      throw new Error('漫画类型筛选需要配套的 Core 版本，请更新应用');
+    if (params.contentKind === 'all') delete params.contentKind;
     const options = { shouldCancel: (): boolean => isCurrent?.() === false };
     const result = background ? await this.runtimeOwner.bookAcquisitions().request('bookshelf.list', params, options, 'background') :
       await this.runtimeOwner.request('bookshelf.list', params, options);

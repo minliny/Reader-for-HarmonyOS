@@ -72,151 +72,92 @@ check('empty shelf uses the same right-aligned three-action header', () => {
     'the tools shrink to their content without reserving the removed gear slot');
 });
 const list = read('bookshelf/ShelfBookListDetails.ets').replace('  build() {', '  build() { Column() {} }\n  @Builder\n  shelfDetails() {');
-check('PH61 progress/source retain equal left/right slots and live progress after row reuse', () => {
-  const { owner } = createReaderBuilderProbe(list, ['shelfDetails', 'statusPill'], { ShelfBookPresentation: Projection, Blank: stub('Blank') });
+check('compact shelf keeps two tags and live independent progress after row reuse', () => {
+  const { owner } = createReaderBuilderProbe(list, ['shelfDetails', 'metadataTag', 'positionLabel'], { ShelfBookPresentation: Projection, Blank: stub('Blank') });
   owner.book = { title: '书名', author: '', sourceId: 'online', sourceName: '非常长的实际书源名称', lastChapter: '最新章节', readProgress: 8765 };
-  owner.appThemeScheme = 'day'; owner.shelfDetails();
-  const nodes = texts(owner), source = nodes.find(n => n.create === '非常长的实际书源名称'), progress = nodes.find(n => n.create === '已读 87%');
-  assert.ok(nodes.indexOf(progress) < nodes.indexOf(source));
-  assert.equal(progress.textAlign, 'TextAlign.Start'); assert.equal(source.textAlign, 'TextAlign.Start');
-  assert.equal(source.maxLines, 1); assert.equal(source.textOverflow.overflow, 'TextOverflow.Ellipsis');
-  assert.equal(nodes[1].constraintSize.minHeight, 15, 'empty author keeps its independent second line');
-  const slots = [...owner.nodes.values()].filter(n => n.type === 'Stack' && n.layoutWeight === 1);
-  assert.equal(slots.length, 2);
-  for (const slot of slots) {
-    assert.equal(slot.constraintSize.minWidth, 0); assert.equal(slot.height, 18);
-    assert.equal(slot.borderRadius, 9); assert.equal(slot.clip, true);
-    assert.equal(slot.create.alignContent, 'Alignment.Start');
-  }
+  owner.appThemeScheme = 'day'; owner.mangaRevision=0; owner.shelfDetails();
+  const nodes = texts(owner), progress = nodes.find(n => n.create === '已读 87%');
+  assert.ok(progress); assert.equal(progress.fontSize,11);assert.equal(progress.lineHeight,14);
+  const author=nodes.find(n=>n.create==='');assert.equal(author.constraintSize.minHeight,14,'empty author retains its own compact line');
+  assert.deepEqual(nodes.filter(n=>n.height===16).map(n=>n.create),['小说','在线']);
   const bar = [...owner.nodes.values()].find(n => n.type === 'Progress');
-  assert.equal(bar.create.value, 87.65); assert.equal(bar.create.total, 100);
+  assert.equal(bar.create.value, 87.65); assert.equal(bar.create.total, 100);assert.equal(bar.height,3);
   assert.equal(bar.style.enableSmoothEffect, false, 'list recycling must not restart a progress animation');
   for (const [input, percent, label] of [[0, 0, '未读'], [1, .01, '已读 <1%'], [10000, 100, '已读 100%'], [12000, 100, '已读 100%'], [-1, 0, '未读'], [NaN, 0, '未读']]) {
     owner.book = { ...owner.book, sourceName: `源${input}`, readProgress: input }; owner.replay();
     assert.equal(bar.create.value, percent);
     assert.ok(texts(owner).some(n => n.create === label));
-    assert.ok(texts(owner).some(n => n.create === `源${input}`));
+    assert.deepEqual(texts(owner).filter(n=>n.height===16).map(n=>n.create),['小说','在线'],'changing source name does not create a third metadata tag');
   }
 });
 
 const detailSource = read('bookshelf/LocalBookDetail.ets');
-check('PH116 detail preview expands up to 20 rows in the outer detail scroll', () => {
+check('detail preview retains at most 20 Core identities in the outer scroll and volume rows only fold', () => {
   for (const count of [0, 3, 20, 40]) {
     const { owner } = createReaderBuilderProbe(detailSource,
-      ['chapterSection', 'chapterRow', 'visibleToc', 'chapterEmptyMessage', 'chapterSectionHeight'], {
-        CHAPTER_SECTION_HEIGHT: 282, CHAPTER_ROW_HEIGHT: 58, CHAPTER_PREVIEW_LIMIT: 20,
-        ButtonType: { Normal: 'Normal' },
-      });
+      ['catalog', 'chapterRow', 'visibleToc', 'chapterEmptyMessage', 'chapterIndent','isCurrentChapter'], { CHAPTER_PREVIEW_LIMIT:20 });
     const toc = Array.from({ length: count }, (_, offset) => ({ index: 7 + offset * 3,
       title: `第${offset + 1}章`, navigable: offset !== 1 }));
-    const selected = [];
-    let directories = 0;
-    Object.assign(owner, { appThemeScheme: 'day', book: { sourceId: 'source', bookId: 'book' },
-      toc, loadingMessage: '', readingBlockedReason: '', contentWidth: () => 326,
-      onSelectChapter: index => selected.push(index),
-      onOpenDirectory: () => { directories += 1; } });
-    owner.chapterSection();
-    const nodes = [...owner.nodes.values()];
-    const chapterTexts = texts(owner).filter(node => /^第\d+章$/.test(node.create));
-    assert.equal(chapterTexts.length, Math.min(count, 20));
-    assert.deepEqual(owner.visibleToc(), toc.slice(0, 20), 'preview retains exact chapter identity/order');
-    for (const node of chapterTexts) assert.deepEqual([node.fontSize, node.fontWeight], [14, 'FontWeight.Regular']);
-    assert.equal(nodes.filter(node => node.type === 'Scroll').length, 0,
-      'chapter list must not hide its twenty rows behind a four-row inner scroll');
-    assert.ok(nodes.some(node => node.type === 'Stack' &&
-      node.height === (count > 0 ? 50 + 58 * Math.min(count, 20) : 282)));
-    const directory = nodes.find(node => node.width === 94 && node.height === 44);
-    assert.equal(directory.enabled, true);
-    directory.onClick();
-    assert.equal(directories, 1,
-      'actual full-directory hit target forwards only the directory intent');
-    assert.deepEqual(selected, []);
-    const rows = nodes.filter(node => node.type === 'Row' && node.height === 58 && node.onClick);
-    assert.equal(rows.length, Math.min(count, 20));
-    if (rows.length) {
-      rows.at(-1).onClick();
-      assert.deepEqual(selected, [toc[Math.min(count, 20) - 1].index],
-        'preview keeps sparse Core indices instead of reindexing display rows');
-      rows[1].onClick();
-      assert.equal(selected.length,1,'volume heading remains visible without a chapter jump');
+    const selected = [];let directories = 0;
+    Object.assign(owner, { appThemeScheme: 'day', book: { sourceId: 'source', bookId: 'book' },removing:false,collapsedGroups:[],
+      toc, loadingMessage: '', readingBlockedReason: '',onSelectChapter: index => selected.push(index),onOpenDirectory:()=>directories++ });
+    owner.catalog();
+    const nodes = [...owner.nodes.values()], chapterTexts = texts(owner).filter(node => /^第\d+章$/.test(node.create));
+    assert.equal(chapterTexts.length, Math.min(count, 20));assert.deepEqual(owner.visibleToc(), toc.slice(0,20));
+    chapterTexts.forEach((node,index)=>assert.deepEqual([node.fontSize,node.fontWeight],[14,toc[index].navigable===false?'FontWeight.Medium':'FontWeight.Regular']));
+    assert.equal(nodes.filter(node=>node.type==='Scroll').length,0,'preview remains in the outer page scroll');
+    const directory=texts(owner).find(node=>node.create==='完整目录 ›');assert.equal(directory.height,44);assert.equal(directory.enabled,true);
+    directory.onClick();assert.equal(directories,1);assert.deepEqual(selected,[]);
+    const rows=nodes.filter(node=>node.type==='Row'&&node.onClick&&node.constraintSize?.minHeight);
+    assert.equal(rows.length,Math.min(count,20));
+    if(rows.length) {
+      rows.at(-1).onClick();assert.deepEqual(selected,[toc[Math.min(count,20)-1].index],'display retains sparse Core indices');
+      rows[1].onClick();assert.equal(selected.length,1,'volume row folds without navigating');assert.deepEqual(owner.collapsedGroups,[toc[1].index]);
     }
-    owner.removing=true;owner.replay();directory.onClick();
-    assert.equal(directory.enabled,false);assert.equal(directories,1);
+    owner.removing=true;owner.replay();directory.onClick();assert.equal(directory.enabled,false);assert.equal(directories,1);
     if(rows.length){rows[0].onClick();assert.equal(selected.length,1);}
   }
 });
-for (const scheme of ['day', 'night']) {
-  check(`${scheme}: detail metadata shares source typography, label and moving source action`, () => {
-    const { owner } = createReaderBuilderProbe(detailSource, ['heroCard'], { bookAuthorLabel, NoCoverCover: Child, ImageFit: { Cover: 'Cover' } });
-    Object.assign(owner, { appThemeScheme: scheme, book: { title: '书名', author: '作者名', sourceName: '短书源', lastChapter: '最新章节', coverUrl: 'https://example.test/cover' },
-      hasCover: () => true, contentWidth: () => 326, sourceSwitchEnabled: true });
-    owner.heroCard();
-    const nodes = texts(owner);
-    assert.ok(nodes.some(n => n.create === '作者：作者名'));
-    const metadata = ['最新：最新章节', '书源：短书源', '分组：默认'].map(label => nodes.find(n => n.create === label));
-    assert.ok(metadata.every(Boolean));
-    for (const node of metadata) assert.deepEqual([node.fontFamily, node.fontWeight, node.fontSize, node.lineHeight, node.height], ['ReaderInter', 'FontWeight.Bold', 12, 15, 18]);
-    const source = metadata[1]; assert.equal(source.width, undefined); assert.equal(source.flexShrink, 1);
-    assert.equal(source.textOverflow.overflow, 'TextOverflow.Ellipsis');
-    const action = nodes.find(n => n.create === '更换书源');
-    assert.deepEqual([action.width, action.height, action.lineHeight, action.textAlign, action.maxLines], [52, 12, 12, 'TextAlign.Center', 1]);
-    assert.equal(action.padding, undefined, 'the 52vp button must not lose 16vp to text padding');
-    const hit = [...owner.nodes.values()].find(n => n.type === 'Stack' && n.width === 52);
-    assert.equal(hit.flexShrink, 0); assert.equal(hit.height, 18);
-    assert.equal(hit.create.alignContent, 'Alignment.Center');
-    assert.equal((hit.height - action.height) / 2, 3, 'fixed 12vp line box leaves symmetric vertical space');
-    let switches = 0; owner.onSwitchSource = () => switches++;
-    hit.onClick(); assert.equal(switches, 1);
-    owner.sourceSwitchEnabled = false; owner.replay(); hit.onClick(); assert.equal(switches, 1, 'local action stays disabled');
-    owner.book = { ...owner.book, sourceName: '非常长的实际名称'.repeat(20) }; owner.replay();
-    assert.equal(texts(owner).find(n => String(n.create).startsWith('书源：')).width, undefined);
-    for (const author of ['作者：关关公子', '浅草茉莉\n进入作者主页 →']) {
-      const raw = { ...owner.book, author }; owner.book = raw; owner.replay();
-      assert.ok(texts(owner).some(n => n.create === `作者：${bookAuthorLabel(author)}`));
-      assert.equal(raw.author, author, 'detail presentation must preserve source metadata');
+for(const scheme of ['day','night']) {
+  check(`${scheme}: current source and author facts remain exact while the source action follows permission`,()=>{
+    const {owner}=createReaderBuilderProbe(detailSource,['hero','metadataTag','readingFacts'],{bookAuthorLabel,NoCoverCover:Child,ImageFit:{Cover:'Cover'}});
+    Object.assign(owner,{appThemeScheme:scheme,book:{sourceId:'source',title:'书名',author:'作者名',sourceName:'短书源',lastChapter:'最新章节',coverUrl:'https://example.test/cover'},hasCover:()=>true,sourceSwitchEnabled:true});
+    owner.hero();owner.readingFacts();
+    assert.ok(texts(owner).some(n=>n.create==='作者名'));
+    const source=texts(owner).find(n=>n.create==='当前来源：短书源');assert.equal(source.layoutWeight,1);assert.equal(source.constraintSize.minWidth,0);
+    assert.equal(source.maxLines,1);assert.equal(source.textOverflow.overflow,'TextOverflow.Ellipsis');
+    const action=texts(owner).find(n=>n.create==='换源');assert.equal(action.height,32);
+    let switches=0;owner.onSwitchSource=()=>switches++;action.onClick();assert.equal(switches,1);
+    owner.sourceSwitchEnabled=false;action.onClick();assert.equal(switches,1,'a retained source callback cannot bypass revoked permission');
+    owner.book={...owner.book,sourceName:'非常长的实际名称'.repeat(20)};owner.replay();
+    assert.equal(texts(owner).find(n=>String(n.create).startsWith('当前来源：')).layoutWeight,1);
+    for(const author of ['作者：关关公子','浅草茉莉\n进入作者主页 →']) {
+      const raw={...owner.book,author};owner.book=raw;owner.replay();
+      assert.ok(texts(owner).some(n=>n.create===bookAuthorLabel(author)));assert.equal(raw.author,author,'presentation cannot rewrite source metadata');
     }
   });
 }
-check('PH46/47 original author typography and the entire five-line block align with the cover', () => {
-  const { owner } = createReaderBuilderProbe(detailSource, ['heroCard'], { bookAuthorLabel, NoCoverCover: Child, ImageFit: { Cover: 'Cover' } });
-  Object.assign(owner, { appThemeScheme:'day', book:{title:'Title',author:'Author',sourceName:'Source',lastChapter:'Chapter',coverUrl:'https://example.test/cover'},
-    hasCover:()=>true,contentWidth:()=>326,sourceSwitchEnabled:true });
-  owner.heroCard();
-  const nodes=[...owner.nodes.values()];
-  const cover=nodes.find(n=>n.type==='Image');
-  const column=nodes.find(n=>n.type==='Column'&&n.layoutWeight===1);
-  assert.equal(cover.height,122); assert.equal(column.height,cover.height);
-  assert.equal(column.justifyContent,'FlexAlign.SpaceBetween');
-  const title=nodes.find(n=>n.type==='Text'&&n.create==='Title');
-  const author=nodes.find(n=>n.type==='Text'&&String(n.create).endsWith('Author'));
-  assert.deepEqual([author.fontFamily,author.fontWeight,author.fontSize,author.lineHeight,author.height],
-    ['ReaderInter','FontWeight.Regular',13,17.55,17.55]);
-  assert.equal(author.fontColor,readerAppColor('TOK_MUTED','day'));
-  assert.equal(author.margin,undefined);
-  assert.equal(title.height,25.96);
-  assert.equal(nodes.find(n=>n.type==='Row'&&n.width===326).height,152);
-  const gap=(column.height-title.height-author.height-3*18)/4;
-  assert.ok(gap>6&&gap<6.2,'five fixed line slots leave positive uniform space between');
+check('detail cover and two-line title use the approved natural hero instead of a fixed five-line block',()=>{
+  const {owner}=createReaderBuilderProbe(detailSource,['hero','metadataTag'],{bookAuthorLabel,NoCoverCover:Child,ImageFit:{Cover:'Cover'}});
+  Object.assign(owner,{appThemeScheme:'day',book:{title:'Title',author:'Author',sourceName:'Source',lastChapter:'Chapter',coverUrl:'https://example.test/cover'},hasCover:()=>true});owner.hero();
+  const nodes=[...owner.nodes.values()],cover=nodes.find(n=>n.type==='Image'),title=texts(owner).find(n=>n.create==='Title'),author=texts(owner).find(n=>n.create==='Author');
+  assert.equal(cover.width,84);assert.equal(cover.height,122);
+  assert.deepEqual([title.fontSize,title.lineHeight,title.maxLines],[24,34,2]);
+  assert.deepEqual([author.fontFamily,author.fontSize,author.lineHeight],['ReaderNotoSansSC',13,20]);assert.equal(author.fontColor,readerAppColor('TOK_MUTED','day'));
+  const hero=nodes.find(n=>n.type==='Row'&&n.constraintSize?.minHeight===122);assert.ok(hero);assert.equal(hero.height,undefined,'long titles can grow the hero instead of clipping');
 });
-
-check('missing synopsis is explained without contaminating the metadata projection', () => {
-  const { owner } = createReaderBuilderProbe(detailSource, ['summaryCard', 'displayIntro'], { bookIntroText });
-  Object.assign(owner, { appThemeScheme: 'day', book: Object.freeze({ intro: '' }), contentWidth: () => 326,
-    summaryHeight: () => 120.313, summaryTextHeight: () => 64.313, usesWideContent: () => false });
-  owner.summaryCard(); assert.ok(texts(owner).some(n => n.create === '暂无简介'));
-  assert.equal(owner.displayIntro(), ''); assert.equal(owner.book.intro, '');
-  owner.book = { intro: '真实简介' }; owner.replay(); assert.ok(texts(owner).some(n => n.create === '真实简介'));
+check('missing synopsis is explained without contaminating metadata and expansion preserves content',()=>{
+  const {owner}=createReaderBuilderProbe(detailSource,['summary','displayIntro'],{bookIntroText},{allowEmptyBranchAdmission:true});
+  Object.assign(owner,{appThemeScheme:'day',book:Object.freeze({intro:''}),introExpanded:false});owner.summary();
+  assert.ok(texts(owner).some(n=>n.create==='暂无简介'));assert.equal(owner.displayIntro(),'');assert.equal(owner.book.intro,'');
+  owner.book={intro:'真实简介'};owner.replay();const intro=texts(owner).find(n=>n.create==='真实简介');assert.equal(intro.maxLines,3);
+  const expand=texts(owner).find(n=>n.create==='展开');expand.onClick();owner.replay();assert.equal(owner.introExpanded,true);assert.equal(intro.maxLines,10000);assert.equal(owner.book.intro,'真实简介');
 });
-for (const [message, reason, expected] of [['', '', '暂无章节信息'], ['正在读取本地目录…', '', '正在读取本地目录…'], ['', '目录读取失败，请重试', '目录读取失败，请重试']]) {
-  check(`empty chapters expose status: ${expected}`, () => {
-    const names = ['chapterSection', 'chapterRow', 'chapterSectionHeight'];
-    if (detailSource.includes('private chapterEmptyMessage(')) names.push('chapterEmptyMessage');
-    const { owner } = createReaderBuilderProbe(detailSource, names, { CHAPTER_SECTION_HEIGHT: 282, ButtonType: { Normal: 'Normal' } });
-    Object.assign(owner, { appThemeScheme: 'day', toc: [], loadingMessage: message, readingEnabled: false, readingBlockedReason: reason,
-      visibleToc: () => [], contentWidth: () => 326 });
-    owner.chapterSection(); assert.ok(texts(owner).some(n => n.create === expected));
-    assert.equal([...owner.nodes.values()].find(n => n.width === 94 && n.height === 44).enabled, true,
-      'empty or failed catalog can still enter the directory recovery surface');
+for(const [message,reason,expected] of [['','','暂无章节信息'],['正在读取本地目录…','','正在读取本地目录…'],['','目录读取失败，请重试','目录读取失败，请重试']]) {
+  check(`empty chapters expose status: ${expected}`,()=>{
+    const {owner}=createReaderBuilderProbe(detailSource,['catalog','chapterRow','chapterEmptyMessage'],{});
+    Object.assign(owner,{appThemeScheme:'day',toc:[],loadingMessage:message,readingEnabled:false,readingBlockedReason:reason,visibleToc:()=>[],removing:false});owner.catalog();
+    assert.ok(texts(owner).some(n=>n.create===expected));assert.equal(texts(owner).find(n=>n.create==='完整目录 ›').enabled,true,'directory recovery remains reachable');
   });
 }
 const sourcePage = read('source/SourceManagementPage.ets');

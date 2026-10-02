@@ -132,7 +132,7 @@ for (const [name, props] of Object.entries({ ReaderDirectoryRules: ['bookId'], P
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
 {
   const result = fixture(); result.page.aboutToAppear(); flush(); result.page.onListFirstLayout(result.page.identity());
-  const { owner, output } = createReaderBuilderProbe(source, ['build', 'flatList', 'chapterRow'], {
+  const { owner, output } = createReaderBuilderProbe(source, ['build', 'standardPage', 'mangaPage', 'mangaFlatList', 'mangaFlatRow', 'flatList', 'chapterRow'], {
     ...deps, ReaderDirectoryRules: Child, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
     ReaderDirectoryNavigationSurface: Child, ReaderDirectoryChapterRow: Child });
   Object.assign(owner, result.page);
@@ -195,7 +195,7 @@ for (const [sourceId, bookKind, capability, expected] of [
   const result = fixture();
   Object.assign(result.page, { sourceId, bookKind, bookId: 'misleading.txt', rulesExpanded: true, rulesRevision: 0 });
   result.page.aboutToAppear(); flush();
-  const { owner } = createReaderBuilderProbe(source, ['build', 'flatList', 'chapterRow'], {
+  const { owner } = createReaderBuilderProbe(source, ['build', 'standardPage', 'mangaPage', 'mangaFlatList', 'mangaFlatRow', 'flatList', 'chapterRow'], {
     ...deps, ReaderRuntimeOwner: { current: () => ({ supportsCoreCapability: () => capability }) },
     ReaderDirectoryRules: Child, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
     ReaderDirectoryNavigationSurface: Child, ReaderDirectoryChapterRow: Child });

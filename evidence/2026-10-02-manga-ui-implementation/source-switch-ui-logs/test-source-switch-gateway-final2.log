@@ -1,0 +1,23 @@
+(node:62029) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+source-switch gateway contract: PASS
+PH70 known candidate first paint, delta projection, registry deletion and missing-only discovery PASS
+PH70 real Index source-switch entry paints known candidates before cache RPC PASS
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: a later event retries the complete affected relation, retaining failed work without an all-library scan
+
+0 !== 1
+
+    at file:///Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/tools/test-source-switch-gateway.mjs:567:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 0,
+  expected: 1,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

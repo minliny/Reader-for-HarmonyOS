@@ -41,7 +41,7 @@ for (const theme of ['day', 'night']) {
   Object.assign(owner, { appThemeScheme: theme, viewMode: 'cover', viewSwitchHeaderOpacity: 1,
     continueReading: undefined, filterRowVisible: false,
     viewModeError: '', visibleBookCount: 0, rowDataSource: {},
-    shelfContentWidth: () => 352, hasActiveFilters: () => false });
+    shelfContentWidth: () => 352, hasActiveFilters: () => false, isWideViewport: () => false });
   owner.bookshelfList(false);
   const icons = [...owner.nodes.values()].filter(node => node.type === 'Image');
   assert.equal(icons.length, 3);

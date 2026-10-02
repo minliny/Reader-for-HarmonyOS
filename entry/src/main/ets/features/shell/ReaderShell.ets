@@ -55,6 +55,11 @@ export struct ReaderShell {
   @Prop bookKind: string | undefined = undefined;
   // Explicit Core content fact; never infer this from the free-form genre.
   @Prop contentKind: 'text' | 'manga' = 'text';
+  @Prop inBookshelf: boolean = true;
+  @Prop bookAuthor: string = '';
+  @Prop bookCoverUrl: string = '';
+  onToggleShelf: () => void = (): void => {};
+  onStopSourceSwitch: () => void = (): void => {};
   @Prop remoteSession: RemoteReadingSession | undefined = undefined;
   @Prop remoteBookSeed: RemoteReadingBookSeed | undefined = undefined;
   entryPresentationProvider: () => ReaderRetainedPresentation | undefined = (): ReaderRetainedPresentation | undefined => undefined;
@@ -296,6 +301,9 @@ export struct ReaderShell {
           SourceSwitchPanel({
             state: this.sourceSwitchState,
             currentSourceId: this.sourceId,
+            bookTitle: this.bookTitle, author: this.bookAuthor, coverUrl: this.bookCoverUrl, currentSourceName: this.sourceName,
+            currentChapterTitle: this.directoryChapterTitle, reduceMotion: this.reduceMotion,
+            onStop: (): void => this.onStopSourceSwitch(),
             onClose: (): void => this.onCloseSourceSwitch(),
             onRetry: (): void => this.onRetrySourceSwitch(),
             onRefresh: (): void => this.onRefreshSourceSwitch(),
@@ -326,6 +334,15 @@ export struct ReaderShell {
       MangaReadingSurface({
         offline: ReaderRuntimeOwner.current().mangaOfflineProbeFor?.(this.sourceId, this.bookId) === true || this.remoteSession?.acquisitionMode === 'offline',
         settingsGateway: this.mangaSettingsGateway,
+        bookTitle: this.bookTitle, inBookshelf: this.inBookshelf,
+        onDetail: (): void => this.onOpenBookInfo(),
+        onToggleShelf: (): void => this.onToggleShelf(),
+        onDownloadChapter: (): void => {
+          const index = this.directoryCurrentChapterIndex;
+          if (index >= 0) this.onDownloadChapter(index);
+        },
+        onSelectDirectoryTarget: (chapterIndex: number, directoryTargetProof?: JsonObject): void =>
+          this.onSelectNavigationTarget(chapterIndex, 0, undefined, directoryTargetProof),
         mangaBackgroundColor: readerAppColor('app.window.background', this.appThemeScheme),
         mangaForegroundColor: readerAppColor('app.window.foreground', this.appThemeScheme),
         errorColor: readerAppColor('TOK_DANGER', this.appThemeScheme),

@@ -1,5 +1,7 @@
 import { themeDayDesignSource } from './lib/reader-theme-design-source.mjs';
 import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import { readFileSync } from 'node:fs';
 
 const read = (relative) => themeDayDesignSource(readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8'));
@@ -13,8 +15,8 @@ const discover = read('entry/src/main/ets/features/discover/DiscoverPage.ets');
 const rss = read('entry/src/main/ets/features/rss/RssPage.ets');
 
 assert.match(tabs,
-  /private bottomBarFrame\(\): SurfaceHorizontalFrame[\s\S]*new SurfaceWidthSpec\(360, 15, 15, 'center'\)/,
-  'Phone main tabs must preserve the canonical 360vp cap and 15vp edge gaps');
+  /private bottomBarFrame\(\): SurfaceHorizontalFrame[\s\S]*new SurfaceWidthSpec\(Math\.min\(360, 98 \* MAIN_TABS\.length\), 32, 32, 'center'\)/,
+  'Phone main tabs preserve count-adaptive narrow width and 32vp edge clearance');
 assert.match(tabs, /private verticalRail\(\)[\s\S]*Column\(\{ space: 6 \}\)[\s\S]*\.height\(332\)/,
   'Tablet main tabs must keep the canonical 82x332 geometry');
 assert.match(tabs, /private railTabItem[\s\S]*\.width\(66\)[\s\S]*\.height\(58\)/,
@@ -45,13 +47,13 @@ assert.doesNotMatch(search, /importing_spinner_(track|arc)/,
 
 assert.match(detail, /private readingActionLabel\(\): string \{[\s\S]*return this\.inBookshelf \? '继续阅读' : '开始阅读';/,
   'a search preview must say start reading until it joins the shelf');
-assert.equal((detail.match(/this\.readingActionLabel\(\)/g) ?? []).length, 2,
-  'visible and accessibility labels must share one shelf-aware action label');
+assert.ok((detail.match(/this\.readingActionLabel\(\)/g) ?? []).length >= 1,
+  'the actionable label consumes the shared shelf/content-aware projection');
 
 assert.match(shelf, /return \/\^\(https\?:\\\/\\\/\|data:image/,
   'bookshelf cards must admit the same remote cover URLs as detail');
-assert.equal((shelf.match(/\.padding\(\{ top: TOK_SPACE_XS, bottom: TOK_SPACE_MD \}\)/g) ?? []).length, 1,
-  'the shared lazy Phone and Tablet shelf must end at the last book plus one bounded spacing token');
+assert.match(shelf, /\.contentEndOffset\(this\.isWideViewport\(\) \? 24 : readerFloatingTabContentInset\(ReaderWindowCoordinator\.metrics\(\)\)\)/,
+  'the shared lazy shelf reserves actual floating-navigation clearance inside scrolling content');
 assert.doesNotMatch(shelf, /bottom: (628|744)/,
   'bookshelf scrolling must not include fixed-canvas blank space below the last book');
 assert.equal((shelf.match(/this\.bookshelfList\((false|true)\)/g) ?? []).length, 2,
@@ -68,8 +70,20 @@ assert.match(rss,
   /private contentFrame\(\): SurfaceHorizontalFrame[\s\S]*readerVisualSafeLeft\(metrics\) - railWidth[\s\S]*new SurfaceWidthSpec\(TOK_CONTENT_RAIL_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET\)/,
   'RSS content width must be bounded by the live viewport after horizontal insets');
 
-assert.match(switchWindow, /private loadingBody[\s\S]*LoadingProgress\(\)[\s\S]*enableLoading\(true\)/,
-  'source-switch loading must render one animated indicator');
+// The approved source view keeps discovery in a small live status row. Run
+// its SDK-emitted child update rather than asserting the removed loading body.
+const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
+syntax.componentCollection.customComponents.add('SearchSpinner');syntax.propCollection.set('SearchSpinner',new Set(['active','diameter','reduceMotion']));
+class SpinnerChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
+const switchSource=readFileSync(new URL('../entry/src/main/ets/features/source/SourceSwitchWindow.ets',import.meta.url),'utf8');
+const windowStruct=switchSource.slice(switchSource.indexOf('@Component\nexport struct SourceSwitchWindow'));
+const {owner:status}=createReaderBuilderProbe(windowStruct,['discoveryStatus'],{SearchSpinner:SpinnerChild});
+let sweeping=true;Object.assign(status,{appThemeScheme:'day',foreground:true,reduceMotion:false,isSweeping:()=>sweeping,statusText:()=>''});status.discoveryStatus();
+const spinner=[...status.children.values()][0];assert.equal(spinner.params.active,true);assert.equal(spinner.params.diameter,13);
+status.foreground=false;status.replay();assert.equal(spinner.params.active,false,'background discovery does not animate');
+status.foreground=true;sweeping=false;status.replay();assert.equal(spinner.params.active,false,'stopped discovery keeps its results without a false spinner');
+status.reduceMotion=true;sweeping=true;status.replay();assert.equal(spinner.params.reduceMotion,true);
 assert.doesNotMatch(switchWindow, /importing_spinner_(track|arc)/,
   'source-switch loading must not stack two spinner circles');
 

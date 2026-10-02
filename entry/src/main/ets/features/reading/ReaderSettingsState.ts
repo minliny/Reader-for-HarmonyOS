@@ -30,6 +30,8 @@ export type ReaderSettingsSnapshot = {
   version: 5;
   mangaDirection?: 'vertical' | 'horizontal';
   mangaFit?: 'source' | 'width' | 'contain';
+  mangaBackground?: 'paper' | 'white' | 'ink';
+  mangaPageNumbers?: boolean;
   screenDirection: ReaderScreenDirection;
   navigationMode: ReaderNavigationMode;
   pageTransition: ReaderPageTransition;
@@ -184,6 +186,8 @@ export function normalizeReaderSettingsSnapshot(
   };
   if (candidate.version === 5 && candidate.mangaDirection !== undefined) normalized.mangaDirection = candidate.mangaDirection === 'horizontal' ? 'horizontal' : 'vertical';
   if (candidate.version === 5 && (candidate.mangaFit === 'width' || candidate.mangaFit === 'contain' || candidate.mangaFit === 'source')) normalized.mangaFit = candidate.mangaFit;
+  if (candidate.version === 5 && (candidate.mangaBackground === 'paper' || candidate.mangaBackground === 'white' || candidate.mangaBackground === 'ink')) normalized.mangaBackground = candidate.mangaBackground;
+  if (candidate.version === 5 && typeof candidate.mangaPageNumbers === 'boolean') normalized.mangaPageNumbers = candidate.mangaPageNumbers;
   return normalized;
 }
 

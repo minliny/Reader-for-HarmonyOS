@@ -44,7 +44,7 @@ const Surface=productionMotionMethods(surfaceURL,
 const saved=[];const settings=[];
 const owner=Object.assign(new Surface(),{data:{totalCount:()=>p.totalCount(),getData:i=>p.row(i),projection:p,notify:()=>{}},
  first:150,last:150,viewportWidth:500,viewportHeight:900,zoom:2,scalePolicy:new PhotoViewScaleModel(),horizontal:false,horizontalPage:0,
- opened:true,mounted:true,layoutGeneration:0,appliedLayoutGeneration:-1,presentationGeneration:0,recovering:false,
+ opened:true,mounted:true,panel:'',chapterEnd:false,exiting:false,layoutGeneration:0,appliedLayoutGeneration:-1,presentationGeneration:0,recovering:false,
  settingsGateway:{updateMangaDirection:async value=>settings.push(value)},
  horizontalScroller:{currentOffset:()=>({xOffset}),scrollTo:position=>{xOffset=position.xOffset;scrolls.push(['x',position.xOffset]);}},
  getUIContext:()=>({postFrameCallback:frame=>frames.push(frame)}),

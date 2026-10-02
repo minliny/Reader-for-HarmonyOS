@@ -1,3 +1,4 @@
+import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
@@ -27,24 +28,24 @@ metrics.gestureInsets=new ReaderInsetsVp(0,0,0,24);
 // SDK still emits and executes the parent Column and its live padding observer.
 const nativeBoundary=new Proxy({}, {get:()=>()=>{}});
 const {owner,output}=createReaderBuilderProbe(source,names,{
-  ...runtime.sdk,MangaStripDataSource,ListScroller,Scroller,PhotoViewScaleModel,
+  ...runtime.sdk,...mangaSurfaceSdkDependencies,MangaStripDataSource,ListScroller,Scroller,PhotoViewScaleModel,
   ReaderWindowCoordinator:{metrics:()=>metrics},readerInteractiveSafeInsets,
   ScrollAlign:{START:0},ImageFit:{Fill:0},ScrollDirection:{Horizontal:0},
   LazyForEach:nativeBoundary,Gesture:nativeBoundary,GestureGroup:nativeBoundary,
-  PinchGesture:nativeBoundary,SwipeGesture:nativeBoundary,
-  globalThis:{Gesture:nativeBoundary,GestureGroup:nativeBoundary,PinchGesture:nativeBoundary,SwipeGesture:nativeBoundary},
+  PinchGesture:nativeBoundary,SwipeGesture:nativeBoundary,TapGesture:nativeBoundary,
+  globalThis:{Gesture:nativeBoundary,GestureGroup:nativeBoundary,PinchGesture:nativeBoundary,SwipeGesture:nativeBoundary,TapGesture:nativeBoundary},
   GesturePriority:{Parallel:0},GestureMode:{Exclusive:0},SwipeDirection:{Horizontal:0},
 },runtime.hooks);
 assert.match(output,/LazyForEach/);
 assert.match(output,/onScrollStop/);
-owner.title='fixture chapter';
+owner.title='fixture chapter';owner.controlsVisible=true;
 owner.initialRender();
 const root=owner.nodes.get(0);
 assert.equal(root.type,'Column');
 assert.deepEqual({...root.padding},{left:0,top:137/3.5,right:0,bottom:24},
   'edge-to-edge manga controls must clear the measured status and gesture bands');
 assert.equal(root.width,'100%');assert.equal(root.height,'100%');
-assert.equal(root.backgroundColor,owner.mangaBackgroundColor,'safe content keeps the full-window theme background');
+assert.equal(root.backgroundColor,owner.paperColor(),'safe content keeps the chosen manga paper behind image pixels');
 assert.ok([...owner.nodes.values()].some(node=>node.type==='Text'&&node.create==='fixture chapter'),
   'the existing chapter title remains inside the safe root');
 const nodeIds=[...owner.nodes.keys()];
@@ -72,3 +73,27 @@ resolve();await saving;assert.equal(completed,true);
 owner.restore(0,0.75);owner.aboutToDisappear=()=>{owner.mounted=false;owner.layoutGeneration++;};owner.aboutToDisappear();
 await new Promise(r=>setTimeout(r,5));assert.equal(scrolls.length,0);
 console.log('PASS actual ArkUI SDK surface lowering; save waits for CAS; disposed layout cannot scroll (native paint not tested)');
+
+const tabletRuntime=createArkUIPropertyRuntimeProbe();
+const tablet=createReaderBuilderProbe(source,names,{
+  ...tabletRuntime.sdk,...mangaSurfaceSdkDependencies,MangaStripDataSource,ListScroller,Scroller,PhotoViewScaleModel,
+  ReaderWindowCoordinator:{metrics:()=>metrics},readerInteractiveSafeInsets,
+  ScrollAlign:{START:0},ImageFit:{Fill:0},ScrollDirection:{Horizontal:0},
+  LazyForEach:nativeBoundary,Gesture:nativeBoundary,GestureGroup:nativeBoundary,
+  PinchGesture:nativeBoundary,SwipeGesture:nativeBoundary,TapGesture:nativeBoundary,
+  globalThis:{Gesture:nativeBoundary,GestureGroup:nativeBoundary,PinchGesture:nativeBoundary,SwipeGesture:nativeBoundary,TapGesture:nativeBoundary},
+  GesturePriority:{Parallel:0},GestureMode:{Exclusive:0},SwipeDirection:{Horizontal:0},
+},tabletRuntime.hooks).owner;
+tablet.stageWidth=1180;tablet.stageHeight=820;tablet.viewportWidth=860;tablet.viewportHeight=820;
+tablet.initialRender();
+const directoryChild=[...tablet.children.values()].find(child=>child.params.mangaDisplay===true);
+assert.ok(directoryChild,'the real SDK mounts the shared native directory outside control visibility');
+assert.equal(directoryChild.params.currentChapterIndex,-1);
+assert.equal(directoryChild.params.chapterStartBookmarkCreationEnabled,false);
+assert.ok([...tablet.nodes.values()].some(node=>node.type==='Column'&&node.width===320&&node.height==='100%'),
+  'persistent directory owns a bounded left column');
+assert.ok([...tablet.nodes.values()].some(node=>node.type==='Stack'&&node.layoutWeight===1&&node.height==='100%'),
+  'image/control stage owns the remaining width');
+assert.equal(tablet.widePanel(),true);assert.equal(tablet.panelWidth(),360);
+assert.equal(tablet.panelHeight(),820);
+console.log('PASS actual SDK tablet directory mounts while controls are hidden, bounded left column and independent right-panel geometry (native paint not tested)');
