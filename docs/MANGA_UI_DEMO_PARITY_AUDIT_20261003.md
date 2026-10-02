@@ -43,6 +43,6 @@ Demo 共有 8 个入口：共用书架、搜索适配、漫画详情、完整目
 
 - 源码变更覆盖上表中的书架、搜索、详情、完整目录、阅读、动态换源、书源管理和入口透传；全场景总览继续作为设计参照，没有复制成生产业务页。
 - 424 项 Harmony 合同回归通过，ArkTS 类型检查和 Hvigor 构建通过。
-- HAP run：`20261002T182642Z-4830c2da-24c370e9`；manifest：`.reader-artifacts/hap/20261002T182642Z-4830c2da-24c370e9/manifest.json`；签名 HAP SHA-256：`9b395417c7ac87bba44e3dcb89a090ae60f4b4dbb463626884bf41fa2fe6b2c2`；签名证书 SHA-256 与 `minliny_HarmonyOS` 权威值一致。
-- manifest verify、目标 inspect 和 VM install 均通过；目标为 `127.0.0.1:5555`，保留应用数据，部署回执为 `.reader-artifacts/hap/20261002T182642Z-4830c2da-24c370e9/deploy-vm-6460677a198b-20261002T182822Z.json`。
+- HAP run：`20261002T183802Z-8ad6f645-24c370e9`；manifest：`.reader-artifacts/hap/20261002T183802Z-8ad6f645-24c370e9/manifest.json`；签名 HAP SHA-256：`8cc96e7b060ed62bff13b6eae4bb44a4e22fb25df5a570ff8d91312a9699c37d`；签名证书 SHA-256 与 `minliny_HarmonyOS` 权威值一致。
+- manifest verify、目标 inspect 和 VM install 均通过；目标为 `127.0.0.1:5555`，保留应用数据，部署回执为 `.reader-artifacts/hap/20261002T183802Z-8ad6f645-24c370e9/deploy-vm-6460677a198b-20261002T183843Z.json`。
 - 新安装后的 VM 截图保存在 `../../evidence/vm-20261003/`。当前 VM 书架没有可用的漫画书籍，已验证主壳、筛选态和底部主 Tab；因此漫画详情、完整目录、漫画阅读的真实像素验收仍为 OPEN，不能用小说页面截图冒充漫画验收。
