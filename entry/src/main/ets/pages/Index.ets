@@ -1064,6 +1064,7 @@ struct Index {
           onOpenEditor: (sourceId: string): void => this.getSourceToolsOrchestrator().openEditor(sourceId),
           onEditorDraftChanged: (text: string): void => this.getSourceToolsOrchestrator().updateEditorDraft(text),
           onSaveEditor: (): void => this.getSourceToolsOrchestrator().saveEditor(),
+          onReconcileEditor: (): void => this.getSourceToolsOrchestrator().reconcileEditor(),
           onCancelEditor: (): void => this.getSourceToolsOrchestrator().cancelEditor(),
           onDebugKeyChanged: (value: string): void => this.getSourceToolsOrchestrator().updateDebugKey(value),
           onCheckSelectionChanged: (mode: 'search' | 'explore', depth: number): void =>
@@ -6765,7 +6766,15 @@ struct Index {
         this.writeImportPresentation(new LocalImportPresentation('fileSelection'));
         return;
       }
-      this.applyBookshelfState(outcome.shelf);
+      // The per-file batch is the durable import fact. A follow-up shelf
+      // read may fail (or be pending reconciliation) and therefore must not
+      // be dereferenced as though it were always present. Keep the last
+      // authoritative shelf projection visible while surfacing the read-back
+      // warning for a targeted retry.
+      if (outcome.shelf !== undefined) {
+        this.applyBookshelfState(outcome.shelf);
+      }
+      this.importFailureMessage = outcome.refreshWarning ?? '';
       this.writeImportPresentation(new LocalImportPresentation('result', outcome.batch));
     } catch (error) {
       // The shelf reload may fail after Core committed; never undo those books.

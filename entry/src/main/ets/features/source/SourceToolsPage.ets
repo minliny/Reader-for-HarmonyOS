@@ -170,6 +170,7 @@ export struct SourceToolsPage {
   onOpenEditor: (sourceId: string) => void = (_sourceId: string): void => {};
   onEditorDraftChanged: (text: string) => void = (_text: string): void => {};
   onSaveEditor: () => void = (): void => {};
+  onReconcileEditor: () => void = (): void => {};
   onCancelEditor: () => void = (): void => {};
   onDebugKeyChanged: (value: string) => void = (_value: string): void => {};
   onDebugSource: (sourceId: string) => void = (_sourceId: string): void => {};
@@ -545,6 +546,16 @@ export struct SourceToolsPage {
         this.actionButton('校验并保存', true, !this.snapshot.busy, (): void => this.onSaveEditor());
       }
       .width('100%');
+      if (this.snapshot.editorReadback?.fact === 'confirmedRefreshFailed') {
+        Text('保存已由 Core 确认；下面的操作只重新读取书源列表，不会再次执行 source.import。')
+          .width('100%')
+          .fontFamily('ReaderNotoSansSC')
+          .fontSize(10)
+          .lineHeight(16)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        this.actionButton('重新读取已保存书源', false, !this.snapshot.busy,
+          (): void => this.onReconcileEditor());
+      }
     }
     .width('100%')
     .padding(TOK_SPACE_SM)

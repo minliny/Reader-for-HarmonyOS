@@ -29,6 +29,7 @@
     "test-local-epub-image-reuse-runtime.mjs",
     "test-local-epub-resource-architecture.mjs",
     "test-local-import-finalize-recovery.mjs",
+    "test-commit-readback-facts.mjs",
     "test-log-privacy.mjs",
     "test-navigation-performance.mjs",
     "test-network-route-policy.mjs",

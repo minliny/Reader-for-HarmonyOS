@@ -1,6 +1,10 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import {
+  projectCommitReadback,
+  type CommitReadbackSummary,
+} from '../../app/ReaderOperationFacts';
+import {
   SourceGateway,
   type BookSource,
   type SourceCheckOutcome,
@@ -62,6 +66,8 @@ export interface SourceToolsSnapshot {
   checkDepth: number;
   debugLogs: SourceDebugLog[];
   batchCheck: SourceBatchCheckProgress;
+  /** The last editor write/read-back fact, if an editor session is active. */
+  editorReadback: CommitReadbackSummary | undefined;
   busy: boolean;
   statusMessage: string;
 }
@@ -80,6 +86,7 @@ interface SourceToolsPatch {
   checkDepth?: number;
   debugLogs?: SourceDebugLog[];
   batchCheck?: SourceBatchCheckProgress;
+  editorReadback?: CommitReadbackSummary | null;
   busy?: boolean;
   statusMessage?: string;
 }
@@ -98,6 +105,7 @@ export const EMPTY_SOURCE_TOOLS_SNAPSHOT: SourceToolsSnapshot = {
   checkDepth: 2,
   debugLogs: [],
   batchCheck: EMPTY_BATCH_CHECK_PROGRESS,
+  editorReadback: undefined,
   busy: false,
   statusMessage: '',
 };
@@ -426,7 +434,13 @@ export class SourceToolsOrchestrator {
       try {
         const editorText = await this.gateway.loadEditableSource(sourceId);
         if (this.isCurrentSession(session)) {
-          this.publish({ editorSourceId: sourceId, editorText, busy: false, statusMessage: '编辑原始 BookSource JSON' });
+          this.publish({
+            editorSourceId: sourceId,
+            editorText,
+            editorReadback: null,
+            busy: false,
+            statusMessage: '编辑原始 BookSource JSON',
+          });
         }
       } catch (error) {
         this.fail(session, '书源读取失败', error as Error);
@@ -446,7 +460,7 @@ export class SourceToolsOrchestrator {
     if (this.snapshot.busy || this.pendingOperations > 0) {
       return;
     }
-    this.publish({ editorSourceId: '', editorText: '', statusMessage: '已取消编辑' });
+    this.publish({ editorSourceId: '', editorText: '', editorReadback: null, statusMessage: '已取消编辑' });
   }
 
   saveEditor(): void {
@@ -458,20 +472,91 @@ export class SourceToolsOrchestrator {
     }
     this.enqueue(async (): Promise<void> => {
       this.publishIfCurrent(session, { busy: true, statusMessage: '正在由 Core 校验并保存…' });
+      // The save and the follow-up reload are two separate facts: once Core
+      // has validated and persisted the edit, a list-refresh failure must not
+      // be reported as "save failed". Persist failure still rejects below.
       try {
         await this.gateway.saveEditableSource(sourceId, text);
-        const sources = await this.gateway.loadSources(undefined, true);
+      } catch (error) {
+        this.fail(session, '书源保存失败', error as Error);
+        return;
+      }
+      let sources: BookSource[];
+      try {
+        sources = await this.gateway.loadSources(undefined, true);
+      } catch (error) {
         if (this.isCurrentSession(session)) {
+          // The edit IS persisted. Keep the draft open for reconciliation
+          // instead of closing it (which would hint that nothing was saved)
+          // or reporting a save failure (which would hint that a re-submit is
+          // required). Only the read-back failed.
+          const fact = projectCommitReadback('confirmed', 'failed');
+          this.publish({
+            busy: false,
+            editorReadback: fact,
+            statusMessage: `书源${fact.message}：${(error as Error).message}；草稿保留供核对`,
+          });
+        }
+        hilog.warn(DOMAIN, 'Reader',
+          'Source edit persisted but list refresh failed: sourceId=%{private}s err=%{private}s',
+          sourceId, (error as Error).message);
+        return;
+      }
+      if (this.isCurrentSession(session)) {
+        this.publish({
+          sources,
+          editorSourceId: '',
+          editorText: '',
+          editorReadback: projectCommitReadback('confirmed', 'succeeded'),
+          busy: false,
+          statusMessage: '书源已由 Core 校验并保存',
+        });
+      }
+    });
+  }
+
+  /**
+   * Reconcile a confirmed editor write using a read-only source.list call.
+   * This path is deliberately separate from saveEditor: a refresh retry must
+   * never dispatch source.import again or ask the user to re-enter the draft.
+   */
+  reconcileEditor(): void {
+    const sourceId = this.snapshot.editorSourceId;
+    if (sourceId.length === 0 || this.snapshot.editorReadback?.fact !== 'confirmedRefreshFailed') {
+      return;
+    }
+    const session = this.session;
+    this.enqueue(async (): Promise<void> => {
+      this.publishIfCurrent(session, { busy: true, statusMessage: '正在读取已保存书源…' });
+      try {
+        const sources = await this.gateway.loadSources(undefined, true);
+        const found = sources.some((source: BookSource): boolean => source.sourceId === sourceId);
+        if (!this.isCurrentSession(session)) return;
+        if (found) {
           this.publish({
             sources,
             editorSourceId: '',
             editorText: '',
+            editorReadback: projectCommitReadback('confirmed', 'succeeded'),
             busy: false,
-            statusMessage: '书源已由 Core 校验并保存',
+            statusMessage: '已确认，当前读取结果可用',
+          });
+          return;
+        }
+        this.publish({
+          sources,
+          editorReadback: projectCommitReadback('confirmed', 'failed'),
+          busy: false,
+          statusMessage: '已确认，但当前列表未找到该书源；草稿保留供核对',
+        });
+      } catch (error) {
+        if (this.isCurrentSession(session)) {
+          this.publish({
+            editorReadback: projectCommitReadback('confirmed', 'failed'),
+            busy: false,
+            statusMessage: `书源已确认，刷新失败：${(error as Error).message}；草稿保留供核对`,
           });
         }
-      } catch (error) {
-        this.fail(session, '书源保存失败', error as Error);
       }
     });
   }
@@ -628,6 +713,8 @@ export class SourceToolsOrchestrator {
       checkDepth: patch.checkDepth ?? this.snapshot.checkDepth,
       debugLogs: patch.debugLogs ?? this.snapshot.debugLogs,
       batchCheck: patch.batchCheck ?? this.snapshot.batchCheck,
+      editorReadback: patch.editorReadback === null ? undefined :
+        (patch.editorReadback ?? this.snapshot.editorReadback),
       busy: patch.busy ?? this.snapshot.busy,
       statusMessage: patch.statusMessage ?? this.snapshot.statusMessage,
     };
@@ -664,6 +751,12 @@ export class SourceToolsOrchestrator {
         // to give ArkUI a new observable value without recreating every prior
         // row on each of a potentially 1,700+ source sweep.
         results: source.batchCheck.results.slice(),
+      },
+      editorReadback: source.editorReadback === undefined ? undefined : {
+        confirmation: source.editorReadback.confirmation,
+        readback: source.editorReadback.readback,
+        fact: source.editorReadback.fact,
+        message: source.editorReadback.message,
       },
       busy: source.busy,
       statusMessage: source.statusMessage,
