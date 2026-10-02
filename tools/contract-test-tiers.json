@@ -214,6 +214,7 @@
     "test-hap-source-inputs.mjs",
     "test-import-refresh-geometry.mjs",
     "test-index-import-bindings.mjs",
+    "test-json-import-dialog-real.mjs",
     "test-legado-product-logic.mjs",
     "test-local-configuration-reset.mjs",
     "test-local-epub-style-preparation.mjs",

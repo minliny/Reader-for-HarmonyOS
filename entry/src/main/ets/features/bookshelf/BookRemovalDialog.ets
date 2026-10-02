@@ -1,17 +1,16 @@
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
-import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../common/ReaderWindowMetrics';
-import { SurfaceWidthSpec, resolveHorizontalFrame } from '../common/SurfaceHorizontalGeometry';
-import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderFonts } from '../common/ReaderFonts';
-import { ReaderPressFeedback } from '../common/ReaderPressFeedback';
+import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { ReaderDialogSurface, DialogActionView } from '../common/ReaderDialogSurface';
 
 /** Figma Library/BookDetail/DeleteDialog 2269:46. The caller owns removal
- * admission and persistence; this native modal owns only confirmation UI. */
+ * admission and persistence; this native modal owns only confirmation UI.
+ * Surface/header/actions come from the shared dialog surface family; this
+ * struct keeps the controller, message measurement and callbacks. */
 @CustomDialog
 export struct BookRemovalDialog {
   controller: CustomDialogController;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop message: string = '';
   @State private measuredMessageHeight: number = 50;
   onCancel: () => void = (): void => {};
@@ -22,71 +21,49 @@ export struct BookRemovalDialog {
   }
 
   build() {
-    Column() {
-      Text('移除书架')
-        .width('100%')
-        .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold).fontSize(17).lineHeight(20)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .margin({ bottom: 16 });
-      Scroll() {
-        Text(this.message)
-          .width('100%')
-          .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Regular).fontSize(13)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-          .constraintSize({ minHeight: 50 })
-          .onAreaChange((_old: Area, area: Area): void => {
-            const height = typeof area.height === 'number' ? area.height :
-              (typeof area.height === 'string' ? Number.parseFloat(area.height) : 0);
-            if (Number.isFinite(height) && height > 0 && Math.abs(height - this.measuredMessageHeight) > 0.5) {
-              this.measuredMessageHeight = height;
-            }
-          });
-      }
-      .width('100%')
-      .height(Math.min(Math.max(50, this.measuredMessageHeight), this.messageMaxHeight()))
-      .align(Alignment.TopStart)
-      .scrollBar(BarState.Auto)
-      .margin({ bottom: 30 });
-      Row({ space: 10 }) {
-        this.action('取消', false, (): void => this.onCancel());
-        this.action('移除', true, (): void => this.onConfirm());
-      }.width('100%');
-    }
-    .width(this.dialogWidth())
-    // ArkUI includes the 1vp border in the content inset: 17 + 1 = Figma 18.
-    .padding(17)
-    .alignItems(HorizontalAlign.Start)
-    .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
-    .border({ width: 1, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-    .borderRadius(12)
-    .shadow({ radius: 46, offsetX: 0, offsetY: 18,
-      color: readerAppColor('app.BookshelfBookActionSheet.build.color.29594632', this.appThemeScheme) });
+    ReaderDialogSurface({
+      specId: 'book-removal',
+      title: '移除书架',
+      actions: [
+        new DialogActionView('cancel', '取消', 'default', true, true),
+        new DialogActionView('confirm', '移除', 'danger', true, false),
+      ],
+      onAction: (id: string): void => {
+        if (id === 'cancel') {
+          this.onCancel();
+        } else if (id === 'confirm') {
+          this.onConfirm();
+        }
+      },
+      body: (): void => {
+        this.messageBody();
+      },
+    })
   }
 
   @Builder
-  private action(label: string, danger: boolean, action: () => void) {
-    Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Text(label).fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold).fontSize(13).lineHeight(16)
-        .fontColor(readerAppColor(danger ? 'TOK_CARD_BG_HI' : 'TOK_INK', this.appThemeScheme));
+  private messageBody() {
+    Scroll() {
+      Text(this.message)
+        .width('100%')
+        .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Regular).fontSize(13)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+        .constraintSize({ minHeight: 50 })
+        .onAreaChange((_old: Area, area: Area): void => {
+          const height = typeof area.height === 'number' ? area.height :
+            (typeof area.height === 'string' ? Number.parseFloat(area.height) : 0);
+          if (Number.isFinite(height) && height > 0 && Math.abs(height - this.measuredMessageHeight) > 0.5) {
+            this.measuredMessageHeight = height;
+          }
+        });
     }
-    .layoutWeight(1).height(38).padding(0)
-    .attributeModifier(new ReaderPressFeedback(
-      readerAppColor(danger ? 'app.BookshelfBookActionSheet.actionSlot.fontColor.FFD7473E' :
-        'TOK_SURFACE_PANEL_SOFT', this.appThemeScheme), this.appThemeScheme, 12))
-    .responseRegion({ x: 0, y: -3, width: '100%', height: 44 })
-    .defaultFocus(!danger)
-    .onClick(action);
-  }
-
-  private dialogWidth(): number {
-    if (this.readerWindowMetricsRevision < 0) return 0;
-    const metrics = ReaderWindowCoordinator.metrics();
-    return resolveHorizontalFrame(metrics.windowRect.width, readerInteractiveSafeLeft(metrics),
-      readerInteractiveSafeRight(metrics), new SurfaceWidthSpec(306, 20, 20)).width;
+    .width('100%')
+    .height(Math.min(Math.max(50, this.measuredMessageHeight), this.messageMaxHeight()))
+    .align(Alignment.TopStart)
+    .scrollBar(BarState.Auto);
   }
 
   private messageMaxHeight(): number {
-    if (this.readerWindowMetricsRevision < 0) return 50;
     const metrics = ReaderWindowCoordinator.metrics();
     // Reserve title, actions, spacing and window insets. Long names and the
     // truthful local-book purge notice scroll instead of being ellipsized.

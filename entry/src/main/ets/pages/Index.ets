@@ -211,6 +211,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import deviceInfo from '@ohos.deviceInfo';
 import { ArkWebExecutionHost } from '../app/ArkWebExecutionHost';
 import { JsonImportDialog } from '../features/common/JsonImportDialog';
+import { ReaderDialogSurface } from '../features/common/ReaderDialogSurface';
 import { isReaderProductSurfaceEnabled } from '../app/ReaderProductScope';
 import { TOK_GREEN, TOK_INK, TOK_MUTED, TOK_ON_PRIMARY } from '../features/common/ReaderTokens';
 
@@ -1210,14 +1211,18 @@ struct Index {
         Stack({ alignContent: Alignment.Center }) {
           Row().width('100%').height('100%').backgroundColor(readerAppColor('app.Index.build.backgroundColor.52000000', this.appThemeScheme))
             .onClick((): void => { if (!this.editingShelfGroupBusy) this.editingShelfGroupBook = undefined; });
-          Column({ space: 12 }) {
-            Text('编辑分组').fontSize(17).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-            BookshelfGroupSelector({
-              selected: (this.editingShelfGroupBook?.group?.trim() ?? '') === '',
-              busy: this.editingShelfGroupBusy,
-              onSelect: (): void => { void this.assignShelfDefaultGroup(); },
-            });
-          }.padding(20).width('75%').backgroundColor(readerAppColor('app.Index.build.backgroundColor.FFFFFCF8', this.appThemeScheme)).borderRadius(20);
+          ReaderDialogSurface({
+            specId: 'shelf-group',
+            title: '编辑分组',
+            actions: [],
+            body: (): void => {
+              BookshelfGroupSelector({
+                selected: (this.editingShelfGroupBook?.group?.trim() ?? '') === '',
+                busy: this.editingShelfGroupBusy,
+                onSelect: (): void => { void this.assignShelfDefaultGroup(); },
+              });
+            },
+          });
         }.width('100%').height('100%');
       }
       if (this.route === 'bookshelf' && this.hasVisibleImportDialog()) {

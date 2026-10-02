@@ -9,6 +9,9 @@ const emptyCard = read('entry/src/main/ets/features/bookshelf/BookshelfEmptyCard
 const shelfManagement = read('entry/src/main/ets/features/bookshelf/BookshelfManagementPage.ets');
 const localImport = read('entry/src/main/ets/features/bookshelf/LocalImportDialog.ets');
 const jsonImport = read('entry/src/main/ets/features/common/JsonImportDialog.ets');
+const dialogSurface = read('entry/src/main/ets/features/common/ReaderDialogSurface.ets');
+const dialogSpecs = read('entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets');
+const indexPage = read('entry/src/main/ets/pages/Index.ets');
 const search = read('entry/src/main/ets/features/search/SearchPage.ets');
 const discover = read('entry/src/main/ets/features/discover/DiscoverPage.ets');
 const rss = read('entry/src/main/ets/features/rss/RssPage.ets');
@@ -147,13 +150,38 @@ assert.match(rssEntry,
   /margin\(\{ left: this\.contentFrame\(\)\.left, right: this\.contentFrame\(\)\.right \}\)/,
   'RSS entry bottom actions must honor asymmetric safe edges');
 
-assert.match(jsonImport,
-  /new SurfaceWidthSpec\([\s\S]*JSON_IMPORT_DIALOG_MAX_WIDTH,[\s\S]*JSON_IMPORT_DIALOG_EDGE_GAP,[\s\S]*JSON_IMPORT_DIALOG_EDGE_GAP/);
-assert.match(jsonImport, /readerInteractiveSafeLeft\(metrics, true\)/);
-assert.match(jsonImport, /readerInteractiveSafeRight\(metrics, true\)/);
-assert.match(jsonImport,
-  /padding\(\{ left: this\.dialogFrame\(\)\.left, right: this\.dialogFrame\(\)\.right \}\)/);
+assert.match(jsonImport, /ReaderDialogSurface\(/,
+  'JSON import delegates its framed card to the shared dialog surface');
+assert.match(jsonImport, /specId: 'json-import'/,
+  'JSON import passes its finite spec id');
+assert.doesNotMatch(jsonImport, /JSON_IMPORT_DIALOG_MAX_WIDTH|new SurfaceWidthSpec|resolveHorizontalFrame|dialogFrame\(\)/,
+  'JSON import no longer owns private frame geometry');
 assert.doesNotMatch(jsonImport, /this\.isTablet \? 520 : '90%'/);
+
+// The json-import variant carries the responsive contract into the registry:
+// card-inset frame mode + keyboard-aware interactive safe edges + 520 cap/20 gap.
+assert.match(dialogSpecs, /'json-import': new DialogSurfaceSpec\(\{[\s\S]*?maxWidth: 520/);
+assert.match(dialogSpecs, /'json-import': new DialogSurfaceSpec\(\{[\s\S]*?edgeGap: 20/);
+assert.match(dialogSpecs, /'json-import': new DialogSurfaceSpec\(\{[\s\S]*?frameMode: 'card-inset'/);
+assert.match(dialogSpecs, /'json-import': new DialogSurfaceSpec\(\{[\s\S]*?usesKeyboardSafeArea: true/);
+assert.match(dialogSurface, /readerInteractiveSafeLeft\(metrics, spec\.usesKeyboardSafeArea\)/,
+  'the shared surface honors the spec keyboard-safe-area flag');
+assert.match(dialogSurface, /spec\.frameMode === 'inset'\) \{\s*return '100%';/,
+  'inset specs still fill the host overlay width for legacy inset consumers');
+assert.match(dialogSurface, /return this\.resolvedFrame\(\)\.width/,
+  'cap and card-inset specs size the surface column to the resolved card width');
+
+// The shelf-group variant carries the legacy percentage width of the former
+// hand-drawn Index overlay into the registry; Index no longer owns the frame.
+assert.match(dialogSpecs, /'shelf-group': new DialogSurfaceSpec\(\{[\s\S]*?widthPercent: 75/);
+assert.match(dialogSpecs, /'shelf-group': new DialogSurfaceSpec\(\{[\s\S]*?padding: 20, borderRadius: 20/);
+assert.match(dialogSpecs, /'shelf-group': new DialogSurfaceSpec\(\{[\s\S]*?backgroundRole: 'TOK_SURFACE_SOLID'/);
+assert.match(dialogSurface, /spec\.widthPercent > 0[\s\S]*?\$\{spec\.widthPercent\}%/,
+  'the shared surface resolves a percentage-width spec directly');
+assert.match(indexPage, /ReaderDialogSurface\(\{\s*specId: 'shelf-group'/,
+  'Index default-group overlay delegates its frame to the shared surface');
+assert.doesNotMatch(indexPage, /\.padding\(20\)\.width\('75%'\)/,
+  'Index no longer owns the hand-drawn 75%/padding-20 dialog frame');
 
 assert.match(fullDirectory, /@State private containerWidth: number = 0/);
 assert.match(fullDirectory,
