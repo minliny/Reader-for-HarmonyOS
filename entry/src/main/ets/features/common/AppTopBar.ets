@@ -5,7 +5,6 @@ import {
   TOK_SURFACE_SOLID,
 } from './ReaderTokens';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
-import { ReaderIconButton } from './ReaderIconButton';
 import {
   readerInteractiveSafeLeft,
   readerInteractiveSafeRight,
@@ -38,13 +37,15 @@ export struct AppTopBar {
     Row() {
       if (this.floating && this.centered) {
         if (this.showLeadingSearch) {
-          ReaderIconButton({
-            icon: this.appThemeScheme === 'night' ? $r('app.media.bookshelf_search_theme_night') : $r('app.media.bookshelf_search'),
-            boxSize: 44,
-            iconSize: 24,
-            radius: 22,
-            onTap: (): void => this.onLeadingTap(),
-          });
+          Stack({ alignContent: Alignment.Center }) {
+            Image(this.appThemeScheme === 'night' ? $r('app.media.bookshelf_search_theme_night') : $r('app.media.bookshelf_search'))
+              .width(24)
+              .height(24);
+          }
+          .width(44)
+          .height(44)
+          .borderRadius(22)
+          .onClick((): void => this.onLeadingTap());
         } else {
           Blank().width(44).height(44);
         }
