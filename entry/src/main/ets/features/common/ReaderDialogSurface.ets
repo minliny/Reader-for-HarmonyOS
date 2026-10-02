@@ -175,7 +175,7 @@ export struct ReaderDialogSurface {
 
   // Specs that preserve the legacy extended touch contract return an expanded
   // region; others fall back to the component's own bounds (44vp min height).
-  private actionTouchRegion(): ResponseRegion {
+  private actionTouchRegion(): Rectangle {
     const spec = this.spec();
     if (spec.actionExtendsTouchRegion) {
       return { x: 0, y: -3, width: '100%', height: spec.actionHeight + 6 };
@@ -214,7 +214,7 @@ export struct ReaderDialogSurface {
   // In inset mode the resolved side gaps become horizontal padding so the card
   // centers within a full-bleed overlay; in cap/card-inset/percent modes padding
   // is uniform.
-  private framePadding(): Padding {
+  private framePadding(): number | Padding {
     const spec = this.spec();
     if (spec.widthPercent <= 0 && spec.frameMode === 'inset') {
       const frame = this.resolvedFrame();
