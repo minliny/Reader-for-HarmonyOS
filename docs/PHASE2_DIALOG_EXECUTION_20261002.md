@@ -31,6 +31,8 @@ worktree：`/Users/minliny/Documents/Reader/.reader-isolated/phase2-dialog-20261
 | `node tools/test-responsive-surface-widths.mjs` | PASS | Dialog 与页面横向几何静态回归 |
 | `node tools/run-contract-tests.mjs --source` | PASS，173 个 source，236 个 integration 分类 | Host 源码合同；不代替 SDK/HAP/VM/视觉/用户验收 |
 
+另外通过四项静态交付门禁：`test-hap-pipeline-contract.mjs`、`test-native-input-preflight.mjs`、`test-build-input-safety.mjs` 和 `test-hap-source-inputs.mjs`。这些只证明输入、签名身份绑定和流水线防护仍可执行，不生成新的 HAP，也不改变当前 VM 安装。
+
 ## 未关闭出口
 
 WP04 仍是候选状态。完整 ArkTS/SDK parent integration、规范 HAP、VM 运行表现、视觉比较、用户接受和主树合入尚未在本回执中关闭。下一步应在同一 worktree 继续做完整 parent integration 与适用 Dialog 对账；只有这些证据分层闭合后才允许合并。
