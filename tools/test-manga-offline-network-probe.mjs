@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { createRequire, registerHooks } from 'node:module';
 import { MangaOfflineNetworkProbe } from '../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts';
+import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
 import { readerMangaOfflineProbeScope } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
 import { MangaImageDecodeHost } from '../entry/src/main/ets/app/MangaImageDecodeHost.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
@@ -137,10 +138,11 @@ console.log('PASS production Runtime send/wait binding, ordinary request isolati
 // Execute the real Surface open/helper. Cached catalog access is its only
 // offline dependency, and a missing cached catalog never reaches acquireBook.
 let catalogReads=0,onlineAcquires=0,catalogFails=false;
-const entry={targetOrdinal:0,chapter:{manifest:{displayHints:{}}}};
+const entry={targetOrdinal:0,recoveryRequired:false,chapter:{chapterIndex:0,chapterTitle:'本章',totalPages:1,pageStart:0,cached:true,resources:[],manifest:{chapter:{sourceId:scope.sourceId,bookId:scope.bookId,chapterId:'/chapter'},sourceRuleVersion:'r',manifestVersion:'v',decodeRevision:'v',pages:[{ordinal:0,pageId:'page-0'}],displayHints:{}}},progress:{token:{epoch:1,revision:0},location:null}};
 const Surface=productionMotionMethods(url('features/manga/MangaReadingSurface.ets'),['open','acquireCatalog','aboutToDisappear'],{
   MangaSessionGateway:class{async entry(){return entry;}},
   RemoteReadingFlowGateway:class{async openCachedSession(){catalogReads++;if(catalogFails)throw Error('no cached catalog');return {identity:scope,entries:[],acquisitionMode:'offline'};}},
+  MangaBookPresentation, AppStorage: { setOrCreate() {} },
 });
 const makeSurface=()=>{
   const s=new Surface(), events=[];
@@ -198,7 +200,10 @@ console.log('PASS actual ordinary shelf click claims exact manga and enters exis
   const ownerClass=tree.statements.find(n=>n.name?.getText(tree)==='ReaderRuntimeOwner');
   const requestMethod=ownerClass.members.find(n=>n.name?.getText(tree)==='requestDirect').getText(tree);
   const virtualPath=url('app/MangaOfflineProbeSdkCheck.ts').pathname;
-  const coreSdk=new URL('../entry/oh_modules/@reader/core-harmony/sdk/reader_core',import.meta.url).pathname;
+  // The source gate runs before the HAP pipeline installs generated oh_modules.
+  // Use the tracked, Native-sync vendored SDK for this type seam so a fresh
+  // isolated worktree remains reproducible; oh_modules is only a build output.
+  const coreSdk=new URL('../entry/vendor/core-harmony/sdk/reader_core',import.meta.url).pathname;
   const text=`import type {JsonObject, ReaderCoreRuntime, ReaderCoreResultEvent, RequestOptions} from '${coreSdk}';
 import Want from '@ohos.app.ability.Want';
 import {hilog} from '@kit.PerformanceAnalysisKit';

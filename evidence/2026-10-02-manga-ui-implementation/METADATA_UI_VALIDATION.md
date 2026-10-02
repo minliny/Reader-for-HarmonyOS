@@ -37,6 +37,8 @@
 
 列表安全区回归确认漫画自然行高分支将上下留白写入 List 的 `contentStartOffset`／`contentEndOffset`，自身 `.padding` 保持 0；文字固定行高分支继续使用原有显式 padding 与 extent。书架回归确认 74vp 顶部和 floating tab 底部留白同样属于 native List content offset，避免把视觉安全区再次扣减到 viewport。
 
+BookDirectoryPage 的 SDK Builder 回归在 390vp 宽、左 50vp／右 32vp 非对称 cutout 下读取漫画分支 header Row 的实际 emitted padding，确认左右值来自 `contentFrame()`，且标题栏不会覆盖 cutout。
+
 首次 BookDirectory SDK probe 报两个新增 Builder 未被 probe 选取，代码侧定位为测试 harness 成员清单遗漏；清单补全新 Builder 后原有标准目录所有断言继续通过。共享 ReaderDirectoryList 固定文字行高断言更新为可选漫画自然行高表达式，仍保留丢失 extent／初始行高错误的 negative controls。
 
 额外 source-name-resolution 当时前 7 条通过，第 8 条在 root 并行编辑 BookshelfPage 时报告 ETS parse 1 diagnostic；该文件由 root 接管，最终集成轮次需重跑，不能把本记录当它已通过。

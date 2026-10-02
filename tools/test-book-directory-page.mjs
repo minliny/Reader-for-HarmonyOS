@@ -7,7 +7,7 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { projectReaderDirectoryEntries } from '../entry/src/main/ets/features/reading/ReaderDirectoryProjection.ts';
 import { snapshotReaderDirectoryData, sameReaderDirectoryData } from '../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts';
 import { SurfaceWidthSpec, resolveHorizontalFrame } from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
-import { readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeBottom } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import { readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop, readerInteractiveSafeBottom } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 
 const path = fileURLToPath(new URL('../entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets', import.meta.url));
 const source = readFileSync(path, 'utf8');
@@ -18,7 +18,7 @@ const Edge = { Top: 'top', Bottom: 'bottom' };
 let metrics = { windowRect: { width: 390 }, systemInsets: { left: 0, right: 0, top: 48, bottom: 34 },
   cutoutInsets: {}, gestureInsets: {}, navigationInsets: {}, keyboardInsets: {} };
 const deps = { projectReaderDirectoryEntries, snapshotReaderDirectoryData, sameReaderDirectoryData,
-  SurfaceWidthSpec, resolveHorizontalFrame, readerInteractiveSafeLeft, readerInteractiveSafeRight,
+  SurfaceWidthSpec, resolveHorizontalFrame, readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop,
   readerInteractiveSafeBottom, ReaderWindowCoordinator: { metrics: () => metrics },
   TOK_CONTENT_MAX_W_TABLET: 720, registerReaderFonts() {}, Edge,
   ReaderRuntimeOwner: { current: () => ({ supportsCoreCapability: () => false }) },
@@ -29,7 +29,7 @@ const deps = { projectReaderDirectoryEntries, snapshotReaderDirectoryData, sameR
 const methods = ['aboutToAppear', 'aboutToDisappear', 'identity', 'rowIsCurrent', 'onIdentityChanged',
   'supportsDirectoryRules', 'onRulesKindChanged',
   'onEntriesChanged', 'admitEntries', 'applySearch', 'toggleSort', 'scheduleTopScroll', 'scrollToEdge',
-  'emptyMessage', 'contentFrame', 'bottomInset', 'publishProjection', 'onListFirstLayout', 'onListUserScroll', 'flushPendingScroll'];
+  'emptyMessage', 'contentFrame', 'topInset', 'bottomInset', 'publishProjection', 'onListFirstLayout', 'onListUserScroll', 'flushPendingScroll'];
 const Page = productionMotionMethods(path, methods, deps);
 const entries = Array.from({ length: 3000 }, (_, i) => ({ index: i * 2 + 1, title: `Chapter ${i + 1}`,
   navigable: i !== 2, downloadState: 'missing', bookmarks: [] }));
@@ -183,6 +183,29 @@ class Child { constructor(owner, params, _storage, id) { Object.assign(this, { o
   assert.doesNotMatch(source, /Text\('(?:书签|当前章节|收起)'\)/);
 }
 console.log('PH119 standalone BookDirectoryPage actual methods and SDK Builder: PASS');
+
+// Manga's full-viewport branch uses the same measured safe frame for the
+// floating title bar.  Exercise the emitted Row attributes under an
+// asymmetric cutout; raw 16vp side padding would overlap the left edge.
+{
+  const result = fixture();
+  result.page.contentKind = 'manga';
+  result.page.aboutToAppear(); flush();
+  const { owner } = createReaderBuilderProbe(source, ['build', 'standardPage', 'mangaPage', 'mangaFlatList', 'mangaFlatRow', 'flatList', 'chapterRow'], {
+    ...deps, ReaderDirectoryRules: Child, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
+    ReaderDirectoryNavigationSurface: Child, ReaderDirectoryChapterRow: Child });
+  Object.assign(owner, result.page);
+  for (const name of methods) owner[name] = Page.prototype[name].bind(owner);
+  owner.initialRender();
+  const headerRows = [...owner.nodes.values()].filter(node => node.type === 'Row' && node.padding?.top !== undefined);
+  assert.equal(headerRows.length, 1);
+  assert.equal(headerRows[0].padding.left, result.page.contentFrame().left,
+    'manga floating directory header starts after the measured left cutout');
+  assert.equal(headerRows[0].padding.right, result.page.contentFrame().right,
+    'manga floating directory header ends before the measured right cutout');
+  result.page.aboutToDisappear();
+}
+console.log('PASS manga directory header SDK frame: asymmetric cutout stays inside contentFrame');
 
 // Render the actual page branch with persisted Core format metadata. Filename
 // and title are deliberately misleading: they are not format evidence.

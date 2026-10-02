@@ -61,7 +61,7 @@ const sourceSwitch = read('entry/src/main/ets/features/source/SourceSwitchWindow
 const sourceSwitchPanel = read('entry/src/main/ets/features/reading/SourceSwitchPanel.ets');
 const index = read('entry/src/main/ets/pages/Index.ets');
 
-assert.match(detail, /new SurfaceWidthSpec\(TOK_CONTENT_MAX_W_TABLET, 19, 19, 'center'\)/);
+assert.match(detail, /new SurfaceWidthSpec\(720, 20, 20, 'center'\)/);
 assert.match(detail, /this\.viewportWidth > 0[\s\S]*ReaderWindowCoordinator\.metrics\(\)\.windowRect\.width/,
   'Detail must seed its first frame from measured Window metrics');
 assert.doesNotMatch(detail, /@Prop isTablet/,
@@ -75,8 +75,8 @@ assert.match(directory, /readerInteractiveSafeBottom\(ReaderWindowCoordinator\.m
 assert.doesNotMatch(directory, /@Prop isTablet/,
   'Full Directory must select its layout from the live container');
 
-assert.match(sourceSwitch, /\.width\(this\.windowWidth\(\)\)/);
-assert.match(sourceSwitch, /\.height\(this\.windowHeight\(\)\)/);
+assert.match(sourceSwitch, /\.width\('100%'\)/);
+assert.match(sourceSwitch, /\.height\('100%'\)/);
 assert.match(sourceSwitch, /readerInteractiveSafeLeft\(metrics\)/);
 assert.doesNotMatch(sourceSwitch, /\.width\(300\)/,
   'Source Switch children must follow the clamped live window');

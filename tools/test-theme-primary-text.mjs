@@ -8,24 +8,23 @@ import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeR
 const root=path.resolve(import.meta.dirname,'..'), ets=path.join(root,'entry/src/main/ets');
 const source=file=>readFileSync(path.join(ets,'features',file),'utf8');
 const output={layer:'Actual SDK Builder retained observer calls plus all production fontColor AST consumers; no new VM pixels',builder:[],consumers:[]};
-const {owner:detail}=createReaderBuilderProbe(source('bookshelf/LocalBookDetail.ets'),['chapterSection','chapterRow','chapterEmptyMessage','chapterSectionHeight'],{
-  CHAPTER_SECTION_HEIGHT:282,ButtonType:{Normal:'Normal'}});
-Object.assign(detail,{appThemeScheme:'day',toc:[],loadingMessage:'',readingEnabled:true,visibleToc:()=>[],contentWidth:()=>338});
-detail.chapterSection();
+const {owner:detail}=createReaderBuilderProbe(source('bookshelf/LocalBookDetail.ets'),['catalog','chapterRow','chapterEmptyMessage','visibleToc'],{});
+Object.assign(detail,{appThemeScheme:'day',book:{sourceId:'source',bookId:'book'},toc:[],removing:false,collapsedGroups:[],loadingMessage:'',readingEnabled:true,visibleToc:()=>[],onOpenDirectory:()=>{}});
+detail.catalog();
 for(const scheme of ['day','night','day']){
   detail.appThemeScheme=scheme;detail.replay();
   const text=[...detail.nodes.values()].find(n=>n.type==='Text'&&n.create==='完整目录');
   const expected=readerAppColor(scheme==='night'?'TOK_GREEN':'TOK_PRIMARY_DARK',scheme);
-  output.builder.push({method:'LocalBookDetail.chapterSection',scheme,actual:text.fontColor,expected});
+  output.builder.push({method:'LocalBookDetail.catalog',scheme,actual:text.fontColor,expected});
   if(process.argv.includes('--record'))writeFileSync(process.argv[process.argv.indexOf('--record')+1],JSON.stringify(output,null,2)+'\n');
   assert.equal(text.fontColor,expected,'outlined directory action text uses Night emphasis, not solid-fill foreground');
   assert.deepEqual([text.fontSize,text.fontWeight,text.fontFamily],[12,900,'ReaderInter']);
-  const capsule=[...detail.nodes.values()].find(n=>n.type==='Row'&&n.width===94);
+  const capsule=[...detail.nodes.values()].find(n=>n.type==='Row'&&n.width===94&&n.height===30);
   assert.deepEqual([capsule.width,capsule.height,capsule.borderRadius],[94,30,999]);
   assert.equal(capsule.backgroundColor,readerAppColor('app.LocalBookDetail.chapterSection.backgroundColor.A3FFFCF8',scheme));
   assert.equal(capsule.border.color,readerAppColor('TOK_BORDER',scheme));
-  const target=[...detail.nodes.values()].find(n=>n.width===94&&n.height===44);
-  assert.deepEqual([target.width,target.height,target.position.x,target.position.y],[94,44,229,3]);
+  const target=[...detail.nodes.values()].find(n=>n.type==='Stack'&&n.width===94&&n.height===44);
+  assert.deepEqual([target.width,target.height],[94,44]);
   const icon=[...detail.nodes.values()].find(n=>n.type==='Image');
   assert.equal(icon.create,`app.media.book_detail_directory${scheme==='night'?'_theme_night':''}`);
 }

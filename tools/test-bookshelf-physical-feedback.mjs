@@ -106,15 +106,19 @@ check('detail preview retains at most 20 Core identities in the outer scroll and
     assert.equal(chapterTexts.length, Math.min(count, 20));assert.deepEqual(owner.visibleToc(), toc.slice(0,20));
     chapterTexts.forEach((node,index)=>assert.deepEqual([node.fontSize,node.fontWeight],[14,toc[index].navigable===false?'FontWeight.Medium':'FontWeight.Regular']));
     assert.equal(nodes.filter(node=>node.type==='Scroll').length,0,'preview remains in the outer page scroll');
-    const directory=texts(owner).find(node=>node.create==='完整目录 ›');assert.equal(directory.height,44);assert.equal(directory.enabled,true);
-    directory.onClick();assert.equal(directories,1);assert.deepEqual(selected,[]);
+    const directory=texts(owner).find(node=>node.create==='完整目录');
+    const directoryTarget=[...owner.nodes.values()].find(node=>node.type==='Stack'&&node.width===94&&node.height===44);
+    assert.equal(directoryTarget.enabled,true);
+    directoryTarget.onClick();assert.equal(directories,1);assert.deepEqual(selected,[]);
     const rows=nodes.filter(node=>node.type==='Row'&&node.onClick&&node.constraintSize?.minHeight);
     assert.equal(rows.length,Math.min(count,20));
     if(rows.length) {
       rows.at(-1).onClick();assert.deepEqual(selected,[toc[Math.min(count,20)-1].index],'display retains sparse Core indices');
       rows[1].onClick();assert.equal(selected.length,1,'volume row folds without navigating');assert.deepEqual(owner.collapsedGroups,[toc[1].index]);
     }
-    owner.removing=true;owner.replay();directory.onClick();assert.equal(directory.enabled,false);assert.equal(directories,1);
+    owner.removing=true;owner.replay();
+    const disabledDirectory=[...owner.nodes.values()].find(node=>node.type==='Stack'&&node.width===94&&node.height===44);
+    disabledDirectory.onClick();assert.equal(disabledDirectory.enabled,false);assert.equal(directories,1);
     if(rows.length){rows[0].onClick();assert.equal(selected.length,1);}
   }
 });
@@ -157,7 +161,8 @@ for(const [message,reason,expected] of [['','','暂无章节信息'],['正在读
   check(`empty chapters expose status: ${expected}`,()=>{
     const {owner}=createReaderBuilderProbe(detailSource,['catalog','chapterRow','chapterEmptyMessage'],{});
     Object.assign(owner,{appThemeScheme:'day',toc:[],loadingMessage:message,readingEnabled:false,readingBlockedReason:reason,visibleToc:()=>[],removing:false});owner.catalog();
-    assert.ok(texts(owner).some(n=>n.create===expected));assert.equal(texts(owner).find(n=>n.create==='完整目录 ›').enabled,true,'directory recovery remains reachable');
+    assert.ok(texts(owner).some(n=>n.create===expected));
+    assert.equal([...owner.nodes.values()].find(n=>n.type==='Stack'&&n.width===94&&n.height===44).enabled,true,'directory recovery remains reachable');
   });
 }
 const sourcePage = read('source/SourceManagementPage.ets');

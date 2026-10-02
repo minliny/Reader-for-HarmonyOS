@@ -45,6 +45,7 @@ import {
 } from '../common/SurfaceHorizontalGeometry';
 import {
   readerInteractiveSafeLeft,
+  readerInteractiveSafeRight,
   readerVisualSafeLeft,
   readerVisualSafeRight,
 } from '../common/ReaderWindowMetrics';

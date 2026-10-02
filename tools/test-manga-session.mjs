@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
+import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
 const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
 function load(name, dependencies = {}) {
   const source = readFileSync(new URL(`${name}.ts`, root), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
@@ -163,7 +164,7 @@ console.log('PASS nonblocking disposal: pixel leases released immediately, admit
  const rt={supportsCoreCapability:()=>true,request:async(method)=>{assert.equal(method,'manga.entry.get');phases.push('entry');return {data:{entry:prepared}};},
   loadReadingImage:async()=>{phases.push('pixels');return {fileUri:'file://entry',width:600,height:800,revision:'r'};},releaseReadingImage:()=>{},
   bookAcquisitions:()=>({acquireBook:()=>{phases.push('catalog-start');return catalog;}})};
- const ControllerSurface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],{MangaSessionGateway});
+ const ControllerSurface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],{MangaSessionGateway, MangaBookPresentation, AppStorage:{setOrCreate(){}}});
  const controller=new Controller(rt);
  const surface=Object.assign(new ControllerSurface(),{mounted:true,controller,runtime:rt,sourceId:'s',bookId:'b',offline:false,
   remoteBookSeed:{},opened:false,publish:()=>phases.push('published'),restore:()=>phases.push('restored'),onRemoteSessionReady:()=>phases.push('catalog-ready')});
@@ -185,7 +186,7 @@ console.log('PASS actual surface first admits narrow pixels, then starts catalog
   assert.equal(method,'reading.progress.update');assert.equal(params.expectedRevision,persisted.progressRevision);
   writes++;persisted=structuredClone(params.location);return {data:{token:{epoch:12,revision:persisted.progressRevision},location:structuredClone(persisted)}};
  },loadReadingImage:async()=>({fileUri:'file://resume',width:600,height:800,revision:'r'}),releaseReadingImage:()=>{}};
- const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],{MangaSessionGateway});
+ const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],{MangaSessionGateway, MangaBookPresentation, AppStorage:{setOrCreate(){}}});
  const c=new Controller(rt);
  const surface=Object.assign(new Surface(),{mounted:true,controller:c,runtime:rt,sourceId:'s',bookId:'b',offline:false,
   remoteSession:{identity:{sourceId:'s',bookId:'b'},contentKind:'manga',entries:[{index:0,url:'/c'}]},
@@ -378,7 +379,7 @@ console.log('PASS optional adjacent work cannot survive session close or recaptu
 // both cached and network entry paths. Core refusal cannot admit image pixels.
 {
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
- const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],{MangaSessionGateway});
+ const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],{MangaSessionGateway, MangaBookPresentation, AppStorage:{setOrCreate(){}}});
  const proof={sourceId:'s',bookId:'b',chapterIndex:0,url:'/c',nodeId:'node-0',catalogRevision:'catalog',structureRevision:'tree',rulesVersion:'rules'};
  for(const mode of ['cached','network','stale-proof']) {
   const requests=[];let pixels=0;

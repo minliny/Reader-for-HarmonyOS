@@ -11,6 +11,7 @@ import { MangaBookPresentation } from '../manga/MangaBookPresentation';
 import { NoCoverCover } from './NoCoverCover';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
+import { TOK_BORDER_W } from '../common/ReaderTokens';
 
 const CHAPTER_PREVIEW_LIMIT: number = 20;
 
@@ -156,8 +157,23 @@ export struct LocalBookDetail {
         Text('目录').fontSize(15).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
         Text(`${this.toc.filter((entry: LocalReadingTocEntry): boolean => entry.navigable !== false).length} 个可读条目`)
           .layoutWeight(1).fontSize(11).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-        Text('完整目录 ›').height(44).fontSize(12).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-          .enabled(!this.removing).onClick((): void => { if (!this.removing) this.onOpenDirectory(); });
+        // Keep the 44vp hit target separate from the 30vp painted capsule.
+        // The SVG is a real production asset; selecting the theme variant here
+        // also keeps the action legible when the detail surface switches to
+        // the night palette.
+        Stack({ alignContent: Alignment.Center }) {
+          Row({ space: 6 }) {
+            Image(this.appThemeScheme === 'night' ? $r('app.media.book_detail_directory_theme_night') :
+              $r('app.media.book_detail_directory')).width(20).height(20);
+            Text('完整目录').fontFamily('ReaderInter').fontWeight(900).fontSize(12)
+              .fontColor(readerAppColor(this.appThemeScheme === 'night' ? 'TOK_GREEN' : 'TOK_PRIMARY_DARK', this.appThemeScheme))
+              .maxLines(1);
+          }.width(94).height(30).padding({ left: 11, right: 11 })
+            .backgroundColor(readerAppColor('app.LocalBookDetail.chapterSection.backgroundColor.A3FFFCF8', this.appThemeScheme))
+            .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
+            .borderRadius(999).alignItems(VerticalAlign.Center);
+        }.width(94).height(44).enabled(!this.removing)
+          .onClick((): void => { if (!this.removing) this.onOpenDirectory(); });
       }.width('100%').constraintSize({ minHeight: 44 });
       ForEach(this.visibleToc(), (entry: LocalReadingTocEntry) => {
         this.chapterRow(entry);

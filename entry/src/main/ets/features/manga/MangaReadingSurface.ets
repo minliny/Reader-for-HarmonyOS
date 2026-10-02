@@ -980,7 +980,7 @@ export struct MangaReadingSurface {
   }
   @Builder
   private panelOverlay() {
-    Stack({ alignContent: this.widePanel() ? Alignment.CenterEnd : Alignment.Bottom }) {
+    Stack({ alignContent: this.widePanel() ? Alignment.End : Alignment.Bottom }) {
       Column().width('100%').height('100%').backgroundColor('#52000000').onClick((): void => { this.panel = ''; });
       Column() {
         Row() {

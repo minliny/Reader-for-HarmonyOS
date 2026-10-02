@@ -230,7 +230,7 @@ assert.match(shell, /controlObscured: this\.route === 'directory'/);
 assert.match(shell, /interactionBlocked: !this\.visible \|\| this\.route !== 'reading' \|\| this\.sourceSwitchVisible/,
   'hidden, directory, and source-switch layers must transfer pointer ownership away from reading');
 assert.match(shell, /onDeleteBookmarks: \(bookmarkTimes: number\[\]\): void => this\.onDeleteBookmarks\(bookmarkTimes\)/);
-assert.equal((shell.match(/reduceMotion: this\.reduceMotion/g) ?? []).length, 2);
+assert.equal((shell.match(/reduceMotion: this\.reduceMotion/g) ?? []).length, 3);
 assert.match(shell, /\.opacity\(this\.visible \? 1 : 0\)/);
 
 const index = read('entry/src/main/ets/pages/Index.ets');

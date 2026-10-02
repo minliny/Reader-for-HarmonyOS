@@ -354,7 +354,7 @@ export struct SourceSwitchWindow {
         .textOverflow({ overflow: TextOverflow.Ellipsis }).width('66%').textAlign(TextAlign.Center);
       Row() {
         Button({ type: ButtonType.Normal }) {
-          Image(this.appThemeScheme === 'night' ? $r('app.media.search_back_theme_night') : $r('app.media.search_back'))
+          Image(this.appThemeScheme === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close'))
             .width(20).height(20);
         }.width(44).height(44).backgroundColor(Color.Transparent)
           .accessibilityText('返回').enabled(!this.busy() && !this.rollbackRequired()).onClick((): void => this.onClose());

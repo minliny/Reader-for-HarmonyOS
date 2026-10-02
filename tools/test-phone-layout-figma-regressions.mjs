@@ -41,12 +41,14 @@ assert.match(shelf, /return Math\.min\(30,[\s\S]*Math\.max\(TOK_SPACE_XS,/,
 assert.match(detail, /@State private viewportWidth: number = 0;/,
   'book detail must observe its physical viewport');
 assert.match(detail,
-  /private contentFrame\(\): SurfaceHorizontalFrame[\s\S]*new SurfaceWidthSpec\(TOK_CONTENT_MAX_W_TABLET, 19, 19, 'center'\)/,
+  /private contentFrame\(\): SurfaceHorizontalFrame[\s\S]*new SurfaceWidthSpec\(720, 20, 20, 'center'\)/,
   'book detail must share one continuous Figma cap and per-edge safe-frame rule');
 assert.match(detail,
-  /private actionButtonWidth\(\): number \{[\s\S]*Math\.min\(355, Math\.max\(0, \(this\.contentWidth\(\) - TOK_SPACE_CONTROL_INLINE\) \/ 2\)\)/,
-  'detail action buttons must shrink on narrow screens without exceeding the Figma maximum');
-assert.match(detail, /private numericAreaLength\(value: Length\): number \{[\s\S]*typeof value === 'string'[\s\S]*Number\.parseFloat\(value\)/,
-  'book detail must accept the vp string form returned by physical-device Area');
+  /private dockFrame\(\): SurfaceHorizontalFrame[\s\S]*new SurfaceWidthSpec\(680, 30, 30, 'center'\)/,
+  'detail action dock keeps the approved continuous 680vp cap and 30vp safe-frame gaps');
+assert.match(detail, /Text\(this\.shelfActionLabel\(\)\)\.width\(94\)/,
+  'detail secondary action keeps the compact approved 94vp control width');
+assert.match(detail, /onAreaChange\([\s\S]*const width = Number\(area\.width\)/,
+  'book detail must consume the live physical Area width');
 
 console.log('physical phone Figma layout regressions: PASS');

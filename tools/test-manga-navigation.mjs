@@ -49,7 +49,7 @@ const owner=Object.assign(new Surface(),{data:{totalCount:()=>p.totalCount(),get
  horizontalScroller:{currentOffset:()=>({xOffset}),scrollTo:position=>{xOffset=position.xOffset;scrolls.push(['x',position.xOffset]);}},
  getUIContext:()=>({postFrameCallback:frame=>frames.push(frame)}),
  scroller:{getItemIndex:(x,y)=>{measurements.push([x,y]);return owner.first;},getItemRect:()=>({y:-clipped,width:nativeWidth,height:nativeHeight}),scrollToIndex:(...args)=>{clipped=0;scrolls.push(['index',...args]);},scrollBy:(...args)=>{clipped=args[1];scrolls.push(['y',...args]);}},
- controller:{chapter:{manifest},totalPages:3,pageAt:ordinal=>manifest.pages[ordinal],pageGeometry:geometry,savePosition:async(...args)=>saved.push(args)},updateViewport:()=>{}});
+ controller:{chapter:{manifest},totalPages:3,pageAt:ordinal=>manifest.pages[ordinal],pageGeometry:geometry,savePosition:async(...args)=>saved.push(args)},updateViewport:()=>{},persistentDirectory:()=>false});
 owner.rememberVisible();assert.deepEqual(owner.visibleAnchor,{ordinal:1,y:0.501,x:0.25});
 owner.changeZoom(99);assert.equal(owner.zoom,3);flushLayout(1500,1500);
 assert.ok(scrolls.some(s=>s[0]==='x'&&s[1]===375));
@@ -78,7 +78,7 @@ owner.zoom=2;await owner.handleBack();assert.equal(owner.zoom,1);assert.equal(ba
 const leaving=owner.handleBack();assert.equal(backCount,0);assert.equal(saveCount,1,'unzoomed back retains the reader until progress settles');
 finishBackSave();await leaving;assert.equal(backCount,1);
 assert.match(surfaceSource,/onExitRequestHandler\([\s\S]*?this\.handleBack\(\)/);
-assert.match(surfaceSource,/Button\('返回'\)\.onClick\([^\n]*this\.handleBack\(\)/);
+assert.match(surfaceSource,/iconAction\([\s\S]*?'返回',[\s\S]*?this\.handleBack\(\)/);
 console.log('PASS unified system/button back: first leaves zoom, second awaits accepted progress before exit');
 
 assert.match(mangaUserError('MANGA_REGION_ANIMATION_UNSUPPORTED'),/动画/);
@@ -90,7 +90,7 @@ console.log('PASS targeted manga error messages preserve unknown failures and ex
 let finishSave;const actions=[];
 owner.saveVisible=()=>new Promise(resolve=>{finishSave=resolve;});
 owner.onDirectory=()=>actions.push('directory');owner.onSwitchSource=()=>actions.push('source');
-const directory=owner.openDirectory();assert.deepEqual(actions,[]);finishSave();await directory;assert.deepEqual(actions,['directory']);
-const switching=owner.openSourceSwitch();finishSave();await switching;assert.deepEqual(actions,['directory','source']);
-const stale=owner.openDirectory();owner.mounted=false;finishSave();await stale;assert.deepEqual(actions,['directory','source']);
+const directory=owner.openDirectory();assert.deepEqual(actions,[]);finishSave();await directory;assert.equal(owner.panel,'directory');assert.deepEqual(actions,[]);
+const switching=owner.openSourceSwitch();finishSave();await switching;assert.deepEqual(actions,['source']);
+const stale=owner.openDirectory();owner.mounted=false;finishSave();await stale;assert.deepEqual(actions,['source']);
 console.log('PASS manga catalog/download and source controls use existing shell routes after position capture; disposed actions cannot navigate');

@@ -353,6 +353,11 @@ interface MangaPositionProjectionJob {
   detailIdentity: string;
 }
 
+interface MangaBookIdentity {
+  sourceId: string;
+  bookId: string;
+}
+
 @Entry
 @Component
 struct Index {
@@ -2541,7 +2546,8 @@ struct Index {
       }
       const title = typeof row['name'] === 'string' ? row['name'] as string : book.title;
       const author = typeof row['author'] === 'string' ? row['author'] as string : book.author;
-      this.detailBook = { ...book, sourceId: book.sourceId, sourceName: book.sourceName, bookId: book.bookId, title, author,
+      this.detailBook = { sourceId: book.sourceId, sourceName: book.sourceName, bookId: book.bookId, title, author,
+        contentKind: book.contentKind, mangaPosition: book.mangaPosition,
         intro: typeof row['intro'] === 'string' ? row['intro'] as string : book.intro,
         coverUrl: typeof row['coverUrl'] === 'string' ? row['coverUrl'] as string : book.coverUrl,
         kind: typeof row['kind'] === 'string' ? row['kind'] as string : book.kind,
@@ -2837,7 +2843,7 @@ struct Index {
     const before = MangaBookPresentation.revision;
     MangaBookPresentation.useOwner(owner);
     if (before !== MangaBookPresentation.revision) this.mangaProjectionSignature = '';
-    const retained = this.shelfBooks.slice(0, 144).map((book: ShelfBook): { sourceId: string; bookId: string } =>
+    const retained: MangaBookIdentity[] = this.shelfBooks.slice(0, 144).map((book: ShelfBook): MangaBookIdentity =>
       ({ sourceId: book.sourceId, bookId: book.bookId }));
     if (this.detailBook?.contentKind === 'manga') retained.push({ sourceId: this.detailBook.sourceId,
       bookId: this.detailBook.bookId });
@@ -2894,7 +2900,10 @@ struct Index {
       if (!current() || before === MangaBookPresentation.revision) return;
       AppStorage.setOrCreate('readerMangaPresentationRevision', MangaBookPresentation.revision);
       if (this.detailBook?.sourceId === book.sourceId && this.detailBook.bookId === book.bookId)
-        this.detailBook = { ...this.detailBook, contentKind: 'manga',
+        this.detailBook = { sourceId: this.detailBook.sourceId, sourceName: this.detailBook.sourceName,
+          bookId: this.detailBook.bookId, title: this.detailBook.title, author: this.detailBook.author,
+          kind: this.detailBook.kind, coverUrl: this.detailBook.coverUrl, intro: this.detailBook.intro,
+          lastChapter: this.detailBook.lastChapter, contentKind: 'manga',
           mangaPosition: MangaBookPresentation.get(book.sourceId, book.bookId) };
     } catch (_error) { /* Optional display projection; unknown remains unknown. */ }
   }
@@ -3441,12 +3450,13 @@ struct Index {
           if (current !== undefined && current.sourceId === session.identity.sourceId &&
             current.bookId === session.identity.bookId) {
             this.detailBook = {
-              ...current,
               sourceId: current.sourceId,
               sourceName: source.name,
               bookId: current.bookId,
               title: current.title,
               author: current.author,
+              contentKind: current.contentKind,
+              mangaPosition: current.mangaPosition,
               kind: current.kind,
               coverUrl: current.coverUrl,
               intro: current.intro,

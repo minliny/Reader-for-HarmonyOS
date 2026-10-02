@@ -5,6 +5,7 @@ import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { motionSegment } from '../entry/src/main/ets/features/common/MotionTimeline.ts';
+import { readerInteractiveSafeBottom } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 
 const file = path => fileURLToPath(new URL(`../entry/src/main/ets/${path}`, import.meta.url));
 const shelfFile = file('features/bookshelf/BookshelfPage.ets');
@@ -20,6 +21,8 @@ const viewMotion = new Function('curves', 'Curve',
   `${stripTypeScriptTypes(declaration)}; return BOOKSHELF_VIEW_MOTION;`)(
   { cubicBezierCurve: () => curve }, { Linear: 'linear', EaseOut: 'easeOut' });
 const Motion = productionMotionMethods(shelfFile, ['sampleViewSwitch'], { motionSegment });
+const readerMetrics = { windowRect: { width: 390, height: 844 }, systemInsets: { top: 48, bottom: 34, left: 0, right: 0 }, cutoutInsets: {}, gestureInsets: {}, navigationInsets: {}, keyboardInsets: {} };
+const readerFloatingTabContentInset = metrics => 68 + Math.max(15, readerInteractiveSafeBottom(metrics)) + 16;
 const sampler = Object.assign(new Motion(), { viewMotion, viewFadeCurve: curve,
   viewContentCurve: curve, viewSwitchSourceMode: 'cover', viewSwitchDestinationMode: 'list' });
 let shelfSamples = 0;
@@ -29,6 +32,7 @@ for (const theme of ['day', 'night']) {
     'sectionActionAsset', 'canonicalFilterActiveAsset', 'isSectionActionActive', 'sectionActionLabel'], {
     LazyForEach: { create() {}, pop() {} },
     ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
+    readerFloatingTabContentInset, ReaderWindowCoordinator: { metrics: () => readerMetrics },
   }, {
     onObserverExit(owner, id) {
       const node = owner.nodes.get(id);
@@ -41,7 +45,7 @@ for (const theme of ['day', 'night']) {
   Object.assign(owner, { appThemeScheme: theme, viewMode: 'cover', viewSwitchHeaderOpacity: 1,
     continueReading: undefined, filterRowVisible: false,
     viewModeError: '', visibleBookCount: 0, rowDataSource: {},
-    shelfContentWidth: () => 352, hasActiveFilters: () => false, isWideViewport: () => false });
+    shelfContentWidth: () => 352, readerFloatingTabContentInset, ReaderWindowCoordinator: { metrics: () => readerMetrics }, hasActiveFilters: () => false, isWideViewport: () => false });
   owner.bookshelfList(false);
   const icons = [...owner.nodes.values()].filter(node => node.type === 'Image');
   assert.equal(icons.length, 3);
@@ -82,17 +86,20 @@ Object.assign(detail, { appThemeScheme: 'day', toc: [{ index: 0, title: '第一�
   book: { title: '书', author: '作者' }, readingEnabled: true, readingBlockedReason: '',
   inBookshelf: true, removalEnabled: true, removing: false, loadingMessage: '',
   contentWidth: () => 352, actionButtonWidth: () => 171 });
+detail.dockFrame = () => ({ width: 352 });
+detail.bottomInset = () => 0;
 detail.actionArea();
-const buttons = [...detail.nodes.values()].filter(node => node.type === 'Stack');
+const buttons = [...detail.nodes.values()].filter(node => node.type === 'Text' && ['继续阅读', '移除书架'].includes(node.create));
 assert.equal(buttons.length, 2);
 const buttonIds = buttons.map(node => node.id);
 for (let progress = 1; progress <= 4; progress += 1) {
   detail.book = { ...detail.book, currentChapterIndex: progress, readProgress: progress * 100 };
   detail.toc = detail.toc.map(entry => ({ ...entry }));
   detail.replay();
-  assert.deepEqual([...detail.nodes.values()].filter(node => node.type === 'Stack').map(node => node.id), buttonIds);
+  assert.deepEqual([...detail.nodes.values()].filter(node => node.type === 'Text' && ['继续阅读', '移除书架'].includes(node.create)).map(node => node.id), buttonIds);
   assert.deepEqual(buttons.map(node => [node.opacity, node.enabled, node.width, node.height]),
-    [[1, true, 171, 46], [1, true, 171, 46]]);
+    [[1, true, undefined, 48], [1, true, 94, 48]]);
+  assert.equal(buttons[0].layoutWeight, 1);
 }
 let continues=0;detail.onContinue=()=>{continues++;};
 for (const inBookshelf of [false,true]) for(const failure of ['目录读取失败','正文处理设置已改变']) {
