@@ -374,10 +374,13 @@ export struct BookshelfPage {
     AppTopBar({ title: '书架', floating: true, centered: true, showLeadingSearch: true,
       onLeadingTap: (): void => this.onSearchRequested() }) {
         ReaderIconButton({
-          icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more')),
+          // The design header uses a bare horizontal-more glyph. The old
+          // bookshelf_more asset includes a vertical-dot paper disc, which
+          // made the trailing slot read as a second pill inside the header.
+          icon: (this.appThemeScheme === 'night' ? $r('app.media.rc_dots_theme_night') : $r('app.media.rc_dots')),
           boxSize: 44,
-          iconSize: 44,
-          radius: 22,
+          iconSize: 24,
+          radius: 0,
           onTap: (): void => {
             this.moreMenuVisible = true;
           },

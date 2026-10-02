@@ -6,6 +6,7 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { motionSegment } from '../entry/src/main/ets/features/common/MotionTimeline.ts';
 import { readerInteractiveSafeBottom } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 
 const file = path => fileURLToPath(new URL(`../entry/src/main/ets/${path}`, import.meta.url));
 const shelfFile = file('features/bookshelf/BookshelfPage.ets');
@@ -80,8 +81,9 @@ for (const theme of ['day', 'night']) {
 const detailSource = readFileSync(file('features/bookshelf/LocalBookDetail.ets'), 'utf8');
 const { owner: detail } = createReaderBuilderProbe(detailSource, ['actionArea',
   'readingActionLabel', 'shelfActionLabel'], {
-  GradientDirection: { Bottom: 'bottom' },
-});
+    GradientDirection: { Bottom: 'bottom' },
+    READER_FONT_NOTO_SANS_SC_UI_BOLD: 'ReaderNotoSansSCUIBold',
+  });
 Object.assign(detail, { appThemeScheme: 'day', toc: [{ index: 0, title: '第一章' }],
   book: { title: '书', author: '作者' }, readingEnabled: true, readingBlockedReason: '',
   inBookshelf: true, removalEnabled: true, removing: false, loadingMessage: '',
@@ -92,6 +94,25 @@ detail.actionArea();
 const buttons = [...detail.nodes.values()].filter(node => node.type === 'Text' && ['继续阅读', '移除书架'].includes(node.create));
 assert.equal(buttons.length, 2);
 const buttonIds = buttons.map(node => node.id);
+assert.equal(buttons[0].fontFamily, 'ReaderNotoSansSCUIBold', 'primary action uses the bundled static UI bold face');
+assert.equal(buttons[1].fontFamily, 'ReaderNotoSansSCUIMedium', 'secondary action uses the bundled static UI medium face');
+assert.equal(buttons[1].fontWeight, 500, 'secondary action uses medium weight');
+assert.deepEqual(buttons[1].border, { width: 1, color: readerAppColor('TOK_LINE', 'day') },
+  'secondary action keeps the one-pixel neutral outline');
+assert.equal(buttons[1].backgroundColor, readerAppColor('TOK_SURFACE_PANEL_SOFT', 'day'),
+  'secondary action uses the neutral soft surface');
+assert.equal(buttons[1].fontColor, readerAppColor('TOK_MUTED', 'day'),
+  'secondary action uses muted text');
+Object.assign(detail, { inBookshelf: false, adding: false, cancellingAdd: false, removing: false });
+detail.replay();
+assert.equal(buttons[1].create, '加入书架');
+assert.equal(buttons[1].fontColor, readerAppColor('TOK_GREEN', 'day'),
+  'add-to-shelf action keeps the positive green affordance');
+Object.assign(detail, { inBookshelf: true });
+detail.replay();
+assert.equal(buttons[1].create, '移除书架');
+assert.equal(buttons[1].fontColor, readerAppColor('TOK_MUTED', 'day'),
+  'remove-from-shelf action uses muted text');
 for (let progress = 1; progress <= 4; progress += 1) {
   detail.book = { ...detail.book, currentChapterIndex: progress, readProgress: progress * 100 };
   detail.toc = detail.toc.map(entry => ({ ...entry }));

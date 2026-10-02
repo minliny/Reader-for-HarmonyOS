@@ -23,8 +23,9 @@ assert.equal(registrar.readerFontFamilyReady('unknown platform family'),false);
 assert.equal(registrar.readerFontFamilyReady('ReaderCustom_owned'),false);
 registrar.registerReaderShelfFonts(platform);registrar.registerReaderShelfFonts(platform);
 assert.deepEqual(calls.map(call=>call.family),[families.READER_FONT_INTER,
- families.READER_FONT_NOTO_SERIF_SC_BOLD,families.READER_FONT_NOTO_SANS_SC],
- 'the first bookshelf frame loads only faces it uses');
+ families.READER_FONT_NOTO_SERIF_SC_BOLD,families.READER_FONT_NOTO_SANS_SC,
+ families.READER_FONT_NOTO_SANS_SC_UI_BOLD],
+ 'the first bookshelf frame loads only faces it uses, including the static UI bold tab/header face');
 let shelfReady=false;const shelf=registrar.prepareReaderShelfFonts().then(()=>{shelfReady=true;});
 await Promise.resolve();assert.equal(shelfReady,false,'shelf submission is not readiness');
 pending.splice(0).forEach(p=>p.resolve());await shelf;assert.equal(shelfReady,true);

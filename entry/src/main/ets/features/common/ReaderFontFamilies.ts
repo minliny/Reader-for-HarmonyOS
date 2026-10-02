@@ -5,6 +5,9 @@ export const READER_FONT_INTER = 'ReaderInter';
 export const READER_FONT_NOTO_SERIF_SC_BOLD = 'ReaderNotoSerifSCBold';
 export const READER_FONT_NOTO_SERIF_SC_REGULAR = 'ReaderNotoSerifSCRegular';
 export const READER_FONT_NOTO_SANS_SC = 'ReaderNotoSansSC';
+// Static UI faces are used for compact navigation chrome where ArkUI does not
+// interpolate variable-font weights reliably on every device.
+export const READER_FONT_NOTO_SANS_SC_UI_BOLD = 'ReaderNotoSansSCUIBold';
 export const READER_FONT_LXGW_WENKAI_LITE = 'ReaderLXGWWenKaiLite';
 export const READER_FONT_LXGW_WENKAI_GB_LITE = 'ReaderLXGWWenKaiGBLite';
 export const READER_FONT_ZHUQUE_FANGSONG = 'ReaderZhuqueFangsong';

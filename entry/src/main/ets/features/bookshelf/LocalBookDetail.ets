@@ -221,26 +221,35 @@ export struct LocalBookDetail {
 
   @Builder
   private actionArea() {
-    Row({ space: 12 }) {
-      Text(this.readingActionLabel()).layoutWeight(1).height(48).fontSize(14).fontWeight(FontWeight.Bold)
-        .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-        .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)).borderRadius(16)
-        .enabled(!this.removing).opacity(this.removing ? 0.5 : 1)
-        .onClick((): void => { if (!this.removing) this.onContinue(); });
-      Text(this.shelfActionLabel()).width(94).height(48).fontSize(12).fontWeight(FontWeight.Bold)
-        .textAlign(TextAlign.Center).fontColor(readerAppColor(this.inBookshelf ? 'TOK_DANGER' : 'TOK_GREEN', this.appThemeScheme))
-        .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme)).borderRadius(16)
-        .enabled(this.removalEnabled && !this.removing && !this.cancellingAdd)
-        .opacity(this.removalEnabled && !this.removing && !this.cancellingAdd ? 1 : 0.4)
-        .onClick((): void => {
-          if (this.removalEnabled && !this.removing && !this.cancellingAdd) {
-            if (this.adding) this.onCancelAdd(); else this.onRemove();
-          }
-        });
-    }.width(this.dockFrame().width).height(68).padding(9)
+    // Measure the 48vp action row independently from the 68vp painted dock;
+    // horizontal insets must not shrink its vertical button bounds.
+    Stack({ alignContent: Alignment.Center }) {
+      Row({ space: 12 }) {
+        Text(this.readingActionLabel()).layoutWeight(1).height(48).fontFamily('ReaderNotoSansSCUIBold')
+          .fontSize(14).fontWeight(FontWeight.Bold)
+          .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
+          .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)).borderRadius(16)
+          .enabled(!this.removing).opacity(this.removing ? 0.5 : 1)
+          .onClick((): void => { if (!this.removing) this.onContinue(); });
+        Text(this.shelfActionLabel()).width(94).height(48).fontFamily('ReaderNotoSansSCUIMedium')
+          .fontSize(12).fontWeight(500)
+          // Removing is a quiet secondary action; adding remains the positive
+          // green affordance used by the shelf entry surface.
+          .textAlign(TextAlign.Center).fontColor(readerAppColor(this.inBookshelf ? 'TOK_MUTED' : 'TOK_GREEN', this.appThemeScheme))
+          .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(16)
+          .border({ width: 1, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+          .enabled(this.removalEnabled && !this.removing && !this.cancellingAdd)
+          .opacity(this.removalEnabled && !this.removing && !this.cancellingAdd ? 1 : 0.4)
+          .onClick((): void => {
+            if (this.removalEnabled && !this.removing && !this.cancellingAdd) {
+              if (this.adding) this.onCancelAdd(); else this.onRemove();
+            }
+          });
+      }.width('100%').height(48).alignItems(VerticalAlign.Center);
+    }.width(this.dockFrame().width).height(68).padding({ left: 9, right: 9 })
       .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme)).borderRadius(24)
       .border({ width: 0.5, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .shadow({ radius: this.appThemeScheme === 'night' ? 0 : 10, color: '#14000000', offsetY: 3 })
+      .shadow({ radius: this.appThemeScheme === 'night' ? 0 : 18, color: '#14000000', offsetY: 5 })
       .align(Alignment.Bottom).margin({ bottom: this.bottomInset() + 12 });
   }
 

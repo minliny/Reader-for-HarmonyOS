@@ -99,6 +99,6 @@ const title = [...detail.nodes.values()].find(value => value.type === 'Text' && 
 assert.equal(title.maxLines, 2); assert.equal(title.fontSize, 24);
 const intro = [...detail.nodes.values()].find(value => value.type === 'Text' && value.create === '简介' && value.lineHeight === 24);
 assert.equal(intro.maxLines, 3);
-const dock = [...detail.nodes.values()].find(value => value.type === 'Row' && value.height === 68);
+const dock = [...detail.nodes.values()].find(value => (value.type === 'Stack' || value.type === 'Row') && value.height === 68);
 assert.equal(dock.width, 330); assert.equal(dock.borderRadius, 24);
 console.log('PASS actual detail SDK Builder: full scroll viewport, 84×122 cover, centered floating header, two-line title, folded intro and floating dock');

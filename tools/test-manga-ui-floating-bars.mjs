@@ -10,12 +10,13 @@ import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThem
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
 const read = name => readFileSync(file(name),'utf8');
 const roleSource=read('features/common/ReaderTypography.ets').replace(/^import\s*[\s\S]*?;\s*/gm,'').replace(/\bexport /g,'');
-const families={ READER_FONT_INTER:'ReaderInter', READER_FONT_NOTO_SANS_SC:'ReaderNotoSansSC', READER_FONT_NOTO_SERIF_SC_BOLD:'ReaderNotoSerifSCBold', READER_FONT_NOTO_SERIF_SC_REGULAR:'ReaderNotoSerifSCRegular' };
+const families={ READER_FONT_INTER:'ReaderInter', READER_FONT_NOTO_SANS_SC:'ReaderNotoSansSC', READER_FONT_NOTO_SANS_SC_UI_BOLD:'ReaderNotoSansSCUIBold', READER_FONT_NOTO_SERIF_SC_BOLD:'ReaderNotoSerifSCBold', READER_FONT_NOTO_SERIF_SC_REGULAR:'ReaderNotoSerifSCRegular' };
 const floatingSource=read('features/common/ReaderFloatingBarMetrics.ts').replace(/^import\s*[\s\S]*?;\s*/gm,'').replace(/\bexport /g,'');
 const {readerFloatingTabBottomInset,readerFloatingTabContentInset}=new Function('readerInteractiveSafeBottom',`${stripTypeScriptTypes(floatingSource)};return {readerFloatingTabBottomInset,readerFloatingTabContentInset};`)(readerInteractiveSafeBottom);
 const roles=new Function(...Object.keys(families),`${stripTypeScriptTypes(roleSource)};return {TYPE_MAIN_TAB_LABEL,TYPE_PAGE_TITLE,TYPE_APP_HOME_TITLE};`)(...Object.values(families));
 let metrics={windowRect:{width:390,height:844},systemInsets:{left:0,right:0,top:48,bottom:34},cutoutInsets:{},gestureInsets:{},navigationInsets:{}};
-const common={...roles,SurfaceWidthSpec,resolveHorizontalFrame,readerInteractiveSafeLeft,readerInteractiveSafeRight,
+const common={...roles,READER_FONT_NOTO_SANS_SC_UI_BOLD:families.READER_FONT_NOTO_SANS_SC_UI_BOLD,
+  SurfaceWidthSpec,resolveHorizontalFrame,readerInteractiveSafeLeft,readerInteractiveSafeRight,
   readerInteractiveSafeBottom,readerVisualSafeTop,readerFloatingTabBottomInset,
   ReaderWindowCoordinator:{metrics:()=>metrics},TOK_SPACE_CONTROL_INLINE:10,TOK_HOME_TOP_BAR_INSET:20,TOK_SPACE_XS:8,TOK_BORDER_W:0.5};
 const tabsFile=file('features/shell/MainTabBar.ets'), tabsSource=readFileSync(tabsFile,'utf8');

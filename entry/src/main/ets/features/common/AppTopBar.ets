@@ -10,6 +10,7 @@ import {
   readerInteractiveSafeRight,
 } from './ReaderWindowMetrics';
 import { TYPE_APP_HOME_TITLE } from './ReaderTypography';
+import { READER_FONT_NOTO_SANS_SC_UI_BOLD } from './ReaderFontFamilies.ts';
 
 // AppTopBar —— 首页顶部标题栏统一组件 (Figma HomeTopBar): 58 高、左右 20 + 顶部 6
 // 内边距、29px 思源宋体粗题 + 可选尾部槽。收敛 Bookshelf/Discover/Settings 三页
@@ -55,8 +56,11 @@ export struct AppTopBar {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .textAlign(TextAlign.Center)
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(650)
+          // ArkUI does not reliably interpolate a 650 weight on the bundled
+          // variable CJK face. The static UI bold face keeps the 650-like
+          // header contrast used by the manga design across devices.
+          .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD)
+          .fontWeight(FontWeight.Bold)
           .fontSize(19)
           .lineHeight(28)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));

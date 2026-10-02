@@ -7,6 +7,7 @@ import {
   READER_FONT_LXGW_WENKAI_LITE,
   READER_FONT_LXGW_WENKAI_GB_LITE,
   READER_FONT_NOTO_SANS_SC,
+  READER_FONT_NOTO_SANS_SC_UI_BOLD,
   READER_FONT_NOTO_SERIF_SC_BOLD,
   READER_FONT_NOTO_SERIF_SC_REGULAR,
   READER_FONT_SARASA_MONO_SC,
@@ -19,7 +20,7 @@ function bundledFontSource(family: string): Resource | undefined {
   if (family === READER_FONT_NOTO_SERIF_SC_REGULAR) return $rawfile('NotoSerifSC-Regular.ttf');
   if (family === 'ReaderNotoSansSCUIRegular') return $rawfile('NotoSansSC-UIRegular.otf');
   if (family === 'ReaderNotoSansSCUIMedium') return $rawfile('NotoSansSC-UIMedium.otf');
-  if (family === 'ReaderNotoSansSCUIBold') return $rawfile('NotoSansSC-UIBold.otf');
+  if (family === READER_FONT_NOTO_SANS_SC_UI_BOLD) return $rawfile('NotoSansSC-UIBold.otf');
   if (family === READER_FONT_NOTO_SANS_SC) return $rawfile('NotoSansSC-VF.otf');
   if (family === READER_FONT_LXGW_WENKAI_LITE) return $rawfile('LXGWWenKaiLite-Regular.ttf');
   if (family === READER_FONT_LXGW_WENKAI_GB_LITE) return $rawfile('LXGWWenKaiGBLite-Regular.ttf');
@@ -46,7 +47,7 @@ export function readerFontFamilyReady(family: string): boolean {
  * on-demand admission after the shelf has been mounted. */
 export function prepareReaderShelfFonts(): Promise<void> {
   return Promise.all([READER_FONT_INTER, READER_FONT_NOTO_SERIF_SC_BOLD,
-    READER_FONT_NOTO_SANS_SC]
+    READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_BOLD]
     .map((family: string): Promise<void> => prepareReaderFontFamily(family))).then((): void => {});
 }
 

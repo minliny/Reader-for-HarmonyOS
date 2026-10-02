@@ -1,6 +1,7 @@
 import {
   READER_FONT_INTER,
   READER_FONT_NOTO_SANS_SC,
+  READER_FONT_NOTO_SANS_SC_UI_BOLD,
   READER_FONT_NOTO_SERIF_SC_BOLD,
   READER_FONT_NOTO_SERIF_SC_REGULAR,
 } from './ReaderFontFamilies.ts';
@@ -60,7 +61,7 @@ export const TYPE_PAGE_TITLE = new ReaderTextStyle(
 export const TYPE_SECTION_HEADING = new ReaderTextStyle(
   READER_FONT_INTER, 900, 13, 15.6, undefined, 'system', 'figmaNode');
 export const TYPE_MAIN_TAB_LABEL = new ReaderTextStyle(
-  READER_FONT_NOTO_SANS_SC, 700, 11, 18, undefined, 'system', 'figmaNode');
+  READER_FONT_NOTO_SANS_SC_UI_BOLD, 700, 11, 18, undefined, 'system', 'figmaNode');
 
 // Shared-select variants. Similar controls retain independent roles whenever
 // their Figma nodes differ; sharing the component never implies identical text.
