@@ -197,7 +197,7 @@ export struct BookDirectoryPage {
       }, (identity: string): string => identity);
       Row() {
         PageBackBar({ title: '目录', floating: true, centered: true, onBack: (): void => this.onBack() });
-      }.width('100%').padding({ left: this.contentFrame().left, right: this.contentFrame().right, top: this.topInset() + 6 })
+      }.width('100%').padding({ left: this.contentFrame().left, right: this.contentFrame().right, top: this.topInset() + 8 })
         .align(Alignment.Top).hitTestBehavior(HitTestMode.Transparent);
       Column() {
         ReaderDirectoryToolbar({ text: this.searchDraft, placeholder: '搜索话／卷名称', ascending: this.ascending,

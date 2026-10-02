@@ -69,7 +69,7 @@ export struct LocalBookDetail {
         PageBackBar({ title: '书籍详情', floating: true, centered: true,
           backIcon: this.appThemeScheme === 'night' ? $r('app.media.book_detail_back_theme_night') : $r('app.media.book_detail_back'),
           onBack: (): void => this.onBack() });
-      }.width('100%').padding({ left: 16 + this.safeLeft(), right: 16 + this.safeRight(), top: this.topInset() + 6 })
+      }.width('100%').padding({ left: 16 + this.safeLeft(), right: 16 + this.safeRight(), top: this.topInset() + 8 })
         .align(Alignment.Top).hitTestBehavior(HitTestMode.Transparent);
       this.actionArea();
     }.width('100%').height('100%')
