@@ -18,6 +18,12 @@ export struct ReaderNativeParagraphView {
   @Prop @Watch('updateHighlight') highlightEnd: number | undefined = undefined;
   @Prop @Watch('updateHighlight') highlightColor: string = '#222222';
   @Prop @Watch('updateHighlight') underline: boolean = false;
+  /**
+   * The TTS underline is painted by a separate Canvas, so its geometry must
+   * observe the same shaping identity as the native Text.  A scalar range can
+   * stay unchanged while a font/size/spacing reflow moves its glyphs.
+   */
+  @Prop @Watch('updateHighlight') highlightLayoutKey: string = '';
   queueHighlightMeasurement: ((action: () => void) => void) | undefined = undefined;
   onHighlightGeometry: (rects: ReaderDynamicHighlightRect[]) => void = (_rects): void => {};
   @Prop localHighlights: boolean = false;
@@ -33,6 +39,7 @@ export struct ReaderNativeParagraphView {
   private y: number = 0;
   private localCanvas: CanvasRenderingContext2D | undefined;
   private localRects: ReaderDynamicHighlightRect[] = [];
+  private paintedHighlightLayoutKey: string = '';
   @State private localHighlightTop: number = 0;
   @State private localHighlightHeight: number = 0;
 
@@ -89,6 +96,18 @@ export struct ReaderNativeParagraphView {
 
   private updateHighlight(): void {
     if (!this.mounted) return;
+    // Font changes can retain the same fragment and scalar range.  Invalidate
+    // the old Canvas rects immediately, then measure against the new native
+    // Text layout in the owner's frame.  Otherwise the old underline remains
+    // at its pre-reflow coordinates until another TTS range/area event.
+    if (this.paintedHighlightLayoutKey !== this.highlightLayoutKey) {
+      this.paintedHighlightLayoutKey = this.highlightLayoutKey;
+      this.onHighlightGeometry([]);
+      this.localRects = [];
+      this.localHighlightTop = 0;
+      this.localHighlightHeight = 0;
+      this.localCanvas?.clearRect(0, 0, this.recipe.style.widthVp, this.localHighlightViewportHeight);
+    }
     const epoch = this.epoch;
     const action = (): void => {
       if (!this.mounted || epoch !== this.epoch || this.map === undefined) return;

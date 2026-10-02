@@ -36,6 +36,11 @@ import { registerReaderShelfFonts } from '../common/ReaderFonts';
 import { BookshelfBookActionSheet } from './BookshelfBookActionSheet';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
+  READER_FLOATING_TOP_BAR_HEIGHT,
+  readerFloatingBarBottomInset,
+  readerFloatingTabContentInset,
+} from '../common/ReaderFloatingBarMetrics';
+import {
   SurfaceHorizontalFrame,
   SurfaceWidthSpec,
   resolveHorizontalFrame,
@@ -473,7 +478,8 @@ export struct BookshelfPage {
     }
     .width(this.shelfContentWidth(isTablet))
     .height('100%')
-    .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_MD })
+    .contentStartOffset(READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS)
+    .contentEndOffset(this.shelfBottomContentInset(isTablet))
     .scrollBar(BarState.Off)
     .maintainVisibleContentPosition(true)
     .onScrollIndex((start: number): void => {
@@ -488,6 +494,12 @@ export struct BookshelfPage {
     .onReachEnd((): void => this.onNextPageRequested())
     .onScroll((): void => this.saveShelfViewport())
     .onAppear((): void => this.restoreShelfViewport());
+  }
+
+  private shelfBottomContentInset(isTablet: boolean): number {
+    if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_MD;
+    const metrics = ReaderWindowCoordinator.metrics();
+    return isTablet ? readerFloatingBarBottomInset(metrics, TOK_SPACE_MD) : readerFloatingTabContentInset(metrics);
   }
 
   private shelfHeaderItems(): number {
@@ -523,7 +535,14 @@ export struct BookshelfPage {
           JSON.stringify([book.sourceId, book.bookId]) === key)) { anchor = index; break; }
       }
       if (anchor < 0) {
-        this.shelfScroller.scrollTo({ xOffset: 0, yOffset: Math.max(0, offset), animation: false });
+        if (Number.isFinite(offset) && offset !== 0) {
+          this.shelfScroller.scrollTo({ xOffset: 0, yOffset: offset, animation: false });
+        } else {
+          // Native List's top edge includes contentStartOffset; scrollTo(0)
+          // would remove the clearance on first entry. Saved signed offsets
+          // retain partial scrolling through that clearance on route return.
+          this.shelfScroller.scrollEdge(Edge.Top);
+        }
         this.viewportRestored = true;
         this.publishVisibleReadingBooks();
         return;

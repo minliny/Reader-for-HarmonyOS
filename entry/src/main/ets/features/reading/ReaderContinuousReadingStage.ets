@@ -9,6 +9,7 @@ import {
   type ReaderAppearanceSnapshot,
 } from './ReaderAppearanceState';
 import { ReaderNativeParagraphView } from './ReaderNativeParagraphView';
+import { readerNativeTextGeometryKey } from './ReaderNativeTextMeasurement';
 import { ReaderNativeParagraphPosition, ReaderNativeParagraphRecipe, ReaderNativeParagraphPreparation,
   ReaderNativeParagraphResource, prepareReaderNativeParagraph } from './ReaderNativeParagraph';
 import { readerThemeDefinition } from '../common/ReaderThemeRegistry';
@@ -271,6 +272,7 @@ export struct ReaderContinuousReadingStage {
                       readerAppearanceThemeStyle(this.appearance.activeTheme).ink :
                       readerThemeDefinition(this.appearance.activeTheme).selection,
                     underline: this.ttsHighlightStart !== undefined,
+                    highlightLayoutKey: readerNativeTextGeometryKey(fragment.nativeParagraph.style),
                     localHighlights: true,
                     localHighlightViewportHeight: this.layout.viewportHeight,
                     onPositionResolver: (position: ReaderNativeParagraphPosition | undefined): void => {

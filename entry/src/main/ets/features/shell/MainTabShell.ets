@@ -11,7 +11,8 @@ import {
 
 // MainTabShell —— 主页面(书架/发现/RSS/设置)公共骨架 (FIGMA_NATIVE_UI_ARCHITECTURE_PLAN §七)。
 // 页面背景 + 内容区 + 响应式主导航。主页面只提供 content + activeTab + onMainTab，
-// Phone 使用 BottomNav；完成 Tablet 版式的页面可启用共享左侧导航轨道。状态栏 padding
+// Phone 的 BottomNav 覆盖全高内容；首尾避让由页面滚动内容持有，透明宿主不拦截空白。
+// 完成 Tablet 版式的页面可启用共享左侧导航轨道。状态栏 padding
 // 与安全区仍由 Index 根 Stack 统一处理，避免双 padding。
 @Component
 export struct MainTabShell {
@@ -44,15 +45,20 @@ export struct MainTabShell {
       .height('100%')
       .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
     } else {
-      Column() {
+      Stack({ alignContent: Alignment.TopStart }) {
         Stack({ alignContent: Alignment.TopStart }) {
           this.content();
         }
-        .layoutWeight(1)
-        .width('100%');
+        .width('100%')
+        .height('100%');
 
         if (this.showBottomNav) {
-          MainTabBar({ current: this.activeTab, onSelect: (key: string): void => this.onMainTab(key) });
+          Stack({ alignContent: Alignment.Bottom }) {
+            MainTabBar({ current: this.activeTab, onSelect: (key: string): void => this.onMainTab(key) });
+          }
+          .width('100%')
+          .height('100%')
+          .hitTestBehavior(HitTestMode.Transparent);
         }
       }
       .width('100%')

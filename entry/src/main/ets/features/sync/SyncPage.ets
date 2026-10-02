@@ -1,3 +1,4 @@
+import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
   type SyncHistoryEntry,
@@ -91,8 +92,7 @@ export struct SyncPage {
   }
 
   build() {
-    Column() {
-      this.backBar();
+    Stack({ alignContent: Alignment.TopStart }) {
       Scroll() {
         Column({ space: TOK_SPACE_MD }) {
           this.webdavSection();
@@ -104,14 +104,15 @@ export struct SyncPage {
         .padding({
           left: this.contentFrame().left,
           right: this.contentFrame().right,
-          top: TOK_SPACE_XS,
-          bottom: 18,
+          top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS,
+          bottom: this.bottomContentInset(),
         });
       }
-      .layoutWeight(1)
+      .height('100%')
       .width('100%')
       .align(Alignment.TopStart)
       .scrollBar(BarState.Off);
+      this.backBar();
     }
     .width('100%')
     .height('100%')
@@ -125,6 +126,11 @@ export struct SyncPage {
     });
   }
 
+
+  private bottomContentInset(): number {
+    if (this.readerWindowMetricsRevision < 0) return 18;
+    return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), 18);
+  }
   @Builder
   private backBar() {
     PageBackBar({

@@ -7,6 +7,7 @@ import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from
 import { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp, readerVisualSafeLeft, readerVisualSafeRight,
   readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from './lib/reader-floating-bar-metrics-probe.mjs';
 import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 const typographySource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
 const TYPE_PAGE_TITLE = new Function(...Object.keys(fontFamilies),
@@ -28,15 +29,16 @@ let metrics = new ReaderWindowMetricsSnapshot();
 const deps = { PageBackBar: Header, Toggle, ToggleType: { Switch: 'switch' },
   ReaderWindowCoordinator: { metrics: () => metrics }, SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame,
   readerVisualSafeLeft, readerVisualSafeRight, readerInteractiveSafeLeft, readerInteractiveSafeRight,
-  TOK_CONTENT_MAX_W_TABLET: 720, TOK_SCREEN_INSET: 19, TOK_SPACE_XS: 8, TOK_SPACE_MD: 16, TYPE_PAGE_TITLE };
-const methods = ['build', 'modeOption'];
+  TOK_CONTENT_MAX_W_TABLET: 720, TOK_SCREEN_INSET: 19, TOK_SPACE_XS: 8, TOK_SPACE_MD: 16,
+  READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset, TYPE_PAGE_TITLE };
+const methods = ['build', 'modeOption', 'bottomContentInset'];
 if (source.includes('private contentFrame(')) methods.push('contentFrame');
 const { Component } = createReaderBuilderProbe(source, methods, deps,
   { onObserverEnter(owner, id) { activeOwner = owner; activeId = id; } });
 const { Component: HeaderComponent } = createReaderBuilderProbe(headerSource, ['trailing', 'build', 'leftInset', 'rightInset'], deps);
-for (const [width, height, left, right] of [[365, 320, 0, 0], [390, 844, 32, 24], [1280, 800, 48, 32]]) {
+for (const [width, height, left, right, safeBottom] of [[365, 320, 0, 0, 0], [390, 844, 32, 24, 24], [1280, 800, 48, 32, 48]]) {
   metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, width, height), undefined,
-    new ReaderInsetsVp(0, 48, 0, 24), new ReaderInsetsVp(left, 0, right, 0));
+    new ReaderInsetsVp(0, 48, 0, safeBottom), new ReaderInsetsVp(left, 0, right, 0));
   const owner = new Component(); let backs = 0; const updates = [], selections = [];
   Object.assign(owner, { appThemeScheme: 'day', mode: 'cover', error: '', autoCheckUpdate: true,
     readerWindowMetricsRevision: 1, onBack: () => { backs++; }, onAutoCheckUpdate: value => updates.push(value),
@@ -59,12 +61,13 @@ for (const [width, height, left, right] of [[365, 320, 0, 0], [390, 844, 32, 24]
   assert.deepEqual(headerRow.padding, { left: Math.max(20, left), right: Math.max(20, right) });
   const nodes = [...owner.nodes.values()];
   const root = nodes[0]; assert.equal(root.padding, undefined, 'host alone consumes vertical safe areas');
+  assert.equal(root.type, 'Stack');
   const scroll = nodes.find(node => node.type === 'Scroll');
-  assert.ok(scroll); assert.equal(scroll.layoutWeight, 1); assert.equal(scroll.align, 'Alignment.TopStart');
-  assert.equal(scroll.height, undefined, 'short windows scroll rather than clip a fixed viewport');
+  assert.ok(scroll); assert.equal(scroll.layoutWeight, undefined); assert.equal(scroll.align, 'Alignment.TopStart');
+  assert.equal(scroll.height, '100%', 'the viewport extends behind the floating header even in short windows');
   const frame = resolveHorizontalFrame(width, left, right, new SurfaceWidthSpec(720, 19, 19));
-  const content = nodes.find(node => node.type === 'Column' && node.padding?.top === 8);
-  assert.deepEqual(content.padding, { left: frame.left, right: frame.right, top: 8, bottom: 16 });
+  const content = nodes.find(node => node.type === 'Column' && node.padding?.top === 66);
+  assert.deepEqual(content.padding, { left: frame.left, right: frame.right, top: 66, bottom: Math.max(16, safeBottom) });
   const toggle = nodes.find(node => node.type === 'Toggle');
   toggle.onChange(false); toggle.onChange(true); assert.deepEqual(updates, [false, true]);
   for (const label of ['封面', '列表']) nodes.find(node => node.type === 'Text' && node.create === label).onClick();
@@ -111,4 +114,4 @@ let firstRelease; let preparations = 0;
 prepare = () => ++preparations === 1 ? new Promise(resolve => { firstRelease = resolve; }) : Promise.resolve();
 load = async () => 'cover'; owner = mount(); owner.selectMode('list'); owner.selectMode('cover'); await settle();
 firstRelease(); await settle(); assert.deepEqual(saved, ['cover']); assert.equal(owner.mode, 'cover');
-console.log('PASS SDK settings shared header/hit/width/theme and vertical ownership; async mode commit/rollback/stale admission and auto-update callbacks preserved');
+console.log('PASS SDK settings floating shared header/full viewport/content clearance/width/theme; async mode commit/rollback/stale admission and auto-update callbacks preserved');

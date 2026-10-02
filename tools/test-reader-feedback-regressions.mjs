@@ -50,8 +50,10 @@ assert.equal((detail.match(/this\.readingActionLabel\(\)/g) ?? []).length, 2,
 
 assert.match(shelf, /return \/\^\(https\?:\\\/\\\/\|data:image/,
   'bookshelf cards must admit the same remote cover URLs as detail');
-assert.equal((shelf.match(/\.padding\(\{ top: TOK_SPACE_XS, bottom: TOK_SPACE_MD \}\)/g) ?? []).length, 1,
-  'the shared lazy Phone and Tablet shelf must end at the last book plus one bounded spacing token');
+assert.equal((shelf.match(/\.contentEndOffset\(this\.shelfBottomContentInset\(isTablet\)\)/g) ?? []).length, 1,
+  'the shared lazy Phone and Tablet shelf carries bounded floating-control clearance inside its scroll content');
+assert.doesNotMatch(shelf, /\.padding\(\{ top: TOK_SPACE_XS, bottom: TOK_SPACE_MD \}\)/,
+  'floating bars must not shrink the List viewport with vertical padding');
 assert.doesNotMatch(shelf, /bottom: (628|744)/,
   'bookshelf scrolling must not include fixed-canvas blank space below the last book');
 assert.equal((shelf.match(/this\.bookshelfList\((false|true)\)/g) ?? []).length, 2,

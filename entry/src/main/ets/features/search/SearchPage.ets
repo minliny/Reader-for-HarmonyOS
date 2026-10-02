@@ -14,6 +14,7 @@ import {
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import { readerSourceCategoryIsText } from '../source/ReaderSourceCategory';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderSearchField } from '../common/ReaderSearchField';
 import {
@@ -304,6 +305,7 @@ export struct SearchPage {
   @Prop isTablet: boolean;
   @Prop reduceMotion: boolean = false;
   @State private historyWidth: number = 0;
+  @State private resultStatsHeight: number = 28.5;
   @State private spinnerRunKey: number = 0;
   onBack: () => void = (): void => {};
   /**
@@ -396,13 +398,15 @@ export struct SearchPage {
 
   build() {
     Stack({ alignContent: Alignment.Bottom }) {
+      Stack({ alignContent: Alignment.TopStart }) { this.stateContent(); }
+        .width('100%').height('100%');
       Column() {
         this.searchBar();
         if (this.presentation.kind === 'results' || this.presentation.kind === 'empty') {
           this.groupScopeRow();
         }
-        Column() { this.stateContent(); }.layoutWeight(1).width('100%');
-      }.width('100%').height('100%');
+      }.width('100%').height(this.searchHeaderHeight())
+        .position({ top: 0, left: 0 }).hitTestBehavior(HitTestMode.Transparent);
       // Stable actor anchored to the whole safe viewport, outside changing
       // source/category/result rows. Caption keeps its lane during streaming.
       Column({ space: 18 }) {
@@ -419,6 +423,16 @@ export struct SearchPage {
     .width('100%').height('100%')
     .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
     .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
+  }
+
+  private searchHeaderHeight(): number {
+    const groups = this.presentation.kind === 'results' || this.presentation.kind === 'empty';
+    return (this.isTablet ? 56 : 52) + (groups && this.groupNames().length > 0 ? 41.5 : 0);
+  }
+
+  private searchBottomInset(minimum: number = 20): number {
+    if (this.readerWindowMetricsRevision < 0) { return minimum; }
+    return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), minimum);
   }
 
   private isSweeping(): boolean {
@@ -479,7 +493,7 @@ export struct SearchPage {
     this.viewState.anchorItemY = 0;
     this.restoreKey = ''; this.restoreOffset = 0; this.restoreItemY = 0;
     this.viewState.anchorNeighbors = []; this.scrollRestored = false;
-    this.resultScroller.scrollTo({ xOffset: 0, yOffset: 0 });
+    this.resultScroller.scrollEdge(Edge.Top);
     this.refreshVisibleResults();
   }
 
@@ -559,13 +573,15 @@ export struct SearchPage {
     .height(this.isTablet ? 56 : 52)
     .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: TOK_SPACE_XS })
     .alignItems(VerticalAlign.Center)
-    .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: readerAppColor('TOK_BORDER', this.appThemeScheme) } });
+    .hitTestBehavior(HitTestMode.Transparent);
   }
 
   @Builder
   private stateContent() {
     if (this.presentation.kind === 'initial') {
-      Scroll() { this.initialContent(); }.width('100%').height('100%')
+      Scroll() {
+        Column() { this.initialContent(); }.width('100%').padding({ top: this.searchHeaderHeight() });
+      }.width('100%').height('100%')
         .align(Alignment.TopStart).scrollBar(BarState.Off);
     } else if (this.presentation.kind === 'loading') {
       this.loadingContent();
@@ -576,14 +592,14 @@ export struct SearchPage {
         Column() {
           this.sourceRequiredContent(this.sourceRequiredReason());
           this.initialContent();
-        }.width('100%');
+        }.width('100%').padding({ top: this.searchHeaderHeight() });
       }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
     } else if (this.presentation.kind === 'sourceLoadError') {
       Scroll() {
         Column() {
           this.sourceLoadErrorContent();
           this.initialContent();
-        }.width('100%');
+        }.width('100%').padding({ top: this.searchHeaderHeight() });
       }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
     } else if (this.presentation.kind === 'empty') {
       this.emptyContent(this.presentation.keyword, this.presentation.searchedSourceCount);
@@ -673,7 +689,7 @@ export struct SearchPage {
       left: this.isTablet ? 20 : 18,
       right: this.isTablet ? 20 : 18,
       top: TOK_SPACE_XS,
-      bottom: 20,
+      bottom: this.searchBottomInset(),
     })
     // Only constrain long chip width; history admission never depends on measurement.
     .onAreaChange((_old: Area, next: Area): void => {
@@ -784,7 +800,7 @@ export struct SearchPage {
   @Builder
   private resultsContent() {
     Stack({ alignContent: Alignment.Bottom }) {
-      Column() {
+      Stack({ alignContent: Alignment.TopStart }) {
         Row() {
           Text('找到 ')
             .fontFamily('ReaderInter')
@@ -850,7 +866,15 @@ export struct SearchPage {
         .width(this.contentFrame().width)
         .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: 6, bottom: 6 })
         .alignItems(VerticalAlign.Center)
-        .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: readerAppColor('TOK_BORDER', this.appThemeScheme) } });
+        .position({ x: 0, y: this.searchHeaderHeight() })
+        .zIndex(1)
+        .hitTestBehavior(HitTestMode.Transparent)
+        .onAreaChange((_old: Area, next: Area): void => {
+          const height = Number(next.height);
+          if (Number.isFinite(height) && height > 0 && Math.abs(height - this.resultStatsHeight) > .1) {
+            this.resultStatsHeight = height;
+          }
+        });
 
         List({ scroller: this.resultScroller }) {
           LazyForEach(this.resultDataSource, (group: SearchBookGroup) => {
@@ -862,7 +886,9 @@ export struct SearchPage {
             this.resultGroupKey(group.book));
         }
         .width('100%')
-        .layoutWeight(1)
+        .height('100%')
+        .contentStartOffset(this.searchHeaderHeight() + this.resultStatsHeight)
+        .contentEndOffset(this.searchBottomInset())
         .scrollBar(BarState.Off)
         .maintainVisibleContentPosition(true)
         .onTouch((event: TouchEvent): void => {
@@ -882,7 +908,7 @@ export struct SearchPage {
 
     }
     .width('100%')
-    .layoutWeight(1);
+    .height('100%');
   }
 
   private groupResults(results: SearchBook[]): SearchBookGroup[] {
@@ -974,7 +1000,9 @@ export struct SearchPage {
         if (index >= 0) break;
       }
       if (index < 0) {
-        this.resultScroller.scrollTo({ xOffset: 0, yOffset: this.restoreKey.length === 0 ? this.restoreOffset : 0 });
+        const offset = this.restoreKey.length === 0 ? this.restoreOffset : 0;
+        if (offset !== 0) this.resultScroller.scrollTo({ xOffset: 0, yOffset: offset });
+        else this.resultScroller.scrollEdge(Edge.Top);
         this.restoreScheduled = false;
         this.scrollRestored = true;
         return;
@@ -989,7 +1017,8 @@ export struct SearchPage {
           if (actual < 0) throw new Error('anchor removed');
           const rect = this.resultScroller.getItemRect(actual);
           if (!Number.isFinite(rect.y) || !Number.isFinite(rect.height) || rect.height <= 0) throw new Error('anchor not laid out');
-          const offset = Math.max(1 - rect.height, Math.min(0, this.restoreItemY));
+          const offset = Math.max(1 - rect.height,
+            Math.min(this.searchHeaderHeight() + this.resultStatsHeight, this.restoreItemY));
           this.resultScroller.scrollBy(0, rect.y - offset);
           this.viewState.anchorKey = anchorKey;
           this.viewState.anchorIndex = actual;
@@ -1107,10 +1136,10 @@ export struct SearchPage {
         .alignSelf(ItemAlign.Center);
       }
       .width('100%')
-      .padding({ top: 50, bottom: 40 });
+      .padding({ top: this.searchHeaderHeight() + 50, bottom: this.searchBottomInset(40) });
     }
     .width('100%')
-    .layoutWeight(1)
+    .height('100%')
     .scrollBar(BarState.Off);
   }
 
@@ -1256,6 +1285,7 @@ export struct SearchPage {
     // Figma Error (2635:59125): content is top-anchored at 96, retry is a solid
     // primary pill (not the outline used before the rebuild). The "检查书源"
     // secondary action is a P0 add-source flow addition.
+    Scroll() {
     Column({ space: 0 }) {
       Image((this.appThemeScheme === 'night' ? $r('app.media.search_error_theme_night') : $r('app.media.search_error'))).width(80).height(80);
 
@@ -1311,9 +1341,9 @@ export struct SearchPage {
         .accessibilityText('检查书源');
     }
     .width('100%')
-    .layoutWeight(1)
     .alignItems(HorizontalAlign.Center)
-    .padding({ top: 96, bottom: 40 });
+    .padding({ top: this.searchHeaderHeight() + 96, bottom: this.searchBottomInset(40) });
+    }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
   }
 
   private contentFrame(): SurfaceHorizontalFrame {

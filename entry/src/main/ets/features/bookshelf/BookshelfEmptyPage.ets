@@ -8,6 +8,10 @@ import { readerAppColor } from '../common/ReaderThemeRegistry';
  */
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
+  READER_FLOATING_TOP_BAR_HEIGHT,
+  readerFloatingTabContentInset,
+} from '../common/ReaderFloatingBarMetrics';
+import {
   SurfaceHorizontalFrame,
   SurfaceWidthSpec,
   resolveHorizontalFrame,
@@ -50,7 +54,7 @@ export struct BookshelfEmptyPage {
         })
       }
       .width(this.contentFrame().width)
-      .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_MD });
+      .padding({ top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS, bottom: this.bottomContentInset() });
     }
     .width('100%')
     .height('100%')
@@ -63,6 +67,11 @@ export struct BookshelfEmptyPage {
         this.viewportWidth = width;
       }
     });
+  }
+
+  private bottomContentInset(): number {
+    if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_MD;
+    return readerFloatingTabContentInset(ReaderWindowCoordinator.metrics());
   }
 
   @Builder

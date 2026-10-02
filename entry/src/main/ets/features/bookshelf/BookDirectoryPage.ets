@@ -46,6 +46,7 @@ export struct BookDirectoryPage {
   @State private ascending: boolean = true;
   @State private projectedEntries: LocalReadingTocEntry[] = [];
   @State private viewportWidth: number = 0;
+  @State private toolsHeight: number = 51;
   @State private navigationInteracted: boolean = false;
   @State private navigationActive: boolean = false;
   private admittedEntries: LocalReadingTocEntry[] = [];
@@ -75,13 +76,12 @@ export struct BookDirectoryPage {
   }
 
   build() {
-    Column() {
-      PageBackBar({ title: '目录', onBack: (): void => this.onBack() });
+    Stack({ alignContent: Alignment.TopStart }) {
+      Column() {
       if (this.supportsDirectoryRules() && ReaderRuntimeOwner.current().supportsCoreCapability('reading.directory.view.v2')) {
         Button(this.rulesExpanded ? '收起层级规则' : '本书目录层级规则').onClick((): void => { this.rulesExpanded = !this.rulesExpanded; });
         if (this.rulesExpanded) { ReaderDirectoryRules({ bookId: this.bookId, onApplied: (): void => { this.rulesRevision += 1; } }); }
       }
-      Column() {
         ReaderDirectoryToolbar({
           text: this.searchDraft,
           placeholder: '搜索章节名称',
@@ -95,6 +95,17 @@ export struct BookDirectoryPage {
         });
         Text('').width('100%').height(1)
           .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
+      }
+      .width(this.contentFrame().width)
+      .position({ x: this.contentFrame().left, y: 58 })
+      .zIndex(1)
+      .hitTestBehavior(HitTestMode.Transparent)
+      .onAreaChange((_old: Area, next: Area): void => {
+        const height = Number(next.height);
+        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.toolsHeight) > .1) {
+          this.toolsHeight = height;
+        }
+      });
         Stack({ alignContent: Alignment.TopStart }) {
           // Only a different book replaces the List. Filtering, sorting and
           // projection refreshes keep its native owner and use original indexes.
@@ -104,7 +115,8 @@ export struct BookDirectoryPage {
                 sourceId: this.sourceId, bookId: this.bookId, query: this.searchQuery, ascending: this.ascending,
                 currentChapterIndex: -1, openRevision: `${identity}:${this.rulesRevision}`,
                 interacted: this.navigationInteracted,
-                rowHeight: 40, listPaddingX: 10, listPaddingY: 5,
+                rowHeight: 40, listPaddingX: 10, listPaddingY: 0,
+                contentStartInset: 58 + this.toolsHeight + 5, contentEndInset: this.bottomInset() + 5,
                 edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
                 chapterEntries: this.admittedEntries,
                 chapterDownloadEnabled: this.sourceId !== 'local',
@@ -134,17 +146,16 @@ export struct BookDirectoryPage {
           }, (identity: string): string => identity);
           if (this.projectedEntries.length === 0 && !this.navigationActive) {
             Text(this.emptyMessage())
-              .width('100%').height('100%').padding(20)
+              .width('100%').height('100%')
+              .padding({ left: 20, right: 20, top: 58 + this.toolsHeight + 20, bottom: this.bottomInset() + 20 })
               .fontFamily('ReaderNotoSansSC').fontSize(14)
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
               .textAlign(TextAlign.Center);
           }
-        }.layoutWeight(1).width('100%');
-      }
-      .width(this.contentFrame().width)
-      .layoutWeight(1)
-      .margin({ left: this.contentFrame().left, right: this.contentFrame().right })
-      .padding({ bottom: this.bottomInset() });
+        }.height('100%').width(this.contentFrame().width)
+          .margin({ left: this.contentFrame().left, right: this.contentFrame().right });
+      Row() { PageBackBar({ title: '目录', onBack: (): void => this.onBack() }); }
+        .width('100%').height(58).zIndex(2).hitTestBehavior(HitTestMode.Transparent);
     }
     .width('100%').height('100%')
     .backgroundColor(readerAppColor('app.window.background', this.appThemeScheme))
@@ -162,7 +173,9 @@ export struct BookDirectoryPage {
       entries: this.projectedEntries,
       rowHeight: 40,
       listPaddingX: 10,
-      listPaddingY: 5,
+      listPaddingY: 0,
+      contentStartInset: 58 + this.toolsHeight + 5,
+      contentEndInset: this.bottomInset() + 5,
       edgeEffectMode: EdgeEffect.Spring,
       scroller: this.listScroller,
       onFirstLayout: (): void => this.onListFirstLayout(identity),

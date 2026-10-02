@@ -10,6 +10,11 @@ assert.throws(()=>readerNativeHighlightValues(Array(65).fill(rect),100,100),/LIM
 const surface=readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingSurface.ets',import.meta.url),'utf8');
 assert.ok(surface.indexOf('.id(this.staticSnapshotId')<surface.indexOf('Canvas(this.highlightCanvas)'),'live snapshot boundary excludes the dynamic canvas');
 assert.match(surface,/getRectsForRange/);assert.match(surface,/if \(this\.separateHighlight\) \{\s*Span\(this\.highlightBody\(\)\);/,'static snapshot text never bakes a dynamic decoration');
+assert.match(surface,/highlightLayoutKey:\s*readerNativeTextGeometryKey\(fragment\.nativeParagraph\.style\)/,
+  'paged native highlights observe the text shaping identity');
+const continuous=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets',import.meta.url),'utf8');
+assert.match(continuous,/highlightLayoutKey:\s*readerNativeTextGeometryKey\(fragment\.nativeParagraph\.style\)/,
+  'continuous native highlights observe the text shaping identity');
 const shader=readFileSync(new URL('../entry/src/main/cpp/bookturn/bookturn_renderer.cpp',import.meta.url),'utf8');assert.match(shader,/applyDynamicHighlights\(texture\(uTexture, vUv\)\.rgb\)/);assert.match(shader,/Slot\(slot\)\.identity == dynamicHighlights_\.identity/);
 console.log('dynamic highlight geometry/color/identity and static snapshot separation: PASS; pixels require runtime verification');
 

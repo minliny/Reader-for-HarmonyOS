@@ -5,7 +5,7 @@ import {BookshelfViewState} from '../entry/src/main/ets/features/bookshelf/Books
 const source=new URL('../entry/src/main/ets/features/bookshelf/BookshelfPage.ets',import.meta.url);
 class Frame { constructor(callback){this.callback=callback;} }
 const Page=productionMotionMethods(source,['shelfHeaderItems','saveShelfViewport','restoreShelfViewport','publishVisibleReadingBooks','aboutToDisappear','aboutToAppear'],{
- BookshelfMotionFrameCallback:Frame, ScrollAlign:{START:'start'}, registerReaderShelfFonts(){}
+ BookshelfMotionFrameCallback:Frame, ScrollAlign:{START:'start'}, Edge:{Top:'top'}, registerReaderShelfFonts(){}
 });
 const state=new BookshelfViewState(); const frames=[]; const calls=[]; const prepared=[];
 const books=[{sourceId:'source',bookId:'first',group:'历史分组'},{sourceId:'another',bookId:'same',group:'默认'}].map(Object.freeze);
@@ -16,7 +16,8 @@ function page(){ return Object.assign(new Page(), {
  webDavCredentials:{currentBookshelfViewMode:()=>undefined},
  storedViewMode:'list',storedSelectedGroup:'默认',readingFilter:'reading',sourceFilter:'online',books,
  shelfScroller:{currentOffset:()=>({yOffset:offset}),getItemRect:()=>({y:itemY}),
-  scrollTo:args=>calls.push(['offset',args.yOffset]),scrollToIndex:index=>{calls.push(['index',index]);itemY=0;},scrollBy:(_x,y)=>calls.push(['by',y])},
+  scrollTo:args=>calls.push(['offset',args.yOffset]),scrollEdge:edge=>calls.push(['edge',edge]),
+  scrollToIndex:index=>{calls.push(['index',index]);itemY=0;},scrollBy:(_x,y)=>calls.push(['by',y])},
  rowDataSource:{totalCount:()=>rows.length,getData:index=>rows[index]},
  getUIContext:()=>({postFrameCallback:frame=>frames.push(frame.callback),getFont:()=>({})}),
  resetViewSwitchMotion(){},setRestingProjectionOpacity(){},rebuildShelfProjection(){},loadViewMode(){},
@@ -37,6 +38,13 @@ frames.shift()();assert.deepEqual(calls,[['index',4],['by',25]]);assert.equal(re
 // Late layout callbacks after leaving cannot mutate the next route's viewport.
 calls.length=0;returned.restoreShelfViewport();returned.aboutToDisappear();frames.shift()();assert.deepEqual(calls,[]);
 const missing=page();rows=[];missing.restoreShelfViewport();frames.shift()();assert.deepEqual(calls,[['offset',345]]);
+for (const saved of [0, -30, -66]) {
+ calls.length=0;state.anchorKey='';state.anchorOffset=saved;
+ const fresh=page();fresh.restoreShelfViewport();frames.shift()();
+ assert.deepEqual(calls,saved === 0 ? [['edge','top']] : [['offset',saved]],
+  'fresh top uses the native edge; saved signed positions retain full or partial header clearance');
+ assert.equal(fresh.viewportRestored,true);
+}
 // Preparation follows the restored visible identity and never guesses at the
 // top of the shelf while the saved viewport is still being applied.
 {

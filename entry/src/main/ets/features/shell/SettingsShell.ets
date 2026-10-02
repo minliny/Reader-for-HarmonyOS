@@ -4,6 +4,11 @@ import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { PageBackBar } from '../common/PageBackBar';
 import { AppTopBar } from '../common/AppTopBar';
 import {
+  READER_FLOATING_TOP_BAR_HEIGHT,
+  readerFloatingBarBottomInset,
+  readerFloatingTabContentInset,
+} from '../common/ReaderFloatingBarMetrics';
+import {
   SurfaceHorizontalFrame,
   SurfaceWidthSpec,
   resolveHorizontalFrame,
@@ -49,7 +54,43 @@ export struct SettingsShell {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Column() {
+      if (this.activeSection === 'home') {
+        Scroll() {
+          Column({ space: TOK_SPACE_SM }) {
+            this.homeContent();
+          }
+          .width('100%')
+          .padding({
+            left: this.contentFrame().left,
+            right: this.contentFrame().right,
+            top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS,
+            bottom: this.homeBottomContentInset(),
+          });
+        }
+        .width('100%')
+        .height('100%')
+        .align(Alignment.Top)
+        .scrollBar(BarState.Off);
+      } else {
+        Scroll() {
+          Column({ space: TOK_SPACE_SM }) {
+            this.generalContent();
+          }
+          .width('100%')
+          .padding({
+            left: this.contentFrame().left,
+            right: this.contentFrame().right,
+            top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS,
+            bottom: this.generalBottomContentInset(),
+          });
+        }
+        .width('100%')
+        .height('100%')
+        .align(Alignment.TopStart)
+        .scrollBar(BarState.Off);
+      }
+
+      Row() {
         if (this.activeSection === 'home') {
           this.homeTopBar();
         } else {
@@ -58,43 +99,24 @@ export struct SettingsShell {
             onBack: (): void => this.onSectionChange('home'),
           });
         }
-        if (this.activeSection === 'home') {
-          Scroll() {
-            Column({ space: TOK_SPACE_SM }) {
-              this.homeContent();
-            }
-            .width('100%')
-            .padding({
-              left: this.contentFrame().left,
-              right: this.contentFrame().right,
-              top: TOK_SPACE_XS,
-              bottom: TOK_SPACE_SM,
-            });
-          }
-          .layoutWeight(1)
-          .width('100%')
-          .align(Alignment.Top)
-          .scrollBar(BarState.Off);
-          MainTabBar({ current: 'settings', onSelect: (key: string): void => this.onMainTab(key) });
-        } else {
-          Scroll() {
-            Column({ space: TOK_SPACE_SM }) {
-              this.generalContent();
-            }
-            .width('100%')
-            .padding({
-              left: this.contentFrame().left,
-              right: this.contentFrame().right,
-              top: TOK_SPACE_XS,
-              bottom: TOK_SPACE_SM,
-            });
-          }
-          .layoutWeight(1)
-          .width('100%')
-          .align(Alignment.TopStart)
-          .scrollBar(BarState.Off);
-        }
       }
+      .width('100%')
+      .height(READER_FLOATING_TOP_BAR_HEIGHT)
+      .hitTestBehavior(HitTestMode.Transparent);
+
+      if (this.activeSection === 'home') {
+        Stack({ alignContent: Alignment.Bottom }) {
+          MainTabBar({ current: 'settings', onSelect: (key: string): void => this.onMainTab(key) });
+        }
+        .width('100%')
+        .height('100%')
+        .hitTestBehavior(HitTestMode.Transparent);
+      }
+
+      if (this.showOverlay) {
+        this.overlayContent();
+      }
+    }
       .width('100%')
       .height('100%')
       .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
@@ -104,18 +126,21 @@ export struct SettingsShell {
           Number(newValue.globalPosition.x),
           Number(newValue.globalPosition.y));
       });
-
-      if (this.showOverlay) {
-        this.overlayContent();
-      }
-    }
-    .width('100%')
-    .height('100%');
   }
 
   @Builder
   private homeTopBar() {
     AppTopBar({ title: '设置' });
+  }
+
+  private homeBottomContentInset(): number {
+    if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_SM;
+    return readerFloatingTabContentInset(ReaderWindowCoordinator.metrics());
+  }
+
+  private generalBottomContentInset(): number {
+    if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_SM;
+    return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), TOK_SPACE_SM);
   }
 
   private onMainTab(key: string): void {

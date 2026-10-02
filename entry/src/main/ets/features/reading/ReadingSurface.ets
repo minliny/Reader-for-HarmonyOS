@@ -1,4 +1,5 @@
 import { ReaderNativeParagraphRecipe } from './ReaderNativeParagraph';
+import { readerNativeTextGeometryKey } from './ReaderNativeTextMeasurement';
 import { ReaderNativeParagraphView } from './ReaderNativeParagraphView';
 import { readerThemeDefinition } from '../common/ReaderThemeRegistry';
 import { readerHighlightCanvasColor, readerDynamicHighlightRectsEqual, ReaderHighlightTextCache,
@@ -417,6 +418,7 @@ export struct ReadingSurface {
                   highlightColor: this.ttsHighlightStart !== undefined ? this.themeStyle().ink :
                     readerThemeDefinition(this.appearance.activeTheme).selection,
                   underline: this.ttsHighlightStart !== undefined,
+                  highlightLayoutKey: readerNativeTextGeometryKey(fragment.nativeParagraph.style),
                   queueHighlightMeasurement: (action: () => void): void => this.enqueueHighlightMeasurement(action),
                   onHighlightGeometry: (rects: ReaderDynamicHighlightRect[]): void => this.acceptHighlightGeometry(fragment.id, rects),
                 });

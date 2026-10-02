@@ -37,6 +37,8 @@ export struct ReaderDirectoryList {
   @State private itemSizes: ChildrenMainSize = new ChildrenMainSize(40);
   @Prop listPaddingX: number = 0;
   @Prop listPaddingY: number = 0;
+  @Prop contentStartInset: number = 0;
+  @Prop contentEndInset: number = 0;
   @Prop edgeEffectMode: EdgeEffect = EdgeEffect.None;
   scroller: Scroller | undefined = undefined;
   onFirstLayout: () => void = (): void => {};
@@ -156,6 +158,8 @@ export struct ReaderDirectoryList {
     .width('100%')
     .height('100%')
     .childrenMainSize(this.itemSizes)
+    .contentStartOffset(this.contentStartInset)
+    .contentEndOffset(this.contentEndInset)
     .padding({
       left: this.listPaddingX,
       right: this.listPaddingX,

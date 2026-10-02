@@ -42,6 +42,7 @@ export struct BookshelfMultiSelectPage {
   onRemoveSelected: (keys: string[]) => void = (_keys: string[]): void => {};
   @State private viewportWidth: number = 0;
   @State private selectedKeys: string[] = [];
+  @State private removeBarHeight: number = 0;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -51,8 +52,7 @@ export struct BookshelfMultiSelectPage {
   }
 
   build() {
-    Column() {
-      this.selectionTopBar();
+    Stack({ alignContent: Alignment.Top }) {
       List({ space: GRID_ROW_GAP }) {
           Repeat(this.bookRows())
             .each((repeatItem: RepeatItem<ShelfBook[]>) => {
@@ -74,12 +74,16 @@ export struct BookshelfMultiSelectPage {
             `bookshelf-multi-row-${row.map((book: ShelfBook): string => this.bookKey(book)).join('|')}`)
           .virtualScroll({ reusable: true });
       }
-      .layoutWeight(1)
+      .height('100%')
       .width('100%')
-      .padding({ top: 12, bottom: 20 })
+      .contentStartOffset(58 + 12)
+      .contentEndOffset(this.removeBarClearance() + 20)
       .alignListItem(ListItemAlign.Center)
       .scrollBar(BarState.Off);
-      this.removeBar();
+      this.selectionTopBar();
+      Column() { this.removeBar(); }
+        .width('100%')
+        .position({ bottom: 0, left: 0 }).hitTestBehavior(HitTestMode.Transparent);
     }
     .width('100%')
     .height('100%')
@@ -135,7 +139,8 @@ export struct BookshelfMultiSelectPage {
     .width('100%')
     .height(58)
     .padding({ left: 20, right: 20, top: 8, bottom: 8 })
-    .alignItems(VerticalAlign.Center);
+    .alignItems(VerticalAlign.Center)
+    .hitTestBehavior(HitTestMode.Transparent);
   }
 
   @Builder
@@ -229,7 +234,16 @@ export struct BookshelfMultiSelectPage {
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(readerAppColor('app.BookshelfMultiSelectPage.removeBar.backgroundColor.EBFFFCF8', this.appThemeScheme))
     .border({ width: { top: 1 }, color: readerAppColor('app.BookshelfMultiSelectPage.removeBar.color.FFC1C7CD', this.appThemeScheme) })
-    .borderRadius({ topLeft: 24, topRight: 24 });
+    .borderRadius({ topLeft: 24, topRight: 24 })
+    .hitTestBehavior(HitTestMode.Transparent)
+    .onAreaChange((_old: Area, next: Area): void => {
+      const height = this.numericAreaLength(next.height);
+      if (height > 0 && Math.abs(height - this.removeBarHeight) > .1) { this.removeBarHeight = height; }
+    });
+  }
+
+  private removeBarClearance(): number {
+    return this.removeBarHeight > 0 ? this.removeBarHeight : 12 + 22 + 6 + 13.31 + this.bottomInset();
   }
 
   private reconcileSelection(): void {

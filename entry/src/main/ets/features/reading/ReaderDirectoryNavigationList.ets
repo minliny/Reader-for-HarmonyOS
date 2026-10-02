@@ -175,6 +175,8 @@ export struct ReaderDirectoryNavigationList {
   @Prop rowHeight: number = 40;
   @Prop listPaddingX: number = 10;
   @Prop listPaddingY: number = 5;
+  @Prop contentStartInset: number = 0;
+  @Prop contentEndInset: number = 0;
   @Prop edgeEffectMode: EdgeEffect = EdgeEffect.None;
   @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
   @Prop @Watch('onChapterEntriesChanged') chapterEntries: LocalReadingTocEntry[] = [];
@@ -528,6 +530,8 @@ export struct ReaderDirectoryNavigationList {
       }, (item: ReaderDirectoryNavigationItem): string => this.rowKey(item));
     }
     .width('100%').height('100%')
+    .contentStartOffset(this.contentStartInset)
+    .contentEndOffset(this.contentEndInset)
     .padding({ left: this.listPaddingX, right: this.listPaddingX,
       top: this.listPaddingY, bottom: this.listPaddingY })
     .scrollBar(BarState.Off).edgeEffect(this.edgeEffectMode)

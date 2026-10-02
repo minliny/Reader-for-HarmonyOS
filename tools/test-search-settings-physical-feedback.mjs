@@ -123,9 +123,12 @@ await check('PH34 actual General and Rules Scrolls align short contents at the t
     'features/sync/SyncPage.ets', 'features/rss/RssSubscriptionEditorPage.ets']) {
     const source = read(file); registerBuilders(source);
     for (const m of source.matchAll(/@BuilderParam\s+(\w+)\s*:/g)) builders.add(m[1]);
-    const { owner } = createReaderBuilderProbe(source, ['build'], { PageBackBar: NativeChild, ReaderToggle: NativeChild });
+    const { owner } = createReaderBuilderProbe(source, ['build'], {
+      PageBackBar: NativeChild, ReaderToggle: NativeChild, READER_FLOATING_TOP_BAR_HEIGHT: 58,
+    });
     Object.assign(owner, { activeSection: 'general', showOverlay: false, appThemeScheme: 'day',
-      contentFrame: () => ({ left: 18, right: 18 }), generalContent() {},
+      contentFrame: () => ({ left: 18, right: 18 }), generalBottomContentInset: () => 34,
+      bottomContentInset: () => 34, generalContent() {},
       statusCard() {}, bundleCard() {}, replaceCard() {}, txtTocCard() {}, dictCard() {}, subscriptionCard() {},
       onSectionChange() {}, onBack() {}, snapshot: { mode: 'create', batchCheck: { phase: 'idle' }, editorSourceId: '' },
       batchControlsRenderKey: () => 'idle', batchCard() {}, exportCard() {}, sourceCard() {}, debugCard() {},

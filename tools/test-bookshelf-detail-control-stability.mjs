@@ -27,6 +27,7 @@ for (const theme of ['day', 'night']) {
   const mountedItems = new Set();
   const { owner } = createReaderBuilderProbe(shelfSource, ['bookshelfList', 'sectionAction',
     'sectionActionAsset', 'canonicalFilterActiveAsset', 'isSectionActionActive', 'sectionActionLabel'], {
+    READER_FLOATING_TOP_BAR_HEIGHT: 58,
     LazyForEach: { create() {}, pop() {} },
     ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
   }, {
@@ -41,7 +42,7 @@ for (const theme of ['day', 'night']) {
   Object.assign(owner, { appThemeScheme: theme, viewMode: 'cover', viewSwitchHeaderOpacity: 1,
     continueReading: undefined, filterRowVisible: false,
     viewModeError: '', visibleBookCount: 0, rowDataSource: {},
-    shelfContentWidth: () => 352, hasActiveFilters: () => false });
+    shelfContentWidth: () => 352, shelfBottomContentInset: () => 99, hasActiveFilters: () => false });
   owner.bookshelfList(false);
   const icons = [...owner.nodes.values()].filter(node => node.type === 'Image');
   assert.equal(icons.length, 3);
@@ -75,16 +76,17 @@ for (const theme of ['day', 'night']) {
 // its two existing actors; only an active shelf mutation gates reading.
 const detailSource = readFileSync(file('features/bookshelf/LocalBookDetail.ets'), 'utf8');
 const { owner: detail } = createReaderBuilderProbe(detailSource, ['actionArea',
-  'readingActionLabel', 'shelfActionLabel'], {
-  GradientDirection: { Bottom: 'bottom' },
+  'readingActionLabel', 'shelfActionLabel', 'actionButtonWidth'], {
+  DETAIL_ACTION_AREA_HEIGHT: 77, TOK_SPACE_CONTROL_INLINE: 10,
 });
 Object.assign(detail, { appThemeScheme: 'day', toc: [{ index: 0, title: '第一章' }],
   book: { title: '书', author: '作者' }, readingEnabled: true, readingBlockedReason: '',
   inBookshelf: true, removalEnabled: true, removing: false, loadingMessage: '',
-  contentWidth: () => 352, actionButtonWidth: () => 171 });
+  contentWidth: () => 352 });
 detail.actionArea();
 const buttons = [...detail.nodes.values()].filter(node => node.type === 'Stack');
 assert.equal(buttons.length, 2);
+assert.deepEqual(buttons.map(node => node.margin), [{ left: 4, right: 4 }, { left: 4, right: 4 }]);
 const buttonIds = buttons.map(node => node.id);
 for (let progress = 1; progress <= 4; progress += 1) {
   detail.book = { ...detail.book, currentChapterIndex: progress, readProgress: progress * 100 };
@@ -92,7 +94,7 @@ for (let progress = 1; progress <= 4; progress += 1) {
   detail.replay();
   assert.deepEqual([...detail.nodes.values()].filter(node => node.type === 'Stack').map(node => node.id), buttonIds);
   assert.deepEqual(buttons.map(node => [node.opacity, node.enabled, node.width, node.height]),
-    [[1, true, 171, 46], [1, true, 171, 46]]);
+    [[1, true, 163, 46], [1, true, 163, 46]]);
 }
 let continues=0;detail.onContinue=()=>{continues++;};
 for (const inBookshelf of [false,true]) for(const failure of ['目录读取失败','正文处理设置已改变']) {

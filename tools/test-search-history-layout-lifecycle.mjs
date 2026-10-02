@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { SearchViewState } from '../entry/src/main/ets/features/search/SearchViewState.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { readerFloatingBarBottomInset } from './lib/reader-floating-bar-metrics-probe.mjs';
 
 const source = readFileSync(process.env.READER_SEARCH_PAGE_SOURCE ??
   new URL('../entry/src/main/ets/features/search/SearchPage.ets', import.meta.url), 'utf8');
@@ -35,9 +36,10 @@ function fixture(history, { width = 0, tablet = false, kind = 'initial', history
     };
   } });
   ({ owner } = createReaderBuilderProbe(source,
-    ['stateContent', 'sourceRequiredReason', 'initialContent', 'sourceRequiredContent', 'sourceLoadErrorContent',
+    ['stateContent', 'searchHeaderHeight', 'searchBottomInset', 'sourceRequiredReason', 'initialContent', 'sourceRequiredContent', 'sourceLoadErrorContent',
       'primaryPill', 'secondaryPill', 'refreshVisibleResults', 'publishVisibleGroups'],
-    { Flex, FlexWrap: enumValues('FlexWrap'), FlexDirection: enumValues('FlexDirection'),
+    { Flex, FlexWrap: enumValues('FlexWrap'), FlexDirection: enumValues('FlexDirection'), readerFloatingBarBottomInset,
+      ReaderWindowCoordinator: { metrics: () => ({ systemInsets: {}, cutoutInsets: {}, gestureInsets: {}, navigationInsets: {} }) },
       FlexAlign: enumValues('FlexAlign'), TOK_BORDER_W: 1, TOK_SPACE_XS: 8,
       TOK_SPACE_CARD_PADDING: 12, TOK_SPACE_ROW_BLOCK: 4 }));
   Object.assign(owner, {

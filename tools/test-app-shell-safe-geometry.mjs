@@ -21,8 +21,10 @@ for (const [name, source] of [
 assert.match(mainTabBar,
   /resolveHorizontalFrame\([\s\S]*readerInteractiveSafeLeft\(metrics\)[\s\S]*readerInteractiveSafeRight\(metrics\)[\s\S]*new SurfaceWidthSpec\(360, 15, 15, 'center'\)/,
   'Phone navigation must resolve its 360vp Figma cap inside live asymmetric safe edges');
-assert.match(mainTabBar, /\.margin\(\{ bottom: Math\.max\(15, this\.interactiveBottom\(\)\) \}\)/,
+assert.match(mainTabBar, /\.margin\(\{ bottom: this\.bottomInset\(\) \}\)/,
   'Phone navigation must preserve the 15vp design gap while clearing the live bottom gesture edge');
+assert.match(mainTabBar, /return readerFloatingTabBottomInset\(ReaderWindowCoordinator\.metrics\(\)\)/,
+  'Phone navigation must share its live safe-bottom rule with scroll content clearance');
 assert.match(mainTabBar, /private verticalRail\(\)[\s\S]*\.width\(82\)\s*\.height\(332\)/,
   'Tablet navigation must preserve the 82x332 Figma rail');
 

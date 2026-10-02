@@ -2,10 +2,10 @@ import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderShelfFonts } from '../common/ReaderFonts';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
-  readerInteractiveSafeBottom,
   readerInteractiveSafeLeft,
   readerInteractiveSafeRight,
 } from '../common/ReaderWindowMetrics';
+import { readerFloatingTabBottomInset } from '../common/ReaderFloatingBarMetrics';
 import {
   SurfaceHorizontalFrame,
   SurfaceWidthSpec,
@@ -81,7 +81,9 @@ export struct MainTabBar {
     .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(24)
-    .margin({ bottom: Math.max(15, this.interactiveBottom()) })
+    .clip(true)
+    .hitTestBehavior(HitTestMode.Transparent)
+    .margin({ bottom: this.bottomInset() })
     .translate({ x: this.bottomBarTranslateX() });
   }
 
@@ -119,6 +121,7 @@ export struct MainTabBar {
         .fontColor(active ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme));
     }
     .layoutWeight(1)
+    .margin({ left: 4, right: 4 })
     .height(54)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
@@ -201,8 +204,9 @@ export struct MainTabBar {
     return (frame.left - frame.right) / 2;
   }
 
-  private interactiveBottom(): number {
-    return readerInteractiveSafeBottom(ReaderWindowCoordinator.metrics());
+  private bottomInset(): number {
+    if (this.readerWindowMetricsRevision < 0) return 15;
+    return readerFloatingTabBottomInset(ReaderWindowCoordinator.metrics());
   }
 
   private liveWindowWidth(): number {

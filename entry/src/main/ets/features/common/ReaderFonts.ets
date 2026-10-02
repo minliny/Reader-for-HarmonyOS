@@ -46,7 +46,7 @@ export function readerFontFamilyReady(family: string): boolean {
  * on-demand admission after the shelf has been mounted. */
 export function prepareReaderShelfFonts(): Promise<void> {
   return Promise.all([READER_FONT_INTER, READER_FONT_NOTO_SERIF_SC_BOLD,
-    READER_FONT_NOTO_SANS_SC]
+    READER_FONT_NOTO_SANS_SC, 'ReaderNotoSansSCUIRegular']
     .map((family: string): Promise<void> => prepareReaderFontFamily(family))).then((): void => {});
 }
 

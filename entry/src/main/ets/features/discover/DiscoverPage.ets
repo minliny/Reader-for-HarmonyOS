@@ -8,6 +8,10 @@ import { readerAppColor } from '../common/ReaderThemeRegistry';
 
 import { MainTabShell } from '../shell/MainTabShell';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import {
+  READER_FLOATING_TOP_BAR_HEIGHT,
+  readerFloatingTabContentInset,
+} from '../common/ReaderFloatingBarMetrics';
 import { ReaderIconButton } from '../common/ReaderIconButton';
 import { AppTopBar } from '../common/AppTopBar';
 import { registerReaderFonts } from '../common/ReaderFonts';
@@ -77,9 +81,14 @@ export struct DiscoverPage {
 
   @Builder
   private discoverTabContent() {
-    Column() {
-      this.homeTopBar();
+    Stack({ alignContent: Alignment.TopStart }) {
       this.discoverContent();
+      Row() {
+        this.homeTopBar();
+      }
+      .width('100%')
+      .height(READER_FLOATING_TOP_BAR_HEIGHT)
+      .hitTestBehavior(HitTestMode.Transparent);
     }
     .width('100%')
     .height('100%');
@@ -110,13 +119,18 @@ export struct DiscoverPage {
       }
       .width('100%')
       .constraintSize({ maxWidth: this.contentFrame().width })
-      .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_SM });
+      .padding({ top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS, bottom: this.bottomContentInset() });
     }
-    .layoutWeight(1)
+    .height('100%')
     .width('100%')
     .align(Alignment.Top)
     .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
     .scrollBar(BarState.Off);
+  }
+
+  private bottomContentInset(): number {
+    if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_SM;
+    return readerFloatingTabContentInset(ReaderWindowCoordinator.metrics());
   }
 
   @Builder

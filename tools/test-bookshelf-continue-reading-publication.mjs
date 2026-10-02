@@ -31,6 +31,7 @@ const hooks = { ...runtime.hooks, onObserverExit(owner, id) {
 } };
 const { Component: Page } = createReaderBuilderProbe(pageSource,
   ['continueReading', 'bookshelfList', 'continueReadingCard', 'hasCover'], {
+    READER_FLOATING_TOP_BAR_HEIGHT: 58,
     ...runtime.sdk, NoCoverCover: Child, ImageFit: { Cover: 'cover' },
     LazyForEach: { create() {}, pop() {} }, ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
   }, hooks);
@@ -41,7 +42,7 @@ class ShelfChild extends Child {
     page = new Page(undefined, params);
     Object.assign(page, { appThemeScheme: 'day', filterRowVisible: false, viewModeError: '', visibleBookCount: 2,
       viewSwitchHeaderOpacity: 1, shelfScroller: {}, rowDataSource: {}, sectionAction() {}, filterRow() {}, projectionRow() {},
-      shelfContentWidth: () => 352, onBookSelected: params.onBookSelected });
+      shelfContentWidth: () => 352, shelfBottomContentInset: () => 99, onBookSelected: params.onBookSelected });
     page.bookshelfList(false);
   }
   updateStateVars(params) {

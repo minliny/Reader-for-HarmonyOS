@@ -6,6 +6,11 @@ import {
 } from '../../app/ReaderCoreGateway';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import {
+  projectCommitReadback,
+  type CommitReadbackSummary,
+} from '../../app/ReaderOperationFacts';
+import { errorMessageOf } from '../../app/ErrorMessage';
+import {
   type LocalImportBatch,
   LocalBookImportGateway,
 } from './LocalBookImportGateway';
@@ -23,10 +28,34 @@ export type BookshelfDataState =
   | { kind: 'empty'; shelf: BookshelfState; continueReading: undefined }
   | { kind: 'populated'; shelf: BookshelfState; continueReading: ShelfBook | undefined };
 
+/**
+ * A completed import batch and its follow-up shelf read-back are two separate
+ * facts. `shelf` is undefined when the follow-up shelf read failed;
+ * `readback` preserves whether the batch was confirmed, pending
+ * reconciliation, or never dispatched, and `refreshWarning` carries the
+ * human-readable read-back cause. A committed batch is never reclassified as
+ * an import failure merely because the refresh rejected.
+ */
 export type BookshelfImportOutcome = {
   batch: LocalImportBatch;
-  shelf: BookshelfDataState;
+  shelf: BookshelfDataState | undefined;
+  readback: CommitReadbackSummary;
+  refreshWarning?: string;
 };
+
+/**
+ * Derive the write fact from the Core-owned per-file batch before looking at
+ * the follow-up shelf read. A cancelled or all-rejected batch did not prove a
+ * durable write; a recovery-pending item means the reply for a mutation was
+ * lost and must remain pending reconciliation. A successful item is enough
+ * to confirm the batch even when another item failed deterministically.
+ */
+function importConfirmation(batch: LocalImportBatch): 'confirmed' | 'unknown' | 'undispatched' {
+  if (batch.state === 'cancelled') return 'undispatched';
+  if (batch.items.some((item): boolean => item.failure?.code === 'recoveryPending')) return 'unknown';
+  if (batch.imported > 0) return 'confirmed';
+  return 'undispatched';
+}
 
 export type BookshelfRemoveOutcome = {
   removed: boolean;
@@ -177,7 +206,32 @@ export class BookshelfFlowGateway {
     // Always re-read after the picker returns. A completed batch can upsert an
     // existing book, and a cancelled batch must still expose the restored
     // Core-owned shelf instead of retaining a UI-side copy.
-    return { batch, shelf: await this.load() };
+    //
+    // The batch is already committed once importPreparedSelections resolves.
+    // A shelf-refresh rejection must not reject the whole operation: that
+    // would swallow the committed per-file results and present the import as
+    // unfinished. Return the batch together with the shared
+    // confirmed/refresh-failed projection so the caller can show the durable
+    // truth and offer a targeted re-read instead of a file re-selection.
+    const confirmation = importConfirmation(batch);
+    try {
+      const shelf = await this.load();
+      return {
+        batch,
+        shelf,
+        readback: projectCommitReadback(confirmation, 'succeeded'),
+      };
+    } catch (error) {
+      const cause = errorMessageOf(error);
+      return {
+        batch,
+        shelf: undefined,
+        readback: projectCommitReadback(confirmation, 'failed'),
+        refreshWarning: confirmation === 'confirmed' ?
+          `导入已确认，书架刷新失败：${cause}` :
+          `导入结果${confirmation === 'unknown' ? '待核对' : '未执行'}，书架刷新失败：${cause}`,
+      };
+    }
   }
 
   async remove(sourceId: string, bookId: string): Promise<BookshelfRemoveOutcome> {

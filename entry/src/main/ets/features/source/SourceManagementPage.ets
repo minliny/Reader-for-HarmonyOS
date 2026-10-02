@@ -14,6 +14,7 @@ import { readerSourceCategoryLabel, type ReaderSourceCategory } from './ReaderSo
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
+import { readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { ReaderSearchField } from '../common/ReaderSearchField';
 import { ReaderToggle } from '../common/ReaderToggle';
 import { ReaderSelect } from '../common/ReaderSelect';
@@ -126,23 +127,7 @@ export struct SourceManagementPage {
     // 根 Stack = 下拉面板 overlay 宿主: 展开面板必须挂在全高容器才可点 (ArkUI 命中测试
     // 裁到父边界, 固定高行内面板下层选项不可点)。
     Stack({ alignContent: Alignment.TopStart }) {
-      Column() {
-        this.backBar();
-        Column() {
-          this.searchField();
-          this.statsRow();
-          if (this.statusKind !== 'idle') {
-            this.statusBanner();
-          }
-          this.filterArea();
-          this.categoryFilter();
-          this.sourceList();
-          this.bottomActionBar();
-        }
-        .layoutWeight(1)
-        .width('100%')
-        .padding({ left: this.contentFrame().left, right: this.contentFrame().right });
-      }
+      Column() { this.sourceList(); }
       .width('100%')
       .height('100%')
       .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
@@ -155,6 +140,13 @@ export struct SourceManagementPage {
           this.viewportWidth = width;
         }
       });
+
+      Row() { this.backBar(); }
+        .width('100%').height(58).hitTestBehavior(HitTestMode.Transparent);
+      Column() { this.bottomActionBar(); }
+        .width('100%').height(44 + TOK_SPACE_SM + this.actionBottomInset())
+        .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
+        .position({ bottom: 0, left: 0 }).hitTestBehavior(HitTestMode.Transparent);
 
       if (this.groupOpen) {
         Row().width('100%').height('100%').backgroundColor(Color.Transparent)
@@ -390,6 +382,28 @@ export struct SourceManagementPage {
   @Builder
   private sourceList() {
     List() {
+      // Filters remain ordinary scroll content; only the navigation and
+      // action bars float. The list viewport extends behind both bars.
+      ListItem() {
+        Column() {
+          this.searchField();
+          this.statsRow();
+          if (this.statusKind !== 'idle') { this.statusBanner(); }
+          this.filterArea();
+          this.categoryFilter();
+        }.width('100%').padding({ bottom: TOK_SPACE_CONTROL_INLINE });
+      }
+      if (this.sources.length === 0 && this.statusKind !== 'loading') {
+        ListItem() {
+          Column({ space: TOK_SPACE_XS }) {
+            Text('暂无书源').fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold)
+              .fontSize(15).lineHeight(22).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+            Text('点击下方「＋ 新增书源」导入 Legado 书源 JSON').fontFamily('ReaderInter')
+              .fontWeight(FontWeight.Regular).fontSize(12).lineHeight(18)
+              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+          }.width('100%').padding({ top: 64 }).alignItems(HorizontalAlign.Center);
+        }
+      }
       // LazyForEach owns an explicit data source so an empty-to-populated Core
       // load and later filter replacements can notify ArkUI after mount. A
       // reusable Repeat over a derived array retained zero stale rows on API
@@ -401,31 +415,11 @@ export struct SourceManagementPage {
       }, (source: BookSource): string => this.sourceRenderKey(source));
     }
     .width('100%')
-    .layoutWeight(1)
-    .margin({ top: TOK_SPACE_CONTROL_INLINE })
+    .height('100%')
+    .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
+    .contentStartOffset(58)
+    .contentEndOffset(44 + TOK_SPACE_SM + this.actionBottomInset())
     .scrollBar(BarState.Off);
-    // P0 add-source flow: a first-run visit (e.g. from Search's
-    // sourceRequired state) must not land on a silent blank list; the bottom
-    // "＋ 新增书源" action stays available below.
-    if (this.sources.length === 0 && this.statusKind !== 'loading') {
-      Column({ space: TOK_SPACE_XS }) {
-        Text('暂无书源')
-          .fontFamily('ReaderNotoSerifSCBold')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(15)
-          .lineHeight(22)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-        Text('点击下方「＋ 新增书源」导入 Legado 书源 JSON')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(12)
-          .lineHeight(18)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-      }
-      .width('100%')
-      .margin({ top: 64 })
-      .alignItems(HorizontalAlign.Center);
-    }
   }
 
   @Builder
@@ -583,7 +577,13 @@ export struct SourceManagementPage {
     .width(this.contentFrame().width)
     .height(44)
     .alignItems(VerticalAlign.Center)
-    .margin({ top: TOK_SPACE_SM, bottom: TOK_SPACE_MD });
+    .margin({ top: TOK_SPACE_SM, bottom: this.actionBottomInset() })
+    .hitTestBehavior(HitTestMode.Transparent);
+  }
+
+  private actionBottomInset(): number {
+    if (this.readerWindowMetricsRevision < 0) { return TOK_SPACE_MD; }
+    return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), TOK_SPACE_MD);
   }
 
   private sourceRenderKey(source: BookSource): string {

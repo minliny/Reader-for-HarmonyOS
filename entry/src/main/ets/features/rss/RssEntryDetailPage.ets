@@ -4,6 +4,10 @@ import {
   type RssSubscription,
 } from './RssGateway';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import {
+  READER_FLOATING_TOP_BAR_HEIGHT,
+  readerFloatingBarBottomInset,
+} from '../common/ReaderFloatingBarMetrics';
 import { PageBackBar } from '../common/PageBackBar';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
@@ -37,6 +41,7 @@ import {
 
 
 export type RssFavoritePresentation = 'loading' | 'favorited' | 'notFavorited' | 'unavailable';
+const RSS_DETAIL_ACTION_AREA_HEIGHT = 62;
 
 /**
  * True RSS child route for one Core-owned item. `description` is rendered as
@@ -63,9 +68,7 @@ export struct RssEntryDetailPage {
   }
 
   build() {
-    Column() {
-      this.backBar();
-
+    Stack({ alignContent: Alignment.TopStart }) {
       Scroll() {
         Column({ space: TOK_SPACE_SM }) {
           this.sourceCard();
@@ -79,19 +82,28 @@ export struct RssEntryDetailPage {
           }
         }
         .width(this.contentFrame().width)
-        .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_SM });
+        .padding({
+          top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS,
+          bottom: RSS_DETAIL_ACTION_AREA_HEIGHT + this.actionAreaBottomOffset(),
+        });
       }
-      .layoutWeight(1)
+      .height('100%')
       .width('100%')
       .scrollBar(BarState.Off)
       .align(Alignment.Top)
       .padding({ left: this.contentFrame().left, right: this.contentFrame().right });
 
-      this.bottomActions();
+      this.backBar();
+      Stack({ alignContent: Alignment.Bottom }) {
+        this.bottomActions();
+      }
+      .width('100%')
+      .height('100%')
+      .padding({ bottom: this.actionAreaBottomOffset() })
+      .hitTestBehavior(HitTestMode.Transparent);
     }
     .width('100%')
     .height('100%')
-    .alignItems(HorizontalAlign.Center)
     .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
       const width = this.numericAreaLength(newValue.width);
@@ -358,9 +370,15 @@ export struct RssEntryDetailPage {
     }
     .width(this.contentFrame().width)
     .margin({ left: this.contentFrame().left, right: this.contentFrame().right })
-    .height(62)
+    .height(RSS_DETAIL_ACTION_AREA_HEIGHT)
     .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
-    .alignItems(VerticalAlign.Center);
+    .alignItems(VerticalAlign.Center)
+    .hitTestBehavior(HitTestMode.Transparent);
+  }
+
+  private actionAreaBottomOffset(): number {
+    if (this.readerWindowMetricsRevision < 0) return 0;
+    return Math.max(0, readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), TOK_SPACE_XS) - TOK_SPACE_XS);
   }
 
   private summaryParagraphs(): string[] {

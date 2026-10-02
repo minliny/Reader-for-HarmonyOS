@@ -1,3 +1,4 @@
+import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PageBackBar } from '../common/PageBackBar';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
@@ -56,8 +57,7 @@ export struct BookshelfManagementPage {
   }
 
   build() {
-    Column() {
-      PageBackBar({ title: '书架数据管理', onBack: (): void => this.onBack() });
+    Stack({ alignContent: Alignment.TopStart }) {
       Scroll() {
         Column({ space: TOK_SPACE_MD }) {
           this.statusCard();
@@ -77,20 +77,26 @@ export struct BookshelfManagementPage {
         .padding({
           left: this.contentFrame().left,
           right: this.contentFrame().right,
-          top: TOK_SPACE_XS,
-          bottom: TOK_SPACE_MD,
+          top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS,
+          bottom: this.bottomContentInset(),
         });
       }
-      .layoutWeight(1)
+      .height('100%')
       .width('100%')
       .align(Alignment.TopStart)
       .scrollBar(BarState.Off);
+      PageBackBar({ title: '书架数据管理', onBack: (): void => this.onBack() });
     }
     .width('100%')
     .height('100%')
     .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
   }
 
+
+  private bottomContentInset(): number {
+    if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_MD;
+    return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), TOK_SPACE_MD);
+  }
   @Builder
   private statusCard() {
     Text(this.snapshot.statusMessage)

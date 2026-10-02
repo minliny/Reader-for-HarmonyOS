@@ -43,7 +43,8 @@ const verifyAuthor=expected=>{
  assert.equal(texts[1].create,expected,'the actual author field stays empty without invented metadata');
  assert.equal(texts[1].constraintSize?.minHeight,15,'empty authors must reserve the original 15vp second row');
  assert.equal(texts[1].fontSize,12);assert.equal(texts[1].lineHeight,15);
- assert.equal(texts[1].fontFamily,'ReaderNotoSansSC');
+ for(const text of texts.slice(1)) assert.equal(text.fontFamily,'ReaderNotoSansSCUIRegular',
+  'author, chapter and both status labels use the fixed 400 face');
  assert.equal(texts[2].create,'最新章节');
  assert.equal(texts[2].lineHeight,13.75);
 };

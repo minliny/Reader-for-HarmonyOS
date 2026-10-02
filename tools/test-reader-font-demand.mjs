@@ -8,7 +8,7 @@ const source=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderF
 const calls=[], pending=[]; let synchronousFailure=false;
 const text={FontCollection:{getGlobalInstance:()=>({loadFontWithCheck(family,src){
  if(synchronousFailure)throw Error('sync font error');
- calls.push({family,src});return new Promise((resolve,reject)=>pending.push({resolve,reject}));
+ calls.push({family,src});return new Promise((resolve,reject)=>pending.push({family,resolve,reject}));
 }})}};
 const loaderSource=readFileSync(new URL('../entry/src/main/ets/app/ReaderFontLoadHost.ts',import.meta.url),'utf8')
  .replace(/^import.*$/gm,'').replace(/^export /gm,'');
@@ -23,11 +23,17 @@ assert.equal(registrar.readerFontFamilyReady('unknown platform family'),false);
 assert.equal(registrar.readerFontFamilyReady('ReaderCustom_owned'),false);
 registrar.registerReaderShelfFonts(platform);registrar.registerReaderShelfFonts(platform);
 assert.deepEqual(calls.map(call=>call.family),[families.READER_FONT_INTER,
- families.READER_FONT_NOTO_SERIF_SC_BOLD,families.READER_FONT_NOTO_SANS_SC],
+ families.READER_FONT_NOTO_SERIF_SC_BOLD,families.READER_FONT_NOTO_SANS_SC,'ReaderNotoSansSCUIRegular'],
  'the first bookshelf frame loads only faces it uses');
 let shelfReady=false;const shelf=registrar.prepareReaderShelfFonts().then(()=>{shelfReady=true;});
 await Promise.resolve();assert.equal(shelfReady,false,'shelf submission is not readiness');
-pending.splice(0).forEach(p=>p.resolve());await shelf;assert.equal(shelfReady,true);
+pending.filter(p=>p.family!=='ReaderNotoSansSCUIRegular').forEach(p=>p.resolve());
+await new Promise(resolve=>setImmediate(resolve));
+assert.equal(shelfReady,false,'the bookshelf must wait for its fixed-weight list face, not render a fallback first');
+assert.equal(registrar.readerFontFamilyReady('ReaderNotoSansSCUIRegular'),false);
+pending.find(p=>p.family==='ReaderNotoSansSCUIRegular').resolve();
+await shelf;pending.splice(0);assert.equal(shelfReady,true);
+assert.equal(registrar.readerFontFamilyReady('ReaderNotoSansSCUIRegular'),true);
 registrar.registerReaderFonts(platform);registrar.registerReaderFonts(platform);
 assert.equal(calls.length,7);
 assert.ok(!calls.some(c=>/WenKai|Fangsong|Sarasa/.test(c.src)),'startup does not load unused optional faces');

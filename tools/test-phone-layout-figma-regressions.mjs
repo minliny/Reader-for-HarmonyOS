@@ -49,8 +49,12 @@ assert.match(detail,
   /private contentFrame\(\): SurfaceHorizontalFrame[\s\S]*new SurfaceWidthSpec\(TOK_CONTENT_MAX_W_TABLET, 19, 19, 'center'\)/,
   'book detail must share one continuous Figma cap and per-edge safe-frame rule');
 assert.match(detail,
-  /private actionButtonWidth\(\): number \{[\s\S]*Math\.min\(355, Math\.max\(0, \(this\.contentWidth\(\) - TOK_SPACE_CONTROL_INLINE\) \/ 2\)\)/,
-  'detail action buttons must shrink on narrow screens without exceeding the Figma maximum');
+  /private actionButtonWidth\(\): number \{\s*return Math\.max\(0, Math\.min\(355, \(this\.contentWidth\(\) - TOK_SPACE_CONTROL_INLINE\) \/ 2\) - 8\);/,
+  'detail action buttons must reserve each button\'s 8vp horizontal margin after dividing the available row width');
+const actionAreaStart = detail.indexOf('private actionArea()');
+const actionArea = detail.slice(actionAreaStart, detail.indexOf('private actionAreaBottomOffset()', actionAreaStart));
+assert.equal((actionArea.match(/\.width\(this\.actionButtonWidth\(\)\)\s*\.margin\(\{ left: 4, right: 4 \}\)/g) ?? []).length, 2,
+  'both detail actions must use the narrower production width with 4vp margins per side');
 assert.match(detail, /private numericAreaLength\(value: Length\): number \{[\s\S]*typeof value === 'string'[\s\S]*Number\.parseFloat\(value\)/,
   'book detail must accept the vp string form returned by physical-device Area');
 

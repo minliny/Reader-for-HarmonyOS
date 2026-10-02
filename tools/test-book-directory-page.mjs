@@ -123,9 +123,9 @@ const require = createRequire(import.meta.url);
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 for (const [name, props] of Object.entries({ ReaderDirectoryRules: ['bookId'], PageBackBar: [], ReaderDirectoryToolbar: ['text', 'placeholder', 'ascending', 'showChapterTools'],
-  ReaderDirectoryList: ['entries', 'rowHeight', 'listPaddingX', 'listPaddingY', 'edgeEffectMode'],
+  ReaderDirectoryList: ['entries', 'rowHeight', 'listPaddingX', 'listPaddingY', 'contentStartInset', 'contentEndInset', 'edgeEffectMode'],
   ReaderDirectoryNavigationSurface: ['sourceId', 'bookId', 'query', 'ascending', 'currentChapterIndex', 'openRevision',
-    'interacted', 'rowHeight', 'listPaddingX', 'listPaddingY', 'edgeEffectMode', 'scroller'],
+    'interacted', 'rowHeight', 'listPaddingX', 'listPaddingY', 'contentStartInset', 'contentEndInset', 'edgeEffectMode', 'scroller'],
   ReaderDirectoryChapterRow: ['entry', 'rowHeight', 'currentChapterIndex', 'chapterDownloadEnabled', 'chapterStartBookmarkCreationEnabled'] })) {
   syntax.componentCollection.customComponents.add(name); syntax.propCollection.set(name, new Set(props));
 }

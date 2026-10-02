@@ -44,6 +44,16 @@ view.prepare();assert.equal(native.prepares,1,'unchanged reactive delivery canno
 view.inkColor='#eeeeee';view.updateInk();assert.equal(native.ink,'#eeeeee');assert.equal(native.prepares,1,'theme changes update ink without reshaping');
 assert.equal(view.heightVp,30);pending.shift()();assert.deepEqual(native.range,[1,4]);
 assert.deepEqual(paint.at(-1),[{left:1,right:4,top:4.5,bottom:6,color:'#222222',multiply:false}]);
+view.highlightLayoutKey='font-size-21';view.updateHighlight();
+assert.deepEqual(paint.at(-1),[],'font reflow clears the old Canvas underline before remeasurement');
+pending.shift()();
+assert.deepEqual(paint.at(-1),[{left:1,right:4,top:4.5,bottom:6,color:'#222222',multiply:false}],
+  'font reflow remeasures the underline against the current native layout');
+view.recipe={...view.recipe,style:{...style,fontSize:21}};view.highlightLayoutKey='font-size-22';
+view.updateHighlight();view.prepare();
+for (const action of pending.splice(0)) action();
+assert.deepEqual(paint.at(-1),[{left:1,right:4,top:4.5,bottom:6,color:'#222222',multiply:false}],
+  'a stale queued measurement cannot suppress the post-reflow measurement');
 view.updateHighlight();const oldCopy=native.copy;view.aboutToDisappear();pending.shift()();oldCopy({start:0,end:5});
 assert.equal(copied.length,1);assert.deepEqual(paint.at(-1),[]);assert.equal(native.closed,true);
 console.log('PASS native paragraph view SDK, original visible selection, absolute scalar highlight and unmount rejection');

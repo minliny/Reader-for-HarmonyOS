@@ -1,4 +1,5 @@
 import type { JsonObject } from '@reader/core-harmony';
+import { drawing } from '@kit.ArkGraphics2D';
 import { ParagraphRange, MeasurementParagraph, MeasuredReadingLine, PhysicalReadingPage } from './ReadingMeasurementModels';
 import { ReaderNativeTextWindow, readerNativeParagraphHeight } from './ReaderNativeTextWindow';
 import { ReaderNativeParagraphResources, ReaderNativeParagraphRecipe, readerNativeParagraphKey } from './ReaderNativeParagraph';
@@ -1271,6 +1272,10 @@ export struct ReadingExperience {
   private controlBackdropRegions: ReaderControlBackdropRect[] = [];
   private controlBackdropGeometryReady: boolean = false;
   private controlBackdropState: ReaderControlBackdropTouchState = createReaderControlBackdropTouchState();
+  private controlBackdropPath: drawing.Path | undefined = undefined;
+  private controlBackdropPathWidth: number = -1;
+  private controlBackdropPathHeight: number = -1;
+  private controlBackdropPathRadius: number = -1;
   private pageTurnSlideTimeline: ReaderPageSettlementTimeline | undefined = undefined;
   private pageTurnGestureState: ReaderPageGestureState = createReaderPageGestureState();
   private readonly bookTurnSession: BookTurnPresentationSession =
@@ -10321,6 +10326,22 @@ export struct ReadingExperience {
     this.controlSession = expandReaderControlSession(this.controlMotionSession(), this.controlTiming().morphDurationMs);
   }
 
+  /** Native rounded-rectangle containment; translation does not rebuild the local path. */
+  private controlBackdropContainsRoundedRect(rect: ReaderControlBackdropRect, x: number, y: number): boolean {
+    const radius = rect.borderRadius ?? 0;
+    if (this.controlBackdropPath === undefined || this.controlBackdropPathWidth !== rect.width ||
+      this.controlBackdropPathHeight !== rect.height || this.controlBackdropPathRadius !== radius) {
+      const path = new drawing.Path();
+      path.addRoundRect(new drawing.RoundRect({ left: 0, top: 0, right: rect.width, bottom: rect.height },
+        radius, radius));
+      this.controlBackdropPath = path;
+      this.controlBackdropPathWidth = rect.width;
+      this.controlBackdropPathHeight = rect.height;
+      this.controlBackdropPathRadius = radius;
+    }
+    return this.controlBackdropPath.contains(x - rect.x, y - rect.y);
+  }
+
   private onControlBackdropTouch(event: TouchEvent): void {
     if (!this.isControlInputEnabled() || event.type === TouchType.Cancel) {
       this.controlBackdropState = createReaderControlBackdropTouchState();
@@ -10338,6 +10359,8 @@ export struct ReadingExperience {
         heldPointerId: this.controlMotionSession().heldPointerId,
         closeRevision: this.controlMotionSession().closeRevision,
         invalidationRevision: this.controlInputRevision, excludedRects: this.controlBackdropRegions,
+        containsRoundedRect: (rect: ReaderControlBackdropRect, x: number, y: number): boolean =>
+          this.controlBackdropContainsRoundedRect(rect, x, y),
       }, { tapMaxDurationMs: 500, touchSlopVp: 8 });
       this.controlBackdropState = result.state;
       if (result.shouldDismiss) { this.hideControl(); return; }

@@ -1,3 +1,4 @@
+import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../common/ReaderFonts';
@@ -170,6 +171,7 @@ export struct SourceToolsPage {
   onOpenEditor: (sourceId: string) => void = (_sourceId: string): void => {};
   onEditorDraftChanged: (text: string) => void = (_text: string): void => {};
   onSaveEditor: () => void = (): void => {};
+  onReconcileEditor: () => void = (): void => {};
   onCancelEditor: () => void = (): void => {};
   onDebugKeyChanged: (value: string) => void = (_value: string): void => {};
   onDebugSource: (sourceId: string) => void = (_sourceId: string): void => {};
@@ -196,8 +198,7 @@ export struct SourceToolsPage {
   }
 
   build() {
-    Column() {
-      PageBackBar({ title: '批量管理与书源工具', onBack: (): void => this.onBack() });
+    Stack({ alignContent: Alignment.TopStart }) {
       Scroll() {
         Column({ space: TOK_SPACE_MD }) {
           this.statusCard();
@@ -229,20 +230,26 @@ export struct SourceToolsPage {
         .padding({
           left: this.contentFrame().left,
           right: this.contentFrame().right,
-          top: TOK_SPACE_XS,
-          bottom: TOK_SPACE_MD,
+          top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS,
+          bottom: this.bottomContentInset(),
         });
       }
-      .layoutWeight(1)
+      .height('100%')
       .width('100%')
       .align(Alignment.TopStart)
       .scrollBar(BarState.Off);
+      PageBackBar({ title: '批量管理与书源工具', onBack: (): void => this.onBack() });
     }
     .width('100%')
     .height('100%')
     .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
   }
 
+
+  private bottomContentInset(): number {
+    if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_MD;
+    return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), TOK_SPACE_MD);
+  }
   @Builder
   private batchCard() {
     Column({ space: TOK_SPACE_SM }) {
@@ -545,6 +552,16 @@ export struct SourceToolsPage {
         this.actionButton('校验并保存', true, !this.snapshot.busy, (): void => this.onSaveEditor());
       }
       .width('100%');
+      if (this.snapshot.editorReadback?.fact === 'confirmedRefreshFailed') {
+        Text('保存已由 Core 确认；下面的操作只重新读取书源列表，不会再次执行 source.import。')
+          .width('100%')
+          .fontFamily('ReaderNotoSansSC')
+          .fontSize(10)
+          .lineHeight(16)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        this.actionButton('重新读取已保存书源', false, !this.snapshot.busy,
+          (): void => this.onReconcileEditor());
+      }
     }
     .width('100%')
     .padding(TOK_SPACE_SM)

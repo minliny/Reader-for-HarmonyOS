@@ -99,11 +99,14 @@ const childMembers = ['publicationRevision', 'publication', 'presentation', 'she
   'selectedGroupName', 'visibleGroups', 'acceptedVisibleGroups', 'resultDataSource', 'groupedCategory', 'groupedResultsCache',
   'resultProjection', 'projectedGroups', 'projectedGroupKeys', 'projectedGroupIndexes', 'changedGroupKeys',
   'warmupGroups', 'visibleStart', 'visibleEnd', 'viewStateRevision', 'listEpoch', 'restoreEpoch',
-  'groupResults', 'acceptPublication', 'refreshVisibleResults', 'publishVisibleGroups', 'resultsContent'];
+  'groupResults', 'acceptPublication', 'refreshVisibleResults', 'publishVisibleGroups', 'resultsContent',
+  'searchHeaderHeight', 'searchBottomInset', 'resultStatsHeight'];
 const childProbe = createReaderBuilderProbe(pageSource, childMembers, {
   ...runtime.sdk, SearchPublication, SearchViewState, SearchResultProjection,
   SearchBookGroup: CountedGroup, SearchResultDataSource, List: nativeStub('List'), LazyForEach: nativeStub('LazyForEach'),
   SearchResultCard: class {},
+  readerFloatingBarBottomInset: (_metrics, minimum) => minimum,
+  ReaderWindowCoordinator: { metrics: () => ({}) },
 }, runtime.hooks);
 // The parent call is extracted as an actual ArkUI AST expression; argument names
 // and lambdas are never reconstructed in the fixture.
@@ -135,6 +138,7 @@ host.initialRender();
 const page = [...host.children.values()][0];
 assert.ok(page instanceof childProbe.Component, 'actual compiled child constructor ran');
 Object.assign(page, { appThemeScheme: 'day', contentFrame: () => ({ width: 390 }), isTablet: false,
+  groupNames: () => ['本地', '在线'],
   onVisibleGroups() {}, listMounted: false, pageMounted: true, scrollRestored: true,
   resultScroller: {}, userInteracting: false, userScrolling: false });
 page.acceptPublication();

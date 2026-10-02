@@ -54,7 +54,8 @@ export struct PageBackBar {
     .width('100%')
     .height(58)
     .padding({ left: this.leftInset(), right: this.rightInset() })
-    .alignItems(VerticalAlign.Center);
+    .alignItems(VerticalAlign.Center)
+    .hitTestBehavior(HitTestMode.Transparent);
   }
 
   private leftInset(): number {

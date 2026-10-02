@@ -1,3 +1,4 @@
+import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -35,8 +36,7 @@ export struct BookshelfSettingsPage {
   aboutToDisappear(): void { this.mounted = false; this.revision += 1; }
 
   build() {
-    Column() {
-      PageBackBar({ title: '书架设置', onBack: (): void => this.onBack() });
+    Stack({ alignContent: Alignment.TopStart }) {
       Scroll() {
         Column() {
           Column({ space: TOK_SPACE_MD }) {
@@ -60,12 +60,18 @@ export struct BookshelfSettingsPage {
         }
         .width('100%')
         .padding({ left: this.contentFrame().left, right: this.contentFrame().right,
-          top: TOK_SPACE_XS, bottom: TOK_SPACE_MD });
+          top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS, bottom: this.bottomContentInset() });
       }
-      .layoutWeight(1).width('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
+      .height('100%').width('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
+      PageBackBar({ title: '书架设置', onBack: (): void => this.onBack() });
     }.width('100%').height('100%').backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
   }
 
+
+  private bottomContentInset(): number {
+    if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_MD;
+    return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), TOK_SPACE_MD);
+  }
   private contentFrame(): SurfaceHorizontalFrame {
     if (this.readerWindowMetricsRevision < 0) {
       return new SurfaceHorizontalFrame(0, 0, 0);

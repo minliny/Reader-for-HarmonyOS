@@ -113,9 +113,10 @@ console.log('search stable rows, enrichment and navigation state: PASS');
 
 // PH25: execute the real page grouping method over progressively arriving sources.
 const Page = productionMotionMethods(process.env.READER_SEARCH_RELEVANCE_SOURCE ?? new URL('../entry/src/main/ets/features/search/SearchPage.ets', import.meta.url),
-  ['groupResults', 'resultGroupKey', 'normalizedBookKey', 'saveScrollAnchor', 'refreshVisibleResults', 'publishVisibleGroups', 'scheduleScrollRestore', 'rememberAnchorNeighbors', 'cancelScrollRestoreForUser', 'onResultScrollIndex'],
+  ['searchHeaderHeight', 'groupResults', 'resultGroupKey', 'normalizedBookKey', 'saveScrollAnchor', 'refreshVisibleResults', 'publishVisibleGroups', 'scheduleScrollRestore', 'rememberAnchorNeighbors', 'cancelScrollRestoreForUser', 'onResultScrollIndex'],
   { ...authorMetadata, SearchBookGroup, searchResultRelevance, searchCandidateRank, SearchResultProjection,
-    SearchLayoutFrame: class { constructor(action) { this.action = action; } onIdle() { this.action(); } }, ScrollAlign: { START: 0 } });
+    SearchLayoutFrame: class { constructor(action) { this.action = action; } onIdle() { this.action(); } },
+    ScrollAlign: { START: 0 }, Edge: { Top: 'top' } });
 const p = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '诡秘之主' },
   viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部' });
 const book = (id, title, author = '作者', extra = {}) => ({ sourceId: id, bookId: `/${id}`, title, author, ...extra });
@@ -293,10 +294,12 @@ console.log('current-version catalog group representative; stale and other-versi
 function restoration() {
   const frames=[],moves=[];const state=new SearchViewState();state.pageRevision=1;state.anchorKey='online:b';state.anchorItemY=-23;
   const p=Object.assign(new Page(),{viewState:state,pageEpoch:1,listEpoch:1,restoreEpoch:0,pageMounted:true,listMounted:true,
+    presentation:{kind:'results'},isTablet:false,groupNames:()=>[],resultStatsHeight:28.5,
     restoreCancelled:false,restoreScheduled:false,scrollRestored:false,restoreKey:state.anchorKey,restoreOffset:137,restoreItemY:-23,
     visibleGroups:['a','b','c'].map(k=>group(k)),getUIContext:()=>({postFrameCallback:frame=>frames.push(frame)}),publishVisibleGroups(){}});
   let y=0,height=100;
   p.resultScroller={scrollToIndex:i=>{moves.push(['index',i]);y=0;},scrollTo:offset=>moves.push(['offset',offset.yOffset]),
+    scrollEdge:edge=>moves.push(['edge',edge]),
     scrollBy:(_x,offset)=>{moves.push(['by',offset]);y-=offset;},getItemRect:()=>({y,height}),currentOffset:()=>({yOffset:137})};
   return {p,frames,moves,setHeight:v=>height=v,tick(){const f=frames.shift();assert.ok(f,'expected layout callback');f.onIdle();}};
 }
@@ -323,6 +326,16 @@ for(const boundary of ['query','page','user']) {
   neighbor.p.scheduleScrollRestore();neighbor.tick();neighbor.tick();assert.equal(neighbor.p.viewState.anchorKey,'online:c');
   const late=restoration();late.setHeight(0);late.p.scheduleScrollRestore();late.tick();late.tick();
   assert.equal(late.p.scrollRestored,false);late.setHeight(100);late.tick();late.tick();assert.equal(late.p.scrollRestored,true);
+}
+for (const offset of [0, -30, -80.5, 137]) {
+  const f=restoration();f.p.restoreKey='';f.p.restoreOffset=offset;f.p.scheduleScrollRestore();f.tick();
+  assert.deepEqual(f.moves,offset!==0?[['offset',offset]]:[['edge','top']],
+    'fresh zero restores native top clearance, while saved signed offsets retain their position within the clearance');
+  assert.equal(f.p.scrollRestored,true);
+}
+{
+  const removed=restoration();removed.p.restoreKey='online:removed';removed.p.scheduleScrollRestore();removed.tick();
+  assert.deepEqual(removed.moves,[['edge','top']], 'a removed key without surviving neighbors resets to the native top edge');
 }
 console.log('R7 layout-key resolution, mid-layout list changes, query/page guards, user cancellation, programmatic callbacks, merge/neighbors and late layout PASS');
 

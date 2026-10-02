@@ -4,6 +4,11 @@ import {
   type RssSubscription,
 } from './RssGateway';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import {
+  READER_FLOATING_TOP_BAR_HEIGHT,
+  readerFloatingBarBottomInset,
+  readerFloatingTabContentInset,
+} from '../common/ReaderFloatingBarMetrics';
 import { MainTabShell } from '../shell/MainTabShell';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderSearchField } from '../common/ReaderSearchField';
@@ -14,6 +19,8 @@ import {
   resolveHorizontalFrame,
 } from '../common/SurfaceHorizontalGeometry';
 import {
+  readerInteractiveSafeLeft,
+  readerInteractiveSafeRight,
   readerVisualSafeLeft,
   readerVisualSafeRight,
 } from '../common/ReaderWindowMetrics';
@@ -81,6 +88,7 @@ export type RssPresentation =
 const STATUS_PAUSED_OPACITY = 0.62;
 const RSS_WIDE_BREAKPOINT = 600;
 const RSS_TABLET_RAIL_WIDTH = 100;
+const RSS_FLOATING_HEADER_HEIGHT = READER_FLOATING_TOP_BAR_HEIGHT + 44 + 30 + TOK_SPACE_XS * 2;
 
 /**
  * Figma-backed RSS page (`10 · Reference · RSS` `F2 · Canonical · RSS`).
@@ -129,10 +137,7 @@ export struct RssPage {
           Blank().width(RSS_TABLET_RAIL_WIDTH);
         }
 
-        Column() {
-          this.topBar();
-          this.searchBar();
-          this.statusTabs();
+        Stack({ alignContent: Alignment.TopStart }) {
           if (this.presentation.kind === 'feed') {
             this.feedScroll(this.presentation.subscriptions, this.presentation.recentUnread, false);
           } else if (this.presentation.kind === 'refreshing') {
@@ -142,10 +147,19 @@ export struct RssPage {
           } else {
             this.errorContent(this.presentation.failedSources);
           }
+
+          Column() {
+            this.topBar();
+            this.searchBar();
+            this.statusTabs();
+          }
+          .width('100%')
+          .height(RSS_FLOATING_HEADER_HEIGHT)
+          .alignItems(HorizontalAlign.Start)
+          .hitTestBehavior(HitTestMode.Transparent);
         }
         .layoutWeight(1)
-        .height('100%')
-        .alignItems(HorizontalAlign.Start);
+        .height('100%');
       }
       .width('100%')
       .height('100%')
@@ -170,7 +184,7 @@ export struct RssPage {
         .lineHeight(41)
         .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
         .maxLines(1)
-        .margin({ left: 20 });
+        .margin({ left: this.headerLeftInset() });
 
       Row({ space: 6 }) {
         this.refreshPill();
@@ -182,8 +196,18 @@ export struct RssPage {
     .width('100%')
     .height(58)
     .justifyContent(FlexAlign.SpaceBetween)
-    .padding({ right: 20 })
+    .padding({ right: this.headerRightInset() })
     .alignItems(VerticalAlign.Center);
+  }
+
+  private headerLeftInset(): number {
+    if (this.readerWindowMetricsRevision < 0) return 20;
+    return Math.max(20, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics()));
+  }
+
+  private headerRightInset(): number {
+    if (this.readerWindowMetricsRevision < 0) return 20;
+    return Math.max(20, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics()));
   }
 
   @Builder
@@ -314,10 +338,10 @@ export struct RssPage {
         this.recentUnreadSection(subscriptions, recentUnread);
       }
       .width(this.contentFrame().width)
-      .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_LG });
+      .padding({ top: RSS_FLOATING_HEADER_HEIGHT + TOK_SPACE_XS, bottom: this.bottomContentInset() });
     }
     .width('100%')
-    .layoutWeight(1)
+    .height('100%')
     .align(Alignment.Top)
     .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
     .scrollBar(BarState.Off);
@@ -654,10 +678,10 @@ export struct RssPage {
         this.emptyUnreadSection();
       }
       .width(this.contentFrame().width)
-      .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_LG });
+      .padding({ top: RSS_FLOATING_HEADER_HEIGHT + TOK_SPACE_XS, bottom: this.bottomContentInset() });
     }
     .width('100%')
-    .layoutWeight(1)
+    .height('100%')
     .align(Alignment.Top)
     .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
     .scrollBar(BarState.Off);
@@ -680,22 +704,34 @@ export struct RssPage {
 
   @Builder
   private errorContent(failedSources: RssFailedSource[]) {
-    Column() {
-      this.stateCard(
-        (this.appThemeScheme === 'night' ? $r('app.media.rss_error_theme_night') : $r('app.media.rss_error')),
-        'RSS 暂时无法载入',
-        `${failedSources.length} 个订阅源无法载入。可以稍后重试，或进入订阅源管理修复登录态和规则。`,
-        failedSources,
-        '重试刷新',
-        (): void => this.onRefresh());
+    Scroll() {
+      Column() {
+        this.stateCard(
+          (this.appThemeScheme === 'night' ? $r('app.media.rss_error_theme_night') : $r('app.media.rss_error')),
+          'RSS 暂时无法载入',
+          `${failedSources.length} 个订阅源无法载入。可以稍后重试，或进入订阅源管理修复登录态和规则。`,
+          failedSources,
+          '重试刷新',
+          (): void => this.onRefresh());
+      }
+      .width('100%')
+      .padding({
+        top: RSS_FLOATING_HEADER_HEIGHT + TOK_SPACE_XS,
+        bottom: this.bottomContentInset(),
+        left: this.contentFrame().left,
+        right: this.contentFrame().right,
+      });
     }
     .width('100%')
-    .layoutWeight(1)
-    .padding({
-      top: TOK_SPACE_XS,
-      left: this.contentFrame().left,
-      right: this.contentFrame().right,
-    });
+    .height('100%')
+    .align(Alignment.Top)
+    .scrollBar(BarState.Off);
+  }
+
+  private bottomContentInset(): number {
+    if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_LG;
+    const metrics = ReaderWindowCoordinator.metrics();
+    return this.isWideViewport() ? readerFloatingBarBottomInset(metrics, TOK_SPACE_LG) : readerFloatingTabContentInset(metrics);
   }
 
   @Builder

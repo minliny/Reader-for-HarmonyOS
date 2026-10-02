@@ -109,7 +109,8 @@ check('Index state changes update the retained shell child props, including serv
 const shellSource = read('features/bookshelf/BookshelfShell.ets');
 function shellFixture({ populated = false, width = 365, menu = false } = {}) {
   const { owner } = createReaderBuilderProbe(shellSource, ['content','build','shellContent','topBar','requestCheckUpdates','showBottomNav','numericAreaLength'], {
-    ...dependencies, BOOKSHELF_WIDE_BREAKPOINT: 600, ReaderWindowCoordinator: { metrics: () => ({ windowRect: { width } }) },
+    ...dependencies, BOOKSHELF_WIDE_BREAKPOINT: 600, READER_FLOATING_TOP_BAR_HEIGHT: 58,
+    ReaderWindowCoordinator: { metrics: () => ({ windowRect: { width } }) },
   });
   let contentCalls = 0;
   Object.assign(owner, { appThemeScheme: 'day', readerWindowMetricsRevision: 0, populated, viewportWidth: 0,
@@ -122,7 +123,7 @@ function shellFixture({ populated = false, width = 365, menu = false } = {}) {
   owner.initialRender();
   const nav = childOf(owner, 'MainTabShell')[0]; nav.params.content();
   const header = childOf(owner, 'AppTopBar')[0]; header.params.trailing();
-  assert.equal(contentCalls, 1); assert.equal(header.params.title, '书架'); assert.equal(header.params.divider, true);
+  assert.equal(contentCalls, 1); assert.equal(header.params.title, '书架'); assert.equal(header.params.divider ?? false, false);
   return { owner, nav, header };
 }
 check('one shell keeps title/actions/nav actors through day-night and populated changes', () => {
@@ -139,7 +140,9 @@ check('one shell keeps title/actions/nav actors through day-night and populated 
   buttons[0].params.onTap(); assert.deepEqual(owner.calls, ['onSearchRequested']);
   assert.equal(owner.moreMenuVisible, false); buttons[1].params.onTap(); assert.equal(owner.moreMenuVisible, true);
   nav.params.onMainTab('settings'); assert.deepEqual(owner.calls, ['onSearchRequested','onMainTab:settings']);
-  assert.ok(nodesOf(owner, 'Stack').some(node => node.layoutWeight === 1 && node.width === '100%'), 'only content gets the remaining height');
+  assert.ok(nodesOf(owner, 'Stack').some(node => node.height === '100%' && node.width === '100%'), 'content retains its full viewport under the floating header');
+  assert.ok(nodesOf(owner, 'Row').some(node => node.height === 58 && node.hitTestBehavior === 'HitTestMode.Transparent'),
+    'the floating header does not turn its empty area into a scroll shield');
 });
 check('shell navigation keeps phone fallback and existing populated tablet rail threshold', () => {
   for (const populated of [false, true]) for (const width of [365,599,600,800]) {
@@ -173,8 +176,11 @@ check('More retains measured global-to-local anchor, live progress and guarded c
   owner.moreMenuVisible = true; more.params.onDismiss(); assert.equal(owner.moreMenuVisible,false);
 });
 for (const failed of [false,true]) check(`status ${failed ? 'failure' : 'loading'} actual content preserves retry/spinner and live theme`, () => {
-  const { owner } = createReaderBuilderProbe(read('features/bookshelf/BookshelfStatusContent.ets'), ['build'], dependencies);
-  let retries = 0; Object.assign(owner, { failed, reduceMotion:false, appThemeScheme:'day', onRetry:()=>retries++ });
+  const { owner } = createReaderBuilderProbe(read('features/bookshelf/BookshelfStatusContent.ets'), ['build'], {
+    ...dependencies, READER_FLOATING_TOP_BAR_HEIGHT: 58,
+  });
+  let retries = 0; Object.assign(owner, { failed, reduceMotion:false, appThemeScheme:'day', onRetry:()=>retries++,
+    minimumContentHeight: () => 400, bottomContentInset: () => 99 });
   owner.initialRender();
   if (failed) {
     assert.deepEqual(nodesOf(owner,'Text').map(node=>node.create), ['书架加载失败','无法读取书架内容，请重试。','重试']);

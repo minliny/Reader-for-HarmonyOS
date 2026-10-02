@@ -467,7 +467,7 @@ export struct ReaderControlPanel {
   private brightnessDragging: boolean = false;
   private brightnessLastEmittedPercent: number = -1;
   private geo: ReaderControlGeometry = new ReaderControlGeometry(false);
-  private dockRect: ReaderControlBackdropRect = { x: 0, y: 0, width: 0, height: 0 };
+  private dockRect: ReaderControlBackdropRect = { x: 0, y: 0, width: 0, height: 0, borderRadius: 24 };
   private dockMeasured: boolean = false;
   private topBarRect: ReaderControlBackdropRect = { x: 0, y: 0, width: 0, height: 0 };
   // The host stores these as a non-reactive input snapshot. Keep the array and
@@ -475,7 +475,7 @@ export struct ReaderControlPanel {
   // VSync needlessly allocates and makes the host reassign the same geometry.
   private readonly backdropRegions: ReaderControlBackdropRect[] = [
     this.dockRect,
-    { x: 0, y: 0, width: 0, height: 0 },
+    { x: 0, y: 0, width: 0, height: 0, borderRadius: 24 },
   ];
   private readonly expandCurve = curves.cubicBezierCurve(0, 0, 0.58, 1);
   private readonly collapseCurve = curves.cubicBezierCurve(0.42, 0, 1, 1);
@@ -776,6 +776,7 @@ export struct ReaderControlPanel {
     topBar.y = this.topBarRect.y + frame.topBar.translateY;
     topBar.width = this.topBarRect.width;
     topBar.height = this.topBarRect.height;
+    topBar.borderRadius = 24;
     this.onBackdropRegionsChange(this.backdropRegions, ready);
   }
 

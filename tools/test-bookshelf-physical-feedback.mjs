@@ -99,7 +99,7 @@ for (const page of ['BookshelfShell']) {
     const headers = [...owner.children.values()].filter(child => child instanceof HeaderChild);
     assert.equal(headers.length, 1, 'the persistent shelf shell mounts the real AppTopBar instead of a title bitmap');
     assert.equal(headers[0].params.title, '书架');
-    assert.equal(headers[0].params.divider, true);
+    assert.equal(headers[0].params.divider ?? false, false);
     assert.equal(typeof headers[0].params.trailing, 'function');
     const { owner: header } = createReaderBuilderProbe(read('common/AppTopBar.ets'), ['trailing', 'build'], {
       TYPE_APP_HOME_TITLE: { fontFamily: 'title-role', fontWeight: 700, fontSizeFp: 29, lineHeightFp: 38 },
@@ -113,12 +113,12 @@ for (const page of ['BookshelfShell']) {
     const row = [...header.nodes.values()].find(node => node.type === 'Row');
     assert.deepEqual(row.padding, { left: 20, right: 20, top: 6 });
     assert.equal(row.height, 58);
-    assert.equal(row.border.width.bottom, 1);
+    assert.equal(row.border.width.bottom, 0);
     for (const scheme of ['night', 'day']) {
       header.appThemeScheme = scheme; header.replay();
       assert.equal(texts(header).find(node => node.create === '书架'), titles[0], 'theme update retains the title actor');
       assert.equal(titles[0].fontColor, readerAppColor('TOK_INK', scheme));
-      assert.equal(row.backgroundColor, readerAppColor('TOK_PAPER', scheme));
+      assert.equal(row.backgroundColor, 'Color.Transparent');
     }
     assert.ok(![...owner.nodes.values(), ...header.nodes.values()]
       .some(node => node.type === 'Image' && node.create === 'app.media.bookshelf_title'));
@@ -142,21 +142,21 @@ check('empty shelf actual Scroll pins short contents to the viewport top', () =>
   const source = read('bookshelf/BookshelfEmptyPage.ets');
   for (const m of source.matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g)) builders.add(m[1]);
   const { owner } = createReaderBuilderProbe(source, ['build'], {
-    BookshelfEmptyCard: Child, TOK_SPACE_XS: 8, TOK_SPACE_MD: 16,
+    BookshelfEmptyCard: Child, TOK_SPACE_XS: 8, TOK_SPACE_MD: 16, READER_FLOATING_TOP_BAR_HEIGHT: 58,
   });
   Object.assign(owner, { appThemeScheme: 'day', moreMenuVisible: false,
-    contentFrame: () => ({ width: 327, left: 19, right: 19 }), topBar() {}, sectionHeader() {} });
+    contentFrame: () => ({ width: 327, left: 19, right: 19 }), bottomContentInset: () => 99, topBar() {}, sectionHeader() {} });
   owner.initialRender();
   const nodes = [...owner.nodes.values()];
   const scroll = nodes.find(node => node.type === 'Scroll');
   assert.ok(scroll);
   assert.ok(['Alignment.Top', 'Alignment.TopStart'].includes(scroll.align),
     'native Scroll must explicitly avoid vertical centering when the empty card is shorter than its viewport');
-  assert.equal(scroll.height, '100%', 'content consumes only the shared shell body');
-  assert.equal(nodes.find(node => node.type === 'Column' && node.width === 327).padding.bottom, 16,
-    'normal-flow navigation needs only the shared body gap, not another bottom-nav spacer');
-  assert.equal(nodes.find(node => node.type === 'Column' && node.width === 327).padding.top, 8,
-    'the actual empty content keeps only its existing 8vp gap below the header');
+  assert.equal(scroll.height, '100%', 'content extends behind the shared floating bars');
+  assert.equal(nodes.find(node => node.type === 'Column' && node.width === 327).padding.bottom, 99,
+    'scroll content clears the floating navigation without reducing its viewport');
+  assert.equal(nodes.find(node => node.type === 'Column' && node.width === 327).padding.top, 66,
+    'the actual empty content keeps its 8vp gap after clearing the floating 58vp header');
 });
 const list = read('bookshelf/ShelfBookListDetails.ets').replace('  build() {', '  build() { Column() {} }\n  @Builder\n  shelfDetails() {');
 check('PH61 progress/source retain equal left/right slots and live progress after row reuse', () => {

@@ -48,7 +48,8 @@ export struct AppTopBar {
     .alignItems(VerticalAlign.Center)
     .backgroundColor(this.divider ? readerAppColor('TOK_PAPER', this.appThemeScheme) : Color.Transparent)
     .border({ width: { bottom: this.divider ? 1 : 0 },
-      color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) });
+      color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
+    .hitTestBehavior(HitTestMode.Transparent);
   }
 
   private leftInset(): number {

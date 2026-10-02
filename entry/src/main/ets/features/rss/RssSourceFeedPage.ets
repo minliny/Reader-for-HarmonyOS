@@ -1,3 +1,4 @@
+import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
   type RssItem,
@@ -59,11 +60,7 @@ export struct RssSourceFeedPage {
   }
 
   build() {
-    Column() {
-      PageBackBar({
-        title: '全部条目',
-        onBack: (): void => this.onBack(),
-      });
+    Stack({ alignContent: Alignment.TopStart }) {
 
       Scroll() {
         Column({ space: TOK_SPACE_XS }) {
@@ -75,17 +72,20 @@ export struct RssSourceFeedPage {
           }
         }
         .width(this.contentFrame().width)
-        .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_LG });
+        .padding({ top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS, bottom: this.bottomContentInset() });
       }
-      .layoutWeight(1)
+      .height('100%')
       .width('100%')
       .scrollBar(BarState.Off)
       .align(Alignment.Top)
       .padding({ left: this.contentFrame().left, right: this.contentFrame().right });
+      PageBackBar({
+        title: '全部条目',
+        onBack: (): void => this.onBack(),
+      });
     }
     .width('100%')
     .height('100%')
-    .alignItems(HorizontalAlign.Center)
     .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
       const width = this.numericAreaLength(newValue.width);
@@ -95,6 +95,11 @@ export struct RssSourceFeedPage {
     });
   }
 
+
+  private bottomContentInset(): number {
+    if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_LG;
+    return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), TOK_SPACE_LG);
+  }
   @Builder
   private sourceCard() {
     Row({ space: TOK_SPACE_XS }) {

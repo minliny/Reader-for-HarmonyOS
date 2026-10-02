@@ -4,6 +4,10 @@ import type { ReadingBookDetail } from '../reading/ReadingBookDetail';
 import { bookIntroText } from '../common/BookIntroText';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
+  READER_FLOATING_TOP_BAR_HEIGHT,
+  readerFloatingBarBottomInset,
+} from '../common/ReaderFloatingBarMetrics';
+import {
   readerVisualSafeLeft,
   readerVisualSafeRight,
 } from '../common/ReaderWindowMetrics';
@@ -45,6 +49,7 @@ const TABLET_SUMMARY_HEIGHT = 98.875;
 const CHAPTER_SECTION_HEIGHT = 282;
 const CHAPTER_ROW_HEIGHT = 58;
 const CHAPTER_PREVIEW_LIMIT = 20;
+const DETAIL_ACTION_AREA_HEIGHT = 77;
 
 /**
  * Local-book detail, translated only from the two Final local variants:
@@ -92,33 +97,30 @@ export struct LocalBookDetail {
   }
 
   build() {
-    Column() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      this.detailScroll();
       this.backBar();
-      Column() {
-        this.detailScroll();
+      Stack({ alignContent: Alignment.Bottom }) {
         this.actionArea();
-        if (this.shelfMessage.length > 0) {
-          Text(this.shelfMessage)
-            .fontSize(12)
-            .fontColor(readerAppColor('TOK_DANGER', this.appThemeScheme))
-            .width(this.contentWidth())
-            .padding({ bottom: TOK_SPACE_MD });
-        }
       }
-      .layoutWeight(1)
       .width('100%')
-      .alignItems(HorizontalAlign.Center)
-      .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
-      .onAreaChange((_oldValue: Area, newValue: Area): void => {
-        const width = this.numericAreaLength(newValue.width);
-        if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
-          this.viewportWidth = width;
-        }
-      });
+      .height('100%')
+      .padding({
+        left: this.contentFrame().left,
+        right: this.contentFrame().right,
+        bottom: this.actionAreaBottomOffset(),
+      })
+      .hitTestBehavior(HitTestMode.Transparent);
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
+    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
+    .onAreaChange((_oldValue: Area, newValue: Area): void => {
+      const width = this.numericAreaLength(newValue.width);
+      if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
+        this.viewportWidth = width;
+      }
+    });
   }
 
   @Builder
@@ -138,12 +140,23 @@ export struct LocalBookDetail {
         this.heroCard();
         this.summaryCard();
         this.chapterSection();
+        if (this.shelfMessage.length > 0) {
+          Text(this.shelfMessage)
+            .fontSize(12)
+            .fontColor(readerAppColor('TOK_DANGER', this.appThemeScheme))
+            .width(this.contentWidth())
+            .padding({ bottom: TOK_SPACE_MD });
+        }
       }
       .width(this.contentWidth())
-      .padding({ top: TOK_SPACE_XS, bottom: 112 });
+      .padding({
+        top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS,
+        bottom: DETAIL_ACTION_AREA_HEIGHT + this.actionAreaBottomOffset(),
+      });
     }
-    .layoutWeight(1)
+    .height('100%')
     .width('100%')
+    .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
     .align(Alignment.Top)
     .scrollBar(BarState.Off);
   }
@@ -426,6 +439,7 @@ export struct LocalBookDetail {
           .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
       }
       .width(this.actionButtonWidth())
+      .margin({ left: 4, right: 4 })
       .height(46)
       .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) })
@@ -448,6 +462,7 @@ export struct LocalBookDetail {
           .fontColor(this.inBookshelf ? readerAppColor('TOK_DANGER', this.appThemeScheme) : readerAppColor('TOK_GREEN', this.appThemeScheme));
       }
       .width(this.actionButtonWidth())
+      .margin({ left: 4, right: 4 })
       .height(46)
       .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_ACTION_DIVIDER', this.appThemeScheme) })
@@ -463,20 +478,16 @@ export struct LocalBookDetail {
       });
     }
     .width(this.contentWidth())
-    .height(77)
+    .height(DETAIL_ACTION_AREA_HEIGHT)
     .padding({ top: TOK_SPACE_MD, bottom: 15 })
     .alignItems(VerticalAlign.Top)
-    // Figma `860:105`: vertical fade behind the ActionBar — transparent →
-    // rgba(249,240,230,0.96) at 42% → #f9f0e6, so scrolled content dissolves
-    // into the page background beneath the two buttons.
-    .linearGradient({
-      direction: GradientDirection.Bottom,
-      colors: [
-        [readerAppColor('app.LocalBookDetail.actionArea.linearGradient.00F9F0E6', this.appThemeScheme), 0.0],
-        [readerAppColor('app.LocalBookDetail.actionArea.linearGradient.F5F9F0E6', this.appThemeScheme), 0.42],
-        [readerAppColor('app.LocalBookDetail.actionArea.linearGradient.FFF9F0E6', this.appThemeScheme), 1.0],
-      ],
-    });
+    .hitTestBehavior(HitTestMode.Transparent);
+  }
+
+  private actionAreaBottomOffset(): number {
+    if (this.readerWindowMetricsRevision < 0) return 0;
+    // The action area already includes its original 15 vp bottom clearance.
+    return Math.max(0, readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), 15) - 15);
   }
 
   private displayIntro(): string {
@@ -529,7 +540,7 @@ export struct LocalBookDetail {
   }
 
   private actionButtonWidth(): number {
-    return Math.min(355, Math.max(0, (this.contentWidth() - TOK_SPACE_CONTROL_INLINE) / 2));
+    return Math.max(0, Math.min(355, (this.contentWidth() - TOK_SPACE_CONTROL_INLINE) / 2) - 8);
   }
 
   private numericAreaLength(value: Length): number {

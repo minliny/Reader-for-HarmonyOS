@@ -4,6 +4,7 @@ import { ReaderIconButton } from '../common/ReaderIconButton';
 import { registerReaderShelfFonts } from '../common/ReaderFonts';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { BookshelfMoreMenu } from './BookshelfMoreMenu';
+import { READER_FLOATING_TOP_BAR_HEIGHT } from '../common/ReaderFloatingBarMetrics';
 
 export const BOOKSHELF_WIDE_BREAKPOINT = 600;
 
@@ -51,16 +52,18 @@ export struct BookshelfShell {
   @Builder
   private shellContent() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Column() {
-        this.topBar();
-        Stack({ alignContent: Alignment.TopStart }) {
-          this.content();
-        }
-        .width('100%')
-        .layoutWeight(1);
+      Stack({ alignContent: Alignment.TopStart }) {
+        this.content();
       }
       .width('100%')
       .height('100%');
+
+      Row() {
+        this.topBar();
+      }
+      .width('100%')
+      .height(READER_FLOATING_TOP_BAR_HEIGHT)
+      .hitTestBehavior(HitTestMode.Transparent);
 
       if (this.moreMenuVisible) {
         BookshelfMoreMenu({
@@ -105,7 +108,7 @@ export struct BookshelfShell {
 
   @Builder
   private topBar() {
-    AppTopBar({ title: '书架', divider: true }) {
+    AppTopBar({ title: '书架' }) {
       Row({ space: 18 }) {
         ReaderIconButton({
           icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_search_theme_night') : $r('app.media.bookshelf_search')),

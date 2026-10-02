@@ -22,7 +22,7 @@ const matcher='(url) => { const match = new RegExp(".*\\\\.m3u8(?:\\\\?.*)?").ex
 function setup({autoAttach=true,autoDetach=true,constructorError=false,target={host:'93.184.216.34',addresses:['93.184.216.34'],route:'direct'},proxyAck=true}={}){
  const clock=new Clock();let generation=0;let cookies=[];const reconciled=[],clears=[],seeds=[],scripts=[],surfaces=[],proxyOperations=[],loads=[],admissions=[],pins=[];
  let onLoad=()=>{},evaluate,configureController=()=>{};
- const store={instance:{sessionGeneration:()=>generation,arkWebSeeds:async profile=>[{url:base,header:'sid='+profile}],reconcileArkWebCookies:async(...args)=>{reconciled.push(args);}}};
+ const store={instance:{sessionGeneration:()=>generation,arkWebSeeds:async profile=>[{name:'sid',domain:'93.184.216.34',path:'/',url:base,header:'sid='+profile}],reconcileArkWebCookies:async(...args)=>{reconciled.push(args);}}};
  class Controller {
   static setHostIP(...args){pins.push(args);} static clearHostIP(){}
   url='about:blank';stopCount=0;

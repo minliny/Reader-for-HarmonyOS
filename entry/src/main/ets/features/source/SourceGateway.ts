@@ -336,6 +336,12 @@ export class SourceGateway {
    * Persist an edited raw source through the existing Core import command.
    * Primary-key migration is intentionally fail-closed: deleting the old id
    * is a separate destructive action and must not be inferred from an edit.
+   *
+   * This compatibility API intentionally returns only after source.import has
+   * returned a validated identity. It does not expose an ambiguous transport
+   * receipt; callers must therefore keep a rejected Promise in the existing
+   * save-failed bucket and must not invent a pending-commit fact here. The
+   * read-only source.list reconciliation belongs to SourceToolsOrchestrator.
    */
   async saveEditableSource(sourceId: string, text: string): Promise<void> {
     let value: unknown;

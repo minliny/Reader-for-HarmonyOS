@@ -211,6 +211,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import deviceInfo from '@ohos.deviceInfo';
 import { ArkWebExecutionHost } from '../app/ArkWebExecutionHost';
 import { JsonImportDialog } from '../features/common/JsonImportDialog';
+import { ReaderDialogSurface } from '../features/common/ReaderDialogSurface';
 import { isReaderProductSurfaceEnabled } from '../app/ReaderProductScope';
 import { TOK_GREEN, TOK_INK, TOK_MUTED, TOK_ON_PRIMARY } from '../features/common/ReaderTokens';
 
@@ -1064,6 +1065,7 @@ struct Index {
           onOpenEditor: (sourceId: string): void => this.getSourceToolsOrchestrator().openEditor(sourceId),
           onEditorDraftChanged: (text: string): void => this.getSourceToolsOrchestrator().updateEditorDraft(text),
           onSaveEditor: (): void => this.getSourceToolsOrchestrator().saveEditor(),
+          onReconcileEditor: (): void => this.getSourceToolsOrchestrator().reconcileEditor(),
           onCancelEditor: (): void => this.getSourceToolsOrchestrator().cancelEditor(),
           onDebugKeyChanged: (value: string): void => this.getSourceToolsOrchestrator().updateDebugKey(value),
           onCheckSelectionChanged: (mode: 'search' | 'explore', depth: number): void =>
@@ -1210,14 +1212,18 @@ struct Index {
         Stack({ alignContent: Alignment.Center }) {
           Row().width('100%').height('100%').backgroundColor(readerAppColor('app.Index.build.backgroundColor.52000000', this.appThemeScheme))
             .onClick((): void => { if (!this.editingShelfGroupBusy) this.editingShelfGroupBook = undefined; });
-          Column({ space: 12 }) {
-            Text('编辑分组').fontSize(17).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-            BookshelfGroupSelector({
-              selected: (this.editingShelfGroupBook?.group?.trim() ?? '') === '',
-              busy: this.editingShelfGroupBusy,
-              onSelect: (): void => { void this.assignShelfDefaultGroup(); },
-            });
-          }.padding(20).width('75%').backgroundColor(readerAppColor('app.Index.build.backgroundColor.FFFFFCF8', this.appThemeScheme)).borderRadius(20);
+          ReaderDialogSurface({
+            specId: 'shelf-group',
+            title: '编辑分组',
+            actions: [],
+            body: (): void => {
+              BookshelfGroupSelector({
+                selected: (this.editingShelfGroupBook?.group?.trim() ?? '') === '',
+                busy: this.editingShelfGroupBusy,
+                onSelect: (): void => { void this.assignShelfDefaultGroup(); },
+              });
+            },
+          });
         }.width('100%').height('100%');
       }
       if (this.route === 'bookshelf' && this.hasVisibleImportDialog()) {
@@ -6765,7 +6771,15 @@ struct Index {
         this.writeImportPresentation(new LocalImportPresentation('fileSelection'));
         return;
       }
-      this.applyBookshelfState(outcome.shelf);
+      // The per-file batch is the durable import fact. A follow-up shelf
+      // read may fail (or be pending reconciliation) and therefore must not
+      // be dereferenced as though it were always present. Keep the last
+      // authoritative shelf projection visible while surfacing the read-back
+      // warning for a targeted retry.
+      if (outcome.shelf !== undefined) {
+        this.applyBookshelfState(outcome.shelf);
+      }
+      this.importFailureMessage = outcome.refreshWarning ?? '';
       this.writeImportPresentation(new LocalImportPresentation('result', outcome.batch));
     } catch (error) {
       // The shelf reload may fail after Core committed; never undo those books.

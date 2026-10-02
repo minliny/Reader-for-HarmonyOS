@@ -41,8 +41,8 @@ const { owner: sharedShell } = createReaderBuilderProbe(mainShell, ['content','b
 });
 Object.assign(sharedShell, { appThemeScheme: 'day', showTabletRail: false, showBottomNav: false, content() {} });
 sharedShell.initialRender();
-const contentRoot = [...sharedShell.nodes.values()].find(node => node.type === 'Column');
-assert.ok(contentRoot, 'normal-flow shared app shell paints beneath failure content');
+const contentRoot = [...sharedShell.nodes.values()].find(node => node.type === 'Stack' && node.backgroundColor !== undefined);
+assert.ok(contentRoot, 'full-size shared app shell paints beneath failure content');
 for (const scheme of ['day','night','day']) {
   sharedShell.appThemeScheme = scheme; sharedShell.replay();
   const windowPaint = readerAppColor('app.window.background', scheme);
@@ -68,8 +68,9 @@ const failedProp = failure[0].arguments[0].properties.find(node => node.name?.ge
 assert.equal(failedProp.initializer.getText(tree), 'this.bookshelfLoadFailed');
 const status = read('entry/src/main/ets/features/bookshelf/BookshelfStatusContent.ets');
 syntax.componentCollection.customComponents.add('SearchSpinner');
-const { owner: failureContent } = createReaderBuilderProbe(status, ['build']);
-Object.assign(failureContent, { failed:true, appThemeScheme:'night', onRetry() {} });
+const { owner: failureContent } = createReaderBuilderProbe(status, ['build'], { READER_FLOATING_TOP_BAR_HEIGHT: 58 });
+Object.assign(failureContent, { failed:true, appThemeScheme:'night', onRetry() {},
+  minimumContentHeight: () => 400, bottomContentInset: () => 99 });
 failureContent.initialRender();
 assert.ok([...failureContent.nodes.values()].some(node => node.type === 'Text' && node.create === '书架加载失败'));
 assert.ok([...failureContent.nodes.values()].every(node => node.backgroundColor === undefined || node.type === 'Text'),

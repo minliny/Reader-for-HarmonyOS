@@ -75,7 +75,7 @@ const http={InterceptorType:{REDIRECTION:1},HttpInterceptorChain:class{addChain(
 const url={URL:{parseURL:(value,base)=>new URL(value,base)}};
 const Host=new Function('connection','http','url','prepareNetworkTarget','NetworkEnvironmentError','hilog','errorMessageOf',code('HttpTransportPolicy.ts')+code('HttpExecuteHost.ts')+';return HttpExecuteHost;')(connection,http,url,prepareNetworkTarget,NetworkEnvironmentError,{warn(){},error(){}},errorMessageOf);
 const host=new Host(),deadline=()=>({deadlineAt:Date.now()+10000,cancelled:false,expired:new Promise(()=>{})});
-reset();proxy={host:'user-proxy',port:8080,exclusionList:[]};dns=Error('no local DNS');await host.singleHop('https://source.example/path',{enumMethod:'GET'}, {},{kind:'none'},undefined,deadline());assert.equal(pins,0);assert.equal(transportCalls,1);assert.equal(urlSeen,'https://source.example/path');assert.equal(optionsSeen.usingProxy,true);
+reset();proxy={host:'user-proxy',port:8080,exclusionList:[]};dns=Error('no local DNS');await host.singleHop('https://source.example/path',{enumMethod:'GET'}, {},{kind:'none'},undefined,deadline());assert.equal(pins,0);assert.equal(transportCalls,1);assert.equal(urlSeen,'https://source.example/path');assert.deepEqual(optionsSeen.usingProxy,proxy);assert.notEqual(optionsSeen.usingProxy,proxy,'one hop freezes the selected system proxy instead of reading a changed default during native dispatch');
 reset();dns=['198.18.1.2'];const syntheticPinCount=pinHistory.length;await host.singleHop('https://source.example/path',{enumMethod:'GET'}, {},{kind:'none'},undefined,deadline());assert.equal(pins,0);assert.equal(transportCalls,2);assert.equal(pinHistory.length,syntheticPinCount+1);assert.deepEqual(pinHistory.at(-1),{host:'source.example',addresses:['198.18.1.2']});assert.equal(urlSeen,'https://source.example/path');assert.equal(optionsSeen.usingProxy,false,'original synthetic address is pinned without bypassing the OS gateway or rewriting Host/TLS');
 reset();await host.singleHop('https://source.example/path',{enumMethod:'GET'}, {},{kind:'none'},undefined,deadline());assert.equal(pins,0);assert.equal(calls.dns,1);assert.equal(transportCalls,3);
 assert.equal(optionsSeen.usingProxy,false,'direct admission cannot be silently rerouted through a changed system proxy');
@@ -115,10 +115,12 @@ const hop=d=>host.singleHop('https://lease.example/book',{enumMethod:'GET'}, {},
  const waitingDeadline=host.createDeadline(5000);let first,third;
  try{
   first=hop(deadline());await until(()=>visits===1);assert.equal(pins,1);
-  const second=hop(waitingDeadline);await until(()=>calls.dns>=2);host.cancelDeadline(waitingDeadline,'cancel queued waiter');
+  const firstTail=Host.targetTails.get('lease.example');
+  const second=hop(waitingDeadline);await until(()=>Host.targetTails.get('lease.example')!==firstTail);host.cancelDeadline(waitingDeadline,'cancel queued waiter');
   await assert.rejects(Promise.race([second,new Promise((_,reject)=>setTimeout(()=>reject(new Error('waiter did not cancel')),300))]),/cancel queued waiter/);
   assert.equal(pins,1);assert.equal(Host.targetTails.has('lease.example'),true);
-  third=hop(deadline());await until(()=>calls.dns>=3);for(let i=0;i<5;i++)await tick();assert.equal(visits,1,'third request cannot pass the held first pin');
+  const secondTail=Host.targetTails.get('lease.example');
+  third=hop(deadline());await until(()=>Host.targetTails.get('lease.example')!==secondTail);for(let i=0;i<5;i++)await tick();assert.equal(visits,1,'third request cannot pass the held first pin');
   releaseFirst();await first;await third;assert.equal(visits,2);assert.equal(pins,0);await until(()=>!Host.targetTails.has('lease.example'));
  }finally{releaseFirst();host.disposeDeadline(waitingDeadline);requestBehavior=undefined;await first?.catch(()=>{});await third?.catch(()=>{})}
 }
