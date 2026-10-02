@@ -31,7 +31,11 @@ export struct BookDirectoryPage {
   @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];
   @Prop catalogMessage: string = '';
   @Prop contentKind: string = 'text';
+  @Prop bookTitle: string = '';
   @Prop currentChapterIndex: number = -1;
+  /** Core manga location page, kept separate from the TOC row ordinal. */
+  @Prop currentPageOrdinal: number = -1;
+  @Prop currentPageTotal: number = -1;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   onBack: () => void = (): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
@@ -180,7 +184,7 @@ export struct BookDirectoryPage {
           interacted: this.navigationInteracted, mangaDisplay: true,
           rowHeight: 58, listPaddingX: this.contentFrame().left,
           listPaddingRight: this.contentFrame().right,
-          listPaddingY: 8, listPaddingTop: this.topInset() + 150,
+          listPaddingY: 8, listPaddingTop: this.topInset() + 200,
           listPaddingBottom: this.bottomInset() + 72,
           edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
           chapterEntries: this.admittedEntries,
@@ -200,6 +204,17 @@ export struct BookDirectoryPage {
       }.width('100%').padding({ left: this.contentFrame().left, right: this.contentFrame().right, top: this.topInset() + 8 })
         .align(Alignment.Top).hitTestBehavior(HitTestMode.Transparent);
       Column() {
+        Row() {
+          Column({ space: 2 }) {
+            Text(this.bookTitle || '漫画目录')
+              .fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold).fontSize(18).lineHeight(24)
+              .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis });
+            Text(`${this.admittedEntries.filter((entry: LocalReadingTocEntry): boolean => entry.navigable !== false).length} 个可读条目${this.admittedEntries.filter((entry: LocalReadingTocEntry): boolean => entry.navigable === false).length > 0 ? ` · ${this.admittedEntries.filter((entry: LocalReadingTocEntry): boolean => entry.navigable === false).length} 个卷组` : ''}`)
+              .fontFamily('ReaderNotoSansSC').fontSize(11).lineHeight(16)
+              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1);
+          }.layoutWeight(1).alignItems(HorizontalAlign.Start);
+        }.width('100%').height(42);
         ReaderDirectoryToolbar({ text: this.searchDraft, placeholder: '搜索话／卷名称', ascending: this.ascending,
           showChapterTools: true, onTextChange: (value: string): void => { this.searchDraft = value; },
           onSearch: (): void => this.applySearch(), onTop: (): void => this.scrollToEdge(Edge.Top),
@@ -210,7 +225,8 @@ export struct BookDirectoryPage {
             .enabled(this.currentChapterIndex >= 0).opacity(this.currentChapterIndex >= 0 ? 1 : 0.4)
             .onClick((): void => this.locateCurrent());
         }.width('100%').height(24).padding({ left: 10, right: 10 });
-      }.width(this.contentFrame().width).height(76)
+      }.width(this.contentFrame().width).height(126)
+        .padding({ left: 10, right: 10, bottom: 8 })
         .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme)).borderRadius(14)
         .align(Alignment.Top).margin({ top: this.topInset() + 66 });
       Stack({ alignContent: Alignment.Bottom }) {
@@ -263,7 +279,7 @@ export struct BookDirectoryPage {
       entries: this.mangaVisibleEntries(), rowHeight: 58, naturalRowHeight: true,
       listPaddingX: this.contentFrame().left, listPaddingY: 8,
       listPaddingRight: this.contentFrame().right,
-      listPaddingTop: this.topInset() + 150, listPaddingBottom: this.bottomInset() + 24,
+      listPaddingTop: this.topInset() + 200, listPaddingBottom: this.bottomInset() + 24,
       edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
       onFirstLayout: (): void => this.onListFirstLayout(identity),
       onUserScrollIntent: (): void => this.onListUserScroll(),
@@ -324,15 +340,11 @@ export struct BookDirectoryPage {
   }
 
   private mangaCurrentPosition(): string {
-    if (this.currentChapterIndex < 0) return '—';
-    let ordinal = 0;
-    let total = 0;
-    for (const entry of this.admittedEntries) {
-      if (entry.navigable === false) continue;
-      total += 1;
-      if (entry.index === this.currentChapterIndex) ordinal = total;
-    }
-    return ordinal > 0 ? `${ordinal} / ${total}` : '—';
+    // This footer describes the current image inside the chapter. The TOC
+    // ordinal is not a page number and must never be shown as one.
+    if (this.currentPageOrdinal === undefined || this.currentPageTotal === undefined ||
+      this.currentPageOrdinal < 0 || this.currentPageTotal <= this.currentPageOrdinal) return '—';
+    return `${this.currentPageOrdinal + 1} / ${this.currentPageTotal} 页`;
   }
 
   private mangaVisibleEntries(): LocalReadingTocEntry[] {

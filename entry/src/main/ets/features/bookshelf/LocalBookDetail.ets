@@ -7,7 +7,6 @@ import { readerVisualSafeLeft, readerVisualSafeRight, readerInteractiveSafeTop,
   readerInteractiveSafeBottom } from '../common/ReaderWindowMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from '../common/SurfaceHorizontalGeometry';
 import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';
-import { MangaBookPresentation } from '../manga/MangaBookPresentation';
 import { NoCoverCover } from './NoCoverCover';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
@@ -99,6 +98,12 @@ export struct LocalBookDetail {
           coverHeight: this.book.contentKind === 'manga' ? 150 : 122 });
       }
       Column({ space: 8 }) {
+        if (this.book.contentKind === 'manga') {
+          Row({ space: 6 }) {
+            this.metadataTag('漫画');
+            this.metadataTag(this.book.sourceId === 'local' ? '本地' : '在线');
+          }.width('100%');
+        }
         Text(this.book.title).width('100%').fontFamily('ReaderNotoSerifSCBold')
           .fontWeight(FontWeight.Bold).fontSize(24).lineHeight(34)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
@@ -106,10 +111,31 @@ export struct LocalBookDetail {
         Text(bookAuthorLabel(this.book.author)).width('100%').fontFamily('ReaderNotoSansSC')
           .fontSize(13).lineHeight(20).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-        Row({ space: 6 }) {
-          this.metadataTag(this.book.contentKind === 'manga' ? '漫画' : this.book.contentKind === 'audio' ? '有声' : '小说');
-          this.metadataTag(this.book.sourceId === 'local' ? '本地' : '在线');
-        }.width('100%');
+        if (this.book.contentKind !== 'manga') {
+          Row({ space: 6 }) {
+            this.metadataTag(this.book.contentKind === 'audio' ? '有声' : '小说');
+            this.metadataTag(this.book.sourceId === 'local' ? '本地' : '在线');
+          }.width('100%');
+        }
+        if (this.book.contentKind === 'manga') {
+          // The manga design keeps source and latest chapter in the hero
+          // information block. This makes the cover, identity, source and
+          // latest item one scan before the independent reading-position card.
+          Row({ space: 8 }) {
+            Text(`当前来源：${this.book.sourceName}`).layoutWeight(1).constraintSize({ minWidth: 0 })
+              .fontSize(12).lineHeight(18).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+              .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+            if (this.sourceSwitchEnabled) {
+              Text('换源').height(28).padding({ left: 10, right: 10 }).fontSize(11)
+                .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
+                .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme)).borderRadius(9)
+                .textAlign(TextAlign.Center).onClick((): void => this.onSwitchSource());
+            }
+          }.width('100%');
+          Text(`最新：${this.book.lastChapter?.trim() || '暂无最新章节'}`).width('100%')
+            .fontSize(11).lineHeight(18).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+        }
       }.layoutWeight(1).constraintSize({ minWidth: 0 }).alignItems(HorizontalAlign.Start);
     }.width('100%').constraintSize({ minHeight: this.book.contentKind === 'manga' ? 150 : 122 }).alignItems(VerticalAlign.Top);
   }
@@ -124,25 +150,44 @@ export struct LocalBookDetail {
 
   @Builder
   private readingFacts() {
-    Column({ space: 9 }) {
-      Row({ space: 12 }) {
-        Text(`当前来源：${this.book.sourceName}`).layoutWeight(1).constraintSize({ minWidth: 0 })
-          .fontSize(13).lineHeight(20).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-        if (this.sourceSwitchEnabled) {
-          Text('换源').height(32).padding({ left: 12, right: 12 }).fontSize(12)
-            .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-            .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme)).borderRadius(10)
-            .textAlign(TextAlign.Center).onClick((): void => { if (this.sourceSwitchEnabled) this.onSwitchSource(); });
-        }
-      }.width('100%');
-      Text(`最新：${this.book.lastChapter?.trim() || '暂无最新章节'}`).width('100%')
-        .fontSize(12).lineHeight(20).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-      if (this.book.contentKind === 'manga') {
-        Text(MangaBookPresentation.label(this.book.mangaPosition)).width('100%')
-          .fontSize(13).lineHeight(22).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
-      }
-    }.width('100%').alignItems(HorizontalAlign.Start);
+    if (this.book.contentKind === 'manga') {
+      // Keep the position separate from source metadata. When Core has no
+      // admitted location, show an explicit empty state and never fabricate a
+      // page number or chapter title.
+      Column({ space: 6 }) {
+        Text('上次读到').width('100%').fontSize(10).lineHeight(16)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        Row({ space: 8 }) {
+          Text(this.book.mangaPosition?.chapterTitle?.trim() || '尚未开始阅读')
+            .layoutWeight(1).constraintSize({ minWidth: 0 }).fontSize(13).lineHeight(20)
+            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+          Text(this.book.mangaPosition === undefined ? '—' :
+            `${this.book.mangaPosition.pageOrdinal + 1}${this.book.mangaPosition.totalPages !== undefined ? ` / ${this.book.mangaPosition.totalPages}` : ''} 页`)
+            .flexShrink(0).fontSize(11).lineHeight(20)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).textAlign(TextAlign.End);
+        }.width('100%');
+      }.width('100%').padding({ left: 14, right: 14, top: 12, bottom: 12 })
+        .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
+        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) }).borderRadius(12)
+        .alignItems(HorizontalAlign.Start);
+    } else {
+      Column({ space: 9 }) {
+        Row({ space: 12 }) {
+          Text(`当前来源：${this.book.sourceName}`).layoutWeight(1).constraintSize({ minWidth: 0 })
+            .fontSize(13).lineHeight(20).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+          if (this.sourceSwitchEnabled) {
+            Text('换源').height(32).padding({ left: 12, right: 12 }).fontSize(12)
+              .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
+              .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme)).borderRadius(10)
+              .textAlign(TextAlign.Center).onClick((): void => { if (this.sourceSwitchEnabled) this.onSwitchSource(); });
+          }
+        }.width('100%');
+        Text(`最新：${this.book.lastChapter?.trim() || '暂无最新章节'}`).width('100%')
+          .fontSize(12).lineHeight(20).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+      }.width('100%').alignItems(HorizontalAlign.Start);
+    }
   }
 
   @Builder
@@ -157,15 +202,20 @@ export struct LocalBookDetail {
           .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
           .onClick((): void => { this.introExpanded = !this.introExpanded; });
       }
-    }.width('100%').alignItems(HorizontalAlign.Start);
+    }.width('100%').padding({ top: this.book.contentKind === 'manga' ? 16 : 0, bottom: this.book.contentKind === 'manga' ? 16 : 0 })
+      .border({ width: { top: this.book.contentKind === 'manga' ? TOK_BORDER_W : 0,
+        bottom: this.book.contentKind === 'manga' ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+      .alignItems(HorizontalAlign.Start);
   }
 
   @Builder
   private catalog() {
     Column() {
       Row({ space: 8 }) {
-        Text('目录').fontSize(15).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-        Text(`${this.toc.filter((entry: LocalReadingTocEntry): boolean => entry.navigable !== false).length} 个可读条目`)
+        Text(this.book !== undefined && this.book.contentKind === 'manga' ? '章节目录' : '目录').fontSize(15).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+        Text(this.book !== undefined && this.book.contentKind === 'manga' ?
+          `${this.toc.filter((entry: LocalReadingTocEntry): boolean => entry.navigable !== false).length} 个可读条目${this.toc.filter((entry: LocalReadingTocEntry): boolean => entry.navigable === false).length > 0 ? ` · ${this.toc.filter((entry: LocalReadingTocEntry): boolean => entry.navigable === false).length} 个卷组` : ''}` :
+          `${this.toc.filter((entry: LocalReadingTocEntry): boolean => entry.navigable !== false).length} 个可读条目`)
           .layoutWeight(1).fontSize(11).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
         // Keep the 44vp hit target separate from the 30vp painted capsule.
         // The SVG is a real production asset; selecting the theme variant here

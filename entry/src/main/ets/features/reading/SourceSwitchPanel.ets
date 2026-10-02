@@ -39,6 +39,7 @@ export struct SourceSwitchPanel {
   @Prop coverUrl: string = '';
   @Prop currentSourceName: string = '';
   @Prop currentChapterTitle: string = '';
+  @Prop contentKind: string = 'text';
   @Prop reduceMotion: boolean = false;
   @Prop consumeTopInset: boolean = true;
   onStop: () => void = (): void => {};
@@ -55,6 +56,7 @@ export struct SourceSwitchPanel {
       currentSourceId: this.currentSourceId,
       bookTitle: this.bookTitle, author: this.author, coverUrl: this.coverUrl,
       currentSourceName: this.currentSourceName, currentChapterTitle: this.currentChapterTitle,
+      contentKind: this.contentKind,
       reduceMotion: this.reduceMotion, consumeTopInset: this.consumeTopInset, onStop: this.onStop,
       onClose: this.onClose,
       onRetry: this.onRetry,

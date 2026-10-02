@@ -228,7 +228,7 @@ export struct ReaderSearchField {
       return this.isTablet ? 40 : 36;
     }
     if (this.variant === 'sourceManagement') {
-      return 38;
+      return 44;
     }
     if (this.variant === 'readerDirectory') {
       return 32;
@@ -241,7 +241,7 @@ export struct ReaderSearchField {
 
   private inputHeight(): number {
     if (this.variant === 'sourceManagement') {
-      return 36;
+      return 42;
     }
     if (this.variant === 'readerDirectory') {
       return 24;
@@ -316,7 +316,7 @@ export struct ReaderSearchField {
   }
 
   private cornerRadius(): number {
-    return this.variant === 'bookPage' || this.variant === 'rssPassive' ? 999 : 8;
+    return this.variant === 'bookPage' || this.variant === 'rssPassive' ? 999 : this.variant === 'sourceManagement' ? 12 : 8;
   }
 
   private inputColor(): string {

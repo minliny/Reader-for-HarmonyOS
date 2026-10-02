@@ -119,6 +119,9 @@ export struct SourceSwitchWindow {
   @Prop @Watch('coverChanged') coverUrl: string = '';
   @Prop currentSourceName: string = '';
   @Prop currentChapterTitle: string = '';
+  // Manga uses the visual source-switch copy from the isolated UI demo. Text
+  // reading keeps the existing generic wording and state semantics.
+  @Prop contentKind: string = 'text';
   @Prop reduceMotion: boolean = false;
   @Prop consumeTopInset: boolean = true;
   onClose: () => void = (): void => {};
@@ -318,15 +321,16 @@ export struct SourceSwitchWindow {
     else this.onRetry();
   }
   private statusText(): string {
-    if (this.isSweeping()) return `正在查找 · ${sourceSwitchSourceCount(this.displayedCandidates)} 个来源`;
+    const count = sourceSwitchSourceCount(this.displayedCandidates);
+    if (this.isSweeping()) return this.contentKind === 'manga' ? `正在查找 · 已发现 ${count} 个` : `正在查找 · ${count} 个来源`;
     if (this.busy()) return '正在切换书源…';
     if (this.state.kind === 'success') return '已切换书源';
     if (this.state.kind === 'failure') return '换源失败';
     if (this.state.kind === 'discoveryError') return '查找失败';
     if ((this.state.kind === 'candidates' || this.state.kind === 'empty') && this.state.stopped === true) {
-      return `已停止 · ${sourceSwitchSourceCount(this.displayedCandidates)} 个来源`;
+      return this.contentKind === 'manga' ? `已停止 · 已发现 ${count} 个` : `已停止 · ${count} 个来源`;
     }
-    return `查找完成 · ${sourceSwitchSourceCount(this.displayedCandidates)} 个来源`;
+    return this.contentKind === 'manga' ? `查找完成 · 已发现 ${count} 个` : `查找完成 · ${count} 个来源`;
   }
   private errorText(): string {
     if (this.state.kind === 'discoveryError' || this.state.kind === 'failure') return this.state.message;
@@ -400,7 +404,13 @@ export struct SourceSwitchWindow {
         SearchSpinner({ active: this.isSweeping() && this.foreground, diameter: 13, reduceMotion: this.reduceMotion });
         Text(this.statusText()).fontFamily('ReaderNotoSansSC').fontSize(11)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).layoutWeight(1);
-        Text('搜索延迟').fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        if (this.contentKind === 'manga') {
+          Text('延迟优先').fontFamily('ReaderNotoSansSC').fontSize(10)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        } else {
+          Text('搜索延迟').fontFamily('ReaderNotoSansSC').fontSize(10)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        }
       }.width('100%').height(28);
       Text('其他来源').fontFamily('ReaderNotoSansSC').fontSize(11)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width('100%');

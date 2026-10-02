@@ -209,22 +209,36 @@ export struct SourceManagementPage {
 
   @Builder
   private searchField() {
-    Row() {
-      ReaderSearchField({
-        variant: 'sourceManagement',
-        mode: 'live',
-        text: this.searchQuery,
-        placeholder: '搜索书源名称或域名',
-        accessibilityLabel: '搜索书源名称或域名',
-        onTextChange: (value: string): void => {
-          this.searchQuery = value;
-          this.rebuildSourceProjection();
-        },
-        onSubmit: (): void => this.rebuildSourceProjection(),
-      });
+    Row({ space: TOK_SPACE_XS }) {
+      Row() {
+        ReaderSearchField({
+          variant: 'sourceManagement',
+          mode: 'live',
+          text: this.searchQuery,
+          placeholder: '搜索书源名称或域名',
+          accessibilityLabel: '搜索书源名称或域名',
+          onTextChange: (value: string): void => {
+            this.searchQuery = value;
+            this.rebuildSourceProjection();
+          },
+          onSubmit: (): void => this.rebuildSourceProjection(),
+        });
+      }
+      .layoutWeight(1)
+      .height(44);
+
+      Stack({ alignContent: Alignment.Center }) {
+        Image($r('app.media.source_add')).width(18).height(18);
+      }
+      .width(40)
+      .height(40)
+      .borderRadius(12)
+      .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+      .accessibilityText('导入书源')
+      .onClick((): void => this.onAddSource());
     }
     .width(this.contentFrame().width)
-    .height(38)
+    .height(44)
     .alignItems(VerticalAlign.Center)
     .margin({ top: TOK_SPACE_XS });
   }
@@ -437,6 +451,15 @@ export struct SourceManagementPage {
   @Builder
   private sourceRow(source: BookSource) {
     Row({ space: TOK_SPACE_XS }) {
+      Stack({ alignContent: Alignment.Center }) {
+        Image((this.appThemeScheme === 'night' ? $r('app.media.source_group_folder_theme_night') : $r('app.media.source_group_folder')))
+          .width(20).height(20);
+      }
+      .width(36)
+      .height(40)
+      .borderRadius(10)
+      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme));
+
       Column({ space: TOK_SPACE_XS }) {
         Row({ space: 6 }) {
           Text(source.name)
@@ -491,8 +514,8 @@ export struct SourceManagementPage {
 
     }
     .width(this.contentFrame().width)
-    .height(70)
-    .padding({ left: TOK_SPACE_SM })
+    .height(76)
+    .padding({ left: 0, right: TOK_SPACE_XS })
     .alignItems(VerticalAlign.Center)
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) });
   }

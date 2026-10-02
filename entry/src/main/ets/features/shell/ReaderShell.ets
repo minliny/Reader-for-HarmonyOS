@@ -303,6 +303,7 @@ export struct ReaderShell {
             currentSourceId: this.sourceId,
             bookTitle: this.bookTitle, author: this.bookAuthor, coverUrl: this.bookCoverUrl, currentSourceName: this.sourceName,
             currentChapterTitle: this.directoryChapterTitle, reduceMotion: this.reduceMotion,
+            contentKind: this.contentKind,
             onStop: (): void => this.onStopSourceSwitch(),
             onClose: (): void => this.onCloseSourceSwitch(),
             onRetry: (): void => this.onRetrySourceSwitch(),

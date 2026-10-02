@@ -698,21 +698,33 @@ export struct SearchPage {
   @Builder
   private groupScopeRow() {
     if (this.groupNames().length > 0) {
-      Scroll() {
-        Row({ space: TOK_SPACE_XS }) {
-          this.groupScopeChip('全部');
-          ForEach(this.groupNames(), (name: string) => {
-            this.groupScopeChip(name);
-          }, (name: string): string => `search-group-${name}`);
+      Row({ space: TOK_SPACE_XS }) {
+        Text('来源')
+          .width(51)
+          .fontFamily('ReaderNotoSansSC')
+          .fontSize(11)
+          .lineHeight(17)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        Scroll() {
+          Row({ space: TOK_SPACE_XS }) {
+            this.groupScopeChip('全部');
+            ForEach(this.groupNames(), (name: string) => {
+              this.groupScopeChip(name);
+            }, (name: string): string => `search-group-${name}`);
+          }
+          .alignItems(VerticalAlign.Center)
+          .padding({ right: this.isTablet ? 20 : 16 });
         }
-        .alignItems(VerticalAlign.Center)
-        .padding({ left: this.isTablet ? 20 : 16, right: this.isTablet ? 20 : 16 });
+        .layoutWeight(1)
+        .scrollable(ScrollDirection.Horizontal)
+        .scrollBar(BarState.Off)
+        .height(41.5)
+        .align(Alignment.Start);
       }
-      .scrollable(ScrollDirection.Horizontal)
-      .scrollBar(BarState.Off)
       .width('100%')
       .height(41.5)
-      .align(Alignment.Start);
+      .padding({ left: this.isTablet ? 20 : 16, right: this.isTablet ? 20 : 16 })
+      .alignItems(VerticalAlign.Center);
     }
   }
 
@@ -737,18 +749,32 @@ export struct SearchPage {
 
   @Builder
   private contentTypeRow() {
-    Scroll() {
-      Row({ space: TOK_SPACE_XS }) {
-        this.contentTypeChip('全部类型');
-        this.contentTypeChip('小说');
-        this.contentTypeChip('漫画');
+    Row({ space: TOK_SPACE_XS }) {
+      Text('内容类型')
+        .width(51)
+        .fontFamily('ReaderNotoSansSC')
+        .fontSize(11)
+        .lineHeight(17)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+      Scroll() {
+        Row({ space: TOK_SPACE_XS }) {
+          this.contentTypeChip('全部类型');
+          this.contentTypeChip('小说');
+          this.contentTypeChip('漫画');
+        }
+        .alignItems(VerticalAlign.Center)
+        .padding({ right: this.isTablet ? 20 : 16 });
       }
-      .alignItems(VerticalAlign.Center)
-      .padding({ left: this.isTablet ? 20 : 16, right: this.isTablet ? 20 : 16 });
+      .layoutWeight(1)
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off)
+      .height(41.5)
+      .align(Alignment.Start);
     }
-    .scrollable(ScrollDirection.Horizontal)
-    .scrollBar(BarState.Off)
-    .width('100%').height(41.5).align(Alignment.Start);
+    .width('100%')
+    .height(41.5)
+    .padding({ left: this.isTablet ? 20 : 16, right: this.isTablet ? 20 : 16 })
+    .alignItems(VerticalAlign.Center);
   }
 
   @Builder
@@ -1463,13 +1489,61 @@ struct SearchResultCard {
       .borderRadius(6);
 
       Column() {
-        Column({ space: 5 }) {
+        Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
+          space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(2) } }) {
+          if (this.group.book.category === 'comic') {
+            Text('漫画').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(9).lineHeight(14)
+              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme)).width(30).height(16)
+              .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).borderRadius(5);
+          } else {
+            Text('小说').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(9).lineHeight(14)
+              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme)).width(30).height(16)
+              .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).borderRadius(5);
+          }
+          if (this.group.book.sourceId === 'local') {
+            Text('本地').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(9).lineHeight(14)
+              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width(30).height(16)
+              .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme)).borderRadius(5);
+          } else {
+            Text('在线').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(9).lineHeight(14)
+              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width(30).height(16)
+              .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme)).borderRadius(5);
+          }
+          // Keep the legacy metadata probes mounted for novel/search contracts;
+          // manga keeps them visually collapsed and uses the compact identity
+          // chips above plus the source line below.
+          Text(this.group.book.category === 'comic' ? '漫画' : '小说')
+            .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
+            .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
+            .padding({ left: 6, right: 6, top: 2, bottom: 2 }).backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
+            .borderRadius(4).maxLines(1).opacity(0).width(0).height(0);
+          Text(this.group.book.sourceName.length > 0 ? this.group.book.sourceName : this.group.book.sourceId)
+            .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
+            .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
+            .padding({ left: 6, right: 6, top: 2, bottom: 2 }).backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
+            .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis }).opacity(0).width(0).height(0);
+          Text(this.group.book.sourceId === 'local' ? '本地书籍' : `已发现 ${this.group.sourceCount} 个书源`)
+            .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .padding({ left: 6, right: 6, top: 2, bottom: 2 }).backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
+            .borderRadius(4).maxLines(1).opacity(0).width(0).height(0);
+          if (this.group.inBookshelf) {
+            Text('已在书架').fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
+              .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
+              .padding({ left: 6, right: 6, top: 2, bottom: 2 }).backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
+              .borderRadius(4).maxLines(1).opacity(0).width(0).height(0);
+          }
+        }
+        .width('100%');
+
+        Column({ space: 4 }) {
           Text(this.group.book.title)
             .width('100%')
             .fontFamily('ReaderNotoSerifSCBold')
             .fontWeight(FontWeight.Bold)
-            .fontSize(15)
-            .lineHeight(19.5)
+            .fontSize(20)
+            .lineHeight(28)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -1478,74 +1552,50 @@ struct SearchResultCard {
             .width('100%')
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Regular)
-            .fontSize(12)
-            .lineHeight(12)
+            .fontSize(11)
+            .lineHeight(18)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
+
+          Text(this.group.book.sourceName.length > 0 ? this.group.book.sourceName : this.group.book.sourceId)
+            .width('100%')
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Regular)
+            .fontSize(11)
+            .lineHeight(18)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
 
           if ((this.group.book.latestChapterTitle?.trim().length ?? 0) > 0) {
-            Text(this.group.book.latestChapterTitle)
+            Text(`最新 · ${this.group.book.latestChapterTitle}`)
               .width('100%')
-              .opacity(0.8)
               .fontFamily('ReaderInter')
               .fontWeight(FontWeight.Regular)
               .fontSize(11)
-              .lineHeight(11)
+              .lineHeight(18)
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
           }
 
           if (this.displayIntro().length > 0) {
-            Text(this.displayIntro())
-              .width('100%')
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Regular)
-              .fontSize(12)
-              .lineHeight(18)
-              .fontColor(readerAppColor('app.SearchResultCard.build.fontColor.FF9A948E', this.appThemeScheme))
-              .maxLines(2)
-              .textOverflow({ overflow: TextOverflow.Ellipsis });
+            if (this.group.book.category !== 'comic') {
+              Text(this.displayIntro())
+                .width('100%')
+                .fontFamily('ReaderInter')
+                .fontWeight(FontWeight.Regular)
+                .fontSize(11)
+                .lineHeight(18)
+                .fontColor(readerAppColor('app.SearchResultCard.build.fontColor.FF9A948E', this.appThemeScheme))
+                .maxLines(2)
+                .textOverflow({ overflow: TextOverflow.Ellipsis });
+            }
           }
         }
         .width('100%')
         .alignItems(HorizontalAlign.Start);
-
-        Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
-          space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(2) } }) {
-          Text(this.group.book.sourceName.length > 0 ? this.group.book.sourceName : this.group.book.sourceId)
-            .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
-            .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-            .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-            .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis });
-          if (this.group.book.category === 'comic' || this.group.book.category === 'novel') {
-            Text(this.group.book.category === 'comic' ? '漫画' : '小说')
-              .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
-              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-              .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-              .borderRadius(4).maxLines(1);
-          }
-          Text(this.group.book.sourceId === 'local' ? '本地书籍' : `已发现 ${this.group.sourceCount} 个书源`)
-            .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-            .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-            .borderRadius(4).maxLines(1);
-          if (this.group.inBookshelf) {
-            Text('已在书架')
-              .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
-              .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-              .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-              .borderRadius(4).maxLines(1);
-          }
-        }
-        .width('100%')
-        .margin({ top: 5 });
       }
       .layoutWeight(1)
       // Only the gap above the tags grows for short metadata. Long metadata
@@ -1558,6 +1608,21 @@ struct SearchResultCard {
     .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: TOK_SPACE_CARD_PADDING, bottom: 14.5 })
     .alignItems(VerticalAlign.Bottom)
     .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: readerAppColor('TOK_BORDER', this.appThemeScheme) } })
-    .onClick((): void => this.onSelectResult(this.group.book, this.group.variants));
+      .onClick((): void => this.onSelectResult(this.group.book, this.group.variants));
+  }
+
+  @Builder
+  private resultTag(label: string, primary: boolean) {
+    Text(label)
+      .fontFamily('ReaderNotoSansSC')
+      .fontWeight(FontWeight.Medium)
+      .fontSize(9)
+      .lineHeight(14)
+      .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
+      .width(30)
+      .height(16)
+      .textAlign(TextAlign.Center)
+      .backgroundColor(primary ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
+      .borderRadius(4);
   }
 }

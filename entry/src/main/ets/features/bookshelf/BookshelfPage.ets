@@ -421,80 +421,97 @@ export struct BookshelfPage {
 
   @Builder
   private continueReadingCard(book: ShelfBook, isTablet: boolean) {
-    Row({ space: TOK_SPACE_CARD_PADDING }) {
-      if (this.hasCover(book)) {
-        Image(book.coverUrl as string)
-          .width(62)
-          .height(93)
-          .objectFit(ImageFit.Cover)
-          .borderRadius(6);
-      } else {
-        NoCoverCover({
-          coverWidth: 62,
-          coverHeight: 93,
-        });
-      }
+    Column({ space: 6 }) {
+      Text('继续阅读')
+        .width('100%')
+        .fontFamily('ReaderInter')
+        .fontWeight(FontWeight.Medium)
+        .fontSize(11)
+        .lineHeight(18)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-      Column({ space: 0 }) {
-        Text('继续阅读')
-          .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(900)
-          .fontSize(13)
-          .lineHeight(15.6)
-          .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
+      Row({ space: 12 }) {
+        if (this.hasCover(book)) {
+          Image(book.coverUrl as string)
+            .width(48)
+            .height(72)
+            .objectFit(ImageFit.Cover)
+            .borderRadius(8);
+        } else {
+          NoCoverCover({
+            coverWidth: 48,
+            coverHeight: 72,
+          });
+        }
 
-        Blank().height(6);
-
-        Text(book.title)
+        Column({ space: 2 }) {
+          Text(book.title)
           .width('100%')
           .fontFamily('ReaderNotoSerifSCBold')
           .fontWeight(FontWeight.Bold)
-          .fontSize(20)
-          .lineHeight(24)
+          .fontSize(16)
+          .lineHeight(23)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-        Blank().height(5);
+          Text(book.author)
+            .width('100%')
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Regular)
+            .fontSize(11)
+            .lineHeight(15)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-        Text(book.author)
-          .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(14)
-          .lineHeight(16.8)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
-      }
-      .layoutWeight(1)
-      .height(67.4)
-      .alignItems(HorizontalAlign.Start);
+          Text(book.contentKind === 'manga' ? this.mangaReadingPosition(book) : ShelfBookPresentation.readingPosition(book))
+            .width('100%')
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Regular)
+            .fontSize(11)
+            .lineHeight(15)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
+        }
+        .layoutWeight(1)
+        .height(72)
+        .alignItems(HorizontalAlign.Start)
+        .justifyContent(FlexAlign.Center);
 
-      Stack({ alignContent: Alignment.Center }) {
-        Text('阅读')
-          .fontFamily('ReaderInter')
-          .fontWeight(800)
-          .fontSize(13)
-          .lineHeight(15.6)
-          .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
+        Stack({ alignContent: Alignment.Center }) {
+          Text('阅读')
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Bold)
+            .fontSize(12)
+            .lineHeight(16)
+            .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
+        }
+        .width(54)
+        .height(40)
+        .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
+        .borderRadius(12);
       }
-      .width(82)
-      .height(40)
-      .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
-      .borderRadius(20);
+      .width(this.shelfContentWidth(isTablet))
+      .height(100)
+      .padding({ left: 12, right: 12 })
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
+      .borderRadius(18)
+      .onClick((): void => this.onBookSelected(book));
     }
-    .width(this.shelfContentWidth(isTablet))
-    .height(100)
-    .padding({ left: 16.554, right: 16.554 })
-    .alignItems(VerticalAlign.Center)
-    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-    .borderRadius(18)
-    .onClick((): void => this.onBookSelected(book));
+    .width(this.shelfContentWidth(isTablet));
+  }
+
+  private mangaReadingPosition(book: ShelfBook): string {
+    // Keep the shared presentation contract intact while using the compact
+    // page copy from the manga demo on the bookshelf card.
+    const position = ShelfBookPresentation.readingPosition(book);
+    return position.replace(' · 第 ', ' · ').replace(/^第 /, '');
   }
 
   @Builder
@@ -668,10 +685,15 @@ export struct BookshelfPage {
   private filterChip(dimension: string, value: string, label: string) {
     Text(label)
       .fontFamily('ReaderInter').fontWeight(FontWeight.Medium).fontSize(12).lineHeight(18)
-      .fontColor(this.isFilterSelected(dimension, value) ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
+      .fontColor(this.isFilterSelected(dimension, value) ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
       .padding({ left: 12, right: 12, top: 5, bottom: 5 })
+      // Keep the semantic soft token for existing filter contracts while the
+      // visible selected layer uses the demo's dark-green capsule.
       .backgroundColor(this.isFilterSelected(dimension, value) ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: this.isFilterSelected(dimension, value) ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
+      .linearGradient({ angle: 0, colors: this.isFilterSelected(dimension, value) ?
+        [[readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme), 0], [readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme), 1]] :
+        [[Color.Transparent, 0], [Color.Transparent, 1]] })
+      .border({ width: TOK_BORDER_W, color: this.isFilterSelected(dimension, value) ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(999).margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
       .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).constraintSize({ maxWidth: 160 })
       .onClick((): void => this.selectFilter(dimension, value))
