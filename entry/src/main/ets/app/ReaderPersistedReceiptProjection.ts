@@ -43,10 +43,10 @@ export interface PersistedReceiptProjection<T> {
 function operationPhaseForReceipt(
   confirmation: CommitConfirmationKind,
   readback: CommitReadbackPhase,
-): 'idle' | 'refreshing' | 'succeeded' | 'failed' | 'pendingReconciliation' {
+): 'notDispatched' | 'refreshing' | 'succeeded' | 'refreshFailed' | 'pendingReconciliation' {
   if (confirmation === 'unknown') return 'pendingReconciliation';
-  if (confirmation === 'undispatched') return 'idle';
-  if (readback === 'failed') return 'failed';
+  if (confirmation === 'undispatched') return 'notDispatched';
+  if (readback === 'failed') return 'refreshFailed';
   if (readback === 'succeeded') return 'succeeded';
   return 'refreshing';
 }

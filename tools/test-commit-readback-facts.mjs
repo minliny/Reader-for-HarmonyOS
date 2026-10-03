@@ -345,6 +345,7 @@ function flowFixture({ failLoad = false, batch: batchOverride } = {}) {
   const outcome = await new BookshelfFlowGateway({}).importPreparedSelections([]);
   assert.equal(outcome.batch, batch);
   assert.equal(outcome.readback.fact, 'notDispatched');
+  assert.equal(outcome.operation.fact, 'notDispatched');
   assert.ok(outcome.shelf !== undefined);
 }
 
@@ -358,6 +359,7 @@ function flowFixture({ failLoad = false, batch: batchOverride } = {}) {
   const outcome = await new BookshelfFlowGateway({}).importPreparedSelections([{ state: 'ready' }]);
   assert.equal(outcome.batch, batch);
   assert.equal(outcome.readback.fact, 'notDispatched');
+  assert.equal(outcome.operation.fact, 'notDispatched');
 }
 
 // A recovery-pending item is the one existing receipt that can say the write
@@ -371,6 +373,7 @@ function flowFixture({ failLoad = false, batch: batchOverride } = {}) {
   const outcome = await new BookshelfFlowGateway({}).importPreparedSelections([{ state: 'ready' }]);
   assert.equal(outcome.batch, batch);
   assert.equal(outcome.readback.fact, 'pendingReconciliation');
+  assert.equal(outcome.operation.fact, 'pendingReconciliation');
 }
 
 {
@@ -379,6 +382,8 @@ function flowFixture({ failLoad = false, batch: batchOverride } = {}) {
   const outcome = await gateway.importPreparedSelections([{ state: 'ready' }]);
   assert.equal(outcome.batch, batch, 'the committed batch is returned unchanged');
   assert.equal(outcome.readback.fact, 'confirmedCurrent');
+  assert.equal(outcome.operation.fact, 'current');
+  assert.equal(outcome.operation.hasValue, true);
   assert.equal(outcome.refreshWarning, undefined);
   assert.ok(outcome.shelf !== undefined);
   assert.equal(calls.imports, 1);
@@ -398,6 +403,9 @@ function flowFixture({ failLoad = false, batch: batchOverride } = {}) {
     'a failed refresh must not fabricate an empty or stale shelf');
   assert.equal(outcome.readback.fact, 'confirmedRefreshFailed');
   assert.equal(outcome.readback.message, '已确认，刷新失败');
+  assert.equal(outcome.operation.fact, 'refreshFailed');
+  assert.equal(outcome.operation.canRetry, true);
+  assert.equal(outcome.operation.hasValue, false);
   assert.match(outcome.refreshWarning, /导入已确认，书架刷新失败/);
   assert.match(outcome.refreshWarning, /bookshelf\.list transport exploded/);
   assert.equal(calls.imports, 1, 'the refresh failure must not re-dispatch the import');
@@ -419,6 +427,8 @@ function flowFixture({ failLoad = false, batch: batchOverride } = {}) {
   assert.notEqual(okOutcome.readback.fact, badOutcome.readback.fact);
   assert.equal(okOutcome.readback.fact, 'confirmedCurrent');
   assert.equal(badOutcome.readback.fact, 'confirmedRefreshFailed');
+  assert.equal(okOutcome.operation.fact, 'current');
+  assert.equal(badOutcome.operation.fact, 'refreshFailed');
 }
 
 console.log('commit/readback facts (ReaderOperationFacts, FS-021 saveEditor, LS-031 importPreparedSelections): PASS');

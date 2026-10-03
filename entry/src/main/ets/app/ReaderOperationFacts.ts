@@ -42,7 +42,9 @@ export type OperationRequestPhase =
   | 'empty'
   | 'partial'
   | 'failed'
+  | 'refreshFailed'
   | 'cancelled'
+  | 'notDispatched'
   | 'pendingReconciliation';
 
 /**
@@ -61,6 +63,7 @@ export type OperationFactKind =
   | 'failed'
   | 'refreshFailed'
   | 'cancelled'
+  | 'notDispatched'
   | 'stale'
   | 'blocked'
   | 'pendingReconciliation';
@@ -130,9 +133,20 @@ export function projectOperationFacts<T>(input: OperationFactsInput<T>): Operati
         fact = hasValue ? 'refreshFailed' : 'failed';
         stale = hasValue || stale;
         break;
+      case 'refreshFailed':
+        // A confirmed write followed by a failed read-back is still a
+        // refresh failure even when this adapter has no retained payload.
+        fact = 'refreshFailed';
+        stale = hasValue || stale;
+        break;
       case 'cancelled':
         fact = 'cancelled';
         stale = hasValue || stale;
+        break;
+      case 'notDispatched':
+        // A retained value may still be current, but it is not evidence that
+        // this mutation was sent or applied.
+        fact = 'notDispatched';
         break;
       case 'pendingReconciliation':
         fact = 'pendingReconciliation';

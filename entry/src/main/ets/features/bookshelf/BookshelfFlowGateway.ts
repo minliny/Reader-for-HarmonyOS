@@ -5,7 +5,7 @@ import {
   type ShelfBook,
 } from '../../app/ReaderCoreGateway';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
-import type { CommitReadbackSummary } from '../../app/ReaderOperationFacts';
+import type { CommitReadbackSummary, OperationFacts } from '../../app/ReaderOperationFacts';
 import { projectPersistedReceipt } from '../../app/ReaderPersistedReceiptProjection';
 import { errorMessageOf } from '../../app/ErrorMessage';
 import {
@@ -38,6 +38,7 @@ export type BookshelfImportOutcome = {
   batch: LocalImportBatch;
   shelf: BookshelfDataState | undefined;
   readback: CommitReadbackSummary;
+  operation: OperationFacts<BookshelfDataState>;
   refreshWarning?: string;
 };
 
@@ -221,16 +222,18 @@ export class BookshelfFlowGateway {
         batch,
         shelf,
         readback: projection.receipt,
+        operation: projection.facts,
       };
     } catch (error) {
       const cause = errorMessageOf(error);
       const projection = projectPersistedReceipt({
-        confirmation, readback: 'failed', refreshError: cause,
+        confirmation, readback: 'failed', refreshError: cause, canRetry: true,
       });
       return {
         batch,
         shelf: undefined,
         readback: projection.receipt,
+        operation: projection.facts,
         refreshWarning: confirmation === 'confirmed' ?
           `导入已确认，书架刷新失败：${cause}` :
           `导入结果${confirmation === 'unknown' ? '待核对' : '未执行'}，书架刷新失败：${cause}`,

@@ -88,6 +88,14 @@ const {
   assert.equal(failedRefresh.facts.canRetry, true);
   assert.equal(failedRefresh.facts.generation, 8);
 
+  const failedWithoutRetainedValue = projectPersistedReceipt({
+    confirmation: 'confirmed', readback: 'failed', refreshError: 'read-back unavailable', canRetry: true,
+  });
+  assert.equal(failedWithoutRetainedValue.facts.fact, 'refreshFailed',
+    'confirmed write plus failed read-back stays distinct even without a payload');
+  assert.equal(failedWithoutRetainedValue.facts.hasValue, false);
+  assert.equal(failedWithoutRetainedValue.facts.canRetry, true);
+
   const pending = projectPersistedReceipt({
     confirmation: 'unknown', readback: 'succeeded', value: { count: 3 },
   });
@@ -100,7 +108,7 @@ const {
     confirmation: 'undispatched', readback: 'failed', value: undefined,
   });
   assert.equal(notDispatched.receipt.fact, 'notDispatched');
-  assert.equal(notDispatched.facts.fact, 'idle');
+  assert.equal(notDispatched.facts.fact, 'notDispatched');
   assert.equal(notDispatched.facts.hasValue, false);
 }
 
