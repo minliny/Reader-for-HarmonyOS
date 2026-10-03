@@ -3,18 +3,18 @@ import {readFileSync} from 'node:fs';
 import {ReaderNativeAlertOwner} from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 const file=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
-let currentOwner;
+let currentOwner, unavailable=false;
 const Index=productionMotionMethods(file,['showIndexAlert','showSourceImportResult','showSourceImportResultFromSearch',
  'requestSourceDelete','requestRssSubscriptionDelete','requestRssSourceImport','showRssOperationResult',
  'requestClearDirectoryBookOffline','refreshCachedChapterFromPrompt','showReadingFailure','nextNavigationGeneration',
  'aboutToDisappear','confirmRssSubscriptionDelete','rssSubscriptions','importRssSources'],{
- ReaderNativeAlertOwner,ReaderRuntimeOwner:{current:()=>currentOwner},isReaderProductSurfaceEnabled:()=>true,
+ ReaderNativeAlertOwner,ReaderRuntimeOwner:{current:()=>{if(unavailable)throw Error('runtime unavailable');return currentOwner;}},isReaderProductSurfaceEnabled:()=>true,
  hilog:{warn(){}},DOMAIN:1,verdictForFailureKind:()=> 'networkFailed',remoteReadingFailureKindOf:()=> 'networkFailed',
  withPreparedRemoteChapter:(session,chapter,revision)=>({...session,preparedChapter:{...chapter,projectionRevision:revision}}),
  RemoteReadingFlowGateway:class {constructor(owner){this.owner=owner;}async loadChapter(){this.owner.calls.push('chapter.content');this.owner.revision+=2;return {chapterIndex:0};}}
 });
 function fixture(route='source'){
- let shown,fail=false;const calls=[];
+ unavailable=false;let shown,fail=false;const calls=[];
  const owner={calls,revision:3,bookAcquisitions(){return{readingProjectionRevision:()=>owner.revision,endSearch(){},};},readingEntryPreparations:()=>({setPaused(){}})};currentOwner=owner;
  const host={deleteSelected(ids){calls.push(['deleteSources',ids]);},removeSubscription(id){calls.push(['deleteRss',id]);},importSources(_replace,done,failed){calls.push('rss.confirmed-write');try{done({imported:2});}catch(error){failed(error);}},exportSources(){}};
  const p=Object.assign(new Index(),{nativeAlertOwner:new ReaderNativeAlertOwner(),route,navigationGeneration:1,shelfReceiptRetired:false,
@@ -74,6 +74,12 @@ for(const exit of ['primary','secondary','cancel','retired','navigation','close'
  const result=await work;assert.equal(result,exit==='primary'?0:undefined,`${exit}: cache decision settles`);
  assert.equal(f.calls.filter(x=>x==='chapter.content').length,exit==='primary'?1:0,'no content dispatch without current primary decision');
  if(f.shown()){assert.equal(f.shown().autoCancel,false);assert.equal(f.shown().primaryButton.value,'刷新本章');assert.equal(f.shown().secondaryButton.value,'保留缓存');}
+}
+for(const timing of ['before-show','after-show','retired','confirmed-import']){
+ const f=fixture(timing==='confirmed-import'?'rssSubscriptionManagement':'source');
+ if(timing==='after-show'){const lease=f.p.showIndexAlert('notice',{title:'x',primaryButton:{value:'x',action:()=>f.calls.push('acted')}});unavailable=true;f.shown().primaryButton.action();assert.equal(await lease.decision,'retired');assert.deepEqual(f.calls,[]);}
+ else{unavailable=true;if(timing==='retired')f.p.shelfReceiptRetired=true;assert.doesNotThrow(()=>timing==='confirmed-import'?f.p.importRssSources(false):f.p.showSourceImportResult('confirmed','notice'));assert.deepEqual(f.calls,timing==='confirmed-import'?['rss.confirmed-write']:[]);}
+ unavailable=false;
 }
 const raw=readFileSync(file,'utf8');assert.equal((raw.match(/\.showAlertDialog\(/g)??[]).length,1,'Index has one actual native host implementation');
 assert.equal((raw.match(/this\.showIndexAlert\(/g)??[]).length,9,'all nine current actual Index consumers use finite host');

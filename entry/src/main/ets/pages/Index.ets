@@ -1929,18 +1929,24 @@ struct Index {
 
   private showIndexAlert(spec: ReaderNativeAlertSpecId, options: ReaderNativeAlertOptions,
     isCurrent: () => boolean = (): boolean => true): ReaderNativeAlertLease | undefined {
-    const owner = ReaderRuntimeOwner.current();
-    const generation = this.navigationGeneration;
-    const route = this.route;
+    if (this.shelfReceiptRetired) return undefined;
     try {
+      const owner = ReaderRuntimeOwner.current();
+      const generation = this.navigationGeneration;
+      const route = this.route;
+      const current = (): boolean => {
+        if (this.shelfReceiptRetired) return false;
+        try { return owner === ReaderRuntimeOwner.current() && generation === this.navigationGeneration &&
+          this.route === route && isCurrent(); }
+        catch (_) { return false; }
+      };
       return this.nativeAlertOwner.present(
-        (native: ReaderNativeAlertOptions): void => this.getUIContext().showAlertDialog(native), spec, options,
-        (): boolean => !this.shelfReceiptRetired && owner === ReaderRuntimeOwner.current() &&
-          generation === this.navigationGeneration && this.route === route && isCurrent());
+        (native: ReaderNativeAlertOptions): void => this.getUIContext().showAlertDialog(native), spec, options, current);
     } catch (error) {
       // The native notice is a separate platform outcome. A durable import,
       // deletion or read ACK must survive a synchronous presentation failure.
-      hilog.warn(DOMAIN, 'Reader', 'Native Alert presentation failed: %{private}s', errorMessageOf(error));
+      try { hilog.warn(DOMAIN, 'Reader', 'Native Alert presentation failed: %{private}s', errorMessageOf(error)); }
+      catch (_) {}
       return undefined;
     }
   }
