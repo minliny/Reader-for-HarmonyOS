@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -18,7 +19,7 @@ const config={url:'https://example.test',user:'reader',password:'transient-secre
 const checksum='a'.repeat(64);
 const clone=v=>v===undefined?undefined:structuredClone(v);
 const pause=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {resolve,promise};};
-const util={TextEncoder:globalThis.TextEncoder,TextDecoder:{create:()=>({decodeToString:b=>new TextDecoder('utf8',{fatal:true}).decode(b)})},Base64Helper:class {encodeToStringSync(v){return Buffer.from(v).toString('base64');}}};
+const util={generateRandomUUID:()=>randomUUID(),TextEncoder:globalThis.TextEncoder,TextDecoder:{create:()=>({decodeToString:b=>new TextDecoder('utf8',{fatal:true}).decode(b)})},Base64Helper:class {encodeToStringSync(v){return Buffer.from(v).toString('base64');}}};
 const asset={Tag:{ALIAS:1,RETURN_TYPE:2,SECRET:3,ACCESSIBILITY:4,CONFLICT_RESOLUTION:5},ReturnType:{ALL:1},Accessibility:{DEVICE_POWERED_ON:1},ConflictResolution:{OVERWRITE:1},ErrorCode:{NOT_FOUND:100},record:undefined,calls:[],failAdd:false,failQuery:false,beforeAdd:undefined,
   async query(){this.calls.push('query');if(this.failQuery){this.failQuery=false;throw Error('read unavailable');}return this.record?[new Map([[3,this.record]])]:[];},
   async add(attributes){this.calls.push('add');if(this.beforeAdd)await this.beforeAdd();this.record=attributes.get(3);if(this.failAdd){this.failAdd=false;throw Error('lost Asset ACK');}},
@@ -65,8 +66,8 @@ function runtime(){return {
     throw Error(method);
   },count(m){return this.calls.filter(c=>c[0]===m).length;},
 };}
-function fixture({empty=false}={}){
-  asset.record=empty?undefined:new TextEncoder().encode(JSON.stringify({formatVersion:2,config}));asset.calls=[];asset.failAdd=false;asset.failQuery=false;asset.beforeAdd=undefined;
+function fixture({empty=false,preserveAsset=false}={}){
+  if(!preserveAsset)asset.record=empty?undefined:new TextEncoder().encode(JSON.stringify({formatVersion:2,config}));asset.calls=[];asset.failAdd=false;asset.failQuery=false;asset.beforeAdd=undefined;
   hostApplications=0;hostFailures=0;prepareCalls=0;const runtimeOwner=runtime();currentOwner=runtimeOwner;
   credentialStore=new Store();credentialStore.loadBookshelfViewMode=async()=> 'cover';let journal;
   credentialStore.loadRestoreJournal=async()=>journal;credentialStore.saveRestoreJournal=async v=>{journal=clone(v);};credentialStore.clearRestoreJournal=async()=>{journal=undefined;};
@@ -87,7 +88,7 @@ function fixture({empty=false}={}){
     if(retryChild){const a=createReaderBuilderProbe(actionSource,['build']);Object.assign(a.owner,{enabled:true,appThemeScheme:'day',...retryChild.params});a.owner.initialRender();action=[...a.owner.nodes.values()].find(v=>v.height===36);}
     return {page:p.owner,view:child.params.view,action,notice:n.owner};
   };
-  return {owner,runtime:runtimeOwner,settle,page,snapshot:()=>snapshot,emitted,close:()=>{route=false;},reopen:()=>{route=true;owner.open();},journal:()=>journal};
+  return {owner,store:credentialStore,runtime:runtimeOwner,settle,page,snapshot:()=>snapshot,emitted,close:()=>{route=false;},reopen:()=>{route=true;owner.open();},journal:()=>journal};
 }
 async function open(f){f.owner.open();await f.settle();assert.equal(f.snapshot().facts.read.fact,'current');}
 {
@@ -100,15 +101,16 @@ async function open(f){f.owner.open();await f.settle();assert.equal(f.snapshot()
 }
 {
   const f=fixture();await open(f);
-  const realLoad=credentialStore.loadSerialized.bind(credentialStore);let reads=0;credentialStore.loadSerialized=async()=>{reads++;if(reads===2)throw Error('post-write read failed');return realLoad();};
+  const realLoad=credentialStore.loadSerializedState.bind(credentialStore);let reads=0;credentialStore.loadSerializedState=async()=>{reads++;if(reads===1)throw Error('post-write read failed');return realLoad();};
   f.owner.saveConfig(config.url,config.user,'','',config.directory);await f.settle();assert.equal(asset.calls.filter(c=>c==='add').length,1);assert.equal(f.snapshot().facts.operation.projection.receipt.fact,'confirmedRefreshFailed');
   const p=f.page();assert.match(p.view.message,/已确认，刷新失败/);p.action.onClick();p.action.onClick();await f.settle();assert.equal(asset.calls.filter(c=>c==='add').length,1);assert.equal(f.snapshot().facts.operation.projection.receipt.fact,'confirmedCurrent');
   assert.doesNotMatch(JSON.stringify(f.snapshot()),/transient-secret|independent-secret/);
 }
 {
   const f=fixture();await open(f);asset.failAdd=true;f.owner.saveConfig(config.url,config.user,'','',config.directory);await f.settle();assert.equal(f.snapshot().facts.operation.projection.receipt.confirmation,'unknown');
-  f.page().action.onClick();await f.settle();assert.equal(f.snapshot().facts.operation.projection.receipt.fact,'pendingReconciliation');assert.equal(asset.calls.filter(c=>c==='add').length,1);
-  f.owner.saveConfig(config.url,config.user,'','',config.directory);f.owner.triggerBackup();await f.settle();assert.equal(asset.calls.filter(c=>c==='add').length,1);assert.equal(f.runtime.count('sync.webdav.transaction.start'),0,'unknown cannot be overwritten by new intent');
+  f.page().action.onClick();await f.settle();assert.equal(f.snapshot().facts.operation.projection.receipt.fact,'confirmedCurrent','exact atomic receipt confirms lost ACK without replay');assert.equal(asset.calls.filter(c=>c==='add').length,1);
+  // A separate unresolved attempt must still block replacement and backup.
+  asset.failAdd=true;asset.beforeAdd=()=>{asset.failQuery=true;};f.owner.saveConfig(config.url,config.user,'','',config.directory);await f.settle();asset.beforeAdd=undefined;f.owner.saveConfig(config.url,config.user,'','',config.directory);f.owner.triggerBackup();await f.settle();assert.equal(asset.calls.filter(c=>c==='add').length,2);assert.equal(f.runtime.count('sync.webdav.transaction.start'),0,'unknown cannot be overwritten by new intent');
 }
 {
   const f=fixture();await open(f);f.owner.saveConfig('http://invalid',config.user,'','',config.directory);await f.settle();assert.equal(f.snapshot().facts.operation.projection.receipt.confirmation,'undispatched');assert.equal(asset.calls.filter(c=>c==='add').length,0);

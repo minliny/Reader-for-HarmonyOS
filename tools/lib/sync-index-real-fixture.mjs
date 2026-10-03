@@ -1,3 +1,5 @@
+import { runtimeOwnerIdentityProbe } from './reader-runtime-admission-probe.mjs';
+import { randomUUID } from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
@@ -9,11 +11,11 @@ const url=new URL('../test-sync-receipt-owner-closure.mjs',import.meta.url);
 let fixtureSource=readFileSync(url,'utf8').split('\nasync function open(f)')[0]
   .replace(/^import[^\n]+\n/gm,'')
   .replaceAll('import.meta.url',JSON.stringify(url.href))
-  .replace('function fixture({empty=false}={})','function fixture({empty=false,createOwner}={})')
+  .replace('function fixture({empty=false,preserveAsset=false}={})','function fixture({empty=false,preserveAsset=false,createOwner}={})')
   .replace('const owner=new Orchestrator(', 'const owner=createOwner ? createOwner() : new Orchestrator(');
-export const syncIndexFixture=new Function('readFileSync','createRequire','stripTypeScriptTypes','createReaderBuilderProbe',
-  fixtureSource+';return {fixture,asset,config,ReaderRuntimeOwner,Orchestrator,DEFAULT_SYNC_SNAPSHOT,source,readerRecoveryView,pause,execute};')
-  (readFileSync,createRequire,stripTypeScriptTypes,createReaderBuilderProbe);
+export const syncIndexFixture=new Function('readFileSync','createRequire','stripTypeScriptTypes','createReaderBuilderProbe','runtimeOwnerIdentityProbe','randomUUID',
+  fixtureSource+';return {fixture,asset,config,ReaderRuntimeOwner,Store,Gateway,Orchestrator,DEFAULT_SYNC_SNAPSHOT,source,readerRecoveryView,pause,execute};')
+  (readFileSync,createRequire,stripTypeScriptTypes,createReaderBuilderProbe,runtimeOwnerIdentityProbe,randomUUID);
 
 export function fullSyncIndexPage(props){
   const f=syncIndexFixture,root=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';

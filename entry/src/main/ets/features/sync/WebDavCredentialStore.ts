@@ -34,7 +34,14 @@ export type StoredWebDavConfig = {
 type StoredWebDavEnvelope = {
   formatVersion: number;
   config: StoredWebDavConfig;
+  /** Non-secret identity committed atomically with this exact configuration. */
+  saveOperationId?: string;
 };
+
+export interface StoredWebDavState {
+  config: StoredWebDavConfig | null;
+  saveOperationId?: string;
+}
 
 /**
  * Sole persistent authority for WebDAV credentials.
@@ -66,6 +73,10 @@ export class WebDavCredentialStore {
   }
 
   async load(): Promise<StoredWebDavConfig | null> {
+    return (await this.loadState()).config;
+  }
+
+  private async loadState(): Promise<StoredWebDavState> {
     const query = new Map<asset.Tag, asset.Value>();
     query.set(asset.Tag.ALIAS, this.utf8(ASSET_ALIAS));
     query.set(asset.Tag.RETURN_TYPE, asset.ReturnType.ALL);
@@ -74,12 +85,12 @@ export class WebDavCredentialStore {
       records = await asset.query(query);
     } catch (error) {
       if (this.errorCode(error) === asset.ErrorCode.NOT_FOUND) {
-        return null;
+        return { config: null };
       }
       throw new Error(`WebDAV secure configuration cannot be read: ${this.errorMessage(error)}`);
     }
     if (records.length === 0) {
-      return null;
+      return { config: null };
     }
     const secret = records[0].get(asset.Tag.SECRET);
     if (!(secret instanceof Uint8Array)) {
@@ -95,14 +106,15 @@ export class WebDavCredentialStore {
     if (envelope.formatVersion !== FORMAT_VERSION || !this.isConfig(envelope.config)) {
       throw new Error('WebDAV secure configuration has an unsupported format');
     }
-    return {
+    if (envelope.saveOperationId !== undefined) this.validateSaveOperationId(envelope.saveOperationId);
+    return { saveOperationId: envelope.saveOperationId, config: {
       url: envelope.config.url,
       user: envelope.config.user,
       password: envelope.config.password,
       backupPassword: envelope.config.backupPassword,
       directory: envelope.config.directory,
       bookshelfViewMode: envelope.config.bookshelfViewMode,
-    };
+    } };
   }
 
   /** Reuse the current context's acknowledged choice after startup/recovery.
@@ -268,14 +280,30 @@ export class WebDavCredentialStore {
     return this.writeTail.then((): Promise<StoredWebDavConfig | null> => this.load());
   }
 
-  save(config: StoredWebDavConfig, evidence?: ReaderWriteEvidence, admitted?: () => boolean): Promise<void> {
+  /** One atomic read of config plus its qualified commit identity. */
+  loadSerializedState(): Promise<StoredWebDavState> {
+    return this.writeTail.then((): Promise<StoredWebDavState> => this.loadState());
+  }
+
+  /** Exact receipt query. Matching fields, old envelopes and absence prove no
+   * specific save; this query never writes or migrates local preferences. */
+  hasSaveReceipt(operationId: string): Promise<boolean> {
+    this.validateSaveOperationId(operationId);
+    return this.loadSerializedState().then((state: StoredWebDavState): boolean =>
+      state.config !== null && state.saveOperationId === operationId);
+  }
+
+  save(config: StoredWebDavConfig, evidence?: ReaderWriteEvidence, admitted?: () => boolean,
+    operationId?: string): Promise<void> {
     const normalized = this.normalize(config);
+    const identity = operationId ?? util.generateRandomUUID(true);
+    this.validateSaveOperationId(identity);
     const next = this.writeTail.catch((): void => {}).then(async (): Promise<void> => {
       if (admitted !== undefined && !admitted()) throw new Error('WebDAV configuration owner retired before dispatch');
       // Migrate before removing the legacy field from the next secure record.
       await this.loadBookshelfViewMode();
       if (admitted !== undefined && !admitted()) throw new Error('WebDAV configuration owner retired before dispatch');
-      await this.persist(normalized, evidence);
+      await this.persist(normalized, evidence, identity);
     });
     // Preserve the error for this caller, but do not let one transient
     // AssetStore failure poison every later save/clear in this process.
@@ -294,8 +322,8 @@ export class WebDavCredentialStore {
     return next;
   }
 
-  private async persist(config: StoredWebDavConfig, evidence?: ReaderWriteEvidence): Promise<void> {
-    const payload = this.utf8(JSON.stringify({ formatVersion: FORMAT_VERSION, config }));
+  private async persist(config: StoredWebDavConfig, evidence?: ReaderWriteEvidence, operationId?: string): Promise<void> {
+    const payload = this.utf8(JSON.stringify({ formatVersion: FORMAT_VERSION, config, saveOperationId: operationId }));
     if (payload.length > MAX_CONFIG_BYTES) {
       throw new Error(`WebDAV secure configuration exceeds ${MAX_CONFIG_BYTES} bytes`);
     }
@@ -325,6 +353,12 @@ export class WebDavCredentialStore {
         throw new Error(`WebDAV secure configuration cannot be cleared: ${this.errorMessage(error)}`);
       }
       evidence?.confirmed();
+    }
+  }
+
+  private validateSaveOperationId(operationId: string): void {
+    if (typeof operationId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(operationId)) {
+      throw new Error('WebDAV secure configuration receipt identity is invalid');
     }
   }
 

@@ -487,6 +487,8 @@
     "test-runtime-admission-teardown.mjs",
     "test-bounded-typography-carriers.mjs",
     "test-bounded-replace-composition.mjs",
-    "test-bookshelf-native-sheet-owner.mjs"
+    "test-bookshelf-native-sheet-owner.mjs",
+    "test-sync-config-durable-receipts.mjs",
+    "test-sync-config-durable-sdk.mjs"
   ]
 }

@@ -35,6 +35,8 @@ export type SyncRestoreConflict = {
 };
 
 export type SyncSnapshot = {
+  /** Actual committed save ID read from the same secure envelope. */
+  configSaveOperationId?: string;
   webdavUrl: string;
   webdavUser: string;
   /** Persisted secrets are never emitted back into ArkUI state. */
@@ -181,7 +183,8 @@ export class SyncGateway {
   async loadSnapshot(recover: boolean = true): Promise<SyncSnapshot> {
     this.assertOwner();
     if (recover) await this.recoverInterruptedRestore();
-    const config = await this.credentials.loadSerialized();
+    const state = await this.credentials.loadSerializedState();
+    const config = state.config;
     this.assertOwner();
     if (config === null) {
       return this.copySnapshot(DEFAULT_SYNC_SNAPSHOT);
@@ -194,6 +197,7 @@ export class SyncGateway {
       backupPass: '',
       webdavPath: config.directory,
       statusMessage: '已加载安全配置',
+      configSaveOperationId: state.saveOperationId,
     };
   }
 
@@ -224,7 +228,9 @@ export class SyncGateway {
         throw new Error('请设置独立的备份加密密码');
       }
       this.assertAdmission(admitted);
-      await this.credentials.save(config, observation?.write, (): boolean => this.isOwner() && (admitted === undefined || admitted()));
+      const operationId = util.generateRandomUUID(true);
+      if (observation !== undefined) observation.operationId = operationId;
+      await this.credentials.save(config, observation?.write, (): boolean => this.isOwner() && (admitted === undefined || admitted()), operationId);
       return {
         ok: true,
         snapshot: {
@@ -238,6 +244,13 @@ export class SyncGateway {
     } catch (error) {
       return { ok: false, error: this.errorMessage(error) };
     }
+  }
+
+  async reconcileSavedConfig(operationId: string): Promise<boolean> {
+    this.assertOwner();
+    const confirmed = await this.credentials.hasSaveReceipt(operationId);
+    this.assertOwner();
+    return confirmed;
   }
 
   async testConnection(

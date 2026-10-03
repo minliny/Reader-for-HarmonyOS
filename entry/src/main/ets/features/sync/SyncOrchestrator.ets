@@ -72,6 +72,20 @@ export class SyncOrchestrator {
           return;
         }
       }
+      if (operation?.action === 'saveConfig' && operation.projection.receipt.confirmation === 'unknown' && operation.operationId !== undefined) {
+        try {
+          if (await this.gateway.reconcileSavedConfig(operation.operationId)) {
+            const observation = new SyncWriteObservation();
+            observation.writeGeneration = operation.writeGeneration;
+            observation.operationId = operation.operationId;
+            observation.write.dispatched(); observation.write.confirmed(); observation.completed = true;
+            this.publishReceipt(session, 'saveConfig', observation, 'reading', '已核对安全存储中的本次保存回执');
+          }
+        } catch (error) {
+          this.publishReceiptWithConfirmation(session, operation, 'failed', this.safeError(error));
+          return;
+        }
+      }
       await this.load(session);
     }).catch((error: Error): void => this.publishRead(session, 'failed', this.safeError(error)))
       .finally((): void => { this.operationInFlight = false; this.deliver(this.session); });
@@ -171,6 +185,13 @@ export class SyncOrchestrator {
       // Startup owns automatic journal recovery. A page read is read-only.
       const snapshot = await this.gateway.loadSnapshot(false);
       const current = this.source();
+      // A new owner/process may see an atomic committed save even if its ACK
+      // was lost. Publish only the ID actually read, never an old/matching intent.
+      if (this.latestOperation === undefined && snapshot.configSaveOperationId !== undefined) {
+        const observation = new SyncWriteObservation(); observation.operationId = snapshot.configSaveOperationId;
+        observation.write.dispatched(); observation.write.confirmed(); observation.completed = true;
+        this.publishReceipt(session, 'saveConfig', observation, 'reading');
+      }
       const operation = this.latestOperation;
       const successMessage = operation?.completed === true && operation.projection.receipt.confirmation === 'confirmed' ?
         operation.action === 'saveConfig' ? '配置已写入系统安全存储' : operation.action === 'backup' ? '备份已上传' : '恢复已完成；重新进入页面后读取新状态' :
@@ -197,7 +218,7 @@ export class SyncOrchestrator {
       ? 'Core 配置已应用，Host 恢复尚未完成；核对已有恢复，不重复覆盖' : undefined;
     const remotePartial = !observation.completed && observation.remoteConfirmedCount > 0
       ? `已有 ${observation.remoteConfirmedCount} 个远端写入响应，备份完成回执待核对；不自动重传` : undefined;
-    this.latestOperation = { action, writeGeneration: observation.writeGeneration, coreApplied: observation.coreApplied, hostApplied: observation.hostApplied,
+    this.latestOperation = { action, writeGeneration: observation.writeGeneration, operationId: observation.operationId, coreApplied: observation.coreApplied, hostApplied: observation.hostApplied,
       completed: observation.completed, remoteConfirmedCount: observation.remoteConfirmedCount,
       projection: projectPersistedReceipt<boolean>({ confirmation, readback, value: this.lastSnapshot === undefined ? undefined : true,
         refreshError: readback === 'failed' ? errorOrStatus : undefined,

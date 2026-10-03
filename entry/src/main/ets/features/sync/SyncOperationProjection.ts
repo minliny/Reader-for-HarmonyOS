@@ -8,6 +8,8 @@ export type SyncOperationAction = 'saveConfig' | 'testConnection' | 'backup' | '
 /** Non-secret summary. Physical IO and ACK boundaries are marked by the gateway. */
 export class SyncWriteObservation {
   writeGeneration: number = ++syncWriteGeneration;
+  /** Qualified config-save identity; never contains URL/user/secrets. */
+  operationId: string | undefined;
   readonly write: ReaderWriteEvidence = new ReaderWriteEvidence();
   coreApplied: boolean = false;
   hostApplied: boolean = false;
@@ -17,6 +19,7 @@ export class SyncWriteObservation {
 export interface SyncOperationProjection {
   action: SyncOperationAction;
   writeGeneration: number;
+  operationId?: string;
   projection: PersistedReceiptProjection<boolean>;
   coreApplied: boolean;
   hostApplied: boolean;

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {actualModeHost,readerRecoveryView} from './lib/bookshelf-view-mode-probe.mjs';
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
@@ -7,8 +8,8 @@ const path=f=>new URL(`../entry/src/main/ets/${f}`,import.meta.url);
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
 const settle=async()=>{for(let i=0;i<15;i++)await Promise.resolve();};
 const Store=productionMotionMethods(path('features/sync/WebDavCredentialStore.ts'),[
- 'loadBookshelfViewMode','saveBookshelfViewMode','readOrMigrateViewMode','writeLocalViewMode','save','clear','validateRestoreJournal'],
- {LOCAL_VIEW_MODE_KEY:'mode',LOCAL_MIGRATION_KEY:'version',LOCAL_CONFIG_VERSION:1,LOCAL_RESTORE_JOURNAL_KEY:'journal'});
+ 'loadBookshelfViewMode','saveBookshelfViewMode','readOrMigrateViewMode','writeLocalViewMode','save','clear','validateRestoreJournal','validateSaveOperationId'],
+ {util:{generateRandomUUID:()=>randomUUID()},LOCAL_VIEW_MODE_KEY:'mode',LOCAL_MIGRATION_KEY:'version',LOCAL_CONFIG_VERSION:1,LOCAL_RESTORE_JOURNAL_KEY:'journal'});
 function fixture(initial={},legacy=null){
  const values=new Map(Object.entries(initial)); let reads=0,writes=0,fail=false;
  const backend={has:async k=>values.has(k),get:async(k,d)=>values.has(k)?values.get(k):d,
