@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
-import { auditTypographyConsumers, isSharedTypographyExpression, typographyRoleImports } from './lib/reader-typography-consumer-audit.mjs';
+import { auditTypographyConsumers, typographyExpressionContext, isSharedTypographyExpression, typographyRoleImports } from './lib/reader-typography-consumer-audit.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 
 const root = new URL('../entry/src/main/ets/features/reading/', import.meta.url), contracts = new Map();
@@ -31,11 +31,11 @@ const isCalibrated = (file,node,property,expression) => file === 'ReaderPageChro
   expression === `this.topTextStyle().${({fontSize:'fontSizeFp',lineHeight:'lineHeightFp',letterSpacing:'letterSpacingFp'})[property]??property}`;
 let files=0,carriers=0,shared=0,calibrated=0,runtime=0;
 for (const file of readdirSync(root).filter(file=>file.endsWith('.ets'))) {
-  files++; const source=readFileSync(new URL(file,root),'utf8'),imports=typographyRoleImports(source,file);
+  files++; const source=readFileSync(new URL(file,root),'utf8'),imports=typographyRoleImports(source,file),expressionContext=typographyExpressionContext(source,'entry/src/main/ets/features/reading/'+file);
   for (const node of auditTypographyConsumers(source,file)) {
     carriers++;
     for (const [property,modifier] of Object.entries(node.modifiers)) {
-      if (isSharedTypographyExpression(modifier.expression)) {
+      if (isSharedTypographyExpression(modifier.expression,expressionContext,node.owner)) {
         for (const role of modifier.expression.matchAll(/TYPE_\w+/g)) {
           assert.ok(imports.has(role[0]),`${file}:${node.line}: actual public role import ${role[0]}`);
           assert.ok(readerTypographyRoles[role[0]],`${file}:${node.line}: actual public role implementation ${role[0]}`);

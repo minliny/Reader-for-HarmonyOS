@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { stripTypeScriptTypes } from 'node:module';
-import { auditTypographyConsumers, typographyProperties, typographyRoleImports, isSharedTypographyExpression } from './lib/reader-typography-consumer-audit.mjs';
+import { auditTypographyConsumers, typographyExpressionContext, typographyProperties, typographyRoleImports, isSharedTypographyExpression } from './lib/reader-typography-consumer-audit.mjs';
 import { typographySuccessorFile, typographySuccessorNode, restoreTypographyMigration } from './lib/reader-typography-migration-fixture.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 
@@ -47,7 +47,7 @@ for (const file of baseline.files) {
       if (replacement === undefined) edits.push({ start: modifier.start, end: modifier.end, replacement: expected.original[property] }); argumentsChecked++;
     }
   }
-  const openSizes = consumers.filter(node => node.modifiers.fontSize && !isSharedTypographyExpression(node.modifiers.fontSize.expression))
+  const openSizes = consumers.filter(node => node.modifiers.fontSize && !isSharedTypographyExpression(node.modifiers.fontSize.expression,typographyExpressionContext(source,file.path),node.owner))
     .map(node => ({ method: node.method, kind: node.kind, expression: node.modifiers.fontSize.expression }));
   for (const open of openSizes) assert.ok((file.openConsumers ?? []).some(registered => JSON.stringify(registered) === JSON.stringify(open)),
     `${file.path}: reject new private tuples; a registered dynamic debt may be closed by its audited successor`);

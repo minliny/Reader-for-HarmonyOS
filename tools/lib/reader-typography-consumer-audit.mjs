@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const sdkRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
@@ -23,7 +24,9 @@ export function auditTypographyConsumers(source, file = '/tmp/TypographyConsumer
       if (!record) {
         let parent = node;
         while (parent && !ts.isMethodDeclaration(parent)) parent = parent.parent;
-        record = { carrierStart: root.getStart(parsed), method: parent?.name?.getText(parsed) ?? '@Styles', kind: root.expression?.getText(parsed),
+        let owner = node;
+        while (owner && !ts.isStructDeclaration(owner) && !ts.isClassDeclaration(owner)) owner = owner.parent;
+        record = { owner: owner?.name?.text, carrierStart: root.getStart(parsed), method: parent?.name?.getText(parsed) ?? '@Styles', kind: root.expression?.getText(parsed),
           text: root.arguments?.[0]?.getText(parsed), modifiers: {}, line: parsed.getLineAndCharacterOfPosition(node.getStart(parsed)).line + 1 };
         groups.set(root.pos, record);
       }
@@ -37,11 +40,70 @@ export function auditTypographyConsumers(source, file = '/tmp/TypographyConsumer
   return [...groups.values()].sort((a, b) => a.line - b.line);
 }
 
+/** Finite real getter bindings. A method name or common-folder location is
+ * never sufficient. Current producers are admitted only when the actual SDK
+ * AST getter returns the imported finite resolver / public role alternatives.
+ * Their producer implementations, variants and propagation have separate
+ * actual-source/SDK contracts; this closes local helper-name laundering. */
+const getterPolicies = {
+  'ReaderActionMenuSurface.ets': { owner: 'ReaderActionMenuSurface', getter: 'spec', resolver: 'resolvePopupSpec', module: 'ReaderSurfaceSpecs', argument: 'this.specId', fields: ['actionFontFamily','actionFontWeight','actionFontSize','actionLineHeight'] },
+  'ReaderDialogSurface.ets': { owner: 'ReaderDialogSurface', getter: 'spec', resolver: 'resolveDialogSpec', module: 'ReaderSurfaceSpecs', argument: 'this.specId', fields: ['headerFontFamily','headerFontWeight','headerFontSize','headerLineHeight'] },
+  'ReaderSheetActionList.ets': { owner: 'ReaderSheetActionList', getter: 'surfaceSpec', resolver: 'resolveSheetSpec', module: 'ReaderSurfaceSpecs', argument: "'bookshelf-book-action'", fields: ['actionLabelFontFamily','actionLabelFontWeight','actionLabelFontSize','actionLabelLineHeight'] },
+  'ReaderChoiceRow.ets': { owner: 'ReaderChoiceRow', getter: 'spec', resolver: 'resolveReaderChoiceSpec', module: 'ReaderChoiceSpecs', argument: 'this.specId', fields: ['selectedWeight','text','selectedText'], textGetter: 'textStyle' },
+  'ReaderSearchField.ets': { owner: 'ReaderSearchField', getter: 'textStyle', roles: ['TYPE_SEARCH_SOURCE_INPUT','TYPE_SEARCH_DIRECTORY_INPUT','TYPE_SEARCH_READER_QUICK_INPUT'], fields: ['fontFamily','fontWeight','fontSizeFp','lineHeightFp','letterSpacingFp'] },
+};
+const roleFields = ['fontFamily','fontWeight','fontSizeFp','lineHeightFp','letterSpacingFp'];
+export function typographyExpressionContext(source, file) {
+  const tree = ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+  assert.equal(tree.parseDiagnostics.length,0,file+': getter binding SDK AST');
+  const normalized=file.replaceAll('\\','/');
+  // Full / relative production paths are accepted; basename-only test fixtures
+  // cannot impersonate a producer from an unrelated folder.
+  const policy = /(?:^|\/)common\//.test(normalized) ? getterPolicies[path.basename(normalized)] : undefined;
+  const bindings = new Map();
+  if (!policy) return { bindings };
+  const owner=tree.statements.find(n=>ts.isStructDeclaration(n)&&n.name.text===policy.owner);
+  if (!owner) return { bindings };
+  const methods=new Map(owner.members.filter(ts.isMethodDeclaration).map(n=>[n.name.getText(tree),n]));
+  const imports=new Map();
+  for(const n of tree.statements)if(ts.isImportDeclaration(n)&&ts.isNamedImports(n.importClause?.namedBindings))
+    for(const e of n.importClause.namedBindings.elements)imports.set(e.name.text,{ exported:(e.propertyName??e.name).text,module:n.moduleSpecifier.text });
+  const bind=(name,fields)=>bindings.set(policy.owner+'#'+name,new Set(fields));
+  if(policy.resolver){
+    const imported=imports.get(policy.resolver),getter=methods.get(policy.getter);
+    const statements=getter?.body?.statements;
+    const returned=statements?.length===1&&ts.isReturnStatement(statements[0])?statements[0].expression:undefined;
+    const validImport=imported?.exported===policy.resolver&&imported.module==='./'+policy.module;
+    const validReturn=ts.isCallExpression(returned)&&ts.isIdentifier(returned.expression)&&returned.expression.text===policy.resolver&&
+      returned.arguments.length===1&&returned.arguments[0].getText(tree)===policy.argument;
+    if(validImport&&validReturn)bind(policy.getter,policy.fields);
+    if(policy.textGetter&&bindings.has(policy.owner+'#'+policy.getter)){
+      const returned=methods.get(policy.textGetter)?.body?.statements;
+      const expression=returned?.length===1&&ts.isReturnStatement(returned[0])?returned[0].expression:undefined;
+      if(ts.isConditionalExpression(expression)&&expression.condition.getText(tree)==='this.selected'&&
+        expression.whenTrue.getText(tree)==='this.spec().selectedText'&&expression.whenFalse.getText(tree)==='this.spec().text')
+        bind(policy.textGetter,roleFields);
+    }
+  }else{
+    const getter=methods.get(policy.getter),seen=[];
+    const validStatement=n=>{
+      if(ts.isReturnStatement(n)&&ts.isIdentifier(n.expression)){seen.push(n.expression.text);return policy.roles.includes(n.expression.text)&&
+        imports.get(n.expression.text)?.exported===n.expression.text&&imports.get(n.expression.text)?.module==='./ReaderTypography';}
+      if(ts.isBlock(n))return n.statements.length===1&&validStatement(n.statements[0]);
+      if(ts.isIfStatement(n))return !n.elseStatement&&/^(?:this\.variant === '(?:sourceManagement|readerDirectory)')$/.test(n.expression.getText(tree))&&validStatement(n.thenStatement);
+      return false;
+    };
+    if(getter?.body?.statements.length===3&&getter.body.statements.every(validStatement)&&
+      new Set(seen).size===policy.roles.length)bind(policy.getter,policy.fields);
+  }
+  return { bindings };
+}
+
 /** Recognise complete role/spec arguments, rather than a TYPE_ substring.
  * Mixed public/private ternaries and page-local numeric overrides stay debt.
  * Proportional cover geometry and the reader's existing bounded interpolation
  * may use public role endpoints. Numeric/mixed endpoint overrides stay debt. */
-export function isSharedTypographyExpression(expression) {
+export function isSharedTypographyExpression(expression, context, owner) {
   if (expression === 'TYPE_SHELF_COVER_PLACEHOLDER.fontSizeFp * this.coverWidth / 96.96' ||
       expression === '(TYPE_SHELF_COVER_PLACEHOLDER.lineHeightFp as number) * this.coverWidth / 96.96') return true;
   const parsed = ts.createSourceFile('/tmp/TypographyArgument.ts', `const value = (${expression});`, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
@@ -66,7 +128,12 @@ export function isSharedTypographyExpression(expression) {
       const callee = node.expression;
       if (ts.isCallExpression(callee) && ts.isPropertyAccessExpression(callee.expression) &&
           callee.expression.expression.kind === ts.SyntaxKind.ThisKeyword &&
-          ['textStyle', 'optionTextStyle', 'surfaceSpec', 'spec'].includes(callee.expression.name.text)) return true;
+          callee.arguments.length === 0 && context?.bindings) {
+        const key = owner ? owner + '#' + callee.expression.name.text : undefined;
+        if (key) return context.bindings.get(key)?.has(node.name.text) === true;
+        const qualified = [...context.bindings].filter(([name]) => name.endsWith('#' + callee.expression.name.text));
+        return qualified.length === 1 && qualified[0][1].has(node.name.text);
+      }
     }
     return false;
   };

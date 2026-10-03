@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
-import { auditTypographyConsumers, isSharedTypographyExpression } from './lib/reader-typography-consumer-audit.mjs';
+import { auditTypographyConsumers, typographyExpressionContext, isSharedTypographyExpression } from './lib/reader-typography-consumer-audit.mjs';
 import { registeredProducerTypographySlots } from './lib/architecture-shared-producer-contract.mjs';
 
 const root = new URL('../entry/src/main/ets/features/', import.meta.url);
@@ -34,11 +34,12 @@ let files = 0, consumers = 0, sharedArguments = 0, sharedProducerArguments = 0, 
 for (const file of readdirSync(root, { recursive: true }).filter(file => file.endsWith('.ets') && !file.startsWith('reading/'))) {
   files++;
   const source=readFileSync(new URL(file, root), 'utf8');
+  const expressionContext=typographyExpressionContext(source,'entry/src/main/ets/features/'+file);
   const producerSlots=registeredProducerTypographySlots(source,'entry/src/main/ets/features/'+file,producerContract);
   for (const node of auditTypographyConsumers(source, file)) {
     consumers++;
     for (const [property, modifier] of Object.entries(node.modifiers)) {
-      if (isSharedTypographyExpression(modifier.expression)) { sharedArguments++; continue; }
+      if (isSharedTypographyExpression(modifier.expression,expressionContext,node.owner)) { sharedArguments++; continue; }
       if (producerSlots.has(node.method,property,modifier.expression)) { sharedProducerArguments++; continue; }
       const receipt = debt.get(JSON.stringify([file, node.method, property, modifier.expression]));
       assert.ok(receipt, `${file}:${node.line}/${property}: new private style must consume the public role/spec (${modifier.expression})`);
