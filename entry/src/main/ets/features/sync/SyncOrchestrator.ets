@@ -1,4 +1,4 @@
-import { SyncGateway, type SyncSnapshot, type SyncRestoreResult, type SyncHistoryEntry, type SyncBackupReceipt } from './SyncGateway';
+import { SyncGateway, DEFAULT_SYNC_SNAPSHOT, type SyncSnapshot, type SyncRestoreResult, type SyncHistoryEntry, type SyncBackupReceipt } from './SyncGateway';
 import { SyncWriteObservation, type SyncOperationAction, type SyncOperationProjection, type SyncPresentationFacts } from './SyncOperationProjection';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { projectOperationFacts, projectCommitReadback, type OperationFacts, type CommitConfirmationKind, type CommitReadbackPhase } from '../../app/ReaderOperationFacts';
@@ -8,11 +8,46 @@ let syncProjectionGeneration: number = 0;
 /** Foreground owner. One chain retains accepted write receipts across route
  * remounts; old routes/RuntimeOwners cannot publish or dispatch new intent. */
 export class SyncOrchestrator {
+  private static readonly retained: WeakMap<ReaderRuntimeOwner, SyncOrchestrator> = new WeakMap();
+  private presentationIdentity: string = 'legacy';
+
+  /** Only the current Runtime is cached. Retired owners keep their accepted
+   * tail, but cannot dispatch through a replacement Runtime. */
+  static forRuntime(owner: ReaderRuntimeOwner): SyncOrchestrator | undefined {
+    if (!ReaderRuntimeOwner.isCurrent(owner)) return undefined;
+    let retained = SyncOrchestrator.retained.get(owner);
+    if (retained === undefined) {
+      retained = new SyncOrchestrator((): void => {},
+        (): SyncSnapshot => DEFAULT_SYNC_SNAPSHOT, owner, (): boolean => false);
+      retained.presentationIdentity = '';
+      SyncOrchestrator.retained.set(owner, retained);
+    }
+    return retained;
+  }
+
+  attachPresentation(identity: string, emit: (snapshot: SyncSnapshot) => void,
+    read: () => SyncSnapshot, current: () => boolean): boolean {
+    if (identity.length === 0 || !this.currentOwner()) return false;
+    if (identity !== this.presentationIdentity) this.session += 1;
+    this.presentationIdentity = identity;
+    this.emit = emit; this.read = read; this.isCurrent = current;
+    this.deliver(this.session);
+    return true;
+  }
+
+  /** Presentation retirement never clears accepted work or its exact receipt. */
+  detachPresentation(identity: string): void {
+    if (identity !== this.presentationIdentity) return;
+    this.session += 1; this.presentationIdentity = '';
+    this.emit = (): void => {}; this.read = (): SyncSnapshot => DEFAULT_SYNC_SNAPSHOT;
+    this.isCurrent = (): boolean => false;
+  }
+
   private readonly gateway: SyncGateway;
   private readonly owner: ReaderRuntimeOwner;
-  private readonly emit: (snapshot: SyncSnapshot) => void;
-  private readonly read: () => SyncSnapshot;
-  private readonly isCurrent: () => boolean;
+  private emit: (snapshot: SyncSnapshot) => void;
+  private read: () => SyncSnapshot;
+  private isCurrent: () => boolean;
   private session: number = 0;
   private operationInFlight: boolean = false;
   private operationChain: Promise<void> = Promise.resolve();
@@ -32,8 +67,16 @@ export class SyncOrchestrator {
 
   ownedBy(owner: ReaderRuntimeOwner): boolean { return this.owner === owner; }
 
+  /** Index physical callbacks must carry their original attachment identity. */
+  isPresentationCurrent(identity: string): boolean {
+    return identity.length > 0 && identity === this.presentationIdentity && this.currentSession(this.session);
+  }
+
   open(): void {
     if (!this.currentOwner() || !this.isCurrent()) return;
+    // A replacement page observes the same accepted chain. It cannot reset
+    // the mutex, start a second write, or clear an unresolved receipt.
+    if (this.operationInFlight) { this.deliver(this.session); return; }
     const session = ++this.session;
     this.publishRead(session, 'loading', '正在读取安全配置…');
     this.operationChain = this.operationChain.then((): Promise<void> => this.load(session));
@@ -217,6 +260,9 @@ export class SyncOrchestrator {
     this.status(session, action === 'saveConfig' ? '正在保存安全配置…' : action === 'backup' ? '正在创建配置备份…' : '正在检查恢复事务…');
     this.operationChain = this.operationChain.then(async (): Promise<void> => {
       if (!this.currentSession(session)) return;
+      // A remount cannot lend its lease to an old config head write. Once a
+      // backup/restore dispatched, its accepted exact transaction can settle;
+      // an interrupted config preparation retains unknown for explicit recovery.
       const admitted = (): boolean => this.currentOwner() && (this.currentSession(session) ||
         (action !== 'saveConfig' && observation.write.dispatchedCount > 0));
       let message: string;

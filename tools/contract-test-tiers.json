@@ -201,6 +201,7 @@
     "test-source-tools-typography.mjs",
     "test-surface-horizontal-geometry.mjs",
     "test-surface-transition-p0.mjs",
+    "test-sync-runtime-presentation-owner.mjs",
     "test-sync-webdav-product.mjs",
     "test-system-file-open-navigation-owner.mjs",
     "test-toc-repair-regressions.mjs",

@@ -49,7 +49,7 @@ class Host {async capture(){return {version:1,bookshelfViewMode:'cover',themeSel
 const ReaderThemeHost={prepareUserChange:async()=>{prepareCalls++;},observedSystemScheme:()=> 'day'};
 const Gateway=execute('features/sync/SyncGateway.ts','SyncGateway',{SyncWriteObservation,SyncHostConfigurationGateway:Host,ReaderRuntimeOwner,WebDavCredentialStore:{get instance(){return credentialStore;}},ReaderThemeHost,HttpExecuteHost:{instance:{execute:async request=>transport(request)}},util,url:{URL:{parseURL:v=>new URL(v)}},errorMessageOf:()=> 'platform failure',AppStorage:{setOrCreate(){}}});
 const DEFAULT_SYNC_SNAPSHOT=execute('features/sync/SyncGateway.ts','DEFAULT_SYNC_SNAPSHOT',{SyncHostConfigurationGateway:Host,ReaderRuntimeOwner,WebDavCredentialStore:{get instance(){return credentialStore;}},ReaderThemeHost,HttpExecuteHost:{},util,url:{},errorMessageOf:()=> '',AppStorage:{}});
-const Orchestrator=execute('features/sync/SyncOrchestrator.ets','SyncOrchestrator',{SyncGateway:Gateway,SyncWriteObservation,ReaderRuntimeOwner,projectPersistedReceipt,...facts});
+const Orchestrator=execute('features/sync/SyncOrchestrator.ets','SyncOrchestrator',{SyncGateway:Gateway,DEFAULT_SYNC_SNAPSHOT,SyncWriteObservation,ReaderRuntimeOwner,projectPersistedReceipt,...facts});
 function runtime(){return {
   calls:[],coreApplied:false,beforeApply:undefined,beforeResolve:undefined,failApplyAck:false,failBackupAdvance:false,failQuery:false,failCommit:0,
   async request(method,params){
