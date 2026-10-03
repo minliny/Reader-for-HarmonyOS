@@ -84,8 +84,10 @@ contract('prepared slide preserves the visual handoff and the strong durable bar
   assert.doesNotMatch(start, /promotePreparedPageTurn|this\.visiblePage\s*=/,
     'starting an animation must not switch the pagination fact');
 
-  assert.match(persist, /runProgressCommitSerial/);
-  assert.match(persist, /resolveAndUpdateProgress/);
+  assert.match(persist, /persistMeasuredCanonicalProgress/);
+  const canonical = methodSection(localReading, 'persistMeasuredCanonicalProgress');
+  assert.match(canonical, /persistPresentedProgress/);
+  assert.match(canonical, /hasPendingSourceSwitch[\s\S]*runProgressCommitSerial[\s\S]*resolveAndUpdateProgress/);
   assert.doesNotMatch(persist, /\.resolveLocation\(|\.updateProgress\(/,
     'page-turn persistence must resolve and store the canonical anchor atomically');
   assert.doesNotMatch(persist, /promotePreparedPageTurn|this\.visiblePage\s*=/,

@@ -20,7 +20,7 @@ class Anchor {constructor(chapterIndex,chapterOffset,chapterProgress,bodyVersion
   Object.assign(this,{chapterIndex,chapterOffset,chapterProgress,bodyVersion,processingVersion});
 }}
 const Owner = productionMotionMethods(source, ['loadInitialReading', 'traceInitialReadingPhase',
-  'loadInitialChapter', 'openChapter', 'loadReaderSettingsSnapshot', 'applyInitialReaderWindowPolicy', 'beginFirstPageCommit',
+  'loadInitialChapter', 'openChapter', 'loadReaderSettingsSnapshot', 'captureReaderSettingsAdmission', 'retryPendingReaderSettings', 'applyInitialReaderWindowPolicy', 'beginFirstPageCommit',
   'completeFirstPage', 'publishMeasuredFirstPage', 'measuredPageEndLimit', 'retainMeasuredParagraphWindow', 'isOrdinaryPageMeasurement',
   'persistOrdinaryFirstPage', 'isOrdinaryFirstPagePresentationCurrent', 'awaitOrdinaryFirstPagePersistence',
   'notifyReadingPresentationReady', 'notifyControlSelectionReadingReady', 'isVisiblePageCurrent', 'resumeSupersededAppearanceMeasurement'], {
@@ -50,7 +50,8 @@ for (const throwingSink of [false, true]) {
     isSelectionActive: (token, selection) => token === 1 && selection === 1,
     ensureReadingSession: async () => {},
     isMeasurementCurrent: (generation, selection, token) => generation === 1 && selection === 1 && token === 1,
-    loadAppearanceSnapshot: async () => {}, readerSettingsGateway: { load: async () => ({ navigationMode: 'paged' }) },
+    loadAppearanceSnapshot: async () => {}, readerSettingsGateway: {
+      load: async () => ({ navigationMode: 'paged' }), writeFacts: () => ({ pendingReconciliation: false }) },
     configureReaderScreenAwakeLease() {}, applyReaderSystemEventPolicy() {},
     applyReaderWindowPolicy: () => window.promise,
     activeGateway: () => ({ loadProgress: () => progress.promise,
@@ -87,7 +88,7 @@ for (const throwingSink of [false, true]) {
   assert.deepEqual(events, ['body-request'], 'body I/O overlaps pending native window policy');
   body.resolve(chapter);
   await settle();
-  assert.equal(owner.chapter, chapter, 'available body must not wait for system window callbacks');
+  assert.equal(owner.chapter, chapter, `available body must not wait for system window callbacks: ${failures.join(', ')}`);
   assert.deepEqual(events, ['body-request', 'measured']);
   window.resolve();
   await loading;

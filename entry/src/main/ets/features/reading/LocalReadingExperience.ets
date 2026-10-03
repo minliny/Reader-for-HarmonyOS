@@ -5907,7 +5907,7 @@ export struct ReadingExperience {
         return;
       }
       this.ordinaryPageMeasurementSelection = -1;
-      await this.activeGateway().runProgressCommitSerial(async (): Promise<void> => {
+      {
         if (!this.isMeasurementCurrent(generation, selectionToken, lifecycleToken)) return;
         if (this.resumeSupersededAppearanceMeasurement(generation, selectionToken,
           lifecycleToken, measuredLayoutSignature)) return;
@@ -5916,13 +5916,14 @@ export struct ReadingExperience {
             this.captureMaterializedChapterContext(), visiblePage,
             this.readerSettingsSnapshot.navigationMode === 'continuous', measuredLayoutSignature);
         }
-        const stored = await this.activeGateway().resolveAndUpdateProgress(
+        const stored = await this.persistMeasuredCanonicalProgress(
           this.bookId,
           chapter.chapterTitle,
           new CoreReadingAnchor(chapter.chapterIndex, visiblePage.startScalar, visibleProgress,
             chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof),
           measuredCoreLayout,
-          (): boolean => this.isMeasurementCurrent(generation, selectionToken, lifecycleToken),
+          (): boolean => this.isMeasurementCurrent(generation, selectionToken, lifecycleToken) &&
+            measuredLayoutSignature === this.paginationLayoutSignature(),
         );
         if (!this.isMeasurementCurrent(generation, selectionToken, lifecycleToken)) return;
         if (stored.chapterIndex !== chapter.chapterIndex || stored.chapterOffset !== visiblePage.startScalar) {
@@ -5968,7 +5969,7 @@ export struct ReadingExperience {
         this.drainRapidPageTurn();
         this.onAutoPagePageCommitted();
         this.resumeDeferredMeasurement(lifecycleToken);
-      });
+      }
     } catch (error) {
       // A changed layout makes a rejected old measurement obsolete. A receipt
       // for the wrong anchor remains an integrity failure, even during reflow.
@@ -5982,6 +5983,27 @@ export struct ReadingExperience {
         this.fail(error as Error, lifecycleToken);
       }
     }
+  }
+
+  private async persistMeasuredCanonicalProgress(bookId: string, title: string | undefined,
+    anchor: LocalReadingAnchor, layout: CoreReadingLayout,
+    isAdmitted: () => boolean): Promise<ReadingSessionCommittedProgress> {
+    const gateway = this.activeGateway();
+    if (!gateway.hasPendingSourceSwitch()) {
+      // Control/prepared presentation stays behind its durable gate, while its
+      // actual write shares the same CAS/unknown owner as continuous and TTS.
+      // Do not call this from runSerial: that boundary must drain this owner.
+      return gateway.persistPresentedProgress(bookId, title, anchor, layout, isAdmitted);
+    }
+    // Source finalization still needs its existing atomic transaction command.
+    // Its exact ACK marker is never synthesized from a matching progress row.
+    let stored: ReadingSessionCommittedProgress | undefined = undefined;
+    await gateway.runProgressCommitSerial(async (): Promise<void> => {
+      if (!isAdmitted()) return;
+      stored = await gateway.resolveAndUpdateProgress(bookId, title, anchor, layout, isAdmitted);
+    });
+    if (stored === undefined) throw new Error('READING_PRESENTED_PROGRESS_SUPERSEDED');
+    return stored;
   }
 
   private async persistOrdinaryFirstPage(page: PhysicalReadingPage, chapter: ReadingSessionChapter,
@@ -12437,13 +12459,16 @@ export struct ReadingExperience {
       result.progress.bookId !== this.bookId) return undefined;
     const stored = result.progress;
     if (stored.chapterIndex === prepared.context.chapter.chapterIndex &&
-      stored.chapterOffset === prepared.page.startScalar) {
+      stored.chapterOffset === prepared.page.startScalar &&
+      stored.bodyVersion === prepared.context.chapter.bodyVersion &&
+      stored.processingVersion === prepared.context.chapter.processingVersion) {
       this.pageTurnStoredProgress = stored;
       return true;
     }
     const origin = this.lastCommittedProgress;
     return origin !== undefined && stored.chapterIndex === origin.chapterIndex &&
       stored.chapterOffset === origin.chapterOffset && stored.updatedAt === origin.updatedAt &&
+      stored.bodyVersion === origin.bodyVersion && stored.processingVersion === origin.processingVersion &&
       stored.locationRevision === origin.locationRevision ? false : undefined;
   }
 
@@ -12488,14 +12513,14 @@ export struct ReadingExperience {
     this.commitInFlight = true;
     try {
       let storedProgressAccepted = false;
-      await this.activeGateway().runProgressCommitSerial(async (): Promise<void> => {
+      {
         if (!this.isPreparedPageTurnCommitCurrent(prepared, lifecycleToken, settlementGeneration)) {
           return;
         }
         const scalarCount = prepared.context.layoutMap.scalarCount();
         this.pageTurnPersistenceState = 'writing';
         const chapterProgress = scalarCount === 0 ? 0 : prepared.page.startScalar / scalarCount;
-        const stored = await this.activeGateway().resolveAndUpdateProgress(
+        const stored = await this.persistMeasuredCanonicalProgress(
           this.bookId,
           prepared.context.chapter.chapterTitle,
           new CoreReadingAnchor(prepared.context.chapter.chapterIndex, prepared.page.startScalar, chapterProgress,
@@ -12512,7 +12537,7 @@ export struct ReadingExperience {
         }
         this.pageTurnStoredProgress = stored;
         storedProgressAccepted = true;
-      });
+      }
       return storedProgressAccepted &&
         this.isPreparedPageTurnCommitCurrent(prepared, lifecycleToken, settlementGeneration);
     } catch (error) {

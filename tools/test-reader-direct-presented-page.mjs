@@ -21,6 +21,7 @@ function fixture() {
   const writes = [], commits = [], events = [];
   const chapter = { chapterIndex: 1, chapterTitle: '章', bodyVersion: 'body', processingVersion: 'processing' };
   const gateway = {
+    hasPendingSourceSwitch: () => false,
     capable: true,
     canPersistPresentedProgress() { return this.capable; },
     persistPresentedProgress(_book, _title, anchor, layout) { const gate = deferred(); writes.push({ anchor, layout, gate }); return gate.promise; },
