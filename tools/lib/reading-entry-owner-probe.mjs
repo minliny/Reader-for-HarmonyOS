@@ -51,6 +51,6 @@ const SourceGateway=emit('features/source/SourceGateway.ts','SourceGateway',comm
 const BookAcquisitionProjectionGateway=emit('app/BookAcquisitionProjectionGateway.ts','BookAcquisitionProjectionGateway',common);
 export const ReaderDirectoryHost=emit('features/reading/ReaderDirectoryHost.ts','ReaderDirectoryHost',common);
 const ReadingPrefetchHost=emit('features/reading/ReadingPrefetchHost.ts','ReadingPrefetchHost',common);
-export const compileHost=(source=read('features/reading/ReadingEntryHost.ts'))=>emit('features/reading/ReadingEntryHost.ts','ReadingEntryHost',
- {...common,ReaderCoreGateway,BookshelfFlowGateway,SourceGateway,BookAcquisitionProjectionGateway,ReaderDirectoryHost,ReadingPrefetchHost},source);
+export const compileHost=(source=read('features/reading/ReadingEntryHost.ts'),dependencies={})=>emit('features/reading/ReadingEntryHost.ts','ReadingEntryHost',
+ {...common,ReaderCoreGateway,BookshelfFlowGateway,SourceGateway,BookAcquisitionProjectionGateway,ReaderDirectoryHost,ReadingPrefetchHost,...dependencies},source);
 export const ProductionHost=compileHost();

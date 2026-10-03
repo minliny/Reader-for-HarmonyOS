@@ -46,10 +46,13 @@ const probeStart = index.indexOf('private async probeRemoteContentVerdict(');
 const probeEnd = index.indexOf('private remoteContentVerdictLabel(', probeStart);
 const probeBlock = index.slice(probeStart, probeEnd);
 assert.match(probeBlock,
-  /preferredChapterIndex\?: number[\s\S]*entry\.index === preferredChapterIndex/,
-  'explicit detail probes must honor their requested chapter');
-assert.match(probeBlock,
-  /await gateway\.loadChapter[\s\S]*this\.remoteContentVerdict = 'readable'[\s\S]*return readableEntries\[attempt\]\.index/,
+  /host\.probe\(this\.readingEntryScopeId, preferredChapterIndex, positionContext\)/,
+  'actual Index transfers the requested chapter and original position to its entry owner');
+const owner = readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingEntryHost.ts', import.meta.url), 'utf8');
+assert.match(owner, /preferredChapterIndex\?: number[\s\S]*entry\.index === preferredChapterIndex/,
+  'explicit owner probes must honor their requested chapter');
+assert.match(owner.slice(owner.indexOf('async probe('), owner.indexOf('replaceDirectory(')),
+  /await new RemoteReadingFlowGateway[\s\S]*if \(!probeCurrent\(\)\)[\s\S]*this\.setVerdict\('readable', scope, lease\); return entries\[attempt\]\.index/,
   'only an admitted chapter body may mark a detail probe readable');
 const terminalFailure = reader.slice(reader.indexOf('private fail('), reader.indexOf('private retryReading('));
 assert.match(terminalFailure, /this\.onReadingFailure\(this\.sourceId, this\.bookId, this\.failureCode, failureKind\)/);
