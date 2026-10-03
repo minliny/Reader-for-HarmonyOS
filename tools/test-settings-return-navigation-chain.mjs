@@ -104,12 +104,12 @@ function navigation(text=indexSource){
     }
     const propertyNames=[...pageSource.matchAll(/@Prop\s+(?:@Watch\([^\n]+?\)\s+)?(\w+)\s*:/g)].map(m=>m[1]);
     const callbackNames=[...pageSource.matchAll(/^  (on\w+):/gm)].map(m=>m[1]);
-    const page=sdk.consumer(pageSource,[...propertyNames,...callbackNames,'appThemeScheme','mounted','temporaryBackIdentity','resetMessage',
+    const page=sdk.consumer(pageSource,[...propertyNames,...callbackNames,'appThemeScheme','mounted','themeOwner','temporaryBackIdentity','resetMessage',
       'onSnapshotChanged','syncSnapshotValues','onCacheCleanupChanged','applyCacheCleanup',
       'buildHome','navRow','operationFeedback','recovery','feedbackMessage','recoveryActionIdentities','recoveryActionKind',
       'recoveryActionGeneration','recoveryActionLabel','recoveryActionCurrent','dispatchRecoveryAction'],
-      {readerRecoveryView,isReaderProductSurfaceEnabled},props);
-    page.mounted=true;page.temporaryBackIdentity='return-native:'+instance;page.resetMessage='';
+      {ReaderRuntimeOwner:f.Runtime,readerRecoveryView,isReaderProductSurfaceEnabled},props);
+    page.mounted=true;page.themeOwner=f.runtime;page.temporaryBackIdentity='return-native:'+instance;page.resetMessage='';
     page.buildHome();
     const row=sdk.walk(page).find(child=>child instanceof sdk.deps.CategoryRow&&child.label==='书源管理');
     assert.ok(row,'actual Settings buildHome mounts Source row in the production CategorySection/Card');
@@ -181,6 +181,38 @@ for(const retirement of ['runtime','mount','closed']){
   assert.deepEqual(i.settingsSnapshot,snapshot,retirement+' late Preferences reply cannot publish values');
   assert.deepEqual(i.settingsOperation,operation,retirement+' late Preferences reply cannot publish completion');cases++;
 }
+for(const failure of ['before','after']){
+  const n=navigation(),{i}=n;i.openSettings();await n.idle();const initial=n.home();
+  n.f.fail(failure);i.settingsHost.toggle('reduceMotion',true,i.settingsPresentationIdentity);await n.idle();
+  const owner=i.settingsHost.orchestrator,original=owner.gateway.writeFacts(),writeGeneration=owner.writeGeneration,
+    originalReceiptGeneration=i.settingsOperation.receipt.facts.generation;
+  assert.equal(i.settingsSnapshot.reduceMotion,true,'real owner keeps the accepted switch value');
+  assert.equal(i.settingsOperation.receipt.receipt.confirmation,'unknown');
+  assert.equal(n.f.disk.get('reduceMotion'),failure==='after','fixture distinguishes not-durable and durable-with-lost-ACK flush');
+  assert.equal(original.pendingReconciliation,true);assert.equal(original.acceptedRevision,1);assert.equal(original.savedRevision,0);
+  const writes=()=>n.f.events.filter(event=>event[0]==='put'||event[0]==='flush');
+  const dispatched=structuredClone(writes());assert.equal(dispatched.filter(event=>event[0]==='put').length,4);
+  assert.equal(dispatched.filter(event=>event[0]==='flush').length,1);
+  const pending=n.home();pending.click();assert.equal(i.route,'source');await n.idle();
+  const source=n.params('source');source.onBack();assert.equal(i.route,'settings');
+  assert.equal(i.settingsHost.orchestrator,owner,'return attaches the original exact Runtime owner');
+  assert.equal(i.settingsOperation.receipt.receipt.confirmation,'unknown','synchronous bind does not qualify the missing flush ACK');
+  await n.idle();
+  assert.equal(i.settingsSnapshot.reduceMotion,true);assert.equal(i.settingsOperation.action,'reduceMotion');
+  assert.equal(i.settingsOperation.receipt.receipt.confirmation,'unknown','open/read cannot promote cached accepted values to durable');
+  assert.equal(i.settingsOperation.receipt.facts.fact,'pendingReconciliation');
+  assert.ok(i.settingsOperation.receipt.facts.generation>originalReceiptGeneration,'new presentation gets a fresh projection generation');
+  assert.deepEqual(owner.gateway.writeFacts(),original,'original accepted/saved revision, action and snapshot identity stay unchanged');
+  assert.equal(owner.writeGeneration,writeGeneration,'navigation does not allocate a replacement write');
+  assert.equal(i.settingsOperation.canRetryAccepted,true,'the existing explicit same-snapshot recovery remains available without invoking it');
+  const returned=n.home(),before={route:i.route,generation:i.navigationGeneration,identity:i.settingsPresentationIdentity};
+  initial.click();pending.click();source.onBack();initial.props.onToggle('reduceMotion',false);
+  assert.deepEqual({route:i.route,generation:i.navigationGeneration,identity:i.settingsPresentationIdentity},before,
+    'old physical navigation and old accepted setter cannot borrow the new visit');
+  returned.click();assert.equal(i.route,'source','fresh native navigation stays usable while the save remains unknown');
+  await n.idle();assert.deepEqual(writes(),dispatched,'return/open/navigation issue no extra put or flush and no compensation');
+  assert.deepEqual(owner.gateway.writeFacts(),original);cases++;
+}
 {
   const tree=ts.createSourceFile('/tmp/SettingsReturnMutation.ets',indexSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS);
   const method=tree.statements.find(node=>node.members?.some(member=>member.name?.getText(tree)==='returnToSettings'))
@@ -193,4 +225,4 @@ for(const retirement of ['runtime','mount','closed']){
   assert.equal(n.i.route,'settings','omitting return bind reproduces the target silent navigation refusal');
   assert.equal(n.i.settingsPresentationIdentity,'');cases++;
 }
-console.log(`PASS ${cases} actual SettingsHost/SourceHost→Index production navigation→SDK Settings/CategorySection/Card/CategoryRow groups: round trip, synchronous attachment before async read, retained section, old physical/generation/identity rejection, no writes and missing-bind negative control.`);
+console.log(`PASS ${cases} actual SettingsHost/SourceHost→Index production navigation→SDK Settings/CategorySection/Card/CategoryRow groups: round trip, synchronous attachment before async read, retained section, old physical/generation/identity rejection, before/after flush lost-ACK retained unknown/accepted write identity with no replay, no navigation writes and missing-bind negative control.`);
