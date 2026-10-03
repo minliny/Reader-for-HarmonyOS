@@ -1,3 +1,5 @@
+import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
+import type { SourceManagementProjection } from './SourceHost';
 import { TYPE_FORM_COMPACT_ACTION, TYPE_FORM_HINT, TYPE_FORM_LABEL_ACTION, TYPE_SEARCH_RESULT_INTRO, TYPE_SOURCE_MANAGEMENT_COUNT, TYPE_SOURCE_MANAGEMENT_STATUS, TYPE_SOURCE_MANAGEMENT_TITLE, TYPE_SOURCE_STATE_TITLE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 // Source Management — rebuilt 2026-08-05 against live Figma nodes
@@ -96,6 +98,8 @@ export struct SourceManagementPage {
   @Prop groups: string[] = [];
   @Prop isTablet: boolean;
   @Prop reduceMotion: boolean = false;
+  @Prop operation: SourceManagementProjection = { action: 'load', sourceId: '' };
+  onReconcile: (generation: number) => void = (_generation: number): void => {};
   @Prop statusKind: SourceManagementStatusKind = 'idle';
   @Prop statusMessage: string = '';
   onBack: () => void = (): void => {};
@@ -230,10 +234,12 @@ export struct SourceManagementPage {
       .margin({ top: TOK_SPACE_XS });
   }
 
+  private recovery(): ReaderRecoveryView { return readerRecoveryView(this.operation.receipt, this.operation.readFacts); }
+
   @Builder
   private statusBanner() {
     Row({ space: TOK_SPACE_XS }) {
-      Text(this.statusMessage)
+      Text(this.recovery().visible ? this.recovery().message : this.statusMessage)
         .layoutWeight(1)
         .fontFamily(TYPE_SOURCE_MANAGEMENT_STATUS.fontFamily as string)
         .fontSize(TYPE_SOURCE_MANAGEMENT_STATUS.fontSizeFp)
@@ -241,13 +247,16 @@ export struct SourceManagementPage {
         .fontColor(this.statusKind === 'error' ? readerAppColor('app.SourceManagementPage.STATUS_ERROR_DOT', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
-      if (this.statusKind === 'error') {
+      if (this.recovery().canRetry || this.statusKind === 'error') {
         Text('重试')
           .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)
           .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)
           .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)
           .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-          .onClick((): void => this.onRetryLoad());
+          .onClick((): void => {
+            if (this.recovery().canRetry) this.onReconcile(this.recovery().generation);
+            else this.onRetryLoad();
+          });
       }
     }
     .width(this.contentFrame().width)
@@ -390,7 +399,7 @@ export struct SourceManagementPage {
         Column() {
           this.searchField();
           this.statsRow();
-          if (this.statusKind !== 'idle') { this.statusBanner(); }
+          if (this.statusKind !== 'idle' || this.recovery().visible) { this.statusBanner(); }
           this.filterArea();
           this.categoryFilter();
         }.width('100%').padding({ bottom: TOK_SPACE_CONTROL_INLINE });

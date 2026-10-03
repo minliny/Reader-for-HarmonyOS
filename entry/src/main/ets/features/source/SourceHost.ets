@@ -3,10 +3,11 @@ import { SourceGateway, type BookSource } from './SourceGateway';
 import type {
   SourceImportCompletion,
   SourceManagementStatusKind,
+  SourceManagementProjection,
 } from './SourceOrchestrator';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 
-export type { SourceImportCompletion, SourceManagementStatusKind } from './SourceOrchestrator';
+export type { SourceImportCompletion, SourceManagementStatusKind, SourceManagementProjection } from './SourceOrchestrator';
 
 /**
  * Entry-owned Source Management boundary. The Index keeps the ArkUI list and
@@ -19,21 +20,25 @@ export class SourceHost {
   private readonly isCurrent: () => boolean;
   private readonly emitStatus: (kind: SourceManagementStatusKind, message: string) => void;
   private readonly owner: () => ReaderRuntimeOwner;
+  private readonly emitProjection: (projection: SourceManagementProjection) => void;
 
   constructor(
     emitSources: (sources: BookSource[]) => void,
     isCurrent: () => boolean,
     emitStatus?: (kind: SourceManagementStatusKind, message: string) => void,
     owner?: () => ReaderRuntimeOwner,
+    emitProjection: (projection: SourceManagementProjection) => void = (_projection: SourceManagementProjection): void => {},
   ) {
     this.emitSources = emitSources;
     this.isCurrent = isCurrent;
     this.emitStatus = emitStatus ?? ((_kind: SourceManagementStatusKind, _message: string): void => {});
     this.owner = owner ?? ((): ReaderRuntimeOwner => ReaderRuntimeOwner.current());
+    this.emitProjection = emitProjection;
   }
 
   open(): void { this.getOrchestrator().open(); }
   retryLoad(): void { this.getOrchestrator().retryLoad(); }
+  reconcile(generation: number): void { this.getOrchestrator().reconcile(generation); }
   toggleSource(id: string, enabled: boolean): void { this.getOrchestrator().toggleSource(id, enabled); }
   checkSource(id: string): void { this.getOrchestrator().checkSource(id); }
   loginSource(id: string): void { this.getOrchestrator().loginSource(id); }
@@ -63,12 +68,13 @@ export class SourceHost {
   }
 
   private getOrchestrator(): SourceOrchestrator {
-    if (this.orchestrator === undefined) {
+    if (this.orchestrator === undefined || !this.orchestrator.owns(this.owner())) {
       this.orchestrator = new SourceOrchestrator(
         this.emitSources,
         this.isCurrent,
         this.emitStatus,
         this.owner(),
+        this.emitProjection,
       );
     }
     return this.orchestrator;

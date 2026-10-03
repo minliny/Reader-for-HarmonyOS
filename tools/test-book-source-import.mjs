@@ -34,6 +34,7 @@ const transportPolicyImport =
   /^import \{ httpUrlHostname, isPrivateNetworkTarget \} from ['"][^'"]*HttpTransportPolicy(\.ts)?['"];$/m;
 const executableGateway = stripTypeScriptTypes(
   gatewaySource
+    .replace(/^import \{ isReaderCoreTransactionPendingError \} from ['"]@reader\/core-harmony['"];$/m, 'const isReaderCoreTransactionPendingError = () => false;')
     .replace(errorMessageImport, () => errorMessageModule)
     .replace(transportPolicyImport, () => transportPolicyModule)
     .replace(sourceCategoryImport, () => sourceCategoryModule)

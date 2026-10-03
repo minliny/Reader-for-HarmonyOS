@@ -1,6 +1,7 @@
 import preferences from '@ohos.data.preferences';
 import { common } from '@kit.AbilityKit';
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
+import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 
 const SETTINGS_PREFERENCES_NAME = 'reader_settings_v1';
 
@@ -79,7 +80,8 @@ export class SettingsGateway {
   }
 
   async update(snapshot: SettingsSnapshot, resetOwned: boolean = false,
-    changedKey?: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog'): Promise<SettingsSnapshot> {
+    changedKey?: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
+    evidence?: ReaderWriteEvidence): Promise<SettingsSnapshot> {
     // A caller can retain and mutate its state object while this update waits
     // behind another write. Capture the full requested snapshot at call time.
     let requestedSnapshot = this.copySnapshot(snapshot);
@@ -106,8 +108,10 @@ export class SettingsGateway {
         };
       }
       try {
+        evidence?.dispatched();
         await this.writeSnapshot(store, requestedSnapshot);
         await store.flush();
+        evidence?.confirmed();
       } catch (error) {
         // A failed flush must not leave unconfirmed values readable from the
         // Preferences in-memory cache. A durable reset intent remains retryable.
@@ -132,12 +136,17 @@ export class SettingsGateway {
   }
 
   private async readSnapshot(store: preferences.Preferences): Promise<SettingsSnapshot> {
-    return {
+    const snapshot: SettingsSnapshot = {
       autoCheckUpdate: (await store.get('autoCheckUpdate', DEFAULT_SNAPSHOT.autoCheckUpdate)) as boolean,
       tapBottomScrollTop: (await store.get('tapBottomScrollTop', DEFAULT_SNAPSHOT.tapBottomScrollTop)) as boolean,
       reduceMotion: (await store.get('reduceMotion', DEFAULT_SNAPSHOT.reduceMotion)) as boolean,
       crashLog: (await store.get('crashLog', DEFAULT_SNAPSHOT.crashLog)) as boolean,
     };
+    if (typeof snapshot.autoCheckUpdate !== 'boolean' || typeof snapshot.tapBottomScrollTop !== 'boolean' ||
+      typeof snapshot.reduceMotion !== 'boolean' || typeof snapshot.crashLog !== 'boolean') {
+      throw new Error('设置持久化数据格式异常');
+    }
+    return snapshot;
   }
 
   private copySnapshot(snapshot: SettingsSnapshot): SettingsSnapshot {

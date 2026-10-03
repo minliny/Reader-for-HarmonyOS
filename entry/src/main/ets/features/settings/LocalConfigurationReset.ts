@@ -1,5 +1,6 @@
 import preferences from '@ohos.data.preferences';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 import { SettingsGateway, createDefaultSettingsSnapshot } from './SettingsGateway';
 import { ReaderSettingsGateway } from '../reading/ReaderSettingsGateway';
@@ -19,10 +20,16 @@ const RESET_INTENT = 'interface-and-reading-settings-v1';
 export class LocalConfigurationReset {
   private static operations: Map<ReaderRuntimeOwner, Promise<boolean>> = new Map();
   private static requests: Map<ReaderRuntimeOwner, Promise<boolean>> = new Map();
+  private static evidence: WeakMap<ReaderRuntimeOwner, ReaderWriteEvidence> = new WeakMap();
+
+  static writeEvidence(owner: ReaderRuntimeOwner): ReaderWriteEvidence | undefined {
+    return LocalConfigurationReset.evidence.get(owner);
+  }
 
   static request(owner: ReaderRuntimeOwner): Promise<boolean> {
     const existing = LocalConfigurationReset.requests.get(owner);
     if (existing !== undefined) return existing;
+    LocalConfigurationReset.evidence.set(owner, new ReaderWriteEvidence());
     const requested = LocalConfigurationReset.prepareAndRequest(owner);
     LocalConfigurationReset.requests.set(owner, requested);
     void requested.finally((): void => {
@@ -69,12 +76,16 @@ export class LocalConfigurationReset {
     const pending = await store.get(RESET_INTENT_KEY, '');
     if (pending !== '' && pending !== RESET_INTENT) throw new Error('CONFIGURATION_RESET_INTENT_INVALID');
     if (pending === '' && !requested) return false;
+    const evidence = LocalConfigurationReset.evidence.get(owner) ?? new ReaderWriteEvidence();
+    LocalConfigurationReset.evidence.set(owner, evidence);
     LocalConfigurationReset.assertOwner(owner);
     if (pending === '') {
+      evidence.dispatched();
       await store.put(RESET_INTENT_KEY, RESET_INTENT);
       try { await store.flush(); }
       catch (error) { await store.delete(RESET_INTENT_KEY); throw error; }
     }
+    if (evidence.dispatchedCount === 0) evidence.dispatched();
     // Each operation uses the existing owner/serialized platform adapter.
     // No WebDAV credential, Core preference, book/source/position, imported
     // font file, reading-device identity or engine secret is removed.
@@ -96,6 +107,7 @@ export class LocalConfigurationReset {
     await store.delete(RESET_INTENT_KEY);
     try { await store.flush(); }
     catch (error) { await store.put(RESET_INTENT_KEY, RESET_INTENT); throw error; }
+    evidence.confirmed();
     return true;
   }
 }

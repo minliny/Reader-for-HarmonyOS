@@ -1,3 +1,6 @@
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { readerRecoveryView } from '../../app/ReaderRecoveryProjection';
+import type { SettingsOperationProjection } from '../settings/SettingsHost';
 import { TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_LABEL, TYPE_APP_INHERITED_OPTION } from '../common/ReaderTypography';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
@@ -21,6 +24,8 @@ export struct BookshelfSettingsPage {
 
   @StorageLink('readerBookshelfViewMode') private mode: string = 'cover';
   @Prop autoCheckUpdate: boolean = true;
+  @Prop operation: SettingsOperationProjection = { action: 'load' };
+  onReconcile: (generation: number) => void = (_generation: number): void => {};
   onBack: () => void = (): void => {};
   onAutoCheckUpdate: (enabled: boolean) => void = (_enabled: boolean): void => {};
   @State private error: string = '';
@@ -40,6 +45,8 @@ export struct BookshelfSettingsPage {
     Stack({ alignContent: Alignment.TopStart }) {
       Scroll() {
         Column() {
+          ReaderRecoveryNotice({ view: readerRecoveryView(this.operation.receipt, this.operation.readFacts),
+            actionLabel: '刷新设置', onReconcile: this.onReconcile });
           Column({ space: TOK_SPACE_MD }) {
             Row() {
               Text('自动检查更新').layoutWeight(1).fontSize(TYPE_APP_INHERITED_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));

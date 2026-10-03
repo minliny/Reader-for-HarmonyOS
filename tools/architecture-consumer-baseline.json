@@ -709,6 +709,13 @@
         "backgroundColor": 1
       },
       "reason": "One actual finite read-only recovery component shared by rule, shelf, source, settings and RSS consumers."
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderRecoveryNotice.ets",
+      "counts": {
+        "fontSize": 1
+      },
+      "reason": "One actual compact operation feedback implementation for pages without an existing status surface."
     }
   ]
 }

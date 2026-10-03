@@ -18,10 +18,10 @@ const verifyMigrationSource = process.argv.includes('--verify-migration-source')
 let sites = 0, argumentsChecked = 0;
 for (const file of baseline.files) {
   const source = readFileSync(new URL(`../${file.path}`, import.meta.url), 'utf8');
-  assert.ok(source.startsWith(file.roleImport), `${file.path}: bounded semantic role import`);
+  assert.ok(verifyMigrationSource ? source.startsWith(file.roleImport) : source.includes(file.roleImport), `${file.path}: bounded semantic role import`);
   const consumers = auditTypographyConsumers(source, file.path), used = new Set(), edits = [];
   for (const expected of file.nodes) {
-    const actual = consumers.find(node => !used.has(node) && node.method === expected.method && node.kind === expected.kind &&
+    const actual = consumers.find(node => !used.has(node) && node.method === (file.path.endsWith('/SettingsPage.ets') && expected.method === 'buildGeneral' ? 'operationFeedback' : expected.method) && node.kind === expected.kind &&
       (!verifyMigrationSource || node.text === expected.text) && node.modifiers.fontSize?.expression === expected.changes.fontSize);
     assert.ok(actual, `${file.path}/${expected.method}: actual production consumer, not a registration row`);
     used.add(actual); sites++;

@@ -1,3 +1,6 @@
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
+import type { SettingsOperationProjection } from './SettingsHost';
 import { TYPE_APP_INHERITED_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_ACTION, TYPE_SETTINGS_CACHE_ACTION, TYPE_SETTINGS_DANGER_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
@@ -64,6 +67,8 @@ export struct SettingsPage {
     crashLog: true,
   };
   @Prop isTablet: boolean;
+  @Prop operation: SettingsOperationProjection = { action: 'load' };
+  onReconcile: (generation: number) => void = (_generation: number): void => {};
   @StorageLink('readerAppThemeMode') private appThemeMode: string = 'system';
   @State private languageValue: string = '简体中文';
   @State private startupValue: string = '书架';
@@ -135,6 +140,7 @@ export struct SettingsPage {
 
   @Builder
   private buildHome() {
+    this.operationFeedback();
     CategorySection({ title: '设置' }) {
       this.navRow('通用设置', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_general_theme_night') : $r('app.media.settings_row_general')), (): void => {
         this.onSectionChange('general');
@@ -158,9 +164,19 @@ export struct SettingsPage {
       this.permissionCard();
     }
     this.dangerRow();
-    if (this.resetMessage.length > 0) {
-      Text(this.resetMessage).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+    this.operationFeedback();
+  }
+
+  private recovery(): ReaderRecoveryView { return readerRecoveryView(this.operation.receipt, this.operation.readFacts); }
+
+  @Builder
+  private operationFeedback() {
+    if (this.resetMessage.length > 0 || this.recovery().visible) {
+      Text(this.recovery().visible ? this.recovery().message : this.resetMessage).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .width('100%').padding(12);
+    }
+    if (this.recovery().canRetry) {
+      ReaderRecoveryAction({ label: '刷新设置', generation: this.recovery().generation, onReconcile: this.onReconcile });
     }
   }
 

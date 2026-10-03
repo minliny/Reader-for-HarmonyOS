@@ -5,11 +5,23 @@ import {
 } from './SourceGateway';
 import type { BookSourceJsonSelection } from '../../app/ReaderHostRegistry';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
+import { projectOperationFacts, type OperationFacts } from '../../app/ReaderOperationFacts';
+import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../app/ReaderPersistedReceiptProjection';
 import { errorMessageOf } from '../../app/ErrorMessage';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
 
 const DOMAIN = 0x5244;
+let sourceProjectionGeneration: number = 0;
+
+export interface SourceManagementProjection {
+  action: string;
+  sourceId: string;
+  receipt?: PersistedReceiptProjection<BookSource[]>;
+  readFacts?: OperationFacts<BookSource[]>;
+  confirmedParts?: number;
+}
 
 export type SourceManagementStatusKind = 'idle' | 'loading' | 'success' | 'warning' | 'error';
 
@@ -65,6 +77,9 @@ export class SourceOrchestrator {
   /** Session-local source-check projections; Core remains authoritative. */
   private checkResults: Map<string, BookSource> = new Map<string, BookSource>();
   private checkingSourceIds: Set<string> = new Set<string>();
+  private emitProjection: (projection: SourceManagementProjection) => void;
+  private latestProjection: SourceManagementProjection = { action: 'load', sourceId: '' };
+  private hasRead: boolean = false;
 
   constructor(
     emit: (sources: BookSource[]) => void,
@@ -72,12 +87,15 @@ export class SourceOrchestrator {
     emitStatus: (kind: SourceManagementStatusKind, message: string) => void =
       (_kind: SourceManagementStatusKind, _message: string): void => {},
     owner: ReaderRuntimeOwner = ReaderRuntimeOwner.current(),
+    emitProjection: (projection: SourceManagementProjection) => void =
+      (_projection: SourceManagementProjection): void => {},
   ) {
     this.owner = owner;
     this.gateway = new SourceGateway(owner);
     this.emit = emit;
     this.emitStatus = emitStatus;
     this.isCurrent = isCurrent;
+    this.emitProjection = emitProjection;
   }
 
   /** Enter Source Management: wait for in-flight toggles, then load the list. */
@@ -86,9 +104,27 @@ export class SourceOrchestrator {
     const session = this.session;
     this.checkResults.clear();
     this.checkingSourceIds.clear();
-    this.presentSources([]);
     this.publishStatus('loading', '正在读取 Core 书源数据…');
-    void this.loadList(session);
+    this.publishRead(session, 'loading');
+    this.operationChain = this.operationChain.then((): Promise<void> => this.loadList(session));
+  }
+
+  owns(owner: ReaderRuntimeOwner): boolean { return this.owner === owner; }
+
+  reconcile(generation: number): void {
+    const session = this.session;
+    this.operationChain = this.operationChain.then(async (): Promise<void> => {
+      if (!this.isCurrentSession(session)) return;
+      const receipt = this.latestProjection.receipt;
+      const read = this.latestProjection.readFacts;
+      if (receipt?.facts.generation === generation && receipt.facts.canRetry) {
+        this.publishReceipt(session, this.latestProjection.action, this.latestProjection.sourceId,
+          receipt.receipt.confirmation, 'reading');
+        await this.loadList(session);
+      } else if (read?.generation === generation && read.canRetry) {
+        this.publishRead(session, 'loading'); await this.loadList(session);
+      }
+    });
   }
 
   retryLoad(): void {
@@ -100,16 +136,20 @@ export class SourceOrchestrator {
   private async loadList(session: number): Promise<void> {
     // A toggle tapped just before leaving the page may still be awaiting Host
     // durability; Core rejects `source.list` while that persistence transaction
-    // is pending. Wait (bounded) for the toggle queue to drain, then load the
-    // authoritative list, retrying if an unrelated transaction still holds the
+    // is pending. The same serial chain drains admitted toggles before this
+    // read, retrying only if an unrelated transaction still holds the
     // bus so a transient rejection can never leave the page permanently blank.
-    await this.waitForSourceToggles(3000);
+    if (!this.isCurrentSession(session)) return;
     let sources: BookSource[];
     try {
       sources = await this.loadSourcesWithRetry();
     } catch (error) {
       if (this.isCurrentSession(session)) {
-        this.publishStatus('error', `书源列表读取失败：${(error as Error).message}`);
+        this.publishRead(session, 'failed', (error as Error).message);
+        const receipt = this.latestProjection.receipt;
+        if (receipt !== undefined) this.publishReceipt(session, this.latestProjection.action,
+          this.latestProjection.sourceId, receipt.receipt.confirmation, 'failed', (error as Error).message);
+        if (receipt === undefined) this.publishStatus('error', `书源列表读取失败：${(error as Error).message}`);
         hilog.error(DOMAIN, 'Reader',
           'Source management load failed: %{private}s', (error as Error).message);
       }
@@ -117,6 +157,12 @@ export class SourceOrchestrator {
     }
     if (this.isCurrentSession(session)) {
       this.presentSources(sources);
+      this.hasRead = true;
+      this.publishRead(session, 'succeeded');
+      const receipt = this.latestProjection.receipt;
+      if (receipt !== undefined) this.publishReceipt(session, this.latestProjection.action,
+        this.latestProjection.sourceId, receipt.receipt.confirmation, 'succeeded');
+      if (receipt?.receipt.confirmation === 'unknown') return;
       this.publishStatus('idle', '');
     }
   }
@@ -127,6 +173,7 @@ export class SourceOrchestrator {
    * completion never repaints a re-entry or a newer toggle.
    */
   toggleSource(id: string, enabled: boolean): void {
+    if (!this.isCurrentSession(this.session)) return;
     this.toggleSeq += 1;
     const seq = this.toggleSeq;
     const session = this.session;
@@ -265,6 +312,8 @@ export class SourceOrchestrator {
       return;
     }
     let importedCount = 0;
+    const evidence = new ReaderWriteEvidence();
+    this.gateway.observeWrites(evidence);
     let failureSummary: string | undefined = undefined;
     try {
       const summary = await this.gateway.importBookSourceDocument(
@@ -283,6 +332,7 @@ export class SourceOrchestrator {
         failureSummary = `失败 ${summary.failedCount} 个书源`;
       }
     } catch (error) {
+      this.publishReceipt(session, 'import', '', evidence.confirmation(), 'failed', errorMessageOf(error), evidence.confirmedCount);
       const importError = error instanceof Error ? error : new Error(errorMessageOf(error));
       if (!this.isCurrentSession(session)) {
         return;
@@ -295,11 +345,12 @@ export class SourceOrchestrator {
         return;
       }
       throw importError;
-    }
+    } finally { this.gateway.observeWrites(undefined); }
 
     if (!this.isCurrentSession(session)) {
       return;
     }
+    this.publishReceipt(session, 'import', '', evidence.confirmation(), 'reading', undefined, evidence.confirmedCount);
     let sources: BookSource[];
     try {
       sources = await this.gateway.loadSources();
@@ -311,6 +362,7 @@ export class SourceOrchestrator {
         'Book-source import persisted but source.list refresh failed: file=%{private}s count=%{public}d err=%{private}s',
         selection.fileName, importedCount, (error as Error).message);
       const refreshWarning = `Core 已导入 ${importedCount} 个书源，但列表刷新失败：${(error as Error).message}`;
+      this.publishReceipt(session, 'import', '', evidence.confirmation(), 'failed', (error as Error).message, evidence.confirmedCount);
       this.publishStatus('warning', refreshWarning);
       return { importedCount, refreshWarning, failureSummary };
     }
@@ -318,6 +370,8 @@ export class SourceOrchestrator {
       return;
     }
     this.presentSources(sources);
+    this.hasRead = true;
+    this.publishReceipt(session, 'import', '', evidence.confirmation(), 'succeeded', undefined, evidence.confirmedCount);
     hilog.info(DOMAIN, 'Reader',
       'Book-source import completed: file=%{private}s count=%{public}d',
       selection.fileName, importedCount);
@@ -356,7 +410,13 @@ export class SourceOrchestrator {
     // until the bus is free. Wait until Core reports idle, then retry once —
     // the serial chain means this retry only waits out the external operation,
     // never a concurrent toggle.
-    await this.updateSourceWithRetry(id, enabled);
+    if (this.owner !== ReaderRuntimeOwner.current()) return;
+    const evidence = new ReaderWriteEvidence();
+    this.gateway.observeWrites(evidence);
+    try { await this.updateSourceWithRetry(id, enabled); }
+    catch (error) { this.publishReceipt(session, 'toggle', id, evidence.confirmation(), 'failed', (error as Error).message); return; }
+    finally { this.gateway.observeWrites(undefined); }
+    this.publishReceipt(session, 'toggle', id, evidence.confirmation(), 'reading');
     if (!enabled) {
       try {
         // Security policy: disabling a source removes both session and
@@ -398,6 +458,7 @@ export class SourceOrchestrator {
     try {
       sources = await this.gateway.loadSources();
     } catch (error) {
+      this.publishReceipt(session, 'toggle', id, evidence.confirmation(), 'failed', (error as Error).message);
       hilog.warn(DOMAIN, 'Reader',
         'Source toggle persisted but list reload failed: sourceId=%{private}s enabled=%{private}s err=%{private}s',
         id, enabled, (error as Error).message);
@@ -405,6 +466,33 @@ export class SourceOrchestrator {
     }
     if (this.isCurrentSession(session) && seq === this.toggleSeq) {
       this.presentSources(sources);
+      this.hasRead = true;
+      this.publishReceipt(session, 'toggle', id, evidence.confirmation(), 'succeeded');
+    }
+  }
+
+  private publishRead(session: number, phase: 'loading' | 'failed' | 'succeeded', message?: string): void {
+    this.latestProjection = { action: this.latestProjection.action, sourceId: this.latestProjection.sourceId,
+      receipt: this.latestProjection.receipt, confirmedParts: this.latestProjection.confirmedParts,
+      readFacts: projectOperationFacts({ phase,
+      value: this.hasRead ? this.sources : undefined, canRetry: phase === 'failed',
+      generation: ++sourceProjectionGeneration, message }) };
+    if (this.isCurrentSession(session)) this.emitProjection(this.latestProjection);
+  }
+
+  private publishReceipt(session: number, action: string, sourceId: string,
+    confirmation: 'confirmed' | 'unknown' | 'undispatched', readback: 'reading' | 'failed' | 'succeeded',
+    refreshError?: string, confirmedParts?: number): void {
+    const receipt = projectPersistedReceipt<BookSource[]>({ confirmation, readback, value: this.hasRead ? this.sources : undefined,
+      refreshError, canRetry: confirmation !== 'undispatched' && readback !== 'reading' && (readback === 'failed' || confirmation === 'unknown'),
+      generation: ++sourceProjectionGeneration });
+    this.latestProjection = { action, sourceId, receipt, readFacts: this.latestProjection.readFacts,
+      confirmedParts: confirmedParts ?? this.latestProjection.confirmedParts };
+    if (this.isCurrentSession(session)) {
+      this.emitProjection(this.latestProjection);
+      this.publishStatus(readback === 'reading' ? 'loading' : readback === 'failed' || confirmation !== 'confirmed' ? 'warning' : 'idle',
+        readback === 'succeeded' && confirmation === 'confirmed' ? '' :
+          receipt.receipt.message + (refreshError === undefined ? '' : `：${refreshError}`));
     }
   }
 
@@ -483,6 +571,7 @@ export class SourceOrchestrator {
       // reports idle, then retry once; a genuine mismatch echo is rethrown
       // above and never retried.
       await this.waitForCoreIdle(5000);
+      if (this.owner !== ReaderRuntimeOwner.current()) throw new Error('Source runtime owner retired');
       await this.gateway.updateSource(id, { enabled });
     }
   }
@@ -526,17 +615,8 @@ export class SourceOrchestrator {
     }
   }
 
-  /**
-   * Resolves once every source toggle enqueued so far has settled (persisted,
-   * failed, or timed out). Source Management re-entry awaits this before the
-   * authoritative load; bounded so a stuck toggle cannot strand the entry.
-   */
-  private waitForSourceToggles(maxMillis: number): Promise<void> {
-    return Promise.race([this.operationChain, delay(maxMillis)]);
-  }
-
   private isCurrentSession(session: number): boolean {
-    return this.isCurrent() && session === this.session;
+    return this.owner === ReaderRuntimeOwner.current() && this.isCurrent() && session === this.session;
   }
 
   private presentSources(sources: BookSource[]): void {
@@ -556,11 +636,11 @@ export class SourceOrchestrator {
         checkMessage: checked?.checkMessage ?? source.checkMessage,
       };
     });
-    this.emit(this.sources);
+    if (this.owner === ReaderRuntimeOwner.current() && this.isCurrent()) this.emit(this.sources);
   }
 
   private publishStatus(kind: SourceManagementStatusKind, message: string): void {
-    if (this.isCurrent()) {
+    if (this.owner === ReaderRuntimeOwner.current() && this.isCurrent()) {
       this.emitStatus(kind, message);
     }
   }

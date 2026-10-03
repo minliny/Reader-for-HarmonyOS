@@ -1,3 +1,4 @@
+import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
 import type { JsonObject } from '@reader/core-harmony';
 import { errorMessageOf } from '../../app/ErrorMessage';
 import { httpUrlHostname, isPrivateNetworkTarget } from '../../app/HttpTransportPolicy';
@@ -196,7 +197,7 @@ export class SourceGateway {
         bookSourceType = bookSource['bookSourceType'];
       }
       if (sourceId === undefined || name === undefined) {
-        continue;
+        throw new Error('source.list returned a source without its identity or name');
       }
       const checkReports = wantsReports ? this.readCheckHistory(source['checkReports'], this.optionalString(source, 'sourceVersion'), reportVersion as number) : undefined;
       const latest = checkReports !== undefined && checkReports.length > 0 ? checkReports[0] : undefined;
@@ -345,8 +346,8 @@ export class SourceGateway {
    *
    * This compatibility API intentionally returns only after source.import has
    * returned a validated identity. It does not expose an ambiguous transport
-   * receipt; callers must therefore keep a rejected Promise in the existing
-   * save-failed bucket and must not invent a pending-commit fact here. The
+   * receipt; observed dispatch/ACK evidence therefore retains unknown writes
+   * while local parse/identity rejection remains undispatched. The
    * read-only source.list reconciliation belongs to SourceToolsOrchestrator.
    */
   async saveEditableSource(sourceId: string, text: string): Promise<void> {
@@ -431,6 +432,11 @@ export class SourceGateway {
     const result = await this.runtimeOwner.request('source.update', {
       sourceId,
       enabled: patch.enabled,
+    }).catch((error: Error) => {
+      // Typed Core admission refusal happens before executing this command.
+      // Generic transport/echo errors retain the actual dispatched evidence.
+      if (isReaderCoreTransactionPendingError(error)) this.writeEvidence?.rejectedBeforeExecution();
+      throw error;
     });
     const updated = result.data['source'];
     if (typeof updated !== 'object' || updated === null || Array.isArray(updated)) {

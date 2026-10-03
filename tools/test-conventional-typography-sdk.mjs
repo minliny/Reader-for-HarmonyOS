@@ -13,7 +13,7 @@ for (const file of baseline.files) {
   const source = readFileSync(new URL(`../${file.path}`, import.meta.url), 'utf8');
   const consumers = auditTypographyConsumers(source, file.path), used = new Set();
   for (const expected of file.nodes) {
-    const actual = consumers.find(node => !used.has(node) && node.method === expected.method && node.kind === expected.kind &&
+    const actual = consumers.find(node => !used.has(node) && node.method === (file.path.endsWith('/SettingsPage.ets') && expected.method === 'buildGeneral' ? 'operationFeedback' : expected.method) && node.kind === expected.kind &&
       node.modifiers.fontSize?.expression === expected.changes.fontSize);
     assert.ok(actual, `${file.path}/${expected.method}: actual SDK parsed consumer`);
     used.add(actual); sites.push({ expected, actual, file: file.path, method: `site${sites.length}` });

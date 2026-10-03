@@ -155,6 +155,7 @@ import {
 } from '../features/rss/RssPage';
 import { SettingsPage, type SettingsSnapshot } from '../features/settings/SettingsPage';
 import { SettingsHost } from '../features/settings/SettingsHost';
+import type { SettingsOperationProjection } from '../features/settings/SettingsHost';
 import { SettingsGateway } from '../features/settings/SettingsGateway';
 import { RulesManagementPage } from '../features/settings/RulesManagementPage';
 import {
@@ -175,6 +176,7 @@ import {
   SourceHost,
   type SourceImportCompletion,
   type SourceManagementStatusKind,
+  type SourceManagementProjection,
 } from '../features/source/SourceHost';
 import {
   buildSourceSwitchCommitParams,
@@ -441,6 +443,8 @@ struct Index {
   @State private sourceSources: BookSource[] = [];
   @State private sourceStatusKind: SourceManagementStatusKind = 'idle';
   @State private sourceStatusMessage: string = '';
+  @State private sourceOperation: SourceManagementProjection = { action: 'load', sourceId: '' };
+  @State private settingsOperation: SettingsOperationProjection = { action: 'load' };
   @State private sourceToolsSnapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   @State private rulesManagementSnapshot: RulesManagementSnapshot = EMPTY_RULES_MANAGEMENT_SNAPSHOT;
   @State private discoverPresentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
@@ -556,6 +560,8 @@ struct Index {
     (snapshot: SettingsSnapshot): void => { this.settingsSnapshot = snapshot; },
     (): SettingsSnapshot => this.settingsSnapshot,
     (): boolean => this.route === 'settings' || this.route === 'bookshelfSettings',
+    undefined,
+    (operation: SettingsOperationProjection): void => { this.settingsOperation = operation; },
   );
   private rulesManagementOrchestrator: RulesManagementOrchestrator | undefined;
   private syncOrchestrator: SyncOrchestrator | undefined;
@@ -566,6 +572,8 @@ struct Index {
       this.sourceStatusKind = kind;
       this.sourceStatusMessage = message;
     },
+    undefined,
+    (operation: SourceManagementProjection): void => { this.sourceOperation = operation; },
   );
   private sourceToolsOrchestrator: SourceToolsOrchestrator | undefined;
   private rssOrchestrator: RssOrchestrator | undefined;
@@ -869,6 +877,8 @@ struct Index {
       } else if (this.route === 'bookshelfSettings') {
         BookshelfSettingsPage({
           autoCheckUpdate: this.settingsSnapshot.autoCheckUpdate,
+          operation: this.settingsOperation,
+          onReconcile: (generation: number): void => this.settingsHost.reconcile(generation),
           onBack: (): void => this.returnFromBookshelfSettings(),
           onAutoCheckUpdate: (value: boolean): void => this.onSettingToggled('autoCheckUpdate', value),
         });
@@ -974,40 +984,11 @@ struct Index {
           onNextPage: (): void => this.getDiscoverOrchestrator().nextPage(),
         });
       } else if (this.route === 'settings') {
-        SettingsPage({
-          activeSection: this.settingsSection,
-          onSectionChange: (section: 'home' | 'general'): void => { this.settingsSection = section; },
-          onRestoreDefaults: (): Promise<boolean> => this.settingsHost.restoreDefaults(),
-          snapshot: this.settingsSnapshot,
-          isTablet: deviceInfo.deviceType === 'tablet',
-          onBack: (): void => this.returnToBookshelf(),
-          onOpenSourceManagement: (): void => this.openSourceManagement(),
-          onOpenRulesManagement: (): void => this.openRulesManagement(),
-          onOpenSync: (): void => this.openSync(),
-          onOpenBookshelfSettings: (): void => this.openBookshelfSettings(),
-          onRssRequested: (): void => this.openRss(),
-          onDiscoverRequested: (): void => this.openDiscover(),
-          onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
-            value: boolean): void => this.onSettingToggled(key, value),
-          onClearCache: (): Promise<boolean> => this.clearTextCache(),
-        });
+        this.settingsContent();
       } else if (this.route === 'rulesManagement') {
         this.rulesManagementContent();
       } else if (this.route === 'source') {
-        SourceManagementPage({
-          sources: this.sourceSources,
-          statusKind: this.sourceStatusKind,
-          statusMessage: this.sourceStatusMessage,
-          isTablet: deviceInfo.deviceType === 'tablet',
-          reduceMotion: this.settingsSnapshot.reduceMotion,
-          onBack: (): void => this.returnFromSourceManagement(),
-          onToggleSource: (id: string, enabled: boolean): void => this.onSourceToggled(id, enabled),
-          onDetectSource: (id: string): void => this.onSourceDetectionRequested(id),
-          onLoginSource: (id: string): void => this.onSourceLoginRequested(id),
-          onAddSource: (): void => this.openJsonImport('bookSource'),
-          onOpenTools: (): void => this.openSourceTools(),
-          onRetryLoad: (): void => this.sourceHost.retryLoad(),
-        });
+        this.sourceManagementContent();
       } else if (this.route === 'sourceTools') {
         SourceToolsPage({
           snapshot: this.sourceToolsSnapshot,
@@ -1431,6 +1412,49 @@ struct Index {
       hilog.error(DOMAIN, 'Reader', 'Group selection failed: %{private}s', errorMessageOf(error));
       this.getUIContext().getPromptAction().showToast({ message: '分组保存失败，请重试' });
     } finally { this.editingShelfGroupBusy = false; }
+  }
+
+  @Builder
+  private settingsContent() {
+    SettingsPage({
+      activeSection: this.settingsSection,
+      onSectionChange: (section: 'home' | 'general'): void => { this.settingsSection = section; },
+      onRestoreDefaults: (): Promise<boolean> => this.settingsHost.restoreDefaults(),
+      snapshot: this.settingsSnapshot,
+      operation: this.settingsOperation,
+      onReconcile: (generation: number): void => this.settingsHost.reconcile(generation),
+      isTablet: deviceInfo.deviceType === 'tablet',
+      onBack: (): void => this.returnToBookshelf(),
+      onOpenSourceManagement: (): void => this.openSourceManagement(),
+      onOpenRulesManagement: (): void => this.openRulesManagement(),
+      onOpenSync: (): void => this.openSync(),
+      onOpenBookshelfSettings: (): void => this.openBookshelfSettings(),
+      onRssRequested: (): void => this.openRss(),
+      onDiscoverRequested: (): void => this.openDiscover(),
+      onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
+        value: boolean): void => this.onSettingToggled(key, value),
+      onClearCache: (): Promise<boolean> => this.clearTextCache(),
+    });
+  }
+
+  @Builder
+  private sourceManagementContent() {
+    SourceManagementPage({
+      sources: this.sourceSources,
+      operation: this.sourceOperation,
+      onReconcile: (generation: number): void => this.sourceHost.reconcile(generation),
+      statusKind: this.sourceStatusKind,
+      statusMessage: this.sourceStatusMessage,
+      isTablet: deviceInfo.deviceType === 'tablet',
+      reduceMotion: this.settingsSnapshot.reduceMotion,
+      onBack: (): void => this.returnFromSourceManagement(),
+      onToggleSource: (id: string, enabled: boolean): void => this.onSourceToggled(id, enabled),
+      onDetectSource: (id: string): void => this.onSourceDetectionRequested(id),
+      onLoginSource: (id: string): void => this.onSourceLoginRequested(id),
+      onAddSource: (): void => this.openJsonImport('bookSource'),
+      onOpenTools: (): void => this.openSourceTools(),
+      onRetryLoad: (): void => this.sourceHost.retryLoad(),
+    });
   }
 
   @Builder

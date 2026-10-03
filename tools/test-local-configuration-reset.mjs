@@ -44,7 +44,8 @@ async function fixture(){
  const readingModule=compile('features/reading/ReaderSettingsGateway.ts',{'@ohos.data.preferences':{default:preferences},'../../app/ReaderRuntimeOwner':Runtime,'../../app/ReaderThemeHost':themeModule,'./ReaderSettingsState':settings});
  const ttsModule=compile('features/reading/ReaderTtsPreferencesGateway.ts',{'@ohos.data.preferences':{default:preferences},'../../app/ReaderRuntimeOwner':Runtime,'../../app/ReaderThemeHost':themeModule,'./ReaderTtsPreferencesState':tts});
  const credentials={saveBookshelfViewMode:async v=>{trace.push('mode');if(fail==='mode'){fail='';throw Error('flush:mode');}mode=v;}};
- const modules={'@ohos.data.preferences':{default:preferences},'../../app/ReaderRuntimeOwner':Runtime,'../../app/ReaderThemeHost':themeModule,'./SettingsGateway':settingModule,
+ const evidenceModule=compile('app/ReaderWriteEvidence.ts',{});
+ const modules={'../../app/ReaderWriteEvidence':evidenceModule,'@ohos.data.preferences':{default:preferences},'../../app/ReaderRuntimeOwner':Runtime,'../../app/ReaderThemeHost':themeModule,'./SettingsGateway':settingModule,
  '../reading/ReaderSettingsGateway':readingModule,'../reading/ReaderSettingsState':settings,'../reading/ReaderTtsPreferencesGateway':ttsModule,'../reading/ReaderTtsPreferencesState':tts,
  '../sync/WebDavCredentialStore':{WebDavCredentialStore:{instance:credentials}}};
  let Reset=compile('features/settings/LocalConfigurationReset.ts',modules).LocalConfigurationReset;
