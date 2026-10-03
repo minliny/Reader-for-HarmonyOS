@@ -45,7 +45,7 @@ assert.match(index,
   /onBookshelfSettingsRequested: \(\): void => this\.openBookshelfSettings\(\)/,
   'the more-menu shelf settings entry still enters the settings flow');
 assert.match(index, /'bookshelfManagement'/);
-assert.match(index, /this\.route = 'bookshelfManagement';[\s\S]*?getBookshelfManagementOrchestrator\(\)\.open\(\)/);
+assert.match(index, /this\.route = 'bookshelfManagement';[\s\S]*?bookshelfHost\.openManagement\(\)/);
 assert.match(index, /BookshelfManagementPage\(\{/);
 
 console.log('bookshelf management Core ownership contract: PASS');

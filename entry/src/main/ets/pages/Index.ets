@@ -3,7 +3,6 @@ import { FrameCallback } from '@kit.ArkUI';
 import { readerAppColor } from '../features/common/ReaderThemeRegistry';
 import { BookshelfSettingsPage } from '../features/bookshelf/BookshelfSettingsPage';
 import { BookshelfGroupSelector } from '../features/bookshelf/BookshelfGroupSelector';
-import { BookshelfManagementGateway } from '../features/bookshelf/BookshelfManagementGateway';
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderCoreRequestError } from '@reader/core-harmony';
 import { SearchHost } from '../features/search/SearchHost';
@@ -33,10 +32,10 @@ import { BookRemovalDialog } from '../features/bookshelf/BookRemovalDialog';
 import { BookshelfMultiSelectPage } from '../features/bookshelf/BookshelfMultiSelectPage';
 import { BookshelfManagementPage } from '../features/bookshelf/BookshelfManagementPage';
 import {
-  BookshelfManagementOrchestrator,
+  BookshelfHost,
   EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT,
   type BookshelfManagementSnapshot,
-} from '../features/bookshelf/BookshelfManagementOrchestrator';
+} from '../features/bookshelf/BookshelfHost';
 import { DiscoverPage } from '../features/discover/DiscoverPage';
 import {
   DiscoverOrchestrator,
@@ -546,7 +545,12 @@ struct Index {
   private readonly bookshelfViewState: BookshelfViewState = new BookshelfViewState();
   /** Bounded, process-local single-flight only; Core remains the durable cache. */
   private discoverOrchestrator: DiscoverOrchestrator | undefined;
-  private bookshelfManagementOrchestrator: BookshelfManagementOrchestrator | undefined;
+  private bookshelfHost: BookshelfHost = new BookshelfHost(
+    (snapshot: BookshelfManagementSnapshot): void => {
+      this.bookshelfManagementSnapshot = snapshot;
+    },
+    (): boolean => this.route === 'bookshelfManagement',
+  );
   private settingsHost: SettingsHost = new SettingsHost(
     (snapshot: SettingsSnapshot): void => { this.settingsSnapshot = snapshot; },
     (): SettingsSnapshot => this.settingsSnapshot,
@@ -881,22 +885,22 @@ struct Index {
           snapshot: this.bookshelfManagementSnapshot,
           onBack: (): void => this.returnToBookshelf(),
           onGroupNameChanged: (value: string): void =>
-            this.getBookshelfManagementOrchestrator().updateGroupName(value),
+            this.bookshelfHost.updateGroupName(value),
           onGroupOrderChanged: (value: string): void =>
-            this.getBookshelfManagementOrchestrator().updateGroupOrder(value),
+            this.bookshelfHost.updateGroupOrder(value),
           onSelectGroup: (groupId: number): void =>
-            this.getBookshelfManagementOrchestrator().selectGroup(groupId),
-          onClearGroupEditor: (): void => this.getBookshelfManagementOrchestrator().clearGroupEditor(),
-          onSaveGroup: (): void => this.getBookshelfManagementOrchestrator().saveGroup(),
+            this.bookshelfHost.selectGroup(groupId),
+          onClearGroupEditor: (): void => this.bookshelfHost.clearGroupEditor(),
+          onSaveGroup: (): void => this.bookshelfHost.saveGroup(),
           onToggleGroupShown: (groupId: number): void =>
-            this.getBookshelfManagementOrchestrator().toggleGroupShown(groupId),
+            this.bookshelfHost.toggleGroupShown(groupId),
           onDeleteGroup: (groupId: number): void =>
-            this.getBookshelfManagementOrchestrator().deleteGroup(groupId),
+            this.bookshelfHost.deleteGroup(groupId),
           onSelectBook: (sourceId: string, bookId: string): void =>
-            this.getBookshelfManagementOrchestrator().selectBook(sourceId, bookId),
+            this.bookshelfHost.selectBook(sourceId, bookId),
           onAssignmentGroupChanged: (value: string): void =>
-            this.getBookshelfManagementOrchestrator().updateAssignmentGroup(value),
-          onAssignBook: (): void => this.getBookshelfManagementOrchestrator().assignSelectedBook(),
+            this.bookshelfHost.updateAssignmentGroup(value),
+          onAssignBook: (): void => this.bookshelfHost.assignSelectedBook(),
         });
       } else if (this.route === 'search') {
         SearchPage({
@@ -1446,7 +1450,7 @@ struct Index {
     if (book === undefined || this.editingShelfGroupBusy) return;
     this.editingShelfGroupBusy = true;
     try {
-      await new BookshelfManagementGateway(ReaderRuntimeOwner.current()).assignGroup(book, '');
+      await this.bookshelfHost.assignDefaultGroup(book);
       this.bookshelfLoadGeneration += 1;
       if (this.route === 'bookshelf') this.refreshBookshelf();
       this.editingShelfGroupBook = undefined;
@@ -1462,7 +1466,7 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'bookshelfManagement';
-    this.getBookshelfManagementOrchestrator().open();
+    this.bookshelfHost.openManagement();
   }
 
   private openBookshelfMultiSelect(initialBook?: ShelfBook): void {
@@ -1532,18 +1536,6 @@ struct Index {
       );
     }
     return this.rulesManagementOrchestrator;
-  }
-
-  private getBookshelfManagementOrchestrator(): BookshelfManagementOrchestrator {
-    if (this.bookshelfManagementOrchestrator === undefined) {
-      this.bookshelfManagementOrchestrator = new BookshelfManagementOrchestrator(
-        (snapshot: BookshelfManagementSnapshot): void => {
-          this.bookshelfManagementSnapshot = snapshot;
-        },
-        (): boolean => this.route === 'bookshelfManagement',
-      );
-    }
-    return this.bookshelfManagementOrchestrator;
   }
 
   private onSettingToggled(
