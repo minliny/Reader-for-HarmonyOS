@@ -2,7 +2,6 @@ import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
 import type { RssOriginalMutationIdentity } from './RssMutationRecoveryContract';
 import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
 import type { RssSubscriptionManagementItem } from './RssPresentationContract';
-export type { RssSubscriptionManagementItem } from './RssPresentationContract';
 import { ReaderButton } from '../common/ReaderButton';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { TYPE_FORM_COMPACT_ACTION, TYPE_SOURCE_MANAGEMENT_META, TYPE_SOURCE_MANAGEMENT_TITLE } from '../common/ReaderTypography';
@@ -42,6 +41,8 @@ import {
   TOK_SPACE_XS,
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
+
+export type { RssSubscriptionManagementItem } from './RssPresentationContract';
 
 /**
  * Figma-backed RSS subscription management child page.

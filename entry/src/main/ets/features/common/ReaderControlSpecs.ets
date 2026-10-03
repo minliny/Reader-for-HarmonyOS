@@ -261,12 +261,19 @@ const BUTTONS: Record<ReaderButtonSpecId, ReaderButtonSpec> = {
 export function resolveReaderButtonSpec(id: ReaderButtonSpecId): ReaderButtonSpec { return BUTTONS[id]; }
 
 export type ReaderFormFieldSpecId = 'source-debug' | 'rules-input' | 'sync-credential' | 'form-body' | 'form-url' | 'shelf-native' | 'shelf-order' | 'source-code' | 'reader-replace-text' | 'reader-content-search' | 'directory-rule-pattern' | 'directory-rule-level' | 'tts-manager-name' | 'tts-manager-value';
+export interface ReaderFormFieldInsets {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+const CONTENT_SEARCH_INSETS: ReaderFormFieldInsets = { left: 2, right: 2, top: 0, bottom: 0 };
 export interface ReaderFormFieldSpec {
   text: ReaderTextStyle | ReaderInheritedTextStyle | undefined;
   height: number;
   width: number | string | undefined;
   nativeLayoutWeight: number | undefined;
-  nativeInsets: { left: number; right: number; top: number; bottom: number } | undefined;
+  nativeInsets: ReaderFormFieldInsets | undefined;
   transparentSurface: boolean;
   borderRole: ReaderAppColorRole;
   borderWidth: number;
@@ -295,7 +302,7 @@ const FIELDS: Record<ReaderFormFieldSpecId, ReaderFormFieldSpec> = {
   'tts-manager-value': { width: '100%', nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, caretRole: undefined, placeholderStyle: undefined, allPadding: undefined, multiline: false, numberInput: false, text: TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY, height: 42, radius: 10, horizontalPadding: 12,
     textRole: 'app.ReaderTtsConfigOverlay.managerForm.fontColor.FF332C25', surfaceRole: 'app.ReaderTtsConfigOverlay.managerForm.backgroundColor.CCFFF8EF',
     placeholderRole: 'app.ReaderTtsConfigOverlay.managerForm.placeholderColor.FFB4A697', hasBorder: true, borderRole: 'app.ReaderTtsConfigOverlay.managerForm.color.66B4A697', borderWidth: 0.5 },
-  'reader-content-search': { width: undefined, nativeLayoutWeight: 1, nativeInsets: { left: 2, right: 2, top: 0, bottom: 0 }, transparentSurface: true,
+  'reader-content-search': { width: undefined, nativeLayoutWeight: 1, nativeInsets: CONTENT_SEARCH_INSETS, transparentSurface: true,
     text: TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT, placeholderStyle: TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_PLACEHOLDER,
     height: 14, radius: 0, horizontalPadding: undefined, allPadding: undefined, textRole: 'TOK_READ_INK', surfaceRole: undefined,
     caretRole: 'TOK_READ_INK', placeholderRole: 'TOK_READ_MUTED', hasBorder: false, borderRole: 'TOK_LINE', borderWidth: TOK_BORDER_W, multiline: false, numberInput: false },
