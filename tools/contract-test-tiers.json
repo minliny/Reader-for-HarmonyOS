@@ -498,6 +498,7 @@
     "test-settings-theme-write-consumer.mjs",
     "test-shelf-resume-handoff.mjs",
     "test-shelf-source-name-resolution.mjs",
+    "test-source-canonical-progress-owner.mjs",
     "test-source-content-correction.mjs",
     "test-source-settings-receipt-consumers.mjs",
     "test-source-supply-chain.mjs",
