@@ -1,9 +1,10 @@
+import {actualSourceManagementTypes,actualSourceManagementHostField} from './source-management-owner-probe.mjs';
 import {actualBookshelfOperationTypes,actualBookshelfHostField} from './bookshelf-operation-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
 import {boundedSurfaceSdk,boundedMembers} from './bounded-surface-sdk-probe.mjs';
-import {fixture,settle as settleOwner,deferred,origin,target,session,Runtime,read,gatewayExports,setCurrentRuntime} from './source-switch-owner-probe.mjs';
+import {fixture,settle as settleOwner,deferred,origin,target,session,Runtime,read,gatewayExports,setCurrentRuntime,Core} from './source-switch-owner-probe.mjs';
 const {ProductionHost:ReadingEntryHost,setRuntime:setEntryRuntime}=await import('./reading-entry-owner-probe.mjs');
 const evidence=await import('../../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
 import * as horizontal from '../../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
@@ -15,7 +16,7 @@ const methods=['getSourceSwitchHost','sourceSwitchContext','sourceSwitchLease','
  'bindSourceSwitchReader','applySourceSwitchEffect','openSourceSwitch','openDetailSourceSwitch','retrySourceSwitch','refreshSourceSwitch',
  'sourceSwitchProbeQuery','knownSearchSourceCandidates','onPickSource','retryFailedSourceSwitch','dismissSourceSwitchFailure','onRollbackSourceSwitch',
  'closeSourceSwitch','performSourceSwitchSeam','resolveReaderSourceSwitchTransaction','reconcilePendingSourceSwitches','currentSourceSwitchTransactionId',
- 'nextNavigationGeneration','isCurrentRuntime','openReading','onRemoteSessionReady','installRemoteReadingSession',
+ 'retireSourceManagementPresentation','nextNavigationGeneration','isCurrentRuntime','openReading','onRemoteSessionReady','installRemoteReadingSession',
  'getReadingEntryHost','readingEntryLease','applyReadingEntrySnapshot','bindReadingEntryReader','retireReadingEntryPresentation',
  'detailReadableAdmission','detailBookKey','chooseCachedChapterRefresh','showReadingFailure','showIndexAlert',
  'applyReadingCommit','getReadingOfflineHost','cleanupRetiredSourceCache','sourceSwitchOverlayContent',
@@ -51,8 +52,11 @@ export function makeIndex(f,{navigation=1,reading=false,cacheAuthority}={}){
    openRemoteBookDetail(seed,name,_shelf,resume,_candidates,_names,parent,validated){this.effects.push({seed,name,resume,parent,validated});},
    reopenSwitchedBook(book){this.effects.push({reopen:book});},returnToReadingOrigin(){this.route=this.readingOriginRoute;},
    isKnownDetailChapter:n=>index.detailToc.some(e=>e.index===n)});
- const shelfTypes=actualBookshelfOperationTypes({ReaderRuntimeOwner:Runtime});
+ const shelfTypes=actualBookshelfOperationTypes({ReaderRuntimeOwner:Runtime,ReaderCoreGateway:Core});
  index.bookshelfHost=actualBookshelfHostField(index,shelfTypes.Host,{setOrCreate(){}});
+ const sourceTypes=actualSourceManagementTypes({ReaderRuntimeOwner:Runtime});
+ index.sourcePresentationIdentity='';
+ index.sourceHost=actualSourceManagementHostField(index,sourceTypes.SourceHost);
  const acquire=f.runtime.bookAcquisitions;f.runtime.bookAcquisitions=()=>({...acquire(),readingProjectionRevision:()=>0,setPreparationVisible(){}});
  const mount=()=>{index.sourceSwitchOverlayContent();return p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchPanel).at(-1);};
  const rows=()=>p.walk(index).filter(x=>x instanceof leafDeps.CandidateRow);

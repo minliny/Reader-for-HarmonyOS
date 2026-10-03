@@ -28,7 +28,7 @@ function fixture(options={}){
  for(const [n,d] of Object.entries(Object.getOwnPropertyDescriptors(Methods.prototype)))if(n!=='constructor'&&typeof d.value==='function')h[n]=d.value;
  Object.assign(h,{route:'detail',readingOriginRoute:'detail',detailReturnRoute:'search',navigationGeneration:0,detailToc:[],readingEntryScopeId:-1,
   sourceSwitchVisible:false,sourceSwitchState:{kind:'discovering'},searchPublicationRevision:0,searchHost:{searchedSourceIds:()=>[],publication:{shelfAt:()=>[]}},
-  bookshelfHost:{loadShelfBook:async()=>canonicalShelf},remoteCatalogRefreshAt:new Map(),directoryBookmarkMutationGeneration:0,offlineMutationGeneration:0,
+  remoteCatalogRefreshAt:new Map(),directoryBookmarkMutationGeneration:0,offlineMutationGeneration:0,
   showReadingFailure(){assert.fail('must not trap body failures in a modal');},showIndexAlert(){assert.fail('unexpected modal');},
   sourceDisplayName:(id,name)=>name??id,hasDeclaredCoverUrl:()=>true,readingDetailForShelf:b=>({...b})});
  directoryReadProbe.attach(h,f.runtime,{ReaderRuntimeOwner:Runtime});
@@ -41,7 +41,7 @@ function fixture(options={}){
    if(options.progressMissing)return{data:{found:false,progress:null,progressRevision:'r1'}};
    return{data:{found:true,progressRevision:'r1',progress:{sourceId:p.sourceId,bookId:p.bookId,chapterIndex:options.progressIndex??11,chapterOffset:52,chapterProgress:0,updatedAt:1}}};
   }
-  if(m==='bookshelf.get'&&options.shelfOverride)return{data:{book:canonicalShelf??null}};
+  if(m==='bookshelf.get'&&(options.shelfOverride||p.sourceId==='local'))return{data:{book:canonicalShelf??null}};
   return requests(m,p,o);
  };
  const acquire=f.runtime.bookAcquisitions;f.runtime.bookAcquisitions=()=>({...acquire(),readingProjectionRevision:()=>0,setPreparationVisible(){},endSearch(){}});
@@ -146,7 +146,7 @@ await check('reader-identity-retained-across-appearance',async()=>{
 });
 await check('local-sparse-search-membership-loads-real-owner-record',async()=>{
  const t=fixture(),h=t.h;h.route='search';h.shelfBooks=[];const result={sourceId:'local',sourceName:'本地',bookId:'import-real-id',title:'真实搜索书名',author:'作者',kind:'epub'};
- canonicalShelf={...result,addedAt:10,intro:'完整本地简介'};h.onSearchResultSelected(result);assert.equal(h.route,'search');await settle();assert.equal(h.route,'detail');assert.equal(h.detailBook.bookId,result.bookId);assert.equal(h.detailBook.title,result.title);assert.equal(h.detailInBookshelf,true);assert.equal(h.detailBook.intro,'完整本地简介');assert.equal(h.detailReturnRoute,'search');assert.equal(h.remoteReadingSeed,undefined);await settle();assert.equal(h.detailToc[0].title,'本地第一章');h.openReading(undefined);assert.equal(h.route,'reading');
+ canonicalShelf={...result,addedAt:10,sortIndex:0,intro:'完整本地简介'};h.onSearchResultSelected(result);assert.equal(h.route,'search');await settle();assert.equal(h.route,'detail');assert.equal(h.detailBook.bookId,result.bookId);assert.equal(h.detailBook.title,result.title);assert.equal(h.detailInBookshelf,true);assert.equal(h.detailBook.intro,'完整本地简介');assert.equal(h.detailReturnRoute,'search');assert.equal(h.remoteReadingSeed,undefined);await settle();assert.equal(h.detailToc[0].title,'本地第一章');h.openReading(undefined);assert.equal(h.route,'reading');
 });
 await check('directory-honest-empty-error-copy',async()=>{
  const Directory=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/FullDirectoryPanel.ets',import.meta.url),['catalogEmptyMessage']),d=Object.assign(new Directory(),{entries:[],catalogMessage:'目录解析失败'});

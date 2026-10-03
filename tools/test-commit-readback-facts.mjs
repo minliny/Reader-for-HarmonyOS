@@ -261,8 +261,10 @@ async function openEditorFor(orchestrator, snapshots) {
   const owner = {
     calls,
     supportsCoreCapability: () => false,
-    async request(method) {
+    async request(method, params, options) {
       calls.push(method);
+      if (options?.canDispatch?.() === false) throw new Error('fixture request retired before actual dispatch');
+      options?.onDispatch?.();
       if (method === 'source.list') return { data: { sources: [] } };
       if (method === 'source.export') {
         return { data: { data: `[${editableSourceJson}]`, count: 1, format: 'json' } };

@@ -31,7 +31,7 @@ export const Runtime = { current: () => currentRuntime, isCurrent: runtime => cu
 const common = { ReaderRuntimeOwner: Runtime, ...sdk, ...errors, ...metadata, ...acquisition, ...category, ...scheduler };
 export const ReaderCoreRequestError = sdk.ReaderCoreRequestError;
 export const Gateway = compile(read('features/source/SourceSwitchGateway.ts'), 'SourceSwitchGateway', common);
-const Core = compile(read('app/ReaderCoreGateway.ts'), 'ReaderCoreGateway', common);
+export const Core = compile(read('app/ReaderCoreGateway.ts'), 'ReaderCoreGateway', common);
 export const gatewayExports = compile(read('features/source/SourceSwitchGateway.ts'),
   '{buildSourceSwitchCommitParams,sourceSwitchCandidateKey}', common);
 export const hostSource = read('features/source/SourceSwitchHost.ts');

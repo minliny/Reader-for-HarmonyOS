@@ -1,3 +1,4 @@
+import {actualSourceManagementTypes,actualSourceManagementHostField} from './source-management-owner-probe.mjs';
 import {actualBookshelfOperationTypes,actualBookshelfHostField} from './bookshelf-operation-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
@@ -16,7 +17,7 @@ const methods=['getReadingEntryHost','readingEntryLease','applyReadingEntrySnaps
  'readingPreparationContext','sharedReadingPreparationSeeds','preparePersistedShelfBooks','prepareVisibleReadingBooks','onSearchVisibilityChanged',
  'openLocalBookDetail','openRemoteBookDetail','onRemoteSessionReady','installRemoteReadingSession','probeRemoteContentVerdict','refreshCachedChapterFromPrompt','chooseCachedChapterRefresh',
  'refreshDetailAcquisitionProjection','openReading','isKnownDetailChapter','presentPreparedReading','returnToReadingOrigin','applyReaderDirectoryProjection',
- 'nextNavigationGeneration','retireSourceSwitchPresentation','retireRssPresentation','retireRssEditorPresentation','isCurrentRuntime','showIndexAlert','showReadingFailure',
+ 'retireSourceManagementPresentation','nextNavigationGeneration','retireSourceSwitchPresentation','retireRssPresentation','retireRssEditorPresentation','isCurrentRuntime','showIndexAlert','showReadingFailure',
  'externalDirectory','detailContent','detailSurface','isCurrentDetailPresentation','detailShelfAdmissionIdentity','isCurrentDetailShelfAdmission','detailReadableAdmission','detailBookKey','remoteContentVerdictLabel'];
 const Runtime={current:()=>{throw Error('consumer must use captured mounted Runtime');},isCurrent:owner=>ProductionHost.forRuntime(owner).owns(owner)};
 const emptyAdmission={key:'',generation:0,adding:false,cancelling:false,message:'',confirmation:'none'};
@@ -49,6 +50,9 @@ export function makeIndex(f,{route='search',mount=1,indexSource=read('pages/Inde
  const shelfRuntime={current:()=>f.runtime,isCurrent:owner=>owner===f.runtime&&!f.runtime.closed};
  const shelfTypes=actualBookshelfOperationTypes({ReaderRuntimeOwner:shelfRuntime});
  idx.bookshelfHost=actualBookshelfHostField(idx,shelfTypes.Host,{setOrCreate(){}});
+ const sourceTypes=actualSourceManagementTypes({ReaderRuntimeOwner:shelfRuntime});
+ idx.sourcePresentationIdentity='';
+ idx.sourceHost=actualSourceManagementHostField(idx,sourceTypes.SourceHost);
  const owner=()=>ProductionHost.forRuntime(f.runtime);
  const render=()=>{idx.detailContent();return p.walk(idx).filter(c=>c instanceof leaf).at(-1);};
  return{p,idx,owner,render,leaf};
