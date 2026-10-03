@@ -263,11 +263,7 @@ import {
   ReaderHttpTtsGateway,
   type ReaderHttpTtsConfig,
 } from './ReaderHttpTtsGateway';
-import {
-  readerOnlineTtsProfile,
-  type ReaderTtsAudioFormat,
-  type ReaderOnlineTtsProfile,
-} from './ReaderOnlineTtsProfile';
+import { ReaderTtsConfigurationHost, type ReaderTtsConfigurationSnapshot } from './ReaderTtsConfigurationHost';
 import type { ReaderTtsEngineOption } from './ReaderTtsFullPanel';
 import {
   ReaderTtsSessionCoordinator,
@@ -1224,6 +1220,8 @@ export struct ReadingExperience {
   private ttsHttpGateway: ReaderHttpTtsGateway | undefined = undefined;
   private ttsCoordinator: ReaderTtsSessionCoordinator | undefined = undefined;
   private ttsConfig: ReaderTtsConfig | undefined = undefined;
+  private ttsConfigurationHost: ReaderTtsConfigurationHost | undefined = undefined;
+  private ttsConfigurationNotice: string | undefined = undefined;
   private readonly unicodeProbeController: TextController = new TextController();
   private chapterTitleMeasurementController: TextController = new TextController();
   private measuredChapterTitleHeightVp: number = 0;
@@ -1921,6 +1919,9 @@ export struct ReadingExperience {
     this.readingRecordActiveSinceMs = 0;
     this.readingRecordPendingMillis = 0;
     const ttsCoordinator = this.ttsCoordinator;
+    this.ttsConfigurationHost?.retire();
+    this.ttsConfigurationHost = undefined;
+    this.ttsConfigurationNotice = undefined;
     this.ttsCoordinator = undefined;
     this.ttsGateway = undefined;
     this.ttsHttpGateway = undefined;
@@ -2138,7 +2139,7 @@ export struct ReadingExperience {
           this.admitSessionControlClosing(readerControlHostClosing(state));
           if (wasPresented !== this.controlsPresentedForWindow()) this.applyWindowPolicyForChromeOwner();
         },
-        onTemporaryLayerChange: (active: boolean): void => { this.controlTemporaryLayer = active; },
+        onTemporaryLayerChange: (active: boolean): void => this.onControlTemporaryLayerChange(active),
         onInputActivity: (): void => this.invalidateControlBackdrop(),
         onBackdropRegionsChange: (regions: ReaderControlBackdropRect[], ready: boolean): void => {
           this.controlBackdropRegions = regions;
@@ -7660,13 +7661,14 @@ export struct ReadingExperience {
     this.ttsGateway = gateway;
     this.ttsHttpGateway = httpGateway;
     this.ttsCoordinator = coordinator;
+    this.requireTtsConfigurationHost();
     this.ttsAvailabilityResolved = false;
     // Voice enumeration and HTTP-engine management populate the full settings
     // surface, but neither is required to start foreground system speech. Load
     // them independently so the first play tap is not held behind slow platform
     // discovery on a physical device.
     if (this.ttsPresentationMetadata === undefined) {
-      const metadata = this.loadTtsPresentationMetadata(owner, coordinator, httpGateway, lifecycleToken);
+      const metadata = this.loadTtsPresentationMetadata(owner, coordinator, lifecycleToken);
       this.ttsPresentationMetadata = metadata;
       void metadata.then((): void => {
         if (this.ttsPresentationMetadata === metadata) this.ttsPresentationMetadata = undefined;
@@ -7679,6 +7681,7 @@ export struct ReadingExperience {
         if (configGeneration === this.ttsConfigMutationGeneration) {
           this.ttsConfig = config;
           this.ttsEngine = config?.engine ?? 'system';
+          this.ttsConfigurationHost?.admitInitialConfig(config);
         }
         if (available && config !== undefined && configGeneration === this.ttsConfigMutationGeneration) {
           try {
@@ -7709,24 +7712,18 @@ export struct ReadingExperience {
   private async loadTtsPresentationMetadata(
     owner: ReaderRuntimeOwner,
     coordinator: ReaderTtsSessionCoordinator,
-    httpGateway: ReaderHttpTtsGateway,
     lifecycleToken: number,
   ): Promise<void> {
     const preferenceGeneration = this.ttsPreferenceMutationGeneration;
     const sourceId = this.sourceId;
     const bookId = this.bookId;
-    const previousEngines = this.ttsHttpEngines;
     let preferencesLoaded = false;
     const isCurrent = (): boolean => this.isSessionActive(lifecycleToken) && this.ttsCoordinator === coordinator &&
       sourceId === this.sourceId && bookId === this.bookId;
     // The three sources are independent. A slow provider list/voice enumeration
     // cannot withhold saved UI preferences or another already-loaded result.
     await Promise.all([
-      httpGateway.list().then((engines: ReaderHttpTtsConfig[]): void => {
-        if (isCurrent() && this.ttsHttpEngines === previousEngines) this.ttsHttpEngines = engines;
-      }).catch((error: Error): void => {
-        hilog.error(0x5244, 'Reader', '%{private}s', `Reader TTS optional HTTP list failed: ${error.message}`);
-      }),
+      this.requireTtsConfigurationHost().refreshMetadata(),
       this.ttsPreferencesGateway.load().then((preferences: ReaderTtsPreferencesSnapshot): void => {
         if (!isCurrent() || preferenceGeneration !== this.ttsPreferenceMutationGeneration) return;
         this.admitTtsPreferences(preferences, this.ttsVoiceOptions);
@@ -7821,23 +7818,6 @@ export struct ReadingExperience {
       backgroundPlayback: value.backgroundPlayback,
       keepScreenOn: value.keepScreenOn,
     };
-  }
-
-  /** Copy the optional online-TTS fields without relying on object spread. */
-  private copyReaderOnlineTtsProfile(value: ReaderOnlineTtsProfile): ReaderOnlineTtsProfile {
-    const copy: ReaderOnlineTtsProfile = {
-      version: value.version,
-      voice: value.voice,
-      format: value.format,
-    };
-    if (value.credentialRef !== undefined) copy.credentialRef = value.credentialRef;
-    if (value.protocol !== undefined) copy.protocol = value.protocol;
-    if (value.model !== undefined) copy.model = value.model;
-    if (value.credentialHeader !== undefined) copy.credentialHeader = value.credentialHeader;
-    if (value.credentialPrefix !== undefined) copy.credentialPrefix = value.credentialPrefix;
-    if (value.pcmSampleRate !== undefined) copy.pcmSampleRate = value.pcmSampleRate;
-    if (value.pcmChannels !== undefined) copy.pcmChannels = value.pcmChannels;
-    return copy;
   }
 
   private async persistTtsPreferencesSnapshot(snapshot: ReaderTtsPreferencesSnapshot): Promise<void> {
@@ -8059,10 +8039,26 @@ export struct ReadingExperience {
     const coordinator = this.ttsCoordinator;
     if (coordinator === undefined) return;
     this.ttsConfigMutationGeneration += 1;
+    const generation = this.ttsConfigMutationGeneration;
+    const lifecycleToken = this.lifecycleToken;
+    const sourceId = this.sourceId;
+    const bookId = this.bookId;
+    const current = (): boolean => this.isSessionActive(lifecycleToken) &&
+      sourceId === this.sourceId && bookId === this.bookId && this.ttsCoordinator === coordinator &&
+      generation === this.ttsConfigMutationGeneration;
     const previousRate = this.ttsState.rate;
     void coordinator.setRate(normalized)
-      .then((): Promise<void> => this.persistTtsConfig(normalized))
+      .then(async (): Promise<void> => {
+        if (current()) await this.persistTtsConfig(normalized);
+      })
       .catch(async (error: Error): Promise<void> => {
+        if (!current()) return;
+        if (this.ttsConfigurationHost?.snapshot().selection.receipt.fact === 'pendingReconciliation') {
+          // A missing config reply may have committed. Do not undo the
+          // coordinator's rate while claiming the durable write failed.
+          try { this.getUIContext().getPromptAction().showToast({ message: error.message }); } catch (_) {}
+          return;
+        }
         // Core/Host state may already have accepted the new rate while the
         // durable config write failed. Reconcile both sides to the last
         // committed value instead of leaving a restart-time surprise.
@@ -8224,227 +8220,78 @@ export struct ReadingExperience {
       .catch((error: Error): void => this.logTtsFailure('voice', error));
   }
 
-  private async changeTtsEngine(engine: string): Promise<void> {
-    if (engine !== 'system' && !this.ttsHttpEngines.some((item: ReaderHttpTtsConfig): boolean =>
-      engine === `http-tts:${item.id}`)) throw new Error('该在线 TTS 配置不存在，请重新选择');
-    const gateway = this.ttsGateway;
+  private requireTtsConfigurationHost(): ReaderTtsConfigurationHost {
+    if (this.ttsConfigurationHost !== undefined) return this.ttsConfigurationHost;
+    const http = this.ttsHttpGateway;
+    const config = this.ttsGateway;
     const coordinator = this.ttsCoordinator;
-    if (gateway === undefined || coordinator === undefined) throw new Error('朗读服务正在初始化，请稍后重试');
-    if (engine === this.ttsEngine) return;
-    this.ttsConfigMutationGeneration += 1;
-    try {
-      await coordinator.stop('user');
-      const prior = this.ttsConfig;
-      const config = await gateway.putConfig({
-        engine,
-        rate: prior?.rate ?? this.coreRateForMultiplier(this.ttsState.rate),
-        ratePercent: prior?.ratePercent ?? this.ratePercentForMultiplier(this.ttsState.rate),
-        pitch: prior?.pitch ?? 0,
-        followSys: prior?.followSys ?? false,
-      });
-      this.ttsConfig = config;
-      this.ttsEngine = config.engine ?? 'system';
-      await coordinator.probeAvailability();
-    } catch (error) {
-      const failure = error as Error;
-      this.logTtsFailure('engine', failure);
-      throw failure;
+    if (http === undefined || config === undefined || coordinator === undefined) {
+      throw new Error('朗读服务正在初始化，请稍后重试');
     }
+    const lifecycleToken = this.lifecycleToken;
+    const sourceId = this.sourceId;
+    const bookId = this.bookId;
+    const current = (): boolean => this.isSessionActive(lifecycleToken) &&
+      sourceId === this.sourceId && bookId === this.bookId && this.ttsCoordinator === coordinator;
+    const host = new ReaderTtsConfigurationHost({
+      http, config, credentials: ReaderTtsCredentialStore.instance,
+      coordinator: {
+        stop: (reason: 'user'): Promise<void> => coordinator.stop(reason),
+        probeAvailability: (isAdmitted: () => boolean): Promise<boolean> =>
+          coordinator.probeConfigurationAvailability(isAdmitted),
+      },
+      isCurrent: current,
+      fallbackConfig: (): ReaderTtsConfig => ({ engine: this.ttsEngine,
+        rate: this.coreRateForMultiplier(this.ttsState.rate),
+        ratePercent: this.ratePercentForMultiplier(this.ttsState.rate),
+        pitch: this.ttsConfig?.pitch ?? 0, followSys: this.ttsConfig?.followSys ?? false }),
+      publish: (snapshot: ReaderTtsConfigurationSnapshot): void => {
+        if (!current() || this.ttsConfigurationHost !== host) return;
+        this.ttsConfig = snapshot.config;
+        this.ttsEngine = snapshot.config?.engine ?? 'system';
+        this.ttsHttpEngines = snapshot.engines;
+        // Configuration failures never rewrite the formal speech state.
+        if (snapshot.notice !== undefined && snapshot.notice !== this.ttsConfigurationNotice) {
+          try { this.getUIContext().getPromptAction().showToast({ message: snapshot.notice }); } catch (_) {}
+        }
+        this.ttsConfigurationNotice = snapshot.notice;
+      },
+      log: (message: string): void => hilog.error(0x5244, 'Reader', '%{private}s', message),
+    }, this.ttsConfig, this.ttsHttpEngines);
+    this.ttsConfigurationHost = host;
+    return host;
+  }
+
+  private onControlTemporaryLayerChange(active: boolean): void {
+    this.controlTemporaryLayer = active;
+    const host = this.ttsConfigurationHost;
+    if (!active || host === undefined) return;
+    const metadata = host.snapshot().metadata;
+    if (metadata.canRetry && (metadata.fact === 'failed' || metadata.fact === 'refreshFailed')) {
+      // Reopening the existing configuration layer retries only its read.
+      // It never replays a durable save or restarts formal playback.
+      void host.refreshMetadata();
+    }
+  }
+
+  private async changeTtsEngine(engine: string): Promise<void> {
+    this.ttsConfigMutationGeneration += 1;
+    await this.requireTtsConfigurationHost().changeEngine(engine);
   }
 
   private async saveHttpTtsEngine(config: ReaderTtsEngineOption): Promise<void> {
-    const gateway = this.ttsHttpGateway;
-    if (gateway === undefined) throw new Error('朗读服务正在初始化，请稍后重试');
-    const existing = this.ttsHttpEngines.find(
-      (engine: ReaderHttpTtsConfig): boolean => engine.id === config.id,
-    );
-    const existingProfile = existing === undefined ? readerOnlineTtsProfile() :
-      readerOnlineTtsProfile(existing.readerProfile);
-    const voice = (config.voice ?? existingProfile.voice).trim();
-    if (voice.length > 256 || /[\u0000-\u001f\u007f]/.test(voice)) {
-      throw new Error('在线 TTS 音色格式无效');
-    }
-    const format: ReaderTtsAudioFormat = config.format ?? existingProfile.format;
-    if (format !== 'mp3' && format !== 'wav' && format !== 'pcm') {
-      throw new Error('在线 TTS 音频格式无效');
-    }
-    const enteredApiKey = (config.apiKey ?? '').trim();
-    const oldCredentialRef = existingProfile.credentialRef;
-    let credentialRef = oldCredentialRef;
-    let createdCredentialRef: string | undefined = undefined;
-    if (enteredApiKey.length > 0) {
-      createdCredentialRef = await ReaderTtsCredentialStore.instance.create(config.id, enteredApiKey);
-      credentialRef = createdCredentialRef;
-    } else if (config.clearApiKey === true) {
-      credentialRef = undefined;
-    }
-    const profile = this.copyReaderOnlineTtsProfile(existingProfile);
-    profile.version = 1;
-    profile.voice = voice;
-    profile.format = format;
-    profile.protocol = existingProfile.protocol ?? 'auto';
-    if (credentialRef !== undefined) profile.credentialRef = credentialRef;
-    else profile.credentialRef = undefined;
-    const merged: ReaderHttpTtsConfig = {
-      id: config.id,
-      name: config.name,
-      url: config.url,
-      lastUpdateTime: config.lastUpdateTime,
-      readerProfile: JSON.stringify(profile),
-    };
-    if (existing?.contentType !== undefined) merged.contentType = existing.contentType;
-    if (existing?.concurrentRate !== undefined) merged.concurrentRate = existing.concurrentRate;
-    if (existing?.loginUrl !== undefined) merged.loginUrl = existing.loginUrl;
-    if (existing?.loginUi !== undefined) merged.loginUi = existing.loginUi;
-    if (existing?.header !== undefined) merged.header = existing.header;
-    if (existing?.jsLib !== undefined) merged.jsLib = existing.jsLib;
-    if (existing?.enabledCookieJar !== undefined) merged.enabledCookieJar = existing.enabledCookieJar;
-    if (existing?.loginCheckJs !== undefined) merged.loginCheckJs = existing.loginCheckJs;
-    let saved: ReaderHttpTtsConfig;
-    try {
-      saved = await gateway.put(merged);
-    } catch (error) {
-      // A timed-out Core request may have committed despite the missing
-      // response. Reconcile before deleting the newly-created secret alias;
-      // losing it would leave a durable config that can never authenticate.
-      if (createdCredentialRef !== undefined) {
-        let committed = false;
-        try {
-          const observed = await gateway.get(config.id);
-          committed = observed?.readerProfile === merged.readerProfile;
-        } catch (_) {
-          // Keep the alias when reconciliation itself is uncertain.
-          committed = true;
-        }
-        if (!committed) {
-          await this.removeTtsCredentialBestEffort(createdCredentialRef);
-        }
-      }
-      const failure = error as Error;
-      this.logTtsFailure('http-engine-put', failure);
-      throw failure;
-    }
-    if (oldCredentialRef !== undefined && oldCredentialRef !== credentialRef) {
-      await this.removeTtsCredentialBestEffort(oldCredentialRef);
-    }
-    try {
-      try {
-        this.ttsHttpEngines = await gateway.list();
-      } catch (error) {
-        // Core already acknowledged the durable write; retain the acknowledged
-        // row locally if a follow-up list call is temporarily unavailable.
-        this.logTtsFailure('http-engine-list', error as Error);
-        this.ttsHttpEngines = this.ttsHttpEngines.filter(
-          (item: ReaderHttpTtsConfig): boolean => item.id !== saved.id,
-        ).concat([saved]);
-      }
-      if (this.ttsEngine !== `http-tts:${saved.id}`) {
-        try {
-          await this.changeTtsEngine(`http-tts:${saved.id}`);
-        } catch (error) {
-          throw new Error(`配置已保存，但启用失败：${this.errorMessage(error)}`);
-        }
-      }
-    } catch (error) {
-      const failure = error as Error;
-      this.logTtsFailure('http-engine-activate', failure);
-      throw failure;
-    }
+    this.ttsConfigMutationGeneration += 1;
+    await this.requireTtsConfigurationHost().save(config);
   }
 
   private async deleteHttpTtsEngine(id: number): Promise<void> {
-    const httpGateway = this.ttsHttpGateway;
-    const configGateway = this.ttsGateway;
-    const coordinator = this.ttsCoordinator;
-    if (httpGateway === undefined || configGateway === undefined || coordinator === undefined)
-      throw new Error('朗读服务正在初始化，请稍后重试');
-    try {
-      await this.deleteHttpTtsEngineCoreFirst(id, httpGateway, configGateway, coordinator);
-    } catch (error) {
-      const failure = error as Error;
-      this.logTtsFailure('http-engine-delete', failure);
-      throw failure;
-    }
-  }
-
-  private async deleteHttpTtsEngineCoreFirst(
-    id: number,
-    httpGateway: ReaderHttpTtsGateway,
-    configGateway: ReaderTtsGateway,
-    coordinator: ReaderTtsSessionCoordinator,
-  ): Promise<void> {
-    const existing = this.ttsHttpEngines.find(
-      (engine: ReaderHttpTtsConfig): boolean => engine.id === id,
-    );
-    if (this.ttsEngine === `http-tts:${id}`) {
-      await coordinator.stop('user');
-      const prior = this.ttsConfig;
-      const config = await configGateway.putConfig({
-        engine: 'system',
-        rate: prior?.rate ?? this.coreRateForMultiplier(this.ttsState.rate),
-        ratePercent: prior?.ratePercent ?? this.ratePercentForMultiplier(this.ttsState.rate),
-        pitch: prior?.pitch ?? 0,
-        followSys: prior?.followSys ?? false,
-      });
-      this.ttsConfig = config;
-      this.ttsEngine = 'system';
-    }
-    const deleted = await httpGateway.delete(id);
-    let remaining: ReaderHttpTtsConfig[];
-    try {
-      remaining = await httpGateway.list();
-      this.ttsHttpEngines = remaining;
-    } catch (error) {
-      this.logTtsFailure('http-engine-list', error as Error);
-      remaining = this.ttsHttpEngines.filter((item: ReaderHttpTtsConfig): boolean => item.id !== id);
-      this.ttsHttpEngines = remaining;
-    }
-    if (deleted.deleted && existing?.readerProfile !== undefined) {
-      try {
-        const oldRef = readerOnlineTtsProfile(existing.readerProfile).credentialRef;
-        if (oldRef !== undefined && !remaining.some((item: ReaderHttpTtsConfig): boolean =>
-          this.profileCredentialRef(item.readerProfile) === oldRef)) {
-          await this.removeTtsCredentialBestEffort(oldRef);
-        }
-      } catch (error) {
-        // A malformed legacy profile must not make a successful Core delete
-        // look like a failed user action; the row is already gone.
-        this.logTtsFailure('http-engine-credential-cleanup', error as Error);
-      }
-    }
-    await coordinator.probeAvailability();
-  }
-
-  private profileCredentialRef(raw: string | undefined): string | undefined {
-    if (raw === undefined || raw.length === 0) return undefined;
-    try {
-      return readerOnlineTtsProfile(raw).credentialRef;
-    } catch (_) {
-      return undefined;
-    }
-  }
-
-  private async removeTtsCredentialBestEffort(alias: string): Promise<void> {
-    try {
-      await ReaderTtsCredentialStore.instance.remove(alias);
-    } catch (error) {
-      hilog.warn(0x5244, 'Reader', '%{private}s',
-        `Reader TTS credential cleanup deferred: ${this.errorMessage(error)}`);
-    }
+    this.ttsConfigMutationGeneration += 1;
+    await this.requireTtsConfigurationHost().delete(id);
   }
 
   private async persistTtsConfig(rate: number): Promise<void> {
-    const gateway = this.ttsGateway;
-    if (gateway === undefined) return;
-    const prior = this.ttsConfig;
-    const config = await gateway.putConfig({
-      engine: this.ttsEngine,
-      rate: this.coreRateForMultiplier(rate),
-      ratePercent: this.ratePercentForMultiplier(rate),
-      pitch: prior?.pitch ?? 0,
-      followSys: prior?.followSys ?? false,
-    });
-    this.ttsConfig = config;
+    await this.requireTtsConfigurationHost().persistRate(
+      this.coreRateForMultiplier(rate), this.ratePercentForMultiplier(rate));
   }
 
   private async commitTtsProgress(progress: ReaderTtsProgressCommit, lifecycleToken: number): Promise<void> {

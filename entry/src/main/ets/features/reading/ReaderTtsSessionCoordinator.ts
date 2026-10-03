@@ -395,16 +395,27 @@ export class ReaderTtsSessionCoordinator {
     return available;
   }
 
-  private async probeAvailabilityInternal(): Promise<boolean> {
+  /** Configuration inspection shares transport ownership, but its failures
+   * belong to configuration facts, never to the formal book playback state. */
+  async probeConfigurationAvailability(isAdmitted: () => boolean): Promise<boolean> {
+    let available = false;
+    await this.enqueue(async (): Promise<void> => {
+      if (isAdmitted()) available = await this.probeAvailabilityInternal(false, isAdmitted);
+    });
+    return available;
+  }
+
+  private async probeAvailabilityInternal(publishPlaybackState: boolean = true,
+    isAdmitted: () => boolean = (): boolean => true): Promise<boolean> {
     // Public stop/start intents update transport state synchronously before
     // entering the operation tail.  Capture the generation here so a probe
     // that is already awaiting a platform call cannot publish idle/unavailable
     // state over that newer intent when its callback resumes.
     const probeGeneration = this.transport.sessionGeneration;
-    const isProbeCurrent = (): boolean => !this.disposed &&
+    const isProbeCurrent = (): boolean => !this.disposed && isAdmitted() &&
       this.transport.sessionGeneration === probeGeneration;
     const hadActiveSession = this.active !== undefined;
-    if (!hadActiveSession && isProbeCurrent()) {
+    if (publishPlaybackState && !hadActiveSession && isProbeCurrent()) {
       this.setState({ ...this.state, status: 'probing' });
     }
     try {
@@ -436,7 +447,7 @@ export class ReaderTtsSessionCoordinator {
       const probe = await this.host.probe();
       if (!isProbeCurrent()) return false;
       if (!probe.available) {
-        if (this.active === undefined && isProbeCurrent()) {
+        if (publishPlaybackState && this.active === undefined && isProbeCurrent()) {
           this.setState({
             ...this.state,
             status: 'unavailable',
@@ -446,7 +457,7 @@ export class ReaderTtsSessionCoordinator {
         }
         return false;
       }
-      if (this.active === undefined && isProbeCurrent()) {
+      if (publishPlaybackState && this.active === undefined && isProbeCurrent()) {
         const wasEngineUnavailable = this.state.stopReason === 'engineUnavailable';
         this.setState({
           ...this.state,
@@ -459,6 +470,7 @@ export class ReaderTtsSessionCoordinator {
     } catch (error) {
       const detail = errorMessageOf(error);
       this.logTtsEvent('probe', detail);
+      if (!publishPlaybackState) throw error;
       if (this.active === undefined && isProbeCurrent()) {
         this.setState({
           ...this.state,

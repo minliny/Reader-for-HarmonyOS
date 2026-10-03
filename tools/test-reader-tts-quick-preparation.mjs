@@ -8,6 +8,7 @@ import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/read
 import * as state from '../entry/src/main/ets/features/reading/ReaderTtsState.ts';
 import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts';
 import * as actors from '../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts';
+import { ReaderTtsConfigurationHost } from './lib/reader-tts-configuration-fixture.mjs';
 import { FakeGateway, FakeHost, chapter, canonicalRemoteContent } from './lib/reader-tts-fixtures.mjs';
 
 const root = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
@@ -20,18 +21,21 @@ function deferred() { let resolve, reject; const promise = new Promise((a, b) =>
 async function drain() { for (let i = 0; i < 30; i++) await Promise.resolve(); }
 let runtime;
 class Frame { constructor(fn) { this.fn = fn; } onFrame() { this.fn(); } }
-const dependencies = { ...state, ReaderTtsSessionCoordinator, ReaderUIFrameCallback: Frame,
+const dependencies = { ...state, ReaderTtsSessionCoordinator, ReaderTtsConfigurationHost,
+  ReaderTtsCredentialStore: { instance: { create: async () => {}, remove: async () => {} } }, ReaderUIFrameCallback: Frame,
   ReaderRuntimeOwner: { current: () => runtime },
   ReaderTtsGateway: class { constructor(owner) { return owner.gateway; } },
   ReaderHttpTtsGateway: class { constructor(owner) { return owner.http; } },
   hilog: { error: () => {} } };
 const methods = ['notifyReadingPresentationReady', 'notifyControlSelectionReadingReady', 'scheduleTtsPresentationWarmup', 'initializeTtsSession',
   'isStableVisiblePageOwner', 'isSelectionCurrent', 'loadTtsPresentationMetadata', 'admitTtsPreferences', 'ttsPreferencesSnapshot', 'multiplierForTtsConfig',
-  'multiplierForCoreRate', 'prepareControlPage', 'changeTtsRate'];
+  'multiplierForCoreRate', 'prepareControlPage', 'changeTtsRate', 'requireTtsConfigurationHost',
+  'persistTtsConfig', 'coreRateForMultiplier', 'ratePercentForMultiplier'];
 function fixture(file = lre) {
   const Owner = productionMotionMethods(file, methods, dependencies);
   const owner = new Owner(), frames = [], events = [], http = deferred(), prefs = deferred(), voice = deferred();
   const gateway = new FakeGateway(), host = new FakeHost();
+  gateway.putConfig = async (config, onDispatch) => { onDispatch?.(); return { ...config }; };
   gateway.getConfig = async () => { gateway.calls.push('config'); return { engine: 'system', rate: 4, ratePercent: 75, pitch: 0, followSys: false }; };
   host.listSystemVoices = () => { events.push('voices'); return voice.promise; };
   runtime = { gateway, getTtsHost: () => host, http: { list: () => { events.push('http'); return http.promise; } } };
@@ -50,7 +54,6 @@ function fixture(file = lre) {
     onSessionLaunchTtsState: s => events.push(`state:${s.status}`),
     ttsPreferencesGateway: { load: () => { events.push('prefs'); return prefs.promise; } },
     persistTtsPreferences: () => events.push('repairVoice'),
-    persistTtsConfig: async rate => { owner.ttsConfig = { ratePercent: rate * 100 }; },
     logTtsFailure: (op, error) => events.push(`error:${op}:${error.message}`), errorMessage: e => e.message,
   });
   const resolveMetadata = () => { http.resolve([]); prefs.resolve(defaults); voice.resolve(voices); };
