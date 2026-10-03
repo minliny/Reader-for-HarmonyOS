@@ -160,7 +160,7 @@ export struct ReaderFullDirectory {
             this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
           onSelectBookmark: this.onSelectBookmark,
           bookmarkIdentity: this.bookmarkIdentity,
-          onDownloadChapter: (index: number): void => this.onDownloadChapter(index),
+          onDownloadChapter: (index: number): void => { if (this.directoryRecovery.offlineBlocked !== true) this.onDownloadChapter(index); },
           onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
@@ -273,7 +273,7 @@ export struct ReaderFullDirectory {
         .height(42)
         .margin({ left: 8 })
         .opacity(this.isLocalBook() || this.offlineBookOperationActive ? 0.4 : 1)
-        .enabled(!this.isLocalBook() && !this.offlineBookOperationActive)
+        .enabled(!this.isLocalBook() && !this.offlineBookOperationActive && this.directoryRecovery.offlineBlocked !== true)
         .accessibilityText(this.offlineBookOperationActive ? '离线操作进行中' : '离线管理')
         .onClick((): void => {
           if (!this.isLocalBook() && !this.offlineBookOperationActive) {
@@ -310,7 +310,7 @@ export struct ReaderFullDirectory {
           .accessibilityText('下载整书')
           .onClick((): void => {
             this.offlineMenuVisible = false;
-            this.onDownloadBook();
+            if (this.directoryRecovery.offlineBlocked !== true) this.onDownloadBook();
           });
         Divider()
           .color(readerAppColor('TOK_LINE_STRONG', this.appThemeScheme))
@@ -327,7 +327,7 @@ export struct ReaderFullDirectory {
           .accessibilityText('清除本书离线内容')
           .onClick((): void => {
             this.offlineMenuVisible = false;
-            this.onClearBookOffline();
+            if (this.directoryRecovery.offlineBlocked !== true) this.onClearBookOffline();
           });
       }
       .width(142)

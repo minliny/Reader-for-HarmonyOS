@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes,createRequire} from 'node:module';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
+import {boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
 const source=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const ordinary=s=>stripTypeScriptTypes(s.replace(/^export type \{[^\n]+from [^\n]+\n/gm,'').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''));
 const load=(p,n,deps={})=>new Function(...Object.keys(deps),ordinary(source(p))+`;return ${n};`)(...Object.values(deps));
@@ -36,16 +37,26 @@ function rpc(){const context={},disk=new Map(Object.entries({autoCheckUpdate:tru
  if(method==='source.list'){if(this.readFail){this.readFail--;throw Error('read unavailable');}return{data:{sources:this.malformed?[{sourceId:'a'}]:clone(this.rows)}};}
  throw Error(method);
  },count(m){return this.calls.filter(x=>x===m).length;}};
- const cache=new Map(disk);prefs.set(context,{async get(k,d){if(r.pause?.method==='get')await r.pause.promise;if(r.readFail){r.readFail--;throw Error('read unavailable');}return r.malformed&&k==='reduceMotion'?'bad':cache.get(k)??d;},async put(k,v){r.puts++;cache.set(k,v);},async flush(){r.flushes++;if(r.pause?.method==='flush')await r.pause.promise;if(r.writeFail){r.writeFail=false;throw Error('flush unknown');}disk.clear();for(const [k,v] of cache)disk.set(k,v);}});return r;}
+ const cache=new Map(disk);prefs.set(context,{async get(k,d){if(r.pause?.method==='get')await r.pause.promise;if(r.readFail){r.readFail--;throw Error('read unavailable');}return r.malformed&&k==='reduceMotion'?'bad':cache.get(k)??d;},async put(k,v){r.puts++;cache.set(k,v);},async flush(){r.flushes++;if(r.pause?.method==='flush')await r.pause.promise;const failure=r.writeFail;r.writeFail=false;if(failure&&failure!=='after')throw Error('flush unknown before durable');disk.clear();for(const [k,v] of cache)disk.set(k,v);if(failure==='after')throw Error('flush unknown after durable');}});return r;}
 // Execute the production Index field initializer: the actual callbacks write
 // Index @State, then actual SDK child props carry those facts to the page.
 function field(index,name,deps){const text=source('pages/Index.ets'),a=text.indexOf('  private '+name+':'),b=text.indexOf('\n  );',a)+6,initializer=text.slice(a,b);const expression=initializer.slice(initializer.indexOf('=')+1).trim().replace(/;$/,'');return new Function(...Object.keys(deps),stripTypeScriptTypes('const value='+expression+';')+'return value;').call(index,...Object.values(deps));}
-function fixture(kind){const SettingsHost=freshSettingsHost();const r=rpc();currentOwner=r;const sourceDomain=kind==='source',method=sourceDomain?'sourceManagementContent':'settingsContent';const index=createReaderBuilderProbe(source('pages/Index.ets'),[method],{SourceManagementPage:Child,SettingsPage:Child,deviceInfo:{deviceType:'phone'}}).owner;
- Object.assign(index,{route:sourceDomain?'source':'settings',sourceSources:[],sourceStatusKind:'idle',sourceStatusMessage:'',sourceOperation:{action:'load',sourceId:''},settingsOperation:{action:'load'},settingsSnapshot:{autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true},settingsSection:'general'});
+function fixture(kind){const SettingsHost=freshSettingsHost();const r=rpc();currentOwner=r;const sourceDomain=kind==='source',method=sourceDomain?'sourceManagementContent':'settingsContent';const index=createReaderBuilderProbe(source('pages/Index.ets'),[method,'isCurrentSettingsPresentation','isCurrentRuntime','reconcileSettingsCache'],{ReaderRuntimeOwner,SourceManagementPage:Child,SettingsPage:Child,deviceInfo:{deviceType:'phone'}}).owner;
+ Object.assign(index,{route:sourceDomain?'source':'settings',sourceSources:[],sourceStatusKind:'idle',sourceStatusMessage:'',sourceOperation:{action:'load',sourceId:''},settingsOperation:{action:'load'},settingsSnapshot:{autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true},settingsSection:'general',mountedRuntimeOwner:r,detailShelfAdmissionMount:1,navigationGeneration:1,shelfReceiptRetired:false});
  const host=field(index,sourceDomain?'sourceHost':'settingsHost',{SourceHost,SettingsHost});index[sourceDomain?'sourceHost':'settingsHost']=host;
- const refresh=()=>{index[method]();return [...index.children.values()][0].params;};
- function page(){const params=refresh(),path=sourceDomain?'features/source/SourceManagementPage.ets':'features/settings/SettingsPage.ets';const page=createReaderBuilderProbe(source(path),sourceDomain?['statusBanner','recovery']:['operationFeedback','recovery'],{readerRecoveryView,ReaderRecoveryAction:Child}).owner;Object.assign(page,params,{appThemeScheme:'day',resetMessage:'',contentFrame:()=>({width:350})});page[sourceDomain?'statusBanner':'operationFeedback']();return page;}
- return{r,index,host,refresh,page,write:()=>sourceDomain?host.toggleSource('a',false):host.toggle('reduceMotion',true),settle:async()=>{await tick();if(sourceDomain)await host.orchestrator.operationChain;else for(let i=0;i<5;i++)await tick();},receipt:()=>index[sourceDomain?'sourceOperation':'settingsOperation'],read:()=>index[sourceDomain?'sourceOperation':'settingsOperation'].readFacts,retry:page=>{if(sourceDomain)[...page.nodes.values()].find(n=>n.create==='重试').onClick();else{const c=[...page.children.values()][0];c.params.onReconcile(c.params.generation);}}};}
+ let rendered=false;const refresh=()=>{if(!rendered){index[method]();rendered=true;}else index.replay();return [...index.children.values()][0].params;};
+ function page(){const params=refresh(),path=sourceDomain?'features/source/SourceManagementPage.ets':'features/settings/SettingsPage.ets';
+  if(sourceDomain){const page=createReaderBuilderProbe(source(path),['statusBanner','recovery'],{readerRecoveryView,ReaderRecoveryAction:Child}).owner;Object.assign(page,params,{appThemeScheme:'day',resetMessage:'',contentFrame:()=>({width:350})});page.statusBanner();return page;}
+  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
+  const page=sdk.consumer(source(path),['operation','cacheCleanup','onCacheCleanupChanged','applyCacheCleanup','temporaryBackIdentity','operationFeedback','recovery','feedbackMessage','recoveryActionIdentities','recoveryActionKind','recoveryActionGeneration',
+   'recoveryActionLabel','recoveryActionCurrent','dispatchRecoveryAction'],{readerRecoveryView,ReaderRuntimeOwner});
+  Object.assign(page,params,{appThemeScheme:'day',resetMessage:'',mounted:true,themeOwner:r,temporaryBackIdentity:'settings-real:1'});page.operationFeedback();
+  page.actualSdk=sdk;return page;
+ }
+ const native=(page,label)=>{const actor=page.actualSdk.walk(page).find(c=>c.label===label&&c instanceof page.actualSdk.deps.ReaderRecoveryAction);assert.ok(actor,label+' actual native action');
+  return [...actor.nodes.values()].find(n=>n.onClick).onClick;};
+
+ return{r,index,host,refresh,page,write:()=>sourceDomain?host.toggleSource('a',false):host.toggle('reduceMotion',true),settle:async()=>{await tick();if(sourceDomain)await host.orchestrator.operationChain;else for(let i=0;i<5;i++)await tick();},receipt:()=>index[sourceDomain?'sourceOperation':'settingsOperation'],read:()=>index[sourceDomain?'sourceOperation':'settingsOperation'].readFacts,native,retry:page=>{if(sourceDomain)[...page.nodes.values()].find(n=>n.create==='重试').onClick();else native(page,'刷新设置')();}};}
 for(const kind of ['source','settings']){
  const command=kind==='source'?'source.update':undefined;
  {
@@ -77,4 +88,18 @@ for(const kind of ['source','settings']){
  if(kind==='source')assert.equal(f.index.sourceSources[0].enabled,false);else assert.equal(f.index.settingsSnapshot.reduceMotion,true,'persisted setting read survives retired delivery');
 }
 
+for(const failure of ['before','after']){
+ const f=fixture('settings');f.host.open();await f.settle();f.r.writeFail=failure;f.write();await f.settle();
+ const page=f.page(),oldSave=f.native(page,'重试保存当前设置'),refresh=f.native(page,'刷新设置');
+ const puts=f.r.puts,flushes=f.r.flushes;refresh();await f.settle();assert.equal(f.r.puts,puts);assert.equal(f.r.flushes,flushes);
+ assert.equal(f.receipt().receipt.receipt.confirmation,'unknown');assert.equal(f.index.settingsSnapshot.reduceMotion,true);
+ oldSave();await f.settle();assert.equal(f.r.puts,puts,'pure refresh retires the old generation action');
+ const debugPage=f.page();const save=f.native(debugPage,'重试保存当前设置');save();save();await f.settle();
+ assert.equal(f.r.puts,puts+4);assert.equal(f.r.flushes,flushes+1);
+ assert.equal(f.receipt().receipt.receipt.confirmation,'confirmed');
+ // A retained SDK physical actor is never upgraded by a new generation.
+ f.r.writeFail=true;f.host.toggle('crashLog',false);await f.settle();const before=f.r.puts;
+ Object.assign(page,f.refresh());page.replay();oldSave();await f.settle();assert.equal(f.r.puts,before,'old actor cannot save a newer accepted tuple');
+ const next=f.page(),current=f.native(next,'重试保存当前设置');f.index.navigationGeneration++;current();await f.settle();assert.equal(f.r.puts,before,'old physical page callback rejects new navigation');
+}
 console.log('Source/Settings actual Gateway -> Index -> SDK consumers: PASS (ACK/read failure/unknown/read-only retry/close/reopen/late/owner/malformed/typed admission).');

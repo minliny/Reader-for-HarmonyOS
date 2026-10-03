@@ -885,7 +885,14 @@ struct Index {
         BookshelfSettingsPage({
           autoCheckUpdate: this.settingsSnapshot.autoCheckUpdate,
           operation: this.settingsOperation,
-          onReconcile: (generation: number): void => this.settingsHost.reconcile(generation),
+          onReconcile: (expected: number): void => {
+        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host)) host.reconcile(expected);
+      },
+      onRetryAccepted: (expected: number): void => {
+        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host)) host.retryAccepted(expected);
+      },
+      onReconcileCache: (expected: number): void => { void this.reconcileSettingsCache(expected, generation, owner, mounting, host); },
+      onContinueCache: (expected: number): void => { void this.reconcileSettingsCache(expected, generation, owner, mounting, host, true); },
           onBack: (): void => this.returnFromBookshelfSettings(),
           onAutoCheckUpdate: (value: boolean): void => this.onSettingToggled('autoCheckUpdate', value),
         });
@@ -1439,6 +1446,7 @@ struct Index {
     this.exitToDetailOriginAfterReader = false;
     this.route = 'settings';
     this.settingsCacheCleanup = this.settingsHost.cacheCleanupSnapshot(this.mountedRuntimeOwner);
+    void this.reconcileSettingsCache(undefined);
     this.settingsHost.open();
   }
 
@@ -1470,17 +1478,25 @@ struct Index {
   }
 
   @Builder
-  private settingsContent(generation: number = this.navigationGeneration, owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner) {
+  private settingsContent(generation: number = this.navigationGeneration, owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner,
+    mounting: number = this.detailShelfAdmissionMount, host: SettingsHost = this.settingsHost) {
     SettingsPage({
       onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void =>
         this.registerTemporaryBackBridge('settings', generation, owner, handler, identity),
       activeSection: this.settingsSection,
       onSectionChange: (section: 'home' | 'general'): void => { this.settingsSection = section; },
-      onRestoreDefaults: (): Promise<boolean> => this.settingsHost.restoreDefaults(),
+      onRestoreDefaults: (): Promise<boolean> => this.isCurrentSettingsPresentation(generation, owner, mounting, host) ? host.restoreDefaults() : Promise.resolve(false),
       snapshot: this.settingsSnapshot,
       operation: this.settingsOperation,
       cacheCleanup: this.settingsCacheCleanup,
-      onReconcile: (generation: number): void => this.settingsHost.reconcile(generation),
+      onReconcile: (expected: number): void => {
+        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host)) host.reconcile(expected);
+      },
+      onRetryAccepted: (expected: number): void => {
+        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host)) host.retryAccepted(expected);
+      },
+      onReconcileCache: (expected: number): void => { void this.reconcileSettingsCache(expected, generation, owner, mounting, host); },
+      onContinueCache: (expected: number): void => { void this.reconcileSettingsCache(expected, generation, owner, mounting, host, true); },
       isTablet: deviceInfo.deviceType === 'tablet',
       onBack: (): void => this.returnToBookshelf(),
       onOpenSourceManagement: (): void => this.openSourceManagement(),
@@ -1490,7 +1506,7 @@ struct Index {
       onRssRequested: (): void => this.openRss(),
       onDiscoverRequested: (): void => this.openDiscover(),
       onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
-        value: boolean): void => this.onSettingToggled(key, value),
+        value: boolean): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host)) host.toggle(key, value); },
       onClearCache: (): Promise<SettingsCacheCleanupSnapshot | undefined> => this.clearTextCache(generation, owner),
     });
   }
@@ -1691,10 +1707,27 @@ struct Index {
     this.settingsHost.toggle(key, value);
   }
 
+  private isCurrentSettingsPresentation(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number = this.detailShelfAdmissionMount, host: SettingsHost = this.settingsHost): boolean {
+    return owner !== undefined && this.isCurrentRuntime(owner) && this.mountedRuntimeOwner === owner &&
+      generation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount &&
+      this.route === 'settings' && !this.shelfReceiptRetired && host === this.settingsHost;
+  }
+  private async reconcileSettingsCache(expected: number | undefined, generation: number = this.navigationGeneration,
+    owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner, mounting: number = this.detailShelfAdmissionMount,
+    host: SettingsHost = this.settingsHost, continuing: boolean = false): Promise<void> {
+    const current = (): boolean => this.isCurrentSettingsPresentation(generation, owner, mounting, host);
+    if (owner === undefined || !current()) return;
+    const previous = host.cacheCleanupSnapshot(owner);
+    if (expected !== undefined && previous?.operation.generation !== expected) return;
+    const snapshot = continuing && expected !== undefined ? await host.continueOriginalCacheCleanup(owner, expected, current) :
+      await host.reconcileCacheCleanup(owner, current);
+    if (current()) this.settingsCacheCleanup = snapshot;
+  }
+
   private async clearTextCache(generation: number = this.navigationGeneration,
     owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner): Promise<SettingsCacheCleanupSnapshot | undefined> {
-    const current = (): boolean => owner !== undefined && this.isCurrentRuntime(owner) &&
-      generation === this.navigationGeneration && this.route === 'settings' && !this.shelfReceiptRetired;
+    const current = (): boolean => this.isCurrentSettingsPresentation(generation, owner);
     if (owner === undefined || !current()) return undefined;
     return this.settingsHost.clearCache(owner, current);
   }
@@ -1867,6 +1900,7 @@ struct Index {
     this.exitToDetailOriginAfterReader = false;
     this.route = 'settings';
     this.settingsCacheCleanup = this.settingsHost.cacheCleanupSnapshot(this.mountedRuntimeOwner);
+    void this.reconcileSettingsCache(undefined);
   }
 
   private returnFromRulesManagement(): void {

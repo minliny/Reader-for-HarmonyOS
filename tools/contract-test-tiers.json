@@ -493,6 +493,7 @@
     "test-search-view-state.mjs",
     "test-secondary-floating-bars.mjs",
     "test-select-semantics.mjs",
+    "test-settings-cache-index-sdk.mjs",
     "test-settings-cache-owner-consumer.mjs",
     "test-settings-select-overlay.mjs",
     "test-settings-selection-owner.mjs",

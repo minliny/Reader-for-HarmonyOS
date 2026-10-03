@@ -74,6 +74,9 @@ export struct SettingsPage {
   @Prop operation: SettingsOperationProjection = { action: 'load' };
   @Prop @Watch('onCacheCleanupChanged') cacheCleanup: SettingsCacheCleanupSnapshot | undefined = undefined;
   onReconcile: (generation: number) => void = (_generation: number): void => {};
+  onRetryAccepted: (generation: number) => void = (_generation: number): void => {};
+  onReconcileCache: (generation: number) => void = (_generation: number): void => {};
+  onContinueCache: (generation: number) => void = (_generation: number): void => {};
   @StorageLink('readerAppThemeMode') private appThemeMode: string = 'system';
   @State private languageValue: string = '简体中文';
   @State private startupValue: string = '书架';
@@ -202,15 +205,54 @@ export struct SettingsPage {
 
   private recovery(): ReaderRecoveryView { return readerRecoveryView(this.operation.receipt, this.operation.readFacts); }
 
+  private feedbackMessage(): string {
+    const messages: string[] = [];
+    if (this.recovery().visible) messages.push(this.recovery().message);
+    else if (this.resetMessage.length > 0) messages.push(this.resetMessage);
+    if (this.cacheCleanup?.operation.canRetry || this.cacheCleanup?.confirmation === 'unknown')
+      messages.push(this.cacheCleanup.operation.message ?? '原清理结果尚未确认，请核对；已有正文仍可使用');
+    return messages.join('\n');
+  }
+  private recoveryActionIdentities(): string[] {
+    const identities: string[] = [];
+    if (this.recovery().canRetry) identities.push(`${this.temporaryBackIdentity}\u0000read\u0000${this.recovery().generation}`);
+    if (this.operation.canRetryAccepted === true && this.operation.receipt !== undefined)
+      identities.push(`${this.temporaryBackIdentity}\u0000accepted\u0000${this.operation.receipt.facts.generation}`);
+    if (this.cacheCleanup !== undefined && !this.cacheCleanup.busy && this.cacheCleanup.operation.canRetry)
+      identities.push(`${this.temporaryBackIdentity}\u0000cache-read\u0000${this.cacheCleanup.operation.generation}`);
+    if (this.cacheCleanup?.canContinueOriginal === true && !this.cacheCleanup.busy)
+      identities.push(`${this.temporaryBackIdentity}\u0000cache-continue\u0000${this.cacheCleanup.operation.generation}`);
+    return identities;
+  }
+  private recoveryActionGeneration(identity: string): number { return Number(identity.slice(identity.lastIndexOf('\u0000') + 1)); }
+  private recoveryActionKind(identity: string): string { return identity.split('\u0000')[1]; }
+  private recoveryActionLabel(identity: string): string {
+    const kind = this.recoveryActionKind(identity);
+    return kind === 'read' ? '刷新设置' : kind === 'accepted' ? '重试保存当前设置' :
+      kind === 'cache-read' ? '核对清理结果' : '继续原操作';
+  }
+  private recoveryActionCurrent(identity: string): boolean {
+    return this.mounted && ReaderRuntimeOwner.isCurrent(this.themeOwner) && this.recoveryActionIdentities().includes(identity);
+  }
+  private dispatchRecoveryAction(identity: string): void {
+    if (!this.recoveryActionCurrent(identity)) return;
+    const generation = this.recoveryActionGeneration(identity), kind = this.recoveryActionKind(identity);
+    if (kind === 'read') this.onReconcile(generation);
+    else if (kind === 'accepted') this.onRetryAccepted(generation);
+    else if (kind === 'cache-read') this.onReconcileCache(generation);
+    else if (kind === 'cache-continue') this.onContinueCache(generation);
+  }
+
   @Builder
   private operationFeedback() {
-    if (this.resetMessage.length > 0 || this.recovery().visible) {
-      Text(this.recovery().visible ? this.recovery().message : this.resetMessage).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+    if (this.feedbackMessage().length > 0) {
+      Text(this.feedbackMessage()).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .width('100%').padding(12);
     }
-    if (this.recovery().canRetry) {
-      ReaderRecoveryAction({ label: '刷新设置', generation: this.recovery().generation, onReconcile: this.onReconcile });
-    }
+    ForEach(this.recoveryActionIdentities(), (identity: string): void => {
+      ReaderRecoveryAction({ label: this.recoveryActionLabel(identity), generation: this.recoveryActionGeneration(identity),
+        enabled: this.recoveryActionCurrent(identity), onReconcile: (): void => this.dispatchRecoveryAction(identity) });
+    }, (identity: string): string => identity);
   }
 
   @Builder

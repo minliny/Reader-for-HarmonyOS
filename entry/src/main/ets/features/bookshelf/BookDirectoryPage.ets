@@ -144,7 +144,7 @@ export struct BookDirectoryPage {
                 contentStartInset: 58 + this.toolsHeight + 5, contentEndInset: this.bottomInset() + 5,
                 edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
                 chapterEntries: this.admittedEntries,
-                chapterDownloadEnabled: this.sourceId !== 'local',
+                chapterDownloadEnabled: this.sourceId !== 'local' && this.directoryRecovery.offlineBlocked !== true,
                 chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
                 fallbackBuilder: (): void => { this.flatList(identity); },
                 onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void => {
@@ -160,7 +160,7 @@ export struct BookDirectoryPage {
                 onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
                 onDownloadChapter: (chapterIndex: number): void => {
                   if (this.mounted && identity === this.admittedIdentity && identity === this.identity())
-                    this.onDownloadChapter(chapterIndex);
+                    if (this.directoryRecovery.offlineBlocked !== true) this.onDownloadChapter(chapterIndex);
                 },
                 onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
                   this.onCreateChapterStartBookmark(request),
@@ -214,13 +214,13 @@ export struct BookDirectoryPage {
     ReaderDirectoryChapterRow({
       entry: item.item,
       rowHeight: 40,
-      chapterDownloadEnabled: this.sourceId !== 'local',
+      chapterDownloadEnabled: this.sourceId !== 'local' && this.directoryRecovery.offlineBlocked !== true,
       chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
       onSelectChapter: (index: number): void => {
         if (this.rowIsCurrent(item.item, identity) && index === item.item.index) this.onSelectChapter(index);
       },
       onDownloadChapter: (index: number): void => {
-        if (this.rowIsCurrent(item.item, identity) && index === item.item.index) this.onDownloadChapter(index);
+        if (this.rowIsCurrent(item.item, identity) && index === item.item.index && this.directoryRecovery.offlineBlocked !== true) this.onDownloadChapter(index);
       },
       onDeleteBookmarks: (times: number[]): void => {
         if (this.rowIsCurrent(item.item, identity)) this.onDeleteBookmarks(times);

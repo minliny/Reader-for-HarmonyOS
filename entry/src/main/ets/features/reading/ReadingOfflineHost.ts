@@ -18,6 +18,8 @@ export interface ReadingOfflineOperation {
   materializationFailure?: string;
   operationFailure?: string;
   canContinueOriginal?: boolean;
+  /** A foreign fixed intent is a capacity fact, not this book's write ACK. */
+  blockingClear?: { scope: 'cache' | 'book'; active: boolean };
   progress?: ReadingOfflineBookProgress;
   projection: PersistedReceiptProjection<LocalReadingTocEntry[]>;
 }
@@ -165,9 +167,27 @@ export class ReadingOfflineHost {
     const current = (): boolean => this.admitted(binding);
     try {
       const pending = await this.dependencies.gateway.pendingClearOperation();
-      if (pending === undefined) return;
+      if (pending === undefined) {
+        if (this.operation?.blockingClear?.active) {
+          this.operation.blockingClear.active = false;
+          this.publish(binding);
+        }
+        return;
+      }
       if (pending.params['scope'] !== 'book' || pending.context.sourceId !== context.sourceId || pending.context.bookId !== context.bookId) {
-        this.deliver(binding, (): void => binding.failed?.(new Error('另一清理操作仍需核对，请返回原内容'))); return;
+        const message = pending.params['scope'] === 'cache' ?
+          '原全局文字缓存清理尚未确认，请返回设置核对；暂不能开始新的本书离线操作，已有正文仍可使用' :
+          '另一书籍的原缓存清理尚未确认，请返回原内容核对；已有正文仍可使用';
+        const generation = this.operation?.blockingClear?.active === true &&
+          this.operation.sourceId === pending.context.sourceId && this.operation.bookId === pending.context.bookId ?
+          this.operation.generation : ++this.generation;
+        this.operation = { action: 'clear', sourceId: pending.context.sourceId, bookId: pending.context.bookId,
+          generation, materialization: 'idle', canContinueOriginal: false,
+          blockingClear: { scope: pending.params['scope'] === 'cache' ? 'cache' : 'book', active: true },
+          projection: projectPersistedReceipt({ confirmation: 'unknown', readback: 'idle', generation,
+            message, blockedReason: message, canRetry: false }) };
+        this.publish(binding);
+        this.deliver(binding, (): void => binding.failed?.(new Error(message))); return;
       }
       const generation = previous?.generation ?? ++this.generation;
       try {
@@ -205,7 +225,8 @@ export class ReadingOfflineHost {
     if (this.active || !this.admitted(binding)) return;
     // An unknown clear could still delete a later new download. A list/status
     // read is not a transaction receipt and cannot silently lift this barrier.
-    if (this.operation?.action === 'clear' && this.operation.projection.receipt.confirmation === 'unknown') {
+    if (this.operation?.action === 'clear' && this.operation.projection.receipt.confirmation === 'unknown' &&
+      this.operation.blockingClear?.active !== false) {
       this.deliver(binding, (): void => binding.failed?.(new Error('离线清除结果未确认，请重新载入核对，不要重复操作'))); return;
     }
     if (action !== 'clear') {
