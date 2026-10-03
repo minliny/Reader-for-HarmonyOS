@@ -332,8 +332,9 @@ export class RssSubscriptionEditorOrchestrator {
       const subscriptions = await this.gateway.loadSubscriptions();
       if (!this.ownsRuntime()) return;
       const subscriptionId = receipt?.subscriptionId || draft.subscriptionId;
+      const feedUrl = draft.feedUrl.trim();
       const subscription = subscriptionId.length > 0 ? subscriptions.find((candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId) :
-        subscriptions.find((candidate: RssSubscription): boolean => candidate.feedUrl === draft.feedUrl.trim());
+        subscriptions.find((candidate: RssSubscription): boolean => candidate.feedUrl === feedUrl);
       if (subscription === undefined && (draft.mode === 'edit' || receipt?.confirmation === 'confirmed')) throw new Error('RSS 订阅已不存在');
       if (receipt !== undefined) this.setReceipt(key, session, receipt.confirmation, receipt.subscriptionId, receipt.revision, 'succeeded', subscription);
       const unchangedDraft = receipt !== undefined && (this.revisions.get(key) ?? 0) === receipt.revision;
