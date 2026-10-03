@@ -10,6 +10,7 @@ const surface = read('entry/src/main/ets/features/reading/ReadingSurface.ets');
 const geometry = read('entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
 const sessionGateway = read('entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
 const pagination = read('entry/src/main/ets/features/reading/ReadingPaginationIndex.ts');
+const paginationOwner = read('entry/src/main/ets/features/reading/ReaderPhysicalPaginationOwner.ts');
 const offline = read('entry/src/main/ets/features/reading/ReadingOfflineGateway.ts');
 const sourceSwitch = read('entry/src/main/ets/features/source/SourceSwitchGateway.ts');
 
@@ -35,8 +36,10 @@ assert.match(experience, /private async ensureReadingSession[\s\S]*if \(this\.se
   'the reader reuses its admitted gateway instead of constructing one per retry');
 assert.equal((experience.match(/ReadingSessionFlowGateway\.open\(/g) ?? []).length, 1,
   'one lifecycle owns the shared local/remote gateway; there is no secondary preparation reader');
-assert.equal((experience.match(/new ReadingPaginationIndex\(\)/g) ?? []).length, 1,
-  'the mounted reader must own one physical pagination index');
+assert.equal((experience.match(/new ReaderPhysicalPaginationOwner<ReadingSurfacePageFragment>\(\)/g) ?? []).length, 1,
+  'the mounted reader must own one physical pagination owner');
+assert.equal((paginationOwner.match(/new ReadingPaginationIndex\(\)/g) ?? []).length, 1,
+  'that physical owner must own the single existing pagination index');
 assert.equal((experience.match(/new ReadingChapterWindow\(\)/g) ?? []).length, 1,
   'the mounted reader must own one bounded previous/current/next chapter window');
 assert.doesNotMatch(sessionGateway, /isTablet|TabletExpanded|deviceForm/,

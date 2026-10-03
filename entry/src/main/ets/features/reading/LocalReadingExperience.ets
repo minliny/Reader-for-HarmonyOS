@@ -1,3 +1,4 @@
+import { ReaderProgressProducerHost, type ReaderProgressProducerIntent, type ReaderContinuousProgressDependencies } from './ReaderProgressProducerHost';
 import { ReaderParagraphLayoutOwner } from './ReaderParagraphLayoutOwner';
 import { ReaderPhysicalPaginationOwner } from './ReaderPhysicalPaginationOwner';
 import type { JsonObject } from '@reader/core-harmony';
@@ -1226,6 +1227,7 @@ export struct ReadingExperience {
   private chapterTitleMeasurementController: TextController = new TextController();
   private measuredChapterTitleHeightVp: number = 0;
   private measuredNativeTitle: ReaderNativeParagraphRecipe | undefined = undefined;
+  private readonly progressProducers: ReaderProgressProducerHost = new ReaderProgressProducerHost();
   private readonly paragraphLayout: ReaderParagraphLayoutOwner<ParagraphRange, MeasurementParagraph> =
     new ReaderParagraphLayoutOwner<ParagraphRange, MeasurementParagraph>();
   private readonly physicalPagination: ReaderPhysicalPaginationOwner<ReadingSurfacePageFragment> =
@@ -1242,12 +1244,7 @@ export struct ReadingExperience {
   private continuousScroller: Scroller | undefined = undefined;
   private continuousVisibleScalar: number = 0;
   private continuousProgressRevision: number = 0;
-  private continuousCommitInFlight: boolean = false;
   private pageTurnTransactionSerial: number = 0;
-  private continuousCommitPending: boolean = false;
-  private continuousCommitPromise: Promise<void> | undefined = undefined;
-  private continuousUnknownTarget: CoreReadingAnchor | undefined = undefined;
-  private continuousUnknownOrigin: LocalReadingProgress | undefined = undefined;
   private continuousAnchorSampler: (() => void) | undefined = undefined;
   private continuousUserInteractionActive: boolean = false;
   private readonly continuousImageResolutions: Set<number> = new Set<number>();
@@ -1522,8 +1519,7 @@ export struct ReadingExperience {
     this.readingRecordPendingMillis = 0;
     this.clearReadingRecordTimer();
     this.commitInFlight = false;
-    this.continuousCommitInFlight = false;
-    this.continuousCommitPending = false;
+    this.progressProducers.retireContinuous();
     this.continuousUserInteractionActive = false;
     this.continuousImageResolutions.clear();
     this.chapterImageByStartScalar.clear();
@@ -1870,6 +1866,7 @@ export struct ReadingExperience {
   }
 
   aboutToDisappear(): void {
+    this.progressProducers.retireContinuous();
     this.finishSessionCapsuleMorph();
     this.bookmarkRollbackGeneration += 1;
     this.bookmarkMutationGeneration += 1;
@@ -3001,7 +2998,7 @@ export struct ReadingExperience {
       this.controlVisible() || this.controlObscured || this.interactionBlocked ||
       this.activePagePointerId >= 0 || this.pendingPointerSegmentReserved ||
       this.pageTurnSettlementActive || this.pageTurnSettlingPrepared !== undefined ||
-      this.pageTurnPreparation !== undefined || this.commitInFlight || this.continuousCommitInFlight ||
+      this.pageTurnPreparation !== undefined || this.commitInFlight || this.progressProducers.continuousInFlight ||
       readerRapidPageTurnHasWork(this.rapidPageTurnState)) return;
     if (this.ttsFollowPositioning !== undefined) return;
     if (target.chapterIndex !== this.currentChapterIndex()) {
@@ -5984,19 +5981,18 @@ export struct ReadingExperience {
   private async persistOrdinaryFirstPage(page: PhysicalReadingPage, chapter: ReadingSessionChapter,
     chapterProgress: number, layout: CoreReadingLayout, layoutSignature: string,
     selectionToken: number, lifecycleToken: number, presentedTurn: boolean = false): Promise<void> {
-    const gateway = this.activeGateway();
     // Runtime/book ownership survives a component disappearing. Only receipt
     // delivery below depends on this presentation's mount and selection.
-    const operation = gateway.persistPresentedProgress(this.bookId, chapter.chapterTitle,
-        new CoreReadingAnchor(chapter.chapterIndex, page.startScalar, chapterProgress,
-          chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof), layout).then((stored: LocalReadingProgress): void => {
+    const current = (): boolean => this.isOrdinaryFirstPagePresentationCurrent(page, chapter, selectionToken, lifecycleToken);
+    const intent = this.progressProducerIntent(chapter,
+      new CoreReadingAnchor(chapter.chapterIndex, page.startScalar, chapterProgress,
+        chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof), layout,
+      current, current, (stored: LocalReadingProgress): void => this.admitCommittedProgress(stored));
+    const operation = this.progressProducers.persistPresented(intent, 'READING_INITIAL_PROGRESS_ANCHOR_MISMATCH')
+      .then((_stored: LocalReadingProgress): void => {
       if (!this.isMountedToken(lifecycleToken) || this.isReaderIdentityCurrent?.() === false) return;
-      if (stored.chapterIndex !== chapter.chapterIndex || stored.chapterOffset !== page.startScalar) {
-        throw new Error('READING_INITIAL_PROGRESS_ANCHOR_MISMATCH');
-      }
       this.traceInitialReadingPhase?.('first-persist', lifecycleToken);
       if (!this.isOrdinaryFirstPagePresentationCurrent(page, chapter, selectionToken, lifecycleToken)) return;
-      this.admitCommittedProgress(stored);
       // A late receipt confirms durability; it never reinstalls a page, phase,
       // selection or desired offset over a newer presentation/measurement.
       if (!this.isOrdinaryFirstPagePresentationCurrent(page, chapter, selectionToken, lifecycleToken)) return;
@@ -6244,24 +6240,13 @@ export struct ReadingExperience {
     }
     this.commitInFlight = true;
     try {
-      await this.activeGateway().runProgressCommitSerial(async (): Promise<void> => {
-        if (!this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken)) {
-          return;
-        }
-        const scalarCount = this.requireChapterLayoutMap().scalarCount();
-        const chapterProgress = scalarCount === 0 ? 0 : page.startScalar / scalarCount;
-        const stored = await this.activeGateway().resolveAndUpdateProgress(
-          this.bookId,
-          chapter.chapterTitle,
-          new CoreReadingAnchor(chapter.chapterIndex, page.startScalar, chapterProgress, chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof),
-          this.coreLayout(),
-          (): boolean => this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken),
-        );
-        if (!this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken)) {
-          return;
-        }
-        this.admitCommittedProgress(stored);
-      });
+      const scalarCount = this.requireChapterLayoutMap().scalarCount();
+      const current = (): boolean => this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken);
+      const intent = this.progressProducerIntent(chapter,
+        new CoreReadingAnchor(chapter.chapterIndex, page.startScalar, scalarCount === 0 ? 0 : page.startScalar / scalarCount,
+          chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof), this.coreLayout(),
+        current, current, (stored: LocalReadingProgress): void => this.admitCommittedProgress(stored));
+      await this.progressProducers.commitVisible(intent);
     } catch (error) {
       // The visible static reading page remains valid. Persistence failures are
       // logged rather than replaced by an unapproved visual state.
@@ -6281,129 +6266,56 @@ export struct ReadingExperience {
    * intermediate offset without allowing an older position to win.
    */
   private async commitContinuousProgress(lifecycleToken: number): Promise<void> {
-    if (!this.isMountedToken(lifecycleToken) || this.phase !== 'ready' ||
-      this.readerSettingsSnapshot.navigationMode !== 'continuous' || this.chapter === undefined ||
-      this.chapterLayoutMap === undefined || this.continuousFragments.length === 0) {
-      return;
-    }
-    this.continuousCommitPending = true;
-    if (this.continuousCommitPromise === undefined) {
-      this.continuousCommitInFlight = true;
-      const operation = this.drainContinuousProgress(lifecycleToken);
-      this.continuousCommitPromise = operation;
-      // Retain the one real drain even if a UI observer times out. A delayed
-      // writer must never overlap a second drain or be reported saved early.
-      const finish = (): void => {
-        if (this.continuousCommitPromise === operation) {
-          this.continuousCommitPromise = undefined;
-          this.continuousCommitInFlight = false;
-        }
-        if (this.isMountedToken(lifecycleToken)) this.drainRapidPageTurn();
-      };
-      void operation.then(finish, finish);
-    }
-    if (await observeReaderProgressOperation(this.continuousCommitPromise) === 'unknown') {
-      throw new Error('READING_CONTINUOUS_PROGRESS_UNKNOWN');
-    }
+    await this.progressProducers.commitContinuous(this.continuousProgressDependencies(lifecycleToken));
   }
 
-  private async drainContinuousProgress(lifecycleToken: number): Promise<void> {
-    while (this.continuousCommitPending && this.isMountedToken(lifecycleToken)) {
-      this.continuousCommitPending = false;
-      await this.persistContinuousProgress(lifecycleToken);
-    }
-  }
-
-  private async persistContinuousProgress(lifecycleToken: number): Promise<void> {
-    if (this.chapter === undefined || this.chapterLayoutMap === undefined || this.phase !== 'ready') return;
-    const chapter = this.chapter;
-    const selectionToken = this.chapterSelectionToken;
-    const scalarCount = this.chapterLayoutMap.scalarCount();
-    const scalar = Math.max(0, Math.min(scalarCount, this.continuousVisibleScalar));
-    const revision = this.continuousProgressRevision;
-    const isOwner = (): boolean => this.isMountedToken(lifecycleToken) && this.phase === 'ready' &&
-      this.readerSettingsSnapshot.navigationMode === 'continuous' && this.chapter === chapter &&
-      this.chapterSelectionToken === selectionToken && this.materializedChapterSelectionToken === selectionToken;
-    const isCurrent = (): boolean => isOwner() && this.continuousProgressRevision === revision &&
-      this.continuousVisibleScalar === scalar;
-    // A retry after an ambiguous result is a read first, even if scrolling has
-    // since selected a newer scalar. Never overwrite an unclassified foreign
-    // row or repeat the unknown write merely because a new sample arrived.
-    if (this.continuousUnknownTarget !== undefined) {
-      await this.reconcileContinuousUnknownProgress(isCurrent);
-      if (!isCurrent()) return;
-    }
-    if (this.lastCommittedProgress?.sourceId === this.sourceId &&
-      this.lastCommittedProgress.bookId === this.bookId &&
-      this.lastCommittedProgress.chapterIndex === chapter.chapterIndex &&
-      this.lastCommittedProgress.chapterOffset === scalar) {
-      this.onAutoPagePageCommitted();
-      return;
-    }
-    try {
-      await this.activeGateway().runProgressCommitSerial(async (): Promise<void> => {
-        if (!isCurrent()) {
-          return;
-        }
-        const chapterProgress = scalarCount === 0 ? 0 : scalar / scalarCount;
-        const stored = await this.activeGateway().resolveAndUpdateProgress(
-          this.bookId,
-          chapter.chapterTitle,
-          new CoreReadingAnchor(chapter.chapterIndex, scalar, chapterProgress, chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof),
-          this.coreLayout(),
-          isCurrent,
-        );
-        if (!isCurrent()) {
-          return;
-        }
-        this.admitCommittedProgress(stored);
-        this.onAutoPagePageCommitted();
-      });
-    } catch (error) {
-      hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience continuous progress commit failed: ${this.errorMessage(error as Error)}`);
-      if (!isOwner()) return;
-      this.continuousUnknownTarget = new CoreReadingAnchor(chapter.chapterIndex, scalar,
-        scalarCount === 0 ? 0 : scalar / scalarCount);
-      this.continuousUnknownOrigin = this.lastCommittedProgress;
-      const confirmedTarget = await this.reconcileContinuousUnknownProgress(isOwner);
-      if (isCurrent() && confirmedTarget) {
-        this.onAutoPagePageCommitted();
-      } else if (isCurrent()) {
-        throw new Error('READING_CONTINUOUS_PROGRESS_UNKNOWN');
-      }
-
-    } finally {
-      if (this.isMountedToken(lifecycleToken) && this.chapter === chapter &&
-        this.continuousProgressRevision !== revision) this.continuousCommitPending = true;
-    }
-  }
-
-  private async reconcileContinuousUnknownProgress(isCurrent: () => boolean): Promise<boolean> {
-    const target = this.continuousUnknownTarget;
-    if (target === undefined) return false;
-    const gateway = this.activeGateway();
-    const result = await reconcileReaderControlSelectionProgress({ isCurrent,
-      runSerial: (operation: () => Promise<void>): Promise<void> => gateway.runProgressCommitSerial(operation),
-      readProgress: async (): Promise<LocalReadingProgress | undefined> => {
-        const state = await gateway.loadProgress(this.bookId, isCurrent);
-        return state.kind === 'restored' ? state.progress : undefined;
+  private continuousProgressDependencies(lifecycleToken: number): ReaderContinuousProgressDependencies {
+    let capturedIntent: ReaderProgressProducerIntent | undefined = undefined;
+    let capturedChapter: ReadingSessionChapter | undefined = undefined;
+    let capturedRevision = -1;
+    const active = (): boolean => this.isMountedToken(lifecycleToken) && this.phase === 'ready' &&
+      this.readerSettingsSnapshot.navigationMode === 'continuous' && this.chapter !== undefined &&
+      this.chapterLayoutMap !== undefined && this.continuousFragments.length > 0;
+    return {
+      active,
+      capture: (): ReaderProgressProducerIntent | undefined => {
+        if (!active() || this.chapter === undefined || this.chapterLayoutMap === undefined) return undefined;
+        const chapter = this.chapter;
+        const selection = this.chapterSelectionToken;
+        const scalarCount = this.chapterLayoutMap.scalarCount();
+        const scalar = Math.max(0, Math.min(scalarCount, this.continuousVisibleScalar));
+        const revision = this.continuousProgressRevision;
+        const isOwner = (): boolean => active() && this.chapter === chapter &&
+          this.chapterSelectionToken === selection && this.materializedChapterSelectionToken === selection;
+        const isCurrent = (): boolean => isOwner() && this.continuousProgressRevision === revision &&
+          this.continuousVisibleScalar === scalar;
+        capturedChapter = chapter;
+        capturedRevision = revision;
+        capturedIntent = this.progressProducerIntent(chapter,
+          new CoreReadingAnchor(chapter.chapterIndex, scalar, scalarCount === 0 ? 0 : scalar / scalarCount,
+            chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof),
+          this.coreLayout(), isOwner, isCurrent, (stored: LocalReadingProgress): void => this.admitCommittedProgress(stored));
+        return capturedIntent;
       },
-    });
-    if (!isCurrent()) return false;
-    const stored = result.progress;
-    if (result.kind !== 'verified' || stored === undefined || stored.bookId !== this.bookId) {
-      throw new Error('READING_CONTINUOUS_PROGRESS_UNKNOWN');
-    }
-    const targetConfirmed = stored.chapterIndex === target.chapterIndex && stored.chapterOffset === target.chapterOffset;
-    const origin = this.continuousUnknownOrigin;
-    const originConfirmed = origin !== undefined && stored.chapterIndex === origin.chapterIndex &&
-      stored.chapterOffset === origin.chapterOffset && stored.updatedAt === origin.updatedAt &&
-      stored.locationRevision === origin.locationRevision;
-    if (!targetConfirmed && !originConfirmed) throw new Error('READING_CONTINUOUS_PROGRESS_FOREIGN');
-    this.continuousUnknownTarget = undefined;
-    this.continuousUnknownOrigin = undefined;
-    if (targetConfirmed) this.admitCommittedProgress(stored);
-    return targetConfirmed;
+      newerSample: (intent: ReaderProgressProducerIntent): boolean => capturedIntent === intent &&
+        this.chapter === capturedChapter && this.continuousProgressRevision !== capturedRevision,
+      completed: (): void => this.onAutoPagePageCommitted(),
+      settled: (): void => this.drainRapidPageTurn(),
+      failed: (error: Error): void => hilog.error(0x5244, 'Reader', '%{private}s',
+        `ReadingExperience continuous progress commit failed: ${this.errorMessage(error)}`),
+    };
+  }
+
+  private progressProducerIntent(chapter: ReadingSessionChapter, anchor: LocalReadingAnchor,
+    layout: LocalReadingLayout, isOwner: () => boolean, isCurrent: () => boolean,
+    publish: (stored: LocalReadingProgress) => void): ReaderProgressProducerIntent {
+    const sourceId = this.sourceId;
+    const bookId = this.bookId;
+    const owner = (): boolean => this.sourceId === sourceId && this.bookId === bookId && isOwner();
+    const current = (): boolean => owner() && isCurrent();
+    return { sourceId, bookId, title: chapter.chapterTitle, anchor, layout, gateway: this.activeGateway(),
+      isOwner: owner, isCurrent: current, committed: (): ReadingCommit | undefined => this.lastCommittedProgress,
+      publish: (stored: LocalReadingProgress): void => { if (owner()) publish(stored); } };
   }
 
   private admitCommittedProgress(stored: LocalReadingProgress): void {
@@ -8208,27 +8120,22 @@ export struct ReadingExperience {
     if (chapter === undefined || !isCurrent() ||
       progress.chapter.chapterIndex !== chapter.chapterIndex || progress.chapter.bodyVersion !== chapter.bodyVersion ||
       progress.chapter.processingVersion !== chapter.processingVersion) return;
-    try {
-      const gateway = this.activeGateway();
-      await gateway.runProgressCommitSerial(async (): Promise<void> => {
-        if (!isCurrent()) return;
-        const scalarCount = this.requireChapterLayoutMap().scalarCount();
-        const offset = Math.max(0, Math.min(scalarCount, progress.charEnd));
-        const chapterProgress = scalarCount === 0 ? 0 : offset / scalarCount;
-        const stored = await gateway.resolveAndUpdateProgress(
-          this.bookId,
-          chapter.chapterTitle,
-          new CoreReadingAnchor(chapter.chapterIndex, offset, chapterProgress, chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof),
-          this.coreLayout(),
-          isCurrent,
-        );
-        if (!isCurrent()) return;
+    const scalarCount = this.requireChapterLayoutMap().scalarCount();
+    const offset = Math.max(0, Math.min(scalarCount, progress.charEnd));
+    const intent = this.progressProducerIntent(chapter,
+      new CoreReadingAnchor(chapter.chapterIndex, offset, scalarCount === 0 ? 0 : offset / scalarCount,
+        chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof), this.coreLayout(),
+      isCurrent, isCurrent, (stored: LocalReadingProgress): void => {
         this.admitCommittedProgress(stored);
+        if (!isCurrent()) return;
         this.lastTtsCommittedProgress = this.lastCommittedProgress;
         this.lastTtsCommittedChapter = chapter;
         this.lastTtsCommittedSelectionToken = selectionToken;
       });
+    try {
+      await this.progressProducers.commitTts(intent);
     } catch (error) {
+      if (!isCurrent()) return;
       this.logTtsFailure('progress', error as Error);
     }
   }
@@ -12534,16 +12441,14 @@ export struct ReadingExperience {
     const page = prepared.page;
     const selectionToken = this.chapterSelectionToken;
     const scalarCount = prepared.context.layoutMap.scalarCount();
+    const current = (): boolean => this.isOrdinaryFirstPagePresentationCurrent(page, chapter, selectionToken, lifecycleToken);
+    const intent = this.progressProducerIntent(chapter,
+      new CoreReadingAnchor(chapter.chapterIndex, page.startScalar, scalarCount === 0 ? 0 : page.startScalar / scalarCount,
+        chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof), this.coreLayout(),
+      current, current, (stored: LocalReadingProgress): void => this.admitCommittedProgress(stored));
     try {
-      const stored = await this.activeGateway().persistPresentedProgress(this.bookId, chapter.chapterTitle,
-        new CoreReadingAnchor(chapter.chapterIndex, page.startScalar, scalarCount === 0 ? 0 : page.startScalar / scalarCount,
-          chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof), this.coreLayout());
-      if (stored.chapterIndex !== chapter.chapterIndex || stored.chapterOffset !== page.startScalar)
-        throw new Error('READING_PAGE_TURN_PROGRESS_ANCHOR_MISMATCH');
-      if (this.isOrdinaryFirstPagePresentationCurrent(page, chapter, selectionToken, lifecycleToken))
-        this.admitCommittedProgress(stored);
-      // Receipt delivery never promotes, rewinds, completes another turn or
-      // changes a texture generation after the display has moved on.
+      await this.progressProducers.persistPresented(intent, 'READING_PAGE_TURN_PROGRESS_ANCHOR_MISMATCH');
+      // Receipt delivery cannot promote/rewind a page or change a texture generation.
     } catch (error) {
       hilog.error(0x5244, 'Reader', '%{private}s',
         `ReadingExperience presented page save pending: ${this.errorMessage(error as Error)}`);
@@ -13040,7 +12945,7 @@ export struct ReadingExperience {
     if (this.activePagePointerId >= 0 || this.pendingPointerSegmentReserved) return { kind: 'busy' };
     if (this.rapidPageTurnState.inFlightDirection !== undefined) return { kind: 'busy' };
     if (this.pageTurnSettlementActive || this.pageTurnSettlingPrepared !== undefined ||
-      this.pageTurnPreparation !== undefined || this.commitInFlight || this.continuousCommitInFlight) {
+      this.pageTurnPreparation !== undefined || this.commitInFlight || this.progressProducers.continuousInFlight) {
       return { kind: 'busy' };
     }
     if (this.rapidPageTurnState.controlRequested) {
@@ -13109,7 +13014,7 @@ export struct ReadingExperience {
     if (origin !== 'manual' && (!this.mounted || !this.appForeground || this.exitRequested ||
       this.controlVisible() || this.controlObscured || this.interactionBlocked || this.pendingPointerSegmentReserved ||
       this.pageTurnSettlementActive || this.pageTurnSettlingPrepared !== undefined ||
-      this.commitInFlight || this.continuousCommitInFlight || readerRapidPageTurnHasWork(this.rapidPageTurnState))) return { kind: 'busy' };
+      this.commitInFlight || this.progressProducers.continuousInFlight || readerRapidPageTurnHasWork(this.rapidPageTurnState))) return { kind: 'busy' };
     if (origin === 'ttsFollow' && (ttsOwner === undefined || !this.isTtsFollowLeaseCurrent(ttsOwner))) return { kind: 'blocked', reason: 'lifecycle' };
     if (this.activePagePointerId >= 0) return { kind: 'busy' };
     if (this.readerSettingsSnapshot.navigationMode === 'continuous') {
@@ -13196,7 +13101,7 @@ export struct ReadingExperience {
   private performContinuousPageTurn(direction: ReaderPageTurnDirection): ReaderPageTurnOutcome {
     if (!this.mounted || this.exitRequested || this.controlVisible() || this.phase !== 'ready' ||
       this.chapter === undefined || this.continuousScroller === undefined ||
-      this.continuousFragments.length === 0 || this.continuousCommitInFlight) {
+      this.continuousFragments.length === 0 || this.progressProducers.continuousInFlight) {
       return { kind: 'busy' };
     }
     const chapter = this.chapter;

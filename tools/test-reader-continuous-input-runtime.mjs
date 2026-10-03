@@ -1,3 +1,4 @@
+import { withReaderProgressProducerFixture } from './lib/reader-progress-producer-fixture.mjs';
 import assert from 'node:assert/strict';
 import { observeReaderProgressOperation, reconcileReaderControlSelectionProgress } from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
@@ -35,11 +36,13 @@ stage.reportCurrentVisibleRange(); rectY = -120; stage.reportCurrentVisibleRange
 assert.deepEqual(reports, [[0, 0, .1], [0, 0, .6]], 'same-row scrolling refreshes the intra-fragment anchor');
 
 class CoreReadingAnchor { constructor(chapterIndex, chapterOffset, chapterProgress) { Object.assign(this, { chapterIndex, chapterOffset, chapterProgress }); } }
-const Owner = productionMotionMethods(new URL('LocalReadingExperience.ets', reading),
-  ['commitContinuousProgress', 'drainContinuousProgress', 'persistContinuousProgress', 'reconcileContinuousUnknownProgress'],
-  { CoreReadingAnchor, observeReaderProgressOperation, reconcileReaderControlSelectionProgress, hilog: { error() {} } });
+const Owner = withReaderProgressProducerFixture(productionMotionMethods(new URL('LocalReadingExperience.ets', reading),
+  ['commitContinuousProgress'],
+  { CoreReadingAnchor, observeReaderProgressOperation, reconcileReaderControlSelectionProgress, hilog: { error() {} } }));
 let completeFirst;
 const firstWrite = new Promise(resolve => { completeFirst = resolve; });
+let reportFirstDispatch;
+const firstDispatched = new Promise(resolve => { reportFirstDispatch = resolve; });
 const writes = [];
 const chapter = { chapterIndex: 2, chapterTitle: 'Chapter' };
 const owner = Object.assign(new Owner(), {
@@ -52,11 +55,12 @@ const owner = Object.assign(new Owner(), {
   admitCommittedProgress(value) { this.lastCommittedProgress = value; }, drainRapidPageTurn() {},
   activeGateway: () => ({ runProgressCommitSerial: fn => fn(),
     resolveAndUpdateProgress: async (_book, _title, anchor) => {
-      writes.push(anchor.chapterOffset); if (writes.length === 1) await firstWrite;
+      writes.push(anchor.chapterOffset); if (writes.length === 1) { reportFirstDispatch(); await firstWrite; }
       return { sourceId: 's', bookId: 'b', ...anchor };
     } }),
 });
 const inFlight = owner.commitContinuousProgress(1);
+await firstDispatched;
 owner.continuousVisibleScalar = 65; owner.continuousProgressRevision++;
 let exitDone = false;
 const exitFlush = owner.commitContinuousProgress(1).then(() => { exitDone = true; });

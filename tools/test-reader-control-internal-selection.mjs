@@ -4,6 +4,7 @@ import { stripTypeScriptTypes } from 'node:module';
 import * as selectionPolicy from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
 import { wholeBookAnchorForPercent } from '../entry/src/main/ets/features/reading/LocalReadingWholeBookProgress.ts';
 import { ReaderTtsPageFollow, readerTtsFollowActive } from '../entry/src/main/ets/features/reading/ReaderTtsPageFollow.ts';
+import { installReaderLayoutOwners } from './lib/reader-measurement-owner-fixture.mjs';
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',
   import.meta.url), 'utf8');
@@ -36,7 +37,7 @@ function Host(mutate = code => code) {
       ...Object.values(deps));
 }
 function owner(Type = Host()) {
-  const host = new Type();
+  const host = installReaderLayoutOwners(new Type());
   Object.assign(host, { sourceId: 'source', bookId: 'book', lifecycleToken: 1, mounted: true,
     exitRequested: false, controlOpenRevision: 41, chapterSelectionToken: 10,
     materializedChapterSelectionToken: 10, visiblePageSelectionToken: 10,

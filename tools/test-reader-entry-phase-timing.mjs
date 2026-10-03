@@ -16,7 +16,9 @@ const logs = [];
 let failLogging = false;
 const hilog = { info(...args) { if (failLogging) throw Error('diagnostic sink unavailable'); logs.push(args); }, error() {} };
 class Page { constructor(fragments, startScalar, endScalar, contentHeight, bodyCapacity) { Object.assign(this, { fragments, startScalar, endScalar, contentHeight, bodyCapacity }); } }
-class Anchor {}
+class Anchor {constructor(chapterIndex,chapterOffset,chapterProgress,bodyVersion,processingVersion) {
+  Object.assign(this,{chapterIndex,chapterOffset,chapterProgress,bodyVersion,processingVersion});
+}}
 const Owner = productionMotionMethods(source, ['loadInitialReading', 'traceInitialReadingPhase',
   'loadInitialChapter', 'openChapter', 'loadReaderSettingsSnapshot', 'applyInitialReaderWindowPolicy', 'beginFirstPageCommit',
   'completeFirstPage', 'publishMeasuredFirstPage', 'measuredPageEndLimit', 'retainMeasuredParagraphWindow', 'isOrdinaryPageMeasurement',
@@ -101,7 +103,7 @@ for (const throwingSink of [false, true]) {
     assert.equal(logs.some(args => args[3] === 'body-presented'), false,
       'model publication cannot claim a compositor-presented frame');
   }
-  commit.resolve({ chapterIndex: 0, chapterOffset: 0 });
+  commit.resolve({ bookId: 'private-book', chapterIndex: 0, chapterOffset: 0 });
   await settle();
   assert.deepEqual(events, ['body-request', 'measured', 'ready', 'chapter-committed']);
   assert.deepEqual(failures, [], 'diagnostic exceptions cannot fail first-page preparation');

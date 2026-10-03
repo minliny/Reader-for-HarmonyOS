@@ -207,7 +207,7 @@ const reloadOwner = experience.match(
 assert.ok(reloadOwner, 'post-persist reload owner path must exist');
 assert.match(reloadOwner[1], /!this\.isSessionActive\(lifecycleToken\) \|\| this\.bookId !== bookId/);
 assert.match(reloadOwner[1], /this\.contentMetrics = undefined/);
-assert.match(reloadOwner[1], /this\.paginationIndex\.invalidateBook\(this\.sourceId, this\.bookId\)/);
+assert.match(reloadOwner[1], /this\.physicalPagination\.index\.invalidateBook\(this\.sourceId, this\.bookId\)/);
 assert.match(reloadOwner[1], /this\.reloadMigratedContentPosition\(lifecycleToken, bookId\)/,
   'internal rule re-materialization must re-read the Core migrated anchor');
 assert.doesNotMatch(reloadOwner[1], /this\.phase !== 'ready'/,

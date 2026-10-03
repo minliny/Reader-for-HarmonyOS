@@ -119,7 +119,7 @@ contract('ordinary CAS pages present independently while strong transactions ret
   assert.match(begin, /void this\.persistPresentedPageTurn\(prepared, lifecycleToken\);\s*this\.finishPreparedPageTurnSettlement\(settlementGeneration, true\);\s*return;/,
     'eligible ordinary presentation releases only the durable gate, then rejoins the original visual handoff');
   assert.ok(begin.indexOf('persistPresentedPageTurn') < begin.indexOf('this.persistPreparedPageTurn('));
-  assert.match(receipt, /persistPresentedProgress[\s\S]*isOrdinaryFirstPagePresentationCurrent[\s\S]*admitCommittedProgress/);
+  assert.match(receipt, /isOrdinaryFirstPagePresentationCurrent[\s\S]*progressProducerIntent[\s\S]*admitCommittedProgress[\s\S]*progressProducers\.persistPresented/);
   assert.doesNotMatch(receipt, /this\.promotePreparedPageTurn\(|this\.finishPreparedPageTurnSettlement\(|this\.visiblePage\s*=/,
     'late ordinary receipts cannot rewind the display or finish another turn');
 });

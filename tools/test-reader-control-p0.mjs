@@ -92,8 +92,8 @@ assert.match(experience, /private requestPageTurn\(direction: ReaderPageTurnDire
 assert.match(experience, /private turnNextPage\(\): ReaderPageTurnOutcome/);
 assert.match(experience, /private turnPreviousPage\(\): ReaderPageTurnOutcome/);
 assert.match(experience, /this\.measureCommittedPageAt\(nextOffset\)/);
-assert.match(experience, /this\.paginationIndex\.findContainingPage\(key, page\.startScalar\)/);
-assert.match(experience, /this\.paginationIndex\.findPreviousPage\(key, page\.startScalar, previousChapterKey\)/);
+assert.match(experience, /this\.physicalPagination\.index\.findContainingPage\(key, page\.startScalar\)/);
+assert.match(experience, /this\.physicalPagination\.index\.findPreviousPage\(key, page\.startScalar, previousChapterKey\)/);
 assert.doesNotMatch(experience, /pageBackStack|ReadingPageHistoryAnchor/);
 assert.match(experience, /private seekControlProgress\(percent: number\): void/);
 assert.match(experience, /private stepControlChapter\(delta: number\): void/);

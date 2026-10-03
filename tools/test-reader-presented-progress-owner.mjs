@@ -58,6 +58,38 @@ function fixture(sourceId = 'local') {
 const cases = [];
 for (const sourceId of ['local', 'remote']) {
   const f = fixture(sourceId), gateway = f.gateway();
+  await assert.rejects(gateway.persistPresentedProgress('book', 'retired before dispatch', anchor(20), layout, () => false), /SUPERSEDED/);
+  assert.equal(f.calls.length, 0, 'a refused UI admission does not read or dispatch');
+  let admitted = true; const gate = deferred(); f.readGates.push(gate);
+  const pending = gateway.persistPresentedProgress('book', 'retired during baseline', anchor(20), layout, () => admitted);
+  await settle(); assert.equal(f.calls.length, 1); admitted = false; gate.resolve();
+  await assert.rejects(pending, /SUPERSEDED/);
+  assert.equal(f.writes().length, 0, 'the real gateway checks admission again after the native baseline read');
+  assert.equal(gateway.pendingPresentedProgress(), undefined);
+  f.close(); cases.push(`UI-admission-before-native-dispatch/${sourceId}`);
+}
+for (const sourceId of ['local', 'remote']) {
+  for (const effect of ['ack', 'lost']) {
+    const f = fixture(sourceId), gateway = f.gateway(); let admitted = true;
+    const gate = deferred(); f.gates.push(gate); if (effect === 'lost') f.effects.push(effect);
+    const pending = gateway.persistPresentedProgress('book', 'accepted exit-visible', anchor(20), layout, () => admitted);
+    await settle(); assert.equal(f.writes().length, 1); admitted = false; gate.resolve();
+    if (effect === 'lost') {
+      await assert.rejects(pending, /receipt lost/);
+      assert.equal(gateway.pendingPresentedProgress().progress.chapterOffset, 20,
+        'retirement cannot discard an already-dispatched unknown intent');
+      assert.equal((await gateway.awaitPresentedProgressPersistence()).chapterOffset, 20);
+    } else {
+      assert.equal((await pending).chapterOffset, 20);
+    }
+    assert.equal(f.durable().chapterOffset, 20, 'UI retirement does not cancel accepted durable position');
+    assert.equal(f.writes().length, 1, 'lost ACK is read-confirmed with the real CAS revision, never blindly rewritten');
+    assert.equal(gateway.pendingPresentedProgress(), undefined);
+    f.close(); cases.push(`dispatched-UI-retirement-preserves-durable-${effect}/${sourceId}`);
+  }
+}
+for (const sourceId of ['local', 'remote']) {
+  const f = fixture(sourceId), gateway = f.gateway();
   const restored = await gateway.loadProgress('book');
   assert.equal(restored.kind, 'restored');
   assert.equal(restored.progressRevision, 'op:1', 'the shared gateway must retain the Core operation revision outside the progress DTO');

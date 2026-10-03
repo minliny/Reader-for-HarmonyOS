@@ -1,4 +1,5 @@
 import { installContentSearchOwnerProbe } from './lib/reader-content-search-owner-probe.mjs';
+import { installReaderLayoutOwners } from './lib/reader-measurement-owner-fixture.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { registerHooks, stripTypeScriptTypes } from 'node:module';
@@ -133,7 +134,7 @@ async function reopenedImport(Type = Host()) {
 async function checkInternalReload(code = method('reloadMigratedContentPosition')) {
   const ReloadHost = new Function('hilog', stripTypeScriptTypes('class ReloadProbe {' +
     method('reloadCurrentPageAfterReplacePersist') + code + method('publishQuickSearchState') + '}') + ';return ReloadProbe;')({error(){}});
-  const host = new ReloadHost(), selections = [];
+  const host = installReaderLayoutOwners(new ReloadHost()), selections = [];
   Object.assign(host, { sourceId: 'source', bookId: 'book', chapterSelectionToken: 1, pageTurnSettlementActive: false,
     isSessionActive: () => true, isSelectionActive: () => true, invalidatePageTurnRuntime() {}, contentMetrics: {},
     paginationIndex: { invalidateBook() {} }, chapterWindow: { clear() {} },

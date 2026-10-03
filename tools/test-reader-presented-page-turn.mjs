@@ -68,7 +68,7 @@ function fixture({ capability = true, sourceSwitch = false, gatewaySwitch = fals
   const key = { sourceId: 's', bookId: 'b', chapterIndex: 1, contentVersion: 'content-v1', layoutSignature: 'layout' };
   const prepared = new classes.PreparedReaderPageTurn('next', page, context, key, 1, 10, 3);
   const stored = { sourceId: 's', bookId: 'b', chapterIndex: 1, chapterOffset: 40,
-    chapterProgress: 0.4, locationRevision: 'r2', updatedAt: 2 };
+    chapterProgress: 0.4, locationRevision: 'r2', updatedAt: 2, bodyVersion: 'body-v1', processingVersion: 'rules-v1' };
   const owner = Object.assign(new Owner(), {
     mounted: true, exitRequested: false, lifecycleToken: 1, sourceId: 's', bookId: 'b', chapter,
     chapterSelectionToken: 2, materializedChapterSelectionToken: 2, visiblePageSelectionToken: 2,

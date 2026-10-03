@@ -989,11 +989,12 @@ export class ReadingSessionFlowGateway {
   }
 
   persistPresentedProgress(bookId: string, chapterTitle: string | undefined,
-    anchor: LocalReadingAnchor, layout: LocalReadingLayout): Promise<LocalReadingProgress> {
+    anchor: LocalReadingAnchor, layout: LocalReadingLayout,
+    isAdmitted?: () => boolean): Promise<LocalReadingProgress> {
     this.assertBook(bookId);
     if (this.sourceSwitchTransactionId !== undefined || this.pendingSourceSwitchResolver !== undefined)
       throw new Error('READING_PRESENTED_PROGRESS_TRANSACTION_PENDING');
-    return this.progressOwner.persistPresented(chapterTitle, anchor, layout, this.progressAccess());
+    return this.progressOwner.persistPresented(chapterTitle, anchor, layout, this.progressAccess(), isAdmitted);
   }
 
   async awaitPresentedProgressPersistence(): Promise<LocalReadingProgress | undefined> {

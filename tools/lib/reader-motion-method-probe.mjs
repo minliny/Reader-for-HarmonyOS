@@ -5,6 +5,7 @@ import { ReaderStartupContentOwner } from '../../entry/src/main/ets/app/ReaderSt
 import { errorMessageOf } from '../../entry/src/main/ets/app/ErrorMessage.ts';
 import { ReaderParagraphLayoutOwner } from '../../entry/src/main/ets/features/reading/ReaderParagraphLayoutOwner.ts';
 import { ReaderPhysicalPaginationOwner } from '../../entry/src/main/ets/features/reading/ReaderPhysicalPaginationOwner.ts';
+import { ReaderProgressProducerHost } from '../../entry/src/main/ets/features/reading/ReaderProgressProducerHost.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -19,7 +20,7 @@ const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
  * This does not simulate ArkUI layout, reactive delivery, or compositor pixels. */
 export function productionMotionMethods(file, names, dependencies = {}) {
   dependencies = { readerAppColor, readerThemeDefinition, readingChapterLayoutMap, hasKnownReadingImageGeometry, errorMessageOf,
-    ...readerTypographyRoles, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner, ReaderStartupContentOwner,
+    ...readerTypographyRoles, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner, ReaderStartupContentOwner, ReaderProgressProducerHost,
     ReaderRuntimeOwner: { current: () => ({ captureReadingContentValidity: () => () => true,
       waitForReadingContentIdle: async () => {} }) }, ...dependencies };
   const source = readFileSync(file, 'utf8');
@@ -30,13 +31,14 @@ export function productionMotionMethods(file, names, dependencies = {}) {
   // Keep newly factored business helpers real in existing method-level probes.
   // Fixtures can still supply their explicit I/O/lifecycle dependencies.
   names = [...names];
-  for (const helper of ['preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch']) {
+  for (const helper of ['preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent']) {
     if (!names.includes(helper) && type.members.some(m => m.name?.getText(tree) === helper) &&
       type.members.some(m => names.includes(m.name?.getText(tree)) && m.getText(tree).includes(`this.${helper}(`))) names.push(helper);
   }
   const methods = names.flatMap(name => type.members.filter(m => m.name?.getText(tree) === name).map(m => m.getText(tree))).join('\n');
   const Probe = new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(`class Probe {
     paragraphLayout = new ReaderParagraphLayoutOwner(); physicalPagination = new ReaderPhysicalPaginationOwner();
+    progressProducers = new ReaderProgressProducerHost();
     nativeTextMeasurement = { clear() {} }; nativeParagraphResources = { close() {}, retain() {} }; ${methods} }`)}; return Probe;`)(...Object.values(dependencies));
   // Existing probes describe pre-refactor component fields. Route those fixture
   // assignments to the real production owners; no production struct accessors
@@ -48,6 +50,9 @@ export function productionMotionMethods(file, names, dependencies = {}) {
     ['measurementRequestedAnchorScalar', 'physicalPagination', 'requestedAnchor'],
     ['pendingPageFragments', 'physicalPagination', 'fragments'], ['pendingPageStartScalar', 'physicalPagination', 'startScalar'],
     ['pendingPageEndScalar', 'physicalPagination', 'endScalar'], ['pendingPageHeight', 'physicalPagination', 'height'],
+    ['continuousCommitInFlight', 'progressProducers', 'continuousInFlight'], ['continuousCommitPending', 'progressProducers', 'continuousPending'],
+    ['continuousCommitPromise', 'progressProducers', 'continuousPromise'], ['continuousUnknownTarget', 'progressProducers', 'continuousUnknownTarget'],
+    ['continuousUnknownOrigin', 'progressProducers', 'continuousUnknownOrigin'],
   ]) Object.defineProperty(Probe.prototype, alias, { get() { return this[owner][field]; },
     set(value) { this[owner][field] = value; }, configurable: true });
   return Probe;
