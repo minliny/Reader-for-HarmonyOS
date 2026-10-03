@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { stripTypeScriptTypes } from 'node:module';
-import { auditTypographyConsumers, typographyProperties } from './lib/reader-typography-consumer-audit.mjs';
+import { auditTypographyConsumers, typographyProperties, typographyRoleImports } from './lib/reader-typography-consumer-audit.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 
 const fixtureArgument = process.argv.find(argument => argument.startsWith('--fixture='));
@@ -21,7 +21,10 @@ const verifyMigrationSource = process.argv.includes('--verify-migration-source')
 let sites = 0, argumentsChecked = 0;
 for (const file of baseline.files) {
   const source = readFileSync(new URL(`../${file.path}`, import.meta.url), 'utf8');
-  assert.ok(verifyMigrationSource ? source.startsWith(file.roleImport) : source.includes(file.roleImport), `${file.path}: bounded semantic role import`);
+  const importedRoles = typographyRoleImports(source, file.path);
+  for (const expected of file.nodes) for (const replacement of Object.values(expected.changes))
+    for (const match of replacement.matchAll(/TYPE_\w+/g))
+      assert.ok(importedRoles.has(match[0]), `${file.path}: actual public semantic role import ${match[0]}`);
   const consumers = auditTypographyConsumers(source, file.path), used = new Set(), edits = [];
   for (const expected of file.nodes) {
     const actual = consumers.find(node => !used.has(node) && node.method === (file.path.endsWith('/SettingsPage.ets') && expected.method === 'buildGeneral' ? 'operationFeedback' : expected.method) && node.kind === expected.kind &&
@@ -42,7 +45,10 @@ for (const file of baseline.files) {
     `${file.path}: reject any newly introduced private typography tuple`);
   let restored = source;
   for (const edit of edits.sort((a, b) => b.start - a.start)) restored = restored.slice(0, edit.start) + edit.replacement + restored.slice(edit.end);
-  restored = restored.slice(file.roleImport.length);
+  if (verifyMigrationSource) {
+    assert.ok(restored.startsWith(file.roleImport), `${file.path}: original migration import prefix for one-time source proof`);
+    restored = restored.slice(file.roleImport.length);
+  }
   if (verifyMigrationSource) assert.equal(createHash('sha256').update(restored).digest('hex'), file.sha256,
     `${file.path}: layout, callbacks, business guards and content match the immutable pre-migration source`);
 }

@@ -25,7 +25,9 @@ for (const baseline of fixture.nodes) {
 assert.equal(fixture.nodes.length, 8, 'eight original semantic consumers; shared Builders may later remove duplicate authored actors');
 let restored = source;
 for (const edit of edits.sort((a,b) => b.start-a.start)) restored = restored.slice(0,edit.start)+edit.value+restored.slice(edit.end);
-if (verifyMigrationSource) { assert.ok(restored.startsWith(fixture.roleImport)); restored = restored.slice(fixture.roleImport.length); }
+if (verifyMigrationSource) {
+  assert.ok(restored.startsWith(fixture.roleImport)); restored = restored.slice(fixture.roleImport.length);
+}
 if (verifyMigrationSource) assert.equal(createHash('sha256').update(restored).digest('hex'), fixture.sha256, 'all owner facts, guards, callbacks, layout, background and lifecycle bytes retained');
 assert.ok(consumers.filter(node => node.modifiers.fontSize).every(node => /TYPE_/.test(node.modifiers.fontSize.expression)));
 const recoverySource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderRecoveryAction.ets',import.meta.url),'utf8');

@@ -62,3 +62,19 @@ export function isSharedTypographyExpression(expression) {
   };
   return visit(root);
 }
+
+/** Collect every real named role import from the public typography module.
+ * Business recovery work may add another import or merge named lists; the
+ * migration gate must not depend on one header line remaining byte-identical. */
+export function typographyRoleImports(source, file = '/tmp/TypographyImports.ets') {
+  const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  assert.equal(parsed.parseDiagnostics.length, 0, `${file}: real ETS imports parse`);
+  const roles = new Set();
+  for (const statement of parsed.statements) {
+    if (!ts.isImportDeclaration(statement) || !/\/(?:ReaderTypography)(?:\.ets)?$/.test(statement.moduleSpecifier.text)) continue;
+    const bindings = statement.importClause?.namedBindings;
+    if (!bindings || !ts.isNamedImports(bindings)) continue;
+    for (const element of bindings.elements) if (/^TYPE_\w+$/.test(element.name.text)) roles.add(element.name.text);
+  }
+  return roles;
+}

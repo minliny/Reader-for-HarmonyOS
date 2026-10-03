@@ -453,6 +453,7 @@
     "test-rss-management-typography.mjs",
     "test-private-typography-budget.mjs",
     "test-source-settings-receipt-consumers.mjs",
-    "test-reader-directory-typography.mjs"
+    "test-reader-directory-typography.mjs",
+    "test-typography-role-imports.mjs"
   ]
 }
