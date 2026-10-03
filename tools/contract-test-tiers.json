@@ -455,6 +455,7 @@
     "test-source-settings-receipt-consumers.mjs",
     "test-reader-directory-typography.mjs",
     "test-typography-role-imports.mjs",
-    "test-source-tools-receipt-consumers.mjs"
+    "test-source-tools-receipt-consumers.mjs",
+    "test-settings-selection-owner.mjs"
   ]
 }

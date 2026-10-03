@@ -53,6 +53,8 @@ export interface SettingsSnapshot {
   crashLog: boolean;
 }
 
+let settingsSelectionGeneration: number = 0;
+
 @Component
 export struct SettingsPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
@@ -84,6 +86,8 @@ export struct SettingsPage {
   private mounted: boolean = false;
   private resetRevision: number = 0;
   @State private openSelect: SettingsSelectField | '' = '';
+  @State private selectionId: string = '';
+  private selectionField: SettingsSelectField | '' = '';
   // 展开面板锚点: 触发条全局坐标减去宿主 Stack 原点, 得面板相对宿主 Stack 的位置。
   // selectAnchors 为普通 map(非 @State): 逐行 onAreaChange 写入, 打开时读入 anchorX/Y。
   @State private anchorRight: number = 0;
@@ -109,7 +113,7 @@ export struct SettingsPage {
     this.syncSnapshotValues();
   }
 
-  aboutToDisappear(): void { this.mounted = false; this.resetRevision += 1; }
+  aboutToDisappear(): void { this.mounted = false; this.resetRevision += 1; this.retireSelection(); }
 
   build() {
     SettingsShell({
@@ -300,7 +304,7 @@ export struct SettingsPage {
         variant: this.isTablet ? 'settingsTablet' : 'settingsPhone',
         reduceMotion: this.reduceMotionValue,
         onToggle: (): void => {
-          this.openSelect = this.openSelect === key ? '' : key;
+          this.toggleSelection(key);
           const a = this.selectAnchors[key];
           if (a !== undefined) {
             this.anchorRight = a.right;
@@ -474,6 +478,31 @@ export struct SettingsPage {
 
   // 展开面板: SettingsShell 根 Stack 即全高 overlay 宿主, 面板相对位置 = 触发条全局坐标
   // - 宿主原点。面板落在宿主 bounds 内 → 所有选项可点。
+  private toggleSelection(field: SettingsSelectField): void {
+    if (this.openSelect === field) { this.retireSelection(); return; }
+    this.openSelect = field;
+    this.selectionField = field;
+    this.selectionId = `${field}:${++settingsSelectionGeneration}`;
+  }
+
+  private retireSelection(): void {
+    this.openSelect = ''; this.selectionField = ''; this.selectionId = '';
+  }
+
+  private ownsSelection(identity: string | undefined): boolean {
+    return this.mounted && identity !== undefined && identity.length > 0 && identity === this.selectionId &&
+      this.selectionField !== '' && this.selectionField === this.openSelect;
+  }
+
+  private commitSelection(option: string, identity: string | undefined): void {
+    if (!this.ownsSelection(identity) || this.openSelect === '' || !this.selectOptions(this.openSelect).includes(option)) return;
+    this.setSelectValue(this.openSelect, option); this.retireSelection();
+  }
+
+  private dismissSelection(identity: string | undefined): void {
+    if (this.ownsSelection(identity)) this.retireSelection();
+  }
+
   @Builder
   private buildOverlay() {
     if (this.openSelect !== '') {
@@ -484,16 +513,9 @@ export struct SettingsPage {
         options: this.selectOptions(this.openSelect),
         anchorRight: this.anchorRight - this.originX,
         anchorBottom: this.anchorBottom - this.originY,
-        onSelect: (opt: string): void => {
-          const field = this.openSelect;
-          if (field !== '') {
-            this.setSelectValue(field, opt);
-          }
-          this.openSelect = '';
-        },
-        onDismiss: (): void => {
-          this.openSelect = '';
-        },
+        selectionId: this.selectionId,
+        onSelect: (opt: string, identity?: string): void => this.commitSelection(opt, identity),
+        onDismiss: (identity?: string): void => this.dismissSelection(identity),
       });
     }
   }
