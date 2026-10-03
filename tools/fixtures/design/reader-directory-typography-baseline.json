@@ -1,0 +1,1069 @@
+{
+  "schemaVersion": 1,
+  "baselineCommit": "cf9dadef",
+  "description": "Complete directory and bookmark chrome family; literal tuple/state/layout baseline retained.",
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/reading/FullDirectoryPanel.ets",
+      "sha256": "bf672e23463867fff413d3ac883d9c1afd3b02fcf5e0dbdbc32e4ae6ae814358",
+      "roleImport": "import { TYPE_APP_INHERITED_OPTION, TYPE_READER_DIRECTORY_COLLAPSE, TYPE_READER_DIRECTORY_CURRENT_TITLE, TYPE_READER_DIRECTORY_HEADING, TYPE_READER_DIRECTORY_POSITION_INTER, TYPE_READER_DIRECTORY_TAB, TYPE_READER_DIRECTORY_TITLE_INTER } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "panelHeader",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.activeTab === 'bookmarks' ? '书签' : '目录'",
+          "original": {
+            "lineHeight": "20",
+            "fontSize": "14",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_READER_DIRECTORY_HEADING.lineHeightFp as number",
+            "fontSize": "TYPE_READER_DIRECTORY_HEADING.fontSizeFp",
+            "fontWeight": "TYPE_READER_DIRECTORY_HEADING.fontWeight",
+            "fontFamily": "TYPE_READER_DIRECTORY_HEADING.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "panelHeader",
+          "index": 1,
+          "kind": "Text",
+          "text": "'收起'",
+          "original": {
+            "lineHeight": "14",
+            "fontSize": "10",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_READER_DIRECTORY_COLLAPSE.lineHeightFp as number",
+            "fontSize": "TYPE_READER_DIRECTORY_COLLAPSE.fontSizeFp",
+            "fontWeight": "TYPE_READER_DIRECTORY_COLLAPSE.fontWeight",
+            "fontFamily": "TYPE_READER_DIRECTORY_COLLAPSE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "directoryBody",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.catalogEmptyMessage()",
+          "original": {
+            "fontSize": "13"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_OPTION.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "directoryTab",
+          "index": 0,
+          "kind": "Text",
+          "text": "'目录'",
+          "original": {
+            "lineHeight": "16",
+            "fontSize": "11",
+            "fontWeight": "600",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_READER_DIRECTORY_TAB.lineHeightFp as number",
+            "fontSize": "TYPE_READER_DIRECTORY_TAB.fontSizeFp",
+            "fontWeight": "TYPE_READER_DIRECTORY_TAB.fontWeight",
+            "fontFamily": "TYPE_READER_DIRECTORY_TAB.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "bookmarkTab",
+          "index": 0,
+          "kind": "Text",
+          "text": "'书签'",
+          "original": {
+            "lineHeight": "16",
+            "fontSize": "11",
+            "fontWeight": "600",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_READER_DIRECTORY_TAB.lineHeightFp as number",
+            "fontSize": "TYPE_READER_DIRECTORY_TAB.fontSizeFp",
+            "fontWeight": "TYPE_READER_DIRECTORY_TAB.fontWeight",
+            "fontFamily": "TYPE_READER_DIRECTORY_TAB.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "chapterRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "repeatItem.item.title",
+          "original": {
+            "fontSize": "11",
+            "fontWeight": "500",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_DIRECTORY_TITLE_INTER.fontSizeFp",
+            "fontWeight": "TYPE_READER_DIRECTORY_TITLE_INTER.fontWeight",
+            "fontFamily": "TYPE_READER_DIRECTORY_TITLE_INTER.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "statusFooter",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.currentTitle()",
+          "original": {
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_DIRECTORY_CURRENT_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_READER_DIRECTORY_CURRENT_TITLE.fontWeight",
+            "fontFamily": "TYPE_READER_DIRECTORY_CURRENT_TITLE.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "statusFooter",
+          "index": 1,
+          "kind": "Text",
+          "text": "this.currentPosition()",
+          "original": {
+            "fontSize": "9",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_DIRECTORY_POSITION_INTER.fontSizeFp",
+            "fontWeight": "TYPE_READER_DIRECTORY_POSITION_INTER.fontWeight",
+            "fontFamily": "TYPE_READER_DIRECTORY_POSITION_INTER.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderBookmarkEmptyState.ets",
+      "sha256": "782a7fdf0db43df994e2e32a01a0196a192340b1b91643200ad373bae89d725f",
+      "roleImport": "import { TYPE_READER_BOOKMARK_ACTION, TYPE_READER_BOOKMARK_BODY, TYPE_READER_BOOKMARK_EMPTY_TITLE } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "build",
+          "index": 0,
+          "kind": "Text",
+          "text": "'暂无书签'",
+          "original": {
+            "lineHeight": "16",
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_READER_BOOKMARK_EMPTY_TITLE.lineHeightFp as number",
+            "fontSize": "TYPE_READER_BOOKMARK_EMPTY_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_READER_BOOKMARK_EMPTY_TITLE.fontWeight",
+            "fontFamily": "TYPE_READER_BOOKMARK_EMPTY_TITLE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 1,
+          "kind": "Text",
+          "text": "'在阅读页面点按书签图标即可收藏当前位置'",
+          "original": {
+            "lineHeight": "14",
+            "fontSize": "10",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_READER_BOOKMARK_BODY.lineHeightFp as number",
+            "fontSize": "TYPE_READER_BOOKMARK_BODY.fontSizeFp",
+            "fontFamily": "TYPE_READER_BOOKMARK_BODY.fontFamily as string"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 2,
+          "kind": "Text",
+          "text": "'返回目录'",
+          "original": {
+            "fontSize": "10",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_BOOKMARK_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_READER_BOOKMARK_ACTION.fontWeight",
+            "fontFamily": "TYPE_READER_BOOKMARK_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderBookmarkErrorState.ets",
+      "sha256": "a34598c67120d6a09e72433e4aeb56a778a4978ef6f64ca0742f6e4e708f1005",
+      "roleImport": "import { TYPE_READER_BOOKMARK_ACTION, TYPE_READER_BOOKMARK_BODY } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "build",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.message",
+          "original": {
+            "lineHeight": "14",
+            "fontSize": "10",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_READER_BOOKMARK_BODY.lineHeightFp as number",
+            "fontSize": "TYPE_READER_BOOKMARK_BODY.fontSizeFp",
+            "fontFamily": "TYPE_READER_BOOKMARK_BODY.fontFamily as string"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 1,
+          "kind": "Text",
+          "text": "'重试'",
+          "original": {
+            "fontSize": "10",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_BOOKMARK_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_READER_BOOKMARK_ACTION.fontWeight",
+            "fontFamily": "TYPE_READER_BOOKMARK_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderBookmarkLoadingState.ets",
+      "sha256": "9d76ebabfe991d91dd1ce408e07f12e08cbe28d3226fb1a150a7fba0d90e6459",
+      "roleImport": "import { TYPE_READER_BOOKMARK_LOADING } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "build",
+          "index": 0,
+          "kind": "Text",
+          "text": "'书签载入中…'",
+          "original": {
+            "fontSize": "10",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_BOOKMARK_LOADING.fontSizeFp",
+            "fontFamily": "TYPE_READER_BOOKMARK_LOADING.fontFamily as string"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderBookmarkRow.ets",
+      "sha256": "df7ba87502949300f267ba4b2120f7eb9c4deac86b01cb3cf20a110e99ed8694",
+      "roleImport": "import { TYPE_READER_BOOKMARK_CHAPTER, TYPE_READER_BOOKMARK_EXCERPT, TYPE_READER_BOOKMARK_EXCERPT_LEGACY, TYPE_READER_BOOKMARK_META, TYPE_READER_BOOKMARK_PENDING, TYPE_READER_BOOKMARK_PENDING_LEGACY } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "motionBody",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.row.chapterTitle",
+          "original": {
+            "lineHeight": "14",
+            "fontSize": "11",
+            "fontWeight": "500",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_READER_BOOKMARK_CHAPTER.lineHeightFp as number",
+            "fontSize": "TYPE_READER_BOOKMARK_CHAPTER.fontSizeFp",
+            "fontWeight": "TYPE_READER_BOOKMARK_CHAPTER.fontWeight",
+            "fontFamily": "TYPE_READER_BOOKMARK_CHAPTER.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "motionBody",
+          "index": 1,
+          "kind": "Text",
+          "text": "BOOKMARK_PENDING_LABEL",
+          "original": {
+            "fontSize": "8"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_BOOKMARK_PENDING.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "motionBody",
+          "index": 2,
+          "kind": "Text",
+          "text": "this.row.positionLabel",
+          "original": {
+            "fontSize": "9",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_BOOKMARK_META.fontSizeFp",
+            "fontFamily": "TYPE_READER_BOOKMARK_META.fontFamily as string"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "motionBody",
+          "index": 3,
+          "kind": "Text",
+          "text": "this.row.timeLabel",
+          "original": {
+            "fontSize": "9",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_BOOKMARK_META.fontSizeFp",
+            "fontFamily": "TYPE_READER_BOOKMARK_META.fontFamily as string"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "motionBody",
+          "index": 4,
+          "kind": "Text",
+          "text": "this.row.excerpt",
+          "original": {
+            "lineHeight": "14",
+            "fontSize": "9",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderNotoSerifSCRegular'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_READER_BOOKMARK_EXCERPT.lineHeightFp as number",
+            "fontSize": "TYPE_READER_BOOKMARK_EXCERPT.fontSizeFp",
+            "fontWeight": "TYPE_READER_BOOKMARK_EXCERPT.fontWeight",
+            "fontFamily": "TYPE_READER_BOOKMARK_EXCERPT.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "legacyBody",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.row.chapterTitle",
+          "original": {
+            "lineHeight": "14",
+            "fontSize": "11",
+            "fontWeight": "500",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_READER_BOOKMARK_CHAPTER.lineHeightFp as number",
+            "fontSize": "TYPE_READER_BOOKMARK_CHAPTER.fontSizeFp",
+            "fontWeight": "TYPE_READER_BOOKMARK_CHAPTER.fontWeight",
+            "fontFamily": "TYPE_READER_BOOKMARK_CHAPTER.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "legacyBody",
+          "index": 1,
+          "kind": "Text",
+          "text": "BOOKMARK_PENDING_LABEL",
+          "original": {
+            "fontSize": "8",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_BOOKMARK_PENDING_LEGACY.fontSizeFp",
+            "fontFamily": "TYPE_READER_BOOKMARK_PENDING_LEGACY.fontFamily as string"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "legacyBody",
+          "index": 2,
+          "kind": "Text",
+          "text": "this.row.positionLabel",
+          "original": {
+            "fontSize": "9",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_BOOKMARK_META.fontSizeFp",
+            "fontFamily": "TYPE_READER_BOOKMARK_META.fontFamily as string"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "legacyBody",
+          "index": 3,
+          "kind": "Text",
+          "text": "this.row.timeLabel",
+          "original": {
+            "fontSize": "9",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_BOOKMARK_META.fontSizeFp",
+            "fontFamily": "TYPE_READER_BOOKMARK_META.fontFamily as string"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "legacyBody",
+          "index": 4,
+          "kind": "Text",
+          "text": "this.row.excerpt",
+          "original": {
+            "lineHeight": "13",
+            "fontSize": "9",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderNotoSerifSCRegular'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_READER_BOOKMARK_EXCERPT_LEGACY.lineHeightFp as number",
+            "fontSize": "TYPE_READER_BOOKMARK_EXCERPT_LEGACY.fontSizeFp",
+            "fontWeight": "TYPE_READER_BOOKMARK_EXCERPT_LEGACY.fontWeight",
+            "fontFamily": "TYPE_READER_BOOKMARK_EXCERPT_LEGACY.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+      "sha256": "f0475b2723cdaf6cdcd02181e61bf251d03d3cd69c23d0f8fd8919f48e59c5e4",
+      "roleImport": "import { TYPE_APP_INHERITED_BODY, TYPE_READER_DIRECTORY_CURRENT_TITLE, TYPE_READER_DIRECTORY_POSITION, TYPE_READER_DIRECTORY_TAB_COMPACT } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "tabButton",
+          "index": 0,
+          "kind": "Text",
+          "text": "title",
+          "original": {
+            "lineHeight": "16",
+            "fontSize": "11",
+            "fontWeight": "500",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_READER_DIRECTORY_TAB_COMPACT.lineHeightFp as number",
+            "fontSize": "TYPE_READER_DIRECTORY_TAB_COMPACT.fontSizeFp",
+            "fontWeight": "TYPE_READER_DIRECTORY_TAB_COMPACT.fontWeight",
+            "fontFamily": "TYPE_READER_DIRECTORY_TAB_COMPACT.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "listBody",
+          "index": 0,
+          "kind": "Text",
+          "text": "'没有匹配的章节'",
+          "original": {
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "listBody",
+          "index": 1,
+          "kind": "Text",
+          "text": "'没有匹配的章节'",
+          "original": {
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 0,
+          "kind": "Text",
+          "text": "'当前章节'",
+          "original": {
+            "fontSize": "9",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_DIRECTORY_POSITION.fontSizeFp",
+            "fontFamily": "TYPE_READER_DIRECTORY_POSITION.fontFamily as string"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 1,
+          "kind": "Text",
+          "text": "this.snapshot.currentTitle",
+          "original": {
+            "fontSize": "11",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_DIRECTORY_CURRENT_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_READER_DIRECTORY_CURRENT_TITLE.fontWeight",
+            "fontFamily": "TYPE_READER_DIRECTORY_CURRENT_TITLE.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 2,
+          "kind": "Text",
+          "text": "this.snapshot.currentPosition",
+          "original": {
+            "fontSize": "9",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_DIRECTORY_POSITION.fontSizeFp",
+            "fontFamily": "TYPE_READER_DIRECTORY_POSITION.fontFamily as string"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderDirectoryChapterRow.ets",
+      "sha256": "56c3f72aece7251ebdfe2c0a503d1bc0b7ab6bbffc0ba356a1da5b888770623d",
+      "roleImport": "import { TYPE_READER_DIRECTORY_TITLE } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "build",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.entry.title",
+          "original": {
+            "fontSize": "11",
+            "fontWeight": "500",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_DIRECTORY_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_READER_DIRECTORY_TITLE.fontWeight",
+            "fontFamily": "TYPE_READER_DIRECTORY_TITLE.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderDirectoryModulePanel.ets",
+      "sha256": "35545888e5deb317082b2da9a125194ba99ce801c2f6b1196d6bab978958156c",
+      "roleImport": "import { TYPE_READER_DIRECTORY_TAB_LEGACY, TYPE_READER_DIRECTORY_TITLE_LEGACY } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "tabs",
+          "index": 0,
+          "kind": "Text",
+          "text": "'目录'",
+          "original": {
+            "fontSize": "10",
+            "fontWeight": "500",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_DIRECTORY_TAB_LEGACY.fontSizeFp",
+            "fontWeight": "TYPE_READER_DIRECTORY_TAB_LEGACY.fontWeight",
+            "fontFamily": "TYPE_READER_DIRECTORY_TAB_LEGACY.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "tabs",
+          "index": 1,
+          "kind": "Text",
+          "text": "'书签'",
+          "original": {
+            "fontSize": "10",
+            "fontWeight": "500",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_DIRECTORY_TAB_LEGACY.fontSizeFp",
+            "fontWeight": "TYPE_READER_DIRECTORY_TAB_LEGACY.fontWeight",
+            "fontFamily": "TYPE_READER_DIRECTORY_TAB_LEGACY.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "chapterRow",
+          "index": 0,
+          "kind": "Text",
+          "text": "repeatItem.item.title",
+          "original": {
+            "lineHeight": "12.32",
+            "fontSize": "11",
+            "fontWeight": "500",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_READER_DIRECTORY_TITLE_LEGACY.lineHeightFp as number",
+            "fontSize": "TYPE_READER_DIRECTORY_TITLE_LEGACY.fontSizeFp",
+            "fontWeight": "TYPE_READER_DIRECTORY_TITLE_LEGACY.fontWeight",
+            "fontFamily": "TYPE_READER_DIRECTORY_TITLE_LEGACY.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets",
+      "sha256": "944133017513d62b26bc73a50c1eb0ed08b06ece7e3bf7521e6e5b5772faf54d",
+      "roleImport": "import { TYPE_APP_INHERITED_HINT, TYPE_READER_DIRECTORY_DISCLOSURE, TYPE_READER_DIRECTORY_TITLE } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "row",
+          "index": 0,
+          "kind": "Text",
+          "text": "'…'",
+          "original": {
+            "fontSize": "11"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_HINT.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "row",
+          "index": 1,
+          "kind": "Text",
+          "text": "item.node.title",
+          "original": {
+            "fontWeight": "500",
+            "fontSize": "11",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontWeight": "TYPE_READER_DIRECTORY_TITLE.fontWeight",
+            "fontSize": "TYPE_READER_DIRECTORY_TITLE.fontSizeFp",
+            "fontFamily": "TYPE_READER_DIRECTORY_TITLE.fontFamily"
+          },
+          "extra": {
+            "fontWeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "row",
+          "index": 2,
+          "kind": "Text",
+          "text": "item.node.expanded ? '⌄' : '›'",
+          "original": {
+            "fontSize": "18"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_DIRECTORY_DISCLOSURE.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets",
+      "sha256": "859f2a04ddb82e6edacfdf96dc77823ed3b8e2dcbb3c95d59da1c8d5262b0bb6",
+      "roleImport": "import { TYPE_APP_INHERITED_BODY } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "build",
+          "index": 0,
+          "kind": "Text",
+          "text": "'没有匹配的目录项'",
+          "original": {
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderDirectoryRules.ets",
+      "sha256": "aa6886462bc8a828be45c05c21441e9211fed7648908c70884e5cd4194a30463",
+      "roleImport": "import { TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_HINT, TYPE_READER_DIRECTORY_RULE_HEADING } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "build",
+          "index": 0,
+          "kind": "Text",
+          "text": "'本书目录层级规则'",
+          "original": {
+            "fontWeight": "FontWeight.Bold",
+            "fontSize": "14"
+          },
+          "changes": {
+            "fontWeight": "TYPE_READER_DIRECTORY_RULE_HEADING.fontWeight as number",
+            "fontSize": "TYPE_READER_DIRECTORY_RULE_HEADING.fontSizeFp"
+          },
+          "extra": {
+            "fontWeight": [],
+            "fontSize": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 1,
+          "kind": "Text",
+          "text": "'只调整导航层级；0 为最外层，范围 0–31。删除所有规则可恢复默认，请先预览。'",
+          "original": {
+            "fontSize": "11"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_HINT.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 2,
+          "kind": "Text",
+          "text": "'正则匹配完整标题或独立行，例如“第一卷.*”可匹配“第一卷 童子行”。'",
+          "original": {
+            "fontSize": "11"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_HINT.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 3,
+          "kind": "TextInput",
+          "text": "{ text: rule.pattern, placeholder: '匹配完整标题或独立正文行的正则表达式' }",
+          "original": {
+            "fontSize": "12"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 4,
+          "kind": "Text",
+          "text": "'层级'",
+          "original": {
+            "fontSize": "11"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_HINT.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 5,
+          "kind": "Text",
+          "text": "this.message",
+          "original": {
+            "fontSize": "11"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_HINT.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        },
+        {
+          "method": "build",
+          "index": 6,
+          "kind": "Text",
+          "text": "title",
+          "original": {
+            "fontSize": "11"
+          },
+          "changes": {
+            "fontSize": "TYPE_APP_INHERITED_HINT.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderFullDirectory.ets",
+      "sha256": "fd117c5e13f2370c729f2cb28c1a884ea3cf16411e3a3e13bd55becaabc4bfc2",
+      "roleImport": "import { TYPE_READER_DIRECTORY_BOOK_TITLE, TYPE_READER_DIRECTORY_CHAPTER, TYPE_READER_DIRECTORY_OFFLINE_ACTION, TYPE_READER_DIRECTORY_SOURCE_ACTION } from '../common/ReaderTypography';\n",
+      "nodes": [
+        {
+          "method": "topBar",
+          "index": 0,
+          "kind": "Text",
+          "text": "this.bookTitle",
+          "original": {
+            "fontSize": "16",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSerifSCBold'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_DIRECTORY_BOOK_TITLE.fontSizeFp",
+            "fontWeight": "TYPE_READER_DIRECTORY_BOOK_TITLE.fontWeight",
+            "fontFamily": "TYPE_READER_DIRECTORY_BOOK_TITLE.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "topBar",
+          "index": 1,
+          "kind": "Text",
+          "text": "this.chapterTitle",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderNotoSerifSCRegular'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_DIRECTORY_CHAPTER.fontSizeFp",
+            "fontWeight": "TYPE_READER_DIRECTORY_CHAPTER.fontWeight",
+            "fontFamily": "TYPE_READER_DIRECTORY_CHAPTER.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "topBar",
+          "index": 2,
+          "kind": "Text",
+          "text": "'换源'",
+          "original": {
+            "fontSize": "12",
+            "fontWeight": "800",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_DIRECTORY_SOURCE_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_READER_DIRECTORY_SOURCE_ACTION.fontWeight",
+            "fontFamily": "TYPE_READER_DIRECTORY_SOURCE_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "offlineBookMenu",
+          "index": 0,
+          "kind": "Text",
+          "text": "'下载整书'",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Medium",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontWeight",
+            "fontFamily": "TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "offlineBookMenu",
+          "index": 1,
+          "kind": "Text",
+          "text": "'清除本书离线'",
+          "original": {
+            "fontSize": "13",
+            "fontWeight": "FontWeight.Medium",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontSizeFp",
+            "fontWeight": "TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontWeight",
+            "fontFamily": "TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    }
+  ]
+}

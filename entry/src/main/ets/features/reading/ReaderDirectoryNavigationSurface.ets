@@ -1,3 +1,4 @@
+import { TYPE_APP_INHERITED_BODY } from '../common/ReaderTypography';
 import { FrameCallback } from '@kit.ArkUI';
 import { ReaderDirectoryTrace } from './ReaderDirectoryTrace';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -374,7 +375,7 @@ export struct ReaderDirectoryNavigationSurface {
         if (this.view.visibleTotal === 0) {
           Text('没有匹配的目录项')
             .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
-            .fontSize(12)
+            .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
             .hitTestBehavior(HitTestMode.None);
         }
       }.width('100%').height('100%');

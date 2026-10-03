@@ -5,7 +5,10 @@ import { stripTypeScriptTypes } from 'node:module';
 import { auditTypographyConsumers, typographyProperties } from './lib/reader-typography-consumer-audit.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 
-const baseline = JSON.parse(readFileSync(new URL('./fixtures/design/conventional-typography-baseline.json', import.meta.url)));
+const fixtureArgument = process.argv.find(argument => argument.startsWith('--fixture='));
+const fixtureName = fixtureArgument?.slice('--fixture='.length) ?? 'conventional-typography-baseline.json';
+assert.ok(/^[a-z0-9-]+\.json$/.test(fixtureName), 'bounded fixture filename');
+const baseline = JSON.parse(readFileSync(new URL(`./fixtures/design/${fixtureName}`, import.meta.url)));
 const fontWeights = { Regular: 400, Medium: 500, Bold: 700 };
 const scenarios = [
   { isWide: () => false, isTablet: false, coverWidth: 96.96, selectedGroupName: '其他' },
@@ -43,6 +46,5 @@ for (const file of baseline.files) {
   if (verifyMigrationSource) assert.equal(createHash('sha256').update(restored).digest('hex'), file.sha256,
     `${file.path}: layout, callbacks, business guards and content match the immutable pre-migration source`);
 }
-assert.equal(baseline.files.length, 28);
-assert.equal(sites, 248);
+assert.equal(sites, baseline.files.reduce((sum, file) => sum + file.nodes.length, 0));
 console.log(`PASS conventional Typography: ${baseline.files.length} complete files, ${sites} production consumers, ${argumentsChecked} arguments, ${verifyMigrationSource ? "exact source restoration/" : ""}AUTO/dynamic variants`);

@@ -1,3 +1,4 @@
+import { TYPE_READER_BOOKMARK_LOADING } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { TOK_READ_MUTED, TOK_READ_PRIMARY } from '../common/ReaderTokens';
 
@@ -16,8 +17,8 @@ export struct ReaderBookmarkLoadingState {
         .height(20)
         .color(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
       Text('书签载入中…')
-        .fontFamily('ReaderNotoSansSC')
-        .fontSize(10)
+        .fontFamily(TYPE_READER_BOOKMARK_LOADING.fontFamily as string)
+        .fontSize(TYPE_READER_BOOKMARK_LOADING.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
     }
     .width('100%')

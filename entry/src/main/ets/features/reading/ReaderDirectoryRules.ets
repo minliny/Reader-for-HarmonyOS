@@ -1,3 +1,4 @@
+import { TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_HINT, TYPE_READER_DIRECTORY_RULE_HEADING } from '../common/ReaderTypography';
 import type { JsonObject, ReaderCoreResultEvent } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -92,18 +93,18 @@ export struct ReaderDirectoryRules {
   }
   build() {
     Column({ space: 8 }) {
-      Text('本书目录层级规则').fontSize(14).fontWeight(FontWeight.Bold);
-      Text('只调整导航层级；0 为最外层，范围 0–31。删除所有规则可恢复默认，请先预览。').fontSize(11);
-      Text('正则匹配完整标题或独立行，例如“第一卷.*”可匹配“第一卷 童子行”。').fontSize(11);
+      Text('本书目录层级规则').fontSize(TYPE_READER_DIRECTORY_RULE_HEADING.fontSizeFp).fontWeight(TYPE_READER_DIRECTORY_RULE_HEADING.fontWeight as number);
+      Text('只调整导航层级；0 为最外层，范围 0–31。删除所有规则可恢复默认，请先预览。').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp);
+      Text('正则匹配完整标题或独立行，例如“第一卷.*”可匹配“第一卷 童子行”。').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp);
       if (this.rules.length > 0) {
         Scroll() { Column({ space: 8 }) {
       ForEach(this.rules, (rule: DirectoryRuleDraft) => {
         Column({ space: 6 }) {
           TextInput({ text: rule.pattern, placeholder: '匹配完整标题或独立正文行的正则表达式' })
-            .height(40).fontSize(12).fontColor(readerAppColor('TOK_INK', this.scheme))
+            .height(40).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.scheme))
             .backgroundColor(readerAppColor('TOK_PAPER', this.scheme)).onChange((value: string): void => this.edit(rule.id, 'pattern', value));
           Row({ space: 8 }) {
-            Text('层级').fontSize(11);
+            Text('层级').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp);
             TextInput({ text: rule.level }).width(64).height(40)
               .fontColor(readerAppColor('TOK_INK', this.scheme)).backgroundColor(readerAppColor('TOK_PAPER', this.scheme))
               .onChange((value: string): void => this.edit(rule.id, 'level', value));
@@ -123,10 +124,10 @@ export struct ReaderDirectoryRules {
         Button('预览').enabled(this.loaded && !this.busy).onClick((): void => { void this.run(false); });
         Button('应用').enabled(this.loaded && !this.busy && this.previewReady).onClick((): void => { void this.run(true); });
       }
-      Text(this.message).fontSize(11);
+      Text(this.message).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp);
       if (this.preview.length > 0) {
         Scroll() { Column() { ForEach(this.preview, (title: string, index: number) => {
-          Text(title).fontSize(11).width('100%');
+          Text(title).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).width('100%');
         }, (_title: string, index: number): string => `${index}`); } }.height(120);
       }
     }.width('100%').padding(10).foregroundColor(readerAppColor('TOK_INK', this.scheme))

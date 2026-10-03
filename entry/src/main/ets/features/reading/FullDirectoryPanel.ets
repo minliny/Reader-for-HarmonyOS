@@ -1,3 +1,4 @@
+import { TYPE_APP_INHERITED_OPTION, TYPE_READER_DIRECTORY_COLLAPSE, TYPE_READER_DIRECTORY_CURRENT_TITLE, TYPE_READER_DIRECTORY_HEADING, TYPE_READER_DIRECTORY_POSITION_INTER, TYPE_READER_DIRECTORY_TAB, TYPE_READER_DIRECTORY_TITLE_INTER } from '../common/ReaderTypography';
 import { readerDirectoryScopeKey } from './ReaderDirectoryNavigation';
 import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
@@ -390,10 +391,10 @@ export struct FullDirectoryPanel {
             .height(16);
         }
         Text(this.activeTab === 'bookmarks' ? '书签' : '目录')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(14)
-          .lineHeight(20)
+          .fontFamily(TYPE_READER_DIRECTORY_HEADING.fontFamily)
+          .fontWeight(TYPE_READER_DIRECTORY_HEADING.fontWeight)
+          .fontSize(TYPE_READER_DIRECTORY_HEADING.fontSizeFp)
+          .lineHeight(TYPE_READER_DIRECTORY_HEADING.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       }
       .layoutWeight(1)
@@ -403,10 +404,10 @@ export struct FullDirectoryPanel {
       Stack({ alignContent: Alignment.Center }) {
         Text('收起')
           .width('100%')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(10)
-          .lineHeight(14)
+          .fontFamily(TYPE_READER_DIRECTORY_COLLAPSE.fontFamily)
+          .fontWeight(TYPE_READER_DIRECTORY_COLLAPSE.fontWeight)
+          .fontSize(TYPE_READER_DIRECTORY_COLLAPSE.fontSizeFp)
+          .lineHeight(TYPE_READER_DIRECTORY_COLLAPSE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
           .textAlign(TextAlign.Center);
       }
@@ -434,7 +435,7 @@ export struct FullDirectoryPanel {
           this.chapterList();
           if (this.projectedEntries.length === 0 && !this.navigationActive) {
             Text(this.catalogEmptyMessage())
-              .fontSize(13)
+              .fontSize(TYPE_APP_INHERITED_OPTION.fontSizeFp)
               .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
               .textAlign(TextAlign.Center)
               .padding({ left: 20, right: 20 });
@@ -482,10 +483,10 @@ export struct FullDirectoryPanel {
     Stack({ alignContent: Alignment.Bottom }) {
       Row() {
         Text('目录')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(600)
-          .fontSize(11)
-          .lineHeight(16)
+          .fontFamily(TYPE_READER_DIRECTORY_TAB.fontFamily)
+          .fontWeight(TYPE_READER_DIRECTORY_TAB.fontWeight)
+          .fontSize(TYPE_READER_DIRECTORY_TAB.fontSizeFp)
+          .lineHeight(TYPE_READER_DIRECTORY_TAB.lineHeightFp as number)
           .fontColor(this.activeTab === 'directory' ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center);
       }
@@ -528,10 +529,10 @@ export struct FullDirectoryPanel {
             .height(15);
         }
         Text('书签')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(600)
-          .fontSize(11)
-          .lineHeight(16)
+          .fontFamily(TYPE_READER_DIRECTORY_TAB.fontFamily)
+          .fontWeight(TYPE_READER_DIRECTORY_TAB.fontWeight)
+          .fontSize(TYPE_READER_DIRECTORY_TAB.fontSizeFp)
+          .lineHeight(TYPE_READER_DIRECTORY_TAB.lineHeightFp as number)
           .fontColor(this.activeTab === 'bookmarks' ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       }
       .width('100%')
@@ -714,9 +715,9 @@ export struct FullDirectoryPanel {
           Text(repeatItem.item.title)
             .width('100%')
             .padding({ left: 9 + readerDirectoryIndentVp(repeatItem.item), right: 9 })
-            .fontFamily('ReaderInter')
-            .fontWeight(500)
-            .fontSize(11)
+            .fontFamily(TYPE_READER_DIRECTORY_TITLE_INTER.fontFamily)
+            .fontWeight(TYPE_READER_DIRECTORY_TITLE_INTER.fontWeight)
+            .fontSize(TYPE_READER_DIRECTORY_TITLE_INTER.fontSizeFp)
             .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -864,18 +865,18 @@ export struct FullDirectoryPanel {
         Text(this.currentTitle())
           .layoutWeight(1)
           .constraintSize({ minWidth: 0 })
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(11)
+          .fontFamily(TYPE_READER_DIRECTORY_CURRENT_TITLE.fontFamily)
+          .fontWeight(TYPE_READER_DIRECTORY_CURRENT_TITLE.fontWeight)
+          .fontSize(TYPE_READER_DIRECTORY_CURRENT_TITLE.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
         Text(this.currentPosition())
           .flexShrink(0)
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(9)
+          .fontFamily(TYPE_READER_DIRECTORY_POSITION_INTER.fontFamily)
+          .fontWeight(TYPE_READER_DIRECTORY_POSITION_INTER.fontWeight)
+          .fontSize(TYPE_READER_DIRECTORY_POSITION_INTER.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textAlign(TextAlign.End);

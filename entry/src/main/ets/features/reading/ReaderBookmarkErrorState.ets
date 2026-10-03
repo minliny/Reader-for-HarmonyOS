@@ -1,3 +1,4 @@
+import { TYPE_READER_BOOKMARK_ACTION, TYPE_READER_BOOKMARK_BODY } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { TOK_READ_MUTED, TOK_READ_PRIMARY, TOK_SURFACE_PANEL_SOFT } from '../common/ReaderTokens';
 
@@ -22,16 +23,16 @@ export struct ReaderBookmarkErrorState {
         .width(ERROR_STATE_ICON_SIZE)
         .height(ERROR_STATE_ICON_SIZE);
       Text(this.message)
-        .fontFamily('ReaderNotoSansSC')
-        .fontSize(10)
-        .lineHeight(14)
+        .fontFamily(TYPE_READER_BOOKMARK_BODY.fontFamily as string)
+        .fontSize(TYPE_READER_BOOKMARK_BODY.fontSizeFp)
+        .lineHeight(TYPE_READER_BOOKMARK_BODY.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.Center);
       Row() {
         Text('重试')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(10)
+          .fontFamily(TYPE_READER_BOOKMARK_ACTION.fontFamily)
+          .fontWeight(TYPE_READER_BOOKMARK_ACTION.fontWeight)
+          .fontSize(TYPE_READER_BOOKMARK_ACTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
           .textAlign(TextAlign.Center);
       }

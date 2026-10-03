@@ -1,3 +1,4 @@
+import { TYPE_READER_BOOKMARK_ACTION, TYPE_READER_BOOKMARK_BODY, TYPE_READER_BOOKMARK_EMPTY_TITLE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { TOK_READ_INK, TOK_READ_MUTED, TOK_READ_PRIMARY } from '../common/ReaderTokens';
 
@@ -21,22 +22,22 @@ export struct ReaderBookmarkEmptyState {
         .width(EMPTY_STATE_ICON_SIZE)
         .height(EMPTY_STATE_ICON_SIZE);
       Text('暂无书签')
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(13)
-        .lineHeight(16)
+        .fontFamily(TYPE_READER_BOOKMARK_EMPTY_TITLE.fontFamily)
+        .fontWeight(TYPE_READER_BOOKMARK_EMPTY_TITLE.fontWeight)
+        .fontSize(TYPE_READER_BOOKMARK_EMPTY_TITLE.fontSizeFp)
+        .lineHeight(TYPE_READER_BOOKMARK_EMPTY_TITLE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       Text('在阅读页面点按书签图标即可收藏当前位置')
-        .fontFamily('ReaderNotoSansSC')
-        .fontSize(10)
-        .lineHeight(14)
+        .fontFamily(TYPE_READER_BOOKMARK_BODY.fontFamily as string)
+        .fontSize(TYPE_READER_BOOKMARK_BODY.fontSizeFp)
+        .lineHeight(TYPE_READER_BOOKMARK_BODY.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.Center);
       Row() {
         Text('返回目录')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(10)
+          .fontFamily(TYPE_READER_BOOKMARK_ACTION.fontFamily)
+          .fontWeight(TYPE_READER_BOOKMARK_ACTION.fontWeight)
+          .fontSize(TYPE_READER_BOOKMARK_ACTION.fontSizeFp)
           .fontColor(readerAppColor('app.ReaderBookmarkEmptyState.EMPTY_STATE_BUTTON_COLOR', this.appThemeScheme))
           .textAlign(TextAlign.Center);
       }

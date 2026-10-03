@@ -524,3 +524,55 @@ export const TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_REGULAR = new ReaderTextStyle
   READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 11, 13, undefined, 'system', 'appBaseline');
 export const TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_SELECTED = new ReaderTextStyle(
   'ReaderNotoSansSCUIBold', 700, 11, 13, undefined, 'system', 'appBaseline');
+
+// Directory/bookmark chrome uses finite shared roles in both retained and
+// compatibility panels. Content, state, hierarchy and motion remain untouched.
+export const TYPE_READER_DIRECTORY_HEADING = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 700, 14, 20, undefined, 'system', 'appBaseline');
+export const TYPE_READER_DIRECTORY_COLLAPSE = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 700, 10, 14, undefined, 'system', 'appBaseline');
+export const TYPE_READER_DIRECTORY_TAB = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 600, 11, 16, undefined, 'system', 'appBaseline');
+export const TYPE_READER_DIRECTORY_TITLE_INTER = new ReaderTextStyle(
+  READER_FONT_INTER, 500, 11, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_READER_DIRECTORY_CURRENT_TITLE = TYPE_SOURCE_TOOLS_COMPACT_ACTION;
+export const TYPE_READER_DIRECTORY_POSITION_INTER = new ReaderTextStyle(
+  READER_FONT_INTER, 400, 9, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_READER_BOOKMARK_EMPTY_TITLE = TYPE_DIALOG_ACTION;
+export const TYPE_READER_BOOKMARK_BODY = new ReaderInheritedTextStyle(
+  READER_FONT_NOTO_SANS_SC, undefined, 10, 14, undefined, 'system', 'appBaseline');
+export const TYPE_READER_BOOKMARK_ACTION = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 700, 10, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_READER_BOOKMARK_LOADING = TYPE_SOURCE_TOOLS_CAPTION;
+export const TYPE_READER_BOOKMARK_CHAPTER = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 500, 11, 14, undefined, 'system', 'appBaseline');
+export const TYPE_READER_BOOKMARK_META = new ReaderInheritedTextStyle(
+  READER_FONT_INTER, undefined, 9, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_READER_BOOKMARK_PENDING = new ReaderInheritedTextStyle(
+  undefined, undefined, 8, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_READER_BOOKMARK_PENDING_LEGACY = new ReaderInheritedTextStyle(
+  READER_FONT_INTER, undefined, 8, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_READER_BOOKMARK_EXCERPT = new ReaderTextStyle(
+  READER_FONT_NOTO_SERIF_SC_REGULAR, 400, 9, 14, undefined, 'system', 'appBaseline');
+export const TYPE_READER_BOOKMARK_EXCERPT_LEGACY = new ReaderTextStyle(
+  READER_FONT_NOTO_SERIF_SC_REGULAR, 400, 9, 13, undefined, 'system', 'appBaseline');
+export const TYPE_READER_DIRECTORY_TAB_COMPACT = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 500, 11, 16, undefined, 'system', 'appBaseline');
+export const TYPE_READER_DIRECTORY_POSITION = new ReaderInheritedTextStyle(
+  READER_FONT_NOTO_SANS_SC, undefined, 9, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_READER_DIRECTORY_TITLE = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 500, 11, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_READER_DIRECTORY_TAB_LEGACY = new ReaderTextStyle(
+  READER_FONT_INTER, 500, 10, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_READER_DIRECTORY_TITLE_LEGACY = new ReaderTextStyle(
+  READER_FONT_INTER, 500, 11, 12.32, undefined, 'system', 'appBaseline');
+export const TYPE_READER_DIRECTORY_DISCLOSURE = new ReaderInheritedTextStyle(
+  undefined, undefined, 18, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_READER_DIRECTORY_RULE_HEADING = new ReaderInheritedTextStyle(
+  undefined, 700, 14, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_READER_DIRECTORY_BOOK_TITLE = TYPE_SHELF_MANAGEMENT_HEADING;
+export const TYPE_READER_DIRECTORY_CHAPTER = new ReaderTextStyle(
+  READER_FONT_NOTO_SERIF_SC_REGULAR, 400, 12, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_READER_DIRECTORY_SOURCE_ACTION = TYPE_RSS_REFRESH_STATUS;
+export const TYPE_READER_DIRECTORY_OFFLINE_ACTION = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 500, 13, undefined, undefined, 'system', 'appBaseline');
