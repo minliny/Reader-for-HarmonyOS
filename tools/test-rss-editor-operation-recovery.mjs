@@ -1,9 +1,7 @@
 import assert from 'node:assert/strict';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
-import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
+import { rssRecoverySurfaceSdk } from './lib/rss-recovery-surface-sdk-probe.mjs';
 import { rssRouteFixture,rssSource,rssFacts,settleRss,deferredRss,replaceRssRuntime,rssRpc,RealRssEditor,RssEmptyEditor } from './lib/rss-operation-fixture.mjs';
-class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,id,params:{...params}});}updateStateVars(params){Object.assign(this.params,params);}}
 function fixture(){
   const f=rssRouteFixture(),snapshots=[],saved=[];let active=true;
   const editor=new RealRssEditor(s=>snapshots.push(structuredClone(s)),id=>saved.push(id),()=>active,f.runtime,task=>f.owner.runSerialized(task));
@@ -11,18 +9,15 @@ function fixture(){
   return{...f,editor,snapshots,saved,create,snapshot:()=>snapshots.at(-1),close(){active=false;},reopen(){active=true;}};
 }
 function page(f){
-  const shared=foundationControls(),properties=shared.properties;
-  const {owner}=createReaderBuilderProbe(rssSource('features/rss/RssSubscriptionEditorPage.ets'),['snapshot','operationRecovery','saveAction','recoveryActionIdentities','recoveryGeneration','dispatchRecovery'],
-    {...shared.dependencies,EMPTY_RSS_EDITOR_SNAPSHOT:RssEmptyEditor,ReaderRecoveryAction:Child},{...properties.hooks,...shared.hooks});
+  const shared=rssRecoverySurfaceSdk();
+  const owner=shared.consumer(rssSource('features/rss/RssSubscriptionEditorPage.ets'),
+    ['snapshot','operationRecovery','saveAction','recoveryActionIdentities','recoveryGeneration','dispatchRecovery'],
+    {EMPTY_RSS_EDITOR_SNAPSHOT:RssEmptyEditor});
   Object.assign(owner,{appThemeScheme:'day',onSave:()=>f.editor.save(),onReconcile:g=>f.editor.reconcile(g),onRetryRead:g=>f.editor.retryLoad(g)});
   owner.updateStateVars({snapshot:f.snapshot()});owner.operationRecovery();owner.saveAction();
   const save=shared.nodes(owner).find(n=>n.type==='Text'&&n.create==='保存');
-  const child=[...owner.children.values()].find(child=>child instanceof Child);
-  let clickRecovery;
-  if(child){const action=createReaderBuilderProbe(rssSource('features/common/ReaderRecoveryAction.ets'),['build']).owner;
-    Object.assign(action,{actionEnabled:true,appThemeScheme:'day',variant:'compact'},child.params);action.initialRender();
-    clickRecovery=()=>[...action.nodes.values()].find(n=>n.type==='Text'&&n.onClick).onClick();}
-  return{owner,save,clickRecovery,properties};
+  const clickRecovery=()=>{const child=shared.walk(owner).filter(c=>c instanceof shared.deps.ReaderRecoveryAction).at(-1);assert.ok(child,'actual emitted recovery action');shared.nodes(child).find(n=>n.onClick).onClick();};
+  return{owner,save,clickRecovery,properties:shared.properties};
 }
 for(const mode of ['create','edit']){
   const f=fixture();if(mode==='create')f.create();else{f.editor.openEdit('s');await settleRss(f.owner);f.editor.updateTitle('edited');}
