@@ -167,9 +167,7 @@ import type {
   RuleSubscriptionDraft,
   TxtTocRuleDraft,
 } from '../features/settings/RulesManagementGateway';
-import {
-  type BookSource,
-} from '../features/source/SourceGateway';
+import type { BookSource } from '../features/source/SourceGateway';
 import { readerSourceCategoryIsText, readerSourceCategoryLabel } from '../features/source/ReaderSourceCategory';
 import {
   SourceHost,
