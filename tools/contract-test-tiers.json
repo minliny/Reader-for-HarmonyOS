@@ -194,7 +194,8 @@
     "test-toc-repair-regressions.mjs",
     "test-transient-transport-acquisition.mjs",
     "test-conventional-typography-registry.mjs",
-    "test-harmony-tts-background-lease.mjs"
+    "test-harmony-tts-background-lease.mjs",
+    "test-harmony-tts-media-retirement.mjs"
   ],
   "integration": [
     "test-action-menu-surface.mjs",
