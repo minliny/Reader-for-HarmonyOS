@@ -26,11 +26,17 @@ assert.equal([...orchestrator.matchAll(/new SourceOrchestrator\(/g)].length, 1, 
 assert.match(orchestrator, /owners: WeakMap<ReaderRuntimeOwner, SourceOrchestrator>/);
 assert.match(host, /private readonly owner: \(\) => ReaderRuntimeOwner/,
   'SourceHost must resolve the runtime owner lazily');
-for (const call of ['sourceHost.open()', 'sourceHost.retryLoad()', 'sourceHost.toggleSource(',
-  'sourceHost.checkSource(', 'sourceHost.loginSource(', 'sourceHost.importBookSources(',
-]) {
-  assert.ok(index.includes(`this.${call}`), `Index must forward ${call}`);
+assert.match(index, /if \(this\.bindSourceManagement\(\)\) this\.sourceHost\.open\(this\.sourcePresentationIdentity\)/,
+  'Index opens the original owner only after attaching the exact current presentation');
+for (const call of ['host.retryLoad(identity)', 'host.toggleSource(id, enabled, identity)',
+  'host.checkSource(id, identity)', 'host.loginSource(id, identity)', 'host.reconcile(expected, identity)']) {
+  assert.ok(index.includes(call), `Index forwards ${call} with its captured presentation identity`);
 }
+assert.match(index, /source\.importBookSources\([\s\S]*sourceIdentity,\s*\);/,
+  'JSON import keeps the original Source host and identity through the asynchronous picker');
+assert.match(index, /private sourceManagementSurface\(generation: number, owner: ReaderRuntimeOwner \| undefined,[\s\S]*mounting: number, host: SourceHost, identity: string\)/);
+assert.match(index, /host\.isPresentationCurrent\(owner, identity\)/,
+  'same Runtime replacement must reject the alive old physical consumer');
 assert.doesNotMatch(index, /new SourceGateway\(/,
   'Index must not construct SourceGateway for display or admitted-book projections');
 assert.match(index, /sourceSources = sources/,

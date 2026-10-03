@@ -60,7 +60,7 @@ function fixture(){
     Object.assign(n,{appThemeScheme:'day'},notices[0].params);n.initialRender();
     const c=[...n.children.values()].at(-1);if(!c)return{notice:n};
     const a=createReaderBuilderProbe(source('features/common/ReaderRecoveryAction.ets'),['build']).owner;
-    Object.assign(a,{appThemeScheme:'day',enabled:true},c.params);a.initialRender();return{notice:n,action:[...a.nodes.values()].find(x=>x.type==='Text'&&x.height===36)};
+    Object.assign(a,{appThemeScheme:'day',actionEnabled:true},c.params);a.initialRender();return{notice:n,action:[...a.nodes.values()].find(x=>x.type==='Text'&&x.height===36)};
    }};
  };
  return{store,host,page,calls,values,failWrite:()=>writeFail=true,failRead:()=>readFail=true,failReadback:()=>afterFlushReadFail=true,

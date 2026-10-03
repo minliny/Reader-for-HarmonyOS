@@ -84,7 +84,6 @@ for(const stale of [false,true]) for(const fails of [false,true]) {
  const session={identity:{sourceId:'s',bookId:'b'},book:{title:'已准入',author:'作者'},entries:[{index:0,title:'第一章',url:'/1'}],acquisitionMode:'cache'};
  const h=Object.assign(new CacheClass(),{mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,searchDetailCandidates:[],shelfBooks:[],
    remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,shelfOperation:{generation:0,removalKey:'',busy:false,batchRemovalBusy:false},
-   bookshelfHost:{loadShelfBook:async()=>undefined},
    showReadingFailure:(...args)=>failures.push(args)});
  h.openRemoteBookDetail(seed,'书源名称');assert.equal(h.route,'detail');await tick();assert.equal(calls.length,1);assert.equal(calls[0].seed,seed);
  assert.equal(calls[0].options.isCurrent(),true);assert.equal(h.detailReturnRoute,'search');
@@ -113,7 +112,7 @@ for (const scenario of ['offscreen-existing','not-on-shelf','stale-lookup']) {
    DOMAIN:0,hilog:{info(){},warn(){},error(){}}});
  const h=Object.assign(new Host(),{mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,
   searchDetailCandidates:[],shelfBooks:[],remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,shelfOperation:{generation:0,removalKey:'',busy:false,batchRemovalBusy:false},
-  bookshelfHost:{loadShelfBook:()=>lookup.promise}});
+  });
  const selected={sourceId:'s',bookId:'offscreen',title:'书',author:'作者'};
  h.openRemoteBookDetail(selected,'书源');assert.equal(h.route,'detail');assert.deepEqual(calls,[]);
  if(scenario==='stale-lookup'){h.nextNavigationGeneration();h.route='bookshelf';}
