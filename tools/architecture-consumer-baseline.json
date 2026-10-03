@@ -774,6 +774,16 @@
       },
       "contractId": "shared-ReaderFormField",
       "reason": "Finite current-UI control owns actual role/geometry/press or controlled draft; no caller style overrides; full original owner SDK and AUTO proof."
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+      "counts": {
+        "fontSize": 1
+      },
+      "contractId": "shared-ReaderLabeledIconAction",
+      "reason": "6 finite original RSS icon/label variants; actual icon/label/Row/Stack, 32/34/44vp and response regions; finite danger/divider business variants only; original role/normal geometry and AUTO omissions",
+      "kind": "finite-spec-actual-shared-producer",
+      "proof": "tools/test-architecture-shared-producers.mjs"
     }
   ],
   "uiPolicies": [

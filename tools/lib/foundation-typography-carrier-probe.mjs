@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes, createRequire } from 'node:module';
 const req=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts=req(sdk+'/node_modules/typescript'),options=req(sdk+'/lib/ets_checker.js').compilerOptions;
+import { labeledIconControls, labeledIconSpecs } from './reader-labeled-icon-action-probe.mjs';
 import { foundationControls, foundationSpecs } from './reader-foundation-control-probe.mjs';
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
@@ -14,10 +15,11 @@ const tuple=node=>Object.fromEntries(typographyProperties.filter(p=>Object.hasOw
 export function foundationTypographyCarrier(entry,file,expected,pageSource,targetSource){
  const target=targetSource??readFileSync(new URL('../../'+entry.target.path,import.meta.url),'utf8');
  const key=JSON.stringify([entry,expected,pageSource,target]);if(cache.has(key))return cache.get(key);
- const specSource=readFileSync(new URL('../../entry/src/main/ets/features/common/ReaderControlSpecs.ets',import.meta.url),'utf8');
+ const rolePath=entry.component==='ReaderLabeledIconAction'?'ReaderLabeledIconActionSpecs.ets':'ReaderControlSpecs.ets';
+ const specSource=readFileSync(new URL('../../entry/src/main/ets/features/common/'+rolePath,import.meta.url),'utf8');
  const roles=typographyRoleImports(specSource,'ReaderControlSpecs.ets');
  const native=(branch,override={})=>{
-  const shared=foundationControls({specs:foundationSpecs({...readerTypographyRoles,...override}),[entry.component==='ReaderButton'?'buttonSource':'fieldSource']:target});
+  const shared=entry.component==='ReaderLabeledIconAction'?labeledIconControls({specs:labeledIconSpecs({...readerTypographyRoles,...override}),source:target}):foundationControls({specs:foundationSpecs({...readerTypographyRoles,...override}),[entry.component==='ReaderButton'?'buttonSource':'fieldSource']:target});
   // SDK field/button source overrides are used by their transform, never just
   // read for a hash. The normal modifier loader also receives actual source.
   const binding=entry.bindingMethod??entry.origin.method;
@@ -47,5 +49,5 @@ export function foundationTypographyCarrier(entry,file,expected,pageSource,targe
   const changed=native(branch,{[role]:{...readerTypographyRoles[role],fontSizeFp:readerTypographyRoles[role].fontSizeFp+2}});
   assert.deepEqual(changed,{...actual,fontSize:actual.fontSize+2},entry.id+': real role propagation through spec/owner/native');
  }
- const result={kind:expected.kind,method:entry.target.method,text:entry.target.text,producerPath:entry.target.path,producerRolePath:'entry/src/main/ets/features/common/ReaderControlSpecs.ets',producerProof:'actual owner -> real SDK common control -> production modifier -> native tuple/role propagation',modifiers:Object.fromEntries(Object.entries(expected.changes).map(([p,expression])=>[p,{expression,extra:expected.extra[p]}]))};cache.set(key,result);return result;
+ const result={kind:expected.kind,method:entry.target.method,text:entry.target.text,producerPath:entry.target.path,producerRolePath:'entry/src/main/ets/features/common/'+rolePath,producerProof:'actual owner -> real SDK common control -> production modifier -> native tuple/role propagation',modifiers:Object.fromEntries(Object.entries(expected.changes).map(([p,expression])=>[p,{expression,extra:expected.extra[p]}]))};cache.set(key,result);return result;
 }

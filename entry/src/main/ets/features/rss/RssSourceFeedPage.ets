@@ -1,3 +1,4 @@
+import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { readerRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { projectOperationFacts, type OperationFacts } from '../../app/ReaderOperationFacts';
@@ -193,24 +194,7 @@ export struct RssSourceFeedPage {
 
   @Builder
   private actionTarget(label: string, icon: Resource, action: () => void) {
-    Stack({ alignContent: Alignment.Center }) {
-      Row({ space: 5 }) {
-        Image(icon).width(18).height(18);
-        Text(label)
-          .fontFamily(TYPE_APP_SMALL_ACTION.fontFamily)
-          .fontWeight(TYPE_APP_SMALL_ACTION.fontWeight)
-          .fontSize(TYPE_APP_SMALL_ACTION.fontSizeFp)
-          .fontColor(readerAppColor('app.RssSourceFeedPage.actionTarget.fontColor.FF3F372F', this.appThemeScheme))
-          .maxLines(1);
-      }
-      .height(32)
-      .padding({ left: 9, right: 9 })
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor(readerAppColor('app.RssSourceFeedPage.ACTION_BG', this.appThemeScheme))
-      .borderRadius(999);
-    }
-    .height(44)
-    .onClick((): void => action());
+    ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-feed', label, icon, onAction: action });
   }
 
   @Builder
@@ -223,22 +207,9 @@ export struct RssSourceFeedPage {
         .fontSize(TYPE_RSS_SECTION_HEADING.fontSizeFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1);
-      Row({ space: 5 }) {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.rss_manage_theme_night') : $r('app.media.rss_manage'))).width(16).height(16);
-        Text('源操作')
-          .fontFamily(TYPE_RSS_LINK_ACTION.fontFamily)
-          .fontWeight(TYPE_RSS_LINK_ACTION.fontWeight)
-          .fontSize(TYPE_RSS_LINK_ACTION.fontSizeFp)
-          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-          .maxLines(1);
-      }
-      .height(30)
-      .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-      .borderRadius(999)
-      .responseRegion({ x: 0, y: -7, width: '100%', height: 44 })
-      .onClick((): void => this.onSourceOperations());
+      ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-source-operations', label: '源操作',
+        icon: this.appThemeScheme === 'night' ? $r('app.media.rss_manage_theme_night') : $r('app.media.rss_manage'),
+        onAction: (): void => this.onSourceOperations() });
     }
     .width('100%')
     .height(34)

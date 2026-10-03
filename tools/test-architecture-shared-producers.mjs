@@ -5,7 +5,8 @@ import { verifyArchitectureRegistration, registeredProducerTypographySlots } fro
 const root=process.cwd(),baseline=JSON.parse(readFileSync('tools/architecture-consumer-baseline.json','utf8')),contract=JSON.parse(readFileSync('tools/fixtures/architecture-shared-producers.json','utf8'));
 const inventory=JSON.parse(execFileSync(process.execPath,['tools/audit-architecture-consumers.mjs','--stdout=json'],{cwd:root,encoding:'utf8',maxBuffer:16*1024*1024,stdio:['ignore','pipe','ignore']}));
 const result=verifyArchitectureRegistration(inventory,baseline,contract,root);
-assert.equal(result.budgetRows,100,'legacy business private budgets are preserved');assert.equal(result.producers,6);
+assert.equal(result.budgetRows,100,'legacy business private budgets are preserved');assert.equal(result.producers,7);
+assert.deepEqual(contract.producers.map(row=>row.component).sort(),['ReaderBoundedSurface','ReaderBoundedSurfaceActions','ReaderBoundedSurfaceHeader','ReaderButton','ReaderFormField','ReaderLabeledIconAction','ReaderSheetActionList'].sort(),'only exact finite shared producers gain owner treatment');
 const header='entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets',original=readFileSync(header,'utf8');
 const read=file=>file===header?original.replace('.fontSize(type.fontSizeFp)','.fontSize(99)'):readFileSync(file,'utf8');
 assert.notEqual(read(header),original);assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,contract,root,read),/finite shared physical inputs/,'same font call count cannot hide a private literal in a shared alias');

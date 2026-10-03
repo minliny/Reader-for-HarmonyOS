@@ -29,6 +29,13 @@ for(const file of readdirSync(featureRoot,{recursive:true}).filter(file=>file.en
     const actual=producers.producers.find(p=>p.component==='ReaderBoundedSurfaceHeader');assert.ok(actual);
     assert.deepEqual(sharedProducerShape(source,actual.file),actual.shape,'actual finite modifier owns title roles and AUTO omissions');delegated++;continue;
   }
+  if(node.kind==='Text'&&file==='common/ReaderLabeledIconAction.ets'&&node.method==='labelContents'&&node.text==='this.label'&&
+    normalise(node.attributes.attributeModifier)==='newReaderLabeledIconLabelModifier(this.specId,this.isDanger,this.scheme)'){
+    const actual=producers.producers.find(p=>p.component==='ReaderLabeledIconAction');assert.ok(actual);
+    assert.deepEqual(sharedProducerShape(source,actual.file),actual.shape,'exact finite icon label modifier owns the native font tuple');
+    assert.ok(source.includes('.onClick((): void => this.commit())'),'actual direct/wrapped native action host remains in the registered producer');
+    delegated++;continue;
+  }
   if(node.kind==='Text'&&file==='common/ReaderButton.ets'&&node.method==='build'&&node.text==='this.label'&&
     ['newReaderButtonLabelModifier(this.specId,this.primary,this.scheme)','newReaderButtonTextModifier(this.specId,this.primary,this.actionEnabled,this.layout,this.scheme,this.isBusy)'].includes(normalise(node.attributes.attributeModifier))||
     ['TextInput','TextArea'].includes(node.kind)&&file==='common/ReaderFormField.ets'&&node.method==='build'&&normalise(node.text)==='{text:this.text,placeholder:this.placeholder}'&&
@@ -72,5 +79,5 @@ for(const row of contracts.values()){
   assert.throws(()=>verifyNativeDefaultBranches(source.replace('if (this.sourceSwitchFailureMessage.length > 0) {\n          ForEach','if (true) {\n          ForEach'),row.file,row),/exact finite branch guard/);
  }
 }
-assert.equal(controls,14);assert.equal(a11y,4);assert.equal(delegated,9);
-console.log(`PASS native-default contracts: ${contracts.size} finite native families / ${controls} actual actors (retry has exact exclusive source-switch/reading branches); ${paint} no-glyph actors, ${a11y} exact accessibility actors, ${delegated} actual shared Dialog/finite title hosts, ${inherited} inherited body spans; no physical font overrides fabricated`);
+assert.equal(controls,14);assert.equal(a11y,4);assert.equal(delegated,10);
+console.log(`PASS native-default contracts: ${contracts.size} finite native families / ${controls} actual actors (retry has exact exclusive source-switch/reading branches); ${paint} no-glyph actors, ${a11y} exact accessibility actors, ${delegated} actual bounded shared glyph hosts, ${inherited} inherited body spans; no physical font overrides fabricated`);

@@ -265,6 +265,7 @@
     "test-error-message-conformance.mjs",
     "test-floating-page-content.mjs",
     "test-foundation-controls-shared.mjs",
+    "test-foundation-icon-consumers.mjs",
     "test-foundation-pill-consumers.mjs",
     "test-foundation-shelf-field-consumers.mjs",
     "test-general-settings-runtime-owner.mjs",

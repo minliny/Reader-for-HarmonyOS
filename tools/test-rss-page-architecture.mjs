@@ -1,4 +1,5 @@
 import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
+import { labeledIconControls } from './lib/reader-labeled-icon-action-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { themeDayDesignSource } from './lib/reader-theme-design-source.mjs';
@@ -276,8 +277,12 @@ assert.doesNotMatch(rss, /this\.actionPill\('导入'|this\.actionPill\('新建'/
 // intentionally excluded because expanded regions would overlap siblings.
 const modeOwner=createReaderBuilderProbe(readFileSync(resolve(repo,'entry/src/main/ets/features/rss/RssPage.ets'),'utf8'),['statusTab'],controls.dependencies,controls.hooks).owner;Object.assign(modeOwner,{appThemeScheme:'day',activeMode:'all'});modeOwner.statusTab('全部','all');
 const modeActors=controls.nodes(modeOwner).filter(n=>n.type==='Stack'&&n.onClick);assert.equal(modeActors.length,1);assert.equal(modeActors[0].responseRegion.height,44);
-assert.equal((rss.match(/\.responseRegion\(\{ x: 0, y: -\d+, width: '100%', height: 44 \}\)/g) ?? []).length+stateActors.length+modeActors.length, 7,'all seven original visual action declarations retain actual shared/native 44vp regions');
-assert.equal((sourceFeed.match(/\.responseRegion\(\{ x: 0, y: -\d+, width: '100%', height: 44 \}\)/g) ?? []).length, 1);
+const labeled=labeledIconControls(),labeledPage=createReaderBuilderProbe(readFileSync(resolve(repo,'entry/src/main/ets/features/rss/RssPage.ets'),'utf8'),['managePill','recentUnreadHeader'],labeled.dependencies,labeled.hooks).owner;Object.assign(labeledPage,{appThemeScheme:'day',onManage:()=>{},onModeRequested:()=>{}});labeledPage.managePill();labeledPage.recentUnreadHeader();
+const boundedMainActions=labeled.orderedNodes(labeledPage).filter(n=>n.onClick);assert.equal(boundedMainActions.length,2);assert.deepEqual(boundedMainActions.map(n=>n.responseRegion.height),[44,44],'both migrated main-page icon actions retain actual finite 44vp touch response');
+assert.equal((rss.match(/\.responseRegion\(\{ x: 0, y: -\d+, width: '100%', height: 44 \}\)/g) ?? []).length+stateActors.length+modeActors.length+boundedMainActions.length, 7,'all seven original visual action declarations retain actual shared/native 44vp regions');
+const feedOwner=createReaderBuilderProbe(readFileSync(resolve(repo,'entry/src/main/ets/features/rss/RssSourceFeedPage.ets'),'utf8'),['entrySectionHeader'],labeled.dependencies,labeled.hooks).owner;Object.assign(feedOwner,{appThemeScheme:'day',onSourceOperations:()=>{}});feedOwner.entrySectionHeader();const boundedFeedActions=labeled.orderedNodes(feedOwner).filter(n=>n.onClick);assert.equal(boundedFeedActions.length,1);assert.equal(boundedFeedActions[0].responseRegion.height,44,'original source operations action now delegates its exact bounded native response');
+assert.equal((sourceFeed.match(/\.responseRegion\(\{ x: 0, y: -\d+, width: '100%', height: 44 \}\)/g) ?? []).length+boundedFeedActions.length,1);
+const filterOwner=createReaderBuilderProbe(readFileSync(resolve(repo,'entry/src/main/ets/features/rss/RssPage.ets'),'utf8'),['filterPill'],controls.dependencies,controls.hooks).owner;Object.assign(filterOwner,{appThemeScheme:'day',filterValue:'全部'});filterOwner.filterPill('全部');assert.equal(controls.nodes(filterOwner).find(n=>n.onClick).responseRegion,undefined,'dense filter chip preserves native non-overlapping AUTO response');
 const entryOwner=createReaderBuilderProbe(readFileSync(resolve(repo,'entry/src/main/ets/features/rss/RssEntryDetailPage.ets'),'utf8'),['sourceCard','itemMeta'],controls.dependencies,controls.hooks).owner;Object.assign(entryOwner,{appThemeScheme:'day',subscription:{title:'订阅'},item:{}});entryOwner.sourceCard();
 const entryAction=controls.nodes(entryOwner).find(n=>n.type==='Text'&&n.create==='查看源');assert.ok(entryAction);assert.equal(entryAction.responseRegion.height,44);
 assert.equal((entryDetail.match(/\.responseRegion\(\{ x: 0, y: -\d+, width: '100%', height: 44 \}\)/g) ?? []).length+1, 1,'original entry source-link touch region is supplied by the actual common actor');

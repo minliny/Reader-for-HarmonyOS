@@ -30,6 +30,7 @@ class ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {
     if (this.layout === 'full') instance.width('100%');
     if (spec.height !== undefined) instance.height(spec.height);
     if (spec.fixedWidth > 0) instance.width(spec.fixedWidth);
+    if (spec.outerMargin !== undefined) instance.margin(spec.outerMargin);
     if (spec.allPadding !== undefined) instance.padding(spec.allPadding);
     else if (spec.verticalPadding > 0) instance.padding({ left: spec.horizontalPadding, right: spec.horizontalPadding, top: spec.verticalPadding, bottom: spec.verticalPadding });
     else if (spec.horizontalPadding > 0) instance.padding({ left: spec.horizontalPadding, right: spec.horizontalPadding });

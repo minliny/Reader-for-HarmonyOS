@@ -1175,6 +1175,265 @@
       "sourceConstants": {
         "RSS_DETAIL_ACTION_AREA_HEIGHT": "62"
       }
+    },
+    {
+      "id": "foundation-icon-rss-feed",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssSourceFeedPage.ets",
+        "method": "actionTarget",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+        "method": "labelContents",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "module": "../common/ReaderLabeledIconAction",
+      "component": "ReaderLabeledIconAction",
+      "specId": "rss-feed",
+      "bindingMethod": "actionTarget",
+      "arguments": [
+        "原操作",
+        "icon",
+        "@callback"
+      ],
+      "requiredMethods": [],
+      "proof": "tools/test-foundation-icon-consumers.mjs"
+    },
+    {
+      "id": "foundation-icon-rss-entry",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssEntryDetailPage.ets",
+        "method": "actionTarget",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+        "method": "labelContents",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "module": "../common/ReaderLabeledIconAction",
+      "component": "ReaderLabeledIconAction",
+      "specId": "rss-entry",
+      "bindingMethod": "actionTarget",
+      "arguments": [
+        "原操作",
+        "icon",
+        "@callback"
+      ],
+      "requiredMethods": [],
+      "proof": "tools/test-foundation-icon-consumers.mjs"
+    },
+    {
+      "id": "foundation-icon-rss-management",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets",
+        "method": "actionTarget",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+        "method": "labelContents",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "module": "../common/ReaderLabeledIconAction",
+      "component": "ReaderLabeledIconAction",
+      "specId": "rss-management",
+      "bindingMethod": "actionTarget",
+      "arguments": [
+        "原操作",
+        "icon",
+        false,
+        false,
+        "@callback"
+      ],
+      "requiredMethods": [],
+      "proof": "tools/test-foundation-icon-consumers.mjs"
+    },
+    {
+      "id": "foundation-icon-rss-manage",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssPage.ets",
+        "method": "managePill",
+        "kind": "Text",
+        "text": "'管理'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+        "method": "labelContents",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "module": "../common/ReaderLabeledIconAction",
+      "component": "ReaderLabeledIconAction",
+      "specId": "rss-manage",
+      "bindingMethod": "managePill",
+      "arguments": [],
+      "requiredMethods": [],
+      "proof": "tools/test-foundation-icon-consumers.mjs"
+    },
+    {
+      "id": "foundation-icon-rss-source-operations",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssSourceFeedPage.ets",
+        "method": "entrySectionHeader",
+        "kind": "Text",
+        "text": "'源操作'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+        "method": "labelContents",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "module": "../common/ReaderLabeledIconAction",
+      "component": "ReaderLabeledIconAction",
+      "specId": "rss-source-operations",
+      "bindingMethod": "entrySectionHeader",
+      "arguments": [],
+      "requiredMethods": [],
+      "proof": "tools/test-foundation-icon-consumers.mjs"
+    },
+    {
+      "id": "foundation-icon-rss-view-all",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssPage.ets",
+        "method": "recentUnreadHeader",
+        "kind": "Text",
+        "text": "'查看全部'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+        "method": "labelContents",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "module": "../common/ReaderLabeledIconAction",
+      "component": "ReaderLabeledIconAction",
+      "specId": "rss-view-all",
+      "bindingMethod": "recentUnreadHeader",
+      "arguments": [],
+      "requiredMethods": [],
+      "proof": "tools/test-foundation-icon-consumers.mjs"
+    },
+    {
+      "id": "foundation-icon-rss-filter",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssPage.ets",
+        "method": "filterPill",
+        "kind": "Text",
+        "text": "opt"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "module": "../common/ReaderButton",
+      "component": "ReaderButton",
+      "specId": "rss-filter",
+      "bindingMethod": "filterPill",
+      "arguments": [
+        "当前"
+      ],
+      "requiredMethods": [],
+      "proof": "tools/test-foundation-icon-consumers.mjs"
+    },
+    {
+      "id": "foundation-icon-sync-config-test",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/sync/SyncPage.ets",
+        "method": "configActions",
+        "kind": "Text",
+        "text": "'测试网络连通性'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "module": "../common/ReaderButton",
+      "component": "ReaderButton",
+      "specId": "sync-config-test",
+      "bindingMethod": "configActions",
+      "arguments": [],
+      "requiredMethods": [
+        "canMutate",
+        "effectiveWebdavUrl",
+        "effectiveWebdavUser",
+        "effectiveWebdavPath"
+      ],
+      "proof": "tools/test-foundation-icon-consumers.mjs",
+      "nativeText": "测试网络连通性",
+      "params": {
+        "snapshot": {
+          "facts": {
+            "canMutate": true
+          },
+          "webdavUrl": "https://dav.test",
+          "webdavUser": "user",
+          "webdavPath": "/Reader"
+        },
+        "webdavPass": "fixture-password",
+        "backupPass": "fixture-backup-password"
+      }
+    },
+    {
+      "id": "foundation-icon-sync-config-save",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/sync/SyncPage.ets",
+        "method": "configActions",
+        "kind": "Text",
+        "text": "'保存配置'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "module": "../common/ReaderButton",
+      "component": "ReaderButton",
+      "specId": "sync-config-save",
+      "bindingMethod": "configActions",
+      "arguments": [],
+      "requiredMethods": [
+        "canMutate",
+        "effectiveWebdavUrl",
+        "effectiveWebdavUser",
+        "effectiveWebdavPath"
+      ],
+      "proof": "tools/test-foundation-icon-consumers.mjs",
+      "nativeText": "保存配置",
+      "params": {
+        "snapshot": {
+          "facts": {
+            "canMutate": true
+          },
+          "webdavUrl": "https://dav.test",
+          "webdavUser": "user",
+          "webdavPath": "/Reader"
+        },
+        "webdavPass": "fixture-password",
+        "backupPass": "fixture-backup-password"
+      }
     }
   ]
 }

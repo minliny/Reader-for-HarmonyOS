@@ -1,4 +1,5 @@
 import {foundationControls} from './lib/reader-foundation-control-probe.mjs';
+import {labeledIconControls} from './lib/reader-labeled-icon-action-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync,writeFileSync} from 'node:fs';
 import path from 'node:path';
@@ -66,8 +67,8 @@ function scan(dir){for(const entry of readdirSync(dir,{withFileTypes:true})){
 }}
 scan(ets);
 assert.ok(output.consumers.some(row => row.file.endsWith('common/ReaderRecoveryAction.ets')), 'the extracted editor recovery control retains the shared primary foreground');
-// Five former foreground sites moved into finite public button specs in the
-// fourth migration. Bind exact actual owner/spec/native edges; a raw AST total
+// Nine former foreground sites moved into finite public Button/Icon specs in
+// the fourth and fifth migrations. Bind exact actual owner/spec/native edges; a raw AST total
 // alone cannot prove their semantic color or retained theme propagation.
 const moved=[
  {file:'bookshelf/BookshelfManagementPage.ets',method:'actionButton',specId:'shelf-action',label:'次操作',arguments:['次操作',false,()=>{}],methods:['actionButton']},
@@ -75,16 +76,20 @@ const moved=[
  {file:'bookshelf/BookshelfManagementPage.ets',method:'groupRow',specId:'shelf-row-edit',label:'编辑',arguments:[{groupId:3,groupName:'实际分组',bookCount:1,show:true}],methods:['groupRow','smallAction']},
  {file:'bookshelf/BookshelfManagementPage.ets',method:'assignmentBookRow',specId:'shelf-row-select',label:'选择',arguments:[{sourceId:2,bookId:7,title:'真实书',author:'作者',group:'组'}],methods:['assignmentBookRow','isSelectedBook']},
  {file:'rss/RssEntryDetailPage.ets',method:'bottomActions',specId:'rss-detail-bottom',label:'打开原文',arguments:[],methods:['bottomActions','hasOriginalLink']},
+ {file:'rss/RssPage.ets',method:'managePill',specId:'rss-manage',label:'管理',arguments:[],methods:['managePill'],icon:true},
+ {file:'rss/RssPage.ets',method:'recentUnreadHeader',specId:'rss-view-all',label:'查看全部',arguments:[],methods:['recentUnreadHeader'],icon:true},
+ {file:'rss/RssSourceFeedPage.ets',method:'entrySectionHeader',specId:'rss-source-operations',label:'源操作',arguments:[],methods:['entrySectionHeader'],icon:true},
+ {file:'sync/SyncPage.ets',method:'configActions',specId:'sync-config-test',label:'测试网络连通性',arguments:[],methods:['configActions','canMutate','effectiveWebdavUrl','effectiveWebdavUser','effectiveWebdavPath']},
 ];
 for(const edge of moved){
- const shared=foundationControls(),{owner}=createReaderBuilderProbe(source(edge.file),edge.methods,{...shared.dependencies,RSS_DETAIL_ACTION_AREA_HEIGHT:62},shared.hooks);
- Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false,mutationBlocked:false,selectedGroupId:0,selectedBookId:0,selectedSourceId:0},item:{link:'https://original.test'},onBack:()=>{},onOpenOriginal:()=>{},contentFrame:()=>({width:354,left:18,right:18}),onSelectGroup:()=>{},onToggleGroupShown:()=>{},onDeleteGroup:()=>{},onSelectBook:()=>{}});
- owner[edge.method](...edge.arguments);const actors=[...owner.children.values()].filter(c=>c instanceof shared.button.Component&&c.specId===edge.specId&&c.label===edge.label);assert.equal(actors.length,1,'exact current owner -> finite shared class: '+edge.file+'/'+edge.method);
- const actor=actors[0];assert.equal(actor.primary,false,'the original emphasis branch remains secondary');const native=shared.nodes(actor).find(n=>n.type==='Text');assert.ok(native);
+ const shared=edge.icon?labeledIconControls():foundationControls(),{owner}=createReaderBuilderProbe(source(edge.file),edge.methods,{...shared.dependencies,RSS_DETAIL_ACTION_AREA_HEIGHT:62},shared.hooks);
+ Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false,mutationBlocked:false,selectedGroupId:0,selectedBookId:0,selectedSourceId:0,facts:{canMutate:true}},onManage:()=>{},onModeRequested:()=>{},onSourceOperations:()=>{},onSaveConfig:()=>{},onTestConnection:()=>{},item:{link:'https://original.test'},onBack:()=>{},onOpenOriginal:()=>{},contentFrame:()=>({width:354,left:18,right:18}),onSelectGroup:()=>{},onToggleGroupShown:()=>{},onDeleteGroup:()=>{},onSelectBook:()=>{}});
+ owner[edge.method](...edge.arguments);const actors=[...owner.children.values()].filter(c=>c instanceof (edge.icon?shared.component:shared.button.Component)&&c.specId===edge.specId&&c.label===edge.label);assert.equal(actors.length,1,'exact current owner -> finite shared class: '+edge.file+'/'+edge.method);
+ const actor=actors[0];if(!edge.icon)assert.equal(actor.primary,false,'the original emphasis branch remains secondary');const native=shared.nodes(actor).find(n=>n.type==='Text');assert.ok(native);
  const colors=[];for(const scheme of ['day','night','day']){owner.appThemeScheme=scheme;shared.flush(owner);const expected=readerAppColor(scheme==='night'?'TOK_GREEN':'TOK_PRIMARY_DARK',scheme);assert.equal(native.fontColor,expected,'real shared theme propagation: '+edge.file+'/'+edge.method);colors.push(native.fontColor);}
  output.sharedConsumers.push({file:'features/'+edge.file,method:edge.method,specId:edge.specId,label:edge.label,colors});
 }
-assert.equal(output.consumers.length,26,'all remaining direct primary foreground AST sites are still accounted exactly');assert.equal(output.sharedConsumers.length,5,'all five migrated physical foreground sites have exact current owner/native proof');
+assert.equal(output.consumers.length,22,'all remaining direct primary foreground AST sites are still accounted exactly');assert.equal(output.sharedConsumers.length,9,'all nine migrated physical foreground sites have exact current owner/native proof');
 assert.equal(output.consumers.length+output.sharedConsumers.length,31,'the original 31 foreground sites remain covered across direct and finite shared implementations');
 if(process.argv.includes('--record'))writeFileSync(process.argv[process.argv.indexOf('--record')+1],JSON.stringify(output,null,2)+'\n');
 console.log(`PASS Night primary text: ${output.consumers.length} direct AST + ${output.sharedConsumers.length} exact common native foregrounds, ${output.builder.length} retained Builder states; Day/solid fill/alpha/layout retained.`);

@@ -1,3 +1,4 @@
+import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
 import type { RssFeedPresentation, RssRefreshingPresentation, RssEmptyUnreadPresentation, RssFailedSource, RssFatalErrorPresentation, RssMode, RssPresentation } from './RssPresentationContract';
 export type { RssFeedPresentation, RssRefreshingPresentation, RssEmptyUnreadPresentation, RssFailedSource, RssFatalErrorPresentation, RssMode, RssPresentation } from './RssPresentationContract';
 import { ReaderButton } from '../common/ReaderButton';
@@ -229,26 +230,9 @@ export struct RssPage {
 
   @Builder
   private managePill() {
-    Row({ space: 5 }) {
-      Image((this.appThemeScheme === 'night' ? $r('app.media.rss_manage_theme_night') : $r('app.media.rss_manage')))
-        .width(16)
-        .height(16);
-      Text('管理')
-        .fontFamily(TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily)
-        .fontWeight(TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight)
-        .fontSize(TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp)
-        .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-        .maxLines(1);
-    }
-    .width(64)
-    .height(34)
-    .justifyContent(FlexAlign.Center)
-    .alignItems(VerticalAlign.Center)
-    .backgroundColor(readerAppColor('app.RssPage.PILL_BG', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.RssPage.PILL_BORDER', this.appThemeScheme) })
-    .borderRadius(12)
-    .responseRegion({ x: 0, y: -5, width: '100%', height: 44 })
-    .onClick((): void => this.onManage());
+    ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-manage', label: '管理',
+      icon: this.appThemeScheme === 'night' ? $r('app.media.rss_manage_theme_night') : $r('app.media.rss_manage'),
+      onAction: (): void => this.onManage() });
   }
 
   @Builder
@@ -437,23 +421,8 @@ export struct RssPage {
 
   @Builder
   private filterPill(opt: string) {
-    Stack({ alignContent: Alignment.Center }) {
-      Text(opt)
-        .fontFamily(TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily)
-        .fontWeight(TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight)
-        .fontSize(TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp)
-        .fontColor(this.filterValue === opt ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('app.RssPage.filterPill.fontColor.FF564D44', this.appThemeScheme))
-        .textAlign(TextAlign.Center)
-        .maxLines(1);
-    }
-    .height(30)
-    .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
-    .backgroundColor(this.filterValue === opt ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('app.RssPage.SOFT_PILL_BG', this.appThemeScheme))
-    .borderRadius(999)
-    .margin({ right: 6, bottom: 6 })
-    .onClick((): void => {
-      this.filterValue = opt;
-    });
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'rss-filter', label: opt, primary: this.filterValue === opt,
+      onAction: (): void => { this.filterValue = opt; } });
   }
 
   @Builder
@@ -548,24 +517,9 @@ export struct RssPage {
         .fontSize(TYPE_RSS_SECTION_HEADING.fontSizeFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1);
-      Row({ space: 5 }) {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.rss_view_all_theme_night') : $r('app.media.rss_view_all')))
-          .width(20)
-          .height(20);
-        Text('查看全部')
-          .fontFamily(TYPE_RSS_LINK_ACTION.fontFamily)
-          .fontWeight(TYPE_RSS_LINK_ACTION.fontWeight)
-          .fontSize(TYPE_RSS_LINK_ACTION.fontSizeFp)
-          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-          .maxLines(1);
-      }
-      .height(28)
-      .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor(readerAppColor('app.RssPage.VIEW_ALL_BG', this.appThemeScheme))
-      .borderRadius(999)
-      .responseRegion({ x: 0, y: -8, width: '100%', height: 44 })
-      .onClick((): void => this.onModeRequested('all'));
+      ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-view-all', label: '查看全部',
+        icon: this.appThemeScheme === 'night' ? $r('app.media.rss_view_all_theme_night') : $r('app.media.rss_view_all'),
+        onAction: (): void => this.onModeRequested('all') });
     }
     .width('100%')
     .height(30)

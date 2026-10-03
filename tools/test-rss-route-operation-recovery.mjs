@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { labeledIconControls } from './lib/reader-labeled-icon-action-probe.mjs';
 import { rssRouteFixture,rssSource,rssRecoveryView,rssFacts,settleRss,deferredRss,replaceRssRuntime,rssRpc,RealRssGateway,RssWriteEvidence } from './lib/rss-operation-fixture.mjs';
 
 class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,id,params:{...params}});}updateStateVars(params){Object.assign(this.params,params);}}
@@ -86,14 +87,14 @@ for(const lost of [false,true]){
 // Real decorated fields plus actual SDK observable property classes: callbacks
 // retained from the mounted native action must consult replacement props.
 for(const pageName of ['RssSourceFeedPage','RssEntryDetailPage']){
-  const properties=createArkUIPropertyRuntimeProbe(),f=rssRouteFixture();let clicked=0;
+  const shared=pageName==='RssSourceFeedPage'?labeledIconControls():undefined,properties=shared?.properties??createArkUIPropertyRuntimeProbe(),f=rssRouteFixture();let clicked=0;
   const members=pageName==='RssSourceFeedPage'?['operation','readFacts','canRefresh','sourceActions','actionTarget']:
     ['operation','readFacts','favoriteState','canRequestFavorite','favoriteAction'];
-  const {owner}=createReaderBuilderProbe(rssSource(`features/rss/${pageName}.ets`),members,{...properties.sdk,projectOperationFacts:rssFacts.projectOperationFacts},properties.hooks);
+  const {owner}=createReaderBuilderProbe(rssSource(`features/rss/${pageName}.ets`),members,{...(shared?.dependencies??properties.sdk),projectOperationFacts:rssFacts.projectOperationFacts},shared?.hooks??properties.hooks);
   Object.assign(owner,{appThemeScheme:'day',onRefresh:()=>clicked++,onEditSource:()=>{},onFavoriteRequested:()=>clicked++});
   owner.updateStateVars({readFacts:rssFacts.projectOperationFacts({phase:'succeeded',value:{}}),favoriteState:'notFavorited'});
   if(pageName==='RssSourceFeedPage')owner.sourceActions();else owner.favoriteAction();
-  const native=[...owner.nodes.values()].find(node=>node.type==='Stack'&&node.onClick);
+  const native=(shared?shared.orderedNodes(owner):[...owner.nodes.values()]).find(node=>node.type==='Stack'&&node.onClick);
   native.onClick();assert.equal(clicked,1);
   owner.updateStateVars({readFacts:rssFacts.projectOperationFacts({phase:'succeeded',value:{}}),favoriteState:'notFavorited',operation:{projection:{receipt:{confirmation:'unknown',readback:'failed',fact:'pendingReconciliation'}}}});properties.flush();
   native.onClick();assert.equal(clicked,1,'retained SDK callback must reject a newly unknown write');

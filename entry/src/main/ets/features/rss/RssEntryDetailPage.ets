@@ -1,3 +1,4 @@
+import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
 import { ReaderButton } from '../common/ReaderButton';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { readerRecoveryView } from '../../app/ReaderRecoveryProjection';
@@ -257,26 +258,7 @@ export struct RssEntryDetailPage {
 
   @Builder
   private actionTarget(label: string, icon: Resource, action: () => void) {
-    Stack({ alignContent: Alignment.Center }) {
-      Row({ space: 5 }) {
-        Image(icon).width(18).height(18);
-        Text(label)
-          .fontFamily(TYPE_APP_SMALL_ACTION.fontFamily)
-          .fontWeight(TYPE_APP_SMALL_ACTION.fontWeight)
-          .fontSize(TYPE_APP_SMALL_ACTION.fontSizeFp)
-          .fontColor(readerAppColor('app.RssEntryDetailPage.actionTarget.fontColor.FF3F372F', this.appThemeScheme))
-          .maxLines(1);
-      }
-      .width('100%')
-      .height(34)
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor(readerAppColor('app.RssEntryDetailPage.ACTION_BG', this.appThemeScheme))
-      .borderRadius(999);
-    }
-    .layoutWeight(1)
-    .height(44)
-    .onClick((): void => action());
+    ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-entry', label, icon, onAction: action });
   }
 
   @Builder

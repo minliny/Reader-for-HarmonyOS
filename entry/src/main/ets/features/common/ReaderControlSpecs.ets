@@ -10,7 +10,7 @@ import {
   TYPE_SHELF_MANAGEMENT_BUTTON, TYPE_SHELF_MANAGEMENT_SMALL_ACTION, TYPE_SHELF_MANAGEMENT_ROW_ACTION, TYPE_RSS_BOTTOM_ACTION, TYPE_SOURCE_TOOLS_CODE_INPUT,
 } from './ReaderTypography';
 
-export type ReaderButtonSpecId = 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action' | 'form-action' | 'form-busy-action' | 'form-document-action' | 'search-primary' | 'search-secondary' | 'discover-page' | 'rss-mode-tab' | 'rss-state' | 'rss-source-link' | 'shelf-action' | 'shelf-small' | 'shelf-row-edit' | 'shelf-row-select' | 'rss-detail-bottom';
+export type ReaderButtonSpecId = 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action' | 'form-action' | 'form-busy-action' | 'form-document-action' | 'search-primary' | 'search-secondary' | 'discover-page' | 'rss-mode-tab' | 'rss-state' | 'rss-source-link' | 'shelf-action' | 'shelf-small' | 'shelf-row-edit' | 'shelf-row-select' | 'rss-detail-bottom' | 'rss-filter' | 'sync-config-test' | 'sync-config-save';
 export type ReaderButtonLayout = 'intrinsic' | 'equal' | 'full';
 export interface ReaderButtonSpec {
   text: ReaderTextStyle | ReaderInheritedTextStyle;
@@ -37,12 +37,13 @@ export interface ReaderButtonSpec {
   responseOffset: number | undefined;
   busyOpacity: number;
   centerText: boolean;
+  outerMargin: { right: number; bottom: number } | undefined;
 }
 const SOURCE_ACTION: ReaderButtonSpec = {
   text: TYPE_SOURCE_TOOLS_ACTION, height: 42, radius: 8, horizontalPadding: 0, stacked: false,
   primarySurface: 'TOK_PRIMARY_DARK', secondarySurface: 'TOK_SURFACE_PANEL_SOFT',
   primaryBorder: 'TOK_PRIMARY_DARK', secondaryBorder: 'TOK_BORDER', disabledOpacity: 0.62, primaryDisabledOpacity: undefined, hasBorder: true, primaryHasBorder: true, hasSurface: true, outerRadius: true,
-  primaryText: 'TOK_ON_PRIMARY', secondaryText: 'TOK_PRIMARY_TEXT', verticalPadding: 0, allPadding: undefined, maxLines: 0, fixedWidth: 0, responseOffset: undefined, busyOpacity: 1, centerText: true,
+  primaryText: 'TOK_ON_PRIMARY', secondaryText: 'TOK_PRIMARY_TEXT', verticalPadding: 0, allPadding: undefined, maxLines: 0, fixedWidth: 0, responseOffset: undefined, busyOpacity: 1, centerText: true, outerMargin: undefined,
 };
 // Named variants retain current physical tuples; callers receive no style bag.
 function copyReaderButtonSpec(): ReaderButtonSpec {
@@ -53,7 +54,7 @@ function copyReaderButtonSpec(): ReaderButtonSpec {
     disabledOpacity: SOURCE_ACTION.disabledOpacity, primaryDisabledOpacity: SOURCE_ACTION.primaryDisabledOpacity, hasBorder: SOURCE_ACTION.hasBorder, primaryHasBorder: SOURCE_ACTION.primaryHasBorder,
     hasSurface: SOURCE_ACTION.hasSurface, outerRadius: SOURCE_ACTION.outerRadius,
     primaryText: SOURCE_ACTION.primaryText, secondaryText: SOURCE_ACTION.secondaryText, verticalPadding: SOURCE_ACTION.verticalPadding, allPadding: SOURCE_ACTION.allPadding,
-    maxLines: SOURCE_ACTION.maxLines, fixedWidth: SOURCE_ACTION.fixedWidth, responseOffset: SOURCE_ACTION.responseOffset, busyOpacity: SOURCE_ACTION.busyOpacity, centerText: SOURCE_ACTION.centerText };
+    maxLines: SOURCE_ACTION.maxLines, fixedWidth: SOURCE_ACTION.fixedWidth, responseOffset: SOURCE_ACTION.responseOffset, busyOpacity: SOURCE_ACTION.busyOpacity, centerText: SOURCE_ACTION.centerText, outerMargin: SOURCE_ACTION.outerMargin };
 }
 const SOURCE_COMPACT: ReaderButtonSpec = copyReaderButtonSpec();
 SOURCE_COMPACT.text = TYPE_SOURCE_TOOLS_COMPACT_ACTION;
@@ -128,6 +129,20 @@ const RSS_DETAIL_BOTTOM: ReaderButtonSpec = copyReaderButtonSpec();
 RSS_DETAIL_BOTTOM.text = TYPE_RSS_BOTTOM_ACTION; RSS_DETAIL_BOTTOM.height = 46; RSS_DETAIL_BOTTOM.radius = 999;
 RSS_DETAIL_BOTTOM.disabledOpacity = 0.38; RSS_DETAIL_BOTTOM.primaryDisabledOpacity = 1; RSS_DETAIL_BOTTOM.primaryHasBorder = false;
 RSS_DETAIL_BOTTOM.secondarySurface = 'TOK_CARD_BG_HI'; RSS_DETAIL_BOTTOM.secondaryBorder = 'app.RssEntryDetailPage.CARD_BORDER';
+const RSS_FILTER: ReaderButtonSpec = copyReaderButtonSpec();
+RSS_FILTER.text = TYPE_APP_COMPACT_PRIMARY_ACTION; RSS_FILTER.height = 30; RSS_FILTER.radius = 999;
+RSS_FILTER.horizontalPadding = 10; RSS_FILTER.stacked = true; RSS_FILTER.maxLines = 1;
+RSS_FILTER.hasBorder = false; RSS_FILTER.disabledOpacity = 1;
+RSS_FILTER.primarySurface = 'app.action.fill'; RSS_FILTER.secondarySurface = 'app.RssPage.SOFT_PILL_BG';
+RSS_FILTER.secondaryText = 'app.RssPage.filterPill.fontColor.FF564D44'; RSS_FILTER.outerMargin = { right: 6, bottom: 6 };
+const SYNC_CONFIG_TEST: ReaderButtonSpec = copyReaderButtonSpec();
+SYNC_CONFIG_TEST.text = TYPE_APP_COMPACT_PRIMARY_ACTION; SYNC_CONFIG_TEST.height = 42; SYNC_CONFIG_TEST.stacked = true;
+SYNC_CONFIG_TEST.radius = 8; SYNC_CONFIG_TEST.disabledOpacity = 1; SYNC_CONFIG_TEST.centerText = false;
+SYNC_CONFIG_TEST.secondarySurface = 'app.SyncPage.GHOST_BG'; SYNC_CONFIG_TEST.secondaryBorder = 'app.SyncPage.GHOST_BORDER';
+const SYNC_CONFIG_SAVE: ReaderButtonSpec = copyReaderButtonSpec();
+SYNC_CONFIG_SAVE.text = TYPE_APP_COMPACT_PRIMARY_ACTION; SYNC_CONFIG_SAVE.height = 42; SYNC_CONFIG_SAVE.stacked = true;
+SYNC_CONFIG_SAVE.radius = 12; SYNC_CONFIG_SAVE.disabledOpacity = 1; SYNC_CONFIG_SAVE.centerText = false;
+SYNC_CONFIG_SAVE.primarySurface = 'app.SyncPage.SOLID_BG'; SYNC_CONFIG_SAVE.primaryBorder = 'app.SyncPage.SOLID_BG';
 
 const BUTTONS: Record<ReaderButtonSpecId, ReaderButtonSpec> = {
   'source-action': SOURCE_ACTION, 'source-compact': SOURCE_COMPACT,
@@ -136,6 +151,7 @@ const BUTTONS: Record<ReaderButtonSpecId, ReaderButtonSpec> = {
   'search-primary': SEARCH_PRIMARY, 'search-secondary': SEARCH_SECONDARY, 'discover-page': DISCOVER_PAGE,
   'rss-mode-tab': RSS_MODE, 'rss-state': RSS_STATE, 'rss-source-link': RSS_SOURCE_LINK,
   'shelf-action': SHELF_ACTION, 'shelf-small': SHELF_SMALL, 'shelf-row-edit': SHELF_ROW_EDIT, 'shelf-row-select': SHELF_ROW_SELECT, 'rss-detail-bottom': RSS_DETAIL_BOTTOM,
+  'rss-filter': RSS_FILTER, 'sync-config-test': SYNC_CONFIG_TEST, 'sync-config-save': SYNC_CONFIG_SAVE,
 };
 export function resolveReaderButtonSpec(id: ReaderButtonSpecId): ReaderButtonSpec { return BUTTONS[id]; }
 

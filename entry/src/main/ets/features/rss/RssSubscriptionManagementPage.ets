@@ -1,3 +1,4 @@
+import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
 import type { RssSubscriptionManagementItem } from './RssPresentationContract';
 export type { RssSubscriptionManagementItem } from './RssPresentationContract';
 import { ReaderButton } from '../common/ReaderButton';
@@ -342,30 +343,8 @@ export struct RssSubscriptionManagementPage {
   }
 
   @Builder
-  private actionTarget(
-    label: string,
-    icon: Resource,
-    danger: boolean,
-    divider: boolean,
-    action: () => void,
-  ) {
-    Row({ space: 5 }) {
-      Image(icon)
-        .width(16)
-        .height(16);
-      Text(label)
-        .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)
-        .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)
-        .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)
-        .fontColor(danger ? readerAppColor('TOK_DANGER', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
-        .maxLines(1);
-    }
-    .layoutWeight(1)
-    .height(44)
-    .justifyContent(FlexAlign.Center)
-    .alignItems(VerticalAlign.Center)
-    .border({ width: { left: divider ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
-    .onClick((): void => action());
+  private actionTarget(label: string, icon: Resource, danger: boolean, divider: boolean, action: () => void) {
+    ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-management', label, icon, isDanger: danger, showDivider: divider, onAction: action });
   }
 
   private toggleDisclosure(subscriptionId: string): void {

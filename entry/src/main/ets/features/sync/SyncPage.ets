@@ -262,41 +262,11 @@ export struct SyncPage {
   @Builder
   private configActions() {
     Row({ space: TOK_SPACE_XS }) {
-      Stack({ alignContent: Alignment.Center }) {
-        Text('测试网络连通性')
-          .fontFamily(TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily)
-          .fontWeight(TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight)
-          .fontSize(TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp)
-          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme));
-      }
-      .height(42)
-      .layoutWeight(1)
-      .backgroundColor(readerAppColor('app.SyncPage.GHOST_BG', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('app.SyncPage.GHOST_BORDER', this.appThemeScheme) })
-      .borderRadius(8)
-      .enabled(this.canMutate())
-      .onClick((): void => this.onTestConnection(
-        this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(),
-        this.webdavPass, this.effectiveWebdavPath().trim()));
-
-      Stack({ alignContent: Alignment.Center }) {
-        Text('保存配置')
-          .fontFamily(TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily)
-          .fontWeight(TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight)
-          .fontSize(TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp)
-          .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
-      }
-      .height(42)
-      .layoutWeight(1)
-      .backgroundColor(readerAppColor('app.SyncPage.SOLID_BG', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('app.SyncPage.SOLID_BG', this.appThemeScheme) })
-      .borderRadius(12)
-      .enabled(this.canMutate())
-      .onClick((): void => this.onSaveConfig(
-        this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(), this.webdavPass,
-        this.backupPass, this.effectiveWebdavPath().trim()));
-    }
-    .width('100%');
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'sync-config-test', label: '测试网络连通性', layout: 'equal', actionEnabled: this.canMutate(),
+        onAction: (): void => this.onTestConnection(this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(), this.webdavPass, this.effectiveWebdavPath().trim()) });
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'sync-config-save', label: '保存配置', primary: true, layout: 'equal', actionEnabled: this.canMutate(),
+        onAction: (): void => this.onSaveConfig(this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(), this.webdavPass, this.backupPass, this.effectiveWebdavPath().trim()) });
+    }.width('100%');
   }
 
   @Builder
