@@ -1,3 +1,5 @@
+import { ReaderDirectoryRecoverySurface } from './ReaderDirectoryRecoverySurface';
+import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from './ReadingDirectoryRecovery';
 import { TYPE_READER_DIRECTORY_BOOK_TITLE, TYPE_READER_DIRECTORY_CHAPTER, TYPE_READER_DIRECTORY_OFFLINE_ACTION, TYPE_READER_DIRECTORY_SOURCE_ACTION } from '../common/ReaderTypography';
 import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
@@ -49,6 +51,12 @@ export struct ReaderFullDirectory {
   @Prop chapterTitle: string = '';
   @Prop entries: LocalReadingTocEntry[] = [];
   @Prop catalogMessage: string = '';
+  @Prop directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
+  onReconcileBookmarks: (generation: number, identity: string) => void = (): void => {};
+  onContinueBookmarks: (generation: number, identity: string) => void = (): void => {};
+  onReconcileOffline: (generation: number, identity: string) => void = (): void => {};
+  onContinueOffline: (generation: number, identity: string) => void = (): void => {};
+
   @Prop currentChapterIndex: number = -1;
   // Source switch is only reachable for remote books (sourceId !== 'local');
   // local books render the top-bar 换源 affordance disabled. This is the
@@ -86,6 +94,7 @@ export struct ReaderFullDirectory {
   // Directory Module or exits a Detail-origin directory session.
   onExit: () => void = (): void => {};
 
+  @State private recoveryHeight: number = 0;
   @State private panelProgress: number = 1;
   @State private containerWidth: number = 0;
   @State private containerHeight: number = 0;
@@ -119,9 +128,24 @@ export struct ReaderFullDirectory {
     this.animationGeneration += 1;
   }
 
+  @Builder
+  private recoveryContent() {
+    if (this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible) {
+      ReaderDirectoryRecoverySurface({ recovery: this.directoryRecovery,
+        onReconcileBookmarks: this.onReconcileBookmarks, onContinueBookmarks: this.onContinueBookmarks,
+        onReconcileOffline: this.onReconcileOffline, onContinueOffline: this.onContinueOffline });
+    }
+  }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       this.topBar();
+      if (this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible) {
+        Column() {
+          this.recoveryContent();
+        }.width(this.panelWidth()).position({ x: this.panelLeft(), y: this.panelTop() })
+          .onAreaChange((_old: Area, area: Area): void => { this.recoveryHeight = this.numericAreaLength(area.height); });
+      }
       Stack({ alignContent: Alignment.BottomStart }) {
         FullDirectoryPanel({
           entries: this.entries,
@@ -130,7 +154,7 @@ export struct ReaderFullDirectory {
           chapterDownloadEnabled: this.sourceId !== 'local',
           isTablet: this.usesExpandedLayout(),
           panelWidthOverride: this.panelWidth(),
-          panelHeightOverride: this.fullPanelHeight(),
+          panelHeightOverride: Math.max(0, this.fullPanelHeight() - this.activeRecoveryHeight()),
           onSelectChapter: (index: number): void => this.onSelectChapter(index),
           onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
             this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
@@ -145,8 +169,8 @@ export struct ReaderFullDirectory {
         });
       }
       .width(this.panelWidth())
-      .height(this.panelViewportHeight())
-      .position({ x: this.panelLeft(), y: this.panelTop() })
+      .height(Math.max(0, this.panelViewportHeight() - this.activeRecoveryHeight()))
+      .position({ x: this.panelLeft(), y: this.panelTop() + this.activeRecoveryHeight() })
       .opacity(this.shouldAnimatePanel() ? this.panelProgress : 1)
       .clip(true);
       this.offlineBookMenu();
@@ -164,6 +188,10 @@ export struct ReaderFullDirectory {
         this.containerHeight = height;
       }
     });
+  }
+
+  private activeRecoveryHeight(): number {
+    return this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible ? this.recoveryHeight : 0;
   }
 
   @Builder

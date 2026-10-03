@@ -1,3 +1,5 @@
+import { ReaderDirectoryRecoverySurface } from '../reading/ReaderDirectoryRecoverySurface';
+import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../reading/ReadingDirectoryRecovery';
 import { TYPE_FORM_STATE_BODY } from '../common/ReaderTypography';
 import { ReaderDirectoryRules } from '../reading/ReaderDirectoryRules';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
@@ -31,6 +33,12 @@ export struct BookDirectoryPage {
   @Prop @Watch('onRulesKindChanged') bookKind: string = '';
   @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];
   @Prop catalogMessage: string = '';
+  @Prop directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
+  onReconcileBookmarks: (generation: number, identity: string) => void = (): void => {};
+  onContinueBookmarks: (generation: number, identity: string) => void = (): void => {};
+  onReconcileOffline: (generation: number, identity: string) => void = (): void => {};
+  onContinueOffline: (generation: number, identity: string) => void = (): void => {};
+
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   onBack: () => void = (): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
@@ -82,6 +90,15 @@ export struct BookDirectoryPage {
     return owner.supportsCoreCapability('reading.directory.view.v2');
   }
 
+  @Builder
+  private recoveryContent() {
+    if (this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible) {
+      ReaderDirectoryRecoverySurface({ recovery: this.directoryRecovery,
+        onReconcileBookmarks: this.onReconcileBookmarks, onContinueBookmarks: this.onContinueBookmarks,
+        onReconcileOffline: this.onReconcileOffline, onContinueOffline: this.onContinueOffline });
+    }
+  }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       Column() {
@@ -100,6 +117,7 @@ export struct BookDirectoryPage {
           onBottom: (): void => this.scrollToEdge(Edge.Bottom),
           onToggleSort: (): void => this.toggleSort(),
         });
+        this.recoveryContent();
         Text('').width('100%').height(1)
           .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
       }

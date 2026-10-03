@@ -924,6 +924,14 @@
         "backgroundColor": 1
       },
       "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderDirectoryRecoverySurface.ets",
+      "kind": "business-slot-wrapper",
+      "owner": "ReaderDirectoryHost / ReadingOfflineHost projection",
+      "reason": "Finite bookmark/offline recovery composition consumes existing shared Notice/Action surfaces; it owns only presentation identity and read versus explicit original-intent forwarding, with zero private typography/background/native-overlay implementation.",
+      "counts": {},
+      "status": "REGISTERED_FINITE_BUSINESS_COMPOSITION_NOT_DEVICE_ACCEPTANCE"
     }
   ]
 }

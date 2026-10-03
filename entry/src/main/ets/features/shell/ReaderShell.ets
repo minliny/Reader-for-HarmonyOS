@@ -1,3 +1,4 @@
+import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../reading/ReadingDirectoryRecovery';
 import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from '../reading/RemoteReadingPositionMigration';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -65,6 +66,12 @@ export struct ReaderShell {
   // 目录 overlay。
   @Prop tocEntries: LocalReadingTocEntry[] = [];
   @Prop catalogMessage: string = '';
+  @Prop directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
+  onReconcileBookmarks: (generation: number, identity: string) => void = (): void => {};
+  onContinueBookmarks: (generation: number, identity: string) => void = (): void => {};
+  onReconcileOffline: (generation: number, identity: string) => void = (): void => {};
+  onContinueOffline: (generation: number, identity: string) => void = (): void => {};
+
   @Prop bookmarkLoadMessage: string = '';
   @Prop directoryCurrentChapterIndex: number = -1;
   @Prop directoryChapterTitle: string = '';
@@ -253,6 +260,11 @@ export struct ReaderShell {
           chapterTitle: this.directoryChapterTitle,
           entries: this.tocEntries,
           catalogMessage: this.catalogMessage,
+          directoryRecovery: this.directoryRecovery,
+          onReconcileBookmarks: this.onReconcileBookmarks,
+          onContinueBookmarks: this.onContinueBookmarks,
+          onReconcileOffline: this.onReconcileOffline,
+          onContinueOffline: this.onContinueOffline,
           currentChapterIndex: this.directoryCurrentChapterIndex,
           sourceId: this.sourceId,
           animateFromControl: this.directoryOpenedFromControl,

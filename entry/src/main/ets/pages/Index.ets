@@ -70,11 +70,6 @@ import { BookDirectoryPage } from '../features/bookshelf/BookDirectoryPage';
 import { backfillRetainedReaderDirectoryNavigation, readerDirectoryObserveMissingNavigation,
   readerDirectoryTakeMissingNavigation } from '../features/reading/ReaderDirectoryNavigation';
 import {
-  loadReaderControlBookmarkProjection, mergeReaderControlBookmarkProjection,
-} from '../features/reading/ReaderControlBookmarkLoad';
-import {
-  LocalReadingFlowGateway,
-  type LocalReadingDownloadState,
   type LocalReadingTocEntry,
 } from '../features/reading/LocalReadingFlowGateway';
 import type { ReadingBookDetail } from '../features/reading/ReadingBookDetail';
@@ -96,9 +91,12 @@ import { sameRemoteSessionEvidence } from '../features/reading/RemoteReadingEvid
 import type { RemoteReadingPositionContext } from '../features/reading/RemoteReadingPositionMigration';
 import type { ReadingSessionChapter } from '../features/reading/ReadingChapterWindow';
 import type { ReadingEntrySeed } from '../features/reading/ReadingEntryPreparation';
-import { ReadingOfflineHost } from '../features/reading/ReadingOfflineHost';
+import { ReadingOfflineHost, type ReadingOfflineBinding, type ReadingOfflineOperation } from '../features/reading/ReadingOfflineHost';
+import { ReaderDirectoryHost, type ReaderDirectoryBinding, type ReaderDirectoryOperation } from '../features/reading/ReaderDirectoryHost';
+import { BookmarkOperationIntentStore, CacheClearOperationIntentStore } from '../features/reading/ReadingOperationIntents';
+import { readingDirectoryRecovery, EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../features/reading/ReadingDirectoryRecovery';
 import { ReadingPrefetchHost, type ReadingPrefetchLease } from '../features/reading/ReadingPrefetchHost';
-import { ReadingOfflineGateway, type ReadingOfflineBookProgress } from '../features/reading/ReadingOfflineGateway';
+import type { ReadingOfflineBookProgress } from '../features/reading/ReadingOfflineGateway';
 import {
   isRemoteSourceFailureKind,
   type RemoteContentVerdict,
@@ -327,9 +325,6 @@ struct Index {
   @State private jsonImportContext: JsonImportContext = 'bookSource';
   @State private detailBook: ReadingBookDetail | undefined = undefined;
   @State private detailToc: LocalReadingTocEntry[] = [];
-  @State private directoryBookmarkProjectionFailureMessage: string = '';
-  private directoryBookmarkProjectionFailureKey: string = '';
-  private directoryBookmarkProjectionFailureGeneration: number = -1;
   @State private detailInBookshelf: boolean = true;
   @State private detailLoadingMessage: string = '';
   /** The visible page that owns entry, exit and first-page failure recovery. */
@@ -417,12 +412,11 @@ struct Index {
   /** The original reader owns loading, layout, errors and first-page commit. */
   @State private readingSessionActive: boolean = false;
   private navigationGeneration: number = 0;
-  /** Prevents repeated marker taps from issuing duplicate bookmark mutations. */
-  private directoryBookmarkMutationGeneration: number = 0;
-  private directoryBookmarkMutationActiveKey: string = '';
-  /** One UI mutation gate over Core's already-durable download queue. */
-  private offlineMutationGeneration: number = 0;
-  @State private offlineMutationActiveKey: string = '';
+  /** Display DTOs only; domain owners retain mutex, dispatch, receipts and generations. */
+  @State private directoryOperation: ReaderDirectoryOperation | undefined = undefined;
+  @State private offlineOperation: ReadingOfflineOperation | undefined = undefined;
+  @State private offlineOperationActive: boolean = false;
+  @State private directoryPresentationGeneration: number = 0;
   /** Serializes the destructive detail-page removal for one exact book. */
   @State private detailShelfAdmissionMount: number = 0;
   @State private readableAdmissions: BookshelfReadableAdmissionSnapshot[] = [];
@@ -1001,7 +995,12 @@ struct Index {
           directoryCurrentChapterIndex: this.directoryCurrentChapterIndex,
           directoryChapterTitle: this.directoryChapterTitle,
           directoryOpenedFromControl: this.directoryReturnTarget === 'readerControl',
-          offlineBookOperationActive: this.offlineMutationActiveKey.length > 0,
+          offlineBookOperationActive: this.offlineOperationActive,
+          directoryRecovery: this.directoryRecovery(),
+          onReconcileBookmarks: (generation: number, identity: string): void => this.reconcileDirectoryOperation(generation, identity),
+          onContinueBookmarks: (generation: number, identity: string): void => this.reconcileDirectoryOperation(generation, identity, true),
+          onReconcileOffline: (generation: number, identity: string): void => this.reconcileOfflineOperation(generation, identity),
+          onContinueOffline: (generation: number, identity: string): void => this.reconcileOfflineOperation(generation, identity, true),
           chapterStartBookmarkCreationEnabled: true,
           sourceSwitchVisible: this.sourceSwitchVisible,
           sourceSwitchState: this.sourceSwitchState,
@@ -1302,7 +1301,7 @@ struct Index {
         inBookshelf: this.detailInBookshelf,
         loadingMessage: this.detailLoadingMessage,
         removalEnabled: !this.readingSessionActive && !this.sourceSwitchVisible &&
-          this.pendingSourceSwitch === undefined && this.offlineMutationActiveKey.length === 0 &&
+          this.pendingSourceSwitch === undefined && !this.offlineOperationActive &&
           this.shelfOperation.removalKey.length === 0 && !this.hasUnknownShelfWrite(),
         removing: this.shelfOperation.removalKey.length > 0,
         adding: this.detailReadableAdmission(this.detailBook).adding,
@@ -1340,6 +1339,11 @@ struct Index {
         bookKind: this.detailBook.kind ?? '',
         entries: this.detailToc,
         catalogMessage: this.detailLoadingMessage,
+        directoryRecovery: this.directoryRecovery(),
+        onReconcileBookmarks: (generation: number, identity: string): void => this.reconcileDirectoryOperation(generation, identity),
+        onContinueBookmarks: (generation: number, identity: string): void => this.reconcileDirectoryOperation(generation, identity, true),
+        onReconcileOffline: (generation: number, identity: string): void => this.reconcileOfflineOperation(generation, identity),
+        onContinueOffline: (generation: number, identity: string): void => this.reconcileOfflineOperation(generation, identity, true),
         chapterStartBookmarkCreationEnabled: true,
         onSelectChapter: (index: number): void => this.onDirectoryChapterSelected(index),
         onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number,
@@ -2911,7 +2915,7 @@ struct Index {
     return { isCurrent: current,
       projectionAllowed: (): boolean => current() && this.route === 'detail' && !this.readingSessionActive && !this.sourceSwitchVisible,
       currentDirectory: (): LocalReadingTocEntry[] => this.detailToc,
-      offlineGeneration: (): number => this.offlineMutationGeneration,
+      offlineGeneration: (): number => this.offlineOperation?.generation ?? 0,
       membership: () => {
         const admission = this.detailBook === undefined ? EMPTY_READABLE_ADMISSION : this.detailReadableAdmission(this.detailBook);
         return { generation: JSON.stringify([this.shelfOperation.generation, admission.generation]),
@@ -3109,131 +3113,63 @@ struct Index {
 
 
   private downloadDirectoryChapter(chapterIndex: number): void {
+    const owner = this.mountedRuntimeOwner;
     const session = this.remoteReadingSession;
-    if (session === undefined || !this.isKnownDetailChapter(chapterIndex) ||
-      this.offlineMutationActiveKey.length > 0) {
-      return;
-    }
-    const generation = ++this.offlineMutationGeneration;
-    const key = `${session.identity.sourceId}\u0000${session.identity.bookId}\u0000${chapterIndex}`;
-    this.offlineMutationActiveKey = key;
-    this.updateDirectoryChapterDownloadState(chapterIndex, 'queued');
-    const isCurrent = (): boolean => generation === this.offlineMutationGeneration &&
-      this.remoteReadingSession?.identity.sourceId === session.identity.sourceId &&
-      this.remoteReadingSession?.identity.bookId === session.identity.bookId;
-    void new ReadingOfflineGateway(ReaderRuntimeOwner.current())
-      .prefetchChapter(session, chapterIndex, isCurrent)
-      .then((entries: LocalReadingTocEntry[]): void => {
-        if (isCurrent()) {
-          // Download owns offline facts, never a delayed bookmark snapshot.
-          this.detailToc = this.mergeDirectoryBookmarks(entries, this.detailToc);
-        }
-      })
-      .catch((error: Error): void => {
-        if (isCurrent()) {
-          this.updateDirectoryChapterDownloadState(chapterIndex, 'failed');
-          hilog.error(DOMAIN, 'Reader', 'Chapter offline download failed: %{private}s', error.message);
-        }
-      })
-      .finally((): void => {
-        if (generation === this.offlineMutationGeneration && this.offlineMutationActiveKey === key) {
-          this.offlineMutationActiveKey = '';
-        }
-      });
+    if (owner === undefined || session === undefined || !this.isKnownDetailChapter(chapterIndex)) return;
+    const host = this.getReadingOfflineHost(owner);
+    if (host !== undefined) void host.downloadChapter(chapterIndex, this.offlineBinding(owner, session));
   }
 
   private downloadDirectoryBook(): void {
+    const owner = this.mountedRuntimeOwner;
     const session = this.remoteReadingSession;
-    if (this.offlineMutationActiveKey.length > 0) {
-      this.showOfflineDownloadFeedback('章节下载正在进行，请在目录查看进度');
-      return;
-    }
-    if (session === undefined || !session.entries.some(entry => entry.navigable !== false && entry.url.trim().length > 0)) {
-      this.showOfflineDownloadFeedback('当前书籍没有可下载的在线章节');
-      return;
-    }
+    if (owner === undefined || session === undefined) return;
+    const host = this.getReadingOfflineHost(owner);
+    if (host === undefined) return;
+    if (host.busy()) { this.showOfflineDownloadFeedback('章节下载正在进行，请在目录查看进度'); return; }
     const total = session.entries.filter(entry => entry.navigable !== false && entry.url.trim().length > 0).length;
-    const generation = ++this.offlineMutationGeneration;
-    const key = `${session.identity.sourceId}\u0000${session.identity.bookId}\u0000all`;
-    this.offlineMutationActiveKey = key;
+    if (total === 0) { this.showOfflineDownloadFeedback('当前书籍没有可下载的在线章节'); return; }
     this.showOfflineDownloadFeedback(`开始下载 ${total} 章，可在目录查看进度`);
-    this.detailToc = this.detailToc.map((entry: LocalReadingTocEntry): LocalReadingTocEntry =>
-      entry.navigable === false || entry.downloadState === 'completed' ? entry : {
-        index: entry.index,
-        title: entry.title,
-        navigable: entry.navigable,
-        downloadState: 'queued',
-        bookmarks: entry.bookmarks,
-      });
-    const isCurrent = (): boolean => generation === this.offlineMutationGeneration &&
-      this.remoteReadingSession?.identity.sourceId === session.identity.sourceId &&
-      this.remoteReadingSession?.identity.bookId === session.identity.bookId;
-    const gateway = new ReadingOfflineGateway(ReaderRuntimeOwner.current());
+    void host.downloadBook(this.offlineBinding(owner, session));
+  }
+
+  private offlineBinding(owner: ReaderRuntimeOwner, session: RemoteReadingSession): ReadingOfflineBinding {
+    const identity = this.directoryOperationBindingId();
+    const current = (): boolean => this.isCurrentDirectoryOperationBinding(identity, owner) &&
+      this.remoteReadingSession === session;
     let lastFeedbackAt = Date.now();
     let lastFeedbackKey = '0:0:0';
-    let latestProgress: ReadingOfflineBookProgress | undefined = undefined;
-    const feedback = (progress: ReadingOfflineBookProgress, finished: boolean): string => {
-      if (finished && progress.completedChapters === total) return `全部 ${total} 章下载完成`;
-      let message = `${finished ? '下载结果' : '正在下载'}：已完成 ${progress.completedChapters}/${total} 章`;
-      if (progress.cachedChapters > 0) message += `，另有 ${progress.cachedChapters} 章正文已缓存`;
-      if (progress.failedChapters > 0) {
-        message += `，${progress.failedChapters} 章失败`;
-        if (progress.firstFailure !== undefined) {
-          const title = session.entries.find(entry => entry.index === progress.firstFailure?.chapterIndex)?.title.trim();
-          const label = title === undefined || title.length === 0 ? `目录第 ${progress.firstFailure.chapterIndex + 1} 项` :
-            (title.length > 32 ? `${title.slice(0, 32)}…` : title);
-          message += `（${label}：${progress.firstFailure.reason}）`;
+    return { session, current, currentEntries: (): LocalReadingTocEntry[] => this.detailToc,
+      emitEntries: (entries: LocalReadingTocEntry[]): void => this.applyOwnedDirectoryEntries(entries),
+      emitOperation: (operation: ReadingOfflineOperation): void => {
+        this.offlineOperation = { ...operation };
+        this.offlineOperationActive = operation.materialization === 'running';
+      },
+      onProgress: (progress: ReadingOfflineBookProgress, finished: boolean): void => {
+        const key = `${progress.completedChapters}:${progress.cachedChapters}:${progress.failedChapters}`;
+        if (finished || (Date.now() - lastFeedbackAt >= 5000 && progress.processedChapters < progress.totalChapters && key !== lastFeedbackKey)) {
+          lastFeedbackAt = Date.now(); lastFeedbackKey = key;
+          this.showOfflineDownloadFeedback(this.offlineDownloadFeedback(session, progress, finished));
         }
-      } else if (finished) message += '，其余章节尚未完成';
-      return message;
-    };
-    void gateway.prefetchBook(session, isCurrent, (progress): void => {
-      if (isCurrent()) {
-        latestProgress = progress;
-        this.detailToc = this.mergeDirectoryBookmarks(progress.entries, this.detailToc);
-        const feedbackKey = `${progress.completedChapters}:${progress.cachedChapters}:${progress.failedChapters}`;
-        if (Date.now() - lastFeedbackAt >= 5000 && progress.processedChapters < progress.totalChapters &&
-          feedbackKey !== lastFeedbackKey) {
-          lastFeedbackAt = Date.now();
-          lastFeedbackKey = feedbackKey;
-          this.showOfflineDownloadFeedback(feedback(progress, false));
-        }
+      },
+      failed: (error: Error): void => { hilog.error(DOMAIN, 'Reader', 'Offline operation/projection: %{private}s', error.message); } };
+  }
+
+  private offlineDownloadFeedback(session: RemoteReadingSession, progress: ReadingOfflineBookProgress, finished: boolean): string {
+    const total = progress.totalChapters;
+    if (finished && progress.completedChapters === total) return `全部 ${total} 章下载完成`;
+    let message = `${finished ? '下载结果' : '正在下载'}：已完成 ${progress.completedChapters}/${total} 章`;
+    if (progress.cachedChapters > 0) message += `，另有 ${progress.cachedChapters} 章正文已缓存`;
+    if (progress.failedChapters > 0) {
+      message += `，${progress.failedChapters} 章失败`;
+      if (progress.firstFailure !== undefined) {
+        const title = session.entries.find(entry => entry.index === progress.firstFailure?.chapterIndex)?.title.trim();
+        const label = title === undefined || title.length === 0 ? `目录第 ${progress.firstFailure.chapterIndex + 1} 项` :
+          (title.length > 32 ? `${title.slice(0, 32)}…` : title);
+        message += `（${label}：${progress.firstFailure.reason}）`;
       }
-    })
-      .then((entries: LocalReadingTocEntry[]): void => {
-        if (isCurrent()) {
-          this.detailToc = this.mergeDirectoryBookmarks(entries, this.detailToc);
-          this.showOfflineDownloadFeedback(feedback({
-            processedChapters: total, totalChapters: total,
-            completedChapters: entries.filter(entry => entry.navigable !== false && entry.downloadState === 'completed').length,
-            cachedChapters: entries.filter(entry => entry.navigable !== false && entry.downloadState === 'cached').length,
-            failedChapters: latestProgress?.failedChapters ?? entries.filter(entry => entry.downloadState === 'failed').length,
-            firstFailure: latestProgress?.firstFailure,
-            entries,
-          }, true));
-        }
-      })
-      .catch((error: Error): void => {
-        if (!isCurrent()) {
-          return;
-        }
-        this.showReadingFailure('整书离线失败', error.message);
-        void gateway.loadProjection(session, isCurrent)
-          .then((entries: LocalReadingTocEntry[]): void => {
-            if (isCurrent()) {
-              this.detailToc = this.mergeDirectoryBookmarks(entries, this.detailToc);
-            }
-          })
-          .catch((projectionError: Error): void => {
-            hilog.error(DOMAIN, 'Reader', 'Whole-book offline projection refresh failed: %{private}s',
-              projectionError.message);
-          });
-      })
-      .finally((): void => {
-        if (generation === this.offlineMutationGeneration && this.offlineMutationActiveKey === key) {
-          this.offlineMutationActiveKey = '';
-        }
-      });
+    } else if (finished) message += '，其余章节尚未完成';
+    return message;
   }
 
   private showOfflineDownloadFeedback(message: string): void {
@@ -3245,7 +3181,7 @@ struct Index {
   }
 
   private requestClearDirectoryBookOffline(): void {
-    if (this.remoteReadingSession === undefined || this.offlineMutationActiveKey.length > 0) {
+    if (this.remoteReadingSession === undefined || this.offlineOperationActive) {
       return;
     }
     const session = this.remoteReadingSession;
@@ -3263,42 +3199,15 @@ struct Index {
         action: (): void => this.clearDirectoryBookOffline(),
       },
     }, (): boolean => this.remoteReadingSession === session && this.remoteSessionGeneration === generation &&
-      this.offlineMutationActiveKey.length === 0);
+      !this.offlineOperationActive);
   }
 
   private clearDirectoryBookOffline(): void {
+    const owner = this.mountedRuntimeOwner;
     const session = this.remoteReadingSession;
-    if (session === undefined || this.offlineMutationActiveKey.length > 0) {
-      return;
-    }
-    const generation = ++this.offlineMutationGeneration;
-    const key = `${session.identity.sourceId}\u0000${session.identity.bookId}\u0000clear`;
-    this.offlineMutationActiveKey = key;
-    const isCurrent = (): boolean => generation === this.offlineMutationGeneration &&
-      this.remoteReadingSession?.identity.sourceId === session.identity.sourceId &&
-      this.remoteReadingSession?.identity.bookId === session.identity.bookId;
-    void new ReadingOfflineGateway(ReaderRuntimeOwner.current()).clearBook(session, isCurrent)
-      .then((): void => {
-        if (isCurrent()) {
-          this.detailToc = this.detailToc.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => ({
-            index: entry.index,
-            title: entry.title,
-            navigable: entry.navigable,
-            downloadState: 'missing',
-            bookmarks: entry.bookmarks,
-          }));
-        }
-      })
-      .catch((error: Error): void => {
-        if (isCurrent()) {
-          this.showReadingFailure('清除离线失败', error.message);
-        }
-      })
-      .finally((): void => {
-        if (generation === this.offlineMutationGeneration && this.offlineMutationActiveKey === key) {
-          this.offlineMutationActiveKey = '';
-        }
-      });
+    if (owner === undefined || session === undefined) return;
+    const host = this.getReadingOfflineHost(owner);
+    if (host !== undefined) void host.clearBook(this.offlineBinding(owner, session));
   }
 
   private detailBookKey(book: ReadingBookDetail): string {
@@ -3336,7 +3245,7 @@ struct Index {
   private canRemoveDetailBook(book: ReadingBookDetail): boolean {
     return this.route === 'detail' && this.isSameDetailBook(book) && !this.readingSessionActive &&
       !this.sourceSwitchVisible && this.pendingSourceSwitch === undefined &&
-      this.offlineMutationActiveKey.length === 0 &&
+      !this.offlineOperationActive &&
       this.shelfOperation.removalKey.length === 0 && !this.shelfOperation.busy && !this.hasUnknownShelfWrite();
   }
 
@@ -3703,6 +3612,8 @@ struct Index {
     this.directoryCurrentChapterIndex = -1;
     this.directoryChapterTitle = '';
     this.route = 'directory';
+    this.directoryPresentationGeneration += 1;
+    this.loadDirectoryOperationProjections();
   }
 
   private openReaderControlDirectory(): void {
@@ -3713,6 +3624,8 @@ struct Index {
     this.directoryReturnTarget = 'readerControl';
     this.preparedReaderRoute = 'directory';
     this.route = 'directory';
+    this.directoryPresentationGeneration += 1;
+    this.loadDirectoryOperationProjections();
   }
 
   private readingReadyCallback(sourceId: string, bookId: string, generation: number): (chapterIndex: number) => void {
@@ -3897,423 +3810,142 @@ struct Index {
     }
   }
 
-  private deleteDirectoryBookmarks(bookmarkTimes: number[]): void {
-    const book = this.detailBook;
-    if (book === undefined || bookmarkTimes.length === 0) {
-      return;
-    }
-    const uniqueTimes: number[] = [];
-    for (const time of bookmarkTimes) {
-      if (!Number.isSafeInteger(time) || uniqueTimes.indexOf(time) >= 0) {
-        continue;
-      }
-      uniqueTimes.push(time);
-    }
-    if (uniqueTimes.length === 0) {
-      return;
-    }
-    const mutationGeneration = this.beginDirectoryBookmarkMutation(book);
-    if (mutationGeneration < 0) {
-      return;
-    }
-    const mutationKey = this.directoryBookmarkMutationKey(book);
-    const navigationGeneration = this.navigationGeneration;
-    const gateway = new LocalReadingFlowGateway(ReaderRuntimeOwner.current());
-    const isCurrent = (): boolean => navigationGeneration === this.navigationGeneration &&
-      this.detailBook?.sourceId === book.sourceId &&
-      this.detailBook?.bookId === book.bookId &&
-      this.detailBook?.title === book.title && this.detailBook?.author === book.author &&
-      this.isDirectoryBookmarkMutationCurrent(mutationGeneration, mutationKey);
-    void this.performDirectoryBookmarkDeletion(
-      gateway,
-      book,
-      uniqueTimes,
-      isCurrent,
-      mutationGeneration,
-      mutationKey,
-    );
+  private getReaderDirectoryHost(owner: ReaderRuntimeOwner): ReaderDirectoryHost | undefined {
+    const current = (): boolean => this.isCurrentRuntime(owner);
+    const host = ReaderDirectoryHost.forRuntime(owner, current, (error: Error): void => {
+      try { hilog.error(DOMAIN, 'Reader', 'Directory delivery failed: %{private}s', error.message); } catch (_) {}
+    }, new BookmarkOperationIntentStore(owner, current));
+    this.directoryOperation = host?.snapshot();
+    return host;
   }
 
-  private createDirectoryChapterStartBookmark(
-    request: ReaderDirectoryChapterStartBookmarkRequest,
-  ): void {
+  private directoryOperationBindingId(): string {
     const book = this.detailBook;
-    if (book === undefined ||
-      !Number.isSafeInteger(request.chapterIndex) || request.chapterIndex < 0 ||
-      request.chapterTitle.trim().length === 0) {
-      return;
-    }
-    let knownChapter = false;
-    for (const entry of this.detailToc) {
-      if (entry.index === request.chapterIndex && entry.title === request.chapterTitle) {
-        knownChapter = true;
-        break;
-      }
-    }
-    if (!knownChapter) {
-      return;
-    }
-    const mutationGeneration = this.beginDirectoryBookmarkMutation(book);
-    if (mutationGeneration < 0) {
-      return;
-    }
-    const mutationKey = this.directoryBookmarkMutationKey(book);
-    const navigationGeneration = this.navigationGeneration;
-    const gateway = new LocalReadingFlowGateway(ReaderRuntimeOwner.current());
-    const isCurrent = (): boolean => navigationGeneration === this.navigationGeneration &&
-      this.detailBook?.sourceId === book.sourceId &&
-      this.detailBook?.bookId === book.bookId &&
-      this.detailBook?.title === book.title && this.detailBook?.author === book.author &&
-      this.isDirectoryBookmarkMutationCurrent(mutationGeneration, mutationKey);
-    void this.performDirectoryChapterStartBookmarkCreation(
-      gateway,
-      book,
-      request,
-      isCurrent,
-      mutationGeneration,
-      mutationKey,
-    );
+    return JSON.stringify([this.detailShelfAdmissionMount, this.navigationGeneration,
+      book?.sourceId ?? '', book?.bookId ?? '', this.remoteSessionGeneration]);
+  }
+
+  private directoryOperationPresentationId(): string {
+    return JSON.stringify([this.directoryOperationBindingId(), this.directoryPresentationGeneration]);
+  }
+
+  private isCurrentDirectoryOperationBinding(identity: string, owner: ReaderRuntimeOwner | undefined): boolean {
+    return owner !== undefined && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) &&
+      !this.shelfReceiptRetired && identity === this.directoryOperationBindingId() && this.detailBook !== undefined &&
+      (this.route === 'detail' || this.route === 'reading' || this.route === 'directory');
+  }
+
+  private isCurrentDirectoryOperationPresentation(identity: string, owner: ReaderRuntimeOwner | undefined): boolean {
+    return this.route === 'directory' && identity === this.directoryOperationPresentationId() &&
+      this.isCurrentDirectoryOperationBinding(this.directoryOperationBindingId(), owner);
+  }
+
+  private applyOwnedDirectoryEntries(entries: LocalReadingTocEntry[]): void {
+    this.detailToc = entries;
+    const entryHost = this.getReadingEntryHost();
+    if (entryHost !== undefined) entryHost.replaceDirectory(this.readingEntryScopeId, entries);
+  }
+
+  private directoryBinding(owner: ReaderRuntimeOwner, book: ReadingBookDetail,
+    isRequestCurrent?: () => boolean, onSettled?: (confirmed: boolean) => void): ReaderDirectoryBinding {
+    const identity = this.directoryOperationBindingId();
+    return { book, current: (): boolean => this.isCurrentDirectoryOperationBinding(identity, owner) &&
+      (isRequestCurrent?.() ?? true) && this.detailBook?.title === book.title && this.detailBook?.author === book.author,
+      currentEntries: (): LocalReadingTocEntry[] => this.detailToc,
+      emitEntries: (entries: LocalReadingTocEntry[]): void => this.applyOwnedDirectoryEntries(entries),
+      emitOperation: (operation: ReaderDirectoryOperation): void => { this.directoryOperation = { ...operation }; },
+      failed: (error: Error): void => { hilog.error(DOMAIN, 'Reader', 'Bookmark operation/projection: %{private}s', error.message); },
+      onSettled };
+  }
+
+  private deleteDirectoryBookmarks(bookmarkTimes: number[]): void {
+    const owner = this.mountedRuntimeOwner, book = this.detailBook;
+    if (owner === undefined || book === undefined) return;
+    const host = this.getReaderDirectoryHost(owner);
+    if (host !== undefined) void host.deleteBookmarks(bookmarkTimes, this.directoryBinding(owner, book));
+  }
+
+  private createDirectoryChapterStartBookmark(request: ReaderDirectoryChapterStartBookmarkRequest): void {
+    const owner = this.mountedRuntimeOwner, book = this.detailBook;
+    if (owner === undefined || book === undefined || !this.detailToc.some(entry =>
+      entry.index === request.chapterIndex && entry.title === request.chapterTitle)) return;
+    const host = this.getReaderDirectoryHost(owner);
+    if (host !== undefined) void host.createChapterStart(request.chapterIndex, this.directoryBinding(owner, book));
   }
 
   private toggleReaderPageBookmark(request: ReaderPageBookmarkToggleRequest): void {
-    const book = this.detailBook;
-    if (book === undefined || !Number.isSafeInteger(request.chapterIndex) || request.chapterIndex < 0 ||
-      !Number.isSafeInteger(request.chapterOffset) || request.chapterOffset < 0 ||
-      request.chapterTitle.trim().length === 0) { request.onSettled?.(false); return; }
-    let entry: LocalReadingTocEntry | undefined = undefined;
-    for (const candidate of this.detailToc) {
-      if (candidate.index === request.chapterIndex && candidate.title === request.chapterTitle) {
-        entry = candidate;
-        break;
-      }
-    }
-    if (entry === undefined || entry.bookmarks === undefined) { request.onSettled?.(false); return; }
-    const admittedTimes: number[] = [];
+    const owner = this.mountedRuntimeOwner, book = this.detailBook;
+    const entry = this.detailToc.find(candidate => candidate.index === request.chapterIndex && candidate.title === request.chapterTitle);
+    if (owner === undefined || book === undefined || entry?.bookmarks === undefined ||
+      !Number.isSafeInteger(request.chapterOffset) || request.chapterOffset < 0) { request.onSettled?.(false); return; }
+    const times: number[] = [];
     for (const time of request.bookmarkTimes) {
-      if (!Number.isSafeInteger(time) || admittedTimes.indexOf(time) >= 0) continue;
-      for (const bookmark of entry.bookmarks) {
-        if (bookmark.time === time) {
-          admittedTimes.push(time);
-          break;
-        }
+      if (!Number.isSafeInteger(time) || times.indexOf(time) >= 0 || !entry.bookmarks.some(mark => mark.time === time)) {
+        request.onSettled?.(false); return;
       }
+      times.push(time);
     }
-    if (admittedTimes.length !== request.bookmarkTimes.length) { request.onSettled?.(false); return; }
-    const mutationGeneration = this.beginDirectoryBookmarkMutation(book);
-    if (mutationGeneration < 0) { request.onSettled?.(false); return; }
-    const mutationKey = this.directoryBookmarkMutationKey(book);
-    const navigationGeneration = this.navigationGeneration;
-    const gateway = new LocalReadingFlowGateway(ReaderRuntimeOwner.current());
-    const isCurrent = (): boolean => navigationGeneration === this.navigationGeneration &&
-      this.detailBook?.sourceId === book.sourceId &&
-      this.detailBook?.bookId === book.bookId &&
-      this.detailBook?.title === book.title && this.detailBook?.author === book.author &&
-      this.isDirectoryBookmarkMutationCurrent(mutationGeneration, mutationKey);
-    if (admittedTimes.length > 0) {
-      void this.performDirectoryBookmarkDeletion(
-        gateway, book, admittedTimes, isCurrent, mutationGeneration, mutationKey, request.onSettled,
-      );
-      return;
-    }
-    void this.performReaderPageBookmarkCreation(
-      gateway, book, request, isCurrent, mutationGeneration, mutationKey,
-    );
-  }
-
-  private directoryBookmarkMutationKey(book: ReadingBookDetail): string {
-    return `${book.sourceId.length}:${book.sourceId}:${book.bookId}`;
+    const host = this.getReaderDirectoryHost(owner);
+    if (host === undefined) { request.onSettled?.(false); return; }
+    const binding = this.directoryBinding(owner, book, undefined, request.onSettled);
+    if (times.length > 0) { void host.deleteBookmarks(times, binding); return; }
+    void host.createPosition({ bookName: book.title, bookAuthor: book.author, chapterIndex: request.chapterIndex,
+      chapterOffset: request.chapterOffset, chapterTitle: request.chapterTitle, bookText: request.bookText,
+      positionScope: request.positionScope }, binding);
   }
 
   private controlBookmarkProjectionMessage(): string {
+    const operation = this.directoryOperation;
+    // The persistent bookmark control needs an actual unavailable/stale list,
+    // not a partial batch result whose canonical list has already refreshed.
+    return operation !== undefined && (operation.projection.receipt.confirmation === 'unknown' ||
+      operation.projection.receipt.fact === 'confirmedRefreshFailed') ? this.directoryRecovery().bookmarks.message : '';
+  }
+
+  private directoryRecovery(): ReadingDirectoryRecovery {
     const book = this.detailBook;
-    return book !== undefined &&
-      this.directoryBookmarkProjectionFailureKey === this.directoryBookmarkMutationKey(book) &&
-      this.directoryBookmarkProjectionFailureGeneration === this.navigationGeneration ?
-      this.directoryBookmarkProjectionFailureMessage : '';
+    if (book === undefined) return EMPTY_READING_DIRECTORY_RECOVERY;
+    return readingDirectoryRecovery(this.directoryOperationPresentationId(), book, this.directoryOperation, this.offlineOperation);
   }
 
-  private failDirectoryBookmarkProjection(
-    book: ReadingBookDetail, outcome: 'confirmed' | 'partial' | 'uncertain',
-  ): void {
-    this.directoryBookmarkProjectionFailureKey = this.directoryBookmarkMutationKey(book);
-    this.directoryBookmarkProjectionFailureGeneration = this.navigationGeneration;
-    // Report the write and read separately. Never replay/rollback a write whose
-    // reply is uncertain. Only a fresh canonical list can restore CRUD admission.
-    this.directoryBookmarkProjectionFailureMessage = outcome === 'confirmed' ?
-      '书签已更新，但列表载入失败，请重新载入核对' : outcome === 'partial' ?
-      '部分书签已更新，剩余结果未确认，请重新载入核对，不要重复操作' :
-      '书签操作结果未确认，请重新载入核对，不要重复操作';
-    this.detailToc = this.detailToc.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => ({
-      index: entry.index, title: entry.title, level: entry.level, navigable: entry.navigable, downloadState: entry.downloadState,
-      bookmarks: undefined,
-    }));
-  }
-
-  private clearDirectoryBookmarkProjectionFailure(): void {
-    this.directoryBookmarkProjectionFailureMessage = '';
-    this.directoryBookmarkProjectionFailureKey = '';
-    this.directoryBookmarkProjectionFailureGeneration = -1;
-  }
-
-  /** Returns -1 when the same book already owns an unfinished mutation. */
-  private beginDirectoryBookmarkMutation(book: ReadingBookDetail): number {
-    const key = this.directoryBookmarkMutationKey(book);
-    if (this.directoryBookmarkMutationActiveKey === key || this.controlBookmarkProjectionMessage().length > 0) {
-      return -1;
-    }
-    this.directoryBookmarkMutationGeneration = this.directoryBookmarkMutationGeneration >=
-      Number.MAX_SAFE_INTEGER ? 1 : this.directoryBookmarkMutationGeneration + 1;
-    this.directoryBookmarkMutationActiveKey = key;
-    return this.directoryBookmarkMutationGeneration;
-  }
-
-  private finishDirectoryBookmarkMutation(generation: number, key: string): void {
-    if (this.isDirectoryBookmarkMutationCurrent(generation, key)) {
-      this.directoryBookmarkMutationActiveKey = '';
+  private reconcileDirectoryOperation(generation: number, identity: string, continueOriginal: boolean = false): void {
+    const owner = this.mountedRuntimeOwner, book = this.detailBook;
+    if (this.route !== 'directory' || !this.isCurrentDirectoryOperationPresentation(identity, owner) || owner === undefined || book === undefined) return;
+    const host = this.getReaderDirectoryHost(owner);
+    if (host !== undefined) {
+      const binding = this.directoryBinding(owner, book);
+      if (continueOriginal) void host.continueOriginal(generation, binding).catch((): void => {});
+      else void host.reconcile(generation, binding).catch((): void => {});
     }
   }
 
-  private isDirectoryBookmarkMutationCurrent(generation: number, key: string): boolean {
-    return generation === this.directoryBookmarkMutationGeneration &&
-      key === this.directoryBookmarkMutationActiveKey;
-  }
-
-  private async performDirectoryChapterStartBookmarkCreation(
-    gateway: LocalReadingFlowGateway,
-    book: ReadingBookDetail,
-    request: ReaderDirectoryChapterStartBookmarkRequest,
-    isCurrent: () => boolean,
-    mutationGeneration: number,
-    mutationKey: string,
-  ): Promise<void> {
-    let writeConfirmed = false;
-    try {
-      await gateway.createChapterStartBookmark({
-        bookName: book.title,
-        bookAuthor: book.author,
-        chapterIndex: request.chapterIndex,
-        chapterTitle: request.chapterTitle,
-      }, isCurrent, book.sourceId === LOCAL_SOURCE_ID ? undefined : { sourceId: book.sourceId, bookId: book.bookId });
-      writeConfirmed = true;
-      if (!isCurrent()) {
-        return;
-      }
-      const entries = await this.reloadDirectoryBookmarkProjection(gateway, book, isCurrent);
-      if (isCurrent()) {
-        this.detailToc = mergeReaderControlBookmarkProjection(this.detailToc, entries);
-        this.clearDirectoryBookmarkProjectionFailure();
-      }
-    } catch (error) {
-      if (isCurrent()) {
-        this.failDirectoryBookmarkProjection(book, writeConfirmed ? 'confirmed' : 'uncertain');
-        hilog.error(DOMAIN, 'Reader', 'Directory bookmark create/projection needs verification: %{private}s',
-          (error as Error).message);
-      }
-    } finally {
-      this.finishDirectoryBookmarkMutation(mutationGeneration, mutationKey);
+  private reconcileOfflineOperation(generation: number, identity: string, continueOriginal: boolean = false): void {
+    const owner = this.mountedRuntimeOwner, session = this.remoteReadingSession;
+    if (this.route !== 'directory' || !this.isCurrentDirectoryOperationPresentation(identity, owner) || owner === undefined || session === undefined) return;
+    const host = this.getReadingOfflineHost(owner);
+    if (host !== undefined) {
+      const binding = this.offlineBinding(owner, session);
+      if (continueOriginal) void host.continueOriginal(generation, binding).catch((): void => {});
+      else void host.reconcile(generation, binding).catch((): void => {});
     }
   }
 
-  private async performReaderPageBookmarkCreation(
-    gateway: LocalReadingFlowGateway,
-    book: ReadingBookDetail,
-    request: ReaderPageBookmarkToggleRequest,
-    isCurrent: () => boolean,
-    mutationGeneration: number,
-    mutationKey: string,
-  ): Promise<void> {
-    let writeConfirmed = false;
-    try {
-      await gateway.createPositionBookmark({
-        bookName: book.title,
-        bookAuthor: book.author,
-        chapterIndex: request.chapterIndex,
-        chapterOffset: request.chapterOffset,
-        chapterTitle: request.chapterTitle,
-        bookText: request.bookText,
-        positionScope: request.positionScope,
-      }, isCurrent);
-      writeConfirmed = true;
-      if (!isCurrent()) return;
-      const entries = await this.reloadDirectoryBookmarkProjection(gateway, book, isCurrent);
-      if (isCurrent()) {
-        this.detailToc = mergeReaderControlBookmarkProjection(this.detailToc, entries);
-        this.clearDirectoryBookmarkProjectionFailure();
-      }
-    } catch (error) {
-      if (isCurrent()) {
-        this.failDirectoryBookmarkProjection(book, writeConfirmed ? 'confirmed' : 'uncertain');
-        hilog.error(DOMAIN, 'Reader', 'Reader page bookmark create/projection needs verification: %{private}s',
-          (error as Error).message);
-      }
-    } finally {
-      this.finishDirectoryBookmarkMutation(mutationGeneration, mutationKey);
-      request.onSettled?.(writeConfirmed);
-    }
+  private loadDirectoryOperationProjections(): void {
+    const owner = this.mountedRuntimeOwner, book = this.detailBook, session = this.remoteReadingSession;
+    if (owner === undefined || book === undefined) return;
+    const directory = this.getReaderDirectoryHost(owner);
+    if (directory !== undefined) void directory.load(this.directoryBinding(owner, book)).catch((): void => {});
+    const offline = this.getReadingOfflineHost(owner);
+    if (offline !== undefined && session !== undefined) void offline.load(this.offlineBinding(owner, session)).catch((): void => {});
   }
 
-  private async performDirectoryBookmarkDeletion(
-    gateway: LocalReadingFlowGateway,
-    book: ReadingBookDetail,
-    bookmarkTimes: number[],
-    isCurrent: () => boolean,
-    mutationGeneration: number,
-    mutationKey: string,
-    onSettled?: (success: boolean) => void,
-  ): Promise<void> {
-    let confirmedDeletes = 0;
-    try {
-      for (const time of bookmarkTimes) {
-        const deleted = await gateway.deleteBookmark(time, isCurrent);
-        if (!isCurrent()) {
-          return;
-        }
-        if (!deleted) {
-          throw new Error(`bookmark.delete did not delete ${time}`);
-        }
-        confirmedDeletes++;
-      }
-      const entries = await this.reloadDirectoryBookmarkProjection(gateway, book, isCurrent);
-      if (isCurrent()) {
-        this.detailToc = mergeReaderControlBookmarkProjection(this.detailToc, entries);
-        this.clearDirectoryBookmarkProjectionFailure();
-      }
-    } catch (error) {
-      if (isCurrent()) {
-        this.failDirectoryBookmarkProjection(book, confirmedDeletes === bookmarkTimes.length ? 'confirmed' :
-          confirmedDeletes > 0 ? 'partial' : 'uncertain');
-        hilog.error(DOMAIN, 'Reader', 'Directory bookmark delete/projection needs verification: %{private}s',
-          (error as Error).message);
-      }
-    } finally {
-      this.finishDirectoryBookmarkMutation(mutationGeneration, mutationKey);
-      onSettled?.(confirmedDeletes === bookmarkTimes.length);
-    }
-  }
-
-  private loadControlBookmarks(
-    sourceId: string, bookId: string, isRequestCurrent: () => boolean,
-  ): Promise<void> {
-    const book = this.detailBook;
-    if (book === undefined || book.sourceId !== sourceId || book.bookId !== bookId ||
-      !this.readingSessionActive || !isRequestCurrent()) {
-      return Promise.reject(new Error('Bookmark projection session superseded'));
-    }
-    const navigationGeneration = this.navigationGeneration;
-    const mutationGeneration = this.directoryBookmarkMutationGeneration;
-    const key = this.directoryBookmarkMutationKey(book);
-    const isCurrent = (): boolean => isRequestCurrent() && this.readingSessionActive &&
-      navigationGeneration === this.navigationGeneration &&
-      this.detailBook?.sourceId === sourceId && this.detailBook?.bookId === bookId &&
-      this.detailBook?.title === book.title && this.detailBook?.author === book.author &&
-      mutationGeneration === this.directoryBookmarkMutationGeneration &&
-      this.directoryBookmarkMutationActiveKey !== key;
-    const gateway = new LocalReadingFlowGateway(ReaderRuntimeOwner.current());
-    return loadReaderControlBookmarkProjection({
-      isCurrent,
-      currentEntries: (): LocalReadingTocEntry[] => this.detailToc,
-      read: (entries: LocalReadingTocEntry[], guard: () => boolean): Promise<LocalReadingTocEntry[]> =>
-        gateway.loadBookmarkProjection(book.title, book.author, entries, guard),
-      commit: (entries: LocalReadingTocEntry[]): void => {
-        this.detailToc = entries;
-        this.clearDirectoryBookmarkProjectionFailure();
-      },
-    }).catch((error: Error): void => {
-      // A later bookmark write or navigation owns its own projection/result.
-      // An obsolete read must not mark that newer list as failed.
-      if (isCurrent()) throw error;
-    });
-  }
-
-  private reloadDirectoryBookmarkProjection(
-    gateway: LocalReadingFlowGateway,
-    book: ReadingBookDetail,
-    isCurrent: () => boolean,
-  ): Promise<LocalReadingTocEntry[]> {
-    if (book.sourceId === LOCAL_SOURCE_ID) {
-      return gateway.loadDirectoryProjection(
-        book.bookId,
-        book.title,
-        book.author,
-        this.detailToc,
-        isCurrent,
-      );
-    }
-    return gateway.loadBookmarkProjection(book.title, book.author, this.detailToc, isCurrent);
-  }
-
-  private async loadRemoteDirectoryProjection(
-    offline: ReadingOfflineGateway,
-    owner: ReaderRuntimeOwner,
-    session: RemoteReadingSession,
-    isCurrent: () => boolean,
-  ): Promise<LocalReadingTocEntry[]> {
-    let entries: LocalReadingTocEntry[] = session.entries.map((entry): LocalReadingTocEntry => ({
-      index: entry.index,
-      title: entry.title,
-      navigable: entry.navigable !== false && entry.url.trim().length > 0,
-      downloadState: 'unknown',
-    }));
-    try {
-      entries = await offline.loadDirectoryProjection(session, isCurrent);
-    } catch (error) {
-      hilog.error(DOMAIN, 'Reader', 'Remote download projection failed: %{private}s',
-        (error as Error).message);
-    }
-    try {
-      return await new LocalReadingFlowGateway(owner).loadBookmarkProjection(
-        session.book.title,
-        session.book.author,
-        entries,
-        isCurrent,
-      );
-    } catch (error) {
-      hilog.error(DOMAIN, 'Reader', 'Remote bookmark projection failed: %{private}s',
-        (error as Error).message);
-      return entries;
-    }
-  }
-
-  private mergeDirectoryBookmarks(
-    entries: LocalReadingTocEntry[],
-    source: LocalReadingTocEntry[],
-  ): LocalReadingTocEntry[] {
-    const sourceByChapter = new Map<number, LocalReadingTocEntry>();
-    for (const entry of source) {
-      sourceByChapter.set(entry.index, entry);
-    }
-    return entries.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => {
-      const previous = sourceByChapter.get(entry.index);
-      return {
-        index: entry.index,
-        title: entry.title,
-        navigable: entry.navigable,
-        downloadState: entry.downloadState,
-        bookmarks: previous?.bookmarks,
-      };
-    });
-  }
-
-  private updateDirectoryChapterDownloadState(
-    chapterIndex: number,
-    downloadState: LocalReadingDownloadState,
-  ): void {
-    const position = this.detailToc.findIndex((entry: LocalReadingTocEntry): boolean =>
-      entry.index === chapterIndex);
-    if (position < 0) {
-      return;
-    }
-    const entry = this.detailToc[position];
-    if (entry.downloadState === downloadState) {
-      return;
-    }
-    this.detailToc.splice(position, 1, {
-      index: entry.index,
-      title: entry.title,
-      navigable: entry.navigable,
-      downloadState,
-      bookmarks: entry.bookmarks,
-    });
+  private loadControlBookmarks(sourceId: string, bookId: string, isRequestCurrent: () => boolean): Promise<void> {
+    const owner = this.mountedRuntimeOwner, book = this.detailBook;
+    if (owner === undefined || book === undefined || book.sourceId !== sourceId || book.bookId !== bookId ||
+      !this.readingSessionActive || !isRequestCurrent()) return Promise.reject(new Error('Bookmark projection session superseded'));
+    const host = this.getReaderDirectoryHost(owner);
+    if (host === undefined) return Promise.reject(new Error('Bookmark projection Runtime retired'));
+    return host.load(this.directoryBinding(owner, book, isRequestCurrent));
   }
 
   @Builder
@@ -4764,8 +4396,13 @@ struct Index {
   }
 
   private getReadingOfflineHost(owner: ReaderRuntimeOwner): ReadingOfflineHost | undefined {
-    return ReadingOfflineHost.forRuntime(owner, (): boolean => ReaderRuntimeOwner.isCurrent(owner),
-      (error: Error): void => hilog.warn(DOMAIN, 'Reader', 'Offline presentation delivery failed: %{private}s', error.message));
+    const current = (): boolean => ReaderRuntimeOwner.isCurrent(owner);
+    const host = ReadingOfflineHost.forRuntime(owner, current,
+      (error: Error): void => hilog.warn(DOMAIN, 'Reader', 'Offline presentation delivery failed: %{private}s', error.message),
+      new CacheClearOperationIntentStore(owner, current));
+    this.offlineOperation = host?.snapshot();
+    this.offlineOperationActive = host?.busy() ?? false;
+    return host;
   }
 
   private cleanupRetiredSourceCache(finalized: SourceSwitchPendingTransaction): void {

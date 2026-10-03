@@ -64,6 +64,9 @@ export class ReaderDirectoryHost {
   private readonly dependencies: ReaderDirectoryDependencies;
   private generation: number = 0;
   private active: boolean = false;
+  /** One latest captured read intent may join accepted work after UI recreation.
+   * It never becomes a mutation or obtains a fresh operation identity. */
+  private pendingRead: { binding: ReaderDirectoryBinding; resolve: () => void; reject: (error: Error) => void } | undefined;
   private readGeneration: number = 0;
   private operation: ReaderDirectoryOperation | undefined;
   private bookmarkProjectionStale: boolean = false;
@@ -120,14 +123,32 @@ export class ReaderDirectoryHost {
   /** Pure canonical list read. A matching list is current data, never proof
    * that an old unknown bookmark.create/delete transaction was confirmed. */
   async load(binding: ReaderDirectoryBinding): Promise<void> {
-    if (this.active || !this.admitted(binding)) return;
-    await this.recoverPending(binding, false);
-    if (this.active || !this.admitted(binding)) return;
-    const readGeneration = ++this.readGeneration;
-    const operationGeneration = this.generation;
-    const current = (): boolean => this.admitted(binding) && !this.active &&
-      readGeneration === this.readGeneration && operationGeneration === this.generation;
-    await this.read(binding, current);
+    if (!this.admitted(binding)) return;
+    if (this.active) {
+      if (this.operation !== undefined && this.sameBook(this.operation.book, binding.book))
+        this.deliver(binding, (): void => binding.emitOperation?.(this.operation!));
+      return new Promise<void>((resolve, reject): void => {
+        this.pendingRead?.resolve();
+        this.pendingRead = { binding, resolve, reject };
+      });
+    }
+    try {
+      await this.recoverPending(binding, false);
+      if (this.active || !this.admitted(binding)) return;
+      const readGeneration = ++this.readGeneration;
+      const operationGeneration = this.generation;
+      const current = (): boolean => this.admitted(binding) && !this.active &&
+        readGeneration === this.readGeneration && operationGeneration === this.generation;
+      await this.read(binding, current);
+    } finally { this.drainPendingRead(); }
+  }
+
+  private drainPendingRead(): void {
+    if (this.active || this.pendingRead === undefined) return;
+    const pending = this.pendingRead;
+    this.pendingRead = undefined;
+    if (!this.admitted(pending.binding)) { pending.resolve(); return; }
+    void this.load(pending.binding).then(pending.resolve, pending.reject);
   }
 
   async reconcile(generation: number, binding: ReaderDirectoryBinding): Promise<void> {
@@ -138,7 +159,8 @@ export class ReaderDirectoryHost {
 
   async continueOriginal(generation: number, binding: ReaderDirectoryBinding): Promise<void> {
     if (this.operation?.generation !== generation || !this.sameBook(this.operation.book, binding.book) || !this.operation.canContinueOriginal) return;
-    await this.recoverPending(binding, true); if (!this.active && this.admitted(binding)) await this.load(binding);
+    try { await this.recoverPending(binding, true); if (!this.active && this.admitted(binding)) await this.load(binding); }
+    finally { this.drainPendingRead(); }
   }
 
   private context(binding: ReaderDirectoryBinding, ownerAction?: ReadingOperationContext['ownerAction']): ReadingOperationContext {
@@ -229,6 +251,7 @@ export class ReaderDirectoryHost {
     } finally {
       this.settled(binding, evidence.confirmation() === 'confirmed' && evidence.confirmedCount === requestedCount);
       if (generation === this.generation) this.active = false;
+      this.drainPendingRead();
     }
   }
 

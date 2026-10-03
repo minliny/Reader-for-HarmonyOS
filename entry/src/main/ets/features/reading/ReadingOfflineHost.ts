@@ -65,6 +65,9 @@ export class ReadingOfflineHost {
 
   private readonly dependencies: ReadingOfflineDependencies;
   private active: boolean = false;
+  /** One latest captured read intent may join accepted work after UI recreation.
+   * It never becomes a mutation or obtains a fresh operation identity. */
+  private pendingRead: { binding: ReadingOfflineBinding; resolve: () => void; reject: (error: Error) => void } | undefined;
   private generation: number = 0;
   private readGeneration: number = 0;
   private operation: ReadingOfflineOperation | undefined;
@@ -97,7 +100,7 @@ export class ReadingOfflineHost {
         this.operation.materializationFailure = (error as Error).message;
       this.updateReceipt(evidence, 'failed', (error as Error).message);
       throw error as Error;
-    } finally { if (this.generation === generation) this.active = false; }
+    } finally { if (this.generation === generation) this.active = false; this.drainPendingRead(); }
   }
 
   async downloadChapter(chapterIndex: number, binding: ReadingOfflineBinding): Promise<void> {
@@ -116,14 +119,32 @@ export class ReadingOfflineHost {
   /** Exact receipt reads may settle metadata; availability reads never dispatch
    * cache.clear, prefetch or image cleanup or infer confirmation from counts. */
   async load(binding: ReadingOfflineBinding): Promise<void> {
-    if (this.active || !this.admitted(binding)) return;
-    await this.recoverClear(binding, false);
-    if (this.active || !this.admitted(binding)) return;
-    const read = ++this.readGeneration;
-    const generation = this.generation;
-    const current = (): boolean => this.admitted(binding) && !this.active &&
-      generation === this.generation && read === this.readGeneration;
-    await this.read(binding, current);
+    if (!this.admitted(binding)) return;
+    if (this.active) {
+      if (this.operation !== undefined && this.matches(this.operation, binding))
+        this.deliver(binding, (): void => binding.emitOperation?.(this.operation!));
+      return new Promise<void>((resolve, reject): void => {
+        this.pendingRead?.resolve();
+        this.pendingRead = { binding, resolve, reject };
+      });
+    }
+    try {
+      await this.recoverClear(binding, false);
+      if (this.active || !this.admitted(binding)) return;
+      const read = ++this.readGeneration;
+      const generation = this.generation;
+      const current = (): boolean => this.admitted(binding) && !this.active &&
+        generation === this.generation && read === this.readGeneration;
+      await this.read(binding, current);
+    } finally { this.drainPendingRead(); }
+  }
+
+  private drainPendingRead(): void {
+    if (this.active || this.pendingRead === undefined) return;
+    const pending = this.pendingRead;
+    this.pendingRead = undefined;
+    if (!this.admitted(pending.binding)) { pending.resolve(); return; }
+    void this.load(pending.binding).then(pending.resolve, pending.reject);
   }
 
   async reconcile(generation: number, binding: ReadingOfflineBinding): Promise<void> {
@@ -134,7 +155,8 @@ export class ReadingOfflineHost {
 
   async continueOriginal(generation: number, binding: ReadingOfflineBinding): Promise<void> {
     if (this.operation?.generation !== generation || !this.matches(this.operation, binding) || !this.operation.canContinueOriginal) return;
-    await this.recoverClear(binding, true); if (!this.active && this.admitted(binding)) await this.load(binding);
+    try { await this.recoverClear(binding, true); if (!this.active && this.admitted(binding)) await this.load(binding); }
+    finally { this.drainPendingRead(); }
   }
   private async recoverClear(binding: ReadingOfflineBinding, continueOriginal: boolean): Promise<void> {
     if (this.active || !this.admitted(binding)) return;
@@ -249,7 +271,7 @@ export class ReadingOfflineHost {
       // Fresh canonical availability preserves cached bodies and partial
       // results; never flatten the whole requested range to failed/missing.
       if (current()) await this.read(binding, current);
-    } finally { if (generation === this.generation) this.active = false; }
+    } finally { if (generation === this.generation) this.active = false; this.drainPendingRead(); }
   }
 
   private async read(binding: ReadingOfflineBinding, current: () => boolean): Promise<void> {
