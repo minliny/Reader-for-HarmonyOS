@@ -44,8 +44,42 @@ type DiscoverPendingRead = { kind: 'sources' } |
   { kind: 'source'; sources: DiscoverSource[]; sourceIndex: number; sourceId: string } |
   { kind: 'page'; sourceId: string; kindIndex: number; url: string; page: number; probingNext: boolean };
 
+interface DiscoverPresentationLease {
+  identity: string;
+  emit: (presentation: DiscoverPresentation) => void;
+  current: () => boolean;
+}
+
 /** Domain-local serialized reads; old canonical content retains its source/category identity. */
 export class DiscoverOrchestrator {
+  private static readonly owners: WeakMap<ReaderRuntimeOwner, DiscoverOrchestrator> = new WeakMap();
+  private presentationLease: DiscoverPresentationLease | undefined;
+  static forRuntime(owner: ReaderRuntimeOwner): DiscoverOrchestrator | undefined {
+    if (!ReaderRuntimeOwner.isCurrent(owner)) return undefined;
+    let host = DiscoverOrchestrator.owners.get(owner);
+    if (host === undefined) {
+      host = new DiscoverOrchestrator((): void => {}, (): boolean => false, owner);
+      DiscoverOrchestrator.owners.set(owner, host);
+    }
+    return host;
+  }
+  attachPresentation(identity: string, emit: (presentation: DiscoverPresentation) => void, current: () => boolean): boolean {
+    try { if (!ReaderRuntimeOwner.isCurrent(this.owner) || !current()) return false; } catch (_) { return false; }
+    if (this.presentationLease?.identity !== identity) this.session += 1;
+    this.presentationLease = { identity, emit, current };
+    try { emit(this.copy(this.presentation)); } catch (_) { /* Projection cannot rewrite read truth. */ }
+    return true;
+  }
+  detachPresentation(identity: string): void {
+    if (this.presentationLease?.identity !== identity) return;
+    this.presentationLease = undefined; this.session += 1;
+  }
+  isPresentationCurrent(identity: string): boolean {
+    return this.presentationLease?.identity === identity && ReaderRuntimeOwner.isCurrent(this.owner) && this.currentPresentation();
+  }
+  private currentPresentation(): boolean {
+    try { return this.presentationLease?.current() ?? this.isCurrent(); } catch (_) { return false; }
+  }
   private readonly gateway: DiscoverGateway;
   private readonly sourceGateway: SourceGateway;
   private readonly owner: ReaderRuntimeOwner;
@@ -68,6 +102,7 @@ export class DiscoverOrchestrator {
   owns(owner: ReaderRuntimeOwner): boolean { return this.owner === owner; }
 
   open(): void {
+    if (!ReaderRuntimeOwner.isCurrent(this.owner) || !this.currentPresentation()) return;
     this.session += 1;
     this.retryQueued = false;
     const session = this.session;
@@ -137,7 +172,7 @@ export class DiscoverOrchestrator {
     if (!this.isCurrentSession(session)) return;
     const generation = this.beginRead({ kind: 'sources' }, '正在读取 Core 发现书源…');
     try {
-      const stored = await this.sourceGateway.loadSources();
+      const stored = await this.sourceGateway.loadSources(undefined, false, (): boolean => this.isCurrentRead(session, generation));
       const sources: DiscoverSource[] = stored.filter((source: BookSource): boolean =>
         source.enabled && source.enabledExplore && readerSourceCategoryIsText(source.category))
         .map((source: BookSource): DiscoverSource => ({ sourceId: source.sourceId, name: source.name, category: source.category }));
@@ -161,7 +196,8 @@ export class DiscoverOrchestrator {
       `正在读取 ${source.name} 的分类…`);
     try {
       let invalidKinds = 0;
-      const kinds = await this.gateway.loadExploreKinds(source.sourceId, (count: number): void => { invalidKinds = count; });
+      const kinds = await this.gateway.loadExploreKinds(source.sourceId, (count: number): void => { invalidKinds = count; },
+        (): boolean => this.isCurrentRead(session, generation));
       if (!this.isCurrentRead(session, generation)) return;
       if (kinds.length === 0) {
         if (invalidKinds > 0) {
@@ -191,7 +227,7 @@ export class DiscoverOrchestrator {
     try {
       let invalidBooks = 0;
       const books = await this.gateway.loadExplore(source.sourceId, kind.url, page, source.category,
-        (count: number): void => { invalidBooks = count; });
+        (count: number): void => { invalidBooks = count; }, (): boolean => this.isCurrentRead(session, generation));
       if (!this.isCurrentRead(session, generation)) return;
       if (invalidBooks > 0 && books.length === 0) {
         const message = '发现页返回部分无效数据，保留当前结果';
@@ -218,8 +254,8 @@ export class DiscoverOrchestrator {
   private currentSource(): DiscoverSource | undefined { return this.presentation.sources[this.presentation.activeSourceIndex]; }
   private currentKind(): DiscoverKind | undefined { return this.presentation.kinds[this.presentation.activeKindIndex]; }
   private retainedBooks(): DiscoverBook[] | undefined { return this.presentation.books.length === 0 ? undefined : this.presentation.books; }
-  private admitsIntent(): boolean { return ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent() && !this.presentation.loading; }
-  private isCurrentSession(session: number): boolean { return ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent() && session === this.session; }
+  private admitsIntent(): boolean { return ReaderRuntimeOwner.isCurrent(this.owner) && this.currentPresentation() && !this.presentation.loading; }
+  private isCurrentSession(session: number): boolean { return ReaderRuntimeOwner.isCurrent(this.owner) && this.currentPresentation() && session === this.session; }
   private isCurrentRead(session: number, generation: number): boolean {
     return this.isCurrentSession(session) && this.presentation.operation?.generation === generation;
   }
@@ -244,7 +280,10 @@ export class DiscoverOrchestrator {
       loading: patch.loading ?? this.presentation.loading, statusMessage: patch.statusMessage ?? this.presentation.statusMessage,
       operation: patch.operation ?? this.presentation.operation,
     };
-    if (ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent()) this.emit(this.copy(this.presentation));
+    if (ReaderRuntimeOwner.isCurrent(this.owner) && this.currentPresentation()) {
+      try { (this.presentationLease?.emit ?? this.emit)(this.copy(this.presentation)); }
+      catch (_) { /* A failed observer cannot turn a read result into a domain failure. */ }
+    }
   }
   private fail(session: number, generation: number, label: string, error: unknown): void {
     const message = `${label}：${errorMessageOf(error)}`;

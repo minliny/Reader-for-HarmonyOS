@@ -159,7 +159,7 @@ export class SourceGateway {
     return sources;
   }
 
-  async loadSources(sourceId?: string, includeReports: boolean = false): Promise<BookSource[]> {
+  async loadSources(sourceId?: string, includeReports: boolean = false, current?: () => boolean): Promise<BookSource[]> {
     const params: JsonObject = sourceId === undefined ? {} : { sourceId };
     const reportVersion = !includeReports ? undefined :
       this.runtimeOwner.supportsCoreCapability('source.check.report.v2') ? 2 :
@@ -169,7 +169,7 @@ export class SourceGateway {
       params['includeCheckReports'] = true;
       if (reportVersion === 2) params['checkReportVersion'] = 2;
     }
-    const result = await this.runtimeOwner.request('source.list', params);
+    const result = await this.runtimeOwner.request('source.list', params, { canDispatch: current, canContinue: current });
     const rawSources = result.data['sources'];
     if (!Array.isArray(rawSources)) {
       throw new Error('source.list returned invalid data');

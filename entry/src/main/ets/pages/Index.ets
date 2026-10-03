@@ -462,6 +462,7 @@ struct Index {
   private readonly bookshelfViewState: BookshelfViewState = new BookshelfViewState();
   /** Bounded, process-local single-flight only; Core remains the durable cache. */
   private discoverOrchestrator: DiscoverOrchestrator | undefined;
+  private discoverPresentationIdentity: string = '';
   private bookshelfHost: BookshelfHost = new BookshelfHost(
     (snapshot: BookshelfManagementSnapshot): void => {
       this.bookshelfManagementSnapshot = snapshot;
@@ -590,6 +591,8 @@ struct Index {
     this.nativeAlertOwner.retire();
     this.shelfReceiptRetired = true;
     this.retireBookshelfCatalogPresentation();
+    this.discoverOrchestrator?.detachPresentation(this.discoverPresentationIdentity);
+    this.discoverPresentationIdentity = '';
     this.bookshelfUpdateRunning = false;
     this.bookshelfBackgroundRefreshRunning = false;
     this.dismissBookRemovalDialog();
@@ -868,18 +871,26 @@ struct Index {
 
   @Builder
   private discoverPageContent() {
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.discoverPageSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount, this.discoverOrchestrator);
+    }, (generation: number): string => generation.toString());
+  }
+
+  @Builder
+  private discoverPageSurface(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: DiscoverOrchestrator | undefined) {
     DiscoverPage({
       presentation: this.discoverPresentation,
       isTablet: deviceInfo.deviceType === 'tablet',
-      onBack: (): void => this.returnToBookshelf(),
-      onRssRequested: (): void => this.openRss(),
-      onSettingsRequested: (): void => this.openSettings(),
-      onRetryRead: (generation: number): void => this.getDiscoverOrchestrator().retryRead(generation),
-      onRefresh: (): void => this.getDiscoverOrchestrator().refresh(),
-      onCycleSource: (): void => this.getDiscoverOrchestrator().cycleSource(),
-      onSelectKind: (index: number): void => this.getDiscoverOrchestrator().selectKind(index),
-      onPreviousPage: (): void => this.getDiscoverOrchestrator().previousPage(),
-      onNextPage: (): void => this.getDiscoverOrchestrator().nextPage(),
+      onBack: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) this.returnToBookshelf(); },
+      onRssRequested: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) this.openRss(); },
+      onSettingsRequested: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) this.openSettings(); },
+      onRetryRead: (expected: number): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.retryRead(expected); },
+      onRefresh: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.refresh(); },
+      onCycleSource: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.cycleSource(); },
+      onSelectKind: (index: number): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.selectKind(index); },
+      onPreviousPage: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.previousPage(); },
+      onNextPage: (): void => { if (this.isCurrentDiscoverPresentation(generation, owner, mounting, host)) host?.nextPage(); },
     });
   }
 
@@ -1429,17 +1440,33 @@ struct Index {
     this.getDiscoverOrchestrator().open();
   }
 
+  private isCurrentDiscoverPresentation(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: DiscoverOrchestrator | undefined, attached: boolean = true): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && this.route === 'discover' &&
+      generation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount &&
+      this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) &&
+      host !== undefined && this.discoverOrchestrator === host && host.owns(owner) &&
+      (!attached || host.isPresentationCurrent(JSON.stringify([this.rssInstanceIdentity, mounting, generation, 'discover'])));
+  }
+
   private getDiscoverOrchestrator(): DiscoverOrchestrator {
-    const owner = ReaderRuntimeOwner.current();
-    if (this.discoverOrchestrator === undefined || !this.discoverOrchestrator.owns(owner)) {
-      this.discoverOrchestrator = new DiscoverOrchestrator(
-        (presentation: DiscoverPresentation): void => {
-          if (this.route === 'discover' && this.isCurrentRuntime(owner)) this.discoverPresentation = presentation;
-        },
-        (): boolean => this.route === 'discover' && this.isCurrentRuntime(owner), owner,
-      );
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner) || this.route !== 'discover')
+      throw new Error('发现页面已退役');
+    const host = DiscoverOrchestrator.forRuntime(owner);
+    if (host === undefined) throw new Error('发现 Runtime 已退役');
+    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const identity = JSON.stringify([this.rssInstanceIdentity, mounting, generation, 'discover']);
+    if (this.discoverOrchestrator !== host || this.discoverPresentationIdentity !== identity) {
+      this.discoverOrchestrator?.detachPresentation(this.discoverPresentationIdentity);
+      this.discoverOrchestrator = host; this.discoverPresentationIdentity = identity;
+      const current = (): boolean => this.discoverPresentationIdentity === identity &&
+        this.isCurrentDiscoverPresentation(generation, owner, mounting, host, false);
+      host.attachPresentation(identity, (presentation: DiscoverPresentation): void => {
+        if (current()) this.discoverPresentation = presentation;
+      }, current);
     }
-    return this.discoverOrchestrator;
+    return host;
   }
 
   private openSettings(): void {
@@ -4774,6 +4801,8 @@ struct Index {
     this.retireRssPresentation();
     this.retireReadingEntryPresentation();
     this.retireBookshelfCatalogPresentation();
+    this.discoverOrchestrator?.detachPresentation(this.discoverPresentationIdentity);
+    this.discoverPresentationIdentity = '';
     this.bookshelfUpdateRunning = false;
     this.bookshelfBackgroundRefreshRunning = false;
     this.temporaryBackLease = undefined;
