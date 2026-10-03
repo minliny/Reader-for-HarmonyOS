@@ -191,22 +191,20 @@ assert.match(panel, /onRetryBookmarkLoad:.*this\.onRetryBookmarkLoad\(\)/);
 assert.match(hostSource, /bookmarkLoadFailed: this\.controlBookmarkLoadFailed/);
 assert.match(hostSource, /onRetryBookmarkLoad:.*this\.loadControlBookmarks\(\)/);
 const index = readFileSync(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'utf8');
-const loader = index.slice(index.indexOf('  private loadControlBookmarks('),
-  index.indexOf('  private reloadDirectoryBookmarkProjection('));
-assert.match(loader, /directoryBookmarkMutationGeneration/);
-assert.match(loader, /directoryBookmarkMutationActiveKey/);
-assert.match(loader, /navigationGeneration/);
-assert.match(loader, /loadReaderControlBookmarkProjection/);
-assert.doesNotMatch(loader, /this\.route\s*=/);
-const downloads = index.slice(index.indexOf('  private downloadDirectoryChapter('),
-  index.indexOf('  private requestClearDirectoryBookOffline('));
-assert.doesNotMatch(downloads, /loadBookmarkProjection/,
-  'download completion must not own a second stale bookmark read');
-assert.match(downloads, /mergeDirectoryBookmarks\(entries, this\.detailToc\)/);
-const crud = index.slice(index.indexOf('  private async performDirectoryChapterStartBookmarkCreation('),
-  index.indexOf('  private loadControlBookmarks('));
-assert.equal((crud.match(/mergeReaderControlBookmarkProjection\(this\.detailToc, entries\)/g) ?? []).length, 3,
-  'all three CRUD refresh paths preserve latest downloads and titles');
+const loader=index.slice(index.indexOf('  private loadControlBookmarks('),index.indexOf('  @Builder\n  private sourceSwitchOverlayContent('));
+assert.match(loader,/host\.load\(this\.directoryBinding\(owner, book, isRequestCurrent\)\)/);
+assert.match(loader,/book\.sourceId !== sourceId \|\| book\.bookId !== bookId/);
+assert.match(loader,/!this\.readingSessionActive \|\| !isRequestCurrent\(\)/);assert.doesNotMatch(loader,/this\.route\s*=/);
+const directoryOwner=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryHost.ts',import.meta.url),'utf8');
+const offlineOwner=readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingOfflineHost.ts',import.meta.url),'utf8');
+assert.match(directoryOwner,/loadReaderControlBookmarkProjection\(\{ isCurrent: current, currentEntries: binding\.currentEntries/);
+assert.match(directoryOwner,/this\.bookmarkProjectionStale = true/);
+assert.match(index,/navigation === this\.navigationGeneration/,'physical page scope is still a captured admission');
+assert.match(index,/host\.createChapterStart\(request\.chapterIndex, this\.directoryBinding\(owner, book\)\)/);
+assert.match(index,/host\.deleteBookmarks\(bookmarkTimes, this\.directoryBinding\(owner, book\)\)/);
+assert.match(index,/void host\.createPosition\(\{/);assert.doesNotMatch(index,/performDirectoryBookmarkDeletion/);
+assert.doesNotMatch(offlineOwner,/loadBookmarkProjection/,'offline download has no second bookmark read producer');
+assert.match(offlineOwner,/source === undefined \? entry : \{ \.\.\.entry, downloadState: source\.downloadState \}/,'offline facts preserve current bookmark metadata');
 const refresh = hostSource.slice(hostSource.indexOf('  private onControlDirectoryDataChanged('),
   hostSource.indexOf('  private async loadAppearanceSnapshot('));
 assert.match(refresh, /!this\.controlBookmarkLoadPending && !this\.controlBookmarkLoadFailed/);

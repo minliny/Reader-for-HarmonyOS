@@ -104,20 +104,21 @@ Object.assign(menu,{appScheme:'day',inputEnabled:true,controlObscured:false,chap
 assert.deepEqual(sharedMenu.nodes(menu).filter(n=>n.type==='Text').map(n=>n.create),['书籍信息','刷新本章','下载全部章节']);
 console.log('PASS PH56–59 production SDK methods/Builders: measured regions/API fallback, reader underlay, bookmark threshold+ACK ordering, safe force refresh and two-action More; OEM pixels are not asserted');
 
-const Index=productionMotionMethods(file('pages/Index.ets'),['performReaderPageBookmarkCreation','performDirectoryBookmarkDeletion'],
- {mergeReaderControlBookmarkProjection:(_old,fresh)=>fresh,hilog:{error(){}},DOMAIN:1});
+const {fixture:durableFixture}=await import('./lib/reading-operation-durable-probe.mjs');
+const {makeIndex:actualDirectoryIndex,settled}=await import('./lib/reading-directory-sdk-consumer.mjs');
 for(const outcome of ['success','write-failed','projection-failed']){
- let result,finished=0,projectionFailure;
- const i=Object.assign(new Index(),{detailToc:[],reloadDirectoryBookmarkProjection:async()=>{
-  if(outcome==='projection-failed')throw Error('projection');return [{index:0,bookmarks:[{time:1,chapterOffset:10}]}];},
- clearDirectoryBookmarkProjectionFailure(){},failDirectoryBookmarkProjection(_book,kind){projectionFailure=kind;},finishDirectoryBookmarkMutation(){finished++;}});
- await i.performReaderPageBookmarkCreation({createPositionBookmark:async()=>{if(outcome==='write-failed')throw Error('write');}},
- {title:'Book',author:'A'},{chapterIndex:0,chapterOffset:10,chapterTitle:'C',bookText:'original',onSettled:r=>result=r},()=>true,1,'b');
- assert.equal(result,outcome!=='write-failed','confirmed write survives subsequent projection failure');assert.equal(finished,1);
- if(outcome==='projection-failed')assert.equal(projectionFailure,'confirmed');
- if(outcome==='write-failed')assert.equal(projectionFailure,'uncertain');
+ const f=await durableFixture(true),x=actualDirectoryIndex(f),i=x.idx;let result,finished=0;
+ i.detailToc=[{index:0,title:'C',bookmarks:[],downloadState:'completed'}];
+ if(outcome==='write-failed')f.options.beforeMethod='bookmark.create';
+ const native=f.runtime.request.bind(f.runtime);f.runtime.request=async(m,p,o)=>{if(outcome==='projection-failed'&&m==='bookmark.list')throw Error('projection');return native(m,p,o);};
+ i.toggleReaderPageBookmark({chapterIndex:0,chapterOffset:10,chapterTitle:'C',bookText:'original',bookmarkTimes:[],onSettled:r=>{result=r;finished++;}});
+ await settled(f);assert.equal(result,outcome!=='write-failed','qualified original write survives subsequent projection failure');assert.equal(finished,1);
+ assert.equal(f.writes().length,1);
+ if(outcome==='projection-failed'){assert.equal(i.directoryOperation.projection.receipt.confirmation,'confirmed');assert.equal(i.directoryOperation.projection.receipt.readback,'failed');}
+ if(outcome==='write-failed')assert.equal(i.directoryOperation.projection.receipt.confirmation,'unknown');
+ if(outcome==='success')assert.equal(i.detailToc[0].bookmarks[0].chapterOffset,10,'same exact physical page anchor reached actual Core');
 }
-console.log('PASS PH59 real Index write/projection acknowledgments: success and both failure boundaries');
+console.log('PASS PH59 actual Index/Directory/Gateway/Core write and projection acknowledgments: success and both failure boundaries');
 
 // Real listener registration + full metric refresh: move without resize,
 // duplicate events, hidden 180-degree rotation, unregister, and old callback.
