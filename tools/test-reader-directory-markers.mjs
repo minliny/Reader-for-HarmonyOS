@@ -145,7 +145,7 @@ assert.match(fullDirectory,
 const gateway = read('entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
 assert.match(gateway, /async createChapterStartBookmark\(/);
 assert.match(gateway,
-  /const captured: LocalReadingPositionBookmarkInput = \{[\s\S]*?chapterOffset: 0, chapterTitle: input\.chapterTitle[\s\S]*?return this\.createPositionBookmark\(captured, isCurrent\)/,
+  /const captured: LocalReadingPositionBookmarkInput = \{[\s\S]*?chapterOffset: 0, chapterTitle: input\.chapterTitle[\s\S]*?return this\.createPositionBookmark\(captured, isCurrent, evidence\)/,
   'chapter markers must reuse the general exact-position Core bookmark path');
 assert.match(gateway, /async loadBookmarkProjection\(/,
   'bookmark projection must be source-independent');
@@ -153,7 +153,8 @@ assert.match(gateway, /async createPositionBookmark\(/);
 assert.match(gateway, /const params: JsonObject = \{\s*bookName: input\.bookName,\s*bookAuthor: input\.bookAuthor,\s*chapterIndex: input\.chapterIndex,\s*chapterPos: input\.chapterOffset,\s*chapterName: input\.chapterTitle,/);
 assert.match(gateway, /bookmark\.create returned a mismatched position bookmark/);
 assert.match(gateway, /async deleteBookmark\(\s*time: number,/);
-assert.match(gateway, /request\('bookmark\.delete', \{\s*time,/);
+assert.match(gateway, /if \(isCurrent\?\.\(\) === false\) throw new Error\('bookmark deletion superseded before dispatch'\);\s*evidence\?\.dispatched\(\);\s*const result = await this\.runtimeOwner\.request\('bookmark\.delete', \{ time \}, \{\}\)/,
+  'bookmark deletion uses the same exact primary key and actual pre-dispatch evidence path');
 assert.match(gateway, /bookmark\.delete returned a mismatched time/);
 assert.match(gateway, /typeof deleted !== 'boolean'/);
 assert.doesNotMatch(gateway, /request\('cache\.book\.prefetch'/);
