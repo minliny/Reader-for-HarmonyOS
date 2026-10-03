@@ -1,6 +1,6 @@
 import { ReaderProgressProducerHost, type ReaderProgressProducerIntent, type ReaderContinuousProgressDependencies } from './ReaderProgressProducerHost';
 import { TYPE_READER_READING_FAILURE_TITLE, TYPE_READER_READING_FAILURE_DETAIL } from '../common/ReaderTypography';
-import { ReaderNativeAlertOwner, type ReaderNativeAlertSpecId, type ReaderNativeAlertOptions, type ReaderNativeAlertLease } from '../../app/ReaderNativeAlertOwner';
+import { ReaderNativeAlertOwner, type ReaderNativeAlertSpecId, type ReaderNativeAlertOptions, ReaderNativeAlertLease } from '../../app/ReaderNativeAlertOwner';
 import { ReaderParagraphLayoutOwner } from './ReaderParagraphLayoutOwner';
 import { ReaderPhysicalPaginationOwner } from './ReaderPhysicalPaginationOwner';
 import type { JsonObject } from '@reader/core-harmony';
@@ -1872,8 +1872,16 @@ export struct ReadingExperience {
   private showReaderAlert(spec: ReaderNativeAlertSpecId, options: ReaderNativeAlertOptions): ReaderNativeAlertLease {
     const lifecycle = this.lifecycleToken;
     const selection = this.chapterSelectionToken;
-    return this.nativeAlertOwner.present((native: ReaderNativeAlertOptions): void => this.getUIContext().showAlertDialog(native),
-      spec, options, (): boolean => this.isMountedToken(lifecycle) && this.isSelectionCurrent(selection) && this.isReaderIdentityCurrent?.() !== false);
+    try {
+      return this.nativeAlertOwner.present((native: ReaderNativeAlertOptions): void => this.getUIContext().showAlertDialog(native),
+        spec, options, (): boolean => this.isMountedToken(lifecycle) && this.isSelectionCurrent(selection) && this.isReaderIdentityCurrent?.() !== false);
+    } catch (error) {
+      // A failed native notice never rewrites a durable progress/content fact.
+      hilog.warn(0x5244, 'Reader', 'Native Alert presentation failed: %{private}s', (error as Error).message);
+      const unavailable = new ReaderNativeAlertLease((): boolean => false);
+      unavailable.nativeFailed();
+      return unavailable;
+    }
   }
 
   aboutToDisappear(): void {
