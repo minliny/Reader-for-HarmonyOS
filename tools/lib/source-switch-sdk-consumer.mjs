@@ -10,7 +10,7 @@ import * as metricsApi from '../../entry/src/main/ets/features/common/ReaderWind
 const {ReaderNativeAlertOwner}=await import('../../entry/src/main/ets/app/ReaderNativeAlertOwner.ts');
 const {ReadingOfflineHost}=await import('./reader-reading-owner-sdk-probe.mjs');
 const settle=async()=>{await settleOwner();await new Promise(setImmediate);await settleOwner();};
-const methods=['getSourceSwitchHost','sourceSwitchContext','sourceSwitchLease','applySourceSwitchSnapshot','retireRssPresentation','retireSourceSwitchPresentation',
+const methods=['getSourceSwitchHost','sourceSwitchContext','sourceSwitchLease','applySourceSwitchSnapshot','retireRssPresentation','retireRssEditorPresentation','retireSourceSwitchPresentation',
  'bindSourceSwitchReader','applySourceSwitchEffect','openSourceSwitch','openDetailSourceSwitch','retrySourceSwitch','refreshSourceSwitch',
  'sourceSwitchProbeQuery','knownSearchSourceCandidates','onPickSource','retryFailedSourceSwitch','dismissSourceSwitchFailure','onRollbackSourceSwitch',
  'closeSourceSwitch','performSourceSwitchSeam','resolveReaderSourceSwitchTransaction','reconcilePendingSourceSwitches','currentSourceSwitchTransactionId',
@@ -20,7 +20,7 @@ const methods=['getSourceSwitchHost','sourceSwitchContext','sourceSwitchLease','
  'applyReadingCommit','getReadingOfflineHost','cleanupRetiredSourceCache','sourceSwitchOverlayContent'];
 export const sourceSwitchMethods=methods.filter(n=>n!=='sourceSwitchOverlayContent');
 const states=['sourceSwitchVisible','sourceSwitchState','sourceSwitchFailureMessage','sourceSwitchScopeId'];
-export function makeIndex(f,{navigation=1,reading=false}={}){
+export function makeIndex(f,{navigation=1,reading=false,cacheAuthority}={}){
  setEntryRuntime(f.runtime);
  const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
  const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
@@ -36,7 +36,7 @@ export function makeIndex(f,{navigation=1,reading=false}={}){
  leafDeps.SourceSwitchPanel=createReaderBuilderProbe(p.hooks.childSources.SourceSwitchPanel,boundedMembers(p.hooks.childSources.SourceSwitchPanel),leafDeps,p.hooks).Component;
  leafDeps.SourceSwitchPanel.prototype.__Repeat=items=>Repeat(items);
  const index=p.consumer(read('pages/Index.ets'),[...states,...methods],{...leafDeps,...evidence,ReaderRuntimeOwner:Runtime,
-   SourceSwitchHost:f.Constructor,ReadingEntryHost,EMPTY_READABLE_ADMISSION:{key:'',generation:0,adding:false,cancelling:false,confirmation:'none'},ReadingOfflineHost,LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{info(){},warn(){}},ReaderNativeAlertOwner},{sourceSwitchScopeId:0});
+   SourceSwitchHost:f.Constructor,ReadingEntryHost,EMPTY_READABLE_ADMISSION:{key:'',generation:0,adding:false,cancelling:false,confirmation:'none'},ReadingOfflineHost,CacheClearOperationIntentStore:cacheAuthority?.types.CacheClearOperationIntentStore,LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{info(){},warn(){}},ReaderNativeAlertOwner},{sourceSwitchScopeId:0});
  Object.assign(index,{mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:1,navigationGeneration:navigation,
    route:reading?'reading':'detail',readingOriginRoute:'detail',detailReturnRoute:'bookshelf',readingSessionActive:reading,detailBook:{...origin,sourceName:'Old'},
    shelfBooks:[origin],detailToc:[{index:0,title:'Chapter 1',navigable:true}],detailInBookshelf:f.context.inBookshelf,

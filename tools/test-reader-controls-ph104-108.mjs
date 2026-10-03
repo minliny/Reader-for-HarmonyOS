@@ -188,7 +188,7 @@ await check('PH106: actual font Host registers persisted sandbox font through fi
   assert.equal(registered.familySrc, 'file://' + descriptor.filePath);
 });
 
-await check('PH105: download feedback starts immediately, verifies completion and ignores stale owner', async () => {
+if (baseline) await check('PH105: download feedback starts immediately, verifies completion and ignores stale owner', async () => {
   const src = sourcePath('pages/Index.ets');
   for (const mode of ['complete', 'partial', 'failure', 'stale']) {
     let resolve, reject, calls = 0;
@@ -215,6 +215,70 @@ await check('PH105: download feedback starts immediately, verifies completion an
     if (mode === 'failure') assert.equal(errors.length, 1);
     if (mode === 'stale') assert.equal(messages.length, 1);
     assert.equal(p.offlineMutationActiveKey, '');
+  }
+});
+if (!baseline) await check('PH105: real Gateway/Host feedback preserves verified completion, partial body, failure and retired owner', async () => {
+  const { actualCacheAuthorityFixture, makeIndex, settled: ownerSettled } = await import('./lib/reading-directory-sdk-consumer.mjs');
+  const { deferred, until } = await import('./lib/reading-operation-durable-probe.mjs');
+  for (const mode of ['complete', 'partial', 'failure', 'stale']) {
+    const f = await actualCacheAuthorityFixture(true), pending = deferred(), messages = [];
+    const model = { state: 'missing', bytes: 0, manifest: false, lastError: undefined, queued: 0 };
+    f.runtime.supportsCoreCapability = capability => capability === 'chapter.content.cacheOnly.v1';
+    f.runtime.markOfflineImageChapterComplete = async () => { model.manifest = mode !== 'partial'; };
+    f.runtime.isOfflineImageChapterComplete = async () => model.manifest;
+    f.runtime.request = async (method, params, options = {}) => {
+      f.calls.push({ method, params: structuredClone(params), options });
+      if (options.canDispatch?.() === false) throw Error('actual adapter refused before send');
+      options.onDispatch?.();
+      if (method === 'cache.book.prefetch') {
+        assert.equal(options.shouldCancel, undefined, 'accepted queue cannot be cancelled by the UI');
+        model.queued++; await pending.promise; model.state = 'inProgress'; model.bytes = 4;
+        return { data: { sourceId: 'source', bookId: 'book', chapterRange: params.chapterRange,
+          chapterCount: 1, prefetchedCount: 1, materializations: [{ chapterIndex: 0, token: 'actual-queue-lease' }] } };
+      }
+      if (method === 'cache.book.status') return { data: { sourceId: 'source', bookId: 'book', tocAvailable: true,
+        chapters: [{ chapterIndex: 0, title: 'Chapter', url: '/chapter', state: model.state, cachedBytes: model.bytes, lastError: model.lastError }] } };
+      if (method === 'chapter.content') return { data: { sourceId: 'source', bookId: 'book', chapterTitle: 'Chapter', content: '这是能够通过既有正文准入的真实章节内容。'.repeat(20), via: 'cache' } };
+      if (method === 'cache.chapter.materialization.report') {
+        model.state = params.outcome; model.lastError = params.errorCode;
+        return { data: { sourceId: 'source', bookId: 'book', chapterIndex: 0, state: params.outcome, retainedCachedBody: true } };
+      }
+      throw Error('Unexpected offline boundary: ' + method);
+    };
+    const { idx, render, p } = makeIndex(f, { remote: true });
+    idx.detailToc = [{ index: 0, title: 'Chapter', navigable: true, downloadState: 'missing' }];
+    idx.getUIContext = () => ({ getPromptAction: () => ({ showToast: ({ message }) => messages.push(message) }) });
+    idx.downloadDirectoryBook();
+    assert.ok(messages[0]?.includes('开始下载'), 'immediate accepted feedback precedes filesystem/RPC admission');
+    await until(() => model.queued === 1);
+    assert.equal(f.offline.busy(), true);
+    if (mode === 'stale') idx.remoteReadingSession = undefined;
+    if (mode === 'failure') pending.reject(Error('offline unavailable'));
+    else pending.resolve();
+    await ownerSettled(f);
+    assert.equal(model.queued, 1, 'one actual queue write');
+    if (mode === 'complete') {
+      assert.match(messages.at(-1), /全部 1 章下载完成/);
+      assert.equal(idx.detailToc[0].downloadState, 'completed');
+    }
+    if (mode === 'partial') {
+      assert.match(messages.at(-1), /已完成 0\/1 章.*1 章正文已缓存/);
+      assert.equal(idx.detailToc[0].downloadState, 'cached');
+    }
+    if (mode === 'failure') {
+      assert.equal(idx.offlineOperation.projection.receipt.confirmation, 'unknown');
+      const leaf = render();
+      assert.equal(idx.offlineOperation.operationFailure, 'offline unavailable', 'actual failure cause retained independently of unknown write receipt');
+      assert.ok(p.walk(leaf).some(actor => actor.view?.visible === true && actor.view?.message === '等待核对'), 'actual shared recovery notice exposes unknown queue instead of claiming failure means unwritten');
+      assert.ok(p.walk(leaf).some(actor => actor.label === '核对离线结果'), 'actual read-only recovery action remains available');
+      assert.equal(idx.detailToc[0].downloadState, 'missing');
+    }
+    if (mode === 'stale') {
+      assert.equal(messages.length, 1, 'retired UI gets no delayed toast');
+      assert.equal(f.offline.snapshot().projection.receipt.confirmation, 'confirmed', 'accepted queue ACK settles in the original domain owner');
+      assert.equal(f.calls.filter(call => call.method === 'cache.chapter.materialization.report').length, 1, 'granted lease is terminally reported after UI retirement');
+    }
+    assert.equal(f.offline.busy(), false, 'actual owner mutex released');
   }
 });
 for (const result of results) console.log(JSON.stringify(result));

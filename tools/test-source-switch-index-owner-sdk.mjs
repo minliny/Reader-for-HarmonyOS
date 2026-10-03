@@ -1,4 +1,5 @@
 import {makeIndex,failureChain} from './lib/source-switch-sdk-consumer.mjs';
+import {actualCacheAuthorityFixture} from './lib/reading-directory-sdk-consumer.mjs';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
@@ -104,27 +105,34 @@ const checks=[];
  checks.push('actual-Index-ReaderShell-retained-ReadingExperience-failure-lexical-scope-recovery');
 }
 for(const outcome of ['confirmed','platform-failure','Core-unknown']){
- const f=fixture({shared:true,open:false}),x=makeIndex(f);delete x.index.cleanupRetiredSourceCache;
+ const f=fixture({shared:true,open:false}),cacheAuthority=await actualCacheAuthorityFixture(true),x=makeIndex(f,{cacheAuthority});delete x.index.cleanupRetiredSourceCache;
+ // Real isolated sandbox IO and actual cold Core receipts replace the obsolete
+ // bare cache.clear stub; SourceSwitch keeps its existing controlled RPC seam.
+ f.runtime.getUIAbilityContext=()=>({filesDir:cacheAuthority.files});
  const native=f.runtime.request.bind(f.runtime),cleanup=[];
+ if(outcome==='Core-unknown')cacheAuthority.options.beforeMethod='cache.clear';
  f.runtime.request=async(method,params,options)=>{
-  if(method!=='cache.clear')return native(method,params,options);
-  cleanup.push(['Core',params]);if(outcome==='Core-unknown')throw Error('old cache ACK lost');
-  return{data:{scope:'book',cacheEntriesRemoved:1,chapterEntriesRemoved:1,queueEntriesRemoved:0,removedContentBytes:2}};
+  if(!method.startsWith('cache.clear'))return native(method,params,options);
+  if(method==='cache.clear')cleanup.push(['Core',params]);
+  return cacheAuthority.runtime.request(method,params,options);
  };
  f.runtime.clearOfflineBookImages=async(sourceId,bookId)=>{cleanup.push(['images',sourceId,bookId]);if(outcome==='platform-failure')throw Error('old cache images unavailable');};
  x.index.openDetailSourceSwitch();await settle();x.mount().onSelectCandidate(f.candidate());await settle();
  const tx=f.host.current().pending.transactionId;f.setPhase('finalized');
- x.index.applyReadingCommit({...target,chapterIndex:0,sourceSwitchTransactionId:tx});await settle();
- assert.equal(f.host.current().pending,undefined,'resource cleanup cannot undo actual source finalization');
- assert.deepEqual(cleanup[0],['Core',{scope:'book',sourceId:'old',bookId:'book'}]);
+ x.index.applyReadingCommit({...target,chapterIndex:0,sourceSwitchTransactionId:tx});
+ for(let i=0;i<200&&x.index.getReadingOfflineHost(f.runtime).busy();i++)await new Promise(r=>setTimeout(r,5));
  const receipt=x.index.getReadingOfflineHost(f.runtime).snapshot();
+ assert.equal(f.host.current().pending,undefined,'resource cleanup cannot undo actual source finalization');
+ assert.equal(cleanup[0][0],'Core');assert.equal(cleanup[0][1].scope,'book');assert.equal(cleanup[0][1].sourceId,'old');assert.equal(cleanup[0][1].bookId,'book');
+ assert.match(cleanup[0][1].operationId,/\/1$/);assert.equal(cleanup[0][1].sequence,1,'actual mandatory authority supplies one exact bounded original identity');
  assert.equal(receipt.sourceId,'old');assert.equal(receipt.bookId,'book');
  assert.equal(receipt.projection.receipt.confirmation,outcome==='Core-unknown'?'unknown':'confirmed');
  assert.equal(receipt.materialization,outcome==='confirmed'?'succeeded':'failed');
  assert.equal(cleanup.length,outcome==='Core-unknown'?1:2);
+ if(outcome!=='Core-unknown')assert.ok(cacheAuthority.calls.some(c=>c.method==='cache.clear.operation.query'),'actual qualified receipt read precedes platform cleanup');
  x.index.applyReadingCommit({...target,chapterIndex:0,sourceSwitchTransactionId:tx});await settle();
  assert.equal(cleanup.length,outcome==='Core-unknown'?1:2,'repeated canonical notification cannot repeat old-source cleanup');
- checks.push('actual-Index-OffineHost-Gateway-retired-source-'+outcome);
+ checks.push('actual-Index-OffineHost-atomic-store-cold-Core-retired-source-'+outcome);
 }
 // The retained reading identity includes readyGeneration, while only the small
 // temporary source overlay is keyed by the source owner scope.

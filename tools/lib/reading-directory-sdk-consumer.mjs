@@ -4,6 +4,8 @@ import {fixture,deferred,until,book,session,bookmarkInput} from './reading-opera
 import {boundedSurfaceSdk,boundedMembers} from './bounded-surface-sdk-probe.mjs';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
 const {readingDirectoryRecovery,EMPTY_READING_DIRECTORY_RECOVERY}=await import('../../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
+// Reuse the real SDK-emitted atomic Store + cold Core authority in other Index consumers.
+export {fixture as actualCacheAuthorityFixture};
 export const read=p=>readFileSync(new URL('../../entry/src/main/ets/'+p,import.meta.url),'utf8');
 export const indexSource=read('pages/Index.ets');
 const methods=['getReaderDirectoryHost','getReadingOfflineHost','directoryOperationPresentationId','isCurrentDirectoryOperationPresentation',
