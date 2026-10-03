@@ -1,3 +1,4 @@
+import type { SearchOperationFacts } from './SearchPresentation';
 import { TYPE_APP_BODY, TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_PRIMARY_ACTION, TYPE_APP_SECONDARY_ACTION, TYPE_SEARCH_FIELD_ACTION, TYPE_SEARCH_FIELD_ACTION_WIDE, TYPE_SEARCH_HISTORY_HEADING, TYPE_SEARCH_HISTORY_KEYWORD, TYPE_SEARCH_HISTORY_STATUS, TYPE_SEARCH_PROGRESS_META, TYPE_SEARCH_RESULT_COUNT, TYPE_SEARCH_RETRY_ACTION, TYPE_SEARCH_SCOPE_LABEL, TYPE_SEARCH_SCOPE_SELECTED, TYPE_SEARCH_STATE_DESCRIPTION, TYPE_SEARCH_STATE_TITLE, TYPE_SEARCH_SUGGESTION_BODY, TYPE_SEARCH_SUGGESTION_HEADING } from '../common/ReaderTypography';
 import { bookAuthorLabel, bookTitleAuthorKey } from '../common/BookAuthorMetadata';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
@@ -446,7 +447,23 @@ export struct SearchPage {
     return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), minimum);
   }
 
+  private operation(): SearchOperationFacts | undefined {
+    const presentation = this.presentation;
+    if (presentation.kind === 'loading' || presentation.kind === 'results' || presentation.kind === 'empty' || presentation.kind === 'error') {
+      return presentation.operation;
+    }
+    return undefined;
+  }
+
+  private retryOperation(): void {
+    const operation = this.operation();
+    if (operation !== undefined && !operation.canRetry) return;
+    this.onRetry();
+  }
+
   private isSweeping(): boolean {
+    const operation = this.operation();
+    if (operation !== undefined) return operation.canCancel;
     return this.presentation.kind === 'loading' ||
       (this.presentation.kind === 'results' && this.presentation.searching);
   }
@@ -462,7 +479,7 @@ export struct SearchPage {
 
   /** Reads the presentation directly so minimal-update re-render tracks it. */
   private isStoppedEmpty(): boolean {
-    return this.presentation.kind === 'empty' && this.presentation.stopped === true;
+    return this.presentation.kind === 'empty' && (this.operation()?.fact === 'cancelled' || this.presentation.stopped === true);
   }
 
   private submitSearch(): void {
@@ -837,9 +854,9 @@ export struct SearchPage {
           if (this.presentation.kind === 'results') {
             if (this.presentation.localSearchFailed || this.presentation.sourceListFailed) {
               Text(this.partialSearchFailure()).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-                .onClick((): void => this.onRetry());
+                .onClick((): void => this.retryOperation());
             }
-            if (this.presentation.stopped === true) {
+            if (this.operation()?.fact === 'cancelled' || this.presentation.stopped === true) {
               // ACQ-02: a stopped sweep keeps its partial results; the header
               // states how far the interrupted sweep got so partials never read
               // as a complete verdict.
@@ -851,7 +868,7 @@ export struct SearchPage {
                 .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis });
-            } else if (this.presentation.searching) {
+            } else if (this.isSweeping()) {
               Text(` · 正在搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源,已返回 ${this.visibleGroups.length} 个`)
                 .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
                 .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
@@ -870,7 +887,7 @@ export struct SearchPage {
                 .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
-                .onClick((): void => this.onRetry());
+                .onClick((): void => this.retryOperation());
             }
           }
         }
@@ -1114,7 +1131,7 @@ export struct SearchPage {
             .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .margin({ top: TOK_SPACE_CONTROL_INLINE })
-            .onClick((): void => this.onRetry());
+            .onClick((): void => this.retryOperation());
         }
 
         Column({ space: 0 }) {
@@ -1141,7 +1158,7 @@ export struct SearchPage {
 
         Row({ space: TOK_SPACE_CONTROL_INLINE }) {
           this.primaryPill('添加更多书源', (): void => this.onManageSources());
-          this.secondaryPill('重新搜索', (): void => this.onRetry());
+          this.secondaryPill('重新搜索', (): void => this.retryOperation());
         }
         .margin({ top: 20 })
         .alignSelf(ItemAlign.Center);
@@ -1224,7 +1241,7 @@ export struct SearchPage {
         .textAlign(TextAlign.Center);
 
       Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-        this.primaryPill('重试加载', (): void => this.onRetry());
+        this.primaryPill('重试加载', (): void => this.retryOperation());
         this.secondaryPill('返回书架', (): void => this.onBack());
       }
       .margin({ top: TOK_SPACE_LG })
@@ -1332,7 +1349,7 @@ export struct SearchPage {
       .padding({ left: 28, right: 28 })
       .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
       .borderRadius(999)
-      .onClick((): void => this.onRetry())
+      .onClick((): void => this.retryOperation())
       .responseRegion({ x: 0, y: -4, width: '100%', height: 48 })
       .accessibilityText('重新搜索');
 
