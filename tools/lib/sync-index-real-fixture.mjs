@@ -14,7 +14,7 @@ let fixtureSource=readFileSync(url,'utf8').split('\nasync function open(f)')[0]
   .replace('function fixture({empty=false,preserveAsset=false}={})','function fixture({empty=false,preserveAsset=false,createOwner}={})')
   .replace('const owner=new Orchestrator(', 'const owner=createOwner ? createOwner() : new Orchestrator(');
 export const syncIndexFixture=new Function('readFileSync','createRequire','stripTypeScriptTypes','createReaderBuilderProbe','runtimeOwnerIdentityProbe','randomUUID',
-  fixtureSource+';return {fixture,asset,config,ReaderRuntimeOwner,Store,Gateway,Orchestrator,DEFAULT_SYNC_SNAPSHOT,source,readerRecoveryView,pause,execute};')
+  fixtureSource+';return {fixture,asset,config,ReaderRuntimeOwner,Store,Gateway,Orchestrator,DEFAULT_SYNC_SNAPSHOT,source,readerRecoveryView,pause,execute,setRuntimeOwner:(owner)=>{currentOwner=owner;}};')
   (readFileSync,createRequire,stripTypeScriptTypes,createReaderBuilderProbe,runtimeOwnerIdentityProbe,randomUUID);
 
 export function fullSyncIndexPage(props){

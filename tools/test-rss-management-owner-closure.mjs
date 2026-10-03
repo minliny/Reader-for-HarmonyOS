@@ -1,3 +1,4 @@
+import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -10,7 +11,7 @@ const ordinary = text => stripTypeScriptTypes(text.replace(/^import[\s\S]*?from 
 const facts = new Function(ordinary(source('app/ReaderOperationFacts.ts')) + ';return {projectOperationFacts,projectCommitReadback};')();
 const projectPersistedReceipt = new Function(...Object.keys(facts), ordinary(source('app/ReaderPersistedReceiptProjection.ts')) + ';return projectPersistedReceipt;')(...Object.values(facts));
 let currentOwner;
-const ReaderRuntimeOwner = { current: () => currentOwner };
+const ReaderRuntimeOwner = runtimeOwnerIdentityProbe(()=>currentOwner);
 const RssGateway = new Function('ReaderRuntimeOwner','isReaderCoreTransactionPendingError', ordinary(source('features/rss/RssGateway.ts')) + ';return RssGateway;')(ReaderRuntimeOwner,isReaderCoreTransactionPendingError);
 const RssOrchestrator = new Function('RssGateway','ReaderRuntimeOwner','ReaderWriteEvidence','RssRouteOperationHost','hilog','isReaderCoreTransactionPendingError','projectPersistedReceipt','projectOperationFacts',
   ordinary(source('features/rss/RssOrchestrator.ets')) + ';return RssOrchestrator;')(RssGateway,ReaderRuntimeOwner,ReaderWriteEvidence,RssRouteOperationHost,{warn(){},error(){}},isReaderCoreTransactionPendingError,projectPersistedReceipt,facts.projectOperationFacts);
@@ -60,7 +61,7 @@ function rpc(){return {
 };}
 function fixture(runtime=rpc()){
   currentOwner=runtime;
-  const {owner:index}=createReaderBuilderProbe(source('pages/Index.ets'),['rssSubscriptionManagementContent','rssSubscriptionManagementSurface','isCurrentRssPresentation','isCurrentRoute','getRssOrchestrator','feedPresentation','rssSubscriptions','rssSubscriptionManagementItems','rssSubscriptionManagementMeta'],
+  const {owner:index}=createReaderBuilderProbe(source('pages/Index.ets'),['rssSubscriptionManagementContent','rssSubscriptionManagementSurface','isCurrentRuntime','isCurrentRssPresentation','isCurrentRoute','getRssOrchestrator','feedPresentation','rssSubscriptions','rssSubscriptionManagementItems','rssSubscriptionManagementMeta'],
     {RssSubscriptionManagementPage:ManagementChild,ReaderRuntimeOwner,RssOrchestrator,projectOperationFacts:facts.projectOperationFacts,deviceInfo:{deviceType:'phone'}});
   Object.assign(index,{route:'rssSubscriptionManagement',navigationGeneration:1,shelfReceiptRetired:false,rssPresentation:{kind:'feed',subscriptions:[],recentUnread:[]},rssManagementRead:facts.projectOperationFacts({phase:'idle'}),rssManagementFocusSubscriptionId:''});
   const orchestrator=index.getRssOrchestrator();index.rssSubscriptionManagementContent();const child=[...index.children.values()][0];

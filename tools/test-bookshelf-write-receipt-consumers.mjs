@@ -1,3 +1,4 @@
+import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes,createRequire} from 'node:module';
@@ -13,7 +14,7 @@ const readerRecoveryView=load('app/ReaderRecoveryProjection.ts','readerRecoveryV
 const errorMessageOf=load('app/ErrorMessage.ts','errorMessageOf');
 const localImportFailure=load('app/LocalImportFailure.ts','localImportFailure');
 let currentOwner;
-const ReaderRuntimeOwner={current:()=>currentOwner};
+const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
 const isReaderCoreTransactionPendingError=error=>error?.typedAdmission===true;
 const ReaderCoreGateway=load('app/ReaderCoreGateway.ts','ReaderCoreGateway',{ReaderRuntimeOwner,isReaderCoreTransactionPendingError});
 const LocalBookImportGateway=load('features/bookshelf/LocalBookImportGateway.ts','LocalBookImportGateway',{ReaderCoreGateway,ReaderRuntimeOwner,errorMessageOf,localImportFailure,hilog:{error(){},warn(){}}});
@@ -75,4 +76,8 @@ for(const variant of ['lost','malformed','identicalOldRow']){const f=fixture();i
 {const f=fixture();const d=defer();f.r.pickerPause=d;f.index.openImportDialog();const old=f.index.beginImport();f.index.closeImportDialog();f.index.openImportDialog();d.resolve();await old;assert.equal(f.r.count('import.persist'),0);assert.equal(f.r.count('discard'),1);assert.equal(f.presentation().state,'fileSelection');}
 {const f=fixture();const d=defer();f.r.pause={method:'bookshelf.add',...d};f.index.openImportDialog();const old=f.index.beginImport();await tick();f.index.closeImportDialog();f.index.openImportDialog();d.resolve();await old;assert.equal(f.receipt(),undefined);assert.equal(f.presentation().state,'fileSelection');}
 {const f=fixture();f.r.readFail=1;await f.import();const d=defer();f.r.pause={method:'bookshelf.list',...d};const old=f.retry(f.importRender());await tick();f.index.closeImportDialog();f.index.openImportDialog();d.resolve();await old;assert.equal(f.receipt().receipt.fact,'confirmedRefreshFailed');assert.equal(f.presentation().state,'fileSelection');assert.equal(f.r.count('bookshelf.add'),1);}
+
+for(const kind of ['single','batch','detail']){const f=fixture(),command=kind==='batch'?'bookshelf.removeBatch':'bookshelf.remove',d=defer();f.r.pause={method:command,...d};const accepted=f.remove(kind);await tick();currentOwner=undefined;assert.throws(()=>ReaderRuntimeOwner.current(),/installed by EntryAbility/);d.resolve();await assert.doesNotReject(accepted);assert.equal(f.r.count(command),1);assert.equal(f.receipt(),undefined,'retired runtime cannot present accepted ACK');assert.equal(f.index.bookshelfRemovalActiveKey,'');assert.equal(f.index.bookshelfBatchRemovalBusy,false);assert.equal(f.index.hasUnknownShelfWrite(),false);assert.equal(f.index.shelfRecovery().visible,false);}
+{const f=fixture();f.r.readFail=1;await f.remove();const d=defer();f.r.pause={method:'bookshelf.list',...d};const recovery=f.retry(f.render());await tick();currentOwner=undefined;d.resolve();await assert.doesNotReject(recovery);assert.equal(f.index.shelfReconcileBusy,0,'retired read settles its lock/finally');assert.equal(f.r.count('bookshelf.remove'),1);}
+{const f=fixture(),d=defer();f.r.pause={method:'bookshelf.add',...d};f.index.openImportDialog();const accepted=f.index.beginImport();await tick();currentOwner=undefined;d.resolve();await assert.doesNotReject(accepted);assert.equal(f.r.count('bookshelf.add'),1);assert.equal(f.receipt(),undefined);assert.equal(f.index.importBusyAttempt,0,'accepted import settles after runtime teardown without false failure UI');}
 console.log('Bookshelf/import actual gateway -> Index -> SDK notice/action: PASS (ACK/read/cleanup/unknown/admission/partial/only-read/close/reopen/late/owner/concurrent/identity).');

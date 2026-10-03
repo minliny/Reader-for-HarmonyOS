@@ -583,6 +583,7 @@ struct Index {
   );
   private rulesManagementOrchestrator: RulesManagementOrchestrator | undefined;
   private syncOrchestrator: SyncOrchestrator | undefined;
+  private mountedRuntimeOwner: ReaderRuntimeOwner | undefined;
   private sourceHost: SourceHost = new SourceHost(
     (sources: BookSource[]): void => { this.sourceSources = sources; },
     (): boolean => this.route === 'source',
@@ -633,6 +634,7 @@ struct Index {
   private storedImportPresentation: string = '';
 
   aboutToAppear(): void {
+    this.mountedRuntimeOwner = ReaderRuntimeOwner.current();
     this.shelfReceiptRetired = false;
     this.systemFileOpenMounted = true;
     // Index is mounted after configuration recovery. Reading these settings
@@ -687,8 +689,15 @@ struct Index {
     this.sourceSwitchUnsubscribe?.();
     this.sourceSwitchUnsubscribe = undefined;
     this.searchHost.close();
-    ReaderRuntimeOwner.current().bookAcquisitions().endSearch();
-    ReaderRuntimeOwner.current().readingEntryPreparations().setPaused(true);
+    // Retire resources only in the owner captured when this Index mounted.
+    // An unavailable/replacement runtime owns its own cleanup and must never
+    // receive the retiring page's endSearch/pause commands.
+    const owner = this.mountedRuntimeOwner;
+    this.mountedRuntimeOwner = undefined;
+    if (this.isCurrentRuntime(owner) && owner !== undefined) {
+      owner.bookAcquisitions().endSearch();
+      owner.readingEntryPreparations().setPaused(true);
+    }
   }
 
   onBackPress(): boolean {
@@ -1467,9 +1476,9 @@ struct Index {
     if (this.discoverOrchestrator === undefined || !this.discoverOrchestrator.owns(owner)) {
       this.discoverOrchestrator = new DiscoverOrchestrator(
         (presentation: DiscoverPresentation): void => {
-          if (this.route === 'discover' && owner === ReaderRuntimeOwner.current()) this.discoverPresentation = presentation;
+          if (this.route === 'discover' && this.isCurrentRuntime(owner)) this.discoverPresentation = presentation;
         },
-        (): boolean => this.route === 'discover' && owner === ReaderRuntimeOwner.current(), owner,
+        (): boolean => this.route === 'discover' && this.isCurrentRuntime(owner), owner,
       );
     }
     return this.discoverOrchestrator;
@@ -1655,7 +1664,7 @@ struct Index {
     this.bookshelfSelectionReady = false;
     const generation = this.navigationGeneration;
     const owner = ReaderRuntimeOwner.current();
-    const current = (): boolean => generation === this.navigationGeneration && this.route === 'bookshelfMultiSelect' && owner === ReaderRuntimeOwner.current();
+    const current = (): boolean => generation === this.navigationGeneration && this.route === 'bookshelfMultiSelect' && this.isCurrentRuntime(owner);
     void new BookshelfFlowGateway(owner).loadAll(current).then((shelf: BookshelfState | undefined): void => {
       if (!current() || shelf === undefined) return;
       this.bookshelfSelectionBooks = shelf.books;
@@ -1773,9 +1782,13 @@ struct Index {
     this.getSyncOrchestrator().resolveRestore(overwriteLocal);
   }
 
+  private isCurrentRuntime(owner: ReaderRuntimeOwner | undefined): boolean {
+    return owner !== undefined && ReaderRuntimeOwner.isCurrent(owner);
+  }
+
   private isCurrentSyncOwner(owner: ReaderRuntimeOwner): boolean {
     if (this.shelfReceiptRetired || !isReaderProductSurfaceEnabled('sync') || this.route !== 'sync') return false;
-    try { return owner === ReaderRuntimeOwner.current(); } catch (_) { return false; }
+    try { return this.isCurrentRuntime(owner); } catch (_) { return false; }
   }
 
   private isCurrentSyncPresentation(generation: number, owner: ReaderRuntimeOwner): boolean {
@@ -2034,7 +2047,7 @@ struct Index {
       const route = this.route;
       const current = (): boolean => {
         if (this.shelfReceiptRetired) return false;
-        try { return owner === ReaderRuntimeOwner.current() && generation === this.navigationGeneration &&
+        try { return this.isCurrentRuntime(owner) && generation === this.navigationGeneration &&
           this.route === route && isCurrent(); }
         catch (_) { return false; }
       };
@@ -2400,7 +2413,7 @@ struct Index {
     subscriptionId: string = '', guid: string = ''): boolean {
     if (this.shelfReceiptRetired || !this.isCurrentRoute(generation, route)) return false;
     try {
-      if (owner !== ReaderRuntimeOwner.current()) return false;
+      if (!this.isCurrentRuntime(owner)) return false;
       if (route === 'rssSourceFeed') return this.selectedRssSubscription?.subscriptionId === subscriptionId;
       if (route === 'rssEntryDetail') return this.selectedRssItem?.subscriptionId === subscriptionId && this.selectedRssItem?.guid === guid;
       return true;
@@ -2969,7 +2982,7 @@ struct Index {
         const candidates = this.searchDetailCandidates;
         const current = (): boolean => generation === this.navigationGeneration &&
           this.route === 'search' && this.searchDetailCandidates === candidates &&
-          owner === ReaderRuntimeOwner.current();
+          this.isCurrentRuntime(owner);
         void this.bookshelfHost.loadShelfBook(LOCAL_SOURCE_ID, book.bookId)
           .then((stored: ShelfBook | undefined): void => {
             if (!current()) return;
@@ -3065,7 +3078,7 @@ struct Index {
     if (this.route !== 'bookshelf' || this.readingSessionActive || !this.searchAppForeground) return;
     const owner = ReaderRuntimeOwner.current();
     const revision = this.shelfProjectionRevision;
-    const allowed = (): boolean => owner === ReaderRuntimeOwner.current() && this.route === 'bookshelf' &&
+    const allowed = (): boolean => this.isCurrentRuntime(owner) && this.route === 'bookshelf' &&
       !this.readingSessionActive && this.searchAppForeground && this.applicationSettingsSnapshot !== undefined &&
       revision === this.shelfProjectionRevision;
     void owner.readingEntryPreparations().preparePersistedShelf(revision,
@@ -4054,7 +4067,7 @@ struct Index {
       sourceId: book.sourceId, bookId: book.bookId,
     }));
     this.bookshelfBatchRemovalBusy = true;
-    const isCurrent = (): boolean => !this.shelfReceiptRetired && owner === ReaderRuntimeOwner.current() &&
+    const isCurrent = (): boolean => !this.shelfReceiptRetired && this.isCurrentRuntime(owner) &&
       generation === this.bookshelfBatchRemovalGeneration && navigation === this.navigationGeneration &&
       receiptGeneration === this.shelfWriteGeneration && this.route === 'bookshelfMultiSelect';
     void gateway.removeMany(targets).then((outcome: BookshelfRemoveBatchOutcome): void => {
@@ -4086,7 +4099,7 @@ struct Index {
     const navigation = this.navigationGeneration;
     const receiptGeneration = this.beginShelfWrite(owner, 'remove');
     const gateway = new BookshelfFlowGateway(owner, this.shelfFilter());
-    const isCurrent = (): boolean => !this.shelfReceiptRetired && owner === ReaderRuntimeOwner.current() &&
+    const isCurrent = (): boolean => !this.shelfReceiptRetired && this.isCurrentRuntime(owner) &&
       generation === this.bookshelfRemovalGeneration && navigation === this.navigationGeneration &&
       receiptGeneration === this.shelfWriteGeneration && this.bookshelfRemovalActiveKey === key &&
       this.route === 'bookshelf';
@@ -4117,7 +4130,7 @@ struct Index {
     const navigation = this.navigationGeneration;
     const receiptGeneration = this.beginShelfWrite(owner, 'remove');
     const gateway = new BookshelfFlowGateway(owner, this.shelfFilter());
-    const isCurrent = (): boolean => !this.shelfReceiptRetired && owner === ReaderRuntimeOwner.current() &&
+    const isCurrent = (): boolean => !this.shelfReceiptRetired && this.isCurrentRuntime(owner) &&
       generation === this.bookshelfRemovalGeneration && navigation === this.navigationGeneration &&
       receiptGeneration === this.shelfWriteGeneration && this.bookshelfRemovalActiveKey === key &&
       this.route === 'detail' && this.isSameDetailBook(book);
@@ -4145,12 +4158,12 @@ struct Index {
   }
 
   private hasUnknownShelfWrite(): boolean {
-    return this.shelfWriteOwner === ReaderRuntimeOwner.current() &&
+    return this.isCurrentRuntime(this.shelfWriteOwner) &&
       this.shelfWriteReceipt?.receipt.confirmation === 'unknown';
   }
 
   private shelfRecovery(): ReaderRecoveryView {
-    if (this.shelfWriteOwner !== ReaderRuntimeOwner.current()) return this.emptyShelfRecovery();
+    if (!this.isCurrentRuntime(this.shelfWriteOwner)) return this.emptyShelfRecovery();
     const recovery = readerRecoveryView(this.shelfWriteReceipt);
     if (this.shelfWriteCleanupWarning.length === 0) return recovery;
     return { message: (recovery.visible ? `${recovery.message}；` : '书籍已移出书架；') +
@@ -4178,12 +4191,12 @@ struct Index {
     const owner = this.shelfWriteOwner;
     if (receipt === undefined || owner === undefined || generation !== this.shelfWriteGeneration ||
       !receipt.facts.canRetry || this.shelfReconcileBusy !== 0 || this.shelfReceiptRetired ||
-      owner !== ReaderRuntimeOwner.current() || this.route !== 'bookshelf') return;
+      !this.isCurrentRuntime(owner) || this.route !== 'bookshelf') return;
     const navigation = this.navigationGeneration;
     const attempt = this.importAttemptId;
     const dialogVisible = this.hasVisibleImportDialog();
     const current = (): boolean => !this.shelfReceiptRetired && generation === this.shelfWriteGeneration &&
-      navigation === this.navigationGeneration && owner === ReaderRuntimeOwner.current() &&
+      navigation === this.navigationGeneration && this.isCurrentRuntime(owner) &&
       this.route === 'bookshelf' && (!dialogVisible || attempt === this.importAttemptId);
     this.shelfReconcileBusy = generation;
     this.shelfWriteReceipt = projectPersistedReceipt({ confirmation: receipt.receipt.confirmation,
@@ -4202,7 +4215,7 @@ struct Index {
         this.shelfReconcileBusy = 0;
         // Closing a dialog retires the pending callback but keeps the last
         // truthful receipt recoverable from the current bookshelf surface.
-        if (!current() && owner === ReaderRuntimeOwner.current() && generation === this.shelfWriteGeneration)
+        if (!current() && this.isCurrentRuntime(owner) && generation === this.shelfWriteGeneration)
           this.shelfWriteReceipt = receipt;
       }
     }
@@ -4391,7 +4404,7 @@ struct Index {
     const isCurrent = (): boolean => this.systemFileOpenMounted && this.readingSessionActive &&
       this.readingReadyGeneration === generation && this.navigationGeneration === navigationGeneration &&
       this.detailBook?.sourceId === sourceId && this.detailBook?.bookId === bookId &&
-      ReaderRuntimeOwner.current() === owner;
+      this.isCurrentRuntime(owner);
     try {
       this.getUIContext().postFrameCallback(new ReaderNavigationBackfillFrame((): void => {
         if (!isCurrent()) {
@@ -6157,7 +6170,7 @@ struct Index {
     const contentCurrent = owner.captureReadingContentValidity?.(session.identity.sourceId, session.identity.bookId);
     const sessionGeneration = this.remoteSessionGeneration;
     const readerOwned = shelfCurrent === undefined && preferredChapterIndex !== undefined;
-    const ownerCurrent = (): boolean => ReaderRuntimeOwner.current() === owner &&
+    const ownerCurrent = (): boolean => this.isCurrentRuntime(owner) &&
       navigation === this.navigationGeneration && contentCurrent?.() !== false && shelfCurrent?.() !== false &&
       (!readerOwned || (sessionGeneration === this.remoteSessionGeneration && this.readingSessionActive &&
         sameRemoteSessionEvidence(this.remoteReadingSession, session)));
@@ -6295,7 +6308,7 @@ struct Index {
     const owner = ReaderRuntimeOwner.current();
     const generation = this.navigationGeneration;
     const sessionGeneration = this.remoteSessionGeneration;
-    const isCurrent = (): boolean => ReaderRuntimeOwner.current() === owner && this.readingSessionActive && generation === this.navigationGeneration &&
+    const isCurrent = (): boolean => this.isCurrentRuntime(owner) && this.readingSessionActive && generation === this.navigationGeneration &&
       sessionGeneration === this.remoteSessionGeneration && this.detailBook?.sourceId === session.identity.sourceId &&
       this.detailBook?.bookId === session.identity.bookId && sameRemoteSessionEvidence(this.remoteReadingSession, session);
     this.remoteCatalogRefreshAttemptAt.set(key, now);
@@ -6387,7 +6400,7 @@ struct Index {
   private refreshSearchShelfMembership(): void {
     const generation = ++this.shelfMembershipGeneration;
     const owner = ReaderRuntimeOwner.current();
-    const current = (): boolean => generation === this.shelfMembershipGeneration && owner === ReaderRuntimeOwner.current();
+    const current = (): boolean => generation === this.shelfMembershipGeneration && this.isCurrentRuntime(owner);
     void new BookshelfFlowGateway(owner).loadAll(current, true).then((shelf: BookshelfState | undefined): void => {
       if (!current() || shelf === undefined) return;
       this.searchHost.updateShelf(shelf.books);
@@ -6409,7 +6422,7 @@ struct Index {
     const offset = previous ? Math.max(0, start - 48) : start + count;
     const owner = ReaderRuntimeOwner.current();
     const current = (): boolean => this.route === 'bookshelf' && generation === this.bookshelfLoadGeneration &&
-      owner === ReaderRuntimeOwner.current() && revision === this.shelfProjectionRevision &&
+      this.isCurrentRuntime(owner) && revision === this.shelfProjectionRevision &&
       start === this.shelfWindowOffset && count === this.shelfBooks.length;
     void new BookshelfFlowGateway(owner, this.shelfFilter()).loadPage(offset, revision, false, current).then((page: BookshelfState): void => {
       if (!current()) return;
@@ -6519,7 +6532,7 @@ struct Index {
       this.shelfBooks.some((book: ShelfBook): boolean => JSON.stringify([book.sourceId, book.bookId]) === anchor) &&
       !state.shelf.books.some((book: ShelfBook): boolean => JSON.stringify([book.sourceId, book.bookId]) === anchor)) {
       const generation = this.bookshelfLoadGeneration, owner = ReaderRuntimeOwner.current();
-      const current = (): boolean => generation === this.bookshelfLoadGeneration && owner === ReaderRuntimeOwner.current();
+      const current = (): boolean => generation === this.bookshelfLoadGeneration && this.isCurrentRuntime(owner);
       const book = this.shelfBooks.find((item: ShelfBook): boolean => JSON.stringify([item.sourceId, item.bookId]) === anchor);
       if (book === undefined) return;
       void new BookshelfFlowGateway(owner, this.shelfFilter()).loadAnchor({ sourceId: book.sourceId, bookId: book.bookId }, this.shelfWindowOffset, current)
@@ -6596,7 +6609,7 @@ struct Index {
     const request = ++this.bookshelfSourceNameRequest;
     const owner = ReaderRuntimeOwner.current();
     const admittedBooks = this.shelfBooks;
-    const isCurrent = (): boolean => request === this.bookshelfSourceNameRequest && owner === ReaderRuntimeOwner.current() &&
+    const isCurrent = (): boolean => request === this.bookshelfSourceNameRequest && this.isCurrentRuntime(owner) &&
       generation === this.bookshelfLoadGeneration && admittedBooks === this.shelfBooks && this.shelfBooks.length > 0;
     void this.sourceHost.loadSourcesForIds(admittedBooks.map((book: ShelfBook): string => book.sourceId), isCurrent)
       .then((sources: BookSource[]): void => {
@@ -6674,7 +6687,7 @@ struct Index {
     const owner = ReaderRuntimeOwner.current();
     const revision = this.shelfProjectionRevision;
     let ownPublishedRevision: string | undefined;
-    const current = (): boolean => owner === ReaderRuntimeOwner.current() &&
+    const current = (): boolean => this.isCurrentRuntime(owner) &&
       revision === this.shelfProjectionRevision && this.canRunBookshelfBackgroundRefresh();
     this.bookshelfBackgroundRefreshRunning = true;
     // Visible rows may be filtered or only the first page. Establish the
@@ -6707,7 +6720,7 @@ struct Index {
         // running. It cannot start another scan until the flag is released.
         // Retry the latest revision once; a continuously changing shelf must
         // not create an unbounded chain of background reads.
-        if (!revisionRetry && owner === ReaderRuntimeOwner.current() &&
+        if (!revisionRetry && this.isCurrentRuntime(owner) &&
           revision !== this.shelfProjectionRevision && ownPublishedRevision !== this.shelfProjectionRevision &&
           this.canRunBookshelfBackgroundRefresh()) {
           this.scheduleBookshelfBackgroundRefresh(this.shelfBooks, true);
@@ -6760,7 +6773,7 @@ struct Index {
       this.bookshelfUpdateRunning = true;
       this.bookshelfUpdateDone = 0;
       this.bookshelfUpdateTotal = 0;
-      void new BookshelfFlowGateway(owner).loadAll((): boolean => owner === ReaderRuntimeOwner.current()).then(async (shelf: BookshelfState | undefined): Promise<void> => {
+      void new BookshelfFlowGateway(owner).loadAll((): boolean => this.isCurrentRuntime(owner)).then(async (shelf: BookshelfState | undefined): Promise<void> => {
         if (shelf === undefined) return;
         const targets = shelf.books.filter((book: ShelfBook): boolean => book.sourceId !== LOCAL_SOURCE_ID);
         this.bookshelfUpdateTotal = targets.length;
@@ -6768,7 +6781,7 @@ struct Index {
           this.bookshelfUpdateDone = done; this.bookshelfUpdateTotal = total;
         });
       }).catch((error: Error): void => { hilog.warn(DOMAIN, 'Reader', 'Manual bookshelf targets: %{private}s', error.message); })
-        .finally((): void => { if (owner === ReaderRuntimeOwner.current()) this.bookshelfUpdateRunning = false; });
+        .finally((): void => { if (this.isCurrentRuntime(owner)) this.bookshelfUpdateRunning = false; });
       return;
     }
     const candidates = this.shelfBooks.filter((book: ShelfBook): boolean =>
@@ -6913,7 +6926,7 @@ struct Index {
       this.route !== 'bookshelf') return false;
     // Runtime owner identity is its process generation; replacement never
     // transfers a pending picker/import's right to present into a new runtime.
-    try { return ReaderRuntimeOwner.current() === owner; } catch (_) { return false; }
+    try { return this.isCurrentRuntime(owner); } catch (_) { return false; }
   }
 
   private writeImportPresentation(presentation: LocalImportPresentation | undefined): void {
