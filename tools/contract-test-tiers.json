@@ -480,6 +480,7 @@
     "test-sync-receipt-owner-closure.mjs",
     "test-typography-carrier-successors.mjs",
     "test-bounded-source-tts-composition.mjs",
-    "test-rss-index-operation-consumers.mjs"
+    "test-rss-index-operation-consumers.mjs",
+    "test-bookshelf-sheet-shared-composition.mjs"
   ]
 }

@@ -1,87 +1,30 @@
-import { readerAppColor } from '../common/ReaderThemeRegistry';
-import { SheetSurfaceSpec, resolveSheetSpec } from '../common/ReaderSurfaceSpecs';
+import { ReaderBoundedSurface } from '../common/ReaderBoundedSurface';
+import { ReaderBoundedSurfaceHeader } from '../common/ReaderBoundedSurfaceHeader';
+import { ReaderSheetActionList } from '../common/ReaderSheetActionList';
 
-/**
- * Per-book action surface. The host presents this content as a centered
- * opaque floating panel so its outline remains visible on every device.
- *
- * The action contents retain the Figma typography and spacing; the host-level
- * presentation follows the same horizontal inset as the shelf covers.
- */
+/** Business callbacks only. The native host retains presentation ownership;
+ * the common frame/header/actions own the existing physical surface. */
 @Component
 export struct BookshelfBookActionSheet {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-
+  @Prop presentationId: string = '';
+  isCurrent: (presentationId: string) => boolean = (_id: string): boolean => false;
   onMultiSelect: () => void = (): void => {};
   onEditGroup: () => void = (): void => {};
   onBookInfo: () => void = (): void => {};
   onRemoveFromBookshelf: () => void = (): void => {};
 
-  private surfaceSpec(): SheetSurfaceSpec {
-    return resolveSheetSpec('bookshelf-book-action');
+  @Builder private sheetHeader() {
+    ReaderBoundedSurfaceHeader({ specId: 'bookshelf-book-action', title: '书籍操作' });
   }
-
+  @Builder private sheetActions() {
+    ReaderSheetActionList({ presentationId: this.presentationId, isCurrent: (id: string): boolean => this.isCurrent(id),
+      onMultiSelect: (): void => this.onMultiSelect(), onBookInfo: (): void => this.onBookInfo(),
+      onEditGroup: (): void => this.onEditGroup(), onRemoveFromBookshelf: (): void => this.onRemoveFromBookshelf(),
+    });
+  }
   build() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Row() {
-        Blank()
-          .width(this.surfaceSpec().handleWidth)
-          .height(this.surfaceSpec().handleHeight)
-          .backgroundColor(readerAppColor(this.surfaceSpec().handleRole, this.appThemeScheme))
-          .borderRadius(999);
-      }
-      .width('100%')
-      .height(this.surfaceSpec().handleHeight)
-      .justifyContent(FlexAlign.Center)
-      .position({ x: 0, y: this.surfaceSpec().handleTop });
-
-      Text('书籍操作')
-        .fontFamily(this.surfaceSpec().titleFontFamily)
-        .fontWeight(this.surfaceSpec().titleFontWeight)
-        .fontSize(this.surfaceSpec().titleFontSize)
-        .lineHeight(this.surfaceSpec().titleLineHeight)
-        .fontColor(readerAppColor(this.surfaceSpec().titleRole, this.appThemeScheme))
-        .maxLines(1)
-        .position({ x: this.surfaceSpec().titleInset, y: this.surfaceSpec().titleTop });
-
-      this.actionSlot('多选', false, this.surfaceSpec().actionY(0), (): void => this.onMultiSelect());
-      this.actionSlot('书籍信息', false, this.surfaceSpec().actionY(1), (): void => this.onBookInfo());
-      this.actionSlot('编辑分组', false, this.surfaceSpec().actionY(2), (): void => this.onEditGroup());
-      this.actionSlot('移除书架', true, this.surfaceSpec().actionY(3), (): void => this.onRemoveFromBookshelf());
-    }
-    .width('100%')
-    .height(this.surfaceSpec().height)
-    .backgroundColor(readerAppColor(this.surfaceSpec().backgroundRole, this.appThemeScheme))
-    .border({ width: this.surfaceSpec().borderWidth, color: readerAppColor(this.surfaceSpec().borderRole, this.appThemeScheme) })
-    .borderRadius({ topLeft: this.surfaceSpec().borderRadius, topRight: this.surfaceSpec().borderRadius, bottomLeft: 0, bottomRight: 0 })
-    .shadow({ radius: this.surfaceSpec().shadowRadius, color: readerAppColor(this.surfaceSpec().shadowRole, this.appThemeScheme), offsetX: 0, offsetY: this.surfaceSpec().shadowOffsetY })
-    .clip(true);
-  }
-
-  @Builder
-  private actionSlot(label: string, danger: boolean, y: number, action: () => void) {
-    Row() {
-      Row() {
-        Text(label)
-          .fontFamily(this.surfaceSpec().actionLabelFontFamily)
-          .fontWeight(this.surfaceSpec().actionLabelFontWeight)
-          .fontSize(this.surfaceSpec().actionLabelFontSize)
-          .lineHeight(this.surfaceSpec().actionLabelLineHeight)
-          .fontColor(danger ? readerAppColor(this.surfaceSpec().dangerTextRole, this.appThemeScheme) : readerAppColor(this.surfaceSpec().actionTextRole, this.appThemeScheme))
-          .maxLines(1);
-      }
-      .layoutWeight(1)
-      .height(this.surfaceSpec().actionHeight)
-      .padding({ left: this.surfaceSpec().actionPaddingLeft })
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor(danger ? readerAppColor(this.surfaceSpec().dangerBackgroundRole, this.appThemeScheme) : readerAppColor(this.surfaceSpec().actionBackgroundRole, this.appThemeScheme))
-      .borderRadius(this.surfaceSpec().actionBorderRadius)
-      .accessibilityText(label)
-      .onClick(action);
-    }
-    .width('100%')
-    .height(this.surfaceSpec().actionHeight)
-    .padding({ left: this.surfaceSpec().horizontalInset, right: this.surfaceSpec().horizontalInset })
-    .position({ x: 0, y });
+    ReaderBoundedSurface({ specId: 'bookshelf-book-action',
+      header: (): void => { this.sheetHeader(); }, actions: (): void => { this.sheetActions(); },
+    });
   }
 }
