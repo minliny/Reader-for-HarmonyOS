@@ -98,7 +98,7 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
     currentSourceSwitchTransactionId:()=>undefined, readingDetailForShelf:book=>({...book}),
     remoteSessionGeneration:0,remoteContentProbeGeneration:0,route: origin, readingOriginRoute: 'detail', detailReturnRoute: 'bookshelf',
     readingSessionActive: false, navigationGeneration: 0, shelfReadingPreparation: false,
-    searchPublication:{shelfAt:()=>[]},searchPublicationRevision:0, detailToc: [], detailInBookshelf: false, shelfBooks: [], searchDetailCandidates: [], remoteCatalogRefreshAt: new Map(),
+    searchHost:{publication:{shelfAt:()=>[]},resume:()=>calls.push('search.resume'),close:()=>calls.push('search.close')},searchPublicationRevision:0, detailToc: [], detailInBookshelf: false, shelfBooks: [], searchDetailCandidates: [], remoteCatalogRefreshAt: new Map(),
     bookshelfRemovalActiveKey: '', offlineMutationGeneration: 0,
     sourceSwitchVisible: false, sourceSwitchState: { kind: 'discovering' },
     searchViewState: view, searchPresentation: presentation, searchOrchestrator: orchestrator,
