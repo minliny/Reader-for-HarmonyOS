@@ -54,6 +54,7 @@ const readerRuleMutationEffects = new Function('RULES_MUTATION_METHODS',
   stripTypeScriptTypes(effectsSource.replace(/^import[\s\S]*?;\n/gm, '')).replace(/\bexport /g, '') + ';return readerRuleMutationEffects;')(RULES_MUTATION_METHODS);
 const require = createRequire(import.meta.url);
 import {bookshelfSourceDisplayName} from '../../entry/src/main/ets/features/bookshelf/BookshelfSourceNameProjection.ts';
+import {actualBookshelfOperationTypes} from './bookshelf-operation-owner-probe.mjs';
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts = require(`${sdk}/node_modules/typescript`);
 const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
@@ -82,7 +83,14 @@ export function productionMotionMethods(file, names, dependencies = {}) {
   assert.ok(type, `production methods: ${names.join(', ')}`);
   // Preserve the actual captured allocator initializer only for the reader
   // struct declaring it. Non-reader probes must not acquire a reader Runtime.
-  const capturedOwnerFields = type.members.filter(m => ['readingImageResources', 'readingRecordHost', 'replaceRuntime', 'rulesMutationOwner'].includes(m.name?.getText(tree)))
+  const needsShelfHost = type.name?.text === 'Index' && type.members.some(m => names.includes(m.name?.getText(tree)) && m.getText(tree).includes('this.bookshelfHost.'));
+  if (needsShelfHost) {
+    dependencies.BookshelfHost ??= actualBookshelfOperationTypes(dependencies).Host;
+    dependencies.IMPORT_PRESENTATION_KEY ??= 'reader.bookshelf.import.presentation.v1';
+    const platformValues = new Map();
+    dependencies.AppStorage ??= { setOrCreate: (key, value) => platformValues.set(key, value) };
+  }
+  const capturedOwnerFields = type.members.filter(m => ['readingImageResources', 'readingRecordHost', 'replaceRuntime', 'rulesMutationOwner', ...(needsShelfHost ? ['bookshelfHost'] : [])].includes(m.name?.getText(tree)))
     .map(m => m.getText(tree)).join('\n');
   // Keep newly factored business helpers real in existing method-level probes.
   // Fixtures can still supply their explicit I/O/lifecycle dependencies.

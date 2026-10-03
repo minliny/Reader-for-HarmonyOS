@@ -5,6 +5,7 @@ import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {rssSource as read,rssFacts,rssProjection,RssWriteEvidence,RssRuntime,replaceRssRuntime,rssRpc,settleRss,deferredRss,RealRssRouteHost} from './lib/rss-operation-fixture.mjs';
 import {ReaderNativeAlertOwner} from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
 import {isReaderCoreTransactionPendingError} from '../entry/vendor/core-harmony/sdk/reader_core.ts';
+import {actualBookshelfOperationTypes, actualBookshelfHostField} from './lib/bookshelf-operation-owner-probe.mjs';
 const require=createRequire(import.meta.url),ts=require((process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/node_modules/typescript');
 function compile(file,n,deps){const source=read(file),tree=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);assert.deepEqual(tree.parseDiagnostics,[]);const emitted=ts.transpileModule(source.replace(/^import[\s\S]*?;\n/gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS},reportDiagnostics:true});assert.deepEqual(emitted.diagnostics,[]);const exports={};new Function('exports',...Object.keys(deps),emitted.outputText)(exports,...Object.values(deps));return n===undefined?exports:exports[n];}
 const Gateway=compile('features/rss/RssGateway.ts','RssGateway',{ReaderRuntimeOwner:RssRuntime,isReaderCoreTransactionPendingError});
@@ -26,6 +27,7 @@ function makeIndex(runtime,{indexSource=read('pages/Index.ets')}={}){
   isReaderProductSurfaceEnabled:()=>true});
  Object.assign(idx,{mountedRuntimeOwner:runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:1,navigationGeneration:1,route:'rssSubscriptionEditor',
   nativeAlertOwner:new ReaderNativeAlertOwner(),rssInstanceIdentity:++instances,rssPresentationIdentity:'',rssEditorPresentationIdentity:'',retireSourceSwitchPresentation(){},sourceToolsOrchestrator:undefined});
+ idx.bookshelfHost=actualBookshelfHostField(idx, actualBookshelfOperationTypes({ReaderRuntimeOwner:RssRuntime}).Host, {setOrCreate(){}});
  const host=idx.getRssEditorOrchestrator();host.openCreate();
  let rendered=false;const render=()=>{if(!rendered){idx.rssEditorContent();rendered=true;}else idx.replay();const page=p.walk(idx).filter(c=>c instanceof Page).at(-1);page.saveAction();page.operationRecovery();return page;};
  const saveNative=page=>[...page.nodes.values()].find(n=>n.create==='保存').onClick;
