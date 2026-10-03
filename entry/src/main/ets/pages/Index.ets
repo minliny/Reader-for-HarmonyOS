@@ -1,3 +1,4 @@
+import type { RssRouteOperationProjection, RssRouteBinding } from '../features/rss/RssRouteOperationHost';
 import { ReaderNativeAlertOwner, type ReaderNativeAlertLease, type ReaderNativeAlertOptions, type ReaderNativeAlertSpecId } from '../app/ReaderNativeAlertOwner';
 import { readerRecoveryView, type ReaderRecoveryView } from '../app/ReaderRecoveryProjection';
 import { projectPersistedReceipt, type PersistedReceiptProjection } from '../app/ReaderPersistedReceiptProjection';
@@ -439,6 +440,12 @@ struct Index {
   @State private directoryChapterTitle: string = '';
   @State private directoryReturnTarget: DirectoryReturnTarget = 'detail';
   @State private searchPublicationRevision: number = 0;
+  @State private rssFeedRead: OperationFacts<RssSubscription[]> = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
+  @State private rssSourceOperation: RssRouteOperationProjection<RssSourceSnapshot> | undefined = undefined;
+  @State private rssSourceRead: OperationFacts<RssSourceSnapshot> = projectOperationFacts<RssSourceSnapshot>({ phase: 'idle' });
+  @State private rssEntryOperation: RssRouteOperationProjection<RssEntrySnapshot> | undefined = undefined;
+  @State private rssEntryRead: OperationFacts<RssEntrySnapshot> = projectOperationFacts<RssEntrySnapshot>({ phase: 'idle' });
+  private rssEditorNavigationGeneration: number = 0;
   @State private rssPresentation: RssPresentation = { kind: 'feed', subscriptions: [], recentUnread: [] };
   @State private rssManagementOperation: RssManagementOperationProjection | undefined = undefined;
   @State private rssManagementRead: OperationFacts<RssSubscription[]> =
@@ -966,63 +973,16 @@ struct Index {
           onManageSources: (): void => this.manageSourcesFromSearch(),
         });
       } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rss') {
-        RssPage({
-          presentation: this.rssPresentation,
-          isTablet: deviceInfo.deviceType === 'tablet',
-          activeMode: 'sources',
-          onBack: (): void => this.returnToBookshelf(),
-          onRefresh: (): void => this.refreshRss(),
-          onManage: (): void => this.onRssManage(),
-          onSelectSubscription: (id: string): void => this.onRssSubscriptionSelected(id),
-          onSelectItem: (subscriptionId: string, guid: string): void =>
-            this.onRssItemSelected(subscriptionId, guid),
-          onModeRequested: (mode: RssMode): void => this.onRssModeRequested(mode),
-          onSettingsRequested: (): void => this.openSettings(),
-          onDiscoverRequested: (): void => this.openDiscover(),
-        });
+        this.rssPageContent();
       } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssSubscriptionManagement') {
         this.rssSubscriptionManagementContent();
       } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssSubscriptionEditor') {
-        RssSubscriptionEditorPage({
-          snapshot: this.rssEditorSnapshot,
-          onBack: (): void => this.returnToRssSubscriptionManagement(),
-          onFeedUrlChanged: (value: string): void => this.getRssEditorOrchestrator().updateFeedUrl(value),
-          onTitleChanged: (value: string): void => this.getRssEditorOrchestrator().updateTitle(value),
-          onEnabledChanged: (value: boolean): void => this.getRssEditorOrchestrator().updateEnabled(value),
-          onEnabledCookieJarChanged: (value: boolean): void =>
-            this.getRssEditorOrchestrator().updateEnabledCookieJar(value),
-          onSourceFieldChanged: (field: RssSourceTextField, value: string): void =>
-            this.getRssEditorOrchestrator().updateSourceField(field, value),
-          onSave: (): void => this.getRssEditorOrchestrator().save(),
-        });
+        this.rssEditorContent();
       } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssSourceFeed' && this.selectedRssSubscription !== undefined) {
-        RssSourceFeedPage({
-          subscription: this.selectedRssSubscription,
-          items: this.selectedRssItems,
-          isTablet: deviceInfo.deviceType === 'tablet',
-          onBack: (): void => this.returnFromRssSourceFeed(),
-          onSelectItem: (item: RssItem): void => this.onRssSourceItemSelected(item),
-          onRefresh: (): void => this.refreshRssSourceFeed(),
-          onEditSource: (): void =>
-            this.openRssManagementForSubscription(this.selectedRssSubscription?.subscriptionId),
-          onSourceOperations: (): void =>
-            this.openRssManagementForSubscription(this.selectedRssSubscription?.subscriptionId),
-        });
+        this.rssSourceFeedContent();
       } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssEntryDetail' && this.selectedRssSubscription !== undefined &&
         this.selectedRssItem !== undefined) {
-        RssEntryDetailPage({
-          subscription: this.selectedRssSubscription,
-          item: this.selectedRssItem,
-          isTablet: deviceInfo.deviceType === 'tablet',
-          favoriteState: this.selectedRssFavoriteState,
-          onBack: (): void => this.returnFromRssEntryDetail(),
-          onViewSource: (): void => this.returnToRssSourceFeed(),
-          onFavoriteRequested: (favorite: boolean): void =>
-            this.onRssEntryFavoriteRequested(favorite),
-          onSourceSettings: (): void =>
-            this.openRssManagementForSubscription(this.selectedRssSubscription?.subscriptionId),
-          onOpenOriginal: (): void => this.onRssOpenOriginalRequested(),
-        });
+        this.rssEntryDetailContent();
       } else if (isReaderProductSurfaceEnabled('discover') && this.route === 'discover') {
         this.discoverPageContent();
       } else if (this.route === 'settings') {
@@ -1216,27 +1176,151 @@ struct Index {
   }
 
   @Builder
+  private rssPageContent() {
+    // Only a new navigation replaces this temporary child; updates keep its identity.
+    // V1 regular callbacks are constructor inputs and must capture the new entity.
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.rssPageSurface(generation, ReaderRuntimeOwner.current());
+    }, (identity: number): string => identity.toString());
+  }
+
+  @Builder
+  private rssPageSurface(generation: number, owner: ReaderRuntimeOwner) {
+    RssPage({
+      presentation: this.rssPresentation,
+      readFacts: this.rssFeedRead,
+      onRetryRead: (facts: OperationFacts<RssSubscription[]>): void => {
+        if (this.isCurrentRssPresentation(generation, owner, 'rss')) this.loadRss(generation, facts.generation);
+      },
+      isTablet: deviceInfo.deviceType === 'tablet',
+      activeMode: 'sources',
+      onBack: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rss')) this.returnToBookshelf(); },
+      onRefresh: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rss')) this.refreshRss(); },
+      onManage: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rss')) this.onRssManage(); },
+      onSelectSubscription: (id: string): void => { if (this.isCurrentRssPresentation(generation, owner, 'rss')) this.onRssSubscriptionSelected(id); },
+      onSelectItem: (subscriptionId: string, guid: string): void => { if (this.isCurrentRssPresentation(generation, owner, 'rss')) this.onRssItemSelected(subscriptionId, guid); },
+      onModeRequested: (mode: RssMode): void => { if (this.isCurrentRssPresentation(generation, owner, 'rss')) this.onRssModeRequested(mode); },
+      onSettingsRequested: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rss')) this.openSettings(); },
+      onDiscoverRequested: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rss')) this.openDiscover(); },
+    });
+  }
+
+  @Builder
+  private rssEditorContent() {
+    // Only a new navigation replaces this temporary child; updates keep its identity.
+    // V1 regular callbacks are constructor inputs and must capture the new entity.
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.rssEditorSurface(generation, ReaderRuntimeOwner.current());
+    }, (identity: number): string => identity.toString());
+  }
+
+  @Builder
+  private rssEditorSurface(generation: number, owner: ReaderRuntimeOwner) {
+    RssSubscriptionEditorPage({
+      snapshot: this.rssEditorSnapshot,
+      onReconcile: (expectedGeneration: number): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionEditor')) this.getRssEditorOrchestrator().reconcile(expectedGeneration); },
+      onRetryRead: (expectedGeneration: number): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionEditor')) this.getRssEditorOrchestrator().retryLoad(expectedGeneration); },
+      onBack: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionEditor')) this.returnToRssSubscriptionManagement(); },
+      onFeedUrlChanged: (value: string): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionEditor')) this.getRssEditorOrchestrator().updateFeedUrl(value); },
+      onTitleChanged: (value: string): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionEditor')) this.getRssEditorOrchestrator().updateTitle(value); },
+      onEnabledChanged: (value: boolean): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionEditor')) this.getRssEditorOrchestrator().updateEnabled(value); },
+      onEnabledCookieJarChanged: (value: boolean): void =>
+        { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionEditor')) this.getRssEditorOrchestrator().updateEnabledCookieJar(value); },
+      onSourceFieldChanged: (field: RssSourceTextField, value: string): void =>
+        { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionEditor')) this.getRssEditorOrchestrator().updateSourceField(field, value); },
+      onSave: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionEditor')) this.getRssEditorOrchestrator().save(); },
+    });
+  }
+
+  @Builder
+  private rssSourceFeedContent() {
+    // Only a new navigation replaces this temporary child; updates keep its identity.
+    // V1 regular callbacks are constructor inputs and must capture the new entity.
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.rssSourceFeedSurface(generation, ReaderRuntimeOwner.current(), this.selectedRssSubscription?.subscriptionId ?? '');
+    }, (identity: number): string => identity.toString());
+  }
+
+  @Builder
+  private rssSourceFeedSurface(generation: number, owner: ReaderRuntimeOwner, subscriptionId: string) {
+    RssSourceFeedPage({
+      subscription: this.selectedRssSubscription,
+      items: this.selectedRssItems,
+      operation: this.rssSourceOperation,
+      readFacts: this.rssSourceRead,
+      onReconcile: (operation: RssRouteOperationProjection<RssSourceSnapshot>): void => {
+        if (this.isCurrentRssPresentation(generation, owner, 'rssSourceFeed', subscriptionId) && operation.subscriptionId === subscriptionId) this.getRssOrchestrator().reconcileSourceOperation(operation, this.rssSourceBinding(generation, subscriptionId));
+      },
+      onRetryRead: (facts: OperationFacts<RssSourceSnapshot>): void => {
+        if (this.isCurrentRssPresentation(generation, owner, 'rssSourceFeed', subscriptionId)) this.getRssOrchestrator().retrySourceRead(subscriptionId, facts, this.rssSourceBinding(generation, subscriptionId));
+      },
+      isTablet: deviceInfo.deviceType === 'tablet',
+      onBack: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSourceFeed', subscriptionId)) this.returnFromRssSourceFeed(); },
+      onSelectItem: (item: RssItem): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSourceFeed', subscriptionId)) this.onRssSourceItemSelected(item); },
+      onRefresh: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSourceFeed', subscriptionId)) this.refreshRssSourceFeed(); },
+      onEditSource: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSourceFeed', subscriptionId)) this.openRssManagementForSubscription(subscriptionId); },
+      onSourceOperations: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSourceFeed', subscriptionId)) this.openRssManagementForSubscription(subscriptionId); },
+    });
+  }
+
+  @Builder
+  private rssEntryDetailContent() {
+    // Only a new navigation replaces this temporary child; updates keep its identity.
+    // V1 regular callbacks are constructor inputs and must capture the new entity.
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.rssEntryDetailSurface(generation, ReaderRuntimeOwner.current(), this.selectedRssSubscription?.subscriptionId ?? '', this.selectedRssItem?.guid ?? '');
+    }, (identity: number): string => identity.toString());
+  }
+
+  @Builder
+  private rssEntryDetailSurface(generation: number, owner: ReaderRuntimeOwner, subscriptionId: string, guid: string) {
+    RssEntryDetailPage({
+      subscription: this.selectedRssSubscription,
+      item: this.selectedRssItem,
+      operation: this.rssEntryOperation,
+      readFacts: this.rssEntryRead,
+      onReconcile: (operation: RssRouteOperationProjection<RssEntrySnapshot>): void => {
+        if (this.isCurrentRssPresentation(generation, owner, 'rssEntryDetail', subscriptionId, guid) && operation.subscriptionId === subscriptionId && operation.guid === guid) this.getRssOrchestrator().reconcileEntryOperation(operation, this.rssEntryBinding(generation, subscriptionId, guid));
+      },
+      onRetryRead: (facts: OperationFacts<RssEntrySnapshot>): void => {
+        if (this.isCurrentRssPresentation(generation, owner, 'rssEntryDetail', subscriptionId, guid)) this.getRssOrchestrator().retryEntryRead(subscriptionId, guid, facts, this.rssEntryBinding(generation, subscriptionId, guid));
+      },
+      isTablet: deviceInfo.deviceType === 'tablet',
+      favoriteState: this.selectedRssFavoriteState,
+      onBack: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssEntryDetail', subscriptionId, guid)) this.returnFromRssEntryDetail(); },
+      onViewSource: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssEntryDetail', subscriptionId, guid)) this.returnToRssSourceFeed(); },
+      onFavoriteRequested: (favorite: boolean): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssEntryDetail', subscriptionId, guid)) this.onRssEntryFavoriteRequested(favorite); },
+      onSourceSettings: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssEntryDetail', subscriptionId, guid)) this.openRssManagementForSubscription(subscriptionId); },
+      onOpenOriginal: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssEntryDetail', subscriptionId, guid)) this.onRssOpenOriginalRequested(); },
+    });
+  }
+
+  @Builder
   private rssSubscriptionManagementContent() {
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.rssSubscriptionManagementSurface(generation, ReaderRuntimeOwner.current());
+    }, (identity: number): string => identity.toString());
+  }
+
+  @Builder
+  private rssSubscriptionManagementSurface(generation: number, owner: ReaderRuntimeOwner) {
     RssSubscriptionManagementPage({
       items: this.rssSubscriptionManagementItems(),
       isTablet: deviceInfo.deviceType === 'tablet',
       focusedSubscriptionId: this.rssManagementFocusSubscriptionId,
       operation: this.rssManagementOperation,
       readFacts: this.rssManagementRead,
-      onBack: (): void => this.returnToRss(),
-      onAdd: (): void => this.onRssSubscriptionAddRequested(),
-      onImport: (): void => this.requestRssSourceImport(),
-      onExport: (): void => this.exportRssSources(),
-      onToggle: (id: string, enabled: boolean): void =>
-        this.getRssOrchestrator().toggleSubscription(id, enabled),
-      onViewArticles: (id: string): void => this.onRssManagementViewArticles(id),
-      onEditSource: (id: string): void => this.onRssSubscriptionEditRequested(id),
-      onRefresh: (id: string): void => this.getRssOrchestrator().refreshSubscription(id),
-      onDelete: (id: string): void => this.requestRssSubscriptionDelete(id),
-      onReconcile: (operation: RssManagementOperationProjection): void =>
-        this.getRssOrchestrator().reconcileManagementOperation(operation),
-      onRetryRead: (facts: OperationFacts<RssSubscription[]>): void =>
-        this.getRssOrchestrator().retryManagementRead(facts),
+      onBack: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.returnToRss(); },
+      onAdd: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.onRssSubscriptionAddRequested(); },
+      onImport: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.requestRssSourceImport(); },
+      onExport: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.exportRssSources(); },
+      onToggle: (id: string, enabled: boolean): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.getRssOrchestrator().toggleSubscription(id, enabled); },
+      onViewArticles: (id: string): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.onRssManagementViewArticles(id); },
+      onEditSource: (id: string): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.onRssSubscriptionEditRequested(id); },
+      onRefresh: (id: string): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.getRssOrchestrator().refreshSubscription(id); },
+      onDelete: (id: string): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.requestRssSubscriptionDelete(id); },
+      onReconcile: (operation: RssManagementOperationProjection): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.getRssOrchestrator().reconcileManagementOperation(operation); },
+      onRetryRead: (facts: OperationFacts<RssSubscription[]>): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.getRssOrchestrator().retryManagementRead(facts); },
     });
   }
 
@@ -1336,34 +1420,21 @@ struct Index {
     this.rssDetailReturnTarget = 'rss';
     this.rssSourceFeedReturnTarget = 'rss';
     this.rssManagementFocusSubscriptionId = '';
-    this.rssPresentation = this.feedPresentation([], []);
     this.route = 'rss';
     void this.loadRss(generation);
   }
 
-  private async loadRss(generation: number): Promise<void> {
-    const gateway = new RssGateway(ReaderRuntimeOwner.current());
-    try {
-      const subscriptions = await gateway.loadSubscriptions();
-      if (!this.isCurrentRoute(generation, 'rss')) {
-        return;
-      }
-      // A true "recent unread" list requires one Core-owned, globally ordered
-      // subscription-scoped query. Keep the slot empty until rss.entries.query
-      // is formally admitted; do not fan out per-source reads and present the
-      // concatenation as a global recent result.
-      this.rssPresentation = this.feedPresentation(subscriptions, []);
-    } catch (error) {
-      // Partial/Fatal error visuals remain blocked in Figma. Preserve the
-      // admitted RSS shell instead of presenting the obsolete full-page
-      // error capture as a new route.
-      if (this.isCurrentRoute(generation, 'rss')) {
-        this.rssPresentation = this.feedPresentation([], []);
-      }
-      const message = errorMessageOf(error);
-      hilog.error(DOMAIN, 'Reader',
-        'RSS subscription projection failed: %{private}s', message);
-    }
+  private loadRss(generation: number, expectedGeneration?: number): void {
+    if (!isReaderProductSurfaceEnabled('rss')) return;
+    const owner = ReaderRuntimeOwner.current();
+    const current = (): boolean => this.isCurrentRssPresentation(generation, owner, 'rss');
+    this.getRssOrchestrator().loadFeed(
+      (subscriptions: RssSubscription[]): void => { if (current()) this.rssPresentation = this.feedPresentation(subscriptions, []); },
+      (facts: OperationFacts<RssSubscription[]>): void => {
+        if (!current()) return;
+        this.rssFeedRead = facts;
+        if (facts.value !== undefined) this.rssPresentation = this.feedPresentation(facts.value, []);
+      }, current, expectedGeneration);
   }
 
   private openDiscover(): void {
@@ -2093,13 +2164,16 @@ struct Index {
   }
 
   private getRssEditorOrchestrator(): RssSubscriptionEditorOrchestrator {
-    if (this.rssEditorOrchestrator === undefined) {
+    if (this.rssEditorOrchestrator === undefined || !this.rssEditorOrchestrator.owns(ReaderRuntimeOwner.current())) {
+      const owner = ReaderRuntimeOwner.current();
       this.rssEditorOrchestrator = new RssSubscriptionEditorOrchestrator(
         (snapshot: RssSubscriptionEditorSnapshot): void => {
-          this.rssEditorSnapshot = snapshot;
+          if (this.isCurrentRssPresentation(this.rssEditorNavigationGeneration, owner, 'rssSubscriptionEditor')) this.rssEditorSnapshot = snapshot;
         },
-        (subscriptionId: string): void => this.finishRssSubscriptionEdit(subscriptionId),
-        (): boolean => this.route === 'rssSubscriptionEditor',
+        (subscriptionId: string): void => { if (this.isCurrentRssPresentation(this.rssEditorNavigationGeneration, owner, 'rssSubscriptionEditor')) this.finishRssSubscriptionEdit(subscriptionId); },
+        (): boolean => this.isCurrentRssPresentation(this.rssEditorNavigationGeneration, owner, 'rssSubscriptionEditor'),
+        owner,
+        (task: () => Promise<void>): Promise<void> => this.getRssOrchestrator().runSerialized(task),
       );
     }
     return this.rssEditorOrchestrator;
@@ -2128,6 +2202,8 @@ struct Index {
       return;
     }
     const generation = this.nextNavigationGeneration();
+    this.rssSourceOperation = undefined;
+    this.rssSourceRead = projectOperationFacts<RssSourceSnapshot>({ phase: 'idle' });
     this.selectedRssSubscription = subscription;
     this.selectedRssItems = [];
     this.selectedRssItem = undefined;
@@ -2141,7 +2217,7 @@ struct Index {
     if (!isReaderProductSurfaceEnabled('rss')) {
       return;
     }
-    this.nextNavigationGeneration();
+    this.rssEditorNavigationGeneration = this.nextNavigationGeneration();
     this.route = 'rssSubscriptionEditor';
     this.getRssEditorOrchestrator().openCreate();
   }
@@ -2155,7 +2231,7 @@ struct Index {
     )) {
       return;
     }
-    this.nextNavigationGeneration();
+    this.rssEditorNavigationGeneration = this.nextNavigationGeneration();
     this.route = 'rssSubscriptionEditor';
     this.getRssEditorOrchestrator().openEdit(subscriptionId);
   }
@@ -2293,20 +2369,50 @@ struct Index {
     this.getRssOrchestrator().removeSubscription(subscriptionId);
   }
 
+  private isCurrentRssPresentation(generation: number, owner: ReaderRuntimeOwner, route: ReaderRoute,
+    subscriptionId: string = '', guid: string = ''): boolean {
+    if (this.shelfReceiptRetired || !this.isCurrentRoute(generation, route)) return false;
+    try {
+      if (owner !== ReaderRuntimeOwner.current()) return false;
+      if (route === 'rssSourceFeed') return this.selectedRssSubscription?.subscriptionId === subscriptionId;
+      if (route === 'rssEntryDetail') return this.selectedRssItem?.subscriptionId === subscriptionId && this.selectedRssItem?.guid === guid;
+      return true;
+    } catch (_) { return false; }
+  }
+
+  private rssSourceBinding(generation: number, subscriptionId: string): RssRouteBinding<RssSourceSnapshot> {
+    const owner = ReaderRuntimeOwner.current();
+    const current = (): boolean => this.isCurrentRssPresentation(generation, owner, 'rssSourceFeed', subscriptionId);
+    return { current,
+      emit: (snapshot: RssSourceSnapshot): void => { if (current()) this.applyRssSourceSnapshot(snapshot); },
+      failed: (error: Error): void => { if (current()) hilog.error(DOMAIN, 'Reader', 'RSS source read failed: %{private}s', error.message); },
+      emitOperation: (operation: RssRouteOperationProjection<RssSourceSnapshot>): void => {
+        if (current() && operation.subscriptionId === subscriptionId) this.rssSourceOperation = operation;
+      },
+      emitRead: (facts: OperationFacts<RssSourceSnapshot>): void => { if (current()) this.rssSourceRead = facts; },
+    };
+  }
+
+  private rssEntryBinding(generation: number, subscriptionId: string, guid: string): RssRouteBinding<RssEntrySnapshot> {
+    const owner = ReaderRuntimeOwner.current();
+    const current = (): boolean => this.isCurrentRssPresentation(generation, owner, 'rssEntryDetail', subscriptionId, guid);
+    return { current,
+      emit: (snapshot: RssEntrySnapshot): void => { if (current()) this.applyRssEntrySnapshot(snapshot); },
+      failed: (error: Error): void => { if (current()) this.failRssEntryOperation('read', error); },
+      emitOperation: (operation: RssRouteOperationProjection<RssEntrySnapshot>): void => {
+        if (current() && operation.subscriptionId === subscriptionId && operation.guid === guid) this.rssEntryOperation = operation;
+      },
+      emitRead: (facts: OperationFacts<RssEntrySnapshot>): void => { if (current()) this.rssEntryRead = facts; },
+    };
+  }
+
   private loadRssSourceItems(generation: number, subscriptionId: string): void {
     if (!isReaderProductSurfaceEnabled('rss')) {
       return;
     }
-    const isCurrent = (): boolean => this.isCurrentRssSourceFeed(generation, subscriptionId);
-    this.getRssOrchestrator().loadSourceFeed(
-      subscriptionId,
-      (snapshot: RssSourceSnapshot): void => this.applyRssSourceSnapshot(snapshot),
-      (error: Error): void => {
-        hilog.error(DOMAIN, 'Reader',
-          'RSS SourceFeed cached read failed: %{private}s', error.message);
-      },
-      isCurrent,
-    );
+    const binding = this.rssSourceBinding(generation, subscriptionId);
+    this.getRssOrchestrator().loadSourceFeed(subscriptionId, binding.emit, binding.failed, binding.current,
+      binding.emitOperation, binding.emitRead);
   }
 
   private refreshRssSourceFeed(): void {
@@ -2318,20 +2424,13 @@ struct Index {
       return;
     }
     const generation = this.navigationGeneration;
-    const isCurrent = (): boolean => this.isCurrentRssSourceFeed(generation, subscriptionId);
-    this.getRssOrchestrator().refreshSourceFeed(
-      subscriptionId,
-      (snapshot: RssSourceSnapshot): void => this.applyRssSourceSnapshot(snapshot),
-      (error: Error): void => {
-        hilog.error(DOMAIN, 'Reader',
-          'RSS SourceFeed refresh failed; cached projection retained: %{private}s', error.message);
-      },
-      isCurrent,
-    );
+    const binding = this.rssSourceBinding(generation, subscriptionId);
+    this.getRssOrchestrator().refreshSourceFeed(subscriptionId, binding.emit, binding.failed, binding.current,
+      binding.emitOperation, binding.emitRead);
   }
 
   private isCurrentRssSourceFeed(generation: number, subscriptionId: string): boolean {
-    return this.isCurrentRoute(generation, 'rssSourceFeed') &&
+    return !this.shelfReceiptRetired && this.isCurrentRoute(generation, 'rssSourceFeed') &&
       this.selectedRssSubscription?.subscriptionId === subscriptionId;
   }
 
@@ -2388,6 +2487,8 @@ struct Index {
       return;
     }
     const generation = this.nextNavigationGeneration();
+    this.rssEntryOperation = undefined;
+    this.rssEntryRead = projectOperationFacts<RssEntrySnapshot>({ phase: 'idle' });
     this.selectedRssSubscription = subscription;
     this.selectedRssItem = item;
     this.selectedRssFavoriteState = 'loading';
@@ -2395,16 +2496,9 @@ struct Index {
     this.route = 'rssEntryDetail';
     const subscriptionId = item.subscriptionId;
     const guid = item.guid;
-    const isCurrent = (): boolean => this.isCurrentRssEntryDetail(
-      generation, subscriptionId, guid,
-    );
-    this.getRssOrchestrator().openEntry(
-      subscriptionId,
-      guid,
-      (snapshot: RssEntrySnapshot): void => this.applyRssEntrySnapshot(snapshot),
-      (error: Error): void => this.failRssEntryOperation('read', error),
-      isCurrent,
-    );
+    const binding = this.rssEntryBinding(generation, subscriptionId, guid);
+    this.getRssOrchestrator().openEntry(subscriptionId, guid, binding.emit, binding.failed, binding.current,
+      binding.emitOperation, binding.emitRead);
   }
 
   private onRssEntryFavoriteRequested(favorite: boolean): void {
@@ -2420,18 +2514,9 @@ struct Index {
     const generation = this.navigationGeneration;
     const subscriptionId = item.subscriptionId;
     const guid = item.guid;
-    this.selectedRssFavoriteState = 'loading';
-    const isCurrent = (): boolean => this.isCurrentRssEntryDetail(
-      generation, subscriptionId, guid,
-    );
-    this.getRssOrchestrator().setEntryFavorite(
-      subscriptionId,
-      guid,
-      favorite,
-      (snapshot: RssEntrySnapshot): void => this.applyRssEntrySnapshot(snapshot),
-      (error: Error): void => this.failRssEntryOperation('favorite', error),
-      isCurrent,
-    );
+    const binding = this.rssEntryBinding(generation, subscriptionId, guid);
+    this.getRssOrchestrator().setEntryFavorite(subscriptionId, guid, favorite, binding.emit, binding.failed, binding.current,
+      binding.emitOperation, binding.emitRead);
   }
 
   private isCurrentRssEntryDetail(
@@ -2439,7 +2524,7 @@ struct Index {
     subscriptionId: string,
     guid: string,
   ): boolean {
-    return this.isCurrentRoute(generation, 'rssEntryDetail') &&
+    return !this.shelfReceiptRetired && this.isCurrentRoute(generation, 'rssEntryDetail') &&
       this.selectedRssItem?.subscriptionId === subscriptionId &&
       this.selectedRssItem?.guid === guid;
   }
@@ -2486,6 +2571,8 @@ struct Index {
     }
     const subscriptionId = this.selectedRssSubscription.subscriptionId;
     const generation = this.nextNavigationGeneration();
+    this.rssSourceOperation = undefined;
+    this.rssSourceRead = projectOperationFacts<RssSourceSnapshot>({ phase: 'idle' });
     this.selectedRssItem = undefined;
     this.selectedRssFavoriteState = 'loading';
     this.rssDetailReturnTarget = 'rssSourceFeed';
