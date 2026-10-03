@@ -415,6 +415,7 @@
     "test-reader-system-status-typography.mjs",
     "test-reader-textnode-diagnostic.mjs",
     "test-reader-theme-host.mjs",
+    "test-reader-theme-operation-generation.mjs",
     "test-reader-theme-paper-origin.mjs",
     "test-reader-theme-runtime-handoff.mjs",
     "test-reader-theme-selection.mjs",
