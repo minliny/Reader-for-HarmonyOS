@@ -192,6 +192,23 @@ export class SourceToolsOrchestrator {
     });
   }
 
+  selectAll(): void {
+    this.setSelection(this.snapshot.sources.map((source: BookSource): string => source.sourceId));
+  }
+
+  toggleSelection(sourceId: string): void {
+    const selected = this.snapshot.selectedSourceIds;
+    this.setSelection(selected.indexOf(sourceId) >= 0 ?
+      selected.filter((candidate: string): boolean => candidate !== sourceId) : selected.concat([sourceId]));
+  }
+
+  consumeSelection(sourceIds: string[]): string[] {
+    if (this.snapshot.busy || this.pendingOperations > 0 || !this.isCurrentSession(this.session)) return [];
+    const selection = this.normalizeSourceIds(sourceIds);
+    this.setSelection([]);
+    return selection;
+  }
+
   exportSelected(sourceIds: string[]): void {
     const selection = this.normalizeSourceIds(sourceIds);
     if (selection.length === 0) {
