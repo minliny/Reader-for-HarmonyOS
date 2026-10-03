@@ -21,8 +21,8 @@ const sourceId = 'source';
 const seed = bookId => ({ sourceId, bookId, detailUrl: bookId, title: '目录示例', author: '作者', sourceVersion: 'v1' });
 const book = (bookId, extra={}) => ({ ...seed(bookId), addedAt: 1, readProgress: 3210, ...extra });
 function fixture(books=[book('/one')]) {
-  const calls=[], records=new Map(), catalogs=new Map(), modes=new Map(), prefetched=[], log=[];
-  let remoteCount=1, cacheGate, projectionGate, failProjection=false, installedOwner, active=0, peak=0, projections=0, fullScans=0, enabled=true;
+  const projectionAdmissions=[], calls=[], records=new Map(), catalogs=new Map(), modes=new Map(), prefetched=[], log=[];
+  let remoteCount=1, cacheGate, projectionGate, failProjection=false, installedOwner, active=0, peak=0, projections=0, fullScans=0, enabled=true, diagnosticThrows=false;
   const runtime = new BookAcquisitionCoordinator(async (method, params, options) => {
     calls.push({method,params});
     const id=params.bookId ?? params.book?.bookId ?? params.bookUrl;
@@ -55,18 +55,18 @@ function fixture(books=[book('/one')]) {
   });
   const owner={bookAcquisitions:()=>runtime,request:(...args)=>runtime.request(...args)};
   installedOwner=owner;
-  class Flow { async load(){projections++;if(projectionGate)await projectionGate.promise;if(failProjection)throw Error('read unavailable');return {books,continueReading:undefined};} async loadAll(current){fullScans++;await pause();return current()?{books,total:books.length,projectionRevision:'r'}:undefined;} }
-  const Index=productionMotionMethods(indexFile,['canRunBookshelfBackgroundRefresh','scheduleBookshelfBackgroundRefresh','refreshBookshelfCatalogBatch','startManualBookshelfUpdate','reconcileBookshelfCatalogProjection','shelfRecovery','emptyShelfRecovery'],{
+  class Flow { async load(current){projectionAdmissions.push(current);if(!current())throw Error('retired before Core admission');projections++;if(projectionGate)await projectionGate.promise;if(failProjection)throw Error('read unavailable');return {books,continueReading:undefined};} async loadAll(current){fullScans++;await pause();return current()?{books,total:books.length,projectionRevision:'r'}:undefined;} }
+  const Index=productionMotionMethods(indexFile,['canRunBookshelfBackgroundRefresh','scheduleBookshelfBackgroundRefresh','refreshBookshelfCatalogBatch','startManualBookshelfUpdate','reconcileBookshelfCatalogProjection','shelfRecovery','shelfReadRecovery','emptyShelfRecovery'],{
     ReaderRuntimeOwner:{current:()=>{if(!installedOwner)throw Error('runtime unavailable');return installedOwner;}},RemoteReadingFlowGateway,projectOperationFacts,readerRecoveryView,
     BookshelfFlowGateway:Flow,
     LOCAL_SOURCE_ID:'local',CATALOG_REFRESH_INTERVAL_MS:600000,DOMAIN:0,
-    hilog:{info:(...args)=>log.push(args),warn:(...args)=>log.push(args)}
+    hilog:{info:(...args)=>log.push(args),warn:(...args)=>{if(diagnosticThrows)throw Error('diagnostic unavailable');log.push(args);}}
   });
   const page=Object.assign(new Index(),{mountedRuntimeOwner:owner,bookshelfHost:bookshelfCatalogHost(Flow,()=>installedOwner),shelfReceiptRetired:false,shelfProjectionRevision:'',navigationGeneration:1,bookshelfCatalogEpoch:0,bookshelfBackgroundEpoch:0,route:'bookshelf',shelfBooks:books,settingsSnapshot:{autoCheckUpdate:true},
     applicationSettingsSnapshot:{autoCheckUpdate:true},searchAppForeground:true,readingSessionActive:false,
     bookshelfUpdateRunning:false,bookshelfBackgroundRefreshRunning:false,bookshelfUpdateDone:0,bookshelfUpdateTotal:0,
     bookshelfLoadGeneration:0,prefetchReadingWindow:async session=>prefetched.push(session),applyBookshelfState(){}});
-  return {runtime,owner,page,calls,records,catalogs,modes,prefetched,log,remoteCount:n=>{remoteCount=n;},
+  return {runtime,owner,page,calls,projectionAdmissions,records,catalogs,modes,prefetched,log,remoteCount:n=>{remoteCount=n;}, diagnosticThrows:v=>{diagnosticThrows=v;},
     cacheGate:g=>{cacheGate=g;}, projectionGate:g=>{projectionGate=g;}, failProjection:v=>{failProjection=v;}, setOwner:v=>{installedOwner=v;},peak:()=>peak,projections:()=>projections,fullScans:()=>fullScans};
 }
 const ets = file => readFileSync(new URL('../entry/src/main/ets/' + file, import.meta.url), 'utf8');
@@ -79,7 +79,7 @@ function actualRecovery(f) {
  for(const member of shellSource.matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g))sdkRequire(sdkRoot+'/lib/component_map.js').CUSTOM_BUILDER_METHOD.add(member[1]);
  const parent=createReaderBuilderProbe(ets('pages/Index.ets'),['bookshelfShellContent'],{BookshelfShell:Child},
   {childSources:{BookshelfShell:shellSource}}).owner;
- Object.assign(parent,f.page,{shelfRecovery:()=>f.page.shelfRecovery(),isBookshelfVisualAdmitted:true,
+ Object.assign(parent,f.page,{shelfRecovery:()=>f.page.shelfRecovery(),shelfReadRecovery:()=>f.page.shelfReadRecovery(),isBookshelfVisualAdmitted:true,
   reconcileBookshelfCatalogProjection:token=>f.page.reconcileBookshelfCatalogProjection(token),
   reconcileShelfWrite:()=>assert.fail('catalog notice must not replay a shelf write')});
  parent.bookshelfShellContent();const props=[...parent.children.values()][0].params;
@@ -272,6 +272,34 @@ await check('actual Host -> Index -> SDK Shell/Notice/physical retry separates p
   const partial=actualRecovery(f);assert.match(partial.notice.view.message,/成功 1\/2，失败 1/);assert.equal(partial.action,undefined);
   // Real old native recovery callback cannot force a new catalog mutation.
   f.page.navigationGeneration++;const before=f.projections();shown.action.onClick();await pause();assert.equal(f.projections(),before);
+ }finally{f.runtime.close();}
+});
+await check('target-read rejection is the only phase allowed to say catalog checks never started',async()=>{
+ const f=fixture();try{f.page.bookshelfHost.catalogTargets=async()=>{throw Error('target read unavailable');};
+ f.page.startManualBookshelfUpdate();await until(()=>!f.page.bookshelfUpdateRunning);
+ assert.equal(f.page.bookshelfCatalogFacts.fact,'failed');assert.match(actualRecovery(f).notice.view.message,/未启动检查/);
+ assert.equal(f.calls.filter(c=>c.method==='book.toc').length,0);assert.equal(f.projections(),0);
+ }finally{f.runtime.close();}
+});
+await check('progress publication throws do not erase real catalog ACKs or abort remaining books',async()=>{
+ const f=fixture([book('/a'),book('/b'),book('/c')]);try{
+ f.modes.set('/b','error');Object.defineProperty(f.page,'bookshelfUpdateDone',{get:()=>0,set:value=>{if(value>0)throw Error('progress render unavailable');},configurable:true});
+ f.page.startManualBookshelfUpdate();await until(()=>!f.page.bookshelfUpdateRunning);
+ assert.equal(f.page.bookshelfCatalogFacts.value.succeeded,2);assert.equal(f.page.bookshelfCatalogFacts.value.failed,1);
+ assert.equal(f.calls.filter(c=>c.method==='book.toc').length,3);assert.equal(f.projections(),1);
+ assert.match(actualRecovery(f).notice.view.message,/成功 2\/3，失败 1/);assert.doesNotMatch(f.page.shelfRecovery().message,/未启动/);
+ assert.ok(f.projectionAdmissions.every(admit=>typeof admit==='function'&&admit()));
+ }finally{f.runtime.close();}
+});
+await check('executed work and readback diagnostic failures preserve progress and cannot claim no dispatch',async()=>{
+ const f=fixture();try{f.failProjection(true);f.diagnosticThrows(true);const batch=f.page.refreshBookshelfCatalogBatch.bind(f.page);
+ f.page.refreshBookshelfCatalogBatch=async(...args)=>{await batch(...args);throw Error('final publication unavailable');};
+ f.page.startManualBookshelfUpdate();await until(()=>!f.page.bookshelfUpdateRunning);
+ assert.equal(f.page.bookshelfCatalogFacts.fact,'partial');assert.equal(f.page.bookshelfCatalogFacts.value.succeeded,1);
+ assert.match(actualRecovery(f).notice.view.message,/已确认成功 1/);assert.doesNotMatch(f.page.shelfRecovery().message,/未启动/);
+ const writes=f.calls.filter(c=>c.method==='book.toc').length;f.failProjection(false);
+ await f.page.reconcileBookshelfCatalogProjection(f.page.bookshelfCatalogFacts.generation);
+ assert.equal(f.calls.filter(c=>c.method==='book.toc').length,writes);assert.equal(f.page.bookshelfCatalogFacts.fact,'current');
  }finally{f.runtime.close();}
 });
 for(const r of results) console.log(JSON.stringify(r));

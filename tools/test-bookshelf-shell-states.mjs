@@ -54,6 +54,7 @@ function indexFixture(state, source = 'online') {
     appThemeScheme: 'day', settingsSnapshot: { reduceMotion: false }, shelfProjectionRevision: '',
     shelfBooks: [{ sourceId: source }], readingSessionActive: false, readerOwnsWindowEdges: () => false,
     shelfRecovery: () => ({message:'',visible:false,canRetry:false,generation:0}),
+    shelfReadRecovery: () => ({message:'',visible:false,canRetry:false,generation:0}),
     appContentTopInset: () => 39, hasVisibleImportDialog: () => false });
   owner.calls = [];
   for (const method of ['openImportDialog','openSearch','openBookshelfSettings','openBookshelfMultiSelect',

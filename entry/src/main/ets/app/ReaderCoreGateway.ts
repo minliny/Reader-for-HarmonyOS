@@ -156,13 +156,13 @@ export class ReaderCoreGateway {
     return this.runtimeOwner.supportsCoreCapability?.('bookshelf.pageProjection.v1') === true;
   }
 
-  async loadContinueReading(): Promise<ShelfBook | undefined> {
+  async loadContinueReading(isCurrent?: () => boolean): Promise<ShelfBook | undefined> {
     const state = await this.loadBookshelf({
       hasReadingProgress: true,
       sortBy: 'lastReadAt',
       sortDirection: 'descending',
       limit: 1,
-    });
+    }, isCurrent);
     return state.books.length === 0 ? undefined : state.books[0];
   }
 

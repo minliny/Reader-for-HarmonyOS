@@ -567,6 +567,10 @@ struct Index {
    * session unrecoverable); a successful load always clears it.
    */
   @State private bookshelfLoadFailed: boolean = false;
+  @State private bookshelfReadFacts: OperationFacts<BookshelfDataState> | undefined = undefined;
+  private bookshelfReadValue: BookshelfDataState | undefined = undefined;
+  private bookshelfReadOwner: ReaderRuntimeOwner | undefined = undefined;
+  private bookshelfReadNavigation: number = 0;
   private bookshelfBackgroundRefreshRunning: boolean = false;
   /** The automatic catalog scan can also supply the idle preparation's identities for this shelf revision. */
   private bookshelfBackgroundSeeds: BookshelfBackgroundSeeds | undefined;
@@ -916,6 +920,8 @@ struct Index {
       },
       populated: this.isBookshelfVisualAdmitted,
       recovery: this.shelfRecovery(),
+      readRecovery: this.shelfReadRecovery(),
+      onRetryRead: (generation: number): void => this.retryBookshelfRead(generation),
       onReconcile: (generation: number): void => {
         if (generation < 0) void this.reconcileBookshelfCatalogProjection(generation);
         else void this.reconcileShelfWrite(generation);
@@ -6553,65 +6559,55 @@ struct Index {
   }
 
   private refreshBookshelf(): void {
+    const owner = this.mountedRuntimeOwner;
+    if (!this.isCurrentRuntime(owner) || owner === undefined || this.shelfReceiptRetired) return;
     this.shelfPageLoading = false;
-    const loadGeneration = this.bookshelfLoadGeneration + 1;
-    this.bookshelfLoadGeneration = loadGeneration;
-    const gateway = new BookshelfFlowGateway(ReaderRuntimeOwner.current(), this.shelfFilter());
+    const generation = ++this.bookshelfLoadGeneration, navigation = this.navigationGeneration, route = this.route;
+    this.bookshelfReadOwner = owner;
+    this.bookshelfReadNavigation = navigation;
+    const current = (): boolean => generation === this.bookshelfLoadGeneration && this.isCurrentRuntime(owner) &&
+      navigation === this.navigationGeneration && route === this.route && !this.shelfReceiptRetired;
     const startedAt = this.beginStartupStage?.('shelf.query') ?? -1;
-    gateway.load()
-      .then((state: BookshelfDataState): void => {
-        if (loadGeneration !== this.bookshelfLoadGeneration) {
-          this.endStartupStage?.('shelf.query', startedAt, 'superseded');
-          return;
+    void this.bookshelfHost.readShelf(owner, this.shelfFilter(), generation, current, this.bookshelfReadValue,
+      this.route === 'bookshelf' && !this.isBookshelfVisualAdmitted && !this.isCoreShelfEmpty,
+      (facts: OperationFacts<BookshelfDataState>): void => {
+        if (!current()) return;
+        this.bookshelfReadFacts = facts;
+        this.bookshelfLoadFailed = facts.fact === 'failed';
+        if ((facts.fact === 'current' || facts.fact === 'empty') && facts.value !== undefined) {
+          this.endStartupStage?.('shelf.query', startedAt, 'ready');
+          if (this.isBookshelfVisualAdmitted && facts.value.kind !== 'populated') {
+            // Preserve the established refresh-only hysteresis, while exposing
+            // both the empty read and retained content rather than silent success.
+            this.bookshelfReadFacts = projectOperationFacts({ phase: 'partial', value: this.bookshelfReadValue,
+              generation, canRetry: true, message: '当前读回为空，暂保留原书架，可重新读取以核对' });
+          } else this.applyBookshelfState(facts.value, true);
+        } else if (facts.fact === 'failed' || facts.fact === 'refreshFailed') {
+          this.endStartupStage?.('shelf.query', startedAt, 'failed');
         }
-        this.endStartupStage?.('shelf.query', startedAt, 'ready');
-        this.bookshelfLoadFailed = false;
-        this.applyBookshelfState(state, true);
-      })
-      .catch((error: Error): void => {
-        this.endStartupStage?.('shelf.query', startedAt, 'failed');
-        if (loadGeneration !== this.bookshelfLoadGeneration) {
-          return;
+      }).then((result): void => {
+        if (current() && result?.presentationFailed) {
+          this.bookshelfReadFacts = projectOperationFacts({ phase: 'partial', value: this.bookshelfReadValue,
+            generation, canRetry: true, message: '书架读取已完成，显示更新未完成，请重新读取' });
+          this.bookshelfLoadFailed = !this.isBookshelfVisualAdmitted;
+          try { hilog.warn(DOMAIN, 'Reader', 'Bookshelf read completed; projection feedback failed'); }
+          catch (_diagnostic) { /* A diagnostic cannot rewrite the confirmed Core read. */ }
         }
-        hilog.error(DOMAIN, 'Reader', 'Bookshelf state failed to refresh: %{private}s', error.message);
-        this.onBookshelfLoadFailed(error, false);
       });
   }
 
-  /**
-   * A failed first load used to leave the session on a blank unrecoverable
-   * home page: the error was only logged and nothing re-read the shelf. The
-   * blank home retries once automatically; if that also fails, a persistent
-   * user-facing retry entry stays until a load succeeds.
-   */
-  private onBookshelfLoadFailed(error: Error, isRetry: boolean): void {
-    if (!isRetry && this.route === 'bookshelf' && !this.isBookshelfVisualAdmitted &&
-      !this.isCoreShelfEmpty) {
-      // First failure on the un-admitted blank home: one automatic retry.
-      const retryGeneration = this.bookshelfLoadGeneration + 1;
-      this.bookshelfLoadGeneration = retryGeneration;
-      const gateway = new BookshelfFlowGateway(ReaderRuntimeOwner.current(), this.shelfFilter());
-      gateway.load()
-        .then((state: BookshelfDataState): void => {
-          if (retryGeneration !== this.bookshelfLoadGeneration) {
-            return;
-          }
-          this.bookshelfLoadFailed = false;
-          // Single-arg call: the auto retry only runs on the un-admitted blank
-          // home, so the refresh-only hysteresis branch is unreachable anyway.
-          this.applyBookshelfState(state);
-        })
-        .catch((retryError: Error): void => {
-          if (retryGeneration !== this.bookshelfLoadGeneration) {
-            return;
-          }
-          hilog.error(DOMAIN, 'Reader',
-            'Bookshelf auto retry failed: %{private}s', retryError.message);
-          this.onBookshelfLoadFailed(retryError, true);
-        });
-      return;
-    }
-    this.bookshelfLoadFailed = true;
+  private shelfReadRecovery(): ReaderRecoveryView {
+    if (!this.isCurrentRuntime(this.bookshelfReadOwner) || !this.isBookshelfVisualAdmitted ||
+      this.bookshelfReadNavigation !== this.navigationGeneration || this.route !== 'bookshelf' || this.shelfReceiptRetired ||
+      (this.bookshelfReadFacts?.fact !== 'refreshFailed' && this.bookshelfReadFacts?.fact !== 'partial')) return this.emptyShelfRecovery();
+    return readerRecoveryView(undefined, this.bookshelfReadFacts);
+  }
+
+  private retryBookshelfRead(generation: number): void {
+    if (generation !== this.bookshelfReadFacts?.generation || generation !== this.bookshelfLoadGeneration ||
+      this.bookshelfReadFacts?.canRetry !== true || !this.isCurrentRuntime(this.bookshelfReadOwner) ||
+      this.bookshelfReadNavigation !== this.navigationGeneration || this.route !== 'bookshelf' || this.shelfReceiptRetired) return;
+    this.refreshBookshelf();
   }
 
   private isKnownDetailChapter(chapterIndex: number | undefined): boolean {
@@ -6664,6 +6660,11 @@ struct Index {
       // projection mounted instead of unmounting the whole route (flicker).
       // Genuine user mutations (removal/import) always reset admission.
       return;
+    }
+    this.bookshelfReadValue = state;
+    if (this.bookshelfReadFacts?.fact === 'refreshFailed' || this.bookshelfReadFacts?.fact === 'partial') {
+      this.bookshelfReadFacts = projectOperationFacts({ phase: state.kind === 'empty' ? 'empty' : 'succeeded',
+        value: state, generation: this.bookshelfLoadGeneration, canRetry: false });
     }
     this.isCoreShelfEmpty = state.kind === 'empty';
     this.shelfProjectionRevision = state.shelf.projectionRevision ?? '';
@@ -6837,7 +6838,7 @@ struct Index {
       (value: BookshelfCatalogProgress): void => { if (current()) onProgress?.(value); });
     if (!current() || progress.cancelled || progress.total === 0) return progress;
     try {
-      const state = await new BookshelfFlowGateway(owner, this.shelfFilter()).load();
+      const state = await this.bookshelfHost.reloadCatalogProjection(owner, this.shelfFilter(), current);
       if (!current()) return progress;
       this.bookshelfLoadGeneration += 1;
       this.applyBookshelfState(state, true);
@@ -6846,7 +6847,8 @@ struct Index {
     } catch (error) {
       if (current()) {
         if (!automatic) this.bookshelfCatalogReadbackFailed = true;
-        hilog.warn(DOMAIN, 'Reader', 'Bookshelf update projection failed: %{private}s', (error as Error).message);
+        try { hilog.warn(DOMAIN, 'Reader', 'Bookshelf update projection failed: %{private}s', (error as Error).message); }
+        catch (_diagnostic) { /* Diagnostics cannot replace successful catalog facts. */ }
       }
     }
     return progress;
@@ -6865,13 +6867,18 @@ struct Index {
     this.bookshelfUpdateRunning = true;
     this.bookshelfUpdateDone = 0;
     this.bookshelfUpdateTotal = 0;
+    let executionStarted = false;
+    let lastProgress: BookshelfCatalogProgress | undefined;
     void this.bookshelfHost.catalogTargets(owner, this.shelfBooks, this.shelfProjectionRevision ?? '', false, current)
       .then(async (shelf: BookshelfState | undefined): Promise<void> => {
         if (shelf === undefined || !current()) return;
+        executionStarted = true;
         const progress = await this.refreshBookshelfCatalogBatch(shelf.books,
           (value: BookshelfCatalogProgress): void => {
+            lastProgress = value;
             this.bookshelfUpdateDone = value.attempted; this.bookshelfUpdateTotal = value.total;
           }, false, current, undefined, owner);
+        lastProgress = progress;
         if (!current()) return;
         const message = `检查完成：成功 ${progress.succeeded}/${progress.total}，失败 ${progress.failed}` +
           (progress.preparationFailed > 0 ? `；${progress.preparationFailed} 本章节预加载未完成` : '') +
@@ -6882,8 +6889,10 @@ struct Index {
           canRetry: this.bookshelfCatalogReadbackFailed, generation: -epoch, message });
       }).catch((error: Error): void => {
         if (!current()) return;
-        this.bookshelfCatalogFacts = projectOperationFacts({ phase: 'failed', generation: -epoch,
-          message: `检查目标读取失败，未启动检查：${error.message}`, canRetry: false });
+        this.bookshelfCatalogFacts = projectOperationFacts({ phase: executionStarted ? 'partial' : 'failed',
+          generation: -epoch, value: lastProgress, canRetry: executionStarted && this.bookshelfCatalogReadbackFailed,
+          message: executionStarted ? `检查反馈未完成；已确认成功 ${lastProgress?.succeeded ?? 0} 本，已知失败 ${lastProgress?.failed ?? 0} 本：${error.message}` :
+            `检查目标读取失败，未启动检查：${error.message}` });
       }).finally((): void => { if (current()) this.bookshelfUpdateRunning = false; });
   }
 
@@ -6898,7 +6907,7 @@ struct Index {
     this.bookshelfCatalogFacts = projectOperationFacts({ phase: 'refreshing', value: facts.value,
       generation, canRetry: false, message: '正在刷新书架…' });
     try {
-      const state = await new BookshelfFlowGateway(owner, this.shelfFilter()).load();
+      const state = await this.bookshelfHost.reloadCatalogProjection(owner, this.shelfFilter(), current);
       if (!current()) return;
       this.bookshelfLoadGeneration += 1;
       this.applyBookshelfState(state, true);

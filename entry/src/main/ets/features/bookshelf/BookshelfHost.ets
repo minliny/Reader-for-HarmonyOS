@@ -4,6 +4,9 @@ import type { BookshelfState } from '../../app/ReaderCoreGateway';
 import { BookshelfFlowGateway } from './BookshelfFlowGateway';
 import { BookshelfCatalogUpdate, type BookshelfCatalogProgress } from './BookshelfCatalogUpdate';
 import type { RemoteReadingSession } from '../reading/RemoteReadingContract';
+import { BookshelfReadOwner, type BookshelfReadResult } from './BookshelfReadOwner';
+import type { BookshelfDataState, BookshelfFilter } from './BookshelfFlowGateway';
+import type { OperationFacts } from '../../app/ReaderOperationFacts';
 import {
   BookshelfManagementGateway,
 } from './BookshelfManagementGateway';
@@ -20,8 +23,8 @@ export {
 /**
  * Entry-owned bookshelf domain boundary. Index keeps navigation, temporary
  * presentation leases and ArkUI snapshots. This host owns management IO and
- * catalog target scans/sweeps through existing Core/acquisition boundaries.
- * Page reads remain BookshelfFlowGateway; a catalog operation always carries
+ * page read/recovery and catalog scans through existing Core/acquisition boundaries.
+ * Page reads use BookshelfFlowGateway; every operation always carries
  * the Runtime and current predicate captured by its originating presentation.
  */
 export class BookshelfHost {
@@ -29,6 +32,15 @@ export class BookshelfHost {
   private readonly emitManagementSnapshot: (snapshot: BookshelfManagementSnapshot) => void;
   private readonly isManagementCurrent: () => boolean;
   private readonly owner: () => ReaderRuntimeOwner;
+
+  readShelf(owner: ReaderRuntimeOwner, filter: BookshelfFilter, generation: number, current: () => boolean,
+    retained: BookshelfDataState | undefined, retryBlank: boolean,
+    emit: (facts: OperationFacts<BookshelfDataState>) => void): Promise<BookshelfReadResult | undefined> {
+    // Filter and Runtime are per-read snapshots. No late retry may reacquire
+    // current() or accidentally query the replacement Runtime.
+    return new BookshelfReadOwner(owner, (live: () => boolean): Promise<BookshelfDataState> =>
+      new BookshelfFlowGateway(owner, filter).load(live)).read(generation, current, retained, retryBlank, emit);
+  }
 
   constructor(
     emitManagementSnapshot: (snapshot: BookshelfManagementSnapshot) => void,
@@ -81,6 +93,11 @@ export class BookshelfHost {
     prefetch: (session: RemoteReadingSession, current: () => boolean) => Promise<void>,
     emit: (progress: BookshelfCatalogProgress) => void): Promise<BookshelfCatalogProgress> {
     return new BookshelfCatalogUpdate(owner).run(books, automatic, intervalMs, current, prefetch, emit);
+  }
+
+  reloadCatalogProjection(owner: ReaderRuntimeOwner, filter: BookshelfFilter,
+    current: () => boolean): Promise<BookshelfDataState> {
+    return new BookshelfFlowGateway(owner, filter).load(current);
   }
 
   private getManagementOrchestrator(): BookshelfManagementOrchestrator {

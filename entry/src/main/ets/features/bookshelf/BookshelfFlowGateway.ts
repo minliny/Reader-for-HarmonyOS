@@ -93,13 +93,13 @@ export class BookshelfFlowGateway {
     this.localImport = new LocalBookImportGateway(runtimeOwner);
   }
 
-  async load(): Promise<BookshelfDataState> {
+  async load(isCurrent?: () => boolean): Promise<BookshelfDataState> {
     if (!this.bookshelf.supportsShelfPages()) {
-      const shelf = await this.bookshelf.loadBookshelf({ sortBy: 'lastReadAt', sortDirection: 'descending' });
+      const shelf = await this.bookshelf.loadBookshelf({ sortBy: 'lastReadAt', sortDirection: 'descending' }, isCurrent);
       return this.classify(shelf, shelf.books.find((book: ShelfBook): boolean => book.currentChapterIndex !== undefined));
     }
     if (this.filter.readingState === 'all' && this.filter.sourceKind === 'all') {
-      const shelf = await this.loadPage(0);
+      const shelf = await this.loadPage(0, undefined, false, isCurrent);
       // Both Core projections use lastReadAt descending and the same
       // composite-key tie break. readingPosition proves a progress record;
       // currentChapterIndex alone can also come from legacy catalog metadata.
@@ -115,11 +115,11 @@ export class BookshelfFlowGateway {
       }
       // A truncated prefix or ambiguous catalog-only position cannot establish
       // the global record. Retain its summary instead of silently dropping it.
-      return this.classify(shelf, await this.bookshelf.loadContinueReading());
+      return this.classify(shelf, await this.bookshelf.loadContinueReading(isCurrent));
     }
     // A filtered page cannot establish the global continue-reading book.
     // Keep both requests concurrent and publish their original stable header.
-    const results = await Promise.all([this.loadPage(0), this.bookshelf.loadContinueReading()]);
+    const results = await Promise.all([this.loadPage(0, undefined, false, isCurrent), this.bookshelf.loadContinueReading(isCurrent)]);
     return this.classify(results[0], results[1]);
   }
 

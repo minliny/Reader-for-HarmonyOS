@@ -18,6 +18,8 @@ export struct BookshelfShell {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  @Prop readRecovery: ReaderRecoveryView | undefined = undefined;
+  onRetryRead: (generation: number) => void = (_generation: number): void => {};
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   @Prop @Watch('onNavigationGenerationChanged') navigationGeneration: number = 0;
   @Prop populated: boolean = false;
@@ -124,6 +126,12 @@ export struct BookshelfShell {
           Column() {
             ReaderRecoveryNotice({ view: this.recovery,
               onReconcile: (generation: number): void => this.onReconcile(generation) });
+            Stack() { this.content(); }.width('100%').layoutWeight(1);
+          }.width('100%').height('100%').padding({ top: READER_FLOATING_TOP_BAR_HEIGHT });
+        } else if (this.readRecovery?.visible === true) {
+          Column() {
+            ReaderRecoveryNotice({ view: this.readRecovery, actionLabel: '刷新列表',
+              onReconcile: (generation: number): void => this.onRetryRead(generation) });
             Stack() { this.content(); }.width('100%').layoutWeight(1);
           }.width('100%').height('100%').padding({ top: READER_FLOATING_TOP_BAR_HEIGHT });
         } else {

@@ -28,7 +28,7 @@ export class BookshelfCatalogUpdate {
     const progress: BookshelfCatalogProgress = { total: targets.length, attempted: 0, succeeded: 0,
       failed: 0, preparationFailed: 0, cancelled: false };
     if (!current()) { progress.cancelled = true; return progress; }
-    emit({ ...progress });
+    try { emit({ ...progress }); } catch (_error) { /* Presentation cannot erase accepted catalog facts. */ }
     // Preserve the established two-book limit; do not enqueue the full shelf.
     for (let start = 0; start < targets.length; start += 2) {
       if (!current()) { progress.cancelled = true; return progress; }
@@ -43,7 +43,7 @@ export class BookshelfCatalogUpdate {
         progress.cancelled = progress.cancelled || outcome.cancelled;
       }
       if (!current()) { progress.cancelled = true; return progress; }
-      emit({ ...progress });
+      try { emit({ ...progress }); } catch (_error) { /* Presentation cannot erase accepted catalog facts. */ }
     }
     return progress;
   }
