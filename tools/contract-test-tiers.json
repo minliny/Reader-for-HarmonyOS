@@ -195,7 +195,8 @@
     "test-transient-transport-acquisition.mjs",
     "test-conventional-typography-registry.mjs",
     "test-harmony-tts-background-lease.mjs",
-    "test-harmony-tts-media-retirement.mjs"
+    "test-harmony-tts-media-retirement.mjs",
+    "test-reader-native-alert-owner.mjs"
   ],
   "integration": [
     "test-action-menu-surface.mjs",
@@ -466,6 +467,7 @@
     "test-reader-dynamic-chrome-typography.mjs",
     "test-reader-typography-coverage.mjs",
     "test-bookshelf-write-receipt-consumers.mjs",
-    "test-discover-operation-consumers.mjs"
+    "test-discover-operation-consumers.mjs",
+    "test-reader-native-alert-consumers.mjs"
   ]
 }

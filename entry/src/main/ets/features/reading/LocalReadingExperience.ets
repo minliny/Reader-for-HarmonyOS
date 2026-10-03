@@ -1,5 +1,6 @@
 import { ReaderProgressProducerHost, type ReaderProgressProducerIntent, type ReaderContinuousProgressDependencies } from './ReaderProgressProducerHost';
 import { TYPE_READER_READING_FAILURE_TITLE, TYPE_READER_READING_FAILURE_DETAIL } from '../common/ReaderTypography';
+import { ReaderNativeAlertOwner, type ReaderNativeAlertSpecId, type ReaderNativeAlertOptions, type ReaderNativeAlertLease } from '../../app/ReaderNativeAlertOwner';
 import { ReaderParagraphLayoutOwner } from './ReaderParagraphLayoutOwner';
 import { ReaderPhysicalPaginationOwner } from './ReaderPhysicalPaginationOwner';
 import type { JsonObject } from '@reader/core-harmony';
@@ -1866,8 +1867,18 @@ export struct ReadingExperience {
     if (settings !== undefined) this.readerSettingsSnapshot = settings;
   }
 
+  private readonly nativeAlertOwner: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
+
+  private showReaderAlert(spec: ReaderNativeAlertSpecId, options: ReaderNativeAlertOptions): ReaderNativeAlertLease {
+    const lifecycle = this.lifecycleToken;
+    const selection = this.chapterSelectionToken;
+    return this.nativeAlertOwner.present((native: ReaderNativeAlertOptions): void => this.getUIContext().showAlertDialog(native),
+      spec, options, (): boolean => this.isMountedToken(lifecycle) && this.isSelectionCurrent(selection) && this.isReaderIdentityCurrent?.() !== false);
+  }
+
   aboutToDisappear(): void {
     this.progressProducers.retireContinuous();
+    this.nativeAlertOwner.retire();
     this.finishSessionCapsuleMorph();
     this.bookmarkRollbackGeneration += 1;
     this.bookmarkMutationGeneration += 1;
@@ -3929,6 +3940,7 @@ export struct ReadingExperience {
     const lifecycleToken = this.lifecycleToken;
     // Bump the selection token so a slower, earlier chapter load can never
     // overwrite a later selection when several rows are tapped in a row.
+    this.nativeAlertOwner.retire();
     this.chapterSelectionToken += 1;
     const selectionToken = this.chapterSelectionToken;
     this.resetForChapterSelection();
@@ -3952,6 +3964,7 @@ export struct ReadingExperience {
       return;
     }
     if (this.sessionGateway === undefined) {
+      this.nativeAlertOwner.retire();
       this.chapterSelectionToken += 1;
       this.resetForChapterSelection();
       this.armFirstPageReadyDeadline(this.lifecycleToken, this.chapterSelectionToken);
@@ -4210,13 +4223,12 @@ export struct ReadingExperience {
   }
 
   private requestCachedChapterRefresh(error: RemoteChapterCacheRefreshError): Promise<boolean> {
-    return new Promise<boolean>((resolve): void => {
-      this.getUIContext().showAlertDialog({ title: '需要重新验证本章缓存', message: error.message,
-        autoCancel: false,
-        primaryButton: { value: '刷新本章', action: (): void => resolve(true) },
-        secondaryButton: { value: '保留缓存并返回', action: (): void => resolve(false) },
-      });
-    });
+    try {
+      return this.showReaderAlert('choice-blocking', { title: '需要重新验证本章缓存', message: error.message,
+        primaryButton: { value: '刷新本章', action: (): void => {} },
+        secondaryButton: { value: '保留缓存并返回', action: (): void => {} },
+      }).decision.then((decision): boolean => decision === 'primary');
+    } catch (_) { return Promise.resolve(false); }
   }
 
   private notifyPreservedContentRefresh(chapter: ReadingSessionChapter, refreshContent: boolean,
@@ -6179,7 +6191,7 @@ export struct ReadingExperience {
         this.onExitCancelled();
         this.beginReadingRecordClock(lifecycleToken);
       };
-      this.getUIContext().showAlertDialog({ title: '阅读进度尚未保存',
+      this.showReaderAlert('confirmation', { title: '阅读进度尚未保存',
         message: '请重试保存后退出。当前阅读位置已保留。',
         primaryButton: { value: '重试保存并退出', action: (): void => {
           if (claimDecision()) this.beginExit();
@@ -10285,7 +10297,7 @@ export struct ReadingExperience {
       .catch((_error: Error): void => {
         if (this.isSelectionActive(lifecycleToken, selectionToken) &&
           panelGeneration === this.replacePanelGeneration && this.controlPage() === 'quickReplace') {
-          this.getUIContext().showAlertDialog({
+          this.showReaderAlert('preview', {
             title: '替换预览',
             message: '当前章节原文缓存不可用，无法生成预览。',
             confirm: { value: '关闭', action: (): void => {} },
@@ -10299,7 +10311,7 @@ export struct ReadingExperience {
       `已启用 ${preview.enabledRuleCount}/${preview.storedRuleCount} 条规则` :
       `已启用 ${preview.enabledRuleCount}/${preview.storedRuleCount} 条规则，本章正文无变化`;
     const suffix = preview.truncated ? '\n\n（内容已截取）' : '';
-    this.getUIContext().showAlertDialog({
+    this.showReaderAlert('preview', {
       title: `替换预览 · ${preview.chapterTitle}`,
       message: `${summary}\n\n替换前\n${preview.before}\n\n替换后\n${preview.after}${suffix}`,
       confirm: { value: '关闭', action: (): void => {} },
@@ -10493,7 +10505,7 @@ export struct ReadingExperience {
     } catch (error) {
       if (!isCurrent()) return;
       hilog.error(0x5244, 'Reader', '%{private}s', `Reading content position reload failed: ${this.errorMessage(error as Error)}`);
-      this.getUIContext().showAlertDialog({ title: '阅读位置恢复失败',
+      this.showReaderAlert('preview', { title: '阅读位置恢复失败',
         message: '正文规则已更新，阅读位置尚未确认。请重试恢复。',
         confirm: { value: '重试恢复', action: (): void => { if (isCurrent()) void this.reloadMigratedContentPosition(lifecycleToken, bookId); } },
       });
@@ -10877,6 +10889,7 @@ export struct ReadingExperience {
     if (stopTts && coordinator !== undefined) {
       void coordinator.stop('contentChanged').catch((error: Error): void => this.logTtsFailure('content stop', error));
     }
+    this.nativeAlertOwner.retire();
     this.chapterSelectionToken += 1;
     const selectionToken = this.chapterSelectionToken;
     this.pendingControlSelection = selectionControlRevision < 0 ? undefined : {
@@ -10990,6 +11003,7 @@ export struct ReadingExperience {
     // Invalidate all failed load/measurement continuations, but retain BOTH
     // display contexts and their resources until the serialized Core read says
     // which location actually committed. A timeout is not a rollback receipt.
+    this.nativeAlertOwner.retire();
     this.chapterSelectionToken += 1;
     const recoveryTicket: ReaderControlSelectionTicket = {
       sourceId: ticket.sourceId, bookId: ticket.bookId, lifecycleToken: ticket.lifecycleToken,
@@ -11161,7 +11175,7 @@ export struct ReadingExperience {
     this.finishPageTurnPerf('failed');
     const retry = this.pendingControlSelectionRetry;
     hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience control selection failed: ${this.failureCode}; ${detail}`);
-    this.getUIContext().showAlertDialog({
+    this.showReaderAlert('confirmation', {
       title: ticket.refreshContent === true ? '刷新本章失败' : '跳转失败',
       message: ticket.refreshContent === true ? `${this.failureCode}\n${detail}。可重试恢复本章，原书签和记录仍保留。` :
         `${this.failureCode}\n${detail}。可重试本次选择，或关闭提示后重新选择章节。`,
@@ -12442,9 +12456,8 @@ export struct ReadingExperience {
       this.cancelPageTurnSettlementDeadline();
       if (this.pageTurnUnknownNotifiedGeneration === generation) return;
       this.pageTurnUnknownNotifiedGeneration = generation;
-      this.getUIContext().showAlertDialog({ title: '正在确认阅读进度',
+      this.showReaderAlert('retry-blocking', { title: '正在确认阅读进度',
         message: '暂时无法确认保存结果。页面已保留，确认完成后继续翻页。',
-        autoCancel: false,
         primaryButton: { value: '重新确认', action: (): void => {
           if (this.pageTurnReconciliationPending || !this.isPreparedPageTurnCommitCurrent(prepared, lifecycle, generation)) return;
           this.pageTurnReconciliationPending = true;
@@ -12693,8 +12706,8 @@ export struct ReadingExperience {
     // infinite native retries, nor can it justify exposing an unadmitted page.
     this.pageTurnRenderRevision += 1;
     this.cancelPageTurnSettlementDeadline();
-    this.getUIContext().showAlertDialog({ title: '正在恢复页面',
-      message: '阅读位置已保留，可以重新显示当前页面。', autoCancel: false,
+    this.showReaderAlert('retry-blocking', { title: '正在恢复页面',
+      message: '阅读位置已保留，可以重新显示当前页面。',
       primaryButton: { value: '重新显示', action: (): void => {
         if (generation !== this.pageTurnSettlementGeneration || !this.mounted) return;
         if (!this.completeBookTurn2DFallback(generation)) this.pageTurnRenderRevision += 1;
@@ -13268,6 +13281,7 @@ export struct ReadingExperience {
       return false;
     }
     const lifecycleToken = this.lifecycleToken;
+    this.nativeAlertOwner.retire();
     this.chapterSelectionToken += 1;
     const selectionToken = this.chapterSelectionToken;
     this.resetForChapterSelection(true);
@@ -13331,6 +13345,7 @@ export struct ReadingExperience {
       return false;
     }
     const lifecycleToken = this.lifecycleToken;
+    this.nativeAlertOwner.retire();
     this.chapterSelectionToken += 1;
     const selectionToken = this.chapterSelectionToken;
     this.resetForChapterSelection(true);
@@ -13476,6 +13491,7 @@ export struct ReadingExperience {
       return;
     }
     this.previousChapterMeasurement = undefined;
+    this.nativeAlertOwner.retire();
     this.chapterSelectionToken += 1;
     const selectionToken = this.chapterSelectionToken;
     this.resetForChapterSelection(true);
@@ -13519,6 +13535,7 @@ export struct ReadingExperience {
     this.phase = 'failed';
     // A timeout/error revokes outstanding acquisition and measurement work;
     // remaining mounted must not allow a late reply to resurrect that attempt.
+    this.nativeAlertOwner.retire();
     this.chapterSelectionToken += 1;
     this.measurementCompleting = false;
     this.remeasurePending = false;
@@ -13535,6 +13552,7 @@ export struct ReadingExperience {
 
   private retryReading(): void {
     if (!this.mounted || this.exitRequested || this.phase !== 'failed') return;
+    this.nativeAlertOwner.retire();
     this.chapterSelectionToken += 1;
     this.resetForChapterSelection();
     this.failureCode = '';

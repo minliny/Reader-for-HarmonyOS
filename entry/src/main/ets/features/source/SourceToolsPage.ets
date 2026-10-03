@@ -1,5 +1,6 @@
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
+import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '../../app/ReaderNativeAlertOwner';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
@@ -206,7 +207,14 @@ export struct SourceToolsPage {
   private projectedBatchResultsIdentity: string = '';
   private projectedDebugLogsIdentity: string = '';
 
+  private readonly nativeAlertOwner: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
+  private mounted: boolean = false;
+  private exportRevision: number = 0;
+
+  aboutToDisappear(): void { this.mounted = false; this.exportRevision += 1; this.nativeAlertOwner.retire(); }
+
   aboutToAppear(): void {
+    this.mounted = true; this.exportRevision += 1;
     registerReaderFonts(this.getUIContext().getFont());
     this.projectedSourceListRevision = -1;
     this.projectedSelectionRevision = -1;
@@ -744,11 +752,14 @@ export struct SourceToolsPage {
    * elsewhere (e.g. delete confirmation).
    */
   private confirmExportThen(action: () => void): void {
-    this.getUIContext().showAlertDialog({
+    if (!this.mounted || this.snapshot.busy) return;
+    const revision = this.exportRevision;
+    const sourceRevision = this.snapshot.sourceListRevision;
+    const selectionRevision = this.snapshot.selectionRevision;
+    this.nativeAlertOwner.present((native: ReaderNativeAlertOptions): void => this.getUIContext().showAlertDialog(native), 'confirmation-cancelable', {
       title: '导出文件含登录凭据',
       message: '导出的书源 JSON 会原样保留 Cookie、Authorization 等登录凭据，' +
         '请勿转发给不可信的对象或公开渠道。是否继续导出？',
-      autoCancel: true,
       primaryButton: {
         value: '继续导出',
         action: (): void => action(),
@@ -757,7 +768,8 @@ export struct SourceToolsPage {
         value: '取消',
         action: (): void => {},
       },
-    });
+    }, (): boolean => this.mounted && !this.snapshot.busy && revision === this.exportRevision &&
+      sourceRevision === this.snapshot.sourceListRevision && selectionRevision === this.snapshot.selectionRevision);
   }
 
   private contentFrame(): SurfaceHorizontalFrame {

@@ -1,6 +1,7 @@
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import type { SettingsOperationProjection } from './SettingsHost';
+import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '../../app/ReaderNativeAlertOwner';
 import { TYPE_APP_INHERITED_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_ACTION, TYPE_SETTINGS_CACHE_ACTION, TYPE_SETTINGS_DANGER_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
@@ -83,6 +84,7 @@ export struct SettingsPage {
   @State private cacheCleanupInFlight: boolean = false;
   @State private resetInFlight: boolean = false;
   @State private resetMessage: string = '';
+  private readonly nativeAlertOwner: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
   private mounted: boolean = false;
   private resetRevision: number = 0;
   @State private openSelect: SettingsSelectField | '' = '';
@@ -113,7 +115,7 @@ export struct SettingsPage {
     this.syncSnapshotValues();
   }
 
-  aboutToDisappear(): void { this.mounted = false; this.resetRevision += 1; this.retireSelection(); }
+  aboutToDisappear(): void { this.nativeAlertOwner.retire(); this.mounted = false; this.resetRevision += 1; this.retireSelection(); }
 
   build() {
     SettingsShell({
@@ -544,13 +546,13 @@ export struct SettingsPage {
   private requestRestoreDefaults(): void {
     if (this.resetInFlight) return;
     const revision = this.resetRevision;
-    this.getUIContext().showAlertDialog({
+    this.nativeAlertOwner.present((native: ReaderNativeAlertOptions): void => this.getUIContext().showAlertDialog(native), 'confirmation', {
       title: '恢复界面与阅读设置',
       message: '恢复通用偏好、书架封面模式、默认日夜阅读主题、跟随系统、阅读排版与朗读偏好。保留书籍、书源、进度、书签、导入字体文件及同步和朗读服务凭据。',
       primaryButton: { value: '取消', action: (): void => {} },
       secondaryButton: { value: '恢复默认', fontColor: readerAppColor('TOK_DANGER', this.appThemeScheme),
         action: (): void => { if (this.mounted && revision === this.resetRevision) void this.performRestoreDefaults(); } },
-    });
+    }, (): boolean => this.mounted && revision === this.resetRevision);
   }
 
   private async performRestoreDefaults(): Promise<void> {

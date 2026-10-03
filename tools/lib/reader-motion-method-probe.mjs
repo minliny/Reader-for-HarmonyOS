@@ -1,3 +1,4 @@
+import { ReaderNativeAlertOwner } from '../../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
 import { readingChapterLayoutMap } from '../../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
 import { hasKnownReadingImageGeometry } from '../../entry/src/main/ets/features/reading/ReadingChapterWindow.ts';
 import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
@@ -20,7 +21,7 @@ const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
  * This does not simulate ArkUI layout, reactive delivery, or compositor pixels. */
 export function productionMotionMethods(file, names, dependencies = {}) {
   dependencies = { readerAppColor, readerThemeDefinition, readingChapterLayoutMap, hasKnownReadingImageGeometry, errorMessageOf,
-    ...readerTypographyRoles, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner, ReaderStartupContentOwner, ReaderProgressProducerHost,
+    ...readerTypographyRoles, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner, ReaderStartupContentOwner, ReaderProgressProducerHost, ReaderNativeAlertOwner,
     ReaderRuntimeOwner: { current: () => ({ captureReadingContentValidity: () => () => true,
       waitForReadingContentIdle: async () => {} }) }, ...dependencies };
   const source = readFileSync(file, 'utf8');
@@ -31,7 +32,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
   // Keep newly factored business helpers real in existing method-level probes.
   // Fixtures can still supply their explicit I/O/lifecycle dependencies.
   names = [...names];
-  for (const helper of ['preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent']) {
+  for (const helper of ['showReaderAlert', 'isMountedToken', 'isSelectionCurrent', 'preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent']) {
     if (!names.includes(helper) && type.members.some(m => m.name?.getText(tree) === helper) &&
       type.members.some(m => names.includes(m.name?.getText(tree)) && m.getText(tree).includes(`this.${helper}(`))) names.push(helper);
   }
@@ -39,6 +40,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
   const Probe = new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(`class Probe {
     paragraphLayout = new ReaderParagraphLayoutOwner(); physicalPagination = new ReaderPhysicalPaginationOwner();
     progressProducers = new ReaderProgressProducerHost();
+    nativeAlertOwner = new ReaderNativeAlertOwner();
     nativeTextMeasurement = { clear() {} }; nativeParagraphResources = { close() {}, retain() {} }; ${methods} }`)}; return Probe;`)(...Object.values(dependencies));
   // Existing probes describe pre-refactor component fields. Route those fixture
   // assignments to the real production owners; no production struct accessors
