@@ -140,7 +140,7 @@
       "kind": "Button",
       "argument": "'重试'",
       "variant": "nativeLabelButton",
-      "businessOwner": "ReadingExperience source-switch failure/session guard",
+      "businessOwner": "ReadingExperience source-switch failure exact scope vs ordinary reading retry/session guard",
       "nativeRenderingOwner": "ArkUI Button",
       "consumerHost": "ReadingExperience.readingFailureContent",
       "requiredAttributes": {},
@@ -153,8 +153,22 @@
         "letterSpacing"
       ],
       "status": "RETAINED_PLATFORM_DEFAULT_CONTRACT",
-      "reason": "Current application intentionally delegates the omitted physical attributes to the actual upstream native ArkUI component; no new Reader style/empty modifier is added.",
-      "sourceLineAtAudit": 13583
+      "reason": "One nativeLabelButton family has two mutually exclusive actual retry actors. The source-switch branch captures exact scope in a keyed ForEach; the ordinary reading branch owns its original retry. Both preserve all five platform-default typography omissions. AST checks require both exact branches/callbacks and reject extra copied actors.",
+      "sourceLineAtAudit": 13583,
+      "branchInstances": [
+        {
+          "guard": "this.sourceSwitchFailureMessage.length > 0",
+          "branch": "then",
+          "onClick": "(): void => this.onRetryFailedSourceSwitch(scopeId)",
+          "forEachInput": "[this.sourceSwitchScopeId]",
+          "forEachKey": "(scopeId: number): string => `${scopeId}`"
+        },
+        {
+          "guard": "this.sourceSwitchFailureMessage.length > 0",
+          "branch": "else",
+          "onClick": "(): void => this.retryReading()"
+        }
+      ]
     },
     {
       "id": "NATIVE-DEFAULT-06",

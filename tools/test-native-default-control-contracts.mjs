@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync,readdirSync } from 'node:fs';
 import { sharedProducerShape } from './lib/architecture-shared-producer-contract.mjs';
 import { auditNativeTextElements } from './lib/reader-typography-consumer-audit.mjs';
+import { verifyNativeDefaultBranches } from './lib/native-default-control-probe.mjs';
 const fixture=JSON.parse(readFileSync(new URL('./fixtures/design/native-default-control-contracts.json',import.meta.url)));
 const producers=JSON.parse(readFileSync(new URL('./fixtures/architecture-shared-producers.json',import.meta.url)));
 const featureRoot=new URL('../entry/src/main/ets/features/',import.meta.url),normalise=text=>(text??'').replace(/\s+/g,'');
@@ -28,11 +29,20 @@ for(const file of readdirSync(featureRoot,{recursive:true}).filter(file=>file.en
   const contract=contracts.get(JSON.stringify([rel,node.method,node.kind,normalise(node.text)]));
   assert.ok(contract,`${rel}:${node.line}: a visible native-default element needs a bounded platform-default contract, not a fake TYPE modifier`);
   assert.equal(node.attributes.attributeModifier, undefined, `${contract.id}: do not add an empty modifier to fake a public migration`);
-  assert.ok(++contract.count<=1,`${contract.id}: prevent copied native default exceptions`);
+  assert.ok(++contract.count<=(contract.branchInstances?.length??1),`${contract.id}: prevent copied native default exceptions`);
   for(const[property,value]of Object.entries(contract.requiredAttributes))assert.equal(node.attributes[property],value,`${contract.id}: preserve actual native input geometry`);
   assert.ok(node.attributes[node.kind==='TextInput'?'onChange':'onClick'] && node.attributes[node.kind==='TextInput'?'onChange':'onClick'] !== 'undefined',`${contract.id}: actual action/draft callback remains wired`);controls++;
  }
 }
-for(const row of contracts.values())assert.equal(row.count,1,`${row.id}: native owner/consumer still present; intentional replacement requires a new actual implementation proof`);
-assert.equal(controls,13);assert.equal(a11y,4);assert.equal(delegated,2);
-console.log(`PASS native-default contracts: ${controls} real native controls / three finite variants; ${paint} no-glyph actors, ${a11y} exact accessibility actors, ${delegated} actual shared Dialog/finite title hosts, ${inherited} inherited body spans; no physical font overrides fabricated`);
+for(const row of contracts.values()){
+ assert.equal(row.count,row.branchInstances?.length??1,`${row.id}: native owner/consumer still present; intentional replacement requires a new actual implementation proof`);
+ if(row.branchInstances){
+  const source=readFileSync(new URL('../entry/src/main/ets/'+row.file,import.meta.url),'utf8');
+  assert.equal(verifyNativeDefaultBranches(source,row.file,row),row.branchInstances.length);
+  assert.throws(()=>verifyNativeDefaultBranches(source.replace("Button('重试').onClick((): void => this.retryReading());","Button('重试').onClick((): void => this.retryReading()); Button('重试').onClick((): void => this.retryReading());"),row.file,row),/copied native default actors/);
+  assert.throws(()=>verifyNativeDefaultBranches(source.replace('this.onRetryFailedSourceSwitch(scopeId)','this.onRetryFailedSourceSwitch(this.sourceSwitchScopeId)'),row.file,row),/exact actual branch callback/);
+  assert.throws(()=>verifyNativeDefaultBranches(source.replace('if (this.sourceSwitchFailureMessage.length > 0) {\n          ForEach','if (true) {\n          ForEach'),row.file,row),/exact finite branch guard/);
+ }
+}
+assert.equal(controls,14);assert.equal(a11y,4);assert.equal(delegated,2);
+console.log(`PASS native-default contracts: ${contracts.size} finite native families / ${controls} actual actors (retry has exact exclusive source-switch/reading branches); ${paint} no-glyph actors, ${a11y} exact accessibility actors, ${delegated} actual shared Dialog/finite title hosts, ${inherited} inherited body spans; no physical font overrides fabricated`);

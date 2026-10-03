@@ -11,6 +11,12 @@ assert.equal(typographyCarrierMethod(rss.path,save,page),'saveAction');
 assert.throws(()=>typographyCarrierMethod(rss.path,save,page.replace('this.saveAction();','// this.saveAction();')),/actual AST call/,'comment cannot stand in for a real Builder edge');
 assert.throws(()=>typographyCarrierMethod(rss.path,save,page.replaceAll('.fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)','.fontSize(19)')),/exact public successor tuple/);
 assert.equal(typographyCarrierMethod(rss.path,rss.nodes[0],page),'build','existing RSS status stays on its actual original carrier');
+const settings=file('/SettingsPage.ets'),reset=settings.nodes.find(node=>node.method==='buildGeneral'&&node.text==='this.resetMessage'),settingsPage=read(settings.path);
+assert.equal(typographyCarrierMethod(settings.path,reset,settingsPage),'operationFeedback');
+assert.throws(()=>typographyCarrierMethod(settings.path,reset,settingsPage.replaceAll('this.operationFeedback();','// this.operationFeedback();')),/actual AST call/);
+assert.throws(()=>typographyCarrierMethod(settings.path,reset,settingsPage.replace('Text(this.feedbackMessage())','Text(this.resetMessage)')),/exact authored successor carrier/);
+assert.throws(()=>typographyCarrierMethod(settings.path,reset,settingsPage.replace('Text(this.feedbackMessage()).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)','Text(this.feedbackMessage()).fontSize(19)')),/exact public successor tuple/);
+assert.throws(()=>typographyCarrierMethod(settings.path,reset,settingsPage.replace('Text(this.feedbackMessage()).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)','Text(this.feedbackMessage()).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).letterSpacing(0)')),/AUTO omissions/);
 const target = read('entry/src/main/ets/features/common/ReaderRecoveryNotice.ets');
 for(const [tail,text] of [['/BookshelfPage.ets','this.viewModeError'],['/BookshelfSettingsPage.ets','this.error']]){
   const pageFile=file(tail), expected=pageFile.nodes.find(node=>node.text===text),source=read(pageFile.path);
@@ -22,4 +28,4 @@ for(const [tail,text] of [['/BookshelfPage.ets','this.viewModeError'],['/Bookshe
   assert.throws(()=>sharedTypographyReplacement(pageFile.path,expected,source,target.replace('.fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)','.fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontWeight(400)')),/AUTO omission/);
   assert.equal(sharedTypographyReplacement('entry/src/main/ets/features/other/OtherPage.ets',expected,source),undefined,'no free-form whitelisting of new pages');
 }
-console.log('PASS precise Typography successors: RSS actual saveAction edge + two actual shared recovery carriers; literal/default/import/comment bypasses rejected.');
+console.log('PASS precise Typography successors: RSS actual saveAction edge + Settings current feedbackMessage edge + two actual shared recovery carriers; literal/default/import/comment bypasses rejected.');

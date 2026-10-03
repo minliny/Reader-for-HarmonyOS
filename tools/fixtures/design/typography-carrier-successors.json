@@ -33,10 +33,10 @@
         "path": "entry/src/main/ets/features/settings/SettingsPage.ets",
         "method": "operationFeedback",
         "kind": "Text",
-        "text": "this.recovery().visible ? this.recovery().message : this.resetMessage"
+        "text": "this.feedbackMessage()"
       },
       "edge": "this.operationFeedback()",
-      "proof": "test-source-settings-receipt-consumers.mjs + test-typography-carrier-successors.mjs"
+      "proof": "test-settings-recovery-consumers.mjs + test-typography-carrier-successors.mjs; actual buildGeneral → operationFeedback keeps TYPE_APP_INHERITED_BODY and AUTO omissions"
     },
     {
       "id": "bookshelf-mode-shared-notice",
