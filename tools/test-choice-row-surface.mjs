@@ -8,8 +8,8 @@ function settings(tablet,resolve=resolveReaderChoiceSpec) {
   const shared=choiceRowProbe(resolve),commits=[];
   const source=read('settings/SettingsSelectOverlay');
   const {owner}=createReaderBuilderProbe(source,
-    ['phoneOption','tabletOption','isSelected','choose','dismiss'],shared.dependencies,shared.hooks);
-  Object.assign(owner,{mounted:true,closed:false,field:'language',value:'中文',options:['中文','English'],appThemeScheme:'day',
+    ['phoneOption','tabletOption','isSelected','ownsOpening','choose','dismiss'],shared.dependencies,shared.hooks);
+  Object.assign(owner,{mounted:true,closed:false,field:'language',selectionId:'language:1',value:'中文',options:['中文','English'],appThemeScheme:'day',
     onSelect:option=>commits.push(option),onDismiss:()=>commits.push('dismiss')});
   tablet?owner.tabletOption('中文',0):owner.phoneOption('中文',0);
   return {owner,shared,commits,nodes:()=>shared.nodes(owner),child:[...owner.children.values()][0]};

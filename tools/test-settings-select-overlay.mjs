@@ -57,11 +57,11 @@ assert.match(overlay,
   'Tablet popover must be trigger-right-aligned and placed 6vp below it');
 assert.match(overlay, /resolvePopupSpec\('settings-select-tablet'\)/,
   'Tablet selector frame is resolved from the shared popup surface registry');
-assert.match(overlay, /\.onClick\(\(\): void => this\.dismiss\(\)\)/,
+assert.match(overlay, /\.onClick\(\(\): void => this\.dismiss\(identity\)\)/,
   'backdrop and cancel card close through the owner callback');
-assert.match(overlay, /onChoose: \(value: string\): void => this\.choose\(value\)/,
+assert.match(overlay, /onChoose: \(value: string\): void => this\.choose\(value, identity\)/,
   'shared production choice row submits through the overlay owner');
-assert.match(overlay, /if \(!this\.mounted \|\| this\.closed \|\| this\.options\.indexOf\(option\) < 0\) return;[\s\S]*this\.onSelect\(option, this\.selectionId\)/,
+assert.match(overlay, /if \(!this\.ownsOpening\(identity\) \|\| this\.options\.indexOf\(option\) < 0\) return;[\s\S]*this\.onSelect\(option, identity\)/,
   'option selection is handed to the owner without local asynchronous state');
 assert.match(choices, /app\.media\.settings_select_check/,
   'selected options must expose the Figma check actor');
