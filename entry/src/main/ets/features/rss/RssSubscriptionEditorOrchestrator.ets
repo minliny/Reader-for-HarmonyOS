@@ -267,6 +267,15 @@ export class RssSubscriptionEditorOrchestrator {
     }).catch((error: Error): void => this.fail(session, 'RSS 核对未执行', error));
   }
 
+  /** Pure original query for cold records without a previous UI receipt. */
+  reconcileOriginal(expected?: RssOriginalMutationIdentity, identity?: string): void {
+    const session=this.session,key=this.activeKey;
+    void this.serialize(async (): Promise<void> => {
+      if (!this.isCurrentSession(session) || identity!==undefined && identity!==this.presentationIdentity) return;
+      await this.readEditor(key,session,true,expected);
+    }).catch((error: Error): void => this.fail(session,'RSS 原操作核对未执行',error));
+  }
+
   continueOriginal(expected: RssOriginalMutationIdentity, identity?: string): void {
     const session=this.session,key=this.activeKey;
     if (expected.scope!=='editor') return;
@@ -288,11 +297,12 @@ export class RssSubscriptionEditorOrchestrator {
     }).catch((error: Error): void => this.fail(session, 'RSS 读取未执行', error));
   }
 
-  private async readEditor(key: string, session: number, finishSaved: boolean = false): Promise<void> {
+  private async readEditor(key: string, session: number, finishSaved: boolean = false,
+    expected?: RssOriginalMutationIdentity): Promise<void> {
     if (!this.ownsRuntime()) return;
     let draft = this.drafts.get(key);
     if (draft === undefined) return;
-    const recovery=await this.gateway.recoverOriginalRss((): boolean => this.isCurrentSession(session));
+    const recovery=await this.gateway.recoverOriginalRss((): boolean => this.isCurrentSession(session),expected);
     const original=recovery.original;
     const matchesEditor=original?.scope==='editor' && original.subscriptionId===(draft.mode==='edit' ? draft.subscriptionId : '');
     if (matchesEditor && original!==undefined) {

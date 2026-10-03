@@ -101,7 +101,10 @@ for(const lost of [false,true]) {
  const attach=id=>host.attachPresentation(id,v=>values.push(clone(v)),()=>{},f.current,f.current);
  attach('editor-first');host.openCreate();await settle(lane);host.updateFeedUrl(draft(110).feedUrl);
  f.options.beforeMethod='rules.mutation.apply';host.save();await settle(lane);
- attach('editor-reopened');host.openCreate();await settle(lane);const original=values.at(-1).original,writes=f.writes().length;
+ attach('editor-reopened');host.openCreate();await settle(lane);let original=values.at(-1).original;const writes=f.writes().length,calls=f.calls.length;
+ host.reconcileOriginal(original,'editor-first');await settle(lane);assert.equal(f.calls.length,calls,'old physical pure-reconcile cannot borrow the current editor');
+ host.reconcileOriginal(original,'editor-reopened');await settle(lane);assert.equal(f.writes().length,writes,'explicit reconcile only queries exact original + current data');
+ original=values.at(-1).original;
  host.continueOriginal(original,'editor-first');await settle(lane);assert.equal(f.writes().length,writes);
  host.detachPresentation('editor-first');assert.equal(host.ownsPresentation('editor-reopened'),true);
  host.continueOriginal(original,'editor-reopened');await settle(lane);assert.equal(f.writes().length,writes+1);cases++;

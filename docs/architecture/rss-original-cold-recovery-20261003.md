@@ -57,7 +57,7 @@ Editor canSave stays false until the authority is qualified.
 | Original consumer | Pure action | Explicit original continuation |
 | --- | --- | --- |
 | RSS management | reconcileOriginal(expected?, presentationIdentity?) | continueOriginal(expected, presentationIdentity?) |
-| RSS editor | Existing reconcile(operation generation); cold pure original action is a separate follow-up | continueOriginal(expected, presentationIdentity?) |
+| RSS editor | reconcileOriginal(expected?, presentationIdentity?) or existing reconcile(operation generation) | continueOriginal(expected, presentationIdentity?) |
 | Existing entry/favorite interaction | Existing reconcileRouteOperation with its captured route binding and operation generation | continueEntryOriginal(expected, binding) |
 
 The Index/UI writer must capture the complete original identity and physical
