@@ -1,3 +1,5 @@
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
@@ -175,6 +177,7 @@ export struct SourceToolsPage {
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onSnapshotChanged') snapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
+  onReconcile: (generation: number) => void = (_generation: number): void => {};
   onBack: () => void = (): void => {};
   onExportAll: () => void = (): void => {};
   onExportSelected: (sourceIds: string[]) => void = (_sourceIds: string[]): void => {};
@@ -218,6 +221,7 @@ export struct SourceToolsPage {
       Scroll() {
         Column({ space: TOK_SPACE_MD }) {
           this.statusCard();
+          this.recoveryAction();
           this.exportCard();
           // V1 @Builder parameters are captured when the builder subtree is
           // mounted. Rebuild only this small controls card when its primitive
@@ -444,9 +448,16 @@ export struct SourceToolsPage {
     .border({ width: { bottom: TOK_BORDER_W }, color: readerAppColor('TOK_BORDER', this.appThemeScheme) });
   }
 
+  private recovery(): ReaderRecoveryView { return readerRecoveryView(this.snapshot.receipt, this.snapshot.readFacts, this.snapshot.confirmedParts ?? 0); }
+  @Builder
+  private recoveryAction() {
+    if (this.recovery().canRetry) {
+      ReaderRecoveryAction({ generation: this.recovery().generation, onReconcile: this.onReconcile });
+    }
+  }
   @Builder
   private statusCard() {
-    Text(this.snapshot.statusMessage.length > 0 ? this.snapshot.statusMessage : '书源规则与持久化均由 Rust Core 负责')
+    Text(this.recovery().visible ? this.recovery().message : this.snapshot.statusMessage.length > 0 ? this.snapshot.statusMessage : '书源规则与持久化均由 Rust Core 负责')
       .width('100%')
       .fontFamily(TYPE_SOURCE_TOOLS_STATUS.fontFamily as string)
       .fontSize(TYPE_SOURCE_TOOLS_STATUS.fontSizeFp)
@@ -565,7 +576,7 @@ export struct SourceToolsPage {
         .onChange((value: string): void => this.onEditorDraftChanged(value));
       Row({ space: TOK_SPACE_XS }) {
         this.actionButton('取消', false, !this.snapshot.busy, (): void => this.onCancelEditor());
-        this.actionButton('校验并保存', true, !this.snapshot.busy, (): void => this.onSaveEditor());
+        this.actionButton('校验并保存', true, !this.snapshot.busy && this.snapshot.editorReadback?.confirmation !== 'unknown', (): void => this.onSaveEditor());
       }
       .width('100%');
       if (this.snapshot.editorReadback?.fact === 'confirmedRefreshFailed') {

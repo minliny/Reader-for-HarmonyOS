@@ -234,7 +234,7 @@ export struct SourceManagementPage {
       .margin({ top: TOK_SPACE_XS });
   }
 
-  private recovery(): ReaderRecoveryView { return readerRecoveryView(this.operation.receipt, this.operation.readFacts); }
+  private recovery(): ReaderRecoveryView { return readerRecoveryView(this.operation.receipt, this.operation.readFacts, this.operation.confirmedParts ?? 0); }
 
   @Builder
   private statusBanner() {

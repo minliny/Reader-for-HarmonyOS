@@ -7,9 +7,11 @@ export interface ReaderRecoveryView {
   canRetry: boolean;
   generation: number;
 }
-export function readerRecoveryView<T>(receipt?: PersistedReceiptProjection<T>, read?: OperationFacts<T>): ReaderRecoveryView {
+export function readerRecoveryView<T>(receipt?: PersistedReceiptProjection<T>, read?: OperationFacts<T>, confirmedParts: number = 0): ReaderRecoveryView {
   if (receipt !== undefined && receipt.receipt.fact !== 'confirmedCurrent') {
-    return { message: receipt.receipt.message + (receipt.refreshError === undefined ? '' : `：${receipt.refreshError}`),
+    return { message: (receipt.facts.message?.includes(receipt.receipt.message) === true ? receipt.facts.message :
+      receipt.receipt.message + (receipt.refreshError === undefined ? '' : `：${receipt.refreshError}`)) +
+      (receipt.receipt.confirmation === 'unknown' && confirmedParts > 0 ? `（已有 ${confirmedParts} 项确认）` : ''),
       visible: true, canRetry: receipt.facts.canRetry, generation: receipt.facts.generation };
   }
   if (read !== undefined && read.fact !== 'idle' && read.fact !== 'current' && read.fact !== 'empty') {

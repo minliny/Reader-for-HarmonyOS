@@ -118,11 +118,15 @@ const orchestratorSource = read('entry/src/main/ets/features/source/SourceToolsO
 assert.match(orchestratorSource,
   /await this\.gateway\.saveEditableSource\(sourceId, text\);[\s\S]*?projectCommitReadback\('confirmed', 'reading'\)[\s\S]*?await this\.gateway\.loadSources\(undefined, true\)/,
   'saveEditor must expose confirmed/refreshing before the read-only list refresh');
+const writeEvidenceSource = read('entry/src/main/ets/app/ReaderWriteEvidence.ts').replace(/^import[^\n]+\n/gm,'').replace(/^export /gm,'');
 const executable = stripTypeScriptTypes(
-  `${errorMessageSource}\n${transportPolicySource}\n${sourceCategorySource}\n${operationFactsSource}\n${persistedReceiptProjectionSource}\n${gatewaySource}\n${orchestratorSource}`,
+  `${writeEvidenceSource}\n${errorMessageSource}\n${transportPolicySource}\n${sourceCategorySource}\n${operationFactsSource}\n${persistedReceiptProjectionSource}\n${gatewaySource.replace(/^import[^\n]+\n/gm,'')}\n${orchestratorSource.replace(/^import[^\n]+\n/gm,'')}`,
 );
 assert.doesNotMatch(executable, /^import /m, 'the Node harness must not retain platform imports');
 
+let currentOwner;
+globalThis.ReaderRuntimeOwner = { current: () => currentOwner };
+globalThis.isReaderCoreTransactionPendingError = () => false;
 globalThis.hilog = { warn() {}, error() {}, info() {}, debug() {}, fatal() {} };
 
 const orchestratorModuleUrl = `data:text/javascript;base64,${Buffer.from(executable).toString('base64')}`;
@@ -169,6 +173,7 @@ function saveOwner({ failList = false } = {}) {
 }
 
 function captureOrchestrator(owner) {
+  currentOwner = owner;
   const snapshots = [];
   const orchestrator = new SourceToolsOrchestrator(
     (snapshot) => snapshots.push(snapshot),
@@ -270,13 +275,13 @@ async function openEditorFor(orchestrator, snapshots) {
   const listBefore = calls.filter((method) => method === 'source.list').length;
   orchestrator.saveEditor();
   await waitUntil(() => latestSnapshot(snapshots)?.busy === false &&
-    latestSnapshot(snapshots)?.statusMessage.includes('保存失败'), 'failed save to settle');
+    latestSnapshot(snapshots)?.statusMessage.includes('等待核对'), 'failed save to settle');
   const done = latestSnapshot(snapshots);
-  assert.match(done.statusMessage, /书源保存失败/);
+  assert.match(done.statusMessage, /等待核对/);
   assert.doesNotMatch(done.statusMessage, /刷新失败/,
     'a rejected save must not be dressed up as a refresh failure');
-  assert.equal(done.editorOperation, undefined,
-    'a rejected write must not publish a persisted/read-back fact');
+  assert.equal(done.editorOperation.fact, 'pendingReconciliation',
+    'a dispatched write with a lost ACK remains unknown');
   assert.equal(done.editorSourceId, 'https://a.example', 'the draft survives a real save failure');
   assert.equal(calls.filter((method) => method === 'source.list').length, listBefore,
     'a failed save must not dispatch the follow-up refresh');

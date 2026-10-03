@@ -1,7 +1,9 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { projectCommitReadback, type CommitReadbackSummary, type OperationFacts } from '../../app/ReaderOperationFacts';
-import { projectPersistedReceipt } from '../../app/ReaderPersistedReceiptProjection';
+import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
+import { projectOperationFacts } from '../../app/ReaderOperationFacts';
+import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../app/ReaderPersistedReceiptProjection';
 import {
   SourceGateway,
   type BookSource,
@@ -10,6 +12,7 @@ import {
 } from './SourceGateway';
 
 const DOMAIN = 0x5244;
+let sourceToolsReceiptGeneration: number = 0;
 
 export type SourceBatchCheckPhase =
   'idle' | 'running' | 'stopping' | 'completed' | 'stopped' | 'failed';
@@ -52,6 +55,9 @@ const EMPTY_BATCH_CHECK_PROGRESS: SourceBatchCheckProgress = {
 
 export interface SourceToolsSnapshot {
   sources: BookSource[];
+  receipt?: PersistedReceiptProjection<BookSource[]>;
+  readFacts?: OperationFacts<BookSource[]>;
+  confirmedParts?: number;
   sourceListRevision: number;
   selectionRevision: number;
   selectedSourceIds: string[];
@@ -74,6 +80,9 @@ export interface SourceToolsSnapshot {
 
 interface SourceToolsPatch {
   sources?: BookSource[];
+  receipt?: PersistedReceiptProjection<BookSource[]>;
+  readFacts?: OperationFacts<BookSource[]>;
+  confirmedParts?: number;
   sourceListRevision?: number;
   selectionRevision?: number;
   selectedSourceIds?: string[];
@@ -150,14 +159,18 @@ export class SourceToolsOrchestrator {
     // list. Seed the first frame with it so ArkUI never renders a stale 0/0
     // header while the fresh Core read is in flight.
     this.snapshot.sources = seedSources.slice();
-    this.publish({ busy: true, statusMessage: '正在读取 Core 书源工具数据…' });
+    this.publish({ busy: true, statusMessage: '正在读取 Core 书源工具数据…',
+      readFacts: projectOperationFacts({ phase: 'loading', value: seedSources.length > 0 ? seedSources : undefined, generation: ++sourceToolsReceiptGeneration }) });
     this.enqueue(async (): Promise<void> => {
       try {
         const sources = await this.gateway.loadSources(undefined, true);
         if (this.isCurrentSession(session)) {
-          this.publish({ sources, busy: false, statusMessage: '已读取 Core 数据' });
+          this.publish({ sources, busy: false, statusMessage: '已读取 Core 数据',
+            readFacts: projectOperationFacts({ phase: 'succeeded', value: sources, generation: ++sourceToolsReceiptGeneration }) });
         }
       } catch (error) {
+        this.publishIfCurrent(session, { readFacts: projectOperationFacts({ phase: 'failed', value: this.snapshot.sources.length > 0 ? this.snapshot.sources : undefined,
+          canRetry: true, generation: ++sourceToolsReceiptGeneration, message: (error as Error).message }) });
         this.fail(session, '书源工具数据读取失败', error as Error);
       }
     }, true);
@@ -212,56 +225,20 @@ export class SourceToolsOrchestrator {
 
   setSelectedEnabled(sourceIds: string[], enabled: boolean): void {
     const selection = this.normalizeSourceIds(sourceIds);
-    if (selection.length === 0) {
-      return;
-    }
+    if (selection.length === 0) return;
     const session = this.session;
     this.enqueue(async (): Promise<void> => {
-      this.publishIfCurrent(session, {
-        busy: true,
-        statusMessage: `正在${enabled ? '启用' : '停用'} ${selection.length} 个书源…`,
-      });
-      let updatedCount = 0;
-      try {
+      if (!this.isCurrentSession(session)) return;
+      await this.performManagementWrite(session, async (): Promise<string> => {
         for (const sourceId of selection) {
           await this.gateway.updateSource(sourceId, { enabled });
-          updatedCount += 1;
           if (!enabled) {
-            try {
-              await this.owner.clearSourceCookieSession(sourceId);
-            } catch (error) {
-              hilog.error(DOMAIN, 'Reader',
-                'Source disabled but cookie cleanup failed: sourceId=%{private}s err=%{private}s',
-                sourceId, (error as Error).message);
-            }
+            try { await this.owner.clearSourceCookieSession(sourceId); }
+            catch (error) { hilog.error(DOMAIN, 'Reader', 'Source cookie cleanup failed: %{private}s', (error as Error).message); }
           }
         }
-        const sources = await this.gateway.loadSources(undefined, true);
-        if (this.isCurrentSession(session)) {
-          this.publish({
-            sources,
-            busy: false,
-            statusMessage: `已${enabled ? '启用' : '停用'} ${selection.length} 个书源`,
-          });
-        }
-      } catch (error) {
-        const updateError = error as Error;
-        // Repeated source.update calls are intentionally not presented as one
-        // atomic Core command. If an item fails, reload durable truth so the
-        // page never hides an already-applied prefix.
-        try {
-          const sources = await this.gateway.loadSources(undefined, true);
-          if (this.isCurrentSession(session)) {
-            this.publish({
-              sources,
-              busy: false,
-              statusMessage: `批量更新中断：已完成 ${updatedCount}/${selection.length}；${updateError.message}`,
-            });
-          }
-        } catch (_) {
-          this.fail(session, `批量更新书源失败（已完成 ${updatedCount}/${selection.length}）`, updateError);
-        }
-      }
+        return `已${enabled ? '启用' : '停用'} ${selection.length} 个书源`;
+      });
     });
   }
 
@@ -405,27 +382,15 @@ export class SourceToolsOrchestrator {
 
   deleteSelected(sourceIds: string[]): void {
     const selection = this.normalizeSourceIds(sourceIds);
-    if (selection.length === 0) {
-      return;
-    }
+    if (selection.length === 0) return;
     const session = this.session;
     this.enqueue(async (): Promise<void> => {
-      this.publishIfCurrent(session, { busy: true, statusMessage: `正在删除 ${selection.length} 个书源…` });
-      try {
+      if (!this.isCurrentSession(session)) return;
+      await this.performManagementWrite(session, async (): Promise<string> => {
         const deleted = await this.gateway.deleteSources(selection);
-        const sources = await this.gateway.loadSources(undefined, true);
-        if (this.isCurrentSession(session)) {
-          const cleanup = deleted.cookieCleanupFailures === 0 ? '' :
-            `；${deleted.cookieCleanupFailures} 个 Host 登录会话清理失败`;
-          this.publish({
-            sources,
-            busy: false,
-            statusMessage: `已删除 ${deleted.deletedCount} 个书源${cleanup}`,
-          });
-        }
-      } catch (error) {
-        this.fail(session, '书源删除失败', error as Error);
-      }
+        return `已删除 ${deleted.deletedCount} 个书源` + (deleted.cookieCleanupFailures === 0 ? '' :
+          `；${deleted.cookieCleanupFailures} 个 Host 登录会话清理失败`);
+      });
     });
   }
 
@@ -479,12 +444,19 @@ export class SourceToolsOrchestrator {
       // The save and the follow-up reload are two separate facts: once Core
       // has validated and persisted the edit, a list-refresh failure must not
       // be reported as "save failed". Persist failure still rejects below.
+      if (!this.isCurrentSession(session) || this.snapshot.editorReadback?.confirmation === 'unknown') return;
+      const evidence = new ReaderWriteEvidence();
+      this.gateway.observeWrites(evidence);
       try {
         await this.gateway.saveEditableSource(sourceId, text);
       } catch (error) {
-        this.fail(session, '书源保存失败', error as Error);
+        this.publishIfCurrent(session, {
+          editorReadback: projectCommitReadback(evidence.confirmation(), 'failed'),
+          busy: false, statusMessage: evidence.confirmation() === 'unknown' ?
+            `书源等待核对：${(error as Error).message}；草稿保留供核对` : `书源保存失败：${(error as Error).message}`,
+        });
         return;
-      }
+      } finally { this.gateway.observeWrites(undefined); }
       // The Core write is confirmed before the follow-up list read starts.
       // Publish that intermediate fact so a slow refresh cannot leave the
       // previous editor outcome looking current while the durable write is
@@ -539,18 +511,19 @@ export class SourceToolsOrchestrator {
    */
   reconcileEditor(): void {
     const sourceId = this.snapshot.editorSourceId;
-    if (sourceId.length === 0 || this.snapshot.editorReadback?.fact !== 'confirmedRefreshFailed') {
+    if (this.snapshot.busy || sourceId.length === 0 || !this.snapshot.editorOperation?.canRetry) {
       return;
     }
     const session = this.session;
+    const confirmation = this.snapshot.editorReadback?.confirmation ?? 'undispatched';
     this.enqueue(async (): Promise<void> => {
       this.publishIfCurrent(session, { busy: true, statusMessage: '正在读取已保存书源…' });
       try {
         const sources = await this.gateway.loadSources(undefined, true);
         const found = sources.some((source: BookSource): boolean => source.sourceId === sourceId);
         if (!this.isCurrentSession(session)) return;
-        if (found) {
-          const projection = projectPersistedReceipt({ confirmation: 'confirmed', readback: 'succeeded', value: sources });
+        if (found && confirmation === 'confirmed') {
+          const projection = projectPersistedReceipt({ confirmation, readback: 'succeeded', value: sources });
           this.publish({
             sources,
             editorSourceId: '',
@@ -562,18 +535,18 @@ export class SourceToolsOrchestrator {
           });
           return;
         }
-        const projection = projectPersistedReceipt({ confirmation: 'confirmed', readback: 'failed',
+        const projection = projectPersistedReceipt({ confirmation, readback: found ? 'succeeded' : 'failed',
           value: sources, canRetry: true });
         this.publish({
           sources,
           editorReadback: projection.receipt,
           editorOperation: projection.facts,
           busy: false,
-          statusMessage: '已确认，但当前列表未找到该书源；草稿保留供核对',
+          statusMessage: confirmation === 'unknown' ? '等待核对；列表读取不能确认先前保存，草稿保留' : '已确认，但当前列表未找到该书源；草稿保留供核对',
         });
       } catch (error) {
         if (this.isCurrentSession(session)) {
-          const projection = projectPersistedReceipt({ confirmation: 'confirmed', readback: 'failed',
+          const projection = projectPersistedReceipt({ confirmation, readback: 'failed',
             value: this.snapshot.sources, refreshError: (error as Error).message, canRetry: true });
           this.publish({
             editorReadback: projection.receipt,
@@ -688,6 +661,68 @@ export class SourceToolsOrchestrator {
     return normalized;
   }
 
+  owns(owner: ReaderRuntimeOwner): boolean { return this.owner === owner; }
+
+  private async performManagementWrite(session: number, mutation: () => Promise<string>): Promise<void> {
+    const evidence = new ReaderWriteEvidence();
+    this.gateway.observeWrites(evidence);
+    this.publishIfCurrent(session, { busy: true });
+    let status: string;
+    try { status = await mutation(); }
+    catch (error) {
+      this.publishManagementReceipt(session, evidence.confirmation(), 'failed', (error as Error).message, evidence.confirmedCount);
+      return;
+    } finally { this.gateway.observeWrites(undefined); }
+    this.publishManagementReceipt(session, evidence.confirmation(), 'reading', undefined, evidence.confirmedCount);
+    await this.reloadManagement(session, status);
+  }
+
+  reconcile(generation: number): void {
+    const receipt = this.snapshot.receipt;
+    if (this.snapshot.editorSourceId.length > 0 && receipt?.facts.generation === generation && receipt.facts.canRetry) {
+      this.reconcileEditor(); return;
+    }
+    const session = this.session;
+    this.enqueue(async (): Promise<void> => {
+      if (!this.isCurrentSession(session)) return;
+      const receipt = this.snapshot.receipt;
+      const read = this.snapshot.readFacts;
+      if (receipt?.facts.generation === generation && receipt.facts.canRetry) {
+        this.publishManagementReceipt(session, receipt.receipt.confirmation, 'reading');
+        await this.reloadManagement(session, '已读取 Core 数据');
+      } else if (read?.generation === generation && read.canRetry) {
+        this.publishIfCurrent(session, { busy: true, readFacts: projectOperationFacts({ phase: 'loading',
+          value: this.snapshot.sources, generation: ++sourceToolsReceiptGeneration }) });
+        await this.reloadManagement(session, '已读取 Core 数据');
+      }
+    });
+  }
+
+  private async reloadManagement(session: number, status: string): Promise<void> {
+    try {
+      const sources = await this.gateway.loadSources(undefined, true);
+      if (!this.isCurrentSession(session)) return;
+      this.publish({ sources, busy: false, statusMessage: status, readFacts: projectOperationFacts({ phase: 'succeeded',
+        value: sources, generation: ++sourceToolsReceiptGeneration }) });
+      const receipt = this.snapshot.receipt;
+      if (receipt !== undefined) this.publishManagementReceipt(session, receipt.receipt.confirmation, 'succeeded');
+    } catch (error) {
+      const receipt = this.snapshot.receipt;
+      if (receipt !== undefined) this.publishManagementReceipt(session, receipt.receipt.confirmation, 'failed', (error as Error).message);
+      this.publishIfCurrent(session, { busy: false, readFacts: projectOperationFacts({ phase: 'failed', value: this.snapshot.sources,
+        canRetry: true, generation: ++sourceToolsReceiptGeneration, message: (error as Error).message }) });
+    }
+  }
+
+  private publishManagementReceipt(session: number, confirmation: 'confirmed' | 'unknown' | 'undispatched',
+    readback: 'reading' | 'failed' | 'succeeded', refreshError?: string, confirmedParts?: number): void {
+    const receipt = projectPersistedReceipt<BookSource[]>({ confirmation, readback, value: this.snapshot.sources, refreshError,
+      generation: ++sourceToolsReceiptGeneration, canRetry: confirmation !== 'undispatched' && readback !== 'reading' &&
+        (readback === 'failed' || confirmation === 'unknown') });
+    this.publishIfCurrent(session, { receipt, busy: readback === 'reading', confirmedParts: confirmedParts ?? this.snapshot.confirmedParts,
+      statusMessage: receipt.receipt.message + (refreshError === undefined ? '' : `：${refreshError}`) });
+  }
+
   private enqueue(operation: () => Promise<void>, allowQueued: boolean = false): void {
     if (!allowQueued && (this.snapshot.busy || this.pendingOperations > 0)) {
       return;
@@ -718,6 +753,16 @@ export class SourceToolsOrchestrator {
   }
 
   private publish(patch: SourceToolsPatch): void {
+    if (patch.editorReadback !== undefined && patch.editorReadback !== null) {
+      const receipt = projectPersistedReceipt<BookSource[]>({ confirmation: patch.editorReadback.confirmation,
+        readback: patch.editorReadback.readback, value: patch.sources ?? this.snapshot.sources,
+        generation: ++sourceToolsReceiptGeneration,
+        canRetry: patch.editorReadback.confirmation !== 'undispatched' && patch.editorReadback.readback !== 'reading' &&
+          (patch.editorReadback.readback === 'failed' || patch.editorReadback.confirmation === 'unknown'),
+        message: patch.statusMessage });
+      patch.receipt = receipt; patch.editorOperation = receipt.facts;
+    }
+
     const sourceListRevision = patch.sourceListRevision ??
       (patch.sources !== undefined ?
         this.snapshot.sourceListRevision + 1 : this.snapshot.sourceListRevision);
@@ -726,6 +771,9 @@ export class SourceToolsOrchestrator {
         this.snapshot.selectionRevision + 1 : this.snapshot.selectionRevision);
     this.snapshot = {
       sources: patch.sources ?? this.snapshot.sources,
+      receipt: patch.receipt ?? this.snapshot.receipt,
+      readFacts: patch.readFacts ?? this.snapshot.readFacts,
+      confirmedParts: patch.confirmedParts ?? this.snapshot.confirmedParts,
       sourceListRevision,
       selectionRevision,
       selectedSourceIds: patch.selectedSourceIds ?? this.snapshot.selectedSourceIds,
@@ -753,6 +801,9 @@ export class SourceToolsOrchestrator {
   private copySnapshot(source: SourceToolsSnapshot): SourceToolsSnapshot {
     return {
       sources: source.sources.slice(),
+      receipt: source.receipt,
+      readFacts: source.readFacts,
+      confirmedParts: source.confirmedParts,
       sourceListRevision: source.sourceListRevision,
       selectionRevision: source.selectionRevision,
       selectedSourceIds: source.selectedSourceIds.slice(),
@@ -803,7 +854,7 @@ export class SourceToolsOrchestrator {
   }
 
   private isCurrentSession(session: number): boolean {
-    return this.isCurrent() && this.session === session;
+    return this.owner === ReaderRuntimeOwner.current() && this.isCurrent() && this.session === session;
   }
 }
 

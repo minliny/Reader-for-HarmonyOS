@@ -149,7 +149,7 @@ export struct RulesManagementPage {
     }
   }
 
-  private recovery(): ReaderRecoveryView { return readerRecoveryView(this.snapshot.receipt, this.snapshot.readFacts); }
+  private recovery(): ReaderRecoveryView { return readerRecoveryView(this.snapshot.receipt, this.snapshot.readFacts, this.snapshot.confirmedParts ?? 0); }
 
   @Builder
   private statusCard() {

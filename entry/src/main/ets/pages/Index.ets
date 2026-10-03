@@ -990,29 +990,7 @@ struct Index {
       } else if (this.route === 'source') {
         this.sourceManagementContent();
       } else if (this.route === 'sourceTools') {
-        SourceToolsPage({
-          snapshot: this.sourceToolsSnapshot,
-          onSelectAll: (): void => this.selectAllSourceTools(),
-          onClearSelection: (): void => this.updateSourceToolsSelection([]),
-          onToggleSelection: (sourceId: string): void => this.toggleSourceToolsSelection(sourceId),
-          onBack: (): void => this.returnToSourceManagement(),
-          onExportAll: (): void => this.getSourceToolsOrchestrator().exportAll(),
-          onExportSelected: (sourceIds: string[]): void => this.exportSelectedSources(sourceIds),
-          onCheckSelected: (sourceIds: string[]): void => this.checkSelectedSources(sourceIds),
-          onStopCheck: (): void => this.getSourceToolsOrchestrator().stopCheckSelected(),
-          onSetSelectedEnabled: (sourceIds: string[], enabled: boolean): void =>
-            this.setSelectedSourcesEnabled(sourceIds, enabled),
-          onDeleteSelected: (sourceIds: string[]): void => this.requestSourceDelete(sourceIds),
-          onOpenEditor: (sourceId: string): void => this.getSourceToolsOrchestrator().openEditor(sourceId),
-          onEditorDraftChanged: (text: string): void => this.getSourceToolsOrchestrator().updateEditorDraft(text),
-          onSaveEditor: (): void => this.getSourceToolsOrchestrator().saveEditor(),
-          onReconcileEditor: (): void => this.getSourceToolsOrchestrator().reconcileEditor(),
-          onCancelEditor: (): void => this.getSourceToolsOrchestrator().cancelEditor(),
-          onDebugKeyChanged: (value: string): void => this.getSourceToolsOrchestrator().updateDebugKey(value),
-          onCheckSelectionChanged: (mode: 'search' | 'explore', depth: number): void =>
-            this.getSourceToolsOrchestrator().updateCheckSelection(mode, depth),
-          onDebugSource: (sourceId: string): void => this.getSourceToolsOrchestrator().debugSource(sourceId),
-        });
+        this.sourceToolsContent();
       } else if (isReaderProductSurfaceEnabled('sync') && this.route === 'sync') {
         if (this.syncSnapshotReady) {
           SyncPage({
@@ -1438,6 +1416,34 @@ struct Index {
   }
 
   @Builder
+  private sourceToolsContent() {
+    SourceToolsPage({
+      snapshot: this.sourceToolsSnapshot,
+      onReconcile: (generation: number): void => this.getSourceToolsOrchestrator().reconcile(generation),
+      onSelectAll: (): void => this.selectAllSourceTools(),
+      onClearSelection: (): void => this.updateSourceToolsSelection([]),
+      onToggleSelection: (sourceId: string): void => this.toggleSourceToolsSelection(sourceId),
+      onBack: (): void => this.returnToSourceManagement(),
+      onExportAll: (): void => this.getSourceToolsOrchestrator().exportAll(),
+      onExportSelected: (sourceIds: string[]): void => this.exportSelectedSources(sourceIds),
+      onCheckSelected: (sourceIds: string[]): void => this.checkSelectedSources(sourceIds),
+      onStopCheck: (): void => this.getSourceToolsOrchestrator().stopCheckSelected(),
+      onSetSelectedEnabled: (sourceIds: string[], enabled: boolean): void =>
+        this.setSelectedSourcesEnabled(sourceIds, enabled),
+      onDeleteSelected: (sourceIds: string[]): void => this.requestSourceDelete(sourceIds),
+      onOpenEditor: (sourceId: string): void => this.getSourceToolsOrchestrator().openEditor(sourceId),
+      onEditorDraftChanged: (text: string): void => this.getSourceToolsOrchestrator().updateEditorDraft(text),
+      onSaveEditor: (): void => this.getSourceToolsOrchestrator().saveEditor(),
+      onReconcileEditor: (): void => this.getSourceToolsOrchestrator().reconcileEditor(),
+      onCancelEditor: (): void => this.getSourceToolsOrchestrator().cancelEditor(),
+      onDebugKeyChanged: (value: string): void => this.getSourceToolsOrchestrator().updateDebugKey(value),
+      onCheckSelectionChanged: (mode: 'search' | 'explore', depth: number): void =>
+        this.getSourceToolsOrchestrator().updateCheckSelection(mode, depth),
+      onDebugSource: (sourceId: string): void => this.getSourceToolsOrchestrator().debugSource(sourceId),
+    });
+  }
+
+  @Builder
   private sourceManagementContent() {
     SourceManagementPage({
       sources: this.sourceSources,
@@ -1681,7 +1687,7 @@ struct Index {
   }
 
   private getSourceToolsOrchestrator(): SourceToolsOrchestrator {
-    if (this.sourceToolsOrchestrator === undefined) {
+    if (this.sourceToolsOrchestrator === undefined || !this.sourceToolsOrchestrator.owns(ReaderRuntimeOwner.current())) {
       this.sourceToolsOrchestrator = new SourceToolsOrchestrator(
         (snapshot: SourceToolsSnapshot): void => {
           this.sourceToolsSnapshot = snapshot;
