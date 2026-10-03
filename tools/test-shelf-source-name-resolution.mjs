@@ -20,7 +20,7 @@ function fixture(initial = []) {
       LOCAL_SOURCE_ID: 'local', ReaderRuntimeOwner: { current: () => owner },
       SourceGateway: class { loadSourcesForIds() { const request = pending(); requests.push(request); return request.promise; } },
     });
-  const host = Object.assign(new Host(), { searchPublication:new SearchPublication(),searchPublicationRevision:0,shelfBooks: initial, bookshelfLoadGeneration: 1, bookshelfSourceNameRequest: 0,
+  const host = Object.assign(new Host(), { searchHost:{sources:()=>[],updateShelf() {}}, searchPublication:new SearchPublication(),searchPublicationRevision:0,shelfBooks: initial, bookshelfLoadGeneration: 1, bookshelfSourceNameRequest: 0,
     searchSources: [], sourceSources: [], sourceToolsSnapshot: {sources: []}, scheduleBookshelfBackgroundRefresh() {} });
   return {host, requests, changeOwner: () => { owner = { setReadingPreparationContext() {} }; }, apply: books => host.applyBookshelfState({kind:'populated',shelf:{books,total:books.length},continueReading:undefined})};
 }
