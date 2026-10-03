@@ -36,7 +36,7 @@ syntax.builderParamObjectCollection.set('ReaderDialogSurface', new Set(
 const Host = productionMotionMethods(file('pages/Index.ets'), [
   'openBookRemovalDialog', 'dismissBookRemovalDialog', 'confirmBookRemovalDialog',
   'requestRemoveDetailBook', 'requestRemoveShelfBook', 'requestRemoveShelfBooks',
-  'canRemoveDetailBook', 'canRemoveShelfBook', 'isSameDetailBook', 'shelfBookKey', 'onBackPress',
+  'hasUnknownShelfWrite', 'canRemoveDetailBook', 'canRemoveShelfBook', 'isSameDetailBook', 'shelfBookKey', 'onBackPress',
 ], { LOCAL_SOURCE_ID: 'local' });
 const local = { sourceId: 'local', bookId: 'a', title: '本地书' };
 const online = { sourceId: 'source', bookId: 'b', title: '在线书' };
