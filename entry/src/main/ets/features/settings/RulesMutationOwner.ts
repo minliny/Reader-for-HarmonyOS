@@ -11,7 +11,7 @@ export interface RulesMutationSnapshot {
   label: string; method: string; message: string;
   blocked: boolean; canRetryOriginal: boolean; operationId?: string; sequence?: number;
   writeStage: 'intent' | 'core' | 'cleanup';
-  subscription?: { kind: 0 | 1 | 2; cursor: number; total: number; confirmedParts: number; failedParts: number; metadataConfirmed: boolean };
+  subscription?: { kind: 0 | 1 | 2 | 3; cursor: number; total: number; confirmedParts: number; failedParts: number; metadataConfirmed: boolean };
 }
 interface RulesMutationReceipt {
   binding: { operationId: string; sequence: number; payloadFingerprint: string };
@@ -45,7 +45,8 @@ export class RulesMutationOwner {
 
   async run<T>(label: string, isCurrent: () => boolean,
     operation: (request: (method: string, params: JsonObject) => Promise<ReaderCoreResultEvent>,
-      confirmed: () => void) => Promise<T>, observer?: ReaderWriteEvidence): Promise<T> {
+      confirmed: () => void) => Promise<T>, observer?: ReaderWriteEvidence,
+    sourceCleanup?: () => Promise<boolean>): Promise<T> {
     if (this.state.busy || this.state.blocked || this.state.confirmation === 'unknown')
       throw new RulesMutationError(this.state.busy ? '另一规则操作正在执行' : this.state.message || '先前规则原操作仍需核对', this.state.confirmation === 'unknown');
     const current = (): boolean => this.current(isCurrent);
@@ -65,7 +66,7 @@ export class RulesMutationOwner {
       if (pending !== undefined) { this.admitPending(pending); throw new RulesMutationError(this.state.message, true); }
       this.state.method = method;
       intent = await this.intents.accept(label, method, fixed, async (): Promise<number> => {
-        const q = await this.query(undefined, current); this.requireCapability(); return q.head?.sequence ?? 0;
+        const q = await this.query(undefined, current); this.requireMethodCapability(method); return q.head?.sequence ?? 0;
       }, current);
       this.admitIdentity(intent); this.state.writeStage = 'core';
       const options: BookRequestOptions = {
@@ -96,6 +97,9 @@ export class RulesMutationOwner {
     try {
       const value = await operation(request, confirmed);
       if (evidence.confirmation() !== 'confirmed' || intent === undefined) throw new Error('rule operation did not return a qualified original ACK');
+      if (sourceCleanup!==undefined && qualifiedReceipt!==undefined && this.needsSourceCleanup(intent)) {
+        if (!await this.finishSourceCleanup(intent,qualifiedReceipt,sourceCleanup,true)) return value;
+      }
       // Cleanup failure cannot turn a qualified committed write into failure.
       await this.clearTerminal(intent, 'confirmed', qualifiedReceipt); return value;
     } catch (error) {
@@ -120,24 +124,26 @@ export class RulesMutationOwner {
   }
 
   /** Only subscription import + its fixed timestamp; not an arbitrary task executor. */
-  async runSubscription(kind: 0 | 1 | 2, steps: RuleSubscriptionStep[],
+  async runSubscription(kind: 0 | 1 | 2 | 3, steps: RuleSubscriptionStep[],
     localFailures: { index: number; message: string }[], currentAdmission: () => boolean,
     qualify: (method: string, params: JsonObject, data: JsonObject) => void,
-    observer?: ReaderWriteEvidence): Promise<RulesMutationSnapshot> {
+    observer?: ReaderWriteEvidence,
+    rejected?: (step: RuleSubscriptionStep, data: JsonObject) => void): Promise<RulesMutationSnapshot> {
     if (this.state.busy || this.state.blocked || this.state.confirmation === 'unknown') throw new RulesMutationError('先核对原规则/订阅操作', true);
     const current = (): boolean => this.current(currentAdmission);
     this.state = { generation: this.state.generation + 1, busy: true, confirmation: 'undispatched',
-      label: '订阅更新', method: '', message: '', blocked: false, canRetryOriginal: false, writeStage: 'intent' };
+      label: kind===3 ? '书源文档导入' : '订阅更新', method: '', message: '', blocked: false, canRetryOriginal: false, writeStage: 'intent' };
     const acceptedBefore = this.intents.accepted();
     try {
       const existing = await this.intents.load(); if (existing !== undefined) { this.admitPending(existing); throw new Error(this.state.message); }
-      if (steps.length < 2 || steps[steps.length-1].method !== 'rule-sub.put' || steps.slice(0,-1).some(s =>
+      if (kind===3 ? steps.length<1 || steps.length>5000 || steps.some(s=>s.method!=='source.import') :
+        steps.length < 2 || steps[steps.length-1].method !== 'rule-sub.put' || steps.slice(0,-1).some(s =>
         s.method !== (kind === 0 ? 'source.import' : kind === 1 ? 'rss-source.import' : 'rule-bundle.import'))) throw new Error('订阅步骤不属于原类型旅程');
       const journey: RuleSubscriptionJourney = { kind, steps, localFailures, cursor: 0, facts: [] };
       const first = steps[0];
-      const intent = await this.intents.accept('订阅更新', first.method, first.params,
-        async (): Promise<number> => { const q = await this.query(undefined,current); this.requireSubscriptionCapability(); return q.head?.sequence ?? 0; },current,journey);
-      return await this.continueSubscription(intent,current,qualify,true,observer,true);
+      const intent = await this.intents.accept(kind===3 ? '书源文档导入' : '订阅更新', first.method, first.params,
+        async (): Promise<number> => { const q = await this.query(undefined,current); this.requireSubscriptionCapability(kind); return q.head?.sequence ?? 0; },current,journey);
+      return await this.continueSubscription(intent,current,qualify,true,observer,true,rejected);
     } catch (error) {
       const accepted = this.intents.accepted();
       if (accepted !== undefined && accepted !== acceptedBefore) this.admitPending(accepted);
@@ -147,14 +153,15 @@ export class RulesMutationOwner {
   }
   private async continueSubscription(initial: RulesMutationIntent, current: () => boolean,
     qualify: (method: string, params: JsonObject, data: JsonObject) => void,
-    explicit: boolean, observer?: ReaderWriteEvidence, durable: boolean = false): Promise<RulesMutationSnapshot> {
+    explicit: boolean, observer?: ReaderWriteEvidence, durable: boolean = false,
+    rejected?: (step: RuleSubscriptionStep, data: JsonObject) => void): Promise<RulesMutationSnapshot> {
     let intent = initial;
     while (true) {
       this.admitPending(intent); this.state.canRetryOriginal = false;
       const journey = intent.subscription; if (journey === undefined) throw new Error('缺少订阅原旅程');
       this.projectSubscription(intent);
       const q = intent.terminal === undefined ? await this.query(intent,current) : undefined;
-      if (q !== undefined) this.requireSubscriptionCapability();
+      if (q !== undefined) this.requireSubscriptionCapability(journey.kind);
       let receipt = intent.terminal === undefined ? q?.receipt : this.decodeReceipt(intent.terminal,intent);
       if (receipt === undefined) {
         const head = q?.head?.sequence ?? 0;
@@ -170,16 +177,16 @@ export class RulesMutationOwner {
       }
       if (receipt.outcome === 'applied') { qualify(intent.mutation.method,intent.mutation.params,receipt.data);
         if (observer !== undefined && observer.confirmedCount < observer.dispatchedCount) observer.confirmed(); }
-      else observer?.rejectedBeforeExecution();
+      else { observer?.rejectedBeforeExecution(); rejected?.(journey.steps[journey.cursor],receipt.data); }
       const last = journey.cursor === journey.steps.length - 1;
       const confirmedImport = (journey.settled?.applied ?? journey.facts.filter(f=>f.outcome === 'applied').length) + (receipt.outcome === 'applied' ? 1 : 0);
       // Definite original Source item rejection preserves the previous partial
       // semantics. Unknown transport stops before any later item or timestamp.
-      const abort = receipt.outcome === 'rejected' && (journey.kind !== 0 || last);
+      const abort = receipt.outcome === 'rejected' && (journey.kind !== 0 && journey.kind !== 3 || last);
       const noImports = journey.kind === 0 && journey.cursor === journey.steps.length - 2 && confirmedImport === 0;
       if (last || abort || noImports) {
         this.projectSubscription(intent,receipt);
-        await this.clearTerminal(intent,receipt.outcome === 'applied' ? 'confirmed' : 'undispatched',receipt);
+        await this.clearTerminal(intent,receipt.outcome === 'applied' || journey.kind===3 && confirmedImport>0 ? 'confirmed' : 'undispatched',receipt);
         if (receipt.outcome === 'rejected') this.state.message = this.rejectionMessage(receipt);
         return this.snapshot();
       }
@@ -208,7 +215,8 @@ export class RulesMutationOwner {
    * null is never "not dispatched", a higher head never confirms an old delta. */
   async recoverOriginal(isCurrent: () => boolean,
     qualify: (method: string, params: JsonObject, data: JsonObject) => void,
-    retryOriginal: boolean = false): Promise<RulesMutationSnapshot> {
+    retryOriginal: boolean = false, family?: 'source-management',
+    sourceCleanup?: (method: string, params: JsonObject) => Promise<boolean>): Promise<RulesMutationSnapshot> {
     if (this.state.busy) throw new RulesMutationError('另一规则操作正在执行', this.state.confirmation === 'unknown');
     const current = (): boolean => this.current(isCurrent); if (!current()) throw new RulesMutationError('规则核对入口已退役', true);
     this.state.busy = true; this.state.generation += 1;
@@ -216,10 +224,12 @@ export class RulesMutationOwner {
       const intent = await this.intents.load();
       if (intent === undefined) { this.state.blocked = false; return this.snapshot(); }
       this.admitPending(intent);
+      const sourceFamily = intent.subscription?.kind===3 || intent.mutation.method==='source.update' || intent.mutation.method==='source.delete';
+      if ((family==='source-management') !== sourceFamily) throw new Error('当前入口不能继续另一家族的原操作；原记录保持阻断');
       if (intent.subscription !== undefined) return await this.continueSubscription(intent,current,qualify,retryOriginal);
       let receipt = intent.terminal === undefined ? undefined : this.decodeReceipt(intent.terminal, intent);
       const query = receipt === undefined ? await this.query(intent, current) : undefined;
-      if (receipt === undefined) this.requireCapability();
+      if (receipt === undefined) this.requireMethodCapability(intent.mutation.method);
       receipt = receipt ?? query?.receipt;
       if (receipt === undefined) {
         const head = query?.head?.sequence ?? 0;
@@ -231,7 +241,13 @@ export class RulesMutationOwner {
         const event = await this.runtime.request('rules.mutation.apply', this.params(intent), { canDispatch: current });
         receipt = this.decodeReceipt(event.data, intent);
       }
-      if (receipt.outcome === 'applied') qualify(intent.mutation.method, intent.mutation.params, receipt.data);
+      if (receipt.outcome === 'applied') {
+        qualify(intent.mutation.method, intent.mutation.params, receipt.data);
+        if (family==='source-management' && sourceCleanup!==undefined && this.needsSourceCleanup(intent)) {
+          if (!await this.finishSourceCleanup(intent,receipt,
+            (): Promise<boolean> => sourceCleanup(intent.mutation.method,intent.mutation.params),retryOriginal)) return this.snapshot();
+        }
+      }
       this.state.canRetryOriginal = false;
       await this.clearTerminal(intent, receipt.outcome === 'applied' ? 'confirmed' : 'undispatched', receipt);
       if (receipt.outcome === 'rejected') this.state.message = this.rejectionMessage(receipt);
@@ -241,6 +257,24 @@ export class RulesMutationOwner {
       this.state.blocked = true; this.state.message = error instanceof Error ? error.message : '规则核对暂时不可用';
       throw new RulesMutationError(this.state.message, this.state.confirmation === 'unknown');
     } finally { this.state.busy = false; }
+  }
+  private needsSourceCleanup(intent: RulesMutationIntent): boolean {
+    return intent.mutation.method==='source.delete' || intent.mutation.method==='source.update' && intent.mutation.params['enabled']===false;
+  }
+  private async finishSourceCleanup(intent: RulesMutationIntent, receipt: RulesMutationReceipt,
+    cleanup: () => Promise<boolean>, explicit: boolean): Promise<boolean> {
+    this.state.confirmation='confirmed';this.state.writeStage='cleanup';this.state.blocked=true;
+    this.state.canRetryOriginal=true;
+    this.state.message='Core 原书源写入已确认；Host 登录会话清理仍待完成，可继续原清理，不会重写 Core';
+    try {
+      await this.intents.retainTerminal(intent,receipt as unknown as JsonObject);
+      if (!explicit) return false;
+      if (!await cleanup()) return false;
+      return true;
+    } catch (error) {
+      this.state.message+='：'+(error instanceof Error ? error.message : '原清理尚未确认');
+      return false;
+    }
   }
   private async clearTerminal(intent: RulesMutationIntent, confirmation: 'confirmed' | 'undispatched', terminal?: RulesMutationReceipt): Promise<void> {
     this.state.confirmation = confirmation; this.state.writeStage = 'cleanup'; this.state.canRetryOriginal = false;
@@ -254,9 +288,15 @@ export class RulesMutationOwner {
   }
   private params(intent: RulesMutationIntent): JsonObject { return { operationId: intent.operationId, sequence: intent.sequence, mutation: intent.mutation }; }
   private current(admission: () => boolean): boolean { try { return ReaderRuntimeOwner.isCurrent(this.runtime as ReaderRuntimeOwner) && admission(); } catch (_) { return false; } }
-  private requireSubscriptionCapability(): void {
+  private requireSubscriptionCapability(kind: 0 | 1 | 2 | 3): void {
     this.requireCapability();
+    if (kind===3) return;
     if (this.runtime.supportsCoreCapability?.('rules.mutation.subscription.v1') !== true) throw new Error('当前 Core 不支持订阅原旅程回执，已停止派发');
+  }
+  private requireMethodCapability(method: string): void {
+    this.requireCapability();
+    if ((method==='source.update' || method==='source.delete') && this.runtime.supportsCoreCapability?.('rules.mutation.source-management.v1') !== true)
+      throw new Error('当前 Core 不支持书源原管理回执，已停止派发');
   }
   private requireCapability(): void { if (this.runtime.supportsCoreCapability?.('rules.mutation.exact.v1') !== true) throw new Error('当前 Core 不具备规则精确回执能力，已停止写入'); }
   private async query(intent: RulesMutationIntent | undefined, current: () => boolean): Promise<RulesMutationQuery> {

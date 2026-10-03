@@ -524,6 +524,8 @@
     "test-source-canonical-progress-owner.mjs",
     "test-source-content-correction.mjs",
     "test-source-index-presentation-consumers.mjs",
+    "test-source-management-cold-owner.mjs",
+    "test-source-management-exact-intents.mjs",
     "test-source-runtime-owner-closure.mjs",
     "test-source-settings-receipt-consumers.mjs",
     "test-source-supply-chain.mjs",

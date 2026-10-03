@@ -14,7 +14,8 @@ const file=new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta
 const direct=overrides=>productionMotionMethods(file,['requestDirect'],{DEFAULT_CORE_REQUEST_TIMEOUT_MS:1000,
  coreAdmissionFailureSummary:()=>undefined,httpResponseFailureSummary:()=>undefined,hilog:{warn(){}},...overrides});
 const payload=method=>({operationId:'00000000-0000-4000-8000-000000000001',sequence:1,
- mutation:{method,params:method==='replace.persist'?{operation:'update',params:{id:3,replacement:'after'}}:{id:3}}});
+ mutation:{method,params:method==='replace.persist'?{operation:'update',params:{id:3,replacement:'after'}}:
+ method==='source.update'?{sourceId:'s',enabled:false}:method==='source.delete'?{sourceIds:['s']}:{id:3}}});
 const tick=()=>new Promise(r=>setImmediate(r));
 function fixture(negative=false){
  const queue=[],calls=[];let complete=true;
@@ -32,12 +33,12 @@ function fixture(negative=false){
 const checks=[];
 for(const original of RULES_MUTATION_METHODS){
  const f=fixture(),tuple=payload(original);
- const changesBody=['replace.persist','dict-rule.put','dict-rule.delete','rule-bundle.import','reader.chinese-conversion.put','source.import'].includes(original);
+ const changesBody=['replace.persist','dict-rule.put','dict-rule.delete','rule-bundle.import','reader.chinese-conversion.put','source.import','source.update','source.delete'].includes(original);
  const current=f.preparations.captureContentValidity('s','b');
  await f.acquisition.request('rules.mutation.apply',tuple);
  assert.equal(current(),!changesBody,original+' preserves original preparation semantics');
  assert.equal(f.acquisition.readingProjectionRevision(),changesBody?2:0,original+' preserves original acquisition semantics');
- assert.equal(f.owner.wakes,['replace.persist','reader.chinese-conversion.put'].includes(original)?1:0,original+' preserves original wake policy');
+ assert.equal(f.owner.wakes,['replace.persist','reader.chinese-conversion.put','source.update'].includes(original)?1:0,original+' preserves original wake policy');
  assert.equal(f.calls.length,1);assert.equal(f.calls[0].method,'rules.mutation.apply');assert.deepEqual(f.calls[0].params,tuple,
   'classification never unwraps the dispatched typed receipt or changes full original DTO');f.close();
 }
@@ -53,7 +54,7 @@ checks.push('all registered original rules keep preparation/acquisition/wake eff
  checks.push('actual SDK in-flight fence and qualified error retain retired body without replay');
 }
 for(const [method,tuple] of [['rules.mutation.query',payload('replace.persist')],['rules.mutation.apply',{...payload('replace.persist'),sequence:0}],
- ['rules.mutation.apply',{...payload('replace.persist'),mutation:{method:'source.delete',params:{sourceIds:['s']}}}],
+ ['rules.mutation.apply',{...payload('replace.persist'),mutation:{method:'future.source.delete',params:{sourceIds:['s']}}}],
  ['rules.mutation.apply',{...payload('replace.persist'),mutation:{method:'replace.persist',params:[]}}]]){
  const f=fixture(),old=f.preparations.captureContentValidity('s','b');
  await f.acquisition.request(method,tuple);assert.equal(old(),true);assert.equal(f.acquisition.readingProjectionRevision(),0);assert.equal(f.owner.wakes,0);f.close();
@@ -65,4 +66,22 @@ checks.push('pure query and malformed/future envelope cannot impersonate an orig
  const tuple=payload('replace.persist');assert.equal(readerRuleMutationEffects('rules.mutation.apply',tuple).method,'replace.persist');
 }
 checks.push('negative production Runtime dependency proves missing unwrap is detected');
+for (const original of ['bookshelf.remove','bookshelf.removeBatch']) {
+ const params=original==='bookshelf.remove' ? {sourceId:'s',bookId:'b'} : {targets:[{sourceId:'s',bookId:'b'}]};
+ const directCase=fixture(),wrapped=fixture(),negative=fixture(true);
+ const beforeDirect=directCase.preparations.captureContentValidity('s','b'),beforeWrapped=wrapped.preparations.captureContentValidity('s','b');
+ await directCase.acquisition.request(original,params);
+ const tuple={operationId:'00000000-0000-4000-8000-000000000001',sequence:1,mutation:{method:original,params}};
+ await wrapped.acquisition.request('bookshelf.management.mutation.apply',tuple);
+ assert.equal(beforeDirect(),false);assert.equal(beforeWrapped(),false);
+ assert.equal(wrapped.owner.preparationIntentEpoch,directCase.owner.preparationIntentEpoch);
+ assert.equal(wrapped.acquisition.preparationGeneration,directCase.acquisition.preparationGeneration);
+ assert.equal(wrapped.owner.wakes,0);assert.deepEqual(wrapped.calls[0].params,tuple);
+ assert.equal(wrapped.calls[0].method,'bookshelf.management.mutation.apply');
+ await negative.acquisition.request('bookshelf.management.mutation.apply',tuple);
+ assert.notEqual(negative.owner.preparationIntentEpoch,wrapped.owner.preparationIntentEpoch,'removing actual Runtime classification loses its destructive intent epoch');
+ for(const f of [directCase,wrapped,negative])f.close();
+}
+checks.push('single/batch typed removal preserves existing destructive preparation fences without rewriting SDK dispatch');
+
 console.log(JSON.stringify({pass:true,checks,boundary:'actual three owners and Core SDK; controlled native event transport, no Core atomic receipt or HarmonyOS target claim'},null,2));

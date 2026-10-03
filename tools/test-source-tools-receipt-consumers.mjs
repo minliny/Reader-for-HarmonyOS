@@ -20,7 +20,7 @@ const clone=v=>structuredClone(v),tick=()=>new Promise(r=>setImmediate(r));
 const defer=()=>{let resolve;const promise=new Promise(r=>resolve=r);return{resolve,promise};};
 const document=id=>JSON.stringify({bookSourceUrl:id,bookSourceName:id,bookSourceType:0,enabled:true});
 function rpc(){return{calls:[],rows:['https://a.test','https://b.test'].map(id=>({sourceId:id,name:id,baseUrl:id,enabled:true,enabledExplore:false,bookSource:JSON.parse(document(id))})),readFail:0,writeFail:false,partial:false,pause:undefined,supportsCoreCapability:()=>false,async clearSourceCookieSession(){},
- async request(method,p){this.calls.push(method);if(this.pause?.method===method)await this.pause.promise;
+ async request(method,p,options={}){if(options.canDispatch?.()===false||options.canContinue?.()===false)throw Error('request not dispatched');options.onDispatch?.();this.calls.push(method);if(this.pause?.method===method)await this.pause.promise;
  if(method==='source.list'){if(this.readFail){this.readFail--;throw Error('read unavailable');}return{data:{sources:clone(this.rows)}};}
  if(method==='source.export')return{data:{data:'['+document(p.sourceIds?.[0]??this.rows[0].sourceId)+']',count:1,format:'json'}};
  if(method==='source.update'){this.rows.find(r=>r.sourceId===p.sourceId).enabled=p.enabled;if(this.writeFail||this.partial&&p.sourceId==='https://b.test'){this.writeFail=false;throw Error('lost ACK');}return{data:{source:clone(this.rows.find(r=>r.sourceId===p.sourceId))}};}

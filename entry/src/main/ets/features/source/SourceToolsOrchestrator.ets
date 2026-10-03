@@ -1,6 +1,7 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { projectCommitReadback, type CommitReadbackSummary, type OperationFacts } from '../../app/ReaderOperationFacts';
+import type { RulesMutationSnapshot } from '../settings/RulesMutationOwner';
 import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { projectOperationFacts } from '../../app/ReaderOperationFacts';
 import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../app/ReaderPersistedReceiptProjection';
@@ -55,6 +56,7 @@ const EMPTY_BATCH_CHECK_PROGRESS: SourceBatchCheckProgress = {
 
 export interface SourceToolsSnapshot {
   sources: BookSource[];
+  original?: RulesMutationSnapshot;
   receipt?: PersistedReceiptProjection<BookSource[]>;
   readFacts?: OperationFacts<BookSource[]>;
   confirmedParts?: number;
@@ -193,6 +195,7 @@ export class SourceToolsOrchestrator {
     this.publish({ busy: true, statusMessage: '正在读取 Core 书源工具数据…',
       readFacts: projectOperationFacts({ phase: 'loading', value: seedSources.length > 0 ? seedSources : undefined, generation: ++sourceToolsReceiptGeneration }) });
     this.enqueue(async (): Promise<void> => {
+      await this.recoverOriginalSource(session,false);
       try {
         const sources = await this.gateway.loadSources(undefined, true);
         if (this.isCurrentSession(session)) {
@@ -280,7 +283,9 @@ export class SourceToolsOrchestrator {
       await this.performManagementWrite(session, async (): Promise<string> => {
         for (const sourceId of selection) {
           await this.gateway.updateSource(sourceId, { enabled });
-          if (!enabled) {
+          const original=this.gateway.originalMutationSnapshot();
+          if (original?.blocked) throw new Error(original.message);
+          if (!enabled && !this.gateway.handlesSourceCleanup()) {
             try { await this.owner.clearSourceCookieSession(sourceId); }
             catch (error) { hilog.error(DOMAIN, 'Reader', 'Source cookie cleanup failed: %{private}s', (error as Error).message); }
           }
@@ -489,6 +494,7 @@ export class SourceToolsOrchestrator {
   }
 
   saveEditor(): void {
+    if (this.gateway.originalMutationSnapshot()?.blocked) return;
     const session = this.session;
     const sourceId = this.snapshot.editorSourceId;
     const text = this.snapshot.editorText;
@@ -723,7 +729,7 @@ export class SourceToolsOrchestrator {
   owns(owner: ReaderRuntimeOwner): boolean { return this.owner === owner; }
 
   private async performManagementWrite(session: number, mutation: () => Promise<string>): Promise<void> {
-    if (this.snapshot.receipt?.receipt.confirmation === 'unknown') return;
+    if (this.snapshot.receipt?.receipt.confirmation === 'unknown' || this.gateway.originalMutationSnapshot()?.blocked) return;
     const evidence = new ReaderWriteEvidence();
     this.gateway.observeWrites(evidence);
     this.publishIfCurrent(session, { busy: true });
@@ -737,7 +743,26 @@ export class SourceToolsOrchestrator {
     await this.reloadManagement(session, status);
   }
 
+  continueOriginal(generation: number): void {
+    const session=this.session,original=this.gateway.originalMutationSnapshot();
+    if (!this.isCurrentSession(session) || original?.generation!==generation || !original.canRetryOriginal || original.busy) return;
+    this.enqueue(async (): Promise<void> => {
+      if (!this.isCurrentSession(session) || this.gateway.originalMutationSnapshot()?.generation!==generation) return;
+      await this.recoverOriginalSource(session,true);await this.reloadManagement(session,'已核对原书源内容');
+    });
+  }
+  private async recoverOriginalSource(session: number, retry: boolean): Promise<void> {
+    if (!this.isCurrentSession(session)) return;
+    try {await this.gateway.recoverOriginalSource((): boolean => this.isCurrentSession(session),retry);} catch (_) {}
+    if (this.isCurrentSession(session)) this.publish({busy:false});
+  }
   reconcile(generation: number): void {
+    const original=this.gateway.originalMutationSnapshot();
+    if (original?.blocked && original.generation===generation) {
+      const session=this.session;this.enqueue(async (): Promise<void> => {
+        await this.recoverOriginalSource(session,false);await this.reloadManagement(session,'已核对原书源回执');
+      });return;
+    }
     const receipt = this.snapshot.receipt;
     if (this.snapshot.editorSourceId.length > 0 && receipt?.facts.generation === generation && receipt.facts.canRetry) {
       this.reconcileEditor(); return;
@@ -776,6 +801,8 @@ export class SourceToolsOrchestrator {
 
   private publishManagementReceipt(session: number, confirmation: 'confirmed' | 'unknown' | 'undispatched',
     readback: 'reading' | 'failed' | 'succeeded', refreshError?: string, confirmedParts?: number): void {
+    const original=this.gateway.originalMutationSnapshot();
+    if (original?.blocked) confirmation=original.confirmation;
     const receipt = projectPersistedReceipt<BookSource[]>({ confirmation, readback, value: this.snapshot.sources, refreshError,
       generation: ++sourceToolsReceiptGeneration, canRetry: confirmation !== 'undispatched' && readback !== 'reading' &&
         (readback === 'failed' || confirmation === 'unknown') });
@@ -863,7 +890,8 @@ export class SourceToolsOrchestrator {
       editorOperation: patch.editorOperation === null ? undefined :
         (patch.editorOperation ?? this.snapshot.editorOperation),
       busy: patch.busy ?? this.snapshot.busy,
-      statusMessage: patch.statusMessage ?? this.snapshot.statusMessage,
+      statusMessage: this.gateway.originalMutationSnapshot()?.blocked ? this.gateway.originalMutationSnapshot()?.message ?? '' :
+        patch.statusMessage ?? this.snapshot.statusMessage,
     };
     this.deliver();
   }
@@ -879,6 +907,7 @@ export class SourceToolsOrchestrator {
   private copySnapshot(source: SourceToolsSnapshot): SourceToolsSnapshot {
     return {
       sources: source.sources.slice(),
+      original: this.gateway.originalMutationSnapshot(),
       receipt: source.receipt,
       readFacts: source.readFacts,
       confirmedParts: source.confirmedParts,

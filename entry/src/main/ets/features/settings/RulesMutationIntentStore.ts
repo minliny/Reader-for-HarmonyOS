@@ -12,7 +12,7 @@ export interface RuleSubscriptionStep { method: string; params: JsonObject; sour
 export interface RuleSubscriptionFact { operationId: string; sequence: number; method: string;
   outcome: 'applied' | 'rejected'; data: JsonObject; receipt: JsonObject; }
 export interface RuleSubscriptionJourney {
-  kind: 0 | 1 | 2;
+  kind: 0 | 1 | 2 | 3;
   /** Original document-derived DTOs + one frozen metadata timestamp. */
   steps: RuleSubscriptionStep[];
   localFailures: { index: number; message: string }[];
@@ -31,7 +31,7 @@ export interface RulesMutationIntent {
   recordFingerprint?: string;
   subscription?: RuleSubscriptionJourney;
 }
-interface RuleSubscriptionPlan { version: 1; id: string; kind: 0 | 1 | 2;
+interface RuleSubscriptionPlan { version: 1; id: string; kind: 0 | 1 | 2 | 3;
   steps: RuleSubscriptionStep[]; localFailures: { index: number; message: string }[]; }
 interface QualifiedSubscriptionPlan { runtime: ReadingGatewayRuntime; fingerprint: string;
   value: RuleSubscriptionPlan; raw: string; params: string[]; durable: boolean; }
@@ -138,6 +138,20 @@ export class RulesMutationIntentStore {
       RulesMutationIntentStore.warm = undefined;
     });
   }
+  /** A qualified Source Core ACK remains attached to its complete original
+   * tuple until idempotent Host cookie cleanup succeeds. This is the same
+   * authority, not a second cleanup queue or another Core mutation. */
+  async retainTerminal(intent: RulesMutationIntent, terminal: JsonObject): Promise<void> {
+    await this.serial(async (): Promise<void> => {
+      this.assertCurrent(); const disk=await this.read();this.assertCurrent();
+      const warm=RulesMutationIntentStore.warm;
+      if ((disk!==undefined && !this.same(disk,intent)) || (warm!==undefined && !this.same(warm,intent)))
+        throw new Error('旧书源清理不能替换新原操作');
+      const retained={...intent,terminal,recordFingerprint:undefined};
+      RulesMutationIntentStore.warm=retained;this.acceptedIntent=retained;
+      await this.write(retained);
+    });
+  }
   private async serial<T>(operation: () => Promise<T>): Promise<T> {
     const prior = RulesMutationIntentStore.tail; let release: (() => void) | undefined;
     RulesMutationIntentStore.tail = new Promise<void>((resolve): void => { release = resolve; });
@@ -155,6 +169,9 @@ export class RulesMutationIntentStore {
       !RULES_MUTATION_METHODS.includes(intent.mutation?.method) || intent.mutation.params === null ||
       typeof intent.mutation.params !== 'object' || Array.isArray(intent.mutation.params)) throw new Error('规则原记录身份或内容无效，已保留');
     // Current snapshots carry the immutable plan reference, not all 5000 DTOs.
+    // Legacy single-operation snapshots may retain their original DTO, but
+    // an unchecked stored terminal can never replace a new exact Core query.
+    if (intent.subscription===undefined && intent.recordFingerprint===undefined) intent.terminal=undefined;
     await this.validateIntegrity(intent,false);
     await this.hydratePlan(intent);
     await this.validateSubscription(intent);
@@ -175,8 +192,8 @@ export class RulesMutationIntentStore {
       if (j.plan!==undefined && j.settled===undefined) {
         j.settled=this.settled(j); j.facts=j.facts.slice(-1);
       }
-      intent.recordFingerprint = await sha256Hex(this.serialized(intent,false));
     }
+    intent.recordFingerprint = await sha256Hex(this.serialized(intent,false));
     this.assertCurrent(); await this.replace(this.serialized(intent,true));
   }
   private serialized(intent: RulesMutationIntent, fingerprint: boolean): string {
@@ -187,12 +204,21 @@ export class RulesMutationIntentStore {
     return JSON.stringify(payload);
   }
   private async validateIntegrity(intent: RulesMutationIntent, warm: boolean): Promise<void> {
-    if (intent.subscription === undefined) return;
-    // An accepted warm tuple can predate a failed digest/Atomic ACK. No Core
-    // dispatch occurs until actual same-ID plan+current snapshot ACKs succeed.
-    if ((warm || intent.subscription.plan===undefined) && intent.recordFingerprint === undefined) return;
-    if (typeof intent.recordFingerprint !== 'string' || intent.recordFingerprint !== await sha256Hex(this.serialized(intent,false)))
-      throw new Error('订阅完整原记录校验失败，已保留且停止新写入');
+    // Warm accepted tuples can predate an interrupted digest/Atomic ACK.
+    // Legacy complete DTOs remain queryable; no unchecked terminal is trusted.
+    if (intent.recordFingerprint===undefined && (warm || intent.subscription?.plan===undefined)) return;
+    if (typeof intent.recordFingerprint!=='string' || intent.recordFingerprint!==await sha256Hex(this.serialized(intent,false)))
+      throw new Error('规则完整原记录校验失败，已保留且停止新写入');
+    const terminal=intent.terminal;
+    if (terminal!==undefined) {
+      const binding=terminal['binding'] as JsonObject;
+      if (binding?.['operationId']!==intent.operationId || binding['sequence']!==intent.sequence ||
+        typeof binding['payloadFingerprint']!=='string' || !/^[0-9a-f]{64}$/.test(binding['payloadFingerprint'] as string) ||
+        terminal['method']!==intent.mutation.method || !['applied','rejected'].includes(terminal['outcome'] as string) ||
+        terminal['data']===null || typeof terminal['data']!=='object' || Array.isArray(terminal['data']) ||
+        terminal['ackFingerprint']!==await sha256Hex(JSON.stringify([terminal['method'],terminal['outcome'],terminal['data']])))
+        throw new Error('规则保留的终态回执无效，已保留且停止新写入');
+    }
   }
   private async ensurePlan(intent: RulesMutationIntent): Promise<void> {
     const j=intent.subscription; if (j===undefined) return;
@@ -239,11 +265,18 @@ export class RulesMutationIntentStore {
     Object.freeze(plan.steps);Object.freeze(plan.localFailures);Object.freeze(plan);
   }
   private validatePlan(kind: number, steps: RuleSubscriptionStep[], failures: {index:number;message:string}[]): void {
-    if (![0,1,2].includes(kind) || !Array.isArray(steps) || steps.length<2 || !Array.isArray(failures) ||
+    if (![0,1,2,3].includes(kind) || !Array.isArray(steps) || steps.length<(kind===3 ? 1 : 2) ||
+      steps.length>(kind===3 ? 5000 : 5001) || !Array.isArray(failures) ||
       steps.some((step,index): boolean => step===null || typeof step!=='object' || step.params===null || typeof step.params!=='object' || Array.isArray(step.params) ||
-        step.method!==(index===steps.length-1 ? 'rule-sub.put' : kind===0 ? 'source.import' : kind===1 ? 'rss-source.import' : 'rule-bundle.import')) ||
+        step.method!==(kind===3 ? 'source.import' : index===steps.length-1 ? 'rule-sub.put' : kind===0 ? 'source.import' : kind===1 ? 'rss-source.import' : 'rule-bundle.import')) ||
       failures.some((failure): boolean => !Number.isSafeInteger(failure.index) || failure.index<0 || typeof failure.message!=='string'))
       throw new Error('订阅固定计划结构无效，已保留');
+    if (kind===3) {
+      const indices=steps.map((step): number => step.sourceIndex ?? -1).concat(failures.map((failure): number => failure.index));
+      if (indices.length>5000 || new Set(indices).size!==indices.length ||
+        indices.some((index): boolean => !Number.isSafeInteger(index) || index<0 || index>=indices.length))
+        throw new Error('书源原文档索引不完整或重复，已保留');
+    }
   }
   private settled(j: RuleSubscriptionJourney): {applied:number;rejected:number} {
     return j.settled ?? {applied:j.facts.filter(f=>f.outcome==='applied').length,rejected:j.facts.filter(f=>f.outcome==='rejected').length};

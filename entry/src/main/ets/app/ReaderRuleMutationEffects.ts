@@ -7,7 +7,7 @@ export interface ReaderRuleMutationEffectRequest { method: string; params: JsonO
  * Reuse the closed Core/Host rule family, never dispatch or reinterpret its DTO.
  * Malformed or future envelopes cannot borrow another command's effects. */
 export function readerRuleMutationEffects(method: string, params: JsonObject): ReaderRuleMutationEffectRequest {
-  if (method !== 'rules.mutation.apply') return { method, params };
+  if (method !== 'rules.mutation.apply' && method !== 'bookshelf.management.mutation.apply') return { method, params };
   const mutation = params['mutation'];
   if (typeof params['operationId'] !== 'string' || (params['operationId'] as string).trim().length === 0 ||
     typeof params['sequence'] !== 'number' || !Number.isSafeInteger(params['sequence']) || (params['sequence'] as number) < 1 ||
@@ -15,7 +15,7 @@ export function readerRuleMutationEffects(method: string, params: JsonObject): R
   const command = mutation as JsonObject;
   const originalMethod = command['method'];
   const originalParams = command['params'];
-  if (typeof originalMethod !== 'string' || !RULES_MUTATION_METHODS.includes(originalMethod) ||
+  if (typeof originalMethod !== 'string' || !(method==='rules.mutation.apply' ? RULES_MUTATION_METHODS : ['bookshelf.remove','bookshelf.removeBatch']).includes(originalMethod) ||
     originalParams === null || typeof originalParams !== 'object' || Array.isArray(originalParams)) return { method, params };
   return { method: originalMethod, params: originalParams as JsonObject };
 }

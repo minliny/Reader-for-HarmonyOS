@@ -5,6 +5,8 @@ import { httpUrlHostname, isPrivateNetworkTarget } from '../../app/HttpTransport
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { classifyReaderSource, type ReaderSourceCategory } from './ReaderSourceCategory';
+import { RulesMutationOwner, type RulesMutationSnapshot } from '../settings/RulesMutationOwner';
+import type { RuleSubscriptionStep } from '../settings/RulesMutationIntentStore';
 
 export type BookSource = {
   sourceId: string;
@@ -238,6 +240,7 @@ export class SourceGateway {
     text: string,
     shouldContinue: () => boolean = (): boolean => true,
   ): Promise<SourceImportSummary> {
+    if (this.supportsOriginalSourceImport()) return this.importOriginalSourceDocument(text,shouldContinue);
     const rawSources = this.parseBookSourceDocument(text);
 
     // Non-abort item admission: one invalid or failing source must never
@@ -286,6 +289,68 @@ export class SourceGateway {
       failedCount: failures.length,
       failures,
     };
+  }
+
+  originalMutationSnapshot(): RulesMutationSnapshot | undefined {
+    return this.supportsOriginalSourceImport() ? RulesMutationOwner.forRuntime(this.runtimeOwner).snapshot() : undefined;
+  }
+  async recoverOriginalSource(current: () => boolean, retryOriginal: boolean = false): Promise<RulesMutationSnapshot | undefined> {
+    if (!this.supportsOriginalSourceImport()) return undefined;
+    return RulesMutationOwner.forRuntime(this.runtimeOwner).recoverOriginal(current,
+      (method: string, params: JsonObject, data: JsonObject): void => this.qualifyOriginalSource(method,params,data),
+      retryOriginal,'source-management',
+      (method: string, params: JsonObject): Promise<boolean> => this.finishOriginalSourceCleanup(method,params));
+  }
+  handlesSourceCleanup(): boolean { return this.supportsOriginalSourceManagement(); }
+  private async finishOriginalSourceCleanup(method: string, params: JsonObject): Promise<boolean> {
+    const ids=method==='source.delete' ? params['sourceIds'] as string[] : [params['sourceId'] as string];
+    let complete=true;
+    for (const id of ids) {
+      if (!ReaderRuntimeOwner.isCurrent(this.runtimeOwner)) return false;
+      try { await this.runtimeOwner.clearSourceCookieSession(id); } catch (_) { complete=false; }
+    }
+    return complete;
+  }
+  private supportsOriginalSourceImport(): boolean {
+    return this.runtimeOwner.supportsCoreCapability?.('rules.mutation.exact.v1') === true;
+  }
+  private supportsOriginalSourceManagement(): boolean {
+    return this.supportsOriginalSourceImport() &&
+      this.runtimeOwner.supportsCoreCapability?.('rules.mutation.source-management.v1') === true;
+  }
+  private async importOriginalSourceDocument(text: string, current: () => boolean): Promise<SourceImportSummary> {
+    const prepared=this.prepareSubscriptionDocument(text),failures: SourceImportFailure[]=prepared.failures.slice();
+    const sourceIds: string[]=[];
+    if (prepared.items.length===0) return {importedCount:0,sourceIds,failedCount:failures.length,failures};
+    const steps: RuleSubscriptionStep[]=prepared.items.map((item): RuleSubscriptionStep => ({
+      method:'source.import',sourceIndex:item.index,params:{sourceId:item.sourceId,bookSource:item.bookSource} }));
+    const result=await RulesMutationOwner.forRuntime(this.runtimeOwner).runSubscription(3,steps,
+      prepared.failures.map((failure): {index:number;message:string} => ({index:failure.index,message:failure.message})),
+      current,(method: string, params: JsonObject, data: JsonObject): void => {
+        this.qualifyOriginalSource(method,params,data);sourceIds.push(data['sourceId'] as string);
+      },this.writeEvidence,(step: RuleSubscriptionStep, data: JsonObject): void => {
+        const error=data['error'] as JsonObject;
+        failures.push({index:step.sourceIndex ?? -1,sourceId:step.params['sourceId'] as string,
+          message:typeof error?.['message']==='string' ? error['message'] as string : 'Core 明确拒绝原书源条目'});
+      });
+    return {importedCount:result.subscription?.confirmedParts ?? 0,sourceIds,
+      failedCount:result.subscription?.failedParts ?? failures.length,failures};
+  }
+  private qualifyOriginalSource(method: string, params: JsonObject, data: JsonObject): void {
+    if (method==='source.import') {
+      if (data['imported']!==true || data['sourceId']!==params['sourceId'] ||
+        typeof data['name']!=='string' || (data['name'] as string).trim().length===0)
+        throw new Error('source.import original ACK does not match its fixed DTO');
+    } else if (method==='source.update') {
+      const source=data['source'] as JsonObject;
+      if (source===null || typeof source!=='object' || Array.isArray(source) ||
+        source['sourceId']!==params['sourceId'] || source['enabled']!==params['enabled'])
+        throw new Error('source.update original ACK does not match its fixed DTO');
+    } else if (method==='source.delete') {
+      const ids=params['sourceIds']; const deleted=data['deleted'];
+      if (!Array.isArray(ids) || typeof deleted!=='number' || !Number.isSafeInteger(deleted) || deleted<0 || deleted>ids.length)
+        throw new Error('source.delete original ACK does not match its fixed DTO');
+    } else throw new Error('不能用书源核定器确认另一家族的原操作');
   }
 
   /** Same original admission, without side effects; subscription freezes these
@@ -453,6 +518,16 @@ export class SourceGateway {
     if (patch.enabled === undefined) {
       throw new Error('source.update requires an enabled flag');
     }
+    if (this.supportsOriginalSourceManagement()) {
+      const params: JsonObject={sourceId,enabled:patch.enabled};
+      await RulesMutationOwner.forRuntime(this.runtimeOwner).run('书源开关',
+        current ?? ((): boolean => ReaderRuntimeOwner.isCurrent(this.runtimeOwner)),
+        async (request,confirmed): Promise<void> => {
+          const event=await request('source.update',params);this.qualifyOriginalSource('source.update',params,event.data);confirmed();
+        },this.writeEvidence,patch.enabled===false ?
+          (): Promise<boolean> => this.finishOriginalSourceCleanup('source.update',params) : undefined);
+      return;
+    }
     const result = await this.runtimeOwner.request('source.update', {
       sourceId,
       enabled: patch.enabled,
@@ -481,16 +556,32 @@ export class SourceGateway {
     if (sourceIds.length === 0) {
       throw new Error('source.delete requires at least one sourceId');
     }
-    this.writeEvidence?.dispatched();
-    const result = await this.runtimeOwner.request('source.delete', { sourceIds });
-    const deleted = result.data['deleted'];
+    const params: JsonObject={sourceIds:sourceIds.slice()};
+    let data: JsonObject;
+    let cookieCleanupFailures = 0;
+    if (this.supportsOriginalSourceManagement()) {
+      data=await RulesMutationOwner.forRuntime(this.runtimeOwner).run('删除书源',
+        (): boolean => ReaderRuntimeOwner.isCurrent(this.runtimeOwner),async (request,confirmed): Promise<JsonObject> => {
+          const event=await request('source.delete',params);this.qualifyOriginalSource('source.delete',params,event.data);confirmed();return event.data;
+        },this.writeEvidence,async (): Promise<boolean> => {
+          for (const id of sourceIds) {
+            if (!ReaderRuntimeOwner.isCurrent(this.runtimeOwner)) { cookieCleanupFailures+=1;continue; }
+            try { await this.runtimeOwner.clearSourceCookieSession(id); } catch (_) { cookieCleanupFailures+=1; }
+          }
+          return cookieCleanupFailures===0;
+        });
+      if (this.originalMutationSnapshot()?.blocked && cookieCleanupFailures===0) cookieCleanupFailures=1;
+    } else {
+      const result=await this.runtimeOwner.request('source.delete',params,{onDispatch:(): void => this.writeEvidence?.dispatched()});
+      data=result.data;
+    }
+    const deleted = data['deleted'];
     if (typeof deleted !== 'number' || !Number.isInteger(deleted) || deleted < 0 ||
       deleted > sourceIds.length) {
       throw new Error('source.delete returned invalid deleted count');
     }
-    this.writeEvidence?.confirmed();
-    let cookieCleanupFailures = 0;
-    for (const sourceId of sourceIds) {
+    if (!this.supportsOriginalSourceManagement()) this.writeEvidence?.confirmed();
+    if (!this.supportsOriginalSourceManagement()) for (const sourceId of sourceIds) {
       try {
         await this.runtimeOwner.clearSourceCookieSession(sourceId);
       } catch (_) {

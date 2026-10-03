@@ -46,10 +46,17 @@ export class SourceHost {
     if (this.boundOwner === owner && this.presentationIdentity === identity)
       return this.orchestrator?.isPresentationCurrent(identity) ?? false;
     const host = SourceOrchestrator.forRuntime(owner);
-    if (host === undefined || !host.attachPresentation(identity, this.emitSources, current,
-      this.emitStatus, this.emitProjection)) return false;
-    this.boundOwner = owner; this.presentationIdentity = identity; this.explicitBinding = true;
-    this.orchestrator = host; return true;
+    if (host===undefined) return false;
+    const previousOwner=this.boundOwner,previousIdentity=this.presentationIdentity,
+      previousExplicit=this.explicitBinding,previousHost=this.orchestrator;
+    // Actual owner synchronously publishes its retained accepted DTO on attach.
+    // The receiving Index must observe this exact Host binding at that point.
+    this.boundOwner=owner;this.presentationIdentity=identity;this.explicitBinding=true;this.orchestrator=host;
+    if (!host.attachPresentation(identity,this.emitSources,current,this.emitStatus,this.emitProjection)) {
+      this.boundOwner=previousOwner;this.presentationIdentity=previousIdentity;
+      this.explicitBinding=previousExplicit;this.orchestrator=previousHost;return false;
+    }
+    return true;
   }
   isPresentationCurrent(owner: ReaderRuntimeOwner, identity: string): boolean {
     return this.boundOwner === owner && this.presentationIdentity === identity &&
@@ -59,6 +66,7 @@ export class SourceHost {
   open(identity?: string): void { this.admitted(identity)?.open(); }
   retryLoad(identity?: string): void { this.admitted(identity)?.retryLoad(); }
   reconcile(generation: number, identity?: string): void { this.admitted(identity)?.reconcile(generation); }
+  continueOriginal(generation: number, identity?: string): void { this.admitted(identity)?.continueOriginal(generation); }
   toggleSource(id: string, enabled: boolean, identity?: string): void { this.admitted(identity)?.toggleSource(id, enabled); }
   checkSource(id: string, identity?: string): void { this.admitted(identity)?.checkSource(id); }
   loginSource(id: string, identity?: string): void { this.admitted(identity)?.loginSource(id); }

@@ -318,9 +318,10 @@ export class ReaderRuntimeOwner {
   }
 
   private async requestDirect(method: string, params: JsonObject = {}, options: BookRequestOptions = {}): Promise<ReaderCoreResultEvent> {
-    if (method === 'cache.clear' || method === 'bookshelf.remove' || method === 'bookshelf.removeBatch' ||
-      method === 'source.delete' || method === 'source.switch.begin' || method === 'source.switch.commit' ||
-      method === 'source.switch.abort' || method === 'runtime.storage.apply' || method === 'runtime.storage.restore')
+    const preparationEffect=readerRuleMutationEffects(method,params).method;
+    if (preparationEffect === 'cache.clear' || preparationEffect === 'bookshelf.remove' || preparationEffect === 'bookshelf.removeBatch' ||
+      preparationEffect === 'source.delete' || preparationEffect === 'source.switch.begin' || preparationEffect === 'source.switch.commit' ||
+      preparationEffect === 'source.switch.abort' || preparationEffect === 'runtime.storage.apply' || preparationEffect === 'runtime.storage.restore')
       this.preparationIntentEpoch += 1;
     const preparations = this.readingEntryPreparations();
     const invalidatesPreparation = preparations.beginRequest(method, params);

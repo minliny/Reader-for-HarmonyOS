@@ -8,6 +8,7 @@ import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { projectOperationFacts, type OperationFacts } from '../../app/ReaderOperationFacts';
 import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../app/ReaderPersistedReceiptProjection';
+import type { RulesMutationSnapshot } from '../settings/RulesMutationOwner';
 import { errorMessageOf } from '../../app/ErrorMessage';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
@@ -21,6 +22,7 @@ export interface SourceManagementProjection {
   receipt?: PersistedReceiptProjection<BookSource[]>;
   readFacts?: OperationFacts<BookSource[]>;
   confirmedParts?: number;
+  original?: RulesMutationSnapshot;
 }
 
 export type SourceManagementStatusKind = 'idle' | 'loading' | 'success' | 'warning' | 'error';
@@ -150,6 +152,10 @@ export class SourceOrchestrator {
     const session = this.session;
     this.operationChain = this.operationChain.then(async (): Promise<void> => {
       if (!this.isCurrentSession(session)) return;
+      const original=this.latestProjection.original;
+      if (original?.blocked && original.generation===generation) {
+        await this.recoverOriginal(session,false);await this.loadList(session,false);return;
+      }
       const receipt = this.latestProjection.receipt;
       const read = this.latestProjection.readFacts;
       if (receipt?.facts.generation === generation && receipt.facts.canRetry) {
@@ -162,18 +168,37 @@ export class SourceOrchestrator {
     });
   }
 
+  continueOriginal(generation: number): void {
+    const session=this.session,original=this.latestProjection.original;
+    if (!this.isCurrentSession(session) || original?.generation!==generation || !original.canRetryOriginal || original.busy) return;
+    this.operationChain=this.operationChain.then(async (): Promise<void> => {
+      if (!this.isCurrentSession(session) || this.latestProjection.original?.generation!==generation) return;
+      await this.recoverOriginal(session,true);await this.loadList(session,false);
+    });
+  }
+  private async recoverOriginal(session: number, retry: boolean): Promise<void> {
+    if (!this.isCurrentSession(session)) return;
+    try { await this.gateway.recoverOriginalSource((): boolean => this.isCurrentSession(session),retry); }
+    catch (_) { /* Actual owner retains its exact reason and original barrier. */ }
+    if (!this.isCurrentSession(session)) return;
+    this.latestProjection={...this.latestProjection,original:this.gateway.originalMutationSnapshot()};
+    try {this.emitProjection(this.latestProjection);} catch (_) {}
+  }
+  private originalBlocked(): boolean { return this.gateway.originalMutationSnapshot()?.blocked===true; }
   retryLoad(): void {
     if (this.isCurrentSession(this.session)) {
       this.open();
     }
   }
 
-  private async loadList(session: number): Promise<void> {
+  private async loadList(session: number, recover: boolean = true): Promise<void> {
     // A toggle tapped just before leaving the page may still be awaiting Host
     // durability; Core rejects `source.list` while that persistence transaction
     // is pending. The same serial chain drains admitted toggles before this
     // read, retrying only if an unrelated transaction still holds the
     // bus so a transient rejection can never leave the page permanently blank.
+    if (!this.isCurrentSession(session)) return;
+    if (recover) await this.recoverOriginal(session,false);
     if (!this.isCurrentSession(session)) return;
     let sources: BookSource[];
     try {
@@ -208,7 +233,7 @@ export class SourceOrchestrator {
    * completion never repaints a re-entry or a newer toggle.
    */
   toggleSource(id: string, enabled: boolean): void {
-    if (!this.isCurrentSession(this.session) || this.latestProjection.receipt?.receipt.confirmation === 'unknown') return;
+    if (!this.isCurrentSession(this.session) || (this.latestProjection.receipt?.receipt.confirmation === 'unknown' || this.originalBlocked())) return;
     this.toggleSeq += 1;
     const seq = this.toggleSeq;
     const session = this.session;
@@ -297,7 +322,7 @@ export class SourceOrchestrator {
     onFailure: (error: Error) => void = (_error: Error): void => {},
   ): void {
     if (!this.isCurrentSession(this.session) || this.importActive ||
-      this.latestProjection.receipt?.receipt.confirmation === 'unknown') {
+      (this.latestProjection.receipt?.receipt.confirmation === 'unknown' || this.originalBlocked())) {
       return;
     }
     this.importActive = true;
@@ -443,14 +468,14 @@ export class SourceOrchestrator {
     // until the bus is free. Wait until Core reports idle, then retry once —
     // the serial chain means this retry only waits out the external operation,
     // never a concurrent toggle.
-    if (!ReaderRuntimeOwner.isCurrent(this.owner) || this.latestProjection.receipt?.receipt.confirmation === 'unknown') return;
+    if (!ReaderRuntimeOwner.isCurrent(this.owner) || (this.latestProjection.receipt?.receipt.confirmation === 'unknown' || this.originalBlocked())) return;
     const evidence = new ReaderWriteEvidence();
     this.gateway.observeWrites(evidence);
     try { await this.updateSourceWithRetry(id, enabled); }
     catch (error) { this.publishReceipt(session, 'toggle', id, evidence.confirmation(), 'failed', (error as Error).message); return; }
     finally { this.gateway.observeWrites(undefined); }
     this.publishReceipt(session, 'toggle', id, evidence.confirmation(), 'reading');
-    if (!enabled) {
+    if (!enabled && !this.gateway.handlesSourceCleanup()) {
       try {
         // Security policy: disabling a source removes both session and
         // persistent cookies. Re-enabling starts a fresh login/session.
@@ -511,6 +536,7 @@ export class SourceOrchestrator {
   private publishRead(session: number, phase: 'loading' | 'failed' | 'succeeded', message?: string): void {
     this.latestProjection = { action: this.latestProjection.action, sourceId: this.latestProjection.sourceId,
       receipt: this.latestProjection.receipt, confirmedParts: this.latestProjection.confirmedParts,
+      original: this.gateway.originalMutationSnapshot(),
       readFacts: projectOperationFacts({ phase,
       value: this.hasRead ? this.sources : undefined, canRetry: phase === 'failed',
       generation: ++sourceProjectionGeneration, message }) };
@@ -520,11 +546,13 @@ export class SourceOrchestrator {
   private publishReceipt(session: number, action: string, sourceId: string,
     confirmation: 'confirmed' | 'unknown' | 'undispatched', readback: 'reading' | 'failed' | 'succeeded',
     refreshError?: string, confirmedParts?: number): void {
+    const original=this.gateway.originalMutationSnapshot();
+    if (original?.blocked) confirmation=original.confirmation;
     const receipt = projectPersistedReceipt<BookSource[]>({ confirmation, readback, value: this.hasRead ? this.sources : undefined,
       refreshError, canRetry: confirmation !== 'undispatched' && readback !== 'reading' && (readback === 'failed' || confirmation === 'unknown'),
       generation: ++sourceProjectionGeneration });
     this.latestProjection = { action, sourceId, receipt, readFacts: this.latestProjection.readFacts,
-      confirmedParts: confirmedParts ?? this.latestProjection.confirmedParts };
+      confirmedParts: confirmedParts ?? this.latestProjection.confirmedParts,original };
     if (this.isCurrentSession(session)) {
       try { this.emitProjection(this.latestProjection); } catch (_) {}
       this.publishStatus(readback === 'reading' ? 'loading' : readback === 'failed' || confirmation !== 'confirmed' ? 'warning' : 'idle',
@@ -682,6 +710,9 @@ export class SourceOrchestrator {
   }
 
   private publishStatus(kind: SourceManagementStatusKind, message: string): void {
-    if (this.isCurrentSession(this.session)) { try { this.emitStatus(kind, message); } catch (_) {} }
+    if (this.isCurrentSession(this.session)) {
+      const original=this.gateway.originalMutationSnapshot();
+      try { this.emitStatus(original?.blocked ? 'warning' : kind,original?.blocked ? original.message : message); } catch (_) {}
+    }
   }
 }
