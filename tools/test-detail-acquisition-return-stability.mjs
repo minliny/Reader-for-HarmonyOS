@@ -30,7 +30,7 @@ const body = { sourceId: 'source', bookId: 'book', chapterIndex: 0, chapterUrl: 
 
 function fixture() {
   const calls = [], verdicts = [], failures = [];
-  let projectionGate, bodyGate, catalogGate, projectionOverride;
+  let projectionGate, bodyGate, catalogGate, projectionOverride, projectionFailureOnce=false;
   let installedOwner;
   const source = { sourceId: 'source', name: '书源', enabled: true, sourceVersion: 'v1' };
   const catalog = { sourceId: 'source', bookId: 'book', sourceVersion: 'v1', catalogVersion: 'catalog',
@@ -47,8 +47,10 @@ function fixture() {
       return { data: snapshot };
     }
     if (method === 'search-book.get') {
+      const fail = projectionFailureOnce; projectionFailureOnce = false;
       const snapshot = projectionOverride === undefined ? { origin: 'source', bookUrl: 'book', name: '书', author: '作者', acquisition: { ...facts } } : structuredClone(projectionOverride);
       if (projectionGate) { const gate = projectionGate; projectionGate = undefined; await gate.promise; }
+      if (fail) throw Error('old cache read failed');
       return { data: { book: snapshot } };
     }
     if (method === 'chapter.content') {
@@ -64,7 +66,7 @@ function fixture() {
   installedOwner = owner;
   const authority = { current: () => { if (installedOwner === undefined) throw Error('Runtime unavailable'); return installedOwner; } };
   const Index = productionMotionMethods(process.env.READER_DETAIL_PROJECTION_SOURCE ?? fileURLToPath(new URL('pages/Index.ets', base)),
-    ['refreshDetailAcquisitionProjection', 'installRemoteReadingSession', 'returnToReadingOrigin', 'probeRemoteContentVerdict',
+    ['isCurrentDetailProjection', 'refreshDetailAcquisitionProjection', 'installRemoteReadingSession', 'returnToReadingOrigin', 'probeRemoteContentVerdict',
       'openRemoteBookDetail', 'readingDetailForRemoteSeed'], {
       ...evidence, BookAcquisitionProjectionGateway, ReaderRuntimeOwner: authority, LOCAL_SOURCE_ID: 'local',
       RemoteReadingFlowGateway, RemoteChapterCacheRefreshError, remoteReadingFailureKindOf, verdictForFailureKind,
@@ -97,6 +99,7 @@ function fixture() {
   return { page, coordinator, facts, calls, verdicts, source, catalog, failures, owner,
     setOwner(value) { installedOwner = value; },
     overrideProjection(value) { projectionOverride = value; },
+    failProjectionOnce() { projectionFailureOnce = true; },
     gateProjection() { projectionGate = deferred(); return projectionGate; },
     gateCatalog() { catalogGate = deferred(); return catalogGate; },
     gateBody() { bodyGate = deferred(); return bodyGate; } };
@@ -295,3 +298,44 @@ for (const retire of ['runtime-unset', 'runtime-replacement', 'navigation', 'ent
   } finally { f.coordinator.close(); }
 }
 console.log('PASS strict typed cache -> exact Runtime/navigation/session/entity Index -> actual SDK Detail/hero: legal metadata, malformed/partial/wrong identity retention, absent/replacement owner and late coalesced replies');
+
+for (const failedOld of [false, true]) for (const replacement of ['navigation', 'runtime']) {
+  const f = fixture(); try {
+    if (failedOld) f.failProjectionOnce();
+    const gate = f.gateProjection(), old = f.page.refreshDetailAcquisitionProjection();
+    await until(() => f.calls.includes('search-book.get'));
+    if (replacement === 'runtime') f.setOwner({ ...f.owner });
+    else {
+      f.page.navigationGeneration++;
+      f.page.remoteSessionGeneration++;
+      f.page.detailBook = { ...f.page.detailBook, bookId: 'second', title: '第二本' };
+      f.page.remoteReadingSession = { ...f.page.remoteReadingSession, identity: { sourceId: 'source', bookId: 'second' }, preparedChapter: undefined };
+    }
+    f.overrideProjection({ origin: 'source', bookUrl: f.page.detailBook.bookId, name: '新意图标题', acquisition: { ...f.facts } });
+    await f.page.refreshDetailAcquisitionProjection();
+    const pending = f.page.bookProjectionPending;
+    assert.ok(pending, 'new call captures its own full lease while old IO remains active');
+    if (replacement === 'runtime') assert.notEqual(pending.owner, f.owner);
+    const secondGate = f.gateProjection(); gate.resolve(); await old;
+    await until(() => f.calls.filter(m => m === 'search-book.get').length === 2);
+    assert.equal(f.page.bookProjectionActive, pending); assert.equal(f.page.bookProjectionLoading, true, 'old finally cannot clear the freshly started active lease');
+    secondGate.resolve(); await until(() => !f.page.bookProjectionLoading);
+    assert.equal(f.page.detailBook.title, '新意图标题'); assert.ok(detailSdk(f).texts.includes('新意图标题'));
+    assert.equal(f.page.bookProjectionPending, undefined); assert.equal(f.page.bookProjectionActive, undefined);
+  } finally { f.coordinator.close(); }
+}
+for (const retiredPending of ['navigation', 'runtime-unset', 'entity']) {
+  const f = fixture(); try {
+    const gate = f.gateProjection(), old = f.page.refreshDetailAcquisitionProjection();
+    await until(() => f.calls.includes('search-book.get'));
+    f.page.navigationGeneration++;
+    await f.page.refreshDetailAcquisitionProjection(); assert.ok(f.page.bookProjectionPending);
+    if (retiredPending === 'navigation') f.page.navigationGeneration++;
+    if (retiredPending === 'runtime-unset') f.setOwner(undefined);
+    if (retiredPending === 'entity') f.page.detailBook = { ...f.page.detailBook, bookId: 'third' };
+    const expected = f.page.detailBook; gate.resolve(); await old; await pause();
+    assert.equal(f.calls.filter(m => m === 'search-book.get').length, 1, 'already retired pending intent cannot drain');
+    assert.equal(f.page.detailBook, expected); assert.equal(f.page.bookProjectionLoading, false);
+  } finally { f.coordinator.close(); }
+}
+console.log('PASS latest captured Detail intent: A to B, exact replacement Runtime, old success/failure, deferred drain, new lease busy ownership, retired pending intent rejection');

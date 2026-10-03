@@ -17,3 +17,9 @@ PASS `test-search-candidate-acquisition.mjs`, `test-remote-reading-evidence.mjs`
 Initial local probe issues were test/runtime setup, corrected before PASS: Node strip-only rejected a constructor parameter property (changed to normal class field); new SDK probe needed real custom-component metadata and native constructor owner field; deferred new-navigation synthetic retry exposed a real overbroad finally admission and was fixed to the original full current predicate. No assertion was removed to pass.
 
 The SDK proof covers emitted component payload/attributes, not native layout/focus/target behavior. HAP, target, visual and user acceptance were not run by this lane. Catalog updater, shelf read/refresh and settings cache ownership remain separate OPEN slices.
+
+## Coalesced intent correction
+
+Independent review found that suppressing a stale request's rerun also lost a separately issued, still-current B intent when A remained in flight. Corrected with finite active/pending leases: every actual call captures its own Runtime/navigation/session/exact book before queuing. Only the active lease releases busy state; it drains the latest pending lease only if that lease remains current. The drain passes the captured lease and does not call current() again. There is no global request owner.
+
+PASS actual production + SDK metadata chain A→B and Runtime replacement with old success/failure, a separately deferred B reply proving A finally does not clear B's active loading, plus pending navigation/entity/Runtime retirement. Both previous test files remain PASS. This correction supersedes the earlier current-only coalesced finally.

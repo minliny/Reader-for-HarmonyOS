@@ -298,6 +298,13 @@ class PendingSourceSwitchTransaction {
   }
 }
 
+interface DetailProjectionIntent {
+  owner: ReaderRuntimeOwner;
+  generation: number;
+  sessionGeneration: number;
+  book: ReadingBookDetail;
+}
+
 class RemoteDetailAdmission {
   session: RemoteReadingSession;
   refreshInBackground: boolean;
@@ -568,6 +575,8 @@ struct Index {
   private sourceSwitchUnsubscribe: (() => void) | undefined = undefined;
   private bookProjectionUnsubscribe: (() => void) | undefined = undefined;
   private bookProjectionLoading: boolean = false;
+  private bookProjectionActive: DetailProjectionIntent | undefined = undefined;
+  private bookProjectionPending: DetailProjectionIntent | undefined = undefined;
   private bookProjectionAgain: boolean = false;
   private candidateAdmissionGeneration: number = -1;
   private candidateAdmissionFailedGeneration: number = -1;
@@ -2842,30 +2851,44 @@ struct Index {
     this.consumeSystemFileOpen();
   }
 
-  private async refreshDetailAcquisitionProjection(): Promise<void> {
+  private isCurrentDetailProjection(intent: DetailProjectionIntent): boolean {
+    return this.isCurrentRuntime(intent.owner) && intent.generation === this.navigationGeneration &&
+      intent.sessionGeneration === this.remoteSessionGeneration && !this.readingSessionActive &&
+      this.route === 'detail' && this.detailBook?.sourceId === intent.book.sourceId &&
+      this.detailBook?.bookId === intent.book.bookId && !this.sourceSwitchVisible;
+  }
+
+  private async refreshDetailAcquisitionProjection(queued?: DetailProjectionIntent): Promise<void> {
     // One selection owns its body verdict. Durable catalog notifications must
     // neither launch a second probe nor automatically retry its terminal failure.
     if (this.candidateAdmissionGeneration === this.navigationGeneration ||
       this.candidateAdmissionFailedGeneration === this.navigationGeneration) return;
-    const book = this.detailBook;
+    const book = queued?.book ?? this.detailBook;
     if (this.route !== 'detail' || this.readingSessionActive ||
       book === undefined || book.sourceId === LOCAL_SOURCE_ID || this.sourceSwitchVisible) return;
-    if (this.bookProjectionLoading) { this.bookProjectionAgain = true; return; }
+    let intent: DetailProjectionIntent;
+    try {
+      intent = queued ?? { owner: ReaderRuntimeOwner.current(), generation: this.navigationGeneration,
+        sessionGeneration: this.remoteSessionGeneration, book };
+    } catch (_error) { return; }
+    if (!this.isCurrentDetailProjection(intent)) return;
+    if (this.bookProjectionActive !== undefined) {
+      this.bookProjectionPending = intent;
+      this.bookProjectionAgain = true;
+      return;
+    }
     this.bookProjectionAgain = false;
     this.bookProjectionLoading = true;
-    const generation = this.navigationGeneration;
-    const sessionGeneration = this.remoteSessionGeneration;
-    let owner: ReaderRuntimeOwner | undefined;
-    const current = (): boolean => this.isCurrentRuntime(owner) && generation === this.navigationGeneration && !this.readingSessionActive &&
-      sessionGeneration === this.remoteSessionGeneration &&
-      this.route === 'detail' && this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId;
+    this.bookProjectionActive = intent;
+    const generation = intent.generation, owner = intent.owner;
+    const current = (): boolean => this.isCurrentDetailProjection(intent);
     try {
-      owner = ReaderRuntimeOwner.current();
       const projectionRevision = owner.bookAcquisitions().readingProjectionRevision();
       const row = await new BookAcquisitionProjectionGateway(owner).load(book.sourceId, book.bookId, current);
       if (!current() || row === undefined || row === null) return;
       if (projectionRevision !== owner.bookAcquisitions().readingProjectionRevision()) {
         this.bookProjectionAgain = true;
+        this.bookProjectionPending ??= intent;
         return;
       }
       const facts = row.acquisition;
@@ -2924,6 +2947,7 @@ struct Index {
       if (!current()) return;
       if (projectionRevision !== owner.bookAcquisitions().readingProjectionRevision()) {
         this.bookProjectionAgain = true;
+        this.bookProjectionPending ??= intent;
         return;
       }
       const merged = copyRemoteReadingSession(session);
@@ -2941,8 +2965,18 @@ struct Index {
       }
     } catch (_error) { /* The current detail survives a failed background projection. */ }
     finally {
-      this.bookProjectionLoading = false;
-      if (this.bookProjectionAgain && current()) void this.refreshDetailAcquisitionProjection();
+      // Only this lease may release its busy state. A queued request owns its
+      // own Runtime/nav/session/entity, so never reacquire an owner here.
+      if (this.bookProjectionActive === intent) {
+        this.bookProjectionActive = undefined;
+        this.bookProjectionLoading = false;
+        const pending = this.bookProjectionPending;
+        this.bookProjectionPending = undefined;
+        this.bookProjectionAgain = false;
+        if (pending !== undefined && this.isCurrentDetailProjection(pending)) {
+          void this.refreshDetailAcquisitionProjection(pending);
+        }
+      }
     }
   }
 
