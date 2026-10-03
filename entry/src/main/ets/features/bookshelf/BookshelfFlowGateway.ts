@@ -226,7 +226,7 @@ export class BookshelfFlowGateway {
       };
     } catch (error) {
       const cause = errorMessageOf(error);
-      const projection = projectPersistedReceipt({
+      const projection = projectPersistedReceipt<BookshelfDataState>({
         confirmation, readback: 'failed', refreshError: cause, canRetry: true,
       });
       return {
