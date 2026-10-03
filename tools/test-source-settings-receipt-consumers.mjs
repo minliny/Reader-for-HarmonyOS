@@ -16,9 +16,13 @@ const SourceGateway=load('features/source/SourceGateway.ts','SourceGateway',{Rea
 const SourceOrchestrator=load('features/source/SourceOrchestrator.ets','SourceOrchestrator',{SourceGateway,ReaderRuntimeOwner,ReaderWriteEvidence,isReaderCoreTransactionPendingError:typed,hilog:{error(){},warn(){},info(){}},projectPersistedReceipt,...facts,...helpers});
 const SourceHost=load('features/source/SourceHost.ets','SourceHost',{ReaderRuntimeOwner,SourceOrchestrator,SourceGateway});
 const prefs=new WeakMap();const preferences={getPreferences:async ctx=>prefs.get(ctx)};
+function freshSettingsHost(){
 const SettingsGateway=load('features/settings/SettingsGateway.ts','SettingsGateway',{preferences,ReaderThemeHost:{async prepareUserChange(){}}});
 const SettingsOrchestrator=load('features/settings/SettingsOrchestrator.ets','SettingsOrchestrator',{SettingsGateway,ReaderRuntimeOwner,ReaderWriteEvidence,LocalConfigurationReset:{request(){throw Error('reset tested by full durable reset suite');}},hilog:{error(){}},projectPersistedReceipt,...facts});
 const SettingsHost=load('features/settings/SettingsHost.ets','SettingsHost',{SettingsOrchestrator,ReaderRuntimeOwner});
+return SettingsHost;
+}
+const SettingsHost=freshSettingsHost();
 const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader',syntax=require(sdk+'/lib/validate_ui_syntax.js');
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
 for(const [name,path] of [['SourceManagementPage','features/source/SourceManagementPage.ets'],['SettingsPage','features/settings/SettingsPage.ets'],['ReaderRecoveryAction','features/common/ReaderRecoveryAction.ets']]){syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...source(path).matchAll(/@Prop\s+(?:@Watch\([^\n]+?\)\s+)?(\w+)\s*:/g)].map(m=>m[1])));}
@@ -36,7 +40,7 @@ function rpc(){const context={},disk=new Map(Object.entries({autoCheckUpdate:tru
 // Execute the production Index field initializer: the actual callbacks write
 // Index @State, then actual SDK child props carry those facts to the page.
 function field(index,name,deps){const text=source('pages/Index.ets'),a=text.indexOf('  private '+name+':'),b=text.indexOf('\n  );',a)+6,initializer=text.slice(a,b);const expression=initializer.slice(initializer.indexOf('=')+1).trim().replace(/;$/,'');return new Function(...Object.keys(deps),stripTypeScriptTypes('const value='+expression+';')+'return value;').call(index,...Object.values(deps));}
-function fixture(kind){const r=rpc();currentOwner=r;const sourceDomain=kind==='source',method=sourceDomain?'sourceManagementContent':'settingsContent';const index=createReaderBuilderProbe(source('pages/Index.ets'),[method],{SourceManagementPage:Child,SettingsPage:Child,deviceInfo:{deviceType:'phone'}}).owner;
+function fixture(kind){const SettingsHost=freshSettingsHost();const r=rpc();currentOwner=r;const sourceDomain=kind==='source',method=sourceDomain?'sourceManagementContent':'settingsContent';const index=createReaderBuilderProbe(source('pages/Index.ets'),[method],{SourceManagementPage:Child,SettingsPage:Child,deviceInfo:{deviceType:'phone'}}).owner;
  Object.assign(index,{route:sourceDomain?'source':'settings',sourceSources:[],sourceStatusKind:'idle',sourceStatusMessage:'',sourceOperation:{action:'load',sourceId:''},settingsOperation:{action:'load'},settingsSnapshot:{autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true},settingsSection:'general'});
  const host=field(index,sourceDomain?'sourceHost':'settingsHost',{SourceHost,SettingsHost});index[sourceDomain?'sourceHost':'settingsHost']=host;
  const refresh=()=>{index[method]();return [...index.children.values()][0].params;};
@@ -49,7 +53,7 @@ for(const kind of ['source','settings']){
   f.write();await f.settle();assert.equal(f.receipt().receipt.receipt.fact,'confirmedRefreshFailed');const p=f.page();assert.match(p.recovery().message,/已确认.*刷新失败/);const writes=kind==='source'?f.r.count(command):f.r.flushes;f.retry(p);f.retry(p);await f.settle();assert.equal(kind==='source'?f.r.count(command):f.r.flushes,writes,'read-only retry never replays mutation');assert.equal(f.receipt().receipt.receipt.fact,'confirmedCurrent');
  }
  {
-  const f=fixture(kind);f.host.open();await f.settle();f.r.writeFail=true;f.write();await f.settle();assert.equal(f.receipt().receipt.receipt.confirmation,'unknown');if(kind==='settings')assert.equal(f.index.settingsSnapshot.reduceMotion,false,'failed preference flush rolls back optimistic UI to coherent value');const n=kind==='source'?f.r.count(command):f.r.flushes;f.retry(f.page());await f.settle();assert.equal(f.receipt().receipt.receipt.fact,'pendingReconciliation');assert.equal(kind==='source'?f.r.count(command):f.r.flushes,n);
+  const f=fixture(kind);f.host.open();await f.settle();f.r.writeFail=true;f.write();await f.settle();assert.equal(f.receipt().receipt.receipt.confirmation,'unknown');if(kind==='settings')assert.equal(f.index.settingsSnapshot.reduceMotion,true,'failed preference flush retains accepted choice with unknown receipt');const n=kind==='source'?f.r.count(command):f.r.flushes;f.retry(f.page());await f.settle();assert.equal(f.receipt().receipt.receipt.fact,'pendingReconciliation');assert.equal(kind==='source'?f.r.count(command):f.r.flushes,n);
  }
  {
   const f=fixture(kind);f.r.readFail=1;f.host.open();await f.settle();assert.ok(f.read().canRetry);assert.equal(f.receipt().receipt,undefined);f.retry(f.page());await f.settle();assert.equal(f.read().fact,'current');f.r.malformed=true;f.host.open();await f.settle();assert.equal(f.read().fact,'refreshFailed','bad persisted payload keeps canonical state');

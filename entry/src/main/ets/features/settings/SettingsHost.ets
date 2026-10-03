@@ -42,6 +42,7 @@ export class SettingsHost {
   toggle(key: SettingsKey, value: boolean): void { this.getOrchestrator().toggle(key, value); }
   restoreDefaults(): Promise<boolean> { return this.getOrchestrator().restoreDefaults(); }
   reconcile(generation: number): void { this.getOrchestrator().reconcile(generation); }
+  retryAccepted(generation: number): void { this.getOrchestrator().retryAccepted(generation); }
 
   cacheCleanupSnapshot(owner: ReaderRuntimeOwner | undefined): SettingsCacheCleanupSnapshot | undefined {
     if (owner === undefined) return undefined;

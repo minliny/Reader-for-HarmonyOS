@@ -90,7 +90,8 @@ export class LocalConfigurationReset {
     // No WebDAV credential, Core preference, book/source/position, imported
     // font file, reading-device identity or engine secret is removed.
     LocalConfigurationReset.assertOwner(owner);
-    await new SettingsGateway(owner.getUIAbilityContext()).update(createDefaultSettingsSnapshot(), true);
+    await new SettingsGateway(owner.getUIAbilityContext()).update(createDefaultSettingsSnapshot(), true, undefined, undefined,
+      (): boolean => ReaderRuntimeOwner.isCurrent(owner));
     LocalConfigurationReset.assertOwner(owner);
     await new ReaderSettingsGateway(owner).update(createDefaultReaderSettingsSnapshot(), true);
     LocalConfigurationReset.assertOwner(owner);

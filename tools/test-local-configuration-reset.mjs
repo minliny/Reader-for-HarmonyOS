@@ -87,7 +87,8 @@ for(const failure of ['reader_configuration_reset_v1','reader_settings_v1','read
  let done=false;const b=other.update({autoCheckUpdate:false,tapBottomScrollTop:true,reduceMotion:true,crashLog:true},true).then(()=>done=true);
  await new Promise(r=>setImmediate(r));assert.equal(done,false,'separate settings instances serialize whole flush');gate.resolve();await Promise.all([a,b]);
  f.fail('reader_settings_v1');await assert.rejects(other.update(f.settingModule.createDefaultSettingsSnapshot(),true),/flush/);
- assert.equal((await f.appGateway.load()).reduceMotion,true,'failed preferences write restores acknowledged cache');
+ assert.equal((await f.appGateway.load()).reduceMotion,false,'failed preferences write retains accepted choice without old compensation');
+ assert.equal(f.appGateway.writeFacts().pendingReconciliation,true,'cached load cannot settle unknown flush');
 }
 {
  const f=await fixture();assert.deepEqual(await f.raceProbe(),[false,true],'empty startup probe cannot swallow explicit reset');await f.assertDefaults();
@@ -120,4 +121,4 @@ let dialog,calls=0;const page=Object.assign(new Page(),{mounted:true,resetRevisi
 page.requestRestoreDefaults();dialog.primaryButton.action();assert.equal(calls,0);assert.match(dialog.message,/保留书籍、书源、进度、书签/);
 page.requestRestoreDefaults();dialog.secondaryButton.action();await new Promise(r=>setImmediate(r));assert.equal(calls,1);assert.equal(page.resetMessage,'已恢复界面与阅读设置');
 page.requestRestoreDefaults();page.mounted=false;dialog.secondaryButton.action();await new Promise(r=>setImmediate(r));assert.equal(calls,1,'dismissed page cannot start reset from stale dialog');
-console.log('PASS production configuration reset: confirmed scope, durable intent, six failure points, restart continuation, newer user intent ordering, owner replacement, shared queues, failed-cache rollback and stale-dialog guard. No Core data/credential mutation.');
+console.log('PASS production configuration reset: confirmed scope, durable intent, six failure points, restart continuation, newer user intent ordering, owner replacement, shared queues, accepted-vs-confirmed cache and stale-dialog guard. No Core data/credential mutation.');

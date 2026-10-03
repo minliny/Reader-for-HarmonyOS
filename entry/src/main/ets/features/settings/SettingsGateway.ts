@@ -11,130 +11,151 @@ export type SettingsSnapshot = {
   reduceMotion: boolean;
   crashLog: boolean;
 };
-
+export type GeneralSettingsKey = 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog';
+export interface GeneralSettingsWriteFacts {
+  acceptedRevision: number;
+  savedRevision: number;
+  pendingReconciliation: boolean;
+  busy: boolean;
+  action: string;
+  accepted?: SettingsSnapshot;
+  saved?: SettingsSnapshot;
+}
 const DEFAULT_SNAPSHOT: SettingsSnapshot = {
-  autoCheckUpdate: true,
-  tapBottomScrollTop: true,
-  reduceMotion: false,
-  crashLog: true,
+  autoCheckUpdate: true, tapBottomScrollTop: true, reduceMotion: false, crashLog: true,
 };
-
 export function createDefaultSettingsSnapshot(): SettingsSnapshot {
   return { autoCheckUpdate: true, tapBottomScrollTop: true, reduceMotion: false, crashLog: true };
 }
 
+/** One real Preferences file, one IO lane across Ability/Runtime contexts.
+ * Accepted choices and flush-confirmed choices are separate facts. Cached get
+ * cannot prove an old flush durable; no failure authorizes an old-value write. */
 export class SettingsGateway {
   private readonly context: common.UIAbilityContext;
   private store: preferences.Preferences | undefined;
-  // `update` writes a complete snapshot as four preference keys followed by a
-  // flush. Keep those sequences ordered so overlapping page intents cannot
-  // persist a mixed snapshot. The tail is always resolved in `finally`: a
-  // rejected write must not prevent a later, independent update from running.
-  private static updateTails: Map<common.UIAbilityContext, Promise<void>> = new Map();
-  private static listeners: Map<common.UIAbilityContext, Set<(snapshot: SettingsSnapshot) => void>> = new Map();
+  private static writeTail: Promise<void> = Promise.resolve();
+  private static activeWrites: number = 0;
+  private static accepted: SettingsSnapshot | undefined;
+  private static saved: SettingsSnapshot | undefined;
+  private static acceptedRevision: number = 0;
+  private static savedRevision: number = 0;
+  private static action: string = 'load';
+  private static listeners: Set<(snapshot: SettingsSnapshot) => void> = new Set();
 
-  constructor(context: common.UIAbilityContext) {
-    this.context = context;
-  }
+  constructor(context: common.UIAbilityContext) { this.context = context; }
 
-  /** Only coherent reads and confirmed writes reach application consumers. */
+  /** Background consumers receive coherent reads and flush-confirmed writes;
+   * the page separately presents the accepted snapshot with its pending fact. */
   subscribe(listener: (snapshot: SettingsSnapshot) => void): () => void {
-    let listeners = SettingsGateway.listeners.get(this.context);
-    if (listeners === undefined) {
-      listeners = new Set<(snapshot: SettingsSnapshot) => void>();
-      SettingsGateway.listeners.set(this.context, listeners);
-    }
-    listeners.add(listener);
-    return (): void => {
-      const current = SettingsGateway.listeners.get(this.context);
-      current?.delete(listener);
-      if (current?.size === 0) SettingsGateway.listeners.delete(this.context);
-    };
+    SettingsGateway.listeners.add(listener);
+    return (): void => { SettingsGateway.listeners.delete(listener); };
   }
-
   private publish(snapshot: SettingsSnapshot): void {
-    for (const listener of SettingsGateway.listeners.get(this.context) ?? []) {
-      // A view callback cannot turn a confirmed preference write into failure.
+    for (const listener of SettingsGateway.listeners) {
       try { listener(this.copySnapshot(snapshot)); } catch (_) {}
     }
   }
+  current(): SettingsSnapshot | undefined {
+    return SettingsGateway.accepted === undefined ? undefined : this.copySnapshot(SettingsGateway.accepted);
+  }
+  writeFacts(): GeneralSettingsWriteFacts {
+    return { acceptedRevision: SettingsGateway.acceptedRevision, savedRevision: SettingsGateway.savedRevision,
+      pendingReconciliation: SettingsGateway.acceptedRevision !== SettingsGateway.savedRevision,
+      busy: SettingsGateway.activeWrites > 0, action: SettingsGateway.action,
+      accepted: this.current(), saved: SettingsGateway.saved === undefined ? undefined : this.copySnapshot(SettingsGateway.saved) };
+  }
 
-  async load(): Promise<SettingsSnapshot> {
+  async load(isAdmitted?: () => boolean): Promise<SettingsSnapshot> {
     await ReaderThemeHost.prepareUserChange();
-    // Do not expose a half-written four-key snapshot while an update is in
-    // flight. `update` always releases this tail, including its error path.
-    const previous = SettingsGateway.updateTails.get(this.context);
-    let release: (() => void) | undefined = undefined;
-    const tail = new Promise<void>((resolve: () => void): void => { release = resolve; });
-    SettingsGateway.updateTails.set(this.context, tail);
-    await previous;
-    try {
-      const snapshot = await this.readSnapshot(await this.ensureStore());
+    this.assertAdmitted(isAdmitted);
+    // Rebuilt UI can show the complete accepted choice while an old flush is
+    // unsettled. It must not publish that choice as a confirmed background fact.
+    const facts = this.writeFacts();
+    if (facts.pendingReconciliation && facts.accepted !== undefined) return facts.accepted;
+    return this.withSettingsAccess(async (): Promise<SettingsSnapshot> => {
+      this.assertAdmitted(isAdmitted);
+      const facts = this.writeFacts();
+      if (facts.pendingReconciliation && facts.accepted !== undefined) return facts.accepted;
+      const store = await this.ensureStore();
+      const snapshot = await this.readSnapshot(store);
+      this.assertAdmitted(isAdmitted);
+      SettingsGateway.accepted = this.copySnapshot(snapshot);
       this.publish(snapshot);
       return snapshot;
-    }
-    finally {
-      release?.();
-      if (SettingsGateway.updateTails.get(this.context) === tail) SettingsGateway.updateTails.delete(this.context);
-    }
+    });
   }
 
   async update(snapshot: SettingsSnapshot, resetOwned: boolean = false,
-    changedKey?: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
-    evidence?: ReaderWriteEvidence): Promise<SettingsSnapshot> {
-    // A caller can retain and mutate its state object while this update waits
-    // behind another write. Capture the full requested snapshot at call time.
-    let requestedSnapshot = this.copySnapshot(snapshot);
+    changedKey?: GeneralSettingsKey, evidence?: ReaderWriteEvidence,
+    isAdmitted?: () => boolean): Promise<SettingsSnapshot> {
+    const requested = this.copySnapshot(snapshot);
     if (!resetOwned) await ReaderThemeHost.prepareUserChange();
-    const previousUpdate = SettingsGateway.updateTails.get(this.context);
-    let releaseUpdate: (() => void) | undefined = undefined;
-    const nextUpdate = new Promise<void>((resolve: () => void): void => {
-      releaseUpdate = resolve;
-    });
-    SettingsGateway.updateTails.set(this.context, nextUpdate);
-    await previousUpdate;
-
-    try {
-      const store = await this.ensureStore();
-      const previous = await this.readSnapshot(store);
-      if (changedKey !== undefined) {
-        // A user toggle admitted after recovery changes only its own field.
-        // Never replay its pre-recovery siblings over the restored defaults.
-        requestedSnapshot = {
-          autoCheckUpdate: changedKey === 'autoCheckUpdate' ? requestedSnapshot.autoCheckUpdate : previous.autoCheckUpdate,
-          tapBottomScrollTop: changedKey === 'tapBottomScrollTop' ? requestedSnapshot.tapBottomScrollTop : previous.tapBottomScrollTop,
-          reduceMotion: changedKey === 'reduceMotion' ? requestedSnapshot.reduceMotion : previous.reduceMotion,
-          crashLog: changedKey === 'crashLog' ? requestedSnapshot.crashLog : previous.crashLog,
-        };
-      }
-      try {
-        evidence?.dispatched();
-        await this.writeSnapshot(store, requestedSnapshot);
-        await store.flush();
-        evidence?.confirmed();
-      } catch (error) {
-        // A failed flush must not leave unconfirmed values readable from the
-        // Preferences in-memory cache. A durable reset intent remains retryable.
-        await this.writeSnapshot(store, previous);
-        throw error;
-      }
-      this.publish(requestedSnapshot);
-      return this.copySnapshot(requestedSnapshot);
-    } finally {
-      if (releaseUpdate !== undefined) {
-        releaseUpdate();
-      }
-      if (SettingsGateway.updateTails.get(this.context) === nextUpdate) SettingsGateway.updateTails.delete(this.context);
-    }
+    return this.writeRequested(requested, changedKey, evidence, isAdmitted);
   }
 
+  /** Explicit finite idempotent setter retry. A queued callback cannot borrow
+   * a newer accepted revision, and it never replays a reset or unrelated field. */
+  async retryAccepted(evidence?: ReaderWriteEvidence, isAdmitted?: () => boolean): Promise<SettingsSnapshot> {
+    const facts = this.writeFacts();
+    if (!facts.pendingReconciliation || facts.accepted === undefined) throw new Error('SETTINGS_NO_PENDING_SAVE');
+    const revision = facts.acceptedRevision;
+    await ReaderThemeHost.prepareUserChange();
+    return this.writeRequested(facts.accepted, undefined, evidence, (): boolean =>
+      revision === SettingsGateway.acceptedRevision && this.admitted(isAdmitted));
+  }
+
+  private writeRequested(requested: SettingsSnapshot, changedKey?: GeneralSettingsKey,
+    evidence?: ReaderWriteEvidence, isAdmitted?: () => boolean): Promise<SettingsSnapshot> {
+    return this.withSettingsAccess(async (): Promise<SettingsSnapshot> => {
+      const store = await this.ensureStore();
+      const previous = this.current() ?? await this.readSnapshot(store);
+      const snapshot: SettingsSnapshot = changedKey === undefined ? requested : {
+        autoCheckUpdate: changedKey === 'autoCheckUpdate' ? requested.autoCheckUpdate : previous.autoCheckUpdate,
+        tapBottomScrollTop: changedKey === 'tapBottomScrollTop' ? requested.tapBottomScrollTop : previous.tapBottomScrollTop,
+        reduceMotion: changedKey === 'reduceMotion' ? requested.reduceMotion : previous.reduceMotion,
+        crashLog: changedKey === 'crashLog' ? requested.crashLog : previous.crashLog,
+      };
+      // Actual first platform put is the dispatch boundary. Once dispatched,
+      // retirement suppresses publication, not the already accepted flush.
+      this.assertAdmitted(isAdmitted);
+      if (SettingsGateway.acceptedRevision >= Number.MAX_SAFE_INTEGER) throw new Error('SETTINGS_REVISION_EXHAUSTED');
+      const revision = ++SettingsGateway.acceptedRevision;
+      SettingsGateway.accepted = this.copySnapshot(snapshot);
+      SettingsGateway.action = changedKey ?? 'save';
+      SettingsGateway.activeWrites += 1;
+      try {
+        evidence?.dispatched();
+        await this.writeSnapshot(store, snapshot);
+        await store.flush();
+        evidence?.confirmed();
+        SettingsGateway.saved = this.copySnapshot(snapshot);
+        SettingsGateway.savedRevision = revision;
+        this.publish(snapshot);
+        return this.copySnapshot(snapshot);
+      } finally { SettingsGateway.activeWrites -= 1; }
+    });
+  }
+
+  private async withSettingsAccess<T>(operation: () => Promise<T>): Promise<T> {
+    const previous = SettingsGateway.writeTail;
+    let release: (() => void) | undefined;
+    SettingsGateway.writeTail = new Promise<void>((resolve: () => void): void => { release = resolve; });
+    await previous;
+    try { return await operation(); } finally { release?.(); }
+  }
+  private admitted(isAdmitted?: () => boolean): boolean {
+    try { return isAdmitted?.() !== false; } catch (_) { return false; }
+  }
+  private assertAdmitted(isAdmitted?: () => boolean): void {
+    if (!this.admitted(isAdmitted)) throw new Error('SETTINGS_OWNER_SUPERSEDED');
+  }
   private async writeSnapshot(store: preferences.Preferences, snapshot: SettingsSnapshot): Promise<void> {
     await store.put('autoCheckUpdate', snapshot.autoCheckUpdate);
     await store.put('tapBottomScrollTop', snapshot.tapBottomScrollTop);
     await store.put('reduceMotion', snapshot.reduceMotion);
     await store.put('crashLog', snapshot.crashLog);
   }
-
   private async readSnapshot(store: preferences.Preferences): Promise<SettingsSnapshot> {
     const snapshot: SettingsSnapshot = {
       autoCheckUpdate: (await store.get('autoCheckUpdate', DEFAULT_SNAPSHOT.autoCheckUpdate)) as boolean,
@@ -143,26 +164,15 @@ export class SettingsGateway {
       crashLog: (await store.get('crashLog', DEFAULT_SNAPSHOT.crashLog)) as boolean,
     };
     if (typeof snapshot.autoCheckUpdate !== 'boolean' || typeof snapshot.tapBottomScrollTop !== 'boolean' ||
-      typeof snapshot.reduceMotion !== 'boolean' || typeof snapshot.crashLog !== 'boolean') {
-      throw new Error('设置持久化数据格式异常');
-    }
+      typeof snapshot.reduceMotion !== 'boolean' || typeof snapshot.crashLog !== 'boolean') throw new Error('设置持久化数据格式异常');
     return snapshot;
   }
-
   private copySnapshot(snapshot: SettingsSnapshot): SettingsSnapshot {
-    return {
-      autoCheckUpdate: snapshot.autoCheckUpdate,
-      tapBottomScrollTop: snapshot.tapBottomScrollTop,
-      reduceMotion: snapshot.reduceMotion,
-      crashLog: snapshot.crashLog,
-    };
+    return { autoCheckUpdate: snapshot.autoCheckUpdate, tapBottomScrollTop: snapshot.tapBottomScrollTop,
+      reduceMotion: snapshot.reduceMotion, crashLog: snapshot.crashLog };
   }
-
   private async ensureStore(): Promise<preferences.Preferences> {
-    if (this.store !== undefined) {
-      return this.store;
-    }
-    this.store = await preferences.getPreferences(this.context, SETTINGS_PREFERENCES_NAME);
+    if (this.store === undefined) this.store = await preferences.getPreferences(this.context, SETTINGS_PREFERENCES_NAME);
     return this.store;
   }
 }
