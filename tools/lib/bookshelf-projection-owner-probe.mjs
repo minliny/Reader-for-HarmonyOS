@@ -9,11 +9,15 @@ import {classifyReaderSource} from '../../entry/src/main/ets/features/source/Rea
 import * as names from '../../entry/src/main/ets/features/bookshelf/BookshelfSourceNameProjection.ts';
 import {runtimeOwnerIdentityProbe} from './reader-runtime-admission-probe.mjs';
 import {productionMotionMethods} from './reader-motion-method-probe.mjs';
+import {isReaderCoreTransactionPendingError} from '../../entry/vendor/core-harmony/sdk/reader_core.ts';
+import {errorMessageOf} from '../../entry/src/main/ets/app/ErrorMessage.ts';
+import {localImportFailure} from '../../entry/src/main/ets/app/LocalImportFailure.ts';
 import {readerRecoveryView} from '../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 export function actualProjectionTypes(readRuntime) {
  const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(readRuntime);
- const ReaderCoreGateway=bookshelfOperationClass('app/ReaderCoreGateway.ts','ReaderCoreGateway');
- const BookshelfFlowGateway=bookshelfOperationClass('features/bookshelf/BookshelfFlowGateway.ts','BookshelfFlowGateway',{ReaderCoreGateway,LocalBookImportGateway:class{}});
+ const ReaderCoreGateway=bookshelfOperationClass('app/ReaderCoreGateway.ts','ReaderCoreGateway',{ReaderRuntimeOwner,isReaderCoreTransactionPendingError});
+ const LocalBookImportGateway=bookshelfOperationClass('features/bookshelf/LocalBookImportGateway.ts','LocalBookImportGateway',{ReaderCoreGateway,ReaderRuntimeOwner,errorMessageOf,localImportFailure,hilog:{error(){}}});
+ const BookshelfFlowGateway=bookshelfOperationClass('features/bookshelf/BookshelfFlowGateway.ts','BookshelfFlowGateway',{ReaderCoreGateway,ReaderRuntimeOwner,LocalBookImportGateway});
  const SourceGateway=bookshelfOperationClass('features/source/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner,classifyReaderSource});
  const BookshelfProjectionOwner=bookshelfOperationClass('features/bookshelf/BookshelfProjectionOwner.ts','BookshelfProjectionOwner',{projectOperationFacts,BookshelfReadOwner,...names});
  const Host=bookshelfOperationClass('features/bookshelf/BookshelfHost.ets','BookshelfHost',{ReaderRuntimeOwner,BookshelfFlowGateway,BookshelfProjectionOwner,SourceGateway});
@@ -21,7 +25,7 @@ export function actualProjectionTypes(readRuntime) {
 }
 export const projectionIndexMethods=['getBookshelfProjection','applyBookshelfProjection','invalidateBookshelfProjection','isCurrentRuntime',
  'isCurrentBookshelfPresentation','shelfFilter','refreshBookshelf','applyBookshelfState','loadShelfWindowPage','loadNextShelfPage','loadPreviousShelfPage',
- 'shelfReadRecovery','retryBookshelfRead','emptyShelfRecovery','refreshSearchShelfMembership','sourceDisplayName'];
+ 'canContinueShelfRemoval','continueShelfRemoval','shelfReadRecovery','retryBookshelfRead','emptyShelfRecovery','refreshSearchShelfMembership','sourceDisplayName'];
 let mount=0;
 export function actualProjectionIndex(runtime,types,{filter={readingState:'all',sourceKind:'all'},initial,identity}={}) {
  const Index=productionMotionMethods(new URL('../../entry/src/main/ets/pages/Index.ets',import.meta.url),projectionIndexMethods,
@@ -34,7 +38,7 @@ export function actualProjectionIndex(runtime,types,{filter={readingState:'all',
   scheduleBookshelfBackgroundRefresh:state=>accepted.push(state),preparePersistedShelfBooks(){},traceStartupStage(){},beginStartupStage:()=>0,endStartupStage(){},
   bookshelfLoadGeneration:0,shelfBooks:[],shelfProjectionRevision:'',shelfMatchedTotal:0,shelfWindowOffset:0,
   shelfHasOnlineBooks:false,isBookshelfVisualAdmitted:false,isCoreShelfEmpty:false,bookshelfLoadFailed:false,
-  settingsSnapshot:{reduceMotion:false},shelfPageLoading:false});
+  settingsSnapshot:{reduceMotion:false},shelfPageLoading:false,shelfOperation:{...bookshelfOperationClass('features/bookshelf/BookshelfOperationOwner.ts','EMPTY_BOOKSHELF_OPERATION_SNAPSHOT')}});
  idx.bookshelfHost=new types.Host(()=>{},()=>true,()=>runtime);
  const owner=idx.getBookshelfProjection();
  if(initial!==undefined)idx.applyBookshelfState(initial);
@@ -55,7 +59,7 @@ export function actualProjectionSdkFeedback(f) {
     {allowEmptyBranchAdmission:true,childSources:{BookshelfShell:shellText,BookshelfPage:read('features/bookshelf/BookshelfPage.ets'),BookshelfStatusContent:read('features/bookshelf/BookshelfStatusContent.ets'),BookshelfEmptyPage:read('features/bookshelf/BookshelfEmptyPage.ets')}}).owner;
   const project=()=>{
     Object.assign(parent,f.idx,{shelfRecovery:()=>({visible:false,canRetry:false,message:'',generation:0}),shelfReadRecovery:()=>f.idx.shelfReadRecovery()});
-    for(const name of ['isCurrentBookshelfPresentation','loadNextShelfPage','loadPreviousShelfPage','refreshBookshelf','retryBookshelfRead','prepareVisibleReadingBooks'])
+    for(const name of ['canContinueShelfRemoval','continueShelfRemoval','isCurrentBookshelfPresentation','loadNextShelfPage','loadPreviousShelfPage','refreshBookshelf','retryBookshelfRead','prepareVisibleReadingBooks'])
       if(typeof f.idx[name]==='function')parent[name]=f.idx[name].bind(f.idx);
     parent.bookshelfContent();parent.bookshelfShellContent();
     const shelf=[...parent.children.values()].find(child=>child.params.books),props=[...parent.children.values()].find(child=>child.params.readRecovery).params;
@@ -72,9 +76,12 @@ export function actualProjectionSdkFeedback(f) {
  * Runtime is the instance-storage seam; no guard or navigation logic is mocked. */
 export function admitBookshelfSdkCarrier(carrier, runtime = {}, readRuntime = () => runtime) {
   const Guard=productionMotionMethods(new URL('../../entry/src/main/ets/pages/Index.ets',import.meta.url),
-    ['isCurrentBookshelfPresentation'],{ReaderRuntimeOwner:runtimeOwnerIdentityProbe(readRuntime)});
+    ['isCurrentBookshelfPresentation','canContinueShelfRemoval','continueShelfRemoval'],{ReaderRuntimeOwner:runtimeOwnerIdentityProbe(readRuntime)});
   carrier.mountedRuntimeOwner ??= runtime;carrier.navigationGeneration ??= 1;
   carrier.detailShelfAdmissionMount ??= 1;carrier.shelfReceiptRetired ??= false;carrier.route ??= 'bookshelf';
+  carrier.shelfOperation??={...bookshelfOperationClass('features/bookshelf/BookshelfOperationOwner.ts','EMPTY_BOOKSHELF_OPERATION_SNAPSHOT')};
+  carrier.canContinueShelfRemoval=Guard.prototype.canContinueShelfRemoval.bind(carrier);
+  carrier.continueShelfRemoval=Guard.prototype.continueShelfRemoval.bind(carrier);
   carrier.isCurrentRuntime=Guard.prototype.isCurrentRuntime.bind(carrier);
   carrier.isCurrentBookshelfPresentation=Guard.prototype.isCurrentBookshelfPresentation.bind(carrier);
   return carrier;

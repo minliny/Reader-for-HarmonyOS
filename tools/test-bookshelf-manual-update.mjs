@@ -1,3 +1,4 @@
+import {admitBookshelfSdkCarrier} from './lib/bookshelf-projection-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { createRequire, registerHooks } from 'node:module';
 import { bookshelfCatalogHost, catalogIndexMethods } from './lib/bookshelf-catalog-host-probe.mjs';
@@ -67,7 +68,7 @@ function fixture(books=[book('/one')]) {
     applicationSettingsSnapshot:{autoCheckUpdate:true},searchAppForeground:true,readingSessionActive:false,
     bookshelfUpdateRunning:false,bookshelfBackgroundRefreshRunning:false,bookshelfUpdateDone:0,bookshelfUpdateTotal:0,
     bookshelfLoadGeneration:0,prefetchReadingWindow:async session=>prefetched.push(session),invalidateBookshelfProjection(){this.bookshelfLoadGeneration++;},applyBookshelfState(){}});
-  return {runtime,owner,page,calls,projectionAdmissions,records,catalogs,modes,prefetched,log,remoteCount:n=>{remoteCount=n;}, diagnosticThrows:v=>{diagnosticThrows=v;},
+  return {runtime,owner,page,currentOwner:()=>installedOwner,calls,projectionAdmissions,records,catalogs,modes,prefetched,log,remoteCount:n=>{remoteCount=n;}, diagnosticThrows:v=>{diagnosticThrows=v;},
     cacheGate:g=>{cacheGate=g;},tocGate:g=>{tocGate=g;},targetsGate:g=>{targetsGate=g;}, projectionGate:g=>{projectionGate=g;}, failProjection:v=>{failProjection=v;},failTargets:v=>{failTargets=v;}, setOwner:v=>{installedOwner=v;},peak:()=>peak,projections:()=>projections,fullScans:()=>fullScans};
 }
 const ets = file => readFileSync(new URL('../entry/src/main/ets/' + file, import.meta.url), 'utf8');
@@ -83,6 +84,11 @@ function actualRecovery(f) {
  Object.assign(parent,f.page,{isCurrentBookshelfPresentation:f.page.isCurrentBookshelfPresentation.bind(f.page),shelfRecovery:()=>f.page.shelfRecovery(),shelfReadRecovery:()=>f.page.shelfReadRecovery(),isBookshelfVisualAdmitted:true,
   reconcileBookshelfCatalogProjection:token=>f.page.reconcileBookshelfCatalogProjection(token),
   reconcileShelfWrite:()=>assert.fail('catalog notice must not replay a shelf write')});
+ admitBookshelfSdkCarrier(parent,f.owner,f.currentOwner);
+ // Keep the actual live Index as the navigation/Runtime authority for the
+ // retained native callbacks; the SDK carrier only renders its Props.
+ parent.isCurrentRuntime=f.page.isCurrentRuntime.bind(f.page);
+ parent.isCurrentBookshelfPresentation=f.page.isCurrentBookshelfPresentation.bind(f.page);
  parent.bookshelfShellContent();const props=[...parent.children.values()][0].params;
  composition.childSources.BookshelfMoreMenu=ets('features/bookshelf/BookshelfMoreMenu.ets');
  const shell=composition.consumer(shellSource,['shellContent','content','recoveryNoticeContent'],{BookshelfMoreMenu:Child,READER_FLOATING_TOP_BAR_HEIGHT:56});
