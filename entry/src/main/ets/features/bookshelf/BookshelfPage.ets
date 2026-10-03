@@ -196,6 +196,8 @@ export struct BookshelfPage {
   private requestedViewMode: BookshelfViewMode = 'cover';
   private viewModeReadFailed: boolean = false;
   @State private actionBook: ShelfBook | undefined = undefined;
+  @State private actionSheetId: string = '';
+  private actionSheetRevision: number = 0;
   @State private visibleBookCount: number = 0;
   private readonly viewMotion: BookshelfViewMotionContract = bookshelfViewMotionContract();
   private pendingViewMode: BookshelfViewMode = 'cover';
@@ -283,6 +285,9 @@ export struct BookshelfPage {
     this.viewState.filterExpanded = this.filterRowVisible;
     this.viewportRestoreGeneration += 1;
     this.mounted = false;
+    this.actionBook = undefined;
+    this.actionSheetId = '';
+    this.actionSheetRevision += 1;
     this.viewModeRevision += 1;
     this.resetViewSwitchMotion();
   }
@@ -309,7 +314,12 @@ export struct BookshelfPage {
         this.viewportWidth = width;
       }
     })
-    .bindSheet(this.actionBook !== undefined, this.bookActionSheetContent, {
+    .bindSheet(this.actionBook !== undefined, this.bookActionSheetContent, this.bookActionSheetOptions());
+  }
+
+  private bookActionSheetOptions(presentationId: string = this.actionSheetId,
+    book: ShelfBook | undefined = this.actionBook): SheetOptions {
+    return {
       height: this.bookActionSheetSpec().height,
       width: this.bookActionWidth(),
       preferType: SheetType.CENTER,
@@ -319,10 +329,8 @@ export struct BookshelfPage {
       radius: { topLeft: this.bookActionSheetSpec().borderRadius, topRight: this.bookActionSheetSpec().borderRadius, bottomLeft: 0, bottomRight: 0 },
       maskColor: readerAppColor(this.bookActionSheetSpec().hostMaskRole, this.appThemeScheme),
       enableOutsideInteractive: false,
-      onDisappear: (): void => {
-        this.actionBook = undefined;
-      },
-    });
+      onDisappear: (): void => this.dismissBookActionSheet(presentationId, book),
+    };
   }
 
   private bookActionSheetSpec(): SheetSurfaceSpec {
@@ -331,11 +339,22 @@ export struct BookshelfPage {
 
   @Builder
   private bookActionSheetContent() {
+    // V1 ordinary callbacks are constructor inputs. Only this small temporary
+    // Sheet child remounts on a new presentation; the bookshelf stays mounted.
+    ForEach([this.actionSheetId], (presentationId: string) => {
+      this.bookActionSheetPresentation(presentationId, this.actionBook);
+    }, (presentationId: string): string => presentationId);
+  }
+
+  @Builder
+  private bookActionSheetPresentation(presentationId: string, book: ShelfBook | undefined) {
     BookshelfBookActionSheet({
-      onMultiSelect: (): void => this.performBookAction(this.onBookMultiSelectRequested),
-      onBookInfo: (): void => this.performBookAction(this.onBookInfoRequested),
-      onEditGroup: (): void => this.performBookAction(this.onBookGroupRequested),
-      onRemoveFromBookshelf: (): void => this.performBookAction(this.onBookRemoveRequested),
+      presentationId,
+      isCurrent: (candidate: string): boolean => candidate === presentationId && this.isCurrentBookActionSheet(presentationId, book),
+      onMultiSelect: (): void => this.performBookAction(presentationId, book, this.onBookMultiSelectRequested),
+      onBookInfo: (): void => this.performBookAction(presentationId, book, this.onBookInfoRequested),
+      onEditGroup: (): void => this.performBookAction(presentationId, book, this.onBookGroupRequested),
+      onRemoveFromBookshelf: (): void => this.performBookAction(presentationId, book, this.onBookRemoveRequested),
     });
   }
 
@@ -927,15 +946,28 @@ export struct BookshelfPage {
 
 
   private presentBookActionSheet(book: ShelfBook): void {
+    if (!this.mounted || !this.books.some((candidate: ShelfBook): boolean => candidate.sourceId === book.sourceId && candidate.bookId === book.bookId)) return;
+    this.actionSheetId = `bookshelf-action:${++this.actionSheetRevision}`;
     this.actionBook = book;
   }
 
-  private performBookAction(action: (book: ShelfBook) => void): void {
-    const book = this.actionBook;
-    if (book === undefined) {
-      return;
-    }
+  private isCurrentBookActionSheet(presentationId: string, book: ShelfBook | undefined): boolean {
+    return this.mounted && presentationId.length > 0 && presentationId === this.actionSheetId &&
+      book !== undefined && this.actionBook === book && this.books.some(
+        (candidate: ShelfBook): boolean => candidate.sourceId === book.sourceId && candidate.bookId === book.bookId);
+  }
+
+  private dismissBookActionSheet(presentationId: string, book: ShelfBook | undefined): void {
+    if (!this.mounted || presentationId.length === 0 || presentationId !== this.actionSheetId ||
+      book === undefined || this.actionBook !== book) return;
     this.actionBook = undefined;
+    this.actionSheetId = '';
+  }
+
+  private performBookAction(presentationId: string, book: ShelfBook | undefined, action: (book: ShelfBook) => void): void {
+    if (!this.isCurrentBookActionSheet(presentationId, book) || book === undefined) return;
+    this.actionBook = undefined;
+    this.actionSheetId = '';
     action(book);
   }
 
@@ -1166,6 +1198,10 @@ export struct BookshelfPage {
   }
 
   private onBooksChanged(): void {
+    if (this.actionBook !== undefined && !this.books.some((candidate: ShelfBook): boolean =>
+      candidate.sourceId === this.actionBook?.sourceId && candidate.bookId === this.actionBook?.bookId)) {
+      this.dismissBookActionSheet(this.actionSheetId, this.actionBook);
+    }
     this.queueShelfProjection();
   }
 

@@ -15,6 +15,8 @@ const { resolveSheetSpec } = new Function('TextAlign', stripTypeScriptTypes(popu
   .replace(/^export /gm,'') + '; return { resolveSheetSpec };')({ Start: 'TextAlign.Start', Center: 'TextAlign.Center' });
 const bookActionSpec=resolveSheetSpec('bookshelf-book-action');
 const action=read('features/bookshelf/BookshelfBookActionSheet.ets');
+const actionRows=read('features/common/ReaderSheetActionList.ets');
+const boundedFrame=read('features/common/ReaderBoundedSurface.ets');
 const dialog=read('features/bookshelf/LocalImportDialog.ets');
 const index=read('pages/Index.ets');
 const typographySource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets',import.meta.url),'utf8');
@@ -76,9 +78,10 @@ assert.match(popupSpecs,/'bookshelf-book-action': new SheetSurfaceSpec\(\{[\s\S]
 assert.match(popupSpecs,/'bookshelf-book-action': new SheetSurfaceSpec\(\{[\s\S]*?hostBackgroundRole: 'app\.BookshelfPage\.bookshelfTabContent\.bindSheet\.FFFFFCF8'/);
 assert.deepEqual([bookActionSpec.actionY(0), bookActionSpec.actionY(1), bookActionSpec.actionY(2), bookActionSpec.actionY(3)], [70, 116, 162, 208],
   'sheet action row positions retain the current four-row visual contract');
-assert.match(action,/resolveSheetSpec\('bookshelf-book-action'\)/);
-assert.match(action,/'编辑分组'.*onEditGroup/);
-assert.match(action,/borderRadius\(\{ topLeft: this\.surfaceSpec\(\)\.borderRadius/);
+assert.match(action,/ReaderBoundedSurface\(\{ specId: 'bookshelf-book-action'/);
+assert.match(actionRows,/resolveSheetSpec\('bookshelf-book-action'\)/);
+assert.match(actionRows,/'编辑分组'.*onEditGroup/);
+assert.match(boundedFrame,/borderRadius\(\{ topLeft: spec\.borderRadius/);
 assert.doesNotMatch(action,/const BOOK_ACTION_(SHEET_HEIGHT|INSET|HEIGHT)\s*=/,'sheet geometry is owned by the shared sheet contract');
 assert.match(popupSpecs,/'bookshelf-more-menu': new PopupSurfaceSpec\(\{[\s\S]*?width: 176/);
 assert.match(popupSpecs,/'bookshelf-more-menu': new PopupSurfaceSpec\(\{[\s\S]*?pointerHeight: 12/);
