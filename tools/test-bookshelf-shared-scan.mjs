@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { bookshelfCatalogHost } from './lib/bookshelf-catalog-host-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const index = new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url);
@@ -32,11 +33,9 @@ function fixture({ autoCheckUpdate = true, fullRevision = 'rev-1', membershipRev
   owner = {
     setReadingPreparationContext() {},
     readingEntryPreparations: () => preparations,
+    bookAcquisitions: () => ({ acquireBook: async seed => { refreshed.push([seed]); return { identity: { sourceId: seed.sourceId, bookId: seed.bookId }, entries: [] }; } }),
   };
-  const Index = productionMotionMethods(index,
-    ['canRunBookshelfBackgroundRefresh', 'scheduleBookshelfBackgroundRefresh', 'preparePersistedShelfBooks'], {
-      ReaderRuntimeOwner: { current: () => owner },
-      BookshelfFlowGateway: class {
+  class ScanFlow {
         async loadAll(current, membershipOnly = false) {
           scans.push({ membershipOnly });
           if (!membershipOnly) {
@@ -49,16 +48,20 @@ function fixture({ autoCheckUpdate = true, fullRevision = 'rev-1', membershipRev
             projectionRevision: membershipOnly ? membershipRevision :
               (typeof fullRevision === 'function' ? fullRevision(fullCount) : fullRevision) } : undefined;
         }
-      },
+      }
+  const Index = productionMotionMethods(index,
+    ['canRunBookshelfBackgroundRefresh', 'scheduleBookshelfBackgroundRefresh', 'refreshBookshelfCatalogBatch', 'preparePersistedShelfBooks'], {
+      ReaderRuntimeOwner: { current: () => owner },
+      BookshelfFlowGateway: ScanFlow,
       LOCAL_SOURCE_ID: 'local', CATALOG_REFRESH_INTERVAL_MS: 600000,
       DOMAIN: 0, hilog: { warn() {} },
     });
   const page = Object.assign(new Index(), {
-    route: 'bookshelf', shelfProjectionRevision: 'rev-1', shelfBooks: [books[0]],
+    mountedRuntimeOwner:owner,bookshelfHost:bookshelfCatalogHost(ScanFlow,()=>owner),navigationGeneration:1,bookshelfBackgroundEpoch:0,route: 'bookshelf', shelfProjectionRevision: 'rev-1', shelfBooks: [books[0]],
     settingsSnapshot: { autoCheckUpdate }, applicationSettingsSnapshot: { autoCheckUpdate },
     readingSessionActive: false, searchAppForeground: true, bookshelfUpdateRunning: false,
     bookshelfBackgroundRefreshRunning: false,
-    async refreshBookshelfCatalogBatch(candidates) { refreshed.push(candidates); },
+    bookshelfLoadGeneration:0,
   });
   return { page, books, scans, admissions, refreshed, owner,
     changeOwner(value) { owner = value; } };

@@ -1,5 +1,11 @@
 import assert from 'node:assert/strict';
-import { registerHooks } from 'node:module';
+import { createRequire, registerHooks } from 'node:module';
+import { bookshelfCatalogHost } from './lib/bookshelf-catalog-host-probe.mjs';
+import { readFileSync } from 'node:fs';
+import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
+import { projectOperationFacts } from '../entry/src/main/ets/app/ReaderOperationFacts.ts';
+import { readerRecoveryView } from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); }
@@ -16,7 +22,7 @@ const seed = bookId => ({ sourceId, bookId, detailUrl: bookId, title: '目录示
 const book = (bookId, extra={}) => ({ ...seed(bookId), addedAt: 1, readProgress: 3210, ...extra });
 function fixture(books=[book('/one')]) {
   const calls=[], records=new Map(), catalogs=new Map(), modes=new Map(), prefetched=[], log=[];
-  let remoteCount=1, cacheGate, active=0, peak=0, projections=0, fullScans=0, enabled=true;
+  let remoteCount=1, cacheGate, projectionGate, failProjection=false, installedOwner, active=0, peak=0, projections=0, fullScans=0, enabled=true;
   const runtime = new BookAcquisitionCoordinator(async (method, params, options) => {
     calls.push({method,params});
     const id=params.bookId ?? params.book?.bookId ?? params.bookUrl;
@@ -48,18 +54,42 @@ function fixture(books=[book('/one')]) {
     throw Error(`unexpected command ${method}`);
   });
   const owner={bookAcquisitions:()=>runtime,request:(...args)=>runtime.request(...args)};
-  const Index=productionMotionMethods(indexFile,['canRunBookshelfBackgroundRefresh','scheduleBookshelfBackgroundRefresh','refreshBookshelfCatalogBatch','startManualBookshelfUpdate','refreshOneShelfBook'],{
-    ReaderRuntimeOwner:{current:()=>owner},RemoteReadingFlowGateway,
-    BookshelfFlowGateway:class { async load(){projections++;return {books,continueReading:undefined};} async loadAll(current){fullScans++;await pause();return current()?{books,total:books.length,projectionRevision:'r'}:undefined;} },
+  installedOwner=owner;
+  class Flow { async load(){projections++;if(projectionGate)await projectionGate.promise;if(failProjection)throw Error('read unavailable');return {books,continueReading:undefined};} async loadAll(current){fullScans++;await pause();return current()?{books,total:books.length,projectionRevision:'r'}:undefined;} }
+  const Index=productionMotionMethods(indexFile,['canRunBookshelfBackgroundRefresh','scheduleBookshelfBackgroundRefresh','refreshBookshelfCatalogBatch','startManualBookshelfUpdate','reconcileBookshelfCatalogProjection','shelfRecovery','emptyShelfRecovery'],{
+    ReaderRuntimeOwner:{current:()=>{if(!installedOwner)throw Error('runtime unavailable');return installedOwner;}},RemoteReadingFlowGateway,projectOperationFacts,readerRecoveryView,
+    BookshelfFlowGateway:Flow,
     LOCAL_SOURCE_ID:'local',CATALOG_REFRESH_INTERVAL_MS:600000,DOMAIN:0,
     hilog:{info:(...args)=>log.push(args),warn:(...args)=>log.push(args)}
   });
-  const page=Object.assign(new Index(),{route:'bookshelf',shelfBooks:books,settingsSnapshot:{autoCheckUpdate:true},
+  const page=Object.assign(new Index(),{mountedRuntimeOwner:owner,bookshelfHost:bookshelfCatalogHost(Flow,()=>installedOwner),shelfReceiptRetired:false,shelfProjectionRevision:'',navigationGeneration:1,bookshelfCatalogEpoch:0,bookshelfBackgroundEpoch:0,route:'bookshelf',shelfBooks:books,settingsSnapshot:{autoCheckUpdate:true},
     applicationSettingsSnapshot:{autoCheckUpdate:true},searchAppForeground:true,readingSessionActive:false,
     bookshelfUpdateRunning:false,bookshelfBackgroundRefreshRunning:false,bookshelfUpdateDone:0,bookshelfUpdateTotal:0,
     bookshelfLoadGeneration:0,prefetchReadingWindow:async session=>prefetched.push(session),applyBookshelfState(){}});
   return {runtime,owner,page,calls,records,catalogs,modes,prefetched,log,remoteCount:n=>{remoteCount=n;},
-    cacheGate:g=>{cacheGate=g;},peak:()=>peak,projections:()=>projections,fullScans:()=>fullScans};
+    cacheGate:g=>{cacheGate=g;}, projectionGate:g=>{projectionGate=g;}, failProjection:v=>{failProjection=v;}, setOwner:v=>{installedOwner=v;},peak:()=>peak,projections:()=>projections,fullScans:()=>fullScans};
+}
+const ets = file => readFileSync(new URL('../entry/src/main/ets/' + file, import.meta.url), 'utf8');
+class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
+const sdkRequire = createRequire(import.meta.url), sdkRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+sdkRequire(sdkRoot + '/lib/validate_ui_syntax.js').builderParamObjectCollection.set('BookshelfShell', new Set(['content']));
+sdkRequire(sdkRoot + '/lib/component_map.js').CUSTOM_BUILDER_METHOD.add('bookshelfContent');
+function actualRecovery(f) {
+ const shellSource=ets('features/bookshelf/BookshelfShell.ets'),composition=boundedSurfaceSdk();
+ for(const member of shellSource.matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g))sdkRequire(sdkRoot+'/lib/component_map.js').CUSTOM_BUILDER_METHOD.add(member[1]);
+ const parent=createReaderBuilderProbe(ets('pages/Index.ets'),['bookshelfShellContent'],{BookshelfShell:Child},
+  {childSources:{BookshelfShell:shellSource}}).owner;
+ Object.assign(parent,f.page,{shelfRecovery:()=>f.page.shelfRecovery(),isBookshelfVisualAdmitted:true,
+  reconcileBookshelfCatalogProjection:token=>f.page.reconcileBookshelfCatalogProjection(token),
+  reconcileShelfWrite:()=>assert.fail('catalog notice must not replay a shelf write')});
+ parent.bookshelfShellContent();const props=[...parent.children.values()][0].params;
+ composition.childSources.BookshelfMoreMenu=ets('features/bookshelf/BookshelfMoreMenu.ets');
+ const shell=composition.consumer(shellSource,['shellContent','content'],{BookshelfMoreMenu:Child,READER_FLOATING_TOP_BAR_HEIGHT:56});
+ Object.assign(shell,props,{topBar(){},content(){},moreMenuVisible:false});shell.shellContent();
+ const notice=composition.walk(shell).find(owner=>owner instanceof composition.deps.ReaderRecoveryNotice);
+ assert.ok(notice,'real Shell -> shared RecoveryNotice consumes the catalog facts');
+ const action=composition.nodes(shell).find(node=>node.height===36&&node.onClick);
+ return {props,notice,action,nodes:composition.nodes(shell)};
 }
 const results=[];
 async function check(name, run) { try {await run();results.push({name,status:'PASS'});} catch(error){results.push({name,status:'FAIL',message:error.stack});} }
@@ -108,6 +138,8 @@ await check('per-book failure/empty results preserve old records, settle flags a
     assert.equal(f.catalogs.get('/broken'),oldBroken);assert.equal(f.catalogs.get('/empty'),oldEmpty);
     assert.equal(f.prefetched.length,1);assert.equal(f.prefetched[0].identity.bookId,'/healthy');
     assert.equal(f.page.bookshelfUpdateDone,3);assert.equal(f.page.bookshelfUpdateTotal,3);assert.ok(f.peak()<=2);
+    assert.equal(f.page.bookshelfCatalogFacts.fact,'partial');assert.equal(f.page.bookshelfCatalogFacts.value.succeeded,1);assert.equal(f.page.bookshelfCatalogFacts.value.failed,2);
+    assert.match(f.page.shelfRecovery().message,/成功 1\/3，失败 2/);assert.equal(f.page.shelfRecovery().canRetry,false);
     assert.equal(f.calls.some(c=>/clear|delete|remove|progress.update/.test(c.method)),false);
   } finally {f.runtime.close();}
 });
@@ -201,6 +233,46 @@ for(const change of ['cancel','close','source-delete']) await check(`force waiti
     assert.equal(f.calls.some(c=>c.method==='book.detail'||c.method==='book.toc'),false);
     assert.equal(f.catalogs.get('/one').length,1,'cached directory survives every waiting cancellation');
   }finally{f.runtime.close();}
+});
+await check('accepted catalog ACK + failed shelf read offers readonly retry, never another force write',async()=>{
+ const f=fixture();try{f.failProjection(true);f.page.startManualBookshelfUpdate();await until(()=>!f.page.bookshelfUpdateRunning);
+  assert.equal(f.page.bookshelfCatalogFacts.fact,'refreshFailed');assert.equal(f.page.bookshelfCatalogFacts.value.succeeded,1);assert.equal(f.page.shelfRecovery().canRetry,true);
+  const writes=f.calls.filter(c=>c.method==='book.toc').length;f.failProjection(false);const token=f.page.shelfRecovery().generation;
+  await Promise.all([f.page.reconcileBookshelfCatalogProjection(token),f.page.reconcileBookshelfCatalogProjection(token)]);
+  assert.equal(f.calls.filter(c=>c.method==='book.toc').length,writes);assert.equal(f.page.bookshelfCatalogFacts.fact,'current');assert.equal(f.projections(),2);
+ }finally{f.runtime.close();}
+});
+for(const automatic of [false,true])for(const retirement of ['runtime-unset','runtime-replaced','navigation','closed'])await check(`${automatic?'auto':'manual'} deferred catalog work cannot acquire/reload/publish another Runtime after ${retirement}`,async()=>{
+ const f=fixture([book('/a'),book('/b'),book('/c')]);try{
+  let gate=deferred(),accepted=0;const acquire=f.runtime.acquireBook.bind(f.runtime);
+  f.runtime.acquireBook=async(...args)=>{accepted++;const session=await acquire(...args);await gate.promise;return session;};
+  if(automatic)f.page.scheduleBookshelfBackgroundRefresh(f.page.shelfBooks);else f.page.startManualBookshelfUpdate();
+  await until(()=>accepted===2);const before=structuredClone({facts:f.page.bookshelfCatalogFacts,done:f.page.bookshelfUpdateDone});
+  if(retirement==='runtime-unset')f.setOwner(undefined);if(retirement==='runtime-replaced')f.setOwner({});
+  if(retirement==='navigation')f.page.navigationGeneration++;if(retirement==='closed')f.page.shelfReceiptRetired=true;
+  // Actual owner absence must be safe while already admitted RPCs finish.
+  if(retirement==='closed'&&automatic){f.page.readingSessionActive=true;}
+  gate.resolve();await pause();await pause();assert.equal(accepted,2);assert.equal(f.projections(),0);assert.equal(f.prefetched.length,0);
+  assert.deepEqual({facts:f.page.bookshelfCatalogFacts,done:f.page.bookshelfUpdateDone},before);
+ }finally{f.runtime.close();}
+});
+await check('body preparation failure preserves catalog success as a separate fact',async()=>{
+ const f=fixture();try{f.page.prefetchReadingWindow=async()=>{throw Error('body failure');};f.page.startManualBookshelfUpdate();await until(()=>!f.page.bookshelfUpdateRunning);
+  assert.equal(f.page.bookshelfCatalogFacts.value.succeeded,1);assert.equal(f.page.bookshelfCatalogFacts.value.failed,0);assert.equal(f.page.bookshelfCatalogFacts.value.preparationFailed,1);assert.equal(f.page.bookshelfCatalogFacts.fact,'partial');
+ }finally{f.runtime.close();}
+});
+await check('actual Host -> Index -> SDK Shell/Notice/physical retry separates partial and readback failure',async()=>{
+ const f=fixture([book('/broken'),book('/good')]);try{
+  f.modes.set('/broken','error');f.failProjection(true);f.page.startManualBookshelfUpdate();await until(()=>!f.page.bookshelfUpdateRunning);
+  const shown=actualRecovery(f);assert.equal(shown.props.updateProgressDone,2);assert.equal(shown.props.updateProgressTotal,2);
+  assert.match(shown.notice.view.message,/成功 1\/2，失败 1/);assert.ok(shown.action);assert.equal(shown.notice.view.canRetry,true);
+  const writes=f.calls.filter(call=>call.method==='book.toc').length;f.failProjection(false);
+  shown.action.onClick();shown.action.onClick();await until(()=>!f.page.bookshelfCatalogFacts.canRetry&&f.page.bookshelfCatalogFacts.fact==='partial');
+  assert.equal(f.calls.filter(call=>call.method==='book.toc').length,writes);assert.equal(f.projections(),2);
+  const partial=actualRecovery(f);assert.match(partial.notice.view.message,/成功 1\/2，失败 1/);assert.equal(partial.action,undefined);
+  // Real old native recovery callback cannot force a new catalog mutation.
+  f.page.navigationGeneration++;const before=f.projections();shown.action.onClick();await pause();assert.equal(f.projections(),before);
+ }finally{f.runtime.close();}
 });
 for(const r of results) console.log(JSON.stringify(r));
 if(results.some(r=>r.status==='FAIL')) process.exitCode=1;

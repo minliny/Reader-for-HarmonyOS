@@ -1,5 +1,9 @@
 import { ReaderCoreGateway, type BookshelfAddReceipt, type ShelfBook, type ShelfBookUpsert } from '../../app/ReaderCoreGateway';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import type { BookshelfState } from '../../app/ReaderCoreGateway';
+import { BookshelfFlowGateway } from './BookshelfFlowGateway';
+import { BookshelfCatalogUpdate, type BookshelfCatalogProgress } from './BookshelfCatalogUpdate';
+import type { RemoteReadingSession } from '../reading/RemoteReadingContract';
 import {
   BookshelfManagementGateway,
 } from './BookshelfManagementGateway';
@@ -14,14 +18,11 @@ export {
 } from './BookshelfManagementOrchestrator';
 
 /**
- * Entry-owned bookshelf management boundary. Index keeps the route and the
- * ArkUI snapshot projection, while this host owns the management
- * orchestrator, its Core gateway, and management intent dispatch.
- *
- * The broader BookshelfFlowGateway remains the page-loading boundary for the
- * shelf projection; this host intentionally starts with the independent
- * management subdomain so the existing shelf UI and route behavior stay
- * unchanged while the construction seam becomes explicit.
+ * Entry-owned bookshelf domain boundary. Index keeps navigation, temporary
+ * presentation leases and ArkUI snapshots. This host owns management IO and
+ * catalog target scans/sweeps through existing Core/acquisition boundaries.
+ * Page reads remain BookshelfFlowGateway; a catalog operation always carries
+ * the Runtime and current predicate captured by its originating presentation.
  */
 export class BookshelfHost {
   private managementOrchestrator: BookshelfManagementOrchestrator | undefined = undefined;
@@ -66,6 +67,20 @@ export class BookshelfHost {
 
   upsertBook(book: ShelfBookUpsert): Promise<BookshelfAddReceipt> {
     return new ReaderCoreGateway(this.owner()).upsertBook(book);
+  }
+
+  catalogTargets(owner: ReaderRuntimeOwner, books: ShelfBook[], revision: string,
+    automatic: boolean, current: () => boolean): Promise<BookshelfState | undefined> {
+    // Only a complete exact revision can be shared with durable preparation.
+    return revision.length > 0 ? new BookshelfFlowGateway(owner, { readingState: 'all', sourceKind: 'all' }, automatic)
+      .loadAll(current) : Promise.resolve(current() ? { books, total: books.length } : undefined);
+  }
+
+  refreshCatalogs(owner: ReaderRuntimeOwner, books: ShelfBook[], automatic: boolean,
+    intervalMs: number, current: () => boolean,
+    prefetch: (session: RemoteReadingSession, current: () => boolean) => Promise<void>,
+    emit: (progress: BookshelfCatalogProgress) => void): Promise<BookshelfCatalogProgress> {
+    return new BookshelfCatalogUpdate(owner).run(books, automatic, intervalMs, current, prefetch, emit);
   }
 
   private getManagementOrchestrator(): BookshelfManagementOrchestrator {

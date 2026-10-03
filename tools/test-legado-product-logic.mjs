@@ -50,7 +50,7 @@ for (const chapterIndex of [60, 99]) assert.equal(catalogBoundary.isRemoteCatalo
 // Groups consume canonical indexes but never the readable-neighbour budget.
 // Execute the real refresh/prefetch and independent shelf-owner regressions.
 await import('./test-reader-directory-business-boundaries.mjs');
-assert.match(index, /for \(let start = 0; start < books\.length; start \+= 2\)[\s\S]*Promise\.all\(batch\.map/,
+assert.match(read('entry/src/main/ets/features/bookshelf/BookshelfCatalogUpdate.ts'), /for \(let start = 0; start < targets\.length; start \+= 2\)[\s\S]*Promise\.all\(batch\.map/,
   'bookshelf updates must use a bounded two-book batch');
 // PH116 explicitly keeps failures and recovery in the normal reading page.
 // Neither acquisition failure nor error presentation may auto-pick a source.
@@ -172,9 +172,10 @@ for (const blocked of ['canCheckUpdates', 'updateRunning', 'backgroundUpdateRunn
 requestUpdate(); assert.equal(updateIntents, 1, 'More delegates the foreground sweep to the existing Index owner');
 assert.equal(shellUpdate.moreMenuVisible, false, 'accepted update closes the menu');
 assert.match(index, /private startManualBookshelfUpdate\(\)/,
-  'SHF-03: Index must own the foreground update queue');
-assert.match(index, /onProgress\(completed, books\.length\)/,
-  'SHF-03: the sweep must report chunk progress for the page');
+  'SHF-03: Index must dispatch the user foreground update intent');
+assert.match(index, /this\.bookshelfHost\.refreshCatalogs\(owner/, 'SHF-03: existing BookshelfHost owns the exact Runtime sweep');
+assert.match(index, /bookshelfUpdateDone = value\.attempted/,
+  'SHF-03: the sweep reports attempted chunk progress, distinct from result success counts');
 assert.match(index, /bookshelfBackgroundRefreshRunning \|\| this\.bookshelfUpdateRunning/,
   'SHF-03: manual and background sweeps must stay mutually exclusive');
 assert.match(shelf, /onBookGroupRequested/,

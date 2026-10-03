@@ -79,6 +79,7 @@ import {
 import type { ReadingBookDetail } from '../features/reading/ReadingBookDetail';
 import type { BookAcquisitionCandidate, BookAcquisitionChange } from '../app/BookAcquisitionCoordinator';
 import { BookAcquisitionProjectionGateway, type BookAcquisitionDetailProjection } from '../app/BookAcquisitionProjectionGateway';
+import type { BookshelfCatalogProgress } from '../features/bookshelf/BookshelfCatalogUpdate';
 import type { RemoteReadingIdentity } from '../features/reading/RemoteReadingContract';
 import { searchCandidateRank } from '../features/search/SearchCandidatePolicy';
 import {
@@ -416,6 +417,11 @@ struct Index {
   @State private bookshelfUpdateRunning: boolean = false;
   @State private bookshelfUpdateDone: number = 0;
   @State private bookshelfUpdateTotal: number = 0;
+  @State private bookshelfCatalogFacts: OperationFacts<BookshelfCatalogProgress> | undefined = undefined;
+  private bookshelfCatalogEpoch: number = 0;
+  private bookshelfBackgroundEpoch: number = 0;
+  private bookshelfCatalogOwner: ReaderRuntimeOwner | undefined = undefined;
+  private bookshelfCatalogReadbackFailed: boolean = false;
   @State private bookshelfManagementSnapshot: BookshelfManagementSnapshot =
     EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT;
   @State private bookshelfMultiSelectInitialKey: string = '';
@@ -693,6 +699,10 @@ struct Index {
     this.temporaryBackLease = undefined;
     this.nativeAlertOwner.retire();
     this.shelfReceiptRetired = true;
+    this.bookshelfCatalogEpoch += 1;
+    this.bookshelfBackgroundEpoch += 1;
+    this.bookshelfUpdateRunning = false;
+    this.bookshelfBackgroundRefreshRunning = false;
     this.shelfWriteGeneration += 1;
     this.dismissBookRemovalDialog();
     this.navigationBackfillObserverDisposer?.();
@@ -906,7 +916,10 @@ struct Index {
       },
       populated: this.isBookshelfVisualAdmitted,
       recovery: this.shelfRecovery(),
-      onReconcile: (generation: number): void => { void this.reconcileShelfWrite(generation); },
+      onReconcile: (generation: number): void => {
+        if (generation < 0) void this.reconcileBookshelfCatalogProjection(generation);
+        else void this.reconcileShelfWrite(generation);
+      },
       reduceMotion: this.settingsSnapshot.reduceMotion,
       canCheckUpdates: this.isBookshelfVisualAdmitted && (this.shelfProjectionRevision.length > 0 ?
         this.shelfHasOnlineBooks : this.shelfBooks.some((book: ShelfBook): boolean => book.sourceId !== 'local')),
@@ -4255,9 +4268,10 @@ struct Index {
   }
 
   private shelfRecovery(): ReaderRecoveryView {
-    if (!this.isCurrentRuntime(this.shelfWriteOwner)) return this.emptyShelfRecovery();
+    const catalog = this.isCurrentRuntime(this.bookshelfCatalogOwner) ? readerRecoveryView(undefined, this.bookshelfCatalogFacts) : this.emptyShelfRecovery();
+    if (!this.isCurrentRuntime(this.shelfWriteOwner)) return catalog;
     const recovery = readerRecoveryView(this.shelfWriteReceipt);
-    if (this.shelfWriteCleanupWarning.length === 0) return recovery;
+    if (this.shelfWriteCleanupWarning.length === 0) return recovery.visible ? recovery : catalog;
     return { message: (recovery.visible ? `${recovery.message}；` : '书籍已移出书架；') +
       `应用内 EPUB 文件清理未完成：${this.shelfWriteCleanupWarning}`,
       visible: true, canRetry: recovery.canRetry, generation: this.shelfWriteGeneration };
@@ -6256,8 +6270,9 @@ struct Index {
     session: RemoteReadingSession,
     preferredChapterIndex: number | undefined = undefined,
     shelfCurrent?: () => boolean,
+    capturedOwner?: ReaderRuntimeOwner,
   ): Promise<void> {
-    const owner = ReaderRuntimeOwner.current();
+    const owner = capturedOwner ?? ReaderRuntimeOwner.current();
     const navigation = this.navigationGeneration;
     const contentCurrent = owner.captureReadingContentValidity?.(session.identity.sourceId, session.identity.bookId);
     const sessionGeneration = this.remoteSessionGeneration;
@@ -6304,6 +6319,9 @@ struct Index {
     if (!readerOwned) {
       const result = await new ReadingOfflineGateway(owner).prefetchWindow(session, startInclusive, endExclusive, ownerCurrent);
       publish(result.entries, session, ownerCurrent);
+      if (shelfCurrent !== undefined && ownerCurrent() && result.failedChapters > 0) {
+        throw new Error('部分章节预加载未完成');
+      }
       return;
     }
     const key = JSON.stringify([session.identity.sourceId, session.identity.bookId, session.sourceVersion,
@@ -6606,6 +6624,10 @@ struct Index {
   }
 
   private nextNavigationGeneration(): number {
+    this.bookshelfCatalogEpoch += 1;
+    this.bookshelfBackgroundEpoch += 1;
+    this.bookshelfUpdateRunning = false;
+    this.bookshelfBackgroundRefreshRunning = false;
     this.temporaryBackLease = undefined;
     this.nativeAlertOwner.retire();
     this.shelfReadingPreparation = false;
@@ -6773,164 +6795,125 @@ struct Index {
   }
 
   private scheduleBookshelfBackgroundRefresh(books: ShelfBook[], revisionRetry: boolean = false): void {
-    if (this.bookshelfBackgroundRefreshRunning || this.bookshelfUpdateRunning ||
-      !this.canRunBookshelfBackgroundRefresh()) {
-      return;
-    }
-    const owner = ReaderRuntimeOwner.current();
+    if (this.bookshelfBackgroundRefreshRunning || this.bookshelfUpdateRunning || !this.canRunBookshelfBackgroundRefresh()) return;
+    const owner = this.mountedRuntimeOwner;
+    if (!this.isCurrentRuntime(owner) || owner === undefined) return;
     const revision = this.shelfProjectionRevision;
+    const navigation = this.navigationGeneration;
+    const epoch = ++this.bookshelfBackgroundEpoch;
     let ownPublishedRevision: string | undefined;
-    const current = (): boolean => this.isCurrentRuntime(owner) &&
-      revision === this.shelfProjectionRevision && this.canRunBookshelfBackgroundRefresh();
+    const current = (): boolean => epoch === this.bookshelfBackgroundEpoch && this.isCurrentRuntime(owner) &&
+      navigation === this.navigationGeneration && revision === this.shelfProjectionRevision && this.canRunBookshelfBackgroundRefresh();
     this.bookshelfBackgroundRefreshRunning = true;
-    // Visible rows may be filtered or only the first page. Establish the
-    // complete revision before writes invalidate its cursor. This background
-    // read never gates admission and stops between pages when reading starts.
-    const targets = revision !== undefined && revision.length > 0 ?
-      new BookshelfFlowGateway(owner, { readingState: 'all', sourceKind: 'all' }, true).loadAll(current) : Promise.resolve({ books, total: books.length } as BookshelfState);
+    const targets = this.bookshelfHost.catalogTargets(owner, books, revision ?? '', true, current);
     if (revision !== undefined && revision.length > 0) {
-      // A full automatic scan already includes the identities requested by
-      // persistent preparation. Keep only identities, and share only an exact
-      // Core revision; a failed or superseded scan leaves the normal fallback.
       this.bookshelfBackgroundSeeds = { owner, revision, seeds: targets.then((shelf: BookshelfState | undefined): ReadingEntrySeed[] | undefined =>
         shelf !== undefined && shelf.projectionRevision === revision ? shelf.books.map((book: ShelfBook): ReadingEntrySeed =>
           ({ sourceId: book.sourceId, bookId: book.bookId })) : undefined).catch((): undefined => undefined) };
     }
     void targets.then(async (shelf: BookshelfState | undefined): Promise<void> => {
-      if (!current() || shelf === undefined ||
-        (revision !== undefined && revision.length > 0 && shelf.projectionRevision !== revision)) return;
-      const now = Date.now();
-      const candidates = shelf.books.filter((book: ShelfBook): boolean => book.sourceId !== LOCAL_SOURCE_ID &&
-        (book.lastCheckAt === undefined || now - book.lastCheckAt * 1000 >= CATALOG_REFRESH_INTERVAL_MS));
-      if (candidates.length > 0) await this.refreshBookshelfCatalogBatch(candidates, undefined, true, current,
-        (publishedRevision: string): void => { ownPublishedRevision = publishedRevision; });
+      if (!current() || shelf === undefined || (revision.length > 0 && shelf.projectionRevision !== revision)) return;
+      await this.refreshBookshelfCatalogBatch(shelf.books, undefined, true, current,
+        (publishedRevision: string): void => { ownPublishedRevision = publishedRevision; }, owner);
     }).catch((error: Error): void => {
       if (current()) hilog.warn(DOMAIN, 'Reader', 'Background bookshelf targets: %{private}s', error.message);
-    })
-      .finally((): void => {
-        this.bookshelfBackgroundRefreshRunning = false;
-        // applyBookshelfState can publish a newer revision while this scan is
-        // running. It cannot start another scan until the flag is released.
-        // Retry the latest revision once; a continuously changing shelf must
-        // not create an unbounded chain of background reads.
-        if (!revisionRetry && this.isCurrentRuntime(owner) &&
-          revision !== this.shelfProjectionRevision && ownPublishedRevision !== this.shelfProjectionRevision &&
-          this.canRunBookshelfBackgroundRefresh()) {
-          this.scheduleBookshelfBackgroundRefresh(this.shelfBooks, true);
-        }
-      });
+    }).finally((): void => {
+      if (epoch !== this.bookshelfBackgroundEpoch || !this.isCurrentRuntime(owner)) return;
+      this.bookshelfBackgroundRefreshRunning = false;
+      if (!revisionRetry && navigation === this.navigationGeneration && revision !== this.shelfProjectionRevision &&
+        ownPublishedRevision !== this.shelfProjectionRevision && this.canRunBookshelfBackgroundRefresh()) {
+        this.scheduleBookshelfBackgroundRefresh(this.shelfBooks, true);
+      }
+    });
   }
 
   private async refreshBookshelfCatalogBatch(books: ShelfBook[],
-    onProgress?: (done: number, total: number) => void, automatic: boolean = false,
-    automaticCurrent?: () => boolean, onAutomaticProjectionApplied?: (revision: string) => void): Promise<void> {
-    // Keep source I/O bounded like Legado's bookshelf updater. Two concurrent
-    // books avoid serial stalls without flooding all enabled sources.
-    let completed = 0;
-    for (let start = 0; start < books.length; start += 2) {
-      if (automatic && !(automaticCurrent?.() ?? this.canRunBookshelfBackgroundRefresh())) return;
-      const batch = books.slice(start, Math.min(books.length, start + 2));
-      await Promise.all(batch.map((book: ShelfBook): Promise<void> => this.refreshOneShelfBook(book, automatic, automaticCurrent)));
-      completed += batch.length;
-      if (onProgress !== undefined) {
-        onProgress(completed, books.length);
-      }
-    }
-    if (automatic && !(automaticCurrent?.() ?? this.canRunBookshelfBackgroundRefresh())) return;
+    onProgress: ((progress: BookshelfCatalogProgress) => void) | undefined,
+    automatic: boolean, current: () => boolean,
+    onAutomaticProjectionApplied: ((revision: string) => void) | undefined,
+    owner: ReaderRuntimeOwner): Promise<BookshelfCatalogProgress> {
+    const progress = await this.bookshelfHost.refreshCatalogs(owner, books, automatic, CATALOG_REFRESH_INTERVAL_MS, current,
+      (session: RemoteReadingSession, live: () => boolean): Promise<void> => this.prefetchReadingWindow(session, undefined, live, owner),
+      (value: BookshelfCatalogProgress): void => { if (current()) onProgress?.(value); });
+    if (!current() || progress.cancelled || progress.total === 0) return progress;
     try {
-      const state = await new BookshelfFlowGateway(ReaderRuntimeOwner.current(), this.shelfFilter()).load();
-      if (this.route === 'bookshelf' && (!automatic || (automaticCurrent?.() ?? this.canRunBookshelfBackgroundRefresh()))) {
-        this.bookshelfLoadGeneration += 1;
-        this.applyBookshelfState(state, true);
-        const appliedRevision = this.shelfProjectionRevision;
-        if (automatic && appliedRevision !== undefined) onAutomaticProjectionApplied?.(appliedRevision);
-      }
+      const state = await new BookshelfFlowGateway(owner, this.shelfFilter()).load();
+      if (!current()) return progress;
+      this.bookshelfLoadGeneration += 1;
+      this.applyBookshelfState(state, true);
+      if (automatic) onAutomaticProjectionApplied?.(this.shelfProjectionRevision);
+      else this.bookshelfCatalogReadbackFailed = false;
     } catch (error) {
-      hilog.warn(DOMAIN, 'Reader', 'Bookshelf update projection failed: %{private}s',
-        (error as Error).message);
+      if (current()) {
+        if (!automatic) this.bookshelfCatalogReadbackFailed = true;
+        hilog.warn(DOMAIN, 'Reader', 'Bookshelf update projection failed: %{private}s', (error as Error).message);
+      }
     }
+    return progress;
   }
 
-  /**
-   * SHF-03: user-triggered foreground sweep. Deliberately ignores the
-   * background lastCheckAt throttle (the user asked for the check now) and
-   * keeps no scheduler behind it: the sweep only lives while this process
-   * runs, concurrency stays at the shared batch limit of two.
-   */
   private startManualBookshelfUpdate(): void {
-    if (this.bookshelfUpdateRunning || this.bookshelfBackgroundRefreshRunning) {
-      return;
-    }
-    if (this.shelfProjectionRevision !== undefined && this.shelfProjectionRevision.length > 0) {
-      const owner = ReaderRuntimeOwner.current();
-      this.bookshelfUpdateRunning = true;
-      this.bookshelfUpdateDone = 0;
-      this.bookshelfUpdateTotal = 0;
-      void new BookshelfFlowGateway(owner).loadAll((): boolean => this.isCurrentRuntime(owner)).then(async (shelf: BookshelfState | undefined): Promise<void> => {
-        if (shelf === undefined) return;
-        const targets = shelf.books.filter((book: ShelfBook): boolean => book.sourceId !== LOCAL_SOURCE_ID);
-        this.bookshelfUpdateTotal = targets.length;
-        await this.refreshBookshelfCatalogBatch(targets, (done: number, total: number): void => {
-          this.bookshelfUpdateDone = done; this.bookshelfUpdateTotal = total;
-        });
-      }).catch((error: Error): void => { hilog.warn(DOMAIN, 'Reader', 'Manual bookshelf targets: %{private}s', error.message); })
-        .finally((): void => { if (this.isCurrentRuntime(owner)) this.bookshelfUpdateRunning = false; });
-      return;
-    }
-    const candidates = this.shelfBooks.filter((book: ShelfBook): boolean =>
-      book.sourceId !== LOCAL_SOURCE_ID);
-    if (candidates.length === 0) {
-      hilog.info(DOMAIN, 'Reader', 'Manual bookshelf update: no network books to check');
-      return;
-    }
+    if (this.bookshelfUpdateRunning || this.bookshelfBackgroundRefreshRunning) return;
+    const owner = this.mountedRuntimeOwner;
+    if (!this.isCurrentRuntime(owner) || owner === undefined || this.route !== 'bookshelf') return;
+    const epoch = ++this.bookshelfCatalogEpoch, navigation = this.navigationGeneration;
+    const current = (): boolean => epoch === this.bookshelfCatalogEpoch && this.isCurrentRuntime(owner) &&
+      navigation === this.navigationGeneration && this.route === 'bookshelf' && !this.shelfReceiptRetired;
+    this.bookshelfCatalogOwner = owner;
+    this.bookshelfCatalogReadbackFailed = false;
+    this.bookshelfCatalogFacts = undefined;
     this.bookshelfUpdateRunning = true;
     this.bookshelfUpdateDone = 0;
-    this.bookshelfUpdateTotal = candidates.length;
-    hilog.info(DOMAIN, 'Reader', 'Manual bookshelf update sweep: %{public}d books', candidates.length);
-    void this.refreshBookshelfCatalogBatch(candidates,
-      (done: number, total: number): void => {
-        this.bookshelfUpdateDone = done;
-        this.bookshelfUpdateTotal = total;
-      })
-      .finally((): void => {
-        this.bookshelfUpdateRunning = false;
-      });
+    this.bookshelfUpdateTotal = 0;
+    void this.bookshelfHost.catalogTargets(owner, this.shelfBooks, this.shelfProjectionRevision ?? '', false, current)
+      .then(async (shelf: BookshelfState | undefined): Promise<void> => {
+        if (shelf === undefined || !current()) return;
+        const progress = await this.refreshBookshelfCatalogBatch(shelf.books,
+          (value: BookshelfCatalogProgress): void => {
+            this.bookshelfUpdateDone = value.attempted; this.bookshelfUpdateTotal = value.total;
+          }, false, current, undefined, owner);
+        if (!current()) return;
+        const message = `检查完成：成功 ${progress.succeeded}/${progress.total}，失败 ${progress.failed}` +
+          (progress.preparationFailed > 0 ? `；${progress.preparationFailed} 本章节预加载未完成` : '') +
+          (this.bookshelfCatalogReadbackFailed ? '；刷新失败，保留原书架，可只读刷新' :
+            progress.failed > 0 ? '；保留已有目录和阅读进度' : '');
+        this.bookshelfCatalogFacts = projectOperationFacts({ phase: this.bookshelfCatalogReadbackFailed ? 'refreshFailed' :
+          progress.failed > 0 || progress.preparationFailed > 0 ? 'partial' : 'succeeded', value: progress,
+          canRetry: this.bookshelfCatalogReadbackFailed, generation: -epoch, message });
+      }).catch((error: Error): void => {
+        if (!current()) return;
+        this.bookshelfCatalogFacts = projectOperationFacts({ phase: 'failed', generation: -epoch,
+          message: `检查目标读取失败，未启动检查：${error.message}`, canRetry: false });
+      }).finally((): void => { if (current()) this.bookshelfUpdateRunning = false; });
+  }
+
+  private async reconcileBookshelfCatalogProjection(generation: number): Promise<void> {
+    const facts = this.bookshelfCatalogFacts, owner = this.bookshelfCatalogOwner;
+    if (facts === undefined || generation !== facts.generation || generation !== -this.bookshelfCatalogEpoch ||
+      !facts.canRetry || !this.bookshelfCatalogReadbackFailed || owner === undefined || !this.isCurrentRuntime(owner) ||
+      this.route !== 'bookshelf' || this.shelfReceiptRetired) return;
+    const navigation = this.navigationGeneration;
+    const current = (): boolean => generation === -this.bookshelfCatalogEpoch && this.isCurrentRuntime(owner) &&
+      navigation === this.navigationGeneration && this.route === 'bookshelf' && !this.shelfReceiptRetired;
+    this.bookshelfCatalogFacts = projectOperationFacts({ phase: 'refreshing', value: facts.value,
+      generation, canRetry: false, message: '正在刷新书架…' });
+    try {
+      const state = await new BookshelfFlowGateway(owner, this.shelfFilter()).load();
+      if (!current()) return;
+      this.bookshelfLoadGeneration += 1;
+      this.applyBookshelfState(state, true);
+      this.bookshelfCatalogReadbackFailed = false;
+      this.bookshelfCatalogFacts = projectOperationFacts({ phase: (facts.value?.failed ?? 0) > 0 ||
+        (facts.value?.preparationFailed ?? 0) > 0 ? 'partial' : 'succeeded', value: facts.value,
+        generation, canRetry: false, message: facts.message?.replace('；刷新失败，保留原书架，可只读刷新', '') });
+    } catch (_error) {
+      if (current()) this.bookshelfCatalogFacts = { ...facts, canRetry: true };
+    }
   }
 
   private canRunBookshelfBackgroundRefresh(): boolean {
     return this.applicationSettingsSnapshot?.autoCheckUpdate === true && this.settingsSnapshot.autoCheckUpdate &&
       this.route === 'bookshelf' && !this.readingSessionActive && this.searchAppForeground;
-  }
-
-  private async refreshOneShelfBook(book: ShelfBook, automatic: boolean = false,
-    automaticCurrent?: () => boolean): Promise<void> {
-    const seed: RemoteReadingBookSeed = {
-      sourceId: book.sourceId,
-      bookId: book.bookId,
-      detailUrl: book.bookId,
-      title: book.title,
-      author: book.author,
-      coverUrl: book.coverUrl,
-      intro: book.intro,
-      lastChapter: book.lastChapter,
-    };
-    try {
-      // Both the explicit action and already-throttled automatic candidates
-      // require a fresh catalog, never a prepared/offline admission shortcut.
-      const owner = ReaderRuntimeOwner.current();
-      const isCurrent = (): boolean => !automatic || (automaticCurrent?.() ?? this.canRunBookshelfBackgroundRefresh());
-      const session = await owner.bookAcquisitions().acquireBook(seed,
-        { forceRefresh: true, isCurrent, canDispatch: isCurrent }, automatic ? 'background' : 'foreground');
-      // Automatic update checks catalogs only. Reader/add/search preparation
-      // owns body acquisition; a shelf sweep must not compete for all bodies.
-      if (!automatic) await this.prefetchReadingWindow(session, undefined, isCurrent);
-    } catch (error) {
-      // Per-book failures do not abort remaining bookshelf updates. Existing
-      // local TOC/bodies stay authoritative and the next interval retries.
-      hilog.warn(DOMAIN, 'Reader',
-        'Bookshelf catalog update failed for %{private}s: %{private}s',
-        book.bookId, (error as Error).message);
-    }
   }
 
   private hasDeclaredCoverUrl(book: ShelfBook): boolean {

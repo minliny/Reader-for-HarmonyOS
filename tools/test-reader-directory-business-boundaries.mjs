@@ -2,12 +2,13 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { registerHooks } from 'node:module';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
+const {BookshelfCatalogUpdate}=await import('../entry/src/main/ets/features/bookshelf/BookshelfCatalogUpdate.ts');
 const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const file=name=>fileURLToPath(new URL(`../entry/src/main/ets/${name}`,import.meta.url));
 const prefetched=[];let runtime={};
-const Host=productionMotionMethods(file('pages/Index.ets'),['applyReadingCommit','prefetchReadingWindow','updateRemoteReadableChapterOrder','refreshOneShelfBook'],{
+const Host=productionMotionMethods(file('pages/Index.ets'),['applyReadingCommit','prefetchReadingWindow','updateRemoteReadableChapterOrder'],{
  CATALOG_REFRESH_NEAR_END:3,CATALOG_REFRESH_RETRY_INTERVAL_MS:30000,READING_CACHE_BEFORE:2,READING_CACHE_AFTER:2,
  RemoteReadingFlowGateway,ReaderRuntimeOwner:{current:()=>runtime},hilog:{warn(){}},DOMAIN:0,
  sameRemoteSessionEvidence:(a,b)=>a===b,
@@ -62,7 +63,9 @@ console.log('PASS accepted-session index rebuilt once, constant-time commits, un
   assert.equal(options.shouldCancel(),false);return{data:{found:false,progress:null}};
  }};
  prefetched.length=0;
- await host.refreshOneShelfBook({...acquired.identity,title:'refreshed book',author:'author'},false);
+ const shelfCurrent=()=>true;
+ await new BookshelfCatalogUpdate(runtime).run([{...acquired.identity,title:'refreshed book',author:'author'}],false,600000,shelfCurrent,
+   (s,live)=>host.prefetchReadingWindow(s,undefined,live,runtime),()=>{});
  assert.equal(calls.length,1);assert.equal(calls[0].options.forceRefresh,true);
  assert.equal(prefetched.length,1,'manual shelf refresh keeps its independently acquired prefetch');
  assert.equal(prefetched[0].session,acquired);assert.deepEqual([prefetched[0].start,prefetched[0].end],[0,7]);
@@ -71,7 +74,8 @@ console.log('PASS accepted-session index rebuilt once, constant-time commits, un
  host.remoteSessionGeneration++;assert.equal(prefetched[0].current(),true,'unrelated reader generation does not own shelf work');
  let shelfAlive=true;await host.prefetchReadingWindow(acquired,3,()=>shelfAlive);
  const guard=prefetched.at(-1).current;shelfAlive=false;assert.equal(guard(),false);
- const count=prefetched.length;await host.refreshOneShelfBook({...acquired.identity,title:'book',author:'author'},true,()=>true);
+ const count=prefetched.length;await new BookshelfCatalogUpdate(runtime).run([{...acquired.identity,title:'book',author:'author'}],true,600000,()=>true,
+   (s,live)=>host.prefetchReadingWindow(s,undefined,live,runtime),()=>{});
  assert.equal(prefetched.length,count,'automatic refresh remains catalog only');
 }
 console.log('PASS actual manual shelf refresh -> acquisition -> independent readable prefetch; visible session and directory are preserved');
