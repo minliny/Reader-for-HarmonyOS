@@ -12,6 +12,7 @@ import { typographyProperties, typographyRoleImports } from './reader-typography
 import {DirectoryRuleDraft,readerControlReplaceEndpoint}from'./reader-reading-field-probe.mjs';
 import {readerRecoveryView}from'../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import {readerSourceCategoryLabel}from'../../entry/src/main/ets/features/source/ReaderSourceCategory.ts';
+import {boundedMembers}from'./bounded-surface-sdk-probe.mjs';
 const cache=new Map();
 const tuple=node=>Object.fromEntries(typographyProperties.filter(p=>Object.hasOwn(node,p)).map(p=>[p,node[p]]));
 /** Original actual owner -> real retained SDK component -> real production
@@ -28,7 +29,18 @@ export function foundationTypographyCarrier(entry,file,expected,pageSource,targe
   // SDK field/button source overrides are used by their transform, never just
   // read for a hash. The normal modifier loader also receives actual source.
   const binding=entry.bindingMethod??entry.origin.method;
-  const methods=[...new Set([binding,...(entry.requiredMethods??[])])];
+  const directory=file==='entry/src/main/ets/features/reading/ReaderDirectoryRules.ets';
+  // Its complete production Builder now owns captured actor/recovery identities.
+  // Load the real methods and initialized fields; a typography-only fixture does
+  // not mount its business lifecycle or manufacture a live Runtime/gateway.
+  const methods=directory?boundedMembers(pageSource):[...new Set([binding,...(entry.requiredMethods??[])])];
+  const dependencies={...shared.dependencies,DirectoryRuleDraft,readerControlReplaceEndpoint,readerRecoveryView,readerSourceCategoryLabel,ScrollDirection:{Horizontal:'ScrollDirection.Horizontal'}};
+  let hooks=shared.hooks;
+  if(directory){
+   const childSources=Object.fromEntries(['ReaderRecoveryAction','ReaderRecoveryNotice'].map(name=>[name,readFileSync(new URL('../../entry/src/main/ets/features/common/'+name+'.ets',import.meta.url),'utf8')]));
+   hooks={...hooks,childSources:{...hooks.childSources,...childSources}};
+   for(const[name,source]of Object.entries(childSources))dependencies[name]=createReaderBuilderProbe(source,boundedMembers(source),dependencies,hooks).Component;
+  }
   const constants={};
   if(entry.sourceConstants){
    const tree=ts.createSourceFile(file,pageSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.equal(tree.parseDiagnostics.length,0);
@@ -41,7 +53,7 @@ export function foundationTypographyCarrier(entry,file,expected,pageSource,targe
   // ID registry outside this unit while still rejecting duplicate IDs inside
   // the actual selected production methods; role variants are separate units.
   const ids=req(sdk+'/lib/component_map.js').ID_ATTRS,savedIds=new Map(ids);let owner;
-  ids.clear();try{({owner}=createReaderBuilderProbe(pageSource,methods,{...shared.dependencies,...constants,DirectoryRuleDraft,readerControlReplaceEndpoint,readerRecoveryView,readerSourceCategoryLabel,ScrollDirection:{Horizontal:'ScrollDirection.Horizontal'}},shared.hooks));}
+  ids.clear();try{({owner}=createReaderBuilderProbe(pageSource,methods,{...dependencies,...constants},hooks));}
   finally{ids.clear();for(const[key,value]of savedIds)ids.set(key,value);}
   if(entry.tailFamily)seedTailOwner(owner);
   Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false,facts:{canMutate:true}},...(entry.params??{}),...(branch.params??{})});

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {tailControls,compileTailConsumer,seedTailOwner,searchActionMethods} from './lib/foundation-tail-consumer-probe.mjs';
 import {foundationSpecs} from './lib/reader-foundation-control-probe.mjs';
+import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import {createRequire}from'node:module';
 const req=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader',ts=req(sdk+'/node_modules/typescript'),opts=req(sdk+'/lib/ets_checker.js').compilerOptions;
 const baseline=JSON.parse(readFileSync(new URL('./fixtures/design/foundation-search-discover-sync-baseline.json',import.meta.url)));
@@ -52,6 +53,9 @@ for(const scheme of['day','night'])for(const fileKey of['search','discover','syn
    const calls=[];const attrs=new Proxy({},{get:(_,k)=>(...args)=>calls.push([k,...args])});const m=new p.current.dependencies.ReaderLabeledIconRowModifier('discover-apply',false,scheme,true);m.applyPressedAttribute(attrs);m.applyNormalAttribute(attrs);assert.deepEqual(calls.filter(c=>c[0]==='linearGradient').at(-1)[1],oldAction.linearGradient,'cancel restores exact original gradient');const before=p.calls.current.length;actor.updateStateVars({scheme,specId:'discover-apply',label:'应用',actionEnabled:false,isDanger:false,showDivider:false,icon:actor.icon});p.current.properties.flush();newAction.onClick();actor.aboutToDisappear();newAction.onClick();assert.equal(p.calls.current.length,before,'actual retained gradient actor disabled/removed physical rejects');
   }
   if(method==='emptyState'){
+   const card=[...p.owners.current.children.values()].find(c=>c.specId==='sync-status');assert.ok(card,'actual Sync consumer mounts the real finite Card');
+   const outer=[...card.nodes.values()].find(n=>n.type==='Column'&&Object.hasOwn(n,'borderRadius')),spec=p.current.dependencies.resolveReaderCardSpec(card.specId);assert.ok(outer);
+   assert.equal(outer.borderRadius,spec.radius);assert.deepEqual(outer.constraintSize,{maxWidth:spec.maxWidth});assert.deepEqual(outer.border,{width:spec.borderWidth,color:readerAppColor(spec.borderRole,card.appThemeScheme)});assert.equal(outer.backgroundColor,readerAppColor(spec.backgroundRole,card.appThemeScheme));
    const old=p.old.orderedNodes(p.owners.old).find(n=>n.type==='Text'&&n.create==='立即备份'),actor=[...p.owners.current.children.values()].flatMap(c=>[c,...c.children.values()]).find(c=>c.specId==='sync-empty-backup');assert.ok(actor);const next=p.current.nodes(actor).find(n=>n.type==='Text');if(!variation.busy)old.onClick();next.onClick();assert.deepEqual(p.calls.current,p.calls.old,'actual empty backup callback and busy admission');
   }
   cases++;
