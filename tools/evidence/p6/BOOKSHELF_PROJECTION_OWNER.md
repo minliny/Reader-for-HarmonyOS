@@ -27,3 +27,7 @@ Index 原 `loadShelfWindowPage` 算法、`applyBookshelfState` 名称/窗口算�
 ## 仍需完成的真实范围
 
 本切片不关闭整个 P2。Index 整轮 Catalog manual/automatic 的 running/epoch/progress/facts、全量 target+preparation 共享与有限重试还在页层，是下一条必须下沉纵切；不能用直接 RPC 为零代替完成。源/RSS规则订阅跨域旅程由其他 lane 收口。HAP/目标/视觉/用户验收未由此代码与 SDK 测试证明。
+
+## 原四项书架回归复核
+
+`detail-removal / reading-feedback / reading-entry / shared-scan` 旧回归已迁真实 owner。原移除禁用、已提交换源返回保护、local/remote/info/search/取消/迟到准入、一次全量 scan/preparation 共享与有限重试均保留。实际 source commit/unknown journey 证明 hidden/rebuilt owner 可持有 accepted intent 而旧页 pending DTO 尚空；Index detail 移除和 bookshelf preparation Back 现直接消费原 `SourceSwitchHost.blocksExit(book)`，不能因为 pending DTO 不在而放行。`offlineOperationActive` 仍来自实际 Offline owner，不恢复旧字段权威。准备重建旧 Runtime 时，实际 Core admission 在 RPC 前拒绝（0 次 membership IO），强于原薄假 Flow 的一次取消读取。

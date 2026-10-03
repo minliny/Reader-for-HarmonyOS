@@ -23,7 +23,7 @@ assert.match(detail, /if \(this\.removalEnabled && !this\.removing && !this\.can
 assert.match(index, /onRemove: \(identity\?: string\): void => \{ if \(this\.isCurrentDetailShelfAdmission\(identity\)\) this\.requestDetailShelfMutation\(\)/);
 assert.match(index, /if \(this\.detailInBookshelf\) \{\s*this\.requestRemoveDetailBook\(\);/,
   'the detail action must choose add/remove from the current Core-derived shelf state');
-assert.match(index, /pendingSourceSwitch === undefined && this\.offlineMutationActiveKey\.length === 0/,
+assert.match(index, /pendingSourceSwitch === undefined && this\.sourceSwitchHost\?\.blocksExit\(this\.detailBook!\) !== true && !this\.offlineOperationActive/,
   'removal must stay unavailable while source-switch or offline work owns the book');
 assert.match(index, /this\.route === 'detail' && this\.isSameDetailBook\(book\) && !this\.readingSessionActive/,
   'the confirmation action must recheck the exact visible book and inactive reader');
@@ -45,10 +45,12 @@ assert.match(operation, /reconcile[\s\S]*confirmation: receipt\.receipt\.confirm
   'read-only recovery preserves the original confirmation rather than deriving it from absence');
 assert.doesNotMatch(index, /reconcileDetailBookRemovalFailure|reconcileShelfBookRemovalFailure/,
   'obsolete exact-key absence inference and compensation paths must be removed');
-assert.match(index, /this\.bookshelfLoadGeneration \+= 1;\s*if \(this\.route === 'detail' && this\.isSameDetailBook\(book\)\) \{\s*this\.returnFromDetail\(\);[\s\S]*?this\.bookshelfLoadGeneration \+= 1;\s*this\.applyBookshelfState\(shelf\);/,
+assert.match(index, /this\.invalidateBookshelfProjection\(\);\s*if \(this\.route === 'detail' && this\.isSameDetailBook\(book\)\) \{\s*this\.returnFromDetail\(\);[\s\S]*?this\.invalidateBookshelfProjection\(\);\s*this\.applyBookshelfState\(shelf\);/,
   'the exact mutation result must replace stale shelf reads when returning from detail (origin-aware dispatch)');
-assert.match(index, /this\.shelfBooks = state\.shelf\.books\.map\([\s\S]*this\.continueReading = state\.continueReading;[\s\S]*state\.kind !== 'populated'/,
-  'an empty removal result must clear stale cards as well as the visual admission flag');
+const projection=read('entry/src/main/ets/features/bookshelf/BookshelfProjectionOwner.ts');
+assert.match(index,/this\.shelfBooks = snapshot\.books;[\s\S]*this\.isBookshelfVisualAdmitted = snapshot\.visualAdmitted/,'page consumes owner rows and visual admission together');
+assert.match(projection,/books, facts, revision:[\s\S]*coreEmpty: state\.kind === 'empty', visualAdmitted: state\.kind === 'populated'/,'an empty removal result clears stale cards and admission in the single owner');
+
 
 assert.match(flow, /async remove\(sourceId: string, bookId: string\)[\s\S]*this\.bookshelf\.removeBook\(sourceId, bookId,/);
 assert.match(core, /request\('bookshelf\.remove', \{ sourceId, bookId \}\)/);

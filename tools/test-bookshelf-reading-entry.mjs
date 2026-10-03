@@ -40,7 +40,7 @@ const methods = [
   'returnFromDetail(', 'requestReaderBookInfo(', 'returnToBookshelf(', 'nextNavigationGeneration(', 'isKnownDetailChapter(',
   'currentSourceSwitchTransactionId(', 'consumeTemporaryBackBridge(', 'isCurrentRuntime(', 'currentReaderPresentationIdentity(',
   'getReadingEntryHost(', 'readingEntryLease(', 'applyReadingEntrySnapshot(', 'bindReadingEntryReader(', 'retireReadingEntryPresentation(', 'chooseCachedChapterRefresh(', 'showIndexAlert(',
-  'consumeSystemFileOpen(', 'retireSourceSwitchPresentation(', 'retireRssPresentation(',
+  'consumeSystemFileOpen(', 'retireSourceSwitchPresentation(', 'retireRssPresentation(', 'retireRssEditorPresentation(',
   'async probeRemoteContentVerdict(', 'remoteContentVerdictLabel(', 'onReadingFailure(',
   'openDetailSourceSwitch(',
   'onSearchResultSelected(', 'searchAcquisitionCandidate(', 'remoteSeedForSearchBook(',

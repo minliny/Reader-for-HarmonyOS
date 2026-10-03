@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { bookshelfCatalogHost } from './lib/bookshelf-catalog-host-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { ProductionHost as ReadingEntryHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
 
 const index = new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url);
 const pause = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -35,6 +36,15 @@ function fixture({ autoCheckUpdate = true, fullRevision = 'rev-1', membershipRev
     readingEntryPreparations: () => preparations,
     bookAcquisitions: () => ({ acquireBook: async seed => { refreshed.push([seed]); return { identity: { sourceId: seed.sourceId, bookId: seed.bookId }, entries: [] }; } }),
   };
+  owner.supportsCoreCapability=c=>c==='bookshelf.pageProjection.v1';
+  owner.request=async(method,params,options)=>{assert.equal(method,'bookshelf.list');scans.push({membershipOnly:params.membershipOnly===true});await pause();
+    if(options?.shouldCancel?.())throw Error('cancelled exact read');
+    return{data:{books:books.map((b,i)=>({...b,title:b.bookId,author:'Writer',addedAt:1,sortIndex:i,sourceName:b.sourceId==='local'?'本地书籍':'Remote'})),
+      total:books.length,projectionRevision:membershipRevision,changed:false,unfilteredTotal:books.length,unfilteredOnlineTotal:1}};
+  };
+  const exactRuntime=owner,acquisition=owner.bookAcquisitions();
+  owner.bookAcquisitions=()=>({...acquisition,request:(...args)=>exactRuntime.request(...args)});
+  setRuntime(owner);
   class ScanFlow {
         async loadAll(current, membershipOnly = false) {
           scans.push({ membershipOnly });
@@ -50,21 +60,21 @@ function fixture({ autoCheckUpdate = true, fullRevision = 'rev-1', membershipRev
         }
       }
   const Index = productionMotionMethods(index,
-    ['canRunBookshelfBackgroundRefresh', 'scheduleBookshelfBackgroundRefresh', 'refreshBookshelfCatalogBatch', 'preparePersistedShelfBooks'], {
-      ReaderRuntimeOwner: { current: () => owner },
+    ['canRunBookshelfBackgroundRefresh', 'scheduleBookshelfBackgroundRefresh', 'refreshBookshelfCatalogBatch', 'preparePersistedShelfBooks','readingPreparationContext','sharedReadingPreparationSeeds'], {
+      ReaderRuntimeOwner: { current: () => owner }, ReadingEntryHost,
       BookshelfFlowGateway: ScanFlow,
       LOCAL_SOURCE_ID: 'local', CATALOG_REFRESH_INTERVAL_MS: 600000,
       DOMAIN: 0, hilog: { warn() {} },
     });
   const page = Object.assign(new Index(), {
-    mountedRuntimeOwner:owner,bookshelfHost:bookshelfCatalogHost(ScanFlow,()=>owner),navigationGeneration:1,bookshelfBackgroundEpoch:0,route: 'bookshelf', shelfProjectionRevision: 'rev-1', shelfBooks: [books[0]],
+    mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,bookshelfHost:bookshelfCatalogHost(ScanFlow,()=>owner),navigationGeneration:1,bookshelfBackgroundEpoch:0,route: 'bookshelf', shelfProjectionRevision: 'rev-1', shelfBooks: [books[0]],
     settingsSnapshot: { autoCheckUpdate }, applicationSettingsSnapshot: { autoCheckUpdate },
     readingSessionActive: false, searchAppForeground: true, bookshelfUpdateRunning: false,
     bookshelfBackgroundRefreshRunning: false,
     bookshelfLoadGeneration:0,
   });
   return { page, books, scans, admissions, refreshed, owner,
-    changeOwner(value) { owner = value; } };
+    changeOwner(value) { owner = value; setRuntime(value); } };
 }
 
 {
@@ -158,7 +168,7 @@ for (const options of [{ failFull: true }, { fullRevision: 'rev-2' }]) {
   f.changeOwner({ setReadingPreparationContext() {}, readingEntryPreparations() { throw new Error('stale owner'); } });
   assert.equal(f.admissions[0].allowed(), false, 'owner replacement revokes the old preparation');
   assert.equal(await f.admissions[0].loadSeeds(f.admissions[0].allowed), undefined);
-  assert.deepEqual(f.scans, [{ membershipOnly: true }], 'cancelled owner scan may return no seeds');
+  assert.deepEqual(f.scans, [], 'actual Core admission rejects a retired owner before any membership RPC');
 }
 
 console.log('bookshelf shared scan: PASS (single scan, fallback, revision fencing, bounded retry)');

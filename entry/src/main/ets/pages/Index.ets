@@ -652,7 +652,7 @@ struct Index {
     if (this.route === 'bookshelf' && this.shelfReadingPreparation) {
       // As in closeSourceSwitch, a durable source move must finish its first
       // page or rollback before navigation can abandon the transaction.
-      if (this.currentSourceSwitchTransactionId() !== undefined) return true;
+      if (this.detailBook !== undefined && this.sourceSwitchHost?.blocksExit(this.detailBook) === true) return true;
       // Cancel admission immediately; a hidden reader still settles its own
       // pending progress write through the existing serialized exit.
       this.nextNavigationGeneration();
@@ -1320,7 +1320,7 @@ struct Index {
         inBookshelf: this.detailInBookshelf,
         loadingMessage: this.detailLoadingMessage,
         removalEnabled: !this.readingSessionActive && !this.sourceSwitchVisible &&
-          this.pendingSourceSwitch === undefined && !this.offlineOperationActive &&
+          this.pendingSourceSwitch === undefined && this.sourceSwitchHost?.blocksExit(this.detailBook!) !== true && !this.offlineOperationActive &&
           this.shelfOperation.removalKey.length === 0 && !this.hasUnknownShelfWrite(),
         removing: this.shelfOperation.removalKey.length > 0,
         adding: this.detailReadableAdmission(this.detailBook).adding,
@@ -3313,6 +3313,7 @@ struct Index {
   private canRemoveDetailBook(book: ReadingBookDetail): boolean {
     return this.route === 'detail' && this.isSameDetailBook(book) && !this.readingSessionActive &&
       !this.sourceSwitchVisible && this.pendingSourceSwitch === undefined &&
+      this.sourceSwitchHost?.blocksExit(book) !== true &&
       !this.offlineOperationActive &&
       this.shelfOperation.removalKey.length === 0 && !this.shelfOperation.busy && !this.hasUnknownShelfWrite();
   }
