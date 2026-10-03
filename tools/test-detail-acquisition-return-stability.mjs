@@ -75,6 +75,7 @@ function fixture() {
     candidateAdmissionGeneration: -1, candidateAdmissionFailedGeneration: -1,
     shelfBooks: [], searchDetailCandidates: [], detailReturnRoute: 'search', remoteCatalogRefreshAt: new Map(),
     offlineMutationGeneration: 0, bookshelfRemovalActiveKey: '', directoryBookmarkMutationGeneration: 0,
+    bookshelfHost: { loadShelfBook: async () => undefined },
     loadRemoteDirectoryProjection: async (_offline, _owner, session) => session.entries,
     showReadingFailure: (title, message) => failures.push({ title, message }),
     getUIContext() { assert.fail('stale readmission must not require confirmation'); },
