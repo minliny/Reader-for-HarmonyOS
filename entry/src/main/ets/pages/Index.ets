@@ -323,6 +323,7 @@ struct Index {
   @State @Watch('onSearchVisibilityChanged') private route: ReaderRoute = 'bookshelf';
   @StorageLink('readerAppForeground') @Watch('onSearchVisibilityChanged') private searchAppForeground: boolean = true;
   @State private jsonImportVisible: boolean = false;
+  @State private jsonImportGeneration: number = 0;
   @State private jsonImportContext: JsonImportContext = 'bookSource';
   @State private detailBook: ReadingBookDetail | undefined = undefined;
   @State private detailToc: LocalReadingTocEntry[] = [];
@@ -498,7 +499,9 @@ struct Index {
     },
   );
   private rulesManagementOrchestrator: RulesManagementOrchestrator | undefined;
+  private rulesPresentationIdentity: string = '';
   private syncOrchestrator: SyncOrchestrator | undefined;
+  private syncPresentationIdentity: string = '';
   private mountedRuntimeOwner: ReaderRuntimeOwner | undefined;
   private temporaryBackLease: TemporaryBackLease | undefined;
   private sourceHost: SourceHost = new SourceHost(
@@ -593,6 +596,10 @@ struct Index {
     this.retireBookshelfCatalogPresentation();
     this.discoverOrchestrator?.detachPresentation(this.discoverPresentationIdentity);
     this.discoverPresentationIdentity = '';
+    this.rulesManagementOrchestrator?.detachPresentation(this.rulesPresentationIdentity);
+    this.rulesPresentationIdentity = '';
+    this.syncOrchestrator?.detachPresentation(this.syncPresentationIdentity);
+    this.syncPresentationIdentity = '';
     this.bookshelfUpdateRunning = false;
     this.bookshelfBackgroundRefreshRunning = false;
     this.dismissBookRemovalDialog();
@@ -1092,14 +1099,7 @@ struct Index {
         this.localImportContent();
       }
       if (this.jsonImportVisible) {
-        JsonImportDialog({
-          title: this.jsonImportTitle(),
-          description: this.jsonImportDescription(),
-          isTablet: deviceInfo.deviceType === 'tablet',
-          onDismiss: (): void => this.dismissJsonImport(),
-          onSelectLocal: (): void => this.selectLocalJsonImport(),
-          onImportOnline: (onlineUrl: string): void => this.importOnlineJson(onlineUrl),
-        });
+        this.jsonImportContent();
       }
       // Host capability surface only: mounted for ArkWeb controller lifecycle,
       // never used as the reading-body renderer.
@@ -1119,29 +1119,38 @@ struct Index {
   @Builder
   private syncContent() {
     ForEach([this.navigationGeneration], (generation: number) => {
-      this.syncSurface(generation, ReaderRuntimeOwner.current(), this.getSyncOrchestrator());
+      this.syncSurface(generation, this.mountedRuntimeOwner, this.getSyncOrchestrator(), this.detailShelfAdmissionMount, this.syncPresentationIdentity);
     }, (identity: number): string => identity.toString());
   }
 
   @Builder
-  private syncSurface(generation: number, owner: ReaderRuntimeOwner, host: SyncOrchestrator) {
+  private syncSurface(generation: number, owner: ReaderRuntimeOwner | undefined, host: SyncOrchestrator,
+    mounting: number, identity: string) {
     SyncPage({
       snapshot: this.syncSnapshot,
       isTablet: deviceInfo.deviceType === 'tablet',
-      onBack: (): void => { if (this.isCurrentSyncPresentation(generation, owner)) this.returnToSettings(); },
-      onReconcile: (expectedGeneration: number): void => { if (this.isCurrentSyncPresentation(generation, owner)) this.getSyncOrchestrator().reconcile(expectedGeneration); },
-      onSkipBackupRetention: (expectedGeneration: number): void => { if (this.isCurrentSyncPresentation(generation, owner)) this.getSyncOrchestrator().skipBackupRetention(expectedGeneration); },
-      onContinueConfigSave: (expectedGeneration: number, url: string, user: string, pass: string, backupPass: string, directory: string): void => {
-        if (this.isCurrentSyncPresentation(generation, owner, host))
-          host.continueConfigSave(expectedGeneration, url, user, pass, backupPass, directory);
+      onBack: (): void => { if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) this.returnToSettings(); },
+      onReconcile: (expected: number): void => {
+        if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.reconcile(expected);
       },
-      onSaveConfig: (url: string, user: string, pass: string, backupPass: string, path: string): void =>
-         { if (this.isCurrentSyncPresentation(generation, owner)) this.onSyncSaveConfig(url, user, pass, backupPass, path); },
-      onTestConnection: (url: string, user: string, pass: string, path: string): void =>
-         { if (this.isCurrentSyncPresentation(generation, owner)) this.onSyncTestConnection(url, user, pass, path); },
-      onTriggerBackup: (): void => { if (this.isCurrentSyncPresentation(generation, owner)) this.onSyncTriggerBackup(); },
-      onRestoreLatest: (): void => { if (this.isCurrentSyncPresentation(generation, owner)) this.onSyncRestoreLatest(); },
-      onResolveRestore: (overwriteLocal: boolean): void => { if (this.isCurrentSyncPresentation(generation, owner)) this.onSyncResolveRestore(overwriteLocal); },
+      onSkipBackupRetention: (expected: number): void => {
+        if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.skipBackupRetention(expected);
+      },
+      onContinueConfigSave: (expected: number, url: string, user: string, pass: string, backupPass: string, directory: string): void => {
+        if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity))
+          host.continueConfigSave(expected, url, user, pass, backupPass, directory);
+      },
+      onSaveConfig: (url: string, user: string, pass: string, backupPass: string, path: string): void => {
+        if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.saveConfig(url, user, pass, backupPass, path);
+      },
+      onTestConnection: (url: string, user: string, pass: string, path: string): void => {
+        if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.testConnection(url, user, pass, path);
+      },
+      onTriggerBackup: (): void => { if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.triggerBackup(); },
+      onRestoreLatest: (): void => { if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.restoreLatest(); },
+      onResolveRestore: (overwriteLocal: boolean): void => {
+        if (this.isCurrentSyncPresentation(generation, owner, host, mounting, identity)) host.resolveRestore(overwriteLocal);
+      },
     });
   }
 
@@ -1651,26 +1660,56 @@ struct Index {
 
   @Builder
   private rulesManagementContent() {
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.rulesManagementSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+        this.getRulesManagementOrchestrator(), this.rulesPresentationIdentity);
+    }, (identity: number): string => identity.toString());
+  }
+
+  @Builder
+  private rulesManagementSurface(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: RulesManagementOrchestrator, identity: string) {
     RulesManagementPage({
       snapshot: this.rulesManagementSnapshot,
-      onReconcile: (generation: number): void => this.getRulesManagementOrchestrator().reconcile(generation),
-      onBack: (): void => this.returnFromRulesManagement(),
-      onSaveReplace: (draft: ReplaceRuleDraft): void =>
-        this.getRulesManagementOrchestrator().saveReplaceRule(draft),
-      onDeleteReplace: (id: number): void => this.getRulesManagementOrchestrator().deleteReplaceRule(id),
-      onSaveTxtToc: (draft: TxtTocRuleDraft): void =>
-        this.getRulesManagementOrchestrator().saveTxtTocRule(draft),
-      onDeleteTxtToc: (id: number): void => this.getRulesManagementOrchestrator().deleteTxtTocRule(id),
-      onSaveDict: (draft: DictRuleDraft): void => this.getRulesManagementOrchestrator().saveDictRule(draft),
-      onDeleteDict: (name: string): void => this.getRulesManagementOrchestrator().deleteDictRule(name),
-      onSaveSubscription: (draft: RuleSubscriptionDraft): void =>
-        this.getRulesManagementOrchestrator().saveRuleSubscription(draft),
-      onDeleteSubscription: (id: number): void =>
-        this.getRulesManagementOrchestrator().deleteRuleSubscription(id),
-      onRefreshSubscription: (subscription: ManagedRuleSubscription): void =>
-        this.getRulesManagementOrchestrator().refreshRuleSubscription(subscription),
-      onExportBundle: (): void => this.getRulesManagementOrchestrator().exportBundle(),
-      onImportBundle: (): void => this.openJsonImport('ruleBundle'),
+      onReconcile: (expected: number): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.reconcile(expected, identity);
+      },
+      onBack: (): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) this.returnFromRulesManagement();
+      },
+      onSaveReplace: (draft: ReplaceRuleDraft): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.saveReplaceRule(draft, identity);
+      },
+      onDeleteReplace: (id: number): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.deleteReplaceRule(id, identity);
+      },
+      onSaveTxtToc: (draft: TxtTocRuleDraft): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.saveTxtTocRule(draft, identity);
+      },
+      onDeleteTxtToc: (id: number): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.deleteTxtTocRule(id, identity);
+      },
+      onSaveDict: (draft: DictRuleDraft): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.saveDictRule(draft, identity);
+      },
+      onDeleteDict: (name: string): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.deleteDictRule(name, identity);
+      },
+      onSaveSubscription: (draft: RuleSubscriptionDraft): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.saveRuleSubscription(draft, identity);
+      },
+      onDeleteSubscription: (id: number): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.deleteRuleSubscription(id, identity);
+      },
+      onRefreshSubscription: (subscription: ManagedRuleSubscription): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.refreshRuleSubscription(subscription, identity);
+      },
+      onExportBundle: (): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) host.exportBundle(identity);
+      },
+      onImportBundle: (): void => {
+        if (this.isCurrentRulesPresentation(generation, owner, mounting, host, identity)) this.openJsonImport('ruleBundle');
+      },
     });
   }
 
@@ -1715,7 +1754,7 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'rulesManagement';
-    this.getRulesManagementOrchestrator().open();
+    this.getRulesManagementOrchestrator().open(this.rulesPresentationIdentity);
   }
 
   private requestRulesManagementFromReader(): void {
@@ -1738,19 +1777,35 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'rulesManagement';
-    this.getRulesManagementOrchestrator().open();
+    this.getRulesManagementOrchestrator().open(this.rulesPresentationIdentity);
+  }
+
+  private isCurrentRulesPresentation(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: RulesManagementOrchestrator, identity: string, attached: boolean = true): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && this.route === 'rulesManagement' &&
+      generation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount &&
+      this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) &&
+      this.rulesManagementOrchestrator === host && host.owns(owner) && identity.length > 0 &&
+      this.rulesPresentationIdentity === identity && (!attached || host.isPresentationCurrent(identity));
   }
 
   private getRulesManagementOrchestrator(): RulesManagementOrchestrator {
-    if (this.rulesManagementOrchestrator === undefined || !this.rulesManagementOrchestrator.owns(ReaderRuntimeOwner.current())) {
-      this.rulesManagementOrchestrator = new RulesManagementOrchestrator(
-        (snapshot: RulesManagementSnapshot): void => {
-          this.rulesManagementSnapshot = snapshot;
-        },
-        (): boolean => this.route === 'rulesManagement',
-      );
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner) || this.route !== 'rulesManagement')
+      throw new Error('规则页面已退役');
+    const host = RulesManagementOrchestrator.forRuntime(owner);
+    if (host === undefined) throw new Error('规则 Runtime 已退役');
+    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const identity = JSON.stringify([this.rssInstanceIdentity, mounting, generation, 'rulesManagement']);
+    if (this.rulesManagementOrchestrator !== host || this.rulesPresentationIdentity !== identity) {
+      this.rulesManagementOrchestrator?.detachPresentation(this.rulesPresentationIdentity);
+      this.rulesManagementOrchestrator = host; this.rulesPresentationIdentity = identity;
+      const current = (): boolean => this.isCurrentRulesPresentation(generation, owner, mounting, host, identity, false);
+      host.attachPresentation(identity, (snapshot: RulesManagementSnapshot): void => {
+        if (current()) this.rulesManagementSnapshot = snapshot;
+      }, current);
     }
-    return this.rulesManagementOrchestrator;
+    return host;
   }
 
   private onSettingToggled(
@@ -1860,32 +1915,37 @@ struct Index {
     return owner !== undefined && ReaderRuntimeOwner.isCurrent(owner);
   }
 
-  private isCurrentSyncOwner(owner: ReaderRuntimeOwner): boolean {
-    if (this.shelfReceiptRetired || !isReaderProductSurfaceEnabled('sync') || this.route !== 'sync') return false;
-    try { return this.isCurrentRuntime(owner); } catch (_) { return false; }
+  private isCurrentSyncOwner(owner: ReaderRuntimeOwner | undefined): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && isReaderProductSurfaceEnabled('sync') &&
+      this.route === 'sync' && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner);
   }
 
-  private isCurrentSyncPresentation(generation: number, owner: ReaderRuntimeOwner, host?: SyncOrchestrator): boolean {
-    return this.isCurrentRoute(generation, 'sync') && this.isCurrentSyncOwner(owner) &&
-      (host === undefined || (this.syncOrchestrator === host && host.ownedBy(owner)));
+  private isCurrentSyncPresentation(generation: number, owner: ReaderRuntimeOwner | undefined,
+    host: SyncOrchestrator | undefined = this.syncOrchestrator, mounting: number = this.detailShelfAdmissionMount,
+    identity: string = this.syncPresentationIdentity, attached: boolean = true): boolean {
+    return owner !== undefined && this.isCurrentRoute(generation, 'sync') && this.isCurrentSyncOwner(owner) &&
+      mounting === this.detailShelfAdmissionMount && host !== undefined && this.syncOrchestrator === host &&
+      host.ownedBy(owner) && identity.length > 0 && this.syncPresentationIdentity === identity &&
+      (!attached || host.isPresentationCurrent(identity));
   }
 
   private getSyncOrchestrator(): SyncOrchestrator {
-    const owner = ReaderRuntimeOwner.current();
-    if (this.syncOrchestrator === undefined || !this.syncOrchestrator.ownedBy(owner)) {
-      this.syncSnapshotReady = false;
-      this.syncOrchestrator = new SyncOrchestrator(
-        (snapshot: SyncSnapshot): void => {
-          if (!this.isCurrentSyncOwner(owner)) return;
-          this.syncSnapshot = snapshot;
-          this.syncSnapshotReady = true;
-        },
-        (): SyncSnapshot => this.syncSnapshot,
-        owner,
-        (): boolean => this.isCurrentSyncOwner(owner),
-      );
+    const owner = this.mountedRuntimeOwner;
+    if (!this.isCurrentSyncOwner(owner) || owner === undefined) throw new Error('同步页面已退役');
+    const host = SyncOrchestrator.forRuntime(owner);
+    if (host === undefined) throw new Error('同步 Runtime 已退役');
+    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const identity = JSON.stringify([this.rssInstanceIdentity, mounting, generation, 'sync']);
+    if (this.syncOrchestrator !== host || this.syncPresentationIdentity !== identity) {
+      this.syncOrchestrator?.detachPresentation(this.syncPresentationIdentity);
+      this.syncOrchestrator = host; this.syncPresentationIdentity = identity;
+      const current = (): boolean => this.isCurrentSyncPresentation(generation, owner, host, mounting, identity, false);
+      host.attachPresentation(identity, (snapshot: SyncSnapshot): void => {
+        if (!current()) return;
+        this.syncSnapshot = snapshot; this.syncSnapshotReady = true;
+      }, (): SyncSnapshot => this.syncSnapshot, current);
     }
-    return this.syncOrchestrator;
+    return host;
   }
 
   private openSourceManagement(returnTarget: SourceManagementReturnTarget = 'settings',
@@ -2014,7 +2074,46 @@ struct Index {
     this.sourceHost.loginSource(id);
   }
 
+  @Builder
+  private jsonImportContent() {
+    ForEach([this.jsonImportGeneration], (presentation: number) => {
+      this.jsonImportSurface(presentation, this.navigationGeneration, this.mountedRuntimeOwner,
+        this.detailShelfAdmissionMount, this.jsonImportContext, this.rulesManagementOrchestrator, this.rulesPresentationIdentity);
+    }, (identity: number): string => identity.toString());
+  }
+
+  @Builder
+  private jsonImportSurface(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, context: JsonImportContext, rules: RulesManagementOrchestrator | undefined, identity: string) {
+    JsonImportDialog({
+      title: this.jsonImportTitle(),
+      description: this.jsonImportDescription(),
+      isTablet: deviceInfo.deviceType === 'tablet',
+      onDismiss: (): void => {
+        if (this.isCurrentJsonImportPresentation(presentation, generation, owner, mounting, context, rules, identity)) this.dismissJsonImport();
+      },
+      onSelectLocal: (): void => {
+        if (!this.isCurrentJsonImportPresentation(presentation, generation, owner, mounting, context, rules, identity)) return;
+        this.dismissJsonImport(); this.executeJsonImport(context, undefined, rules, identity);
+      },
+      onImportOnline: (url: string): void => {
+        if (!this.isCurrentJsonImportPresentation(presentation, generation, owner, mounting, context, rules, identity)) return;
+        this.dismissJsonImport(); this.executeJsonImport(context, url, rules, identity);
+      },
+    });
+  }
+
+  private isCurrentJsonImportPresentation(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, context: JsonImportContext, rules: RulesManagementOrchestrator | undefined, identity: string): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && this.jsonImportVisible &&
+      presentation === this.jsonImportGeneration && generation === this.navigationGeneration &&
+      mounting === this.detailShelfAdmissionMount && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) &&
+      context === this.jsonImportContext && (context !== 'ruleBundle' || (rules !== undefined &&
+        this.isCurrentRulesPresentation(generation, owner, mounting, rules, identity)));
+  }
+
   private openJsonImport(context: JsonImportContext): void {
+    this.jsonImportGeneration += 1;
     this.jsonImportContext = context;
     this.jsonImportVisible = true;
   }
@@ -2035,7 +2134,8 @@ struct Index {
     this.executeJsonImport(context, onlineUrl);
   }
 
-  private executeJsonImport(context: JsonImportContext, onlineUrl?: string): void {
+  private executeJsonImport(context: JsonImportContext, onlineUrl?: string,
+    rules: RulesManagementOrchestrator | undefined = this.rulesManagementOrchestrator, identity: string = this.rulesPresentationIdentity): void {
     if (context === 'bookSource' && this.route === 'source') {
       this.sourceHost.importBookSources(
         onlineUrl,
@@ -2054,7 +2154,8 @@ struct Index {
       return;
     }
     if (context === 'ruleBundle' && this.route === 'rulesManagement') {
-      this.getRulesManagementOrchestrator().importBundle(onlineUrl);
+      if (rules !== undefined && rules === this.rulesManagementOrchestrator && rules.isPresentationCurrent(identity))
+        rules.importBundle(onlineUrl, identity);
       return;
     }
     if ((context === 'rssMerge' || context === 'rssReplace') &&
@@ -4803,9 +4904,14 @@ struct Index {
     this.retireBookshelfCatalogPresentation();
     this.discoverOrchestrator?.detachPresentation(this.discoverPresentationIdentity);
     this.discoverPresentationIdentity = '';
+    this.rulesManagementOrchestrator?.detachPresentation(this.rulesPresentationIdentity);
+    this.rulesPresentationIdentity = '';
+    this.syncOrchestrator?.detachPresentation(this.syncPresentationIdentity);
+    this.syncPresentationIdentity = '';
     this.bookshelfUpdateRunning = false;
     this.bookshelfBackgroundRefreshRunning = false;
     this.temporaryBackLease = undefined;
+    this.jsonImportVisible = false;
     this.nativeAlertOwner.retire();
     this.shelfReadingPreparation = false;
     this.pendingLocalDirectoryProjection = undefined;

@@ -112,6 +112,10 @@ export class RulesManagementOrchestrator {
     this.emit=(_snapshot: RulesManagementSnapshot): void => {}; this.isCurrent=(): boolean => false;
   }
   currentSnapshot(): RulesManagementSnapshot { return this.copy(this.snapshot); }
+  /** Physical page callbacks carry the immutable original attachment. */
+  isPresentationCurrent(identity: string): boolean {
+    return identity.length > 0 && identity === this.presentationIdentity && this.isCurrentSession(this.session);
+  }
   private admitPresentation(identity?: string): boolean {
     if (identity!==this.presentationIdentity) return false;
     return this.isCurrentSession(this.session);

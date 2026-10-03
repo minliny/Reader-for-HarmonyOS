@@ -9,7 +9,7 @@ import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {ReaderNativeAlertOwner} from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
 const clone=v=>structuredClone(v),methods=['isCurrentSyncOwner','isCurrentSyncPresentation','isCurrentRoute','getSyncOrchestrator',
   'retireRssEditorPresentation','onSyncSaveConfig','onSyncTestConnection','onSyncTriggerBackup','onSyncRestoreLatest','onSyncResolveRestore','nextNavigationGeneration'];
-let enabled=true;
+let enabled=true, instanceIdentity=0;
 const deps={ReaderRuntimeOwner:f.ReaderRuntimeOwner,SyncOrchestrator:f.Orchestrator,isReaderProductSurfaceEnabled:()=>enabled,deviceInfo:{deviceType:'phone'}};
 const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),methods,deps);
 const syntax=createRequire(import.meta.url)((process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/lib/validate_ui_syntax.js');
@@ -23,13 +23,24 @@ const durablePrefix=readFileSync(new URL('./test-sync-backup-durable-receipts.mj
   .replace('f.fixture({preserveAsset:cold})','f.fixture({preserveAsset:cold,createOwner})');
 const {fixture:durableFixture,directory:durableDirectory}=new Function('assert','mkdtempSync','readFileSync','writeFileSync','existsSync','rmSync','tmpdir','join','f',
   durablePrefix+';return {fixture,directory};')(assert,mkdtempSync,readFileSync,writeFileSync,existsSync,rmSync,tmpdir,join,f);
+function payload(index,indexText=f.source('pages/Index.ets')) {
+  const parent=createReaderBuilderProbe(indexText,['syncContent','syncSurface'],{...deps,SyncPage:Child},{allowEmptyBranchAdmission:true}).owner;
+  Object.assign(parent,index);for(const name of methods)parent[name]=index[name].bind(index);
+  parent.syncContent();return{parent,props:[...parent.children.values()].at(-1).params};
+}
+function replacementIndex(x,Type=Index) {
+  const index=Object.assign(new Type(),{nativeAlertOwner:new ReaderNativeAlertOwner(),route:'sync',navigationGeneration:1,
+    shelfReceiptRetired:false,detailShelfAdmissionMount:1,rssInstanceIdentity:++instanceIdentity,
+    mountedRuntimeOwner:x.runtime,syncSnapshot:clone(f.DEFAULT_SYNC_SNAPSHOT),syncSnapshotReady:false});
+  index.getSyncOrchestrator();return index;
+}
 function fixture({durable=false}={}){
   enabled=true;const index=Object.assign(new Index(),{nativeAlertOwner:new ReaderNativeAlertOwner(),route:'sync',navigationGeneration:1,
-    shelfReceiptRetired:false,syncSnapshot:clone(f.DEFAULT_SYNC_SNAPSHOT),syncSnapshotReady:false});
-  const real=(durable?durableFixture:f.fixture)({createOwner:()=>index.getSyncOrchestrator()});
+    shelfReceiptRetired:false,detailShelfAdmissionMount:1,rssInstanceIdentity:++instanceIdentity,
+    syncSnapshot:clone(f.DEFAULT_SYNC_SNAPSHOT),syncSnapshotReady:false});
+  const real=(durable?durableFixture:f.fixture)({createOwner:()=>{index.mountedRuntimeOwner=f.ReaderRuntimeOwner.current();return index.getSyncOrchestrator();}});
   let parent;
-  const props=()=>{parent=createReaderBuilderProbe(f.source('pages/Index.ets'),['syncContent','syncSurface'],{...deps,SyncPage:Child},{allowEmptyBranchAdmission:true}).owner;
-    Object.assign(parent,index);for(const name of methods)parent[name]=index[name].bind(index);parent.syncContent();return [...parent.children.values()].at(-1).params;};
+  const props=()=>{const actual=payload(index);parent=actual.parent;return actual.props;};
   const page=()=>{
     const p=createReaderBuilderProbe(f.source('features/sync/SyncPage.ets'),['manualActionsSection','canContinueConfigSave','configSaveContinuationIdentities','configSaveGeneration','effectiveWebdavUrl','effectiveWebdavUser','effectiveWebdavPath','sectionHeadingMuted','restoreConflictCard','feedbackView','recoveryLabel','canMutate','manualActionButton','canSkipBackupRetention','backupRetentionActionIdentities','backupGeneration'],
       {readerRecoveryView:f.readerRecoveryView,ReaderRecoveryNotice:Child,ReaderRecoveryAction:Child,ReaderCard:Card},{mountChildren:true,childSources:{ReaderCard:f.source('features/common/ReaderCard.ets')}}).owner;
@@ -61,10 +72,10 @@ for(const retired of['route','generation','runtime-unset','hidden','unmounted'])
   assert.doesNotThrow(()=>{p.onSaveConfig(f.config.url,f.config.user,'','',f.config.directory);p.onTestConnection(f.config.url,f.config.user,'',f.config.directory);p.onTriggerBackup();p.onRestoreLatest();p.onResolveRestore(true);p.onReconcile(0);p.onSkipBackupRetention(0);p.onContinueConfigSave(0,f.config.url,f.config.user,'','',f.config.directory);p.onBack();});
   await x.settle();assert.equal(f.asset.calls.length,before);assert.equal(x.runtime.calls.length,native);f.setRuntimeOwner(x.runtime);
 }
-{const x=fixture();await x.open();const old=x.props(),parent=x.parent(),child=[...parent.children.values()].at(-1);x.index.navigationGeneration=2;parent.navigationGeneration=2;parent.replay();const next=[...parent.children.values()].at(-1);assert.notEqual(next.id,child.id);old.onTriggerBackup();await x.settle();assert.equal(x.runtime.count('sync.webdav.transaction.start'),0);next.params.onTriggerBackup();await x.settle();assert.equal(x.runtime.count('sync.webdav.transaction.start'),1);}
+{const x=fixture();await x.open();const old=x.props(),parent=x.parent(),child=[...parent.children.values()].at(-1);x.index.navigationGeneration=2;x.index.getSyncOrchestrator();Object.assign(parent,x.index);parent.replay();const next=[...parent.children.values()].at(-1);assert.notEqual(next.id,child.id);old.onTriggerBackup();await x.settle();assert.equal(x.runtime.count('sync.webdav.transaction.start'),0);next.params.onTriggerBackup();await x.settle();assert.equal(x.runtime.count('sync.webdav.transaction.start'),1);}
 {const x=fixture();await x.open();const gate=f.pause();x.runtime.beforeApply=()=>gate.promise;x.props().onRestoreLatest();await x.settle();x.props().onResolveRestore(true);for(let n=0;x.runtime.count('runtime.storage.apply')===0&&n<2000;n++)await new Promise(r=>setTimeout(r,1));assert.equal(x.runtime.count('runtime.storage.apply'),1);const atClose=clone(x.index.syncSnapshot);x.index.nextNavigationGeneration();x.index.route='settings';gate.resolve();await x.settle();assert.deepEqual(x.index.syncSnapshot,atClose,'late accepted write cannot publish into closed route');}
 {const x=fixture();await x.open();const gate=f.pause();f.asset.beforeAdd=()=>gate.promise;x.props().onSaveConfig(f.config.url,f.config.user,'','',f.config.directory);for(let n=0;!f.asset.calls.includes('add')&&n<2000;n++)await new Promise(r=>setTimeout(r,1));assert.ok(f.asset.calls.includes('add'));const atRetirement=clone(x.index.syncSnapshot);f.setRuntimeOwner(undefined);gate.resolve();await assert.doesNotReject(x.settle());assert.deepEqual(x.index.syncSnapshot,atRetirement,'accepted durable save settles after actual Runtime unset without late Index publication');assert.equal(f.asset.calls.filter(v=>v==='add').length,1);f.setRuntimeOwner(x.runtime);}
-{const x=fixture();await x.open();const old=x.index.getSyncOrchestrator();const y=fixture();const replacement=x.index.getSyncOrchestrator();assert.notEqual(replacement,old);assert.equal(replacement.ownedBy(y.runtime),true);}
+{const x=fixture();await x.open();const old=x.index.getSyncOrchestrator();const y=fixture();assert.throws(()=>x.index.getSyncOrchestrator(),/已退役/,'old mounted Index never reacquires the successor Runtime');assert.notEqual(y.index.getSyncOrchestrator(),old);assert.equal(y.index.getSyncOrchestrator().ownedBy(y.runtime),true);}
 for(const retired of ['live','route','generation','runtime-unset','hidden','unmounted']) {
   const x=fixture({durable:true});await x.open();x.runtime.failBackupAdvance=true;x.props().onTriggerBackup();await x.settle();
   const pending=x.index.syncSnapshot.facts.operation;x.qualifyRemote();x.props().onReconcile(pending.projection.facts.generation);await x.settle();
@@ -120,6 +131,43 @@ for (const retired of ['live', 'route', 'generation', 'runtime-unset', 'hidden',
     assert.equal(f.asset.calls.filter(v => v === 'add').length, adds, 'old physical config continuation cannot replay terminal save');
   } else assert.equal(x.index.syncSnapshot.facts.operation.completed, false, 'retired or replaced owner cannot settle via old physical actor');
   f.setRuntimeOwner(x.runtime);
+}
+{
+ const x=fixture();await x.open();const old=x.props(),oldHost=x.index.getSyncOrchestrator(),oldID=x.index.syncPresentationIdentity;
+ const next=replacementIndex(x),currentID=next.syncPresentationIdentity;
+ assert.equal(next.getSyncOrchestrator(),oldHost,'same exact Runtime uses one accepted owner');
+ assert.equal(x.index.getSyncOrchestrator(),oldHost,'still-alive old getter returns original owner without attaching again');
+ assert.equal(oldHost.isPresentationCurrent(currentID),true);assert.equal(oldHost.isPresentationCurrent(oldID),false);
+ const before=x.runtime.calls.length,adds=f.asset.calls.length;
+ old.onTriggerBackup();old.onSaveConfig(f.config.url,f.config.user,'','',f.config.directory);old.onReconcile(0);old.onBack();
+ await x.settle();assert.equal(x.runtime.calls.length,before);assert.equal(f.asset.calls.length,adds);
+ oldHost.detachPresentation(oldID);assert.equal(oldHost.isPresentationCurrent(currentID),true,'old exact detach cannot clear successor');
+ const actual=fullSyncIndexPage(payload(next).props),trigger=[...actual.nodes.values()].find(n=>n.type==='Stack'&&n.height===40&&n.onClick);
+ assert.ok(trigger?.onClick,'current complete decorated Page retains a usable native backup button');
+ trigger.onClick();await x.settle();assert.equal(x.runtime.count('sync.webdav.transaction.start'),1);
+ assert.equal(next.syncSnapshot.facts.operation.completed,true);
+}
+{
+ const x=fixture();await x.open();const gate=f.pause();x.runtime.beforeApply=()=>gate.promise;
+ x.props().onRestoreLatest();await x.settle();x.props().onResolveRestore(true);
+ for(let n=0;x.runtime.count('runtime.storage.apply')===0&&n<2000;n++)await new Promise(r=>setTimeout(r,1));
+ assert.equal(x.runtime.count('runtime.storage.apply'),1);const original=x.index.getSyncOrchestrator(),tail=original.operationChain;
+ const next=replacementIndex(x),atRetirement=clone(x.index.syncSnapshot);
+ assert.equal(next.getSyncOrchestrator(),original);assert.equal(original.operationChain,tail,'replacement cannot reset accepted mutation drain');
+ assert.equal(next.syncSnapshot.facts.busy,true);payload(next).props.onTriggerBackup();
+ assert.equal(x.runtime.count('sync.webdav.transaction.start'),1,'replacement cannot open a second mutation chain');
+ gate.resolve();await x.settle();assert.deepEqual(x.index.syncSnapshot,atRetirement);
+ assert.equal(next.syncSnapshot.facts.operation.completed,true,'accepted actual write settles into new same-Runtime presentation');
+ assert.equal(x.runtime.count('runtime.storage.apply'),1);
+}
+{
+ const original=f.source('pages/Index.ets'),mutant=original.replace('if (this.syncOrchestrator !== host || this.syncPresentationIdentity !== identity) {','if (true) {');
+ assert.notEqual(mutant,original);const candidateDirectory=mkdtempSync(join(tmpdir(),'reader-sync-attach-negative-')),candidate=join(candidateDirectory,'Index.ets');writeFileSync(candidate,mutant);
+ const Mutant=productionMotionMethods(candidate,methods,deps);
+ const x=fixture();await x.open();const old=Object.assign(new Mutant(),x.index);old.syncOrchestrator=undefined;old.syncPresentationIdentity='';old.getSyncOrchestrator();
+ const next=replacementIndex(x,Mutant);assert.equal(x.owner.isPresentationCurrent(next.syncPresentationIdentity),true);
+ old.getSyncOrchestrator();assert.equal(x.owner.isPresentationCurrent(next.syncPresentationIdentity),false,'unconditional attach negative control proves old alive getter steals current lease');
+ rmSync(candidateDirectory,{recursive:true,force:true});
 }
 rmSync(durableDirectory,{recursive:true,force:true});
 console.log('PASS Sync actual AssetStore→Gateway→owner→Index→SDK Page→shared native recovery: usable first failure, true ACK/readback and unknown, no repeated save/backup, stale runtime/navigation/hidden/close callbacks, identity rebind, late accepted restore, secrets omitted');

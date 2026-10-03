@@ -486,6 +486,7 @@
     "test-rss-route-operation-recovery.mjs",
     "test-rule-subscription-durable-journey.mjs",
     "test-rule-subscription-intent-integrity.mjs",
+    "test-rules-index-presentation-consumers.mjs",
     "test-rules-mutation-durable-intent.mjs",
     "test-rules-mutation-owner.mjs",
     "test-rules-presentation-runtime-owner.mjs",
