@@ -6,6 +6,7 @@ import { productionReaderPressFeedback } from './reader-press-feedback-probe.mjs
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
 import { labeledIconControls } from './reader-labeled-icon-action-probe.mjs';
 import { foundationControls } from './reader-foundation-control-probe.mjs';
+import { switchControls } from './reader-switch-control-probe.mjs';
 
 const sdkRoot = process.env.READER_ETS_LOADER_ROOT ??
   '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
@@ -62,6 +63,24 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       mountChildren: true, lifecycleChildren: true,
       onChildUpdated(child, params) {
         foundation.properties.flush();
+        originalHooks.onChildUpdated?.(child, params);
+      },
+    };
+  }
+  // The two existing controlled switch families follow the same bounded
+  // actual-child resolution. Explicit components remain authoritative; the
+  // producer itself calls neither child, so it cannot recursively resolve.
+  const missingSwitch = ['ReaderToggle', 'ReaderSegmentedControl'].filter(name =>
+    dependencies[name] === undefined && new RegExp(`\\b${name}\\s*\\(`).test(members.join('\n')));
+  if (missingSwitch.length > 0) {
+    const controls = switchControls();
+    const originalHooks = hooks;
+    dependencies = { ...controls.dependencies, ...dependencies };
+    hooks = { ...controls.hooks, ...originalHooks,
+      childSources: { ...controls.hooks.childSources, ...originalHooks.childSources },
+      mountChildren: true, lifecycleChildren: true,
+      onChildUpdated(child, params) {
+        controls.properties.flush();
         originalHooks.onChildUpdated?.(child, params);
       },
     };

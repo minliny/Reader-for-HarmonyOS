@@ -242,8 +242,9 @@ assert.match(index, /reduceMotion: this\.settingsSnapshot\.reduceMotion/);
 
 const settings = read('entry/src/main/ets/features/settings/SettingsPage.ets');
 assert.match(settings, /@Prop @Watch\('onSnapshotChanged'\) snapshot/);
-assert.match(settings, /onRowClick: \(\): void => this\.toggleSetting\(key, !this\.settingValue\(key\)\)/);
-assert.match(settings, /this\.reduceMotionValue = value/);
+assert.match(settings, /onRowClick: \(\): void => this\.toggleSetting\(key, !this\.settingValue\(key\), identity\)/);
+assert.match(settings, /this\.reduceMotionValue = this\.snapshot\.reduceMotion/);
+assert.doesNotMatch(settings, /this\.reduceMotionValue = value/, 'the page cannot preflip an unaccepted flag');
 
 const fullDirectory = read('entry/src/main/ets/features/reading/ReaderFullDirectory.ets');
 assert.match(fullDirectory,

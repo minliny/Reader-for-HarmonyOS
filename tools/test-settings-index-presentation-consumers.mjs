@@ -1,3 +1,4 @@
+import {switchSpecs} from './lib/reader-switch-control-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes,createRequire} from 'node:module';
@@ -38,15 +39,15 @@ function index(f,route='settings',text=indexSource){
    const native=label=>{o.settingsRecovery();const actor=p.walk(o).find(c=>c instanceof p.deps.ReaderRecoveryAction&&c.label===label);assert.ok(actor,label);return p.nodes(actor).find(n=>n.onClick).onClick;};
    return{o,p,params,toggle:()=>params.onAutoCheckUpdate(!params.autoCheckUpdate),native,refresh(){o.updateStateVars(props());p.properties.flush();}};
   }
-  const ReaderPressFeedback=productionReaderPressFeedback();
+  const ReaderPressFeedback=productionReaderPressFeedback();p.hooks.lifecycleChildren=true;
   for(const [n,path]of [['CategoryRow','features/settings/CategoryRow.ets'],['ReaderToggle','features/common/ReaderToggle.ets']]){
-   p.hooks.childSources[n]=read(path);p.deps[n]=createReaderBuilderProbe(read(path),boundedMembers(read(path)),{...p.deps,ReaderPressFeedback},p.hooks).Component;
+   p.hooks.childSources[n]=read(path);p.deps[n]=createReaderBuilderProbe(read(path),boundedMembers(read(path)),{...p.deps,ReaderPressFeedback,...switchSpecs(),AccessibilityRoleType:{SWITCH:'AccessibilityRoleType.SWITCH'}},p.hooks).Component;
   }
   const properties=[...pageSource.matchAll(/@Prop\s+(?:@Watch\([^\n]+?\)\s+)?(\w+)\s*:/g)].map(m=>m[1]);
   const callbacks=[...pageSource.matchAll(/^  (on\w+):/gm)].map(m=>m[1]);
   const o=p.consumer(pageSource,[...properties,...callbacks,'appThemeScheme','mounted','themeOwner','temporaryBackIdentity','resetMessage',
    'autoCheckUpdateValue','tapBottomScrollTopValue','reduceMotionValue','crashLogValue','onSnapshotChanged','syncSnapshotValues','onCacheCleanupChanged','applyCacheCleanup',
-   'switchRow','toggleSetting','settingValue','operationFeedback','recovery','feedbackMessage','recoveryActionIdentities','recoveryActionKind',
+   'switchRow','toggleSetting','settingValue','settingCanToggle','settingToggleBusy','operationFeedback','recovery','feedbackMessage','recoveryActionIdentities','recoveryActionKind',
    'recoveryActionGeneration','recoveryActionLabel','recoveryActionCurrent','dispatchRecoveryAction'],{ReaderPressFeedback,ReaderRuntimeOwner:f.Runtime,readerRecoveryView},params);
   Object.assign(o,{mounted:true,themeOwner:f.runtime,temporaryBackIdentity:'actual-settings:'+sequence,resetMessage:''});o.syncSnapshotValues();
   const toggle=()=>{o.switchRow('减少动效',()=>({id:1}),'reduceMotion');const actor=p.walk(o).findLast(c=>c instanceof p.deps.ReaderToggle);assert.ok(actor,'actual shared toggle mounted');return p.nodes(actor).find(n=>n.onClick).onClick;};

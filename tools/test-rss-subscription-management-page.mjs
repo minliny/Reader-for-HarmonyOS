@@ -33,7 +33,7 @@ assert.match(page, /onViewArticles: \(subscriptionId: string\) => void/);
 assert.match(page, /onEditSource: \(subscriptionId: string\) => void/);
 assert.match(page, /onRefresh: \(subscriptionId: string\) => void/);
 assert.match(page, /onDelete: \(subscriptionId: string\) => void/);
-assert.match(page, /this\.onToggle\(item\.subscriptionId, !item\.enabled\)/);
+assert.match(page, /this\.onToggle\(item\.subscriptionId, next\)/);
 
 // Phone and Tablet share one compact responsive assembly.
 assert.match(page,

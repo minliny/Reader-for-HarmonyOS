@@ -191,8 +191,8 @@ export struct RulesManagementPage {
       this.input(this.replacePattern, '查找表达式', (value: string): void => { this.replacePattern = value; });
       this.input(this.replaceValue, '替换为', (value: string): void => { this.replaceValue = value; });
       Row({ space: TOK_SPACE_SM }) {
-        this.booleanField('启用', this.replaceEnabled, (): void => { this.replaceEnabled = !this.replaceEnabled; });
-        this.booleanField('正则', this.replaceRegex, (): void => { this.replaceRegex = !this.replaceRegex; });
+        this.booleanField('启用', this.replaceEnabled, (next: boolean): void => { this.replaceEnabled = next; });
+        this.booleanField('正则', this.replaceRegex, (next: boolean): void => { this.replaceRegex = next; });
       }.width('100%');
       this.input(this.replaceOrder, '排序', (value: string): void => { this.replaceOrder = value; });
       this.actionButton(this.replaceId < 0 ? '新增替换规则' : '保存替换规则', true, (): void => {
@@ -225,7 +225,7 @@ export struct RulesManagementPage {
       this.input(this.txtName, '名称', (value: string): void => { this.txtName = value; });
       this.input(this.txtRule, '章节标题正则', (value: string): void => { this.txtRule = value; });
       this.input(this.txtExample, '示例标题', (value: string): void => { this.txtExample = value; });
-      this.booleanField('启用', this.txtEnabled, (): void => { this.txtEnabled = !this.txtEnabled; });
+      this.booleanField('启用', this.txtEnabled, (next: boolean): void => { this.txtEnabled = next; });
       this.input(this.txtOrder, '序号', (value: string): void => { this.txtOrder = value; });
       this.actionButton(this.txtId < 0 ? '新增 TXT 规则' : '保存 TXT 规则', true, (): void => {
         const draft: TxtTocRuleDraft = {
@@ -254,7 +254,7 @@ export struct RulesManagementPage {
       this.input(this.dictName, '名称（主键）', (value: string): void => { this.dictName = value; });
       this.input(this.dictUrl, 'URL 规则，使用 {{key}}', (value: string): void => { this.dictUrl = value; });
       this.input(this.dictShow, '展示规则（留空返回原文）', (value: string): void => { this.dictShow = value; });
-      this.booleanField('启用', this.dictEnabled, (): void => { this.dictEnabled = !this.dictEnabled; });
+      this.booleanField('启用', this.dictEnabled, (next: boolean): void => { this.dictEnabled = next; });
       this.input(this.dictOrder, '排序', (value: string): void => { this.dictOrder = value; });
       this.actionButton('保存字典规则', true, (): void => this.onSaveDict({
         name: this.dictName,
@@ -284,7 +284,7 @@ export struct RulesManagementPage {
         this.actionButton('替换规则', this.subType === 2, (): void => { this.subType = 2; }, false);
       }.width('100%');
       this.booleanField('自动更新标记', this.subAutoUpdate,
-        (): void => { this.subAutoUpdate = !this.subAutoUpdate; });
+        (next: boolean): void => { this.subAutoUpdate = next; });
       this.input(this.subOrder, '排序', (value: string): void => { this.subOrder = value; });
       this.actionButton(this.subId < 0 ? '新增订阅' : '保存订阅', true, (): void => {
         const draft: RuleSubscriptionDraft = {
@@ -322,10 +322,13 @@ export struct RulesManagementPage {
   }
 
   @Builder
-  private booleanField(label: string, value: boolean, action: () => void) {
+  private booleanField(label: string, value: boolean, action: (next: boolean) => void) {
     Row() {
       Text(label).layoutWeight(1).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-      ReaderToggle({ value, onToggle: action });
+      ReaderToggle({ value, specId: 'standard-toggle', accessibilityLabel: label,
+        inputIdentity: `${label}:${this.replaceId}:${this.txtId}:${this.dictName}:${this.subId}`,
+        // These controls edit the retained local draft, not the pending durable write.
+        actionEnabled: true, onToggle: action });
     }.layoutWeight(1).height(40);
   }
 

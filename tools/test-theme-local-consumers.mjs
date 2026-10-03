@@ -1,3 +1,4 @@
+import {switchControls,segmentSource} from './lib/reader-switch-control-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
@@ -99,6 +100,24 @@ captureSharedConsumer('features/rss/RssPage.ets', ['statusTab', 'filterPill', 'r
 captureSharedConsumer('features/discover/DiscoverPage.ets', ['categoryChips','kindTitles','filterRow','currentFilterText'], owner => {
   owner.categoryChips();owner.filterRow();
 });
+// F04's same theme palette now belongs to the actual finite enum producer.
+function captureSegmentTheme(source = segmentSource) {
+  const control = switchControls({ segmentDefinition: source });
+  const owner = control.mount(control.segment, { inputIdentity: 'theme-palette', options: ['跟随','浅色','深色'], optionIds: ['system','day','night'], selectedIndex: 0 });
+  const roles = new Set(rows.filter(row => row.file === 'features/common/ReaderSegmentedControl.ets').map(row => row.role));
+  const witnessed = new Map();
+  for (const scheme of ['day', 'night', 'day']) {
+    owner.appThemeScheme = scheme; control.properties.flush();
+    const native = control.nodes(owner).flatMap(node => [node.backgroundColor,node.fontColor,node.border?.color]);
+    for (const role of roles) if (native.includes(readerAppColor(role,scheme))) {
+      if (!witnessed.has(role)) witnessed.set(role,new Set());
+      witnessed.get(role).add(scheme);
+    }
+  }
+  return new Set([...witnessed].filter(([,schemes])=>schemes.size===2).map(([role])=>role));
+}
+sharedBindings.set('features/common/ReaderSegmentedControl.ets', captureSegmentTheme());
+assert.notDeepEqual(captureSegmentTheme(segmentSource.replaceAll('this.appThemeScheme', "'day'")), sharedBindings.get('features/common/ReaderSegmentedControl.ets'), 'frozen Day shared enum cannot qualify Night role consumption');
 for (const row of rows) {
   assert.equal(readerAppColor(row.role, 'day'), row.day, `${row.role}: Day retained`);
   assert.equal(readerAppColor(row.role, 'night'), row.night, `${row.role}: Night mapped`);

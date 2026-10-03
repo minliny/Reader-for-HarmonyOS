@@ -1,3 +1,4 @@
+import {switchSpecs} from './lib/reader-switch-control-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
@@ -17,10 +18,10 @@ const typed=e=>e.typedAdmission===true;
 const Gateway=load('features/source/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner:Runtime,isReaderCoreTransactionPendingError:typed,...helpers});
 const Orchestrator=load('features/source/SourceOrchestrator.ets','SourceOrchestrator',{SourceGateway:Gateway,ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,isReaderCoreTransactionPendingError:typed,hilog:{error(){},warn(){},info(){}},projectPersistedReceipt:receipt,...facts,...helpers});
 const Host=load('features/source/SourceHost.ets','SourceHost',{ReaderRuntimeOwner:Runtime,SourceOrchestrator:Orchestrator,SourceGateway:Gateway});
-const sdk=boundedSurfaceSdk();
+const sdk=boundedSurfaceSdk();sdk.hooks.lifecycleChildren=true;
 const toggleSource=source('features/common/ReaderToggle.ets');
 sdk.hooks.childSources.ReaderToggle=toggleSource;
-const Toggle=createReaderBuilderProbe(toggleSource,boundedMembers(toggleSource),sdk.deps,sdk.hooks).Component;
+const Toggle=createReaderBuilderProbe(toggleSource,boundedMembers(toggleSource),{...sdk.deps,...switchSpecs(),AccessibilityRoleType:{SWITCH:'AccessibilityRoleType.SWITCH'}},sdk.hooks).Component;
 const badgeSource=source('features/common/StatusBadge.ets');sdk.hooks.childSources.StatusBadge=badgeSource;
 const Badge=createReaderBuilderProbe(badgeSource,boundedMembers(badgeSource),sdk.deps,sdk.hooks).Component;
 class Child{constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
@@ -58,8 +59,8 @@ function index(r,text=indexSource){
  const props=()=>{i.sourceManagementContent();return [...i.children.values()].findLast(c=>c.params.sources)?.params;};
  const page=()=>{
   const params=props(),p=sdk.consumer(pageSource,['appThemeScheme','operation','statusKind','statusMessage','onReconcile','onToggleSource','onDetectSource','onLoginSource','onAddSource','onOpenTools','onRetryLoad',
-   'recovery','statusBanner','sourceRow','statusBadgeBackground','statusBadgeDot','statusBadge','detectButton','loginButton','sourceSwitch','bottomActionBar'],{readerRecoveryView:load('app/ReaderRecoveryProjection.ts','readerRecoveryView'),ReaderToggle:Toggle,StatusBadge:Badge,readerSourceCategoryLabel:helpers.readerSourceCategoryLabel},params);
-  p.contentFrame=()=>({width:350});p.actionBottomInset=()=>0;
+   'recovery','statusBanner','sourceRow','statusBadgeBackground','statusBadgeDot','statusBadge','detectButton','loginButton','sourceSwitch','sourceToggleBusy','sourceToggleEnabled','bottomActionBar'],{readerRecoveryView:load('app/ReaderRecoveryProjection.ts','readerRecoveryView'),ReaderToggle:Toggle,StatusBadge:Badge,readerSourceCategoryLabel:helpers.readerSourceCategoryLabel},params);
+  p.mounted=true;p.temporaryBackIdentity='source-sdk-visit';p.contentFrame=()=>({width:350});p.actionBottomInset=()=>0;
   const switchAction=()=>{p.sourceRow(i.sourceSources[0]);const c=[...p.children.values()].findLast(c=>c instanceof Toggle);c.initialRender();return sdk.nodes(c).find(n=>n.onClick).onClick;};
   const action=(spec,label)=>{const actor=sdk.walk(p).findLast(c=>c.specId===spec&&(!label||c.label===label));assert.ok(actor,'actual '+spec+' component');
    const hit=sdk.nodes(actor).find(n=>typeof n.onClick==='function');assert.ok(hit,'actual '+spec+' native action');return hit.onClick;};

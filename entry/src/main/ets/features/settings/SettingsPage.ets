@@ -303,21 +303,17 @@ export struct SettingsPage {
   @Builder
   private switchRow(label: string, icon: () => Resource, key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
   ) {
-    CategoryRow({
-      icon: icon(),
-      label: label,
-      // The shared row already owns the topmost tap gesture. Wire the same
-      // idempotent target value here so both the row and the visual toggle are
-      // reachable on device and through accessibility focus.
-      onRowClick: (): void => this.toggleSetting(key, !this.settingValue(key)),
-    }) {
-      ReaderToggle({
-        value: this.settingValue(key),
-        radius: 999,
-        onToggle: (): void => this.toggleSetting(key, !this.settingValue(key)),
-      });
-    }
+    ForEach([this.temporaryBackIdentity], (identity: string): void => {
+      CategoryRow({ icon: icon(), label,
+        onRowClick: (): void => this.toggleSetting(key, !this.settingValue(key), identity) }) {
+        ReaderToggle({ value: this.settingValue(key), specId: 'standard-toggle',
+          inputIdentity: `${identity}:${key}`, accessibilityLabel: label,
+          actionEnabled: this.settingCanToggle(identity), isBusy: this.settingToggleBusy(),
+          onToggle: (next: boolean): void => this.toggleSetting(key, next, identity) });
+      }
+    }, (identity: string): string => identity);
   }
+
 
   private onSnapshotChanged(): void {
     this.syncSnapshotValues();
@@ -330,19 +326,23 @@ export struct SettingsPage {
     this.crashLogValue = this.snapshot.crashLog;
   }
 
+  private settingToggleBusy(): boolean {
+    return this.operation.receipt?.facts.fact === 'refreshing';
+  }
+
+  private settingCanToggle(identity: string): boolean {
+    return this.mounted && identity === this.temporaryBackIdentity && ReaderRuntimeOwner.isCurrent(this.themeOwner) &&
+      !this.resetInFlight && !this.settingToggleBusy() && this.operation.receipt?.receipt.confirmation !== 'unknown';
+  }
+
   private toggleSetting(
     key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
     value: boolean,
+    identity: string = this.temporaryBackIdentity,
   ): void {
-    if (key === 'autoCheckUpdate') {
-      this.autoCheckUpdateValue = value;
-    } else if (key === 'tapBottomScrollTop') {
-      this.tapBottomScrollTopValue = value;
-    } else if (key === 'reduceMotion') {
-      this.reduceMotionValue = value;
-    } else {
-      this.crashLogValue = value;
-    }
+    if (!this.settingCanToggle(identity)) return;
+    // The Settings owner publishes the accepted snapshot before/after its
+    // actual IO. The page never paints an unaccepted optimistic mirror.
     this.onToggle(key, value);
   }
 
@@ -418,7 +418,9 @@ export struct SettingsPage {
   private appThemeControl() {
     ForEach([this.temporaryBackIdentity], (capturedIdentity: string): void => {
       ReaderSegmentedControl({
-        options: SEG_OPTIONS,
+        specId: 'app-theme-segment', options: SEG_OPTIONS, optionIds: ['system', 'day', 'night'],
+        inputIdentity: capturedIdentity, accessibilityLabel: 'App主题',
+        actionEnabled: this.mounted && ReaderRuntimeOwner.isCurrent(this.themeOwner),
         selectedIndex: this.themeIndex(),
         onSelect: (index: number): void => this.selectAppTheme(index, capturedIdentity),
       });

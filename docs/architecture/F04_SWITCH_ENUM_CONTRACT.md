@@ -1,0 +1,23 @@
+# F04: existing Toggle and short enum
+
+This slice preserves the current application rendering. It implements the original F04 contract for the six `ReaderToggle` declarations and one `ReaderSegmentedControl` declaration; list/form repetition creates actual instances. It does not replace the specialized reading switch track, timer neighbors, or appearance stepper: those remain in the persistent reader tree with their own geometry/runtime.
+
+`ReaderSwitchSpecs` is the single finite geometry/theme-role producer. `standard-toggle` retains 44×24, a 20×20 thumb at x2/x22/y2, normal radius999, pressed radius12 and the original 44×44 response region at y−10. `app-theme-segment` retains 168×36, 30-high items, padding2, item radius6, container radius8, existing borders/colors and the exact `TYPE_APP_SEGMENT_LABEL` tuple. Omitted native lineHeight/letterSpacing remain omitted. Pages cannot set radius, colors, sizes or other appearance overrides.
+
+Both controls emit an intent and never change their own controlled `value`/`selectedIndex`. `inputIdentity` must be nonempty. Current identity, mounted lifecycle, actual admission and pending flags guard native click; native ArkUI owns focus, keyboard/accessibility activation and press/release/cancel. The control adds the actual checked/selected accessibility attributes supported by the installed SDK; this local proof does not claim target assistive technology or native scheduling acceptance. Stable `optionIds` identify the short-enum action after reorder; missing/duplicate IDs cannot dispatch.
+
+| Production declaration | Value authority | Admission and callback |
+| --- | --- | --- |
+| SourceManagementPage.sourceSwitch | current Core source projection | Original mutation/read-back facts; forwards `next`, captured source ID and opening. A tiny keyed control plus callback guard retains exact opening. |
+| RulesManagementPage.booleanField | original local draft | Draft edits remain available during an unknown durable write. Save/delete/import/refresh mutation barriers remain at the original owner. Emits `next` into the same draft field. |
+| SettingsPage.switchRow | Settings owner's accepted snapshot | The page mirror changes only through `snapshot`/Watch. The row and Toggle share opening/Runtime/reset/pending/unknown admission; no optimistic page preflip. |
+| SettingsPage.appThemeControl | original ThemeHost's accepted AppStorage mode | Original Runtime/mount/opening guard; stable system/day/night IDs. No fabricated theme busy DTO. Existing lost-ACK accepted choice and failure notice remain. |
+| RssSubscriptionEditorPage.build (enabled) | original retained editor draft | `next` is forwarded to the original draft setter; unknown save does not remove editing capability. Original save/continuation barriers remain. |
+| RssSubscriptionEditorPage.build (cookie) | original retained editor draft | Same draft contract; no secret leaves the existing platform owner. |
+| RssSubscriptionManagementPage.subscriptionItem | original Core subscription projection | Original unknown/busy facts disable the immediate write. Captured subscription/opening guards and tiny keyed control prevent old callbacks borrowing a replacement. |
+
+A parent that changes its callback scope must reconstruct only the bounded action/control with its scope key; V1 ordinary callback fields are not updated by Prop delivery. This is already the settings/theme keyed row/control pattern and the original RSS editor page presentation contract. It does not remount a reader/page tree.
+
+`tools/test-switch-enum-shared-contract.mjs` uses the installed SDK component emitter and actual V1 property classes. The two frozen pre-migration component sources prove native tuple equality in both schemes; test execution covers all seven real declarations, controlled false→true→false/accepted selection, old native callbacks, disabled/pending/unmounted admission, stable IDs, actual existing press/cancel modifier, and isolated finite-spec changes. Guard-removal and private specification negatives execute real production paths. Existing Settings/Source/Theme strong owner→Index→SDK tests preserve original accepted/lost-ACK/recovery/Runtime matrices. The producer gate binds both components to their exact unchanged legacy budget rows and freezes their real spec/interfaces/consumer edges; registration alone is not SDK/target acceptance.
+
+No generic TaskStore, new business busy state, timer, animation, or keyboard controller is introduced. Hidden product gates remain unchanged. Native target input/accessibility, signed artifact, visual and user acceptance remain separate evidence layers.

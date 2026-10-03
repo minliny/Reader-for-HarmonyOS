@@ -300,11 +300,19 @@ export struct RssSubscriptionManagementPage {
         .opacity(item.enabled ? 1 : 0.62);
 
         Stack({ alignContent: Alignment.Center }) {
+          ForEach([`${this.presentationIdentity}:${item.subscriptionId}`], (identity: string): void => {
           ReaderToggle({
-            value: item.enabled,
-            radius: 999,
-            onToggle: (): void => this.onToggle(item.subscriptionId, !item.enabled),
+            value: item.enabled, specId: 'standard-toggle', accessibilityLabel: '启用订阅',
+            inputIdentity: identity,
+            actionEnabled: this.operation?.original?.blocked !== true && this.operation?.projection.receipt.confirmation !== 'unknown',
+            isBusy: this.operation?.original?.busy === true || this.operation?.projection.facts.fact === 'refreshing',
+            onToggle: (next: boolean): void => {
+              if (identity === `${this.presentationIdentity}:${item.subscriptionId}` && this.operation?.original?.blocked !== true &&
+                this.operation?.projection.receipt.confirmation !== 'unknown' && this.operation?.original?.busy !== true &&
+                this.operation?.projection.facts.fact !== 'refreshing') this.onToggle(item.subscriptionId, next);
+            },
           });
+          }, (identity: string): string => identity);
         }
         .width(44)
         .height(44);

@@ -1,3 +1,4 @@
+import {switchControls} from './lib/reader-switch-control-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -63,9 +64,9 @@ await check('PH24 native loading indicator preserves 13/36 sizes and responds wi
   }
 });
 await check('PH37 four Toggle states retain geometry, track role, click and thumb position', () => {
-  const { owner } = createReaderBuilderProbe(read('features/common/ReaderToggle.ets'), ['build']);
+  const shared = switchControls(), owner = shared.toggle.owner; owner.aboutToAppear();
   let taps = 0;
-  Object.assign(owner, { appThemeScheme: 'day', value: false, radius: 999, onToggle: () => taps++ });
+  Object.assign(owner, { appThemeScheme: 'day', value: false, inputIdentity: 'actual-physical-toggle', onToggle: () => taps++ });
   owner.initialRender();
   const track = [...owner.nodes.values()].find(n => n.type === 'Stack');
   const thumb = [...owner.nodes.values()].find(n => n.type === 'Text');
