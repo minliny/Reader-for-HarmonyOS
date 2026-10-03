@@ -56,8 +56,8 @@ export struct ReaderBoundedSurfaceActions {
     }
   }
 
-  private enabled(id: ReaderBoundedActionId): boolean { return id === 'primary' ? this.primaryEnabled : this.cancelEnabled; }
-  private dispatch(id: ReaderBoundedActionId): void { if (this.enabled(id)) this.onAction(id); }
+  private actionEnabled(id: ReaderBoundedActionId): boolean { return id === 'primary' ? this.primaryEnabled : this.cancelEnabled; }
+  private dispatch(id: ReaderBoundedActionId): void { if (this.actionEnabled(id)) this.onAction(id); }
 
   @Builder private fileAction(id: ReaderBoundedActionId) {
     if (id === 'cancel') {

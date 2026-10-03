@@ -146,7 +146,7 @@ export struct ReaderSelectPanel {
     ReaderChoiceRow({
       specId: 'appearance-library', label: opt,
       selected: opt === this.renderedValue(), scheme: this.appThemeScheme,
-      enabled: !this.closeInFlight,
+      actionEnabled: !this.closeInFlight,
       onChoose: (option: string): void => this.selectAndCollapse(option),
     });
   }
@@ -158,7 +158,7 @@ export struct ReaderSelectPanel {
         (this.variant === 'sourceGroup' ? 'source-group-selected' : 'default-selected'),
       label: this.renderedValue(), selected: true, scheme: this.appThemeScheme,
       availableWidth: this.resolvedWidth(), chevronAngle: this.chevronAngle,
-      enabled: !this.closeInFlight,
+      actionEnabled: !this.closeInFlight,
       onChoose: (option: string): void => this.selectAndCollapse(option),
     });
   }
@@ -167,7 +167,7 @@ export struct ReaderSelectPanel {
   private optionRow(opt: string) {
     ReaderChoiceRow({
       specId: this.variant === 'sourceGroup' ? 'source-group-option' : 'default-option',
-      label: opt, scheme: this.appThemeScheme, enabled: !this.closeInFlight,
+      label: opt, scheme: this.appThemeScheme, actionEnabled: !this.closeInFlight,
       onChoose: (option: string): void => this.selectAndCollapse(option),
     });
   }

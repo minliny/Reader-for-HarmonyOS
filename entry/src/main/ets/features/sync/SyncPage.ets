@@ -341,7 +341,7 @@ export struct SyncPage {
           if (this.canContinueConfigSave()) {
             ForEach(this.configSaveContinuationIdentities(), (identity: string): void => {
               ReaderRecoveryAction({ label: '继续原操作', generation: this.configSaveGeneration(identity),
-                enabled: this.snapshot.facts?.busy !== true,
+                actionEnabled: this.snapshot.facts?.busy !== true,
                 onReconcile: (generation: number): void => this.onContinueConfigSave(generation,
                   this.effectiveWebdavUrl(), this.effectiveWebdavUser(), this.webdavPass, this.backupPass, this.effectiveWebdavPath()) });
             }, (identity: string): string => identity);
@@ -352,7 +352,7 @@ export struct SyncPage {
             // when its receipt changes so an old physical callback keeps old ID.
             ForEach(this.backupRetentionActionIdentities(), (_identity: string): void => {
               ReaderRecoveryAction({ label: '保留备份，结束清理', generation: this.backupGeneration(_identity),
-                enabled: this.snapshot.facts?.busy !== true,
+                actionEnabled: this.snapshot.facts?.busy !== true,
                 onReconcile: (generation: number): void => this.onSkipBackupRetention(generation) });
             }, (identity: string): string => identity);
           }

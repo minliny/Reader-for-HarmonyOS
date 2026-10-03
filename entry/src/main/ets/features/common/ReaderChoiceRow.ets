@@ -13,7 +13,7 @@ export struct ReaderChoiceRow {
   @Prop scheme: string = 'day';
   @Prop availableWidth: number = 0;
   @Prop chevronAngle: number = 0;
-  @Prop enabled: boolean = true;
+  @Prop actionEnabled: boolean = true;
   onChoose: (value: string) => void = (): void => {};
 
   private mounted: boolean = false;
@@ -55,7 +55,7 @@ export struct ReaderChoiceRow {
       .padding({ left: this.spec().padding, right: this.spec().padding })
       .alignItems(VerticalAlign.Center).borderRadius(this.spec().radius)
       .backgroundColor(this.rowBackground())
-      .enabled(this.enabled).accessibilityText(this.accessibilityLabel())
+      .enabled(this.actionEnabled).accessibilityText(this.accessibilityLabel())
       .onClick((): void => this.choose());
   }
 
@@ -72,7 +72,7 @@ export struct ReaderChoiceRow {
         .rotate({ angle: this.chevronAngle })
         .position({ x: this.availableWidth - this.spec().iconRight, y: this.spec().iconTop });
     }.width('100%').height(this.rowHeight())
-      .backgroundColor(this.rowBackground()).enabled(this.enabled)
+      .backgroundColor(this.rowBackground()).enabled(this.actionEnabled)
       .accessibilityText(this.accessibilityLabel()).onClick((): void => this.choose());
   }
 
@@ -87,5 +87,5 @@ export struct ReaderChoiceRow {
   private hasIcon(): boolean { return this.spec().showIcon === 'always' || (this.spec().showIcon === 'selected' && this.selected); }
   private icon(): Resource { return $r(this.scheme === 'night' ? this.spec().iconNight : this.spec().iconDay); }
   private accessibilityLabel(): string { return this.specId === 'appearance-library' ? `${this.label}${this.selected ? '，已选择' : ''}` : this.label; }
-  private choose(): void { if (this.mounted && this.enabled) this.onChoose(this.label); }
+  private choose(): void { if (this.mounted && this.actionEnabled) this.onChoose(this.label); }
 }

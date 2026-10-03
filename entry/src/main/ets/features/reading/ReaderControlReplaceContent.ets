@@ -469,7 +469,7 @@ export struct ReaderControlReplaceContent {
   }
   @Builder
   private temporaryOverlay() {
-    ReaderBoundedSurface({ specId: 'reader-replace-editor', width: this.availableWidth, height: this.availableHeight,
+    ReaderBoundedSurface({ specId: 'reader-replace-editor', surfaceWidth: this.availableWidth, surfaceHeight: this.availableHeight,
       header: (): void => { this.temporaryHeader(); }, body: (): void => { this.temporaryBody(); }, actions: (): void => { this.temporaryActions(); } });
   }
 

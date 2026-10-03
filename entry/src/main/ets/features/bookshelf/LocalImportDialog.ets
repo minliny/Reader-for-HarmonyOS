@@ -109,8 +109,8 @@ export struct LocalImportDialog {
           this.fileSelectionPanel();
         } else {
           // One persistent opaque shell owns the importing -> result handoff.
-          ReaderBoundedSurface({ specId: 'local-import-progress', width: this.panelFrame().width,
-            height: this.shellHeight, body: (): void => { this.progressLayers(); } });
+          ReaderBoundedSurface({ specId: 'local-import-progress', surfaceWidth: this.panelFrame().width,
+            surfaceHeight: this.shellHeight, body: (): void => { this.progressLayers(); } });
         }
       }
       .width('100%')
@@ -138,7 +138,7 @@ export struct LocalImportDialog {
 
   @Builder
   private fileSelectionPanel() {
-    ReaderBoundedSurface({ specId: 'local-import-selection', width: this.panelFrame().width, height: 399.75,
+    ReaderBoundedSurface({ specId: 'local-import-selection', surfaceWidth: this.panelFrame().width, surfaceHeight: 399.75,
       header: (): void => { this.fileSelectionHeader(); }, body: (): void => { this.fileSelectionBody(); }, actions: (): void => { this.fileSelectionActions(); } });
   }
 
@@ -265,8 +265,8 @@ export struct LocalImportDialog {
 
   @Builder
   private resultPanel() {
-    ReaderBoundedSurface({ specId: 'local-import-result-content', width: this.panelFrame().width,
-      height: this.resultPanelHeight(), header: (): void => { this.resultBoundedHeader(); }, body: (): void => { this.resultBody(); }, actions: (): void => { this.resultFooter(); } })
+    ReaderBoundedSurface({ specId: 'local-import-result-content', surfaceWidth: this.panelFrame().width,
+      surfaceHeight: this.resultPanelHeight(), header: (): void => { this.resultBoundedHeader(); }, body: (): void => { this.resultBody(); }, actions: (): void => { this.resultFooter(); } })
       .opacity(this.resultOpacity).hitTestBehavior(this.resultOpacity > 0 ? HitTestMode.Default : HitTestMode.None);
   }
 

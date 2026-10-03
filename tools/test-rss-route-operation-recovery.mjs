@@ -13,7 +13,7 @@ function recovery(f,pageName,operation=f.operations.at(-1),read=f.reads.at(-1)){
   const n=createReaderBuilderProbe(rssSource('features/common/ReaderRecoveryNotice.ets'),['build'],{ReaderRecoveryAction:Child}).owner;
   Object.assign(n,notice.params,{appThemeScheme:'day'});n.initialRender();const child=[...n.children.values()][0];
   const action=createReaderBuilderProbe(rssSource('features/common/ReaderRecoveryAction.ets'),['build']).owner;
-  Object.assign(action,{enabled:true,appThemeScheme:'day',variant:'compact'},child.params);action.initialRender();
+  Object.assign(action,{actionEnabled:true,appThemeScheme:'day',variant:'compact'},child.params);action.initialRender();
   return{page:owner,notice:notice.params,click:()=>[...action.nodes.values()].find(node=>node.type==='Text'&&node.onClick).onClick()};
 }
 for(const method of ['refreshSourceFeed','openEntry','setEntryFavorite']){

@@ -251,7 +251,7 @@ export struct SettingsPage {
     }
     ForEach(this.recoveryActionIdentities(), (identity: string): void => {
       ReaderRecoveryAction({ label: this.recoveryActionLabel(identity), generation: this.recoveryActionGeneration(identity),
-        enabled: this.recoveryActionCurrent(identity), onReconcile: (): void => this.dispatchRecoveryAction(identity) });
+        actionEnabled: this.recoveryActionCurrent(identity), onReconcile: (): void => this.dispatchRecoveryAction(identity) });
     }, (identity: string): string => identity);
   }
 

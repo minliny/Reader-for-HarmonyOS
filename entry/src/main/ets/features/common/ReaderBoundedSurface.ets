@@ -61,8 +61,8 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
 export struct ReaderBoundedSurface {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop specId: ReaderBoundedSurfaceId = 'source-switch-window';
-  @Prop width: number | string = 300;
-  @Prop height: number = 385;
+  @Prop surfaceWidth: number | string = 300;
+  @Prop surfaceHeight: number = 385;
   @BuilderParam header: () => void = this.emptySlot;
   @BuilderParam body: () => void = this.emptySlot;
   @BuilderParam actions: () => void = this.emptySlot;
@@ -86,6 +86,6 @@ export struct ReaderBoundedSurface {
   }
 
   private frameModifier(): AttributeModifier<CommonAttribute> {
-    return new ReaderBoundedFrameModifier(this.specId, this.width, this.height, this.appThemeScheme);
+    return new ReaderBoundedFrameModifier(this.specId, this.surfaceWidth, this.surfaceHeight, this.appThemeScheme);
   }
 }

@@ -123,7 +123,7 @@ export struct ReaderTtsConfigOverlay {
 
   @Builder
   private configurationHeader() {
-    ReaderBoundedSurfaceHeader({ specId: this.boundedSpecId(), title: this.title, enabled: !this.busy,
+    ReaderBoundedSurfaceHeader({ specId: this.boundedSpecId(), title: this.title, actionEnabled: !this.busy,
       onClose: (): void => this.close() });
   }
 
@@ -133,8 +133,8 @@ export struct ReaderTtsConfigOverlay {
         .backgroundColor(this.manager ? readerAppColor('app.ReaderTtsConfigOverlay.build.backgroundColor.661F1B17', this.appThemeScheme) : Color.Transparent)
         .onClick((): void => this.close());
       Column() {
-      ReaderBoundedSurface({ specId: this.boundedSpecId(), width: this.manager ? '100%' : this.panelWidth(),
-        height: this.panelHeight(), header: (): void => { this.boundedHeader(); }, body: (): void => { this.boundedContent(); }, actions: (): void => { this.boundedActions(); } });
+      ReaderBoundedSurface({ specId: this.boundedSpecId(), surfaceWidth: this.manager ? '100%' : this.panelWidth(),
+        surfaceHeight: this.panelHeight(), header: (): void => { this.boundedHeader(); }, body: (): void => { this.boundedContent(); }, actions: (): void => { this.boundedActions(); } });
       }.width(this.manager ? '100%' : this.panelWidth()).height(this.manager ? '100%' : this.panelHeight())
         .justifyContent(FlexAlign.End).alignItems(HorizontalAlign.Center)
         .padding(this.manager ? { left: 13, right: 13,

@@ -29,6 +29,10 @@ export struct ReaderDirectoryRecoverySurface {
     return suffix.slice(suffix.lastIndexOf('\u0000') + 1) === 'bookmark';
   }
   private view(identity: string): ReaderRecoveryView { return this.isBookmarks(identity) ? this.recovery.bookmarks : this.recovery.offline; }
+  private noticeView(identity: string): ReaderRecoveryView {
+    const current: ReaderRecoveryView = this.view(identity);
+    return { visible: current.visible, message: current.message, generation: current.generation, canRetry: false };
+  }
   private isCurrent(identity: string): boolean {
     return this.capturedPresentation(identity) === this.recovery.presentationId && this.view(identity).visible &&
       this.capturedGeneration(identity) === this.view(identity).generation;
@@ -48,15 +52,15 @@ export struct ReaderDirectoryRecoverySurface {
   build() {
     Column() {
       ForEach(this.identities(), (identity: string) => {
-        ReaderRecoveryNotice({ view: { ...this.view(identity), canRetry: false } });
+        ReaderRecoveryNotice({ view: this.noticeView(identity) });
         if (this.view(identity).canRetry) {
           ReaderRecoveryAction({ label: this.isBookmarks(identity) ? '重新载入核对书签' : '核对离线结果',
-            generation: this.capturedGeneration(identity), enabled: this.isCurrent(identity),
+            generation: this.capturedGeneration(identity), actionEnabled: this.isCurrent(identity),
             onReconcile: (): void => this.reconcile(identity, false) });
         }
         if (this.canContinue(identity)) {
           ReaderRecoveryAction({ label: '继续原操作', generation: this.capturedGeneration(identity),
-            enabled: this.canContinue(identity), onReconcile: (): void => this.reconcile(identity, true) });
+            actionEnabled: this.canContinue(identity), onReconcile: (): void => this.reconcile(identity, true) });
         }
       }, (identity: string): string => identity);
     }.width('100%');

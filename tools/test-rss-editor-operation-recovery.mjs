@@ -19,7 +19,7 @@ function page(f){
   const child=[...owner.children.values()][0];
   let clickRecovery;
   if(child){const action=createReaderBuilderProbe(rssSource('features/common/ReaderRecoveryAction.ets'),['build']).owner;
-    Object.assign(action,{enabled:true,appThemeScheme:'day',variant:'compact'},child.params);action.initialRender();
+    Object.assign(action,{actionEnabled:true,appThemeScheme:'day',variant:'compact'},child.params);action.initialRender();
     clickRecovery=()=>[...action.nodes.values()].find(n=>n.type==='Text'&&n.onClick).onClick();}
   return{owner,save,clickRecovery,properties};
 }

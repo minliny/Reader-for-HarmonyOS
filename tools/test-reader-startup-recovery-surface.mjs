@@ -8,7 +8,7 @@ const source=file=>readFileSync(new URL(`../entry/src/main/ets/${file}`,import.m
 const childSource=source('features/common/ReaderRecoveryAction.ets');
 const properties=createArkUIPropertyRuntimeProbe();
 const child=createReaderBuilderProbe(childSource,
-  ['appThemeScheme','variant','label','generation','enabled','onReconcile','build'],properties.sdk,properties.hooks);
+  ['appThemeScheme','variant','label','generation','actionEnabled','onReconcile','build'],properties.sdk,properties.hooks);
 const page=createReaderBuilderProbe(source('pages/ReaderStartupRecovery.ets'),
   ['scheme','state','owner','unsubscribe','aboutToAppear','aboutToDisappear','onBackPress','build','title','message'],
   {...properties.sdk,ReaderStartupContentOwner,ReaderRecoveryAction:child.Component},

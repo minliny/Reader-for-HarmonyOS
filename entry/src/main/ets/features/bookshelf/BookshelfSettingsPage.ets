@@ -80,7 +80,7 @@ export struct BookshelfSettingsPage {
     if (this.operation.canRetryAccepted === true && this.operation.receipt !== undefined) {
       ForEach([this.settingsRecoveryIdentity('accepted', this.operation.receipt.facts.generation)], (identity: string) => {
         ReaderRecoveryAction({ label: '重试保存当前设置', generation: Number((JSON.parse(identity) as (string | number)[])[3]),
-          enabled: this.settingsRecoveryCurrent(identity), onReconcile: (): void => this.retrySettingsRecovery(identity) });
+          actionEnabled: this.settingsRecoveryCurrent(identity), onReconcile: (): void => this.retrySettingsRecovery(identity) });
       }, (identity: string): string => identity);
     }
   }

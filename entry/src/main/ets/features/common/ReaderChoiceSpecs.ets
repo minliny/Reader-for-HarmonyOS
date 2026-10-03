@@ -54,52 +54,162 @@ const COMMON_ROW: ReaderChoiceSpec = {
 
 // A finite registry preserves every current geometry/typography tuple. It is
 // not an arbitrary style bag exposed to page callers.
+function copyReaderChoiceSpec(): ReaderChoiceSpec {
+  return {
+    height: COMMON_ROW.height,
+    padding: COMMON_ROW.padding,
+    gap: COMMON_ROW.gap,
+    radius: COMMON_ROW.radius,
+    text: COMMON_ROW.text,
+    selectedText: COMMON_ROW.selectedText,
+    selectedWeight: COMMON_ROW.selectedWeight,
+    variableWeight: COMMON_ROW.variableWeight,
+    textRole: COMMON_ROW.textRole,
+    selectedTextRole: COMMON_ROW.selectedTextRole,
+    selectedBackground: COMMON_ROW.selectedBackground,
+    dividerRole: COMMON_ROW.dividerRole,
+    dividerHeight: COMMON_ROW.dividerHeight,
+    iconDay: COMMON_ROW.iconDay,
+    iconNight: COMMON_ROW.iconNight,
+    iconWidth: COMMON_ROW.iconWidth,
+    iconHeight: COMMON_ROW.iconHeight,
+    showIcon: COMMON_ROW.showIcon,
+    rotateIcon: COMMON_ROW.rotateIcon,
+    layout: COMMON_ROW.layout,
+    textLeft: COMMON_ROW.textLeft,
+    textTop: COMMON_ROW.textTop,
+    textHeight: COMMON_ROW.textHeight,
+    textWidthInset: COMMON_ROW.textWidthInset,
+    iconRight: COMMON_ROW.iconRight,
+    iconTop: COMMON_ROW.iconTop,
+    ellipsis: COMMON_ROW.ellipsis,
+    textAlignStart: COMMON_ROW.textAlignStart,
+  };
+}
+const CHOICE_SOURCE_GROUP_OPTION: ReaderChoiceSpec = copyReaderChoiceSpec();
+CHOICE_SOURCE_GROUP_OPTION.padding = 14;
+CHOICE_SOURCE_GROUP_OPTION.text = TYPE_SELECT_SOURCE_GROUP_VALUE;
+CHOICE_SOURCE_GROUP_OPTION.selectedText = TYPE_SELECT_SOURCE_GROUP_VALUE;
+CHOICE_SOURCE_GROUP_OPTION.textRole = 'TOK_INK';
+CHOICE_SOURCE_GROUP_OPTION.selectedTextRole = 'TOK_INK';
+const CHOICE_DEFAULT_SELECTED: ReaderChoiceSpec = copyReaderChoiceSpec();
+CHOICE_DEFAULT_SELECTED.gap = 8;
+CHOICE_DEFAULT_SELECTED.text = TYPE_SELECT_DEFAULT_VALUE;
+CHOICE_DEFAULT_SELECTED.selectedText = TYPE_SELECT_DEFAULT_VALUE;
+CHOICE_DEFAULT_SELECTED.selectedWeight = TYPE_SELECT_DEFAULT_VALUE.fontWeight;
+CHOICE_DEFAULT_SELECTED.textRole = 'TOK_PRIMARY_TEXT';
+CHOICE_DEFAULT_SELECTED.selectedTextRole = 'TOK_PRIMARY_TEXT';
+CHOICE_DEFAULT_SELECTED.selectedBackground = 'TOK_SURFACE_PANEL_SOFT';
+CHOICE_DEFAULT_SELECTED.iconDay = 'app.media.reader_chevron_down';
+CHOICE_DEFAULT_SELECTED.iconNight = 'app.media.reader_chevron_down_theme_night';
+CHOICE_DEFAULT_SELECTED.iconWidth = 12;
+CHOICE_DEFAULT_SELECTED.iconHeight = 8;
+CHOICE_DEFAULT_SELECTED.showIcon = 'always';
+CHOICE_DEFAULT_SELECTED.rotateIcon = true;
+const CHOICE_SOURCE_GROUP_SELECTED: ReaderChoiceSpec = copyReaderChoiceSpec();
+CHOICE_SOURCE_GROUP_SELECTED.text = TYPE_SELECT_SOURCE_GROUP_VALUE;
+CHOICE_SOURCE_GROUP_SELECTED.selectedText = TYPE_SELECT_SOURCE_GROUP_VALUE;
+CHOICE_SOURCE_GROUP_SELECTED.selectedWeight = TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight;
+CHOICE_SOURCE_GROUP_SELECTED.textRole = 'TOK_INK';
+CHOICE_SOURCE_GROUP_SELECTED.selectedTextRole = 'TOK_INK';
+CHOICE_SOURCE_GROUP_SELECTED.selectedBackground = 'app.ReaderSelectPanel.sourceGroupSelectedRow.backgroundColor.FFFFFCF8';
+CHOICE_SOURCE_GROUP_SELECTED.iconDay = 'app.media.source_group_chevron';
+CHOICE_SOURCE_GROUP_SELECTED.iconNight = 'app.media.source_group_chevron_theme_night';
+CHOICE_SOURCE_GROUP_SELECTED.iconWidth = 12;
+CHOICE_SOURCE_GROUP_SELECTED.iconHeight = 12;
+CHOICE_SOURCE_GROUP_SELECTED.showIcon = 'always';
+CHOICE_SOURCE_GROUP_SELECTED.rotateIcon = true;
+CHOICE_SOURCE_GROUP_SELECTED.layout = 'positioned';
+CHOICE_SOURCE_GROUP_SELECTED.textLeft = 14;
+CHOICE_SOURCE_GROUP_SELECTED.textTop = 10;
+CHOICE_SOURCE_GROUP_SELECTED.textHeight = 15;
+CHOICE_SOURCE_GROUP_SELECTED.textWidthInset = 42;
+CHOICE_SOURCE_GROUP_SELECTED.iconRight = 21;
+CHOICE_SOURCE_GROUP_SELECTED.iconTop = 12;
+const CHOICE_APPEARANCE_COMPACT_SELECTED: ReaderChoiceSpec = copyReaderChoiceSpec();
+CHOICE_APPEARANCE_COMPACT_SELECTED.text = TYPE_SELECT_APPEARANCE_VALUE;
+CHOICE_APPEARANCE_COMPACT_SELECTED.selectedText = TYPE_SELECT_APPEARANCE_VALUE;
+CHOICE_APPEARANCE_COMPACT_SELECTED.selectedWeight = TYPE_SELECT_APPEARANCE_VALUE.fontWeight;
+CHOICE_APPEARANCE_COMPACT_SELECTED.textRole = 'TOK_PRIMARY_TEXT';
+CHOICE_APPEARANCE_COMPACT_SELECTED.selectedTextRole = 'TOK_PRIMARY_TEXT';
+CHOICE_APPEARANCE_COMPACT_SELECTED.selectedBackground = 'TOK_SURFACE_PANEL_SOFT';
+CHOICE_APPEARANCE_COMPACT_SELECTED.iconDay = 'app.media.reader_chevron_down';
+CHOICE_APPEARANCE_COMPACT_SELECTED.iconNight = 'app.media.reader_chevron_down_theme_night';
+CHOICE_APPEARANCE_COMPACT_SELECTED.iconWidth = 8;
+CHOICE_APPEARANCE_COMPACT_SELECTED.iconHeight = 4;
+CHOICE_APPEARANCE_COMPACT_SELECTED.showIcon = 'always';
+CHOICE_APPEARANCE_COMPACT_SELECTED.rotateIcon = true;
+CHOICE_APPEARANCE_COMPACT_SELECTED.layout = 'positioned';
+CHOICE_APPEARANCE_COMPACT_SELECTED.textLeft = 10;
+CHOICE_APPEARANCE_COMPACT_SELECTED.textTop = 11;
+CHOICE_APPEARANCE_COMPACT_SELECTED.textHeight = 14;
+CHOICE_APPEARANCE_COMPACT_SELECTED.textWidthInset = 28;
+CHOICE_APPEARANCE_COMPACT_SELECTED.iconRight = 14;
+CHOICE_APPEARANCE_COMPACT_SELECTED.iconTop = 16;
+const CHOICE_APPEARANCE_LIBRARY: ReaderChoiceSpec = copyReaderChoiceSpec();
+CHOICE_APPEARANCE_LIBRARY.height = 25;
+CHOICE_APPEARANCE_LIBRARY.padding = 9;
+CHOICE_APPEARANCE_LIBRARY.gap = 10;
+CHOICE_APPEARANCE_LIBRARY.radius = 6;
+CHOICE_APPEARANCE_LIBRARY.text = TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_REGULAR;
+CHOICE_APPEARANCE_LIBRARY.selectedText = TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_SELECTED;
+CHOICE_APPEARANCE_LIBRARY.selectedWeight = 700;
+CHOICE_APPEARANCE_LIBRARY.variableWeight = true;
+CHOICE_APPEARANCE_LIBRARY.textAlignStart = false;
+CHOICE_APPEARANCE_LIBRARY.textRole = 'app.ReaderSelectPanel.appearanceLibraryOption.fontColor.FF41484C';
+CHOICE_APPEARANCE_LIBRARY.selectedTextRole = 'app.ReaderSelectPanel.appearanceLibraryOption.fontColor.FF2F6373';
+CHOICE_APPEARANCE_LIBRARY.selectedBackground = 'app.appearance.selectSelected';
+CHOICE_APPEARANCE_LIBRARY.iconDay = 'app.media.reader_appearance_make_check';
+CHOICE_APPEARANCE_LIBRARY.iconNight = 'app.media.reader_appearance_make_check_theme_night';
+CHOICE_APPEARANCE_LIBRARY.iconWidth = 11;
+CHOICE_APPEARANCE_LIBRARY.iconHeight = 9;
+CHOICE_APPEARANCE_LIBRARY.showIcon = 'selected';
+const CHOICE_SETTINGS_PHONE: ReaderChoiceSpec = copyReaderChoiceSpec();
+CHOICE_SETTINGS_PHONE.height = 52;
+CHOICE_SETTINGS_PHONE.padding = 16;
+CHOICE_SETTINGS_PHONE.text = TYPE_SETTINGS_SELECT_PHONE_OPTION;
+CHOICE_SETTINGS_PHONE.selectedText = TYPE_SETTINGS_SELECT_PHONE_OPTION;
+CHOICE_SETTINGS_PHONE.selectedWeight = 700;
+CHOICE_SETTINGS_PHONE.ellipsis = false;
+CHOICE_SETTINGS_PHONE.textAlignStart = false;
+CHOICE_SETTINGS_PHONE.textRole = 'app.SettingsSelectOverlay.phoneOption.fontColor.FF1F1B17';
+CHOICE_SETTINGS_PHONE.selectedTextRole = 'app.SettingsSelectOverlay.phoneOption.fontColor.FF2D4A3E';
+CHOICE_SETTINGS_PHONE.selectedBackground = 'app.SettingsSelectOverlay.phoneOption.backgroundColor.0D2D4A3E';
+CHOICE_SETTINGS_PHONE.dividerRole = 'app.SettingsSelectOverlay.phoneOption.backgroundColor.FFC1C7CD';
+CHOICE_SETTINGS_PHONE.dividerHeight = 1;
+CHOICE_SETTINGS_PHONE.iconDay = 'app.media.settings_select_check';
+CHOICE_SETTINGS_PHONE.iconNight = 'app.media.settings_select_check_theme_night';
+CHOICE_SETTINGS_PHONE.iconWidth = 16;
+CHOICE_SETTINGS_PHONE.iconHeight = 16;
+CHOICE_SETTINGS_PHONE.showIcon = 'selected';
+const CHOICE_SETTINGS_TABLET: ReaderChoiceSpec = copyReaderChoiceSpec();
+CHOICE_SETTINGS_TABLET.height = 42;
+CHOICE_SETTINGS_TABLET.padding = 14;
+CHOICE_SETTINGS_TABLET.text = TYPE_SETTINGS_SELECT_TABLET_OPTION;
+CHOICE_SETTINGS_TABLET.selectedText = TYPE_SETTINGS_SELECT_TABLET_OPTION;
+CHOICE_SETTINGS_TABLET.selectedWeight = 700;
+CHOICE_SETTINGS_TABLET.ellipsis = false;
+CHOICE_SETTINGS_TABLET.textAlignStart = false;
+CHOICE_SETTINGS_TABLET.textRole = 'app.SettingsSelectOverlay.tabletOption.fontColor.FF1F1B17';
+CHOICE_SETTINGS_TABLET.selectedTextRole = 'app.SettingsSelectOverlay.tabletOption.fontColor.FF2D4A3E';
+CHOICE_SETTINGS_TABLET.selectedBackground = 'app.SettingsSelectOverlay.tabletOption.backgroundColor.0F2D4A3E';
+CHOICE_SETTINGS_TABLET.dividerRole = 'app.SettingsSelectOverlay.tabletOption.backgroundColor.FFC1C7CD';
+CHOICE_SETTINGS_TABLET.dividerHeight = 1;
+CHOICE_SETTINGS_TABLET.iconDay = 'app.media.settings_select_check';
+CHOICE_SETTINGS_TABLET.iconNight = 'app.media.settings_select_check_theme_night';
+CHOICE_SETTINGS_TABLET.iconWidth = 14;
+CHOICE_SETTINGS_TABLET.iconHeight = 14;
+CHOICE_SETTINGS_TABLET.showIcon = 'selected';
+
 const CHOICES: Record<ReaderChoiceSpecId, ReaderChoiceSpec> = {
   'default-option': COMMON_ROW,
-  'source-group-option': { ...COMMON_ROW, padding: 14, text: TYPE_SELECT_SOURCE_GROUP_VALUE,
-    selectedText: TYPE_SELECT_SOURCE_GROUP_VALUE, textRole: 'TOK_INK', selectedTextRole: 'TOK_INK' },
-  'default-selected': { ...COMMON_ROW, gap: 8, text: TYPE_SELECT_DEFAULT_VALUE,
-    selectedText: TYPE_SELECT_DEFAULT_VALUE, selectedWeight: TYPE_SELECT_DEFAULT_VALUE.fontWeight,
-    textRole: 'TOK_PRIMARY_TEXT', selectedTextRole: 'TOK_PRIMARY_TEXT', selectedBackground: 'TOK_SURFACE_PANEL_SOFT',
-    iconDay: 'app.media.reader_chevron_down', iconNight: 'app.media.reader_chevron_down_theme_night',
-    iconWidth: 12, iconHeight: 8, showIcon: 'always', rotateIcon: true },
-  'source-group-selected': { ...COMMON_ROW, text: TYPE_SELECT_SOURCE_GROUP_VALUE,
-    selectedText: TYPE_SELECT_SOURCE_GROUP_VALUE, selectedWeight: TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight,
-    textRole: 'TOK_INK', selectedTextRole: 'TOK_INK',
-    selectedBackground: 'app.ReaderSelectPanel.sourceGroupSelectedRow.backgroundColor.FFFFFCF8',
-    iconDay: 'app.media.source_group_chevron', iconNight: 'app.media.source_group_chevron_theme_night',
-    iconWidth: 12, iconHeight: 12, showIcon: 'always', rotateIcon: true,
-    layout: 'positioned', textLeft: 14, textTop: 10, textHeight: 15, textWidthInset: 42, iconRight: 21, iconTop: 12 },
-  'appearance-compact-selected': { ...COMMON_ROW, text: TYPE_SELECT_APPEARANCE_VALUE,
-    selectedText: TYPE_SELECT_APPEARANCE_VALUE, selectedWeight: TYPE_SELECT_APPEARANCE_VALUE.fontWeight,
-    textRole: 'TOK_PRIMARY_TEXT', selectedTextRole: 'TOK_PRIMARY_TEXT', selectedBackground: 'TOK_SURFACE_PANEL_SOFT',
-    iconDay: 'app.media.reader_chevron_down', iconNight: 'app.media.reader_chevron_down_theme_night',
-    iconWidth: 8, iconHeight: 4, showIcon: 'always', rotateIcon: true,
-    layout: 'positioned', textLeft: 10, textTop: 11, textHeight: 14, textWidthInset: 28, iconRight: 14, iconTop: 16 },
-  'appearance-library': { ...COMMON_ROW, height: 25, padding: 9, gap: 10, radius: 6,
-    text: TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_REGULAR, selectedText: TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_SELECTED,
-    selectedWeight: 700, variableWeight: true, textAlignStart: false,
-    textRole: 'app.ReaderSelectPanel.appearanceLibraryOption.fontColor.FF41484C',
-    selectedTextRole: 'app.ReaderSelectPanel.appearanceLibraryOption.fontColor.FF2F6373',
-    selectedBackground: 'app.appearance.selectSelected',
-    iconDay: 'app.media.reader_appearance_make_check', iconNight: 'app.media.reader_appearance_make_check_theme_night',
-    iconWidth: 11, iconHeight: 9, showIcon: 'selected' },
-  'settings-phone': { ...COMMON_ROW, height: 52, padding: 16, text: TYPE_SETTINGS_SELECT_PHONE_OPTION,
-    selectedText: TYPE_SETTINGS_SELECT_PHONE_OPTION, selectedWeight: 700, ellipsis: false, textAlignStart: false,
-    textRole: 'app.SettingsSelectOverlay.phoneOption.fontColor.FF1F1B17',
-    selectedTextRole: 'app.SettingsSelectOverlay.phoneOption.fontColor.FF2D4A3E',
-    selectedBackground: 'app.SettingsSelectOverlay.phoneOption.backgroundColor.0D2D4A3E',
-    dividerRole: 'app.SettingsSelectOverlay.phoneOption.backgroundColor.FFC1C7CD', dividerHeight: 1,
-    iconDay: 'app.media.settings_select_check', iconNight: 'app.media.settings_select_check_theme_night',
-    iconWidth: 16, iconHeight: 16, showIcon: 'selected' },
-  'settings-tablet': { ...COMMON_ROW, height: 42, padding: 14, text: TYPE_SETTINGS_SELECT_TABLET_OPTION,
-    selectedText: TYPE_SETTINGS_SELECT_TABLET_OPTION, selectedWeight: 700, ellipsis: false, textAlignStart: false,
-    textRole: 'app.SettingsSelectOverlay.tabletOption.fontColor.FF1F1B17',
-    selectedTextRole: 'app.SettingsSelectOverlay.tabletOption.fontColor.FF2D4A3E',
-    selectedBackground: 'app.SettingsSelectOverlay.tabletOption.backgroundColor.0F2D4A3E',
-    dividerRole: 'app.SettingsSelectOverlay.tabletOption.backgroundColor.FFC1C7CD', dividerHeight: 1,
-    iconDay: 'app.media.settings_select_check', iconNight: 'app.media.settings_select_check_theme_night',
-    iconWidth: 14, iconHeight: 14, showIcon: 'selected' },
+  'source-group-option': CHOICE_SOURCE_GROUP_OPTION,
+  'default-selected': CHOICE_DEFAULT_SELECTED,
+  'source-group-selected': CHOICE_SOURCE_GROUP_SELECTED,
+  'appearance-compact-selected': CHOICE_APPEARANCE_COMPACT_SELECTED,
+  'appearance-library': CHOICE_APPEARANCE_LIBRARY,
+  'settings-phone': CHOICE_SETTINGS_PHONE,
+  'settings-tablet': CHOICE_SETTINGS_TABLET,
 };
 
 export function resolveReaderChoiceSpec(id: ReaderChoiceSpecId): ReaderChoiceSpec { return CHOICES[id]; }

@@ -5,18 +5,18 @@ const read=path=>readFileSync(new URL(`../entry/src/main/ets/${path}`,import.met
 const source=read('features/source/SourceSwitchWindow.ets'),tts=read('features/reading/ReaderTtsConfigOverlay.ets');
 for(const [specId,width,height,radius,type] of [['source-switch-window',300,385,20,'Column'],['tts-config-manager','100%',574,22,'Column'],['tts-config-picker',260,172,14,'Column'],['local-import-selection',350,399.75,20,'Column'],['local-import-progress',350,228,20,'Stack'],['local-import-result-content',350,500,undefined,'Column'],['reader-replace-editor',338,666,12,'Column']]){
   const probe=boundedSurfaceSdk(),calls=[];
-  const f=new probe.deps.ReaderBoundedSurface(undefined,{specId,width,height});
+  const f=new probe.deps.ReaderBoundedSurface(undefined,{specId,surfaceWidth: width,surfaceHeight: height});
   Object.assign(f,{header:()=>calls.push('header'),body:()=>calls.push('body'),actions:()=>calls.push('actions')});f.initialRender();
   assert.deepEqual(calls,['header','body','actions']);const shell=[...f.nodes.values()].find(n=>n.type===type);assert.equal(shell.width,width);assert.equal(shell.height,height);assert.equal(shell.borderRadius,radius);
-  f.updateStateVars({specId,width,height:height-40});probe.properties.flush();assert.equal(shell.height,height-40,'actual SDK property update keeps the same frame node');
+  f.updateStateVars({specId,surfaceWidth: width,surfaceHeight:height-40});probe.properties.flush();assert.equal(shell.height,height-40,'actual SDK property update keeps the same frame node');
   if(specId==='source-switch-window')for(const property of ['constraintSize','shadow','clip'])assert.ok(!f.attributeCalls.some(c=>c.property===property),`${property} stays absent rather than explicit undefined`);
   if(specId==='local-import-result-content'){assert.equal(shell.backgroundColor,undefined);assert.equal(shell.alignItems,'HorizontalAlign.Start');}
 }
 for(const specId of ['source-switch-window','tts-config-manager','tts-config-picker']){
   const probe=boundedSurfaceSdk();let close=0;
-  const h=new probe.deps.ReaderBoundedSurfaceHeader(undefined,{specId,title:'original',width:300,enabled:true,onClose:()=>close++});h.initialRender();
+  const h=new probe.deps.ReaderBoundedSurfaceHeader(undefined,{specId,title:'original',surfaceWidth:300,actionEnabled:true,onClose:()=>close++});h.initialRender();
   const title=[...h.nodes.values()].find(n=>n.type==='Text'&&n.create==='original');const target=[...h.nodes.values()].find(n=>n.onClick);target.onClick();assert.equal(close,1);
-  h.updateStateVars({specId,title:'replacement',width:280,enabled:false});probe.properties.flush();assert.equal(title.create,'replacement');target.onClick();assert.equal(close,1,'retained shared close callback uses live admission');
+  h.updateStateVars({specId,title:'replacement',surfaceWidth:280,actionEnabled:false});probe.properties.flush();assert.equal(title.create,'replacement');target.onClick();assert.equal(close,1,'retained shared close callback uses live admission');
   assert.equal(target.enabled,false);if(specId==='source-switch-window'){assert.equal(target.width,44);assert.equal(target.height,44);}else{
     assert.deepEqual(target.responseRegion,{x:-6,y:-6,width:28,height:28});
     for(const property of ['height','lineHeight','constraintSize','margin'])assert.ok(!h.attributeCalls.some(c=>c.id===title.id&&c.property===property),`TTS AUTO ${property} is never authored`);
@@ -24,9 +24,9 @@ for(const specId of ['source-switch-window','tts-config-manager','tts-config-pic
 }
 {
   const probe=boundedSurfaceSdk();
-  const f=new probe.deps.ReaderBoundedSurface(undefined,{specId:'bookshelf-book-action',width:99,height:99});f.initialRender();
+  const f=new probe.deps.ReaderBoundedSurface(undefined,{specId:'bookshelf-book-action',surfaceWidth:99,surfaceHeight:99});f.initialRender();
   const shell=[...f.nodes.values()].find(n=>n.type==='Stack');assert.equal(shell.width,'100%');assert.equal(shell.height,270);assert.deepEqual(shell.borderRadius,{topLeft:24,topRight:24,bottomLeft:0,bottomRight:0});
-  const h=new probe.deps.ReaderBoundedSurfaceHeader(undefined,{specId:'bookshelf-book-action',title:'书籍操作',width:99,enabled:true});h.initialRender();
+  const h=new probe.deps.ReaderBoundedSurfaceHeader(undefined,{specId:'bookshelf-book-action',title:'书籍操作',surfaceWidth:99,actionEnabled:true});h.initialRender();
   const title=[...h.nodes.values()].find(n=>n.type==='Text');assert.ok(!h.attributeCalls.some(c=>c.id===title.id&&c.property==='width'),'sheet title AUTO is actually omitted');assert.deepEqual(title.position,{x:14,y:34});assert.equal([...h.nodes.values()].some(n=>n.onClick),false,'sheet header owns no close');
 }
 for(const specId of ['local-file-selection','local-import-result','tts-manager','replace-editor']){

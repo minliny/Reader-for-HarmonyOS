@@ -9,7 +9,7 @@ export struct ReaderRecoveryAction {
   @Prop variant: 'compact' | 'rssManagement' = 'compact';
   @Prop label: string = '刷新列表';
   @Prop generation: number = 0;
-  @Prop enabled: boolean = true;
+  @Prop actionEnabled: boolean = true;
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   build() {
     Text(this.label)
@@ -22,8 +22,8 @@ export struct ReaderRecoveryAction {
       .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
       .borderRadius(this.variant === 'rssManagement' ? 8 : 6)
       .textAlign(TextAlign.Center)
-      .enabled(this.enabled)
+      .enabled(this.actionEnabled)
       .accessibilityText(this.label)
-      .onClick((): void => { if (this.enabled) this.onReconcile(this.generation); });
+      .onClick((): void => { if (this.actionEnabled) this.onReconcile(this.generation); });
   }
 }

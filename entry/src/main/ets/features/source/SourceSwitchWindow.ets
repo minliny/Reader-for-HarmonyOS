@@ -121,14 +121,14 @@ export struct SourceSwitchWindow {
   }
 
   build() {
-    ReaderBoundedSurface({ specId: 'source-switch-window', width: this.windowWidth(), height: this.windowHeight(),
+    ReaderBoundedSurface({ specId: 'source-switch-window', surfaceWidth: this.windowWidth(), surfaceHeight: this.windowHeight(),
       header: (): void => { this.header(); }, body: (): void => { this.windowBody(); }, actions: (): void => { this.footer(); } })
       .translate({ x: this.windowTranslateX(), y: this.windowTranslateY() });
   }
 
   @Builder
   private header() {
-    ReaderBoundedSurfaceHeader({ specId: 'source-switch-window', title: '换源', width: this.windowWidth(),
+    ReaderBoundedSurfaceHeader({ specId: 'source-switch-window', title: '换源', surfaceWidth: this.windowWidth(),
       accessory: (): void => { this.sortPill(); }, onClose: (): void => this.onClose() });
   }
 

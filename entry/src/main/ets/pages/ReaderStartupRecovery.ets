@@ -27,9 +27,9 @@ struct ReaderStartupRecovery {
       Text(this.message()).fontFamily(TYPE_APP_BODY.fontFamily).fontWeight(TYPE_APP_BODY.fontWeight)
         .fontSize(TYPE_APP_BODY.fontSizeFp).lineHeight(TYPE_APP_BODY.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.scheme)).textAlign(TextAlign.Center);
-      ReaderRecoveryAction({ label: this.state.canRetry ? '重试' : '正在等待…', enabled: this.state.canRetry,
+      ReaderRecoveryAction({ label: this.state.canRetry ? '重试' : '正在等待…', actionEnabled: this.state.canRetry,
         onReconcile: (): void => this.owner?.retry() });
-      ReaderRecoveryAction({ label: '退出应用', enabled: this.state.canRetry,
+      ReaderRecoveryAction({ label: '退出应用', actionEnabled: this.state.canRetry,
         onReconcile: (): void => { void this.owner?.exit(); } });
     }.width('100%').height('100%').padding(24)
       .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center)

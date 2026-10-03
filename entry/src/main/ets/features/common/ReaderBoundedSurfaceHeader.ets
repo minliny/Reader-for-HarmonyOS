@@ -27,8 +27,8 @@ export struct ReaderBoundedSurfaceHeader {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop specId: ReaderBoundedSurfaceId = 'source-switch-window';
   @Prop title: string = '';
-  @Prop width: number = 300;
-  @Prop enabled: boolean = true;
+  @Prop surfaceWidth: number = 300;
+  @Prop actionEnabled: boolean = true;
   @BuilderParam leading: () => void = this.emptySlot;
   @BuilderParam accessory: () => void = this.emptySlot;
   onAreaChanged: (oldValue: Area, next: Area) => void = (_oldValue: Area, _next: Area): void => {};
@@ -51,7 +51,7 @@ export struct ReaderBoundedSurfaceHeader {
     } else if (this.specId === 'source-switch-window') {
       Column({ space: 0 }) {
         this.headerRow();
-        Text('').width(Math.max(0, this.width - 1)).height(1)
+        Text('').width(Math.max(0, this.surfaceWidth - 1)).height(1)
           .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
       }.width('100%').height(34);
     } else { this.headerRow(); }
@@ -120,12 +120,12 @@ export struct ReaderBoundedSurfaceHeader {
         Stack({ alignContent: Alignment.Center }) {
           Image(this.appThemeScheme === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close')).width(20).height(20);
         }.width(22).height(22).borderRadius(8).backgroundColor(readerAppColor('TOK_SS_CLOSE_BG', this.appThemeScheme));
-      }.width(44).height(44).margin({ left: 1 }).enabled(this.enabled)
-        .onClick((): void => { if (this.enabled) this.onClose(); });
+      }.width(44).height(44).margin({ left: 1 }).enabled(this.actionEnabled)
+        .onClick((): void => { if (this.actionEnabled) this.onClose(); });
     } else {
       Image(this.appThemeScheme === 'night' ? $r('app.media.reader_tts_make_close_theme_night') : $r('app.media.reader_tts_make_close')).width(16).height(16)
-        .responseRegion({ x: -6, y: -6, width: 28, height: 28 }).enabled(this.enabled)
-        .accessibilityText('关闭 TTS 配置').onClick((): void => { if (this.enabled) this.onClose(); });
+        .responseRegion({ x: -6, y: -6, width: 28, height: 28 }).enabled(this.actionEnabled)
+        .accessibilityText('关闭 TTS 配置').onClick((): void => { if (this.actionEnabled) this.onClose(); });
     }
   }
 }

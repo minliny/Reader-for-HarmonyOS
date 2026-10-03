@@ -13,7 +13,7 @@ export const {resolveReaderChoiceSpec}=new Function(...Object.keys(readerTypogra
 export function choiceRowProbe(resolve=resolveReaderChoiceSpec) {
   const properties=createArkUIPropertyRuntimeProbe();
   const probe=createReaderBuilderProbe(choiceSource,
-    ['specId','label','selected','showDivider','scheme','availableWidth','chevronAngle','enabled','onChoose',
+    ['specId','label','selected','showDivider','scheme','availableWidth','chevronAngle','actionEnabled','onChoose',
       'mounted','aboutToAppear','aboutToDisappear','build','normalRow','positionedRow','spec','textStyle','rowHeight','textColor','rowBackground','hasIcon','icon','accessibilityLabel','choose'],
     {...properties.sdk,resolveReaderChoiceSpec:resolve},properties.hooks);
   return {...probe,properties,dependencies:{ReaderChoiceRow:probe.Component,resolveReaderChoiceSpec:resolve},

@@ -103,11 +103,11 @@ function fixture({empty=false,preserveAsset=false}={}){
     const child=[...p.owner.children.values()].find(c=>c.params.view);
     const n=createReaderBuilderProbe(noticeSource,['build'],{ReaderRecoveryAction:Child});Object.assign(n.owner,{...child.params,appThemeScheme:'day'});n.owner.initialRender();
     const retryChild=[...n.owner.children.values()][0];let action;
-    if(retryChild){const a=createReaderBuilderProbe(actionSource,['build']);Object.assign(a.owner,{enabled:true,appThemeScheme:'day',...retryChild.params});a.owner.initialRender();action=[...a.owner.nodes.values()].find(v=>v.height===36);}
+    if(retryChild){const a=createReaderBuilderProbe(actionSource,['build']);Object.assign(a.owner,{actionEnabled:true,appThemeScheme:'day',...retryChild.params});a.owner.initialRender();action=[...a.owner.nodes.values()].find(v=>v.height===36);}
     const continuationChild=[...p.owner.children.values()].find(c=>c.params.label==='继续原操作');let continueAction;
-    if(continuationChild){const a=createReaderBuilderProbe(actionSource,['build']);Object.assign(a.owner,{enabled:true,appThemeScheme:'day',...continuationChild.params});a.owner.initialRender();continueAction=[...a.owner.nodes.values()].find(v=>v.height===36);}
+    if(continuationChild){const a=createReaderBuilderProbe(actionSource,['build']);Object.assign(a.owner,{actionEnabled:true,appThemeScheme:'day',...continuationChild.params});a.owner.initialRender();continueAction=[...a.owner.nodes.values()].find(v=>v.height===36);}
     const skipChild=[...p.owner.children.values()].find(c=>c.params.label==='保留备份，结束清理');let skipAction;
-    if(skipChild){const a=createReaderBuilderProbe(actionSource,['build']);Object.assign(a.owner,{enabled:true,appThemeScheme:'day',...skipChild.params});a.owner.initialRender();skipAction=[...a.owner.nodes.values()].find(v=>v.height===36);}
+    if(skipChild){const a=createReaderBuilderProbe(actionSource,['build']);Object.assign(a.owner,{actionEnabled:true,appThemeScheme:'day',...skipChild.params});a.owner.initialRender();skipAction=[...a.owner.nodes.values()].find(v=>v.height===36);}
     return {page:p.owner,view:child.params.view,action,skipAction,continueAction,notice:n.owner};
   };
   return {owner,store:credentialStore,runtime:runtimeOwner,settle,page,snapshot:()=>snapshot,emitted,close:()=>{route=false;},reopen:()=>{route=true;owner.open();},journal:()=>journal};
@@ -196,7 +196,7 @@ for(const fail of ['none','applyAck','commitAck','host']){
   },{mountChildren:true,initialParams:{snapshot:{...clone(DEFAULT_SYNC_SNAPSHOT),webdavUrl:config.url,webdavUser:config.user,webdavPath:config.directory,facts:{read:facts.projectOperationFacts({phase:'succeeded',value:true}),busy:false,canMutate:true}},isTablet:false},
     childSources:{ReaderCard:source('features/common/ReaderCard.ets'),PageBackBar:source('features/common/PageBackBar.ets')}});
   full.owner.aboutToAppear();full.owner.initialRender();assert.equal(full.owner.webdavUrl,config.url);
-  const inputs=[...full.owner.nodes.values()].filter(n=>n.create&&typeof n.create==='object'&&'placeholder' in n.create);assert.equal(inputs.length,5);assert.equal(inputs.filter(n=>n.enabled).length,5);assert.equal(inputs.filter(n=>n.type==='Password').length,2);
+  const inputs=[...full.owner.nodes.values()].filter(n=>n.create&&typeof n.create==='object'&&'placeholder' in n.create);assert.equal(inputs.length,5);assert.equal(inputs.filter(n=>n.enabled).length,5);assert.equal(inputs.filter(n=>n.type==='TextInput').length,5);assert.equal(inputs.filter(n=>n.nativeInputType==='Password').length,2);
   full.owner.webdavUrlEdited=true;full.owner.webdavUrl='https://draft.test';full.owner.webdavPass='secret-draft';full.owner.backupPass='backup-draft';
   const operation={action:'saveConfig',writeGeneration:1,coreApplied:false,hostApplied:false,completed:true,remoteConfirmedCount:0,projection:projectPersistedReceipt({confirmation:'confirmed',readback:'failed',generation:900,canRetry:true})};
   full.owner.updateStateVars({snapshot:{...clone(full.owner.snapshot),webdavUrl:'https://new.test',facts:{...full.owner.snapshot.facts,operation,busy:false,canMutate:true}}});
