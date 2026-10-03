@@ -399,6 +399,7 @@
     "test-remote-position-reader.mjs",
     "test-remote-reading-evidence.mjs",
     "test-rss-page-architecture.mjs",
+    "test-rss-persisted-refresh-projection.mjs",
     "test-search-candidate-acquisition.mjs",
     "test-search-cover-continuity.mjs",
     "test-search-history-layout-lifecycle.mjs",

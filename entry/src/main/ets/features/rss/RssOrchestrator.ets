@@ -9,6 +9,10 @@ import {
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
+import {
+  projectPersistedReceipt,
+  type PersistedReceiptProjection,
+} from '../../app/ReaderPersistedReceiptProjection';
 
 const DOMAIN = 0x5244;
 
@@ -27,6 +31,19 @@ function isPendingTransactionError(error: Error): boolean {
 }
 
 type RssMutation = () => Promise<void>;
+
+/**
+ * Durable mutation/read-back facts for the management route. The write is
+ * confirmed independently from the follow-up list read, so a transient list
+ * failure cannot erase the fact that Core already applied the mutation.
+ */
+export interface RssManagementOperationProjection {
+  action: string;
+  subscriptionId: string;
+  projection: PersistedReceiptProjection<RssSubscription[]>;
+}
+
+type RssOperationProjectionEmitter = (operation: RssManagementOperationProjection) => void;
 
 export interface RssSourceSnapshot {
   subscriptions: RssSubscription[];
@@ -58,20 +75,31 @@ export class RssOrchestrator {
   private readonly gateway: RssGateway;
   private readonly emit: (subscriptions: RssSubscription[]) => void;
   private readonly isCurrent: () => boolean;
+  private readonly emitOperation: RssOperationProjectionEmitter;
   /** Bumped on every management-page entry; stale write-backs are discarded. */
   private session: number = 0;
   /** One chain for toggle, refresh, and remove across page entries. */
   private mutationChain: Promise<void> = Promise.resolve();
+  private operationGeneration: number = 0;
+  private lastSubscriptions: RssSubscription[] = [];
+  private latestOperation: RssManagementOperationProjection | undefined;
 
   constructor(
     emit: (subscriptions: RssSubscription[]) => void,
     isCurrent: () => boolean,
     owner: ReaderRuntimeOwner = ReaderRuntimeOwner.current(),
+    emitOperation: RssOperationProjectionEmitter = (_operation: RssManagementOperationProjection): void => {},
   ) {
     this.owner = owner;
     this.gateway = new RssGateway(owner);
     this.emit = emit;
     this.isCurrent = isCurrent;
+    this.emitOperation = emitOperation;
+  }
+
+  /** Last durable mutation fact, retained for a late route/read-back observer. */
+  latestOperationProjection(): RssManagementOperationProjection | undefined {
+    return this.latestOperation;
   }
 
   /** Enter management: wait for prior mutations, then read Core truth. */
@@ -311,15 +339,20 @@ export class RssOrchestrator {
     session: number,
   ): Promise<void> {
     await this.runMutationWithRetry(mutation);
+    this.publishOperation(action, subscriptionId, session, 'reading');
     let subscriptions: RssSubscription[];
     try {
       subscriptions = await this.loadSubscriptionsWithRetry();
     } catch (error) {
+      const refreshError = (error as Error).message;
+      this.publishOperation(action, subscriptionId, session, 'failed', refreshError);
       hilog.warn(DOMAIN, 'Reader',
         'RSS management mutation persisted but list reload failed: action=%{private}s subscriptionId=%{private}s err=%{private}s',
-        action, subscriptionId, (error as Error).message);
+        action, subscriptionId, refreshError);
       return;
     }
+    this.lastSubscriptions = subscriptions;
+    this.publishOperation(action, subscriptionId, session, 'succeeded', undefined, subscriptions);
     // Mutations and their reloads share one chain, so every emitted snapshot
     // is authoritative for all transactions completed before it. Publishing
     // each successful step also ensures a later failed intent cannot conceal
@@ -341,8 +374,33 @@ export class RssOrchestrator {
       }
       return;
     }
+    this.lastSubscriptions = subscriptions;
     if (this.isCurrentSession(session)) {
       this.emit(subscriptions);
+    }
+  }
+
+  private publishOperation(
+    action: string,
+    subscriptionId: string,
+    session: number,
+    readback: 'reading' | 'failed' | 'succeeded',
+    refreshError?: string,
+    value?: RssSubscription[],
+  ): void {
+    const projection = projectPersistedReceipt<RssSubscription[]>({
+      confirmation: 'confirmed',
+      readback,
+      value: value ?? (readback === 'failed' ? this.lastSubscriptions : undefined),
+      refreshError,
+      stale: readback === 'failed',
+      canRetry: true,
+      generation: ++this.operationGeneration,
+    });
+    const operation: RssManagementOperationProjection = { action, subscriptionId, projection };
+    this.latestOperation = operation;
+    if (this.isCurrentSession(session)) {
+      this.emitOperation(operation);
     }
   }
 
