@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
+import {mkdtempSync,readFileSync,writeFileSync,existsSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import {syncIndexFixture as f,fullSyncIndexPage} from './lib/sync-index-real-fixture.mjs';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
@@ -15,15 +18,20 @@ for(const [name,path]of[['SyncPage','sync'],['ReaderRecoveryNotice','common'],['
 }
 class Child{constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
 class Card extends Child{initialRender(){this.params.content?.();}}
-function fixture(){
+const durablePrefix=readFileSync(new URL('./test-sync-backup-durable-receipts.mjs',import.meta.url),'utf8').split('try {')[0]
+  .replace(/^import[^\n]+\n/gm,'').replace('function fixture({cold=false}={})','function fixture({cold=false,createOwner}={})')
+  .replace('f.fixture({preserveAsset:cold})','f.fixture({preserveAsset:cold,createOwner})');
+const {fixture:durableFixture,directory:durableDirectory}=new Function('assert','mkdtempSync','readFileSync','writeFileSync','existsSync','rmSync','tmpdir','join','f',
+  durablePrefix+';return {fixture,directory};')(assert,mkdtempSync,readFileSync,writeFileSync,existsSync,rmSync,tmpdir,join,f);
+function fixture({durable=false}={}){
   enabled=true;const index=Object.assign(new Index(),{nativeAlertOwner:new ReaderNativeAlertOwner(),route:'sync',navigationGeneration:1,
     shelfReceiptRetired:false,syncSnapshot:clone(f.DEFAULT_SYNC_SNAPSHOT),syncSnapshotReady:false});
-  const real=f.fixture({createOwner:()=>index.getSyncOrchestrator()});
+  const real=(durable?durableFixture:f.fixture)({createOwner:()=>index.getSyncOrchestrator()});
   let parent;
   const props=()=>{parent=createReaderBuilderProbe(f.source('pages/Index.ets'),['syncContent','syncSurface'],{...deps,SyncPage:Child},{allowEmptyBranchAdmission:true}).owner;
     Object.assign(parent,index);for(const name of methods)parent[name]=index[name].bind(index);parent.syncContent();return [...parent.children.values()].at(-1).params;};
   const page=()=>{
-    const p=createReaderBuilderProbe(f.source('features/sync/SyncPage.ets'),['manualActionsSection','sectionHeadingMuted','restoreConflictCard','feedbackView','recoveryLabel','canMutate','manualActionButton'],
+    const p=createReaderBuilderProbe(f.source('features/sync/SyncPage.ets'),['manualActionsSection','sectionHeadingMuted','restoreConflictCard','feedbackView','recoveryLabel','canMutate','manualActionButton','canSkipBackupRetention','backupRetentionActionIdentities','backupGeneration'],
       {readerRecoveryView:f.readerRecoveryView,ReaderRecoveryNotice:Child,ReaderCard:Card},{mountChildren:true,childSources:{ReaderCard:f.source('features/common/ReaderCard.ets')}}).owner;
     Object.assign(p,props(),{contentFrame:()=>({width:390}),appThemeScheme:'day'});p.manualActionsSection();
     const notice=[...p.children.values()].find(c=>c.params.view);
@@ -50,11 +58,31 @@ for(const retired of['route','generation','runtime-unset','hidden','unmounted'])
   const x=fixture();await x.open();const p=x.props(),before=f.asset.calls.length,native=x.runtime.calls.length;
   if(retired==='route')x.index.route='settings';if(retired==='generation')x.index.nextNavigationGeneration();if(retired==='runtime-unset'){f.setRuntimeOwner(undefined);assert.throws(()=>f.ReaderRuntimeOwner.current(),/installed by EntryAbility/);}
   if(retired==='hidden')enabled=false;if(retired==='unmounted')x.index.shelfReceiptRetired=true;
-  assert.doesNotThrow(()=>{p.onSaveConfig(f.config.url,f.config.user,'','',f.config.directory);p.onTestConnection(f.config.url,f.config.user,'',f.config.directory);p.onTriggerBackup();p.onRestoreLatest();p.onResolveRestore(true);p.onReconcile(0);p.onBack();});
+  assert.doesNotThrow(()=>{p.onSaveConfig(f.config.url,f.config.user,'','',f.config.directory);p.onTestConnection(f.config.url,f.config.user,'',f.config.directory);p.onTriggerBackup();p.onRestoreLatest();p.onResolveRestore(true);p.onReconcile(0);p.onSkipBackupRetention(0);p.onBack();});
   await x.settle();assert.equal(f.asset.calls.length,before);assert.equal(x.runtime.calls.length,native);f.setRuntimeOwner(x.runtime);
 }
 {const x=fixture();await x.open();const old=x.props(),parent=x.parent(),child=[...parent.children.values()].at(-1);x.index.navigationGeneration=2;parent.navigationGeneration=2;parent.replay();const next=[...parent.children.values()].at(-1);assert.notEqual(next.id,child.id);old.onTriggerBackup();await x.settle();assert.equal(x.runtime.count('sync.webdav.transaction.start'),0);next.params.onTriggerBackup();await x.settle();assert.equal(x.runtime.count('sync.webdav.transaction.start'),1);}
 {const x=fixture();await x.open();const gate=f.pause();x.runtime.beforeApply=()=>gate.promise;x.props().onRestoreLatest();await x.settle();x.props().onResolveRestore(true);await new Promise(r=>setImmediate(r));const atClose=clone(x.index.syncSnapshot);x.index.nextNavigationGeneration();x.index.route='settings';gate.resolve();await x.settle();assert.deepEqual(x.index.syncSnapshot,atClose,'late accepted write cannot publish into closed route');}
 {const x=fixture();await x.open();const gate=f.pause();f.asset.beforeAdd=()=>gate.promise;x.props().onSaveConfig(f.config.url,f.config.user,'','',f.config.directory);await new Promise(r=>setImmediate(r));const atRetirement=clone(x.index.syncSnapshot);f.setRuntimeOwner(undefined);gate.resolve();await assert.doesNotReject(x.settle());assert.deepEqual(x.index.syncSnapshot,atRetirement,'accepted durable save settles after actual Runtime unset without late Index publication');assert.equal(f.asset.calls.filter(v=>v==='add').length,1);f.setRuntimeOwner(x.runtime);}
 {const x=fixture();await x.open();const old=x.index.getSyncOrchestrator();const y=fixture();const replacement=x.index.getSyncOrchestrator();assert.notEqual(replacement,old);assert.equal(replacement.ownedBy(y.runtime),true);}
+for(const retired of ['live','route','generation','runtime-unset','hidden','unmounted']) {
+  const x=fixture({durable:true});await x.open();x.runtime.failBackupAdvance=true;x.props().onTriggerBackup();await x.settle();
+  const pending=x.index.syncSnapshot.facts.operation;x.qualifyRemote();x.props().onReconcile(pending.projection.facts.generation);await x.settle();
+  assert.equal(x.index.syncSnapshot.facts.operation.uploadQualified,true);assert.equal(x.index.syncSnapshot.facts.operation.completed,false);
+  const props=x.props(),actual=fullSyncIndexPage(props),action=[...actual.children.values()].find(c=>c.params.label==='保留备份，结束清理');
+  assert.ok(action,'actual Index → complete decorated SDK Page mounts exact receipt consent action');
+  const before=x.runtime.count('sync.webdav.backup.retention.skip');
+  if(retired==='route')x.index.route='settings';if(retired==='generation')x.index.nextNavigationGeneration();
+  if(retired==='runtime-unset')f.setRuntimeOwner(undefined);if(retired==='hidden')enabled=false;if(retired==='unmounted')x.index.shelfReceiptRetired=true;
+  assert.doesNotThrow(()=>action.params.onReconcile(action.params.generation));await x.settle();
+  assert.equal(x.runtime.count('sync.webdav.backup.retention.skip'),before+(retired==='live'?1:0));
+  if(retired==='live') {
+    assert.equal(x.index.syncSnapshot.facts.operation.retentionSkipped,true);assert.equal(x.index.syncSnapshot.facts.operation.completed,false);
+    assert.equal(x.index.syncSnapshot.facts.canMutate,true);const count=x.runtime.calls.length;
+    action.params.onReconcile(action.params.generation);await x.settle();assert.equal(x.runtime.calls.length,count,'retired actual consent actor never replays terminal mutation');
+    assert.equal(x.requests.filter(r=>r.method==='PUT').length,1);assert.equal(x.requests.filter(r=>r.method==='DELETE').length,0);
+  }
+  f.setRuntimeOwner(x.runtime);
+}
+rmSync(durableDirectory,{recursive:true,force:true});
 console.log('PASS Sync actual AssetStore→Gateway→owner→Index→SDK Page→shared native recovery: usable first failure, true ACK/readback and unknown, no repeated save/backup, stale runtime/navigation/hidden/close callbacks, identity rebind, late accepted restore, secrets omitted');

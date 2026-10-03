@@ -1237,6 +1237,7 @@ struct Index {
       isTablet: deviceInfo.deviceType === 'tablet',
       onBack: (): void => { if (this.isCurrentSyncPresentation(generation, owner)) this.returnToSettings(); },
       onReconcile: (expectedGeneration: number): void => { if (this.isCurrentSyncPresentation(generation, owner)) this.getSyncOrchestrator().reconcile(expectedGeneration); },
+      onSkipBackupRetention: (expectedGeneration: number): void => { if (this.isCurrentSyncPresentation(generation, owner)) this.getSyncOrchestrator().skipBackupRetention(expectedGeneration); },
       onSaveConfig: (url: string, user: string, pass: string, backupPass: string, path: string): void =>
          { if (this.isCurrentSyncPresentation(generation, owner)) this.onSyncSaveConfig(url, user, pass, backupPass, path); },
       onTestConnection: (url: string, user: string, pass: string, path: string): void =>
