@@ -9,6 +9,12 @@ const require = createRequire(import.meta.url);
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
+const shelfTypography = Object.fromEntries([
+  'NOTE', 'STATUS', 'BODY', 'BODY_MUTED', 'META', 'GROUP_TITLE', 'ROW_ACTION',
+  'BOOK_TITLE', 'HEADING', 'BUTTON', 'SMALL_ACTION',
+].map(name => [`TYPE_SHELF_MANAGEMENT_${name}`, {
+  fontFamily: 'ReaderNotoSansSC', fontWeight: 400, fontSizeFp: 12, lineHeightFp: 16,
+}]));
 for (const name of ['PageBackBar', 'ReaderToggle']) {
   syntax.componentCollection.customComponents.add(name);
   syntax.propCollection.set(name, new Set(['title', 'titleColor', 'onBack', 'value', 'onToggle']));
@@ -38,6 +44,7 @@ for (const [file, bottom] of cases) {
     PageBackBar: Child, ReaderToggle: Child, ReaderWindowCoordinator: { metrics: () => metrics },
     READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset, RSS_DETAIL_ACTION_AREA_HEIGHT: 62,
     TOK_SPACE_XS: 8, TOK_SPACE_SM: 12, TOK_SPACE_MD: 16, TOK_SPACE_LG: 24,
+    ...shelfTypography,
   });
   for (const [width, height, left, right] of [[365, 320, 19, 19], [390, 844, 32, 24], [1280, 800, 280, 280]]) {
     for (const safeBottom of [0, 24, 48]) {
