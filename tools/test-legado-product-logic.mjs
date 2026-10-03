@@ -12,6 +12,7 @@ const shelfMoreMenu = read('entry/src/main/ets/features/bookshelf/BookshelfMoreM
 const remote = read('entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 const sourceSwitchGateway = read('entry/src/main/ets/features/source/SourceSwitchGateway.ts');
 const sourceSwitchWindow = read('entry/src/main/ets/features/source/SourceSwitchWindow.ets');
+const surfaceSpecs = read('entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets');
 const sourceSwitchRow = read('entry/src/main/ets/features/source/CandidateRow.ets');
 const reading = read('entry/src/main/ets/features/reading/LocalReadingExperience.ets');
 
@@ -81,6 +82,18 @@ assert.doesNotMatch(sourceSwitchGateway, /bookAcquisitions\?\.\(\)\.prepare/,
 assert.match(sourceSwitchRow, /acquisitionState === 'catalogReady'/);
 assert.match(sourceSwitchRow, /acquisitionState === 'readable'/,
   'a discovered source must not be labeled readable');
+assert.match(surfaceSpecs, /'source-switch-window': new PopupSurfaceSpec\(\{[\s\S]*?height: 385/,
+  'source-switch outer frame height remains the shared finite popup variant');
+assert.match(surfaceSpecs, /'source-switch-window': new PopupSurfaceSpec\(\{[\s\S]*?width: 300/,
+  'source-switch phone/tablet content width remains the shared finite popup variant');
+assert.match(sourceSwitchWindow, /resolvePopupSpec\('source-switch-window'\)/,
+  'source-switch window reads the shared popup surface contract');
+assert.match(sourceSwitchWindow, /readerInteractiveSafeLeft\(metrics\)[\s\S]*readerInteractiveSafeRight\(metrics\)/,
+  'source-switch keeps asymmetric safe edges for both phone and tablet hosts');
+assert.match(sourceSwitchWindow, /Math\.min\(this\.surfaceSpec\(\)\.height, available\)/,
+  'source-switch retains the finite height cap while allowing smaller host windows');
+assert.doesNotMatch(sourceSwitchWindow, /new SurfaceWidthSpec\(300, 0, 0, 'center'\)/,
+  'source-switch consumer does not duplicate its outer width');
 
 assert.match(remote, /async openCachedCatalogSession\([\s\S]*acquisitionMode: contextIsCurrent && !cached\.requiresContextRefresh \? 'online' : 'offline'/,
   'only current continuation context enables online fallback; stale or deleted source remains offline-readable');

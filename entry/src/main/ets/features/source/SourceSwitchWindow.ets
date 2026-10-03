@@ -18,8 +18,6 @@ import {
   TOK_SS_FOOTER_TEXT,
   TOK_SS_MUTED,
   TOK_SS_SORT_PILL_BG,
-  TOK_SS_WINDOW_BG,
-  TOK_SS_WINDOW_BORDER,
 } from '../common/ReaderTokens';
 
 import { registerReaderFonts } from '../common/ReaderFonts';
@@ -35,6 +33,7 @@ import {
   SurfaceWidthSpec,
   resolveHorizontalFrame,
 } from '../common/SurfaceHorizontalGeometry';
+import { PopupSurfaceSpec, resolvePopupSpec } from '../common/ReaderSurfaceSpecs';
 
 /**
  * SourceSwitch overlay window state (Window State 7态, SS-SOURCE-SWITCH-01).
@@ -108,6 +107,10 @@ export struct SourceSwitchWindow {
     (_candidate: SourceSwitchCandidate): void => {};
   onRollback: () => void = (): void => {};
 
+  private surfaceSpec(): PopupSurfaceSpec {
+    return resolvePopupSpec('source-switch-window');
+  }
+
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
   }
@@ -121,9 +124,9 @@ export struct SourceSwitchWindow {
     }
     .width(this.windowWidth())
     .height(this.windowHeight())
-    .backgroundColor(readerAppColor('TOK_SS_WINDOW_BG', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_SS_WINDOW_BORDER', this.appThemeScheme) })
-    .borderRadius(20)
+    .backgroundColor(readerAppColor(this.surfaceSpec().surfaceBackgroundRole, this.appThemeScheme))
+    .border({ width: this.surfaceSpec().borderWidth, color: readerAppColor(this.surfaceSpec().surfaceBorderRole, this.appThemeScheme) })
+    .borderRadius(this.surfaceSpec().borderRadius)
     .translate({ x: this.windowTranslateX(), y: this.windowTranslateY() });
   }
 
@@ -465,7 +468,7 @@ export struct SourceSwitchWindow {
       this.liveWindowWidth(),
       readerInteractiveSafeLeft(metrics),
       readerInteractiveSafeRight(metrics),
-      new SurfaceWidthSpec(300, 0, 0, 'center'),
+      new SurfaceWidthSpec(this.surfaceSpec().width, 0, 0, 'center'),
     );
   }
 
@@ -479,7 +482,7 @@ export struct SourceSwitchWindow {
       0,
       this.liveWindowHeight() - readerVisualSafeTop(metrics) - readerInteractiveSafeBottom(metrics, true),
     );
-    return Math.min(385, available);
+    return Math.min(this.surfaceSpec().height, available);
   }
 
   private windowTranslateX(): number {

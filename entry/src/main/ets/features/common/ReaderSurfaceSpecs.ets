@@ -327,9 +327,10 @@ export function resolveSheetSpec(id: SheetSpecId): SheetSurfaceSpec {
  * consumer keeps labels, icons, enabled state and callbacks; this contract
  * owns frame geometry, touch rows and visual roles.
  */
-export type PopupSpecId = 'bookshelf-more-menu';
+export type PopupSpecId = 'bookshelf-more-menu' | 'source-switch-window';
 
 export interface PopupSurfaceSpecInit {
+  height: number;
   width: number;
   pointerWidth: number;
   pointerHeight: number;
@@ -360,6 +361,7 @@ export interface PopupSurfaceSpecInit {
 }
 
 export class PopupSurfaceSpec {
+  readonly height: number;
   readonly width: number;
   readonly pointerWidth: number;
   readonly pointerHeight: number;
@@ -389,6 +391,7 @@ export class PopupSurfaceSpec {
   readonly actionLineHeight: number;
 
   constructor(init: PopupSurfaceSpecInit) {
+    this.height = init.height;
     this.width = init.width;
     this.pointerWidth = init.pointerWidth;
     this.pointerHeight = init.pointerHeight;
@@ -436,6 +439,7 @@ const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
   // These values mirror the existing menu until the popup family is migrated
   // and the visual baseline is reviewed as a batch.
   'bookshelf-more-menu': new PopupSurfaceSpec({
+    height: 0,
     width: 176, pointerWidth: 24, pointerHeight: 12,
     actionHeight: 50, actionCount: 4,
     trailingExtension: 11, anchorOverlap: 5,
@@ -452,6 +456,27 @@ const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
     actionTextRole: 'app.BookshelfMoreMenu.action.fontColor.FF1F1B17',
     dividerRole: 'app.BookshelfMoreMenu.action.color.FFE8E2DA',
     actionFontFamily: 'ReaderNotoSansSC', actionFontSize: 15, actionLineHeight: 22,
+  }),
+  // Source-switch window: the content state machine remains in the consumer;
+  // this entry owns the finite outer frame used by phone and tablet hosts.
+  'source-switch-window': new PopupSurfaceSpec({
+    height: 385,
+    width: 300, pointerWidth: 0, pointerHeight: 0,
+    actionHeight: 0, actionCount: 0,
+    trailingExtension: 0, anchorOverlap: 0,
+    borderWidth: 1, borderRadius: 20,
+    shadowRadius: 0, shadowOffsetY: 0,
+    actionPaddingLeft: 0, actionPaddingRight: 0,
+    actionIconSize: 0, dividerInset: 0, dividerHeight: 0,
+    pointerPoints: [],
+    surfaceBackgroundRole: 'TOK_SS_WINDOW_BG',
+    surfaceBorderRole: 'TOK_SS_WINDOW_BORDER',
+    surfaceShadowRole: 'TOK_SS_WINDOW_BORDER',
+    pointerFillRole: 'TOK_SS_WINDOW_BG',
+    pointerStrokeRole: 'TOK_SS_WINDOW_BORDER',
+    actionTextRole: 'TOK_SS_FOOTER_TEXT',
+    dividerRole: 'TOK_SS_WINDOW_BORDER',
+    actionFontFamily: 'ReaderInter', actionFontSize: 0, actionLineHeight: 0,
   }),
 };
 
