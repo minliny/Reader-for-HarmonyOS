@@ -27,9 +27,6 @@ for (const [property, expression] of Object.entries({
 })) allow('common/ReaderSelectPanel.ets', 'appearanceLibraryOption', property, expression, 1, 'integrator owns the concurrent real shared choice-row migration');
 for (const [method, role] of [['phoneOption', 'TYPE_SETTINGS_SELECT_PHONE_OPTION'], ['tabletOption', 'TYPE_SETTINGS_SELECT_TABLET_OPTION']])
   allow('settings/SettingsSelectOverlay.ets', method, 'fontWeight', `this.isSelected(option) ? FontWeight.Bold : ${role}.fontWeight`, 1, 'integrator owns the shared choice-row selected-weight migration');
-allow('common/ReaderDialogSurface.ets', 'header', 'fontWeight', 'FontWeight.Bold', 2, 'public Dialog spec has family/size/line box but still lacks its fontWeight getter');
-allow('bookshelf/BookshelfBookActionSheet.ets', 'build', 'fontWeight', 'FontWeight.Bold', 1, 'public Sheet spec needs a title weight getter');
-allow('bookshelf/BookshelfBookActionSheet.ets', 'actionSlot', 'fontWeight', 'FontWeight.Bold', 1, 'public Sheet spec needs an action weight getter');
 allow('common/ReaderActionMenuSurface.ets', 'actionRow', 'fontWeight', 'FontWeight.Medium', 1, 'integrator moved the actual shared action row; weight getter remains pending');
 let files = 0, consumers = 0, sharedArguments = 0, privateArguments = 0;
 for (const file of readdirSync(root, { recursive: true }).filter(file => file.endsWith('.ets') && !file.startsWith('reading/'))) {

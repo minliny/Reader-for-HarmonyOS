@@ -6,6 +6,7 @@ import { readerAppColor } from './ReaderThemeRegistry';
 @Component
 export struct ReaderRecoveryAction {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @Prop variant: 'compact' | 'rssManagement' = 'compact';
   @Prop label: string = '刷新列表';
   @Prop generation: number = 0;
   @Prop enabled: boolean = true;
@@ -19,7 +20,7 @@ export struct ReaderRecoveryAction {
       .height(36)
       .padding({ left: 12, right: 12 })
       .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-      .borderRadius(6)
+      .borderRadius(this.variant === 'rssManagement' ? 8 : 6)
       .textAlign(TextAlign.Center)
       .enabled(this.enabled)
       .accessibilityText(this.label)

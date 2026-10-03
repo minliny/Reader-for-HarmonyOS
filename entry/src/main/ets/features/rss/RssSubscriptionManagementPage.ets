@@ -1,3 +1,4 @@
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { TYPE_FORM_COMPACT_ACTION, TYPE_SOURCE_MANAGEMENT_META, TYPE_SOURCE_MANAGEMENT_TITLE } from '../common/ReaderTypography';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -160,17 +161,13 @@ export struct RssSubscriptionManagementPage {
           .lineHeight(TYPE_SOURCE_MANAGEMENT_META.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
         if (this.canRetryFeedback()) {
-          Text(this.hasOperationFeedback() ? '刷新列表' : '重试')
-            .height(36)
-            .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
-            .textAlign(TextAlign.Center)
-            .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)
-            .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)
-            .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)
-            .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-            .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-            .borderRadius(8)
-            .onClick((): void => this.retryFeedback());
+          ReaderRecoveryAction({
+            variant: 'rssManagement',
+            label: this.hasOperationFeedback() ? '刷新列表' : '重试',
+            generation: this.hasOperationFeedback() && this.operation !== undefined ?
+              this.operation.projection.facts.generation : this.readFacts.generation,
+            onReconcile: (_generation: number): void => this.retryFeedback(),
+          });
         }
       }
       .width('100%')

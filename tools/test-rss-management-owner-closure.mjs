@@ -18,6 +18,9 @@ const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 const pageSource = source('features/rss/RssSubscriptionManagementPage.ets');
 syntax.componentCollection.customComponents.add('RssSubscriptionManagementPage');
 syntax.propCollection.set('RssSubscriptionManagementPage', new Set([...pageSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
+const recoverySource = source('features/common/ReaderRecoveryAction.ets');
+syntax.componentCollection.customComponents.add('ReaderRecoveryAction');
+syntax.propCollection.set('ReaderRecoveryAction', new Set([...recoverySource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
 class ManagementChild {
   constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}
   updateStateVars(params){Object.assign(this.params,params);}
@@ -61,9 +64,13 @@ function fixture(runtime=rpc()){
   const orchestrator=index.getRssOrchestrator();index.rssSubscriptionManagementContent();const child=[...index.children.values()][0];
   const refresh=()=>{index.replay();return child.params;};
   const page=()=>{
-    const {owner}=createReaderBuilderProbe(pageSource,['operationFeedback','hasOperationFeedback','feedbackMessage','canRetryFeedback','retryFeedback']);
+    const {owner}=createReaderBuilderProbe(pageSource,['operationFeedback','hasOperationFeedback','feedbackMessage','canRetryFeedback','retryFeedback'],{ReaderRecoveryAction:ManagementChild});
     Object.assign(owner,refresh(),{operation:clone(child.params.operation),readFacts:clone(child.params.readFacts),appThemeScheme:'day'});
-    owner.operationFeedback();return owner;
+    owner.operationFeedback();
+    const recoveryChild=[...owner.children.values()][0];
+    if(recoveryChild){const recovery=createReaderBuilderProbe(recoverySource,['build']).owner;Object.assign(recovery,{enabled:true},recoveryChild.params,{appThemeScheme:'day'});recovery.initialRender();
+      for(const [id,node] of recovery.nodes)owner.nodes.set(-id,node);}
+    return owner;
   };
   return {runtime,index,orchestrator,refresh,page,child};
 }
@@ -88,7 +95,7 @@ for(const [action,command] of [['toggle','rss.subscription.persist'],['refresh',
   if(action==='remove')assert.equal(f.refresh().items.length,1);
   f.runtime.readFailures.push(new Error('different failure'));f.orchestrator.refreshSubscription('b');await settle(f.orchestrator);
   Object.assign(page,{operation:clone(f.refresh().operation),readFacts:clone(f.refresh().readFacts)});page.replay();
-  assert.match(textNode(page).create,/different failure/,'mounted SDK text reads live Props');retryNode(page).onClick();await settle(f.orchestrator);
+  assert.match(textNode(page).create,/different failure/,'mounted SDK text reads live Props');retryNode(f.page()).onClick();await settle(f.orchestrator);
   assert.equal(f.index.rssManagementOperation.projection.receipt.fact,'confirmedCurrent');
 }
 {
