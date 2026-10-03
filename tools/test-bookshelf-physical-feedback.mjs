@@ -322,23 +322,30 @@ const sourcePage = read('source/SourceManagementPage.ets');
 for (const loginUrl of [undefined, 'https://example.test/login']) {
   check(`source name/category/URL remain distinct and login precedes detect (${loginUrl ? 'login' : 'no login'})`, () => {
     const names = ['sourceRow', 'detectButton', 'loginButton', 'statusBadge', 'sourceSwitch'];
+    if (!baseline) names.push('operation', 'mounted', 'temporaryBackIdentity', 'sourceToggleBusy', 'sourceToggleEnabled');
     if (sourcePage.includes('private sourceMeta(')) names.push('sourceMeta');
     const deps = {
       readerSourceCategoryLabel,
       TYPE_SOURCE_MANAGEMENT_META: {
         fontFamily: 'ReaderNotoSansSC', fontWeight: 400, fontSizeFp: 10, lineHeightFp: 12.5,
       },
-      StatusBadge: Child, ReaderToggle: Child,
+      StatusBadge: Child, ...(baseline ? { ReaderToggle: Child } : {}),
     };
     const ui = baseline ? {owner:createReaderBuilderProbe(sourcePage,names,deps).owner} : sourceSharedActionFixture(names,deps);
     const { owner } = ui;
-    Object.assign(owner, { appThemeScheme: 'day', contentFrame: () => ({ width: 326 }), statusBadgeBackground() {}, statusBadgeDot() {} });
+    Object.assign(owner, { appThemeScheme: 'day', mounted: true, temporaryBackIdentity: 'source-metadata-visit',
+      contentFrame: () => ({ width: 326 }), statusBadgeBackground() {}, statusBadgeDot() {} });
     const source = { sourceId: 'source', name: '实际书源名称', baseUrl: 'https://example.test/very/long/path', category: 'novel', enabled: true, loginUrl, checkState: 'failed', checkMessage: '检测失败，请重试' };
     let logins = 0, detects = 0;
     owner.onLoginSource = id => { assert.equal(id, source.sourceId); logins++; };
     owner.onDetectSource = id => { assert.equal(id, source.sourceId); detects++; };
     owner.sourceRow(source);
     const allNodes = baseline ? [...owner.nodes.values()] : ui.controls.orderedNodes(owner);
+    if (!baseline) {
+      const toggle = allNodes.find(node => node.accessibilityRole === 'AccessibilityRoleType.SWITCH');
+      assert.ok(toggle, 'actual shared Toggle native actor mounts through the Root bounded resolver');
+      assert.deepEqual([toggle.width, toggle.height, toggle.accessibilityChecked, toggle.enabled], [44, 24, true, true]);
+    }
     const nodes = allNodes.filter(n=>n.type==='Text'), labels = nodes.map(n => n.create);
     assert.ok(labels.includes(source.baseUrl)); assert.ok(labels.includes(readerSourceCategoryLabel('novel')));
     assert.ok(labels.includes(source.checkMessage));
