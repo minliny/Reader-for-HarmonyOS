@@ -87,5 +87,7 @@ for(const row of contracts.values()){
   assert.throws(()=>verifyNativeDefaultBranches(source.replace('if (this.sourceSwitchFailureMessage.length > 0) {\n          ForEach','if (true) {\n          ForEach'),row.file,row),/exact finite branch guard/);
  }
 }
-assert.equal(controls,14);assert.equal(a11y,4);assert.equal(delegated,12);
+assert.equal(controls,14);assert.equal(a11y,4);// One additional finite ReaderButton leading-slot Text is now an actual shared
+// glyph host; native-default families and all private budgets are unchanged.
+assert.equal(delegated,13);
 console.log(`PASS native-default contracts: ${contracts.size} finite native families / ${controls} actual actors (retry has exact exclusive source-switch/reading branches); ${paint} no-glyph actors, ${a11y} exact accessibility actors, ${delegated} actual bounded shared glyph hosts, ${inherited} inherited body spans; no physical font overrides fabricated`);

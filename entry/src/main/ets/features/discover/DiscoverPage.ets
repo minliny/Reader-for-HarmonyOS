@@ -1,3 +1,4 @@
+import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
 import { ReaderButton } from '../common/ReaderButton';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
@@ -205,22 +206,8 @@ export struct DiscoverPage {
     Scroll() {
       Row({ space: 7 }) {
         ForEach(this.kindTitles(), (label: string, index: number) => {
-          Stack({ alignContent: Alignment.Center }) {
-            Text(label)
-              .fontFamily(TYPE_DISCOVER_CATEGORY.fontFamily)
-              .fontWeight(TYPE_DISCOVER_CATEGORY.fontWeight)
-              .fontSize(TYPE_DISCOVER_CATEGORY.fontSizeFp)
-              .lineHeight(TYPE_DISCOVER_CATEGORY.lineHeightFp as number)
-              .fontColor(this.presentation.activeKindIndex === index ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('app.DiscoverPage.categoryChips.fontColor.FF3F372F', this.appThemeScheme))
-              .maxLines(1);
-          }
-          .height(32)
-          .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
-          .backgroundColor(this.presentation.activeKindIndex === index ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('app.DiscoverPage.CHIP_BG', this.appThemeScheme))
-          .borderRadius(999)
-          .onClick((): void => {
-            this.onSelectKind(index);
-          });
+          ReaderButton({ scheme: this.appThemeScheme, specId: 'discover-category', label,
+            primary: this.presentation.activeKindIndex === index, onAction: (): void => this.onSelectKind(index) });
         }, (label: string): string => `discover-chip-${label}`);
       }
       .height(32)
@@ -267,28 +254,8 @@ export struct DiscoverPage {
       .border({ width: TOK_BORDER_W, color: readerAppColor('app.DiscoverPage.FILTER_BORDER', this.appThemeScheme) })
       .borderRadius(8);
 
-      Row() {
-        Image($r('app.media.discover_apply')).width(20).height(20);
-        Text('应用')
-          .fontFamily(TYPE_DISCOVER_FILTER_LABEL.fontFamily)
-          .fontWeight(TYPE_DISCOVER_FILTER_LABEL.fontWeight)
-          .fontSize(TYPE_DISCOVER_FILTER_LABEL.fontSizeFp)
-          .lineHeight(TYPE_DISCOVER_FILTER_LABEL.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-          .maxLines(1)
-          .margin({ left: TOK_SPACE_ROW_BLOCK });
-      }
-      .width(69.097)
-      .height(34)
-      .padding({ left: TOK_SPACE_CONTROL_INLINE })
-      .alignItems(VerticalAlign.Center)
-      .linearGradient({
-        angle: 270,
-        colors: [[readerAppColor('app.DiscoverPage.filterRow.linearGradient.FF436F88', this.appThemeScheme), 0], [readerAppColor('app.DiscoverPage.filterRow.linearGradient.FF315F78', this.appThemeScheme), 1]],
-      })
-      .border({ width: TOK_BORDER_W, color: readerAppColor('app.DiscoverPage.APPLY_BORDER', this.appThemeScheme) })
-      .borderRadius(8)
-      .onClick((): void => this.onRefresh());
+      ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'discover-apply', label: '应用',
+        icon: $r('app.media.discover_apply'), onAction: (): void => this.onRefresh() });
     }
     .width('100%')
     .height(34)

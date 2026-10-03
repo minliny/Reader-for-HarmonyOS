@@ -1,7 +1,8 @@
-import { TOK_SPACE_XS, TOK_BORDER_W } from './ReaderTokens';
+import { TOK_SPACE_XS, TOK_BORDER_W, TOK_SPACE_MD, TOK_SPACE_CARD_PADDING, TOK_SPACE_SM, TOK_SPACE_LG, TOK_SPACE_CONTROL_INLINE } from './ReaderTokens';
 import type { ReaderAppColorRole } from './ReaderThemeRegistry';
 import {
-  ReaderTextStyle, ReaderInheritedTextStyle, TYPE_APP_INHERITED_BODY, TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_INPUT, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_PLACEHOLDER, TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT, TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY, TYPE_FORM_HINT, TYPE_SOURCE_TOOLS_ACTION,
+  TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_SEARCH_FIELD_ACTION, TYPE_SEARCH_FIELD_ACTION_WIDE, TYPE_SEARCH_HISTORY_KEYWORD, TYPE_SEARCH_PROGRESS_META, TYPE_SEARCH_RETRY_ACTION, TYPE_SEARCH_SCOPE_LABEL, TYPE_SEARCH_SCOPE_SELECTED, TYPE_DISCOVER_CATEGORY, TYPE_SYNC_BACKUP_ACTION,
+  ReaderTextStyle, ReaderInheritedTextStyle, TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_INPUT, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_PLACEHOLDER, TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT, TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY, TYPE_FORM_HINT, TYPE_SOURCE_TOOLS_ACTION,
   TYPE_SOURCE_TOOLS_COMPACT_ACTION, TYPE_SOURCE_TOOLS_BODY,
   TYPE_RULES_MANAGEMENT_ACTION, TYPE_RULES_COMPACT_ACTION,
   TYPE_RULES_MANAGEMENT_INPUT, TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_SYNC_INPUT,
@@ -10,8 +11,9 @@ import {
   TYPE_SHELF_MANAGEMENT_BUTTON, TYPE_SHELF_MANAGEMENT_SMALL_ACTION, TYPE_SHELF_MANAGEMENT_ROW_ACTION, TYPE_RSS_BOTTOM_ACTION, TYPE_SOURCE_TOOLS_CODE_INPUT,
 } from './ReaderTypography';
 
-export type ReaderButtonSpecId = 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action' | 'form-action' | 'form-busy-action' | 'form-document-action' | 'search-primary' | 'search-secondary' | 'discover-page' | 'rss-mode-tab' | 'rss-state' | 'rss-source-link' | 'shelf-action' | 'shelf-small' | 'shelf-row-edit' | 'shelf-row-select' | 'rss-detail-bottom' | 'rss-filter' | 'sync-config-test' | 'sync-config-save' | 'source-management-retry' | 'source-management-category' | 'source-management-status-compact' | 'source-management-status-wide' | 'source-management-detect' | 'source-management-login' | 'source-management-manage';
+export type ReaderButtonSpecId = 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action' | 'form-action' | 'form-busy-action' | 'form-document-action' | 'search-primary' | 'search-secondary' | 'discover-page' | 'rss-mode-tab' | 'rss-state' | 'rss-source-link' | 'shelf-action' | 'shelf-small' | 'shelf-row-edit' | 'shelf-row-select' | 'rss-detail-bottom' | 'rss-filter' | 'sync-config-test' | 'sync-config-save' | 'source-management-retry' | 'source-management-category' | 'source-management-status-compact' | 'source-management-status-wide' | 'source-management-detect' | 'source-management-login' | 'source-management-manage' | 'search-field-phone' | 'search-field-wide' | 'search-history-clear' | 'search-history-keyword' | 'search-scope' | 'search-retry-status-spaced' | 'search-retry-status' | 'search-retry-progress' | 'search-error-retry' | 'search-error-source' | 'discover-category' | 'sync-empty-backup';
 export type ReaderButtonLayout = 'intrinsic' | 'equal' | 'full';
+export interface ReaderButtonMargin { top?: number; right?: number; bottom?: number; left?: number; }
 export interface ReaderButtonSpec {
   text: ReaderTextStyle | ReaderInheritedTextStyle;
   height: number | undefined;
@@ -37,14 +39,20 @@ export interface ReaderButtonSpec {
   responseOffset: number | undefined;
   busyOpacity: number;
   centerText: boolean;
-  outerMargin: { right: number; bottom: number } | undefined;
+  outerMargin: ReaderButtonMargin | undefined;
+  selectedWeight: number | undefined;
+  textEllipsis: boolean;
+  verticalOnlyPadding: boolean;
+  maxWidthKind: 'none' | 'history' | 'scope';
+  responseHeight: number;
+  leadingSlot: boolean;
   responsiveStatusWidth: boolean;
 }
 const SOURCE_ACTION: ReaderButtonSpec = {
   text: TYPE_SOURCE_TOOLS_ACTION, height: 42, radius: 8, horizontalPadding: 0, stacked: false,
   primarySurface: 'TOK_PRIMARY_DARK', secondarySurface: 'TOK_SURFACE_PANEL_SOFT',
   primaryBorder: 'TOK_PRIMARY_DARK', secondaryBorder: 'TOK_BORDER', disabledOpacity: 0.62, primaryDisabledOpacity: undefined, hasBorder: true, primaryHasBorder: true, hasSurface: true, outerRadius: true,
-  primaryText: 'TOK_ON_PRIMARY', secondaryText: 'TOK_PRIMARY_TEXT', verticalPadding: 0, allPadding: undefined, maxLines: 0, fixedWidth: 0, responseOffset: undefined, busyOpacity: 1, centerText: true, outerMargin: undefined, responsiveStatusWidth: false,
+  primaryText: 'TOK_ON_PRIMARY', secondaryText: 'TOK_PRIMARY_TEXT', verticalPadding: 0, allPadding: undefined, maxLines: 0, fixedWidth: 0, responseOffset: undefined, busyOpacity: 1, centerText: true, outerMargin: undefined, selectedWeight: undefined, textEllipsis: false, verticalOnlyPadding: false, maxWidthKind: 'none', responseHeight: 44, leadingSlot: false, responsiveStatusWidth: false,
 };
 // Named variants retain current physical tuples; callers receive no style bag.
 function copyReaderButtonSpec(): ReaderButtonSpec {
@@ -55,7 +63,7 @@ function copyReaderButtonSpec(): ReaderButtonSpec {
     disabledOpacity: SOURCE_ACTION.disabledOpacity, primaryDisabledOpacity: SOURCE_ACTION.primaryDisabledOpacity, hasBorder: SOURCE_ACTION.hasBorder, primaryHasBorder: SOURCE_ACTION.primaryHasBorder,
     hasSurface: SOURCE_ACTION.hasSurface, outerRadius: SOURCE_ACTION.outerRadius,
     primaryText: SOURCE_ACTION.primaryText, secondaryText: SOURCE_ACTION.secondaryText, verticalPadding: SOURCE_ACTION.verticalPadding, allPadding: SOURCE_ACTION.allPadding,
-    maxLines: SOURCE_ACTION.maxLines, fixedWidth: SOURCE_ACTION.fixedWidth, responseOffset: SOURCE_ACTION.responseOffset, busyOpacity: SOURCE_ACTION.busyOpacity, centerText: SOURCE_ACTION.centerText, outerMargin: SOURCE_ACTION.outerMargin, responsiveStatusWidth: SOURCE_ACTION.responsiveStatusWidth };
+    maxLines: SOURCE_ACTION.maxLines, fixedWidth: SOURCE_ACTION.fixedWidth, responseOffset: SOURCE_ACTION.responseOffset, busyOpacity: SOURCE_ACTION.busyOpacity, centerText: SOURCE_ACTION.centerText, outerMargin: SOURCE_ACTION.outerMargin, selectedWeight: SOURCE_ACTION.selectedWeight, textEllipsis: SOURCE_ACTION.textEllipsis, verticalOnlyPadding: SOURCE_ACTION.verticalOnlyPadding, maxWidthKind: SOURCE_ACTION.maxWidthKind, responseHeight: SOURCE_ACTION.responseHeight, leadingSlot: SOURCE_ACTION.leadingSlot, responsiveStatusWidth: SOURCE_ACTION.responsiveStatusWidth };
 }
 const SOURCE_COMPACT: ReaderButtonSpec = copyReaderButtonSpec();
 SOURCE_COMPACT.text = TYPE_SOURCE_TOOLS_COMPACT_ACTION;
@@ -188,7 +196,57 @@ SOURCE_MANAGEMENT_MANAGE.maxLines = 1; SOURCE_MANAGEMENT_MANAGE.disabledOpacity 
 SOURCE_MANAGEMENT_MANAGE.secondarySurface = 'TOK_SURFACE_SOLID'; SOURCE_MANAGEMENT_MANAGE.secondaryBorder = 'app.SourceManagementPage.SEARCH_FIELD_BORDER';
 SOURCE_MANAGEMENT_MANAGE.secondaryText = 'TOK_INK';
 
+// Remaining actual Search/Discover/Sync actions retain their authored tuples.
+function bareReaderButton(text: ReaderTextStyle | ReaderInheritedTextStyle): ReaderButtonSpec {
+  const spec = copyReaderButtonSpec(); spec.text = text; spec.height = undefined;
+  spec.radius = 0; spec.horizontalPadding = 0; spec.hasBorder = false; spec.hasSurface = false;
+  spec.outerRadius = false; spec.centerText = false; spec.disabledOpacity = 1; spec.secondaryText = 'TOK_MUTED'; return spec;
+}
+const SEARCH_FIELD_PHONE: ReaderButtonSpec = bareReaderButton(TYPE_SEARCH_FIELD_ACTION);
+SEARCH_FIELD_PHONE.stacked = true; SEARCH_FIELD_PHONE.height = 36; SEARCH_FIELD_PHONE.radius = 999;
+SEARCH_FIELD_PHONE.horizontalPadding = TOK_SPACE_CARD_PADDING; SEARCH_FIELD_PHONE.secondarySurface = 'app.action.fill';
+SEARCH_FIELD_PHONE.secondaryText = 'TOK_ON_PRIMARY'; SEARCH_FIELD_PHONE.disabledOpacity = 0.4;
+SEARCH_FIELD_PHONE.hasSurface = true; SEARCH_FIELD_PHONE.leadingSlot = true;
+const SEARCH_FIELD_WIDE: ReaderButtonSpec = bareReaderButton(TYPE_SEARCH_FIELD_ACTION_WIDE);
+SEARCH_FIELD_WIDE.stacked = true; SEARCH_FIELD_WIDE.height = 40; SEARCH_FIELD_WIDE.radius = 999;
+SEARCH_FIELD_WIDE.horizontalPadding = 18; SEARCH_FIELD_WIDE.secondarySurface = 'app.action.fill';
+SEARCH_FIELD_WIDE.secondaryText = 'TOK_ON_PRIMARY'; SEARCH_FIELD_WIDE.disabledOpacity = 0.4;
+SEARCH_FIELD_WIDE.hasSurface = true; SEARCH_FIELD_WIDE.leadingSlot = true;
+const SEARCH_HISTORY_CLEAR: ReaderButtonSpec = bareReaderButton(TYPE_APP_FILTER_OPTION);
+const SEARCH_HISTORY_KEYWORD: ReaderButtonSpec = bareReaderButton(TYPE_SEARCH_HISTORY_KEYWORD);
+SEARCH_HISTORY_KEYWORD.radius = 999; SEARCH_HISTORY_KEYWORD.horizontalPadding = 14.5; SEARCH_HISTORY_KEYWORD.verticalPadding = 7.5;
+SEARCH_HISTORY_KEYWORD.hasSurface = true; SEARCH_HISTORY_KEYWORD.hasBorder = true; SEARCH_HISTORY_KEYWORD.secondarySurface = 'TOK_CARD_BG';
+SEARCH_HISTORY_KEYWORD.secondaryBorder = 'TOK_BORDER'; SEARCH_HISTORY_KEYWORD.secondaryText = 'TOK_INK'; SEARCH_HISTORY_KEYWORD.maxLines = 1;
+SEARCH_HISTORY_KEYWORD.textEllipsis = true; SEARCH_HISTORY_KEYWORD.maxWidthKind = 'history'; SEARCH_HISTORY_KEYWORD.outerMargin = { right: TOK_SPACE_XS, bottom: TOK_SPACE_XS };
+const SEARCH_SCOPE: ReaderButtonSpec = bareReaderButton(TYPE_SEARCH_SCOPE_LABEL);
+SEARCH_SCOPE.selectedWeight = TYPE_SEARCH_SCOPE_SELECTED.fontWeight; SEARCH_SCOPE.radius = 999;
+SEARCH_SCOPE.horizontalPadding = 10; SEARCH_SCOPE.verticalPadding = 5.5; SEARCH_SCOPE.hasSurface = true; SEARCH_SCOPE.hasBorder = true;
+SEARCH_SCOPE.primarySurface = 'app.action.fill'; SEARCH_SCOPE.secondarySurface = 'TOK_PAPER'; SEARCH_SCOPE.primaryBorder = 'TOK_GREEN';
+SEARCH_SCOPE.secondaryBorder = 'TOK_BORDER'; SEARCH_SCOPE.secondaryText = 'TOK_INK'; SEARCH_SCOPE.maxLines = 1; SEARCH_SCOPE.textEllipsis = true; SEARCH_SCOPE.maxWidthKind = 'scope';
+const SEARCH_RETRY_STATUS: ReaderButtonSpec = bareReaderButton(TYPE_APP_INHERITED_BODY);
+const SEARCH_RETRY_STATUS_SPACED: ReaderButtonSpec = bareReaderButton(TYPE_APP_INHERITED_BODY);
+SEARCH_RETRY_STATUS_SPACED.outerMargin = { top: TOK_SPACE_CONTROL_INLINE };
+const SEARCH_RETRY_PROGRESS: ReaderButtonSpec = bareReaderButton(TYPE_SEARCH_PROGRESS_META);
+SEARCH_RETRY_PROGRESS.maxLines = 1; SEARCH_RETRY_PROGRESS.textEllipsis = true;
+const SEARCH_ERROR_RETRY: ReaderButtonSpec = bareReaderButton(TYPE_SEARCH_RETRY_ACTION);
+SEARCH_ERROR_RETRY.stacked = true; SEARCH_ERROR_RETRY.height = 40; SEARCH_ERROR_RETRY.radius = 999; SEARCH_ERROR_RETRY.horizontalPadding = 28;
+SEARCH_ERROR_RETRY.hasSurface = true; SEARCH_ERROR_RETRY.secondarySurface = 'app.action.fill'; SEARCH_ERROR_RETRY.secondaryText = 'TOK_ON_PRIMARY';
+SEARCH_ERROR_RETRY.outerMargin = { top: TOK_SPACE_LG }; SEARCH_ERROR_RETRY.responseOffset = -4; SEARCH_ERROR_RETRY.responseHeight = 48;
+const SEARCH_ERROR_SOURCE: ReaderButtonSpec = bareReaderButton(TYPE_APP_SECONDARY_ACTION);
+SEARCH_ERROR_SOURCE.radius = 999; SEARCH_ERROR_SOURCE.horizontalPadding = 18.5; SEARCH_ERROR_SOURCE.verticalPadding = 11.5;
+SEARCH_ERROR_SOURCE.hasSurface = true; SEARCH_ERROR_SOURCE.hasBorder = true; SEARCH_ERROR_SOURCE.secondarySurface = 'TOK_CARD_BG';
+SEARCH_ERROR_SOURCE.secondaryBorder = 'TOK_BORDER'; SEARCH_ERROR_SOURCE.outerMargin = { top: TOK_SPACE_CONTROL_INLINE }; SEARCH_ERROR_SOURCE.responseOffset = -4;
+const DISCOVER_CATEGORY: ReaderButtonSpec = bareReaderButton(TYPE_DISCOVER_CATEGORY);
+DISCOVER_CATEGORY.stacked = true; DISCOVER_CATEGORY.height = 32; DISCOVER_CATEGORY.radius = 999; DISCOVER_CATEGORY.horizontalPadding = TOK_SPACE_SM;
+DISCOVER_CATEGORY.hasSurface = true; DISCOVER_CATEGORY.maxLines = 1; DISCOVER_CATEGORY.primarySurface = 'app.action.fill';
+DISCOVER_CATEGORY.secondarySurface = 'app.DiscoverPage.CHIP_BG'; DISCOVER_CATEGORY.secondaryText = 'app.DiscoverPage.categoryChips.fontColor.FF3F372F';
+const SYNC_EMPTY_BACKUP: ReaderButtonSpec = bareReaderButton(TYPE_SYNC_BACKUP_ACTION);
+SYNC_EMPTY_BACKUP.centerText = true; SYNC_EMPTY_BACKUP.radius = 999; SYNC_EMPTY_BACKUP.verticalPadding = 9; SYNC_EMPTY_BACKUP.verticalOnlyPadding = true;
+SYNC_EMPTY_BACKUP.hasSurface = true; SYNC_EMPTY_BACKUP.secondarySurface = 'app.action.fill'; SYNC_EMPTY_BACKUP.secondaryText = 'TOK_ON_PRIMARY';
+SYNC_EMPTY_BACKUP.outerMargin = { bottom: TOK_SPACE_MD, left: TOK_SPACE_MD, right: TOK_SPACE_MD };
+
 const BUTTONS: Record<ReaderButtonSpecId, ReaderButtonSpec> = {
+  'search-field-phone': SEARCH_FIELD_PHONE, 'search-field-wide': SEARCH_FIELD_WIDE, 'search-history-clear': SEARCH_HISTORY_CLEAR, 'search-history-keyword': SEARCH_HISTORY_KEYWORD, 'search-scope': SEARCH_SCOPE, 'search-retry-status': SEARCH_RETRY_STATUS, 'search-retry-status-spaced': SEARCH_RETRY_STATUS_SPACED, 'search-retry-progress': SEARCH_RETRY_PROGRESS, 'search-error-retry': SEARCH_ERROR_RETRY, 'search-error-source': SEARCH_ERROR_SOURCE, 'discover-category': DISCOVER_CATEGORY, 'sync-empty-backup': SYNC_EMPTY_BACKUP,
   'source-action': SOURCE_ACTION, 'source-compact': SOURCE_COMPACT,
   'rules-action': RULES_ACTION, 'rules-compact': RULES_COMPACT, 'sync-action': SYNC_ACTION,
   'form-action': FORM_ACTION, 'form-busy-action': FORM_BUSY_ACTION, 'form-document-action': FORM_DOCUMENT_ACTION,

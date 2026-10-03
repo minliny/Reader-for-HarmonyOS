@@ -1987,6 +1987,710 @@
       "methodEdges": [],
       "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
       "nativeText": "新增书源"
+    },
+    {
+      "id": "foundation-tail-SearchPage-searchBar-0",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "searchBar",
+        "kind": "Text",
+        "text": "'停止'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "searchBar",
+      "specId": "search-field-phone",
+      "arguments": [],
+      "params": {
+        "presentation": {
+          "kind": "loading",
+          "history": [],
+          "operation": {
+            "canCancel": true
+          }
+        }
+      },
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "停止",
+      "specExpression": "this.isTablet ? 'search-field-wide' : 'search-field-phone'",
+      "cases": [
+        {
+          "params": {
+            "isTablet": false
+          },
+          "specId": "search-field-phone",
+          "role": "TYPE_SEARCH_FIELD_ACTION"
+        },
+        {
+          "params": {
+            "isTablet": true
+          },
+          "specId": "search-field-wide",
+          "role": "TYPE_SEARCH_FIELD_ACTION_WIDE"
+        }
+      ]
+    },
+    {
+      "id": "foundation-tail-SearchPage-searchBar-1",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "searchBar",
+        "kind": "Text",
+        "text": "'搜索'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "searchBar",
+      "specId": "search-field-phone",
+      "arguments": [],
+      "params": {
+        "presentation": {
+          "kind": "initial",
+          "history": [],
+          "operation": {
+            "canCancel": false
+          }
+        }
+      },
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "搜索",
+      "specExpression": "this.isTablet ? 'search-field-wide' : 'search-field-phone'",
+      "cases": [
+        {
+          "params": {
+            "isTablet": false
+          },
+          "specId": "search-field-phone",
+          "role": "TYPE_SEARCH_FIELD_ACTION"
+        },
+        {
+          "params": {
+            "isTablet": true
+          },
+          "specId": "search-field-wide",
+          "role": "TYPE_SEARCH_FIELD_ACTION_WIDE"
+        }
+      ]
+    },
+    {
+      "id": "foundation-tail-SearchPage-initialContent-3",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "initialContent",
+        "kind": "Text",
+        "text": "'清空记录'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "initialContent",
+      "specId": "search-history-clear",
+      "arguments": [],
+      "params": {},
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "清空记录"
+    },
+    {
+      "id": "foundation-tail-SearchPage-initialContent-4",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "initialContent",
+        "kind": "Text",
+        "text": "keyword"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "initialContent",
+      "specId": "search-history-keyword",
+      "arguments": [],
+      "params": {},
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "原历史"
+    },
+    {
+      "id": "foundation-tail-SearchPage-groupScopeChip-0",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "groupScopeChip",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "groupScopeChip",
+      "specId": "search-scope",
+      "arguments": [
+        "当前"
+      ],
+      "params": {},
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "当前",
+      "cases": [
+        {
+          "params": {
+            "selectedGroupName": "其他"
+          }
+        },
+        {
+          "params": {
+            "selectedGroupName": "当前"
+          }
+        }
+      ],
+      "expressionBindings": {
+        "label": "当前"
+      }
+    },
+    {
+      "id": "foundation-tail-SearchPage-resultsContent-3",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "resultsContent",
+        "kind": "Text",
+        "text": "this.partialSearchFailure()"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "resultsContent",
+      "specId": "search-retry-status",
+      "arguments": [],
+      "params": {
+        "presentation": {
+          "kind": "results",
+          "history": [],
+          "localSearchFailed": true,
+          "localSearchError": "原本地失败",
+          "failedSourceCount": 2,
+          "searching": false,
+          "completedSourceCount": 3,
+          "totalSourceCount": 7,
+          "results": [],
+          "operation": {
+            "canRetry": true,
+            "canCancel": false
+          }
+        }
+      },
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation"
+    },
+    {
+      "id": "foundation-tail-SearchPage-resultsContent-6",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "resultsContent",
+        "kind": "Text",
+        "text": "` · 失败 ${this.presentation.failedSourceCount} 个书源${!this.presentation.searching || this.presentation.completedSourceCount === this.presentation.totalSourceCount ? '，重试' : ''}`"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "resultsContent",
+      "specId": "search-retry-progress",
+      "arguments": [],
+      "params": {
+        "presentation": {
+          "kind": "results",
+          "results": [],
+          "failedSourceCount": 2,
+          "searching": false,
+          "operation": {
+            "canRetry": true,
+            "canCancel": false
+          }
+        }
+      },
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation"
+    },
+    {
+      "id": "foundation-tail-SearchPage-emptyContent-2",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "emptyContent",
+        "kind": "Text",
+        "text": "this.partialSearchFailure()"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "emptyContent",
+      "specId": "search-retry-status-spaced",
+      "arguments": [
+        "原关键词",
+        7
+      ],
+      "params": {
+        "presentation": {
+          "kind": "empty",
+          "history": [],
+          "localSearchFailed": true,
+          "localSearchError": "原本地失败",
+          "failedSourceCount": 2,
+          "searching": false,
+          "completedSourceCount": 3,
+          "totalSourceCount": 7,
+          "results": [],
+          "operation": {
+            "canRetry": true,
+            "canCancel": false
+          }
+        }
+      },
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation"
+    },
+    {
+      "id": "foundation-tail-SearchPage-errorContent-2",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "errorContent",
+        "kind": "Text",
+        "text": "'重新搜索'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "errorContent",
+      "specId": "search-error-retry",
+      "arguments": [
+        7
+      ],
+      "params": {},
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "重新搜索"
+    },
+    {
+      "id": "foundation-tail-SearchPage-errorContent-3",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "errorContent",
+        "kind": "Text",
+        "text": "'检查书源'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "errorContent",
+      "specId": "search-error-source",
+      "arguments": [
+        7
+      ],
+      "params": {},
+      "requiredMethods": [
+        "searchFailureTitle",
+        "searchFailureMessage",
+        "isStoppedEmpty",
+        "searchActionLeading",
+        "operation",
+        "retryOperation",
+        "isSweeping",
+        "canSubmit",
+        "submitSearch",
+        "scopeSourceIds",
+        "selectGroup",
+        "refreshVisibleResults",
+        "publishVisibleGroups",
+        "groupNames",
+        "groupScopeRow",
+        "groupScopeChip",
+        "searchHeaderHeight",
+        "searchBottomInset",
+        "partialSearchFailure",
+        "primaryPill",
+        "secondaryPill",
+        "suggestion"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "检查书源"
+    },
+    {
+      "id": "foundation-tail-DiscoverPage-categoryChips-0",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/discover/DiscoverPage.ets",
+        "method": "categoryChips",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "categoryChips",
+      "specId": "discover-category",
+      "arguments": [],
+      "params": {
+        "presentation": {
+          "kinds": [
+            {
+              "title": "分类一"
+            }
+          ],
+          "activeKindIndex": 0
+        }
+      },
+      "requiredMethods": [
+        "currentFilterText",
+        "kindTitles"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "分类一"
+    },
+    {
+      "id": "foundation-tail-DiscoverPage-filterRow-2",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/discover/DiscoverPage.ets",
+        "method": "filterRow",
+        "kind": "Text",
+        "text": "'应用'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderLabeledIconAction",
+      "module": "../common/ReaderLabeledIconAction",
+      "bindingMethod": "filterRow",
+      "specId": "discover-apply",
+      "arguments": [],
+      "params": {
+        "presentation": {
+          "kinds": [],
+          "filter": "最新"
+        }
+      },
+      "requiredMethods": [
+        "currentFilterText",
+        "kindTitles"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "应用"
+    },
+    {
+      "id": "foundation-tail-SyncPage-emptyState-1",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/sync/SyncPage.ets",
+        "method": "emptyState",
+        "kind": "Text",
+        "text": "'立即备份'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "emptyState",
+      "specId": "sync-empty-backup",
+      "arguments": [],
+      "params": {},
+      "requiredMethods": [
+        "canMutate"
+      ],
+      "tailFamily": true,
+      "proof": "test-foundation-search-discover-sync.mjs actual frozen/full production parent SDK, finite native modifier/tuple/AUTO and propagation",
+      "nativeText": "立即备份"
     }
   ]
 }
