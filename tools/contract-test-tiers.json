@@ -364,6 +364,7 @@
     "test-reader-layout-pagination-owners.mjs",
     "test-reader-local-image-core-contract.mjs",
     "test-reader-local-reverse-page.mjs",
+    "test-reader-lre-rules-authority.mjs",
     "test-reader-measurement-prefix.mjs",
     "test-reader-module-selection.mjs",
     "test-reader-more-popup.mjs",
