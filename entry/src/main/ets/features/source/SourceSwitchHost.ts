@@ -9,7 +9,7 @@ import { RemoteReadingFlowGateway, type RemoteReadingBookSeed, type RemoteReadin
 import { remoteReadingFailureKindOf } from '../reading/RemoteContentAdmission';
 import type { RemoteReadingIdentity } from '../reading/RemoteReadingContract';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
-import type { SourceSwitchPanelState } from './SourceSwitchWindow';
+import type { SourceSwitchPanelState } from './SourceSwitchPresentationState';
 import { buildSourceSwitchCommitParams, sourceSwitchCandidateKey, SourceSwitchGateway,
   type PendingSourceSwitch, type SourceSwitchCandidate, type SourceSwitchCommitOutcome,
   type SourceSwitchProbeQuery } from './SourceSwitchGateway';

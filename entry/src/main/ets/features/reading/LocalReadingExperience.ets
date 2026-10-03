@@ -211,7 +211,7 @@ import type {
 import type { ReaderReplacePreview } from './ReaderReplaceQuickGateway';
 import { RulesMutationOwner } from '../settings/RulesMutationOwner';
 import { ReaderControlReplaceGateway, ReaderControlReplaceGatewayError } from './ReaderControlReplaceGateway';
-import { createReaderControlReplaceState, beginReaderControlReplaceLoad, admitReaderControlReplaceLoad,
+import { copyReaderControlReplaceState, createReaderControlReplaceState, beginReaderControlReplaceLoad, admitReaderControlReplaceLoad,
   beginReaderControlReplaceMutation, admitReaderControlReplaceRule, admitReaderControlReplaceDeletion,
   settleReaderControlReplaceOriginal,
   admitReaderControlReplaceImport, failReaderControlReplaceRequest, readerControlReplaceTicket,
@@ -378,6 +378,8 @@ export class ReadingCommit {
   locationRevision: string | undefined;
   updatedAt: number;
   sourceSwitchTransactionId: string | undefined;
+  bodyVersion: string | undefined;
+  processingVersion: string | undefined;
 
   constructor(
     sourceId: string,
@@ -388,6 +390,8 @@ export class ReadingCommit {
     locationRevision: string | undefined,
     updatedAt: number = 0,
     sourceSwitchTransactionId: string | undefined = undefined,
+    bodyVersion: string | undefined = undefined,
+    processingVersion: string | undefined = undefined,
   ) {
     this.sourceId = sourceId;
     this.bookId = bookId;
@@ -397,6 +401,8 @@ export class ReadingCommit {
     this.locationRevision = locationRevision;
     this.updatedAt = updatedAt;
     this.sourceSwitchTransactionId = sourceSwitchTransactionId;
+    this.bodyVersion = bodyVersion;
+    this.processingVersion = processingVersion;
   }
 }
 
@@ -6334,7 +6340,7 @@ export struct ReadingExperience {
       newerSample: (intent: ReaderProgressProducerIntent): boolean => capturedIntent === intent &&
         this.chapter === capturedChapter && this.continuousProgressRevision !== capturedRevision,
       completed: (): void => this.onAutoPagePageCommitted(),
-      settled: (): void => this.drainRapidPageTurn(),
+      settled: (): void => { this.drainRapidPageTurn(); },
       failed: (error: Error): void => hilog.error(0x5244, 'Reader', '%{private}s',
         `ReadingExperience continuous progress commit failed: ${this.errorMessage(error)}`),
     };
@@ -6362,6 +6368,8 @@ export struct ReadingExperience {
       stored.locationRevision,
       stored.updatedAt,
       stored.sourceSwitchTransactionId,
+      stored.bodyVersion,
+      stored.processingVersion,
     );
     this.lastCommittedProgress = commit;
     try {
@@ -10106,8 +10114,10 @@ export struct ReadingExperience {
 
   private projectReaderReplaceWriteFacts(): void {
     const fact = this.rulesMutationOwner.snapshot();
-    this.controlReplaceState = { ...this.controlReplaceState, writeBlocked: fact.blocked || fact.busy,
-      recoveryLabel: fact.canRetryOriginal ? '重试已保留的原规则操作' : '核对原规则操作' };
+    const projected = copyReaderControlReplaceState(this.controlReplaceState);
+    projected.writeBlocked = fact.blocked || fact.busy;
+    projected.recoveryLabel = fact.canRetryOriginal ? '重试已保留的原规则操作' : '核对原规则操作';
+    this.controlReplaceState = projected;
     if (fact.confirmation === 'unknown') {
       this.controlReplaceState = failReaderControlReplaceRequest(this.controlReplaceState,
         readerControlReplaceTicket(this.controlReplaceState),
@@ -10116,8 +10126,10 @@ export struct ReadingExperience {
       this.controlReplaceState = settleReaderControlReplaceOriginal(this.controlReplaceState, fact.operationId);
     }
     if (!this.controlReplaceState.writeUncertain) {
-      this.controlReplaceState = { ...this.controlReplaceState, writeOperationId: fact.blocked ? fact.operationId : undefined,
-        errorMessage: fact.blocked ? fact.message : this.controlReplaceState.errorMessage };
+      const settled = copyReaderControlReplaceState(this.controlReplaceState);
+      settled.writeOperationId = fact.blocked ? fact.operationId : undefined;
+      settled.errorMessage = fact.blocked ? fact.message : this.controlReplaceState.errorMessage;
+      this.controlReplaceState = settled;
     }
   }
 

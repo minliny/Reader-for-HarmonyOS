@@ -56,7 +56,7 @@ export function orderedReaderControlReplaceRules(rules: ReaderReplaceRule[]): Re
   return ordered.sort((a: ReaderReplaceRule, b: ReaderReplaceRule): number => a.order - b.order || a.id - b.id);
 }
 
-function copyState(state: ReaderControlReplaceState): ReaderControlReplaceState {
+export function copyReaderControlReplaceState(state: ReaderControlReplaceState): ReaderControlReplaceState {
   return { sessionKey: state.sessionKey, defaultScope: state.defaultScope, revision: state.revision, status: state.status,
     rules: state.rules, mutationPending: state.mutationPending,
     errorMessage: state.errorMessage, writeUncertain: state.writeUncertain,
@@ -75,7 +75,7 @@ export function readerControlReplaceTicketCurrent(state: ReaderControlReplaceSta
 
 export function beginReaderControlReplaceLoad(state: ReaderControlReplaceState): ReaderControlReplaceState {
   if (state.mutationPending) throw new Error('替换规则正在保存，请等待完成');
-  const next = copyState(state);
+  const next = copyReaderControlReplaceState(state);
   next.revision += 1;
   next.status = 'loading';
   next.errorMessage = state.writeUncertain ? state.errorMessage : '';
@@ -85,7 +85,7 @@ export function beginReaderControlReplaceLoad(state: ReaderControlReplaceState):
 export function admitReaderControlReplaceLoad(state: ReaderControlReplaceState,
   ticket: ReaderControlReplaceTicket, rules: ReaderReplaceRule[]): ReaderControlReplaceState {
   if (!readerControlReplaceTicketCurrent(state, ticket) || state.mutationPending) return state;
-  const next = copyState(state);
+  const next = copyReaderControlReplaceState(state);
   next.rules = orderedReaderControlReplaceRules(rules);
   next.status = 'ready';
   next.errorMessage = state.writeUncertain ? state.errorMessage : '';
@@ -100,7 +100,7 @@ export function beginReaderControlReplaceMutation(state: ReaderControlReplaceSta
   if (state.mutationPending || state.writeBlocked || state.writeUncertain || state.canonicalReloadRequired || state.status !== 'ready') {
     throw new Error('请先完成或重新核对当前替换规则操作');
   }
-  const next = copyState(state);
+  const next = copyReaderControlReplaceState(state);
   next.revision += 1; // Invalidates every older list read too.
   next.mutationPending = true;
   next.errorMessage = '';
@@ -125,7 +125,7 @@ export function admitReaderControlReplaceDeletion(state: ReaderControlReplaceSta
 export function admitReaderControlReplaceImport(state: ReaderControlReplaceState,
   ticket: ReaderControlReplaceTicket): ReaderControlReplaceState {
   if (!readerControlReplaceTicketCurrent(state, ticket)) return state;
-  const next = copyState(state);
+  const next = copyReaderControlReplaceState(state);
   next.mutationPending = false;
   next.status = 'idle';
   next.errorMessage = '';
@@ -135,7 +135,7 @@ export function admitReaderControlReplaceImport(state: ReaderControlReplaceState
 }
 
 function admitMutation(state: ReaderControlReplaceState, rules: ReaderReplaceRule[]): ReaderControlReplaceState {
-  const next = copyState(state);
+  const next = copyReaderControlReplaceState(state);
   next.rules = orderedReaderControlReplaceRules(rules);
   next.mutationPending = false;
   next.status = 'ready';
@@ -148,7 +148,7 @@ export function failReaderControlReplaceRequest(state: ReaderControlReplaceState
   ticket: ReaderControlReplaceTicket, message: string, writeUncertain: boolean = false,
   operationId?: string): ReaderControlReplaceState {
   if (!readerControlReplaceTicketCurrent(state, ticket)) return state;
-  const next = copyState(state);
+  const next = copyReaderControlReplaceState(state);
   next.mutationPending = false;
   next.status = state.rules.length > 0 && !writeUncertain && !state.writeUncertain &&
     !state.canonicalReloadRequired ? 'ready' : 'error';
@@ -163,7 +163,7 @@ export function failReaderControlReplaceRequest(state: ReaderControlReplaceState
 export function settleReaderControlReplaceOriginal(state: ReaderControlReplaceState,
   operationId: string | undefined): ReaderControlReplaceState {
   if (!state.writeUncertain || operationId === undefined || state.writeOperationId !== operationId) return state;
-  const next = copyState(state);
+  const next = copyReaderControlReplaceState(state);
   next.writeUncertain = false; next.writeOperationId = undefined;
   next.canonicalReloadRequired = true; next.errorMessage = ''; return next;
 }

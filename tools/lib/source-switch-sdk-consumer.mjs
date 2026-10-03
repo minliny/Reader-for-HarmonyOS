@@ -1,3 +1,4 @@
+import {actualBookshelfOperationTypes,actualBookshelfHostField} from './bookshelf-operation-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
@@ -50,6 +51,8 @@ export function makeIndex(f,{navigation=1,reading=false,cacheAuthority}={}){
    openRemoteBookDetail(seed,name,_shelf,resume,_candidates,_names,parent,validated){this.effects.push({seed,name,resume,parent,validated});},
    reopenSwitchedBook(book){this.effects.push({reopen:book});},returnToReadingOrigin(){this.route=this.readingOriginRoute;},
    isKnownDetailChapter:n=>index.detailToc.some(e=>e.index===n)});
+ const shelfTypes=actualBookshelfOperationTypes({ReaderRuntimeOwner:Runtime});
+ index.bookshelfHost=actualBookshelfHostField(index,shelfTypes.Host,{setOrCreate(){}});
  const acquire=f.runtime.bookAcquisitions;f.runtime.bookAcquisitions=()=>({...acquire(),readingProjectionRevision:()=>0,setPreparationVisible(){}});
  const mount=()=>{index.sourceSwitchOverlayContent();return p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchPanel).at(-1);};
  const rows=()=>p.walk(index).filter(x=>x instanceof leafDeps.CandidateRow);

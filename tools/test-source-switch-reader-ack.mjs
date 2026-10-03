@@ -34,6 +34,7 @@ for(const atomic of [false,true]){
   await f.gateway.updateProgress('book',{...anchor,locationRevision:'canonical'});
  assert.equal(stored.sourceSwitchTransactionId,'original');assert.equal(f.gateway.hasPendingSourceSwitch(),false);
  f.owner.admitCommittedProgress(stored);assert.equal(f.callbacks[0].sourceSwitchTransactionId,'original');
+ assert.equal(f.callbacks[0].bodyVersion,'body');assert.equal(f.callbacks[0].processingVersion,'processing','committed origin keeps actual canonical content proof');
  assert.notEqual(f.callbacks[0].sourceSwitchTransactionId,f.owner.sourceSwitchTransactionId,'no live prop lookup');
  const ordinary=await f.gateway.updateProgress('book',{...anchor,locationRevision:'canonical'});assert.equal(ordinary.sourceSwitchTransactionId,undefined);
  f.owner.admitCommittedProgress(ordinary);assert.equal(f.callbacks.at(-1).sourceSwitchTransactionId,undefined,'later ordinary ACK is not a repeated finalization receipt');

@@ -1,3 +1,4 @@
+import {actualBookshelfOperationTypes,actualBookshelfHostField} from './bookshelf-operation-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
@@ -45,6 +46,9 @@ export function makeIndex(f,{route='search',mount=1,indexSource=read('pages/Inde
    consumeSystemFileOpen(){},isRemoteCatalogNearEnd:()=>false,refreshRemoteCatalogNearEnd(){},
    getUIContext:()=>({showAlertDialog(options){f.notices.push(options);f.nativeAlert=options;}}),
    searchAcquisitionCandidate:row=>({seed:row,catalogReady:false,failed:false})});
+ const shelfRuntime={current:()=>f.runtime,isCurrent:owner=>owner===f.runtime&&!f.runtime.closed};
+ const shelfTypes=actualBookshelfOperationTypes({ReaderRuntimeOwner:shelfRuntime});
+ idx.bookshelfHost=actualBookshelfHostField(idx,shelfTypes.Host,{setOrCreate(){}});
  const owner=()=>ProductionHost.forRuntime(f.runtime);
  const render=()=>{idx.detailContent();return p.walk(idx).filter(c=>c instanceof leaf).at(-1);};
  return{p,idx,owner,render,leaf};
