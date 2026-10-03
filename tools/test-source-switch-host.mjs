@@ -141,6 +141,14 @@ function fixture(options={},productionSource=hostSource) {
 const checks=[];
 const TX='00000000-0000-4000-8000-000000000001';
 {
+  const f=fixture();await settle();const owner=f.Constructor.forRuntime(f.runtime);
+  assert.equal(f.Constructor.forRuntime(f.runtime),owner,'Index remount shares one actual feature owner');
+  const successor={...f.runtime};currentRuntime=successor;const next=f.Constructor.forRuntime(successor);
+  assert.notEqual(next,owner);assert.throws(()=>f.Constructor.forRuntime(f.runtime),error=>error.kind==='pending');
+  assert.equal(f.Constructor.forRuntime(successor),next,'old Runtime must never replace successor cache');
+  checks.push('feature-local-exact-Runtime-shared-owner-remount-and-retired-refusal');
+}
+{
   const f=fixture();await settle();assert.equal(f.host.current().state.kind,'candidates');
   await f.host.pick(f.candidate(),f.host.current().scopeId);
   assert.equal(f.host.current().write.confirmation,'confirmed');assert.equal(f.host.current().pending.transactionId,TX);

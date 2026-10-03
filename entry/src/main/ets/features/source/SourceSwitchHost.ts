@@ -66,6 +66,7 @@ export interface SourceSwitchLease {
  * UI retirement stops delivery/acquisition. Accepted durable writes retain
  * their ACK/unknown fact; a matching shelf or pending list is never an ACK. */
 export class SourceSwitchHost {
+  private static shared: SourceSwitchHost | undefined;
   private readonly runtime: ReaderRuntimeOwner;
   private readonly gateway: SourceSwitchGateway;
   private readonly shelf: ReaderCoreGateway;
@@ -90,6 +91,17 @@ export class SourceSwitchHost {
     this.gateway = new SourceSwitchGateway(runtime);
     this.shelf = new ReaderCoreGateway(runtime);
     this.intents = new SourceSwitchIntentStore(runtime, this.gateway);
+  }
+
+  /** One finite feature owner survives Index remounts for this exact Runtime.
+   * A retired Runtime cannot evict a successor or borrow its pending work. */
+  static forRuntime(runtime: ReaderRuntimeOwner = ReaderRuntimeOwner.current()): SourceSwitchHost {
+    if (!ReaderRuntimeOwner.isCurrent(runtime)) throw new SourceSwitchIntentRecoveryError('pending', '换源服务已退役，请使用当前服务核对');
+    if (SourceSwitchHost.shared?.owns(runtime) !== true) {
+      SourceSwitchHost.shared?.retire();
+      SourceSwitchHost.shared = new SourceSwitchHost(runtime);
+    }
+    return SourceSwitchHost.shared;
   }
 
   current(): SourceSwitchSnapshot { return this.snapshot; }
@@ -250,7 +262,7 @@ export class SourceSwitchHost {
         // ACK establishes Core acceptance. Query provides the actual retained
         // lineage/phase needed to persist and retire this Host intent safely.
         await this.recoverIntent(false, false);
-      if (this.fixedIntent !== undefined) return;
+        if (this.fixedIntent !== undefined) return;
         if (!admitted()) return;
         this.hide(); this.deliver({ kind: 'targetReady', book: outcome.book, session: toc.readingSession,
           chapterIndex: outcome.matchedChapter.order });
