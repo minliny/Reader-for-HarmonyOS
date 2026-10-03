@@ -10,12 +10,13 @@ registerHooks({ resolve(specifier, context, nextResolve) {
     throw error;
   }
 } });
-const { RulesMutationOwner } = await import('../entry/src/main/ets/features/settings/RulesMutationOwner.ts');
+const { readerReplaceSdkFixture, compileReaderReplaceSdkMethods, untilReaderReplaceSdk, mountReaderReplaceRecoveryActor } = await import('./lib/reader-replace-legacy-sdk-probe.mjs');
+const actualSdk = await readerReplaceSdkFixture();
+const RulesMutationOwner = actualSdk.Owner;
 let activeRuntime;
 const statePolicy = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
 const quickPolicy = await import('../entry/src/main/ets/features/reading/ReaderReplaceQuickState.ts');
-const { ReaderControlReplaceGatewayError } =
-  await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGateway.ts');
+const ReaderControlReplaceGatewayError = actualSdk.FullError;
 const { copyReaderControlSessionState } =
   await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
 const {readerControlHostClosing}=await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
@@ -46,11 +47,10 @@ const deps = { ReaderRuntimeOwner: { current: () => activeRuntime }, ...statePol
   ReaderWindowCoordinator: { metrics: () => ({}) }, readerControlKeyboardVisible: () => false,
   hideReaderControlKeyboard: () => { throw Error('unexpected keyboard work'); },
 };
-function Host(mutate = code => code) {
+function Host(mutate = code => code, sdk = actualSdk) {
   const code = mutate(names.map(method).join('\n'));
-  return new Function(...Object.keys(deps),
-    stripTypeScriptTypes('class ReplaceHostProbe {' + code + '}') + ';return ReplaceHostProbe;')(
-      ...Object.values(deps));
+  return compileReaderReplaceSdkMethods('features/reading/LocalReadingExperience.methods.ts', 'ReplaceHostProbe', { ...deps, ReaderControlReplaceGatewayError: sdk.FullError }, true,
+    'export class ReplaceHostProbe {' + code + '}');
 }
 const rule = (id, enabled = true) => ({ id, order: id, name: '规则' + id, pattern: 'old', replacement: 'new',
   group: '', scope: '', excludeScope: '', scopeTitle: false, scopeSource: false, scopeContent: true,
@@ -61,10 +61,11 @@ function ready(key, rows) {
 }
 function deferred() { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; });
   return { promise, resolve, reject }; }
-function owner(Type = Host()) {
+function owner(Type = Host(), sdk = actualSdk) {
   const host = new Type();
-  const runtime = {}; activeRuntime = runtime;
-  Object.assign(host, { replaceRuntime: runtime, rulesMutationOwner: RulesMutationOwner.forRuntime(runtime) });
+  const runtime = sdk === actualSdk ? { getUIAbilityContext: () => ({ filesDir: sdk.files }) } : sdk.runtime;
+  activeRuntime = runtime; sdk.install(runtime);
+  Object.assign(host, { replaceRuntime: runtime, rulesMutationOwner: sdk.Owner.forRuntime(runtime) });
   Object.assign(host, { sourceId: 'source', bookId: 'book', lifecycleToken: 1, mounted: true,
     exitRequested: false, visible: true, page: 'quickReplace', replacePanelGeneration: 1,
     replaceMutationGeneration: 0, replaceMutationActiveGeneration: -1,
@@ -91,7 +92,7 @@ function owner(Type = Host()) {
       this.page = page; this.controlSession.location = { level: 'secondary', module: 'replace' };
       this.onControlSessionChanged();
     },
-    replaceGateway: { loadRules: async () => { host.loadCalls++; return [rule(1), rule(2)]; } },
+    replaceGateway: sdk === actualSdk ? Object.assign(new sdk.Full(runtime), { loadRules: async () => { host.loadCalls++; return [rule(1), rule(2)]; } }) : new sdk.Full(runtime),
   });
   return host;
 }
@@ -219,6 +220,9 @@ for (const operation of ['save', 'delete']) {
   const reads = [oldRead, newRead];
   host.replaceGateway.loadRules = async () => reads.shift().promise;
   const old = host.reloadControlReplace();
+  // Preserve the original overlapping-read ordering after the real owner has
+  // completed its bounded journal read; no mutation mutex is bypassed.
+  await untilReaderReplaceSdk(() => reads.length === 1);
   const recent = host.reloadControlReplace();
   newRead.resolve([rule(1)]); await recent;
   await host.runControlReplaceMutation(1, async () => ({ rule: rule(1, false), changed: true, needsReload: false }));
@@ -265,5 +269,53 @@ for (const operation of ['save', 'delete']) {
   assert.equal(host.replaceMutationActiveGeneration, nextGeneration);
   assert.deepEqual(host.controlReplaceState.rules.map(r => r.id), [9]);
   assert.equal(host.reloadBookCalls, 0);
+}
+// The historical Promise/lifecycle matrix above remains intact. Qualify its
+// current exact-recovery carrier with complete production Owner/Gateway and
+// real cold SQLite IO, including null-query versus original accepted payload.
+for (const phase of ['beforeMethod', 'afterMethod']) {
+  const f = await readerReplaceSdkFixture();
+  const seed = { ...rule(1) }; delete seed.id;
+  await f.command('replace.persist', { operation: 'create', params: seed });
+  const h = owner(Host(code => code, f), f); await h.reloadControlReplace();
+  const draft = statePolicy.createReaderControlReplaceDraft(h.controlReplaceState.rules[0]);
+  draft.name = 'exact-original-' + phase;
+  f.options[phase] = 'rules.mutation.apply';
+  await assert.rejects(h.runControlReplaceMutation(1, current => h.replaceGateway.save(draft, current)),
+    e => e.writeUncertain === true);
+  const original = JSON.parse(f.disk());
+  assert.equal(h.controlReplaceState.writeUncertain, true);
+  assert.equal(h.controlReplaceState.writeOperationId, original.operationId);
+  f.retire();
+  const cold = await readerReplaceSdkFixture(f), rebuilt = owner(Host(code => code, cold), cold);
+  await rebuilt.reloadControlReplace();
+  assert.equal(cold.writes().length, 0, 'cold reconciliation is only exact query and readonly projection');
+  if (phase === 'beforeMethod') {
+    assert.equal(rebuilt.controlReplaceState.writeUncertain, true, 'matching current list cannot prove original nonexecution');
+    assert.equal(cold.owner.snapshot().canRetryOriginal, true);
+    await assert.rejects(rebuilt.runControlReplaceMutation(1, () => cold.Full.prototype.save.call(rebuilt.replaceGateway, draft)),
+      error => error.message === cold.owner.snapshot().message);
+    const before = cold.calls.length;
+    await rebuilt.reloadControlReplace(true, 'retired-other-intent');
+    assert.equal(cold.calls.length, before, 'retained old recovery rejects another exact identity before any RPC');
+    const recovery = await mountReaderReplaceRecoveryActor({ state: rebuilt.controlReplaceState, draft, layer: 'editor',
+      onReload: id => rebuilt.reloadControlReplace(true, id) });
+    const physicalAction = [...recovery.nodes.values()].find(n => n.type === 'Text');
+    assert.equal(physicalAction.create, '重试已保留的原规则操作');
+    physicalAction.onClick();
+    await untilReaderReplaceSdk(() => !recovery.localPending);
+    assert.equal(recovery.localError, '');
+    assert.strictEqual(recovery.draft, draft); assert.equal(recovery.layer, 'editor');
+    recovery.state = rebuilt.controlReplaceState;
+    physicalAction.onClick(); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(cold.writes().length, 1, 'settled old physical recovery cannot reapply the original write');
+    assert.deepEqual(cold.writes()[0].params, { operationId: original.operationId, sequence: original.sequence, mutation: original.mutation },
+      'explicit continuation sends the same immutable accepted content, sequence and ID');
+  }
+  assert.equal(rebuilt.controlReplaceState.writeUncertain, false);
+  assert.equal(rebuilt.controlReplaceState.status, 'ready');
+  assert.equal(rebuilt.controlReplaceState.rules[0].name, draft.name);
+  assert.equal(cold.owner.snapshot().confirmation, 'confirmed');
+  assert.equal(cold.disk(), '', 'local intent clears only after exact receipt and AtomicFile ACK');
 }
 console.log('PASS Replace Host actual methods: reopen/import canonical read, stale reads, write ownership, uncertainty and Promise rejection; NOT device acceptance');

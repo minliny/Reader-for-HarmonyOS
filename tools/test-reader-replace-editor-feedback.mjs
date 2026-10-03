@@ -9,7 +9,7 @@ import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThem
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
   if((specifier.startsWith('./')||specifier.startsWith('../'))&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
 const state = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
-const { readerControlReplaceDraftParams } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGateway.ts');
+const { readerControlReplaceDraftParams } = await import('./lib/reader-replace-legacy-sdk-probe.mjs');
 const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts');
 const typographySource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
 const rulesTypography = new Function(...Object.keys(fontFamilies), `${stripTypeScriptTypes(typographySource)
@@ -32,7 +32,7 @@ await check('actual TextInput uses explicit compact geometry and live app-theme 
   owner.appThemeScheme='day';owner.replay();assert.equal(input.fontColor,readerAppColor('TOK_READ_INK','day'));
 });
 await check('actual editor has distinct back and fixed bottom save/cancel outside scrolling fields',()=>{
-  const members=['temporaryOverlay','temporaryTitle','temporaryHeader','temporaryLeading','temporaryAccessory','temporaryActions','temporaryBody','textAction','editorFields','editorText','editorFlag','previewContent',
+  const members=['temporaryOverlay','temporaryTitle','temporaryHeader','temporaryLeading','temporaryAccessory','temporaryActions','temporaryBody','originalRecoveryAction','textAction','editorFields','editorText','editorFlag','previewContent',
     ...(source.includes('private editorActions(')?['editorActions']:[])];
   const composition=boundedSurfaceSdk(),owner=composition.consumer(source,members);
   Object.assign(owner,{layer:'editor',draft:state.createReaderControlReplaceDraft(),state:ready(),appThemeScheme:'night',
