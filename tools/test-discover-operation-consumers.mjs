@@ -73,6 +73,9 @@ function wholePage(f) {
  const original=f.owner,current=wholePage(f),oldAction=current.actions().at(-1);assert.ok(oldAction);
  const oldProps=f.props(),oldIdentity=f.index.discoverPresentationIdentity,newer=fixture(f.r);assert.equal(newer.owner,original);
  assert.deepEqual(newer.p(),f.p(),'actual shared owner publishes the same source/kind/receipt after new Index construction');
+ assert.equal(f.index.getDiscoverOrchestrator(), original, 'old still-mounted getter returns original shared owner without reattaching');
+ assert.equal(original.isPresentationCurrent(newer.index.discoverPresentationIdentity), true, 'old alive getter cannot steal the successor attachment');
+ assert.equal(original.isPresentationCurrent(oldIdentity), false);
  const before=f.r.calls.length;oldAction.onClick();oldProps.onRefresh();oldProps.onSelectKind(1);await f.settle();
  assert.equal(f.r.calls.length,before,'old ordinary/native callback cannot borrow the successor attach');
  f.owner.detachPresentation(oldIdentity);const live=wholePage(newer);live.actions().at(-1).onClick();live.actions().at(-1).onClick();await newer.settle();
@@ -103,6 +106,16 @@ function wholePage(f) {
  const f=fixture(rpc(),mutation);await f.open();f.r.fail='source.explore';f.owner.refresh();await f.settle();
  const old=wholePage(f),fresh=fixture(f.r),before=f.r.calls.length;
  old.actions().at(-1).onClick();await fresh.settle();assert.equal(f.r.calls.length,before+1,'negative control proves actual Index guard prevents borrowing the successor owner');
+}
+{
+ const original=source('pages/Index.ets');
+ const mutation=original.replace('if (this.discoverOrchestrator !== host || this.discoverPresentationIdentity !== identity) {', 'if (true) {');
+ assert.notEqual(mutation,original);
+ const old=fixture(rpc(),mutation);await old.open();const fresh=fixture(old.r,mutation);
+ assert.equal(old.owner.isPresentationCurrent(fresh.index.discoverPresentationIdentity),true);
+ old.index.getDiscoverOrchestrator();
+ assert.equal(old.owner.isPresentationCurrent(fresh.index.discoverPresentationIdentity),false,'unconditional-attach negative control proves old alive getter steals successor');
+ assert.equal(old.owner.isPresentationCurrent(old.index.discoverPresentationIdentity),true);
 }
 const Direct=productionMotionMethods(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url),['requestDirect'],{
  DEFAULT_CORE_REQUEST_TIMEOUT_MS:15000,coreAdmissionFailureSummary:()=>undefined,httpResponseFailureSummary:()=>undefined,hilog:{warn(){}}});
