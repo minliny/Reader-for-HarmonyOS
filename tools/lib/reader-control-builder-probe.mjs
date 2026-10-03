@@ -43,6 +43,14 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const childSource = readFileSync(new URL('../../entry/src/main/ets/features/reading/ReaderControlSwitchTrack.ets', import.meta.url), 'utf8');
   syntax.componentCollection.customComponents.add(childName);
   syntax.propCollection.set(childName, new Set([...childSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
+  const recoveryChildren = ['ReaderRecoveryAction', 'ReaderRecoveryNotice'];
+  for (const name of recoveryChildren) {
+    const child = new URL(`../../entry/src/main/ets/features/common/${name}.ets`, import.meta.url);
+    if (!existsSync(child)) continue;
+    const definition = readFileSync(child, 'utf8');
+    syntax.componentCollection.customComponents.add(name);
+    syntax.propCollection.set(name, new Set([...definition.matchAll(/@Prop\s+(\w+)\s*:/g)].map(match => match[1])));
+  }
   for (const [name, child] of Object.entries(hooks.childSources ?? {})) {
     syntax.componentCollection.customComponents.add(name);
     syntax.propCollection.set(name, new Set([...child.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
@@ -153,7 +161,8 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   // Geometry/property probes do not register physical platform fonts. The
   // actual registrar has a separate demand/failure/retry test.
   const globals = { readerRegisteredFontFamily: (_font, family) => family,
-    readerFontFamilyReady: () => true, readerAppColor, readerThemeDefinition, ViewPU, ReaderControlSwitchTrack: Child, $r: value => value,
+    readerFontFamilyReady: () => true, readerAppColor, readerThemeDefinition, ViewPU, ReaderControlSwitchTrack: Child,
+    ...Object.fromEntries(recoveryChildren.map(name => [name, Child])), $r: value => value,
     ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Path', 'Text', 'TextInput', 'TextArea', 'Select', 'Span', 'Marquee', 'Image', 'Slider', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
     ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment',
