@@ -177,6 +177,7 @@
     "test-settings-cache-cleanup.mjs",
     "test-settings-host-wiring.mjs",
     "test-signing-authority.mjs",
+    "test-bookshelf-management-typography.mjs",
     "test-source-check-progress.mjs",
     "test-source-host-wiring.mjs",
     "test-source-management-typography.mjs",

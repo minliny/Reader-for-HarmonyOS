@@ -152,6 +152,34 @@ export const TYPE_SOURCE_SWITCH_CHAPTER = new ReaderTextStyle(
 export const TYPE_SOURCE_MANAGEMENT_META = new ReaderTextStyle(
   READER_FONT_NOTO_SANS_SC, 400, 10, 12.5, undefined, 'system', 'figmaNode');
 
+// The bookshelf-management surface is a real product page rather than a
+// diagnostic view. Keep its existing tuples in named roles so the page no
+// longer owns a second set of physical font literals. Roles remain separate
+// where the current line box, family or weight differs; introducing this
+// contract must not change the baseline UI before the later visual pass.
+export const TYPE_SHELF_MANAGEMENT_NOTE = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 400, 10, 16, undefined, 'system', 'figmaNode');
+export const TYPE_SHELF_MANAGEMENT_STATUS = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 400, 12, 18, undefined, 'system', 'figmaNode');
+export const TYPE_SHELF_MANAGEMENT_BODY = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 400, 12, undefined, undefined, 'system', 'figmaNode');
+export const TYPE_SHELF_MANAGEMENT_BODY_MUTED = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 400, 11, undefined, undefined, 'system', 'figmaNode');
+export const TYPE_SHELF_MANAGEMENT_META = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 400, 10, undefined, undefined, 'system', 'figmaNode');
+export const TYPE_SHELF_MANAGEMENT_GROUP_TITLE = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 700, 13, undefined, undefined, 'system', 'figmaNode');
+export const TYPE_SHELF_MANAGEMENT_ROW_ACTION = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 400, 11, undefined, undefined, 'system', 'figmaNode');
+export const TYPE_SHELF_MANAGEMENT_BOOK_TITLE = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 700, 12, undefined, undefined, 'system', 'figmaNode');
+export const TYPE_SHELF_MANAGEMENT_HEADING = new ReaderTextStyle(
+  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 16, undefined, undefined, 'system', 'figmaNode');
+export const TYPE_SHELF_MANAGEMENT_BUTTON = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 700, 12, undefined, undefined, 'system', 'figmaNode');
+export const TYPE_SHELF_MANAGEMENT_SMALL_ACTION = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 400, 10, undefined, undefined, 'system', 'figmaNode');
+
 // Immersive page chrome. These roles currently share the Figma
 // `Reader/ImmersiveMeta` tuple, but remain separate semantic contracts so a
 // later design change to time, progress, or page ordinal does not couple the
