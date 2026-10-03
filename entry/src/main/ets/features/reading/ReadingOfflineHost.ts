@@ -331,7 +331,10 @@ export class ReadingOfflineHost {
       totalChapters: session.entries.filter(entry => entry.navigable !== false && entry.url.trim().length > 0).length,
       completedChapters: entries.filter(entry => entry.navigable !== false && entry.downloadState === 'completed').length,
       cachedChapters: entries.filter(entry => entry.navigable !== false && entry.downloadState === 'cached').length,
-      failedChapters: entries.filter(entry => entry.navigable !== false && entry.downloadState === 'failed').length,
+      // A readable cached body and a failed image/materialization step overlap.
+      // Canonical row availability cannot erase the same operation's failures.
+      failedChapters: Math.max(previous?.failedChapters ?? 0,
+        entries.filter(entry => entry.navigable !== false && entry.downloadState === 'failed').length),
       firstFailure: previous?.firstFailure, entries };
   }
 

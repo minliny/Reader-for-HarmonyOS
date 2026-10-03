@@ -3,16 +3,17 @@ import { registerHooks } from 'node:module';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if((s.startsWith('./')||s.startsWith('../'))&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 const {ReadingOfflineHost}=await import(process.env.READER_READING_OWNER_SDK === '1' ? './lib/reader-reading-owner-sdk-probe.mjs' : '../entry/src/main/ets/features/reading/ReadingOfflineHost.ts');
 const {ReadingOfflineGateway}=await import('../entry/src/main/ets/features/reading/ReadingOfflineGateway.ts');
+const {ReadingOfflineMaterializationError}=await import('../entry/src/main/ets/features/reading/ReadingOfflineContract.ts');
 const clone=structuredClone,tick=()=>new Promise(r=>setImmediate(r));
 const defer=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolve:()=>resolve()};};
 function fixture(){let route=true,owner=true,entries=[{index:0,title:'Chapter',level:2,downloadState:'missing',bookmarks:[{time:4}]}];const delivered=[];
  const session={acquisitionMode:'online',identity:{sourceId:'source',bookId:'book'},detailUrl:'/detail',tocUrl:'/toc',book:{title:'Book',author:'Author'},continuationVariables:[],entries:[{index:0,title:'Chapter',url:'/chapter',variables:[]}],hostRequirements:[]};
- const rpc={calls:[],state:'missing',bytes:0,pause:undefined,lost:false,cleanupFail:false,readFail:false,manifest:false,async request(method,p,options={}){
+ const rpc={calls:[],state:'missing',bytes:0,lastError:undefined,pause:undefined,lost:false,cleanupFail:false,readFail:false,manifest:false,async request(method,p,options={}){
   this.calls.push({method,p:clone(p),options});
-  if(method==='cache.book.status'){if(this.readFail)throw Error('status unavailable');return{data:{sourceId:'source',bookId:'book',tocAvailable:true,chapters:[{chapterIndex:0,title:'Chapter',url:'/chapter',state:this.state,cachedBytes:this.bytes}]}};}
+  if(method==='cache.book.status'){if(this.readFail)throw Error('status unavailable');return{data:{sourceId:'source',bookId:'book',tocAvailable:true,chapters:[{chapterIndex:0,title:'Chapter',url:'/chapter',state:this.state,cachedBytes:this.bytes,lastError:this.lastError}]}};}
   if(method==='cache.book.prefetch'){assert.equal(options.shouldCancel,undefined,'manual queue ACK cannot be cancelled by route after dispatch');if(this.pause)await this.pause.promise;this.state='inProgress';this.bytes=4;if(this.lost)throw Error('lost queue ACK');return{data:{sourceId:'source',bookId:'book',chapterRange:p.chapterRange,chapterCount:1,prefetchedCount:1,materializations:[{chapterIndex:0,token:'token'}]}};}
   if(method==='chapter.content')return{data:{sourceId:'source',bookId:'book',chapterTitle:'Chapter',content:'text only',via:'cache'}};
-  if(method==='cache.chapter.materialization.report'){assert.equal(options.shouldCancel,undefined);this.state=p.outcome;return{data:{sourceId:'source',bookId:'book',chapterIndex:0,state:p.outcome,retainedCachedBody:true}};}
+  if(method==='cache.chapter.materialization.report'){assert.equal(options.shouldCancel,undefined);this.state=p.outcome;this.lastError=p.errorCode;return{data:{sourceId:'source',bookId:'book',chapterIndex:0,state:p.outcome,retainedCachedBody:true}};}
   if(method==='cache.clear'){assert.equal(options.shouldCancel,undefined);if(this.pause)await this.pause.promise;this.state='missing';this.bytes=0;if(this.lost)throw Error('lost clear ACK');return{data:{scope:'book'}};}
   throw Error(method);
  },supportsCoreCapability:c=>c==='chapter.content.cacheOnly.v1',async markOfflineImageChapterComplete(){this.manifest=true;},async isOfflineImageChapterComplete(){return this.manifest;},async clearOfflineBookImages(){this.calls.push({method:'host.clearImages'});if(this.cleanupFail)throw Error('image cleanup failed');this.manifest=false;}};
@@ -46,5 +47,13 @@ for(const action of ['downloadChapter','clearBook'])for(const retire of ['retire
  const successor=fixture();assert.notEqual(successor.host,f.host);
  assert.equal(ReadingOfflineHost.forRuntime(f.rpc,()=>false),undefined,'retired lookup cannot replace successor cached owner');
  assert.equal(ReadingOfflineHost.forRuntime(successor.rpc,()=>true),successor.host);
+}
+{
+ const f=fixture();f.rpc.markOfflineImageChapterComplete=async()=>{throw new ReadingOfflineMaterializationError('storage_full','存储空间不足');};
+ await f.host.downloadBook(f.binding);
+ assert.equal(f.entries()[0].downloadState,'cached','readable durable body survives its failed materialization');
+ assert.equal(f.host.snapshot().progress.completedChapters,0);assert.equal(f.host.snapshot().progress.cachedChapters,1);
+ assert.equal(f.host.snapshot().progress.failedChapters,1,'final availability merge retains same-operation failures');
+ assert.match(f.host.snapshot().progress.firstFailure.reason,/存储空间不足/);
 }
 console.log('PASS actual ReadingOfflineGateway -> ReadingOfflineHost: queue ACK/materialization/cleanup separation, cached partials, unknown pure reads, mutex, session retirement, terminal lease report and runtime-unset');
