@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
+let diagnosticFails = false;
 const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
-  ['finishExit'], { hilog: { warn() {} } });
+  ['finishExit'], { hilog: { warn() { if (diagnosticFails) throw Error('diagnostic unavailable'); } } });
 
 function fixture() {
   let failed = true;
@@ -23,7 +24,8 @@ function fixture() {
   return { owner, events, recover() { failed = false; } };
 }
 
-{
+for (const failedDiagnostic of [false, true]) {
+  diagnosticFails = failedDiagnostic;
   const f = fixture();
   f.owner.getUIContext = () => ({ showAlertDialog() { throw Error('native UI unavailable'); } });
   await f.owner.finishExit(1);
@@ -35,6 +37,7 @@ function fixture() {
   await f.owner.finishExit(1);
   assert.deepEqual(f.events, ['cancel-destination', 'resume-clock', 'exit']);
 }
+diagnosticFails = false;
 for (const decision of ['primary', 'secondary', 'cancel']) {
   const f = fixture(); let native;
   f.owner.getUIContext = () => ({ showAlertDialog(options) { native = options; } });

@@ -1877,9 +1877,11 @@ export struct ReadingExperience {
         spec, options, (): boolean => this.isMountedToken(lifecycle) && this.isSelectionCurrent(selection) && this.isReaderIdentityCurrent?.() !== false);
     } catch (error) {
       // A failed native notice never rewrites a durable progress/content fact.
-      hilog.warn(0x5244, 'Reader', 'Native Alert presentation failed: %{private}s', (error as Error).message);
       const unavailable = new ReaderNativeAlertLease((): boolean => false);
       unavailable.nativeFailed();
+      try {
+        hilog.warn(0x5244, 'Reader', 'Native Alert presentation failed: %{private}s', (error as Error).message);
+      } catch (_diagnosticError) {}
       return unavailable;
     }
   }
