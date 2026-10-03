@@ -195,7 +195,6 @@
     "test-source-host-wiring.mjs",
     "test-source-management-typography.mjs",
     "test-source-product-tools.mjs",
-    "test-source-runtime-owner-closure.mjs",
     "test-source-selection-and-rss-projection.mjs",
     "test-source-switch-transaction.mjs",
     "test-source-switch-typography.mjs",
