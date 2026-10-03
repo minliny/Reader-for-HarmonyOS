@@ -18,6 +18,9 @@ const featureRoot = path.join(root, 'entry/src/main/ets');
 const sharedContract = JSON.parse(fs.readFileSync(path.join(root, 'tools/fixtures/architecture-shared-producers.json'), 'utf8'));
 const inventory = JSON.parse(execFileSync(process.execPath, ['tools/audit-architecture-consumers.mjs', '--stdout=json'], { cwd: root, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] }));
 const coverage = verifyArchitectureRegistration(inventory, baseline, sharedContract, root);
+const actualDialogCalls = new Map(inventory.rows.map(row => [
+  `entry/src/main/ets/${row.file}`, row.overlays.filter(call => call.kind === 'CustomDialogController').length,
+]));
 const patterns = {
   fontSize: /\.fontSize\s*\(/g,
   backgroundColor: /\.backgroundColor\s*\(/g,
@@ -49,7 +52,12 @@ for (const file of walk(featureRoot)) {
     // against legacy budgets and rejected newly honest feedback surfaces.
     const current = name === 'fontSize' && /\.fontSize\s*\(/.test(text)
       ? countPrivateTypographyCalls(text, rel)
-      : name === 'fontSize' ? 0 : (text.match(pattern) ?? []).length;
+      : name === 'fontSize' ? 0
+        // The installed SDK AST counts actual native controller construction,
+        // excluding type annotations, comments and diagnostic strings. Keep
+        // the original budget; adding a type must not count as a new overlay.
+        : name === 'CustomDialogController' ? (actualDialogCalls.get(rel) ?? 0)
+          : (text.match(pattern) ?? []).length;
     if (current > (previous[name] ?? 0)) {
       violations.push(`${rel}: ${name} ${current} > baseline ${previous[name] ?? 0}`);
     }
