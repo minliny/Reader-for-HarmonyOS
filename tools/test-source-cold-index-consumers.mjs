@@ -132,6 +132,9 @@ for(const retired of ['nav','mount','route','runtime','unmount']){
 }
 {
  const f=await fixture();await f.source.importBookSourceDocument(document,f.current);const a=index(f,'sourceTools',1);a.open();await a.settled();a.host.setSelection([id]);
+ a.params().onDeleteSelected([id]);const canceled=a.alerts.at(-1),beforeCancel=f.writes().length;
+ assert.ok(canceled?.primaryButton);canceled.primaryButton.action();await a.settled();
+ assert.equal(f.writes().length,beforeCancel,'native cancellation performs no deletion');
  a.params().onDeleteSelected([id]);const old=a.alerts.at(-1);assert.ok(old?.secondaryButton);
  const b=index(f,'sourceTools',2),writes=f.writes().length;old.secondaryButton.action();await b.settled();
  assert.equal(f.writes().length,writes,'old native confirmation cannot borrow successor Tools lease at same Runtime/nav');

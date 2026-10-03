@@ -145,7 +145,8 @@ assert.match(index, /onCheckSelected:[^\n]*host\?\.checkSelected\(sourceIds\)/);
 assert.doesNotMatch(index, /onCheckSelected:[^\n]*consumeSelection/,
   'starting a check keeps the owner canonical selected scope visible');
 assert.match(index, /onExportAll:[^\n]*host\?\.exportAll\(\)/);
-assert.match(index, /this\.requestSourceDelete\(sourceIds, host\)/);
+assert.match(index, /onDeleteSelected:[^\n]*isCurrentSourceToolsPresentation\(generation, owner, mounting, host, identity\)[^\n]*this\.requestSourceDelete\(sourceIds, host, identity\)/,
+  'delete confirmation carries the exact Tools attachment; the production cold-consumer test exercises cancel, stale and live callbacks');
 assert.match(index, /getSourceToolsOrchestrator\(\)\.open\(this\.sourceSources\)/);
 assert.doesNotMatch(index, /private (?:selectAllSourceTools|toggleSourceToolsSelection|consumeSourceToolsSelection)/);
 assert.match(index, /showIndexAlert\('confirmation-cancelable',[\s\S]*确定删除所选/);
