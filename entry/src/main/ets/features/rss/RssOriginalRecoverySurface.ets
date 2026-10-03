@@ -7,6 +7,8 @@ interface RssRecoveryActionIdentity {
   presentationIdentity: string;
   scope: 'management' | 'editor' | 'entry' | 'feed';
   original: RssOriginalMutationProjection;
+  subscriptionId: string;
+  guid: string;
 }
 
 /** One finite RSS recovery presentation. Only the original domain owner may
@@ -16,6 +18,8 @@ interface RssRecoveryActionIdentity {
 export struct RssOriginalRecoverySurface {
   @Prop original: RssOriginalMutationProjection | undefined = undefined;
   @Prop presentationIdentity: string = '';
+  @Prop subscriptionId: string = '';
+  @Prop guid: string = '';
   @Prop scope: 'management' | 'editor' | 'entry' | 'feed' = 'management';
   onReconcileOriginal: (expected: RssOriginalMutationIdentity) => void = (_expected: RssOriginalMutationIdentity): void => {};
   onContinueOriginal: (expected: RssOriginalMutationIdentity) => void = (_expected: RssOriginalMutationIdentity): void => {};
@@ -28,7 +32,8 @@ export struct RssOriginalRecoverySurface {
   }
   private identities(): string[] {
     if (this.original?.blocked !== true) return [];
-    const identity: RssRecoveryActionIdentity = { presentationIdentity: this.presentationIdentity, scope: this.scope, original: this.original };
+    const identity: RssRecoveryActionIdentity = { presentationIdentity: this.presentationIdentity, scope: this.scope, original: this.original,
+      subscriptionId: this.subscriptionId, guid: this.guid };
     return [JSON.stringify(identity)];
   }
   private actionIdentity(identity: string): RssRecoveryActionIdentity {
@@ -39,7 +44,9 @@ export struct RssOriginalRecoverySurface {
   }
   private qualified(identity: string): boolean {
     const captured = this.actionIdentity(identity);
-    return captured.scope !== 'feed' && captured.original.scope === captured.scope &&
+    const entityMatches = captured.scope === 'management' || (captured.original.subscriptionId === captured.subscriptionId &&
+      (captured.scope !== 'entry' || captured.original.guid === captured.guid));
+    return entityMatches && captured.scope !== 'feed' && captured.original.scope === captured.scope &&
       captured.original.canRetryOriginal && captured.original.operationId.length > 0;
   }
   private continuationLabel(identity: string): string {

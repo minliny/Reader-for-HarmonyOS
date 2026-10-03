@@ -1,18 +1,18 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {fixture,seedEntry} from './lib/rss-management-durable-probe.mjs';
+import {fixture,seedEntry,draft} from './lib/rss-management-durable-probe.mjs';
 import {boundedSurfaceSdk,boundedMembers} from './lib/bounded-surface-sdk-probe.mjs';
 const source=readFileSync(new URL('../entry/src/main/ets/features/rss/RssOriginalRecoverySurface.ets',import.meta.url),'utf8');
-async function pending(){
- const warm=await fixture();await seedEntry(warm);warm.options.beforeMethod='rules.mutation.apply';await assert.rejects(warm.rss.updateSubscriptionEnabled('s',false));
+async function pending(kind='management'){
+ const warm=await fixture();await seedEntry(warm);warm.options.beforeMethod='rules.mutation.apply';await assert.rejects(kind==='entry'?warm.rss.persistFavorite('s','g',10):kind==='editor'?warm.rss.createSubscription(draft(301)):warm.rss.updateSubscriptionEnabled('s',false));
  const original=JSON.parse(warm.disk());warm.retire();const f=await fixture(warm);await f.rss.recoverOriginalRss(f.current);return{f,original,projection:f.rss.originalMutationSnapshot()};
 }
 function surface(projection,handlers={},scope='management'){
  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
- const owner=sdk.consumer(source,boundedMembers(source),{}, {original:projection,presentationIdentity:'page-a',scope,...handlers});owner.aboutToAppear();owner.initialRender();
+ const owner=sdk.consumer(source,boundedMembers(source),{}, {original:projection,presentationIdentity:'page-a',subscriptionId:projection.subscriptionId,guid:projection.guid,scope,...handlers});owner.aboutToAppear();owner.initialRender();
  const actions=()=>sdk.walk(owner).filter(c=>c instanceof sdk.deps.ReaderRecoveryAction);
  const action=label=>{const actor=actions().filter(c=>c.label===label).at(-1);assert.ok(actor,label);return{actor,click:sdk.nodes(actor).find(n=>n.onClick).onClick};};
- return{sdk,owner,actions,action,update(params){owner.updateStateVars(params);sdk.properties.flush();owner.replay();sdk.properties.flush();}};
+ return{sdk,owner,actions,action,update(params){owner.updateStateVars({original:owner.original,presentationIdentity:owner.presentationIdentity,scope:owner.scope,subscriptionId:owner.subscriptionId,guid:owner.guid,...params});sdk.properties.flush();owner.replay();sdk.properties.flush();}};
 }
 let cases=0;
 {
@@ -42,5 +42,11 @@ for(const state of ['busy','foreign','feed','unqualified','disappeared']){
  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});const owner=sdk.consumer(mutated,boundedMembers(mutated),{}, {original:projection,presentationIdentity:'page-a',scope:'management',onContinueOriginal:()=>attempts++});owner.aboutToAppear();owner.initialRender();
  const actor=sdk.walk(owner).filter(a=>a instanceof sdk.deps.ReaderRecoveryAction&&a.label==='继续原操作').at(-1),click=sdk.nodes(actor).find(n=>n.onClick).onClick;
  owner.aboutToDisappear();click();assert.equal(attempts,1,'negative control: removing the physical guard reproduces the retired write attempt');cases++;
+}
+for(const kind of ['entry','editor']){
+ const {projection}=await pending(kind);const v=surface(projection,{},kind);assert.ok(v.action('继续原操作'));
+ v.update({subscriptionId:'other'});assert.equal(v.actions().filter(a=>a.label==='继续原操作'&&a.actionEnabled).length,0,'other entity cannot borrow this original');
+ const wrong=surface(projection,{},kind);wrong.update({guid:kind==='entry'?'other':'',subscriptionId:kind==='editor'?'other':projection.subscriptionId});
+ assert.equal(wrong.actions().filter(a=>a.label==='继续原操作'&&a.actionEnabled).length,0);cases++;
 }
 console.log(`PASS RSS actual Core/Atomic original→decorated shared recovery→native physical event: ${cases} groups`);
