@@ -57,6 +57,10 @@ function fixture(){
     sourceSwitchState:{kind:'candidates',candidates:[candidate]},sourceSwitchVisible:true,
     shelfBooks:[book],remoteCatalogRefreshAt:new Map(),offlineMutationActiveKey:'',
     directoryBookmarkMutationGeneration:0,directoryBookmarkMutationActiveKey:'',
+    // Local search results now resolve sparse/offscreen shelf membership through
+    // the extracted BookshelfHost. Keep the harness on the same owner boundary
+    // instead of relying on the production-only ReaderCoreGateway injection.
+    bookshelfHost:{loadShelfBook:async()=>canonicalShelf},
     refreshBookshelf(){},
     nextNavigationGeneration(){return ++this.navigationGeneration;},
     isKnownDetailChapter:index=>index===11,
