@@ -54,7 +54,7 @@ export struct ReaderActionMenuSurface {
             .opacity(this.action(id).enabled || !this.spec().actionMutesContent ? 1 : 0.45);
         }
         Text(this.action(id).label)
-          .fontFamily(this.spec().actionFontFamily).fontWeight(FontWeight.Medium)
+          .fontFamily(this.spec().actionFontFamily).fontWeight(this.spec().actionFontWeight)
           .fontSize(this.spec().actionFontSize).lineHeight(this.spec().actionLineHeight)
           .fontColor(readerAppColor(!this.action(id).enabled && this.spec().actionMutesContent ?
             'TOK_MUTED' : this.spec().actionTextRole, this.scheme))

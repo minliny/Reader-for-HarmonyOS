@@ -37,7 +37,7 @@ export struct BookshelfBookActionSheet {
 
       Text('书籍操作')
         .fontFamily(this.surfaceSpec().titleFontFamily)
-        .fontWeight(FontWeight.Bold)
+        .fontWeight(this.surfaceSpec().titleFontWeight)
         .fontSize(this.surfaceSpec().titleFontSize)
         .lineHeight(this.surfaceSpec().titleLineHeight)
         .fontColor(readerAppColor(this.surfaceSpec().titleRole, this.appThemeScheme))
@@ -64,7 +64,7 @@ export struct BookshelfBookActionSheet {
       Row() {
         Text(label)
           .fontFamily(this.surfaceSpec().actionLabelFontFamily)
-          .fontWeight(FontWeight.Bold)
+          .fontWeight(this.surfaceSpec().actionLabelFontWeight)
           .fontSize(this.surfaceSpec().actionLabelFontSize)
           .lineHeight(this.surfaceSpec().actionLabelLineHeight)
           .fontColor(danger ? readerAppColor(this.surfaceSpec().dangerTextRole, this.appThemeScheme) : readerAppColor(this.surfaceSpec().actionTextRole, this.appThemeScheme))

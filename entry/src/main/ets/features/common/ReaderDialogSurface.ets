@@ -109,7 +109,7 @@ export struct ReaderDialogSurface {
       Row() {
         Text(this.title)
           .layoutWeight(1)
-          .fontFamily(this.spec().headerFontFamily).fontWeight(FontWeight.Bold)
+          .fontFamily(this.spec().headerFontFamily).fontWeight(this.spec().headerFontWeight)
           .fontSize(this.spec().headerFontSize).lineHeight(this.spec().headerLineHeight)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -126,7 +126,7 @@ export struct ReaderDialogSurface {
     } else {
       Text(this.title)
         .width('100%')
-        .fontFamily(this.spec().headerFontFamily).fontWeight(FontWeight.Bold)
+        .fontFamily(this.spec().headerFontFamily).fontWeight(this.spec().headerFontWeight)
         .fontSize(this.spec().headerFontSize).lineHeight(this.spec().headerLineHeight)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(this.spec().headerTextAlign);

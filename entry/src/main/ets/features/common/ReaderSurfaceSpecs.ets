@@ -59,6 +59,7 @@ export interface DialogSurfaceSpecInit {
 }
 
 export class DialogSurfaceSpec {
+  readonly headerFontWeight: number = 700;
   readonly maxWidth: number;
   readonly edgeGap: number;
   readonly widthPercent: number;
@@ -226,6 +227,8 @@ export interface SheetSurfaceSpecInit {
 }
 
 export class SheetSurfaceSpec {
+  readonly titleFontWeight: number = 700;
+  readonly actionLabelFontWeight: number = 700;
   readonly height: number;
   readonly horizontalInset: number;
   readonly handleWidth: number;
@@ -370,6 +373,7 @@ export interface PopupSurfaceSpecInit {
 }
 
 export class PopupSurfaceSpec {
+  readonly actionFontWeight: number = 500;
   readonly actionMutesContent: boolean;
   readonly height: number;
   readonly width: number;
