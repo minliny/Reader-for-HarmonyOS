@@ -1,6 +1,7 @@
 import fileIo from '@ohos.file.fs';
 import type { BusinessError } from '@ohos.base';
 import util from '@ohos.util';
+import { replaceReaderAtomicSnapshot } from '../../app/ReaderAtomicSnapshotFile';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { SourceSwitchGateway, type SourceSwitchCommitParams, type SourceSwitchTransactionProjection } from './SourceSwitchGateway';
 
@@ -163,24 +164,7 @@ export class SourceSwitchIntentStore {
    * finishWrite can have published before throwing: never call failWrite or
    * compensate once finish was invoked, and preserve the exact warm intent. */
   private async replace(raw: string): Promise<void> {
-    const path = this.path(), writer = new fileIo.AtomicFile(path);
-    let finishing = false;
-    try {
-      const stream = writer.startWrite();
-      await new Promise<void>((resolve: () => void, reject: (reason?: Error) => void): void => {
-        stream.on('error', (): void => reject(new Error('source switch intent stream write failed')));
-        stream.end(raw, 'utf-8', resolve);
-      });
-      finishing = true;
-      writer.finishWrite();
-      const base = await fileIo.open(path, fileIo.OpenMode.READ_WRITE);
-      try { await fileIo.fsync(base.fd); } finally { await fileIo.close(base); }
-      const parent = await fileIo.open(this.runtime.getUIAbilityContext().filesDir, fileIo.OpenMode.READ_ONLY);
-      try { await fileIo.fsync(parent.fd); } finally { await fileIo.close(parent); }
-    } catch (error) {
-      if (!finishing) { try { writer.failWrite(); } catch (_) {} }
-      throw error as Error;
-    }
+    await replaceReaderAtomicSnapshot(this.path(), this.runtime.getUIAbilityContext().filesDir, raw);
   }
   private sameIntent(left: SourceSwitchIntent, right: SourceSwitchIntent): boolean {
     return left.operationId === right.operationId && left.sequence === right.sequence &&

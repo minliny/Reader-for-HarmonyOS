@@ -41,3 +41,6 @@ Gateway, presented-progress, catalog-seam, source transaction, bounded Source/TT
 ## Rollback and data
 
 Revert Host and Index integration together; preserve intent file, Core head/journals and user data. Never delete authority to erase unknown. Old Core parser compatibility with new caller journal fields is not certified, so an old Native/HAP is not assumed safe rollback after caller writes. Gateway evidence/options and failure-state additions are additive; original reader/source/progress algorithms and physical tuples remain baseline.
+# Shared atomic IO adapter
+
+`ReaderAtomicSnapshotFile.replaceReaderAtomicSnapshot` now contains the existing platform AtomicFile/finish/base-fsync/parent-fsync implementation once. The source-switch intent retains its own original UUID/sequence/full DTO, warm/durable state, static IO tail, confirmation and admission. Other finite domain intent owners can consume this IO adapter without implementing another write engine. The actual full source-switch fault matrix executes this real helper; no model-only replacement was substituted. Its OS support and restart durability remain target questions.

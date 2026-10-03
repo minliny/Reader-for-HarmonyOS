@@ -62,8 +62,9 @@ function fixture(options={},productionSource=hostSource) {
       finishWrite(){disk.finishes++;disk.published=this.raw;if(options.loseFinishAck){options.loseFinishAck=false;throw Error('AtomicFile published but finish ACK lost');}}
       failWrite(){disk.failWrites++;}
     }};
+  const replaceReaderAtomicSnapshot=compile(read('app/ReaderAtomicSnapshotFile.ts'),'replaceReaderAtomicSnapshot',{fileIo});
   const intentClasses=compile(read('features/source/SourceSwitchIntentStore.ts'),'{SourceSwitchIntentStore,SourceSwitchIntentRecoveryError}',
-    {...common,SourceSwitchGateway:Gateway,util:{generateRandomUUID:()=> `00000000-0000-4000-8000-${String(++uuid).padStart(12,'0')}`},fileIo});
+    {...common,SourceSwitchGateway:Gateway,util:{generateRandomUUID:()=> `00000000-0000-4000-8000-${String(++uuid).padStart(12,'0')}`},fileIo,replaceReaderAtomicSnapshot});
   const ProductionHost=compile(productionSource,'SourceSwitchHost',{...common,...gatewayExports,SourceSwitchGateway:Gateway,
     ReaderCoreGateway:Core,ReadingSessionFlowGateway,RemoteReadingFlowGateway,...content,ReaderWriteEvidence,...intentClasses});
   const runtime={closed:false,getUIAbilityContext:()=>({filesDir:'/private-files'}), bookAcquisitions:()=>({sourceRegistryRevision:()=>1,
