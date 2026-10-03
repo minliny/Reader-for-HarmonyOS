@@ -1,5 +1,17 @@
 # Bounded form/modal shared structures
 
+## Current lane status
+
+| Assigned family | Production structure / code contract | Native / target evidence |
+|---|---|---|
+| SourceSwitchWindow + existing SourceSwitchPanel delegate | Shared real Frame/Header, lexical slots, live error state; composed SDK and old transaction/typography gates PASS | Native scheduling/focus/target OPEN |
+| TTS manager/picker/voice overlay | Shared real Frame/Header/actions; normal/compact original hosts and draft/generation/busy ownership; composed SDK and existing gates PASS | Native content-cover/keyboard/target OPEN |
+| Local import selection/progress/result | Shared real Frame/Header/actions + original measured transition owner; full SDK composition and Gateway→Index recovery chain PASS, same-key nonempty result refresh fixed | Native dynamic measurement/layout/focus/target OPEN |
+| Retained replace editor/delete/import-confirm/preview | Shared real Frame/Header/body/actions; persistent canonical list/morph and business owner retained; full SDK composition and real Host gates PASS | Native branch removal/layout/focus/target OPEN |
+| Root-owned book action sheet | This lane supplies its shared finite Frame/Header; root owns actual action list and bindSheet consumer | Acceptance is in root's evidence, not inferred here |
+
+All five assigned original files are accounted for. SourceSwitchPanel intentionally remains its thin unchanged delegate, preserving every callback/interface and opening no new entry. The later sections retain first-slice history to explain discoveries; this table is the current status. Integrated ArkTS/HAP/device, typography global gates and visual/user acceptance are root-owned separate exits.
+
 ## Immutable baseline and ownership
 
 Host baseline `d6adb8833d530e19141dc3ff506dc055dc8feec7`; isolated branch `codex/p5-bounded-forms-20261003`. `bounded-form-baseline/AST_BASELINE.json` records the actual installed SDK ETS AST, immutable source hashes, declarations/decorators and 199 native node records for all five assigned files. Reproduce with `node tools/audit-bounded-form-families.mjs`; this is source evidence, not pixels.
@@ -63,3 +75,11 @@ The private temporary frame, header-title and footer implementations have been d
 `test-bounded-replace-composition.mjs` compiles the complete original owner with actual SDK properties and real shared children. It proves exact frame/header/footer tuple, live text input and draft, busy click/back/cancel guards, failed validation retains the original draft, unknown receipt blocks replay, same frame updates bounds/title, and late save versus a replaced book/opening. Close/reopen and all noneditor layers are exercised; the original canonical rule Text remains singular and identical across full→quick→full morph and same-key canonical data replacement. Shared action mutation affects the actual editor while the named TTS family stays unchanged. Missing Header or leading lexical binding is a failing negative control. Parent fixtures pass all Props explicitly, matching ReaderControlPanel's actual caller, rather than manufacturing a first-update default-watch edge.
 
 The previous editor SDK regressions now mount the real shared structures and retain save/failure/back/no-write/unknown/endpoints checks. Existing real Host/Quick/morph-scroll tests pass unchanged. This closes this lane's four retained form consumers at code/contract level; it does not simulate native branch removal, scheduling, keyboard/focus, pixels or target/user acceptance. Root exclusively closes the separate book-sheet caller/native host, global typography mapping and integrated source/ArkTS gates.
+
+## Nonempty result-state follow-up
+
+Completing the empty-batch handoff proof exposed another real retained-Builder gap in the existing result body: ForEach identity includes filename/state/index, while a same-failed-state detail or same-success-state disposition can still change. The row captured the first DTO, and its nested badge captured the first primitive label/color. `currentResultItem` now admits the current DTO only for the original filename/state/index identity; retained row and badge Builders read live getters. Removed identities only finish their old paint, with no action or persistence authority. The original key, geometry, fonts, content and durability owner are unchanged.
+
+The full SDK probe now executes nonempty retained failed and success rows: same native failure Text updates its detail/code-derived badge, and same native success badge updates created→existing disposition. A source mutation that returns the first snapshot is rejected by the same test. Unknown command confirmation is still supplied only by the existing business receipt owner; these rendering getters do not synthesize ACKs. Nine related directed gates and immutable baseline audit pass.
+
+Rollback boundaries are the reviewable commits: common Source/TTS compatibility and action structure; local import structures; retained replace structures; then the bounded live-result projection correction. They contain no Index, root strict typography carrier mapping, ReaderTypography, native/VM/HAP change or existing tool-helper mutation. The new dedicated SDK-composition helper is confined to test plumbing; original SDK runtime/Builder helpers remain unchanged.

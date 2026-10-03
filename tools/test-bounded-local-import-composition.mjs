@@ -64,7 +64,18 @@ function mount(params={},options={},input=source,viewportHeight=0){
   o.updateStateVars({...props(o),reduceMotion:true});p.properties.flush();assert.equal(o.spinnerRunning,false);
   o.foreground=false;assert.equal(o.spinnerRunning,false);o.aboutToDisappear();
 }
-// Original business lifecycle methods remain byte-identical; the real SDK
+{
+  const first={fileName:'same.txt',state:'failed',failure:{code:'recoveryPending',message:'first ACK unknown'}};
+  const {p,o}=mount({state:'result',batch:{items:[first],imported:0}});
+  const message=p.nodes(o).find(n=>n.create==='first ACK unknown'),badge=p.nodes(o).find(n=>n.create==='待确认');assert.ok(message&&badge);const messageId=message.id,badgeId=badge.id;
+  o.updateStateVars({...props(o),batch:{items:[{...first,failure:{code:'validation',message:'current failure detail'}}],imported:0}});p.properties.flush();
+  assert.equal(message.create,'current failure detail','same ForEach key must read latest failure DTO');assert.equal(badge.create,'失败','nested badge must use current primitive projection');assert.equal(message.id,messageId);assert.equal(badge.id,badgeId);
+  const success=mount({state:'result',batch:{items:[{fileName:'same.txt',state:'success',disposition:'created'}],imported:1}}),successBadge=success.p.nodes(success.o).find(n=>n.create==='新增成功');
+  success.o.updateStateVars({...props(success.o),batch:{items:[{fileName:'same.txt',state:'success',disposition:'existing'}],imported:1}});success.p.properties.flush();assert.equal(successBadge.create,'已在书架');
+  assert.throws(()=>{const bad=mount({state:'result',batch:{items:[first],imported:0}}, {},source.replace('this.currentResultItem(item, index)','item'));const text=bad.p.nodes(bad.o).find(n=>n.create==='first ACK unknown');bad.o.updateStateVars({...props(bad.o),batch:{items:[{...first,failure:{code:'validation',message:'new failure'}}],imported:0}});bad.p.properties.flush();assert.equal(text.create,'new failure','current same-key DTO');},/current same-key DTO/);
+}
+// Original business lifecycle methods remain byte-identical; only result DTO
+// projection changed to live getters for retained same-key rows. the real SDK
 // structures now consume them instead of privately repainting their frame.
 assert.doesNotMatch(source,/\.shadow\(\{ radius: 50/);assert.doesNotMatch(source,/\.backgroundColor\(readerAppColor\(this\.surfaceSpec\(\)\.backgroundRole/);
 assert.throws(()=>mount({}, {},source.replace('body: (): void => { this.fileSelectionBody(); }','body: this.fileSelectionBody')),/state|fileSelectionBody|bind/,'old unbound slot is detected by composed probe');

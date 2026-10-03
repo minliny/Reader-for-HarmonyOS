@@ -387,7 +387,8 @@ export struct LocalImportDialog {
   private resultItemsNatural() {
     Column() {
       ForEach(this.resultItems(), (item: LocalImportItem, index: number): void => {
-        this.resultItem(item, index !== this.resultItems().length - 1);
+        this.resultItem((): LocalImportItem => this.currentResultItem(item, index),
+          (): boolean => index !== this.resultItems().length - 1);
       }, (item: LocalImportItem, index: number): string => `${item.fileName}-${item.state}-${index}`);
     }.width('100%').onAreaChange((_old: Area, next: Area): void => {
       this.measuredItemsHeight = this.numericAreaLength(next.height);
@@ -397,7 +398,7 @@ export struct LocalImportDialog {
   }
 
   @Builder
-  private resultItem(item: LocalImportItem, hasDivider: boolean) {
+  private resultItem(item: () => LocalImportItem, hasDivider: () => boolean) {
     Column({ space: 0 }) {
       Row({ space: TOK_SPACE_SM }) {
         Stack({ alignContent: Alignment.Center }) {
@@ -408,7 +409,7 @@ export struct LocalImportDialog {
         .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
         .borderRadius(8);
         Column({ space: 3 }) {
-          Text(item.fileName)
+          Text(item().fileName)
             .width('100%')
             .fontFamily(TYPE_FILE_IMPORT_NAME.fontFamily)
             .fontWeight(TYPE_FILE_IMPORT_NAME.fontWeight)
@@ -417,16 +418,16 @@ export struct LocalImportDialog {
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
-          this.resultBadge(item.state === 'success' ?
-            (item.disposition === 'created' ? '新增成功' : item.disposition === 'existing' ? '已在书架' : '成功') :
-            (item.failure?.code === 'recoveryPending' ? '待确认' : '失败'), item.state === 'success' ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.LocalImportDialog.resultItem.resultBadge.FF5A4A2A', this.appThemeScheme));
-          if (item.failure !== undefined) {
-            Text(item.failure.message).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(2).width('100%');
+          this.resultBadge((): string => item().state === 'success' ?
+            (item().disposition === 'created' ? '新增成功' : item().disposition === 'existing' ? '已在书架' : '成功') :
+            (item().failure?.code === 'recoveryPending' ? '待确认' : '失败'), (): string => item().state === 'success' ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.LocalImportDialog.resultItem.resultBadge.FF5A4A2A', this.appThemeScheme));
+          if (item().failure !== undefined) {
+            Text(item().failure.message).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(2).width('100%');
           }
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start);
-        if (item.state === 'success') {
+        if (item().state === 'success') {
           Image((this.appThemeScheme === 'night' ? $r('app.media.import_success_theme_night') : $r('app.media.import_success'))).width(17).height(17);
         } else {
           Image($r('app.media.import_failure')).width(17).height(17);
@@ -436,7 +437,7 @@ export struct LocalImportDialog {
       .constraintSize({ minHeight: 61 })
       .padding({ left: TOK_SPACE_MD, right: TOK_SPACE_MD, top: TOK_SPACE_CONTROL_INLINE, bottom: 11 })
       .alignItems(VerticalAlign.Center);
-      if (hasDivider) {
+      if (hasDivider()) {
         Divider()
           .width('100%')
           .color(readerAppColor('app.LocalImportDialog.resultItem.color.FFE8E2D9', this.appThemeScheme))
@@ -447,8 +448,8 @@ export struct LocalImportDialog {
   }
 
   @Builder
-  private resultBadge(label: string, color: string) {
-    Text(label)
+  private resultBadge(label: () => string, color: () => string) {
+    Text(label())
       .fontFamily(TYPE_FILE_IMPORT_BADGE.fontFamily)
       .fontWeight(TYPE_FILE_IMPORT_BADGE.fontWeight)
       .fontSize(TYPE_FILE_IMPORT_BADGE.fontSizeFp)
@@ -456,7 +457,7 @@ export struct LocalImportDialog {
       .letterSpacing(TYPE_FILE_IMPORT_BADGE.letterSpacingFp as number)
       .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
       .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-      .backgroundColor(color)
+      .backgroundColor(color())
       .borderRadius(4);
   }
 
@@ -476,6 +477,13 @@ export struct LocalImportDialog {
 
   private resultItems(): LocalImportItem[] {
     return this.batch === undefined ? [] : this.batch.items;
+  }
+
+  /** Stable ForEach identity keeps its current DTO, rather than the first
+   * same-name/state snapshot. Removed identities only finish their old paint. */
+  private currentResultItem(snapshot: LocalImportItem, index: number): LocalImportItem {
+    const current = this.resultItems()[index];
+    return current !== undefined && current.fileName === snapshot.fileName && current.state === snapshot.state ? current : snapshot;
   }
 
   private panelFrame(): SurfaceHorizontalFrame {
