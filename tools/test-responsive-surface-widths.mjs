@@ -111,7 +111,7 @@ assert.match(localImport,
   'all local-import states must resolve their shared dialog frame role');
 assert.match(localImport, /resolveDialogSpec\('local-import'\)/,
   'local import delegates its outer frame to the shared dialog registry');
-assert.equal((localImport.match(/\.width\(this\.panelFrame\(\)\.width\)/g) ?? []).length, 4,
+assert.equal((localImport.match(/(?:\.width\(this\.panelFrame\(\)\.width\)|width: this\.panelFrame\(\)\.width)/g) ?? []).length, 4,
   'selection, importing, result and retained shell must share the same clamp');
 assert.match(localImport,
   /padding\(\{ left: this\.panelFrame\(\)\.left, right: this\.panelFrame\(\)\.right \}\)/);

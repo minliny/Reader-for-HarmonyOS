@@ -1,6 +1,9 @@
+import { ReaderBoundedSurface } from '../common/ReaderBoundedSurface';
+import { ReaderBoundedSurfaceHeader } from '../common/ReaderBoundedSurfaceHeader';
+import { ReaderBoundedSurfaceActions } from '../common/ReaderBoundedSurfaceActions';
 import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
-import { TYPE_APP_INHERITED_HINT, TYPE_FILE_IMPORT_ACTION, TYPE_FILE_IMPORT_BADGE, TYPE_FILE_IMPORT_CANCEL, TYPE_FILE_IMPORT_HINT, TYPE_FILE_IMPORT_LABEL, TYPE_FILE_IMPORT_NAME, TYPE_FILE_IMPORT_PROGRESS, TYPE_FILE_IMPORT_TITLE, TYPE_FILE_IMPORT_WAIT } from '../common/ReaderTypography';
+import { TYPE_APP_INHERITED_HINT, TYPE_FILE_IMPORT_BADGE, TYPE_FILE_IMPORT_HINT, TYPE_FILE_IMPORT_LABEL, TYPE_FILE_IMPORT_NAME, TYPE_FILE_IMPORT_PROGRESS, TYPE_FILE_IMPORT_WAIT } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import curves from '@ohos.curves';
 import { readerMotionNowMs } from '../common/ReaderMotionClock';
@@ -105,11 +108,8 @@ export struct LocalImportDialog {
           this.fileSelectionPanel();
         } else {
           // One persistent opaque shell owns the importing -> result handoff.
-          Row().width(this.panelFrame().width).height(this.shellHeight)
-            .backgroundColor(readerAppColor(this.surfaceSpec().backgroundRole, this.appThemeScheme)).borderRadius(this.surfaceSpec().borderRadius)
-            .shadow({ radius: 50, color: readerAppColor('app.LocalImportDialog.build.color.40000000', this.appThemeScheme), offsetX: 0, offsetY: 25 });
-          this.importingPanel();
-          if (this.batch !== undefined) this.resultPanel();
+          ReaderBoundedSurface({ specId: 'local-import-progress', width: this.panelFrame().width,
+            height: this.shellHeight, body: (): void => { this.progressLayers(); } });
         }
       }
       .width('100%')
@@ -133,23 +133,28 @@ export struct LocalImportDialog {
   }
 
   @Builder
+  private progressLayers() { this.importingPanel(); if (this.batch !== undefined) this.resultPanel(); }
+
+  @Builder
   private fileSelectionPanel() {
-    Column() {
-      Row() {
-        Text('导入本地书籍')
-          .fontFamily(TYPE_FILE_IMPORT_TITLE.fontFamily)
-          .fontWeight(TYPE_FILE_IMPORT_TITLE.fontWeight)
-          .fontSize(TYPE_FILE_IMPORT_TITLE.fontSizeFp)
-          .lineHeight(TYPE_FILE_IMPORT_TITLE.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-          .maxLines(1);
-      }
-      .width('100%')
-      .padding({ left: 20, right: 20, top: 20, bottom: 17 })
-      .alignItems(VerticalAlign.Center);
+    ReaderBoundedSurface({ specId: 'local-import-selection', width: this.panelFrame().width, height: 399.75,
+      header: (): void => { this.fileSelectionHeader(); }, body: (): void => { this.fileSelectionBody(); }, actions: (): void => { this.fileSelectionActions(); } });
+  }
 
-      Blank().width('100%').height(1).backgroundColor(readerAppColor('app.LocalImportDialog.fileSelectionPanel.backgroundColor.FFE8E2D9', this.appThemeScheme));
+  @Builder
+  private fileSelectionHeader() {
+    ReaderBoundedSurfaceHeader({ specId: 'local-import-selection', title: '导入本地书籍' });
+  }
 
+  @Builder
+  private fileSelectionActions() {
+    ReaderBoundedSurfaceActions({ specId: 'local-file-selection',
+      primaryLabel: this.state === 'pickerOpening' ? '正在选择…' : '选择文件', primaryEnabled: this.state !== 'pickerOpening',
+      onAction: (id: string): void => { if (id === 'primary') this.onSelectFiles(); else this.onClose(); } });
+  }
+
+  @Builder
+  private fileSelectionBody() {
       Column({ space: 0 }) {
         // Drop zone: 310 wide, dashed 2px #C1C7CD on #F8F4EC, radius 14.
         Column({ space: TOK_SPACE_SM }) {
@@ -216,54 +221,9 @@ export struct LocalImportDialog {
         .width('100%')
         .padding({ top: TOK_SPACE_MD });
 
-        // Primary 211 / outlined cancel; row height 84 (20 top + 44 + 20 bottom).
-        Row({ space: TOK_SPACE_SM }) {
-          Row({ space: TOK_SPACE_XS }) {
-            Image($r('app.media.import_choose_file')).width(15).height(15);
-            Text(this.state === 'pickerOpening' ? '正在选择…' : '选择文件')
-              .fontFamily(TYPE_FILE_IMPORT_ACTION.fontFamily)
-              .fontWeight(TYPE_FILE_IMPORT_ACTION.fontWeight)
-              .fontSize(TYPE_FILE_IMPORT_ACTION.fontSizeFp)
-              .lineHeight(TYPE_FILE_IMPORT_ACTION.lineHeightFp as number)
-              .letterSpacing(TYPE_FILE_IMPORT_ACTION.letterSpacingFp as number)
-              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
-          }
-          .layoutWeight(1)
-          .height(44)
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
-          .borderRadius(22)
-          .enabled(this.state !== 'pickerOpening')
-        .onClick((): void => this.onSelectFiles());
-
-          Row({ space: 6 }) {
-            Image((this.appThemeScheme === 'night' ? $r('app.media.import_cancel_theme_night') : $r('app.media.import_cancel'))).width(13).height(13);
-            Text('取消')
-              .fontFamily(TYPE_FILE_IMPORT_CANCEL.fontFamily)
-              .fontWeight(TYPE_FILE_IMPORT_CANCEL.fontWeight)
-              .fontSize(TYPE_FILE_IMPORT_CANCEL.fontSizeFp)
-              .lineHeight(TYPE_FILE_IMPORT_CANCEL.lineHeightFp as number)
-              .letterSpacing(TYPE_FILE_IMPORT_CANCEL.letterSpacingFp as number)
-              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-          }
-          .height(44)
-          .padding({ left: 21, right: 21 })
-          .justifyContent(FlexAlign.Center)
-          .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-          .borderRadius(22)
-          .onClick((): void => this.onClose());
-        }
-        .width('100%')
-        .padding({ top: 20, bottom: 20 });
       }
       .width('100%')
       .padding({ left: 20, right: 20, top: 20 });
-    }
-    .width(this.panelFrame().width)
-    .height(399.75)
-    .backgroundColor(readerAppColor(this.surfaceSpec().backgroundRole, this.appThemeScheme))
-    .borderRadius(this.surfaceSpec().borderRadius)
-    .shadow({ radius: 50, color: readerAppColor('app.LocalImportDialog.fileSelectionPanel.color.40000000', this.appThemeScheme), offsetX: 0, offsetY: 25 });
   }
 
   @Builder
@@ -304,7 +264,16 @@ export struct LocalImportDialog {
 
   @Builder
   private resultPanel() {
-    Column() {
+    ReaderBoundedSurface({ specId: 'local-import-result-content', width: this.panelFrame().width,
+      height: this.resultPanelHeight(), header: (): void => { this.resultBoundedHeader(); }, body: (): void => { this.resultBody(); }, actions: (): void => { this.resultFooter(); } })
+      .opacity(this.resultOpacity).hitTestBehavior(this.resultOpacity > 0 ? HitTestMode.Default : HitTestMode.None);
+  }
+
+  @Builder
+  private resultBoundedHeader() { if (!this.resultLayout().compact) this.resultHeader(); }
+
+  @Builder
+  private resultBody() {
       if (this.resultLayout().compact) {
         Scroll() {
           Column() { this.resultHeader(); this.resultSummary(); this.resultItemsNatural(); }
@@ -312,48 +281,33 @@ export struct LocalImportDialog {
         }.width('100%').height(Math.max(0, this.resultPanelHeight() - this.measuredFooterHeight))
           .scrollBar(BarState.Off);
       } else {
-        this.resultHeader();
         this.resultSummary();
         this.resultItemsPanel();
       }
-      this.resultFooter();
-    }
-    .width(this.panelFrame().width).height(this.resultPanelHeight())
-    .alignItems(HorizontalAlign.Start).opacity(this.resultOpacity)
-    .hitTestBehavior(this.resultOpacity > 0 ? HitTestMode.Default : HitTestMode.None);
   }
 
   @Builder
   private resultHeader() {
-    Column() {
-      Text('导入结果').fontFamily(TYPE_FILE_IMPORT_TITLE.fontFamily).fontWeight(TYPE_FILE_IMPORT_TITLE.fontWeight)
-        .fontSize(TYPE_FILE_IMPORT_TITLE.fontSizeFp).lineHeight(TYPE_FILE_IMPORT_TITLE.lineHeightFp as number).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1).width('100%')
-        .padding({ left: 20, right: 20, top: 20, bottom: 17 });
-      Blank().width('100%').height(1).backgroundColor(readerAppColor('app.LocalImportDialog.resultHeader.backgroundColor.FFE8E2D9', this.appThemeScheme));
-    }.width('100%').onAreaChange((_old: Area, next: Area): void => {
-      this.measuredHeaderHeight = this.numericAreaLength(next.height);
-      this.updateMeasuredResult();
-    });
+    ReaderBoundedSurfaceHeader({ specId: 'local-import-result-content', title: '导入结果',
+      onAreaChanged: (_old: Area, next: Area): void => {
+        this.measuredHeaderHeight = this.numericAreaLength(next.height); this.updateMeasuredResult();
+      } });
+  }
+
+  @Builder
+  private resultRecovery() {
+    ReaderRecoveryNotice({ view: this.recovery,
+      onReconcile: (generation: number): void => this.onReconcile(generation) });
   }
 
   @Builder
   private resultFooter() {
-    Column() {
-      ReaderRecoveryNotice({ view: this.recovery,
-        onReconcile: (generation: number): void => this.onReconcile(generation) });
-      Row({ space: 6 }) {
-        Image($r('app.media.import_done')).width(14).height(14);
-        Text('完成').fontFamily(TYPE_FILE_IMPORT_ACTION.fontFamily).fontWeight(TYPE_FILE_IMPORT_ACTION.fontWeight).fontSize(TYPE_FILE_IMPORT_ACTION.fontSizeFp).lineHeight(TYPE_FILE_IMPORT_ACTION.lineHeightFp as number)
-          .letterSpacing(TYPE_FILE_IMPORT_ACTION.letterSpacingFp as number).fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
-      }.width(this.resultButtonWidth()).height(40).justifyContent(FlexAlign.Center)
-        .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme)).borderRadius(20).onClick((): void => this.onClose());
-    }.width('100%').padding({ left: 16, right: 16,
-      top: Math.min(16, Math.max(0, (this.availableHeight() - 40) / 2)),
-      bottom: Math.min(20, Math.max(0, (this.availableHeight() - 40) / 2)) })
-      .onAreaChange((_old: Area, next: Area): void => {
-        this.measuredFooterHeight = this.numericAreaLength(next.height);
-        this.updateMeasuredResult();
-      });
+    ReaderBoundedSurfaceActions({ specId: 'local-import-result', primaryLabel: '完成',
+      actionWidth: this.resultButtonWidth(), availableHeight: this.availableHeight(), feedback: (): void => { this.resultRecovery(); },
+      onAction: (_id: string): void => this.onClose(),
+      onAreaChanged: (_old: Area, next: Area): void => {
+        this.measuredFooterHeight = this.numericAreaLength(next.height); this.updateMeasuredResult();
+      } });
   }
 
   @Builder

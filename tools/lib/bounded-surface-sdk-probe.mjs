@@ -30,7 +30,7 @@ export function boundedSurfaceSdk(options={}){
     ReaderBoundedTitleModifier:classOf(childSources.ReaderBoundedSurfaceHeader,'ReaderBoundedTitleModifier',{readerAppColor,...readerTypographyRoles}),
     ReaderBoundedFileActionModifier:classOf(childSources.ReaderBoundedSurfaceActions,'ReaderBoundedFileActionModifier',{}),
   };
-  const hooks={...properties.hooks,childSources,mountChildren:true};
+  const hooks={...properties.hooks,childSources,mountChildren:true,allowEmptyBranchAdmission:options.allowEmptyBranchAdmission===true};
   for(const name of Object.keys(childSources))deps[name]=createReaderBuilderProbe(childSources[name],boundedMembers(childSources[name]),deps,hooks).Component;
   const walk=owner=>[owner,...[...owner.children.values()].flatMap(child=>child.nodes?walk(child):[])];
   return {properties,deps,hooks,childSources,walk,nodes:owner=>walk(owner).flatMap(x=>[...x.nodes.values()]),
