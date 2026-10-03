@@ -1,4 +1,4 @@
-import type { ShelfBook } from '../../app/ReaderCoreGateway';
+import { ReaderCoreGateway, type ShelfBook } from '../../app/ReaderCoreGateway';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import {
   BookshelfManagementGateway,
@@ -57,6 +57,10 @@ export class BookshelfHost {
 
   assignDefaultGroup(book: ShelfBook): Promise<ShelfBook> {
     return new BookshelfManagementGateway(this.owner()).assignGroup(book, '');
+  }
+
+  loadShelfBook(sourceId: string, bookId: string): Promise<ShelfBook | undefined> {
+    return new ReaderCoreGateway(this.owner()).loadShelfBook(sourceId, bookId);
   }
 
   private getManagementOrchestrator(): BookshelfManagementOrchestrator {

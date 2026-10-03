@@ -2728,7 +2728,7 @@ struct Index {
         const current = (): boolean => generation === this.navigationGeneration &&
           this.route === 'search' && this.searchDetailCandidates === candidates &&
           owner === ReaderRuntimeOwner.current();
-        void new ReaderCoreGateway(owner).loadShelfBook(LOCAL_SOURCE_ID, book.bookId)
+        void this.bookshelfHost.loadShelfBook(LOCAL_SOURCE_ID, book.bookId)
           .then((stored: ShelfBook | undefined): void => {
             if (!current()) return;
             if (stored === undefined) {

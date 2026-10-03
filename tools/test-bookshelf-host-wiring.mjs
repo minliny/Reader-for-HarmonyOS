@@ -17,7 +17,7 @@ assert.doesNotMatch(index, /private getBookshelfManagementOrchestrator\(/,
 for (const method of [
   'openManagement', 'updateGroupName', 'updateGroupOrder', 'selectGroup',
   'clearGroupEditor', 'saveGroup', 'toggleGroupShown', 'deleteGroup',
-  'selectBook', 'updateAssignmentGroup', 'assignSelectedBook', 'assignDefaultGroup',
+  'selectBook', 'updateAssignmentGroup', 'assignSelectedBook', 'assignDefaultGroup', 'loadShelfBook',
 ]) {
   assert.match(host, new RegExp(`\\b${method}\\(`), `BookshelfHost must expose ${method}`);
 }
@@ -25,6 +25,8 @@ assert.match(host, /new BookshelfManagementOrchestrator\(/,
   'BookshelfHost must be the single management orchestrator construction site');
 assert.match(host, /new BookshelfManagementGateway\(/,
   'BookshelfHost must own the direct management gateway construction');
+assert.match(host, /new ReaderCoreGateway\(this\.owner\(\)\)\.loadShelfBook\(/,
+  'BookshelfHost must own the bookshelf detail gateway construction');
 assert.match(host, /private readonly owner: \(\) => ReaderRuntimeOwner/,
   'BookshelfHost must resolve the runtime owner lazily');
 for (const call of [
@@ -33,10 +35,19 @@ for (const call of [
   'bookshelfHost.clearGroupEditor()', 'bookshelfHost.saveGroup()',
   'bookshelfHost.toggleGroupShown(', 'bookshelfHost.deleteGroup(',
   'bookshelfHost.selectBook(', 'bookshelfHost.updateAssignmentGroup(',
-  'bookshelfHost.assignSelectedBook()', 'bookshelfHost.assignDefaultGroup(',
+  'bookshelfHost.assignSelectedBook()', 'bookshelfHost.assignDefaultGroup(', 'bookshelfHost.loadShelfBook(',
 ]) {
   assert.ok(index.includes(`this.${call}`), `Index must forward ${call}`);
 }
 assert.match(index, /bookshelfManagementSnapshot = snapshot/,
   'Index must retain the existing management snapshot projection');
+const detailSelectionStart = index.indexOf('private onSearchResultSelected(');
+const detailSelectionEnd = index.indexOf('// The search badge describes a saved work', detailSelectionStart);
+assert.ok(detailSelectionStart >= 0 && detailSelectionEnd > detailSelectionStart,
+  'local search detail selection remains a bounded host boundary');
+const localDetailSelection = index.slice(detailSelectionStart, detailSelectionEnd);
+assert.match(localDetailSelection, /this\.bookshelfHost\.loadShelfBook\(/,
+  'local search detail lookup is routed through BookshelfHost');
+assert.doesNotMatch(localDetailSelection, /new ReaderCoreGateway\(owner\)\.loadShelfBook\(/,
+  'Index no longer constructs a direct Core gateway for the local detail lookup');
 console.log('Bookshelf host wiring: PASS (management intents and snapshot projection retained)');
