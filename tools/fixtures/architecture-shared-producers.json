@@ -1,0 +1,1954 @@
+{
+  "schema": 1,
+  "sourceHead": "4bfec1eb5c6c51f3ad0b5ddb80e79b010a5b6feb",
+  "boundary": "exact producer/spec/native structure/consumer edges; no wildcard exemption; original 100 business budgets unchanged; SDK proof tests run separately",
+  "producers": [
+    {
+      "id": "shared-ReaderBoundedSurface",
+      "file": "entry/src/main/ets/features/common/ReaderBoundedSurface.ets",
+      "component": "ReaderBoundedSurface",
+      "specPolicy": "8 finite ReaderBoundedSurfaceId variants; measured width/height only; finite resolveDialog/Popup/SheetSpec or retained editor geometry.",
+      "shape": {
+        "types": [
+          {
+            "name": "ReaderBoundedSurfaceId",
+            "type": "'source-switch-window' | 'tts-config-manager' | 'tts-config-picker' | 'bookshelf-book-action' | 'local-import-selection' | 'local-import-progress' | 'local-import-result-content' | 'reader-replace-editor'"
+          }
+        ],
+        "declarations": [
+          {
+            "name": "ReaderBoundedFrameModifier",
+            "publicFields": []
+          },
+          {
+            "name": "ReaderBoundedSurface",
+            "publicFields": [
+              {
+                "name": "specId",
+                "type": "ReaderBoundedSurfaceId",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "width",
+                "type": "number | string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "height",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "header",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              },
+              {
+                "name": "body",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              },
+              {
+                "name": "actions",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "height",
+            "args": [
+              "this.height"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "width",
+            "args": [
+              "this.width"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "shadow",
+            "args": [
+              "{ radius: 50,\n    color: readerAppColor(this.id === 'local-import-selection' ? 'app.LocalImportDialog.fileSelectionPanel.color.40000000' : 'app.LocalImportDialog.build.color.40000000', this.scheme), offsetX: 0, offsetY: 25 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "borderRadius",
+            "args": [
+              "spec.borderRadius"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(spec.backgroundRole, this.scheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "borderRadius",
+            "args": [
+              "12"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor('TOK_SURFACE_SOLID', this.scheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "padding",
+            "args": [
+              "12"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "height",
+            "args": [
+              "this.height"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "width",
+            "args": [
+              "this.width"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "clip",
+            "args": [
+              "true"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "shadow",
+            "args": [
+              "{ radius: spec.shadowRadius, color: readerAppColor(spec.shadowRole, this.scheme), offsetX: 0, offsetY: spec.shadowOffsetY }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "borderRadius",
+            "args": [
+              "{ topLeft: spec.borderRadius, topRight: spec.borderRadius, bottomLeft: 0, bottomRight: 0 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "border",
+            "args": [
+              "{ width: spec.borderWidth, color: readerAppColor(spec.borderRole, this.scheme) }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(spec.backgroundRole, this.scheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "height",
+            "args": [
+              "spec.height"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "borderRadius",
+            "args": [
+              "this.id === 'tts-config-picker' ? 14 : spec.borderRadius"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "border",
+            "args": [
+              "{ width: spec.borderWidth, color: readerAppColor(spec.surfaceBorderRole, this.scheme) }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(spec.surfaceBackgroundRole, this.scheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "height",
+            "args": [
+              "this.height"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "width",
+            "args": [
+              "this.width"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "clip",
+            "args": [
+              "true"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "shadow",
+            "args": [
+              "{\n    radius: this.id === 'tts-config-picker' ? 36 : spec.shadowRadius,\n    color: readerAppColor(this.id === 'tts-config-picker' ? 'app.ReaderTtsConfigOverlay.build.color.381F1B17' : spec.surfaceShadowRole, this.scheme),\n    offsetY: this.id === 'tts-config-picker' ? 14 : spec.shadowOffsetY,\n}"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "constraintSize",
+            "args": [
+              "{\n    maxWidth: this.id === 'tts-config-manager' ? spec.width : this.width, maxHeight: '100%',\n}"
+            ]
+          }
+        ],
+        "implementation": "import { readerAppColor } from './ReaderThemeRegistry';\nimport { PopupSurfaceSpec, resolvePopupSpec, resolveSheetSpec, resolveDialogSpec } from './ReaderSurfaceSpecs';\nexport type ReaderBoundedSurfaceId = 'source-switch-window' | 'tts-config-manager' | 'tts-config-picker' | 'bookshelf-book-action' | 'local-import-selection' | 'local-import-progress' | 'local-import-result-content' | 'reader-replace-editor';\nexport class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttribute> {\n    private readonly id: ReaderBoundedSurfaceId;\n    private readonly width: number | string;\n    private readonly height: number;\n    private readonly scheme: string;\n    constructor(id: ReaderBoundedSurfaceId, width: number | string, height: number, scheme: string) {\n        this.id = id;\n        this.width = width;\n        this.height = height;\n        this.scheme = scheme;\n    }\n    applyNormalAttribute(instance: CommonAttribute): void {\n        if (this.id === 'local-import-selection' || this.id === 'local-import-progress' || this.id === 'local-import-result-content') {\n            const spec = resolveDialogSpec('local-import');\n            instance.width(this.width).height(this.height);\n            if (this.id !== 'local-import-result-content')\n                instance.backgroundColor(readerAppColor(spec.backgroundRole, this.scheme))\n                    .borderRadius(spec.borderRadius).shadow({ radius: 50,\n                    color: readerAppColor(this.id === 'local-import-selection' ? 'app.LocalImportDialog.fileSelectionPanel.color.40000000' : 'app.LocalImportDialog.build.color.40000000', this.scheme), offsetX: 0, offsetY: 25 });\n            return;\n        }\n        if (this.id === 'reader-replace-editor') {\n            instance.width(this.width).height(this.height).padding(12)\n                .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.scheme)).borderRadius(12);\n            return;\n        }\n        if (this.id === 'bookshelf-book-action') {\n            const spec = resolveSheetSpec('bookshelf-book-action');\n            instance.width('100%').height(spec.height)\n                .backgroundColor(readerAppColor(spec.backgroundRole, this.scheme))\n                .border({ width: spec.borderWidth, color: readerAppColor(spec.borderRole, this.scheme) })\n                .borderRadius({ topLeft: spec.borderRadius, topRight: spec.borderRadius, bottomLeft: 0, bottomRight: 0 })\n                .shadow({ radius: spec.shadowRadius, color: readerAppColor(spec.shadowRole, this.scheme), offsetX: 0, offsetY: spec.shadowOffsetY }).clip(true);\n            return;\n        }\n        const spec = resolvePopupSpec(this.id === 'source-switch-window' ? 'source-switch-window' : 'tts-config-manager');\n        instance.width(this.width).height(this.height)\n            .backgroundColor(readerAppColor(spec.surfaceBackgroundRole, this.scheme))\n            .border({ width: spec.borderWidth, color: readerAppColor(spec.surfaceBorderRole, this.scheme) })\n            .borderRadius(this.id === 'tts-config-picker' ? 14 : spec.borderRadius);\n        if (this.id !== 'source-switch-window')\n            instance.constraintSize({\n                maxWidth: this.id === 'tts-config-manager' ? spec.width : this.width, maxHeight: '100%',\n            }).shadow({\n                radius: this.id === 'tts-config-picker' ? 36 : spec.shadowRadius,\n                color: readerAppColor(this.id === 'tts-config-picker' ? 'app.ReaderTtsConfigOverlay.build.color.381F1B17' : spec.surfaceShadowRole, this.scheme),\n                offsetY: this.id === 'tts-config-picker' ? 14 : spec.shadowOffsetY,\n            }).clip(true);\n    }\n}\n@Component\nexport struct ReaderBoundedSurface extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        specId?: ReaderBoundedSurfaceId;\n        width?: number | string;\n        height?: number;\n        header?: () => void;\n        body?: () => void;\n        actions?: () => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    specId: ReaderBoundedSurfaceId = 'source-switch-window';\n    @Prop\n    width: number | string = 300;\n    @Prop\n    height: number = 385;\n    @BuilderParam\n    header: () => void = this.emptySlot;\n    @BuilderParam\n    body: () => void = this.emptySlot;\n    @BuilderParam\n    actions: () => void = this.emptySlot;\n    @Builder\n    private emptySlot() { }\n    build() {\n        if (this.specId === 'bookshelf-book-action') {\n                .attributeModifier<\n      >(this.frameModifier());\n        }\n        else if (this.specId === 'local-import-progress') {\n                .attributeModifier<\n      >(this.frameModifier());\n        }\n        else if (this.specId === 'local-import-result-content') {\n            .alignItems<\n      >(HorizontalAlign.Start)\n                .attributeModifier<\n      >(this.frameModifier());\n        }\n        else {\n                .attributeModifier<\n      >(this.frameModifier());\n        }\n    }\n    private frameModifier(): AttributeModifier<CommonAttribute> {\n        return new ReaderBoundedFrameModifier(this.specId, this.width, this.height, this.appThemeScheme);\n    }\n}\n"
+      },
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookshelfBookActionSheet.ets",
+          "method": "features/bookshelf/BookshelfBookActionSheet.ets#BookshelfBookActionSheet#build",
+          "component": "ReaderBoundedSurface",
+          "specId": "'bookshelf-book-action'",
+          "keys": [
+            "specId",
+            "header",
+            "actions"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalImportDialog.ets",
+          "method": "features/bookshelf/LocalImportDialog.ets#LocalImportDialog#build",
+          "component": "ReaderBoundedSurface",
+          "specId": "'local-import-progress'",
+          "keys": [
+            "specId",
+            "width",
+            "height",
+            "body"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalImportDialog.ets",
+          "method": "features/bookshelf/LocalImportDialog.ets#LocalImportDialog#fileSelectionPanel",
+          "component": "ReaderBoundedSurface",
+          "specId": "'local-import-selection'",
+          "keys": [
+            "specId",
+            "width",
+            "height",
+            "header",
+            "body",
+            "actions"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalImportDialog.ets",
+          "method": "features/bookshelf/LocalImportDialog.ets#LocalImportDialog#resultPanel",
+          "component": "ReaderBoundedSurface",
+          "specId": "'local-import-result-content'",
+          "keys": [
+            "specId",
+            "width",
+            "height",
+            "header",
+            "body",
+            "actions"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderControlReplaceContent.ets",
+          "method": "features/reading/ReaderControlReplaceContent.ets#ReaderControlReplaceContent#temporaryOverlay",
+          "component": "ReaderBoundedSurface",
+          "specId": "'reader-replace-editor'",
+          "keys": [
+            "specId",
+            "width",
+            "height",
+            "header",
+            "body",
+            "actions"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderTtsConfigOverlay.ets",
+          "method": "features/reading/ReaderTtsConfigOverlay.ets#ReaderTtsConfigOverlay#build",
+          "component": "ReaderBoundedSurface",
+          "specId": "this.boundedSpecId()",
+          "keys": [
+            "specId",
+            "width",
+            "height",
+            "header",
+            "body",
+            "actions"
+          ]
+        },
+        {
+          "file": "features/source/SourceSwitchWindow.ets",
+          "method": "features/source/SourceSwitchWindow.ets#SourceSwitchWindow#build",
+          "component": "ReaderBoundedSurface",
+          "specId": "'source-switch-window'",
+          "keys": [
+            "specId",
+            "width",
+            "height",
+            "header",
+            "body",
+            "actions"
+          ]
+        }
+      ],
+      "removalProofs": [
+        "tools/test-bounded-surface-frame-header.mjs",
+        "tools/test-bounded-source-tts-composition.mjs",
+        "tools/test-bounded-local-import-composition.mjs",
+        "tools/test-bounded-replace-composition.mjs",
+        "tools/test-bookshelf-sheet-shared-composition.mjs"
+      ],
+      "sdkProofs": [
+        "tools/test-bounded-surface-frame-header.mjs",
+        "tools/test-bounded-source-tts-composition.mjs",
+        "tools/test-bounded-local-import-composition.mjs",
+        "tools/test-bounded-replace-composition.mjs",
+        "tools/test-bookshelf-sheet-shared-composition.mjs"
+      ]
+    },
+    {
+      "id": "shared-ReaderBoundedSurfaceHeader",
+      "file": "entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets",
+      "component": "ReaderBoundedSurfaceHeader",
+      "specPolicy": "Same 8 finite surface IDs; existing ROLE titles or registered sheetSpec. Source/TTS AUTO omissions and sheet handle/title retained. Business title/slots/callbacks only.",
+      "shape": {
+        "types": [],
+        "declarations": [
+          {
+            "name": "ReaderBoundedTitleModifier",
+            "publicFields": []
+          },
+          {
+            "name": "ReaderBoundedSurfaceHeader",
+            "publicFields": [
+              {
+                "name": "specId",
+                "type": "ReaderBoundedSurfaceId",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "title",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "width",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "enabled",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "leading",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              },
+              {
+                "name": "accessory",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              },
+              {
+                "name": "onAreaChanged",
+                "type": "(oldValue: Area, next: Area) => void",
+                "decorators": []
+              },
+              {
+                "name": "onClose",
+                "type": "() => void",
+                "decorators": []
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderBoundedTitleModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor(this.id === 'source-switch-window' ? 'TOK_READ_INK' : 'TOK_TTS_INK', this.scheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedTitleModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontSize",
+            "args": [
+              "type.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedTitleModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontWeight",
+            "args": [
+              "type.fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedTitleModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontFamily",
+            "args": [
+              "type.fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedTitleModifier",
+            "method": "applyNormalAttribute",
+            "property": "margin",
+            "args": [
+              "{ left: 7 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedTitleModifier",
+            "method": "applyNormalAttribute",
+            "property": "lineHeight",
+            "args": [
+              "TYPE_SOURCE_SWITCH_HEADING.lineHeightFp as number"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedTitleModifier",
+            "method": "applyNormalAttribute",
+            "property": "height",
+            "args": [
+              "16"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedTitleModifier",
+            "method": "applyNormalAttribute",
+            "property": "constraintSize",
+            "args": [
+              "{ minWidth: 0 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "28"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor('TOK_READ_INK', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "fontWeight",
+            "args": [
+              "TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "fontSize",
+            "args": [
+              "TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "fontFamily",
+            "args": [
+              "TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "34"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor('TOK_LINE', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "1"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "Math.max(0, this.width - 1)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "padding",
+            "args": [
+              "{ left: 20, right: 20, top: 20, bottom: 17 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "padding",
+            "args": [
+              "{ left: 20, right: 20, top: 20, bottom: 17 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor('TOK_INK', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "lineHeight",
+            "args": [
+              "TYPE_FILE_IMPORT_TITLE.lineHeightFp as number"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "fontSize",
+            "args": [
+              "TYPE_FILE_IMPORT_TITLE.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "fontWeight",
+            "args": [
+              "TYPE_FILE_IMPORT_TITLE.fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "fontFamily",
+            "args": [
+              "TYPE_FILE_IMPORT_TITLE.fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(this.specId === 'local-import-selection' ?\n    'app.LocalImportDialog.fileSelectionPanel.backgroundColor.FFE8E2D9' : 'app.LocalImportDialog.resultHeader.backgroundColor.FFE8E2D9', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "height",
+            "args": [
+              "1"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "localImportHeader",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "importTitle",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor('TOK_INK', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "importTitle",
+            "property": "lineHeight",
+            "args": [
+              "TYPE_FILE_IMPORT_TITLE.lineHeightFp as number"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "importTitle",
+            "property": "fontSize",
+            "args": [
+              "TYPE_FILE_IMPORT_TITLE.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "importTitle",
+            "property": "fontWeight",
+            "args": [
+              "TYPE_FILE_IMPORT_TITLE.fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "importTitle",
+            "property": "fontFamily",
+            "args": [
+              "TYPE_FILE_IMPORT_TITLE.fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "height",
+            "args": [
+              "this.sheetSpec().handleHeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "borderRadius",
+            "args": [
+              "999"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(this.sheetSpec().handleRole, this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "height",
+            "args": [
+              "this.sheetSpec().handleHeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "width",
+            "args": [
+              "this.sheetSpec().handleWidth"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor(this.sheetSpec().titleRole, this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "lineHeight",
+            "args": [
+              "this.sheetSpec().titleLineHeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "fontSize",
+            "args": [
+              "this.sheetSpec().titleFontSize"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "fontWeight",
+            "args": [
+              "this.sheetSpec().titleFontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "sheetHeader",
+            "property": "fontFamily",
+            "args": [
+              "this.sheetSpec().titleFontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "headerRow",
+            "property": "padding",
+            "args": [
+              "this.specId === 'source-switch-window' ? 0 : {\n    left: this.specId === 'tts-config-manager' ? 18 : 12, right: this.specId === 'tts-config-manager' ? 24 : 16,\n}"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "headerRow",
+            "property": "height",
+            "args": [
+              "this.specId === 'source-switch-window' ? 33 : this.specId === 'tts-config-manager' ? 58 : 40"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "headerRow",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "headerRow",
+            "property": "margin",
+            "args": [
+              "{ left: 9 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "headerRow",
+            "property": "height",
+            "args": [
+              "18"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "headerRow",
+            "property": "width",
+            "args": [
+              "18"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "headerRow",
+            "property": "height",
+            "args": [
+              "20"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "headerRow",
+            "property": "width",
+            "args": [
+              "20"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "margin",
+            "args": [
+              "{ left: 1 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "height",
+            "args": [
+              "44"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "width",
+            "args": [
+              "44"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor('TOK_SS_CLOSE_BG', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "borderRadius",
+            "args": [
+              "8"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "height",
+            "args": [
+              "22"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "width",
+            "args": [
+              "22"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "height",
+            "args": [
+              "20"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "width",
+            "args": [
+              "20"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "responseRegion",
+            "args": [
+              "{ x: -6, y: -6, width: 28, height: 28 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "height",
+            "args": [
+              "16"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceHeader",
+            "method": "closeAction",
+            "property": "width",
+            "args": [
+              "16"
+            ]
+          }
+        ],
+        "implementation": "import { TYPE_SOURCE_SWITCH_HEADING, TYPE_READER_TTS_MANAGER_TITLE, TYPE_READER_TTS_CONFIGURATION_TITLE, TYPE_FILE_IMPORT_TITLE, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE } from './ReaderTypography';\nimport { readerAppColor } from './ReaderThemeRegistry';\nimport { SheetSurfaceSpec, resolveSheetSpec } from './ReaderSurfaceSpecs';\nimport type { ReaderBoundedSurfaceId } from './ReaderBoundedSurface';\nexport class ReaderBoundedTitleModifier implements AttributeModifier<TextAttribute> {\n    private readonly id: ReaderBoundedSurfaceId;\n    private readonly scheme: string;\n    constructor(id: ReaderBoundedSurfaceId, scheme: string) { this.id = id; this.scheme = scheme; }\n    applyNormalAttribute(instance: TextAttribute): void {\n        const type = this.id === 'source-switch-window' ? TYPE_SOURCE_SWITCH_HEADING :\n            this.id === 'tts-config-manager' ? TYPE_READER_TTS_MANAGER_TITLE : TYPE_READER_TTS_CONFIGURATION_TITLE;\n        instance.fontFamily(type.fontFamily).fontWeight(type.fontWeight).fontSize(type.fontSizeFp)\n            .fontColor(readerAppColor(this.id === 'source-switch-window' ? 'TOK_READ_INK' : 'TOK_TTS_INK', this.scheme));\n        if (this.id === 'source-switch-window')\n            instance.constraintSize({ minWidth: 0 }).height(16)\n                .lineHeight(TYPE_SOURCE_SWITCH_HEADING.lineHeightFp as number).margin({ left: 7 });\n    }\n}\n@Component\nexport struct ReaderBoundedSurfaceHeader extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        specId?: ReaderBoundedSurfaceId;\n        title?: string;\n        width?: number;\n        enabled?: boolean;\n        leading?: () => void;\n        accessory?: () => void;\n        onAreaChanged?: (oldValue: Area, next: Area) => void;\n        onClose?: () => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    specId: ReaderBoundedSurfaceId = 'source-switch-window';\n    @Prop\n    title: string = '';\n    @Prop\n    width: number = 300;\n    @Prop\n    enabled: boolean = true;\n    @BuilderParam\n    leading: () => void = this.emptySlot;\n    @BuilderParam\n    accessory: () => void = this.emptySlot;\n    onAreaChanged: (oldValue: Area, next: Area) => void = (_oldValue: Area, _next: Area): void => { };\n    onClose: () => void = (): void => { };\n    @Builder\n    private emptySlot() { }\n    build() {\n        if (this.specId === 'local-import-selection' || this.specId === 'local-import-result-content') {\n            this.localImportHeader();\n        }\n        else if (this.specId === 'reader-replace-editor') {\n            .width<\n      >('100%').height<\n      >(28);\n        }\n        else if (this.specId === 'bookshelf-book-action') {\n            this.sheetHeader();\n        }\n        else if (this.specId === 'source-switch-window') {\n            .width<\n      >('100%').height<\n      >(34);\n        }\n        else {\n            this.headerRow();\n        }\n    }\n    @Builder\n    private localImportHeader() {\n        .width<\n    >('100%').onAreaChange<\n    >((oldValue: Area, next: Area): void => this.onAreaChanged(oldValue, next));\n    }\n    @Builder\n    private importTitle() {\n        .fontFamily<\n    >(TYPE_FILE_IMPORT_TITLE.fontFamily).fontWeight<\n    >(TYPE_FILE_IMPORT_TITLE.fontWeight)\n            .fontSize<\n    >(TYPE_FILE_IMPORT_TITLE.fontSizeFp).lineHeight<\n    >(TYPE_FILE_IMPORT_TITLE.lineHeightFp as number)\n            .fontColor<\n    >(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines<\n    >(1);\n    }\n    private sheetSpec(): SheetSurfaceSpec { return resolveSheetSpec('bookshelf-book-action'); }\n    @Builder\n    private sheetHeader() {\n        .width<\n    >('100%').height<\n    >(this.sheetSpec().handleHeight).justifyContent<\n    >(FlexAlign.Center)\n            .position<\n    >({ x: 0, y: this.sheetSpec().handleTop });\n        .fontFamily<\n    >(this.sheetSpec().titleFontFamily).fontWeight<\n    >(this.sheetSpec().titleFontWeight)\n            .fontSize<\n    >(this.sheetSpec().titleFontSize).lineHeight<\n    >(this.sheetSpec().titleLineHeight)\n            .fontColor<\n    >(readerAppColor(this.sheetSpec().titleRole, this.appThemeScheme)).maxLines<\n    >(1)\n            .position<\n    >({ x: this.sheetSpec().titleInset, y: this.sheetSpec().titleTop });\n    }\n    @Builder\n    private headerRow() {\n        .width<\n    >('100%').height<\n    >(this.specId === 'source-switch-window' ? 33 : this.specId === 'tts-config-manager' ? 58 : 40)\n            .alignItems<\n    >(VerticalAlign.Center)\n            .padding<\n    >(this.specId === 'source-switch-window' ? 0 : {\n            left: this.specId === 'tts-config-manager' ? 18 : 12, right: this.specId === 'tts-config-manager' ? 24 : 16,\n        });\n    }\n    @Builder\n    private titleText() {\n        .layoutWeight<\n    >(1).attributeModifier<\n    >(new ReaderBoundedTitleModifier(this.specId, this.appThemeScheme));\n    }\n    @Builder\n    private closeAction() {\n        if (this.specId === 'source-switch-window') {\n            .width<\n      >(44).height<\n      >(44).margin<\n      >({ left: 1 }).enabled<\n      >(this.enabled)\n                .onClick<\n      >((): void => { if (this.enabled)\n                this.onClose(); });\n        }\n        else {\n            .width<\n      >(16).height<\n      >(16)\n                .responseRegion<\n      >({ x: -6, y: -6, width: 28, height: 28 }).enabled<\n      >(this.enabled)\n                .accessibilityText<\n      >('关闭 TTS 配置').onClick<\n      >((): void => { if (this.enabled)\n                this.onClose(); });\n        }\n    }\n}\n"
+      },
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookshelfBookActionSheet.ets",
+          "method": "features/bookshelf/BookshelfBookActionSheet.ets#BookshelfBookActionSheet#sheetHeader",
+          "component": "ReaderBoundedSurfaceHeader",
+          "specId": "'bookshelf-book-action'",
+          "keys": [
+            "specId",
+            "title"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalImportDialog.ets",
+          "method": "features/bookshelf/LocalImportDialog.ets#LocalImportDialog#fileSelectionHeader",
+          "component": "ReaderBoundedSurfaceHeader",
+          "specId": "'local-import-selection'",
+          "keys": [
+            "specId",
+            "title"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalImportDialog.ets",
+          "method": "features/bookshelf/LocalImportDialog.ets#LocalImportDialog#resultHeader",
+          "component": "ReaderBoundedSurfaceHeader",
+          "specId": "'local-import-result-content'",
+          "keys": [
+            "specId",
+            "title",
+            "onAreaChanged"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderControlReplaceContent.ets",
+          "method": "features/reading/ReaderControlReplaceContent.ets#ReaderControlReplaceContent#temporaryHeader",
+          "component": "ReaderBoundedSurfaceHeader",
+          "specId": "'reader-replace-editor'",
+          "keys": [
+            "specId",
+            "title",
+            "leading",
+            "accessory"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderTtsConfigOverlay.ets",
+          "method": "features/reading/ReaderTtsConfigOverlay.ets#ReaderTtsConfigOverlay#configurationHeader",
+          "component": "ReaderBoundedSurfaceHeader",
+          "specId": "this.boundedSpecId()",
+          "keys": [
+            "specId",
+            "title",
+            "enabled",
+            "onClose"
+          ]
+        },
+        {
+          "file": "features/source/SourceSwitchWindow.ets",
+          "method": "features/source/SourceSwitchWindow.ets#SourceSwitchWindow#header",
+          "component": "ReaderBoundedSurfaceHeader",
+          "specId": "'source-switch-window'",
+          "keys": [
+            "specId",
+            "title",
+            "width",
+            "accessory",
+            "onClose"
+          ]
+        }
+      ],
+      "removalProofs": [
+        "tools/test-bounded-surface-frame-header.mjs",
+        "tools/test-bounded-source-tts-composition.mjs",
+        "tools/test-bounded-local-import-composition.mjs",
+        "tools/test-bounded-replace-composition.mjs",
+        "tools/test-bookshelf-sheet-shared-composition.mjs"
+      ],
+      "sdkProofs": [
+        "tools/test-bounded-surface-frame-header.mjs",
+        "tools/test-bounded-source-tts-composition.mjs",
+        "tools/test-bounded-local-import-composition.mjs",
+        "tools/test-bounded-replace-composition.mjs",
+        "tools/test-bookshelf-sheet-shared-composition.mjs"
+      ]
+    },
+    {
+      "id": "shared-ReaderBoundedSurfaceActions",
+      "file": "entry/src/main/ets/features/common/ReaderBoundedSurfaceActions.ets",
+      "component": "ReaderBoundedSurfaceActions",
+      "specPolicy": "4 finite IDs: local-file-selection/local-import-result/tts-manager/replace-editor; real shared action rows and existing roles, live enabled and callback inputs.",
+      "shape": {
+        "types": [
+          {
+            "name": "ReaderBoundedActionSpecId",
+            "type": "'local-file-selection' | 'local-import-result' | 'tts-manager' | 'replace-editor'"
+          },
+          {
+            "name": "ReaderBoundedActionId",
+            "type": "'primary' | 'cancel'"
+          }
+        ],
+        "declarations": [
+          {
+            "name": "ReaderBoundedFileActionModifier",
+            "publicFields": []
+          },
+          {
+            "name": "ReaderBoundedSurfaceActions",
+            "publicFields": [
+              {
+                "name": "specId",
+                "type": "ReaderBoundedActionSpecId",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "primaryLabel",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "primaryEnabled",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "cancelEnabled",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "actionWidth",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "availableHeight",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "feedback",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              },
+              {
+                "name": "onAction",
+                "type": "(id: ReaderBoundedActionId) => void",
+                "decorators": []
+              },
+              {
+                "name": "onAreaChanged",
+                "type": "(oldValue: Area, next: Area) => void",
+                "decorators": []
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderBoundedFileActionModifier",
+            "method": "applyNormalAttribute",
+            "property": "width",
+            "args": [
+              "this.width"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "build",
+            "property": "padding",
+            "args": [
+              "{ left: 16, right: 16,\n    top: Math.min(16, Math.max(0, (this.availableHeight - 40) / 2)),\n    bottom: Math.min(20, Math.max(0, (this.availableHeight - 40) / 2)) }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "build",
+            "property": "padding",
+            "args": [
+              "{ left: 20, right: 20 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "build",
+            "property": "padding",
+            "args": [
+              "{ top: 20, bottom: 20 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "build",
+            "property": "padding",
+            "args": [
+              "{ left: 18, right: 18, top: 16, bottom: 16 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "76"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "36"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "borderRadius",
+            "args": [
+              "22"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "border",
+            "args": [
+              "{ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "padding",
+            "args": [
+              "{ left: 21, right: 21 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "height",
+            "args": [
+              "44"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "height",
+            "args": [
+              "13"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "width",
+            "args": [
+              "13"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor('TOK_MUTED', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "letterSpacing",
+            "args": [
+              "TYPE_FILE_IMPORT_CANCEL.letterSpacingFp as number"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "lineHeight",
+            "args": [
+              "TYPE_FILE_IMPORT_CANCEL.lineHeightFp as number"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "fontSize",
+            "args": [
+              "TYPE_FILE_IMPORT_CANCEL.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "fontWeight",
+            "args": [
+              "TYPE_FILE_IMPORT_CANCEL.fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "fontFamily",
+            "args": [
+              "TYPE_FILE_IMPORT_CANCEL.fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "borderRadius",
+            "args": [
+              "this.specId === 'local-import-result' ? 20 : 22"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor('app.action.fill', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "height",
+            "args": [
+              "this.specId === 'local-import-result' ? 40 : 44"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "height",
+            "args": [
+              "this.specId === 'local-import-result' ? 14 : 15"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "width",
+            "args": [
+              "this.specId === 'local-import-result' ? 14 : 15"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "letterSpacing",
+            "args": [
+              "TYPE_FILE_IMPORT_ACTION.letterSpacingFp as number"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "lineHeight",
+            "args": [
+              "TYPE_FILE_IMPORT_ACTION.lineHeightFp as number"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "fontSize",
+            "args": [
+              "TYPE_FILE_IMPORT_ACTION.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "fontWeight",
+            "args": [
+              "TYPE_FILE_IMPORT_ACTION.fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "fileAction",
+            "property": "fontFamily",
+            "args": [
+              "TYPE_FILE_IMPORT_ACTION.fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "borderRadius",
+            "args": [
+              "12"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.backgroundColor.29B4A697', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.fontColor.FF5B5046', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "fontSize",
+            "args": [
+              "TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "fontWeight",
+            "args": [
+              "TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "fontFamily",
+            "args": [
+              "TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "height",
+            "args": [
+              "44"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "opacity",
+            "args": [
+              "this.primaryEnabled ? 1 : 0.42"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "shadow",
+            "args": [
+              "{ radius: 12, color: readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.color.4D2F6373', this.appThemeScheme), offsetY: 4 }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "borderRadius",
+            "args": [
+              "12"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "linearGradient",
+            "args": [
+              "{ angle: 155, colors: [[readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.linearGradient.FF2F6373', this.appThemeScheme), 0], [readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.linearGradient.FF244F5C', this.appThemeScheme), 1]] }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.fontColor.FFFFFAF4', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "fontSize",
+            "args": [
+              "TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "fontWeight",
+            "args": [
+              "TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "fontFamily",
+            "args": [
+              "TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "height",
+            "args": [
+              "44"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "border",
+            "args": [
+              "{ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) }"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "borderRadius",
+            "args": [
+              "6"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "height",
+            "args": [
+              "36"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor('TOK_READ_INK', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "fontSize",
+            "args": [
+              "TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "fontFamily",
+            "args": [
+              "TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.fontFamily as string"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "borderRadius",
+            "args": [
+              "6"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "height",
+            "args": [
+              "36"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor('app.ReaderControlReplaceContent.toolbarButton.fontColor.FFFFFFFF', this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "fontSize",
+            "args": [
+              "TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderBoundedSurfaceActions",
+            "method": "textAction",
+            "property": "fontFamily",
+            "args": [
+              "TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.fontFamily as string"
+            ]
+          }
+        ],
+        "implementation": "import { readerAppColor } from './ReaderThemeRegistry';\nimport { TYPE_FILE_IMPORT_ACTION, TYPE_FILE_IMPORT_CANCEL, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE } from './ReaderTypography';\nimport { TOK_SPACE_SM, TOK_SPACE_XS, TOK_BORDER_W } from './ReaderTokens';\nexport type ReaderBoundedActionSpecId = 'local-file-selection' | 'local-import-result' | 'tts-manager' | 'replace-editor';\nexport type ReaderBoundedActionId = 'primary' | 'cancel';\nexport class ReaderBoundedFileActionModifier implements AttributeModifier<CommonAttribute> {\n    private readonly id: ReaderBoundedActionSpecId;\n    private readonly width: number;\n    constructor(id: ReaderBoundedActionSpecId, width: number) { this.id = id; this.width = width; }\n    applyNormalAttribute(instance: CommonAttribute): void {\n        if (this.id === 'local-import-result')\n            instance.width(this.width);\n        else\n            instance.layoutWeight(1);\n    }\n}\n@Component\nexport struct ReaderBoundedSurfaceActions extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        specId?: ReaderBoundedActionSpecId;\n        primaryLabel?: string;\n        primaryEnabled?: boolean;\n        cancelEnabled?: boolean;\n        actionWidth?: number;\n        availableHeight?: number;\n        feedback?: () => void;\n        onAction?: (id: ReaderBoundedActionId) => void;\n        onAreaChanged?: (oldValue: Area, next: Area) => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    specId: ReaderBoundedActionSpecId = 'tts-manager';\n    @Prop\n    primaryLabel: string = '保存';\n    @Prop\n    primaryEnabled: boolean = true;\n    @Prop\n    cancelEnabled: boolean = true;\n    @Prop\n    actionWidth: number = 0;\n    @Prop\n    availableHeight: number = 844;\n    @BuilderParam\n    feedback: () => void = this.emptySlot;\n    onAction: (id: ReaderBoundedActionId) => void = (_id: ReaderBoundedActionId): void => { };\n    onAreaChanged: (oldValue: Area, next: Area) => void = (_oldValue: Area, _next: Area): void => { };\n    @Builder\n    private emptySlot() { }\n    build() {\n        if (this.specId === 'local-import-result') {\n                .width<\n      >('100%').padding<\n      >({ left: 16, right: 16,\n                top: Math.min(16, Math.max(0, (this.availableHeight - 40) / 2)),\n                bottom: Math.min(20, Math.max(0, (this.availableHeight - 40) / 2)) })\n                .onAreaChange<\n      >((oldValue: Area, next: Area): void => this.onAreaChanged(oldValue, next));\n        }\n        else if (this.specId === 'local-file-selection') {\n            .width<\n      >('100%').padding<\n      >({ left: 20, right: 20 });\n        }\n        else if (this.specId === 'tts-manager') {\n                .width<\n      >('100%').height<\n      >(76).padding<\n      >({ left: 18, right: 18, top: 16, bottom: 16 });\n        }\n        else {\n                .width<\n      >('100%').height<\n      >(36).flexShrink<\n      >(0);\n        }\n    }\n    private enabled(id: ReaderBoundedActionId): boolean { return id === 'primary' ? this.primaryEnabled : this.cancelEnabled; }\n    private dispatch(id: ReaderBoundedActionId): void { if (this.enabled(id))\n        this.onAction(id); }\n    @Builder\n    private fileAction(id: ReaderBoundedActionId) {\n        if (id === 'cancel') {\n            .height<\n      >(44).padding<\n      >({ left: 21, right: 21 }).justifyContent<\n      >(FlexAlign.Center)\n                .border<\n      >({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius<\n      >(22)\n                .enabled<\n      >(this.cancelEnabled).onClick<\n      >((): void => this.dispatch(id));\n        }\n        else {\n            .attributeModifier<\n      >(new ReaderBoundedFileActionModifier(this.specId, this.actionWidth))\n                .height<\n      >(this.specId === 'local-import-result' ? 40 : 44).justifyContent<\n      >(FlexAlign.Center)\n                .backgroundColor<\n      >(readerAppColor('app.action.fill', this.appThemeScheme)).borderRadius<\n      >(this.specId === 'local-import-result' ? 20 : 22)\n                .enabled<\n      >(this.primaryEnabled).onClick<\n      >((): void => this.dispatch(id));\n        }\n    }\n    @Builder\n    private textAction(id: ReaderBoundedActionId) {\n        if (this.specId === 'tts-manager') {\n            if (id === 'cancel') {\n                .layoutWeight<\n        >(1).height<\n        >(44).fontFamily<\n        >(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.fontFamily)\n                    .fontWeight<\n        >(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.fontWeight).fontSize<\n        >(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.fontSizeFp)\n                    .fontColor<\n        >(readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.fontColor.FF5B5046', this.appThemeScheme)).textAlign<\n        >(TextAlign.Center)\n                    .backgroundColor<\n        >(readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.backgroundColor.29B4A697', this.appThemeScheme)).borderRadius<\n        >(12)\n                    .enabled<\n        >(this.cancelEnabled).onClick<\n        >((): void => this.dispatch(id));\n            }\n            else {\n                .layoutWeight<\n        >(1).height<\n        >(44).fontFamily<\n        >(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.fontFamily)\n                    .fontWeight<\n        >(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.fontWeight).fontSize<\n        >(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.fontSizeFp)\n                    .fontColor<\n        >(readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.fontColor.FFFFFAF4', this.appThemeScheme)).textAlign<\n        >(TextAlign.Center)\n                    .linearGradient<\n        >({ angle: 155, colors: [[readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.linearGradient.FF2F6373', this.appThemeScheme), 0], [readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.linearGradient.FF244F5C', this.appThemeScheme), 1]] }).borderRadius<\n        >(12)\n                    .shadow<\n        >({ radius: 12, color: readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.color.4D2F6373', this.appThemeScheme), offsetY: 4 })\n                    .enabled<\n        >(this.primaryEnabled).opacity<\n        >(this.primaryEnabled ? 1 : 0.42).onClick<\n        >((): void => this.dispatch(id));\n            }\n        }\n        else {\n            if (id === 'cancel') {\n                .fontFamily<\n        >(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.fontFamily as string)\n                    .fontSize<\n        >(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.fontSizeFp).fontColor<\n        >(readerAppColor('TOK_READ_INK', this.appThemeScheme))\n                    .layoutWeight<\n        >(1).height<\n        >(36).textAlign<\n        >(TextAlign.Center).borderRadius<\n        >(6)\n                    .backgroundColor<\n        >(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))\n                    .border<\n        >({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })\n                    .enabled<\n        >(this.cancelEnabled).onClick<\n        >((): void => this.dispatch(id));\n            }\n            else {\n                .fontFamily<\n        >(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.fontFamily as string)\n                    .fontSize<\n        >(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.fontSizeFp)\n                    .fontColor<\n        >(readerAppColor('app.ReaderControlReplaceContent.toolbarButton.fontColor.FFFFFFFF', this.appThemeScheme))\n                    .layoutWeight<\n        >(1).height<\n        >(36).textAlign<\n        >(TextAlign.Center).borderRadius<\n        >(6)\n                    .backgroundColor<\n        >(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))\n                    .enabled<\n        >(this.primaryEnabled).onClick<\n        >((): void => this.dispatch(id));\n            }\n        }\n    }\n}\n"
+      },
+      "consumers": [
+        {
+          "file": "features/bookshelf/LocalImportDialog.ets",
+          "method": "features/bookshelf/LocalImportDialog.ets#LocalImportDialog#fileSelectionActions",
+          "component": "ReaderBoundedSurfaceActions",
+          "specId": "'local-file-selection'",
+          "keys": [
+            "specId",
+            "primaryLabel",
+            "primaryEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalImportDialog.ets",
+          "method": "features/bookshelf/LocalImportDialog.ets#LocalImportDialog#resultFooter",
+          "component": "ReaderBoundedSurfaceActions",
+          "specId": "'local-import-result'",
+          "keys": [
+            "specId",
+            "primaryLabel",
+            "actionWidth",
+            "availableHeight",
+            "feedback",
+            "onAction",
+            "onAreaChanged"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderControlReplaceContent.ets",
+          "method": "features/reading/ReaderControlReplaceContent.ets#ReaderControlReplaceContent#editorActions",
+          "component": "ReaderBoundedSurfaceActions",
+          "specId": "'replace-editor'",
+          "keys": [
+            "specId",
+            "primaryEnabled",
+            "cancelEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderTtsConfigOverlay.ets",
+          "method": "features/reading/ReaderTtsConfigOverlay.ets#ReaderTtsConfigOverlay#managerFooter",
+          "component": "ReaderBoundedSurfaceActions",
+          "specId": "'tts-manager'",
+          "keys": [
+            "specId",
+            "primaryEnabled",
+            "cancelEnabled",
+            "onAction"
+          ]
+        }
+      ],
+      "removalProofs": [
+        "tools/test-bounded-surface-frame-header.mjs",
+        "tools/test-bounded-source-tts-composition.mjs",
+        "tools/test-bounded-local-import-composition.mjs",
+        "tools/test-bounded-replace-composition.mjs",
+        "tools/test-bookshelf-sheet-shared-composition.mjs"
+      ],
+      "sdkProofs": [
+        "tools/test-bounded-surface-frame-header.mjs",
+        "tools/test-bounded-source-tts-composition.mjs",
+        "tools/test-bounded-local-import-composition.mjs",
+        "tools/test-bounded-replace-composition.mjs",
+        "tools/test-bookshelf-sheet-shared-composition.mjs"
+      ]
+    },
+    {
+      "id": "shared-ReaderSheetActionList",
+      "file": "entry/src/main/ets/features/common/ReaderSheetActionList.ets",
+      "component": "ReaderSheetActionList",
+      "specPolicy": "One bookshelf-book-action SheetSurfaceSpec; 4 keyed physical actions and danger variant. Presentation admission/once-only dispatch remains leaf feature-local.",
+      "shape": {
+        "types": [],
+        "declarations": [
+          {
+            "name": "ReaderSheetActionList",
+            "publicFields": [
+              {
+                "name": "presentationId",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "isCurrent",
+                "type": "(presentationId: string) => boolean",
+                "decorators": []
+              },
+              {
+                "name": "onMultiSelect",
+                "type": "() => void",
+                "decorators": []
+              },
+              {
+                "name": "onBookInfo",
+                "type": "() => void",
+                "decorators": []
+              },
+              {
+                "name": "onEditGroup",
+                "type": "() => void",
+                "decorators": []
+              },
+              {
+                "name": "onRemoveFromBookshelf",
+                "type": "() => void",
+                "decorators": []
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderSheetActionList",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "this.surfaceSpec().height"
+            ]
+          },
+          {
+            "owner": "ReaderSheetActionList",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderSheetActionList",
+            "method": "actionSlot",
+            "property": "padding",
+            "args": [
+              "{ left: this.surfaceSpec().horizontalInset, right: this.surfaceSpec().horizontalInset }"
+            ]
+          },
+          {
+            "owner": "ReaderSheetActionList",
+            "method": "actionSlot",
+            "property": "height",
+            "args": [
+              "this.surfaceSpec().actionHeight"
+            ]
+          },
+          {
+            "owner": "ReaderSheetActionList",
+            "method": "actionSlot",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderSheetActionList",
+            "method": "actionSlot",
+            "property": "borderRadius",
+            "args": [
+              "this.surfaceSpec().actionBorderRadius"
+            ]
+          },
+          {
+            "owner": "ReaderSheetActionList",
+            "method": "actionSlot",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(danger ? this.surfaceSpec().dangerBackgroundRole : this.surfaceSpec().actionBackgroundRole, this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderSheetActionList",
+            "method": "actionSlot",
+            "property": "padding",
+            "args": [
+              "{ left: this.surfaceSpec().actionPaddingLeft }"
+            ]
+          },
+          {
+            "owner": "ReaderSheetActionList",
+            "method": "actionSlot",
+            "property": "height",
+            "args": [
+              "this.surfaceSpec().actionHeight"
+            ]
+          },
+          {
+            "owner": "ReaderSheetActionList",
+            "method": "actionSlot",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor(danger ? this.surfaceSpec().dangerTextRole : this.surfaceSpec().actionTextRole, this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderSheetActionList",
+            "method": "actionSlot",
+            "property": "lineHeight",
+            "args": [
+              "this.surfaceSpec().actionLabelLineHeight"
+            ]
+          },
+          {
+            "owner": "ReaderSheetActionList",
+            "method": "actionSlot",
+            "property": "fontSize",
+            "args": [
+              "this.surfaceSpec().actionLabelFontSize"
+            ]
+          },
+          {
+            "owner": "ReaderSheetActionList",
+            "method": "actionSlot",
+            "property": "fontWeight",
+            "args": [
+              "this.surfaceSpec().actionLabelFontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderSheetActionList",
+            "method": "actionSlot",
+            "property": "fontFamily",
+            "args": [
+              "this.surfaceSpec().actionLabelFontFamily"
+            ]
+          }
+        ],
+        "implementation": "import { readerAppColor } from './ReaderThemeRegistry';\nimport { SheetSurfaceSpec, resolveSheetSpec } from './ReaderSurfaceSpecs';\n@Component\nexport struct ReaderSheetActionList extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        presentationId?: string;\n        isCurrent?: (presentationId: string) => boolean;\n        onMultiSelect?: () => void;\n        onBookInfo?: () => void;\n        onEditGroup?: () => void;\n        onRemoveFromBookshelf?: () => void;\n        private mounted?: boolean;\n        private dispatchedId?: string;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    presentationId: string = '';\n    isCurrent: (presentationId: string) => boolean = (_id: string): boolean => false;\n    onMultiSelect: () => void = (): void => { };\n    onBookInfo: () => void = (): void => { };\n    onEditGroup: () => void = (): void => { };\n    onRemoveFromBookshelf: () => void = (): void => { };\n    private mounted: boolean = false;\n    private dispatchedId: string = '';\n    aboutToAppear(): void { this.mounted = true; }\n    aboutToDisappear(): void { this.mounted = false; }\n    private surfaceSpec(): SheetSurfaceSpec { return resolveSheetSpec('bookshelf-book-action'); }\n    private dispatch(id: string, action: () => void): void {\n        if (!this.mounted || id.length === 0 || id !== this.presentationId ||\n            this.dispatchedId === id)\n            return;\n        try {\n            if (!this.isCurrent(id))\n                return;\n        }\n        catch (_error) {\n            return;\n        }\n        this.dispatchedId = id;\n        action();\n    }\n    build() {\n        .width<\n    >('100%').height<\n    >(this.surfaceSpec().height);\n    }\n    @Builder\n    private actionSlot(label: string, danger: boolean, index: number, id: string, action: () => void) {\n        .width<\n    >('100%').height<\n    >(this.surfaceSpec().actionHeight)\n            .padding<\n    >({ left: this.surfaceSpec().horizontalInset, right: this.surfaceSpec().horizontalInset })\n            .position<\n    >({ x: 0, y: this.surfaceSpec().actionY(index) });\n    }\n}\n"
+      },
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookshelfBookActionSheet.ets",
+          "method": "features/bookshelf/BookshelfBookActionSheet.ets#BookshelfBookActionSheet#sheetActions",
+          "component": "ReaderSheetActionList",
+          "keys": [
+            "presentationId",
+            "isCurrent",
+            "onMultiSelect",
+            "onBookInfo",
+            "onEditGroup",
+            "onRemoveFromBookshelf"
+          ],
+          "specId": null
+        }
+      ],
+      "removalProofs": [
+        "tools/test-bounded-surface-frame-header.mjs",
+        "tools/test-bounded-source-tts-composition.mjs",
+        "tools/test-bounded-local-import-composition.mjs",
+        "tools/test-bounded-replace-composition.mjs",
+        "tools/test-bookshelf-sheet-shared-composition.mjs"
+      ],
+      "sdkProofs": [
+        "tools/test-bounded-surface-frame-header.mjs",
+        "tools/test-bounded-source-tts-composition.mjs",
+        "tools/test-bounded-local-import-composition.mjs",
+        "tools/test-bounded-replace-composition.mjs",
+        "tools/test-bookshelf-sheet-shared-composition.mjs"
+      ]
+    }
+  ],
+  "legacyBusinessRowsSha256": "3f7f18a54b7bf56a1bb557d3c48574f3e9b4f7e869a25dce2541c04b30f924d0",
+  "legacySharedOwnersSha256": "af8b056aa81b2ddccecb15af9cb59e714300d03568915c44edebc2256514d074"
+}

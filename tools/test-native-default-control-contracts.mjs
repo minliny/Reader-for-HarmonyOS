@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync,readdirSync } from 'node:fs';
+import { sharedProducerShape } from './lib/architecture-shared-producer-contract.mjs';
 import { auditNativeTextElements } from './lib/reader-typography-consumer-audit.mjs';
 const fixture=JSON.parse(readFileSync(new URL('./fixtures/design/native-default-control-contracts.json',import.meta.url)));
+const producers=JSON.parse(readFileSync(new URL('./fixtures/architecture-shared-producers.json',import.meta.url)));
 const featureRoot=new URL('../entry/src/main/ets/features/',import.meta.url),normalise=text=>(text??'').replace(/\s+/g,'');
 const contracts=new Map(fixture.consumers.map(row=>[JSON.stringify([row.file,row.method,row.kind,normalise(row.argument)]),{...row,count:0}]));
 assert.equal(contracts.size,13);
@@ -18,6 +20,11 @@ for(const file of readdirSync(featureRoot,{recursive:true}).filter(file=>file.en
   if(node.kind==='Button'&&file==='common/ReaderDialogSurface.ets'&&node.method==='actionCell'&&node.attributes.attributeModifier==='this.actionModifier(action)'){
    assert.ok(source.includes('TYPE_DIALOG')||source.includes('this.spec()'),'actual shared Dialog family owns its labelled native child');delegated++;continue;
   }
+  if(node.kind==='Text'&&file==='common/ReaderBoundedSurfaceHeader.ets'&&node.method==='titleText'&&node.text==='this.title'&&
+    normalise(node.attributes.attributeModifier)==='newReaderBoundedTitleModifier(this.specId,this.appThemeScheme)'){
+    const actual=producers.producers.find(p=>p.component==='ReaderBoundedSurfaceHeader');assert.ok(actual);
+    assert.deepEqual(sharedProducerShape(source,actual.file),actual.shape,'actual finite modifier owns title roles and AUTO omissions');delegated++;continue;
+  }
   const contract=contracts.get(JSON.stringify([rel,node.method,node.kind,normalise(node.text)]));
   assert.ok(contract,`${rel}:${node.line}: a visible native-default element needs a bounded platform-default contract, not a fake TYPE modifier`);
   assert.equal(node.attributes.attributeModifier, undefined, `${contract.id}: do not add an empty modifier to fake a public migration`);
@@ -27,5 +34,5 @@ for(const file of readdirSync(featureRoot,{recursive:true}).filter(file=>file.en
  }
 }
 for(const row of contracts.values())assert.equal(row.count,1,`${row.id}: native owner/consumer still present; intentional replacement requires a new actual implementation proof`);
-assert.equal(controls,13);assert.equal(a11y,4);assert.equal(delegated,1);
-console.log(`PASS native-default contracts: ${controls} real native controls / three finite variants; ${paint} no-glyph actors, ${a11y} exact accessibility actors, ${delegated} shared Dialog host, ${inherited} inherited body spans; no physical font overrides fabricated`);
+assert.equal(controls,13);assert.equal(a11y,4);assert.equal(delegated,2);
+console.log(`PASS native-default contracts: ${controls} real native controls / three finite variants; ${paint} no-glyph actors, ${a11y} exact accessibility actors, ${delegated} actual shared Dialog/finite title hosts, ${inherited} inherited body spans; no physical font overrides fabricated`);

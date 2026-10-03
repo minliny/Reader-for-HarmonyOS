@@ -7,11 +7,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { execFileSync } from 'node:child_process';
+import { verifyArchitectureRegistration } from './lib/architecture-shared-producer-contract.mjs';
 import { auditTypographyConsumers, isSharedTypographyExpression } from './lib/reader-typography-consumer-audit.mjs';
 
 const root = process.cwd();
 const baseline = JSON.parse(fs.readFileSync(path.join(root, 'tools/architecture-consumer-baseline.json'), 'utf8'));
-const featureRoot = path.join(root, 'entry/src/main/ets/features');
+const featureRoot = path.join(root, 'entry/src/main/ets');
+const sharedContract = JSON.parse(fs.readFileSync(path.join(root, 'tools/fixtures/architecture-shared-producers.json'), 'utf8'));
+const inventory = JSON.parse(execFileSync(process.execPath, ['tools/audit-architecture-consumers.mjs', '--stdout=json'], { cwd: root, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] }));
+const coverage = verifyArchitectureRegistration(inventory, baseline, sharedContract, root);
 const patterns = {
   fontSize: /\.fontSize\s*\(/g,
   backgroundColor: /\.backgroundColor\s*\(/g,
@@ -31,7 +36,7 @@ function walk(dir) {
   }
   return result;
 }
-const base = new Map([...baseline.rows, ...(baseline.sharedOwners ?? [])].map((row) => [row.file, row.counts]));
+const base = new Map([...baseline.rows, ...(baseline.sharedOwners ?? []), ...(baseline.uiPolicies ?? [])].map((row) => [row.file, row.counts]));
 const violations = [];
 for (const file of walk(featureRoot)) {
   const rel = path.relative(root, file).replaceAll(path.sep, '/');
@@ -55,4 +60,4 @@ if (violations.length) {
   for (const violation of violations) console.error(`- ${violation}`);
   process.exit(1);
 }
-console.log(`architecture consumer baseline PASS (${baseline.rows.length} registered files)`);
+console.log(`architecture consumer baseline PASS (${coverage.budgetRows} unchanged business budgets + ${coverage.sharedOwners} bounded shared owners + ${coverage.outsideBudgetPolicies} exact retained policies; ${coverage.uiFiles} actual UI files fully registered)`);

@@ -716,6 +716,214 @@
         "fontSize": 1
       },
       "reason": "One actual compact operation feedback implementation for pages without an existing status surface."
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderBoundedSurface.ets",
+      "counts": {
+        "backgroundColor": 4
+      },
+      "kind": "finite-spec-actual-shared-producer",
+      "contractId": "shared-ReaderBoundedSurface",
+      "proof": "tools/test-architecture-shared-producers.mjs",
+      "reason": "8 finite ReaderBoundedSurfaceId variants; measured width/height only; finite resolveDialog/Popup/SheetSpec or retained editor geometry."
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets",
+      "counts": {
+        "fontSize": 2,
+        "backgroundColor": 4
+      },
+      "kind": "finite-spec-actual-shared-producer",
+      "contractId": "shared-ReaderBoundedSurfaceHeader",
+      "proof": "tools/test-architecture-shared-producers.mjs",
+      "reason": "Same 8 finite surface IDs; existing ROLE titles or registered sheetSpec. Source/TTS AUTO omissions and sheet handle/title retained. Business title/slots/callbacks only."
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderBoundedSurfaceActions.ets",
+      "counts": {
+        "backgroundColor": 4
+      },
+      "kind": "finite-spec-actual-shared-producer",
+      "contractId": "shared-ReaderBoundedSurfaceActions",
+      "proof": "tools/test-architecture-shared-producers.mjs",
+      "reason": "4 finite IDs: local-file-selection/local-import-result/tts-manager/replace-editor; real shared action rows and existing roles, live enabled and callback inputs."
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderSheetActionList.ets",
+      "counts": {
+        "backgroundColor": 1
+      },
+      "kind": "finite-spec-actual-shared-producer",
+      "contractId": "shared-ReaderSheetActionList",
+      "proof": "tools/test-architecture-shared-producers.mjs",
+      "reason": "One bookshelf-book-action SheetSurfaceSpec; 4 keyed physical actions and danger variant. Presentation admission/once-only dispatch remains leaf feature-local."
+    }
+  ],
+  "uiPolicies": [
+    {
+      "file": "entry/src/main/ets/app/ArkWebExecutionHost.ets",
+      "kind": "platform-host",
+      "owner": "ArkWebExecutionHost / Core routed JS execution",
+      "reason": "Hidden mounted Web/native evaluation and retained host failure feedback; genuine Host owner, not a general page shell.",
+      "counts": {
+        "fontSize": 4,
+        "backgroundColor": 2
+      },
+      "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/features/bookshelf/BookshelfShell.ets",
+      "kind": "layout-composition",
+      "owner": "BookshelfShell / Bookshelf state owner",
+      "reason": "Existing shared shelf layout slots; no own text/style arguments. Consumer must keep page/scroll identity.",
+      "counts": {},
+      "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderIconButton.ets",
+      "kind": "existing-shared-control",
+      "owner": "ReaderIconButton",
+      "reason": "Existing actual native icon event target; shared implementation already imported by real callers, with no private font/background calls.",
+      "counts": {},
+      "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/BookTurnTextureBuilder.ets",
+      "kind": "native-adapter",
+      "owner": "Reading page-turn texture owner",
+      "reason": "Offscreen native paragraph/texture builder is the real measurement/render authority; physical text inputs remain justified native runtime contracts.",
+      "counts": {},
+      "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderBookmarkList.ets",
+      "kind": "feature-shared-list",
+      "owner": "ReaderBookmarkList / reading bookmark owner",
+      "reason": "Actual shared bookmark list consumes shared row/loading/error/empty components; preserves bookmark owner and selection callbacks.",
+      "counts": {},
+      "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets",
+      "kind": "native-stage",
+      "owner": "ReadingExperience / continuous native stage",
+      "reason": "Persistent native text/tree composition and body/viewport inputs; not a permanent exception for chrome text.",
+      "counts": {},
+      "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderDirectoryList.ets",
+      "kind": "feature-shared-list",
+      "owner": "ReaderDirectoryList / directory projection owner",
+      "reason": "Shared directory List host consumes supplied entries/row geometry; navigation and row owner remains explicit.",
+      "counts": {},
+      "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderNativeParagraphView.ets",
+      "kind": "native-adapter",
+      "owner": "ReaderNativeParagraph resource owner",
+      "reason": "Native shaped paragraph leases/paint are a narrow render/measurement boundary, with no ordinary duplicated UI typography.",
+      "counts": {},
+      "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderPageTurnStage.ets",
+      "kind": "native-stage",
+      "owner": "ReadingExperience / ReaderPageTurnSurface",
+      "reason": "Persistent outgoing/incoming page owners and native stage; background/measurement/body exceptions are runtime contracts only.",
+      "counts": {},
+      "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/SourceSwitchPanel.ets",
+      "kind": "business-slot-wrapper",
+      "owner": "Reading source-switch owner",
+      "reason": "Existing wrapper passes finite SourceSwitchWindow and body/business state; no private style implementation.",
+      "counts": {},
+      "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/features/search/SearchSpinner.ets",
+      "kind": "motion-actor",
+      "owner": "Search request lifecycle owner",
+      "reason": "Actual shared visual loading actor; timer/subscription lifetime and reduced motion remain owner contracts.",
+      "counts": {},
+      "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/features/settings/CategorySection.ets",
+      "kind": "business-slot-wrapper",
+      "owner": "Settings category owner",
+      "reason": "Existing real section layout consumes named category header/row structures; zero private font/background calls.",
+      "counts": {},
+      "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/pages/Index.ets",
+      "kind": "page-orchestration",
+      "owner": "Index unique integration owner",
+      "reason": "Actual page/surface host, navigation and native dialog admission; existing background/controller budget recorded without claiming migration closure.",
+      "counts": {
+        "backgroundColor": 4,
+        "CustomDialogController": 2,
+        "showAlertDialog": 4
+      },
+      "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/pages/ReaderStartupRecovery.ets",
+      "kind": "native-startup-root",
+      "owner": "ReaderStartupContentOwner",
+      "reason": "Required pre-Index recovery root uses shared public roles; native Ability retry/exit contract applies.",
+      "counts": {
+        "backgroundColor": 1
+      },
+      "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/pages/ReaderControlMotionVerification.ets",
+      "kind": "debug-probe",
+      "owner": "Debug cold-start allowlist",
+      "reason": "Explicit diagnostic UI root only; finite real probe typography retained, no new shipping route.",
+      "counts": {
+        "fontSize": 11,
+        "backgroundColor": 4
+      },
+      "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/pages/ReaderParagraphDiagnostic.ets",
+      "kind": "debug-probe",
+      "owner": "Debug cold-start allowlist",
+      "reason": "Actual native shaping/layout diagnostic root; intentional physical test typography is bounded to this exact debug file.",
+      "counts": {
+        "fontSize": 7,
+        "backgroundColor": 2
+      },
+      "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/pages/ReaderRendererPilot.ets",
+      "kind": "debug-probe",
+      "owner": "Debug cold-start allowlist",
+      "reason": "Dedicated native renderer/device probe root; physical calibration inputs remain only inside exact diagnostic scope.",
+      "counts": {
+        "fontSize": 2,
+        "backgroundColor": 1
+      },
+      "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/pages/ReaderTextNodeDiagnostic.ets",
+      "kind": "debug-probe",
+      "owner": "Debug cold-start allowlist",
+      "reason": "Native TextNode diagnostic root; actual physical native font probe arguments are intentional, not regular application UI.",
+      "counts": {
+        "fontSize": 3,
+        "backgroundColor": 1
+      },
+      "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
     }
   ]
 }

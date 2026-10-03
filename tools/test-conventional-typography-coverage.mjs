@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { auditTypographyConsumers, isSharedTypographyExpression } from './lib/reader-typography-consumer-audit.mjs';
+import { registeredProducerTypographySlots } from './lib/architecture-shared-producer-contract.mjs';
 
 const root = new URL('../entry/src/main/ets/features/', import.meta.url);
+const producerContract=JSON.parse(readFileSync(new URL('./fixtures/architecture-shared-producers.json',import.meta.url),'utf8'));
 // This is explicit migration debt, not a permanent rendering exception. Missing
 // rows are allowed as concurrent finite-spec migrations remove the old calls;
 // a new private argument or duplicate consumer is rejected across all folders.
@@ -28,17 +30,20 @@ for (const [property, expression] of Object.entries({
 for (const [method, role] of [['phoneOption', 'TYPE_SETTINGS_SELECT_PHONE_OPTION'], ['tabletOption', 'TYPE_SETTINGS_SELECT_TABLET_OPTION']])
   allow('settings/SettingsSelectOverlay.ets', method, 'fontWeight', `this.isSelected(option) ? FontWeight.Bold : ${role}.fontWeight`, 1, 'integrator owns the shared choice-row selected-weight migration');
 allow('common/ReaderActionMenuSurface.ets', 'actionRow', 'fontWeight', 'FontWeight.Medium', 1, 'integrator moved the actual shared action row; weight getter remains pending');
-let files = 0, consumers = 0, sharedArguments = 0, privateArguments = 0;
+let files = 0, consumers = 0, sharedArguments = 0, sharedProducerArguments = 0, privateArguments = 0;
 for (const file of readdirSync(root, { recursive: true }).filter(file => file.endsWith('.ets') && !file.startsWith('reading/'))) {
   files++;
-  for (const node of auditTypographyConsumers(readFileSync(new URL(file, root), 'utf8'), file)) {
+  const source=readFileSync(new URL(file, root), 'utf8');
+  const producerSlots=registeredProducerTypographySlots(source,'entry/src/main/ets/features/'+file,producerContract);
+  for (const node of auditTypographyConsumers(source, file)) {
     consumers++;
     for (const [property, modifier] of Object.entries(node.modifiers)) {
       if (isSharedTypographyExpression(modifier.expression)) { sharedArguments++; continue; }
+      if (producerSlots.has(node.method,property,modifier.expression)) { sharedProducerArguments++; continue; }
       const receipt = debt.get(JSON.stringify([file, node.method, property, modifier.expression]));
       assert.ok(receipt, `${file}:${node.line}/${property}: new private style must consume the public role/spec (${modifier.expression})`);
       assert.ok(++receipt.count <= receipt.maximum, `${file}/${node.method}: no duplicated private migration debt`); privateArguments++;
     }
   }
 }
-console.log(`PASS conventional Typography coverage: ${files} files, ${consumers} real modifier carriers, ${sharedArguments} shared arguments; ${privateArguments} explicitly OPEN migration-debt arguments`);
+console.log(`PASS conventional Typography coverage: ${files} files, ${consumers} real modifier carriers, ${sharedArguments} public role/spec arguments + ${sharedProducerArguments} exact finite producer arguments; ${privateArguments} explicitly OPEN migration-debt arguments`);
