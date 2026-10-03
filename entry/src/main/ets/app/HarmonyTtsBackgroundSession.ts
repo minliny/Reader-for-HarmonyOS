@@ -19,6 +19,7 @@ export interface ReaderTtsBackgroundCapability {
  * separate facts; a failed stop never becomes a successful release. */
 export class HarmonyTtsBackgroundSession implements ReaderTtsBackgroundSessionBridge {
   private readonly context: common.UIAbilityContext;
+  private static retiring: HarmonyTtsBackgroundSession[] = [];
   private operationTail: Promise<void> = Promise.resolve();
   private active: boolean = false;
   private closed: boolean = false;
@@ -51,7 +52,7 @@ export class HarmonyTtsBackgroundSession implements ReaderTtsBackgroundSessionBr
   };
 
   constructor(context: common.UIAbilityContext) { this.context = context; }
-  setRevocationListener(listener: (() => void) | undefined): void { this.revoked = listener; }
+  setRevocationListener(listener: (() => void) | undefined): void { if (!this.closed) this.revoked = listener; }
   capability(): ReaderTtsBackgroundCapability { return { phase: this.phase, taskId: this.taskId, reason: this.reason }; }
 
   async activate(): Promise<boolean> {
@@ -65,6 +66,13 @@ export class HarmonyTtsBackgroundSession implements ReaderTtsBackgroundSessionBr
         try { await this.stopOwnedTask(); } catch (_) { return; }
         if (this.closed || generation !== this.generation) return;
       }
+      try {
+        // Preserve exact native task ownership across RuntimeOwner replacement.
+        for (const previous of HarmonyTtsBackgroundSession.retiring.slice()) await previous.close();
+      } catch (error) {
+        this.phase = 'denied'; this.reason = `prior-retirement:${(error as Error).message}`; return;
+      }
+      if (this.closed || generation !== this.generation) return;
       if (!canIUse('SystemCapability.ResourceSchedule.BackgroundTaskManager.ContinuousTask')) {
         this.phase = 'unavailable'; this.reason = 'continuous-task-unavailable'; return;
       }
@@ -86,6 +94,8 @@ export class HarmonyTtsBackgroundSession implements ReaderTtsBackgroundSessionBr
         try { before = (await backgroundTaskManager.getAllContinuousTasks(this.context)).map((item): number => item.continuousTaskId); }
         catch (_) { /* The ID-bearing start ACK remains authoritative. */ }
         if (this.closed || generation !== this.generation) return;
+        // Once dispatched, a rejected/lost ACK cannot prove that no native task exists.
+        this.unverifiedTask = true;
         const receipt = await backgroundTaskManager.startBackgroundRunning(this.context, ['audioPlayback'], agent);
         let id = receipt.continuousTaskId;
         if (id === undefined) this.unverifiedTask = true;
@@ -138,15 +148,20 @@ export class HarmonyTtsBackgroundSession implements ReaderTtsBackgroundSessionBr
 
   async close(): Promise<void> {
     if (!this.closed) { this.closed = true; this.generation += 1; this.active = false; this.revoked = undefined; }
+    if (HarmonyTtsBackgroundSession.retiring.indexOf(this) < 0) HarmonyTtsBackgroundSession.retiring.push(this);
     const task = this.operationTail.then(async (): Promise<void> => this.stopOwnedTask());
     this.operationTail = task.catch((): void => {});
-    try { await task; }
-    finally {
-      if (this.observing) {
-        try { backgroundTaskManager.off('continuousTaskCancel', this.onCancelled); this.observing = false; }
-        catch (error) { hilog.warn(LOG_DOMAIN, 'Reader', 'TTS background listener release failed: %{private}s', (error as Error).message); }
+    let failure: Error | undefined = undefined;
+    try { await task; } catch (error) { failure = error as Error; }
+    if (this.observing) {
+      try { backgroundTaskManager.off('continuousTaskCancel', this.onCancelled); this.observing = false; }
+      catch (error) {
+        hilog.warn(LOG_DOMAIN, 'Reader', 'TTS background listener release failed: %{private}s', (error as Error).message);
+        if (failure === undefined) failure = error as Error;
       }
     }
+    if (failure !== undefined) throw failure;
+    HarmonyTtsBackgroundSession.retiring = HarmonyTtsBackgroundSession.retiring.filter((owned): boolean => owned !== this);
   }
 
   private async stopOwnedTask(): Promise<void> {

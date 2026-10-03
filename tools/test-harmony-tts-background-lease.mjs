@@ -24,9 +24,45 @@ function fixture() {
     stripTypeScriptTypes(source.replace(/^import[^;]*;\s*/gm,'')).replace(/^export /gm,'')+';return HarmonyTtsBackgroundSession;')
     (want,native,{warn(){},error(){}},()=>available);
   const owner=new Class({abilityInfo:{bundleName:'io.reader.minliny',name:'EntryAbility'}});
-  return {owner,native,want,calls,tasks,listeners,cancel(id,reason=1){for(const listener of listeners)listener({id,reason});},
+  return {owner,Class,native,want,calls,tasks,listeners,cancel(id,reason=1){for(const listener of listeners)listener({id,reason});},
     set available(value){available=value;},set failStop(value){failStop=value;},set missingId(value){missingId=value;},
     set failReadback(value){failReadback=value;}};
+}
+{
+  const f=fixture();await f.owner.activate();const id=f.owner.capability().taskId;f.failStop=true;
+  await assert.rejects(f.owner.close(),/release failed/);
+  const successor=new f.Class({abilityInfo:{bundleName:'io.reader.minliny',name:'EntryAbility'}});
+  assert.equal(await successor.activate(),false,'new runtime cannot lose the retired task identity');
+  assert.equal(f.calls.filter(call=>call[0]==='start').length,1);
+  f.failStop=false;assert.equal(await successor.activate(),true);
+  const startIndex=f.calls.findLastIndex(call=>call[0]==='start');
+  assert.ok(f.calls.findLastIndex(call=>call[0]==='stop'&&call[1]===id)<startIndex);
+  await successor.close();assert.equal(f.tasks.length,0);
+}
+{
+  const f=fixture(),wait=deferred();let starts=0;
+  f.native.startBackgroundRunning=async()=>{starts++;return starts===1?wait.promise:{continuousTaskId:62};};
+  const first=f.owner.activate();await tick();const close=f.owner.close();
+  const successor=new f.Class({abilityInfo:{bundleName:'io.reader.minliny',name:'EntryAbility'}});
+  const second=successor.activate();await tick();assert.equal(starts,1);
+  wait.resolve({continuousTaskId:61});assert.equal(await first,false);await close;assert.equal(await second,true);
+  assert.deepEqual(f.calls.filter(call=>call[0]==='stop'),[['stop',61]]);await successor.close();
+}
+{
+  const f=fixture();await f.owner.activate();const off=f.native.off;let fail=true;
+  f.native.off=(...args)=>{if(fail)throw Error('unsubscribe failed');return off(...args);};
+  await assert.rejects(f.owner.close(),/unsubscribe failed/);
+  const successor=new f.Class({abilityInfo:{bundleName:'io.reader.minliny',name:'EntryAbility'}});
+  assert.equal(await successor.activate(),false);assert.equal(f.calls.filter(call=>call[0]==='start').length,1);
+  fail=false;assert.equal(await successor.activate(),true);await successor.close();assert.equal(f.listeners.size,0);
+}
+{
+  const f=fixture();f.missingId=true;f.failReadback=true;assert.equal(await f.owner.activate(),false);
+  await assert.rejects(f.owner.close(),/no verified native identity/);
+  const successor=new f.Class({abilityInfo:{bundleName:'io.reader.minliny',name:'EntryAbility'}});
+  assert.equal(await successor.activate(),false,'unknown identity remains a background-only admission block across runtime replacement');
+  assert.equal(f.calls.filter(call=>call[0]==='start').length,1);
+  assert.equal(f.calls.filter(call=>call[0]==='stop').length,0);
 }
 
 {
@@ -83,6 +119,13 @@ function fixture() {
   const f=fixture();f.native.on=()=>{throw Error('observer denied');};
   assert.equal(await f.owner.activate(),false);assert.equal(f.owner.capability().phase,'denied');
   assert.equal(f.calls.filter(call=>call[0]==='start').length,0,'a task without revocation observation is never declared admitted');await f.owner.close();
+}
+
+{
+  const f=fixture();f.native.startBackgroundRunning=async()=>{f.calls.push(['start']);throw Error('lost start ACK');};
+  assert.equal(await f.owner.activate(),false);assert.equal(f.owner.capability().phase,'unverified');
+  assert.equal(await f.owner.activate(),false);assert.equal(f.calls.filter(call=>call[0]==='start').length,1);
+  await assert.rejects(f.owner.close(),/no verified native identity/);
 }
 
 // The actual router distinguishes foreground capability loss from mandatory
