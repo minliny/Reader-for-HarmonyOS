@@ -1,3 +1,5 @@
+import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
+import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
@@ -79,7 +81,12 @@ assert.match(sourcePage, /Text\('批量管理'\)/);
 assert.match(page, /Core 生成 Legado 兼容 JSON/);
 assert.match(page, /fullWidthActionButton\('导出全部书源'/,
   'standalone export action must not reuse the row-only layoutWeight button');
-assert.match(page, /private fullWidthActionButton[\s\S]*?\.width\('100%'\)[\s\S]*?\.height\(42\)/);
+assert.match(page, /private fullWidthActionButton[\s\S]*?ReaderButton\(\{[\s\S]*?specId: 'source-action'[\s\S]*?layout: 'full'/);
+const controls=foundationControls(),controlOwner=createReaderBuilderProbe(page,['fullWidthActionButton','smallButton'],controls.dependencies,controls.hooks).owner;
+let actions=0;Object.assign(controlOwner,{appThemeScheme:'day',snapshot:{busy:false}});
+controlOwner.fullWidthActionButton('导出全部书源',true,()=>actions++);const full=controls.nodes(controlOwner).find(n=>n.type==='Text');
+assert.equal(full.width,'100%');assert.equal(full.height,42);assert.equal(full.borderRadius,8);assert.equal(Object.hasOwn(full,'layoutWeight'),false,'standalone export retains full-width instead of row-only equal weight');
+full.onClick();assert.equal(actions,1);controlOwner.snapshot.busy=true;controls.flush(controlOwner);full.onClick();assert.equal(actions,1,'retained full-width callback honors current busy Prop');
 assert.match(page, /onCheckSelected/);
 assert.match(page, /onDeleteSelected/);
 assert.match(page, /onSelectAll/);
@@ -117,7 +124,8 @@ assert.match(page, /onStopCheck/);
 assert.match(page, /log\.sourceId[\s\S]*log\.traceId[\s\S]*log\.requestId/);
 assert.match(page, /private sourceCard\(\)/);
 assert.match(page, /private smallButton\(label: string, enabled: boolean/);
-assert.match(page, /if \(enabled\)[\s\S]*action\(\)/);
+assert.match(page, /private smallButton[\s\S]*?specId: 'source-compact'[\s\S]*?actionEnabled: enabled/);
+controlOwner.smallButton('不可用',false,()=>actions++);const small=controls.nodes(controlOwner).find(n=>n.type==='Text'&&n.create==='不可用');assert.equal(small.enabled,false);small.onClick();assert.equal(actions,1,'shared compact actor rejects a direct disabled physical callback');
 assert.doesNotMatch(page, /private takeSelection/);
 assert.doesNotMatch(page, /RuleSubscription|规则订阅|subscriptionCard/);
 assert.match(sourcePage, /statusKind/);

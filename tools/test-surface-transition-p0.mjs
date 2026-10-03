@@ -76,10 +76,10 @@ assert.match(directory, /readerInteractiveSafeBottom\(ReaderWindowCoordinator\.m
 assert.doesNotMatch(directory, /@Prop isTablet/,
   'Full Directory must select its layout from the live container');
 
-assert.match(sourceSwitch, /ReaderBoundedSurface\(\{ specId: 'source-switch-window', width: this\.windowWidth\(\), height: this\.windowHeight\(\)/);
+assert.match(sourceSwitch, /ReaderBoundedSurface\(\{ specId: 'source-switch-window', surfaceWidth: this\.windowWidth\(\), surfaceHeight: this\.windowHeight\(\)/);
 for (const [width,height] of [[240,300],[300,385],[280,320]]) {
   const kit=boundedSurfaceSdk();
-  const frame=kit.consumer(read('entry/src/main/ets/features/common/ReaderBoundedSurface.ets'),undefined,{}, {specId:'source-switch-window',width,height});
+  const frame=kit.consumer(read('entry/src/main/ets/features/common/ReaderBoundedSurface.ets'),undefined,{}, {specId:'source-switch-window',surfaceWidth:width,surfaceHeight:height});
   frame.initialRender();
   const painted=[...frame.nodes.values()].find(node=>node.backgroundColor);
   assert.equal(painted.width,width);assert.equal(painted.height,height,'actual SDK shared frame respects clamped owner geometry');

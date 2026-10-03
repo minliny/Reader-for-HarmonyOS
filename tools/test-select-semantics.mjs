@@ -1,3 +1,6 @@
+import { resolveReaderChoiceSpec, choiceRowProbe } from './lib/reader-choice-row-probe.mjs';
+import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
+import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { themeDayDesignSource } from './lib/reader-theme-design-source.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -93,9 +96,19 @@ assert.match(panel, /this\.chevronAngle = -180/,
   'the selected-row chevron must rotate around its fixed center while the panel expands');
 assert.match(panel, /ReaderChoiceRow\(\{[\s\S]*'source-group-selected'/,
   'the expanded source-group row consumes the actual shared finite implementation');
-assert.match(choices,
-  /'source-group-selected':[\s\S]*?TYPE_SELECT_SOURCE_GROUP_VALUE[\s\S]*?'app\.ReaderSelectPanel\.sourceGroupSelectedRow\.backgroundColor\.FFFFFCF8'[\s\S]*?app\.media\.source_group_chevron/,
-  'the shared source-group specification preserves trigger typography, icon and surface');
+const sourceGroupSpec=resolveReaderChoiceSpec('source-group-selected');
+assert.deepEqual(sourceGroupSpec.text,readerTypographyRoles.TYPE_SELECT_SOURCE_GROUP_VALUE);
+assert.deepEqual(sourceGroupSpec.selectedText,readerTypographyRoles.TYPE_SELECT_SOURCE_GROUP_VALUE);
+assert.equal(sourceGroupSpec.selectedBackground,'app.ReaderSelectPanel.sourceGroupSelectedRow.backgroundColor.FFFFFCF8');
+assert.equal(sourceGroupSpec.iconDay,'app.media.source_group_chevron');assert.equal(sourceGroupSpec.iconNight,'app.media.source_group_chevron_theme_night');
+assert.deepEqual([sourceGroupSpec.height,sourceGroupSpec.layout,sourceGroupSpec.textLeft,sourceGroupSpec.textTop,sourceGroupSpec.iconRight,sourceGroupSpec.iconTop],[36,'positioned',14,10,21,12]);
+for(const scheme of ['day','night']){
+ const actual=choiceRowProbe(),owner=actual.owner;Object.assign(owner,{specId:'source-group-selected',label:'当前分组',selected:true,scheme,availableWidth:276,chevronAngle:-180,actionEnabled:true});owner.aboutToAppear();owner.initialRender();
+ const nodes=actual.nodes(owner),label=nodes.find(n=>n.type==='Text'),icon=nodes.find(n=>n.type==='Image');
+ assert.equal(label.fontSize,sourceGroupSpec.text.fontSizeFp);assert.equal(label.fontFamily,sourceGroupSpec.text.fontFamily);assert.equal(label.fontWeight,sourceGroupSpec.text.fontWeight);
+ assert.equal(label.fontColor,readerAppColor(sourceGroupSpec.selectedTextRole,scheme));assert.equal(icon.create,scheme==='night'?sourceGroupSpec.iconNight:sourceGroupSpec.iconDay);
+ assert.ok(nodes.some(n=>n.backgroundColor===readerAppColor(sourceGroupSpec.selectedBackground,scheme)));assert.deepEqual([icon.width,icon.height],[12,12]);
+}
 assert.match(panel,
   /private panelBorderColor[\s\S]*?this\.variant === 'sourceGroup'[\s\S]*?return readerAppColor\('app\.ReaderSelectPanel\.panelBorderColor\.paint\.85B4A697', this\.appThemeScheme\)/,
   'the expanded source-group panel must preserve the source-management field border');
