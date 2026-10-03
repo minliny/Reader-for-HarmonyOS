@@ -3,13 +3,13 @@ import {
   type BookshelfListParams,
   ReaderCoreGateway,
   type ShelfBook,
-  type BookshelfRemoveBatchReceipt,
 } from '../../app/ReaderCoreGateway';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import type { CommitReadbackSummary, OperationFacts } from '../../app/ReaderOperationFacts';
 import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../app/ReaderPersistedReceiptProjection';
 import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { errorMessageOf } from '../../app/ErrorMessage';
+import { BookshelfRemovalGateway } from './BookshelfRemovalGateway';
 import {
   type LocalImportBatch,
   LocalBookImportGateway,
@@ -83,12 +83,14 @@ export type BookshelfRemoveBatchOutcome = {
  * deliberately a feature-local gateway rather than a reusable page engine.
  */
 export class BookshelfFlowGateway {
+  private readonly owner: ReaderRuntimeOwner;
   private readonly bookshelf: ReaderCoreGateway;
   private readonly localImport: LocalBookImportGateway;
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current(),
     private readonly filter: BookshelfFilter = { readingState: 'all', sourceKind: 'all' },
     private readonly background: boolean = false) {
+    this.owner = runtimeOwner;
     this.bookshelf = new ReaderCoreGateway(runtimeOwner);
     this.localImport = new LocalBookImportGateway(runtimeOwner);
   }
@@ -253,11 +255,8 @@ export class BookshelfFlowGateway {
     let removed = false;
     let issue: string | undefined;
     try {
-      await this.bookshelf.removeBook(sourceId, bookId, {
-        dispatched: (): void => evidence.dispatched(),
-        confirmed: (value: boolean): void => { evidence.confirmed(); removed = value; },
-        rejectedBeforeExecution: (): void => evidence.rejectedBeforeExecution(),
-      });
+      await new BookshelfRemovalGateway(this.owner).remove([{ sourceId, bookId }], false, evidence,
+        (count: number): void => { removed = count > 0; });
     } catch (error) { issue = errorMessageOf(error); }
     const receipt = await this.readAfterRemoval(evidence, issue);
     return { removed, shelf: receipt.value, receipt,
@@ -269,13 +268,8 @@ export class BookshelfFlowGateway {
     let removedCount = 0;
     let issue: string | undefined;
     try {
-      await this.bookshelf.removeBooks(targets, {
-        dispatched: (): void => evidence.dispatched(),
-        confirmed: (value: BookshelfRemoveBatchReceipt): void => {
-          evidence.confirmed(); removedCount = value.removedTargets.length;
-        },
-        rejectedBeforeExecution: (): void => evidence.rejectedBeforeExecution(),
-      });
+      await new BookshelfRemovalGateway(this.owner).remove(targets, true, evidence,
+        (count: number): void => { removedCount = count; });
     } catch (error) { issue = errorMessageOf(error); }
     const receipt = await this.readAfterRemoval(evidence, issue);
     return { removedCount, shelf: receipt.value, receipt,

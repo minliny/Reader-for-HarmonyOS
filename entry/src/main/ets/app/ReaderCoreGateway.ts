@@ -235,10 +235,7 @@ export class ReaderCoreGateway {
       if (isReaderCoreTransactionPendingError(error)) observation?.rejectedBeforeExecution();
       throw error;
     }
-    const removed = result.data['removed'];
-    if (typeof removed !== 'boolean') {
-      throw new Error('bookshelf.remove returned invalid data');
-    }
+    const removed = this.qualifyBookRemoval(result.data);
     observation?.confirmed(removed);
     if (sourceId === 'local') {
       // Run for both removed and idempotent-missing receipts so a repeated
@@ -266,25 +263,7 @@ export class ReaderCoreGateway {
       if (isReaderCoreTransactionPendingError(error)) observation?.rejectedBeforeExecution();
       throw error;
     }
-    const receipt: BookshelfRemoveBatchReceipt = {
-      requestedCount: this.requiredNonNegativeInteger(result.data, 'requestedCount', 'bookshelf.removeBatch'),
-      uniqueCount: this.requiredNonNegativeInteger(result.data, 'uniqueCount', 'bookshelf.removeBatch'),
-      removedTargets: this.decodeRemoveTargets(result.data['removedTargets']),
-      missingTargets: this.decodeRemoveTargets(result.data['missingTargets']),
-      duplicateTargets: this.decodeRemoveTargets(result.data['duplicateTargets']),
-    };
-    // An unrelated/partial payload is not an ACK for this requested set.
-    const identity = (target: BookshelfRemoveTarget): string => JSON.stringify([target.sourceId, target.bookId]);
-    const expected = new Set(targets.map(identity));
-    const acknowledged = receipt.removedTargets.concat(receipt.missingTargets).map(identity);
-    const acknowledgedSet = new Set(acknowledged);
-    if (receipt.requestedCount !== targets.length || receipt.uniqueCount !== expected.size ||
-      acknowledged.length !== expected.size || acknowledgedSet.size !== expected.size ||
-      acknowledged.some((key: string): boolean => !expected.has(key)) ||
-      receipt.duplicateTargets.length !== targets.length - expected.size ||
-      receipt.duplicateTargets.some((target: BookshelfRemoveTarget): boolean => !expected.has(identity(target)))) {
-      throw new Error('bookshelf.removeBatch returned a mismatched receipt');
-    }
+    const receipt = this.qualifyBookBatchRemoval(targets, result.data);
     observation?.confirmed(receipt);
     const released = new Set<string>();
     for (const target of targets) {
@@ -296,10 +275,59 @@ export class ReaderCoreGateway {
     return receipt;
   }
 
-  private async releaseLocalBookAssets(bookIds: string[]): Promise<void> {
+  /** The original Core ACK decoders are shared by legacy calls and exact
+   * durable receipts. No shelf membership snapshot can substitute for them. */
+  qualifyBookRemoval(data: JsonObject): boolean {
+    const removed = data['removed'];
+    if (typeof removed !== 'boolean') throw new Error('bookshelf.remove returned invalid data');
+    return removed;
+  }
+
+  qualifyBookBatchRemoval(targets: BookshelfRemoveTarget[], data: JsonObject): BookshelfRemoveBatchReceipt {
+    const receipt: BookshelfRemoveBatchReceipt = {
+      requestedCount: this.requiredNonNegativeInteger(data, 'requestedCount', 'bookshelf.removeBatch'),
+      uniqueCount: this.requiredNonNegativeInteger(data, 'uniqueCount', 'bookshelf.removeBatch'),
+      removedTargets: this.decodeRemoveTargets(data['removedTargets']),
+      missingTargets: this.decodeRemoveTargets(data['missingTargets']),
+      duplicateTargets: this.decodeRemoveTargets(data['duplicateTargets']),
+    };
+    // An unrelated/partial payload is not an ACK for this requested set.
+    const identity = (target: BookshelfRemoveTarget): string => JSON.stringify([target.sourceId, target.bookId]);
+    const expected = new Set(targets.map(identity));
+    const seenRequested: Set<string> = new Set();
+    const expectedDuplicates: string[] = [];
+    for (const target of targets) {
+      const key = identity(target);
+      if (seenRequested.has(key)) expectedDuplicates.push(key);
+      else seenRequested.add(key);
+    }
+    const acknowledged = receipt.removedTargets.concat(receipt.missingTargets).map(identity);
+    const acknowledgedSet = new Set(acknowledged);
+    if (receipt.requestedCount !== targets.length || receipt.uniqueCount !== expected.size ||
+      acknowledged.length !== expected.size || acknowledgedSet.size !== expected.size ||
+      acknowledged.some((key: string): boolean => !expected.has(key)) ||
+      receipt.duplicateTargets.length !== targets.length - expected.size ||
+      receipt.duplicateTargets.some((target: BookshelfRemoveTarget): boolean => !expected.has(identity(target))) ||
+      JSON.stringify(receipt.duplicateTargets.map(identity).sort()) !== JSON.stringify(expectedDuplicates.sort())) {
+      throw new Error('bookshelf.removeBatch returned a mismatched receipt');
+    }
+    return receipt;
+  }
+
+  async finishBookRemoval(targets: BookshelfRemoveTarget[], current: () => boolean): Promise<void> {
+    const local = new Set<string>();
+    for (const target of targets) {
+      this.assertNonBlankString(target.sourceId, 'sourceId'); this.assertNonBlankString(target.bookId, 'bookId');
+      if (target.sourceId === 'local') local.add(target.bookId);
+    }
+    await this.releaseLocalBookAssets(Array.from(local), current);
+  }
+
+  private async releaseLocalBookAssets(bookIds: string[], current?: () => boolean): Promise<void> {
     let nextIndex = 0;
     const worker = async (): Promise<void> => {
       while (nextIndex < bookIds.length) {
+        if (current !== undefined && !current()) throw new Error('BOOKSHELF_REMOVAL_CLEANUP_RETIRED');
         const index = nextIndex;
         nextIndex += 1;
         await this.runtimeOwner.releaseLocalBookAsset(bookIds[index]);

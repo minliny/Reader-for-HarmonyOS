@@ -230,6 +230,8 @@
     "test-bookshelf-read-owner-closure.mjs",
     "test-bookshelf-reading-entry.mjs",
     "test-bookshelf-reading-feedback.mjs",
+    "test-bookshelf-removal-durable-intent.mjs",
+    "test-bookshelf-removal-index-consumers.mjs",
     "test-bookshelf-settings-layout.mjs",
     "test-bookshelf-settings-operation-sdk.mjs",
     "test-bookshelf-shared-scan.mjs",

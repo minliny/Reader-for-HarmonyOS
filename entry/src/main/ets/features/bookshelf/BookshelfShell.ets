@@ -1,5 +1,6 @@
 import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { MainTabShell } from '../shell/MainTabShell';
 import { AppTopBar } from '../common/AppTopBar';
 import { ReaderIconButton } from '../common/ReaderIconButton';
@@ -21,6 +22,9 @@ export struct BookshelfShell {
   @Prop readRecovery: ReaderRecoveryView | undefined = undefined;
   onRetryRead: (generation: number, navigation?: number) => void = (_generation: number): void => {};
   onReconcile: (generation: number, navigation?: number) => void = (_generation: number): void => {};
+  @Prop canContinueRemoval: boolean = false;
+  @Prop removalActionLabel: string = '继续原删除操作';
+  onContinueRemoval: (generation: number, navigation: number) => void = (_generation: number, _navigation: number): void => {};
   @Prop @Watch('onNavigationGenerationChanged') navigationGeneration: number = 0;
   @Prop populated: boolean = false;
   @Prop reduceMotion: boolean = false;
@@ -196,6 +200,14 @@ export struct BookshelfShell {
           if (read) this.onRetryRead(tokens[1], tokens[0]);
           else this.onReconcile(tokens[1], tokens[0]);
         } });
+      if (!read && this.canContinueRemoval) {
+        ReaderRecoveryAction({ label: this.removalActionLabel, generation: (JSON.parse(identity) as number[])[1],
+          onReconcile: (generation: number): void => {
+            const tokens = JSON.parse(identity) as number[];
+            if (!this.mounted || generation !== tokens[1] || this.navigationGeneration !== tokens[0]) return;
+            this.onContinueRemoval(tokens[1], tokens[0]);
+          } });
+      }
     }, (identity: string): string => identity);
   }
 

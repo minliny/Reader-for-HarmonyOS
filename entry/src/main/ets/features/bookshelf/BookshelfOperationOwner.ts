@@ -4,6 +4,8 @@ import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../
 import { BookshelfFlowGateway, type BookshelfDataState, type BookshelfFilter, type BookshelfRemovalTarget,
   type BookshelfRemoveOutcome, type BookshelfRemoveBatchOutcome, type BookshelfImportOutcome } from './BookshelfFlowGateway';
 import { LocalImportPresentationOwner, type LocalImportPresentation } from './LocalImportPresentationOwner';
+import { BookshelfRemovalGateway } from './BookshelfRemovalGateway';
+import { BookshelfManagementIntentStore, isBookshelfRemovalMethod, type BookshelfManagementMutationState } from './BookshelfManagementIntentStore';
 
 export interface BookshelfOperationSnapshot {
   generation: number;
@@ -15,6 +17,7 @@ export interface BookshelfOperationSnapshot {
   reconcileBusy: boolean;
   receipt: PersistedReceiptProjection<BookshelfDataState> | undefined;
   cleanupWarning: string;
+  removalMutation?: BookshelfManagementMutationState;
   importPresentation: LocalImportPresentation | undefined;
   importIdentity: number;
   importSerialized: string;
@@ -36,7 +39,8 @@ export class BookshelfOperationOwner {
   private readonly presentation: LocalImportPresentationOwner = new LocalImportPresentationOwner();
 
   private readonly subscribers: Set<(snapshot: BookshelfOperationSnapshot) => void> = new Set();
-  constructor(private readonly owner: ReaderRuntimeOwner) {}
+  private readonly authority: BookshelfManagementIntentStore;
+  constructor(private readonly owner: ReaderRuntimeOwner) { this.authority = BookshelfManagementIntentStore.forRuntime(owner); }
   subscribe(emit: (snapshot: BookshelfOperationSnapshot) => void): () => void {
     this.subscribers.add(emit);
     return (): void => { this.subscribers.delete(emit); };
@@ -44,7 +48,8 @@ export class BookshelfOperationOwner {
 
   owns(owner: ReaderRuntimeOwner): boolean { return owner === this.owner; }
   current(): BookshelfOperationSnapshot { return this.snapshot; }
-  unknown(): boolean { return this.snapshot.receipt?.receipt.confirmation === 'unknown'; }
+  unknown(): boolean { return this.snapshot.receipt?.receipt.confirmation === 'unknown' ||
+    this.authority.snapshot().blocked; }
   canMutate(): boolean { return this.liveRuntime() && !this.snapshot.busy && !this.snapshot.reconcileBusy && !this.unknown(); }
 
   restoreImport(serialized: string, admitted: () => boolean): void { this.presentationAdmission = admitted; this.presentation.restore(serialized); this.publishPresentation(); }
@@ -61,6 +66,7 @@ export class BookshelfOperationOwner {
       const gateway = new BookshelfFlowGateway(this.owner, filter);
       const outcome = batch ? await gateway.removeMany(targets) : await gateway.remove(targets[0].sourceId, targets[0].bookId);
       this.receipt(outcome.receipt, generation, outcome.cleanupWarning);
+      this.snapshot = { ...this.snapshot, removalMutation: this.authority.snapshot() };
       return outcome;
     } finally { this.finish(generation); }
   }
@@ -68,7 +74,13 @@ export class BookshelfOperationOwner {
   async importFiles(filter: BookshelfFilter, admitted: () => boolean): Promise<BookshelfImportOutcome | undefined> {
     if (!this.canMutate() || !this.admitted(admitted) || this.presentation.current()?.state !== 'fileSelection') return undefined;
     const identity = this.presentation.generation();
-    const current = (): boolean => this.liveRuntime() && this.presentation.owns(identity) && this.admitted(this.presentationAdmission);
+    const presentationAdmission = this.presentationAdmission;
+    const current = (): boolean => this.liveRuntime() && this.presentation.owns(identity) &&
+      this.admitted(presentationAdmission) && this.admitted(admitted);
+    // Cold original delete/group intent is checked before selecting new files;
+    // import must not recreate an asset still owned by a retained delete.
+    await this.recoverRemoval(filter, current);
+    if (!this.canMutate() || !current() || this.presentation.current()?.state !== 'fileSelection') return undefined;
     const generation = this.begin('import', filter);
     this.presentation.write(identity, 'pickerOpening'); this.publishPresentation('');
     const gateway = new BookshelfFlowGateway(this.owner, filter);
@@ -104,13 +116,27 @@ export class BookshelfOperationOwner {
     Promise<PersistedReceiptProjection<BookshelfDataState> | undefined> {
     const receipt = this.snapshot.receipt;
     if (!this.liveRuntime() || !this.admitted(admitted) || receipt === undefined || this.snapshot.generation !== generation ||
-      !receipt.facts.canRetry || this.snapshot.busy || this.snapshot.reconcileBusy) return undefined;
+      (!receipt.facts.canRetry && !this.snapshot.removalMutation?.blocked) || this.snapshot.busy || this.snapshot.reconcileBusy) return undefined;
     this.snapshot = { ...this.snapshot, reconcileBusy: true,
       receipt: projectPersistedReceipt({ confirmation: receipt.receipt.confirmation, readback: 'reading', value: receipt.value, generation, canRetry: false }) };
     this.publish();
     const current = (): boolean => this.liveRuntime() && this.snapshot.generation === generation && this.admitted(admitted);
     try {
-      const read = await new BookshelfFlowGateway(this.owner, filter).reconcile(receipt, generation, current);
+      let original = receipt;
+      if (this.snapshot.action === 'remove') {
+        try {
+          const state = await new BookshelfRemovalGateway(this.owner).recover(current);
+          this.snapshot = { ...this.snapshot, removalMutation: state };
+          if (isBookshelfRemovalMethod(state.method)) original = projectPersistedReceipt({
+            confirmation: state.confirmation, readback: 'idle', value: receipt.value, generation,
+            canRetry: state.blocked || state.confirmation === 'unknown', message: state.message || undefined });
+        } catch (error) {
+          this.snapshot = { ...this.snapshot, removalMutation: this.authority.snapshot() };
+          original = projectPersistedReceipt({ confirmation: this.snapshot.removalMutation!.confirmation,
+            readback: 'idle', value: receipt.value, generation, canRetry: true, message: (error as Error).message });
+        }
+      }
+      const read = await new BookshelfFlowGateway(this.owner, filter).reconcile(original, generation, current);
       if (!current()) return undefined;
       this.snapshot = { ...this.snapshot, receipt: read, filter: { ...filter },
         importFailureMessage: this.snapshot.action === 'import' ? read.refreshError ?? '' : this.snapshot.importFailureMessage };
@@ -121,6 +147,48 @@ export class BookshelfOperationOwner {
         this.publish();
       }
     }
+  }
+
+  /** Mount/open reconciliation is only a historical query and current list
+   * read. It cannot apply a deletion or release a local asset. */
+  async recoverRemoval(filter: BookshelfFilter, admitted: () => boolean): Promise<void> {
+    if (!this.liveRuntime() || !this.admitted(admitted) || this.snapshot.busy || this.snapshot.reconcileBusy) return;
+    this.snapshot = { ...this.snapshot, reconcileBusy: true }; this.publish();
+    try {
+      let state: BookshelfManagementMutationState;
+      try { state = await new BookshelfRemovalGateway(this.owner).recover(admitted); }
+      catch (_) { state = this.authority.snapshot(); }
+      if (!this.liveRuntime() || !this.admitted(admitted)) return;
+      this.snapshot = { ...this.snapshot, removalMutation: state };
+      if (!isBookshelfRemovalMethod(state.method) || state.operationId === undefined || this.authority.original() === undefined) return;
+      const generation = this.snapshot.action === 'remove' && this.snapshot.receipt !== undefined ? this.snapshot.generation : ++nextOperationGeneration;
+      const original = projectPersistedReceipt<BookshelfDataState>({ confirmation: state.confirmation, readback: 'idle',
+        generation, canRetry: state.blocked || state.confirmation === 'unknown', message: state.message || undefined });
+      const current = (): boolean => this.liveRuntime() && this.admitted(admitted);
+      const read = await new BookshelfFlowGateway(this.owner, filter).reconcile(original, generation, current);
+      if (!current()) return;
+      this.snapshot = { ...this.snapshot, action: 'remove', generation, filter: { ...filter }, receipt: read };
+    } finally { this.snapshot = { ...this.snapshot, reconcileBusy: false }; this.publish(); }
+  }
+
+  async continueRemoval(generation: number, filter: BookshelfFilter, admitted: () => boolean):
+    Promise<PersistedReceiptProjection<BookshelfDataState> | undefined> {
+    const state = this.snapshot.removalMutation;
+    if (!this.liveRuntime() || !this.admitted(admitted) || this.snapshot.busy || this.snapshot.reconcileBusy ||
+      generation !== this.snapshot.generation || !isBookshelfRemovalMethod(state?.method) || !state?.canContinueOriginal) return undefined;
+    const previous = this.snapshot.receipt;
+    this.snapshot = { ...this.snapshot, busy: true }; this.publish();
+    const current = (): boolean => this.liveRuntime() && this.admitted(admitted) && this.snapshot.generation === generation;
+    try {
+      let next: BookshelfManagementMutationState;
+      try { next = await new BookshelfRemovalGateway(this.owner).recover(current, true); }
+      catch (_) { next = this.authority.snapshot(); }
+      this.snapshot = { ...this.snapshot, removalMutation: next };
+      const original = projectPersistedReceipt<BookshelfDataState>({ confirmation: next.confirmation,
+        readback: 'idle', value: previous?.value, generation, canRetry: next.blocked, message: next.message || undefined });
+      const read = await new BookshelfFlowGateway(this.owner, filter).reconcile(original, generation, current);
+      this.receipt(read, generation); return current() ? read : undefined;
+    } finally { this.finish(generation); }
   }
 
   private begin(action: 'import' | 'remove', filter: BookshelfFilter): number {

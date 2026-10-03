@@ -8,7 +8,10 @@ import { replaceReaderAtomicSnapshot } from '../../app/ReaderAtomicSnapshotFile'
 import { sha256Hex } from '../../app/BundledBookSourceSupply';
 import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 
-export type BookshelfManagementMethod = 'book-group.create' | 'book-group.update' | 'book-group.delete' | 'bookshelf.group.assign';
+export type BookshelfManagementMethod = 'book-group.create' | 'book-group.update' | 'book-group.delete' | 'bookshelf.group.assign' | 'bookshelf.remove' | 'bookshelf.removeBatch';
+export function isBookshelfRemovalMethod(method: BookshelfManagementMethod | undefined): boolean {
+  return method === 'bookshelf.remove' || method === 'bookshelf.removeBatch';
+}
 export interface BookshelfManagementIntent {
   version: 1; operationId: string; sequence: number;
   mutation: { method: BookshelfManagementMethod; params: JsonObject };
@@ -25,13 +28,20 @@ interface ManagementReceipt { binding: { operationId: string; sequence: number; 
   method: BookshelfManagementMethod; outcome: 'applied' | 'rejected'; data: JsonObject; ackFingerprint: string; }
 interface ManagementQuery { head?: { operationId: string; sequence: number; payloadFingerprint?: string };
   receipt?: ManagementReceipt; canApplySameOriginal: boolean; }
-const METHODS: BookshelfManagementMethod[] = ['book-group.create', 'book-group.update', 'book-group.delete', 'bookshelf.group.assign'];
+const METHODS: BookshelfManagementMethod[] = ['book-group.create', 'book-group.update', 'book-group.delete', 'bookshelf.group.assign', 'bookshelf.remove', 'bookshelf.removeBatch'];
 
 /** One fixed complete group/membership intent over the existing AtomicFile.
  * The original management orchestrator owns business serialization. This IO
  * lane protects its original tuple across Runtime and process replacement;
  * it never infers a write receipt from current group/book list values. */
 export class BookshelfManagementIntentStore {
+  private static readonly retained: WeakMap<ReaderRuntimeOwner, BookshelfManagementIntentStore> = new WeakMap();
+  static forRuntime(owner: ReaderRuntimeOwner): BookshelfManagementIntentStore {
+    if (!ReaderRuntimeOwner.isCurrent(owner)) throw new Error('BOOKSHELF_MANAGEMENT_OWNER_RETIRED');
+    let store = this.retained.get(owner);
+    if (store === undefined) { store = new BookshelfManagementIntentStore(owner); this.retained.set(owner, store); }
+    return store;
+  }
   private static tail: Promise<void> = Promise.resolve();
   private static warm: BookshelfManagementIntent | undefined;
   private readonly owner: ReaderRuntimeOwner;
@@ -39,6 +49,10 @@ export class BookshelfManagementIntentStore {
     canContinueOriginal: false, message: '' };
   constructor(owner: ReaderRuntimeOwner) { this.owner = owner; }
   snapshot(): BookshelfManagementMutationState { return { ...this.state }; }
+  original(): BookshelfManagementIntent | undefined {
+    const value = BookshelfManagementIntentStore.warm;
+    return value?.operationId === this.state.operationId ? JSON.parse(JSON.stringify(value)) as BookshelfManagementIntent : undefined;
+  }
 
   async execute<T>(method: BookshelfManagementMethod, params: JsonObject,
     qualify: (method: BookshelfManagementMethod, params: JsonObject, data: JsonObject) => T,
@@ -48,7 +62,7 @@ export class BookshelfManagementIntentStore {
       let old: BookshelfManagementIntent | undefined;
       let head: ManagementQuery = { canApplySameOriginal: false };
       try {
-        this.requireCapability(); old = await this.load();
+        this.requireCapability(method); old = await this.load();
         if (old === undefined) head = await this.query(undefined, admitted);
       } catch (error) {
         this.state.blocked = true; this.state.canContinueOriginal = false;
@@ -109,12 +123,12 @@ export class BookshelfManagementIntentStore {
       try {
         let receipt = intent.terminal === undefined ? undefined : await this.receipt(intent.terminal, intent);
         if (receipt === undefined) {
-          this.requireCapability(); const query = await this.query(intent, admitted); receipt = query.receipt;
+          this.requireCapability(intent.mutation.method); const query = await this.query(intent, admitted); receipt = query.receipt;
           if (receipt === undefined) {
             this.state.canContinueOriginal = query.canApplySameOriginal;
             this.state.message = query.canApplySameOriginal ?
-              '原分组操作尚未确认；可明确继续已保留的原操作，不会创建新标识' :
-              '原分组操作尚无精确回执，已保留并阻断；当前列表不能确认此次写入';
+              `${isBookshelfRemovalMethod(intent.mutation.method) ? '原删除' : '原分组'}操作尚未确认；可明确继续已保留的原操作，不会创建新标识` :
+              `${isBookshelfRemovalMethod(intent.mutation.method) ? '原删除' : '原分组'}操作尚无精确回执，已保留并阻断；当前列表不能确认此次写入`;
             if (!continueOriginal) return this.snapshot();
             if (!query.canApplySameOriginal) throw new Error(this.state.message);
             // Re-establish local fsync ACK before the same original admission.
@@ -134,6 +148,31 @@ export class BookshelfManagementIntentStore {
         if (this.state.confirmation !== 'confirmed') this.state.confirmation = 'unknown';
         this.state.blocked = true; this.state.canContinueOriginal = false;
         this.state.message = (error as Error).message; throw error as Error;
+      }
+    });
+  }
+
+  /** Core deletion and local EPUB release have separate ACKs. Pure recovery
+   * retains the qualified terminal until an explicit original cleanup intent
+   * (or the initial accepted delete) completes. The shared lane prevents a
+   * new group/delete from racing that release and reusing the original asset. */
+  async completeRemoval(operationId: string, cleanup: (intent: BookshelfManagementIntent) => Promise<void>,
+    admitted: () => boolean): Promise<void> {
+    await this.serial(async (): Promise<void> => {
+      this.assertCurrent(admitted);
+      const intent = await this.load();
+      if (intent === undefined || intent.operationId !== operationId || !isBookshelfRemovalMethod(intent.mutation.method) ||
+        intent.terminal === undefined) throw new Error('原删除清理身份或精确回执已改变');
+      const receipt = await this.receipt(intent.terminal, intent);
+      if (receipt.outcome !== 'applied') throw new Error('原删除未获 Core 确认，不能清理资产');
+      this.pending(intent); this.state.confirmation = 'confirmed'; this.state.canContinueOriginal = true;
+      try {
+        this.assertCurrent(admitted); await cleanup(intent); this.assertCurrent(admitted);
+        await this.clear(intent); this.state.blocked = false; this.state.canContinueOriginal = false; this.state.message = '';
+      } catch (error) {
+        this.state.blocked = true; this.state.canContinueOriginal = this.current(admitted);
+        this.state.message = `书籍已移出书架；原删除资产或记录清理未完成：${(error as Error).message}`;
+        throw error as Error;
       }
     });
   }
@@ -183,18 +222,25 @@ export class BookshelfManagementIntentStore {
     try {
       // Preserve the actual qualified receipt if cleanup ACK is lost. An ACK
       // already obtained from original Runtime remains truth after retirement.
-      await this.write(terminal); await this.clear(terminal);
-      this.state.blocked = false; this.state.message = '';
+      await this.write(terminal);
+      if (confirmation === 'confirmed' && isBookshelfRemovalMethod(intent.mutation.method)) {
+        this.state.blocked = true; this.state.canContinueOriginal = true;
+        this.state.message = '书籍已移出书架；原删除资产与记录清理仍需完成';
+      } else {
+        await this.clear(terminal); this.state.blocked = false; this.state.message = '';
+      }
     } catch (_) {
       this.state.blocked = true;
-      this.state.message = `${confirmation === 'confirmed' ? '原分组写入已确认' : 'Core 已明确拒绝原分组操作'}；记录清理尚未确认，请核对`;
+      this.state.message = `${confirmation === 'confirmed' ? '原书架写入已确认' : 'Core 已明确拒绝原书架操作'}；记录清理尚未确认，请核对`;
     }
   }
   private pending(intent: BookshelfManagementIntent): void {
-    this.state = { confirmation: 'unknown', blocked: true, canContinueOriginal: false,
-      message: '原分组操作仍需核对，不能覆盖原内容或执行另一分组写入',
+    this.state = { confirmation: intent.terminal?.['outcome'] === 'applied' ? 'confirmed' :
+      intent.terminal?.['outcome'] === 'rejected' ? 'undispatched' : 'unknown', blocked: true, canContinueOriginal: false,
+      message: isBookshelfRemovalMethod(intent.mutation.method) ? '原删除操作仍需核对，不能覆盖原内容或执行另一分组/删除写入' :
+        '原分组操作仍需核对，不能覆盖原内容或执行另一分组/删除写入',
       operationId: intent.operationId, sequence: intent.sequence, method: intent.mutation.method };
-    if (intent.mutation.method === 'bookshelf.group.assign') {
+    if (intent.mutation.method === 'bookshelf.group.assign' || intent.mutation.method === 'bookshelf.remove') {
       this.state.sourceId = intent.mutation.params['sourceId'] as string;
       this.state.bookId = intent.mutation.params['bookId'] as string;
       this.state.group = intent.mutation.params['group'] as string;
@@ -255,8 +301,9 @@ export class BookshelfManagementIntentStore {
     try { return ReaderRuntimeOwner.isCurrent(this.owner) && (admitted?.() ?? true); } catch (_) { return false; }
   }
   private assertCurrent(admitted?: () => boolean): void { if (!this.current(admitted)) throw new Error('原分组服务已退役，保留记录由当前服务核对'); }
-  private requireCapability(): void {
-    if (!this.owner.supportsCoreCapability('bookshelf.managementMutation.v1')) throw new Error('当前 Core 缺少分组原操作精确回执能力，已停止新写入');
+  private requireCapability(method: BookshelfManagementMethod): void {
+    const capability = isBookshelfRemovalMethod(method) ? 'bookshelf.removalMutation.v1' : 'bookshelf.managementMutation.v1';
+    if (!this.owner.supportsCoreCapability(capability)) throw new Error('当前 Core 缺少书架原操作精确回执能力，已停止新写入');
   }
   private fingerprint(value: unknown): boolean { return typeof value === 'string' && /^[0-9a-f]{64}$/.test(value); }
   private object(value: unknown): JsonObject {

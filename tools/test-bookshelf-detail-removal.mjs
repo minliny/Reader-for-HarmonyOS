@@ -7,6 +7,8 @@ const index = read('entry/src/main/ets/pages/Index.ets');
 const flow = read('entry/src/main/ets/features/bookshelf/BookshelfFlowGateway.ts');
 const operation = read('entry/src/main/ets/features/bookshelf/BookshelfOperationOwner.ts');
 const core = read('entry/src/main/ets/app/ReaderCoreGateway.ts');
+const removal = read('entry/src/main/ets/features/bookshelf/BookshelfRemovalGateway.ts');
+const intent = read('entry/src/main/ets/features/bookshelf/BookshelfManagementIntentStore.ts');
 const host = read('entry/src/main/ets/app/ReaderHostRegistry.ts');
 
 assert.match(detail, /@Prop removalEnabled: boolean = true;/);
@@ -37,8 +39,10 @@ assert.match(operation, /new BookshelfFlowGateway\(this\.owner, filter\)/,
   'the domain owner reuses the actual gateway without a second Core contract');
 assert.doesNotMatch(index, /request\('bookshelf\.remove'/,
   'Index must not bypass ReaderCoreGateway with a duplicate removal protocol');
-assert.match(flow, /confirmed: \(value: boolean\): void => \{ evidence\.confirmed\(\); removed = value; \}/,
-  'the actual gateway ACK establishes confirmation before independent cleanup');
+assert.match(flow, /new BookshelfRemovalGateway\(this\.owner\)\.remove\(\[\{ sourceId, bookId \}\], false, evidence/);
+assert.match(intent, /const value = qualify\(method, intent\.mutation\.params, receipt\.data\);[\s\S]*evidence\?\.confirmed\(\)/,
+  'the qualified exact Core ACK establishes confirmation before independent cleanup');
+assert.match(removal, /confirmed\(result\);[\s\S]*await this\.cleanup\(id\)/, 'original ACK publishes before finite asset cleanup');
 assert.match(index, /outcome\.receipt\.receipt\.confirmation === 'confirmed'/,
   'a validated mutation ACK admits the deleted-detail transition');
 assert.match(operation, /reconcile[\s\S]*confirmation: receipt\.receipt\.confirmation/,
@@ -52,7 +56,11 @@ assert.match(index,/this\.shelfBooks = snapshot\.books;[\s\S]*this\.isBookshelfV
 assert.match(projection,/books, facts, revision:[\s\S]*coreEmpty: state\.kind === 'empty', visualAdmitted: state\.kind === 'populated'/,'an empty removal result clears stale cards and admission in the single owner');
 
 
-assert.match(flow, /async remove\(sourceId: string, bookId: string\)[\s\S]*this\.bookshelf\.removeBook\(sourceId, bookId,/);
+assert.match(flow, /async remove\(sourceId: string, bookId: string\)[\s\S]*new BookshelfRemovalGateway\(this\.owner\)\.remove\(\[\{ sourceId, bookId \}\]/);
+assert.match(removal, /this\.store\.execute\(method, params/);
+assert.match(intent, /request\('bookshelf\.management\.mutation\.apply'/);
+assert.match(core, /qualifyBookRemoval\(data: JsonObject\)/);
+assert.match(core, /qualifyBookBatchRemoval\(targets: BookshelfRemoveTarget\[\], data: JsonObject\)/);
 assert.match(core, /request\('bookshelf\.remove', \{ sourceId, bookId \}\)/);
 assert.match(core, /if \(sourceId === 'local'\)[\s\S]*releaseLocalBookAsset\(bookId\)/,
   'only local books own a retained Host archive');

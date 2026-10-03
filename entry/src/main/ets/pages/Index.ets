@@ -830,6 +830,11 @@ struct Index {
       },
       populated: this.isBookshelfVisualAdmitted,
       recovery: this.shelfRecovery(),
+      canContinueRemoval: this.canContinueShelfRemoval(),
+      removalActionLabel: this.shelfOperation.removalMutation?.confirmation === 'confirmed' ? '完成原删除清理' : '继续原删除操作',
+      onContinueRemoval: (generation: number, presentedNavigation: number): void => {
+        if (this.isCurrentBookshelfPresentation(presentedNavigation, owner, mounting)) void this.continueShelfRemoval(generation);
+      },
       readRecovery: this.shelfReadRecovery(),
       onRetryRead: (generation: number, presentedNavigation?: number): void => {
         if (this.isCurrentBookshelfPresentation(presentedNavigation ?? navigation, owner, mounting)) this.retryBookshelfRead(generation);
@@ -3903,12 +3908,23 @@ struct Index {
 
   private hasUnknownShelfWrite(): boolean {
     return this.isCurrentRuntime(this.shelfOperationOwner) &&
-      this.shelfOperation.receipt?.receipt.confirmation === 'unknown';
+      (this.shelfOperation.receipt?.receipt.confirmation === 'unknown' || this.shelfOperation.removalMutation?.blocked === true);
+  }
+
+  private canContinueShelfRemoval(): boolean {
+    const original = this.shelfOperation.removalMutation;
+    return this.isCurrentRuntime(this.shelfOperationOwner) && !this.shelfOperation.busy && !this.shelfOperation.reconcileBusy &&
+      original?.blocked === true && original.canContinueOriginal &&
+      (original.method === 'bookshelf.remove' || original.method === 'bookshelf.removeBatch');
   }
 
   private shelfRecovery(): ReaderRecoveryView {
     const catalog = this.isCurrentRuntime(this.bookshelfCatalogOwner) ? readerRecoveryView(undefined, this.bookshelfCatalogFacts) : this.emptyShelfRecovery();
     if (!this.isCurrentRuntime(this.shelfOperationOwner)) return catalog;
+    const original = this.shelfOperation.removalMutation;
+    if (original?.blocked) return { message: original.message || '原书架操作尚待核对，已保留原内容', visible: true,
+      canRetry: (original.method === 'bookshelf.remove' || original.method === 'bookshelf.removeBatch') &&
+        !this.shelfOperation.busy && !this.shelfOperation.reconcileBusy, generation: this.shelfOperation.generation };
     const recovery = readerRecoveryView(this.shelfOperation.receipt);
     if (this.shelfOperation.cleanupWarning.length === 0) return recovery.visible ? recovery : catalog;
     return { message: (recovery.visible ? `${recovery.message}；` : '书籍已移出书架；') +
@@ -3925,6 +3941,16 @@ struct Index {
       this.route === 'bookshelf' && (!dialogVisible || identity === this.shelfOperation.importIdentity);
     const read = await this.bookshelfHost.operations(owner).reconcile(generation, this.shelfFilter(), current);
     if (read !== undefined && current() && read.value !== undefined) { this.invalidateBookshelfProjection(); this.applyBookshelfState(read.value); }
+  }
+
+  private async continueShelfRemoval(generation: number): Promise<void> {
+    const owner = this.shelfOperationOwner;
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner) || this.route !== 'bookshelf' ||
+      generation !== this.shelfOperation.generation || !this.canContinueShelfRemoval()) return;
+    const navigation = this.navigationGeneration; const mounting = this.detailShelfAdmissionMount;
+    const current = (): boolean => this.isCurrentBookshelfPresentation(navigation, owner, mounting);
+    const read = await this.bookshelfHost.operations(owner).continueRemoval(generation, this.shelfFilter(), current);
+    if (current() && read?.value !== undefined) { this.invalidateBookshelfProjection(); this.applyBookshelfState(read.value); }
   }
 
   private applyDetailBookRemoval(book: ReadingBookDetail, shelf: BookshelfDataState): void {
@@ -5287,6 +5313,9 @@ struct Index {
     const operation = this.bookshelfHost.operations(owner); operation.restoreImport(this.storedImportPresentation,
       (): boolean => !this.shelfReceiptRetired && this.isCurrentRuntime(owner) && this.route === 'bookshelf' && navigation === this.navigationGeneration);
     this.shelfOperationOwner = owner; this.shelfOperation = operation.current();
+    const mounting = this.detailShelfAdmissionMount;
+    void operation.recoverRemoval(this.shelfFilter(), (): boolean =>
+      this.isCurrentBookshelfPresentation(navigation, owner, mounting));
   }
 
   private hasVisibleImportDialog(): boolean { return this.shelfOperation.importPresentation !== undefined; }

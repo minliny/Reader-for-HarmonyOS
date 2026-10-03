@@ -27,7 +27,7 @@ export async function managementFixture(existing, suppliedRuntime, gatewaySource
  const options={},calls=[],io={finishes:0,syncs:0,failWrites:0};let installed,uuid=existing?.uuid??0;
  const Runtime=runtimeOwnerIdentityProbe(()=>installed);
  const fileIo={OpenMode:{READ_ONLY:fs.constants.O_RDONLY,READ_WRITE:fs.constants.O_RDWR},
-  async readText(path){try{return await fsp.readFile(path,'utf8');}catch(e){if(e.code==='ENOENT')throw{code:13900002};throw e;}},
+  async readText(path){if(options.readGate){const gate=options.readGate;options.readGate=undefined;options.readEntered=true;await gate.promise;}try{return await fsp.readFile(path,'utf8');}catch(e){if(e.code==='ENOENT')throw{code:13900002};throw e;}},
   async open(path,flags){return{fd:fs.openSync(path,flags)};},async close(f){fs.closeSync(f.fd);},
   async fsync(fd){fs.fsyncSync(fd);io.syncs++;if(options.loseSyncAt===io.syncs)throw Error('fsync accepted; ACK lost');},
   AtomicFile:class{constructor(path){this.path=path;this.tmp=path+'.tmp';}startWrite(){if(options.beforeLocal){options.beforeLocal=false;throw Error('startWrite rejected before local side effect');}return{on(){},end:(raw,_encoding,done)=>{fs.writeFileSync(this.tmp,raw);queueMicrotask(done);}};}
@@ -45,8 +45,9 @@ export async function managementFixture(existing, suppliedRuntime, gatewaySource
  // independent read projections. Production uses one native Core instance;
  // simultaneous first-open CLI processes would test migration-file locking.
  await command('book-group.list',{});
+ const capabilities=(await command('core.info',{})).data.capabilities;
  const runtime=suppliedRuntime??{};
- Object.assign(runtime,{closed:false,getUIAbilityContext:()=>({filesDir:files}),supportsCoreCapability:()=>options.capability!==false,
+ Object.assign(runtime,{closed:false,getUIAbilityContext:()=>({filesDir:files}),supportsCoreCapability:name=>options.capability!==false&&capabilities.includes(name),
   async request(method,params={},requestOptions={}) {
    const call={method,params:structuredClone(params),options:requestOptions,dispatched:false};calls.push(call);
    const originalMethod=method==='bookshelf.management.mutation.apply'?params.mutation.method:method;
@@ -70,7 +71,7 @@ export async function managementFixture(existing, suppliedRuntime, gatewaySource
  const Host=compile('features/bookshelf/BookshelfHost.ets','BookshelfHost',{ReaderRuntimeOwner:Runtime,ReaderCoreGateway,
   BookshelfManagementOrchestrator:types.BookshelfManagementOrchestrator},true,
   read('features/bookshelf/BookshelfHost.ets').replace(/^export \{[\s\S]*?from ['"][^'"]+['"];\n/gm,''));
- const store=new Store(runtime),gateway=new Gateway(runtime,store);
+ const store=Store.forRuntime(runtime),gateway=new Gateway(runtime,store);
  return{root,files,core,runtime,Runtime,options,calls,io,Store,Gateway,Host,ReaderCoreGateway,Orchestrator:types.BookshelfManagementOrchestrator,
   EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT:types.EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT,store,gateway,command,sha256Hex,
   uuid:()=>uuid,disk:()=>{try{return fs.readFileSync(resolve(files,'reader-bookshelf-management-intent-v1.json'),'utf8');}catch(e){if(e.code==='ENOENT')return'';throw e;}},

@@ -41,13 +41,20 @@ export class BookshelfManagementGateway {
   constructor(owner: ReaderRuntimeOwner = ReaderRuntimeOwner.current(), intents?: BookshelfManagementIntentStore) {
     this.owner = owner;
     this.shelf = new ReaderCoreGateway(owner);
-    this.intents = intents ?? new BookshelfManagementIntentStore(owner);
+    this.intents = intents ?? BookshelfManagementIntentStore.forRuntime(owner);
   }
   mutationSnapshot(): BookshelfManagementMutationState { return this.intents.snapshot(); }
+  qualifyOriginal(method: BookshelfManagementMethod, params: JsonObject, data: JsonObject): void {
+    this.qualifyMutation(method, params, data);
+  }
   async recoverWrites(admitted: () => boolean, continueOriginal: boolean = false): Promise<BookshelfManagementMutationState> {
-    return this.intents.recover((method: BookshelfManagementMethod, params: JsonObject, data: JsonObject): void => {
+    const qualify = (method: BookshelfManagementMethod, params: JsonObject, data: JsonObject): void => {
       this.qualifyMutation(method, params, data);
-    }, admitted, continueOriginal);
+    };
+    const state = await this.intents.recover(qualify, admitted, false);
+    if (continueOriginal && state.method !== 'bookshelf.remove' && state.method !== 'bookshelf.removeBatch')
+      return this.intents.recover(qualify, admitted, true);
+    return state;
   }
   private async write(method: BookshelfManagementMethod, params: JsonObject): Promise<{ data: JsonObject }> {
     const evidence = this.writeEvidence, admitted = this.admitted;
@@ -70,6 +77,10 @@ export class BookshelfManagementGateway {
     if (method === 'book-group.delete') {
       if (typeof data['deleted'] !== 'boolean' || data['groupId'] !== params['groupId']) throw new Error('分组原删除回执不符');
       return;
+    }
+    if (method === 'bookshelf.remove') { this.shelf.qualifyBookRemoval(data); return; }
+    if (method === 'bookshelf.removeBatch') {
+      this.shelf.qualifyBookBatchRemoval(params['targets'] as { sourceId: string; bookId: string }[], data); return;
     }
     const book = this.decodeShelfBook(this.requiredObject(data, 'book', method));
     if (book.sourceId !== params['sourceId'] || book.bookId !== params['bookId'] || (book.group ?? '').trim() !== params['group'])

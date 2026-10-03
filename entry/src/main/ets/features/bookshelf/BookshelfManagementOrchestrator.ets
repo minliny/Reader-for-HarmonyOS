@@ -153,7 +153,8 @@ export class BookshelfManagementOrchestrator {
 
   continueOriginal(generation: number, identity?: string): void {
     if (!this.admit(identity) || this.writeReserved || this.snapshot.busy ||
-      this.latestReceipt?.facts.generation !== generation || !this.gateway.mutationSnapshot().canContinueOriginal) return;
+      this.latestReceipt?.facts.generation !== generation || !this.gateway.mutationSnapshot().canContinueOriginal ||
+      this.gateway.mutationSnapshot().method === 'bookshelf.remove' || this.gateway.mutationSnapshot().method === 'bookshelf.removeBatch') return;
     const session = this.session;
     this.enqueueWrite(session, async (): Promise<void> => {
       await this.recoverOriginal(session, true);
@@ -164,12 +165,14 @@ export class BookshelfManagementOrchestrator {
   private async recoverOriginal(session: number, continueOriginal: boolean = false): Promise<void> {
     try {
       const state = await this.gateway.recoverWrites((): boolean => this.isCurrentSession(session), continueOriginal);
-      this.publish({ managementMutation: state });
-      if (state.operationId !== undefined) this.publishReceipt(session, state.confirmation, 'reading', state.message || undefined);
+      const removal = state.method === 'bookshelf.remove' || state.method === 'bookshelf.removeBatch';
+      this.publish({ managementMutation: removal ? { ...state, canContinueOriginal: false } : state });
+      if (!removal && state.operationId !== undefined) this.publishReceipt(session, state.confirmation, 'reading', state.message || undefined);
     } catch (error) {
       const state = this.gateway.mutationSnapshot();
-      this.publish({ managementMutation: state });
-      if (state.operationId !== undefined || state.blocked) this.publishReceipt(session, state.confirmation, 'failed', (error as Error).message);
+      const removal = state.method === 'bookshelf.remove' || state.method === 'bookshelf.removeBatch';
+      this.publish({ managementMutation: removal ? { ...state, canContinueOriginal: false } : state });
+      if (!removal && (state.operationId !== undefined || state.blocked)) this.publishReceipt(session, state.confirmation, 'failed', (error as Error).message);
     }
   }
 
