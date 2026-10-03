@@ -58,10 +58,10 @@ const invoke = key => new Function(stripTypeScriptTypes(`const action = ${callba
 assert.deepEqual([...callbacks.keys()],['bookshelf_grid','bookshelf_list','bookshelf_filter']);
 invoke('bookshelf_filter'); assert.equal(shelf.filterRowVisible,true);
 invoke('bookshelf_filter'); assert.equal(shelf.filterRowVisible,false);
-const Shell = productionMotionMethods(path('BookshelfShell'), ['requestCheckUpdates']);
+const Shell = productionMotionMethods(path('BookshelfShell'), ['dismissMoreMenu','requestCheckUpdates']);
 const shell = new Shell();
-let updates=0; Object.assign(shell,{canCheckUpdates:true,updateRunning:false,backgroundUpdateRunning:false,onCheckUpdatesRequested:()=>updates++});
-shell.requestCheckUpdates(); assert.equal(updates,1);
+let updates=0; Object.assign(shell,{moreMenuVisible:true,moreSelectionId:"live-menu",canCheckUpdates:true,updateRunning:false,backgroundUpdateRunning:false,onCheckUpdatesRequested:()=>updates++});
+shell.requestCheckUpdates(); assert.equal(updates,1);assert.equal(shell.moreMenuVisible,false);assert.equal(shell.moreSelectionId,'');
 shell.backgroundUpdateRunning=true;shell.requestCheckUpdates();assert.equal(updates,1);
 shell.backgroundUpdateRunning=false;shell.canCheckUpdates=false;shell.requestCheckUpdates();assert.equal(updates,1);
 assert.ok(!shelfSource.slice(shelfSource.indexOf('private filterRow()'),shelfSource.indexOf('private filterChip(')).includes('onCheckUpdates'));

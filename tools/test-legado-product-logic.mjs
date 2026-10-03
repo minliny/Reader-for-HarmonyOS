@@ -139,7 +139,7 @@ assert.match(shelfMoreMenu, /检查更新/,
 // SHF-03 moved with the persistent chrome. Execute the actual More -> Shell
 // guard -> Index callback instead of looking for an obsolete Page field.
 const shellFile = new URL('../entry/src/main/ets/features/bookshelf/BookshelfShell.ets', import.meta.url);
-const ShellUpdate = productionMotionMethods(shellFile, ['requestCheckUpdates']);
+const ShellUpdate = productionMotionMethods(shellFile, ['moreIntentAction','dismissMoreMenu','requestCheckUpdates']);
 const require = createRequire(import.meta.url);
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
@@ -157,7 +157,7 @@ function suppliedCallback(text, component, property, owner) {
   return new Function(`return ${stripTypeScriptTypes(value.initializer.getText(tree))};`).call(owner);
 }
 let updateIntents = 0;
-const shellUpdate = Object.assign(new ShellUpdate(), { canCheckUpdates: true, updateRunning: false,
+const shellUpdate = Object.assign(new ShellUpdate(), { mounted:true, moreSelectionId:'live-menu', canCheckUpdates: true, updateRunning: false,
   backgroundUpdateRunning: false, moreMenuVisible: true,
   onCheckUpdatesRequested: suppliedCallback(index, 'BookshelfShell', 'onCheckUpdatesRequested', {
     startManualBookshelfUpdate: () => { updateIntents++; },
