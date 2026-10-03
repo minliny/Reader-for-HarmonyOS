@@ -8,6 +8,7 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => themeDayDesignSource(readFileSync(resolve(repo, path), 'utf8'));
 const page = read('entry/src/main/ets/features/settings/SettingsPage.ets');
 const overlay = read('entry/src/main/ets/features/settings/SettingsSelectOverlay.ets');
+const typography = read('entry/src/main/ets/features/common/ReaderTypography.ets');
 
 assert.match(page, /import \{ SettingsSelectOverlay, type SettingsSelectField \}/);
 assert.match(page, /\['简体中文', '繁體中文', 'English', '日本語', '한국어'\]/,
@@ -20,6 +21,18 @@ assert.match(page,
 
 assert.match(overlay, /Settings\/SelectPanel `4106:64687`/);
 assert.match(overlay, /Settings\/SelectOptionRow `4103:909`/);
+for (const role of [
+  'TYPE_SETTINGS_SELECT_TITLE',
+  'TYPE_SETTINGS_SELECT_PHONE_OPTION',
+  'TYPE_SETTINGS_SELECT_PHONE_CANCEL',
+  'TYPE_SETTINGS_SELECT_TABLET_OPTION',
+]) {
+  assert.match(overlay, new RegExp(role), `${role} is consumed by the selector overlay`);
+  assert.match(typography, new RegExp(`export const ${role} = new ReaderTextStyle`),
+    `${role} is registered in the shared typography contract`);
+}
+assert.doesNotMatch(overlay, /\.fontFamily\('ReaderNotoSansSC'\)/,
+  'settings selector text no longer owns a private font-family tuple');
 assert.match(overlay, /const PHONE_OPTION_HEIGHT = 52/);
 assert.match(overlay, /const TABLET_PANEL_WIDTH = 160/);
 assert.match(overlay, /const TABLET_OPTION_HEIGHT = 42/);

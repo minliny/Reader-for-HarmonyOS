@@ -76,6 +76,18 @@ export const TYPE_SELECT_DEFAULT_VALUE = new ReaderTextStyle(
 export const TYPE_SELECT_OPTION = new ReaderTextStyle(
   READER_FONT_NOTO_SANS_SC, 400, 12, undefined, undefined, 'system', 'figmaNode');
 
+// SettingsSelectOverlay keeps separate phone and tablet option contracts.
+// These roles preserve the audited tuples while removing their ownership from
+// the overlay consumer; selected state may still raise only the weight.
+export const TYPE_SETTINGS_SELECT_TITLE = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 400, 12, 14.4, 0.48, 'system', 'figmaNode');
+export const TYPE_SETTINGS_SELECT_PHONE_OPTION = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 400, 15, 18, undefined, 'system', 'figmaNode');
+export const TYPE_SETTINGS_SELECT_PHONE_CANCEL = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 400, 15, 18, undefined, 'system', 'figmaNode');
+export const TYPE_SETTINGS_SELECT_TABLET_OPTION = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 400, 14, 16.8, undefined, 'system', 'figmaNode');
+
 // Search-field variants share input behavior but not geometry or typography.
 export const TYPE_SEARCH_BOOK_INPUT = new ReaderTextStyle(
   READER_FONT_INTER, 400, 14, 21, undefined, 'system', 'figmaNode');

@@ -1,5 +1,11 @@
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderFonts } from '../common/ReaderFonts';
+import {
+  TYPE_SETTINGS_SELECT_PHONE_CANCEL,
+  TYPE_SETTINGS_SELECT_PHONE_OPTION,
+  TYPE_SETTINGS_SELECT_TABLET_OPTION,
+  TYPE_SETTINGS_SELECT_TITLE,
+} from '../common/ReaderTypography';
 
 export type SettingsSelectField = 'language' | 'startup' | 'animation';
 
@@ -84,11 +90,11 @@ export struct SettingsSelectOverlay {
 
       Row() {
         Text(this.title())
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(12)
-          .lineHeight(14.4)
-          .letterSpacing(0.48)
+          .fontFamily(TYPE_SETTINGS_SELECT_TITLE.fontFamily)
+          .fontWeight(TYPE_SETTINGS_SELECT_TITLE.fontWeight)
+          .fontSize(TYPE_SETTINGS_SELECT_TITLE.fontSizeFp)
+          .lineHeight(TYPE_SETTINGS_SELECT_TITLE.lineHeightFp as number)
+          .letterSpacing(TYPE_SETTINGS_SELECT_TITLE.letterSpacingFp as number)
           .fontColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.fontColor.FF1F1B17', this.appThemeScheme));
       }
       .width('100%')
@@ -111,10 +117,10 @@ export struct SettingsSelectOverlay {
 
       Stack({ alignContent: Alignment.Center }) {
         Text('取消')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(15)
-          .lineHeight(18)
+          .fontFamily(TYPE_SETTINGS_SELECT_PHONE_CANCEL.fontFamily)
+          .fontWeight(TYPE_SETTINGS_SELECT_PHONE_CANCEL.fontWeight)
+          .fontSize(TYPE_SETTINGS_SELECT_PHONE_CANCEL.fontSizeFp)
+          .lineHeight(TYPE_SETTINGS_SELECT_PHONE_CANCEL.lineHeightFp as number)
           .fontColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.fontColor.FF41484C', this.appThemeScheme));
       }
       .width('100%')
@@ -144,10 +150,10 @@ export struct SettingsSelectOverlay {
       Row() {
         Text(option)
           .layoutWeight(1)
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(this.isSelected(option) ? FontWeight.Bold : FontWeight.Regular)
-          .fontSize(15)
-          .lineHeight(18)
+          .fontFamily(TYPE_SETTINGS_SELECT_PHONE_OPTION.fontFamily)
+          .fontWeight(this.isSelected(option) ? FontWeight.Bold : TYPE_SETTINGS_SELECT_PHONE_OPTION.fontWeight)
+          .fontSize(TYPE_SETTINGS_SELECT_PHONE_OPTION.fontSizeFp)
+          .lineHeight(TYPE_SETTINGS_SELECT_PHONE_OPTION.lineHeightFp as number)
           .fontColor(this.isSelected(option) ? readerAppColor('app.SettingsSelectOverlay.phoneOption.fontColor.FF2D4A3E', this.appThemeScheme) : readerAppColor('app.SettingsSelectOverlay.phoneOption.fontColor.FF1F1B17', this.appThemeScheme))
           .maxLines(1);
         if (this.isSelected(option)) {
@@ -204,10 +210,10 @@ export struct SettingsSelectOverlay {
       Row() {
         Text(option)
           .layoutWeight(1)
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(this.isSelected(option) ? FontWeight.Bold : FontWeight.Regular)
-          .fontSize(14)
-          .lineHeight(16.8)
+          .fontFamily(TYPE_SETTINGS_SELECT_TABLET_OPTION.fontFamily)
+          .fontWeight(this.isSelected(option) ? FontWeight.Bold : TYPE_SETTINGS_SELECT_TABLET_OPTION.fontWeight)
+          .fontSize(TYPE_SETTINGS_SELECT_TABLET_OPTION.fontSizeFp)
+          .lineHeight(TYPE_SETTINGS_SELECT_TABLET_OPTION.lineHeightFp as number)
           .fontColor(this.isSelected(option) ? readerAppColor('app.SettingsSelectOverlay.tabletOption.fontColor.FF2D4A3E', this.appThemeScheme) : readerAppColor('app.SettingsSelectOverlay.tabletOption.fontColor.FF1F1B17', this.appThemeScheme))
           .maxLines(1);
         if (this.isSelected(option)) {
