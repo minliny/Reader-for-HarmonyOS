@@ -135,6 +135,7 @@ const localResult={...result,sourceId:'local',bookId:'import-one',sourceName:'æœ
 }
 function addFixture(){const notices=[];const host=Object.assign(new Add(),{
   detailBook:result,remoteReadingSession:{identity:result,book:result},bookshelfRemovalGeneration:0,
+  bookshelfHost:{upsertBook:async()=>{writeCount++;if(writeError)throw writeError;return {created:true};}},
   bookshelfAdditionGeneration:0,bookshelfAdditionActiveKey:'',bookshelfAdditionError:'',
   bookshelfRemovalActiveKey:'',canRemoveDetailBook:()=>true,detailBookKey:()=> 'search-source:/new',
   showReadingFailure:(...args)=>notices.push(args),refreshBookshelf(){},refreshSearchShelfMembership(){this.refreshed=true;},
