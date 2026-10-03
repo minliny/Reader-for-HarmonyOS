@@ -8,7 +8,7 @@ const require=createRequire(import.meta.url);
 const ets=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts=require(ets+'/node_modules/typescript');
 const root=fileURLToPath(new URL('../../',import.meta.url));
-const coreRoots=[process.env.READER_CORE_ROOT,resolve(root,'../../../Reader-Core-Native'),resolve(root,'../../Reader-Core-Native')].filter(Boolean);
+const coreRoots=[process.env.READER_CORE_ROOT,resolve(root,'../Reader-Core-Native'),resolve(root,'../../../Reader-Core-Native'),resolve(root,'../../Reader-Core-Native')].filter(Boolean);
 const coreRoot=coreRoots.find(path=>existsSync(resolve(path,'bindings/harmony/sdk/reader_core.ts')));
 assert.ok(coreRoot,'actual Core SDK fixture input exists');
 const sdk=await import(pathToFileURL(resolve(coreRoot,'bindings/harmony/sdk/reader_core.ts')).href);
