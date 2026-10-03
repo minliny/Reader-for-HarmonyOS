@@ -120,14 +120,14 @@ export struct SourceSwitchWindow {
 
   build() {
     ReaderBoundedSurface({ specId: 'source-switch-window', width: this.windowWidth(), height: this.windowHeight(),
-      header: this.header, body: this.windowBody, actions: this.footer })
+      header: (): void => { this.header(); }, body: (): void => { this.windowBody(); }, actions: (): void => { this.footer(); } })
       .translate({ x: this.windowTranslateX(), y: this.windowTranslateY() });
   }
 
   @Builder
   private header() {
     ReaderBoundedSurfaceHeader({ specId: 'source-switch-window', title: '换源', width: this.windowWidth(),
-      accessory: this.sortPill, onClose: (): void => this.onClose() });
+      accessory: (): void => { this.sortPill(); }, onClose: (): void => this.onClose() });
   }
 
   @Builder
@@ -197,11 +197,12 @@ export struct SourceSwitchWindow {
     } else if (this.state.kind === 'empty') {
       this.messageBody('未找到其他书源', '可检查书源是否启用后重试');
     } else if (this.state.kind === 'discoveryError') {
-      this.errorBody(this.state.message);
+      this.errorBody((): string => this.state.kind === 'discoveryError' ? this.state.message : '');
     } else if (this.state.kind === 'success') {
       this.messageBody('已切换书源', '');
     } else if (this.state.kind === 'failure') {
-      this.failureBody(this.state.message, this.state.transactionId !== undefined);
+      this.failureBody((): string => this.state.kind === 'failure' ? this.state.message : '',
+        (): boolean => this.state.kind === 'failure' && this.state.transactionId !== undefined);
     }
   }
 
@@ -256,7 +257,7 @@ export struct SourceSwitchWindow {
   }
 
   @Builder
-  private errorBody(message: string) {
+  private errorBody(message: () => string) {
     Column({ space: 0 }) {
       Blank().layoutWeight(1);
       Text('书源搜索失败')
@@ -266,7 +267,7 @@ export struct SourceSwitchWindow {
         .lineHeight(TYPE_SOURCE_STATE_TITLE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center);
-      Text(message)
+      Text(message())
         .margin({ top: TOK_SPACE_XS })
         .width(this.messageWidth())
         .fontFamily(TYPE_SOURCE_SWITCH_MESSAGE.fontFamily)
@@ -296,7 +297,7 @@ export struct SourceSwitchWindow {
   }
 
   @Builder
-  private failureBody(message: string, canRollback: boolean) {
+  private failureBody(message: () => string, canRollback: () => boolean) {
     Column({ space: 0 }) {
       Blank().layoutWeight(1);
       Text('换源失败')
@@ -306,7 +307,7 @@ export struct SourceSwitchWindow {
         .lineHeight(TYPE_SOURCE_STATE_TITLE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center);
-      Text(message)
+      Text(message())
         .margin({ top: TOK_SPACE_XS })
         .width(this.messageWidth())
         .fontFamily(TYPE_SOURCE_SWITCH_MESSAGE.fontFamily)
@@ -317,7 +318,7 @@ export struct SourceSwitchWindow {
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .textAlign(TextAlign.Center);
-      if (canRollback) {
+      if (canRollback()) {
         Text('撤销切换')
           .margin({ top: 18 })
           .fontFamily(TYPE_SOURCE_SWITCH_RECOVERY.fontFamily)

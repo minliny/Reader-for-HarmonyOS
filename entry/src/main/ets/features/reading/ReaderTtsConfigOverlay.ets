@@ -1,3 +1,4 @@
+import { ReaderBoundedSurfaceActions } from '../common/ReaderBoundedSurfaceActions';
 import { ReaderBoundedSurface, type ReaderBoundedSurfaceId } from '../common/ReaderBoundedSurface';
 import { ReaderBoundedSurfaceHeader } from '../common/ReaderBoundedSurfaceHeader';
 import { TYPE_READER_TTS_CHOICE_REGULAR, TYPE_READER_TTS_CHOICE_SELECTED, TYPE_READER_TTS_CONFIGURATION_TITLE, TYPE_READER_TTS_MANAGER_TITLE, TYPE_READER_TTS_VOICE_REGULAR, TYPE_READER_TTS_VOICE_SELECTED } from '../common/ReaderTypography';
@@ -133,7 +134,7 @@ export struct ReaderTtsConfigOverlay {
         .onClick((): void => this.close());
       Column() {
       ReaderBoundedSurface({ specId: this.boundedSpecId(), width: this.manager ? '100%' : this.panelWidth(),
-        height: this.panelHeight(), header: this.boundedHeader, body: this.boundedContent, actions: this.boundedActions });
+        height: this.panelHeight(), header: (): void => { this.boundedHeader(); }, body: (): void => { this.boundedContent(); }, actions: (): void => { this.boundedActions(); } });
       }.width(this.manager ? '100%' : this.panelWidth()).height(this.manager ? '100%' : this.panelHeight())
         .justifyContent(FlexAlign.End).alignItems(HorizontalAlign.Center)
         .padding(this.manager ? { left: 13, right: 13,
@@ -358,19 +359,8 @@ export struct ReaderTtsConfigOverlay {
 
   @Builder
   private managerFooter() {
-    Row({ space: 10 }) {
-      Text('取消').layoutWeight(1).height(44).fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.fontFamily)
-        .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.fontSizeFp)
-        .fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.fontColor.FF5B5046', this.appThemeScheme)).textAlign(TextAlign.Center).backgroundColor(readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.backgroundColor.29B4A697', this.appThemeScheme)).borderRadius(12)
-        .enabled(!this.busy).onClick((): void => this.close());
-      Text('保存').layoutWeight(1).height(44).fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.fontFamily)
-        .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.fontSizeFp)
-        .fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.fontColor.FFFFFAF4', this.appThemeScheme)).textAlign(TextAlign.Center)
-        .linearGradient({ angle: 155, colors: [[readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.linearGradient.FF2F6373', this.appThemeScheme), 0], [readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.linearGradient.FF244F5C', this.appThemeScheme), 1]] }).borderRadius(12)
-        .shadow({ radius: 12, color: readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.color.4D2F6373', this.appThemeScheme), offsetY: 4 })
-        .enabled(this.canSubmit() && !this.busy).opacity(this.canSubmit() && !this.busy ? 1 : 0.42)
-        .onClick((): void => this.submit());
-    }.width('100%').height(76).padding({ left: 18, right: 18, top: 16, bottom: 16 });
+    ReaderBoundedSurfaceActions({ specId: 'tts-manager', primaryEnabled: this.canSubmit() && !this.busy,
+      cancelEnabled: !this.busy, onAction: (id: string): void => { if (id === 'cancel') this.close(); else this.submit(); } });
   }
 
   private current(generation: number): boolean { return this.mounted && generation === this.generation; }

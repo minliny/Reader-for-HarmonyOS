@@ -1,7 +1,24 @@
-import { TYPE_SOURCE_SWITCH_HEADING, TYPE_READER_TTS_MANAGER_TITLE, TYPE_READER_TTS_CONFIGURATION_TITLE } from './ReaderTypography';
+import { TYPE_SOURCE_SWITCH_HEADING, TYPE_READER_TTS_MANAGER_TITLE, TYPE_READER_TTS_CONFIGURATION_TITLE, TYPE_FILE_IMPORT_TITLE, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE } from './ReaderTypography';
 import { readerAppColor } from './ReaderThemeRegistry';
 import { SheetSurfaceSpec, resolveSheetSpec } from './ReaderSurfaceSpecs';
 import type { ReaderBoundedSurfaceId } from './ReaderBoundedSurface';
+
+/** Only set attributes present in the selected original header. In particular
+ * the TTS AUTO title does not call height/lineHeight with undefined. The IDs
+ * are stable per mounted family; native node reuse across IDs is not a contract. */
+export class ReaderBoundedTitleModifier implements AttributeModifier<TextAttribute> {
+  private readonly id: ReaderBoundedSurfaceId;
+  private readonly scheme: string;
+  constructor(id: ReaderBoundedSurfaceId, scheme: string) { this.id = id; this.scheme = scheme; }
+  applyNormalAttribute(instance: TextAttribute): void {
+    const type = this.id === 'source-switch-window' ? TYPE_SOURCE_SWITCH_HEADING :
+      this.id === 'tts-config-manager' ? TYPE_READER_TTS_MANAGER_TITLE : TYPE_READER_TTS_CONFIGURATION_TITLE;
+    instance.fontFamily(type.fontFamily).fontWeight(type.fontWeight).fontSize(type.fontSizeFp)
+      .fontColor(readerAppColor(this.id === 'source-switch-window' ? 'TOK_READ_INK' : 'TOK_TTS_INK', this.scheme));
+    if (this.id === 'source-switch-window') instance.constraintSize({ minWidth: 0 }).height(16)
+      .lineHeight(TYPE_SOURCE_SWITCH_HEADING.lineHeightFp as number).margin({ left: 7 });
+  }
+}
 
 /** Header title, close target and finite physical layout shared by real
  * bounded surfaces. The optional source sort control is a business slot. */
@@ -12,13 +29,24 @@ export struct ReaderBoundedSurfaceHeader {
   @Prop title: string = '';
   @Prop width: number = 300;
   @Prop enabled: boolean = true;
+  @BuilderParam leading: () => void = this.emptySlot;
   @BuilderParam accessory: () => void = this.emptySlot;
+  onAreaChanged: (oldValue: Area, next: Area) => void = (_oldValue: Area, _next: Area): void => {};
   onClose: () => void = (): void => {};
 
   @Builder private emptySlot() {}
 
   build() {
-    if (this.specId === 'bookshelf-book-action') {
+    if (this.specId === 'local-import-selection' || this.specId === 'local-import-result-content') {
+      this.localImportHeader();
+    } else if (this.specId === 'reader-replace-editor') {
+      Row({ space: 8 }) { this.leading();
+        Text(this.title).fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontFamily)
+          .fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontSizeFp).fontWeight(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontWeight)
+          .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).layoutWeight(1);
+        this.accessory();
+      }.width('100%').height(28);
+    } else if (this.specId === 'bookshelf-book-action') {
       this.sheetHeader();
     } else if (this.specId === 'source-switch-window') {
       Column({ space: 0 }) {
@@ -27,6 +55,27 @@ export struct ReaderBoundedSurfaceHeader {
           .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
       }.width('100%').height(34);
     } else { this.headerRow(); }
+  }
+
+  @Builder private localImportHeader() {
+    Column() {
+      if (this.specId === 'local-import-selection') {
+        Row() { this.importTitle(); }.width('100%').padding({ left: 20, right: 20, top: 20, bottom: 17 }).alignItems(VerticalAlign.Center);
+      } else {
+        Text(this.title).fontFamily(TYPE_FILE_IMPORT_TITLE.fontFamily).fontWeight(TYPE_FILE_IMPORT_TITLE.fontWeight)
+          .fontSize(TYPE_FILE_IMPORT_TITLE.fontSizeFp).lineHeight(TYPE_FILE_IMPORT_TITLE.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1).width('100%')
+          .padding({ left: 20, right: 20, top: 20, bottom: 17 });
+      }
+      Blank().width('100%').height(1).backgroundColor(readerAppColor(this.specId === 'local-import-selection' ?
+        'app.LocalImportDialog.fileSelectionPanel.backgroundColor.FFE8E2D9' : 'app.LocalImportDialog.resultHeader.backgroundColor.FFE8E2D9', this.appThemeScheme));
+    }.width('100%').onAreaChange((oldValue: Area, next: Area): void => this.onAreaChanged(oldValue, next));
+  }
+
+  @Builder private importTitle() {
+    Text(this.title).fontFamily(TYPE_FILE_IMPORT_TITLE.fontFamily).fontWeight(TYPE_FILE_IMPORT_TITLE.fontWeight)
+      .fontSize(TYPE_FILE_IMPORT_TITLE.fontSizeFp).lineHeight(TYPE_FILE_IMPORT_TITLE.lineHeightFp as number)
+      .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1);
   }
 
   private sheetSpec(): SheetSurfaceSpec { return resolveSheetSpec('bookshelf-book-action'); }
@@ -62,15 +111,7 @@ export struct ReaderBoundedSurfaceHeader {
   }
 
   @Builder private titleText() {
-    Text(this.title).layoutWeight(1)
-      .constraintSize(this.specId === 'source-switch-window' ? { minWidth: 0 } : {})
-      .height(this.specId === 'source-switch-window' ? 16 : undefined)
-      .fontFamily(this.specId === 'source-switch-window' ? TYPE_SOURCE_SWITCH_HEADING.fontFamily : this.specId === 'tts-config-manager' ? TYPE_READER_TTS_MANAGER_TITLE.fontFamily : TYPE_READER_TTS_CONFIGURATION_TITLE.fontFamily)
-      .fontWeight(this.specId === 'source-switch-window' ? TYPE_SOURCE_SWITCH_HEADING.fontWeight : this.specId === 'tts-config-manager' ? TYPE_READER_TTS_MANAGER_TITLE.fontWeight : TYPE_READER_TTS_CONFIGURATION_TITLE.fontWeight)
-      .fontSize(this.specId === 'source-switch-window' ? TYPE_SOURCE_SWITCH_HEADING.fontSizeFp : this.specId === 'tts-config-manager' ? TYPE_READER_TTS_MANAGER_TITLE.fontSizeFp : TYPE_READER_TTS_CONFIGURATION_TITLE.fontSizeFp)
-      .lineHeight(this.specId === 'source-switch-window' ? TYPE_SOURCE_SWITCH_HEADING.lineHeightFp as number : undefined)
-      .fontColor(readerAppColor(this.specId === 'source-switch-window' ? 'TOK_READ_INK' : 'TOK_TTS_INK', this.appThemeScheme))
-      .margin(this.specId === 'source-switch-window' ? { left: 7 } : 0);
+    Text(this.title).layoutWeight(1).attributeModifier(new ReaderBoundedTitleModifier(this.specId, this.appThemeScheme));
   }
 
   @Builder private closeAction() {

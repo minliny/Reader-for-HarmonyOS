@@ -478,6 +478,7 @@
     "test-reader-native-alert-exit-faults.mjs",
     "test-bookshelf-view-mode-receipts.mjs",
     "test-sync-receipt-owner-closure.mjs",
-    "test-typography-carrier-successors.mjs"
+    "test-typography-carrier-successors.mjs",
+    "test-bounded-source-tts-composition.mjs"
   ]
 }
