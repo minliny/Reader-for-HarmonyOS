@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "boundary": "source: isolated repository with Node only; integration: complete FnOS SDK/cross-repository gate. All discovered tests remain in full check-local.sh.",
   "source": [
+    "test-local-directory-download-projection.mjs",
     "test-reading-prefetch-host.mjs",
     "test-source-selection-and-rss-projection.mjs",
     "test-system-file-open-navigation-owner.mjs",
