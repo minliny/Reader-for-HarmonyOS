@@ -26,6 +26,14 @@ const DOMAIN = 0x5244;
 // across that clone and never collides when the RuntimeOwner is replaced.
 let rssProjectionGeneration: number = 0;
 
+function logRssError(format: string, ...values: string[]): void {
+  try { hilog.error(DOMAIN, 'Reader', format, ...values); } catch (_) {}
+}
+
+function logRssWarning(format: string, ...values: string[]): void {
+  try { hilog.warn(DOMAIN, 'Reader', format, ...values); } catch (_) {}
+}
+
 function delay(millis: number): Promise<void> {
   return new Promise<void>((resolve: () => void): void => {
     setTimeout(resolve, millis);
@@ -81,15 +89,32 @@ type RssRouteGuard = () => boolean;
  * emitted projection is reloaded from Core after the requested transaction.
  */
 export class RssOrchestrator {
+  private static readonly retained: WeakMap<ReaderRuntimeOwner, RssOrchestrator> = new WeakMap();
+
+  /** One original RSS lane per Runtime; obsolete factories cannot evict it.
+   * Warm ownership is not an operation receipt or a cold recovery journal. */
+  static forRuntime(owner: ReaderRuntimeOwner): RssOrchestrator | undefined {
+    if (!ReaderRuntimeOwner.isCurrent(owner)) return undefined;
+    const retained = RssOrchestrator.retained.get(owner);
+    if (retained !== undefined) return retained;
+    const orchestrator = new RssOrchestrator((_value: RssSubscription[]): void => {},
+      (): boolean => false, owner);
+    // Native WeakMap ownership cannot pin a closed Runtime solely because
+    // RSS was its last visited feature. Accepted tasks keep their own owner.
+    RssOrchestrator.retained.set(owner, orchestrator);
+    return orchestrator;
+  }
+
   private readonly owner: ReaderRuntimeOwner;
   private readonly gateway: RssGateway;
   private readonly routeOperations: RssRouteOperationHost;
   private feedRead: OperationFacts<RssSubscription[]> = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
   private feedValue: RssSubscription[] | undefined = undefined;
-  private readonly emit: (subscriptions: RssSubscription[]) => void;
-  private readonly isCurrent: () => boolean;
-  private readonly emitOperation: RssOperationProjectionEmitter;
-  private readonly emitRead: (facts: OperationFacts<RssSubscription[]>) => void;
+  private emit: (subscriptions: RssSubscription[]) => void;
+  private isCurrent: () => boolean;
+  private emitOperation: RssOperationProjectionEmitter;
+  private emitRead: (facts: OperationFacts<RssSubscription[]>) => void;
+  private presentationIdentity: string | undefined = undefined;
   /** Bumped on every management-page entry; stale write-backs are discarded. */
   private session: number = 0;
   /** One chain for toggle, refresh, and remove across page entries. */
@@ -112,13 +137,13 @@ export class RssOrchestrator {
     this.routeOperations = new RssRouteOperationHost({ gateway: this.gateway,
       ownsRuntime: (): boolean => this.ownsRuntime(),
       enqueue: (work: () => Promise<void>): void => {
-        void this.runSerialized(work).catch((error: Error): void => hilog.error(DOMAIN, 'Reader', '%{private}s', error.message));
+        void this.runSerialized(work).catch((error: Error): void => logRssError('%{private}s', error.message));
       },
       mutate: (work: () => Promise<void>, admitted: () => boolean): Promise<void> => this.runMutationWithRetry(work, admitted),
       readSource: (id: string): Promise<RssSourceSnapshot> => this.loadSourceSnapshotWithRetry(id),
       readEntry: (id: string, guid: string): Promise<RssEntrySnapshot> => this.loadEntrySnapshotWithRetry(id, guid),
       readMembership: (id: string, guid: string): Promise<boolean> => this.loadFavoriteMembershipWithRetry(id, guid),
-      deliveryFailed: (error: Error): void => hilog.error(DOMAIN, 'Reader', '%{private}s', error.message),
+      deliveryFailed: (error: Error): void => logRssError('%{private}s', error.message),
     });
     this.emit = emit;
     this.isCurrent = isCurrent;
@@ -128,6 +153,40 @@ export class RssOrchestrator {
 
   owns(owner: ReaderRuntimeOwner): boolean {
     return this.owner === owner;
+  }
+
+  /** A physical view captures identity before dispatch. Replacing its delivery
+   * retires queued intents, while accepted writes retain this original lane. */
+  attachPresentation(identity: string, emit: (subscriptions: RssSubscription[]) => void,
+    isCurrent: () => boolean, emitOperation: RssOperationProjectionEmitter,
+    emitRead: (facts: OperationFacts<RssSubscription[]>) => void,
+    admitted: () => boolean): boolean {
+    if (!this.ownsRuntime() || identity.length === 0) return false;
+    try { if (!admitted()) return false; } catch (_error) { return false; }
+    if (this.presentationIdentity !== identity) this.session += 1;
+    this.presentationIdentity = identity;
+    this.emit = emit;
+    this.isCurrent = isCurrent;
+    this.emitOperation = emitOperation;
+    this.emitRead = emitRead;
+    const session = this.session;
+    this.deliverRoute((): boolean => this.isCurrentSession(session), (): void => {
+      if (this.hasSubscriptions) this.emit(this.lastSubscriptions);
+      this.emitRead(this.latestRead);
+      if (this.latestOperation !== undefined) this.emitOperation(this.latestOperation);
+    });
+    return true;
+  }
+
+  /** An old view cannot detach a newer view or discard its pending truth. */
+  detachPresentation(identity: string): void {
+    if (this.presentationIdentity !== identity) return;
+    this.presentationIdentity = undefined;
+    this.session += 1;
+    this.isCurrent = (): boolean => false;
+    this.emit = (_value: RssSubscription[]): void => {};
+    this.emitOperation = (_value: RssManagementOperationProjection): void => {};
+    this.emitRead = (_value: OperationFacts<RssSubscription[]>): void => {};
   }
 
   /** Last durable mutation fact, retained for a late route/read-back observer. */
@@ -237,6 +296,8 @@ export class RssOrchestrator {
           return;
         }
         // The import acknowledgement is durable even if the list read fails.
+        this.publishOperation('source-import', replaceExisting ? 'replace' : 'merge', session,
+          'reading', undefined, undefined, 'confirmed');
         await this.readBack('source-import', replaceExisting ? 'replace' : 'merge', session, 'confirmed');
         if (this.isCurrentSession(session)) onComplete(result);
       },
@@ -282,7 +343,7 @@ export class RssOrchestrator {
           message: (error as Error).message, canRetry: true, generation: ++rssProjectionGeneration });
         this.deliverRoute(isCurrent, (): void => emitRead(this.feedRead));
       }
-    }).catch((error: Error): void => hilog.error(DOMAIN, 'Reader', '%{private}s', error.message));
+    }).catch((error: Error): void => logRssError('%{private}s', error.message));
   }
 
   /** Also used by the editor: every RSS write/read shares this actual lane. */
@@ -291,7 +352,7 @@ export class RssOrchestrator {
       if (!this.ownsRuntime()) throw new Error('RSS runtime owner retired');
       await work();
     });
-    this.mutationChain = result.catch((error: Error): void => hilog.error(DOMAIN, 'Reader', '%{private}s', error.message));
+    this.mutationChain = result.catch((error: Error): void => logRssError('%{private}s', error.message));
     return result;
   }
 
@@ -353,7 +414,7 @@ export class RssOrchestrator {
       .catch((error: Error): void => {
         this.publishOperation(action, subscriptionId, session, 'failed', error.message,
           undefined, isPendingTransactionError(error) ? 'undispatched' : 'unknown');
-        hilog.error(DOMAIN, 'Reader',
+        logRssError(
           'RSS management mutation acknowledgement unavailable: action=%{private}s subscriptionId=%{private}s err=%{private}s',
           action, subscriptionId, error.message);
       });
@@ -373,7 +434,7 @@ export class RssOrchestrator {
         await task();
       })
       .catch((error: Error): void => {
-        hilog.error(DOMAIN, 'Reader',
+        logRssError(
           'RSS route operation failed: action=%{private}s identity=%{private}s err=%{private}s',
           action, identity, error.message);
         if (isCurrent()) {
@@ -398,12 +459,17 @@ export class RssOrchestrator {
       this.publishOperation(action, subscriptionId, session, 'failed', (error as Error).message, undefined, evidence.confirmation());
       return;
     } finally { this.gateway.observeWrites(undefined); }
+    // Receipt settlement is owned here even after the original view/Runtime
+    // retired. Runtime admission only controls subsequent reads and delivery.
+    this.publishOperation(action, subscriptionId, session, 'reading', undefined, undefined, evidence.confirmation());
     await this.readBack(action, subscriptionId, session, evidence.confirmation());
   }
 
   private deliverRoute(isCurrent: RssRouteGuard, delivery: () => void): void {
-    if (!this.ownsRuntime() || !isCurrent()) return;
-    try { delivery(); } catch (error) { hilog.error(DOMAIN, 'Reader', '%{private}s', (error as Error).message); }
+    try {
+      if (!this.ownsRuntime() || !isCurrent()) return;
+      delivery();
+    } catch (error) { logRssError('%{private}s', (error as Error).message); }
   }
 
   private async reconcileUnknownManagementWrite(session: number): Promise<boolean> {
@@ -427,7 +493,7 @@ export class RssOrchestrator {
     } catch (error) {
       const refreshError = (error as Error).message;
       this.publishOperation(action, subscriptionId, session, 'failed', refreshError, undefined, confirmation);
-      hilog.warn(DOMAIN, 'Reader',
+      logRssWarning(
         'RSS management readback failed: confirmation=%{private}s action=%{private}s subscriptionId=%{private}s err=%{private}s',
         confirmation, action, subscriptionId, refreshError);
       return;
@@ -440,8 +506,9 @@ export class RssOrchestrator {
     // is authoritative for all transactions completed before it. Publishing
     // each successful step also ensures a later failed intent cannot conceal
     // an earlier persisted change.
-    if (this.isCurrentSession(session)) {
-      this.deliverRoute((): boolean => this.isCurrentSession(session), (): void => this.emit(subscriptions));
+    const deliverySession = this.presentationIdentity === undefined ? session : this.session;
+    if (this.isCurrentSession(deliverySession)) {
+      this.deliverRoute((): boolean => this.isCurrentSession(deliverySession), (): void => this.emit(subscriptions));
     }
   }
 
@@ -458,7 +525,7 @@ export class RssOrchestrator {
           (error as Error).message, undefined, operation.projection.receipt.confirmation);
       }
       if (this.isCurrentSession(session)) {
-        hilog.error(DOMAIN, 'Reader',
+        logRssError(
           'RSS subscription management load failed: %{private}s', (error as Error).message);
       }
       return;
@@ -471,8 +538,9 @@ export class RssOrchestrator {
         undefined, subscriptions, operation.projection.receipt.confirmation);
     }
     this.publishRead(session, 'succeeded');
-    if (this.isCurrentSession(session)) {
-      this.deliverRoute((): boolean => this.isCurrentSession(session), (): void => this.emit(subscriptions));
+    const deliverySession = this.presentationIdentity === undefined ? session : this.session;
+    if (this.isCurrentSession(deliverySession)) {
+      this.deliverRoute((): boolean => this.isCurrentSession(deliverySession), (): void => this.emit(subscriptions));
     }
   }
 
@@ -497,8 +565,9 @@ export class RssOrchestrator {
     });
     const operation: RssManagementOperationProjection = { action, subscriptionId, projection };
     this.latestOperation = operation;
-    if (this.isCurrentSession(session)) {
-      this.deliverRoute((): boolean => this.isCurrentSession(session), (): void => this.emitOperation(operation));
+    const deliverySession = this.presentationIdentity === undefined ? session : this.session;
+    if (this.isCurrentSession(deliverySession)) {
+      this.deliverRoute((): boolean => this.isCurrentSession(deliverySession), (): void => this.emitOperation(operation));
     }
   }
 
@@ -510,7 +579,8 @@ export class RssOrchestrator {
       generation: ++rssProjectionGeneration,
       message,
     });
-    this.deliverRoute((): boolean => this.isCurrentSession(session), (): void => this.emitRead(this.latestRead));
+    const deliverySession = this.presentationIdentity === undefined ? session : this.session;
+    this.deliverRoute((): boolean => this.isCurrentSession(deliverySession), (): void => this.emitRead(this.latestRead));
   }
 
   private async runMutationWithRetry(mutation: RssMutation, admitted: () => boolean = (): boolean => this.ownsRuntime()): Promise<void> {
@@ -626,7 +696,7 @@ export class RssOrchestrator {
           return;
         }
       } catch (error) {
-        hilog.warn(DOMAIN, 'Reader',
+        logRssWarning(
           'runtime.status probe failed during RSS idle wait: %{private}s',
           (error as Error).message);
       }
@@ -642,6 +712,7 @@ export class RssOrchestrator {
   }
 
   private isCurrentSession(session: number): boolean {
-    return this.ownsRuntime() && this.isCurrent() && session === this.session;
+    try { return this.ownsRuntime() && this.isCurrent() && session === this.session; }
+    catch (_error) { return false; }
   }
 }

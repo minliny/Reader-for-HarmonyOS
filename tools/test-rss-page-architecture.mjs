@@ -139,7 +139,8 @@ assert.match(index, /private returnFromRssSourceFeed\(\): void \{[\s\S]*this\.ro
 assert.match(orchestrator, /private mutationChain: Promise<void> = Promise\.resolve\(\)/);
 assert.match(orchestrator, /this\.mutationChain = this\.mutationChain[\s\S]*this\.applyMutation/);
 assert.match(orchestrator, /await this\.runMutationWithRetry\(mutation,.*isCurrentSession\(session\)\);[\s\S]*await this\.loadSubscriptionsWithRetry\(\)/);
-assert.match(orchestrator, /if \(this\.isCurrentSession\(session\)\) \{\s*this\.deliverRoute\([\s\S]{0,150}this\.emit\(subscriptions\)/);
+assert.match(orchestrator, /const deliverySession = this\.presentationIdentity === undefined \? session : this\.session;\s*if \(this\.isCurrentSession\(deliverySession\)\) \{\s*this\.deliverRoute\(\(\): boolean => this\.isCurrentSession\(deliverySession\), \(\): void => this\.emit\(subscriptions\)/,
+  'canonical readback goes only to the admitted current presentation; accepted writes stay in their original owner');
 assert.match(orchestrator, /owner\.request\('runtime\.status', \{\}\)/);
 assert.match(orchestrator, /isReaderCoreTransactionPendingError\(error\)/);
 assert.doesNotMatch(orchestrator, /error\.message\.indexOf|error\.message\.includes/);

@@ -186,4 +186,92 @@ for(const action of ['toggle','import']){
   assert.deepEqual(f.runtime.calls.map(c=>c[0]),['rss-source.list','rss.subscription.persist','rss-source.list','rss-source.list'],'unsent retired-session intent is dropped; accepted write and re-entry share one chain');
   assert.equal(f.index.rssManagementOperation.subscriptionId,'a');assert.equal(f.refresh().items[0].enabled,false);
 }
-console.log('RSS actual Gateway -> Index -> SDK Props/feedback: PASS (write/read/unknown/retry/close/re-entry/owner/concurrency).');
+// The actual complete Gateway/Orchestrator survives same-Runtime physical view
+// replacement. Controlled RPC answers are IO fixtures, never Core receipts.
+function retainedView(owner, identity, active = () => true) {
+  const values=[],operations=[],reads=[];
+  assert.equal(owner.attachPresentation(identity,v=>values.push(clone(v)),active,
+    o=>operations.push(clone(o)),f=>reads.push(clone(f)),()=>true),true);
+  return {values,operations,reads};
+}
+{
+  const runtime=rpc();currentOwner=runtime;
+  const owner=RssOrchestrator.forRuntime(runtime), first=retainedView(owner,'first');
+  owner.open();await settle(owner);
+  const pause=deferred();let waiting=false;
+  runtime.beforeRequest=async method=>{if(method==='rss.subscription.persist'){waiting=true;await pause.promise;}};
+  owner.toggleSubscription('a',false);while(!waiting)await new Promise(r=>setImmediate(r));
+  const before=first.operations.length;
+  const same=RssOrchestrator.forRuntime(runtime);assert.equal(same,owner);
+  const newer=retainedView(same,'replacement');
+  owner.detachPresentation('first');
+  assert.equal(owner.attachPresentation('retired-old',()=>assert.fail(),()=>true,
+    ()=>assert.fail(),()=>assert.fail(),()=>false),false,'obsolete view cannot replace current delivery');
+  assert.equal(owner.attachPresentation('throwing-old',()=>assert.fail(),()=>true,
+    ()=>assert.fail(),()=>assert.fail(),()=>{throw Error('retired admission');}),false);
+  pause.resolve();await settle(owner);
+  assert.equal(runtime.count('rss.subscription.persist'),1);
+  assert.equal(first.operations.length,before,'late accepted ACK cannot publish to old view');
+  assert.equal(newer.operations.at(-1).projection.receipt.fact,'confirmedCurrent');
+  assert.equal(newer.values.at(-1)[0].enabled,false,'replacement receives the same canonical readback');
+  assert.equal(newer.reads.at(-1).fact,'current');
+}
+{
+  const runtime=rpc();currentOwner=runtime;
+  const owner=RssOrchestrator.forRuntime(runtime);retainedView(owner,'queued-old');
+  owner.open();await settle(owner);
+  const pause=deferred();owner.mutationChain=pause.promise;
+  owner.toggleSubscription('a',false);
+  retainedView(owner,'queued-new');pause.resolve();await settle(owner);
+  assert.equal(runtime.count('rss.subscription.persist'),0,'old physical queued intent cannot acquire new delivery admission');
+}
+{
+  const runtime=rpc();currentOwner=runtime;
+  const owner=RssOrchestrator.forRuntime(runtime);retainedView(owner,'unknown-old');
+  owner.open();await settle(owner);runtime.writeFailure=new Error('ACK lost after mutation');
+  owner.toggleSubscription('a',false);await settle(owner);
+  owner.detachPresentation('unknown-old');
+  const same=RssOrchestrator.forRuntime(runtime),next=retainedView(same,'unknown-new');
+  assert.equal(next.operations.at(-1).projection.receipt.confirmation,'unknown');
+  same.open();await settle(same);same.toggleSubscription('b',false);await settle(same);
+  assert.equal(runtime.count('rss.subscription.persist'),1,'warm remount never replays or replaces an unknown mutation');
+  assert.equal(next.operations.at(-1).projection.receipt.fact,'pendingReconciliation','matching read is not ACK proof');
+}
+{
+  const oldRuntime=rpc();currentOwner=oldRuntime;
+  const old=RssOrchestrator.forRuntime(oldRuntime);retainedView(old,'retired');
+  old.open();await settle(old);
+  const pause=deferred();let waiting=false;
+  oldRuntime.beforeRequest=async method=>{if(method==='rss.subscription.persist'){waiting=true;await pause.promise;}};
+  old.toggleSubscription('a',false);while(!waiting)await new Promise(r=>setImmediate(r));
+  const newRuntime=rpc();currentOwner=newRuntime;
+  const current=RssOrchestrator.forRuntime(newRuntime),next=retainedView(current,'current');
+  assert.equal(RssOrchestrator.forRuntime(oldRuntime),undefined,'obsolete factory cannot replace current cached owner');
+  assert.equal(RssOrchestrator.forRuntime(newRuntime),current);
+  pause.resolve();await settle(old);
+  assert.equal(old.latestOperationProjection().projection.receipt.confirmation,'confirmed','original owner retains exact accepted ACK after retirement');
+  assert.equal(next.operations.length,0);
+  currentOwner=undefined;assert.equal(RssOrchestrator.forRuntime(newRuntime),undefined);
+  assert.equal(current.attachPresentation('unavailable',()=>{},()=>true,()=>{},()=>{},()=>true),false);
+}
+{
+  const runtime=rpc();currentOwner=runtime;
+  const owner=RssOrchestrator.forRuntime(runtime);
+  retainedView(owner,'throwing-admission',()=>{throw Error('native context retired');});
+  owner.open();owner.toggleSubscription('a',false);await settle(owner);
+  assert.equal(runtime.count('rss.subscription.persist'),0);
+}
+{
+  const ThrowingDiagnosticOwner = new Function('RssGateway','ReaderRuntimeOwner','ReaderWriteEvidence','RssRouteOperationHost','hilog','isReaderCoreTransactionPendingError','projectPersistedReceipt','projectOperationFacts',
+    ordinary(source('features/rss/RssOrchestrator.ets')) + ';return RssOrchestrator;')(RssGateway,ReaderRuntimeOwner,ReaderWriteEvidence,RssRouteOperationHost,
+      {warn(){throw Error('logger unavailable');},error(){throw Error('logger unavailable');}},isReaderCoreTransactionPendingError,projectPersistedReceipt,facts.projectOperationFacts);
+  const runtime=rpc();currentOwner=runtime;
+  const owner=new ThrowingDiagnosticOwner(()=>{throw Error('native delivery retired');},()=>true,runtime,
+    ()=>{throw Error('native delivery retired');},()=>{throw Error('native delivery retired');});
+  owner.open();await settle(owner);owner.toggleSubscription('a',false);await settle(owner);
+  assert.equal(owner.latestOperationProjection().projection.receipt.fact,'confirmedCurrent');
+  assert.equal(runtime.count('rss.subscription.persist'),1,'throwing diagnostic cannot rewrite accepted ACK');
+  await assert.rejects(owner.runSerialized(async()=>{throw Error('independent operation failed');}),/independent operation failed/);
+  let ran=false;await owner.runSerialized(async()=>{ran=true;});assert.equal(ran,true,'logger cannot poison the serial tail');
+}
+console.log('RSS actual Gateway -> Index -> SDK Props/feedback + same-Runtime retained lane: PASS (write/read/unknown/retry/close/re-entry/owner/concurrency).');
