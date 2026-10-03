@@ -180,6 +180,7 @@
     "test-source-host-wiring.mjs",
     "test-source-product-tools.mjs",
     "test-source-switch-transaction.mjs",
+    "test-source-switch-typography.mjs",
     "test-surface-horizontal-geometry.mjs",
     "test-surface-transition-p0.mjs",
     "test-sync-webdav-product.mjs",
