@@ -5,7 +5,7 @@ import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {ReaderNativeAlertOwner} from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {boundedSurfaceSdk,boundedMembers} from './lib/bounded-surface-sdk-probe.mjs';
-import {choiceSource,resolveReaderChoiceSpec} from './lib/reader-choice-row-probe.mjs';
+import {choiceSource,resolveReaderChoiceSpec,compileReaderChoiceLabelModifier} from './lib/reader-choice-row-probe.mjs';
 import {menuSource,ReaderMenuActionView} from './lib/reader-action-menu-probe.mjs';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
@@ -15,7 +15,7 @@ import {admitBookshelfSdkCarrier} from './lib/bookshelf-projection-owner-probe.m
 // Reuse only the real leaf constructors/fixtures, not that test's assertions.
 const fixtureUrl=new URL('./test-temporary-back-leaf-sdk.mjs',import.meta.url);
 const fixtureSource=readFileSync(fixtureUrl,'utf8').split('function assertCycle(')[0].replace(/^import[^\n]+\n/gm,'').replaceAll('import.meta.url',JSON.stringify(fixtureUrl.href));
-const deps={assert,readFileSync,createRequire,stripTypeScriptTypes,ReaderNativeAlertOwner,createReaderBuilderProbe,boundedSurfaceSdk,boundedMembers,choiceSource,resolveReaderChoiceSpec,menuSource,ReaderMenuActionView};
+const deps={assert,readFileSync,createRequire,stripTypeScriptTypes,ReaderNativeAlertOwner,createReaderBuilderProbe,boundedSurfaceSdk,boundedMembers,choiceSource,resolveReaderChoiceSpec,compileReaderChoiceLabelModifier,menuSource,ReaderMenuActionView};
 const leaf=new Function(...Object.keys(deps),fixtureSource+';return{harness,settingsSource,sourceSource,shelfSource,read};')(...Object.values(deps));
 const syntax=createRequire(import.meta.url)((process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/lib/validate_ui_syntax.js');syntax.builderParamObjectCollection.set('BookshelfShell',new Set(['content']));createRequire(import.meta.url)((process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/lib/component_map.js').CUSTOM_BUILDER_METHOD.add('bookshelfContent');
 const indexPath=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),indexSource=readFileSync(indexPath,'utf8');
