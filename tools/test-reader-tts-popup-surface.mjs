@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const specs = read('entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets');
 const overlay = read('entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets');
+const frame = read('entry/src/main/ets/features/common/ReaderBoundedSurface.ets');
 
 const { resolvePopupSpec } = new Function('TextAlign',
   `${stripTypeScriptTypes(specs).replace(/^export /gm, '')}; return { resolvePopupSpec };`)(
@@ -23,12 +24,14 @@ assert.match(overlay, /import \{ PopupSurfaceSpec, resolvePopupSpec \} from '\.\
 assert.match(overlay, /private managerSurfaceSpec\(\): PopupSurfaceSpec/);
 assert.match(overlay, /return resolvePopupSpec\('tts-config-manager'\)/);
 assert.match(overlay, /this\.managerSurfaceSpec\(\)\.width/);
-assert.match(overlay, /this\.managerSurfaceSpec\(\)\.surfaceBackgroundRole/);
-assert.match(overlay, /this\.managerSurfaceSpec\(\)\.surfaceBorderRole/);
-assert.match(overlay, /this\.managerSurfaceSpec\(\)\.borderRadius/);
-assert.match(overlay, /this\.managerSurfaceSpec\(\)\.shadowRadius/);
-assert.match(overlay, /this\.managerSurfaceSpec\(\)\.shadowOffsetY/);
+assert.match(frame, /spec\.surfaceBackgroundRole/);
+assert.match(frame, /spec\.surfaceBorderRole/);
+assert.match(frame, /spec\.borderRadius/);
+assert.match(frame, /spec\.shadowRadius/);
+assert.match(frame, /spec\.shadowOffsetY/);
 assert.doesNotMatch(overlay, /this\.manager \? 364/,
   'manager width is owned by the popup surface contract');
 
-console.log('reader TTS manager popup surface contract: PASS');
+assert.match(overlay, /ReaderBoundedSurface/);
+assert.doesNotMatch(overlay, /\.backgroundColor\(readerAppColor\(this\.manager \? this\.managerSurfaceSpec/);
+console.log('reader TTS manager shared popup surface contract: PASS');

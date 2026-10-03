@@ -201,6 +201,7 @@
   ],
   "integration": [
     "test-action-menu-surface.mjs",
+    "test-bounded-surface-frame-header.mjs",
     "test-source-tools-typography-sdk.mjs",
     "test-arkweb-resource-capture.mjs",
     "test-arkweb-resource-diagnostic.mjs",

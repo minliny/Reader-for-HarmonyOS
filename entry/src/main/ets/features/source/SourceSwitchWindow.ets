@@ -1,3 +1,5 @@
+import { ReaderBoundedSurface } from '../common/ReaderBoundedSurface';
+import { ReaderBoundedSurfaceHeader } from '../common/ReaderBoundedSurfaceHeader';
 import { TYPE_APP_LOADING_BODY, TYPE_SOURCE_STATE_TITLE, TYPE_SOURCE_SWITCH_COLUMN, TYPE_SOURCE_SWITCH_FOOTER, TYPE_SOURCE_SWITCH_HEADING, TYPE_SOURCE_SWITCH_MESSAGE, TYPE_SOURCE_SWITCH_RECOVERY, TYPE_SOURCE_SWITCH_SORT } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { CandidateRow } from './CandidateRow';
@@ -117,72 +119,19 @@ export struct SourceSwitchWindow {
   }
 
   build() {
-    Column({ space: 0 }) {
-      this.header();
-      this.columnHeader();
-      this.body();
-      this.footer();
-    }
-    .width(this.windowWidth())
-    .height(this.windowHeight())
-    .backgroundColor(readerAppColor(this.surfaceSpec().surfaceBackgroundRole, this.appThemeScheme))
-    .border({ width: this.surfaceSpec().borderWidth, color: readerAppColor(this.surfaceSpec().surfaceBorderRole, this.appThemeScheme) })
-    .borderRadius(this.surfaceSpec().borderRadius)
-    .translate({ x: this.windowTranslateX(), y: this.windowTranslateY() });
+    ReaderBoundedSurface({ specId: 'source-switch-window', width: this.windowWidth(), height: this.windowHeight(),
+      header: this.header, body: this.windowBody, actions: this.footer })
+      .translate({ x: this.windowTranslateX(), y: this.windowTranslateY() });
   }
 
   @Builder
   private header() {
-    Column({ space: 0 }) {
-      Row() {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_switch_theme_night') : $r('app.media.reader_directory_switch')))
-          .width(18)
-          .height(18)
-          .margin({ left: 9 });
-
-        Text('换源')
-          .layoutWeight(1)
-          .constraintSize({ minWidth: 0 })
-          .height(16)
-          .fontFamily(TYPE_SOURCE_SWITCH_HEADING.fontFamily)
-          .fontWeight(TYPE_SOURCE_SWITCH_HEADING.fontWeight)
-          .fontSize(TYPE_SOURCE_SWITCH_HEADING.fontSizeFp)
-          .lineHeight(TYPE_SOURCE_SWITCH_HEADING.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
-          .margin({ left: 7 });
-
-        this.sortPill();
-
-        // Figma SourceSwitch/CloseButton 568:40: 22×22 pill with the exact
-        // 20×20 Icon/Close asset, centered inside its 44×44 hit target.
-        Stack({ alignContent: Alignment.Center }) {
-          Stack({ alignContent: Alignment.Center }) {
-            Image((this.appThemeScheme === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close')))
-              .width(20)
-              .height(20);
-          }
-          .width(22)
-          .height(22)
-          .borderRadius(8)
-          .backgroundColor(readerAppColor('TOK_SS_CLOSE_BG', this.appThemeScheme));
-        }
-        .width(44)
-        .height(44)
-        .margin({ left: 1 })
-        .onClick((): void => this.onClose());
-      }
-      .width('100%')
-      .height(33)
-      .alignItems(VerticalAlign.Center);
-
-      Text('')
-        .width(Math.max(0, this.windowWidth() - 1))
-        .height(1)
-        .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
-    }
-    .width('100%')
-    .height(34);
+    ReaderBoundedSurfaceHeader({ specId: 'source-switch-window', title: '换源', width: this.windowWidth(),
+      accessory: this.sortPill, onClose: (): void => this.onClose() });
   }
+
+  @Builder
+  private windowBody() { this.columnHeader(); this.body(); }
 
   // Figma SortPillBg 60×20 rgba(155,132,102,0.10) r10 with centered 9px
   // label (text spans 50px, centered on the pill midpoint 225).

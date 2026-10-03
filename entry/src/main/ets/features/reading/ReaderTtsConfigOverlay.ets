@@ -1,3 +1,5 @@
+import { ReaderBoundedSurface, type ReaderBoundedSurfaceId } from '../common/ReaderBoundedSurface';
+import { ReaderBoundedSurfaceHeader } from '../common/ReaderBoundedSurfaceHeader';
 import { TYPE_READER_TTS_CHOICE_REGULAR, TYPE_READER_TTS_CHOICE_SELECTED, TYPE_READER_TTS_CONFIGURATION_TITLE, TYPE_READER_TTS_MANAGER_TITLE, TYPE_READER_TTS_VOICE_REGULAR, TYPE_READER_TTS_VOICE_SELECTED } from '../common/ReaderTypography';
 import { TYPE_READER_TTS_CONFIG_BUILD_LABEL, TYPE_READER_TTS_CONFIG_BUILD_STATUS, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY, TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE, TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT, TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY, TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL, TYPE_READER_TTS_CONFIG_MANAGER_FORM_STATUS, TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -116,18 +118,12 @@ export struct ReaderTtsConfigOverlay {
     return Math.max(8, Math.min(desired, this.availableHeight - h - 8));
   }
 
+  private boundedSpecId(): ReaderBoundedSurfaceId { return this.manager ? 'tts-config-manager' : 'tts-config-picker'; }
+
   @Builder
   private configurationHeader() {
-    Row({ space: 8 }) {
-      if (this.manager) { Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_online_engine_theme_night') : $r('app.media.reader_tts_online_engine'))).width(20).height(20); }
-      Text(this.title).layoutWeight(1).fontFamily(this.manager ? TYPE_READER_TTS_MANAGER_TITLE.fontFamily : TYPE_READER_TTS_CONFIGURATION_TITLE.fontFamily)
-        .fontSize(this.manager ? TYPE_READER_TTS_MANAGER_TITLE.fontSizeFp : TYPE_READER_TTS_CONFIGURATION_TITLE.fontSizeFp).fontWeight(this.manager ? TYPE_READER_TTS_MANAGER_TITLE.fontWeight : TYPE_READER_TTS_CONFIGURATION_TITLE.fontWeight)
-        .fontColor(readerAppColor('TOK_TTS_INK', this.appThemeScheme));
-      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_make_close_theme_night') : $r('app.media.reader_tts_make_close'))).width(16).height(16)
-        .responseRegion({ x: -6, y: -6, width: 28, height: 28 }).enabled(!this.busy)
-        .accessibilityText('关闭 TTS 配置').onClick((): void => this.close());
-    }.width('100%').height(this.manager ? 58 : 40)
-      .padding({ left: this.manager ? 18 : 12, right: this.manager ? 24 : 16 });
+    ReaderBoundedSurfaceHeader({ specId: this.boundedSpecId(), title: this.title, enabled: !this.busy,
+      onClose: (): void => this.close() });
   }
 
   build() {
@@ -136,7 +132,37 @@ export struct ReaderTtsConfigOverlay {
         .backgroundColor(this.manager ? readerAppColor('app.ReaderTtsConfigOverlay.build.backgroundColor.661F1B17', this.appThemeScheme) : Color.Transparent)
         .onClick((): void => this.close());
       Column() {
-      Column({ space: 0 }) {
+      ReaderBoundedSurface({ specId: this.boundedSpecId(), width: this.manager ? '100%' : this.panelWidth(),
+        height: this.panelHeight(), header: this.boundedHeader, body: this.boundedContent, actions: this.boundedActions });
+      }.width(this.manager ? '100%' : this.panelWidth()).height(this.manager ? '100%' : this.panelHeight())
+        .justifyContent(FlexAlign.End).alignItems(HorizontalAlign.Center)
+        .padding(this.manager ? { left: 13, right: 13,
+          top: this.managerOuterPadding(), bottom: this.managerOuterPadding() } : 0)
+        .position(this.manager ? undefined : {
+          x: this.availableWidth - this.panelWidth() - (this.voicePicker ? 21 : 13),
+          y: this.panelY() }).hitTestBehavior(HitTestMode.Transparent);
+    }.width(this.windowModal ? '100%' : this.availableWidth)
+      .height(this.windowModal ? '100%' : this.availableHeight).zIndex(20)
+      .onSizeChange((_oldSize: SizeOptions, size: SizeOptions): void => {
+        if (this.windowModal && typeof size.height === 'number' && size.height > 0) {
+          this.modalUsableHeight = size.height;
+        }
+      });
+  }
+
+  @Builder
+  private boundedHeader() {
+    if (!this.compactManager() && !this.voicePicker) this.configurationHeader();
+  }
+
+  @Builder
+  private boundedActions() {
+    if (!this.compactManager() && this.manager) this.managerFooter();
+  }
+
+  @Builder
+  private boundedContent() {
+
       if (this.compactManager()) {
         // Below the fixed header/footer budget, the complete form becomes one
         // scroll surface. Save/Cancel keep their 44vp targets and can be reached
@@ -149,9 +175,6 @@ export struct ReaderTtsConfigOverlay {
           }.width('100%');
         }.width('100%').height(this.panelHeight()).scrollBar(BarState.Off);
       } else {
-        if (!this.voicePicker) {
-          this.configurationHeader();
-        }
         Scroll() {
           Column({ space: 0 }) {
             if (this.manager) {
@@ -183,33 +206,7 @@ export struct ReaderTtsConfigOverlay {
             .id(this.manager ? 'reader-tts-manager-content' : 'reader-tts-choice-content');
         }.width('100%').height(Math.max(0, this.panelHeight() - (this.voicePicker ? 0 : this.manager ? 58 + 76 : 40)))
           .align(Alignment.TopStart).scrollBar(BarState.Off);
-        if (this.manager) {
-          this.managerFooter();
-        }
       }
-      }.width(this.manager ? '100%' : this.panelWidth()).height(this.panelHeight())
-        .constraintSize({ maxWidth: this.manager ? this.managerSurfaceSpec().width : this.panelWidth(), maxHeight: '100%' })
-        .backgroundColor(readerAppColor(this.manager ? this.managerSurfaceSpec().surfaceBackgroundRole : 'app.ReaderTtsConfigOverlay.build.backgroundColor.FFFFFAF4', this.appThemeScheme))
-        .border({ width: this.manager ? this.managerSurfaceSpec().borderWidth : 0.5,
-          color: readerAppColor(this.manager ? this.managerSurfaceSpec().surfaceBorderRole : 'app.ReaderTtsConfigOverlay.build.color.66B4A697', this.appThemeScheme) })
-        .borderRadius(this.manager ? this.managerSurfaceSpec().borderRadius : 14)
-        .shadow({ radius: this.manager ? this.managerSurfaceSpec().shadowRadius : 36,
-          color: this.manager ? readerAppColor(this.managerSurfaceSpec().surfaceShadowRole, this.appThemeScheme) : readerAppColor('app.ReaderTtsConfigOverlay.build.color.381F1B17', this.appThemeScheme),
-          offsetY: this.manager ? this.managerSurfaceSpec().shadowOffsetY : 14 }).clip(true)
-      }.width(this.manager ? '100%' : this.panelWidth()).height(this.manager ? '100%' : this.panelHeight())
-        .justifyContent(FlexAlign.End).alignItems(HorizontalAlign.Center)
-        .padding(this.manager ? { left: 13, right: 13,
-          top: this.managerOuterPadding(), bottom: this.managerOuterPadding() } : 0)
-        .position(this.manager ? undefined : {
-          x: this.availableWidth - this.panelWidth() - (this.voicePicker ? 21 : 13),
-          y: this.panelY() }).hitTestBehavior(HitTestMode.Transparent);
-    }.width(this.windowModal ? '100%' : this.availableWidth)
-      .height(this.windowModal ? '100%' : this.availableHeight).zIndex(20)
-      .onSizeChange((_oldSize: SizeOptions, size: SizeOptions): void => {
-        if (this.windowModal && typeof size.height === 'number' && size.height > 0) {
-          this.modalUsableHeight = size.height;
-        }
-      });
   }
 
   @Builder
