@@ -119,4 +119,22 @@ function fixture(count=1370){
  const work=host.refreshNearEnd(f.session,lease);host.retire();gate.resolve();await work;
  assert.equal(published,1,'negative control reproduces retired catalog delivery when own lifecycle admission is removed');
 }
+{
+ const f=fixture(12),realNow=Date.now;let now=realNow();Date.now=()=>now;
+ const gate=deferred(),session=f.session;let refreshes=0;f.runtime.bookAcquisitions=()=>({async acquireBook(){refreshes++;await gate.promise;return{...session,catalogVersion:'catalog2'};}});
+ const lease={isCurrent:()=>true,displayedSession:()=>session,directory:()=>f.page.detailToc,projected(){},refreshed(){},diagnostic(){}};
+ try {
+  const past={sourceId:'past',bookId:'settled'},future={sourceId:'future',bookId:'clock'};
+  f.host.noteCatalogRefresh(past,(now-600001)/1000);f.host.noteCatalogRefresh(future,(now+600000)/1000);
+  assert.equal(f.host.refreshAt.has('past\u0000settled'),false);assert.equal(f.host.refreshAt.has('future\u0000clock'),true);
+  const work=f.host.refreshNearEnd(session,lease);now+=3600000;f.host.retire();
+  f.host.noteCatalogRefresh({sourceId:'another',bookId:'book'},now/1000);
+  assert.equal(f.host.refreshInFlight.has('source\u0000book'),true,'retired native work still settling cannot be TTL-evicted');
+  assert.equal(f.host.attemptAt.has('source\u0000book'),true);
+  await f.host.refreshNearEnd(session,lease);assert.equal(refreshes,1,'a new live presentation cannot replace the old unsettled native refresh');
+  gate.resolve();await work;f.host.noteCatalogRefresh({sourceId:'latest',bookId:'book'},now/1000);
+  assert.equal(f.host.attemptAt.has('source\u0000book'),false,'actual settlement plus existing expiry permits cleanup');
+ } finally {Date.now=realNow;}
+ checks.push('expired-settled-deadlines-only-future-clock-and-inflight-retained');
+}
 console.log(JSON.stringify({status:'PASS',checks,scope:'actual ReadingPrefetchHost + complete actual Offline/Remote Gateways; controlled native/core IO; Index integration/native targets remain separate'}));

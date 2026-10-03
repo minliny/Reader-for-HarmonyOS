@@ -63,6 +63,7 @@ export class ReadingPrefetchHost {
   retire(): void {
     this.lifecycle += 1; this.requestedKey = ''; this.pending = undefined; this.completed = undefined;
     this.readableToc = undefined; this.indexes = []; this.positions.clear();
+    this.pruneSettledTimes(Date.now());
     // Active native work remains with the existing Gateway until its actual
     // leases/reports settle. A later admission shares that drain, never spawns
     // a second concurrent reader-window producer.
@@ -71,6 +72,7 @@ export class ReadingPrefetchHost {
   noteCatalogRefresh(identity: RemoteReadingIdentity, lastCheckAt: number | undefined): void {
     if (lastCheckAt === undefined || !Number.isFinite(lastCheckAt)) return;
     const key = this.key(identity);
+    this.pruneSettledTimes(Date.now());
     this.refreshAt.set(key, Math.max(this.refreshAt.get(key) ?? 0, lastCheckAt * 1000));
   }
 
@@ -126,8 +128,9 @@ export class ReadingPrefetchHost {
       lease.isCurrent() && sameRemoteSessionEvidence(lease.displayedSession(), session);
     if (!current()) return;
     const key = this.key(session.identity), now = Date.now();
+    this.pruneSettledTimes(now);
     const last = this.refreshAt.get(key), attempt = this.attemptAt.get(key);
-    if (this.refreshInFlight.get(key)?.() === true ||
+    if (this.refreshInFlight.has(key) ||
       (last !== undefined && now - last < CATALOG_REFRESH_INTERVAL_MS) ||
       (attempt !== undefined && now - attempt < CATALOG_REFRESH_RETRY_INTERVAL_MS)) return;
     this.attemptAt.set(key, now); this.refreshInFlight.set(key, current);
@@ -198,6 +201,16 @@ export class ReadingPrefetchHost {
   }
   private diagnostic(lease: ReadingPrefetchLease, stage: 'window' | 'catalog', message: string): void {
     try { lease.diagnostic(stage, message); } catch (_) {}
+  }
+  /** These are existing eligibility deadlines, not a cache age/LRU budget.
+   * A backwards clock or a still-settling native refresh is never expiry proof. */
+  private pruneSettledTimes(now: number): void {
+    for (const [key, at] of this.refreshAt) {
+      if (!this.refreshInFlight.has(key) && now >= at && now - at >= CATALOG_REFRESH_INTERVAL_MS) this.refreshAt.delete(key);
+    }
+    for (const [key, at] of this.attemptAt) {
+      if (!this.refreshInFlight.has(key) && now >= at && now - at >= CATALOG_REFRESH_RETRY_INTERVAL_MS) this.attemptAt.delete(key);
+    }
   }
   private key(identity: RemoteReadingIdentity): string { return `${identity.sourceId}\u0000${identity.bookId}`; }
 }
