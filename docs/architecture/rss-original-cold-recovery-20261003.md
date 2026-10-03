@@ -58,7 +58,7 @@ Editor canSave stays false until the authority is qualified.
 | --- | --- | --- |
 | RSS management | reconcileOriginal(expected?, presentationIdentity?) | continueOriginal(expected, presentationIdentity?) |
 | RSS editor | reconcileOriginal(expected?, presentationIdentity?) or existing reconcile(operation generation) | continueOriginal(expected, presentationIdentity?) |
-| Existing entry/favorite interaction | Existing reconcileRouteOperation with its captured route binding and operation generation | continueEntryOriginal(expected, binding) |
+| Existing entry/favorite interaction | reconcileEntryOperation(expected route projection, binding); source uses reconcileSourceOperation | continueEntryOriginal(expected, binding) |
 
 The Index/UI writer must capture the complete original identity and physical
 presentation/route binding in each action. It must not read a fresh Host
