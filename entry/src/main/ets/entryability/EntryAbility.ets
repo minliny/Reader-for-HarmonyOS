@@ -46,6 +46,7 @@ export default class EntryAbility extends UIAbility {
       BUILD_MODE_NAME,
       want.parameters?.readerControlMotionVerification,
       want.parameters?.readerOpenSourcePilot,
+      want.parameters?.readerStartupMainLoadFailure,
     );
     if (readerEventLoopProbeEnabled(DEBUG, BUILD_MODE_NAME, want.parameters?.readerEventLoopProbe)) {
       this.eventLoopProbe = new ReaderEventLoopProbe(readerMotionNowMs,
@@ -253,7 +254,15 @@ export default class EntryAbility extends UIAbility {
     const trace = ReaderStartupTrace.current();
     const startedAt = trace?.begin('startup.load-content') ?? -1;
     trace?.mark('startup.admission-settled');
-    windowStage.loadContent(this.coldStartPage, (error): void => {
+    const page = this.coldStartPage;
+    // A debug fault is one real dispatch, never a synthetic error callback.
+    // Consume before calling the platform so both callback failure and a
+    // synchronous dispatch throw retry the actual Index on the next request.
+    if (page === 'pages/__ReaderStartupMainLoadFailure') {
+      this.coldStartPage = 'pages/Index';
+      trace?.mark('startup.main-load-fault-request');
+    }
+    windowStage.loadContent(page, (error): void => {
       if (generation !== this.windowStageGeneration) return;
       // This is a platform callback, never evidence of a displayed shelf frame.
       trace?.end('startup.load-content', startedAt, error.code ? 'failed' : 'callback');

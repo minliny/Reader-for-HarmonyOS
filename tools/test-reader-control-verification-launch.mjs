@@ -27,11 +27,12 @@ assert.equal(readerControlVerificationColdStartPage(true, 'debug', true, true), 
 // Supplemental integration guards: not a claim of compiled/device behavior.
 const ability = await readFile(new URL('../entry/src/main/ets/entryability/EntryAbility.ets', import.meta.url), 'utf8');
 assert.match(ability, /private coldStartPage: string = 'pages\/Index'/);
-assert.match(ability, /windowStage\.loadContent\(this\.coldStartPage,/);
+assert.match(ability, /const page = this\.coldStartPage;[\s\S]*windowStage\.loadContent\(page,/);
 assert.match(ability, /readerControlVerificationColdStartPage\(/);
 assert.match(ability, /want\.parameters\?\.readerOpenSourcePilot/);
-assert.equal([...ability.matchAll(/this\.coldStartPage\s*=/g)].length, 1,
-  'only onCreate admits a cold-start destination');
+assert.equal([...ability.matchAll(/this\.coldStartPage\s*=/g)].length, 2,
+  'only onCreate admits a destination, with one exact missing-page consumption reset');
+assert.match(ability, /if \(page === 'pages\/__ReaderStartupMainLoadFailure'\) \{\s*this\.coldStartPage = 'pages\/Index';/);
 assert.match(ability, /onNewWant\(want: Want,[\s\S]*?ReaderSystemFileOpenHost\.receive\(want\);\s*\}/,
   'warm file wants enter the import queue without changing diagnostic routes or reloading the window');
 assert.doesNotMatch(ability, /want\.(?:uri|action)|want\.parameters\?\.\[['"](?:route|page|url)['"]\]/,
