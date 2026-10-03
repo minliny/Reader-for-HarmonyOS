@@ -1,3 +1,4 @@
+import { foundationControls, foundationSpecs } from './lib/reader-foundation-control-probe.mjs';
 import { themeDayDesignSource } from './lib/reader-theme-design-source.mjs';
 import * as morphScroll from '../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts';
 import * as presentation from '../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
@@ -196,14 +197,14 @@ for (const ui of [searchUI, settingsUI]) {
   assert.doesNotMatch(ui, /private get /, 'ArkUI component state must use actual methods');
   assert.match(ui, /@Prop(?: @Watch\('(?:onResultLayoutChanged|onMotionChanged)'\))? motionProgress: number/);
 }
-assert.equal((searchUI.match(/TextInput\(\{/g) ?? []).length, 1, 'one real input across morph');
+assert.equal((searchUI.match(/ReaderFormField\(\{ specId: 'reader-content-search'/g) ?? []).length, 1, 'one real finite shared input across morph');
 assert.equal((searchUI.match(/List\(\{ space: 0, scroller: this\.resultScroller \}\)/g) ?? []).length, 1);
 assert.doesNotMatch(searchUI, /Scroll\(this\.resultScroller\)/);
 assert.equal((searchUI.match(/setTimeout\(/g) ?? []).length, 1,
   'one coalesced native-layout admission timer, not an independent animation clock');
 assert.match(searchUI, /this\.resultNativeFollowTimer = setTimeout\([\s\S]*?\}, 0\);/);
 assert.doesNotMatch(settingsUI, /setTimeout\(/);
-assert.match(searchUI, /onEditChange\(\(editing: boolean\): void => this\.onTemporaryLayerChange\(editing\)\)/);
+assert.match(searchUI, /onEditingChange: \(editing: boolean\): void => this\.onTemporaryLayerChange\(editing\)/);
 assert.match(searchUI, /@Watch\('dismissTemporaryLayer'\)/);
 assert.match(searchUI, /\.stopEditing\(\)/);
 assert.match(searchUI, /\.fontColor\(TOK_DANGER\)/, 'match highlight uses the restored danger token');
@@ -324,14 +325,16 @@ assert.match(searchUI, /offsetRemain: this\.onResultWillScroll\(offset, source\)
 assert.match(searchUI, /\.onDidScroll\([^\n]+this\.onResultDidScroll\(\)/);
 assert.match(searchUI, /\.edgeEffect\(EdgeEffect\.None\)/);
 if (readerBuilderSdkAvailable) {
-  function checkMountedInputInsets(source) {
-    const { owner } = createReaderBuilderProbe(source, ['frame', 'searchField', 'presentation'], { sampleReaderControlSearch, ...motionDeps });
+  const fieldSpecSource = read('entry/src/main/ets/features/common/ReaderControlSpecs.ets');
+  function checkMountedInputInsets(source, specsSource = fieldSpecSource) {
+    const shared = foundationControls({ specs: foundationSpecs(undefined, specsSource) });
+    const { owner } = createReaderBuilderProbe(source, ['frame', 'searchField', 'presentation'], { ...shared.dependencies, sampleReaderControlSearch, ...motionDeps }, shared.hooks);
     Object.assign(owner, { motionProgress: 0, availableWidth: 286, availableHeight: 190, query: '', inputController: {} });
     owner.searchField();
-    const input = [...owner.nodes.values()].find(node => node.type === 'TextInput');
+    const input = shared.nodes(owner).find(node => node.type === 'TextInput');
     for (const p of [0, .5, 1, 0]) {
       Object.assign(owner, { motionProgress: p, availableWidth: 286 + 52 * p,
-        availableHeight: 190 + 476 * p, query: '他' }); owner.replay();
+        availableHeight: 190 + 476 * p, query: '他' }); shared.flush(owner);
       assert.deepEqual(input.padding, { left: 2, right: 2, top: 0, bottom: 0 },
         'compact input explicitly clears both native vertical content insets');
       assert.equal(input.create.text, '他', 'same native input receives current query');
@@ -342,8 +345,8 @@ if (readerBuilderSdkAvailable) {
     }
   }
   checkMountedInputInsets(searchUI);
-  assert.throws(() => checkMountedInputInsets(searchUI.replace(
-    '.padding({ left: 2, right: 2, top: 0, bottom: 0 })', '.padding({ left: 2, right: 2 })')),
+  assert.throws(() => checkMountedInputInsets(searchUI, fieldSpecSource.replace(
+    'nativeInsets: { left: 2, right: 2, top: 0, bottom: 0 }', 'nativeInsets: { left: 2, right: 2 }')),
   /compact input explicitly/, 'reject returning to unspecified platform vertical padding');
   assertSearchListBuilderGeometry(searchUI);
   console.log('Actual SDK normalized List: parent clip, authored child origin, extent, same-instance roundtrip PASS');

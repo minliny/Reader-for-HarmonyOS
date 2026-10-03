@@ -1,3 +1,4 @@
+import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderBoundedSurfaceActions } from '../common/ReaderBoundedSurfaceActions';
 import { ReaderBoundedSurface, type ReaderBoundedSurfaceId } from '../common/ReaderBoundedSurface';
 import { ReaderBoundedSurfaceHeader } from '../common/ReaderBoundedSurfaceHeader';
@@ -290,35 +291,23 @@ export struct ReaderTtsConfigOverlay {
       Column({ space: 6 }) {
         Text('服务名称').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)
           .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF5B5046', this.appThemeScheme));
-        TextInput({ placeholder: '例如 Azure 语音', text: this.draftName })
-          .enabled(!this.busy).accessibilityText('在线 TTS 配置名称').width('100%').height(42)
-          .fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT.fontFamily).fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF332C25', this.appThemeScheme))
-          .placeholderColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.placeholderColor.FFB4A697', this.appThemeScheme)).padding({ left: 12, right: 12 })
-          .backgroundColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.backgroundColor.CCFFF8EF', this.appThemeScheme)).border({ width: .5, color: readerAppColor('app.ReaderTtsConfigOverlay.managerForm.color.66B4A697', this.appThemeScheme) }).borderRadius(10)
-          .onChange((value: string): void => { this.draftName = value; });
+        ReaderFormField({ specId: 'tts-manager-name', scheme: this.appThemeScheme, text: this.draftName, placeholder: '例如 Azure 语音',
+          isEditable: !this.busy, fieldAccessibilityLabel: '在线 TTS 配置名称',
+          onTextChange: (value: string): void => { this.draftName = value; } });
       }.width('100%');
       Column({ space: 6 }) {
         Text('接口地址').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)
           .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF5B5046', this.appThemeScheme));
-        TextInput({ placeholder: 'https://api.example.com/tts', text: this.draftUrl })
-          .enabled(!this.busy).accessibilityText('在线 TTS 请求 URL').width('100%').height(42)
-          .fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY.fontFamily as string).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF332C25', this.appThemeScheme)).placeholderColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.placeholderColor.FFB4A697', this.appThemeScheme))
-          .padding({ left: 12, right: 12 }).backgroundColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.backgroundColor.CCFFF8EF', this.appThemeScheme))
-          .border({ width: .5, color: readerAppColor('app.ReaderTtsConfigOverlay.managerForm.color.66B4A697', this.appThemeScheme) }).borderRadius(10)
-          .onChange((value: string): void => { this.draftUrl = value; });
+        ReaderFormField({ specId: 'tts-manager-value', scheme: this.appThemeScheme, text: this.draftUrl, placeholder: 'https://api.example.com/tts',
+          isEditable: !this.busy, fieldAccessibilityLabel: '在线 TTS 请求 URL',
+          onTextChange: (value: string): void => { this.draftUrl = value; } });
       }.width('100%');
       Column({ space: 6 }) {
         Text('API 密钥').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)
           .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF5B5046', this.appThemeScheme));
-        TextInput({ placeholder: '填入访问密钥', text: this.draftApiKey })
-          .enabled(!this.busy).type(InputType.Password).accessibilityText('在线 TTS 访问密钥，不会显示或写入 Core')
-          .width('100%').height(42).fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY.fontFamily as string).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF332C25', this.appThemeScheme))
-          .placeholderColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.placeholderColor.FFB4A697', this.appThemeScheme)).padding({ left: 12, right: 12 }).backgroundColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.backgroundColor.CCFFF8EF', this.appThemeScheme))
-          .border({ width: .5, color: readerAppColor('app.ReaderTtsConfigOverlay.managerForm.color.66B4A697', this.appThemeScheme) }).borderRadius(10)
-          .onChange((value: string): void => {
-            this.draftApiKey = value;
-            if (value.length > 0) this.draftClearApiKey = false;
-          });
+        ReaderFormField({ specId: 'tts-manager-value', scheme: this.appThemeScheme, text: this.draftApiKey, placeholder: '填入访问密钥',
+          isEditable: !this.busy, fieldAccessibilityLabel: '在线 TTS 访问密钥，不会显示或写入 Core', password: true,
+          onTextChange: (value: string): void => { this.draftApiKey = value; if (value.length > 0) this.draftClearApiKey = false; } });
         Text(this.draftClearApiKey ? '将清除已保存密钥' : '清除已保存密钥')
           .width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE.fontFamily).fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE.fontWeight)
           .fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE.fontSizeFp).fontColor(this.draftClearApiKey ? readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FFA8543A', this.appThemeScheme) : readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF8A7D6F', this.appThemeScheme))
@@ -331,12 +320,9 @@ export struct ReaderTtsConfigOverlay {
       Column({ space: 6 }) {
         Text('发音人 / 音色').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)
           .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF5B5046', this.appThemeScheme));
-        TextInput({ placeholder: '例如 xiaoxiao', text: this.draftVoice })
-          .enabled(!this.busy).accessibilityText('在线 TTS 音色')
-          .width('100%').height(42).fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY.fontFamily as string).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF332C25', this.appThemeScheme))
-          .placeholderColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.placeholderColor.FFB4A697', this.appThemeScheme)).padding({ left: 12, right: 12 }).backgroundColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.backgroundColor.CCFFF8EF', this.appThemeScheme))
-          .border({ width: .5, color: readerAppColor('app.ReaderTtsConfigOverlay.managerForm.color.66B4A697', this.appThemeScheme) }).borderRadius(10)
-          .onChange((value: string): void => { this.draftVoice = value; });
+        ReaderFormField({ specId: 'tts-manager-value', scheme: this.appThemeScheme, text: this.draftVoice, placeholder: '例如 xiaoxiao',
+          isEditable: !this.busy, fieldAccessibilityLabel: '在线 TTS 音色',
+          onTextChange: (value: string): void => { this.draftVoice = value; } });
       }.width('100%');
       Column({ space: 6 }) {
         Text('音频格式').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)

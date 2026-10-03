@@ -1,3 +1,4 @@
+import { ReaderFormField } from '../common/ReaderFormField';
 import { TYPE_READER_SNIPPET_INLINE_MATCH, TYPE_READER_SNIPPET_INLINE_REGULAR } from '../common/ReaderTypography';
 import { TYPE_READER_SEARCH_RETAINED_LOAD_MORE_ACTION_STATUS, TYPE_READER_SEARCH_RETAINED_QUICK_BACK_BACK, TYPE_READER_SEARCH_RETAINED_RESULTS_BODY_STATUS, TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE, TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -28,8 +29,8 @@ let readerContentSearchInputSequence: number = 0;
 
 /** Search 1938:4927 content only. One input and one result scroll tree survive
  * Quick/Full; Stage owns the shell, header, p, whole visibility and timing.
- * The input primitive's real IME/caret semantics are retained here because the
- * fixed-height ReaderSearchField variants cannot represent 24->32 geometry. */
+ * ReaderFormField owns the exact native IME/caret recipe; this persistent
+ * actor retains the authored24->32 outer geometry and one input controller. */
 @Component
 export struct ReaderControlSearchContent {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
@@ -379,21 +380,10 @@ export struct ReaderControlSearchContent {
   @Builder
   private searchField() {
     Row({ space: 5 }) {
-      TextInput({ placeholder: '搜索正文内容', text: this.query, controller: this.inputController })
-        .id(this.queryInputId).enableKeyboardOnFocus(true)
-        // This is a 14vp text line inside the authored 24->32vp field. Clear
-        // native vertical content insets explicitly; horizontal-only padding
-        // leaves the platform's TextInput top/bottom defaults unspecified.
-        .layoutWeight(1).height(14).padding({ left: 2, right: 2, top: 0, bottom: 0 }).borderRadius(0)
-        .fontFamily(TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT.fontFamily).fontSize(TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT.fontSizeFp).fontWeight(TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT.fontWeight)
-        .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).backgroundColor(Color.Transparent)
-        .caretColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).placeholderColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
-        .placeholderFont({ size: 10, family: 'ReaderNotoSansSC' })
-        .maxLines(1).enterKeyType(EnterKeyType.Search)
-        .accessibilityText('搜索正文内容')
-        .onChange((value: string): void => this.onQueryChange(value))
-        .onEditChange((editing: boolean): void => this.onTemporaryLayerChange(editing))
-        .onSubmit((_key: EnterKeyType): void => this.submit());
+      ReaderFormField({ specId: 'reader-content-search', scheme: this.appThemeScheme,
+        text: this.query, placeholder: '搜索正文内容', inputController: this.inputController, inputIdentity: this.queryInputId,
+        fieldAccessibilityLabel: '搜索正文内容', onTextChange: (value: string): void => this.onQueryChange(value),
+        onEditingChange: (editing: boolean): void => this.onTemporaryLayerChange(editing), onSubmit: (): void => this.submit() });
     }
     .width(this.frame().field.width).height(this.frame().field.height)
     .padding({ left: 9, right: 9 }).alignItems(VerticalAlign.Center)

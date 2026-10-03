@@ -1434,6 +1434,559 @@
         "webdavPass": "fixture-password",
         "backupPass": "fixture-backup-password"
       }
+    },
+    {
+      "id": "foundation-ReaderControlReplaceContent-editorText-reader-replace-text-52",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "editorText",
+        "kind": "TextInput",
+        "text": "{ text: value(), placeholder: '' }"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: this.text, placeholder: this.placeholder }"
+      },
+      "component": "ReaderFormField",
+      "module": "../common/ReaderFormField",
+      "bindingMethod": "editorText",
+      "specId": "reader-replace-text",
+      "arguments": [
+        "替换内容",
+        "@value",
+        "@callback"
+      ],
+      "params": {
+        "motionProgress": 1,
+        "interactionEnabled": true,
+        "localPending": false,
+        "state": {
+          "mutationPending": false,
+          "writeBlocked": false,
+          "writeUncertain": false
+        }
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "原草稿",
+      "requiredMethods": [
+        "fullInput"
+      ]
+    },
+    {
+      "id": "foundation-ReaderControlSearchContent-searchField-reader-content-search-53",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlSearchContent.ets",
+        "method": "searchField",
+        "kind": "TextInput",
+        "text": "{ placeholder: '搜索正文内容', text: this.query, controller: this.inputController }"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: this.text, placeholder: this.placeholder }"
+      },
+      "component": "ReaderFormField",
+      "module": "../common/ReaderFormField",
+      "bindingMethod": "searchField",
+      "specId": "reader-content-search",
+      "arguments": [],
+      "params": {
+        "query": "原正文关键词",
+        "queryInputId": "persistent-reading-input",
+        "frameOverride": {
+          "field": {
+            "width": 260,
+            "height": 32,
+            "x": 18,
+            "y": 10
+          }
+        },
+        "presentationOverride": {
+          "contentOpacity": 1,
+          "contentBlur": 0
+        }
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "原正文关键词"
+    },
+    {
+      "id": "foundation-ReaderTtsConfigOverlay-managerForm-tts-manager-name-54",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "managerForm",
+        "kind": "TextInput",
+        "text": "{ placeholder: '例如 Azure 语音', text: this.draftName }"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: this.text, placeholder: this.placeholder }"
+      },
+      "component": "ReaderFormField",
+      "module": "../common/ReaderFormField",
+      "bindingMethod": "managerForm",
+      "specId": "tts-manager-name",
+      "arguments": [],
+      "params": {
+        "draftName": "原服务",
+        "draftUrl": "https://original.invalid/tts",
+        "draftApiKey": "private-fixture-only",
+        "draftVoice": "原音色",
+        "busy": false,
+        "draftClearApiKey": true,
+        "draftFormat": "mp3",
+        "errorText": ""
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "原服务",
+      "requiredMethods": [
+        "formatChoice"
+      ]
+    },
+    {
+      "id": "foundation-ReaderTtsConfigOverlay-managerForm-tts-manager-value-55",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "managerForm",
+        "kind": "TextInput",
+        "text": "{ placeholder: 'https://api.example.com/tts', text: this.draftUrl }"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: this.text, placeholder: this.placeholder }"
+      },
+      "component": "ReaderFormField",
+      "module": "../common/ReaderFormField",
+      "bindingMethod": "managerForm",
+      "specId": "tts-manager-value",
+      "arguments": [],
+      "params": {
+        "draftName": "原服务",
+        "draftUrl": "https://original.invalid/tts",
+        "draftApiKey": "private-fixture-only",
+        "draftVoice": "原音色",
+        "busy": false,
+        "draftClearApiKey": true,
+        "draftFormat": "mp3",
+        "errorText": ""
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "https://original.invalid/tts",
+      "requiredMethods": [
+        "formatChoice"
+      ]
+    },
+    {
+      "id": "foundation-ReaderTtsConfigOverlay-managerForm-tts-manager-value-56",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "managerForm",
+        "kind": "TextInput",
+        "text": "{ placeholder: '填入访问密钥', text: this.draftApiKey }"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: this.text, placeholder: this.placeholder }"
+      },
+      "component": "ReaderFormField",
+      "module": "../common/ReaderFormField",
+      "bindingMethod": "managerForm",
+      "specId": "tts-manager-value",
+      "arguments": [],
+      "params": {
+        "draftName": "原服务",
+        "draftUrl": "https://original.invalid/tts",
+        "draftApiKey": "private-fixture-only",
+        "draftVoice": "原音色",
+        "busy": false,
+        "draftClearApiKey": true,
+        "draftFormat": "mp3",
+        "errorText": ""
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "private-fixture-only",
+      "requiredMethods": [
+        "formatChoice"
+      ]
+    },
+    {
+      "id": "foundation-ReaderTtsConfigOverlay-managerForm-tts-manager-value-57",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "managerForm",
+        "kind": "TextInput",
+        "text": "{ placeholder: '例如 xiaoxiao', text: this.draftVoice }"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: this.text, placeholder: this.placeholder }"
+      },
+      "component": "ReaderFormField",
+      "module": "../common/ReaderFormField",
+      "bindingMethod": "managerForm",
+      "specId": "tts-manager-value",
+      "arguments": [],
+      "params": {
+        "draftName": "原服务",
+        "draftUrl": "https://original.invalid/tts",
+        "draftApiKey": "private-fixture-only",
+        "draftVoice": "原音色",
+        "busy": false,
+        "draftClearApiKey": true,
+        "draftFormat": "mp3",
+        "errorText": ""
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "原音色",
+      "requiredMethods": [
+        "formatChoice"
+      ]
+    },
+    {
+      "id": "foundation-ReaderDirectoryRules-build-directory-rule-pattern-58",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderDirectoryRules.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: rule.pattern, placeholder: '匹配完整标题或独立正文行的正则表达式' }"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: this.text, placeholder: this.placeholder }"
+      },
+      "component": "ReaderFormField",
+      "module": "../common/ReaderFormField",
+      "bindingMethod": "build",
+      "specId": "directory-rule-pattern",
+      "arguments": [],
+      "params": {
+        "scheme": "day",
+        "bookId": "book",
+        "rules": [
+          {
+            "id": 7,
+            "pattern": "^卷",
+            "level": "2",
+            "boundary": "title"
+          }
+        ],
+        "loaded": true,
+        "busy": false,
+        "previewReady": false,
+        "preview": [],
+        "message": ""
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "^卷"
+    },
+    {
+      "id": "foundation-SourceManagementPage-statusBanner-source-management-retry-59",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "method": "statusBanner",
+        "kind": "Text",
+        "text": "'重试'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "statusBanner",
+      "specId": "source-management-retry",
+      "arguments": [],
+      "params": {
+        "statusKind": "error",
+        "statusMessage": "原消息",
+        "operation": {},
+        "categoryValue": "all",
+        "isTablet": false,
+        "contentFrameOverride": {
+          "width": 350
+        },
+        "filterControlWidthOverride": 280,
+        "actionBottomInsetOverride": 0
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "requiredMethods": [
+        "recovery"
+      ],
+      "nativeText": "重试"
+    },
+    {
+      "id": "foundation-SourceManagementPage-categoryFilter-source-management-category-60",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "method": "categoryFilter",
+        "kind": "Text",
+        "text": "category === 'all' ? '全部类型' : readerSourceCategoryLabel(category as ReaderSourceCategory)"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "categoryFilter",
+      "specId": "source-management-category",
+      "arguments": [],
+      "params": {
+        "statusKind": "error",
+        "statusMessage": "原消息",
+        "operation": {},
+        "categoryValue": "all",
+        "isTablet": false,
+        "contentFrameOverride": {
+          "width": 350
+        },
+        "filterControlWidthOverride": 280,
+        "actionBottomInsetOverride": 0
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "全部类型"
+    },
+    {
+      "id": "foundation-SourceManagementPage-chip-source-management-status-compact-61",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "method": "chip",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "chip",
+      "specId": "source-management-status-compact",
+      "arguments": [
+        "有限状态",
+        58,
+        false,
+        true
+      ],
+      "params": {
+        "statusKind": "error",
+        "statusMessage": "原消息",
+        "operation": {},
+        "categoryValue": "all",
+        "isTablet": false,
+        "contentFrameOverride": {
+          "width": 350
+        },
+        "filterControlWidthOverride": 280,
+        "actionBottomInsetOverride": 0
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "specExpression": "width === 58 ? 'source-management-status-compact' : 'source-management-status-wide'",
+      "nativeText": "有限状态",
+      "cases": [
+        {},
+        {
+          "arguments": [
+            "有限状态",
+            72,
+            true,
+            false
+          ],
+          "specId": "source-management-status-wide"
+        }
+      ]
+    },
+    {
+      "id": "foundation-SourceManagementPage-detectButton-source-management-detect-62",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "method": "detectButton",
+        "kind": "Text",
+        "text": "source.checkState === 'checking' ? '检测中' : '检测'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "detectButton",
+      "specId": "source-management-detect",
+      "arguments": [
+        {
+          "sourceId": "exact-source",
+          "checkState": "idle"
+        }
+      ],
+      "params": {
+        "statusKind": "error",
+        "statusMessage": "原消息",
+        "operation": {},
+        "categoryValue": "all",
+        "isTablet": false,
+        "contentFrameOverride": {
+          "width": 350
+        },
+        "filterControlWidthOverride": 280,
+        "actionBottomInsetOverride": 0
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "检测"
+    },
+    {
+      "id": "foundation-SourceManagementPage-loginButton-source-management-login-63",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "method": "loginButton",
+        "kind": "Text",
+        "text": "'登录'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "loginButton",
+      "specId": "source-management-login",
+      "arguments": [
+        {
+          "sourceId": "exact-source",
+          "checkState": "idle"
+        }
+      ],
+      "params": {
+        "statusKind": "error",
+        "statusMessage": "原消息",
+        "operation": {},
+        "categoryValue": "all",
+        "isTablet": false,
+        "contentFrameOverride": {
+          "width": 350
+        },
+        "filterControlWidthOverride": 280,
+        "actionBottomInsetOverride": 0
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "登录"
+    },
+    {
+      "id": "foundation-SourceManagementPage-bottomActionBar-source-management-manage-64",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "method": "bottomActionBar",
+        "kind": "Text",
+        "text": "'批量管理'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "bottomActionBar",
+      "specId": "source-management-manage",
+      "arguments": [],
+      "params": {
+        "statusKind": "error",
+        "statusMessage": "原消息",
+        "operation": {},
+        "categoryValue": "all",
+        "isTablet": false,
+        "contentFrameOverride": {
+          "width": 350
+        },
+        "filterControlWidthOverride": 280,
+        "actionBottomInsetOverride": 0
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "批量管理"
+    },
+    {
+      "id": "foundation-SourceManagementPage-bottomActionBar-source-management-add-65",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+        "method": "bottomActionBar",
+        "kind": "Text",
+        "text": "'新增书源'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+        "method": "labelContents",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderLabeledIconAction",
+      "module": "../common/ReaderLabeledIconAction",
+      "bindingMethod": "bottomActionBar",
+      "specId": "source-management-add",
+      "arguments": [],
+      "params": {
+        "statusKind": "error",
+        "statusMessage": "原消息",
+        "operation": {},
+        "categoryValue": "all",
+        "isTablet": false,
+        "contentFrameOverride": {
+          "width": 350
+        },
+        "filterControlWidthOverride": 280,
+        "actionBottomInsetOverride": 0
+      },
+      "methodEdges": [],
+      "proof": "test-foundation-reading-fields.mjs and test-source-foundation-specs.mjs; exact original/native AUTO + actual SDK producer consumer and bounded role propagation",
+      "nativeText": "新增书源"
     }
   ]
 }

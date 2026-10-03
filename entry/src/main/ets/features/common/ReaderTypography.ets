@@ -948,3 +948,6 @@ export const TYPE_READER_READING_FAILURE_TITLE = new ReaderInheritedTextStyle(
   undefined, 500, 20, undefined, undefined, 'system', 'appBaseline');
 export const TYPE_READER_READING_FAILURE_DETAIL = new ReaderInheritedTextStyle(
   undefined, undefined, 16, undefined, undefined, 'system', 'appBaseline');
+
+// The current content-search placeholder is Noto10 with native weight/line AUTO.
+export const TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_PLACEHOLDER = TYPE_SOURCE_TOOLS_CAPTION;

@@ -1,7 +1,7 @@
-import { TOK_SPACE_XS } from './ReaderTokens';
+import { TOK_SPACE_XS, TOK_BORDER_W } from './ReaderTokens';
 import type { ReaderAppColorRole } from './ReaderThemeRegistry';
 import {
-  ReaderTextStyle, ReaderInheritedTextStyle, TYPE_FORM_HINT, TYPE_SOURCE_TOOLS_ACTION,
+  ReaderTextStyle, ReaderInheritedTextStyle, TYPE_APP_INHERITED_BODY, TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_INPUT, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_PLACEHOLDER, TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT, TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY, TYPE_FORM_HINT, TYPE_SOURCE_TOOLS_ACTION,
   TYPE_SOURCE_TOOLS_COMPACT_ACTION, TYPE_SOURCE_TOOLS_BODY,
   TYPE_RULES_MANAGEMENT_ACTION, TYPE_RULES_COMPACT_ACTION,
   TYPE_RULES_MANAGEMENT_INPUT, TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_SYNC_INPUT,
@@ -202,10 +202,18 @@ const BUTTONS: Record<ReaderButtonSpecId, ReaderButtonSpec> = {
 };
 export function resolveReaderButtonSpec(id: ReaderButtonSpecId): ReaderButtonSpec { return BUTTONS[id]; }
 
-export type ReaderFormFieldSpecId = 'source-debug' | 'rules-input' | 'sync-credential' | 'form-body' | 'form-url' | 'shelf-native' | 'shelf-order' | 'source-code';
+export type ReaderFormFieldSpecId = 'source-debug' | 'rules-input' | 'sync-credential' | 'form-body' | 'form-url' | 'shelf-native' | 'shelf-order' | 'source-code' | 'reader-replace-text' | 'reader-content-search' | 'directory-rule-pattern' | 'directory-rule-level' | 'tts-manager-name' | 'tts-manager-value';
 export interface ReaderFormFieldSpec {
   text: ReaderTextStyle | ReaderInheritedTextStyle | undefined;
   height: number;
+  width: number | string | undefined;
+  nativeLayoutWeight: number | undefined;
+  nativeInsets: { left: number; right: number; top: number; bottom: number } | undefined;
+  transparentSurface: boolean;
+  borderRole: ReaderAppColorRole;
+  borderWidth: number;
+  caretRole: ReaderAppColorRole | undefined;
+  placeholderStyle: ReaderTextStyle | ReaderInheritedTextStyle | undefined;
   radius: number | undefined;
   horizontalPadding: number | undefined;
   allPadding: number | undefined;
@@ -217,23 +225,39 @@ export interface ReaderFormFieldSpec {
   numberInput: boolean;
 }
 const FIELDS: Record<ReaderFormFieldSpecId, ReaderFormFieldSpec> = {
+  'reader-replace-text': { width: '100%', nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, caretRole: undefined, placeholderStyle: undefined, allPadding: undefined, multiline: false, numberInput: false, text: TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_INPUT, height: 36, radius: 6, horizontalPadding: undefined,
+    textRole: 'TOK_READ_INK', surfaceRole: 'TOK_SURFACE_PANEL_SOFT', placeholderRole: 'TOK_READ_MUTED', hasBorder: true, borderRole: 'TOK_LINE', borderWidth: TOK_BORDER_W },
+  'directory-rule-pattern': { width: undefined, nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, caretRole: undefined, placeholderStyle: undefined, allPadding: undefined, multiline: false, numberInput: false, text: TYPE_APP_INHERITED_BODY, height: 40, radius: undefined, horizontalPadding: undefined,
+    textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined, hasBorder: false, borderRole: 'TOK_BORDER', borderWidth: TOK_BORDER_W },
+  'directory-rule-level': { width: 64, nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, caretRole: undefined, placeholderStyle: undefined, allPadding: undefined, multiline: false, numberInput: false, text: undefined, height: 40, radius: undefined, horizontalPadding: undefined,
+    textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined, hasBorder: false, borderRole: 'TOK_BORDER', borderWidth: TOK_BORDER_W },
+  'tts-manager-name': { width: '100%', nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, caretRole: undefined, placeholderStyle: undefined, allPadding: undefined, multiline: false, numberInput: false, text: TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT, height: 42, radius: 10, horizontalPadding: 12,
+    textRole: 'app.ReaderTtsConfigOverlay.managerForm.fontColor.FF332C25', surfaceRole: 'app.ReaderTtsConfigOverlay.managerForm.backgroundColor.CCFFF8EF',
+    placeholderRole: 'app.ReaderTtsConfigOverlay.managerForm.placeholderColor.FFB4A697', hasBorder: true, borderRole: 'app.ReaderTtsConfigOverlay.managerForm.color.66B4A697', borderWidth: 0.5 },
+  'tts-manager-value': { width: '100%', nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, caretRole: undefined, placeholderStyle: undefined, allPadding: undefined, multiline: false, numberInput: false, text: TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY, height: 42, radius: 10, horizontalPadding: 12,
+    textRole: 'app.ReaderTtsConfigOverlay.managerForm.fontColor.FF332C25', surfaceRole: 'app.ReaderTtsConfigOverlay.managerForm.backgroundColor.CCFFF8EF',
+    placeholderRole: 'app.ReaderTtsConfigOverlay.managerForm.placeholderColor.FFB4A697', hasBorder: true, borderRole: 'app.ReaderTtsConfigOverlay.managerForm.color.66B4A697', borderWidth: 0.5 },
+  'reader-content-search': { width: undefined, nativeLayoutWeight: 1, nativeInsets: { left: 2, right: 2, top: 0, bottom: 0 }, transparentSurface: true,
+    text: TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT, placeholderStyle: TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_PLACEHOLDER,
+    height: 14, radius: 0, horizontalPadding: undefined, allPadding: undefined, textRole: 'TOK_READ_INK', surfaceRole: undefined,
+    caretRole: 'TOK_READ_INK', placeholderRole: 'TOK_READ_MUTED', hasBorder: false, borderRole: 'TOK_LINE', borderWidth: TOK_BORDER_W, multiline: false, numberInput: false },
   // The repeated group drafts keep actual ArkUI default text/placeholder/caret
   // rendering. No empty role and no physical font override is fabricated.
-  'shelf-native': { text: undefined, height: 44, radius: undefined, horizontalPadding: undefined,
+  'shelf-native': { width: '100%', nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, borderRole: 'TOK_BORDER', borderWidth: TOK_BORDER_W, caretRole: undefined, placeholderStyle: undefined, text: undefined, height: 44, radius: undefined, horizontalPadding: undefined,
     textRole: undefined, surfaceRole: undefined, placeholderRole: undefined, allPadding: undefined, hasBorder: false, multiline: false, numberInput: false },
-  'shelf-order': { text: undefined, height: 44, radius: undefined, horizontalPadding: undefined,
+  'shelf-order': { width: '100%', nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, borderRole: 'TOK_BORDER', borderWidth: TOK_BORDER_W, caretRole: undefined, placeholderStyle: undefined, text: undefined, height: 44, radius: undefined, horizontalPadding: undefined,
     textRole: undefined, surfaceRole: undefined, placeholderRole: undefined, allPadding: undefined, hasBorder: false, multiline: false, numberInput: true },
-  'source-code': { text: TYPE_SOURCE_TOOLS_CODE_INPUT, height: 320, radius: 8, horizontalPadding: undefined,
+  'source-code': { width: '100%', nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, borderRole: 'TOK_BORDER', borderWidth: TOK_BORDER_W, caretRole: undefined, placeholderStyle: undefined, text: TYPE_SOURCE_TOOLS_CODE_INPUT, height: 320, radius: 8, horizontalPadding: undefined,
     textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined, allPadding: TOK_SPACE_XS, hasBorder: true, multiline: true, numberInput: false },
-  'form-body': { text: TYPE_FORM_INPUT, height: 44, radius: 8, horizontalPadding: 12,
+  'form-body': { width: '100%', nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, borderRole: 'TOK_BORDER', borderWidth: TOK_BORDER_W, caretRole: undefined, placeholderStyle: undefined, text: TYPE_FORM_INPUT, height: 44, radius: 8, horizontalPadding: 12,
     textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined, allPadding: undefined, hasBorder: true, multiline: false, numberInput: false },
-  'form-url': { text: TYPE_FORM_URL_INPUT, height: 44, radius: 8, horizontalPadding: 12,
+  'form-url': { width: '100%', nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, borderRole: 'TOK_BORDER', borderWidth: TOK_BORDER_W, caretRole: undefined, placeholderStyle: undefined, text: TYPE_FORM_URL_INPUT, height: 44, radius: 8, horizontalPadding: 12,
     textRole: 'TOK_INK', surfaceRole: 'TOK_SURFACE_FIELD', placeholderRole: 'TOK_MUTED', allPadding: undefined, hasBorder: true, multiline: false, numberInput: false },
-  'source-debug': { text: TYPE_SOURCE_TOOLS_BODY, height: 40, radius: 8, horizontalPadding: 12,
+  'source-debug': { width: '100%', nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, borderRole: 'TOK_BORDER', borderWidth: TOK_BORDER_W, caretRole: undefined, placeholderStyle: undefined, text: TYPE_SOURCE_TOOLS_BODY, height: 40, radius: 8, horizontalPadding: 12,
     textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined, allPadding: undefined, hasBorder: true, multiline: false, numberInput: false },
-  'rules-input': { text: TYPE_RULES_MANAGEMENT_INPUT, height: 40, radius: 8, horizontalPadding: 12,
+  'rules-input': { width: '100%', nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, borderRole: 'TOK_BORDER', borderWidth: TOK_BORDER_W, caretRole: undefined, placeholderStyle: undefined, text: TYPE_RULES_MANAGEMENT_INPUT, height: 40, radius: 8, horizontalPadding: 12,
     textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined, allPadding: undefined, hasBorder: true, multiline: false, numberInput: false },
-  'sync-credential': { text: TYPE_SYNC_INPUT, height: 36, radius: 6, horizontalPadding: 11,
+  'sync-credential': { width: '100%', nativeLayoutWeight: undefined, nativeInsets: undefined, transparentSurface: false, borderRole: 'TOK_BORDER', borderWidth: TOK_BORDER_W, caretRole: undefined, placeholderStyle: undefined, text: TYPE_SYNC_INPUT, height: 36, radius: 6, horizontalPadding: 11,
     textRole: 'TOK_CONTROL_INK', surfaceRole: 'TOK_FIELD_SURFACE', placeholderRole: 'app.SyncPage.webdavInputRow.placeholderColor.FF9C9488', allPadding: undefined, hasBorder: true, multiline: false, numberInput: false },
 };
 export function resolveReaderFormFieldSpec(id: ReaderFormFieldSpecId): ReaderFormFieldSpec { return FIELDS[id]; }

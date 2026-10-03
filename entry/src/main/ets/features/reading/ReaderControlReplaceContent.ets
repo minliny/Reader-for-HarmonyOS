@@ -1,3 +1,4 @@
+import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderBoundedSurface } from '../common/ReaderBoundedSurface';
 import { ReaderBoundedSurfaceHeader } from '../common/ReaderBoundedSurfaceHeader';
 import { ReaderBoundedSurfaceActions } from '../common/ReaderBoundedSurfaceActions';
@@ -564,13 +565,9 @@ export struct ReaderControlReplaceContent {
   private editorText(label: string, value: () => string, change: (value: string) => void) {
     Column({ space: 3 }) {
       Text(label).fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
-      TextInput({ text: value(), placeholder: '' }).width('100%').height(36)
-        .fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_INPUT.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_INPUT.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
-        .placeholderColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
-        .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(6)
-        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-        .enabled(this.fullInput() && !this.localPending && !this.state.mutationPending && !this.state.writeBlocked && !this.state.writeUncertain)
-        .onChange((text: string): void => change(text));
+      ReaderFormField({ specId: 'reader-replace-text', scheme: this.appThemeScheme, text: value(), placeholder: '',
+        isEditable: this.fullInput() && !this.localPending && !this.state.mutationPending && !this.state.writeBlocked && !this.state.writeUncertain,
+        onTextChange: (text: string): void => change(text) });
     }.width('100%').alignItems(HorizontalAlign.Start);
   }
   @Builder

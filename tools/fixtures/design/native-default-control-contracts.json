@@ -286,9 +286,15 @@
         "lineHeight",
         "letterSpacing"
       ],
-      "status": "RETAINED_PLATFORM_DEFAULT_CONTRACT",
-      "reason": "Current application intentionally delegates the omitted physical attributes to the actual upstream native ArkUI component; no new Reader style/empty modifier is added.",
-      "sourceLineAtAudit": 108
+      "status": "SHARED_NATIVE_DEFAULT_CONTRACT",
+      "reason": "Actual ReaderFormField directory-rule-level variant owns the existing64x40 surface and delegates all native text/keyboard defaults to ArkUI; exact original consumer/callback and real SDK constructor are proved.",
+      "sourceLineAtAudit": 108,
+      "sharedReplacement": {
+        "component": "ReaderFormField",
+        "module": "../common/ReaderFormField",
+        "specId": "directory-rule-level",
+        "callback": "(value: string): void => this.edit(rule.id, 'level', value)"
+      }
     },
     {
       "id": "NATIVE-DEFAULT-10",
