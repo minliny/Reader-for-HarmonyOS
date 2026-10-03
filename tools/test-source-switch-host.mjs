@@ -70,7 +70,8 @@ function fixture(options={},productionSource=hostSource) {
   const runtime={closed:false,getUIAbilityContext:()=>({filesDir:'/private-files'}), bookAcquisitions:()=>({sourceRegistryRevision:()=>1,
     subscribe(callback){subscriptions.add(callback);return()=>subscriptions.delete(callback);},
     async acquireBook(seed,admission){calls.push(['acquire',seed]);if(options.acquireGate)await options.acquireGate.promise;
-      if(!admission.isCurrent())throw Error('retired acquisition');return options.targetSession??session;}}),
+      if(!admission.isCurrent())throw Error('retired acquisition');
+      if(options.failAcquire)throw Error('body unavailable');return options.targetSession??session;}}),
     async request(method,params,requestOptions={}) {
       calls.push([method,params,requestOptions]);
       // Controlled startup/native fixture. The production Runtime's exact
@@ -141,6 +142,25 @@ function fixture(options={},productionSource=hostSource) {
 }
 const checks=[];
 const TX='00000000-0000-4000-8000-000000000001/1';
+{
+  const f=fixture({preview:true,failAcquire:true});await settle();
+  const original=f.host.current().scopeId;await f.host.pick(f.candidate(),original);
+  assert.equal(f.effects.at(-1).kind,'acquisitionFailed');assert.equal(f.host.current().visible,false);
+  const before=f.calls.length;
+  assert.equal(f.host.bindReader({...f.context,query:{...f.context.query,bookId:'other'}},f.lease),false);
+  assert.equal(f.host.bindReader(f.context,{...f.lease,isCurrent:()=>false}),false);
+  assert.equal(f.host.bindReader(f.context,f.lease),true);
+  assert.equal(f.calls.length,before,'reader rebind performs no read, acquisition or mutation');
+  assert.equal(f.host.current().failureMessage,'body unavailable');
+  const rebound=f.host.current().scopeId;assert.notEqual(rebound,original);
+  f.host.retryFailed(original);assert.equal(f.calls.length,before,'old failure action cannot borrow the new scope');
+  f.options.failAcquire=false;f.host.retryFailed(rebound);await settle();
+  assert.equal(f.effects.at(-1).kind,'previewReady','rebound failure keeps the original candidate for explicit retry');
+  assert.equal(f.calls.filter(([method])=>method==='source.switch.commit').length,0);
+  const empty=fixture();await settle();assert.equal(empty.host.bindReader(empty.context,empty.lease),false);
+  currentRuntime=undefined;assert.equal(f.host.bindReader(f.context,f.lease),false);
+  checks.push('failed-acquisition-reader-rebind-exact-identity-scope-no-IO');
+}
 {
   const f=fixture();await settle();const owner=f.Constructor.forRuntime(f.runtime);
   assert.equal(f.Constructor.forRuntime(f.runtime),owner,'Index remount shares one actual feature owner');

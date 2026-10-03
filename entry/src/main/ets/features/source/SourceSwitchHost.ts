@@ -107,14 +107,17 @@ export class SourceSwitchHost {
   current(): SourceSwitchSnapshot { return this.snapshot; }
   owns(runtime: ReaderRuntimeOwner): boolean { return this.runtime === runtime; }
 
-  /** Rebind only the existing pending journey to its admitted reader after
+  /** Rebind only the existing pending or failed acquisition journey after
    * Index's navigation seam. This does not open UI, execute IO, or mount trees. */
   bindReader(context: SourceSwitchContext, lease: SourceSwitchLease): boolean {
     const pending = this.snapshot.pending;
-    if (pending === undefined || this.snapshot.visible || this.snapshot.state.kind === 'switching' ||
-      !ReaderRuntimeOwner.isCurrent(this.runtime) ||
-      !((pending.targetSourceId === context.query.sourceId && pending.targetBookId === context.query.bookId) ||
-        (pending.fromSourceId === context.query.sourceId && pending.fromBookId === context.query.bookId))) return false;
+    const ownsPending = pending !== undefined &&
+      ((pending.targetSourceId === context.query.sourceId && pending.targetBookId === context.query.bookId) ||
+        (pending.fromSourceId === context.query.sourceId && pending.fromBookId === context.query.bookId));
+    const ownsFailure = this.failedCandidate !== undefined && this.failedIdentity !== undefined &&
+      this.snapshot.failureMessage.length > 0 && this.sameIdentity(this.failedIdentity, context.query);
+    if ((!ownsPending && !ownsFailure) || this.snapshot.visible || this.snapshot.state.kind === 'switching' ||
+      !ReaderRuntimeOwner.isCurrent(this.runtime)) return false;
     this.retire(); this.context = context; this.lease = lease;
     if (!this.currentLease()) { this.retire(); return false; }
     this.snapshot = { ...this.snapshot, scopeId: ++this.scopeGeneration };
