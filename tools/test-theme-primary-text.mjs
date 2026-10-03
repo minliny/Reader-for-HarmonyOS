@@ -13,6 +13,11 @@ const shelfTypography = Object.fromEntries([
 ].map(name => [`TYPE_SHELF_MANAGEMENT_${name}`, {
   fontFamily: 'ReaderNotoSansSC', fontWeight: 400, fontSizeFp: 12, lineHeightFp: 16,
 }]));
+Object.assign(shelfTypography, {
+  TYPE_RULES_MANAGEMENT_HEADING: { fontFamily: 'ReaderNotoSansSC', fontWeight: 700, fontSizeFp: 14 },
+  TYPE_RULES_MANAGEMENT_INPUT: { fontFamily: 'ReaderNotoSansSC', fontWeight: 400, fontSizeFp: 12 },
+  TYPE_RULES_MANAGEMENT_ACTION: { fontFamily: 'ReaderNotoSansSC', fontWeight: 700, fontSizeFp: 12 },
+});
 const output={layer:'Actual SDK Builder retained observer calls plus all production fontColor AST consumers; no new VM pixels',builder:[],consumers:[]};
 const {owner:detail}=createReaderBuilderProbe(source('bookshelf/LocalBookDetail.ets'),['chapterSection','chapterRow','chapterEmptyMessage','chapterSectionHeight'],{
   CHAPTER_SECTION_HEIGHT:282,ButtonType:{Normal:'Normal'}});
