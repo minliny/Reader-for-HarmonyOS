@@ -8,7 +8,7 @@ import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {ReaderNativeAlertOwner} from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
 const clone=v=>structuredClone(v),methods=['isCurrentSyncOwner','isCurrentSyncPresentation','isCurrentRoute','getSyncOrchestrator',
-  'onSyncSaveConfig','onSyncTestConnection','onSyncTriggerBackup','onSyncRestoreLatest','onSyncResolveRestore','nextNavigationGeneration'];
+  'retireRssEditorPresentation','onSyncSaveConfig','onSyncTestConnection','onSyncTriggerBackup','onSyncRestoreLatest','onSyncResolveRestore','nextNavigationGeneration'];
 let enabled=true;
 const deps={ReaderRuntimeOwner:f.ReaderRuntimeOwner,SyncOrchestrator:f.Orchestrator,isReaderProductSurfaceEnabled:()=>enabled,deviceInfo:{deviceType:'phone'}};
 const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),methods,deps);
@@ -58,7 +58,7 @@ for(const retired of['route','generation','runtime-unset','hidden','unmounted'])
   const x=fixture();await x.open();const p=x.props(),before=f.asset.calls.length,native=x.runtime.calls.length;
   if(retired==='route')x.index.route='settings';if(retired==='generation')x.index.nextNavigationGeneration();if(retired==='runtime-unset'){f.setRuntimeOwner(undefined);assert.throws(()=>f.ReaderRuntimeOwner.current(),/installed by EntryAbility/);}
   if(retired==='hidden')enabled=false;if(retired==='unmounted')x.index.shelfReceiptRetired=true;
-  assert.doesNotThrow(()=>{p.onSaveConfig(f.config.url,f.config.user,'','',f.config.directory);p.onTestConnection(f.config.url,f.config.user,'',f.config.directory);p.onTriggerBackup();p.onRestoreLatest();p.onResolveRestore(true);p.onReconcile(0);p.onSkipBackupRetention(0);p.onBack();});
+  assert.doesNotThrow(()=>{p.onSaveConfig(f.config.url,f.config.user,'','',f.config.directory);p.onTestConnection(f.config.url,f.config.user,'',f.config.directory);p.onTriggerBackup();p.onRestoreLatest();p.onResolveRestore(true);p.onReconcile(0);p.onSkipBackupRetention(0);p.onContinueConfigSave(0,f.config.url,f.config.user,'','',f.config.directory);p.onBack();});
   await x.settle();assert.equal(f.asset.calls.length,before);assert.equal(x.runtime.calls.length,native);f.setRuntimeOwner(x.runtime);
 }
 {const x=fixture();await x.open();const old=x.props(),parent=x.parent(),child=[...parent.children.values()].at(-1);x.index.navigationGeneration=2;parent.navigationGeneration=2;parent.replay();const next=[...parent.children.values()].at(-1);assert.notEqual(next.id,child.id);old.onTriggerBackup();await x.settle();assert.equal(x.runtime.count('sync.webdav.transaction.start'),0);next.params.onTriggerBackup();await x.settle();assert.equal(x.runtime.count('sync.webdav.transaction.start'),1);}
@@ -82,6 +82,43 @@ for(const retired of ['live','route','generation','runtime-unset','hidden','unmo
     action.params.onReconcile(action.params.generation);await x.settle();assert.equal(x.runtime.calls.length,count,'retired actual consent actor never replays terminal mutation');
     assert.equal(x.requests.filter(r=>r.method==='PUT').length,1);assert.equal(x.requests.filter(r=>r.method==='DELETE').length,0);
   }
+  f.setRuntimeOwner(x.runtime);
+}
+// The previous durable backup scenarios injected a distinct native Preferences
+// adapter. Restore the original fresh-config transport before this independent family.
+for (const retired of ['live', 'route', 'generation', 'runtime-unset', 'hidden', 'unmounted', 'replacement-host']) {
+  const preferences = new Map();
+  f.setPreferences({ async get(key, fallback) { return preferences.has(key) ? preferences.get(key) : fallback; },
+    async has(key) { return preferences.has(key); }, async put(key, value) { preferences.set(key, value); },
+    async delete(key) { preferences.delete(key); }, async flush() {} });
+  const x = fixture(); await x.open(); f.asset.failAdd = true;
+  x.props().onSaveConfig(f.config.url, f.config.user, f.config.password, f.config.backupPassword, f.config.directory);
+  await x.settle();
+  const initial = x.index.syncSnapshot.facts.operation;
+  assert.equal(initial.projection.receipt.confirmation, 'unknown');
+  x.props().onReconcile(initial.projection.facts.generation); await x.settle();
+  const pending = x.index.syncSnapshot.facts.operation;
+  assert.equal(pending.projection.receipt.confirmation, 'unknown');
+  assert.equal(pending.canContinueOriginal, true);
+  const props = x.props(), actual = fullSyncIndexPage(props);
+  const original = [...actual.children.values()].find(child => child.params.label === '继续原操作');
+  assert.ok(original, 'actual Index→decorated Page has original config continuation action');
+  const identity = pending.operationId, adds = f.asset.calls.filter(v => v === 'add').length;
+  if (retired === 'route') x.index.route = 'settings';
+  if (retired === 'generation') x.index.nextNavigationGeneration();
+  if (retired === 'runtime-unset') f.setRuntimeOwner(undefined);
+  if (retired === 'hidden') enabled = false;
+  if (retired === 'unmounted') x.index.shelfReceiptRetired = true;
+  if (retired === 'replacement-host') x.index.syncOrchestrator = undefined;
+  assert.doesNotThrow(() => original.params.onReconcile(original.params.generation)); await x.settle();
+  assert.equal(f.asset.calls.filter(v => v === 'add').length, adds, 'exact prepared original never writes a second immutable record');
+  if (retired === 'live') {
+    assert.equal(x.index.syncSnapshot.facts.operation.completed, true);
+    assert.equal(x.index.syncSnapshot.facts.operation.operationId, identity, 'explicit continuation retains original operation identity');
+    assert.equal(x.index.syncSnapshot.facts.canMutate, true);
+    original.params.onReconcile(original.params.generation); await x.settle();
+    assert.equal(f.asset.calls.filter(v => v === 'add').length, adds, 'old physical config continuation cannot replay terminal save');
+  } else assert.equal(x.index.syncSnapshot.facts.operation.completed, false, 'retired or replaced owner cannot settle via old physical actor');
   f.setRuntimeOwner(x.runtime);
 }
 rmSync(durableDirectory,{recursive:true,force:true});

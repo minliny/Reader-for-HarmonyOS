@@ -1112,18 +1112,22 @@ struct Index {
   @Builder
   private syncContent() {
     ForEach([this.navigationGeneration], (generation: number) => {
-      this.syncSurface(generation, ReaderRuntimeOwner.current());
+      this.syncSurface(generation, ReaderRuntimeOwner.current(), this.getSyncOrchestrator());
     }, (identity: number): string => identity.toString());
   }
 
   @Builder
-  private syncSurface(generation: number, owner: ReaderRuntimeOwner) {
+  private syncSurface(generation: number, owner: ReaderRuntimeOwner, host: SyncOrchestrator) {
     SyncPage({
       snapshot: this.syncSnapshot,
       isTablet: deviceInfo.deviceType === 'tablet',
       onBack: (): void => { if (this.isCurrentSyncPresentation(generation, owner)) this.returnToSettings(); },
       onReconcile: (expectedGeneration: number): void => { if (this.isCurrentSyncPresentation(generation, owner)) this.getSyncOrchestrator().reconcile(expectedGeneration); },
       onSkipBackupRetention: (expectedGeneration: number): void => { if (this.isCurrentSyncPresentation(generation, owner)) this.getSyncOrchestrator().skipBackupRetention(expectedGeneration); },
+      onContinueConfigSave: (expectedGeneration: number, url: string, user: string, pass: string, backupPass: string, directory: string): void => {
+        if (this.isCurrentSyncPresentation(generation, owner, host))
+          host.continueConfigSave(expectedGeneration, url, user, pass, backupPass, directory);
+      },
       onSaveConfig: (url: string, user: string, pass: string, backupPass: string, path: string): void =>
          { if (this.isCurrentSyncPresentation(generation, owner)) this.onSyncSaveConfig(url, user, pass, backupPass, path); },
       onTestConnection: (url: string, user: string, pass: string, path: string): void =>
@@ -1816,8 +1820,9 @@ struct Index {
     try { return this.isCurrentRuntime(owner); } catch (_) { return false; }
   }
 
-  private isCurrentSyncPresentation(generation: number, owner: ReaderRuntimeOwner): boolean {
-    return this.isCurrentRoute(generation, 'sync') && this.isCurrentSyncOwner(owner);
+  private isCurrentSyncPresentation(generation: number, owner: ReaderRuntimeOwner, host?: SyncOrchestrator): boolean {
+    return this.isCurrentRoute(generation, 'sync') && this.isCurrentSyncOwner(owner) &&
+      (host === undefined || (this.syncOrchestrator === host && host.ownedBy(owner)));
   }
 
   private getSyncOrchestrator(): SyncOrchestrator {
