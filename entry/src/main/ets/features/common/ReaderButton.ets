@@ -7,7 +7,14 @@ import { TOK_BORDER_W, TOK_SPACE_XS } from './ReaderTokens';
  * ArkUI owns pointer release/cancel and pressed state. A retained intent must
  * delegate to current parent state, or use a bounded parent identity key. */
 class ReaderButtonLabelModifier implements AttributeModifier<TextAttribute> {
-  constructor(private id: ReaderButtonSpecId, private primary: boolean, private scheme: string) {}
+  private id: ReaderButtonSpecId;
+  private primary: boolean;
+  private scheme: string;
+  constructor(id: ReaderButtonSpecId, primary: boolean, scheme: string) {
+    this.id = id;
+    this.primary = primary;
+    this.scheme = scheme;
+  }
   applyNormalAttribute(instance: TextAttribute): void {
     const spec = resolveReaderButtonSpec(this.id);
     const text = spec.text;
@@ -24,8 +31,22 @@ class ReaderButtonLabelModifier implements AttributeModifier<TextAttribute> {
   }
 }
 class ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {
-  constructor(private id: ReaderButtonSpecId, private primary: boolean, private enabled: boolean,
-    private layout: ReaderButtonLayout, private scheme: string, private busy: boolean = false, private availableWidth: number = 0) {}
+  private id: ReaderButtonSpecId;
+  private primary: boolean;
+  private enabled: boolean;
+  private layout: ReaderButtonLayout;
+  private scheme: string;
+  private busy: boolean;
+  private availableWidth: number;
+  constructor(id: ReaderButtonSpecId, primary: boolean, enabled: boolean, layout: ReaderButtonLayout, scheme: string, busy: boolean = false, availableWidth: number = 0) {
+    this.id = id;
+    this.primary = primary;
+    this.enabled = enabled;
+    this.layout = layout;
+    this.scheme = scheme;
+    this.busy = busy;
+    this.availableWidth = availableWidth;
+  }
   applyNormalAttribute(instance: CommonAttribute): void {
     const spec = resolveReaderButtonSpec(this.id);
     if (this.layout === 'equal') instance.layoutWeight(1);
@@ -58,8 +79,22 @@ class ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {
 // Text receives one modifier registration. Repeated attributeModifier calls
 // must not rely on platform ordering to keep the earlier label recipe alive.
 class ReaderButtonTextModifier implements AttributeModifier<TextAttribute> {
-  constructor(private id: ReaderButtonSpecId, private primary: boolean, private enabled: boolean,
-    private layout: ReaderButtonLayout, private scheme: string, private busy: boolean = false, private availableWidth: number = 0) {}
+  private id: ReaderButtonSpecId;
+  private primary: boolean;
+  private enabled: boolean;
+  private layout: ReaderButtonLayout;
+  private scheme: string;
+  private busy: boolean;
+  private availableWidth: number;
+  constructor(id: ReaderButtonSpecId, primary: boolean, enabled: boolean, layout: ReaderButtonLayout, scheme: string, busy: boolean = false, availableWidth: number = 0) {
+    this.id = id;
+    this.primary = primary;
+    this.enabled = enabled;
+    this.layout = layout;
+    this.scheme = scheme;
+    this.busy = busy;
+    this.availableWidth = availableWidth;
+  }
   applyNormalAttribute(instance: TextAttribute): void {
     new ReaderButtonLabelModifier(this.id, this.primary, this.scheme).applyNormalAttribute(instance);
     new ReaderButtonFrameModifier(this.id, this.primary, this.enabled, this.layout, this.scheme, this.busy, this.availableWidth).applyNormalAttribute(instance);

@@ -4,7 +4,14 @@ import { readerAppColor } from './ReaderThemeRegistry';
 import { TOK_BORDER_W } from './ReaderTokens';
 
 class ReaderLabeledIconLabelModifier implements AttributeModifier<TextAttribute> {
-  constructor(private id: ReaderLabeledIconActionSpecId, private danger: boolean, private scheme: string) {}
+  private id: ReaderLabeledIconActionSpecId;
+  private danger: boolean;
+  private scheme: string;
+  constructor(id: ReaderLabeledIconActionSpecId, danger: boolean, scheme: string) {
+    this.id = id;
+    this.danger = danger;
+    this.scheme = scheme;
+  }
   applyNormalAttribute(instance: TextAttribute): void {
     const spec = resolveReaderLabeledIconActionSpec(this.id), text = spec.text;
     if (text.fontFamily !== undefined) instance.fontFamily(text.fontFamily);
@@ -17,7 +24,16 @@ class ReaderLabeledIconLabelModifier implements AttributeModifier<TextAttribute>
   }
 }
 class ReaderLabeledIconRowModifier implements AttributeModifier<RowAttribute> {
-  constructor(private id: ReaderLabeledIconActionSpecId, private divider: boolean, private scheme: string, private enabled: boolean) {}
+  private id: ReaderLabeledIconActionSpecId;
+  private divider: boolean;
+  private scheme: string;
+  private enabled: boolean;
+  constructor(id: ReaderLabeledIconActionSpecId, divider: boolean, scheme: string, enabled: boolean) {
+    this.id = id;
+    this.divider = divider;
+    this.scheme = scheme;
+    this.enabled = enabled;
+  }
   applyNormalAttribute(instance: RowAttribute): void {
     const spec = resolveReaderLabeledIconActionSpec(this.id);
     if (spec.rowHeight !== undefined) instance.height(spec.rowHeight);
@@ -55,7 +71,14 @@ class ReaderLabeledIconRowModifier implements AttributeModifier<RowAttribute> {
   }
 }
 class ReaderLabeledIconHitModifier implements AttributeModifier<StackAttribute> {
-  constructor(private id: ReaderLabeledIconActionSpecId, private scheme: string, private enabled: boolean) {}
+  private id: ReaderLabeledIconActionSpecId;
+  private scheme: string;
+  private enabled: boolean;
+  constructor(id: ReaderLabeledIconActionSpecId, scheme: string, enabled: boolean) {
+    this.id = id;
+    this.scheme = scheme;
+    this.enabled = enabled;
+  }
   applyNormalAttribute(instance: StackAttribute): void {
     instance.height(44);
     const spec = resolveReaderLabeledIconActionSpec(this.id);
