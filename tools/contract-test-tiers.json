@@ -500,6 +500,7 @@
     "test-temporary-back-index-sdk.mjs",
     "test-reader-image-resource-lifecycle.mjs",
     "test-reader-tts-preference-lifecycle.mjs",
-    "test-reader-reading-record-receipt.mjs"
+    "test-reader-reading-record-receipt.mjs",
+    "test-reader-tts-preference-write-facts.mjs"
   ]
 }

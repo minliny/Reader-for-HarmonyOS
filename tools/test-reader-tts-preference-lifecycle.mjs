@@ -12,7 +12,7 @@ const gatewaySource = readFileSync(new URL('ReaderTtsPreferencesGateway.ts', dir
 let barrier = async () => {}, createStore;
 const Gateway = new Function(...Object.keys(state), 'ReaderThemeHost', 'ReaderRuntimeOwner', 'preferences',
   `${stripTypeScriptTypes(gatewaySource.slice(gatewaySource.indexOf('const READER_TTS_PREFERENCES_NAME'))).replace('export class ', 'class ')}; return ReaderTtsPreferencesGateway;`)
-  (...Object.values(state), { prepareUserChange: () => barrier() }, {}, { getPreferences: (...args) => createStore(...args) });
+  (...Object.values(state), { prepareUserChange: () => barrier() }, { isCurrent: () => true }, { getPreferences: (...args) => createStore(...args) });
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
 const settle = async () => { for (let i = 0; i < 8; i++) await new Promise(done => setImmediate(done)); };
 function gatewayFixture() {
@@ -72,7 +72,7 @@ function readerFixture(file = lreFile) {
     setVoice: async (language, person) => { events.push(['voice', language, person]); await nativeGate.promise; },
     setFailurePolicy: value => events.push(['policy',value]), setPauseOnInterruption: value => events.push(['pause',value]) };
   const Reader = productionMotionMethods(file, ['nextTtsPreferenceMutationGeneration', 'captureTtsPreferenceAdmission',
-    'ttsPreferencesSnapshot', 'copyTtsPreferencesSnapshot', 'persistTtsPreferencesSnapshot', 'persistTtsPreferences',
+    'ttsPreferencesSnapshot', 'copyTtsPreferencesSnapshot', 'persistTtsPreferencesSnapshot', 'persistTtsPreferences', 'notifyTtsPreferencePending',
     'isSessionActive', ...mutations.map(x => x[0])], {
     ReaderRuntimeOwner: { current: () => ({ getTtsHost: () => ({ setBackgroundPlaybackEnabled: value => events.push(['background', value]) }) }) },
   });

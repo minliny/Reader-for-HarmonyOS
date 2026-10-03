@@ -7520,6 +7520,7 @@ export struct ReadingExperience {
         if (!isCurrent() || preferenceGeneration !== this.ttsPreferenceMutationGeneration) return;
         this.admitTtsPreferences(preferences, this.ttsVoiceOptions);
         preferencesLoaded = true;
+        this.retryPendingTtsPreferences();
       }).catch((error: Error): void => {
         hilog.error(0x5244, 'Reader', '%{private}s', `Reader TTS optional preferences failed: ${error.message}`);
       }),
@@ -7572,7 +7573,25 @@ export struct ReadingExperience {
     const current = this.captureTtsPreferenceAdmission(this.ttsPreferenceMutationGeneration);
     if (!current()) return;
     void this.persistTtsPreferencesSnapshot(this.ttsPreferencesSnapshot(), current)
-      .catch((error: Error): void => { if (current()) this.logTtsFailure('preference-persist', error); });
+      .catch((error: Error): void => { if (current()) this.notifyTtsPreferencePending(error, current); });
+  }
+
+  private notifyTtsPreferencePending(error: Error, isCurrent: () => boolean): void {
+    if (!isCurrent() || error.message === 'TTS_PREFERENCE_OWNER_SUPERSEDED') return;
+    try {
+      this.getUIContext().getPromptAction().showToast({ message: '朗读设置保存尚未确认，当前选择已保留，请稍后重试' });
+    } catch (_noticeError) {}
+    try { this.logTtsFailure('preference-save-pending', error); } catch (_diagnosticError) {}
+  }
+
+  private retryPendingTtsPreferences(): void {
+    if (!this.ttsPreferencesGateway.writeFacts().pendingReconciliation) return;
+    const current = this.captureTtsPreferenceAdmission(this.ttsPreferenceMutationGeneration);
+    if (!current()) return;
+    // One finite retry per existing metadata load. Do not hold first play or
+    // reading behind unreturned Preferences IO, or start a background loop.
+    void this.ttsPreferencesGateway.retryAccepted(current)
+      .catch((error: Error): void => this.notifyTtsPreferencePending(error, current));
   }
 
   private nextTtsPreferenceMutationGeneration(): number {
@@ -7609,7 +7628,7 @@ export struct ReadingExperience {
 
   /**
    * ArkTS does not accept object spread on imported structural aliases. Keep
-   * preference updates explicitly typed so rollback candidates retain the
+   * preference updates explicitly typed so accepted candidates retain the
    * same value semantics without widening to an untyped object.
    */
   private copyTtsPreferencesSnapshot(value: ReaderTtsPreferencesSnapshot): ReaderTtsPreferencesSnapshot {
@@ -7915,11 +7934,7 @@ export struct ReadingExperience {
       try {
         await this.persistTtsPreferencesSnapshot(candidate, current);
       } catch (error) {
-        if (current()) {
-          this.ttsAllowMixing = previous.allowMixing;
-          try { await coordinator?.setAllowMixing(previous.allowMixing); } catch (_) {}
-          this.logTtsFailure('preference-persist', error as Error);
-        }
+        this.notifyTtsPreferencePending(error as Error, current);
       }
     };
     void apply().catch((error: Error): void => { if (current()) this.logTtsFailure('audio-session', error); });
@@ -7936,10 +7951,7 @@ export struct ReadingExperience {
     const host = this.ttsCoordinator === undefined ? undefined : ReaderRuntimeOwner.current().getTtsHost();
     host?.setBackgroundPlaybackEnabled?.(enabled);
     void this.persistTtsPreferencesSnapshot(candidate, current).catch((error: Error): void => {
-      if (!current()) return;
-      this.ttsBackgroundPlayback = previous.backgroundPlayback;
-      host?.setBackgroundPlaybackEnabled?.(previous.backgroundPlayback);
-      this.logTtsFailure('preference-persist', error);
+      this.notifyTtsPreferencePending(error, current);
     });
   }
 
@@ -7952,12 +7964,12 @@ export struct ReadingExperience {
     candidate.keepScreenOn = enabled;
     this.ttsKeepScreenOn = enabled;
     void this.applyReaderWindowPolicy(this.readerSettingsSnapshot, this.controlsPresentedForWindow())
-      .then(async (): Promise<void> => { if (current()) await this.persistTtsPreferencesSnapshot(candidate, current); })
-      .catch((error: Error): void => {
+      .then(async (): Promise<void> => {
         if (!current()) return;
-        this.ttsKeepScreenOn = previous.keepScreenOn;
-        this.logTtsFailure('preference-persist', error);
-      });
+        try { await this.persistTtsPreferencesSnapshot(candidate, current); }
+        catch (error) { this.notifyTtsPreferencePending(error as Error, current); }
+      })
+      .catch((error: Error): void => { if (current()) this.logTtsFailure('window-policy', error); });
   }
 
   private changeTtsFailurePolicy(policy: 'skip' | 'stop'): void {
@@ -7971,10 +7983,7 @@ export struct ReadingExperience {
     this.ttsFailurePolicy = policy;
     coordinator?.setFailurePolicy(policy);
     void this.persistTtsPreferencesSnapshot(candidate, current).catch((error: Error): void => {
-      if (!current()) return;
-      this.ttsFailurePolicy = previous.failurePolicy;
-      coordinator?.setFailurePolicy(previous.failurePolicy);
-      this.logTtsFailure('preference-persist', error);
+      this.notifyTtsPreferencePending(error, current);
     });
   }
 
@@ -7989,9 +7998,7 @@ export struct ReadingExperience {
     if (!enabled) this.invalidateTtsPageFollow?.();
     else this.followTtsPage?.(this.ttsState);
     void this.persistTtsPreferencesSnapshot(candidate, current).catch((error: Error): void => {
-      if (!current()) return;
-      this.ttsFollowHighlight = previous.followHighlight;
-      this.logTtsFailure('preference-persist', error);
+      this.notifyTtsPreferencePending(error, current);
     });
   }
 
@@ -8006,10 +8013,7 @@ export struct ReadingExperience {
     this.ttsPauseOnInterruption = enabled;
     coordinator?.setPauseOnInterruption(enabled);
     void this.persistTtsPreferencesSnapshot(candidate, current).catch((error: Error): void => {
-      if (!current()) return;
-      this.ttsPauseOnInterruption = previous.pauseOnInterruption;
-      coordinator?.setPauseOnInterruption(previous.pauseOnInterruption);
-      this.logTtsFailure('preference-persist', error);
+      this.notifyTtsPreferencePending(error, current);
     });
   }
 
@@ -8033,11 +8037,7 @@ export struct ReadingExperience {
         try {
           await this.persistTtsPreferencesSnapshot(candidate, current);
         } catch (error) {
-          if (!current()) return;
-          this.ttsLanguage = previous.language;
-          this.ttsPerson = previous.person;
-          try { await coordinator?.setVoice(previous.language, previous.person); } catch (_) {}
-          this.logTtsFailure('preference-persist', error as Error);
+          this.notifyTtsPreferencePending(error as Error, current);
         }
       })
       .catch((error: Error): void => { if (current()) this.logTtsFailure('voice', error); });
@@ -9127,7 +9127,7 @@ export struct ReadingExperience {
   private observeAppearanceSave(saved: Promise<void>, lifecycleToken: number): void {
     void saved.catch((error: Error): void => {
       if (this.isSessionActive(lifecycleToken) && this.appearanceGateway.hasUnsavedChanges()) {
-        this.showAppearanceFailure('外观设置保存失败，当前效果已保留，请稍后重试', error);
+        this.showAppearanceFailure('外观设置保存尚未确认，当前效果已保留，请稍后重试', error);
       }
     });
   }

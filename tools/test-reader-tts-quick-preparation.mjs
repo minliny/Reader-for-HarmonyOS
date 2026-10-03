@@ -28,7 +28,7 @@ const dependencies = { ...state, ReaderTtsSessionCoordinator, ReaderTtsConfigura
   ReaderHttpTtsGateway: class { constructor(owner) { return owner.http; } },
   hilog: { error: () => {} } };
 const methods = ['notifyReadingPresentationReady', 'notifyControlSelectionReadingReady', 'scheduleTtsPresentationWarmup', 'initializeTtsSession',
-  'isStableVisiblePageOwner', 'isSelectionCurrent', 'loadTtsPresentationMetadata', 'admitTtsPreferences', 'ttsPreferencesSnapshot', 'multiplierForTtsConfig',
+  'isStableVisiblePageOwner', 'isSelectionCurrent', 'loadTtsPresentationMetadata', 'retryPendingTtsPreferences', 'admitTtsPreferences', 'ttsPreferencesSnapshot', 'multiplierForTtsConfig',
   'multiplierForCoreRate', 'prepareControlPage', 'changeTtsRate', 'requireTtsConfigurationHost',
   'persistTtsConfig', 'coreRateForMultiplier', 'ratePercentForMultiplier'];
 function fixture(file = lre) {
@@ -52,7 +52,7 @@ function fixture(file = lre) {
     getUIContext: () => ({ postFrameCallback: f => frames.push(f) }),
     onChapterCommitted: () => events.push('committed'), onReadingReady: () => events.push('ready'),
     onSessionLaunchTtsState: s => events.push(`state:${s.status}`),
-    ttsPreferencesGateway: { load: () => { events.push('prefs'); return prefs.promise; } },
+    ttsPreferencesGateway: { load: () => { events.push('prefs'); return prefs.promise; }, writeFacts: () => ({ pendingReconciliation: false }) },
     persistTtsPreferences: () => events.push('repairVoice'),
     logTtsFailure: (op, error) => events.push(`error:${op}:${error.message}`), errorMessage: e => e.message,
   });
