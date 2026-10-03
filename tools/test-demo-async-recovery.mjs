@@ -196,7 +196,6 @@ const importSource=read('entry/src/main/ets/features/bookshelf/LocalBookImportGa
 const importMethods=[
  method(importSource,'async importPreparedSelection('),
  method(importSource,'async finalizeCommittedImport('),
- method(importSource,'async reconcileShelfAdd('),
  method(importSource,'isShelfMutationOutcomeUnknown('),
  method(importSource,'isDeterministicCoreRejection('),
 ].join('');
@@ -247,7 +246,8 @@ console.log('PASS: ambiguous persist reply preserves EPUB resources and asks to 
 }
 console.log('PASS: deterministic import.persist rejection discards staged input without recovery orphan');
 
-// A lost bookshelf.add reply is reconciled before any body/asset rollback.
+// A lost bookshelf.add reply cannot authorize compensation, even if a later
+// read would be matching, absent, or unavailable.
 for (const shelfVerdict of ['committed', 'absent', 'unknown']) {
  let coreRollbacks=0;let assetRollbacks=0;
  const h=new ImportProbe();
@@ -267,13 +267,13 @@ for (const shelfVerdict of ['committed', 'absent', 'unknown']) {
    async commitLocalBookInput(){return {bookId:'book',assetKind:'source',path:'/book',created:true};},
    async rollbackLocalBookAsset(){assetRollbacks++;},
   }});
+ h.bookshelf={upsertBook:params=>h.runtimeOwner.request('bookshelf.add',params)};
  const result=await h.importPreparedSelection({state:'ready',input:{fileName:'book.txt',bookId:'book'}});
- if(shelfVerdict==='committed')assert.equal(result.state,'success');
- else assert.equal(result.failure.code,shelfVerdict==='unknown'?'recoveryPending':'unknown');
- assert.equal(coreRollbacks,shelfVerdict==='absent'?1:0);
- assert.equal(assetRollbacks,shelfVerdict==='absent'?1:0);
+ assert.equal(result.failure.code,'recoveryPending');
+ assert.equal(coreRollbacks,0);
+ assert.equal(assetRollbacks,0);
 }
-console.log('PASS: lost bookshelf.add reply reconciles durable shelf truth before compensation');
+console.log('PASS: lost bookshelf.add reply remains pending without compensation or fabricated ACK');
 
 // A deterministic Core validation error must not be mistaken for a lost
 // reply merely because an older shelf row has the same identity.
@@ -293,6 +293,7 @@ console.log('PASS: lost bookshelf.add reply reconciles durable shelf truth befor
    async commitLocalBookInput(){return {bookId:'book',assetKind:'source',path:'/book',created:true};},
    async rollbackLocalBookAsset(){assetRollbacks++;},
   }});
+ h.bookshelf={upsertBook:params=>h.runtimeOwner.request('bookshelf.add',params)};
  const result=await h.importPreparedSelection({state:'ready',input:{fileName:'book.txt',bookId:'book'}});
  assert.equal(result.state,'failed');
  assert.equal(result.failure.code,'unknown');

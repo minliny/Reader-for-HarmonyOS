@@ -79,7 +79,7 @@ assert.ok(bookTurnHost.indexOf('SettlementSwapShouldFire') <
   bookTurnHost.indexOf('const float solveMs', bookTurnHost.indexOf('bool BookTurnHost::ProcessSettlementFrame')),
   'settlement solve diagnostics must include coverage-gate cost');
 
-assert.match(shelfFlow, /this\.bookshelf\.removeBooks\(targets\)/);
+assert.match(shelfFlow, /this\.bookshelf\.removeBooks\(targets,/);
 assert.match(shelfFlow, /Promise\.all\(\[this\.loadPage\(0\), this\.bookshelf\.loadContinueReading\(\)\]\)/,
   'paged shelf uses an independent bounded continue-reading summary');
 for (const [name, source] of [

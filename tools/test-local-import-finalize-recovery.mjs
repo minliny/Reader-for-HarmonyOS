@@ -141,9 +141,11 @@ assert.equal(ownerProbe.isAlreadyFinalizedLocalImportError({
 // Exercise the complete production import transaction. An old same-identity
 // shelf row is not proof that this metadata upsert committed after a timeout.
 const importCode = stripTypeScriptTypes(gateway.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
-const ImportGateway = new Function('ReaderRuntimeOwner', 'hilog', 'errorMessageOf', 'localImportFailure',
+const coreCode=stripTypeScriptTypes(read('entry/src/main/ets/app/ReaderCoreGateway.ts').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''));
+const ReaderCoreGateway=new Function('ReaderRuntimeOwner','isReaderCoreTransactionPendingError',coreCode+';return ReaderCoreGateway;')({},()=>false);
+const ImportGateway = new Function('ReaderCoreGateway','ReaderRuntimeOwner', 'hilog', 'errorMessageOf', 'localImportFailure',
   `${importCode}\nreturn LocalBookImportGateway;`)(
-  {}, { warn() {}, error() {} }, error => error.message, localImportFailure);
+  ReaderCoreGateway, {}, { warn() {}, error() {} }, error => error.message, localImportFailure);
 const importBook = { bookId: 'same-bytes', title: '新书名', author: '新作者',
   coverUrl: 'cover', intro: '简介', kind: 'txt', lastChapter: '第二章' };
 for (const scenario of ['normal', 'committed', 'sourceId', 'bookId', 'title', 'author', 'coverUrl', 'intro', 'kind', 'lastChapter']) {
@@ -158,7 +160,7 @@ for (const scenario of ['normal', 'committed', 'sourceId', 'bookId', 'title', 'a
         persisted: { kind: 'localBook', data: { book: importBook } } } };
       if (name === 'bookshelf.add') {
         assert.deepEqual(params, { sourceId: 'local', ...importBook });
-        if (scenario === 'normal') return { data: { created: false } };
+        if (scenario === 'normal') return { data: { sourceId:'local',bookId:importBook.bookId,created: false,addedAt:1 } };
         throw Error('lost add response');
       }
       if (name === 'bookshelf.get') {
@@ -175,10 +177,10 @@ for (const scenario of ['normal', 'committed', 'sourceId', 'bookId', 'title', 'a
   const result = await new ImportGateway(owner).importPreparedSelections([
     { state: 'ready', input: { bookId: importBook.bookId, fileName: '新书名.txt', stagedPath: '/private/input' } },
   ]);
-  if (scenario === 'normal' || scenario === 'committed') {
+  if (scenario === 'normal') {
     assert.equal(result.imported, 1); assert.equal(result.failed, 0);
     assert.equal(calls.at(-1), 'import.finalize');
-    assert.equal(calls.filter(name => name === 'bookshelf.get').length, scenario === 'normal' ? 0 : 1);
+    assert.equal(calls.filter(name => name === 'bookshelf.get').length, 0);
   } else {
     assert.equal(result.failed, 1); assert.equal(result.items[0].failure.code, 'recoveryPending');
     assert.ok(!calls.includes('import.finalize'));
@@ -187,4 +189,4 @@ for (const scenario of ['normal', 'committed', 'sourceId', 'bookId', 'title', 'a
     'import membership has no reader page preparation or progress side effects');
 }
 
-console.log('local import finalize recovery queue and lost-upsert metadata reconciliation: PASS');
+console.log('local import finalize recovery queue and ACK-only confirmation: PASS (identical/old/mismatched reads cannot prove missing ACK)');

@@ -1,3 +1,5 @@
+import { readerRecoveryView, type ReaderRecoveryView } from '../app/ReaderRecoveryProjection';
+import { projectPersistedReceipt, type PersistedReceiptProjection } from '../app/ReaderPersistedReceiptProjection';
 import type { RemoteReadingPositionScope } from '../features/reading/RemoteReadingPositionMigration';
 import { FrameCallback } from '@kit.ArkUI';
 import { readerAppColor } from '../features/common/ReaderThemeRegistry';
@@ -366,6 +368,13 @@ struct Index {
   private navigationBackfillObservedKey: string = '';
   private navigationBackfillObserverDisposer: (() => void) | undefined;
   @State private importFailureMessage: string = '';
+  @State private shelfWriteReceipt: PersistedReceiptProjection<BookshelfDataState> | undefined = undefined;
+  @State private shelfWriteCleanupWarning: string = '';
+  @State private shelfWriteAction: 'import' | 'remove' = 'remove';
+  private shelfWriteOwner: ReaderRuntimeOwner | undefined;
+  private shelfWriteGeneration: number = 0;
+  private shelfReconcileBusy: number = 0;
+  private shelfReceiptRetired: boolean = false;
   @State private editingShelfGroupBook: ShelfBook | undefined = undefined;
   @State private editingShelfGroupBusy: boolean = false;
   private bookshelfSettingsReturnRoute: 'bookshelf' | 'settings' = 'bookshelf';
@@ -615,6 +624,7 @@ struct Index {
   private storedImportPresentation: string = '';
 
   aboutToAppear(): void {
+    this.shelfReceiptRetired = false;
     this.systemFileOpenMounted = true;
     // Index is mounted after configuration recovery. Reading these settings
     // inside that recovery barrier itself would recursively wait on it.
@@ -649,6 +659,8 @@ struct Index {
   }
 
   aboutToDisappear(): void {
+    this.shelfReceiptRetired = true;
+    this.shelfWriteGeneration += 1;
     this.dismissBookRemovalDialog();
     this.navigationBackfillObserverDisposer?.();
     this.navigationBackfillObserverDisposer = undefined;
@@ -844,32 +856,53 @@ struct Index {
     }
   }
 
+  @Builder
+  private bookshelfShellContent() {
+    BookshelfShell({
+      populated: this.isBookshelfVisualAdmitted,
+      recovery: this.shelfRecovery(),
+      onReconcile: (generation: number): void => { void this.reconcileShelfWrite(generation); },
+      reduceMotion: this.settingsSnapshot.reduceMotion,
+      canCheckUpdates: this.isBookshelfVisualAdmitted && (this.shelfProjectionRevision.length > 0 ?
+        this.shelfHasOnlineBooks : this.shelfBooks.some((book: ShelfBook): boolean => book.sourceId !== 'local')),
+      updateRunning: this.bookshelfUpdateRunning,
+      backgroundUpdateRunning: this.bookshelfBackgroundRefreshRunning,
+      updateProgressDone: this.bookshelfUpdateDone,
+      updateProgressTotal: this.bookshelfUpdateTotal,
+      onImportRequested: (): void => this.openImportDialog(),
+      onSearchRequested: (): void => this.openSearch(),
+      onBookshelfSettingsRequested: (): void => this.openBookshelfSettings(),
+      onBatchManageRequested: (): void => this.openBookshelfMultiSelect(),
+      onCheckUpdatesRequested: (): void => this.startManualBookshelfUpdate(),
+      onMainTab: (key: string): void => {
+        if (key === 'discover') this.openDiscover();
+        else if (key === 'rss') this.openRss();
+        else if (key === 'settings') this.openSettings();
+      },
+    }) {
+      this.bookshelfContent();
+    }
+  }
+
+  @Builder
+  private localImportContent() {
+    LocalImportDialog({
+      state: this.visibleImportDialogState(),
+      batch: this.visibleImportBatch(),
+      reduceMotion: this.settingsSnapshot.reduceMotion,
+      failureMessage: this.importFailureMessage,
+      recovery: this.shelfWriteAction === 'import' ? this.shelfRecovery() : this.emptyShelfRecovery(),
+      onReconcile: (generation: number): void => { void this.reconcileShelfWrite(generation); },
+      onSelectFiles: (): void => { void this.beginImport(); },
+      onClose: (): void => this.closeImportDialog(),
+    });
+  }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       if (this.route === 'bookshelf') {
         Stack() {
-          BookshelfShell({
-            populated: this.isBookshelfVisualAdmitted,
-            reduceMotion: this.settingsSnapshot.reduceMotion,
-            canCheckUpdates: this.isBookshelfVisualAdmitted && (this.shelfProjectionRevision.length > 0 ?
-              this.shelfHasOnlineBooks : this.shelfBooks.some((book: ShelfBook): boolean => book.sourceId !== 'local')),
-            updateRunning: this.bookshelfUpdateRunning,
-            backgroundUpdateRunning: this.bookshelfBackgroundRefreshRunning,
-            updateProgressDone: this.bookshelfUpdateDone,
-            updateProgressTotal: this.bookshelfUpdateTotal,
-            onImportRequested: (): void => this.openImportDialog(),
-            onSearchRequested: (): void => this.openSearch(),
-            onBookshelfSettingsRequested: (): void => this.openBookshelfSettings(),
-            onBatchManageRequested: (): void => this.openBookshelfMultiSelect(),
-            onCheckUpdatesRequested: (): void => this.startManualBookshelfUpdate(),
-            onMainTab: (key: string): void => {
-              if (key === 'discover') this.openDiscover();
-              else if (key === 'rss') this.openRss();
-              else if (key === 'settings') this.openSettings();
-            },
-          }) {
-            this.bookshelfContent();
-          }
+          this.bookshelfShellContent();
         }
         .width('100%')
         .height('100%')
@@ -1146,14 +1179,7 @@ struct Index {
         }.width('100%').height('100%');
       }
       if (this.route === 'bookshelf' && this.hasVisibleImportDialog()) {
-        LocalImportDialog({
-          state: this.visibleImportDialogState(),
-          batch: this.visibleImportBatch(),
-          reduceMotion: this.settingsSnapshot.reduceMotion,
-          failureMessage: this.importFailureMessage,
-          onSelectFiles: (): void => { void this.beginImport(); },
-          onClose: (): void => this.closeImportDialog(),
-        });
+        this.localImportContent();
       }
       if (this.jsonImportVisible) {
         JsonImportDialog({
@@ -1222,7 +1248,7 @@ struct Index {
         loadingMessage: this.detailLoadingMessage,
         removalEnabled: !this.readingSessionActive && !this.sourceSwitchVisible &&
           this.pendingSourceSwitch === undefined && this.offlineMutationActiveKey.length === 0 &&
-          this.bookshelfRemovalActiveKey.length === 0,
+          this.bookshelfRemovalActiveKey.length === 0 && !this.hasUnknownShelfWrite(),
         removing: this.bookshelfRemovalActiveKey.length > 0,
         adding: this.bookshelfAdditionActiveKey === this.detailBookKey(this.detailBook),
         cancellingAdd: this.bookshelfAdditionCancellingKey === this.detailBookKey(this.detailBook),
@@ -3680,7 +3706,7 @@ struct Index {
     return this.route === 'detail' && this.isSameDetailBook(book) && !this.readingSessionActive &&
       !this.sourceSwitchVisible && this.pendingSourceSwitch === undefined &&
       this.offlineMutationActiveKey.length === 0 &&
-      this.bookshelfRemovalActiveKey.length === 0;
+      this.bookshelfRemovalActiveKey.length === 0 && !this.hasUnknownShelfWrite();
   }
 
   private requestDetailShelfMutation(): void {
@@ -3862,145 +3888,62 @@ struct Index {
   }
 
   private removeShelfBooks(books: ShelfBook[]): void {
-    if (this.route !== 'bookshelfMultiSelect' || this.bookshelfBatchRemovalBusy || books.length === 0) {
-      return;
-    }
+    if (this.route !== 'bookshelfMultiSelect' || this.bookshelfBatchRemovalBusy || books.length === 0 ||
+      this.hasUnknownShelfWrite()) return;
     const generation = ++this.bookshelfBatchRemovalGeneration;
-    const gateway = new BookshelfFlowGateway(ReaderRuntimeOwner.current(), this.shelfFilter());
+    const owner = ReaderRuntimeOwner.current();
+    const navigation = this.navigationGeneration;
+    const receiptGeneration = this.beginShelfWrite(owner, 'remove');
+    const gateway = new BookshelfFlowGateway(owner, this.shelfFilter());
     const targets: BookshelfRemovalTarget[] = books.map((book: ShelfBook): BookshelfRemovalTarget => ({
-      sourceId: book.sourceId,
-      bookId: book.bookId,
+      sourceId: book.sourceId, bookId: book.bookId,
     }));
     this.bookshelfBatchRemovalBusy = true;
-    const isCurrent = (): boolean => generation === this.bookshelfBatchRemovalGeneration &&
-      this.route === 'bookshelfMultiSelect';
-    void gateway.removeMany(targets)
-      .then((outcome: BookshelfRemoveBatchOutcome): void => {
-        if (!isCurrent()) {
-          return;
-        }
-        this.applyBookshelfState(outcome.shelf);
-        this.bookshelfMultiSelectInitialKey = '';
-        this.nextNavigationGeneration();
-        this.route = 'bookshelf';
-      })
-      .catch((error: Error): Promise<void> =>
-        this.reconcileShelfBookBatchRemovalFailure(error, gateway, isCurrent))
-      .finally((): void => {
-        if (generation === this.bookshelfBatchRemovalGeneration) {
-          this.bookshelfBatchRemovalBusy = false;
-        }
-      });
-  }
-
-  private async reconcileShelfBookBatchRemovalFailure(
-    error: Error,
-    gateway: BookshelfFlowGateway,
-    isCurrent: () => boolean,
-  ): Promise<void> {
-    try {
-      const shelf = await gateway.load();
-      if (!isCurrent()) {
-        return;
-      }
-      this.applyBookshelfState(shelf);
+    const isCurrent = (): boolean => !this.shelfReceiptRetired && owner === ReaderRuntimeOwner.current() &&
+      generation === this.bookshelfBatchRemovalGeneration && navigation === this.navigationGeneration &&
+      receiptGeneration === this.shelfWriteGeneration && this.route === 'bookshelfMultiSelect';
+    void gateway.removeMany(targets).then((outcome: BookshelfRemoveBatchOutcome): void => {
+      this.bookshelfLoadGeneration += 1;
+      if (!isCurrent()) return;
+      this.publishShelfWrite(outcome.receipt, receiptGeneration, outcome.cleanupWarning);
+      if (outcome.shelf !== undefined) this.applyBookshelfState(outcome.shelf);
       this.bookshelfMultiSelectInitialKey = '';
       this.nextNavigationGeneration();
       this.route = 'bookshelf';
-      this.showReadingFailure('批量移除未完全完成', error.message);
-    } catch (reloadError) {
-      if (!isCurrent()) {
-        return;
-      }
-      const message = reloadError instanceof Error ? reloadError.message : `${reloadError}`;
-      this.showReadingFailure('批量移除失败', `${error.message}；书架刷新失败：${message}`);
-    }
+    }).finally((): void => {
+      if (generation === this.bookshelfBatchRemovalGeneration) this.bookshelfBatchRemovalBusy = false;
+    });
   }
 
   private canRemoveShelfBook(book: ShelfBook): boolean {
     return this.route === 'bookshelf' && !this.readingSessionActive &&
-      this.bookshelfRemovalActiveKey.length === 0 &&
+      this.bookshelfRemovalActiveKey.length === 0 && !this.hasUnknownShelfWrite() &&
       this.shelfBooks.some((candidate: ShelfBook): boolean =>
         candidate.sourceId === book.sourceId && candidate.bookId === book.bookId);
   }
 
   private removeShelfBook(book: ShelfBook): void {
-    if (!this.canRemoveShelfBook(book)) {
-      return;
-    }
+    if (!this.canRemoveShelfBook(book)) return;
     const generation = ++this.bookshelfRemovalGeneration;
     const key = `${book.sourceId}\u0000${book.bookId}`;
     this.bookshelfRemovalActiveKey = key;
     const owner = ReaderRuntimeOwner.current();
+    const navigation = this.navigationGeneration;
+    const receiptGeneration = this.beginShelfWrite(owner, 'remove');
     const gateway = new BookshelfFlowGateway(owner, this.shelfFilter());
-    const isCurrent = (): boolean => generation === this.bookshelfRemovalGeneration &&
-      this.bookshelfRemovalActiveKey === key;
-    void gateway.remove(book.sourceId, book.bookId)
-      .then((outcome: BookshelfRemoveOutcome): void => {
-        if (isCurrent()) {
-          this.applyShelfBookRemoval(outcome.shelf);
-        }
-      })
-      .catch((error: Error): Promise<void> =>
-        this.reconcileShelfBookRemovalFailure(book, error, owner, gateway, isCurrent))
-      .finally((): void => {
-        if (isCurrent()) {
-          this.bookshelfRemovalActiveKey = '';
-        }
-      });
-  }
-
-  private async reconcileShelfBookRemovalFailure(
-    book: ShelfBook,
-    originalError: Error,
-    owner: ReaderRuntimeOwner,
-    gateway: BookshelfFlowGateway,
-    isCurrent: () => boolean,
-  ): Promise<void> {
-    try {
-      const stored = await this.bookshelfHost.loadShelfBook(book.sourceId, book.bookId);
-      if (!isCurrent()) {
-        return;
-      }
-      if (stored !== undefined) {
-        this.showReadingFailure('移除书架失败', originalError.message);
-        return;
-      }
-
-      let cleanupError: Error | undefined = undefined;
-      if (book.sourceId === LOCAL_SOURCE_ID) {
-        try {
-          await owner.releaseLocalBookAsset(book.bookId);
-        } catch (error) {
-          cleanupError = error instanceof Error ? error : new Error(errorMessageOf(error));
-        }
-      }
-      try {
-        const shelf = await gateway.load();
-        if (!isCurrent()) {
-          return;
-        }
-        this.applyShelfBookRemoval(shelf);
-      } catch (loadError) {
-        if (!isCurrent()) {
-          return;
-        }
-        this.refreshBookshelf();
-        const loadMessage = loadError instanceof Error ? loadError.message : `${loadError}`;
-        this.showReadingFailure('已移出书架', `书籍已移除，但书架状态刷新未完成：${loadMessage}`);
-      }
-      if (cleanupError !== undefined && isCurrent()) {
-        this.showReadingFailure('已移出书架',
-          `书籍已移除，但应用内 EPUB 文件清理未完成：${cleanupError.message}`);
-      }
-    } catch (probeError) {
-      if (isCurrent()) {
-        const probeMessage = probeError instanceof Error ? probeError.message : `${probeError}`;
-        hilog.error(DOMAIN, 'Reader',
-          'Shelf book removal reconciliation failed: %{private}s', probeMessage);
-        this.showReadingFailure('移除书架失败', originalError.message);
-      }
-    }
+    const isCurrent = (): boolean => !this.shelfReceiptRetired && owner === ReaderRuntimeOwner.current() &&
+      generation === this.bookshelfRemovalGeneration && navigation === this.navigationGeneration &&
+      receiptGeneration === this.shelfWriteGeneration && this.bookshelfRemovalActiveKey === key &&
+      this.route === 'bookshelf';
+    void gateway.remove(book.sourceId, book.bookId).then((outcome: BookshelfRemoveOutcome): void => {
+      this.bookshelfLoadGeneration += 1;
+      if (!isCurrent()) return;
+      this.publishShelfWrite(outcome.receipt, receiptGeneration, outcome.cleanupWarning);
+      if (outcome.shelf !== undefined) this.applyShelfBookRemoval(outcome.shelf);
+    }).finally((): void => {
+      if (generation === this.bookshelfRemovalGeneration && this.bookshelfRemovalActiveKey === key)
+        this.bookshelfRemovalActiveKey = '';
+    });
   }
 
   private applyShelfBookRemoval(shelf: BookshelfDataState): void {
@@ -4011,99 +3954,101 @@ struct Index {
   }
 
   private removeDetailBook(book: ReadingBookDetail): void {
-    if (!this.canRemoveDetailBook(book)) {
-      return;
-    }
+    if (!this.canRemoveDetailBook(book)) return;
     const generation = ++this.bookshelfRemovalGeneration;
     const key = this.detailBookKey(book);
     this.bookshelfRemovalActiveKey = key;
     const owner = ReaderRuntimeOwner.current();
+    const navigation = this.navigationGeneration;
+    const receiptGeneration = this.beginShelfWrite(owner, 'remove');
     const gateway = new BookshelfFlowGateway(owner, this.shelfFilter());
-    const isCurrent = (): boolean => generation === this.bookshelfRemovalGeneration &&
-      this.bookshelfRemovalActiveKey === key;
-    void gateway.remove(book.sourceId, book.bookId)
-      .then((outcome: BookshelfRemoveOutcome): void => {
-        if (isCurrent()) {
-          this.applyDetailBookRemoval(book, outcome.shelf);
-        }
-      })
-      .catch((error: Error): Promise<void> =>
-        this.reconcileDetailBookRemovalFailure(book, error, owner, gateway, isCurrent))
-      .finally((): void => {
-        if (isCurrent()) {
-          this.bookshelfRemovalActiveKey = '';
-        }
-      });
+    const isCurrent = (): boolean => !this.shelfReceiptRetired && owner === ReaderRuntimeOwner.current() &&
+      generation === this.bookshelfRemovalGeneration && navigation === this.navigationGeneration &&
+      receiptGeneration === this.shelfWriteGeneration && this.bookshelfRemovalActiveKey === key &&
+      this.route === 'detail' && this.isSameDetailBook(book);
+    void gateway.remove(book.sourceId, book.bookId).then((outcome: BookshelfRemoveOutcome): void => {
+      this.bookshelfLoadGeneration += 1;
+      if (!isCurrent()) return;
+      this.publishShelfWrite(outcome.receipt, receiptGeneration, outcome.cleanupWarning);
+      // A validated ACK permits leaving the deleted detail even when the
+      // follow-up read failed. A merely absent read is never an ACK.
+      if (outcome.receipt.receipt.confirmation === 'confirmed') {
+        if (outcome.shelf !== undefined) this.applyDetailBookRemoval(book, outcome.shelf);
+        else this.returnFromDetail();
+      } else {
+        if (outcome.shelf !== undefined) this.applyBookshelfState(outcome.shelf);
+        this.returnFromDetail();
+      }
+    }).finally((): void => {
+      if (generation === this.bookshelfRemovalGeneration && this.bookshelfRemovalActiveKey === key)
+        this.bookshelfRemovalActiveKey = '';
+    });
   }
 
-  /**
-   * `removeBook` commits Core before releasing a retained local EPUB. If the
-   * Host cleanup or the following shelf read fails, query the exact composite
-   * key before deciding whether the destructive command itself failed.
-   */
-  private async reconcileDetailBookRemovalFailure(
-    book: ReadingBookDetail,
-    originalError: Error,
-    owner: ReaderRuntimeOwner,
-    gateway: BookshelfFlowGateway,
-    isCurrent: () => boolean,
-  ): Promise<void> {
-    try {
-      const stored = await this.bookshelfHost.loadShelfBook(book.sourceId, book.bookId);
-      if (!isCurrent()) {
-        return;
-      }
-      if (stored !== undefined) {
-        this.showReadingFailure('移除书架失败', originalError.message);
-        return;
-      }
+  private emptyShelfRecovery(): ReaderRecoveryView {
+    return { message: '', visible: false, canRetry: false, generation: 0 };
+  }
 
-      let cleanupError: Error | undefined = undefined;
-      if (book.sourceId === LOCAL_SOURCE_ID) {
-        try {
-          // Idempotent retry for the Core-committed / Host-cleanup-failed window.
-          await owner.releaseLocalBookAsset(book.bookId);
-        } catch (error) {
-          cleanupError = error instanceof Error ? error : new Error(errorMessageOf(error));
-        }
+  private hasUnknownShelfWrite(): boolean {
+    return this.shelfWriteOwner === ReaderRuntimeOwner.current() &&
+      this.shelfWriteReceipt?.receipt.confirmation === 'unknown';
+  }
+
+  private shelfRecovery(): ReaderRecoveryView {
+    if (this.shelfWriteOwner !== ReaderRuntimeOwner.current()) return this.emptyShelfRecovery();
+    const recovery = readerRecoveryView(this.shelfWriteReceipt);
+    if (this.shelfWriteCleanupWarning.length === 0) return recovery;
+    return { message: (recovery.visible ? `${recovery.message}；` : '书籍已移出书架；') +
+      `应用内 EPUB 文件清理未完成：${this.shelfWriteCleanupWarning}`,
+      visible: true, canRetry: recovery.canRetry, generation: this.shelfWriteGeneration };
+  }
+
+  private beginShelfWrite(owner: ReaderRuntimeOwner, action: 'import' | 'remove'): number {
+    this.shelfWriteOwner = owner;
+    this.shelfWriteAction = action;
+    this.shelfWriteCleanupWarning = '';
+    this.shelfWriteReceipt = undefined;
+    this.shelfReconcileBusy = 0;
+    return ++this.shelfWriteGeneration;
+  }
+
+  private publishShelfWrite(receipt: PersistedReceiptProjection<BookshelfDataState>, generation: number,
+    cleanupWarning?: string): void {
+    this.shelfWriteReceipt = { ...receipt, facts: { ...receipt.facts, generation } };
+    this.shelfWriteCleanupWarning = cleanupWarning ?? '';
+  }
+
+  private async reconcileShelfWrite(generation: number): Promise<void> {
+    const receipt = this.shelfWriteReceipt;
+    const owner = this.shelfWriteOwner;
+    if (receipt === undefined || owner === undefined || generation !== this.shelfWriteGeneration ||
+      !receipt.facts.canRetry || this.shelfReconcileBusy !== 0 || this.shelfReceiptRetired ||
+      owner !== ReaderRuntimeOwner.current() || this.route !== 'bookshelf') return;
+    const navigation = this.navigationGeneration;
+    const attempt = this.importAttemptId;
+    const dialogVisible = this.hasVisibleImportDialog();
+    const current = (): boolean => !this.shelfReceiptRetired && generation === this.shelfWriteGeneration &&
+      navigation === this.navigationGeneration && owner === ReaderRuntimeOwner.current() &&
+      this.route === 'bookshelf' && (!dialogVisible || attempt === this.importAttemptId);
+    this.shelfReconcileBusy = generation;
+    this.shelfWriteReceipt = projectPersistedReceipt({ confirmation: receipt.receipt.confirmation,
+      readback: 'reading', value: receipt.value, generation, canRetry: false });
+    try {
+      const read = await new BookshelfFlowGateway(owner, this.shelfFilter()).reconcile(receipt, generation);
+      if (!current()) return;
+      this.shelfWriteReceipt = read;
+      if (read.value !== undefined) {
+        this.bookshelfLoadGeneration += 1;
+        this.applyBookshelfState(read.value);
       }
-      let shelf: BookshelfDataState;
-      try {
-        shelf = await gateway.load();
-      } catch (loadError) {
-        if (!isCurrent()) {
-          return;
-        }
-        // The exact key already proved the destructive Core commit. Never
-        // leave a deleted book open or relabel that committed fact as failure.
-        if (this.route === 'detail' && this.isSameDetailBook(book)) {
-          this.returnFromDetail();
-        } else if (this.route === 'bookshelf') {
-          this.refreshBookshelf();
-        }
-        const loadMessage = loadError instanceof Error ? loadError.message : `${loadError}`;
-        this.showReadingFailure('已移出书架',
-          `书籍已从书架移除，但书架状态刷新未完成：${loadMessage}`);
-        if (cleanupError !== undefined) {
-          hilog.error(DOMAIN, 'Reader',
-            'Local EPUB cleanup also failed after bookshelf removal: %{private}s', cleanupError.message);
-        }
-        return;
-      }
-      if (!isCurrent()) {
-        return;
-      }
-      this.applyDetailBookRemoval(book, shelf);
-      if (cleanupError !== undefined) {
-        this.showReadingFailure('已移出书架',
-          `书籍已从书架移除，但应用内 EPUB 文件清理未完成：${cleanupError.message}`);
-      }
-    } catch (probeError) {
-      if (isCurrent()) {
-        const probeMessage = probeError instanceof Error ? probeError.message : `${probeError}`;
-        hilog.error(DOMAIN, 'Reader',
-          'Bookshelf removal reconciliation failed: %{private}s', probeMessage);
-        this.showReadingFailure('移除书架失败', originalError.message);
+      if (this.shelfWriteAction === 'import') this.importFailureMessage = read.refreshError ?? '';
+    } finally {
+      if (this.shelfReconcileBusy === generation) {
+        this.shelfReconcileBusy = 0;
+        // Closing a dialog retires the pending callback but keeps the last
+        // truthful receipt recoverable from the current bookshelf surface.
+        if (!current() && owner === ReaderRuntimeOwner.current() && generation === this.shelfWriteGeneration)
+          this.shelfWriteReceipt = receipt;
       }
     }
   }
@@ -6751,13 +6696,15 @@ struct Index {
   private async beginImport(): Promise<void> {
     const presentation = this.currentImportPresentation();
     if (this.route !== 'bookshelf' || presentation === undefined ||
-      presentation.state !== 'fileSelection' || this.importBusyAttempt !== 0) return;
+      presentation.state !== 'fileSelection' || this.importBusyAttempt !== 0 ||
+      this.bookshelfRemovalActiveKey.length > 0 || this.hasUnknownShelfWrite()) return;
     const attemptId = ++this.importAttemptId;
     this.importBusyAttempt = attemptId;
     this.importFailureMessage = '';
     const navigationGeneration = this.navigationGeneration;
     const owner = ReaderRuntimeOwner.current();
     const current = (): boolean => this.isCurrentImport(attemptId, navigationGeneration, owner);
+    const receiptGeneration = this.beginShelfWrite(owner, 'import');
     const gateway = new BookshelfFlowGateway(owner, this.shelfFilter());
     this.writeImportPresentation(new LocalImportPresentation('pickerOpening'));
     try {
@@ -6788,6 +6735,9 @@ struct Index {
       if (outcome.shelf !== undefined) {
         this.applyBookshelfState(outcome.shelf);
       }
+      this.publishShelfWrite({ receipt: outcome.readback, facts: outcome.operation,
+        value: outcome.shelf, hasValue: outcome.shelf !== undefined,
+        refreshError: outcome.refreshWarning }, receiptGeneration);
       this.importFailureMessage = outcome.refreshWarning ?? '';
       this.writeImportPresentation(new LocalImportPresentation('result', outcome.batch));
     } catch (error) {
@@ -6804,7 +6754,7 @@ struct Index {
   }
 
   private isCurrentImport(attemptId: number, navigationGeneration: number, owner: ReaderRuntimeOwner): boolean {
-    if (this.importAttemptId !== attemptId || this.navigationGeneration !== navigationGeneration ||
+    if (this.shelfReceiptRetired || this.importAttemptId !== attemptId || this.navigationGeneration !== navigationGeneration ||
       this.route !== 'bookshelf') return false;
     // Runtime owner identity is its process generation; replacement never
     // transfers a pending picker/import's right to present into a new runtime.

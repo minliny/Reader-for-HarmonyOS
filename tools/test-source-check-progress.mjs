@@ -28,11 +28,17 @@ const orchestratorSource = read('entry/src/main/ets/features/source/SourceToolsO
   .replace(/^import \{ hilog \} from ['"]@kit\.PerformanceAnalysisKit['"];\n/m, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '')
   .replace(/^import \{[\s\S]*?\} from ['"]\.\/SourceGateway['"];\n/m, '');
+const sharedFacts=read('entry/src/main/ets/app/ReaderOperationFacts.ts').replace(/^export /gm,'');
+const persistedFacts=read('entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,'');
+const writeEvidence=read('entry/src/main/ets/app/ReaderWriteEvidence.ts').replace(/^export /gm,'');
 const executable = stripTypeScriptTypes(
-  `${errorMessageSource}\n${transportPolicySource}\n${sourceCategorySource}\n${gatewaySource}\n${orchestratorSource}`,
+  `${sharedFacts}\n${persistedFacts}\n${writeEvidence}\n${errorMessageSource}\n${transportPolicySource}\n${sourceCategorySource}\n${gatewaySource.replace(/^import[^\n]+\n/gm,'')}\n${orchestratorSource.replace(/^import[^\n]+\n/gm,'')}`,
 );
 assert.doesNotMatch(executable, /^import /m, 'the Node harness must not retain platform imports');
 
+let currentOwner;
+globalThis.ReaderRuntimeOwner={current:()=>currentOwner};
+globalThis.isReaderCoreTransactionPendingError=()=>false;
 globalThis.hilog = {
   warn() {}, error() {}, info() {}, debug() {}, fatal() {},
 };
@@ -126,6 +132,7 @@ function controlledOwner(sources) {
 }
 
 function capture(owner) {
+  currentOwner=owner;
   const snapshots = [];
   const orchestrator = new SourceToolsOrchestrator(
     (snapshot) => snapshots.push(snapshot),

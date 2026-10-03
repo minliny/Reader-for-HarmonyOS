@@ -1,3 +1,5 @@
+import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { TYPE_APP_INHERITED_HINT, TYPE_FILE_IMPORT_ACTION, TYPE_FILE_IMPORT_BADGE, TYPE_FILE_IMPORT_CANCEL, TYPE_FILE_IMPORT_HINT, TYPE_FILE_IMPORT_LABEL, TYPE_FILE_IMPORT_NAME, TYPE_FILE_IMPORT_PROGRESS, TYPE_FILE_IMPORT_TITLE, TYPE_FILE_IMPORT_WAIT } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import curves from '@ohos.curves';
@@ -53,6 +55,8 @@ export struct LocalImportDialog {
   @Prop @Watch('onBatchChanged') batch: LocalImportBatch | undefined;
   @Prop @Watch('onPresentationChanged') reduceMotion: boolean = false;
   @Prop failureMessage: string = '';
+  @Prop recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  onReconcile: (generation: number) => void = (_generation: number): void => {};
   @StorageLink('readerAppForeground') @Watch('onPresentationChanged') private foreground: boolean = true;
   @State private viewportHeight: number = 0;
   @State private measuredItemsHeight: number = 0;
@@ -335,6 +339,8 @@ export struct LocalImportDialog {
   @Builder
   private resultFooter() {
     Column() {
+      ReaderRecoveryNotice({ view: this.recovery,
+        onReconcile: (generation: number): void => this.onReconcile(generation) });
       Row({ space: 6 }) {
         Image($r('app.media.import_done')).width(14).height(14);
         Text('完成').fontFamily(TYPE_FILE_IMPORT_ACTION.fontFamily).fontWeight(TYPE_FILE_IMPORT_ACTION.fontWeight).fontSize(TYPE_FILE_IMPORT_ACTION.fontSizeFp).lineHeight(TYPE_FILE_IMPORT_ACTION.lineHeightFp as number)

@@ -464,6 +464,7 @@
     "test-search-operation-consumer.mjs",
     "test-reader-static-chrome-typography.mjs",
     "test-reader-dynamic-chrome-typography.mjs",
-    "test-reader-typography-coverage.mjs"
+    "test-reader-typography-coverage.mjs",
+    "test-bookshelf-write-receipt-consumers.mjs"
   ]
 }

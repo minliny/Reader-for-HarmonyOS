@@ -31,6 +31,7 @@ for (const [name, file, slot] of [
   ['MainTabShell', 'features/shell/MainTabShell.ets', 'content'],
   ['AppTopBar', 'features/common/AppTopBar.ets', 'trailing'],
   ['ReaderIconButton', 'features/common/ReaderIconButton.ets'],
+  ['ReaderRecoveryNotice', 'features/common/ReaderRecoveryNotice.ets'],
   ['BookshelfMoreMenu', 'features/bookshelf/BookshelfMoreMenu.ets'],
   ['SearchSpinner', 'features/search/SearchSpinner.ets'],
 ]) register(name, existsSync(resolve(root, 'entry/src/main/ets', file)) ? read(file) : '', slot);
@@ -43,6 +44,7 @@ function check(name, action) {
 function indexFixture(state, source = 'online') {
   const names = ['build'];
   if (index.includes('private bookshelfContent(')) names.push('bookshelfContent');
+  if (index.includes('private bookshelfShellContent(')) names.push('bookshelfShellContent');
   const { owner } = createReaderBuilderProbe(index, names, {
     ...dependencies, SafeAreaType: enumValues('SafeAreaType'), SafeAreaEdge: enumValues('SafeAreaEdge'),
   });
@@ -50,6 +52,7 @@ function indexFixture(state, source = 'online') {
     isCoreShelfEmpty: state === 'empty', bookshelfLoadFailed: state === 'failure',
     appThemeScheme: 'day', settingsSnapshot: { reduceMotion: false }, shelfProjectionRevision: '',
     shelfBooks: [{ sourceId: source }], readingSessionActive: false, readerOwnsWindowEdges: () => false,
+    shelfRecovery: () => ({message:'',visible:false,canRetry:false,generation:0}),
     appContentTopInset: () => 39, hasVisibleImportDialog: () => false });
   owner.calls = [];
   for (const method of ['openImportDialog','openSearch','openBookshelfSettings','openBookshelfMultiSelect',
@@ -114,6 +117,7 @@ function shellFixture({ populated = false, width = 365, menu = false } = {}) {
   });
   let contentCalls = 0;
   Object.assign(owner, { appThemeScheme: 'day', readerWindowMetricsRevision: 0, populated, viewportWidth: 0,
+    recovery: {message:'',visible:false,canRetry:false,generation:0},
     moreMenuVisible: menu, moreAnchorRight: 0, moreAnchorBottom: 0, overlayOriginX: 0, overlayOriginY: 0,
     canCheckUpdates: populated, updateRunning: false, backgroundUpdateRunning: false, updateProgressDone: 0, updateProgressTotal: 0,
     reduceMotion: false, content: () => { contentCalls++; }, calls: [] });

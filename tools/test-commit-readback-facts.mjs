@@ -305,7 +305,7 @@ const flowSource = read('entry/src/main/ets/features/bookshelf/BookshelfFlowGate
 const flowExecutableSource = flowSource.replace(
   /constructor\(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner\.current\(\),\n\s*private readonly filter: BookshelfFilter = \{ readingState: 'all', sourceKind: 'all' \},\n\s*private readonly background: boolean = false\) \{/,
   "constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current(), filter: BookshelfFilter = { readingState: 'all', sourceKind: 'all' }, background: boolean = false) {\n    this.filter = filter;\n    this.background = background;",
-).replace(/^export /gm, '');
+).replace(/^import[^\n]+\n/gm, '').replace(/^export /gm, '');
 const flowExecutable = stripTypeScriptTypes(`${operationFactsSource}\n${persistedReceiptProjectionSource}\n${flowExecutableSource}`);
 assert.doesNotMatch(flowExecutable, /^import /m, 'flow harness must not retain platform imports');
 const flowFactory = new Function(

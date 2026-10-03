@@ -42,11 +42,11 @@ function fixture(initial={},legacy=null){
 const owner={};let currentOwner=owner,picks=[],imports=[],released=[],applied=[],presented=[];
 class Gateway {selectLocalBookInputs(){const d=deferred();picks.push(d);return d.promise;} importPreparedSelections(){const d=deferred();imports.push(d);return d.promise;}async releaseUnusedSelections(x){released.push(x);}}
 class Presentation {constructor(state,batch){this.state=state;this.batch=batch;}}
-const Index=productionMotionMethods(path('pages/Index.ets'),['beginImport','isCurrentImport','closeImportDialog','openImportDialog'],
+const Index=productionMotionMethods(path('pages/Index.ets'),['beginImport','isCurrentImport','closeImportDialog','openImportDialog','hasUnknownShelfWrite','beginShelfWrite','publishShelfWrite'],
  {ReaderRuntimeOwner:{current:()=>currentOwner},BookshelfFlowGateway:Gateway,LocalImportPresentation:Presentation,
  hilog:{error(){}},DOMAIN:0,errorMessageOf:e=>String(e)});
 function index(){let p={state:'fileSelection'};return Object.assign(new Index(),{route:'bookshelf',navigationGeneration:1,
- importAttemptId:0,importBusyAttempt:0,bookshelfLoadGeneration:0,currentImportPresentation:()=>p,
+ importAttemptId:0,importBusyAttempt:0,bookshelfLoadGeneration:0,bookshelfRemovalActiveKey:'',shelfWriteGeneration:0,currentImportPresentation:()=>p,
  writeImportPresentation:x=>{p=x;presented.push(x);},applyBookshelfState:x=>applied.push(x)});}
 const batch={state:'completed',items:[{fileName:'a',state:'success'}],imported:1,failed:0};
 {

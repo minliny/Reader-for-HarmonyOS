@@ -34,18 +34,20 @@ assert.match(index, /new BookshelfFlowGateway\(owner, this\.shelfFilter\(\)\)[\s
   'the page must reuse the feature gateway instead of issuing a second Core contract');
 assert.doesNotMatch(index, /request\('bookshelf\.remove'/,
   'Index must not bypass ReaderCoreGateway with a duplicate removal protocol');
-assert.match(index, /loadShelfBook\(book\.sourceId, book\.bookId\)/,
-  'a post-commit Host failure must be reconciled by the exact composite shelf key');
-assert.match(index, /await owner\.releaseLocalBookAsset\(book\.bookId\)/,
-  'local Host cleanup must get one idempotent retry after Core proves the book absent');
-assert.match(index, /The exact key already proved the destructive Core commit[\s\S]*this\.returnToBookshelf\(\)/,
-  'a failed post-commit shelf refresh must not leave the deleted detail route visible');
+assert.match(flow, /confirmed: \(value: boolean\): void => \{ evidence\.confirmed\(\); removed = value; \}/,
+  'the actual gateway ACK establishes confirmation before independent cleanup');
+assert.match(index, /outcome\.receipt\.receipt\.confirmation === 'confirmed'/,
+  'a validated mutation ACK admits the deleted-detail transition');
+assert.match(index, /reconcileShelfWrite[\s\S]*confirmation: receipt\.receipt\.confirmation/,
+  'read-only recovery preserves the original confirmation rather than deriving it from absence');
+assert.doesNotMatch(index, /reconcileDetailBookRemovalFailure|reconcileShelfBookRemovalFailure/,
+  'obsolete exact-key absence inference and compensation paths must be removed');
 assert.match(index, /this\.bookshelfLoadGeneration \+= 1;\s*if \(this\.route === 'detail' && this\.isSameDetailBook\(book\)\) \{\s*this\.returnFromDetail\(\);[\s\S]*?this\.bookshelfLoadGeneration \+= 1;\s*this\.applyBookshelfState\(shelf\);/,
   'the exact mutation result must replace stale shelf reads when returning from detail (origin-aware dispatch)');
 assert.match(index, /this\.shelfBooks = state\.shelf\.books\.map\([\s\S]*this\.continueReading = state\.continueReading;[\s\S]*state\.kind !== 'populated'/,
   'an empty removal result must clear stale cards as well as the visual admission flag');
 
-assert.match(flow, /async remove\(sourceId: string, bookId: string\)[\s\S]*this\.bookshelf\.removeBook\(sourceId, bookId\)/);
+assert.match(flow, /async remove\(sourceId: string, bookId: string\)[\s\S]*this\.bookshelf\.removeBook\(sourceId, bookId,/);
 assert.match(core, /request\('bookshelf\.remove', \{ sourceId, bookId \}\)/);
 assert.match(core, /if \(sourceId === 'local'\)[\s\S]*releaseLocalBookAsset\(bookId\)/,
   'only local books own a retained Host archive');

@@ -1,3 +1,5 @@
+import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { MainTabShell } from '../shell/MainTabShell';
 import { AppTopBar } from '../common/AppTopBar';
 import { ReaderIconButton } from '../common/ReaderIconButton';
@@ -14,6 +16,8 @@ export const BOOKSHELF_WIDE_BREAKPOINT = 600;
 export struct BookshelfShell {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @Prop recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  onReconcile: (generation: number) => void = (_generation: number): void => {};
   @Prop populated: boolean = false;
   @Prop reduceMotion: boolean = false;
   @Prop canCheckUpdates: boolean = false;
@@ -53,7 +57,15 @@ export struct BookshelfShell {
   private shellContent() {
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.TopStart }) {
-        this.content();
+        if (this.recovery.visible) {
+          Column() {
+            ReaderRecoveryNotice({ view: this.recovery,
+              onReconcile: (generation: number): void => this.onReconcile(generation) });
+            Stack() { this.content(); }.width('100%').layoutWeight(1);
+          }.width('100%').height('100%').padding({ top: READER_FLOATING_TOP_BAR_HEIGHT });
+        } else {
+          this.content();
+        }
       }
       .width('100%')
       .height('100%');
