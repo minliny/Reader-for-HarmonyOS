@@ -1,3 +1,4 @@
+import type { RemoteReadingIdentity } from './RemoteReadingContract';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../app/ReaderPersistedReceiptProjection';
@@ -64,6 +65,30 @@ export class ReadingOfflineHost {
   constructor(dependencies: ReadingOfflineDependencies) { this.dependencies = dependencies; }
   busy(): boolean { return this.active; }
   snapshot(): ReadingOfflineOperation | undefined { return this.operation; }
+
+  /** SourceSwitch post-commit cleanup of one captured old identity. Its Core
+   * and physical-image effects have independent facts. No current reader
+   * session, source cookie or desired-book inference participates. */
+  async cleanupRetiredSource(identity: RemoteReadingIdentity, isCurrent?: () => boolean): Promise<void> {
+    const current = (): boolean => { try { return this.dependencies.ownsRuntime() && (isCurrent?.() ?? true); } catch (_) { return false; } };
+    if (!current()) throw new Error('retired source cleanup Runtime is no longer current');
+    if (identity.sourceId.trim() === '' || identity.bookId.trim() === '') throw new Error('retired source cleanup requires exact book identity');
+    if (this.active || (this.operation?.action === 'clear' && this.operation.projection.receipt.confirmation === 'unknown'))
+      throw new Error('an earlier offline operation still requires reconciliation');
+    this.active = true; ++this.readGeneration; const generation = ++this.generation;
+    const evidence = new ReaderWriteEvidence();
+    this.operation = { action: 'clear', sourceId: identity.sourceId, bookId: identity.bookId, generation,
+      materialization: 'running', projection: projectPersistedReceipt({ confirmation: 'undispatched', readback: 'idle', generation }) };
+    try {
+      await this.dependencies.gateway.clearBookIdentity(identity.sourceId, identity.bookId, current, evidence);
+      this.operation.materialization = current() ? 'succeeded' : 'retired';
+      this.updateReceipt(evidence, 'idle');
+    } catch (error) {
+      this.operation.materialization = current() ? 'failed' : 'retired';
+      this.updateReceipt(evidence, 'failed', (error as Error).message);
+      throw error as Error;
+    } finally { if (this.generation === generation) this.active = false; }
+  }
 
   async downloadChapter(chapterIndex: number, binding: ReadingOfflineBinding): Promise<void> {
     if (!Number.isSafeInteger(chapterIndex) || !binding.session.entries.some(entry => entry.index === chapterIndex &&
