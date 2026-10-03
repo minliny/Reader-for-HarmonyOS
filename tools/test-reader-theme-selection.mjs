@@ -51,11 +51,13 @@ assert.equal(store.current().activeTheme,'greenNight');assert.equal(store.curren
 pending[1].d.resolve();await two.saved;
 const three=await store.change(s=>setReaderAppearanceTheme(s,'warm','day'));void three.saved.catch(()=>{});await new Promise(r=>setImmediate(r));
 pending[2].d.reject(Error('current-write-failed'));await three.saved.catch(()=>{});await new Promise(r=>setImmediate(r));
-assert.equal(store.current().activeTheme,'greenNight');assert.equal(store.current().appThemeMode,'night');
-assert.equal(pending[3].snapshot.activeTheme,'greenNight');pending[3].d.resolve();await store.flush();
-assert.equal(store.hasUnsavedChanges(),false);assert.equal(disk.value.activeTheme,'greenNight');
+assert.equal(store.current().activeTheme,'warm');assert.equal(store.current().appThemeMode,'day');
+assert.equal(store.hasUnsavedChanges(),true);assert.equal(pending.length,3,'unknown save must not enqueue old-theme compensation');
+const retry=store.flush();await new Promise(r=>setImmediate(r));
+assert.equal(pending[3].snapshot.activeTheme,'warm');pending[3].d.resolve();await retry;
+assert.equal(store.hasUnsavedChanges(),false);assert.equal(disk.value.activeTheme,'warm');
 for(const frame of frames)assert.equal(appearanceThemeSelection(frame).appThemeMode==='system'?'day':frame.appThemeMode,READER_THEME_DEFINITIONS.find(t=>t.id===frame.activeTheme).scheme);
-console.log('PASS theme truth table, migrations, sync fallback, atomic publication, old failure isolation and current failure durable rollback');
+console.log('PASS theme truth table, migrations, sync fallback, atomic publication, old failure isolation and current unknown retains intent and explicit idempotent flush');
 const removedNight=normalizeReaderAppearanceSnapshot({...fresh,appThemeMode:'night',activeTheme:'deleted-night',nightTheme:'greenNight'});
 assert.equal(removedNight.activeTheme,'greenNight');assert.equal(removedNight.appThemeMode,'night');
 const removedDay=normalizeReaderAppearanceSnapshot({...fresh,appThemeMode:'day',activeTheme:'deleted-day',dayTheme:'warm'});

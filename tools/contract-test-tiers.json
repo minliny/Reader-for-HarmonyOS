@@ -256,6 +256,7 @@
     "test-reader-appearance-make.mjs",
     "test-reader-appearance-page-publication.mjs",
     "test-reader-appearance-store.mjs",
+    "test-reader-appearance-write-confirmation.mjs",
     "test-reader-appearance-theme-extension.mjs",
     "test-reader-appearance.mjs",
     "test-reader-auto-page-full.mjs",
