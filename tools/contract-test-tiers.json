@@ -207,6 +207,7 @@
     "test-transient-transport-acquisition.mjs"
   ],
   "integration": [
+    "test-source-switch-reader-ack.mjs",
     "test-source-switch-host.mjs",
     "test-action-menu-surface.mjs",
     "test-architecture-shared-producers.mjs",
