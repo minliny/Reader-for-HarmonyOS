@@ -41,7 +41,7 @@ assert.match(ability, /this\.runtimeOwner\?\.flush\(\)/);
 assert.match(ability, /owner\?\.release\(\)/);
 
 const pages = JSON.parse(await readFile(new URL('../entry/src/main/resources/base/profile/main_pages.json', import.meta.url), 'utf8'));
-assert.deepEqual(pages.src, [normal, diagnostic, rendererPilot], 'diagnostics are registered for guarded debug cold starts');
+assert.deepEqual(pages.src, [normal, diagnostic, rendererPilot, 'pages/ReaderStartupRecovery'], 'diagnostics are registered for guarded debug cold starts');
 const renderer = await readFile(new URL('../entry/src/main/ets/pages/ReaderRendererPilot.ets', import.meta.url), 'utf8');
 assert.match(renderer, /\$rawfile\('reader-oss-pilot\/index\.html'\)/);
 assert.match(renderer, /\.fileAccess\(false\)/);

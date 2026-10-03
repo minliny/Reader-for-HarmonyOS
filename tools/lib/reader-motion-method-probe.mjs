@@ -1,6 +1,7 @@
 import { readingChapterLayoutMap } from '../../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
 import { hasKnownReadingImageGeometry } from '../../entry/src/main/ets/features/reading/ReadingChapterWindow.ts';
 import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { ReaderStartupContentOwner } from '../../entry/src/main/ets/app/ReaderStartupContentOwner.ts';
 import { errorMessageOf } from '../../entry/src/main/ets/app/ErrorMessage.ts';
 import { ReaderParagraphLayoutOwner } from '../../entry/src/main/ets/features/reading/ReaderParagraphLayoutOwner.ts';
 import { ReaderPhysicalPaginationOwner } from '../../entry/src/main/ets/features/reading/ReaderPhysicalPaginationOwner.ts';
@@ -18,7 +19,7 @@ const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
  * This does not simulate ArkUI layout, reactive delivery, or compositor pixels. */
 export function productionMotionMethods(file, names, dependencies = {}) {
   dependencies = { readerAppColor, readerThemeDefinition, readingChapterLayoutMap, hasKnownReadingImageGeometry, errorMessageOf,
-    ...readerTypographyRoles, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner,
+    ...readerTypographyRoles, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner, ReaderStartupContentOwner,
     ReaderRuntimeOwner: { current: () => ({ captureReadingContentValidity: () => () => true,
       waitForReadingContentIdle: async () => {} }) }, ...dependencies };
   const source = readFileSync(file, 'utf8');

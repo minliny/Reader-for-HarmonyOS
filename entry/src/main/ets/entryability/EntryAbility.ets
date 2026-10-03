@@ -10,6 +10,7 @@ import { AbilityConstant, ConfigurationConstant, type Configuration, UIAbility, 
 import { window } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
+import { ReaderStartupContentOwner } from '../app/ReaderStartupContentOwner';
 import { ReaderSystemFileOpenHost } from '../app/ReaderSystemFileOpenHost';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
 import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory } from '../app/ReaderControlVerificationLaunch';
@@ -22,6 +23,7 @@ const DOMAIN = 0x5244;
 
 export default class EntryAbility extends UIAbility {
   private windowStageGeneration: number = 0;
+  private startupContent: ReaderStartupContentOwner | undefined = undefined;
   private coldStartPage: string = 'pages/Index';
   private runtimeOwner: ReaderRuntimeOwner | undefined = undefined;
   private themeReady: Promise<void> = Promise.resolve();
@@ -159,28 +161,41 @@ export default class EntryAbility extends UIAbility {
   onWindowStageCreate(windowStage: window.WindowStage): void {
     ReaderStartupTrace.current()?.mark('window.create');
     const generation = ++this.windowStageGeneration;
-    const win = windowStage.getMainWindowSync();
-    void ReaderStartupTrace.measure('startup.window', (): Promise<boolean> => ReaderWindowCoordinator.install(win))
-      .then((installed: boolean): void => {
-      if (installed && generation === this.windowStageGeneration) {
-        void Promise.all([this.recoveryReady, this.shelfFontsReady]).then((): void => {
-          if (generation === this.windowStageGeneration) this.loadMainContent(windowStage);
+    this.startupContent?.close();
+    let windowReady: Promise<boolean>;
+    try {
+      const win = windowStage.getMainWindowSync();
+      windowReady = ReaderStartupTrace.measure('startup.window', (): Promise<boolean> => ReaderWindowCoordinator.install(win))
+        .catch((error: Error): boolean => {
+          hilog.error(DOMAIN, 'Reader', 'Window metrics setup failed: %{private}s', error.message);
+          return false;
         });
-      }
-    }).catch((error: Error): void => {
-      hilog.error(DOMAIN, 'Reader', 'Window metrics setup failed: %{private}s', error.message);
-      // Window setup failure must not strand the application before its first
-      // page. The default zero-inset snapshot keeps the UI recoverable.
-      if (generation === this.windowStageGeneration) {
-        void Promise.all([this.recoveryReady, this.shelfFontsReady]).then((): void => {
-          if (generation === this.windowStageGeneration) this.loadMainContent(windowStage);
-        });
-      }
+    } catch (error) {
+      hilog.error(DOMAIN, 'Reader', 'Main window access failed: %{private}s', (error as Error).message);
+      windowReady = Promise.resolve(false);
+    }
+    // Window metrics can fall back to their existing zero-inset snapshot.
+    // A bounded admission failure is displayed outside the not-yet-mounted Index.
+    const admission = Promise.all([windowReady, this.recoveryReady, this.shelfFontsReady]).then((): void => {});
+    this.startupContent = new ReaderStartupContentOwner(admission, {
+      loadMain: (done: (code: number) => void): void => this.loadMainContent(windowStage, done),
+      loadRecovery: (done: (code: number) => void): void => {
+        windowStage.loadContent('pages/ReaderStartupRecovery', (error): void => done(error.code));
+      },
+      ready: (): void => { if (generation === this.windowStageGeneration) this.eventLoopProbe?.start(); },
+      unavailable: (): void => {
+        hilog.error(DOMAIN, 'Reader', 'Startup recovery content could not be mounted; platform recovery remains unavailable');
+      },
+      exit: (): Promise<void> => this.context.terminateSelf(),
+      observerFailed: (error: Error): void => hilog.warn(DOMAIN, 'Reader', 'Startup projection failed: %{private}s', error.message),
     });
+    this.startupContent.start();
   }
 
   onWindowStageDestroy(): void {
     this.eventLoopProbe?.stop('window-destroyed');
+    this.startupContent?.close();
+    this.startupContent = undefined;
     this.windowStageGeneration += 1;
     ReaderWindowCoordinator.detach();
   }
@@ -219,6 +234,8 @@ export default class EntryAbility extends UIAbility {
 
   onDestroy(): void {
     this.eventLoopProbe?.stop('destroyed');
+    this.startupContent?.close();
+    this.startupContent = undefined;
     ReaderThemeHost.detach();
     this.windowStageGeneration += 1;
     ReaderWindowCoordinator.detach();
@@ -231,18 +248,21 @@ export default class EntryAbility extends UIAbility {
     });
   }
 
-  private loadMainContent(windowStage: window.WindowStage): void {
+  private loadMainContent(windowStage: window.WindowStage, done?: (code: number) => void): void {
+    const generation = this.windowStageGeneration;
     const trace = ReaderStartupTrace.current();
     const startedAt = trace?.begin('startup.load-content') ?? -1;
     trace?.mark('startup.admission-settled');
     windowStage.loadContent(this.coldStartPage, (error): void => {
+      if (generation !== this.windowStageGeneration) return;
       // This is a platform callback, never evidence of a displayed shelf frame.
       trace?.end('startup.load-content', startedAt, error.code ? 'failed' : 'callback');
       if (error.code) {
         hilog.error(DOMAIN, 'Reader', 'Failed to load main page: %{private}s', JSON.stringify(error));
-      } else {
+      } else if (done === undefined) {
         this.eventLoopProbe?.start();
       }
+      done?.(error.code);
     });
   }
 }

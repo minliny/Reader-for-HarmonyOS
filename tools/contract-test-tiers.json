@@ -456,6 +456,8 @@
     "test-reader-directory-typography.mjs",
     "test-typography-role-imports.mjs",
     "test-source-tools-receipt-consumers.mjs",
-    "test-settings-selection-owner.mjs"
+    "test-settings-selection-owner.mjs",
+    "test-reader-startup-content-recovery.mjs",
+    "test-reader-startup-recovery-surface.mjs"
   ]
 }

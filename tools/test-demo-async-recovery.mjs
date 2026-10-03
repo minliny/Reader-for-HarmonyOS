@@ -1,3 +1,4 @@
+import {ReaderStartupContentOwner} from '../entry/src/main/ets/app/ReaderStartupContentOwner.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { registerHooks, stripTypeScriptTypes } from 'node:module';
@@ -76,14 +77,14 @@ for (const outcome of ['cancelled', 'already-saved', 'failure', 'other-book']) {
 }
 const entry=stripTypeScriptTypes(read('entry/src/main/ets/entryability/EntryAbility.ets').replace(/^import[\s\S]*?;\n/gm,''));
 let setups=[];const coordinator={install:()=>{const p=deferred();setups.push(p);return p.promise;},detach(){}};
-const Entry=new Function('UIAbility','ReaderWindowCoordinator','ReaderStartupTrace','hilog',entry.replace('export default class','return class'))(class{},coordinator,ReaderStartupTrace,{error(){}});
+const Entry=new Function('UIAbility','ReaderWindowCoordinator','ReaderStartupTrace','hilog','ReaderStartupContentOwner',entry.replace('export default class','return class'))(class{},coordinator,ReaderStartupTrace,{error(){}},ReaderStartupContentOwner);
 const stage=()=>({loads:0,getMainWindowSync:()=>({}),loadContent(){this.loads++;}});
 {
  const e=new Entry(),old=stage(),fresh=stage();e.onWindowStageCreate(old);e.onWindowStageDestroy();e.onWindowStageCreate(fresh);
  setups[0].reject(Error('old setup failed'));setups[1].resolve(true);await tick();assert.equal(old.loads,0);assert.equal(fresh.loads,1);
 }
 {
- const e=new Entry(),s=stage();e.onWindowStageCreate(s);setups[2].resolve(false);await tick();assert.equal(s.loads,0);
+ const e=new Entry(),s=stage();e.onWindowStageCreate(s);setups[2].resolve(false);await tick();assert.equal(s.loads,1,'failed geometry setup uses the existing zero-inset recovery instead of stranding startup');e.onWindowStageDestroy();
 }
 console.log('PASS: detail mutation settles after exit; stale window completion cannot load content');
 // Cache freshness/request joining live in the coordinator. Exercise the active
