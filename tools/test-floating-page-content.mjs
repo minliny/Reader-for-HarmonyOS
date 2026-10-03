@@ -1,3 +1,4 @@
+import { readerRecoveryView } from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -47,6 +48,7 @@ const lazy = { create(_id, _owner, data, generator) {
   for (let index = 0; index < data.totalCount(); index++) generator(data.getData(index));
 }, pop() {} };
 const deps = {
+  readerRecoveryView,
   ...tokens, LazyForEach: lazy, ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
   Repeat: function Repeat(items) { return {
     each(generator) { this.generator = generator; return this; }, key() { return this; }, virtualScroll() { return this; },
@@ -61,12 +63,14 @@ const deps = {
 };
 const nodes = owner => [...owner.nodes.values()];
 function fixture(key, names, values = {}) {
-  const { owner } = createReaderBuilderProbe(sources[key], names, deps);
+  const selected = key === 'search' ? [...names, 'operation', 'retryOperation'] : key === 'source' ? [...names, 'recovery'] : names;
+  const { owner } = createReaderBuilderProbe(sources[key], selected, deps);
   for (const match of sources[key].matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g)) {
     if (typeof owner[match[1]] !== 'function') owner[match[1]] = () => {};
   }
   Object.assign(owner, { appThemeScheme: 'day', readerWindowMetricsRevision: 1,
-    contentFrame: () => ({ left: 42, right: 18, width: 330 }), numericAreaLength: value => Number(value), ...values });
+    contentFrame: () => ({ left: 42, right: 18, width: 330 }), numericAreaLength: value => Number(value),
+    ...(key === 'source' ? { operation: { action: 'load', sourceId: '' } } : {}), ...values });
   return owner;
 }
 function fullList(owner) {
