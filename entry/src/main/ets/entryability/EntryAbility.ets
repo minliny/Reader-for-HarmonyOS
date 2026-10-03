@@ -16,6 +16,7 @@ import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
 import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory } from '../app/ReaderControlVerificationLaunch';
 import { ReaderEventLoopProbe, ReaderEventLoopSample, readerEventLoopProbeEnabled } from '../app/ReaderEventLoopProbe';
 import { probeReaderAtomicSnapshot, type ReaderAtomicSnapshotSample } from '../app/ReaderAtomicSnapshotProbe';
+import { probeReaderAssetInventory, type ReaderAssetInventorySample } from '../app/ReaderAssetInventoryProbe';
 import { ReaderStartupTrace, type ReaderStartupSample } from '../app/ReaderStartupTrace';
 import { readerMotionNowMs } from '../features/common/ReaderMotionClock';
 import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
@@ -116,6 +117,13 @@ export default class EntryAbility extends UIAbility {
         true, this.context.filesDir, (): boolean => this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner),
         readerMotionNowMs, (sample: ReaderAtomicSnapshotSample): void => {
           hilog.info(DOMAIN, 'Reader', 'READER_ATOMIC_SNAPSHOT %{public}s', JSON.stringify(sample));
+        })).catch((): void => {});
+    }
+    if (DEBUG === true && BUILD_MODE_NAME === 'debug' && want.parameters?.readerAssetInventoryProbe === true) {
+      void this.recoveryReady.then((): Promise<void> => probeReaderAssetInventory(DEBUG, BUILD_MODE_NAME,
+        true, (): boolean => this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner), readerMotionNowMs,
+        (sample: ReaderAssetInventorySample): void => {
+          hilog.info(DOMAIN, 'Reader', 'READER_ASSET_INVENTORY %{public}s', JSON.stringify(sample));
         })).catch((): void => {});
     }
   }

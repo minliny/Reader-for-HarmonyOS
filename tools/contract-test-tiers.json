@@ -51,6 +51,7 @@
     "test-reader-appearance-motion-sampler.mjs",
     "test-reader-appearance-motion-state.mjs",
     "test-reader-appearance-motion-tree.mjs",
+    "test-reader-asset-inventory-probe.mjs",
     "test-reader-atomic-snapshot-probe.mjs",
     "test-reader-auto-page-coordinator.mjs",
     "test-reader-auto-page-state.mjs",
