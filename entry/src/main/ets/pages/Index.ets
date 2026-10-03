@@ -1,3 +1,4 @@
+import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from '../features/rss/RssMutationRecoveryContract';
 import { RssPresentationProjection } from '../features/rss/RssPresentationProjection';
 import type { RssRouteOperationProjection, RssRouteBinding } from '../features/rss/RssRouteOperationHost';
 import { ReaderNativeAlertOwner, type ReaderNativeAlertLease, type ReaderNativeAlertOptions, type ReaderNativeAlertSpecId } from '../app/ReaderNativeAlertOwner';
@@ -232,6 +233,13 @@ type DetailReturnRoute = 'bookshelf' | 'search';
 type SourceManagementReturnTarget = 'settings' | 'search';
 
 type TemporaryBackScope = 'bookshelf' | 'settings' | 'source';
+interface RssFeedPresentationBinding {
+  current: () => boolean;
+  emit: (subscriptions: RssSubscription[]) => void;
+  emitRead: (facts: OperationFacts<RssSubscription[]>) => void;
+  emitOriginal: (original: RssOriginalMutationProjection | undefined) => void;
+}
+
 interface TemporaryBackLease {
   scope: TemporaryBackScope;
   generation: number;
@@ -353,6 +361,9 @@ struct Index {
   @State private directoryReturnTarget: DirectoryReturnTarget = 'detail';
   @State private searchPublicationRevision: number = 0;
   @State private rssFeedRead: OperationFacts<RssSubscription[]> = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
+  @State private rssFeedOriginal: RssOriginalMutationProjection | undefined = undefined;
+  @State private rssSourceOriginal: RssOriginalMutationProjection | undefined = undefined;
+  @State private rssEntryOriginal: RssOriginalMutationProjection | undefined = undefined;
   @State private rssSourceOperation: RssRouteOperationProjection<RssSourceSnapshot> | undefined = undefined;
   @State private rssSourceRead: OperationFacts<RssSourceSnapshot> = projectOperationFacts<RssSourceSnapshot>({ phase: 'idle' });
   @State private rssEntryOperation: RssRouteOperationProjection<RssEntrySnapshot> | undefined = undefined;
@@ -1156,28 +1167,36 @@ struct Index {
     // Only a new navigation replaces this temporary child; updates keep its identity.
     // V1 regular callbacks are constructor inputs and must capture the new entity.
     ForEach([this.navigationGeneration], (generation: number) => {
-      this.rssPageSurface(generation, ReaderRuntimeOwner.current());
+      this.rssPageSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+        this.rssOrchestrator, this.rssPresentationIdentity);
     }, (identity: number): string => identity.toString());
   }
 
   @Builder
-  private rssPageSurface(generation: number, owner: ReaderRuntimeOwner) {
+  private rssPageSurface(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number,
+    host: RssOrchestrator | undefined, identity: string) {
     RssPage({
       presentation: this.rssPresentation,
+      original: this.rssFeedOriginal,
+      presentationIdentity: identity,
+      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => {
+        if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss'))
+          this.reconcileRssFeedOriginal(expected, generation, owner, mounting, host, identity);
+      },
       readFacts: this.rssFeedRead,
       onRetryRead: (facts: OperationFacts<RssSubscription[]>): void => {
-        if (this.isCurrentRssPresentation(generation, owner, 'rss')) this.loadRss(generation, facts.generation);
+        if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.loadRss(generation, facts.generation);
       },
       isTablet: deviceInfo.deviceType === 'tablet',
       activeMode: 'sources',
-      onBack: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rss')) this.returnToBookshelf(); },
-      onRefresh: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rss')) this.refreshRss(); },
-      onManage: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rss')) this.onRssManage(); },
-      onSelectSubscription: (id: string): void => { if (this.isCurrentRssPresentation(generation, owner, 'rss')) this.onRssSubscriptionSelected(id); },
-      onSelectItem: (subscriptionId: string, guid: string): void => { if (this.isCurrentRssPresentation(generation, owner, 'rss')) this.onRssItemSelected(subscriptionId, guid); },
-      onModeRequested: (mode: RssMode): void => { if (this.isCurrentRssPresentation(generation, owner, 'rss')) this.onRssModeRequested(mode); },
-      onSettingsRequested: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rss')) this.openSettings(); },
-      onDiscoverRequested: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rss')) this.openDiscover(); },
+      onBack: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.returnToBookshelf(); },
+      onRefresh: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.refreshRss(); },
+      onManage: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.onRssManage(); },
+      onSelectSubscription: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.onRssSubscriptionSelected(id); },
+      onSelectItem: (subscriptionId: string, guid: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.onRssItemSelected(subscriptionId, guid); },
+      onModeRequested: (mode: RssMode): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.onRssModeRequested(mode); },
+      onSettingsRequested: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.openSettings(); },
+      onDiscoverRequested: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.openDiscover(); },
     });
   }
 
@@ -1195,6 +1214,9 @@ struct Index {
   private rssEditorSurface(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number,
     identity: string, host: RssSubscriptionEditorOrchestrator | undefined) {
     RssSubscriptionEditorPage({
+      presentationIdentity: identity,
+      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.reconcileOriginal(expected, identity); },
+      onContinueOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.continueOriginal(expected, identity); },
       snapshot: this.rssEditorSnapshot,
       onReconcile: (expectedGeneration: number): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.reconcile(expectedGeneration); },
       onRetryRead: (expectedGeneration: number): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.retryLoad(expectedGeneration); },
@@ -1215,29 +1237,34 @@ struct Index {
     // Only a new navigation replaces this temporary child; updates keep its identity.
     // V1 regular callbacks are constructor inputs and must capture the new entity.
     ForEach([this.navigationGeneration], (generation: number) => {
-      this.rssSourceFeedSurface(generation, ReaderRuntimeOwner.current(), this.selectedRssSubscription?.subscriptionId ?? '');
+      this.rssSourceFeedSurface(generation, this.mountedRuntimeOwner, this.selectedRssSubscription?.subscriptionId ?? '',
+        this.detailShelfAdmissionMount, this.rssOrchestrator, this.rssPresentationIdentity);
     }, (identity: number): string => identity.toString());
   }
 
   @Builder
-  private rssSourceFeedSurface(generation: number, owner: ReaderRuntimeOwner, subscriptionId: string) {
+  private rssSourceFeedSurface(generation: number, owner: ReaderRuntimeOwner | undefined, subscriptionId: string,
+    mounting: number, host: RssOrchestrator | undefined, identity: string) {
     RssSourceFeedPage({
       subscription: this.selectedRssSubscription,
       items: this.selectedRssItems,
+      presentationIdentity: identity,
+      original: this.rssSourceOriginal,
+      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) host?.reconcileSourceOriginal(expected, this.rssSourceBinding(generation, subscriptionId, owner, host, identity, mounting), subscriptionId); },
       operation: this.rssSourceOperation,
       readFacts: this.rssSourceRead,
       onReconcile: (operation: RssRouteOperationProjection<RssSourceSnapshot>): void => {
-        if (this.isCurrentRssPresentation(generation, owner, 'rssSourceFeed', subscriptionId) && operation.subscriptionId === subscriptionId) this.getRssOrchestrator().reconcileSourceOperation(operation, this.rssSourceBinding(generation, subscriptionId));
+        if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId) && operation.subscriptionId === subscriptionId) host?.reconcileSourceOperation(operation, this.rssSourceBinding(generation, subscriptionId, owner, host, identity, mounting));
       },
       onRetryRead: (facts: OperationFacts<RssSourceSnapshot>): void => {
-        if (this.isCurrentRssPresentation(generation, owner, 'rssSourceFeed', subscriptionId)) this.getRssOrchestrator().retrySourceRead(subscriptionId, facts, this.rssSourceBinding(generation, subscriptionId));
+        if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) host?.retrySourceRead(subscriptionId, facts, this.rssSourceBinding(generation, subscriptionId, owner, host, identity, mounting));
       },
       isTablet: deviceInfo.deviceType === 'tablet',
-      onBack: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSourceFeed', subscriptionId)) this.returnFromRssSourceFeed(); },
-      onSelectItem: (item: RssItem): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSourceFeed', subscriptionId)) this.onRssSourceItemSelected(item); },
-      onRefresh: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSourceFeed', subscriptionId)) this.refreshRssSourceFeed(); },
-      onEditSource: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSourceFeed', subscriptionId)) this.openRssManagementForSubscription(subscriptionId); },
-      onSourceOperations: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSourceFeed', subscriptionId)) this.openRssManagementForSubscription(subscriptionId); },
+      onBack: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.returnFromRssSourceFeed(); },
+      onSelectItem: (item: RssItem): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.onRssSourceItemSelected(item); },
+      onRefresh: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.refreshRssSourceFeed(); },
+      onEditSource: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.openRssManagementForSubscription(subscriptionId); },
+      onSourceOperations: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId)) this.openRssManagementForSubscription(subscriptionId); },
     });
   }
 
@@ -1246,59 +1273,70 @@ struct Index {
     // Only a new navigation replaces this temporary child; updates keep its identity.
     // V1 regular callbacks are constructor inputs and must capture the new entity.
     ForEach([this.navigationGeneration], (generation: number) => {
-      this.rssEntryDetailSurface(generation, ReaderRuntimeOwner.current(), this.selectedRssSubscription?.subscriptionId ?? '', this.selectedRssItem?.guid ?? '');
+      this.rssEntryDetailSurface(generation, this.mountedRuntimeOwner, this.selectedRssSubscription?.subscriptionId ?? '', this.selectedRssItem?.guid ?? '',
+        this.detailShelfAdmissionMount, this.rssOrchestrator, this.rssPresentationIdentity);
     }, (identity: number): string => identity.toString());
   }
 
   @Builder
-  private rssEntryDetailSurface(generation: number, owner: ReaderRuntimeOwner, subscriptionId: string, guid: string) {
+  private rssEntryDetailSurface(generation: number, owner: ReaderRuntimeOwner | undefined, subscriptionId: string, guid: string,
+    mounting: number, host: RssOrchestrator | undefined, identity: string) {
     RssEntryDetailPage({
       subscription: this.selectedRssSubscription,
       item: this.selectedRssItem,
+      presentationIdentity: identity,
+      original: this.rssEntryOriginal,
+      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) host?.reconcileEntryOriginal(expected, this.rssEntryBinding(generation, subscriptionId, guid, owner, host, identity, mounting), subscriptionId, guid); },
+      onContinueOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) host?.continueEntryOriginal(expected, this.rssEntryBinding(generation, subscriptionId, guid, owner, host, identity, mounting)); },
       operation: this.rssEntryOperation,
       readFacts: this.rssEntryRead,
       onReconcile: (operation: RssRouteOperationProjection<RssEntrySnapshot>): void => {
-        if (this.isCurrentRssPresentation(generation, owner, 'rssEntryDetail', subscriptionId, guid) && operation.subscriptionId === subscriptionId && operation.guid === guid) this.getRssOrchestrator().reconcileEntryOperation(operation, this.rssEntryBinding(generation, subscriptionId, guid));
+        if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid) && operation.subscriptionId === subscriptionId && operation.guid === guid) host?.reconcileEntryOperation(operation, this.rssEntryBinding(generation, subscriptionId, guid, owner, host, identity, mounting));
       },
       onRetryRead: (facts: OperationFacts<RssEntrySnapshot>): void => {
-        if (this.isCurrentRssPresentation(generation, owner, 'rssEntryDetail', subscriptionId, guid)) this.getRssOrchestrator().retryEntryRead(subscriptionId, guid, facts, this.rssEntryBinding(generation, subscriptionId, guid));
+        if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) host?.retryEntryRead(subscriptionId, guid, facts, this.rssEntryBinding(generation, subscriptionId, guid, owner, host, identity, mounting));
       },
       isTablet: deviceInfo.deviceType === 'tablet',
       favoriteState: this.selectedRssFavoriteState,
-      onBack: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssEntryDetail', subscriptionId, guid)) this.returnFromRssEntryDetail(); },
-      onViewSource: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssEntryDetail', subscriptionId, guid)) this.returnToRssSourceFeed(); },
-      onFavoriteRequested: (favorite: boolean): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssEntryDetail', subscriptionId, guid)) this.onRssEntryFavoriteRequested(favorite); },
-      onSourceSettings: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssEntryDetail', subscriptionId, guid)) this.openRssManagementForSubscription(subscriptionId); },
-      onOpenOriginal: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssEntryDetail', subscriptionId, guid)) this.onRssOpenOriginalRequested(); },
+      onBack: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.returnFromRssEntryDetail(); },
+      onViewSource: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.returnToRssSourceFeed(); },
+      onFavoriteRequested: (favorite: boolean): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.onRssEntryFavoriteRequested(favorite); },
+      onSourceSettings: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.openRssManagementForSubscription(subscriptionId); },
+      onOpenOriginal: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.onRssOpenOriginalRequested(); },
     });
   }
 
   @Builder
   private rssSubscriptionManagementContent() {
     ForEach([this.navigationGeneration], (generation: number) => {
-      this.rssSubscriptionManagementSurface(generation, ReaderRuntimeOwner.current());
+      this.rssSubscriptionManagementSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+        this.rssOrchestrator, this.rssPresentationIdentity);
     }, (identity: number): string => identity.toString());
   }
 
   @Builder
-  private rssSubscriptionManagementSurface(generation: number, owner: ReaderRuntimeOwner) {
+  private rssSubscriptionManagementSurface(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number,
+    host: RssOrchestrator | undefined, identity: string) {
     RssSubscriptionManagementPage({
       items: this.rssSubscriptionManagementItems(),
       isTablet: deviceInfo.deviceType === 'tablet',
       focusedSubscriptionId: this.rssManagementFocusSubscriptionId,
+      presentationIdentity: identity,
+      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.reconcileOriginal(expected, identity); },
+      onContinueOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.continueOriginal(expected, identity); },
       operation: this.rssManagementOperation,
       readFacts: this.rssManagementRead,
-      onBack: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.returnToRss(); },
-      onAdd: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.onRssSubscriptionAddRequested(); },
-      onImport: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.requestRssSourceImport(); },
-      onExport: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.exportRssSources(); },
-      onToggle: (id: string, enabled: boolean): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.getRssOrchestrator().toggleSubscription(id, enabled); },
-      onViewArticles: (id: string): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.onRssManagementViewArticles(id); },
-      onEditSource: (id: string): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.onRssSubscriptionEditRequested(id); },
-      onRefresh: (id: string): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.getRssOrchestrator().refreshSubscription(id); },
-      onDelete: (id: string): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.requestRssSubscriptionDelete(id); },
-      onReconcile: (operation: RssManagementOperationProjection): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.getRssOrchestrator().reconcileManagementOperation(operation); },
-      onRetryRead: (facts: OperationFacts<RssSubscription[]>): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionManagement')) this.getRssOrchestrator().retryManagementRead(facts); },
+      onBack: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.returnToRss(); },
+      onAdd: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.onRssSubscriptionAddRequested(); },
+      onImport: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.requestRssSourceImport(); },
+      onExport: (): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.exportRssSources(); },
+      onToggle: (id: string, enabled: boolean): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.toggleSubscription(id, enabled); },
+      onViewArticles: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.onRssManagementViewArticles(id); },
+      onEditSource: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.onRssSubscriptionEditRequested(id); },
+      onRefresh: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.refreshSubscription(id); },
+      onDelete: (id: string): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) this.requestRssSubscriptionDelete(id); },
+      onReconcile: (operation: RssManagementOperationProjection): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.reconcileManagementOperation(operation); },
+      onRetryRead: (facts: OperationFacts<RssSubscription[]>): void => { if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.retryManagementRead(facts); },
     });
   }
 
@@ -1423,15 +1461,32 @@ struct Index {
 
   private loadRss(generation: number, expectedGeneration?: number): void {
     if (!isReaderProductSurfaceEnabled('rss')) return;
-    const owner = ReaderRuntimeOwner.current();
-    const current = (): boolean => this.isCurrentRssPresentation(generation, owner, 'rss');
-    this.getRssOrchestrator().loadFeed(
-      (subscriptions: RssSubscription[]): void => { if (current()) this.rssPresentation = this.feedPresentation(subscriptions, []); },
-      (facts: OperationFacts<RssSubscription[]>): void => {
+    const host = this.getRssOrchestrator();
+    const binding = this.rssFeedBinding(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+      host, this.rssPresentationIdentity);
+    if (!binding.current()) return;
+    host.loadFeed(binding.emit, binding.emitRead, binding.current, expectedGeneration, binding.emitOriginal);
+  }
+
+  private rssFeedBinding(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number,
+    host: RssOrchestrator | undefined, identity: string): RssFeedPresentationBinding {
+    const current = (): boolean => this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss');
+    return { current,
+      emit: (subscriptions: RssSubscription[]): void => { if (current()) this.rssPresentation = this.feedPresentation(subscriptions, []); },
+      emitRead: (facts: OperationFacts<RssSubscription[]>): void => {
         if (!current()) return;
         this.rssFeedRead = facts;
         if (facts.value !== undefined) this.rssPresentation = this.feedPresentation(facts.value, []);
-      }, current, expectedGeneration);
+      },
+      emitOriginal: (original: RssOriginalMutationProjection | undefined): void => { if (current()) this.rssFeedOriginal = original; },
+    };
+  }
+
+  private reconcileRssFeedOriginal(expected: RssOriginalMutationIdentity, generation: number,
+    owner: ReaderRuntimeOwner | undefined, mounting: number, host: RssOrchestrator | undefined, identity: string): void {
+    const binding = this.rssFeedBinding(generation, owner, mounting, host, identity);
+    if (!binding.current()) return;
+    host?.reconcileFeedOriginal(expected, binding.emit, binding.emitRead, binding.current, binding.emitOriginal);
   }
 
   private openDiscover(): void {
@@ -2293,41 +2348,44 @@ struct Index {
     ForEach([this.jsonImportGeneration], (presentation: number) => {
       this.jsonImportSurface(presentation, this.navigationGeneration, this.mountedRuntimeOwner,
         this.detailShelfAdmissionMount, this.jsonImportContext, this.rulesManagementOrchestrator, this.rulesPresentationIdentity,
-        this.sourceHost, this.sourcePresentationIdentity);
+        this.sourceHost, this.sourcePresentationIdentity, this.rssOrchestrator, this.rssPresentationIdentity);
     }, (identity: number): string => identity.toString());
   }
 
   @Builder
   private jsonImportSurface(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
     mounting: number, context: JsonImportContext, rules: RulesManagementOrchestrator | undefined, identity: string,
-    source: SourceHost, sourceIdentity: string) {
+    source: SourceHost, sourceIdentity: string, rss: RssOrchestrator | undefined, rssIdentity: string) {
     JsonImportDialog({
       title: this.jsonImportTitle(),
       description: this.jsonImportDescription(),
       isTablet: deviceInfo.deviceType === 'tablet',
       onDismiss: (): void => {
-        if (this.isCurrentJsonImportPresentation(presentation, generation, owner, mounting, context, rules, identity, source, sourceIdentity)) this.dismissJsonImport();
+        if (this.isCurrentJsonImportPresentation(presentation, generation, owner, mounting, context, rules, identity, source, sourceIdentity, rss, rssIdentity)) this.dismissJsonImport();
       },
       onSelectLocal: (): void => {
-        if (!this.isCurrentJsonImportPresentation(presentation, generation, owner, mounting, context, rules, identity, source, sourceIdentity)) return;
-        this.dismissJsonImport(); this.executeJsonImport(context, undefined, rules, identity, source, sourceIdentity);
+        if (!this.isCurrentJsonImportPresentation(presentation, generation, owner, mounting, context, rules, identity, source, sourceIdentity, rss, rssIdentity)) return;
+        this.dismissJsonImport(); this.executeJsonImport(context, undefined, rules, identity, source, sourceIdentity, rss, rssIdentity);
       },
       onImportOnline: (url: string): void => {
-        if (!this.isCurrentJsonImportPresentation(presentation, generation, owner, mounting, context, rules, identity, source, sourceIdentity)) return;
-        this.dismissJsonImport(); this.executeJsonImport(context, url, rules, identity, source, sourceIdentity);
+        if (!this.isCurrentJsonImportPresentation(presentation, generation, owner, mounting, context, rules, identity, source, sourceIdentity, rss, rssIdentity)) return;
+        this.dismissJsonImport(); this.executeJsonImport(context, url, rules, identity, source, sourceIdentity, rss, rssIdentity);
       },
     });
   }
 
   private isCurrentJsonImportPresentation(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
     mounting: number, context: JsonImportContext, rules: RulesManagementOrchestrator | undefined, identity: string,
-    source: SourceHost = this.sourceHost, sourceIdentity: string = this.sourcePresentationIdentity): boolean {
+    source: SourceHost = this.sourceHost, sourceIdentity: string = this.sourcePresentationIdentity,
+    rss: RssOrchestrator | undefined = this.rssOrchestrator, rssIdentity: string = this.rssPresentationIdentity): boolean {
     return owner !== undefined && !this.shelfReceiptRetired && this.jsonImportVisible &&
       presentation === this.jsonImportGeneration && generation === this.navigationGeneration &&
       mounting === this.detailShelfAdmissionMount && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) &&
       context === this.jsonImportContext && (context !== 'bookSource' ||
         this.isCurrentSourceManagement(generation, owner, mounting, source, sourceIdentity)) && (context !== 'ruleBundle' || (rules !== undefined &&
-        this.isCurrentRulesPresentation(generation, owner, mounting, rules, identity)));
+        this.isCurrentRulesPresentation(generation, owner, mounting, rules, identity))) &&
+      ((context !== 'rssMerge' && context !== 'rssReplace') ||
+        this.isCurrentRssHostPresentation(generation, owner, mounting, rss, rssIdentity, 'rssSubscriptionManagement'));
   }
 
   private openJsonImport(context: JsonImportContext): void {
@@ -2354,7 +2412,8 @@ struct Index {
 
   private executeJsonImport(context: JsonImportContext, onlineUrl?: string,
     rules: RulesManagementOrchestrator | undefined = this.rulesManagementOrchestrator, identity: string = this.rulesPresentationIdentity,
-    source: SourceHost = this.sourceHost, sourceIdentity: string = this.sourcePresentationIdentity): void {
+    source: SourceHost = this.sourceHost, sourceIdentity: string = this.sourcePresentationIdentity,
+    rss: RssOrchestrator | undefined = this.rssOrchestrator, rssIdentity: string = this.rssPresentationIdentity): void {
     if (context === 'bookSource' && this.route === 'source') {
       const generation = this.navigationGeneration, owner = this.mountedRuntimeOwner, mounting = this.detailShelfAdmissionMount;
       const current = (): boolean => this.isCurrentSourceManagement(generation, owner, mounting, source, sourceIdentity);
@@ -2384,7 +2443,7 @@ struct Index {
     }
     if ((context === 'rssMerge' || context === 'rssReplace') &&
       this.route === 'rssSubscriptionManagement') {
-      this.importRssSources(context === 'rssReplace', onlineUrl);
+      this.importRssSources(context === 'rssReplace', onlineUrl, rss, rssIdentity);
     }
   }
 
@@ -2649,6 +2708,7 @@ struct Index {
       return;
     }
     const generation = this.nextNavigationGeneration();
+    this.rssSourceOriginal = undefined;
     this.rssSourceOperation = undefined;
     this.rssSourceRead = projectOperationFacts<RssSourceSnapshot>({ phase: 'idle' });
     this.selectedRssSubscription = subscription;
@@ -2717,6 +2777,11 @@ struct Index {
         'RSS delete confirmation ignored stale subscriptionId=%{private}s', subscriptionId);
       return;
     }
+    const generation = this.navigationGeneration, owner = this.mountedRuntimeOwner, mounting = this.detailShelfAdmissionMount;
+    const host = this.rssOrchestrator, identity = this.rssPresentationIdentity;
+    const current = (): boolean => this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement') &&
+      this.rssSubscriptions().find((candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId) === subscription;
+    if (!current()) return;
     this.showIndexAlert('confirmation-cancelable', {
       title: '删除订阅源',
       message: `确定删除“${subscription.title}”吗？删除后无法恢复。`,
@@ -2726,10 +2791,9 @@ struct Index {
       },
       secondaryButton: {
         value: '删除',
-        action: (): void => this.confirmRssSubscriptionDelete(subscriptionId),
+        action: (): void => { if (current()) this.confirmRssSubscriptionDelete(subscriptionId, generation, owner, mounting, host, identity); },
       },
-    }, (): boolean => this.rssSubscriptions().find((candidate: RssSubscription): boolean =>
-      candidate.subscriptionId === subscriptionId) === subscription);
+    }, current);
   }
 
   private requestRssSourceImport(): void {
@@ -2739,35 +2803,39 @@ struct Index {
     if (this.route !== 'rssSubscriptionManagement') {
       return;
     }
-    const host = this.getRssOrchestrator();
+    const host = this.rssOrchestrator, identity = this.rssPresentationIdentity;
+    const generation = this.navigationGeneration, owner = this.mountedRuntimeOwner, mounting = this.detailShelfAdmissionMount;
     const importVisible = this.jsonImportVisible;
+    const current = (): boolean => this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement') && this.jsonImportVisible === importVisible;
+    if (!current()) return;
     this.showIndexAlert('confirmation-cancelable', {
       title: '导入 RSS 源',
       message: '“合并导入”保留现有来源；“覆盖全部”会原子替换当前 RSS 来源与阅读状态。',
       primaryButton: {
         value: '合并导入',
-        action: (): void => this.openJsonImport('rssMerge'),
+        action: (): void => { if (current()) this.openJsonImport('rssMerge'); },
       },
       secondaryButton: {
         value: '覆盖全部',
         fontColor: readerAppColor('app.Index.requestRssSourceImport.showAlertDialog.FFB42318', this.appThemeScheme),
-        action: (): void => this.openJsonImport('rssReplace'),
+        action: (): void => { if (current()) this.openJsonImport('rssReplace'); },
       },
-    }, (): boolean => this.rssOrchestrator === host && this.jsonImportVisible === importVisible);
+    }, current);
   }
 
-  private importRssSources(replaceExisting: boolean, onlineUrl?: string): void {
-    if (!isReaderProductSurfaceEnabled('rss')) {
-      return;
-    }
-    this.getRssOrchestrator().importSources(
+  private importRssSources(replaceExisting: boolean, onlineUrl?: string,
+    host: RssOrchestrator | undefined = this.rssOrchestrator, identity: string = this.rssPresentationIdentity): void {
+    const generation = this.navigationGeneration, owner = this.mountedRuntimeOwner, mounting = this.detailShelfAdmissionMount;
+    const current = (): boolean => this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement');
+    if (!current() || host === undefined) return;
+    host.importSources(
       replaceExisting,
       (result: RssSourceImportResult | undefined): void => {
-        if (result !== undefined) {
+        if (result !== undefined && current()) {
           this.showRssOperationResult('RSS 源导入完成', `Core 已原子导入 ${result.imported} 个来源。`);
         }
       },
-      (error: Error): void => this.showRssOperationResult('RSS 源导入失败', error.message),
+      (error: Error): void => { if (current()) this.showRssOperationResult('RSS 源导入失败', error.message); },
       onlineUrl,
     );
   }
@@ -2803,17 +2871,21 @@ struct Index {
     });
   }
 
-  private confirmRssSubscriptionDelete(subscriptionId: string): void {
-    if (!isReaderProductSurfaceEnabled('rss')) {
-      return;
-    }
+  private confirmRssSubscriptionDelete(subscriptionId: string, generation: number = this.navigationGeneration,
+    owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner, mounting: number = this.detailShelfAdmissionMount,
+    host: RssOrchestrator | undefined = this.rssOrchestrator, identity: string = this.rssPresentationIdentity): void {
     const stillPresent = this.rssSubscriptions().some(
-      (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId,
-    );
-    if (this.route !== 'rssSubscriptionManagement' || !stillPresent) {
-      return;
-    }
-    this.getRssOrchestrator().removeSubscription(subscriptionId);
+      (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId);
+    if (stillPresent && this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement'))
+      host?.removeSubscription(subscriptionId);
+  }
+
+  private isCurrentRssHostPresentation(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number,
+    host: RssOrchestrator | undefined, identity: string, route: ReaderRoute, subscriptionId: string = '', guid: string = ''): boolean {
+    return owner !== undefined && host !== undefined && host === this.rssOrchestrator && host.owns(owner) &&
+      identity.length > 0 && identity === this.rssPresentationIdentity && host.isPresentationCurrent(identity) &&
+      owner === this.mountedRuntimeOwner && mounting === this.detailShelfAdmissionMount &&
+      isReaderProductSurfaceEnabled('rss') && this.isCurrentRssPresentation(generation, owner, route, subscriptionId, guid);
   }
 
   private isCurrentRssPresentation(generation: number, owner: ReaderRuntimeOwner, route: ReaderRoute,
@@ -2827,10 +2899,12 @@ struct Index {
     } catch (_) { return false; }
   }
 
-  private rssSourceBinding(generation: number, subscriptionId: string): RssRouteBinding<RssSourceSnapshot> {
-    const owner = ReaderRuntimeOwner.current();
-    const current = (): boolean => this.isCurrentRssPresentation(generation, owner, 'rssSourceFeed', subscriptionId);
+  private rssSourceBinding(generation: number, subscriptionId: string,
+    owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner, host: RssOrchestrator | undefined = this.rssOrchestrator,
+    identity: string = this.rssPresentationIdentity, mounting: number = this.detailShelfAdmissionMount): RssRouteBinding<RssSourceSnapshot> {
+    const current = (): boolean => this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSourceFeed', subscriptionId);
     return { current,
+      emitOriginal: (original: RssOriginalMutationProjection | undefined): void => { if (current()) this.rssSourceOriginal = original; },
       emit: (snapshot: RssSourceSnapshot): void => { if (current()) this.applyRssSourceSnapshot(snapshot); },
       failed: (error: Error): void => { if (current()) hilog.error(DOMAIN, 'Reader', 'RSS source read failed: %{private}s', error.message); },
       emitOperation: (operation: RssRouteOperationProjection<RssSourceSnapshot>): void => {
@@ -2840,10 +2914,12 @@ struct Index {
     };
   }
 
-  private rssEntryBinding(generation: number, subscriptionId: string, guid: string): RssRouteBinding<RssEntrySnapshot> {
-    const owner = ReaderRuntimeOwner.current();
-    const current = (): boolean => this.isCurrentRssPresentation(generation, owner, 'rssEntryDetail', subscriptionId, guid);
+  private rssEntryBinding(generation: number, subscriptionId: string, guid: string,
+    owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner, host: RssOrchestrator | undefined = this.rssOrchestrator,
+    identity: string = this.rssPresentationIdentity, mounting: number = this.detailShelfAdmissionMount): RssRouteBinding<RssEntrySnapshot> {
+    const current = (): boolean => this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid);
     return { current,
+      emitOriginal: (original: RssOriginalMutationProjection | undefined): void => { if (current()) this.rssEntryOriginal = original; },
       emit: (snapshot: RssEntrySnapshot): void => { if (current()) this.applyRssEntrySnapshot(snapshot); },
       failed: (error: Error): void => { if (current()) this.failRssEntryOperation('read', error); },
       emitOperation: (operation: RssRouteOperationProjection<RssEntrySnapshot>): void => {
@@ -2857,9 +2933,10 @@ struct Index {
     if (!isReaderProductSurfaceEnabled('rss')) {
       return;
     }
+    const host = this.getRssOrchestrator();
     const binding = this.rssSourceBinding(generation, subscriptionId);
-    this.getRssOrchestrator().loadSourceFeed(subscriptionId, binding.emit, binding.failed, binding.current,
-      binding.emitOperation, binding.emitRead);
+    host.loadSourceFeed(subscriptionId, binding.emit, binding.failed, binding.current,
+      binding.emitOperation, binding.emitRead, binding.emitOriginal);
   }
 
   private refreshRssSourceFeed(): void {
@@ -2871,9 +2948,10 @@ struct Index {
       return;
     }
     const generation = this.navigationGeneration;
+    const host = this.getRssOrchestrator();
     const binding = this.rssSourceBinding(generation, subscriptionId);
-    this.getRssOrchestrator().refreshSourceFeed(subscriptionId, binding.emit, binding.failed, binding.current,
-      binding.emitOperation, binding.emitRead);
+    host.refreshSourceFeed(subscriptionId, binding.emit, binding.failed, binding.current,
+      binding.emitOperation, binding.emitRead, binding.emitOriginal);
   }
 
   private isCurrentRssSourceFeed(generation: number, subscriptionId: string): boolean {
@@ -2934,6 +3012,7 @@ struct Index {
       return;
     }
     const generation = this.nextNavigationGeneration();
+    this.rssEntryOriginal = undefined;
     this.rssEntryOperation = undefined;
     this.rssEntryRead = projectOperationFacts<RssEntrySnapshot>({ phase: 'idle' });
     this.selectedRssSubscription = subscription;
@@ -2943,9 +3022,10 @@ struct Index {
     this.route = 'rssEntryDetail';
     const subscriptionId = item.subscriptionId;
     const guid = item.guid;
+    const host = this.getRssOrchestrator();
     const binding = this.rssEntryBinding(generation, subscriptionId, guid);
-    this.getRssOrchestrator().openEntry(subscriptionId, guid, binding.emit, binding.failed, binding.current,
-      binding.emitOperation, binding.emitRead);
+    host.openEntry(subscriptionId, guid, binding.emit, binding.failed, binding.current,
+      binding.emitOperation, binding.emitRead, binding.emitOriginal);
   }
 
   private onRssEntryFavoriteRequested(favorite: boolean): void {
@@ -2961,9 +3041,10 @@ struct Index {
     const generation = this.navigationGeneration;
     const subscriptionId = item.subscriptionId;
     const guid = item.guid;
+    const host = this.getRssOrchestrator();
     const binding = this.rssEntryBinding(generation, subscriptionId, guid);
-    this.getRssOrchestrator().setEntryFavorite(subscriptionId, guid, favorite, binding.emit, binding.failed, binding.current,
-      binding.emitOperation, binding.emitRead);
+    host.setEntryFavorite(subscriptionId, guid, favorite, binding.emit, binding.failed, binding.current,
+      binding.emitOperation, binding.emitRead, binding.emitOriginal);
   }
 
   private isCurrentRssEntryDetail(
@@ -3018,6 +3099,7 @@ struct Index {
     }
     const subscriptionId = this.selectedRssSubscription.subscriptionId;
     const generation = this.nextNavigationGeneration();
+    this.rssSourceOriginal = undefined;
     this.rssSourceOperation = undefined;
     this.rssSourceRead = projectOperationFacts<RssSourceSnapshot>({ phase: 'idle' });
     this.selectedRssItem = undefined;

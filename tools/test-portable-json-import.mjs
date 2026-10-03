@@ -56,7 +56,7 @@ assert.match(index, /openJsonImport\('bookSource'\)/);
 assert.match(index, /openJsonImport\('ruleBundle'\)/);
 assert.match(index, /openJsonImport\('rssMerge'\)/);
 assert.match(index, /openJsonImport\('rssReplace'\)/);
-assert.match(index, /private executeJsonImport\(context: JsonImportContext, onlineUrl\?: string,\s*rules: RulesManagementOrchestrator \| undefined = this\.rulesManagementOrchestrator, identity: string = this\.rulesPresentationIdentity,\s*source: SourceHost = this\.sourceHost, sourceIdentity: string = this\.sourcePresentationIdentity\)/);
+assert.match(index, /private executeJsonImport\(context: JsonImportContext, onlineUrl\?: string,\s*rules: RulesManagementOrchestrator \| undefined = this\.rulesManagementOrchestrator, identity: string = this\.rulesPresentationIdentity,\s*source: SourceHost = this\.sourceHost, sourceIdentity: string = this\.sourcePresentationIdentity,\s*rss: RssOrchestrator \| undefined = this\.rssOrchestrator, rssIdentity: string = this\.rssPresentationIdentity\)/);
 assert.match(index, /rules\.isPresentationCurrent\(identity\)\)\s*rules\.importBundle\(onlineUrl, identity\)/,
   'portable rules import retains its captured original presentation at actual owner admission');
 

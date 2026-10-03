@@ -1,3 +1,5 @@
+import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
+import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from './RssMutationRecoveryContract';
 import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
 import type { RssFeedPresentation, RssRefreshingPresentation, RssEmptyUnreadPresentation, RssFailedSource, RssFatalErrorPresentation, RssMode, RssPresentation } from './RssPresentationContract';
 export type { RssFeedPresentation, RssRefreshingPresentation, RssEmptyUnreadPresentation, RssFailedSource, RssFatalErrorPresentation, RssMode, RssPresentation } from './RssPresentationContract';
@@ -80,6 +82,9 @@ export struct RssPage {
   @Prop presentation: RssPresentation;
   @Prop isTablet: boolean;
   @Prop activeMode: RssMode = 'sources';
+  @Prop original: RssOriginalMutationProjection | undefined = undefined;
+  @Prop presentationIdentity: string = '';
+  onReconcileOriginal: (expected: RssOriginalMutationIdentity) => void = (_expected: RssOriginalMutationIdentity): void => {};
   @Prop readFacts: OperationFacts<RssSubscription[]> = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
   onRetryRead: (facts: OperationFacts<RssSubscription[]>) => void = (_facts: OperationFacts<RssSubscription[]>): void => {};
   onBack: () => void = (): void => {};
@@ -273,10 +278,14 @@ export struct RssPage {
 
   @Builder
   private readFeedback() {
-    ReaderRecoveryNotice({ view: readerRecoveryView(undefined, this.readFacts), actionLabel: '重新读取',
-      onReconcile: (generation: number): void => {
-        if (this.readFacts.generation === generation && this.readFacts.canRetry) this.onRetryRead(this.readFacts);
-      } });
+    RssOriginalRecoverySurface({ original: this.original, presentationIdentity: this.presentationIdentity, scope: 'feed',
+      onReconcileOriginal: this.onReconcileOriginal });
+    if (this.original?.blocked !== true) {
+      ReaderRecoveryNotice({ view: readerRecoveryView(undefined, this.readFacts), actionLabel: '重新读取',
+        onReconcile: (generation: number): void => {
+          if (this.readFacts.generation === generation && this.readFacts.canRetry) this.onRetryRead(this.readFacts);
+        } });
+    }
   }
 
   @Builder

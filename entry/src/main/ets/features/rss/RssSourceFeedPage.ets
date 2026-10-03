@@ -1,3 +1,5 @@
+import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
+import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from './RssMutationRecoveryContract';
 import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { readerRecoveryView } from '../../app/ReaderRecoveryProjection';
@@ -57,6 +59,10 @@ export struct RssSourceFeedPage {
   @Prop isTablet: boolean;
   @Prop operation: RssRouteOperationProjection<RssSourceSnapshot> | undefined = undefined;
   @Prop readFacts: OperationFacts<RssSourceSnapshot> = projectOperationFacts<RssSourceSnapshot>({ phase: 'idle' });
+  @Prop presentationIdentity: string = '';
+  @Prop original: RssOriginalMutationProjection | undefined = undefined;
+  onReconcileOriginal: (expected: RssOriginalMutationIdentity) => void = (_expected: RssOriginalMutationIdentity): void => {};
+  onContinueOriginal: (expected: RssOriginalMutationIdentity) => void = (_expected: RssOriginalMutationIdentity): void => {};
   onReconcile: (operation: RssRouteOperationProjection<RssSourceSnapshot>) => void = (_operation: RssRouteOperationProjection<RssSourceSnapshot>): void => {};
   onRetryRead: (facts: OperationFacts<RssSourceSnapshot>) => void = (_facts: OperationFacts<RssSourceSnapshot>): void => {};
   onBack: () => void = (): void => {};
@@ -114,8 +120,13 @@ export struct RssSourceFeedPage {
   }
   @Builder
   private operationFeedback() {
+    RssOriginalRecoverySurface({ original: this.original, presentationIdentity: this.presentationIdentity, scope: 'feed',
+      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => this.onReconcileOriginal(expected),
+      onContinueOriginal: (expected: RssOriginalMutationIdentity): void => this.onContinueOriginal(expected) });
+    if (this.original?.blocked !== true) {
     ReaderRecoveryNotice({ view: readerRecoveryView(this.operation?.projection, this.readFacts),
       actionLabel: '重新读取', onReconcile: (generation: number): void => this.retryFeedback(generation) });
+    }
   }
 
   private retryFeedback(generation: number): void {
