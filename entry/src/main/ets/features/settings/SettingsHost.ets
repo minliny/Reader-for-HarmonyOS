@@ -10,14 +10,22 @@ import { common } from '@kit.AbilityKit';
  */
 export class SettingsHost {
   private orchestrator: SettingsOrchestrator | undefined = undefined;
+  private readonly emit: (snapshot: SettingsSnapshot) => void;
+  private readonly read: () => SettingsSnapshot;
+  private readonly isCurrent: () => boolean;
+  private readonly context: () => common.UIAbilityContext;
 
   constructor(
-    private readonly emit: (snapshot: SettingsSnapshot) => void,
-    private readonly read: () => SettingsSnapshot,
-    private readonly isCurrent: () => boolean,
-    private readonly context: () => common.UIAbilityContext =
-      (): common.UIAbilityContext => ReaderRuntimeOwner.current().getUIAbilityContext(),
-  ) {}
+    emit: (snapshot: SettingsSnapshot) => void,
+    read: () => SettingsSnapshot,
+    isCurrent: () => boolean,
+    context?: () => common.UIAbilityContext,
+  ) {
+    this.emit = emit;
+    this.read = read;
+    this.isCurrent = isCurrent;
+    this.context = context ?? ((): common.UIAbilityContext => ReaderRuntimeOwner.current().getUIAbilityContext());
+  }
 
   open(): void { this.getOrchestrator().open(); }
   toggle(key: SettingsKey, value: boolean): void { this.getOrchestrator().toggle(key, value); }

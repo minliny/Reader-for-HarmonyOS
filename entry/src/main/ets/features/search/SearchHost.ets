@@ -18,11 +18,16 @@ export class SearchHost {
   readonly publication: SearchPublication = new SearchPublication();
   private orchestrator: SearchOrchestrator | undefined = undefined;
   private revision: number = 0;
+  private readonly onPublicationChanged: () => void;
+  private readonly isSearchVisible: () => boolean;
 
   constructor(
-    private readonly onPublicationChanged: () => void,
-    private readonly isSearchVisible: () => boolean,
-  ) {}
+    onPublicationChanged: () => void,
+    isSearchVisible: () => boolean,
+  ) {
+    this.onPublicationChanged = onPublicationChanged;
+    this.isSearchVisible = isSearchVisible;
+  }
 
   publicationRevision(): number { return this.revision; }
 

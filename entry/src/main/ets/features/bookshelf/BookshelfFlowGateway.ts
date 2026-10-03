@@ -215,7 +215,7 @@ export class BookshelfFlowGateway {
     const confirmation = importConfirmation(batch);
     try {
       const shelf = await this.load();
-      const projection = projectPersistedReceipt({
+      const projection = projectPersistedReceipt<BookshelfDataState>({
         confirmation, readback: 'succeeded', value: shelf,
       });
       return {

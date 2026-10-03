@@ -15,14 +15,22 @@ export type { SourceImportCompletion, SourceManagementStatusKind } from './Sourc
  */
 export class SourceHost {
   private orchestrator: SourceOrchestrator | undefined = undefined;
+  private readonly emitSources: (sources: BookSource[]) => void;
+  private readonly isCurrent: () => boolean;
+  private readonly emitStatus: (kind: SourceManagementStatusKind, message: string) => void;
+  private readonly owner: () => ReaderRuntimeOwner;
 
   constructor(
-    private readonly emitSources: (sources: BookSource[]) => void,
-    private readonly isCurrent: () => boolean,
-    private readonly emitStatus: (kind: SourceManagementStatusKind, message: string) => void =
-      (_kind: SourceManagementStatusKind, _message: string): void => {},
-    private readonly owner: () => ReaderRuntimeOwner = (): ReaderRuntimeOwner => ReaderRuntimeOwner.current(),
-  ) {}
+    emitSources: (sources: BookSource[]) => void,
+    isCurrent: () => boolean,
+    emitStatus?: (kind: SourceManagementStatusKind, message: string) => void,
+    owner?: () => ReaderRuntimeOwner,
+  ) {
+    this.emitSources = emitSources;
+    this.isCurrent = isCurrent;
+    this.emitStatus = emitStatus ?? ((_kind: SourceManagementStatusKind, _message: string): void => {});
+    this.owner = owner ?? ((): ReaderRuntimeOwner => ReaderRuntimeOwner.current());
+  }
 
   open(): void { this.getOrchestrator().open(); }
   retryLoad(): void { this.getOrchestrator().retryLoad(); }

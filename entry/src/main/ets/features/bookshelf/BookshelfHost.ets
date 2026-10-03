@@ -25,13 +25,19 @@ export {
  */
 export class BookshelfHost {
   private managementOrchestrator: BookshelfManagementOrchestrator | undefined = undefined;
+  private readonly emitManagementSnapshot: (snapshot: BookshelfManagementSnapshot) => void;
+  private readonly isManagementCurrent: () => boolean;
+  private readonly owner: () => ReaderRuntimeOwner;
 
   constructor(
-    private readonly emitManagementSnapshot: (snapshot: BookshelfManagementSnapshot) => void,
-    private readonly isManagementCurrent: () => boolean,
-    private readonly owner: () => ReaderRuntimeOwner =
-      (): ReaderRuntimeOwner => ReaderRuntimeOwner.current(),
-  ) {}
+    emitManagementSnapshot: (snapshot: BookshelfManagementSnapshot) => void,
+    isManagementCurrent: () => boolean,
+    owner?: () => ReaderRuntimeOwner,
+  ) {
+    this.emitManagementSnapshot = emitManagementSnapshot;
+    this.isManagementCurrent = isManagementCurrent;
+    this.owner = owner ?? ((): ReaderRuntimeOwner => ReaderRuntimeOwner.current());
+  }
 
   openManagement(): void { this.getManagementOrchestrator().open(); }
   updateGroupName(value: string): void { this.getManagementOrchestrator().updateGroupName(value); }

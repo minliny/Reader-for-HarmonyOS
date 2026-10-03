@@ -338,7 +338,7 @@ export class SearchOrchestrator {
         keyword: presentation.keyword,
         searchedSourceCount: this.sweepCompletedSourceCount,
         stopped: true,
-        operation: projectOperationFacts({ phase: 'cancelled', canRetry: true, generation: this.work }),
+        operation: projectOperationFacts<SearchOperationValue>({ phase: 'cancelled', canRetry: true, generation: this.work }),
       });
       return;
     }
@@ -359,7 +359,7 @@ export class SearchOrchestrator {
         stopped: true,
         localSearchFailed: presentation.localSearchFailed, sourceListFailed: presentation.sourceListFailed,
         localFailureMessage: presentation.localFailureMessage, sourceListFailureMessage: presentation.sourceListFailureMessage,
-        operation: projectOperationFacts({
+        operation: projectOperationFacts<SearchOperationValue>({
           phase: 'cancelled',
           value: {
             resultCount: presentation.results.length,
