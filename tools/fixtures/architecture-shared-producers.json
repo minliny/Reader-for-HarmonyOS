@@ -4144,6 +4144,375 @@
       "sdkProofs": [
         "tools/test-choice-row-surface.mjs"
       ]
+    },
+    {
+      "id": "shared-RssOriginalRecoverySurface",
+      "file": "entry/src/main/ets/features/rss/RssOriginalRecoverySurface.ets",
+      "component": "RssOriginalRecoverySurface",
+      "specPolicy": "Finite RSS business-slot-wrapper: 4 exact scopes, immutable original operation/presentation/entity identity; one existing Notice and two existing Action declarations; no private rendering styles or arbitrary leaf appearance inputs",
+      "shape": {
+        "types": [],
+        "declarations": [
+          {
+            "name": "RssOriginalRecoverySurface",
+            "publicFields": [
+              {
+                "name": "original",
+                "type": "RssOriginalMutationProjection | undefined",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "presentationIdentity",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "subscriptionId",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "guid",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "scope",
+                "type": "'management' | 'editor' | 'entry' | 'feed'",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "onReconcileOriginal",
+                "type": "(expected: RssOriginalMutationIdentity) => void",
+                "decorators": []
+              },
+              {
+                "name": "onContinueOriginal",
+                "type": "(expected: RssOriginalMutationIdentity) => void",
+                "decorators": []
+              }
+            ]
+          }
+        ],
+        "styles": [],
+        "implementation": "import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';\nimport { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';\nimport type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';\nimport type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from './RssMutationRecoveryContract';\ninterface RssRecoveryActionIdentity {\n    presentationIdentity: string;\n    scope: 'management' | 'editor' | 'entry' | 'feed';\n    original: RssOriginalMutationProjection;\n    subscriptionId: string;\n    guid: string;\n}\n@Component\nexport struct RssOriginalRecoverySurface extends   {\n    constructor(?: {\n        original?: RssOriginalMutationProjection | undefined;\n        presentationIdentity?: string;\n        subscriptionId?: string;\n        guid?: string;\n        scope?: 'management' | 'editor' | 'entry' | 'feed';\n        onReconcileOriginal?: (expected: RssOriginalMutationIdentity) => void;\n        onContinueOriginal?: (expected: RssOriginalMutationIdentity) => void;\n        private mounted?: boolean;\n    }, ?: ) { }\n    @Prop\n    original: RssOriginalMutationProjection | undefined = undefined;\n    @Prop\n    presentationIdentity: string = '';\n    @Prop\n    subscriptionId: string = '';\n    @Prop\n    guid: string = '';\n    @Prop\n    scope: 'management' | 'editor' | 'entry' | 'feed' = 'management';\n    onReconcileOriginal: (expected: RssOriginalMutationIdentity) => void = (_expected: RssOriginalMutationIdentity): void => { };\n    onContinueOriginal: (expected: RssOriginalMutationIdentity) => void = (_expected: RssOriginalMutationIdentity): void => { };\n    private mounted: boolean = false;\n    aboutToAppear(): void { this.mounted = true; }\n    aboutToDisappear(): void { this.mounted = false; }\n    private view(): ReaderRecoveryView {\n        return { visible: this.original?.blocked === true, message: this.original?.message ?? '',\n            canRetry: false, generation: this.original?.generation ?? 0 };\n    }\n    private identities(): string[] {\n        if (this.original?.blocked !== true)\n            return [];\n        const identity: RssRecoveryActionIdentity = { presentationIdentity: this.presentationIdentity, scope: this.scope, original: this.original,\n            subscriptionId: this.subscriptionId, guid: this.guid };\n        return [JSON.stringify(identity)];\n    }\n    private actionIdentity(identity: string): RssRecoveryActionIdentity {\n        return JSON.parse(identity) as RssRecoveryActionIdentity;\n    }\n    private expected(identity: string): RssOriginalMutationProjection {\n        return this.actionIdentity(identity).original;\n    }\n    private qualified(identity: string): boolean {\n        const captured = this.actionIdentity(identity);\n        const entityMatches = captured.scope === 'management' || (captured.original.subscriptionId === captured.subscriptionId &&\n            (captured.scope !== 'entry' || captured.original.guid === captured.guid));\n        return entityMatches && captured.scope !== 'feed' && captured.original.scope === captured.scope &&\n            captured.original.canRetryOriginal && captured.original.operationId.length > 0;\n    }\n    private continuationLabel(identity: string): string {\n        const captured = this.expected(identity);\n        return captured.confirmation === 'confirmed' && captured.writeStage === 'cleanup' ? '继续原清理' : '继续原操作';\n    }\n    private current(identity: string): boolean {\n        return this.mounted && this.original?.busy !== true && this.identities().indexOf(identity) >= 0;\n    }\n    private canContinue(identity: string): boolean {\n        return this.current(identity) && this.qualified(identity) && this.original?.canRetryOriginal === true;\n    }\n    build() {\n        if (this.original?.blocked === true) {\n            ReaderRecoveryNotice({ view: this.view() });\n            ForEach(this.identities(), (identity: string) => {\n                ReaderRecoveryAction({ label: '核对原操作回执', generation: this.expected(identity).generation,\n                    actionEnabled: this.current(identity),\n                    onReconcile: (): void => { if (this.current(identity))\n                        this.onReconcileOriginal(this.expected(identity)); } });\n                if (this.qualified(identity)) {\n                    ReaderRecoveryAction({ label: this.continuationLabel(identity),\n                        generation: this.expected(identity).generation, actionEnabled: this.current(identity),\n                        onReconcile: (): void => { if (this.canContinue(identity))\n                            this.onContinueOriginal(this.expected(identity)); } });\n                }\n            }, (identity: string): string => identity);\n        }\n    }\n}\n"
+      },
+      "specSources": [],
+      "consumers": [
+        {
+          "file": "features/rss/RssEntryDetailPage.ets",
+          "method": "features/rss/RssEntryDetailPage.ets#RssEntryDetailPage#operationFeedback",
+          "component": "RssOriginalRecoverySurface",
+          "specId": null,
+          "keys": [
+            "original",
+            "presentationIdentity",
+            "scope",
+            "subscriptionId",
+            "guid",
+            "onReconcileOriginal",
+            "onContinueOriginal"
+          ]
+        },
+        {
+          "file": "features/rss/RssPage.ets",
+          "method": "features/rss/RssPage.ets#RssPage#readFeedback",
+          "component": "RssOriginalRecoverySurface",
+          "specId": null,
+          "keys": [
+            "original",
+            "presentationIdentity",
+            "scope",
+            "onReconcileOriginal"
+          ]
+        },
+        {
+          "file": "features/rss/RssSourceFeedPage.ets",
+          "method": "features/rss/RssSourceFeedPage.ets#RssSourceFeedPage#operationFeedback",
+          "component": "RssOriginalRecoverySurface",
+          "specId": null,
+          "keys": [
+            "original",
+            "presentationIdentity",
+            "scope",
+            "onReconcileOriginal",
+            "onContinueOriginal"
+          ]
+        },
+        {
+          "file": "features/rss/RssSubscriptionEditorPage.ets",
+          "method": "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage#operationRecovery",
+          "component": "RssOriginalRecoverySurface",
+          "specId": null,
+          "keys": [
+            "original",
+            "presentationIdentity",
+            "scope",
+            "subscriptionId",
+            "onReconcileOriginal",
+            "onContinueOriginal"
+          ]
+        },
+        {
+          "file": "features/rss/RssSubscriptionManagementPage.ets",
+          "method": "features/rss/RssSubscriptionManagementPage.ets#RssSubscriptionManagementPage#operationFeedback",
+          "component": "RssOriginalRecoverySurface",
+          "specId": null,
+          "keys": [
+            "original",
+            "presentationIdentity",
+            "scope",
+            "onReconcileOriginal",
+            "onContinueOriginal"
+          ]
+        }
+      ],
+      "delegates": [
+        {
+          "component": "ReaderRecoveryNotice",
+          "file": "entry/src/main/ets/features/common/ReaderRecoveryNotice.ets",
+          "shape": {
+            "types": [],
+            "declarations": [
+              {
+                "name": "ReaderRecoveryNotice",
+                "publicFields": [
+                  {
+                    "name": "view",
+                    "type": "ReaderRecoveryView",
+                    "decorators": [
+                      "@Prop"
+                    ]
+                  },
+                  {
+                    "name": "actionLabel",
+                    "type": "string",
+                    "decorators": [
+                      "@Prop"
+                    ]
+                  },
+                  {
+                    "name": "onReconcile",
+                    "type": "(generation: number) => void",
+                    "decorators": []
+                  }
+                ]
+              }
+            ],
+            "styles": [
+              {
+                "owner": "ReaderRecoveryNotice",
+                "method": "build",
+                "property": "width",
+                "args": [
+                  "'100%'"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryNotice",
+                "method": "build",
+                "property": "padding",
+                "args": [
+                  "12"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryNotice",
+                "method": "build",
+                "property": "width",
+                "args": [
+                  "'100%'"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryNotice",
+                "method": "build",
+                "property": "fontColor",
+                "args": [
+                  "readerAppColor('TOK_MUTED', this.appThemeScheme)"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryNotice",
+                "method": "build",
+                "property": "fontSize",
+                "args": [
+                  "TYPE_APP_INHERITED_BODY.fontSizeFp"
+                ]
+              }
+            ],
+            "implementation": "import { TYPE_APP_INHERITED_BODY } from './ReaderTypography';\nimport { readerAppColor } from './ReaderThemeRegistry';\nimport { ReaderRecoveryAction } from './ReaderRecoveryAction';\nimport type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';\n@Component\nexport struct ReaderRecoveryNotice extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        view?: ReaderRecoveryView;\n        actionLabel?: string;\n        onReconcile?: (generation: number) => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    view: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };\n    @Prop\n    actionLabel: string = '刷新列表';\n    onReconcile: (generation: number) => void = (_generation: number): void => { };\n    build() {\n        if (this.view.visible) {\n            .width<\n      >('100%');\n        }\n    }\n}\n"
+          },
+          "consumers": [
+            {
+              "file": "features/rss/RssOriginalRecoverySurface.ets",
+              "method": "features/rss/RssOriginalRecoverySurface.ets#RssOriginalRecoverySurface#build",
+              "component": "ReaderRecoveryNotice",
+              "specId": null,
+              "keys": [
+                "view"
+              ]
+            }
+          ]
+        },
+        {
+          "component": "ReaderRecoveryAction",
+          "file": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+          "shape": {
+            "types": [],
+            "declarations": [
+              {
+                "name": "ReaderRecoveryAction",
+                "publicFields": [
+                  {
+                    "name": "variant",
+                    "type": "'compact' | 'rssManagement'",
+                    "decorators": [
+                      "@Prop"
+                    ]
+                  },
+                  {
+                    "name": "label",
+                    "type": "string",
+                    "decorators": [
+                      "@Prop"
+                    ]
+                  },
+                  {
+                    "name": "generation",
+                    "type": "number",
+                    "decorators": [
+                      "@Prop"
+                    ]
+                  },
+                  {
+                    "name": "actionEnabled",
+                    "type": "boolean",
+                    "decorators": [
+                      "@Prop"
+                    ]
+                  },
+                  {
+                    "name": "onReconcile",
+                    "type": "(generation: number) => void",
+                    "decorators": []
+                  }
+                ]
+              }
+            ],
+            "styles": [
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "borderRadius",
+                "args": [
+                  "this.variant === 'rssManagement' ? 8 : 6"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "backgroundColor",
+                "args": [
+                  "readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme)"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "padding",
+                "args": [
+                  "{ left: 12, right: 12 }"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "height",
+                "args": [
+                  "36"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "fontColor",
+                "args": [
+                  "readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme)"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "fontSize",
+                "args": [
+                  "TYPE_FORM_COMPACT_ACTION.fontSizeFp"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "fontWeight",
+                "args": [
+                  "TYPE_FORM_COMPACT_ACTION.fontWeight"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "fontFamily",
+                "args": [
+                  "TYPE_FORM_COMPACT_ACTION.fontFamily"
+                ]
+              }
+            ],
+            "implementation": "import { TYPE_FORM_COMPACT_ACTION } from './ReaderTypography';\nimport { readerAppColor } from './ReaderThemeRegistry';\n@Component\nexport struct ReaderRecoveryAction extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        variant?: 'compact' | 'rssManagement';\n        label?: string;\n        generation?: number;\n        actionEnabled?: boolean;\n        onReconcile?: (generation: number) => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    variant: 'compact' | 'rssManagement' = 'compact';\n    @Prop\n    label: string = '刷新列表';\n    @Prop\n    generation: number = 0;\n    @Prop\n    actionEnabled: boolean = true;\n    onReconcile: (generation: number) => void = (_generation: number): void => { };\n    build() {\n            .fontFamily<\n    >(TYPE_FORM_COMPACT_ACTION.fontFamily)\n            .fontWeight<\n    >(TYPE_FORM_COMPACT_ACTION.fontWeight)\n            .fontSize<\n    >(TYPE_FORM_COMPACT_ACTION.fontSizeFp)\n            .fontColor<\n    >(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))\n            .height<\n    >(36)\n            .padding<\n    >({ left: 12, right: 12 })\n            .backgroundColor<\n    >(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))\n            .borderRadius<\n    >(this.variant === 'rssManagement' ? 8 : 6)\n            .textAlign<\n    >(TextAlign.Center)\n            .enabled<\n    >(this.actionEnabled)\n            .accessibilityText<\n    >(this.label)\n            .onClick<\n    >((): void => { if (this.actionEnabled)\n            this.onReconcile(this.generation); });\n    }\n}\n"
+          },
+          "consumers": [
+            {
+              "file": "features/rss/RssOriginalRecoverySurface.ets",
+              "method": "features/rss/RssOriginalRecoverySurface.ets#RssOriginalRecoverySurface#build",
+              "component": "ReaderRecoveryAction",
+              "specId": null,
+              "keys": [
+                "label",
+                "generation",
+                "actionEnabled",
+                "onReconcile"
+              ]
+            },
+            {
+              "file": "features/rss/RssOriginalRecoverySurface.ets",
+              "method": "features/rss/RssOriginalRecoverySurface.ets#RssOriginalRecoverySurface#build",
+              "component": "ReaderRecoveryAction",
+              "specId": null,
+              "keys": [
+                "label",
+                "generation",
+                "actionEnabled",
+                "onReconcile"
+              ]
+            }
+          ]
+        }
+      ],
+      "removalProofs": [
+        "tools/evidence/p4/RSS_ORIGINAL_RECOVERY_PRODUCER.md"
+      ],
+      "sdkProofs": [
+        "tools/test-rss-original-recovery-surface-sdk.mjs",
+        "tools/test-rss-cold-index-consumers.mjs"
+      ]
     }
   ],
   "legacyBusinessRowsSha256": "3f7f18a54b7bf56a1bb557d3c48574f3e9b4f7e869a25dce2541c04b30f924d0",
