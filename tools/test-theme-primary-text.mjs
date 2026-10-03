@@ -7,6 +7,12 @@ import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeR
 
 const root=path.resolve(import.meta.dirname,'..'), ets=path.join(root,'entry/src/main/ets');
 const source=file=>readFileSync(path.join(ets,'features',file),'utf8');
+const shelfTypography = Object.fromEntries([
+  'NOTE', 'STATUS', 'BODY', 'BODY_MUTED', 'META', 'GROUP_TITLE', 'ROW_ACTION',
+  'BOOK_TITLE', 'HEADING', 'BUTTON', 'SMALL_ACTION',
+].map(name => [`TYPE_SHELF_MANAGEMENT_${name}`, {
+  fontFamily: 'ReaderNotoSansSC', fontWeight: 400, fontSizeFp: 12, lineHeightFp: 16,
+}]));
 const output={layer:'Actual SDK Builder retained observer calls plus all production fontColor AST consumers; no new VM pixels',builder:[],consumers:[]};
 const {owner:detail}=createReaderBuilderProbe(source('bookshelf/LocalBookDetail.ets'),['chapterSection','chapterRow','chapterEmptyMessage','chapterSectionHeight'],{
   CHAPTER_SECTION_HEIGHT:282,ButtonType:{Normal:'Normal'}});
@@ -30,7 +36,7 @@ for(const scheme of ['day','night','day']){
   assert.equal(icon.create,`app.media.book_detail_directory${scheme==='night'?'_theme_night':''}`);
 }
 for(const file of ['settings/RulesManagementPage.ets','source/SourceToolsPage.ets','bookshelf/BookshelfManagementPage.ets']){
-  const {owner}=createReaderBuilderProbe(source(file),['actionButton']);
+  const {owner}=createReaderBuilderProbe(source(file),['actionButton'],shelfTypography);
   Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false}});
   owner.actionButton('主操作',true,()=>{});owner.actionButton('次操作',false,()=>{});
   for(const scheme of ['day','night','day'])for(const busy of [false,true]){
