@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createRequire, registerHooks } from 'node:module';
+import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
+import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
@@ -9,6 +10,10 @@ registerHooks({resolve(specifier,context,next){try{return next(specifier,context
 const state = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
 const { readerControlReplaceDraftParams } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGateway.ts');
 const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts');
+const typographySource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
+const rulesTypography = new Function(...Object.keys(fontFamilies), `${stripTypeScriptTypes(typographySource)
+  .replace(/^import[^;]+;\s*/gm, '').replace(/^export /gm, '')}; return { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION };`)(
+    ...Object.values(fontFamilies));
 const file = new URL('../entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets',import.meta.url);
 const source = readFileSync(file,'utf8');
 const results=[];
@@ -85,7 +90,7 @@ await check('actual standalone settings Add action has no inherited reading scop
   syntax.componentCollection.customComponents.add('ReaderToggle');
   syntax.propCollection.set('ReaderToggle',new Set([...toggleSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
   class NativeChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
-  const {owner}=createReaderBuilderProbe(settingsSource,['replaceCard','heading','input','booleanField','actionButton','entityRow','smallButton','integerOrZero'],{ReaderToggle:NativeChild});
+  const {owner}=createReaderBuilderProbe(settingsSource,['replaceCard','heading','input','booleanField','actionButton','entityRow','smallButton','integerOrZero'],{ReaderToggle:NativeChild,...rulesTypography});
   let saved;
   Object.assign(owner,{appThemeScheme:'day',snapshot:{replaceRules:[],busy:false},replaceId:-1,replaceName:'独立规则',
     replacePattern:'原文',replaceValue:'替换',replaceEnabled:true,replaceRegex:false,replaceOrder:'0',onSaveReplace:draft=>{saved=draft;},
