@@ -35,7 +35,7 @@ const Gateway=productionMotionMethods(path('features/sync/SyncGateway.ts'),['rec
 function gatewayFixture({receipt=false,hostConfig=true,failApplyResponse=false,failCommitResponse=false,failHost=false}={}){
  let applied=receipt,coreApplications=0,themeApplications=0,commits=0,queries=0,record;
  let pending=copy(journal);let hostFailed=failHost,commitFailed=failCommitResponse;
- const g=Object.assign(new Gateway(),{credentials:{loadRestoreJournal:async()=>pending,saveRestoreJournal:async x=>{pending=x;},clearRestoreJournal:async id=>{assert.equal(pending?.operationId,id);pending=undefined;}},
+ const g=Object.assign(new Gateway(),{assertOwner:()=>{},assertAdmission:()=>{},credentials:{loadRestoreJournal:async()=>pending,saveRestoreJournal:async x=>{pending=x;},clearRestoreJournal:async id=>{assert.equal(pending?.operationId,id);pending=undefined;}},
  hostConfiguration:{decode:x=>x,apply:async x=>{themeApplications++;if(hostFailed){hostFailed=false;throw Error('host flush');}assert.deepEqual(x,next);}},
  requireObject:x=>x,decodeTransaction:x=>x,abortBestEffort:async()=>true,
  runtimeOwner:{request:async(name,params)=>{
@@ -90,7 +90,7 @@ console.log('PASS WebDAV Host production recovery: durable choices, allow-list, 
    MAX_TRANSACTION_REQUESTS:100,ReaderThemeHost:{prepareUserChange:async()=>{barrier++;},observedSystemScheme:()=> 'night'},
    AppStorage:{setOrCreate:(k,v)=>diagnostics.set(k,v)},
  });
- const start=Object.assign(new Start(),{recoverInterruptedRestore:async()=>false,authorization:()=>undefined,
+ const start=Object.assign(new Start(),{assertOwner:()=>{},assertAdmission:()=>{},requireRestoreSettled:async()=>{},recoverInterruptedRestore:async()=>false,authorization:()=>undefined,
    hostConfiguration:{capture:async()=>prior,encode:x=>host.encode(x)},runtimeOwner:{request:async(_name,p)=>{params=p;return{data:{transactionId:'migrate-1',status:'conflict',phase:'restoreConflict',requests:[],themeMigrationReason:'legacy-unknown-reader:system:night'}};}}});
  await start.startTransaction('restore',{url:'https://example.invalid',directory:'/backup',backupPassword:'not-a-real-secret'},true);
  assert.equal(barrier,1);assert.equal(params.systemScheme,'night');assert.equal(params.hostConfig.themeSelection.reader.scheme,'day','system observation is independent from selected reading scheme');

@@ -59,8 +59,8 @@ assert.match(gateway, /webdavPass:\s*''/);
 assert.match(gateway, /backupPass:\s*''/);
 assert.match(gateway, /params\['encryptionKey'\]\s*=\s*config\.backupPassword/);
 const restoreLatest = gateway.slice(
-  gateway.indexOf('async restoreLatest()'),
-  gateway.indexOf('async resolveRestore()', gateway.indexOf('async restoreLatest()')),
+  gateway.indexOf('async restoreLatest('),
+  gateway.indexOf('async resolveRestore(', gateway.indexOf('async restoreLatest(')),
 );
 assert.match(restoreLatest, /const stalePendingTransactionId = this\.pendingRestoreTransactionId/,
   'a new restore must account for a previously unresolved conflict');
@@ -111,7 +111,7 @@ assert.equal(classifier.isAlreadyClosedTransactionError(new Error('network timeo
 assert.doesNotMatch(orchestrator, /hilog|console\./,
   'orchestration statuses must be user-safe and must not log secrets');
 assert.match(orchestrator, /operationInFlight/);
-assert.match(orchestrator, /saveConfig\(url, user, pass, backupPass, directory\)/);
+assert.match(orchestrator, /saveConfig\(url, user, pass, backupPass, directory, observation, admitted\)/);
 
 assert.match(page, /onSaveConfig/);
 assert.match(page, /aboutToAppear\(\)[\s\S]*this\.appliedSnapshotIdentity\s*=\s*'';[\s\S]*this\.syncSnapshotInputs\(\)/,

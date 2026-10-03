@@ -1,3 +1,5 @@
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { TYPE_APP_COMPACT_BADGE, TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_APP_LOADING_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_LABEL, TYPE_FORM_ACTION, TYPE_FORM_LABEL_ACTION, TYPE_FORM_STATUS, TYPE_SECTION_HEADING, TYPE_SYNC_BACKUP_ACTION, TYPE_SYNC_CONFLICT_META, TYPE_SYNC_HISTORY_STATUS, TYPE_SYNC_INPUT, TYPE_SYNC_MUTED_HEADING, TYPE_SYNC_ROW_LABEL } from '../common/ReaderTypography';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -66,6 +68,7 @@ export struct SyncPage {
     (_url: string, _user: string, _pass: string, _backupPass: string, _path: string): void => {};
   onTestConnection: (url: string, user: string, pass: string, path: string) => void =
     (_url: string, _user: string, _pass: string, _path: string): void => {};
+  onReconcile: (generation: number) => void = (_generation: number): void => {};
   onTriggerBackup: () => void = (): void => {};
   onRestoreLatest: () => void = (): void => {};
   onResolveRestore: (overwriteLocal: boolean) => void = (_overwriteLocal: boolean): void => {};
@@ -79,6 +82,7 @@ export struct SyncPage {
   @State private webdavPathEdited: boolean = false;
   @State private viewportWidth: number = 0;
   private appliedSnapshotIdentity: string = '';
+  private acknowledgedSaveGeneration: number = 0;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -237,6 +241,7 @@ export struct SyncPage {
           .maxLines(1);
         if (isPassword) {
           TextInput({ text: value, placeholder: placeholder })
+            .enabled(this.canEdit())
             .width('100%')
             .height(36)
             // Credentials must never be rendered as ordinary readable page
@@ -255,6 +260,7 @@ export struct SyncPage {
             .onChange((newValue: string): void => onChange(newValue));
         } else {
           TextInput({ text: value, placeholder: placeholder })
+            .enabled(this.canEdit())
             .width('100%')
             .height(36)
             .fontFamily(TYPE_SYNC_INPUT.fontFamily)
@@ -294,6 +300,7 @@ export struct SyncPage {
       .backgroundColor(readerAppColor('app.SyncPage.GHOST_BG', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('app.SyncPage.GHOST_BORDER', this.appThemeScheme) })
       .borderRadius(8)
+      .enabled(this.canMutate())
       .onClick((): void => this.onTestConnection(
         this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(),
         this.webdavPass, this.effectiveWebdavPath().trim()));
@@ -310,6 +317,7 @@ export struct SyncPage {
       .backgroundColor(readerAppColor('app.SyncPage.SOLID_BG', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('app.SyncPage.SOLID_BG', this.appThemeScheme) })
       .borderRadius(12)
+      .enabled(this.canMutate())
       .onClick((): void => this.onSaveConfig(
         this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(), this.webdavPass,
         this.backupPass, this.effectiveWebdavPath().trim()));
@@ -324,7 +332,9 @@ export struct SyncPage {
       ReaderCard({ bg: readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme), cardBorder: readerAppColor('app.SyncPage.CARD_BORDER_SOFT', this.appThemeScheme), radius: 13,
         cardWidth: this.contentFrame().width }) {
         Column({ space: TOK_SPACE_SM }) {
-          if (this.snapshot.statusMessage.length > 0) {
+          ReaderRecoveryNotice({ view: this.feedbackView(), actionLabel: this.recoveryLabel(),
+            onReconcile: (generation: number): void => this.onReconcile(generation) });
+          if (this.snapshot.statusMessage.length > 0 && !this.feedbackView().visible) {
             Text(this.snapshot.statusMessage)
               .width('100%')
               .fontFamily(TYPE_FORM_STATUS.fontFamily as string)
@@ -362,6 +372,7 @@ export struct SyncPage {
     .backgroundColor(primary ? readerAppColor('app.SyncPage.SOLID_BG', this.appThemeScheme) : readerAppColor('app.SyncPage.GHOST_BG', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: primary ? readerAppColor('app.SyncPage.SOLID_BG', this.appThemeScheme) : readerAppColor('app.SyncPage.GHOST_BORDER', this.appThemeScheme) })
     .borderRadius(10)
+    .enabled(this.canMutate())
     .onClick(action);
   }
 
@@ -522,6 +533,7 @@ export struct SyncPage {
           .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
           .borderRadius(999)
           .margin({ bottom: TOK_SPACE_MD, left: TOK_SPACE_MD, right: TOK_SPACE_MD })
+          .enabled(this.canMutate())
           .onClick((): void => this.onTriggerBackup());
       }
       .width('100%');
@@ -643,6 +655,22 @@ export struct SyncPage {
     return 0;
   }
 
+  private canEdit(): boolean { return this.snapshot.facts?.busy !== true; }
+
+  private canMutate(): boolean { return this.snapshot.facts?.canMutate ?? true; }
+
+  private feedbackView(): ReaderRecoveryView {
+    const facts = this.snapshot.facts;
+    const read = facts?.read.fact === 'failed' || facts?.read.fact === 'refreshFailed' ? facts.read : facts?.request ?? facts?.read;
+    return readerRecoveryView(facts?.operation?.projection, read);
+  }
+
+  private recoveryLabel(): string {
+    const operation = this.snapshot.facts?.operation;
+    return operation !== undefined && !operation.completed &&
+      (operation.action === 'restore' || operation.action === 'resolveRestore') ? '核对已有恢复' : '重新读取配置';
+  }
+
   private effectiveWebdavUrl(): string {
     return this.webdavUrlEdited ? this.webdavUrl : this.snapshot.webdavUrl;
   }
@@ -656,6 +684,13 @@ export struct SyncPage {
   }
 
   private onSnapshotChanged(): void {
+    const operation = this.snapshot.facts?.operation;
+    if (operation?.action === 'saveConfig' && operation.projection.receipt.confirmation === 'confirmed' &&
+      operation.writeGeneration > this.acknowledgedSaveGeneration) {
+      this.acknowledgedSaveGeneration = operation.writeGeneration;
+      this.webdavPass = '';
+      this.backupPass = '';
+    }
     this.syncSnapshotInputs();
   }
 
