@@ -1,3 +1,4 @@
+import { readerRecoveryView } from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -26,7 +27,7 @@ const Toggle = new Proxy({ name: 'Toggle' }, { get: (target, key) => key === 'na
   if (key !== 'pop') activeOwner.nodes.get(activeId)[key] = args.length === 1 ? args[0] : args;
 } });
 let metrics = new ReaderWindowMetricsSnapshot();
-const deps = { PageBackBar: Header, Toggle, ToggleType: { Switch: 'switch' },
+const deps = { readerRecoveryView, PageBackBar: Header, Toggle, ToggleType: { Switch: 'switch' },
   ReaderWindowCoordinator: { metrics: () => metrics }, SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame,
   readerVisualSafeLeft, readerVisualSafeRight, readerInteractiveSafeLeft, readerInteractiveSafeRight,
   TOK_CONTENT_MAX_W_TABLET: 720, TOK_SCREEN_INSET: 19, TOK_SPACE_XS: 8, TOK_SPACE_MD: 16,
@@ -40,7 +41,7 @@ for (const [width, height, left, right, safeBottom] of [[365, 320, 0, 0, 0], [39
   metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, width, height), undefined,
     new ReaderInsetsVp(0, 48, 0, safeBottom), new ReaderInsetsVp(left, 0, right, 0));
   const owner = new Component(); let backs = 0; const updates = [], selections = [];
-  Object.assign(owner, { appThemeScheme: 'day', mode: 'cover', error: '', autoCheckUpdate: true,
+  Object.assign(owner, { appThemeScheme: 'day', operation: {action:'load'}, mode: 'cover', error: '', autoCheckUpdate: true,
     readerWindowMetricsRevision: 1, onBack: () => { backs++; }, onAutoCheckUpdate: value => updates.push(value),
     selectMode: value => selections.push(value) });
   owner.initialRender();
@@ -82,7 +83,7 @@ for (const [width, height, left, right, safeBottom] of [[365, 320, 0, 0, 0], [39
 }
 const retryOwner = new Component();
 const retries = [];
-Object.assign(retryOwner, { appThemeScheme: 'day', mode: 'cover', error: '显示方式保存失败，点击重试',
+Object.assign(retryOwner, { appThemeScheme: 'day', operation: {action:'load'}, mode: 'cover', error: '显示方式保存失败，点击重试',
   requestedMode: 'list', autoCheckUpdate: true, readerWindowMetricsRevision: 1,
   selectMode: mode => retries.push(mode) });
 retryOwner.initialRender();
