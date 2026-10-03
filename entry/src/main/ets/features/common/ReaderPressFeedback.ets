@@ -29,14 +29,28 @@ export class ReaderPressFeedback implements AttributeModifier<CommonAttribute> {
   pressedSurface(): ResourceColor {
     if (!this.enabled) return this.surface;
     try {
-      const accent = ColorMetrics.resourceColor(readerAppColor('TOK_ACCENT', this.scheme));
-      const overlay = ColorMetrics.rgba(accent.red, accent.green, accent.blue, 0.12);
-      return ColorMetrics.resourceColor(this.surface).blendColor(overlay).color;
+      return this.composePressedSurface();
     } catch (_) { return this.surface; }
   }
 
+  private composePressedSurface(): ResourceColor {
+    const accent = ColorMetrics.resourceColor(readerAppColor('TOK_ACCENT', this.scheme));
+    const overlay = ColorMetrics.rgba(accent.red, accent.green, accent.blue, 0.12);
+    return ColorMetrics.resourceColor(this.surface).blendColor(overlay).color;
+  }
+
   applyPressedAttribute(instance: CommonAttribute): void {
-    instance.backgroundColor(this.pressedSurface()).borderRadius(this.enabled ? this.pressedRadius : this.radius);
+    if (!this.enabled) {
+      this.applyNormalAttribute(instance);
+      return;
+    }
+    try {
+      instance.backgroundColor(this.composePressedSurface()).borderRadius(this.pressedRadius);
+    } catch (_) {
+      // Keep the original complete fallback, including geometry, when the
+      // platform cannot produce the pressed surface.
+      this.applyNormalAttribute(instance);
+    }
   }
 
   applyDisabledAttribute(instance: CommonAttribute): void {

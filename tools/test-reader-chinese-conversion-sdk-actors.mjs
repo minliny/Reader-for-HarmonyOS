@@ -4,7 +4,7 @@ import {createRequire} from 'node:module';
 import {fixture,compile,until} from './lib/rules-mutation-durable-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {boundedSurfaceSdk,boundedMembers} from './lib/bounded-surface-sdk-probe.mjs';
-import {choiceSource,resolveReaderChoiceSpec} from './lib/reader-choice-row-probe.mjs';
+import {choiceSource,resolveReaderChoiceSpec,compileReaderChoiceLabelModifier} from './lib/reader-choice-row-probe.mjs';
 import {readerControlAppearanceEndpoint} from '../entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts';
 import {appearanceSelectMenuHeight} from '../entry/src/main/ets/features/common/ReaderSelectAppearanceStyle.ts';
 const read=name=>readFileSync(new URL(`../entry/src/main/ets/features/${name}.ets`,import.meta.url),'utf8');
@@ -21,7 +21,7 @@ const fullNames=[...common,'appThemeScheme','reduceMotion','interactionEnabled',
   'aboutToAppear','aboutToDisappear','requestCloseSelect'];
 function harness(kind,parentSource=parents[kind],dispatch){
   const finishes=[],calls=[];
-  const p=boundedSurfaceSdk();Object.assign(p.deps,{resolveReaderChoiceSpec,registerReaderFonts(){},
+  const p=boundedSurfaceSdk();Object.assign(p.deps,{resolveReaderChoiceSpec,ReaderChoiceLabelModifier:compileReaderChoiceLabelModifier(),registerReaderFonts(){},
     OPTION_H:36,SELECT_PAD:10,CHEVRON_GAP:8,CHEVRON_W:12,CHEVRON_H:8,SELECT_CHROME:40,
     APPEARANCE_SELECT_MENU_WIDTH:104,APPEARANCE_SELECT_OPTION_HEIGHT:25,appearanceSelectMenuHeight,readerControlAppearanceEndpoint,
     readerPageTurnStyle:()=> 'slide',motionAnimateParam:(_id,onFinish)=>({onFinish}),

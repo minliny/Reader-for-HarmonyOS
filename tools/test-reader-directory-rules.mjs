@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
 const rulesPath = fileURLToPath(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryRules.ets', import.meta.url));
 const rulesSource = readFileSync(rulesPath, 'utf8');
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
@@ -89,13 +90,14 @@ console.log('directory hierarchy editor actual SDK Builder syntax PASS');
   const selects=[];
   const Select={name:'Select',create(options){selects.push({options});},selected(value){selects.at(-1).selected=value;},
     onSelect(callback){selects.at(-1).onSelect=callback;},pop(){}};
-  const {owner}=createReaderBuilderProbe(rulesSource,['build'],{readerAppColor:token=>token,DirectoryRuleDraft:Draft,Select});
+  const controls=foundationControls();
+  const {owner}=createReaderBuilderProbe(rulesSource,['build'],{...controls.dependencies,readerAppColor:token=>token,DirectoryRuleDraft:Draft,Select},controls.hooks);
   const edits=[],runs=[];
   Object.assign(owner,{rules:[new Draft(1,'^第一部$','1','title'),new Draft(2,'^第一卷$','2','head')],
     preview:['第一部','  第一卷'],loaded:true,busy:false,previewReady:true,scheme:'day',message:'已预览',nextRuleId:2,
     edit:(...args)=>edits.push(args),changed(){this.previewReady=false;this.preview=[];},run:apply=>runs.push(apply)});
   owner.initialRender();
-  const nodes=[...owner.nodes.values()];
+  const nodes=controls.orderedNodes(owner);
   const fields=nodes.filter(node=>node.type==='TextInput');
   assert.equal(fields.length,4);
   fields[0].onChange('^第二部$');fields[1].onChange('3');
