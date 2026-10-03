@@ -35,10 +35,13 @@ assert.match(orchestrator, /new RssGateway\(owner\)/,
   'RSS subscriptions must reuse the RSS gateway');
 assert.match(orchestrator, /loadOnlineJsonDocument\(subscription\.url\)/,
   'manual subscription refresh must use the shared Host JSON transport');
-assert.match(orchestrator, /subscription\.type === 0[\s\S]*importBookSourceDocument/);
-assert.match(orchestrator, /subscription\.type === 1[\s\S]*importSourcesDocument/);
-assert.match(orchestrator, /importReplaceRuleDocument\(document\.text\)/);
-assert.match(orchestrator, /update: Date\.now\(\)/,
+assert.match(orchestrator, /subscription\.type === 0[\s\S]*prepareSubscriptionDocument\(document\.text\)/);
+assert.match(orchestrator, /gateway\.refreshSubscription\(subscription,document\.text,sourcePlan/);
+assert.match(gateway, /subscription\.type === 0[\s\S]*method:'source\.import'/,
+  'book-source subscriptions retain original per-item import semantics in exact durable steps');
+assert.match(gateway, /subscription\.type === 1[\s\S]*method:'rss-source\.import'/);
+assert.match(gateway, /replaceRuleDocumentBundle\(document\)/);
+assert.match(gateway, /update:\s*Date\.now\(\)/,
   'successful manual refresh must persist the last-update timestamp');
 assert.match(rssGateway, /async importSourcesDocument\([\s\S]*this\.mutationRequest\('rss-source\.import'/,
   'already-acquired RSS JSON must reuse the existing Core import command');
@@ -63,7 +66,7 @@ assert.match(experience, /this\.onOpenRulesManagement\(\)/,
   'rules management remains reachable from the designed reader replacement flow');
 assert.match(index, /route === 'rulesManagement'/);
 assert.match(index, /RulesManagementPage\(/);
-assert.match(index, /refreshRuleSubscription\(subscription\)/);
+assert.match(index, /refreshRuleSubscription\(subscription(?:,|\))/);
 assert.match(host, /selectBoundedJsonDocument\('Reader 规则包 JSON'\)/);
 assert.match(host, /saveBoundedJsonDocument\(text, suggestedFileName, 'Reader 规则包 JSON'/);
 

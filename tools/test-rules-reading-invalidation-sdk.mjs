@@ -32,7 +32,7 @@ function fixture(negative=false){
 const checks=[];
 for(const original of RULES_MUTATION_METHODS){
  const f=fixture(),tuple=payload(original);
- const changesBody=['replace.persist','dict-rule.put','dict-rule.delete','rule-bundle.import','reader.chinese-conversion.put'].includes(original);
+ const changesBody=['replace.persist','dict-rule.put','dict-rule.delete','rule-bundle.import','reader.chinese-conversion.put','source.import'].includes(original);
  const current=f.preparations.captureContentValidity('s','b');
  await f.acquisition.request('rules.mutation.apply',tuple);
  assert.equal(current(),!changesBody,original+' preserves original preparation semantics');

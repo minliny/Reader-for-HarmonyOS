@@ -179,11 +179,15 @@ requestUpdate(); assert.equal(updateIntents, 1, 'More delegates the foreground s
 assert.equal(shellUpdate.moreMenuVisible, false, 'accepted update closes the menu');
 assert.match(index, /private startManualBookshelfUpdate\(\)/,
   'SHF-03: Index must dispatch the user foreground update intent');
-assert.match(index, /this\.bookshelfHost\.refreshCatalogs\(owner/, 'SHF-03: existing BookshelfHost owns the exact Runtime sweep');
-assert.match(index, /bookshelfUpdateDone = value\.attempted/,
+const catalogOwner = read('entry/src/main/ets/features/bookshelf/BookshelfCatalogOwner.ts');
+assert.match(index, /this\.bookshelfHost\.catalog\(owner\)/, 'SHF-03: existing BookshelfHost owns the exact Runtime sweep');
+assert.match(catalogOwner, /new BookshelfCatalogUpdate\(this\.owner\)\.run\(books, automatic/,
+  'SHF-03: original bounded sweep uses the exact owner');
+assert.match(catalogOwner, /done: value\.attempted/,
   'SHF-03: the sweep reports attempted chunk progress, distinct from result success counts');
-assert.match(index, /bookshelfBackgroundRefreshRunning \|\| this\.bookshelfUpdateRunning/,
+assert.match(catalogOwner, /if \(this\.active !== undefined \|\| !this\.current\(binding\)\) return;/,
   'SHF-03: manual and background sweeps must stay mutually exclusive');
+await import('./test-bookshelf-manual-update.mjs');
 assert.match(shelf, /onBookGroupRequested/,
   'explicit per-book grouping is isolated from opening the shelf tool');
 assert.doesNotMatch(shelfMoreMenu, /分组管理/,

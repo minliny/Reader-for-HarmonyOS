@@ -85,13 +85,13 @@ const menu=Object.assign(new Select(),{mounted:true,generation:1,selectionId:'ol
   reduceMotion:false,getUIContext:()=>UI,onCommit:()=>events.push('commit'),onDismiss:()=>events.push('dismiss')});
 menu.selectAndCollapse('value'); const late=animations.at(-1).onFinish;
 menu.aboutToDisappear(); late(); assert.deepEqual(events,['commit'],'late finish cannot operate after unmount');
-const Appearance=productionMotionMethods(feature('reading/ReaderControlAppearanceContent.ets'),['commitSelect']);
+const Appearance=productionMotionMethods(feature('reading/ReaderControlAppearanceContent.ets'),['commitSelect','selectionActorIdentity']);
 const selected=[];
-const appearance=Object.assign(new Appearance(),{selectIdentity:'language:2',openSelect:'language',fullInput:()=>true,
+const appearance=Object.assign(new Appearance(),{selectIdentity:'language:2',chineseConversionIdentity:'reader:motion',openSelect:'language',fullInput:()=>true,
   selectOptions:()=>['原文','繁转简','简转繁'],applySelect:(...args)=>selected.push(args)});
 appearance.commitSelect('双字','indent:1'); appearance.commitSelect('双字','language:2');
 assert.equal(selected.length,0,'neither stale identity nor invalid value can change another setting');
-appearance.commitSelect('繁转简','language:2'); assert.deepEqual(selected,[['language','繁转简']]);
+appearance.commitSelect('繁转简',appearance.selectionActorIdentity()); assert.deepEqual(selected,[['language','繁转简','reader:motion']]);
 
 const Host=productionMotionMethods(feature('reading/LocalReadingExperience.ets'),
  ['performContinuousPageTurn','onReaderBookmarkGestureReleased','finishBookmarkRollback','reconcilePageBookmarkFeedback'],

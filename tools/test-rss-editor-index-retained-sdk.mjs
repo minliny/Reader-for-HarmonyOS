@@ -19,6 +19,8 @@ function makeIndex(runtime,{indexSource=read('pages/Index.ets')}={}){
  const Page=createReaderBuilderProbe(raw,members,{...p.deps,EMPTY_RSS_EDITOR_SNAPSHOT:editor.EMPTY_RSS_EDITOR_SNAPSHOT},p.hooks).Component;
  const names=['rssEditorSnapshot','getRssOrchestrator','retireRssPresentation','getRssEditorOrchestrator','retireRssEditorPresentation','isCurrentRssEditorPresentation','isCurrentRuntime',
   'rssEditorContent','rssEditorSurface','feedPresentation','finishRssSubscriptionEdit','nextNavigationGeneration','retireReadingEntryPresentation'];
+ for (const name of ['retireBookshelfCatalogPresentation','retireSyncPresentation','retireRulesPresentation','retireDiscoverPresentation'])
+   if (indexSource.includes(`private ${name}(`)) names.push(name);
  const idx=p.consumer(indexSource,names,{ReaderRuntimeOwner:RssRuntime,RssOrchestrator:Lane,RssSubscriptionEditorOrchestrator:Editor,
   RssSubscriptionEditorPage:Page,EMPTY_RSS_EDITOR_SNAPSHOT:editor.EMPTY_RSS_EDITOR_SNAPSHOT,projectOperationFacts:rssFacts.projectOperationFacts,
   isReaderProductSurfaceEnabled:()=>true});
