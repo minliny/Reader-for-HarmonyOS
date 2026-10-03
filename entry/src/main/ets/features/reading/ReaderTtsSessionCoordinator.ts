@@ -53,7 +53,8 @@ export type ReaderTtsHostEvent =
   | { type: 'error'; requestId: string; message: string }
   | { type: 'interruption'; action: 'pause' | 'resume' | 'stop' | 'duck' | 'unduck' }
   | { type: 'deviceChange'; action: 'continue' | 'stop' }
-  | { type: 'mediaControl'; action: 'play' | 'pause' | 'stop' | 'next' | 'previous' };
+  | { type: 'mediaControl'; action: 'play' | 'pause' | 'stop' | 'next' | 'previous' }
+  | { type: 'backgroundLeaseRevoked' };
 
 export type ReaderTtsHostProbe = {
   available: boolean;
@@ -250,6 +251,14 @@ export class ReaderTtsSessionCoordinator {
   }
 
   private routeHostEvent(event: ReaderTtsHostEvent): void {
+    if (event.type === 'backgroundLeaseRevoked') {
+      // Platform background eligibility is mandatory, independent from the
+      // user's optional interruption preference. Router admits this event
+      // only while the app is actually in background.
+      this.voidLogged(this.stopAudition(), 'audition.background-lease-revoked');
+      this.voidLogged(this.pauseForBackground(), 'background-lease-revoked');
+      return;
+    }
     const audition = this.audition;
     if (audition !== undefined) {
       if ('requestId' in event && event.requestId === audition.requestId) {
@@ -1147,7 +1156,8 @@ export class ReaderTtsSessionCoordinator {
   }
 
   private async handleHostEvent(event: ReaderTtsHostEvent): Promise<void> {
-    if (event.type === 'mediaControl' || event.type === 'interruption' || event.type === 'deviceChange') {
+    if (event.type === 'mediaControl' || event.type === 'interruption' || event.type === 'deviceChange' ||
+      event.type === 'backgroundLeaseRevoked') {
       return;
     }
     const active = this.active;
