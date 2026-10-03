@@ -209,6 +209,7 @@ import type {
   ReaderPageBookmarkToggleRequest,
 } from './ReaderDirectoryMarkerState';
 import type { ReaderReplacePreview } from './ReaderReplaceQuickGateway';
+import { RulesMutationOwner } from '../settings/RulesMutationOwner';
 import { ReaderControlReplaceGateway, ReaderControlReplaceGatewayError } from './ReaderControlReplaceGateway';
 import { createReaderControlReplaceState, beginReaderControlReplaceLoad, admitReaderControlReplaceLoad,
   beginReaderControlReplaceMutation, admitReaderControlReplaceRule, admitReaderControlReplaceDeletion,
@@ -1211,8 +1212,10 @@ export struct ReadingExperience {
   private remoteCatalogSessionAttemptAt: number = 0;
   private preparedReadingEntry: ReadingEntrySnapshot | undefined = undefined;
   entryPresentationProvider: () => ReaderRetainedPresentation | undefined = (): ReaderRetainedPresentation | undefined => undefined;
+  private readonly replaceRuntime: ReaderRuntimeOwner = ReaderRuntimeOwner.current();
+  private readonly rulesMutationOwner: RulesMutationOwner = RulesMutationOwner.forRuntime(this.replaceRuntime);
   private readonly replaceGateway: ReaderControlReplaceGateway =
-    new ReaderControlReplaceGateway(ReaderRuntimeOwner.current());
+    new ReaderControlReplaceGateway(this.replaceRuntime);
   private readonly appearanceGateway: ReaderAppearanceGateway =
     new ReaderAppearanceGateway(ReaderRuntimeOwner.current());
   private readonly chineseConversionGateway: ReaderChineseConversionGateway =
@@ -10053,6 +10056,19 @@ export struct ReadingExperience {
     }
   }
 
+  private readerReplaceRuntimeCurrent(): boolean {
+    try { return ReaderRuntimeOwner.current() === this.replaceRuntime; } catch (_) { return false; }
+  }
+
+  private projectReaderReplaceWriteFacts(): void {
+    const fact = this.rulesMutationOwner.snapshot();
+    if (fact.confirmation === 'unknown') {
+      this.controlReplaceState = failReaderControlReplaceRequest(this.controlReplaceState,
+        readerControlReplaceTicket(this.controlReplaceState),
+        fact.message || '规则写入结果尚未确认；可以读取当前列表，但不能继续写入', true);
+    }
+  }
+
   private openQuickReplace(): void {
     if (!this.mounted || !this.controlVisible() || this.controlPage() !== 'home') {
       return;
@@ -10062,6 +10078,7 @@ export struct ReadingExperience {
     if (this.controlReplaceState.sessionKey !== sessionKey) {
       this.controlReplaceState = createReaderControlReplaceState(sessionKey, this.bookTitle, this.sourceId);
     }
+    this.projectReaderReplaceWriteFacts();
     this.setControlPage('quickReplace');
     // A valid empty collection still opens: Full offers a real Add action.
     // A write already dispatched survives closure/reopen; never release its lock.
@@ -10072,8 +10089,8 @@ export struct ReadingExperience {
 
   private controlReplaceCurrent(lifecycle: number, sourceId: string, bookId: string,
     panelGeneration: number): boolean {
-    return this.isSessionActive(lifecycle) && this.sourceId === sourceId && this.bookId === bookId &&
-      panelGeneration === this.replacePanelGeneration && this.controlVisible() &&
+    return this.readerReplaceRuntimeCurrent() && this.isSessionActive(lifecycle) &&
+      this.sourceId === sourceId && this.bookId === bookId && panelGeneration === this.replacePanelGeneration && this.controlVisible() &&
       readerControlContentLocation(this.controlSession).module === 'replace';
   }
 
@@ -10083,6 +10100,7 @@ export struct ReadingExperience {
     const bookId = this.bookId;
     const panelGeneration = this.replacePanelGeneration;
     if (!this.controlReplaceCurrent(lifecycle, sourceId, bookId, panelGeneration)) throw new Error('规则面板已关闭');
+    this.projectReaderReplaceWriteFacts();
     const wasUncertain = this.controlReplaceState.writeUncertain;
     this.controlReplaceState = beginReaderControlReplaceLoad(this.controlReplaceState);
     const ticket = readerControlReplaceTicket(this.controlReplaceState);
@@ -10092,6 +10110,7 @@ export struct ReadingExperience {
       const rules = await this.replaceGateway.loadRules(isCurrent);
       if (!isCurrent()) return;
       this.controlReplaceState = admitReaderControlReplaceLoad(this.controlReplaceState, ticket, rules);
+      this.projectReaderReplaceWriteFacts();
       this.replaceState = createReaderReplaceQuickState(rules);
       if (wasUncertain) this.reloadCurrentPageAfterReplacePersist(lifecycle, bookId);
     } catch (error) {
@@ -10113,6 +10132,9 @@ export struct ReadingExperience {
     const bookId = this.bookId;
     const panelGeneration = this.replacePanelGeneration;
     if (!this.controlReplaceCurrent(lifecycle, sourceId, bookId, panelGeneration)) throw new Error('规则面板已关闭');
+    this.projectReaderReplaceWriteFacts();
+    const shared = this.rulesMutationOwner.snapshot();
+    if (shared.busy || shared.confirmation === 'unknown') throw new Error(shared.message || '另一规则操作尚未确认');
     const next = beginReaderControlReplaceMutation(this.controlReplaceState);
     const generation = this.beginReplaceMutation(lifecycle, bookId, ruleId);
     if (generation < 0) throw new Error('另一条规则正在保存，请等待完成');
@@ -10287,19 +10309,29 @@ export struct ReadingExperience {
     }
     const lifecycleToken = this.lifecycleToken;
     const bookId = this.bookId;
+    const sourceId = this.sourceId;
     const panelGeneration = this.replacePanelGeneration;
+    this.projectReaderReplaceWriteFacts();
+    const shared = this.rulesMutationOwner.snapshot();
+    if (shared.busy || shared.confirmation === 'unknown') {
+      this.showReaderAlert('preview', { title: '规则操作尚未确认', message: shared.message || '另一规则操作正在执行，请等待确认',
+        confirm: { value: '关闭', action: (): void => {} } });
+      return;
+    }
     const mutationGeneration = this.beginReplaceMutation(lifecycleToken, bookId, ruleId);
     if (mutationGeneration < 0) {
       return;
     }
     void this.persistBeforeContentMutation().then((positionCurrent): Promise<ReaderReplaceRule> => {
-      if (!positionCurrent() || !this.isReplaceMutationCurrent(mutationGeneration, lifecycleToken, bookId, ruleId)) {
-        throw new Error('READING_CONTENT_MUTATION_SUPERSEDED');
-      }
-      return this.replaceGateway.setRuleEnabled(ruleId, isEnabled);
+      const canDispatch = (): boolean => positionCurrent() && this.sourceId === sourceId &&
+        this.controlReplaceCurrent(lifecycleToken, sourceId, bookId, panelGeneration) &&
+        this.isReplaceMutationCurrent(mutationGeneration, lifecycleToken, bookId, ruleId);
+      if (!canDispatch()) throw new Error('READING_CONTENT_MUTATION_SUPERSEDED');
+      return this.replaceGateway.setRuleEnabled(ruleId, isEnabled, canDispatch);
     })
       .then((confirmed): void => {
-        if (!this.isReplaceMutationCurrent(mutationGeneration, lifecycleToken, bookId, ruleId)) {
+        if (this.sourceId !== sourceId || !this.readerReplaceRuntimeCurrent() ||
+          !this.isReplaceMutationCurrent(mutationGeneration, lifecycleToken, bookId, ruleId)) {
           return;
         }
         // Panel closure invalidates only presentation work. The already
@@ -10312,15 +10344,23 @@ export struct ReadingExperience {
         this.finishReplaceMutation(mutationGeneration, lifecycleToken, bookId, ruleId);
         this.reloadCurrentPageAfterReplacePersist(lifecycleToken, bookId);
       })
-      .catch((_error: Error): void => {
-        // Preserve the Core-confirmed visible switch state. Figma does not
-        // define an inline failure variant. A failed persist releases only its
-        // exact mutation owner and must never trigger a content reload.
+      .catch((error: Error): void => {
+        const ownsWrite = this.sourceId === sourceId && this.readerReplaceRuntimeCurrent() &&
+          this.isReplaceMutationCurrent(mutationGeneration, lifecycleToken, bookId, ruleId);
+        if (ownsWrite && this.controlReplaceCurrent(lifecycleToken, sourceId, bookId, panelGeneration)) {
+          this.projectReaderReplaceWriteFacts();
+          this.showReaderAlert('preview', { title: '规则操作未确认', message: this.errorMessage(error),
+            confirm: { value: '关闭', action: (): void => {} } });
+        }
+        // Retire this UI ticket only. The shared original rule authority keeps
+        // dispatched unknown across panel closure, book changes and re-entry.
         this.finishReplaceMutation(mutationGeneration, lifecycleToken, bookId, ruleId);
       });
   }
 
   private beginReplaceMutation(lifecycleToken: number, bookId: string, ruleId: number): number {
+    const shared = this.rulesMutationOwner.snapshot();
+    if (shared.busy || shared.confirmation === 'unknown' || !this.readerReplaceRuntimeCurrent()) return -1;
     if (this.replaceMutationActiveGeneration >= 0 &&
       this.replaceMutationActiveLifecycleToken === lifecycleToken &&
       this.replaceMutationActiveBookId === bookId) {

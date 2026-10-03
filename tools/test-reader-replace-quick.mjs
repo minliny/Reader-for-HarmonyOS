@@ -178,11 +178,11 @@ assert.match(toggleOwner[0], /this\.isReplaceMutationCurrent\(mutationGeneration
 assert.match(toggleOwner[0],
   /if \(panelGeneration === this\.replacePanelGeneration[\s\S]*?this\.replaceState = [\s\S]*?\n        \}[\s\S]*?this\.finishReplaceMutation[\s\S]*?this\.reloadCurrentPageAfterReplacePersist\(lifecycleToken, bookId\)/,
   'successful Core closure must reload content outside the panel-visibility gate');
-const failureOwner = toggleOwner[0].match(/\.catch\(\(_error: Error\): void => \{([\s\S]*?)\n      \}\);/);
+const failureOwner = toggleOwner[0].match(/\.catch\(\(error: Error\): void => \{([\s\S]*?)\n      \}\);/);
 assert.ok(failureOwner, 'Quick Replace failure owner path must exist');
 assert.match(failureOwner[1], /finishReplaceMutation/);
 assert.doesNotMatch(failureOwner[1], /reloadCurrentPageAfterReplacePersist|invalidateBook|contentMetrics/,
-  'a failed persist must release its owner without refreshing content');
+  'a failed persist retires only its UI ticket without pretending to confirm or refreshing content');
 
 const beginMutation = experience.match(
   /private beginReplaceMutation\([\s\S]*?\n  private isReplaceMutationCurrent/,

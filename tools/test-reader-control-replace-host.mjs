@@ -10,6 +10,8 @@ registerHooks({ resolve(specifier, context, nextResolve) {
     throw error;
   }
 } });
+const { RulesMutationOwner } = await import('../entry/src/main/ets/features/settings/RulesMutationOwner.ts');
+let activeRuntime;
 const statePolicy = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
 const quickPolicy = await import('../entry/src/main/ets/features/reading/ReaderReplaceQuickState.ts');
 const { ReaderControlReplaceGatewayError } =
@@ -23,7 +25,7 @@ const { ReaderContentSearchPublication } = await import('data:text/javascript,' 
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',
   import.meta.url), 'utf8');
 const names = ['openQuickReplace', 'controlReplaceCurrent', 'reloadControlReplace', 'runControlReplaceMutation',
-  'beginReplaceMutation', 'isReplaceMutationCurrent', 'finishReplaceMutation', 'invalidateReplaceMutationOwner',
+  'readerReplaceRuntimeCurrent', 'projectReaderReplaceWriteFacts', 'beginReplaceMutation', 'isReplaceMutationCurrent', 'finishReplaceMutation', 'invalidateReplaceMutationOwner',
   'onControlSessionChanged','admitSessionControlClosing','publishQuickSearchState'];
 function method(name) {
   const match = new RegExp('  private (?:async )?' + name + '\\(').exec(source);
@@ -38,7 +40,7 @@ function method(name) {
   assert.equal(depth, 0);
   return source.slice(match.index, end);
 }
-const deps = { ...statePolicy, ...quickPolicy, copyReaderControlSessionState, ReaderControlReplaceGatewayError, readerControlHostClosing,
+const deps = { ReaderRuntimeOwner: { current: () => activeRuntime }, ...statePolicy, ...quickPolicy, copyReaderControlSessionState, ReaderControlReplaceGatewayError, readerControlHostClosing,
   readerControlContentLocation: session => session.location,
   readerControlHostCloseCommitted: (session, revision) => session.closeRevision > revision,
   ReaderWindowCoordinator: { metrics: () => ({}) }, readerControlKeyboardVisible: () => false,
@@ -61,6 +63,8 @@ function deferred() { let resolve, reject; const promise = new Promise((a, b) =>
   return { promise, resolve, reject }; }
 function owner(Type = Host()) {
   const host = new Type();
+  const runtime = {}; activeRuntime = runtime;
+  Object.assign(host, { replaceRuntime: runtime, rulesMutationOwner: RulesMutationOwner.forRuntime(runtime) });
   Object.assign(host, { sourceId: 'source', bookId: 'book', lifecycleToken: 1, mounted: true,
     exitRequested: false, visible: true, page: 'quickReplace', replacePanelGeneration: 1,
     replaceMutationGeneration: 0, replaceMutationActiveGeneration: -1,
@@ -232,8 +236,9 @@ for (const operation of ['save', 'delete']) {
   assert.equal(host.reloadBookCalls, 1, 'unconfirmed reply is not proof no database write happened');
   await assert.rejects(host.runControlReplaceMutation(1, async () => ({ changed: true })), /请先完成/);
   await host.reloadControlReplace();
-  assert.equal(host.controlReplaceState.writeUncertain, false);
-  assert.equal(host.reloadBookCalls, 2, 'canonical uncertainty resolution re-materializes the original book');
+  assert.equal(host.controlReplaceState.writeUncertain, true, 'list reload cannot confirm the original write');
+  assert.equal(host.reloadBookCalls, 2, 'current projection refresh re-materializes the book without confirming the original write');
+  await assert.rejects(host.runControlReplaceMutation(1, async () => ({changed:true})), /请先完成/);
 }
 {
   const host = owner();
