@@ -16,7 +16,7 @@ const patterns = {
   backgroundColor: /\.backgroundColor\s*\(/g,
   CustomDialogController: /CustomDialogController/g,
   showAlertDialog: /showAlertDialog/g,
-  bindSheet: /\.bindSheet/g,
+  bindSheet: /\.bindSheet\s*\(/g,
   bindPopup: /\.bindPopup/g,
   bindContentCover: /\.bindContentCover/g,
   bindMenu: /\.bindMenu/g,
