@@ -1,6 +1,6 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
-import type { CommitReadbackSummary, OperationFacts } from '../../app/ReaderOperationFacts';
+import { projectCommitReadback, type CommitReadbackSummary, type OperationFacts } from '../../app/ReaderOperationFacts';
 import { projectPersistedReceipt } from '../../app/ReaderPersistedReceiptProjection';
 import {
   SourceGateway,
