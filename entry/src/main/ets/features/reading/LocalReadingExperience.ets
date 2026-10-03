@@ -4690,13 +4690,11 @@ export struct ReadingExperience {
           if (!Number.isFinite(lineCapacity) || lineCapacity <= 0) {
             throw new Error('PAGINATION_SURFACE_HEIGHT_INVALID');
           }
-          const paragraphSpace = this.physicalPagination.fragments.length > 0 ?
-            this.appearanceSnapshot.paragraphSpacing : 0;
           // Even an unknown image has the renderer's existing 1vp minimum
           // (or its failed-block line height). A full text page cannot admit
           // either outcome, so it must not wait for the next page's decode.
           const minimumImageHeight = Math.min(1, readerAppearanceLineHeight(this.appearanceSnapshot));
-          if (!this.physicalPagination.canFit(minimumImageHeight, paragraphSpace, lineCapacity)) {
+          if (!this.physicalPagination.canAppend(minimumImageHeight, true, this.appearanceSnapshot.paragraphSpacing, lineCapacity)) {
             this.beginFirstPageCommit(generation, selectionToken, lifecycleToken);
             return;
           }
@@ -4718,18 +4716,11 @@ export struct ReadingExperience {
           let imageHeight = bodyImage.state === 'ready' || hasKnownReadingImageGeometry(bodyImage) ?
             this.scaledReadingImageHeight(bodyImage, lineCapacity) :
             readerAppearanceLineHeight(this.appearanceSnapshot);
-          if (!this.physicalPagination.canFit(imageHeight, paragraphSpace, lineCapacity)) {
+          if (!this.physicalPagination.canAppend(imageHeight, true, this.appearanceSnapshot.paragraphSpacing, lineCapacity)) {
             this.beginFirstPageCommit(generation, selectionToken, lifecycleToken);
             return;
           }
-          const admittedParagraphSpace = this.physicalPagination.fragments.length > 0 ?
-            this.appearanceSnapshot.paragraphSpacing : 0;
-          if (this.physicalPagination.fragments.length === 0) {
-            this.physicalPagination.startScalar = bodyImage.startScalar;
-          }
-          this.physicalPagination.height += admittedParagraphSpace + imageHeight;
-          this.physicalPagination.endScalar = bodyImage.endScalar;
-          this.physicalPagination.fragments.push(new ReadingSurfacePageFragment(
+          this.physicalPagination.appendFragment(new ReadingSurfacePageFragment(
             `chapter-${this.requireMeasurementChapter().chapterIndex}:image:${bodyImage.startScalar}-${bodyImage.endScalar}`,
             '',
             true,
@@ -4740,7 +4731,7 @@ export struct ReadingExperience {
             bodyImage.state === 'ready' ? bodyImage.fileUri : undefined,
             imageHeight,
             bodyImage.imageWidthBasisPoints,
-          ));
+          ), bodyImage.startScalar, bodyImage.endScalar, imageHeight, true, this.appearanceSnapshot.paragraphSpacing);
           continue;
         }
         // Consume the laid-out prefix in reading order. A later paragraph
@@ -4773,16 +4764,9 @@ export struct ReadingExperience {
           let candidateHeight = this.getUIContext().px2vp(readerNativeParagraphHeight(
             paragraph.controller.getLayoutManager(), nativeRecipe?.firstLine ?? line.lineIndex, line.lineIndex));
           let admittedLineHeight = candidateHeight - nativeHeight;
-          const paragraphSpace = isParagraphStart && this.physicalPagination.fragments.length > 0 ?
-            this.appearanceSnapshot.paragraphSpacing : 0;
-          if (!this.physicalPagination.canFit(admittedLineHeight, paragraphSpace, lineCapacity)) {
+          if (!this.physicalPagination.canAppend(admittedLineHeight, isParagraphStart, this.appearanceSnapshot.paragraphSpacing, lineCapacity)) {
             this.beginFirstPageCommit(generation, selectionToken, lifecycleToken);
             return;
-          }
-          const admittedParagraphSpace = isParagraphStart && this.physicalPagination.fragments.length > 0 ?
-            this.appearanceSnapshot.paragraphSpacing : 0;
-          if (this.physicalPagination.fragments.length === 0) {
-            this.physicalPagination.startScalar = line.startScalar;
           }
           const firstNativeLine = nativeRecipe === undefined;
           if (nativeRecipe === undefined) {
@@ -4808,14 +4792,12 @@ export struct ReadingExperience {
           }
           nativeRecipe.lastLine = line.lineIndex;
           nativeHeight = candidateHeight;
-          this.physicalPagination.height += admittedParagraphSpace + admittedLineHeight;
-          this.physicalPagination.endScalar = line.endScalar;
           // ReadingSurface uses this id as its ArkUI ForEach identity. A
           // paragraph starts at zero in every chapter, so the local paragraph
           // id alone would let a new chapter reuse an old visible Text child.
           // Bind the fragment to the Core-returned chapter identity; this is
           // presentation identity only and never changes the scalar anchor.
-          this.physicalPagination.fragments.push(new ReadingSurfacePageFragment(
+          const fragment = new ReadingSurfacePageFragment(
             `chapter-${this.requireMeasurementChapter().chapterIndex}:${paragraph.id}:${line.startScalar}-${line.endScalar}`,
             this.presentationLineText(paragraph.text.substring(line.startUtf16, line.endUtf16)),
             isParagraphStart,
@@ -4825,10 +4807,11 @@ export struct ReadingExperience {
             0,
             undefined,
             admittedLineHeight,
-          ));
-          const fragment = this.physicalPagination.fragments[this.physicalPagination.fragments.length - 1];
+          );
           fragment.nativeParagraph = nativeRecipe;
           fragment.nativeParagraphFirst = firstNativeLine;
+          this.physicalPagination.appendFragment(fragment, line.startScalar, line.endScalar,
+            admittedLineHeight, isParagraphStart, this.appearanceSnapshot.paragraphSpacing);
         }
 
       }
@@ -5018,9 +5001,7 @@ export struct ReadingExperience {
     this.measuredNativeTitle = undefined;
     this.measuredChapterTitleHeightVp = 0;
     this.chapterTitleMeasurementController = new TextController();
-    pending.nextRangeIndex = this.measuringRanges().length - 1;
-    while (pending.nextRangeIndex >= 0 &&
-      this.measuringRanges()[pending.nextRangeIndex].startScalar >= pending.endScalar) pending.nextRangeIndex -= 1;
+    pending.nextRangeIndex = this.paragraphLayout.previousRangeIndex(this.measuringRanges(), pending.endScalar);
     this.physicalPagination.index.beginMeasurement(selectionToken);
     this.measurementCompleting = false;
     this.batchProcessing = false;
@@ -5041,13 +5022,13 @@ export struct ReadingExperience {
   private preparePreviousMeasurementParagraph(): boolean {
     const pending = this.previousChapterMeasurement;
     if (pending === undefined || pending.nextRangeIndex < 0) return false;
-    const index = pending.nextRangeIndex--;
-    const range = this.measuringRanges()[index];
-    const text = this.requireMeasurementChapter().content.substring(range.startUtf16, range.endUtf16);
-    this.nativeTextMeasurement.clear();
-    this.paragraphLayout.batch.splice(0, this.paragraphLayout.batch.length,
-      new MeasurementParagraph(range.id, index, text, range.startScalar,
-        new ReadingSurfaceLayoutMap(text), new TextController(), true, range.startScalar));
+    const next = this.paragraphLayout.preparePrevious(this.requireMeasurementChapter().content,
+      this.measuringRanges(), pending.nextRangeIndex, (): void => this.nativeTextMeasurement.clear(),
+      (range: ParagraphRange, index: number, text: string, requested: number): MeasurementParagraph =>
+        new MeasurementParagraph(range.id, index, text, range.startScalar,
+          new ReadingSurfaceLayoutMap(text), new TextController(), true, requested));
+    if (next === undefined) return false;
+    pending.nextRangeIndex = next;
     return true;
   }
 
@@ -5098,7 +5079,6 @@ export struct ReadingExperience {
       if (pending === undefined || paragraph === undefined) return;
       if (!this.hasValidUnicodeProbe(lifecycleToken)) return;
       const image = this.readingImageForParagraph(paragraph);
-      const gap = this.physicalPagination.fragments.length > 0 ? this.appearanceSnapshot.paragraphSpacing : 0;
       let full = false;
       if (image !== undefined) {
         if (image.state === 'pending' && !hasKnownReadingImageGeometry(image)) {
@@ -5108,14 +5088,13 @@ export struct ReadingExperience {
           const capacity = this.reversePageCapacityAt(image.startScalar);
           const height = image.state === 'ready' || hasKnownReadingImageGeometry(image) ? this.scaledReadingImageHeight(image, capacity) :
             readerAppearanceLineHeight(this.appearanceSnapshot);
-          full = this.physicalPagination.fragments.length > 0 && this.physicalPagination.height + gap + height > capacity;
+          full = !this.physicalPagination.canPrepend(height, this.appearanceSnapshot.paragraphSpacing, capacity);
           if (!full) {
-            this.physicalPagination.fragments.unshift(new ReadingSurfacePageFragment(
+            this.physicalPagination.prependFragments([new ReadingSurfacePageFragment(
               `chapter-${pending.targetChapterIndex}:image:${image.startScalar}-${image.endScalar}`, '', true,
               image.startScalar, image.endScalar, image.state === 'ready' ? image.pixelMap : undefined,
-              height, image.state === 'ready' ? image.fileUri : undefined, height, image.imageWidthBasisPoints));
-            this.physicalPagination.startScalar = image.startScalar;
-            this.physicalPagination.height += gap + height;
+              height, image.state === 'ready' ? image.fileUri : undefined, height, image.imageWidthBasisPoints)],
+              image.startScalar, height, this.appearanceSnapshot.paragraphSpacing);
           }
         }
       } else {
@@ -5127,8 +5106,8 @@ export struct ReadingExperience {
           const candidate = this.getUIContext().px2vp(readerNativeParagraphHeight(
             paragraph.controller.getLayoutManager(), line.lineIndex, lines[0].lineIndex));
           const capacity = this.reversePageCapacityAt(line.startScalar);
-          if ((this.physicalPagination.fragments.length > 0 || selected.length > 0) &&
-            this.physicalPagination.height + gap + candidate > capacity) { full = true; break; }
+          if (!this.physicalPagination.canPrepend(candidate, this.appearanceSnapshot.paragraphSpacing,
+            capacity, selected.length > 0)) { full = true; break; }
           selected.unshift(line); height = candidate;
         }
         if (selected.length > 0) {
@@ -5159,9 +5138,8 @@ export struct ReadingExperience {
           const window = new ReaderNativeTextWindow(this.getUIContext(), this.nativeTextMeasurement.take(paragraph.controller),
             paragraph.controller, this.getUIContext().vp2px(this.measurementTextWidth()), recipe.firstLine, recipe.lastLine);
           this.nativeParagraphResources.set(recipe.key, window, paragraph.layoutMap);
-          this.physicalPagination.fragments = fragments.concat(this.physicalPagination.fragments);
-          this.physicalPagination.startScalar = selected[0].startScalar;
-          this.physicalPagination.height += gap + height;
+          this.physicalPagination.prependFragments(fragments, selected[0].startScalar,
+            height, this.appearanceSnapshot.paragraphSpacing);
         }
       }
       this.nativeTextMeasurement.clear(); this.paragraphLayout.batch.length = 0;

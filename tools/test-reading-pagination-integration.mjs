@@ -214,8 +214,11 @@ assert.match(reverseBegin, /Math\.min\(pending\.originalChapterOffset, known\?\.
   'the seam must preserve both leading paragraph delimiters and the restored whole line');
 assert.match(reverseBegin, /pending\.endScalar < 0/,
   'expanding the paragraph window must not change the reverse destination');
-assert.match(productionMethod('preparePreviousMeasurementParagraph'), /content\.substring\(range\.startUtf16, range\.endUtf16\)/,
-  'reverse layout must shape the complete original paragraph context');
+assert.match(productionMethod('preparePreviousMeasurementParagraph'), /paragraphLayout\.preparePrevious\(/,
+  'reverse paragraph planning uses the same production owner as forward batches');
+assert.match(readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderParagraphLayoutOwner.ts', import.meta.url), 'utf8'),
+  /content\.substring\(range\.startUtf16, range\.endUtf16\)/,
+  'the reverse owner shapes the complete original paragraph context');
 const reverseLines = productionMethod('measuredReverseLines');
 assert.match(reverseLines, /manager\.getLineMetrics\(middle\)\.endIndex <= endUtf16/,
   'the reverse line lookup must use actual native UTF-16 boundaries');

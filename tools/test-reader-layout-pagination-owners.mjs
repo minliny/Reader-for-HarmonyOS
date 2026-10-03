@@ -22,6 +22,14 @@ import { ReadingSurfaceLayoutMap } from '../entry/src/main/ets/features/reading/
   assert.equal(owner.batch[0].original,text.substring(split),'giant semantic paragraph is never byte-sliced');
   assert.equal(owner.prepareBatch(text,ranges,8,100,()=>clears++,factory),false);
   assert.equal(clears,3,'every batch retires the previous temporary native measurement');
+  assert.equal(owner.previousRangeIndex(ranges,ranges[1].startScalar),0,
+    'an exact reverse boundary excludes the later paragraph');
+  const previous=owner.preparePrevious(text,ranges,1,()=>clears++,factory);
+  assert.equal(previous,0);assert.equal(owner.batch.length,1);
+  assert.equal(owner.batch[0].original,text.substring(split),'reverse giant paragraph retains whole shaping context');
+  assert.equal(owner.batch[0].request,ranges[1].startScalar);
+  assert.equal(owner.preparePrevious(text,ranges,-1,()=>clears++,factory),undefined);
+  assert.equal(clears,4,'an exhausted reverse range cannot dispose an active batch');
 }
 
 const key={sourceId:'local',bookId:'layout-owner',chapterIndex:0,layoutSignature:'existing-native',contentVersion:'v1'};
@@ -46,6 +54,23 @@ const input=(request,draft,extra={})=>({key,requestedAnchor:request,chapterStart
     /PAGINATION_PREVIOUS_PAGE_NOT_ADJACENT/,'reverse discovery must preserve exact adjacency');
   owner.fragments=[{}];owner.height=8;assert.equal(owner.canFit(2,0,10),true);assert.equal(owner.canFit(2,1,10),false);
   owner.resetPage();assert.equal(owner.canFit(20,0,10),true,'first admitted native line retains existing overflow behavior');
+}
+{
+  const owner=new ReaderPhysicalPaginationOwner();
+  assert.equal(owner.canAppend(20,true,3,10),true,'a first line larger than the viewport is still admitted');
+  owner.appendFragment('a',0,4,7,true,3);
+  owner.appendFragment('continued',4,8,2,false,3);
+  assert.equal(owner.height,9,'continued native lines do not add paragraph spacing');
+  assert.equal(owner.canAppend(1,true,3,12),false,'a new paragraph includes its spacing before fit');
+  owner.appendFragment('next',8,10,1,true,3);
+  assert.deepEqual([owner.startScalar,owner.endScalar,owner.height],[0,10,13]);
+  owner.resetPage();owner.endScalar=20;
+  assert.equal(owner.canPrepend(20,3,10),true,'a first reverse line retains overflow admission');
+  assert.equal(owner.canPrepend(20,3,10,true),false,'selected provisional native lines count before resource transfer');
+  owner.prependFragments(['tail'],15,5,3);owner.prependFragments(['head','continued'],10,4,3);
+  assert.deepEqual(owner.fragments,['head','continued','tail']);
+  assert.deepEqual([owner.startScalar,owner.endScalar,owner.height],[10,20,12],
+    'reverse packing changes the start and height while preserving its observed end');
 }
 
 // Actual SDK-parsed LRE delegates both producers to the real owner classes.

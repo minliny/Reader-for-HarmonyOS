@@ -47,4 +47,23 @@ export class ReaderParagraphLayoutOwner<TRange extends ReaderParagraphLayoutRang
     }
     return Math.max(0, ranges.length - 1);
   }
+
+  previousRangeIndex(ranges: TRange[], endScalar: number): number {
+    let index = ranges.length - 1;
+    while (index >= 0 && ranges[index].startScalar >= endScalar) index -= 1;
+    return index;
+  }
+
+  preparePrevious(content: string, ranges: TRange[], index: number, releaseMeasurement: () => void,
+    create: (range: TRange, index: number, text: string, requestedStartScalar: number) => TParagraph): number | undefined {
+    if (index < 0) return undefined;
+    const range = ranges[index];
+    releaseMeasurement();
+    // A reverse page still measures one complete original paragraph. Its
+    // transaction captures the returned next index, while this owner holds the
+    // current native batch shared by forward and reverse measurement adapters.
+    this.batch.splice(0, this.batch.length, create(range, index,
+      content.substring(range.startUtf16, range.endUtf16), range.startScalar));
+    return index - 1;
+  }
 }

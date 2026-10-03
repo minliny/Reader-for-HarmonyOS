@@ -37,9 +37,10 @@ const COVER_OCCLUSION_OFFSET_X_VP = 6;
 /**
  * Immutable-by-convention input for one already measured physical page.
  *
- * Pagination and progress remain owned by LocalReadingExperience. The stage
- * only places these presentation models next to one another for the selected
- * flat-page transition.
+ * Paragraph/physical-page producers and the session durable progress owner
+ * supply admitted facts; LocalReadingExperience owns their page publication.
+ * This stage places retained presentation models next to one another for the
+ * selected flat-page transition.
  */
 export class ReaderPageTurnRenderPage {
   /** Stable mounted ArkUI subtree ID used only by ComponentSnapshot. */
