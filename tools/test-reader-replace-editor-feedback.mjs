@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
 import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
@@ -31,17 +32,18 @@ await check('actual TextInput uses explicit compact geometry and live app-theme 
   owner.appThemeScheme='day';owner.replay();assert.equal(input.fontColor,readerAppColor('TOK_READ_INK','day'));
 });
 await check('actual editor has distinct back and fixed bottom save/cancel outside scrolling fields',()=>{
-  const members=['temporaryOverlay','textAction','editorFields','editorText','editorFlag','previewContent',
+  const members=['temporaryOverlay','temporaryTitle','temporaryHeader','temporaryLeading','temporaryAccessory','temporaryActions','temporaryBody','textAction','editorFields','editorText','editorFlag','previewContent',
     ...(source.includes('private editorActions(')?['editorActions']:[])];
-  const {owner}=createReaderBuilderProbe(source,members);
+  const composition=boundedSurfaceSdk(),owner=composition.consumer(source,members);
   Object.assign(owner,{layer:'editor',draft:state.createReaderControlReplaceDraft(),state:ready(),appThemeScheme:'night',
     availableWidth:320,availableHeight:400,localError:'',localPending:false,fullInput:()=>true,quickInput:()=>false,
     readyInput:()=>true,editorFields(){},dismissTemporaryLayer(){},saveEditor(){},cancelTemporaryLayer(){}});
-  owner.temporaryOverlay();const labels=[...owner.nodes.values()].filter(n=>n.type==='Text').map(n=>n.create);
+  owner.temporaryOverlay();const labels=composition.nodes(owner).filter(n=>n.type==='Text').map(n=>n.create);
   assert.equal(labels.filter(x=>x==='返回').length,1);assert.equal(labels.filter(x=>x==='取消').length,1);
   assert.equal(labels.filter(x=>x==='保存').length,1);
-  assert.match(source,/\.layoutWeight\(1\)\.scrollBar\(BarState\.Auto\)\.align\(Alignment\.TopStart\);\s*if \(this\.layer === 'editor'\) \{\s*this\.editorActions\(\);/,
-    'actual Scroll ends before editor actions; footer cannot be hidden beneath all fields');
+  assert.match(source,/body: \(\): void => \{ this\.temporaryBody\(\); \}, actions: \(\): void => \{ this\.temporaryActions\(\); \}/,
+    'actual persistent frame puts footer in a separate slot after Scroll body');
+  assert.match(source,/private temporaryBody\(\)[^]*\.layoutWeight\(1\)\.scrollBar\(BarState\.Auto\)\.align\(Alignment\.TopStart\);/);
 });
 await check('actual reading draft uses real book/source defaults and editing/global creation remain independent',()=>{
   const scopeState=ready();assert.equal(scopeState.defaultScope,'当前书名;https://source.example');
@@ -70,17 +72,17 @@ await check('save failure retains draft, confirmed save closes, cancel performs 
   owner.cancelTemporaryLayer();assert.equal(owner.layer,'editor');resolve();await task;assert.equal(owner.layer,'');
 });
 await check('same mounted footer reacts to mutation, uncertain writes and endpoint input guards',()=>{
-  const {owner}=createReaderBuilderProbe(source,['editorActions','readyInput','fullInput','quickInput'],{readerControlReplaceEndpoint});
+  const composition=boundedSurfaceSdk(),owner=composition.consumer(source,['editorActions','readyInput','fullInput','quickInput'],{readerControlReplaceEndpoint});
   Object.assign(owner,{state:ready(),appThemeScheme:'night',motionProgress:1,interactionEnabled:true,localPending:false});
-  owner.editorActions();const nodes=[...owner.nodes.values()];const save=nodes.find(n=>n.create==='保存'),cancel=nodes.find(n=>n.create==='取消');
+  owner.editorActions();const nodes=composition.nodes(owner);const save=nodes.find(n=>n.create==='保存'),cancel=nodes.find(n=>n.create==='取消');
   assert.equal(save.enabled,true);assert.equal(cancel.enabled,true);
   for(const key of ['mutationPending','writeUncertain','canonicalReloadRequired']){
-    owner.state[key]=true;owner.replay();assert.equal(save.enabled,false,`${key} immediately disables save`);
+    owner.state[key]=true;owner.replay();composition.properties.flush();assert.equal(save.enabled,false,`${key} immediately disables save`);
     assert.equal(cancel.enabled,key!=='mutationPending');owner.state[key]=false;
   }
-  owner.localPending=true;owner.replay();assert.equal(save.enabled,false);assert.equal(cancel.enabled,false);
-  owner.localPending=false;owner.motionProgress=.5;owner.replay();assert.equal(save.enabled,false);
-  owner.motionProgress=1;owner.replay();assert.equal(save.enabled,true);
+  owner.localPending=true;owner.replay();composition.properties.flush();assert.equal(save.enabled,false);assert.equal(cancel.enabled,false);
+  owner.localPending=false;owner.motionProgress=.5;owner.replay();composition.properties.flush();assert.equal(save.enabled,false);
+  owner.motionProgress=1;owner.replay();composition.properties.flush();assert.equal(save.enabled,true);
 });
 await check('actual standalone settings Add action has no inherited reading scope',()=>{
   const settingsSource=readFileSync(new URL('../entry/src/main/ets/features/settings/RulesManagementPage.ets',import.meta.url),'utf8');

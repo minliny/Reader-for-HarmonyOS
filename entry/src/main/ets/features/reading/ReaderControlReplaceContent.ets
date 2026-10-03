@@ -1,5 +1,8 @@
+import { ReaderBoundedSurface } from '../common/ReaderBoundedSurface';
+import { ReaderBoundedSurfaceHeader } from '../common/ReaderBoundedSurfaceHeader';
+import { ReaderBoundedSurfaceActions } from '../common/ReaderBoundedSurfaceActions';
 import { TYPE_READER_REPLACE_RULE_NAME } from '../common/ReaderTypography';
-import { TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE, TYPE_READER_REPLACE_RETAINED_EDITOR_FIELDS_LABEL, TYPE_READER_REPLACE_RETAINED_EDITOR_FLAG_LABEL, TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_INPUT, TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_LABEL, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL_SECONDARY, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_TITLE, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_VALUE, TYPE_READER_REPLACE_RETAINED_QUICK_BACK_BACK, TYPE_READER_REPLACE_RETAINED_RULE_ROW_META, TYPE_READER_REPLACE_RETAINED_RULE_ROW_PATTERN, TYPE_READER_REPLACE_RETAINED_STATUS_CONTENT_STATUS, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE, TYPE_READER_REPLACE_RETAINED_TEXT_ACTION_LABEL, TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL } from '../common/ReaderTypography';
+import { TYPE_READER_REPLACE_RETAINED_EDITOR_FIELDS_LABEL, TYPE_READER_REPLACE_RETAINED_EDITOR_FLAG_LABEL, TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_INPUT, TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_LABEL, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL_SECONDARY, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_TITLE, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_VALUE, TYPE_READER_REPLACE_RETAINED_QUICK_BACK_BACK, TYPE_READER_REPLACE_RETAINED_RULE_ROW_META, TYPE_READER_REPLACE_RETAINED_RULE_ROW_PATTERN, TYPE_READER_REPLACE_RETAINED_STATUS_CONTENT_STATUS, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE, TYPE_READER_REPLACE_RETAINED_TEXT_ACTION_LABEL, TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PathShape } from '@ohos.arkui.shape';
 import { sampleReaderControlMotionPresentation, readerControlMotionClipRects, readerControlMotionClipPath,
@@ -459,21 +462,41 @@ export struct ReaderControlReplaceContent {
   }
   @Builder
   private temporaryOverlay() {
-    Column({ space: 8 }) {
-      Row({ space: 8 }) {
-        if (this.layer === 'editor') {
-          Text('返回').fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
-            .width(38).height(28).textAlign(TextAlign.Center)
-            .enabled(!this.localPending && !this.state.mutationPending)
-            .onClick((): void => this.cancelTemporaryLayer());
-        }
-        Text(this.layer === 'editor' ? (this.draft.original === undefined ? '新增替换规则' : '编辑替换规则') :
-          this.layer === 'delete' ? '确认删除规则' : this.layer === 'import-confirm' ? '确认导入替换规则' : '当前章节预览')
-          .fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontFamily).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontSizeFp).fontWeight(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).layoutWeight(1);
-        if (this.layer !== 'editor') {
-          this.textAction('取消', (): void => this.cancelTemporaryLayer(), (): boolean => !this.localPending && !this.state.mutationPending);
-        }
-      }.width('100%').height(28);
+    ReaderBoundedSurface({ specId: 'reader-replace-editor', width: this.availableWidth, height: this.availableHeight,
+      header: (): void => { this.temporaryHeader(); }, body: (): void => { this.temporaryBody(); }, actions: (): void => { this.temporaryActions(); } });
+  }
+
+  private temporaryTitle(): string {
+    return this.layer === 'editor' ? (this.draft.original === undefined ? '新增替换规则' : '编辑替换规则') :
+      this.layer === 'delete' ? '确认删除规则' : this.layer === 'import-confirm' ? '确认导入替换规则' : '当前章节预览';
+  }
+
+  @Builder
+  private temporaryHeader() {
+    ReaderBoundedSurfaceHeader({ specId: 'reader-replace-editor', title: this.temporaryTitle(),
+      leading: (): void => { this.temporaryLeading(); }, accessory: (): void => { this.temporaryAccessory(); } });
+  }
+
+  @Builder
+  private temporaryLeading() {
+    if (this.layer === 'editor') {
+      Text('返回').fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK.fontFamily as string)
+        .fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
+        .width(38).height(28).textAlign(TextAlign.Center).enabled(!this.localPending && !this.state.mutationPending)
+        .onClick((): void => this.cancelTemporaryLayer());
+    }
+  }
+
+  @Builder
+  private temporaryAccessory() {
+    if (this.layer !== 'editor') this.textAction('取消', (): void => this.cancelTemporaryLayer(), (): boolean => !this.localPending && !this.state.mutationPending);
+  }
+
+  @Builder
+  private temporaryActions() { if (this.layer === 'editor') this.editorActions(); }
+
+  @Builder
+  private temporaryBody() {
       Scroll() {
         Column({ space: 8 }) {
           if (this.layer === 'editor') {
@@ -503,29 +526,15 @@ export struct ReaderControlReplaceContent {
           }
         }.width('100%').alignItems(HorizontalAlign.Start);
       }.width('100%').layoutWeight(1).scrollBar(BarState.Auto).align(Alignment.TopStart);
-      if (this.layer === 'editor') {
-        this.editorActions();
-      }
-    }.width(this.availableWidth).height(this.availableHeight).padding(12)
-      .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme)).borderRadius(12);
   }
+
   @Builder
   private editorActions() {
-    Row({ space: 8 }) {
-      Text('取消').fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
-        .layoutWeight(1).height(36).textAlign(TextAlign.Center).borderRadius(6)
-        .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
-        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-        .enabled(!this.localPending && !this.state.mutationPending)
-        .onClick((): void => this.cancelTemporaryLayer());
-      Text('保存').fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.fontSizeFp)
-        .fontColor(readerAppColor('app.ReaderControlReplaceContent.toolbarButton.fontColor.FFFFFFFF', this.appThemeScheme))
-        .layoutWeight(1).height(36).textAlign(TextAlign.Center).borderRadius(6)
-        .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
-        .enabled(this.fullInput() && this.readyInput())
-        .onClick((): void => { this.saveEditor(); });
-    }.width('100%').height(36).flexShrink(0);
+    ReaderBoundedSurfaceActions({ specId: 'replace-editor', primaryEnabled: this.fullInput() && this.readyInput(),
+      cancelEnabled: !this.localPending && !this.state.mutationPending,
+      onAction: (id: string): void => { if (id === 'cancel') this.cancelTemporaryLayer(); else this.saveEditor(); } });
   }
+
   @Builder
   private editorFields() {
     this.editorText('名称', (): string => this.draft.name, (value: string): void => { this.draft.name = value; });

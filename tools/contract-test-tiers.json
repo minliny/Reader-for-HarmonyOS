@@ -485,6 +485,7 @@
     "test-bounded-local-import-composition.mjs",
     "test-sync-index-operation-consumers.mjs",
     "test-runtime-admission-teardown.mjs",
-    "test-bounded-typography-carriers.mjs"
+    "test-bounded-typography-carriers.mjs",
+    "test-bounded-replace-composition.mjs"
   ]
 }
