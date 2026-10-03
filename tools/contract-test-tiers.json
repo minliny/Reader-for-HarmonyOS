@@ -524,6 +524,7 @@
     "test-typography-role-imports.mjs",
     "test-webdav-credential-queue.mjs",
     "test-window-flicker-dedup.mjs",
-    "test-reader-settings-write-facts.mjs"
+    "test-reader-settings-write-facts.mjs",
+    "test-rules-mutation-owner.mjs"
   ]
 }

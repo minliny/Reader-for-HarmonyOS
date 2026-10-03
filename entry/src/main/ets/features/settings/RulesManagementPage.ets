@@ -174,7 +174,7 @@ export struct RulesManagementPage {
         .width('100%').fontSize(TYPE_RULES_INHERITED_DESCRIPTION.fontSizeFp).lineHeight(TYPE_RULES_INHERITED_DESCRIPTION.lineHeightFp as number).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       Row({ space: TOK_SPACE_XS }) {
         this.actionButton('导入并合并', false, (): void => this.onImportBundle());
-        this.actionButton('导出全部', true, (): void => this.onExportBundle());
+        this.actionButton('导出全部', true, (): void => this.onExportBundle(), false);
       }.width('100%');
     }
     .width('100%').padding(TOK_SPACE_SM).backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
@@ -277,9 +277,9 @@ export struct RulesManagementPage {
       this.input(this.subName, '名称', (value: string): void => { this.subName = value; });
       this.input(this.subUrl, '订阅 URL', (value: string): void => { this.subUrl = value; });
       Row({ space: TOK_SPACE_XS }) {
-        this.actionButton('书源', this.subType === 0, (): void => { this.subType = 0; });
-        this.actionButton('RSS 源', this.subType === 1, (): void => { this.subType = 1; });
-        this.actionButton('替换规则', this.subType === 2, (): void => { this.subType = 2; });
+        this.actionButton('书源', this.subType === 0, (): void => { this.subType = 0; }, false);
+        this.actionButton('RSS 源', this.subType === 1, (): void => { this.subType = 1; }, false);
+        this.actionButton('替换规则', this.subType === 2, (): void => { this.subType = 2; }, false);
       }.width('100%');
       this.booleanField('自动更新标记', this.subAutoUpdate,
         (): void => { this.subAutoUpdate = !this.subAutoUpdate; });
@@ -334,7 +334,7 @@ export struct RulesManagementPage {
   }
 
   @Builder
-  private actionButton(label: string, primary: boolean, action: () => void) {
+  private actionButton(label: string, primary: boolean, action: () => void, mutation: boolean = true) {
     Text(label).layoutWeight(1).height(40).textAlign(TextAlign.Center)
       .fontFamily(TYPE_RULES_MANAGEMENT_ACTION.fontFamily)
       .fontWeight(TYPE_RULES_MANAGEMENT_ACTION.fontWeight)
@@ -342,8 +342,8 @@ export struct RulesManagementPage {
       .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .backgroundColor(primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(8)
-      .opacity(this.snapshot.busy ? 0.62 : 1).onClick((): void => {
-        if (!this.snapshot.busy) action();
+      .opacity(this.snapshot.busy || (mutation && this.snapshot.receipt?.receipt.confirmation === 'unknown') ? 0.62 : 1).onClick((): void => {
+        if (!this.snapshot.busy && (!mutation || this.snapshot.receipt?.receipt.confirmation !== 'unknown')) action();
       });
   }
 
@@ -356,7 +356,7 @@ export struct RulesManagementPage {
         Text(detail).width('100%').fontSize(TYPE_APP_INHERITED_CAPTION.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }.layoutWeight(1).alignItems(HorizontalAlign.Start);
-      this.smallButton('编辑', edit);
+      this.smallButton('编辑', edit, false);
       this.smallButton('删除', remove);
     }
     .width('100%').height(56).padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })
@@ -372,7 +372,7 @@ export struct RulesManagementPage {
         Text(`${this.subscriptionTypeLabel(rule.type)} · ${rule.url}`).width('100%').fontSize(TYPE_APP_INHERITED_CAPTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       }.layoutWeight(1).alignItems(HorizontalAlign.Start);
-      this.smallButton('编辑', (): void => this.editSubscription(rule));
+      this.smallButton('编辑', (): void => this.editSubscription(rule), false);
       this.smallButton('拉取', (): void => this.onRefreshSubscription(rule));
       this.smallButton('删除', (): void => this.onDeleteSubscription(rule.id));
     }
@@ -381,12 +381,12 @@ export struct RulesManagementPage {
   }
 
   @Builder
-  private smallButton(label: string, action: () => void) {
+  private smallButton(label: string, action: () => void, mutation: boolean = true) {
     Text(label).height(30).padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
       .textAlign(TextAlign.Center).fontSize(TYPE_RULES_COMPACT_ACTION.fontSizeFp).fontWeight(TYPE_RULES_COMPACT_ACTION.fontWeight as number).fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(7).opacity(this.snapshot.busy ? 0.62 : 1).onClick((): void => {
-        if (!this.snapshot.busy) action();
+      .borderRadius(7).opacity(this.snapshot.busy || (mutation && this.snapshot.receipt?.receipt.confirmation === 'unknown') ? 0.62 : 1).onClick((): void => {
+        if (!this.snapshot.busy && (!mutation || this.snapshot.receipt?.receipt.confirmation !== 'unknown')) action();
       });
   }
 

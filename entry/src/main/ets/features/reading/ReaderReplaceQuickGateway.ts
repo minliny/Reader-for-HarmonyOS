@@ -1,6 +1,7 @@
 import type { JsonObject } from '@reader/core-harmony';
 import { errorMessageOf } from '../../app/ErrorMessage';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
+import { RulesMutationOwner, RulesMutationError } from '../settings/RulesMutationOwner';
 import {
   createHiddenReaderReplaceQuickState,
   createReaderReplaceQuickState,
@@ -16,11 +17,13 @@ export type ReaderReplaceQuickGatewayErrorCode =
 
 export class ReaderReplaceQuickGatewayError extends Error {
   readonly code: ReaderReplaceQuickGatewayErrorCode;
+  readonly writeUncertain: boolean;
 
-  constructor(code: ReaderReplaceQuickGatewayErrorCode, message: string) {
+  constructor(code: ReaderReplaceQuickGatewayErrorCode, message: string, writeUncertain: boolean = false) {
     super(message);
     this.name = 'ReaderReplaceQuickGatewayError';
     this.code = code;
+    this.writeUncertain = writeUncertain;
   }
 }
 
@@ -105,10 +108,12 @@ export class ReaderReplaceQuickGateway {
    * Persists a real switch transition. The caller keeps its previous visible
    * state on failure and applies only this confirmed returned rule.
    */
-  async setRuleEnabled(ruleId: number, isEnabled: boolean): Promise<ReaderReplaceRule> {
+  async setRuleEnabled(ruleId: number, isEnabled: boolean,
+    isCurrent: () => boolean = (): boolean => true): Promise<ReaderReplaceRule> {
     this.assertSafeInteger(ruleId, 'ruleId');
     try {
-      const result = await this.runtimeOwner.request('replace.persist', {
+      return await RulesMutationOwner.forRuntime(this.runtimeOwner).run('切换替换规则', isCurrent, async (request, confirmed) => {
+      const result = await request('replace.persist', {
         operation: 'update',
         params: {
           id: ruleId,
@@ -129,13 +134,15 @@ export class ReaderReplaceQuickGateway {
           'replace.persist returned a mismatched rule update',
         );
       }
-      return rule;
+      confirmed(); return rule;
+      });
     } catch (error) {
       if (error instanceof ReaderReplaceQuickGatewayError) {
         throw error;
       }
       const message = errorMessageOf(error);
-      throw new ReaderReplaceQuickGatewayError('commandFailed', `replace.persist failed: ${message}`);
+      throw new ReaderReplaceQuickGatewayError('commandFailed', `replace.persist failed: ${message}`,
+        error instanceof RulesMutationError && error.writeUncertain);
     }
   }
 

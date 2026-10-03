@@ -74,7 +74,7 @@ export function beginReaderControlReplaceLoad(state: ReaderControlReplaceState):
   const next = copyState(state);
   next.revision += 1;
   next.status = 'loading';
-  next.errorMessage = '';
+  next.errorMessage = state.writeUncertain ? state.errorMessage : '';
   return next;
 }
 
@@ -84,11 +84,11 @@ export function admitReaderControlReplaceLoad(state: ReaderControlReplaceState,
   const next = copyState(state);
   next.rules = orderedReaderControlReplaceRules(rules);
   next.status = 'ready';
-  next.errorMessage = '';
+  next.errorMessage = state.writeUncertain ? state.errorMessage : '';
   // A fresh read supplies current facts, not proof that an uncertain write failed.
-  // The UI leaves its old editor on reload and requires a new explicit action.
-  next.writeUncertain = false;
-  next.canonicalReloadRequired = false;
+  // Preserve the original unknown across every successful pure list read.
+  next.writeUncertain = state.writeUncertain;
+  next.canonicalReloadRequired = state.writeUncertain;
   return next;
 }
 

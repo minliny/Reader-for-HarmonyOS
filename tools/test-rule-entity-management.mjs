@@ -18,8 +18,12 @@ for (const method of [
   'rule-sub.list', 'rule-sub.put', 'rule-sub.delete',
   'rule-bundle.export', 'rule-bundle.import',
 ]) {
-  assert.ok(gateway.includes(`request('${method}'`), `rules gateway must use ${method}`);
+  const mutation = ['replace.persist','txt-toc-rule.create','txt-toc-rule.update','txt-toc-rule.delete',
+    'dict-rule.put','dict-rule.delete','rule-sub.put','rule-sub.delete','rule-bundle.import'].includes(method);
+  assert.ok(gateway.includes(`${mutation ? 'requestMutation' : 'request'}('${method}'`), `rules gateway must use ${method}`);
 }
+assert.match(gateway, /RulesMutationOwner\.forRuntime\(this\.owner\)\.run/,
+  'all rule mutations share the original Runtime rule domain and actual dispatch evidence');
 
 assert.match(orchestrator, /private operationTail: Promise<void>/,
   'mutating Core commands must remain serialized at the page coordinator');

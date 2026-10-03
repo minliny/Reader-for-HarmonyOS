@@ -93,6 +93,11 @@ export class RulesManagementOrchestrator {
     const session = this.session;
     this.publish({ busy: true, statusMessage: '正在读取 Core 规则实体…',
       readFacts: projectOperationFacts({ phase: 'loading', value: this.readValue(), generation: ++rulesProjectionGeneration }) });
+    const original = this.gateway.mutationSnapshot();
+    if (original.confirmation === 'unknown') {
+      this.receiptLabel = original.label;
+      this.publishReceipt(session, 'unknown', 'reading', original.message);
+    }
     this.enqueue(async (): Promise<void> => this.reload(session, 'Core 规则实体已就绪'));
   }
 
@@ -246,8 +251,14 @@ export class RulesManagementOrchestrator {
   }
 
   private async performWrite(session: number, label: string, operation: (evidence: ReaderWriteEvidence) => Promise<string>): Promise<void> {
+    const prior = this.gateway.mutationSnapshot();
+    if (prior.confirmation === 'unknown') {
+      this.receiptLabel = prior.label;
+      this.publishReceipt(session, 'unknown', 'failed', prior.message);
+      return;
+    }
     const evidence = new ReaderWriteEvidence();
-    this.gateway.observeWrites(evidence);
+    this.gateway.observeWrites(evidence, (): boolean => this.isCurrentSession(session));
     this.sourceGateway.observeWrites(evidence);
     this.rssGateway.observeWrites(evidence);
     this.receiptLabel = label;
@@ -255,7 +266,10 @@ export class RulesManagementOrchestrator {
     try {
       status = await operation(evidence);
     } catch (error) {
-      this.publishReceipt(session, evidence.confirmation(), 'failed', (error as Error).message,
+      const original = this.gateway.mutationSnapshot();
+      const confirmation = original.confirmation === 'unknown' ? 'unknown' : evidence.confirmation();
+      if (original.confirmation === 'unknown' && evidence.dispatchedCount === 0) this.receiptLabel = original.label;
+      this.publishReceipt(session, confirmation, 'failed', (error as Error).message,
         evidence.confirmedCount);
       return;
     } finally {

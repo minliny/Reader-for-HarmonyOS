@@ -10,6 +10,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
 const { ReaderControlReplaceGateway, ReaderControlReplaceGatewayError, readerControlReplaceDraftParams } =
   await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGateway.ts');
 const { createReaderControlReplaceDraft } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
+const { BookRequestNotDispatchedError } = await import('../entry/src/main/ets/app/BookRequestScheduler.ts');
 const rule = (id) => ({ id, order: id, name: `规则${id}`, pattern: 'old', replacement: 'new', group: 'g',
   scope: 'book', excludeScope: 'skip', scopeTitle: true, scopeSource: true, scopeContent: true,
   isEnabled: true, isRegex: false, timeoutMillisecond: 9000 });
@@ -21,7 +22,13 @@ let duringValidation;
 let duringPersist;
 let persistError = false;
 let badReceipt = false;
+let duringStartup;
 const runtime = { async request(method, params = {}, options = {}) {
+  if (method === 'replace.persist' || method === 'rule-bundle.import') {
+    duringStartup?.();
+    if (options.canDispatch?.() === false) throw new BookRequestNotDispatchedError('not dispatched after startup');
+    options.onDispatch?.();
+  }
   calls.push({ method, params: structuredClone(params), options });
   if (method === 'replace-rule.list') {
     assert.equal(typeof options.shouldCancel, 'function');
@@ -58,7 +65,7 @@ const runtime = { async request(method, params = {}, options = {}) {
   }
   throw new Error(`unexpected Core method ${method}`);
 } };
-const gateway = new ReaderControlReplaceGateway(runtime);
+let gateway = new ReaderControlReplaceGateway(runtime);
 const all = await gateway.loadRules(() => current);
 assert.deepEqual(all.map(r => r.id), [1, 2, 3, 4, 5]);
 assert.equal(all[0].scopeSource, true);
@@ -98,10 +105,13 @@ current = true;
 persistError = true;
 await assert.rejects(gateway.save(draft), e => e instanceof ReaderControlReplaceGatewayError && e.writeUncertain);
 persistError = false;
+gateway = new ReaderControlReplaceGateway({ ...runtime });
 badReceipt = true;
 await assert.rejects(gateway.save(draft), e => e.writeUncertain === true);
+gateway = new ReaderControlReplaceGateway({ ...runtime });
 await assert.rejects(gateway.deleteRule(3), e => e.writeUncertain === true);
 badReceipt = false;
+gateway = new ReaderControlReplaceGateway({ ...runtime });
 draft.order = 2147483648;
 await assert.rejects(gateway.save(draft), /数值/);
 
