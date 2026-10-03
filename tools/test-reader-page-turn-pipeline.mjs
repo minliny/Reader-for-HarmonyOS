@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 
 const readingDir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const localReading = readFileSync(new URL('LocalReadingExperience.ets', readingDir), 'utf8');
+const sessionGateway = readFileSync(new URL('ReadingSessionFlowGateway.ts', readingDir), 'utf8');
+const progressOwner = readFileSync(new URL('ReadingSessionProgressOwner.ts', readingDir), 'utf8');
 const stage = readFileSync(new URL('ReaderPageTurnStage.ets', readingDir), 'utf8');
 const interaction = readFileSync(new URL('ReaderPageInteractionLayer.ets', readingDir), 'utf8');
 const rapidState = readFileSync(new URL('ReaderRapidPageTurnState.ts', readingDir), 'utf8');
@@ -87,7 +89,11 @@ contract('prepared slide preserves the visual handoff and the strong durable bar
   assert.match(persist, /persistMeasuredCanonicalProgress/);
   const canonical = methodSection(localReading, 'persistMeasuredCanonicalProgress');
   assert.match(canonical, /persistPresentedProgress/);
-  assert.match(canonical, /hasPendingSourceSwitch[\s\S]*runProgressCommitSerial[\s\S]*resolveAndUpdateProgress/);
+  assert.match(canonical, /if \(\!gateway\.hasPendingSourceSwitch\(\)\) \{[\s\S]*?return gateway\.persistPresentedProgress\(bookId, title, anchor, layout, isAdmitted\);\s*\}[\s\S]*return gateway\.persistCanonicalProgress\(bookId, title, anchor, layout, isAdmitted\);/);
+  assert.match(sessionGateway, /async persistCanonicalProgress[\s\S]*this\.progressOwner\.awaitPersistence\(\)[\s\S]*expectedTransaction === recovered\.sourceSwitchTransactionId[\s\S]*sourceCanonicalHistorical === true[\s\S]*reading\.progress\.sourceFinalizeReceipt\.v1[\s\S]*reading\.progress\.compareAndSet\.v1[\s\S]*this\.progressOwner\.persistPresented/,
+    'source strong gate uses the original exact immutable receipt plus actual shared CAS owner');
+  assert.match(progressOwner, /async runSerial[\s\S]*await this\.drain\(\)[\s\S]*await operation\(\)/,
+    'the common progress ordering drains an earlier unknown write before a new strong transaction');
   assert.doesNotMatch(persist, /\.resolveLocation\(|\.updateProgress\(/,
     'page-turn persistence must resolve and store the canonical anchor atomically');
   assert.doesNotMatch(persist, /promotePreparedPageTurn|this\.visiblePage\s*=/,

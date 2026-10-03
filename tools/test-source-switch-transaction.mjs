@@ -58,7 +58,7 @@ assert.match(detail, /onSwitchSource: \(\) => void/);
 assert.match(detail, /\.enabled\(this\.sourceSwitchEnabled\)/,
   'local detail keeps the source-switch pill visible but disables interaction');
 assert.match(index, /sourceSwitchEnabled: this\.detailBook\.sourceId !== LOCAL_SOURCE_ID/);
-assert.match(index, /onSwitchSource: \(\): void => this\.openDetailSourceSwitch\(\)/);
+assert.match(index, /onSwitchSource: \(\): void => \{ if \(this\.isCurrentDetailPresentation\(identity, owner\)\) this\.openDetailSourceSwitch\(\); \}/);
 
 const detailOverlayStart = index.indexOf("if ((this.route === 'detail' || this.route === 'bookshelf') &&");
 const detailOverlayEnd = index.indexOf("if (this.route === 'bookshelf'", detailOverlayStart);
@@ -110,3 +110,30 @@ assert.doesNotMatch(index, /AppStorage.*transactionId|StorageLink.*sourceSwitch/
   'source switch journal identity must not be copied into an ArkUI store');
 
 console.log('source-switch post-commit transaction contract: PASS');
+
+// The owner/refactor source claims above are also exercised through the real
+// SDK-transformed Index -> finite Host -> Gateway -> candidate actor chain.
+const { fixture, settle: settleOwner } = await import('./lib/source-switch-owner-probe.mjs');
+const { makeIndex } = await import('./lib/source-switch-sdk-consumer.mjs');
+const settle = async () => { await settleOwner(); await new Promise(setImmediate); await settleOwner(); };
+{
+  const f = fixture({ shared: true, open: false, loseCommitAck: true, failExactQuery: true }), x = makeIndex(f);
+  x.index.openDetailSourceSwitch(); await settle(); const panel = x.mount();
+  panel.onSelectCandidate(f.candidate()); await settle();
+  assert.equal(f.host.current().write.confirmation, 'unknown');
+  panel.onClose(); assert.equal(f.host.current().visible, true);
+  assert.equal(f.calls.filter(([method]) => method === 'source.switch.rollback').length, 0);
+  const current = x.mount(), retry = x.p.nodes(current).find(n => n.create === '重试核对'); assert.ok(retry?.onClick);
+  f.options.failExactQuery = false; retry.onClick(); await settle();
+  assert.equal(f.host.current().write.confirmation, 'confirmed'); assert.equal(x.index.detailBook.sourceId, 'new');
+  assert.equal(f.calls.filter(([method]) => method === 'source.switch.commit').length, 1);
+  assert.equal(f.calls.filter(([method]) => method === 'source.switch.rollback').length, 0);
+}
+{
+  const f = fixture({ shared: true, open: false }), x = makeIndex(f); x.index.openDetailSourceSwitch(); await settle();
+  const old = x.mount(); old.onClose(); x.index.openDetailSourceSwitch(); await settle(); const scope = x.index.sourceSwitchScopeId;
+  old.onClose(); old.onRetry(); old.onSelectCandidate(f.candidate()); await settle();
+  assert.equal(x.index.sourceSwitchScopeId, scope); assert.equal(f.host.current().visible, true);
+  assert.equal(f.calls.filter(([method]) => method === 'source.switch.commit').length, 0);
+}
+console.log('actual SDK source-switch exact-query and stale physical-action contracts: PASS');
