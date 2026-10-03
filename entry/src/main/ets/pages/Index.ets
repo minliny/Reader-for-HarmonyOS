@@ -2,6 +2,7 @@ import { RssPresentationProjection } from '../features/rss/RssPresentationProjec
 import type { RssRouteOperationProjection, RssRouteBinding } from '../features/rss/RssRouteOperationHost';
 import { ReaderNativeAlertOwner, type ReaderNativeAlertLease, type ReaderNativeAlertOptions, type ReaderNativeAlertSpecId } from '../app/ReaderNativeAlertOwner';
 import { readerRecoveryView, type ReaderRecoveryView } from '../app/ReaderRecoveryProjection';
+import { ReaderRecoveryNotice } from '../features/common/ReaderRecoveryNotice';
 import type { RemoteReadingPositionScope } from '../features/reading/RemoteReadingPositionMigration';
 import { FrameCallback } from '@kit.ArkUI';
 import { readerAppColor } from '../features/common/ReaderThemeRegistry';
