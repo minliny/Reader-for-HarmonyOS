@@ -11,7 +11,7 @@ const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
 const indexSource = read('entry/src/main/ets/pages/Index.ets');
 assert.match(indexSource, /if \(presentImportResult && snapshot\.receipt\?\.value !== undefined\) this\.applyBookshelfState\(snapshot\.receipt\.value\);/,
   'Index must guard the optional shelf read-back before applying it');
-assert.match(indexSource, /onReconcileEditor: \(\): void => this\.getSourceToolsOrchestrator\(\)\.reconcileEditor\(\)/,
+assert.match(indexSource, /onReconcileEditor:[^\n]*isCurrentSourceToolsPresentation[^\n]*host\?\.reconcileEditor\(\)/,
   'Index must expose the read-only editor reconciliation action');
 
 // ReaderOperationFacts is a pure mapping module with no IO and no platform

@@ -277,13 +277,12 @@ for (const mode of ['search', 'explore']) {
 // an ArkUI component and cannot be executed in plain Node.
 {
   const index = read('entry/src/main/ets/pages/Index.ets');
-  const start = index.indexOf('private checkSelectedSources(');
-  const end = index.indexOf('private setSelectedSourcesEnabled(', start);
-  assert.ok(start >= 0 && end > start, 'Index exposes the selected-source check adapter');
-  const adapter = index.slice(start, end);
-  assert.match(adapter, /checkSelected\(sourceIds\)/);
-  assert.doesNotMatch(adapter, /consumeSourceToolsSelection/,
-    'starting detection must not clear the visible selected scope');
+  const adapter = index.match(/onCheckSelected:[^\n]*/)?.[0];
+  assert.ok(adapter, 'Index exposes the guarded original owner selected-source intent');
+  assert.match(adapter, /isCurrentSourceToolsPresentation/);
+  assert.match(adapter, /host\?\.checkSelected\(sourceIds\)/);
+  assert.doesNotMatch(adapter, /consumeSelection/,
+    'starting detection must not clear the owner canonical visible selected scope');
 }
 
 // Scale contract for the actual imported-source cardinality seen by the

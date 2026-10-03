@@ -302,13 +302,13 @@ export struct SourceToolsPage {
             (): void => this.onCheckSelected(this.snapshot.selectedSourceIds));
         }
         this.actionButton('启用', false,
-          !this.snapshot.busy && this.snapshot.selectedSourceCount > 0,
+          this.canWriteSources() && this.snapshot.selectedSourceCount > 0,
           (): void => this.onSetSelectedEnabled(this.snapshot.selectedSourceIds, true));
         this.actionButton('停用', false,
-          !this.snapshot.busy && this.snapshot.selectedSourceCount > 0,
+          this.canWriteSources() && this.snapshot.selectedSourceCount > 0,
           (): void => this.onSetSelectedEnabled(this.snapshot.selectedSourceIds, false));
         this.actionButton('删除', false,
-          !this.snapshot.busy && this.snapshot.selectedSourceCount > 0,
+          this.canWriteSources() && this.snapshot.selectedSourceCount > 0,
           (): void => this.onDeleteSelected(this.snapshot.selectedSourceIds));
       }
       .width('100%');
@@ -583,8 +583,8 @@ export struct SourceToolsPage {
         .padding(TOK_SPACE_XS)
         .onChange((value: string): void => this.onEditorDraftChanged(value));
       Row({ space: TOK_SPACE_XS }) {
-        this.actionButton('取消', false, !this.snapshot.busy, (): void => this.onCancelEditor());
-        this.actionButton('校验并保存', true, !this.snapshot.busy && this.snapshot.editorReadback?.confirmation !== 'unknown', (): void => this.onSaveEditor());
+        this.actionButton('取消', false, !this.snapshot.busy && this.snapshot.editorReadback?.confirmation !== 'unknown', (): void => this.onCancelEditor());
+        this.actionButton('校验并保存', true, this.canWriteSources(), (): void => this.onSaveEditor());
       }
       .width('100%');
       if (this.snapshot.editorReadback?.fact === 'confirmedRefreshFailed') {
@@ -722,6 +722,11 @@ export struct SourceToolsPage {
           action();
         }
       });
+  }
+
+  private canWriteSources(): boolean {
+    return !this.snapshot.busy && this.snapshot.receipt?.receipt.confirmation !== 'unknown' &&
+      this.snapshot.editorReadback?.confirmation !== 'unknown';
   }
 
   @Builder

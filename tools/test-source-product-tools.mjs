@@ -69,7 +69,7 @@ assert.match(orchestrator, /selectedSourceIds: source\.selectedSourceIds\.slice\
 assert.match(orchestrator, /已选择 \$\{selection\.length\} 个书源/);
 assert.doesNotMatch(orchestrator, /RuleSubscription|rule-sub|putSubscription|deleteSubscription/);
 assert.match(orchestrator, /pendingOperations/);
-assert.match(orchestrator, /if \(!allowQueued && \(this\.snapshot\.busy \|\| this\.pendingOperations > 0\)\)/);
+assert.match(orchestrator, /if \(!this\.isCurrentSession\(this\.session\) \|\| \(!allowQueued && \(this\.snapshot\.busy \|\| this\.pendingOperations > 0\)\)\)/);
 
 assert.match(sourcePage, /onOpenTools/);
 assert.match(sourcePage, /ReaderSearchField\(\{[\s\S]*variant: 'sourceManagement'[\s\S]*mode: 'live'/);
@@ -128,17 +128,16 @@ assert.match(rulesGateway, /request\('rule-sub\.delete'/);
 assert.match(rulesPage, /subscriptions/);
 assert.match(index, /'sourceTools'/);
 assert.match(index, /SourceToolsPage\(/);
-assert.match(index, /onSelectAll: \(\): void => this\.selectAllSourceTools\(\)/);
-assert.match(index, /onToggleSelection: \(sourceId: string\): void => this\.toggleSourceToolsSelection\(sourceId\)/);
-assert.match(index, /onStopCheck: \(\): void => this\.getSourceToolsOrchestrator\(\)\.stopCheckSelected\(\)/);
-assert.match(index, /private consumeSourceToolsSelection/);
-assert.match(index, /private checkSelectedSources\(sourceIds: string\[\]\): void \{[^}]*checkSelected\(sourceIds\);[^}]*\}/);
-assert.doesNotMatch(index,
-  /private checkSelectedSources\(sourceIds: string\[\]\): void \{[^}]*consumeSourceToolsSelection/,
-  'starting a check must preserve the visible selected-source scope');
-assert.match(index, /getSourceToolsOrchestrator\(\)\.exportAll\(\)/);
-assert.match(index, /requestSourceDelete\(sourceIds\)/);
+assert.match(index, /onSelectAll:[^\n]*isCurrentSourceToolsPresentation[^\n]*host\?\.selectAll\(\)/);
+assert.match(index, /onToggleSelection:[^\n]*isCurrentSourceToolsPresentation[^\n]*host\?\.toggleSelection\(sourceId\)/);
+assert.match(index, /onStopCheck:[^\n]*isCurrentSourceToolsPresentation[^\n]*host\?\.stopCheckSelected\(\)/);
+assert.match(index, /onCheckSelected:[^\n]*host\?\.checkSelected\(sourceIds\)/);
+assert.doesNotMatch(index, /onCheckSelected:[^\n]*consumeSelection/,
+  'starting a check keeps the owner canonical selected scope visible');
+assert.match(index, /onExportAll:[^\n]*host\?\.exportAll\(\)/);
+assert.match(index, /this\.requestSourceDelete\(sourceIds, host\)/);
 assert.match(index, /getSourceToolsOrchestrator\(\)\.open\(this\.sourceSources\)/);
+assert.doesNotMatch(index, /private (?:selectAllSourceTools|toggleSourceToolsSelection|consumeSourceToolsSelection)/);
 assert.match(index, /showIndexAlert\('confirmation-cancelable',[\s\S]*确定删除所选/);
 
 for (const forbidden of [

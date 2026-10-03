@@ -1,3 +1,4 @@
+import { RssPresentationProjection } from '../entry/src/main/ets/features/rss/RssPresentationProjection.ts';
 import {bookshelfOperationClass} from './lib/bookshelf-operation-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -9,7 +10,7 @@ const Index=productionMotionMethods(file,['showIndexAlert','showSourceImportResu
  'requestSourceDelete','requestRssSubscriptionDelete','requestRssSourceImport','showRssOperationResult',
  'requestClearDirectoryBookOffline','refreshCachedChapterFromPrompt','showReadingFailure','nextNavigationGeneration',
  'aboutToDisappear','confirmRssSubscriptionDelete','rssSubscriptions','importRssSources'],{
- ReaderNativeAlertOwner,ReaderRuntimeOwner:{current:()=>{if(unavailable)throw Error('runtime unavailable');return currentOwner;}},isReaderProductSurfaceEnabled:()=>true,
+ RssPresentationProjection,ReaderNativeAlertOwner,ReaderRuntimeOwner:{current:()=>{if(unavailable)throw Error('runtime unavailable');return currentOwner;}},isReaderProductSurfaceEnabled:()=>true,
  hilog:{warn(){}},DOMAIN:1,verdictForFailureKind:()=> 'networkFailed',remoteReadingFailureKindOf:()=> 'networkFailed',
  withPreparedRemoteChapter:(session,chapter,revision)=>({...session,preparedChapter:{...chapter,projectionRevision:revision}}),
  RemoteReadingFlowGateway:class {constructor(owner){this.owner=owner;}async loadChapter(){this.owner.calls.push('chapter.content');this.owner.revision+=2;return {chapterIndex:0};}}
@@ -23,11 +24,12 @@ function fixture(route='source'){
   sourceManagementReturnTarget:'search',sourceManagementSearchKeyword:'abc',sourceToolsSnapshot:{sources:[{sourceId:'s'}],sourceListRevision:3,selectionRevision:4,busy:false},
   sourceToolsOrchestrator:host,rssOrchestrator:host,rssPresentation:{kind:'feed',subscriptions:[{subscriptionId:'rss',title:'源'}]},jsonImportVisible:false,
   remoteSessionGeneration:2,remoteReadingSession:{identity:{sourceId:'s',bookId:'b'}},offlineMutationActiveKey:'',
-  consumeSourceToolsSelection:ids=>{p.sourceToolsSnapshot.selectionRevision++;return ids.filter(id=>p.sourceToolsSnapshot.sources.some(x=>x.sourceId===id));},
   getSourceToolsOrchestrator:()=>host,getRssOrchestrator:()=>host,returnFromSourceManagement:()=>calls.push('returnSearch'),
   openJsonImport:context=>{calls.push(context);p.jsonImportVisible=true;},clearDirectoryBookOffline:()=>calls.push('clearOffline'),
   installRemoteReadingSession:s=>{p.remoteReadingSession=s;},getUIContext:()=>({showAlertDialog(options){if(fail)throw Error('platform unavailable');shown=options;}}),
   shelfWriteGeneration:0,searchHost:{close(){}},dismissBookRemovalDialog(){}});
+ host.consumeSelection=ids=>{p.sourceToolsSnapshot.selectionRevision++;return ids.filter(id=>p.sourceToolsSnapshot.sources.some(x=>x.sourceId===id));};
+ host.detachPresentation=()=>{};
  return{p,calls,host,owner,shown:()=>shown,nativeFail:()=>{fail=true;}};
 }
 const cases=[

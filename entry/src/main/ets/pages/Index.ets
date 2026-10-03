@@ -361,6 +361,8 @@ class ReaderNavigationBackfillFrame extends FrameCallback {
   onIdle(_remaining: number): void {}
 }
 
+let sourceToolsIndexInstance: number = 0;
+
 @Entry
 @Component
 struct Index {
@@ -623,6 +625,8 @@ struct Index {
     (operation: SourceManagementProjection): void => { this.sourceOperation = operation; },
   );
   private sourceToolsOrchestrator: SourceToolsOrchestrator | undefined;
+  private readonly sourceToolsInstanceIdentity: number = ++sourceToolsIndexInstance;
+  private sourceToolsPresentationIdentity: string = '';
   private rssOrchestrator: RssOrchestrator | undefined;
   private rssEditorOrchestrator: RssSubscriptionEditorOrchestrator | undefined;
   /**
@@ -706,6 +710,8 @@ struct Index {
     this.navigationBackfillObserverDisposer?.();
     this.navigationBackfillObserverDisposer = undefined;
     this.navigationBackfillObservedKey = '';
+    this.sourceToolsOrchestrator?.detachPresentation(this.sourceToolsPresentationIdentity);
+    this.sourceToolsPresentationIdentity = '';
     this.systemFileOpenNavigation?.dispose();
     this.systemFileOpenNavigation = undefined;
     this.applicationSettingsUnsubscribe?.();
@@ -1596,29 +1602,40 @@ struct Index {
 
   @Builder
   private sourceToolsContent() {
+    ForEach([this.navigationGeneration], (generation: number): void => {
+      this.sourceToolsSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+        this.sourceToolsOrchestrator);
+    }, (generation: number): string => generation.toString());
+  }
+
+  @Builder
+  private sourceToolsSurface(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: SourceToolsOrchestrator | undefined) {
     SourceToolsPage({
       snapshot: this.sourceToolsSnapshot,
-      onReconcile: (generation: number): void => this.getSourceToolsOrchestrator().reconcile(generation),
-      onSelectAll: (): void => this.selectAllSourceTools(),
-      onClearSelection: (): void => this.updateSourceToolsSelection([]),
-      onToggleSelection: (sourceId: string): void => this.toggleSourceToolsSelection(sourceId),
-      onBack: (): void => this.returnToSourceManagement(),
-      onExportAll: (): void => this.getSourceToolsOrchestrator().exportAll(),
-      onExportSelected: (sourceIds: string[]): void => this.exportSelectedSources(sourceIds),
-      onCheckSelected: (sourceIds: string[]): void => this.checkSelectedSources(sourceIds),
-      onStopCheck: (): void => this.getSourceToolsOrchestrator().stopCheckSelected(),
-      onSetSelectedEnabled: (sourceIds: string[], enabled: boolean): void =>
-        this.setSelectedSourcesEnabled(sourceIds, enabled),
-      onDeleteSelected: (sourceIds: string[]): void => this.requestSourceDelete(sourceIds),
-      onOpenEditor: (sourceId: string): void => this.getSourceToolsOrchestrator().openEditor(sourceId),
-      onEditorDraftChanged: (text: string): void => this.getSourceToolsOrchestrator().updateEditorDraft(text),
-      onSaveEditor: (): void => this.getSourceToolsOrchestrator().saveEditor(),
-      onReconcileEditor: (): void => this.getSourceToolsOrchestrator().reconcileEditor(),
-      onCancelEditor: (): void => this.getSourceToolsOrchestrator().cancelEditor(),
-      onDebugKeyChanged: (value: string): void => this.getSourceToolsOrchestrator().updateDebugKey(value),
-      onCheckSelectionChanged: (mode: 'search' | 'explore', depth: number): void =>
-        this.getSourceToolsOrchestrator().updateCheckSelection(mode, depth),
-      onDebugSource: (sourceId: string): void => this.getSourceToolsOrchestrator().debugSource(sourceId),
+      onReconcile: (expected: number): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host)) host?.reconcile(expected); },
+      onSelectAll: (): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host)) host?.selectAll(); },
+      onClearSelection: (): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host)) host?.setSelection([]); },
+      onToggleSelection: (sourceId: string): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host)) host?.toggleSelection(sourceId); },
+      onBack: (): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host)) this.returnToSourceManagement(); },
+      onExportAll: (): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host)) host?.exportAll(); },
+      onExportSelected: (sourceIds: string[]): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host)) host?.exportSelected(host.consumeSelection(sourceIds)); },
+      onCheckSelected: (sourceIds: string[]): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host)) host?.checkSelected(sourceIds); },
+      onStopCheck: (): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host)) host?.stopCheckSelected(); },
+      onSetSelectedEnabled: (sourceIds: string[], enabled: boolean): void => {
+        if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host)) host?.setSelectedEnabled(host.consumeSelection(sourceIds), enabled);
+      },
+      onDeleteSelected: (sourceIds: string[]): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host)) this.requestSourceDelete(sourceIds, host); },
+      onOpenEditor: (sourceId: string): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host)) host?.openEditor(sourceId); },
+      onEditorDraftChanged: (text: string): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host)) host?.updateEditorDraft(text); },
+      onSaveEditor: (): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host)) host?.saveEditor(); },
+      onReconcileEditor: (): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host)) host?.reconcileEditor(); },
+      onCancelEditor: (): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host)) host?.cancelEditor(); },
+      onDebugKeyChanged: (value: string): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host)) host?.updateDebugKey(value); },
+      onCheckSelectionChanged: (mode: 'search' | 'explore', depth: number): void => {
+        if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host)) host?.updateCheckSelection(mode, depth);
+      },
+      onDebugSource: (sourceId: string): void => { if (this.isCurrentSourceToolsPresentation(generation, owner, mounting, host)) host?.debugSource(sourceId); },
     });
   }
 
@@ -1909,70 +1926,37 @@ struct Index {
     this.openSourceManagement('search', keyword);
   }
 
+  private isCurrentSourceToolsPresentation(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: SourceToolsOrchestrator | undefined = this.sourceToolsOrchestrator): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && this.route === 'sourceTools' && this.navigationGeneration === generation &&
+      mounting === this.detailShelfAdmissionMount && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) &&
+      host !== undefined && this.sourceToolsOrchestrator === host && host.owns(owner);
+  }
+
   private getSourceToolsOrchestrator(): SourceToolsOrchestrator {
-    if (this.sourceToolsOrchestrator === undefined || !this.sourceToolsOrchestrator.owns(ReaderRuntimeOwner.current())) {
-      this.sourceToolsOrchestrator = new SourceToolsOrchestrator(
-        (snapshot: SourceToolsSnapshot): void => {
-          this.sourceToolsSnapshot = snapshot;
-        },
-        (): boolean => this.route === 'sourceTools',
-      );
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || !this.isCurrentRuntime(owner) || this.shelfReceiptRetired || this.route !== 'sourceTools')
+      throw new Error('书源工具页面已退役');
+    const host = SourceToolsOrchestrator.forRuntime(owner);
+    if (host === undefined) throw new Error('书源工具 Runtime 已退役');
+    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const identity = JSON.stringify([this.sourceToolsInstanceIdentity, mounting, generation]);
+    if (this.sourceToolsOrchestrator !== host || this.sourceToolsPresentationIdentity !== identity) {
+      this.sourceToolsOrchestrator?.detachPresentation(this.sourceToolsPresentationIdentity);
+      this.sourceToolsOrchestrator = host; this.sourceToolsPresentationIdentity = identity;
+      const current = (): boolean => this.sourceToolsPresentationIdentity === identity &&
+        this.isCurrentSourceToolsPresentation(generation, owner, mounting, host);
+      host.attachPresentation(identity, (snapshot: SourceToolsSnapshot): void => {
+        if (current()) this.sourceToolsSnapshot = snapshot;
+      }, current);
     }
-    return this.sourceToolsOrchestrator;
+    return host;
   }
 
   private openSourceTools(): void {
-    this.nextNavigationGeneration();
-    this.readingSessionActive = false;
-    this.readingExitRequest = undefined;
-    this.exitToDetailOriginAfterReader = false;
-    this.updateSourceToolsSelection([]);
-    this.route = 'sourceTools';
+    this.nextNavigationGeneration(); this.readingSessionActive = false; this.readingExitRequest = undefined;
+    this.exitToDetailOriginAfterReader = false; this.route = 'sourceTools';
     this.getSourceToolsOrchestrator().open(this.sourceSources);
-  }
-
-  private updateSourceToolsSelection(sourceIds: string[]): void {
-    this.getSourceToolsOrchestrator().setSelection(sourceIds);
-  }
-
-  private selectAllSourceTools(): void {
-    this.updateSourceToolsSelection(this.sourceToolsSnapshot.sources.map(
-      (source: BookSource): string => source.sourceId,
-    ));
-  }
-
-  private toggleSourceToolsSelection(sourceId: string): void {
-    const selection = this.sourceToolsSnapshot.selectedSourceIds;
-    if (selection.indexOf(sourceId) >= 0) {
-      this.updateSourceToolsSelection(selection.filter(
-        (candidate: string): boolean => candidate !== sourceId,
-      ));
-      return;
-    }
-    this.updateSourceToolsSelection(selection.concat([sourceId]));
-  }
-
-  private consumeSourceToolsSelection(sourceIds: string[]): string[] {
-    const available = new Set(this.sourceToolsSnapshot.sources.map(
-      (source: BookSource): string => source.sourceId,
-    ));
-    const selection = sourceIds.filter((sourceId: string): boolean => available.has(sourceId));
-    this.updateSourceToolsSelection([]);
-    return selection;
-  }
-
-  private exportSelectedSources(sourceIds: string[]): void {
-    this.getSourceToolsOrchestrator().exportSelected(this.consumeSourceToolsSelection(sourceIds));
-  }
-
-  private checkSelectedSources(sourceIds: string[]): void {
-    // Keep the checked rows selected so a long-running batch always retains
-    // its visible scope and can be inspected or rerun after completion.
-    this.getSourceToolsOrchestrator().checkSelected(sourceIds);
-  }
-
-  private setSelectedSourcesEnabled(sourceIds: string[], enabled: boolean): void {
-    this.getSourceToolsOrchestrator().setSelectedEnabled(this.consumeSourceToolsSelection(sourceIds), enabled);
   }
 
   private returnToSourceManagement(): void {
@@ -2187,15 +2171,14 @@ struct Index {
       this.sourceManagementReturnTarget === returnTarget);
   }
 
-  private requestSourceDelete(sourceIds: string[]): void {
-    if (this.route !== 'sourceTools' || sourceIds.length === 0) {
+  private requestSourceDelete(sourceIds: string[], host: SourceToolsOrchestrator | undefined = this.sourceToolsOrchestrator): void {
+    if (this.route !== 'sourceTools' || sourceIds.length === 0 || host === undefined || this.sourceToolsOrchestrator !== host) {
       return;
     }
-    const selection = this.consumeSourceToolsSelection(sourceIds);
+    const selection = host.consumeSelection(sourceIds);
     if (selection.length === 0) {
       return;
     }
-    const host = this.getSourceToolsOrchestrator();
     const listRevision = this.sourceToolsSnapshot.sourceListRevision;
     const selectionRevision = this.sourceToolsSnapshot.selectionRevision;
     this.showIndexAlert('confirmation-cancelable', {
@@ -2210,7 +2193,7 @@ struct Index {
         fontColor: readerAppColor('app.Index.requestSourceDelete.showAlertDialog.FFB42318', this.appThemeScheme),
         action: (): void => {
           if (this.route === 'sourceTools') {
-            this.getSourceToolsOrchestrator().deleteSelected(selection);
+            host.deleteSelected(selection);
           }
         },
       },

@@ -126,10 +126,34 @@ export const EMPTY_SOURCE_TOOLS_SNAPSHOT: SourceToolsSnapshot = {
  * export serialization, source checking, or persistence.
  */
 export class SourceToolsOrchestrator {
+  private static cached: SourceToolsOrchestrator | undefined;
+  private presentationIdentity: string = '';
+
+  /** Feature-local exact Runtime cache; accepted tasks keep their original tail. */
+  static forRuntime(owner: ReaderRuntimeOwner): SourceToolsOrchestrator | undefined {
+    if (!ReaderRuntimeOwner.isCurrent(owner)) return undefined;
+    if (SourceToolsOrchestrator.cached === undefined || !SourceToolsOrchestrator.cached.owns(owner))
+      SourceToolsOrchestrator.cached = new SourceToolsOrchestrator((): void => {}, (): boolean => false, owner);
+    return SourceToolsOrchestrator.cached;
+  }
+
+  attachPresentation(identity: string, emit: (snapshot: SourceToolsSnapshot) => void,
+    current: () => boolean): void {
+    this.presentationIdentity = identity; this.emit = emit; this.isCurrent = current;
+    this.deliver();
+  }
+
+  detachPresentation(identity: string): void {
+    if (identity !== this.presentationIdentity) return;
+    this.presentationIdentity = ''; this.emit = (): void => {}; this.isCurrent = (): boolean => false;
+  }
+
+  current(): SourceToolsSnapshot { return this.copySnapshot(this.snapshot); }
+
   private readonly gateway: SourceGateway;
   private readonly owner: ReaderRuntimeOwner;
-  private readonly emit: (snapshot: SourceToolsSnapshot) => void;
-  private readonly isCurrent: () => boolean;
+  private emit: (snapshot: SourceToolsSnapshot) => void;
+  private isCurrent: () => boolean;
   private snapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   private session: number = 0;
   private batchCheckRun: number = 0;
@@ -150,6 +174,13 @@ export class SourceToolsOrchestrator {
   }
 
   open(seedSources: BookSource[] = []): void {
+    if (!this.isCurrentSession(this.session)) return;
+    // Reopening cannot erase an accepted mutation or its unknown ACK barrier.
+    if (this.pendingOperations > 0 || this.snapshot.receipt?.receipt.confirmation === 'unknown' ||
+      this.snapshot.editorReadback?.confirmation === 'unknown' ||
+      this.snapshot.receipt?.receipt.fact === 'confirmedRefreshFailed') {
+      this.deliver(); return;
+    }
     this.session += 1;
     this.batchCheckRun += 1;
     this.batchCheckCancelRequested = false;
@@ -181,7 +212,7 @@ export class SourceToolsOrchestrator {
   }
 
   setSelection(sourceIds: string[]): void {
-    if (this.snapshot.busy || this.pendingOperations > 0) {
+    if (!this.isCurrentSession(this.session) || this.snapshot.busy || this.pendingOperations > 0) {
       return;
     }
     const selection = this.normalizeSourceIds(sourceIds);
@@ -260,7 +291,7 @@ export class SourceToolsOrchestrator {
   }
 
   checkSelected(sourceIds: string[]): void {
-    if (this.snapshot.busy || this.pendingOperations > 0) {
+    if (!this.isCurrentSession(this.session) || this.snapshot.busy || this.pendingOperations > 0) {
       return;
     }
     const selection = this.normalizeSourceIds(sourceIds);
@@ -371,6 +402,13 @@ export class SourceToolsOrchestrator {
         }
         hilog.error(DOMAIN, 'Reader', '批量检测书源失败: %{private}s', (error as Error).message);
       }
+      finally {
+        if (this.isAcceptedSession(session) && this.batchCheckRun === run && this.snapshot.busy) {
+          progress = progress.stop();
+          this.publish({ batchCheck: progress.snapshot(), busy: false,
+            statusMessage: `已停止检测：完成 ${progress.completed}/${selection.length}，所选项通过 ${progress.passed}，未通过 ${progress.failed}，检测错误 ${progress.errors}` });
+        }
+      }
     });
   }
 
@@ -434,7 +472,7 @@ export class SourceToolsOrchestrator {
   }
 
   updateEditorDraft(text: string): void {
-    if (this.snapshot.busy || this.pendingOperations > 0 ||
+    if (!this.isCurrentSession(this.session) || this.snapshot.busy || this.pendingOperations > 0 ||
       this.snapshot.editorSourceId.length === 0 || text.length > 16 * 1024 * 1024) {
       return;
     }
@@ -442,7 +480,8 @@ export class SourceToolsOrchestrator {
   }
 
   cancelEditor(): void {
-    if (this.snapshot.busy || this.pendingOperations > 0) {
+    if (!this.isCurrentSession(this.session) || this.snapshot.editorReadback?.confirmation === 'unknown' ||
+      this.snapshot.busy || this.pendingOperations > 0) {
       return;
     }
     this.publish({ editorSourceId: '', editorText: '', editorReadback: null, editorOperation: null,
@@ -457,11 +496,12 @@ export class SourceToolsOrchestrator {
       return;
     }
     this.enqueue(async (): Promise<void> => {
+      if (!this.isCurrentSession(session) || this.snapshot.editorReadback?.confirmation === 'unknown' ||
+        this.snapshot.receipt?.receipt.confirmation === 'unknown') return;
       this.publishIfCurrent(session, { busy: true, statusMessage: '正在由 Core 校验并保存…' });
       // The save and the follow-up reload are two separate facts: once Core
       // has validated and persisted the edit, a list-refresh failure must not
       // be reported as "save failed". Persist failure still rejects below.
-      if (!this.isCurrentSession(session) || this.snapshot.editorReadback?.confirmation === 'unknown') return;
       const evidence = new ReaderWriteEvidence();
       this.gateway.observeWrites(evidence);
       try {
@@ -487,7 +527,7 @@ export class SourceToolsOrchestrator {
       try {
         sources = await this.gateway.loadSources(undefined, true);
       } catch (error) {
-        if (this.isCurrentSession(session)) {
+        if (this.isAcceptedSession(session)) {
           // The edit IS persisted. Keep the draft open for reconciliation
           // instead of closing it (which would hint that nothing was saved)
           // or reporting a save failure (which would hint that a re-submit is
@@ -506,7 +546,7 @@ export class SourceToolsOrchestrator {
           sourceId, (error as Error).message);
         return;
       }
-      if (this.isCurrentSession(session)) {
+      if (this.isAcceptedSession(session)) {
         const projection = projectPersistedReceipt({ confirmation: 'confirmed', readback: 'succeeded', value: sources });
         this.publish({
           sources,
@@ -538,7 +578,7 @@ export class SourceToolsOrchestrator {
       try {
         const sources = await this.gateway.loadSources(undefined, true);
         const found = sources.some((source: BookSource): boolean => source.sourceId === sourceId);
-        if (!this.isCurrentSession(session)) return;
+        if (!this.isAcceptedSession(session)) return;
         if (found && confirmation === 'confirmed') {
           const projection = projectPersistedReceipt({ confirmation, readback: 'succeeded', value: sources });
           this.publish({
@@ -562,14 +602,16 @@ export class SourceToolsOrchestrator {
           statusMessage: confirmation === 'unknown' ? '等待核对；列表读取不能确认先前保存，草稿保留' : '已确认，但当前列表未找到该书源；草稿保留供核对',
         });
       } catch (error) {
-        if (this.isCurrentSession(session)) {
+        if (this.isAcceptedSession(session)) {
           const projection = projectPersistedReceipt({ confirmation, readback: 'failed',
             value: this.snapshot.sources, refreshError: (error as Error).message, canRetry: true });
           this.publish({
             editorReadback: projection.receipt,
             editorOperation: projection.facts,
             busy: false,
-            statusMessage: `书源已确认，刷新失败：${(error as Error).message}；草稿保留供核对`,
+            statusMessage: confirmation === 'confirmed' ?
+              `书源已确认，刷新失败：${(error as Error).message}；草稿保留供核对` :
+              `书源等待核对：${(error as Error).message}；草稿保留供核对`,
           });
         }
       }
@@ -681,6 +723,7 @@ export class SourceToolsOrchestrator {
   owns(owner: ReaderRuntimeOwner): boolean { return this.owner === owner; }
 
   private async performManagementWrite(session: number, mutation: () => Promise<string>): Promise<void> {
+    if (this.snapshot.receipt?.receipt.confirmation === 'unknown') return;
     const evidence = new ReaderWriteEvidence();
     this.gateway.observeWrites(evidence);
     this.publishIfCurrent(session, { busy: true });
@@ -718,7 +761,7 @@ export class SourceToolsOrchestrator {
   private async reloadManagement(session: number, status: string): Promise<void> {
     try {
       const sources = await this.gateway.loadSources(undefined, true);
-      if (!this.isCurrentSession(session)) return;
+      if (!this.isAcceptedSession(session)) return;
       this.publish({ sources, busy: false, statusMessage: status, readFacts: projectOperationFacts({ phase: 'succeeded',
         value: sources, generation: ++sourceToolsReceiptGeneration }) });
       const receipt = this.snapshot.receipt;
@@ -741,17 +784,28 @@ export class SourceToolsOrchestrator {
   }
 
   private enqueue(operation: () => Promise<void>, allowQueued: boolean = false): void {
-    if (!allowQueued && (this.snapshot.busy || this.pendingOperations > 0)) {
+    if (!this.isCurrentSession(this.session) || (!allowQueued && (this.snapshot.busy || this.pendingOperations > 0))) {
       return;
     }
+    const session = this.session, presentation = this.presentationIdentity, admitted = this.isCurrent;
+    let started = false;
     this.pendingOperations += 1;
     this.operationTail = this.operationTail
-      .then(operation)
+      .then(async (): Promise<void> => {
+        if (session !== this.session || presentation !== this.presentationIdentity ||
+          !ReaderRuntimeOwner.isCurrent(this.owner) || !admitted()) return;
+        started = true; await operation();
+      })
       .catch((error: Error): void => {
         hilog.error(DOMAIN, 'Reader', 'Source tools operation failed: %{private}s', error.message);
       })
       .finally((): void => {
         this.pendingOperations = Math.max(0, this.pendingOperations - 1);
+        if (this.isAcceptedSession(session) && this.pendingOperations === 0 && this.snapshot.busy) {
+          this.publish({ busy: false, readFacts: projectOperationFacts({ phase: 'cancelled',
+            value: this.snapshot.sources, canRetry: true, generation: ++sourceToolsReceiptGeneration,
+            message: started ? '原页面已退役，操作结果未投影' : '原页面已退役，操作尚未派发' }) });
+        }
       });
   }
 
@@ -764,7 +818,8 @@ export class SourceToolsOrchestrator {
   }
 
   private publishIfCurrent(session: number, patch: SourceToolsPatch): void {
-    if (this.isCurrentSession(session)) {
+    // This records accepted-task truth even after its physical view retires.
+    if (this.isAcceptedSession(session)) {
       this.publish(patch);
     }
   }
@@ -810,10 +865,16 @@ export class SourceToolsOrchestrator {
       busy: patch.busy ?? this.snapshot.busy,
       statusMessage: patch.statusMessage ?? this.snapshot.statusMessage,
     };
-    if (ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent()) {
-      this.emit(this.copySnapshot(this.snapshot));
-    }
+    this.deliver();
   }
+
+  private deliver(): void {
+    try {
+      if (ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent()) this.emit(this.copySnapshot(this.snapshot));
+    } catch (_) { /* A retired platform view cannot change an accepted Core result. */ }
+  }
+
+  private isAcceptedSession(session: number): boolean { return this.session === session; }
 
   private copySnapshot(source: SourceToolsSnapshot): SourceToolsSnapshot {
     return {
@@ -871,7 +932,8 @@ export class SourceToolsOrchestrator {
   }
 
   private isCurrentSession(session: number): boolean {
-    return ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent() && this.session === session;
+    try { return ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent() && this.session === session; }
+    catch (_) { return false; }
   }
 }
 
