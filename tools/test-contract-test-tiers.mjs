@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -88,5 +88,35 @@ try {
     assert.ok(active >= 0 && active <= 2, 'actual native overlap stays within the configured two workers');
   }
   assert.equal(active, 0); assert.equal(peak, 2); assert.equal(pids.size, 0);
+  // Actual child OS temp writes are isolated, released only after successful
+  // process termination, and retained for a failed child. A sibling sentinel
+  // and per-test logs/results cannot be deleted by scratch cleanup.
+  const sentinel = join(root, 'outside-scratch.txt'); writeFileSync(sentinel, 'preserve');
+  const scratchTrace = join(root, 'temporary-storage.jsonl');
+  const storageScript = status => `import {tmpdir} from 'node:os';import {join} from 'node:path';` +
+    `import {mkdirSync,writeFileSync,appendFileSync} from 'node:fs';` +
+    `const directory=tmpdir();const nested=join(directory,'actual-core-fixture');mkdirSync(nested);` +
+    `writeFileSync(join(nested,'receipt.db'),'actual child fixture');` +
+    `appendFileSync(${JSON.stringify(scratchTrace)},JSON.stringify({pid:process.pid,directory})+'\\n');` +
+    `console.log('native fixture written');process.exit(${status});`;
+  const storage = nativeFixture('temporary-storage', {
+    'test-storage-pass.mjs': storageScript(0), 'test-storage-fail.mjs': storageScript(7),
+  });
+  const storageRows = await failedResults(storage, 2, {}, /test-storage-fail.mjs failed \(7\)/);
+  const writes = readFileSync(scratchTrace, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+  assert.equal(new Set(writes.map(row => row.directory)).size, 2, 'concurrent actual OS temp directories are distinct');
+  for (const row of storageRows) {
+    assert.ok(writes.some(write => write.directory === row.temporaryDirectory));
+    assert.equal(row.temporaryStorageRemoved, row.status === 0);
+    assert.equal(existsSync(row.temporaryDirectory), row.status !== 0);
+    assert.match(readFileSync(row.log, 'utf8'), /native fixture written/, 'logs survive successful fixture removal');
+    if (row.status !== 0) {
+      assert.equal(readFileSync(join(row.temporaryDirectory, 'actual-core-fixture/receipt.db'), 'utf8'), 'actual child fixture');
+      rmSync(row.temporaryDirectory, { recursive: true }); // Failed fixture inspected; this test owns it.
+    }
+  }
+  assert.equal(readFileSync(sentinel, 'utf8'), 'preserve');
+  assert.ok(cleanRows.find(row => row.timedOut).temporaryStorageRemoved === false, 'expired exit0 cannot trigger successful scratch cleanup');
+  assert.ok(ignoredRows.find(row => row.timedOut).temporaryStorageRemoved === false);
   console.log('PASS: failed/unclassified/duplicate/empty tiers, timeout cleanup exit0, TERM ignore/KILL, actual concurrency bound and every selected settlement');
 } finally { rmSync(root, { recursive: true, force: true }); }

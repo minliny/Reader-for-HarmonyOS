@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, mkdtempSync, openSync, closeSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdtempSync, mkdirSync, openSync, closeSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -46,6 +46,8 @@ export async function runContractsBounded(root, tier, workers = 1, testOptions =
   async function worker() {
     while (cursor < selected.length) {
       const name = selected[cursor++], started = Date.now(), log = resolve(logRoot, name + '.log');
+      const temporaryDirectory = resolve(logRoot, 'temporary', name);
+      mkdirSync(temporaryDirectory, { recursive: true });
       const fd = openSync(log, 'wx');
       const result = await new Promise(resolveResult => {
         let child, error, deadline, escalation;
@@ -53,7 +55,8 @@ export async function runContractsBounded(root, tier, workers = 1, testOptions =
         const termination = [];
         try {
           child = spawn(process.execPath, [resolve(root, 'tools', name)],
-            { cwd: root, stdio: ['ignore', fd, fd] });
+            { cwd: root, stdio: ['ignore', fd, fd],
+              env: { ...process.env, TMPDIR: temporaryDirectory, TMP: temporaryDirectory, TEMP: temporaryDirectory } });
         } catch (failure) { resolveResult({ error: failure.code ?? failure.message, timedOut, termination }); return; }
         const terminate = signal => {
           try { termination.push({ signal, sent: child.kill(signal) }); }
@@ -73,7 +76,15 @@ export async function runContractsBounded(root, tier, workers = 1, testOptions =
         });
       });
       closeSync(fd);
-      const row = { name, ...result, milliseconds: Date.now() - started, log };
+      // Only an actually successful, closed child releases its own temporary
+      // storage. Failed/expired children retain fixtures alongside their logs.
+      // This never scans or removes the shared OS temp root or user data.
+      let temporaryStorageRemoved = false;
+      if (!result.error && !result.timedOut && result.status === 0) {
+        try { rmSync(temporaryDirectory, { recursive: true }); temporaryStorageRemoved = true; }
+        catch (failure) { result.error = `temporary cleanup: ${failure.code ?? failure.message}`; }
+      }
+      const row = { name, ...result, milliseconds: Date.now() - started, log, temporaryDirectory, temporaryStorageRemoved };
       results.push(row);
       console.log(`${name}: ${!row.error && !row.timedOut && row.status === 0 ? 'PASS' : 'FAIL'} (${row.milliseconds}ms)`);
     }
