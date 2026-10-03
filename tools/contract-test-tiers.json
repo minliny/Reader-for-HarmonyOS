@@ -525,6 +525,7 @@
     "test-webdav-credential-queue.mjs",
     "test-window-flicker-dedup.mjs",
     "test-reader-settings-write-facts.mjs",
-    "test-rules-mutation-owner.mjs"
+    "test-rules-mutation-owner.mjs",
+    "test-reader-strong-progress-owner.mjs"
   ]
 }
