@@ -4684,5 +4684,274 @@
     }
   ],
   "legacyBusinessRowsSha256": "3f7f18a54b7bf56a1bb557d3c48574f3e9b4f7e869a25dce2541c04b30f924d0",
-  "legacySharedOwnersSha256": "82c4c61426bf926ad9708e8953b6a7b6e45478f9cf84e1ffcfe524c87cec0521"
+  "legacySharedOwnersSha256": "82c4c61426bf926ad9708e8953b6a7b6e45478f9cf84e1ffcfe524c87cec0521",
+  "retainedConsumerSlots": [
+    {
+      "id": "directory-rules-recovery",
+      "file": "entry/src/main/ets/features/reading/ReaderDirectoryRules.ets",
+      "boundary": "One actual existing directory-rule recovery slot; original business budget unchanged. Existing compact Notice/Action implementation and public inputs qualified exactly, no new producer/style exemption and no hidden entry opened.",
+      "components": [
+        {
+          "component": "ReaderRecoveryNotice",
+          "file": "entry/src/main/ets/features/common/ReaderRecoveryNotice.ets",
+          "shape": {
+            "types": [],
+            "declarations": [
+              {
+                "name": "ReaderRecoveryNotice",
+                "publicFields": [
+                  {
+                    "name": "view",
+                    "type": "ReaderRecoveryView",
+                    "decorators": [
+                      "@Prop"
+                    ]
+                  },
+                  {
+                    "name": "actionLabel",
+                    "type": "string",
+                    "decorators": [
+                      "@Prop"
+                    ]
+                  },
+                  {
+                    "name": "onReconcile",
+                    "type": "(generation: number) => void",
+                    "decorators": []
+                  }
+                ]
+              }
+            ],
+            "styles": [
+              {
+                "owner": "ReaderRecoveryNotice",
+                "method": "build",
+                "property": "width",
+                "args": [
+                  "'100%'"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryNotice",
+                "method": "build",
+                "property": "padding",
+                "args": [
+                  "12"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryNotice",
+                "method": "build",
+                "property": "width",
+                "args": [
+                  "'100%'"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryNotice",
+                "method": "build",
+                "property": "fontColor",
+                "args": [
+                  "readerAppColor('TOK_MUTED', this.appThemeScheme)"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryNotice",
+                "method": "build",
+                "property": "fontSize",
+                "args": [
+                  "TYPE_APP_INHERITED_BODY.fontSizeFp"
+                ]
+              }
+            ],
+            "implementation": "import { TYPE_APP_INHERITED_BODY } from './ReaderTypography';\nimport { readerAppColor } from './ReaderThemeRegistry';\nimport { ReaderRecoveryAction } from './ReaderRecoveryAction';\nimport type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';\n@Component\nexport struct ReaderRecoveryNotice extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        view?: ReaderRecoveryView;\n        actionLabel?: string;\n        onReconcile?: (generation: number) => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    view: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };\n    @Prop\n    actionLabel: string = '刷新列表';\n    onReconcile: (generation: number) => void = (_generation: number): void => { };\n    build() {\n        if (this.view.visible) {\n            .width<\n      >('100%');\n        }\n    }\n}\n"
+          },
+          "consumers": [
+            {
+              "file": "features/reading/ReaderDirectoryRules.ets",
+              "method": "features/reading/ReaderDirectoryRules.ets#ReaderDirectoryRules#build",
+              "component": "ReaderRecoveryNotice",
+              "specId": null,
+              "keys": [
+                "view"
+              ],
+              "input": "{ view: this.recoveryView() }"
+            }
+          ]
+        },
+        {
+          "component": "ReaderRecoveryAction",
+          "file": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
+          "shape": {
+            "types": [],
+            "declarations": [
+              {
+                "name": "ReaderRecoveryAction",
+                "publicFields": [
+                  {
+                    "name": "variant",
+                    "type": "'compact' | 'rssManagement'",
+                    "decorators": [
+                      "@Prop"
+                    ]
+                  },
+                  {
+                    "name": "label",
+                    "type": "string",
+                    "decorators": [
+                      "@Prop"
+                    ]
+                  },
+                  {
+                    "name": "generation",
+                    "type": "number",
+                    "decorators": [
+                      "@Prop"
+                    ]
+                  },
+                  {
+                    "name": "actionEnabled",
+                    "type": "boolean",
+                    "decorators": [
+                      "@Prop"
+                    ]
+                  },
+                  {
+                    "name": "onReconcile",
+                    "type": "(generation: number) => void",
+                    "decorators": []
+                  }
+                ]
+              }
+            ],
+            "styles": [
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "borderRadius",
+                "args": [
+                  "this.variant === 'rssManagement' ? 8 : 6"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "backgroundColor",
+                "args": [
+                  "readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme)"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "padding",
+                "args": [
+                  "{ left: 12, right: 12 }"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "height",
+                "args": [
+                  "36"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "fontColor",
+                "args": [
+                  "readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme)"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "fontSize",
+                "args": [
+                  "TYPE_FORM_COMPACT_ACTION.fontSizeFp"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "fontWeight",
+                "args": [
+                  "TYPE_FORM_COMPACT_ACTION.fontWeight"
+                ]
+              },
+              {
+                "owner": "ReaderRecoveryAction",
+                "method": "build",
+                "property": "fontFamily",
+                "args": [
+                  "TYPE_FORM_COMPACT_ACTION.fontFamily"
+                ]
+              }
+            ],
+            "implementation": "import { TYPE_FORM_COMPACT_ACTION } from './ReaderTypography';\nimport { readerAppColor } from './ReaderThemeRegistry';\n@Component\nexport struct ReaderRecoveryAction extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        variant?: 'compact' | 'rssManagement';\n        label?: string;\n        generation?: number;\n        actionEnabled?: boolean;\n        onReconcile?: (generation: number) => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    variant: 'compact' | 'rssManagement' = 'compact';\n    @Prop\n    label: string = '刷新列表';\n    @Prop\n    generation: number = 0;\n    @Prop\n    actionEnabled: boolean = true;\n    onReconcile: (generation: number) => void = (_generation: number): void => { };\n    build() {\n            .fontFamily<\n    >(TYPE_FORM_COMPACT_ACTION.fontFamily)\n            .fontWeight<\n    >(TYPE_FORM_COMPACT_ACTION.fontWeight)\n            .fontSize<\n    >(TYPE_FORM_COMPACT_ACTION.fontSizeFp)\n            .fontColor<\n    >(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))\n            .height<\n    >(36)\n            .padding<\n    >({ left: 12, right: 12 })\n            .backgroundColor<\n    >(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))\n            .borderRadius<\n    >(this.variant === 'rssManagement' ? 8 : 6)\n            .textAlign<\n    >(TextAlign.Center)\n            .enabled<\n    >(this.actionEnabled)\n            .accessibilityText<\n    >(this.label)\n            .onClick<\n    >((): void => { if (this.actionEnabled)\n            this.onReconcile(this.generation); });\n    }\n}\n"
+          },
+          "consumers": [
+            {
+              "file": "features/reading/ReaderDirectoryRules.ets",
+              "method": "features/reading/ReaderDirectoryRules.ets#ReaderDirectoryRules#build",
+              "component": "ReaderRecoveryAction",
+              "specId": null,
+              "keys": [
+                "label",
+                "generation",
+                "actionEnabled",
+                "onReconcile"
+              ],
+              "input": "{ label: '核对原操作回执', generation: this.operation.generation,\n    actionEnabled: !this.busy && this.ownsRecovery(identity), onReconcile: (): void => { void this.recover(identity, false); } }"
+            },
+            {
+              "file": "features/reading/ReaderDirectoryRules.ets",
+              "method": "features/reading/ReaderDirectoryRules.ets#ReaderDirectoryRules#build",
+              "component": "ReaderRecoveryAction",
+              "specId": null,
+              "keys": [
+                "label",
+                "generation",
+                "actionEnabled",
+                "onReconcile"
+              ],
+              "input": "{ label: '继续原操作', generation: this.operation.generation,\n    actionEnabled: !this.busy && this.ownsRecovery(identity), onReconcile: (): void => { void this.recover(identity, true); } }"
+            },
+            {
+              "file": "features/reading/ReaderDirectoryRules.ets",
+              "method": "features/reading/ReaderDirectoryRules.ets#ReaderDirectoryRules#build",
+              "component": "ReaderRecoveryAction",
+              "specId": null,
+              "keys": [
+                "label",
+                "generation",
+                "actionEnabled",
+                "onReconcile"
+              ],
+              "input": "{ label: '重新读取规则', generation: this.operation.generation,\n    actionEnabled: this.ownsRecovery(identity), onReconcile: (): void => { if (this.ownsRecovery(identity))\n        this.loadRules(); } }"
+            },
+            {
+              "file": "features/reading/ReaderDirectoryRules.ets",
+              "method": "features/reading/ReaderDirectoryRules.ets#ReaderDirectoryRules#build",
+              "component": "ReaderRecoveryAction",
+              "specId": null,
+              "keys": [
+                "label",
+                "generation",
+                "actionEnabled",
+                "onReconcile"
+              ],
+              "input": "{ label: '刷新当前目录', generation: this.operation.generation,\n    actionEnabled: !this.busy && this.ownsRecovery(identity), onReconcile: (): void => { this.retryDirectoryRefresh(identity); } }"
+            }
+          ]
+        }
+      ],
+      "sdkProofs": [
+        "tools/test-reader-directory-rules.mjs",
+        "docs/architecture/reader-directory-rules-exact-receipt-20261004.md"
+      ]
+    }
+  ]
 }

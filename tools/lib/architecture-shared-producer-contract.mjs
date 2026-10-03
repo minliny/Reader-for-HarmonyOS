@@ -54,6 +54,13 @@ function edge(element,row){
  return{file:row.file,method:element.method,component:element.kind,specId:spec?.initializer?print(spec.initializer,tree):null,keys};
 }
 export function producerConsumerEdges(inventory,name){return inventory.rows.flatMap(row=>row.elements.filter(e=>e.kind===name&&e.customTarget?.endsWith('#'+name+'#build')).map(e=>edge(e,row)));}
+/** Exact inputs to existing shared controls from one approved recovery slot.
+ * The business owner implementation is not a shared producer/style exemption. */
+export function retainedSharedConsumerInputs(inventory,name,file){
+ return inventory.rows.filter(row=>row.file===relative(file)).flatMap(row=>row.elements
+  .filter(e=>e.kind===name&&e.customTarget?.endsWith('#'+name+'#build'))
+  .map(e=>({...edge(e,row),input:canonicalArgument(e.args[0]??'{}')})));
+}
 export function verifyArchitectureRegistration(inventory,baseline,contract,root,readSource=file=>readFileSync(path.join(root,file),'utf8')){
  assert.equal(createHash('sha256').update(JSON.stringify(baseline.rows)).digest('hex'),contract.legacyBusinessRowsSha256,'legacy100 private budgets cannot be silently raised');
  const producerFiles=new Set(contract.producers.map(p=>p.file));
@@ -102,6 +109,28 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
     for(const edge of outgoing)for(const key of edge.keys)assert.ok(fields.has(key),'illegal shared delegate input '+key);
   }
 
+ }
+ assert.ok((contract.retainedConsumerSlots??[]).length<=1,'one exact existing directory recovery slot, no broad alias exemption');
+ for(const slot of contract.retainedConsumerSlots??[]){
+  assert.equal(slot.id,'directory-rules-recovery','only the exact approved recovery slot is qualified');
+  assert.equal(slot.file,'entry/src/main/ets/features/reading/ReaderDirectoryRules.ets','no UI-path wildcard or new producer exemption');
+  assert.ok(baseline.rows.some(row=>row.file===slot.file),'recovery consumer retains its original business budget');
+  assert.ok(slot.sdkProofs.length>0,'actual recovery consumer SDK proof required');
+  for(const proof of slot.sdkProofs)assert.ok(readSource(proof).length>0,'actual recovery SDK proof');
+  assert.deepEqual(slot.components.map(c=>c.component).sort(),['ReaderRecoveryAction','ReaderRecoveryNotice'],'exact existing common controls only');
+  for(const child of slot.components){
+    assert.equal(child.file,'entry/src/main/ets/features/common/'+child.component+'.ets','exact shared recovery implementation');
+    assert.ok(baseline.sharedOwners.some(row=>row.file===child.file),'existing bounded shared owner, no new exemption');
+    const shape=sharedProducerShape(readSource(child.file),child.file);assert.deepEqual(shape,child.shape,'retained shared child interface/implementation changed');
+    const declaration=shape.declarations.find(d=>d.name===child.component);assert.ok(declaration,'actual shared recovery struct');
+    const fields=new Set(declaration.publicFields.map(field=>field.name));
+    const inputs=retainedSharedConsumerInputs(inventory,child.component,slot.file);
+    for(const input of inputs)for(const key of input.keys)assert.ok(fields.has(key),'illegal retained shared input '+child.component+':'+key);
+    assert.deepEqual(inputs,child.consumers,'actual retained recovery input/identity/callback bindings changed');
+    assert.equal(inputs.length,child.component==='ReaderRecoveryNotice'?1:4,'all five actual recovery sites required');
+    const row=inventory.rows.find(row=>row.file===relative(slot.file));
+    for(const element of row.elements.filter(e=>e.kind===child.component))assert.equal(element.modifiers.some(m=>appearance.has(m.property)),false,'recovery caller cannot override common appearance');
+  }
  }
  return{budgetRows:baseline.rows.length,sharedOwners:baseline.sharedOwners.length,outsideBudgetPolicies:baseline.uiPolicies.length,uiFiles:inventory.rows.filter(r=>r.elements.length).length,producers:contract.producers.length};
 }

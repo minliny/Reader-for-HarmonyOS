@@ -28,6 +28,24 @@ assert.throws(()=>verifyArchitectureRegistration(illegal,baseline,contract,root)
 const missingRssDelegate=structuredClone(inventory),rssWrapper=missingRssDelegate.rows.find(row=>row.file==='features/rss/RssOriginalRecoverySurface.ets');
 assert.ok(rssWrapper);const actualAction=rssWrapper.elements.findIndex(element=>element.kind==='ReaderRecoveryAction');assert.ok(actualAction>=0);rssWrapper.elements.splice(actualAction,1);
 assert.throws(()=>verifyArchitectureRegistration(missingRssDelegate,baseline,contract,root),/actual shared delegate edges changed/,'five incoming Page rows cannot hide a missing shared action implementation');
+assert.equal(contract.retainedConsumerSlots.length,1);
+const directorySlot=contract.retainedConsumerSlots[0];
+assert.deepEqual(directorySlot.components.map(child=>[child.component,child.consumers.length]),[['ReaderRecoveryNotice',1],['ReaderRecoveryAction',4]]);
+const incompleteDirectory=structuredClone(inventory),directoryRow=incompleteDirectory.rows.find(row=>row.file==='features/reading/ReaderDirectoryRules.ets');
+const refresh=directoryRow.elements.findIndex(element=>element.kind==='ReaderRecoveryAction'&&element.args[0].includes('刷新当前目录'));assert.ok(refresh>=0);directoryRow.elements.splice(refresh,1);
+assert.throws(()=>verifyArchitectureRegistration(incompleteDirectory,baseline,contract,root),/retained recovery input\/identity\/callback bindings changed/,'original3 recovery actors cannot hide missing confirmed refresh failure surface');
+const privateDirectory=structuredClone(inventory);privateDirectory.rows.find(row=>row.file===directoryRow.file).elements.find(element=>element.kind==='ReaderRecoveryAction').args[0]=privateDirectory.rows.find(row=>row.file===directoryRow.file).elements.find(element=>element.kind==='ReaderRecoveryAction').args[0].replace('{ label:', '{ fontSize: 99, label:');
+assert.throws(()=>verifyArchitectureRegistration(privateDirectory,baseline,contract,root),/illegal retained shared input/,'new business recovery does not grant private style inputs');
+const swappedCallback=structuredClone(inventory);const replay=swappedCallback.rows.find(row=>row.file===directoryRow.file).elements.find(element=>element.kind==='ReaderRecoveryAction'&&element.args[0].includes('核对原操作回执'));
+replay.args[0]=replay.args[0].replace('this.recover(identity, false)','this.recover(identity, true)');
+assert.throws(()=>verifyArchitectureRegistration(swappedCallback,baseline,contract,root),/retained recovery input\/identity\/callback bindings changed/,'a pure inspect label cannot silently become replaying dispatch');
+const droppedIdentity=structuredClone(inventory);const stale=droppedIdentity.rows.find(row=>row.file===directoryRow.file).elements.find(element=>element.kind==='ReaderRecoveryAction');
+stale.args[0]=stale.args[0].replace('this.ownsRecovery(identity)','true');
+assert.throws(()=>verifyArchitectureRegistration(droppedIdentity,baseline,contract,root),/retained recovery input\/identity\/callback bindings changed/,'captured recovery identity is an actual input contract');
+const arbitrarySlot=structuredClone(contract);arbitrarySlot.retainedConsumerSlots[0].file='entry/src/main/ets/features/common/UnknownHeader.ets';
+assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,arbitrarySlot,root),/no UI-path wildcard or new producer exemption/);
+const realActionSource=readFileSync('entry/src/main/ets/features/common/ReaderRecoveryAction.ets','utf8');
+assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,contract,root,file=>file.endsWith('/ReaderRecoveryAction.ets')?realActionSource.replace('.height(36)', '.height(99)'):readFileSync(file,'utf8')),/actual shared delegate implementation changed|retained shared child interface\/implementation changed/,'shared interface/geometry cannot change behind an input-only registration');
 const cardRow=inventory.rows.find(row=>row.file==='features/sync/SyncPage.ets');
 const originalCardCall=cardRow.elements.find(e=>e.kind==='ReaderCard');assert.ok(originalCardCall);
 for(const property of ['radius','bg','cardBorder']){
