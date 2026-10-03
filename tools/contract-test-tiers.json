@@ -494,6 +494,7 @@
     "test-rss-management-exact-intents.mjs",
     "test-rss-management-owner-closure.mjs",
     "test-rss-management-typography.mjs",
+    "test-rss-original-recovery-surface-sdk.mjs",
     "test-rss-page-architecture.mjs",
     "test-rss-persisted-refresh-projection.mjs",
     "test-rss-route-operation-recovery.mjs",
