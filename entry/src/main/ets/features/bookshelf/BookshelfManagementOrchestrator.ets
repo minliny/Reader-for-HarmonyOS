@@ -166,14 +166,21 @@ export class BookshelfManagementOrchestrator {
     try {
       const state = await this.gateway.recoverWrites((): boolean => this.isCurrentSession(session), continueOriginal);
       const removal = state.method === 'bookshelf.remove' || state.method === 'bookshelf.removeBatch';
-      this.publish({ managementMutation: removal ? { ...state, canContinueOriginal: false } : state });
+      this.publish({ managementMutation: this.managementMutationProjection(state) });
       if (!removal && state.operationId !== undefined) this.publishReceipt(session, state.confirmation, 'reading', state.message || undefined);
     } catch (error) {
       const state = this.gateway.mutationSnapshot();
       const removal = state.method === 'bookshelf.remove' || state.method === 'bookshelf.removeBatch';
-      this.publish({ managementMutation: removal ? { ...state, canContinueOriginal: false } : state });
+      this.publish({ managementMutation: this.managementMutationProjection(state) });
       if (!removal && (state.operationId !== undefined || state.blocked)) this.publishReceipt(session, state.confirmation, 'failed', (error as Error).message);
     }
+  }
+
+  private managementMutationProjection(state: BookshelfManagementMutationState): BookshelfManagementMutationState {
+    if (state.method !== 'bookshelf.remove' && state.method !== 'bookshelf.removeBatch') return state;
+    return { confirmation: state.confirmation, blocked: state.blocked, canContinueOriginal: false,
+      message: state.message, operationId: state.operationId, sequence: state.sequence, method: state.method,
+      sourceId: state.sourceId, bookId: state.bookId, group: state.group };
   }
 
   updateGroupName(value: string, identity?: string): void {

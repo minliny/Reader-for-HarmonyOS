@@ -1,6 +1,6 @@
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import type { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
-import type { RemoteReadingSession } from '../reading/RemoteReadingContract';
+import type { RemoteReadingSession } from '../reading/RemoteReadingFlowGateway';
 
 export interface BookshelfCatalogProgress {
   total: number;

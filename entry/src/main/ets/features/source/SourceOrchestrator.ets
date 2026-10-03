@@ -181,7 +181,10 @@ export class SourceOrchestrator {
     try { await this.gateway.recoverOriginalSource((): boolean => this.isCurrentSession(session),retry); }
     catch (_) { /* Actual owner retains its exact reason and original barrier. */ }
     if (!this.isCurrentSession(session)) return;
-    this.latestProjection={...this.latestProjection,original:this.gateway.originalMutationSnapshot()};
+    const previous = this.latestProjection;
+    this.latestProjection = { action: previous.action, sourceId: previous.sourceId, receipt: previous.receipt,
+      readFacts: previous.readFacts, confirmedParts: previous.confirmedParts,
+      original: this.gateway.originalMutationSnapshot() };
     try {this.emitProjection(this.latestProjection);} catch (_) {}
   }
   private originalBlocked(): boolean { return this.gateway.originalMutationSnapshot()?.blocked===true; }

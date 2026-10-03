@@ -3,7 +3,7 @@ import type { BookshelfState, ShelfBook } from '../../app/ReaderCoreGateway';
 import { projectOperationFacts, type OperationFacts } from '../../app/ReaderOperationFacts';
 import { BookshelfFlowGateway, type BookshelfDataState, type BookshelfFilter } from './BookshelfFlowGateway';
 import { BookshelfCatalogUpdate, type BookshelfCatalogProgress } from './BookshelfCatalogUpdate';
-import type { RemoteReadingSession } from '../reading/RemoteReadingContract';
+import type { RemoteReadingSession } from '../reading/RemoteReadingFlowGateway';
 import type { ReadingEntrySeed } from '../reading/ReadingEntryPreparation';
 
 export interface BookshelfCatalogSeeds {
