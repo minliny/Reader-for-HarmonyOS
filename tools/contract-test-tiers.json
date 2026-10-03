@@ -143,6 +143,7 @@
     "test-reader-session-launch.mjs",
     "test-reader-session-morph-state.mjs",
     "test-reader-settings.mjs",
+    "test-reader-settings-write-facts.mjs",
     "test-reader-source-category.mjs",
     "test-reader-source-failure-p0.mjs",
     "test-reader-status-measurement.mjs",
