@@ -146,6 +146,12 @@ export const TYPE_SOURCE_SWITCH_LATENCY = new ReaderTextStyle(
 export const TYPE_SOURCE_SWITCH_CHAPTER = new ReaderTextStyle(
   READER_FONT_INTER, 500, 9, 10, undefined, 'system', 'figmaNode');
 
+// Source-management rows use one compact metadata tuple for category, URL and
+// the optional latest-check summary. They remain a single role so those three
+// fields cannot drift while the primary source title keeps its own role.
+export const TYPE_SOURCE_MANAGEMENT_META = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 400, 10, 12.5, undefined, 'system', 'figmaNode');
+
 // Immersive page chrome. These roles currently share the Figma
 // `Reader/ImmersiveMeta` tuple, but remain separate semantic contracts so a
 // later design change to time, progress, or page ordinal does not couple the

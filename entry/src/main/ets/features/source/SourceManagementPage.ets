@@ -11,6 +11,7 @@ import {
 } from './SourceGateway';
 import type { SourceManagementStatusKind } from './SourceOrchestrator';
 import { readerSourceCategoryLabel, type ReaderSourceCategory } from './ReaderSourceCategory';
+import { TYPE_SOURCE_MANAGEMENT_META } from '../common/ReaderTypography';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
@@ -438,24 +439,30 @@ export struct SourceManagementPage {
             .textOverflow({ overflow: TextOverflow.Ellipsis });
           Text(readerSourceCategoryLabel(source.category))
             .flexShrink(0)
-            .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Regular)
-            .fontSize(10).lineHeight(12.5)
+            .fontFamily(TYPE_SOURCE_MANAGEMENT_META.fontFamily)
+            .fontWeight(TYPE_SOURCE_MANAGEMENT_META.fontWeight)
+            .fontSize(TYPE_SOURCE_MANAGEMENT_META.fontSizeFp)
+            .lineHeight(TYPE_SOURCE_MANAGEMENT_META.lineHeightFp)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .maxLines(1);
         }.width('100%').alignItems(VerticalAlign.Center);
         Text(source.baseUrl)
           .width('100%')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(10)
-          .lineHeight(12.5)
+          .fontFamily(TYPE_SOURCE_MANAGEMENT_META.fontFamily)
+          .fontWeight(TYPE_SOURCE_MANAGEMENT_META.fontWeight)
+          .fontSize(TYPE_SOURCE_MANAGEMENT_META.fontSizeFp)
+          .lineHeight(TYPE_SOURCE_MANAGEMENT_META.lineHeightFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         if (source.checkMessage !== undefined && source.checkMessage.trim().length > 0 &&
           source.checkState !== undefined && source.checkState !== 'unchecked') {
           Text(source.checkMessage)
-            .width('100%').fontFamily('ReaderNotoSansSC').fontSize(10).lineHeight(12.5)
+            .width('100%')
+            .fontFamily(TYPE_SOURCE_MANAGEMENT_META.fontFamily)
+            .fontWeight(TYPE_SOURCE_MANAGEMENT_META.fontWeight)
+            .fontSize(TYPE_SOURCE_MANAGEMENT_META.fontSizeFp)
+            .lineHeight(TYPE_SOURCE_MANAGEMENT_META.lineHeightFp)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         }
