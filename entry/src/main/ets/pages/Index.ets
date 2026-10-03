@@ -154,7 +154,7 @@ import {
   type RssPresentation,
 } from '../features/rss/RssPage';
 import { SettingsPage, type SettingsSnapshot } from '../features/settings/SettingsPage';
-import { SettingsOrchestrator } from '../features/settings/SettingsOrchestrator';
+import { SettingsHost } from '../features/settings/SettingsHost';
 import { SettingsGateway } from '../features/settings/SettingsGateway';
 import { RulesManagementPage } from '../features/settings/RulesManagementPage';
 import {
@@ -547,7 +547,11 @@ struct Index {
   /** Bounded, process-local single-flight only; Core remains the durable cache. */
   private discoverOrchestrator: DiscoverOrchestrator | undefined;
   private bookshelfManagementOrchestrator: BookshelfManagementOrchestrator | undefined;
-  private settingsOrchestrator: SettingsOrchestrator | undefined;
+  private settingsHost: SettingsHost = new SettingsHost(
+    (snapshot: SettingsSnapshot): void => { this.settingsSnapshot = snapshot; },
+    (): SettingsSnapshot => this.settingsSnapshot,
+    (): boolean => this.route === 'settings' || this.route === 'bookshelfSettings',
+  );
   private rulesManagementOrchestrator: RulesManagementOrchestrator | undefined;
   private syncOrchestrator: SyncOrchestrator | undefined;
   private sourceOrchestrator: SourceOrchestrator | undefined;
@@ -995,7 +999,7 @@ struct Index {
         SettingsPage({
           activeSection: this.settingsSection,
           onSectionChange: (section: 'home' | 'general'): void => { this.settingsSection = section; },
-          onRestoreDefaults: (): Promise<boolean> => this.getSettingsOrchestrator().restoreDefaults(),
+          onRestoreDefaults: (): Promise<boolean> => this.settingsHost.restoreDefaults(),
           snapshot: this.settingsSnapshot,
           isTablet: deviceInfo.deviceType === 'tablet',
           onBack: (): void => this.returnToBookshelf(),
@@ -1415,14 +1419,14 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'settings';
-    this.getSettingsOrchestrator().open();
+    this.settingsHost.open();
   }
 
   private openBookshelfSettings(): void {
     this.bookshelfSettingsReturnRoute = this.route === 'settings' ? 'settings' : 'bookshelf';
     this.nextNavigationGeneration();
     this.route = 'bookshelfSettings';
-    this.getSettingsOrchestrator().open();
+    this.settingsHost.open();
   }
 
   private returnFromBookshelfSettings(): void {
@@ -1539,7 +1543,7 @@ struct Index {
     key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
     value: boolean,
   ): void {
-    this.getSettingsOrchestrator().toggle(key, value);
+    this.settingsHost.toggle(key, value);
   }
 
   private async clearTextCache(): Promise<boolean> {
@@ -1559,20 +1563,6 @@ struct Index {
       hilog.error(DOMAIN, 'Reader', 'Text cache cleanup failed: %{private}s', message);
       return false;
     }
-  }
-
-  private getSettingsOrchestrator(): SettingsOrchestrator {
-    if (this.settingsOrchestrator === undefined) {
-      this.settingsOrchestrator = new SettingsOrchestrator(
-        (snapshot: SettingsSnapshot): void => {
-          this.settingsSnapshot = snapshot;
-        },
-        (): SettingsSnapshot => this.settingsSnapshot,
-        (): boolean => this.route === 'settings' || this.route === 'bookshelfSettings',
-        ReaderRuntimeOwner.current().getUIAbilityContext(),
-      );
-    }
-    return this.settingsOrchestrator;
   }
 
   private onSyncSaveConfig(url: string, user: string, pass: string, backupPass: string, path: string): void {
