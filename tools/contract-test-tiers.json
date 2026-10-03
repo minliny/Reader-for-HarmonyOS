@@ -557,6 +557,7 @@
     "test-source-tools-typography.mjs",
     "test-surface-repair.mjs",
     "test-svg-provenance.mjs",
+    "test-switch-enum-shared-contract.mjs",
     "test-sync-backup-durable-receipts.mjs",
     "test-sync-backup-retention-exit.mjs",
     "test-sync-config-cold-intent.mjs",
