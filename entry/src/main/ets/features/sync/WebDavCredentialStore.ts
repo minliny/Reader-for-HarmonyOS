@@ -3,6 +3,7 @@ import preferences from '@ohos.data.preferences';
 import asset from '@ohos.security.asset';
 import util from '@ohos.util';
 import { errorMessageOf } from '../../app/ErrorMessage';
+import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 
 const ASSET_ALIAS = 'reader.webdav.config.v2';
 const FORMAT_VERSION = 2;
@@ -248,12 +249,19 @@ export class WebDavCredentialStore {
     return this.localPreferences;
   }
 
-  save(config: StoredWebDavConfig): Promise<void> {
+  /** Serialized read-back; never replays a save or guesses a lost ACK. */
+  loadSerialized(): Promise<StoredWebDavConfig | null> {
+    return this.writeTail.then((): Promise<StoredWebDavConfig | null> => this.load());
+  }
+
+  save(config: StoredWebDavConfig, evidence?: ReaderWriteEvidence, admitted?: () => boolean): Promise<void> {
     const normalized = this.normalize(config);
     const next = this.writeTail.catch((): void => {}).then(async (): Promise<void> => {
+      if (admitted !== undefined && !admitted()) throw new Error('WebDAV configuration owner retired before dispatch');
       // Migrate before removing the legacy field from the next secure record.
       await this.loadBookshelfViewMode();
-      await this.persist(normalized);
+      if (admitted !== undefined && !admitted()) throw new Error('WebDAV configuration owner retired before dispatch');
+      await this.persist(normalized, evidence);
     });
     // Preserve the error for this caller, but do not let one transient
     // AssetStore failure poison every later save/clear in this process.
@@ -261,16 +269,18 @@ export class WebDavCredentialStore {
     return next;
   }
 
-  clear(): Promise<void> {
+  clear(evidence?: ReaderWriteEvidence, admitted?: () => boolean): Promise<void> {
     const next = this.writeTail.catch((): void => {}).then(async (): Promise<void> => {
+      if (admitted !== undefined && !admitted()) throw new Error('WebDAV configuration owner retired before dispatch');
       await this.loadBookshelfViewMode();
-      await this.remove();
+      if (admitted !== undefined && !admitted()) throw new Error('WebDAV configuration owner retired before dispatch');
+      await this.remove(evidence);
     });
     this.writeTail = next.catch((): void => {});
     return next;
   }
 
-  private async persist(config: StoredWebDavConfig): Promise<void> {
+  private async persist(config: StoredWebDavConfig, evidence?: ReaderWriteEvidence): Promise<void> {
     const payload = this.utf8(JSON.stringify({ formatVersion: FORMAT_VERSION, config }));
     if (payload.length > MAX_CONFIG_BYTES) {
       throw new Error(`WebDAV secure configuration exceeds ${MAX_CONFIG_BYTES} bytes`);
@@ -281,21 +291,26 @@ export class WebDavCredentialStore {
     attributes.set(asset.Tag.ACCESSIBILITY, asset.Accessibility.DEVICE_POWERED_ON);
     attributes.set(asset.Tag.CONFLICT_RESOLUTION, asset.ConflictResolution.OVERWRITE);
     try {
+      evidence?.dispatched();
       await asset.add(attributes);
+      evidence?.confirmed();
     } catch (error) {
       throw new Error(`WebDAV secure configuration cannot be written: ${this.errorMessage(error)}`);
     }
   }
 
-  private async remove(): Promise<void> {
+  private async remove(evidence?: ReaderWriteEvidence): Promise<void> {
     const query = new Map<asset.Tag, asset.Value>();
     query.set(asset.Tag.ALIAS, this.utf8(ASSET_ALIAS));
     try {
+      evidence?.dispatched();
       await asset.remove(query);
+      evidence?.confirmed();
     } catch (error) {
       if (this.errorCode(error) !== asset.ErrorCode.NOT_FOUND) {
         throw new Error(`WebDAV secure configuration cannot be cleared: ${this.errorMessage(error)}`);
       }
+      evidence?.confirmed();
     }
   }
 
