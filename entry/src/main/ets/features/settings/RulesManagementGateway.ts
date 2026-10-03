@@ -96,6 +96,11 @@ export class RulesManagementGateway {
 
   mutationSnapshot(): RulesMutationSnapshot { return RulesMutationOwner.forRuntime(this.owner).snapshot(); }
 
+  async recoverMutation(current: () => boolean, retryOriginal: boolean = false): Promise<RulesMutationSnapshot> {
+    return RulesMutationOwner.forRuntime(this.owner).recoverOriginal(current,
+      (method: string, params: JsonObject, data: JsonObject): void => this.qualifyMutation(method, params, data), retryOriginal);
+  }
+
   constructor(owner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.owner = owner;
   }

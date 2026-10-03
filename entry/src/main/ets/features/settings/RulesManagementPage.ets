@@ -145,7 +145,7 @@ export struct RulesManagementPage {
   @Builder
   private recoveryAction() {
     if (this.recovery().canRetry) {
-      ReaderRecoveryAction({ generation: this.recovery().generation, onReconcile: this.onReconcile });
+      ReaderRecoveryAction({ label: this.snapshot.ruleMutation?.canRetryOriginal === true ? '重试原规则操作' : this.snapshot.ruleMutation?.blocked === true ? '核对原规则操作' : '刷新列表', generation: this.recovery().generation, onReconcile: this.onReconcile });
     }
   }
 
@@ -342,8 +342,8 @@ export struct RulesManagementPage {
       .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .backgroundColor(primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(8)
-      .opacity(this.snapshot.busy || (mutation && this.snapshot.receipt?.receipt.confirmation === 'unknown') ? 0.62 : 1).onClick((): void => {
-        if (!this.snapshot.busy && (!mutation || this.snapshot.receipt?.receipt.confirmation !== 'unknown')) action();
+      .opacity(this.snapshot.busy || (mutation && (this.snapshot.ruleMutation?.blocked === true || this.snapshot.receipt?.receipt.confirmation === 'unknown')) ? 0.62 : 1).onClick((): void => {
+        if (!this.snapshot.busy && (!mutation || (this.snapshot.ruleMutation?.blocked !== true && this.snapshot.receipt?.receipt.confirmation !== 'unknown'))) action();
       });
   }
 
@@ -385,8 +385,8 @@ export struct RulesManagementPage {
     Text(label).height(30).padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
       .textAlign(TextAlign.Center).fontSize(TYPE_RULES_COMPACT_ACTION.fontSizeFp).fontWeight(TYPE_RULES_COMPACT_ACTION.fontWeight as number).fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(7).opacity(this.snapshot.busy || (mutation && this.snapshot.receipt?.receipt.confirmation === 'unknown') ? 0.62 : 1).onClick((): void => {
-        if (!this.snapshot.busy && (!mutation || this.snapshot.receipt?.receipt.confirmation !== 'unknown')) action();
+      .borderRadius(7).opacity(this.snapshot.busy || (mutation && (this.snapshot.ruleMutation?.blocked === true || this.snapshot.receipt?.receipt.confirmation === 'unknown')) ? 0.62 : 1).onClick((): void => {
+        if (!this.snapshot.busy && (!mutation || (this.snapshot.ruleMutation?.blocked !== true && this.snapshot.receipt?.receipt.confirmation !== 'unknown'))) action();
       });
   }
 

@@ -1,5 +1,6 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import type { RulesMutationSnapshot } from './RulesMutationOwner';
 import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { projectOperationFacts, type OperationFacts } from '../../app/ReaderOperationFacts';
 import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../app/ReaderPersistedReceiptProjection';
@@ -37,6 +38,7 @@ export interface RulesManagementSnapshot {
   receipt?: PersistedReceiptProjection<RulesReadValue>;
   readFacts?: OperationFacts<RulesReadValue>;
   confirmedParts?: number;
+  ruleMutation?: RulesMutationSnapshot;
 }
 
 interface RulesManagementPatch {
@@ -49,6 +51,7 @@ interface RulesManagementPatch {
   receipt?: PersistedReceiptProjection<RulesReadValue>;
   readFacts?: OperationFacts<RulesReadValue>;
   confirmedParts?: number;
+  ruleMutation?: RulesMutationSnapshot;
 }
 
 export const EMPTY_RULES_MANAGEMENT_SNAPSHOT: RulesManagementSnapshot = {
@@ -98,7 +101,10 @@ export class RulesManagementOrchestrator {
       this.receiptLabel = original.label;
       this.publishReceipt(session, 'unknown', 'reading', original.message);
     }
-    this.enqueue(async (): Promise<void> => this.reload(session, 'Core 规则实体已就绪'));
+    this.enqueue(async (): Promise<void> => {
+      await this.recoverOriginal(session, false);
+      await this.reload(session, 'Core 规则实体已就绪');
+    });
   }
 
   owns(owner: ReaderRuntimeOwner): boolean { return this.owner === owner; }
@@ -110,8 +116,10 @@ export class RulesManagementOrchestrator {
       const receipt = this.latestReceipt;
       const read = this.snapshot.readFacts;
       if (receipt?.facts.generation === generation && receipt.facts.canRetry) {
-        this.publishReceipt(session, receipt.receipt.confirmation, 'reading');
-        await this.reload(session, `${this.receiptLabel}已由 Core 确认`);
+        if (this.snapshot.ruleMutation?.blocked === true || receipt.receipt.confirmation === 'unknown') {
+          await this.recoverOriginal(session, this.snapshot.ruleMutation?.canRetryOriginal === true);
+        } else this.publishReceipt(session, receipt.receipt.confirmation, 'reading');
+        await this.reload(session, `${this.receiptLabel}核对已结束`);
       } else if (read?.generation === generation && read.canRetry) {
         this.publishIfCurrent(session, { busy: true, readFacts: projectOperationFacts({
           phase: 'loading', value: this.readValue(), generation: ++rulesProjectionGeneration }) });
@@ -281,6 +289,22 @@ export class RulesManagementOrchestrator {
     await this.reload(session, status);
   }
 
+  private async recoverOriginal(session: number, retryOriginal: boolean): Promise<void> {
+    if (!this.isCurrentSession(session)) return;
+    try {
+      const original = await this.gateway.recoverMutation((): boolean => this.isCurrentSession(session), retryOriginal);
+      if (!this.isCurrentSession(session)) return;
+      this.publish({ ruleMutation: original });
+      if (original.operationId !== undefined) {
+        this.receiptLabel = original.label;
+        this.publishReceipt(session, original.confirmation, 'failed', original.message.length > 0 ? original.message : undefined);
+      }
+    } catch (error) {
+      const original = this.gateway.mutationSnapshot(); this.receiptLabel = original.label;
+      this.publishReceipt(session, original.confirmation, 'failed', (error as Error).message);
+    }
+  }
+
   private async reload(session: number, statusMessage: string): Promise<void> {
     const patch: RulesManagementPatch = {};
     const errors: string[] = [];
@@ -294,7 +318,7 @@ export class RulesManagementOrchestrator {
       this.publish(patch);
       const receipt = this.latestReceipt;
       if (receipt !== undefined) this.publishReceipt(session, receipt.receipt.confirmation,
-        errors.length === 0 ? 'succeeded' : 'failed', errors.length === 0 ? undefined : errors.join('；'));
+        errors.length === 0 && this.gateway.mutationSnapshot().blocked !== true ? 'succeeded' : 'failed', this.gateway.mutationSnapshot().blocked ? this.gateway.mutationSnapshot().message : errors.length === 0 ? undefined : errors.join('；'));
       this.publish({ busy: false, statusMessage: errors.length === 0 &&
         (receipt === undefined || receipt.receipt.confirmation === 'confirmed') ? statusMessage :
         receipt === undefined ? `规则实体刷新失败：${errors.join('；')}` : this.snapshot.statusMessage,
@@ -314,7 +338,7 @@ export class RulesManagementOrchestrator {
     this.latestReceipt = projectPersistedReceipt({ confirmation, readback, value: this.readValue(), refreshError: error,
       canRetry: readback !== 'reading' && confirmation !== 'undispatched' && (readback === 'failed' || confirmation === 'unknown'),
       generation: ++rulesProjectionGeneration });
-    this.publishIfCurrent(session, { receipt: this.latestReceipt, confirmedParts, busy: readback === 'reading',
+    this.publishIfCurrent(session, { receipt: this.latestReceipt, confirmedParts, ruleMutation: this.gateway.mutationSnapshot(), busy: readback === 'reading',
       statusMessage: `${this.receiptLabel}：${this.latestReceipt.receipt.message}` +
         `${confirmation === 'unknown' && (confirmedParts ?? this.snapshot.confirmedParts ?? 0) > 0 ? `（已有 ${confirmedParts ?? this.snapshot.confirmedParts} 步确认）` : ''}` +
         `${error === undefined ? '' : `；${error}`}` });
@@ -351,6 +375,7 @@ export class RulesManagementOrchestrator {
       receipt: patch.receipt ?? this.snapshot.receipt,
       readFacts: patch.readFacts ?? this.snapshot.readFacts,
       confirmedParts: patch.confirmedParts ?? this.snapshot.confirmedParts,
+      ruleMutation: patch.ruleMutation ?? this.snapshot.ruleMutation,
     };
     if (ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent()) this.emit(this.copy(this.snapshot));
   }
@@ -366,6 +391,7 @@ export class RulesManagementOrchestrator {
       receipt: source.receipt,
       readFacts: source.readFacts,
       confirmedParts: source.confirmedParts,
+      ruleMutation: source.ruleMutation,
     };
   }
 
