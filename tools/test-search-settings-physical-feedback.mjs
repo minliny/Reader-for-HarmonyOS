@@ -119,10 +119,15 @@ await check('PH67 SDK previews use four approved light bases and retain four ori
   });
 });
 await check('PH36 real Index Back returns General to Settings before Bookshelf and preserves overlay priority', () => {
-  const Index = productionMotionMethods(path('pages/Index.ets'), ['consumeTemporaryBackBridge','isCurrentRuntime','onBackPress']);
+  const runtime={},Runtime=runtimeOwnerIdentityProbe(()=>runtime);
+  const Index = productionMotionMethods(path('pages/Index.ets'), ['consumeTemporaryBackBridge','isCurrentRuntime','onBackPress'],{ReaderRuntimeOwner:Runtime});
+  const SourceSwitch=productionMotionMethods(path('features/source/SourceSwitchHost.ts'),
+    ['consumeBack','close','currentScope','currentLease','identity','busyOrUnknown','stopDiscovery','publish','deliver'],{ReaderRuntimeOwner:Runtime});
   const owner = Object.assign(new Index(), { hasVisibleImportDialog:()=>false, route: 'settings', settingsSection: 'general',
-    returnToBookshelf: () => { owner.route = 'bookshelf'; },
-    sourceSwitchVisible: true, closeSourceSwitch: () => { owner.sourceSwitchVisible = false; } });
+    returnToBookshelf: () => { owner.route = 'bookshelf'; },sourceSwitchVisible: true,sourceSwitchScopeId:1 });
+  owner.sourceSwitchHost=Object.assign(new SourceSwitch(),{runtime,generation:0,
+    context:{query:{sourceId:'source',bookId:'book'}},snapshot:{scopeId:1,visible:true,state:{kind:'discovering'},rollbackInFlight:false},
+    lease:{isCurrent:identity=>identity.sourceId==='source'&&identity.bookId==='book',changed:snapshot=>{owner.sourceSwitchVisible=snapshot.visible;},effect:()=>{}}});
   assert.equal(owner.onBackPress(), true); assert.equal(owner.settingsSection, 'general');
   assert.equal(owner.onBackPress(), true); assert.equal(owner.route, 'settings'); assert.equal(owner.settingsSection, 'home');
   assert.equal(owner.onBackPress(), true); assert.equal(owner.route, 'bookshelf');

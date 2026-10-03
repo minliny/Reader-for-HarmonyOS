@@ -8,7 +8,7 @@ import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThem
 const source = readFileSync(new URL('../entry/src/main/ets/features/source/SourceToolsPage.ets', import.meta.url), 'utf8');
 const baseline = JSON.parse(readFileSync(new URL('./fixtures/design/source-tools-typography-baseline.json', import.meta.url)));
 const methods = [...source.matchAll(/@Builder\s+private\s+(\w+)\s*\(/g)].map(match => match[1]);
-methods.push('recovery', 'batchCheckPercent', 'batchCheckPhaseLabel', 'batchResultLabel', 'confirmExportThen');
+methods.push('recovery', 'batchCheckPercent', 'batchCheckPhaseLabel', 'batchResultLabel', 'confirmExportThen', 'canWriteSources');
 const properties = ['fontFamily', 'fontWeight', 'fontSize', 'lineHeight', 'letterSpacing'];
 const result = { sourceName: '测试书源', sourceId: 'https://source.example', message: '能力检查完成', state: 'passed', traceId: 'trace' };
 const bookSource = { name: '测试书源', sourceId: 'https://source.example', baseUrl: 'https://source.example', lastCheckSummary: '上次检测已完成' };
@@ -107,6 +107,18 @@ for (const scheme of ['night', 'day']) {
   buttons.appThemeScheme = scheme; buttons.replay();
   assert.equal(controls[0].fontColor, readerAppColor('TOK_ON_PRIMARY', scheme));
   assert.equal(controls[1].fontColor, readerAppColor('TOK_PRIMARY_TEXT', scheme));
+}
+
+for(const state of ['busy','receiptUnknown','editorUnknown']){
+ const {owner,calls}=make();
+ if(state==='busy')owner.snapshot.busy=true;
+ if(state==='receiptUnknown')owner.snapshot.receipt={receipt:{confirmation:'unknown'}};
+ if(state==='editorUnknown')owner.snapshot.editorReadback={confirmation:'unknown'};
+ owner.batchCard();owner.editorCard();
+ for(const node of owner.nodes.values())if(['启用','停用','删除','校验并保存'].includes(node.create)){
+  assert.equal(node.opacity,0.62,`${state}: actual bounded source mutation action disabled`);node.onClick();
+ }
+ assert.equal(calls.some(call=>['setEnabled','deleteSelected','save'].includes(call)),false,`${state}: current domain guard prevents mutations`);
 }
 
 // One shared description role reaches export, editing and the active batch

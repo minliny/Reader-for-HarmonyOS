@@ -30,7 +30,7 @@ function field(index){const text=source('pages/Index.ets'),start=text.indexOf(' 
  const expression=text.slice(start,end).split('=').slice(1).join('=').trim().replace(/;$/,'');
  return new Function('SettingsHost',ordinary('const value='+expression+';')+'return value;').call(index,Host);}
 function fixture(mode='valid'){
- const calls=[],notices=[];let currentMode=mode,gate,report=good(),remainingEntries=10,head,receipt,raw='',uuid=0;
+ const calls=[],notices=[];let currentMode=mode,gate,report=good(),remainingEntries=10,head,receipt,raw='',uuid=0,queryMode,committedParams;const queries=[];
  const fileIo={OpenMode:{READ_ONLY:0,READ_WRITE:2},async readText(){return raw;},async open(){return{fd:1};},async close(){},async fsync(){},
   AtomicFile:class {startWrite(){return{on(){},end:(value,_encoding,callback)=>{this.raw=value;queueMicrotask(callback);}};}finishWrite(){raw=this.raw;}failWrite(){}}};
  const replaceReaderAtomicSnapshot=load('app/ReaderAtomicSnapshotFile.ts','replaceReaderAtomicSnapshot',{fileIo});
@@ -38,19 +38,27 @@ function fixture(mode='valid'){
   fileIo,replaceReaderAtomicSnapshot,ReaderRuntimeOwner:Runtime,ReaderCoreRequestError,isReaderCoreTransactionPendingError,
   util:{generateRandomUUID:()=>`12345678-1234-4234-8123-${String(++uuid).padStart(12,'0')}`}});
  const runtime={getUIAbilityContext:()=>({filesDir:'/cache-fixture'}),async request(method,params,options){
-  if(method==='cache.clear.operation.query')return{data:{head:head??null,receipt:receipt!==undefined&&params.operationId===receipt.binding.operationId?receipt:null}};
+  if(method==='cache.clear.operation.query'){
+   queries.push(structuredClone(params));if(queryMode==='error')throw Error('exact query unavailable');
+   let actual=receipt!==undefined&&params.operationId===receipt.binding.operationId?structuredClone(receipt):null;
+   if(actual!==null){assert.deepEqual(params.expected,committedParams,'exact query carries the original complete command; empty cache alone proves nothing');
+    if(queryMode==='wrong-id')actual.binding.operationId='ffffffff-ffff-4fff-8fff-ffffffffffff/'+actual.binding.sequence;
+    if(queryMode==='wrong-fingerprint')actual.binding.payloadFingerprint='b'.repeat(64);
+    if(queryMode==='null')actual=null;}
+   return{data:{head:head??null,receipt:actual}};
+  }
   if(method==='cache.clear.operation.settle'){assert.deepEqual(params,receipt.binding);receipt.phase='settled';return{data:structuredClone(receipt)};}
   assert.equal(method,'cache.clear');assert.equal(params.scope,'cache');assert.ok(params.operationId.endsWith('/'+params.sequence));calls.push({method,params,options});
   if(options.canDispatch?.()===false)throw Error('actual adapter refused before send');options.onDispatch?.();
   const pause=gate;gate=undefined;if(pause)await pause.promise;
   if(currentMode==='typed')throw typedPending();if(currentMode==='lost-before')throw Error('clear ACK unavailable');
   if(currentMode==='message-only')throw Object.assign(Error('TRANSACTION_PENDING'),{code:'TRANSACTION_PENDING'});
-  remainingEntries=0;head={operationId:params.operationId,sequence:params.sequence,payloadFingerprint:'a'.repeat(64)};receipt={binding:head,phase:'committed',result:structuredClone(report)};
+  remainingEntries=0;committedParams=structuredClone(params);head={operationId:params.operationId,sequence:params.sequence,payloadFingerprint:'a'.repeat(64)};receipt={binding:head,phase:'committed',result:structuredClone(report)};
   if(currentMode==='lost-after')throw Error('clear ACK unavailable');return{data:report};}};
 
  installed=runtime;
- const Methods=productionMotionMethods(file('pages/Index.ets'),['clearTextCache','openSettings'],{ReaderRuntimeOwner:Runtime});
- const index=Object.assign(new Methods(),{mountedRuntimeOwner:runtime,route:'settings',navigationGeneration:1,shelfReceiptRetired:false,settingsSection:'general',settingsSnapshot:{},settingsOperation:{action:'load'},settingsCacheCleanup:undefined,nextNavigationGeneration(){return ++this.navigationGeneration;}});
+ const Methods=productionMotionMethods(file('pages/Index.ets'),['clearTextCache','openSettings','isCurrentSettingsPresentation','reconcileSettingsCache'],{ReaderRuntimeOwner:Runtime});
+ const index=Object.assign(new Methods(),{mountedRuntimeOwner:runtime,route:'settings',navigationGeneration:1,detailShelfAdmissionMount:1,shelfReceiptRetired:false,settingsSection:'general',settingsSnapshot:{},settingsOperation:{action:'load'},settingsCacheCleanup:undefined,nextNavigationGeneration(){return ++this.navigationGeneration;}});
  index.settingsHost=field(index);
  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});sdk.childSources.CategoryRow=source('features/settings/CategoryRow.ets');
  sdk.deps.CategoryRow=createReaderBuilderProbe(sdk.childSources.CategoryRow,boundedMembers(sdk.childSources.CategoryRow),sdk.deps,sdk.hooks).Component;
@@ -68,9 +76,9 @@ function fixture(mode='valid'){
   Object.assign(owner,{mounted:true,themeOwner:runtime,temporaryBackIdentity:identity,appThemeScheme:'day',getUIContext:()=>({getPromptAction:()=>({showToast:opt=>notices.push(opt.message)})})});
   owner.onCacheCleanupChanged();owner.cacheActionRow();
   return{owner,row:()=>sdk.nodes(owner).find(node=>node.type==='Row'&&node.onClick),label:()=>{owner.replay();return sdk.nodes(owner).find(node=>node.type==='Text'&&node.create===owner.cacheActionLabel)?.create;},
-   update(){owner.updateStateVars({...props()});owner.replay();}};
+   update(){owner.updateStateVars({...props()});owner.onCacheCleanupChanged();owner.replay();}};
  }
- return{index,runtime,calls,notices,page,props,remainingEntries:()=>remainingEntries,snapshot:()=>index.settingsHost.cacheCleanupSnapshot(runtime),mode:v=>{currentMode=v;},report:v=>{report=v;},setOwner:v=>{installed=v;},pause(){gate=defer();return gate;}};
+ return{index,runtime,calls,notices,page,props,remainingEntries:()=>remainingEntries,snapshot:()=>index.settingsHost.cacheCleanupSnapshot(runtime),mode:v=>{currentMode=v;},report:v=>{report=v;},queryMode:v=>{queryMode=v;},queries,disk:()=>raw,setOwner:v=>{installed=v;},pause(){gate=defer();return gate;}};
 }
 {
  const f=fixture(),p=f.page();assert.equal(p.owner.cacheActionLabel,'清理文字缓存');p.row().onClick();p.row().onClick();await until(()=>f.snapshot()?.confirmation==='confirmed');p.update();
@@ -82,11 +90,23 @@ for(const mode of ['lost-before','lost-after','message-only']){
  assert.equal(p.owner.cacheActionLabel,'结果未确认');assert.equal(p.label(),'结果未确认');if(mode==='lost-after')assert.equal(f.remainingEntries(),0);if(mode==='lost-before')assert.equal(f.remainingEntries(),10);assert.equal(f.snapshot().operation.fact,'pendingReconciliation');assert.equal(f.snapshot().operation.canRetry,true);
  p.row().onClick();await tick();assert.equal(f.calls.length,1);assert.match(f.notices[0],/尚未确认/);
  p.owner.mounted=false;f.index.route='bookshelf';f.index.openSettings();const reopened=f.page('settings-back:next');
- assert.equal(reopened.owner.cacheActionLabel,'结果未确认');reopened.row().onClick();await tick();assert.equal(f.calls.length,1,'reopen cannot blind replay an uncertain clear');
+ assert.equal(reopened.owner.cacheActionLabel,'清理中','reopen projects exact read reconciliation as busy');reopened.row().onClick();await tick();assert.equal(f.calls.length,1,'reopen cannot blind replay an uncertain clear');
+ await until(()=>f.snapshot()?.busy===false);reopened.update();
+ assert.equal(reopened.owner.cacheActionLabel,mode==='lost-after'?'已清理':'结果未确认','only exact same-ID committed receipt permits settlement; absent query keeps unknown');
+ assert.equal(f.calls.length,1,'pure read plus metadata settlement never replays cache.clear');
 }
 {
  const f=fixture('typed'),p=f.page();p.row().onClick();await until(()=>f.snapshot()?.confirmation==='undispatched');p.update();assert.equal(p.owner.cacheActionLabel,'清理失败');
  assert.equal(f.snapshot().operation.canRetry,true);f.mode('valid');p.row().onClick();await until(()=>f.snapshot()?.confirmation==='confirmed');p.update();assert.equal(f.calls.length,2);assert.equal(p.owner.cacheActionLabel,'已清理');
+}
+for(const queryMode of ['null','wrong-id','wrong-fingerprint','error']){
+ const f=fixture('lost-after'),p=f.page();p.row().onClick();await until(()=>f.snapshot()?.confirmation==='unknown');
+ assert.equal(f.remainingEntries(),0,'matching empty cache is not an operation receipt');f.queryMode(queryMode);
+ p.owner.mounted=false;f.index.route='bookshelf';f.index.openSettings();const current=f.page('settings-back:exact-'+queryMode);
+ await until(()=>f.snapshot()?.busy===false);current.update();
+ assert.equal(f.snapshot().confirmation,'unknown');assert.equal(current.owner.cacheActionLabel,'结果未确认');assert.notEqual(f.disk(),'','unqualified read does not clear fixed original intent');
+ current.row().onClick();await tick();assert.equal(f.calls.length,1,'mismatched/absent/error query cannot authorize fresh cache.clear');
+ assert.ok(f.queries.some(q=>q.operationId===f.calls[0].params.operationId&&q.expected.scope==='cache'),'current UI uses exact original identity, not just matching cache contents');
 }
 for(const mutate of [r=>({...r,scope:'all'}),r=>({...r,cacheEntriesRemoved:-1}),r=>({...r,chapterEntriesRemoved:'2'}),r=>({...r,queueEntriesRemoved:0.5}),r=>({...r,removedContentBytes:Number.NaN}),r=>({scope:r.scope})]){
  const f=fixture(),p=f.page();f.report(mutate(good()));p.row().onClick();await until(()=>f.snapshot()?.confirmation==='unknown');p.update();assert.equal(p.owner.cacheActionLabel,'结果未确认');
