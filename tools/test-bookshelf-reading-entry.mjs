@@ -34,7 +34,7 @@ function method(signature) {
   assert.equal(ts.getAllDecorators(member).length, 0, 'ordinary reading harness excludes neighboring UI builders');
   return member.getText(indexTree);
 }
-const methods = [
+const methodNames = [
   'installRemoteReadingSession(', 'onRemoteSessionReady(', 'openShelfBook(', 'openShelfBookInfo(', 'openLocalBookDetail(', 'openRemoteBookDetail(',
   'openReading(', 'presentPreparedReading(', 'returnToReadingOrigin(', 'onReaderExited(',
   'returnFromDetail(', 'requestReaderBookInfo(', 'returnToBookshelf(', 'nextNavigationGeneration(', 'isKnownDetailChapter(',
@@ -45,9 +45,8 @@ const methods = [
   'openDetailSourceSwitch(',
   'onSearchResultSelected(', 'searchAcquisitionCandidate(', 'remoteSeedForSearchBook(',
   ...(source.includes('  private cancelReaderExitDestination(') ? ['cancelReaderExitDestination('] : []),
-].map(method).join('\n');
-const back = method('onBackPress(');
-const harnessCode = stripTypeScriptTypes(`class Harness { ${methods}\n${back} }`);
+];
+for (const signature of [...methodNames, 'onBackPress(']) method(signature);
 const deferred = () => {
   let resolve, reject;
   const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
@@ -88,25 +87,21 @@ function create(remote = false) {
   const Entry=compileHost(undefined,{ReaderRuntimeOwner:runtimeAuthority,LocalReadingFlowGateway:LocalGateway,RemoteReadingFlowGateway:RemoteGateway,
     ReaderCoreGateway:class {loadShelfBook(){return Promise.resolve(book);}},SourceGateway:class {loadSources(){return Promise.resolve([{sourceId:'source',category:'novel'}]);}}});
   const emptyAdmission={generation:0,adding:false,cancelling:false,confirmation:'none'};
-  const Harness = new Function(
-    'resolveBookshelfBook', 'LOCAL_SOURCE_ID', 'ReaderRuntimeOwner', 'LocalReadingFlowGateway', 'RemoteReadingFlowGateway',
-    'ReadingOfflineGateway', 'ReaderCoreGateway', 'SourceGateway', 'RemoteDetailAdmission',
-    'hilog', 'DOMAIN', 'readerSourceCategoryIsText', 'readerSourceCategoryLabel', 'ReadingEntryHost', 'EMPTY_READABLE_ADMISSION',
-    'remoteReadingFailureKindOf', 'verdictForFailureKind', 'isRemoteSourceFailureKind',
-    'remoteSourceFailureSummary', 'RemoteReadingGatewayError', 'remoteReadingFailureRecord', 'searchCandidateRank',
-    'sameRemoteSessionEvidence','preparedRemoteChapterMatches','preparedRemoteChapterPositionMatches','captureRemotePositionContext','withPreparedRemoteChapter','copyRemoteReadingSession','RemoteChapterCacheRefreshError',
-    `${harnessCode}; return Harness;`,
-  )(
-    resolveBookshelfBook, 'local', runtimeAuthority,
-    LocalGateway,RemoteGateway,
-    class {}, class { loadShelfBook() { return Promise.resolve(book); } },
-    class { loadSources() { return Promise.resolve([{ sourceId: 'source', category: 'novel' }]); } },
-    class { constructor(value) { this.session = value; } },
-    { info() {}, warn() {}, error() {} }, 0, () => true, () => '小说',Entry,emptyAdmission,
-    error => error.kind ?? 'NETWORK_FAILED', () => 'networkFailed',
-    kind => kind === 'NETWORK_FAILED', () => '网络请求失败', class extends Error {}, () => ({}), searchCandidateRank,
-    readingEvidence.sameRemoteSessionEvidence, readingEvidence.preparedRemoteChapterMatches, readingEvidence.preparedRemoteChapterPositionMatches,captureRemotePositionContext,readingEvidence.withPreparedRemoteChapter, readingEvidence.copyRemoteReadingSession,RemoteChapterCacheRefreshError,
-  );
+  const Harness = productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url),
+    [...methodNames.map(signature => signature.replace(/^async /, '').replace(/\($/, '')), 'onBackPress'], {
+      resolveBookshelfBook, LOCAL_SOURCE_ID: 'local', ReaderRuntimeOwner: runtimeAuthority,
+      LocalReadingFlowGateway: LocalGateway, RemoteReadingFlowGateway: RemoteGateway,
+      ReadingOfflineGateway: class {}, ReaderCoreGateway: class { loadShelfBook() { return Promise.resolve(book); } },
+      SourceGateway: class { loadSources() { return Promise.resolve([{ sourceId: 'source', category: 'novel' }]); } },
+      RemoteDetailAdmission: class { constructor(value) { this.session = value; } },
+      hilog: { info() {}, warn() {}, error() {} }, DOMAIN: 0,
+      readerSourceCategoryIsText: () => true, readerSourceCategoryLabel: () => '小说',
+      ReadingEntryHost: Entry, EMPTY_READABLE_ADMISSION: emptyAdmission,
+      remoteReadingFailureKindOf: error => error.kind ?? 'NETWORK_FAILED', verdictForFailureKind: () => 'networkFailed',
+      isRemoteSourceFailureKind: kind => kind === 'NETWORK_FAILED', remoteSourceFailureSummary: () => '网络请求失败',
+      RemoteReadingGatewayError: class extends Error {}, remoteReadingFailureRecord: () => ({}), searchCandidateRank,
+      ...readingEvidence, captureRemotePositionContext, RemoteChapterCacheRefreshError,
+    });
   const h = new Harness(), routes = [], alerts = [];
   h.nativeAlertOwner = new ReaderNativeAlertOwner();
   let route = 'bookshelf';
