@@ -9,6 +9,8 @@ import type { BookshelfDataState, BookshelfFilter } from './BookshelfFlowGateway
 import { BookshelfOperationOwner, type BookshelfOperationSnapshot } from './BookshelfOperationOwner';
 import { BookshelfReadableAdmissionOwner, type BookshelfReadableAdmissionSnapshot } from './BookshelfReadableAdmissionOwner';
 import type { OperationFacts } from '../../app/ReaderOperationFacts';
+import { BookshelfProjectionOwner } from './BookshelfProjectionOwner';
+import { SourceGateway } from '../source/SourceGateway';
 import {
   BookshelfManagementGateway,
 } from './BookshelfManagementGateway';
@@ -30,6 +32,7 @@ export {
  * the Runtime and current predicate captured by its originating presentation.
  */
 export class BookshelfHost {
+  private static projectionOwner: BookshelfProjectionOwner | undefined;
   // One feature-local Runtime lane survives Index reconstruction caused by
   // the system picker. It is never an application-wide task/error registry.
   private static readableOwner: BookshelfReadableAdmissionOwner | undefined;
@@ -44,6 +47,16 @@ export class BookshelfHost {
   private readonly owner: () => ReaderRuntimeOwner;
   private readonly emitReadable: (snapshot: BookshelfReadableAdmissionSnapshot[], owner: ReaderRuntimeOwner) => void;
   private readonly emitOperation: (snapshot: BookshelfOperationSnapshot, owner: ReaderRuntimeOwner) => void;
+
+  projection(owner: ReaderRuntimeOwner): BookshelfProjectionOwner | undefined {
+    if (!ReaderRuntimeOwner.isCurrent(owner)) return undefined;
+    if (BookshelfHost.projectionOwner === undefined || !BookshelfHost.projectionOwner.owns(owner)) {
+      BookshelfHost.projectionOwner = new BookshelfProjectionOwner(owner, (): boolean => ReaderRuntimeOwner.isCurrent(owner),
+        (filter: BookshelfFilter): BookshelfFlowGateway => new BookshelfFlowGateway(owner, filter),
+        (ids: string[], current: () => boolean) => new SourceGateway(owner).loadSourcesForIds(ids, current));
+    }
+    return BookshelfHost.projectionOwner;
+  }
 
   readShelf(owner: ReaderRuntimeOwner, filter: BookshelfFilter, generation: number, current: () => boolean,
     retained: BookshelfDataState | undefined, retryBlank: boolean,

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { SearchPublication } from '../entry/src/main/ets/features/search/SearchPublication.ts';
+import { actualProjectionTypes, actualProjectionIndex } from './lib/bookshelf-projection-owner-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
 const Gateway = productionMotionMethods(file('app/ReaderCoreGateway.ts'), ['loadBookshelf','decodeShelfBook','decodeShelfReadingPosition','requiredNonNegativeInteger','requiredString','requiredNumber','optionalString','optionalNumber','optionalNonNegativeInteger']);
@@ -16,29 +16,25 @@ for(const sourceName of ['source-a','https://example.test','ftp://example.test',
 const legacy={...raw};delete legacy.sourceName;
 assert.equal(gateway.decodeShelfBook(legacy).sourceName,undefined,'old Core wire payload remains valid');
 let sources; let sourceLoads=0;
-const owner = { setReadingPreparationContext() {} };
-const SourceHost = class { async loadSourcesForIds() { sourceLoads++; if(sources===undefined) throw Error('source.list failed'); return sources; } };
-const Host=productionMotionMethods(file('pages/Index.ets'),['applyBookshelfState','hydrateShelfSourceNames','copyShelfBookWithSourceName'],{
-  ReaderRuntimeOwner:{current:()=>owner},LOCAL_SOURCE_ID:'local',SourceHost
-});
-const host=Object.assign(new Host(),{searchPublication:new SearchPublication(),searchHost:{updateShelf() {}},searchPublicationRevision:0,shelfBooks:[],bookshelfLoadGeneration:1,bookshelfSourceNameRequest:0,sourceDisplayName:()=> '旧内存名称',sourceHost:new SourceHost(),scheduleBookshelfBackgroundRefresh(){}});
+const owner={supportsCoreCapability:()=>false,async request(method,params){assert.equal(method,'source.list');sourceLoads++;if(sources===undefined)throw Error('source.list failed');return{data:{sources:sources.map(s=>({...s,enabled:true}))}};}};
+const types=actualProjectionTypes(()=>owner),actual=actualProjectionIndex(owner,types),host=actual.idx,projection=actual.owner;
 const populated={kind:'populated',shelf,continueReading:undefined};
 host.applyBookshelfState(populated);await new Promise(resolve=>setImmediate(resolve));
 assert.equal(sourceLoads,0,'complete Core shelf projection does not load the full source registry');
 assert.equal(host.shelfBooks[0].sourceName,'持久名称','source.list failure preserves cold Core name rather than an older registry');
 assert.equal(host.shelfBooks[0].readProgress,4520);assert.equal(host.shelfBooks[0].currentChapterIndex,4);
 assert.equal(host.shelfBooks[0].readingPosition.chapterOffset,123);
-sources=[{sourceId:'source-a',name:'新名称'}];host.hydrateShelfSourceNames(1);await new Promise(resolve=>setImmediate(resolve));
+sources=[{sourceId:'source-a',name:'新名称'}];await projection.hydrate(host.bookshelfProjectionBinding);
 assert.equal(host.shelfBooks[0].sourceName,'新名称');
 assert.equal(host.shelfBooks[0].readingPosition.bodyVersion,'b','source-name hydration preserves Core position proof');
-sources=[];host.hydrateShelfSourceNames(1);await new Promise(resolve=>setImmediate(resolve));
+sources=[];await projection.hydrate(host.bookshelfProjectionBinding);
 assert.equal(host.shelfBooks[0].sourceName,'新名称','a successful but filtered source list cannot establish persistent source deletion');
 sources=undefined;host.applyBookshelfState({...populated,shelf:{books:[{...shelf.books[0],sourceName:'书源已移除'}],total:1}});
 await new Promise(resolve=>setImmediate(resolve));assert.equal(host.shelfBooks[0].sourceName,'书源已移除','stale in-memory source must not resurrect deletion');
-sources=[{sourceId:'source-b',name:'另一个源'}];host.shelfBooks=[{...raw},{...raw,sourceId:'source-b'}];host.hydrateShelfSourceNames(1);await new Promise(resolve=>setImmediate(resolve));
+sources=[{sourceId:'source-b',name:'另一个源'}];host.applyBookshelfState({kind:'populated',shelf:{books:[{...raw},{...raw,sourceId:'source-b'}],total:2},continueReading:undefined});await projection.hydrate(host.bookshelfProjectionBinding);
 assert.deepEqual(host.shelfBooks.map(b=>b.sourceName),['持久名称','另一个源'],'same bookId keeps exact source isolation without treating an unmatched source as deleted');
 for (const name of ['ftp://reader.example','www.reader.example','source-a']) {
-  sources=[{sourceId:'source-a',name}];host.shelfBooks=[{...raw}];host.hydrateShelfSourceNames(1);await new Promise(resolve=>setImmediate(resolve));
+  sources=[{sourceId:'source-a',name}];host.applyBookshelfState({kind:'populated',shelf:{books:[{...raw}],total:1},continueReading:undefined});await projection.hydrate(host.bookshelfProjectionBinding);
   assert.equal(host.shelfBooks[0].sourceName,'持久名称','invalid registry names cannot erase an already known name or reintroduce URL/identity labels');
 }
 

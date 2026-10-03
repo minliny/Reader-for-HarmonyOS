@@ -224,6 +224,7 @@
     "test-bookshelf-native-sheet-owner.mjs",
     "test-bookshelf-paged-projection.mjs",
     "test-bookshelf-physical-feedback.mjs",
+    "test-bookshelf-projection-index-owner.mjs",
     "test-bookshelf-read-owner-closure.mjs",
     "test-bookshelf-reading-entry.mjs",
     "test-bookshelf-reading-feedback.mjs",

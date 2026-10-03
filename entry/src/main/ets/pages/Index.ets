@@ -25,7 +25,6 @@ import type {
 import {
   type BookshelfDataState,
   type BookshelfFilter,
-  BookshelfFlowGateway,
   type BookshelfRemovalTarget,
 } from '../features/bookshelf/BookshelfFlowGateway';
 import { EMPTY_READABLE_ADMISSION, type BookshelfReadableAdmissionSnapshot, type BookshelfReadableAdmissionEffect } from '../features/bookshelf/BookshelfReadableAdmissionOwner';
@@ -40,6 +39,8 @@ import {
   EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT,
   type BookshelfManagementSnapshot,
 } from '../features/bookshelf/BookshelfHost';
+import { BookshelfProjectionOwner, type BookshelfProjectionBinding, type BookshelfProjectionSnapshot } from '../features/bookshelf/BookshelfProjectionOwner';
+import { bookshelfSourceDisplayName } from '../features/bookshelf/BookshelfSourceNameProjection';
 import { DiscoverPage } from '../features/discover/DiscoverPage';
 import {
   DiscoverOrchestrator,
@@ -301,7 +302,6 @@ struct Index {
   private shelfMatchedTotal: number = 0;
   private shelfPageLoading: boolean = false;
   private shelfWindowOffset: number = 0;
-  private shelfMembershipGeneration: number = 0;
   @State private bookshelfSelectionBooks: ShelfBook[] = [];
   @State private bookshelfSelectionReady: boolean = false;
   @State private continueReading: ShelfBook | undefined = undefined;
@@ -437,9 +437,8 @@ struct Index {
       this.bookRemovalConfirmAction = undefined;
     },
   });
-  /** Rejects a late shelf read after a newer import/refresh has completed. */
+  /** Read generation DTO; the feature-local projection owner owns admission. */
   private bookshelfLoadGeneration: number = 0;
-  private bookshelfSourceNameRequest: number = 0;
   /**
    * The latest bookshelf read failed. On the un-admitted blank home this
    * surfaces a persistent retry entry (a dismissed dialog would leave the
@@ -447,8 +446,9 @@ struct Index {
    */
   @State private bookshelfLoadFailed: boolean = false;
   @State private bookshelfReadFacts: OperationFacts<BookshelfDataState> | undefined = undefined;
-  private bookshelfReadValue: BookshelfDataState | undefined = undefined;
   private bookshelfReadOwner: ReaderRuntimeOwner | undefined = undefined;
+  private bookshelfProjectionOwner: BookshelfProjectionOwner | undefined;
+  private bookshelfProjectionBinding: BookshelfProjectionBinding | undefined;
   private bookshelfReadNavigation: number = 0;
   private bookshelfBackgroundRefreshRunning: boolean = false;
   /** The automatic catalog scan can also supply the idle preparation's identities for this shelf revision. */
@@ -474,7 +474,7 @@ struct Index {
       AppStorage.setOrCreate<string>(IMPORT_PRESENTATION_KEY, snapshot.importSerialized);
       if (this.shelfReceiptRetired) return;
       if (snapshot.receipt !== undefined && (this.shelfOperation.receipt === undefined || this.shelfOperation.generation !== snapshot.generation))
-        this.bookshelfLoadGeneration += 1;
+        this.invalidateBookshelfProjection();
       const presentImportResult = snapshot.action === 'import' && snapshot.importPresentation?.state === 'result' &&
         (this.shelfOperation.importPresentation?.state !== 'result' || this.shelfOperation.receipt !== snapshot.receipt) &&
         this.route === 'bookshelf' && snapshot.filter.readingState === this.shelfReadingFilter && snapshot.filter.sourceKind === this.shelfSourceFilter;
@@ -593,6 +593,8 @@ struct Index {
     this.bookshelfUpdateRunning = false;
     this.bookshelfBackgroundRefreshRunning = false;
     this.dismissBookRemovalDialog();
+    this.bookshelfProjectionOwner?.detach(this.bookshelfProjectionBinding?.identity ?? '');
+    this.bookshelfProjectionBinding = undefined;
     this.bookshelfHost.detachOperationPresentation();
     this.bookshelfHost.detachReadablePresentation();
     this.navigationBackfillObserverDisposer?.();
@@ -754,47 +756,49 @@ struct Index {
   }
 
   @Builder
-  private bookshelfContent() {
+  private bookshelfContent(generation: number = this.navigationGeneration, owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner,
+    mounting: number = this.detailShelfAdmissionMount) {
     if (this.isBookshelfVisualAdmitted) {
       BookshelfPage({
         viewState: this.bookshelfViewState,
         books: this.shelfBooks,
         serverFiltered: this.shelfProjectionRevision.length > 0,
-        onNextPageRequested: (): void => this.loadNextShelfPage(),
-        onPreviousPageRequested: (): void => this.loadPreviousShelfPage(),
+        onNextPageRequested: (): void => { if (this.isCurrentBookshelfPresentation(generation, owner, mounting)) this.loadNextShelfPage(); },
+        onPreviousPageRequested: (): void => { if (this.isCurrentBookshelfPresentation(generation, owner, mounting)) this.loadPreviousShelfPage(); },
         onFilterRequested: (readingState: string, sourceKind: string): void => {
+          if (!this.isCurrentBookshelfPresentation(generation, owner, mounting)) return;
           this.shelfReadingFilter = readingState; this.shelfSourceFilter = sourceKind;
           this.bookshelfViewState.anchorKey = ''; this.bookshelfViewState.anchorOffset = 0;
           this.refreshBookshelf();
         },
         continueReading: this.continueReading,
         reduceMotion: this.settingsSnapshot.reduceMotion,
-        onRssRequested: (): void => this.openRss(),
-        onSettingsRequested: (): void => this.openSettings(),
-        onDiscoverRequested: (): void => this.openDiscover(),
+        onRssRequested: (): void => { if (this.isCurrentBookshelfPresentation(generation, owner, mounting)) this.openRss(); },
+        onSettingsRequested: (): void => { if (this.isCurrentBookshelfPresentation(generation, owner, mounting)) this.openSettings(); },
+        onDiscoverRequested: (): void => { if (this.isCurrentBookshelfPresentation(generation, owner, mounting)) this.openDiscover(); },
         onBookSelected: (book: ShelfBook): void => {
           // Native enabled state updates on the next render. Guard only UI
           // taps here; a failed source switch still owns its internal reopen.
-          if (!this.shelfReadingPreparation && !this.readingSessionActive) this.openShelfBook(book);
+          if (this.isCurrentBookshelfPresentation(generation, owner, mounting) && !this.shelfReadingPreparation && !this.readingSessionActive) this.openShelfBook(book);
         },
-        onVisibleBooksChanged: (books: ShelfBook[]): void => this.prepareVisibleReadingBooks(books),
-        onBookMultiSelectRequested: (book: ShelfBook): void => this.openBookshelfMultiSelect(book),
-        onBookInfoRequested: (book: ShelfBook): void => this.openShelfBookInfo(book),
-        onBookGroupRequested: (book: ShelfBook): void => { this.editingShelfGroupBook = book; },
-        onBookRemoveRequested: (book: ShelfBook): void => this.requestRemoveShelfBook(book),
+        onVisibleBooksChanged: (books: ShelfBook[]): void => { if (this.isCurrentBookshelfPresentation(generation, owner, mounting)) this.prepareVisibleReadingBooks(books); },
+        onBookMultiSelectRequested: (book: ShelfBook): void => { if (this.isCurrentBookshelfPresentation(generation, owner, mounting)) this.openBookshelfMultiSelect(book); },
+        onBookInfoRequested: (book: ShelfBook): void => { if (this.isCurrentBookshelfPresentation(generation, owner, mounting)) this.openShelfBookInfo(book); },
+        onBookGroupRequested: (book: ShelfBook): void => { if (this.isCurrentBookshelfPresentation(generation, owner, mounting)) this.editingShelfGroupBook = book; },
+        onBookRemoveRequested: (book: ShelfBook): void => { if (this.isCurrentBookshelfPresentation(generation, owner, mounting)) this.requestRemoveShelfBook(book); },
       })
         .enabled(!this.shelfReadingPreparation && !this.readingSessionActive);
     } else if (this.isCoreShelfEmpty) {
       // Core alone admits the true empty shelf. Tablet keeps its phone assembly.
       BookshelfEmptyPage({
-        onImportRequested: (): void => this.openImportDialog(),
-        onSearchRequested: (): void => this.openSearch(),
+        onImportRequested: (): void => { if (this.isCurrentBookshelfPresentation(generation, owner, mounting)) this.openImportDialog(); },
+        onSearchRequested: (): void => { if (this.isCurrentBookshelfPresentation(generation, owner, mounting)) this.openSearch(); },
       });
     } else {
       BookshelfStatusContent({
         failed: this.bookshelfLoadFailed,
         reduceMotion: this.settingsSnapshot.reduceMotion,
-        onRetry: (): void => this.refreshBookshelf(),
+        onRetry: (): void => { if (this.isCurrentBookshelfPresentation(generation, owner, mounting)) this.refreshBookshelf(); },
       });
     }
   }
@@ -1476,7 +1480,7 @@ struct Index {
     this.editingShelfGroupBusy = true;
     try {
       await this.bookshelfHost.assignDefaultGroup(book);
-      this.bookshelfLoadGeneration += 1;
+      this.invalidateBookshelfProjection();
       if (this.route === 'bookshelf') this.refreshBookshelf();
       this.editingShelfGroupBook = undefined;
     } catch (error) {
@@ -1652,9 +1656,11 @@ struct Index {
     const generation = this.navigationGeneration;
     const owner = ReaderRuntimeOwner.current();
     const current = (): boolean => generation === this.navigationGeneration && this.route === 'bookshelfMultiSelect' && this.isCurrentRuntime(owner);
-    void new BookshelfFlowGateway(owner).loadAll(current).then((shelf: BookshelfState | undefined): void => {
-      if (!current() || shelf === undefined) return;
-      this.bookshelfSelectionBooks = shelf.books;
+    const projection = this.getBookshelfProjection(), binding = this.bookshelfProjectionBinding;
+    if (projection === undefined || binding === undefined) return;
+    void projection.selection(binding).then((books: ShelfBook[] | undefined): void => {
+      if (!current() || books === undefined) return;
+      this.bookshelfSelectionBooks = books;
       this.bookshelfSelectionReady = true;
     }).catch((error: Error): void => {
       if (!current()) return;
@@ -3475,7 +3481,7 @@ struct Index {
   }
 
   private applyShelfBookRemoval(shelf: BookshelfDataState): void {
-    this.bookshelfLoadGeneration += 1;
+    this.invalidateBookshelfProjection();
     if (this.route === 'bookshelf') {
       this.applyBookshelfState(shelf);
     }
@@ -3522,17 +3528,17 @@ struct Index {
     const current = (): boolean => !this.shelfReceiptRetired && this.isCurrentRuntime(owner) && navigation === this.navigationGeneration &&
       this.route === 'bookshelf' && (!dialogVisible || identity === this.shelfOperation.importIdentity);
     const read = await this.bookshelfHost.operations(owner).reconcile(generation, this.shelfFilter(), current);
-    if (read !== undefined && current() && read.value !== undefined) { this.bookshelfLoadGeneration += 1; this.applyBookshelfState(read.value); }
+    if (read !== undefined && current() && read.value !== undefined) { this.invalidateBookshelfProjection(); this.applyBookshelfState(read.value); }
   }
 
   private applyDetailBookRemoval(book: ReadingBookDetail, shelf: BookshelfDataState): void {
     // The mutation result is newer than every shelf read already in flight.
-    this.bookshelfLoadGeneration += 1;
+    this.invalidateBookshelfProjection();
     if (this.route === 'detail' && this.isSameDetailBook(book)) {
       this.returnFromDetail();
       // `returnToBookshelf` starts its own read; prefer the exact state already
       // returned by the completed mutation and invalidate that redundant read.
-      this.bookshelfLoadGeneration += 1;
+      this.invalidateBookshelfProjection();
       this.applyBookshelfState(shelf);
       return;
     }
@@ -4525,25 +4531,8 @@ struct Index {
   }
 
   private sourceDisplayName(sourceId: string, persistedName: string = ''): string {
-    if (sourceId === LOCAL_SOURCE_ID) return '本地书籍';
-    const savedName = persistedName.trim();
-    // Only Core's exact persisted-source lookup can establish absence. Empty
-    // in-memory lists may simply be unready, failed, or from another route.
-    if (savedName === '书源已移除') return savedName;
-    const readable = (name: string): boolean => name.length > 0 && name !== sourceId.trim() &&
-      name !== '书源名称暂不可用' && name !== '书源已移除' &&
-      !/^[a-z][a-z0-9+.-]*:/i.test(name) && !/^www\./i.test(name);
-    if (readable(savedName)) return savedName;
-    for (const source of this.searchHost.sources()) {
-      if (source.sourceId === sourceId && readable(source.name.trim())) return source.name.trim();
-    }
-    for (const source of this.sourceSources) {
-      if (source.sourceId === sourceId && readable(source.name.trim())) return source.name.trim();
-    }
-    for (const source of this.sourceToolsSnapshot.sources) {
-      if (source.sourceId === sourceId && readable(source.name.trim())) return source.name.trim();
-    }
-    return '书源名称暂不可用';
+    return bookshelfSourceDisplayName(sourceId, persistedName,
+      [this.searchHost.sources(), this.sourceSources, this.sourceToolsSnapshot.sources]);
   }
 
   private readingDetailForRemoteSeed(seed: RemoteReadingBookSeed, sourceName: string): ReadingBookDetail {
@@ -4663,88 +4652,85 @@ struct Index {
     return { readingState: this.shelfReadingFilter, sourceKind: this.shelfSourceFilter };
   }
 
+  private isCurrentBookshelfPresentation(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number): boolean {
+    return owner !== undefined && owner === this.mountedRuntimeOwner && !this.shelfReceiptRetired &&
+      this.route === 'bookshelf' && generation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount && this.isCurrentRuntime(owner);
+  }
+
   private refreshSearchShelfMembership(): void {
-    const generation = ++this.shelfMembershipGeneration;
-    const owner = ReaderRuntimeOwner.current();
-    const current = (): boolean => generation === this.shelfMembershipGeneration && this.isCurrentRuntime(owner);
-    void new BookshelfFlowGateway(owner).loadAll(current, true).then((shelf: BookshelfState | undefined): void => {
-      if (!current() || shelf === undefined) return;
-      this.searchHost.updateShelf(shelf.books);
-    }).catch((error: Error): void => {
-      if (current()) hilog.warn(DOMAIN, 'Reader', 'Search shelf membership: %{private}s', error.message);
-    });
+    const projection = this.getBookshelfProjection();
+    const binding = this.bookshelfProjectionBinding;
+    if (projection !== undefined && binding !== undefined) void projection.refreshMembership(binding);
   }
 
   private loadNextShelfPage(): void { this.loadShelfWindowPage(false); }
-
   private loadPreviousShelfPage(): void { this.loadShelfWindowPage(true); }
-
   private loadShelfWindowPage(previous: boolean): void {
-    const start = this.shelfWindowOffset, count = this.shelfBooks.length;
-    if (this.route !== 'bookshelf' || this.shelfPageLoading || this.shelfProjectionRevision.length === 0 ||
-      (previous ? start === 0 : start + count >= this.shelfMatchedTotal)) return;
-    this.shelfPageLoading = true;
-    const generation = this.bookshelfLoadGeneration, revision = this.shelfProjectionRevision;
-    const offset = previous ? Math.max(0, start - 48) : start + count;
-    const owner = ReaderRuntimeOwner.current();
-    const current = (): boolean => this.route === 'bookshelf' && generation === this.bookshelfLoadGeneration &&
-      this.isCurrentRuntime(owner) && revision === this.shelfProjectionRevision &&
-      start === this.shelfWindowOffset && count === this.shelfBooks.length;
-    void new BookshelfFlowGateway(owner, this.shelfFilter()).loadPage(offset, revision, false, current).then((page: BookshelfState): void => {
-      if (!current()) return;
-      if (page.changed) { this.refreshBookshelf(); return; }
-      if (page.projectionRevision !== revision || page.total !== this.shelfMatchedTotal || page.books.length === 0 ||
-        (page.offset !== undefined && page.offset !== offset) || (previous && page.books.length !== start - offset))
-        throw new Error('BOOKSHELF_PAGE_INCONSISTENT');
-      const identities = new Set(this.shelfBooks.map((book: ShelfBook): string => this.shelfBookKey(book)));
-      if (page.books.some((book: ShelfBook): boolean => identities.has(this.shelfBookKey(book))))
-        throw new Error('BOOKSHELF_PAGE_DUPLICATE');
-      const combined = previous ? page.books.concat(this.shelfBooks) : this.shelfBooks.concat(page.books);
-      const drop = Math.ceil(Math.max(0, combined.length - 144) / 48) * 48;
-      this.shelfWindowOffset = previous ? offset : start + drop;
-      this.shelfBooks = previous ? combined.slice(0, 144) : combined.slice(drop);
-    }).catch((error: Error): void => {
-      if (current()) hilog.warn(DOMAIN, 'Reader', 'Bookshelf window: %{private}s', error.message);
-    }).finally((): void => { if (generation === this.bookshelfLoadGeneration) this.shelfPageLoading = false; });
+    if (this.route !== 'bookshelf') return;
+    const projection = this.getBookshelfProjection(), binding = this.bookshelfProjectionBinding;
+    if (projection !== undefined && binding !== undefined) void projection.page(previous, binding);
   }
 
   private refreshBookshelf(): void {
-    const owner = this.mountedRuntimeOwner;
-    if (!this.isCurrentRuntime(owner) || owner === undefined || this.shelfReceiptRetired) return;
-    this.shelfPageLoading = false;
-    const generation = ++this.bookshelfLoadGeneration, navigation = this.navigationGeneration, route = this.route;
-    this.bookshelfReadOwner = owner;
-    this.bookshelfReadNavigation = navigation;
-    const current = (): boolean => generation === this.bookshelfLoadGeneration && this.isCurrentRuntime(owner) &&
-      navigation === this.navigationGeneration && route === this.route && !this.shelfReceiptRetired;
-    const startedAt = this.beginStartupStage?.('shelf.query') ?? -1;
-    void this.bookshelfHost.readShelf(owner, this.shelfFilter(), generation, current, this.bookshelfReadValue,
-      this.route === 'bookshelf' && !this.isBookshelfVisualAdmitted && !this.isCoreShelfEmpty,
-      (facts: OperationFacts<BookshelfDataState>): void => {
-        if (!current()) return;
-        this.bookshelfReadFacts = facts;
-        this.bookshelfLoadFailed = facts.fact === 'failed';
-        if ((facts.fact === 'current' || facts.fact === 'empty') && facts.value !== undefined) {
-          this.endStartupStage?.('shelf.query', startedAt, 'ready');
-          if (this.isBookshelfVisualAdmitted && facts.value.kind !== 'populated') {
-            // Preserve the established refresh-only hysteresis, while exposing
-            // both the empty read and retained content rather than silent success.
-            this.bookshelfReadFacts = projectOperationFacts({ phase: 'partial', value: this.bookshelfReadValue,
-              generation, canRetry: true, message: '当前读回为空，暂保留原书架，可重新读取以核对' });
-          } else this.applyBookshelfState(facts.value, true);
-        } else if (facts.fact === 'failed' || facts.fact === 'refreshFailed') {
-          this.endStartupStage?.('shelf.query', startedAt, 'failed');
-        }
-      }).then((result): void => {
-        if (current() && result?.presentationFailed) {
-          this.bookshelfReadFacts = projectOperationFacts({ phase: 'partial', value: this.bookshelfReadValue,
-            generation, canRetry: true, message: '书架读取已完成，显示更新未完成，请重新读取' });
-          this.bookshelfLoadFailed = !this.isBookshelfVisualAdmitted;
-          try { hilog.warn(DOMAIN, 'Reader', 'Bookshelf read completed; projection feedback failed'); }
-          catch (_diagnostic) { /* A diagnostic cannot rewrite the confirmed Core read. */ }
-        }
+    const projection = this.getBookshelfProjection(), binding = this.bookshelfProjectionBinding;
+    if (projection === undefined || binding === undefined) return;
+    let startedAt = -1;
+    try { startedAt = this.beginStartupStage?.('shelf.query') ?? -1; }
+    catch (_diagnostic) { /* Diagnostics cannot prevent the read. */ }
+    void projection.refresh(this.shelfFilter(), binding,
+      this.route === 'bookshelf' && !this.isBookshelfVisualAdmitted && !this.isCoreShelfEmpty)
+      .then((result): void => {
+        if (!binding.current()) return;
+        try {
+          if (result?.facts.fact === 'current' || result?.facts.fact === 'empty') this.endStartupStage?.('shelf.query', startedAt, 'ready');
+          else if (result?.facts.fact === 'failed' || result?.facts.fact === 'refreshFailed') this.endStartupStage?.('shelf.query', startedAt, 'failed');
+        } catch (_diagnostic) { /* Diagnostics cannot rewrite the completed read. */ }
       });
   }
+
+  private getBookshelfProjection(): BookshelfProjectionOwner | undefined {
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner)) return undefined;
+    const projection = this.bookshelfHost.projection(owner);
+    if (projection === undefined) return undefined;
+    const navigation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount, route = this.route;
+    const identity = JSON.stringify([this.rssInstanceIdentity, mounting, navigation, route, 'shelf-projection']);
+    if (this.bookshelfProjectionOwner !== projection || this.bookshelfProjectionBinding?.identity !== identity) {
+      this.bookshelfProjectionOwner?.detach(this.bookshelfProjectionBinding?.identity ?? '');
+      const binding: BookshelfProjectionBinding = { identity,
+        current: (): boolean => !this.shelfReceiptRetired && this.isCurrentRuntime(owner) &&
+          owner === this.mountedRuntimeOwner && navigation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount && route === this.route,
+        anchorKey: (): string => this.bookshelfViewState.anchorKey,
+        sources: (): BookSource[][] => [this.searchHost.sources(), this.sourceSources, this.sourceToolsSnapshot.sources],
+        emit: (snapshot: BookshelfProjectionSnapshot): void => this.applyBookshelfProjection(snapshot, owner, navigation),
+        membership: (books: ShelfBook[]): void => this.searchHost.updateShelf(books),
+        membershipNeeded: (): boolean => this.route === 'search',
+        accepted: (state: BookshelfDataState): void => {
+          if (state.kind === 'populated') { this.scheduleBookshelfBackgroundRefresh(state.shelf.books); this.preparePersistedShelfBooks(); }
+          else this.traceStartupStage?.('shelf.empty-model-ready', 'ready');
+        },
+        failed: (error: Error): void => hilog.warn(DOMAIN, 'Reader', 'Bookshelf projection: %{private}s', error.message) };
+      this.bookshelfProjectionOwner = projection; this.bookshelfProjectionBinding = binding;
+      projection.attach(binding);
+    }
+    return projection;
+  }
+
+  private applyBookshelfProjection(snapshot: BookshelfProjectionSnapshot, owner: ReaderRuntimeOwner, navigation: number): void {
+    if (snapshot.filter.readingState !== this.shelfReadingFilter || snapshot.filter.sourceKind !== this.shelfSourceFilter) return;
+    const wasAdmitted = this.isBookshelfVisualAdmitted;
+    this.bookshelfLoadGeneration = snapshot.generation;
+    this.shelfBooks = snapshot.books; this.shelfProjectionRevision = snapshot.revision;
+    this.shelfMatchedTotal = snapshot.matchedTotal; this.shelfWindowOffset = snapshot.offset;
+    this.shelfHasOnlineBooks = snapshot.hasOnlineBooks; this.continueReading = snapshot.continueReading;
+    this.shelfPageLoading = snapshot.pageLoading; this.isCoreShelfEmpty = snapshot.coreEmpty;
+    this.isBookshelfVisualAdmitted = snapshot.visualAdmitted;
+    this.bookshelfReadOwner = owner; this.bookshelfReadNavigation = navigation; this.bookshelfReadFacts = snapshot.facts;
+    this.bookshelfLoadFailed = snapshot.facts?.fact === 'failed' || (snapshot.facts?.fact === 'partial' && !snapshot.visualAdmitted);
+    if (!wasAdmitted && snapshot.visualAdmitted) this.traceStartupStage?.('shelf.model-ready', 'ready');
+  }
+
+  private invalidateBookshelfProjection(): void { this.getBookshelfProjection()?.invalidate(); }
 
   private shelfReadRecovery(): ReaderRecoveryView {
     if (!this.isCurrentRuntime(this.bookshelfReadOwner) || !this.isBookshelfVisualAdmitted ||
@@ -4791,162 +4777,9 @@ struct Index {
   }
 
   private applyBookshelfState(state: BookshelfDataState, refreshOnly: boolean = false, preserveAnchor: boolean = true): void {
-    const anchor = state.shelf.projectionRevision === undefined ? '' : this.bookshelfViewState.anchorKey;
-    if (preserveAnchor && state.kind === 'populated' && state.shelf.projectionRevision !== undefined &&
-      anchor.length > 0 &&
-      this.shelfBooks.some((book: ShelfBook): boolean => JSON.stringify([book.sourceId, book.bookId]) === anchor) &&
-      !state.shelf.books.some((book: ShelfBook): boolean => JSON.stringify([book.sourceId, book.bookId]) === anchor)) {
-      const generation = this.bookshelfLoadGeneration, owner = ReaderRuntimeOwner.current();
-      const current = (): boolean => generation === this.bookshelfLoadGeneration && this.isCurrentRuntime(owner);
-      const book = this.shelfBooks.find((item: ShelfBook): boolean => JSON.stringify([item.sourceId, item.bookId]) === anchor);
-      if (book === undefined) return;
-      void new BookshelfFlowGateway(owner, this.shelfFilter()).loadAnchor({ sourceId: book.sourceId, bookId: book.bookId }, this.shelfWindowOffset, current)
-        .then((shelf: BookshelfState | undefined): void => {
-          if (current() && shelf !== undefined) this.applyBookshelfState({ kind: 'populated', shelf, continueReading: state.continueReading }, refreshOnly, false);
-        }).catch((error: Error): void => {
-          if (current()) hilog.warn(DOMAIN, 'Reader', 'Bookshelf anchor refresh: %{private}s', error.message);
-        });
-      return;
-    }
-    if (refreshOnly && state.kind !== 'populated' && this.isBookshelfVisualAdmitted) {
-      // A refresh-only read that lost the populated shelf while the admitted
-      // tree is mounted is treated as a transient Core read: keep the last
-      // projection mounted instead of unmounting the whole route (flicker).
-      // Genuine user mutations (removal/import) always reset admission.
-      return;
-    }
-    this.bookshelfReadValue = state;
-    if (this.bookshelfReadFacts?.fact === 'refreshFailed' || this.bookshelfReadFacts?.fact === 'partial') {
-      this.bookshelfReadFacts = projectOperationFacts({ phase: state.kind === 'empty' ? 'empty' : 'succeeded',
-        value: state, generation: this.bookshelfLoadGeneration, canRetry: false });
-    }
-    this.isCoreShelfEmpty = state.kind === 'empty';
-    this.shelfProjectionRevision = state.shelf.projectionRevision ?? '';
-    this.shelfMatchedTotal = state.shelf.total;
-    this.shelfWindowOffset = state.shelf.offset ?? 0;
-    this.shelfHasOnlineBooks = (state.shelf.unfilteredOnlineTotal ?? 0) > 0;
-    // Keep the source's own display name with the shelf projection. The
-    // source id remains the stable identity; the label is resolved from the
-    // admitted source registry and never replaced with a generic "网络书".
-    const cachedNames = new Map<string, string>();
-    for (const previous of this.shelfBooks) {
-      const name = previous.sourceName?.trim() ?? '';
-      if (name.length > 0 && name !== previous.sourceId.trim() && name !== '书源名称暂不可用' &&
-        name !== '书源已移除' && !/^[a-z][a-z0-9+.-]*:/i.test(name) && !/^www\./i.test(name)) {
-        cachedNames.set(previous.sourceId, name);
-      }
-    }
-    this.shelfBooks = state.shelf.books.map((book: ShelfBook): ShelfBook => {
-      const savedName = book.sourceName?.trim() ?? '';
-      // Core's confirmed deletion wins; an unavailable label cannot erase a
-      // known exact-source name. Never borrow names by book title or bookId.
-      const persisted = savedName.length > 0 && savedName !== book.sourceId.trim() &&
-        savedName !== '书源名称暂不可用' && !/^[a-z][a-z0-9+.-]*:/i.test(savedName) && !/^www\./i.test(savedName);
-      const name = persisted ? savedName :
-        (cachedNames.get(book.sourceId) ?? this.sourceDisplayName(book.sourceId));
-      return this.copyShelfBookWithSourceName(book, name);
-    });
-    // Current Core projects names in the shelf query. Only legacy/incomplete
-    // rows need the compatibility lookup of only their exact source identities.
-    if (state.shelf.books.some((book: ShelfBook): boolean =>
-      book.sourceId !== LOCAL_SOURCE_ID && (book.sourceName === undefined ||
-        book.sourceName.trim().length === 0 || book.sourceName === '书源名称暂不可用'))) {
-      this.hydrateShelfSourceNames(this.bookshelfLoadGeneration);
-    }
-    if (this.shelfProjectionRevision.length === 0 ||
-      (this.shelfReadingFilter === 'all' && this.shelfSourceFilter === 'all' && this.shelfBooks.length === this.shelfMatchedTotal)) {
-      this.shelfMembershipGeneration += 1;
-      this.searchHost.updateShelf(this.shelfBooks);
-    } else if (this.route === 'search') this.refreshSearchShelfMembership();
-    this.continueReading = state.continueReading;
-    if (state.kind !== 'populated') {
-      this.traceStartupStage?.('shelf.empty-model-ready', 'ready');
-      this.isBookshelfVisualAdmitted = false;
-      return;
-    }
-    // N-COVER-REMAP-01: Figma `Library/BookCover` `3612:1796` supplies a
-    // `Book=NoCover` variant, so a Core book without a coverUrl is no longer
-    // a missing visual. Re-admit no-cover books and let the detail/result
-    // pages use the shared NoCover gradient placeholder rather than
-    // silently dropping the entire shelf.
-    if (!this.isBookshelfVisualAdmitted) this.traceStartupStage?.('shelf.model-ready', 'ready');
-    this.isBookshelfVisualAdmitted = true;
-    this.scheduleBookshelfBackgroundRefresh(state.shelf.books);
-    this.preparePersistedShelfBooks();
-  }
-
-  private hydrateShelfSourceNames(generation: number): void {
-    const request = ++this.bookshelfSourceNameRequest;
-    const owner = ReaderRuntimeOwner.current();
-    const admittedBooks = this.shelfBooks;
-    const isCurrent = (): boolean => request === this.bookshelfSourceNameRequest && this.isCurrentRuntime(owner) &&
-      generation === this.bookshelfLoadGeneration && admittedBooks === this.shelfBooks && this.shelfBooks.length > 0;
-    void this.sourceHost.loadSourcesForIds(admittedBooks.map((book: ShelfBook): string => book.sourceId), isCurrent)
-      .then((sources: BookSource[]): void => {
-        if (!isCurrent()) return;
-        const names = new Map<string, string>();
-        for (const source of sources) {
-          const name = source.name.trim();
-          if (name.length > 0 && name !== source.sourceId.trim() && name !== '书源名称暂不可用' &&
-            name !== '书源已移除' && !/^[a-z][a-z0-9+.-]*:/i.test(name) && !/^www\./i.test(name)) {
-            names.set(source.sourceId, name);
-          }
-        }
-        let changed = false;
-        const projected = this.shelfBooks.map((book: ShelfBook): ShelfBook => {
-          // A source.list projection can omit malformed rows. Its absence is
-          // not deletion, and it cannot revive Core's confirmed missing row.
-          if (book.sourceName === '书源已移除') return book;
-          const name = book.sourceId === LOCAL_SOURCE_ID ? '本地书籍' : names.get(book.sourceId);
-          if (name === undefined || book.sourceName === name) return book;
-          changed = true;
-          return this.copyShelfBookWithSourceName(book, name);
-        });
-        if (changed) {
-          this.shelfBooks = projected;
-          // Name hydration owns visible rows only. It cannot replace the
-          // complete search membership with a filtered or partial page.
-          if (this.shelfProjectionRevision === undefined || this.shelfProjectionRevision.length === 0 ||
-            (this.shelfReadingFilter === 'all' && this.shelfSourceFilter === 'all' && projected.length === this.shelfMatchedTotal)) {
-            this.searchHost.updateShelf(projected);
-          }
-        }
-      })
-      .catch((): void => {
-        // A transient source.list failure preserves Core's persisted name.
-      });
-  }
-
-  /**
-   * ArkTS does not support object spread for structural records. Keep the
-   * bookshelf projection immutable while copying every optional field
-   * explicitly, so source-name hydration cannot drop read progress or other
-   * Core-owned metadata.
-   */
-  private copyShelfBookWithSourceName(book: ShelfBook, sourceName: string): ShelfBook {
-    const copy: ShelfBook = {
-      sourceId: book.sourceId,
-      sourceName,
-      bookId: book.bookId,
-      title: book.title,
-      author: book.author,
-      addedAt: book.addedAt,
-    };
-    if (book.kind !== undefined) copy.kind = book.kind;
-    if (book.coverUrl !== undefined) copy.coverUrl = book.coverUrl;
-    if (book.intro !== undefined) copy.intro = book.intro;
-    if (book.lastChapter !== undefined) copy.lastChapter = book.lastChapter;
-    if (book.lastReadAt !== undefined) copy.lastReadAt = book.lastReadAt;
-    if (book.group !== undefined) copy.group = book.group;
-    if (book.sortIndex !== undefined) copy.sortIndex = book.sortIndex;
-    if (book.unreadCount !== undefined) copy.unreadCount = book.unreadCount;
-    if (book.lastCheckAt !== undefined) copy.lastCheckAt = book.lastCheckAt;
-    if (book.currentChapterTitle !== undefined) copy.currentChapterTitle = book.currentChapterTitle;
-    if (book.currentChapterIndex !== undefined) copy.currentChapterIndex = book.currentChapterIndex;
-    if (book.chapterCount !== undefined) copy.chapterCount = book.chapterCount;
-    if (book.readProgress !== undefined) copy.readProgress = book.readProgress;
-    if (book.readingPosition !== undefined) copy.readingPosition = book.readingPosition;
-    return copy;
+    const projection = this.getBookshelfProjection(), binding = this.bookshelfProjectionBinding;
+    if (projection !== undefined && binding !== undefined)
+      projection.accept(state, this.shelfFilter(), binding, refreshOnly, preserveAnchor);
   }
 
   private scheduleBookshelfBackgroundRefresh(books: ShelfBook[], revisionRetry: boolean = false): void {
@@ -4994,7 +4827,7 @@ struct Index {
     try {
       const state = await this.bookshelfHost.reloadCatalogProjection(owner, this.shelfFilter(), current);
       if (!current()) return progress;
-      this.bookshelfLoadGeneration += 1;
+      this.invalidateBookshelfProjection();
       this.applyBookshelfState(state, true);
       if (automatic) onAutomaticProjectionApplied?.(this.shelfProjectionRevision);
       else this.bookshelfCatalogReadbackFailed = false;
@@ -5063,7 +4896,7 @@ struct Index {
     try {
       const state = await this.bookshelfHost.reloadCatalogProjection(owner, this.shelfFilter(), current);
       if (!current()) return;
-      this.bookshelfLoadGeneration += 1;
+      this.invalidateBookshelfProjection();
       this.applyBookshelfState(state, true);
       this.bookshelfCatalogReadbackFailed = false;
       this.bookshelfCatalogFacts = projectOperationFacts({ phase: (facts.value?.failed ?? 0) > 0 ||
