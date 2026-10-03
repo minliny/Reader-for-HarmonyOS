@@ -8,18 +8,7 @@ import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeR
 
 const root=path.resolve(import.meta.dirname,'..'), ets=path.join(root,'entry/src/main/ets');
 const source=file=>readFileSync(path.join(ets,'features',file),'utf8');
-const shelfTypography = Object.fromEntries([
-  'NOTE', 'STATUS', 'BODY', 'BODY_MUTED', 'META', 'GROUP_TITLE', 'ROW_ACTION',
-  'BOOK_TITLE', 'HEADING', 'BUTTON', 'SMALL_ACTION',
-].map(name => [`TYPE_SHELF_MANAGEMENT_${name}`, {
-  fontFamily: 'ReaderNotoSansSC', fontWeight: 400, fontSizeFp: 12, lineHeightFp: 16,
-}]));
-Object.assign(shelfTypography, {
-  TYPE_RULES_MANAGEMENT_HEADING: { fontFamily: 'ReaderNotoSansSC', fontWeight: 700, fontSizeFp: 14 },
-  TYPE_RULES_MANAGEMENT_INPUT: { fontFamily: 'ReaderNotoSansSC', fontWeight: 400, fontSizeFp: 12 },
-  TYPE_RULES_MANAGEMENT_ACTION: { fontFamily: 'ReaderNotoSansSC', fontWeight: 700, fontSizeFp: 12 },
-});
-const output={layer:'Actual SDK Builder retained observer calls plus all production fontColor AST consumers; no new VM pixels',builder:[],consumers:[]};
+const output={layer:'Actual SDK Builder retained observer calls plus all production fontColor AST consumers; no new VM pixels',builder:[],consumers:[],sharedConsumers:[]};
 const {owner:detail}=createReaderBuilderProbe(source('bookshelf/LocalBookDetail.ets'),['chapterSection','chapterRow','chapterEmptyMessage','chapterSectionHeight'],{
   CHAPTER_SECTION_HEIGHT:282,ButtonType:{Normal:'Normal'}});
 Object.assign(detail,{appThemeScheme:'day',toc:[],loadingMessage:'',readingEnabled:true,visibleToc:()=>[],contentWidth:()=>338});
@@ -42,7 +31,7 @@ for(const scheme of ['day','night','day']){
   assert.equal(icon.create,`app.media.book_detail_directory${scheme==='night'?'_theme_night':''}`);
 }
 for(const file of ['settings/RulesManagementPage.ets','source/SourceToolsPage.ets','bookshelf/BookshelfManagementPage.ets']){
-  const shared=foundationControls();const {owner}=createReaderBuilderProbe(source(file),['actionButton'],{...shelfTypography,...shared.dependencies},shared.hooks);
+  const shared=foundationControls();const {owner}=createReaderBuilderProbe(source(file),['actionButton'],shared.dependencies,shared.hooks);
   Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false}});
   if(file.startsWith('source/')){owner.actionButton('主操作',true,true,()=>{});owner.actionButton('次操作',false,true,()=>{});}else{owner.actionButton('主操作',true,()=>{});owner.actionButton('次操作',false,()=>{});}
   for(const scheme of ['day','night','day'])for(const busy of [false,true]){
@@ -77,6 +66,25 @@ function scan(dir){for(const entry of readdirSync(dir,{withFileTypes:true})){
 }}
 scan(ets);
 assert.ok(output.consumers.some(row => row.file.endsWith('common/ReaderRecoveryAction.ets')), 'the extracted editor recovery control retains the shared primary foreground');
-assert.equal(output.consumers.length,31,'Source/Rules/RSS foregrounds share one exact finite ReaderButton producer; indirect spec colors are covered by actual native comparison and retained SDK theme contracts');
+// Five former foreground sites moved into finite public button specs in the
+// fourth migration. Bind exact actual owner/spec/native edges; a raw AST total
+// alone cannot prove their semantic color or retained theme propagation.
+const moved=[
+ {file:'bookshelf/BookshelfManagementPage.ets',method:'actionButton',specId:'shelf-action',label:'次操作',arguments:['次操作',false,()=>{}],methods:['actionButton']},
+ {file:'bookshelf/BookshelfManagementPage.ets',method:'smallAction',specId:'shelf-small',label:'小操作',arguments:['小操作',()=>{}],methods:['smallAction']},
+ {file:'bookshelf/BookshelfManagementPage.ets',method:'groupRow',specId:'shelf-row-edit',label:'编辑',arguments:[{groupId:3,groupName:'实际分组',bookCount:1,show:true}],methods:['groupRow','smallAction']},
+ {file:'bookshelf/BookshelfManagementPage.ets',method:'assignmentBookRow',specId:'shelf-row-select',label:'选择',arguments:[{sourceId:2,bookId:7,title:'真实书',author:'作者',group:'组'}],methods:['assignmentBookRow','isSelectedBook']},
+ {file:'rss/RssEntryDetailPage.ets',method:'bottomActions',specId:'rss-detail-bottom',label:'打开原文',arguments:[],methods:['bottomActions','hasOriginalLink']},
+];
+for(const edge of moved){
+ const shared=foundationControls(),{owner}=createReaderBuilderProbe(source(edge.file),edge.methods,{...shared.dependencies,RSS_DETAIL_ACTION_AREA_HEIGHT:62},shared.hooks);
+ Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false,mutationBlocked:false,selectedGroupId:0,selectedBookId:0,selectedSourceId:0},item:{link:'https://original.test'},onBack:()=>{},onOpenOriginal:()=>{},contentFrame:()=>({width:354,left:18,right:18}),onSelectGroup:()=>{},onToggleGroupShown:()=>{},onDeleteGroup:()=>{},onSelectBook:()=>{}});
+ owner[edge.method](...edge.arguments);const actors=[...owner.children.values()].filter(c=>c instanceof shared.button.Component&&c.specId===edge.specId&&c.label===edge.label);assert.equal(actors.length,1,'exact current owner -> finite shared class: '+edge.file+'/'+edge.method);
+ const actor=actors[0];assert.equal(actor.primary,false,'the original emphasis branch remains secondary');const native=shared.nodes(actor).find(n=>n.type==='Text');assert.ok(native);
+ const colors=[];for(const scheme of ['day','night','day']){owner.appThemeScheme=scheme;shared.flush(owner);const expected=readerAppColor(scheme==='night'?'TOK_GREEN':'TOK_PRIMARY_DARK',scheme);assert.equal(native.fontColor,expected,'real shared theme propagation: '+edge.file+'/'+edge.method);colors.push(native.fontColor);}
+ output.sharedConsumers.push({file:'features/'+edge.file,method:edge.method,specId:edge.specId,label:edge.label,colors});
+}
+assert.equal(output.consumers.length,26,'all remaining direct primary foreground AST sites are still accounted exactly');assert.equal(output.sharedConsumers.length,5,'all five migrated physical foreground sites have exact current owner/native proof');
+assert.equal(output.consumers.length+output.sharedConsumers.length,31,'the original 31 foreground sites remain covered across direct and finite shared implementations');
 if(process.argv.includes('--record'))writeFileSync(process.argv[process.argv.indexOf('--record')+1],JSON.stringify(output,null,2)+'\n');
-console.log(`PASS Night primary text: ${output.consumers.length} production AST foregrounds, ${output.builder.length} retained Builder states; Day/solid fill/alpha/layout retained.`);
+console.log(`PASS Night primary text: ${output.consumers.length} direct AST + ${output.sharedConsumers.length} exact common native foregrounds, ${output.builder.length} retained Builder states; Day/solid fill/alpha/layout retained.`);

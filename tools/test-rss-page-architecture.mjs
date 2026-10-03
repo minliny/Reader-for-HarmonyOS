@@ -211,7 +211,13 @@ assert.match(entryDetail, /enabled\(this\.canRequestFavorite\(\)\)/);
 assert.match(entryDetail, /Text\('摘要'\)/);
 assert.match(entryDetail, /private summaryBodyCard\(\)/);
 assert.match(entryDetail, /private hasOriginalLink\(\): boolean/);
-assert.equal((entryDetail.match(/\.enabled\(this\.hasOriginalLink\(\)\)/g) ?? []).length, 2);
+assert.equal((entryDetail.match(/\.enabled\(this\.hasOriginalLink\(\)\)/g) ?? []).length, 1,'the original-link summary actor stays native');
+assert.match(entryDetail,/ReaderButton\(\{[^}]*specId: 'rss-detail-bottom'[^}]*label: '打开原文'[^}]*actionEnabled: this\.hasOriginalLink\(\)/,'the second original-link actor is the real finite common control');
+const bottom=createReaderBuilderProbe(entryDetail,['bottomActions','hasOriginalLink'],{...controls.dependencies,RSS_DETAIL_ACTION_AREA_HEIGHT:62},controls.hooks).owner;
+let bottomBack=0,bottomOpen=0;Object.assign(bottom,{appThemeScheme:'day',item:{link:'https://original.test'},contentFrame:()=>({width:354,left:18,right:18}),onBack:()=>bottomBack++,onOpenOriginal:()=>bottomOpen++});bottom.bottomActions();
+const bottomActors=controls.nodes(bottom).filter(n=>n.type==='Text'&&n.onClick);assert.equal(bottomActors.length,2);assert.deepEqual(bottomActors.map(n=>n.create),['返回列表','打开原文']);for(const n of bottomActors)n.onClick();assert.deepEqual([bottomBack,bottomOpen],[1,1]);
+bottom.item={link:''};controls.flush(bottom);bottomActors[1].onClick();assert.equal(bottomOpen,1,'retained common original-link actor updates real enabled Prop and rejects an unavailable link');
+
 assert.doesNotMatch(entryDetail, /private bodyCard\(|bodyParagraphs\(|已解析正文/);
 
 // Management rows are projections of full Core source truth. Add/edit and
