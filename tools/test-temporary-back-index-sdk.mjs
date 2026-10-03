@@ -11,6 +11,7 @@ import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
 import {actualSourceManagementTypes,actualSourceManagementHostField} from './lib/source-management-owner-probe.mjs';
 import {fixture as generalSettingsFixture} from './lib/general-settings-persistence-probe.mjs';
+import {admitBookshelfSdkCarrier} from './lib/bookshelf-projection-owner-probe.mjs';
 // Reuse only the real leaf constructors/fixtures, not that test's assertions.
 const fixtureUrl=new URL('./test-temporary-back-leaf-sdk.mjs',import.meta.url);
 const fixtureSource=readFileSync(fixtureUrl,'utf8').split('function assertCycle(')[0].replace(/^import[^\n]+\n/gm,'').replaceAll('import.meta.url',JSON.stringify(fixtureUrl.href));
@@ -26,6 +27,7 @@ class Child{constructor(owner,params,_s,id){Object.assign(this,{owner,params,id}
 function fixture(scope){
   const general=generalSettingsFixture(),runtime=general.runtime;installed=runtime;
   const index=Object.assign(new Index(),{route:scope,navigationGeneration:1,mountedRuntimeOwner:runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:1,rssInstanceIdentity:1,sourcePresentationIdentity:'',settingsPresentationIdentity:'',settingsSection:'general',settingsSnapshot:{reduceMotion:false},shelfBooks:[],shelfProjectionRevision:'',sourceSources:[],sourceStatusKind:'idle',sourceStatusMessage:'',sourceOperation:undefined});
+  admitBookshelfSdkCarrier(index,runtime,()=>installed);
   const start=indexSource.indexOf('  private settingsHost:'),end=indexSource.indexOf('\n  );',start)+6;
   const expression=indexSource.slice(start,end).split('=').slice(1).join('=').trim().replace(/;$/,'');
   index.settingsHost=new Function('SettingsHost',stripTypeScriptTypes('const value='+expression+';')+'return value;').call(index,general.Host);
