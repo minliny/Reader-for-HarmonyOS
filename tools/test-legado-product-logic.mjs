@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
 
 const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
 const index = read('entry/src/main/ets/pages/Index.ets');
@@ -196,7 +197,10 @@ assert.doesNotMatch(shelfMoreMenu, /分组管理/,
 assert.match(shelf, /Text\(`更新 \$\{book\.unreadCount\} 章`\)/);
 assert.match(shelf, /Text\(this\.gridProgressLabel\(book\)\)/,
   'grid progress renders through the basis-point formatter');
-assert.match(shelf, /已读 <1%/,
+assert.match(shelf, /ShelfBookPresentation\.progress\(book, 'grid-caption'\)/,
+  'Grid delegates its sub-1% label to the same actual projection as List');
+for (const variant of ['list-status', 'grid-caption']) assert.equal(
+  ShelfBookPresentation.progress({ readProgress: 1 }, variant), '已读 <1%',
   'sub-1% progress stays visible instead of collapsing to 0%');
 
 console.log('Legado product behavior contract: PASS');

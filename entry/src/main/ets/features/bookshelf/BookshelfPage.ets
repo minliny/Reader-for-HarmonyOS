@@ -893,7 +893,7 @@ export struct BookshelfPage {
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
-      if ((book.readProgress ?? 0) > 0) {
+      if (this.gridProgressLabel(book).length > 0) {
         Text(this.gridProgressLabel(book))
           .width(this.shelfBookCardWidth(isTablet))
           .fontFamily(TYPE_SHELF_LIST_STATUS.fontFamily)
@@ -1058,23 +1058,10 @@ export struct BookshelfPage {
 
 
 
-  /**
-   * readProgress arrives in basis points (0..10000, Core remote.rs). A book
-   * read past its first pages of a long title lands under 1% and a plain
-   * floor() presented it as "已读 0%"; keep the sub-1% state visible instead.
-   */
+  /** Grid hides the unread caption; the shared whole-book projection owns
+   * basis-point normalization, bounds and the positive sub-1% label. */
   private gridProgressLabel(book: ShelfBook): string {
-    return this.shelfProgressText(book.readProgress ?? 0);
-  }
-
-
-
-  private shelfProgressText(readProgressBasisPoints: number): string {
-    const percent = readProgressBasisPoints / 100;
-    if (readProgressBasisPoints > 0 && percent < 1) {
-      return '已读 <1%';
-    }
-    return `已读 ${Math.floor(percent)}%`;
+    return ShelfBookPresentation.progress(book, 'grid-caption');
   }
 
   private shelfBookCardWidth(isTablet: boolean): number {
@@ -1483,7 +1470,7 @@ export struct BookshelfPage {
   private gridBookCardHeight(book: ShelfBook, isTablet: boolean): number {
     const coverHeight = this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet);
     const titleAndAuthor = 6 + 18.3 + 6 + 15;
-    const progress = (book.readProgress ?? 0) > 0 ? 6 + 12 : 0;
+    const progress = this.gridProgressLabel(book).length > 0 ? 6 + 12 : 0;
     return coverHeight + titleAndAuthor + progress;
   }
 

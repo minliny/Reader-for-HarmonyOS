@@ -4,6 +4,7 @@ import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { motionSegment } from '../entry/src/main/ets/features/common/MotionTimeline.ts';
 import { readerAppearanceCubicBezierProgress as bezier } from '../entry/src/main/ets/features/reading/ReaderAppearanceMotionGeometry.ts';
+import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
 
 // Execute the real SDK-emitted Builder callbacks and production sample methods.
 // This checks composition inputs and retained node identity, not native pixels.
@@ -46,13 +47,13 @@ const methods = ['sampleViewSwitch', 'resetViewSwitchMotion', 'setRestingProject
   'projectionListProgress', 'projectionRowHeight', 'projectionBookWidth', 'projectionBookHeight',
   'projectionBookTranslateX', 'projectionBookTranslateY', 'projectionCoverScale', 'projectionCoverRadius',
   'projectionCoverCompensationX', 'projectionCoverCompensationY', 'projectionListDetailsWidth',
-  'projectionCoverLayerOpacity', 'gridBookCardHeight', 'listCoverWidth', 'listCoverHeight',
+  'projectionCoverLayerOpacity', 'gridBookCardHeight', 'gridProgressLabel', 'listCoverWidth', 'listCoverHeight',
   'shelfBookCardWidth', 'bookCardWidth', 'bookCardHeight', 'bookRowSpace', 'hasCover',
   'projectionBookCover', 'projectionBookCoverLayer', 'projectionListDetails',
   'bookActionPresentationHandler', 'isShelfPresentationCurrent'];
 function fixture(text = source) {
   const { owner } = createReaderBuilderProbe(text, methods, { ...tokens, ...geometry,
-    motionSegment, bookshelfViewCoverDelayMs, NoCoverCover: Child, ShelfBookListDetails: Child,
+    motionSegment, bookshelfViewCoverDelayMs, NoCoverCover: Child, ShelfBookListDetails: Child, ShelfBookPresentation,
     ImageFit: { Cover: 'cover' } });
   Object.assign(owner, { viewMotion: motion, viewContentCurve: curves.cubicBezierCurve(.4, 0, .2, 1),
     viewFadeCurve: curves.cubicBezierCurve(0, 0, .58, 1), viewMoveCurve: curves.cubicBezierCurve(.2, 0, 0, 1),
