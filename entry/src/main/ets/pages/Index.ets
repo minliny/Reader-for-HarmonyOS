@@ -2302,8 +2302,11 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'settings';
-    this.settingsCacheCleanup = this.settingsHost.cacheCleanupSnapshot(this.mountedRuntimeOwner);
-    void this.reconcileSettingsCache(undefined);
+    if (this.bindSettingsPresentation()) {
+      this.settingsCacheCleanup = this.settingsHost.cacheCleanupSnapshot(this.mountedRuntimeOwner);
+      void this.reconcileSettingsCache(undefined);
+      this.settingsHost.open(this.settingsPresentationIdentity);
+    }
   }
 
   private returnFromRulesManagement(): void {
@@ -3169,6 +3172,7 @@ struct Index {
     this.rssSourceFeedReturnTarget = 'rss';
     this.rssManagementFocusSubscriptionId = '';
     this.route = 'rss';
+    this.loadRss(this.navigationGeneration);
   }
 
   private openRssManagementForSubscription(subscriptionId: string | undefined): void {
