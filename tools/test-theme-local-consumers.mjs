@@ -62,10 +62,12 @@ function captureSharedConsumer(file, methods, render) {
   const shared = labeledIconControls();
   const source = readFileSync(new URL(`../entry/src/main/ets/${file}`, import.meta.url), 'utf8');
   const { owner } = createReaderBuilderProbe(source, methods,
-    { ...shared.dependencies, ...readerTypographyRoles }, shared.hooks);
+    { ...shared.dependencies, ...readerTypographyRoles,ScrollDirection:{Horizontal:'ScrollDirection.Horizontal'},BarState:{Off:'BarState.Off'} }, shared.hooks);
   Object.assign(owner, { appThemeScheme: 'day', activeMode: 'all', filterValue: 'all',
     filterControlWidth: () => 280, contentFrame: () => ({ width: 350 }), actionBottomInset: () => 0,
-    onOpenTools: () => {}, onAddSource: () => {}, onModeRequested: () => {} });
+    onOpenTools: () => {}, onAddSource: () => {}, onModeRequested: () => {},
+    presentation:{activeKindIndex:0,kinds:[{title:'默认'},{title:'其他'}],filterKey:'all',loading:false},
+    onSelectKind:()=>{},onCycleFilter:()=>{},onRefresh:()=>{} });
   render(owner);
   const roles = new Set(rows.filter(row => row.file === file).map(row => row.role));
   const witnesses = new Map();
@@ -77,7 +79,7 @@ function captureSharedConsumer(file, methods, render) {
       assert.ok(button || child.constructor === shared.component, 'actual shared Button or labeled Icon');
       const spec = button ? shared.dependencies.resolveReaderButtonSpec(child.specId) :
         shared.dependencies.resolveReaderLabeledIconActionSpec(child.specId);
-      const nativeColors = shared.nodes(child).flatMap(node => [node.backgroundColor, node.fontColor, node.border?.color]);
+      const nativeColors = shared.nodes(child).flatMap(node => [node.backgroundColor, node.fontColor, node.border?.color,...(node.linearGradient?.colors??[]).map(stop=>stop[0])] );
       for (const role of Object.values(spec).filter(value => roles.has(value))) {
         if (!nativeColors.includes(readerAppColor(role, scheme))) continue;
         if (!witnesses.has(role)) witnesses.set(role, new Set());
@@ -93,6 +95,9 @@ captureSharedConsumer('features/source/SourceManagementPage.ets', ['chip', 'bott
 captureSharedConsumer('features/rss/RssSourceFeedPage.ets', ['actionTarget'], owner => owner.actionTarget('刷新', 'icon', () => {}));
 captureSharedConsumer('features/rss/RssPage.ets', ['statusTab', 'filterPill', 'recentUnreadHeader'], owner => {
   owner.statusTab('未读', 'unread'); owner.filterPill('未读'); owner.recentUnreadHeader();
+});
+captureSharedConsumer('features/discover/DiscoverPage.ets', ['categoryChips','kindTitles','filterRow','currentFilterText'], owner => {
+  owner.categoryChips();owner.filterRow();
 });
 for (const row of rows) {
   assert.equal(readerAppColor(row.role, 'day'), row.day, `${row.role}: Day retained`);

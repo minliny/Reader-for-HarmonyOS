@@ -1,4 +1,5 @@
 import {foundationControls} from './lib/reader-foundation-control-probe.mjs';
+import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import {labeledIconControls} from './lib/reader-labeled-icon-action-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync,writeFileSync} from 'node:fs';
@@ -33,7 +34,7 @@ for(const scheme of ['day','night','day']){
 }
 for(const file of ['settings/RulesManagementPage.ets','source/SourceToolsPage.ets','bookshelf/BookshelfManagementPage.ets']){
   const shared=foundationControls();const {owner}=createReaderBuilderProbe(source(file),['actionButton'],shared.dependencies,shared.hooks);
-  Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false}});
+  Object.assign(owner,{operation:{receipt:undefined,readFacts:undefined,confirmedParts:0},statusKind:'error',statusMessage:'加载失败',readFacts:{fact:'failed',message:'离线',canRetry:true,generation:1},onRetryLoad:()=>{},onReconcile:()=>{},onLoginSource:()=>{},appThemeScheme:'day',snapshot:{busy:false}});
   if(file.startsWith('source/')){owner.actionButton('主操作',true,true,()=>{});owner.actionButton('次操作',false,true,()=>{});}else{owner.actionButton('主操作',true,()=>{});owner.actionButton('次操作',false,()=>{});}
   for(const scheme of ['day','night','day'])for(const busy of [false,true]){
     owner.appThemeScheme=scheme;owner.snapshot.busy=busy;shared.flush(owner);
@@ -67,8 +68,8 @@ function scan(dir){for(const entry of readdirSync(dir,{withFileTypes:true})){
 }}
 scan(ets);
 assert.ok(output.consumers.some(row => row.file.endsWith('common/ReaderRecoveryAction.ets')), 'the extracted editor recovery control retains the shared primary foreground');
-// Nine former foreground sites moved into finite public Button/Icon specs in
-// the fourth and fifth migrations. Bind exact actual owner/spec/native edges; a raw AST total
+// Eleven former foreground sites moved into finite public Button/Icon specs in
+// the fourth, fifth and Source action migrations. Bind exact actual owner/spec/native edges; a raw AST total
 // alone cannot prove their semantic color or retained theme propagation.
 const moved=[
  {file:'bookshelf/BookshelfManagementPage.ets',method:'actionButton',specId:'shelf-action',label:'次操作',arguments:['次操作',false,()=>{}],methods:['actionButton']},
@@ -79,17 +80,19 @@ const moved=[
  {file:'rss/RssPage.ets',method:'managePill',specId:'rss-manage',label:'管理',arguments:[],methods:['managePill'],icon:true},
  {file:'rss/RssPage.ets',method:'recentUnreadHeader',specId:'rss-view-all',label:'查看全部',arguments:[],methods:['recentUnreadHeader'],icon:true},
  {file:'rss/RssSourceFeedPage.ets',method:'entrySectionHeader',specId:'rss-source-operations',label:'源操作',arguments:[],methods:['entrySectionHeader'],icon:true},
+ {file:'source/SourceManagementPage.ets',method:'statusBanner',specId:'source-management-retry',label:'重试',arguments:[],methods:['statusBanner','recovery']},
+ {file:'source/SourceManagementPage.ets',method:'loginButton',specId:'source-management-login',label:'登录',arguments:[{sourceId:'source1'}],methods:['loginButton']},
  {file:'sync/SyncPage.ets',method:'configActions',specId:'sync-config-test',label:'测试网络连通性',arguments:[],methods:['configActions','canMutate','effectiveWebdavUrl','effectiveWebdavUser','effectiveWebdavPath']},
 ];
 for(const edge of moved){
- const shared=edge.icon?labeledIconControls():foundationControls(),{owner}=createReaderBuilderProbe(source(edge.file),edge.methods,{...shared.dependencies,RSS_DETAIL_ACTION_AREA_HEIGHT:62},shared.hooks);
- Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false,mutationBlocked:false,selectedGroupId:0,selectedBookId:0,selectedSourceId:0,facts:{canMutate:true}},onManage:()=>{},onModeRequested:()=>{},onSourceOperations:()=>{},onSaveConfig:()=>{},onTestConnection:()=>{},item:{link:'https://original.test'},onBack:()=>{},onOpenOriginal:()=>{},contentFrame:()=>({width:354,left:18,right:18}),onSelectGroup:()=>{},onToggleGroupShown:()=>{},onDeleteGroup:()=>{},onSelectBook:()=>{}});
+ const shared=edge.icon?labeledIconControls():foundationControls(),{owner}=createReaderBuilderProbe(source(edge.file),edge.methods,{...shared.dependencies,RSS_DETAIL_ACTION_AREA_HEIGHT:62,readerRecoveryView},shared.hooks);
+ Object.assign(owner,{operation:{receipt:undefined,readFacts:undefined,confirmedParts:0},statusKind:'error',statusMessage:'加载失败',readFacts:{fact:'failed',message:'离线',canRetry:true,generation:1},onRetryLoad:()=>{},onReconcile:()=>{},onLoginSource:()=>{},appThemeScheme:'day',snapshot:{busy:false,mutationBlocked:false,selectedGroupId:0,selectedBookId:0,selectedSourceId:0,facts:{canMutate:true}},onManage:()=>{},onModeRequested:()=>{},onSourceOperations:()=>{},onSaveConfig:()=>{},onTestConnection:()=>{},item:{link:'https://original.test'},onBack:()=>{},onOpenOriginal:()=>{},contentFrame:()=>({width:354,left:18,right:18}),onSelectGroup:()=>{},onToggleGroupShown:()=>{},onDeleteGroup:()=>{},onSelectBook:()=>{}});
  owner[edge.method](...edge.arguments);const actors=[...owner.children.values()].filter(c=>c instanceof (edge.icon?shared.component:shared.button.Component)&&c.specId===edge.specId&&c.label===edge.label);assert.equal(actors.length,1,'exact current owner -> finite shared class: '+edge.file+'/'+edge.method);
  const actor=actors[0];if(!edge.icon)assert.equal(actor.primary,false,'the original emphasis branch remains secondary');const native=shared.nodes(actor).find(n=>n.type==='Text');assert.ok(native);
  const colors=[];for(const scheme of ['day','night','day']){owner.appThemeScheme=scheme;shared.flush(owner);const expected=readerAppColor(scheme==='night'?'TOK_GREEN':'TOK_PRIMARY_DARK',scheme);assert.equal(native.fontColor,expected,'real shared theme propagation: '+edge.file+'/'+edge.method);colors.push(native.fontColor);}
  output.sharedConsumers.push({file:'features/'+edge.file,method:edge.method,specId:edge.specId,label:edge.label,colors});
 }
-assert.equal(output.consumers.length,22,'all remaining direct primary foreground AST sites are still accounted exactly');assert.equal(output.sharedConsumers.length,9,'all nine migrated physical foreground sites have exact current owner/native proof');
+assert.equal(output.consumers.length,20,'all remaining direct primary foreground AST sites are still accounted exactly');assert.equal(output.sharedConsumers.length,11,'all eleven migrated physical foreground sites have exact current owner/native proof');
 assert.equal(output.consumers.length+output.sharedConsumers.length,31,'the original 31 foreground sites remain covered across direct and finite shared implementations');
 if(process.argv.includes('--record'))writeFileSync(process.argv[process.argv.indexOf('--record')+1],JSON.stringify(output,null,2)+'\n');
 console.log(`PASS Night primary text: ${output.consumers.length} direct AST + ${output.sharedConsumers.length} exact common native foregrounds, ${output.builder.length} retained Builder states; Day/solid fill/alpha/layout retained.`);

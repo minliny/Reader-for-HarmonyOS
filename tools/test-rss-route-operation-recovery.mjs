@@ -1,21 +1,17 @@
 import assert from 'node:assert/strict';
+import {rssRecoverySurfaceSdk} from './lib/rss-recovery-surface-sdk-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { labeledIconControls } from './lib/reader-labeled-icon-action-probe.mjs';
 import { rssRouteFixture,rssSource,rssRecoveryView,rssFacts,settleRss,deferredRss,replaceRssRuntime,rssRpc,RealRssGateway,RssWriteEvidence } from './lib/rss-operation-fixture.mjs';
 
-class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,id,params:{...params}});}updateStateVars(params){Object.assign(this.params,params);}}
 function recovery(f,pageName,operation=f.operations.at(-1),read=f.reads.at(-1)){
-  const source=rssSource(`features/rss/${pageName}.ets`);
-  const properties=createArkUIPropertyRuntimeProbe();
-  const {owner}=createReaderBuilderProbe(source,['operation','readFacts','operationFeedback','retryFeedback'],{...properties.sdk,ReaderRecoveryNotice:Child,readerRecoveryView:rssRecoveryView,projectOperationFacts:rssFacts.projectOperationFacts});
+  const sdk=rssRecoverySurfaceSdk({foundation:false}),owner=sdk.consumer(rssSource(`features/rss/${pageName}.ets`),
+    ['operation','readFacts','operationFeedback','retryFeedback'],{readerRecoveryView:rssRecoveryView,projectOperationFacts:rssFacts.projectOperationFacts});
   Object.assign(owner,{operation,readFacts:read,onReconcile:o=>pageName==='RssSourceFeedPage'?f.owner.reconcileSourceOperation(o,f.binding()):f.owner.reconcileEntryOperation(o,f.binding()),onRetryRead:()=>assert.fail('receipt retry must use receipt generation')});
-  owner.operationFeedback();const notice=[...owner.children.values()][0];
-  const n=createReaderBuilderProbe(rssSource('features/common/ReaderRecoveryNotice.ets'),['build'],{ReaderRecoveryAction:Child}).owner;
-  Object.assign(n,notice.params,{appThemeScheme:'day'});n.initialRender();const child=[...n.children.values()][0];
-  const action=createReaderBuilderProbe(rssSource('features/common/ReaderRecoveryAction.ets'),['build']).owner;
-  Object.assign(action,{actionEnabled:true,appThemeScheme:'day',variant:'compact'},child.params);action.initialRender();
-  return{page:owner,notice:notice.params,click:()=>[...action.nodes.values()].find(node=>node.type==='Text'&&node.onClick).onClick()};
+  owner.operationFeedback();const notice=sdk.walk(owner).filter(c=>c instanceof sdk.deps.ReaderRecoveryNotice).at(-1);assert.ok(notice);
+  const action=sdk.walk(notice).find(c=>c instanceof sdk.deps.ReaderRecoveryAction);assert.ok(action);
+  return{page:owner,notice:{view:notice.view},click:()=>sdk.nodes(action).find(n=>n.onClick).onClick()};
 }
 for(const method of ['refreshSourceFeed','openEntry','setEntryFavorite']){
   const f=rssRouteFixture();f.invoke('loadSourceFeed','s');await settleRss(f.owner);
@@ -64,11 +60,15 @@ for(const lost of [false,true]){
   const f=rssRouteFixture(),values=[],reads=[];f.owner.loadFeed(v=>values.push(v),r=>reads.push(r),()=>true);await settleRss(f.owner);
   f.runtime.readFailures.set('rss-source.list',Error('offline'));f.owner.loadFeed(v=>values.push(v),r=>reads.push(r),()=>true);await settleRss(f.owner);
   assert.equal(reads.at(-1).fact,'refreshFailed');assert.equal(reads.at(-1).value.length,1);assert.equal(values.length,1);
-  const properties=createArkUIPropertyRuntimeProbe();
-  const ui=createReaderBuilderProbe(rssSource('features/rss/RssPage.ets'),['readFacts','readFeedback'],{...properties.sdk,ReaderRecoveryNotice:Child,readerRecoveryView:rssRecoveryView,projectOperationFacts:rssFacts.projectOperationFacts},properties.hooks).owner;
+  const sdk=rssRecoverySurfaceSdk({foundation:false});
+  const ui=sdk.consumer(rssSource('features/rss/RssPage.ets'),['readFacts','readFeedback'],{readerRecoveryView:rssRecoveryView,projectOperationFacts:rssFacts.projectOperationFacts});
   const failed=reads.at(-1);Object.assign(ui,{onRetryRead:expected=>f.owner.loadFeed(v=>values.push(v),r=>reads.push(r),()=>true,expected.generation)});ui.updateStateVars({readFacts:failed});ui.readFeedback();
-  const notice=[...ui.children.values()][0];notice.params.onReconcile(failed.generation);await settleRss(f.owner);assert.equal(reads.at(-1).fact,'current');
-  ui.updateStateVars({readFacts:reads.at(-1)});properties.flush();const count=f.runtime.count('rss-source.list');notice.params.onReconcile(failed.generation);await settleRss(f.owner);assert.equal(f.runtime.count('rss-source.list'),count,'mounted main recovery rejects retired generation');
+  const notice=sdk.walk(ui).find(c=>c instanceof sdk.deps.ReaderRecoveryNotice);assert.ok(notice);const action=sdk.walk(notice).find(c=>c instanceof sdk.deps.ReaderRecoveryAction),click=sdk.nodes(action).find(n=>n.onClick).onClick;
+  click();await settleRss(f.owner);assert.equal(reads.at(-1).fact,'current');
+  // Keep the actual old physical callback after the real V1 setter update.
+  // This probe does not model conditional native removal; admission is proved
+  // by the captured callback against the current actual parent Props.
+  ui.updateStateVars({readFacts:reads.at(-1)});const count=f.runtime.count('rss-source.list');click();await settleRss(f.owner);assert.equal(f.runtime.count('rss-source.list'),count,'mounted main recovery rejects retired generation');
 }
 {
   const runtime=rssRpc();replaceRssRuntime(runtime);const gateway=new RealRssGateway(runtime),evidence=new RssWriteEvidence();gateway.observeWrites(evidence);

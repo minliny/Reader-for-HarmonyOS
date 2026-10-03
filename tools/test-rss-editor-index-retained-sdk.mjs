@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
-import {boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
+import {rssRecoverySurfaceSdk as boundedSurfaceSdk} from './lib/rss-recovery-surface-sdk-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {rssSource as read,rssFacts,rssProjection,RssWriteEvidence,RssRuntime,replaceRssRuntime,rssRpc,settleRss,deferredRss,RealRssRouteHost} from './lib/rss-operation-fixture.mjs';
 import {ReaderNativeAlertOwner} from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
