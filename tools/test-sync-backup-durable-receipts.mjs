@@ -43,7 +43,10 @@ try {
   const cold=fixture({cold:true});await open(cold);assert.equal(operation(cold).operationId,id,'actual disk journal survives new Store/runtime/owner');
   assert.equal(cold.runtime.count('sync.webdav.transaction.start'),0,'cold open never replays start or HTTP mutation');
   assert.equal(operation(cold).projection.receipt.confirmation,'unknown');
+  assert.equal([...cold.page().notice.children.values()][0].params.label,'核对本次备份','actual SDK public recovery label describes the exact backup GET query');
+  const oldAction=cold.page().action;
   cold.qualifyRemote();await retry(cold);assert.equal(operation(cold).uploadQualified,true);assert.equal(operation(cold).completed,false);
+  const currentRequests=cold.requests.length;oldAction.onClick();await cold.settle();assert.equal(cold.requests.length,currentRequests,'old physical generation callback cannot rerun the current query');
   assert.equal(operation(cold).projection.receipt.confirmation,'confirmed');assert.match(cold.page().view.message,/保留清理/);
   assert.deepEqual(cold.requests.map(r=>r.method),['GET'],'physical recovery only dispatches original GET');
   assert.equal(cold.snapshot().facts.canMutate,false);cold.owner.triggerBackup();cold.owner.restoreLatest();cold.owner.saveConfig(f.config.url,f.config.user,'','',f.config.directory);await cold.settle();

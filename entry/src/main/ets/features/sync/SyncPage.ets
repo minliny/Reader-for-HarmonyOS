@@ -667,6 +667,7 @@ export struct SyncPage {
 
   private recoveryLabel(): string {
     const operation = this.snapshot.facts?.operation;
+    if (operation?.action === 'backup' && !operation.completed) return '核对本次备份';
     return operation !== undefined && !operation.completed &&
       (operation.action === 'restore' || operation.action === 'resolveRestore') ? '核对已有恢复' : '重新读取配置';
   }
