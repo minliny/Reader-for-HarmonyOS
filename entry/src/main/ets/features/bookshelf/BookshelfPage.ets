@@ -1,6 +1,8 @@
+import { BookshelfViewModeHost, type BookshelfViewModeSnapshot } from './BookshelfViewModeHost';
+import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { TYPE_APP_COMPACT_BADGE, TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_STATE, TYPE_APP_SECTION_LABEL, TYPE_MAIN_TAB_LABEL, TYPE_SECTION_HEADING } from '../common/ReaderTypography';
 import { BOOKSHELF_WIDE_BREAKPOINT } from './BookshelfShell';
-import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
   TYPE_SHELF_ACTION,
@@ -187,6 +189,8 @@ export struct BookshelfPage {
   private mounted: boolean = false;
   private projectionQueued: boolean = false;
   private projectionGeneration: number = 0;
+  @State private viewModeSnapshot: BookshelfViewModeSnapshot = { canonical: undefined };
+  private readonly viewModeHost: BookshelfViewModeHost = BookshelfViewModeHost.instance;
   private viewModeRevision: number = 0;
   private confirmedViewMode: BookshelfViewMode = 'cover';
   private requestedViewMode: BookshelfViewMode = 'cover';
@@ -215,6 +219,8 @@ export struct BookshelfPage {
     this.viewMode = restoredMode;
     this.confirmedViewMode = restoredMode;
     this.requestedViewMode = restoredMode;
+    this.viewModeSnapshot = this.viewModeHost.current();
+    this.viewModeError = this.viewModeRecovery().message;
     this.storedViewMode = restoredMode;
     this.storedSelectedGroup = '';
     this.filterRowVisible = this.viewState.filterExpanded;
@@ -227,30 +233,47 @@ export struct BookshelfPage {
     if (confirmedMode === undefined) this.loadViewMode();
   }
 
-  private retryViewMode(): void {
-    if (this.viewModeReadFailed) this.loadViewMode();
-    else this.setViewMode(this.requestedViewMode);
+  private viewModeRecovery(): ReaderRecoveryView {
+    const view = readerRecoveryView(this.viewModeSnapshot.receipt, this.viewModeSnapshot.readFacts);
+    if (this.viewModeSnapshot.receipt?.facts.blockedReason === 'BOOKSHELF_RESTORE_PENDING') {
+      return { message: '请先在同步设置中重试未完成的恢复', visible: true, canRetry: false, generation: view.generation };
+    }
+    return view;
+  }
+
+  private retryViewMode(generation: number = this.viewModeRecovery().generation): void {
+    const revision = this.viewModeRevision;
+    void this.viewModeHost.reconcile(generation, (): boolean => this.mounted && revision === this.viewModeRevision)
+      .then((snapshot): void => {
+        if (snapshot === undefined || !this.mounted || revision !== this.viewModeRevision) return;
+        this.applyViewModeSnapshot(snapshot);
+      });
+  }
+
+  private applyViewModeSnapshot(snapshot: BookshelfViewModeSnapshot): void {
+    this.viewModeSnapshot = snapshot;
+    this.viewModeError = this.viewModeRecovery().message;
+    this.viewModeReadFailed = snapshot.readFacts?.canRetry === true;
+    const mode = snapshot.canonical;
+    if (mode === undefined) return;
+    this.confirmedViewMode = mode;
+    this.storedViewMode = mode;
+    if (this.viewMode === mode && !this.viewSwitchRunning) return;
+    this.resetViewSwitchMotion();
+    this.viewMode = mode;
+    this.setRestingProjectionOpacity(mode);
+    this.rebuildShelfProjection();
   }
 
   private loadViewMode(): void {
     const revision = ++this.viewModeRevision;
     this.viewModeError = '';
     this.viewModeReadFailed = false;
-    void this.webDavCredentials.loadBookshelfViewMode().then((mode): void => {
-      if (!this.mounted || revision !== this.viewModeRevision) return;
-      this.confirmedViewMode = mode;
-      this.requestedViewMode = mode;
-      this.storedViewMode = mode;
-      if (this.viewMode === mode && !this.viewSwitchRunning) return;
-      this.resetViewSwitchMotion();
-      this.viewMode = mode;
-      this.setRestingProjectionOpacity(mode);
-      this.rebuildShelfProjection();
-    }).catch((): void => {
-      if (!this.mounted || revision !== this.viewModeRevision) return;
-      this.viewModeReadFailed = true;
-      this.viewModeError = '显示方式读取失败，点击重试';
-    });
+    void this.viewModeHost.load((): boolean => this.mounted && revision === this.viewModeRevision)
+      .then((snapshot): void => {
+        if (snapshot === undefined || !this.mounted || revision !== this.viewModeRevision) return;
+        this.applyViewModeSnapshot(snapshot);
+      });
   }
 
   aboutToDisappear(): void {
@@ -469,8 +492,8 @@ export struct BookshelfPage {
 
       if (this.viewModeError.length > 0) {
         ListItem() {
-          Text(this.viewModeError).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .onClick((): void => this.retryViewMode());
+          ReaderRecoveryNotice({ view: this.viewModeRecovery(), actionLabel: '刷新显示方式',
+            onReconcile: (generation: number): void => this.retryViewMode(generation) });
         }
       }
 
@@ -1197,26 +1220,25 @@ export struct BookshelfPage {
   }
 
   private async persistRequestedViewMode(mode: BookshelfViewMode, revision: number): Promise<boolean> {
-    await ReaderThemeHost.prepareUserChange();
-    if (!this.mounted || revision !== this.viewModeRevision) return false;
-    // Recovery may have replaced the durable baseline while this intent waited.
-    this.confirmedViewMode = await this.webDavCredentials.loadBookshelfViewMode();
-    if (!this.mounted || revision !== this.viewModeRevision) return false;
-    await this.webDavCredentials.saveBookshelfViewMode(mode);
-    return true;
+    const snapshot = await this.viewModeHost.save(mode, (): boolean => this.mounted && revision === this.viewModeRevision);
+    if (snapshot === undefined) return false;
+    if (snapshot.canonical !== undefined) this.confirmedViewMode = snapshot.canonical;
+    if (this.mounted && revision === this.viewModeRevision) {
+      this.viewModeSnapshot = snapshot;
+      this.viewModeError = this.viewModeRecovery().message;
+      if (snapshot.receipt?.receipt.confirmation !== 'confirmed') this.applyViewModeSnapshot(snapshot);
+    }
+    return snapshot.receipt?.receipt.confirmation === 'confirmed';
   }
 
   private setViewMode(mode: BookshelfViewMode): void {
+    if (!this.mounted || !this.viewModeHost.canSave()) return;
     const revision = ++this.viewModeRevision;
     this.requestedViewMode = mode;
     this.viewModeReadFailed = false;
     this.storedViewMode = mode;
     this.viewModeError = '';
-    void this.persistRequestedViewMode(mode, revision).then((committed: boolean): void => {
-      // The store serializes writes. Every durable acknowledgement advances
-      // the rollback baseline, even if a newer UI intent is still pending.
-      if (committed) this.confirmedViewMode = mode;
-    }).catch((error: Error): void => {
+    void this.persistRequestedViewMode(mode, revision).catch((error: Error): void => {
       if (!this.mounted || revision !== this.viewModeRevision) return;
       this.storedViewMode = this.confirmedViewMode;
       this.resetViewSwitchMotion();

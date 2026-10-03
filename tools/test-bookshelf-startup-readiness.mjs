@@ -1,3 +1,4 @@
+import {actualModeHost,readerRecoveryView} from './lib/bookshelf-view-mode-probe.mjs';
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
@@ -144,7 +145,7 @@ function storeFixture() {
   assert.equal(f.store.currentBookshelfViewMode(), 'list', 'serialized writes publish the last acknowledgement');
 }
 
-const Page = productionMotionMethods(file('features/bookshelf/BookshelfPage.ets'), ['aboutToAppear', 'loadViewMode', 'retryViewMode'], { registerReaderShelfFonts() {} });
+const Page = productionMotionMethods(file('features/bookshelf/BookshelfPage.ets'), ['aboutToAppear', 'loadViewMode', 'retryViewMode', 'viewModeRecovery', 'applyViewModeSnapshot'], { readerRecoveryView, registerReaderShelfFonts() {} });
 function pageFixture(confirmed, pending) {
   let reads = 0, builds = 0;
   const owner = Object.assign(new Page(), { mounted: false, viewModeRevision: 0, storedViewMode: 'cover', viewSwitchRunning: false,
@@ -152,6 +153,7 @@ function pageFixture(confirmed, pending) {
     viewState: { filterExpanded: false }, getUIContext: () => ({ getFont() {} }),
     setRestingProjectionOpacity() {}, resetViewSwitchMotion() {}, rebuildShelfProjection() { builds += 1; },
   });
+  owner.viewModeHost=actualModeHost(owner.webDavCredentials);owner.viewModeSnapshot={canonical:undefined};
   return { owner, reads: () => reads, builds: () => builds };
 }
 {

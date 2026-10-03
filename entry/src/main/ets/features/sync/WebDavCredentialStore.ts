@@ -111,11 +111,15 @@ export class WebDavCredentialStore {
     return this.pendingBookshelfModeWrites === 0 ? this.confirmedBookshelfMode : undefined;
   }
 
-  loadBookshelfViewMode(): Promise<'cover' | 'list'> {
+  bookshelfModeContextGeneration(): number { return this.contextGeneration; }
+
+  loadBookshelfViewMode(allowMigration: boolean = true): Promise<'cover' | 'list'> {
     const generation = this.contextGeneration;
     const next = this.localModeWriteTail.then(async (): Promise<'cover' | 'list'> => {
       try {
-        const mode = await this.readOrMigrateViewMode();
+        if (generation !== this.contextGeneration) throw new Error('BOOKSHELF_VIEW_MODE_RETIRED');
+        const mode = await this.readOrMigrateViewMode(allowMigration);
+        if (generation !== this.contextGeneration) throw new Error('BOOKSHELF_VIEW_MODE_RETIRED');
         if (generation === this.contextGeneration) this.confirmedBookshelfMode = mode;
         return mode;
       } catch (error) {
@@ -128,11 +132,14 @@ export class WebDavCredentialStore {
   }
 
   /** One serialized non-secret authority; credential edits never mirror mode. */
-  saveBookshelfViewMode(mode: 'cover' | 'list', restoreOperationId?: string): Promise<void> {
+  saveBookshelfViewMode(mode: 'cover' | 'list', restoreOperationId?: string,
+    observation?: ReaderWriteEvidence, isCurrent: () => boolean = (): boolean => true): Promise<void> {
     const generation = this.contextGeneration;
     this.pendingBookshelfModeWrites += 1;
     const next = this.localModeWriteTail.then(async (): Promise<void> => {
+      if (generation !== this.contextGeneration || !isCurrent()) throw new Error('BOOKSHELF_VIEW_MODE_RETIRED');
       await this.readOrMigrateViewMode();
+      if (generation !== this.contextGeneration || !isCurrent()) throw new Error('BOOKSHELF_VIEW_MODE_RETIRED');
       const store = await this.ensureLocalPreferences();
       const raw = await store.get(LOCAL_RESTORE_JOURNAL_KEY, '');
       if (raw !== '') {
@@ -141,7 +148,8 @@ export class WebDavCredentialStore {
         this.validateRestoreJournal(journal);
         if (journal.operationId !== restoreOperationId) throw new Error('BOOKSHELF_RESTORE_PENDING');
       }
-      await this.writeLocalViewMode(store, mode);
+      await this.writeLocalViewMode(store, mode, observation,
+        (): boolean => generation === this.contextGeneration && isCurrent());
       if (generation === this.contextGeneration) this.confirmedBookshelfMode = mode;
     }).catch((error: Error): never => {
       if (generation === this.contextGeneration) this.confirmedBookshelfMode = undefined;
@@ -153,16 +161,18 @@ export class WebDavCredentialStore {
     return next;
   }
 
-  private async readOrMigrateViewMode(): Promise<'cover' | 'list'> {
+  private async readOrMigrateViewMode(allowMigration: boolean = true): Promise<'cover' | 'list'> {
     const store = await this.ensureLocalPreferences();
     const present = await store.has(LOCAL_VIEW_MODE_KEY);
     const stored = await store.get(LOCAL_VIEW_MODE_KEY, 'cover');
     const version = await store.get(LOCAL_MIGRATION_KEY, 0);
     if (present) {
+      if (stored !== 'cover' && stored !== 'list') throw new Error('BOOKSHELF_VIEW_MODE_INVALID');
       const mode = stored === 'list' ? 'list' : 'cover';
-      if (version !== LOCAL_CONFIG_VERSION) await this.writeLocalViewMode(store, mode);
+      if (allowMigration && version !== LOCAL_CONFIG_VERSION) await this.writeLocalViewMode(store, mode);
       return mode;
     }
+    if (!allowMigration) throw new Error('BOOKSHELF_VIEW_MODE_MISSING');
     // Only a truly absent local key may consult the legacy raw Asset field.
     // Never interpret load()'s former synthetic cover as a prior user choice.
     const legacy = version === LOCAL_CONFIG_VERSION ? null : await this.load();
@@ -171,14 +181,18 @@ export class WebDavCredentialStore {
     return mode;
   }
 
-  private async writeLocalViewMode(store: preferences.Preferences, mode: 'cover' | 'list'): Promise<void> {
+  private async writeLocalViewMode(store: preferences.Preferences, mode: 'cover' | 'list',
+    observation?: ReaderWriteEvidence, isCurrent: () => boolean = (): boolean => true): Promise<void> {
     const hadMode = await store.has(LOCAL_VIEW_MODE_KEY);
     const priorMode = await store.get(LOCAL_VIEW_MODE_KEY, 'cover');
     const priorVersion = await store.get(LOCAL_MIGRATION_KEY, 0);
+    if (!isCurrent()) throw new Error('BOOKSHELF_VIEW_MODE_RETIRED');
+    observation?.dispatched();
     try {
       await store.put(LOCAL_VIEW_MODE_KEY, mode);
       await store.put(LOCAL_MIGRATION_KEY, LOCAL_CONFIG_VERSION);
       await store.flush();
+      observation?.confirmed();
     } catch (error) {
       // Preferences keeps pending values in memory after a failed flush. Undo
       // those values so a later read cannot acknowledge an uncommitted choice.

@@ -1,4 +1,4 @@
-import { readerRecoveryView } from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
+import {actualModeHost,readerRecoveryView} from './lib/bookshelf-view-mode-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -20,6 +20,8 @@ const require = createRequire(import.meta.url);
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 syntax.componentCollection.customComponents.add('PageBackBar');
+syntax.componentCollection.customComponents.add('ReaderRecoveryNotice');
+syntax.propCollection.set('ReaderRecoveryNotice',new Set(['view','actionLabel']));
 syntax.propCollection.set('PageBackBar', new Set(['titleColor']));
 class Header { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
 let activeOwner, activeId;
@@ -27,7 +29,8 @@ const Toggle = new Proxy({ name: 'Toggle' }, { get: (target, key) => key === 'na
   if (key !== 'pop') activeOwner.nodes.get(activeId)[key] = args.length === 1 ? args[0] : args;
 } });
 let metrics = new ReaderWindowMetricsSnapshot();
-const deps = { readerRecoveryView, PageBackBar: Header, Toggle, ToggleType: { Switch: 'switch' },
+class Notice {constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});}}
+const deps = { readerRecoveryView,ReaderRecoveryNotice:Notice, PageBackBar: Header, Toggle, ToggleType: { Switch: 'switch' },
   ReaderWindowCoordinator: { metrics: () => metrics }, SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame,
   readerVisualSafeLeft, readerVisualSafeRight, readerInteractiveSafeLeft, readerInteractiveSafeRight,
   TOK_CONTENT_MAX_W_TABLET: 720, TOK_SCREEN_INSET: 19, TOK_SPACE_XS: 8, TOK_SPACE_MD: 16,
@@ -41,7 +44,7 @@ for (const [width, height, left, right, safeBottom] of [[365, 320, 0, 0, 0], [39
   metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, width, height), undefined,
     new ReaderInsetsVp(0, 48, 0, safeBottom), new ReaderInsetsVp(left, 0, right, 0));
   const owner = new Component(); let backs = 0; const updates = [], selections = [];
-  Object.assign(owner, { appThemeScheme: 'day', operation: {action:'load'}, mode: 'cover', error: '', autoCheckUpdate: true,
+  Object.assign(owner, { appThemeScheme: 'day', mode: 'cover', operation:{action:'load'}, error: '', autoCheckUpdate: true,
     readerWindowMetricsRevision: 1, onBack: () => { backs++; }, onAutoCheckUpdate: value => updates.push(value),
     selectMode: value => selections.push(value) });
   owner.initialRender();
@@ -82,37 +85,36 @@ for (const [width, height, left, right, safeBottom] of [[365, 320, 0, 0, 0], [39
   }
 }
 const retryOwner = new Component();
-const retries = [];
-Object.assign(retryOwner, { appThemeScheme: 'day', operation: {action:'load'}, mode: 'cover', error: '显示方式保存失败，点击重试',
-  requestedMode: 'list', autoCheckUpdate: true, readerWindowMetricsRevision: 1,
-  selectMode: mode => retries.push(mode) });
+const retries=[];
+Object.assign(retryOwner,{appThemeScheme:'day',mode:'cover',operation:{action:'load'},error:'pending',autoCheckUpdate:true,readerWindowMetricsRevision:1,
+ viewModeRecovery:()=>({visible:true,message:'pending',canRetry:true,generation:9}),retryMode:g=>retries.push(g)});
 retryOwner.initialRender();
-[...retryOwner.nodes.values()].find(node => node.type === 'Text' && node.create === retryOwner.error).onClick();
-assert.deepEqual(retries, ['list'], 'the visible retry keeps the last requested mode');
+const recovery=[...retryOwner.children.values()].find(c=>c instanceof Notice&&c.params.view?.visible);
+recovery.params.onReconcile(9);assert.deepEqual(retries,[9],'visible recovery retains operation identity and reads only');
 let persistedMode = 'cover';
 let prepare = async () => {}, saved = [], load = async () => persistedMode,
   save = async mode => { saved.push(mode); persistedMode = mode; };
 let fontRegistrations = 0;
-const Model = productionMotionMethods(file, ['aboutToAppear', 'aboutToDisappear', 'persistRequestedMode', 'selectMode'], {
-  registerReaderFonts: () => { fontRegistrations++; }, ReaderThemeHost: { prepareUserChange: () => prepare() },
-  WebDavCredentialStore: { instance: { loadBookshelfViewMode: () => load(), saveBookshelfViewMode: mode => save(mode) } },
+const Model = productionMotionMethods(file, ['aboutToAppear', 'aboutToDisappear', 'persistRequestedMode', 'selectMode','viewModeRecovery','applyModeSnapshot','loadMode','retryMode'], {
+  readerRecoveryView, registerReaderFonts: () => { fontRegistrations++; }, ReaderThemeHost: { prepareUserChange: () => prepare() },
+  WebDavCredentialStore: { instance: { currentBookshelfViewMode:()=>persistedMode, loadBookshelfViewMode: () => load(), saveBookshelfViewMode: mode => save(mode) } },
 });
 const mount = () => { const owner = Object.assign(new Model(), { mode: 'cover', revision: 0, error: '',
-  getUIContext: () => ({ getFont: () => ({}) }) }); owner.aboutToAppear(); return owner; };
+  getUIContext: () => ({ getFont: () => ({}) }),viewModeHost:actualModeHost({currentBookshelfViewMode:()=>persistedMode,loadBookshelfViewMode:()=>load(),saveBookshelfViewMode:mode=>save(mode)},()=>prepare()),viewModeSnapshot:{canonical:undefined} }); owner.aboutToAppear(); return owner; };
 const settle = () => new Promise(resolve => setImmediate(resolve));
 let owner = mount(); owner.selectMode('list'); assert.equal(owner.mode, 'list'); await settle();
 assert.deepEqual(saved, ['list']); assert.equal(owner.confirmed, 'list'); assert.equal(fontRegistrations, 1);
 save = async () => { throw new Error('disk'); }; owner.selectMode('cover'); await settle();
 assert.equal(owner.mode, 'list', 'failed optimistic change rolls back to the confirmed persisted mode');
-assert.equal(owner.error, '显示方式保存失败，点击重试'); assert.equal(owner.requestedMode, 'cover');
-load = async () => 'list'; owner.selectMode('cover'); await settle(); assert.equal(owner.mode, 'list');
-prepare = async () => { throw new Error('BOOKSHELF_RESTORE_PENDING'); }; owner.selectMode('cover'); await settle();
+assert.equal(owner.viewModeSnapshot.receipt.receipt.confirmation,'unknown');assert.match(owner.error,/等待核对/); assert.equal(owner.requestedMode, 'cover');
+load = async () => 'list'; owner=mount();owner.selectMode('cover'); await settle(); assert.equal(owner.mode, 'list');
+prepare = async () => { throw new Error('BOOKSHELF_RESTORE_PENDING'); }; owner=mount();owner.selectMode('cover'); await settle();
 assert.equal(owner.error, '请先在同步设置中重试未完成的恢复'); assert.equal(owner.mode, 'list');
 let release; prepare = () => new Promise(resolve => { release = resolve; }); saved = [];
 save = async mode => { saved.push(mode); }; owner = mount(); owner.selectMode('list');
-owner.aboutToDisappear(); release(); await settle(); assert.deepEqual(saved, []); assert.equal(owner.error, '');
+await settle();owner.aboutToDisappear(); release(); await settle(); assert.deepEqual(saved, []); assert.equal(owner.error, '');
 let firstRelease; let preparations = 0;
 prepare = () => ++preparations === 1 ? new Promise(resolve => { firstRelease = resolve; }) : Promise.resolve();
 load = async () => 'cover'; owner = mount(); owner.selectMode('list'); owner.selectMode('cover'); await settle();
-firstRelease(); await settle(); assert.deepEqual(saved, ['cover']); assert.equal(owner.mode, 'cover');
+firstRelease(); await settle();await settle(); assert.deepEqual(saved, ['cover']); assert.equal(owner.mode, 'cover');
 console.log('PASS SDK settings floating shared header/full viewport/content clearance/width/theme; async mode commit/rollback/stale admission and auto-update callbacks preserved');

@@ -1,9 +1,10 @@
+import { BookshelfViewModeHost, type BookshelfViewModeSnapshot } from './BookshelfViewModeHost';
+import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { readerRecoveryView } from '../../app/ReaderRecoveryProjection';
 import type { SettingsOperationProjection } from '../settings/SettingsHost';
 import { TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_LABEL, TYPE_APP_INHERITED_OPTION } from '../common/ReaderTypography';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
-import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PageBackBar } from '../common/PageBackBar';
@@ -29,6 +30,8 @@ export struct BookshelfSettingsPage {
   onBack: () => void = (): void => {};
   onAutoCheckUpdate: (enabled: boolean) => void = (_enabled: boolean): void => {};
   @State private error: string = '';
+  @State private viewModeSnapshot: BookshelfViewModeSnapshot = { canonical: undefined };
+  private readonly viewModeHost: BookshelfViewModeHost = BookshelfViewModeHost.instance;
   private revision: number = 0;
   private confirmed: string = 'cover';
   private requestedMode: 'cover' | 'list' = 'cover';
@@ -37,7 +40,12 @@ export struct BookshelfSettingsPage {
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
     this.mounted = true;
-    this.confirmed = this.mode;
+    const canonical = WebDavCredentialStore.instance.currentBookshelfViewMode();
+    this.confirmed = canonical ?? this.mode;
+    this.mode = this.confirmed;
+    this.viewModeSnapshot = this.viewModeHost.current();
+    this.error = this.viewModeRecovery().message;
+    if (canonical === undefined) this.loadMode();
   }
   aboutToDisappear(): void { this.mounted = false; this.revision += 1; }
 
@@ -60,8 +68,8 @@ export struct BookshelfSettingsPage {
               this.modeOption('list', '列表');
             }.width('100%');
             if (this.error.length > 0) {
-              Text(this.error).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-                .onClick((): void => this.selectMode(this.requestedMode));
+              ReaderRecoveryNotice({ view: this.viewModeRecovery(), actionLabel: '刷新显示方式',
+                onReconcile: (generation: number): void => this.retryMode(generation) });
             }
           }.padding(TOK_SPACE_MD).width('100%').backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
             .border({ width: 1, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(12);
@@ -97,23 +105,49 @@ export struct BookshelfSettingsPage {
       .onClick((): void => this.selectMode(value));
   }
 
+  private viewModeRecovery(): ReaderRecoveryView {
+    const view = readerRecoveryView(this.viewModeSnapshot.receipt, this.viewModeSnapshot.readFacts);
+    if (this.viewModeSnapshot.receipt?.facts.blockedReason === 'BOOKSHELF_RESTORE_PENDING') {
+      return { message: '请先在同步设置中重试未完成的恢复', visible: true, canRetry: false, generation: view.generation };
+    }
+    return view;
+  }
+
+  private applyModeSnapshot(snapshot: BookshelfViewModeSnapshot): void {
+    this.viewModeSnapshot = snapshot;
+    this.error = this.viewModeRecovery().message;
+    if (snapshot.canonical !== undefined) { this.confirmed = snapshot.canonical; this.mode = snapshot.canonical; }
+  }
+
+  private loadMode(): void {
+    const revision = ++this.revision;
+    void this.viewModeHost.load((): boolean => this.mounted && revision === this.revision).then((snapshot): void => {
+      if (snapshot !== undefined && this.mounted && revision === this.revision) this.applyModeSnapshot(snapshot);
+    });
+  }
+
+  private retryMode(generation: number): void {
+    const revision = this.revision;
+    void this.viewModeHost.reconcile(generation, (): boolean => this.mounted && revision === this.revision).then((snapshot): void => {
+      if (snapshot !== undefined && this.mounted && revision === this.revision) this.applyModeSnapshot(snapshot);
+    });
+  }
+
   private async persistRequestedMode(mode: 'cover' | 'list', revision: number): Promise<boolean> {
-    await ReaderThemeHost.prepareUserChange();
-    if (!this.mounted || revision !== this.revision) return false;
-    this.confirmed = await WebDavCredentialStore.instance.loadBookshelfViewMode();
-    if (!this.mounted || revision !== this.revision) return false;
-    await WebDavCredentialStore.instance.saveBookshelfViewMode(mode);
-    return true;
+    const snapshot = await this.viewModeHost.save(mode, (): boolean => this.mounted && revision === this.revision);
+    if (snapshot === undefined) return false;
+    if (snapshot.canonical !== undefined) this.confirmed = snapshot.canonical;
+    if (this.mounted && revision === this.revision) this.applyModeSnapshot(snapshot);
+    return snapshot.receipt?.receipt.confirmation === 'confirmed';
   }
 
   private selectMode(mode: 'cover' | 'list'): void {
+    if (!this.mounted || !this.viewModeHost.canSave()) return;
     const revision = ++this.revision;
     this.requestedMode = mode;
     this.mode = mode;
     this.error = '';
-    void this.persistRequestedMode(mode, revision).then((committed: boolean): void => {
-      if (committed) this.confirmed = mode;
-    }).catch((error: Error): void => {
+    void this.persistRequestedMode(mode, revision).catch((error: Error): void => {
       if (!this.mounted || revision !== this.revision) return;
       this.mode = this.confirmed;
       this.error = error.message === 'BOOKSHELF_RESTORE_PENDING' ?

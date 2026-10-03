@@ -1,3 +1,4 @@
+import {sharedTypographyReplacement} from './lib/reader-typography-shared-replacements.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { auditTypographyConsumers, typographyProperties } from './lib/reader-typography-consumer-audit.mjs';
@@ -19,7 +20,8 @@ for (const file of baseline.files) {
   const successor = typographySuccessorFile(baseline, file.path);
   for (const originalExpected of file.nodes) {
     const expected = typographySuccessorNode(originalExpected, successor);
-    const actual = consumers.find(node => !used.has(node) && node.method === (file.path.endsWith('/SettingsPage.ets') && expected.method === 'buildGeneral' ? 'operationFeedback' : expected.method) && node.kind === expected.kind &&
+    const replacement = sharedTypographyReplacement(file.path,expected,source);
+    const actual = replacement ?? consumers.find(node => !used.has(node) && node.method === (file.path.endsWith('/SettingsPage.ets') && expected.method === 'buildGeneral' ? 'operationFeedback' : expected.method) && node.kind === expected.kind &&
       node.modifiers.fontSize?.expression === expected.changes.fontSize);
     assert.ok(actual, `${file.path}/${expected.method}: actual SDK parsed consumer`);
     used.add(actual); sites.push({ expected, actual, file: file.path, method: `site${sites.length}` });

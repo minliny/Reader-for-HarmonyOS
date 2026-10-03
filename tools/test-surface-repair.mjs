@@ -1,3 +1,4 @@
+import {actualModeHost,readerRecoveryView} from './lib/bookshelf-view-mode-probe.mjs';
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
@@ -85,17 +86,18 @@ spin.foreground=false;assert.equal(spin.shouldAnimate(),false);
 spin.foreground=true;spin.reduceMotion=true;assert.equal(spin.shouldAnimate(),false);
 spin.reduceMotion=false;spin.active=false;assert.equal(spin.shouldAnimate(),false);
 console.log('PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership');
-const ShelfMode=productionMotionMethods(path('features/bookshelf/BookshelfPage.ets'),['setViewMode','retryViewMode','loadViewMode','persistRequestedViewMode'],{ReaderThemeHost:{prepareUserChange:async()=>{}}});
+const ShelfMode=productionMotionMethods(path('features/bookshelf/BookshelfPage.ets'),['setViewMode','retryViewMode','loadViewMode','persistRequestedViewMode','viewModeRecovery','applyViewModeSnapshot'],{readerRecoveryView});
 {
- const first=deferred(),second=deferred();let writes=0;
+ const first=deferred(),second=deferred();let writes=0,durableMode='cover';
  const shelf=Object.assign(new ShelfMode(),{mounted:true,viewModeRevision:0,confirmedViewMode:'cover',reduceMotion:true,
- webDavCredentials:{loadBookshelfViewMode:async()=> shelf.confirmedViewMode,saveBookshelfViewMode:()=> ++writes===1?first.promise:second.promise},
+ webDavCredentials:{loadBookshelfViewMode:async()=>durableMode,saveBookshelfViewMode:mode=>(++writes===1?first.promise:second.promise).then(()=>{durableMode=mode;})},
  resetViewSwitchMotion(){},setRestingProjectionOpacity(){},rebuildShelfProjection(){}});
+ shelf.viewModeHost=actualModeHost(shelf.webDavCredentials);shelf.viewModeSnapshot={canonical:undefined};
  shelf.setViewMode('list');await settle();first.resolve();await settle();shelf.setViewMode('cover');await settle();second.reject(Error('flush'));await settle();
  assert.equal(shelf.viewMode,'list','failed newest write rolls back to most recently ACKed value, not oldest baseline');
  assert.equal(shelf.requestedViewMode,'cover','retry retains failed requested value');
  let saves=0;shelf.viewModeReadFailed=true;shelf.webDavCredentials={loadBookshelfViewMode:async()=> 'list',saveBookshelfViewMode:async()=>saves++};
- shelf.retryViewMode();await settle();assert.equal(saves,0,'a failed initial read retries reading and cannot overwrite unknown durable choice');
+ shelf.viewModeHost=actualModeHost(shelf.webDavCredentials);shelf.loadViewMode();await settle();assert.equal(saves,0,'a failed initial read retries reading and cannot overwrite unknown durable choice');
  assert.equal(shelf.viewMode,'list');
 }
 

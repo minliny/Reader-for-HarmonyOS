@@ -1,3 +1,4 @@
+import {sharedTypographyReplacement} from './lib/reader-typography-shared-replacements.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -31,7 +32,8 @@ for (const file of baseline.files) {
       assert.ok(importedRoles.has(match[0]), `${file.path}: actual public semantic role import ${match[0]}`);
   const consumers = auditTypographyConsumers(source, file.path), used = new Set(), edits = [];
   for (const expected of expectedNodes) {
-    const actual = consumers.find(node => !used.has(node) && node.method === (file.path.endsWith('/SettingsPage.ets') && expected.method === 'buildGeneral' ? 'operationFeedback' : expected.method) && node.kind === expected.kind &&
+    const replacement = verifyMigrationSource ? undefined : sharedTypographyReplacement(file.path,expected,source);
+    const actual = replacement ?? consumers.find(node => !used.has(node) && node.method === (file.path.endsWith('/SettingsPage.ets') && expected.method === 'buildGeneral' ? 'operationFeedback' : expected.method) && node.kind === expected.kind &&
       (!verifyMigrationSource || node.text === expected.text) && node.modifiers.fontSize?.expression === expected.changes.fontSize);
     assert.ok(actual, `${file.path}/${expected.method}: actual production consumer, not a registration row`);
     used.add(actual); sites++;
@@ -42,7 +44,7 @@ for (const file of baseline.files) {
       assert.deepEqual(modifier.extra, expected.extra[property], `${file.path}/${property}: native variable-font options`);
       for (const scenario of scenarios) if (modifier.expression !== expected.original[property]) assert.equal(evaluate(modifier.expression, scenario), evaluate(expected.original[property], scenario),
         `${file.path}/${expected.method}/${property}: current physical tuple and responsive state`);
-      edits.push({ start: modifier.start, end: modifier.end, replacement: expected.original[property] }); argumentsChecked++;
+      if (replacement === undefined) edits.push({ start: modifier.start, end: modifier.end, replacement: expected.original[property] }); argumentsChecked++;
     }
   }
   const openSizes = consumers.filter(node => node.modifiers.fontSize && !isSharedTypographyExpression(node.modifiers.fontSize.expression))
