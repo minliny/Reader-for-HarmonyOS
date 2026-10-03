@@ -436,6 +436,7 @@
     "test-select-semantics.mjs",
     "test-settings-select-overlay.mjs",
     "test-settings-theme-icons.mjs",
+    "test-settings-theme-write-consumer.mjs",
     "test-shelf-resume-handoff.mjs",
     "test-shelf-source-name-resolution.mjs",
     "test-source-content-correction.mjs",

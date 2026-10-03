@@ -5,6 +5,7 @@ import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '../../app
 import { TYPE_APP_INHERITED_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_ACTION, TYPE_SETTINGS_CACHE_ACTION, TYPE_SETTINGS_DANGER_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
+import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 // Settings General — rebuilt 2026-08-05 against live Figma nodes
 // 943:2897 (Phone 390×844) / 943:3369 (Tablet 760×960).
 // Batch 3: 设置/偏好/行为/权限四个区块收敛到 CategorySection(Card+Heading+rows)，
@@ -86,6 +87,7 @@ export struct SettingsPage {
   @State private resetMessage: string = '';
   private readonly nativeAlertOwner: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
   private mounted: boolean = false;
+  private themeOwner: ReaderRuntimeOwner | undefined = undefined;
   private temporaryBackIdentity: string = '';
   onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string) => void =
     (_handler: (() => boolean) | undefined, _identity: string): void => {};
@@ -114,6 +116,8 @@ export struct SettingsPage {
 
   aboutToAppear(): void {
     this.mounted = true;
+    try { this.themeOwner = ReaderRuntimeOwner.current(); }
+    catch (_unavailable) { this.themeOwner = undefined; }
     registerReaderFonts(this.getUIContext().getFont());
     this.syncSnapshotValues();
     const identity = `settings-back:${++settingsSelectionGeneration}`;
@@ -124,6 +128,7 @@ export struct SettingsPage {
   aboutToDisappear(): void {
     const identity = this.temporaryBackIdentity;
     this.mounted = false;
+    this.themeOwner = undefined;
     this.temporaryBackIdentity = '';
     this.nativeAlertOwner.retire();
     this.resetRevision += 1;
@@ -356,20 +361,35 @@ export struct SettingsPage {
     Row({ space: 12 }) {
       this.labelColumn(label, icon);
 
-      ReaderSegmentedControl({
-        options: SEG_OPTIONS,
-        selectedIndex: this.themeIndex(),
-        onSelect: (index: number): void => {
-          void ReaderThemeHost.selectApp(index === 0 ? 'system' : index === 1 ? 'day' : 'night')
-            .catch((): void => { this.getUIContext().getPromptAction().showToast({ message: '主题保存失败，已恢复原配置' }); });
-        },
-      });
+      this.appThemeControl(this.temporaryBackIdentity);
     }
     .width('100%')
     .constraintSize({ minHeight: SELECT_ROW_H })
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Center)
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) });
+  }
+
+  @Builder
+  private appThemeControl(identity: string) {
+    ReaderSegmentedControl({
+      options: SEG_OPTIONS,
+      selectedIndex: this.themeIndex(),
+      onSelect: (index: number): void => this.selectAppTheme(index, identity),
+    });
+  }
+
+  private selectAppTheme(index: number, identity: string): void {
+    const current = (): boolean => this.mounted && identity === this.temporaryBackIdentity &&
+      ReaderRuntimeOwner.isCurrent(this.themeOwner);
+    if (!current()) return;
+    void ReaderThemeHost.selectApp(index === 0 ? 'system' : index === 1 ? 'day' : 'night')
+      .catch((): void => {
+        if (!current()) return;
+        try { this.getUIContext().getPromptAction().showToast({
+          message: '主题保存尚未确认，当前选择已保留，请稍后重试',
+        }); } catch (_notice) { /* Native feedback cannot rewrite the accepted choice. */ }
+      });
   }
 
   // 行内左列: icon 盒 + label, 间距统一 12 (与 CategoryRow 同构)。
