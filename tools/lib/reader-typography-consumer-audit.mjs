@@ -36,3 +36,29 @@ export function auditTypographyConsumers(source, file = '/tmp/TypographyConsumer
   walk(parsed);
   return [...groups.values()].sort((a, b) => a.line - b.line);
 }
+
+/** Recognise complete role/spec arguments, rather than a TYPE_ substring.
+ * Mixed public/private ternaries and page-local numeric overrides stay debt.
+ * The sole conventional arithmetic exception is the existing proportional
+ * cover geometry; its base font tuple remains owned by the public role. */
+export function isSharedTypographyExpression(expression) {
+  if (expression === 'TYPE_SHELF_COVER_PLACEHOLDER.fontSizeFp * this.coverWidth / 96.96' ||
+      expression === '(TYPE_SHELF_COVER_PLACEHOLDER.lineHeightFp as number) * this.coverWidth / 96.96') return true;
+  const parsed = ts.createSourceFile('/tmp/TypographyArgument.ts', `const value = (${expression});`, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  if (parsed.parseDiagnostics.length) return false;
+  const root = parsed.statements[0]?.declarationList?.declarations[0]?.initializer;
+  const visit = node => {
+    if (!node) return false;
+    if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node)) return visit(node.expression);
+    if (ts.isConditionalExpression(node)) return visit(node.whenTrue) && visit(node.whenFalse);
+    if (ts.isPropertyAccessExpression(node)) {
+      if (ts.isIdentifier(node.expression) && /^TYPE_\w+$/.test(node.expression.text)) return true;
+      const callee = node.expression;
+      if (ts.isCallExpression(callee) && ts.isPropertyAccessExpression(callee.expression) &&
+          callee.expression.expression.kind === ts.SyntaxKind.ThisKeyword &&
+          ['textStyle', 'optionTextStyle', 'surfaceSpec', 'spec'].includes(callee.expression.name.text)) return true;
+    }
+    return false;
+  };
+  return visit(root);
+}

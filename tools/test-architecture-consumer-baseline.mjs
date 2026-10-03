@@ -7,6 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { auditTypographyConsumers, isSharedTypographyExpression } from './lib/reader-typography-consumer-audit.mjs';
 
 const root = process.cwd();
 const baseline = JSON.parse(fs.readFileSync(path.join(root, 'tools/architecture-consumer-baseline.json'), 'utf8'));
@@ -37,7 +38,13 @@ for (const file of walk(featureRoot)) {
   const text = fs.readFileSync(file, 'utf8');
   const previous = base.get(rel) ?? {};
   for (const [name, pattern] of Object.entries(patterns)) {
-    const current = (text.match(pattern) ?? []).length;
+    // A public role/spec consumer is not a new private font implementation.
+    // Use the real ETS AST; lexical count also charged shared calls/comments
+    // against legacy budgets and rejected newly honest feedback surfaces.
+    const current = name === 'fontSize' && /\.fontSize\s*\(/.test(text)
+      ? auditTypographyConsumers(text, rel).filter(node => node.modifiers.fontSize &&
+        !isSharedTypographyExpression(node.modifiers.fontSize.expression)).length
+      : name === 'fontSize' ? 0 : (text.match(pattern) ?? []).length;
     if (current > (previous[name] ?? 0)) {
       violations.push(`${rel}: ${name} ${current} > baseline ${previous[name] ?? 0}`);
     }

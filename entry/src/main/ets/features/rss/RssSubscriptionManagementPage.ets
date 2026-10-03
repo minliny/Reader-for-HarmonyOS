@@ -1,3 +1,4 @@
+import { TYPE_FORM_COMPACT_ACTION, TYPE_SOURCE_MANAGEMENT_META, TYPE_SOURCE_MANAGEMENT_TITLE } from '../common/ReaderTypography';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PageBackBar } from '../common/PageBackBar';
@@ -130,9 +131,9 @@ export struct RssSubscriptionManagementPage {
           .width(14)
           .height(14);
         Text('添加')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(11)
+          .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)
+          .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)
+          .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
           .maxLines(1);
       }
@@ -153,19 +154,19 @@ export struct RssSubscriptionManagementPage {
       Row({ space: TOK_SPACE_XS }) {
         Text(this.feedbackMessage())
           .layoutWeight(1)
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(10)
-          .lineHeight(12.5)
+          .fontFamily(TYPE_SOURCE_MANAGEMENT_META.fontFamily)
+          .fontWeight(TYPE_SOURCE_MANAGEMENT_META.fontWeight)
+          .fontSize(TYPE_SOURCE_MANAGEMENT_META.fontSizeFp)
+          .lineHeight(TYPE_SOURCE_MANAGEMENT_META.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
         if (this.canRetryFeedback()) {
           Text(this.hasOperationFeedback() ? '刷新列表' : '重试')
             .height(36)
             .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
             .textAlign(TextAlign.Center)
-            .fontFamily('ReaderNotoSansSC')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(11)
+            .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)
+            .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)
+            .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)
             .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
             .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
             .borderRadius(8)
@@ -211,10 +212,10 @@ export struct RssSubscriptionManagementPage {
     Column({ space: TOK_SPACE_XS }) {
       Text(`${this.items.length} 个订阅源 · ${this.enabledCount()} 个启用 · ${this.disabledCount()} 个停用`)
         .width('100%')
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(10)
-        .lineHeight(12.5)
+        .fontFamily(TYPE_SOURCE_MANAGEMENT_META.fontFamily)
+        .fontWeight(TYPE_SOURCE_MANAGEMENT_META.fontWeight)
+        .fontSize(TYPE_SOURCE_MANAGEMENT_META.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_MANAGEMENT_META.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -234,9 +235,9 @@ export struct RssSubscriptionManagementPage {
       .layoutWeight(1)
       .height(36)
       .textAlign(TextAlign.Center)
-      .fontFamily('ReaderNotoSansSC')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(11)
+      .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)
+      .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)
+      .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)
       .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
       .borderRadius(8)
@@ -284,19 +285,19 @@ export struct RssSubscriptionManagementPage {
         Column({ space: 3 }) {
           Text(item.title)
             .width('100%')
-            .fontFamily('ReaderNotoSansSC')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(13)
-            .lineHeight(15.34)
+            .fontFamily(TYPE_SOURCE_MANAGEMENT_TITLE.fontFamily)
+            .fontWeight(TYPE_SOURCE_MANAGEMENT_TITLE.fontWeight)
+            .fontSize(TYPE_SOURCE_MANAGEMENT_TITLE.fontSizeFp)
+            .lineHeight(TYPE_SOURCE_MANAGEMENT_TITLE.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
           Text(item.meta)
             .width('100%')
-            .fontFamily('ReaderNotoSansSC')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(10)
-            .lineHeight(12.5)
+            .fontFamily(TYPE_SOURCE_MANAGEMENT_META.fontFamily)
+            .fontWeight(TYPE_SOURCE_MANAGEMENT_META.fontWeight)
+            .fontSize(TYPE_SOURCE_MANAGEMENT_META.fontSizeFp)
+            .lineHeight(TYPE_SOURCE_MANAGEMENT_META.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -371,9 +372,9 @@ export struct RssSubscriptionManagementPage {
         .width(16)
         .height(16);
       Text(label)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(11)
+        .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)
+        .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)
+        .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)
         .fontColor(danger ? readerAppColor('TOK_DANGER', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1);
     }

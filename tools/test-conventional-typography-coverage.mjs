@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
-import { auditTypographyConsumers } from './lib/reader-typography-consumer-audit.mjs';
+import { auditTypographyConsumers, isSharedTypographyExpression } from './lib/reader-typography-consumer-audit.mjs';
 
 const root = new URL('../entry/src/main/ets/features/', import.meta.url);
 // This is explicit migration debt, not a permanent rendering exception. Missing
@@ -25,17 +25,19 @@ for (const [property, expression] of Object.entries({
   fontFamily: "opt === this.renderedValue() ? 'ReaderNotoSansSCUIBold' : 'ReaderNotoSansSCUIRegular'",
   fontWeight: 'opt === this.renderedValue() ? FontWeight.Bold : FontWeight.Regular', fontSize: '11', lineHeight: '13',
 })) allow('common/ReaderSelectPanel.ets', 'appearanceLibraryOption', property, expression, 1, 'integrator owns the concurrent real shared choice-row migration');
+for (const [method, role] of [['phoneOption', 'TYPE_SETTINGS_SELECT_PHONE_OPTION'], ['tabletOption', 'TYPE_SETTINGS_SELECT_TABLET_OPTION']])
+  allow('settings/SettingsSelectOverlay.ets', method, 'fontWeight', `this.isSelected(option) ? FontWeight.Bold : ${role}.fontWeight`, 1, 'integrator owns the shared choice-row selected-weight migration');
 allow('common/ReaderDialogSurface.ets', 'header', 'fontWeight', 'FontWeight.Bold', 2, 'public Dialog spec has family/size/line box but still lacks its fontWeight getter');
 allow('bookshelf/BookshelfBookActionSheet.ets', 'build', 'fontWeight', 'FontWeight.Bold', 1, 'public Sheet spec needs a title weight getter');
 allow('bookshelf/BookshelfBookActionSheet.ets', 'actionSlot', 'fontWeight', 'FontWeight.Bold', 1, 'public Sheet spec needs an action weight getter');
-allow('bookshelf/BookshelfMoreMenu.ets', 'action', 'fontWeight', 'FontWeight.Medium', 1, 'integrator owns the shared action-menu/spec migration');
+allow('common/ReaderActionMenuSurface.ets', 'actionRow', 'fontWeight', 'FontWeight.Medium', 1, 'integrator moved the actual shared action row; weight getter remains pending');
 let files = 0, consumers = 0, sharedArguments = 0, privateArguments = 0;
 for (const file of readdirSync(root, { recursive: true }).filter(file => file.endsWith('.ets') && !file.startsWith('reading/'))) {
   files++;
   for (const node of auditTypographyConsumers(readFileSync(new URL(file, root), 'utf8'), file)) {
     consumers++;
     for (const [property, modifier] of Object.entries(node.modifiers)) {
-      if (/TYPE_|this\.(?:textStyle|optionTextStyle|surfaceSpec|spec)\(\)/.test(modifier.expression)) { sharedArguments++; continue; }
+      if (isSharedTypographyExpression(modifier.expression)) { sharedArguments++; continue; }
       const receipt = debt.get(JSON.stringify([file, node.method, property, modifier.expression]));
       assert.ok(receipt, `${file}:${node.line}/${property}: new private style must consume the public role/spec (${modifier.expression})`);
       assert.ok(++receipt.count <= receipt.maximum, `${file}/${node.method}: no duplicated private migration debt`); privateArguments++;
