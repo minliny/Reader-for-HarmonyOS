@@ -3,7 +3,7 @@ import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import type { BookshelfState } from '../../app/ReaderCoreGateway';
 import { BookshelfFlowGateway } from './BookshelfFlowGateway';
 import { BookshelfCatalogUpdate, type BookshelfCatalogProgress } from './BookshelfCatalogUpdate';
-import type { RemoteReadingSession } from '../reading/RemoteReadingContract';
+import type { RemoteReadingSession } from '../reading/RemoteReadingFlowGateway';
 import { BookshelfReadOwner, type BookshelfReadResult } from './BookshelfReadOwner';
 import type { BookshelfDataState, BookshelfFilter } from './BookshelfFlowGateway';
 import { BookshelfOperationOwner, type BookshelfOperationSnapshot } from './BookshelfOperationOwner';
