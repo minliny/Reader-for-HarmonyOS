@@ -898,6 +898,23 @@ struct Index {
     });
   }
 
+  @Builder
+  private discoverPageContent() {
+    DiscoverPage({
+      presentation: this.discoverPresentation,
+      isTablet: deviceInfo.deviceType === 'tablet',
+      onBack: (): void => this.returnToBookshelf(),
+      onRssRequested: (): void => this.openRss(),
+      onSettingsRequested: (): void => this.openSettings(),
+      onRetryRead: (generation: number): void => this.getDiscoverOrchestrator().retryRead(generation),
+      onRefresh: (): void => this.getDiscoverOrchestrator().refresh(),
+      onCycleSource: (): void => this.getDiscoverOrchestrator().cycleSource(),
+      onSelectKind: (index: number): void => this.getDiscoverOrchestrator().selectKind(index),
+      onPreviousPage: (): void => this.getDiscoverOrchestrator().previousPage(),
+      onNextPage: (): void => this.getDiscoverOrchestrator().nextPage(),
+    });
+  }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       if (this.route === 'bookshelf') {
@@ -1004,18 +1021,7 @@ struct Index {
           onOpenOriginal: (): void => this.onRssOpenOriginalRequested(),
         });
       } else if (isReaderProductSurfaceEnabled('discover') && this.route === 'discover') {
-        DiscoverPage({
-          presentation: this.discoverPresentation,
-          isTablet: deviceInfo.deviceType === 'tablet',
-          onBack: (): void => this.returnToBookshelf(),
-          onRssRequested: (): void => this.openRss(),
-          onSettingsRequested: (): void => this.openSettings(),
-          onRefresh: (): void => this.getDiscoverOrchestrator().refresh(),
-          onCycleSource: (): void => this.getDiscoverOrchestrator().cycleSource(),
-          onSelectKind: (index: number): void => this.getDiscoverOrchestrator().selectKind(index),
-          onPreviousPage: (): void => this.getDiscoverOrchestrator().previousPage(),
-          onNextPage: (): void => this.getDiscoverOrchestrator().nextPage(),
-        });
+        this.discoverPageContent();
       } else if (this.route === 'settings') {
         this.settingsContent();
       } else if (this.route === 'rulesManagement') {
@@ -1370,12 +1376,13 @@ struct Index {
   }
 
   private getDiscoverOrchestrator(): DiscoverOrchestrator {
-    if (this.discoverOrchestrator === undefined) {
+    const owner = ReaderRuntimeOwner.current();
+    if (this.discoverOrchestrator === undefined || !this.discoverOrchestrator.owns(owner)) {
       this.discoverOrchestrator = new DiscoverOrchestrator(
         (presentation: DiscoverPresentation): void => {
-          this.discoverPresentation = presentation;
+          if (this.route === 'discover' && owner === ReaderRuntimeOwner.current()) this.discoverPresentation = presentation;
         },
-        (): boolean => this.route === 'discover',
+        (): boolean => this.route === 'discover' && owner === ReaderRuntimeOwner.current(), owner,
       );
     }
     return this.discoverOrchestrator;

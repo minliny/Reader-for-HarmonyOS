@@ -1,10 +1,11 @@
+import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { TYPE_APP_SECTION_LABEL, TYPE_APP_SEGMENT_LABEL, TYPE_APP_SMALL_LABEL, TYPE_DISCOVER_AUTHOR, TYPE_DISCOVER_CATEGORY, TYPE_DISCOVER_FILTER_LABEL, TYPE_DISCOVER_FILTER_VALUE, TYPE_DISCOVER_INTRO, TYPE_DISCOVER_RANK_TITLE, TYPE_DISCOVER_SOURCE_META, TYPE_DISCOVER_STATE_TITLE, TYPE_DISCOVER_STATUS } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 // Discover main page — rebuilt 2026-08-06 against live Figma node 376:2
 // (Reference/Discover/Phone · 390×844).
-// Data honesty: source.explore results do not exist in the app yet, so the
-// source card carries a neutral 书源 label and the result list renders an
-// empty state. No book rows are fabricated.
+// Core owns source.explore data. Retained source/category/page identities
+// remain coherent while a newer read fails; no book rows are fabricated.
 // Icons: existing media only (no new SVG assets).
 
 import { MainTabShell } from '../shell/MainTabShell';
@@ -61,6 +62,7 @@ export struct DiscoverPage {
   onBack: () => void = (): void => {};
   onRssRequested: () => void = (): void => {};
   onSettingsRequested: () => void = (): void => {};
+  onRetryRead: (generation: number) => void = (_generation: number): void => {};
   onRefresh: () => void = (): void => {};
   onCycleSource: () => void = (): void => {};
   onSelectKind: (index: number) => void = (_index: number): void => {};
@@ -112,6 +114,7 @@ export struct DiscoverPage {
   private discoverContent() {
     Scroll() {
       Column({ space: 7 }) {
+        this.operationFeedback();
         this.currentSourceCard();
         this.categoryChips();
         this.filterRow();
@@ -127,6 +130,19 @@ export struct DiscoverPage {
     .align(Alignment.Top)
     .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
     .scrollBar(BarState.Off);
+  }
+
+  private recovery(): ReaderRecoveryView {
+    const operation = this.presentation.operation;
+    if (operation === undefined || (operation.fact !== 'failed' && operation.fact !== 'refreshFailed' &&
+      operation.fact !== 'partial')) return { message: '', visible: false, canRetry: false, generation: 0 };
+    return readerRecoveryView(undefined, operation);
+  }
+
+  @Builder
+  private operationFeedback() {
+    ReaderRecoveryNotice({ view: this.recovery(),
+      onReconcile: (generation: number): void => this.onRetryRead(generation) });
   }
 
   private bottomContentInset(): number {
@@ -319,7 +335,7 @@ export struct DiscoverPage {
       } else {
         ForEach(this.presentation.books, (book: DiscoverBook) => {
           this.resultRow(book);
-        }, (book: DiscoverBook): string => `discover-book-${book.bookId}`);
+        }, (book: DiscoverBook): string => JSON.stringify([book.sourceId, book.bookId]));
       }
       this.paginationRow();
     }
