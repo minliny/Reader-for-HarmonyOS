@@ -1,3 +1,4 @@
+import { ReaderReadingImageResources, sameReaderReadingImageResource } from '../../entry/src/main/ets/features/reading/ReaderReadingImageResources.ts';
 import { ReaderNativeAlertOwner, ReaderNativeAlertLease } from '../../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
 import { readingChapterLayoutMap } from '../../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
 import { hasKnownReadingImageGeometry } from '../../entry/src/main/ets/features/reading/ReadingChapterWindow.ts';
@@ -23,8 +24,8 @@ const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 export function productionMotionMethods(file, names, dependencies = {}) {
   const fixtureRuntime = { captureReadingContentValidity: () => () => true, waitForReadingContentIdle: async () => {} };
   dependencies = { readerAppColor, readerThemeDefinition, readingChapterLayoutMap, hasKnownReadingImageGeometry, errorMessageOf,
-    ...readerTypographyRoles, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner, ReaderStartupContentOwner, ReaderProgressProducerHost, ReaderNativeAlertOwner, ReaderNativeAlertLease,
-    ReaderRuntimeOwner: runtimeOwnerIdentityProbe(() => fixtureRuntime), ...dependencies };
+    ...readerTypographyRoles, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner, ReaderStartupContentOwner, ReaderProgressProducerHost, ReaderNativeAlertOwner, ReaderNativeAlertLease, ReaderReadingImageResources, sameReaderReadingImageResource,
+    hilog: { error() {} }, ReaderRuntimeOwner: runtimeOwnerIdentityProbe(() => fixtureRuntime), ...dependencies };
   // Older fixtures inject current() as the instance-storage seam. Keep their
   // IO stub, but execute the actual production isCurrent predicate. The
   // original current() remains untouched, including its throwing behavior.
@@ -38,15 +39,19 @@ export function productionMotionMethods(file, names, dependencies = {}) {
   assert.equal(tree.parseDiagnostics.length, 0, `${file}: ETS parses`);
   const type = tree.statements.find(n => n.members && names.every(name => n.members.some(m => m.name?.getText(tree) === name)));
   assert.ok(type, `production methods: ${names.join(', ')}`);
+  // Preserve the actual captured allocator initializer only for the reader
+  // struct declaring it. Non-reader probes must not acquire a reader Runtime.
+  const imageOwnerField = type.members.find(m => m.name?.getText(tree) === 'readingImageResources');
+  const capturedImageOwner = imageOwnerField ? imageOwnerField.getText(tree) : '';
   // Keep newly factored business helpers real in existing method-level probes.
   // Fixtures can still supply their explicit I/O/lifecycle dependencies.
   names = [...names];
   let expanded;
   do {
     expanded = false;
-    for (const helper of ['consumeTemporaryBackBridge', 'isCurrentRuntime', 'showReaderAlert', 'showIndexAlert', 'isMountedToken', 'isSelectionCurrent', 'preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent']) {
+    for (const helper of ['errorMessage', 'consumeTemporaryBackBridge', 'isCurrentRuntime', 'showReaderAlert', 'showIndexAlert', 'isMountedToken', 'isSelectionCurrent', 'preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent']) {
     if (!names.includes(helper) && type.members.some(m => m.name?.getText(tree) === helper) &&
-      type.members.some(m => names.includes(m.name?.getText(tree)) && m.getText(tree).includes(`this.${helper}(`))) { names.push(helper); expanded = true; }
+      (capturedImageOwner.includes(`this.${helper}(`) || type.members.some(m => names.includes(m.name?.getText(tree)) && m.getText(tree).includes(`this.${helper}(`)))) { names.push(helper); expanded = true; }
     }
   } while (expanded);
   const methods = names.flatMap(name => type.members.filter(m => m.name?.getText(tree) === name).map(m => m.getText(tree))).join('\n');
@@ -54,7 +59,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
     paragraphLayout = new ReaderParagraphLayoutOwner(); physicalPagination = new ReaderPhysicalPaginationOwner();
     progressProducers = new ReaderProgressProducerHost();
     nativeAlertOwner = new ReaderNativeAlertOwner();
-    nativeTextMeasurement = { clear() {} }; nativeParagraphResources = { close() {}, retain() {} }; ${methods} }`)}; return Probe;`)(...Object.values(dependencies));
+    nativeTextMeasurement = { clear() {} }; nativeParagraphResources = { close() {}, retain() {} }; ${capturedImageOwner} ${methods} }`)}; return Probe;`)(...Object.values(dependencies));
   // Existing probes describe pre-refactor component fields. Route those fixture
   // assignments to the real production owners; no production struct accessors
   // or duplicated batching/index-admission algorithm is introduced.

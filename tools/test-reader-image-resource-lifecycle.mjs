@@ -17,6 +17,7 @@ const ResourceReader = productionMotionMethods(file, ['adoptReadingImage', 'rele
 });
 function image(uri, pixelMap, state = 'ready') { return { fileUri: uri, pixelMap, state }; }
 function fixture() {
+  staticAvailable = true; // A new component is constructed before its Runtime retires.
   const resources = new ReaderReadingImageResources(allocator, () => {
     events.push(['release-diagnostic']); if (diagnosticFails) throw Error('diagnostic unavailable');
   });
@@ -74,6 +75,7 @@ for (const brokenDiagnostics of [false, true]) {
   const f = fixture();
   f.owner.adoptReadingImage(image('file:///partial'));
   f.owner.adoptReadingImage(image('file:///ok'));
+  staticAvailable = false;
   f.owner.aboutToDisappear();
   assert.equal(f.resources.releaseFailures(), 1, 'a thrown release is recorded, not claimed confirmed or blindly replayed');
   assert.ok(events.some(e => e[0] === 'measurement-clear'));
