@@ -35,3 +35,8 @@ the old fields/method body. Source/local tests are not ArkTS/HAP, actual Want
 grant/reconstruction, device focus, visual or user acceptance. New fault copy
 for a throwing route/exit adapter must be recorded for the postponed UI review;
 normal UI geometry and normal workflow copy stay the current-app baseline.
+# Reader exit receipt identity (2026-10-03)
+
+Independent review found that a bare `exitId` cannot distinguish an old physical reader's delayed exit/cancel from a reopened reader's pending file-open exit. The navigation view now consumes the existing ReaderShell identity `JSON.stringify([sourceId, bookId, readingReadyGeneration])`. The Host fixes that identity before requesting the existing serialized exit; `readerExited(identity)` and `cancelExit(identity)` accept only that reader and the still-current queue head in the original mounted Runtime. A successor entry may request its own exit without allowing the old receipt to acknowledge its file result. The persistent reader tree and existing progress-exit controller remain unchanged.
+
+The actual queue/Host probe covers same-book reopen, old physical exit/cancel, successor settlement and a replaced queue head. Consumer wiring must pass the immutable identity from the existing ReaderShell callback; deriving it from current Index inside a delayed callback would defeat this contract. SDK/target consumer exits remain open until that wiring is verified.

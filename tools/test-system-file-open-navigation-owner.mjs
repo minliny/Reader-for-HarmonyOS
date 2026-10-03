@@ -11,7 +11,7 @@ const book = { sourceId: 'local', bookId: 'local:fixture', title: '本地书', c
 
 function fixture(text = source) {
   const owner = {}, runtime = { current: owner }, events = [];
-  const view = { foreground: true, reading: false, navigationGeneration: 1, switchBlocked: false };
+  const view = { foreground: true, reading: false, navigationGeneration: 1, readerIdentity: 'reader-entry-1', switchBlocked: false };
   let queue = new ReaderSystemFileOpenQueue(async () => ({ book }));
   const bridge = { peek: () => queue.peek(), subscribe: cb => queue.subscribe(cb), acknowledge: id => { events.push(['ack', id]); queue.acknowledge(id); } };
   const Owner = new Function('ReaderRuntimeOwner', 'ReaderSystemFileOpenHost', stripTypeScriptTypes(text
@@ -44,10 +44,34 @@ function fixture(text = source) {
   assert.deepEqual(f.events, []);
   f.view.requestExit = reason => { assert.equal(reason, 'navigation'); f.events.push(['exit']); f.host.consume(); };
   f.host.consume(); f.host.consume(); assert.deepEqual(f.events, [['exit']]);
-  assert.equal(f.host.hasPendingExit(), true); assert.equal(f.host.readerExited(), true); assert.equal(f.host.readerExited(), false);
+  assert.equal(f.host.hasPendingExit(), true); assert.equal(f.host.readerExited(f.view.readerIdentity), true); assert.equal(f.host.readerExited(f.view.readerIdentity), false);
   f.view.reading = false; f.host.consume(); assert.deepEqual(f.events.map(e => e[0]), ['exit', 'open', 'ack']);
-  f.view.reading = true; await f.enqueue(); f.host.consume(); f.host.cancelExit();
+  f.view.reading = true; await f.enqueue(); f.host.consume(); f.host.cancelExit(f.view.readerIdentity);
   assert.equal(f.peek(), undefined); assert.equal(f.host.hasPendingExit(), false); f.dispose();
+}
+// The serialized reader reports its immutable entry identity. A delayed exit
+// or cancel from an old physical ReaderShell cannot consume a successor's
+// retained Want result, even when the reader reopened the very same book.
+for (const cancel of [false, true]) {
+  const f = fixture(); f.view.reading = true; f.view.book = book;
+  f.view.requestExit = () => f.events.push(['exit', f.view.readerIdentity]);
+  await f.enqueue(); f.host.mount(); const old = f.view.readerIdentity;
+  f.view.readerIdentity = 'reader-entry-2'; f.view.navigationGeneration++;
+  assert.equal(f.host.hasPendingExit(), false); f.host.consume();
+  const settle = id => cancel ? f.host.cancelExit(id) : f.host.readerExited(id);
+  const before = f.events.length;
+  assert.equal(settle(old), false); assert.equal(f.events.length, before);
+  assert.ok(f.peek()); assert.equal(f.host.hasPendingExit(), true);
+  assert.equal(settle(f.view.readerIdentity), true);
+  if (cancel) assert.equal(f.peek(), undefined); else assert.ok(f.peek());
+  f.dispose();
+}
+// Same reader identity cannot consume a different queued result's ticket.
+{
+  const f = fixture(); f.view.reading = true; f.view.book = book;
+  f.view.requestExit = () => f.events.push(['exit']); await f.enqueue(); f.host.mount();
+  await f.enqueue({ book }, 'file://provider/next.txt');
+  assert.equal(f.host.cancelExit(f.view.readerIdentity), false); assert.ok(f.peek()); f.dispose();
 }
 {
   const f = fixture(); f.view.switchBlocked = true; await f.enqueue(); f.host.mount(); f.host.consume();

@@ -7,6 +7,8 @@ export interface SystemFileOpenNavigationView {
   foreground: boolean;
   reading: boolean;
   navigationGeneration: number;
+  /** Existing persistent ReaderShell identity, including its entry generation. */
+  readerIdentity: string;
   book?: SystemFileOpenReaderIdentity;
   switchBlocked: boolean;
   requestExit?: (reason: 'navigation') => void;
@@ -28,6 +30,7 @@ export class ReaderSystemFileOpenNavigationHost {
   private mountGeneration: number = 0;
   private unsubscribe: (() => void) | undefined;
   private exitId: number = 0;
+  private exitReaderIdentity: string = '';
   private noticeId: number = 0;
   private applying: boolean = false;
   private checking: string = '';
@@ -54,24 +57,30 @@ export class ReaderSystemFileOpenNavigationHost {
     this.checking = '';
     this.checked = '';
     this.exitId = 0;
+    this.exitReaderIdentity = '';
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     // Do not acknowledge or discard a retained queue result for a rebuilt UI.
   }
 
-  hasPendingExit(): boolean { return this.admitted() && this.exitId > 0; }
+  hasPendingExit(): boolean {
+    return this.admitted() && this.exitId > 0 && this.exitReaderIdentity === this.currentView()?.readerIdentity;
+  }
 
-  readerExited(): boolean {
-    if (!this.admitted() || this.exitId === 0) return false;
+  readerExited(readerIdentity: string): boolean {
+    if (!this.currentExit(readerIdentity)) return false;
     this.exitId = 0;
+    this.exitReaderIdentity = '';
     return true;
   }
 
-  cancelExit(): void {
-    if (!this.admitted()) return;
+  cancelExit(readerIdentity: string): boolean {
+    if (!this.currentExit(readerIdentity)) return false;
     const id = this.exitId;
     this.exitId = 0;
+    this.exitReaderIdentity = '';
     if (id > 0 && ReaderSystemFileOpenHost.peek()?.id === id) ReaderSystemFileOpenHost.acknowledge(id);
+    return true;
   }
 
   consume(): void {
@@ -124,8 +133,10 @@ export class ReaderSystemFileOpenNavigationHost {
         }
         return;
       }
-      if (view.requestExit !== undefined && this.exitId !== result.id) {
+      if (view.requestExit !== undefined && view.readerIdentity.length > 0 &&
+        (this.exitId !== result.id || this.exitReaderIdentity !== view.readerIdentity)) {
         this.exitId = result.id;
+        this.exitReaderIdentity = view.readerIdentity;
         try { view.requestExit('navigation'); } catch (_) {
           // The callback may already have accepted an exit. Retain its id and
           // the saved book; do not blindly request exit again after a throw.
@@ -154,6 +165,11 @@ export class ReaderSystemFileOpenNavigationHost {
 
   private currentView(): SystemFileOpenNavigationView | undefined {
     try { return this.adapter.view(); } catch (_) { return undefined; }
+  }
+  private currentExit(readerIdentity: string): boolean {
+    return this.admitted() && readerIdentity.length > 0 && this.exitId > 0 &&
+      readerIdentity === this.exitReaderIdentity && readerIdentity === this.currentView()?.readerIdentity &&
+      ReaderSystemFileOpenHost.peek()?.id === this.exitId;
   }
   private admitted(): boolean {
     try { return this.mounted && ReaderRuntimeOwner.isCurrent(this.owner) && this.adapter.isCurrent(); }
