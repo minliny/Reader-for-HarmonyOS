@@ -114,8 +114,8 @@ assert.doesNotMatch(entryDetail, /MainTabShell/);
 assert.doesNotMatch(entryDetail, /actionTarget\('已读'|actionTarget\('移除收藏'/);
 assert.doesNotMatch(entryDetail, /已解析正文|原文条目/);
 assert.doesNotMatch(entryDetail, /Text\(this\.item\.description\)/);
-assert.match(index, /onSelectSubscription: \(id: string\): void =>\s*(?:\{ if \(this\.isCurrentRssPresentation\([^;\n]+\)\) )?this\.onRssSubscriptionSelected\(id\)/);
-assert.match(index, /onSelectItem: \(subscriptionId: string, guid: string\): void =>\s*(?:\{ if \(this\.isCurrentRssPresentation\([^;\n]+\)\) )?this\.onRssItemSelected\(subscriptionId, guid\)/);
+assert.match(index, /onSelectSubscription: \(id: string\): void =>\s*(?:\{ if \(this\.isCurrentRssHostPresentation\([^;\n]+\)\) )?this\.onRssSubscriptionSelected\(id\)/);
+assert.match(index, /onSelectItem: \(subscriptionId: string, guid: string\): void =>\s*(?:\{ if \(this\.isCurrentRssHostPresentation\([^;\n]+\)\) )?this\.onRssItemSelected\(subscriptionId, guid\)/);
 assert.match(rss, /onSelectItem: \(subscriptionId: string, guid: string\) => void/);
 assert.match(rss, /rss-item-\$\{item\.subscriptionId\.length\}:\$\{item\.subscriptionId\}-\$\{item\.guid\.length\}:\$\{item\.guid\}/);
 assert.match(rss, /this\.onSelectItem\(item\.subscriptionId, item\.guid\)/);
@@ -131,19 +131,19 @@ assert.doesNotMatch(gateway, /category\?:|entries\?:|type\?:|rules\?:|authNeeded
 assert.doesNotMatch(gateway, /MAX_RECENT_UNREAD_SUBSCRIPTIONS|loadRecentUnread|slice\(0,\s*4\)/);
 assert.doesNotMatch(gateway, /Promise\.all/);
 assert.doesNotMatch(index, /\.loadRecentUnread\(/);
-assert.match(index, /getRssOrchestrator\(\)\.loadFeed\(/);
+assert.match(index, /const host = this\.getRssOrchestrator\(\);[\s\S]*host\.loadFeed\(binding\.emit, binding\.emitRead, binding\.current, expectedGeneration, binding\.emitOriginal\)/);
 assert.doesNotMatch(index, /\.queryEntries\(/);
 
 // Management is reachable from the main RSS page. Toggle, per-feed refresh,
 // and confirmed delete enter one serial orchestrator chain; rows change only
 // after Core's authoritative list has reloaded.
-assert.match(index, /onManage: \(\): void =>\s*(?:\{ if \(this\.isCurrentRssPresentation\([^;\n]+\)\) )?this\.onRssManage\(\)/);
+assert.match(index, /onManage: \(\): void =>\s*(?:\{ if \(this\.isCurrentRssHostPresentation\([^;\n]+\)\) )?this\.onRssManage\(\)/);
 assert.match(index, /private onRssManage\(\): void \{[\s\S]*this\.route = 'rssSubscriptionManagement';[\s\S]*this\.getRssOrchestrator\(\)\.open\(\);/);
 assert.doesNotMatch(index, /RSS subscription management has no admitted route/);
 assert.match(index, /onToggle: \(id: string, enabled: boolean\): void =>[\s\S]*toggleSubscription\(id, enabled\)/);
-assert.match(index, /onRefresh: \(id: string\): void =>\s*(?:\{ if \(this\.isCurrentRssPresentation\([^;\n]+\)\) )?this\.getRssOrchestrator\(\)\.refreshSubscription\(id\)/);
+assert.match(index, /onRefresh: \(id: string\): void =>\s*(?:\{ if \(this\.isCurrentRssHostPresentation\([^;\n]+\)\) )?host\?\.refreshSubscription\(id\)/);
 assert.match(index, /showIndexAlert\('confirmation-cancelable', \{[\s\S]*primaryButton:[\s\S]*value: '取消'[\s\S]*secondaryButton:[\s\S]*value: '删除'/);
-assert.match(index, /private confirmRssSubscriptionDelete\(subscriptionId: string\): void \{[\s\S]*removeSubscription\(subscriptionId\);/);
+assert.match(index, /private confirmRssSubscriptionDelete\(subscriptionId: string,[\s\S]*this\.isCurrentRssHostPresentation\([\s\S]*host\?\.removeSubscription\(subscriptionId\);/);
 assert.match(index, /private onRssManagementViewArticles\(subscriptionId: string\): void \{\s*if \(!isReaderProductSurfaceEnabled\('rss'\)\) \{\s*return;\s*\}\s*this\.onRssSubscriptionSelected\(subscriptionId, 'rssSubscriptionManagement'\);/);
 assert.match(index, /private returnFromRssSourceFeed\(\): void \{[\s\S]*this\.route = 'rssSubscriptionManagement';/);
 assert.match(orchestrator, /private mutationChain: Promise<void> = Promise\.resolve\(\)/);
@@ -195,16 +195,16 @@ assert.match(orchestrator, /candidate\.subscriptionId === subscriptionId \? item
 assert.match(orchestrator, /subscription: itemResult\.subscription/);
 assert.doesNotMatch(index, /private rssMutationChain|private rssMutationQueue/);
 assert.doesNotMatch(index, /new RssGateway\(ReaderRuntimeOwner\.current\(\)\)\.loadItems/);
-assert.match(index, /private openRssEntryDetail\([\s\S]*getRssOrchestrator\(\)\.openEntry\(/);
-assert.match(index, /private onRssEntryFavoriteRequested\([\s\S]*getRssOrchestrator\(\)\.setEntryFavorite\(/);
+assert.match(index, /private openRssEntryDetail\([\s\S]*const host = this\.getRssOrchestrator\(\);[\s\S]*host\.openEntry\(/);
+assert.match(index, /private onRssEntryFavoriteRequested\([\s\S]*const host = this\.getRssOrchestrator\(\);[\s\S]*host\.setEntryFavorite\(/);
 assert.match(index, /selectedRssFavoriteState = snapshot\.favorite \? 'favorited' : 'notFavorited'/);
-assert.match(index, /onRefresh: \(\): void =>\s*(?:\{ if \(this\.isCurrentRssPresentation\([^;\n]+\)\) )?this\.refreshRssSourceFeed\(\)/);
-assert.match(index, /private refreshRssSourceFeed\(\): void \{[\s\S]*getRssOrchestrator\(\)\.refreshSourceFeed\(/);
+assert.match(index, /onRefresh: \(\): void =>\s*(?:\{ if \(this\.isCurrentRssHostPresentation\([^;\n]+\)\) )?this\.refreshRssSourceFeed\(\)/);
+assert.match(index, /private refreshRssSourceFeed\(\): void \{[\s\S]*const host = this\.getRssOrchestrator\(\);[\s\S]*host\.refreshSourceFeed\(/);
 assert.match(index, /private onRssSubscriptionSelected\([\s\S]*this\.selectedRssItems = \[\];[\s\S]*this\.loadRssSourceItems\(generation, subscriptionId\)/);
 assert.doesNotMatch(index, /this\.selectedRssItems = this\.rssRecentUnread\(\)\.filter/);
 assert.match(index, /focusedSubscriptionId: this\.rssManagementFocusSubscriptionId/);
-assert.match(index, /onEditSource: \(\): void =>\s*(?:\{ if \(this\.isCurrentRssPresentation\([^;\n]+\)\) )?this\.openRssManagementForSubscription/);
-assert.match(index, /onSourceSettings: \(\): void =>\s*(?:\{ if \(this\.isCurrentRssPresentation\([^;\n]+\)\) )?this\.openRssManagementForSubscription/);
+assert.match(index, /onEditSource: \(\): void =>\s*(?:\{ if \(this\.isCurrentRssHostPresentation\([^;\n]+\)\) )?this\.openRssManagementForSubscription/);
+assert.match(index, /onSourceSettings: \(\): void =>\s*(?:\{ if \(this\.isCurrentRssHostPresentation\([^;\n]+\)\) )?this\.openRssManagementForSubscription/);
 assert.match(index, /HOST_CAPABILITY_GAP: RSS original link requires webview\.open Host wiring/);
 assert.match(entryDetail, /export type RssFavoritePresentation = 'loading' \| 'favorited' \| 'notFavorited' \| 'unavailable'/);
 assert.match(entryDetail, /favoriteState === 'favorited' \? TOK_PRIMARY_SOFT/);
@@ -260,7 +260,7 @@ assert.doesNotMatch(index, /RSS SourceFeed action %\{private\}s has no admitted 
 assert.doesNotMatch(index, /RSS EntryDetail action %\{private\}s has no admitted host transaction/);
 assert.match(index, /RSS refresh is placeholder-only until its admitted flow is supplied/);
 assert.match(index, /RSS mode %\{private\}s has no admitted data contract/);
-assert.match(index, /getRssOrchestrator\(\)\.loadFeed\(/);
+assert.match(index, /const host = this\.getRssOrchestrator\(\);[\s\S]*host\.loadFeed\(binding\.emit, binding\.emitRead, binding\.current, expectedGeneration, binding\.emitOriginal\)/);
 assert.doesNotMatch(index, /\.queryEntries\(/);
 
 // Filter is an inline disclosure in normal layout flow, not a dropdown/select.

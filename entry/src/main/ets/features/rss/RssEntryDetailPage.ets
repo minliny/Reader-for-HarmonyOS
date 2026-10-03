@@ -1,3 +1,5 @@
+import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
+import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from './RssMutationRecoveryContract';
 import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
 import { ReaderButton } from '../common/ReaderButton';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
@@ -65,6 +67,10 @@ export struct RssEntryDetailPage {
   @Prop isTablet: boolean;
   @Prop operation: RssRouteOperationProjection<RssEntrySnapshot> | undefined = undefined;
   @Prop readFacts: OperationFacts<RssEntrySnapshot> = projectOperationFacts<RssEntrySnapshot>({ phase: 'idle' });
+  @Prop presentationIdentity: string = '';
+  @Prop original: RssOriginalMutationProjection | undefined = undefined;
+  onReconcileOriginal: (expected: RssOriginalMutationIdentity) => void = (_expected: RssOriginalMutationIdentity): void => {};
+  onContinueOriginal: (expected: RssOriginalMutationIdentity) => void = (_expected: RssOriginalMutationIdentity): void => {};
   onReconcile: (operation: RssRouteOperationProjection<RssEntrySnapshot>) => void = (_operation: RssRouteOperationProjection<RssEntrySnapshot>): void => {};
   onRetryRead: (facts: OperationFacts<RssEntrySnapshot>) => void = (_facts: OperationFacts<RssEntrySnapshot>): void => {};
   @Prop favoriteState: RssFavoritePresentation = 'loading';
@@ -128,8 +134,14 @@ export struct RssEntryDetailPage {
 
   @Builder
   private operationFeedback() {
+    RssOriginalRecoverySurface({ original: this.original, presentationIdentity: this.presentationIdentity, scope: 'entry',
+      subscriptionId: this.item?.subscriptionId ?? '', guid: this.item?.guid ?? '',
+      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => this.onReconcileOriginal(expected),
+      onContinueOriginal: (expected: RssOriginalMutationIdentity): void => this.onContinueOriginal(expected) });
+    if (this.original?.blocked !== true) {
     ReaderRecoveryNotice({ view: readerRecoveryView(this.operation?.projection, this.readFacts),
       actionLabel: '重新读取', onReconcile: (generation: number): void => this.retryFeedback(generation) });
+    }
   }
 
   private retryFeedback(generation: number): void {

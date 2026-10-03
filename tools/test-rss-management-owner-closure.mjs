@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { RssWriteEvidence as ReaderWriteEvidence, RealRssRouteHost as RssRouteOperationHost, pendingRssError } from './lib/rss-operation-fixture.mjs';
 import { isReaderCoreTransactionPendingError } from '../entry/vendor/core-harmony/sdk/reader_core.ts';
+import {boundedSurfaceSdk,boundedMembers} from './lib/bounded-surface-sdk-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 const source = name => readFileSync(new URL(`../entry/src/main/ets/${name}`, import.meta.url), 'utf8');
 // Execute complete production owners and protocol decoders, replacing platform imports only.
@@ -65,16 +66,18 @@ function rpc(){return {
 let physicalIndexIdentity=0;
 function fixture(runtime=rpc()){
   currentOwner=runtime;
-  const {owner:index}=createReaderBuilderProbe(source('pages/Index.ets'),['rssSubscriptionManagementContent','rssSubscriptionManagementSurface','isCurrentRuntime','isCurrentRssPresentation','isCurrentRoute','getRssOrchestrator','retireRssPresentation','feedPresentation','rssSubscriptions','rssSubscriptionManagementItems'],
-    {RssPresentationProjection,RssSubscriptionManagementPage:ManagementChild,ReaderRuntimeOwner,RssOrchestrator,projectOperationFacts:facts.projectOperationFacts,deviceInfo:{deviceType:'phone'}});
+  const {owner:index}=createReaderBuilderProbe(source('pages/Index.ets'),['rssSubscriptionManagementContent','rssSubscriptionManagementSurface','isCurrentRuntime','isCurrentRssHostPresentation','isCurrentRssPresentation','isCurrentRoute','getRssOrchestrator','retireRssPresentation','feedPresentation','rssSubscriptions','rssSubscriptionManagementItems'],
+    {RssPresentationProjection,RssSubscriptionManagementPage:ManagementChild,ReaderRuntimeOwner,RssOrchestrator,projectOperationFacts:facts.projectOperationFacts,isReaderProductSurfaceEnabled:()=>true,deviceInfo:{deviceType:'phone'}});
   Object.assign(index,{mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,rssInstanceIdentity:++physicalIndexIdentity,rssPresentationIdentity:'',route:'rssSubscriptionManagement',navigationGeneration:1,shelfReceiptRetired:false,rssPresentation:{kind:'feed',subscriptions:[],recentUnread:[]},rssManagementRead:facts.projectOperationFacts({phase:'idle'}),rssManagementFocusSubscriptionId:''});
   const orchestrator=index.getRssOrchestrator();index.rssSubscriptionManagementContent();const child=[...index.children.values()][0];
   const refresh=()=>{index.replay();return child.params;};
+  const surfaceSdk=boundedSurfaceSdk();const originalSurfaceSource=source('features/rss/RssOriginalRecoverySurface.ets');surfaceSdk.childSources.RssOriginalRecoverySurface=originalSurfaceSource;
+  const OriginalSurface=createReaderBuilderProbe(originalSurfaceSource,boundedMembers(originalSurfaceSource),surfaceSdk.deps,surfaceSdk.hooks).Component;
   const page=()=>{
-    const {owner}=createReaderBuilderProbe(pageSource,['operationFeedback','hasOperationFeedback','feedbackMessage','canRetryFeedback','retryFeedback'],{ReaderRecoveryAction:ManagementChild});
+    const {owner}=createReaderBuilderProbe(pageSource,['operationFeedback','hasOperationFeedback','feedbackMessage','canRetryFeedback','retryFeedback'],{ReaderRecoveryAction:ManagementChild,RssOriginalRecoverySurface:OriginalSurface},{...surfaceSdk.hooks,mountChildren:true});
     Object.assign(owner,refresh(),{operation:clone(child.params.operation),readFacts:clone(child.params.readFacts),appThemeScheme:'day'});
     owner.operationFeedback();
-    const recoveryChild=[...owner.children.values()][0];
+    const recoveryChild=[...owner.children.values()].find(child=>child instanceof ManagementChild);
     if(recoveryChild){const recovery=createReaderBuilderProbe(recoverySource,['build']).owner;Object.assign(recovery,{actionEnabled:true},recoveryChild.params,{appThemeScheme:'day'});recovery.initialRender();
       for(const [id,node] of recovery.nodes)owner.nodes.set(-id,node);}
     return owner;

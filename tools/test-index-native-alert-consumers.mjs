@@ -1,3 +1,4 @@
+import {RealRssOrchestrator,replaceRssRuntime} from './lib/rss-operation-fixture.mjs';
 import { RssPresentationProjection } from '../entry/src/main/ets/features/rss/RssPresentationProjection.ts';
 import {bookshelfOperationClass} from './lib/bookshelf-operation-owner-probe.mjs';
 import assert from 'node:assert/strict';
@@ -21,7 +22,7 @@ const EMPTY_READABLE_ADMISSION={generation:0,adding:false,cancelling:false,confi
 const Index=productionMotionMethods(file,['showIndexAlert','showSourceImportResult','showSourceImportResultFromSearch',
  'requestSourceDelete','requestRssSubscriptionDelete','requestRssSourceImport','showRssOperationResult',
  'requestClearDirectoryBookOffline','refreshCachedChapterFromPrompt','showReadingFailure','nextNavigationGeneration',
- 'aboutToDisappear','confirmRssSubscriptionDelete','rssSubscriptions','importRssSources','bindReadingEntryReader','isCurrentSourceToolsPresentation'],{
+ 'aboutToDisappear','isCurrentRssHostPresentation','isCurrentRssPresentation','isCurrentRoute','confirmRssSubscriptionDelete','rssSubscriptions','importRssSources','bindReadingEntryReader','isCurrentSourceToolsPresentation'],{
  ReadingEntryHost:Entry,EMPTY_READABLE_ADMISSION,LOCAL_SOURCE_ID:'local',
  RssPresentationProjection,ReaderNativeAlertOwner,ReaderRuntimeOwner:{current:()=>{if(unavailable)throw Error('runtime unavailable');return currentOwner;}},isReaderProductSurfaceEnabled:()=>true,
  hilog:{warn(){}},DOMAIN:1,verdictForFailureKind:()=> 'networkFailed',remoteReadingFailureKindOf:()=> 'networkFailed',
@@ -37,7 +38,7 @@ function fixture(route='source'){
   mountedRuntimeOwner:owner,detailShelfAdmissionMount:1,detailBook:{sourceId:'s',bookId:'b',title:'书',author:'作者'},
   detailToc:[{index:0,title:'章',url:'/0'}],shelfOperation:{generation:0,removalKey:'',busy:false},detailReadableAdmission:()=>EMPTY_READABLE_ADMISSION,
   sourceManagementReturnTarget:'search',sourceManagementSearchKeyword:'abc',sourceToolsSnapshot:{sources:[{sourceId:'s'}],sourceListRevision:3,selectionRevision:4,busy:false},
-  sourceToolsPresentationIdentity:'native-tools:1',rssOrchestrator:host,rssPresentation:{kind:'feed',subscriptions:[{subscriptionId:'rss',title:'源'}]},jsonImportVisible:false,
+  sourceToolsPresentationIdentity:'native-tools:1',rssPresentationIdentity:'native-rss:1',rssOrchestrator:host,rssPresentation:{kind:'feed',subscriptions:[{subscriptionId:'rss',title:'源'}]},jsonImportVisible:false,
   remoteSessionGeneration:2,remoteReadingSession:{identity:{sourceId:'s',bookId:'b'},book:{title:'书',author:'作者'},sourceVersion:'v',catalogVersion:'c',contextVersion:'x',
    entries:[{index:0,title:'章',url:'/0',variables:[]}],acquisitionMode:'online',hostRequirements:[],continuationVariables:[]},offlineMutationActiveKey:'',
   getSourceToolsOrchestrator:()=>host,getRssOrchestrator:()=>host,returnFromSourceManagement:()=>calls.push('returnSearch'),
@@ -52,6 +53,10 @@ function fixture(route='source'){
  tools.deleteSelected=ids=>calls.push(['deleteSources',ids]);
  tools.attachPresentation(p.sourceToolsPresentationIdentity,snapshot=>p.sourceToolsSnapshot=snapshot,
   ()=>authority.isCurrent(owner)&&p.route==='sourceTools'&&!p.shelfReceiptRetired);
+ replaceRssRuntime(owner);const rss=new RealRssOrchestrator(()=>{},()=>p.route==='rssSubscriptionManagement',owner);p.rssOrchestrator=rss;
+ rss.attachPresentation(p.rssPresentationIdentity,()=>{},()=>p.route==='rssSubscriptionManagement',()=>{},()=>{},()=>authority.isCurrent(owner)&&!p.shelfReceiptRetired);
+ rss.removeSubscription=id=>calls.push(['deleteRss',id]);
+ rss.importSources=(_replace,done,failed)=>{calls.push('rss.confirmed-write');try{done({imported:2});}catch(error){failed(error);}};
  host.detachPresentation=()=>{};
  p.bindReadingEntryReader();
  return{p,calls,host,owner,shown:()=>shown,nativeFail:()=>{fail=true;}};
@@ -106,7 +111,7 @@ for(const exit of ['primary','secondary','cancel','retired','navigation','close'
 for(const timing of ['before-show','after-show','retired','confirmed-import']){
  const f=fixture(timing==='confirmed-import'?'rssSubscriptionManagement':'source');
  if(timing==='after-show'){const lease=f.p.showIndexAlert('notice',{title:'x',primaryButton:{value:'x',action:()=>f.calls.push('acted')}});unavailable=true;f.shown().primaryButton.action();assert.equal(await lease.decision,'retired');assert.deepEqual(f.calls,[]);}
- else{unavailable=true;if(timing==='retired')f.p.shelfReceiptRetired=true;assert.doesNotThrow(()=>timing==='confirmed-import'?f.p.importRssSources(false):f.p.showSourceImportResult('confirmed','notice'));assert.deepEqual(f.calls,timing==='confirmed-import'?['rss.confirmed-write']:[]);}
+ else{if(timing==='confirmed-import')f.p.rssOrchestrator.importSources=(_replace,done,failed)=>{f.calls.push('rss.confirmed-write');unavailable=true;try{done({imported:2});}catch(error){failed(error);}};else unavailable=true;if(timing==='retired')f.p.shelfReceiptRetired=true;assert.doesNotThrow(()=>timing==='confirmed-import'?f.p.importRssSources(false):f.p.showSourceImportResult('confirmed','notice'));assert.deepEqual(f.calls,timing==='confirmed-import'?['rss.confirmed-write']:[]);}
  unavailable=false;
 }
 const raw=readFileSync(file,'utf8');assert.equal((raw.match(/\.showAlertDialog\(/g)??[]).length,1,'Index has one actual native host implementation');

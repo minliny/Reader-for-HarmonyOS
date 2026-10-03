@@ -1,3 +1,5 @@
+import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
+import type { RssOriginalMutationIdentity } from './RssMutationRecoveryContract';
 import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
 import type { RssSubscriptionManagementItem } from './RssPresentationContract';
 export type { RssSubscriptionManagementItem } from './RssPresentationContract';
@@ -59,6 +61,9 @@ export struct RssSubscriptionManagementPage {
   @Prop focusedSubscriptionId: string = '';
   @Prop operation: RssManagementOperationProjection | undefined = undefined;
   @Prop readFacts: OperationFacts<RssSubscription[]> = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
+  @Prop presentationIdentity: string = '';
+  onReconcileOriginal: (expected: RssOriginalMutationIdentity) => void = (_expected: RssOriginalMutationIdentity): void => {};
+  onContinueOriginal: (expected: RssOriginalMutationIdentity) => void = (_expected: RssOriginalMutationIdentity): void => {};
   onReconcile: (operation: RssManagementOperationProjection) => void =
     (_operation: RssManagementOperationProjection): void => {};
   onRetryRead: (facts: OperationFacts<RssSubscription[]>) => void =
@@ -147,7 +152,10 @@ export struct RssSubscriptionManagementPage {
 
   @Builder
   private operationFeedback() {
-    if (this.feedbackMessage().length > 0) {
+    RssOriginalRecoverySurface({ original: this.operation?.original, presentationIdentity: this.presentationIdentity, scope: 'management',
+      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => this.onReconcileOriginal(expected),
+      onContinueOriginal: (expected: RssOriginalMutationIdentity): void => this.onContinueOriginal(expected) });
+    if (this.operation?.original?.blocked !== true && this.feedbackMessage().length > 0) {
       Row({ space: TOK_SPACE_XS }) {
         Text(this.feedbackMessage())
           .layoutWeight(1)

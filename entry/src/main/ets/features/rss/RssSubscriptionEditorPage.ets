@@ -1,3 +1,5 @@
+import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
+import type { RssOriginalMutationIdentity } from './RssMutationRecoveryContract';
 import { ReaderButton } from '../common/ReaderButton';
 import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
@@ -52,6 +54,9 @@ export struct RssSubscriptionEditorPage {
   onSourceFieldChanged: (field: RssSourceTextField, value: string) => void =
     (_field: RssSourceTextField, _value: string): void => {};
   onSave: () => void = (): void => {};
+  @Prop presentationIdentity: string = '';
+  onReconcileOriginal: (expected: RssOriginalMutationIdentity) => void = (_expected: RssOriginalMutationIdentity): void => {};
+  onContinueOriginal: (expected: RssOriginalMutationIdentity) => void = (_expected: RssOriginalMutationIdentity): void => {};
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   onRetryRead: (generation: number) => void = (_generation: number): void => {};
 
@@ -199,7 +204,11 @@ export struct RssSubscriptionEditorPage {
   }
   @Builder
   private operationRecovery() {
-    ForEach(this.recoveryActionIdentities(), (identity: string): void => {
+    RssOriginalRecoverySurface({ original: this.snapshot.original, presentationIdentity: this.presentationIdentity, scope: 'editor',
+      subscriptionId: this.snapshot.subscriptionId ?? '',
+      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => this.onReconcileOriginal(expected),
+      onContinueOriginal: (expected: RssOriginalMutationIdentity): void => this.onContinueOriginal(expected) });
+    ForEach(this.snapshot.original?.blocked === true ? [] : this.recoveryActionIdentities(), (identity: string): void => {
       ReaderRecoveryAction({ label: '重新读取', generation: this.recoveryGeneration(identity),
         onReconcile: (): void => this.dispatchRecovery(identity) });
     }, (identity: string): string => identity);
