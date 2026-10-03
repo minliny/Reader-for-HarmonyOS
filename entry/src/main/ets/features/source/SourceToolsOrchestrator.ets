@@ -1,6 +1,6 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
-import type { CommitReadbackSummary } from '../../app/ReaderOperationFacts';
+import type { CommitReadbackSummary, OperationFacts } from '../../app/ReaderOperationFacts';
 import { projectPersistedReceipt } from '../../app/ReaderPersistedReceiptProjection';
 import {
   SourceGateway,
@@ -66,6 +66,8 @@ export interface SourceToolsSnapshot {
   batchCheck: SourceBatchCheckProgress;
   /** The last editor write/read-back fact, if an editor session is active. */
   editorReadback: CommitReadbackSummary | undefined;
+  /** Structured lifecycle facts for the editor write and canonical refresh. */
+  editorOperation: OperationFacts<BookSource[]> | undefined;
   busy: boolean;
   statusMessage: string;
 }
@@ -85,6 +87,7 @@ interface SourceToolsPatch {
   debugLogs?: SourceDebugLog[];
   batchCheck?: SourceBatchCheckProgress;
   editorReadback?: CommitReadbackSummary | null;
+  editorOperation?: OperationFacts<BookSource[]> | null;
   busy?: boolean;
   statusMessage?: string;
 }
@@ -104,6 +107,7 @@ export const EMPTY_SOURCE_TOOLS_SNAPSHOT: SourceToolsSnapshot = {
   debugLogs: [],
   batchCheck: EMPTY_BATCH_CHECK_PROGRESS,
   editorReadback: undefined,
+  editorOperation: undefined,
   busy: false,
   statusMessage: '',
 };
@@ -436,6 +440,7 @@ export class SourceToolsOrchestrator {
             editorSourceId: sourceId,
             editorText,
             editorReadback: null,
+            editorOperation: null,
             busy: false,
             statusMessage: '编辑原始 BookSource JSON',
           });
@@ -458,7 +463,8 @@ export class SourceToolsOrchestrator {
     if (this.snapshot.busy || this.pendingOperations > 0) {
       return;
     }
-    this.publish({ editorSourceId: '', editorText: '', editorReadback: null, statusMessage: '已取消编辑' });
+    this.publish({ editorSourceId: '', editorText: '', editorReadback: null, editorOperation: null,
+      statusMessage: '已取消编辑' });
   }
 
   saveEditor(): void {
@@ -488,12 +494,13 @@ export class SourceToolsOrchestrator {
           // instead of closing it (which would hint that nothing was saved)
           // or reporting a save failure (which would hint that a re-submit is
           // required). Only the read-back failed.
-          const fact = projectPersistedReceipt({ confirmation: 'confirmed', readback: 'failed',
-            refreshError: (error as Error).message }).receipt;
+          const projection = projectPersistedReceipt({ confirmation: 'confirmed', readback: 'failed',
+            value: this.snapshot.sources, refreshError: (error as Error).message, canRetry: true });
           this.publish({
             busy: false,
-            editorReadback: fact,
-            statusMessage: `书源${fact.message}：${(error as Error).message}；草稿保留供核对`,
+            editorReadback: projection.receipt,
+            editorOperation: projection.facts,
+            statusMessage: `书源${projection.receipt.message}：${(error as Error).message}；草稿保留供核对`,
           });
         }
         hilog.warn(DOMAIN, 'Reader',
@@ -502,11 +509,13 @@ export class SourceToolsOrchestrator {
         return;
       }
       if (this.isCurrentSession(session)) {
+        const projection = projectPersistedReceipt({ confirmation: 'confirmed', readback: 'succeeded', value: sources });
         this.publish({
           sources,
           editorSourceId: '',
           editorText: '',
-          editorReadback: projectPersistedReceipt({ confirmation: 'confirmed', readback: 'succeeded' }).receipt,
+          editorReadback: projection.receipt,
+          editorOperation: projection.facts,
           busy: false,
           statusMessage: '书源已由 Core 校验并保存',
         });
@@ -532,26 +541,34 @@ export class SourceToolsOrchestrator {
         const found = sources.some((source: BookSource): boolean => source.sourceId === sourceId);
         if (!this.isCurrentSession(session)) return;
         if (found) {
+          const projection = projectPersistedReceipt({ confirmation: 'confirmed', readback: 'succeeded', value: sources });
           this.publish({
             sources,
             editorSourceId: '',
             editorText: '',
-            editorReadback: projectPersistedReceipt({ confirmation: 'confirmed', readback: 'succeeded' }).receipt,
+            editorReadback: projection.receipt,
+            editorOperation: projection.facts,
             busy: false,
             statusMessage: '已确认，当前读取结果可用',
           });
           return;
         }
+        const projection = projectPersistedReceipt({ confirmation: 'confirmed', readback: 'failed',
+          value: sources, canRetry: true });
         this.publish({
           sources,
-          editorReadback: projectPersistedReceipt({ confirmation: 'confirmed', readback: 'failed' }).receipt,
+          editorReadback: projection.receipt,
+          editorOperation: projection.facts,
           busy: false,
           statusMessage: '已确认，但当前列表未找到该书源；草稿保留供核对',
         });
       } catch (error) {
         if (this.isCurrentSession(session)) {
+          const projection = projectPersistedReceipt({ confirmation: 'confirmed', readback: 'failed',
+            value: this.snapshot.sources, refreshError: (error as Error).message, canRetry: true });
           this.publish({
-            editorReadback: projectPersistedReceipt({ confirmation: 'confirmed', readback: 'failed' }).receipt,
+            editorReadback: projection.receipt,
+            editorOperation: projection.facts,
             busy: false,
             statusMessage: `书源已确认，刷新失败：${(error as Error).message}；草稿保留供核对`,
           });
@@ -714,6 +731,8 @@ export class SourceToolsOrchestrator {
       batchCheck: patch.batchCheck ?? this.snapshot.batchCheck,
       editorReadback: patch.editorReadback === null ? undefined :
         (patch.editorReadback ?? this.snapshot.editorReadback),
+      editorOperation: patch.editorOperation === null ? undefined :
+        (patch.editorOperation ?? this.snapshot.editorOperation),
       busy: patch.busy ?? this.snapshot.busy,
       statusMessage: patch.statusMessage ?? this.snapshot.statusMessage,
     };
@@ -756,6 +775,18 @@ export class SourceToolsOrchestrator {
         readback: source.editorReadback.readback,
         fact: source.editorReadback.fact,
         message: source.editorReadback.message,
+      },
+      editorOperation: source.editorOperation === undefined ? undefined : {
+        fact: source.editorOperation.fact,
+        value: source.editorOperation.value === undefined ? undefined : source.editorOperation.value.slice(),
+        hasValue: source.editorOperation.hasValue,
+        stale: source.editorOperation.stale,
+        blocked: source.editorOperation.blocked,
+        canRetry: source.editorOperation.canRetry,
+        canCancel: source.editorOperation.canCancel,
+        generation: source.editorOperation.generation,
+        message: source.editorOperation.message,
+        blockedReason: source.editorOperation.blockedReason,
       },
       busy: source.busy,
       statusMessage: source.statusMessage,

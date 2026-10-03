@@ -199,6 +199,8 @@ async function openEditorFor(orchestrator, snapshots) {
   const done = latestSnapshot(snapshots);
   assert.equal(done.editorSourceId, '', 'saved editor must close');
   assert.equal(done.editorText, '', 'saved draft must clear');
+  assert.equal(done.editorOperation.fact, 'current');
+  assert.equal(done.editorOperation.hasValue, true);
   assert.ok(owner.calls.includes('source.import'));
 }
 
@@ -221,6 +223,10 @@ async function openEditorFor(orchestrator, snapshots) {
     'the draft stays open for reconciliation after a refresh failure');
   assert.equal(done.editorText, editableSourceJson,
     'the draft text is retained so the user can reconcile, not re-typed');
+  assert.equal(done.editorOperation.fact, 'refreshFailed');
+  assert.equal(done.editorOperation.stale, true);
+  assert.equal(done.editorOperation.canRetry, true);
+  assert.equal(done.editorOperation.hasValue, true);
   const writesAfter = owner.calls.filter((method) => method === 'source.import').length;
   assert.equal(writesAfter, writesBefore + 1, 'exactly one persist was dispatched');
   const listCalls = owner.calls.filter((method) => method === 'source.list').length;
@@ -235,6 +241,7 @@ async function openEditorFor(orchestrator, snapshots) {
   assert.equal(owner.calls.filter((method) => method === 'source.import').length, writesAfter,
     'read-only reconciliation must not dispatch source.import');
   assert.equal(latestSnapshot(snapshots).editorReadback.fact, 'confirmedCurrent');
+  assert.equal(latestSnapshot(snapshots).editorOperation.fact, 'current');
 }
 
 {
@@ -265,6 +272,8 @@ async function openEditorFor(orchestrator, snapshots) {
   assert.match(done.statusMessage, /书源保存失败/);
   assert.doesNotMatch(done.statusMessage, /刷新失败/,
     'a rejected save must not be dressed up as a refresh failure');
+  assert.equal(done.editorOperation, undefined,
+    'a rejected write must not publish a persisted/read-back fact');
   assert.equal(done.editorSourceId, 'https://a.example', 'the draft survives a real save failure');
   assert.equal(calls.filter((method) => method === 'source.list').length, listBefore,
     'a failed save must not dispatch the follow-up refresh');
