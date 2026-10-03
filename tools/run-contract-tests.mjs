@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync, spawn } from 'node:child_process';
+import { performance } from 'node:perf_hooks';
 
 export function contractTests(root, tier) {
   assert.ok(['source', 'full'].includes(tier));
@@ -45,7 +46,7 @@ export async function runContractsBounded(root, tier, workers = 1, testOptions =
   const results = []; let cursor = 0;
   async function worker() {
     while (cursor < selected.length) {
-      const name = selected[cursor++], started = Date.now(), log = resolve(logRoot, name + '.log');
+      const name = selected[cursor++], started = performance.now(), wallStarted = Date.now(), log = resolve(logRoot, name + '.log');
       const temporaryDirectory = resolve(logRoot, 'temporary', name);
       mkdirSync(temporaryDirectory, { recursive: true });
       const fd = openSync(log, 'wx');
@@ -84,7 +85,8 @@ export async function runContractsBounded(root, tier, workers = 1, testOptions =
         try { rmSync(temporaryDirectory, { recursive: true }); temporaryStorageRemoved = true; }
         catch (failure) { result.error = `temporary cleanup: ${failure.code ?? failure.message}`; }
       }
-      const row = { name, ...result, milliseconds: Date.now() - started, log, temporaryDirectory, temporaryStorageRemoved };
+      const row = { name, ...result, milliseconds: Math.round(performance.now() - started),
+        wallMilliseconds: Date.now() - wallStarted, log, temporaryDirectory, temporaryStorageRemoved };
       results.push(row);
       console.log(`${name}: ${!row.error && !row.timedOut && row.status === 0 ? 'PASS' : 'FAIL'} (${row.milliseconds}ms)`);
     }

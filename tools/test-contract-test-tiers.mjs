@@ -49,6 +49,25 @@ try {
     return JSON.parse(readFileSync(join(dirname(log), 'results.json'), 'utf8')).results;
   };
 
+  // A real child still uses the unchanged finite timeout after wall-clock
+  // adjustment. Duration is monotonic; the raw wall difference stays visible.
+  const clock = nativeFixture('wall-clock-adjustment', {
+    'test-clock.mjs': 'setTimeout(()=>process.exit(0),120);',
+  });
+  const originalWallNow = Date.now;
+  let clockOffset = 0;
+  Date.now = () => originalWallNow() + clockOffset;
+  try {
+    const pending = runContractsBounded(clock, 'full', 1, { timeoutMs: 2_000 });
+    clockOffset = -60_000;
+    const measured = await pending;
+    const row = measured.results[0];
+    assert.equal(row.status, 0); assert.equal(row.timedOut, false);
+    assert.ok(row.milliseconds >= 100 && row.milliseconds < 2_000);
+    assert.ok(row.wallMilliseconds < -58_000, 'wall-clock rollback remains explicit diagnostic evidence');
+    assert.equal(row.temporaryStorageRemoved, true);
+  } finally { Date.now = originalWallNow; }
+
   // A child which cleans up and exits zero after TERM still exceeded its deadline.
   const cleanTimeout = nativeFixture('term-clean-exit', {
     'test-cleanup.mjs': "process.on('SIGTERM',()=>process.exit(0));setInterval(()=>{},1000);",
