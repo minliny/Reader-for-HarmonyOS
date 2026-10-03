@@ -219,7 +219,7 @@ export class RulesMutationOwner {
    * null is never "not dispatched", a higher head never confirms an old delta. */
   async recoverOriginal(isCurrent: () => boolean,
     qualify: (method: string, params: JsonObject, data: JsonObject) => void,
-    retryOriginal: boolean = false, family?: 'source-management' | 'rss-management',
+    retryOriginal: boolean = false, family?: 'source-management' | 'rss-management' | 'directory-rules',
     sourceCleanup?: (method: string, params: JsonObject) => Promise<boolean>,
     expectedOperationId?: string, originalAdmission?: (method: string, params: JsonObject) => boolean,
     inspectOnly: boolean = false): Promise<RulesMutationSnapshot> {
@@ -233,10 +233,12 @@ export class RulesMutationOwner {
       const sourceFamily = intent.subscription?.kind===3 || intent.mutation.method==='source.update' || intent.mutation.method==='source.delete';
       const rssFamily = intent.subscription===undefined &&
         (intent.mutation.method.startsWith('rss.') || intent.mutation.method.startsWith('rss-source.'));
+      const directoryFamily = intent.subscription===undefined && intent.mutation.method==='reading.directory.rules.apply.v2';
       if (expectedOperationId!==undefined && expectedOperationId!==intent.operationId ||
         originalAdmission!==undefined && !originalAdmission(intent.mutation.method,intent.mutation.params))
         throw new Error('当前恢复动作不属于保留的原操作；原记录保持阻断');
-      const ownFamily = (family==='source-management') === sourceFamily && (family==='rss-management') === rssFamily;
+      const ownFamily = family==='directory-rules' ? directoryFamily : !directoryFamily &&
+        (family==='source-management') === sourceFamily && (family==='rss-management') === rssFamily;
       if (!ownFamily || inspectOnly) {
         await this.inspectOriginal(intent, current, ownFamily, qualify);
         if (retryOriginal) throw new Error('纯核对或当前入口不能继续另一家族的原操作；原记录保持阻断');
@@ -340,6 +342,8 @@ export class RulesMutationOwner {
   }
   private requireMethodCapability(method: string): void {
     this.requireCapability();
+    if (method==='reading.directory.rules.apply.v2' && this.runtime.supportsCoreCapability?.('rules.mutation.directory-rules.v1') !== true)
+      throw new Error('当前 Core 不支持本书目录规则原操作回执，已停止派发');
     if ((method==='source.update' || method==='source.delete') && this.runtime.supportsCoreCapability?.('rules.mutation.source-management.v1') !== true)
       throw new Error('当前 Core 不支持书源原管理回执，已停止派发');
     if ((method.startsWith('rss.') || method==='rss-source.put') && this.runtime.supportsCoreCapability?.('rules.mutation.rss-management.v1') !== true)
@@ -371,7 +375,15 @@ export class RulesMutationOwner {
       raw['method'] !== intent.mutation.method || (raw['outcome'] !== 'applied' && raw['outcome'] !== 'rejected')) throw new Error('规则原回执与固定标识不匹配');
     this.object(raw['data'], '规则原数据'); await this.intents.qualifyTerminal(intent,raw); return raw as unknown as RulesMutationReceipt;
   }
-  private rejectionMessage(receipt: RulesMutationReceipt): string { const error = this.object(receipt.data['error'], '规则原拒绝'); return typeof error['message'] === 'string' ? error['message'] : 'Core 明确拒绝原规则操作'; }
+  private rejectionMessage(receipt: RulesMutationReceipt): string {
+    // This finite variant retains the original preview/apply unavailable DTO.
+    // Its exact rejected receipt proves no directory publication; it must not
+    // be reclassified as unknown because the old DTO has no CoreError wrapper.
+    if (receipt.method === 'reading.directory.rules.apply.v2' && receipt.data['status'] === 'unavailable')
+      return `本书目录规则未应用：${String(receipt.data['reason'] ?? '没有可靠的层级边界')}`;
+    const error = this.object(receipt.data['error'], '规则原拒绝');
+    return typeof error['message'] === 'string' ? error['message'] : 'Core 明确拒绝原规则操作';
+  }
   private object(value: unknown, name: string): JsonObject { if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${name}结构无效`); return value as JsonObject; }
   private fingerprint(value: unknown): boolean { return typeof value === 'string' && /^[0-9a-f]{64}$/.test(value); }
 }
