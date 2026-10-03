@@ -180,7 +180,7 @@ for (const wide of [false, true]) for (const kind of ['feed', 'refreshing', 'emp
   const rss = probe('rss/RssPage.ets', ['build', 'feedScroll', 'emptyUnreadScroll', 'errorContent', 'bottomContentInset'], {
     presentation: { kind, subscriptions: [], recentUnread: [], failedSources: [] }, isWideViewport: () => wide,
     topBar() {}, searchBar() {}, statusTabs() {}, subscriptionSection() {}, recentUnreadSection() {},
-    refreshingRow() {}, emptyUnreadSection() {}, stateCard() {}, onMainTab() {},
+    refreshingRow() {}, emptyUnreadSection() {}, stateCard() {}, readFeedback() {}, onMainTab() {},
     contentFrame: () => ({ left: 19, right: 19, width: 352 }),
   });
   rss.initialRender();

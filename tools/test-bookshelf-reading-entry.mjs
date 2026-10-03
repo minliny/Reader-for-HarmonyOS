@@ -1,3 +1,4 @@
+import { ReaderNativeAlertOwner } from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -92,6 +93,7 @@ function create(remote = false) {
     readingEvidence.sameRemoteSessionEvidence, readingEvidence.preparedRemoteChapterMatches, readingEvidence.preparedRemoteChapterPositionMatches,captureRemotePositionContext,readingEvidence.withPreparedRemoteChapter, readingEvidence.copyRemoteReadingSession,RemoteChapterCacheRefreshError,
   );
   const h = new Harness(), routes = [], alerts = [];
+  h.nativeAlertOwner = new ReaderNativeAlertOwner();
   let route = 'bookshelf';
   Object.defineProperty(h, 'route', { get: () => route, set: value => { routes.push(value); route = value; } });
   Object.assign(h, {

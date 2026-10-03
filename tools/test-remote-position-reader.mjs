@@ -207,12 +207,13 @@ console.log('ML cache: offline readable old body, one-session notice, explicit p
    let active=true,revision=0;const calls=[],dialogs=[],failures=[];
    const ErrorKind=RemoteChapterCacheRefreshError;
    const error=new ErrorKind(session,0,position,scenario==='preserved');
+   const runtime={bookAcquisitions:()=>({readingProjectionRevision:()=>revision})};
    const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
      ['refreshCachedChapterFromPrompt'],{...admission,withPreparedRemoteChapter,errorMessageOf:e=>e.message,
-       ReaderRuntimeOwner:{current:()=>({bookAcquisitions:()=>({readingProjectionRevision:()=>revision})})},
+       ReaderRuntimeOwner:{current:()=>runtime},hilog:{warn(){}},DOMAIN:0,
        RemoteReadingFlowGateway:class{async loadChapter(...args){calls.push(args);revision+=2;
          if(scenario==='failure')throw Error('synthetic refresh failed');return upgraded;}}});
-   const page=Object.assign(new Index(),{navigationGeneration:7,showReadingFailure:(...args)=>failures.push(args),
+   const page=Object.assign(new Index(),{route:'reading',shelfReceiptRetired:false,remoteSessionGeneration:1,remoteReadingSession:session,navigationGeneration:7,showReadingFailure:(...args)=>failures.push(args),
      installRemoteReadingSession(value){this.remoteReadingSession=value;},getUIContext:()=>({showAlertDialog(row){
        dialogs.push(row);if(scenario==='stale')active=false;
        row[scenario==='decline'?'secondaryButton':'primaryButton'].action();}})});

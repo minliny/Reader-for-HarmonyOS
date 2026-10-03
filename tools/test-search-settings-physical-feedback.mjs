@@ -139,12 +139,12 @@ await check('PH34 actual General and Rules Scrolls align short contents at the t
     Object.assign(owner, { activeSection: 'general', showOverlay: false, appThemeScheme: 'day',
       contentFrame: () => ({ left: 18, right: 18 }), generalBottomContentInset: () => 34,
       bottomContentInset: () => 34, generalContent() {},
-      operationFeedback() {}, recoveryAction() {}, statusCard() {}, bundleCard() {}, replaceCard() {}, txtTocCard() {}, dictCard() {}, subscriptionCard() {},
+      operationFeedback() {}, operationRecovery() {}, recoveryAction() {}, statusCard() {}, bundleCard() {}, replaceCard() {}, txtTocCard() {}, dictCard() {}, subscriptionCard() {},
       onSectionChange() {}, onBack() {}, snapshot: { mode: 'create', batchCheck: { phase: 'idle' }, editorSourceId: '' },
       batchControlsRenderKey: () => 'idle', batchCard() {}, exportCard() {}, sourceCard() {}, debugCard() {},
       statisticsCard() {}, groupEditorCard() {}, groupsCard() {}, assignmentCard() {}, recordsCard() {},
       backBar() {}, webdavSection() {}, manualActionsSection() {}, autoBackupSection() {}, historySection() {},
-      editorField() {}, sectionTitle() {} });
+      editorField() {}, sectionTitle() {}, saveAction() {} });
     owner.initialRender();
     const scroll = [...owner.nodes.values()].find(n => n.type === 'Scroll');
     assert.ok(scroll); assert.equal(scroll.align, 'Alignment.TopStart');

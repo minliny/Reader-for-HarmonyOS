@@ -36,7 +36,7 @@ assert.match(orchestrator, /subscription\.type === 1[\s\S]*importSourcesDocument
 assert.match(orchestrator, /importReplaceRuleDocument\(document\.text\)/);
 assert.match(orchestrator, /update: Date\.now\(\)/,
   'successful manual refresh must persist the last-update timestamp');
-assert.match(rssGateway, /async importSourcesDocument\([\s\S]*request\('rss-source\.import'/,
+assert.match(rssGateway, /async importSourcesDocument\([\s\S]*this\.mutationRequest\('rss-source\.import'/,
   'already-acquired RSS JSON must reuse the existing Core import command');
 assert.match(gateway, /type: draft\.type/,
   'rule-sub.put must preserve the selected Legado subscription type');

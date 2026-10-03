@@ -20,10 +20,10 @@ const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
  * Native-node cleanup is instrumented; platform geometry has its separate SDK/VM suite.
  * This does not simulate ArkUI layout, reactive delivery, or compositor pixels. */
 export function productionMotionMethods(file, names, dependencies = {}) {
+  const fixtureRuntime = { captureReadingContentValidity: () => () => true, waitForReadingContentIdle: async () => {} };
   dependencies = { readerAppColor, readerThemeDefinition, readingChapterLayoutMap, hasKnownReadingImageGeometry, errorMessageOf,
     ...readerTypographyRoles, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner, ReaderStartupContentOwner, ReaderProgressProducerHost, ReaderNativeAlertOwner, ReaderNativeAlertLease,
-    ReaderRuntimeOwner: { current: () => ({ captureReadingContentValidity: () => () => true,
-      waitForReadingContentIdle: async () => {} }) }, ...dependencies };
+    ReaderRuntimeOwner: { current: () => fixtureRuntime }, ...dependencies };
   const source = readFileSync(file, 'utf8');
   const tree = ts.createSourceFile('/tmp/ReaderMotionProbe.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   assert.equal(tree.parseDiagnostics.length, 0, `${file}: ETS parses`);

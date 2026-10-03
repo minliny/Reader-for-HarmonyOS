@@ -38,6 +38,7 @@ for (const [file, bottom] of cases) {
   const isDetail = file === 'rss/RssEntryDetailPage.ets';
   const methods = ['build'];
   if (builders.includes('backBar')) methods.push('backBar');
+  if (file.endsWith('RssSubscriptionEditorPage.ets')) methods.push('saveAction');
   if (isDetail) methods.push('bottomActions', 'actionAreaBottomOffset');
   else methods.push('bottomContentInset');
   const { Component } = createReaderBuilderProbe(source, methods, {
@@ -54,7 +55,7 @@ for (const [file, bottom] of cases) {
       const owner = new Component(); const calls = [];
       for (const name of builders) if (!methods.includes(name)) owner[name] = () => {};
       Object.assign(owner, { appThemeScheme: 'day', readerWindowMetricsRevision: 1, contentFrame: () => frame,
-        snapshot: { statusMessage: '状态', busy: false, mode: 'create', enabled: false, enabledCookieJar: false,
+        snapshot: { statusMessage: '状态', busy: false, canSave:true, mode: 'create', enabled: false, enabledCookieJar: false,
           batchCheck: { phase: 'idle' }, editorSourceId: '' },
         item: { link: 'https://example.com/article' }, items: [], favoriteState: 'notFavorited',
         summaryParagraphs: () => [], hasOriginalLink: () => true,
