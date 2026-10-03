@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { runtimeOwnerIdentityProbe } from './reader-runtime-admission-probe.mjs';
 import { stripTypeScriptTypes } from 'node:module';
 import { isReaderCoreTransactionPendingError, ReaderCoreRequestError } from '../../entry/vendor/core-harmony/sdk/reader_core.ts';
 
@@ -9,7 +10,7 @@ export const rssProjection = new Function(...Object.keys(rssFacts), ordinary(rss
 export const rssRecoveryView = new Function(ordinary(rssSource('app/ReaderRecoveryProjection.ts')) + ';return readerRecoveryView;')();
 export const RssWriteEvidence = new Function(ordinary(rssSource('app/ReaderWriteEvidence.ts')) + ';return ReaderWriteEvidence;')();
 let currentOwner;
-export const RssRuntime = { current: () => currentOwner };
+export const RssRuntime = runtimeOwnerIdentityProbe(() => currentOwner);
 export const replaceRssRuntime = owner => { currentOwner = owner; };
 const quiet = { warn(){},error(){} };
 export const RealRssGateway = new Function('ReaderRuntimeOwner','isReaderCoreTransactionPendingError', ordinary(rssSource('features/rss/RssGateway.ts')) + ';return RssGateway;')(RssRuntime,isReaderCoreTransactionPendingError);

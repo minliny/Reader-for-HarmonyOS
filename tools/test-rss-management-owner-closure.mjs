@@ -60,11 +60,12 @@ function rpc(){return {
     throw new Error(`unimplemented RPC ${method}`);
   },count(method){return this.calls.filter(c=>c[0]===method).length;},
 };}
+let physicalIndexIdentity=0;
 function fixture(runtime=rpc()){
   currentOwner=runtime;
-  const {owner:index}=createReaderBuilderProbe(source('pages/Index.ets'),['rssSubscriptionManagementContent','rssSubscriptionManagementSurface','isCurrentRuntime','isCurrentRssPresentation','isCurrentRoute','getRssOrchestrator','feedPresentation','rssSubscriptions','rssSubscriptionManagementItems'],
+  const {owner:index}=createReaderBuilderProbe(source('pages/Index.ets'),['rssSubscriptionManagementContent','rssSubscriptionManagementSurface','isCurrentRuntime','isCurrentRssPresentation','isCurrentRoute','getRssOrchestrator','retireRssPresentation','feedPresentation','rssSubscriptions','rssSubscriptionManagementItems'],
     {RssPresentationProjection,RssSubscriptionManagementPage:ManagementChild,ReaderRuntimeOwner,RssOrchestrator,projectOperationFacts:facts.projectOperationFacts,deviceInfo:{deviceType:'phone'}});
-  Object.assign(index,{route:'rssSubscriptionManagement',navigationGeneration:1,shelfReceiptRetired:false,rssPresentation:{kind:'feed',subscriptions:[],recentUnread:[]},rssManagementRead:facts.projectOperationFacts({phase:'idle'}),rssManagementFocusSubscriptionId:''});
+  Object.assign(index,{mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,rssInstanceIdentity:++physicalIndexIdentity,rssPresentationIdentity:'',route:'rssSubscriptionManagement',navigationGeneration:1,shelfReceiptRetired:false,rssPresentation:{kind:'feed',subscriptions:[],recentUnread:[]},rssManagementRead:facts.projectOperationFacts({phase:'idle'}),rssManagementFocusSubscriptionId:''});
   const orchestrator=index.getRssOrchestrator();index.rssSubscriptionManagementContent();const child=[...index.children.values()][0];
   const refresh=()=>{index.replay();return child.params;};
   const page=()=>{
@@ -156,8 +157,8 @@ for(const action of ['toggle','import']){
   const pause=deferred();let waiting=false;
   f.runtime.beforeRequest=async method=>{if(method==='rss.subscription.persist'){waiting=true;await pause.promise;}};
   f.orchestrator.toggleSubscription('a',false);while(!waiting)await new Promise(r=>setImmediate(r));
-  currentOwner=rpc();const newer=f.index.getRssOrchestrator();newer.open();await settle(newer);const current=clone(f.index.rssPresentation);
-  pause.resolve();await settle(f.orchestrator);assert.deepEqual(f.index.rssPresentation,current,'old owner late ACK cannot publish into new owner');
+  const next=fixture(rpc()),newer=next.orchestrator;assert.throws(()=>f.index.getRssOrchestrator(),/退役/);newer.open();await settle(newer);const current=clone(next.index.rssPresentation);
+  pause.resolve();await settle(f.orchestrator);assert.deepEqual(next.index.rssPresentation,current,'old owner late ACK cannot publish into new owner');
 }
 {
   const f=fixture();f.orchestrator.open();await settle(f.orchestrator);const pause=deferred();let waiting=false;
@@ -174,7 +175,7 @@ for(const action of ['toggle','import']){
   const f=fixture();f.orchestrator.open();await settle(f.orchestrator);f.runtime.readFailures.push(new Error('failed'));f.orchestrator.toggleSubscription('a',false);await settle(f.orchestrator);
   const stale=clone(f.index.rssManagementOperation);f.orchestrator.open();await settle(f.orchestrator);const reads=f.runtime.count('rss-source.list');
   f.orchestrator.reconcileManagementOperation(stale);await settle(f.orchestrator);assert.equal(f.runtime.count('rss-source.list'),reads,'re-entry invalidates recovery');
-  const replacement=rpc();currentOwner=replacement;const newer=f.index.getRssOrchestrator();assert.notEqual(newer,f.orchestrator);newer.open();await settle(newer);
+  const replacement=rpc(),next=fixture(replacement),newer=next.orchestrator;assert.throws(()=>f.index.getRssOrchestrator(),/退役/);assert.notEqual(newer,f.orchestrator);newer.open();await settle(newer);
   f.orchestrator.toggleSubscription('b',false);await settle(f.orchestrator);assert.equal(f.runtime.count('rss.subscription.persist'),1,'retired owner cannot dispatch');
   const nextReads=replacement.count('rss-source.list');newer.reconcileManagementOperation(stale);await settle(newer);assert.equal(replacement.count('rss-source.list'),nextReads,'owner replacement invalidates recovery');
 }
@@ -185,6 +186,45 @@ for(const action of ['toggle','import']){
   f.orchestrator.refreshSubscription('b');f.orchestrator.open();pause.resolve();await settle(f.orchestrator);
   assert.deepEqual(f.runtime.calls.map(c=>c[0]),['rss-source.list','rss.subscription.persist','rss-source.list','rss-source.list'],'unsent retired-session intent is dropped; accepted write and re-entry share one chain');
   assert.equal(f.index.rssManagementOperation.subscriptionId,'a');assert.equal(f.refresh().items[0].enabled,false);
+}
+// Actual Index factories and SDK child callbacks must consume that retained lane.
+{
+  const first=fixture();first.orchestrator.open();await settle(first.orchestrator);
+  const oldToggle=first.refresh().onToggle,oldRetry=first.refresh().onRetryRead;
+  const pause=deferred();let accepted=false;
+  first.runtime.beforeRequest=async method=>{if(method==='rss.subscription.persist'){accepted=true;await pause.promise;}};
+  oldToggle('a',false);while(!accepted)await new Promise(r=>setImmediate(r));
+  const oldValue=clone(first.index.rssPresentation);
+  first.index.shelfReceiptRetired=true;
+  const next=fixture(first.runtime);assert.equal(next.orchestrator,first.orchestrator,'actual new Index reuses one original mutation lane');
+  const liveIdentity=next.index.rssPresentationIdentity;
+  first.index.retireRssPresentation();assert.equal(next.orchestrator.presentationIdentity,liveIdentity,'late old Index detach cannot revoke successor');
+  assert.throws(()=>first.index.getRssOrchestrator(),/退役/);
+  oldToggle('b',false);oldRetry({generation:5});
+  pause.resolve();await settle(next.orchestrator);
+  assert.equal(first.runtime.count('rss.subscription.persist'),1);
+  assert.deepEqual(first.index.rssPresentation,oldValue,'accepted ACK cannot deliver to retired Index');
+  assert.equal(next.refresh().items[0].enabled,false,'actual SDK successor receives readback');
+  assert.equal(next.refresh().operation.projection.receipt.fact,'confirmedCurrent');
+}
+{
+  const first=fixture();first.orchestrator.open();await settle(first.orchestrator);
+  first.runtime.writeFailure=Error('actual lost ACK');first.refresh().onToggle('a',false);await settle(first.orchestrator);
+  first.index.shelfReceiptRetired=true;first.index.retireRssPresentation();
+  const next=fixture(first.runtime);assert.equal(next.orchestrator,first.orchestrator);
+  assert.equal(next.refresh().operation.projection.receipt.confirmation,'unknown','actual Index remount replays unknown DTO from owner');
+  next.refresh().onToggle('b',false);retryNode(next.page()).onClick();await settle(next.orchestrator);
+  assert.equal(first.runtime.count('rss.subscription.persist'),1,'actual successor action cannot replace unresolved original write');
+  assert.equal(next.refresh().operation.projection.receipt.fact,'pendingReconciliation');
+}
+{
+  const f=fixture();f.orchestrator.open();await settle(f.orchestrator);
+  const oldRead=clone(f.index.rssManagementRead),oldOperation=clone(f.index.rssManagementOperation);
+  f.index.navigationGeneration+=1;f.index.route='rss';
+  f.index.getRssOrchestrator();
+  assert.equal(f.orchestrator.presentationIdentity,f.index.rssPresentationIdentity,'nonmanagement admitted factory binds current nav');
+  assert.deepEqual(f.index.rssManagementRead,oldRead);assert.deepEqual(f.index.rssManagementOperation,oldOperation,'management-only publication cannot leak into another route');
+  currentOwner=undefined;assert.throws(()=>f.index.getRssOrchestrator(),/退役/);
 }
 // The actual complete Gateway/Orchestrator survives same-Runtime physical view
 // replacement. Controlled RPC answers are IO fixtures, never Core receipts.

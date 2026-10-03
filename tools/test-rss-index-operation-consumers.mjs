@@ -6,7 +6,7 @@ import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {ReaderNativeAlertOwner} from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
 import {rssSource, rssFacts, rssRecoveryView, RssRuntime,replaceRssRuntime,RealRssOrchestrator,RealRssEditor,RssEmptyEditor,rssRpc,settleRss,deferredRss} from './lib/rss-operation-fixture.mjs';
 const source=rssSource,file=p=>new URL('../entry/src/main/ets/'+p,import.meta.url),clone=v=>v===undefined?undefined:structuredClone(v);
-const methods=['isCurrentRssPresentation','rssSubscriptionManagementItems','getRssOrchestrator','getRssEditorOrchestrator','loadRss','feedPresentation','rssSubscriptions','rssSourceBinding','rssEntryBinding','isCurrentRoute',
+const methods=['isCurrentRssPresentation','rssSubscriptionManagementItems','getRssOrchestrator','retireRssPresentation','getRssEditorOrchestrator','loadRss','feedPresentation','rssSubscriptions','rssSourceBinding','rssEntryBinding','isCurrentRoute',
  'loadRssSourceItems','refreshRssSourceFeed','isCurrentRssSourceFeed','applyRssSourceSnapshot','openRssEntryDetail','onRssEntryFavoriteRequested',
  'isCurrentRssEntryDetail','applyRssEntrySnapshot','failRssEntryOperation','nextNavigationGeneration','onRssSubscriptionSelected',
  'onRssSubscriptionAddRequested','onRssSubscriptionEditRequested','finishRssSubscriptionEdit','returnToRssSubscriptionManagement'];
@@ -19,9 +19,10 @@ for(const [name,path]of[['RssSubscriptionManagementPage','rss'],['RssPage','rss'
  syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...source('features/'+path+'/'+name+'.ets').matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
 }
 class Child{constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
-function fixture(route='rssSourceFeed'){
- const runtime=rssRpc();replaceRssRuntime(runtime);
- const p=Object.assign(new Index(),{nativeAlertOwner:new ReaderNativeAlertOwner(),route,navigationGeneration:1,shelfReceiptRetired:false,
+let physicalIndexIdentity=0;
+function fixture(route='rssSourceFeed',runtime=rssRpc()){
+ replaceRssRuntime(runtime);
+ const p=Object.assign(new Index(),{mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,rssInstanceIdentity:++physicalIndexIdentity,rssPresentationIdentity:'',nativeAlertOwner:new ReaderNativeAlertOwner(),route,navigationGeneration:1,shelfReceiptRetired:false,
   rssPresentation:{kind:'feed',subscriptions:clone(runtime.subscriptions),recentUnread:[]},selectedRssSubscription:clone(runtime.subscriptions[0]),selectedRssItems:clone(runtime.items),selectedRssItem:clone(runtime.items[0]),
   selectedRssFavoriteState:'notFavorited',rssFeedRead:rssFacts.projectOperationFacts({phase:'idle'}),rssSourceRead:rssFacts.projectOperationFacts({phase:'idle'}),rssEntryRead:rssFacts.projectOperationFacts({phase:'idle'}),
   rssManagementRead:rssFacts.projectOperationFacts({phase:'idle'}),rssEditorSnapshot:clone(RssEmptyEditor),rssEditorNavigationGeneration:1,rssManagementFocusSubscriptionId:''});
@@ -69,7 +70,7 @@ for(const kind of['source','entry','main','editor']){
  await f.settle();assert.equal(f.runtime.calls.length,before,'stale actual Index SDK callback cannot operate a new route');
 }
 {const f=fixture('rssSubscriptionEditor');const editor=f.p.getRssEditorOrchestrator();editor.openCreate();await f.settle();editor.updateFeedUrl('https://example.test/new');f.runtime.afterWrite=()=>f.runtime.readFailures.set('rss-source.list',Error('editor canonical readback failed'));editor.save();await f.settle();assert.equal(f.p.rssEditorSnapshot.operation.receipt.confirmation,'confirmed');const rendered=f.render('editor');await f.retry(rendered);assert.equal(f.runtime.count('rss-source.put'),1);assert.equal(f.p.rssEditorSnapshot.operation.receipt.fact,'confirmedCurrent');}
-{const f=fixture('rssSubscriptionEditor'),old=f.p.getRssEditorOrchestrator();const replacement=rssRpc();replaceRssRuntime(replacement);const next=f.p.getRssEditorOrchestrator();assert.notEqual(old,next,'Index recreates editor on runtime replacement');assert.equal(next.owns(replacement),true);}
+{const f=fixture('rssSubscriptionEditor'),old=f.p.getRssEditorOrchestrator();const replacement=rssRpc();replaceRssRuntime(replacement);assert.throws(()=>f.p.getRssEditorOrchestrator(),/退役/);const successor=fixture('rssSubscriptionEditor',replacement),next=successor.p.getRssEditorOrchestrator();assert.notEqual(old,next,'new mounted Index acquires editor in replacement Runtime');assert.equal(next.owns(replacement),true);}
 
 // SDK rerender of the same route keys the temporary child by navigation identity.
 {const f=fixture();const old=f.renderProps('rssSourceFeedContent','RssSourceFeedPage');const b=f.builder(),oldChild=[...b.children.values()].at(-1);f.p.navigationGeneration=2;b.navigationGeneration=2;b.replay();const fresh=[...b.children.values()].at(-1);assert.notEqual(fresh.id,oldChild.id,'new identity creates a new V1 callback owner');const before=f.runtime.calls.length;old.onRefresh();await f.settle();assert.equal(f.runtime.calls.length,before);fresh.params.onRefresh();await f.settle();assert.equal(f.runtime.count('rss.feed.refresh'),1);}

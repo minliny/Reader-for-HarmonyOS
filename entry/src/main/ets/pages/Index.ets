@@ -321,6 +321,7 @@ class ReaderNavigationBackfillFrame extends FrameCallback {
 }
 
 let sourceToolsIndexInstance: number = 0;
+let rssIndexInstance: number = 0;
 
 @Entry
 @Component
@@ -583,6 +584,8 @@ struct Index {
   private readonly sourceToolsInstanceIdentity: number = ++sourceToolsIndexInstance;
   private sourceToolsPresentationIdentity: string = '';
   private rssOrchestrator: RssOrchestrator | undefined;
+  private readonly rssInstanceIdentity: number = ++rssIndexInstance;
+  private rssPresentationIdentity: string = '';
   private rssEditorOrchestrator: RssSubscriptionEditorOrchestrator | undefined;
   /**
    * Installed only by the mounted ReadingSurface.  System Back calls this
@@ -667,6 +670,7 @@ struct Index {
     this.navigationBackfillObservedKey = '';
     this.sourceToolsOrchestrator?.detachPresentation(this.sourceToolsPresentationIdentity);
     this.sourceToolsPresentationIdentity = '';
+    this.retireRssPresentation();
     this.systemFileOpenNavigation?.dispose();
     this.systemFileOpenNavigation = undefined;
     this.applicationSettingsUnsubscribe?.();
@@ -2180,30 +2184,49 @@ struct Index {
     this.getRssOrchestrator().open();
   }
 
+  private retireRssPresentation(): void {
+    this.rssOrchestrator?.detachPresentation(this.rssPresentationIdentity);
+    this.rssPresentationIdentity = '';
+  }
+
   private getRssOrchestrator(): RssOrchestrator {
-    if (this.rssOrchestrator === undefined || !this.rssOrchestrator.owns(ReaderRuntimeOwner.current())) {
-      this.rssManagementOperation = undefined;
-      this.rssManagementRead = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
-      this.rssOrchestrator = new RssOrchestrator(
-        (subscriptions: RssSubscription[]): void => {
-          this.rssPresentation = this.feedPresentation(subscriptions, []);
-        },
-        (): boolean => this.route === 'rssSubscriptionManagement',
-        ReaderRuntimeOwner.current(),
-        (operation: RssManagementOperationProjection): void => {
-          this.rssManagementOperation = operation;
-        },
-        (facts: OperationFacts<RssSubscription[]>): void => {
-          this.rssManagementRead = facts;
-        },
-      );
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner))
+      throw new Error('RSS 页面已退役');
+    const host = RssOrchestrator.forRuntime(owner);
+    if (host === undefined) throw new Error('RSS Runtime 已退役');
+    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const identity = JSON.stringify([this.rssInstanceIdentity, mounting, generation]);
+    if (this.rssOrchestrator !== host || this.rssPresentationIdentity !== identity) {
+      this.retireRssPresentation();
+      if (this.rssOrchestrator !== host) {
+        this.rssManagementOperation = undefined;
+        this.rssManagementRead = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
+      }
+      this.rssOrchestrator = host;
+      this.rssPresentationIdentity = identity;
+      const admitted = (): boolean => this.rssOrchestrator === host && this.rssPresentationIdentity === identity &&
+        this.mountedRuntimeOwner === owner && !this.shelfReceiptRetired && this.detailShelfAdmissionMount === mounting &&
+        this.navigationGeneration === generation && this.isCurrentRuntime(owner);
+      const current = (): boolean => admitted() && this.route === 'rssSubscriptionManagement';
+      if (!host.attachPresentation(identity,
+        (subscriptions: RssSubscription[]): void => { if (current()) this.rssPresentation = this.feedPresentation(subscriptions, []); },
+        current,
+        (operation: RssManagementOperationProjection): void => { if (current()) this.rssManagementOperation = operation; },
+        (facts: OperationFacts<RssSubscription[]>): void => { if (current()) this.rssManagementRead = facts; },
+        admitted)) {
+        this.rssPresentationIdentity = '';
+        throw new Error('RSS 展示已退役');
+      }
     }
-    return this.rssOrchestrator;
+    return host;
   }
 
   private getRssEditorOrchestrator(): RssSubscriptionEditorOrchestrator {
-    if (this.rssEditorOrchestrator === undefined || !this.rssEditorOrchestrator.owns(ReaderRuntimeOwner.current())) {
-      const owner = ReaderRuntimeOwner.current();
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner)) throw new Error('RSS 编辑页面已退役');
+    if (this.rssEditorOrchestrator === undefined || !this.rssEditorOrchestrator.owns(owner)) {
+      const shared = this.getRssOrchestrator();
       this.rssEditorOrchestrator = new RssSubscriptionEditorOrchestrator(
         (snapshot: RssSubscriptionEditorSnapshot): void => {
           if (this.isCurrentRssPresentation(this.rssEditorNavigationGeneration, owner, 'rssSubscriptionEditor')) this.rssEditorSnapshot = snapshot;
@@ -2211,7 +2234,7 @@ struct Index {
         (subscriptionId: string): void => { if (this.isCurrentRssPresentation(this.rssEditorNavigationGeneration, owner, 'rssSubscriptionEditor')) this.finishRssSubscriptionEdit(subscriptionId); },
         (): boolean => this.isCurrentRssPresentation(this.rssEditorNavigationGeneration, owner, 'rssSubscriptionEditor'),
         owner,
-        (task: () => Promise<void>): Promise<void> => this.getRssOrchestrator().runSerialized(task),
+        (task: () => Promise<void>): Promise<void> => shared.runSerialized(task),
       );
     }
     return this.rssEditorOrchestrator;
@@ -5859,6 +5882,7 @@ struct Index {
 
   private nextNavigationGeneration(): number {
     this.retireSourceSwitchPresentation();
+    this.retireRssPresentation();
     this.bookshelfCatalogEpoch += 1;
     this.bookshelfBackgroundEpoch += 1;
     this.bookshelfUpdateRunning = false;
