@@ -530,6 +530,7 @@
     "test-source-canonical-progress-owner.mjs",
     "test-source-cold-index-consumers.mjs",
     "test-source-content-correction.mjs",
+    "test-source-foundation-specs.mjs",
     "test-source-index-presentation-consumers.mjs",
     "test-source-management-cold-owner.mjs",
     "test-source-management-exact-intents.mjs",

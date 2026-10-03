@@ -1,7 +1,7 @@
 import { TOK_SPACE_XS } from './ReaderTokens';
 import type { ReaderAppColorRole } from './ReaderThemeRegistry';
 import {
-  ReaderTextStyle, ReaderInheritedTextStyle, TYPE_SOURCE_TOOLS_ACTION,
+  ReaderTextStyle, ReaderInheritedTextStyle, TYPE_FORM_HINT, TYPE_SOURCE_TOOLS_ACTION,
   TYPE_SOURCE_TOOLS_COMPACT_ACTION, TYPE_SOURCE_TOOLS_BODY,
   TYPE_RULES_MANAGEMENT_ACTION, TYPE_RULES_COMPACT_ACTION,
   TYPE_RULES_MANAGEMENT_INPUT, TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_SYNC_INPUT,
@@ -10,7 +10,7 @@ import {
   TYPE_SHELF_MANAGEMENT_BUTTON, TYPE_SHELF_MANAGEMENT_SMALL_ACTION, TYPE_SHELF_MANAGEMENT_ROW_ACTION, TYPE_RSS_BOTTOM_ACTION, TYPE_SOURCE_TOOLS_CODE_INPUT,
 } from './ReaderTypography';
 
-export type ReaderButtonSpecId = 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action' | 'form-action' | 'form-busy-action' | 'form-document-action' | 'search-primary' | 'search-secondary' | 'discover-page' | 'rss-mode-tab' | 'rss-state' | 'rss-source-link' | 'shelf-action' | 'shelf-small' | 'shelf-row-edit' | 'shelf-row-select' | 'rss-detail-bottom' | 'rss-filter' | 'sync-config-test' | 'sync-config-save';
+export type ReaderButtonSpecId = 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action' | 'form-action' | 'form-busy-action' | 'form-document-action' | 'search-primary' | 'search-secondary' | 'discover-page' | 'rss-mode-tab' | 'rss-state' | 'rss-source-link' | 'shelf-action' | 'shelf-small' | 'shelf-row-edit' | 'shelf-row-select' | 'rss-detail-bottom' | 'rss-filter' | 'sync-config-test' | 'sync-config-save' | 'source-management-retry' | 'source-management-category' | 'source-management-status-compact' | 'source-management-status-wide' | 'source-management-detect' | 'source-management-login' | 'source-management-manage';
 export type ReaderButtonLayout = 'intrinsic' | 'equal' | 'full';
 export interface ReaderButtonSpec {
   text: ReaderTextStyle | ReaderInheritedTextStyle;
@@ -38,12 +38,13 @@ export interface ReaderButtonSpec {
   busyOpacity: number;
   centerText: boolean;
   outerMargin: { right: number; bottom: number } | undefined;
+  responsiveStatusWidth: boolean;
 }
 const SOURCE_ACTION: ReaderButtonSpec = {
   text: TYPE_SOURCE_TOOLS_ACTION, height: 42, radius: 8, horizontalPadding: 0, stacked: false,
   primarySurface: 'TOK_PRIMARY_DARK', secondarySurface: 'TOK_SURFACE_PANEL_SOFT',
   primaryBorder: 'TOK_PRIMARY_DARK', secondaryBorder: 'TOK_BORDER', disabledOpacity: 0.62, primaryDisabledOpacity: undefined, hasBorder: true, primaryHasBorder: true, hasSurface: true, outerRadius: true,
-  primaryText: 'TOK_ON_PRIMARY', secondaryText: 'TOK_PRIMARY_TEXT', verticalPadding: 0, allPadding: undefined, maxLines: 0, fixedWidth: 0, responseOffset: undefined, busyOpacity: 1, centerText: true, outerMargin: undefined,
+  primaryText: 'TOK_ON_PRIMARY', secondaryText: 'TOK_PRIMARY_TEXT', verticalPadding: 0, allPadding: undefined, maxLines: 0, fixedWidth: 0, responseOffset: undefined, busyOpacity: 1, centerText: true, outerMargin: undefined, responsiveStatusWidth: false,
 };
 // Named variants retain current physical tuples; callers receive no style bag.
 function copyReaderButtonSpec(): ReaderButtonSpec {
@@ -54,7 +55,7 @@ function copyReaderButtonSpec(): ReaderButtonSpec {
     disabledOpacity: SOURCE_ACTION.disabledOpacity, primaryDisabledOpacity: SOURCE_ACTION.primaryDisabledOpacity, hasBorder: SOURCE_ACTION.hasBorder, primaryHasBorder: SOURCE_ACTION.primaryHasBorder,
     hasSurface: SOURCE_ACTION.hasSurface, outerRadius: SOURCE_ACTION.outerRadius,
     primaryText: SOURCE_ACTION.primaryText, secondaryText: SOURCE_ACTION.secondaryText, verticalPadding: SOURCE_ACTION.verticalPadding, allPadding: SOURCE_ACTION.allPadding,
-    maxLines: SOURCE_ACTION.maxLines, fixedWidth: SOURCE_ACTION.fixedWidth, responseOffset: SOURCE_ACTION.responseOffset, busyOpacity: SOURCE_ACTION.busyOpacity, centerText: SOURCE_ACTION.centerText, outerMargin: SOURCE_ACTION.outerMargin };
+    maxLines: SOURCE_ACTION.maxLines, fixedWidth: SOURCE_ACTION.fixedWidth, responseOffset: SOURCE_ACTION.responseOffset, busyOpacity: SOURCE_ACTION.busyOpacity, centerText: SOURCE_ACTION.centerText, outerMargin: SOURCE_ACTION.outerMargin, responsiveStatusWidth: SOURCE_ACTION.responsiveStatusWidth };
 }
 const SOURCE_COMPACT: ReaderButtonSpec = copyReaderButtonSpec();
 SOURCE_COMPACT.text = TYPE_SOURCE_TOOLS_COMPACT_ACTION;
@@ -144,6 +145,49 @@ SYNC_CONFIG_SAVE.text = TYPE_APP_COMPACT_PRIMARY_ACTION; SYNC_CONFIG_SAVE.height
 SYNC_CONFIG_SAVE.radius = 12; SYNC_CONFIG_SAVE.disabledOpacity = 1; SYNC_CONFIG_SAVE.centerText = false;
 SYNC_CONFIG_SAVE.primarySurface = 'app.SyncPage.SOLID_BG'; SYNC_CONFIG_SAVE.primaryBorder = 'app.SyncPage.SOLID_BG';
 
+
+const SOURCE_MANAGEMENT_RETRY: ReaderButtonSpec = copyReaderButtonSpec();
+SOURCE_MANAGEMENT_RETRY.text = TYPE_FORM_COMPACT_ACTION; SOURCE_MANAGEMENT_RETRY.height = undefined;
+SOURCE_MANAGEMENT_RETRY.hasSurface = false; SOURCE_MANAGEMENT_RETRY.hasBorder = false;
+SOURCE_MANAGEMENT_RETRY.outerRadius = false; SOURCE_MANAGEMENT_RETRY.centerText = false;
+SOURCE_MANAGEMENT_RETRY.disabledOpacity = 1;
+const SOURCE_MANAGEMENT_CATEGORY: ReaderButtonSpec = copyReaderButtonSpec();
+SOURCE_MANAGEMENT_CATEGORY.text = TYPE_FORM_HINT; SOURCE_MANAGEMENT_CATEGORY.height = 32;
+SOURCE_MANAGEMENT_CATEGORY.radius = 16; SOURCE_MANAGEMENT_CATEGORY.horizontalPadding = 12;
+SOURCE_MANAGEMENT_CATEGORY.centerText = false; SOURCE_MANAGEMENT_CATEGORY.hasBorder = false;
+SOURCE_MANAGEMENT_CATEGORY.disabledOpacity = 1; SOURCE_MANAGEMENT_CATEGORY.secondarySurface = 'TOK_CARD_BG';
+SOURCE_MANAGEMENT_CATEGORY.secondaryText = 'TOK_INK';
+const SOURCE_MANAGEMENT_STATUS: ReaderButtonSpec = copyReaderButtonSpec();
+SOURCE_MANAGEMENT_STATUS.text = TYPE_FORM_COMPACT_ACTION; SOURCE_MANAGEMENT_STATUS.height = 32;
+SOURCE_MANAGEMENT_STATUS.radius = 16; SOURCE_MANAGEMENT_STATUS.maxLines = 1;
+SOURCE_MANAGEMENT_STATUS.disabledOpacity = 0.45; SOURCE_MANAGEMENT_STATUS.secondarySurface = 'TOK_CARD_BG';
+SOURCE_MANAGEMENT_STATUS.fixedWidth = 58; SOURCE_MANAGEMENT_STATUS.responsiveStatusWidth = true;
+SOURCE_MANAGEMENT_STATUS.secondaryBorder = 'app.SourceManagementPage.CHIP_BORDER'; SOURCE_MANAGEMENT_STATUS.secondaryText = 'TOK_INK';
+const SOURCE_MANAGEMENT_STATUS_WIDE: ReaderButtonSpec = copyReaderButtonSpec();
+SOURCE_MANAGEMENT_STATUS_WIDE.text = SOURCE_MANAGEMENT_STATUS.text; SOURCE_MANAGEMENT_STATUS_WIDE.height = SOURCE_MANAGEMENT_STATUS.height;
+SOURCE_MANAGEMENT_STATUS_WIDE.radius = SOURCE_MANAGEMENT_STATUS.radius; SOURCE_MANAGEMENT_STATUS_WIDE.maxLines = SOURCE_MANAGEMENT_STATUS.maxLines;
+SOURCE_MANAGEMENT_STATUS_WIDE.disabledOpacity = SOURCE_MANAGEMENT_STATUS.disabledOpacity; SOURCE_MANAGEMENT_STATUS_WIDE.secondarySurface = SOURCE_MANAGEMENT_STATUS.secondarySurface;
+SOURCE_MANAGEMENT_STATUS_WIDE.secondaryBorder = SOURCE_MANAGEMENT_STATUS.secondaryBorder; SOURCE_MANAGEMENT_STATUS_WIDE.secondaryText = SOURCE_MANAGEMENT_STATUS.secondaryText;
+SOURCE_MANAGEMENT_STATUS_WIDE.fixedWidth = 72; SOURCE_MANAGEMENT_STATUS_WIDE.responsiveStatusWidth = true;
+const SOURCE_MANAGEMENT_DETECT: ReaderButtonSpec = copyReaderButtonSpec();
+SOURCE_MANAGEMENT_DETECT.text = TYPE_FORM_COMPACT_ACTION; SOURCE_MANAGEMENT_DETECT.height = 28;
+SOURCE_MANAGEMENT_DETECT.radius = 7; SOURCE_MANAGEMENT_DETECT.fixedWidth = 44; SOURCE_MANAGEMENT_DETECT.stacked = true;
+SOURCE_MANAGEMENT_DETECT.centerText = false; SOURCE_MANAGEMENT_DETECT.maxLines = 1;
+SOURCE_MANAGEMENT_DETECT.disabledOpacity = 1; SOURCE_MANAGEMENT_DETECT.busyOpacity = 0.62;
+SOURCE_MANAGEMENT_DETECT.secondarySurface = 'TOK_CARD_BG'; SOURCE_MANAGEMENT_DETECT.secondaryBorder = 'app.SourceManagementPage.CHIP_BORDER';
+SOURCE_MANAGEMENT_DETECT.secondaryText = 'TOK_INK';
+const SOURCE_MANAGEMENT_LOGIN: ReaderButtonSpec = copyReaderButtonSpec();
+SOURCE_MANAGEMENT_LOGIN.text = TYPE_FORM_COMPACT_ACTION; SOURCE_MANAGEMENT_LOGIN.height = 28;
+SOURCE_MANAGEMENT_LOGIN.radius = 7; SOURCE_MANAGEMENT_LOGIN.fixedWidth = 44; SOURCE_MANAGEMENT_LOGIN.stacked = true;
+SOURCE_MANAGEMENT_LOGIN.centerText = false; SOURCE_MANAGEMENT_LOGIN.maxLines = 1; SOURCE_MANAGEMENT_LOGIN.disabledOpacity = 1;
+SOURCE_MANAGEMENT_LOGIN.secondarySurface = 'TOK_CARD_BG'; SOURCE_MANAGEMENT_LOGIN.secondaryBorder = 'app.SourceManagementPage.CHIP_BORDER';
+const SOURCE_MANAGEMENT_MANAGE: ReaderButtonSpec = copyReaderButtonSpec();
+SOURCE_MANAGEMENT_MANAGE.text = TYPE_FORM_LABEL_ACTION; SOURCE_MANAGEMENT_MANAGE.height = 44;
+SOURCE_MANAGEMENT_MANAGE.radius = 8; SOURCE_MANAGEMENT_MANAGE.stacked = true; SOURCE_MANAGEMENT_MANAGE.centerText = false;
+SOURCE_MANAGEMENT_MANAGE.maxLines = 1; SOURCE_MANAGEMENT_MANAGE.disabledOpacity = 1;
+SOURCE_MANAGEMENT_MANAGE.secondarySurface = 'TOK_SURFACE_SOLID'; SOURCE_MANAGEMENT_MANAGE.secondaryBorder = 'app.SourceManagementPage.SEARCH_FIELD_BORDER';
+SOURCE_MANAGEMENT_MANAGE.secondaryText = 'TOK_INK';
+
 const BUTTONS: Record<ReaderButtonSpecId, ReaderButtonSpec> = {
   'source-action': SOURCE_ACTION, 'source-compact': SOURCE_COMPACT,
   'rules-action': RULES_ACTION, 'rules-compact': RULES_COMPACT, 'sync-action': SYNC_ACTION,
@@ -152,6 +196,9 @@ const BUTTONS: Record<ReaderButtonSpecId, ReaderButtonSpec> = {
   'rss-mode-tab': RSS_MODE, 'rss-state': RSS_STATE, 'rss-source-link': RSS_SOURCE_LINK,
   'shelf-action': SHELF_ACTION, 'shelf-small': SHELF_SMALL, 'shelf-row-edit': SHELF_ROW_EDIT, 'shelf-row-select': SHELF_ROW_SELECT, 'rss-detail-bottom': RSS_DETAIL_BOTTOM,
   'rss-filter': RSS_FILTER, 'sync-config-test': SYNC_CONFIG_TEST, 'sync-config-save': SYNC_CONFIG_SAVE,
+  'source-management-retry': SOURCE_MANAGEMENT_RETRY, 'source-management-category': SOURCE_MANAGEMENT_CATEGORY,
+  'source-management-status-compact': SOURCE_MANAGEMENT_STATUS, 'source-management-status-wide': SOURCE_MANAGEMENT_STATUS_WIDE, 'source-management-detect': SOURCE_MANAGEMENT_DETECT,
+  'source-management-login': SOURCE_MANAGEMENT_LOGIN, 'source-management-manage': SOURCE_MANAGEMENT_MANAGE,
 };
 export function resolveReaderButtonSpec(id: ReaderButtonSpecId): ReaderButtonSpec { return BUTTONS[id]; }
 

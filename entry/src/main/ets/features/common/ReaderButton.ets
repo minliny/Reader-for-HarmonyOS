@@ -1,7 +1,7 @@
 import { ReaderButtonLayout, ReaderButtonSpecId, resolveReaderButtonSpec } from './ReaderControlSpecs';
 import { ReaderPressFeedback } from './ReaderPressFeedback';
 import { readerAppColor } from './ReaderThemeRegistry';
-import { TOK_BORDER_W } from './ReaderTokens';
+import { TOK_BORDER_W, TOK_SPACE_XS } from './ReaderTokens';
 
 /** Shared action presentation. Admission and business work stay at the owner;
  * ArkUI owns pointer release/cancel and pressed state. A retained intent must
@@ -23,13 +23,13 @@ class ReaderButtonLabelModifier implements AttributeModifier<TextAttribute> {
 }
 class ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {
   constructor(private id: ReaderButtonSpecId, private primary: boolean, private enabled: boolean,
-    private layout: ReaderButtonLayout, private scheme: string, private busy: boolean = false) {}
+    private layout: ReaderButtonLayout, private scheme: string, private busy: boolean = false, private availableWidth: number = 0) {}
   applyNormalAttribute(instance: CommonAttribute): void {
     const spec = resolveReaderButtonSpec(this.id);
     if (this.layout === 'equal') instance.layoutWeight(1);
     if (this.layout === 'full') instance.width('100%');
     if (spec.height !== undefined) instance.height(spec.height);
-    if (spec.fixedWidth > 0) instance.width(spec.fixedWidth);
+    if (spec.fixedWidth > 0) instance.width(spec.responsiveStatusWidth ? spec.fixedWidth * Math.min(1, Math.max(0, this.availableWidth - TOK_SPACE_XS * 4) / 318) : spec.fixedWidth);
     if (spec.outerMargin !== undefined) instance.margin(spec.outerMargin);
     if (spec.allPadding !== undefined) instance.padding(spec.allPadding);
     else if (spec.verticalPadding > 0) instance.padding({ left: spec.horizontalPadding, right: spec.horizontalPadding, top: spec.verticalPadding, bottom: spec.verticalPadding });
@@ -54,14 +54,14 @@ class ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {
 // must not rely on platform ordering to keep the earlier label recipe alive.
 class ReaderButtonTextModifier implements AttributeModifier<TextAttribute> {
   constructor(private id: ReaderButtonSpecId, private primary: boolean, private enabled: boolean,
-    private layout: ReaderButtonLayout, private scheme: string, private busy: boolean = false) {}
+    private layout: ReaderButtonLayout, private scheme: string, private busy: boolean = false, private availableWidth: number = 0) {}
   applyNormalAttribute(instance: TextAttribute): void {
     new ReaderButtonLabelModifier(this.id, this.primary, this.scheme).applyNormalAttribute(instance);
-    new ReaderButtonFrameModifier(this.id, this.primary, this.enabled, this.layout, this.scheme, this.busy).applyNormalAttribute(instance);
+    new ReaderButtonFrameModifier(this.id, this.primary, this.enabled, this.layout, this.scheme, this.busy, this.availableWidth).applyNormalAttribute(instance);
   }
   applyPressedAttribute(instance: TextAttribute): void {
     new ReaderButtonLabelModifier(this.id, this.primary, this.scheme).applyNormalAttribute(instance);
-    new ReaderButtonFrameModifier(this.id, this.primary, this.enabled, this.layout, this.scheme, this.busy).applyPressedAttribute(instance);
+    new ReaderButtonFrameModifier(this.id, this.primary, this.enabled, this.layout, this.scheme, this.busy, this.availableWidth).applyPressedAttribute(instance);
   }
   applyDisabledAttribute(instance: TextAttribute): void { this.applyNormalAttribute(instance); }
 }
@@ -74,6 +74,9 @@ export struct ReaderButton {
   @Prop actionEnabled: boolean = true;
   @Prop layout: ReaderButtonLayout = 'intrinsic';
   @Prop isBusy: boolean = false;
+  // Measured layout authority only; finite Source status variants own the
+  // admitted 58/72 design widths and existing 318vp shrink formula.
+  @Prop availableWidth: number = 0;
   onAction: () => void = (): void => {};
   private mounted: boolean = false;
   aboutToAppear(): void { this.mounted = true; }
@@ -82,10 +85,10 @@ export struct ReaderButton {
     if (resolveReaderButtonSpec(this.specId).stacked) {
       Stack({ alignContent: Alignment.Center }) {
         Text(this.label).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme));
-      }.attributeModifier(new ReaderButtonFrameModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy))
+      }.attributeModifier(new ReaderButtonFrameModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy, this.availableWidth))
         .enabled(this.actionEnabled).accessibilityText(this.label).onClick((): void => this.commit());
     } else {
-      Text(this.label).attributeModifier(new ReaderButtonTextModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy))
+      Text(this.label).attributeModifier(new ReaderButtonTextModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy, this.availableWidth))
         .enabled(this.actionEnabled).accessibilityText(this.label).onClick((): void => this.commit());
     }
   }

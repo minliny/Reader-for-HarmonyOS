@@ -19,7 +19,8 @@ class ReaderLabeledIconRowModifier implements AttributeModifier<RowAttribute> {
   constructor(private id: ReaderLabeledIconActionSpecId, private divider: boolean, private scheme: string, private enabled: boolean) {}
   applyNormalAttribute(instance: RowAttribute): void {
     const spec = resolveReaderLabeledIconActionSpec(this.id);
-    instance.height(spec.rowHeight).alignItems(VerticalAlign.Center);
+    if (spec.rowHeight !== undefined) instance.height(spec.rowHeight);
+    instance.alignItems(VerticalAlign.Center);
     if (spec.rowWidth !== undefined) instance.width(spec.rowWidth);
     if (spec.horizontalPadding !== undefined) instance.padding({ left: spec.horizontalPadding, right: spec.horizontalPadding });
     if (spec.centerRow) instance.justifyContent(FlexAlign.Center);
@@ -27,14 +28,14 @@ class ReaderLabeledIconRowModifier implements AttributeModifier<RowAttribute> {
       if (spec.divided) instance.border({ width: { left: this.divider ? TOK_BORDER_W : 0 }, color: readerAppColor(spec.borderRole, this.scheme) });
       else instance.border({ width: TOK_BORDER_W, color: readerAppColor(spec.borderRole, this.scheme) });
     }
-    if (spec.surfaceRole !== undefined) this.feedback().applyNormalAttribute(instance);
-    else if (spec.radius !== undefined) instance.borderRadius(spec.radius);
+    if (spec.surfaceRole !== undefined && !spec.surfaceOnHit) this.feedback().applyNormalAttribute(instance);
+    else if (spec.radius !== undefined && !spec.surfaceOnHit) instance.borderRadius(spec.radius);
     if (!spec.outerHit) {
       if (spec.equalLayout) instance.layoutWeight(1);
       if (spec.responseOffset !== undefined) instance.responseRegion({ x: 0, y: spec.responseOffset, width: '100%', height: 44 });
     }
   }
-  applyPressedAttribute(instance: RowAttribute): void { this.applyNormalAttribute(instance); if (resolveReaderLabeledIconActionSpec(this.id).surfaceRole !== undefined) this.feedback().applyPressedAttribute(instance); }
+  applyPressedAttribute(instance: RowAttribute): void { this.applyNormalAttribute(instance); if (resolveReaderLabeledIconActionSpec(this.id).surfaceRole !== undefined && !resolveReaderLabeledIconActionSpec(this.id).surfaceOnHit) this.feedback().applyPressedAttribute(instance); }
   applyDisabledAttribute(instance: RowAttribute): void { this.applyNormalAttribute(instance); }
   private feedback(): ReaderPressFeedback {
     const spec = resolveReaderLabeledIconActionSpec(this.id);
@@ -42,10 +43,18 @@ class ReaderLabeledIconRowModifier implements AttributeModifier<RowAttribute> {
   }
 }
 class ReaderLabeledIconHitModifier implements AttributeModifier<StackAttribute> {
-  constructor(private id: ReaderLabeledIconActionSpecId) {}
+  constructor(private id: ReaderLabeledIconActionSpecId, private scheme: string, private enabled: boolean) {}
   applyNormalAttribute(instance: StackAttribute): void {
     instance.height(44);
-    if (resolveReaderLabeledIconActionSpec(this.id).equalLayout) instance.layoutWeight(1);
+    const spec = resolveReaderLabeledIconActionSpec(this.id);
+    if (spec.equalLayout) instance.layoutWeight(1);
+    if (spec.surfaceOnHit) this.feedback().applyNormalAttribute(instance);
+  }
+  applyPressedAttribute(instance: StackAttribute): void { this.applyNormalAttribute(instance); if (resolveReaderLabeledIconActionSpec(this.id).surfaceOnHit) this.feedback().applyPressedAttribute(instance); }
+  applyDisabledAttribute(instance: StackAttribute): void { this.applyNormalAttribute(instance); }
+  private feedback(): ReaderPressFeedback {
+    const spec = resolveReaderLabeledIconActionSpec(this.id);
+    return new ReaderPressFeedback(readerAppColor(spec.surfaceRole ?? 'TOK_PAPER', this.scheme), this.scheme, spec.radius ?? 0, spec.radius ?? 0, this.enabled);
   }
 }
 
@@ -72,12 +81,12 @@ export struct ReaderLabeledIconAction {
   build() {
     if (resolveReaderLabeledIconActionSpec(this.specId).outerHit) {
       Stack({ alignContent: Alignment.Center }) {
-        Row({ space: 5 }) { this.labelContents(); }
+        Row({ space: resolveReaderLabeledIconActionSpec(this.specId).gap }) { this.labelContents(); }
           .attributeModifier(new ReaderLabeledIconRowModifier(this.specId, this.showDivider, this.scheme, this.actionEnabled));
-      }.attributeModifier(new ReaderLabeledIconHitModifier(this.specId))
+      }.attributeModifier(new ReaderLabeledIconHitModifier(this.specId, this.scheme, this.actionEnabled))
         .enabled(this.actionEnabled).accessibilityText(this.label).onClick((): void => this.commit());
     } else {
-      Row({ space: 5 }) { this.labelContents(); }
+      Row({ space: resolveReaderLabeledIconActionSpec(this.specId).gap }) { this.labelContents(); }
         .attributeModifier(new ReaderLabeledIconRowModifier(this.specId, this.showDivider, this.scheme, this.actionEnabled))
         .enabled(this.actionEnabled).accessibilityText(this.label).onClick((): void => this.commit());
     }
