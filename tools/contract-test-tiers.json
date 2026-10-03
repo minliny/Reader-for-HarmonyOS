@@ -506,6 +506,7 @@
     "test-typography-carrier-successors.mjs",
     "test-typography-role-imports.mjs",
     "test-webdav-credential-queue.mjs",
-    "test-window-flicker-dedup.mjs"
+    "test-window-flicker-dedup.mjs",
+    "test-sync-backup-retention-exit.mjs"
   ]
 }

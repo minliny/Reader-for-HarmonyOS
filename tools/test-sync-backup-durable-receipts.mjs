@@ -17,7 +17,7 @@ function preferences(){let data=existsSync(disk)?JSON.parse(readFileSync(disk,'u
 };}
 function fixture({cold=false}={}){
  if(!cold)rmSync(disk,{force:true});const x=f.fixture({preserveAsset:cold});const prefs=preferences();f.setPreferences(prefs);
- const requests=[],original=x.runtime.request.bind(x.runtime);let state='prepared',uploaded=false,retention=false,remoteQualified=false;
+ const requests=[],original=x.runtime.request.bind(x.runtime);let state='prepared',uploaded=false,retention=false,remoteQualified=false,skipped=false,skipLostAck=false,skipGate;
  const exactId=()=>x.runtime.backupOperationId;
  // Typed Core result injection here is independent of the paired Rust tests,
  // which exercise actual durable Core/hash/SQLite methods. No hash algorithm
@@ -25,14 +25,22 @@ function fixture({cold=false}={}){
  x.runtime.request=async(method,params,options)=>{
   if(method==='sync.webdav.backup.receipt.query'){
    x.runtime.calls.push([method,structuredClone(params)]);
-   return {data:{transactionId:params.transactionId,receiptState:state,uploadQualified:uploaded||params.response!==undefined&&remoteQualified,
+   return {data:{transactionId:params.transactionId,receiptState:state,retentionSkipped:skipped,uploadQualified:uploaded||params.response!==undefined&&remoteQualified,
     retentionCompleted:retention,durable:true,remotePath:'/backup/package',contentBytes:100,
     request:!uploaded&&params.response===undefined&&state!=='undispatched'?{method:'GET',url:'https://example.test/backup/package'}:undefined}};
+  }
+  if(method==='sync.webdav.backup.retention.skip'){
+   x.runtime.calls.push([method,structuredClone(params)]);
+   if(skipGate)await skipGate.promise;
+   if(!uploaded&&!(params.response!==undefined&&remoteQualified))throw Error('typed Core exact upload qualification refused');
+   state='retentionSkipped';uploaded=true;skipped=true;
+   if(skipLostAck){skipLostAck=false;throw Error('lost local terminal command ACK');}
+   return {data:{transactionId:params.transactionId,receiptState:state,uploadQualified:true,retentionCompleted:false,retentionSkipped:true,durable:true}};
   }
   return original(method,params,options);
  };
  f.setTransport(async request=>{requests.push(structuredClone(request));return {status:request.method==='GET'?200:201,body:'opaque-core-ciphertext',finalUrl:request.url};});
- return {...x,prefs,requests,qualifyRemote:()=>{remoteQualified=true;},removeRemote:()=>{remoteQualified=false;},settleCore:(s,u,r)=>{state=s;uploaded=u;retention=r;},exactId};
+ return {...x,prefs,requests,qualifyRemote:()=>{remoteQualified=true;},removeRemote:()=>{remoteQualified=false;},settleCore:(s,u,r)=>{state=s;uploaded=u;retention=r;skipped=s==='retentionSkipped';},loseSkipAck:()=>{skipLostAck=true;},pauseSkip:gate=>{skipGate=gate;},exactId};
 }
 try {
  {

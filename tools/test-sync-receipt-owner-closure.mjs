@@ -82,14 +82,16 @@ function fixture({empty=false,preserveAsset=false}={}){
   class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
   class Card extends Child { initialRender(){this.params.content?.();} }
   const page=()=>{
-    const p=createReaderBuilderProbe(source('features/sync/SyncPage.ets'),['manualActionsSection','sectionHeadingMuted','restoreConflictCard','feedbackView','recoveryLabel','canMutate','manualActionButton'],{readerRecoveryView,ReaderRecoveryNotice:Child,ReaderCard:Card},{mountChildren:true,childSources:{ReaderCard:source('features/common/ReaderCard.ets')}});
-    Object.assign(p.owner,{snapshot:clone(snapshot),contentFrame:()=>({width:390}),appThemeScheme:'day',onReconcile:g=>owner.reconcile(g),onTriggerBackup:()=>owner.triggerBackup(),onRestoreLatest:()=>owner.restoreLatest(),restoreConflictCard:()=>{}});
+    const p=createReaderBuilderProbe(source('features/sync/SyncPage.ets'),['manualActionsSection','sectionHeadingMuted','restoreConflictCard','feedbackView','recoveryLabel','canSkipBackupRetention','backupGeneration','backupRetentionActionIdentities','canMutate','manualActionButton'],{readerRecoveryView,ReaderRecoveryNotice:Child,ReaderRecoveryAction:Child,ReaderCard:Card},{mountChildren:true,childSources:{ReaderCard:source('features/common/ReaderCard.ets')}});
+    Object.assign(p.owner,{snapshot:clone(snapshot),contentFrame:()=>({width:390}),appThemeScheme:'day',onReconcile:g=>owner.reconcile(g),onSkipBackupRetention:g=>owner.skipBackupRetention(g),onTriggerBackup:()=>owner.triggerBackup(),onRestoreLatest:()=>owner.restoreLatest(),restoreConflictCard:()=>{}});
     p.owner.manualActionsSection();
     const child=[...p.owner.children.values()].find(c=>c.params.view);
     const n=createReaderBuilderProbe(noticeSource,['build'],{ReaderRecoveryAction:Child});Object.assign(n.owner,{...child.params,appThemeScheme:'day'});n.owner.initialRender();
     const retryChild=[...n.owner.children.values()][0];let action;
     if(retryChild){const a=createReaderBuilderProbe(actionSource,['build']);Object.assign(a.owner,{enabled:true,appThemeScheme:'day',...retryChild.params});a.owner.initialRender();action=[...a.owner.nodes.values()].find(v=>v.height===36);}
-    return {page:p.owner,view:child.params.view,action,notice:n.owner};
+    const skipChild=[...p.owner.children.values()].find(c=>c.params.label==='保留备份，结束清理');let skipAction;
+    if(skipChild){const a=createReaderBuilderProbe(actionSource,['build']);Object.assign(a.owner,{enabled:true,appThemeScheme:'day',...skipChild.params});a.owner.initialRender();skipAction=[...a.owner.nodes.values()].find(v=>v.height===36);}
+    return {page:p.owner,view:child.params.view,action,skipAction,notice:n.owner};
   };
   return {owner,store:credentialStore,runtime:runtimeOwner,settle,page,snapshot:()=>snapshot,emitted,close:()=>{route=false;},reopen:()=>{route=true;owner.open();},journal:()=>journal};
 }

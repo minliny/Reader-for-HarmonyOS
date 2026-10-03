@@ -63,11 +63,14 @@ export type SyncBackupReceipt = {
   receiptState: string;
   uploadQualified: boolean;
   retentionCompleted: boolean;
+  retentionSkipped: boolean;
   undispatched: boolean;
   durable: boolean;
   remotePath?: string;
   contentBytes?: number;
 };
+type SyncBackupQuery = { receipt: SyncBackupReceipt; response?: JsonObject };
+
 export type SyncRestoreResult = {
   ok: boolean;
   applied?: boolean;
@@ -335,14 +338,40 @@ export class SyncGateway {
     this.assertOwner();
     const journal = await this.credentials.loadBackupJournal();
     this.assertOwner(); if (journal === undefined) return undefined;
+    return (await this.queryBackupReceipt(journal, allowRemote)).receipt;
+  }
+
+  /** Explicit user termination. The exact upload must still qualify; this
+   * records skipped cleanup locally and never sends remote PUT or DELETE. */
+  async skipBackupRetention(operationId: string, admitted?: () => boolean): Promise<SyncBackupReceipt> {
+    this.assertAdmission(admitted);
+    const journal = await this.credentials.loadBackupJournal();
+    this.assertAdmission(admitted);
+    if (journal === undefined || journal.operationId !== operationId) throw new Error('本次备份记录已变化');
+    const checked = await this.queryBackupReceipt(journal, true, admitted);
+    this.assertAdmission(admitted);
+    if (!checked.receipt.uploadQualified || !checked.receipt.durable) throw new Error('本次上传尚未核实，不能结束清理');
+    if (checked.receipt.retentionCompleted || checked.receipt.retentionSkipped) return checked.receipt;
+    const result = await this.runtimeOwner.request('sync.webdav.backup.retention.skip', {
+      transactionId: operationId, ...(checked.response === undefined ? {} : { response: checked.response }),
+    });
+    this.assertAdmission(admitted);
+    const receipt = this.decodeBackupReceipt(result.data, journal);
+    if (!receipt.retentionCompleted && !receipt.retentionSkipped) throw new Error('结束清理尚未获得本地回执');
+    return receipt;
+  }
+
+  private async queryBackupReceipt(journal: WebDavBackupJournal, allowRemote: boolean,
+    admitted?: () => boolean): Promise<SyncBackupQuery> {
+    this.assertAdmission(admitted);
     const queried = await this.runtimeOwner.request('sync.webdav.backup.receipt.query', { transactionId: journal.operationId });
-    this.assertOwner();
+    this.assertAdmission(admitted);
     let receipt = this.decodeBackupReceipt(queried.data, journal);
     const requestValue = queried.data['request'];
     if (allowRemote && journal.phase === 'mayDispatch' && !receipt.uploadQualified && requestValue !== undefined) {
       const request = this.requireObject(requestValue, 'Core 备份核对请求');
       if (request['method'] !== 'GET' || typeof request['url'] !== 'string') throw new Error('备份核对必须是原路径只读请求');
-      const current = await this.credentials.loadSerializedState(); this.assertOwner();
+      const current = await this.credentials.loadSerializedState(); this.assertAdmission(admitted);
       if (current.config === null || journal.configSaveOperationId !== undefined && current.saveOperationId !== journal.configSaveOperationId) throw new Error('原备份凭据已变化，不能核对远端');
       const configured = url.URL.parseURL(current.config.url), target = url.URL.parseURL(request['url'] as string);
       if (target.protocol !== 'https:' || target.origin !== configured.origin ||
@@ -350,24 +379,27 @@ export class SyncGateway {
       const headers = request['headers'] === undefined ? {} : this.requireObject(request['headers'], '备份核对请求头');
       const authorization = this.authorization(current.config); if (authorization !== undefined) headers['Authorization'] = authorization;
       const response = await HttpExecuteHost.instance.execute({ ...request, headers, httpsOnly: true, sameOriginRedirectsOnly: true });
-      this.assertOwner();
+      this.assertAdmission(admitted);
       const checked = await this.runtimeOwner.request('sync.webdav.backup.receipt.query', { transactionId: journal.operationId, response });
-      this.assertOwner(); receipt = this.decodeBackupReceipt(checked.data, journal);
+      this.assertAdmission(admitted); receipt = this.decodeBackupReceipt(checked.data, journal);
+      return { receipt, response };
     }
-    return receipt;
+    return { receipt };
   }
 
   private decodeBackupReceipt(data: JsonObject, journal: WebDavBackupJournal): SyncBackupReceipt {
     this.assertTransactionIdentity(journal.operationId, data['transactionId'] as string, '备份发布记录');
     const state = data['receiptState'], uploaded = data['uploadQualified'], completed = data['retentionCompleted'], durable = data['durable'];
-    if (typeof state !== 'string' || !['missing','prepared','undispatched','uploadAcknowledged','retentionCompleted'].includes(state) ||
+    const skipped = data['retentionSkipped'] ?? false;
+    if (typeof state !== 'string' || !['missing','prepared','undispatched','uploadAcknowledged','retentionCompleted','retentionSkipped'].includes(state) ||
       typeof uploaded !== 'boolean' || typeof completed !== 'boolean' || typeof durable !== 'boolean' || completed && !uploaded ||
-      state === 'undispatched' && (uploaded || completed)) throw new Error('Core 备份发布记录无效');
+      typeof skipped !== 'boolean' || skipped && (!uploaded || completed) ||
+      (state === 'retentionSkipped') !== skipped || state === 'undispatched' && (uploaded || completed || skipped)) throw new Error('Core 备份发布记录无效');
     const undispatched = state === 'undispatched' || journal.phase === 'prepared' && !uploaded && !completed;
     const path = data['remotePath'], bytes = data['contentBytes'];
     if (path !== undefined && (typeof path !== 'string' || path.length > 4096) || bytes !== undefined && (typeof bytes !== 'number' || !Number.isSafeInteger(bytes) || bytes < 0)) throw new Error('Core 备份发布摘要无效');
     return { operationId: journal.operationId, receiptState: state, uploadQualified: uploaded && durable,
-      retentionCompleted: completed && durable, durable, undispatched, remotePath: path as string | undefined, contentBytes: bytes as number | undefined };
+      retentionCompleted: completed && durable, retentionSkipped: skipped && durable, durable, undispatched, remotePath: path as string | undefined, contentBytes: bytes as number | undefined };
   }
 
   private async requireBackupSettled(): Promise<void> {
@@ -377,7 +409,7 @@ export class SyncGateway {
       if (!await this.abortBestEffort(receipt.operationId, true)) throw new Error('上一次未发送备份仍在清理');
       this.assertOwner(); await this.credentials.clearBackupJournal(receipt.operationId); this.assertOwner(); return;
     }
-    if (!receipt.retentionCompleted) throw new Error('上一次备份发布或保留清理尚未核定，不重传');
+    if (!receipt.retentionCompleted && !receipt.retentionSkipped) throw new Error('上一次备份发布或保留清理尚未核定，不重传');
     await this.credentials.clearBackupJournal(receipt.operationId); this.assertOwner();
   }
 

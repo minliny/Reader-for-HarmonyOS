@@ -17,6 +17,7 @@ export class SyncWriteObservation {
   remoteConfirmedCount: number = 0;
   /** Exact publisher qualification, separate from generic HTTP2xx counts. */
   uploadQualified: boolean = false;
+  retentionSkipped: boolean = false;
 }
 export interface SyncOperationProjection {
   action: SyncOperationAction;
@@ -28,6 +29,7 @@ export interface SyncOperationProjection {
   completed: boolean;
   remoteConfirmedCount: number;
   uploadQualified: boolean;
+  retentionSkipped?: boolean;
 }
 export interface SyncPresentationFacts {
   read: OperationFacts<boolean>;

@@ -1,3 +1,4 @@
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { TYPE_APP_COMPACT_BADGE, TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_APP_LOADING_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_LABEL, TYPE_FORM_ACTION, TYPE_FORM_LABEL_ACTION, TYPE_FORM_STATUS, TYPE_SECTION_HEADING, TYPE_SYNC_BACKUP_ACTION, TYPE_SYNC_CONFLICT_META, TYPE_SYNC_HISTORY_STATUS, TYPE_SYNC_INPUT, TYPE_SYNC_MUTED_HEADING, TYPE_SYNC_ROW_LABEL } from '../common/ReaderTypography';
@@ -69,6 +70,7 @@ export struct SyncPage {
   onTestConnection: (url: string, user: string, pass: string, path: string) => void =
     (_url: string, _user: string, _pass: string, _path: string): void => {};
   onReconcile: (generation: number) => void = (_generation: number): void => {};
+  onSkipBackupRetention: (generation: number) => void = (_generation: number): void => {};
   onTriggerBackup: () => void = (): void => {};
   onRestoreLatest: () => void = (): void => {};
   onResolveRestore: (overwriteLocal: boolean) => void = (_overwriteLocal: boolean): void => {};
@@ -334,6 +336,16 @@ export struct SyncPage {
         Column({ space: TOK_SPACE_SM }) {
           ReaderRecoveryNotice({ view: this.feedbackView(), actionLabel: this.recoveryLabel(),
             onReconcile: (generation: number): void => this.onReconcile(generation) });
+          if (this.canSkipBackupRetention()) {
+            // This mutating consent actor belongs to one exact receipt identity.
+            // V1 callback fields are construction-only; rebuild only this action
+            // when its receipt changes so an old physical callback keeps old ID.
+            ForEach(this.backupRetentionActionIdentities(), (_identity: string): void => {
+              ReaderRecoveryAction({ label: '保留备份，结束清理', generation: this.backupGeneration(_identity),
+                enabled: this.snapshot.facts?.busy !== true,
+                onReconcile: (generation: number): void => this.onSkipBackupRetention(generation) });
+            }, (identity: string): string => identity);
+          }
           if (this.snapshot.statusMessage.length > 0 && !this.feedbackView().visible) {
             Text(this.snapshot.statusMessage)
               .width('100%')
@@ -665,9 +677,26 @@ export struct SyncPage {
     return readerRecoveryView(facts?.operation?.projection, read);
   }
 
+  private canSkipBackupRetention(): boolean {
+    const operation = this.snapshot.facts?.operation;
+    return operation?.action === 'backup' && operation.uploadQualified && !operation.completed &&
+      operation.retentionSkipped !== true;
+  }
+
+  private backupRetentionActionIdentities(): string[] {
+    const operation = this.snapshot.facts?.operation;
+    return operation?.operationId === undefined ? [] :
+      [`${operation.operationId}:${operation.projection.facts.generation}`];
+  }
+
+  private backupGeneration(identity?: string): number {
+    return identity === undefined ? this.snapshot.facts?.operation?.projection.facts.generation ?? 0 :
+      Number(identity.substring(identity.lastIndexOf(':') + 1));
+  }
+
   private recoveryLabel(): string {
     const operation = this.snapshot.facts?.operation;
-    if (operation?.action === 'backup' && !operation.completed) return '核对本次备份';
+    if (operation?.action === 'backup' && !operation.completed && !operation.retentionSkipped) return '核对本次备份';
     return operation !== undefined && !operation.completed &&
       (operation.action === 'restore' || operation.action === 'resolveRestore') ? '核对已有恢复' : '重新读取配置';
   }

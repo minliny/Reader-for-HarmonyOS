@@ -100,6 +100,30 @@ export class SyncOrchestrator {
     this.deliver(session);
   }
 
+  /** This distinct user action never treats a GET as consent to settle. */
+  skipBackupRetention(generation: number): void {
+    if (!this.currentSession(this.session) || this.operationInFlight || generation !== this.generation()) return;
+    const operation = this.latestOperation;
+    if (operation?.action !== 'backup' || !operation.uploadQualified || operation.completed ||
+      operation.retentionSkipped === true || operation.operationId === undefined) return;
+    const session = this.session, operationId = operation.operationId;
+    this.operationInFlight = true;
+    this.operationChain = this.operationChain.then(async (): Promise<void> => {
+      if (!this.currentSession(session)) return;
+      try {
+        const receipt = await this.gateway.skipBackupRetention(operationId, (): boolean =>
+          this.currentSession(session) && this.latestOperation?.operationId === operationId &&
+          generation === this.generation());
+        if (!this.currentSession(session)) return;
+        this.publishBackupReceipt(session, receipt, operation.writeGeneration);
+        await this.load(session);
+      } catch (error) {
+        if (this.currentSession(session)) this.publishReceiptWithConfirmation(session, operation, 'failed', this.safeError(error));
+      }
+    }).finally((): void => { this.operationInFlight = false; this.deliver(this.session); });
+    this.deliver(session);
+  }
+
   saveConfig(url: string, user: string, pass: string, backupPass: string, directory: string): void {
     this.enqueue('saveConfig', async (observation: SyncWriteObservation, admitted: () => boolean): Promise<string> => {
       const outcome = await this.gateway.saveConfig(url, user, pass, backupPass, directory, observation, admitted);
@@ -235,8 +259,9 @@ export class SyncOrchestrator {
     if (uploadQualified) observation.write.confirmed();
     observation.uploadQualified = uploadQualified;
     observation.completed = receipt.retentionCompleted;
-    this.publishReceipt(session, 'backup', observation, receipt.retentionCompleted ? 'reading' : 'failed',
-      receipt.retentionCompleted ? '已核对本次备份及保留清理完成回执' : receipt.undispatched ? '本次备份尚未发出，可重新提交' :
+    observation.retentionSkipped = receipt.retentionSkipped;
+    this.publishReceipt(session, 'backup', observation, receipt.retentionSkipped ? 'succeeded' : receipt.retentionCompleted ? 'reading' : 'failed',
+      receipt.retentionSkipped ? '备份已保留，清理已由你结束；已发出的远端请求不会撤回' : receipt.retentionCompleted ? '已核对本次备份及保留清理完成回执' : receipt.undispatched ? '本次备份尚未发出，可重新提交' :
         uploadQualified ? '本次备份上传已核实，保留清理尚未完成；不会自动重传或删除' : '本次备份远端结果待核对，不重复上传');
   }
 
@@ -245,13 +270,13 @@ export class SyncOrchestrator {
     const confirmation = observation.write.confirmation();
     const partial = observation.coreApplied && !observation.completed
       ? 'Core 配置已应用，Host 恢复尚未完成；核对已有恢复，不重复覆盖' : undefined;
-    const remotePartial = !observation.completed && observation.uploadQualified ? '本次备份上传已核实，保留清理尚无完成回执；不自动重传或删除' :
+    const remotePartial = observation.retentionSkipped ? '备份已保留，保留清理已由你结束；已发出的远端请求不会撤回' : !observation.completed && observation.uploadQualified ? '本次备份上传已核实，保留清理尚无完成回执；不自动重传或删除' :
       !observation.completed && observation.remoteConfirmedCount > 0 ? `已有 ${observation.remoteConfirmedCount} 个远端写入响应，备份完成回执待核对；不自动重传` : undefined;
     this.latestOperation = { action, writeGeneration: observation.writeGeneration, operationId: observation.operationId, coreApplied: observation.coreApplied, hostApplied: observation.hostApplied,
-      completed: observation.completed, remoteConfirmedCount: observation.remoteConfirmedCount, uploadQualified: observation.uploadQualified,
+      completed: observation.completed, retentionSkipped: observation.retentionSkipped, remoteConfirmedCount: observation.remoteConfirmedCount, uploadQualified: observation.uploadQualified,
       projection: projectPersistedReceipt<boolean>({ confirmation, readback, value: this.lastSnapshot === undefined ? undefined : true,
         refreshError: readback === 'failed' ? errorOrStatus : undefined,
-        message: partial !== undefined || remotePartial !== undefined ? projectCommitReadback(confirmation, readback).message + '：' + (partial ?? remotePartial) : undefined, canRetry: readback !== 'reading' && (confirmation !== 'undispatched'),
+        message: partial !== undefined || remotePartial !== undefined ? projectCommitReadback(confirmation, readback).message + '：' + (partial ?? remotePartial) : undefined, canRetry: (readback === 'failed' || !observation.retentionSkipped) && readback !== 'reading' && (confirmation !== 'undispatched'),
         generation: ++syncProjectionGeneration }) };
     if (errorOrStatus !== undefined) this.lastSnapshot = { ...this.source(), statusMessage: errorOrStatus };
     this.deliver(session);
@@ -259,11 +284,11 @@ export class SyncOrchestrator {
 
   private publishReceiptWithConfirmation(session: number, operation: SyncOperationProjection, readback: CommitReadbackPhase, error?: string): void {
     const confirmation: CommitConfirmationKind = operation.projection.receipt.confirmation;
-    const effectiveReadback = readback === 'succeeded' && confirmation === 'confirmed' && !operation.completed ? 'failed' : readback;
+    const effectiveReadback = readback === 'succeeded' && confirmation === 'confirmed' && !operation.completed && !operation.retentionSkipped ? 'failed' : readback;
     this.latestOperation = { ...operation, projection: projectPersistedReceipt<boolean>({ confirmation, readback: effectiveReadback,
       value: this.lastSnapshot === undefined ? undefined : true, refreshError: error,
       message: !operation.completed ? operation.projection.facts.message : undefined,
-      canRetry: readback !== 'reading' && (readback === 'failed' || confirmation === 'unknown' || !operation.completed) && confirmation !== 'undispatched',
+      canRetry: (readback === 'failed' || !operation.retentionSkipped) && readback !== 'reading' && (readback === 'failed' || confirmation === 'unknown' || !operation.completed) && confirmation !== 'undispatched',
       generation: ++syncProjectionGeneration }) };
     this.deliver(session);
   }
@@ -272,7 +297,7 @@ export class SyncOrchestrator {
     if (!this.currentSession(this.session) || this.operationInFlight || this.lastSnapshot === undefined) return false;
     const operation = this.latestOperation;
     if (operation !== undefined && (operation.projection.receipt.confirmation === 'unknown' ||
-      (operation.coreApplied && !operation.completed) || (operation.action === 'backup' && !operation.completed && operation.projection.receipt.confirmation === 'confirmed'))) return false;
+      (operation.coreApplied && !operation.completed) || (operation.action === 'backup' && !operation.completed && !operation.retentionSkipped && operation.projection.receipt.confirmation === 'confirmed'))) return false;
     this.operationInFlight = true;
     return true;
   }
@@ -289,7 +314,7 @@ export class SyncOrchestrator {
     const facts: SyncPresentationFacts = { read: this.readFacts, operation, request: this.requestFacts, busy: this.operationInFlight,
       canMutate: !this.operationInFlight && this.lastSnapshot !== undefined &&
         operation?.projection.receipt.confirmation !== 'unknown' && !(operation?.coreApplied === true && !operation.completed) &&
-        !(operation?.action === 'backup' && !operation.completed && operation.projection.receipt.confirmation === 'confirmed') };
+        !(operation?.action === 'backup' && !operation.completed && !operation.retentionSkipped && operation.projection.receipt.confirmation === 'confirmed') };
     this.emit({ ...source, webdavPass: '', backupPass: '', facts });
   }
   private safeError(_error: unknown): string { return '操作未完成，请核对当前配置或已有恢复记录'; }
