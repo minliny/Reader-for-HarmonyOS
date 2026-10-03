@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
 import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
@@ -92,12 +93,13 @@ await check('actual standalone settings Add action has no inherited reading scop
   syntax.componentCollection.customComponents.add('ReaderToggle');
   syntax.propCollection.set('ReaderToggle',new Set([...toggleSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
   class NativeChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
-  const {owner}=createReaderBuilderProbe(settingsSource,['replaceCard','heading','input','booleanField','actionButton','entityRow','smallButton','integerOrZero'],{ReaderToggle:NativeChild,...rulesTypography});
+  const foundation=foundationControls();
+  const {owner}=createReaderBuilderProbe(settingsSource,['replaceCard','heading','input','booleanField','actionButton','entityRow','smallButton','integerOrZero'],{...foundation.dependencies,ReaderToggle:NativeChild,...rulesTypography},foundation.hooks);
   let saved;
   Object.assign(owner,{appThemeScheme:'day',snapshot:{replaceRules:[],busy:false},replaceId:-1,replaceName:'独立规则',
     replacePattern:'原文',replaceValue:'替换',replaceEnabled:true,replaceRegex:false,replaceOrder:'0',onSaveReplace:draft=>{saved=draft;},
     defaultScope:'不应污染设置页;https://reading.example'});
-  owner.replaceCard();const add=[...owner.nodes.values()].find(n=>n.type==='Text'&&n.create==='新增替换规则');
+  owner.replaceCard();const add=foundation.nodes(owner).find(n=>n.type==='Text'&&n.create==='新增替换规则');
   assert.ok(add);add.onClick();assert.equal(saved.name,'独立规则');assert.equal(Object.hasOwn(saved,'scope'),false);
   assert.equal(Object.hasOwn(saved,'sourceId'),false);assert.equal(Object.hasOwn(saved,'bookId'),false);
 });

@@ -111,8 +111,11 @@ assert.match(localImport,
   'all local-import states must resolve their shared dialog frame role');
 assert.match(localImport, /resolveDialogSpec\('local-import'\)/,
   'local import delegates its outer frame to the shared dialog registry');
-assert.equal((localImport.match(/(?:\.width\(this\.panelFrame\(\)\.width\)|width: this\.panelFrame\(\)\.width)/g) ?? []).length, 4,
-  'selection, importing, result and retained shell must share the same clamp');
+assert.equal((localImport.match(/(?:\.width\(this\.panelFrame\(\)\.width\)|(?:surfaceWidth|width): this\.panelFrame\(\)\.width)/g) ?? []).length, 4,
+  'selection, importing, result and retained shell pass the same original clamp through their actual bounded surface input');
+const boundedImportSurface=read('entry/src/main/ets/features/common/ReaderBoundedSurface.ets');
+assert.match(boundedImportSurface,/new ReaderBoundedFrameModifier\(this\.specId, this\.surfaceWidth, this\.surfaceHeight,/,'actual common frame consumes delegated width and height');
+assert.match(boundedImportSurface,/\.width\(this\.width\)/,'actual frame modifier applies delegated width to the native surface');
 assert.match(localImport,
   /padding\(\{ left: this\.panelFrame\(\)\.left, right: this\.panelFrame\(\)\.right \}\)/);
 
