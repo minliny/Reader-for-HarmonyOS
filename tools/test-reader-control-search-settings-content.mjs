@@ -346,7 +346,7 @@ if (readerBuilderSdkAvailable) {
   }
   checkMountedInputInsets(searchUI);
   assert.throws(() => checkMountedInputInsets(searchUI, fieldSpecSource.replace(
-    'nativeInsets: { left: 2, right: 2, top: 0, bottom: 0 }', 'nativeInsets: { left: 2, right: 2 }')),
+    'const CONTENT_SEARCH_INSETS: ReaderFormFieldInsets = { left: 2, right: 2, top: 0, bottom: 0 };', 'const CONTENT_SEARCH_INSETS: ReaderFormFieldInsets = { left: 2, right: 2 };')),
   /compact input explicitly/, 'reject returning to unspecified platform vertical padding');
   assertSearchListBuilderGeometry(searchUI);
   console.log('Actual SDK normalized List: parent clip, authored child origin, extent, same-instance roundtrip PASS');
