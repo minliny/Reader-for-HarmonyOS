@@ -1,0 +1,37 @@
+[
+  {
+    "name": "future DTO, unchanged checksum",
+    "blocked": true,
+    "error": "订阅完整原记录校验失败，已保留且停止新写入",
+    "dispatched": 0,
+    "meaning": "Real production cold corruption barrier"
+  },
+  {
+    "name": "prior receipt body, unchanged checksums",
+    "blocked": true,
+    "error": "订阅逐步原回执与固定步骤不匹配，已保留",
+    "dispatched": 0,
+    "meaning": "Real production cold corruption barrier"
+  },
+  {
+    "name": "prior receipt body, recomputed outer checksum only",
+    "blocked": true,
+    "error": "订阅逐步原回执与固定步骤不匹配，已保留",
+    "dispatched": 0,
+    "meaning": "Real production cold corruption barrier"
+  },
+  {
+    "name": "future DTO, recomputed outer checksum (not authentication)",
+    "blocked": false,
+    "error": null,
+    "dispatched": 0,
+    "meaning": "Expected checksum boundary: self-authored digest is not a MAC/signature or historical Core authority"
+  },
+  {
+    "name": "prior body and both digests recomputed (not authentication)",
+    "blocked": false,
+    "error": null,
+    "dispatched": 0,
+    "meaning": "Expected checksum boundary: self-authored digest is not a MAC/signature or historical Core authority"
+  }
+]
