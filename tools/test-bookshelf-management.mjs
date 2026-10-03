@@ -21,7 +21,7 @@ for (const method of [
   'bookshelf.group.assign',
   'read-record.list',
 ]) {
-  assert.match(gateway, new RegExp(`request\\('${method.replaceAll('.', '\\.')}'`));
+  assert.match(gateway, new RegExp(`${method.includes('list')?'request':'write'}\\('${method.replaceAll('.', '\\.')}'`));
 }
 
 assert.match(shelfGateway, /group\?: string/);

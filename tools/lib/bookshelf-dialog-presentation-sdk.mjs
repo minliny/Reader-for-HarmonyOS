@@ -33,18 +33,18 @@ const Book=createReaderBuilderProbe(bookSource,boundedMembers(bookSource),{...sd
 const Group=createReaderBuilderProbe(selectorSource,boundedMembers(selectorSource),sdk.deps,sdk.hooks).Component;
 let currentOwner;const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
 const methods=['isCurrentRuntime','isCurrentBookshelfPresentation','isCurrentBookRemoval','openBookRemovalDialog','bookRemovalDialogContent','dismissBookRemovalDialog','confirmBookRemovalDialog',
- 'bindBookshelfManagement','bookshelfManagementIdentity','isCurrentBookshelfManagement','closeShelfGroup','shelfGroupRecovery','shelfGroupRecoveryContent','openShelfGroup','shelfGroupContent','shelfGroupSurface','shelfGroupBody','isCurrentShelfGroup','assignShelfDefaultGroup'];
+ 'bindBookshelfManagement','bookshelfManagementIdentity','isCurrentBookshelfManagement','closeShelfGroup','shelfGroupRecovery','canContinueShelfGroup','shelfGroupRecoveryContent','openShelfGroup','shelfGroupContent','shelfGroupSurface','shelfGroupBody','isCurrentShelfGroup','assignShelfDefaultGroup'];
 const defer=()=>{let resolve,reject;const promise=new Promise((r,j)=>{resolve=r;reject=j;});return{promise,resolve,reject};};
 function fixture(text=indexSource, runtime){
  const controllers=[];
  class Controller{constructor(options){this.options=options;this.opens=0;this.closes=0;controllers.push(this);}open(){this.opens++;this.options.builder();}close(){this.closes++;}}
  const r=runtime??{};currentOwner=r;
  const probe=createReaderBuilderProbe(text,methods,{BookRemovalDialog:Book,CustomDialogController:Controller,DialogAlignment:{Center:'center'},ReaderRuntimeOwner,
-  ReaderDialogSurface:SurfaceChild,BookshelfGroupSelector:Group,ReaderRecoveryNotice:sdk.deps.ReaderRecoveryNotice,readerRecoveryView,DOMAIN:0,hilog:{error(){}},errorMessageOf:e=>e.message}, {mountChildren:true});
+  ReaderDialogSurface:SurfaceChild,BookshelfGroupSelector:Group,ReaderRecoveryNotice:sdk.deps.ReaderRecoveryNotice,ReaderRecoveryAction:sdk.deps.ReaderRecoveryAction,readerRecoveryView,DOMAIN:0,hilog:{error(){}},errorMessageOf:e=>e.message}, {mountChildren:true});
  const i=probe.owner;Object.assign(i,{mountedRuntimeOwner:r,navigationGeneration:1,detailShelfAdmissionMount:1,route:'bookshelf',shelfReceiptRetired:false,
   bookRemovalPresentation:0,bookRemovalDialogOpen:false,editingShelfGroupPresentation:0,editingShelfGroupBusy:false,bookshelfManagementSnapshot:{busy:false},bookshelfManagementPresentationIdentity:'',rssInstanceIdentity:1,appThemeScheme:'day'});
  let refresh=0,invalid=0;const writes=[],toasts=[];let task;
- i.bookshelfHost={bindManagement:()=>true,detachManagementPresentation(){},isManagementPresentationCurrent:()=>true,assignDefaultGroup:async book=>{writes.push(book);if(task)await task.promise;return{receipt:{receipt:{confirmation:'confirmed',fact:'confirmedCurrent'}}};}};
+ i.bookshelfHost={bindManagement:()=>true,openManagement(){},detachManagementPresentation(){},isManagementPresentationCurrent:()=>true,assignDefaultGroup:async book=>{writes.push(book);if(task)await task.promise;return{receipt:{receipt:{confirmation:'confirmed',fact:'confirmedCurrent'}}};}};
  i.invalidateBookshelfProjection=()=>invalid++;i.refreshBookshelf=()=>refresh++;i.getUIContext=()=>({getPromptAction:()=>({showToast:v=>toasts.push(v.message)})});
  const leaf=()=>[...i.children.values()].findLast(c=>c instanceof Book);
  const native=()=>{const b=leaf();b.initialRender();const surface=sharedSurface([...b.children.values()][0].params);return{b,surface,

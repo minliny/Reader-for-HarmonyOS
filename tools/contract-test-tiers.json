@@ -222,6 +222,7 @@
     "test-bookshelf-filter-responsibilities.mjs",
     "test-bookshelf-host-wiring.mjs",
     "test-bookshelf-management-shared-owner.mjs",
+    "test-bookshelf-management-durable-intent.mjs",
     "test-bookshelf-manual-update.mjs",
     "test-bookshelf-more-layout.mjs",
     "test-bookshelf-native-sheet-owner.mjs",

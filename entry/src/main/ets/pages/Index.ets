@@ -3,6 +3,7 @@ import type { RssRouteOperationProjection, RssRouteBinding } from '../features/r
 import { ReaderNativeAlertOwner, type ReaderNativeAlertLease, type ReaderNativeAlertOptions, type ReaderNativeAlertSpecId } from '../app/ReaderNativeAlertOwner';
 import { readerRecoveryView, type ReaderRecoveryView } from '../app/ReaderRecoveryProjection';
 import { ReaderRecoveryNotice } from '../features/common/ReaderRecoveryNotice';
+import { ReaderRecoveryAction } from '../features/common/ReaderRecoveryAction';
 import type { RemoteReadingPositionScope } from '../features/reading/RemoteReadingPositionMigration';
 import { FrameCallback } from '@kit.ArkUI';
 import { readerAppColor } from '../features/common/ReaderThemeRegistry';
@@ -1487,6 +1488,8 @@ struct Index {
     this.editingShelfGroupPresentation += 1;
     this.editingShelfGroupBook = book;
     this.bindBookshelfManagement(this.editingShelfGroupPresentation, book);
+    if (this.bookshelfManagementPresentationIdentity.length > 0)
+      this.bookshelfHost.openManagement(this.bookshelfManagementPresentationIdentity);
   }
 
   @Builder
@@ -1540,12 +1543,31 @@ struct Index {
           this.bookshelfHost.reconcileManagement(expected, this.bookshelfManagementIdentity(generation, mounting, presentation));
       },
     });
+    if (this.canContinueShelfGroup(book, expected)) {
+      ReaderRecoveryAction({ generation: expected, label: '继续原分组操作',
+        onReconcile: (_expected: number): void => {
+          if (this.isCurrentShelfGroup(presentation, generation, owner, mounting, book) && this.canContinueShelfGroup(book, expected))
+            this.bookshelfHost.continueOriginalManagement(expected, this.bookshelfManagementIdentity(generation, mounting, presentation));
+        },
+      });
+    }
+  }
+  private canContinueShelfGroup(book: ShelfBook, expected: number): boolean {
+    const mutation = this.bookshelfManagementSnapshot.managementMutation;
+    return this.bookshelfManagementSnapshot.receipt?.facts.generation === expected && !this.bookshelfManagementSnapshot.busy &&
+      mutation?.canContinueOriginal === true && mutation.method === 'bookshelf.group.assign' &&
+      mutation.sourceId === book.sourceId && mutation.bookId === book.bookId && mutation.group === '';
   }
   private shelfGroupRecovery(expected: number): ReaderRecoveryView {
     const receipt = this.bookshelfManagementSnapshot.receipt;
     if (receipt === undefined || receipt.facts.generation !== expected)
       return { message: '', visible: false, canRetry: false, generation: expected };
-    return readerRecoveryView(receipt, this.bookshelfManagementSnapshot.readFacts);
+    const view = readerRecoveryView(receipt, this.bookshelfManagementSnapshot.readFacts);
+    const mutation = this.bookshelfManagementSnapshot.managementMutation;
+    if (mutation?.blocked === true && mutation.message.length > 0)
+      return { message: `${view.message}：${mutation.message}`, visible: true,
+        canRetry: view.canRetry || !this.bookshelfManagementSnapshot.busy, generation: expected };
+    return view;
   }
   private closeShelfGroup(presentation: number = this.editingShelfGroupPresentation): void {
     if (presentation !== this.editingShelfGroupPresentation) return;
@@ -1754,6 +1776,7 @@ struct Index {
       onAssignmentGroupChanged: (value: string): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.updateAssignmentGroup(value, identity); },
       onAssignBook: (): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.assignSelectedBook(identity); },
       onReconcile: (expected: number): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.reconcileManagement(expected, identity); },
+      onContinueOriginal: (expected: number): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.continueOriginalManagement(expected, identity); },
     });
   }
 

@@ -139,6 +139,7 @@ export class BookshelfHost {
   updateAssignmentGroup(value: string, identity: string = this.managementPresentationIdentity): void { this.getManagementOrchestrator()?.updateAssignmentGroup(value, identity); }
   assignSelectedBook(identity: string = this.managementPresentationIdentity): void { this.getManagementOrchestrator()?.assignSelectedBook(identity); }
   reconcileManagement(generation: number, identity: string = this.managementPresentationIdentity): void { this.getManagementOrchestrator()?.reconcile(generation, identity); }
+  continueOriginalManagement(generation: number, identity: string = this.managementPresentationIdentity): void { this.getManagementOrchestrator()?.continueOriginal(generation, identity); }
 
   bindManagement(owner: ReaderRuntimeOwner, identity: string, current: () => boolean): boolean {
     if (!ReaderRuntimeOwner.isCurrent(owner)) return false;

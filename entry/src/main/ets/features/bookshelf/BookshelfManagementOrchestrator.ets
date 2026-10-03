@@ -2,6 +2,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
+import type { BookshelfManagementMutationState } from './BookshelfManagementIntentStore';
 import { projectOperationFacts, type OperationFacts } from '../../app/ReaderOperationFacts';
 import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../app/ReaderPersistedReceiptProjection';
 import {
@@ -26,6 +27,7 @@ export interface BookshelfManagementSnapshot {
   receipt?: PersistedReceiptProjection<BookshelfManagementData>;
   readFacts?: OperationFacts<BookshelfManagementData>;
   mutationBlocked?: boolean;
+  managementMutation?: BookshelfManagementMutationState;
 }
 
 const EMPTY_DATA: BookshelfManagementData = {
@@ -61,6 +63,7 @@ interface BookshelfManagementPatch {
   receipt?: PersistedReceiptProjection<BookshelfManagementData>;
   readFacts?: OperationFacts<BookshelfManagementData>;
   mutationBlocked?: boolean;
+  managementMutation?: BookshelfManagementMutationState;
 }
 
 /** Serial coordinator; Core remains the sole owner of groups, membership and records. */
@@ -110,7 +113,7 @@ export class BookshelfManagementOrchestrator {
   }
   private canWrite(identity?: string): boolean {
     return this.admit(identity) && !this.writeReserved && !this.snapshot.busy &&
-      this.latestReceipt?.receipt.confirmation !== 'unknown';
+      this.latestReceipt?.receipt.confirmation !== 'unknown' && !this.gateway.mutationSnapshot().blocked;
   }
 
   open(identity?: string): void {
@@ -120,7 +123,10 @@ export class BookshelfManagementOrchestrator {
     this.publish({ busy: true, statusMessage: '正在读取 Core 书架数据…',
       readFacts: projectOperationFacts({ phase: 'loading', value: this.hasRead ? this.snapshot.data : undefined,
         generation: ++bookshelfManagementGeneration }) });
-    this.enqueue(async (): Promise<void> => { await this.reload(session, '已读取分组、书架与阅读记录'); });
+    this.enqueue(async (): Promise<void> => {
+      await this.recoverOriginal(session);
+      await this.reload(session, '已读取分组、书架与阅读记录');
+    });
   }
 
   owns(owner: ReaderRuntimeOwner): boolean { return this.owner === owner; }
@@ -132,15 +138,39 @@ export class BookshelfManagementOrchestrator {
       if (!this.isCurrentSession(session)) return;
       const receipt = this.latestReceipt;
       const read = this.snapshot.readFacts;
-      if (receipt?.facts.generation === generation && receipt.facts.canRetry) {
+      if (receipt?.facts.generation === generation && (receipt.facts.canRetry || this.gateway.mutationSnapshot().blocked)) {
         this.publishReceipt(session, receipt.receipt.confirmation, 'reading');
+        await this.recoverOriginal(session);
         await this.reload(session, '已读取分组、书架与阅读记录');
       } else if (read?.generation === generation && read.canRetry) {
         this.publishIfCurrent(session, { busy: true, readFacts: projectOperationFacts({ phase: 'loading',
           value: this.hasRead ? this.snapshot.data : undefined, generation: ++bookshelfManagementGeneration }) });
+        await this.recoverOriginal(session);
         await this.reload(session, '已读取分组、书架与阅读记录');
       }
     });
+  }
+
+  continueOriginal(generation: number, identity?: string): void {
+    if (!this.admit(identity) || this.writeReserved || this.snapshot.busy ||
+      this.latestReceipt?.facts.generation !== generation || !this.gateway.mutationSnapshot().canContinueOriginal) return;
+    const session = this.session;
+    this.enqueueWrite(session, async (): Promise<void> => {
+      await this.recoverOriginal(session, true);
+      await this.reload(session, '已核对并读取分组、书架与阅读记录');
+    }, true);
+  }
+
+  private async recoverOriginal(session: number, continueOriginal: boolean = false): Promise<void> {
+    try {
+      const state = await this.gateway.recoverWrites((): boolean => this.isCurrentSession(session), continueOriginal);
+      this.publish({ managementMutation: state });
+      if (state.operationId !== undefined) this.publishReceipt(session, state.confirmation, 'reading', state.message || undefined);
+    } catch (error) {
+      const state = this.gateway.mutationSnapshot();
+      this.publish({ managementMutation: state });
+      if (state.operationId !== undefined || state.blocked) this.publishReceipt(session, state.confirmation, 'failed', (error as Error).message);
+    }
   }
 
   updateGroupName(value: string, identity?: string): void {
@@ -258,10 +288,10 @@ export class BookshelfManagementOrchestrator {
     }).then((): BookshelfManagementSnapshot => this.currentSnapshot());
   }
 
-  private enqueueWrite(session: number, operation: () => Promise<void>): Promise<void> {
+  private enqueueWrite(session: number, operation: () => Promise<void>, continuation: boolean = false): Promise<void> {
     this.writeReserved = true;
     const accepted = this.operationTail.then(async (): Promise<void> => {
-      if (!this.isCurrentSession(session) || this.latestReceipt?.receipt.confirmation === 'unknown') return;
+      if (!this.isCurrentSession(session) || (!continuation && (this.latestReceipt?.receipt.confirmation === 'unknown' || this.gateway.mutationSnapshot().blocked))) return;
       await operation();
     });
     this.operationTail = accepted.catch((error: Error): void => {
@@ -275,8 +305,12 @@ export class BookshelfManagementOrchestrator {
     const evidence = new ReaderWriteEvidence();
     this.gateway.observeWrites(evidence, (): boolean => this.isCurrentSession(session));
     try { await operation(); }
-    catch (error) { this.publishReceipt(session, evidence.confirmation(), 'failed', (error as Error).message); return; }
+    catch (error) {
+      const state = this.gateway.mutationSnapshot(); this.publish({ managementMutation: state });
+      this.publishReceipt(session, state.blocked ? state.confirmation : evidence.confirmation(), 'failed', (error as Error).message); return;
+    }
     finally { this.gateway.observeWrites(undefined); }
+    this.publish({ managementMutation: this.gateway.mutationSnapshot() });
     this.publishReceipt(session, evidence.confirmation(), this.isCurrentSession(session) ? 'reading' : 'failed');
     if (!this.isCurrentSession(session)) return;
     if (await this.reload(session, status) && clearDraft) {
@@ -357,7 +391,8 @@ export class BookshelfManagementOrchestrator {
       statusMessage: patch.statusMessage ?? this.snapshot.statusMessage,
       receipt: patch.receipt ?? this.snapshot.receipt,
       readFacts: patch.readFacts ?? this.snapshot.readFacts,
-      mutationBlocked: this.latestReceipt?.receipt.confirmation === 'unknown',
+      mutationBlocked: this.latestReceipt?.receipt.confirmation === 'unknown' || this.gateway.mutationSnapshot().blocked,
+      managementMutation: patch.managementMutation ?? this.snapshot.managementMutation,
     };
     if (this.isCurrentSession(this.session)) { try { this.emit(this.copySnapshot(this.snapshot)); } catch (error) {
       try { hilog.error(DOMAIN, 'Reader', 'Bookshelf observer failed: %{private}s', (error as Error).message); } catch (_) {}
@@ -397,6 +432,7 @@ export class BookshelfManagementOrchestrator {
       receipt: source.receipt,
       readFacts: source.readFacts,
       mutationBlocked: source.mutationBlocked,
+      managementMutation: source.managementMutation,
     };
   }
 }

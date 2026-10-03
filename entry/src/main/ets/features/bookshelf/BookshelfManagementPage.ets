@@ -56,6 +56,7 @@ export struct BookshelfManagementPage {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop snapshot: BookshelfManagementSnapshot = EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT;
   onReconcile: (generation: number) => void = (_generation: number): void => {};
+  onContinueOriginal: (generation: number) => void = (_generation: number): void => {};
   onBack: () => void = (): void => {};
   onGroupNameChanged: (value: string) => void = (_value: string): void => {};
   onGroupOrderChanged: (value: string) => void = (_value: string): void => {};
@@ -117,12 +118,36 @@ export struct BookshelfManagementPage {
   }
   @Builder
   private recoveryAction() {
-    if (this.recovery().canRetry) {
-      ReaderRecoveryAction({ generation: this.recovery().generation, onReconcile: this.onReconcile });
-    }
+    ForEach(this.recoveryIdentities(), (identity: string) => {
+      this.recoveryActor(identity);
+    }, (identity: string): string => identity);
   }
 
-  private recovery(): ReaderRecoveryView { return readerRecoveryView(this.snapshot.receipt, this.snapshot.readFacts); }
+  @Builder
+  private recoveryActor(identity: string) {
+    if (identity.startsWith('read:')) {
+      ReaderRecoveryAction({ generation: Number(identity.substring(5)), onReconcile: this.onReconcile });
+    } else {
+      ReaderRecoveryAction({ generation: Number(identity.substring(9)), label: '继续原分组操作',
+        onReconcile: this.onContinueOriginal });
+    }
+  }
+  private recoveryIdentities(): string[] {
+    const view = this.recovery(); const identities: string[] = [];
+    if (view.canRetry) identities.push(`read:${view.generation}`);
+    if (this.snapshot.managementMutation?.canContinueOriginal === true && !this.snapshot.busy && this.snapshot.receipt !== undefined)
+      identities.push(`continue:${this.snapshot.receipt.facts.generation}`);
+    return identities;
+  }
+  private recovery(): ReaderRecoveryView {
+    const view = readerRecoveryView(this.snapshot.receipt, this.snapshot.readFacts);
+    const mutation = this.snapshot.managementMutation;
+    if (mutation?.blocked === true && mutation.message.length > 0)
+      return { message: `${view.message}：${mutation.message}`, visible: true,
+        canRetry: view.canRetry || (!this.snapshot.busy && this.snapshot.receipt !== undefined),
+        generation: this.snapshot.receipt?.facts.generation ?? view.generation };
+    return view;
+  }
 
   @Builder
   private statusCard() {

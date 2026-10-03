@@ -1,8 +1,8 @@
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderCoreGateway, type ShelfBook } from '../../app/ReaderCoreGateway';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
-import type { BookRequestOptions } from '../../app/BookRequestScheduler';
 import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
+import { BookshelfManagementIntentStore, type BookshelfManagementMethod, type BookshelfManagementMutationState } from './BookshelfManagementIntentStore';
 
 export interface BookGroup {
   groupId: number;
@@ -32,20 +32,48 @@ export class BookshelfManagementGateway {
   private readonly owner: ReaderRuntimeOwner;
   private readonly shelf: ReaderCoreGateway;
   private writeEvidence: ReaderWriteEvidence | undefined;
+  private readonly intents: BookshelfManagementIntentStore;
 
   private admitted: (() => boolean) | undefined;
   observeWrites(evidence: ReaderWriteEvidence | undefined, admitted?: () => boolean): void {
     this.writeEvidence = evidence; this.admitted = admitted;
   }
-  private writeOptions(): BookRequestOptions {
-    const evidence = this.writeEvidence, admitted = this.admitted;
-    return { canDispatch: (): boolean => ReaderRuntimeOwner.isCurrent(this.owner) && (admitted?.() ?? true),
-      onDispatch: (): void => evidence?.dispatched() };
-  }
-
-  constructor(owner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
+  constructor(owner: ReaderRuntimeOwner = ReaderRuntimeOwner.current(), intents?: BookshelfManagementIntentStore) {
     this.owner = owner;
     this.shelf = new ReaderCoreGateway(owner);
+    this.intents = intents ?? new BookshelfManagementIntentStore(owner);
+  }
+  mutationSnapshot(): BookshelfManagementMutationState { return this.intents.snapshot(); }
+  async recoverWrites(admitted: () => boolean, continueOriginal: boolean = false): Promise<BookshelfManagementMutationState> {
+    return this.intents.recover((method: BookshelfManagementMethod, params: JsonObject, data: JsonObject): void => {
+      this.qualifyMutation(method, params, data);
+    }, admitted, continueOriginal);
+  }
+  private async write(method: BookshelfManagementMethod, params: JsonObject): Promise<{ data: JsonObject }> {
+    const evidence = this.writeEvidence, admitted = this.admitted;
+    const data = await this.intents.execute(method, params,
+      (originalMethod: BookshelfManagementMethod, original: JsonObject, result: JsonObject): JsonObject => {
+        this.qualifyMutation(originalMethod, original, result); return result;
+      }, evidence, (): boolean => ReaderRuntimeOwner.isCurrent(this.owner) && (admitted?.() ?? true));
+    return { data };
+  }
+  private qualifyMutation(method: BookshelfManagementMethod, params: JsonObject, data: JsonObject): void {
+    if (method === 'book-group.create' || method === 'book-group.update') {
+      const group = this.decodeGroup(this.requiredObject(data, 'group', method));
+      if (method === 'book-group.update' && group.groupId !== params['groupId']) throw new Error('分组原回执实体不符');
+      if (params['groupName'] !== undefined && group.groupName !== params['groupName']) throw new Error('分组原回执名称不符');
+      if (params['order'] !== undefined && group.order !== params['order']) throw new Error('分组原回执顺序不符');
+      if (params['enableRefresh'] !== undefined && group.enableRefresh !== params['enableRefresh']) throw new Error('分组原回执刷新选项不符');
+      if (params['show'] !== undefined && group.show !== params['show']) throw new Error('分组原回执显示选项不符');
+      return;
+    }
+    if (method === 'book-group.delete') {
+      if (typeof data['deleted'] !== 'boolean' || data['groupId'] !== params['groupId']) throw new Error('分组原删除回执不符');
+      return;
+    }
+    const book = this.decodeShelfBook(this.requiredObject(data, 'book', method));
+    if (book.sourceId !== params['sourceId'] || book.bookId !== params['bookId'] || (book.group ?? '').trim() !== params['group'])
+      throw new Error('原分组分配回执与完整书籍/分组不符');
   }
 
   async load(): Promise<BookshelfManagementData> {
@@ -71,14 +99,13 @@ export class BookshelfManagementGateway {
   async createGroup(groupName: string, order: number): Promise<BookGroup> {
     const normalizedName = this.requireGroupName(groupName);
     this.requireInteger(order, 'book-group.create order');
-    const result = await this.owner.request('book-group.create', {
+    const result = await this.write('book-group.create', {
       groupName: normalizedName,
       order,
       enableRefresh: true,
       show: true,
-    }, this.writeOptions());
+    });
     const created = this.decodeGroup(this.requiredObject(result.data, 'group', 'book-group.create'));
-    this.writeEvidence?.confirmed();
     return created;
   }
 
@@ -86,59 +113,55 @@ export class BookshelfManagementGateway {
     this.requireInteger(group.groupId, 'book-group.update groupId');
     this.requireInteger(order, 'book-group.update order');
     const normalizedName = this.requireGroupName(groupName);
-    const result = await this.owner.request('book-group.update', {
+    const result = await this.write('book-group.update', {
       groupId: group.groupId,
       groupName: normalizedName,
       order,
       enableRefresh: group.enableRefresh,
       show: group.show,
-    }, this.writeOptions());
+    });
     const updated = this.decodeGroup(this.requiredObject(result.data, 'group', 'book-group.update'));
     if (updated.groupId !== group.groupId) {
       throw new Error('book-group.update returned a mismatched group id');
     }
-    this.writeEvidence?.confirmed();
     return updated;
   }
 
   async setGroupShown(group: BookGroup, shown: boolean): Promise<BookGroup> {
-    const result = await this.owner.request('book-group.update', {
+    const result = await this.write('book-group.update', {
       groupId: group.groupId,
       show: shown,
-    }, this.writeOptions());
+    });
     const updated = this.decodeGroup(this.requiredObject(result.data, 'group', 'book-group.update'));
     if (updated.groupId !== group.groupId || updated.show !== shown) {
       throw new Error('book-group.update returned inconsistent visibility');
     }
-    this.writeEvidence?.confirmed();
     return updated;
   }
 
   async deleteGroup(groupId: number): Promise<boolean> {
     this.requireInteger(groupId, 'book-group.delete groupId');
-    const result = await this.owner.request('book-group.delete', { groupId }, this.writeOptions());
+    const result = await this.write('book-group.delete', { groupId });
     const deleted = result.data['deleted'];
     const echoedId = result.data['groupId'];
     if (typeof deleted !== 'boolean' || echoedId !== groupId) {
       throw new Error('book-group.delete returned invalid data');
     }
-    this.writeEvidence?.confirmed();
     return deleted;
   }
 
   async assignGroup(book: ShelfBook, group: string): Promise<ShelfBook> {
-    const result = await this.owner.request('bookshelf.group.assign', {
+    const result = await this.write('bookshelf.group.assign', {
       sourceId: book.sourceId,
       bookId: book.bookId,
       group: group.trim(),
-    }, this.writeOptions());
+    });
     const updated = this.decodeShelfBook(
       this.requiredObject(result.data, 'book', 'bookshelf.group.assign'),
     );
     if (updated.sourceId !== book.sourceId || updated.bookId !== book.bookId || (updated.group ?? '').trim() !== group.trim()) {
       throw new Error('bookshelf.group.assign returned a mismatched composite identity');
     }
-    this.writeEvidence?.confirmed();
     return updated;
   }
 
