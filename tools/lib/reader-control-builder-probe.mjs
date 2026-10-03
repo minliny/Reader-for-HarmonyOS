@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionReaderPressFeedback } from './reader-press-feedback-probe.mjs';
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
+import { labeledIconControls } from './reader-labeled-icon-action-probe.mjs';
 import { foundationControls } from './reader-foundation-control-probe.mjs';
 
 const sdkRoot = process.env.READER_ETS_LOADER_ROOT ??
@@ -50,10 +51,10 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   // Resolve only actual calls in the selected production members, and keep an
   // explicitly supplied component/property runtime authoritative. Foundation
   // components themselves do not call either child, so this is not recursive.
-  const missingFoundation = ['ReaderButton', 'ReaderFormField'].filter(name =>
+  const missingFoundation = ['ReaderButton', 'ReaderFormField', 'ReaderLabeledIconAction'].filter(name =>
     dependencies[name] === undefined && new RegExp(`\\b${name}\\s*\\(`).test(members.join('\n')));
   if (missingFoundation.length > 0) {
-    const foundation = foundationControls();
+    const foundation = missingFoundation.includes('ReaderLabeledIconAction') ? labeledIconControls() : foundationControls();
     const originalHooks = hooks;
     dependencies = { ...foundation.dependencies, ...dependencies };
     hooks = { ...foundation.hooks, ...originalHooks,
