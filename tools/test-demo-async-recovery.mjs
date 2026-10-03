@@ -26,6 +26,7 @@ const ActionClass=new Function('ReaderCoreRequestError','ReaderRuntimeOwner','Re
 for(const fails of [false,true]){
  pending=deferred();const h=new ActionClass();const book={sourceId:'s',bookId:'b'};
  Object.assign(h,{detailBook:book,remoteReadingSession:{identity:book,book:{title:'b'}},bookshelfRemovalGeneration:0,
+ bookshelfHost:{upsertBook:()=>pending.promise},
  bookshelfAdditionGeneration:0,bookshelfAdditionActiveKey:'',bookshelfAdditionError:'',
  bookshelfRemovalActiveKey:'',canRemoveDetailBook:()=>true,detailBookKey:()=> 's:b',
  isSameDetailBook:b=>h.detailBook===b,refreshBookshelf:()=>{h.refreshes++;},
@@ -50,6 +51,7 @@ for (const outcome of ['cancelled', 'already-saved', 'failure', 'other-book']) {
   });
  const book={sourceId:'s',bookId:'b'};
  const h=Object.assign(new Cancel(),{detailBook:book,detailBookKey:()=> 's:b',
+  bookshelfHost:{loadShelfBook:()=>lookup.promise},
   bookshelfAdditionActiveKey:'s:b',bookshelfAdditionCancellingKey:'',bookshelfAdditionGeneration:1,
   bookshelfAdditionError:'',bookshelfAdditionErrorKey:'',detailInBookshelf:false,
   isSameDetailBook:b=>h.detailBook===b,refreshBookshelf:()=>h.refreshes++,
@@ -110,6 +112,7 @@ for(const stale of [false,true]) for(const fails of [false,true]) {
  const session={identity:{sourceId:'s',bookId:'b'},book:{title:'已准入',author:'作者'},entries:[{index:0,title:'第一章',url:'/1'}],acquisitionMode:'cache'};
  const h=Object.assign(new CacheClass(),{remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,searchDetailCandidates:[],shelfBooks:[],
    remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,bookshelfRemovalActiveKey:'',
+   bookshelfHost:{loadShelfBook:async()=>undefined},
    probeRemoteContentVerdict:async()=>0,loadRemoteDirectoryProjection:async()=>session.entries,
    showReadingFailure:(...args)=>failures.push(args),
    refreshCachedSearchDetailInBackground:(...args)=>refreshes.push(args)});
@@ -138,7 +141,8 @@ for (const scenario of ['offscreen-existing','not-on-shelf','stale-lookup']) {
    RemoteReadingFlowGateway:class{},ReadingOfflineGateway:class{},ReaderCoreGateway:class{loadShelfBook(){return lookup.promise;}},
    DOMAIN:0,hilog:{info(){},warn(){},error(){}}});
  const h=Object.assign(new Host(),{remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,
-  searchDetailCandidates:[],shelfBooks:[],remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,bookshelfRemovalActiveKey:''});
+  searchDetailCandidates:[],shelfBooks:[],remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,bookshelfRemovalActiveKey:'',
+  bookshelfHost:{loadShelfBook:()=>lookup.promise}});
  const selected={sourceId:'s',bookId:'offscreen',title:'书',author:'作者'};
  h.openRemoteBookDetail(selected,'书源');assert.equal(h.route,'detail');assert.deepEqual(calls,[]);
  if(scenario==='stale-lookup'){h.nextNavigationGeneration();h.route='bookshelf';}
