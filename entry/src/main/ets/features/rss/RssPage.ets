@@ -1,3 +1,5 @@
+import type { RssFeedPresentation, RssRefreshingPresentation, RssEmptyUnreadPresentation, RssFailedSource, RssFatalErrorPresentation, RssMode, RssPresentation } from './RssPresentationContract';
+export type { RssFeedPresentation, RssRefreshingPresentation, RssEmptyUnreadPresentation, RssFailedSource, RssFatalErrorPresentation, RssMode, RssPresentation } from './RssPresentationContract';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { readerRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { projectOperationFacts, type OperationFacts } from '../../app/ReaderOperationFacts';
@@ -50,42 +52,6 @@ import {
   TOK_SPACE_SM,
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
-
-export interface RssFeedPresentation {
-  kind: 'feed';
-  subscriptions: RssSubscription[];
-  recentUnread: RssItem[];
-}
-
-export interface RssRefreshingPresentation {
-  kind: 'refreshing';
-  subscriptions: RssSubscription[];
-  recentUnread: RssItem[];
-}
-
-export interface RssEmptyUnreadPresentation {
-  kind: 'emptyUnread';
-  subscriptions: RssSubscription[];
-}
-
-export interface RssFailedSource {
-  name: string;
-  reason?: string;
-}
-
-export interface RssFatalErrorPresentation {
-  kind: 'fatalError';
-  failedSources: RssFailedSource[];
-}
-
-/** Main-page content modes. These are component/content changes, never routes. */
-export type RssMode = 'sources' | 'all' | 'favorites' | 'rules';
-
-export type RssPresentation =
-  | RssFeedPresentation
-  | RssRefreshingPresentation
-  | RssEmptyUnreadPresentation
-  | RssFatalErrorPresentation;
 
 // Authored Day colors and opacity are retained in the shared App registry.
 // Figma 暂停源整行降透明度 62%

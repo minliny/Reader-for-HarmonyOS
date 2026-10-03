@@ -1,3 +1,5 @@
+import type { RssSubscriptionManagementItem } from './RssPresentationContract';
+export type { RssSubscriptionManagementItem } from './RssPresentationContract';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { TYPE_FORM_COMPACT_ACTION, TYPE_SOURCE_MANAGEMENT_META, TYPE_SOURCE_MANAGEMENT_TITLE } from '../common/ReaderTypography';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
@@ -36,14 +38,6 @@ import {
   TOK_SPACE_XS,
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
-
-/** Presentation-only row data. Business truth remains owned by Core. */
-export interface RssSubscriptionManagementItem {
-  subscriptionId: string;
-  title: string;
-  meta: string;
-  enabled: boolean;
-}
 
 /**
  * Figma-backed RSS subscription management child page.
