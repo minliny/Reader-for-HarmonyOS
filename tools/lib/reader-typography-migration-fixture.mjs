@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { auditTypographyConsumers } from './reader-typography-consumer-audit.mjs';
+import { auditTypographyConsumers, typographyRoleImports } from './reader-typography-consumer-audit.mjs';
 
 export function typographySuccessorFile(baseline, path) {
   if (!baseline.successorFixture) return undefined;
@@ -29,6 +29,13 @@ export function restoreTypographyMigration(source, file, { verifySource = true }
     assert.ok(actual, `${file.path}/${expected.method}: exact migration consumer exists`); used.add(actual);
     for (const [property, value] of Object.entries(expected.original))
       edits.push({ ...actual.modifiers[property], value });
+  }
+  if (!verifySource) {
+    const imports = typographyRoleImports(source, file.path);
+    for (const role of file.roleImport.matchAll(/TYPE_\w+/g))
+      assert.ok(imports.has(role[0]), `${file.path}: actual public import ${role[0]} regardless of import order`);
+    for (const extra of file.extras ?? []) assert.ok(extra.after && source.includes(extra.after), `${file.path}: declared cleanup remains present`);
+    return source;
   }
   for (const edit of edits.sort((a,b) => b.start-a.start)) source = source.slice(0, edit.start)+edit.value+source.slice(edit.end);
   assert.ok(source.startsWith(file.roleImport), `${file.path}: exact migration import`);
