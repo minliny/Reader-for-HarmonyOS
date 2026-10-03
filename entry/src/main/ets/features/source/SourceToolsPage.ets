@@ -181,6 +181,7 @@ export struct SourceToolsPage {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onSnapshotChanged') snapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   onReconcile: (generation: number) => void = (_generation: number): void => {};
+  onContinueOriginal: (generation: number) => void = (_generation: number): void => {};
   onBack: () => void = (): void => {};
   onExportAll: () => void = (): void => {};
   onExportSelected: (sourceIds: string[]) => void = (_sourceIds: string[]): void => {};
@@ -206,6 +207,7 @@ export struct SourceToolsPage {
   private projectedSourceListRevision: number = -1;
   private projectedSelectionRevision: number = -1;
   private projectedBusy: boolean = false;
+  private projectedCanWrite: boolean = false;
   private projectedBatchResultsIdentity: string = '';
   private projectedDebugLogsIdentity: string = '';
 
@@ -459,15 +461,51 @@ export struct SourceToolsPage {
   }
 
   private recovery(): ReaderRecoveryView { return readerRecoveryView(this.snapshot.receipt, this.snapshot.readFacts, this.snapshot.confirmedParts ?? 0); }
+  private originalRecoveryIdentity(): string {
+    const original = this.snapshot.original;
+    return original === undefined ? '' : `${original.generation}:${original.operationId ?? ''}:` +
+      `${original.confirmation}:${original.writeStage}:${original.blocked ? 1 : 0}:` +
+      `${original.canRetryOriginal ? 1 : 0}:${original.busy || this.snapshot.busy ? 1 : 0}`;
+  }
+  private isCurrentOriginalRecovery(identity: string, generation: number): boolean {
+    const original = this.snapshot.original;
+    return this.mounted && original !== undefined && original.blocked &&
+      original.generation === generation && this.originalRecoveryIdentity() === identity &&
+      !original.busy && !this.snapshot.busy;
+  }
+  private reconcileOriginal(identity: string, generation: number): void {
+    if (this.isCurrentOriginalRecovery(identity, generation)) this.onReconcile(generation);
+  }
+  private continueOriginal(identity: string, generation: number): void {
+    if (this.isCurrentOriginalRecovery(identity, generation) && this.snapshot.original?.canRetryOriginal) {
+      this.onContinueOriginal(generation);
+    }
+  }
+  @Builder
+  private originalRecoveryActions(identity: string, generation: number) {
+    ReaderRecoveryAction({ label: '核对原操作回执', generation,
+      actionEnabled: !this.snapshot.busy && this.snapshot.original?.busy !== true,
+      onReconcile: (value: number): void => this.reconcileOriginal(identity, value) });
+    if (this.snapshot.original?.canRetryOriginal) {
+      ReaderRecoveryAction({
+        label: this.snapshot.original?.confirmation === 'confirmed' && this.snapshot.original?.writeStage === 'cleanup' ? '继续原清理' : '继续原操作',
+        generation, actionEnabled: !this.snapshot.busy && this.snapshot.original?.busy !== true,
+        onReconcile: (value: number): void => this.continueOriginal(identity, value) });
+    }
+  }
   @Builder
   private recoveryAction() {
-    if (this.recovery().canRetry) {
+    if (this.snapshot.original?.blocked) {
+      ForEach([this.originalRecoveryIdentity()], (identity: string) => {
+        this.originalRecoveryActions(identity, this.snapshot.original?.generation ?? 0);
+      }, (identity: string): string => `source-original-recovery:${identity}`);
+    } else if (this.recovery().canRetry) {
       ReaderRecoveryAction({ generation: this.recovery().generation, onReconcile: this.onReconcile });
     }
   }
   @Builder
   private statusCard() {
-    Text(this.recovery().visible ? this.recovery().message : this.snapshot.statusMessage.length > 0 ? this.snapshot.statusMessage : '书源规则与持久化均由 Rust Core 负责')
+    Text(this.snapshot.original?.blocked ? this.snapshot.original.message : this.recovery().visible ? this.recovery().message : this.snapshot.statusMessage.length > 0 ? this.snapshot.statusMessage : '书源规则与持久化均由 Rust Core 负责')
       .width('100%')
       .fontFamily(TYPE_SOURCE_TOOLS_STATUS.fontFamily as string)
       .fontSize(TYPE_SOURCE_TOOLS_STATUS.fontSizeFp)
@@ -554,7 +592,7 @@ export struct SourceToolsPage {
           .alignItems(HorizontalAlign.Start);
           this.smallButton(row.selected ? '已选' : '选择', row.actionsEnabled,
             (): void => this.onToggleSelection(row.source.sourceId));
-          this.smallButton('编辑', row.actionsEnabled, (): void => this.onOpenEditor(row.source.sourceId));
+          this.smallButton('编辑', row.actionsEnabled && this.canWriteSources(), (): void => this.onOpenEditor(row.source.sourceId));
           this.smallButton('调试', row.actionsEnabled, (): void => this.onDebugSource(row.source.sourceId));
         }
         .width('100%')
@@ -573,9 +611,9 @@ export struct SourceToolsPage {
         .fontSize(TYPE_SOURCE_TOOLS_DESCRIPTION.fontSizeFp)
         .lineHeight(TYPE_SOURCE_TOOLS_DESCRIPTION.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-      ReaderFormField({ scheme: this.appThemeScheme, specId: 'source-code', text: this.snapshot.editorText, placeholder: 'BookSource JSON', onTextChange: (value: string): void => this.onEditorDraftChanged(value) });
+      ReaderFormField({ scheme: this.appThemeScheme, specId: 'source-code', text: this.snapshot.editorText, placeholder: 'BookSource JSON', isEditable: this.snapshot.original?.blocked !== true, onTextChange: (value: string): void => this.onEditorDraftChanged(value) });
       Row({ space: TOK_SPACE_XS }) {
-        this.actionButton('取消', false, !this.snapshot.busy && this.snapshot.editorReadback?.confirmation !== 'unknown', (): void => this.onCancelEditor());
+        this.actionButton('取消', false, !this.snapshot.busy && this.snapshot.editorReadback?.confirmation !== 'unknown' && this.snapshot.original?.blocked !== true, (): void => this.onCancelEditor());
         this.actionButton('校验并保存', true, this.canWriteSources(), (): void => this.onSaveEditor());
       }
       .width('100%');
@@ -676,7 +714,7 @@ export struct SourceToolsPage {
   }
 
   private canWriteSources(): boolean {
-    return !this.snapshot.busy && this.snapshot.receipt?.receipt.confirmation !== 'unknown' &&
+    return !this.snapshot.busy && this.snapshot.original?.blocked !== true && this.snapshot.receipt?.receipt.confirmation !== 'unknown' &&
       this.snapshot.editorReadback?.confirmation !== 'unknown';
   }
 
@@ -732,7 +770,7 @@ export struct SourceToolsPage {
   private syncListDataSources(): void {
     if (this.projectedSourceListRevision !== this.snapshot.sourceListRevision ||
       this.projectedSelectionRevision !== this.snapshot.selectionRevision ||
-      this.projectedBusy !== this.snapshot.busy) {
+      this.projectedBusy !== this.snapshot.busy || this.projectedCanWrite !== this.canWriteSources()) {
       this.sourceDataSource.replace(
         this.snapshot.sources,
         this.snapshot.selectedSourceIds,
@@ -741,6 +779,7 @@ export struct SourceToolsPage {
       this.projectedSourceListRevision = this.snapshot.sourceListRevision;
       this.projectedSelectionRevision = this.snapshot.selectionRevision;
       this.projectedBusy = this.snapshot.busy;
+      this.projectedCanWrite = this.canWriteSources();
     }
 
     const batchIdentity = this.batchResultsIdentity();
@@ -767,7 +806,7 @@ export struct SourceToolsPage {
 
   private batchControlsRenderKey(): string {
     return `${this.snapshot.selectionRevision}:${this.snapshot.selectedSourceCount}:` +
-      `${this.snapshot.busy ? 1 : 0}:${this.snapshot.batchCheck.phase}`;
+      `${this.snapshot.busy ? 1 : 0}:${this.snapshot.batchCheck.phase}:${this.canWriteSources() ? 1 : 0}`;
   }
 
   private batchProgressRenderKey(): string {

@@ -33,7 +33,7 @@ function makeIndex(r){const index=createReaderBuilderProbe(source('pages/Index.e
 function fixture(){const r=rpc();currentOwner=r;const index=makeIndex(r);const owner=index.getSourceToolsOrchestrator();
  const settle=async()=>{await owner.operationTail;};
  const refresh=()=>{index.sourceToolsContent();return [...index.children.values()].at(-1).params;};
- const page=()=>{const child=refresh();const page=createReaderBuilderProbe(source('features/source/SourceToolsPage.ets'),['statusCard','recovery','recoveryAction'],{readerRecoveryView,ReaderRecoveryAction:Child}).owner;Object.assign(page,child,{appThemeScheme:'day'});page.statusCard();page.recoveryAction();return page;};
+ const page=()=>{const child=refresh();const page=createReaderBuilderProbe(source('features/source/SourceToolsPage.ets'),['statusCard','recovery','recoveryAction','originalRecoveryActions','originalRecoveryIdentity','isCurrentOriginalRecovery','reconcileOriginal','continueOriginal'],{readerRecoveryView,ReaderRecoveryAction:Child}).owner;Object.assign(page,child,{appThemeScheme:'day'});page.statusCard();page.recoveryAction();return page;};
  const retry=p=>{const c=[...p.children.values()][0];c.params.onReconcile(c.params.generation);};
  return{r,index,owner,settle,refresh,page,retry,open:async()=>{owner.open([]);await settle();},edit:async()=>{owner.openEditor('https://a.test');await settle();owner.updateEditorDraft(document('https://a.test'));},receipt:()=>index.sourceToolsSnapshot.receipt};}
 for(const action of ['toggle','delete','editor']){
