@@ -44,16 +44,33 @@ export class SettingsHost {
   reconcile(generation: number): void { this.getOrchestrator().reconcile(generation); }
 
   cacheCleanupSnapshot(owner: ReaderRuntimeOwner | undefined): SettingsCacheCleanupSnapshot | undefined {
-    return owner !== undefined && this.cacheCleanup?.owns(owner) ? this.cacheCleanup.current() : undefined;
+    if (owner === undefined) return undefined;
+    if (this.cacheCleanup?.owns(owner)) return this.cacheCleanup.current();
+    return SettingsCacheCleanupOwner.peekForRuntime(owner)?.current();
   }
 
   clearCache(owner: ReaderRuntimeOwner, current: () => boolean): Promise<SettingsCacheCleanupSnapshot> {
-    if (this.cacheCleanup === undefined || !this.cacheCleanup.owns(owner)) {
-      this.cacheCleanup = new SettingsCacheCleanupOwner(owner, (snapshot: SettingsCacheCleanupSnapshot): void => {
-        this.emitCacheCleanup(snapshot, owner);
-      });
-    }
-    return this.cacheCleanup.clear(current);
+    if (!this.cacheCleanupAdmitted(owner, current)) return Promise.resolve(this.cacheCleanup?.current() ?? new SettingsCacheCleanupOwner(owner, (_snapshot: SettingsCacheCleanupSnapshot): void => {}).current());
+    return this.cacheCleanupOwner(owner).clear(current);
+  }
+  reconcileCacheCleanup(owner: ReaderRuntimeOwner, current: () => boolean): Promise<SettingsCacheCleanupSnapshot> {
+    if (!this.cacheCleanupAdmitted(owner, current)) return Promise.resolve(this.cacheCleanup?.current() ?? new SettingsCacheCleanupOwner(owner, (_snapshot: SettingsCacheCleanupSnapshot): void => {}).current());
+    return this.cacheCleanupOwner(owner).reconcile(current);
+  }
+  continueOriginalCacheCleanup(owner: ReaderRuntimeOwner, generation: number, current: () => boolean): Promise<SettingsCacheCleanupSnapshot> {
+    if (!this.cacheCleanupAdmitted(owner, current)) return Promise.resolve(this.cacheCleanup?.current() ?? new SettingsCacheCleanupOwner(owner, (_snapshot: SettingsCacheCleanupSnapshot): void => {}).current());
+    return this.cacheCleanupOwner(owner).continueOriginal(generation, current);
+  }
+  private cacheCleanupAdmitted(owner: ReaderRuntimeOwner, current: () => boolean): boolean {
+    try { return ReaderRuntimeOwner.isCurrent(owner) && current(); } catch (_) { return false; }
+  }
+  private cacheCleanupOwner(owner: ReaderRuntimeOwner): SettingsCacheCleanupOwner {
+    const shared = SettingsCacheCleanupOwner.forRuntime(owner, (snapshot: SettingsCacheCleanupSnapshot): void => {
+      this.emitCacheCleanup(snapshot, owner);
+    });
+    if (shared === undefined) throw new Error('Settings cache Runtime retired before owner admission');
+    this.cacheCleanup = shared;
+    return shared;
   }
 
   private getOrchestrator(): SettingsOrchestrator {

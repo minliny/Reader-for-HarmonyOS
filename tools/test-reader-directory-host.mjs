@@ -22,7 +22,7 @@ function fixture(){let runtimeCurrent=true,routeCurrent=true;const delivered=[],
  return{rpc,host,binding,create,delivered,settled,entries:()=>entries,setEntries:v=>entries=v,retire:()=>routeCurrent=false,unset:()=>runtimeCurrent=false,restore:()=>{routeCurrent=runtimeCurrent=true;}};
 }
 {
- const f=fixture();f.rpc.failList=true;await f.create();assert.equal(f.host.snapshot().projection.receipt.fact,'confirmedRefreshFailed');assert.equal(f.host.busy(),false);assert.equal(f.entries()[0].bookmarks,undefined);assert.equal(f.entries()[0].level,2);assert.equal(f.entries()[0].downloadState,'completed');assert.deepEqual(f.settled,[true]);
+ const f=fixture();f.rpc.failList=true;await f.create();assert.equal(f.host.snapshot().projection.receipt.fact,'confirmedRefreshFailed');assert.equal(f.host.busy(),false);assert.deepEqual(f.entries()[0].bookmarks,[],'readback failure retains the last usable projection');assert.equal(f.entries()[0].level,2);assert.equal(f.entries()[0].downloadState,'completed');assert.deepEqual(f.settled,[true]);
  f.rpc.failList=false;await f.host.reconcile(f.host.snapshot().generation,f.binding);assert.equal(f.host.snapshot().projection.receipt.fact,'confirmedCurrent');assert.equal(f.entries()[0].bookmarks.length,1);assert.equal(f.rpc.calls.filter(c=>c.method==='bookmark.create').length,1);
 }
 {

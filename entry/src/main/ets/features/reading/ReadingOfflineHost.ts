@@ -1,3 +1,4 @@
+import type { CacheClearOperationIntentStore, ReadingOperationPendingError } from './ReadingOperationIntents';
 import type { RemoteReadingIdentity } from './RemoteReadingContract';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
@@ -14,6 +15,9 @@ export interface ReadingOfflineOperation {
   generation: number;
   /** Queue/cache ACK is distinct from Host image materialization/cleanup. */
   materialization: 'idle' | 'running' | 'succeeded' | 'failed' | 'retired';
+  materializationFailure?: string;
+  operationFailure?: string;
+  canContinueOriginal?: boolean;
   progress?: ReadingOfflineBookProgress;
   projection: PersistedReceiptProjection<LocalReadingTocEntry[]>;
 }
@@ -45,12 +49,15 @@ export class ReadingOfflineHost {
   /** A recreated Index in the same Runtime shares accepted writes/mutex.
    * A lookup from an obsolete Runtime must not replace the current cache. */
   static forRuntime(runtime: ReadingGatewayRuntime, ownsRuntime: () => boolean,
-    deliveryFailed?: (error: Error) => void): ReadingOfflineHost | undefined {
+    deliveryFailed?: (error: Error) => void, intents?: CacheClearOperationIntentStore): ReadingOfflineHost | undefined {
     let current = false;
     try { current = ownsRuntime(); } catch (_error) { return undefined; }
     if (!current) return undefined;
-    if (ReadingOfflineHost.retainedRuntime === runtime && ReadingOfflineHost.retainedHost !== undefined) return ReadingOfflineHost.retainedHost;
-    const host = new ReadingOfflineHost({ gateway: new ReadingOfflineGateway(runtime), ownsRuntime, deliveryFailed });
+    if (ReadingOfflineHost.retainedRuntime === runtime && ReadingOfflineHost.retainedHost !== undefined) {
+      if (intents !== undefined) ReadingOfflineHost.retainedHost.dependencies.gateway.installClearAuthority(intents);
+      return ReadingOfflineHost.retainedHost;
+    }
+    const host = new ReadingOfflineHost({ gateway: new ReadingOfflineGateway(runtime, intents), ownsRuntime, deliveryFailed });
     ReadingOfflineHost.retainedRuntime = runtime;
     ReadingOfflineHost.retainedHost = host;
     return host;
@@ -85,6 +92,9 @@ export class ReadingOfflineHost {
       this.updateReceipt(evidence, 'idle');
     } catch (error) {
       this.operation.materialization = current() ? 'failed' : 'retired';
+      this.operation.operationFailure = (error as Error).message;
+      if (evidence.confirmation() === 'confirmed' && (error as ReadingOperationPendingError).intent === undefined)
+        this.operation.materializationFailure = (error as Error).message;
       this.updateReceipt(evidence, 'failed', (error as Error).message);
       throw error as Error;
     } finally { if (this.generation === generation) this.active = false; }
@@ -103,9 +113,11 @@ export class ReadingOfflineHost {
 
   async clearBook(binding: ReadingOfflineBinding): Promise<void> { await this.write('clear', binding); }
 
-  /** Cache status only: no source HTTP, PUT-like prefetch, cache.clear or Host
-   * image cleanup. New matching availability never confirms an old ACK. */
+  /** Exact receipt reads may settle metadata; availability reads never dispatch
+   * cache.clear, prefetch or image cleanup or infer confirmation from counts. */
   async load(binding: ReadingOfflineBinding): Promise<void> {
+    if (this.active || !this.admitted(binding)) return;
+    await this.recoverClear(binding, false);
     if (this.active || !this.admitted(binding)) return;
     const read = ++this.readGeneration;
     const generation = this.generation;
@@ -120,6 +132,52 @@ export class ReadingOfflineHost {
     await this.load(binding);
   }
 
+  async continueOriginal(generation: number, binding: ReadingOfflineBinding): Promise<void> {
+    if (this.operation?.generation !== generation || !this.matches(this.operation, binding) || !this.operation.canContinueOriginal) return;
+    await this.recoverClear(binding, true); if (!this.active && this.admitted(binding)) await this.load(binding);
+  }
+  private async recoverClear(binding: ReadingOfflineBinding, continueOriginal: boolean): Promise<void> {
+    if (this.active || !this.admitted(binding)) return;
+    this.active = true; const previous = this.operation !== undefined && this.matches(this.operation, binding) ? this.operation : undefined;
+    const context = { sourceId: binding.session.identity.sourceId, bookId: binding.session.identity.bookId };
+    const current = (): boolean => this.admitted(binding);
+    try {
+      const pending = await this.dependencies.gateway.pendingClearOperation();
+      if (pending === undefined) return;
+      if (pending.params['scope'] !== 'book' || pending.context.sourceId !== context.sourceId || pending.context.bookId !== context.bookId) {
+        this.deliver(binding, (): void => binding.failed?.(new Error('另一清理操作仍需核对，请返回原内容'))); return;
+      }
+      const generation = previous?.generation ?? ++this.generation;
+      try {
+        const recovered = await this.dependencies.gateway.reconcileClearOperation(context, current, undefined, continueOriginal);
+        if (recovered === undefined) return;
+        // Core-only read recovery does not claim the physical image step ran.
+        this.operation = { action: 'clear', ...context, generation, materialization: previous?.materialization ?? 'idle',
+          materializationFailure: previous?.materializationFailure, canContinueOriginal: false,
+          projection: projectPersistedReceipt({ confirmation: 'confirmed', readback: 'idle', generation, canRetry: true,
+            message: previous?.materializationFailure ?? '原清理已核实；图片缓存整理保留原执行状态' }) };
+        this.publish(binding);
+      } catch (error) {
+        const issue = error as ReadingOperationPendingError;
+        const confirmed = issue.confirmed === true || previous?.projection.receipt.confirmation === 'confirmed';
+        this.operation = { action: 'clear', ...context, generation, materialization: previous?.materialization ?? 'idle',
+          materializationFailure: previous?.materializationFailure, operationFailure: issue.message,
+          canContinueOriginal: !confirmed && issue.blocked !== true,
+          projection: projectPersistedReceipt({ confirmation: confirmed ? 'confirmed' : 'unknown', readback: 'failed', generation,
+            message: previous?.materializationFailure ?? issue.message, blockedReason: issue.blocked ? issue.message : undefined, refreshError: issue.message, canRetry: true, stale: true }) };
+        this.publish(binding); this.deliver(binding, (): void => binding.failed?.(error as Error));
+      }
+    } catch (error) {
+      const issue = error as ReadingOperationPendingError; const generation = previous?.generation ?? ++this.generation;
+      this.operation = { action: 'clear', ...context, generation, materialization: previous?.materialization ?? 'idle',
+        materializationFailure: previous?.materializationFailure, operationFailure: issue.message, canContinueOriginal: false,
+        projection: projectPersistedReceipt({ confirmation: previous?.projection.receipt.confirmation ?? 'unknown',
+          readback: 'failed', generation, canRetry: true, blockedReason: issue.message, message: issue.message,
+          value: binding.currentEntries(), stale: true }) };
+      this.publish(binding); this.deliver(binding, (): void => binding.failed?.(error as Error));
+    } finally { this.active = false; }
+  }
+
   private async write(action: ReadingOfflineOperation['action'], binding: ReadingOfflineBinding,
     chapterIndex?: number): Promise<void> {
     if (this.active || !this.admitted(binding)) return;
@@ -127,6 +185,14 @@ export class ReadingOfflineHost {
     // read is not a transaction receipt and cannot silently lift this barrier.
     if (this.operation?.action === 'clear' && this.operation.projection.receipt.confirmation === 'unknown') {
       this.deliver(binding, (): void => binding.failed?.(new Error('离线清除结果未确认，请重新载入核对，不要重复操作'))); return;
+    }
+    if (action !== 'clear') {
+      try {
+        if (await this.dependencies.gateway.pendingClearOperation() !== undefined) {
+          this.deliver(binding, (): void => binding.failed?.(new Error('原缓存清理仍需核对，不能开始新的下载'))); return;
+        }
+      } catch (error) { this.deliver(binding, (): void => binding.failed?.(error as Error)); return; }
+      if (this.active || !this.admitted(binding)) return;
     }
     this.active = true;
     ++this.readGeneration;
@@ -174,6 +240,9 @@ export class ReadingOfflineHost {
     } catch (error) {
       if (this.operation?.generation !== generation) return;
       this.operation.materialization = current() ? 'failed' : 'retired';
+      this.operation.operationFailure = (error as Error).message;
+      if (evidence.confirmation() === 'confirmed' && (error as ReadingOperationPendingError).intent === undefined)
+        this.operation.materializationFailure = (error as Error).message;
       this.updateReceipt(evidence, 'failed', (error as Error).message);
       this.publish(binding);
       this.deliver(binding, (): void => binding.failed?.(error as Error));
@@ -188,7 +257,7 @@ export class ReadingOfflineHost {
     const operation = this.operation;
     if (operation !== undefined && this.matches(operation, binding)) {
       operation.projection = projectPersistedReceipt({ confirmation: operation.projection.receipt.confirmation,
-        readback: 'reading', generation: operation.generation });
+        readback: 'reading', generation: operation.generation, message: operation.materializationFailure ?? operation.operationFailure, blockedReason: operation.projection.facts.blockedReason });
       this.publish(binding);
     }
     try {
@@ -198,7 +267,8 @@ export class ReadingOfflineHost {
       if (operation !== undefined && this.operation === operation && this.matches(operation, binding)) {
         operation.projection = projectPersistedReceipt({ confirmation: operation.projection.receipt.confirmation,
           readback: 'succeeded', generation: operation.generation, value: entries,
-          canRetry: operation.projection.receipt.confirmation === 'unknown' || operation.materialization === 'failed' });
+          message: operation.materializationFailure ?? operation.operationFailure, blockedReason: operation.projection.facts.blockedReason,
+          canRetry: operation.projection.receipt.confirmation === 'unknown' || operation.materialization === 'failed' || operation.canContinueOriginal === true });
         operation.progress = this.progress(binding.session, entries, operation.progress);
         this.publish(binding);
       }
@@ -206,7 +276,7 @@ export class ReadingOfflineHost {
       if (!current()) return;
       if (operation !== undefined && this.operation === operation && this.matches(operation, binding)) {
         operation.projection = projectPersistedReceipt({ confirmation: operation.projection.receipt.confirmation,
-          readback: 'failed', generation: operation.generation, refreshError: (error as Error).message, canRetry: true });
+          readback: 'failed', generation: operation.generation, refreshError: (error as Error).message, message: operation.materializationFailure ?? operation.operationFailure ?? (error as Error).message, blockedReason: operation.projection.facts.blockedReason, canRetry: true });
         this.publish(binding);
       }
       this.deliver(binding, (): void => binding.failed?.(error as Error));
@@ -226,7 +296,7 @@ export class ReadingOfflineHost {
     message?: string, value?: LocalReadingTocEntry[]): void {
     if (this.operation === undefined) return;
     this.operation.projection = projectPersistedReceipt({ confirmation: evidence.confirmation(), readback,
-      generation: this.operation.generation, value, refreshError: message,
+      generation: this.operation.generation, value, refreshError: message, message: this.operation.materializationFailure ?? this.operation.operationFailure ?? message,
       canRetry: readback !== 'reading' && (readback === 'failed' || evidence.confirmation() === 'unknown'), stale: readback === 'failed' });
   }
   private merge(current: LocalReadingTocEntry[], projected: LocalReadingTocEntry[]): LocalReadingTocEntry[] {

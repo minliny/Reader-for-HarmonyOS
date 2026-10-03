@@ -1,10 +1,11 @@
+import type { BookRequestOptions } from '../../app/BookRequestScheduler';
+import type { common } from '@kit.AbilityKit';
 import type { BookAcquisitionCoordinator } from '../../app/BookAcquisitionCoordinator';
 import type { RemoteReadingSession } from './RemoteReadingFlowGateway';
 import type { image } from '@kit.ImageKit';
 import type {
   JsonObject,
   ReaderCoreResultEvent,
-  RequestOptions,
 } from '@reader/core-harmony';
 
 export type ReadingGatewayImage = {
@@ -35,6 +36,8 @@ export type ReadingGatewayImageChapterIdentity = {
 
 /** The only Core request surface feature gateways may consume. */
 export interface ReadingGatewayRuntime {
+  /** Existing Ability context supplies only platform IO to finite mutation intents. */
+  getUIAbilityContext?(): common.UIAbilityContext;
   /** Optional preparation has read authority only; foreground gateways own repairs. */
   readonly allowSourceContentCorrection?: boolean;
   /** Runtime/content lifetime for already displayed position persistence. */
@@ -50,7 +53,7 @@ export interface ReadingGatewayRuntime {
   request(
     method: string,
     params?: JsonObject,
-    options?: RequestOptions,
+    options?: BookRequestOptions,
   ): Promise<ReaderCoreResultEvent>;
 
   /**

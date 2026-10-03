@@ -1,3 +1,4 @@
+import type { BookmarkOperationIntentStore, ReadingOperationContext, ReadingOperationPendingError } from './ReadingOperationIntents';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../app/ReaderPersistedReceiptProjection';
@@ -14,6 +15,7 @@ export interface ReaderDirectoryOperation {
   requestedCount: number;
   confirmedCount: number;
   completion: 'notDispatched' | 'partial' | 'complete' | 'unknown';
+  canContinueOriginal?: boolean;
   projection: PersistedReceiptProjection<LocalReadingTocEntry[]>;
 }
 
@@ -45,12 +47,15 @@ export class ReaderDirectoryHost {
   /** A recreated Index in the same Runtime shares accepted writes/mutex.
    * A lookup from an obsolete Runtime must not replace the current cache. */
   static forRuntime(runtime: ReadingGatewayRuntime, ownsRuntime: () => boolean,
-    deliveryFailed?: (error: Error) => void): ReaderDirectoryHost | undefined {
+    deliveryFailed?: (error: Error) => void, intents?: BookmarkOperationIntentStore): ReaderDirectoryHost | undefined {
     let current = false;
     try { current = ownsRuntime(); } catch (_error) { return undefined; }
     if (!current) return undefined;
-    if (ReaderDirectoryHost.retainedRuntime === runtime && ReaderDirectoryHost.retainedHost !== undefined) return ReaderDirectoryHost.retainedHost;
-    const host = new ReaderDirectoryHost({ gateway: new LocalReadingFlowGateway(runtime), ownsRuntime, deliveryFailed });
+    if (ReaderDirectoryHost.retainedRuntime === runtime && ReaderDirectoryHost.retainedHost !== undefined) {
+      if (intents !== undefined) ReaderDirectoryHost.retainedHost.dependencies.gateway.installBookmarkAuthority(intents);
+      return ReaderDirectoryHost.retainedHost;
+    }
+    const host = new ReaderDirectoryHost({ gateway: new LocalReadingFlowGateway(runtime, intents), ownsRuntime, deliveryFailed });
     ReaderDirectoryHost.retainedRuntime = runtime;
     ReaderDirectoryHost.retainedHost = host;
     return host;
@@ -61,6 +66,7 @@ export class ReaderDirectoryHost {
   private active: boolean = false;
   private readGeneration: number = 0;
   private operation: ReaderDirectoryOperation | undefined;
+  private bookmarkProjectionStale: boolean = false;
 
   constructor(dependencies: ReaderDirectoryDependencies) { this.dependencies = dependencies; }
 
@@ -74,7 +80,7 @@ export class ReaderDirectoryHost {
     await this.write('createChapterStart', 1, binding, async (evidence, current): Promise<void> => {
       await this.dependencies.gateway.createChapterStartBookmark({ bookName: book.title,
         bookAuthor: book.author, chapterIndex, chapterTitle: entry.title }, current,
-        book.sourceId === LOCAL_SOURCE_ID ? undefined : { sourceId: book.sourceId, bookId: book.bookId }, evidence);
+        book.sourceId === LOCAL_SOURCE_ID ? undefined : { sourceId: book.sourceId, bookId: book.bookId }, evidence, this.context(binding, 'createChapterStart'));
     });
   }
 
@@ -89,7 +95,7 @@ export class ReaderDirectoryHost {
     const captured: LocalReadingPositionBookmarkInput = { ...input,
       positionScope: input.positionScope === undefined ? undefined : { ...input.positionScope } };
     await this.write('createPosition', 1, binding, async (evidence, current): Promise<void> => {
-      await this.dependencies.gateway.createPositionBookmark(captured, current, evidence);
+      await this.dependencies.gateway.createPositionBookmark(captured, current, evidence, this.context(binding, 'createPosition'));
     });
   }
 
@@ -105,7 +111,7 @@ export class ReaderDirectoryHost {
         // Admission only controls the next dispatch. A prior ACK remains a
         // confirmed fact even when navigation retired during its await.
         if (!current()) return;
-        const deleted = await this.dependencies.gateway.deleteBookmark(time, current, evidence);
+        const deleted = await this.dependencies.gateway.deleteBookmark(time, current, evidence, { ...this.context(binding, 'delete'), requestedCount: captured.length, confirmedBefore: evidence.confirmedCount });
         if (!deleted) throw new Error('bookmark.delete confirmed that the projected bookmark was already absent');
       }
     });
@@ -114,6 +120,8 @@ export class ReaderDirectoryHost {
   /** Pure canonical list read. A matching list is current data, never proof
    * that an old unknown bookmark.create/delete transaction was confirmed. */
   async load(binding: ReaderDirectoryBinding): Promise<void> {
+    if (this.active || !this.admitted(binding)) return;
+    await this.recoverPending(binding, false);
     if (this.active || !this.admitted(binding)) return;
     const readGeneration = ++this.readGeneration;
     const operationGeneration = this.generation;
@@ -128,12 +136,75 @@ export class ReaderDirectoryHost {
     await this.load(binding);
   }
 
+  async continueOriginal(generation: number, binding: ReaderDirectoryBinding): Promise<void> {
+    if (this.operation?.generation !== generation || !this.sameBook(this.operation.book, binding.book) || !this.operation.canContinueOriginal) return;
+    await this.recoverPending(binding, true); if (!this.active && this.admitted(binding)) await this.load(binding);
+  }
+
+  private context(binding: ReaderDirectoryBinding, ownerAction?: ReadingOperationContext['ownerAction']): ReadingOperationContext {
+    return { sourceId: binding.book.sourceId, bookId: binding.book.bookId, title: binding.book.title, author: binding.book.author, ownerAction };
+  }
+  private async recoverPending(binding: ReaderDirectoryBinding, continueOriginal: boolean): Promise<void> {
+    if (this.active || !this.admitted(binding)) return;
+    this.active = true; const previous = this.operation !== undefined && this.sameBook(this.operation.book, binding.book) ? this.operation : undefined;
+    const current = (): boolean => this.admitted(binding);
+    try {
+      const pending = await this.dependencies.gateway.pendingBookmarkOperation();
+      if (pending === undefined) return;
+      if (pending.context.sourceId !== binding.book.sourceId || pending.context.bookId !== binding.book.bookId ||
+        pending.context.title !== binding.book.title || pending.context.author !== binding.book.author) {
+        this.deliver(binding, (): void => binding.failed?.(new Error('另一书籍的原书签操作仍需核对，请返回原书籍'))); return;
+      }
+      const evidence = new ReaderWriteEvidence();
+      try {
+        const recovered = await this.dependencies.gateway.reconcileBookmarkOperation(this.context(binding), current, evidence, continueOriginal);
+        if (recovered === undefined) return;
+        const requestedCount = previous?.requestedCount ?? pending.context.requestedCount ?? 1;
+        const confirmedCount = Math.min(requestedCount, (previous?.confirmedCount ?? pending.context.confirmedBefore ?? 0) +
+          (previous?.projection.receipt.confirmation === 'confirmed' ? 0 : 1));
+        const generation = previous?.generation ?? ++this.generation;
+        const action = pending.context.ownerAction === 'createChapterStart' ? 'createChapterStart' : pending.method === 'bookmark.delete' ? 'delete' : 'createPosition';
+        this.operation = { action, book: { ...binding.book }, generation, requestedCount, confirmedCount,
+          completion: confirmedCount === requestedCount ? 'complete' : 'partial', canContinueOriginal: false,
+          projection: projectPersistedReceipt({ confirmation: 'confirmed', readback: 'idle', generation, canRetry: true,
+            message: confirmedCount === requestedCount ? '原书签操作已核实' : '原操作已核实，未派发后续书签操作' }) };
+        this.deliver(binding, (): void => binding.emitOperation?.(this.operation!));
+      } catch (error) {
+        const issue = error as ReadingOperationPendingError;
+        const generation = previous?.generation ?? ++this.generation;
+        const confirmed = issue.confirmed === true || previous?.projection.receipt.confirmation === 'confirmed';
+        const requestedCount = previous?.requestedCount ?? pending.context.requestedCount ?? 1;
+        const confirmedCount = confirmed ? Math.min(requestedCount, (previous?.confirmedCount ?? pending.context.confirmedBefore ?? 0) + (previous?.projection.receipt.confirmation === 'confirmed' ? 0 : 1)) : previous?.confirmedCount ?? pending.context.confirmedBefore ?? 0;
+        this.operation = { action: pending.context.ownerAction === 'createChapterStart' ? 'createChapterStart' : pending.method === 'bookmark.delete' ? 'delete' : 'createPosition',
+          book: { ...binding.book }, generation, requestedCount, confirmedCount, completion: confirmed ? (confirmedCount === requestedCount ? 'complete' : 'partial') : 'unknown', canContinueOriginal: !confirmed && issue.blocked !== true,
+          projection: projectPersistedReceipt({ confirmation: confirmed ? 'confirmed' : 'unknown', readback: 'failed', generation, canRetry: true,
+            message: issue.message, blockedReason: issue.blocked ? issue.message : undefined, refreshError: issue.message, value: binding.currentEntries(), stale: true }) };
+        this.deliver(binding, (): void => binding.emitOperation?.(this.operation!));
+        this.deliver(binding, (): void => binding.failed?.(error as Error));
+      }
+    } catch (error) {
+      this.bookmarkProjectionStale = true; const issue = error as ReadingOperationPendingError;
+      const generation = previous?.generation ?? ++this.generation;
+      this.operation = { action: previous?.action ?? 'createPosition', book: { ...binding.book }, generation,
+        requestedCount: previous?.requestedCount ?? 1, confirmedCount: previous?.confirmedCount ?? 0,
+        completion: previous?.completion ?? 'unknown', canContinueOriginal: false,
+        projection: projectPersistedReceipt({ confirmation: previous?.projection.receipt.confirmation ?? 'unknown',
+          readback: 'failed', generation, canRetry: true, value: binding.currentEntries(), stale: true,
+          blockedReason: issue.message, message: issue.message, refreshError: issue.message }) };
+      this.deliver(binding, (): void => binding.emitOperation?.(this.operation!));
+      this.deliver(binding, (): void => binding.failed?.(error as Error));
+    } finally { this.active = false; }
+  }
+
   private async write(action: ReaderDirectoryOperation['action'], requestedCount: number,
     binding: ReaderDirectoryBinding, mutation: (evidence: ReaderWriteEvidence, current: () => boolean) => Promise<void>): Promise<void> {
     if (this.active || !this.admitted(binding)) { this.settled(binding, false); return; }
-    // One unresolved operation is retained without eviction. There is no
-    // exact Core bookmark operation receipt; rereading must not release an
-    // unknown write into a duplicate replay or discard it for another book.
+    // Exact receipts can recover the original operation. A new mutation can
+    // neither replace unknown nor use an old/stale bookmark projection.
+    if (this.bookmarkProjectionStale) {
+      this.deliver(binding, (): void => binding.failed?.(new Error('书签视图尚未刷新，请先重新载入核对')));
+      this.settled(binding, false); return;
+    }
     if (this.operation?.projection.receipt.confirmation === 'unknown') {
       this.deliver(binding, (): void => binding.failed?.(new Error('书签操作结果未确认，请重新载入核对，不要重复操作')));
       this.settled(binding, false); return;
@@ -152,7 +223,7 @@ export class ReaderDirectoryHost {
     } catch (error) {
       this.publish(action, book, generation, requestedCount, evidence, 'failed', binding, (error as Error).message);
       if (current()) {
-        this.deliver(binding, (): void => binding.emitEntries(binding.currentEntries().map(entry => ({ ...entry, bookmarks: undefined }))));
+        this.bookmarkProjectionStale = true;
         this.deliver(binding, (): void => binding.failed?.(error as Error));
       }
     } finally {
@@ -169,10 +240,10 @@ export class ReaderDirectoryHost {
         read: (entries, guard): Promise<LocalReadingTocEntry[]> => this.dependencies.gateway.loadBookmarkProjection(
           binding.book.title, binding.book.author, entries, guard),
         commit: (entries): void => this.deliver(binding, (): void => binding.emitEntries(entries)) });
-      if (current()) this.updateReadback(binding, 'succeeded');
+      if (current()) { this.bookmarkProjectionStale = false; this.updateReadback(binding, 'succeeded'); }
     } catch (error) {
       if (!current()) return;
-      this.updateReadback(binding, 'failed', (error as Error).message);
+      this.bookmarkProjectionStale = true; this.updateReadback(binding, 'failed', (error as Error).message);
       if (reportFailure) this.deliver(binding, (): void => binding.failed?.(error as Error));
       throw error;
     }
@@ -182,8 +253,10 @@ export class ReaderDirectoryHost {
     const operation = this.operation;
     if (operation === undefined || !this.sameBook(operation.book, binding.book)) return;
     operation.projection = projectPersistedReceipt({ confirmation: operation.projection.receipt.confirmation,
-      readback, generation: operation.generation, value: readback === 'succeeded' ? binding.currentEntries() : undefined,
-      refreshError: message, message: operation.completion === 'partial' ? '部分书签已更新，后续操作未派发，请重新载入核对' : message,
+      readback, generation: operation.generation, value: binding.currentEntries(),
+      refreshError: message, message: operation.completion === 'partial' ? '部分书签已更新，后续操作未派发，请重新载入核对' : message ??
+        (operation.projection.receipt.confirmation === 'unknown' ? operation.projection.facts.message : undefined),
+      blockedReason: operation.projection.facts.blockedReason,
       canRetry: readback === 'failed' || operation.projection.receipt.confirmation === 'unknown', stale: readback === 'failed' });
     this.deliver(binding, (): void => binding.emitOperation?.(operation));
   }

@@ -13,7 +13,9 @@ const file=name=>new URL('../entry/src/main/ets/'+name,import.meta.url),source=n
 const ordinary=text=>stripTypeScriptTypes(text.replace(/^export type \{[^\n]+from [^\n]+\n/gm,'').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''));
 const load=(name,className,deps)=>new Function(...Object.keys(deps),ordinary(source(name))+`;return ${className};`)(...Object.values(deps));
 let installed;const Runtime=runtimeOwnerIdentityProbe(()=>installed);
-const Gateway=load('features/settings/SettingsCacheGateway.ts','SettingsCacheGateway',{isReaderCoreTransactionPendingError});
+let ActualCacheStore;
+class CacheClearOperationIntentStore { constructor(...args){return new ActualCacheStore(...args);} }
+const Gateway=load('features/settings/SettingsCacheGateway.ts','SettingsCacheGateway',{CacheClearOperationIntentStore});
 const CleanupOwner=load('features/settings/SettingsCacheCleanupOwner.ts','SettingsCacheCleanupOwner',{ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,projectOperationFacts,SettingsCacheGateway:Gateway});
 class SettingsOrchestrator{constructor(){}owns(){return true;}open(){}}
 const Host=load('features/settings/SettingsHost.ets','SettingsHost',{ReaderRuntimeOwner:Runtime,SettingsOrchestrator,SettingsCacheCleanupOwner:CleanupOwner});
@@ -28,12 +30,24 @@ function field(index){const text=source('pages/Index.ets'),start=text.indexOf(' 
  const expression=text.slice(start,end).split('=').slice(1).join('=').trim().replace(/;$/,'');
  return new Function('SettingsHost',ordinary('const value='+expression+';')+'return value;').call(index,Host);}
 function fixture(mode='valid'){
- const calls=[],notices=[];let currentMode=mode,gate,report=good(),remainingEntries=10;
- const runtime={getUIAbilityContext:()=>({}),async request(method,params,options){assert.equal(method,'cache.clear');assert.deepEqual(params,{scope:'cache'});calls.push({method,params,options});
+ const calls=[],notices=[];let currentMode=mode,gate,report=good(),remainingEntries=10,head,receipt,raw='',uuid=0;
+ const fileIo={OpenMode:{READ_ONLY:0,READ_WRITE:2},async readText(){return raw;},async open(){return{fd:1};},async close(){},async fsync(){},
+  AtomicFile:class {startWrite(){return{on(){},end:(value,_encoding,callback)=>{this.raw=value;queueMicrotask(callback);}};}finishWrite(){raw=this.raw;}failWrite(){}}};
+ const replaceReaderAtomicSnapshot=load('app/ReaderAtomicSnapshotFile.ts','replaceReaderAtomicSnapshot',{fileIo});
+ ActualCacheStore=load('features/reading/ReadingOperationIntents.ts','CacheClearOperationIntentStore',{
+  fileIo,replaceReaderAtomicSnapshot,ReaderRuntimeOwner:Runtime,ReaderCoreRequestError,isReaderCoreTransactionPendingError,
+  util:{generateRandomUUID:()=>`12345678-1234-4234-8123-${String(++uuid).padStart(12,'0')}`}});
+ const runtime={getUIAbilityContext:()=>({filesDir:'/cache-fixture'}),async request(method,params,options){
+  if(method==='cache.clear.operation.query')return{data:{head:head??null,receipt:receipt!==undefined&&params.operationId===receipt.binding.operationId?receipt:null}};
+  if(method==='cache.clear.operation.settle'){assert.deepEqual(params,receipt.binding);receipt.phase='settled';return{data:structuredClone(receipt)};}
+  assert.equal(method,'cache.clear');assert.equal(params.scope,'cache');assert.ok(params.operationId.endsWith('/'+params.sequence));calls.push({method,params,options});
+  if(options.canDispatch?.()===false)throw Error('actual adapter refused before send');options.onDispatch?.();
   const pause=gate;gate=undefined;if(pause)await pause.promise;
-  if(currentMode==='typed')throw typedPending();if(currentMode==='lost-before')throw Error('clear ACK unavailable');remainingEntries=0;if(currentMode==='lost-after')throw Error('clear ACK unavailable');
+  if(currentMode==='typed')throw typedPending();if(currentMode==='lost-before')throw Error('clear ACK unavailable');
   if(currentMode==='message-only')throw Object.assign(Error('TRANSACTION_PENDING'),{code:'TRANSACTION_PENDING'});
-  return{data:report};}};
+  remainingEntries=0;head={operationId:params.operationId,sequence:params.sequence,payloadFingerprint:'a'.repeat(64)};receipt={binding:head,phase:'committed',result:structuredClone(report)};
+  if(currentMode==='lost-after')throw Error('clear ACK unavailable');return{data:report};}};
+
  installed=runtime;
  const Methods=productionMotionMethods(file('pages/Index.ets'),['clearTextCache','openSettings'],{ReaderRuntimeOwner:Runtime});
  const index=Object.assign(new Methods(),{mountedRuntimeOwner:runtime,route:'settings',navigationGeneration:1,shelfReceiptRetired:false,settingsSection:'general',settingsSnapshot:{},settingsOperation:{action:'load'},settingsCacheCleanup:undefined,nextNavigationGeneration(){return ++this.navigationGeneration;}});
@@ -65,8 +79,8 @@ function fixture(mode='valid'){
 }
 for(const mode of ['lost-before','lost-after','message-only']){
  const f=fixture(mode),p=f.page();p.row().onClick();await until(()=>f.snapshot()?.confirmation==='unknown');p.update();
- assert.equal(p.owner.cacheActionLabel,'结果未确认');assert.equal(p.label(),'结果未确认');if(mode==='lost-after')assert.equal(f.remainingEntries(),0);if(mode==='lost-before')assert.equal(f.remainingEntries(),10);assert.equal(f.snapshot().operation.fact,'pendingReconciliation');assert.equal(f.snapshot().operation.canRetry,false);
- p.row().onClick();await tick();assert.equal(f.calls.length,1);assert.match(f.notices[0],/尚未确认.*不能核对/);
+ assert.equal(p.owner.cacheActionLabel,'结果未确认');assert.equal(p.label(),'结果未确认');if(mode==='lost-after')assert.equal(f.remainingEntries(),0);if(mode==='lost-before')assert.equal(f.remainingEntries(),10);assert.equal(f.snapshot().operation.fact,'pendingReconciliation');assert.equal(f.snapshot().operation.canRetry,true);
+ p.row().onClick();await tick();assert.equal(f.calls.length,1);assert.match(f.notices[0],/尚未确认/);
  p.owner.mounted=false;f.index.route='bookshelf';f.index.openSettings();const reopened=f.page('settings-back:next');
  assert.equal(reopened.owner.cacheActionLabel,'结果未确认');reopened.row().onClick();await tick();assert.equal(f.calls.length,1,'reopen cannot blind replay an uncertain clear');
 }
@@ -112,4 +126,4 @@ for(const mode of ['valid','lost-after'])for(const retirement of ['navigation','
  const f=fixture();f.index.settingsHost.emitCacheCleanup=()=>{throw Error('native state publisher unavailable');};
  await f.index.clearTextCache();assert.equal(f.snapshot().confirmation,'confirmed');assert.equal(f.snapshot().operation.fact,'current');assert.equal(f.calls.length,1);
 }
-console.log('PASS actual canonical cache Gateway → finite SettingsHost owner → Index SDK Props → actual V1 Page/CategoryRow: confirmed, typed-before-execution, unknown/malformed receipt, repeated taps, close/reopen, deferred ACK, Runtime/nav/presentation retirement and no blind replay. Current Core has no per-clear readback query.');
+console.log('PASS actual canonical cache Gateway → finite SettingsHost owner → Index SDK Props → actual V1 Page/CategoryRow: confirmed, typed-before-execution, unknown/malformed receipt, repeated taps, close/reopen, deferred ACK, Runtime/nav/presentation retirement and no blind replay. The new exact durable recovery is tested against actual Core SQLite by test-reading-operation-durable-intents; this test retains the actual SDK physical consumer matrix.');

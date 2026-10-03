@@ -1,3 +1,4 @@
+import type { CacheClearOperationIntentStore, ReadingOperationContext, ReadingOperationIntent, ReadingRecoveredOperation } from './ReadingOperationIntents';
 import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { diagnosticCodeOf } from '../../app/LogPrivacy';
 import type { BookAcquisitionCoordinator } from '../../app/BookAcquisitionCoordinator';
@@ -66,10 +67,13 @@ export class ReadingOfflineGateway {
   private readonly runtime: ReadingGatewayRuntime;
   private readonly remote: RemoteReadingFlowGateway;
 
-  constructor(runtime: ReadingGatewayRuntime) {
-    this.runtime = runtime;
+  private clearIntents?: CacheClearOperationIntentStore;
+  constructor(runtime: ReadingGatewayRuntime, clearIntents?: CacheClearOperationIntentStore) {
+    this.runtime = runtime; this.clearIntents = clearIntents;
     this.remote = new RemoteReadingFlowGateway(runtime);
   }
+
+  installClearAuthority(intents: CacheClearOperationIntentStore): void { this.clearIntents ??= intents; }
 
   async loadProjection(
     session: RemoteReadingSession,
@@ -453,21 +457,42 @@ export class ReadingOfflineGateway {
       throw new Error('offline reading image clear capability is unavailable');
     }
     this.assertCurrent(isCurrent);
-    evidence?.dispatched();
-    const result = await this.runtime.request('cache.clear', {
-      scope: 'book',
-      sourceId,
-      bookId,
-    }, evidence === undefined ? this.requestOptions(isCurrent) : {});
-    if (result.data['scope'] !== 'book') {
-      throw new Error('cache.clear did not confirm the exact book scope');
+    const params: JsonObject = { scope: 'book', sourceId, bookId };
+    const qualify = (data: JsonObject): JsonObject => {
+      if (data['scope'] !== 'book') throw new Error('cache.clear did not confirm the exact book scope');
+      for (const key of ['cacheEntriesRemoved', 'chapterEntriesRemoved', 'queueEntriesRemoved', 'removedContentBytes']) this.requireNonNegativeInteger(data[key], key);
+      return data;
+    };
+    if (this.clearIntents !== undefined) {
+      await this.clearIntents.execute('cache.clear', params, { sourceId, bookId }, qualify, evidence, isCurrent ?? ((): boolean => true));
+    } else {
+      // Legacy API compatibility; current production owner supplies the
+      // shared Reading/Settings finite cache-clear authority.
+      evidence?.dispatched(); const result = await this.runtime.request('cache.clear', params, evidence === undefined ? this.requestOptions(isCurrent) : {});
+      if (result.data['scope'] !== 'book') throw new Error('cache.clear did not confirm the exact book scope'); evidence?.confirmed();
     }
-    evidence?.confirmed();
     this.assertCurrent(isCurrent);
-    // Core clears first, so a Host cleanup failure can only leave unreachable
-    // files; retrying the same exact book clear remains safe and monotonic.
+    // Core confirmation and platform image cleanup are independent. Recovery
+    // never silently repeats either destructive step.
     await this.runtime.clearOfflineBookImages(sourceId, bookId);
     this.assertCurrent(isCurrent);
+  }
+
+  async pendingClearOperation(): Promise<ReadingOperationIntent | undefined> { return this.clearIntents?.pending(); }
+  async reconcileClearOperation(context: ReadingOperationContext, current: () => boolean,
+    evidence?: ReaderWriteEvidence, continueOriginal: boolean = false): Promise<ReadingRecoveredOperation | undefined> {
+    const qualify = (data: JsonObject, intent: ReadingOperationIntent): JsonObject => {
+      if (data['scope'] !== intent.params['scope']) throw new Error('cache.clear recovery scope mismatch');
+      for (const key of ['cacheEntriesRemoved', 'chapterEntriesRemoved', 'queueEntriesRemoved', 'removedContentBytes']) this.requireNonNegativeInteger(data[key], key);
+      return data;
+    };
+    return continueOriginal ? this.clearIntents?.continueOriginal(context, qualify, evidence, current) : this.clearIntents?.reconcile(context, qualify, current);
+  }
+  /** The platform step is separate from Core receipt recovery. It is never
+   * silently launched by a pure query/status refresh. */
+  async cleanupConfirmedImages(sourceId: string, bookId: string, current: () => boolean): Promise<void> {
+    this.assertCurrent(current); if (this.runtime.clearOfflineBookImages === undefined) throw new Error('offline reading image clear capability is unavailable');
+    await this.runtime.clearOfflineBookImages(sourceId, bookId); this.assertCurrent(current);
   }
 
   private async loadCoreStatuses(
