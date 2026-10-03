@@ -10,6 +10,7 @@ export class ReadingRecordIntent {
   readonly readAt: number;
   operationId: string | undefined = undefined;
   sequence: number | undefined = undefined;
+  deviceId: string | undefined = undefined;
   constructor(acceptanceId: string, bookName: string, elapsedMillis: number, readAt: number) {
     this.acceptanceId = acceptanceId; this.bookName = bookName;
     this.elapsedMillis = elapsedMillis; this.readAt = readAt;

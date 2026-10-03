@@ -11,23 +11,28 @@ import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const dir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const gatewaySource = readFileSync(new URL('ReadingRecordGateway.ts', dir), 'utf8');
 let activeRuntime, storeFactory, ids = 0;
-const Gateway = new Function('preferences', 'util', 'ReaderRuntimeOwner', 'ReadingRecordIntent', 'ReadingRecordRecoveryError',
-  `${stripTypeScriptTypes(gatewaySource.replace(/^import[^\n]*\n/gm, '')).replace('export class ', 'class ')}; return ReadingRecordGateway;`)
+const loadGateway = source => new Function('preferences', 'util', 'ReaderRuntimeOwner', 'ReadingRecordIntent', 'ReadingRecordRecoveryError',
+  `${stripTypeScriptTypes(source.replace(/^import[^\n]*\n/gm, '')).replace('export class ', 'class ')}; return ReadingRecordGateway;`)
   ({ getPreferences: () => storeFactory() }, { generateRandomUUID: () => `actual-intent-${++ids}` },
     { isCurrent: owner => owner === activeRuntime }, ReadingRecordIntent, ReadingRecordRecoveryError);
+const Gateway = loadGateway(gatewaySource);
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return {promise,resolve,reject}; };
 const settle = async () => { for (let i=0;i<8;i++) await new Promise(done=>setImmediate(done)); };
 function nativeReceipt(params) { return { ...params, author: '', record: { deviceId:params.deviceId, bookName:params.bookName,
   readTime:params.elapsedMillis, lastRead:params.readAt } }; }
-function fixture() {
-  let head = null, throwWrite = false, hangWrite, flushFailure, flushGate;
+function fixture(GatewayClass = Gateway) {
+  let head = null, throwWrite = false, hangWrite, flushFailure, flushGate, rejectJournalPut = false, eraseJournalOnFlushFailure = false;
   const cache = new Map([['device-id','harmony-device']]), events = [], writes = [];
   const store = { async get(key, fallback) { events.push(['get',key]); return cache.get(key) ?? fallback; },
-    async put(key, value) { events.push(['put',key]); cache.set(key,value); }, async flush() {
+    async put(key, value) { events.push(['put',key]);
+      if (key === 'delta-journal-v1' && rejectJournalPut) { rejectJournalPut=false; throw Error('put rejected before side effect'); }
+      cache.set(key,value); }, async flush() {
       const phase=JSON.parse(cache.get('delta-journal-v1')??'null')?.phase;
       events.push(['flush',phase]);
       if (flushGate) { const gate=flushGate; flushGate=undefined; await gate.promise; }
-      if (flushFailure===phase) { flushFailure=undefined; throw Error('lost Preferences flush ACK'); }
+      if (flushFailure===phase) { flushFailure=undefined;
+        if (eraseJournalOnFlushFailure) { eraseJournalOnFlushFailure=false; cache.delete('delta-journal-v1'); }
+        throw Error('lost Preferences flush ACK'); }
     } };
   const runtime = { getUIAbilityContext: () => ({}), async request(method,params,options) {
     events.push(['native',method]); assert.equal(options.timeoutMs,15000);
@@ -38,13 +43,57 @@ function fixture() {
     return {data:{record:head.record,receipt:head}};
   } };
   storeFactory=async()=>store; activeRuntime=runtime;
-  const gateway=new Gateway(runtime);
+  const gateway=new GatewayClass(runtime);
   return {gateway,runtime,cache,events,writes,store,
     head:()=>head,setHead:value=>{head=value;},lostWrite:()=>{throwWrite=true;},hangWrite:gate=>{hangWrite=gate;},
     lostFlush:phase=>{flushFailure=phase;},hangFlush:gate=>{flushGate=gate;},
+    rejectPutBeforeEffect:()=>{rejectJournalPut=true;},missingJournalAfterFlush:()=>{flushFailure='pending';eraseJournalOnFlushFailure=true;},
     journal:()=>JSON.parse(cache.get('delta-journal-v1')??'null'),
     remount() { const next={...runtime}; activeRuntime=next; storeFactory=async()=>store; return new Gateway(next); },
   };
+}
+{
+  const start=gatewaySource.indexOf('      const head = await this.readHead();'),
+    end=gatewaySource.indexOf('      const watermark = head?.sequence ?? 0;',start);
+  assert.ok(start>0&&end>start);
+  const old=loadGateway(gatewaySource.slice(0,start)+`      if (intent.sequence !== undefined || intent.operationId !== undefined) {
+        throw new ReadingRecordRecoveryError('blocked', 'old assigned identity permanently blocked');
+      }
+      const head = await this.readHead();
+`+gatewaySource.slice(end));
+  const f=fixture(old), intent=f.gateway.createIntent('book',100,10);f.rejectPutBeforeEffect();
+  await assert.rejects(f.gateway.accumulate(intent),e=>e.kind==='pending');
+  await assert.rejects(f.gateway.accumulate(intent),e=>e.kind==='blocked',
+    'old real production-method admission is a negative control: a recoverable put-before-effect failure falsely blocks retry');
+  assert.equal(f.writes.length,0);
+}
+for (const failure of ['put-before-side-effect', 'lost-flush-missing-row']) {
+  const f=fixture(), intent=f.gateway.createIntent('book',100,10);
+  if (failure==='put-before-side-effect') f.rejectPutBeforeEffect(); else f.missingJournalAfterFlush();
+  await assert.rejects(f.gateway.accumulate(intent),e=>e.kind==='pending');
+  assert.equal(f.journal(),null);assert.equal(f.writes.length,0);
+  const assigned={operationId:intent.operationId,sequence:intent.sequence,deviceId:intent.deviceId};
+  assert.deepEqual(assigned,{operationId:'harmony-device/1',sequence:1,deviceId:'harmony-device'});
+  await f.gateway.accumulate(intent);
+  assert.equal(f.writes.length,1,'missing journal retries the same accepted native identity after read-only watermark admission');
+  assert.deepEqual({operationId:intent.operationId,sequence:intent.sequence,deviceId:intent.deviceId},assigned);
+  assert.equal(f.journal().phase,'confirmed');
+}
+for (const headCase of ['exact', 'higher', 'same-sequence-conflict']) {
+  const f=fixture(), intent=f.gateway.createIntent('book',100,10);f.rejectPutBeforeEffect();
+  await assert.rejects(f.gateway.accumulate(intent),e=>e.kind==='pending');
+  const assigned={operationId:intent.operationId,sequence:intent.sequence,deviceId:intent.deviceId,
+    bookName:intent.bookName,elapsedMillis:intent.elapsedMillis,readAt:intent.readAt};
+  f.setHead(nativeReceipt(headCase==='exact'?assigned:headCase==='higher'?{...assigned,operationId:'harmony-device/2',sequence:2}:
+    {...assigned,elapsedMillis:101}));
+  if (headCase==='exact') {
+    await f.gateway.accumulate(intent);assert.equal(f.journal().phase,'confirmed');
+  } else {
+    await assert.rejects(f.gateway.accumulate(intent),e=>e.kind==='blocked'&&
+      (headCase==='higher'?/越过/.test(e.message):/不一致/.test(e.message)));
+    assert.equal(f.journal(),null,'unknown/conflicting head never creates a false confirmed local record');
+  }
+  assert.equal(f.writes.length,0,'read-only exact receipt confirms, higher/conflicting receipt cannot re-dispatch');
 }
 for(const failure of ['native','pending','confirmed']) {
   const f=fixture(), intent=f.gateway.createIntent('book',100,10);

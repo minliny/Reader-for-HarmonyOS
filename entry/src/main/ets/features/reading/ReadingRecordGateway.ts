@@ -49,14 +49,27 @@ export class ReadingRecordGateway {
         if (journal.acceptanceId === intent.acceptanceId) this.checkIntent(journal, intent);
         const record = await this.settleJournal(store, journal);
         if (journal.acceptanceId === intent.acceptanceId) {
-          intent.operationId = journal.operationId; intent.sequence = journal.sequence;
+          intent.operationId = journal.operationId; intent.sequence = journal.sequence; intent.deviceId = journal.deviceId;
           return record;
         }
       }
-      if (intent.sequence !== undefined || intent.operationId !== undefined) {
-        throw new ReadingRecordRecoveryError('blocked', '这段阅读时长的旧流水已不在当前回执中，不能再次累计。待核对记录已保留。');
-      }
       const head = await this.readHead();
+      if (intent.sequence !== undefined || intent.operationId !== undefined || intent.deviceId !== undefined) {
+        // A put may reject before its side effect, or a lost flush ACK may
+        // leave no journal on read-back. Keep the complete originally assigned
+        // tuple: an absent local row is not permission to allocate a new ID.
+        journal = this.assignedJournal(intent);
+        if (head !== undefined && head.sequence > journal.sequence)
+          throw new ReadingRecordRecoveryError('blocked', '当前流水已越过这段待核对时长，最新回执无法证明它是否已累计。请继续阅读并保留记录，不能按总时长推断或重写。');
+        if (head?.sequence === journal.sequence) {
+          this.checkReceipt(head, journal);
+          journal.phase = 'confirmed'; journal.receipt = head;
+        } else if ((head?.sequence ?? 0) !== journal.sequence - 1) {
+          throw new ReadingRecordRecoveryError('blocked', '阅读时长水位与原流水不连续，无法安全继续。待核对记录已保留。');
+        }
+        await this.writeJournal(store, journal);
+        return await this.settleJournal(store, journal);
+      }
       const watermark = head?.sequence ?? 0;
       if (!Number.isSafeInteger(watermark) || watermark >= Number.MAX_SAFE_INTEGER)
         throw new ReadingRecordRecoveryError('blocked', '阅读时长流水号已达到上限，不能重置或继续累计。');
@@ -64,7 +77,7 @@ export class ReadingRecordGateway {
       const deviceId = await this.deviceId();
       journal = { phase: 'pending', acceptanceId: intent.acceptanceId, deviceId, bookName: intent.bookName,
         elapsedMillis: intent.elapsedMillis, readAt: intent.readAt, operationId: `${deviceId}/${sequence}`, sequence };
-      intent.operationId = journal.operationId; intent.sequence = sequence;
+      intent.operationId = journal.operationId; intent.sequence = sequence; intent.deviceId = deviceId;
       // Persist this exact value before any Core mutation. A lost local flush
       // does not permit a second native identity or a different pending value.
       await this.writeJournal(store, journal);
@@ -128,8 +141,18 @@ export class ReadingRecordGateway {
   private checkIntent(journal: ReadingRecordJournal, intent: ReadingRecordIntent): void {
     if (journal.bookName !== intent.bookName || journal.elapsedMillis !== intent.elapsedMillis || journal.readAt !== intent.readAt ||
       (intent.sequence !== undefined && intent.sequence !== journal.sequence) ||
-      (intent.operationId !== undefined && intent.operationId !== journal.operationId))
+      (intent.operationId !== undefined && intent.operationId !== journal.operationId) ||
+      (intent.deviceId !== undefined && intent.deviceId !== journal.deviceId))
       throw new ReadingRecordRecoveryError('blocked', '相同阅读时长标识的内容发生变化，已拒绝覆盖。');
+  }
+
+  private assignedJournal(intent: ReadingRecordIntent): ReadingRecordJournal {
+    if (intent.sequence === undefined || !Number.isSafeInteger(intent.sequence) || intent.sequence <= 0 ||
+      intent.deviceId === undefined || intent.deviceId.length === 0 || intent.deviceId.length > 128 ||
+      intent.operationId !== `${intent.deviceId}/${intent.sequence}`)
+      throw new ReadingRecordRecoveryError('blocked', '阅读时长原流水身份不完整，已拒绝重新分配。待核对记录已保留。');
+    return { phase: 'pending', acceptanceId: intent.acceptanceId, deviceId: intent.deviceId, bookName: intent.bookName,
+      elapsedMillis: intent.elapsedMillis, readAt: intent.readAt, operationId: intent.operationId, sequence: intent.sequence };
   }
 
   private checkReceipt(receipt: ReadingRecordReceipt, journal: ReadingRecordJournal): void {
