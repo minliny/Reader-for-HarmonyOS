@@ -70,6 +70,7 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
   assert.ok(producer.specPolicy&&producer.removalProofs.length&&producer.sdkProofs.length,'spec→delete→SDK chain required');
   for(const proof of [...producer.removalProofs,...producer.sdkProofs])assert.ok(readSource(proof).length>0,'actual existing proof: '+proof);
   const shape=sharedProducerShape(readSource(producer.file),producer.file);assert.deepEqual(shape,producer.shape,'finite shared physical inputs/interface changed: '+producer.file);
+  for(const spec of producer.specSources??[])assert.deepEqual(sharedProducerShape(readSource(spec.file),spec.file),spec.shape,'finite shared spec source/role bindings changed: '+spec.file);
   const declaration=shape.declarations.find(d=>d.name===producer.component);assert.ok(declaration,'actual shared struct');
   const publicFields=new Set(declaration.publicFields.map(f=>f.name));
   const edges=producerConsumerEdges(inventory,producer.component);assert.ok(edges.length>0,'shared producer must be consumed');

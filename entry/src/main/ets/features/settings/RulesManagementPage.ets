@@ -1,3 +1,5 @@
+import { ReaderButton } from '../common/ReaderButton';
+import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_CAPTION, TYPE_FORM_STATUS, TYPE_RULES_COMPACT_ACTION, TYPE_RULES_ENTITY_TITLE, TYPE_RULES_INHERITED_DESCRIPTION, TYPE_RULES_INHERITED_NOTE } from '../common/ReaderTypography';
@@ -316,13 +318,7 @@ export struct RulesManagementPage {
 
   @Builder
   private input(value: string, placeholder: string, changed: (value: string) => void) {
-    TextInput({ text: value, placeholder })
-      .width('100%').height(40).fontFamily(TYPE_RULES_MANAGEMENT_INPUT.fontFamily)
-      .fontWeight(TYPE_RULES_MANAGEMENT_INPUT.fontWeight)
-      .fontSize(TYPE_RULES_MANAGEMENT_INPUT.fontSizeFp)
-      .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme)).border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(8)
-      .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM }).onChange(changed);
+    ReaderFormField({ scheme: this.appThemeScheme, specId: 'rules-input', text: value, placeholder, onTextChange: changed });
   }
 
   @Builder
@@ -335,16 +331,9 @@ export struct RulesManagementPage {
 
   @Builder
   private actionButton(label: string, primary: boolean, action: () => void, mutation: boolean = true) {
-    Text(label).layoutWeight(1).height(40).textAlign(TextAlign.Center)
-      .fontFamily(TYPE_RULES_MANAGEMENT_ACTION.fontFamily)
-      .fontWeight(TYPE_RULES_MANAGEMENT_ACTION.fontWeight)
-      .fontSize(TYPE_RULES_MANAGEMENT_ACTION.fontSizeFp)
-      .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-      .backgroundColor(primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(8)
-      .opacity(this.snapshot.busy || (mutation && (this.snapshot.ruleMutation?.blocked === true || this.snapshot.receipt?.receipt.confirmation === 'unknown')) ? 0.62 : 1).onClick((): void => {
-        if (!this.snapshot.busy && (!mutation || (this.snapshot.ruleMutation?.blocked !== true && this.snapshot.receipt?.receipt.confirmation !== 'unknown'))) action();
-      });
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'rules-action', label, primary, layout: 'equal',
+      actionEnabled: !this.snapshot.busy && (!mutation || (this.snapshot.ruleMutation?.blocked !== true && this.snapshot.receipt?.receipt.confirmation !== 'unknown')),
+      onAction: action });
   }
 
   @Builder
@@ -382,12 +371,9 @@ export struct RulesManagementPage {
 
   @Builder
   private smallButton(label: string, action: () => void, mutation: boolean = true) {
-    Text(label).height(30).padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
-      .textAlign(TextAlign.Center).fontSize(TYPE_RULES_COMPACT_ACTION.fontSizeFp).fontWeight(TYPE_RULES_COMPACT_ACTION.fontWeight as number).fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(7).opacity(this.snapshot.busy || (mutation && (this.snapshot.ruleMutation?.blocked === true || this.snapshot.receipt?.receipt.confirmation === 'unknown')) ? 0.62 : 1).onClick((): void => {
-        if (!this.snapshot.busy && (!mutation || (this.snapshot.ruleMutation?.blocked !== true && this.snapshot.receipt?.receipt.confirmation !== 'unknown'))) action();
-      });
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'rules-compact', label,
+      actionEnabled: !this.snapshot.busy && (!mutation || (this.snapshot.ruleMutation?.blocked !== true && this.snapshot.receipt?.receipt.confirmation !== 'unknown')),
+      onAction: action });
   }
 
   private editReplace(rule: ManagedReplaceRule): void {

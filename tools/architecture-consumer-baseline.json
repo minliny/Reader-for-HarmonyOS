@@ -757,6 +757,23 @@
       "contractId": "shared-ReaderSheetActionList",
       "proof": "tools/test-architecture-shared-producers.mjs",
       "reason": "One bookshelf-book-action SheetSurfaceSpec; 4 keyed physical actions and danger variant. Presentation admission/once-only dispatch remains leaf feature-local."
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderButton.ets",
+      "counts": {
+        "fontSize": 1
+      },
+      "contractId": "shared-ReaderButton",
+      "reason": "Finite current-UI control owns actual role/geometry/press or controlled draft; no caller style overrides; full original owner SDK and AUTO proof."
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderFormField.ets",
+      "counts": {
+        "fontSize": 1,
+        "backgroundColor": 1
+      },
+      "contractId": "shared-ReaderFormField",
+      "reason": "Finite current-UI control owns actual role/geometry/press or controlled draft; no caller style overrides; full original owner SDK and AUTO proof."
     }
   ],
   "uiPolicies": [

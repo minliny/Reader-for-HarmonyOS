@@ -1,3 +1,4 @@
+import {foundationControls} from './lib/reader-foundation-control-probe.mjs';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {mkdtempSync,readFileSync,writeFileSync,existsSync,rmSync} from 'node:fs';
@@ -7,6 +8,7 @@ import {syncIndexFixture as f,fullSyncIndexPage} from './lib/sync-index-real-fix
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {ReaderNativeAlertOwner} from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
+const nodes=owner=>[...(owner.nodes?.values()??[]),...[...(owner.children?.values()??[])].flatMap(c=>nodes(c))];
 const clone=v=>structuredClone(v),methods=['isCurrentSyncOwner','isCurrentSyncPresentation','isCurrentRoute','getSyncOrchestrator',
   'retireRssEditorPresentation','onSyncSaveConfig','onSyncTestConnection','onSyncTriggerBackup','onSyncRestoreLatest','onSyncResolveRestore','nextNavigationGeneration'];
 let enabled=true, instanceIdentity=0;
@@ -42,10 +44,11 @@ function fixture({durable=false}={}){
   let parent;
   const props=()=>{const actual=payload(index);parent=actual.parent;return actual.props;};
   const page=()=>{
+    const shared=foundationControls();
     const p=createReaderBuilderProbe(f.source('features/sync/SyncPage.ets'),['manualActionsSection','canContinueConfigSave','configSaveContinuationIdentities','configSaveGeneration','effectiveWebdavUrl','effectiveWebdavUser','effectiveWebdavPath','sectionHeadingMuted','restoreConflictCard','feedbackView','recoveryLabel','canMutate','manualActionButton','canSkipBackupRetention','backupRetentionActionIdentities','backupGeneration'],
-      {readerRecoveryView:f.readerRecoveryView,ReaderRecoveryNotice:Child,ReaderRecoveryAction:Child,ReaderCard:Card},{mountChildren:true,childSources:{ReaderCard:f.source('features/common/ReaderCard.ets')}}).owner;
+      {...shared.dependencies,readerRecoveryView:f.readerRecoveryView,ReaderRecoveryNotice:Child,ReaderRecoveryAction:Child,ReaderCard:Card},{...shared.hooks,mountChildren:true,childSources:{...shared.hooks.childSources,ReaderCard:f.source('features/common/ReaderCard.ets')}}).owner;
     Object.assign(p,props(),{contentFrame:()=>({width:390}),appThemeScheme:'day'});p.manualActionsSection();
-    const notice=[...p.children.values()].find(c=>c.params.view);
+    const notice=[...p.children.values()].find(c=>c.params?.view);
     const n=createReaderBuilderProbe(f.source('features/common/ReaderRecoveryNotice.ets'),['build'],{ReaderRecoveryAction:Child}).owner;
     Object.assign(n,notice.params,{appThemeScheme:'day'});n.initialRender();const actionChild=[...n.children.values()][0];let action;
     if(actionChild){const a=createReaderBuilderProbe(f.source('features/common/ReaderRecoveryAction.ets'),['build']).owner;
@@ -60,9 +63,9 @@ function fixture({durable=false}={}){
 {const x=fixture();await x.open();f.asset.failAdd=true;x.props().onSaveConfig(f.config.url,f.config.user,'','',f.config.directory);await x.settle();assert.equal(x.index.syncSnapshot.facts.operation.projection.receipt.confirmation,'unknown');await x.retry();assert.equal(f.asset.calls.filter(v=>v==='add').length,1);assert.equal(x.index.syncSnapshot.facts.operation.projection.receipt.fact,'pendingReconciliation','exact immutable preparation alone cannot commit current head');}
 {const x=fixture();await x.open();const load=x.store.loadSerializedState.bind(x.store);let fail=true;x.store.loadSerializedState=async()=>{if(fail){fail=false;throw Error('actual post-save read failed');}return load();};x.props().onSaveConfig(f.config.url,f.config.user,'','',f.config.directory);await x.settle();assert.equal(x.index.syncSnapshot.facts.operation.projection.receipt.fact,'confirmedRefreshFailed');await x.retry();assert.equal(f.asset.calls.filter(v=>v==='add').length,1);assert.equal(x.index.syncSnapshot.facts.operation.projection.receipt.fact,'confirmedCurrent');assert.doesNotMatch(JSON.stringify(x.index.syncSnapshot),/transient-secret|independent-secret/);}
 {const x=fixture();await x.open();const actual=fullSyncIndexPage(x.props());actual.webdavUrl='https://draft.test';actual.webdavUrlEdited=true;actual.webdavPass='typed-secret';actual.backupPass='backup-secret';
-  const save=[...actual.nodes.values()].filter(n=>n.type==='Stack'&&n.height===42).at(-1);assert.ok(save.onClick,'actual complete SDK page save handler');const load=x.store.loadSerializedState.bind(x.store);let fail=true;x.store.loadSerializedState=async()=>{if(fail){fail=false;throw Error('actual post-save read failed');}return load();};save.onClick();await x.settle();
+  const save=nodes(actual).filter(n=>n.type==='Stack'&&n.height===42).at(-1);assert.ok(save.onClick,'actual complete SDK page save handler');const load=x.store.loadSerializedState.bind(x.store);let fail=true;x.store.loadSerializedState=async()=>{if(fail){fail=false;throw Error('actual post-save read failed');}return load();};save.onClick();await x.settle();
   assert.equal(x.index.syncSnapshot.facts.operation.projection.receipt.fact,'confirmedRefreshFailed');actual.updateStateVars(x.props());actual.replay();assert.equal(actual.webdavPass,'','actual @Watch clears acknowledged password');assert.equal(actual.webdavUrl,'https://draft.test','edited draft is retained');
-  assert.equal([...actual.children.values()].find(c=>c.params.view)?.params.view.canRetry,true,'real updated recovery child sees operation');await x.retry();assert.equal(f.asset.calls.filter(v=>v==='add').length,1);
+  assert.equal([...actual.children.values()].find(c=>c.params?.view)?.params.view.canRetry,true,'real updated recovery child sees operation');await x.retry();assert.equal(f.asset.calls.filter(v=>v==='add').length,1);
   x.index.navigationGeneration++;x.index.route='settings';save.onClick();await x.settle();assert.equal(f.asset.calls.filter(v=>v==='add').length,1,'physical old SDK save handler cannot operate the new route');}
 {const x=fixture();await x.open();x.runtime.failBackupAdvance=true;x.props().onTriggerBackup();await x.settle();await x.retry();assert.equal(x.runtime.count('sync.webdav.transaction.start'),1);assert.equal(x.index.syncSnapshot.facts.operation.projection.receipt.confirmation,'unknown');}
 for(const retired of['route','generation','runtime-unset','hidden','unmounted']){
@@ -80,7 +83,7 @@ for(const retired of ['live','route','generation','runtime-unset','hidden','unmo
   const x=fixture({durable:true});await x.open();x.runtime.failBackupAdvance=true;x.props().onTriggerBackup();await x.settle();
   const pending=x.index.syncSnapshot.facts.operation;x.qualifyRemote();x.props().onReconcile(pending.projection.facts.generation);await x.settle();
   assert.equal(x.index.syncSnapshot.facts.operation.uploadQualified,true);assert.equal(x.index.syncSnapshot.facts.operation.completed,false);
-  const props=x.props(),actual=fullSyncIndexPage(props),action=[...actual.children.values()].find(c=>c.params.label==='保留备份，结束清理');
+  const props=x.props(),actual=fullSyncIndexPage(props),action=[...actual.children.values()].find(c=>c.params?.label==='保留备份，结束清理');
   assert.ok(action,'actual Index → complete decorated SDK Page mounts exact receipt consent action');
   const before=x.runtime.count('sync.webdav.backup.retention.skip');
   if(retired==='route')x.index.route='settings';if(retired==='generation')x.index.nextNavigationGeneration();
@@ -112,7 +115,7 @@ for (const retired of ['live', 'route', 'generation', 'runtime-unset', 'hidden',
   assert.equal(pending.projection.receipt.confirmation, 'unknown');
   assert.equal(pending.canContinueOriginal, true);
   const props = x.props(), actual = fullSyncIndexPage(props);
-  const original = [...actual.children.values()].find(child => child.params.label === '继续原操作');
+  const original = [...actual.children.values()].find(child => child.params?.label === '继续原操作');
   assert.ok(original, 'actual Index→decorated Page has original config continuation action');
   const identity = pending.operationId, adds = f.asset.calls.filter(v => v === 'add').length;
   if (retired === 'route') x.index.route = 'settings';
@@ -142,7 +145,7 @@ for (const retired of ['live', 'route', 'generation', 'runtime-unset', 'hidden',
  old.onTriggerBackup();old.onSaveConfig(f.config.url,f.config.user,'','',f.config.directory);old.onReconcile(0);old.onBack();
  await x.settle();assert.equal(x.runtime.calls.length,before);assert.equal(f.asset.calls.length,adds);
  oldHost.detachPresentation(oldID);assert.equal(oldHost.isPresentationCurrent(currentID),true,'old exact detach cannot clear successor');
- const actual=fullSyncIndexPage(payload(next).props),trigger=[...actual.nodes.values()].find(n=>n.type==='Stack'&&n.height===40&&n.onClick);
+ const actual=fullSyncIndexPage(payload(next).props),trigger=nodes(actual).find(n=>n.type==='Stack'&&n.height===40&&n.onClick);
  assert.ok(trigger?.onClick,'current complete decorated Page retains a usable native backup button');
  trigger.onClick();await x.settle();assert.equal(x.runtime.count('sync.webdav.transaction.start'),1);
  assert.equal(next.syncSnapshot.facts.operation.completed,true);

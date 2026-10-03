@@ -1,3 +1,4 @@
+import {foundationControls} from './lib/reader-foundation-control-probe.mjs';
 import { randomUUID } from 'node:crypto';
 import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
@@ -97,16 +98,17 @@ function fixture({empty=false,preserveAsset=false}={}){
   class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
   class Card extends Child { initialRender(){this.params.content?.();} }
   const page=()=>{
-    const p=createReaderBuilderProbe(source('features/sync/SyncPage.ets'),['manualActionsSection','configSaveContinuationIdentities','canContinueConfigSave','configSaveGeneration','effectiveWebdavUrl','effectiveWebdavUser','effectiveWebdavPath','sectionHeadingMuted','restoreConflictCard','feedbackView','recoveryLabel','canSkipBackupRetention','backupGeneration','backupRetentionActionIdentities','canMutate','manualActionButton'],{readerRecoveryView,ReaderRecoveryNotice:Child,ReaderRecoveryAction:Child,ReaderCard:Card},{mountChildren:true,childSources:{ReaderCard:source('features/common/ReaderCard.ets')}});
+    const shared=foundationControls();
+    const p=createReaderBuilderProbe(source('features/sync/SyncPage.ets'),['manualActionsSection','configSaveContinuationIdentities','canContinueConfigSave','configSaveGeneration','effectiveWebdavUrl','effectiveWebdavUser','effectiveWebdavPath','sectionHeadingMuted','restoreConflictCard','feedbackView','recoveryLabel','canSkipBackupRetention','backupGeneration','backupRetentionActionIdentities','canMutate','manualActionButton'],{...shared.dependencies,readerRecoveryView,ReaderRecoveryNotice:Child,ReaderRecoveryAction:Child,ReaderCard:Card},{...shared.hooks,mountChildren:true,childSources:{...shared.hooks.childSources,ReaderCard:source('features/common/ReaderCard.ets')}});
     Object.assign(p.owner,{snapshot:clone(snapshot),contentFrame:()=>({width:390}),appThemeScheme:'day',onReconcile:g=>owner.reconcile(g),onSkipBackupRetention:g=>owner.skipBackupRetention(g),onContinueConfigSave:(...args)=>owner.continueConfigSave(...args),onTriggerBackup:()=>owner.triggerBackup(),onRestoreLatest:()=>owner.restoreLatest(),restoreConflictCard:()=>{}});
     p.owner.manualActionsSection();
-    const child=[...p.owner.children.values()].find(c=>c.params.view);
+    const child=[...p.owner.children.values()].find(c=>c.params?.view);
     const n=createReaderBuilderProbe(noticeSource,['build'],{ReaderRecoveryAction:Child});Object.assign(n.owner,{...child.params,appThemeScheme:'day'});n.owner.initialRender();
     const retryChild=[...n.owner.children.values()][0];let action;
     if(retryChild){const a=createReaderBuilderProbe(actionSource,['build']);Object.assign(a.owner,{actionEnabled:true,appThemeScheme:'day',...retryChild.params});a.owner.initialRender();action=[...a.owner.nodes.values()].find(v=>v.height===36);}
-    const continuationChild=[...p.owner.children.values()].find(c=>c.params.label==='继续原操作');let continueAction;
+    const continuationChild=[...p.owner.children.values()].find(c=>c.params?.label==='继续原操作');let continueAction;
     if(continuationChild){const a=createReaderBuilderProbe(actionSource,['build']);Object.assign(a.owner,{actionEnabled:true,appThemeScheme:'day',...continuationChild.params});a.owner.initialRender();continueAction=[...a.owner.nodes.values()].find(v=>v.height===36);}
-    const skipChild=[...p.owner.children.values()].find(c=>c.params.label==='保留备份，结束清理');let skipAction;
+    const skipChild=[...p.owner.children.values()].find(c=>c.params?.label==='保留备份，结束清理');let skipAction;
     if(skipChild){const a=createReaderBuilderProbe(actionSource,['build']);Object.assign(a.owner,{actionEnabled:true,appThemeScheme:'day',...skipChild.params});a.owner.initialRender();skipAction=[...a.owner.nodes.values()].find(v=>v.height===36);}
     return {page:p.owner,view:child.params.view,action,skipAction,continueAction,notice:n.owner};
   };
@@ -189,19 +191,21 @@ for(const fail of ['none','applyAck','commitAck','host']){
   class Card extends Child {initialRender(){this.params.content?.();}}
   const geometry=execute('features/common/SurfaceHorizontalGeometry.ts','({SurfaceWidthSpec,SurfaceHorizontalFrame,resolveHorizontalFrame})');
   syntax.builderParamObjectCollection.set('PageBackBar',new Set(['trailing']));
-  const full=createReaderBuilderProbe(text,names,{...geometry,DEFAULT_SYNC_SNAPSHOT,readerRecoveryView,ReaderCard:Card,PageBackBar:Child,ReaderRecoveryNotice:Child,
+  const shared=foundationControls();
+  const full=createReaderBuilderProbe(text,names,{...shared.dependencies,...geometry,DEFAULT_SYNC_SNAPSHOT,readerRecoveryView,ReaderCard:Card,PageBackBar:Child,ReaderRecoveryNotice:Child,
     ...Object.fromEntries(['ObservedPropertySimplePU','ObservedPropertyObjectPU','SynchedPropertySimpleOneWayPU','SynchedPropertyObjectOneWayPU'].map(k=>[k,Property])),
     registerReaderFonts(){},ReaderWindowCoordinator:{metrics:()=>({windowRect:{width:390}})},readerVisualSafeLeft:()=>0,readerVisualSafeRight:()=>0,readerFloatingBarBottomInset:()=>18,
     READER_FLOATING_TOP_BAR_HEIGHT:56,InputType:{Password:'Password'},TOK_CONTENT_MAX_W_TABLET:722,TOK_SCREEN_INSET:18,
-  },{mountChildren:true,initialParams:{snapshot:{...clone(DEFAULT_SYNC_SNAPSHOT),webdavUrl:config.url,webdavUser:config.user,webdavPath:config.directory,facts:{read:facts.projectOperationFacts({phase:'succeeded',value:true}),busy:false,canMutate:true}},isTablet:false},
-    childSources:{ReaderCard:source('features/common/ReaderCard.ets'),PageBackBar:source('features/common/PageBackBar.ets')}});
+  },{...shared.hooks,mountChildren:true,initialParams:{snapshot:{...clone(DEFAULT_SYNC_SNAPSHOT),webdavUrl:config.url,webdavUser:config.user,webdavPath:config.directory,facts:{read:facts.projectOperationFacts({phase:'succeeded',value:true}),busy:false,canMutate:true}},isTablet:false},
+    childSources:{...shared.hooks.childSources,ReaderCard:source('features/common/ReaderCard.ets'),PageBackBar:source('features/common/PageBackBar.ets')}});
+  const replay=full.owner.replay.bind(full.owner);full.owner.replay=()=>{replay();shared.properties.flush();};
   full.owner.aboutToAppear();full.owner.initialRender();assert.equal(full.owner.webdavUrl,config.url);
-  const inputs=[...full.owner.nodes.values()].filter(n=>n.create&&typeof n.create==='object'&&'placeholder' in n.create);assert.equal(inputs.length,5);assert.equal(inputs.filter(n=>n.enabled).length,5);assert.equal(inputs.filter(n=>n.type==='TextInput').length,5);assert.equal(inputs.filter(n=>n.nativeInputType==='Password').length,2);
+  const inputs=shared.nodes(full.owner).filter(n=>n.create&&typeof n.create==='object'&&'placeholder' in n.create);assert.equal(inputs.length,5);assert.equal(inputs.filter(n=>n.enabled).length,5);assert.equal(inputs.filter(n=>n.type==='TextInput').length,5);assert.equal(inputs.filter(n=>n.nativeInputType==='InputType.Password').length,2);
   full.owner.webdavUrlEdited=true;full.owner.webdavUrl='https://draft.test';full.owner.webdavPass='secret-draft';full.owner.backupPass='backup-draft';
   const operation={action:'saveConfig',writeGeneration:1,coreApplied:false,hostApplied:false,completed:true,remoteConfirmedCount:0,projection:projectPersistedReceipt({confirmation:'confirmed',readback:'failed',generation:900,canRetry:true})};
   full.owner.updateStateVars({snapshot:{...clone(full.owner.snapshot),webdavUrl:'https://new.test',facts:{...full.owner.snapshot.facts,operation,busy:false,canMutate:true}}});
   assert.equal(full.owner.webdavUrl,'https://draft.test','ACK/readback keeps edited non-secret draft');assert.equal(full.owner.webdavPass,'','actual @Watch clears acknowledged password draft');assert.equal(full.owner.backupPass,'');
-  const recovery=[...full.owner.children.values()].find(c=>c.params.view);full.owner.replay();assert.equal(recovery.params.view.canRetry,true,'mounted shared child receives live snapshot receipt');
+  const recovery=[...full.owner.children.values()].find(c=>c.params?.view);full.owner.replay();assert.equal(recovery.params.view.canRetry,true,'mounted shared child receives live snapshot receipt');
   full.owner.webdavPass='later-draft';full.owner.backupPass='later-backup';
   full.owner.updateStateVars({snapshot:{...clone(full.owner.snapshot),facts:{...full.owner.snapshot.facts,operation:{...operation,projection:projectPersistedReceipt({confirmation:'confirmed',readback:'succeeded',generation:901})}}}});
   assert.equal(full.owner.webdavPass,'later-draft','read-only recovery never re-clears a later secret draft');assert.equal(full.owner.backupPass,'later-backup');

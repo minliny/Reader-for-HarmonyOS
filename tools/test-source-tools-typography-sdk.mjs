@@ -1,3 +1,4 @@
+import { foundationControls, foundationSpecs } from './lib/reader-foundation-control-probe.mjs';
 import { readerRecoveryView } from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -16,12 +17,15 @@ const fingerprint = node => JSON.stringify(Object.fromEntries(properties.filter(
   .map(property => [property, node[property]])));
 const allowed = new Set(baseline.nodes.map(node => fingerprint(node.tuple)));
 const seen = new Set();
+const nodes=owner=>[...owner.nodes.values(),...[...owner.children.values()].flatMap(child=>nodes(child))];
 const make = (overrides = {}) => {
+  const controls=foundationControls({specs:foundationSpecs({...readerTypographyRoles,...overrides})});
   const { owner } = createReaderBuilderProbe(source, methods, {
     // Virtual list painting is outside this typography probe. The actual row
     // Builders run separately below, with their real SDK observer closures.
-    LazyForEach: { create() {}, pop() {} }, readerRecoveryView, ...overrides,
-  });
+    LazyForEach: { create() {}, pop() {} }, readerRecoveryView, ...controls.dependencies, ...overrides,
+  },controls.hooks);
+  const replay=owner.replay.bind(owner);owner.replay=()=>{replay();controls.properties.flush();};
   const calls = [];
   Object.assign(owner, {
     appThemeScheme: 'day',
@@ -57,7 +61,7 @@ const cases = [
 for (const [name, ...args] of cases) {
   const { owner } = make();
   owner[name](...args);
-  for (const node of owner.nodes.values()) if (Object.hasOwn(node, 'fontSize')) {
+  for (const node of nodes(owner)) if (Object.hasOwn(node, 'fontSize')) {
     const tuple = fingerprint(node);
     assert.ok(allowed.has(tuple), `${name}/${String(node.create)}: exact baseline tuple, including omitted AUTO modifiers`);
     seen.add(tuple);
@@ -70,21 +74,21 @@ assert.deepEqual(seen, allowed, 'all 14 authored tuples have real SDK Builder ev
 const { owner: progress } = make();
 progress.snapshot.batchCheck.results = [result];
 progress.batchCheckCard();
-assert.ok([...progress.nodes.values()].some(node => node.create === '实时结果（最新在前）'));
+assert.ok(nodes(progress).some(node => node.create === '实时结果（最新在前）'));
 for (const scheme of ['day', 'night', 'day']) {
   progress.appThemeScheme = scheme; progress.replay();
-  const title = [...progress.nodes.values()].find(node => typeof node.create === 'string' && node.create.startsWith('检测进度'));
+  const title = nodes(progress).find(node => typeof node.create === 'string' && node.create.startsWith('检测进度'));
   assert.equal(title.fontColor, readerAppColor('TOK_INK', scheme));
 }
 const { owner: editor, calls: editorCalls } = make();
 editor.editorCard(); editor.debugCard();
-const code = [...editor.nodes.values()].find(node => node.type === 'TextArea');
-const input = [...editor.nodes.values()].find(node => node.type === 'TextInput');
+const code = nodes(editor).find(node => node.type === 'TextArea');
+const input = nodes(editor).find(node => node.type === 'TextInput');
 assert.equal(code.fontFamily, 'monospace'); assert.equal(code.height, 320);
 assert.equal(input.height, 40);
 code.onChange('{"edited":true}'); input.onChange('新的关键词');
 assert.deepEqual(editorCalls.slice(-2), [['editor', '{"edited":true}'], ['key', '新的关键词']]);
-const selects = [...editor.nodes.values()].filter(node => node.type === 'Select');
+const selects = nodes(editor).filter(node => node.type === 'Select');
 assert.equal(selects.length, 2);
 assert.ok(selects.every(node => !Object.hasOwn(node, 'fontSize') && !Object.hasOwn(node, 'fontFamily')),
   'native Select typography remains at its current AUTO baseline');
@@ -97,7 +101,7 @@ buttons.actionButton('禁用', true, false, () => accepted++);
 buttons.actionButton('允许', false, true, () => accepted++);
 buttons.smallButton('禁用小操作', false, () => accepted++);
 buttons.fullWidthActionButton('导出', true, () => accepted++);
-const controls = [...buttons.nodes.values()].filter(node => typeof node.onClick === 'function');
+const controls = nodes(buttons).filter(node => typeof node.onClick === 'function');
 controls.forEach(node => node.onClick());
 assert.equal(accepted, 2, 'disabled action and small controls remain guarded');
 buttons.snapshot.busy = true; buttons.replay();
@@ -115,7 +119,7 @@ for(const state of ['busy','receiptUnknown','editorUnknown']){
  if(state==='receiptUnknown')owner.snapshot.receipt={receipt:{confirmation:'unknown'}};
  if(state==='editorUnknown')owner.snapshot.editorReadback={confirmation:'unknown'};
  owner.batchCard();owner.editorCard();
- for(const node of owner.nodes.values())if(['启用','停用','删除','校验并保存'].includes(node.create)){
+ for(const node of nodes(owner))if(['启用','停用','删除','校验并保存'].includes(node.create)){
   assert.equal(node.opacity,0.62,`${state}: actual bounded source mutation action disabled`);node.onClick();
  }
  assert.equal(calls.some(call=>['setEnabled','deleteSelected','save'].includes(call)),false,`${state}: current domain guard prevents mutations`);
@@ -127,9 +131,9 @@ const { owner: propagated } = make({
   TYPE_SOURCE_TOOLS_DESCRIPTION: { ...readerTypographyRoles.TYPE_SOURCE_TOOLS_DESCRIPTION, fontSizeFp: 13 },
 });
 propagated.batchCheckCard(); propagated.exportCard(); propagated.editorCard();
-const descriptionNodes = [...propagated.nodes.values()].filter(node => node.lineHeight === 17);
+const descriptionNodes = nodes(propagated).filter(node => node.lineHeight === 17);
 assert.equal(descriptionNodes.length, 3);
 assert.ok(descriptionNodes.every(node => node.fontSize === 13), 'one role update propagates across three real consumers');
-assert.ok([...propagated.nodes.values()].some(node => node.fontSize === 14), 'other heading variant remains unchanged');
+assert.ok(nodes(propagated).some(node => node.fontSize === 14), 'other heading variant remains unchanged');
 
 console.log('PASS source-tools real SDK typography: 14 tuples, AUTO, state/theme replay, input and action callbacks, role propagation');

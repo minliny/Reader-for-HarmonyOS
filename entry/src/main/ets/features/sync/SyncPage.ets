@@ -1,3 +1,5 @@
+import { ReaderButton } from '../common/ReaderButton';
+import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
@@ -243,41 +245,9 @@ export struct SyncPage {
           .lineHeight(TYPE_APP_ROW_LABEL.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1);
-        if (isPassword) {
-          TextInput({ text: value, placeholder: placeholder })
-            .enabled(this.canEdit())
-            .width('100%')
-            .height(36)
-            // Credentials must never be rendered as ordinary readable page
-            // text. They remain transient page state; this does not introduce
-            // a storage policy for WebDAV secrets.
-            .type(InputType.Password)
-            .fontFamily(TYPE_SYNC_INPUT.fontFamily)
-            .fontWeight(TYPE_SYNC_INPUT.fontWeight)
-            .fontSize(TYPE_SYNC_INPUT.fontSizeFp)
-            .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
-            .backgroundColor(readerAppColor('TOK_FIELD_SURFACE', this.appThemeScheme))
-            .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-            .borderRadius(6)
-            .padding({ left: 11, right: 11 })
-            .placeholderColor(readerAppColor('app.SyncPage.webdavInputRow.placeholderColor.FF9C9488', this.appThemeScheme))
-            .onChange((newValue: string): void => onChange(newValue));
-        } else {
-          TextInput({ text: value, placeholder: placeholder })
-            .enabled(this.canEdit())
-            .width('100%')
-            .height(36)
-            .fontFamily(TYPE_SYNC_INPUT.fontFamily)
-            .fontWeight(TYPE_SYNC_INPUT.fontWeight)
-            .fontSize(TYPE_SYNC_INPUT.fontSizeFp)
-            .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
-            .backgroundColor(readerAppColor('TOK_FIELD_SURFACE', this.appThemeScheme))
-            .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-            .borderRadius(6)
-            .padding({ left: 11, right: 11 })
-            .placeholderColor(readerAppColor('app.SyncPage.webdavInputRow.placeholderColor.FF9C9488', this.appThemeScheme))
-            .onChange((newValue: string): void => onChange(newValue));
-        }
+        // Credential masking remains the original native password policy.
+        ReaderFormField({ scheme: this.appThemeScheme, specId: 'sync-credential', text: value, placeholder, password: isPassword,
+          isEditable: this.canEdit(), onTextChange: (newValue: string): void => onChange(newValue) });
       }
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start);
@@ -382,20 +352,7 @@ export struct SyncPage {
 
   @Builder
   private manualActionButton(label: string, primary: boolean, action: () => void) {
-    Stack({ alignContent: Alignment.Center }) {
-      Text(label)
-        .fontFamily(TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily)
-        .fontWeight(TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight)
-        .fontSize(TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp)
-        .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme));
-    }
-    .height(40)
-    .layoutWeight(1)
-    .backgroundColor(primary ? readerAppColor('app.SyncPage.SOLID_BG', this.appThemeScheme) : readerAppColor('app.SyncPage.GHOST_BG', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: primary ? readerAppColor('app.SyncPage.SOLID_BG', this.appThemeScheme) : readerAppColor('app.SyncPage.GHOST_BORDER', this.appThemeScheme) })
-    .borderRadius(10)
-    .enabled(this.canMutate())
-    .onClick(action);
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'sync-action', label, primary, actionEnabled: this.canMutate(), layout: 'equal', onAction: action });
   }
 
   @Builder

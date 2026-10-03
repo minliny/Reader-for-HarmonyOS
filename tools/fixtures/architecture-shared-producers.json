@@ -1947,6 +1947,535 @@
         "tools/test-bounded-replace-composition.mjs",
         "tools/test-bookshelf-sheet-shared-composition.mjs"
       ]
+    },
+    {
+      "id": "shared-ReaderButton",
+      "file": "entry/src/main/ets/features/common/ReaderButton.ets",
+      "component": "ReaderButton",
+      "specPolicy": "5 finite original source/rules/sync variants; finite intrinsic/equal/full layout, current enable and primary business choice only.",
+      "shape": {
+        "types": [],
+        "declarations": [
+          {
+            "name": "ReaderButtonLabelModifier",
+            "publicFields": []
+          },
+          {
+            "name": "ReaderButtonFrameModifier",
+            "publicFields": []
+          },
+          {
+            "name": "ReaderButtonTextModifier",
+            "publicFields": []
+          },
+          {
+            "name": "ReaderButton",
+            "publicFields": [
+              {
+                "name": "scheme",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "specId",
+                "type": "ReaderButtonSpecId",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "label",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "primary",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "actionEnabled",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "layout",
+                "type": "ReaderButtonLayout",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "onAction",
+                "type": "() => void",
+                "decorators": []
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderButtonLabelModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontFamily",
+            "args": [
+              "text.fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderButtonLabelModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontWeight",
+            "args": [
+              "text.fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderButtonLabelModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontSize",
+            "args": [
+              "text.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderButtonLabelModifier",
+            "method": "applyNormalAttribute",
+            "property": "lineHeight",
+            "args": [
+              "text.lineHeightFp"
+            ]
+          },
+          {
+            "owner": "ReaderButtonLabelModifier",
+            "method": "applyNormalAttribute",
+            "property": "letterSpacing",
+            "args": [
+              "text.letterSpacingFp"
+            ]
+          },
+          {
+            "owner": "ReaderButtonLabelModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor(this.primary ? 'TOK_ON_PRIMARY' : 'TOK_PRIMARY_TEXT', this.scheme)"
+            ]
+          },
+          {
+            "owner": "ReaderButtonFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderButtonFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "height",
+            "args": [
+              "spec.height"
+            ]
+          },
+          {
+            "owner": "ReaderButtonFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "padding",
+            "args": [
+              "{ left: spec.horizontalPadding, right: spec.horizontalPadding }"
+            ]
+          },
+          {
+            "owner": "ReaderButtonFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "border",
+            "args": [
+              "{ width: TOK_BORDER_W, color: readerAppColor(this.primary ? spec.primaryBorder : spec.secondaryBorder, this.scheme) }"
+            ]
+          },
+          {
+            "owner": "ReaderButtonFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "opacity",
+            "args": [
+              "this.enabled ? 1 : spec.disabledOpacity"
+            ]
+          }
+        ],
+        "implementation": "import { ReaderButtonLayout, ReaderButtonSpecId, resolveReaderButtonSpec } from './ReaderControlSpecs';\nimport { ReaderPressFeedback } from './ReaderPressFeedback';\nimport { readerAppColor } from './ReaderThemeRegistry';\nimport { TOK_BORDER_W } from './ReaderTokens';\nclass ReaderButtonLabelModifier implements AttributeModifier<TextAttribute> {\n    constructor(private id: ReaderButtonSpecId, private primary: boolean, private scheme: string) { }\n    applyNormalAttribute(instance: TextAttribute): void {\n        const spec = resolveReaderButtonSpec(this.id);\n        const text = spec.text;\n        if (text.fontFamily !== undefined)\n            instance.fontFamily(text.fontFamily);\n        if (text.fontWeight !== undefined)\n            instance.fontWeight(text.fontWeight);\n        instance.fontSize(text.fontSizeFp);\n        if (text.lineHeightFp !== undefined)\n            instance.lineHeight(text.lineHeightFp);\n        if (text.letterSpacingFp !== undefined)\n            instance.letterSpacing(text.letterSpacingFp);\n        instance.fontColor(readerAppColor(this.primary ? 'TOK_ON_PRIMARY' : 'TOK_PRIMARY_TEXT', this.scheme));\n        if (!spec.stacked)\n            instance.textAlign(TextAlign.Center);\n    }\n}\nclass ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {\n    constructor(private id: ReaderButtonSpecId, private primary: boolean, private enabled: boolean, private layout: ReaderButtonLayout, private scheme: string) { }\n    applyNormalAttribute(instance: CommonAttribute): void {\n        const spec = resolveReaderButtonSpec(this.id);\n        if (this.layout === 'equal')\n            instance.layoutWeight(1);\n        if (this.layout === 'full')\n            instance.width('100%');\n        instance.height(spec.height);\n        if (spec.horizontalPadding > 0)\n            instance.padding({ left: spec.horizontalPadding, right: spec.horizontalPadding });\n        instance.border({ width: TOK_BORDER_W, color: readerAppColor(this.primary ? spec.primaryBorder : spec.secondaryBorder, this.scheme) });\n        if (spec.disabledOpacity < 1)\n            instance.opacity(this.enabled ? 1 : spec.disabledOpacity);\n        this.feedback().applyNormalAttribute(instance);\n    }\n    applyPressedAttribute(instance: CommonAttribute): void { this.applyNormalAttribute(instance); this.feedback().applyPressedAttribute(instance); }\n    applyDisabledAttribute(instance: CommonAttribute): void { this.applyNormalAttribute(instance); this.feedback().applyDisabledAttribute(instance); }\n    private feedback(): ReaderPressFeedback {\n        const spec = resolveReaderButtonSpec(this.id);\n        return new ReaderPressFeedback(readerAppColor(this.primary ? spec.primarySurface : spec.secondarySurface, this.scheme), this.scheme, spec.radius, spec.radius, this.enabled);\n    }\n}\nclass ReaderButtonTextModifier implements AttributeModifier<TextAttribute> {\n    constructor(private id: ReaderButtonSpecId, private primary: boolean, private enabled: boolean, private layout: ReaderButtonLayout, private scheme: string) { }\n    applyNormalAttribute(instance: TextAttribute): void {\n        new ReaderButtonLabelModifier(this.id, this.primary, this.scheme).applyNormalAttribute(instance);\n        new ReaderButtonFrameModifier(this.id, this.primary, this.enabled, this.layout, this.scheme).applyNormalAttribute(instance);\n    }\n    applyPressedAttribute(instance: TextAttribute): void {\n        new ReaderButtonLabelModifier(this.id, this.primary, this.scheme).applyNormalAttribute(instance);\n        new ReaderButtonFrameModifier(this.id, this.primary, this.enabled, this.layout, this.scheme).applyPressedAttribute(instance);\n    }\n    applyDisabledAttribute(instance: TextAttribute): void { this.applyNormalAttribute(instance); }\n}\n@Component\nexport struct ReaderButton extends   {\n    constructor(?: {\n        scheme?: string;\n        specId?: ReaderButtonSpecId;\n        label?: string;\n        primary?: boolean;\n        actionEnabled?: boolean;\n        layout?: ReaderButtonLayout;\n        onAction?: () => void;\n        private mounted?: boolean;\n    }, ?: ) { }\n    @Prop\n    scheme: string = 'day';\n    @Prop\n    specId: ReaderButtonSpecId = 'source-action';\n    @Prop\n    label: string = '';\n    @Prop\n    primary: boolean = false;\n    @Prop\n    actionEnabled: boolean = true;\n    @Prop\n    layout: ReaderButtonLayout = 'intrinsic';\n    onAction: () => void = (): void => { };\n    private mounted: boolean = false;\n    aboutToAppear(): void { this.mounted = true; }\n    aboutToDisappear(): void { this.mounted = false; }\n    build() {\n        if (resolveReaderButtonSpec(this.specId).stacked) {\n            .attributeModifier<\n      >(new ReaderButtonFrameModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme))\n                .enabled<\n      >(this.actionEnabled).accessibilityText<\n      >(this.label).onClick<\n      >((): void => this.commit());\n        }\n        else {\n            .attributeModifier<\n      >(new ReaderButtonTextModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme))\n                .enabled<\n      >(this.actionEnabled).accessibilityText<\n      >(this.label).onClick<\n      >((): void => this.commit());\n        }\n    }\n    private commit(): void { if (this.mounted && this.actionEnabled)\n        this.onAction(); }\n}\n"
+      },
+      "specSources": [
+        {
+          "file": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
+          "shape": {
+            "types": [
+              {
+                "name": "ReaderButtonSpecId",
+                "type": "'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action'"
+              },
+              {
+                "name": "ReaderButtonLayout",
+                "type": "'intrinsic' | 'equal' | 'full'"
+              },
+              {
+                "name": "ReaderFormFieldSpecId",
+                "type": "'source-debug' | 'rules-input' | 'sync-credential'"
+              }
+            ],
+            "declarations": [],
+            "styles": [],
+            "implementation": "import type { ReaderAppColorRole } from './ReaderThemeRegistry';\nimport { ReaderTextStyle, ReaderInheritedTextStyle, TYPE_SOURCE_TOOLS_ACTION, TYPE_SOURCE_TOOLS_COMPACT_ACTION, TYPE_SOURCE_TOOLS_BODY, TYPE_RULES_MANAGEMENT_ACTION, TYPE_RULES_COMPACT_ACTION, TYPE_RULES_MANAGEMENT_INPUT, TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_SYNC_INPUT, } from './ReaderTypography';\nexport type ReaderButtonSpecId = 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action';\nexport type ReaderButtonLayout = 'intrinsic' | 'equal' | 'full';\nexport interface ReaderButtonSpec {\n    text: ReaderTextStyle | ReaderInheritedTextStyle;\n    height: number;\n    radius: number;\n    horizontalPadding: number;\n    stacked: boolean;\n    primarySurface: ReaderAppColorRole;\n    secondarySurface: ReaderAppColorRole;\n    primaryBorder: ReaderAppColorRole;\n    secondaryBorder: ReaderAppColorRole;\n    disabledOpacity: number;\n}\nconst SOURCE_ACTION: ReaderButtonSpec = {\n    text: TYPE_SOURCE_TOOLS_ACTION, height: 42, radius: 8, horizontalPadding: 0, stacked: false,\n    primarySurface: 'TOK_PRIMARY_DARK', secondarySurface: 'TOK_SURFACE_PANEL_SOFT',\n    primaryBorder: 'TOK_PRIMARY_DARK', secondaryBorder: 'TOK_BORDER', disabledOpacity: 0.62,\n};\nfunction copyReaderButtonSpec(): ReaderButtonSpec {\n    return { text: SOURCE_ACTION.text, height: SOURCE_ACTION.height, radius: SOURCE_ACTION.radius,\n        horizontalPadding: SOURCE_ACTION.horizontalPadding, stacked: SOURCE_ACTION.stacked,\n        primarySurface: SOURCE_ACTION.primarySurface, secondarySurface: SOURCE_ACTION.secondarySurface,\n        primaryBorder: SOURCE_ACTION.primaryBorder, secondaryBorder: SOURCE_ACTION.secondaryBorder,\n        disabledOpacity: SOURCE_ACTION.disabledOpacity };\n}\nconst SOURCE_COMPACT: ReaderButtonSpec = copyReaderButtonSpec();\nSOURCE_COMPACT.text = TYPE_SOURCE_TOOLS_COMPACT_ACTION;\nSOURCE_COMPACT.height = 30;\nSOURCE_COMPACT.radius = 7;\nSOURCE_COMPACT.horizontalPadding = 10;\nconst RULES_ACTION: ReaderButtonSpec = copyReaderButtonSpec();\nRULES_ACTION.text = TYPE_RULES_MANAGEMENT_ACTION;\nRULES_ACTION.height = 40;\nconst RULES_COMPACT: ReaderButtonSpec = copyReaderButtonSpec();\nRULES_COMPACT.text = TYPE_RULES_COMPACT_ACTION;\nRULES_COMPACT.height = 30;\nRULES_COMPACT.radius = 7;\nRULES_COMPACT.horizontalPadding = 12;\nconst SYNC_ACTION: ReaderButtonSpec = copyReaderButtonSpec();\nSYNC_ACTION.text = TYPE_APP_COMPACT_PRIMARY_ACTION;\nSYNC_ACTION.height = 40;\nSYNC_ACTION.radius = 10;\nSYNC_ACTION.stacked = true;\nSYNC_ACTION.primarySurface = 'app.SyncPage.SOLID_BG';\nSYNC_ACTION.secondarySurface = 'app.SyncPage.GHOST_BG';\nSYNC_ACTION.primaryBorder = 'app.SyncPage.SOLID_BG';\nSYNC_ACTION.secondaryBorder = 'app.SyncPage.GHOST_BORDER';\nSYNC_ACTION.disabledOpacity = 1;\nconst BUTTONS: Record<ReaderButtonSpecId, ReaderButtonSpec> = {\n    'source-action': SOURCE_ACTION, 'source-compact': SOURCE_COMPACT,\n    'rules-action': RULES_ACTION, 'rules-compact': RULES_COMPACT, 'sync-action': SYNC_ACTION,\n};\nexport function resolveReaderButtonSpec(id: ReaderButtonSpecId): ReaderButtonSpec { return BUTTONS[id]; }\nexport type ReaderFormFieldSpecId = 'source-debug' | 'rules-input' | 'sync-credential';\nexport interface ReaderFormFieldSpec {\n    text: ReaderTextStyle | ReaderInheritedTextStyle;\n    height: number;\n    radius: number;\n    horizontalPadding: number;\n    textRole: ReaderAppColorRole;\n    surfaceRole: ReaderAppColorRole;\n    placeholderRole: ReaderAppColorRole | undefined;\n}\nconst FIELDS: Record<ReaderFormFieldSpecId, ReaderFormFieldSpec> = {\n    'source-debug': { text: TYPE_SOURCE_TOOLS_BODY, height: 40, radius: 8, horizontalPadding: 12,\n        textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined },\n    'rules-input': { text: TYPE_RULES_MANAGEMENT_INPUT, height: 40, radius: 8, horizontalPadding: 12,\n        textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined },\n    'sync-credential': { text: TYPE_SYNC_INPUT, height: 36, radius: 6, horizontalPadding: 11,\n        textRole: 'TOK_CONTROL_INK', surfaceRole: 'TOK_FIELD_SURFACE', placeholderRole: 'app.SyncPage.webdavInputRow.placeholderColor.FF9C9488' },\n};\nexport function resolveReaderFormFieldSpec(id: ReaderFormFieldSpecId): ReaderFormFieldSpec { return FIELDS[id]; }\n"
+          }
+        }
+      ],
+      "consumers": [
+        {
+          "file": "features/settings/RulesManagementPage.ets",
+          "method": "features/settings/RulesManagementPage.ets#RulesManagementPage#actionButton",
+          "component": "ReaderButton",
+          "specId": "'rules-action'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "layout",
+            "actionEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/settings/RulesManagementPage.ets",
+          "method": "features/settings/RulesManagementPage.ets#RulesManagementPage#smallButton",
+          "component": "ReaderButton",
+          "specId": "'rules-compact'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "actionEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/source/SourceToolsPage.ets",
+          "method": "features/source/SourceToolsPage.ets#SourceToolsPage#smallButton",
+          "component": "ReaderButton",
+          "specId": "'source-compact'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "actionEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/source/SourceToolsPage.ets",
+          "method": "features/source/SourceToolsPage.ets#SourceToolsPage#actionButton",
+          "component": "ReaderButton",
+          "specId": "'source-action'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "actionEnabled",
+            "layout",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/source/SourceToolsPage.ets",
+          "method": "features/source/SourceToolsPage.ets#SourceToolsPage#fullWidthActionButton",
+          "component": "ReaderButton",
+          "specId": "'source-action'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "actionEnabled",
+            "layout",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/sync/SyncPage.ets",
+          "method": "features/sync/SyncPage.ets#SyncPage#manualActionButton",
+          "component": "ReaderButton",
+          "specId": "'sync-action'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "actionEnabled",
+            "layout",
+            "onAction"
+          ]
+        }
+      ],
+      "removalProofs": [
+        "tools/test-foundation-controls-shared.mjs",
+        "tools/test-source-tools-typography-sdk.mjs"
+      ],
+      "sdkProofs": [
+        "tools/test-foundation-controls-shared.mjs",
+        "tools/test-source-tools-typography-sdk.mjs",
+        "tools/test-conventional-typography-sdk.mjs"
+      ]
+    },
+    {
+      "id": "shared-ReaderFormField",
+      "file": "entry/src/main/ets/features/common/ReaderFormField.ets",
+      "component": "ReaderFormField",
+      "specPolicy": "3 finite original native input tuples with exact AUTO/default omissions and current native password variant.",
+      "shape": {
+        "types": [],
+        "declarations": [
+          {
+            "name": "ReaderFormFieldModifier",
+            "publicFields": []
+          },
+          {
+            "name": "ReaderFormField",
+            "publicFields": [
+              {
+                "name": "scheme",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "specId",
+                "type": "ReaderFormFieldSpecId",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "text",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "placeholder",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "isEditable",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "password",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "onTextChange",
+                "type": "(value: string) => void",
+                "decorators": []
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderFormFieldModifier",
+            "method": "applyNormalAttribute",
+            "property": "height",
+            "args": [
+              "spec.height"
+            ]
+          },
+          {
+            "owner": "ReaderFormFieldModifier",
+            "method": "applyNormalAttribute",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderFormFieldModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontFamily",
+            "args": [
+              "text.fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderFormFieldModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontWeight",
+            "args": [
+              "text.fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderFormFieldModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontSize",
+            "args": [
+              "text.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderFormFieldModifier",
+            "method": "applyNormalAttribute",
+            "property": "lineHeight",
+            "args": [
+              "text.lineHeightFp"
+            ]
+          },
+          {
+            "owner": "ReaderFormFieldModifier",
+            "method": "applyNormalAttribute",
+            "property": "letterSpacing",
+            "args": [
+              "text.letterSpacingFp"
+            ]
+          },
+          {
+            "owner": "ReaderFormFieldModifier",
+            "method": "applyNormalAttribute",
+            "property": "padding",
+            "args": [
+              "{ left: spec.horizontalPadding, right: spec.horizontalPadding }"
+            ]
+          },
+          {
+            "owner": "ReaderFormFieldModifier",
+            "method": "applyNormalAttribute",
+            "property": "borderRadius",
+            "args": [
+              "spec.radius"
+            ]
+          },
+          {
+            "owner": "ReaderFormFieldModifier",
+            "method": "applyNormalAttribute",
+            "property": "border",
+            "args": [
+              "{ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.scheme) }"
+            ]
+          },
+          {
+            "owner": "ReaderFormFieldModifier",
+            "method": "applyNormalAttribute",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(spec.surfaceRole, this.scheme)"
+            ]
+          },
+          {
+            "owner": "ReaderFormFieldModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontColor",
+            "args": [
+              "readerAppColor(spec.textRole, this.scheme)"
+            ]
+          }
+        ],
+        "implementation": "import { ReaderFormFieldSpecId, resolveReaderFormFieldSpec } from './ReaderControlSpecs';\nimport { readerAppColor } from './ReaderThemeRegistry';\nimport { TOK_BORDER_W } from './ReaderTokens';\nclass ReaderFormFieldModifier implements AttributeModifier<TextInputAttribute> {\n    constructor(private id: ReaderFormFieldSpecId, private scheme: string) { }\n    applyNormalAttribute(instance: TextInputAttribute): void {\n        const spec = resolveReaderFormFieldSpec(this.id);\n        const text = spec.text;\n        instance.width('100%').height(spec.height);\n        if (text.fontFamily !== undefined)\n            instance.fontFamily(text.fontFamily);\n        if (text.fontWeight !== undefined)\n            instance.fontWeight(text.fontWeight);\n        instance.fontSize(text.fontSizeFp);\n        if (text.lineHeightFp !== undefined)\n            instance.lineHeight(text.lineHeightFp);\n        if (text.letterSpacingFp !== undefined)\n            instance.letterSpacing(text.letterSpacingFp);\n        instance.fontColor(readerAppColor(spec.textRole, this.scheme))\n            .backgroundColor(readerAppColor(spec.surfaceRole, this.scheme))\n            .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.scheme) }).borderRadius(spec.radius)\n            .padding({ left: spec.horizontalPadding, right: spec.horizontalPadding });\n        if (spec.placeholderRole !== undefined)\n            instance.placeholderColor(readerAppColor(spec.placeholderRole, this.scheme));\n    }\n}\n@Component\nexport struct ReaderFormField extends   {\n    constructor(?: {\n        scheme?: string;\n        specId?: ReaderFormFieldSpecId;\n        text?: string;\n        placeholder?: string;\n        isEditable?: boolean;\n        password?: boolean;\n        onTextChange?: (value: string) => void;\n        private mounted?: boolean;\n    }, ?: ) { }\n    @Prop\n    scheme: string = 'day';\n    @Prop\n    specId: ReaderFormFieldSpecId = 'rules-input';\n    @Prop\n    text: string = '';\n    @Prop\n    placeholder: string = '';\n    @Prop\n    isEditable: boolean = true;\n    @Prop\n    password: boolean = false;\n    onTextChange: (value: string) => void = (_value: string): void => { };\n    private mounted: boolean = false;\n    aboutToAppear(): void { this.mounted = true; }\n    aboutToDisappear(): void { this.mounted = false; }\n    build() {\n        if (this.password) {\n            .type<\n      >(InputType.Password)\n                .attributeModifier<\n      >(new ReaderFormFieldModifier(this.specId, this.scheme))\n                .enabled<\n      >(this.isEditable).onChange<\n      >((value: string): void => this.change(value));\n        }\n        else {\n                .attributeModifier<\n      >(new ReaderFormFieldModifier(this.specId, this.scheme))\n                .enabled<\n      >(this.isEditable).onChange<\n      >((value: string): void => this.change(value));\n        }\n    }\n    private change(value: string): void { if (this.mounted && this.isEditable)\n        this.onTextChange(value); }\n}\n"
+      },
+      "specSources": [
+        {
+          "file": "entry/src/main/ets/features/common/ReaderControlSpecs.ets",
+          "shape": {
+            "types": [
+              {
+                "name": "ReaderButtonSpecId",
+                "type": "'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action'"
+              },
+              {
+                "name": "ReaderButtonLayout",
+                "type": "'intrinsic' | 'equal' | 'full'"
+              },
+              {
+                "name": "ReaderFormFieldSpecId",
+                "type": "'source-debug' | 'rules-input' | 'sync-credential'"
+              }
+            ],
+            "declarations": [],
+            "styles": [],
+            "implementation": "import type { ReaderAppColorRole } from './ReaderThemeRegistry';\nimport { ReaderTextStyle, ReaderInheritedTextStyle, TYPE_SOURCE_TOOLS_ACTION, TYPE_SOURCE_TOOLS_COMPACT_ACTION, TYPE_SOURCE_TOOLS_BODY, TYPE_RULES_MANAGEMENT_ACTION, TYPE_RULES_COMPACT_ACTION, TYPE_RULES_MANAGEMENT_INPUT, TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_SYNC_INPUT, } from './ReaderTypography';\nexport type ReaderButtonSpecId = 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action';\nexport type ReaderButtonLayout = 'intrinsic' | 'equal' | 'full';\nexport interface ReaderButtonSpec {\n    text: ReaderTextStyle | ReaderInheritedTextStyle;\n    height: number;\n    radius: number;\n    horizontalPadding: number;\n    stacked: boolean;\n    primarySurface: ReaderAppColorRole;\n    secondarySurface: ReaderAppColorRole;\n    primaryBorder: ReaderAppColorRole;\n    secondaryBorder: ReaderAppColorRole;\n    disabledOpacity: number;\n}\nconst SOURCE_ACTION: ReaderButtonSpec = {\n    text: TYPE_SOURCE_TOOLS_ACTION, height: 42, radius: 8, horizontalPadding: 0, stacked: false,\n    primarySurface: 'TOK_PRIMARY_DARK', secondarySurface: 'TOK_SURFACE_PANEL_SOFT',\n    primaryBorder: 'TOK_PRIMARY_DARK', secondaryBorder: 'TOK_BORDER', disabledOpacity: 0.62,\n};\nfunction copyReaderButtonSpec(): ReaderButtonSpec {\n    return { text: SOURCE_ACTION.text, height: SOURCE_ACTION.height, radius: SOURCE_ACTION.radius,\n        horizontalPadding: SOURCE_ACTION.horizontalPadding, stacked: SOURCE_ACTION.stacked,\n        primarySurface: SOURCE_ACTION.primarySurface, secondarySurface: SOURCE_ACTION.secondarySurface,\n        primaryBorder: SOURCE_ACTION.primaryBorder, secondaryBorder: SOURCE_ACTION.secondaryBorder,\n        disabledOpacity: SOURCE_ACTION.disabledOpacity };\n}\nconst SOURCE_COMPACT: ReaderButtonSpec = copyReaderButtonSpec();\nSOURCE_COMPACT.text = TYPE_SOURCE_TOOLS_COMPACT_ACTION;\nSOURCE_COMPACT.height = 30;\nSOURCE_COMPACT.radius = 7;\nSOURCE_COMPACT.horizontalPadding = 10;\nconst RULES_ACTION: ReaderButtonSpec = copyReaderButtonSpec();\nRULES_ACTION.text = TYPE_RULES_MANAGEMENT_ACTION;\nRULES_ACTION.height = 40;\nconst RULES_COMPACT: ReaderButtonSpec = copyReaderButtonSpec();\nRULES_COMPACT.text = TYPE_RULES_COMPACT_ACTION;\nRULES_COMPACT.height = 30;\nRULES_COMPACT.radius = 7;\nRULES_COMPACT.horizontalPadding = 12;\nconst SYNC_ACTION: ReaderButtonSpec = copyReaderButtonSpec();\nSYNC_ACTION.text = TYPE_APP_COMPACT_PRIMARY_ACTION;\nSYNC_ACTION.height = 40;\nSYNC_ACTION.radius = 10;\nSYNC_ACTION.stacked = true;\nSYNC_ACTION.primarySurface = 'app.SyncPage.SOLID_BG';\nSYNC_ACTION.secondarySurface = 'app.SyncPage.GHOST_BG';\nSYNC_ACTION.primaryBorder = 'app.SyncPage.SOLID_BG';\nSYNC_ACTION.secondaryBorder = 'app.SyncPage.GHOST_BORDER';\nSYNC_ACTION.disabledOpacity = 1;\nconst BUTTONS: Record<ReaderButtonSpecId, ReaderButtonSpec> = {\n    'source-action': SOURCE_ACTION, 'source-compact': SOURCE_COMPACT,\n    'rules-action': RULES_ACTION, 'rules-compact': RULES_COMPACT, 'sync-action': SYNC_ACTION,\n};\nexport function resolveReaderButtonSpec(id: ReaderButtonSpecId): ReaderButtonSpec { return BUTTONS[id]; }\nexport type ReaderFormFieldSpecId = 'source-debug' | 'rules-input' | 'sync-credential';\nexport interface ReaderFormFieldSpec {\n    text: ReaderTextStyle | ReaderInheritedTextStyle;\n    height: number;\n    radius: number;\n    horizontalPadding: number;\n    textRole: ReaderAppColorRole;\n    surfaceRole: ReaderAppColorRole;\n    placeholderRole: ReaderAppColorRole | undefined;\n}\nconst FIELDS: Record<ReaderFormFieldSpecId, ReaderFormFieldSpec> = {\n    'source-debug': { text: TYPE_SOURCE_TOOLS_BODY, height: 40, radius: 8, horizontalPadding: 12,\n        textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined },\n    'rules-input': { text: TYPE_RULES_MANAGEMENT_INPUT, height: 40, radius: 8, horizontalPadding: 12,\n        textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined },\n    'sync-credential': { text: TYPE_SYNC_INPUT, height: 36, radius: 6, horizontalPadding: 11,\n        textRole: 'TOK_CONTROL_INK', surfaceRole: 'TOK_FIELD_SURFACE', placeholderRole: 'app.SyncPage.webdavInputRow.placeholderColor.FF9C9488' },\n};\nexport function resolveReaderFormFieldSpec(id: ReaderFormFieldSpecId): ReaderFormFieldSpec { return FIELDS[id]; }\n"
+          }
+        }
+      ],
+      "consumers": [
+        {
+          "file": "features/settings/RulesManagementPage.ets",
+          "method": "features/settings/RulesManagementPage.ets#RulesManagementPage#input",
+          "component": "ReaderFormField",
+          "specId": "'rules-input'",
+          "keys": [
+            "scheme",
+            "specId",
+            "text",
+            "placeholder",
+            "onTextChange"
+          ]
+        },
+        {
+          "file": "features/source/SourceToolsPage.ets",
+          "method": "features/source/SourceToolsPage.ets#SourceToolsPage#debugCard",
+          "component": "ReaderFormField",
+          "specId": "'source-debug'",
+          "keys": [
+            "scheme",
+            "specId",
+            "text",
+            "placeholder",
+            "onTextChange"
+          ]
+        },
+        {
+          "file": "features/sync/SyncPage.ets",
+          "method": "features/sync/SyncPage.ets#SyncPage#webdavInputRow",
+          "component": "ReaderFormField",
+          "specId": "'sync-credential'",
+          "keys": [
+            "scheme",
+            "specId",
+            "text",
+            "placeholder",
+            "password",
+            "isEditable",
+            "onTextChange"
+          ]
+        }
+      ],
+      "removalProofs": [
+        "tools/test-foundation-controls-shared.mjs",
+        "tools/test-source-tools-typography-sdk.mjs"
+      ],
+      "sdkProofs": [
+        "tools/test-foundation-controls-shared.mjs",
+        "tools/test-source-tools-typography-sdk.mjs",
+        "tools/test-conventional-typography-sdk.mjs"
+      ]
     }
   ],
   "legacyBusinessRowsSha256": "3f7f18a54b7bf56a1bb557d3c48574f3e9b4f7e869a25dce2541c04b30f924d0",

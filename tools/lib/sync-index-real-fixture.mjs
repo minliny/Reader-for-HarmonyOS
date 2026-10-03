@@ -1,3 +1,4 @@
+import {foundationControls} from './reader-foundation-control-probe.mjs';
 import { runtimeOwnerIdentityProbe } from './reader-runtime-admission-probe.mjs';
 import { randomUUID } from 'node:crypto';
 import {readFileSync} from 'node:fs';
@@ -13,9 +14,9 @@ let fixtureSource=readFileSync(url,'utf8').split('\nasync function open(f)')[0]
   .replaceAll('import.meta.url',JSON.stringify(url.href))
   .replace('function fixture({empty=false,preserveAsset=false}={})','function fixture({empty=false,preserveAsset=false,createOwner}={})')
   .replace('const owner=new Orchestrator(', 'const owner=createOwner ? createOwner() : new Orchestrator(');
-export const syncIndexFixture=new Function('readFileSync','createRequire','stripTypeScriptTypes','createReaderBuilderProbe','runtimeOwnerIdentityProbe','randomUUID',
+export const syncIndexFixture=new Function('readFileSync','createRequire','stripTypeScriptTypes','createReaderBuilderProbe','runtimeOwnerIdentityProbe','randomUUID','foundationControls',
   fixtureSource+';return {fixture,asset,config,ReaderRuntimeOwner,Store,Gateway,Orchestrator,DEFAULT_SYNC_SNAPSHOT,source,readerRecoveryView,pause,execute,setRuntimeOwner:(owner)=>{currentOwner=owner;},setTransport:(execute)=>{transport=execute;},setPreferences:(store)=>{nativePreferences=store;}};')
-  (readFileSync,createRequire,stripTypeScriptTypes,createReaderBuilderProbe,runtimeOwnerIdentityProbe,randomUUID);
+  (readFileSync,createRequire,stripTypeScriptTypes,createReaderBuilderProbe,runtimeOwnerIdentityProbe,randomUUID,foundationControls);
 
 export function fullSyncIndexPage(props,sharedChildren={},probeHooks={}){
   const f=syncIndexFixture,root=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
@@ -27,11 +28,13 @@ export function fullSyncIndexPage(props,sharedChildren={},probeHooks={}){
   class Card extends Child{initialRender(){this.params.content?.();}}
   const geometry=f.execute('features/common/SurfaceHorizontalGeometry.ts','({SurfaceWidthSpec,SurfaceHorizontalFrame,resolveHorizontalFrame})');
   const syntax=require(root+'/lib/validate_ui_syntax.js');syntax.builderParamObjectCollection.set('PageBackBar',new Set(['trailing']));
-  const result=createReaderBuilderProbe(text,names,{...geometry,DEFAULT_SYNC_SNAPSHOT:f.DEFAULT_SYNC_SNAPSHOT,readerRecoveryView:f.readerRecoveryView,
+  const foundation=foundationControls();
+  const result=createReaderBuilderProbe(text,names,{...foundation.dependencies,...geometry,DEFAULT_SYNC_SNAPSHOT:f.DEFAULT_SYNC_SNAPSHOT,readerRecoveryView:f.readerRecoveryView,
     ReaderCard:Card,PageBackBar:Child,ReaderRecoveryNotice:Child,ReaderRecoveryAction:Child,...sharedChildren,
     ...Object.fromEntries(['ObservedPropertySimplePU','ObservedPropertyObjectPU','SynchedPropertySimpleOneWayPU','SynchedPropertyObjectOneWayPU'].map(k=>[k,Property])),
     registerReaderFonts(){},ReaderWindowCoordinator:{metrics:()=>({windowRect:{width:390}})},readerVisualSafeLeft:()=>0,readerVisualSafeRight:()=>0,readerFloatingBarBottomInset:()=>18,
     READER_FLOATING_TOP_BAR_HEIGHT:56,InputType:{Password:'Password'},TOK_CONTENT_MAX_W_TABLET:722,TOK_SCREEN_INSET:18,
-  },{...probeHooks,mountChildren:true,initialParams:props,childSources:{ReaderCard:f.source('features/common/ReaderCard.ets'),PageBackBar:f.source('features/common/PageBackBar.ets')}});
+  },{...foundation.hooks,...probeHooks,mountChildren:true,initialParams:props,childSources:{...foundation.hooks.childSources,...probeHooks.childSources,ReaderCard:f.source('features/common/ReaderCard.ets'),PageBackBar:f.source('features/common/PageBackBar.ets')}});
+  const replay=result.owner.replay.bind(result.owner);result.owner.replay=()=>{replay();foundation.properties.flush();};
   result.owner.aboutToAppear();result.owner.initialRender();return result.owner;
 }

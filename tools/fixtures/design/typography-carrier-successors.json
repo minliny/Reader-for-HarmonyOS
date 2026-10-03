@@ -644,6 +644,117 @@
           }
         }
       ]
+    },
+    {
+      "id": "foundation-smallButton",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/settings/RulesManagementPage.ets",
+        "method": "smallButton",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "smallButton",
+      "specId": "rules-compact",
+      "arguments": [
+        "证明",
+        "@callback"
+      ],
+      "requiredMethods": [],
+      "proof": "test-foundation-controls-shared.mjs; actual owner/SDK/AttributeModifier/tuple and role propagation"
+    },
+    {
+      "id": "foundation-webdavInputRow",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/sync/SyncPage.ets",
+        "method": "webdavInputRow",
+        "kind": "TextInput",
+        "text": "{ text: value, placeholder: placeholder }"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderFormField.ets",
+        "method": "build",
+        "kind": "TextInput",
+        "text": "{ text: this.text, placeholder: this.placeholder }"
+      },
+      "component": "ReaderFormField",
+      "module": "../common/ReaderFormField",
+      "bindingMethod": "webdavInputRow",
+      "specId": "sync-credential",
+      "arguments": [
+        "icon",
+        "字段",
+        "草稿",
+        "占位",
+        true,
+        "@callback"
+      ],
+      "requiredMethods": [
+        "canEdit",
+        "canMutate"
+      ],
+      "proof": "test-foundation-controls-shared.mjs; actual owner/SDK/AttributeModifier/tuple and role propagation",
+      "cases": [
+        {
+          "arguments": [
+            "icon",
+            "字段",
+            "草稿",
+            "占位",
+            true,
+            "@callback"
+          ]
+        },
+        {
+          "arguments": [
+            "icon",
+            "字段",
+            "草稿",
+            "占位",
+            false,
+            "@callback"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "foundation-manualActionButton",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/sync/SyncPage.ets",
+        "method": "manualActionButton",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "manualActionButton",
+      "specId": "sync-action",
+      "arguments": [
+        "证明",
+        true,
+        "@callback"
+      ],
+      "requiredMethods": [
+        "canEdit",
+        "canMutate"
+      ],
+      "proof": "test-foundation-controls-shared.mjs; actual owner/SDK/AttributeModifier/tuple and role propagation"
     }
   ]
 }

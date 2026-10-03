@@ -1,3 +1,5 @@
+import { ReaderButton } from '../common/ReaderButton';
+import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '../../app/ReaderNativeAlertOwner';
@@ -622,17 +624,8 @@ export struct SourceToolsPage {
           .enabled(!this.snapshot.busy)
           .onSelect((index: number): void => this.onCheckSelectionChanged(this.snapshot.checkMode, index + 2));
       }.width('100%');
-      TextInput({ text: this.snapshot.debugKey, placeholder: '检测关键词（留空时使用 Core 默认“我的”）' })
-        .width('100%')
-        .height(40)
-        .fontFamily(TYPE_SOURCE_TOOLS_BODY.fontFamily as string)
-        .fontSize(TYPE_SOURCE_TOOLS_BODY.fontSizeFp)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
-        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-        .borderRadius(8)
-        .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
-        .onChange((value: string): void => this.onDebugKeyChanged(value));
+      ReaderFormField({ scheme: this.appThemeScheme, specId: 'source-debug', text: this.snapshot.debugKey,
+        placeholder: '检测关键词（留空时使用 Core 默认“我的”）', onTextChange: (value: string): void => this.onDebugKeyChanged(value) });
       if (this.snapshot.debugSourceId.length > 0) {
         Text(`检测对象：${this.snapshot.debugSourceId}`)
           .width('100%')
@@ -684,44 +677,12 @@ export struct SourceToolsPage {
 
   @Builder
   private smallButton(label: string, enabled: boolean, action: () => void) {
-    Text(label)
-      .height(30)
-      .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
-      .textAlign(TextAlign.Center)
-      .fontFamily(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontFamily)
-      .fontWeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontWeight)
-      .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp)
-      .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(7)
-      .opacity(enabled ? 1 : 0.62)
-      .onClick((): void => {
-        if (enabled) {
-          action();
-        }
-      });
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-compact', label, actionEnabled: enabled, onAction: action });
   }
 
   @Builder
   private actionButton(label: string, primary: boolean, enabled: boolean, action: () => void) {
-    Text(label)
-      .layoutWeight(1)
-      .height(42)
-      .textAlign(TextAlign.Center)
-      .fontFamily(TYPE_SOURCE_TOOLS_ACTION.fontFamily)
-      .fontWeight(TYPE_SOURCE_TOOLS_ACTION.fontWeight)
-      .fontSize(TYPE_SOURCE_TOOLS_ACTION.fontSizeFp)
-      .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-      .backgroundColor(primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(8)
-      .opacity(enabled ? 1 : 0.62)
-      .onClick((): void => {
-        if (enabled) {
-          action();
-        }
-      });
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-action', label, primary, actionEnabled: enabled, layout: 'equal', onAction: action });
   }
 
   private canWriteSources(): boolean {
@@ -731,23 +692,7 @@ export struct SourceToolsPage {
 
   @Builder
   private fullWidthActionButton(label: string, primary: boolean, action: () => void) {
-    Text(label)
-      .width('100%')
-      .height(42)
-      .textAlign(TextAlign.Center)
-      .fontFamily(TYPE_SOURCE_TOOLS_ACTION.fontFamily)
-      .fontWeight(TYPE_SOURCE_TOOLS_ACTION.fontWeight)
-      .fontSize(TYPE_SOURCE_TOOLS_ACTION.fontSizeFp)
-      .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-      .backgroundColor(primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(8)
-      .opacity(this.snapshot.busy ? 0.62 : 1)
-      .onClick((): void => {
-        if (!this.snapshot.busy) {
-          action();
-        }
-      });
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-action', label, primary, actionEnabled: !this.snapshot.busy, layout: 'full', onAction: action });
   }
 
   /**

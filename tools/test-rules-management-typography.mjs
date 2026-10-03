@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
+import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
@@ -36,15 +38,18 @@ const heading = page.slice(headingStart, inputStart);
 const input = page.slice(inputStart, page.indexOf('private booleanField', inputStart));
 const action = page.slice(actionStart, page.indexOf('private entityRow', actionStart));
 
-for (const [source, role, label] of [
-  [heading, 'TYPE_RULES_MANAGEMENT_HEADING', 'heading'],
-  [input, 'TYPE_RULES_MANAGEMENT_INPUT', 'input'],
-  [action, 'TYPE_RULES_MANAGEMENT_ACTION', 'action button'],
-]) {
-  for (const property of ['fontFamily', 'fontWeight', 'fontSizeFp']) {
-    assert.match(source, new RegExp(`${role}\\.${property}`), `${label} uses ${role}.${property}`);
-  }
+for (const property of ['fontFamily','fontWeight','fontSizeFp']) assert.match(heading,new RegExp('TYPE_RULES_MANAGEMENT_HEADING\\.'+property));
+const shared=foundationControls();
+const {owner}=createReaderBuilderProbe(page,['input','actionButton'],shared.dependencies,shared.hooks);
+Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false}});
+owner.input('原草稿','原占位',()=>{});owner.actionButton('原动作',true,()=>{});
+const native=shared.nodes(owner),field=native.find(node=>node.type==='TextInput'),actionText=native.find(node=>node.type==='Text');
+for(const[node,role]of [[field,TYPE_RULES_MANAGEMENT_INPUT],[actionText,TYPE_RULES_MANAGEMENT_ACTION]]){
+ assert.equal(node.fontFamily,role.fontFamily);assert.equal(node.fontWeight,role.fontWeight);assert.equal(node.fontSize,role.fontSizeFp);
+ assert.equal(Object.hasOwn(node,'lineHeight'),false,'native AUTO line box remains omitted');
 }
+assert.equal([...owner.children.values()].filter(c=>c instanceof shared.field.Component).length,1,'actual rules input consumes common field');
+assert.equal([...owner.children.values()].filter(c=>c instanceof shared.button.Component).length,1,'actual rules action consumes common button');
 
 assert.doesNotMatch(heading, /fontFamily\('ReaderNotoSansSC'\)|fontWeight\(FontWeight\.Bold\)|fontSize\(14\)/,
   'rules-management heading no longer owns the physical tuple');

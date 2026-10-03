@@ -1,3 +1,4 @@
+import {foundationControls} from './lib/reader-foundation-control-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
@@ -36,8 +37,8 @@ function index(f,Host,text=indexSource){
   open:async()=>{owner.open(i.rulesPresentationIdentity);await owner.operationTail;}};
 }
 function actualPage(props){
- const sdk=boundedSurfaceSdk();
- const page=sdk.consumer(pageSource,boundedMembers(pageSource),{...recovery,EMPTY_RULES_MANAGEMENT_SNAPSHOT:props.snapshot,
+ const foundation=foundationControls(),sdk=boundedSurfaceSdk();sdk.hooks.lifecycleChildren=true;Object.assign(sdk.hooks.childSources,foundation.hooks.childSources);
+ const page=sdk.consumer(pageSource,boundedMembers(pageSource),{...foundation.dependencies,...recovery,EMPTY_RULES_MANAGEMENT_SNAPSHOT:props.snapshot,
   ReaderToggle:Child,PageBackBar:Child},props);
  Object.assign(page,{dictName:draft.name,dictUrl:draft.urlRule,dictShow:draft.showRule,dictEnabled:true,dictOrder:'0'});
  page.dictCard();page.bundleCard();page.recoveryAction();

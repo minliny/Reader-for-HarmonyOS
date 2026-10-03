@@ -1,3 +1,4 @@
+import {foundationControls} from './lib/reader-foundation-control-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync,writeFileSync} from 'node:fs';
 import path from 'node:path';
@@ -41,12 +42,12 @@ for(const scheme of ['day','night','day']){
   assert.equal(icon.create,`app.media.book_detail_directory${scheme==='night'?'_theme_night':''}`);
 }
 for(const file of ['settings/RulesManagementPage.ets','source/SourceToolsPage.ets','bookshelf/BookshelfManagementPage.ets']){
-  const {owner}=createReaderBuilderProbe(source(file),['actionButton'],shelfTypography);
+  const shared=foundationControls();const {owner}=createReaderBuilderProbe(source(file),['actionButton'],{...shelfTypography,...shared.dependencies},shared.hooks);
   Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false}});
-  owner.actionButton('主操作',true,()=>{});owner.actionButton('次操作',false,()=>{});
+  if(file.startsWith('source/')){owner.actionButton('主操作',true,true,()=>{});owner.actionButton('次操作',false,true,()=>{});}else{owner.actionButton('主操作',true,()=>{});owner.actionButton('次操作',false,()=>{});}
   for(const scheme of ['day','night','day'])for(const busy of [false,true]){
-    owner.appThemeScheme=scheme;owner.snapshot.busy=busy;owner.replay();
-    const text=[...owner.nodes.values()].filter(n=>n.type==='Text');
+    owner.appThemeScheme=scheme;owner.snapshot.busy=busy;shared.flush(owner);
+    const text=shared.nodes(owner).filter(n=>n.type==='Text');
     assert.equal(text[0].fontColor,readerAppColor('TOK_ON_PRIMARY',scheme),'solid action keeps its independent onPrimary');
     assert.equal(text[0].backgroundColor,readerAppColor('TOK_PRIMARY_DARK',scheme),'solid primaryDark fill is unchanged');
     assert.equal(text[1].fontColor,readerAppColor(scheme==='night'?'TOK_GREEN':'TOK_PRIMARY_DARK',scheme));
@@ -67,7 +68,7 @@ function scan(dir){for(const entry of readdirSync(dir,{withFileTypes:true})){
       assert.ok(calls.length,`${file}: no unchecked indirect primaryDark foreground`);
       for(const call of calls){const evaluate=new Function('readerAppColor',`return ${call.getText(tree)}`),record={file:path.relative(ets,file),line:tree.getLineAndCharacterOfPosition(call.getStart(tree)).line+1,colors:[]};
         for(const scheme of ['day','night','day']){
-          const actual=evaluate.call({appThemeScheme:scheme},readerAppColor),expected=readerAppColor(scheme==='night'?'TOK_GREEN':'TOK_PRIMARY_DARK',scheme);
+          const actual=evaluate.call({appThemeScheme:scheme,scheme,primary:false},readerAppColor),expected=readerAppColor(scheme==='night'?'TOK_GREEN':'TOK_PRIMARY_DARK',scheme);
           assert.equal(actual,expected,`${record.file}:${record.line}: Day retained, Night emphasis follows primary`);record.colors.push(actual);
         }output.consumers.push(record);
       }
@@ -76,6 +77,6 @@ function scan(dir){for(const entry of readdirSync(dir,{withFileTypes:true})){
 }}
 scan(ets);
 assert.ok(output.consumers.some(row => row.file.endsWith('common/ReaderRecoveryAction.ets')), 'the extracted editor recovery control retains the shared primary foreground');
-assert.equal(output.consumers.length,40,'duplicate editor recovery foreground was removed; all current distinct foreground call sites remain covered');
+assert.equal(output.consumers.length,35,'six private Source/Rules foregrounds now share one actual ReaderButton producer; all current AST foregrounds remain covered');
 if(process.argv.includes('--record'))writeFileSync(process.argv[process.argv.indexOf('--record')+1],JSON.stringify(output,null,2)+'\n');
 console.log(`PASS Night primary text: ${output.consumers.length} production AST foregrounds, ${output.builder.length} retained Builder states; Day/solid fill/alpha/layout retained.`);

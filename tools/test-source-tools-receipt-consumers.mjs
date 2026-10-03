@@ -1,3 +1,4 @@
+import {foundationControls} from './lib/reader-foundation-control-probe.mjs';
 import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -64,9 +65,9 @@ for(const action of ['toggle','delete','editor']){
 // action tuples; users retain read-only checking/export/recovery access.
 {
  const f=fixture();await f.open();f.owner.selectAll();f.r.writeFail=true;f.owner.setSelectedEnabled(['https://a.test'],false);await f.settle();
- const p=createReaderBuilderProbe(source('features/source/SourceToolsPage.ets'),['batchCard','heading','actionButton','canWriteSources']).owner;
+ const shared=foundationControls();const p=createReaderBuilderProbe(source('features/source/SourceToolsPage.ets'),['batchCard','heading','actionButton','canWriteSources'],shared.dependencies,shared.hooks).owner;
  Object.assign(p,f.refresh(),{appThemeScheme:'day'});p.batchCard();const count=f.r.calls.length;
- for(const label of ['启用','停用','删除']){const node=[...p.nodes.values()].find(n=>n.type==='Text'&&n.create===label);assert.ok(node,label);assert.equal(node.opacity,.62);node.onClick();}
+ for(const label of ['启用','停用','删除']){const node=shared.nodes(p).find(n=>n.type==='Text'&&n.create===label);assert.ok(node,label);assert.equal(node.opacity,.62);node.onClick();}
  assert.equal(f.r.calls.length,count);assert.equal(f.owner.current().receipt.receipt.confirmation,'unknown');
 }
 // Actual same-Runtime remount keeps the accepted queue and receipt while

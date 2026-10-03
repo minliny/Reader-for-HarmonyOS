@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { auditTypographyConsumers } from './reader-typography-consumer-audit.mjs';
+import { foundationTypographyCarrier } from './foundation-typography-carrier-probe.mjs';
 import { boundedTypographyCarrier } from './bounded-typography-carrier-probe.mjs';
 const require = createRequire(import.meta.url);
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
@@ -49,7 +50,7 @@ export function typographyCarrierMethod(file, expected, pageSource) {
  * rows/counts, physical values or AUTO omissions are changed. */
 export function sharedTypographyReplacement(file, expected, pageSource, targetSource) {
   const entry = successor(file, expected);
-  if (entry?.kind === 'bounded') {
+  if (entry?.kind === 'bounded' || entry?.kind === 'foundation') {
     for (const [origin, target] of entry.methodEdges ?? []) callsMethod(pageSource, file, origin, target);
     const { tree, method } = methodOf(pageSource, file, entry.bindingMethod);
     assert.ok(tree.statements.some(node => ts.isImportDeclaration(node) && node.moduleSpecifier?.text === entry.module &&
@@ -67,7 +68,7 @@ export function sharedTypographyReplacement(file, expected, pageSource, targetSo
     };
     visit(method);
     assert.ok(found, `${entry.id}: real finite binding, not a comment or unrelated shared node`);
-    return boundedTypographyCarrier(entry, file, expected, pageSource, targetSource);
+    return entry.kind === 'foundation' ? foundationTypographyCarrier(entry,file,expected,pageSource,targetSource) : boundedTypographyCarrier(entry, file, expected, pageSource, targetSource);
   }
   if (entry?.kind !== 'shared') return undefined;
   const { tree, method } = methodOf(pageSource, file, expected.method); let found = false;

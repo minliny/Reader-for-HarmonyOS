@@ -51,7 +51,7 @@ try {
  {
   const x=await unknown();await qualify(x);let selected;
   const full=fullSyncIndexPage({snapshot:x.snapshot(),isTablet:false,onSkipBackupRetention:g=>{selected=g;x.owner.skipBackupRetention(g);}});
-  const child=[...full.children.values()].find(c=>c.params.label==='保留备份，结束清理');assert.ok(child,'complete decorated SDK Page consumes finite shared action');
+  const child=[...full.children.values()].find(c=>c.params?.label==='保留备份，结束清理');assert.ok(child,'complete decorated SDK Page consumes finite shared action');
   child.params.onReconcile(child.params.generation);await x.settle();assert.equal(selected,child.params.generation);assert.equal(operation(x).retentionSkipped,true);
  }
  {
@@ -67,14 +67,14 @@ try {
    updateStateVars(params){Object.assign(this.params,params);this.actor.updateStateVars(params);this.actor.replay();}
   }
   const parent=fullSyncIndexPage({snapshot:x.snapshot(),isTablet:false,onSkipBackupRetention:g=>x.owner.skipBackupRetention(g)},{ReaderRecoveryAction:ActualAction},{allowEmptyBranchAdmission:true});
-  const first=[...parent.children.values()].find(c=>c.params.label==='保留备份，结束清理');const old=[...first.actor.nodes.values()].find(v=>v.height===36).onClick;const oldGeneration=first.actor.generation;
+  const first=[...parent.children.values()].find(c=>c.params?.label==='保留备份，结束清理');const old=[...first.actor.nodes.values()].find(v=>v.height===36).onClick;const oldGeneration=first.actor.generation;
   // Retained V1 instance accepts actual Props only; ordinary callback is not
   // refreshed. Busy updates must still suppress its real native action.
-  first.updateStateVars({...first.params,enabled:false,onReconcile:()=>{throw Error('ordinary callback must not be rebound');}});old();await x.settle();assert.equal(x.runtime.count('sync.webdav.backup.retention.skip'),0);
-  first.updateStateVars({...first.params,enabled:true});
+  first.updateStateVars({...first.params,actionEnabled:false,onReconcile:()=>{throw Error('ordinary callback must not be rebound');}});old();await x.settle();assert.equal(x.runtime.count('sync.webdav.backup.retention.skip'),0);
+  first.updateStateVars({...first.params,actionEnabled:true});
   const observerCount=parent.observers.length;await retry(x);parent.updateStateVars({snapshot:x.snapshot()});parent.replay();
   assert.equal(parent.observers.length,observerCount+1,'only one new consent actor is admitted; Page/config/history actors remain retained');
-  const actors=[...parent.children.values()].filter(c=>c.params.label==='保留备份，结束清理');assert.equal(actors.length,2,'only exact receipt action is keyed, Page remains mounted');
+  const actors=[...parent.children.values()].filter(c=>c.params?.label==='保留备份，结束清理');assert.equal(actors.length,2,'only exact receipt action is keyed, Page remains mounted');
   assert.equal(first.actor.generation,oldGeneration,'retired actor does not acquire successor generation through Prop refresh');
   old();await x.settle();assert.equal(x.runtime.count('sync.webdav.backup.retention.skip'),0);
   const current=actors.at(-1);assert.notEqual(current.actor.generation,oldGeneration);

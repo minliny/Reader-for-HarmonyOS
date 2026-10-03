@@ -26,6 +26,15 @@ for(const file of readdirSync(featureRoot,{recursive:true}).filter(file=>file.en
     const actual=producers.producers.find(p=>p.component==='ReaderBoundedSurfaceHeader');assert.ok(actual);
     assert.deepEqual(sharedProducerShape(source,actual.file),actual.shape,'actual finite modifier owns title roles and AUTO omissions');delegated++;continue;
   }
+  if(node.kind==='Text'&&file==='common/ReaderButton.ets'&&node.method==='build'&&node.text==='this.label'&&
+    ['newReaderButtonLabelModifier(this.specId,this.primary,this.scheme)','newReaderButtonTextModifier(this.specId,this.primary,this.actionEnabled,this.layout,this.scheme)'].includes(normalise(node.attributes.attributeModifier))||
+    node.kind==='TextInput'&&file==='common/ReaderFormField.ets'&&node.method==='build'&&normalise(node.text)==='{text:this.text,placeholder:this.placeholder}'&&
+    normalise(node.attributes.attributeModifier)==='newReaderFormFieldModifier(this.specId,this.scheme)'){
+    const actual=producers.producers.find(p=>p.component===(node.kind==='Text'?'ReaderButton':'ReaderFormField'));assert.ok(actual);
+    assert.deepEqual(sharedProducerShape(source,actual.file),actual.shape,'actual finite foundation modifier preserves public roles/AUTO');
+    assert.ok(node.attributes[node.kind==='TextInput'?'onChange':'onClick']||node.kind==='Text'&&normalise(node.attributes.attributeModifier)==='newReaderButtonLabelModifier(this.specId,this.primary,this.scheme)', 'real event host or finite stacked label');
+    delegated++;continue;
+  }
   const contract=contracts.get(JSON.stringify([rel,node.method,node.kind,normalise(node.text)]));
   assert.ok(contract,`${rel}:${node.line}: a visible native-default element needs a bounded platform-default contract, not a fake TYPE modifier`);
   assert.equal(node.attributes.attributeModifier, undefined, `${contract.id}: do not add an empty modifier to fake a public migration`);
@@ -44,5 +53,5 @@ for(const row of contracts.values()){
   assert.throws(()=>verifyNativeDefaultBranches(source.replace('if (this.sourceSwitchFailureMessage.length > 0) {\n          ForEach','if (true) {\n          ForEach'),row.file,row),/exact finite branch guard/);
  }
 }
-assert.equal(controls,14);assert.equal(a11y,4);assert.equal(delegated,2);
+assert.equal(controls,14);assert.equal(a11y,4);assert.equal(delegated,6);
 console.log(`PASS native-default contracts: ${contracts.size} finite native families / ${controls} actual actors (retry has exact exclusive source-switch/reading branches); ${paint} no-glyph actors, ${a11y} exact accessibility actors, ${delegated} actual shared Dialog/finite title hosts, ${inherited} inherited body spans; no physical font overrides fabricated`);

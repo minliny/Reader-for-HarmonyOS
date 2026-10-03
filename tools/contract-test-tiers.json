@@ -284,6 +284,7 @@
     "test-platform-paragraph-fixture-isolation.mjs",
     "test-popofree-source-correction.mjs",
     "test-popup-reduce-motion-lifecycle.mjs",
+    "test-foundation-controls-shared.mjs",
     "test-private-typography-budget.mjs",
     "test-qidian-directory-source-correction.mjs",
     "test-readable-admission-index-owner.mjs",
