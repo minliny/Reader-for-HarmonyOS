@@ -13,7 +13,9 @@ for (const failure of ['beforeMethod','afterMethod']) {
   const result=await cold.recover(pure.original,true);assert.equal(result.original.confirmation,'confirmed');
   assert.deepEqual(cold.writes()[0].params,{operationId:original.operationId,sequence:original.sequence,mutation:original.mutation});
  } else {
-  assert.equal(pure.original.confirmation,'confirmed');assert.ok(pure.outcome.subscription.subscriptionId);assert.equal(pure.original.blocked,false);
+  assert.equal(pure.original.confirmation,'confirmed');assert.ok(pure.outcome.subscription.subscriptionId);assert.equal(pure.original.blocked,true);
+  assert.equal(cold.disk(),JSON.stringify(original),'pure exact ACK does not clear the accepted intent');
+  await cold.recover(pure.original,true);assert.equal(cold.writes().length,0,'explicit original cleanup does not repeat an acknowledged Core write');
  }
  assert.equal(cold.disk(),'');assert.equal((await cold.rss.loadSubscriptions()).length,1);cases++;
 }
@@ -31,7 +33,11 @@ for (const variant of ['update','toggle','remove','read','favorite','unfavorite'
   if(failure==='beforeMethod') {
    assert.equal(pure.original.canRetryOriginal,true);await cold.recover(pure.original,true);
    assert.deepEqual(cold.writes()[0].params,{operationId:original.operationId,sequence:original.sequence,mutation:original.mutation});
-  } else {assert.equal(pure.original.confirmation,'confirmed', variant+' '+failure+' '+pure.original.message);assert.equal(pure.original.blocked,false);}
+  } else {
+   assert.equal(pure.original.confirmation,'confirmed', variant+' '+failure+' '+pure.original.message);assert.equal(pure.original.blocked,true);
+   assert.equal(cold.disk(),JSON.stringify(original),'pure exact ACK preserves the journal');
+   await cold.recover(pure.original,true);assert.equal(cold.writes().length,0,'only original local cleanup continues after a known ACK');
+  }
   assert.equal(cold.disk(),'');cases++;
  }
 }

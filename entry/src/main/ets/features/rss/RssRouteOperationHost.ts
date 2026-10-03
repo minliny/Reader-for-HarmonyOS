@@ -21,6 +21,8 @@ export interface RssRouteBinding<T> {
   current: () => boolean;
   emitOperation?: (operation: RssRouteOperationProjection<T>) => void;
   emitRead?: (facts: OperationFacts<T>) => void;
+  /** Cross-family original authority is independent from this entity's receipt. */
+  emitOriginal?: (original: RssOriginalMutationProjection | undefined) => void;
 }
 
 interface RssRouteDependencies {
@@ -99,6 +101,16 @@ export class RssRouteOperationHost {
     this.reconcile(state, expected, binding, (): Promise<RssEntrySnapshot> => this.dependencies.readEntry(expected.subscriptionId, expected.guid));
   }
 
+  reconcileSourceOriginal(expected: RssOriginalMutationIdentity, binding: RssRouteBinding<RssSourceSnapshot>, subscriptionId: string): void {
+    this.reconcileOriginal(this.source(subscriptionId), expected, binding,
+      (): Promise<RssSourceSnapshot> => this.dependencies.readSource(subscriptionId));
+  }
+
+  reconcileEntryOriginal(expected: RssOriginalMutationIdentity, binding: RssRouteBinding<RssEntrySnapshot>, subscriptionId: string, guid: string): void {
+    this.reconcileOriginal(this.entry(subscriptionId, guid), expected, binding,
+      (): Promise<RssEntrySnapshot> => this.dependencies.readEntry(subscriptionId, guid));
+  }
+
   continueEntryOriginal(expected: RssOriginalMutationIdentity, binding: RssRouteBinding<RssEntrySnapshot>): void {
     if (expected.scope!=='entry') return;
     const state=this.entry(expected.subscriptionId,expected.guid);
@@ -141,6 +153,16 @@ export class RssRouteOperationHost {
     });
   }
 
+  private reconcileOriginal<T>(state: RssRouteState<T>, expected: RssOriginalMutationIdentity,
+    binding: RssRouteBinding<T>, reader: () => Promise<T>): void {
+    this.enqueue(state, binding, async (): Promise<void> => {
+      // A pure original query does not depend on a fabricated entity receipt
+      // or its ordinary retry eligibility. The captured physical identity does.
+      if (!this.dependencies.gateway.isOriginalMutationCurrent(expected)) return;
+      await this.read(state, binding, reader, expected);
+    });
+  }
+
   private async write<T>(state: RssRouteState<T>, binding: RssRouteBinding<T>, action: string,
     subscriptionId: string, guid: string, mutation: () => Promise<void>, reader: () => Promise<T>): Promise<void> {
     if (!this.admitted(binding)) return;
@@ -164,9 +186,11 @@ export class RssRouteOperationHost {
     await this.read(state, binding, reader);
   }
 
-  private async read<T>(state: RssRouteState<T>, binding: RssRouteBinding<T>, reader: () => Promise<T>): Promise<void> {
+  private async read<T>(state: RssRouteState<T>, binding: RssRouteBinding<T>, reader: () => Promise<T>, expectedOriginal?: RssOriginalMutationIdentity): Promise<void> {
     if (!this.ownsRuntime()) return;
-    const recovery=await this.dependencies.gateway.recoverOriginalRss((): boolean => this.admitted(binding));
+    const recovery=await this.dependencies.gateway.recoverOriginalRss((): boolean => this.admitted(binding), expectedOriginal, false, true);
+    this.deliver(binding, (): void => binding.emitOriginal?.(recovery.original));
+    if (!this.admitted(binding)) return;
     const original=recovery.original,operation=state.operation;
     if (original!==undefined && operation!==undefined && original.scope==='entry' &&
       original.subscriptionId===operation.subscriptionId && original.guid===operation.guid &&

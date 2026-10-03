@@ -18,7 +18,12 @@ for(const failure of ['beforeMethod','afterMethod']) {
  if(failure==='beforeMethod') {
   assert.equal(current.original.canRetryOriginal,true);m.host.continueOriginal(current.original);await settle(m.host);
   assert.equal(cold.writes().length,1);assert.equal(m.values.at(-1)[0].enabled,false);
- } else {assert.equal(current.projection.receipt.confirmation,'confirmed');assert.equal(current.original.blocked,false);}
+ } else {
+  assert.equal(current.projection.receipt.confirmation,'confirmed');assert.equal(current.original.blocked,true);
+  const retained=cold.disk(),local=cold.io.finishes;m.host.reconcileOriginal(current.original);await settle(m.host);
+  assert.equal(cold.disk(),retained);assert.equal(cold.io.finishes,local,'pure management reconcile never clears the original journal');
+  m.host.continueOriginal(m.operations.at(-1).original);await settle(m.host);assert.equal(cold.writes().length,0);assert.equal(cold.disk(),'');
+ }
  cases++;
 }
 for(const failure of ['beforeMethod','afterMethod']) {
@@ -35,7 +40,10 @@ for(const failure of ['beforeMethod','afterMethod']) {
   e.host.continueOriginal(expected);await e.settle();assert.equal(cold.writes().length,1);
   assert.equal(e.values.at(-1).title,'Newer draft remains local');assert.equal(e.saved.length,0,'historical accepted content cannot dismiss a newer draft');
  } else {
-  assert.equal(e.values.at(-1).operation.receipt.confirmation,'confirmed');assert.equal(e.values.at(-1).original.blocked,false);
+  assert.equal(e.values.at(-1).operation.receipt.confirmation,'confirmed');assert.equal(e.values.at(-1).original.blocked,true);
+  const retained=cold.disk(),local=cold.io.finishes;e.host.reconcileOriginal(e.values.at(-1).original);await e.settle();
+  assert.equal(cold.disk(),retained);assert.equal(cold.io.finishes,local,'pure editor reconcile never clears the original journal');
+  e.host.continueOriginal(e.values.at(-1).original);await e.settle();assert.equal(cold.writes().length,0);
  }
  assert.equal(cold.disk(),'');assert.equal((await cold.rss.loadSubscriptions())[0].title,'Original accepted title');cases++;
 }
@@ -60,7 +68,12 @@ for(const method of ['read','favorite','unfavorite']) for(const failure of ['bef
  if(failure==='beforeMethod') {
   assert.equal(original.canRetryOriginal,true);m.host.continueEntryOriginal(original,binding);await settle(m.host);
   assert.equal(cold.writes().length,1);assert.equal(operations.at(-1).projection.receipt.confirmation,'confirmed');
- } else {assert.equal(original.confirmation,'confirmed');assert.equal(original.blocked,false);}
+ } else {
+  assert.equal(original.confirmation,'confirmed');assert.equal(original.blocked,true);
+  const retained=cold.disk(),local=cold.io.finishes;m.host.reconcileEntryOriginal(original,binding,'s','g');await settle(m.host);
+  assert.equal(cold.disk(),retained);assert.equal(cold.io.finishes,local,'pure entity reconcile never clears the original journal');
+  m.host.continueEntryOriginal(operations.at(-1).original,binding);await settle(m.host);assert.equal(cold.writes().length,0);assert.equal(cold.disk(),'');
+ }
  cases++;
 }
 {
