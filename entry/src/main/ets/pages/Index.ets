@@ -6,8 +6,7 @@ import { BookshelfGroupSelector } from '../features/bookshelf/BookshelfGroupSele
 import { BookshelfManagementGateway } from '../features/bookshelf/BookshelfManagementGateway';
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderCoreRequestError } from '@reader/core-harmony';
-import { SearchViewState } from '../features/search/SearchViewState';
-import { SearchPublication } from '../features/search/SearchPublication';
+import { SearchHost } from '../features/search/SearchHost';
 import { resolveBookshelfBook } from '../features/bookshelf/BookshelfBookIdentity';
 import { BookshelfViewState } from '../features/bookshelf/BookshelfViewState';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
@@ -115,12 +114,9 @@ import type {
 } from '../features/reading/ReaderDirectoryMarkerState';
 import type {
   SearchBook,
-  SearchSource,
 } from '../features/search/SearchGateway';
-import { SearchOrchestrator } from '../features/search/SearchOrchestrator';
 import {
   SearchPage,
-  type SearchPresentation,
 } from '../features/search/SearchPage';
 import {
   RssGateway,
@@ -432,7 +428,6 @@ struct Index {
   @State private directoryCurrentChapterIndex: number = -1;
   @State private directoryChapterTitle: string = '';
   @State private directoryReturnTarget: DirectoryReturnTarget = 'detail';
-  private searchPublication: SearchPublication = new SearchPublication();
   @State private searchPublicationRevision: number = 0;
   @State private rssPresentation: RssPresentation = { kind: 'feed', subscriptions: [], recentUnread: [] };
   @State private selectedRssSubscription: RssSubscription | undefined = undefined;
@@ -544,9 +539,11 @@ struct Index {
   private bookProjectionAgain: boolean = false;
   private candidateAdmissionGeneration: number = -1;
   private candidateAdmissionFailedGeneration: number = -1;
-  private searchViewState: SearchViewState = new SearchViewState();
+  private searchHost: SearchHost = new SearchHost(
+    (): void => { this.searchPublicationRevision += 1; },
+    (): boolean => this.route === 'search' && this.searchAppForeground,
+  );
   private readonly bookshelfViewState: BookshelfViewState = new BookshelfViewState();
-  private searchOrchestrator: SearchOrchestrator | undefined;
   /** Bounded, process-local single-flight only; Core remains the durable cache. */
   private discoverOrchestrator: DiscoverOrchestrator | undefined;
   private bookshelfManagementOrchestrator: BookshelfManagementOrchestrator | undefined;
@@ -643,7 +640,7 @@ struct Index {
     this.bookProjectionUnsubscribe = undefined;
     this.sourceSwitchUnsubscribe?.();
     this.sourceSwitchUnsubscribe = undefined;
-    this.searchOrchestrator?.close();
+    this.searchHost.close();
     ReaderRuntimeOwner.current().bookAcquisitions().endSearch();
     ReaderRuntimeOwner.current().readingEntryPreparations().setPaused(true);
   }
@@ -892,8 +889,8 @@ struct Index {
         });
       } else if (this.route === 'search') {
         SearchPage({
-          viewState: this.searchViewState,
-          publication: this.searchPublication,
+          viewState: this.searchHost.viewState,
+          publication: this.searchHost.publication,
           publicationRevision: this.searchPublicationRevision,
           reduceMotion: this.settingsSnapshot.reduceMotion,
           isTablet: deviceInfo.deviceType === 'tablet',
@@ -902,7 +899,7 @@ struct Index {
             this.performSearch(keyword, scopeSourceIds),
           onStop: (): void => this.stopSearch(),
           onClearHistory: (): void => this.clearSearchHistory(),
-          onRetryHistory: (): void => this.getSearchOrchestrator().retryHistory(),
+          onRetryHistory: (): void => this.searchHost.retryHistory(),
           onSelectResult: (book: SearchBook, variants: SearchBook[]): void =>
             this.onSearchResultSelected(book, variants),
           onVisibleGroups: (groups: SearchBook[][]): void => this.scheduleSearchDetailWarmups(groups),
@@ -1640,7 +1637,7 @@ struct Index {
 
   /** Enter Source Management from the Search page's add/manage-source intents. */
   private manageSourcesFromSearch(): void {
-    const presentation = this.searchPublication.presentationAt(this.searchPublicationRevision);
+    const presentation = this.searchHost.presentation();
     const keyword = presentation.kind === 'loading' || presentation.kind === 'results' ||
       presentation.kind === 'empty' || presentation.kind === 'error' ? presentation.keyword : '';
     this.openSourceManagement('search', keyword);
@@ -1772,18 +1769,17 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'search';
-    const orchestrator = this.getSearchOrchestrator();
     if (autoSearch && keyword.length > 0) {
       // A fresh entry reloads sources; the search itself re-checks the enabled
       // set, so a still-disabled configuration lands on sourceRequired instead
       // of firing doomed requests.
-      orchestrator.open();
-      orchestrator.search(keyword);
+      this.searchHost.open();
+      this.searchHost.search(keyword);
       return;
     }
-    orchestrator.refreshSources();
+    this.searchHost.refreshSources();
     // Restore the same query after source management; only autoSearch replaces it.
-    orchestrator.resume();
+    this.searchHost.resume();
   }
 
   private onSourceToggled(id: string, enabled: boolean): void {
@@ -2556,7 +2552,7 @@ struct Index {
     this.preparePersistedShelfBooks();
     ReaderRuntimeOwner.current().bookAcquisitions().visibilityChanged();
     ReaderRuntimeOwner.current().bookAcquisitions().setPreparationVisible(this.route === 'search' && this.searchAppForeground);
-    this.searchOrchestrator?.visibilityChanged();
+    this.searchHost.visibilityChanged();
     void this.refreshDetailAcquisitionProjection();
     this.consumeSystemFileOpen();
   }
@@ -2665,8 +2661,7 @@ struct Index {
   }
 
   private openSearch(): void {
-    this.searchViewState.reset();
-    this.searchViewState.requestInputFocus();
+    this.searchHost.prepareEntry();
     this.nextNavigationGeneration();
     this.resetSearchDetailWarmups();
     this.readingSessionActive = false;
@@ -2674,46 +2669,29 @@ struct Index {
     this.exitToDetailOriginAfterReader = false;
     this.route = 'search';
     this.refreshSearchShelfMembership();
-    this.getSearchOrchestrator().open();
+    this.searchHost.open();
   }
 
   private performSearch(keyword: string, scopeSourceIds?: string[]): void {
-    this.searchViewState.reset(keyword);
     this.nextNavigationGeneration();
     this.resetSearchDetailWarmups();
-    this.getSearchOrchestrator().search(keyword, scopeSourceIds);
+    this.searchHost.search(keyword, scopeSourceIds);
   }
 
   private stopSearch(): void {
-    this.getSearchOrchestrator().stop();
+    this.searchHost.stop();
     ReaderRuntimeOwner.current().bookAcquisitions().endSearch();
-  }
-
-  private getSearchOrchestrator(): SearchOrchestrator {
-    if (this.searchOrchestrator === undefined) {
-      this.searchOrchestrator = new SearchOrchestrator(
-        (presentation: SearchPresentation): void => {
-          this.searchPublication.publish(presentation);
-          this.searchPublicationRevision += 1;
-        },
-        (sources: SearchSource[]): void => {
-          this.searchPublication.updateSources(sources);
-        },
-        (): boolean => this.route === 'search' && this.searchAppForeground,
-      );
-    }
-    return this.searchOrchestrator;
   }
 
   private retrySearch(): void {
     this.resetSearchDetailWarmups();
-    this.getSearchOrchestrator().retry();
+    this.searchHost.retry();
   }
 
   private clearSearchHistory(): void {
     this.nextNavigationGeneration();
     ReaderRuntimeOwner.current().bookAcquisitions().endSearch();
-    this.getSearchOrchestrator().clearHistory();
+    this.searchHost.clearHistory();
   }
 
   private resetSearchDetailWarmups(): void {
@@ -2796,7 +2774,7 @@ struct Index {
     // The search badge describes a saved work, not just this source URL. Keep
     // its exact durable identity so changing source owns the existing row.
     const shelfMatch = resolveBookshelfBook(book.sourceId, book.bookId, book.title, book.author,
-      this.searchPublication.shelfAt(this.searchPublicationRevision).concat(this.shelfBooks),
+      this.searchHost.publication.shelfAt(this.searchPublicationRevision).concat(this.shelfBooks),
       book.authorIdentity, book.sourceRuleVersion);
     if (shelfMatch.kind === 'ambiguous') {
       this.showReadingFailure('书架中有多个版本', '请从书架选择要阅读或换源的版本，已有书籍不会自动合并。');
@@ -4989,7 +4967,7 @@ struct Index {
           SourceSwitchDiscoveryOutcome => cached.length > 0
           ? { kind: 'sources', candidates: cached }
           : gateway.refreshCandidates(query, isCurrent,
-            this.detailReturnRoute === 'search' ? this.searchOrchestrator?.searchedSourceIds() ?? [] : []));
+            this.detailReturnRoute === 'search' ? this.searchHost.searchedSourceIds() : []));
     load
       .then((outcome: SourceSwitchDiscoveryOutcome): void => {
         if (!isCurrent()) {
@@ -5817,12 +5795,12 @@ struct Index {
     // must not call open() because that would reset them to the Initial state.
     this.route = 'search';
     // Restore the original queue, including sources completed while hidden.
-    this.getSearchOrchestrator().resume();
+    this.searchHost.resume();
   }
 
   private returnToBookshelf(): void {
     this.searchDetailCandidates = [];
-    this.searchOrchestrator?.close();
+    this.searchHost.close();
     const retainedRemoteSession = this.detailBook !== undefined &&
       this.detailBook.sourceId !== LOCAL_SOURCE_ID &&
       this.remoteReadingSession?.identity.sourceId === this.detailBook.sourceId &&
@@ -6001,7 +5979,7 @@ struct Index {
       name !== '书源名称暂不可用' && name !== '书源已移除' &&
       !/^[a-z][a-z0-9+.-]*:/i.test(name) && !/^www\./i.test(name);
     if (readable(savedName)) return savedName;
-    for (const source of this.searchPublication.sourcesAt(this.searchPublicationRevision)) {
+    for (const source of this.searchHost.sources()) {
       if (source.sourceId === sourceId && readable(source.name.trim())) return source.name.trim();
     }
     for (const source of this.sourceSources) {
@@ -6279,8 +6257,7 @@ struct Index {
     const current = (): boolean => generation === this.shelfMembershipGeneration && owner === ReaderRuntimeOwner.current();
     void new BookshelfFlowGateway(owner).loadAll(current, true).then((shelf: BookshelfState | undefined): void => {
       if (!current() || shelf === undefined) return;
-      this.searchPublication.updateShelf(shelf.books);
-      this.searchPublicationRevision += 1;
+      this.searchHost.updateShelf(shelf.books);
     }).catch((error: Error): void => {
       if (current()) hilog.warn(DOMAIN, 'Reader', 'Search shelf membership: %{private}s', error.message);
     });
@@ -6462,8 +6439,7 @@ struct Index {
     if (this.shelfProjectionRevision.length === 0 ||
       (this.shelfReadingFilter === 'all' && this.shelfSourceFilter === 'all' && this.shelfBooks.length === this.shelfMatchedTotal)) {
       this.shelfMembershipGeneration += 1;
-      this.searchPublication.updateShelf(this.shelfBooks);
-      this.searchPublicationRevision += 1;
+      this.searchHost.updateShelf(this.shelfBooks);
     } else if (this.route === 'search') this.refreshSearchShelfMembership();
     this.continueReading = state.continueReading;
     if (state.kind !== 'populated') {
@@ -6515,8 +6491,7 @@ struct Index {
           // complete search membership with a filtered or partial page.
           if (this.shelfProjectionRevision === undefined || this.shelfProjectionRevision.length === 0 ||
             (this.shelfReadingFilter === 'all' && this.shelfSourceFilter === 'all' && projected.length === this.shelfMatchedTotal)) {
-            this.searchPublication.updateShelf(projected);
-            this.searchPublicationRevision += 1;
+            this.searchHost.updateShelf(projected);
           }
         }
       })
