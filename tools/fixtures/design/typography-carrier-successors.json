@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "boundary": "Immutable physical tuples remain in conventional-typography-baseline.json. These are audited actual carrier successors only; no budget or visual value is raised. Current CI verifies native five-attribute/AUTO tuples and actual AST consumer edges. Historical byte proof remains opt-in at original source.",
+  "entries": [
+    {
+      "id": "rss-editor-save-builder",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssSubscriptionEditorPage.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "'保存'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/rss/RssSubscriptionEditorPage.ets",
+        "method": "saveAction",
+        "kind": "Text",
+        "text": "'保存'"
+      },
+      "edge": "this.saveAction()",
+      "proof": "test-rss-editor-operation-recovery.mjs + test-typography-carrier-successors.mjs"
+    },
+    {
+      "id": "settings-reset-feedback-builder",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/settings/SettingsPage.ets",
+        "method": "buildGeneral",
+        "kind": "Text",
+        "text": "this.resetMessage"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/settings/SettingsPage.ets",
+        "method": "operationFeedback",
+        "kind": "Text",
+        "text": "this.recovery().visible ? this.recovery().message : this.resetMessage"
+      },
+      "edge": "this.operationFeedback()",
+      "proof": "test-source-settings-receipt-consumers.mjs + test-typography-carrier-successors.mjs"
+    },
+    {
+      "id": "bookshelf-mode-shared-notice",
+      "kind": "shared",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/BookshelfPage.ets",
+        "method": "bookshelfList",
+        "kind": "Text",
+        "text": "this.viewModeError"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderRecoveryNotice.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.view.message"
+      },
+      "component": "ReaderRecoveryNotice",
+      "module": "../common/ReaderRecoveryNotice",
+      "view": "this.viewModeRecovery()",
+      "proof": "test-bookshelf-view-mode-receipts.mjs + test-typography-carrier-successors.mjs"
+    },
+    {
+      "id": "bookshelf-settings-mode-shared-notice",
+      "kind": "shared",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/BookshelfSettingsPage.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.error"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderRecoveryNotice.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.view.message"
+      },
+      "component": "ReaderRecoveryNotice",
+      "module": "../common/ReaderRecoveryNotice",
+      "view": "this.viewModeRecovery()",
+      "proof": "test-bookshelf-view-mode-receipts.mjs + test-typography-carrier-successors.mjs"
+    }
+  ]
+}

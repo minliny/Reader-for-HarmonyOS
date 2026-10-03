@@ -475,6 +475,7 @@
     "test-native-default-control-contracts.mjs",
     "test-reader-native-alert-exit-faults.mjs",
     "test-bookshelf-view-mode-receipts.mjs",
-    "test-sync-receipt-owner-closure.mjs"
+    "test-sync-receipt-owner-closure.mjs",
+    "test-typography-carrier-successors.mjs"
   ]
 }
