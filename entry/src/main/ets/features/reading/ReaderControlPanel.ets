@@ -6,6 +6,7 @@ import { ReaderSessionLaunchStage } from './ReaderSessionLaunchStage';
 import type { ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
 import type { ReaderSessionCapsuleState } from './ReaderSessionCapsuleModel';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { PopupSurfaceSpec, resolvePopupSpec } from '../common/ReaderSurfaceSpecs';
 import { ReaderControlMotionFrameCache } from './ReaderControlMotionGeometry';
 import { FrameCallback } from '@kit.ArkUI';
 import { sampleReaderControlMorphProgress } from './ReaderControlMotionPolicy';
@@ -1030,6 +1031,7 @@ export struct ReaderControlPanel {
   }
 
   private readerMoreMenuWidth(): number {
+    const surface = this.readerMoreSurfaceSpec();
     // Measure only on opening; progress/motion publications reuse this width.
     // Native popup placement owns target tracking and window-edge avoidance.
     if (this.moreMenuVisible && this.moreMenuMeasuredWidth <= 0) {
@@ -1038,14 +1040,19 @@ export struct ReaderControlPanel {
       let width: number = 0;
       labels.forEach((label: string): void => {
         const measured = context.getMeasureUtils().measureTextSize({
-          textContent: label, fontFamily: 'ReaderNotoSansSC', fontSize: '15fp', fontWeight: '500',
+          textContent: label, fontFamily: surface.actionFontFamily,
+          fontSize: `${surface.actionFontSize}fp`, fontWeight: '500',
         });
         width = Math.max(width, context.px2vp(Number(measured.width)));
       });
       this.moreMenuMeasuredWidth = Math.ceil(width) + 36;
     }
-    return Math.min(this.moreMenuMeasuredWidth > 0 ? this.moreMenuMeasuredWidth : 176,
+    return Math.min(this.moreMenuMeasuredWidth > 0 ? this.moreMenuMeasuredWidth : surface.width,
       Math.max(0, this.layout.viewportWidth - 24));
+  }
+
+  private readerMoreSurfaceSpec(): PopupSurfaceSpec {
+    return resolvePopupSpec('reader-more-menu');
   }
 
   private readerMoreActionEnabled(action: 'info' | 'refresh' | 'download'): boolean {
@@ -1058,16 +1065,20 @@ export struct ReaderControlPanel {
   private readerMoreAction(label: string, action: 'info' | 'refresh' | 'download') {
     Stack({ alignContent: Alignment.TopStart }) {
       Row() {
-        Text(label).fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(15).lineHeight(22)
-          .fontColor(readerAppColor('TOK_INK', this.appScheme)).maxLines(1)
+        Text(label).fontFamily(this.readerMoreSurfaceSpec().actionFontFamily).fontWeight(FontWeight.Medium)
+          .fontSize(this.readerMoreSurfaceSpec().actionFontSize).lineHeight(this.readerMoreSurfaceSpec().actionLineHeight)
+          .fontColor(readerAppColor(this.readerMoreSurfaceSpec().actionTextRole, this.appScheme)).maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
-      }.width('100%').height(50).padding({ left: 18, right: 18 });
+      }.width('100%').height(this.readerMoreSurfaceSpec().actionHeight)
+        .padding({ left: this.readerMoreSurfaceSpec().actionPaddingLeft, right: this.readerMoreSurfaceSpec().actionPaddingRight });
       if (action !== 'download') {
-        Row().width('calc(100% - 32vp)').height(1)
-          .backgroundColor(readerAppColor('app.BookshelfMoreMenu.action.color.FFE8E2DA', this.appScheme))
-          .position({ x: 16, y: 49 });
+        Row().width(`calc(100% - ${this.readerMoreSurfaceSpec().dividerInset * 2}vp)`)
+          .height(this.readerMoreSurfaceSpec().dividerHeight)
+          .backgroundColor(readerAppColor(this.readerMoreSurfaceSpec().dividerRole, this.appScheme))
+          .position({ x: this.readerMoreSurfaceSpec().dividerInset,
+            y: this.readerMoreSurfaceSpec().actionHeight - this.readerMoreSurfaceSpec().dividerHeight });
       }
-    }.width('100%').height(50)
+    }.width('100%').height(this.readerMoreSurfaceSpec().actionHeight)
       .opacity(this.readerMoreActionEnabled(action) ? 1 : 0.45).enabled(this.readerMoreActionEnabled(action))
       .accessibilityText(label).onClick((): void => this.performMoreAction(action));
   }
@@ -1081,7 +1092,7 @@ export struct ReaderControlPanel {
         this.readerMoreAction(this.bookDownloadActive ? '正在下载章节…' : '下载全部章节', 'download');
       }.width('100%');
     }.width('100%')
-      .height(Math.min(150, Math.max(0, this.layout.viewportHeight - 36)))
+      .height(Math.min(this.readerMoreSurfaceSpec().actionsHeight, Math.max(0, this.layout.viewportHeight - 36)))
       .scrollBar(BarState.Auto).align(Alignment.TopStart);
   }
 
@@ -1539,17 +1550,21 @@ export struct ReaderControlPanel {
         builder: this.readerMoreMenu,
         placement: Placement.BottomRight,
         width: this.readerMoreMenuWidth(),
-        enableArrow: true, arrowWidth: 24, arrowHeight: 12, radius: 16,
+        enableArrow: true, arrowWidth: this.readerMoreSurfaceSpec().pointerWidth,
+        arrowHeight: this.readerMoreSurfaceSpec().pointerHeight,
+        radius: this.readerMoreSurfaceSpec().borderRadius,
         arrowPointPosition: ArrowPointPosition.CENTER,
         targetSpace: 8,
-        popupColor: readerAppColor('app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8', this.appScheme),
+        popupColor: readerAppColor(this.readerMoreSurfaceSpec().surfaceBackgroundRole, this.appScheme),
         backgroundBlurStyle: BlurStyle.NONE,
-        borderWidth: 1,
+        borderWidth: this.readerMoreSurfaceSpec().borderWidth,
         borderLinearGradient: { colors: [
-          [readerAppColor('app.BookshelfMoreMenu.build.color.FFE3DED6', this.appScheme), 0],
-          [readerAppColor('app.BookshelfMoreMenu.build.color.FFE3DED6', this.appScheme), 1],
+          [readerAppColor(this.readerMoreSurfaceSpec().surfaceBorderRole, this.appScheme), 0],
+          [readerAppColor(this.readerMoreSurfaceSpec().surfaceBorderRole, this.appScheme), 1],
         ] },
-        shadow: { radius: 28, color: readerAppColor('app.BookshelfMoreMenu.build.color.292E261F', this.appScheme), offsetY: 10 },
+        shadow: { radius: this.readerMoreSurfaceSpec().shadowRadius,
+          color: readerAppColor(this.readerMoreSurfaceSpec().surfaceShadowRole, this.appScheme),
+          offsetY: this.readerMoreSurfaceSpec().shadowOffsetY },
         autoCancel: true, mask: true, focusable: true, followTransformOfTarget: true,
         onStateChange: (event: PopupStateChangeParam): void => {
           if (!event.isVisible) this.dismissMoreMenu();

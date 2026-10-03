@@ -8,13 +8,25 @@ const file = new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.
 const source = readFileSync(file, 'utf8');
 const enums = name => new Proxy({}, { get: (_, key) => `${name}.${String(key)}` });
 const typography = { fontFamily: 'ReaderNotoSerifSC', fontWeight: 400, fontSizeFp: 12 };
+const readerMoreSurface = {
+  width: 176, pointerWidth: 24, pointerHeight: 12, borderRadius: 16,
+  borderWidth: 1, shadowRadius: 28, shadowOffsetY: 10,
+  actionHeight: 50, actionsHeight: 150, actionPaddingLeft: 18, actionPaddingRight: 18,
+  dividerInset: 16, dividerHeight: 1, actionFontFamily: 'ReaderNotoSansSC',
+  actionFontSize: 15, actionLineHeight: 22, actionTextRole: 'TOK_INK',
+  dividerRole: 'app.BookshelfMoreMenu.action.color.FFE8E2DA',
+  surfaceBackgroundRole: 'app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8',
+  surfaceBorderRole: 'app.BookshelfMoreMenu.build.color.FFE3DED6',
+  surfaceShadowRole: 'app.BookshelfMoreMenu.build.color.292E261F',
+};
 const dependencies = {
   Placement: enums('Placement'), ArrowPointPosition: enums('ArrowPointPosition'), BlurStyle: enums('BlurStyle'),
   TYPE_READER_CONTROL_BOOK_TITLE: typography, TYPE_READER_CONTROL_CHAPTER_SOURCE: typography,
   TYPE_READER_CONTROL_SOURCE_ACTION: typography,
+  resolvePopupSpec: id => { assert.equal(id, 'reader-more-menu'); return readerMoreSurface; },
 };
 const methods = ['topBar', 'readerMoreMenu', 'readerMoreAction', 'readerMoreMenuWidth',
-  'readerMoreActionEnabled', 'setMoreMenuVisible', 'dismissMoreMenu', 'performMoreAction'];
+  'readerMoreSurfaceSpec', 'readerMoreActionEnabled', 'setMoreMenuVisible', 'dismissMoreMenu', 'performMoreAction'];
 function fixture(scheme = 'day') {
   const { owner } = createReaderBuilderProbe(source, methods, dependencies);
   const actions = [], measurements = [], temporary = [];

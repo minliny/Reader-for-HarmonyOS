@@ -335,7 +335,7 @@ export function resolveSheetSpec(id: SheetSpecId): SheetSurfaceSpec {
  * consumer keeps labels, icons, enabled state and callbacks; this contract
  * owns frame geometry, touch rows and visual roles.
  */
-export type PopupSpecId = 'bookshelf-more-menu' | 'source-switch-window' | 'tts-config-manager';
+export type PopupSpecId = 'bookshelf-more-menu' | 'reader-more-menu' | 'source-switch-window' | 'tts-config-manager';
 
 export interface PopupSurfaceSpecInit {
   height: number;
@@ -462,6 +462,28 @@ const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
     pointerFillRole: 'app.BookshelfMoreMenu.build.fill.FFFFFCF8',
     pointerStrokeRole: 'app.BookshelfMoreMenu.build.stroke.FFE3DED6',
     actionTextRole: 'app.BookshelfMoreMenu.action.fontColor.FF1F1B17',
+    dividerRole: 'app.BookshelfMoreMenu.action.color.FFE8E2DA',
+    actionFontFamily: 'ReaderNotoSansSC', actionFontSize: 15, actionLineHeight: 22,
+  }),
+  // Reader control More menu. It shares the bookshelf More surface family,
+  // while keeping its audited three-row height and native popup dimensions.
+  // The action state and labels remain owned by ReaderControlPanel.
+  'reader-more-menu': new PopupSurfaceSpec({
+    height: 0,
+    width: 176, pointerWidth: 24, pointerHeight: 12,
+    actionHeight: 50, actionCount: 3,
+    trailingExtension: 11, anchorOverlap: 5,
+    borderWidth: 1, borderRadius: 16,
+    shadowRadius: 28, shadowOffsetY: 10,
+    actionPaddingLeft: 18, actionPaddingRight: 18,
+    actionIconSize: 0, dividerInset: 16, dividerHeight: 1,
+    pointerPoints: [[0, 12], [12, 0], [24, 12]],
+    surfaceBackgroundRole: 'app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8',
+    surfaceBorderRole: 'app.BookshelfMoreMenu.build.color.FFE3DED6',
+    surfaceShadowRole: 'app.BookshelfMoreMenu.build.color.292E261F',
+    pointerFillRole: 'app.BookshelfMoreMenu.build.fill.FFFFFCF8',
+    pointerStrokeRole: 'app.BookshelfMoreMenu.build.stroke.FFE3DED6',
+    actionTextRole: 'TOK_INK',
     dividerRole: 'app.BookshelfMoreMenu.action.color.FFE8E2DA',
     actionFontFamily: 'ReaderNotoSansSC', actionFontSize: 15, actionLineHeight: 22,
   }),
