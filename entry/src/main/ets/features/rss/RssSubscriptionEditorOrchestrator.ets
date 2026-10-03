@@ -1,3 +1,6 @@
+import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
+import { projectOperationFacts, type OperationFacts, type CommitConfirmationKind } from '../../app/ReaderOperationFacts';
+import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../app/ReaderPersistedReceiptProjection';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import {
@@ -7,6 +10,8 @@ import {
 } from './RssGateway';
 
 const DOMAIN = 0x5244;
+let editorProjectionGeneration: number = 0;
+interface RssEditorReceipt { confirmation: CommitConfirmationKind; subscriptionId: string; revision: number; projection: PersistedReceiptProjection<RssSubscription>; }
 
 export interface RssSubscriptionEditorSnapshot {
   mode: 'create' | 'edit';
@@ -29,6 +34,9 @@ export interface RssSubscriptionEditorSnapshot {
   ruleContent: string;
   busy: boolean;
   statusMessage: string;
+  canSave: boolean;
+  readFacts: OperationFacts<RssSubscription>;
+  operation: PersistedReceiptProjection<RssSubscription> | undefined;
 }
 
 export const EMPTY_RSS_EDITOR_SNAPSHOT: RssSubscriptionEditorSnapshot = {
@@ -52,187 +60,244 @@ export const EMPTY_RSS_EDITOR_SNAPSHOT: RssSubscriptionEditorSnapshot = {
   ruleContent: '',
   busy: false,
   statusMessage: '',
+  canSave: true,
+  readFacts: projectOperationFacts<RssSubscription>({ phase: 'idle' }),
+  operation: undefined,
 };
 
 /** Thin UI coordinator over canonical Core rss.subscription.create/update. */
 export class RssSubscriptionEditorOrchestrator {
   private readonly gateway: RssGateway;
+  private readonly owner: ReaderRuntimeOwner;
+  private readonly serialize: (work: () => Promise<void>) => Promise<void>;
+  private serialTail: Promise<void> = Promise.resolve();
+  private activeKey: string = 'create';
+  private readonly drafts: Map<string, RssSubscriptionEditorSnapshot> = new Map();
+  private readonly revisions: Map<string, number> = new Map();
+  private readonly dirty: Map<string, boolean> = new Map();
+  private readonly receipts: Map<string, RssEditorReceipt> = new Map();
+  private readonly pending: Set<string> = new Set();
   private readonly emit: (snapshot: RssSubscriptionEditorSnapshot) => void;
   private readonly onSaved: (subscriptionId: string) => void;
   private readonly isCurrent: () => boolean;
   private snapshot: RssSubscriptionEditorSnapshot = EMPTY_RSS_EDITOR_SNAPSHOT;
   private session: number = 0;
-  private saving: boolean = false;
+
 
   constructor(
     emit: (snapshot: RssSubscriptionEditorSnapshot) => void,
     onSaved: (subscriptionId: string) => void,
     isCurrent: () => boolean,
     owner: ReaderRuntimeOwner = ReaderRuntimeOwner.current(),
+    serialize?: (work: () => Promise<void>) => Promise<void>,
   ) {
+    this.owner = owner;
     this.gateway = new RssGateway(owner);
+    this.serialize = serialize ?? ((work: () => Promise<void>): Promise<void> => {
+      const result = this.serialTail.then(work);
+      this.serialTail = result.catch((): void => {});
+      return result;
+    });
     this.emit = emit;
     this.onSaved = onSaved;
     this.isCurrent = isCurrent;
   }
 
-  openCreate(): void {
-    this.session += 1;
-    this.saving = false;
-    this.publish({
-      mode: 'create',
-      subscriptionId: '',
-      feedUrl: '',
-      title: '',
-      enabled: true,
-      sourceGroup: '',
-      customOrder: '',
-      updateIntervalMinutes: '',
-      header: '',
-      enabledCookieJar: false,
-      ruleArticles: '',
-      ruleNextPage: '',
-      ruleTitle: '',
-      rulePubDate: '',
-      ruleDescription: '',
-      ruleImage: '',
-      ruleLink: '',
-      ruleContent: '',
-      busy: false,
-      statusMessage: '新增 RSS 订阅',
-    });
-  }
+  owns(owner: ReaderRuntimeOwner): boolean { return this.owner === owner; }
 
-  openEdit(subscriptionId: string): void {
+  openCreate(): void { this.open('create', ''); }
+
+  openEdit(subscriptionId: string): void { this.open('edit', subscriptionId); }
+
+  private open(mode: 'create' | 'edit', subscriptionId: string): void {
     this.session += 1;
     const session = this.session;
-    this.saving = false;
-    this.publish({
-      mode: 'edit',
-      subscriptionId,
-      feedUrl: '',
-      title: '',
-      enabled: true,
-      sourceGroup: '',
-      customOrder: '',
-      updateIntervalMinutes: '',
-      header: '',
-      enabledCookieJar: false,
-      ruleArticles: '',
-      ruleNextPage: '',
-      ruleTitle: '',
-      rulePubDate: '',
-      ruleDescription: '',
-      ruleImage: '',
-      ruleLink: '',
-      ruleContent: '',
-      busy: true,
-      statusMessage: '正在读取 Core 订阅…',
-    });
-    void this.gateway.loadSubscriptions()
-      .then((subscriptions: RssSubscription[]): void => {
-        const subscription = subscriptions.find(
-          (candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId,
-        );
-        if (subscription === undefined) {
-          throw new Error('RSS 订阅已不存在');
-        }
-        if (this.isCurrentSession(session)) {
-          this.publish({
-            feedUrl: subscription.feedUrl,
-            title: subscription.title,
-            enabled: subscription.enabled,
-            sourceGroup: subscription.sourceGroup ?? '',
-            customOrder: subscription.customOrder?.toString() ?? '',
-            updateIntervalMinutes: subscription.updateIntervalMinutes?.toString() ?? '',
-            header: subscription.header ?? '',
-            enabledCookieJar: subscription.enabledCookieJar ?? false,
-            ruleArticles: subscription.ruleArticles ?? '',
-            ruleNextPage: subscription.ruleNextPage ?? '',
-            ruleTitle: subscription.ruleTitle ?? '',
-            rulePubDate: subscription.rulePubDate ?? '',
-            ruleDescription: subscription.ruleDescription ?? '',
-            ruleImage: subscription.ruleImage ?? '',
-            ruleLink: subscription.ruleLink ?? '',
-            ruleContent: subscription.ruleContent ?? '',
-            busy: false,
-            statusMessage: '编辑 RSS 订阅',
-          });
-        }
-      })
-      .catch((error: Error): void => this.fail(session, 'RSS 订阅读取失败', error));
+    this.activeKey = mode === 'create' ? 'create' : JSON.stringify(['edit', subscriptionId]);
+    const saved = this.drafts.get(this.activeKey);
+    this.snapshot = this.copySnapshot(saved ?? { ...EMPTY_RSS_EDITOR_SNAPSHOT, mode, subscriptionId });
+    const receipt = this.receipts.get(this.activeKey);
+    this.publish({ busy: this.pending.has(this.activeKey), canSave: !this.pending.has(this.activeKey) && receipt?.confirmation !== 'unknown' && receipt?.projection.receipt.readback !== 'reading' &&
+      receipt?.projection.receipt.fact !== 'confirmedRefreshFailed',
+      operation: receipt?.projection, statusMessage: receipt?.projection.facts.message ?? (mode === 'create' ? '新增 RSS 订阅' : '正在读取 Core 订阅…') });
+    if (mode === 'edit' || receipt !== undefined || this.pending.has(this.activeKey)) {
+      const key = this.activeKey;
+      void this.serialize(async (): Promise<void> => { if (this.isCurrentSession(session)) await this.readEditor(key, session); }).catch((error: Error): void => this.fail(session, 'RSS 读取未执行', error));
+    }
   }
 
   updateFeedUrl(value: string): void {
     if (value.length <= 8192) {
-      this.publish({ feedUrl: value });
+      this.publishDraft({ feedUrl: value });
     }
   }
 
   updateTitle(value: string): void {
     if (value.length <= 512) {
-      this.publish({ title: value });
+      this.publishDraft({ title: value });
     }
   }
 
   updateEnabled(value: boolean): void {
-    this.publish({ enabled: value });
+    this.publishDraft({ enabled: value });
   }
 
   updateEnabledCookieJar(value: boolean): void {
-    this.publish({ enabledCookieJar: value });
+    this.publishDraft({ enabledCookieJar: value });
   }
 
   updateSourceField(field: RssSourceTextField, value: string): void {
     if (value.length > 8192) {
       return;
     }
-    if (field === 'sourceGroup') this.publish({ sourceGroup: value });
-    else if (field === 'customOrder') this.publish({ customOrder: value });
-    else if (field === 'updateIntervalMinutes') this.publish({ updateIntervalMinutes: value });
-    else if (field === 'header') this.publish({ header: value });
-    else if (field === 'ruleArticles') this.publish({ ruleArticles: value });
-    else if (field === 'ruleNextPage') this.publish({ ruleNextPage: value });
-    else if (field === 'ruleTitle') this.publish({ ruleTitle: value });
-    else if (field === 'rulePubDate') this.publish({ rulePubDate: value });
-    else if (field === 'ruleDescription') this.publish({ ruleDescription: value });
-    else if (field === 'ruleImage') this.publish({ ruleImage: value });
-    else if (field === 'ruleLink') this.publish({ ruleLink: value });
-    else if (field === 'ruleContent') this.publish({ ruleContent: value });
+    if (field === 'sourceGroup') this.publishDraft({ sourceGroup: value });
+    else if (field === 'customOrder') this.publishDraft({ customOrder: value });
+    else if (field === 'updateIntervalMinutes') this.publishDraft({ updateIntervalMinutes: value });
+    else if (field === 'header') this.publishDraft({ header: value });
+    else if (field === 'ruleArticles') this.publishDraft({ ruleArticles: value });
+    else if (field === 'ruleNextPage') this.publishDraft({ ruleNextPage: value });
+    else if (field === 'ruleTitle') this.publishDraft({ ruleTitle: value });
+    else if (field === 'rulePubDate') this.publishDraft({ rulePubDate: value });
+    else if (field === 'ruleDescription') this.publishDraft({ ruleDescription: value });
+    else if (field === 'ruleImage') this.publishDraft({ ruleImage: value });
+    else if (field === 'ruleLink') this.publishDraft({ ruleLink: value });
+    else if (field === 'ruleContent') this.publishDraft({ ruleContent: value });
   }
 
   save(): void {
-    if (this.saving) {
-      return;
-    }
-    const session = this.session;
+    const session = this.session, key = this.activeKey;
+    if (!this.isCurrentSession(session) || !this.snapshot.canSave || this.pending.has(key) || this.receipts.get(key)?.confirmation === 'unknown') return;
     const current = this.copySnapshot(this.snapshot);
     let draft: RssSourceDraft;
-    try {
-      draft = this.sourceDraft(current);
-    } catch (error) {
-      this.publish({ busy: false, statusMessage: `RSS 订阅保存失败：${(error as Error).message}` });
-      return;
-    }
-    this.saving = true;
-    this.publish({ busy: true, statusMessage: '正在由 Core 保存 RSS 订阅…' });
-    const task = current.mode === 'create'
-      ? this.gateway.createSubscription(draft)
-          .then((result): string => result.subscription.subscriptionId)
-      : this.gateway.updateSubscription(
-          current.subscriptionId,
-          draft,
-        ).then((subscription: RssSubscription): string => subscription.subscriptionId);
-    void task.then((subscriptionId: string): void => {
-      this.saving = false;
-      if (this.isCurrentSession(session)) {
-        this.publish({ busy: false, statusMessage: 'RSS 订阅已保存' });
-        this.onSaved(subscriptionId);
+    try { draft = this.sourceDraft(current); }
+    catch (error) { this.publish({ busy: false, statusMessage: `RSS 订阅尚未提交：${(error as Error).message}` }); return; }
+    const revision = this.revisions.get(key) ?? 0;
+    this.pending.add(key);
+    this.publish({ busy: true, canSave: false, statusMessage: '正在由 Core 保存 RSS 订阅…' });
+    void this.serialize(async (): Promise<void> => {
+      if (!this.isCurrentSession(session)) {
+        this.pending.delete(key);
+        this.patchDraft(key, { busy: false, canSave: true, statusMessage: 'RSS 订阅尚未提交，草稿已保留' });
+        return;
       }
+      const evidence = new ReaderWriteEvidence();
+      this.gateway.observeWrites(evidence);
+      let subscriptionId = current.subscriptionId;
+      try {
+        if (current.mode === 'create') subscriptionId = (await this.gateway.createSubscription(draft)).subscription.subscriptionId;
+        else subscriptionId = (await this.gateway.updateSubscription(current.subscriptionId, draft)).subscriptionId;
+      } catch (error) {
+        this.pending.delete(key);
+        const confirmation = evidence.confirmation();
+        this.setReceipt(key, session, confirmation, subscriptionId, revision, 'failed', undefined, (error as Error).message);
+        this.patchDraft(key, { busy: false, canSave: confirmation === 'undispatched' });
+        if (this.isCurrentSession(session)) this.publish({ busy: false, canSave: confirmation === 'undispatched',
+          statusMessage: this.receipts.get(key)?.projection.facts.message ?? '提交结果待核对' });
+        return;
+      } finally { this.gateway.observeWrites(undefined); }
+      this.pending.delete(key);
+      this.setReceipt(key, session, evidence.confirmation(), subscriptionId, revision, 'reading');
+      this.patchDraft(key, { busy: false, canSave: false });
+      if (this.owner !== ReaderRuntimeOwner.current()) return;
+      await this.readEditor(key, session, true);
     }).catch((error: Error): void => {
-      this.saving = false;
-      this.fail(session, 'RSS 订阅保存失败', error);
+      this.pending.delete(key);
+      this.patchDraft(key, { busy: false, canSave: this.receipts.get(key)?.confirmation !== 'unknown' });
+      this.fail(session, 'RSS 操作未执行', error);
     });
+  }
+
+  reconcile(generation: number): void {
+    const session = this.session, key = this.activeKey, receipt = this.receipts.get(key);
+    if (receipt === undefined || receipt.projection.facts.generation !== generation || !receipt.projection.facts.canRetry) return;
+    void this.serialize(async (): Promise<void> => {
+      const latest = this.receipts.get(key);
+      if (!this.isCurrentSession(session) || latest?.projection.facts.generation !== generation || !latest.projection.facts.canRetry) return;
+      await this.readEditor(key, session, true);
+    }).catch((error: Error): void => this.fail(session, 'RSS 核对未执行', error));
+  }
+
+  retryLoad(generation: number): void {
+    const session = this.session, key = this.activeKey;
+    void this.serialize(async (): Promise<void> => {
+      if (!this.isCurrentSession(session) || this.snapshot.readFacts.generation !== generation || !this.snapshot.readFacts.canRetry) return;
+      await this.readEditor(key, session);
+    }).catch((error: Error): void => this.fail(session, 'RSS 读取未执行', error));
+  }
+
+  private async readEditor(key: string, session: number, finishSaved: boolean = false): Promise<void> {
+    if (this.owner !== ReaderRuntimeOwner.current()) return;
+    const draft = this.drafts.get(key);
+    if (draft === undefined) return;
+    const receipt = this.receipts.get(key);
+    const publishCurrent = (patch: RssSubscriptionEditorPatch): void => {
+      this.patchDraft(key, patch);
+      if (this.isCurrentSession(session) && this.activeKey === key) this.publish(patch);
+    };
+    publishCurrent({ busy: true, canSave: false, readFacts: projectOperationFacts<RssSubscription>({ phase: 'loading',
+      value: receipt?.projection.value, generation: ++editorProjectionGeneration }) });
+    if (receipt !== undefined) this.setReceipt(key, session, receipt.confirmation, receipt.subscriptionId, receipt.revision, 'reading', receipt.projection.value);
+    try {
+      const subscriptions = await this.gateway.loadSubscriptions();
+      if (this.owner !== ReaderRuntimeOwner.current()) return;
+      const subscriptionId = receipt?.subscriptionId || draft.subscriptionId;
+      const subscription = subscriptionId.length > 0 ? subscriptions.find((candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId) :
+        subscriptions.find((candidate: RssSubscription): boolean => candidate.feedUrl === draft.feedUrl.trim());
+      if (subscription === undefined && (draft.mode === 'edit' || receipt?.confirmation === 'confirmed')) throw new Error('RSS 订阅已不存在');
+      if (receipt !== undefined) this.setReceipt(key, session, receipt.confirmation, receipt.subscriptionId, receipt.revision, 'succeeded', subscription);
+      const unchangedDraft = receipt !== undefined && (this.revisions.get(key) ?? 0) === receipt.revision;
+      if (receipt === undefined && subscription !== undefined && !this.dirty.get(key)) {
+        publishCurrent(this.fieldsFromSubscription(subscription));
+      }
+      // A confirmed create owns its returned Core identity. If a newer draft
+      // or a later editor entry remains open, subsequent explicit saves update
+      // that identity rather than blindly creating a second subscription.
+      if (receipt?.confirmation === 'confirmed' && subscription !== undefined) publishCurrent({ mode: 'edit', subscriptionId: subscription.subscriptionId });
+      publishCurrent({ busy: false, canSave: receipt?.confirmation !== 'unknown',
+        readFacts: projectOperationFacts<RssSubscription>({ phase: 'succeeded', value: subscription, generation: ++editorProjectionGeneration }),
+        statusMessage: receipt?.confirmation === 'unknown' ? '提交结果待核对；已读取当前数据，原提交回执仍未确认，草稿保留' :
+          receipt?.confirmation === 'confirmed' ? unchangedDraft ? 'RSS 订阅已保存' : '本次提交已保存，当前草稿仍有未保存更改' : '编辑 RSS 订阅' });
+      if (finishSaved && receipt?.confirmation === 'confirmed' && unchangedDraft && this.isCurrentSession(session)) {
+        this.drafts.delete(key); this.dirty.delete(key); this.revisions.delete(key); this.receipts.delete(key);
+        try { this.onSaved(receipt.subscriptionId); } catch (error) { hilog.error(DOMAIN, 'Reader', '%{private}s', (error as Error).message); }
+      }
+    } catch (error) {
+      if (receipt !== undefined) this.setReceipt(key, session, receipt.confirmation, receipt.subscriptionId, receipt.revision, 'failed', receipt.projection.value, (error as Error).message);
+      publishCurrent({ busy: false, canSave: receipt?.confirmation === 'undispatched' || receipt === undefined,
+        readFacts: projectOperationFacts<RssSubscription>({ phase: 'failed', value: receipt?.projection.value, canRetry: true,
+          generation: ++editorProjectionGeneration, message: (error as Error).message }),
+        statusMessage: receipt === undefined ? `RSS 订阅读取失败：${(error as Error).message}` :
+          this.receipts.get(key)?.projection.facts.message ?? '提交结果待核对' });
+    }
+  }
+
+  private setReceipt(key: string, session: number, confirmation: CommitConfirmationKind, subscriptionId: string, revision: number,
+    readback: 'reading' | 'failed' | 'succeeded', value?: RssSubscription, refreshError?: string): void {
+    const projection = projectPersistedReceipt<RssSubscription>({ confirmation, readback, value, refreshError,
+      stale: readback === 'failed', canRetry: confirmation !== 'undispatched' && readback !== 'reading' &&
+        (readback === 'failed' || confirmation === 'unknown'), generation: ++editorProjectionGeneration });
+    this.receipts.set(key, { confirmation, subscriptionId, revision, projection });
+    this.patchDraft(key, { operation: projection });
+    if (this.isCurrentSession(session) && this.activeKey === key) this.publish({ operation: projection });
+  }
+
+  private fieldsFromSubscription(subscription: RssSubscription): RssSubscriptionEditorPatch {
+    return { feedUrl: subscription.feedUrl, title: subscription.title, enabled: subscription.enabled,
+      sourceGroup: subscription.sourceGroup ?? '', customOrder: subscription.customOrder?.toString() ?? '',
+      updateIntervalMinutes: subscription.updateIntervalMinutes?.toString() ?? '', header: subscription.header ?? '',
+      enabledCookieJar: subscription.enabledCookieJar ?? false, ruleArticles: subscription.ruleArticles ?? '',
+      ruleNextPage: subscription.ruleNextPage ?? '', ruleTitle: subscription.ruleTitle ?? '', rulePubDate: subscription.rulePubDate ?? '',
+      ruleDescription: subscription.ruleDescription ?? '', ruleImage: subscription.ruleImage ?? '', ruleLink: subscription.ruleLink ?? '', ruleContent: subscription.ruleContent ?? '' };
+  }
+
+  private patchDraft(key: string, patch: RssSubscriptionEditorPatch): void {
+    const current = this.drafts.get(key);
+    if (current !== undefined) this.drafts.set(key, { ...current, ...patch });
+  }
+
+  private publishDraft(patch: RssSubscriptionEditorPatch): void {
+    const key = this.activeKey;
+    this.dirty.set(key, true); this.revisions.set(key, (this.revisions.get(key) ?? 0) + 1);
+    this.publish(patch);
   }
 
   private publish(patch: RssSubscriptionEditorPatch): void {
@@ -257,9 +322,14 @@ export class RssSubscriptionEditorOrchestrator {
       ruleContent: patch.ruleContent ?? this.snapshot.ruleContent,
       busy: patch.busy ?? this.snapshot.busy,
       statusMessage: patch.statusMessage ?? this.snapshot.statusMessage,
+      canSave: patch.canSave ?? this.snapshot.canSave,
+      readFacts: patch.readFacts ?? this.snapshot.readFacts,
+      operation: patch.operation ?? this.snapshot.operation,
     };
-    if (this.isCurrent()) {
-      this.emit(this.copySnapshot(this.snapshot));
+    this.drafts.set(this.activeKey, this.copySnapshot(this.snapshot));
+    if (this.owner === ReaderRuntimeOwner.current() && this.isCurrent()) {
+      try { this.emit(this.copySnapshot(this.snapshot)); }
+      catch (error) { hilog.error(DOMAIN, 'Reader', '%{private}s', (error as Error).message); }
     }
   }
 
@@ -292,11 +362,14 @@ export class RssSubscriptionEditorOrchestrator {
       ruleContent: source.ruleContent,
       busy: source.busy,
       statusMessage: source.statusMessage,
+      canSave: source.canSave,
+      readFacts: source.readFacts,
+      operation: source.operation,
     };
   }
 
   private isCurrentSession(session: number): boolean {
-    return this.isCurrent() && session === this.session;
+    return this.owner === ReaderRuntimeOwner.current() && this.isCurrent() && session === this.session;
   }
 
   private sourceDraft(snapshot: RssSubscriptionEditorSnapshot): RssSourceDraft {
@@ -359,4 +432,7 @@ interface RssSubscriptionEditorPatch {
   ruleContent?: string;
   busy?: boolean;
   statusMessage?: string;
+  canSave?: boolean;
+  readFacts?: OperationFacts<RssSubscription>;
+  operation?: PersistedReceiptProjection<RssSubscription>;
 }

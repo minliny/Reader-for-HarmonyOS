@@ -415,6 +415,8 @@
     "test-rss-page-architecture.mjs",
     "test-rss-persisted-refresh-projection.mjs",
     "test-rss-management-owner-closure.mjs",
+    "test-rss-route-operation-recovery.mjs",
+    "test-rss-editor-operation-recovery.mjs",
     "test-search-candidate-acquisition.mjs",
     "test-search-cover-continuity.mjs",
     "test-search-history-layout-lifecycle.mjs",

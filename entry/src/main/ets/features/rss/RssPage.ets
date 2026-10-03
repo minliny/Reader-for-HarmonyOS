@@ -1,3 +1,6 @@
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { readerRecoveryView } from '../../app/ReaderRecoveryProjection';
+import { projectOperationFacts, type OperationFacts } from '../../app/ReaderOperationFacts';
 import { TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_APP_SEGMENT_LABEL, TYPE_APP_SMALL_ACTION, TYPE_RSS_ENTRY_DESCRIPTION, TYPE_RSS_ENTRY_TITLE, TYPE_RSS_ERROR_REASON, TYPE_RSS_HOME_TITLE, TYPE_RSS_LINK_ACTION, TYPE_RSS_META, TYPE_RSS_REFRESH_STATUS, TYPE_RSS_SECTION_HEADING, TYPE_RSS_SOURCE_TITLE, TYPE_RSS_STATE_ACTION, TYPE_RSS_STATE_BODY, TYPE_RSS_STATE_TITLE, TYPE_RSS_UNREAD_COUNT } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
@@ -109,6 +112,8 @@ export struct RssPage {
   @Prop presentation: RssPresentation;
   @Prop isTablet: boolean;
   @Prop activeMode: RssMode = 'sources';
+  @Prop readFacts: OperationFacts<RssSubscription[]> = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
+  onRetryRead: (facts: OperationFacts<RssSubscription[]>) => void = (_facts: OperationFacts<RssSubscription[]>): void => {};
   onBack: () => void = (): void => {};
   onRefresh: () => void = (): void => {};
   onManage: () => void = (): void => {};
@@ -329,9 +334,18 @@ export struct RssPage {
   }
 
   @Builder
+  private readFeedback() {
+    ReaderRecoveryNotice({ view: readerRecoveryView(undefined, this.readFacts), actionLabel: '重新读取',
+      onReconcile: (generation: number): void => {
+        if (this.readFacts.generation === generation && this.readFacts.canRetry) this.onRetryRead(this.readFacts);
+      } });
+  }
+
+  @Builder
   private feedScroll(subscriptions: RssSubscription[], recentUnread: RssItem[], refreshing: boolean) {
     Scroll() {
       Column({ space: TOK_SPACE_XS }) {
+        this.readFeedback();
         if (refreshing) {
           this.refreshingRow();
         }
@@ -675,6 +689,7 @@ export struct RssPage {
   private emptyUnreadScroll(subscriptions: RssSubscription[]) {
     Scroll() {
       Column({ space: TOK_SPACE_XS }) {
+        this.readFeedback();
         this.subscriptionSection(subscriptions);
         this.emptyUnreadSection();
       }

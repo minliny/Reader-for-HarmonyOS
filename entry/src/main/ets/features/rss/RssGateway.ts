@@ -1,4 +1,4 @@
-import type { JsonObject } from '@reader/core-harmony';
+import { isReaderCoreTransactionPendingError, type JsonObject, type ReaderCoreResultEvent } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 
@@ -153,15 +153,17 @@ export class RssGateway {
 
   /** Create one complete source with Core-owned opaque identity. */
   async createSubscription(draft: RssSourceDraft): Promise<RssSubscriptionSaveResult> {
-    const result = await this.runtimeOwner.request('rss-source.put', {
+    const evidence = this.writeEvidence;
+    const result = await this.mutationRequest('rss-source.put', {
       source: this.encodeSource(draft),
-    });
+    }, evidence);
     const created = this.requiredBoolean(result.data, 'created');
     const sourceData = this.requiredObject(result.data, 'source');
     const subscription = this.decodeSubscription(
       this.requiredObject(sourceData, 'subscription'),
       this.requiredObject(sourceData, 'source'),
     );
+    evidence?.confirmed();
     return { created, subscription };
   }
 
@@ -171,10 +173,11 @@ export class RssGateway {
     draft: RssSourceDraft,
   ): Promise<RssSubscription> {
     this.requireSubscriptionId(subscriptionId);
-    const result = await this.runtimeOwner.request('rss-source.put', {
+    const evidence = this.writeEvidence;
+    const result = await this.mutationRequest('rss-source.put', {
       subscriptionId,
       source: this.encodeSource(draft),
-    });
+    }, evidence);
     const sourceData = this.requiredObject(result.data, 'source');
     const subscription = this.decodeSubscription(
       this.requiredObject(sourceData, 'subscription'),
@@ -183,6 +186,7 @@ export class RssGateway {
     if (subscription.subscriptionId !== subscriptionId || subscription.enabled !== draft.enabled) {
       throw new Error('rss-source.put returned a mismatched subscription');
     }
+    evidence?.confirmed();
     return subscription;
   }
 
@@ -207,17 +211,17 @@ export class RssGateway {
     onWriteDispatched: () => void = (): void => {},
   ): Promise<RssSourceImportResult> {
     onWriteDispatched();
-    this.writeEvidence?.dispatched();
-    const result = await this.runtimeOwner.request('rss-source.import', {
+    const evidence = this.writeEvidence;
+    const result = await this.mutationRequest('rss-source.import', {
       json,
       replaceExisting,
-    });
+    }, evidence);
     const imported = this.nonNegativeInteger(result.data, 'imported');
     const echoedReplace = this.requiredBoolean(result.data, 'replaceExisting');
     if (echoedReplace !== replaceExisting) {
       throw new Error('rss-source.import returned a mismatched replaceExisting');
     }
-    this.writeEvidence?.confirmed();
+    evidence?.confirmed();
     return { imported, replaceExisting: echoedReplace };
   }
 
@@ -284,11 +288,12 @@ export class RssGateway {
     read: boolean,
   ): Promise<RssEntryReadResult> {
     this.requireEntryIdentity(subscriptionId, guid);
-    const result = await this.runtimeOwner.request('rss.entry.read', {
+    const evidence = this.writeEvidence;
+    const result = await this.mutationRequest('rss.entry.read', {
       subscriptionId,
       guid,
       read,
-    });
+    }, evidence);
     if (!this.requiredBoolean(result.data, 'marked')) {
       throw new Error('rss.entry.read did not confirm the mutation');
     }
@@ -298,12 +303,14 @@ export class RssGateway {
     if (echoedSubscriptionId !== subscriptionId || echoedGuid !== guid || echoedRead !== read) {
       throw new Error('rss.entry.read returned a mismatched scoped identity');
     }
-    return {
+    const receipt: RssEntryReadResult = {
       subscriptionId: echoedSubscriptionId,
       guid: echoedGuid,
       read: echoedRead,
       unreadCount: this.nonNegativeInteger(result.data, 'unreadCount'),
     };
+    evidence?.confirmed();
+    return receipt;
   }
 
   /** Read favorite membership from Core truth; no local membership cache. */
@@ -348,11 +355,12 @@ export class RssGateway {
     if (!Number.isSafeInteger(addedAt) || addedAt < 0) {
       throw new Error('rss.favorite.persist requires a non-negative addedAt');
     }
-    const result = await this.runtimeOwner.request('rss.favorite.persist', {
+    const evidence = this.writeEvidence;
+    const result = await this.mutationRequest('rss.favorite.persist', {
       subscriptionId,
       guid,
       addedAt,
-    });
+    }, evidence);
     const created = this.requiredBoolean(result.data, 'created');
     const favorite = this.decodeFavorite(this.requiredObject(result.data, 'favorite'));
     if (favorite.subscriptionId !== subscriptionId || favorite.guid !== guid) {
@@ -361,22 +369,25 @@ export class RssGateway {
     if (created && favorite.addedAt !== addedAt) {
       throw new Error('rss.favorite.persist returned a mismatched creation time');
     }
+    evidence?.confirmed();
     return favorite;
   }
 
   /** Remove a favorite through Core's idempotent scoped identity path. */
   async removeFavorite(subscriptionId: string, guid: string): Promise<boolean> {
     this.requireEntryIdentity(subscriptionId, guid);
-    const result = await this.runtimeOwner.request('rss.favorite.remove', {
+    const evidence = this.writeEvidence;
+    const result = await this.mutationRequest('rss.favorite.remove', {
       subscriptionId,
       guid,
-    });
+    }, evidence);
     const echoedSubscriptionId = this.requiredNonEmptyString(result.data, 'subscriptionId');
     const echoedGuid = this.requiredNonEmptyString(result.data, 'guid');
     const removed = this.requiredBoolean(result.data, 'removed');
     if (echoedSubscriptionId !== subscriptionId || echoedGuid !== guid) {
       throw new Error('rss.favorite.remove returned a mismatched scoped identity');
     }
+    evidence?.confirmed();
     return removed;
   }
 
@@ -386,13 +397,14 @@ export class RssGateway {
     enabled: boolean,
   ): Promise<RssSubscription> {
     this.requireSubscriptionId(subscriptionId);
-    const result = await this.runtimeOwner.request('rss.subscription.persist', {
+    const evidence = this.writeEvidence;
+    const result = await this.mutationRequest('rss.subscription.persist', {
       operation: 'update',
       params: {
         subscriptionId,
         enabled,
       },
-    });
+    }, evidence);
     if (this.requiredString(result.data, 'operation') !== 'update') {
       throw new Error('rss.subscription.persist returned the wrong operation');
     }
@@ -401,20 +413,23 @@ export class RssGateway {
     if (subscription.subscriptionId !== subscriptionId || subscription.enabled !== enabled) {
       throw new Error('rss.subscription.persist returned a mismatched updated subscription');
     }
+    evidence?.confirmed();
     return subscription;
   }
 
   /** Remove one subscription through Core's idempotent canonical delete path. */
   async removeSubscription(subscriptionId: string): Promise<boolean> {
     this.requireSubscriptionId(subscriptionId);
-    const result = await this.runtimeOwner.request('rss.subscription.remove', {
+    const evidence = this.writeEvidence;
+    const result = await this.mutationRequest('rss.subscription.remove', {
       subscriptionId,
-    });
+    }, evidence);
     const echoedId = this.requiredString(result.data, 'subscriptionId');
     const deleted = this.requiredBoolean(result.data, 'deleted');
     if (echoedId !== subscriptionId) {
       throw new Error('rss.subscription.remove returned a mismatched subscriptionId');
     }
+    evidence?.confirmed();
     return deleted;
   }
 
@@ -424,10 +439,11 @@ export class RssGateway {
    */
   async refreshSubscription(subscriptionId: string): Promise<RssRefreshResult> {
     this.requireSubscriptionId(subscriptionId);
-    const result = await this.runtimeOwner.request('rss.feed.refresh', {
+    const evidence = this.writeEvidence;
+    const result = await this.mutationRequest('rss.feed.refresh', {
       subscriptionId,
       evaluatedAt: 0,
-    });
+    }, evidence);
     const subscription = this.decodeSubscription(
       this.requiredObject(result.data, 'subscription'),
     );
@@ -466,7 +482,7 @@ export class RssGateway {
       (!fetched && (notModified || newCount !== 0))) {
       throw new Error('rss.feed.refresh returned inconsistent fetch flags');
     }
-    return {
+    const receipt: RssRefreshResult = {
       subscription,
       items,
       count,
@@ -476,6 +492,21 @@ export class RssGateway {
       notModified,
       evaluatedAt: this.requiredInteger(result.data, 'evaluatedAt'),
     };
+    evidence?.confirmed();
+    return receipt;
+  }
+
+  private async mutationRequest(method: string, params: JsonObject,
+    evidence: ReaderWriteEvidence | undefined): Promise<ReaderCoreResultEvent> {
+    // Arguments (including source/identity validation) were evaluated before
+    // this boundary. Only this runtime request is a dispatched mutation.
+    evidence?.dispatched();
+    try {
+      return await this.runtimeOwner.request(method, params);
+    } catch (error) {
+      if (isReaderCoreTransactionPendingError(error)) evidence?.rejectedBeforeExecution();
+      throw error;
+    }
   }
 
   private decodeSubscription(value: unknown, source?: JsonObject): RssSubscription {

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { RssWriteEvidence as ReaderWriteEvidence, RealRssRouteHost as RssRouteOperationHost, pendingRssError } from './lib/rss-operation-fixture.mjs';
+import { isReaderCoreTransactionPendingError } from '../entry/vendor/core-harmony/sdk/reader_core.ts';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 const source = name => readFileSync(new URL(`../entry/src/main/ets/${name}`, import.meta.url), 'utf8');
 // Execute complete production owners and protocol decoders, replacing platform imports only.
@@ -9,9 +11,9 @@ const facts = new Function(ordinary(source('app/ReaderOperationFacts.ts')) + ';r
 const projectPersistedReceipt = new Function(...Object.keys(facts), ordinary(source('app/ReaderPersistedReceiptProjection.ts')) + ';return projectPersistedReceipt;')(...Object.values(facts));
 let currentOwner;
 const ReaderRuntimeOwner = { current: () => currentOwner };
-const RssGateway = new Function('ReaderRuntimeOwner', ordinary(source('features/rss/RssGateway.ts')) + ';return RssGateway;')(ReaderRuntimeOwner);
-const RssOrchestrator = new Function('RssGateway','ReaderRuntimeOwner','hilog','isReaderCoreTransactionPendingError','projectPersistedReceipt','projectOperationFacts',
-  ordinary(source('features/rss/RssOrchestrator.ets')) + ';return RssOrchestrator;')(RssGateway,ReaderRuntimeOwner,{warn(){},error(){}},error=>error.code==='TRANSACTION_PENDING',projectPersistedReceipt,facts.projectOperationFacts);
+const RssGateway = new Function('ReaderRuntimeOwner','isReaderCoreTransactionPendingError', ordinary(source('features/rss/RssGateway.ts')) + ';return RssGateway;')(ReaderRuntimeOwner,isReaderCoreTransactionPendingError);
+const RssOrchestrator = new Function('RssGateway','ReaderRuntimeOwner','ReaderWriteEvidence','RssRouteOperationHost','hilog','isReaderCoreTransactionPendingError','projectPersistedReceipt','projectOperationFacts',
+  ordinary(source('features/rss/RssOrchestrator.ets')) + ';return RssOrchestrator;')(RssGateway,ReaderRuntimeOwner,ReaderWriteEvidence,RssRouteOperationHost,{warn(){},error(){}},isReaderCoreTransactionPendingError,projectPersistedReceipt,facts.projectOperationFacts);
 const require = createRequire(import.meta.url);
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
@@ -123,6 +125,9 @@ for(const action of ['toggle','import']){
   retryNode(f.page()).onClick();await settle(f.orchestrator);
   assert.equal(f.index.rssManagementOperation.projection.receipt.fact,'pendingReconciliation','matching state is not a lost ACK');
   assert.equal(f.runtime.count(action==='toggle'?'rss.subscription.persist':'rss-source.import'),1);
+  f.orchestrator.toggleSubscription('b',false);f.orchestrator.importSources(true,()=>assert.fail('unknown cannot be replaced'),()=>assert.fail());await settle(f.orchestrator);
+  assert.equal(f.runtime.count('rss.subscription.persist'),action==='toggle'?1:0);assert.equal(f.runtime.count('rss-source.import'),action==='import'?1:0);
+  assert.equal(f.index.rssManagementOperation.projection.receipt.confirmation,'unknown','subsequent intent cannot overwrite unresolved receipt');
 }
 {
   const f=fixture();f.orchestrator.open();await settle(f.orchestrator);
@@ -131,7 +136,7 @@ for(const action of ['toggle','import']){
   assert.deepEqual(failures,['picker denied']);assert.equal(f.index.rssManagementOperation,undefined);assert.equal(f.runtime.count('rss-source.import'),0);
 }
 {
-  const f=fixture();f.runtime.readFailures.push(Object.assign(new Error('gate'),{code:'TRANSACTION_PENDING'}));
+  const f=fixture();f.runtime.readFailures.push(pendingRssError());
   f.orchestrator.open();await settle(f.orchestrator);
   assert.equal(f.index.rssManagementRead.fact,'current');assert.equal(f.runtime.count('runtime.status'),1);assert.equal(f.runtime.count('rss-source.list'),2,'typed read gate waits and retries a read only');
 }
@@ -176,7 +181,7 @@ for(const action of ['toggle','import']){
   f.runtime.beforeRequest=async method=>{if(method==='rss.subscription.persist'){waiting=true;await pause.promise;}};
   f.orchestrator.toggleSubscription('a',false);while(!waiting)await new Promise(r=>setImmediate(r));
   f.orchestrator.refreshSubscription('b');f.orchestrator.open();pause.resolve();await settle(f.orchestrator);
-  assert.deepEqual(f.runtime.calls.map(c=>c[0]),['rss-source.list','rss.subscription.persist','rss-source.list','rss.feed.refresh','rss-source.list','rss-source.list'],'all intents and re-entry use one chain');
-  assert.equal(f.index.rssManagementOperation.subscriptionId,'b');assert.equal(f.refresh().items[0].enabled,false);
+  assert.deepEqual(f.runtime.calls.map(c=>c[0]),['rss-source.list','rss.subscription.persist','rss-source.list','rss-source.list'],'unsent retired-session intent is dropped; accepted write and re-entry share one chain');
+  assert.equal(f.index.rssManagementOperation.subscriptionId,'a');assert.equal(f.refresh().items[0].enabled,false);
 }
 console.log('RSS actual Gateway -> Index -> SDK Props/feedback: PASS (write/read/unknown/retry/close/re-entry/owner/concurrency).');

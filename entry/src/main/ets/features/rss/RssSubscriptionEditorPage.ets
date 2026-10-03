@@ -1,3 +1,4 @@
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { TYPE_FORM_HINT, TYPE_FORM_INPUT, TYPE_FORM_LABEL_ACTION, TYPE_FORM_NOTE, TYPE_FORM_SECTION_HEADING, TYPE_FORM_STATUS } from '../common/ReaderTypography';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -49,6 +50,8 @@ export struct RssSubscriptionEditorPage {
   onSourceFieldChanged: (field: RssSourceTextField, value: string) => void =
     (_field: RssSourceTextField, _value: string): void => {};
   onSave: () => void = (): void => {};
+  onReconcile: (generation: number) => void = (_generation: number): void => {};
+  onRetryRead: (generation: number) => void = (_generation: number): void => {};
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -68,6 +71,7 @@ export struct RssSubscriptionEditorPage {
             .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
             .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
             .borderRadius(8);
+          this.operationRecovery();
           Column({ space: TOK_SPACE_MD }) {
             this.editorField('订阅名称', this.snapshot.title, '留空时由 Core 回退为 Feed URL',
               (value: string): void => this.onTitleChanged(value));
@@ -143,22 +147,7 @@ export struct RssSubscriptionEditorPage {
               (value: string): void => this.onSourceFieldChanged('ruleContent', value));
             this.editorField('下一页规则', this.snapshot.ruleNextPage, '.next@href',
               (value: string): void => this.onSourceFieldChanged('ruleNextPage', value));
-            Text('保存')
-              .width('100%')
-              .height(44)
-              .textAlign(TextAlign.Center)
-              .fontFamily(TYPE_FORM_LABEL_ACTION.fontFamily)
-              .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)
-              .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)
-              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-              .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
-              .borderRadius(8)
-              .opacity(this.snapshot.busy ? 0.62 : 1)
-              .onClick((): void => {
-                if (!this.snapshot.busy) {
-                  this.onSave();
-                }
-              });
+            this.saveAction();
           }
           .width('100%')
           .padding(TOK_SPACE_MD)
@@ -194,6 +183,36 @@ export struct RssSubscriptionEditorPage {
     .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
   }
 
+
+  @Builder
+  private operationRecovery() {
+    if (this.snapshot.operation?.facts.canRetry) {
+      ReaderRecoveryAction({ label: '重新读取', generation: this.snapshot.operation.facts.generation,
+        onReconcile: this.onReconcile });
+    } else if (this.snapshot.readFacts.canRetry) {
+      ReaderRecoveryAction({ label: '重新读取', generation: this.snapshot.readFacts.generation,
+        onReconcile: this.onRetryRead });
+    }
+  }
+
+  @Builder
+  private saveAction() {
+    Text('保存')
+      .width('100%')
+      .height(44)
+      .textAlign(TextAlign.Center)
+      .fontFamily(TYPE_FORM_LABEL_ACTION.fontFamily)
+      .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)
+      .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)
+      .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
+      .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+      .borderRadius(8)
+      .opacity(this.snapshot.busy || !this.snapshot.canSave ? 0.62 : 1)
+      .enabled(this.snapshot.canSave && !this.snapshot.busy)
+      .onClick((): void => {
+        if (!this.snapshot.busy && this.snapshot.canSave) this.onSave();
+      });
+  }
 
   private bottomContentInset(): number {
     if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_MD;

@@ -1,3 +1,5 @@
+import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
+import { RssRouteOperationHost, type RssRouteOperationProjection, type RssRouteBinding } from './RssRouteOperationHost';
 import {
   RssGateway,
   type RssItem,
@@ -81,6 +83,9 @@ type RssRouteGuard = () => boolean;
 export class RssOrchestrator {
   private readonly owner: ReaderRuntimeOwner;
   private readonly gateway: RssGateway;
+  private readonly routeOperations: RssRouteOperationHost;
+  private feedRead: OperationFacts<RssSubscription[]> = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
+  private feedValue: RssSubscription[] | undefined = undefined;
   private readonly emit: (subscriptions: RssSubscription[]) => void;
   private readonly isCurrent: () => boolean;
   private readonly emitOperation: RssOperationProjectionEmitter;
@@ -104,6 +109,17 @@ export class RssOrchestrator {
   ) {
     this.owner = owner;
     this.gateway = new RssGateway(owner);
+    this.routeOperations = new RssRouteOperationHost({ gateway: this.gateway,
+      ownsRuntime: (): boolean => this.owner === ReaderRuntimeOwner.current(),
+      enqueue: (work: () => Promise<void>): void => {
+        void this.runSerialized(work).catch((error: Error): void => hilog.error(DOMAIN, 'Reader', '%{private}s', error.message));
+      },
+      mutate: (work: () => Promise<void>, admitted: () => boolean): Promise<void> => this.runMutationWithRetry(work, admitted),
+      readSource: (id: string): Promise<RssSourceSnapshot> => this.loadSourceSnapshotWithRetry(id),
+      readEntry: (id: string, guid: string): Promise<RssEntrySnapshot> => this.loadEntrySnapshotWithRetry(id, guid),
+      readMembership: (id: string, guid: string): Promise<boolean> => this.loadFavoriteMembershipWithRetry(id, guid),
+      deliveryFailed: (error: Error): void => hilog.error(DOMAIN, 'Reader', '%{private}s', error.message),
+    });
     this.emit = emit;
     this.isCurrent = isCurrent;
     this.emitOperation = emitOperation;
@@ -198,6 +214,7 @@ export class RssOrchestrator {
       'source-import',
       replaceExisting ? 'replace' : 'merge',
       async (): Promise<void> => {
+        if (await this.reconcileUnknownManagementWrite(session)) return;
         let dispatched = false;
         let result: RssSourceImportResult | undefined;
         try {
@@ -245,113 +262,78 @@ export class RssOrchestrator {
     );
   }
 
-  /** Read one SourceFeed snapshot on the same chain as all RSS mutations. */
-  loadSourceFeed(
-    subscriptionId: string,
-    emit: RssSourceSnapshotEmitter,
-    onFailure: RssOperationFailure,
-    isCurrent: RssRouteGuard,
-  ): void {
-    this.enqueueRouteTask(
-      'source-load',
-      subscriptionId,
-      async (): Promise<void> => {
-        const snapshot = await this.loadSourceSnapshotWithRetry(subscriptionId);
-        if (isCurrent()) {
-          emit(snapshot);
-        }
-      },
-      onFailure,
-      isCurrent,
-    );
+  /** Main feed is a subscription projection only; global query remains unadmitted. */
+  loadFeed(emit: (value: RssSubscription[]) => void, emitRead: (facts: OperationFacts<RssSubscription[]>) => void,
+    isCurrent: RssRouteGuard, expectedGeneration?: number): void {
+    void this.runSerialized(async (): Promise<void> => {
+      if (this.owner !== ReaderRuntimeOwner.current() || !isCurrent() ||
+        (expectedGeneration !== undefined && (this.feedRead.generation !== expectedGeneration || !this.feedRead.canRetry))) return;
+      this.feedRead = projectOperationFacts<RssSubscription[]>({ phase: 'loading', value: this.feedValue, generation: ++rssProjectionGeneration });
+      this.deliverRoute(isCurrent, (): void => emitRead(this.feedRead));
+      try {
+        const subscriptions = await this.loadSubscriptionsWithRetry();
+        if (this.owner !== ReaderRuntimeOwner.current()) return;
+        this.feedValue = subscriptions;
+        this.feedRead = projectOperationFacts<RssSubscription[]>({ phase: 'succeeded', value: subscriptions, generation: ++rssProjectionGeneration });
+        this.deliverRoute(isCurrent, (): void => emitRead(this.feedRead));
+        this.deliverRoute(isCurrent, (): void => emit(subscriptions));
+      } catch (error) {
+        this.feedRead = projectOperationFacts<RssSubscription[]>({ phase: 'failed', value: this.feedValue,
+          message: (error as Error).message, canRetry: true, generation: ++rssProjectionGeneration });
+        this.deliverRoute(isCurrent, (): void => emitRead(this.feedRead));
+      }
+    }).catch((error: Error): void => hilog.error(DOMAIN, 'Reader', '%{private}s', error.message));
   }
 
-  /** Refresh one feed, then publish only a fresh list + cached-item snapshot. */
-  refreshSourceFeed(
-    subscriptionId: string,
-    emit: RssSourceSnapshotEmitter,
-    onFailure: RssOperationFailure,
-    isCurrent: RssRouteGuard,
-  ): void {
-    this.enqueueRouteTask(
-      'source-refresh',
-      subscriptionId,
-      async (): Promise<void> => {
-        await this.runMutationWithRetry(async (): Promise<void> => {
-          await this.gateway.refreshSubscription(subscriptionId);
-        });
-        const snapshot = await this.loadSourceSnapshotWithRetry(subscriptionId);
-        if (isCurrent()) {
-          emit(snapshot);
-        }
-      },
-      onFailure,
-      isCurrent,
-    );
+  /** Also used by the editor: every RSS write/read shares this actual lane. */
+  runSerialized(work: () => Promise<void>): Promise<void> {
+    const result = this.mutationChain.then(async (): Promise<void> => {
+      if (this.owner !== ReaderRuntimeOwner.current()) throw new Error('RSS runtime owner retired');
+      await work();
+    });
+    this.mutationChain = result.catch((error: Error): void => hilog.error(DOMAIN, 'Reader', '%{private}s', error.message));
+    return result;
   }
 
-  /** Opening an entry performs the real scoped read mutation before reload. */
-  openEntry(
-    subscriptionId: string,
-    guid: string,
-    emit: RssEntrySnapshotEmitter,
-    onFailure: RssOperationFailure,
-    isCurrent: RssRouteGuard,
-  ): void {
-    this.enqueueRouteTask(
-      'entry-read',
-      `${subscriptionId}:${guid}`,
-      async (): Promise<void> => {
-        await this.runMutationWithRetry(async (): Promise<void> => {
-          await this.gateway.setEntryRead(subscriptionId, guid, true);
-        });
-        const snapshot = await this.loadEntrySnapshotWithRetry(subscriptionId, guid);
-        if (isCurrent()) {
-          emit(snapshot);
-        }
-      },
-      onFailure,
-      isCurrent,
-    );
+  loadSourceFeed(subscriptionId: string, emit: RssSourceSnapshotEmitter, onFailure: RssOperationFailure,
+    isCurrent: RssRouteGuard, emitOperation?: (operation: RssRouteOperationProjection<RssSourceSnapshot>) => void,
+    emitRead?: (facts: OperationFacts<RssSourceSnapshot>) => void): void {
+    this.routeOperations.loadSource(subscriptionId, { emit, failed: onFailure, current: isCurrent, emitOperation, emitRead });
   }
 
-  /**
-   * Re-read favorite membership inside the serial chain, mutate only when the
-   * requested truth differs, then reload authoritative entry state.
-   */
-  setEntryFavorite(
-    subscriptionId: string,
-    guid: string,
-    favorite: boolean,
-    emit: RssEntrySnapshotEmitter,
-    onFailure: RssOperationFailure,
-    isCurrent: RssRouteGuard,
-  ): void {
-    this.enqueueRouteTask(
-      'entry-favorite',
-      `${subscriptionId}:${guid}`,
-      async (): Promise<void> => {
-        const current = await this.loadFavoriteMembershipWithRetry(subscriptionId, guid);
-        if (current !== favorite) {
-          if (favorite) {
-            const addedAt = Date.now();
-            await this.runMutationWithRetry(async (): Promise<void> => {
-              await this.gateway.persistFavorite(subscriptionId, guid, addedAt);
-            });
-          } else {
-            await this.runMutationWithRetry(async (): Promise<void> => {
-              await this.gateway.removeFavorite(subscriptionId, guid);
-            });
-          }
-        }
-        const snapshot = await this.loadEntrySnapshotWithRetry(subscriptionId, guid);
-        if (isCurrent()) {
-          emit(snapshot);
-        }
-      },
-      onFailure,
-      isCurrent,
-    );
+  refreshSourceFeed(subscriptionId: string, emit: RssSourceSnapshotEmitter, onFailure: RssOperationFailure,
+    isCurrent: RssRouteGuard, emitOperation?: (operation: RssRouteOperationProjection<RssSourceSnapshot>) => void,
+    emitRead?: (facts: OperationFacts<RssSourceSnapshot>) => void): void {
+    this.routeOperations.refreshSource(subscriptionId, { emit, failed: onFailure, current: isCurrent, emitOperation, emitRead });
+  }
+
+  openEntry(subscriptionId: string, guid: string, emit: RssEntrySnapshotEmitter, onFailure: RssOperationFailure,
+    isCurrent: RssRouteGuard, emitOperation?: (operation: RssRouteOperationProjection<RssEntrySnapshot>) => void,
+    emitRead?: (facts: OperationFacts<RssEntrySnapshot>) => void): void {
+    this.routeOperations.openEntry(subscriptionId, guid, { emit, failed: onFailure, current: isCurrent, emitOperation, emitRead });
+  }
+
+  setEntryFavorite(subscriptionId: string, guid: string, favorite: boolean, emit: RssEntrySnapshotEmitter,
+    onFailure: RssOperationFailure, isCurrent: RssRouteGuard,
+    emitOperation?: (operation: RssRouteOperationProjection<RssEntrySnapshot>) => void,
+    emitRead?: (facts: OperationFacts<RssEntrySnapshot>) => void): void {
+    this.routeOperations.setFavorite(subscriptionId, guid, favorite, { emit, failed: onFailure, current: isCurrent, emitOperation, emitRead });
+  }
+
+  reconcileSourceOperation(expected: RssRouteOperationProjection<RssSourceSnapshot>, binding: RssRouteBinding<RssSourceSnapshot>): void {
+    this.routeOperations.reconcileSource(expected, binding);
+  }
+
+  reconcileEntryOperation(expected: RssRouteOperationProjection<RssEntrySnapshot>, binding: RssRouteBinding<RssEntrySnapshot>): void {
+    this.routeOperations.reconcileEntry(expected, binding);
+  }
+
+  retrySourceRead(id: string, expected: OperationFacts<RssSourceSnapshot>, binding: RssRouteBinding<RssSourceSnapshot>): void {
+    this.routeOperations.retrySourceRead(id, expected, binding);
+  }
+
+  retryEntryRead(id: string, guid: string, expected: OperationFacts<RssEntrySnapshot>, binding: RssRouteBinding<RssEntrySnapshot>): void {
+    this.routeOperations.retryEntryRead(id, guid, expected, binding);
   }
 
   private enqueueMutation(
@@ -387,7 +369,7 @@ export class RssOrchestrator {
   ): void {
     this.mutationChain = this.mutationChain
       .then(async (): Promise<void> => {
-        if (this.owner !== ReaderRuntimeOwner.current()) return;
+        if (this.owner !== ReaderRuntimeOwner.current() || !isCurrent()) return;
         await task();
       })
       .catch((error: Error): void => {
@@ -406,10 +388,29 @@ export class RssOrchestrator {
     mutation: RssMutation,
     session: number,
   ): Promise<void> {
-    if (this.owner !== ReaderRuntimeOwner.current()) return;
-    this.publishOperation(action, subscriptionId, session, 'reading', undefined, undefined, 'unknown');
-    await this.runMutationWithRetry(mutation);
-    await this.readBack(action, subscriptionId, session, 'confirmed');
+    if (!this.isCurrentSession(session) || await this.reconcileUnknownManagementWrite(session)) return;
+    const evidence = new ReaderWriteEvidence();
+    this.gateway.observeWrites(evidence);
+    this.publishOperation(action, subscriptionId, session, 'reading', undefined, undefined, 'undispatched');
+    try {
+      await this.runMutationWithRetry(mutation, (): boolean => this.isCurrentSession(session));
+    } catch (error) {
+      this.publishOperation(action, subscriptionId, session, 'failed', (error as Error).message, undefined, evidence.confirmation());
+      return;
+    } finally { this.gateway.observeWrites(undefined); }
+    await this.readBack(action, subscriptionId, session, evidence.confirmation());
+  }
+
+  private deliverRoute(isCurrent: RssRouteGuard, delivery: () => void): void {
+    if (this.owner !== ReaderRuntimeOwner.current() || !isCurrent()) return;
+    try { delivery(); } catch (error) { hilog.error(DOMAIN, 'Reader', '%{private}s', (error as Error).message); }
+  }
+
+  private async reconcileUnknownManagementWrite(session: number): Promise<boolean> {
+    const operation = this.latestOperation;
+    if (operation?.projection.receipt.confirmation !== 'unknown') return false;
+    await this.readBack(operation.action, operation.subscriptionId, session, 'unknown');
+    return true;
   }
 
   private async readBack(
@@ -440,7 +441,7 @@ export class RssOrchestrator {
     // each successful step also ensures a later failed intent cannot conceal
     // an earlier persisted change.
     if (this.isCurrentSession(session)) {
-      this.emit(subscriptions);
+      this.deliverRoute((): boolean => this.isCurrentSession(session), (): void => this.emit(subscriptions));
     }
   }
 
@@ -471,7 +472,7 @@ export class RssOrchestrator {
     }
     this.publishRead(session, 'succeeded');
     if (this.isCurrentSession(session)) {
-      this.emit(subscriptions);
+      this.deliverRoute((): boolean => this.isCurrentSession(session), (): void => this.emit(subscriptions));
     }
   }
 
@@ -497,7 +498,7 @@ export class RssOrchestrator {
     const operation: RssManagementOperationProjection = { action, subscriptionId, projection };
     this.latestOperation = operation;
     if (this.isCurrentSession(session)) {
-      this.emitOperation(operation);
+      this.deliverRoute((): boolean => this.isCurrentSession(session), (): void => this.emitOperation(operation));
     }
   }
 
@@ -509,10 +510,11 @@ export class RssOrchestrator {
       generation: ++rssProjectionGeneration,
       message,
     });
-    if (this.isCurrentSession(session)) this.emitRead(this.latestRead);
+    this.deliverRoute((): boolean => this.isCurrentSession(session), (): void => this.emitRead(this.latestRead));
   }
 
-  private async runMutationWithRetry(mutation: RssMutation): Promise<void> {
+  private async runMutationWithRetry(mutation: RssMutation, admitted: () => boolean = (): boolean => this.owner === ReaderRuntimeOwner.current()): Promise<void> {
+    if (!admitted()) throw new Error('RSS operation superseded before dispatch');
     try {
       await mutation();
       return;
@@ -522,7 +524,7 @@ export class RssOrchestrator {
         throw err;
       }
       await this.waitForCoreIdle(5000);
-      if (this.owner !== ReaderRuntimeOwner.current()) throw new Error('RSS runtime owner retired');
+      if (this.owner !== ReaderRuntimeOwner.current() || !admitted()) throw new Error('RSS operation superseded before dispatch');
       await mutation();
     }
   }

@@ -1,3 +1,8 @@
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { readerRecoveryView } from '../../app/ReaderRecoveryProjection';
+import { projectOperationFacts, type OperationFacts } from '../../app/ReaderOperationFacts';
+import type { RssSourceSnapshot } from './RssOrchestrator';
+import type { RssRouteOperationProjection } from './RssRouteOperationHost';
 import { TYPE_APP_SMALL_ACTION, TYPE_RSS_ENTRY_DESCRIPTION, TYPE_RSS_ENTRY_TITLE, TYPE_RSS_LINK_ACTION, TYPE_RSS_META, TYPE_RSS_SECTION_HEADING, TYPE_RSS_SOURCE_TITLE } from '../common/ReaderTypography';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -49,6 +54,10 @@ export struct RssSourceFeedPage {
   @Prop subscription: RssSubscription;
   @Prop items: RssItem[];
   @Prop isTablet: boolean;
+  @Prop operation: RssRouteOperationProjection<RssSourceSnapshot> | undefined = undefined;
+  @Prop readFacts: OperationFacts<RssSourceSnapshot> = projectOperationFacts<RssSourceSnapshot>({ phase: 'idle' });
+  onReconcile: (operation: RssRouteOperationProjection<RssSourceSnapshot>) => void = (_operation: RssRouteOperationProjection<RssSourceSnapshot>): void => {};
+  onRetryRead: (facts: OperationFacts<RssSourceSnapshot>) => void = (_facts: OperationFacts<RssSourceSnapshot>): void => {};
   onBack: () => void = (): void => {};
   onSelectItem: (item: RssItem) => void = (_item: RssItem): void => {};
   onRefresh: () => void = (): void => {};
@@ -65,6 +74,7 @@ export struct RssSourceFeedPage {
 
       Scroll() {
         Column({ space: TOK_SPACE_XS }) {
+          this.operationFeedback();
           this.sourceCard();
           this.sourceActions();
           this.entrySectionHeader();
@@ -101,6 +111,21 @@ export struct RssSourceFeedPage {
     if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_LG;
     return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), TOK_SPACE_LG);
   }
+  @Builder
+  private operationFeedback() {
+    ReaderRecoveryNotice({ view: readerRecoveryView(this.operation?.projection, this.readFacts),
+      actionLabel: '重新读取', onReconcile: (generation: number): void => this.retryFeedback(generation) });
+  }
+
+  private retryFeedback(generation: number): void {
+    const operation = this.operation;
+    if (operation !== undefined && operation.projection.facts.generation === generation && operation.projection.facts.canRetry) {
+      this.onReconcile(operation);
+    } else if (this.readFacts.generation === generation && this.readFacts.canRetry) {
+      this.onRetryRead(this.readFacts);
+    }
+  }
+
   @Builder
   private sourceCard() {
     Row({ space: TOK_SPACE_XS }) {
@@ -149,10 +174,16 @@ export struct RssSourceFeedPage {
     .borderRadius(8);
   }
 
+  private canRefresh(): boolean {
+    return (this.readFacts.fact === 'idle' || this.readFacts.fact === 'current' || this.readFacts.fact === 'empty') &&
+      this.operation?.projection.receipt.confirmation !== 'unknown' && this.operation?.projection.receipt.readback !== 'reading' &&
+      this.operation?.projection.receipt.fact !== 'confirmedRefreshFailed';
+  }
+
   @Builder
   private sourceActions() {
     Row({ space: 2 }) {
-      this.actionTarget('刷新', (this.appThemeScheme === 'night' ? $r('app.media.rss_refresh_theme_night') : $r('app.media.rss_refresh')), (): void => this.onRefresh());
+      this.actionTarget('刷新', (this.appThemeScheme === 'night' ? $r('app.media.rss_refresh_theme_night') : $r('app.media.rss_refresh')), (): void => { if (this.canRefresh()) this.onRefresh(); });
       this.actionTarget('编辑源', (this.appThemeScheme === 'night' ? $r('app.media.rss_edit_theme_night') : $r('app.media.rss_edit')), (): void => this.onEditSource());
     }
     .width('100%')

@@ -1,3 +1,8 @@
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { readerRecoveryView } from '../../app/ReaderRecoveryProjection';
+import { projectOperationFacts, type OperationFacts } from '../../app/ReaderOperationFacts';
+import type { RssEntrySnapshot } from './RssOrchestrator';
+import type { RssRouteOperationProjection } from './RssRouteOperationHost';
 import { TYPE_APP_SMALL_ACTION, TYPE_RSS_ARTICLE_BODY, TYPE_RSS_ARTICLE_TITLE, TYPE_RSS_BOTTOM_ACTION, TYPE_RSS_LINK_ACTION, TYPE_RSS_META, TYPE_RSS_SOURCE_TITLE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
@@ -56,6 +61,10 @@ export struct RssEntryDetailPage {
   @Prop subscription: RssSubscription;
   @Prop item: RssItem;
   @Prop isTablet: boolean;
+  @Prop operation: RssRouteOperationProjection<RssEntrySnapshot> | undefined = undefined;
+  @Prop readFacts: OperationFacts<RssEntrySnapshot> = projectOperationFacts<RssEntrySnapshot>({ phase: 'idle' });
+  onReconcile: (operation: RssRouteOperationProjection<RssEntrySnapshot>) => void = (_operation: RssRouteOperationProjection<RssEntrySnapshot>): void => {};
+  onRetryRead: (facts: OperationFacts<RssEntrySnapshot>) => void = (_facts: OperationFacts<RssEntrySnapshot>): void => {};
   @Prop favoriteState: RssFavoritePresentation = 'loading';
   onBack: () => void = (): void => {};
   onViewSource: () => void = (): void => {};
@@ -72,6 +81,7 @@ export struct RssEntryDetailPage {
     Stack({ alignContent: Alignment.TopStart }) {
       Scroll() {
         Column({ space: TOK_SPACE_SM }) {
+          this.operationFeedback();
           this.sourceCard();
           this.summaryCard();
           this.entryActions();
@@ -115,26 +125,28 @@ export struct RssEntryDetailPage {
   }
 
   @Builder
+  private operationFeedback() {
+    ReaderRecoveryNotice({ view: readerRecoveryView(this.operation?.projection, this.readFacts),
+      actionLabel: '重新读取', onReconcile: (generation: number): void => this.retryFeedback(generation) });
+  }
+
+  private retryFeedback(generation: number): void {
+    const operation = this.operation;
+    if (operation !== undefined && operation.projection.facts.generation === generation && operation.projection.facts.canRetry) {
+      this.onReconcile(operation);
+    } else if (this.readFacts.generation === generation && this.readFacts.canRetry) {
+      this.onRetryRead(this.readFacts);
+    }
+  }
+
+  @Builder
   private backBar() {
     PageBackBar({
       title: 'RSS 阅读',
       onBack: (): void => this.onBack(),
     }) {
       Row({ space: 6 }) {
-        Stack({ alignContent: Alignment.Center }) {
-          Image(this.favoriteState === 'favorited' ?
-            (this.appThemeScheme === 'night' ? $r('app.media.rss_bookmark_active_theme_night') : $r('app.media.rss_bookmark_active')) : (this.appThemeScheme === 'night' ? $r('app.media.rss_bookmark_theme_night') : $r('app.media.rss_bookmark')))
-            .width(20)
-            .height(20);
-        }
-        .width(32)
-        .height(44)
-        .borderRadius(16)
-        .backgroundColor(this.favoriteState === 'favorited' ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : readerAppColor('app.RssEntryDetailPage.backBar.backgroundColor.00000000', this.appThemeScheme))
-        .opacity(this.favoriteState === 'loading' ? 0.45 : 1)
-        .enabled(this.favoriteState === 'favorited' || this.favoriteState === 'notFavorited')
-        .onClick((): void =>
-          this.onFavoriteRequested(this.favoriteState !== 'favorited'));
+        this.favoriteAction();
 
         Stack({ alignContent: Alignment.Center }) {
           Image((this.appThemeScheme === 'night' ? $r('app.media.rss_external_theme_night') : $r('app.media.rss_external'))).width(20).height(20);
@@ -148,6 +160,24 @@ export struct RssEntryDetailPage {
       .height(44)
       .alignItems(VerticalAlign.Center);
     }
+  }
+
+  @Builder
+  private favoriteAction() {
+    Stack({ alignContent: Alignment.Center }) {
+      Image(this.favoriteState === 'favorited' ?
+        (this.appThemeScheme === 'night' ? $r('app.media.rss_bookmark_active_theme_night') : $r('app.media.rss_bookmark_active')) : (this.appThemeScheme === 'night' ? $r('app.media.rss_bookmark_theme_night') : $r('app.media.rss_bookmark')))
+        .width(20)
+        .height(20);
+    }
+    .width(32)
+    .height(44)
+    .borderRadius(16)
+    .backgroundColor(this.favoriteState === 'favorited' ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : readerAppColor('app.RssEntryDetailPage.backBar.backgroundColor.00000000', this.appThemeScheme))
+    .opacity(this.favoriteState === 'loading' ? 0.45 : 1)
+    .enabled(this.canRequestFavorite())
+    .onClick((): void =>
+      { if (this.canRequestFavorite()) this.onFavoriteRequested(this.favoriteState !== 'favorited'); });
   }
 
   @Builder
@@ -390,6 +420,13 @@ export struct RssEntryDetailPage {
       .split(/\n+/)
       .map((paragraph: string): string => paragraph.trim())
       .filter((paragraph: string): boolean => paragraph.length > 0);
+  }
+
+  private canRequestFavorite(): boolean {
+    return (this.favoriteState === 'favorited' || this.favoriteState === 'notFavorited') &&
+      (this.readFacts.fact === 'idle' || this.readFacts.fact === 'current' || this.readFacts.fact === 'empty') &&
+      this.operation?.projection.receipt.confirmation !== 'unknown' && this.operation?.projection.receipt.readback !== 'reading' &&
+      this.operation?.projection.receipt.fact !== 'confirmedRefreshFailed';
   }
 
   private hasOriginalLink(): boolean {
