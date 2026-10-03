@@ -36,6 +36,7 @@ let nextOperationGeneration: number = 0;
 export class BookshelfOperationOwner {
   private snapshot: BookshelfOperationSnapshot = { ...EMPTY_BOOKSHELF_OPERATION_SNAPSHOT };
   private presentationAdmission: () => boolean = (): boolean => false;
+  private presentationInstanceIdentity: number = 0;
   private readonly presentation: LocalImportPresentationOwner = new LocalImportPresentationOwner();
 
   private readonly subscribers: Set<(snapshot: BookshelfOperationSnapshot) => void> = new Set();
@@ -52,9 +53,28 @@ export class BookshelfOperationOwner {
     this.authority.snapshot().blocked; }
   canMutate(): boolean { return this.liveRuntime() && !this.snapshot.busy && !this.snapshot.reconcileBusy && !this.unknown(); }
 
-  restoreImport(serialized: string, admitted: () => boolean): void { this.presentationAdmission = admitted; this.presentation.restore(serialized); this.publishPresentation(); }
-  openImport(admitted: () => boolean): void { if (!this.liveRuntime() || !this.admitted(admitted)) return; this.presentationAdmission = admitted; this.presentation.open(); this.publishPresentation(''); }
-  closeImport(): void { this.presentation.close(); this.publishPresentation(''); }
+  restoreImport(serialized: string, admitted: () => boolean, instanceIdentity: number = 0): void {
+    if (!this.admitImportPresentation(admitted, instanceIdentity)) return;
+    this.presentationAdmission = admitted; this.presentation.restore(serialized); this.publishPresentation();
+  }
+  openImport(admitted: () => boolean, instanceIdentity: number = 0): void {
+    if (!this.admitImportPresentation(admitted, instanceIdentity)) return;
+    this.presentationAdmission = admitted; this.presentation.open(); this.publishPresentation('');
+  }
+  closeImport(instanceIdentity: number = 0): void {
+    if (!this.isImportPresentationInstance(instanceIdentity)) return;
+    this.presentation.close(); this.publishPresentation('');
+  }
+  isImportPresentationInstance(instanceIdentity: number): boolean {
+    return this.liveRuntime() && instanceIdentity === this.presentationInstanceIdentity;
+  }
+  private admitImportPresentation(admitted: () => boolean, instanceIdentity: number): boolean {
+    if (!this.liveRuntime() || !this.admitted(admitted) || !Number.isSafeInteger(instanceIdentity) ||
+      instanceIdentity < this.presentationInstanceIdentity) return false;
+    // Index already supplies a monotonic instance identity. A late older
+    // adapter cannot replace the current lease even while its route is live.
+    this.presentationInstanceIdentity = instanceIdentity; return true;
+  }
 
   async remove(targets: BookshelfRemovalTarget[], batch: boolean, filter: BookshelfFilter, admitted: () => boolean):
     Promise<BookshelfRemoveOutcome | BookshelfRemoveBatchOutcome | undefined> {
@@ -74,13 +94,16 @@ export class BookshelfOperationOwner {
   async importFiles(filter: BookshelfFilter, admitted: () => boolean): Promise<BookshelfImportOutcome | undefined> {
     if (!this.canMutate() || !this.admitted(admitted) || this.presentation.current()?.state !== 'fileSelection') return undefined;
     const identity = this.presentation.generation();
-    const presentationAdmission = this.presentationAdmission;
+    // Admission belongs to the currently attached presentation of this exact
+    // opening. A rebuilt Index may replace that adapter without replacing the
+    // accepted task; close/reopen still revokes the captured opening identity.
     const current = (): boolean => this.liveRuntime() && this.presentation.owns(identity) &&
-      this.admitted(presentationAdmission) && this.admitted(admitted);
+      this.admitted(this.presentationAdmission);
+    const callerCurrent = (): boolean => current() && this.admitted(admitted);
     // Cold original delete/group intent is checked before selecting new files;
     // import must not recreate an asset still owned by a retained delete.
-    await this.recoverRemoval(filter, current);
-    if (!this.canMutate() || !current() || this.presentation.current()?.state !== 'fileSelection') return undefined;
+    await this.recoverRemoval(filter, callerCurrent);
+    if (!this.canMutate() || !callerCurrent() || this.presentation.current()?.state !== 'fileSelection') return undefined;
     const generation = this.begin('import', filter);
     this.presentation.write(identity, 'pickerOpening'); this.publishPresentation('');
     const gateway = new BookshelfFlowGateway(this.owner, filter);

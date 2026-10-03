@@ -77,7 +77,15 @@ assert.ok(bookTurnHost.indexOf('SettlementSwapShouldFire') <
   bookTurnHost.indexOf('const float solveMs', bookTurnHost.indexOf('bool BookTurnHost::ProcessSettlementFrame')),
   'settlement solve diagnostics must include coverage-gate cost');
 
-assert.match(shelfFlow, /this\.bookshelf\.removeBooks\(targets,/);
+assert.match(shelfFlow, /new BookshelfRemovalGateway\(this\.owner\)\.remove\(targets, true, evidence,/,
+  'batch removal must enter the bounded durable original-command gateway');
+const shelfRemoval = read('entry/src/main/ets/features/bookshelf/BookshelfRemovalGateway.ts');
+assert.match(shelfRemoval, /this\.store\.execute\(method, params,/,
+  'one original batch intent owns the durable Core write');
+assert.match(shelfRemoval, /this\.core\.finishBookRemoval\(targets, current\)/,
+  'qualified original cleanup uses the finite Core asset-release adapter');
+assert.doesNotMatch(shelfRemoval, /targets\.forEach\([\s\S]*bookshelf\.remove|Promise\.all\([\s\S]*bookshelf\.remove/,
+  'batch deletion must not fan out unqualified per-book writes');
 assert.match(shelfFlow, /Promise\.all\(\[this\.loadPage\(0, undefined, false, isCurrent\), this\.bookshelf\.loadContinueReading\(isCurrent\)\]\)/,
   'paged shelf uses an independent bounded continue-reading summary');
 for (const [name, source] of [

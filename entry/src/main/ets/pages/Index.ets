@@ -463,7 +463,8 @@ struct Index {
       // AppStorage is a platform adapter only. The feature owner creates,
       // validates and atomically serializes its state/result.
       AppStorage.setOrCreate<string>(IMPORT_PRESENTATION_KEY, snapshot.importSerialized);
-      if (this.shelfReceiptRetired) return;
+      if (this.shelfReceiptRetired || (snapshot.action === 'import' &&
+        !this.bookshelfHost.operations(owner).isImportPresentationInstance(this.rssInstanceIdentity))) return;
       if (snapshot.receipt !== undefined && (this.shelfOperation.receipt === undefined || this.shelfOperation.generation !== snapshot.generation))
         this.invalidateBookshelfProjection();
       const presentImportResult = snapshot.action === 'import' && snapshot.importPresentation?.state === 'result' &&
@@ -5295,12 +5296,12 @@ struct Index {
     if (this.shelfReceiptRetired || this.route !== 'bookshelf') return;
     const owner = ReaderRuntimeOwner.current(); const navigation = this.navigationGeneration;
     this.bookshelfHost.operations(owner).openImport((): boolean => !this.shelfReceiptRetired && this.isCurrentRuntime(owner) &&
-      this.route === 'bookshelf' && navigation === this.navigationGeneration);
+      this.route === 'bookshelf' && navigation === this.navigationGeneration, this.rssInstanceIdentity);
   }
 
   private closeImportDialog(): void {
     const owner = this.shelfOperationOwner;
-    if (owner !== undefined && this.isCurrentRuntime(owner)) this.bookshelfHost.operations(owner).closeImport();
+    if (owner !== undefined && this.isCurrentRuntime(owner)) this.bookshelfHost.operations(owner).closeImport(this.rssInstanceIdentity);
   }
 
   private async beginImport(): Promise<void> {
@@ -5312,7 +5313,9 @@ struct Index {
   }
 
   private isCurrentImport(identity: number, navigationGeneration: number, owner: ReaderRuntimeOwner): boolean {
-    return !this.shelfReceiptRetired && this.shelfOperation.importIdentity === identity && this.hasVisibleImportDialog() &&
+    return !this.shelfReceiptRetired && this.isCurrentRuntime(owner) &&
+      this.bookshelfHost.operations(owner).isImportPresentationInstance(this.rssInstanceIdentity) &&
+      this.shelfOperation.importIdentity === identity && this.hasVisibleImportDialog() &&
       this.navigationGeneration === navigationGeneration && this.route === 'bookshelf' && this.isCurrentRuntime(owner);
   }
 
@@ -5320,7 +5323,8 @@ struct Index {
     const owner = ReaderRuntimeOwner.current();
     const navigation = this.navigationGeneration;
     const operation = this.bookshelfHost.operations(owner); operation.restoreImport(this.storedImportPresentation,
-      (): boolean => !this.shelfReceiptRetired && this.isCurrentRuntime(owner) && this.route === 'bookshelf' && navigation === this.navigationGeneration);
+      (): boolean => !this.shelfReceiptRetired && this.isCurrentRuntime(owner) && this.route === 'bookshelf' && navigation === this.navigationGeneration, this.rssInstanceIdentity);
+    if (!operation.isImportPresentationInstance(this.rssInstanceIdentity)) return;
     this.shelfOperationOwner = owner; this.shelfOperation = operation.current();
     const mounting = this.detailShelfAdmissionMount;
     void operation.recoverRemoval(this.shelfFilter(), (): boolean =>
