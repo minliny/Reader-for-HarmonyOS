@@ -175,10 +175,10 @@ import {
 } from '../features/source/SourceGateway';
 import { readerSourceCategoryIsText, readerSourceCategoryLabel } from '../features/source/ReaderSourceCategory';
 import {
-  SourceOrchestrator,
+  SourceHost,
   type SourceImportCompletion,
   type SourceManagementStatusKind,
-} from '../features/source/SourceOrchestrator';
+} from '../features/source/SourceHost';
 import {
   buildSourceSwitchCommitParams,
   sourceSwitchCandidateKey,
@@ -554,7 +554,14 @@ struct Index {
   );
   private rulesManagementOrchestrator: RulesManagementOrchestrator | undefined;
   private syncOrchestrator: SyncOrchestrator | undefined;
-  private sourceOrchestrator: SourceOrchestrator | undefined;
+  private sourceHost: SourceHost = new SourceHost(
+    (sources: BookSource[]): void => { this.sourceSources = sources; },
+    (): boolean => this.route === 'source',
+    (kind: SourceManagementStatusKind, message: string): void => {
+      this.sourceStatusKind = kind;
+      this.sourceStatusMessage = message;
+    },
+  );
   private sourceToolsOrchestrator: SourceToolsOrchestrator | undefined;
   private rssOrchestrator: RssOrchestrator | undefined;
   private rssEditorOrchestrator: RssSubscriptionEditorOrchestrator | undefined;
@@ -1047,7 +1054,7 @@ struct Index {
           onLoginSource: (id: string): void => this.onSourceLoginRequested(id),
           onAddSource: (): void => this.openJsonImport('bookSource'),
           onOpenTools: (): void => this.openSourceTools(),
-          onRetryLoad: (): void => this.getSourceOrchestrator().retryLoad(),
+          onRetryLoad: (): void => this.sourceHost.retryLoad(),
         });
       } else if (this.route === 'sourceTools') {
         SourceToolsPage({
@@ -1622,7 +1629,7 @@ struct Index {
     this.sourceManagementReturnTarget = returnTarget;
     this.sourceManagementSearchKeyword = searchKeyword;
     this.route = 'source';
-    this.getSourceOrchestrator().open();
+    this.sourceHost.open();
   }
 
   /** Enter Source Management from the Search page's add/manage-source intents. */
@@ -1631,22 +1638,6 @@ struct Index {
     const keyword = presentation.kind === 'loading' || presentation.kind === 'results' ||
       presentation.kind === 'empty' || presentation.kind === 'error' ? presentation.keyword : '';
     this.openSourceManagement('search', keyword);
-  }
-
-  private getSourceOrchestrator(): SourceOrchestrator {
-    if (this.sourceOrchestrator === undefined) {
-      this.sourceOrchestrator = new SourceOrchestrator(
-        (sources: BookSource[]): void => {
-          this.sourceSources = sources;
-        },
-        (): boolean => this.route === 'source',
-        (kind: SourceManagementStatusKind, message: string): void => {
-          this.sourceStatusKind = kind;
-          this.sourceStatusMessage = message;
-        },
-      );
-    }
-    return this.sourceOrchestrator;
   }
 
   private getSourceToolsOrchestrator(): SourceToolsOrchestrator {
@@ -1718,7 +1709,7 @@ struct Index {
   private returnToSourceManagement(): void {
     this.nextNavigationGeneration();
     this.route = 'source';
-    this.getSourceOrchestrator().open();
+    this.sourceHost.open();
   }
 
   private returnToSettings(): void {
@@ -1775,15 +1766,15 @@ struct Index {
   private onSourceToggled(id: string, enabled: boolean): void {
     // SS-SOURCE-TOGGLE-01 orchestration (serial chain, Core-idle retry, session
     // guards) lives in SourceOrchestrator; Index only forwards the intent.
-    this.getSourceOrchestrator().toggleSource(id, enabled);
+    this.sourceHost.toggleSource(id, enabled);
   }
 
   private onSourceDetectionRequested(id: string): void {
-    this.getSourceOrchestrator().checkSource(id);
+    this.sourceHost.checkSource(id);
   }
 
   private onSourceLoginRequested(id: string): void {
-    this.getSourceOrchestrator().loginSource(id);
+    this.sourceHost.loginSource(id);
   }
 
   private openJsonImport(context: JsonImportContext): void {
@@ -1809,7 +1800,7 @@ struct Index {
 
   private executeJsonImport(context: JsonImportContext, onlineUrl?: string): void {
     if (context === 'bookSource' && this.route === 'source') {
-      this.getSourceOrchestrator().importBookSources(
+      this.sourceHost.importBookSources(
         onlineUrl,
         (completion: SourceImportCompletion): void => {
           const base = completion.refreshWarning ?? `Core 已导入 ${completion.importedCount} 个书源`;

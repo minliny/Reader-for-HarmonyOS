@@ -457,7 +457,7 @@ assert.match(owner, /async selectBookSourceJson\(\)[\s\S]*this\.host\.selectBook
 assert.match(page, /onAddSource: \(\) => void/);
 assert.match(page, /\.onClick\(\(\): void => this\.onAddSource\(\)\)/);
 assert.match(index, /onAddSource: \(\): void => this\.openJsonImport\('bookSource'\)/);
-assert.match(index, /this\.getSourceOrchestrator\(\)\.importBookSources\(/);
+assert.match(index, /this\.sourceHost\.importBookSources\(/);
 assert.match(orchestrator, /this\.operationChain = this\.operationChain[\s\S]*applyBookSourceImport/);
 assert.match(orchestrator,
   /applyBookSourceImport\([\s\S]*session: number,[\s\S]*onlineUrl\?: string,[\s\S]*selectBookSourceJson\(\)[\s\S]*loadOnlineJsonDocument\(onlineUrl\)/);
