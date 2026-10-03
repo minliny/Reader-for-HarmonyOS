@@ -110,7 +110,7 @@ export class RssOrchestrator {
     this.owner = owner;
     this.gateway = new RssGateway(owner);
     this.routeOperations = new RssRouteOperationHost({ gateway: this.gateway,
-      ownsRuntime: (): boolean => this.owner === ReaderRuntimeOwner.current(),
+      ownsRuntime: (): boolean => this.ownsRuntime(),
       enqueue: (work: () => Promise<void>): void => {
         void this.runSerialized(work).catch((error: Error): void => hilog.error(DOMAIN, 'Reader', '%{private}s', error.message));
       },
@@ -266,13 +266,13 @@ export class RssOrchestrator {
   loadFeed(emit: (value: RssSubscription[]) => void, emitRead: (facts: OperationFacts<RssSubscription[]>) => void,
     isCurrent: RssRouteGuard, expectedGeneration?: number): void {
     void this.runSerialized(async (): Promise<void> => {
-      if (this.owner !== ReaderRuntimeOwner.current() || !isCurrent() ||
+      if (!this.ownsRuntime() || !isCurrent() ||
         (expectedGeneration !== undefined && (this.feedRead.generation !== expectedGeneration || !this.feedRead.canRetry))) return;
       this.feedRead = projectOperationFacts<RssSubscription[]>({ phase: 'loading', value: this.feedValue, generation: ++rssProjectionGeneration });
       this.deliverRoute(isCurrent, (): void => emitRead(this.feedRead));
       try {
         const subscriptions = await this.loadSubscriptionsWithRetry();
-        if (this.owner !== ReaderRuntimeOwner.current()) return;
+        if (!this.ownsRuntime()) return;
         this.feedValue = subscriptions;
         this.feedRead = projectOperationFacts<RssSubscription[]>({ phase: 'succeeded', value: subscriptions, generation: ++rssProjectionGeneration });
         this.deliverRoute(isCurrent, (): void => emitRead(this.feedRead));
@@ -288,7 +288,7 @@ export class RssOrchestrator {
   /** Also used by the editor: every RSS write/read shares this actual lane. */
   runSerialized(work: () => Promise<void>): Promise<void> {
     const result = this.mutationChain.then(async (): Promise<void> => {
-      if (this.owner !== ReaderRuntimeOwner.current()) throw new Error('RSS runtime owner retired');
+      if (!this.ownsRuntime()) throw new Error('RSS runtime owner retired');
       await work();
     });
     this.mutationChain = result.catch((error: Error): void => hilog.error(DOMAIN, 'Reader', '%{private}s', error.message));
@@ -369,7 +369,7 @@ export class RssOrchestrator {
   ): void {
     this.mutationChain = this.mutationChain
       .then(async (): Promise<void> => {
-        if (this.owner !== ReaderRuntimeOwner.current() || !isCurrent()) return;
+        if (!this.ownsRuntime() || !isCurrent()) return;
         await task();
       })
       .catch((error: Error): void => {
@@ -402,7 +402,7 @@ export class RssOrchestrator {
   }
 
   private deliverRoute(isCurrent: RssRouteGuard, delivery: () => void): void {
-    if (this.owner !== ReaderRuntimeOwner.current() || !isCurrent()) return;
+    if (!this.ownsRuntime() || !isCurrent()) return;
     try { delivery(); } catch (error) { hilog.error(DOMAIN, 'Reader', '%{private}s', (error as Error).message); }
   }
 
@@ -419,7 +419,7 @@ export class RssOrchestrator {
     session: number,
     confirmation: CommitConfirmationKind,
   ): Promise<void> {
-    if (this.owner !== ReaderRuntimeOwner.current()) return;
+    if (!this.ownsRuntime()) return;
     this.publishOperation(action, subscriptionId, session, 'reading', undefined, undefined, confirmation);
     let subscriptions: RssSubscription[];
     try {
@@ -513,7 +513,7 @@ export class RssOrchestrator {
     this.deliverRoute((): boolean => this.isCurrentSession(session), (): void => this.emitRead(this.latestRead));
   }
 
-  private async runMutationWithRetry(mutation: RssMutation, admitted: () => boolean = (): boolean => this.owner === ReaderRuntimeOwner.current()): Promise<void> {
+  private async runMutationWithRetry(mutation: RssMutation, admitted: () => boolean = (): boolean => this.ownsRuntime()): Promise<void> {
     if (!admitted()) throw new Error('RSS operation superseded before dispatch');
     try {
       await mutation();
@@ -524,7 +524,7 @@ export class RssOrchestrator {
         throw err;
       }
       await this.waitForCoreIdle(5000);
-      if (this.owner !== ReaderRuntimeOwner.current() || !admitted()) throw new Error('RSS operation superseded before dispatch');
+      if (!this.ownsRuntime() || !admitted()) throw new Error('RSS operation superseded before dispatch');
       await mutation();
     }
   }
@@ -634,7 +634,14 @@ export class RssOrchestrator {
     }
   }
 
+  /** EntryAbility teardown unsets current(); retirement is an admission fact,
+   * not a transport failure and must not erase an already accepted receipt. */
+  private ownsRuntime(): boolean {
+    try { return this.owner === ReaderRuntimeOwner.current(); }
+    catch (_error) { return false; }
+  }
+
   private isCurrentSession(session: number): boolean {
-    return this.owner === ReaderRuntimeOwner.current() && this.isCurrent() && session === this.session;
+    return this.ownsRuntime() && this.isCurrent() && session === this.session;
   }
 }

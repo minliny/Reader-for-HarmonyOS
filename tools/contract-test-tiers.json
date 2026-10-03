@@ -196,7 +196,8 @@
     "test-conventional-typography-registry.mjs",
     "test-harmony-tts-background-lease.mjs",
     "test-harmony-tts-media-retirement.mjs",
-    "test-reader-native-alert-owner.mjs"
+    "test-reader-native-alert-owner.mjs",
+    "test-rss-runtime-retirement-admission.mjs"
   ],
   "integration": [
     "test-action-menu-surface.mjs",

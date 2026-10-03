@@ -197,7 +197,7 @@ export class RssSubscriptionEditorOrchestrator {
       this.pending.delete(key);
       this.setReceipt(key, session, evidence.confirmation(), subscriptionId, revision, 'reading');
       this.patchDraft(key, { busy: false, canSave: false });
-      if (this.owner !== ReaderRuntimeOwner.current()) return;
+      if (!this.ownsRuntime()) return;
       await this.readEditor(key, session, true);
     }).catch((error: Error): void => {
       this.pending.delete(key);
@@ -225,7 +225,7 @@ export class RssSubscriptionEditorOrchestrator {
   }
 
   private async readEditor(key: string, session: number, finishSaved: boolean = false): Promise<void> {
-    if (this.owner !== ReaderRuntimeOwner.current()) return;
+    if (!this.ownsRuntime()) return;
     const draft = this.drafts.get(key);
     if (draft === undefined) return;
     const receipt = this.receipts.get(key);
@@ -238,7 +238,7 @@ export class RssSubscriptionEditorOrchestrator {
     if (receipt !== undefined) this.setReceipt(key, session, receipt.confirmation, receipt.subscriptionId, receipt.revision, 'reading', receipt.projection.value);
     try {
       const subscriptions = await this.gateway.loadSubscriptions();
-      if (this.owner !== ReaderRuntimeOwner.current()) return;
+      if (!this.ownsRuntime()) return;
       const subscriptionId = receipt?.subscriptionId || draft.subscriptionId;
       const subscription = subscriptionId.length > 0 ? subscriptions.find((candidate: RssSubscription): boolean => candidate.subscriptionId === subscriptionId) :
         subscriptions.find((candidate: RssSubscription): boolean => candidate.feedUrl === draft.feedUrl.trim());
@@ -327,7 +327,7 @@ export class RssSubscriptionEditorOrchestrator {
       operation: patch.operation ?? this.snapshot.operation,
     };
     this.drafts.set(this.activeKey, this.copySnapshot(this.snapshot));
-    if (this.owner === ReaderRuntimeOwner.current() && this.isCurrent()) {
+    if (this.ownsRuntime() && this.isCurrent()) {
       try { this.emit(this.copySnapshot(this.snapshot)); }
       catch (error) { hilog.error(DOMAIN, 'Reader', '%{private}s', (error as Error).message); }
     }
@@ -368,8 +368,15 @@ export class RssSubscriptionEditorOrchestrator {
     };
   }
 
+  /** EntryAbility teardown unsets current(); retirement is an admission fact,
+   * not a transport failure and must not erase an already accepted receipt. */
+  private ownsRuntime(): boolean {
+    try { return this.owner === ReaderRuntimeOwner.current(); }
+    catch (_error) { return false; }
+  }
+
   private isCurrentSession(session: number): boolean {
-    return this.owner === ReaderRuntimeOwner.current() && this.isCurrent() && session === this.session;
+    return this.ownsRuntime() && this.isCurrent() && session === this.session;
   }
 
   private sourceDraft(snapshot: RssSubscriptionEditorSnapshot): RssSourceDraft {

@@ -145,18 +145,18 @@ export class RssRouteOperationHost {
   }
 
   private async read<T>(state: RssRouteState<T>, binding: RssRouteBinding<T>, reader: () => Promise<T>): Promise<void> {
-    if (!this.dependencies.ownsRuntime()) return;
+    if (!this.ownsRuntime()) return;
     this.publishRead(state, binding, 'loading');
     this.updateReadback(state, binding, 'reading');
     try {
       const value = await reader();
-      if (!this.dependencies.ownsRuntime()) return;
+      if (!this.ownsRuntime()) return;
       state.value = value;
       this.publishRead(state, binding, 'succeeded');
       this.updateReadback(state, binding, 'succeeded');
       this.deliver(binding, (): void => binding.emit(value));
     } catch (error) {
-      if (!this.dependencies.ownsRuntime()) return;
+      if (!this.ownsRuntime()) return;
       this.publishRead(state, binding, 'failed', (error as Error).message);
       this.updateReadback(state, binding, 'failed', (error as Error).message);
       this.reportFailure(binding, error as Error);
@@ -223,7 +223,13 @@ export class RssRouteOperationHost {
     try { delivery(); } catch (error) { this.dependencies.deliveryFailed?.(error as Error); }
   }
 
-  private admitted<T>(binding: RssRouteBinding<T>): boolean { return this.dependencies.ownsRuntime() && binding.current(); }
+  private ownsRuntime(): boolean {
+    try { return this.dependencies.ownsRuntime(); } catch (_error) { return false; }
+  }
+
+  private admitted<T>(binding: RssRouteBinding<T>): boolean {
+    try { return this.ownsRuntime() && binding.current(); } catch (_error) { return false; }
+  }
 
   private source(id: string): RssRouteState<RssSourceSnapshot> {
     let state = this.sources.get(id);

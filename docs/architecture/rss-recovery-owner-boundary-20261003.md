@@ -61,3 +61,11 @@ Still open:
 5. Management unknown barrier, entity unknown barrier and editor unknown barrier are scoped; they are not a new global transaction journal across every RSS subdomain. Core still owns actual transaction exclusion. Stronger cross-domain/cross-restart unknown resolution requires an admitted Core final-receipt contract and tests, not a matching list read.
 
 Rollback is the isolated RSS commit plus P5's separate matching Index wiring commit. No schema/native/storage mutation is introduced. Reverting UI/owners preserves saved Core data; it cannot undo a native command already dispatched.
+
+## Runtime-unset retirement admission follow-up
+
+A read-side audit found a real teardown gap: `ReaderRuntimeOwner.close()` unsets the installed singleton, and `current()` then throws. RSS owner comparisons previously called this throwing accessor inside UI admission, including after a write ACK. That could enter an error catch after durable confirmation and re-enable a pending editor draft.
+
+`RssOrchestrator` and `RssSubscriptionEditorOrchestrator` now use private, bounded `ownsRuntime()` comparisons that return false on teardown. `RssRouteOperationHost` safely admits both runtime and route callbacks. This changes only admission: the Gateway remains the receipt source, dispatched writes still settle, unknown remains unknown, and a retired UI receives no late update or navigation.
+
+`test-rss-runtime-retirement-admission.mjs` executes the exact production static `current()` with the singleton unset, then real Gateway/owners with deferred ACK and lost ACK. It proves retained confirmed/unknown receipt, released pending state, preserved locked draft, skipped follow-up read, no replay/callback, and a removed-guard negative control. Existing route/editor/management directed gates also pass. Native shutdown behavior and target evidence remain separate.
