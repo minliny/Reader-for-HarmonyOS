@@ -74,6 +74,8 @@ function scan(dir){for(const entry of readdirSync(dir,{withFileTypes:true})){
     }ts.forEachChild(node,visit);
   }visit(tree);
 }}
-scan(ets);assert.equal(output.consumers.length,41,'all audited foreground call sites remain covered');
+scan(ets);
+assert.ok(output.consumers.some(row => row.file.endsWith('common/ReaderRecoveryAction.ets')), 'the extracted editor recovery control retains the shared primary foreground');
+assert.equal(output.consumers.length,40,'duplicate editor recovery foreground was removed; all current distinct foreground call sites remain covered');
 if(process.argv.includes('--record'))writeFileSync(process.argv[process.argv.indexOf('--record')+1],JSON.stringify(output,null,2)+'\n');
 console.log(`PASS Night primary text: ${output.consumers.length} production AST foregrounds, ${output.builder.length} retained Builder states; Day/solid fill/alpha/layout retained.`);

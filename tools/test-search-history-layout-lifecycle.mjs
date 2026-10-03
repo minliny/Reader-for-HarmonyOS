@@ -37,7 +37,7 @@ function fixture(history, { width = 0, tablet = false, kind = 'initial', history
   } });
   ({ owner } = createReaderBuilderProbe(source,
     ['stateContent', 'searchHeaderHeight', 'searchBottomInset', 'sourceRequiredReason', 'initialContent', 'sourceRequiredContent', 'sourceLoadErrorContent',
-      'primaryPill', 'secondaryPill', 'refreshVisibleResults', 'publishVisibleGroups'],
+      'operation', 'retryOperation', 'primaryPill', 'secondaryPill', 'refreshVisibleResults', 'publishVisibleGroups'],
     { Flex, FlexWrap: enumValues('FlexWrap'), FlexDirection: enumValues('FlexDirection'), readerFloatingBarBottomInset,
       ReaderWindowCoordinator: { metrics: () => ({ systemInsets: {}, cutoutInsets: {}, gestureInsets: {}, navigationInsets: {} }) },
       FlexAlign: enumValues('FlexAlign'), TOK_BORDER_W: 1, TOK_SPACE_XS: 8,

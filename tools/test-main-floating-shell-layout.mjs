@@ -168,7 +168,7 @@ for (const section of ['home', 'general']) {
 
 safeBottom = 34;
 const discover = probe('discover/DiscoverPage.ets', ['discoverTabContent', 'discoverContent', 'bottomContentInset'], {
-  homeTopBar() {}, currentSourceCard() {}, categoryChips() {}, filterRow() {}, rankingHeader() {}, resultList() {},
+  homeTopBar() {}, currentSourceCard() {}, categoryChips() {}, filterRow() {}, rankingHeader() {}, resultList() {}, operationFeedback() {},
   contentFrame: () => ({ left: 19, right: 19, width: 352 }),
 });
 discover.discoverTabContent();

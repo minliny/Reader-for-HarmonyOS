@@ -102,7 +102,7 @@ const childMembers = ['publicationRevision', 'publication', 'presentation', 'she
   'resultProjection', 'projectedGroups', 'projectedGroupKeys', 'projectedGroupIndexes', 'changedGroupKeys',
   'warmupGroups', 'visibleStart', 'visibleEnd', 'viewStateRevision', 'listEpoch', 'restoreEpoch',
   'groupResults', 'acceptPublication', 'refreshVisibleResults', 'publishVisibleGroups', 'resultsContent',
-  'searchHeaderHeight', 'searchBottomInset', 'resultStatsHeight'];
+  'operation', 'retryOperation', 'isSweeping', 'searchHeaderHeight', 'searchBottomInset', 'resultStatsHeight'];
 const childProbe = createReaderBuilderProbe(pageSource, childMembers, {
   ...runtime.sdk, SearchPublication, SearchViewState, SearchResultProjection,
   SearchBookGroup: CountedGroup, SearchResultDataSource, List: nativeStub('List'), LazyForEach: nativeStub('LazyForEach'),

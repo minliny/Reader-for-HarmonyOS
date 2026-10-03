@@ -1,3 +1,4 @@
+import { readerRecoveryView } from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
@@ -7,7 +8,7 @@ import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThem
 const source = readFileSync(new URL('../entry/src/main/ets/features/source/SourceToolsPage.ets', import.meta.url), 'utf8');
 const baseline = JSON.parse(readFileSync(new URL('./fixtures/design/source-tools-typography-baseline.json', import.meta.url)));
 const methods = [...source.matchAll(/@Builder\s+private\s+(\w+)\s*\(/g)].map(match => match[1]);
-methods.push('batchCheckPercent', 'batchCheckPhaseLabel', 'batchResultLabel', 'confirmExportThen');
+methods.push('recovery', 'batchCheckPercent', 'batchCheckPhaseLabel', 'batchResultLabel', 'confirmExportThen');
 const properties = ['fontFamily', 'fontWeight', 'fontSize', 'lineHeight', 'letterSpacing'];
 const result = { sourceName: '测试书源', sourceId: 'https://source.example', message: '能力检查完成', state: 'passed', traceId: 'trace' };
 const bookSource = { name: '测试书源', sourceId: 'https://source.example', baseUrl: 'https://source.example', lastCheckSummary: '上次检测已完成' };
@@ -19,7 +20,7 @@ const make = (overrides = {}) => {
   const { owner } = createReaderBuilderProbe(source, methods, {
     // Virtual list painting is outside this typography probe. The actual row
     // Builders run separately below, with their real SDK observer closures.
-    LazyForEach: { create() {}, pop() {} }, ...overrides,
+    LazyForEach: { create() {}, pop() {} }, readerRecoveryView, ...overrides,
   });
   const calls = [];
   Object.assign(owner, {

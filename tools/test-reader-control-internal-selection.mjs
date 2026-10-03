@@ -1,3 +1,4 @@
+import { ReaderNativeAlertOwner } from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -30,10 +31,10 @@ const names = ['isUnknownCatalogEdge', 'entryChapterPosition', 'ttsFollowScope',
   'stepControlChapter', 'readingTocEntries', 'seekControlProgress', 'controlSelectionOwner', 'completeControlSelectionAfterCommit',
   'resumeDeferredPageTurnWork', 'clearDeferredPageTurnWork'];
 function Host(mutate = code => code) {
-  const deps = { ...selectionPolicy, wholeBookAnchorForPercent, readerTtsFollowActive, LOCAL_READING_SOURCE_ID: 'local' };
+  const deps = { ReaderNativeAlertOwner, ...selectionPolicy, wholeBookAnchorForPercent, readerTtsFollowActive, LOCAL_READING_SOURCE_ID: 'local' };
   const code = mutate(names.map(method).join('\n'));
   return new Function(...Object.keys(deps), stripTypeScriptTypes(deferredClass +
-    '\nclass InternalSelectionProbe {' + code + '}') + ';return InternalSelectionProbe;')(
+    '\nclass InternalSelectionProbe { nativeAlertOwner = new ReaderNativeAlertOwner();' + code + '}') + ';return InternalSelectionProbe;')(
       ...Object.values(deps));
 }
 function owner(Type = Host()) {

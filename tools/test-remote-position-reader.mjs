@@ -16,7 +16,7 @@ const CoreReadingAnchor=new Function(`${stripTypeScriptTypes(anchorSource)}; ret
 let captureContentEpoch=()=>()=>true;
 let waitContentIdle=async()=>{};
 const Reader=productionMotionMethods(file,['openChapter','loadSessionChapter','configureRestoredAnchor','lastVisibleScalar',
-  'positionContextForScope','selectBookmarkAnchor','commitTtsProgress','ttsChapterRef','notifyPreservedContentRefresh','reloadBookmarksAfterContentRefresh','requestCachedChapterRefresh'],{ReadingSurfaceLayoutMap,CoreReadingAnchor,RemoteChapterCacheRefreshError,LOCAL_READING_SOURCE_ID:'local',
+  'positionContextForScope','selectBookmarkAnchor','commitTtsProgress','progressProducerIntent','ttsChapterRef','notifyPreservedContentRefresh','reloadBookmarksAfterContentRefresh','requestCachedChapterRefresh'],{ReadingSurfaceLayoutMap,CoreReadingAnchor,RemoteChapterCacheRefreshError,LOCAL_READING_SOURCE_ID:'local',
   ReaderRuntimeOwner:{current:()=>({captureReadingContentValidity:(...args)=>captureContentEpoch(...args),
     waitForReadingContentIdle:(...args)=>waitContentIdle(...args)})}});
 const old={sourceId:'s',bookId:'b',chapterIndex:0,chapterTitle:'章',chapterUrl:'/0',bodyVersion:'old',processingVersion:'old-p',
@@ -27,7 +27,7 @@ const receipt=(id)=>({status:'committed',previousBodyVersion:'old',bodyVersion:'
 function page(load){
   const calls=[];
   const gateway={loadChapter:async(...args)=>{calls.push(args);return load(...args);}};
-  const p=Object.assign(new Reader(),{sourceId:'s',bookId:'b',tocEntries:[],chapterWindow:{get:()=>undefined,setCurrent(){},clear(){}},
+  const p=Object.assign(new Reader(),{mounted:true,lifecycleToken:1,chapterSelectionToken:1,sourceId:'s',bookId:'b',tocEntries:[],chapterWindow:{get:()=>undefined,setCurrent(){},clear(){}},
     controlBookmarkLoadGeneration:0,onLoadControlBookmarks:async()=>{},isSelectionActive:()=>true,activeGateway:()=>gateway,ensureCurrentContentMetrics:async()=>true,
     admitChapterContentVersion(){},retainCurrentChapterWindow(){},rebuildChapterImageIndexes(){},hasMeasuredViewport:()=>false,
     fail(error){this.failure=error;}});
@@ -91,8 +91,8 @@ for(const bad of ['body','anchor']){
 }
 {
  const {p,gateway}=page(async()=>old);p.chapter=upgraded;p.isSessionActive=()=>true;p.requireChapterLayoutMap=()=>new ReadingSurfaceLayoutMap(upgraded.content);
- p.coreLayout=()=>({});p.admitCommittedProgress=()=>{};p.logTtsFailure=()=>{};
- let saved;gateway.runProgressCommitSerial=async work=>work();gateway.resolveAndUpdateProgress=async(_book,_title,anchor)=>{saved=anchor;return anchor;};
+ p.coreLayout=()=>({});p.admitCommittedProgress=()=>{};p.logTtsFailure=(_label,error)=>{throw error;};
+ let saved;gateway.runProgressCommitSerial=async work=>work();gateway.persistPresentedProgress=async(bookId,_title,anchor,_layout,admitted)=>{assert.equal(admitted(),true);saved=anchor;return {bookId,...anchor,updatedAt:1};};
  await p.commitTtsProgress({chapter:p.ttsChapterRef(old),charEnd:6},1);assert.equal(saved,undefined,'old TTS callback cannot bind offsets to a new chapter body');
  await p.commitTtsProgress({chapter:p.ttsChapterRef(upgraded),charEnd:3},1);
  assert.equal(saved.bodyVersion,'new');assert.equal(saved.processingVersion,'new-p');assert.equal(saved.chapterOffset,3);

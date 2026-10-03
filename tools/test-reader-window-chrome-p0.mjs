@@ -59,8 +59,11 @@ const calls = (node, name, sourceTree = tree) => {
     ts.forEachChild(item, visit);
   }; visit(node); return result;
 };
-assert.equal(calls(build, 'BookshelfShell').length, 1);
-assert.equal(calls(build, 'this.bookshelfContent').length, 1, 'shared shell receives the readiness content slot');
+const shellContent = indexType.members.find(node => node.name?.getText(tree) === 'bookshelfShellContent');
+assert.ok(shellContent);
+assert.equal(calls(build, 'this.bookshelfShellContent').length, 1);
+assert.equal(calls(shellContent, 'BookshelfShell').length, 1);
+assert.equal(calls(shellContent, 'this.bookshelfContent').length, 1, 'shared shell receives the readiness content slot');
 const shelfShellTree = parse(read('entry/src/main/ets/features/bookshelf/BookshelfShell.ets'));
 assert.equal(calls(shelfShellTree, 'MainTabShell', shelfShellTree).length, 1, 'bookshelf chrome uses the actual app palette owner');
 const failure = calls(content, 'BookshelfStatusContent'); assert.equal(failure.length, 1);

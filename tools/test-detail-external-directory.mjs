@@ -110,7 +110,7 @@ for(const sourceId of ['local','remote']){
 }
 // The real retained detail observer keeps the same child ID through catalog/back.
 {
- const {owner}=createReaderBuilderProbe(source,['detailContent','externalDirectory','detailBookKey'],{BookDirectoryPage:DirectoryChild,LocalBookDetail:DirectoryChild,LOCAL_SOURCE_ID:'local',...enums});
+ const {owner}=createReaderBuilderProbe(source,['detailContent','externalDirectory','detailBookKey','hasUnknownShelfWrite'],{BookDirectoryPage:DirectoryChild,LocalBookDetail:DirectoryChild,ReaderRuntimeOwner:{current:()=>undefined},LOCAL_SOURCE_ID:'local',...enums});
  const host=index();host.openFullDirectory();Object.assign(owner,host,{offlineMutationActiveKey:'',remoteContentVerdict:'readable',remoteContentVerdictLabel:()=>'',appThemeScheme:'day'});
  owner.detailContent();
  const detail=[...owner.children.values()].find(child=>child.params.book);

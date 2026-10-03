@@ -139,7 +139,7 @@ await check('PH34 actual General and Rules Scrolls align short contents at the t
     Object.assign(owner, { activeSection: 'general', showOverlay: false, appThemeScheme: 'day',
       contentFrame: () => ({ left: 18, right: 18 }), generalBottomContentInset: () => 34,
       bottomContentInset: () => 34, generalContent() {},
-      statusCard() {}, bundleCard() {}, replaceCard() {}, txtTocCard() {}, dictCard() {}, subscriptionCard() {},
+      operationFeedback() {}, recoveryAction() {}, statusCard() {}, bundleCard() {}, replaceCard() {}, txtTocCard() {}, dictCard() {}, subscriptionCard() {},
       onSectionChange() {}, onBack() {}, snapshot: { mode: 'create', batchCheck: { phase: 'idle' }, editorSourceId: '' },
       batchControlsRenderKey: () => 'idle', batchCard() {}, exportCard() {}, sourceCard() {}, debugCard() {},
       statisticsCard() {}, groupEditorCard() {}, groupsCard() {}, assignmentCard() {}, recordsCard() {},

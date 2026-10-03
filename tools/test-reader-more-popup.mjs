@@ -14,7 +14,7 @@ const readerMoreSurface = {
   borderWidth: 1, shadowRadius: 28, shadowOffsetY: 10,
   actionHeight: 50, actionsHeight: 150, actionPaddingLeft: 18, actionPaddingRight: 18,
   dividerInset: 16, dividerHeight: 1, actionFontFamily: 'ReaderNotoSansSC',
-  actionFontSize: 15, actionLineHeight: 22, actionTextRole: 'TOK_INK',
+  actionFontWeight: 500, actionFontSize: 15, actionLineHeight: 22, actionTextRole: 'TOK_INK',
   dividerRole: 'app.BookshelfMoreMenu.action.color.FFE8E2DA',
   surfaceBackgroundRole: 'app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8',
   surfaceBorderRole: 'app.BookshelfMoreMenu.build.color.FFE3DED6',
@@ -87,7 +87,7 @@ for (const scheme of ['day', 'night']) {
   const rowTexts = t.nodes().filter(node => menuLabels.includes(node.create));
   assert.deepEqual(rowTexts.map(node => node.create), menuLabels);
   for (const text of rowTexts) {
-    assert.deepEqual([text.fontSize, text.lineHeight, text.fontWeight], [15, 22, 'FontWeight.Medium']);
+    assert.deepEqual([text.fontSize, text.lineHeight, text.fontWeight], [15, 22, 500]);
     assert.equal(text.fontColor, readerAppColor('TOK_INK', scheme));
   }
   const scroll = t.nodes().find(node => node.type === 'Scroll');

@@ -49,7 +49,9 @@ await check('temporary unknown Core name cannot erase cached exact-source name o
 await check('successful but unmatched/filtered source list does not prove deletion', async () => {
   const Gateway = productionMotionMethods(file('features/source/SourceGateway.ts'), ['loadSources','optionalString'], {classifyReaderSource});
   const gateway = Object.assign(new Gateway(), {runtimeOwner:{request:async()=>({data:{sources:[{sourceId:'source-a',enabled:true}]}})}});
-  const partial = await gateway.loadSources(); assert.deepEqual(partial, []);
+  await assert.rejects(gateway.loadSources(), /without its identity or name/, 'malformed source payload is a read failure, never deletion proof');
+  gateway.runtimeOwner.request = async () => ({data:{sources:[{sourceId:'source-b',name:'other source',baseUrl:'https://b.example',enabled:true,enabledExplore:true}]}});
+  const partial = await gateway.loadSources(); assert.equal(partial[0].sourceId, 'source-b');
   const f = fixture([book('Core持久名称')]); f.host.hydrateShelfSourceNames(1); f.requests[0].resolve(partial); await tick();
   assert.equal(f.host.shelfBooks[0].sourceName, 'Core持久名称');
   f.host.shelfBooks=[book(undefined)]; f.host.hydrateShelfSourceNames(1); f.requests[1].resolve([]); await tick();

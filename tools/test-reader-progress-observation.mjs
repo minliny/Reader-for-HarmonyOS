@@ -15,10 +15,10 @@ assert.equal(reads, 0, 'an expired queued query is inert without releasing or ov
 
 const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 const Page = productionMotionMethods(file, ['beginPreparedPageTurnPersistence', 'admitPageTurnPersistenceOutcome', 'canPresentOrdinaryPage'],
-  { observeReaderProgressOperation: observe });
+  { observeReaderProgressOperation: observe, hilog: {warn(){}} });
 let completeWrite, completed = 0, dialogs = 0, current = true;
 const write = new Promise(resolve => { completeWrite = resolve; });
-const page = Object.assign(new Page(), { pageTurnSettlementGeneration: 7, pageTurnCommitStarted: false,
+const page = Object.assign(new Page(), { mounted:true,lifecycleToken:1,chapterSelectionToken:1,pageTurnSettlementGeneration: 7, pageTurnCommitStarted: false,
   activeGateway:()=>({canPersistPresentedProgress:()=>false}),
   persistPreparedPageTurn: () => write, isPreparedPageTurnCommitCurrent: () => current,
   cancelPageTurnSettlementDeadline() {}, getUIContext: () => ({ showAlertDialog: () => dialogs++ }),
@@ -35,7 +35,7 @@ for (const kind of ['ordinary','unchanged-migration','source-switch','control','
   const calls=[];
   const chapter={chapterIndex:2,...(kind==='migrated'?{positionMigration:{status:'migrated'}}:
     kind==='unchanged-migration'?{positionMigration:{status:'unchanged'}}:{})};
-  const owner=Object.assign(new Page(),{pageTurnSettlementGeneration:8,pageTurnCommitStarted:false,
+  const owner=Object.assign(new Page(),{mounted:true,lifecycleToken:1,chapterSelectionToken:1,pageTurnSettlementGeneration:8,pageTurnCommitStarted:false,
     sourceSwitchTransactionId:kind==='source-switch'?'transaction':undefined,
     pendingControlSelection:kind==='control'?{selectionToken:1}:undefined,
     activeGateway:()=>({canPersistPresentedProgress:()=>kind!=='legacy'}),isPreparedPageTurnCommitCurrent:()=>true,
