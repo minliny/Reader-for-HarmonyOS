@@ -238,22 +238,7 @@ export class SourceGateway {
     text: string,
     shouldContinue: () => boolean = (): boolean => true,
   ): Promise<SourceImportSummary> {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(text) as unknown;
-    } catch (error) {
-      const message = errorMessageOf(error);
-      throw new Error(`Book-source document is not valid JSON: ${message}`);
-    }
-    const rawSources: unknown[] = Array.isArray(parsed) ? parsed : [parsed];
-    if (rawSources.length === 0) {
-      throw new Error('Book-source document contains no sources');
-    }
-    if (rawSources.length > MAX_BOOK_SOURCE_DOCUMENT_ENTRIES) {
-      throw new Error(
-        `Book-source document exceeds ${MAX_BOOK_SOURCE_DOCUMENT_ENTRIES} source limit`,
-      );
-    }
+    const rawSources = this.parseBookSourceDocument(text);
 
     // Non-abort item admission: one invalid or failing source must never
     // prevent the remaining items from importing. Each item is validated and
@@ -299,6 +284,44 @@ export class SourceGateway {
       failedCount: failures.length,
       failures,
     };
+  }
+
+  /** Same original admission, without side effects; subscription freezes these
+   * exact DTOs before accepting its first durable operation. */
+  prepareSubscriptionDocument(text: string): {
+    items: { index: number; sourceId: string; bookSource: JsonObject }[];
+    failures: SourceImportFailure[];
+  } {
+    const rawSources = this.parseBookSourceDocument(text);
+    const items: { index: number; sourceId: string; bookSource: JsonObject }[] = [];
+    const failures: SourceImportFailure[] = [];
+    for (let index = 0; index < rawSources.length; index++) {
+      try { const bookSource = this.requireBookSourceObject(rawSources[index],index);
+        const sourceId = this.requireBookSourceUrl(bookSource,index);
+        items.push({index,sourceId,bookSource});
+      } catch (error) { failures.push({index,sourceId:'',message:errorMessageOf(error)}); }
+    }
+    return {items,failures};
+  }
+  private parseBookSourceDocument(text: string): unknown[] {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text) as unknown;
+    } catch (error) {
+      const message = errorMessageOf(error);
+      throw new Error(`Book-source document is not valid JSON: ${message}`);
+    }
+    const rawSources: unknown[] = Array.isArray(parsed) ? parsed : [parsed];
+    if (rawSources.length === 0) {
+      throw new Error('Book-source document contains no sources');
+    }
+    if (rawSources.length > MAX_BOOK_SOURCE_DOCUMENT_ENTRIES) {
+      throw new Error(
+        `Book-source document exceeds ${MAX_BOOK_SOURCE_DOCUMENT_ENTRIES} source limit`,
+      );
+    }
+
+    return rawSources;
   }
 
   /** Core serializes the exact persisted raw BookSource objects. */

@@ -4,13 +4,14 @@ import { BookRequestNotDispatchedError, type BookRequestOptions } from '../../ap
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import type { ReadingGatewayRuntime } from '../reading/ReadingGatewayRuntime';
-import { RulesMutationIntentStore, type RulesMutationIntent } from './RulesMutationIntentStore';
+import { RulesMutationIntentStore, type RulesMutationIntent, type RuleSubscriptionJourney, type RuleSubscriptionStep } from './RulesMutationIntentStore';
 
 export interface RulesMutationSnapshot {
   generation: number; busy: boolean; confirmation: 'undispatched' | 'confirmed' | 'unknown';
   label: string; method: string; message: string;
   blocked: boolean; canRetryOriginal: boolean; operationId?: string; sequence?: number;
   writeStage: 'intent' | 'core' | 'cleanup';
+  subscription?: { kind: 0 | 1 | 2; cursor: number; total: number; confirmedParts: number; failedParts: number; metadataConfirmed: boolean };
 }
 interface RulesMutationReceipt {
   binding: { operationId: string; sequence: number; payloadFingerprint: string };
@@ -118,6 +119,91 @@ export class RulesMutationOwner {
     } finally { this.state.busy = false; }
   }
 
+  /** Only subscription import + its fixed timestamp; not an arbitrary task executor. */
+  async runSubscription(kind: 0 | 1 | 2, steps: RuleSubscriptionStep[],
+    localFailures: { index: number; message: string }[], currentAdmission: () => boolean,
+    qualify: (method: string, params: JsonObject, data: JsonObject) => void,
+    observer?: ReaderWriteEvidence): Promise<RulesMutationSnapshot> {
+    if (this.state.busy || this.state.blocked || this.state.confirmation === 'unknown') throw new RulesMutationError('先核对原规则/订阅操作', true);
+    const current = (): boolean => this.current(currentAdmission);
+    this.state = { generation: this.state.generation + 1, busy: true, confirmation: 'undispatched',
+      label: '订阅更新', method: '', message: '', blocked: false, canRetryOriginal: false, writeStage: 'intent' };
+    const acceptedBefore = this.intents.accepted();
+    try {
+      const existing = await this.intents.load(); if (existing !== undefined) { this.admitPending(existing); throw new Error(this.state.message); }
+      if (steps.length < 2 || steps[steps.length-1].method !== 'rule-sub.put' || steps.slice(0,-1).some(s =>
+        s.method !== (kind === 0 ? 'source.import' : kind === 1 ? 'rss-source.import' : 'rule-bundle.import'))) throw new Error('订阅步骤不属于原类型旅程');
+      const journey: RuleSubscriptionJourney = { kind, steps, localFailures, cursor: 0, facts: [] };
+      const first = steps[0];
+      const intent = await this.intents.accept('订阅更新', first.method, first.params,
+        async (): Promise<number> => { const q = await this.query(undefined,current); this.requireSubscriptionCapability(); return q.head?.sequence ?? 0; },current,journey);
+      return await this.continueSubscription(intent,current,qualify,true,observer,true);
+    } catch (error) {
+      const accepted = this.intents.accepted();
+      if (accepted !== undefined && accepted !== acceptedBefore) this.admitPending(accepted);
+      this.state.message = error instanceof Error ? error.message : '订阅更新暂时不可用';
+      throw new RulesMutationError(this.state.message,this.state.confirmation === 'unknown');
+    } finally { this.state.busy = false; }
+  }
+  private async continueSubscription(initial: RulesMutationIntent, current: () => boolean,
+    qualify: (method: string, params: JsonObject, data: JsonObject) => void,
+    explicit: boolean, observer?: ReaderWriteEvidence, durable: boolean = false): Promise<RulesMutationSnapshot> {
+    let intent = initial;
+    while (true) {
+      this.admitPending(intent); this.state.canRetryOriginal = false;
+      const journey = intent.subscription; if (journey === undefined) throw new Error('缺少订阅原旅程');
+      this.projectSubscription(intent);
+      const q = intent.terminal === undefined ? await this.query(intent,current) : undefined;
+      if (q !== undefined) this.requireSubscriptionCapability();
+      let receipt = intent.terminal === undefined ? q?.receipt : this.decodeReceipt(intent.terminal,intent);
+      if (receipt === undefined) {
+        const head = q?.head?.sequence ?? 0;
+        if (head !== intent.sequence - 1) throw new Error(head >= intent.sequence ? '流水已越过订阅原步骤且无精确回执，保持阻断' : '订阅原流水不连续');
+        this.state.canRetryOriginal = true;
+        if (!explicit) { this.state.message = '可继续保留的原订阅步骤，下载内容与更新时间不会重建'; return this.snapshot(); }
+        if (!durable) await this.intents.ensureDurable(intent,current);
+        this.state.writeStage = 'core';
+        const event = await this.runtime.request('rules.mutation.apply',this.params(intent), {
+          canDispatch: current, onDispatch: (): void => observer?.dispatched(),
+        });
+        receipt = this.decodeReceipt(event.data,intent);
+      }
+      if (receipt.outcome === 'applied') { qualify(intent.mutation.method,intent.mutation.params,receipt.data);
+        if (observer !== undefined && observer.confirmedCount < observer.dispatchedCount) observer.confirmed(); }
+      else observer?.rejectedBeforeExecution();
+      const last = journey.cursor === journey.steps.length - 1;
+      const confirmedImport = journey.facts.filter(f=>f.outcome === 'applied').length + (receipt.outcome === 'applied' ? 1 : 0);
+      // Definite original Source item rejection preserves the previous partial
+      // semantics. Unknown transport stops before any later item or timestamp.
+      const abort = receipt.outcome === 'rejected' && (journey.kind !== 0 || last);
+      const noImports = journey.kind === 0 && journey.cursor === journey.steps.length - 2 && confirmedImport === 0;
+      if (last || abort || noImports) {
+        this.projectSubscription(intent,receipt);
+        await this.clearTerminal(intent,receipt.outcome === 'applied' ? 'confirmed' : 'undispatched',receipt);
+        if (receipt.outcome === 'rejected') this.state.message = this.rejectionMessage(receipt);
+        return this.snapshot();
+      }
+      this.projectSubscription(intent,receipt);
+      this.state.confirmation = 'unknown'; this.state.blocked = true; this.state.canRetryOriginal = true;
+      this.state.message = '原订阅步骤已确认，仍需继续剩余导入及固定更新时间';
+      if (!explicit) return this.snapshot();
+      // Actual head must still belong to this original ACK; a foreign higher
+      // sequence never admits advancing the old journey.
+      const head = (await this.query(intent,current)).head;
+      if (head?.operationId !== intent.operationId || head.sequence !== intent.sequence) throw new Error('订阅原回执已被较新流水越过，保持阻断');
+      intent = await this.intents.advanceSubscription(intent,receipt as unknown as JsonObject,head.sequence,current);
+      durable = true; this.admitPending(intent);
+    }
+  }
+  private projectSubscription(intent: RulesMutationIntent, currentReceipt?: RulesMutationReceipt): void {
+    const j=intent.subscription; if (j === undefined) return;
+    const facts=[...j.facts,...(currentReceipt === undefined ? [] : [{ outcome: currentReceipt.outcome, method:currentReceipt.method }])];
+    this.state.subscription={ kind:j.kind,cursor:j.cursor,total:j.steps.length,
+      confirmedParts:facts.filter(f=>f.outcome==='applied').length,
+      failedParts:j.localFailures.length+facts.filter(f=>f.outcome==='rejected').length,
+      metadataConfirmed:facts.some(f=>f.method==='rule-sub.put' && f.outcome==='applied') };
+  }
+
   /** Pure exact query first. Explicit safe retry reuses the complete same ID;
    * null is never "not dispatched", a higher head never confirms an old delta. */
   async recoverOriginal(isCurrent: () => boolean,
@@ -130,6 +216,7 @@ export class RulesMutationOwner {
       const intent = await this.intents.load();
       if (intent === undefined) { this.state.blocked = false; return this.snapshot(); }
       this.admitPending(intent);
+      if (intent.subscription !== undefined) return await this.continueSubscription(intent,current,qualify,retryOriginal);
       let receipt = intent.terminal === undefined ? undefined : this.decodeReceipt(intent.terminal, intent);
       const query = receipt === undefined ? await this.query(intent, current) : undefined;
       if (receipt === undefined) this.requireCapability();
@@ -160,13 +247,17 @@ export class RulesMutationOwner {
     try { await this.intents.clear(intent, terminal as unknown as JsonObject | undefined); this.state.blocked = false; this.state.message = ''; }
     catch (_) { this.state.blocked = true; this.state.message = `${confirmation === 'confirmed' ? '原规则写入已确认' : '原规则操作未执行'}；原记录清理尚未确认，请核对后再开始下一项`; }
   }
-  private admitIdentity(intent: RulesMutationIntent): void { this.state.operationId = intent.operationId; this.state.sequence = intent.sequence; this.state.label = intent.label; this.state.method = intent.mutation.method; }
+  private admitIdentity(intent: RulesMutationIntent): void { this.state.operationId = intent.operationId; this.state.sequence = intent.sequence; this.state.label = intent.label; this.state.method = intent.mutation.method; this.projectSubscription(intent); }
   private admitPending(intent: RulesMutationIntent): void {
     this.admitIdentity(intent); this.state.confirmation = 'unknown'; this.state.blocked = true;
     this.state.message = '先前规则原操作仍需核对，不能覆盖原内容或接受另一草稿';
   }
   private params(intent: RulesMutationIntent): JsonObject { return { operationId: intent.operationId, sequence: intent.sequence, mutation: intent.mutation }; }
   private current(admission: () => boolean): boolean { try { return ReaderRuntimeOwner.isCurrent(this.runtime as ReaderRuntimeOwner) && admission(); } catch (_) { return false; } }
+  private requireSubscriptionCapability(): void {
+    this.requireCapability();
+    if (this.runtime.supportsCoreCapability?.('rules.mutation.subscription.v1') !== true) throw new Error('当前 Core 不支持订阅原旅程回执，已停止派发');
+  }
   private requireCapability(): void { if (this.runtime.supportsCoreCapability?.('rules.mutation.exact.v1') !== true) throw new Error('当前 Core 不具备规则精确回执能力，已停止写入'); }
   private async query(intent: RulesMutationIntent | undefined, current: () => boolean): Promise<RulesMutationQuery> {
     const event = await this.runtime.request('rules.mutation.query', intent === undefined ? {} : { operationId: intent.operationId, expected: this.params(intent) }, { canDispatch: current });

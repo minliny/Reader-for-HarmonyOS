@@ -169,37 +169,12 @@ export class RulesManagementOrchestrator {
         busy: true,
         statusMessage: `正在拉取${typeLabel}订阅：${subscription.name}…`,
       });
-      await this.performWrite(session, `${typeLabel}订阅更新`, async (evidence: ReaderWriteEvidence): Promise<string> => {
-        let importedStatus: string = '';
+      await this.performWrite(session, `${typeLabel}订阅更新`, async (_evidence: ReaderWriteEvidence): Promise<string> => {
         const document = await this.owner.loadOnlineJsonDocument(subscription.url);
-        if (!this.isCurrentSession(session)) {
-          throw new Error('订阅更新已关闭');
-        }
-        if (subscription.type === 0) {
-          const summary = await this.sourceGateway.importBookSourceDocument(
-            document.text,
-            (): boolean => this.isCurrentSession(session),
-          );
-          importedStatus = `已导入 ${summary.importedCount} 个书源`;
-          if (summary.failedCount > 0) importedStatus += `；${summary.failedCount} 个未完成`;
-        } else if (subscription.type === 1) {
-          const result = await this.rssGateway.importSourcesDocument(document.text, false);
-          importedStatus = `已合并 ${result.imported} 个 RSS 源`;
-        } else {
-          importedStatus = await this.gateway.importReplaceRuleDocument(document.text);
-        }
-        if (evidence.confirmation() !== 'confirmed') throw new Error(`${importedStatus}；导入结果尚未确认`);
-        if (!this.isCurrentSession(session)) throw new Error(`${importedStatus}；订阅更新已关闭`);
-        await this.gateway.saveRuleSubscription({
-          id: subscription.id,
-          name: subscription.name,
-          url: subscription.url,
-          type: subscription.type,
-          autoUpdate: subscription.autoUpdate,
-          customOrder: subscription.customOrder,
-          update: Date.now(),
-        });
-        return `${importedStatus}；订阅更新时间已保存`;
+        if (!this.isCurrentSession(session)) throw new Error('订阅更新已关闭，未接受');
+        const sourcePlan = subscription.type === 0 ? this.sourceGateway.prepareSubscriptionDocument(document.text) : undefined;
+        return await this.gateway.refreshSubscription(subscription,document.text,sourcePlan,
+          (): boolean => this.isCurrentSession(session));
       });
     });
   }
@@ -297,7 +272,7 @@ export class RulesManagementOrchestrator {
       this.publish({ ruleMutation: original });
       if (original.operationId !== undefined) {
         this.receiptLabel = original.label;
-        this.publishReceipt(session, original.confirmation, 'failed', original.message.length > 0 ? original.message : undefined);
+        this.publishReceipt(session, original.confirmation, 'failed', original.message.length > 0 ? original.message : undefined,original.subscription?.confirmedParts);
       }
     } catch (error) {
       const original = this.gateway.mutationSnapshot(); this.receiptLabel = original.label;
@@ -335,8 +310,9 @@ export class RulesManagementOrchestrator {
 
   private publishReceipt(session: number, confirmation: 'confirmed' | 'unknown' | 'undispatched',
     readback: 'reading' | 'failed' | 'succeeded', error?: string, confirmedParts?: number): void {
+    confirmedParts = this.gateway.mutationSnapshot().subscription?.confirmedParts ?? confirmedParts;
     this.latestReceipt = projectPersistedReceipt({ confirmation, readback, value: this.readValue(), refreshError: error,
-      canRetry: readback !== 'reading' && confirmation !== 'undispatched' && (readback === 'failed' || confirmation === 'unknown'),
+      canRetry: readback !== 'reading' && (confirmation !== 'undispatched' || this.gateway.mutationSnapshot().blocked) && (readback === 'failed' || confirmation === 'unknown'),
       generation: ++rulesProjectionGeneration });
     this.publishIfCurrent(session, { receipt: this.latestReceipt, confirmedParts, ruleMutation: this.gateway.mutationSnapshot(), busy: readback === 'reading',
       statusMessage: `${this.receiptLabel}：${this.latestReceipt.receipt.message}` +

@@ -7,11 +7,23 @@ import { replaceReaderAtomicSnapshot } from '../../app/ReaderAtomicSnapshotFile'
 import type { ReadingGatewayRuntime } from '../reading/ReadingGatewayRuntime';
 
 import { RULES_MUTATION_METHODS } from './RulesMutationContract';
+export interface RuleSubscriptionStep { method: string; params: JsonObject; sourceIndex?: number; }
+export interface RuleSubscriptionFact { operationId: string; sequence: number; method: string;
+  outcome: 'applied' | 'rejected'; data: JsonObject; receipt: JsonObject; }
+export interface RuleSubscriptionJourney {
+  kind: 0 | 1 | 2;
+  /** Original document-derived DTOs + one frozen metadata timestamp. */
+  steps: RuleSubscriptionStep[];
+  localFailures: { index: number; message: string }[];
+  cursor: number;
+  facts: RuleSubscriptionFact[];
+}
 export interface RulesMutationIntent {
   version: 1; operationId: string; sequence: number; label: string;
   mutation: { method: string; params: JsonObject };
   /** Only a qualified actual terminal Core receipt; independent from cleanup ACK. */
   terminal?: JsonObject;
+  subscription?: RuleSubscriptionJourney;
 }
 /** Single complete accepted delta over the existing AtomicFile primitive. The
  * static IO lane and warm tuple outlive Runtime replacement. Never evict an
@@ -27,12 +39,12 @@ export class RulesMutationIntentStore {
     return this.serial(async (): Promise<RulesMutationIntent | undefined> => {
       this.assertCurrent(); const disk = await this.read(); this.assertCurrent();
       const warm = RulesMutationIntentStore.warm;
-      if (warm !== undefined && disk !== undefined && !this.same(warm, disk)) throw new Error('规则原记录与暖状态冲突，不能覆盖');
+      if (warm !== undefined && disk !== undefined && !this.same(warm, disk) && !this.previousOf(disk, warm)) throw new Error('规则原记录与暖状态冲突，不能覆盖');
       const intent = warm ?? disk; RulesMutationIntentStore.warm = intent; return intent;
     });
   }
   async accept(label: string, method: string, params: JsonObject,
-    queryHead: () => Promise<number>, admitted: () => boolean): Promise<RulesMutationIntent> {
+    queryHead: () => Promise<number>, admitted: () => boolean, subscription?: RuleSubscriptionJourney): Promise<RulesMutationIntent> {
     return this.serial(async (): Promise<RulesMutationIntent> => {
       this.assertCurrent(); if (!admitted()) throw new Error('规则操作已退役，未接受');
       const disk = await this.read(); this.assertCurrent();
@@ -43,17 +55,44 @@ export class RulesMutationIntentStore {
       if (!Number.isSafeInteger(head) || head < 0 || head >= Number.MAX_SAFE_INTEGER) throw new Error('规则流水号不可继续，不能重置');
       const sequence = head + 1;
       const intent: RulesMutationIntent = { version: 1, operationId: `${util.generateRandomUUID()}/${sequence}`,
-        sequence, label, mutation: { method, params: fixed } };
+        sequence, label, mutation: { method, params: fixed },
+        subscription: subscription === undefined ? undefined : JSON.parse(JSON.stringify(subscription)) as RuleSubscriptionJourney };
       RulesMutationIntentStore.warm = intent;
       this.acceptedIntent = intent;
       await this.write(intent); return intent;
+    });
+  }
+  /** A qualified previous original receipt and the next fixed tuple are one
+   * Atomic snapshot. Next Core dispatch is forbidden until this ACK. */
+  async advanceSubscription(intent: RulesMutationIntent, receipt: JsonObject,
+    head: number, admitted: () => boolean): Promise<RulesMutationIntent> {
+    return this.serial(async (): Promise<RulesMutationIntent> => {
+      this.assertCurrent(); if (!admitted()) throw new Error('订阅旅程已退役');
+      const journey = intent.subscription;
+      if (journey === undefined || journey.cursor + 1 >= journey.steps.length || head !== intent.sequence ||
+        !Number.isSafeInteger(head) || head >= Number.MAX_SAFE_INTEGER) throw new Error('订阅原流水不能推进');
+      const disk = await this.read(); this.assertCurrent(); if (!admitted()) throw new Error('订阅旅程已退役');
+      const warm = RulesMutationIntentStore.warm;
+      if ((disk !== undefined && !this.same(disk, intent)) || (warm !== undefined && !this.same(warm, intent))) throw new Error('不能覆盖另一订阅原操作');
+      const binding = receipt['binding'] as JsonObject;
+      if (binding?.['operationId'] !== intent.operationId || binding['sequence'] !== intent.sequence ||
+        receipt['method'] !== intent.mutation.method || !['applied','rejected'].includes(receipt['outcome'] as string)) throw new Error('订阅推进缺少原精确回执');
+      const cursor = journey.cursor + 1, step = journey.steps[cursor], sequence = head + 1;
+      const next: RulesMutationIntent = { version: 1, label: intent.label,
+        operationId: `${util.generateRandomUUID()}/${sequence}`, sequence,
+        mutation: { method: step.method, params: JSON.parse(JSON.stringify(step.params)) as JsonObject },
+        subscription: { ...journey, cursor, facts: [...journey.facts, {
+          operationId: intent.operationId, sequence: intent.sequence, method: intent.mutation.method,
+          outcome: receipt['outcome'] as 'applied' | 'rejected', data: receipt['data'] as JsonObject, receipt }] } };
+      RulesMutationIntentStore.warm = next; this.acceptedIntent = next;
+      await this.write(next); return next;
     });
   }
   async ensureDurable(intent: RulesMutationIntent, admitted: () => boolean): Promise<void> {
     await this.serial(async (): Promise<void> => {
       this.assertCurrent(); if (!admitted()) throw new Error('规则服务已退役');
       const disk = await this.read(); this.assertCurrent(); if (!admitted()) throw new Error('规则服务已退役');
-      if ((disk !== undefined && !this.same(disk, intent)) ||
+      if ((disk !== undefined && !this.same(disk, intent) && !this.previousOf(disk, intent)) ||
         (RulesMutationIntentStore.warm !== undefined && !this.same(RulesMutationIntentStore.warm, intent))) throw new Error('旧规则记录不能覆盖新原操作');
       RulesMutationIntentStore.warm = intent; await this.write(intent);
     });
@@ -96,6 +135,7 @@ export class RulesMutationIntentStore {
       intent.operationId.split('/').pop() !== `${intent.sequence}` || typeof intent.label !== 'string' ||
       !RULES_MUTATION_METHODS.includes(intent.mutation?.method) || intent.mutation.params === null ||
       typeof intent.mutation.params !== 'object' || Array.isArray(intent.mutation.params)) throw new Error('规则原记录身份或内容无效，已保留');
+    this.validateSubscription(intent);
     return intent;
   }
   private async write(intent: RulesMutationIntent): Promise<void> { this.assertCurrent(); await this.replace(JSON.stringify(intent)); }
@@ -108,7 +148,31 @@ export class RulesMutationIntentStore {
     return `${context.filesDir}/reader-rules-mutation-intent-v1.json`;
   }
   private same(a: RulesMutationIntent, b: RulesMutationIntent): boolean {
-    return a.operationId === b.operationId && a.sequence === b.sequence && JSON.stringify(a.mutation) === JSON.stringify(b.mutation);
+    return a.operationId === b.operationId && a.sequence === b.sequence && JSON.stringify(a.mutation) === JSON.stringify(b.mutation) &&
+      JSON.stringify(a.subscription) === JSON.stringify(b.subscription);
+  }
+  private previousOf(previous: RulesMutationIntent, next: RulesMutationIntent): boolean {
+    const a = previous.subscription, b = next.subscription;
+    if (a === undefined || b === undefined || a.kind !== b.kind || b.cursor !== a.cursor + 1 ||
+      JSON.stringify(a.steps) !== JSON.stringify(b.steps) || JSON.stringify(a.localFailures) !== JSON.stringify(b.localFailures) ||
+      JSON.stringify(a.facts) !== JSON.stringify(b.facts.slice(0,-1))) return false;
+    const receipt = b.facts[b.facts.length - 1];
+    const binding = receipt?.receipt?.['binding'] as JsonObject | undefined;
+    return receipt?.operationId === previous.operationId && receipt.sequence === previous.sequence && receipt.method === previous.mutation.method &&
+      binding?.['operationId'] === previous.operationId && binding['sequence'] === previous.sequence;
+  }
+  private validateSubscription(intent: RulesMutationIntent): void {
+    const j = intent.subscription; if (j === undefined) return;
+    if (![0,1,2].includes(j.kind) || !Array.isArray(j.steps) || j.steps.length < 2 ||
+      !Number.isSafeInteger(j.cursor) || j.cursor < 0 || j.cursor >= j.steps.length || !Array.isArray(j.facts) ||
+      j.facts.length !== j.cursor || !Array.isArray(j.localFailures) ||
+      j.steps[j.steps.length-1]?.method !== 'rule-sub.put' ||
+      JSON.stringify(j.steps[j.cursor]?.params) !== JSON.stringify(intent.mutation.params) ||
+      j.steps[j.cursor]?.method !== intent.mutation.method ||
+      j.steps.some((s,index): boolean => index === j.steps.length - 1 ? s.method !== 'rule-sub.put' :
+        s.method !== (j.kind === 0 ? 'source.import' : j.kind === 1 ? 'rss-source.import' : 'rule-bundle.import'))) throw new Error('订阅原旅程结构无效，已保留');
+    for (const fact of j.facts) { if (typeof fact.operationId !== 'string' || !Number.isSafeInteger(fact.sequence) ||
+      !['applied','rejected'].includes(fact.outcome) || fact.data === null || typeof fact.data !== 'object' || fact.receipt === null || typeof fact.receipt !== 'object') throw new Error('订阅原回执结构无效'); }
   }
   private assertCurrent(): void { if (!ReaderRuntimeOwner.isCurrent(this.runtime as ReaderRuntimeOwner)) throw new Error('规则服务已退役，请由当前服务核对原记录'); }
 }

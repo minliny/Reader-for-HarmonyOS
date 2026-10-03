@@ -1,3 +1,4 @@
+import type { RuleSubscriptionStep } from './RulesMutationIntentStore';
 import type { JsonObject, ReaderCoreResultEvent } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
@@ -199,6 +200,9 @@ export class RulesManagementGateway {
   }
 
   async saveRuleSubscription(draft: RuleSubscriptionDraft): Promise<void> {
+    await this.requestMutation('rule-sub.put',this.ruleSubscriptionParams(draft));
+  }
+  private ruleSubscriptionParams(draft: RuleSubscriptionDraft): JsonObject {
     const name = draft.name.trim();
     const subscriptionUrl = draft.url.trim();
     const update = draft.update ?? 0;
@@ -215,7 +219,7 @@ export class RulesManagementGateway {
     if (update < 0) {
       throw new Error('rule subscription update must not be negative');
     }
-    await this.requestMutation('rule-sub.put', {
+    return {
       id: draft.id ?? Date.now(),
       name,
       url: subscriptionUrl,
@@ -223,7 +227,7 @@ export class RulesManagementGateway {
       customOrder: draft.customOrder,
       autoUpdate: draft.autoUpdate,
       update,
-    });
+    };
   }
 
   /**
@@ -232,6 +236,9 @@ export class RulesManagementGateway {
    * remains responsible for strict schema validation and atomic merge.
    */
   async importReplaceRuleDocument(json: string): Promise<string> {
+    return this.importBundle(this.replaceRuleDocumentBundle(json), false);
+  }
+  private replaceRuleDocumentBundle(json: string): string {
     const document = json.trim();
     if (document.length === 0) {
       throw new Error('替换规则订阅返回空文档');
@@ -246,7 +253,7 @@ export class RulesManagementGateway {
     }
     const bundle = `{"schemaVersion":1,"replaceRules":${rulesJson},` +
       `"dictRules":[],"txtTocRules":[],"ruleSubscriptions":[]}`;
-    return this.importBundle(bundle, false);
+    return bundle;
   }
 
   async deleteRuleSubscription(id: number): Promise<void> {
@@ -281,6 +288,30 @@ export class RulesManagementGateway {
     return status;
   }
 
+  async refreshSubscription(subscription: ManagedRuleSubscription, document: string,
+    sourcePlan: { items: { index: number; sourceId: string; bookSource: JsonObject }[];
+      failures: { index: number; message: string }[] } | undefined,
+    current: () => boolean): Promise<string> {
+    const steps: RuleSubscriptionStep[] = [];
+    const localFailures: { index: number; message: string }[] = [];
+    if (subscription.type === 0) {
+      if (sourcePlan === undefined) throw new Error('书源订阅缺少原准入计划');
+      for (const item of sourcePlan.items) steps.push({ method:'source.import',
+        params:{sourceId:item.sourceId,bookSource:item.bookSource}, sourceIndex:item.index });
+      localFailures.push(...sourcePlan.failures);
+      if (steps.length === 0) throw new Error(`书源订阅没有可导入项；${localFailures.length} 个未完成`);
+    } else if (subscription.type === 1) steps.push({ method:'rss-source.import',params:{json:document,replaceExisting:false} });
+    else if (subscription.type === 2) steps.push({ method:'rule-bundle.import',params:{json:this.replaceRuleDocumentBundle(document),replaceExisting:false} });
+    else throw new Error('未登记的订阅类型');
+    steps.push({ method:'rule-sub.put',params:this.ruleSubscriptionParams({...subscription,update:Date.now()}) });
+    const state = await RulesMutationOwner.forRuntime(this.owner).runSubscription(subscription.type,steps,localFailures,current,
+      (method:string,params:JsonObject,data:JsonObject):void=>this.qualifyMutation(method,params,data),this.writeEvidence);
+    const journey = state.subscription;
+    if (journey?.metadataConfirmed !== true) throw new Error(state.message || '导入已核定但订阅更新时间未保存');
+    return `订阅更新已确认；${Math.max(0,journey.confirmedParts-1)} 个导入步骤已确认` +
+      (journey.failedParts > 0 ? `；${journey.failedParts} 个未完成` : '') + '；订阅更新时间已保存';
+  }
+
   private async requestMutation(method: string, params: JsonObject): Promise<ReaderCoreResultEvent> {
     const admission = this.mutationAdmission;
     return RulesMutationOwner.forRuntime(this.owner).run('Core 规则写入',
@@ -294,6 +325,19 @@ export class RulesManagementGateway {
 
   /** Qualification is over this original returned ACK, never a later list. */
   private qualifyMutation(method: string, params: JsonObject, data: JsonObject): void {
+    if (method === 'source.import') {
+      if (data['imported'] !== true || data['sourceId'] !== params['sourceId'] ||
+        typeof data['name'] !== 'string' || (data['name'] as string).trim().length === 0) throw new Error('source.import 原回执无效');
+      return;
+    }
+    if (method === 'rss-source.import') {
+      if (data['schemaVersion'] !== 1 || data['replaceExisting'] !== params['replaceExisting']) throw new Error('RSS 导入原回执无效');
+      this.requireCount(data,'imported'); return;
+    }
+    if (method === 'reader.chinese-conversion.put') {
+      const config=this.requireObject(data['config'],'转换原回执');
+      if (config['mode'] !== params['mode'] || config['configId'] !== 1) throw new Error('转换原回执无效'); return;
+    }
     if (method === 'rule-bundle.import') {
       if (data['schemaVersion'] !== 1 || data['replaceExisting'] !== params['replaceExisting'])
         throw new Error('rule-bundle.import returned mismatched data');

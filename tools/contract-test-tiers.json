@@ -483,6 +483,7 @@
     "test-rss-route-operation-recovery.mjs",
     "test-rules-mutation-durable-intent.mjs",
     "test-rules-mutation-owner.mjs",
+    "test-rule-subscription-durable-journey.mjs",
     "test-rules-reading-invalidation-sdk.mjs",
     "test-runtime-admission-teardown.mjs",
     "test-search-candidate-acquisition.mjs",
