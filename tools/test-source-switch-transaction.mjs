@@ -38,7 +38,7 @@ assert.doesNotMatch(failure, /rollbackPendingSourceSwitch|showReadingFailure|ret
   'typed body errors retain the mounted reader and pending transaction for retry');
 assert.match(index, /this\.performSourceSwitchSeam\(effect\.book, effect\.session, effect\.chapterIndex\)/);
 assert.match(sourceHost, /this\.gateway\.rollbackSwitch\(transactionId/);
-assert.match(index, /commit\.sourceSwitchTransactionId !== undefined[\s\S]*host\.targetCommitted\([\s\S]*commit\.sourceSwitchTransactionId\)/,
+assert.match(index, /commit\.sourceSwitchTransactionId !== undefined[\s\S]*this\.getSourceSwitchHost\(\)\?\.targetCommitted\([\s\S]*commit\.sourceSwitchTransactionId\)/,
   'only the actual finalized ID from the canonical ACK releases the barrier');
 assert.match(sourceHost, /pending\.transactionId !== transactionId[\s\S]*this\.currentTransactionId\(identity\)/);
 assert.match(index, /if \(finalized !== undefined\) this\.cleanupRetiredSourceCache\(finalized\)/);

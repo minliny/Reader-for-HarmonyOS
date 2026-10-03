@@ -1,3 +1,4 @@
+import { readingPrefetchOwnerProbe } from './lib/reading-prefetch-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -22,7 +23,7 @@ for (const declaration of [
   /const CATALOG_REFRESH_NEAR_END = 3;/,
   /const CATALOG_REFRESH_INTERVAL_MS = 10 \* 60 \* 1000;/,
 ]) {
-  assert.match(index, declaration);
+  assert.match(read('entry/src/main/ets/features/reading/ReadingPrefetchHost.ts'), declaration);
 }
 
 assert.match(index, /private openShelfBook\([\s\S]*openRemoteBookDetail\([\s\S]*selection, true\);/,
@@ -35,9 +36,11 @@ assert.match(index, /private applyReadingCommit\([\s\S]*this\.prefetchReadingWin
   'each durable reading commit must maintain the rolling cache window');
 assert.match(index, /if \(this\.isRemoteCatalogNearEnd\(session, commit\.chapterIndex\)\) \{\s*this\.refreshRemoteCatalogNearEnd\(session\);/,
   'reading near the current end must trigger a throttled TOC refresh');
+const boundaryRuntime={};
+const boundaryProbe=readingPrefetchOwnerProbe(()=>boundaryRuntime);
 const CatalogBoundary = productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url),
-  ['isRemoteCatalogNearEnd'], { CATALOG_REFRESH_NEAR_END: 3 });
-const catalogBoundary = new CatalogBoundary();
+  ['isRemoteCatalogNearEnd'], boundaryProbe);
+const catalogBoundary = Object.assign(new CatalogBoundary(),{mountedRuntimeOwner:boundaryRuntime});
 const sparseCatalog = { entries: [10, 20, 30, 40, 50, 60, 70].map((chapterIndex, position) =>
   ({ index: chapterIndex, url: position < 5 ? `https://source.invalid/${chapterIndex}` : '' })) };
 assert.equal(catalogBoundary.isRemoteCatalogNearEnd(sparseCatalog, 10), false,
@@ -67,12 +70,14 @@ assert.doesNotMatch(failureBlock, /startSourceDiscovery/,
   'read failure must never auto-open or auto-pick source discovery');
 assert.doesNotMatch(failureBlock, /automaticSourceRecoveryKey/,
   'the automatic recovery latch is retired together with the auto-switch path');
-assert.match(index,
-  /if \(autoPickFirst\) \{[\s\S]*value\.isCurrent !== true[\s\S]*this\.onPickSource\(candidate\);/,
-  'the discovery auto-pick branch stays available only to explicit non-failure callers');
-assert.match(index, /gateway\.loadCachedCandidates\(query, isCurrent, known\)/,
-  'source picker reads the same durable candidates as search');
-assert.match(index, /gateway\.refreshCandidates\(query, isCurrent,[\s\S]{0,150}searchedSourceIds\(\)/,
+const sourceOwner=read('entry/src/main/ets/features/source/SourceSwitchHost.ts');
+assert.doesNotMatch(sourceOwner, /autoPickFirst|automaticSourceRecoveryKey/,
+  'the unused explicit auto-pick path is retired; only a user candidate intent dispatches a source mutation');
+assert.match(index, /private onPickSource[\s\S]*this\.sourceSwitchHost\?\.pick\(candidate, scopeId\)/,
+  'physical source choice delegates its captured scope to the original owner');
+assert.match(sourceOwner, /this\.gateway\.loadCachedCandidates\(context\.query,[\s\S]{0,150}context\.knownCandidates/,
+  'source owner reads the same durable candidates as search');
+assert.match(sourceOwner, /this\.gateway\.refreshCandidates\(context\.query,[\s\S]{0,200}context\.searchedSourceIds/,
   'an empty picker only discovers sources not already dispatched by its search');
 assert.match(sourceSwitchGateway, /const SOURCE_SWITCH_CACHE_TTL_MS = 24 \* 60 \* 60 \* 1000;/);
 assert.match(sourceSwitchGateway, /acquisitionState = stale/,

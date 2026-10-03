@@ -34,11 +34,11 @@ function method(signature) {
   return member.getText(indexTree);
 }
 const methods = [
-  'installRemoteReadingSession(', 'updateRemoteReadableChapterOrder(', 'onRemoteSessionReady(', 'openShelfBook(', 'openShelfBookInfo(', 'openLocalBookDetail(', 'openRemoteBookDetail(',
+  'installRemoteReadingSession(', 'onRemoteSessionReady(', 'openShelfBook(', 'openShelfBookInfo(', 'openLocalBookDetail(', 'openRemoteBookDetail(',
   'openReading(', 'presentPreparedReading(', 'returnToReadingOrigin(', 'onReaderExited(',
   'returnFromDetail(', 'requestReaderBookInfo(', 'returnToBookshelf(', 'nextNavigationGeneration(', 'isKnownDetailChapter(',
   'currentSourceSwitchTransactionId(', 'consumeTemporaryBackBridge(', 'isCurrentRuntime(', 'currentReaderPresentationIdentity(',
-  'consumeSystemFileOpen(',
+  'consumeSystemFileOpen(', 'retireSourceSwitchPresentation(', 'retireRssPresentation(',
   'async probeRemoteContentVerdict(', 'remoteContentVerdictLabel(', 'onReadingFailure(',
   'openDetailSourceSwitch(',
   'onSearchResultSelected(', 'searchAcquisitionCandidate(', 'remoteSeedForSearchBook(',

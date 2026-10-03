@@ -96,6 +96,7 @@ import { captureRemotePositionContext, type RemoteReadingPositionContext } from 
 import type { ReadingSessionChapter } from '../features/reading/ReadingChapterWindow';
 import type { ReadingEntrySeed } from '../features/reading/ReadingEntryPreparation';
 import { ReadingOfflineHost } from '../features/reading/ReadingOfflineHost';
+import { ReadingPrefetchHost, type ReadingPrefetchLease } from '../features/reading/ReadingPrefetchHost';
 import { ReadingOfflineGateway, type ReadingOfflineBookProgress } from '../features/reading/ReadingOfflineGateway';
 import {
   isRemoteSourceFailureKind,
@@ -214,21 +215,7 @@ import { TOK_GREEN, TOK_INK, TOK_MUTED, TOK_ON_PRIMARY } from '../features/commo
 const DOMAIN = 0x5244;
 const IMPORT_PRESENTATION_KEY = LOCAL_IMPORT_PRESENTATION_KEY;
 const LOCAL_SOURCE_ID = 'local';
-const READING_CACHE_BEFORE = 2;
-const READING_CACHE_AFTER = 2;
-const CATALOG_REFRESH_NEAR_END = 3;
 const CATALOG_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
-const CATALOG_REFRESH_RETRY_INTERVAL_MS = 30 * 1000;
-
-interface ReadingWindowPrefetchIntent {
-  key: string;
-  owner: ReaderRuntimeOwner;
-  session: RemoteReadingSession;
-  startInclusive: number;
-  endExclusive: number;
-  isCurrent: () => boolean;
-  retryAfter?: number;
-}
 
 type ReaderRoute = 'bookshelf' | 'discover' | 'detail' | 'reading' | 'directory' | 'search' |
   'bookshelfManagement' | 'bookshelfMultiSelect' | 'bookshelfSettings' |
@@ -391,9 +378,6 @@ struct Index {
   private remoteCacheNoticeGeneration: number = -1;
   private remoteContentProbeGeneration: number = 0;
   private remoteSessionGeneration: number = 0;
-  private remoteReadableToc: RemoteReadingTocEntry[] | undefined = undefined;
-  private remoteReadableChapterIndexes: number[] = [];
-  private remoteReadableChapterPositions: Map<number, number> = new Map();
   private remoteReadabilityProjectionRevision: number = -1;
   private pendingRemoteDirectoryProjection: (() => void) | undefined = undefined;
   private pendingLocalDirectoryProjection: (() => void) | undefined = undefined;
@@ -510,14 +494,6 @@ struct Index {
   private bookshelfBackgroundRefreshRunning: boolean = false;
   /** The automatic catalog scan can also supply the idle preparation's identities for this shelf revision. */
   private bookshelfBackgroundSeeds: BookshelfBackgroundSeeds | undefined;
-  private remoteCatalogRefreshAt: Map<string, number> = new Map();
-  private remoteCatalogRefreshAttemptAt: Map<string, number> = new Map();
-  private remoteCatalogRefreshInFlight: Map<string, () => boolean> = new Map();
-  private readingWindowPrefetchRequestedKey: string = '';
-  private readingWindowPrefetchPending: ReadingWindowPrefetchIntent | undefined = undefined;
-  private readingWindowPrefetchActive: ReadingWindowPrefetchIntent | undefined = undefined;
-  private readingWindowPrefetchCompleted: ReadingWindowPrefetchIntent | undefined = undefined;
-  private readingWindowPrefetchTask: Promise<void> | undefined = undefined;
   private bookProjectionUnsubscribe: (() => void) | undefined = undefined;
   private bookProjectionLoading: boolean = false;
   private bookProjectionActive: DetailProjectionIntent | undefined = undefined;
@@ -3299,12 +3275,9 @@ struct Index {
       this.openReading(undefined);
       return;
     }
-    if (shelfSnapshot?.lastCheckAt !== undefined) {
-      const catalogKey = `${seed.sourceId}\u0000${seed.bookId}`;
-      const persistedRefreshAt = shelfSnapshot.lastCheckAt * 1000;
-      const processRefreshAt = this.remoteCatalogRefreshAt.get(catalogKey) ?? 0;
-      this.remoteCatalogRefreshAt.set(catalogKey, Math.max(processRefreshAt, persistedRefreshAt));
-    }
+    if (shelfSnapshot?.lastCheckAt !== undefined && this.mountedRuntimeOwner !== undefined &&
+      this.isCurrentRuntime(this.mountedRuntimeOwner))
+      ReadingPrefetchHost.forRuntime(this.mountedRuntimeOwner).noteCatalogRefresh(seed, shelfSnapshot.lastCheckAt);
     const owner = ReaderRuntimeOwner.current();
     const gateway = new RemoteReadingFlowGateway(owner);
     const offline = new ReadingOfflineGateway(owner);
@@ -5117,7 +5090,6 @@ struct Index {
     }
     if (session === undefined) {
       this.remoteReadingSession = undefined;
-      this.updateRemoteReadableChapterOrder(undefined);
       this.remoteReadabilityProjectionRevision = -1;
       return;
     }
@@ -5131,7 +5103,6 @@ struct Index {
     } else {
       this.remoteReadingSession = session;
     }
-    this.updateRemoteReadableChapterOrder(this.remoteReadingSession);
     const facts = readableProjection?.acquisition;
     // Only a stable Core projection for this exact canonical session can
     // preserve the gate. It supplies no reusable materialized chapter.
@@ -5409,9 +5380,9 @@ struct Index {
       this.detailBook?.sourceId !== commit.sourceId || this.detailBook?.bookId !== commit.bookId) {
       return;
     }
-    const host = this.getSourceSwitchHost();
-    if (host !== undefined && commit.sourceSwitchTransactionId !== undefined) {
-      const finalized = host.targetCommitted({ sourceId: commit.sourceId, bookId: commit.bookId }, commit.sourceSwitchTransactionId);
+    if (commit.sourceSwitchTransactionId !== undefined) {
+      const finalized = this.getSourceSwitchHost()?.targetCommitted(
+        { sourceId: commit.sourceId, bookId: commit.bookId }, commit.sourceSwitchTransactionId);
       if (finalized !== undefined) this.cleanupRetiredSourceCache(finalized);
     }
     const session = this.remoteReadingSession;
@@ -5533,189 +5504,54 @@ struct Index {
     this.directoryChapterTitle = chapterTitle;
   }
 
-  private async prefetchReadingWindow(
-    session: RemoteReadingSession,
-    preferredChapterIndex: number | undefined = undefined,
-    shelfCurrent?: () => boolean,
-    capturedOwner?: ReaderRuntimeOwner,
-  ): Promise<void> {
-    const owner = capturedOwner ?? ReaderRuntimeOwner.current();
-    const navigation = this.navigationGeneration;
-    const contentCurrent = owner.captureReadingContentValidity?.(session.identity.sourceId, session.identity.bookId);
+  private readingPrefetchLease(session: RemoteReadingSession, owner: ReaderRuntimeOwner,
+    readerOwned: boolean, shelfCurrent?: () => boolean): ReadingPrefetchLease {
+    const navigation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
     const sessionGeneration = this.remoteSessionGeneration;
-    const readerOwned = shelfCurrent === undefined && preferredChapterIndex !== undefined;
-    const ownerCurrent = (): boolean => this.isCurrentRuntime(owner) &&
-      navigation === this.navigationGeneration && contentCurrent?.() !== false && shelfCurrent?.() !== false &&
-      (!readerOwned || (sessionGeneration === this.remoteSessionGeneration && this.readingSessionActive &&
-        sameRemoteSessionEvidence(this.remoteReadingSession, session)));
-    if (!ownerCurrent() || session.entries.length === 0) return;
-    if (readerOwned) this.updateRemoteReadableChapterOrder(session);
-    const indexes = readerOwned ? this.remoteReadableChapterIndexes :
-      session.entries.filter((entry: RemoteReadingTocEntry): boolean => entry.navigable !== false && entry.url.trim().length > 0)
-        .map((entry: RemoteReadingTocEntry): number => entry.index);
-    let chapterIndex = preferredChapterIndex;
-    if (chapterIndex === undefined) {
-      const progress = await new RemoteReadingFlowGateway(owner)
-        .loadProgress(session.identity, ownerCurrent);
-      if (!ownerCurrent()) return;
-      chapterIndex = progress.kind === 'restored' ? progress.progress.chapterIndex : indexes[0];
-    }
-    if (chapterIndex === undefined) return;
-    const position = readerOwned ? this.remoteReadableChapterPosition(session, chapterIndex) : indexes.indexOf(chapterIndex);
-    if (position === undefined || position < 0) return;
-    const startInclusive = indexes[Math.max(0, position - READING_CACHE_BEFORE)];
-    const endExclusive = indexes[Math.min(indexes.length - 1, position + READING_CACHE_AFTER)] + 1;
-    const publish = (entries: LocalReadingTocEntry[], intended: RemoteReadingSession, current: () => boolean): void => {
-      if (!current() || !sameRemoteSessionEvidence(this.remoteReadingSession, intended)) return;
-      let next: LocalReadingTocEntry[] | undefined;
-      for (const entry of entries) {
-        const position = this.detailToc.findIndex((item: LocalReadingTocEntry): boolean => item.index === entry.index);
-        if (position < 0 || this.detailToc[position].downloadState === entry.downloadState) continue;
-        if (next === undefined) next = this.detailToc.slice();
-        const prior: LocalReadingTocEntry = this.detailToc[position];
-        const updated: LocalReadingTocEntry = { index: prior.index, title: prior.title,
-          downloadState: entry.downloadState };
-        if (prior.level !== undefined) updated.level = prior.level;
-        if (prior.navigable !== undefined) updated.navigable = prior.navigable;
-        if (prior.bookmarks !== undefined) updated.bookmarks = prior.bookmarks;
-        next[position] = updated;
-      }
-      if (next !== undefined) this.detailToc = next;
+    const current = (): boolean => !this.shelfReceiptRetired && this.mountedRuntimeOwner === owner &&
+      mounting === this.detailShelfAdmissionMount && this.isCurrentRuntime(owner) && navigation === this.navigationGeneration &&
+      shelfCurrent?.() !== false && (!readerOwned || (sessionGeneration === this.remoteSessionGeneration &&
+        this.readingSessionActive && this.detailBook?.sourceId === session.identity.sourceId &&
+        this.detailBook?.bookId === session.identity.bookId && sameRemoteSessionEvidence(this.remoteReadingSession, session)));
+    return { isCurrent: current,
+      displayedSession: (): RemoteReadingSession | undefined => this.remoteReadingSession,
+      directory: (): LocalReadingTocEntry[] => this.detailToc,
+      projected: (entries: LocalReadingTocEntry[]): void => { if (current()) this.detailToc = entries; },
+      refreshed: (refreshed: RemoteReadingSession): void => {
+        if (!current()) return;
+        this.onRemoteSessionReady(refreshed);
+        this.refreshBookshelf();
+      },
+      diagnostic: (stage: 'window' | 'catalog', message: string): void => {
+        if (current()) hilog.warn(DOMAIN, 'Reader', stage === 'catalog' ?
+          'Near-end catalog refresh failed: %{private}s' : 'Rolling chapter cache incomplete: %{private}s', message);
+      },
     };
-    // Explicit shelf-update requests retain their separate per-book work.
-    if (!readerOwned) {
-      const result = await new ReadingOfflineGateway(owner).prefetchWindow(session, startInclusive, endExclusive, ownerCurrent);
-      publish(result.entries, session, ownerCurrent);
-      if (shelfCurrent !== undefined && ownerCurrent() && result.failedChapters > 0) {
-        throw new Error('部分章节预加载未完成');
-      }
-      return;
-    }
-    const key = JSON.stringify([session.identity.sourceId, session.identity.bookId, session.sourceVersion,
-      session.catalogVersion, session.contextVersion, navigation, startInclusive, endExclusive]);
-    const completed = this.readingWindowPrefetchCompleted;
-    if (completed?.key === key && completed.isCurrent() &&
-      (completed.retryAfter === undefined || Date.now() < completed.retryAfter)) return;
-    const pending = this.readingWindowPrefetchPending;
-    const active = this.readingWindowPrefetchActive;
-    if ((pending?.key === key && pending.isCurrent()) || (active?.key === key && active.isCurrent()))
-      return this.readingWindowPrefetchTask;
-    this.readingWindowPrefetchRequestedKey = key;
-    const intent: ReadingWindowPrefetchIntent = { key, owner, session, startInclusive, endExclusive,
-      isCurrent: (): boolean => ownerCurrent() && this.readingWindowPrefetchRequestedKey === key };
-    this.readingWindowPrefetchPending = intent;
-    if (this.readingWindowPrefetchTask !== undefined) return this.readingWindowPrefetchTask;
-    const task = (async (): Promise<void> => {
-      // Publish the single task before inspecting a potentially cancelled
-      // intent, and coalesce same-turn commits before dispatching optional I/O.
-      await Promise.resolve();
-      try {
-        while (this.readingWindowPrefetchPending !== undefined) {
-          const work = this.readingWindowPrefetchPending;
-          this.readingWindowPrefetchPending = undefined;
-          this.readingWindowPrefetchActive = work;
-          let incomplete = true;
-          try {
-            if (!work.isCurrent()) continue;
-            const result = await new ReadingOfflineGateway(work.owner).prefetchWindow(
-              work.session, work.startInclusive, work.endExclusive, work.isCurrent);
-            incomplete = result.failedChapters > 0 || result.entries.some((entry: LocalReadingTocEntry): boolean =>
-              entry.navigable !== false && entry.downloadState !== 'completed');
-            publish(result.entries, work.session, work.isCurrent);
-          } catch (error) {
-            if (work.isCurrent()) hilog.warn(DOMAIN, 'Reader', 'Rolling chapter cache incomplete: %{private}s', (error as Error).message);
-          } finally {
-            // Successful windows coalesce every page commit. Incomplete work
-            // may retry after a short delay without a per-page request storm.
-            if (work.isCurrent()) {
-              const completed: ReadingWindowPrefetchIntent = { key: work.key, owner: work.owner,
-                session: work.session, startInclusive: work.startInclusive, endExclusive: work.endExclusive,
-                isCurrent: work.isCurrent,
-                retryAfter: incomplete ? Date.now() + CATALOG_REFRESH_RETRY_INTERVAL_MS : undefined };
-              this.readingWindowPrefetchCompleted = completed;
-            }
-            this.readingWindowPrefetchActive = undefined;
-          }
-        }
-      } finally {
-        this.readingWindowPrefetchTask = undefined;
-      }
-    })();
-    this.readingWindowPrefetchTask = task;
-    return task;
+  }
+
+  private async prefetchReadingWindow(session: RemoteReadingSession, preferredChapterIndex?: number,
+    shelfCurrent?: () => boolean, capturedOwner?: ReaderRuntimeOwner): Promise<void> {
+    const owner = capturedOwner ?? this.mountedRuntimeOwner;
+    if (owner === undefined || !this.isCurrentRuntime(owner) || this.shelfReceiptRetired) return;
+    const readerOwned = shelfCurrent === undefined && preferredChapterIndex !== undefined;
+    const lease = this.readingPrefetchLease(session, owner, readerOwned, shelfCurrent);
+    if (!lease.isCurrent()) return;
+    await ReadingPrefetchHost.forRuntime(owner).prefetch(session, preferredChapterIndex, lease,
+      shelfCurrent !== undefined ? 'shelf' : readerOwned ? 'reader' : 'opportunistic');
   }
 
   private isRemoteCatalogNearEnd(session: RemoteReadingSession, chapterIndex: number): boolean {
-    this.updateRemoteReadableChapterOrder(session);
-    const position = this.remoteReadableChapterPosition(session, chapterIndex);
-    return position !== undefined && this.remoteReadableChapterIndexes.length - position - 1 <= CATALOG_REFRESH_NEAR_END;
-  }
-
-  /** Rebuilt only when an admitted session supplies a different TOC array. */
-  private updateRemoteReadableChapterOrder(session: RemoteReadingSession | undefined): void {
-    if (this.remoteReadableToc === session?.entries) return;
-    this.remoteReadableToc = session?.entries;
-    this.remoteReadableChapterIndexes = [];
-    this.remoteReadableChapterPositions = new Map();
-    if (session === undefined) return;
-    for (const entry of session.entries) {
-      if (entry.navigable === false || entry.url.trim().length === 0) continue;
-      this.remoteReadableChapterPositions.set(entry.index, this.remoteReadableChapterIndexes.length);
-      this.remoteReadableChapterIndexes.push(entry.index);
-    }
-  }
-
-  private remoteReadableChapterPosition(session: RemoteReadingSession, chapterIndex: number): number | undefined {
-    // Narrow/unknown catalog positions cannot be clamped to an unrelated row.
-    if (this.remoteReadableToc !== session.entries) return undefined;
-    return this.remoteReadableChapterPositions.get(chapterIndex);
+    const owner = this.mountedRuntimeOwner;
+    return owner !== undefined && this.isCurrentRuntime(owner) &&
+      ReadingPrefetchHost.forRuntime(owner).nearEnd(session, chapterIndex);
   }
 
   private refreshRemoteCatalogNearEnd(session: RemoteReadingSession): void {
-    const detail = this.detailBook;
-    if (!this.readingSessionActive || detail === undefined || detail.sourceId !== session.identity.sourceId ||
-      detail.bookId !== session.identity.bookId || !sameRemoteSessionEvidence(this.remoteReadingSession, session)) return;
-    const key = `${session.identity.sourceId}\u0000${session.identity.bookId}`;
-    const now = Date.now();
-    const lastRefresh = this.remoteCatalogRefreshAt.get(key);
-    const lastAttempt = this.remoteCatalogRefreshAttemptAt.get(key);
-    if (this.remoteCatalogRefreshInFlight.get(key)?.() === true ||
-      (lastRefresh !== undefined && now - lastRefresh < CATALOG_REFRESH_INTERVAL_MS) ||
-      (lastAttempt !== undefined && now - lastAttempt < CATALOG_REFRESH_RETRY_INTERVAL_MS)) return;
-    const owner = ReaderRuntimeOwner.current();
-    const generation = this.navigationGeneration;
-    const sessionGeneration = this.remoteSessionGeneration;
-    const isCurrent = (): boolean => this.isCurrentRuntime(owner) && this.readingSessionActive && generation === this.navigationGeneration &&
-      sessionGeneration === this.remoteSessionGeneration && this.detailBook?.sourceId === session.identity.sourceId &&
-      this.detailBook?.bookId === session.identity.bookId && sameRemoteSessionEvidence(this.remoteReadingSession, session);
-    this.remoteCatalogRefreshAttemptAt.set(key, now);
-    this.remoteCatalogRefreshInFlight.set(key, isCurrent);
-    const seed: RemoteReadingBookSeed = {
-      sourceId: session.identity.sourceId,
-      bookId: session.identity.bookId,
-      detailUrl: session.detailUrl,
-      title: session.book.title,
-      author: session.book.author,
-      coverUrl: session.book.coverUrl,
-      intro: session.book.intro,
-      kind: session.book.kind,
-      lastChapter: session.book.lastChapter,
-      sourceVersion: session.sourceVersion,
-      searchVariables: session.continuationVariables,
-    };
-    void new RemoteReadingFlowGateway(owner).openSession(seed, { isCurrent, forceRefresh: true })
-      .then((refreshed: RemoteReadingSession): void => {
-        if (!isCurrent()) return;
-        if (!canAppendRemoteReadingCatalog(session, refreshed)) throw new Error('READING_CATALOG_REFRESH_REQUIRES_REOPEN');
-        this.remoteCatalogRefreshAt.set(key, Date.now());
-        this.onRemoteSessionReady(refreshed);
-        this.refreshBookshelf();
-      })
-      .catch((error: Error): void => {
-        if (isCurrent()) hilog.warn(DOMAIN, 'Reader', 'Near-end catalog refresh failed: %{private}s', error.message);
-      }).finally((): void => {
-        if (this.remoteCatalogRefreshInFlight.get(key) === isCurrent) this.remoteCatalogRefreshInFlight.delete(key);
-      });
+    const owner = this.mountedRuntimeOwner, detail = this.detailBook;
+    if (owner === undefined || !this.isCurrentRuntime(owner) || !this.readingSessionActive || detail === undefined ||
+      detail.sourceId !== session.identity.sourceId || detail.bookId !== session.identity.bookId ||
+      !sameRemoteSessionEvidence(this.remoteReadingSession, session)) return;
+    void ReadingPrefetchHost.forRuntime(owner).refreshNearEnd(session, this.readingPrefetchLease(session, owner, true));
   }
 
   private applyReaderDirectoryProjection(entries: LocalReadingTocEntry[]): void {

@@ -1,3 +1,4 @@
+import { readingPrefetchOwnerProbe } from './lib/reading-prefetch-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
@@ -39,11 +40,14 @@ function fixture(cachedSourceVersion=sourceVersion){
   throw Error(`unexpected ${method}`);
  });
  const owner={bookAcquisitions:()=>runtime,request:(...a)=>runtime.request(...a),supportsCoreCapability:c=>c==='reading.catalog.page.v1',captureReadingContentValidity:()=>()=>true};
- const Index=productionMotionMethods(file('pages/Index.ets'),['refreshRemoteCatalogNearEnd','isRemoteCatalogNearEnd','onRemoteSessionReady'],{
-  RemoteReadingFlowGateway,canAppendRemoteReadingCatalog,sameRemoteSessionEvidence,ReaderRuntimeOwner:{current:()=>owner},CATALOG_REFRESH_INTERVAL_MS:600000,CATALOG_REFRESH_RETRY_INTERVAL_MS:30000,CATALOG_REFRESH_NEAR_END:3,DOMAIN:0,hilog:{warn:(...a)=>warnings.push(a)} });
- const page=Object.assign(new Index(),{readingSessionActive:true,navigationGeneration:1,remoteSessionGeneration:1,remoteCatalogRefreshAt:new Map(),remoteCatalogRefreshAttemptAt:new Map(),remoteCatalogRefreshInFlight:new Map(),detailBook:{...seed,sourceName:'佩蒲裴榕'},directoryCurrentChapterIndex:955,
+ const ownerProbe=readingPrefetchOwnerProbe(()=>owner);
+ const Index=productionMotionMethods(file('pages/Index.ets'),['readingPrefetchLease','refreshRemoteCatalogNearEnd','isRemoteCatalogNearEnd','onRemoteSessionReady'],{
+  ...ownerProbe,RemoteReadingFlowGateway,canAppendRemoteReadingCatalog,sameRemoteSessionEvidence,CATALOG_REFRESH_INTERVAL_MS:600000,CATALOG_REFRESH_RETRY_INTERVAL_MS:30000,CATALOG_REFRESH_NEAR_END:3,DOMAIN:0,hilog:{warn:(...a)=>warnings.push(a)} });
+ const page=Object.assign(new Index(),{mountedRuntimeOwner:owner,detailShelfAdmissionMount:1,shelfReceiptRetired:false,readingSessionActive:true,navigationGeneration:1,remoteSessionGeneration:1,remoteCatalogRefreshAt:new Map(),remoteCatalogRefreshAttemptAt:new Map(),remoteCatalogRefreshInFlight:new Map(),detailBook:{...seed,sourceName:'佩蒲裴榕'},directoryCurrentChapterIndex:955,
   directoryBookmarkMutationGeneration:0,directoryBookmarkMutationActiveKey:'',offlineMutationGeneration:0,
   installRemoteReadingSession(s){if(!sameRemoteSessionEvidence(this.remoteReadingSession,s))this.remoteSessionGeneration++;this.remoteReadingSession=s;},refreshBookshelf(){} });
+ const authority=ownerProbe.ReadingPrefetchHost.forRuntime(owner);
+ for(const [alias,key] of [['remoteCatalogRefreshAt','refreshAt'],['remoteCatalogRefreshAttemptAt','attemptAt'],['remoteCatalogRefreshInFlight','refreshInFlight']])Object.defineProperty(page,alias,{get:()=>authority[key]});
  return{runtime,owner,page,calls,warnings,gate:g=>{tocGate=g;},fail:v=>{fail=v;},catalog:()=>catalog};
 }
 const View=productionMotionMethods(file('features/reading/LocalReadingExperience.ets'),['onRemoteCatalogChanged','prepareRemoteCatalogNearEnd','hydrateEntryCatalog','admitTocEntries','readingTocEntries','adjacentChapterIndex','turnNextPage','queuePageTurnPreparation','drainPageTurnPreparationQueue','completePreparedPageTurn','notifyReadingPresentationReady'],{
@@ -164,15 +168,15 @@ await check('cold near-end acquisition failures retain the visible page, singlef
   r.v.prepareRemoteCatalogNearEnd();assert.equal(calls,1);now+=30001;fail=false;r.v.prepareRemoteCatalogNearEnd();await until(()=>gateway.remoteSession()!==undefined);assert.equal(calls,2);
  }finally{Date.now=realNow;}
 });
-await check('a cancelled old flight cannot clear a replacement flight or publish its result',async()=>{
+await check('retired presentation cannot replace unsettled native refresh; a later explicit retry uses the current lease',async()=>{
  const f=fixture(),realNow=Date.now;let now=1000000;Date.now=()=>now;
  try{const old=await f.runtime.acquireBook(seed);f.page.remoteReadingSession=old;const jobs=[];
   f.runtime.acquireBook=(_seed,options)=>{const job=deferred();jobs.push({...job,options});return job.promise;};
   f.page.refreshRemoteCatalogNearEnd(old);assert.equal(jobs.length,1);
-  f.page.navigationGeneration++;now+=30001;f.page.refreshRemoteCatalogNearEnd(old);assert.equal(jobs.length,2);
-  const currentFlight=f.page.remoteCatalogRefreshInFlight.get(`${sourceId}\u0000${bookId}`);
-  jobs[0].resolve(session(allEntries,'old-late'));await pause();assert.equal(f.page.remoteReadingSession,old);
-  assert.equal(f.page.remoteCatalogRefreshInFlight.get(`${sourceId}\u0000${bookId}`),currentFlight);
+  f.page.navigationGeneration++;now+=30001;f.page.refreshRemoteCatalogNearEnd(old);assert.equal(jobs.length,1,'accepted native producer must settle before another refresh');
+  jobs[0].resolve(session(allEntries,'old-late'));await until(()=>f.page.remoteCatalogRefreshInFlight.size===0);
+  assert.equal(f.page.remoteReadingSession,old,'old result cannot update a reentered reader');
+  f.page.refreshRemoteCatalogNearEnd(old);assert.equal(jobs.length,2);
   jobs[1].resolve(session(allEntries,'new'));await until(()=>f.page.remoteCatalogRefreshInFlight.size===0);assert.equal(f.page.remoteReadingSession.catalogVersion,'new');
  }finally{Date.now=realNow;f.runtime.close();}
 });
