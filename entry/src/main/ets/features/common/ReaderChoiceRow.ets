@@ -2,6 +2,24 @@ import { ReaderChoiceSpec, ReaderChoiceSpecId, resolveReaderChoiceSpec } from '.
 import { readerAppColor } from './ReaderThemeRegistry';
 import type { ReaderTextStyle } from './ReaderTypography';
 
+/** The finite row spec keeps AUTO attributes absent, rather than calling a
+ * native setter with undefined (which has different platform semantics). */
+class ReaderChoiceLabelModifier implements AttributeModifier<TextAttribute> {
+  constructor(private id: ReaderChoiceSpecId, private selected: boolean) {}
+  applyNormalAttribute(instance: TextAttribute): void {
+    const spec = resolveReaderChoiceSpec(this.id);
+    const text = this.selected ? spec.selectedText : spec.text;
+    instance.fontFamily(text.fontFamily);
+    const weight = this.selected ? spec.selectedWeight : text.fontWeight;
+    if (spec.variableWeight) instance.fontWeight(weight, { enableVariableFontWeight: true });
+    else instance.fontWeight(weight);
+    instance.fontSize(text.fontSizeFp);
+    if (text.lineHeightFp !== undefined) instance.lineHeight(text.lineHeightFp);
+    if (spec.textAlignStart) instance.textAlign(TextAlign.Start);
+    if (spec.ellipsis) instance.textOverflow({ overflow: TextOverflow.Ellipsis });
+  }
+}
+
 /** Controlled option row shared by inline selectors and responsive Settings.
  * Caller owns choice identity/commit; the finite spec owns the whole row. */
 @Component
@@ -41,12 +59,8 @@ export struct ReaderChoiceRow {
   private normalRow() {
     Row({ space: this.spec().gap }) {
       Text(this.label).layoutWeight(1)
-        .fontFamily(this.textStyle().fontFamily)
-        .fontWeight(this.selected ? this.spec().selectedWeight : this.textStyle().fontWeight, this.spec().variableWeight ? { enableVariableFontWeight: true } : undefined)
-        .fontSize(this.textStyle().fontSizeFp).lineHeight(this.textStyle().lineHeightFp as number)
-        .fontColor(this.textColor()).maxLines(1)
-        .textAlign(this.spec().textAlignStart ? TextAlign.Start : undefined)
-        .textOverflow(this.spec().ellipsis ? { overflow: TextOverflow.Ellipsis } : undefined);
+        .attributeModifier(new ReaderChoiceLabelModifier(this.specId, this.selected))
+        .fontColor(this.textColor()).maxLines(1);
       if (this.hasIcon()) {
         Image(this.icon()).width(this.spec().iconWidth).height(this.spec().iconHeight)
           .rotate({ angle: this.spec().rotateIcon ? this.chevronAngle : 0 });

@@ -36,6 +36,11 @@ for(const file of readdirSync(featureRoot,{recursive:true}).filter(file=>file.en
     assert.ok(source.includes('.onClick((): void => this.commit())'),'actual direct/wrapped native action host remains in the registered producer');
     delegated++;continue;
   }
+  if(node.kind==='Text'&&file==='common/ReaderChoiceRow.ets'&&node.method==='normalRow'&&node.text==='this.label'&&
+    normalise(node.attributes.attributeModifier)==='newReaderChoiceLabelModifier(this.specId,this.selected)'){
+    const actual=producers.producers.find(p=>p.component==='ReaderChoiceRow');assert.ok(actual);
+    assert.deepEqual(sharedProducerShape(source,actual.file),actual.shape,'exact finite choice modifier owns roles and native AUTO omissions');delegated++;continue;
+  }
   if(node.kind==='Text'&&file==='common/ReaderButton.ets'&&node.method==='build'&&node.text==='this.label'&&
     ['newReaderButtonLabelModifier(this.specId,this.primary,this.scheme)','newReaderButtonTextModifier(this.specId,this.primary,this.actionEnabled,this.layout,this.scheme,this.isBusy,this.availableWidth)'].includes(normalise(node.attributes.attributeModifier))||
     ['TextInput','TextArea'].includes(node.kind)&&file==='common/ReaderFormField.ets'&&node.method==='build'&&['{text:this.text,placeholder:this.placeholder}','{text:this.text}','{text:this.text,placeholder:this.placeholder,controller:this.inputController}'].includes(normalise(node.text))&&
@@ -89,5 +94,5 @@ for(const row of contracts.values()){
 }
 assert.equal(controls,14);assert.equal(a11y,4);// One additional finite ReaderButton leading-slot Text is now an actual shared
 // glyph host; native-default families and all private budgets are unchanged.
-assert.equal(delegated,13);
+assert.equal(delegated,14);
 console.log(`PASS native-default contracts: ${contracts.size} finite native families / ${controls} actual actors (retry has exact exclusive source-switch/reading branches); ${paint} no-glyph actors, ${a11y} exact accessibility actors, ${delegated} actual bounded shared glyph hosts, ${inherited} inherited body spans; no physical font overrides fabricated`);

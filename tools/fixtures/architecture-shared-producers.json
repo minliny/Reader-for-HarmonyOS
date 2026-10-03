@@ -3704,8 +3704,448 @@
         "tools/test-source-foundation-specs.mjs",
         "tools/test-foundation-search-discover-sync.mjs"
       ]
+    },
+    {
+      "id": "shared-ReaderChoiceRow",
+      "file": "entry/src/main/ets/features/common/ReaderChoiceRow.ets",
+      "component": "ReaderChoiceRow",
+      "specPolicy": "8 exact current-UI choice variants; existing row/positioned layouts, fixed role sources/selected weight/divider/icon; optional AUTO native setters absent, no arbitrary leaf override",
+      "shape": {
+        "types": [],
+        "declarations": [
+          {
+            "name": "ReaderChoiceLabelModifier",
+            "publicFields": []
+          },
+          {
+            "name": "ReaderChoiceRow",
+            "publicFields": [
+              {
+                "name": "specId",
+                "type": "ReaderChoiceSpecId",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "label",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "selected",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "showDivider",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "scheme",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "availableWidth",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "chevronAngle",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "actionEnabled",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "onChoose",
+                "type": "(value: string) => void",
+                "decorators": []
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderChoiceLabelModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontFamily",
+            "args": [
+              "text.fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceLabelModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontWeight",
+            "args": [
+              "weight",
+              "{ enableVariableFontWeight: true }"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceLabelModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontWeight",
+            "args": [
+              "weight"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceLabelModifier",
+            "method": "applyNormalAttribute",
+            "property": "fontSize",
+            "args": [
+              "text.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceLabelModifier",
+            "method": "applyNormalAttribute",
+            "property": "lineHeight",
+            "args": [
+              "text.lineHeightFp"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "this.spec().height"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "build",
+            "property": "padding",
+            "args": [
+              "{ left: this.spec().padding, right: this.spec().padding }"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "this.spec().dividerHeight"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "build",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(this.spec().dividerRole!, this.scheme)"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "this.spec().dividerHeight"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "normalRow",
+            "property": "backgroundColor",
+            "args": [
+              "this.rowBackground()"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "normalRow",
+            "property": "borderRadius",
+            "args": [
+              "this.spec().radius"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "normalRow",
+            "property": "padding",
+            "args": [
+              "{ left: this.spec().padding, right: this.spec().padding }"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "normalRow",
+            "property": "height",
+            "args": [
+              "this.rowHeight()"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "normalRow",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "normalRow",
+            "property": "fontColor",
+            "args": [
+              "this.textColor()"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "normalRow",
+            "property": "height",
+            "args": [
+              "this.spec().iconHeight"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "normalRow",
+            "property": "width",
+            "args": [
+              "this.spec().iconWidth"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "positionedRow",
+            "property": "backgroundColor",
+            "args": [
+              "this.rowBackground()"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "positionedRow",
+            "property": "height",
+            "args": [
+              "this.rowHeight()"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "positionedRow",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "positionedRow",
+            "property": "fontColor",
+            "args": [
+              "this.textColor()"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "positionedRow",
+            "property": "lineHeight",
+            "args": [
+              "this.textStyle().lineHeightFp as number"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "positionedRow",
+            "property": "fontSize",
+            "args": [
+              "this.textStyle().fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "positionedRow",
+            "property": "fontWeight",
+            "args": [
+              "this.selected ? this.spec().selectedWeight : this.textStyle().fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "positionedRow",
+            "property": "fontFamily",
+            "args": [
+              "this.textStyle().fontFamily"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "positionedRow",
+            "property": "height",
+            "args": [
+              "this.spec().textHeight"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "positionedRow",
+            "property": "width",
+            "args": [
+              "Math.max(0, this.availableWidth - this.spec().textWidthInset)"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "positionedRow",
+            "property": "height",
+            "args": [
+              "this.spec().iconHeight"
+            ]
+          },
+          {
+            "owner": "ReaderChoiceRow",
+            "method": "positionedRow",
+            "property": "width",
+            "args": [
+              "this.spec().iconWidth"
+            ]
+          }
+        ],
+        "implementation": "import { ReaderChoiceSpec, ReaderChoiceSpecId, resolveReaderChoiceSpec } from './ReaderChoiceSpecs';\nimport { readerAppColor } from './ReaderThemeRegistry';\nimport type { ReaderTextStyle } from './ReaderTypography';\nclass ReaderChoiceLabelModifier implements AttributeModifier<TextAttribute> {\n    constructor(private id: ReaderChoiceSpecId, private selected: boolean) { }\n    applyNormalAttribute(instance: TextAttribute): void {\n        const spec = resolveReaderChoiceSpec(this.id);\n        const text = this.selected ? spec.selectedText : spec.text;\n        instance.fontFamily(text.fontFamily);\n        const weight = this.selected ? spec.selectedWeight : text.fontWeight;\n        if (spec.variableWeight)\n            instance.fontWeight(weight, { enableVariableFontWeight: true });\n        else\n            instance.fontWeight(weight);\n        instance.fontSize(text.fontSizeFp);\n        if (text.lineHeightFp !== undefined)\n            instance.lineHeight(text.lineHeightFp);\n        if (spec.textAlignStart)\n            instance.textAlign(TextAlign.Start);\n        if (spec.ellipsis)\n            instance.textOverflow({ overflow: TextOverflow.Ellipsis });\n    }\n}\n@Component\nexport struct ReaderChoiceRow extends   {\n    constructor(?: {\n        specId?: ReaderChoiceSpecId;\n        label?: string;\n        selected?: boolean;\n        showDivider?: boolean;\n        scheme?: string;\n        availableWidth?: number;\n        chevronAngle?: number;\n        actionEnabled?: boolean;\n        onChoose?: (value: string) => void;\n        private mounted?: boolean;\n    }, ?: ) { }\n    @Prop\n    specId: ReaderChoiceSpecId = 'default-option';\n    @Prop\n    label: string = '';\n    @Prop\n    selected: boolean = false;\n    @Prop\n    showDivider: boolean = false;\n    @Prop\n    scheme: string = 'day';\n    @Prop\n    availableWidth: number = 0;\n    @Prop\n    chevronAngle: number = 0;\n    @Prop\n    actionEnabled: boolean = true;\n    onChoose: (value: string) => void = (): void => { };\n    private mounted: boolean = false;\n    aboutToAppear(): void { this.mounted = true; }\n    aboutToDisappear(): void { this.mounted = false; }\n    build() {\n        .width<\n    >('100%').height<\n    >(this.spec().height);\n    }\n    @Builder\n    private normalRow() {\n        .width<\n    >('100%').height<\n    >(this.rowHeight())\n            .padding<\n    >({ left: this.spec().padding, right: this.spec().padding })\n            .alignItems<\n    >(VerticalAlign.Center).borderRadius<\n    >(this.spec().radius)\n            .backgroundColor<\n    >(this.rowBackground())\n            .enabled<\n    >(this.actionEnabled).accessibilityText<\n    >(this.accessibilityLabel())\n            .onClick<\n    >((): void => this.choose());\n    }\n    @Builder\n    private positionedRow() {\n        .width<\n    >('100%').height<\n    >(this.rowHeight())\n            .backgroundColor<\n    >(this.rowBackground()).enabled<\n    >(this.actionEnabled)\n            .accessibilityText<\n    >(this.accessibilityLabel()).onClick<\n    >((): void => this.choose());\n    }\n    private spec(): ReaderChoiceSpec { return resolveReaderChoiceSpec(this.specId); }\n    private textStyle(): ReaderTextStyle { return this.selected ? this.spec().selectedText : this.spec().text; }\n    private rowHeight(): number { return this.spec().height - (this.showDivider ? this.spec().dividerHeight : 0); }\n    private textColor(): ResourceColor { return readerAppColor(this.selected ? this.spec().selectedTextRole : this.spec().textRole, this.scheme); }\n    private rowBackground(): ResourceColor {\n        return this.selected && this.spec().selectedBackground !== undefined ?\n            readerAppColor(this.spec().selectedBackground!, this.scheme) : Color.Transparent;\n    }\n    private hasIcon(): boolean { return this.spec().showIcon === 'always' || (this.spec().showIcon === 'selected' && this.selected); }\n    private icon(): Resource { return $r(this.scheme === 'night' ? this.spec().iconNight : this.spec().iconDay); }\n    private accessibilityLabel(): string { return this.specId === 'appearance-library' ? `${this.label}${this.selected ? '，已选择' : ''}` : this.label; }\n    private choose(): void { if (this.mounted && this.actionEnabled)\n        this.onChoose(this.label); }\n}\n"
+      },
+      "specSources": [
+        {
+          "file": "entry/src/main/ets/features/common/ReaderChoiceSpecs.ets",
+          "shape": {
+            "types": [
+              {
+                "name": "ReaderChoiceSpecId",
+                "type": "'settings-phone' | 'settings-tablet' | 'appearance-library' | 'default-selected' | 'source-group-selected' | 'appearance-compact-selected' | 'default-option' | 'source-group-option'"
+              },
+              {
+                "name": "ReaderChoiceLayout",
+                "type": "'row' | 'positioned'"
+              }
+            ],
+            "declarations": [],
+            "styles": [],
+            "implementation": "import type { ReaderAppColorRole } from './ReaderThemeRegistry';\nimport { ReaderTextStyle, TYPE_SELECT_DEFAULT_VALUE, TYPE_SELECT_OPTION, TYPE_SELECT_SOURCE_GROUP_VALUE, TYPE_SELECT_APPEARANCE_VALUE, TYPE_SETTINGS_SELECT_PHONE_OPTION, TYPE_SETTINGS_SELECT_TABLET_OPTION, TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_REGULAR, TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_SELECTED, } from './ReaderTypography';\nexport type ReaderChoiceSpecId = 'settings-phone' | 'settings-tablet' | 'appearance-library' | 'default-selected' | 'source-group-selected' | 'appearance-compact-selected' | 'default-option' | 'source-group-option';\nexport type ReaderChoiceLayout = 'row' | 'positioned';\nexport interface ReaderChoiceSpec {\n    height: number;\n    padding: number;\n    gap: number;\n    radius: number;\n    text: ReaderTextStyle;\n    selectedText: ReaderTextStyle;\n    selectedWeight: number;\n    variableWeight: boolean;\n    textRole: ReaderAppColorRole;\n    selectedTextRole: ReaderAppColorRole;\n    selectedBackground: ReaderAppColorRole | undefined;\n    dividerRole: ReaderAppColorRole | undefined;\n    dividerHeight: number;\n    iconDay: string;\n    iconNight: string;\n    iconWidth: number;\n    iconHeight: number;\n    showIcon: 'always' | 'selected' | 'never';\n    rotateIcon: boolean;\n    layout: ReaderChoiceLayout;\n    textLeft: number;\n    textTop: number;\n    textHeight: number;\n    textWidthInset: number;\n    iconRight: number;\n    iconTop: number;\n    ellipsis: boolean;\n    textAlignStart: boolean;\n}\nconst COMMON_ROW: ReaderChoiceSpec = {\n    height: 36, padding: 10, gap: 0, radius: 0,\n    text: TYPE_SELECT_OPTION, selectedText: TYPE_SELECT_OPTION,\n    selectedWeight: TYPE_SELECT_OPTION.fontWeight, variableWeight: false,\n    textRole: 'TOK_CONTROL_INK', selectedTextRole: 'TOK_CONTROL_INK',\n    selectedBackground: undefined, dividerRole: undefined, dividerHeight: 0,\n    iconDay: '', iconNight: '', iconWidth: 0, iconHeight: 0, showIcon: 'never', rotateIcon: false,\n    layout: 'row', textLeft: 0, textTop: 0, textHeight: 0, textWidthInset: 0, iconRight: 0, iconTop: 0,\n    ellipsis: true, textAlignStart: true,\n};\nfunction copyReaderChoiceSpec(): ReaderChoiceSpec {\n    return {\n        height: COMMON_ROW.height,\n        padding: COMMON_ROW.padding,\n        gap: COMMON_ROW.gap,\n        radius: COMMON_ROW.radius,\n        text: COMMON_ROW.text,\n        selectedText: COMMON_ROW.selectedText,\n        selectedWeight: COMMON_ROW.selectedWeight,\n        variableWeight: COMMON_ROW.variableWeight,\n        textRole: COMMON_ROW.textRole,\n        selectedTextRole: COMMON_ROW.selectedTextRole,\n        selectedBackground: COMMON_ROW.selectedBackground,\n        dividerRole: COMMON_ROW.dividerRole,\n        dividerHeight: COMMON_ROW.dividerHeight,\n        iconDay: COMMON_ROW.iconDay,\n        iconNight: COMMON_ROW.iconNight,\n        iconWidth: COMMON_ROW.iconWidth,\n        iconHeight: COMMON_ROW.iconHeight,\n        showIcon: COMMON_ROW.showIcon,\n        rotateIcon: COMMON_ROW.rotateIcon,\n        layout: COMMON_ROW.layout,\n        textLeft: COMMON_ROW.textLeft,\n        textTop: COMMON_ROW.textTop,\n        textHeight: COMMON_ROW.textHeight,\n        textWidthInset: COMMON_ROW.textWidthInset,\n        iconRight: COMMON_ROW.iconRight,\n        iconTop: COMMON_ROW.iconTop,\n        ellipsis: COMMON_ROW.ellipsis,\n        textAlignStart: COMMON_ROW.textAlignStart,\n    };\n}\nconst CHOICE_SOURCE_GROUP_OPTION: ReaderChoiceSpec = copyReaderChoiceSpec();\nCHOICE_SOURCE_GROUP_OPTION.padding = 14;\nCHOICE_SOURCE_GROUP_OPTION.text = TYPE_SELECT_SOURCE_GROUP_VALUE;\nCHOICE_SOURCE_GROUP_OPTION.selectedText = TYPE_SELECT_SOURCE_GROUP_VALUE;\nCHOICE_SOURCE_GROUP_OPTION.textRole = 'TOK_INK';\nCHOICE_SOURCE_GROUP_OPTION.selectedTextRole = 'TOK_INK';\nconst CHOICE_DEFAULT_SELECTED: ReaderChoiceSpec = copyReaderChoiceSpec();\nCHOICE_DEFAULT_SELECTED.gap = 8;\nCHOICE_DEFAULT_SELECTED.text = TYPE_SELECT_DEFAULT_VALUE;\nCHOICE_DEFAULT_SELECTED.selectedText = TYPE_SELECT_DEFAULT_VALUE;\nCHOICE_DEFAULT_SELECTED.selectedWeight = TYPE_SELECT_DEFAULT_VALUE.fontWeight;\nCHOICE_DEFAULT_SELECTED.textRole = 'TOK_PRIMARY_TEXT';\nCHOICE_DEFAULT_SELECTED.selectedTextRole = 'TOK_PRIMARY_TEXT';\nCHOICE_DEFAULT_SELECTED.selectedBackground = 'TOK_SURFACE_PANEL_SOFT';\nCHOICE_DEFAULT_SELECTED.iconDay = 'app.media.reader_chevron_down';\nCHOICE_DEFAULT_SELECTED.iconNight = 'app.media.reader_chevron_down_theme_night';\nCHOICE_DEFAULT_SELECTED.iconWidth = 12;\nCHOICE_DEFAULT_SELECTED.iconHeight = 8;\nCHOICE_DEFAULT_SELECTED.showIcon = 'always';\nCHOICE_DEFAULT_SELECTED.rotateIcon = true;\nconst CHOICE_SOURCE_GROUP_SELECTED: ReaderChoiceSpec = copyReaderChoiceSpec();\nCHOICE_SOURCE_GROUP_SELECTED.text = TYPE_SELECT_SOURCE_GROUP_VALUE;\nCHOICE_SOURCE_GROUP_SELECTED.selectedText = TYPE_SELECT_SOURCE_GROUP_VALUE;\nCHOICE_SOURCE_GROUP_SELECTED.selectedWeight = TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight;\nCHOICE_SOURCE_GROUP_SELECTED.textRole = 'TOK_INK';\nCHOICE_SOURCE_GROUP_SELECTED.selectedTextRole = 'TOK_INK';\nCHOICE_SOURCE_GROUP_SELECTED.selectedBackground = 'app.ReaderSelectPanel.sourceGroupSelectedRow.backgroundColor.FFFFFCF8';\nCHOICE_SOURCE_GROUP_SELECTED.iconDay = 'app.media.source_group_chevron';\nCHOICE_SOURCE_GROUP_SELECTED.iconNight = 'app.media.source_group_chevron_theme_night';\nCHOICE_SOURCE_GROUP_SELECTED.iconWidth = 12;\nCHOICE_SOURCE_GROUP_SELECTED.iconHeight = 12;\nCHOICE_SOURCE_GROUP_SELECTED.showIcon = 'always';\nCHOICE_SOURCE_GROUP_SELECTED.rotateIcon = true;\nCHOICE_SOURCE_GROUP_SELECTED.layout = 'positioned';\nCHOICE_SOURCE_GROUP_SELECTED.textLeft = 14;\nCHOICE_SOURCE_GROUP_SELECTED.textTop = 10;\nCHOICE_SOURCE_GROUP_SELECTED.textHeight = 15;\nCHOICE_SOURCE_GROUP_SELECTED.textWidthInset = 42;\nCHOICE_SOURCE_GROUP_SELECTED.iconRight = 21;\nCHOICE_SOURCE_GROUP_SELECTED.iconTop = 12;\nconst CHOICE_APPEARANCE_COMPACT_SELECTED: ReaderChoiceSpec = copyReaderChoiceSpec();\nCHOICE_APPEARANCE_COMPACT_SELECTED.text = TYPE_SELECT_APPEARANCE_VALUE;\nCHOICE_APPEARANCE_COMPACT_SELECTED.selectedText = TYPE_SELECT_APPEARANCE_VALUE;\nCHOICE_APPEARANCE_COMPACT_SELECTED.selectedWeight = TYPE_SELECT_APPEARANCE_VALUE.fontWeight;\nCHOICE_APPEARANCE_COMPACT_SELECTED.textRole = 'TOK_PRIMARY_TEXT';\nCHOICE_APPEARANCE_COMPACT_SELECTED.selectedTextRole = 'TOK_PRIMARY_TEXT';\nCHOICE_APPEARANCE_COMPACT_SELECTED.selectedBackground = 'TOK_SURFACE_PANEL_SOFT';\nCHOICE_APPEARANCE_COMPACT_SELECTED.iconDay = 'app.media.reader_chevron_down';\nCHOICE_APPEARANCE_COMPACT_SELECTED.iconNight = 'app.media.reader_chevron_down_theme_night';\nCHOICE_APPEARANCE_COMPACT_SELECTED.iconWidth = 8;\nCHOICE_APPEARANCE_COMPACT_SELECTED.iconHeight = 4;\nCHOICE_APPEARANCE_COMPACT_SELECTED.showIcon = 'always';\nCHOICE_APPEARANCE_COMPACT_SELECTED.rotateIcon = true;\nCHOICE_APPEARANCE_COMPACT_SELECTED.layout = 'positioned';\nCHOICE_APPEARANCE_COMPACT_SELECTED.textLeft = 10;\nCHOICE_APPEARANCE_COMPACT_SELECTED.textTop = 11;\nCHOICE_APPEARANCE_COMPACT_SELECTED.textHeight = 14;\nCHOICE_APPEARANCE_COMPACT_SELECTED.textWidthInset = 28;\nCHOICE_APPEARANCE_COMPACT_SELECTED.iconRight = 14;\nCHOICE_APPEARANCE_COMPACT_SELECTED.iconTop = 16;\nconst CHOICE_APPEARANCE_LIBRARY: ReaderChoiceSpec = copyReaderChoiceSpec();\nCHOICE_APPEARANCE_LIBRARY.height = 25;\nCHOICE_APPEARANCE_LIBRARY.padding = 9;\nCHOICE_APPEARANCE_LIBRARY.gap = 10;\nCHOICE_APPEARANCE_LIBRARY.radius = 6;\nCHOICE_APPEARANCE_LIBRARY.text = TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_REGULAR;\nCHOICE_APPEARANCE_LIBRARY.selectedText = TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_SELECTED;\nCHOICE_APPEARANCE_LIBRARY.selectedWeight = 700;\nCHOICE_APPEARANCE_LIBRARY.variableWeight = true;\nCHOICE_APPEARANCE_LIBRARY.textAlignStart = false;\nCHOICE_APPEARANCE_LIBRARY.textRole = 'app.ReaderSelectPanel.appearanceLibraryOption.fontColor.FF41484C';\nCHOICE_APPEARANCE_LIBRARY.selectedTextRole = 'app.ReaderSelectPanel.appearanceLibraryOption.fontColor.FF2F6373';\nCHOICE_APPEARANCE_LIBRARY.selectedBackground = 'app.appearance.selectSelected';\nCHOICE_APPEARANCE_LIBRARY.iconDay = 'app.media.reader_appearance_make_check';\nCHOICE_APPEARANCE_LIBRARY.iconNight = 'app.media.reader_appearance_make_check_theme_night';\nCHOICE_APPEARANCE_LIBRARY.iconWidth = 11;\nCHOICE_APPEARANCE_LIBRARY.iconHeight = 9;\nCHOICE_APPEARANCE_LIBRARY.showIcon = 'selected';\nconst CHOICE_SETTINGS_PHONE: ReaderChoiceSpec = copyReaderChoiceSpec();\nCHOICE_SETTINGS_PHONE.height = 52;\nCHOICE_SETTINGS_PHONE.padding = 16;\nCHOICE_SETTINGS_PHONE.text = TYPE_SETTINGS_SELECT_PHONE_OPTION;\nCHOICE_SETTINGS_PHONE.selectedText = TYPE_SETTINGS_SELECT_PHONE_OPTION;\nCHOICE_SETTINGS_PHONE.selectedWeight = 700;\nCHOICE_SETTINGS_PHONE.ellipsis = false;\nCHOICE_SETTINGS_PHONE.textAlignStart = false;\nCHOICE_SETTINGS_PHONE.textRole = 'app.SettingsSelectOverlay.phoneOption.fontColor.FF1F1B17';\nCHOICE_SETTINGS_PHONE.selectedTextRole = 'app.SettingsSelectOverlay.phoneOption.fontColor.FF2D4A3E';\nCHOICE_SETTINGS_PHONE.selectedBackground = 'app.SettingsSelectOverlay.phoneOption.backgroundColor.0D2D4A3E';\nCHOICE_SETTINGS_PHONE.dividerRole = 'app.SettingsSelectOverlay.phoneOption.backgroundColor.FFC1C7CD';\nCHOICE_SETTINGS_PHONE.dividerHeight = 1;\nCHOICE_SETTINGS_PHONE.iconDay = 'app.media.settings_select_check';\nCHOICE_SETTINGS_PHONE.iconNight = 'app.media.settings_select_check_theme_night';\nCHOICE_SETTINGS_PHONE.iconWidth = 16;\nCHOICE_SETTINGS_PHONE.iconHeight = 16;\nCHOICE_SETTINGS_PHONE.showIcon = 'selected';\nconst CHOICE_SETTINGS_TABLET: ReaderChoiceSpec = copyReaderChoiceSpec();\nCHOICE_SETTINGS_TABLET.height = 42;\nCHOICE_SETTINGS_TABLET.padding = 14;\nCHOICE_SETTINGS_TABLET.text = TYPE_SETTINGS_SELECT_TABLET_OPTION;\nCHOICE_SETTINGS_TABLET.selectedText = TYPE_SETTINGS_SELECT_TABLET_OPTION;\nCHOICE_SETTINGS_TABLET.selectedWeight = 700;\nCHOICE_SETTINGS_TABLET.ellipsis = false;\nCHOICE_SETTINGS_TABLET.textAlignStart = false;\nCHOICE_SETTINGS_TABLET.textRole = 'app.SettingsSelectOverlay.tabletOption.fontColor.FF1F1B17';\nCHOICE_SETTINGS_TABLET.selectedTextRole = 'app.SettingsSelectOverlay.tabletOption.fontColor.FF2D4A3E';\nCHOICE_SETTINGS_TABLET.selectedBackground = 'app.SettingsSelectOverlay.tabletOption.backgroundColor.0F2D4A3E';\nCHOICE_SETTINGS_TABLET.dividerRole = 'app.SettingsSelectOverlay.tabletOption.backgroundColor.FFC1C7CD';\nCHOICE_SETTINGS_TABLET.dividerHeight = 1;\nCHOICE_SETTINGS_TABLET.iconDay = 'app.media.settings_select_check';\nCHOICE_SETTINGS_TABLET.iconNight = 'app.media.settings_select_check_theme_night';\nCHOICE_SETTINGS_TABLET.iconWidth = 14;\nCHOICE_SETTINGS_TABLET.iconHeight = 14;\nCHOICE_SETTINGS_TABLET.showIcon = 'selected';\nconst CHOICES: Record<ReaderChoiceSpecId, ReaderChoiceSpec> = {\n    'default-option': COMMON_ROW,\n    'source-group-option': CHOICE_SOURCE_GROUP_OPTION,\n    'default-selected': CHOICE_DEFAULT_SELECTED,\n    'source-group-selected': CHOICE_SOURCE_GROUP_SELECTED,\n    'appearance-compact-selected': CHOICE_APPEARANCE_COMPACT_SELECTED,\n    'appearance-library': CHOICE_APPEARANCE_LIBRARY,\n    'settings-phone': CHOICE_SETTINGS_PHONE,\n    'settings-tablet': CHOICE_SETTINGS_TABLET,\n};\nexport function resolveReaderChoiceSpec(id: ReaderChoiceSpecId): ReaderChoiceSpec { return CHOICES[id]; }\n"
+          }
+        }
+      ],
+      "consumers": [
+        {
+          "file": "features/common/ReaderSelectPanel.ets",
+          "method": "features/common/ReaderSelectPanel.ets#ReaderSelectPanel#appearanceLibraryOption",
+          "component": "ReaderChoiceRow",
+          "specId": "'appearance-library'",
+          "keys": [
+            "specId",
+            "label",
+            "selected",
+            "scheme",
+            "actionEnabled",
+            "onChoose"
+          ]
+        },
+        {
+          "file": "features/common/ReaderSelectPanel.ets",
+          "method": "features/common/ReaderSelectPanel.ets#ReaderSelectPanel#selectedRow",
+          "component": "ReaderChoiceRow",
+          "specId": "this.variant === 'appearanceCompact' ? 'appearance-compact-selected' :\n    (this.variant === 'sourceGroup' ? 'source-group-selected' : 'default-selected')",
+          "keys": [
+            "specId",
+            "label",
+            "selected",
+            "scheme",
+            "availableWidth",
+            "chevronAngle",
+            "actionEnabled",
+            "onChoose"
+          ]
+        },
+        {
+          "file": "features/common/ReaderSelectPanel.ets",
+          "method": "features/common/ReaderSelectPanel.ets#ReaderSelectPanel#optionRow",
+          "component": "ReaderChoiceRow",
+          "specId": "this.variant === 'sourceGroup' ? 'source-group-option' : 'default-option'",
+          "keys": [
+            "specId",
+            "label",
+            "scheme",
+            "actionEnabled",
+            "onChoose"
+          ]
+        },
+        {
+          "file": "features/settings/SettingsSelectOverlay.ets",
+          "method": "features/settings/SettingsSelectOverlay.ets#SettingsSelectOverlay#phoneOption",
+          "component": "ReaderChoiceRow",
+          "specId": "'settings-phone'",
+          "keys": [
+            "specId",
+            "label",
+            "selected",
+            "showDivider",
+            "scheme",
+            "onChoose"
+          ]
+        },
+        {
+          "file": "features/settings/SettingsSelectOverlay.ets",
+          "method": "features/settings/SettingsSelectOverlay.ets#SettingsSelectOverlay#tabletOption",
+          "component": "ReaderChoiceRow",
+          "specId": "'settings-tablet'",
+          "keys": [
+            "specId",
+            "label",
+            "selected",
+            "showDivider",
+            "scheme",
+            "onChoose"
+          ]
+        }
+      ],
+      "removalProofs": [
+        "tools/evidence/p4/CHOICE_NATIVE_AUTO_CALLS.md"
+      ],
+      "sdkProofs": [
+        "tools/test-choice-row-surface.mjs"
+      ]
     }
   ],
   "legacyBusinessRowsSha256": "3f7f18a54b7bf56a1bb557d3c48574f3e9b4f7e869a25dce2541c04b30f924d0",
-  "legacySharedOwnersSha256": "af8b056aa81b2ddccecb15af9cb59e714300d03568915c44edebc2256514d074"
+  "legacySharedOwnersSha256": "82c4c61426bf926ad9708e8953b6a7b6e45478f9cf84e1ffcfe524c87cec0521"
 }

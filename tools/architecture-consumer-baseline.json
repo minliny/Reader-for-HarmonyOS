@@ -700,7 +700,8 @@
         "backgroundColor": 3
       },
       "kind": "finite-spec-shared-choice-row",
-      "proof": "tools/test-choice-row-surface.mjs"
+      "proof": "tools/test-choice-row-surface.mjs",
+      "contractId": "shared-ReaderChoiceRow"
     },
     {
       "file": "entry/src/main/ets/features/common/ReaderRecoveryAction.ets",
