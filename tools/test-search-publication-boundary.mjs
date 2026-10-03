@@ -129,9 +129,10 @@ class ActualSearchPage extends childProbe.Component {
   constructor(...args) { initialParams = args[1]; super(...args); }
 }
 const indexMembers = ['searchHost', 'searchPublicationRevision', 'applyBookshelfState',
-  'getBookshelfProjection', 'applyBookshelfProjection', 'shelfFilter', 'isCurrentRuntime'];
+  'getBookshelfProjection', 'applyBookshelfProjection', 'shelfFilter', 'isCurrentRuntime',
+  'searchPageContent', 'searchPageSurface', 'isCurrentSearchPresentation'];
 const parentSource = `@Component struct Index {\n${indexMembers.map(name => member(indexStruct, indexTree, name)).join('\n')}
-build() { ${searchEntry}; }\n}`;
+build() { this.searchPageContent(); }\n}`;
 class SearchHostProbe {
   constructor(onPublicationChanged, isSearchVisible) {
     this.viewState = new SearchViewState();
