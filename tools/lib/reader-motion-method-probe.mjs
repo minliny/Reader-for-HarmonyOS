@@ -32,7 +32,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
   // Keep newly factored business helpers real in existing method-level probes.
   // Fixtures can still supply their explicit I/O/lifecycle dependencies.
   names = [...names];
-  for (const helper of ['showReaderAlert', 'isMountedToken', 'isSelectionCurrent', 'preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent']) {
+  for (const helper of ['showReaderAlert', 'showIndexAlert', 'isMountedToken', 'isSelectionCurrent', 'preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent']) {
     if (!names.includes(helper) && type.members.some(m => m.name?.getText(tree) === helper) &&
       type.members.some(m => names.includes(m.name?.getText(tree)) && m.getText(tree).includes(`this.${helper}(`))) names.push(helper);
   }
