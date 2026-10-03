@@ -485,6 +485,15 @@ export class SourceToolsOrchestrator {
         this.fail(session, '书源保存失败', error as Error);
         return;
       }
+      // The Core write is confirmed before the follow-up list read starts.
+      // Publish that intermediate fact so a slow refresh cannot leave the
+      // previous editor outcome looking current while the durable write is
+      // already committed.
+      this.publishIfCurrent(session, {
+        editorReadback: projectCommitReadback('confirmed', 'reading'),
+        busy: true,
+        statusMessage: '书源已确认，正在刷新…',
+      });
       let sources: BookSource[];
       try {
         sources = await this.gateway.loadSources(undefined, true);

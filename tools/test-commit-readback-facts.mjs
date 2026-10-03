@@ -115,6 +115,9 @@ const orchestratorSource = read('entry/src/main/ets/features/source/SourceToolsO
   .replace(/^import \{ projectCommitReadback \} from ['"][^'"]*ReaderOperationFacts['"];\n/m, '')
   .replace(/^import \{ projectPersistedReceipt \} from ['"][^'"]*ReaderPersistedReceiptProjection['"];\n/m, '')
   .replace(/^import \{[\s\S]*?\} from ['"]\.\/SourceGateway['"];\n/m, '');
+assert.match(orchestratorSource,
+  /await this\.gateway\.saveEditableSource\(sourceId, text\);[\s\S]*?projectCommitReadback\('confirmed', 'reading'\)[\s\S]*?await this\.gateway\.loadSources\(undefined, true\)/,
+  'saveEditor must expose confirmed/refreshing before the read-only list refresh');
 const executable = stripTypeScriptTypes(
   `${errorMessageSource}\n${transportPolicySource}\n${sourceCategorySource}\n${operationFactsSource}\n${persistedReceiptProjectionSource}\n${gatewaySource}\n${orchestratorSource}`,
 );
