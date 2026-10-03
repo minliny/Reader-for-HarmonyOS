@@ -1,3 +1,6 @@
+import { ReaderButton } from '../common/ReaderButton';
+import { ReaderIconButton } from '../common/ReaderIconButton';
+import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import type { SourceManagementProjection } from './SourceHost';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
@@ -243,13 +246,8 @@ export struct SourceManagementPage {
       title: '书源管理',
       onBack: (): void => this.onBack(),
     }) {
-      Stack({ alignContent: Alignment.Center }) {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more'))).width(20).height(20);
-      }
-      .width(44)
-      .height(44)
-      .borderRadius(22)
-      .onClick((): void => this.onOpenTools());
+      ReaderIconButton({ icon: this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more'),
+        boxSize: 44, iconSize: 20, radius: 22, onTap: (): void => this.onOpenTools() });
     }
   }
 
@@ -334,15 +332,11 @@ export struct SourceManagementPage {
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       if (this.recovery().canRetry || this.statusKind === 'error') {
-        Text('重试')
-          .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)
-          .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)
-          .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)
-          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-          .onClick((): void => {
+        ReaderButton({ scheme: this.appThemeScheme, specId: 'source-management-retry', label: '重试',
+          onAction: (): void => {
             if (this.recovery().canRetry) this.onReconcile(this.recovery().generation);
             else this.onRetryLoad();
-          });
+          } });
       }
     }
     .width(this.contentFrame().width)
@@ -378,19 +372,11 @@ export struct SourceManagementPage {
     Scroll() {
       Row({ space: TOK_SPACE_XS }) {
         ForEach(['all', 'novel', 'comic', 'music', 'download', 'external', 'other'], (category: string) => {
-          Text(category === 'all' ? '全部类型' : readerSourceCategoryLabel(category as ReaderSourceCategory))
-            .fontFamily(TYPE_FORM_HINT.fontFamily as string)
-            .fontSize(TYPE_FORM_HINT.fontSizeFp)
-            .fontColor(this.categoryValue === category ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
-            .backgroundColor(this.categoryValue === category ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-            .borderRadius(16)
-            .padding({ left: 12, right: 12 })
-            .height(32)
-            .id(`source-category-${category}`)
-            .onClick((): void => {
-              this.categoryValue = category;
-              this.rebuildSourceProjection();
-            });
+          ReaderButton({ scheme: this.appThemeScheme, specId: 'source-management-category',
+            label: category === 'all' ? '全部类型' : readerSourceCategoryLabel(category as ReaderSourceCategory),
+            primary: this.categoryValue === category,
+            onAction: (): void => { this.categoryValue = category; this.rebuildSourceProjection(); } })
+            .id(`source-category-${category}`);
         }, (category: string): string => category);
       }
     }
@@ -418,25 +404,9 @@ export struct SourceManagementPage {
 
   @Builder
   private chip(label: string, width: number, active: boolean, enabled: boolean) {
-    Text(label)
-      .width(this.statusChipWidth(width))
-      .height(32)
-      .textAlign(TextAlign.Center)
-      .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)
-      .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)
-      .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)
-      .fontColor(active ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
-      .backgroundColor(active ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: active ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('app.SourceManagementPage.CHIP_BORDER', this.appThemeScheme) })
-      .borderRadius(16)
-      .maxLines(1)
-      .opacity(enabled ? 1 : 0.45)
-      .onClick((): void => {
-        if (enabled) {
-          this.statusValue = label;
-          this.rebuildSourceProjection();
-        }
-      });
+    ReaderButton({ scheme: this.appThemeScheme, specId: width === 58 ? 'source-management-status-compact' : 'source-management-status-wide',
+      label, primary: active, actionEnabled: enabled, availableWidth: this.filterControlWidth(),
+      onAction: (): void => { if (enabled) { this.statusValue = label; this.rebuildSourceProjection(); } } });
   }
 
   @Builder
@@ -586,43 +556,15 @@ export struct SourceManagementPage {
 
   @Builder
   private detectButton(source: BookSource) {
-    Stack({ alignContent: Alignment.Center }) {
-      Text(source.checkState === 'checking' ? '检测中' : '检测')
-        .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)
-        .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)
-        .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .maxLines(1);
-    }
-    .width(44)
-    .height(28)
-    .borderRadius(7)
-    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.SourceManagementPage.CHIP_BORDER', this.appThemeScheme) })
-    .opacity(source.checkState === 'checking' ? 0.62 : 1)
-    .onClick((): void => {
-      if (source.checkState !== 'checking') {
-        this.onDetectSource(source.sourceId);
-      }
-    });
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-management-detect',
+      label: source.checkState === 'checking' ? '检测中' : '检测', isBusy: source.checkState === 'checking',
+      onAction: (): void => { if (source.checkState !== 'checking') this.onDetectSource(source.sourceId); } });
   }
 
   @Builder
   private loginButton(source: BookSource) {
-    Stack({ alignContent: Alignment.Center }) {
-      Text('登录')
-        .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)
-        .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)
-        .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)
-        .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-        .maxLines(1);
-    }
-    .width(44)
-    .height(28)
-    .borderRadius(7)
-    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.SourceManagementPage.CHIP_BORDER', this.appThemeScheme) })
-    .onClick((): void => this.onLoginSource(source.sourceId));
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-management-login', label: '登录',
+      onAction: (): void => this.onLoginSource(source.sourceId) });
   }
 
   @Builder
@@ -638,40 +580,10 @@ export struct SourceManagementPage {
   @Builder
   private bottomActionBar() {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-      Stack({ alignContent: Alignment.Center }) {
-        Text('批量管理')
-          .fontFamily(TYPE_FORM_LABEL_ACTION.fontFamily)
-          .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)
-          .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-          .maxLines(1);
-      }
-      .layoutWeight(1)
-      .height(44)
-      .borderRadius(8)
-      .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('app.SourceManagementPage.SEARCH_FIELD_BORDER', this.appThemeScheme) })
-      .onClick((): void => this.onOpenTools());
-
-      Stack({ alignContent: Alignment.Center }) {
-        Row({ space: TOK_SPACE_XS }) {
-          Image($r('app.media.source_add'))
-            .width(18)
-            .height(18);
-          Text('新增书源')
-            .fontFamily(TYPE_FORM_LABEL_ACTION.fontFamily)
-            .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)
-            .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)
-            .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-            .maxLines(1);
-        }
-        .alignItems(VerticalAlign.Center);
-      }
-      .layoutWeight(1)
-      .height(44)
-      .borderRadius(8)
-      .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
-      .onClick((): void => this.onAddSource());
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'source-management-manage', label: '批量管理', layout: 'equal',
+        onAction: (): void => this.onOpenTools() });
+      ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'source-management-add', label: '新增书源',
+        icon: $r('app.media.source_add'), onAction: (): void => this.onAddSource() });
     }
     .width(this.contentFrame().width)
     .height(44)
@@ -794,11 +706,7 @@ export struct SourceManagementPage {
     return Math.max(0, (this.contentFrame().width - 20) / 2);
   }
 
-  private statusChipWidth(designWidth: number): number {
-    const gapWidth = TOK_SPACE_XS * 4;
-    const availableForChips = Math.max(0, this.filterControlWidth() - gapWidth);
-    return designWidth * Math.min(1, availableForChips / 318);
-  }
+
 
   private groupSelectWidth(): number {
     return Math.max(0, this.filterControlWidth() - (GROUP_FILTER_WIDTH - GROUP_SELECT_WIDTH));
