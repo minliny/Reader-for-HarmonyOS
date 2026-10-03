@@ -52,6 +52,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import inputMethod from '@ohos.inputMethod';
 import {
   ReadingSessionFlowGateway,
+  type ReadingSessionCommittedProgress,
   type ReadingContentSearchResult,
   type ReadingSessionSource,
 } from './ReadingSessionFlowGateway';
@@ -374,6 +375,7 @@ export class ReadingCommit {
   chapterProgress: number;
   locationRevision: string | undefined;
   updatedAt: number;
+  sourceSwitchTransactionId: string | undefined;
 
   constructor(
     sourceId: string,
@@ -383,6 +385,7 @@ export class ReadingCommit {
     chapterProgress: number,
     locationRevision: string | undefined,
     updatedAt: number = 0,
+    sourceSwitchTransactionId: string | undefined = undefined,
   ) {
     this.sourceId = sourceId;
     this.bookId = bookId;
@@ -391,6 +394,7 @@ export class ReadingCommit {
     this.chapterProgress = chapterProgress;
     this.locationRevision = locationRevision;
     this.updatedAt = updatedAt;
+    this.sourceSwitchTransactionId = sourceSwitchTransactionId;
   }
 }
 
@@ -931,8 +935,9 @@ export struct ReadingExperience {
   isReaderIdentityCurrent: () => boolean = (): boolean => true;
   @Prop sourceSwitchFailureMessage: string = '';
   onRemoteSessionReady: (session: RemoteReadingSession) => void = (_session: RemoteReadingSession): void => {};
-  onRetryFailedSourceSwitch: () => void = (): void => {};
-  onDismissSourceSwitchFailure: () => void = (): void => {};
+  onRetryFailedSourceSwitch: (scopeId?: number) => void = (): void => {};
+  onDismissSourceSwitchFailure: (scopeId?: number) => void = (): void => {};
+  @Prop sourceSwitchScopeId: number = 0;
   resolveSourceSwitchTransactionId: (sourceId: string, bookId: string) => Promise<string | undefined> =
     async (_sourceId: string, _bookId: string): Promise<string | undefined> => undefined;
   @Prop sourceSwitchTransactionId: string | undefined = undefined;
@@ -6323,7 +6328,7 @@ export struct ReadingExperience {
       publish: (stored: LocalReadingProgress): void => { if (owner()) publish(stored); } };
   }
 
-  private admitCommittedProgress(stored: LocalReadingProgress): void {
+  private admitCommittedProgress(stored: ReadingSessionCommittedProgress): void {
     const commit = new ReadingCommit(
       this.sourceId,
       this.bookId,
@@ -6332,6 +6337,7 @@ export struct ReadingExperience {
       stored.chapterProgress,
       stored.locationRevision,
       stored.updatedAt,
+      stored.sourceSwitchTransactionId,
     );
     this.lastCommittedProgress = commit;
     try {
@@ -13527,16 +13533,19 @@ export struct ReadingExperience {
           .fontSize(TYPE_READER_READING_FAILURE_DETAIL.fontSizeFp)
           .fontColor(readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink)
           .width('100%');
-        Button('重试')
-          .onClick((): void => {
-            if (this.sourceSwitchFailureMessage.length > 0) this.onRetryFailedSourceSwitch();
-            else this.retryReading();
-          });
+        if (this.sourceSwitchFailureMessage.length > 0) {
+          ForEach([this.sourceSwitchScopeId], (scopeId: number): void => {
+            Button('重试').onClick((): void => this.onRetryFailedSourceSwitch(scopeId));
+          }, (scopeId: number): string => `${scopeId}`);
+        } else {
+          Button('重试').onClick((): void => this.retryReading());
+        }
         Button('阅读设置')
           .onClick((): void => this.openReaderControl());
         if (this.sourceSwitchFailureMessage.length > 0) {
-          Button('继续当前书源')
-            .onClick((): void => this.onDismissSourceSwitchFailure());
+          ForEach([this.sourceSwitchScopeId], (scopeId: number): void => {
+            Button('继续当前书源').onClick((): void => this.onDismissSourceSwitchFailure(scopeId));
+          }, (scopeId: number): string => `${scopeId}`);
         }
         if (this.sourceId !== LOCAL_READING_SOURCE_ID) {
           Button('切换书源')

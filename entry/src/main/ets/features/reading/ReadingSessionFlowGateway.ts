@@ -91,6 +91,12 @@ export type ReadingContentSearchPage = {
  * and remote keep their typed Core gateways, while this class normalizes only
  * the values the renderer actually consumes.
  */
+/** Only an exact canonical Core ACK can supply this optional receipt. It is
+ * carried with that stored progress, never read from a later live UI prop. */
+export interface ReadingSessionCommittedProgress extends LocalReadingProgress {
+  sourceSwitchTransactionId?: string;
+}
+
 export class ReadingSessionFlowGateway {
   /** Mount first; acquisition and transaction admission belong to this flow.
    * Every awaited result checks the same selection/lifecycle intent before it
@@ -814,7 +820,7 @@ export class ReadingSessionFlowGateway {
     bookId: string,
     update: LocalReadingProgressUpdate,
     isCurrent?: () => boolean,
-  ): Promise<LocalReadingProgress> {
+  ): Promise<ReadingSessionCommittedProgress> {
     this.assertBook(bookId);
     if (this.pendingSourceSwitchResolver !== undefined) await this.ensureSourceSwitchAdmission(isCurrent);
     if (this.source.kind === 'local') {
@@ -829,11 +835,12 @@ export class ReadingSessionFlowGateway {
       isCurrent,
       transactionId,
     );
-    if (transactionId !== undefined) {
+    if (transactionId !== undefined && this.sourceSwitchTransactionId === transactionId) {
       this.sourceSwitchTransactionId = undefined;
     }
     this.progressOwner.noteCommitted();
     return {
+      ...(transactionId === undefined ? {} : { sourceSwitchTransactionId: transactionId }),
       bookId: stored.bookId,
       chapterIndex: stored.chapterIndex,
       chapterOffset: stored.chapterOffset,
@@ -850,14 +857,14 @@ export class ReadingSessionFlowGateway {
     anchor: LocalReadingAnchor,
     layout: LocalReadingLayout,
     isCurrent?: () => boolean,
-  ): Promise<LocalReadingProgress> {
+  ): Promise<ReadingSessionCommittedProgress> {
     const stored = await this.resolveAndUpdateProgressUnowned(bookId, chapterTitle, anchor, layout, isCurrent);
     this.progressOwner.noteCommitted();
     return stored;
   }
 
   private async resolveAndUpdateProgressUnowned(bookId: string, chapterTitle: string | undefined,
-    anchor: LocalReadingAnchor, layout: LocalReadingLayout, isCurrent?: () => boolean): Promise<LocalReadingProgress> {
+    anchor: LocalReadingAnchor, layout: LocalReadingLayout, isCurrent?: () => boolean): Promise<ReadingSessionCommittedProgress> {
     this.assertBook(bookId);
     if (this.pendingSourceSwitchResolver !== undefined) await this.ensureSourceSwitchAdmission(isCurrent);
     const update: LocalReadingProgressUpdate = {
@@ -878,10 +885,11 @@ export class ReadingSessionFlowGateway {
       transactionId,
       resolution,
     );
-    if (transactionId !== undefined) {
+    if (transactionId !== undefined && this.sourceSwitchTransactionId === transactionId) {
       this.sourceSwitchTransactionId = undefined;
     }
     return {
+      ...(transactionId === undefined ? {} : { sourceSwitchTransactionId: transactionId }),
       bookId: stored.bookId,
       chapterIndex: stored.chapterIndex,
       chapterOffset: stored.chapterOffset,
