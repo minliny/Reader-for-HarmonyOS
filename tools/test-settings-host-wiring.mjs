@@ -21,9 +21,9 @@ assert.equal((orchestrator.match(/new SettingsOrchestrator\(/g) ?? []).length, 1
 assert.match(orchestrator, /owners: WeakMap<ReaderRuntimeOwner, SettingsOrchestrator>/, 'one warm business owner per actual Runtime');
 assert.match(host, /getUIAbilityContext\(\)/,
   'SettingsHost must resolve the UI context lazily at first use');
-for (const call of ['settingsHost.open()', 'settingsHost.toggle(']) {
+for (const call of ['settingsHost.open(this.settingsPresentationIdentity)', 'settingsHost.toggle(key, value, this.settingsPresentationIdentity)']) {
   assert.ok(index.includes(`this.${call}`), `Index must forward ${call}`);
 }
 console.log('Settings host wiring: PASS (Index dispatch boundary and lazy context ownership)');
 
-assert.match(index, /isCurrentSettingsPresentation\(generation, owner, mounting, host\) \? host\.restoreDefaults\(\) : Promise\.resolve\(false\)/, 'retained reset invokes only captured current Settings owner');
+assert.match(index, /isCurrentSettingsPresentation\(generation, owner, mounting, host, 'settings', identity\) \? host\.restoreDefaults\(identity\) : Promise\.resolve\(false\)/, 'retained reset invokes only captured current Settings owner');

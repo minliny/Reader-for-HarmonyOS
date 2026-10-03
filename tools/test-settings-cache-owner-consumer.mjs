@@ -9,6 +9,7 @@ import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { boundedSurfaceSdk, boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
+import {fixture as generalSettingsFixture} from './lib/general-settings-persistence-probe.mjs';
 const file=name=>new URL('../entry/src/main/ets/'+name,import.meta.url),source=name=>readFileSync(file(name),'utf8');
 const ordinary=text=>stripTypeScriptTypes(text.replace(/^export type \{[^\n]+from [^\n]+\n/gm,'').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''));
 const load=(name,className,deps)=>new Function(...Object.keys(deps),ordinary(source(name))+`;return ${className};`)(...Object.values(deps));
@@ -17,8 +18,6 @@ let ActualCacheStore;
 class CacheClearOperationIntentStore { constructor(...args){return new ActualCacheStore(...args);} }
 const Gateway=load('features/settings/SettingsCacheGateway.ts','SettingsCacheGateway',{CacheClearOperationIntentStore});
 const CleanupOwner=load('features/settings/SettingsCacheCleanupOwner.ts','SettingsCacheCleanupOwner',{ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,projectOperationFacts,SettingsCacheGateway:Gateway});
-class SettingsOrchestrator{constructor(){}owns(){return true;}open(){}}
-const Host=load('features/settings/SettingsHost.ets','SettingsHost',{ReaderRuntimeOwner:Runtime,SettingsOrchestrator,SettingsCacheCleanupOwner:CleanupOwner});
 const tick=()=>new Promise(done=>setImmediate(done)),defer=()=>{let resolve;const promise=new Promise(done=>resolve=done);return{resolve,promise};};
 async function until(predicate){for(let i=0;i<100;i++){if(predicate())return;await tick();}assert.fail('cache cleanup did not settle');}
 const good=()=>({scope:'cache',cacheEntriesRemoved:4,chapterEntriesRemoved:2,queueEntriesRemoved:1,removedContentBytes:10});
@@ -26,7 +25,7 @@ const typedPending=()=>new ReaderCoreRequestError({protocolVersion:1,requestId:1
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
 const sdkRequire=createRequire(import.meta.url),sdkRoot=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 sdkRequire(sdkRoot+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('CategoryRow',new Set(['content']));
-function field(index){const text=source('pages/Index.ets'),start=text.indexOf('  private settingsHost:'),end=text.indexOf('\n  );',start)+6;
+function field(index,Host){const text=source('pages/Index.ets'),start=text.indexOf('  private settingsHost:'),end=text.indexOf('\n  );',start)+6;
  const expression=text.slice(start,end).split('=').slice(1).join('=').trim().replace(/;$/,'');
  return new Function('SettingsHost',ordinary('const value='+expression+';')+'return value;').call(index,Host);}
 function fixture(mode='valid'){
@@ -57,9 +56,11 @@ function fixture(mode='valid'){
   if(currentMode==='lost-after')throw Error('clear ACK unavailable');return{data:report};}};
 
  installed=runtime;
- const Methods=productionMotionMethods(file('pages/Index.ets'),['clearTextCache','openSettings','isCurrentSettingsPresentation','reconcileSettingsCache'],{ReaderRuntimeOwner:Runtime});
- const index=Object.assign(new Methods(),{mountedRuntimeOwner:runtime,route:'settings',navigationGeneration:1,detailShelfAdmissionMount:1,shelfReceiptRetired:false,settingsSection:'general',settingsSnapshot:{},settingsOperation:{action:'load'},settingsCacheCleanup:undefined,nextNavigationGeneration(){return ++this.navigationGeneration;}});
- index.settingsHost=field(index);
+ const general=generalSettingsFixture();general.setActive(runtime);const actual=general.host();assert.equal(actual.host.bindPresentation(runtime,'cache-compiler',()=>true),true);
+ const Host=load('features/settings/SettingsHost.ets','SettingsHost',{ReaderRuntimeOwner:Runtime,SettingsOrchestrator:actual.host.orchestrator.constructor,SettingsCacheCleanupOwner:CleanupOwner});
+ const Methods=productionMotionMethods(file('pages/Index.ets'),['clearTextCache','openSettings','bindSettingsPresentation','isCurrentSettingsPresentation','reconcileSettingsCache'],{ReaderRuntimeOwner:Runtime});
+ const index=Object.assign(new Methods(),{mountedRuntimeOwner:runtime,route:'settings',navigationGeneration:1,detailShelfAdmissionMount:1,rssInstanceIdentity:1,settingsPresentationIdentity:'',shelfReceiptRetired:false,settingsSection:'general',settingsSnapshot:{},settingsOperation:{action:'load'},settingsCacheCleanup:undefined,nextNavigationGeneration(){return ++this.navigationGeneration;}});
+ index.settingsHost=field(index,Host);assert.equal(index.bindSettingsPresentation(),true);
  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});sdk.childSources.CategoryRow=source('features/settings/CategoryRow.ets');
  sdk.deps.CategoryRow=createReaderBuilderProbe(sdk.childSources.CategoryRow,boundedMembers(sdk.childSources.CategoryRow),sdk.deps,sdk.hooks).Component;
  const pageSource=source('features/settings/SettingsPage.ets');
@@ -69,7 +70,7 @@ function fixture(mode='valid'){
  const declaration=tree.statements.find(node=>node.members&&node.members.some(member=>member.name?.getText(tree)==='build'));
  const names=[...declaration.members.filter(node=>ts.isPropertyDeclaration(node)).map(node=>node.name.getText(tree)),
   'cacheActionRow','clearTextCache','onCacheCleanupChanged','applyCacheCleanup','onSnapshotChanged','syncSnapshotValues'];
- function props(){const p=createReaderBuilderProbe(source('pages/Index.ets'),['settingsContent'],{SettingsPage:Child,deviceInfo:{deviceType:'phone'}},{childSources:{SettingsPage:pageSource}}).owner;
+ function props(){const p=createReaderBuilderProbe(source('pages/Index.ets'),['settingsContent','settingsSurface'],{SettingsPage:Child,deviceInfo:{deviceType:'phone'}},{childSources:{SettingsPage:pageSource}}).owner;
   Object.assign(p,index,{clearTextCache:(...args)=>index.clearTextCache(...args)});p.settingsContent();return [...p.children.values()][0].params;}
  function page(identity='settings-back:test'){
   const params=props(),owner=sdk.consumer(pageSource,names,{ReaderRuntimeOwner:Runtime,ReaderNativeAlertOwner},params);
@@ -124,6 +125,7 @@ for(const mode of ['valid','lost-after'])for(const retirement of ['navigation','
 }
 {
  const f=fixture(),old=f.props().onClearCache;f.index.navigationGeneration++;await old();assert.equal(f.calls.length,0,'captured native Index callback keeps its original nav lease');
+ assert.equal(f.index.bindSettingsPresentation(),true,'new navigation binds its own actual Settings presentation');
  const p=f.page(),oldActor=[...p.owner.children.values()].at(-1),physical=p.row().onClick;p.owner.temporaryBackIdentity='settings-back:replacement';physical();await tick();assert.equal(f.calls.length,0,'same-instance old physical handler cannot dispatch');
  p.owner.replay();const freshActor=[...p.owner.children.values()].at(-1);assert.notEqual(freshActor,oldActor,'actual SDK key admits only fresh small row actor');
  freshActor.onRowClick();await until(()=>f.snapshot()?.confirmation==='confirmed');assert.equal(f.calls.length,1);physical();await tick();assert.equal(f.calls.length,1);

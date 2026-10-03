@@ -476,12 +476,21 @@ struct Index {
       if (!this.shelfReceiptRetired && this.isCurrentRuntime(owner)) this.readableAdmissions = snapshots;
     },
   );
+  private settingsPresentationIdentity: string = '';
   private settingsHost: SettingsHost = new SettingsHost(
-    (snapshot: SettingsSnapshot): void => { this.settingsSnapshot = snapshot; },
+    (snapshot: SettingsSnapshot): void => {
+      if (this.isCurrentSettingsPresentation(this.navigationGeneration, this.mountedRuntimeOwner,
+        this.detailShelfAdmissionMount, this.settingsHost,
+        this.route === 'bookshelfSettings' ? 'bookshelfSettings' : 'settings', this.settingsPresentationIdentity, false)) this.settingsSnapshot = snapshot;
+    },
     (): SettingsSnapshot => this.settingsSnapshot,
     (): boolean => this.route === 'settings' || this.route === 'bookshelfSettings',
     undefined,
-    (operation: SettingsOperationProjection): void => { this.settingsOperation = operation; },
+    (operation: SettingsOperationProjection): void => {
+      if (this.isCurrentSettingsPresentation(this.navigationGeneration, this.mountedRuntimeOwner,
+        this.detailShelfAdmissionMount, this.settingsHost,
+        this.route === 'bookshelfSettings' ? 'bookshelfSettings' : 'settings', this.settingsPresentationIdentity, false)) this.settingsOperation = operation;
+    },
     (snapshot: SettingsCacheCleanupSnapshot, owner: ReaderRuntimeOwner): void => {
       if (this.isCurrentRuntime(owner) && this.route === 'settings') this.settingsCacheCleanup = snapshot;
     },
@@ -583,6 +592,7 @@ struct Index {
   }
 
   aboutToDisappear(): void {
+    this.retireSettingsPresentation();
     this.retireSourceManagementPresentation();
     this.temporaryBackLease = undefined;
     this.nativeAlertOwner.retire();
@@ -1466,16 +1476,18 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'settings';
-    this.settingsCacheCleanup = this.settingsHost.cacheCleanupSnapshot(this.mountedRuntimeOwner);
-    void this.reconcileSettingsCache(undefined);
-    this.settingsHost.open();
+    if (this.bindSettingsPresentation()) {
+      this.settingsCacheCleanup = this.settingsHost.cacheCleanupSnapshot(this.mountedRuntimeOwner);
+      void this.reconcileSettingsCache(undefined);
+      this.settingsHost.open(this.settingsPresentationIdentity);
+    }
   }
 
   private openBookshelfSettings(): void {
     this.bookshelfSettingsReturnRoute = this.route === 'settings' ? 'settings' : 'bookshelf';
     this.nextNavigationGeneration();
     this.route = 'bookshelfSettings';
-    this.settingsHost.open();
+    if (this.bindSettingsPresentation()) this.settingsHost.open(this.settingsPresentationIdentity);
   }
 
   private returnFromBookshelfSettings(): void {
@@ -1604,56 +1616,76 @@ struct Index {
   }
 
   @Builder
-  private bookshelfSettingsContent(generation: number = this.navigationGeneration, owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner,
-    mounting: number = this.detailShelfAdmissionMount, host: SettingsHost = this.settingsHost) {
+  private bookshelfSettingsContent() {
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.bookshelfSettingsSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+        this.settingsHost, this.settingsPresentationIdentity);
+    }, (generation: number): string => generation.toString());
+  }
+  @Builder
+  private bookshelfSettingsSurface(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: SettingsHost, identity: string) {
     BookshelfSettingsPage({
-      navigationGeneration: this.navigationGeneration,
+      navigationGeneration: generation,
       autoCheckUpdate: this.settingsSnapshot.autoCheckUpdate,
       operation: this.settingsOperation,
       onReconcile: (expected: number, navigation?: number): void => {
-        if (this.isCurrentSettingsPresentation(navigation ?? generation, owner, mounting, host, 'bookshelfSettings')) host.reconcile(expected);
+        if ((navigation === undefined || navigation === generation) &&
+          this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'bookshelfSettings', identity)) host.reconcile(expected, identity);
       },
       onRetryAccepted: (expected: number, navigation?: number): void => {
-        if (this.isCurrentSettingsPresentation(navigation ?? generation, owner, mounting, host, 'bookshelfSettings')) host.retryAccepted(expected);
+        if ((navigation === undefined || navigation === generation) &&
+          this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'bookshelfSettings', identity)) host.retryAccepted(expected, identity);
       },
-      onBack: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'bookshelfSettings')) this.returnFromBookshelfSettings(); },
+      onBack: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'bookshelfSettings', identity)) this.returnFromBookshelfSettings(); },
       onAutoCheckUpdate: (value: boolean): void => {
-        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'bookshelfSettings')) host.toggle('autoCheckUpdate', value);
+        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'bookshelfSettings', identity)) host.toggle('autoCheckUpdate', value, identity);
       },
     });
   }
 
   @Builder
-  private settingsContent(generation: number = this.navigationGeneration, owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner,
-    mounting: number = this.detailShelfAdmissionMount, host: SettingsHost = this.settingsHost) {
+  private settingsContent() {
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.settingsSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+        this.settingsHost, this.settingsPresentationIdentity);
+    }, (generation: number): string => generation.toString());
+  }
+  @Builder
+  private settingsSurface(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: SettingsHost, identity: string) {
     SettingsPage({
-      onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void =>
-        this.registerTemporaryBackBridge('settings', generation, owner, handler, identity),
+      onTemporaryBackBridge: (handler: (() => boolean) | undefined, bridgeIdentity: string): void => {
+        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity))
+          this.registerTemporaryBackBridge('settings', generation, owner, handler, bridgeIdentity);
+      },
       activeSection: this.settingsSection,
-      onSectionChange: (section: 'home' | 'general'): void => { this.settingsSection = section; },
-      onRestoreDefaults: (): Promise<boolean> => this.isCurrentSettingsPresentation(generation, owner, mounting, host) ? host.restoreDefaults() : Promise.resolve(false),
+      onSectionChange: (section: 'home' | 'general'): void => {
+        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.settingsSection = section;
+      },
+      onRestoreDefaults: (): Promise<boolean> => this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity) ? host.restoreDefaults(identity) : Promise.resolve(false),
       snapshot: this.settingsSnapshot,
       operation: this.settingsOperation,
       cacheCleanup: this.settingsCacheCleanup,
       onReconcile: (expected: number): void => {
-        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host)) host.reconcile(expected);
+        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) host.reconcile(expected, identity);
       },
       onRetryAccepted: (expected: number): void => {
-        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host)) host.retryAccepted(expected);
+        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) host.retryAccepted(expected, identity);
       },
-      onReconcileCache: (expected: number): void => { void this.reconcileSettingsCache(expected, generation, owner, mounting, host); },
-      onContinueCache: (expected: number): void => { void this.reconcileSettingsCache(expected, generation, owner, mounting, host, true); },
+      onReconcileCache: (expected: number): void => { void this.reconcileSettingsCache(expected, generation, owner, mounting, host, false, identity); },
+      onContinueCache: (expected: number): void => { void this.reconcileSettingsCache(expected, generation, owner, mounting, host, true, identity); },
       isTablet: deviceInfo.deviceType === 'tablet',
-      onBack: (): void => this.returnToBookshelf(),
-      onOpenSourceManagement: (): void => this.openSourceManagement(),
-      onOpenRulesManagement: (): void => this.openRulesManagement(),
-      onOpenSync: (): void => this.openSync(),
-      onOpenBookshelfSettings: (): void => this.openBookshelfSettings(),
-      onRssRequested: (): void => this.openRss(),
-      onDiscoverRequested: (): void => this.openDiscover(),
+      onBack: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.returnToBookshelf(); },
+      onOpenSourceManagement: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.openSourceManagement(); },
+      onOpenRulesManagement: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.openRulesManagement(); },
+      onOpenSync: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.openSync(); },
+      onOpenBookshelfSettings: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.openBookshelfSettings(); },
+      onRssRequested: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.openRss(); },
+      onDiscoverRequested: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.openDiscover(); },
       onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
-        value: boolean): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host)) host.toggle(key, value); },
-      onClearCache: (): Promise<SettingsCacheCleanupSnapshot | undefined> => this.clearTextCache(generation, owner),
+        value: boolean): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) host.toggle(key, value, identity); },
+      onClearCache: (): Promise<SettingsCacheCleanupSnapshot | undefined> => this.clearTextCache(generation, owner, mounting, host, identity),
     });
   }
 
@@ -1957,19 +1989,37 @@ struct Index {
     key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
     value: boolean,
   ): void {
-    this.settingsHost.toggle(key, value);
+    if (this.isCurrentSettingsPresentation(this.navigationGeneration, this.mountedRuntimeOwner))
+      this.settingsHost.toggle(key, value, this.settingsPresentationIdentity);
   }
 
+  private bindSettingsPresentation(): boolean {
+    const owner = this.mountedRuntimeOwner, host = this.settingsHost;
+    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const route: 'settings' | 'bookshelfSettings' = this.route === 'bookshelfSettings' ? 'bookshelfSettings' : 'settings';
+    if (owner === undefined || !this.isCurrentSettingsPresentation(generation, owner, mounting, host, route, '', false)) return false;
+    const identity = JSON.stringify([this.rssInstanceIdentity, mounting, generation, route]);
+    if (identity === this.settingsPresentationIdentity) return host.isPresentationCurrent(owner, identity);
+    host.detachPresentation(this.settingsPresentationIdentity); this.settingsPresentationIdentity = identity;
+    return host.bindPresentation(owner, identity,
+      (): boolean => this.isCurrentSettingsPresentation(generation, owner, mounting, host, route, identity, false));
+  }
+  private retireSettingsPresentation(): void {
+    this.settingsHost.detachPresentation(this.settingsPresentationIdentity); this.settingsPresentationIdentity = '';
+  }
   private isCurrentSettingsPresentation(generation: number, owner: ReaderRuntimeOwner | undefined,
-    mounting: number = this.detailShelfAdmissionMount, host: SettingsHost = this.settingsHost, route: 'settings' | 'bookshelfSettings' = 'settings'): boolean {
+    mounting: number = this.detailShelfAdmissionMount, host: SettingsHost = this.settingsHost,
+    route: 'settings' | 'bookshelfSettings' = this.route === 'bookshelfSettings' ? 'bookshelfSettings' : 'settings',
+    identity: string = this.settingsPresentationIdentity, attached: boolean = true): boolean {
     return owner !== undefined && this.isCurrentRuntime(owner) && this.mountedRuntimeOwner === owner &&
       generation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount &&
-      this.route === route && !this.shelfReceiptRetired && host === this.settingsHost;
+      this.route === route && !this.shelfReceiptRetired && host === this.settingsHost &&
+      (!attached || (identity.length > 0 && identity === this.settingsPresentationIdentity && host.isPresentationCurrent(owner, identity)));
   }
   private async reconcileSettingsCache(expected: number | undefined, generation: number = this.navigationGeneration,
     owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner, mounting: number = this.detailShelfAdmissionMount,
-    host: SettingsHost = this.settingsHost, continuing: boolean = false): Promise<void> {
-    const current = (): boolean => this.isCurrentSettingsPresentation(generation, owner, mounting, host);
+    host: SettingsHost = this.settingsHost, continuing: boolean = false, identity: string = this.settingsPresentationIdentity): Promise<void> {
+    const current = (): boolean => this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity);
     if (owner === undefined || !current()) return;
     const previous = host.cacheCleanupSnapshot(owner);
     if (expected !== undefined && previous?.operation.generation !== expected) return;
@@ -1979,10 +2029,11 @@ struct Index {
   }
 
   private async clearTextCache(generation: number = this.navigationGeneration,
-    owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner): Promise<SettingsCacheCleanupSnapshot | undefined> {
-    const current = (): boolean => this.isCurrentSettingsPresentation(generation, owner);
+    owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner, mounting: number = this.detailShelfAdmissionMount,
+    host: SettingsHost = this.settingsHost, identity: string = this.settingsPresentationIdentity): Promise<SettingsCacheCleanupSnapshot | undefined> {
+    const current = (): boolean => this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity);
     if (owner === undefined || !current()) return undefined;
-    return this.settingsHost.clearCache(owner, current);
+    return host.clearCache(owner, current);
   }
 
   private onSyncSaveConfig(url: string, user: string, pass: string, backupPass: string, path: string): void {
@@ -5104,6 +5155,7 @@ struct Index {
   }
 
   private nextNavigationGeneration(): number {
+    this.retireSettingsPresentation();
     this.retireSourceManagementPresentation();
     this.retireSourceSwitchPresentation();
     this.retireRssEditorPresentation();
