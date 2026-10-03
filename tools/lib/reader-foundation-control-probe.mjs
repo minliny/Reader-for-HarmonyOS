@@ -21,19 +21,20 @@ function withoutImports(source) {
 }
 function executable(source){return ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText;}
 export function foundationSpecs(roles=readerTypographyRoles,source=readFileSync(file('ReaderControlSpecs'),'utf8')) {
- return new Function(...Object.keys(roles),executable(withoutImports(source))+';return {resolveReaderButtonSpec,resolveReaderFormFieldSpec};')(...Object.values(roles));
+ const values={...readerFoundationTokens,...roles};
+ return new Function(...Object.keys(values),executable(withoutImports(source))+';return {resolveReaderButtonSpec,resolveReaderFormFieldSpec};')(...Object.values(values));
 }
 export function foundationModifiers(specs=foundationSpecs(),ColorMetrics,sourceOverrides={}) {
  const feedback=productionReaderPressFeedback({ColorMetrics});
  const common={...readerFoundationTokens,...specs,readerAppColor,ReaderPressFeedback:feedback,TextAlign:{Center:'TextAlign.Center'}};
  const load=(source,names)=>new Function(...Object.keys(common),executable(withoutImports(source.slice(0,source.indexOf('@Component'))))+';return {'+names.join(',')+'};')(...Object.values(common));
- return {...load(sourceOverrides.buttonSource??buttonSource,['ReaderButtonLabelModifier','ReaderButtonFrameModifier','ReaderButtonTextModifier']),...load(sourceOverrides.fieldSource??fieldSource,['ReaderFormFieldModifier'])};
+ return {...load(sourceOverrides.buttonSource??buttonSource,['ReaderButtonLabelModifier','ReaderButtonFrameModifier','ReaderButtonTextModifier']),...load(sourceOverrides.fieldSource??fieldSource,['ReaderFormFieldModifier','ReaderFormAreaModifier'])};
 }
 export function foundationControls({specs=foundationSpecs(),ColorMetrics,buttonSource:buttonDefinition=buttonSource,fieldSource:fieldDefinition=fieldSource}={}) {
  const properties=createArkUIPropertyRuntimeProbe(),creationOrder=new WeakMap();let creationSequence=0;
  const beforeObserver=properties.hooks.onObserverEnter;properties.hooks.onObserverEnter=(owner,id)=>{beforeObserver?.(owner,id);let nodes=creationOrder.get(owner);if(!nodes)creationOrder.set(owner,nodes=new Map());if(!nodes.has(id))nodes.set(id,creationSequence++);};
  const modifiers=foundationModifiers(specs,ColorMetrics,{buttonSource:buttonDefinition,fieldSource:fieldDefinition});
- const deps={...properties.sdk,...readerFoundationTokens,...specs,...modifiers,InputType:{Password:'InputType.Password'}};
+ const deps={...properties.sdk,...readerFoundationTokens,...specs,...modifiers,InputType:{Password:'InputType.Password',Number:'InputType.Number'}};
  const button=createReaderBuilderProbe(buttonDefinition,['scheme','specId','label','primary','actionEnabled','layout','isBusy','onAction','mounted','aboutToAppear','aboutToDisappear','build','commit'],deps,properties.hooks);
  const field=createReaderBuilderProbe(fieldDefinition,['scheme','specId','text','placeholder','isEditable','password','onTextChange','onSubmit','submit','mounted','aboutToAppear','aboutToDisappear','build','change'],deps,properties.hooks);
  const dependencies={...deps,ReaderButton:button.Component,ReaderFormField:field.Component};

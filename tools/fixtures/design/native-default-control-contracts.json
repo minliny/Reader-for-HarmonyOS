@@ -12,7 +12,7 @@
       "sdkDeclaration": "openharmony/ets/component/button.d.ts"
     },
     "nativeShelfGroupInput": {
-      "actualImplementation": "ArkUI TextInput({text,placeholder})",
+      "actualImplementation": "ReaderFormField finite shelf-native/shelf-order → original ArkUI TextInput",
       "finiteApplicability": "three BookshelfManagement group draft fields only",
       "typography": "all five physical modifiers omitted; framework text/placeholder/caret rendering retained",
       "geometry": "height44vp,width100% retained",
@@ -74,9 +74,16 @@
         "lineHeight",
         "letterSpacing"
       ],
-      "status": "RETAINED_PLATFORM_DEFAULT_CONTRACT",
-      "reason": "Current application intentionally delegates the omitted physical attributes to the actual upstream native ArkUI component; no new Reader style/empty modifier is added.",
-      "sourceLineAtAudit": 169
+      "status": "SHARED_STRUCTURE_PLATFORM_DEFAULT_CONTRACT",
+      "reason": "Repeated group draft structure now delegates to one real ReaderFormField, retaining all five default fonts and native surfaces; only the existing order field selects numeric keyboard.",
+      "sourceLineAtAudit": 169,
+      "sharedReplacement": {
+        "component": "ReaderFormField",
+        "module": "../common/ReaderFormField",
+        "specId": "shelf-native",
+        "callback": "this.onGroupNameChanged",
+        "proof": "tools/test-foundation-shelf-field-consumers.mjs"
+      }
     },
     {
       "id": "NATIVE-DEFAULT-03",
@@ -101,9 +108,16 @@
         "lineHeight",
         "letterSpacing"
       ],
-      "status": "RETAINED_PLATFORM_DEFAULT_CONTRACT",
-      "reason": "Current application intentionally delegates the omitted physical attributes to the actual upstream native ArkUI component; no new Reader style/empty modifier is added.",
-      "sourceLineAtAudit": 171
+      "status": "SHARED_STRUCTURE_PLATFORM_DEFAULT_CONTRACT",
+      "reason": "Repeated group draft structure now delegates to one real ReaderFormField, retaining all five default fonts and native surfaces; only the existing order field selects numeric keyboard.",
+      "sourceLineAtAudit": 171,
+      "sharedReplacement": {
+        "component": "ReaderFormField",
+        "module": "../common/ReaderFormField",
+        "specId": "shelf-order",
+        "callback": "this.onGroupOrderChanged",
+        "proof": "tools/test-foundation-shelf-field-consumers.mjs"
+      }
     },
     {
       "id": "NATIVE-DEFAULT-04",
@@ -128,9 +142,16 @@
         "lineHeight",
         "letterSpacing"
       ],
-      "status": "RETAINED_PLATFORM_DEFAULT_CONTRACT",
-      "reason": "Current application intentionally delegates the omitted physical attributes to the actual upstream native ArkUI component; no new Reader style/empty modifier is added.",
-      "sourceLineAtAudit": 255
+      "status": "SHARED_STRUCTURE_PLATFORM_DEFAULT_CONTRACT",
+      "reason": "Repeated group draft structure now delegates to one real ReaderFormField, retaining all five default fonts and native surfaces; only the existing order field selects numeric keyboard.",
+      "sourceLineAtAudit": 255,
+      "sharedReplacement": {
+        "component": "ReaderFormField",
+        "module": "../common/ReaderFormField",
+        "specId": "shelf-native",
+        "callback": "this.onAssignmentGroupChanged",
+        "proof": "tools/test-foundation-shelf-field-consumers.mjs"
+      }
     },
     {
       "id": "NATIVE-DEFAULT-05",

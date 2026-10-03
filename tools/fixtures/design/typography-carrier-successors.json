@@ -1093,6 +1093,88 @@
         "itemMeta"
       ],
       "proof": "test-foundation-controls-shared.mjs actual owner/SDK modifier/exact tuple/AUTO and propagation"
+    },
+    {
+      "id": "foundation-RssEntryDetailPage-bottomActions-0",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssEntryDetailPage.ets",
+        "method": "bottomActions",
+        "kind": "Text",
+        "text": "'返回列表'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "bottomActions",
+      "specId": "rss-detail-bottom",
+      "arguments": [],
+      "params": {
+        "item": {
+          "link": "https://original.test"
+        },
+        "readerWindowMetricsRevision": -1,
+        "contentFrameOverride": {
+          "width": 300,
+          "left": 18,
+          "right": 18
+        }
+      },
+      "requiredMethods": [
+        "contentFrame",
+        "hasOriginalLink"
+      ],
+      "proof": "test-foundation-shelf-field-consumers.mjs + original immutable font tuple SDK/role propagation",
+      "nativeText": "返回列表",
+      "sourceConstants": {
+        "RSS_DETAIL_ACTION_AREA_HEIGHT": "62"
+      }
+    },
+    {
+      "id": "foundation-RssEntryDetailPage-bottomActions-1",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssEntryDetailPage.ets",
+        "method": "bottomActions",
+        "kind": "Text",
+        "text": "'打开原文'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "bottomActions",
+      "specId": "rss-detail-bottom",
+      "arguments": [],
+      "params": {
+        "item": {
+          "link": "https://original.test"
+        },
+        "readerWindowMetricsRevision": -1,
+        "contentFrameOverride": {
+          "width": 300,
+          "left": 18,
+          "right": 18
+        }
+      },
+      "requiredMethods": [
+        "contentFrame",
+        "hasOriginalLink"
+      ],
+      "proof": "test-foundation-shelf-field-consumers.mjs + original immutable font tuple SDK/role propagation",
+      "nativeText": "打开原文",
+      "sourceConstants": {
+        "RSS_DETAIL_ACTION_AREA_HEIGHT": "62"
+      }
     }
   ]
 }

@@ -362,32 +362,9 @@ export struct RssEntryDetailPage {
   @Builder
   private bottomActions() {
     Row({ space: TOK_SPACE_XS }) {
-      Text('返回列表')
-        .layoutWeight(1)
-        .height(46)
-        .fontFamily(TYPE_RSS_BOTTOM_ACTION.fontFamily)
-        .fontWeight(TYPE_RSS_BOTTOM_ACTION.fontWeight)
-        .fontSize(TYPE_RSS_BOTTOM_ACTION.fontSizeFp)
-        .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-        .textAlign(TextAlign.Center)
-        .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
-        .borderRadius(999)
-        .onClick((): void => this.onBack());
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'rss-detail-bottom', label: '返回列表', primary: true, layout: 'equal', onAction: (): void => this.onBack() });
 
-      Text('打开原文')
-        .layoutWeight(1)
-        .height(46)
-        .fontFamily(TYPE_RSS_BOTTOM_ACTION.fontFamily)
-        .fontWeight(TYPE_RSS_BOTTOM_ACTION.fontWeight)
-        .fontSize(TYPE_RSS_BOTTOM_ACTION.fontSizeFp)
-        .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-        .textAlign(TextAlign.Center)
-        .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
-        .border({ width: TOK_BORDER_W, color: readerAppColor('app.RssEntryDetailPage.CARD_BORDER', this.appThemeScheme) })
-        .borderRadius(999)
-        .opacity(this.hasOriginalLink() ? 1 : 0.38)
-        .enabled(this.hasOriginalLink())
-        .onClick((): void => this.onOpenOriginal());
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'rss-detail-bottom', label: '打开原文', layout: 'equal', actionEnabled: this.hasOriginalLink(), onAction: (): void => this.onOpenOriginal() });
     }
     .width(this.contentFrame().width)
     .margin({ left: this.contentFrame().left, right: this.contentFrame().right })

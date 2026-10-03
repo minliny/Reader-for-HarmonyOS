@@ -30,16 +30,19 @@ class ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {
     if (this.layout === 'full') instance.width('100%');
     if (spec.height !== undefined) instance.height(spec.height);
     if (spec.fixedWidth > 0) instance.width(spec.fixedWidth);
-    if (spec.verticalPadding > 0) instance.padding({ left: spec.horizontalPadding, right: spec.horizontalPadding, top: spec.verticalPadding, bottom: spec.verticalPadding });
+    if (spec.allPadding !== undefined) instance.padding(spec.allPadding);
+    else if (spec.verticalPadding > 0) instance.padding({ left: spec.horizontalPadding, right: spec.horizontalPadding, top: spec.verticalPadding, bottom: spec.verticalPadding });
     else if (spec.horizontalPadding > 0) instance.padding({ left: spec.horizontalPadding, right: spec.horizontalPadding });
-    if (spec.hasBorder) instance.border({ width: TOK_BORDER_W, color: readerAppColor(this.primary ? spec.primaryBorder : spec.secondaryBorder, this.scheme) });
-    if (spec.disabledOpacity < 1) instance.opacity(this.enabled ? 1 : spec.disabledOpacity);
+    if (spec.hasBorder && (!this.primary || spec.primaryHasBorder)) instance.border({ width: TOK_BORDER_W, color: readerAppColor(this.primary ? spec.primaryBorder : spec.secondaryBorder, this.scheme) });
+    const disabledOpacity = this.primary ? (spec.primaryDisabledOpacity ?? spec.disabledOpacity) : spec.disabledOpacity;
+    if (disabledOpacity < 1) instance.opacity(this.enabled ? 1 : disabledOpacity);
     if (spec.busyOpacity < 1) instance.opacity(this.busy ? spec.busyOpacity : 1);
     if (spec.responseOffset !== undefined) instance.responseRegion({ x: 0, y: spec.responseOffset, width: '100%', height: 44 });
-    this.feedback().applyNormalAttribute(instance);
+    if (spec.hasSurface) this.feedback().applyNormalAttribute(instance);
+    else if (spec.outerRadius) instance.borderRadius(spec.radius);
   }
-  applyPressedAttribute(instance: CommonAttribute): void { this.applyNormalAttribute(instance); this.feedback().applyPressedAttribute(instance); }
-  applyDisabledAttribute(instance: CommonAttribute): void { this.applyNormalAttribute(instance); this.feedback().applyDisabledAttribute(instance); }
+  applyPressedAttribute(instance: CommonAttribute): void { this.applyNormalAttribute(instance); if (resolveReaderButtonSpec(this.id).hasSurface) this.feedback().applyPressedAttribute(instance); }
+  applyDisabledAttribute(instance: CommonAttribute): void { this.applyNormalAttribute(instance); if (resolveReaderButtonSpec(this.id).hasSurface) this.feedback().applyDisabledAttribute(instance); }
   private feedback(): ReaderPressFeedback {
     const spec = resolveReaderButtonSpec(this.id);
     return new ReaderPressFeedback(readerAppColor(this.primary ? spec.primarySurface : spec.secondarySurface, this.scheme),

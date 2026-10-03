@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { foundationControls, foundationSpecs } from './lib/reader-foundation-control-probe.mjs';
+import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
@@ -48,7 +50,9 @@ for (const role of roles) {
     style.fontSizeFp,
     style.lineHeightFp,
   ], expected[role], `${role} preserves the existing bookshelf-management tuple`);
-  assert.match(page, new RegExp(`${role}\\.fontFamily`), `${role} is consumed by the page`);
+  const specRoles={ TYPE_SHELF_MANAGEMENT_BUTTON:'shelf-action', TYPE_SHELF_MANAGEMENT_SMALL_ACTION:'shelf-small', TYPE_SHELF_MANAGEMENT_ROW_ACTION:'shelf-row-edit' };
+  if(specRoles[role]) assert.equal(foundationSpecs().resolveReaderButtonSpec(specRoles[role]).text.fontFamily,style.fontFamily,'actual finite spec retains the original role');
+  else assert.match(page, new RegExp(`${role}\\.fontFamily`), `${role} is consumed by the page`);
 }
 
 assert.doesNotMatch(page, /fontFamily\('Reader(?:NotoSansSC|NotoSerifSCBold)'\)/,
@@ -57,3 +61,10 @@ assert.doesNotMatch(page, /\.fontSize\((?:10|11|12|13|16)\)/,
   'bookshelf-management page no longer owns a direct font-size tuple');
 
 console.log('PASS bookshelf-management typography uses named ReaderTypography roles without changing tuples');
+
+// Actual Parent→SDK common component→native tuple, rather than allowing a
+// source-name registration to replace the former three control consumers.
+for(const [method,args,role,spec]of [['actionButton',['操作',false,()=>{}],'TYPE_SHELF_MANAGEMENT_BUTTON','shelf-action'],['smallAction',['操作',()=>{}],'TYPE_SHELF_MANAGEMENT_SMALL_ACTION','shelf-small'],['groupRow',[{groupId:1,groupName:'组',groupOrder:1,show:true,bookCount:1}],'TYPE_SHELF_MANAGEMENT_ROW_ACTION','shelf-row-edit']]){
+ const shared=foundationControls(),{owner}=createReaderBuilderProbe(page,[method,'smallAction'],shared.dependencies,shared.hooks);Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false}});owner[method](...args);
+ const child=[...owner.children.values()].find(c=>c instanceof shared.button.Component&&c.specId===spec);assert.ok(child);const n=shared.nodes(child).find(n=>n.type==='Text');for(const[p,key]of Object.entries({fontFamily:'fontFamily',fontWeight:'fontWeight',fontSize:'fontSizeFp',lineHeight:'lineHeightFp',letterSpacing:'letterSpacingFp'})){if(typography[role][key]===undefined)assert.equal(Object.hasOwn(n,p),false,'AUTO');else assert.equal(n[p],typography[role][key]);}
+}

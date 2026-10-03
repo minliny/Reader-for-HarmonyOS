@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
+import { stripTypeScriptTypes, createRequire } from 'node:module';
+const req=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const ts=req(sdk+'/node_modules/typescript'),options=req(sdk+'/lib/ets_checker.js').compilerOptions;
 import { foundationControls, foundationSpecs } from './reader-foundation-control-probe.mjs';
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
@@ -20,8 +22,17 @@ export function foundationTypographyCarrier(entry,file,expected,pageSource,targe
   // read for a hash. The normal modifier loader also receives actual source.
   const binding=entry.bindingMethod??entry.origin.method;
   const methods=[binding,...(entry.requiredMethods??[])];
-  const {owner}=createReaderBuilderProbe(pageSource,methods,shared.dependencies,shared.hooks);
+  const constants={};
+  if(entry.sourceConstants){
+   const tree=ts.createSourceFile(file,pageSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.equal(tree.parseDiagnostics.length,0);
+   for(const[name,expectedConstant]of Object.entries(entry.sourceConstants)){
+    const declaration=tree.statements.filter(ts.isVariableStatement).flatMap(s=>s.declarationList.declarations).find(d=>d.name.getText(tree)===name);
+    assert.ok(declaration&&ts.isNumericLiteral(declaration.initializer),'actual bounded owner constant');assert.equal(declaration.initializer.getText(tree),expectedConstant,'original constant remains bound to actual source');constants[name]=Number(declaration.initializer.text);
+   }
+  }
+  const {owner}=createReaderBuilderProbe(pageSource,methods,{...shared.dependencies,...constants},shared.hooks);
   Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false,facts:{canMutate:true}},...(entry.params??{})});
+  if (entry.params?.contentFrameOverride) owner.contentFrame=()=>entry.params.contentFrameOverride;
   owner[binding](...(branch.arguments??entry.arguments).map(arg=>arg==='@callback'?()=>{}:arg));
   const children=[...owner.children.values()].filter(child=>child instanceof shared.dependencies[entry.component]&&child.specId===entry.specId&&(!entry.nativeText||child.label===entry.nativeText));
   assert.equal(children.length,1,entry.id+': actual original owner constructs finite shared class');

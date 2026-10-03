@@ -31,8 +31,8 @@ function makeIndex(runtime,{indexSource=read('pages/Index.ets')}={}){
  idx.bookshelfHost=actualBookshelfHostField(idx, actualBookshelfOperationTypes({ReaderRuntimeOwner:RssRuntime}).Host, {setOrCreate(){}});
  idx.sourceHost=new (actualSourceManagementTypes({ReaderRuntimeOwner:RssRuntime}).SourceHost)(()=>{},()=>false,()=>{},()=>runtime);
  const host=idx.getRssEditorOrchestrator();host.openCreate();
- let rendered=false;const render=()=>{if(!rendered){idx.rssEditorContent();rendered=true;}else idx.replay();const page=p.walk(idx).filter(c=>c instanceof Page).at(-1);page.saveAction();page.operationRecovery();return page;};
- const saveNative=page=>[...page.nodes.values()].find(n=>n.create==='保存').onClick;
+ let rendered=false;const paintedPages=new WeakSet();const render=()=>{if(!rendered){idx.rssEditorContent();rendered=true;}else idx.replay();p.properties.flush();const page=p.walk(idx).filter(c=>c instanceof Page).at(-1);if(!paintedPages.has(page)){page.saveAction();page.operationRecovery();paintedPages.add(page);}p.properties.flush();return page;};
+ const saveNative=page=>{const button=p.walk(page).find(c=>c.specId==='form-busy-action'&&c.label==='保存');assert.ok(button,'actual retained ReaderButton actor');assert.equal(typeof button.commit,'function');assert.equal(typeof button.aboutToDisappear,'function');const native=[...button.nodes.values()].find(n=>n.type==='Text'&&n.create==='保存');assert.ok(native);return native.onClick;};
  const recoveryNative=page=>{const a=p.walk(page).find(c=>c instanceof p.deps.ReaderRecoveryAction);assert.ok(a);return[...a.nodes.values()].find(n=>n.onClick).onClick;};
  return{p,idx,host,render,saveNative,recoveryNative,settle:()=>settleRss(idx.getRssOrchestrator())};
 }

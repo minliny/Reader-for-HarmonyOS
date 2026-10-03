@@ -573,17 +573,7 @@ export struct SourceToolsPage {
         .fontSize(TYPE_SOURCE_TOOLS_DESCRIPTION.fontSizeFp)
         .lineHeight(TYPE_SOURCE_TOOLS_DESCRIPTION.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-      TextArea({ text: this.snapshot.editorText, placeholder: 'BookSource JSON' })
-        .width('100%')
-        .height(320)
-        .fontFamily(TYPE_SOURCE_TOOLS_CODE_INPUT.fontFamily as string)
-        .fontSize(TYPE_SOURCE_TOOLS_CODE_INPUT.fontSizeFp)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
-        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-        .borderRadius(8)
-        .padding(TOK_SPACE_XS)
-        .onChange((value: string): void => this.onEditorDraftChanged(value));
+      ReaderFormField({ scheme: this.appThemeScheme, specId: 'source-code', text: this.snapshot.editorText, placeholder: 'BookSource JSON', onTextChange: (value: string): void => this.onEditorDraftChanged(value) });
       Row({ space: TOK_SPACE_XS }) {
         this.actionButton('取消', false, !this.snapshot.busy && this.snapshot.editorReadback?.confirmation !== 'unknown', (): void => this.onCancelEditor());
         this.actionButton('校验并保存', true, this.canWriteSources(), (): void => this.onSaveEditor());

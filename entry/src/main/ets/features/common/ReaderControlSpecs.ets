@@ -1,3 +1,4 @@
+import { TOK_SPACE_XS } from './ReaderTokens';
 import type { ReaderAppColorRole } from './ReaderThemeRegistry';
 import {
   ReaderTextStyle, ReaderInheritedTextStyle, TYPE_SOURCE_TOOLS_ACTION,
@@ -6,9 +7,10 @@ import {
   TYPE_RULES_MANAGEMENT_INPUT, TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_SYNC_INPUT,
   TYPE_FORM_LABEL_ACTION, TYPE_FORM_COMPACT_ACTION, TYPE_FORM_INPUT, TYPE_FORM_URL_INPUT,
   TYPE_APP_PRIMARY_ACTION, TYPE_APP_SECONDARY_ACTION, TYPE_APP_SMALL_LABEL, TYPE_RSS_STATE_ACTION, TYPE_RSS_LINK_ACTION,
+  TYPE_SHELF_MANAGEMENT_BUTTON, TYPE_SHELF_MANAGEMENT_SMALL_ACTION, TYPE_SHELF_MANAGEMENT_ROW_ACTION, TYPE_RSS_BOTTOM_ACTION, TYPE_SOURCE_TOOLS_CODE_INPUT,
 } from './ReaderTypography';
 
-export type ReaderButtonSpecId = 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action' | 'form-action' | 'form-busy-action' | 'form-document-action' | 'search-primary' | 'search-secondary' | 'discover-page' | 'rss-mode-tab' | 'rss-state' | 'rss-source-link';
+export type ReaderButtonSpecId = 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action' | 'form-action' | 'form-busy-action' | 'form-document-action' | 'search-primary' | 'search-secondary' | 'discover-page' | 'rss-mode-tab' | 'rss-state' | 'rss-source-link' | 'shelf-action' | 'shelf-small' | 'shelf-row-edit' | 'shelf-row-select' | 'rss-detail-bottom';
 export type ReaderButtonLayout = 'intrinsic' | 'equal' | 'full';
 export interface ReaderButtonSpec {
   text: ReaderTextStyle | ReaderInheritedTextStyle;
@@ -21,10 +23,15 @@ export interface ReaderButtonSpec {
   primaryBorder: ReaderAppColorRole;
   secondaryBorder: ReaderAppColorRole;
   disabledOpacity: number;
+  primaryDisabledOpacity: number | undefined;
   hasBorder: boolean;
+  primaryHasBorder: boolean;
+  hasSurface: boolean;
+  outerRadius: boolean;
   primaryText: ReaderAppColorRole;
   secondaryText: ReaderAppColorRole;
   verticalPadding: number;
+  allPadding: number | undefined;
   maxLines: number;
   fixedWidth: number;
   responseOffset: number | undefined;
@@ -34,8 +41,8 @@ export interface ReaderButtonSpec {
 const SOURCE_ACTION: ReaderButtonSpec = {
   text: TYPE_SOURCE_TOOLS_ACTION, height: 42, radius: 8, horizontalPadding: 0, stacked: false,
   primarySurface: 'TOK_PRIMARY_DARK', secondarySurface: 'TOK_SURFACE_PANEL_SOFT',
-  primaryBorder: 'TOK_PRIMARY_DARK', secondaryBorder: 'TOK_BORDER', disabledOpacity: 0.62, hasBorder: true,
-  primaryText: 'TOK_ON_PRIMARY', secondaryText: 'TOK_PRIMARY_TEXT', verticalPadding: 0, maxLines: 0, fixedWidth: 0, responseOffset: undefined, busyOpacity: 1, centerText: true,
+  primaryBorder: 'TOK_PRIMARY_DARK', secondaryBorder: 'TOK_BORDER', disabledOpacity: 0.62, primaryDisabledOpacity: undefined, hasBorder: true, primaryHasBorder: true, hasSurface: true, outerRadius: true,
+  primaryText: 'TOK_ON_PRIMARY', secondaryText: 'TOK_PRIMARY_TEXT', verticalPadding: 0, allPadding: undefined, maxLines: 0, fixedWidth: 0, responseOffset: undefined, busyOpacity: 1, centerText: true,
 };
 // Named variants retain current physical tuples; callers receive no style bag.
 function copyReaderButtonSpec(): ReaderButtonSpec {
@@ -43,8 +50,9 @@ function copyReaderButtonSpec(): ReaderButtonSpec {
     horizontalPadding: SOURCE_ACTION.horizontalPadding, stacked: SOURCE_ACTION.stacked,
     primarySurface: SOURCE_ACTION.primarySurface, secondarySurface: SOURCE_ACTION.secondarySurface,
     primaryBorder: SOURCE_ACTION.primaryBorder, secondaryBorder: SOURCE_ACTION.secondaryBorder,
-    disabledOpacity: SOURCE_ACTION.disabledOpacity, hasBorder: SOURCE_ACTION.hasBorder,
-    primaryText: SOURCE_ACTION.primaryText, secondaryText: SOURCE_ACTION.secondaryText, verticalPadding: SOURCE_ACTION.verticalPadding,
+    disabledOpacity: SOURCE_ACTION.disabledOpacity, primaryDisabledOpacity: SOURCE_ACTION.primaryDisabledOpacity, hasBorder: SOURCE_ACTION.hasBorder, primaryHasBorder: SOURCE_ACTION.primaryHasBorder,
+    hasSurface: SOURCE_ACTION.hasSurface, outerRadius: SOURCE_ACTION.outerRadius,
+    primaryText: SOURCE_ACTION.primaryText, secondaryText: SOURCE_ACTION.secondaryText, verticalPadding: SOURCE_ACTION.verticalPadding, allPadding: SOURCE_ACTION.allPadding,
     maxLines: SOURCE_ACTION.maxLines, fixedWidth: SOURCE_ACTION.fixedWidth, responseOffset: SOURCE_ACTION.responseOffset, busyOpacity: SOURCE_ACTION.busyOpacity, centerText: SOURCE_ACTION.centerText };
 }
 const SOURCE_COMPACT: ReaderButtonSpec = copyReaderButtonSpec();
@@ -101,35 +109,68 @@ const RSS_SOURCE_LINK: ReaderButtonSpec = copyReaderButtonSpec();
 RSS_SOURCE_LINK.text = TYPE_RSS_LINK_ACTION; RSS_SOURCE_LINK.height = 28; RSS_SOURCE_LINK.radius = 999;
 RSS_SOURCE_LINK.horizontalPadding = 9; RSS_SOURCE_LINK.hasBorder = false; RSS_SOURCE_LINK.disabledOpacity = 1;
 RSS_SOURCE_LINK.secondarySurface = 'TOK_PRIMARY_SOFT'; RSS_SOURCE_LINK.responseOffset = -8;
+
+const SHELF_ACTION: ReaderButtonSpec = copyReaderButtonSpec();
+SHELF_ACTION.text = TYPE_SHELF_MANAGEMENT_BUTTON; SHELF_ACTION.height = 44; SHELF_ACTION.hasBorder = false;
+const SHELF_SMALL: ReaderButtonSpec = copyReaderButtonSpec();
+SHELF_SMALL.text = TYPE_SHELF_MANAGEMENT_SMALL_ACTION; SHELF_SMALL.height = undefined;
+SHELF_SMALL.centerText = false; SHELF_SMALL.horizontalPadding = 9; SHELF_SMALL.verticalPadding = 7;
+SHELF_SMALL.disabledOpacity = 1; SHELF_SMALL.secondarySurface = 'TOK_SURFACE_SOLID';
+const SHELF_ROW_EDIT: ReaderButtonSpec = copyReaderButtonSpec();
+SHELF_ROW_EDIT.text = TYPE_SHELF_MANAGEMENT_ROW_ACTION; SHELF_ROW_EDIT.height = undefined;
+SHELF_ROW_EDIT.centerText = false; SHELF_ROW_EDIT.allPadding = 8;
+SHELF_ROW_EDIT.hasBorder = false; SHELF_ROW_EDIT.disabledOpacity = 1; SHELF_ROW_EDIT.hasSurface = false; SHELF_ROW_EDIT.outerRadius = false;
+const SHELF_ROW_SELECT: ReaderButtonSpec = copyReaderButtonSpec();
+SHELF_ROW_SELECT.text = TYPE_SHELF_MANAGEMENT_ROW_ACTION; SHELF_ROW_SELECT.height = undefined;
+SHELF_ROW_SELECT.centerText = false; SHELF_ROW_SELECT.allPadding = 8;
+SHELF_ROW_SELECT.hasBorder = false; SHELF_ROW_SELECT.disabledOpacity = 1;
+const RSS_DETAIL_BOTTOM: ReaderButtonSpec = copyReaderButtonSpec();
+RSS_DETAIL_BOTTOM.text = TYPE_RSS_BOTTOM_ACTION; RSS_DETAIL_BOTTOM.height = 46; RSS_DETAIL_BOTTOM.radius = 999;
+RSS_DETAIL_BOTTOM.disabledOpacity = 0.38; RSS_DETAIL_BOTTOM.primaryDisabledOpacity = 1; RSS_DETAIL_BOTTOM.primaryHasBorder = false;
+RSS_DETAIL_BOTTOM.secondarySurface = 'TOK_CARD_BG_HI'; RSS_DETAIL_BOTTOM.secondaryBorder = 'app.RssEntryDetailPage.CARD_BORDER';
+
 const BUTTONS: Record<ReaderButtonSpecId, ReaderButtonSpec> = {
   'source-action': SOURCE_ACTION, 'source-compact': SOURCE_COMPACT,
   'rules-action': RULES_ACTION, 'rules-compact': RULES_COMPACT, 'sync-action': SYNC_ACTION,
   'form-action': FORM_ACTION, 'form-busy-action': FORM_BUSY_ACTION, 'form-document-action': FORM_DOCUMENT_ACTION,
   'search-primary': SEARCH_PRIMARY, 'search-secondary': SEARCH_SECONDARY, 'discover-page': DISCOVER_PAGE,
   'rss-mode-tab': RSS_MODE, 'rss-state': RSS_STATE, 'rss-source-link': RSS_SOURCE_LINK,
+  'shelf-action': SHELF_ACTION, 'shelf-small': SHELF_SMALL, 'shelf-row-edit': SHELF_ROW_EDIT, 'shelf-row-select': SHELF_ROW_SELECT, 'rss-detail-bottom': RSS_DETAIL_BOTTOM,
 };
 export function resolveReaderButtonSpec(id: ReaderButtonSpecId): ReaderButtonSpec { return BUTTONS[id]; }
 
-export type ReaderFormFieldSpecId = 'source-debug' | 'rules-input' | 'sync-credential' | 'form-body' | 'form-url';
+export type ReaderFormFieldSpecId = 'source-debug' | 'rules-input' | 'sync-credential' | 'form-body' | 'form-url' | 'shelf-native' | 'shelf-order' | 'source-code';
 export interface ReaderFormFieldSpec {
-  text: ReaderTextStyle | ReaderInheritedTextStyle;
+  text: ReaderTextStyle | ReaderInheritedTextStyle | undefined;
   height: number;
-  radius: number;
-  horizontalPadding: number;
-  textRole: ReaderAppColorRole;
-  surfaceRole: ReaderAppColorRole;
+  radius: number | undefined;
+  horizontalPadding: number | undefined;
+  allPadding: number | undefined;
+  textRole: ReaderAppColorRole | undefined;
+  surfaceRole: ReaderAppColorRole | undefined;
   placeholderRole: ReaderAppColorRole | undefined;
+  hasBorder: boolean;
+  multiline: boolean;
+  numberInput: boolean;
 }
 const FIELDS: Record<ReaderFormFieldSpecId, ReaderFormFieldSpec> = {
+  // The repeated group drafts keep actual ArkUI default text/placeholder/caret
+  // rendering. No empty role and no physical font override is fabricated.
+  'shelf-native': { text: undefined, height: 44, radius: undefined, horizontalPadding: undefined,
+    textRole: undefined, surfaceRole: undefined, placeholderRole: undefined, allPadding: undefined, hasBorder: false, multiline: false, numberInput: false },
+  'shelf-order': { text: undefined, height: 44, radius: undefined, horizontalPadding: undefined,
+    textRole: undefined, surfaceRole: undefined, placeholderRole: undefined, allPadding: undefined, hasBorder: false, multiline: false, numberInput: true },
+  'source-code': { text: TYPE_SOURCE_TOOLS_CODE_INPUT, height: 320, radius: 8, horizontalPadding: undefined,
+    textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined, allPadding: TOK_SPACE_XS, hasBorder: true, multiline: true, numberInput: false },
   'form-body': { text: TYPE_FORM_INPUT, height: 44, radius: 8, horizontalPadding: 12,
-    textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined },
+    textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined, allPadding: undefined, hasBorder: true, multiline: false, numberInput: false },
   'form-url': { text: TYPE_FORM_URL_INPUT, height: 44, radius: 8, horizontalPadding: 12,
-    textRole: 'TOK_INK', surfaceRole: 'TOK_SURFACE_FIELD', placeholderRole: 'TOK_MUTED' },
+    textRole: 'TOK_INK', surfaceRole: 'TOK_SURFACE_FIELD', placeholderRole: 'TOK_MUTED', allPadding: undefined, hasBorder: true, multiline: false, numberInput: false },
   'source-debug': { text: TYPE_SOURCE_TOOLS_BODY, height: 40, radius: 8, horizontalPadding: 12,
-    textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined },
+    textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined, allPadding: undefined, hasBorder: true, multiline: false, numberInput: false },
   'rules-input': { text: TYPE_RULES_MANAGEMENT_INPUT, height: 40, radius: 8, horizontalPadding: 12,
-    textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined },
+    textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined, allPadding: undefined, hasBorder: true, multiline: false, numberInput: false },
   'sync-credential': { text: TYPE_SYNC_INPUT, height: 36, radius: 6, horizontalPadding: 11,
-    textRole: 'TOK_CONTROL_INK', surfaceRole: 'TOK_FIELD_SURFACE', placeholderRole: 'app.SyncPage.webdavInputRow.placeholderColor.FF9C9488' },
+    textRole: 'TOK_CONTROL_INK', surfaceRole: 'TOK_FIELD_SURFACE', placeholderRole: 'app.SyncPage.webdavInputRow.placeholderColor.FF9C9488', allPadding: undefined, hasBorder: true, multiline: false, numberInput: false },
 };
 export function resolveReaderFormFieldSpec(id: ReaderFormFieldSpecId): ReaderFormFieldSpec { return FIELDS[id]; }
