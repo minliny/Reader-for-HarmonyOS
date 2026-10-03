@@ -247,14 +247,23 @@ export class LocalReadingFlowGateway {
       throw new Error('bookAuthor must be a string');
     }
     const requests = await Promise.all([
-      this.runtimeOwner.request('cache.book.status', {
-        sourceId: LOCAL_SOURCE_ID,
-        bookId,
-        includeGlobalStats: false,
-      }, this.requestOptions(isCurrent)),
+      this.loadDownloadProjection(bookId, entries, isCurrent),
       this.loadBookmarkProjection(bookName, bookAuthor, entries, isCurrent),
     ]);
-    const cacheData = requests[0].data;
+    return requests[0].map((entry: LocalReadingTocEntry, index: number): LocalReadingTocEntry => ({
+      ...entry, bookmarks: requests[1][index].bookmarks,
+    }));
+  }
+
+  /** Local durable download facts only. Shared Directory owner separately
+   * owns bookmark read/mutation admission; no second bookmark producer. */
+  async loadDownloadProjection(bookId: string, entries: LocalReadingTocEntry[],
+    isCurrent?: LocalReadingRequestGuard): Promise<LocalReadingTocEntry[]> {
+    this.assertNonBlankString(bookId, 'bookId');
+    const result = await this.runtimeOwner.request('cache.book.status', {
+      sourceId: LOCAL_SOURCE_ID, bookId, includeGlobalStats: false,
+    }, this.requestOptions(isCurrent));
+    const cacheData = result.data;
     this.assertLocalSource(cacheData, 'cache.book.status');
     this.assertMatchingBookId(cacheData, bookId, 'cache.book.status');
     const rawStatuses = cacheData['chapters'];
@@ -275,9 +284,8 @@ export class LocalReadingFlowGateway {
       );
     }
 
-    const bookmarkEntries = requests[1];
     const projected: LocalReadingTocEntry[] = [];
-    for (const entry of bookmarkEntries) {
+    for (const entry of entries) {
       projected.push({
         index: entry.index,
         title: entry.title,
