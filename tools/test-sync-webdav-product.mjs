@@ -19,7 +19,7 @@ assert.match(store, /backupPassword:\s*string/);
 assert.match(store, /bookshelfViewMode\?:\s*'cover' \| 'list'/,
   'legacy Asset mode remains readable only for one-time migration');
 assert.match(store, /loadBookshelfViewMode\(\)/);
-assert.match(store, /saveBookshelfViewMode\(mode: 'cover' \| 'list', restoreOperationId\?: string\)/);
+assert.match(store, /saveBookshelfViewMode\(mode: 'cover' \| 'list', restoreOperationId\?: string,\s*observation\?: ReaderWriteEvidence, isCurrent: \(\) => boolean = \(\): boolean => true\)/);
 assert.match(store, /ensureLocalPreferences\(\)/,
   'bookshelf mode must have one durable local Preferences authority');
 assert.match(store, /localModeWriteTail[\s\S]*readOrMigrateViewMode\(\)/,

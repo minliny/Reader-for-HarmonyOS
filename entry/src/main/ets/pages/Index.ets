@@ -995,18 +995,7 @@ struct Index {
         this.sourceToolsContent();
       } else if (isReaderProductSurfaceEnabled('sync') && this.route === 'sync') {
         if (this.syncSnapshotReady) {
-          SyncPage({
-            snapshot: this.syncSnapshot,
-            isTablet: deviceInfo.deviceType === 'tablet',
-            onBack: (): void => this.returnToSettings(),
-            onSaveConfig: (url: string, user: string, pass: string, backupPass: string, path: string): void =>
-              this.onSyncSaveConfig(url, user, pass, backupPass, path),
-            onTestConnection: (url: string, user: string, pass: string, path: string): void =>
-              this.onSyncTestConnection(url, user, pass, path),
-            onTriggerBackup: (): void => this.onSyncTriggerBackup(),
-            onRestoreLatest: (): void => this.onSyncRestoreLatest(),
-            onResolveRestore: (overwriteLocal: boolean): void => this.onSyncResolveRestore(overwriteLocal),
-          });
+          this.syncContent();
         } else {
           Column() {
             Text('正在读取安全配置…');
@@ -1173,6 +1162,30 @@ struct Index {
       .padding({ top: this.readerOwnsWindowEdges() ? 0 : this.appContentTopInset() })
       .expandSafeArea([SafeAreaType.SYSTEM], this.readerOwnsWindowEdges() ?
         [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM] : [SafeAreaEdge.BOTTOM])
+  }
+
+  @Builder
+  private syncContent() {
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.syncSurface(generation, ReaderRuntimeOwner.current());
+    }, (identity: number): string => identity.toString());
+  }
+
+  @Builder
+  private syncSurface(generation: number, owner: ReaderRuntimeOwner) {
+    SyncPage({
+      snapshot: this.syncSnapshot,
+      isTablet: deviceInfo.deviceType === 'tablet',
+      onBack: (): void => { if (this.isCurrentSyncPresentation(generation, owner)) this.returnToSettings(); },
+      onReconcile: (expectedGeneration: number): void => { if (this.isCurrentSyncPresentation(generation, owner)) this.getSyncOrchestrator().reconcile(expectedGeneration); },
+      onSaveConfig: (url: string, user: string, pass: string, backupPass: string, path: string): void =>
+         { if (this.isCurrentSyncPresentation(generation, owner)) this.onSyncSaveConfig(url, user, pass, backupPass, path); },
+      onTestConnection: (url: string, user: string, pass: string, path: string): void =>
+         { if (this.isCurrentSyncPresentation(generation, owner)) this.onSyncTestConnection(url, user, pass, path); },
+      onTriggerBackup: (): void => { if (this.isCurrentSyncPresentation(generation, owner)) this.onSyncTriggerBackup(); },
+      onRestoreLatest: (): void => { if (this.isCurrentSyncPresentation(generation, owner)) this.onSyncRestoreLatest(); },
+      onResolveRestore: (overwriteLocal: boolean): void => { if (this.isCurrentSyncPresentation(generation, owner)) this.onSyncResolveRestore(overwriteLocal); },
+    });
   }
 
   @Builder
@@ -1760,14 +1773,28 @@ struct Index {
     this.getSyncOrchestrator().resolveRestore(overwriteLocal);
   }
 
+  private isCurrentSyncOwner(owner: ReaderRuntimeOwner): boolean {
+    if (this.shelfReceiptRetired || !isReaderProductSurfaceEnabled('sync') || this.route !== 'sync') return false;
+    try { return owner === ReaderRuntimeOwner.current(); } catch (_) { return false; }
+  }
+
+  private isCurrentSyncPresentation(generation: number, owner: ReaderRuntimeOwner): boolean {
+    return this.isCurrentRoute(generation, 'sync') && this.isCurrentSyncOwner(owner);
+  }
+
   private getSyncOrchestrator(): SyncOrchestrator {
-    if (this.syncOrchestrator === undefined) {
+    const owner = ReaderRuntimeOwner.current();
+    if (this.syncOrchestrator === undefined || !this.syncOrchestrator.ownedBy(owner)) {
+      this.syncSnapshotReady = false;
       this.syncOrchestrator = new SyncOrchestrator(
         (snapshot: SyncSnapshot): void => {
+          if (!this.isCurrentSyncOwner(owner)) return;
           this.syncSnapshot = snapshot;
           this.syncSnapshotReady = true;
         },
         (): SyncSnapshot => this.syncSnapshot,
+        owner,
+        (): boolean => this.isCurrentSyncOwner(owner),
       );
     }
     return this.syncOrchestrator;

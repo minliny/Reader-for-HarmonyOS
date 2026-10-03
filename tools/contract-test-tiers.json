@@ -482,6 +482,7 @@
     "test-bounded-source-tts-composition.mjs",
     "test-rss-index-operation-consumers.mjs",
     "test-bookshelf-sheet-shared-composition.mjs",
-    "test-bounded-local-import-composition.mjs"
+    "test-bounded-local-import-composition.mjs",
+    "test-sync-index-operation-consumers.mjs"
   ]
 }
