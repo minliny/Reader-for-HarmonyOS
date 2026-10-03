@@ -40,10 +40,18 @@ for (const call of [
   'bookshelfHost.toggleGroupShown(', 'bookshelfHost.deleteGroup(',
   'bookshelfHost.selectBook(', 'bookshelfHost.updateAssignmentGroup(',
   'bookshelfHost.assignSelectedBook()', 'bookshelfHost.assignDefaultGroup(', 'bookshelfHost.loadShelfBook(',
-  'bookshelfHost.upsertBook(',
 ]) {
   assert.ok(index.includes(`this.${call}`), `Index must forward ${call}`);
 }
+const readable = readFileSync(resolve(repo, 'entry/src/main/ets/features/bookshelf/BookshelfReadableAdmissionOwner.ts'), 'utf8');
+assert.match(index, /this\.bookshelfHost\.readable\(owner\)\.add\(/,
+  'Index publishes an exact captured readable intent to its existing Host');
+assert.match(host, /new BookshelfReadableAdmissionOwner\(owner\)/,
+  'the existing BookshelfHost owns the runtime-bound readable admission owner');
+assert.match(readable, /await new ReaderCoreGateway\(this\.owner\)\.upsertBook\(book\)/,
+  'the admission owner performs the actual typed Core write');
+assert.match(readable, /private readonly owner: ReaderRuntimeOwner/,
+  'the accepted write uses the captured owner, never a late current-runtime lookup');
 assert.match(index, /bookshelfManagementSnapshot = snapshot/,
   'Index must retain the existing management snapshot projection');
 const detailSelectionStart = index.indexOf('private onSearchResultSelected(');

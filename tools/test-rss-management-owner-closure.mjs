@@ -1,3 +1,4 @@
+import { RssPresentationProjection } from '../entry/src/main/ets/features/rss/RssPresentationProjection.ts';
 import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -61,8 +62,8 @@ function rpc(){return {
 };}
 function fixture(runtime=rpc()){
   currentOwner=runtime;
-  const {owner:index}=createReaderBuilderProbe(source('pages/Index.ets'),['rssSubscriptionManagementContent','rssSubscriptionManagementSurface','isCurrentRuntime','isCurrentRssPresentation','isCurrentRoute','getRssOrchestrator','feedPresentation','rssSubscriptions','rssSubscriptionManagementItems','rssSubscriptionManagementMeta'],
-    {RssSubscriptionManagementPage:ManagementChild,ReaderRuntimeOwner,RssOrchestrator,projectOperationFacts:facts.projectOperationFacts,deviceInfo:{deviceType:'phone'}});
+  const {owner:index}=createReaderBuilderProbe(source('pages/Index.ets'),['rssSubscriptionManagementContent','rssSubscriptionManagementSurface','isCurrentRuntime','isCurrentRssPresentation','isCurrentRoute','getRssOrchestrator','feedPresentation','rssSubscriptions','rssSubscriptionManagementItems'],
+    {RssPresentationProjection,RssSubscriptionManagementPage:ManagementChild,ReaderRuntimeOwner,RssOrchestrator,projectOperationFacts:facts.projectOperationFacts,deviceInfo:{deviceType:'phone'}});
   Object.assign(index,{route:'rssSubscriptionManagement',navigationGeneration:1,shelfReceiptRetired:false,rssPresentation:{kind:'feed',subscriptions:[],recentUnread:[]},rssManagementRead:facts.projectOperationFacts({phase:'idle'}),rssManagementFocusSubscriptionId:''});
   const orchestrator=index.getRssOrchestrator();index.rssSubscriptionManagementContent();const child=[...index.children.values()][0];
   const refresh=()=>{index.replay();return child.params;};

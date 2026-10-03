@@ -28,3 +28,9 @@ selection calculation/date/metadata body. The factory must capture Runtime and
 presentation lifetime: a route-only predicate/default Runtime is insufficient
 for publication after a retired page. Actual Index/SDK actors and final ArkTS,
 artifact, target and postponed visual/user evidence remain separate exits.
+
+## Actual RSS Index consumption
+
+Index's feed/subscriptions/recentUnread/managementItems methods now delegate to the real `RssPresentationProjection`. Its duplicate metadata, date and two-digit implementation is deleted. Gateway→Index→actual SDK management/feed/detail/editor consumer regressions preserve current strings, date formatting, empty/unavailable behavior and all existing recovery boundaries. SourceTools Index delivery is a separate following slice; a pure leaf projection alone does not close that consumer exit.
+
+The former bookshelf host wiring test's requirement for Index direct `upsertBook` was replaced with exact Index→BookshelfHost.readable→BookshelfReadableAdmissionOwner→actual captured ReaderCoreGateway assertions. The production write is not moved back into Index.

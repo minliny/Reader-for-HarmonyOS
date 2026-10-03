@@ -1,3 +1,4 @@
+import { RssPresentationProjection } from '../features/rss/RssPresentationProjection';
 import type { RssRouteOperationProjection, RssRouteBinding } from '../features/rss/RssRouteOperationHost';
 import { ReaderNativeAlertOwner, type ReaderNativeAlertLease, type ReaderNativeAlertOptions, type ReaderNativeAlertSpecId } from '../app/ReaderNativeAlertOwner';
 import { readerRecoveryView, type ReaderRecoveryView } from '../app/ReaderRecoveryProjection';
@@ -2780,72 +2781,20 @@ struct Index {
       'FIGMA_VISUAL_GAP: RSS mode %{private}s has no admitted data contract', mode);
   }
 
-  private feedPresentation(
-    subscriptions: RssSubscription[],
-    recentUnread: RssItem[],
-  ): RssPresentation {
-    const presentation: RssPresentation = {
-      kind: 'feed', subscriptions: subscriptions, recentUnread: recentUnread,
-    };
-    return presentation;
+  private feedPresentation(subscriptions: RssSubscription[], recentUnread: RssItem[]): RssPresentation {
+    return RssPresentationProjection.feed(subscriptions, recentUnread);
   }
 
   private rssSubscriptions(): RssSubscription[] {
-    if (this.rssPresentation.kind === 'fatalError') {
-      return [];
-    }
-    return this.rssPresentation.subscriptions;
+    return RssPresentationProjection.subscriptions(this.rssPresentation);
   }
 
   private rssRecentUnread(): RssItem[] {
-    if (this.rssPresentation.kind === 'feed' || this.rssPresentation.kind === 'refreshing') {
-      return this.rssPresentation.recentUnread;
-    }
-    return [];
+    return RssPresentationProjection.recentUnread(this.rssPresentation);
   }
 
   private rssSubscriptionManagementItems(): RssSubscriptionManagementItem[] {
-    return this.rssSubscriptions().map(
-      (subscription: RssSubscription): RssSubscriptionManagementItem => ({
-        subscriptionId: subscription.subscriptionId,
-        title: subscription.title,
-        meta: this.rssSubscriptionManagementMeta(subscription),
-        enabled: subscription.enabled,
-      }),
-    );
-  }
-
-  /** Management metadata is a projection of Core fields only. */
-  private rssSubscriptionManagementMeta(subscription: RssSubscription): string {
-    const parts: string[] = [];
-    if (subscription.sourceGroup !== undefined && subscription.sourceGroup.trim().length > 0) {
-      parts.push(subscription.sourceGroup);
-    }
-    if (subscription.customOrder !== undefined) {
-      parts.push(`排序 ${subscription.customOrder}`);
-    }
-    if (subscription.ruleArticles !== undefined && subscription.ruleArticles.trim().length > 0) {
-      parts.push('规则型');
-    }
-    const siteUrl = subscription.siteUrl;
-    parts.push(siteUrl !== undefined && siteUrl.trim().length > 0 ? siteUrl : subscription.feedUrl);
-    if (subscription.lastFetchAt !== undefined && subscription.lastFetchAt > 0) {
-      parts.push(`上次刷新 ${this.formatRssManagementTime(subscription.lastFetchAt)}`);
-    }
-    if (!subscription.enabled) {
-      parts.push('已停用');
-    }
-    return parts.join(' · ');
-  }
-
-  private formatRssManagementTime(timestamp: number): string {
-    const date = new Date(timestamp);
-    return `${date.getFullYear()}-${this.twoDigit(date.getMonth() + 1)}-${this.twoDigit(date.getDate())} ` +
-      `${this.twoDigit(date.getHours())}:${this.twoDigit(date.getMinutes())}`;
-  }
-
-  private twoDigit(value: number): string {
-    return value < 10 ? `0${value}` : `${value}`;
+    return RssPresentationProjection.managementItems(this.rssPresentation);
   }
 
   private onSearchVisibilityChanged(): void {

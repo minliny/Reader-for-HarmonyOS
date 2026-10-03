@@ -1,3 +1,4 @@
+import { RssPresentationProjection } from '../entry/src/main/ets/features/rss/RssPresentationProjection.ts';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
@@ -5,11 +6,11 @@ import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {ReaderNativeAlertOwner} from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
 import {rssSource, rssFacts, rssRecoveryView, RssRuntime,replaceRssRuntime,RealRssOrchestrator,RealRssEditor,RssEmptyEditor,rssRpc,settleRss,deferredRss} from './lib/rss-operation-fixture.mjs';
 const source=rssSource,file=p=>new URL('../entry/src/main/ets/'+p,import.meta.url),clone=v=>v===undefined?undefined:structuredClone(v);
-const methods=['isCurrentRssPresentation','rssSubscriptionManagementItems','rssSubscriptionManagementMeta','getRssOrchestrator','getRssEditorOrchestrator','loadRss','feedPresentation','rssSubscriptions','rssSourceBinding','rssEntryBinding','isCurrentRoute',
+const methods=['isCurrentRssPresentation','rssSubscriptionManagementItems','getRssOrchestrator','getRssEditorOrchestrator','loadRss','feedPresentation','rssSubscriptions','rssSourceBinding','rssEntryBinding','isCurrentRoute',
  'loadRssSourceItems','refreshRssSourceFeed','isCurrentRssSourceFeed','applyRssSourceSnapshot','openRssEntryDetail','onRssEntryFavoriteRequested',
  'isCurrentRssEntryDetail','applyRssEntrySnapshot','failRssEntryOperation','nextNavigationGeneration','onRssSubscriptionSelected',
  'onRssSubscriptionAddRequested','onRssSubscriptionEditRequested','finishRssSubscriptionEdit','returnToRssSubscriptionManagement'];
-const deps={ReaderRuntimeOwner:RssRuntime,RssOrchestrator:RealRssOrchestrator,RssSubscriptionEditorOrchestrator:RealRssEditor,
+const deps={RssPresentationProjection,ReaderRuntimeOwner:RssRuntime,RssOrchestrator:RealRssOrchestrator,RssSubscriptionEditorOrchestrator:RealRssEditor,
  projectOperationFacts:rssFacts.projectOperationFacts,isReaderProductSurfaceEnabled:()=>true,hilog:{warn(){},error(){}},DOMAIN:1,deviceInfo:{deviceType:'phone'}};
 const Index=productionMotionMethods(file('pages/Index.ets'),methods,deps);
 const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';

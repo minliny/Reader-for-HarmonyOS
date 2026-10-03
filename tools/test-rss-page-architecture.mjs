@@ -206,9 +206,8 @@ assert.doesNotMatch(entryDetail, /private bodyCard\(|bodyParagraphs\(|已解析�
 
 // Management rows are projections of full Core source truth. Add/edit and
 // document import/export use the full-source protocol without an ArkUI store.
-const managementMeta = index.match(
-  /private rssSubscriptionManagementMeta\(subscription: RssSubscription\): string \{[\s\S]*?\n  \}/,
-)?.[0] ?? '';
+assert.match(index, /return RssPresentationProjection\.managementItems\(this\.rssPresentation\)/);
+const managementMeta = readFileSync(resolve(repo, 'entry/src/main/ets/features/rss/RssPresentationProjection.ts'), 'utf8');
 assert.match(managementMeta, /subscription\.siteUrl/);
 assert.match(managementMeta, /subscription\.feedUrl/);
 assert.match(managementMeta, /subscription\.lastFetchAt/);
