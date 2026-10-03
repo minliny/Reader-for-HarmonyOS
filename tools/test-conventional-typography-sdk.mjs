@@ -32,13 +32,17 @@ const sourceFor = original => `@Component struct TypographyConsumerProbe {\n${si
   return `@Builder private ${site.method}(label: string) { ${carriers[site.expected.kind]}\n${modifiers}\n }`;
 }).join('\n')}\nbuild() { Column() {} }\n}`;
 const names = sites.map(site => site.method);
-const dependencies = { FontWeight: { Regular: 400, Medium: 500, Bold: 700 } };
+const dependencies = { FontWeight: { Regular: 400, Medium: 500, Bold: 700 },
+  fontId: 'preview-face', font: 'preview-face', value: 0, group: 'screen', option: '当前',
+  readerAppearanceFontSlotFamily: (_snapshot, slot) => `Preview:${slot}`,
+  readerRegisteredFontFamily: (_registry, family) => family,
+};
 const before = createReaderBuilderProbe(sourceFor(true), names, dependencies).Component;
 const after = createReaderBuilderProbe(sourceFor(false), names, dependencies).Component;
 const scenarios = [
-  { isWide: () => false, isTablet: false, coverWidth: 96.96, selectedGroupName: '其他' },
-  { isWide: () => true, isTablet: true, coverWidth: 128, selectedGroupName: '当前' },
-  { isWide: () => false, isTablet: true, coverWidth: 65.28, selectedGroupName: '当前' },
+  { isWide: () => false, isTablet: false, coverWidth: 96.96, selectedGroupName: '其他', headerInter: () => false, snapshot: {}, visiblePreviewFamily: face => `Preview:${face}`, indentOptionActive: () => false, isActive: () => false },
+  { isWide: () => true, isTablet: true, coverWidth: 128, selectedGroupName: '当前', headerInter: () => true, snapshot: {}, visiblePreviewFamily: face => `Preview:${face}`, indentOptionActive: () => true, isActive: () => true },
+  { isWide: () => false, isTablet: true, coverWidth: 65.28, selectedGroupName: '当前', headerInter: () => false, snapshot: {}, visiblePreviewFamily: face => `Preview:${face}`, indentOptionActive: () => true, isActive: () => false },
 ];
 const tuple = node => Object.fromEntries(typographyProperties.filter(property => Object.hasOwn(node, property)).map(property => [property, node[property]]));
 for (const scenario of scenarios) {

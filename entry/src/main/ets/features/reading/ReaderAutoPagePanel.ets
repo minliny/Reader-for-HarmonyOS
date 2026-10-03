@@ -1,3 +1,4 @@
+import { TYPE_READER_AUTO_PAGE_QUICK_COMPAT_CHAPTER_CONTROL_VALUE, TYPE_READER_AUTO_PAGE_QUICK_COMPAT_HEADER_BACK, TYPE_READER_AUTO_PAGE_QUICK_COMPAT_RUNNING_CONTROL_LABEL, TYPE_READER_AUTO_PAGE_QUICK_COMPAT_SPEED_BUTTON_LABEL, TYPE_READER_AUTO_PAGE_QUICK_COMPAT_SPEED_CONTROL_LABEL, TYPE_READER_AUTO_PAGE_QUICK_COMPAT_SPEED_CONTROL_VALUE, TYPE_READER_AUTO_PAGE_QUICK_COMPAT_STOP_CONTROL_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import type { ReaderAutoPageStatus } from './ReaderAutoPageState';
 import {
@@ -114,10 +115,10 @@ export struct ReaderAutoPagePanel {
           .width(11)
           .height(11);
         Text('返回')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(10)
-          .lineHeight(10)
+          .fontFamily(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_HEADER_BACK.fontFamily)
+          .fontWeight(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_HEADER_BACK.fontWeight)
+          .fontSize(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_HEADER_BACK.fontSizeFp)
+          .lineHeight(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_HEADER_BACK.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
       }
       .height(QUICK_AUTO_PAGE_HEADER_HEIGHT)
@@ -203,10 +204,10 @@ export struct ReaderAutoPagePanel {
         .width(27)
         .height(9)
         .margin({ top: 7 })
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(9)
-        .lineHeight(9)
+        .fontFamily(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_CHAPTER_CONTROL_VALUE.fontFamily)
+        .fontWeight(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_CHAPTER_CONTROL_VALUE.fontWeight)
+        .fontSize(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_CHAPTER_CONTROL_VALUE.fontSizeFp)
+        .lineHeight(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_CHAPTER_CONTROL_VALUE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1);
@@ -247,10 +248,10 @@ export struct ReaderAutoPagePanel {
         .width(36)
         .height(9)
         .margin({ top: 4.5 })
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(9)
-        .lineHeight(9)
+        .fontFamily(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_RUNNING_CONTROL_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_RUNNING_CONTROL_LABEL.fontWeight)
+        .fontSize(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_RUNNING_CONTROL_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_RUNNING_CONTROL_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1);
@@ -281,10 +282,10 @@ export struct ReaderAutoPagePanel {
         .width(18)
         .height(9)
         .margin({ top: 4.5 })
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(9)
-        .lineHeight(9)
+        .fontFamily(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_STOP_CONTROL_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_STOP_CONTROL_LABEL.fontWeight)
+        .fontSize(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_STOP_CONTROL_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_STOP_CONTROL_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('app.ReaderAutoPagePanel.stopControl.fontColor.FF8C3D36', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1);
@@ -308,19 +309,19 @@ export struct ReaderAutoPagePanel {
       Text('翻页速度')
         .layoutWeight(1)
         .height(16)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(11)
+        .fontFamily(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_SPEED_CONTROL_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_SPEED_CONTROL_LABEL.fontWeight)
+        .fontSize(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_SPEED_CONTROL_LABEL.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .maxLines(1);
 
       this.speedButton('-', '减慢自动翻页', true);
       Text(`${this.speedSeconds} 秒`)
         .width(48)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(900)
-        .fontSize(11)
-        .lineHeight(11)
+        .fontFamily(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_SPEED_CONTROL_VALUE.fontFamily)
+        .fontWeight(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_SPEED_CONTROL_VALUE.fontWeight)
+        .fontSize(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_SPEED_CONTROL_VALUE.fontSizeFp)
+        .lineHeight(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_SPEED_CONTROL_VALUE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1);
@@ -342,10 +343,10 @@ export struct ReaderAutoPagePanel {
   private speedButton(label: string, accessibility: string, slower: boolean) {
     Stack({ alignContent: Alignment.Center }) {
       Text(label)
-        .fontFamily('ReaderInter')
-        .fontWeight(800)
-        .fontSize(18)
-        .lineHeight(18)
+        .fontFamily(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_SPEED_BUTTON_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_SPEED_BUTTON_LABEL.fontWeight)
+        .fontSize(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_SPEED_BUTTON_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_AUTO_PAGE_QUICK_COMPAT_SPEED_BUTTON_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.Center);
     }

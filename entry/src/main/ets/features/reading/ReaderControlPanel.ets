@@ -1,3 +1,4 @@
+import { TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL, TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_COLLAPSE, TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_VALUE, TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL, TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL, TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL, TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL, TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY } from '../common/ReaderTypography';
 import { ReaderActionMenuSurface, ReaderMenuActionView } from '../common/ReaderActionMenuSurface';
 import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
@@ -1146,14 +1147,14 @@ export struct ReaderControlPanel {
       Image(this.headerIcon()).width(16).height(16).position({ x: 0, y: 7 })
         .hitTestBehavior(HitTestMode.None);
       Text(this.contentTitle()).fontFamily(this.headerInter() ? 'ReaderInter' : 'ReaderNotoSansSCUIBold')
-        .fontWeight(FontWeight.Bold, { enableVariableFontWeight: true }).fontSize(14).lineHeight(this.headerInter() ? 16.8 : 20)
+        .fontWeight(TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_VALUE.fontWeight as number, { enableVariableFontWeight: true }).fontSize(TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_VALUE.fontSizeFp).lineHeight(this.headerInter() ? 16.8 : 20)
         .fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .width(Math.max(0, this.headerFrame().width - 74)).height(this.headerInter() ? 17 : 20)
         .position({ x: 24, y: this.headerInter() ? 6.5 : 5 });
       Stack({ alignContent: Alignment.TopStart }) {
         Text('收起').width(20).height(this.headerInter() ? 12 : 14)
           .fontFamily(this.headerInter() ? 'ReaderInter' : 'ReaderNotoSansSCUIBold')
-          .fontWeight(FontWeight.Bold, { enableVariableFontWeight: true }).fontSize(10).lineHeight(this.headerInter() ? 12 : 14)
+          .fontWeight(TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_COLLAPSE.fontWeight as number, { enableVariableFontWeight: true }).fontSize(TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_COLLAPSE.fontSizeFp).lineHeight(this.headerInter() ? 12 : 14)
           .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme)).textAlign(TextAlign.Center)
           .position({ x: 10, y: this.headerInter() ? 7 : 6 });
       }.width(40).height(26).position({ x: Math.max(0, this.headerFrame().width - 40), y: 2 })
@@ -1174,8 +1175,8 @@ export struct ReaderControlPanel {
   @Builder
   private replaceHeader() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Text('替换规则管理').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold)
-        .fontSize(14).lineHeight(16.8).fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1)
+      Text('替换规则管理').fontFamily(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL.fontFamily).fontWeight(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL.fontWeight)
+        .fontSize(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL.fontSizeFp).lineHeight(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL.lineHeightFp as number).fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1)
         .width(this.replaceHeaderFrame().title.width).height(this.replaceHeaderFrame().title.height)
         .position({ x: this.replaceHeaderFrame().title.x, y: this.replaceHeaderFrame().title.y })
         .opacity(this.replaceHeaderFrame().title.opacity).hitTestBehavior(HitTestMode.None);
@@ -1183,8 +1184,8 @@ export struct ReaderControlPanel {
         .width(this.replaceHeaderFrame().icon.width).height(this.replaceHeaderFrame().icon.height)
         .position({ x: this.replaceHeaderFrame().icon.x, y: this.replaceHeaderFrame().icon.y })
         .opacity(this.replaceHeaderFrame().icon.opacity).hitTestBehavior(HitTestMode.None);
-      Text('完成').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold)
-        .fontSize(10).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme)).textAlign(TextAlign.Center)
+      Text('完成').fontFamily(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY.fontFamily).fontWeight(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY.fontWeight)
+        .fontSize(TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme)).textAlign(TextAlign.Center)
         .width(this.replaceHeaderFrame().action.width).height(this.replaceHeaderFrame().action.height)
         .position({ x: this.replaceHeaderFrame().action.x, y: this.replaceHeaderFrame().action.y })
         .opacity(this.replaceHeaderFrame().action.opacity).backgroundColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme)).borderRadius(8)
@@ -1597,10 +1598,10 @@ export struct ReaderControlPanel {
       Text(label)
         .width('100%')
         .height(13)
-        .fontFamily('ReaderInter')
-        .fontWeight(800)
-        .fontSize(11)
-        .lineHeight(13)
+        .fontFamily(TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL.fontWeight)
+        .fontSize(TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1)
@@ -1705,10 +1706,10 @@ export struct ReaderControlPanel {
       // 进度百分比 Inter Regular 9 (固定 26.23 宽容器, 使 slider 起点对齐 Figma)。
       Text(`${Math.round(this.effectiveProgressPercent())}%`)
         .width(26.23)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(9)
-        .lineHeight(9)
+        .fontFamily(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontWeight)
+        .fontSize(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme))
         .maxLines(1);
 
@@ -1749,10 +1750,10 @@ export struct ReaderControlPanel {
       Text(`共 ${this.totalChapters} 章`)
         .width(39)
         .height(30)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(9)
-        .lineHeight(9)
+        .fontFamily(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontWeight)
+        .fontSize(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme))
         .textAlign(TextAlign.RIGHT)
         .maxLines(1)
@@ -1822,10 +1823,10 @@ export struct ReaderControlPanel {
           Text('A')
             .width(READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE)
             .height(READER_CONTROL_BRIGHTNESS_AUTO_PILL_SIZE)
-            .fontFamily('ReaderInter')
-            .fontWeight(500)
-            .fontSize(13)
-            .lineHeight(13)
+            .fontFamily(TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL.fontFamily)
+            .fontWeight(TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL.fontWeight)
+            .fontSize(TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL.fontSizeFp)
+            .lineHeight(TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL.lineHeightFp as number)
             .fontColor(this.brightnessAutomatic ? readerAppColor('TOK_READ_PRIMARY', this.appScheme) : readerAppColor('TOK_READ_INK', this.appScheme))
             .textAlign(TextAlign.Center);
         }
@@ -1968,10 +1969,10 @@ export struct ReaderControlPanel {
       Text(label)
         .width('100%')
         .height(15)
-        .fontFamily('ReaderNotoSansSCUIBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(10)
-        .lineHeight(15)
+        .fontFamily(TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL.fontWeight)
+        .fontSize(TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL.lineHeightFp as number)
         .fontColor(this.isActiveModule(module) ? readerAppColor('TOK_READ_PRIMARY', this.appScheme) : readerAppColor('TOK_READ_ICON', this.appScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1)

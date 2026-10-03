@@ -1,3 +1,4 @@
+import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import * as morphScroll from '../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts';
 import * as presentation from '../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
@@ -188,8 +189,8 @@ const textSink = label => {
   chain.onClick = callback => { rendered.click = callback; return chain; };
   return chain;
 };
-const BuilderProbe = new Function('readerAppColor', 'Text', 'TOK_READ_PRIMARY', 'TextAlign', 'TOK_READ_ACTIVE_SOFT',
-  `${stripTypeScriptTypes(`class BuilderProbe { ${actionMethod} }`)}\nreturn BuilderProbe;`)(readerAppColor, textSink, '', { Center: 0 }, '');
+const BuilderProbe = new Function(...Object.keys(readerTypographyRoles), 'readerAppColor', 'Text', 'TOK_READ_PRIMARY', 'TextAlign', 'TOK_READ_ACTIVE_SOFT',
+  `${stripTypeScriptTypes(`class BuilderProbe { ${actionMethod} }`)}\nreturn BuilderProbe;`)(...Object.values(readerTypographyRoles), readerAppColor, textSink, '', { Center: 0 }, '');
 const gate = predicates.get('预览当前章节已保存规则');
 let clicks = 0;
 owner.motionProgress = 0;

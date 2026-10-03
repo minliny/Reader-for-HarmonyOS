@@ -1,3 +1,4 @@
+import { TYPE_READER_APPEARANCE_RETAINED_FONT_CELL_PREVIEW, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_TERTIARY, TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL, TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_SELECT_FIELD_VALUE, TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE, TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE, TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_THEME_SHELL_VALUE } from '../common/ReaderTypography';
 import { prepareReaderFontFamily, readerFontFamilyReady, registerReaderFonts } from '../common/ReaderFonts';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -391,9 +392,9 @@ export struct ReaderControlAppearanceContent {
   @Builder
   private themeHeaders() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Text('主题库').fontFamily('ReaderNotoSansSCUIBold').fontSize(9).lineHeight(9.9)
-        .fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).position({ x: 0, y: 0 });
-      Text(this.themeSummary()).width(88).fontFamily('ReaderNotoSansSCUIRegular').fontWeight(FontWeight.Regular).fontSize(7.5).lineHeight(8)
+      Text('主题库').fontFamily(TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL.lineHeightFp as number)
+        .fontWeight(TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).position({ x: 0, y: 0 });
+      Text(this.themeSummary()).width(88).fontFamily(TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META.fontFamily).fontWeight(TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META.fontWeight).fontSize(TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(1).textAlign(TextAlign.End)
         .position({ x: Math.max(0, this.frame().quickThemeHeader.width - 88), y: 3.95 });
     }.width(this.frame().quickThemeHeader.width).height(15.898)
@@ -402,9 +403,9 @@ export struct ReaderControlAppearanceContent {
       .accessibilityLevel(this.motionProgress === 0 ? 'auto' : 'no-hide-descendants')
       .hitTestBehavior(HitTestMode.None);
     Stack({ alignContent: Alignment.TopStart }) {
-      Text('主题库').fontFamily('ReaderNotoSansSCUIBold').fontSize(12).lineHeight(17)
-        .fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).position({ x: 0, y: 1 });
-      Text(this.themeSummary()).width(140).fontFamily('ReaderNotoSansSCUIRegular').fontWeight(FontWeight.Regular).fontSize(9).lineHeight(13)
+      Text('主题库').fontFamily(TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL_SECONDARY.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL_SECONDARY.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL_SECONDARY.lineHeightFp as number)
+        .fontWeight(TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL_SECONDARY.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).position({ x: 0, y: 1 });
+      Text(this.themeSummary()).width(140).fontFamily(TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META_SECONDARY.fontFamily).fontWeight(TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META_SECONDARY.fontWeight).fontSize(TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META_SECONDARY.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META_SECONDARY.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(1).textAlign(TextAlign.End)
         .position({ x: Math.max(0, this.frame().fullThemeHeader.width - 140), y: 3 });
     }.width(this.frame().fullThemeHeader.width).height(20)
@@ -418,7 +419,7 @@ export struct ReaderControlAppearanceContent {
   private themeShell(theme: ReaderAppearanceTheme, index: number) {
     Stack({ alignContent: Alignment.TopStart }) {
       Text(this.themeLabel(theme)).width(Math.max(0, this.frame().themeShells[index].width - 10))
-        .height(13).fontFamily('ReaderNotoSansSCUIRegular').fontWeight(FontWeight.Regular).fontSize(9).lineHeight(13)
+        .height(13).fontFamily(TYPE_READER_APPEARANCE_RETAINED_THEME_SHELL_VALUE.fontFamily).fontWeight(TYPE_READER_APPEARANCE_RETAINED_THEME_SHELL_VALUE.fontWeight).fontSize(TYPE_READER_APPEARANCE_RETAINED_THEME_SHELL_VALUE.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_THEME_SHELL_VALUE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center).maxLines(1)
         .position({ x: 5, y: 39 });
     }.width(this.frame().themeShells[index].width).height(58.8).borderRadius(8)
@@ -456,7 +457,7 @@ export struct ReaderControlAppearanceContent {
   @Builder
   private themeAction(day: boolean) {
     Text(this.defaultThemeActionLabel(day)).width(74).height(28)
-      .fontFamily('ReaderNotoSansSCUIBold').fontSize(9).lineHeight(13).fontWeight(FontWeight.Bold)
+      .fontFamily(TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE.lineHeightFp as number).fontWeight(TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE.fontWeight)
       .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).textAlign(TextAlign.Center).borderRadius(6)
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
       .position(this.actorPosition(day ? this.frame().themeDayAction : this.frame().themeNightAction))
@@ -489,15 +490,15 @@ export struct ReaderControlAppearanceContent {
   @Builder
   private fontHeaders() {
     Text('字体库').width(this.frame().quickFontHeader.width).height(10)
-      .fontFamily('ReaderNotoSansSCUIBold').fontSize(9).lineHeight(9.9).fontWeight(FontWeight.Bold)
+      .fontFamily(TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL.lineHeightFp as number).fontWeight(TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL.fontWeight)
       .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).position(this.actorPosition(this.frame().quickFontHeader, true))
       .accessibilityLevel(this.motionProgress === 0 ? 'auto' : 'no-hide-descendants')
       .opacity(this.frame().quickFontHeader.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
       .hitTestBehavior(HitTestMode.None);
     Row() {
-      Text('字体库').fontFamily('ReaderNotoSansSCUIMedium').fontSize(13).fontWeight(FontWeight.Medium).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
+      Text('字体库').fontFamily(TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_SECONDARY.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_SECONDARY.fontSizeFp).fontWeight(TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_SECONDARY.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       Blank();
-      Text('可拖动调整位置').fontFamily('ReaderNotoSansSCUIRegular').fontWeight(FontWeight.Regular).fontSize(10).fontColor(readerAppColor('app.appearance.layoutCaption', this.appThemeScheme));
+      Text('可拖动调整位置').fontFamily(TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_TERTIARY.fontFamily).fontWeight(TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_TERTIARY.fontWeight).fontSize(TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_TERTIARY.fontSizeFp).fontColor(readerAppColor('app.appearance.layoutCaption', this.appThemeScheme));
     }.width(this.frame().fullFontHeader.width).height(16)
       .position(this.actorPosition(this.frame().fullFontHeader))
       .opacity(this.frame().fullFontHeader.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
@@ -588,8 +589,8 @@ export struct ReaderControlAppearanceContent {
         .borderRadius(12).clip(true).hitTestBehavior(HitTestMode.None);
       Text(readerAppearanceFontSlotLabel(this.snapshot, font))
         .width(this.fontActor(font).width).height(this.fontActor(font).height)
-        .fontFamily(this.visiblePreviewFamily(font)).fontSize(12)
-        .fontWeight(FontWeight.Regular, { enableVariableFontWeight: true })
+        .fontFamily(this.visiblePreviewFamily(font)).fontSize(TYPE_READER_APPEARANCE_RETAINED_FONT_CELL_PREVIEW.fontSizeFp)
+        .fontWeight(TYPE_READER_APPEARANCE_RETAINED_FONT_CELL_PREVIEW.fontWeight as number, { enableVariableFontWeight: true })
         .fontColor(this.activeFont(font) ? readerAppColor('app.ReaderControlAppearanceContent.fontCell.fontColor.FFFFFAF4', this.appThemeScheme) : readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .opacity(this.presentation().contentOpacity * (this.fontPreviewReady(font) ? 1 : 0.65))
@@ -622,9 +623,9 @@ export struct ReaderControlAppearanceContent {
   private layoutLibrary() {
     Stack({ alignContent: Alignment.TopStart }) {
       Row() {
-        Text('排版库').fontFamily('ReaderNotoSansSCUIMedium').fontSize(13).lineHeight(17).fontWeight(FontWeight.Medium).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
+        Text('排版库').fontFamily(TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL.lineHeightFp as number).fontWeight(TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
         Blank();
-        Text('即时应用').fontFamily('ReaderNotoSansSCUIRegular').fontWeight(FontWeight.Regular).fontSize(10).lineHeight(13).fontColor(readerAppColor('app.appearance.layoutCaption', this.appThemeScheme));
+        Text('即时应用').fontFamily(TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL_SECONDARY.fontFamily).fontWeight(TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL_SECONDARY.fontWeight).fontSize(TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL_SECONDARY.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL_SECONDARY.lineHeightFp as number).fontColor(readerAppColor('app.appearance.layoutCaption', this.appThemeScheme));
       }.width(Math.max(0, this.frame().sectionWidth - 8)).height(17)
         .position({ x: 4, y: 10 });
       Row().width(Math.max(0, this.frame().sectionWidth - 4)).height(254)
@@ -645,8 +646,8 @@ export struct ReaderControlAppearanceContent {
   @Builder
   private selectField(kind: string, y: number) {
     Row() {
-      Text(this.selectLabel(kind)).fontFamily('ReaderNotoSansSCUIRegular').fontSize(12).lineHeight(18)
-        .fontWeight(FontWeight.Regular).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1);
+      Text(this.selectLabel(kind)).fontFamily(TYPE_READER_APPEARANCE_RETAINED_SELECT_FIELD_VALUE.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_SELECT_FIELD_VALUE.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_SELECT_FIELD_VALUE.lineHeightFp as number)
+        .fontWeight(TYPE_READER_APPEARANCE_RETAINED_SELECT_FIELD_VALUE.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1);
       Blank();
       ReaderSelect({ value: this.selectValue(kind), options: this.selectOptions(kind),
         isOpen: this.openSelect === kind && !this.selectClosing, variant: 'appearanceLibrary',
@@ -695,14 +696,14 @@ export struct ReaderControlAppearanceContent {
   @Builder
   private stepperRow(metric: ReaderAppearanceMetric, y: number) {
     Stack({ alignContent: Alignment.TopStart }) {
-      Text(this.metricLabel(metric)).height(18).fontFamily('ReaderNotoSansSCUIRegular').fontSize(12).lineHeight(18)
-        .fontWeight(FontWeight.Regular).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).position({ x: 13, y: 12 });
+      Text(this.metricLabel(metric)).height(18).fontFamily(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE.fontSizeFp).lineHeight(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE.lineHeightFp as number)
+        .fontWeight(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).position({ x: 13, y: 12 });
       Row().width(98).height(27).backgroundColor(readerAppColor('app.appearance.selectSurface', this.appThemeScheme))
         .border({ width: 1, color: readerAppColor('app.appearance.selectBorder', this.appThemeScheme) }).borderRadius(8)
         .position({ x: Math.max(0, this.frame().sectionWidth - 113), y: 7 }).hitTestBehavior(HitTestMode.None);
       this.stepButton(metric, -1, Math.max(0, this.frame().sectionWidth - 121));
-      Text(this.metricValue(metric)).width(44).height(25).fontFamily('ReaderNotoSansSCUIMedium').fontSize(11)
-        .fontWeight(FontWeight.Medium).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).textAlign(TextAlign.Center)
+      Text(this.metricValue(metric)).width(44).height(25).fontFamily(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE_SECONDARY.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE_SECONDARY.fontSizeFp)
+        .fontWeight(TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE_SECONDARY.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).textAlign(TextAlign.Center)
         .border({ width: { left: 1, right: 1 }, color: readerAppColor('app.ReaderControlAppearanceContent.stepperRow.color.339B8466', this.appThemeScheme) })
         .position({ x: Math.max(0, this.frame().sectionWidth - 86), y: 8 }).hitTestBehavior(HitTestMode.None);
       this.stepButton(metric, 1, Math.max(0, this.frame().sectionWidth - 51));
@@ -714,8 +715,8 @@ export struct ReaderControlAppearanceContent {
   @Builder
   private stepButton(metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection, x: number) {
     Stack({ alignContent: Alignment.Center }) {
-      Text(direction < 0 ? '−' : '+').width(26).height(25).fontFamily('ReaderNotoSansSCUIRegular').fontSize(15)
-        .fontWeight(FontWeight.Regular).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center);
+      Text(direction < 0 ? '−' : '+').width(26).height(25).fontFamily(TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE.fontFamily).fontSize(TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE.fontSizeFp)
+        .fontWeight(TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE.fontWeight).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center);
     }.width(44).height(42).position({ x: x, y: 0 })
       .opacity(readerAppearanceCanStep(this.snapshot, metric, direction) ? 1 : 0.38)
       .enabled(this.fullInput() && readerAppearanceCanStep(this.snapshot, metric, direction))

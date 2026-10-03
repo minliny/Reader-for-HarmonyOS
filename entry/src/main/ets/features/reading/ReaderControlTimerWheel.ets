@@ -1,3 +1,4 @@
+import { TYPE_READER_TIMER_RETAINED_BUILD_VALUE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { TOK_BORDER_W, TOK_LINE, TOK_READ_INK, TOK_READ_MUTED } from '../common/ReaderTokens';
 
@@ -50,8 +51,8 @@ export struct ReaderControlTimerWheel {
           .border({ width: { top: TOK_BORDER_W, bottom: TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
           .position({ x: 0, y: this.neighbours * this.rowHeight }).hitTestBehavior(HitTestMode.None);
       }.width(this.wheelWidth).height(this.rowHeight * (this.neighbours * 2 + 1)).clip(true);
-      Text(this.unit).width(this.wheelWidth).height(8).fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold).fontSize(8).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center);
+      Text(this.unit).width(this.wheelWidth).height(8).fontFamily(TYPE_READER_TIMER_RETAINED_BUILD_VALUE.fontFamily)
+        .fontWeight(TYPE_READER_TIMER_RETAINED_BUILD_VALUE.fontWeight).fontSize(TYPE_READER_TIMER_RETAINED_BUILD_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center);
     }.width(this.wheelWidth).alignItems(HorizontalAlign.Center);
   }
 }

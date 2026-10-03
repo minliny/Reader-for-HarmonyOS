@@ -1,3 +1,4 @@
+import { TYPE_READER_SETTINGS_QUICK_COMPAT_SEGMENT_OPTION_VALUE, TYPE_READER_SETTINGS_QUICK_COMPAT_SEGMENT_ROW_VALUE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
@@ -78,10 +79,10 @@ export struct ReaderSettingsModulePanel {
       Text(this.groupLabel(group))
         .width('100%')
         .height(12)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Medium)
-        .fontSize(10)
-        .lineHeight(12)
+        .fontFamily(TYPE_READER_SETTINGS_QUICK_COMPAT_SEGMENT_ROW_VALUE.fontFamily)
+        .fontWeight(TYPE_READER_SETTINGS_QUICK_COMPAT_SEGMENT_ROW_VALUE.fontWeight)
+        .fontSize(TYPE_READER_SETTINGS_QUICK_COMPAT_SEGMENT_ROW_VALUE.fontSizeFp)
+        .lineHeight(TYPE_READER_SETTINGS_QUICK_COMPAT_SEGMENT_ROW_VALUE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
         .maxLines(1)
         .position({ x: 0, y: 0 });
@@ -110,9 +111,9 @@ export struct ReaderSettingsModulePanel {
       .padding({ left: 3, right: 3 })
       .backgroundColor(this.isActive(group, option) ? readerAppColor('TOK_READ_ELEVATED', this.appThemeScheme) : Color.Transparent)
       .borderRadius(6)
-      .fontFamily('ReaderNotoSansSC')
+      .fontFamily(TYPE_READER_SETTINGS_QUICK_COMPAT_SEGMENT_OPTION_VALUE.fontFamily as string)
       .fontWeight(this.isActive(group, option) ? FontWeight.Bold : FontWeight.Medium)
-      .fontSize(9)
+      .fontSize(TYPE_READER_SETTINGS_QUICK_COMPAT_SEGMENT_OPTION_VALUE.fontSizeFp)
       .fontColor(this.isActive(group, option) ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
       .textAlign(TextAlign.Center)
       .maxLines(1)

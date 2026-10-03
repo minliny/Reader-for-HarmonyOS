@@ -1,3 +1,4 @@
+import { TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE, TYPE_READER_REPLACE_RETAINED_EDITOR_FIELDS_LABEL, TYPE_READER_REPLACE_RETAINED_EDITOR_FLAG_LABEL, TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_INPUT, TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_LABEL, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL_SECONDARY, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_TITLE, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_VALUE, TYPE_READER_REPLACE_RETAINED_QUICK_BACK_BACK, TYPE_READER_REPLACE_RETAINED_RULE_ROW_META, TYPE_READER_REPLACE_RETAINED_RULE_ROW_PATTERN, TYPE_READER_REPLACE_RETAINED_STATUS_CONTENT_STATUS, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE, TYPE_READER_REPLACE_RETAINED_TEXT_ACTION_LABEL, TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PathShape } from '@ohos.arkui.shape';
 import { sampleReaderControlMotionPresentation, readerControlMotionClipRects, readerControlMotionClipPath,
@@ -334,7 +335,7 @@ export struct ReaderControlReplaceContent {
   private quickBack() {
     Row({ space: 5 }) {
       Image((this.appThemeScheme === 'night' ? $r('app.media.reader_control_replace_back_theme_night') : $r('app.media.reader_control_replace_back'))).width(11).height(11);
-      Text('返回').fontFamily('ReaderNotoSansSC').fontSize(10).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
+      Text('返回').fontFamily(TYPE_READER_REPLACE_RETAINED_QUICK_BACK_BACK.fontFamily).fontSize(TYPE_READER_REPLACE_RETAINED_QUICK_BACK_BACK.fontSizeFp).fontWeight(TYPE_READER_REPLACE_RETAINED_QUICK_BACK_BACK.fontWeight).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
     }.width(51).height(24).justifyContent(FlexAlign.Center).backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
       .position({ x: this.frame().back.x, y: this.frame().back.y })
       .opacity(this.frame().back.opacity * this.presentation().contentOpacity).blur(this.presentation().contentBlur)
@@ -346,7 +347,7 @@ export struct ReaderControlReplaceContent {
   private toolbarButton(label: string, icon: Resource, add: boolean, action: () => void) {
     Row({ space: 6 }) {
       Image(icon).width(20).height(20);
-      Text(label).fontFamily('ReaderNotoSansSC').fontSize(11).fontWeight(FontWeight.Bold)
+      Text(label).fontFamily(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.fontFamily).fontSize(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.fontSizeFp).fontWeight(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.fontWeight)
         .fontColor(add ? readerAppColor('app.ReaderControlReplaceContent.toolbarButton.fontColor.FFFFFFFF', this.appThemeScheme) : readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1);
     }.width(0).layoutWeight(add ? 100.66 : 96.67).height(40).justifyContent(FlexAlign.Center)
       .backgroundColor(add ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_ELEVATED', this.appThemeScheme)).borderRadius(8)
@@ -391,9 +392,9 @@ export struct ReaderControlReplaceContent {
         .height(17).position({ x: this.frame().rowPadding + this.frame().toggleWidth + 10,
           y: 5.5 + 5.5 * this.frame().progress });
       Column({ space: 4 }) {
-        Text(`${rule().pattern} → ${rule().replacement}`).fontFamily('ReaderNotoSansSC').fontSize(9)
+        Text(`${rule().pattern} → ${rule().replacement}`).fontFamily(TYPE_READER_REPLACE_RETAINED_RULE_ROW_PATTERN.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_RULE_ROW_PATTERN.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-        Text(this.scopeSummary(rule())).fontFamily('ReaderNotoSansSC').fontSize(8).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
+        Text(this.scopeSummary(rule())).fontFamily(TYPE_READER_REPLACE_RETAINED_RULE_ROW_META.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_RULE_ROW_META.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       }.width(Math.max(0, this.frame().list.width - 155)).height(34).alignItems(HorizontalAlign.Start)
         .position({ x: this.frame().rowPadding + this.frame().toggleWidth + 10, y: 32 })
@@ -439,7 +440,7 @@ export struct ReaderControlReplaceContent {
     Column({ space: 4 }) {
       Text(this.state.errorMessage || this.localError || (this.state.status === 'loading' || this.state.status === 'idle' ?
         '规则载入中…' : this.emptyStateMessage()))
-        .fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(3);
+        .fontFamily(TYPE_READER_REPLACE_RETAINED_STATUS_CONTENT_STATUS.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_STATUS_CONTENT_STATUS.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(3);
       if (this.state.errorMessage.length > 0 || this.localError.length > 0 || this.state.status === 'error') {
         this.textAction('重新加载核对', (): void => this.reload(), (): boolean => !this.state.mutationPending && !this.localPending);
       }
@@ -450,7 +451,7 @@ export struct ReaderControlReplaceContent {
   private textAction(label: string, action: () => void, enabled: () => boolean = (): boolean => true) {
     // Builder primitive arguments retain their initial value in partial update.
     // Read the supplied state predicate here and again at click dispatch.
-    Text(label).fontFamily('ReaderNotoSansSC').fontSize(11).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme)).textAlign(TextAlign.Center)
+    Text(label).fontFamily(TYPE_READER_REPLACE_RETAINED_TEXT_ACTION_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEXT_ACTION_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme)).textAlign(TextAlign.Center)
       .layoutWeight(1).height(28).padding({ left: 6, right: 6 }).backgroundColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme)).borderRadius(6)
       .enabled(enabled() && (this.fullInput() || this.quickInput()))
       .onClick((): void => { if (enabled() && (this.fullInput() || this.quickInput())) action(); });
@@ -460,14 +461,14 @@ export struct ReaderControlReplaceContent {
     Column({ space: 8 }) {
       Row({ space: 8 }) {
         if (this.layer === 'editor') {
-          Text('返回').fontFamily('ReaderNotoSansSC').fontSize(11).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
+          Text('返回').fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
             .width(38).height(28).textAlign(TextAlign.Center)
             .enabled(!this.localPending && !this.state.mutationPending)
             .onClick((): void => this.cancelTemporaryLayer());
         }
         Text(this.layer === 'editor' ? (this.draft.original === undefined ? '新增替换规则' : '编辑替换规则') :
           this.layer === 'delete' ? '确认删除规则' : this.layer === 'import-confirm' ? '确认导入替换规则' : '当前章节预览')
-          .fontFamily('ReaderNotoSansSC').fontSize(13).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).layoutWeight(1);
+          .fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontFamily).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontSizeFp).fontWeight(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).layoutWeight(1);
         if (this.layer !== 'editor') {
           this.textAction('取消', (): void => this.cancelTemporaryLayer(), (): boolean => !this.localPending && !this.state.mutationPending);
         }
@@ -478,26 +479,26 @@ export struct ReaderControlReplaceContent {
             this.editorFields();
           } else if (this.layer === 'delete') {
             Text(`删除“${this.deleteCandidate?.name ?? ''}”？此操作需要 Core 确认后才从列表移除。`)
-              .fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
+              .fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
             this.textAction('确认删除', (): void => {
               const rule = this.deleteCandidate;
               if (rule !== undefined && this.readyInput()) this.perform(async (): Promise<void> => this.onDelete(rule), true);
             }, (): boolean => this.readyInput());
           } else if (this.layer === 'import-confirm') {
             Text('导入仅合并替换规则；相同ID会覆盖已有规则，其他规则集合不变。请保留导出备份。')
-              .fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
+              .fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
             this.textAction('选择文件并导入', (): void => { this.confirmImport(); }, (): boolean => this.readyInput());
           } else {
             this.previewContent();
           }
           if (this.localError.length > 0 || this.state.errorMessage.length > 0) {
-            Text(this.localError || this.state.errorMessage).fontFamily('ReaderNotoSansSC').fontSize(11).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
+            Text(this.localError || this.state.errorMessage).fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
           }
           if (this.state.writeUncertain) {
             this.textAction('重新加载并核对，不重复提交', (): void => this.reload(), (): boolean => !this.localPending);
           }
           if (this.localPending || this.state.mutationPending) {
-            Text('正在等待确认…').fontFamily('ReaderNotoSansSC').fontSize(11).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
+            Text('正在等待确认…').fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
           }
         }.width('100%').alignItems(HorizontalAlign.Start);
       }.width('100%').layoutWeight(1).scrollBar(BarState.Auto).align(Alignment.TopStart);
@@ -510,13 +511,13 @@ export struct ReaderControlReplaceContent {
   @Builder
   private editorActions() {
     Row({ space: 8 }) {
-      Text('取消').fontFamily('ReaderNotoSansSC').fontSize(11).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
+      Text('取消').fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .layoutWeight(1).height(36).textAlign(TextAlign.Center).borderRadius(6)
         .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
         .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
         .enabled(!this.localPending && !this.state.mutationPending)
         .onClick((): void => this.cancelTemporaryLayer());
-      Text('保存').fontFamily('ReaderNotoSansSC').fontSize(11)
+      Text('保存').fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.fontSizeFp)
         .fontColor(readerAppColor('app.ReaderControlReplaceContent.toolbarButton.fontColor.FFFFFFFF', this.appThemeScheme))
         .layoutWeight(1).height(36).textAlign(TextAlign.Center).borderRadius(6)
         .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
@@ -540,14 +541,14 @@ export struct ReaderControlReplaceContent {
     this.editorFlag('作用于正文', (): boolean => this.draft.scopeContent, (value: boolean): void => { this.draft.scopeContent = value; });
     this.editorFlag('作用于书源导入', (): boolean => this.draft.scopeSource, (value: boolean): void => { this.draft.scopeSource = value; });
     Text('保存后规则生效；章节预览使用已保存规则。')
-      .fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
+      .fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_FIELDS_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_FIELDS_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
   }
   @Builder
   private editorText(label: string, value: () => string, change: (value: string) => void) {
     Column({ space: 3 }) {
-      Text(label).fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
+      Text(label).fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       TextInput({ text: value(), placeholder: '' }).width('100%').height(36)
-        .fontFamily('ReaderNotoSansSC').fontSize(11).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
+        .fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_INPUT.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_INPUT.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .placeholderColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
         .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(6)
         .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
@@ -558,7 +559,7 @@ export struct ReaderControlReplaceContent {
   @Builder
   private editorFlag(label: string, value: () => boolean, change: (value: boolean) => void) {
     Row({ space: 10 }) {
-      Text(label).fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).layoutWeight(1);
+      Text(label).fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_FLAG_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_FLAG_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).layoutWeight(1);
       ReaderControlSwitchTrack({ value: value() });
     }.width('100%').height(32).enabled(this.readyInput()).accessibilityText(`${label}，${value() ? '开启' : '关闭'}`)
       .onClick((): void => this.changeEditorFlag(value, change));
@@ -566,13 +567,13 @@ export struct ReaderControlReplaceContent {
   @Builder
   private previewContent() {
     if (this.previewResult !== undefined) {
-      Text(this.previewResult.chapterTitle).fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
+      Text(this.previewResult.chapterTitle).fontFamily(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_TITLE.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_TITLE.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       Text(`已保存 ${this.previewResult.storedRuleCount} 条，启用 ${this.previewResult.enabledRuleCount} 条${this.previewResult.truncated ? '；仅展示截取片段' : ''}`)
-        .fontFamily('ReaderNotoSansSC').fontSize(10).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
-      Text('替换前').fontFamily('ReaderNotoSansSC').fontSize(11).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
-      Text(this.previewResult.before).fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
-      Text('替换后').fontFamily('ReaderNotoSansSC').fontSize(11).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
-      Text(this.previewResult.after).fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
+        .fontFamily(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
+      Text('替换前').fontFamily(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL_SECONDARY.fontFamily).fontSize(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL_SECONDARY.fontSizeFp).fontWeight(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL_SECONDARY.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
+      Text(this.previewResult.before).fontFamily(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_VALUE.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
+      Text('替换后').fontFamily(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL_SECONDARY.fontFamily).fontSize(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL_SECONDARY.fontSizeFp).fontWeight(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL_SECONDARY.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
+      Text(this.previewResult.after).fontFamily(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_VALUE.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
     } else if (!this.localPending) {
       this.textAction('重试预览', (): void => { this.preview(); }, (): boolean => this.readyInput());
     }

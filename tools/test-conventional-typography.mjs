@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { stripTypeScriptTypes } from 'node:module';
-import { auditTypographyConsumers, typographyProperties, typographyRoleImports } from './lib/reader-typography-consumer-audit.mjs';
+import { auditTypographyConsumers, typographyProperties, typographyRoleImports, isSharedTypographyExpression } from './lib/reader-typography-consumer-audit.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 
 const fixtureArgument = process.argv.find(argument => argument.startsWith('--fixture='));
@@ -36,13 +36,14 @@ for (const file of baseline.files) {
       const modifier = actual.modifiers[property];
       assert.equal(modifier.expression, expected.changes[property], `${file.path}/${property}: shared role consumer`);
       assert.deepEqual(modifier.extra, expected.extra[property], `${file.path}/${property}: native variable-font options`);
-      for (const scenario of scenarios) assert.equal(evaluate(modifier.expression, scenario), evaluate(expected.original[property], scenario),
+      for (const scenario of scenarios) if (modifier.expression !== expected.original[property]) assert.equal(evaluate(modifier.expression, scenario), evaluate(expected.original[property], scenario),
         `${file.path}/${expected.method}/${property}: current physical tuple and responsive state`);
       edits.push({ start: modifier.start, end: modifier.end, replacement: expected.original[property] }); argumentsChecked++;
     }
   }
-  assert.ok(consumers.filter(node => node.modifiers.fontSize).every(node => /TYPE_|this\.(?:textStyle|optionTextStyle|surfaceSpec|spec)\(\)/.test(node.modifiers.fontSize.expression)),
-    `${file.path}: reject any newly introduced private typography tuple`);
+  const openSizes = consumers.filter(node => node.modifiers.fontSize && !isSharedTypographyExpression(node.modifiers.fontSize.expression))
+    .map(node => ({ method: node.method, kind: node.kind, expression: node.modifiers.fontSize.expression }));
+  assert.deepEqual(openSizes, file.openConsumers ?? [], `${file.path}: reject new private tuples; explicit remaining dynamic debt is not closed`);
   let restored = source;
   for (const edit of edits.sort((a, b) => b.start - a.start)) restored = restored.slice(0, edit.start) + edit.replacement + restored.slice(edit.end);
   if (verifyMigrationSource) {
@@ -53,4 +54,4 @@ for (const file of baseline.files) {
     `${file.path}: layout, callbacks, business guards and content match the immutable pre-migration source`);
 }
 assert.equal(sites, baseline.files.reduce((sum, file) => sum + file.nodes.length, 0));
-console.log(`PASS conventional Typography: ${baseline.files.length} complete files, ${sites} production consumers, ${argumentsChecked} arguments, ${verifyMigrationSource ? "exact source restoration/" : ""}AUTO/dynamic variants`);
+console.log(`PASS conventional Typography: ${baseline.files.length} files, ${sites} production consumers, ${argumentsChecked} arguments, ${verifyMigrationSource ? "exact source restoration/" : ""}AUTO/dynamic variants`);
