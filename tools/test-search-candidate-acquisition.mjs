@@ -6,6 +6,7 @@ registerHooks({resolve(s,c,n){try{return n(s,c)}catch(e){if(s.startsWith('.')&&!
 const {resolveBookshelfBook}=await import('../entry/src/main/ets/features/bookshelf/BookshelfBookIdentity.ts');
 const base=new URL('../entry/src/main/ets/',import.meta.url);
 const path=p=>new URL(p,base);
+const {BookAcquisitionProjectionGateway}=await import(path('app/BookAcquisitionProjectionGateway.ts'));
 const {BookAcquisitionCoordinator}=await import(path('app/BookAcquisitionCoordinator.ts'));
 const {RemoteReadingFlowGateway,RemoteChapterCacheRefreshError}=await import(path('features/reading/RemoteReadingFlowGateway.ts'));
 const {RemoteReadingGatewayError,remoteReadingFailureRecord}=await import(path('features/reading/RemoteReadingContract.ts'));
@@ -339,7 +340,7 @@ const indexSource=readFileSync(path('pages/Index.ets'),'utf8');
 const admissionSource=indexSource.slice(indexSource.indexOf('class RemoteDetailAdmission {'),indexSource.indexOf('class RemoteSessionAttemptOutcome {'));
 const RemoteDetailAdmission=new Function(stripTypeScriptTypes(admissionSource)+';return RemoteDetailAdmission;')();
 function indexFixture(f){
- const errors=[];const Index=productionMotionMethods(path('pages/Index.ets'),['refreshDetailAcquisitionProjection','installRemoteReadingSession','onSearchResultSelected','searchAcquisitionCandidate','remoteSeedForSearchBook','openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','probeRemoteContentVerdict','remoteContentVerdictLabel'],{ resolveBookshelfBook,
+ const errors=[];const Index=productionMotionMethods(path('pages/Index.ets'),['refreshDetailAcquisitionProjection','installRemoteReadingSession','onSearchResultSelected','searchAcquisitionCandidate','remoteSeedForSearchBook','openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','probeRemoteContentVerdict','remoteContentVerdictLabel'],{ resolveBookshelfBook,BookAcquisitionProjectionGateway,
  sameRemoteSessionEvidence,preparedRemoteChapterMatches,preparedRemoteChapterPositionMatches,captureRemotePositionContext,withPreparedRemoteChapter,copyRemoteReadingSession,errorMessageOf,ReaderRuntimeOwner:{current:()=>f.owner},RemoteReadingFlowGateway,RemoteChapterCacheRefreshError,RemoteReadingGatewayError,remoteReadingFailureRecord,remoteReadingFailureKindOf,verdictForFailureKind,RemoteDetailAdmission,searchCandidateRank,
  ReadingOfflineGateway:class{},ReaderCoreGateway:class{async loadShelfBook(){return undefined}},LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{warn(){},error(){},info(){}}});
  const page=Object.assign(new Index(),{route:'search',searchPublication:{shelfAt:()=>[]},searchHost:{publication:{shelfAt:()=>[]},updateShelf() {}},searchPublicationRevision:0,shelfBooks:[],searchDetailCandidates:[],navigationGeneration:0,remoteSessionGeneration:0,remoteContentProbeGeneration:0,remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,bookshelfRemovalActiveKey:'',bookshelfHost:{loadShelfBook:async()=>undefined},showReadingFailure:(...a)=>errors.push(a),loadRemoteDirectoryProjection:async(_a,_b,s)=>s.entries});return{page,errors};

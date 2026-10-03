@@ -78,6 +78,7 @@ import {
 } from '../features/reading/LocalReadingFlowGateway';
 import type { ReadingBookDetail } from '../features/reading/ReadingBookDetail';
 import type { BookAcquisitionCandidate, BookAcquisitionChange } from '../app/BookAcquisitionCoordinator';
+import { BookAcquisitionProjectionGateway, type BookAcquisitionDetailProjection } from '../app/BookAcquisitionProjectionGateway';
 import type { RemoteReadingIdentity } from '../features/reading/RemoteReadingContract';
 import { searchCandidateRank } from '../features/search/SearchCandidatePolicy';
 import {
@@ -2854,29 +2855,29 @@ struct Index {
     this.bookProjectionLoading = true;
     const generation = this.navigationGeneration;
     const sessionGeneration = this.remoteSessionGeneration;
-    const current = (): boolean => generation === this.navigationGeneration && !this.readingSessionActive &&
+    let owner: ReaderRuntimeOwner | undefined;
+    const current = (): boolean => this.isCurrentRuntime(owner) && generation === this.navigationGeneration && !this.readingSessionActive &&
       sessionGeneration === this.remoteSessionGeneration &&
       this.route === 'detail' && this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId;
     try {
-      const owner = ReaderRuntimeOwner.current();
+      owner = ReaderRuntimeOwner.current();
       const projectionRevision = owner.bookAcquisitions().readingProjectionRevision();
-      const result = await owner.request('search-book.get', { origin: book.sourceId, bookUrl: book.bookId });
-      const row: JsonObject | undefined = result.data['book'] as JsonObject | undefined;
+      const row = await new BookAcquisitionProjectionGateway(owner).load(book.sourceId, book.bookId, current);
       if (!current() || row === undefined || row === null) return;
       if (projectionRevision !== owner.bookAcquisitions().readingProjectionRevision()) {
         this.bookProjectionAgain = true;
         return;
       }
-      const facts: JsonObject | undefined = row['acquisition'] as JsonObject | undefined;
+      const facts = row.acquisition;
       if (facts === undefined) return;
-      if (facts['stale'] === true) {
+      if (facts.stale === true) {
         const admitted = this.remoteReadingSession;
         // A completed cache-first readmission may legitimately retain an old
         // catalog for offline reading. Repeated stale notifications must not
         // reopen that already validated body in a loop.
         if (admitted !== undefined && preparedRemoteChapterMatches(admitted.preparedChapter, admitted,
           undefined, projectionRevision) && (admitted.acquisitionMode === 'offline' ||
-          admitted.sourceVersion !== facts['sourceVersion'])) return;
+          admitted.sourceVersion !== facts.sourceVersion)) return;
         const shelfSnapshot = this.shelfBooks.find((item: ShelfBook): boolean =>
           item.sourceId === book.sourceId && item.bookId === book.bookId);
         this.openRemoteBookDetail({ sourceId: book.sourceId, bookId: book.bookId, detailUrl: book.bookId,
@@ -2888,17 +2889,17 @@ struct Index {
         this.candidateAdmissionGeneration = this.navigationGeneration;
         return;
       }
-      const title = typeof row['name'] === 'string' ? row['name'] as string : book.title;
-      const author = typeof row['author'] === 'string' ? row['author'] as string : book.author;
+      const title = row.name ?? book.title;
+      const author = row.author ?? book.author;
       this.detailBook = { sourceId: book.sourceId, sourceName: book.sourceName, bookId: book.bookId, title, author,
-        intro: typeof row['intro'] === 'string' ? row['intro'] as string : book.intro,
-        coverUrl: typeof row['coverUrl'] === 'string' ? row['coverUrl'] as string : book.coverUrl,
-        kind: typeof row['kind'] === 'string' ? row['kind'] as string : book.kind,
-        lastChapter: typeof row['latestChapterTitle'] === 'string' ? row['latestChapterTitle'] as string : book.lastChapter };
+        intro: row.intro ?? book.intro,
+        coverUrl: row.coverUrl ?? book.coverUrl,
+        kind: row.kind ?? book.kind,
+        lastChapter: row.latestChapterTitle ?? book.lastChapter };
       const previous = this.remoteReadingSession;
       if (previous !== undefined && previous.catalogVersion !== undefined && previous.contextVersion !== undefined &&
-        facts['catalogVersion'] === previous.catalogVersion && facts['contextVersion'] === previous.contextVersion &&
-        facts['sourceVersion'] === previous.sourceVersion) {
+        facts.catalogVersion === previous.catalogVersion && facts.contextVersion === previous.contextVersion &&
+        facts.sourceVersion === previous.sourceVersion) {
         const merged = copyRemoteReadingSession(previous);
         merged.book = { title, author, intro: this.detailBook.intro,
           coverUrl: this.detailBook.coverUrl, kind: this.detailBook.kind, lastChapter: this.detailBook.lastChapter };
@@ -2906,18 +2907,18 @@ struct Index {
         // Core has just validated the canonical source/catalog/body/processing
         // snapshot. Preserve that verdict across metadata notifications without
         // relabelling an old materialized chapter as current.
-        const readableRevision = wasReadable && facts['schemaVersion'] === 2 &&
-          facts['verificationCurrent'] === true ? projectionRevision : undefined;
+        const readableRevision = wasReadable && facts.schemaVersion === 2 &&
+          facts.verificationCurrent === true ? projectionRevision : undefined;
         this.installRemoteReadingSession(merged, readableRevision, row);
         if (wasReadable && this.remoteContentVerdict === 'verifying') {
           await this.probeRemoteContentVerdict(new RemoteReadingFlowGateway(owner), this.remoteReadingSession ?? previous, current);
         }
         return;
       }
-      if (typeof facts['catalogAt'] !== 'number') return;
+      if (typeof facts.catalogAt !== 'number') return;
       const session = await new RemoteReadingFlowGateway(owner).openCachedCatalogSession({ sourceId: book.sourceId,
         bookId: book.bookId, detailUrl: book.bookId, title, author,
-        sourceVersion: typeof facts['sourceVersion'] === 'string' ? facts['sourceVersion'] as string : undefined }, current, true);
+        sourceVersion: facts.sourceVersion }, current, true);
       if (!current()) return;
       const entries = await this.loadRemoteDirectoryProjection(new ReadingOfflineGateway(owner), owner, session, current);
       if (!current()) return;
@@ -2935,12 +2936,13 @@ struct Index {
       if (this.remoteContentVerdict !== 'readable') {
         const installed = this.remoteReadingSession;
         if (installed !== undefined) await this.probeRemoteContentVerdict(new RemoteReadingFlowGateway(owner), installed,
-          (): boolean => generation === this.navigationGeneration && this.route === 'detail' && !this.readingSessionActive);
+          (): boolean => this.isCurrentRuntime(owner) && generation === this.navigationGeneration &&
+            this.route === 'detail' && !this.readingSessionActive);
       }
     } catch (_error) { /* The current detail survives a failed background projection. */ }
     finally {
       this.bookProjectionLoading = false;
-      if (this.bookProjectionAgain) void this.refreshDetailAcquisitionProjection();
+      if (this.bookProjectionAgain && current()) void this.refreshDetailAcquisitionProjection();
     }
   }
 
@@ -5682,7 +5684,7 @@ struct Index {
 
   /** All semantic session replacement passes this boundary. */
   private installRemoteReadingSession(session: RemoteReadingSession | undefined,
-    readableProjectionRevision?: number, readableProjection?: JsonObject): void {
+    readableProjectionRevision?: number, readableProjection?: BookAcquisitionDetailProjection): void {
     const previous = this.remoteReadingSession;
     const same = sameRemoteSessionEvidence(previous, session);
     if (!same) {
@@ -5706,16 +5708,16 @@ struct Index {
       this.remoteReadingSession = session;
     }
     this.updateRemoteReadableChapterOrder(this.remoteReadingSession);
-    const facts: JsonObject | undefined = readableProjection?.['acquisition'] as JsonObject | undefined;
+    const facts = readableProjection?.acquisition;
     // Only a stable Core projection for this exact canonical session can
     // preserve the gate. It supplies no reusable materialized chapter.
-    const confirmed = readableProjectionRevision === revision && facts?.['schemaVersion'] === 2 &&
-      facts['verificationCurrent'] === true && facts['stale'] !== true &&
-      readableProjection?.['origin'] === session.identity.sourceId &&
-      readableProjection?.['bookUrl'] === session.identity.bookId &&
+    const confirmed = readableProjectionRevision === revision && facts?.schemaVersion === 2 &&
+      facts.verificationCurrent === true && facts.stale !== true &&
+      readableProjection?.origin === session.identity.sourceId &&
+      readableProjection?.bookUrl === session.identity.bookId &&
       session.sourceVersion !== undefined && session.catalogVersion !== undefined && session.contextVersion !== undefined &&
-      facts['sourceVersion'] === session.sourceVersion && facts['catalogVersion'] === session.catalogVersion &&
-      facts['contextVersion'] === session.contextVersion && session.requiresContextRefresh !== true;
+      facts.sourceVersion === session.sourceVersion && facts.catalogVersion === session.catalogVersion &&
+      facts.contextVersion === session.contextVersion && session.requiresContextRefresh !== true;
     if (valid || confirmed) {
       this.remoteReadabilityProjectionRevision = revision;
       this.remoteContentVerdict = 'readable';

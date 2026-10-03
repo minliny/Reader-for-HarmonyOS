@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
-import { registerHooks } from 'node:module';
+import { createRequire, registerHooks } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
+import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return nextResolve(`${specifier}.ts`, context); throw error; }
 } });
 const base = new URL('../entry/src/main/ets/', import.meta.url);
+const { BookAcquisitionProjectionGateway } = await import(new URL('app/BookAcquisitionProjectionGateway.ts', base));
 const { BookAcquisitionCoordinator } = await import(new URL('app/BookAcquisitionCoordinator.ts', base));
 const { RemoteReadingFlowGateway, RemoteChapterCacheRefreshError } = await import(new URL('features/reading/RemoteReadingFlowGateway.ts', base));
 const evidence = await import(new URL('features/reading/RemoteReadingEvidence.ts', base));
@@ -27,7 +30,8 @@ const body = { sourceId: 'source', bookId: 'book', chapterIndex: 0, chapterUrl: 
 
 function fixture() {
   const calls = [], verdicts = [], failures = [];
-  let projectionGate, bodyGate, catalogGate;
+  let projectionGate, bodyGate, catalogGate, projectionOverride;
+  let installedOwner;
   const source = { sourceId: 'source', name: '书源', enabled: true, sourceVersion: 'v1' };
   const catalog = { sourceId: 'source', bookId: 'book', sourceVersion: 'v1', catalogVersion: 'catalog',
     contextVersion: 'context', catalogAt: now, tocAvailable: true, continuationVariables: {},
@@ -43,9 +47,9 @@ function fixture() {
       return { data: snapshot };
     }
     if (method === 'search-book.get') {
-      const snapshot = { ...facts };
+      const snapshot = projectionOverride === undefined ? { origin: 'source', bookUrl: 'book', name: '书', author: '作者', acquisition: { ...facts } } : structuredClone(projectionOverride);
       if (projectionGate) { const gate = projectionGate; projectionGate = undefined; await gate.promise; }
-      return { data: { book: { origin: 'source', bookUrl: 'book', name: '书', author: '作者', acquisition: snapshot } } };
+      return { data: { book: snapshot } };
     }
     if (method === 'chapter.content') {
       if (bodyGate) await bodyGate.promise;
@@ -57,10 +61,12 @@ function fixture() {
     throw Error(`unexpected ${method}`);
   });
   const owner = { bookAcquisitions: () => coordinator, request: (...args) => coordinator.request(...args) };
+  installedOwner = owner;
+  const authority = { current: () => { if (installedOwner === undefined) throw Error('Runtime unavailable'); return installedOwner; } };
   const Index = productionMotionMethods(process.env.READER_DETAIL_PROJECTION_SOURCE ?? fileURLToPath(new URL('pages/Index.ets', base)),
     ['refreshDetailAcquisitionProjection', 'installRemoteReadingSession', 'returnToReadingOrigin', 'probeRemoteContentVerdict',
       'openRemoteBookDetail', 'readingDetailForRemoteSeed'], {
-      ...evidence, ReaderRuntimeOwner: { current: () => owner }, LOCAL_SOURCE_ID: 'local',
+      ...evidence, BookAcquisitionProjectionGateway, ReaderRuntimeOwner: authority, LOCAL_SOURCE_ID: 'local',
       RemoteReadingFlowGateway, RemoteChapterCacheRefreshError, remoteReadingFailureKindOf, verdictForFailureKind,
       captureRemotePositionContext, RemoteReadingGatewayError, remoteReadingFailureRecord,
       ReadingOfflineGateway: class {}, ReaderCoreGateway: class { async loadShelfBook() { return undefined; } },
@@ -88,7 +94,9 @@ function fixture() {
   coordinator.subscribe(change => {
     if (change.reset || change.identities.some(id => id.sourceId === 'source' && id.bookId === 'book')) void page.refreshDetailAcquisitionProjection();
   });
-  return { page, coordinator, facts, calls, verdicts, source, catalog, failures,
+  return { page, coordinator, facts, calls, verdicts, source, catalog, failures, owner,
+    setOwner(value) { installedOwner = value; },
+    overrideProjection(value) { projectionOverride = value; },
     gateProjection() { projectionGate = deferred(); return projectionGate; },
     gateCatalog() { catalogGate = deferred(); return catalogGate; },
     gateBody() { bodyGate = deferred(); return bodyGate; } };
@@ -218,3 +226,72 @@ for (const mismatch of [undefined, 'sourceVersion', 'catalogVersion', 'contextVe
   } finally { f.coordinator.close(); }
 }
 console.log('PASS production Index + actual Coordinator/Gateway: stable return/new catalog, exact evidence negatives, source/processing races, delayed offline readmission. No device pixel claim.');
+
+// Actual typed Core read -> production Index -> SDK detail payload/hero consumer.
+class DetailChild { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
+class CoverChild extends DetailChild {}
+const sdkRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRequire = createRequire(import.meta.url), uiSyntax = sdkRequire(sdkRoot + '/lib/validate_ui_syntax.js');
+for (const name of ['LocalBookDetail', 'NoCoverCover']) {
+  uiSyntax.componentCollection.customComponents.add(name);
+  if (name === 'LocalBookDetail') uiSyntax.propCollection.set(name, new Set([...readFileSync(new URL('features/bookshelf/LocalBookDetail.ets', base), 'utf8').matchAll(/@Prop\s+(\w+)\s*:/g)].map(match => match[1])));
+}
+sdkRequire(sdkRoot + '/lib/component_map.js').CUSTOM_BUILDER_METHOD.add('externalDirectory');
+function detailSdk(f) {
+  const read = file => readFileSync(new URL(file, base), 'utf8');
+  const parent = createReaderBuilderProbe(read('pages/Index.ets'), ['detailContent'], { LocalBookDetail: DetailChild, LOCAL_SOURCE_ID: 'local' }).owner;
+  Object.assign(parent, f.page, { bookshelfRemovalActiveKey: '', bookshelfAdditionActiveKey: '',
+    bookshelfAdditionCancellingKey: '', bookshelfAdditionErrorKey: '', offlineMutationActiveKey: '',
+    detailBookKey: b => JSON.stringify([b.sourceId, b.bookId]), hasUnknownShelfWrite: () => false,
+    remoteContentVerdictLabel: () => '', remoteContentVerdict: f.page.remoteContentVerdict });
+  parent.detailContent();
+  const props = [...parent.children.values()][0].params;
+  const child = createReaderBuilderProbe(read('features/bookshelf/LocalBookDetail.ets'), ['heroCard', 'hasCover'], { NoCoverCover: CoverChild, TOK_BORDER_W: 1, TOK_SPACE_CARD_PADDING: 15, TOK_SPACE_XS: 8, bookAuthorLabel: value => value || '未知作者' }).owner;
+  Object.assign(child, props, { appThemeScheme: 'day', contentWidth: () => 352 });
+  child.heroCard();
+  return { props, texts: [...child.nodes.values()].filter(node => node.type === 'Text').map(node => node.create) };
+}
+for (const invalid of [null, [], { origin: 'other', bookUrl: 'book' }, { origin: 'source', bookUrl: 'other' },
+  { bookUrl: 'book' }, { origin: 'source', bookUrl: 'book', name: 3 },
+  { origin: 'source', bookUrl: 'book', acquisition: [] },
+  { origin: 'source', bookUrl: 'book', acquisition: { verificationCurrent: 'true' } },
+  { origin: 'source', bookUrl: 'book', acquisition: { catalogAt: -1 } },
+  { origin: 'source', bookUrl: 'book', acquisition: { schemaVersion: 2.5 } }]) {
+  const f = fixture();
+  try {
+    const oldBook = f.page.detailBook, oldSession = f.page.remoteReadingSession;
+    f.overrideProjection(invalid); await f.page.refreshDetailAcquisitionProjection();
+    assert.equal(f.page.detailBook, oldBook, 'wrong/absent/malformed data cannot replace admitted detail');
+    assert.equal(f.page.remoteReadingSession, oldSession); assert.equal(f.calls.filter(m => m === 'chapter.content').length, 0);
+    assert.equal(detailSdk(f).props.book, oldBook, 'real SDK detail consumer retains the exact admitted book');
+    assert.equal(f.page.bookProjectionLoading, false);
+  } finally { f.coordinator.close(); }
+}
+{
+  const f = fixture(); try {
+    f.overrideProjection({ origin: 'source', bookUrl: 'book', name: '新标题', author: '新作者', acquisition: { ...f.facts } });
+    await f.page.refreshDetailAcquisitionProjection();
+    const actual = detailSdk(f);
+    assert.equal(actual.props.book.title, '新标题'); assert.ok(actual.texts.includes('新标题'));
+    assert.ok(actual.texts.includes('作者：新作者')); assert.equal(actual.props.readingEnabled, true);
+  } finally { f.coordinator.close(); }
+}
+for (const retire of ['runtime-unset', 'runtime-replacement', 'navigation', 'entity', 'session']) {
+  const f = fixture(); try {
+    const oldBook = f.page.detailBook, oldSession = f.page.remoteReadingSession;
+    f.overrideProjection({ origin: 'source', bookUrl: 'book', name: '迟到标题', acquisition: { ...f.facts } });
+    const gate = f.gateProjection(), pending = f.page.refreshDetailAcquisitionProjection();
+    await until(() => f.calls.includes('search-book.get'));
+    if (retire === 'runtime-unset') f.setOwner(undefined);
+    if (retire === 'runtime-replacement') f.setOwner({});
+    if (retire === 'navigation') f.page.navigationGeneration++;
+    if (retire === 'entity') f.page.detailBook = { ...oldBook, bookId: 'replacement' };
+    if (retire === 'session') f.page.remoteSessionGeneration++;
+    const expected = f.page.detailBook;
+    f.page.bookProjectionAgain = true; gate.resolve(); await assert.doesNotReject(pending); await pause();
+    assert.equal(f.page.detailBook, expected); assert.equal(f.page.remoteReadingSession, oldSession);
+    assert.equal(f.page.bookProjectionLoading, false);
+    if (retire.startsWith('runtime')) assert.equal(f.calls.filter(m => m === 'search-book.get').length, 1, 'old owner cannot reacquire a new Runtime for a queued rerun');
+  } finally { f.coordinator.close(); }
+}
+console.log('PASS strict typed cache -> exact Runtime/navigation/session/entity Index -> actual SDK Detail/hero: legal metadata, malformed/partial/wrong identity retention, absent/replacement owner and late coalesced replies');
