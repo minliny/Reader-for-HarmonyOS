@@ -458,6 +458,7 @@
     "test-reading-catalog-refresh.mjs",
     "test-reading-directory-fixture.mjs",
     "test-reading-directory-index-sdk.mjs",
+    "test-reading-entry-admission-diagnostic.mjs",
     "test-reading-entry-host.mjs",
     "test-reading-entry-index-sdk.mjs",
     "test-reading-entry-preparation.mjs",

@@ -1,4 +1,5 @@
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import hilog from '@ohos.hilog';
 import { ReaderCoreGateway, type ShelfBook } from '../../app/ReaderCoreGateway';
 import { BookAcquisitionProjectionGateway, type BookAcquisitionDetailProjection } from '../../app/BookAcquisitionProjectionGateway';
 import type { BookAcquisitionCandidate } from '../../app/BookAcquisitionCoordinator';
@@ -147,6 +148,8 @@ export class ReadingEntryHost {
       }
       return;
     }
+    const admissionStartedAt = Date.now();
+    let admissionMeasured = false;
     ReadingPrefetchHost.forRuntime(this.runtime).noteCatalogRefresh(seed, input.shelfSnapshot?.lastCheckAt);
     const seeds: RemoteReadingBookSeed[] = [seed, ...(input.fallbackSeeds ?? [])];
     const names: string[] = [input.sourceName, ...(input.fallbackSourceNames ?? [])];
@@ -182,6 +185,8 @@ export class ReadingEntryHost {
       const session = admission.session;
       const index = seeds.findIndex(candidate => this.sameBook(session, candidate));
       if (index < 0 || (!group && index !== 0)) throw new Error('REMOTE_DETAIL_ADMISSION_IDENTITY_MISMATCH');
+      this.admissionDiagnostic(scope, lease, session.identity, admissionStartedAt, session.acquisitionMode);
+      admissionMeasured = true;
       const sourceName = names[index]?.trim() || session.identity.sourceId;
       const suppliedShelf = shelf?.sourceId === session.identity.sourceId && shelf.bookId === session.identity.bookId ? shelf :
         input.shelfBooks?.find(book => book.sourceId === session.identity.sourceId && book.bookId === session.identity.bookId);
@@ -202,6 +207,7 @@ export class ReadingEntryHost {
     } catch (error) {
       if (!current()) return;
       if (error instanceof RemoteChapterCacheRefreshError) { await this.refreshCachedChapter(error, scope, lease, current); return; }
+      if (!admissionMeasured) this.admissionDiagnostic(scope, lease, seed, admissionStartedAt);
       const catalogAvailable = group && this.state.session !== undefined && this.state.toc.length > 0;
       if (!catalogAvailable) { this.install(undefined); this.state = { ...this.state, book: this.detail(seed, input.sourceName), toc: [] }; }
       this.state = { ...this.state, loadingMessage: errorMessageOf(error), verdict: verdictForFailureKind(remoteReadingFailureKindOf(error)),
@@ -555,6 +561,21 @@ export class ReadingEntryHost {
     this.state = { ...this.state, backgroundError: errorMessageOf(error) }; this.publish(scope, lease); this.diagnostic(lease, stage, error);
   }
   private diagnostic(lease: ReadingEntryLease, stage: string, error: unknown): void { try { lease.diagnostic(stage, errorMessageOf(error)); } catch (_) {} }
+  private admissionDiagnostic(scope: number, lease: ReadingEntryLease,
+    identity: { sourceId: string; bookId: string }, startedAt: number, mode?: string): void {
+    if (!this.current(scope, lease)()) return;
+    try {
+      if (mode === undefined) {
+        hilog.warn(0x5244, 'Reader',
+          'PERF search-detail-admission-failed source=%{private}s book=%{private}s durationMs=%{public}d scope=%{public}d',
+          identity.sourceId, identity.bookId, Date.now() - startedAt, scope);
+      } else {
+        hilog.info(0x5244, 'Reader',
+          'PERF search-detail-admission source=%{private}s book=%{private}s mode=%{private}s durationMs=%{public}d scope=%{public}d',
+          identity.sourceId, identity.bookId, mode, Date.now() - startedAt, scope);
+      }
+    } catch (_) { /* Diagnostics cannot change acquired catalog/body facts. */ }
+  }
   private notice(lease: ReadingEntryLease, title: string, message: string): void { try { lease.notice(title, message); } catch (_) {} }
   private sameBook(session: RemoteReadingSession | undefined, book: { sourceId: string; bookId: string }): boolean {
     return session?.identity.sourceId === book.sourceId && session.identity.bookId === book.bookId;
