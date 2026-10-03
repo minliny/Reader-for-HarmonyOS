@@ -221,7 +221,8 @@ export class RulesMutationOwner {
     qualify: (method: string, params: JsonObject, data: JsonObject) => void,
     retryOriginal: boolean = false, family?: 'source-management' | 'rss-management',
     sourceCleanup?: (method: string, params: JsonObject) => Promise<boolean>,
-    expectedOperationId?: string, originalAdmission?: (method: string, params: JsonObject) => boolean): Promise<RulesMutationSnapshot> {
+    expectedOperationId?: string, originalAdmission?: (method: string, params: JsonObject) => boolean,
+    inspectOnly: boolean = false): Promise<RulesMutationSnapshot> {
     if (this.state.busy) throw new RulesMutationError('另一规则操作正在执行', this.state.confirmation === 'unknown');
     const current = (): boolean => this.current(isCurrent); if (!current()) throw new RulesMutationError('规则核对入口已退役', true);
     this.state.busy = true; this.state.generation += 1;
@@ -232,11 +233,15 @@ export class RulesMutationOwner {
       const sourceFamily = intent.subscription?.kind===3 || intent.mutation.method==='source.update' || intent.mutation.method==='source.delete';
       const rssFamily = intent.subscription===undefined &&
         (intent.mutation.method.startsWith('rss.') || intent.mutation.method.startsWith('rss-source.'));
-      if ((family==='source-management') !== sourceFamily || (family==='rss-management') !== rssFamily)
-        throw new Error('当前入口不能继续另一家族的原操作；原记录保持阻断');
       if (expectedOperationId!==undefined && expectedOperationId!==intent.operationId ||
         originalAdmission!==undefined && !originalAdmission(intent.mutation.method,intent.mutation.params))
         throw new Error('当前恢复动作不属于保留的原操作；原记录保持阻断');
+      const ownFamily = (family==='source-management') === sourceFamily && (family==='rss-management') === rssFamily;
+      if (!ownFamily || inspectOnly) {
+        await this.inspectOriginal(intent, current, ownFamily, qualify);
+        if (retryOriginal) throw new Error('纯核对或当前入口不能继续另一家族的原操作；原记录保持阻断');
+        return this.snapshot();
+      }
       if (intent.subscription !== undefined) return await this.continueSubscription(intent,current,qualify,retryOriginal);
       let receipt = intent.terminal === undefined ? undefined : await this.decodeReceipt(intent.terminal, intent);
       const query = receipt === undefined ? await this.query(intent, current) : undefined;
@@ -268,6 +273,35 @@ export class RulesMutationOwner {
       this.state.blocked = true; this.state.message = error instanceof Error ? error.message : '规则核对暂时不可用';
       throw new RulesMutationError(this.state.message, this.state.confirmation === 'unknown');
     } finally { this.state.busy = false; }
+  }
+  private async inspectOriginal(intent: RulesMutationIntent, current: () => boolean, ownFamily: boolean,
+    qualify: (method: string, params: JsonObject, data: JsonObject) => void): Promise<void> {
+    // Shared authority may be inspected by another feature, but only the
+    // original family can qualify its business result, clear or continue it.
+    this.state.blocked = true; this.state.canRetryOriginal = false;
+    this.requireMethodCapability(intent.mutation.method);
+    let receipt = intent.terminal === undefined ? undefined : await this.decodeReceipt(intent.terminal, intent);
+    if (receipt !== undefined) this.state.confirmation = receipt.outcome === 'applied' ? 'confirmed' : 'undispatched';
+    const query = await this.query(intent, current);
+    receipt = receipt ?? query.receipt;
+    if (receipt !== undefined) {
+      // RSS qualification is a read-only original DTO/result parser. Returning
+      // this historical ACK lets the editor project its ID without clearing
+      // the intent or treating a matching current row as the old receipt.
+      if (ownFamily && receipt.outcome === 'applied') qualify(intent.mutation.method, intent.mutation.params, receipt.data);
+      this.state.confirmation = receipt.outcome === 'applied' ? 'confirmed' : 'undispatched';
+      this.state.writeStage = 'cleanup';
+      this.state.canRetryOriginal = ownFamily;
+      this.state.message = receipt.outcome === 'applied' ?
+        `原步骤 Core 写入已确认；原旅程或 Host 清理仍待完成${ownFamily ? '，可明确继续原操作' : '，请返回所属入口，当前入口不能继续'}` :
+        `Core 已确认原步骤未执行；原记录仍待处理${ownFamily ? '，可明确继续原处理' : '，请返回所属入口，当前入口不能继续'}`;
+    } else {
+      this.state.writeStage = 'core';
+      this.state.canRetryOriginal = ownFamily && (query.head?.sequence ?? 0) === intent.sequence - 1;
+      this.state.message = (query.head?.sequence ?? 0) >= intent.sequence ?
+        '原流水已越过且无精确回执，保持阻断；请返回原操作入口核对' :
+        `尚无原步骤精确回执；${this.state.canRetryOriginal ? '可明确继续已保留的原操作，不创建新标识' : '当前入口仅能核对，不能继续另一家族的原操作'}`;
+    }
   }
   private needsSourceCleanup(intent: RulesMutationIntent): boolean {
     return intent.mutation.method==='source.delete' || intent.mutation.method==='source.update' && intent.mutation.params['enabled']===false;

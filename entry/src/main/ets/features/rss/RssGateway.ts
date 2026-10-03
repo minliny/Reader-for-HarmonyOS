@@ -153,6 +153,13 @@ export class RssGateway {
       canRetryOriginal:scope!=='foreign' && state.canRetryOriginal,message:state.message };
   }
   supportsOriginalRecovery(): boolean { return this.supportsOriginalRss(); }
+  isOriginalMutationCurrent(expected: RssOriginalMutationIdentity): boolean {
+    const original = this.originalMutationSnapshot();
+    return original !== undefined && original.operationId === expected.operationId &&
+      original.generation === expected.generation && original.method === expected.method &&
+      original.scope === expected.scope && original.subscriptionId === expected.subscriptionId &&
+      original.guid === expected.guid;
+  }
   /** Only original accepted source content, never a current row heuristic. */
   originalSourceDraft(): { subscriptionId: string; draft: RssSourceDraft } | undefined {
     if (!this.supportsOriginalRss()) return undefined;
@@ -173,7 +180,7 @@ export class RssGateway {
   /** Pure query unless the current physical action explicitly supplies the
    * exact original identity. Never use a new editor draft or matching row. */
   async recoverOriginalRss(current: () => boolean, expected?: RssOriginalMutationIdentity,
-    retryOriginal: boolean = false): Promise<RssOriginalMutationRecovery> {
+    retryOriginal: boolean = false, inspectOnly: boolean = !retryOriginal): Promise<RssOriginalMutationRecovery> {
     if (!this.supportsOriginalRss()) return {};
     const before=this.originalMutationSnapshot();
     if (before?.busy===true) {
@@ -181,8 +188,7 @@ export class RssGateway {
       return {original:before};
     }
     if (retryOriginal && expected===undefined) throw new Error('继续 RSS 原操作需要精确原身份');
-    if (expected!==undefined && (before?.operationId!==expected.operationId || before.generation!==expected.generation ||
-      before.method!==expected.method || before.scope!==expected.scope || before.subscriptionId!==expected.subscriptionId || before.guid!==expected.guid))
+    if (expected!==undefined && !this.isOriginalMutationCurrent(expected))
       throw new Error('RSS 恢复动作已退役，未派发');
     let outcome: RssOriginalMutationOutcome | undefined;
     try {
@@ -196,7 +202,7 @@ export class RssGateway {
           const nested=method==='rss.subscription.persist' ? this.requiredObject(params,'params') : params;
           return method===expected.method && (nested['subscriptionId'] ?? '')===expected.subscriptionId &&
             (params['guid'] ?? '')===expected.guid;
-        });
+        },inspectOnly);
     } catch (error) {
       // Durable state remains owned by the shared original authority. A
       // foreign intent is visible as blocked but never granted a RSS replay.
