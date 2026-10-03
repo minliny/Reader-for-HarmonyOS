@@ -38,8 +38,8 @@ for(const file of readdirSync(featureRoot,{recursive:true}).filter(file=>file.en
   }
   if(node.kind==='Text'&&file==='common/ReaderButton.ets'&&node.method==='build'&&node.text==='this.label'&&
     ['newReaderButtonLabelModifier(this.specId,this.primary,this.scheme)','newReaderButtonTextModifier(this.specId,this.primary,this.actionEnabled,this.layout,this.scheme,this.isBusy,this.availableWidth)'].includes(normalise(node.attributes.attributeModifier))||
-    ['TextInput','TextArea'].includes(node.kind)&&file==='common/ReaderFormField.ets'&&node.method==='build'&&normalise(node.text)==='{text:this.text,placeholder:this.placeholder}'&&
-    normalise(node.attributes.attributeModifier)===(node.kind==='TextArea'?'newReaderFormAreaModifier(this.specId,this.scheme)':'newReaderFormFieldModifier(this.specId,this.scheme)')){
+    ['TextInput','TextArea'].includes(node.kind)&&file==='common/ReaderFormField.ets'&&node.method==='build'&&['{text:this.text,placeholder:this.placeholder}','{text:this.text}','{text:this.text,placeholder:this.placeholder,controller:this.inputController}'].includes(normalise(node.text))&&
+    normalise(node.attributes.attributeModifier)===(node.kind==='TextArea'?'newReaderFormAreaModifier(this.specId,this.scheme,this.fieldAccessibilityLabel)':'newReaderFormFieldModifier(this.specId,this.scheme,this.fieldAccessibilityLabel)')){
     const actual=producers.producers.find(p=>p.component===(node.kind==='Text'?'ReaderButton':'ReaderFormField'));assert.ok(actual);
     assert.deepEqual(sharedProducerShape(source,actual.file),actual.shape,'actual finite foundation modifier preserves public roles/AUTO');
     assert.ok(node.attributes[['TextInput','TextArea'].includes(node.kind)?'onChange':'onClick']||node.kind==='Text'&&normalise(node.attributes.attributeModifier)==='newReaderButtonLabelModifier(this.specId,this.primary,this.scheme)', 'real event host or finite stacked label');
@@ -58,7 +58,15 @@ for(const file of readdirSync(featureRoot,{recursive:true}).filter(file=>file.en
 const req=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts=req(sdk+'/node_modules/typescript'),options=req(sdk+'/lib/ets_checker.js').compilerOptions;
 for(const row of contracts.values()){
- if(row.sharedReplacement){
+ if(row.sharedReplacement&&row.id==='NATIVE-DEFAULT-09'){
+  assert.equal(row.variant,'nativeDirectoryLevelInput');assert.equal(row.count,0,'old authored native directory level input removed');
+  const replacement=row.sharedReplacement,source=readFileSync(new URL('../entry/src/main/ets/'+row.file,import.meta.url),'utf8'),tree=ts.createSourceFile(row.file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+  assert.equal(tree.parseDiagnostics.length,0);assert.ok(tree.statements.some(n=>ts.isImportDeclaration(n)&&n.moduleSpecifier.text===replacement.module&&n.importClause.namedBindings.elements.some(e=>e.name.text===replacement.component)));
+  const declaration=tree.statements.find(ts.isStructDeclaration),method=declaration.members.find(n=>ts.isMethodDeclaration(n)&&n.name.text==='build');let matches=0;
+  const visit=n=>{if((ts.isEtsComponentExpression(n)||ts.isCallExpression(n))&&n.expression.getText(tree)===replacement.component){const props=new Map(n.arguments[0].properties.map(p=>[p.name.text,p.initializer.getText(tree)]));if(props.get('specId')==="'directory-rule-level'"){assert.equal(props.get('text'),'rule.level');assert.equal(props.get('placeholder'),undefined);assert.equal(props.get('onTextChange'),replacement.callback);matches++;}}ts.forEachChild(n,visit);};visit(method);assert.equal(matches,1,'exact original rule input consumer');
+  const spec=foundationSpecs().resolveReaderFormFieldSpec('directory-rule-level');assert.equal(spec.text,undefined);assert.equal(spec.numberInput,false);assert.equal(spec.width,64);assert.equal(spec.height,40);
+  const shared=foundationControls(),child=new shared.field.Component(undefined,{specId:'directory-rule-level',text:'2',isEditable:true});child.aboutToAppear();child.initialRender();const native=shared.nodes(child).find(n=>n.type==='TextInput');assert.ok(native);for(const property of row.typographyOmissions)assert.equal(Object.hasOwn(native,property),false,'actual native level AUTO');assert.equal(native.width,64);assert.equal(native.height,40);assert.equal(native.nativeInputType,undefined);assert.deepEqual(native.create,{text:'2'});assert.equal(typeof native.onChange,'function');row.count=1;controls++;
+ }else if(row.sharedReplacement){
   assert.equal(row.variant,'nativeShelfGroupInput');assert.equal(row.file,'features/bookshelf/BookshelfManagementPage.ets');assert.equal(row.count,0,'old private native structure really removed');
   const source=readFileSync(new URL('../entry/src/main/ets/'+row.file,import.meta.url),'utf8'),tree=ts.createSourceFile(row.file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
   assert.equal(tree.parseDiagnostics.length,0);const declaration=tree.statements.find(n=>ts.isStructDeclaration(n)),method=declaration.members.find(n=>ts.isMethodDeclaration(n)&&n.name.text===row.method);
@@ -79,5 +87,5 @@ for(const row of contracts.values()){
   assert.throws(()=>verifyNativeDefaultBranches(source.replace('if (this.sourceSwitchFailureMessage.length > 0) {\n          ForEach','if (true) {\n          ForEach'),row.file,row),/exact finite branch guard/);
  }
 }
-assert.equal(controls,14);assert.equal(a11y,4);assert.equal(delegated,10);
+assert.equal(controls,14);assert.equal(a11y,4);assert.equal(delegated,12);
 console.log(`PASS native-default contracts: ${contracts.size} finite native families / ${controls} actual actors (retry has exact exclusive source-switch/reading branches); ${paint} no-glyph actors, ${a11y} exact accessibility actors, ${delegated} actual bounded shared glyph hosts, ${inherited} inherited body spans; no physical font overrides fabricated`);

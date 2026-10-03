@@ -258,7 +258,7 @@ for (const [label, field] of fields) {
   field.change('42');
   assert.equal(field.value(), '42', `${label}: second edit remains live`);
 }
-assert.match(source, /TextInput\(\{ text: value\(\), placeholder: '' \}\)/,
+assert.match(source, /ReaderFormField\(\{ specId: 'reader-replace-text',[\s\S]*?text: value\(\), placeholder: ''/,
   'input keeps its live value getter while leaving the already-labelled placeholder empty');
 assert.match(source, /ReaderControlSwitchTrack\(\{ value: value\(\) \}\)/);
 assert.match(source, /\.onClick\(\(\): void => this\.changeEditorFlag\(value, change\)\)/);

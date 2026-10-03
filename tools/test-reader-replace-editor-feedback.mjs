@@ -22,15 +22,16 @@ const results=[];
 async function check(name,fn){try{await fn();results.push({name,status:'PASS'});}catch(e){results.push({name,status:'FAIL',message:e.message});}}
 const ready = () => ({...state.createReaderControlReplaceState('s:b:1','当前书名','https://source.example'),status:'ready'});
 await check('actual TextInput uses explicit compact geometry and live app-theme text without repeating label',()=>{
-  const {owner}=createReaderBuilderProbe(source,['editorText']);
-  Object.assign(owner,{appThemeScheme:'night',state:ready(),fullInput:()=>true,localPending:false});
+  const shared=foundationControls();
+  const {owner}=createReaderBuilderProbe(source,['editorText','fullInput'],{...shared.dependencies,readerControlReplaceEndpoint},shared.hooks);
+  Object.assign(owner,{appThemeScheme:'night',state:ready(),motionProgress:1,interactionEnabled:true,localPending:false});
   let value='';owner.editorText('替换为（可留空）',()=>value,x=>{value=x;});
-  const input=[...owner.nodes.values()].find(n=>n.type==='TextInput');
+  const input=shared.nodes(owner).find(n=>n.type==='TextInput');
   assert.equal(input.fontColor,readerAppColor('TOK_READ_INK','night'));
   assert.equal(input.placeholderColor,readerAppColor('TOK_READ_MUTED','night'));
   assert.equal(input.create.placeholder,'');assert.equal(input.borderRadius,6);assert.equal(input.fontSize,11);
-  input.onChange('新的输入');owner.replay();assert.equal(input.create.text,'新的输入');
-  owner.appThemeScheme='day';owner.replay();assert.equal(input.fontColor,readerAppColor('TOK_READ_INK','day'));
+  input.onChange('新的输入');shared.flush(owner);assert.equal(input.create.text,'新的输入');
+  owner.appThemeScheme='day';shared.flush(owner);assert.equal(input.fontColor,readerAppColor('TOK_READ_INK','day'));
 });
 await check('actual editor has distinct back and fixed bottom save/cancel outside scrolling fields',()=>{
   const members=['temporaryOverlay','temporaryTitle','temporaryHeader','temporaryLeading','temporaryAccessory','temporaryActions','temporaryBody','originalRecoveryAction','textAction','editorFields','editorText','editorFlag','previewContent',

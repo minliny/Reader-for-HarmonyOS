@@ -151,8 +151,8 @@ assert.match(configurationHost, /if \(existing\?\.enabledCookieJar !== undefined
 assert.match(configurationHost, /this\.deps\.http\.put\(merged,/);
 assert.doesNotMatch(experience, /gateway\.put\(\{ \.\.\./);
 assert.match(configurationHost, /await this\.deps\.http\.delete\(id,/);
-assert.match(manager, /TextInput\(\{ placeholder: '例如 Azure 语音'/);
-assert.match(manager, /TextInput\(\{ placeholder: 'https:\/\/api\.example\.com\/tts'/);
+assert.match(manager, /ReaderFormField\(\{ specId: 'tts-manager-name',[\s\S]*?placeholder: '例如 Azure 语音'/);
+assert.match(manager, /ReaderFormField\(\{ specId: 'tts-manager-value',[\s\S]*?placeholder: 'https:\/\/api\.example\.com\/tts'/);
 assert.match(manager, /Text\('API 密钥'\)/);
 assert.match(manager, /private managerFooter\(\)/,
   'the Make modal keeps Cancel and Save outside the scrolling form body');

@@ -1,3 +1,4 @@
+import { ReaderFormField } from '../common/ReaderFormField';
 import { TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_HINT, TYPE_READER_DIRECTORY_RULE_HEADING } from '../common/ReaderTypography';
 import type { JsonObject, ReaderCoreResultEvent } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
@@ -100,14 +101,12 @@ export struct ReaderDirectoryRules {
         Scroll() { Column({ space: 8 }) {
       ForEach(this.rules, (rule: DirectoryRuleDraft) => {
         Column({ space: 6 }) {
-          TextInput({ text: rule.pattern, placeholder: '匹配完整标题或独立正文行的正则表达式' })
-            .height(40).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.scheme))
-            .backgroundColor(readerAppColor('TOK_PAPER', this.scheme)).onChange((value: string): void => this.edit(rule.id, 'pattern', value));
+          ReaderFormField({ specId: 'directory-rule-pattern', scheme: this.scheme, text: rule.pattern,
+            placeholder: '匹配完整标题或独立正文行的正则表达式', onTextChange: (value: string): void => this.edit(rule.id, 'pattern', value) });
           Row({ space: 8 }) {
             Text('层级').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp);
-            TextInput({ text: rule.level }).width(64).height(40)
-              .fontColor(readerAppColor('TOK_INK', this.scheme)).backgroundColor(readerAppColor('TOK_PAPER', this.scheme))
-              .onChange((value: string): void => this.edit(rule.id, 'level', value));
+            ReaderFormField({ specId: 'directory-rule-level', scheme: this.scheme, text: rule.level,
+              onTextChange: (value: string): void => this.edit(rule.id, 'level', value) });
             Select([{ value: '已有标题' }, { value: '章首独立行' }, { value: '章尾独立行' }, { value: '独立行边界' }])
               .selected(['title', 'head', 'tail', 'any'].indexOf(rule.boundary))
               .onSelect((index: number): void => this.edit(rule.id, 'boundary', ['title', 'head', 'tail', 'any'][index]));

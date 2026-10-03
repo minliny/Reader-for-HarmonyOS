@@ -8,6 +8,9 @@ import { foundationControls, foundationSpecs } from './reader-foundation-control
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
 import { typographyProperties, typographyRoleImports } from './reader-typography-consumer-audit.mjs';
+import {DirectoryRuleDraft,readerControlReplaceEndpoint}from'./reader-reading-field-probe.mjs';
+import {readerRecoveryView}from'../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
+import {readerSourceCategoryLabel}from'../../entry/src/main/ets/features/source/ReaderSourceCategory.ts';
 const cache=new Map();
 const tuple=node=>Object.fromEntries(typographyProperties.filter(p=>Object.hasOwn(node,p)).map(p=>[p,node[p]]));
 /** Original actual owner -> real retained SDK component -> real production
@@ -19,7 +22,8 @@ export function foundationTypographyCarrier(entry,file,expected,pageSource,targe
  const specSource=readFileSync(new URL('../../entry/src/main/ets/features/common/'+rolePath,import.meta.url),'utf8');
  const roles=typographyRoleImports(specSource,'ReaderControlSpecs.ets');
  const native=(branch,override={})=>{
-  const shared=entry.component==='ReaderLabeledIconAction'?labeledIconControls({specs:labeledIconSpecs({...readerTypographyRoles,...override}),source:target}):foundationControls({specs:foundationSpecs({...readerTypographyRoles,...override}),[entry.component==='ReaderButton'?'buttonSource':'fieldSource']:target});
+  const foundation=foundationControls({specs:foundationSpecs({...readerTypographyRoles,...override}),...(entry.component==='ReaderLabeledIconAction'?{}:{[entry.component==='ReaderButton'?'buttonSource':'fieldSource']:target})});
+  const shared=labeledIconControls({foundation,specs:labeledIconSpecs({...readerTypographyRoles,...override}),...(entry.component==='ReaderLabeledIconAction'?{source:target}:{})});
   // SDK field/button source overrides are used by their transform, never just
   // read for a hash. The normal modifier loader also receives actual source.
   const binding=entry.bindingMethod??entry.origin.method;
@@ -32,11 +36,21 @@ export function foundationTypographyCarrier(entry,file,expected,pageSource,targe
     assert.ok(declaration&&ts.isNumericLiteral(declaration.initializer),'actual bounded owner constant');assert.equal(declaration.initializer.getText(tree),expectedConstant,'original constant remains bound to actual source');constants[name]=Number(declaration.initializer.text);
    }
   }
-  const {owner}=createReaderBuilderProbe(pageSource,methods,{...shared.dependencies,...constants},shared.hooks);
+  // Each carrier is an independent SDK compilation unit. Preserve the SDK
+  // ID registry outside this unit while still rejecting duplicate IDs inside
+  // the actual selected production methods; role variants are separate units.
+  const ids=req(sdk+'/lib/component_map.js').ID_ATTRS,savedIds=new Map(ids);let owner;
+  ids.clear();try{({owner}=createReaderBuilderProbe(pageSource,methods,{...shared.dependencies,...constants,DirectoryRuleDraft,readerControlReplaceEndpoint,readerRecoveryView,readerSourceCategoryLabel,ScrollDirection:{Horizontal:'ScrollDirection.Horizontal'}},shared.hooks));}
+  finally{ids.clear();for(const[key,value]of savedIds)ids.set(key,value);}
   Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false,facts:{canMutate:true}},...(entry.params??{})});
   if (entry.params?.contentFrameOverride) owner.contentFrame=()=>entry.params.contentFrameOverride;
-  owner[binding](...(branch.arguments??entry.arguments).map(arg=>arg==='@callback'?()=>{}:arg));
-  const children=[...owner.children.values()].filter(child=>child instanceof shared.dependencies[entry.component]&&child.specId===entry.specId&&(!entry.nativeText||child.label===entry.nativeText));
+  if(entry.params?.frameOverride)owner.frame=()=>entry.params.frameOverride;
+  if(entry.params?.presentationOverride)owner.presentation=()=>entry.params.presentationOverride;
+  if(entry.params?.filterControlWidthOverride!==undefined)owner.filterControlWidth=()=>entry.params.filterControlWidthOverride;
+  if(entry.params?.actionBottomInsetOverride!==undefined)owner.actionBottomInset=()=>entry.params.actionBottomInsetOverride;
+  const args=(branch.arguments??entry.arguments).map(arg=>arg==='@callback'?()=>{}:arg==='@value'?()=>entry.nativeText:arg);
+  if(binding==='build')owner.initialRender();else owner[binding](...args);
+  const children=[...owner.children.values()].filter(child=>child instanceof shared.dependencies[entry.component]&&child.specId===(branch.specId??entry.specId)&&(!entry.nativeText||(entry.component==='ReaderFormField'?child.text:child.label)===entry.nativeText));
   assert.equal(children.length,1,entry.id+': actual original owner constructs finite shared class');
   const nodes=shared.nodes(children[0]).filter(node=>node.type===expected.kind);
   assert.equal(nodes.length,1,entry.id+': one actual native carrier');

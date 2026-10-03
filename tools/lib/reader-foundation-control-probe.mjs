@@ -26,7 +26,7 @@ export function foundationSpecs(roles=readerTypographyRoles,source=readFileSync(
 }
 export function foundationModifiers(specs=foundationSpecs(),ColorMetrics,sourceOverrides={}) {
  const feedback=productionReaderPressFeedback({ColorMetrics});
- const common={...readerFoundationTokens,...specs,readerAppColor,ReaderPressFeedback:feedback,TextAlign:{Center:'TextAlign.Center'}};
+ const common={...readerFoundationTokens,...specs,readerAppColor,ReaderPressFeedback:feedback,TextAlign:{Center:'TextAlign.Center'},Color:{Transparent:'Color.Transparent'}};
  const load=(source,names)=>new Function(...Object.keys(common),executable(withoutImports(source.slice(0,source.indexOf('@Component'))))+';return {'+names.join(',')+'};')(...Object.values(common));
  return {...load(sourceOverrides.buttonSource??buttonSource,['ReaderButtonLabelModifier','ReaderButtonFrameModifier','ReaderButtonTextModifier']),...load(sourceOverrides.fieldSource??fieldSource,['ReaderFormFieldModifier','ReaderFormAreaModifier'])};
 }
@@ -36,7 +36,7 @@ export function foundationControls({specs=foundationSpecs(),ColorMetrics,buttonS
  const modifiers=foundationModifiers(specs,ColorMetrics,{buttonSource:buttonDefinition,fieldSource:fieldDefinition});
  const deps={...properties.sdk,...readerFoundationTokens,...specs,...modifiers,InputType:{Password:'InputType.Password',Number:'InputType.Number'}};
  const button=createReaderBuilderProbe(buttonDefinition,['scheme','specId','label','primary','actionEnabled','layout','isBusy','availableWidth','onAction','mounted','aboutToAppear','aboutToDisappear','build','commit'],deps,properties.hooks);
- const field=createReaderBuilderProbe(fieldDefinition,['scheme','specId','text','placeholder','isEditable','password','onTextChange','onSubmit','submit','mounted','aboutToAppear','aboutToDisappear','build','change'],deps,properties.hooks);
+ const field=createReaderBuilderProbe(fieldDefinition,['scheme','specId','text','placeholder','isEditable','password','inputIdentity','fieldAccessibilityLabel','inputController','onEditingChange','editChanged','onTextChange','onSubmit','submit','mounted','aboutToAppear','aboutToDisappear','build','change'],deps,properties.hooks);
  const dependencies={...deps,ReaderButton:button.Component,ReaderFormField:field.Component};
  return {button,field,properties,dependencies,hooks:{onObserverEnter:properties.hooks.onObserverEnter,childSources:{ReaderButton:buttonDefinition,ReaderFormField:fieldDefinition},mountChildren:true,lifecycleChildren:true},
   nodes(owner){return [...(owner.nodes?.values()??[]),...[...(owner.children?.values()??[])].flatMap(child=>this.nodes(child))];},
