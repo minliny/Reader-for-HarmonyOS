@@ -121,6 +121,9 @@ export class RssSubscriptionEditorOrchestrator {
   }
 
   owns(owner: ReaderRuntimeOwner): boolean { return this.owner === owner; }
+  ownsPresentation(identity: string): boolean {
+    return this.ownsRuntime() && identity.length > 0 && this.presentationIdentity === identity;
+  }
 
   attachPresentation(identity: string, emit: (snapshot: RssSubscriptionEditorSnapshot) => void,
     onSaved: (subscriptionId: string) => void, isCurrent: () => boolean, admitted: () => boolean): boolean {

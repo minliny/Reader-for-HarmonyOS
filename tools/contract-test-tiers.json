@@ -469,6 +469,7 @@
     "test-reading-whole-book-progress.mjs",
     "test-remote-position-reader.mjs",
     "test-remote-reading-evidence.mjs",
+    "test-rss-editor-index-retained-sdk.mjs",
     "test-rss-editor-operation-recovery.mjs",
     "test-rss-editor-retained-admission.mjs",
     "test-rss-index-operation-consumers.mjs",

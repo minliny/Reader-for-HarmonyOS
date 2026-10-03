@@ -515,6 +515,7 @@ struct Index {
   private rssOrchestrator: RssOrchestrator | undefined;
   private readonly rssInstanceIdentity: number = ++rssIndexInstance;
   private rssPresentationIdentity: string = '';
+  private rssEditorPresentationIdentity: string = '';
   private rssEditorOrchestrator: RssSubscriptionEditorOrchestrator | undefined;
   /**
    * Installed only by the mounted ReadingSurface.  System Back calls this
@@ -599,6 +600,7 @@ struct Index {
     this.navigationBackfillObservedKey = '';
     this.sourceToolsOrchestrator?.detachPresentation(this.sourceToolsPresentationIdentity);
     this.sourceToolsPresentationIdentity = '';
+    this.retireRssEditorPresentation();
     this.retireRssPresentation();
     this.retireReadingEntryPresentation();
     this.systemFileOpenNavigation?.dispose();
@@ -1167,25 +1169,27 @@ struct Index {
     // Only a new navigation replaces this temporary child; updates keep its identity.
     // V1 regular callbacks are constructor inputs and must capture the new entity.
     ForEach([this.navigationGeneration], (generation: number) => {
-      this.rssEditorSurface(generation, ReaderRuntimeOwner.current());
+      this.rssEditorSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+        this.rssEditorPresentationIdentity, this.rssEditorOrchestrator);
     }, (identity: number): string => identity.toString());
   }
 
   @Builder
-  private rssEditorSurface(generation: number, owner: ReaderRuntimeOwner) {
+  private rssEditorSurface(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number,
+    identity: string, host: RssSubscriptionEditorOrchestrator | undefined) {
     RssSubscriptionEditorPage({
       snapshot: this.rssEditorSnapshot,
-      onReconcile: (expectedGeneration: number): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionEditor')) this.getRssEditorOrchestrator().reconcile(expectedGeneration); },
-      onRetryRead: (expectedGeneration: number): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionEditor')) this.getRssEditorOrchestrator().retryLoad(expectedGeneration); },
-      onBack: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionEditor')) this.returnToRssSubscriptionManagement(); },
-      onFeedUrlChanged: (value: string): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionEditor')) this.getRssEditorOrchestrator().updateFeedUrl(value); },
-      onTitleChanged: (value: string): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionEditor')) this.getRssEditorOrchestrator().updateTitle(value); },
-      onEnabledChanged: (value: boolean): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionEditor')) this.getRssEditorOrchestrator().updateEnabled(value); },
+      onReconcile: (expectedGeneration: number): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.reconcile(expectedGeneration); },
+      onRetryRead: (expectedGeneration: number): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.retryLoad(expectedGeneration); },
+      onBack: (): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) this.returnToRssSubscriptionManagement(); },
+      onFeedUrlChanged: (value: string): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.updateFeedUrl(value); },
+      onTitleChanged: (value: string): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.updateTitle(value); },
+      onEnabledChanged: (value: boolean): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.updateEnabled(value); },
       onEnabledCookieJarChanged: (value: boolean): void =>
-        { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionEditor')) this.getRssEditorOrchestrator().updateEnabledCookieJar(value); },
+        { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.updateEnabledCookieJar(value); },
       onSourceFieldChanged: (field: RssSourceTextField, value: string): void =>
-        { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionEditor')) this.getRssEditorOrchestrator().updateSourceField(field, value); },
-      onSave: (): void => { if (this.isCurrentRssPresentation(generation, owner, 'rssSubscriptionEditor')) this.getRssEditorOrchestrator().save(); },
+        { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.updateSourceField(field, value); },
+      onSave: (): void => { if (this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host)) host?.save(); },
     });
   }
 
@@ -2209,22 +2213,39 @@ struct Index {
     return host;
   }
 
+  private retireRssEditorPresentation(): void {
+    this.rssEditorOrchestrator?.detachPresentation(this.rssEditorPresentationIdentity);
+    this.rssEditorPresentationIdentity = '';
+  }
+  private isCurrentRssEditorPresentation(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, identity: string, host: RssSubscriptionEditorOrchestrator | undefined, attached: boolean = true): boolean {
+    return owner !== undefined && host !== undefined && identity.length > 0 && this.rssEditorOrchestrator === host &&
+      this.rssEditorPresentationIdentity === identity && (!attached || host.ownsPresentation(identity)) && host.owns(owner) && this.mountedRuntimeOwner === owner &&
+      this.detailShelfAdmissionMount === mounting && this.navigationGeneration === generation &&
+      !this.shelfReceiptRetired && this.route === 'rssSubscriptionEditor' && this.isCurrentRuntime(owner);
+  }
   private getRssEditorOrchestrator(): RssSubscriptionEditorOrchestrator {
     const owner = this.mountedRuntimeOwner;
-    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner)) throw new Error('RSS 编辑页面已退役');
-    if (this.rssEditorOrchestrator === undefined || !this.rssEditorOrchestrator.owns(owner)) {
-      const shared = this.getRssOrchestrator();
-      this.rssEditorOrchestrator = new RssSubscriptionEditorOrchestrator(
-        (snapshot: RssSubscriptionEditorSnapshot): void => {
-          if (this.isCurrentRssPresentation(this.rssEditorNavigationGeneration, owner, 'rssSubscriptionEditor')) this.rssEditorSnapshot = snapshot;
-        },
-        (subscriptionId: string): void => { if (this.isCurrentRssPresentation(this.rssEditorNavigationGeneration, owner, 'rssSubscriptionEditor')) this.finishRssSubscriptionEdit(subscriptionId); },
-        (): boolean => this.isCurrentRssPresentation(this.rssEditorNavigationGeneration, owner, 'rssSubscriptionEditor'),
-        owner,
-        (task: () => Promise<void>): Promise<void> => shared.runSerialized(task),
-      );
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner) || this.route !== 'rssSubscriptionEditor')
+      throw new Error('RSS 编辑页面已退役');
+    const shared = this.getRssOrchestrator();
+    const host = RssSubscriptionEditorOrchestrator.forRuntime(owner, (task: () => Promise<void>): Promise<void> => shared.runSerialized(task));
+    if (host === undefined) throw new Error('RSS 编辑 Runtime 已退役');
+    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const identity = JSON.stringify([this.rssInstanceIdentity, mounting, generation, 'editor']);
+    if (this.rssEditorOrchestrator !== host || this.rssEditorPresentationIdentity !== identity) {
+      this.retireRssEditorPresentation();
+      this.rssEditorOrchestrator = host; this.rssEditorPresentationIdentity = identity;
+      const current = (): boolean => this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host);
+      const admitted = (): boolean => this.isCurrentRssEditorPresentation(generation, owner, mounting, identity, host, false);
+      if (!host.attachPresentation(identity,
+        (snapshot: RssSubscriptionEditorSnapshot): void => { if (current()) this.rssEditorSnapshot = snapshot; },
+        (subscriptionId: string): void => { if (current()) this.finishRssSubscriptionEdit(subscriptionId); }, current, admitted)) {
+        this.rssEditorPresentationIdentity = '';
+        throw new Error('RSS 编辑展示已退役');
+      }
     }
-    return this.rssEditorOrchestrator;
+    return host;
   }
 
   private onRssManagementViewArticles(subscriptionId: string): void {
@@ -4745,6 +4766,7 @@ struct Index {
 
   private nextNavigationGeneration(): number {
     this.retireSourceSwitchPresentation();
+    this.retireRssEditorPresentation();
     this.retireRssPresentation();
     this.retireReadingEntryPresentation();
     this.bookshelfCatalogEpoch += 1;

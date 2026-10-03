@@ -184,15 +184,23 @@ export struct RssSubscriptionEditorPage {
   }
 
 
+  private recoveryActionIdentities(): string[] {
+    if (this.snapshot.operation?.facts.canRetry) return [`write:${this.snapshot.operation.facts.generation}`];
+    if (this.snapshot.readFacts.canRetry) return [`read:${this.snapshot.readFacts.generation}`];
+    return [];
+  }
+  private recoveryGeneration(identity: string): number { return Number(identity.slice(identity.indexOf(':') + 1)); }
+  private dispatchRecovery(identity: string): void {
+    if (!this.recoveryActionIdentities().includes(identity)) return;
+    if (identity.startsWith('write:')) this.onReconcile(this.recoveryGeneration(identity));
+    else this.onRetryRead(this.recoveryGeneration(identity));
+  }
   @Builder
   private operationRecovery() {
-    if (this.snapshot.operation?.facts.canRetry) {
-      ReaderRecoveryAction({ label: '重新读取', generation: this.snapshot.operation.facts.generation,
-        onReconcile: this.onReconcile });
-    } else if (this.snapshot.readFacts.canRetry) {
-      ReaderRecoveryAction({ label: '重新读取', generation: this.snapshot.readFacts.generation,
-        onReconcile: this.onRetryRead });
-    }
+    ForEach(this.recoveryActionIdentities(), (identity: string): void => {
+      ReaderRecoveryAction({ label: '重新读取', generation: this.recoveryGeneration(identity),
+        onReconcile: (): void => this.dispatchRecovery(identity) });
+    }, (identity: string): string => identity);
   }
 
   @Builder

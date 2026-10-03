@@ -6,7 +6,7 @@ import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {ReaderNativeAlertOwner} from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
 import {rssSource, rssFacts, rssRecoveryView, RssRuntime,replaceRssRuntime,RealRssOrchestrator,RealRssEditor,RssEmptyEditor,rssRpc,settleRss,deferredRss} from './lib/rss-operation-fixture.mjs';
 const source=rssSource,file=p=>new URL('../entry/src/main/ets/'+p,import.meta.url),clone=v=>v===undefined?undefined:structuredClone(v);
-const methods=['isCurrentRssPresentation','rssSubscriptionManagementItems','getRssOrchestrator','retireRssPresentation','getRssEditorOrchestrator','loadRss','feedPresentation','rssSubscriptions','rssSourceBinding','rssEntryBinding','isCurrentRoute',
+const methods=['isCurrentRssPresentation','rssSubscriptionManagementItems','getRssOrchestrator','retireRssPresentation','getRssEditorOrchestrator','retireRssEditorPresentation','isCurrentRssEditorPresentation','loadRss','feedPresentation','rssSubscriptions','rssSourceBinding','rssEntryBinding','isCurrentRoute',
  'loadRssSourceItems','refreshRssSourceFeed','isCurrentRssSourceFeed','applyRssSourceSnapshot','openRssEntryDetail','onRssEntryFavoriteRequested',
  'isCurrentRssEntryDetail','applyRssEntrySnapshot','failRssEntryOperation','nextNavigationGeneration','onRssSubscriptionSelected',
  'onRssSubscriptionAddRequested','onRssSubscriptionEditRequested','finishRssSubscriptionEdit','returnToRssSubscriptionManagement'];
@@ -22,7 +22,7 @@ class Child{constructor(owner,params,_s,id){Object.assign(this,{owner,params,id}
 let physicalIndexIdentity=0;
 function fixture(route='rssSourceFeed',runtime=rssRpc()){
  replaceRssRuntime(runtime);
- const p=Object.assign(new Index(),{mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,rssInstanceIdentity:++physicalIndexIdentity,rssPresentationIdentity:'',nativeAlertOwner:new ReaderNativeAlertOwner(),route,navigationGeneration:1,shelfReceiptRetired:false,
+ const p=Object.assign(new Index(),{mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,rssInstanceIdentity:++physicalIndexIdentity,rssPresentationIdentity:'',rssEditorPresentationIdentity:'',nativeAlertOwner:new ReaderNativeAlertOwner(),route,navigationGeneration:1,shelfReceiptRetired:false,
   rssPresentation:{kind:'feed',subscriptions:clone(runtime.subscriptions),recentUnread:[]},selectedRssSubscription:clone(runtime.subscriptions[0]),selectedRssItems:clone(runtime.items),selectedRssItem:clone(runtime.items[0]),
   selectedRssFavoriteState:'notFavorited',rssFeedRead:rssFacts.projectOperationFacts({phase:'idle'}),rssSourceRead:rssFacts.projectOperationFacts({phase:'idle'}),rssEntryRead:rssFacts.projectOperationFacts({phase:'idle'}),
   rssManagementRead:rssFacts.projectOperationFacts({phase:'idle'}),rssEditorSnapshot:clone(RssEmptyEditor),rssEditorNavigationGeneration:1,rssManagementFocusSubscriptionId:''});
@@ -38,7 +38,7 @@ function fixture(route='rssSourceFeed',runtime=rssRpc()){
  };
  const render=(kind)=>{
   const names={main:['rssPageContent','RssPage','readFeedback'],source:['rssSourceFeedContent','RssSourceFeedPage','operationFeedback','retryFeedback'],
-   entry:['rssEntryDetailContent','RssEntryDetailPage','operationFeedback','retryFeedback'],editor:['rssEditorContent','RssSubscriptionEditorPage','operationRecovery']};
+   entry:['rssEntryDetailContent','RssEntryDetailPage','operationFeedback','retryFeedback'],editor:['rssEditorContent','RssSubscriptionEditorPage','operationRecovery','recoveryActionIdentities','recoveryGeneration','dispatchRecovery']};
   const [builder,child,...members]=names[kind],props=renderProps(builder,child);
   const b=createReaderBuilderProbe(source('features/rss/'+child+'.ets'),members,{readerRecoveryView:rssRecoveryView,ReaderRecoveryNotice:Child,ReaderRecoveryAction:Child}).owner;
   Object.assign(b,{appThemeScheme:'day'},clone(Object.fromEntries(Object.entries(props).filter(([,v])=>typeof v!=='function'))),Object.fromEntries(Object.entries(props).filter(([,v])=>typeof v==='function')));
