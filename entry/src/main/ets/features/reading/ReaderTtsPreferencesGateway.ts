@@ -35,7 +35,8 @@ export class ReaderTtsPreferencesGateway {
     }
   }
 
-  async update(snapshot: ReaderTtsPreferencesSnapshot, resetOwned: boolean = false): Promise<ReaderTtsPreferencesSnapshot> {
+  async update(snapshot: ReaderTtsPreferencesSnapshot, resetOwned: boolean = false,
+    isAdmitted?: () => boolean): Promise<ReaderTtsPreferencesSnapshot> {
     const requested = normalizeReaderTtsPreferencesSnapshot(snapshot);
     if (!resetOwned) await ReaderThemeHost.prepareUserChange();
     const previousUpdate = ReaderTtsPreferencesGateway.updateTails.get(this.runtimeOwner) ?? Promise.resolve();
@@ -49,6 +50,10 @@ export class ReaderTtsPreferencesGateway {
     try {
       const store = await this.ensureStore();
       const previous = await store.get(READER_TTS_SNAPSHOT_KEY, '');
+      // Restore, serialization and store reads may have suspended the caller.
+      // This is the last boundary before the first write is actually dispatched.
+      // Never cancel put/flush after dispatch merely because its UI retired.
+      if (isAdmitted?.() === false) throw new Error('TTS_PREFERENCE_OWNER_SUPERSEDED');
       try {
         await store.put(READER_TTS_SNAPSHOT_KEY, JSON.stringify(requested));
         await store.flush();

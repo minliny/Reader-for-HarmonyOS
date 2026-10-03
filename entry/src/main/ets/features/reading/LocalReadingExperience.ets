@@ -7572,14 +7572,28 @@ export struct ReadingExperience {
   }
 
   private persistTtsPreferences(): void {
-    void this.persistTtsPreferencesSnapshot(this.ttsPreferencesSnapshot())
-      .catch((error: Error): void => this.logTtsFailure('preference-persist', error));
+    const current = this.captureTtsPreferenceAdmission(this.ttsPreferenceMutationGeneration);
+    if (!current()) return;
+    void this.persistTtsPreferencesSnapshot(this.ttsPreferencesSnapshot(), current)
+      .catch((error: Error): void => { if (current()) this.logTtsFailure('preference-persist', error); });
   }
 
   private nextTtsPreferenceMutationGeneration(): number {
     this.ttsPreferenceMutationGeneration = this.ttsPreferenceMutationGeneration >= Number.MAX_SAFE_INTEGER ?
       1 : this.ttsPreferenceMutationGeneration + 1;
     return this.ttsPreferenceMutationGeneration;
+  }
+
+  /** UI intent admission; the existing gateway owns serialized durable writes.
+   * A queued write may retire before dispatch. A dispatched write still settles. */
+  private captureTtsPreferenceAdmission(generation: number): () => boolean {
+    const lifecycleToken = this.lifecycleToken;
+    const sourceId = this.sourceId;
+    const bookId = this.bookId;
+    const coordinator = this.ttsCoordinator;
+    return (): boolean => generation === this.ttsPreferenceMutationGeneration &&
+      this.isSessionActive(lifecycleToken) && sourceId === this.sourceId && bookId === this.bookId &&
+      coordinator === this.ttsCoordinator;
   }
 
   private ttsPreferencesSnapshot(): ReaderTtsPreferencesSnapshot {
@@ -7615,8 +7629,9 @@ export struct ReadingExperience {
     };
   }
 
-  private async persistTtsPreferencesSnapshot(snapshot: ReaderTtsPreferencesSnapshot): Promise<void> {
-    await this.ttsPreferencesGateway.update(snapshot);
+  private async persistTtsPreferencesSnapshot(snapshot: ReaderTtsPreferencesSnapshot,
+    isAdmitted?: () => boolean): Promise<void> {
+    await this.ttsPreferencesGateway.update(snapshot, false, isAdmitted);
   }
 
   private cancelPendingTtsPlay(): void {
@@ -7890,37 +7905,41 @@ export struct ReadingExperience {
 
   private changeTtsAllowMixing(enabled: boolean): void {
     const generation = this.nextTtsPreferenceMutationGeneration();
+    const current = this.captureTtsPreferenceAdmission(generation);
+    if (!current()) return;
     const previous = this.ttsPreferencesSnapshot();
     const candidate = this.copyTtsPreferencesSnapshot(previous);
     candidate.allowMixing = enabled;
     const coordinator = this.ttsCoordinator;
     const apply = async (): Promise<void> => {
       if (coordinator !== undefined) await coordinator.setAllowMixing(enabled);
-      if (generation !== this.ttsPreferenceMutationGeneration) return;
+      if (!current()) return;
       this.ttsAllowMixing = enabled;
       try {
-        await this.persistTtsPreferencesSnapshot(candidate);
+        await this.persistTtsPreferencesSnapshot(candidate, current);
       } catch (error) {
-        if (generation === this.ttsPreferenceMutationGeneration) {
+        if (current()) {
           this.ttsAllowMixing = previous.allowMixing;
           try { await coordinator?.setAllowMixing(previous.allowMixing); } catch (_) {}
           this.logTtsFailure('preference-persist', error as Error);
         }
       }
     };
-    void apply().catch((error: Error): void => this.logTtsFailure('audio-session', error));
+    void apply().catch((error: Error): void => { if (current()) this.logTtsFailure('audio-session', error); });
   }
 
   private changeTtsBackgroundPlayback(enabled: boolean): void {
     const generation = this.nextTtsPreferenceMutationGeneration();
+    const current = this.captureTtsPreferenceAdmission(generation);
+    if (!current()) return;
     const previous = this.ttsPreferencesSnapshot();
     const candidate = this.copyTtsPreferencesSnapshot(previous);
     candidate.backgroundPlayback = enabled;
     this.ttsBackgroundPlayback = enabled;
     const host = this.ttsCoordinator === undefined ? undefined : ReaderRuntimeOwner.current().getTtsHost();
     host?.setBackgroundPlaybackEnabled?.(enabled);
-    void this.persistTtsPreferencesSnapshot(candidate).catch((error: Error): void => {
-      if (generation !== this.ttsPreferenceMutationGeneration) return;
+    void this.persistTtsPreferencesSnapshot(candidate, current).catch((error: Error): void => {
+      if (!current()) return;
       this.ttsBackgroundPlayback = previous.backgroundPlayback;
       host?.setBackgroundPlaybackEnabled?.(previous.backgroundPlayback);
       this.logTtsFailure('preference-persist', error);
@@ -7929,14 +7948,16 @@ export struct ReadingExperience {
 
   private changeTtsKeepScreenOn(enabled: boolean): void {
     const generation = this.nextTtsPreferenceMutationGeneration();
+    const current = this.captureTtsPreferenceAdmission(generation);
+    if (!current()) return;
     const previous = this.ttsPreferencesSnapshot();
     const candidate = this.copyTtsPreferencesSnapshot(previous);
     candidate.keepScreenOn = enabled;
     this.ttsKeepScreenOn = enabled;
     void this.applyReaderWindowPolicy(this.readerSettingsSnapshot, this.controlsPresentedForWindow())
-      .then((): Promise<void> => this.persistTtsPreferencesSnapshot(candidate))
+      .then(async (): Promise<void> => { if (current()) await this.persistTtsPreferencesSnapshot(candidate, current); })
       .catch((error: Error): void => {
-        if (generation !== this.ttsPreferenceMutationGeneration) return;
+        if (!current()) return;
         this.ttsKeepScreenOn = previous.keepScreenOn;
         this.logTtsFailure('preference-persist', error);
       });
@@ -7944,29 +7965,34 @@ export struct ReadingExperience {
 
   private changeTtsFailurePolicy(policy: 'skip' | 'stop'): void {
     const generation = this.nextTtsPreferenceMutationGeneration();
+    const current = this.captureTtsPreferenceAdmission(generation);
+    if (!current()) return;
+    const coordinator = this.ttsCoordinator;
     const previous = this.ttsPreferencesSnapshot();
     const candidate = this.copyTtsPreferencesSnapshot(previous);
     candidate.failurePolicy = policy;
     this.ttsFailurePolicy = policy;
-    this.ttsCoordinator?.setFailurePolicy(policy);
-    void this.persistTtsPreferencesSnapshot(candidate).catch((error: Error): void => {
-      if (generation !== this.ttsPreferenceMutationGeneration) return;
+    coordinator?.setFailurePolicy(policy);
+    void this.persistTtsPreferencesSnapshot(candidate, current).catch((error: Error): void => {
+      if (!current()) return;
       this.ttsFailurePolicy = previous.failurePolicy;
-      this.ttsCoordinator?.setFailurePolicy(previous.failurePolicy);
+      coordinator?.setFailurePolicy(previous.failurePolicy);
       this.logTtsFailure('preference-persist', error);
     });
   }
 
   private changeTtsFollowHighlight(enabled: boolean): void {
     const generation = this.nextTtsPreferenceMutationGeneration();
+    const current = this.captureTtsPreferenceAdmission(generation);
+    if (!current()) return;
     const previous = this.ttsPreferencesSnapshot();
     const candidate = this.copyTtsPreferencesSnapshot(previous);
     candidate.followHighlight = enabled;
     this.ttsFollowHighlight = enabled;
     if (!enabled) this.invalidateTtsPageFollow?.();
     else this.followTtsPage?.(this.ttsState);
-    void this.persistTtsPreferencesSnapshot(candidate).catch((error: Error): void => {
-      if (generation !== this.ttsPreferenceMutationGeneration) return;
+    void this.persistTtsPreferencesSnapshot(candidate, current).catch((error: Error): void => {
+      if (!current()) return;
       this.ttsFollowHighlight = previous.followHighlight;
       this.logTtsFailure('preference-persist', error);
     });
@@ -7974,15 +8000,18 @@ export struct ReadingExperience {
 
   private changeTtsPauseOnInterruption(enabled: boolean): void {
     const generation = this.nextTtsPreferenceMutationGeneration();
+    const current = this.captureTtsPreferenceAdmission(generation);
+    if (!current()) return;
+    const coordinator = this.ttsCoordinator;
     const previous = this.ttsPreferencesSnapshot();
     const candidate = this.copyTtsPreferencesSnapshot(previous);
     candidate.pauseOnInterruption = enabled;
     this.ttsPauseOnInterruption = enabled;
-    this.ttsCoordinator?.setPauseOnInterruption(enabled);
-    void this.persistTtsPreferencesSnapshot(candidate).catch((error: Error): void => {
-      if (generation !== this.ttsPreferenceMutationGeneration) return;
+    coordinator?.setPauseOnInterruption(enabled);
+    void this.persistTtsPreferencesSnapshot(candidate, current).catch((error: Error): void => {
+      if (!current()) return;
       this.ttsPauseOnInterruption = previous.pauseOnInterruption;
-      this.ttsCoordinator?.setPauseOnInterruption(previous.pauseOnInterruption);
+      coordinator?.setPauseOnInterruption(previous.pauseOnInterruption);
       this.logTtsFailure('preference-persist', error);
     });
   }
@@ -7992,6 +8021,8 @@ export struct ReadingExperience {
       candidate.language === language && candidate.person === person);
     if (option === undefined) return;
     const generation = this.nextTtsPreferenceMutationGeneration();
+    const current = this.captureTtsPreferenceAdmission(generation);
+    if (!current()) return;
     const previous = this.ttsPreferencesSnapshot();
     const candidate = this.copyTtsPreferencesSnapshot(previous);
     candidate.language = option.language;
@@ -7999,20 +8030,20 @@ export struct ReadingExperience {
     const coordinator = this.ttsCoordinator;
     void (coordinator === undefined ? Promise.resolve() : coordinator.setVoice(option.language, option.person))
       .then(async (): Promise<void> => {
-        if (generation !== this.ttsPreferenceMutationGeneration) return;
+        if (!current()) return;
         this.ttsLanguage = option.language;
         this.ttsPerson = option.person;
         try {
-          await this.persistTtsPreferencesSnapshot(candidate);
+          await this.persistTtsPreferencesSnapshot(candidate, current);
         } catch (error) {
-          if (generation !== this.ttsPreferenceMutationGeneration) return;
+          if (!current()) return;
           this.ttsLanguage = previous.language;
           this.ttsPerson = previous.person;
           try { await coordinator?.setVoice(previous.language, previous.person); } catch (_) {}
           this.logTtsFailure('preference-persist', error as Error);
         }
       })
-      .catch((error: Error): void => this.logTtsFailure('voice', error));
+      .catch((error: Error): void => { if (current()) this.logTtsFailure('voice', error); });
   }
 
   private requireTtsConfigurationHost(): ReaderTtsConfigurationHost {

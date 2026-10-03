@@ -22,9 +22,13 @@ Evidence: `test-reader-image-resource-lifecycle.mjs` executes the actual owner a
 
 Rollback: revert the image-owner commit as one unit (new owner, LRE callers, fixtures/tests/registration/document). Reverting only the leaf wrapper would reintroduce static Runtime teardown lookups.
 
-## 2. TTS preferences — open until the next candidate
+## 2. TTS preferences — implemented lifecycle candidate
 
-Seven preference mutations (mixing/background/keep-awake/failure policy/follow/pause-on-interruption/voice) currently guard only a mutation counter. A retired instance or changed book/coordinator can publish/rollback into a later lifecycle, and a queued gateway update may dispatch after retirement. Required fix: capture lifecycle, source/book, coordinator and operation counter; reject before actual dispatch after any restore/serialization/store-read waits. Once a real durable write was dispatched, retirement must not cancel its completion. Do not transplant playback state or policy to a global owner; retain the existing preferences gateway and coordinator owners.
+Seven preference mutations (mixing/background/keep-awake/failure policy/follow/pause-on-interruption/voice) currently guard only a mutation counter. A retired instance or changed book/coordinator can publish/rollback into a later lifecycle, and a queued gateway update may dispatch after retirement. The candidate captures lifecycle, source/book, coordinator and operation counter; it rejects before actual dispatch after restore/serialization/store-read waits. Once a real durable write was dispatched, retirement must not cancel its completion. Do not transplant playback state or policy to a global owner; retain the existing preferences gateway and coordinator owners.
+
+Evidence: `test-reader-tts-preference-lifecycle.mjs` executes the actual complete preferences gateway and seven actual LRE mutation methods. Deferred restore, previous serial write, store opening, baseline reads, native policy/voice ACK, dispatched-write completion and retired lifecycle/book/coordinator/operation negative cases are covered; a generation-only production-source mutation is detected. Existing two-argument reset behavior is preserved. `test-reader-tts-preferences.mjs` remains passing. This is method/contract evidence; the existing native Preferences flush/rollback path has no atomic durable receipt, and this lifecycle change does not claim to solve that separate ambiguous-flush contract.
+
+Rollback: revert the TTS preference admission commit as one unit. The optional third gateway argument is backward compatible; removing only the LRE caller would lose UI admission, while removing only the gateway check would allow queued retired writes.
 
 ## 3. Reading statistics — open, real Core contract gap
 
@@ -34,4 +38,4 @@ Required minimum is a fixed operation ID per accepted delta, transactionally dur
 
 ## Acceptance boundary
 
-Items 2 and 3 remain code/contract gaps; A02/P3 is not declared closed by item 1. Local/SDK/component, artifact, actual OS/native, performance/target, visual and user gates stay separate. Root holds HAP/VM; this lane has not used either.
+Item 3 remains a Core/Host code and contract gap; A02/P3 is not declared closed by items 1 and 2. Local/SDK/component, artifact, actual OS/native, performance/target, visual and user gates stay separate. Root holds HAP/VM; this lane has not used either.
