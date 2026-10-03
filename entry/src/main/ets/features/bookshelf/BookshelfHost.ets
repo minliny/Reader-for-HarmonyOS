@@ -10,6 +10,7 @@ import { BookshelfOperationOwner, type BookshelfOperationSnapshot } from './Book
 import { BookshelfReadableAdmissionOwner, type BookshelfReadableAdmissionSnapshot } from './BookshelfReadableAdmissionOwner';
 import type { OperationFacts } from '../../app/ReaderOperationFacts';
 import { BookshelfProjectionOwner } from './BookshelfProjectionOwner';
+import { BookshelfCatalogOwner } from './BookshelfCatalogOwner';
 import { SourceGateway } from '../source/SourceGateway';
 import {
   BookshelfManagementGateway,
@@ -33,6 +34,7 @@ export {
  */
 export class BookshelfHost {
   private static projectionOwner: BookshelfProjectionOwner | undefined;
+  private static catalogOwner: BookshelfCatalogOwner | undefined;
   // One feature-local Runtime lane survives Index reconstruction caused by
   // the system picker. It is never an application-wide task/error registry.
   private static readableOwner: BookshelfReadableAdmissionOwner | undefined;
@@ -56,6 +58,14 @@ export class BookshelfHost {
         (ids: string[], current: () => boolean) => new SourceGateway(owner).loadSourcesForIds(ids, current));
     }
     return BookshelfHost.projectionOwner;
+  }
+
+  catalog(owner: ReaderRuntimeOwner): BookshelfCatalogOwner | undefined {
+    if (!ReaderRuntimeOwner.isCurrent(owner)) return undefined;
+    if (BookshelfHost.catalogOwner === undefined || !BookshelfHost.catalogOwner.owns(owner))
+      BookshelfHost.catalogOwner = new BookshelfCatalogOwner(owner, (): boolean => ReaderRuntimeOwner.isCurrent(owner),
+        (filter: BookshelfFilter, background: boolean): BookshelfFlowGateway => new BookshelfFlowGateway(owner, filter, background));
+    return BookshelfHost.catalogOwner;
   }
 
   readShelf(owner: ReaderRuntimeOwner, filter: BookshelfFilter, generation: number, current: () => boolean,

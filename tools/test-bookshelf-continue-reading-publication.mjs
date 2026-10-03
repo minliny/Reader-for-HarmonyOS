@@ -1,3 +1,4 @@
+import {admitBookshelfSdkCarrier} from './lib/bookshelf-projection-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -35,7 +36,7 @@ const hooks = { ...runtime.hooks, onObserverExit(owner, id) {
   if (!mounted.has(id)) { mounted.add(id); node.create[0](); }
 } };
 const { Component: Page } = createReaderBuilderProbe(pageSource,
-  ['continueReading', 'bookshelfList', 'continueReadingCard', 'hasCover'], {
+  ['continueReading','navigationGeneration','onShelfPresentationChanged','dismissBookActionSheet','publishVisibleReadingBooks','bookSelectionHandler','isShelfPresentationCurrent','shelfScrollHandler','shelfPageHandler','bookshelfList', 'continueReadingCard', 'hasCover'], {
     READER_FLOATING_TOP_BAR_HEIGHT: 58,
     ...shelfTypography,
     ...runtime.sdk, NoCoverCover: Child, ImageFit: { Cover: 'cover' },
@@ -46,7 +47,7 @@ class ShelfChild extends Child {
   constructor(owner, params, storage, id) {
     super(owner, params, storage, id); pageMounts++;
     page = new Page(undefined, params);
-    Object.assign(page, { appThemeScheme: 'day', filterRowVisible: false, viewModeError: '', visibleBookCount: 2,
+    Object.assign(page, { actionSheetId:'',mounted:true,appThemeScheme: 'day', filterRowVisible: false, viewModeError: '', visibleBookCount: 2,
       viewSwitchHeaderOpacity: 1, shelfScroller: {}, rowDataSource: {}, sectionAction() {}, filterRow() {}, projectionRow() {},
       shelfContentWidth: () => 352, shelfBottomContentInset: () => 99, onBookSelected: params.onBookSelected });
     page.bookshelfList(false);
@@ -60,7 +61,7 @@ class ShelfChild extends Child {
 // Real Index state -> actual component call -> SDK @Prop copy/reset -> actual
 // ListItem and continueReadingCard observers. No manual page replay, remount,
 // mutated A object or production-source substitutions can hide a stale closure.
-const { owner: index } = createReaderBuilderProbe(indexSource, ['continueReading', 'bookshelfContent'], {
+const { owner: index } = createReaderBuilderProbe(indexSource, ['continueReading','navigationGeneration', 'bookshelfContent'], {
   ...runtime.sdk, BookshelfPage: ShelfChild, BookshelfEmptyPage: Child, BookshelfStatusContent: Child,
 }, runtime.hooks);
 const a = { sourceId: 'local', bookId: 'a', title: '短书 A', author: '作者 A', coverUrl: withCover ? 'file:///a.png' : undefined };
@@ -69,6 +70,7 @@ const clicks = [];
 Object.assign(index, { isBookshelfVisualAdmitted: true, shelfBooks: [a], shelfProjectionRevision: 'a',
   continueReading: a, settingsSnapshot: { reduceMotion: false }, bookshelfViewState: {},
   shelfReadingPreparation: false, readingSessionActive: false, openShelfBook: book => clicks.push(book.bookId) });
+admitBookshelfSdkCarrier(index);
 index.bookshelfContent();
 const card = [...page.nodes.values()].find(node => node.type === 'Row' && node.height === 100);
 assert.ok(card); card.onClick(); assert.deepEqual(clicks, ['a']);
@@ -97,6 +99,17 @@ results.push({ withCover, evidence: runtime.source, deliveredProp: page.continue
 assert.deepEqual(actual, { title: b.title, author: b.author, cover: b.coverUrl, clicked: 'b' },
   'retained Continue Reading native text, cover and click must publish the new proven book');
 assert.deepEqual([...page.children.keys()], childIds, 'the existing NoCover actor is retained');
+const oldGesture=card.onClick,oldParent=[...index.children.values()].find(child=>child instanceof ShelfChild).params.onBookSelected;
+const beforeNavigationClicks=clicks.length;
+index.navigationGeneration++;runtime.flush();
+assert.equal(pageMounts,1,'navigation Props update the retained Page');
+assert.equal(page.navigationGeneration,index.navigationGeneration,'actual V1 navigation Prop is refreshed');
+assert.deepEqual([...page.nodes.keys()],actorIds,'navigation does not remount native card/cover actors');
+oldGesture();oldParent(b);assert.equal(clicks.length,beforeNavigationClicks,'old physical gesture and old callback cannot borrow new navigation');
+card.onClick();assert.equal(clicks.at(-1),'b','current retained card uses new navigation with its original ordinary parent callback');
+assert.equal(clicks.length,beforeNavigationClicks+1);
+const currentGesture=card.onClick;page.mounted=false;currentGesture();assert.equal(clicks.length,beforeNavigationClicks+1,'retired Page cannot dispatch');page.mounted=true;
+
 // A queued Prop removal can arrive before ArkUI removes the branch. A gesture
 // in that interval must not reopen the previous book. Deliver the real parent
 // observer only; no fake native unmount/remount is asserted by this probe.

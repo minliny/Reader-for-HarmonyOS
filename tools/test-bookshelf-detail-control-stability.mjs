@@ -25,7 +25,7 @@ const sampler = Object.assign(new Motion(), { viewMotion, viewFadeCurve: curve,
 let shelfSamples = 0;
 for (const theme of ['day', 'night']) {
   const mountedItems = new Set();
-  const { owner } = createReaderBuilderProbe(shelfSource, ['bookshelfList', 'sectionAction',
+  const { owner } = createReaderBuilderProbe(shelfSource, ['bookshelfList','shelfPageHandler','shelfScrollHandler','isShelfPresentationCurrent', 'sectionAction',
     'sectionActionAsset', 'canonicalFilterActiveAsset', 'isSectionActionActive', 'sectionActionLabel'], {
     READER_FLOATING_TOP_BAR_HEIGHT: 58,
     LazyForEach: { create() {}, pop() {} },

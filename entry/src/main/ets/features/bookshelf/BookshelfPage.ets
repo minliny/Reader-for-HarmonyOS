@@ -162,20 +162,21 @@ export struct BookshelfPage {
   @StorageLink('readerBookshelfSourceFilter') @Watch('onShelfFiltersChanged') private sourceFilter: string = 'all';
   @Prop @Watch('onBooksChanged') books: ShelfBook[];
   @Prop serverFiltered: boolean = false;
-  onNextPageRequested: () => void = (): void => {};
-  onPreviousPageRequested: () => void = (): void => {};
-  onFilterRequested: (readingState: string, sourceKind: string) => void = (_readingState: string, _sourceKind: string): void => {};
+  @Prop @Watch('onShelfPresentationChanged') navigationGeneration: number = 0;
+  onNextPageRequested: (navigation?: number) => void = (): void => {};
+  onPreviousPageRequested: (navigation?: number) => void = (): void => {};
+  onFilterRequested: (readingState: string, sourceKind: string, navigation?: number) => void = (_readingState: string, _sourceKind: string): void => {};
   @Prop continueReading: ShelfBook | undefined;
   @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
-  onRssRequested: () => void = (): void => {};
-  onSettingsRequested: () => void = (): void => {};
-  onDiscoverRequested: () => void = (): void => {};
-  onBookSelected: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
-  onVisibleBooksChanged: (books: ShelfBook[]) => void = (_books: ShelfBook[]): void => {};
-  onBookMultiSelectRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
-  onBookGroupRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
-  onBookInfoRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
-  onBookRemoveRequested: (book: ShelfBook) => void = (_book: ShelfBook): void => {};
+  onRssRequested: (navigation?: number) => void = (): void => {};
+  onSettingsRequested: (navigation?: number) => void = (): void => {};
+  onDiscoverRequested: (navigation?: number) => void = (): void => {};
+  onBookSelected: (book: ShelfBook, navigation?: number) => void = (_book: ShelfBook): void => {};
+  onVisibleBooksChanged: (books: ShelfBook[], navigation?: number) => void = (_books: ShelfBook[]): void => {};
+  onBookMultiSelectRequested: (book: ShelfBook, navigation?: number) => void = (_book: ShelfBook): void => {};
+  onBookGroupRequested: (book: ShelfBook, navigation?: number) => void = (_book: ShelfBook): void => {};
+  onBookInfoRequested: (book: ShelfBook, navigation?: number) => void = (_book: ShelfBook): void => {};
+  onBookRemoveRequested: (book: ShelfBook, navigation?: number) => void = (_book: ShelfBook): void => {};
   @State private viewportWidth: number = 0;
   @State private viewMode: BookshelfViewMode = 'cover';
   @State private viewSwitchRunning: boolean = false;
@@ -198,6 +199,7 @@ export struct BookshelfPage {
   @State private actionBook: ShelfBook | undefined = undefined;
   @State private actionSheetId: string = '';
   private actionSheetRevision: number = 0;
+  private actionSheetNavigation: number = 0;
   @State private visibleBookCount: number = 0;
   private readonly viewMotion: BookshelfViewMotionContract = bookshelfViewMotionContract();
   private pendingViewMode: BookshelfViewMode = 'cover';
@@ -456,10 +458,7 @@ export struct BookshelfPage {
     .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
     .borderRadius(8)
-    .onClick((): void => {
-      const book = bookProvider();
-      if (book !== undefined) this.onBookSelected(book);
-    });
+    .onClick(this.bookSelectionHandler(bookProvider));
   }
 
   @Builder
@@ -541,16 +540,9 @@ export struct BookshelfPage {
     .contentEndOffset(this.shelfBottomContentInset(isTablet))
     .scrollBar(BarState.Off)
     .maintainVisibleContentPosition(true)
-    .onScrollIndex((start: number): void => {
-      if (!this.viewportRestored) return;
-      this.firstVisibleItem = start;
-      this.saveShelfViewport();
-      this.publishVisibleReadingBooks();
-      if (start <= this.shelfHeaderItems() + 4) this.onPreviousPageRequested();
-      if (start + 8 >= this.shelfHeaderItems() + this.rowDataSource.totalCount()) this.onNextPageRequested();
-    })
-    .onReachStart((): void => this.onPreviousPageRequested())
-    .onReachEnd((): void => this.onNextPageRequested())
+    .onScrollIndex(this.shelfScrollHandler())
+    .onReachStart(this.shelfPageHandler(true))
+    .onReachEnd(this.shelfPageHandler(false))
     .onScroll((): void => this.saveShelfViewport())
     .onAppear((): void => this.restoreShelfViewport());
   }
@@ -680,7 +672,7 @@ export struct BookshelfPage {
   }
 
   private onShelfFiltersChanged(): void {
-    if (this.mounted && this.serverFiltered) this.onFilterRequested(this.readingFilter, this.sourceFilter);
+    if (this.mounted && this.serverFiltered) this.onFilterRequested(this.readingFilter, this.sourceFilter, this.navigationGeneration);
     this.queueShelfProjection();
   }
 
@@ -793,10 +785,10 @@ export struct BookshelfPage {
       x: this.projectionBookTranslateX(columnIndex, isTablet, index),
       y: this.projectionBookTranslateY(columnIndex, isTablet, index),
     })
-    .onClick((): void => this.onBookSelected(book))
+    .onClick(this.bookSelectionHandler((): ShelfBook => book))
     .gesture(
       LongPressGesture({ fingers: 1, repeat: false, duration: 500 })
-        .onAction((_event: GestureEvent): void => this.presentBookActionSheet(book)),
+        .onAction(this.bookActionPresentationHandler(book)),
     );
   }
 
@@ -933,7 +925,7 @@ export struct BookshelfPage {
       .height(44)
       .borderRadius(22)
       .accessibilityText(`${book.title}更多操作`)
-      .onClick((): void => this.presentBookActionSheet(book));
+      .onClick(this.bookActionPresentationHandler(book));
     }
     .width(this.projectionListDetailsWidth(isTablet))
     .height(this.listCoverHeight(isTablet))
@@ -948,11 +940,12 @@ export struct BookshelfPage {
   private presentBookActionSheet(book: ShelfBook): void {
     if (!this.mounted || !this.books.some((candidate: ShelfBook): boolean => candidate.sourceId === book.sourceId && candidate.bookId === book.bookId)) return;
     this.actionSheetId = `bookshelf-action:${++this.actionSheetRevision}`;
+    this.actionSheetNavigation = this.navigationGeneration;
     this.actionBook = book;
   }
 
   private isCurrentBookActionSheet(presentationId: string, book: ShelfBook | undefined): boolean {
-    return this.mounted && presentationId.length > 0 && presentationId === this.actionSheetId &&
+    return this.mounted && this.actionSheetNavigation === this.navigationGeneration && presentationId.length > 0 && presentationId === this.actionSheetId &&
       book !== undefined && this.actionBook === book && this.books.some(
         (candidate: ShelfBook): boolean => candidate.sourceId === book.sourceId && candidate.bookId === book.bookId);
   }
@@ -964,11 +957,11 @@ export struct BookshelfPage {
     this.actionSheetId = '';
   }
 
-  private performBookAction(presentationId: string, book: ShelfBook | undefined, action: (book: ShelfBook) => void): void {
+  private performBookAction(presentationId: string, book: ShelfBook | undefined, action: (book: ShelfBook, navigation?: number) => void): void {
     if (!this.isCurrentBookActionSheet(presentationId, book) || book === undefined) return;
     this.actionBook = undefined;
     this.actionSheetId = '';
-    action(book);
+    action(book, this.actionSheetNavigation);
   }
 
   private bookActionWidth(): number {
@@ -1119,13 +1112,61 @@ export struct BookshelfPage {
     return 0;
   }
 
+  private onShelfPresentationChanged(): void {
+    // Props update the retained page; revoke only its temporary Sheet.
+    this.dismissBookActionSheet(this.actionSheetId, this.actionBook);
+    this.publishVisibleReadingBooks();
+  }
+
+  private isShelfPresentationCurrent(navigation: number): boolean {
+    return this.mounted && navigation === this.navigationGeneration;
+  }
+
+  private bookSelectionHandler(provider: () => ShelfBook | undefined): () => void {
+    const navigation = this.navigationGeneration;
+    return (): void => {
+      if (!this.isShelfPresentationCurrent(navigation)) return;
+      const book = provider();
+      if (book !== undefined) this.onBookSelected(book, navigation);
+    };
+  }
+
+  private bookActionPresentationHandler(book: ShelfBook): () => void {
+    const navigation = this.navigationGeneration;
+    return (): void => { if (this.isShelfPresentationCurrent(navigation)) this.presentBookActionSheet(book); };
+  }
+
+  private shelfPageHandler(previous: boolean): () => void {
+    const navigation = this.navigationGeneration;
+    return (): void => {
+      if (!this.isShelfPresentationCurrent(navigation)) return;
+      if (previous) this.onPreviousPageRequested(navigation); else this.onNextPageRequested(navigation);
+    };
+  }
+
+  private shelfScrollHandler(): (start: number) => void {
+    const navigation = this.navigationGeneration;
+    return (start: number): void => {
+      if (!this.isShelfPresentationCurrent(navigation) || !this.viewportRestored) return;
+      this.firstVisibleItem = start;
+      this.saveShelfViewport(); this.publishVisibleReadingBooks();
+      if (start <= this.shelfHeaderItems() + 4) this.onPreviousPageRequested(navigation);
+      if (start + 8 >= this.shelfHeaderItems() + this.rowDataSource.totalCount()) this.onNextPageRequested(navigation);
+    };
+  }
+
+  private mainTabHandler(key: string, active: boolean): () => void {
+    const navigation = this.navigationGeneration;
+    return (): void => { if (!active && this.isShelfPresentationCurrent(navigation)) this.onMainTab(key); };
+  }
+
   private onMainTab(key: string): void {
     if (key === 'discover') {
-      this.onDiscoverRequested();
+      this.onDiscoverRequested(this.navigationGeneration);
     } else if (key === 'rss') {
-      this.onRssRequested();
+      this.onRssRequested(this.navigationGeneration);
     } else if (key === 'settings') {
-      this.onSettingsRequested();
+      this.onSettingsRequested(this.navigationGeneration);
     }
     // 'bookshelf' is this page; MainTabBar suppresses the current tab.
   }
@@ -1190,11 +1231,7 @@ export struct BookshelfPage {
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(active ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : Color.Transparent)
     .borderRadius(24)
-    .onClick((): void => {
-      if (!active) {
-        this.onMainTab(navKey);
-      }
-    });
+    .onClick(this.mainTabHandler(navKey, active));
   }
 
   private onBooksChanged(): void {
@@ -1241,7 +1278,7 @@ export struct BookshelfPage {
         }
       }
     }
-    this.onVisibleBooksChanged(books);
+    this.onVisibleBooksChanged(books, this.navigationGeneration);
   }
 
   private bookRowRenderKey(row: ShelfBook[], rowIndex: number): string {

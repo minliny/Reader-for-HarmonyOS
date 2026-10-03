@@ -59,11 +59,23 @@ export function actualProjectionSdkFeedback(f) {
       if(typeof f.idx[name]==='function')parent[name]=f.idx[name].bind(f.idx);
     parent.bookshelfContent();parent.bookshelfShellContent();
     const shelf=[...parent.children.values()].find(child=>child.params.books),props=[...parent.children.values()].find(child=>child.params.readRecovery).params;
-    const shell=sdk.consumer(shellText,['shellContent','content'],{BookshelfMoreMenu:Child,READER_FLOATING_TOP_BAR_HEIGHT:56});
+    const shell=sdk.consumer(shellText,['shellContent','content','recoveryNoticeContent'],{BookshelfMoreMenu:Child,READER_FLOATING_TOP_BAR_HEIGHT:56});
     Object.assign(shell,props,{content(){},topBar(){},moreMenuVisible:false});shell.shellContent();
     const notice=sdk.walk(shell).find(owner=>owner instanceof sdk.deps.ReaderRecoveryNotice);
     const action=sdk.nodes(shell).find(node=>node.height===36&&node.onClick);
     return {props,shelf,notice,action,shell};
   };
   return {project,parent};
+}
+
+/** Bind the actual Index admission methods to a SDK-only carrier. The opaque
+ * Runtime is the instance-storage seam; no guard or navigation logic is mocked. */
+export function admitBookshelfSdkCarrier(carrier, runtime = {}, readRuntime = () => runtime) {
+  const Guard=productionMotionMethods(new URL('../../entry/src/main/ets/pages/Index.ets',import.meta.url),
+    ['isCurrentBookshelfPresentation'],{ReaderRuntimeOwner:runtimeOwnerIdentityProbe(readRuntime)});
+  carrier.mountedRuntimeOwner ??= runtime;carrier.navigationGeneration ??= 1;
+  carrier.detailShelfAdmissionMount ??= 1;carrier.shelfReceiptRetired ??= false;carrier.route ??= 'bookshelf';
+  carrier.isCurrentRuntime=Guard.prototype.isCurrentRuntime.bind(carrier);
+  carrier.isCurrentBookshelfPresentation=Guard.prototype.isCurrentBookshelfPresentation.bind(carrier);
+  return carrier;
 }

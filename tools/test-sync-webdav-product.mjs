@@ -145,7 +145,8 @@ assert.match(index, /this\.getSyncOrchestrator\(\)\.open\(\)/);
 assert.match(index, /onSyncSaveConfig/);
 assert.match(index, /onSyncRestoreLatest/);
 assert.match(index, /onSyncResolveRestore/);
-assert.match(index, /this\.shelfBooks = state\.shelf\.books\.map[\s\S]*copyShelfBookWithSourceName\(book, name\)/,
+const projection=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/BookshelfProjectionOwner.ts',import.meta.url),'utf8');
+assert.match(projection, /const books = state\.shelf\.books\.map[\s\S]*this\.copyName\(book, name\)/,
   'source display names must be an immutable projection of the Core shelf');
 assert.match(ability, /loadBookshelfViewMode\(\)[\s\S]*AppStorage\.setOrCreate\('readerBookshelfViewMode', mode\)/,
   'cold start must hydrate the projection before the first page is mounted');

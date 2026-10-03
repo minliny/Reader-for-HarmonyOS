@@ -92,7 +92,7 @@ for (const bottom of [0, 15, 34, 50]) {
   assert.equal(surface.margin.bottom, Math.max(15, bottom));
 }
 
-const shelf = probe('bookshelf/BookshelfPage.ets', ['bookshelfList', 'shelfBottomContentInset'], {
+const shelf = probe('bookshelf/BookshelfPage.ets', ['bookshelfList','shelfPageHandler','shelfScrollHandler','isShelfPresentationCurrent', 'shelfBottomContentInset'], {
   continueReading: undefined, filterRowVisible: false, viewModeError: '', visibleBookCount: 1,
   rowDataSource: {}, shelfScroller: {}, shelfContentWidth: () => 352,
 });

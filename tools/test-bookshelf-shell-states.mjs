@@ -1,3 +1,4 @@
+import {admitBookshelfSdkCarrier} from './lib/bookshelf-projection-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -56,6 +57,7 @@ function indexFixture(state, source = 'online') {
     shelfRecovery: () => ({message:'',visible:false,canRetry:false,generation:0}),
     shelfReadRecovery: () => ({message:'',visible:false,canRetry:false,generation:0}),
     appContentTopInset: () => 39, hasVisibleImportDialog: () => false });
+  admitBookshelfSdkCarrier(owner);
   owner.calls = [];
   for (const method of ['openImportDialog','openSearch','openBookshelfSettings','openBookshelfMultiSelect',
     'startManualBookshelfUpdate','openDiscover','openRss','openSettings','refreshBookshelf']) {
@@ -113,7 +115,7 @@ check('Index state changes update the retained shell child props, including serv
 });
 const shellSource = read('features/bookshelf/BookshelfShell.ets');
 function shellFixture({ populated = false, width = 365, menu = false } = {}) {
-  const { owner } = createReaderBuilderProbe(shellSource, ['content','mounted','temporaryBackIdentity','temporaryBackGeneration','navigationGeneration','onNavigationGenerationChanged','registerTemporaryBackGeneration','moreSelectionId','onTemporaryBackBridge','aboutToAppear','aboutToDisappear','consumeTemporaryBack','dismissMoreMenu','moreOpenAction','moreIntentAction','build','shellContent','topBar','requestCheckUpdates','showBottomNav','numericAreaLength'], {
+  const { owner } = createReaderBuilderProbe(shellSource, ['content','mounted','temporaryBackIdentity','temporaryBackGeneration','navigationGeneration','onNavigationGenerationChanged','registerTemporaryBackGeneration','moreSelectionId','onTemporaryBackBridge','aboutToAppear','aboutToDisappear','consumeTemporaryBack','dismissMoreMenu','moreOpenAction','moreIntentAction','build','shellContent','recoveryNoticeContent','topBar','requestCheckUpdates','showBottomNav','numericAreaLength'], {
     ...dependencies, ...createArkUIPropertyRuntimeProbe().sdk, bookshelfTemporaryGeneration:0,registerReaderShelfFonts(){}, BOOKSHELF_WIDE_BREAKPOINT: 600, READER_FLOATING_TOP_BAR_HEIGHT: 58,
     ReaderWindowCoordinator: { metrics: () => ({ windowRect: { width } }) },
   });

@@ -1,3 +1,7 @@
+import {BookshelfReadOwner} from '../../entry/src/main/ets/features/bookshelf/BookshelfReadOwner.ts';
+import {projectOperationFacts} from '../../entry/src/main/ets/app/ReaderOperationFacts.ts';
+import {classifyReaderSource} from '../../entry/src/main/ets/features/source/ReaderSourceCategory.ts';
+import * as sourceNames from '../../entry/src/main/ets/features/bookshelf/BookshelfSourceNameProjection.ts';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
@@ -12,7 +16,9 @@ export function actualBookshelfOperationTypes(deps) {
  const presentation=bookshelfOperationClass('features/bookshelf/LocalImportPresentationOwner.ts','({LocalImportPresentation,LocalImportPresentationOwner,LOCAL_IMPORT_PRESENTATION_KEY})');
  const operation=bookshelfOperationClass('features/bookshelf/BookshelfOperationOwner.ts','({BookshelfOperationOwner,EMPTY_BOOKSHELF_OPERATION_SNAPSHOT})',{...deps,...presentation});
  const readable=bookshelfOperationClass('features/bookshelf/BookshelfReadableAdmissionOwner.ts','({BookshelfReadableAdmissionOwner,EMPTY_READABLE_ADMISSION})',deps);
- const Host=bookshelfOperationClass('features/bookshelf/BookshelfHost.ets','BookshelfHost',{...deps,...operation,...readable});
+ const BookshelfProjectionOwner=bookshelfOperationClass('features/bookshelf/BookshelfProjectionOwner.ts','BookshelfProjectionOwner',{BookshelfReadOwner,projectOperationFacts,...sourceNames});
+ const SourceGateway=bookshelfOperationClass('features/source/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner:deps.ReaderRuntimeOwner,classifyReaderSource});
+ const Host=bookshelfOperationClass('features/bookshelf/BookshelfHost.ets','BookshelfHost',{...deps,...operation,...readable,BookshelfProjectionOwner,SourceGateway});
  return {...presentation,...operation,...readable,Host};
 }
 export function actualBookshelfHostField(index,Host,AppStorage) {

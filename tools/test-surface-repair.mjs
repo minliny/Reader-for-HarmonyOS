@@ -1,3 +1,4 @@
+import {projectionIndexMethods} from './lib/bookshelf-projection-owner-probe.mjs';
 import {configIntentFixture} from './lib/sync-config-intent-fixture.mjs';
 import {actualBookshelfOperationTypes,actualBookshelfHostField,bookshelfOperationClass} from './lib/bookshelf-operation-owner-probe.mjs';
 import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
@@ -57,10 +58,10 @@ const owner={};let currentOwner=owner,picks=[],imports=[],released=[],applied=[]
 const Runtime=runtimeOwnerIdentityProbe(()=>currentOwner);
 class Gateway {selectLocalBookInputs(){const d=deferred();picks.push(d);return d.promise;} importPreparedSelections(){const d=deferred();imports.push(d);return d.promise;}async releaseUnusedSelections(x){released.push(x);}}
 const operationTypes=actualBookshelfOperationTypes({ReaderRuntimeOwner:Runtime,BookshelfFlowGateway:Gateway,projectPersistedReceipt,ReaderWriteEvidence});
-const Index=productionMotionMethods(path('pages/Index.ets'),['beginImport','isCurrentImport','closeImportDialog','openImportDialog','hasUnknownShelfWrite',
+const Index=productionMotionMethods(path('pages/Index.ets'),[...projectionIndexMethods,'beginImport','isCurrentImport','closeImportDialog','openImportDialog','hasUnknownShelfWrite',
  'hasVisibleImportDialog','visibleImportDialogState','visibleImportBatch','currentImportPresentation','reconcileImportPresentation'], {ReaderRuntimeOwner:Runtime});
 function index(){currentOwner={};let serialized='';const page=Object.assign(new Index(),{route:'bookshelf',navigationGeneration:1,shelfReceiptRetired:false,
- bookshelfLoadGeneration:0,shelfOperation:{...operationTypes.EMPTY_BOOKSHELF_OPERATION_SNAPSHOT},storedImportPresentation:'',shelfReadingFilter:'all',shelfSourceFilter:'all',
+ mountedRuntimeOwner:currentOwner,detailShelfAdmissionMount:1,rssInstanceIdentity:1,bookshelfViewState:{anchorKey:'',anchorOffset:0},searchHost:{sources:()=>[],updateShelf(){}},sourceSources:[],sourceToolsSnapshot:{sources:[]},scheduleBookshelfBackgroundRefresh(){},preparePersistedShelfBooks(){},bookshelfLoadGeneration:0,shelfOperation:{...operationTypes.EMPTY_BOOKSHELF_OPERATION_SNAPSHOT},storedImportPresentation:'',shelfReadingFilter:'all',shelfSourceFilter:'all',
  applyBookshelfState:x=>applied.push(x)});
  page.bookshelfHost=actualBookshelfHostField(page,operationTypes.Host,{setOrCreate:(_k,value)=>{serialized=value;presented.push(value?JSON.parse(value):undefined);}});
  page.reconcileImportPresentation();page.openImportDialog();return page;}

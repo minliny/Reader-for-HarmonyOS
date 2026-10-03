@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { bookshelfCatalogHost } from './lib/bookshelf-catalog-host-probe.mjs';
+import { bookshelfCatalogHost, catalogIndexMethods } from './lib/bookshelf-catalog-host-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { ProductionHost as ReadingEntryHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
 
@@ -60,14 +60,14 @@ function fixture({ autoCheckUpdate = true, fullRevision = 'rev-1', membershipRev
         }
       }
   const Index = productionMotionMethods(index,
-    ['canRunBookshelfBackgroundRefresh', 'scheduleBookshelfBackgroundRefresh', 'refreshBookshelfCatalogBatch', 'preparePersistedShelfBooks','readingPreparationContext','sharedReadingPreparationSeeds'], {
+    [...catalogIndexMethods,'preparePersistedShelfBooks','readingPreparationContext','sharedReadingPreparationSeeds'], {
       ReaderRuntimeOwner: { current: () => owner }, ReadingEntryHost,
       BookshelfFlowGateway: ScanFlow,
       LOCAL_SOURCE_ID: 'local', CATALOG_REFRESH_INTERVAL_MS: 600000,
       DOMAIN: 0, hilog: { warn() {} },
     });
   const page = Object.assign(new Index(), {
-    mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,bookshelfHost:bookshelfCatalogHost(ScanFlow,()=>owner),navigationGeneration:1,bookshelfBackgroundEpoch:0,route: 'bookshelf', shelfProjectionRevision: 'rev-1', shelfBooks: [books[0]],
+    mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,rssInstanceIdentity:1,shelfReadingFilter:'all',shelfSourceFilter:'all',bookshelfHost:bookshelfCatalogHost(ScanFlow,()=>owner),navigationGeneration:1,bookshelfBackgroundEpoch:0,route: 'bookshelf', shelfProjectionRevision: 'rev-1', shelfBooks: [books[0]],
     settingsSnapshot: { autoCheckUpdate }, applicationSettingsSnapshot: { autoCheckUpdate },
     readingSessionActive: false, searchAppForeground: true, bookshelfUpdateRunning: false,
     bookshelfBackgroundRefreshRunning: false,

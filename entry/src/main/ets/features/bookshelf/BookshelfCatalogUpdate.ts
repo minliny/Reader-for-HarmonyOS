@@ -59,9 +59,9 @@ export class BookshelfCatalogUpdate {
         detailUrl: book.bookId, title: book.title, author: book.author, coverUrl: book.coverUrl,
         intro: book.intro, lastChapter: book.lastChapter },
         { forceRefresh: true, isCurrent: current, canDispatch: current }, automatic ? 'background' : 'foreground');
-      if (!current()) { result.cancelled = true; return result; }
       // Acquired fresh catalog and optional body preparation are two facts.
       result.succeeded = 1;
+      if (!current()) { result.cancelled = true; return result; }
       if (!automatic) {
         try { await prefetch(session, current); }
         catch (_error) { if (current()) result.preparationFailed = 1; }

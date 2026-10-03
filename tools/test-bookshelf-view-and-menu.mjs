@@ -102,4 +102,6 @@ assert.match(dialog,/duration: 220/);assert.match(dialog,/delay: 80, duration: 1
 const operationOwner=read('features/bookshelf/BookshelfOperationOwner.ts');
 assert.match(operationOwner,/!this\.canMutate\(\)[\s\S]*this\.presentation\.current\(\)\?\.state !== 'fileSelection'/,'domain owner holds the real mutex and picker-opening admission');
 assert.match(index,/this\.bookshelfHost\.operations\(owner\)\.importFiles\(this\.shelfFilter\(\), current\)/,'page forwards its exact opening/navigation lease to the actual owner');
+assert.match(operationOwner,/!this\.canMutate\(\) \|\| !this\.admitted\(admitted\) \|\| this\.presentation\.current\(\)\?\.state !== 'fileSelection'/);
+assert.match(operationOwner,/busy: true[\s\S]*this\.publish\(\); return generation/,'actual finite owner admits one picker/import before synchronous callbacks');
 console.log('PASS bookshelf/import current approved surfaces: shared four-row typography, separate menus, cover-aligned sheet, measured results and bounded animation');

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { SearchPublication } from '../entry/src/main/ets/features/search/SearchPublication.ts';
+import {actualProjectionTypes,actualProjectionIndex} from './lib/bookshelf-projection-owner-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
 import { classifyReaderSource } from '../entry/src/main/ets/features/source/ReaderSourceCategory.ts';
@@ -14,16 +14,21 @@ const results = [];
 async function check(name, fn) { try { await fn(); results.push({name,status:'PASS'}); }
   catch (e) { results.push({name,status:'FAIL',message:e.message}); } }
 function fixture(initial = []) {
-  const requests = []; let owner = { setReadingPreparationContext() {} };
-  const SourceHost = class { loadSourcesForIds() { const request = pending(); requests.push(request); return request.promise; } };
-  const Host = productionMotionMethods(file('pages/Index.ets'),
-    ['applyBookshelfState','sourceDisplayName','hydrateShelfSourceNames','copyShelfBookWithSourceName','readingDetailForShelf'], {
-      LOCAL_SOURCE_ID: 'local', ReaderRuntimeOwner: { current: () => owner },
-      SourceHost,
-    });
-  const host = Object.assign(new Host(), { searchHost:{sources:()=>[],updateShelf() {}}, searchPublication:new SearchPublication(),searchPublicationRevision:0,shelfBooks: initial, bookshelfLoadGeneration: 1, bookshelfSourceNameRequest: 0,
-    searchSources: [], sourceSources: [], sourceToolsSnapshot: {sources: []}, sourceHost: new SourceHost(), scheduleBookshelfBackgroundRefresh() {} });
-  return {host, requests, changeOwner: () => { owner = { setReadingPreparationContext() {} }; }, apply: books => host.applyBookshelfState({kind:'populated',shelf:{books,total:books.length},continueReading:undefined})};
+  const requests=[];
+  const runtime=()=>({setReadingPreparationContext(){},async request(method,params) {
+    assert.equal(method,'source.list','metadata uses the existing SourceGateway');
+    const request=pending();requests.push({...request,params,resolve:sources=>request.resolve({data:{sources:sources.map(source=>({...source,baseUrl:'https://fixture.test',enabled:true,enabledExplore:false}))}})});
+    return request.promise;
+  }});
+  let currentRuntime=runtime();const types=actualProjectionTypes(()=>currentRuntime);
+  let index=actualProjectionIndex(currentRuntime,types,{initial:{kind:initial.length?'populated':'empty',shelf:{books:initial,total:initial.length}}});
+  const Detail=productionMotionMethods(file('pages/Index.ets'),['readingDetailForShelf'],types);
+  const apply=books=>index.idx.applyBookshelfState({kind:books.length?'populated':'empty',shelf:{books,total:books.length},continueReading:undefined});
+  const addDetail=()=>{index.idx.readingDetailForShelf=Detail.prototype.readingDetailForShelf.bind(index.idx);};addDetail();
+  return {get host(){return index.idx;},get owner(){return index.owner;},requests,apply,
+    hydrate:()=>index.owner.hydrate(index.idx.bookshelfProjectionBinding),
+    invalidate:()=>index.idx.invalidateBookshelfProjection(),
+    changeOwner:()=>{const books=index.idx.shelfBooks;currentRuntime=runtime();index=actualProjectionIndex(currentRuntime,types,{initial:{kind:books.length?'populated':'empty',shelf:{books,total:books.length}}});addDetail();}};
 }
 await check('missing/invalid name is unknown, not evidence of source removal', () => {
   for (const name of [undefined, '', 'source-a', 'https://example.test', 'www.example.test'])
@@ -52,20 +57,20 @@ await check('successful but unmatched/filtered source list does not prove deleti
   await assert.rejects(gateway.loadSources(), /without its identity or name/, 'malformed source payload is a read failure, never deletion proof');
   gateway.runtimeOwner.request = async () => ({data:{sources:[{sourceId:'source-b',name:'other source',baseUrl:'https://b.example',enabled:true,enabledExplore:true}]}});
   const partial = await gateway.loadSources(); assert.equal(partial[0].sourceId, 'source-b');
-  const f = fixture([book('Core持久名称')]); f.host.hydrateShelfSourceNames(1); f.requests[0].resolve(partial); await tick();
+  const f = fixture([book('Core持久名称')]); f.hydrate(); f.requests[0].resolve(partial); await tick();
   assert.equal(f.host.shelfBooks[0].sourceName, 'Core持久名称');
-  f.host.shelfBooks=[book(undefined)]; f.host.hydrateShelfSourceNames(1); f.requests[1].resolve([]); await tick();
-  assert.equal(ShelfBookPresentation.source(f.host.shelfBooks[0]), unavailable);
+  const fresh=fixture([book(undefined)]);fresh.requests[0].resolve([]);await tick();
+  assert.equal(ShelfBookPresentation.source(fresh.host.shelfBooks[0]), unavailable,'fresh canonical row without any name stays unknown');
 });
 await check('late old hydration cannot overwrite newer successful name', async () => {
   const f = fixture([book('旧名称')]);
-  f.host.hydrateShelfSourceNames(1); f.host.hydrateShelfSourceNames(1);
+  f.hydrate(); f.hydrate();
   f.requests[1].resolve([sourceA('最新名称')]); await tick();
   f.requests[0].resolve([sourceA('过期名称')]); await tick();
   assert.equal(f.host.shelfBooks[0].sourceName, '最新名称');
 });
 await check('Core deletion admitted while name lookup is pending is never resurrected', async () => {
-  const f = fixture([book('有效名称')]); f.host.hydrateShelfSourceNames(1);
+  const f = fixture([book('有效名称')]); f.hydrate();
   f.apply([book(removed)]);
   f.requests[0].resolve([sourceA('过期列表名称')]); await tick();
   assert.equal(f.requests.length,1,'confirmed deletion needs no registry lookup');
@@ -76,13 +81,13 @@ await check('Core deletion admitted while name lookup is pending is never resurr
   assert.equal(f.host.shelfBooks[0].sourceName, '重新导入名称');
 });
 await check('runtime/route-generation changes reject old results without borrowing another identity', async () => {
-  const f = fixture([book('有效名称')]); f.host.hydrateShelfSourceNames(1); f.changeOwner();
+  const f = fixture([book('有效名称')]); f.hydrate(); f.changeOwner();
   f.requests[0].resolve([sourceA('旧Owner名称')]); await tick();
   assert.equal(f.host.shelfBooks[0].sourceName,'有效名称');
-  f.host.hydrateShelfSourceNames(1); f.host.bookshelfLoadGeneration++;
+  f.hydrate(); f.invalidate();
   f.requests[1].resolve([sourceA('旧页名称')]); await tick();
   assert.equal(f.host.shelfBooks[0].sourceName,'有效名称');
-  f.host.shelfBooks=[{...book(undefined),sourceId:'source-b'}]; f.host.hydrateShelfSourceNames(2);
+  f.apply([{...book(undefined),sourceId:'source-b'}]);
   f.requests[2].resolve([sourceA('另一个同书ID名称')]); await tick();
   assert.equal(ShelfBookPresentation.source(f.host.shelfBooks[0]),unavailable);
 });

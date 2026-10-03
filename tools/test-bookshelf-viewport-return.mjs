@@ -61,5 +61,5 @@ const text=readFileSync(source,'utf8');assert.match(text,/List\(\{ space: TOK_SP
 assert.match(text,/maintainVisibleContentPosition\(true\)/);assert.match(text,/onAppear\(\(\): void => this\.restoreShelfViewport\(\)\)/);
 const index=readFileSync(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),'utf8');
 assert.match(index,/private readonly bookshelfViewState: BookshelfViewState = new BookshelfViewState/);
-assert.match(index,/BookshelfPage\(\{\s*viewState: this\.bookshelfViewState/);
+assert.match(index,/BookshelfPage\(\{\s*navigationGeneration: this\.navigationGeneration,\s*viewState: this\.bookshelfViewState/);
 console.log('PASS bookshelf route return: identity+item offset, list/state/type filters, removed group-filter migration, reordered books, late callback isolation');

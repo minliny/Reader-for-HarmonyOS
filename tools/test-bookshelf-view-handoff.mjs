@@ -48,7 +48,8 @@ const methods = ['sampleViewSwitch', 'resetViewSwitchMotion', 'setRestingProject
   'projectionCoverCompensationX', 'projectionCoverCompensationY', 'projectionListDetailsWidth',
   'projectionCoverLayerOpacity', 'gridBookCardHeight', 'listCoverWidth', 'listCoverHeight',
   'shelfBookCardWidth', 'bookCardWidth', 'bookCardHeight', 'bookRowSpace', 'hasCover',
-  'projectionBookCover', 'projectionBookCoverLayer', 'projectionListDetails'];
+  'projectionBookCover', 'projectionBookCoverLayer', 'projectionListDetails',
+  'bookActionPresentationHandler', 'isShelfPresentationCurrent'];
 function fixture(text = source) {
   const { owner } = createReaderBuilderProbe(text, methods, { ...tokens, ...geometry,
     motionSegment, bookshelfViewCoverDelayMs, NoCoverCover: Child, ShelfBookListDetails: Child,

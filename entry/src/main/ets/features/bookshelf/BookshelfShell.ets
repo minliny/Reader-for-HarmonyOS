@@ -19,8 +19,8 @@ export struct BookshelfShell {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
   @Prop readRecovery: ReaderRecoveryView | undefined = undefined;
-  onRetryRead: (generation: number) => void = (_generation: number): void => {};
-  onReconcile: (generation: number) => void = (_generation: number): void => {};
+  onRetryRead: (generation: number, navigation?: number) => void = (_generation: number): void => {};
+  onReconcile: (generation: number, navigation?: number) => void = (_generation: number): void => {};
   @Prop @Watch('onNavigationGenerationChanged') navigationGeneration: number = 0;
   @Prop populated: boolean = false;
   @Prop reduceMotion: boolean = false;
@@ -124,14 +124,12 @@ export struct BookshelfShell {
       Stack({ alignContent: Alignment.TopStart }) {
         if (this.recovery.visible) {
           Column() {
-            ReaderRecoveryNotice({ view: this.recovery,
-              onReconcile: (generation: number): void => this.onReconcile(generation) });
+            this.recoveryNoticeContent(this.recovery, false);
             Stack() { this.content(); }.width('100%').layoutWeight(1);
           }.width('100%').height('100%').padding({ top: READER_FLOATING_TOP_BAR_HEIGHT });
         } else if (this.readRecovery?.visible === true) {
           Column() {
-            ReaderRecoveryNotice({ view: this.readRecovery, actionLabel: '刷新列表',
-              onReconcile: (generation: number): void => this.onRetryRead(generation) });
+            this.recoveryNoticeContent(this.readRecovery!, true);
             Stack() { this.content(); }.width('100%').layoutWeight(1);
           }.width('100%').height('100%').padding({ top: READER_FLOATING_TOP_BAR_HEIGHT });
         } else {
@@ -185,6 +183,20 @@ export struct BookshelfShell {
       this.overlayOriginX = Number(newValue.globalPosition.x);
       this.overlayOriginY = Number(newValue.globalPosition.y);
     });
+  }
+
+  @Builder
+  private recoveryNoticeContent(view: ReaderRecoveryView, read: boolean) {
+    // Only the compact feedback actor changes identity; content stays mounted.
+    ForEach([JSON.stringify([this.navigationGeneration, view.generation])], (identity: string): void => {
+      ReaderRecoveryNotice({ view, actionLabel: '刷新列表',
+        onReconcile: (generation: number): void => {
+          const tokens = JSON.parse(identity) as number[];
+          if (generation !== tokens[1] || this.navigationGeneration !== tokens[0]) return;
+          if (read) this.onRetryRead(tokens[1], tokens[0]);
+          else this.onReconcile(tokens[1], tokens[0]);
+        } });
+    }, (identity: string): string => identity);
   }
 
   @Builder
