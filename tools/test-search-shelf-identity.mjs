@@ -22,6 +22,7 @@ function searchFixture(books){
   const searchPublication=new SearchPublication();searchPublication.updateShelf(books);
   const calls=[],localCalls=[],notices=[];
   const host=Object.assign(new Search(),{searchHost:{publication:searchPublication},searchPublicationRevision:1,shelfBooks:[],
+    bookshelfHost:{loadShelfBook:async (...identity)=>{lookupCalls.push(identity);return coreLookup(...identity);}},
     openRemoteBookDetail:(...args)=>calls.push(args),showReadingFailure:(...args)=>notices.push(args),
     openLocalBookDetail:(...args)=>localCalls.push(args),
     navigationGeneration:0,route:'search',nextNavigationGeneration(){return ++this.navigationGeneration;},
