@@ -143,6 +143,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     }
     static create(child) {
       child.owner.children.set(child.id, child);
+      if (hooks.lifecycleChildren) child.aboutToAppear?.();
       if (hooks.mountChildren && typeof child.initialRender === 'function') child.initialRender();
     }
   }

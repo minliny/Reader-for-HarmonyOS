@@ -8,6 +8,7 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => themeDayDesignSource(readFileSync(resolve(repo, path), 'utf8'));
 const page = read('entry/src/main/ets/features/settings/SettingsPage.ets');
 const overlay = read('entry/src/main/ets/features/settings/SettingsSelectOverlay.ets');
+const choices = read('entry/src/main/ets/features/common/ReaderChoiceSpecs.ets');
 const typography = read('entry/src/main/ets/features/common/ReaderTypography.ets');
 const surfaces = read('entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets');
 
@@ -28,7 +29,7 @@ for (const role of [
   'TYPE_SETTINGS_SELECT_PHONE_CANCEL',
   'TYPE_SETTINGS_SELECT_TABLET_OPTION',
 ]) {
-  assert.match(overlay, new RegExp(role), `${role} is consumed by the selector overlay`);
+  assert.match(overlay + choices, new RegExp(role), `${role} is consumed by the selector overlay`);
   assert.match(typography, new RegExp(`export const ${role} = new ReaderTextStyle`),
     `${role} is registered in the shared typography contract`);
 }
@@ -56,11 +57,13 @@ assert.match(overlay,
   'Tablet popover must be trigger-right-aligned and placed 6vp below it');
 assert.match(overlay, /resolvePopupSpec\('settings-select-tablet'\)/,
   'Tablet selector frame is resolved from the shared popup surface registry');
-assert.match(overlay, /\.onClick\(\(\): void => this\.onDismiss\(\)\)/,
+assert.match(overlay, /\.onClick\(\(\): void => this\.dismiss\(\)\)/,
   'backdrop and cancel card close through the owner callback');
-assert.match(overlay, /\.onClick\(\(\): void => this\.onSelect\(option\)\)/,
+assert.match(overlay, /onChoose: \(value: string\): void => this\.choose\(value\)/,
+  'shared production choice row submits through the overlay owner');
+assert.match(overlay, /if \(!this\.mounted \|\| this\.closed \|\| this\.options\.indexOf\(option\) < 0\) return;[\s\S]*this\.onSelect\(option, this\.selectionId\)/,
   'option selection is handed to the owner without local asynchronous state');
-assert.match(overlay, /app\.media\.settings_select_check/,
+assert.match(choices, /app\.media\.settings_select_check/,
   'selected options must expose the Figma check actor');
 
 console.log('settings responsive select overlay contract: PASS');

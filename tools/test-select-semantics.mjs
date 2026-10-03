@@ -49,6 +49,7 @@ assert.match(sync, /this\.gatedRow\('备份频率'/);
 
 const select = read('entry/src/main/ets/features/common/ReaderSelect.ets');
 const panel = read('entry/src/main/ets/features/common/ReaderSelectPanel.ets');
+const choices = read('entry/src/main/ets/features/common/ReaderChoiceSpecs.ets');
 const motion = read('entry/src/main/ets/features/common/MotionSpec.ets');
 assert.match(select, /@Prop controlWidth: number = 0/);
 assert.match(panel, /@Prop controlWidth: number = 0/);
@@ -90,9 +91,11 @@ assert.match(panel,
   'the Figma motion must animate once and switch directly under reduced motion');
 assert.match(panel, /this\.chevronAngle = -180/,
   'the selected-row chevron must rotate around its fixed center while the panel expands');
-assert.match(panel,
-  /private sourceGroupSelectedRow[\s\S]*?TYPE_SELECT_SOURCE_GROUP_VALUE\.fontFamily[\s\S]*?app\.media\.source_group_chevron[\s\S]*?\.backgroundColor\(readerAppColor\('app\.ReaderSelectPanel\.sourceGroupSelectedRow\.backgroundColor\.FFFFFCF8', this\.appThemeScheme\)\)/,
-  'the expanded source-group selected row must preserve the trigger typography, icon, and surface');
+assert.match(panel, /ReaderChoiceRow\(\{[\s\S]*'source-group-selected'/,
+  'the expanded source-group row consumes the actual shared finite implementation');
+assert.match(choices,
+  /'source-group-selected':[\s\S]*?TYPE_SELECT_SOURCE_GROUP_VALUE[\s\S]*?'app\.ReaderSelectPanel\.sourceGroupSelectedRow\.backgroundColor\.FFFFFCF8'[\s\S]*?app\.media\.source_group_chevron/,
+  'the shared source-group specification preserves trigger typography, icon and surface');
 assert.match(panel,
   /private panelBorderColor[\s\S]*?this\.variant === 'sourceGroup'[\s\S]*?return readerAppColor\('app\.ReaderSelectPanel\.panelBorderColor\.paint\.85B4A697', this\.appThemeScheme\)/,
   'the expanded source-group panel must preserve the source-management field border');

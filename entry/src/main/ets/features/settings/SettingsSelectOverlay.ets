@@ -1,9 +1,8 @@
+import { ReaderChoiceRow } from '../common/ReaderChoiceRow';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
   TYPE_SETTINGS_SELECT_PHONE_CANCEL,
-  TYPE_SETTINGS_SELECT_PHONE_OPTION,
-  TYPE_SETTINGS_SELECT_TABLET_OPTION,
   TYPE_SETTINGS_SELECT_TITLE,
 } from '../common/ReaderTypography';
 import { PopupSurfaceSpec, resolvePopupSpec } from '../common/ReaderSurfaceSpecs';
@@ -34,16 +33,36 @@ export struct SettingsSelectOverlay {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @Prop isTablet: boolean = false;
-  @Prop field: SettingsSelectField = 'language';
+  @Prop @Watch('onFieldChanged') field: SettingsSelectField = 'language';
+  @Prop @Watch('onFieldChanged') selectionId: string = '';
   @Prop value: string = '';
   @Prop options: string[] = [];
   @Prop anchorRight: number = 0;
   @Prop anchorBottom: number = 0;
-  onSelect: (option: string) => void = (_option: string): void => {};
-  onDismiss: () => void = (): void => {};
+  onSelect: (option: string, identity?: string) => void = (_option: string, _identity?: string): void => {};
+  onDismiss: (identity?: string) => void = (_identity?: string): void => {};
+
+  private mounted: boolean = false;
+  private closed: boolean = false;
 
   aboutToAppear(): void {
+    this.mounted = true;
+    this.closed = false;
     registerReaderFonts(this.getUIContext().getFont());
+  }
+
+  aboutToDisappear(): void { this.mounted = false; this.closed = true; }
+
+  private onFieldChanged(): void { this.closed = false; }
+  private dismiss(): void {
+    if (!this.mounted || this.closed) return;
+    this.closed = true;
+    this.onDismiss(this.selectionId);
+  }
+  private choose(option: string): void {
+    if (!this.mounted || this.closed || this.options.indexOf(option) < 0) return;
+    this.closed = true;
+    this.onSelect(option, this.selectionId);
   }
 
   build() {
@@ -53,7 +72,7 @@ export struct SettingsSelectOverlay {
         .height('100%')
         .backgroundColor(this.isTablet ? Color.Transparent : readerAppColor('app.SettingsSelectOverlay.build.backgroundColor.521F1B17', this.appThemeScheme))
         .hitTestBehavior(HitTestMode.Default)
-        .onClick((): void => this.onDismiss());
+        .onClick((): void => this.dismiss());
 
       if (this.isTablet) {
         this.tabletPanel();
@@ -126,7 +145,7 @@ export struct SettingsSelectOverlay {
       .backgroundColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.backgroundColor.FFFFFCF8', this.appThemeScheme))
       .border({ width: 1, color: readerAppColor('app.SettingsSelectOverlay.phoneSheet.color.FFC1C7CD', this.appThemeScheme) })
       .borderRadius(PHONE_RADIUS)
-      .onClick((): void => this.onDismiss());
+      .onClick((): void => this.dismiss());
     }
     .width('100%')
     .padding({
@@ -144,43 +163,11 @@ export struct SettingsSelectOverlay {
 
   @Builder
   private phoneOption(option: string, index: number) {
-    Column() {
-      Row() {
-        Text(option)
-          .layoutWeight(1)
-          .fontFamily(TYPE_SETTINGS_SELECT_PHONE_OPTION.fontFamily)
-          .fontWeight(this.isSelected(option) ? FontWeight.Bold : TYPE_SETTINGS_SELECT_PHONE_OPTION.fontWeight)
-          .fontSize(TYPE_SETTINGS_SELECT_PHONE_OPTION.fontSizeFp)
-          .lineHeight(TYPE_SETTINGS_SELECT_PHONE_OPTION.lineHeightFp as number)
-          .fontColor(this.isSelected(option) ? readerAppColor('app.SettingsSelectOverlay.phoneOption.fontColor.FF2D4A3E', this.appThemeScheme) : readerAppColor('app.SettingsSelectOverlay.phoneOption.fontColor.FF1F1B17', this.appThemeScheme))
-          .maxLines(1);
-        if (this.isSelected(option)) {
-          Image((this.appThemeScheme === 'night' ? $r('app.media.settings_select_check_theme_night') : $r('app.media.settings_select_check')))
-            .width(16)
-            .height(16);
-        }
-      }
-      .width('100%')
-      .height(index < this.options.length - 1 ? PHONE_OPTION_HEIGHT - 1 : PHONE_OPTION_HEIGHT)
-      .padding({ left: 16, right: 16 })
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor(this.isSelected(option) ? readerAppColor('app.SettingsSelectOverlay.phoneOption.backgroundColor.0D2D4A3E', this.appThemeScheme) : Color.Transparent)
-      .onClick((): void => this.onSelect(option));
-
-      if (index < this.options.length - 1) {
-        Row() {
-          Blank()
-            .layoutWeight(1)
-            .height(1)
-            .backgroundColor(readerAppColor('app.SettingsSelectOverlay.phoneOption.backgroundColor.FFC1C7CD', this.appThemeScheme));
-        }
-          .width('100%')
-          .height(1)
-          .padding({ left: 16, right: 16 });
-      }
-    }
-    .width('100%')
-    .height(PHONE_OPTION_HEIGHT);
+    ReaderChoiceRow({
+      specId: 'settings-phone', label: option, selected: this.isSelected(option),
+      showDivider: index < this.options.length - 1, scheme: this.appThemeScheme,
+      onChoose: (value: string): void => this.choose(value),
+    });
   }
 
   @Builder
@@ -204,43 +191,11 @@ export struct SettingsSelectOverlay {
 
   @Builder
   private tabletOption(option: string, index: number) {
-    Column() {
-      Row() {
-        Text(option)
-          .layoutWeight(1)
-          .fontFamily(TYPE_SETTINGS_SELECT_TABLET_OPTION.fontFamily)
-          .fontWeight(this.isSelected(option) ? FontWeight.Bold : TYPE_SETTINGS_SELECT_TABLET_OPTION.fontWeight)
-          .fontSize(TYPE_SETTINGS_SELECT_TABLET_OPTION.fontSizeFp)
-          .lineHeight(TYPE_SETTINGS_SELECT_TABLET_OPTION.lineHeightFp as number)
-          .fontColor(this.isSelected(option) ? readerAppColor('app.SettingsSelectOverlay.tabletOption.fontColor.FF2D4A3E', this.appThemeScheme) : readerAppColor('app.SettingsSelectOverlay.tabletOption.fontColor.FF1F1B17', this.appThemeScheme))
-          .maxLines(1);
-        if (this.isSelected(option)) {
-          Image((this.appThemeScheme === 'night' ? $r('app.media.settings_select_check_theme_night') : $r('app.media.settings_select_check')))
-            .width(14)
-            .height(14);
-        }
-      }
-      .width('100%')
-      .height(index < this.options.length - 1 ? this.tabletSpec().actionHeight - this.tabletSpec().dividerHeight : this.tabletSpec().actionHeight)
-      .padding({ left: this.tabletSpec().actionPaddingLeft, right: this.tabletSpec().actionPaddingRight })
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor(this.isSelected(option) ? readerAppColor('app.SettingsSelectOverlay.tabletOption.backgroundColor.0F2D4A3E', this.appThemeScheme) : Color.Transparent)
-      .onClick((): void => this.onSelect(option));
-
-      if (index < this.options.length - 1) {
-        Row() {
-          Blank()
-            .layoutWeight(1)
-            .height(1)
-            .backgroundColor(readerAppColor(this.tabletSpec().dividerRole, this.appThemeScheme));
-        }
-          .width('100%')
-          .height(this.tabletSpec().dividerHeight)
-          .padding({ left: this.tabletSpec().dividerInset, right: this.tabletSpec().dividerInset });
-      }
-    }
-    .width('100%')
-    .height(this.tabletSpec().actionHeight);
+    ReaderChoiceRow({
+      specId: 'settings-tablet', label: option, selected: this.isSelected(option),
+      showDivider: index < this.options.length - 1, scheme: this.appThemeScheme,
+      onChoose: (value: string): void => this.choose(value),
+    });
   }
 
   private tabletSpec(): PopupSurfaceSpec {
