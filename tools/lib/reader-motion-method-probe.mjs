@@ -13,7 +13,7 @@ import { ReaderProgressProducerHost } from '../../entry/src/main/ets/features/re
 import { ReaderWriteEvidence } from '../../entry/src/main/ets/app/ReaderWriteEvidence.ts';
 import { RssPresentationProjection } from '../../entry/src/main/ets/features/rss/RssPresentationProjection.ts';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
 import { runtimeOwnerIdentityProbe } from './reader-runtime-admission-probe.mjs';
@@ -24,8 +24,33 @@ const ReaderReadingRecordHost = new Function('ReadingRecordIntent', 'ReadingReco
   stripTypeScriptTypes(recordHostSource.replace(/^import[\s\S]*?;\n/gm, '')).replace('export class ', 'class ') +
   '; return ReaderReadingRecordHost;')(ReadingRecordIntent, ReadingRecordRecoveryError);
 const rulesOwnerSource = readFileSync(new URL('../../entry/src/main/ets/features/settings/RulesMutationOwner.ts', import.meta.url), 'utf8');
-const RulesMutationOwner = new Function('BookRequestNotDispatchedError', 'ReaderWriteEvidence',
-  stripTypeScriptTypes(rulesOwnerSource.replace(/^import[\s\S]*?;\n/gm, '')).replace(/\bexport /g, '') + ';return RulesMutationOwner;')(ReaderCoreNotDispatchedError, ReaderWriteEvidence);
+const wholeRulesClass = (source, name, names) => new Function(...names,
+  stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm, '')).replace(/\bexport /g, '') + `;return ${name};`);
+const rulesOwnerFactory = wholeRulesClass(rulesOwnerSource, 'RulesMutationOwner',
+  ['ReaderRuntimeOwner', 'BookRequestNotDispatchedError', 'ReaderWriteEvidence', 'RULES_MUTATION_METHODS', 'RulesMutationIntentStore']);
+const storePath = new URL('../../entry/src/main/ets/features/settings/RulesMutationIntentStore.ts', import.meta.url);
+const rulesStoreFactory = existsSync(storePath) ? wholeRulesClass(readFileSync(storePath, 'utf8'), 'RulesMutationIntentStore',
+  ['ReaderRuntimeOwner', 'RULES_MUTATION_METHODS', 'fileIo', 'util', 'replaceReaderAtomicSnapshot']) : undefined;
+const atomicFactory = wholeRulesClass(readFileSync(new URL('../../entry/src/main/ets/app/ReaderAtomicSnapshotFile.ts', import.meta.url), 'utf8'),
+  'replaceReaderAtomicSnapshot', ['fileIo']);
+// A method probe without an actual platform IO seam cannot manufacture a
+// durable rules receipt. Non-rules probes only construct the unchanged owner.
+const unsupportedRulesIo = () => { throw new Error('Rules probe requires an explicit platform IO seam'); };
+const missingRulesIo = {readText: async () => unsupportedRulesIo(), open: async () => unsupportedRulesIo(),
+  fsync: async () => unsupportedRulesIo(), close: async () => unsupportedRulesIo(),
+  OpenMode: {READ_WRITE: 2, READ_ONLY: 0}, AtomicFile: class {constructor() {unsupportedRulesIo();}}};
+function actualRulesMutationOwner(deps) {
+  const io = deps.rulesFileIo ?? deps.fileIo ?? missingRulesIo;
+  const store = rulesStoreFactory?.(deps.ReaderRuntimeOwner, RULES_MUTATION_METHODS, io,
+    deps.rulesUtil ?? deps.util ?? {generateRandomUUID: unsupportedRulesIo},
+    deps.replaceReaderAtomicSnapshot ?? atomicFactory(io));
+  return rulesOwnerFactory(deps.ReaderRuntimeOwner, ReaderCoreNotDispatchedError, ReaderWriteEvidence, RULES_MUTATION_METHODS, store);
+}
+const rulesContractSource = readFileSync(new URL('../../entry/src/main/ets/features/settings/RulesMutationContract.ts', import.meta.url), 'utf8');
+const RULES_MUTATION_METHODS = new Function(stripTypeScriptTypes(rulesContractSource).replace(/\bexport /g, '') + ';return RULES_MUTATION_METHODS;')();
+const effectsSource = readFileSync(new URL('../../entry/src/main/ets/app/ReaderRuleMutationEffects.ts', import.meta.url), 'utf8');
+const readerRuleMutationEffects = new Function('RULES_MUTATION_METHODS',
+  stripTypeScriptTypes(effectsSource.replace(/^import[\s\S]*?;\n/gm, '')).replace(/\bexport /g, '') + ';return readerRuleMutationEffects;')(RULES_MUTATION_METHODS);
 const require = createRequire(import.meta.url);
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts = require(`${sdk}/node_modules/typescript`);
@@ -37,7 +62,7 @@ const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 export function productionMotionMethods(file, names, dependencies = {}) {
   const fixtureRuntime = { captureReadingContentValidity: () => () => true, waitForReadingContentIdle: async () => {} };
   dependencies = { ReaderCoreNotDispatchedError, readerAppColor, readerThemeDefinition, readingChapterLayoutMap, hasKnownReadingImageGeometry, errorMessageOf,
-    ...readerTypographyRoles, RulesMutationOwner, RssPresentationProjection, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner, ReaderStartupContentOwner, ReaderProgressProducerHost, ReaderNativeAlertOwner, ReaderNativeAlertLease, ReaderReadingImageResources, sameReaderReadingImageResource, ReaderReadingRecordHost, ReadingRecordRecoveryError,
+    ...readerTypographyRoles, readerRuleMutationEffects, RssPresentationProjection, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner, ReaderStartupContentOwner, ReaderProgressProducerHost, ReaderNativeAlertOwner, ReaderNativeAlertLease, ReaderReadingImageResources, sameReaderReadingImageResource, ReaderReadingRecordHost, ReadingRecordRecoveryError,
     hilog: { error() {} }, ReaderRuntimeOwner: runtimeOwnerIdentityProbe(() => fixtureRuntime), ...dependencies };
   // Older fixtures inject current() as the instance-storage seam. Keep their
   // IO stub, but execute the actual production isCurrent predicate. The
@@ -47,6 +72,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
     const authority = runtimeOwnerIdentityProbe(() => { try { return injected.current(); } catch (_error) { return undefined; } });
     dependencies.ReaderRuntimeOwner = Object.assign(Object.create(injected), { isCurrent: authority.isCurrent.bind(authority) });
   }
+  if (dependencies.RulesMutationOwner === undefined) dependencies.RulesMutationOwner = actualRulesMutationOwner(dependencies);
   const source = readFileSync(file, 'utf8');
   const tree = ts.createSourceFile('/tmp/ReaderMotionProbe.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   assert.equal(tree.parseDiagnostics.length, 0, `${file}: ETS parses`);

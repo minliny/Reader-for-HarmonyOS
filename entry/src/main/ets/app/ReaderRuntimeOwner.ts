@@ -1,5 +1,6 @@
 import { supplyBundledSources } from './IncrementalBundledSourceSupply';
 import { BookAcquisitionCoordinator } from './BookAcquisitionCoordinator';
+import { readerRuleMutationEffects } from './ReaderRuleMutationEffects';
 import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError, type BookRequestOptions } from './BookRequestScheduler';
 export { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError } from './BookRequestScheduler';
 import common from '@ohos.app.ability.common';
@@ -358,9 +359,10 @@ export class ReaderRuntimeOwner {
       throw error;
     } finally {
       if (invalidatesPreparation) preparations.finishRequest(method, params);
-      if (method === 'reading.progress.update' || method === 'bookshelf.add' || method === 'source.update' ||
-        method === 'source.supply' || method === 'replace.persist' || method === 'replace.undo' ||
-        method === 'reader.chinese-conversion.put') this.wakeReadingPreparations();
+      const effectMethod = readerRuleMutationEffects(method, params).method;
+      if (effectMethod === 'reading.progress.update' || effectMethod === 'bookshelf.add' || effectMethod === 'source.update' ||
+        effectMethod === 'source.supply' || effectMethod === 'replace.persist' || effectMethod === 'replace.undo' ||
+        effectMethod === 'reader.chinese-conversion.put') this.wakeReadingPreparations();
     }
   }
 

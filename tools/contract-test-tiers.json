@@ -479,6 +479,7 @@
     "test-rss-persisted-refresh-projection.mjs",
     "test-rss-route-operation-recovery.mjs",
     "test-rules-mutation-owner.mjs",
+    "test-rules-reading-invalidation-sdk.mjs",
     "test-runtime-admission-teardown.mjs",
     "test-search-candidate-acquisition.mjs",
     "test-search-cover-continuity.mjs",

@@ -1,3 +1,4 @@
+import { readerRuleMutationEffects } from '../../app/ReaderRuleMutationEffects';
 import type { JsonObject, ReaderCoreResultEvent, RequestOptions } from '@reader/core-harmony';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import { ReadingSessionFlowGateway } from './ReadingSessionFlowGateway';
@@ -360,6 +361,9 @@ export class ReadingEntryPreparation {
 
   /** Both sides of a mutation fence uncertain failures as well as successful writes. */
   beginRequest(method: string, params: JsonObject = {}): boolean {
+    const effect = readerRuleMutationEffects(method, params);
+    method = effect.method;
+    params = effect.params;
     if (method !== 'book.toc' && method !== 'book.detail' && !this.affectsSnapshot(method, params)) return false;
     const catalog = method === 'book.toc' || method === 'book.detail';
     const content = method !== 'reading.progress.update' || params['sourceSwitchTransactionId'] !== undefined;
@@ -374,6 +378,9 @@ export class ReadingEntryPreparation {
   }
 
   finishRequest(method: string, params: JsonObject = {}): void {
+    const effect = readerRuleMutationEffects(method, params);
+    method = effect.method;
+    params = effect.params;
     const catalog = method === 'book.toc' || method === 'book.detail';
     const content = method !== 'reading.progress.update' || params['sourceSwitchTransactionId'] !== undefined;
     const scopes = this.mutationScopes(method, params);
