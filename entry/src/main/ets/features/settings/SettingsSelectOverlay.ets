@@ -185,27 +185,25 @@ export struct SettingsSelectOverlay {
 
   @Builder
   private tabletPanel() {
-    const spec = this.tabletSpec();
     Column() {
       ForEach(this.options, (option: string, index: number) => {
         this.tabletOption(option, index);
       }, (option: string): string => `settings-tablet-option-${this.field}-${option}`);
     }
-    .width(spec.width)
-    .backgroundColor(readerAppColor(spec.surfaceBackgroundRole, this.appThemeScheme))
-    .border({ width: spec.borderWidth, color: readerAppColor(spec.surfaceBorderRole, this.appThemeScheme) })
-    .borderRadius(spec.borderRadius)
+    .width(this.tabletSpec().width)
+    .backgroundColor(readerAppColor(this.tabletSpec().surfaceBackgroundRole, this.appThemeScheme))
+    .border({ width: this.tabletSpec().borderWidth, color: readerAppColor(this.tabletSpec().surfaceBorderRole, this.appThemeScheme) })
+    .borderRadius(this.tabletSpec().borderRadius)
     .clip(true)
-    .shadow({ radius: spec.shadowRadius, color: readerAppColor(spec.surfaceShadowRole, this.appThemeScheme), offsetX: 0, offsetY: spec.shadowOffsetY })
+    .shadow({ radius: this.tabletSpec().shadowRadius, color: readerAppColor(this.tabletSpec().surfaceShadowRole, this.appThemeScheme), offsetX: 0, offsetY: this.tabletSpec().shadowOffsetY })
     .position({
-      x: this.anchorRight - spec.width,
-      y: this.anchorBottom + spec.anchorOverlap,
+      x: this.anchorRight - this.tabletSpec().width,
+      y: this.anchorBottom + this.tabletSpec().anchorOverlap,
     });
   }
 
   @Builder
   private tabletOption(option: string, index: number) {
-    const spec = this.tabletSpec();
     Column() {
       Row() {
         Text(option)
@@ -223,8 +221,8 @@ export struct SettingsSelectOverlay {
         }
       }
       .width('100%')
-      .height(index < this.options.length - 1 ? spec.actionHeight - spec.dividerHeight : spec.actionHeight)
-      .padding({ left: spec.actionPaddingLeft, right: spec.actionPaddingRight })
+      .height(index < this.options.length - 1 ? this.tabletSpec().actionHeight - this.tabletSpec().dividerHeight : this.tabletSpec().actionHeight)
+      .padding({ left: this.tabletSpec().actionPaddingLeft, right: this.tabletSpec().actionPaddingRight })
       .alignItems(VerticalAlign.Center)
       .backgroundColor(this.isSelected(option) ? readerAppColor('app.SettingsSelectOverlay.tabletOption.backgroundColor.0F2D4A3E', this.appThemeScheme) : Color.Transparent)
       .onClick((): void => this.onSelect(option));
@@ -234,15 +232,15 @@ export struct SettingsSelectOverlay {
           Blank()
             .layoutWeight(1)
             .height(1)
-            .backgroundColor(readerAppColor(spec.dividerRole, this.appThemeScheme));
+            .backgroundColor(readerAppColor(this.tabletSpec().dividerRole, this.appThemeScheme));
         }
           .width('100%')
-          .height(spec.dividerHeight)
-          .padding({ left: spec.dividerInset, right: spec.dividerInset });
+          .height(this.tabletSpec().dividerHeight)
+          .padding({ left: this.tabletSpec().dividerInset, right: this.tabletSpec().dividerInset });
       }
     }
     .width('100%')
-    .height(spec.actionHeight);
+    .height(this.tabletSpec().actionHeight);
   }
 
   private tabletSpec(): PopupSurfaceSpec {

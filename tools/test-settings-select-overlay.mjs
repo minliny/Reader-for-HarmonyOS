@@ -52,7 +52,7 @@ assert.match(overlay, /Blank\(\)[\s\S]*\.width\(36\)[\s\S]*\.height\(4\)/,
 assert.match(overlay, /Text\('取消'\)[\s\S]*\.height\(PHONE_OPTION_HEIGHT\)/,
   'Phone cancellation remains a separate 52vp card');
 assert.match(overlay,
-  /\.position\(\{[\s\S]*x: this\.anchorRight - spec\.width[\s\S]*y: this\.anchorBottom \+ spec\.anchorOverlap/,
+  /\.position\(\{[\s\S]*x: this\.anchorRight - this\.tabletSpec\(\)\.width[\s\S]*y: this\.anchorBottom \+ this\.tabletSpec\(\)\.anchorOverlap/,
   'Tablet popover must be trigger-right-aligned and placed 6vp below it');
 assert.match(overlay, /resolvePopupSpec\('settings-select-tablet'\)/,
   'Tablet selector frame is resolved from the shared popup surface registry');
