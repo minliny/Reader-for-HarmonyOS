@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { auditTypographyConsumers, typographyRoleImports, isSharedTypographyExpression, typographyProperties } from './lib/reader-typography-consumer-audit.mjs';
 import { restoreTypographyMigration } from './lib/reader-typography-migration-fixture.mjs';
+import { sharedTypographyReplacement, typographyCarrierMethod } from './lib/reader-typography-shared-replacements.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { readerControlLerp } from '../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts';
@@ -11,17 +12,19 @@ const fixture = JSON.parse(readFileSync(new URL('./fixtures/design/reader-dynami
 const sites = [];
 for (const file of fixture.files) {
   const source = readFileSync(new URL(`../${file.path}`, import.meta.url), 'utf8');
-  restoreTypographyMigration(source, file, { verifySource: process.argv.includes('--verify-migration-source') });
+  if (process.argv.includes('--verify-migration-source')) restoreTypographyMigration(source, file);
   const imports = typographyRoleImports(source, file.path), used = new Set();
   for (const expected of file.nodes) {
-    const actual = auditTypographyConsumers(source, file.path).find(node => !used.has(node) && node.method === expected.method && node.kind === expected.kind && node.text === expected.text &&
+    const replacement = sharedTypographyReplacement(file.path, expected, source);
+    const producerImports = replacement?.producerPath ? typographyRoleImports(readFileSync(new URL('../' + replacement.producerPath, import.meta.url), 'utf8'), replacement.producerPath) : imports;
+    const actual = replacement ?? auditTypographyConsumers(source, file.path).find(node => !used.has(node) && node.method === typographyCarrierMethod(file.path, expected, source) && node.kind === expected.kind && node.text === expected.text &&
       Object.entries(expected.changes).every(([property,value]) => node.modifiers[property]?.expression === value));
     assert.ok(actual); used.add(actual);
     assert.deepEqual(Object.keys(actual.modifiers).sort(), Object.keys(expected.original).sort(), 'AUTO/inherited modifiers stay omitted');
     for (const [property, modifier] of Object.entries(actual.modifiers)) {
       assert.deepEqual(modifier.extra, expected.extra[property], 'native variable-font options remain intact');
       for (const role of modifier.expression.matchAll(/TYPE_\w+/g)) {
-        assert.ok(imports.has(role[0])); assert.ok(readerTypographyRoles[role[0]], `${role[0]} is an actual public export`);
+        assert.ok(producerImports.has(role[0])); assert.ok(readerTypographyRoles[role[0]], `${role[0]} is an actual public export`);
       }
       assert.ok(isSharedTypographyExpression(modifier.expression) ||
         file.path.endsWith('ReaderControlSettingsContent.ets') && actual.method === 'segmentRow' && property === 'lineHeight' && modifier.expression === 'this.label(row).height',

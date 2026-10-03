@@ -284,6 +284,366 @@
       },
       "edge": "this.fileSelectionBody()",
       "proof": "test-bounded-local-import-composition.mjs + immutable tuple gate"
+    },
+    {
+      "id": "replace-leading-6",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryOverlay",
+        "kind": "Text",
+        "text": "'返回'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryLeading",
+        "kind": "Text",
+        "text": "'返回'"
+      },
+      "methodEdges": [
+        [
+          "temporaryOverlay",
+          "temporaryHeader"
+        ],
+        [
+          "temporaryHeader",
+          "temporaryLeading"
+        ]
+      ],
+      "proof": "actual full SDK bounded owner and immutable tuple gate"
+    },
+    {
+      "id": "replace-shared-title",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryOverlay",
+        "kind": "Text",
+        "text": "this.layer === 'editor' ? (this.draft.original === undefined ? '新增替换规则' : '编辑替换规则') :\n          this.layer === 'delete' ? '确认删除规则' : this.layer === 'import-confirm' ? '确认导入替换规则' : '当前章节预览'"
+      },
+      "component": "ReaderBoundedSurfaceHeader",
+      "module": "../common/ReaderBoundedSurfaceHeader",
+      "specId": "reader-replace-editor",
+      "nativeText": "新增替换规则",
+      "bindingMethod": "temporaryHeader",
+      "methodEdges": [
+        [
+          "temporaryOverlay",
+          "temporaryHeader"
+        ]
+      ],
+      "params": {},
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets",
+        "method": "titleText",
+        "kind": "Text",
+        "text": "this.title"
+      },
+      "proof": "real composed SDK native tuple + active exact-role propagation"
+    },
+    {
+      "id": "replace-body-8",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryOverlay",
+        "kind": "Text",
+        "text": "`删除“${this.deleteCandidate?.name ?? ''}”？此操作需要 Core 确认后才从列表移除。`"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryBody",
+        "kind": "Text",
+        "text": "`删除“${this.deleteCandidate?.name ?? ''}”？此操作需要 Core 确认后才从列表移除。`"
+      },
+      "methodEdges": [
+        [
+          "temporaryOverlay",
+          "temporaryBody"
+        ]
+      ],
+      "proof": "actual full SDK bounded owner and immutable tuple gate"
+    },
+    {
+      "id": "replace-body-9",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryOverlay",
+        "kind": "Text",
+        "text": "'导入仅合并替换规则；相同ID会覆盖已有规则，其他规则集合不变。请保留导出备份。'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryBody",
+        "kind": "Text",
+        "text": "'导入仅合并替换规则；相同ID会覆盖已有规则，其他规则集合不变。请保留导出备份。'"
+      },
+      "methodEdges": [
+        [
+          "temporaryOverlay",
+          "temporaryBody"
+        ]
+      ],
+      "proof": "actual full SDK bounded owner and immutable tuple gate"
+    },
+    {
+      "id": "replace-body-10",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryOverlay",
+        "kind": "Text",
+        "text": "this.localError || this.state.errorMessage"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryBody",
+        "kind": "Text",
+        "text": "this.localError || this.state.errorMessage"
+      },
+      "methodEdges": [
+        [
+          "temporaryOverlay",
+          "temporaryBody"
+        ]
+      ],
+      "proof": "actual full SDK bounded owner and immutable tuple gate"
+    },
+    {
+      "id": "replace-body-11",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryOverlay",
+        "kind": "Text",
+        "text": "'正在等待确认…'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "temporaryBody",
+        "kind": "Text",
+        "text": "'正在等待确认…'"
+      },
+      "methodEdges": [
+        [
+          "temporaryOverlay",
+          "temporaryBody"
+        ]
+      ],
+      "proof": "actual full SDK bounded owner and immutable tuple gate"
+    },
+    {
+      "id": "replace-footer-12",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "editorActions",
+        "kind": "Text",
+        "text": "'取消'"
+      },
+      "component": "ReaderBoundedSurfaceActions",
+      "module": "../common/ReaderBoundedSurfaceActions",
+      "specId": "replace-editor",
+      "nativeText": "取消",
+      "bindingMethod": "editorActions",
+      "methodEdges": [],
+      "params": {},
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceActions.ets",
+        "method": "textAction",
+        "kind": "Text",
+        "text": "this.primaryLabel"
+      },
+      "proof": "real composed SDK native tuple + active exact-role propagation"
+    },
+    {
+      "id": "replace-footer-13",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+        "method": "editorActions",
+        "kind": "Text",
+        "text": "'保存'"
+      },
+      "component": "ReaderBoundedSurfaceActions",
+      "module": "../common/ReaderBoundedSurfaceActions",
+      "specId": "replace-editor",
+      "nativeText": "保存",
+      "bindingMethod": "editorActions",
+      "methodEdges": [],
+      "params": {},
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceActions.ets",
+        "method": "textAction",
+        "kind": "Text",
+        "text": "this.primaryLabel"
+      },
+      "proof": "real composed SDK native tuple + active exact-role propagation"
+    },
+    {
+      "id": "tts-content-0",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.message"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "boundedContent",
+        "kind": "Text",
+        "text": "this.message"
+      },
+      "methodEdges": [
+        [
+          "build",
+          "boundedContent"
+        ]
+      ],
+      "proof": "actual full SDK bounded owner and immutable tuple gate"
+    },
+    {
+      "id": "tts-content-1",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "'管理在线 TTS'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "boundedContent",
+        "kind": "Text",
+        "text": "'管理在线 TTS'"
+      },
+      "methodEdges": [
+        [
+          "build",
+          "boundedContent"
+        ]
+      ],
+      "proof": "actual full SDK bounded owner and immutable tuple gate"
+    },
+    {
+      "id": "tts-content-2",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.errorText"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "boundedContent",
+        "kind": "Text",
+        "text": "this.errorText"
+      },
+      "methodEdges": [
+        [
+          "build",
+          "boundedContent"
+        ]
+      ],
+      "proof": "actual full SDK bounded owner and immutable tuple gate"
+    },
+    {
+      "id": "tts-footer-17",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "managerFooter",
+        "kind": "Text",
+        "text": "'取消'"
+      },
+      "component": "ReaderBoundedSurfaceActions",
+      "module": "../common/ReaderBoundedSurfaceActions",
+      "specId": "tts-manager",
+      "nativeText": "取消",
+      "bindingMethod": "managerFooter",
+      "methodEdges": [],
+      "params": {
+        "manager": true
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceActions.ets",
+        "method": "textAction",
+        "kind": "Text",
+        "text": "this.primaryLabel"
+      },
+      "proof": "real composed SDK native tuple + active exact-role propagation"
+    },
+    {
+      "id": "tts-footer-18",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "managerFooter",
+        "kind": "Text",
+        "text": "'保存'"
+      },
+      "component": "ReaderBoundedSurfaceActions",
+      "module": "../common/ReaderBoundedSurfaceActions",
+      "specId": "tts-manager",
+      "nativeText": "保存",
+      "bindingMethod": "managerFooter",
+      "methodEdges": [],
+      "params": {
+        "manager": true
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceActions.ets",
+        "method": "textAction",
+        "kind": "Text",
+        "text": "this.primaryLabel"
+      },
+      "proof": "real composed SDK native tuple + active exact-role propagation"
+    },
+    {
+      "id": "tts-shared-dynamic-title",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+        "method": "configurationHeader",
+        "kind": "Text",
+        "text": "this.title"
+      },
+      "component": "ReaderBoundedSurfaceHeader",
+      "module": "../common/ReaderBoundedSurfaceHeader",
+      "specId": null,
+      "nativeText": "TTS 标题",
+      "bindingMethod": "configurationHeader",
+      "methodEdges": [],
+      "params": {
+        "title": "TTS 标题"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets",
+        "method": "titleText",
+        "kind": "Text",
+        "text": "this.title"
+      },
+      "proof": "real composed SDK native tuple + active exact-role propagation",
+      "specExpression": "this.boundedSpecId()",
+      "cases": [
+        {
+          "specId": "tts-config-manager",
+          "role": "TYPE_READER_TTS_MANAGER_TITLE",
+          "params": {
+            "manager": true
+          }
+        },
+        {
+          "specId": "tts-config-picker",
+          "role": "TYPE_READER_TTS_CONFIGURATION_TITLE",
+          "params": {
+            "manager": false
+          }
+        }
+      ]
     }
   ]
 }

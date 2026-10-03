@@ -32,7 +32,7 @@ export function typographyCarrierMethod(file, expected, pageSource) {
   const entry = successor(file, expected);
   if (entry?.kind === 'sameFile') {
     assert.equal(entry.target.path, file);
-    callsMethod(pageSource, file, entry.origin.method, entry.target.method);
+    for (const [origin, target] of entry.methodEdges ?? [[entry.origin.method, entry.target.method]]) callsMethod(pageSource, file, origin, target);
     const carrier = auditTypographyConsumers(pageSource, file).find(node => node.method === entry.target.method && node.kind === entry.target.kind && node.text === entry.target.text);
     assert.ok(carrier, `${entry.id}: exact authored successor carrier`);
     assert.deepEqual(Object.keys(carrier.modifiers).sort(), Object.keys(expected.original).sort(), `${entry.id}: all native tuple attributes/AUTO omissions`);
@@ -60,7 +60,7 @@ export function sharedTypographyReplacement(file, expected, pageSource, targetSo
         const props = node.arguments?.[0];
         if (props && ts.isObjectLiteralExpression(props)) {
           const spec = props.properties.find(property => property.name?.text === 'specId');
-          if (spec?.initializer?.text === entry.specId) found = true;
+          if (spec?.initializer?.text === entry.specId || entry.specExpression && spec?.initializer?.getText(tree) === entry.specExpression) found = true;
         }
       }
       ts.forEachChild(node, visit);

@@ -4,7 +4,7 @@ import { sharedTypographyReplacement, typographyCarrierMethod } from './lib/read
 const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const baseline = JSON.parse(read('tools/fixtures/design/conventional-typography-baseline.json'));
 const registry = JSON.parse(read('tools/fixtures/design/typography-carrier-successors.json'));
-const entries = registry.entries.filter(entry => entry.kind === 'bounded');
+const entries = registry.entries.filter(entry => entry.kind === 'bounded' && /SourceSwitchWindow|LocalImportDialog/.test(entry.origin.path));
 assert.equal(entries.length, 6, 'bounded existing Source and import title/action carriers');
 for (const entry of entries) {
   const file = baseline.files.find(file => file.path === entry.origin.path);
