@@ -132,8 +132,11 @@ for (const sourceId of ['local', 'remote']) {
 for (const sourceId of ['local', 'remote']) {
   const f = fixture(sourceId), old = f.gateway(), gate = deferred(); f.gates.push(gate);
   const write = old.persistPresentedProgress('book', 'chapter', anchor(20), layout); await settle();
-  assert.equal(f.writes().length, 1); assert.equal(f.writes()[0].options.shouldCancel(), false,
+  assert.equal(f.writes().length, 1);
+  const writeOptions = f.writes()[0].options;
+  assert.equal(writeOptions.canContinue?.() ?? !writeOptions.shouldCancel?.(), true,
     'an ordinary progress mutation must not invalidate its own content lease');
+  if (sourceId === 'remote') assert.equal(writeOptions.shouldCancel, undefined, 'remote durable writes only use admission before SDK entry');
   const reopened = f.gateway(), pending = await reopened.loadProgress('book');
   assert.equal(pending.presentationPending, true); assert.equal(pending.progress.chapterOffset, 20);
   assert.equal(pending.progress.locationRevision, undefined, 'in-process intent is never fabricated as a durable receipt');

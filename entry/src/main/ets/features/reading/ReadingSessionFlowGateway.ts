@@ -29,7 +29,7 @@ import {
 import { hasKnownReadingImageGeometry, type ReadingSessionChapter, type ReadingSessionImage } from './ReadingChapterWindow';
 import { materializeReadingDocument } from './ReadingDocumentProjection';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
-import { readingSessionProgressOwner, ReadingSessionProgressOwner, type ReadingSessionProgressAccess } from './ReadingSessionProgressOwner';
+import { readingSessionProgressOwner, ReadingSessionProgressOwner, type ReadingSessionProgressAccess, type ReadingSessionProgressReceipt } from './ReadingSessionProgressOwner';
 import type { image } from '@kit.ImageKit';
 import { canAppendRemoteReadingCatalog, sameRemoteSessionEvidence, preparedRemoteChapterMatches, preparedRemoteChapterPositionMatches } from './RemoteReadingEvidence';
 import { classifyRemoteReadingCommandFailure } from './RemoteReadingContract';
@@ -93,9 +93,9 @@ export type ReadingContentSearchPage = {
  */
 /** Only an exact canonical Core ACK can supply this optional receipt. It is
  * carried with that stored progress, never read from a later live UI prop. */
-export interface ReadingSessionCommittedProgress extends LocalReadingProgress {
-  sourceSwitchTransactionId?: string;
-}
+export type ReadingSessionCommittedProgress = ReadingSessionProgressReceipt;
+
+interface ReadingSourceSwitchReceipt { transactionId: string | undefined; }
 
 export class ReadingSessionFlowGateway {
   /** Mount first; acquisition and transaction admission belong to this flow.
@@ -150,7 +150,9 @@ export class ReadingSessionFlowGateway {
   private readonly runtimeOwner: ReadingGatewayRuntime;
   private readonly local: LocalReadingFlowGateway;
   private readonly remote: RemoteReadingFlowGateway;
-  private sourceSwitchTransactionId: string | undefined;
+  private sourceSwitchReceipt: ReadingSourceSwitchReceipt = { transactionId: undefined };
+  private get sourceSwitchTransactionId(): string | undefined { return this.sourceSwitchReceipt.transactionId; }
+  private set sourceSwitchTransactionId(value: string | undefined) { this.sourceSwitchReceipt.transactionId = value; }
   private pendingSourceSwitchResolver: (() => Promise<string | undefined>) | undefined;
   private sourceSwitchResolution: Promise<string | undefined> | undefined;
   private preparedChapterConsumed: boolean = false;
@@ -1005,8 +1007,67 @@ export class ReadingSessionFlowGateway {
     return this.progressOwner.persistPresented(chapterTitle, anchor, layout, this.progressAccess(), isAdmitted);
   }
 
-  async awaitPresentedProgressPersistence(): Promise<LocalReadingProgress | undefined> {
-    return this.progressOwner.awaitPersistence();
+  async persistCanonicalProgress(bookId: string, title: string | undefined, anchor: LocalReadingAnchor,
+    layout: LocalReadingLayout, isAdmitted: () => boolean): Promise<ReadingSessionCommittedProgress> {
+    this.assertBook(bookId);
+    if (this.pendingSourceSwitchResolver !== undefined) await this.ensureSourceSwitchAdmission(isAdmitted);
+    // Resolve the original unknown owner first. Its exact ACK can retire the
+    // source transaction; a matching current row cannot do so.
+    const expectedTransaction = this.sourceSwitchTransactionId;
+    const recovered = await this.progressOwner.awaitPersistence() as ReadingSessionCommittedProgress | undefined;
+    if (recovered?.sourceSwitchTransactionId !== undefined && expectedTransaction === recovered.sourceSwitchTransactionId) {
+      // Same-Runtime reader re-entry shares the durable owner. Its exact
+      // original ACK may retire this matching ID, never a successor ID.
+      if (this.sourceSwitchTransactionId === recovered.sourceSwitchTransactionId) this.sourceSwitchTransactionId = undefined;
+      if (!isAdmitted() || this.sourceSwitchTransactionId !== undefined)
+        throw new Error('READING_PRESENTED_PROGRESS_SUPERSEDED');
+      if (recovered.sourceCanonicalHistorical === true) throw new Error('READING_SOURCE_CANONICAL_HISTORICAL_RECEIPT');
+      if (recovered.bookId === bookId && recovered.chapterIndex === anchor.chapterIndex &&
+        recovered.chapterOffset === anchor.chapterOffset && recovered.bodyVersion === anchor.bodyVersion &&
+        recovered.processingVersion === anchor.processingVersion) return recovered;
+      throw new Error('READING_SOURCE_CANONICAL_ORIGINAL_TARGET_RECOVERED');
+    }
+    if (!isAdmitted()) throw new Error('READING_PRESENTED_PROGRESS_SUPERSEDED');
+    const transactionId = this.sourceSwitchTransactionId;
+    if (transactionId === undefined) return this.persistPresentedProgress(bookId, title, anchor, layout, isAdmitted);
+    if (this.runtimeOwner.supportsCoreCapability?.('reading.progress.sourceFinalizeReceipt.v1') !== true ||
+      this.runtimeOwner.supportsCoreCapability?.('reading.progress.compareAndSet.v1') !== true)
+      throw new Error('READING_SOURCE_CANONICAL_RECEIPT_REQUIRED');
+    return this.progressOwner.persistPresented(title, anchor, layout,
+      this.sourceCanonicalProgressAccess(transactionId), isAdmitted);
+  }
+
+  private sourceCanonicalProgressAccess(transactionId: string): ReadingSessionProgressAccess {
+    const identity = { sourceId: this.sourceId, bookId: this.bookId };
+    const receipt = this.sourceSwitchReceipt;
+    const remote = new RemoteReadingFlowGateway(this.runtimeOwner);
+    // Only the finite receipt identity/command adapter survives an unknown
+    // write. It retains neither the session catalog nor any reader component.
+    return { requireWriteReceipt: true,
+      receiptIsCurrent: async (stored): Promise<boolean> => {
+        const current = await remote.loadProgress(identity);
+        const original = stored as ReadingSessionProgressReceipt;
+        return current.kind === 'restored' && current.progressRevision === original.progressRevision &&
+          current.progress.chapterIndex === stored.chapterIndex && current.progress.chapterOffset === stored.chapterOffset &&
+          current.progress.bodyVersion === stored.bodyVersion && current.progress.processingVersion === stored.processingVersion;
+      },
+      read: (current: () => boolean): Promise<LocalReadingProgressState> => remote.loadProgress(identity, current),
+      write: async (title, anchor, layout, current, expectedProgressRevision, dispatch): Promise<ReadingSessionCommittedProgress> => {
+        const stored = await remote.updateProgress(identity, { chapterIndex: anchor.chapterIndex,
+          chapterOffset: anchor.chapterOffset, chapterProgress: anchor.chapterProgress,
+          expectedProgressRevision, expectedBodyVersion: anchor.bodyVersion,
+          expectedProcessingVersion: anchor.processingVersion }, current, transactionId,
+          { chapterTitle: title, anchor, layout }, dispatch);
+        if (receipt.transactionId === transactionId) receipt.transactionId = undefined;
+        return { ...stored, sourceSwitchTransactionId: transactionId };
+      },
+    };
+  }
+
+  async awaitPresentedProgressPersistence(): Promise<ReadingSessionCommittedProgress | undefined> {
+    const receipt = await this.progressOwner.awaitPersistence() as ReadingSessionCommittedProgress | undefined;
+    if (receipt?.sourceCanonicalHistorical === true) throw new Error('READING_SOURCE_CANONICAL_HISTORICAL_RECEIPT');
+    return receipt;
   }
 
   pendingPresentedProgress(): LocalReadingProgressState | undefined {

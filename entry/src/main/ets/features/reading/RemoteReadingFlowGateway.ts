@@ -1,3 +1,4 @@
+import { BookRequestNotDispatchedError, type BookRequestOptions } from '../../app/BookRequestScheduler';
 import { readBookAuthorIdentity, type BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
 import { appendReadingSelectionContext, appendExpectedPositionVersions, captureRemotePositionContext, decodeRemotePositionMigration, encodeRemotePositionContext, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 import type {
@@ -90,6 +91,7 @@ export type RemoteReadingSession = {
 };
 
 export type RemoteReadingProgress = {
+  progressRevision?: string;
   bodyVersion?: string;
   processingVersion?: string;
   sourceId: string;
@@ -864,6 +866,7 @@ export class RemoteReadingFlowGateway {
     isCurrent?: () => boolean,
     sourceSwitchTransactionId?: string,
     resolution?: RemoteReadingAtomicResolution,
+    dispatch?: BookRequestOptions,
   ): Promise<RemoteReadingProgress> {
     const identity = createRemoteReadingIdentity(identityValue.sourceId, identityValue.bookId);
     this.assertChapterIndex(update.chapterIndex, 'update.chapterIndex');
@@ -927,7 +930,15 @@ export class RemoteReadingFlowGateway {
     if (sourceSwitchTransactionId !== undefined) {
       params['transactionId'] = sourceSwitchTransactionId;
     }
-    const result = await this.request('reading.progress.update', params, isCurrent);
+    let result: ReaderCoreResultEvent;
+    try {
+      // Actual Runtime admission follows its startup barrier. After dispatch,
+      // presentation retirement must not cancel an accepted durable write.
+      if (isCurrent?.() === false || dispatch?.canDispatch?.() === false)
+        throw new BookRequestNotDispatchedError('reading progress owner retired before dispatch');
+      result = await this.runtimeOwner.request('reading.progress.update', params,
+        { ...dispatch, canContinue: isCurrent, canDispatch: dispatch?.canDispatch ?? isCurrent });
+    } catch (error) { throw classifyRemoteReadingCommandFailure('reading.progress.update', error); }
     if (result.data['stored'] !== true) {
       throw new RemoteReadingGatewayError(
         'invalidResponse',
@@ -946,6 +957,7 @@ export class RemoteReadingFlowGateway {
     if ((params['expectedBodyVersion'] !== undefined && stored.bodyVersion !== params['expectedBodyVersion']) ||
       (params['expectedProcessingVersion'] !== undefined && stored.processingVersion !== params['expectedProcessingVersion']) ||
       stored.chapterIndex !== update.chapterIndex || stored.chapterOffset !== update.chapterOffset ||
+      stored.chapterProgress !== update.chapterProgress ||
       (update.locationRevision !== undefined && stored.locationRevision !== update.locationRevision)) {
       throw new RemoteReadingGatewayError(
         'identityMismatch',
@@ -961,6 +973,10 @@ export class RemoteReadingFlowGateway {
         'reading.progress.update did not atomically finalize the source switch',
         'reading.progress.update',
       );
+    }
+    if (dispatch !== undefined && sourceSwitchTransactionId !== undefined &&
+      (stored.progressRevision === undefined || stored.progressRevision.trim().length === 0)) {
+      throw new RemoteReadingGatewayError('invalidResponse', 'source canonical ACK has no exact progress revision', 'reading.progress.update');
     }
     return stored;
   }
@@ -1085,6 +1101,8 @@ export class RemoteReadingFlowGateway {
     appendExpectedPositionVersions({}, bodyVersion, processingVersion);
     if (bodyVersion !== undefined) decoded.bodyVersion = bodyVersion;
     if (processingVersion !== undefined) decoded.processingVersion = processingVersion;
+    const progressRevision = this.optionalString(progress, 'progressRevision', command);
+    if (progressRevision !== undefined) decoded.progressRevision = progressRevision;
     const revision = this.optionalString(progress, 'locationRevision', command);
     if (revision !== undefined) {
       decoded.locationRevision = revision;

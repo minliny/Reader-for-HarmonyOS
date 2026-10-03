@@ -5995,15 +5995,9 @@ export struct ReadingExperience {
       // Do not call this from runSerial: that boundary must drain this owner.
       return gateway.persistPresentedProgress(bookId, title, anchor, layout, isAdmitted);
     }
-    // Source finalization still needs its existing atomic transaction command.
-    // Its exact ACK marker is never synthesized from a matching progress row.
-    let stored: ReadingSessionCommittedProgress | undefined = undefined;
-    await gateway.runProgressCommitSerial(async (): Promise<void> => {
-      if (!isAdmitted()) return;
-      stored = await gateway.resolveAndUpdateProgress(bookId, title, anchor, layout, isAdmitted);
-    });
-    if (stored === undefined) throw new Error('READING_PRESENTED_PROGRESS_SUPERSEDED');
-    return stored;
+    // The same durable owner retains the original source canonical tuple.
+    // Only Core's exact first-write receipt releases an unknown finalization.
+    return gateway.persistCanonicalProgress(bookId, title, anchor, layout, isAdmitted);
   }
 
   private async persistOrdinaryFirstPage(page: PhysicalReadingPage, chapter: ReadingSessionChapter,
