@@ -14,8 +14,12 @@ export type { SourceImportCompletion, SourceManagementStatusKind, SourceManageme
  * status projections, while this host owns the gateway/orchestrator instance
  * and forwards source-management intents with their existing session guards.
  */
+let sourceHostPresentationSequence: number = 0;
 export class SourceHost {
   private orchestrator: SourceOrchestrator | undefined = undefined;
+  private boundOwner: ReaderRuntimeOwner | undefined;
+  private presentationIdentity: string = '';
+  private explicitBinding: boolean = false;
   private readonly emitSources: (sources: BookSource[]) => void;
   private readonly isCurrent: () => boolean;
   private readonly emitStatus: (kind: SourceManagementStatusKind, message: string) => void;
@@ -36,19 +40,32 @@ export class SourceHost {
     this.emitProjection = emitProjection;
   }
 
-  open(): void { this.getOrchestrator().open(); }
-  retryLoad(): void { this.getOrchestrator().retryLoad(); }
-  reconcile(generation: number): void { this.getOrchestrator().reconcile(generation); }
-  toggleSource(id: string, enabled: boolean): void { this.getOrchestrator().toggleSource(id, enabled); }
-  checkSource(id: string): void { this.getOrchestrator().checkSource(id); }
-  loginSource(id: string): void { this.getOrchestrator().loginSource(id); }
-  importBookSources(
-    onlineUrl?: string,
-    onComplete: (completion: SourceImportCompletion) => void =
-      (_completion: SourceImportCompletion): void => {},
-    onFailure: (error: Error) => void = (_error: Error): void => {},
-  ): void {
-    this.getOrchestrator().importBookSources(onlineUrl, onComplete, onFailure);
+  bindPresentation(owner: ReaderRuntimeOwner, identity: string, current: () => boolean): boolean {
+    if (identity.length === 0) return false;
+    try { if (!ReaderRuntimeOwner.isCurrent(owner) || !current()) return false; } catch (_) { return false; }
+    if (this.boundOwner === owner && this.presentationIdentity === identity)
+      return this.orchestrator?.isPresentationCurrent(identity) ?? false;
+    const host = SourceOrchestrator.forRuntime(owner);
+    if (host === undefined || !host.attachPresentation(identity, this.emitSources, current,
+      this.emitStatus, this.emitProjection)) return false;
+    this.boundOwner = owner; this.presentationIdentity = identity; this.explicitBinding = true;
+    this.orchestrator = host; return true;
+  }
+  isPresentationCurrent(owner: ReaderRuntimeOwner, identity: string): boolean {
+    return this.boundOwner === owner && this.presentationIdentity === identity &&
+      (this.orchestrator?.isPresentationCurrent(identity) ?? false);
+  }
+  detachPresentation(identity: string): void { this.orchestrator?.detachPresentation(identity); }
+  open(identity?: string): void { this.admitted(identity)?.open(); }
+  retryLoad(identity?: string): void { this.admitted(identity)?.retryLoad(); }
+  reconcile(generation: number, identity?: string): void { this.admitted(identity)?.reconcile(generation); }
+  toggleSource(id: string, enabled: boolean, identity?: string): void { this.admitted(identity)?.toggleSource(id, enabled); }
+  checkSource(id: string, identity?: string): void { this.admitted(identity)?.checkSource(id); }
+  loginSource(id: string, identity?: string): void { this.admitted(identity)?.loginSource(id); }
+  importBookSources(onlineUrl?: string,
+    onComplete: (completion: SourceImportCompletion) => void = (_completion: SourceImportCompletion): void => {},
+    onFailure: (error: Error) => void = (_error: Error): void => {}, identity?: string): void {
+    this.admitted(identity)?.importBookSources(onlineUrl, onComplete, onFailure);
   }
 
   /**
@@ -58,25 +75,31 @@ export class SourceHost {
    * never invents a source row when the registry is unavailable.
    */
   loadSourcesForIds(sourceIds: string[], isCurrent: () => boolean): Promise<BookSource[]> {
-    return new SourceGateway(this.owner()).loadSourcesForIds(sourceIds, isCurrent);
+    const owner = this.capturedOwner();
+    return new SourceGateway(owner).loadSourcesForIds(sourceIds,
+      (): boolean => ReaderRuntimeOwner.isCurrent(owner) && isCurrent());
   }
 
   /** Read an optional exact source projection without exposing SourceGateway
    * construction to Index.  Callers own the lifetime/cancellation policy. */
   loadSources(sourceId?: string): Promise<BookSource[]> {
-    return new SourceGateway(this.owner()).loadSources(sourceId);
+    const owner = this.capturedOwner();
+    return new SourceGateway(owner).loadSources(sourceId, false, (): boolean => ReaderRuntimeOwner.isCurrent(owner));
   }
 
-  private getOrchestrator(): SourceOrchestrator {
-    if (this.orchestrator === undefined || !this.orchestrator.owns(this.owner())) {
-      this.orchestrator = new SourceOrchestrator(
-        this.emitSources,
-        this.isCurrent,
-        this.emitStatus,
-        this.owner(),
-        this.emitProjection,
-      );
+  private capturedOwner(): ReaderRuntimeOwner {
+    if (this.boundOwner === undefined) this.boundOwner = this.owner();
+    return this.boundOwner;
+  }
+  private admitted(identity?: string): SourceOrchestrator | undefined {
+    if (this.orchestrator === undefined) {
+      const owner = this.capturedOwner();
+      const legacyIdentity = `source-host:${++sourceHostPresentationSequence}`;
+      if (!this.bindPresentation(owner, legacyIdentity, this.isCurrent)) return undefined;
+      this.explicitBinding = false;
     }
-    return this.orchestrator;
+    if ((identity === undefined && this.explicitBinding) ||
+      (identity !== undefined && identity !== this.presentationIdentity)) return undefined;
+    return this.orchestrator?.isPresentationCurrent(this.presentationIdentity) ? this.orchestrator : undefined;
   }
 }

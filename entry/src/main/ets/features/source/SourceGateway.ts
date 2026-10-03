@@ -151,7 +151,7 @@ export class SourceGateway {
       if (!isCurrent()) return [];
       if (sourceId.trim().length === 0 || sourceId === 'local') continue;
       try {
-        const exact = await this.loadSources(sourceId);
+        const exact = await this.loadSources(sourceId, false, isCurrent);
         if (!isCurrent()) return [];
         for (const source of exact) if (source.sourceId === sourceId) sources.push(source);
       } catch (_) { /* A missing label never erases a valid shelf projection. */ }
@@ -259,11 +259,10 @@ export class SourceGateway {
       }
       this.assertImportCurrent(shouldContinue, sourceIds.length);
       try {
-        this.writeEvidence?.dispatched();
         const result = await this.runtimeOwner.request('source.import', {
           sourceId,
           bookSource,
-        });
+        }, { canDispatch: shouldContinue, onDispatch: (): void => this.writeEvidence?.dispatched() });
         const imported = result.data['imported'];
         const echoedSourceId = this.optionalString(result.data, 'sourceId');
         const echoedName = this.optionalString(result.data, 'name');
@@ -274,6 +273,9 @@ export class SourceGateway {
         sourceIds.push(echoedSourceId);
         this.writeEvidence?.confirmed();
       } catch (error) {
+        // An indeterminate dispatched item is a write barrier for this
+        // admitted document. Later rows must not hide or overtake that ACK.
+        if (this.writeEvidence?.confirmation() === 'unknown') throw error;
         const message = errorMessageOf(error);
         failures.push({ index, sourceId, message });
       }
@@ -447,15 +449,14 @@ export class SourceGateway {
    * or when Core echoes a mismatched state — the page keeps a non-optimistic
    * toggle and reloads the list only after a confirmed success.
    */
-  async updateSource(sourceId: string, patch: SourcePatch): Promise<void> {
+  async updateSource(sourceId: string, patch: SourcePatch, current?: () => boolean): Promise<void> {
     if (patch.enabled === undefined) {
       throw new Error('source.update requires an enabled flag');
     }
-    this.writeEvidence?.dispatched();
     const result = await this.runtimeOwner.request('source.update', {
       sourceId,
       enabled: patch.enabled,
-    }).catch((error: Error) => {
+    }, { canDispatch: current, onDispatch: (): void => this.writeEvidence?.dispatched() }).catch((error: Error) => {
       // Typed Core admission refusal happens before executing this command.
       // Generic transport/echo errors retain the actual dispatched evidence.
       if (isReaderCoreTransactionPendingError(error)) this.writeEvidence?.rejectedBeforeExecution();

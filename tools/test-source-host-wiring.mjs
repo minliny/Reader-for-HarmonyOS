@@ -18,8 +18,12 @@ for (const method of ['open', 'retryLoad', 'toggleSource', 'checkSource', 'login
 for (const method of ['loadSourcesForIds', 'loadSources']) {
   assert.match(host, new RegExp(`\\b${method}\\(`), `SourceHost must expose ${method}`);
 }
-assert.match(host, /new SourceOrchestrator\(/,
-  'SourceHost must be the single SourceOrchestrator construction site');
+assert.match(host, /SourceOrchestrator\.forRuntime\(owner\)/,
+  'SourceHost obtains the one original-runtime owner');
+assert.doesNotMatch(host, /new SourceOrchestrator\(/, 'recreated presentation must not duplicate the business chain');
+const orchestrator = readFileSync(resolve(repo, 'entry/src/main/ets/features/source/SourceOrchestrator.ets'), 'utf8');
+assert.equal([...orchestrator.matchAll(/new SourceOrchestrator\(/g)].length, 1, 'only the finite runtime factory constructs its owner');
+assert.match(orchestrator, /owners: WeakMap<ReaderRuntimeOwner, SourceOrchestrator>/);
 assert.match(host, /private readonly owner: \(\) => ReaderRuntimeOwner/,
   'SourceHost must resolve the runtime owner lazily');
 for (const call of ['sourceHost.open()', 'sourceHost.retryLoad()', 'sourceHost.toggleSource(',

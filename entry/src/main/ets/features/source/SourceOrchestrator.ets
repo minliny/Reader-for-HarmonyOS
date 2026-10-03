@@ -59,6 +59,41 @@ function isPendingTransactionError(error: Error): boolean {
  * persisted truth.
  */
 export class SourceOrchestrator {
+  private static readonly owners: WeakMap<ReaderRuntimeOwner, SourceOrchestrator> = new WeakMap();
+  private presentationIdentity: string | undefined = 'legacy-constructor';
+  static forRuntime(owner: ReaderRuntimeOwner): SourceOrchestrator | undefined {
+    if (!ReaderRuntimeOwner.isCurrent(owner)) return undefined;
+    let host = SourceOrchestrator.owners.get(owner);
+    if (host === undefined) {
+      host = new SourceOrchestrator((): void => {}, (): boolean => false,
+        (): void => {}, owner, (): void => {});
+      SourceOrchestrator.owners.set(owner, host);
+    }
+    return host;
+  }
+  attachPresentation(identity: string, emit: (sources: BookSource[]) => void,
+    current: () => boolean, status: (kind: SourceManagementStatusKind, message: string) => void,
+    projection: (value: SourceManagementProjection) => void): boolean {
+    try { if (identity.length === 0 || !ReaderRuntimeOwner.isCurrent(this.owner) || !current()) return false; }
+    catch (_) { return false; }
+    if (this.presentationIdentity !== identity) this.session += 1;
+    this.presentationIdentity = identity;
+    this.emit = emit; this.isCurrent = current; this.emitStatus = status; this.emitProjection = projection;
+    if (this.hasRead) { try { emit(this.sources); } catch (_) {} }
+    try { projection(this.latestProjection); } catch (_) {}
+    const receipt = this.latestProjection.receipt;
+    if (receipt !== undefined) this.publishStatus(receipt.receipt.fact === 'confirmedCurrent' ? 'idle' : 'warning', receipt.receipt.message);
+    return true;
+  }
+  detachPresentation(identity: string): void {
+    if (this.presentationIdentity !== identity) return;
+    this.presentationIdentity = undefined; this.session += 1;
+    this.isCurrent = (): boolean => false;
+    this.emit = (): void => {}; this.emitStatus = (): void => {}; this.emitProjection = (): void => {};
+  }
+  isPresentationCurrent(identity: string): boolean {
+    return this.presentationIdentity === identity && this.isCurrentSession(this.session);
+  }
   private owner: ReaderRuntimeOwner;
   private gateway: SourceGateway;
   private emit: (sources: BookSource[]) => void;
@@ -100,10 +135,10 @@ export class SourceOrchestrator {
 
   /** Enter Source Management: wait for in-flight toggles, then load the list. */
   open(): void {
+    if (!this.isCurrentSession(this.session)) return;
     this.session += 1;
     const session = this.session;
     this.checkResults.clear();
-    this.checkingSourceIds.clear();
     this.publishStatus('loading', '正在读取 Core 书源数据…');
     this.publishRead(session, 'loading');
     this.operationChain = this.operationChain.then((): Promise<void> => this.loadList(session));
@@ -128,7 +163,7 @@ export class SourceOrchestrator {
   }
 
   retryLoad(): void {
-    if (ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent()) {
+    if (this.isCurrentSession(this.session)) {
       this.open();
     }
   }
@@ -142,7 +177,7 @@ export class SourceOrchestrator {
     if (!this.isCurrentSession(session)) return;
     let sources: BookSource[];
     try {
-      sources = await this.loadSourcesWithRetry();
+      sources = await this.loadSourcesWithRetry(session);
     } catch (error) {
       if (this.isCurrentSession(session)) {
         this.publishRead(session, 'failed', (error as Error).message);
@@ -173,7 +208,7 @@ export class SourceOrchestrator {
    * completion never repaints a re-entry or a newer toggle.
    */
   toggleSource(id: string, enabled: boolean): void {
-    if (!this.isCurrentSession(this.session)) return;
+    if (!this.isCurrentSession(this.session) || this.latestProjection.receipt?.receipt.confirmation === 'unknown') return;
     this.toggleSeq += 1;
     const seq = this.toggleSeq;
     const session = this.session;
@@ -191,7 +226,7 @@ export class SourceOrchestrator {
 
   /** Queue one production L1-L5 diagnostic; repeated taps never duplicate it. */
   checkSource(id: string): void {
-    if (this.checkingSourceIds.has(id)) {
+    if (!this.isCurrentSession(this.session) || this.checkingSourceIds.has(id)) {
       return;
     }
     const session = this.session;
@@ -207,16 +242,14 @@ export class SourceOrchestrator {
           'Source check failed: sourceId=%{private}s err=%{private}s', id, error.message);
       })
       .finally((): void => {
-        if (session === this.session) {
-          this.checkingSourceIds.delete(id);
-        }
+        this.checkingSourceIds.delete(id);
       });
   }
 
   /** Open the source-owned login/challenge URL on the shared Host session. */
   loginSource(id: string): void {
     const source = this.sources.find((candidate: BookSource): boolean => candidate.sourceId === id);
-    if (source === undefined || source.loginUrl === undefined || this.checkingSourceIds.has(id)) {
+    if (!this.isCurrentSession(this.session) || source === undefined || source.loginUrl === undefined || this.checkingSourceIds.has(id)) {
       return;
     }
     const loginUrl = source.loginUrl;
@@ -225,6 +258,7 @@ export class SourceOrchestrator {
     this.setCheckProjection(id, 'checking', [], '等待登录 / 验证');
     this.operationChain = this.operationChain
       .then(async (): Promise<void> => {
+        if (!this.isCurrentSession(session)) return;
         await this.owner.openSourceLogin(source.sourceId, loginUrl, source.name);
         if (!this.isCurrentSession(session)) {
           return;
@@ -246,9 +280,7 @@ export class SourceOrchestrator {
           id, error.message);
       })
       .finally((): void => {
-        if (session === this.session) {
-          this.checkingSourceIds.delete(id);
-        }
+        this.checkingSourceIds.delete(id);
       });
   }
 
@@ -264,7 +296,8 @@ export class SourceOrchestrator {
       (_completion: SourceImportCompletion): void => {},
     onFailure: (error: Error) => void = (_error: Error): void => {},
   ): void {
-    if (this.importActive) {
+    if (!this.isCurrentSession(this.session) || this.importActive ||
+      this.latestProjection.receipt?.receipt.confirmation === 'unknown') {
       return;
     }
     this.importActive = true;
@@ -274,13 +307,13 @@ export class SourceOrchestrator {
       .then(async (): Promise<void> => {
         const completion = await this.applyBookSourceImport(session, onlineUrl);
         if (completion !== undefined && this.isCurrentSession(session)) {
-          onComplete(completion);
+          try { onComplete(completion); } catch (_) { /* A view cannot undo an accepted import. */ }
         }
       })
       .catch((error: Error): void => {
         if (this.isCurrentSession(session)) {
           this.publishStatus('error', `书源导入失败：${error.message}`);
-          onFailure(error);
+          try { onFailure(error); } catch (_) {}
         }
         hilog.error(DOMAIN, 'Reader',
           'Book-source import failed; page kept unchanged: %{private}s', error.message);
@@ -347,13 +380,13 @@ export class SourceOrchestrator {
       throw importError;
     } finally { this.gateway.observeWrites(undefined); }
 
-    if (!this.isCurrentSession(session)) {
-      return;
-    }
-    this.publishReceipt(session, 'import', '', evidence.confirmation(), 'reading', undefined, evidence.confirmedCount);
+    this.publishReceipt(session, 'import', '', evidence.confirmation(),
+      this.isCurrentSession(session) ? 'reading' : 'failed',
+      this.isCurrentSession(session) ? undefined : '列表尚未刷新', evidence.confirmedCount);
+    if (!this.isCurrentSession(session)) return;
     let sources: BookSource[];
     try {
-      sources = await this.gateway.loadSources();
+      sources = await this.gateway.loadSources(undefined, false, (): boolean => this.isCurrentSession(session));
     } catch (error) {
       if (!this.isCurrentSession(session)) {
         return;
@@ -388,7 +421,7 @@ export class SourceOrchestrator {
       return;
     }
     try {
-      const sources = await this.gateway.loadSources();
+      const sources = await this.gateway.loadSources(undefined, false, (): boolean => this.isCurrentSession(session));
       if (this.isCurrentSession(session)) {
         this.presentSources(sources);
       }
@@ -410,7 +443,7 @@ export class SourceOrchestrator {
     // until the bus is free. Wait until Core reports idle, then retry once —
     // the serial chain means this retry only waits out the external operation,
     // never a concurrent toggle.
-    if (!ReaderRuntimeOwner.isCurrent(this.owner)) return;
+    if (!ReaderRuntimeOwner.isCurrent(this.owner) || this.latestProjection.receipt?.receipt.confirmation === 'unknown') return;
     const evidence = new ReaderWriteEvidence();
     this.gateway.observeWrites(evidence);
     try { await this.updateSourceWithRetry(id, enabled); }
@@ -427,6 +460,10 @@ export class SourceOrchestrator {
           'Source disabled but cookie-session cleanup failed: sourceId=%{private}s err=%{private}s',
           id, (error as Error).message);
       }
+    }
+    if (!this.isCurrentSession(session)) {
+      this.publishReceipt(session, 'toggle', id, evidence.confirmation(), 'failed', '列表尚未刷新');
+      return;
     }
     // `updateSource` resolved → the toggle IS persisted (Core awaits the Host
     // snapshot put). Reflect it locally even if the reload below fails, so a
@@ -456,7 +493,7 @@ export class SourceOrchestrator {
     }
     let sources: BookSource[];
     try {
-      sources = await this.gateway.loadSources();
+      sources = await this.gateway.loadSources(undefined, false, (): boolean => this.isCurrentSession(session));
     } catch (error) {
       this.publishReceipt(session, 'toggle', id, evidence.confirmation(), 'failed', (error as Error).message);
       hilog.warn(DOMAIN, 'Reader',
@@ -477,7 +514,7 @@ export class SourceOrchestrator {
       readFacts: projectOperationFacts({ phase,
       value: this.hasRead ? this.sources : undefined, canRetry: phase === 'failed',
       generation: ++sourceProjectionGeneration, message }) };
-    if (this.isCurrentSession(session)) this.emitProjection(this.latestProjection);
+    if (this.isCurrentSession(session)) { try { this.emitProjection(this.latestProjection); } catch (_) {} }
   }
 
   private publishReceipt(session: number, action: string, sourceId: string,
@@ -489,7 +526,7 @@ export class SourceOrchestrator {
     this.latestProjection = { action, sourceId, receipt, readFacts: this.latestProjection.readFacts,
       confirmedParts: confirmedParts ?? this.latestProjection.confirmedParts };
     if (this.isCurrentSession(session)) {
-      this.emitProjection(this.latestProjection);
+      try { this.emitProjection(this.latestProjection); } catch (_) {}
       this.publishStatus(readback === 'reading' ? 'loading' : readback === 'failed' || confirmation !== 'confirmed' ? 'warning' : 'idle',
         readback === 'succeeded' && confirmation === 'confirmed' ? '' :
           receipt.receipt.message + (refreshError === undefined ? '' : `：${refreshError}`));
@@ -560,7 +597,7 @@ export class SourceOrchestrator {
 
   private async updateSourceWithRetry(id: string, enabled: boolean): Promise<void> {
     try {
-      await this.gateway.updateSource(id, { enabled });
+      await this.gateway.updateSource(id, { enabled }, (): boolean => ReaderRuntimeOwner.isCurrent(this.owner));
       return;
     } catch (error) {
       const err = error as Error;
@@ -572,13 +609,13 @@ export class SourceOrchestrator {
       // above and never retried.
       await this.waitForCoreIdle(5000);
       if (!ReaderRuntimeOwner.isCurrent(this.owner)) throw new Error('Source runtime owner retired');
-      await this.gateway.updateSource(id, { enabled });
+      await this.gateway.updateSource(id, { enabled }, (): boolean => ReaderRuntimeOwner.isCurrent(this.owner));
     }
   }
 
-  private async loadSourcesWithRetry(): Promise<BookSource[]> {
+  private async loadSourcesWithRetry(session: number): Promise<BookSource[]> {
     try {
-      return await this.gateway.loadSources();
+      return await this.gateway.loadSources(undefined, false, (): boolean => this.isCurrentSession(session));
     } catch (error) {
       const err = error as Error;
       if (!isPendingTransactionError(err)) {
@@ -588,7 +625,8 @@ export class SourceOrchestrator {
       // is holding the bus. Wait until Core reports idle, then load once more
       // instead of guessing a fixed backoff window.
       await this.waitForCoreIdle(5000);
-      return await this.gateway.loadSources();
+      if (!this.isCurrentSession(session)) throw new Error('书源原页面已关闭');
+      return await this.gateway.loadSources(undefined, false, (): boolean => this.isCurrentSession(session));
     }
   }
 
@@ -600,8 +638,11 @@ export class SourceOrchestrator {
   private async waitForCoreIdle(maxMillis: number): Promise<void> {
     const deadline = Date.now() + maxMillis;
     while (Date.now() < deadline) {
+      if (!ReaderRuntimeOwner.isCurrent(this.owner)) throw new Error('书源原 Runtime 已退役');
       try {
-        const result = await this.owner.request('runtime.status', {});
+        const result = await this.owner.request('runtime.status', {}, {
+          canDispatch: (): boolean => ReaderRuntimeOwner.isCurrent(this.owner),
+        });
         const pending = result.data['pendingHostOperationCount'] as number | undefined;
         if (pending === 0) {
           return;
@@ -616,7 +657,8 @@ export class SourceOrchestrator {
   }
 
   private isCurrentSession(session: number): boolean {
-    return ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent() && session === this.session;
+    try { return this.presentationIdentity !== undefined && ReaderRuntimeOwner.isCurrent(this.owner) &&
+      this.isCurrent() && session === this.session; } catch (_) { return false; }
   }
 
   private presentSources(sources: BookSource[]): void {
@@ -636,12 +678,10 @@ export class SourceOrchestrator {
         checkMessage: checked?.checkMessage ?? source.checkMessage,
       };
     });
-    if (ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent()) this.emit(this.sources);
+    if (this.isCurrentSession(this.session)) { try { this.emit(this.sources); } catch (_) {} }
   }
 
   private publishStatus(kind: SourceManagementStatusKind, message: string): void {
-    if (ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent()) {
-      this.emitStatus(kind, message);
-    }
+    if (this.isCurrentSession(this.session)) { try { this.emitStatus(kind, message); } catch (_) {} }
   }
 }

@@ -31,7 +31,7 @@ const clone=v=>v===undefined?undefined:structuredClone(v),tick=()=>new Promise(r
 const defer=()=>{let resolve;const promise=new Promise(r=>resolve=r);return{resolve,promise};};
 const row=()=>({sourceId:'a',name:'A',baseUrl:'https://a.test',enabled:true,enabledExplore:false,bookSource:{bookSourceType:0}});
 function rpc(){const context={},disk=new Map(Object.entries({autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true}));const r={context,disk,calls:[],rows:[row()],readFail:0,writeFail:false,admission:false,malformed:false,pause:undefined,puts:0,flushes:0,getUIAbilityContext:()=>context,supportsCoreCapability:()=>false,
- async clearSourceCookieSession(){},async request(method,params){this.calls.push(method);if(this.pause?.method===method)await this.pause.promise;
+ async clearSourceCookieSession(){},async request(method,params,options={}){if(options.canDispatch?.()===false||options.canContinue?.()===false)throw Error('not dispatched');options.onDispatch?.();this.calls.push(method);if(this.pause?.method===method)await this.pause.promise;
  if(method==='runtime.status')return{data:{pendingHostOperationCount:0}};
  if(method==='source.update'){if(this.admission){this.admission=false;throw Object.assign(Error('gate'),{typedAdmission:true});}this.rows[0].enabled=params.enabled;if(this.writeFail){this.writeFail=false;throw Error('ack lost');}return{data:{source:clone(this.rows[0])}};}
  if(method==='source.list'){if(this.readFail){this.readFail--;throw Error('read unavailable');}return{data:{sources:this.malformed?[{sourceId:'a'}]:clone(this.rows)}};}
@@ -83,7 +83,7 @@ for(const kind of ['source','settings']){
 for(const kind of ['source','settings']){
  const f=fixture(kind);f.host.open();await f.settle();const d=defer();f.r.pause={method:kind==='source'?'source.update':'flush',...d};f.write();await tick();
  const before=clone(f.receipt());currentOwner=undefined;d.resolve();await f.settle();assert.deepEqual(f.receipt(),before,'late actual ACK has no retired UI/error publication');
- const count=kind==='source'?f.r.calls.length:f.r.puts;assert.throws(()=>f.write(),/must be installed/,'Host hard acquisition remains explicit; retired owner callbacks were already safely rejected');await f.settle();assert.equal(kind==='source'?f.r.calls.length:f.r.puts,count);
+ const count=kind==='source'?f.r.calls.length:f.r.puts;if(kind==='settings')assert.throws(()=>f.write(),/must be installed/,'legacy Settings acquisition remains explicit');else f.write();await f.settle();assert.equal(kind==='source'?f.r.calls.length:f.r.puts,count);
  f.r.pause=undefined;currentOwner=f.r;f.host.open();await f.settle();assert.equal(f.read().fact,'current');
  if(kind==='source')assert.equal(f.index.sourceSources[0].enabled,false);else assert.equal(f.index.settingsSnapshot.reduceMotion,true,'persisted setting read survives retired delivery');
 }

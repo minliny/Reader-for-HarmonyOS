@@ -464,7 +464,7 @@ assert.match(orchestrator,
   /applyBookSourceImport\([\s\S]*session: number,[\s\S]*onlineUrl\?: string,[\s\S]*selectBookSourceJson\(\)[\s\S]*loadOnlineJsonDocument\(onlineUrl\)/);
 assert.match(orchestrator, /selection === undefined \|\| !this\.isCurrentSession\(session\)/,
   'a picker completion from an old page session must not begin Core imports');
-assert.match(orchestrator, /importBookSourceDocument\([\s\S]*this\.isCurrentSession\(session\)[\s\S]*gateway\.loadSources\(\)/);
+assert.match(orchestrator, /importBookSourceDocument\([\s\S]*this\.isCurrentSession\(session\)[\s\S]*gateway\.loadSources\(undefined, false, \(\): boolean => this\.isCurrentSession\(session\)\)/);
 assert.match(orchestrator, /Book-source import failed; page kept unchanged/);
 assert.match(orchestrator, /Core 已导入 \$\{importedCount\} 个书源，但列表刷新失败/);
 assert.match(orchestrator, /publishStatus\('error', `书源列表读取失败/);
