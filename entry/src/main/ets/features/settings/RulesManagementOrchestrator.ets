@@ -65,12 +65,14 @@ export const EMPTY_RULES_MANAGEMENT_SNAPSHOT: RulesManagementSnapshot = {
 
 /** Serial UI coordinator; all validation, persistence and bundle semantics stay in Core. */
 export class RulesManagementOrchestrator {
+  private static shared: RulesManagementOrchestrator | undefined;
+  private presentationIdentity: string | undefined;
   private readonly gateway: RulesManagementGateway;
   private readonly sourceGateway: SourceGateway;
   private readonly rssGateway: RssGateway;
   private readonly owner: ReaderRuntimeOwner;
-  private readonly emit: (snapshot: RulesManagementSnapshot) => void;
-  private readonly isCurrent: () => boolean;
+  private emit: (snapshot: RulesManagementSnapshot) => void;
+  private isCurrent: () => boolean;
   private snapshot: RulesManagementSnapshot = EMPTY_RULES_MANAGEMENT_SNAPSHOT;
   private operationTail: Promise<void> = Promise.resolve();
   private session: number = 0;
@@ -91,7 +93,32 @@ export class RulesManagementOrchestrator {
     this.isCurrent = isCurrent;
   }
 
-  open(): void {
+  static forRuntime(owner: ReaderRuntimeOwner): RulesManagementOrchestrator | undefined {
+    if (!ReaderRuntimeOwner.isCurrent(owner)) return undefined;
+    const shared=RulesManagementOrchestrator.shared;
+    if (shared?.owns(owner)) return shared;
+    const next=new RulesManagementOrchestrator((_snapshot: RulesManagementSnapshot): void => {}, (): boolean => false, owner);
+    RulesManagementOrchestrator.shared=next; return next;
+  }
+  attachPresentation(identity: string, emit: (snapshot: RulesManagementSnapshot) => void, current: () => boolean): boolean {
+    if (identity.length===0 || !ReaderRuntimeOwner.isCurrent(this.owner)) return false;
+    try { if (!current()) return false; } catch (_) { return false; }
+    this.session+=1; this.presentationIdentity=identity; this.emit=emit; this.isCurrent=current;
+    this.publish({}); return true;
+  }
+  detachPresentation(identity: string): void {
+    if (identity!==this.presentationIdentity) return;
+    this.session+=1; this.presentationIdentity=undefined;
+    this.emit=(_snapshot: RulesManagementSnapshot): void => {}; this.isCurrent=(): boolean => false;
+  }
+  currentSnapshot(): RulesManagementSnapshot { return this.copy(this.snapshot); }
+  private admitPresentation(identity?: string): boolean {
+    if (identity!==this.presentationIdentity) return false;
+    return this.isCurrentSession(this.session);
+  }
+
+  open(presentationIdentity?: string): void {
+    if (!this.admitPresentation(presentationIdentity)) return;
     this.session += 1;
     const session = this.session;
     this.publish({ busy: true, statusMessage: '正在读取 Core 规则实体…',
@@ -109,7 +136,8 @@ export class RulesManagementOrchestrator {
 
   owns(owner: ReaderRuntimeOwner): boolean { return this.owner === owner; }
 
-  reconcile(generation: number): void {
+  reconcile(generation: number, presentationIdentity?: string): void {
+    if (!this.admitPresentation(presentationIdentity)) return;
     const session = this.session;
     this.enqueue(async (): Promise<void> => {
       if (!this.isCurrentSession(session)) return;
@@ -128,42 +156,52 @@ export class RulesManagementOrchestrator {
     });
   }
 
-  saveReplaceRule(draft: ReplaceRuleDraft): void {
+  saveReplaceRule(draft: ReplaceRuleDraft, presentationIdentity?: string): void {
+    if (!this.admitPresentation(presentationIdentity)) return;
     this.mutate('保存替换规则', async (): Promise<void> => this.gateway.saveReplaceRule(draft));
   }
 
-  deleteReplaceRule(id: number): void {
+  deleteReplaceRule(id: number, presentationIdentity?: string): void {
+    if (!this.admitPresentation(presentationIdentity)) return;
     this.mutate('删除替换规则', async (): Promise<void> => this.gateway.deleteReplaceRule(id));
   }
 
-  saveTxtTocRule(draft: TxtTocRuleDraft): void {
+  saveTxtTocRule(draft: TxtTocRuleDraft, presentationIdentity?: string): void {
+    if (!this.admitPresentation(presentationIdentity)) return;
     this.mutate('保存 TXT 目录规则', async (): Promise<void> => this.gateway.saveTxtTocRule(draft));
   }
 
-  deleteTxtTocRule(id: number): void {
+  deleteTxtTocRule(id: number, presentationIdentity?: string): void {
+    if (!this.admitPresentation(presentationIdentity)) return;
     this.mutate('删除 TXT 目录规则', async (): Promise<void> => this.gateway.deleteTxtTocRule(id));
   }
 
-  saveDictRule(draft: DictRuleDraft): void {
+  saveDictRule(draft: DictRuleDraft, presentationIdentity?: string): void {
+    if (!this.admitPresentation(presentationIdentity)) return;
     this.mutate('保存字典规则', async (): Promise<void> => this.gateway.saveDictRule(draft));
   }
 
-  deleteDictRule(name: string): void {
+  deleteDictRule(name: string, presentationIdentity?: string): void {
+    if (!this.admitPresentation(presentationIdentity)) return;
     this.mutate('删除字典规则', async (): Promise<void> => this.gateway.deleteDictRule(name));
   }
 
-  saveRuleSubscription(draft: RuleSubscriptionDraft): void {
+  saveRuleSubscription(draft: RuleSubscriptionDraft, presentationIdentity?: string): void {
+    if (!this.admitPresentation(presentationIdentity)) return;
     this.mutate('保存规则订阅', async (): Promise<void> => this.gateway.saveRuleSubscription(draft));
   }
 
-  deleteRuleSubscription(id: number): void {
+  deleteRuleSubscription(id: number, presentationIdentity?: string): void {
+    if (!this.admitPresentation(presentationIdentity)) return;
     this.mutate('删除规则订阅', async (): Promise<void> => this.gateway.deleteRuleSubscription(id));
   }
 
   /** Download one stored RuleSub and route its Legado payload by persisted type. */
-  refreshRuleSubscription(subscription: ManagedRuleSubscription): void {
+  refreshRuleSubscription(subscription: ManagedRuleSubscription, presentationIdentity?: string): void {
+    if (!this.admitPresentation(presentationIdentity)) return;
     const session = this.session;
     this.enqueue(async (): Promise<void> => {
+      if (!this.isCurrentSession(session)) return;
       const typeLabel = this.subscriptionTypeLabel(subscription.type);
       this.publishIfCurrent(session, {
         busy: true,
@@ -179,9 +217,11 @@ export class RulesManagementOrchestrator {
     });
   }
 
-  exportBundle(): void {
+  exportBundle(presentationIdentity?: string): void {
+    if (!this.admitPresentation(presentationIdentity)) return;
     const session = this.session;
     this.enqueue(async (): Promise<void> => {
+      if (!this.isCurrentSession(session)) return;
       this.publishIfCurrent(session, { busy: true, statusMessage: '正在由 Core 生成规则包…' });
       try {
         const bundle = await this.gateway.exportBundle();
@@ -198,9 +238,11 @@ export class RulesManagementOrchestrator {
     });
   }
 
-  importBundle(onlineUrl?: string): void {
+  importBundle(onlineUrl?: string, presentationIdentity?: string): void {
+    if (!this.admitPresentation(presentationIdentity)) return;
     const session = this.session;
     this.enqueue(async (): Promise<void> => {
+      if (!this.isCurrentSession(session)) return;
       this.publishIfCurrent(session, {
         busy: true,
         statusMessage: onlineUrl === undefined ? '请选择本地 Core 规则包…' : '正在下载在线 Core 规则包…',
@@ -234,6 +276,7 @@ export class RulesManagementOrchestrator {
   }
 
   private async performWrite(session: number, label: string, operation: (evidence: ReaderWriteEvidence) => Promise<string>): Promise<void> {
+    if (!this.isCurrentSession(session)) return;
     const prior = this.gateway.mutationSnapshot();
     if (prior.confirmation === 'unknown') {
       this.receiptLabel = prior.label;
@@ -284,9 +327,13 @@ export class RulesManagementOrchestrator {
     const patch: RulesManagementPatch = {};
     const errors: string[] = [];
     let readCount = 0;
+    if (!this.isCurrentSession(session)) return;
     try { patch.replaceRules = await this.gateway.listReplaceRules(); readCount += 1; } catch (error) { errors.push((error as Error).message); }
+    if (!this.isCurrentSession(session)) return;
     try { patch.txtTocRules = await this.gateway.listTxtTocRules(); readCount += 1; } catch (error) { errors.push((error as Error).message); }
+    if (!this.isCurrentSession(session)) return;
     try { patch.dictRules = await this.gateway.listDictRules(); readCount += 1; } catch (error) { errors.push((error as Error).message); }
+    if (!this.isCurrentSession(session)) return;
     try { patch.subscriptions = await this.gateway.listRuleSubscriptions(); readCount += 1; } catch (error) { errors.push((error as Error).message); }
     if (this.isCurrentSession(session)) {
       if (readCount > 0) this.hasRead = true;
@@ -353,7 +400,7 @@ export class RulesManagementOrchestrator {
       confirmedParts: patch.confirmedParts ?? this.snapshot.confirmedParts,
       ruleMutation: patch.ruleMutation ?? this.snapshot.ruleMutation,
     };
-    if (ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent()) this.emit(this.copy(this.snapshot));
+    if (this.isCurrentSession(this.session)) this.emit(this.copy(this.snapshot));
   }
 
   private copy(source: RulesManagementSnapshot): RulesManagementSnapshot {
@@ -372,7 +419,7 @@ export class RulesManagementOrchestrator {
   }
 
   private isCurrentSession(session: number): boolean {
-    return ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent() && this.session === session;
+    try { return ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent() && this.session === session; } catch (_) { return false; }
   }
 
   private subscriptionTypeLabel(type: number): string {
