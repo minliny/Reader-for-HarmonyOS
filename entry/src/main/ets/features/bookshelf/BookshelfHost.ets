@@ -6,6 +6,7 @@ import { BookshelfCatalogUpdate, type BookshelfCatalogProgress } from './Bookshe
 import type { RemoteReadingSession } from '../reading/RemoteReadingContract';
 import { BookshelfReadOwner, type BookshelfReadResult } from './BookshelfReadOwner';
 import type { BookshelfDataState, BookshelfFilter } from './BookshelfFlowGateway';
+import { BookshelfOperationOwner, type BookshelfOperationSnapshot } from './BookshelfOperationOwner';
 import type { OperationFacts } from '../../app/ReaderOperationFacts';
 import {
   BookshelfManagementGateway,
@@ -28,10 +29,16 @@ export {
  * the Runtime and current predicate captured by its originating presentation.
  */
 export class BookshelfHost {
+  // One feature-local Runtime lane survives Index reconstruction caused by
+  // the system picker. It is never an application-wide task/error registry.
+  private static operationOwner: BookshelfOperationOwner | undefined;
+  private operationSubscription: (() => void) | undefined;
+  private subscribedOperation: BookshelfOperationOwner | undefined;
   private managementOrchestrator: BookshelfManagementOrchestrator | undefined = undefined;
   private readonly emitManagementSnapshot: (snapshot: BookshelfManagementSnapshot) => void;
   private readonly isManagementCurrent: () => boolean;
   private readonly owner: () => ReaderRuntimeOwner;
+  private readonly emitOperation: (snapshot: BookshelfOperationSnapshot, owner: ReaderRuntimeOwner) => void;
 
   readShelf(owner: ReaderRuntimeOwner, filter: BookshelfFilter, generation: number, current: () => boolean,
     retained: BookshelfDataState | undefined, retryBlank: boolean,
@@ -46,11 +53,33 @@ export class BookshelfHost {
     emitManagementSnapshot: (snapshot: BookshelfManagementSnapshot) => void,
     isManagementCurrent: () => boolean,
     owner?: () => ReaderRuntimeOwner,
+    emitOperation: (snapshot: BookshelfOperationSnapshot, owner: ReaderRuntimeOwner) => void = (): void => {},
   ) {
+    this.emitOperation = emitOperation;
     this.emitManagementSnapshot = emitManagementSnapshot;
     this.isManagementCurrent = isManagementCurrent;
     this.owner = owner ?? ((): ReaderRuntimeOwner => ReaderRuntimeOwner.current());
   }
+
+  operations(owner: ReaderRuntimeOwner): BookshelfOperationOwner {
+    if (!ReaderRuntimeOwner.isCurrent(owner)) {
+      // A late close/read of an old Host may inspect its accepted task, but
+      // must not replace the current Runtime's shared feature lane.
+      if (this.subscribedOperation?.owns(owner)) return this.subscribedOperation;
+      if (BookshelfHost.operationOwner?.owns(owner)) return BookshelfHost.operationOwner;
+      throw new Error('BOOKSHELF_OPERATION_OWNER_RETIRED');
+    }
+    if (BookshelfHost.operationOwner === undefined || !BookshelfHost.operationOwner.owns(owner)) {
+      BookshelfHost.operationOwner = new BookshelfOperationOwner(owner);
+    }
+    const operation = BookshelfHost.operationOwner;
+    if (this.subscribedOperation !== operation || this.operationSubscription === undefined) {
+      this.operationSubscription?.(); this.subscribedOperation = operation;
+      this.operationSubscription = operation.subscribe((snapshot: BookshelfOperationSnapshot): void => this.emitOperation(snapshot, owner));
+    }
+    return operation;
+  }
+  detachOperationPresentation(): void { this.operationSubscription?.(); this.operationSubscription = undefined; }
 
   openManagement(): void { this.getManagementOrchestrator().open(); }
   updateGroupName(value: string): void { this.getManagementOrchestrator().updateGroupName(value); }

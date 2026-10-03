@@ -207,8 +207,8 @@ export class BookshelfFlowGateway {
     return this.localImport.releaseUnusedSelections(selections);
   }
 
-  async importPreparedSelections(selections: LocalBookPreparation[]): Promise<BookshelfImportOutcome> {
-    const batch = await this.localImport.importPreparedSelections(selections);
+  async importPreparedSelections(selections: LocalBookPreparation[], onDispatched?: () => void): Promise<BookshelfImportOutcome> {
+    const batch = await this.localImport.importPreparedSelections(selections, onDispatched);
     // Always re-read after the picker returns. A completed batch can upsert an
     // existing book, and a cancelled batch must still expose the restored
     // Core-owned shelf instead of retaining a UI-side copy.
@@ -283,10 +283,10 @@ export class BookshelfFlowGateway {
   }
 
   /** Read only: absence in a later read cannot manufacture a missing ACK. */
-  async reconcile(receipt: PersistedReceiptProjection<BookshelfDataState>, generation: number):
+  async reconcile(receipt: PersistedReceiptProjection<BookshelfDataState>, generation: number, current?: () => boolean):
     Promise<PersistedReceiptProjection<BookshelfDataState>> {
     try {
-      const shelf = await this.load();
+      const shelf = await this.load(current);
       return projectPersistedReceipt({ confirmation: receipt.receipt.confirmation,
         readback: 'succeeded', value: shelf, generation,
         canRetry: receipt.receipt.confirmation === 'unknown' });

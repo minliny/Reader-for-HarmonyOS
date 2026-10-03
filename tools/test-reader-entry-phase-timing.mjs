@@ -124,7 +124,7 @@ const Index = productionMotionMethods(new URL('../entry/src/main/ets/pages/Index
     ReaderRuntimeOwner: { current: () => ({ noteReadingPreparationIntent() {} }) } });
 const index = Object.assign(new Index(), {
   route: 'bookshelf', currentSourceSwitchTransactionId: () => 'recovering-transaction', navigationGeneration: 4, shelfEntryTraceAttempt: 0, shelfEntryTraceStartedAt: -1,
-  bookshelfRemovalActiveKey: '', isKnownDetailChapter: () => true, sourceDisplayName: () => 'private-source-name',
+  shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false}, isKnownDetailChapter: () => true, sourceDisplayName: () => 'private-source-name',
   openRemoteBookDetail() { this.shelfReadingPreparation = true; this.remoteReadingSession = {}; },
   nextNavigationGeneration() { return ++this.navigationGeneration; }, detailBook: { sourceId: 'remote', bookId: 'private-book' },
 });

@@ -52,14 +52,14 @@ export class LocalBookImportGateway {
     }
   }
 
-  async importPreparedSelections(selections: LocalBookPreparation[]): Promise<LocalImportBatch> {
+  async importPreparedSelections(selections: LocalBookPreparation[], onDispatched?: () => void): Promise<LocalImportBatch> {
     if (selections.length === 0) {
       return { state: 'cancelled', imported: 0, failed: 0, items: [] };
     }
     const items: LocalImportItem[] = [];
     let imported = 0;
     for (const selection of selections) {
-      const item = await this.importPreparedSelection(selection);
+      const item = await this.importPreparedSelection(selection, onDispatched);
       items.push(item);
       if (item.state === 'success') imported += 1;
     }
@@ -70,7 +70,7 @@ export class LocalBookImportGateway {
     return this.importPreparedSelections(await this.selectLocalBookInputs());
   }
 
-  private async importPreparedSelection(selection: LocalBookPreparation): Promise<LocalImportItem> {
+  private async importPreparedSelection(selection: LocalBookPreparation, onDispatched?: () => void): Promise<LocalImportItem> {
     if (selection.state === 'failed') {
       return { fileName: selection.fileName, state: 'failed', failure: selection.failure ?? localImportFailure('read') };
     }
@@ -92,6 +92,7 @@ export class LocalBookImportGateway {
         throw new Error('local_book_not_readable: incomplete content');
       }
       persistenceStarted = true;
+      onDispatched?.();
       const persisted = await this.runtimeOwner.request('import.persist', {
         transactionId: this.nextTransactionId(selection.input.bookId),
         parsed: parsed.data,

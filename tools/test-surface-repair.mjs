@@ -1,3 +1,6 @@
+import {actualBookshelfOperationTypes,actualBookshelfHostField,bookshelfOperationClass} from './lib/bookshelf-operation-owner-probe.mjs';
+import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
+import {ReaderWriteEvidence} from '../entry/src/main/ets/app/ReaderWriteEvidence.ts';
 import { randomUUID } from 'node:crypto';
 import {actualModeHost,readerRecoveryView} from './lib/bookshelf-view-mode-probe.mjs';
 import assert from 'node:assert/strict';
@@ -41,35 +44,40 @@ function fixture(initial={},legacy=null){
  const f=fixture({mode:'list',version:1});let fail=true;f.s.persist=async()=>{if(fail){fail=false;throw Error('asset');}};
  await assert.rejects(f.s.save({}),/asset/);await f.s.save({});await f.s.clear();assert.equal(await f.s.loadBookshelfViewMode(),'list');
 }
+const receiptFacts=bookshelfOperationClass('app/ReaderOperationFacts.ts','({projectOperationFacts,projectCommitReadback})');
+const projectPersistedReceipt=bookshelfOperationClass('app/ReaderPersistedReceiptProjection.ts','projectPersistedReceipt',receiptFacts);
 const owner={};let currentOwner=owner,picks=[],imports=[],released=[],applied=[],presented=[];
+const Runtime=runtimeOwnerIdentityProbe(()=>currentOwner);
 class Gateway {selectLocalBookInputs(){const d=deferred();picks.push(d);return d.promise;} importPreparedSelections(){const d=deferred();imports.push(d);return d.promise;}async releaseUnusedSelections(x){released.push(x);}}
-class Presentation {constructor(state,batch){this.state=state;this.batch=batch;}}
-const Index=productionMotionMethods(path('pages/Index.ets'),['beginImport','isCurrentImport','closeImportDialog','openImportDialog','hasUnknownShelfWrite','beginShelfWrite','publishShelfWrite'],
- {ReaderRuntimeOwner:{current:()=>currentOwner},BookshelfFlowGateway:Gateway,LocalImportPresentation:Presentation,
- hilog:{error(){}},DOMAIN:0,errorMessageOf:e=>String(e)});
-function index(){let p={state:'fileSelection'};return Object.assign(new Index(),{route:'bookshelf',navigationGeneration:1,
- importAttemptId:0,importBusyAttempt:0,bookshelfLoadGeneration:0,bookshelfRemovalActiveKey:'',shelfWriteGeneration:0,currentImportPresentation:()=>p,
- writeImportPresentation:x=>{p=x;presented.push(x);},applyBookshelfState:x=>applied.push(x)});}
+const operationTypes=actualBookshelfOperationTypes({ReaderRuntimeOwner:Runtime,BookshelfFlowGateway:Gateway,projectPersistedReceipt,ReaderWriteEvidence});
+const Index=productionMotionMethods(path('pages/Index.ets'),['beginImport','isCurrentImport','closeImportDialog','openImportDialog','hasUnknownShelfWrite',
+ 'hasVisibleImportDialog','visibleImportDialogState','visibleImportBatch','currentImportPresentation','reconcileImportPresentation'], {ReaderRuntimeOwner:Runtime});
+function index(){currentOwner={};let serialized='';const page=Object.assign(new Index(),{route:'bookshelf',navigationGeneration:1,shelfReceiptRetired:false,
+ bookshelfLoadGeneration:0,shelfOperation:{...operationTypes.EMPTY_BOOKSHELF_OPERATION_SNAPSHOT},storedImportPresentation:'',shelfReadingFilter:'all',shelfSourceFilter:'all',
+ applyBookshelfState:x=>applied.push(x)});
+ page.bookshelfHost=actualBookshelfHostField(page,operationTypes.Host,{setOrCreate:(_k,value)=>{serialized=value;presented.push(value?JSON.parse(value):undefined);}});
+ page.reconcileImportPresentation();page.openImportDialog();return page;}
+const outcome=(batch,shelf)=>{const projection=projectPersistedReceipt({confirmation:'confirmed',readback:'succeeded',value:shelf});return{batch,shelf,readback:projection.receipt,operation:projection.facts};};
 const batch={state:'completed',items:[{fileName:'a',state:'success'}],imported:1,failed:0};
 {
  const i=index();const work=i.beginImport();await i.beginImport();assert.equal(picks.length,1,'pickerOpening prevents duplicate picker');
  picks.at(-1).resolve([{state:'ready'}]);await settle();i.route='reading';i.navigationGeneration++;
- imports.at(-1).resolve({batch,shelf:'committed'});await work;
+ imports.at(-1).resolve(outcome(batch,'committed'));await work;
  assert.equal(applied.length,0,'navigation during import cannot use an old bool');assert.equal(i.bookshelfLoadGeneration,1);
 }
 {
- const i=index();const old=i.beginImport();i.closeImportDialog();i.openImportDialog();const fresh=i.beginImport();
- picks.at(-2).resolve([{state:'ready'}]);await old;assert.equal(released.length,1,'unused stale picker resources released');
- picks.at(-1).resolve([]);await fresh;assert.equal(presented.at(-1).state,'fileSelection','picker cancellation is not a result');
+ const i=index();const old=i.beginImport();i.closeImportDialog();i.openImportDialog();const count=picks.length;await i.beginImport();assert.equal(picks.length,count,'closing picker retains accepted mutex');
+ picks.at(-1).resolve([{state:'ready'}]);await old;assert.equal(released.length,1,'unused stale picker resources released');
+ const fresh=i.beginImport();picks.at(-1).resolve([]);await fresh;assert.equal(presented.at(-1).state,'fileSelection','picker cancellation is not a result');
 }
 {
  const i=index();const work=i.beginImport();picks.at(-1).resolve([{state:'ready'}]);await settle();
- i.closeImportDialog();i.openImportDialog();imports.at(-1).resolve({batch,shelf:'old'});await work;
+ i.closeImportDialog();i.openImportDialog();imports.at(-1).resolve(outcome(batch,'old'));await work;
  assert.equal(applied.length,0,'same-route close/reopen revokes old result');assert.equal(presented.at(-1).state,'fileSelection');
 }
 {
  const i=index();const work=i.beginImport();picks.at(-1).resolve([{state:'ready'}]);await settle();
- currentOwner={};imports.at(-1).resolve({batch,shelf:'old-runtime'});await work;assert.equal(applied.length,0);currentOwner=owner;
+ currentOwner={};imports.at(-1).resolve(outcome(batch,'old-runtime'));await work;assert.equal(applied.length,0);currentOwner=owner;
 }
 const books=[{sourceId:'https://bad.test',bookId:'1',title:'a',author:'b',currentChapterTitle:'current',group:''},
  {sourceId:'remote2',sourceName:'真实书源',bookId:'2',group:'历史分组',readProgress:80}];

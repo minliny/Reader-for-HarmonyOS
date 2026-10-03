@@ -29,13 +29,13 @@ for(const fails of [false,true]){
  Object.assign(h,{detailBook:book,remoteReadingSession:{identity:book,book:{title:'b'}},bookshelfRemovalGeneration:0,
  bookshelfHost:{upsertBook:()=>pending.promise},
  bookshelfAdditionGeneration:0,bookshelfAdditionActiveKey:'',bookshelfAdditionError:'',
- bookshelfRemovalActiveKey:'',canRemoveDetailBook:()=>true,detailBookKey:()=> 's:b',
+ shelfOperation:{removalKey:'',busy:false,batchRemovalBusy:false},canRemoveDetailBook:()=>true,detailBookKey:()=> 's:b',
  isSameDetailBook:b=>h.detailBook===b,refreshBookshelf:()=>{h.refreshes++;},
  prefetchReadingWindow:async()=>{h.prefetches++;},showReadingFailure:()=>{h.failures++;},refreshes:0,prefetches:0,failures:0});
- h.addDetailBook();assert.equal(h.bookshelfRemovalActiveKey,'','pending add cannot block reading a different book');
+ h.addDetailBook();assert.equal(h.shelfOperation.removalKey,'','pending add cannot block reading a different book');
  assert.equal(h.bookshelfAdditionActiveKey,'s:b');h.detailBook=undefined;
  if(fails)pending.reject(Error('synthetic'));else pending.resolve();
- await tick();assert.equal(h.bookshelfRemovalActiveKey,'');assert.equal(h.bookshelfAdditionActiveKey,'');
+ await tick();assert.equal(h.shelfOperation.removalKey,'');assert.equal(h.bookshelfAdditionActiveKey,'');
  assert.equal(h.refreshes,fails?0:1);assert.equal(h.prefetches,0,'durable preparation belongs to the application owner');
  assert.equal(h.failures,0,'a late add failure never opens a modal over another page');
  assert.equal(h.bookshelfAdditionError.includes('synthetic'),fails);
@@ -112,7 +112,7 @@ for(const stale of [false,true]) for(const fails of [false,true]) {
  const seed={sourceId:'s',bookId:'b',title:'预览',author:'作者'};
  const session={identity:{sourceId:'s',bookId:'b'},book:{title:'已准入',author:'作者'},entries:[{index:0,title:'第一章',url:'/1'}],acquisitionMode:'cache'};
  const h=Object.assign(new CacheClass(),{remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,searchDetailCandidates:[],shelfBooks:[],
-   remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,bookshelfRemovalActiveKey:'',
+   remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,shelfOperation:{removalKey:'',busy:false,batchRemovalBusy:false},
    bookshelfHost:{loadShelfBook:async()=>undefined},
    probeRemoteContentVerdict:async()=>0,loadRemoteDirectoryProjection:async()=>session.entries,
    showReadingFailure:(...args)=>failures.push(args),
@@ -142,7 +142,7 @@ for (const scenario of ['offscreen-existing','not-on-shelf','stale-lookup']) {
    RemoteReadingFlowGateway:class{},ReadingOfflineGateway:class{},ReaderCoreGateway:class{loadShelfBook(){return lookup.promise;}},
    DOMAIN:0,hilog:{info(){},warn(){},error(){}}});
  const h=Object.assign(new Host(),{remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,
-  searchDetailCandidates:[],shelfBooks:[],remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,bookshelfRemovalActiveKey:'',
+  searchDetailCandidates:[],shelfBooks:[],remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,shelfOperation:{removalKey:'',busy:false,batchRemovalBusy:false},
   bookshelfHost:{loadShelfBook:()=>lookup.promise}});
  const selected={sourceId:'s',bookId:'offscreen',title:'书',author:'作者'};
  h.openRemoteBookDetail(selected,'书源');assert.equal(h.route,'detail');assert.deepEqual(calls,[]);

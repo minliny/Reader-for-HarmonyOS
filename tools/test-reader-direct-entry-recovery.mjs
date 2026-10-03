@@ -53,7 +53,7 @@ const session={identity:{sourceId:candidate.sourceId,bookId:candidate.bookUrl},b
 function fixture(){
   return Object.assign(new Host(),{route:'detail',readingOriginRoute:'detail',detailReturnRoute:'search',
     navigationGeneration:0,readingSessionActive:false,detailBook:{...book},detailToc:[],
-    detailInBookshelf:true,bookshelfRemovalActiveKey:'',remoteReadingSession:undefined,
+    detailInBookshelf:true,shelfOperation:{removalKey:'',busy:false,batchRemovalBusy:false},remoteReadingSession:undefined,
     sourceSwitchState:{kind:'candidates',candidates:[candidate]},sourceSwitchVisible:true,
     shelfBooks:[book],remoteCatalogRefreshAt:new Map(),offlineMutationActiveKey:'',
     directoryBookmarkMutationGeneration:0,directoryBookmarkMutationActiveKey:'',

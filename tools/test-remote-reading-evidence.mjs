@@ -40,7 +40,7 @@ function chapter(current, index) {
 function page(current = session()) {
   return Object.assign(new Index(), { remoteReadingSession: current, remoteContentVerdict: 'verifying',
     remoteSessionGeneration: 0, remoteContentProbeGeneration: 0, navigationGeneration: 7, route: 'detail',
-    readingSessionActive: false, bookshelfRemovalActiveKey: '', detailInBookshelf: false,
+    readingSessionActive: false, shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false}, detailInBookshelf: false,
     loadRemoteDirectoryProjection: async (_a, _b, value) => value.entries });
 }
 

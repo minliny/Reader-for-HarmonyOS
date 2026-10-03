@@ -1,3 +1,4 @@
+import {bookshelfOperationClass} from './lib/bookshelf-operation-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {ReaderNativeAlertOwner} from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
@@ -13,11 +14,12 @@ const Index=productionMotionMethods(file,['showIndexAlert','showSourceImportResu
  withPreparedRemoteChapter:(session,chapter,revision)=>({...session,preparedChapter:{...chapter,projectionRevision:revision}}),
  RemoteReadingFlowGateway:class {constructor(owner){this.owner=owner;}async loadChapter(){this.owner.calls.push('chapter.content');this.owner.revision+=2;return {chapterIndex:0};}}
 });
+const ActualBookshelfHost=bookshelfOperationClass('features/bookshelf/BookshelfHost.ets','BookshelfHost');
 function fixture(route='source'){
  unavailable=false;let shown,fail=false;const calls=[];
  const owner={calls,revision:3,bookAcquisitions(){return{readingProjectionRevision:()=>owner.revision,endSearch(){},};},readingEntryPreparations:()=>({setPaused(){}})};currentOwner=owner;
  const host={deleteSelected(ids){calls.push(['deleteSources',ids]);},removeSubscription(id){calls.push(['deleteRss',id]);},importSources(_replace,done,failed){calls.push('rss.confirmed-write');try{done({imported:2});}catch(error){failed(error);}},exportSources(){}};
- const p=Object.assign(new Index(),{nativeAlertOwner:new ReaderNativeAlertOwner(),route,navigationGeneration:1,shelfReceiptRetired:false,
+ const p=Object.assign(new Index(),{bookshelfHost:new ActualBookshelfHost(()=>{},()=>false),nativeAlertOwner:new ReaderNativeAlertOwner(),route,navigationGeneration:1,shelfReceiptRetired:false,
   sourceManagementReturnTarget:'search',sourceManagementSearchKeyword:'abc',sourceToolsSnapshot:{sources:[{sourceId:'s'}],sourceListRevision:3,selectionRevision:4,busy:false},
   sourceToolsOrchestrator:host,rssOrchestrator:host,rssPresentation:{kind:'feed',subscriptions:[{subscriptionId:'rss',title:'源'}]},jsonImportVisible:false,
   remoteSessionGeneration:2,remoteReadingSession:{identity:{sourceId:'s',bookId:'b'}},offlineMutationActiveKey:'',

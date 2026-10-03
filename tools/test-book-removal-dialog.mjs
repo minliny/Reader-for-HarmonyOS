@@ -44,7 +44,7 @@ function fixture(route, book = local) {
   const events = [];
   const host = Object.assign(new Host(), { route, detailBook: book, shelfBooks: [local, online],
     bookshelfSelectionBooks: [local, online], bookshelfSelectionReady: true,
-    bookshelfBatchRemovalBusy: false, bookshelfRemovalActiveKey: '', offlineMutationActiveKey: '',
+    bookshelfBatchRemovalBusy: false, shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false}, offlineMutationActiveKey: '',
     readingSessionActive: false, sourceSwitchVisible: false, pendingSourceSwitch: undefined,
     navigationGeneration: 1, bookRemovalDialogOpen: false,
     bookRemovalDialogController: { open() { events.push('open'); }, close() { events.push('close'); } },
@@ -65,7 +65,7 @@ for (const origin of ['detail', 'bookshelf', 'bookshelfMultiSelect']) {
     else if (exit === 'back') assert.equal(h.onBackPress(), true);
     else {
       if (exit === 'stale') h.navigationGeneration++;
-      if (exit === 'busy') { h.bookshelfRemovalActiveKey = 'busy'; h.bookshelfBatchRemovalBusy = true; }
+      if (exit === 'busy') { h.shelfOperation={...h.shelfOperation,removalKey:'busy',busy:true,batchRemovalBusy:true}; }
       h.confirmBookRemovalDialog();
     }
     h.confirmBookRemovalDialog();

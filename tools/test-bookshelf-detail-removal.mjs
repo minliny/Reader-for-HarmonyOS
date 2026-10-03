@@ -5,6 +5,7 @@ const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.ur
 const detail = read('entry/src/main/ets/features/bookshelf/LocalBookDetail.ets');
 const index = read('entry/src/main/ets/pages/Index.ets');
 const flow = read('entry/src/main/ets/features/bookshelf/BookshelfFlowGateway.ts');
+const operation = read('entry/src/main/ets/features/bookshelf/BookshelfOperationOwner.ts');
 const core = read('entry/src/main/ets/app/ReaderCoreGateway.ts');
 const host = read('entry/src/main/ets/app/ReaderHostRegistry.ts');
 
@@ -30,15 +31,17 @@ assert.match(index, /应用内解析内容、阅读进度和离线任务将一�
   'local deletion copy must disclose the Core purge without claiming to delete the system file');
 assert.match(index, /书源、阅读进度和已缓存正文不会删除，可再次通过搜索加入书架/,
   'remote deletion copy must disclose that removal is shelf-only');
-assert.match(index, /new BookshelfFlowGateway\(owner, this\.shelfFilter\(\)\)[\s\S]*gateway\.remove\(book\.sourceId, book\.bookId\)/,
-  'the page must reuse the feature gateway instead of issuing a second Core contract');
+assert.match(index, /this\.bookshelfHost\.operations\(owner\)\.remove\(/,
+  'the page publishes intent to the existing Host-owned finite mutation lane');
+assert.match(operation, /new BookshelfFlowGateway\(this\.owner, filter\)/,
+  'the domain owner reuses the actual gateway without a second Core contract');
 assert.doesNotMatch(index, /request\('bookshelf\.remove'/,
   'Index must not bypass ReaderCoreGateway with a duplicate removal protocol');
 assert.match(flow, /confirmed: \(value: boolean\): void => \{ evidence\.confirmed\(\); removed = value; \}/,
   'the actual gateway ACK establishes confirmation before independent cleanup');
 assert.match(index, /outcome\.receipt\.receipt\.confirmation === 'confirmed'/,
   'a validated mutation ACK admits the deleted-detail transition');
-assert.match(index, /reconcileShelfWrite[\s\S]*confirmation: receipt\.receipt\.confirmation/,
+assert.match(operation, /reconcile[\s\S]*confirmation: receipt\.receipt\.confirmation/,
   'read-only recovery preserves the original confirmation rather than deriving it from absence');
 assert.doesNotMatch(index, /reconcileDetailBookRemovalFailure|reconcileShelfBookRemovalFailure/,
   'obsolete exact-key absence inference and compensation paths must be removed');

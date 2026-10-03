@@ -8,6 +8,7 @@ import { readerAppColor } from '../common/ReaderThemeRegistry';
 import curves from '@ohos.curves';
 import { readerMotionNowMs } from '../common/ReaderMotionClock';
 import { localImportResultLayout, LocalImportResultLayout } from './LocalImportLayout';
+import type { LocalImportDialogState } from './LocalImportPresentationOwner';
 import type { LocalImportBatch, LocalImportItem } from './LocalBookImportGateway';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
@@ -38,7 +39,7 @@ import {
 
 import { registerReaderFonts } from '../common/ReaderFonts';
 
-export type LocalImportDialogState = 'fileSelection' | 'pickerOpening' | 'importing' | 'result';
+export type { LocalImportDialogState } from './LocalImportPresentationOwner';
 
 /**
  * Figma `Library/LocalImportDialog` (node 2657:918, 390×844), centered in

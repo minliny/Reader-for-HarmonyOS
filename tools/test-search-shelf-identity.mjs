@@ -137,7 +137,7 @@ function addFixture(){const notices=[];const host=Object.assign(new Add(),{
   detailBook:result,remoteReadingSession:{identity:result,book:result},bookshelfRemovalGeneration:0,
   bookshelfHost:{upsertBook:async()=>{writeCount++;if(writeError)throw writeError;return {created:true};}},
   bookshelfAdditionGeneration:0,bookshelfAdditionActiveKey:'',bookshelfAdditionError:'',
-  bookshelfRemovalActiveKey:'',canRemoveDetailBook:()=>true,detailBookKey:()=> 'search-source:/new',
+  shelfOperation:{removalKey:'',busy:false,batchRemovalBusy:false},canRemoveDetailBook:()=>true,detailBookKey:()=> 'search-source:/new',
   showReadingFailure:(...args)=>notices.push(args),refreshBookshelf(){},refreshSearchShelfMembership(){this.refreshed=true;},
 });return {host,notices};}
 {
@@ -152,6 +152,6 @@ function addFixture(){const notices=[];const host=Object.assign(new Add(),{
   assert.equal(writeCount,1);assert.equal(host.detailInBookshelf,undefined,'another identity never becomes this detail row');
   assert.equal(host.refreshed,true);assert.equal(notices.length,0);
   assert.match(host.bookshelfAdditionError,/已加入书架/);
-  assert.equal(host.bookshelfRemovalActiveKey,'');writeError=undefined;
+  assert.equal(host.shelfOperation.removalKey,'');writeError=undefined;
 }
 console.log('PASS: search selection preserves saved identity; sparse offscreen membership loads full local detail with stale guards; ambiguous and duplicate ownership remains safe');

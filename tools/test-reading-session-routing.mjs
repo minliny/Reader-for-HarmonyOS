@@ -26,7 +26,7 @@ assert.match(index, /this\.sourceHost\.loadSources\(session\.identity\.sourceId\
 const remoteOpen = index.slice(index.indexOf('private openRemoteBookDetail('), index.indexOf('private openReading('));
 assert.ok(remoteOpen.indexOf('this.route = entryRoute') < remoteOpen.indexOf('.acquireBookWithBackgroundRefresh(seed, { isCurrent })'),
   'remote navigation must publish the chosen shelf or detail entry before Core/network admission');
-assert.match(index, /sourceSwitchEnabled: this\.detailBook\.sourceId !== LOCAL_SOURCE_ID &&\s*this\.bookshelfRemovalActiveKey\.length === 0/,
+assert.match(index, /sourceSwitchEnabled: this\.detailBook\.sourceId !== LOCAL_SOURCE_ID &&\s*this\.shelfOperation\.removalKey\.length === 0/,
   'source browsing remains available even when the current source catalog failed');
 assert.match(index, /readingEnabled: this\.remoteContentVerdict === 'readable'/,
   'the detail retains its diagnostic verdict independently from reading admission');

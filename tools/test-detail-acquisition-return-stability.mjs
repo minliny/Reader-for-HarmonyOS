@@ -82,7 +82,7 @@ function fixture() {
     readingSessionActive: false, sourceSwitchVisible: false, bookProjectionLoading: false, bookProjectionAgain: false,
     candidateAdmissionGeneration: -1, candidateAdmissionFailedGeneration: -1,
     shelfBooks: [], searchDetailCandidates: [], detailReturnRoute: 'search', remoteCatalogRefreshAt: new Map(),
-    offlineMutationGeneration: 0, bookshelfRemovalActiveKey: '', directoryBookmarkMutationGeneration: 0,
+    offlineMutationGeneration: 0, shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false}, directoryBookmarkMutationGeneration: 0,
     bookshelfHost: { loadShelfBook: async () => undefined },
     loadRemoteDirectoryProjection: async (_offline, _owner, session) => session.entries,
     showReadingFailure: (title, message) => failures.push({ title, message }),
@@ -243,7 +243,7 @@ sdkRequire(sdkRoot + '/lib/component_map.js').CUSTOM_BUILDER_METHOD.add('externa
 function detailSdk(f) {
   const read = file => readFileSync(new URL(file, base), 'utf8');
   const parent = createReaderBuilderProbe(read('pages/Index.ets'), ['detailContent'], { LocalBookDetail: DetailChild, LOCAL_SOURCE_ID: 'local' }).owner;
-  Object.assign(parent, f.page, { bookshelfRemovalActiveKey: '', bookshelfAdditionActiveKey: '',
+  Object.assign(parent, f.page, { shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false}, bookshelfAdditionActiveKey: '',
     bookshelfAdditionCancellingKey: '', bookshelfAdditionErrorKey: '', offlineMutationActiveKey: '',
     detailBookKey: b => JSON.stringify([b.sourceId, b.bookId]), hasUnknownShelfWrite: () => false,
     remoteContentVerdictLabel: () => '', remoteContentVerdict: f.page.remoteContentVerdict });

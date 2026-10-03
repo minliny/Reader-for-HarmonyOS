@@ -50,7 +50,7 @@ function fixture() {
   const p = Object.assign(new Index(), {
     route: 'bookshelf', readingOriginRoute: 'bookshelf', navigationGeneration: 0,
     readingSessionActive: false, shelfReadingPreparation: false, detailToc: [],
-    bookshelfRemovalActiveKey: '', directoryBookmarkMutationGeneration: 0, directoryBookmarkMutationActiveKey: '',
+    shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false}, directoryBookmarkMutationGeneration: 0, directoryBookmarkMutationActiveKey: '',
     installRemoteReadingSession(session) { this.remoteReadingSession = session; },
     readingDetailForShelf: selection => ({ ...selection }), hasDeclaredCoverUrl: () => true,
     showReadingFailure: (...args) => failures.push(args),

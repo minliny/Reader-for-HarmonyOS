@@ -77,7 +77,7 @@ function fixture({changedOffset=false,missingProgress=false,legacyProgress=false
  const shelf={sourceId:'source',bookId:'book',title:'书',author:'作者',currentChapterIndex:0};
  const p=Object.assign(new Index(),{route:'bookshelf',readingOriginRoute:'bookshelf',navigationGeneration:0,
   remoteSessionGeneration:0,remoteContentProbeGeneration:0,remoteReadabilityProjectionRevision:-1,detailToc:[],
-  shelfBooks:[shelf],searchDetailCandidates:[],remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,bookshelfRemovalActiveKey:'',
+  shelfBooks:[shelf],searchDetailCandidates:[],remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,shelfOperation:{removalKey:'',busy:false,batchRemovalBusy:false},
   directoryBookmarkMutationGeneration:0,directoryBookmarkMutationActiveKey:'',
   readingDetailForRemoteSeed:(seed,sourceName)=>({...seed,sourceName}),
   showReadingFailure:(...a)=>errors.push(a),refreshCachedSearchDetailInBackground(){},

@@ -99,7 +99,7 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
     remoteSessionGeneration:0,remoteContentProbeGeneration:0,route: origin, readingOriginRoute: 'detail', detailReturnRoute: 'bookshelf',
     readingSessionActive: false, navigationGeneration: 0, shelfReadingPreparation: false,
     searchHost:{publication:{shelfAt:()=>[]},resume:()=>calls.push('search.resume'),close:()=>calls.push('search.close')},searchPublicationRevision:0, detailToc: [], detailInBookshelf: false, shelfBooks: [], searchDetailCandidates: [], remoteCatalogRefreshAt: new Map(),
-    bookshelfRemovalActiveKey: '', offlineMutationGeneration: 0,
+    shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false}, offlineMutationGeneration: 0,
     bookshelfHost: { loadShelfBook: async (sourceId, bookId) => rows.get(`${sourceId}\0${bookId}`) },
     sourceSwitchVisible: false, sourceSwitchState: { kind: 'discovering' },
     searchViewState: view, searchPresentation: presentation, searchOrchestrator: orchestrator,
