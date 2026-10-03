@@ -43,6 +43,11 @@ import type {
   RuleSubscriptionDraft,
   TxtTocRuleDraft,
 } from './RulesManagementGateway';
+import {
+  TYPE_RULES_MANAGEMENT_ACTION,
+  TYPE_RULES_MANAGEMENT_HEADING,
+  TYPE_RULES_MANAGEMENT_INPUT,
+} from '../common/ReaderTypography';
 
 @Component
 export struct RulesManagementPage {
@@ -289,14 +294,19 @@ export struct RulesManagementPage {
 
   @Builder
   private heading(value: string) {
-    Text(value).width('100%').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold)
-      .fontSize(14).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+    Text(value).width('100%').fontFamily(TYPE_RULES_MANAGEMENT_HEADING.fontFamily)
+      .fontWeight(TYPE_RULES_MANAGEMENT_HEADING.fontWeight)
+      .fontSize(TYPE_RULES_MANAGEMENT_HEADING.fontSizeFp)
+      .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
   }
 
   @Builder
   private input(value: string, placeholder: string, changed: (value: string) => void) {
     TextInput({ text: value, placeholder })
-      .width('100%').height(40).fontFamily('ReaderNotoSansSC').fontSize(12).fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+      .width('100%').height(40).fontFamily(TYPE_RULES_MANAGEMENT_INPUT.fontFamily)
+      .fontWeight(TYPE_RULES_MANAGEMENT_INPUT.fontWeight)
+      .fontSize(TYPE_RULES_MANAGEMENT_INPUT.fontSizeFp)
+      .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
       .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme)).border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(8)
       .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM }).onChange(changed);
   }
@@ -311,8 +321,11 @@ export struct RulesManagementPage {
 
   @Builder
   private actionButton(label: string, primary: boolean, action: () => void) {
-    Text(label).layoutWeight(1).height(40).textAlign(TextAlign.Center).fontWeight(FontWeight.Bold)
-      .fontSize(12).fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
+    Text(label).layoutWeight(1).height(40).textAlign(TextAlign.Center)
+      .fontFamily(TYPE_RULES_MANAGEMENT_ACTION.fontFamily)
+      .fontWeight(TYPE_RULES_MANAGEMENT_ACTION.fontWeight)
+      .fontSize(TYPE_RULES_MANAGEMENT_ACTION.fontSizeFp)
+      .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .backgroundColor(primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(8)
       .opacity(this.snapshot.busy ? 0.62 : 1).onClick((): void => {

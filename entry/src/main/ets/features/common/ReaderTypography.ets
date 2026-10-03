@@ -152,6 +152,18 @@ export const TYPE_SOURCE_SWITCH_CHAPTER = new ReaderTextStyle(
 export const TYPE_SOURCE_MANAGEMENT_META = new ReaderTextStyle(
   READER_FONT_NOTO_SANS_SC, 400, 10, 12.5, undefined, 'system', 'figmaNode');
 
+// RulesManagementPage keeps its current compact editor geometry while moving
+// the three repeated text tuples into named semantic roles. These values are
+// deliberately identical to the existing page-local tuples; this slice only
+// changes ownership so a later visual pass can update the rules surface from
+// one place without changing its current baseline.
+export const TYPE_RULES_MANAGEMENT_HEADING = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 700, 14, undefined, undefined, 'system', 'figmaNode');
+export const TYPE_RULES_MANAGEMENT_INPUT = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 400, 12, undefined, undefined, 'system', 'figmaNode');
+export const TYPE_RULES_MANAGEMENT_ACTION = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 700, 12, undefined, undefined, 'system', 'figmaNode');
+
 // The bookshelf-management surface is a real product page rather than a
 // diagnostic view. Keep its existing tuples in named roles so the page no
 // longer owns a second set of physical font literals. Roles remain separate

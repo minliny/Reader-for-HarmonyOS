@@ -170,6 +170,7 @@
     "test-rss-discover-responsive-layout.mjs",
     "test-rss-subscription-management-page.mjs",
     "test-rule-entity-management.mjs",
+    "test-rules-management-typography.mjs",
     "test-search-detail-cache-first.mjs",
     "test-search-gateway.mjs",
     "test-search-host-wiring.mjs",
