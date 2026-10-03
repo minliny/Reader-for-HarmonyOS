@@ -13,6 +13,7 @@ export type ReaderFontScalePolicy = 'system' | 'readerAppearance';
 export type ReaderTypographySource =
   | 'figmaVariable'
   | 'figmaNode'
+  | 'appBaseline'
   | 'platformCalibration'
   | 'runtimeAppearance';
 
@@ -36,6 +37,37 @@ export class ReaderTextStyle {
   constructor(
     fontFamily: string,
     fontWeight: number,
+    fontSizeFp: number,
+    lineHeightFp: number | undefined,
+    letterSpacingFp: number | undefined,
+    scalePolicy: ReaderFontScalePolicy,
+    source: ReaderTypographySource,
+  ) {
+    this.fontFamily = fontFamily;
+    this.fontWeight = fontWeight;
+    this.fontSizeFp = fontSizeFp;
+    this.lineHeightFp = lineHeightFp;
+    this.letterSpacingFp = letterSpacingFp;
+    this.scalePolicy = scalePolicy;
+    this.source = source;
+  }
+}
+
+/** A role may explicitly retain ArkUI's inherited family or default weight.
+ * Consumers must omit undefined modifiers, rather than inventing a font tuple
+ * during architecture migration. Existing fully specified roles stay strict. */
+export class ReaderInheritedTextStyle {
+  readonly fontFamily: string | undefined;
+  readonly fontWeight: number | undefined;
+  readonly fontSizeFp: number;
+  readonly lineHeightFp: number | undefined;
+  readonly letterSpacingFp: number | undefined;
+  readonly scalePolicy: ReaderFontScalePolicy;
+  readonly source: ReaderTypographySource;
+
+  constructor(
+    fontFamily: string | undefined,
+    fontWeight: number | undefined,
     fontSizeFp: number,
     lineHeightFp: number | undefined,
     letterSpacingFp: number | undefined,
@@ -168,6 +200,38 @@ export const TYPE_SOURCE_SWITCH_CHAPTER = new ReaderTextStyle(
 // fields cannot drift while the primary source title keeps its own role.
 export const TYPE_SOURCE_MANAGEMENT_META = new ReaderTextStyle(
   READER_FONT_NOTO_SANS_SC, 400, 10, 12.5, undefined, 'system', 'figmaNode');
+
+// Source-tools is migrated as one complete text family. AUTO is deliberate:
+// default weights, inherited list metadata and natural line boxes preserve the
+// current application baseline alongside explicitly authored bold controls.
+export const TYPE_SOURCE_TOOLS_HEADING = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 700, 14, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_TOOLS_ACTION = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 700, 12, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_TOOLS_COMPACT_ACTION = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 700, 11, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_TOOLS_BODY = new ReaderInheritedTextStyle(
+  READER_FONT_NOTO_SANS_SC, undefined, 12, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_TOOLS_HINT = new ReaderInheritedTextStyle(
+  READER_FONT_NOTO_SANS_SC, undefined, 11, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_TOOLS_CAPTION = new ReaderInheritedTextStyle(
+  READER_FONT_NOTO_SANS_SC, undefined, 10, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_TOOLS_NOTE = new ReaderInheritedTextStyle(
+  READER_FONT_NOTO_SANS_SC, undefined, 10, 16, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_TOOLS_DESCRIPTION = new ReaderInheritedTextStyle(
+  READER_FONT_NOTO_SANS_SC, undefined, 11, 17, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_TOOLS_STATUS = new ReaderInheritedTextStyle(
+  READER_FONT_NOTO_SANS_SC, undefined, 12, 18, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_TOOLS_URL = new ReaderInheritedTextStyle(
+  READER_FONT_INTER, undefined, 10, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_TOOLS_DEBUG_ID = new ReaderInheritedTextStyle(
+  READER_FONT_INTER, undefined, 11, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_TOOLS_CODE_INPUT = new ReaderInheritedTextStyle(
+  'monospace', undefined, 11, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_TOOLS_DEBUG_LOG = new ReaderInheritedTextStyle(
+  'monospace', undefined, 10, 16, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_TOOLS_INHERITED_META = new ReaderInheritedTextStyle(
+  undefined, undefined, 10, undefined, undefined, 'system', 'appBaseline');
 
 // RulesManagementPage keeps its current compact editor geometry while moving
 // the three repeated text tuples into named semantic roles. These values are

@@ -187,6 +187,7 @@
     "test-source-product-tools.mjs",
     "test-source-switch-transaction.mjs",
     "test-source-switch-typography.mjs",
+    "test-source-tools-typography.mjs",
     "test-surface-horizontal-geometry.mjs",
     "test-surface-transition-p0.mjs",
     "test-sync-webdav-product.mjs",
@@ -194,6 +195,7 @@
     "test-transient-transport-acquisition.mjs"
   ],
   "integration": [
+    "test-source-tools-typography-sdk.mjs",
     "test-arkweb-resource-capture.mjs",
     "test-arkweb-resource-diagnostic.mjs",
     "test-book-author-metadata.mjs",

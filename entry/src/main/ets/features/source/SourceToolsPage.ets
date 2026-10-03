@@ -4,6 +4,22 @@ import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
 import {
+  TYPE_SOURCE_TOOLS_ACTION,
+  TYPE_SOURCE_TOOLS_BODY,
+  TYPE_SOURCE_TOOLS_CAPTION,
+  TYPE_SOURCE_TOOLS_CODE_INPUT,
+  TYPE_SOURCE_TOOLS_COMPACT_ACTION,
+  TYPE_SOURCE_TOOLS_DEBUG_ID,
+  TYPE_SOURCE_TOOLS_DEBUG_LOG,
+  TYPE_SOURCE_TOOLS_DESCRIPTION,
+  TYPE_SOURCE_TOOLS_HEADING,
+  TYPE_SOURCE_TOOLS_HINT,
+  TYPE_SOURCE_TOOLS_INHERITED_META,
+  TYPE_SOURCE_TOOLS_NOTE,
+  TYPE_SOURCE_TOOLS_STATUS,
+  TYPE_SOURCE_TOOLS_URL,
+} from '../common/ReaderTypography';
+import {
   SurfaceHorizontalFrame,
   SurfaceWidthSpec,
   resolveHorizontalFrame,
@@ -286,9 +302,9 @@ export struct SourceToolsPage {
       .width('100%');
       Text('批量操作复用 source.export / source.check.run / source.update / source.delete；删除由系统确认框二次确认。')
         .width('100%')
-        .fontFamily('ReaderNotoSansSC')
-        .fontSize(10)
-        .lineHeight(16)
+        .fontFamily(TYPE_SOURCE_TOOLS_NOTE.fontFamily as string)
+        .fontSize(TYPE_SOURCE_TOOLS_NOTE.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_TOOLS_NOTE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
     }
     .width('100%')
@@ -305,14 +321,14 @@ export struct SourceToolsPage {
         Text(`检测进度 ${this.snapshot.batchCheck.completed}/${this.snapshot.batchCheck.total}` +
           `（${this.batchCheckPercent(this.snapshot.batchCheck)}%）`)
           .layoutWeight(1)
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(14)
+          .fontFamily(TYPE_SOURCE_TOOLS_HEADING.fontFamily)
+          .fontWeight(TYPE_SOURCE_TOOLS_HEADING.fontWeight)
+          .fontSize(TYPE_SOURCE_TOOLS_HEADING.fontSizeFp)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
         Text(this.batchCheckPhaseLabel(this.snapshot.batchCheck))
-          .fontFamily('ReaderNotoSansSC')
-          .fontSize(11)
-          .fontWeight(FontWeight.Bold)
+          .fontFamily(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontFamily)
+          .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp)
+          .fontWeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontWeight)
           .fontColor(this.snapshot.batchCheck.phase === 'failed' ? readerAppColor('app.SourceToolsPage.batchCheckCard.fontColor.FFA8584D', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme));
       }
       .width('100%');
@@ -331,9 +347,9 @@ export struct SourceToolsPage {
         Text(`当前 ${this.snapshot.batchCheck.currentIndex}/${this.snapshot.batchCheck.total}：` +
           `${this.snapshot.batchCheck.currentSourceName}（检测所选能力）`)
           .width('100%')
-          .fontFamily('ReaderNotoSansSC')
-          .fontSize(11)
-          .lineHeight(17)
+          .fontFamily(TYPE_SOURCE_TOOLS_DESCRIPTION.fontFamily as string)
+          .fontSize(TYPE_SOURCE_TOOLS_DESCRIPTION.fontSizeFp)
+          .lineHeight(TYPE_SOURCE_TOOLS_DESCRIPTION.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -349,15 +365,15 @@ export struct SourceToolsPage {
       if (this.snapshot.batchCheck.results.length === 0) {
         Text('每个书源完成后，结果会立即出现在这里。')
           .width('100%')
-          .fontFamily('ReaderNotoSansSC')
-          .fontSize(11)
+          .fontFamily(TYPE_SOURCE_TOOLS_HINT.fontFamily as string)
+          .fontSize(TYPE_SOURCE_TOOLS_HINT.fontSizeFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       } else {
         Text('实时结果（最新在前）')
           .width('100%')
-          .fontFamily('ReaderNotoSansSC')
-          .fontSize(11)
-          .fontWeight(FontWeight.Bold)
+          .fontFamily(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontFamily)
+          .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp)
+          .fontWeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontWeight)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
         List() {
           LazyForEach(this.batchResultDataSource, (result: SourceBatchCheckResult) => {
@@ -385,9 +401,9 @@ export struct SourceToolsPage {
       .layoutWeight(1)
       .height(32)
       .textAlign(TextAlign.Center)
-      .fontFamily('ReaderNotoSansSC')
-      .fontSize(11)
-      .fontWeight(FontWeight.Bold)
+      .fontFamily(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontFamily)
+      .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp)
+      .fontWeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontWeight)
       .fontColor(color)
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .borderRadius(7);
@@ -399,16 +415,16 @@ export struct SourceToolsPage {
       Column({ space: 3 }) {
         Text(result.sourceName)
           .width('100%')
-          .fontFamily('ReaderNotoSansSC')
-          .fontSize(12)
-          .fontWeight(FontWeight.Bold)
+          .fontFamily(TYPE_SOURCE_TOOLS_ACTION.fontFamily)
+          .fontSize(TYPE_SOURCE_TOOLS_ACTION.fontSizeFp)
+          .fontWeight(TYPE_SOURCE_TOOLS_ACTION.fontWeight)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         Text(result.message)
           .width('100%')
-          .fontFamily('ReaderNotoSansSC')
-          .fontSize(10)
+          .fontFamily(TYPE_SOURCE_TOOLS_CAPTION.fontFamily as string)
+          .fontSize(TYPE_SOURCE_TOOLS_CAPTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -416,9 +432,9 @@ export struct SourceToolsPage {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start);
       Text(this.batchResultLabel(result))
-        .fontFamily('ReaderNotoSansSC')
-        .fontSize(11)
-        .fontWeight(FontWeight.Bold)
+        .fontFamily(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontFamily)
+        .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp)
+        .fontWeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontWeight)
         .fontColor(result.state === 'passed' ? readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme) :
           (result.state === 'failed' ? readerAppColor('app.SourceToolsPage.batchResultRow.fontColor.FFA8584D', this.appThemeScheme) : readerAppColor('app.SourceToolsPage.batchResultRow.fontColor.FF9A6A1F', this.appThemeScheme)));
     }
@@ -432,9 +448,9 @@ export struct SourceToolsPage {
   private statusCard() {
     Text(this.snapshot.statusMessage.length > 0 ? this.snapshot.statusMessage : '书源规则与持久化均由 Rust Core 负责')
       .width('100%')
-      .fontFamily('ReaderNotoSansSC')
-      .fontSize(12)
-      .lineHeight(18)
+      .fontFamily(TYPE_SOURCE_TOOLS_STATUS.fontFamily as string)
+      .fontSize(TYPE_SOURCE_TOOLS_STATUS.fontSizeFp)
+      .lineHeight(TYPE_SOURCE_TOOLS_STATUS.lineHeightFp as number)
       .fontColor(this.snapshot.busy ? readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
       .padding(TOK_SPACE_SM)
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
@@ -448,9 +464,9 @@ export struct SourceToolsPage {
       this.heading('书源导出');
       Text('Core 生成 Legado 兼容 JSON；Host 只通过系统文件选择器写入。')
         .width('100%')
-        .fontFamily('ReaderNotoSansSC')
-        .fontSize(11)
-        .lineHeight(17)
+        .fontFamily(TYPE_SOURCE_TOOLS_DESCRIPTION.fontFamily as string)
+        .fontSize(TYPE_SOURCE_TOOLS_DESCRIPTION.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_TOOLS_DESCRIPTION.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       this.fullWidthActionButton('导出全部书源', true,
         (): void => this.confirmExportThen((): void => this.onExportAll()));
@@ -491,23 +507,23 @@ export struct SourceToolsPage {
           Column({ space: 3 }) {
             Text(row.source.name)
               .width('100%')
-              .fontFamily('ReaderNotoSansSC')
-              .fontSize(12)
-              .fontWeight(FontWeight.Bold)
+              .fontFamily(TYPE_SOURCE_TOOLS_ACTION.fontFamily)
+              .fontSize(TYPE_SOURCE_TOOLS_ACTION.fontSizeFp)
+              .fontWeight(TYPE_SOURCE_TOOLS_ACTION.fontWeight)
               .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
             Text(row.source.baseUrl)
               .width('100%')
-              .fontFamily('ReaderInter')
-              .fontSize(10)
+              .fontFamily(TYPE_SOURCE_TOOLS_URL.fontFamily as string)
+              .fontSize(TYPE_SOURCE_TOOLS_URL.fontSizeFp)
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
             if (row.source.lastCheckSummary !== undefined) {
               Text(row.source.lastCheckSummary)
                 .width('100%')
-                .fontSize(10)
+                .fontSize(TYPE_SOURCE_TOOLS_INHERITED_META.fontSizeFp)
                 .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -532,15 +548,15 @@ export struct SourceToolsPage {
       this.heading(`编辑：${this.snapshot.editorSourceId}`);
       Text('bookSourceUrl 是主键；本页不执行隐式迁移。保存时由 Core source.import 校验并持久化。')
         .width('100%')
-        .fontFamily('ReaderNotoSansSC')
-        .fontSize(11)
-        .lineHeight(17)
+        .fontFamily(TYPE_SOURCE_TOOLS_DESCRIPTION.fontFamily as string)
+        .fontSize(TYPE_SOURCE_TOOLS_DESCRIPTION.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_TOOLS_DESCRIPTION.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       TextArea({ text: this.snapshot.editorText, placeholder: 'BookSource JSON' })
         .width('100%')
         .height(320)
-        .fontFamily('monospace')
-        .fontSize(11)
+        .fontFamily(TYPE_SOURCE_TOOLS_CODE_INPUT.fontFamily as string)
+        .fontSize(TYPE_SOURCE_TOOLS_CODE_INPUT.fontSizeFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
         .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
@@ -555,9 +571,9 @@ export struct SourceToolsPage {
       if (this.snapshot.editorReadback?.fact === 'confirmedRefreshFailed') {
         Text('保存已由 Core 确认；下面的操作只重新读取书源列表，不会再次执行 source.import。')
           .width('100%')
-          .fontFamily('ReaderNotoSansSC')
-          .fontSize(10)
-          .lineHeight(16)
+          .fontFamily(TYPE_SOURCE_TOOLS_NOTE.fontFamily as string)
+          .fontSize(TYPE_SOURCE_TOOLS_NOTE.fontSizeFp)
+          .lineHeight(TYPE_SOURCE_TOOLS_NOTE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
         this.actionButton('重新读取已保存书源', false, !this.snapshot.busy,
           (): void => this.onReconcileEditor());
@@ -590,8 +606,8 @@ export struct SourceToolsPage {
       TextInput({ text: this.snapshot.debugKey, placeholder: '检测关键词（留空时使用 Core 默认“我的”）' })
         .width('100%')
         .height(40)
-        .fontFamily('ReaderNotoSansSC')
-        .fontSize(12)
+        .fontFamily(TYPE_SOURCE_TOOLS_BODY.fontFamily as string)
+        .fontSize(TYPE_SOURCE_TOOLS_BODY.fontSizeFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
         .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
@@ -601,8 +617,8 @@ export struct SourceToolsPage {
       if (this.snapshot.debugSourceId.length > 0) {
         Text(`检测对象：${this.snapshot.debugSourceId}`)
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontSize(11)
+          .fontFamily(TYPE_SOURCE_TOOLS_DEBUG_ID.fontFamily as string)
+          .fontSize(TYPE_SOURCE_TOOLS_DEBUG_ID.fontSizeFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -631,9 +647,9 @@ export struct SourceToolsPage {
   private debugLogRow(log: SourceDebugLog, index: number) {
         Text(`${index + 1}. [${log.state}] ${log.message}`)
           .width('100%')
-          .fontFamily('monospace')
-          .fontSize(10)
-          .lineHeight(16)
+          .fontFamily(TYPE_SOURCE_TOOLS_DEBUG_LOG.fontFamily as string)
+          .fontSize(TYPE_SOURCE_TOOLS_DEBUG_LOG.fontSizeFp)
+          .lineHeight(TYPE_SOURCE_TOOLS_DEBUG_LOG.lineHeightFp as number)
           .fontColor(log.state === -1 ? readerAppColor('app.SourceToolsPage.debugLogRow.fontColor.FFA8584D', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme));
   }
 
@@ -641,9 +657,9 @@ export struct SourceToolsPage {
   private heading(value: string) {
     Text(value)
       .width('100%')
-      .fontFamily('ReaderNotoSansSC')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(14)
+      .fontFamily(TYPE_SOURCE_TOOLS_HEADING.fontFamily)
+      .fontWeight(TYPE_SOURCE_TOOLS_HEADING.fontWeight)
+      .fontSize(TYPE_SOURCE_TOOLS_HEADING.fontSizeFp)
       .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
   }
 
@@ -653,9 +669,9 @@ export struct SourceToolsPage {
       .height(30)
       .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
       .textAlign(TextAlign.Center)
-      .fontFamily('ReaderNotoSansSC')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(11)
+      .fontFamily(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontFamily)
+      .fontWeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontWeight)
+      .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp)
       .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
@@ -674,9 +690,9 @@ export struct SourceToolsPage {
       .layoutWeight(1)
       .height(42)
       .textAlign(TextAlign.Center)
-      .fontFamily('ReaderNotoSansSC')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(12)
+      .fontFamily(TYPE_SOURCE_TOOLS_ACTION.fontFamily)
+      .fontWeight(TYPE_SOURCE_TOOLS_ACTION.fontWeight)
+      .fontSize(TYPE_SOURCE_TOOLS_ACTION.fontSizeFp)
       .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .backgroundColor(primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
@@ -695,9 +711,9 @@ export struct SourceToolsPage {
       .width('100%')
       .height(42)
       .textAlign(TextAlign.Center)
-      .fontFamily('ReaderNotoSansSC')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(12)
+      .fontFamily(TYPE_SOURCE_TOOLS_ACTION.fontFamily)
+      .fontWeight(TYPE_SOURCE_TOOLS_ACTION.fontWeight)
+      .fontSize(TYPE_SOURCE_TOOLS_ACTION.fontSizeFp)
       .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .backgroundColor(primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
