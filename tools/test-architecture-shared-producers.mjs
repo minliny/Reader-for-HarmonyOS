@@ -5,8 +5,8 @@ import { verifyArchitectureRegistration, registeredProducerTypographySlots } fro
 const root=process.cwd(),baseline=JSON.parse(readFileSync('tools/architecture-consumer-baseline.json','utf8')),contract=JSON.parse(readFileSync('tools/fixtures/architecture-shared-producers.json','utf8'));
 const inventory=JSON.parse(execFileSync(process.execPath,['tools/audit-architecture-consumers.mjs','--stdout=json'],{cwd:root,encoding:'utf8',maxBuffer:16*1024*1024,stdio:['ignore','pipe','ignore']}));
 const result=verifyArchitectureRegistration(inventory,baseline,contract,root);
-assert.equal(result.budgetRows,100,'legacy business private budgets are preserved');assert.equal(result.producers,10);
-assert.deepEqual(contract.producers.map(row=>row.component).sort(),['ReaderBoundedSurface','ReaderBoundedSurfaceActions','ReaderBoundedSurfaceHeader','ReaderButton','ReaderFormField','ReaderLabeledIconAction','ReaderSheetActionList','ReaderChoiceRow','RssOriginalRecoverySurface','ReaderCard'].sort(),'only exact finite shared producers gain owner treatment');
+assert.equal(result.budgetRows,100,'legacy business private budgets are preserved');assert.equal(result.producers,12);
+assert.deepEqual(contract.producers.map(row=>row.component).sort(),['ReaderBoundedSurface','ReaderBoundedSurfaceActions','ReaderBoundedSurfaceHeader','ReaderButton','ReaderFormField','ReaderLabeledIconAction','ReaderSheetActionList','ReaderChoiceRow','RssOriginalRecoverySurface','ReaderCard','ReaderToggle','ReaderSegmentedControl'].sort(),'only exact finite shared producers gain owner treatment');
 const header='entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets',original=readFileSync(header,'utf8');
 const read=file=>file===header?original.replace('.fontSize(type.fontSizeFp)','.fontSize(99)'):readFileSync(file,'utf8');
 assert.notEqual(read(header),original);assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,contract,root,read),/finite shared physical inputs/,'same font call count cannot hide a private literal in a shared alias');
@@ -64,3 +64,14 @@ assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,copiedMode,r
 const cardSource=readFileSync('entry/src/main/ets/features/common/ReaderCard.ets','utf8');
 assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,contract,root,file=>file.endsWith('/ReaderCard.ets')?cardSource.replace('.borderRadius(resolveReaderCardSpec(this.specId).radius)', '.borderRadius(99)'):readFileSync(file,'utf8')),/finite shared physical inputs/,'same-count literal99 in actual Card implementation rejected');
 console.log('PASS P0 actual UI/finite shared producer gate: unchanged100 budgets, exact producer/spec/consumer/interface/physical-inputs, retained outside100 policy; literal-same-count, wildcard, absent zero-style UI and arbitrary consumer override rejected. SDK proof suites are separate.');
+
+for (const component of ['ReaderToggle','ReaderSegmentedControl']) {
+ const originalCall = inventory.rows.flatMap(row=>row.elements.map(element=>({row,element}))).find(x=>x.element.kind===component);
+ assert.ok(originalCall);
+ const negative = structuredClone(inventory), call = negative.rows.find(row=>row.file===originalCall.row.file).elements.find(element=>element.kind===component);
+ call.args[0]=call.args[0].replace('{', '{ radius: 99,');
+ assert.throws(()=>verifyArchitectureRegistration(negative,baseline,contract,root), /illegal shared input/, 'free radius cannot return to F04');
+ const privateSpec=structuredClone(inventory), bad=privateSpec.rows.find(row=>row.file===originalCall.row.file).elements.find(element=>element.kind===component);
+ bad.args[0]=bad.args[0].replace(component==='ReaderToggle'?"'standard-toggle'":"'app-theme-segment'", "'private99'");
+ assert.throws(()=>verifyArchitectureRegistration(privateSpec,baseline,contract,root), /producer\/consumer\/spec edges changed/, 'exact finite F04 spec cannot drift');
+}

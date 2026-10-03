@@ -544,7 +544,7 @@ export struct SourceManagementPage {
         this.statusBadgeDot(source),
       );
 
-      this.sourceSwitch(source.enabled, (): void => { if (this.operation.original?.blocked !== true) this.onToggleSource(source.sourceId, !source.enabled); });
+      this.sourceSwitch(source.enabled, (next: boolean): void => this.onToggleSource(source.sourceId, next), source.sourceId);
 
     }
     .width(this.contentFrame().width)
@@ -573,8 +573,22 @@ export struct SourceManagementPage {
   }
 
   @Builder
-  private sourceSwitch(value: boolean, onTap: () => void) {
-    ReaderToggle({ value: value, radius: 999, onToggle: onTap });
+  private sourceSwitch(value: boolean, onTap: (next: boolean) => void, sourceId: string) {
+    ForEach([`${this.temporaryBackIdentity}:${sourceId}`], (identity: string): void => {
+      ReaderToggle({ value, specId: 'standard-toggle', inputIdentity: identity,
+        accessibilityLabel: '启用书源', actionEnabled: this.sourceToggleEnabled(), isBusy: this.sourceToggleBusy(),
+        onToggle: (next: boolean): void => {
+          if (identity === `${this.temporaryBackIdentity}:${sourceId}` && this.sourceToggleEnabled() && !this.sourceToggleBusy()) onTap(next);
+        } });
+    }, (identity: string): string => identity);
+  }
+
+  private sourceToggleBusy(): boolean {
+    return this.operation.original?.busy === true || this.operation.receipt?.facts.fact === 'refreshing';
+  }
+
+  private sourceToggleEnabled(): boolean {
+    return this.mounted && this.operation.original?.blocked !== true && this.operation.receipt?.receipt.confirmation !== 'unknown';
   }
 
   @Builder

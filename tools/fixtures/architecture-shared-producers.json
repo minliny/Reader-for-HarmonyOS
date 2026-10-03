@@ -4681,6 +4681,481 @@
         "tools/test-reader-card-finite-specs.mjs",
         "tools/lib/reader-card-probe.mjs"
       ]
+    },
+    {
+      "id": "shared-ReaderToggle",
+      "file": "entry/src/main/ets/features/common/ReaderToggle.ets",
+      "component": "ReaderToggle",
+      "registrationKind": "legacy-business-budget",
+      "specPolicy": "F04 exact existing ReaderToggle finite specification. Controlled value/selection and next intent; mounted exact input identity, actual business admission, native checked/selected and focusability. Native ArkUI owns keyboard/accessibility click/press/release/cancel. Local Rules/RSS drafts remain editable; Source/RSS management and Settings durable mutation qualification follows original owner projections. No free radius/geometry/theme overrides; immutable original100 row retained.",
+      "shape": {
+        "types": [],
+        "declarations": [
+          {
+            "name": "ReaderToggle",
+            "publicFields": [
+              {
+                "name": "specId",
+                "type": "ReaderToggleSpecId",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "value",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "actionEnabled",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "isBusy",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "inputIdentity",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "accessibilityLabel",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "onToggle",
+                "type": "(next: boolean) => void",
+                "decorators": []
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderToggle",
+            "method": "build",
+            "property": "responseRegion",
+            "args": [
+              "{ x: 0, y: resolveReaderToggleSpec(this.specId).responseY,\n    width: resolveReaderToggleSpec(this.specId).width, height: resolveReaderToggleSpec(this.specId).responseHeight }"
+            ]
+          },
+          {
+            "owner": "ReaderToggle",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "resolveReaderToggleSpec(this.specId).height"
+            ]
+          },
+          {
+            "owner": "ReaderToggle",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "resolveReaderToggleSpec(this.specId).width"
+            ]
+          },
+          {
+            "owner": "ReaderToggle",
+            "method": "build",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(resolveReaderToggleSpec(this.specId).thumbColor, this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderToggle",
+            "method": "build",
+            "property": "borderRadius",
+            "args": [
+              "resolveReaderToggleSpec(this.specId).thumbRadius"
+            ]
+          },
+          {
+            "owner": "ReaderToggle",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "resolveReaderToggleSpec(this.specId).thumbSize"
+            ]
+          },
+          {
+            "owner": "ReaderToggle",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "resolveReaderToggleSpec(this.specId).thumbSize"
+            ]
+          }
+        ],
+        "implementation": "import { readerAppColor } from './ReaderThemeRegistry';\nimport { ReaderPressFeedback } from './ReaderPressFeedback';\nimport { ReaderToggleSpecId, resolveReaderToggleSpec } from './ReaderSwitchSpecs';\n@Component\nexport struct ReaderToggle extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        specId?: ReaderToggleSpecId;\n        value?: boolean;\n        actionEnabled?: boolean;\n        isBusy?: boolean;\n        inputIdentity?: string;\n        accessibilityLabel?: string;\n        onToggle?: (next: boolean) => void;\n        private mounted?: boolean;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    specId: ReaderToggleSpecId = 'standard-toggle';\n    @Prop\n    value: boolean = false;\n    @Prop\n    actionEnabled: boolean = true;\n    @Prop\n    isBusy: boolean = false;\n    @Prop\n    inputIdentity: string = '';\n    @Prop\n    accessibilityLabel: string = '';\n    onToggle: (next: boolean) => void = (_next: boolean): void => { };\n    private mounted: boolean = false;\n    aboutToAppear(): void { this.mounted = true; }\n    aboutToDisappear(): void { this.mounted = false; }\n    build() {\n        ForEach([this.inputIdentity], (identity: string): void => {\n                .width<\n      >(resolveReaderToggleSpec(this.specId).width)\n                .height<\n      >(resolveReaderToggleSpec(this.specId).height)\n                .attributeModifier<\n      >(new ReaderPressFeedback(readerAppColor(this.value ? resolveReaderToggleSpec(this.specId).checkedColor :\n                resolveReaderToggleSpec(this.specId).uncheckedColor, this.appThemeScheme), this.appThemeScheme, resolveReaderToggleSpec(this.specId).radius, resolveReaderToggleSpec(this.specId).pressedRadius, this.canAct(identity)))\n                .responseRegion<\n      >({ x: 0, y: resolveReaderToggleSpec(this.specId).responseY,\n                width: resolveReaderToggleSpec(this.specId).width, height: resolveReaderToggleSpec(this.specId).responseHeight })\n                .enabled<\n      >(this.canAct(identity)).focusable<\n      >(this.canAct(identity))\n                .accessibilityRole<\n      >(AccessibilityRoleType.SWITCH).accessibilityChecked<\n      >(this.value)\n                .accessibilityText<\n      >(this.accessibilityLabel)\n                .onClick<\n      >((): void => this.toggle(identity));\n        }, (identity: string): string => identity);\n    }\n    private canAct(identity: string): boolean {\n        return this.mounted && identity.length > 0 && this.actionEnabled && !this.isBusy && identity === this.inputIdentity;\n    }\n    private toggle(identity: string): void { if (this.canAct(identity))\n        this.onToggle(!this.value); }\n}\n"
+      },
+      "specSources": [
+        {
+          "file": "entry/src/main/ets/features/common/ReaderSwitchSpecs.ets",
+          "shape": {
+            "types": [
+              {
+                "name": "ReaderToggleSpecId",
+                "type": "'standard-toggle'"
+              },
+              {
+                "name": "ReaderSegmentSpecId",
+                "type": "'app-theme-segment'"
+              }
+            ],
+            "declarations": [],
+            "styles": [],
+            "implementation": "import type { ReaderAppColorRole } from './ReaderThemeRegistry';\nexport type ReaderToggleSpecId = 'standard-toggle';\nexport type ReaderSegmentSpecId = 'app-theme-segment';\nexport interface ReaderToggleSpec {\n    width: number;\n    height: number;\n    thumbSize: number;\n    thumbRadius: number;\n    thumbOffX: number;\n    thumbOnX: number;\n    thumbY: number;\n    radius: number;\n    pressedRadius: number;\n    responseY: number;\n    responseHeight: number;\n    thumbColor: ReaderAppColorRole;\n    checkedColor: ReaderAppColorRole;\n    uncheckedColor: ReaderAppColorRole;\n}\nconst STANDARD_TOGGLE: ReaderToggleSpec = {\n    width: 44, height: 24, thumbSize: 20, thumbRadius: 10,\n    thumbOffX: 2, thumbOnX: 22, thumbY: 2,\n    radius: 999, pressedRadius: 12, responseY: -10, responseHeight: 44,\n    thumbColor: 'app.ReaderToggle.build.backgroundColor.FFFFFFFF',\n    checkedColor: 'TOK_PRIMARY_DARK', uncheckedColor: 'app.toggle.offTrack',\n};\nexport interface ReaderSegmentSpec {\n    width: number;\n    height: number;\n    itemHeight: number;\n    padding: number;\n    radius: number;\n    itemRadius: number;\n    borderWidth: number;\n    activeText: ReaderAppColorRole;\n    inactiveText: ReaderAppColorRole;\n    selectedSurface: ReaderAppColorRole;\n    selectedBorder: ReaderAppColorRole;\n    surface: ReaderAppColorRole;\n    border: ReaderAppColorRole;\n}\nconst APP_THEME_SEGMENT: ReaderSegmentSpec = {\n    width: 168, height: 36, itemHeight: 30, padding: 2, radius: 8, itemRadius: 6, borderWidth: 1,\n    activeText: 'app.ReaderSegmentedControl.SEG_TEXT_ACTIVE',\n    inactiveText: 'app.ReaderSegmentedControl.SEG_TEXT_INACTIVE',\n    selectedSurface: 'app.ReaderSegmentedControl.SEG_SELECTED_BG',\n    selectedBorder: 'app.ReaderSegmentedControl.SEG_SELECTED_BORDER',\n    surface: 'app.ReaderSegmentedControl.SEG_BG', border: 'app.ReaderSegmentedControl.SEG_BORDER',\n};\nexport function resolveReaderToggleSpec(id: ReaderToggleSpecId): ReaderToggleSpec {\n    if (id !== 'standard-toggle')\n        throw new Error('Unknown ReaderToggle specification');\n    return STANDARD_TOGGLE;\n}\nexport function resolveReaderSegmentSpec(id: ReaderSegmentSpecId): ReaderSegmentSpec {\n    if (id !== 'app-theme-segment')\n        throw new Error('Unknown ReaderSegmentedControl specification');\n    return APP_THEME_SEGMENT;\n}\n"
+          }
+        }
+      ],
+      "consumers": [
+        {
+          "file": "features/rss/RssSubscriptionEditorPage.ets",
+          "method": "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage#build",
+          "component": "ReaderToggle",
+          "specId": "'standard-toggle'",
+          "keys": [
+            "value",
+            "specId",
+            "accessibilityLabel",
+            "inputIdentity",
+            "actionEnabled",
+            "onToggle"
+          ]
+        },
+        {
+          "file": "features/rss/RssSubscriptionEditorPage.ets",
+          "method": "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage#build",
+          "component": "ReaderToggle",
+          "specId": "'standard-toggle'",
+          "keys": [
+            "value",
+            "specId",
+            "accessibilityLabel",
+            "inputIdentity",
+            "actionEnabled",
+            "onToggle"
+          ]
+        },
+        {
+          "file": "features/rss/RssSubscriptionManagementPage.ets",
+          "method": "features/rss/RssSubscriptionManagementPage.ets#RssSubscriptionManagementPage#subscriptionItem",
+          "component": "ReaderToggle",
+          "specId": "'standard-toggle'",
+          "keys": [
+            "value",
+            "specId",
+            "accessibilityLabel",
+            "inputIdentity",
+            "actionEnabled",
+            "isBusy",
+            "onToggle"
+          ]
+        },
+        {
+          "file": "features/settings/RulesManagementPage.ets",
+          "method": "features/settings/RulesManagementPage.ets#RulesManagementPage#booleanField",
+          "component": "ReaderToggle",
+          "specId": "'standard-toggle'",
+          "keys": [
+            "value",
+            "specId",
+            "accessibilityLabel",
+            "inputIdentity",
+            "actionEnabled",
+            "onToggle"
+          ]
+        },
+        {
+          "file": "features/settings/SettingsPage.ets",
+          "method": "features/settings/SettingsPage.ets#SettingsPage#switchRow",
+          "component": "ReaderToggle",
+          "specId": "'standard-toggle'",
+          "keys": [
+            "value",
+            "specId",
+            "inputIdentity",
+            "accessibilityLabel",
+            "actionEnabled",
+            "isBusy",
+            "onToggle"
+          ]
+        },
+        {
+          "file": "features/source/SourceManagementPage.ets",
+          "method": "features/source/SourceManagementPage.ets#SourceManagementPage#sourceSwitch",
+          "component": "ReaderToggle",
+          "specId": "'standard-toggle'",
+          "keys": [
+            "value",
+            "specId",
+            "inputIdentity",
+            "accessibilityLabel",
+            "actionEnabled",
+            "isBusy",
+            "onToggle"
+          ]
+        }
+      ],
+      "removalProofs": [
+        "entry/src/main/ets/features/common/ReaderToggle.ets"
+      ],
+      "sdkProofs": [
+        "tools/test-switch-enum-shared-contract.mjs"
+      ]
+    },
+    {
+      "id": "shared-ReaderSegmentedControl",
+      "file": "entry/src/main/ets/features/common/ReaderSegmentedControl.ets",
+      "component": "ReaderSegmentedControl",
+      "registrationKind": "legacy-business-budget",
+      "specPolicy": "F04 exact existing ReaderSegmentedControl finite specification. Controlled value/selection and next intent; mounted exact input identity, actual business admission, native checked/selected and focusability. Native ArkUI owns keyboard/accessibility click/press/release/cancel. Local Rules/RSS drafts remain editable; Source/RSS management and Settings durable mutation qualification follows original owner projections. No free radius/geometry/theme overrides; immutable original100 row retained.",
+      "shape": {
+        "types": [],
+        "declarations": [
+          {
+            "name": "ReaderSegmentedControl",
+            "publicFields": [
+              {
+                "name": "specId",
+                "type": "ReaderSegmentSpecId",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "options",
+                "type": "string[]",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "optionIds",
+                "type": "string[]",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "selectedIndex",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "actionEnabled",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "isBusy",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "inputIdentity",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "accessibilityLabel",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "onSelect",
+                "type": "(index: number) => void",
+                "decorators": []
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderSegmentedControl",
+            "method": "build",
+            "property": "borderRadius",
+            "args": [
+              "resolveReaderSegmentSpec(this.specId).radius"
+            ]
+          },
+          {
+            "owner": "ReaderSegmentedControl",
+            "method": "build",
+            "property": "border",
+            "args": [
+              "{ width: resolveReaderSegmentSpec(this.specId).borderWidth, color: readerAppColor(resolveReaderSegmentSpec(this.specId).border, this.appThemeScheme) }"
+            ]
+          },
+          {
+            "owner": "ReaderSegmentedControl",
+            "method": "build",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(resolveReaderSegmentSpec(this.specId).surface, this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderSegmentedControl",
+            "method": "build",
+            "property": "padding",
+            "args": [
+              "{ left: resolveReaderSegmentSpec(this.specId).padding, right: resolveReaderSegmentSpec(this.specId).padding,\n    top: resolveReaderSegmentSpec(this.specId).padding, bottom: resolveReaderSegmentSpec(this.specId).padding }"
+            ]
+          },
+          {
+            "owner": "ReaderSegmentedControl",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "resolveReaderSegmentSpec(this.specId).height"
+            ]
+          },
+          {
+            "owner": "ReaderSegmentedControl",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "resolveReaderSegmentSpec(this.specId).width"
+            ]
+          },
+          {
+            "owner": "ReaderSegmentedControl",
+            "method": "build",
+            "property": "border",
+            "args": [
+              "this.isSelected(optionId) ? { width: resolveReaderSegmentSpec(this.specId).borderWidth,\n    color: readerAppColor(resolveReaderSegmentSpec(this.specId).selectedBorder, this.appThemeScheme) } : { width: 0 }"
+            ]
+          },
+          {
+            "owner": "ReaderSegmentedControl",
+            "method": "build",
+            "property": "backgroundColor",
+            "args": [
+              "this.isSelected(optionId) ? readerAppColor(resolveReaderSegmentSpec(this.specId).selectedSurface, this.appThemeScheme) : Color.Transparent"
+            ]
+          },
+          {
+            "owner": "ReaderSegmentedControl",
+            "method": "build",
+            "property": "borderRadius",
+            "args": [
+              "resolveReaderSegmentSpec(this.specId).itemRadius"
+            ]
+          },
+          {
+            "owner": "ReaderSegmentedControl",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "resolveReaderSegmentSpec(this.specId).itemHeight"
+            ]
+          },
+          {
+            "owner": "ReaderSegmentedControl",
+            "method": "build",
+            "property": "fontColor",
+            "args": [
+              "this.isSelected(optionId) ? readerAppColor(resolveReaderSegmentSpec(this.specId).activeText, this.appThemeScheme) :\n    readerAppColor(resolveReaderSegmentSpec(this.specId).inactiveText, this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderSegmentedControl",
+            "method": "build",
+            "property": "fontSize",
+            "args": [
+              "TYPE_APP_SEGMENT_LABEL.fontSizeFp"
+            ]
+          },
+          {
+            "owner": "ReaderSegmentedControl",
+            "method": "build",
+            "property": "fontWeight",
+            "args": [
+              "TYPE_APP_SEGMENT_LABEL.fontWeight"
+            ]
+          },
+          {
+            "owner": "ReaderSegmentedControl",
+            "method": "build",
+            "property": "fontFamily",
+            "args": [
+              "TYPE_APP_SEGMENT_LABEL.fontFamily"
+            ]
+          }
+        ],
+        "implementation": "import { TYPE_APP_SEGMENT_LABEL } from './ReaderTypography';\nimport { readerAppColor } from './ReaderThemeRegistry';\nimport { ReaderSegmentSpecId, resolveReaderSegmentSpec } from './ReaderSwitchSpecs';\n@Component\nexport struct ReaderSegmentedControl extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        specId?: ReaderSegmentSpecId;\n        options?: string[];\n        optionIds?: string[];\n        selectedIndex?: number;\n        actionEnabled?: boolean;\n        isBusy?: boolean;\n        inputIdentity?: string;\n        accessibilityLabel?: string;\n        onSelect?: (index: number) => void;\n        private mounted?: boolean;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    specId: ReaderSegmentSpecId = 'app-theme-segment';\n    @Prop\n    options: string[] = [];\n    @Prop\n    optionIds: string[] = [];\n    @Prop\n    selectedIndex: number = 0;\n    @Prop\n    actionEnabled: boolean = true;\n    @Prop\n    isBusy: boolean = false;\n    @Prop\n    inputIdentity: string = '';\n    @Prop\n    accessibilityLabel: string = '';\n    onSelect: (index: number) => void = (_index: number): void => { };\n    private mounted: boolean = false;\n    aboutToAppear(): void { this.mounted = true; }\n    aboutToDisappear(): void { this.mounted = false; }\n    build() {\n        ForEach([this.inputIdentity], (identity: string): void => {\n                .width<\n      >(resolveReaderSegmentSpec(this.specId).width)\n                .height<\n      >(resolveReaderSegmentSpec(this.specId).height)\n                .padding<\n      >({ left: resolveReaderSegmentSpec(this.specId).padding, right: resolveReaderSegmentSpec(this.specId).padding,\n                top: resolveReaderSegmentSpec(this.specId).padding, bottom: resolveReaderSegmentSpec(this.specId).padding })\n                .backgroundColor<\n      >(readerAppColor(resolveReaderSegmentSpec(this.specId).surface, this.appThemeScheme))\n                .border<\n      >({ width: resolveReaderSegmentSpec(this.specId).borderWidth, color: readerAppColor(resolveReaderSegmentSpec(this.specId).border, this.appThemeScheme) })\n                .borderRadius<\n      >(resolveReaderSegmentSpec(this.specId).radius)\n                .accessibilityText<\n      >(this.accessibilityLabel)\n                .alignItems<\n      >(VerticalAlign.Center);\n        }, (identity: string): string => identity);\n    }\n    private optionLabel(id: string): string { return this.options[this.optionIds.indexOf(id)] ?? ''; }\n    private isSelected(id: string): boolean { return this.optionIds.indexOf(id) === this.selectedIndex; }\n    private canAct(identity: string, id: string): boolean {\n        return this.mounted && identity.length > 0 && this.actionEnabled && !this.isBusy && identity === this.inputIdentity &&\n            this.optionIds.length === this.options.length && this.optionIds.indexOf(id) >= 0 &&\n            this.optionIds.every((value: string, index: number): boolean => value.length > 0 && this.optionIds.indexOf(value) === index);\n    }\n    private select(identity: string, id: string): void { if (this.canAct(identity, id))\n        this.onSelect(this.optionIds.indexOf(id)); }\n}\n"
+      },
+      "specSources": [
+        {
+          "file": "entry/src/main/ets/features/common/ReaderSwitchSpecs.ets",
+          "shape": {
+            "types": [
+              {
+                "name": "ReaderToggleSpecId",
+                "type": "'standard-toggle'"
+              },
+              {
+                "name": "ReaderSegmentSpecId",
+                "type": "'app-theme-segment'"
+              }
+            ],
+            "declarations": [],
+            "styles": [],
+            "implementation": "import type { ReaderAppColorRole } from './ReaderThemeRegistry';\nexport type ReaderToggleSpecId = 'standard-toggle';\nexport type ReaderSegmentSpecId = 'app-theme-segment';\nexport interface ReaderToggleSpec {\n    width: number;\n    height: number;\n    thumbSize: number;\n    thumbRadius: number;\n    thumbOffX: number;\n    thumbOnX: number;\n    thumbY: number;\n    radius: number;\n    pressedRadius: number;\n    responseY: number;\n    responseHeight: number;\n    thumbColor: ReaderAppColorRole;\n    checkedColor: ReaderAppColorRole;\n    uncheckedColor: ReaderAppColorRole;\n}\nconst STANDARD_TOGGLE: ReaderToggleSpec = {\n    width: 44, height: 24, thumbSize: 20, thumbRadius: 10,\n    thumbOffX: 2, thumbOnX: 22, thumbY: 2,\n    radius: 999, pressedRadius: 12, responseY: -10, responseHeight: 44,\n    thumbColor: 'app.ReaderToggle.build.backgroundColor.FFFFFFFF',\n    checkedColor: 'TOK_PRIMARY_DARK', uncheckedColor: 'app.toggle.offTrack',\n};\nexport interface ReaderSegmentSpec {\n    width: number;\n    height: number;\n    itemHeight: number;\n    padding: number;\n    radius: number;\n    itemRadius: number;\n    borderWidth: number;\n    activeText: ReaderAppColorRole;\n    inactiveText: ReaderAppColorRole;\n    selectedSurface: ReaderAppColorRole;\n    selectedBorder: ReaderAppColorRole;\n    surface: ReaderAppColorRole;\n    border: ReaderAppColorRole;\n}\nconst APP_THEME_SEGMENT: ReaderSegmentSpec = {\n    width: 168, height: 36, itemHeight: 30, padding: 2, radius: 8, itemRadius: 6, borderWidth: 1,\n    activeText: 'app.ReaderSegmentedControl.SEG_TEXT_ACTIVE',\n    inactiveText: 'app.ReaderSegmentedControl.SEG_TEXT_INACTIVE',\n    selectedSurface: 'app.ReaderSegmentedControl.SEG_SELECTED_BG',\n    selectedBorder: 'app.ReaderSegmentedControl.SEG_SELECTED_BORDER',\n    surface: 'app.ReaderSegmentedControl.SEG_BG', border: 'app.ReaderSegmentedControl.SEG_BORDER',\n};\nexport function resolveReaderToggleSpec(id: ReaderToggleSpecId): ReaderToggleSpec {\n    if (id !== 'standard-toggle')\n        throw new Error('Unknown ReaderToggle specification');\n    return STANDARD_TOGGLE;\n}\nexport function resolveReaderSegmentSpec(id: ReaderSegmentSpecId): ReaderSegmentSpec {\n    if (id !== 'app-theme-segment')\n        throw new Error('Unknown ReaderSegmentedControl specification');\n    return APP_THEME_SEGMENT;\n}\n"
+          }
+        }
+      ],
+      "consumers": [
+        {
+          "file": "features/settings/SettingsPage.ets",
+          "method": "features/settings/SettingsPage.ets#SettingsPage#appThemeControl",
+          "component": "ReaderSegmentedControl",
+          "specId": "'app-theme-segment'",
+          "keys": [
+            "specId",
+            "options",
+            "optionIds",
+            "inputIdentity",
+            "accessibilityLabel",
+            "actionEnabled",
+            "selectedIndex",
+            "onSelect"
+          ]
+        }
+      ],
+      "removalProofs": [
+        "entry/src/main/ets/features/common/ReaderSegmentedControl.ets"
+      ],
+      "sdkProofs": [
+        "tools/test-switch-enum-shared-contract.mjs"
+      ]
     }
   ],
   "legacyBusinessRowsSha256": "3f7f18a54b7bf56a1bb557d3c48574f3e9b4f7e869a25dce2541c04b30f924d0",

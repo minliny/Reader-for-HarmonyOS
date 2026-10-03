@@ -106,8 +106,11 @@ export struct RssSubscriptionEditorPage {
               .layoutWeight(1)
               .alignItems(HorizontalAlign.Start);
               ReaderToggle({
-                value: this.snapshot.enabled,
-                onToggle: (): void => this.onEnabledChanged(!this.snapshot.enabled),
+                value: this.snapshot.enabled, specId: 'standard-toggle', accessibilityLabel: '启用订阅',
+                inputIdentity: `${this.presentationIdentity}:${this.snapshot.mode}:${this.snapshot.subscriptionId}:enabled`,
+                // Draft editing stays available while the original save is unresolved.
+                actionEnabled: true,
+                onToggle: (next: boolean): void => this.onEnabledChanged(next),
               });
             }
             .width('100%')
@@ -128,8 +131,11 @@ export struct RssSubscriptionEditorPage {
               .layoutWeight(1)
               .alignItems(HorizontalAlign.Start);
               ReaderToggle({
-                value: this.snapshot.enabledCookieJar,
-                onToggle: (): void => this.onEnabledCookieJarChanged(!this.snapshot.enabledCookieJar),
+                value: this.snapshot.enabledCookieJar, specId: 'standard-toggle', accessibilityLabel: '启用 Cookie 会话',
+                inputIdentity: `${this.presentationIdentity}:${this.snapshot.mode}:${this.snapshot.subscriptionId}:enabledCookieJar`,
+                // Draft editing stays available while the original save is unresolved.
+                actionEnabled: true,
+                onToggle: (next: boolean): void => this.onEnabledCookieJarChanged(next),
               });
             }
             .width('100%')
