@@ -1,26 +1,31 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const file=new URL('../entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets',import.meta.url);
 const source=readFileSync(file,'utf8');
-const constants=Object.fromEntries([...source.matchAll(/const (\w+) = (\d+);/g)].map(m=>[m[1],Number(m[2])]));
-Object.assign(constants,{MENU_HEIGHT:212,MENU_COLLAPSED_HEIGHT:62,ACTIONS_HEIGHT:200});
-const names=['actionEnabled','actionLabel','actionIcon','menuWidth','menuX','menuTop','visiblePanelHeight','pointerX','commitAction','collapseMenu'];
-const Methods=productionMotionMethods(file,names,constants);
+const specSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets',import.meta.url),'utf8');
+const { resolvePopupSpec } = new Function('TextAlign', stripTypeScriptTypes(specSource)
+  .replace(/^export /gm,'') + '; return { resolvePopupSpec };')({ Start: 'TextAlign.Start', Center: 'TextAlign.Center' });
+const popupSpec=resolvePopupSpec('bookshelf-more-menu');
+const names=['surfaceSpec','actionEnabled','actionLabel','actionIcon','menuWidth','menuX','menuTop','visiblePanelHeight','pointerX','commitAction','collapseMenu'];
+const Methods=productionMotionMethods(file,names,{resolvePopupSpec});
 const menu=Object.assign(new Methods(),{overlayWidth:393,overlayHeight:650,anchorRight:373,anchorBottom:60,panelHeight:212});
 assert.equal(menu.menuWidth(),176);assert.equal(menu.menuTop(),55);assert.equal(menu.visiblePanelHeight(),212);assert.equal(menu.pointerX(),131);
 for(const [width,height,right,bottom] of [[320,190,312,60],[393,140,393,60],[800,300,798,80],[170,200,170,70]]) {
  Object.assign(menu,{overlayWidth:width,overlayHeight:height,anchorRight:right,anchorBottom:bottom});
  assert.ok(menu.menuX()>=0);assert.ok(menu.menuX()+menu.menuWidth()<=width);
  assert.ok(menu.menuTop()+menu.visiblePanelHeight()<=height-8);
- assert.ok(menu.visiblePanelHeight()>=62,'a compact viewport retains one full scrollable row');
- assert.ok(menu.pointerX()>=0 && menu.pointerX()+24<=menu.menuWidth());
+ assert.ok(menu.visiblePanelHeight()>=popupSpec.collapsedHeight,'a compact viewport retains one full scrollable row');
+ assert.ok(menu.pointerX()>=0 && menu.pointerX()+popupSpec.pointerWidth<=menu.menuWidth());
 }
-assert.match(source,/Scroll\(\)[\s\S]*?\.height\(ACTIONS_HEIGHT\)/);
-assert.match(source,/\.height\(Math.max\(0, this.visiblePanelHeight\(\) - POINTER_HEIGHT\)\)/);
+assert.match(source,/Scroll\(\)[\s\S]*?\.height\(this\.surfaceSpec\(\)\.actionsHeight\)/);
+assert.match(source,/\.height\(Math.max\(0, this.visiblePanelHeight\(\) - this\.surfaceSpec\(\)\.pointerHeight\)\)/);
+assert.match(source,/resolvePopupSpec\('bookshelf-more-menu'\)/,'menu consumes the shared popup surface registry');
+assert.doesNotMatch(source,/const (MENU_WIDTH|POINTER_HEIGHT|ACTION_HEIGHT|ACTION_COUNT|ACTIONS_HEIGHT|MENU_COLLAPSED_HEIGHT)\s*=/,'menu geometry is owned by the shared surface contract');
 assert.equal((source.match(/this.action\(/g)??[]).length,4);
-const {owner}=createReaderBuilderProbe(source,['action',...names],constants);
+const {owner}=createReaderBuilderProbe(source,['action',...names],{resolvePopupSpec});
 let calls=0;Object.assign(owner,{appThemeScheme:'day',overlayWidth:393,overlayHeight:650,canCheckUpdates:false,updateRunning:false,backgroundUpdateRunning:false,
  closeInFlight:false,mounted:true,generation:0,reduceMotion:true,onDismiss(){},getUIContext:()=>({animateTo:(_p,cb)=>cb()})});
 owner.action('update',false,()=>calls++);

@@ -167,3 +167,140 @@ const DIALOG_SPECS: Record<DialogSpecId, DialogSurfaceSpec> = {
 export function resolveDialogSpec(id: DialogSpecId): DialogSurfaceSpec {
   return DIALOG_SPECS[id];
 }
+
+/**
+ * Menu/popup surfaces use the same data-only registry as dialogs. The
+ * consumer keeps labels, icons, enabled state and callbacks; this contract
+ * owns frame geometry, touch rows and visual roles.
+ */
+export type PopupSpecId = 'bookshelf-more-menu';
+
+export interface PopupSurfaceSpecInit {
+  width: number;
+  pointerWidth: number;
+  pointerHeight: number;
+  actionHeight: number;
+  actionCount: number;
+  trailingExtension: number;
+  anchorOverlap: number;
+  borderWidth: number;
+  borderRadius: number;
+  shadowRadius: number;
+  shadowOffsetY: number;
+  actionPaddingLeft: number;
+  actionPaddingRight: number;
+  actionIconSize: number;
+  dividerInset: number;
+  dividerHeight: number;
+  pointerPoints: Array<Array<number>>;
+  surfaceBackgroundRole: ReaderAppColorRole;
+  surfaceBorderRole: ReaderAppColorRole;
+  surfaceShadowRole: ReaderAppColorRole;
+  pointerFillRole: ReaderAppColorRole;
+  pointerStrokeRole: ReaderAppColorRole;
+  actionTextRole: ReaderAppColorRole;
+  dividerRole: ReaderAppColorRole;
+  actionFontFamily: string;
+  actionFontSize: number;
+  actionLineHeight: number;
+}
+
+export class PopupSurfaceSpec {
+  readonly width: number;
+  readonly pointerWidth: number;
+  readonly pointerHeight: number;
+  readonly actionHeight: number;
+  readonly actionCount: number;
+  readonly trailingExtension: number;
+  readonly anchorOverlap: number;
+  readonly borderWidth: number;
+  readonly borderRadius: number;
+  readonly shadowRadius: number;
+  readonly shadowOffsetY: number;
+  readonly actionPaddingLeft: number;
+  readonly actionPaddingRight: number;
+  readonly actionIconSize: number;
+  readonly dividerInset: number;
+  readonly dividerHeight: number;
+  readonly pointerPoints: Array<Array<number>>;
+  readonly surfaceBackgroundRole: ReaderAppColorRole;
+  readonly surfaceBorderRole: ReaderAppColorRole;
+  readonly surfaceShadowRole: ReaderAppColorRole;
+  readonly pointerFillRole: ReaderAppColorRole;
+  readonly pointerStrokeRole: ReaderAppColorRole;
+  readonly actionTextRole: ReaderAppColorRole;
+  readonly dividerRole: ReaderAppColorRole;
+  readonly actionFontFamily: string;
+  readonly actionFontSize: number;
+  readonly actionLineHeight: number;
+
+  constructor(init: PopupSurfaceSpecInit) {
+    this.width = init.width;
+    this.pointerWidth = init.pointerWidth;
+    this.pointerHeight = init.pointerHeight;
+    this.actionHeight = init.actionHeight;
+    this.actionCount = init.actionCount;
+    this.trailingExtension = init.trailingExtension;
+    this.anchorOverlap = init.anchorOverlap;
+    this.borderWidth = init.borderWidth;
+    this.borderRadius = init.borderRadius;
+    this.shadowRadius = init.shadowRadius;
+    this.shadowOffsetY = init.shadowOffsetY;
+    this.actionPaddingLeft = init.actionPaddingLeft;
+    this.actionPaddingRight = init.actionPaddingRight;
+    this.actionIconSize = init.actionIconSize;
+    this.dividerInset = init.dividerInset;
+    this.dividerHeight = init.dividerHeight;
+    this.pointerPoints = init.pointerPoints;
+    this.surfaceBackgroundRole = init.surfaceBackgroundRole;
+    this.surfaceBorderRole = init.surfaceBorderRole;
+    this.surfaceShadowRole = init.surfaceShadowRole;
+    this.pointerFillRole = init.pointerFillRole;
+    this.pointerStrokeRole = init.pointerStrokeRole;
+    this.actionTextRole = init.actionTextRole;
+    this.dividerRole = init.dividerRole;
+    this.actionFontFamily = init.actionFontFamily;
+    this.actionFontSize = init.actionFontSize;
+    this.actionLineHeight = init.actionLineHeight;
+  }
+
+  get actionsHeight(): number {
+    return this.actionHeight * this.actionCount;
+  }
+
+  get expandedHeight(): number {
+    return this.pointerHeight + this.actionsHeight;
+  }
+
+  get collapsedHeight(): number {
+    return this.pointerHeight + this.actionHeight;
+  }
+}
+
+const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
+  // Figma interaction registry 1982:313 / approved phone reference 4572:1796.
+  // These values mirror the existing menu until the popup family is migrated
+  // and the visual baseline is reviewed as a batch.
+  'bookshelf-more-menu': new PopupSurfaceSpec({
+    width: 176, pointerWidth: 24, pointerHeight: 12,
+    actionHeight: 50, actionCount: 4,
+    trailingExtension: 11, anchorOverlap: 5,
+    borderWidth: 1, borderRadius: 16,
+    shadowRadius: 28, shadowOffsetY: 10,
+    actionPaddingLeft: 18, actionPaddingRight: 16,
+    actionIconSize: 24, dividerInset: 16, dividerHeight: 1,
+    pointerPoints: [[0, 12], [12, 0], [24, 12]],
+    surfaceBackgroundRole: 'app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8',
+    surfaceBorderRole: 'app.BookshelfMoreMenu.build.color.FFE3DED6',
+    surfaceShadowRole: 'app.BookshelfMoreMenu.build.color.292E261F',
+    pointerFillRole: 'app.BookshelfMoreMenu.build.fill.FFFFFCF8',
+    pointerStrokeRole: 'app.BookshelfMoreMenu.build.stroke.FFE3DED6',
+    actionTextRole: 'app.BookshelfMoreMenu.action.fontColor.FF1F1B17',
+    dividerRole: 'app.BookshelfMoreMenu.action.color.FFE8E2DA',
+    actionFontFamily: 'ReaderNotoSansSC', actionFontSize: 15, actionLineHeight: 22,
+  }),
+};
+
+export function resolvePopupSpec(id: PopupSpecId): PopupSurfaceSpec {
+  return POPUP_SPECS[id];
+}
