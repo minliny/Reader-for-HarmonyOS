@@ -15,19 +15,25 @@ import {
 const READER_SETTINGS_PREFERENCES_NAME = 'reader_reading_settings_v1';
 const READER_SETTINGS_SNAPSHOT_KEY = 'snapshot';
 
-/**
- * App-local persistence for the Reader Settings module.
- *
- * Reader Core persistence is a fixed business snapshot, not a generic UI
- * settings store. This gateway therefore uses HarmonyOS Preferences through
- * the already-owned UIAbilityContext and serializes updates to avoid exposing
- * or persisting a mixed snapshot.
- */
+export interface ReaderSettingsWriteFacts {
+  acceptedRevision: number;
+  savedRevision: number;
+  pendingReconciliation: boolean;
+  accepted?: ReaderSettingsSnapshot;
+  saved?: ReaderSettingsSnapshot;
+}
+
+/** App-local whole-snapshot setters share one actual Preferences-file lane
+ * across Ability/Runtime owners. Current presentation and flush ACK are
+ * independent facts; an unknown flush never authorizes old compensation. */
 export class ReaderSettingsGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
   private store: preferences.Preferences | undefined = undefined;
-  private static updateTails: Map<ReaderRuntimeOwner, Promise<void>> = new Map();
-  private static snapshots: WeakMap<ReaderRuntimeOwner, ReaderSettingsSnapshot> = new WeakMap();
+  private static writeTail: Promise<void> = Promise.resolve();
+  private static accepted: ReaderSettingsSnapshot | undefined;
+  private static saved: ReaderSettingsSnapshot | undefined;
+  private static acceptedRevision: number = 0;
+  private static savedRevision: number = 0;
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.runtimeOwner = runtimeOwner;
@@ -35,8 +41,16 @@ export class ReaderSettingsGateway {
 
   /** Last admitted application snapshot, available before the reader's first build. */
   current(): ReaderSettingsSnapshot | undefined {
-    const snapshot = ReaderSettingsGateway.snapshots.get(this.runtimeOwner);
+    const snapshot = ReaderSettingsGateway.accepted;
     return snapshot === undefined ? undefined : copyReaderSettingsSnapshot(snapshot);
+  }
+
+  writeFacts(): ReaderSettingsWriteFacts {
+    return { acceptedRevision: ReaderSettingsGateway.acceptedRevision,
+      savedRevision: ReaderSettingsGateway.savedRevision,
+      pendingReconciliation: ReaderSettingsGateway.acceptedRevision !== ReaderSettingsGateway.savedRevision,
+      accepted: this.current(), saved: ReaderSettingsGateway.saved === undefined ? undefined :
+        copyReaderSettingsSnapshot(ReaderSettingsGateway.saved) };
   }
 
   async load(): Promise<ReaderSettingsSnapshot> {
@@ -51,50 +65,52 @@ export class ReaderSettingsGateway {
   }
 
   private loadAdmittedSnapshot(isCurrentOwner: () => boolean): Promise<ReaderSettingsSnapshot> {
+    if (!this.admitted(isCurrentOwner)) return Promise.reject(new Error('READER_SETTINGS_OWNER_SUPERSEDED'));
+    // Warm re-entry must not wait for an old unreturned flush. A current
+    // snapshot here is not a confirmation of that pending durable operation.
+    const current = this.current();
+    if (current !== undefined) return Promise.resolve(current);
     return this.withSettingsAccess(async (): Promise<ReaderSettingsSnapshot> => {
-      if (!isCurrentOwner()) throw new Error('READER_SETTINGS_OWNER_CHANGED');
+      this.assertAdmitted(isCurrentOwner);
       const current = this.current();
       if (current !== undefined) return current;
       const store = await this.ensureStore();
-      if (!isCurrentOwner()) throw new Error('READER_SETTINGS_OWNER_CHANGED');
-      const snapshot = await this.readSnapshot(store);
-      if (!isCurrentOwner()) throw new Error('READER_SETTINGS_OWNER_CHANGED');
-      ReaderSettingsGateway.snapshots.set(this.runtimeOwner, snapshot);
-      return copyReaderSettingsSnapshot(snapshot);
+      this.assertAdmitted(isCurrentOwner);
+      return this.readSnapshot(store, isCurrentOwner);
     });
   }
 
-  async update(snapshot: ReaderSettingsSnapshot, resetOwned: boolean = false): Promise<ReaderSettingsSnapshot> {
+  async update(snapshot: ReaderSettingsSnapshot, resetOwned: boolean = false,
+    isAdmitted?: () => boolean): Promise<ReaderSettingsSnapshot> {
     const requestedSnapshot = normalizeReaderSettingsSnapshot(snapshot);
     if (!resetOwned) await ReaderThemeHost.prepareUserChange();
     return this.withSettingsAccess(async (): Promise<ReaderSettingsSnapshot> => {
       const store = await this.ensureStore();
-      const previous = await store.get(READER_SETTINGS_SNAPSHOT_KEY, '');
-      try {
-        await store.put(READER_SETTINGS_SNAPSHOT_KEY, JSON.stringify(requestedSnapshot));
-        await store.flush();
-      } catch (error) {
-        await store.put(READER_SETTINGS_SNAPSHOT_KEY, previous);
-        throw error;
-      }
-      ReaderSettingsGateway.snapshots.set(this.runtimeOwner, requestedSnapshot);
-      return copyReaderSettingsSnapshot(requestedSnapshot);
+      await store.get(READER_SETTINGS_SNAPSHOT_KEY, '');
+      this.assertAdmitted(isAdmitted);
+      return this.writeSnapshot(store, requestedSnapshot);
     });
   }
 
-  /** Initial reads/migrations share the existing write queue: they must not
-   * publish a Preferences put that a pending failed flush will roll back. */
+  /** One finite idempotent retry. A cached get cannot settle an unknown ACK;
+   * a queued retry may not borrow a newer accepted revision. */
+  async retryAccepted(isAdmitted?: () => boolean): Promise<ReaderSettingsSnapshot> {
+    const snapshot = this.current();
+    if (snapshot === undefined) return this.load();
+    const revision = ReaderSettingsGateway.acceptedRevision;
+    return this.update(snapshot, false, (): boolean => revision === ReaderSettingsGateway.acceptedRevision && isAdmitted?.() !== false);
+  }
+
+  /** Initial migration and writes reuse the same file-local lane. Retirement
+   * rejects first dispatch, while an actual put retains the lane through flush. */
   private async withSettingsAccess<T>(operation: () => Promise<T>): Promise<T> {
-    const previousUpdate = ReaderSettingsGateway.updateTails.get(this.runtimeOwner) ?? Promise.resolve();
+    const previousUpdate = ReaderSettingsGateway.writeTail;
     let releaseUpdate: (() => void) | undefined = undefined;
     const nextUpdate = new Promise<void>((resolve: () => void): void => {
       releaseUpdate = resolve;
     });
-    ReaderSettingsGateway.updateTails.set(this.runtimeOwner, nextUpdate);
-    // A failed flush must not poison every later retry in this process. Each
-    // caller receives its own I/O error, while the serialized tail continues
-    // from a settled point.
-    await previousUpdate.catch((): void => {});
+    ReaderSettingsGateway.writeTail = nextUpdate;
+    await previousUpdate;
 
     try {
       return await operation();
@@ -102,33 +118,48 @@ export class ReaderSettingsGateway {
       if (releaseUpdate !== undefined) {
         releaseUpdate();
       }
-      if (ReaderSettingsGateway.updateTails.get(this.runtimeOwner) === nextUpdate) ReaderSettingsGateway.updateTails.delete(this.runtimeOwner);
     }
   }
 
-  private async readSnapshot(store: preferences.Preferences): Promise<ReaderSettingsSnapshot> {
+  private async readSnapshot(store: preferences.Preferences, isCurrentOwner: () => boolean): Promise<ReaderSettingsSnapshot> {
     const fallback = createDefaultReaderSettingsSnapshot();
     const raw = (await store.get(READER_SETTINGS_SNAPSHOT_KEY, '')) as string;
-    if (raw.length === 0) {
-      return fallback;
-    }
+    this.assertAdmitted(isCurrentOwner);
+    if (raw.length === 0) { ReaderSettingsGateway.accepted = fallback; return copyReaderSettingsSnapshot(fallback); }
+    let decoded: ReaderSettingsSnapshot | ReaderSettingsSnapshotV4 | ReaderSettingsSnapshotV3 | ReaderSettingsSnapshotV2 | ReaderSettingsSnapshotV1;
     try {
-      const decoded = JSON.parse(raw) as
+      decoded = JSON.parse(raw) as
         ReaderSettingsSnapshot | ReaderSettingsSnapshotV4 | ReaderSettingsSnapshotV3 | ReaderSettingsSnapshotV2 | ReaderSettingsSnapshotV1;
-      const normalized = normalizeReaderSettingsSnapshot(decoded);
-      if (decoded.version !== 5) {
-        try {
-          await store.put(READER_SETTINGS_SNAPSHOT_KEY, JSON.stringify(normalized));
-          await store.flush();
-        } catch (_) {
-          // A valid migrated snapshot remains usable for this session. A later
-          // load/update retries persistence without exposing mixed legacy/V4 state.
-        }
-      }
-      return normalized;
     } catch (_) {
-      return fallback;
+      ReaderSettingsGateway.accepted = fallback; return copyReaderSettingsSnapshot(fallback);
     }
+    const normalized = normalizeReaderSettingsSnapshot(decoded);
+    this.assertAdmitted(isCurrentOwner);
+    ReaderSettingsGateway.accepted = copyReaderSettingsSnapshot(normalized);
+    if (decoded !== null && decoded.version !== 5) {
+      try { await this.writeSnapshot(store, normalized); }
+      catch (_) { /* Usable migrated choice retained; real write facts stay unknown. */ }
+    }
+    return copyReaderSettingsSnapshot(normalized);
+  }
+
+  private async writeSnapshot(store: preferences.Preferences, snapshot: ReaderSettingsSnapshot): Promise<ReaderSettingsSnapshot> {
+    if (ReaderSettingsGateway.acceptedRevision >= Number.MAX_SAFE_INTEGER)
+      throw new Error('READER_SETTINGS_REVISION_EXHAUSTED');
+    const revision = ++ReaderSettingsGateway.acceptedRevision;
+    ReaderSettingsGateway.accepted = copyReaderSettingsSnapshot(snapshot);
+    await store.put(READER_SETTINGS_SNAPSHOT_KEY, JSON.stringify(snapshot));
+    await store.flush();
+    ReaderSettingsGateway.saved = copyReaderSettingsSnapshot(snapshot);
+    ReaderSettingsGateway.savedRevision = revision;
+    return copyReaderSettingsSnapshot(snapshot);
+  }
+
+  private admitted(isAdmitted?: () => boolean): boolean {
+    return ReaderRuntimeOwner.isCurrent(this.runtimeOwner) && isAdmitted?.() !== false;
+  }
+  private assertAdmitted(isAdmitted?: () => boolean): void {
+    if (!this.admitted(isAdmitted)) throw new Error('READER_SETTINGS_OWNER_SUPERSEDED');
   }
 
   private async ensureStore(): Promise<preferences.Preferences> {

@@ -8705,6 +8705,7 @@ export struct ReadingExperience {
       this.configureReaderScreenAwakeLease(this.readerSettingsSnapshot);
       this.applyReaderSystemEventPolicy(this.readerSettingsSnapshot);
       this.applyInitialReaderWindowPolicy(this.readerSettingsSnapshot, lifecycleToken, this.readerSettingsMutationGeneration);
+      this.retryPendingReaderSettings(this.captureReaderSettingsAdmission(lifecycleToken, this.readerSettingsMutationGeneration));
       return;
     }
     const mutationGeneration = this.readerSettingsMutationGeneration;
@@ -8721,6 +8722,7 @@ export struct ReadingExperience {
       this.configureReaderScreenAwakeLease(loadedSnapshot);
       this.applyReaderSystemEventPolicy(loadedSnapshot);
       this.applyInitialReaderWindowPolicy(loadedSnapshot, lifecycleToken, mutationGeneration);
+      this.retryPendingReaderSettings(this.captureReaderSettingsAdmission(lifecycleToken, mutationGeneration));
     } catch (_error) {
       // Keep locally-rendered behavior coherent with a failed Host request:
       // supported page-turn state survives, window-backed fields fail closed.
@@ -8769,7 +8771,6 @@ export struct ReadingExperience {
   }
 
   private commitReaderSessionSettings(snapshot: ReaderSettingsSnapshot): void {
-    const previous = this.readerSettingsSnapshot;
     this.readerSettingsMutationGeneration = this.readerSettingsMutationGeneration >= Number.MAX_SAFE_INTEGER ?
       1 : this.readerSettingsMutationGeneration + 1;
     const generation = this.readerSettingsMutationGeneration;
@@ -8779,14 +8780,9 @@ export struct ReadingExperience {
     this.configureReaderScreenAwakeLease(snapshot);
     this.applyReaderSystemEventPolicy(snapshot);
     this.pageTurnRenderRevision += 1;
-    void this.readerSettingsGateway.update(snapshot).catch((error: Error): void => {
-      if (!this.isSessionActive(lifecycleToken) || generation !== this.readerSettingsMutationGeneration) return;
-      this.readerSettingsSnapshot = previous;
-      this.configureReaderScreenAwakeLease(previous);
-      this.applyReaderSystemEventPolicy(previous);
-      this.pageTurnRenderRevision += 1;
-      this.showReaderSettingsFailure('阅读设置保存失败，已恢复上次保存值', error);
-    });
+    const current = this.captureReaderSettingsAdmission(lifecycleToken, generation);
+    void this.readerSettingsGateway.update(snapshot, false, current).catch((error: Error): void =>
+      this.notifyReaderSettingsSavePending(error, current));
   }
 
   private commitReaderWindowSettings(snapshot: ReaderSettingsSnapshot): void {
@@ -8794,6 +8790,7 @@ export struct ReadingExperience {
       1 : this.readerSettingsMutationGeneration + 1;
     const generation = this.readerSettingsMutationGeneration;
     const lifecycleToken = this.lifecycleToken;
+    const current = this.captureReaderSettingsAdmission(lifecycleToken, generation);
     const previous = this.readerSettingsSnapshot;
     this.readerSettingsSnapshot = snapshot;
     this.readerSettingsLoaded = true;
@@ -8801,19 +8798,20 @@ export struct ReadingExperience {
     this.applyReaderSystemEventPolicy(snapshot);
     void this.applyReaderWindowPolicy(snapshot, this.controlsPresentedForWindow())
       .then((): Promise<void> => {
-        if (!this.isSessionActive(lifecycleToken) ||
-          generation !== this.readerSettingsMutationGeneration) {
+        if (!current()) {
           return Promise.resolve();
         }
         const cutoutLayoutChanged = previous.extendIntoCutout !== snapshot.extendIntoCutout;
         if (cutoutLayoutChanged) {
           this.reflowAfterWindowGeometryChange();
         }
-        return this.readerSettingsGateway.update(snapshot).then((): void => {});
+        // The native policy succeeded. Its durable snapshot is a separate
+        // operation: missing Preferences ACK must not undo the actual policy.
+        return this.readerSettingsGateway.update(snapshot, false, current)
+          .catch((error: Error): void => this.notifyReaderSettingsSavePending(error, current)).then((): void => {});
       })
       .catch((error: Error): void => {
-        if (this.isSessionActive(lifecycleToken) &&
-          generation === this.readerSettingsMutationGeneration) {
+        if (current()) {
           this.readerSettingsSnapshot = previous;
           this.configureReaderScreenAwakeLease(previous);
           this.applyReaderSystemEventPolicy(previous);
@@ -8824,18 +8822,34 @@ export struct ReadingExperience {
           }
           void this.applyReaderWindowPolicy(previous, this.controlsPresentedForWindow())
             .catch((_rollbackError: Error): void => {});
-          this.showReaderSettingsFailure('阅读设置保存失败，已恢复上次保存值', error);
+          this.showReaderSettingsFailure('窗口设置未能应用，已恢复当前窗口设置', error);
         }
       });
   }
 
   private showReaderSettingsFailure(message: string, error: Error): void {
-    hilog.warn(0x5244, 'Reader', '%{private}s', `Reader settings persistence failed: ${this.errorMessage(error)}`);
+    try { hilog.warn(0x5244, 'Reader', '%{private}s', `Reader settings operation: ${this.errorMessage(error)}`); } catch (_) {}
     try {
       this.getUIContext().getPromptAction().showToast({ message });
     } catch (_) {
-      // A missing presentation context must not prevent the state rollback.
+      // A retired notice/diagnostic cannot change accepted settings or policy.
     }
+  }
+
+  private captureReaderSettingsAdmission(lifecycle: number, generation: number): () => boolean {
+    const sourceId = this.sourceId, bookId = this.bookId;
+    return (): boolean => this.isSessionActive(lifecycle) && generation === this.readerSettingsMutationGeneration &&
+      sourceId === this.sourceId && bookId === this.bookId;
+  }
+
+  private notifyReaderSettingsSavePending(error: Error, current: () => boolean): void {
+    if (current()) this.showReaderSettingsFailure('阅读设置保存尚未确认，当前效果已保留，请稍后重试', error);
+  }
+
+  private retryPendingReaderSettings(current: () => boolean): void {
+    if (!current() || !this.readerSettingsGateway.writeFacts().pendingReconciliation) return;
+    void this.readerSettingsGateway.retryAccepted(current).catch((error: Error): void =>
+      this.notifyReaderSettingsSavePending(error, current));
   }
 
   private applyReaderWindowPolicy(snapshot: ReaderSettingsSnapshot,
@@ -8935,7 +8949,6 @@ export struct ReadingExperience {
       return;
     }
     const previous = this.readerSettingsSnapshot;
-    const previousBookTurnRuntimeFailed = this.bookTurnRuntimeFailed;
     const snapshot = setReaderPageTurnStyle(this.readerSettingsSnapshot, style);
     const changed = readerPageTurnStyle(snapshot) !== readerPageTurnStyle(previous);
     const navigationChanged = snapshot.navigationMode !== previous.navigationMode;
@@ -8965,38 +8978,10 @@ export struct ReadingExperience {
     }
     const mutationGeneration = this.readerSettingsMutationGeneration;
     const lifecycleToken = this.lifecycleToken;
-    void this.readerSettingsGateway.update(snapshot).catch((error: Error): void => {
-      // Page-turn style changes use a special reflow path, so they must retain
-      // the same transactional rollback contract as the other settings. Do
-      // not let a failed Preferences flush leave a session-only style that
-      // silently disappears on the next reader mount.
-      if (!this.isSessionActive(lifecycleToken) ||
-        mutationGeneration !== this.readerSettingsMutationGeneration ||
-        changeGeneration !== this.pageStyleChangeGeneration) {
-        return;
-      }
-      this.readerSettingsSnapshot = previous;
-      this.readerSettingsLoaded = true;
-      this.bookTurnRuntimeFailed = previousBookTurnRuntimeFailed;
-      if (changed) {
-        this.invalidatePageTurnRuntime(true);
-      } else {
-        this.pageTurnRenderRevision += 1;
-      }
-      if (navigationChanged && this.hasCurrentMaterializedChapter()) {
-        if (previous.navigationMode === 'continuous') {
-          this.rebuildContinuousFragments();
-          this.setContinuousInitialAnchor(this.visiblePage?.startScalar ?? this.desiredChapterOffset);
-          this.continuousProgressRevision += 1;
-        } else {
-          this.beginCanonicalModeMeasurement(this.continuousVisibleScalar);
-        }
-      }
-      if (readerPageTransitionUsesPreparedPages(previous) && this.phase === 'ready') {
-        this.schedulePageTurnPreparation();
-      }
-      this.showReaderSettingsFailure('阅读设置保存失败，已恢复上次保存值', error);
-    });
+    const admission = this.captureReaderSettingsAdmission(lifecycleToken, mutationGeneration);
+    const current = (): boolean => admission() && changeGeneration === this.pageStyleChangeGeneration;
+    void this.readerSettingsGateway.update(snapshot, false, current).catch((error: Error): void =>
+      this.notifyReaderSettingsSavePending(error, current));
   }
 
   private changeAppearanceTheme(theme: ReaderAppearanceTheme): void {

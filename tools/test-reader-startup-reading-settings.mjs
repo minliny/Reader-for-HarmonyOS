@@ -10,8 +10,8 @@ const source = readFileSync(new URL('features/reading/ReaderSettingsGateway.ts',
 const stores = new WeakMap();
 let barrierCalls = 0;
 const dependencies = { preferences: { getPreferences: async owner => stores.get(owner) },
-  ReaderThemeHost: { prepareUserChange: async () => { barrierCalls++; } }, ...settings };
-const Gateway = new Function(...Object.keys(dependencies),
+  ReaderThemeHost: { prepareUserChange: async () => { barrierCalls++; } }, ReaderRuntimeOwner: { isCurrent: owner => stores.has(owner) }, ...settings };
+const makeGateway = () => new Function(...Object.keys(dependencies),
   `${stripTypeScriptTypes(source.slice(source.indexOf('const READER_SETTINGS_PREFERENCES_NAME'))
     .replace('export class ', 'class '))}; return ReaderSettingsGateway;`)(...Object.values(dependencies));
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
@@ -19,12 +19,13 @@ const settle = async () => { for (let i = 0; i < 12; i++) await new Promise(reso
 const defaults = settings.createDefaultReaderSettingsSnapshot();
 const saved = { ...defaults, extendIntoCutout: false, pageTransition: 'none' };
 function fixture(raw = JSON.stringify(saved)) {
+  const Gateway = makeGateway(); // independent actual class represents this fixture's cold application process
   const owner = { getUIAbilityContext() { return this; }, start: async () => {} };
   const calls = [];
   const store = { get: async () => { calls.push('get'); return raw; },
     put: async (_key, value) => { calls.push('put'); raw = value; }, flush: async () => { calls.push('flush'); } };
   stores.set(owner, store);
-  return { owner, store, calls, gateway: new Gateway(owner) };
+  return { owner, store, calls, Gateway, gateway: new Gateway(owner) };
 }
 
 // The startup admission and normal reads use the real gateway and same queue.
@@ -33,7 +34,7 @@ function fixture(raw = JSON.stringify(saved)) {
   assert.equal(f.gateway.current(), undefined);
   await f.gateway.loadAfterConfigurationRecovery(() => true);
   assert.equal(barrierCalls, before, 'completed startup recovery must not recursively enter the user-change barrier');
-  assert.deepEqual(new Gateway(f.owner).current(), saved);
+  assert.deepEqual(new f.Gateway(f.owner).current(), saved);
   await f.gateway.load();
   assert.equal(barrierCalls, before + 1, 'ordinary callers still enter the recovery barrier');
   assert.deepEqual(f.calls, ['get'], 'the reader reuses the admitted settings');
@@ -45,9 +46,10 @@ function fixture(raw = JSON.stringify(saved)) {
   const writing = f.gateway.update(defaults, true);
   await settle();
   let done = false;
-  const loading = new Gateway(f.owner).loadAfterConfigurationRecovery(() => true).then(value => { done = true; return value; });
-  await settle(); assert.equal(done, false, 'startup admission waits for the existing settings write queue');
-  assert.deepEqual(f.gateway.current(), saved);
+  const loading = new f.Gateway(f.owner).loadAfterConfigurationRecovery(() => true).then(value => { done = true; return value; });
+  await settle(); assert.equal(done, true, 'warm startup consumes current accepted settings without waiting for an unreturned flush');
+  assert.deepEqual(f.gateway.current(), defaults);
+  assert.equal(f.gateway.writeFacts().pendingReconciliation, true, 'current snapshot is not a flush confirmation');
   flush.resolve(); await writing;
   assert.deepEqual(await loading, defaults, 'the post-recovery snapshot includes the confirmed reset');
 }
@@ -58,7 +60,8 @@ function fixture(raw = JSON.stringify(saved)) {
   await settle();
   const loading = f.gateway.loadAfterConfigurationRecovery(() => true);
   flush.reject(Error('disk failure')); await failed;
-  assert.deepEqual(await loading, saved, 'a failed recovery write does not publish unconfirmed settings');
+  assert.deepEqual(await loading, defaults, 'unknown recovery write retains its current accepted snapshot');
+  assert.equal(f.gateway.writeFacts().pendingReconciliation, true);
 }
 for (const raw of ['', '{invalid']) {
   const f = fixture(raw);
@@ -81,7 +84,7 @@ for (const raw of ['', '{invalid']) {
   f.store.get = () => read.promise;
   const loading = f.gateway.loadAfterConfigurationRecovery(() => current);
   await settle(); current = false; read.resolve(JSON.stringify(saved));
-  await assert.rejects(loading, /READER_SETTINGS_OWNER_CHANGED/);
+  await assert.rejects(loading, /READER_SETTINGS_OWNER_SUPERSEDED/);
   assert.equal(f.gateway.current(), undefined, 'late old-owner reads cannot publish even into the old cache');
   const successor = fixture(); assert.equal(successor.gateway.current(), undefined);
   assert.deepEqual(await successor.gateway.loadAfterConfigurationRecovery(() => true), saved);
@@ -101,7 +104,7 @@ for (const failRead of [false, true]) {
     readerEventLoopProbeEnabled: () => false, ReaderRuntimeOwner: { install: () => f.owner },
     ReaderSystemFileOpenHost: { install() {}, receive() {} },
     AppStorage: { setOrCreate() {} }, WebDavCredentialStore: { instance: { attachContext() {}, loadBookshelfViewMode: async () => null } },
-    prepareReaderShelfFonts: () => shelfFont.promise, ReaderSettingsGateway: Gateway,
+    prepareReaderShelfFonts: () => shelfFont.promise, ReaderSettingsGateway: f.Gateway,
     ReaderThemeHost: { install: async () => {}, setRecoveryBarrier() {} },
     ConfigurationConstant: { ColorMode: { COLOR_MODE_DARK: 1 } },
     SyncGateway: class { async recoverInterruptedRestore() { trace.push('recover'); await recovery.promise; } },
@@ -132,4 +135,4 @@ for (const failRead of [false, true]) {
 }
 const index = readFileSync(new URL('pages/Index.ets', base), 'utf8');
 assert.doesNotMatch(index, /new ReaderSettingsGateway\(\)\.load\(/, 'Index no longer starts the first reading-settings receipt after becoming visible');
-console.log('PASS startup reading settings: real queue, confirmed recovery snapshot, defaults/migration/failure, owner isolation, parallel font preparation and pre-Index admission.');
+console.log('PASS startup reading settings: file queue, current versus confirmed recovery snapshot, defaults/migration/failure, owner isolation, parallel font preparation and pre-Index admission.');

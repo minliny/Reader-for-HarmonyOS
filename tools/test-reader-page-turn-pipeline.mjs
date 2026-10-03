@@ -323,17 +323,16 @@ contract('settings and Appearance share one ReaderSettings page-turn truth', () 
     /const next: ReaderPageTurnStyle = option === '仿真' \? 'simulation'[\s\S]*this\.onPageTurnStyleChange\(next\);/);
 });
 
-contract('page-turn style persistence failure rolls back the live session', () => {
+contract('page-turn style unknown save retains the current session and uses captured admission', () => {
   const style = methodSection(localReading, 'changeReaderPageTurnStyle');
   assert.match(style, /const previous = this\.readerSettingsSnapshot;/);
-  assert.match(style, /const previousBookTurnRuntimeFailed = this\.bookTurnRuntimeFailed;/);
-  assert.match(style, /readerSettingsGateway\.update\(snapshot\)\.catch\(\(error: Error\)/);
-  assert.match(style, /mutationGeneration !== this\.readerSettingsMutationGeneration/);
-  assert.match(style, /changeGeneration !== this\.pageStyleChangeGeneration/);
-  assert.match(style, /this\.readerSettingsSnapshot = previous;/);
-  assert.match(style, /this\.bookTurnRuntimeFailed = previousBookTurnRuntimeFailed;/);
+  assert.match(style, /readerSettingsGateway\.update\(snapshot, false, current\)\.catch\(\(error: Error\)/);
+  assert.match(style, /captureReaderSettingsAdmission\(lifecycleToken, mutationGeneration\)/);
+  assert.match(style, /changeGeneration === this\.pageStyleChangeGeneration/);
+  assert.doesNotMatch(style, /this\.readerSettingsSnapshot = previous;/);
+  assert.doesNotMatch(style, /previousBookTurnRuntimeFailed/);
   assert.match(style, /this\.invalidatePageTurnRuntime\(true\)/);
-  assert.match(style, /this\.showReaderSettingsFailure\('阅读设置保存失败，已恢复上次保存值', error\)/);
+  assert.match(style, /this\.notifyReaderSettingsSavePending\(error, current\)/);
 });
 
 contract('page-turn generations invalidate stale preparation and settlement owners', () => {
