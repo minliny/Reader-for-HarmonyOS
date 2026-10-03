@@ -342,7 +342,7 @@ check('single-book sheet matches cover frame and both layers have straight lower
   const width = new Function('ReaderWindowCoordinator', 'readerVisualSafeLeft', 'readerVisualSafeRight', method);
   for (const available of [240, 326, 352, 630]) assert.equal(width.call({ shelfContentWidth: () => available, isWideViewport: () => available > 500,
     effectiveViewportWidth: () => available + 38 }, { metrics: () => ({}) }, () => 19, () => 19), available);
-  assert.match(shelf, /radius: \{ topLeft: 24, topRight: 24, bottomLeft: 0, bottomRight: 0 \}/);
+  assert.match(shelf, /radius: \{ topLeft: this\.bookActionSheetSpec\(\)\.borderRadius, topRight: this\.bookActionSheetSpec\(\)\.borderRadius, bottomLeft: 0, bottomRight: 0 \}/);
   assert.match(sheet, /borderRadius\(\{ topLeft: this\.surfaceSpec\(\)\.borderRadius, topRight: this\.surfaceSpec\(\)\.borderRadius, bottomLeft: 0, bottomRight: 0 \}\)/);
   const surfaceSpecs = read('common/ReaderSurfaceSpecs.ets');
   assert.match(surfaceSpecs, /bookshelf-book-action[\s\S]*borderRadius: 24/);
