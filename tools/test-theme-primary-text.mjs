@@ -77,6 +77,6 @@ function scan(dir){for(const entry of readdirSync(dir,{withFileTypes:true})){
 }}
 scan(ets);
 assert.ok(output.consumers.some(row => row.file.endsWith('common/ReaderRecoveryAction.ets')), 'the extracted editor recovery control retains the shared primary foreground');
-assert.equal(output.consumers.length,34,'Source/Rules and RSS document foregrounds now consume one actual ReaderButton producer; all current AST foregrounds remain covered');
+assert.equal(output.consumers.length,31,'Source/Rules/RSS foregrounds share one exact finite ReaderButton producer; indirect spec colors are covered by actual native comparison and retained SDK theme contracts');
 if(process.argv.includes('--record'))writeFileSync(process.argv[process.argv.indexOf('--record')+1],JSON.stringify(output,null,2)+'\n');
 console.log(`PASS Night primary text: ${output.consumers.length} production AST foregrounds, ${output.builder.length} retained Builder states; Day/solid fill/alpha/layout retained.`);

@@ -23,7 +23,7 @@ export function foundationTypographyCarrier(entry,file,expected,pageSource,targe
   const {owner}=createReaderBuilderProbe(pageSource,methods,shared.dependencies,shared.hooks);
   Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false,facts:{canMutate:true}},...(entry.params??{})});
   owner[binding](...(branch.arguments??entry.arguments).map(arg=>arg==='@callback'?()=>{}:arg));
-  const children=[...owner.children.values()].filter(child=>child instanceof shared.dependencies[entry.component]&&child.specId===entry.specId);
+  const children=[...owner.children.values()].filter(child=>child instanceof shared.dependencies[entry.component]&&child.specId===entry.specId&&(!entry.nativeText||child.label===entry.nativeText));
   assert.equal(children.length,1,entry.id+': actual original owner constructs finite shared class');
   const nodes=shared.nodes(children[0]).filter(node=>node.type===expected.kind);
   assert.equal(nodes.length,1,entry.id+': one actual native carrier');

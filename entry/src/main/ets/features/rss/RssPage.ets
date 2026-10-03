@@ -1,5 +1,6 @@
 import type { RssFeedPresentation, RssRefreshingPresentation, RssEmptyUnreadPresentation, RssFailedSource, RssFatalErrorPresentation, RssMode, RssPresentation } from './RssPresentationContract';
 export type { RssFeedPresentation, RssRefreshingPresentation, RssEmptyUnreadPresentation, RssFailedSource, RssFatalErrorPresentation, RssMode, RssPresentation } from './RssPresentationContract';
+import { ReaderButton } from '../common/ReaderButton';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { readerRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { projectOperationFacts, type OperationFacts } from '../../app/ReaderOperationFacts';
@@ -282,21 +283,8 @@ export struct RssPage {
 
   @Builder
   private statusTab(label: string, mode: RssMode) {
-    Stack({ alignContent: Alignment.Center }) {
-      Text(label)
-        .fontFamily(TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily)
-        .fontWeight(TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight)
-        .fontSize(TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp)
-        .fontColor(this.activeMode === mode ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('app.RssPage.statusTab.fontColor.FF564D44', this.appThemeScheme))
-        .textAlign(TextAlign.Center)
-        .maxLines(1);
-    }
-    .height(30)
-    .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
-    .backgroundColor(this.activeMode === mode ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('app.RssPage.SOFT_PILL_BG', this.appThemeScheme))
-    .borderRadius(999)
-    .responseRegion({ x: 0, y: -7, width: '100%', height: 44 })
-    .onClick((): void => this.onModeRequested(mode));
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'rss-mode-tab', label, primary: this.activeMode === mode,
+      onAction: (): void => this.onModeRequested(mode) });
   }
 
   @Builder
@@ -797,38 +785,9 @@ export struct RssPage {
   @Builder
   private stateButtons(primaryLabel: string, primaryAction: () => void) {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-      Stack({ alignContent: Alignment.Center }) {
-        Text(primaryLabel)
-          .fontFamily(TYPE_RSS_STATE_ACTION.fontFamily)
-          .fontWeight(TYPE_RSS_STATE_ACTION.fontWeight)
-          .fontSize(TYPE_RSS_STATE_ACTION.fontSizeFp)
-          .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-          .maxLines(1);
-      }
-      .width(88)
-      .height(36)
-      .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
-      .borderRadius(999)
-      .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
-      .onClick((): void => primaryAction());
-
-      Stack({ alignContent: Alignment.Center }) {
-        Text('订阅管理')
-          .fontFamily(TYPE_RSS_STATE_ACTION.fontFamily)
-          .fontWeight(TYPE_RSS_STATE_ACTION.fontWeight)
-          .fontSize(TYPE_RSS_STATE_ACTION.fontSizeFp)
-          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-          .maxLines(1);
-      }
-      .width(88)
-      .height(36)
-      .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-      .borderRadius(999)
-      .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
-      .onClick((): void => this.onManage());
-    }
-    .margin({ top: 20 })
-    .alignItems(VerticalAlign.Center);
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'rss-state', label: primaryLabel, primary: true, onAction: primaryAction });
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'rss-state', label: '订阅管理', onAction: (): void => this.onManage() });
+    }.margin({ top: 20 }).alignItems(VerticalAlign.Center);
   }
 
   private refreshStatusText(): string {

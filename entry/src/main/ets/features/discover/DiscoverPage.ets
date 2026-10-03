@@ -1,3 +1,4 @@
+import { ReaderButton } from '../common/ReaderButton';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { TYPE_APP_SECTION_LABEL, TYPE_APP_SEGMENT_LABEL, TYPE_APP_SMALL_LABEL, TYPE_DISCOVER_AUTHOR, TYPE_DISCOVER_CATEGORY, TYPE_DISCOVER_FILTER_LABEL, TYPE_DISCOVER_FILTER_VALUE, TYPE_DISCOVER_INTRO, TYPE_DISCOVER_RANK_TITLE, TYPE_DISCOVER_SOURCE_META, TYPE_DISCOVER_STATE_TITLE, TYPE_DISCOVER_STATUS } from '../common/ReaderTypography';
@@ -368,18 +369,8 @@ export struct DiscoverPage {
 
   @Builder
   private pageAction(label: string, enabled: boolean, action: () => void) {
-    Text(label)
-      .fontFamily(TYPE_APP_SMALL_LABEL.fontFamily)
-      .fontWeight(TYPE_APP_SMALL_LABEL.fontWeight)
-      .fontSize(TYPE_APP_SMALL_LABEL.fontSizeFp)
-      .fontColor(enabled ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
-      .backgroundColor(enabled ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('app.DiscoverPage.CHIP_BG', this.appThemeScheme))
-      .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: 8, bottom: 8 })
-      .borderRadius(999)
-      .opacity(this.presentation.loading ? 0.6 : 1)
-      .onClick((): void => {
-        if (enabled && !this.presentation.loading) action();
-      });
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'discover-page', label, primary: enabled,
+      actionEnabled: enabled && !this.presentation.loading, isBusy: this.presentation.loading, onAction: action });
   }
 
   @Builder

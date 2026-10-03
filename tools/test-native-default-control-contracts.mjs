@@ -27,7 +27,7 @@ for(const file of readdirSync(featureRoot,{recursive:true}).filter(file=>file.en
     assert.deepEqual(sharedProducerShape(source,actual.file),actual.shape,'actual finite modifier owns title roles and AUTO omissions');delegated++;continue;
   }
   if(node.kind==='Text'&&file==='common/ReaderButton.ets'&&node.method==='build'&&node.text==='this.label'&&
-    ['newReaderButtonLabelModifier(this.specId,this.primary,this.scheme)','newReaderButtonTextModifier(this.specId,this.primary,this.actionEnabled,this.layout,this.scheme)'].includes(normalise(node.attributes.attributeModifier))||
+    ['newReaderButtonLabelModifier(this.specId,this.primary,this.scheme)','newReaderButtonTextModifier(this.specId,this.primary,this.actionEnabled,this.layout,this.scheme,this.isBusy)'].includes(normalise(node.attributes.attributeModifier))||
     node.kind==='TextInput'&&file==='common/ReaderFormField.ets'&&node.method==='build'&&normalise(node.text)==='{text:this.text,placeholder:this.placeholder}'&&
     normalise(node.attributes.attributeModifier)==='newReaderFormFieldModifier(this.specId,this.scheme)'){
     const actual=producers.producers.find(p=>p.component===(node.kind==='Text'?'ReaderButton':'ReaderFormField'));assert.ok(actual);

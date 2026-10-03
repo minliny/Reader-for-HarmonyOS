@@ -1,3 +1,4 @@
+import { ReaderButton } from '../common/ReaderButton';
 import type { SearchOperationFacts } from './SearchPresentation';
 import { TYPE_APP_BODY, TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_PRIMARY_ACTION, TYPE_APP_SECONDARY_ACTION, TYPE_SEARCH_FIELD_ACTION, TYPE_SEARCH_FIELD_ACTION_WIDE, TYPE_SEARCH_HISTORY_HEADING, TYPE_SEARCH_HISTORY_KEYWORD, TYPE_SEARCH_HISTORY_STATUS, TYPE_SEARCH_PROGRESS_META, TYPE_SEARCH_RESULT_COUNT, TYPE_SEARCH_RETRY_ACTION, TYPE_SEARCH_SCOPE_LABEL, TYPE_SEARCH_SCOPE_SELECTED, TYPE_SEARCH_STATE_DESCRIPTION, TYPE_SEARCH_STATE_TITLE, TYPE_SEARCH_SUGGESTION_BODY, TYPE_SEARCH_SUGGESTION_HEADING } from '../common/ReaderTypography';
 import { bookAuthorLabel, bookTitleAuthorKey } from '../common/BookAuthorMetadata';
@@ -1254,35 +1255,12 @@ export struct SearchPage {
 
   @Builder
   private primaryPill(label: string, onTap: () => void) {
-    Text(label)
-      .fontFamily(TYPE_APP_PRIMARY_ACTION.fontFamily)
-      .fontWeight(TYPE_APP_PRIMARY_ACTION.fontWeight)
-      .fontSize(TYPE_APP_PRIMARY_ACTION.fontSizeFp)
-      .lineHeight(TYPE_APP_PRIMARY_ACTION.lineHeightFp as number)
-      .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-      .padding({ left: 18, right: 18, top: 11.5, bottom: 11.5 })
-      .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
-      .borderRadius(999)
-      .onClick((): void => onTap())
-      .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
-      .accessibilityText(label);
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'search-primary', label, primary: true, onAction: onTap });
   }
 
   @Builder
   private secondaryPill(label: string, onTap: () => void) {
-    Text(label)
-      .fontFamily(TYPE_APP_SECONDARY_ACTION.fontFamily)
-      .fontWeight(TYPE_APP_SECONDARY_ACTION.fontWeight)
-      .fontSize(TYPE_APP_SECONDARY_ACTION.fontSizeFp)
-      .lineHeight(TYPE_APP_SECONDARY_ACTION.lineHeightFp as number)
-      .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-      .padding({ left: 18.5, right: 18.5, top: 11.5, bottom: 11.5 })
-      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(999)
-      .onClick((): void => onTap())
-      .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
-      .accessibilityText(label);
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'search-secondary', label, onAction: onTap });
   }
 
   @Builder

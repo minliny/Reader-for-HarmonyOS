@@ -1,3 +1,4 @@
+import { ReaderButton } from '../common/ReaderButton';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { readerRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { projectOperationFacts, type OperationFacts } from '../../app/ReaderOperationFacts';
@@ -212,18 +213,7 @@ export struct RssEntryDetailPage {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start);
 
-      Text('查看源')
-        .height(28)
-        .padding({ left: 9, right: 9 })
-        .fontFamily(TYPE_RSS_LINK_ACTION.fontFamily)
-        .fontWeight(TYPE_RSS_LINK_ACTION.fontWeight)
-        .fontSize(TYPE_RSS_LINK_ACTION.fontSizeFp)
-        .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-        .textAlign(TextAlign.Center)
-        .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-        .borderRadius(999)
-        .responseRegion({ x: 0, y: -8, width: '100%', height: 44 })
-        .onClick((): void => this.onViewSource());
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'rss-source-link', label: '查看源', onAction: (): void => this.onViewSource() });
     }
     .width('100%')
     .height(58)

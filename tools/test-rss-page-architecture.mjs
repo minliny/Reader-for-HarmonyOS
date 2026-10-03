@@ -1,3 +1,6 @@
+import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
+import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { themeDayDesignSource } from './lib/reader-theme-design-source.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -67,8 +70,11 @@ assert.match(rss, /private refreshStatusText\(\): string/);
 
 // Empty/error actions share one 88x36 pill language; secondary is semantic
 // primary-soft rather than an unrelated outlined rectangle.
-assert.equal((rss.match(/\.width\(88\)\s*\.height\(36\)/g) ?? []).length, 2);
-assert.match(rss, /\.backgroundColor\(TOK_PRIMARY_SOFT\)/);
+const controls=foundationControls(),stateOwner=createReaderBuilderProbe(readFileSync(resolve(repo,'entry/src/main/ets/features/rss/RssPage.ets'),'utf8'),['stateButtons'],controls.dependencies,controls.hooks).owner;
+let actionCalls=0;Object.assign(stateOwner,{appThemeScheme:'day',onManage:()=>actionCalls++});stateOwner.stateButtons('重试',()=>actionCalls++);
+const stateActors=controls.nodes(stateOwner).filter(n=>n.type==='Stack'&&n.onClick);assert.equal(stateActors.length,2);
+for(const actor of stateActors)assert.deepEqual([actor.width,actor.height,actor.borderRadius,actor.responseRegion.height],[88,36,999,44]);
+assert.equal(stateActors[1].backgroundColor,readerAppColor('TOK_PRIMARY_SOFT','day'));for(const actor of stateActors)actor.onClick();assert.equal(actionCalls,2,'actual primary/management shared actors retain original callbacks');
 
 // Sources / All / Favorites / Rules are main-page content modes. Unsupported
 // modes emit an intent and remain on Sources; they are not added to ReaderRoute.
@@ -262,8 +268,12 @@ assert.doesNotMatch(rss, /this\.actionPill\('导入'|this\.actionPill\('新建'/
 // Compact visual pills keep their Figma dimensions, but standalone actions
 // expose a 44vp touch response region. Dense wrapping filter chips are
 // intentionally excluded because expanded regions would overlap siblings.
-assert.equal((rss.match(/\.responseRegion\(\{ x: 0, y: -\d+, width: '100%', height: 44 \}\)/g) ?? []).length, 7);
+const modeOwner=createReaderBuilderProbe(readFileSync(resolve(repo,'entry/src/main/ets/features/rss/RssPage.ets'),'utf8'),['statusTab'],controls.dependencies,controls.hooks).owner;Object.assign(modeOwner,{appThemeScheme:'day',activeMode:'all'});modeOwner.statusTab('全部','all');
+const modeActors=controls.nodes(modeOwner).filter(n=>n.type==='Stack'&&n.onClick);assert.equal(modeActors.length,1);assert.equal(modeActors[0].responseRegion.height,44);
+assert.equal((rss.match(/\.responseRegion\(\{ x: 0, y: -\d+, width: '100%', height: 44 \}\)/g) ?? []).length+stateActors.length+modeActors.length, 7,'all seven original visual action declarations retain actual shared/native 44vp regions');
 assert.equal((sourceFeed.match(/\.responseRegion\(\{ x: 0, y: -\d+, width: '100%', height: 44 \}\)/g) ?? []).length, 1);
-assert.equal((entryDetail.match(/\.responseRegion\(\{ x: 0, y: -\d+, width: '100%', height: 44 \}\)/g) ?? []).length, 1);
+const entryOwner=createReaderBuilderProbe(readFileSync(resolve(repo,'entry/src/main/ets/features/rss/RssEntryDetailPage.ets'),'utf8'),['sourceCard','itemMeta'],controls.dependencies,controls.hooks).owner;Object.assign(entryOwner,{appThemeScheme:'day',subscription:{title:'订阅'},item:{}});entryOwner.sourceCard();
+const entryAction=controls.nodes(entryOwner).find(n=>n.type==='Text'&&n.create==='查看源');assert.ok(entryAction);assert.equal(entryAction.responseRegion.height,44);
+assert.equal((entryDetail.match(/\.responseRegion\(\{ x: 0, y: -\d+, width: '100%', height: 44 \}\)/g) ?? []).length+1, 1,'original entry source-link touch region is supplied by the actual common actor');
 
 console.log('rss page architecture contract: PASS');

@@ -887,6 +887,212 @@
       "methodEdges": [],
       "requiredMethods": [],
       "proof": "test-foundation-controls-shared.mjs + actual JSON/RSS owner/SDK/AttributeModifier, immutable five tuple and AUTO/role propagation"
+    },
+    {
+      "id": "foundation-SearchPage-primaryPill-0",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "primaryPill",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "primaryPill",
+      "specId": "search-primary",
+      "arguments": [
+        "证明",
+        "@callback"
+      ],
+      "params": {},
+      "requiredMethods": [],
+      "proof": "test-foundation-controls-shared.mjs actual owner/SDK modifier/exact tuple/AUTO and propagation"
+    },
+    {
+      "id": "foundation-SearchPage-secondaryPill-0",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/search/SearchPage.ets",
+        "method": "secondaryPill",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "secondaryPill",
+      "specId": "search-secondary",
+      "arguments": [
+        "证明",
+        "@callback"
+      ],
+      "params": {},
+      "requiredMethods": [],
+      "proof": "test-foundation-controls-shared.mjs actual owner/SDK modifier/exact tuple/AUTO and propagation"
+    },
+    {
+      "id": "foundation-DiscoverPage-pageAction-0",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/discover/DiscoverPage.ets",
+        "method": "pageAction",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "pageAction",
+      "specId": "discover-page",
+      "arguments": [
+        "证明",
+        true,
+        "@callback"
+      ],
+      "params": {
+        "presentation": {
+          "loading": false
+        }
+      },
+      "requiredMethods": [],
+      "proof": "test-foundation-controls-shared.mjs actual owner/SDK modifier/exact tuple/AUTO and propagation"
+    },
+    {
+      "id": "foundation-RssPage-statusTab-0",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssPage.ets",
+        "method": "statusTab",
+        "kind": "Text",
+        "text": "label"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "statusTab",
+      "specId": "rss-mode-tab",
+      "arguments": [
+        "全部",
+        "all"
+      ],
+      "params": {
+        "activeMode": "all"
+      },
+      "requiredMethods": [],
+      "proof": "test-foundation-controls-shared.mjs actual owner/SDK modifier/exact tuple/AUTO and propagation"
+    },
+    {
+      "id": "foundation-RssPage-stateButtons-0",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssPage.ets",
+        "method": "stateButtons",
+        "kind": "Text",
+        "text": "primaryLabel"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "stateButtons",
+      "specId": "rss-state",
+      "arguments": [
+        "证明",
+        "@callback"
+      ],
+      "params": {},
+      "requiredMethods": [],
+      "proof": "test-foundation-controls-shared.mjs actual owner/SDK modifier/exact tuple/AUTO and propagation",
+      "nativeText": "证明"
+    },
+    {
+      "id": "foundation-RssPage-stateButtons-1",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssPage.ets",
+        "method": "stateButtons",
+        "kind": "Text",
+        "text": "'订阅管理'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "stateButtons",
+      "specId": "rss-state",
+      "arguments": [
+        "证明",
+        "@callback"
+      ],
+      "params": {},
+      "requiredMethods": [],
+      "proof": "test-foundation-controls-shared.mjs actual owner/SDK modifier/exact tuple/AUTO and propagation",
+      "nativeText": "订阅管理"
+    },
+    {
+      "id": "foundation-RssEntryDetailPage-sourceCard-2",
+      "kind": "foundation",
+      "origin": {
+        "path": "entry/src/main/ets/features/rss/RssEntryDetailPage.ets",
+        "method": "sourceCard",
+        "kind": "Text",
+        "text": "'查看源'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderButton.ets",
+        "method": "build",
+        "kind": "Text",
+        "text": "this.label"
+      },
+      "component": "ReaderButton",
+      "module": "../common/ReaderButton",
+      "bindingMethod": "sourceCard",
+      "specId": "rss-source-link",
+      "arguments": [],
+      "params": {
+        "subscription": {
+          "title": "订阅"
+        },
+        "item": {
+          "publishTime": "",
+          "read": false,
+          "favorite": false
+        }
+      },
+      "requiredMethods": [
+        "itemMeta"
+      ],
+      "proof": "test-foundation-controls-shared.mjs actual owner/SDK modifier/exact tuple/AUTO and propagation"
     }
   ]
 }
