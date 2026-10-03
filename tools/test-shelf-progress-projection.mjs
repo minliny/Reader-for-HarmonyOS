@@ -37,17 +37,27 @@ assert.notEqual(positiveRule, projectionSource); assert.notEqual(gridOnlyRule, p
 let writes = 0;
 const forbiddenTransport = { request() { writes++; assert.fail('display must never dispatch'); } };
 const textNodes = owner => [...owner.nodes.values()].filter(n => n.type === 'Text');
+// Select the unchanged production geometry once. Parsing the full Page inside
+// each member predicate used to reparse it hundreds of times per Grid owner.
+// The SDK still transforms the original selected methods for every new owner;
+// no native nodes, property runtime, Component or callback are shared here.
+const geometryMethods = ['shelfBookCardWidth', 'bookCardWidth', 'bookCardHeight'];
+const pageTree = parse(pageSource);
+const pageDeclaration = pageTree.statements.find(ts.isStructDeclaration);
+const geometryMethodSource = geometryMethods.map(name => {
+  const member = pageDeclaration.members.find(m => m.name?.getText(pageTree) === name);
+  assert.ok(member, 'actual production geometry method ' + name);
+  return member.getText(pageTree);
+}).join('\n');
+const frozenGridWithGeometry = frozenGrid.replace(/build\(\) \{ Column\(\) \{\} \}/,
+  geometryMethodSource + '\nbuild() { Column() {} }');
 function grid(text, Projection, book, tablet = false, scheme = 'day') {
   const old = text.includes('private shelfProgressText(');
   const names = ['projectionGridDetails', 'gridProgressLabel', 'gridBookCardHeight', ...(old ? ['shelfProgressText'] : [])];
   // Geometry remains the actual production methods/constants. Only the
   // window's resolved content width is a controlled Phone/Tablet input.
-  const methods = ['shelfBookCardWidth', 'bookCardWidth', 'bookCardHeight'];
-  const declaration = parse(pageSource).statements.find(ts.isStructDeclaration);
-  const complete = text.replace(/build\(\) \{ Column\(\) \{\} \}/, methods.map(name =>
-    declaration.members.find(m => m.name?.getText(parse(pageSource)) === name)?.getText(parse(pageSource))).join('\n') + '\nbuild() { Column() {} }');
-  const selected = old ? complete : pageSource;
-  const { owner } = createReaderBuilderProbe(selected, [...names, ...methods], { ...geometry, ...tokens,
+  const selected = old ? frozenGridWithGeometry : pageSource;
+  const { owner } = createReaderBuilderProbe(selected, [...names, ...geometryMethods], { ...geometry, ...tokens,
     ShelfBookPresentation: Projection, runtime: forbiddenTransport });
   Object.assign(owner, { appThemeScheme: scheme, viewMode: 'cover', viewSwitchGridContentOpacity: 1,
     shelfContentWidth: wide => wide ? 650 : 326 });
