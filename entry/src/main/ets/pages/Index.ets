@@ -411,7 +411,7 @@ struct Index {
   private pendingSourceSwitch: SourceSwitchPendingTransaction | undefined = undefined;
   /** The original reader owns loading, layout, errors and first-page commit. */
   @State private readingSessionActive: boolean = false;
-  private navigationGeneration: number = 0;
+  @State private navigationGeneration: number = 0;
   /** Display DTOs only; domain owners retain mutex, dispatch, receipts and generations. */
   @State private directoryOperation: ReaderDirectoryOperation | undefined = undefined;
   @State private offlineOperation: ReadingOfflineOperation | undefined = undefined;
@@ -888,20 +888,7 @@ struct Index {
         .height('100%')
         .enabled(!this.shelfReadingPreparation && !this.readingSessionActive);
       } else if (this.route === 'bookshelfSettings') {
-        BookshelfSettingsPage({
-          autoCheckUpdate: this.settingsSnapshot.autoCheckUpdate,
-          operation: this.settingsOperation,
-          onReconcile: (expected: number): void => {
-        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host)) host.reconcile(expected);
-      },
-      onRetryAccepted: (expected: number): void => {
-        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host)) host.retryAccepted(expected);
-      },
-      onReconcileCache: (expected: number): void => { void this.reconcileSettingsCache(expected, generation, owner, mounting, host); },
-      onContinueCache: (expected: number): void => { void this.reconcileSettingsCache(expected, generation, owner, mounting, host, true); },
-          onBack: (): void => this.returnFromBookshelfSettings(),
-          onAutoCheckUpdate: (value: boolean): void => this.onSettingToggled('autoCheckUpdate', value),
-        });
+        this.bookshelfSettingsContent();
       } else if (this.route === 'bookshelfMultiSelect') {
         BookshelfMultiSelectPage({
           books: this.bookshelfSelectionBooks,
@@ -1490,6 +1477,26 @@ struct Index {
   }
 
   @Builder
+  private bookshelfSettingsContent(generation: number = this.navigationGeneration, owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner,
+    mounting: number = this.detailShelfAdmissionMount, host: SettingsHost = this.settingsHost) {
+    BookshelfSettingsPage({
+      navigationGeneration: this.navigationGeneration,
+      autoCheckUpdate: this.settingsSnapshot.autoCheckUpdate,
+      operation: this.settingsOperation,
+      onReconcile: (expected: number, navigation?: number): void => {
+        if (this.isCurrentSettingsPresentation(navigation ?? generation, owner, mounting, host, 'bookshelfSettings')) host.reconcile(expected);
+      },
+      onRetryAccepted: (expected: number, navigation?: number): void => {
+        if (this.isCurrentSettingsPresentation(navigation ?? generation, owner, mounting, host, 'bookshelfSettings')) host.retryAccepted(expected);
+      },
+      onBack: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'bookshelfSettings')) this.returnFromBookshelfSettings(); },
+      onAutoCheckUpdate: (value: boolean): void => {
+        if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'bookshelfSettings')) host.toggle('autoCheckUpdate', value);
+      },
+    });
+  }
+
+  @Builder
   private settingsContent(generation: number = this.navigationGeneration, owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner,
     mounting: number = this.detailShelfAdmissionMount, host: SettingsHost = this.settingsHost) {
     SettingsPage({
@@ -1722,10 +1729,10 @@ struct Index {
   }
 
   private isCurrentSettingsPresentation(generation: number, owner: ReaderRuntimeOwner | undefined,
-    mounting: number = this.detailShelfAdmissionMount, host: SettingsHost = this.settingsHost): boolean {
+    mounting: number = this.detailShelfAdmissionMount, host: SettingsHost = this.settingsHost, route: 'settings' | 'bookshelfSettings' = 'settings'): boolean {
     return owner !== undefined && this.isCurrentRuntime(owner) && this.mountedRuntimeOwner === owner &&
       generation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount &&
-      this.route === 'settings' && !this.shelfReceiptRetired && host === this.settingsHost;
+      this.route === route && !this.shelfReceiptRetired && host === this.settingsHost;
   }
   private async reconcileSettingsCache(expected: number | undefined, generation: number = this.navigationGeneration,
     owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner, mounting: number = this.detailShelfAdmissionMount,

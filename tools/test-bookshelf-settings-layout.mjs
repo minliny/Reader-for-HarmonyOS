@@ -35,7 +35,7 @@ const deps = { readerRecoveryView,ReaderRecoveryNotice:Notice, PageBackBar: Head
   readerVisualSafeLeft, readerVisualSafeRight, readerInteractiveSafeLeft, readerInteractiveSafeRight,
   TOK_CONTENT_MAX_W_TABLET: 720, TOK_SCREEN_INSET: 19, TOK_SPACE_XS: 8, TOK_SPACE_MD: 16,
   READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset, TYPE_PAGE_TITLE };
-const methods = ['build', 'modeOption', 'bottomContentInset'];
+const methods = ['build','settingsRecovery','settingsRecoveryIdentity','settingsRecoveryCurrent','retrySettingsRecovery', 'modeOption', 'bottomContentInset'];
 if (source.includes('private contentFrame(')) methods.push('contentFrame');
 const { Component } = createReaderBuilderProbe(source, methods, deps,
   { onObserverEnter(owner, id) { activeOwner = owner; activeId = id; } });

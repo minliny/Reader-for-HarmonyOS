@@ -1,3 +1,4 @@
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { BookshelfViewModeHost, type BookshelfViewModeSnapshot } from './BookshelfViewModeHost';
 import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
@@ -26,7 +27,10 @@ export struct BookshelfSettingsPage {
   @StorageLink('readerBookshelfViewMode') private mode: string = 'cover';
   @Prop autoCheckUpdate: boolean = true;
   @Prop operation: SettingsOperationProjection = { action: 'load' };
-  onReconcile: (generation: number) => void = (_generation: number): void => {};
+  @Prop navigationGeneration: number = 0;
+  @State private presentationRevision: number = 0;
+  onRetryAccepted: (generation: number, navigation?: number) => void = (_generation: number): void => {};
+  onReconcile: (generation: number, navigation?: number) => void = (_generation: number): void => {};
   onBack: () => void = (): void => {};
   onAutoCheckUpdate: (enabled: boolean) => void = (_enabled: boolean): void => {};
   @State private error: string = '';
@@ -39,7 +43,7 @@ export struct BookshelfSettingsPage {
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
-    this.mounted = true;
+    this.mounted = true; this.presentationRevision += 1;
     const canonical = WebDavCredentialStore.instance.currentBookshelfViewMode();
     this.confirmed = canonical ?? this.mode;
     this.mode = this.confirmed;
@@ -47,14 +51,45 @@ export struct BookshelfSettingsPage {
     this.error = this.viewModeRecovery().message;
     if (canonical === undefined) this.loadMode();
   }
-  aboutToDisappear(): void { this.mounted = false; this.revision += 1; }
+  aboutToDisappear(): void { this.mounted = false; this.revision += 1; this.presentationRevision += 1; }
+
+  private settingsRecoveryIdentity(kind: string, generation: number): string {
+    return JSON.stringify([this.navigationGeneration, this.presentationRevision, kind, generation]);
+  }
+  private settingsRecoveryCurrent(identity: string): boolean {
+    if (!this.mounted) return false;
+    const token = JSON.parse(identity) as (string | number)[];
+    if (token[0] !== this.navigationGeneration || token[1] !== this.presentationRevision) return false;
+    if (token[2] === 'accepted') return this.operation.canRetryAccepted === true && token[3] === this.operation.receipt?.facts.generation;
+    const recovery = readerRecoveryView(this.operation.receipt, this.operation.readFacts);
+    return recovery.canRetry && token[3] === recovery.generation;
+  }
+  private retrySettingsRecovery(identity: string): void {
+    if (!this.settingsRecoveryCurrent(identity)) return;
+    const token = JSON.parse(identity) as (string | number)[];
+    if (token[2] === 'accepted') this.onRetryAccepted(token[3] as number, token[0] as number);
+    else this.onReconcile(token[3] as number, token[0] as number);
+  }
+
+  @Builder
+  private settingsRecovery() {
+    ForEach([this.settingsRecoveryIdentity('read', readerRecoveryView(this.operation.receipt, this.operation.readFacts).generation)], (identity: string) => {
+      ReaderRecoveryNotice({ view: readerRecoveryView(this.operation.receipt, this.operation.readFacts),
+        actionLabel: '刷新设置', onReconcile: (): void => this.retrySettingsRecovery(identity) });
+    }, (identity: string): string => identity);
+    if (this.operation.canRetryAccepted === true && this.operation.receipt !== undefined) {
+      ForEach([this.settingsRecoveryIdentity('accepted', this.operation.receipt.facts.generation)], (identity: string) => {
+        ReaderRecoveryAction({ label: '重试保存当前设置', generation: Number((JSON.parse(identity) as (string | number)[])[3]),
+          enabled: this.settingsRecoveryCurrent(identity), onReconcile: (): void => this.retrySettingsRecovery(identity) });
+      }, (identity: string): string => identity);
+    }
+  }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       Scroll() {
         Column() {
-          ReaderRecoveryNotice({ view: readerRecoveryView(this.operation.receipt, this.operation.readFacts),
-            actionLabel: '刷新设置', onReconcile: this.onReconcile });
+          this.settingsRecovery();
           Column({ space: TOK_SPACE_MD }) {
             Row() {
               Text('自动检查更新').layoutWeight(1).fontSize(TYPE_APP_INHERITED_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));

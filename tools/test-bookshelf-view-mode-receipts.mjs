@@ -47,7 +47,7 @@ function fixture(){
   return{p,select:mode=>p[settings?'selectMode':'setViewMode'](mode),load:()=>p[settings?'loadMode':'loadViewMode'](),
    retry:g=>p[settings?'retryMode':'retryViewMode'](g),close:()=>p.aboutToDisappear(),
    render(){
-    const selected=settings?['build','modeOption']:['bookshelfList'];
+    const selected=settings?['build','modeOption','settingsRecovery','settingsRecoveryIdentity','settingsRecoveryCurrent','retrySettingsRecovery']:['bookshelfList'];
     const deps={readerRecoveryView,ViewStackProcessor:{StartGetAccessRecordingFor(){},StopGetAccessRecording(){}},LazyForEach:{create(){},pop(){}},READER_FLOATING_TOP_BAR_HEIGHT:56,ReaderRecoveryNotice:Child,PageBackBar:Child,Toggle:{create(){},isOn(){},selectedColor(){},onChange(){},pop(){}},ToggleType:{Switch:'Switch'}};
     const b=createReaderBuilderProbe(source(path),selected,deps).owner;
     Object.assign(b,p,{appThemeScheme:'day',books:[],operation:{action:'load'},continueReading:undefined,filterRowVisible:false,visibleBookCount:1,autoCheckUpdate:true,

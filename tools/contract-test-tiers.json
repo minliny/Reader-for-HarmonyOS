@@ -230,6 +230,7 @@
     "test-bookshelf-reading-entry.mjs",
     "test-bookshelf-reading-feedback.mjs",
     "test-bookshelf-settings-layout.mjs",
+    "test-bookshelf-settings-operation-sdk.mjs",
     "test-bookshelf-shared-scan.mjs",
     "test-bookshelf-sheet-shared-composition.mjs",
     "test-bookshelf-shell-states.mjs",
