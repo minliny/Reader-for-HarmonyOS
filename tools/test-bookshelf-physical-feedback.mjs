@@ -317,7 +317,13 @@ for (const loginUrl of [undefined, 'https://example.test/login']) {
   check(`source name/category/URL remain distinct and login precedes detect (${loginUrl ? 'login' : 'no login'})`, () => {
     const names = ['sourceRow', 'detectButton', 'loginButton', 'statusBadge', 'sourceSwitch'];
     if (sourcePage.includes('private sourceMeta(')) names.push('sourceMeta');
-    const { owner } = createReaderBuilderProbe(sourcePage, names, { readerSourceCategoryLabel, StatusBadge: Child, ReaderToggle: Child });
+    const { owner } = createReaderBuilderProbe(sourcePage, names, {
+      readerSourceCategoryLabel,
+      TYPE_SOURCE_MANAGEMENT_META: {
+        fontFamily: 'ReaderNotoSansSC', fontWeight: 400, fontSizeFp: 10, lineHeightFp: 12.5,
+      },
+      StatusBadge: Child, ReaderToggle: Child,
+    });
     Object.assign(owner, { appThemeScheme: 'day', contentFrame: () => ({ width: 326 }), statusBadgeBackground() {}, statusBadgeDot() {} });
     const source = { sourceId: 'source', name: '实际书源名称', baseUrl: 'https://example.test/very/long/path', category: 'novel', enabled: true, loginUrl, checkState: 'failed', checkMessage: '检测失败，请重试' };
     let logins = 0, detects = 0;
