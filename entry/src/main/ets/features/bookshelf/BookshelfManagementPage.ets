@@ -378,8 +378,8 @@ export struct BookshelfManagementPage {
       .fontSize(TYPE_SHELF_MANAGEMENT_BUTTON.fontSizeFp)
       .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .backgroundColor(primary ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
-      .borderRadius(8).opacity(this.snapshot.busy ? 0.62 : 1)
-      .onClick((): void => { if (!this.snapshot.busy) action(); });
+      .borderRadius(8).opacity(this.snapshot.busy || this.snapshot.mutationBlocked === true ? 0.62 : 1)
+      .onClick((): void => { if (!this.snapshot.busy && this.snapshot.mutationBlocked !== true) action(); });
   }
 
   @Builder
@@ -391,7 +391,7 @@ export struct BookshelfManagementPage {
       .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .padding({ left: 9, right: 9, top: 7, bottom: 7 })
       .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme)).border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(8).onClick(action);
+      .borderRadius(8).onClick((): void => { if (!this.snapshot.busy && this.snapshot.mutationBlocked !== true) action(); });
   }
 
   private isSelectedBook(book: ShelfBook): boolean {

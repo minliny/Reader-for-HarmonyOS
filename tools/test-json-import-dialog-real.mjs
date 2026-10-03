@@ -212,10 +212,10 @@ class SelectorChild {
 }
 assert.match(indexSource, /specId: 'shelf-group',[\s\S]*?title: '编辑分组',[\s\S]*?actions: \[\]/);
 assert.match(indexSource,
-  /BookshelfGroupSelector\(\{\s*selected:[\s\S]*?busy: this\.editingShelfGroupBusy,\s*onSelect: \(\): void => \{ void this\.assignShelfDefaultGroup\(presentation, generation, owner, mounting, book\); \}/,
+  /BookshelfGroupSelector\(\{\s*selected:[\s\S]*?busy: this\.editingShelfGroupBusy \|\| this\.bookshelfManagementSnapshot\.busy \|\| this\.bookshelfManagementSnapshot\.mutationBlocked === true,\s*onSelect: \(\): void => \{ void this\.assignShelfDefaultGroup\(presentation, generation, owner, mounting, book\); \}/,
   'the selector select intent routes into the default-group assignment');
 assert.match(indexSource,
-  /\.onClick\(\(\): void => \{\s*if \(!this\.editingShelfGroupBusy && this\.isCurrentShelfGroup\(presentation, generation, owner, mounting, book\)\)\s*this\.editingShelfGroupBook = undefined;/,
+  /\.onClick\(\(\): void => \{\s*if \(!this\.editingShelfGroupBusy && this\.isCurrentShelfGroup\(presentation, generation, owner, mounting, book\)\)\s*this\.closeShelfGroup\(presentation\);/,
   'the mask tap dismisses the overlay only when no assignment is in flight');
 // The actual production named body Builder now mounts the real selector.
 const groupHost=bookshelfDialogPresentationFixture(),book={sourceId:'s',bookId:'book',group:''};

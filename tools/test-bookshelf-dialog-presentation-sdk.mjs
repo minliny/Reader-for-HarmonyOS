@@ -51,8 +51,9 @@ for(const fail of[false,true]){
 {
  const begin=indexSource.indexOf('  private isCurrentShelfGroup('),end=indexSource.indexOf('\n  private async assignShelfDefaultGroup(',begin);
  const mutant=indexSource.slice(0,begin)+'  private isCurrentShelfGroup(): boolean { return true; }\n'+indexSource.slice(end);
- const f=fixture(mutant),a={sourceId:'s',bookId:'a'},b={sourceId:'s',bookId:'b'};
+ const doubleMutant=mutant.replace('if (presentation !== this.editingShelfGroupPresentation) return;', '');
+ const f=fixture(doubleMutant),a={sourceId:'s',bookId:'a'},b={sourceId:'s',bookId:'b'};
  f.i.openShelfGroup(a);const old=f.group();f.i.editingShelfGroupBook=undefined;f.i.openShelfGroup(b);old.mask.onClick();
- assert.equal(f.i.editingShelfGroupBook,undefined,'guard-removal negative control lets old mask close current B');cases++;
+ assert.equal(f.i.editingShelfGroupBook,undefined,'removing both presentation and close-token guards lets old mask close current B');cases++;
 }
 console.log(`PASS ${cases} actual Index native Controller→BookRemovalDialog→shared Dialog Button and group Selector/Mask SDK: opening A/B, current once, old confirm/cancel/late native close, exact runtime/nav/mount, late assignment delivery; original geometry/action order retained.`);

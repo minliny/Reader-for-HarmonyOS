@@ -13,9 +13,6 @@ import { BookshelfProjectionOwner } from './BookshelfProjectionOwner';
 import { BookshelfCatalogOwner } from './BookshelfCatalogOwner';
 import { SourceGateway } from '../source/SourceGateway';
 import {
-  BookshelfManagementGateway,
-} from './BookshelfManagementGateway';
-import {
   BookshelfManagementOrchestrator,
   type BookshelfManagementSnapshot,
 } from './BookshelfManagementOrchestrator';
@@ -43,6 +40,8 @@ export class BookshelfHost {
   private static operationOwner: BookshelfOperationOwner | undefined;
   private operationSubscription: (() => void) | undefined;
   private subscribedOperation: BookshelfOperationOwner | undefined;
+  private static readonly managementOwners: WeakMap<ReaderRuntimeOwner, BookshelfManagementOrchestrator> = new WeakMap();
+  private managementPresentationIdentity: string = '';
   private managementOrchestrator: BookshelfManagementOrchestrator | undefined = undefined;
   private readonly emitManagementSnapshot: (snapshot: BookshelfManagementSnapshot) => void;
   private readonly isManagementCurrent: () => boolean;
@@ -128,26 +127,45 @@ export class BookshelfHost {
   }
   detachReadablePresentation(): void { this.readableSubscription?.(); this.readableSubscription = undefined; }
 
-  openManagement(): void { this.getManagementOrchestrator().open(); }
-  updateGroupName(value: string): void { this.getManagementOrchestrator().updateGroupName(value); }
-  updateGroupOrder(value: string): void { this.getManagementOrchestrator().updateGroupOrder(value); }
-  selectGroup(groupId: number): void { this.getManagementOrchestrator().selectGroup(groupId); }
-  clearGroupEditor(): void { this.getManagementOrchestrator().clearGroupEditor(); }
-  saveGroup(): void { this.getManagementOrchestrator().saveGroup(); }
-  toggleGroupShown(groupId: number): void { this.getManagementOrchestrator().toggleGroupShown(groupId); }
-  deleteGroup(groupId: number): void { this.getManagementOrchestrator().deleteGroup(groupId); }
-  selectBook(sourceId: string, bookId: string): void {
-    this.getManagementOrchestrator().selectBook(sourceId, bookId);
-  }
-  updateAssignmentGroup(value: string): void {
-    this.getManagementOrchestrator().updateAssignmentGroup(value);
-  }
-  assignSelectedBook(): void { this.getManagementOrchestrator().assignSelectedBook(); }
-  reconcileManagement(generation: number): void { this.getManagementOrchestrator().reconcile(generation); }
+  openManagement(identity: string = this.managementPresentationIdentity): void { this.getManagementOrchestrator()?.open(identity); }
+  updateGroupName(value: string, identity: string = this.managementPresentationIdentity): void { this.getManagementOrchestrator()?.updateGroupName(value, identity); }
+  updateGroupOrder(value: string, identity: string = this.managementPresentationIdentity): void { this.getManagementOrchestrator()?.updateGroupOrder(value, identity); }
+  selectGroup(groupId: number, identity: string = this.managementPresentationIdentity): void { this.getManagementOrchestrator()?.selectGroup(groupId, identity); }
+  clearGroupEditor(identity: string = this.managementPresentationIdentity): void { this.getManagementOrchestrator()?.clearGroupEditor(identity); }
+  saveGroup(identity: string = this.managementPresentationIdentity): void { this.getManagementOrchestrator()?.saveGroup(identity); }
+  toggleGroupShown(groupId: number, identity: string = this.managementPresentationIdentity): void { this.getManagementOrchestrator()?.toggleGroupShown(groupId, identity); }
+  deleteGroup(groupId: number, identity: string = this.managementPresentationIdentity): void { this.getManagementOrchestrator()?.deleteGroup(groupId, identity); }
+  selectBook(sourceId: string, bookId: string, identity: string = this.managementPresentationIdentity): void { this.getManagementOrchestrator()?.selectBook(sourceId, bookId, identity); }
+  updateAssignmentGroup(value: string, identity: string = this.managementPresentationIdentity): void { this.getManagementOrchestrator()?.updateAssignmentGroup(value, identity); }
+  assignSelectedBook(identity: string = this.managementPresentationIdentity): void { this.getManagementOrchestrator()?.assignSelectedBook(identity); }
+  reconcileManagement(generation: number, identity: string = this.managementPresentationIdentity): void { this.getManagementOrchestrator()?.reconcile(generation, identity); }
 
-  assignDefaultGroup(book: ShelfBook): Promise<ShelfBook> {
-    return new BookshelfManagementGateway(this.owner()).assignGroup(book, '');
+  bindManagement(owner: ReaderRuntimeOwner, identity: string, current: () => boolean): boolean {
+    if (!ReaderRuntimeOwner.isCurrent(owner)) return false;
+    try { if (!current()) return false; } catch (_) { return false; }
+    let host = BookshelfHost.managementOwners.get(owner);
+    if (host === undefined) {
+      host = new BookshelfManagementOrchestrator((_snapshot: BookshelfManagementSnapshot): void => {}, (): boolean => false, owner);
+      BookshelfHost.managementOwners.set(owner, host);
+    }
+    if (this.managementOrchestrator === host && this.managementPresentationIdentity === identity)
+      return host.isPresentationCurrent(identity);
+    this.detachManagementPresentation(); this.managementOrchestrator = host; this.managementPresentationIdentity = identity;
+    return host.attachPresentation(identity, this.emitManagementSnapshot, current);
   }
+  isManagementPresentationCurrent(owner: ReaderRuntimeOwner, identity: string): boolean {
+    return this.managementOrchestrator?.owns(owner) === true && identity === this.managementPresentationIdentity &&
+      this.managementOrchestrator.isPresentationCurrent(identity);
+  }
+  detachManagementPresentation(): void {
+    this.managementOrchestrator?.detachPresentation(this.managementPresentationIdentity);
+    this.managementPresentationIdentity = '';
+  }
+  managementSnapshot(): BookshelfManagementSnapshot | undefined { return this.managementOrchestrator?.currentSnapshot(); }
+  assignDefaultGroup(book: ShelfBook, identity: string = this.managementPresentationIdentity): Promise<BookshelfManagementSnapshot | undefined> {
+    return this.getManagementOrchestrator()?.assignBookGroup(book, '', identity) ?? Promise.resolve(undefined);
+  }
+
 
   loadShelfBook(sourceId: string, bookId: string): Promise<ShelfBook | undefined> {
     return new ReaderCoreGateway(this.owner()).loadShelfBook(sourceId, bookId);
@@ -176,14 +194,7 @@ export class BookshelfHost {
     return new BookshelfFlowGateway(owner, filter).load(current);
   }
 
-  private getManagementOrchestrator(): BookshelfManagementOrchestrator {
-    if (this.managementOrchestrator === undefined || !this.managementOrchestrator.owns(this.owner())) {
-      this.managementOrchestrator = new BookshelfManagementOrchestrator(
-        this.emitManagementSnapshot,
-        this.isManagementCurrent,
-        this.owner(),
-      );
-    }
+  private getManagementOrchestrator(): BookshelfManagementOrchestrator | undefined {
     return this.managementOrchestrator;
   }
 }

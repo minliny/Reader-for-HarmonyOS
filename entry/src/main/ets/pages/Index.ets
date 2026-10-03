@@ -453,6 +453,7 @@ struct Index {
   /** Bounded, process-local single-flight only; Core remains the durable cache. */
   private discoverOrchestrator: DiscoverOrchestrator | undefined;
   private discoverPresentationIdentity: string = '';
+  private bookshelfManagementPresentationIdentity: string = '';
   private bookshelfHost: BookshelfHost = new BookshelfHost(
     (snapshot: BookshelfManagementSnapshot): void => {
       this.bookshelfManagementSnapshot = snapshot;
@@ -583,6 +584,8 @@ struct Index {
     this.nativeAlertOwner.retire();
     this.shelfReceiptRetired = true;
     this.retireBookshelfCatalogPresentation();
+    this.bookshelfHost.detachManagementPresentation();
+    this.bookshelfManagementPresentationIdentity = '';
     this.discoverOrchestrator?.detachPresentation(this.discoverPresentationIdentity);
     this.discoverPresentationIdentity = '';
     this.rulesManagementOrchestrator?.detachPresentation(this.rulesPresentationIdentity);
@@ -644,7 +647,7 @@ struct Index {
       return true;
     }
     if (this.editingShelfGroupBook !== undefined) {
-      if (!this.editingShelfGroupBusy) this.editingShelfGroupBook = undefined;
+      if (!this.editingShelfGroupBusy) this.closeShelfGroup();
       return true;
     }
     if (this.consumeTemporaryBackBridge()) return true;
@@ -1480,6 +1483,7 @@ struct Index {
     if (this.editingShelfGroupBusy) return;
     this.editingShelfGroupPresentation += 1;
     this.editingShelfGroupBook = book;
+    this.bindBookshelfManagement(this.editingShelfGroupPresentation, book);
   }
 
   @Builder
@@ -1497,7 +1501,7 @@ struct Index {
       Row().width('100%').height('100%').backgroundColor(readerAppColor('app.Index.build.backgroundColor.52000000', this.appThemeScheme))
         .onClick((): void => {
           if (!this.editingShelfGroupBusy && this.isCurrentShelfGroup(presentation, generation, owner, mounting, book))
-            this.editingShelfGroupBook = undefined;
+            this.closeShelfGroup(presentation);
         });
       ReaderDialogSurface({
         specId: 'shelf-group',
@@ -1513,15 +1517,45 @@ struct Index {
     mounting: number, book: ShelfBook) {
     BookshelfGroupSelector({
       selected: (book.group?.trim() ?? '') === '',
-      busy: this.editingShelfGroupBusy,
+      busy: this.editingShelfGroupBusy || this.bookshelfManagementSnapshot.busy || this.bookshelfManagementSnapshot.mutationBlocked === true,
       onSelect: (): void => { void this.assignShelfDefaultGroup(presentation, generation, owner, mounting, book); },
     });
+    if (this.bookshelfManagementSnapshot.receipt !== undefined) {
+      ForEach([this.bookshelfManagementSnapshot.receipt.facts.generation], (expected: number) => {
+        this.shelfGroupRecoveryContent(presentation, generation, owner, mounting, book, expected);
+      }, (identity: number): string => identity.toString());
+    }
+  }
+
+  @Builder
+  private shelfGroupRecoveryContent(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, book: ShelfBook, expected: number) {
+    ReaderRecoveryNotice({
+      view: this.shelfGroupRecovery(expected), actionLabel: '核对分组',
+      onReconcile: (_expected: number): void => {
+        if (this.isCurrentShelfGroup(presentation, generation, owner, mounting, book))
+          this.bookshelfHost.reconcileManagement(expected, this.bookshelfManagementIdentity(generation, mounting, presentation));
+      },
+    });
+  }
+  private shelfGroupRecovery(expected: number): ReaderRecoveryView {
+    const receipt = this.bookshelfManagementSnapshot.receipt;
+    if (receipt === undefined || receipt.facts.generation !== expected)
+      return { message: '', visible: false, canRetry: false, generation: expected };
+    return readerRecoveryView(receipt, this.bookshelfManagementSnapshot.readFacts);
+  }
+  private closeShelfGroup(presentation: number = this.editingShelfGroupPresentation): void {
+    if (presentation !== this.editingShelfGroupPresentation) return;
+    this.editingShelfGroupBook = undefined;
+    this.bookshelfHost.detachManagementPresentation(); this.bookshelfManagementPresentationIdentity = '';
   }
 
   private isCurrentShelfGroup(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
     mounting: number, book: ShelfBook): boolean {
     return this.isCurrentBookshelfPresentation(generation, owner, mounting) &&
-      presentation === this.editingShelfGroupPresentation && this.editingShelfGroupBook === book;
+      presentation === this.editingShelfGroupPresentation && this.editingShelfGroupBook === book &&
+      owner !== undefined && this.bookshelfHost.isManagementPresentationCurrent(owner,
+        this.bookshelfManagementIdentity(generation, mounting, presentation));
   }
 
   private async assignShelfDefaultGroup(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
@@ -1530,14 +1564,15 @@ struct Index {
     if (!current() || this.editingShelfGroupBusy) return;
     this.editingShelfGroupBusy = true;
     try {
-      await this.bookshelfHost.assignDefaultGroup(book);
+      const result = await this.bookshelfHost.assignDefaultGroup(book,
+        this.bookshelfManagementIdentity(generation, mounting, presentation));
       if (!current()) return;
-      this.invalidateBookshelfProjection(); this.refreshBookshelf();
-      this.editingShelfGroupBook = undefined;
+      if (result?.receipt?.receipt.confirmation === 'confirmed') { this.invalidateBookshelfProjection(); this.refreshBookshelf(); }
+      if (result?.receipt?.receipt.fact === 'confirmedCurrent') this.closeShelfGroup(presentation);
     } catch (error) {
       if (!current()) return;
       hilog.error(DOMAIN, 'Reader', 'Group selection failed: %{private}s', errorMessageOf(error));
-      this.getUIContext().getPromptAction().showToast({ message: '分组保存失败，请重试' });
+      this.getUIContext().getPromptAction().showToast({ message: '分组操作暂不可用，请重新打开核对' });
     } finally {
       if (presentation === this.editingShelfGroupPresentation) this.editingShelfGroupBusy = false;
     }
@@ -1660,27 +1695,28 @@ struct Index {
 
   @Builder
   private bookshelfManagementContent() {
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.bookshelfManagementSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+        this.bookshelfHost, this.bookshelfManagementPresentationIdentity);
+    }, (identity: number): string => identity.toString());
+  }
+  @Builder
+  private bookshelfManagementSurface(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: BookshelfHost, identity: string) {
     BookshelfManagementPage({
       snapshot: this.bookshelfManagementSnapshot,
-      onBack: (): void => this.returnToBookshelf(),
-      onGroupNameChanged: (value: string): void =>
-        this.bookshelfHost.updateGroupName(value),
-      onGroupOrderChanged: (value: string): void =>
-        this.bookshelfHost.updateGroupOrder(value),
-      onSelectGroup: (groupId: number): void =>
-        this.bookshelfHost.selectGroup(groupId),
-      onClearGroupEditor: (): void => this.bookshelfHost.clearGroupEditor(),
-      onSaveGroup: (): void => this.bookshelfHost.saveGroup(),
-      onToggleGroupShown: (groupId: number): void =>
-        this.bookshelfHost.toggleGroupShown(groupId),
-      onDeleteGroup: (groupId: number): void =>
-        this.bookshelfHost.deleteGroup(groupId),
-      onSelectBook: (sourceId: string, bookId: string): void =>
-        this.bookshelfHost.selectBook(sourceId, bookId),
-      onAssignmentGroupChanged: (value: string): void =>
-        this.bookshelfHost.updateAssignmentGroup(value),
-      onAssignBook: (): void => this.bookshelfHost.assignSelectedBook(),
-      onReconcile: (generation: number): void => this.bookshelfHost.reconcileManagement(generation),
+      onBack: (): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) this.returnToBookshelf(); },
+      onGroupNameChanged: (value: string): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.updateGroupName(value, identity); },
+      onGroupOrderChanged: (value: string): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.updateGroupOrder(value, identity); },
+      onSelectGroup: (groupId: number): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.selectGroup(groupId, identity); },
+      onClearGroupEditor: (): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.clearGroupEditor(identity); },
+      onSaveGroup: (): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.saveGroup(identity); },
+      onToggleGroupShown: (groupId: number): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.toggleGroupShown(groupId, identity); },
+      onDeleteGroup: (groupId: number): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.deleteGroup(groupId, identity); },
+      onSelectBook: (sourceId: string, bookId: string): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.selectBook(sourceId, bookId, identity); },
+      onAssignmentGroupChanged: (value: string): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.updateAssignmentGroup(value, identity); },
+      onAssignBook: (): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.assignSelectedBook(identity); },
+      onReconcile: (expected: number): void => { if (this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity)) host.reconcileManagement(expected, identity); },
     });
   }
 
@@ -1739,13 +1775,36 @@ struct Index {
     });
   }
 
+  private bookshelfManagementIdentity(generation: number, mounting: number, opening?: number): string {
+    return JSON.stringify([this.rssInstanceIdentity, mounting, generation, 'bookshelfManagement', opening ?? 'page']);
+  }
+  private isCurrentBookshelfManagement(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: BookshelfHost, identity: string, attached: boolean = true, opening?: number, book?: ShelfBook): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && this.mountedRuntimeOwner === owner &&
+      this.isCurrentRuntime(owner) && generation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount &&
+      (opening === undefined ? this.route === 'bookshelfManagement' :
+        this.route === 'bookshelf' && this.editingShelfGroupPresentation === opening && this.editingShelfGroupBook === book) &&
+      host === this.bookshelfHost && identity.length > 0 && this.bookshelfManagementPresentationIdentity === identity &&
+      (!attached || host.isManagementPresentationCurrent(owner, identity));
+  }
+  private bindBookshelfManagement(opening?: number, book?: ShelfBook): void {
+    const generation = this.navigationGeneration, owner = this.mountedRuntimeOwner, mounting = this.detailShelfAdmissionMount;
+    if (owner === undefined) return;
+    const host = this.bookshelfHost, identity = this.bookshelfManagementIdentity(generation, mounting, opening);
+    if (this.bookshelfManagementPresentationIdentity === identity) return;
+    this.bookshelfManagementPresentationIdentity = identity;
+    const current = (): boolean => this.isCurrentBookshelfManagement(generation, owner, mounting, host, identity, false, opening, book);
+    if (!host.bindManagement(owner, identity, current)) this.bookshelfManagementPresentationIdentity = '';
+  }
+
   private openBookshelfManagement(): void {
     this.nextNavigationGeneration();
     this.readingSessionActive = false;
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'bookshelfManagement';
-    this.bookshelfHost.openManagement();
+    this.bindBookshelfManagement();
+    this.bookshelfHost.openManagement(this.bookshelfManagementPresentationIdentity);
   }
 
   private openBookshelfMultiSelect(initialBook?: ShelfBook): void {
@@ -4967,6 +5026,8 @@ struct Index {
     this.retireRssPresentation();
     this.retireReadingEntryPresentation();
     this.retireBookshelfCatalogPresentation();
+    this.bookshelfHost.detachManagementPresentation();
+    this.bookshelfManagementPresentationIdentity = '';
     this.discoverOrchestrator?.detachPresentation(this.discoverPresentationIdentity);
     this.discoverPresentationIdentity = '';
     this.rulesManagementOrchestrator?.detachPresentation(this.rulesPresentationIdentity);

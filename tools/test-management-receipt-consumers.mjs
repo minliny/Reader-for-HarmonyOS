@@ -25,7 +25,7 @@ for(const [name,path] of [['RulesManagementPage','features/settings/RulesManagem
 }
 const clone=v=>v===undefined?undefined:structuredClone(v);
 const defer=()=>{let resolve;const promise=new Promise(r=>resolve=r);return{resolve,promise};};
-function rpc(){return{calls:[],failRead:'',failWrite:false,invalidRead:false,wait:undefined,shelf:{books:[]},async request(method,params){this.calls.push(method);if(this.wait&&this.wait.method===method)await this.wait.promise;
+function rpc(){return{calls:[],failRead:'',failWrite:false,invalidRead:false,wait:undefined,shelf:{books:[]},async request(method,params,options={}){if(options.canDispatch?.()===false)throw Error('not admitted');options.onDispatch?.();this.calls.push(method);if(this.wait&&this.wait.method===method)await this.wait.promise;
  if(method==='replace.validate')return{data:{valid:true}};
  if(method==='replace.persist'||method==='book-group.create'){if(this.failWrite){this.failWrite=false;throw Error('lost acknowledgement');}return{data:{group:{groupId:3,groupName:params.groupName,order:0,enableRefresh:true,show:true}}};}
  if(method===this.failRead){this.failRead='';throw Error('read unavailable');}
@@ -55,22 +55,24 @@ async function fixture(kind){const isRules=kind==='rules',actual=isRules?await d
  }
  const cls=isRules?rules.RulesManagementOrchestrator:Shelf.BookshelfManagementOrchestrator;
  const owner=new cls(v=>{snapshot=clone(v);},()=>visible,runtime);
- const host={reconcileManagement:g=>owner.reconcile(g),updateGroupName:v=>owner.updateGroupName(v),updateGroupOrder:v=>owner.updateGroupOrder(v),selectGroup(){},clearGroupEditor(){},saveGroup:()=>owner.saveGroup(),toggleGroupShown(){},deleteGroup(){},selectBook(){},updateAssignmentGroup(){},assignSelectedBook(){}};
- const method=isRules?'rulesManagementSurface':'bookshelfManagementContent';
- const methods=isRules?[method,'isCurrentRulesPresentation','isCurrentRuntime']:[method];
+ const host={reconcileManagement:(g,id)=>owner.reconcile(g,id),updateGroupName:v=>owner.updateGroupName(v),updateGroupOrder:v=>owner.updateGroupOrder(v),selectGroup(){},clearGroupEditor(){},saveGroup:()=>owner.saveGroup(),toggleGroupShown(){},deleteGroup(){},selectBook(){},updateAssignmentGroup(){},assignSelectedBook(){}};
+ const method=isRules?'rulesManagementSurface':'bookshelfManagementSurface';
+ const methods=isRules?[method,'isCurrentRulesPresentation','isCurrentRuntime']:[method,'isCurrentBookshelfManagement','isCurrentRuntime'];
  const index=createReaderBuilderProbe(source('pages/Index.ets'),methods,{ReaderRuntimeOwner:actual?.Runtime??ReaderRuntimeOwner,RulesManagementPage:Child,BookshelfManagementPage:Child}).owner;
  const identity='management-receipt-rules';
  Object.assign(index,{route:isRules?'rulesManagement':'bookshelfManagement',mountedRuntimeOwner:runtime,shelfReceiptRetired:false,navigationGeneration:1,detailShelfAdmissionMount:1,rulesManagementOrchestrator:owner,rulesPresentationIdentity:identity});
- if(isRules)owner.attachPresentation(identity,v=>{snapshot=clone(v);},()=>visible);
+ owner.attachPresentation(identity,v=>{snapshot=clone(v);},()=>visible);
+ host.isManagementPresentationCurrent=(runtime,expected)=>owner.owns(runtime)&&owner.isPresentationCurrent(expected);
+ Object.assign(index,{bookshelfManagementPresentationIdentity:identity});
  Object.assign(index,{getRulesManagementOrchestrator:()=>owner,bookshelfHost:host,openJsonImport(){},returnFromRulesManagement(){},returnToBookshelf(){}});
- function page(){Object.assign(index,{rulesManagementSnapshot:snapshot,bookshelfManagementSnapshot:snapshot});if(isRules)index[method](1,runtime,1,owner,identity);else index[method]();const child=[...index.children.values()][0];const pagePath=isRules?'features/settings/RulesManagementPage.ets':'features/bookshelf/BookshelfManagementPage.ets';
+ function page(){Object.assign(index,{rulesManagementSnapshot:snapshot,bookshelfManagementSnapshot:snapshot});if(isRules)index[method](1,runtime,1,owner,identity);else index[method](1,runtime,1,host,identity);const child=[...index.children.values()][0];const pagePath=isRules?'features/settings/RulesManagementPage.ets':'features/bookshelf/BookshelfManagementPage.ets';
   const page=createReaderBuilderProbe(source(pagePath),['recoveryAction','statusCard','recovery'],{ReaderRecoveryAction:Child,readerRecoveryView,EMPTY_RULES_MANAGEMENT_SNAPSHOT:Rules.EMPTY_RULES_MANAGEMENT_SNAPSHOT,EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT:Shelf.EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT}).owner;
   for(const name of ['bundleCard','replaceCard','txtTocCard','dictCard','subscriptionCard','statisticsCard','groupEditorCard','groupsCard','assignmentCard','recordsCard']) page[name]=()=>{};
   page.contentFrame=()=>({width:350,left:19,right:19});page.bottomContentInset=()=>12;
   Object.assign(page,child.params,{appThemeScheme:'day'});page.statusCard();page.recoveryAction();const recovery=[...page.children.values()].find(c=>c.params.generation!==undefined);
   return{page,recovery};
  }
- return{runtime,owner,page,open:()=>owner.open(isRules?identity:undefined),setVisible:v=>{visible=v;},snapshot:()=>snapshot,write:()=>{if(isRules)owner.saveReplaceRule({name:'x',pattern:'x',replacement:'y',isEnabled:true,isRegex:false,order:0},identity);else{owner.updateGroupName('new');owner.updateGroupOrder('0');owner.saveGroup();}},settle:()=>owner.operationTail};}
+ return{runtime,owner,page,open:()=>owner.open(identity),setVisible:v=>{visible=v;},snapshot:()=>snapshot,write:()=>{if(isRules)owner.saveReplaceRule({name:'x',pattern:'x',replacement:'y',isEnabled:true,isRegex:false,order:0},identity);else{owner.updateGroupName('new',identity);owner.updateGroupOrder('0',identity);owner.saveGroup(identity);}},settle:()=>owner.operationTail};}
 function runtimeAccepted(f,command){return f.runtime.count(command)>0;}
 for(const kind of ['rules','shelf']){
  const command=kind==='rules'?'rules.mutation.apply':'book-group.create',read=kind==='rules'?'replace-rule.list':'book-group.list';
