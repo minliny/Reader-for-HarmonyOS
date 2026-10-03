@@ -15,8 +15,10 @@ assert.doesNotMatch(index, /private getSettingsOrchestrator\(/,
 for (const method of ['open', 'toggle', 'restoreDefaults']) {
   assert.match(host, new RegExp(`\\b${method}\\(`), `SettingsHost must expose ${method}`);
 }
-assert.match(host, /new SettingsOrchestrator\(/,
-  'SettingsHost must be the single SettingsOrchestrator construction site');
+const orchestrator = readFileSync(resolve(repo, 'entry/src/main/ets/features/settings/SettingsOrchestrator.ets'), 'utf8');
+assert.match(host, /SettingsOrchestrator\.forRuntime\(owner, this\.context\(\)\)/, 'SettingsHost resolves the finite Runtime owner');
+assert.equal((orchestrator.match(/new SettingsOrchestrator\(/g) ?? []).length, 1, 'only the finite Runtime factory constructs the business orchestrator');
+assert.match(orchestrator, /owners: WeakMap<ReaderRuntimeOwner, SettingsOrchestrator>/, 'one warm business owner per actual Runtime');
 assert.match(host, /getUIAbilityContext\(\)/,
   'SettingsHost must resolve the UI context lazily at first use');
 for (const call of ['settingsHost.open()', 'settingsHost.toggle(']) {

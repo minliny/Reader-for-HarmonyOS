@@ -1,5 +1,6 @@
 import {
   SettingsGateway,
+  createDefaultSettingsSnapshot,
   type SettingsSnapshot,
 } from './SettingsGateway';
 import { common } from '@kit.AbilityKit';
@@ -23,26 +24,54 @@ export interface SettingsOperationProjection {
 export type SettingsKey =
   'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog';
 
-/**
- * Owns the Settings page's orchestration. A plain class: entry load and the
- * optimistic toggle write are guarded by an entry `session` plus a per-write
- * `writeGeneration`, so a stale completion can never repaint a newer intent or
- * a later re-entry. Emits typed `SettingsSnapshot`s; Index only forwards them.
- *
- * `read()` returns the current snapshot (Index's @State) so an intent is built
- * from the latest user-visible state, exactly like the previous Index inline code.
+/** Same Runtime, one original settings business lane. Presentations attach
+ * with finite identities; disposing an Index retires only its projection.
+ * Accepted setters drain in order, while each platform first-put still checks
+ * Runtime admission. Preferences cached values never qualify an old flush ACK.
  */
 export class SettingsOrchestrator {
+  private static readonly owners: WeakMap<ReaderRuntimeOwner, SettingsOrchestrator> = new WeakMap();
+  private presentationIdentity: string | undefined = 'legacy-constructor';
+  static forRuntime(owner: ReaderRuntimeOwner, context: common.UIAbilityContext): SettingsOrchestrator | undefined {
+    if (!ReaderRuntimeOwner.isCurrent(owner)) return undefined;
+    let host = SettingsOrchestrator.owners.get(owner);
+    if (host === undefined) {
+      host = new SettingsOrchestrator((): void => {}, createDefaultSettingsSnapshot,
+        (): boolean => false, context, (): void => {}, owner);
+      SettingsOrchestrator.owners.set(owner, host);
+    }
+    return host;
+  }
+  attachPresentation(identity: string, emit: (snapshot: SettingsSnapshot) => void,
+    current: () => boolean, operation: (projection: SettingsOperationProjection) => void): boolean {
+    try { if (identity.length === 0 || !ReaderRuntimeOwner.isCurrent(this.owner) || !current()) return false; }
+    catch (_) { return false; }
+    if (this.presentationIdentity !== identity) this.session += 1;
+    this.presentationIdentity = identity; this.emit = emit; this.isCurrent = current; this.emitOperation = operation;
+    this.canonical = this.gateway.current() ?? this.canonical;
+    this.present(this.session, this.writeGeneration);
+    if (this.isPresentationCurrent(identity)) { try { operation(this.latestOperation); } catch (_) {} }
+    return this.isPresentationCurrent(identity);
+  }
+  detachPresentation(identity: string): void {
+    if (this.presentationIdentity !== identity) return;
+    this.presentationIdentity = undefined; this.session += 1;
+    this.isCurrent = (): boolean => false; this.emit = (): void => {}; this.emitOperation = (): void => {};
+  }
+  isPresentationCurrent(identity: string): boolean {
+    return this.presentationIdentity === identity && this.isCurrentSession(this.session, this.writeGeneration);
+  }
   private gateway: SettingsGateway;
   private emit: (snapshot: SettingsSnapshot) => void;
-  private read: () => SettingsSnapshot;
   private isCurrent: () => boolean;
   private session: number = 0;
   private writeGeneration: number = 0;
   private resetting: boolean = false;
   private retrying: boolean = false;
   private readonly owner: ReaderRuntimeOwner;
-  private readonly emitOperation: (projection: SettingsOperationProjection) => void;
+  private emitOperation: (projection: SettingsOperationProjection) => void;
+  private operationChain: Promise<void> = Promise.resolve();
+  private queuedWrites: number = 0;
   private latestOperation: SettingsOperationProjection = { action: 'load' };
   private canonical: SettingsSnapshot;
 
@@ -56,7 +85,6 @@ export class SettingsOrchestrator {
   ) {
     this.gateway = new SettingsGateway(context);
     this.emit = emit;
-    this.read = read;
     this.isCurrent = isCurrent;
     this.owner = owner;
     this.emitOperation = emitOperation;
@@ -67,11 +95,12 @@ export class SettingsOrchestrator {
 
   /** Enter the Settings page: reload the authoritative Host snapshot. */
   open(): void {
+    if (!this.isCurrentSession(this.session, this.writeGeneration)) return;
     this.session += 1;
     const session = this.session;
     const expectedWrite = this.writeGeneration;
     this.publishRead(session, expectedWrite, 'loading');
-    void this.reload(session, expectedWrite);
+    this.operationChain = this.operationChain.then((): Promise<void> => this.reload(session, expectedWrite));
   }
 
   private async reload(session: number, expectedWrite: number): Promise<void> {
@@ -83,7 +112,7 @@ export class SettingsOrchestrator {
           return;
         }
         this.canonical = snapshot;
-        this.emit(snapshot);
+        this.present(session, expectedWrite);
         this.publishRead(session, expectedWrite, 'succeeded');
         const facts = this.gateway.writeFacts();
         if (facts.pendingReconciliation) this.latestOperation = { action: facts.action, readFacts: this.latestOperation.readFacts, receipt: this.latestOperation.receipt, canRetryAccepted: this.latestOperation.canRetryAccepted };
@@ -105,7 +134,7 @@ export class SettingsOrchestrator {
 
   /** Present the requested switch; retain accepted choice on unknown flush. */
   toggle(key: SettingsKey, value: boolean): void {
-    if (this.resetting || !this.isCurrentSession(this.session, this.writeGeneration)) return;
+    if (this.resetting || this.retrying || !this.isCurrentSession(this.session, this.writeGeneration)) return;
     // Optimistic in-page update; persist asynchronously to the Host
     // preferences store (app-level settings, not Core-owned).
     const intent = this.withSetting(key, value);
@@ -114,19 +143,22 @@ export class SettingsOrchestrator {
     const session = this.session;
     const evidence = new ReaderWriteEvidence();
     this.latestOperation = { action: key, readFacts: this.latestOperation.readFacts };
-    this.emit(intent);
-    this.gateway.update(intent, false, key, evidence, (): boolean => this.isCurrentSession(session, writeGeneration))
+    this.canonical = intent;
+    this.present(session, writeGeneration);
+    this.queuedWrites += 1;
+    this.operationChain = this.operationChain.then((): Promise<void> =>
+      this.gateway.update(intent, false, key, evidence, (): boolean => ReaderRuntimeOwner.isCurrent(this.owner))
       .then(async (snapshot: SettingsSnapshot): Promise<void> => {
-        if (!this.isCurrentSession(session, writeGeneration)) {
+        if (!ReaderRuntimeOwner.isCurrent(this.owner) || writeGeneration !== this.writeGeneration) {
           return;
         }
         this.canonical = snapshot;
-        this.emit(snapshot);
+        this.present(session, writeGeneration);
         this.publishReceipt(session, writeGeneration, evidence.confirmation(), 'reading');
         await this.reload(session, writeGeneration);
       })
       .catch(async (error: Error): Promise<void> => {
-        if (!this.isCurrentSession(session, writeGeneration)) {
+        if (!ReaderRuntimeOwner.isCurrent(this.owner) || writeGeneration !== this.writeGeneration) {
           return;
         }
         hilog.error(DOMAIN, 'Reader', 'Settings update failed: %{private}s', error.message);
@@ -134,10 +166,10 @@ export class SettingsOrchestrator {
         // An undispatched intent may restore the last usable projection; an
         // accepted write keeps its complete snapshot with an unknown fact.
         this.canonical = this.gateway.current() ?? this.canonical;
-        this.emit(this.canonical);
+        this.present(session, writeGeneration);
         this.publishReceipt(session, writeGeneration, evidence.confirmation(), 'failed', error.message);
         await this.reload(session, writeGeneration);
-      });
+      }).finally((): void => { this.queuedWrites -= 1; }));
   }
 
   async restoreDefaults(): Promise<boolean> {
@@ -146,7 +178,12 @@ export class SettingsOrchestrator {
     const session = this.session;
     const generation = ++this.writeGeneration;
     this.latestOperation = { action: 'reset', readFacts: this.latestOperation.readFacts };
+    const previous = this.operationChain;
+    let release: (() => void) | undefined;
+    this.operationChain = new Promise<void>((resolve: () => void): void => { release = resolve; });
     try {
+      await previous;
+      if (!ReaderRuntimeOwner.isCurrent(this.owner)) return false;
       await LocalConfigurationReset.request(this.owner);
       const evidence = LocalConfigurationReset.writeEvidence(this.owner);
       this.publishReceipt(session, generation, evidence?.confirmation() ?? 'undispatched', 'reading');
@@ -157,7 +194,7 @@ export class SettingsOrchestrator {
       this.publishReceipt(session, generation, evidence?.confirmation() ?? 'undispatched', 'failed', (error as Error).message);
       hilog.error(DOMAIN, 'Reader', 'Configuration reset remains retryable: %{private}s', (error as Error).message);
       throw error as Error;
-    } finally { this.resetting = false; }
+    } finally { this.resetting = false; release?.(); }
   }
 
   reconcile(generation: number): void {
@@ -168,9 +205,10 @@ export class SettingsOrchestrator {
     const read = this.latestOperation.readFacts;
     if (receipt?.facts.generation === generation && receipt.facts.canRetry) {
       this.publishReceipt(session, write, receipt.receipt.confirmation, 'reading');
-      void this.reload(session, write);
+      this.operationChain = this.operationChain.then((): Promise<void> => this.reload(session, write));
     } else if (read?.generation === generation && read.canRetry) {
-      this.publishRead(session, write, 'loading'); void this.reload(session, write);
+      this.publishRead(session, write, 'loading');
+      this.operationChain = this.operationChain.then((): Promise<void> => this.reload(session, write));
     }
   }
 
@@ -178,49 +216,54 @@ export class SettingsOrchestrator {
    * reconcile remains read-only and never guesses durability from cached get. */
   retryAccepted(generation: number): void {
     const receipt = this.latestOperation.receipt;
-    if (this.resetting || this.retrying || !this.latestOperation.canRetryAccepted || receipt?.facts.generation !== generation ||
+    if (this.resetting || this.retrying || this.queuedWrites > 0 || !this.latestOperation.canRetryAccepted || receipt?.facts.generation !== generation ||
       !this.isCurrentSession(this.session, this.writeGeneration)) return;
     const session = this.session, write = ++this.writeGeneration;
     const evidence = new ReaderWriteEvidence();
     this.retrying = true;
     this.latestOperation = { action: this.latestOperation.action, readFacts: this.latestOperation.readFacts, receipt: this.latestOperation.receipt, canRetryAccepted: false };
     this.publishReceipt(session, write, 'unknown', 'reading');
-    void this.gateway.retryAccepted(evidence, (): boolean => this.isCurrentSession(session, write))
+    this.operationChain = this.operationChain.then((): Promise<void> =>
+      this.gateway.retryAccepted(evidence, (): boolean => ReaderRuntimeOwner.isCurrent(this.owner) && write === this.writeGeneration)
       .then(async (snapshot: SettingsSnapshot): Promise<void> => {
         this.retrying = false;
-        if (!this.isCurrentSession(session, write)) return;
-        this.canonical = snapshot; this.emit(snapshot);
+        if (!ReaderRuntimeOwner.isCurrent(this.owner) || write !== this.writeGeneration) return;
+        this.canonical = snapshot; this.present(session, write);
         this.publishReceipt(session, write, evidence.confirmation(), 'reading');
         await this.reload(session, write);
       }).catch(async (error: Error): Promise<void> => {
         this.retrying = false;
-        if (!this.isCurrentSession(session, write)) return;
+        if (!ReaderRuntimeOwner.isCurrent(this.owner) || write !== this.writeGeneration) return;
         this.canonical = this.gateway.current() ?? this.canonical;
-        this.emit(this.canonical);
+        this.present(session, write);
         this.publishReceipt(session, write, this.gateway.writeFacts().pendingReconciliation ? 'unknown' : evidence.confirmation(),
           'failed', error.message);
         await this.reload(session, write);
-      });
+      }));
   }
 
   private publishRead(session: number, write: number, phase: 'loading' | 'failed' | 'succeeded', message?: string): void {
     if (!this.isCurrentSession(session, write)) return;
     this.latestOperation = { action: this.latestOperation.action, receipt: this.latestOperation.receipt,
-      canRetryAccepted: !this.retrying && this.gateway.writeFacts().pendingReconciliation && !this.gateway.writeFacts().busy,
+      canRetryAccepted: !this.retrying && this.queuedWrites === 0 && this.gateway.writeFacts().pendingReconciliation && !this.gateway.writeFacts().busy,
       readFacts: projectOperationFacts({ phase, value: this.canonical, canRetry: phase === 'failed',
         generation: ++settingsProjectionGeneration, message }) };
-    this.emitOperation(this.latestOperation);
+    try { this.emitOperation(this.latestOperation); } catch (_) {}
   }
 
   private publishReceipt(session: number, write: number, confirmation: 'confirmed' | 'unknown' | 'undispatched',
     readback: 'reading' | 'failed' | 'succeeded', refreshError?: string): void {
-    if (!this.isCurrentSession(session, write)) return;
+    if (!ReaderRuntimeOwner.isCurrent(this.owner) || write !== this.writeGeneration) return;
     this.latestOperation = { action: this.latestOperation.action, readFacts: this.latestOperation.readFacts,
-      canRetryAccepted: !this.retrying && this.gateway.writeFacts().pendingReconciliation && !this.gateway.writeFacts().busy,
+      canRetryAccepted: !this.retrying && this.queuedWrites <= 1 && this.gateway.writeFacts().pendingReconciliation && !this.gateway.writeFacts().busy,
       receipt: projectPersistedReceipt({ confirmation, readback, value: this.canonical, refreshError,
         canRetry: confirmation !== 'undispatched' && readback !== 'reading' && (readback === 'failed' || confirmation === 'unknown'),
         generation: ++settingsProjectionGeneration }) };
-    this.emitOperation(this.latestOperation);
+    if (this.isCurrentSession(session, write)) { try { this.emitOperation(this.latestOperation); } catch (_) {} }
+  }
+
+  private present(session: number, write: number): void {
+    if (this.isCurrentSession(session, write)) { try { this.emit(this.canonical); } catch (_) {} }
   }
 
   private isCurrentSession(session: number, expectedWrite: number): boolean {
@@ -229,7 +272,7 @@ export class SettingsOrchestrator {
   }
 
   private withSetting(key: SettingsKey, value: boolean): SettingsSnapshot {
-    const current = this.read();
+    const current = this.canonical;
     return {
       autoCheckUpdate: key === 'autoCheckUpdate' ? value : current.autoCheckUpdate,
       tapBottomScrollTop: key === 'tapBottomScrollTop' ? value : current.tapBottomScrollTop,

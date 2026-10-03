@@ -11,8 +11,12 @@ export type { SettingsCacheCleanupSnapshot } from './SettingsCacheCleanupOwner';
  * because other page shells consume it, while this host owns construction and
  * dispatch of the settings orchestrator and its context-bound gateway.
  */
+let settingsHostPresentationSequence: number = 0;
 export class SettingsHost {
   private orchestrator: SettingsOrchestrator | undefined = undefined;
+  private boundOwner: ReaderRuntimeOwner | undefined;
+  private presentationIdentity: string = '';
+  private explicitBinding: boolean = false;
   private readonly emit: (snapshot: SettingsSnapshot) => void;
   private readonly read: () => SettingsSnapshot;
   private readonly isCurrent: () => boolean;
@@ -38,11 +42,26 @@ export class SettingsHost {
     this.emitCacheCleanup = emitCacheCleanup;
   }
 
-  open(): void { this.getOrchestrator().open(); }
-  toggle(key: SettingsKey, value: boolean): void { this.getOrchestrator().toggle(key, value); }
-  restoreDefaults(): Promise<boolean> { return this.getOrchestrator().restoreDefaults(); }
-  reconcile(generation: number): void { this.getOrchestrator().reconcile(generation); }
-  retryAccepted(generation: number): void { this.getOrchestrator().retryAccepted(generation); }
+  bindPresentation(owner: ReaderRuntimeOwner, identity: string, current: () => boolean): boolean {
+    if (identity.length === 0) return false;
+    try { if (!ReaderRuntimeOwner.isCurrent(owner) || !current()) return false; } catch (_) { return false; }
+    if (this.boundOwner === owner && this.presentationIdentity === identity)
+      return this.orchestrator?.isPresentationCurrent(identity) ?? false;
+    const orchestrator = SettingsOrchestrator.forRuntime(owner, this.context());
+    if (orchestrator === undefined || !orchestrator.attachPresentation(identity, this.emit, current, this.emitOperation)) return false;
+    this.boundOwner = owner; this.presentationIdentity = identity; this.explicitBinding = true;
+    this.orchestrator = orchestrator; return true;
+  }
+  isPresentationCurrent(owner: ReaderRuntimeOwner, identity: string): boolean {
+    return this.boundOwner === owner && this.presentationIdentity === identity &&
+      (this.orchestrator?.isPresentationCurrent(identity) ?? false);
+  }
+  detachPresentation(identity: string): void { this.orchestrator?.detachPresentation(identity); }
+  open(identity?: string): void { this.admitted(identity)?.open(); }
+  toggle(key: SettingsKey, value: boolean, identity?: string): void { this.admitted(identity)?.toggle(key, value); }
+  restoreDefaults(identity?: string): Promise<boolean> { return this.admitted(identity)?.restoreDefaults() ?? Promise.resolve(false); }
+  reconcile(generation: number, identity?: string): void { this.admitted(identity)?.reconcile(generation); }
+  retryAccepted(generation: number, identity?: string): void { this.admitted(identity)?.retryAccepted(generation); }
 
   cacheCleanupSnapshot(owner: ReaderRuntimeOwner | undefined): SettingsCacheCleanupSnapshot | undefined {
     if (owner === undefined) return undefined;
@@ -74,10 +93,15 @@ export class SettingsHost {
     return shared;
   }
 
-  private getOrchestrator(): SettingsOrchestrator {
-    if (this.orchestrator === undefined || !this.orchestrator.owns(ReaderRuntimeOwner.current())) {
-      this.orchestrator = new SettingsOrchestrator(this.emit, this.read, this.isCurrent, this.context(), this.emitOperation);
+  private admitted(identity?: string): SettingsOrchestrator | undefined {
+    if (this.orchestrator === undefined) {
+      const owner = ReaderRuntimeOwner.current();
+      const legacyIdentity = `settings-host:${++settingsHostPresentationSequence}`;
+      if (!this.bindPresentation(owner, legacyIdentity, this.isCurrent)) return undefined;
+      this.explicitBinding = false;
     }
-    return this.orchestrator;
+    if ((identity === undefined && this.explicitBinding) ||
+      (identity !== undefined && identity !== this.presentationIdentity)) return undefined;
+    return this.orchestrator?.isPresentationCurrent(this.presentationIdentity) ? this.orchestrator : undefined;
   }
 }

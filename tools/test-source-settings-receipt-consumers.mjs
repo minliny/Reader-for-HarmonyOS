@@ -18,8 +18,8 @@ const SourceOrchestrator=load('features/source/SourceOrchestrator.ets','SourceOr
 const SourceHost=load('features/source/SourceHost.ets','SourceHost',{ReaderRuntimeOwner,SourceOrchestrator,SourceGateway});
 const prefs=new WeakMap();const preferences={getPreferences:async ctx=>prefs.get(ctx)};
 function freshSettingsHost(){
-const SettingsGateway=load('features/settings/SettingsGateway.ts','SettingsGateway',{preferences,ReaderThemeHost:{async prepareUserChange(){}}});
-const SettingsOrchestrator=load('features/settings/SettingsOrchestrator.ets','SettingsOrchestrator',{SettingsGateway,ReaderRuntimeOwner,ReaderWriteEvidence,LocalConfigurationReset:{request(){throw Error('reset tested by full durable reset suite');}},hilog:{error(){}},projectPersistedReceipt,...facts});
+const {SettingsGateway,createDefaultSettingsSnapshot}=load('features/settings/SettingsGateway.ts','{SettingsGateway,createDefaultSettingsSnapshot}',{preferences,ReaderThemeHost:{async prepareUserChange(){}}});
+const SettingsOrchestrator=load('features/settings/SettingsOrchestrator.ets','SettingsOrchestrator',{SettingsGateway,createDefaultSettingsSnapshot,ReaderRuntimeOwner,ReaderWriteEvidence,LocalConfigurationReset:{request(){throw Error('reset tested by full durable reset suite');}},hilog:{error(){}},projectPersistedReceipt,...facts});
 const SettingsHost=load('features/settings/SettingsHost.ets','SettingsHost',{SettingsOrchestrator,ReaderRuntimeOwner});
 return SettingsHost;
 }
@@ -83,7 +83,7 @@ for(const kind of ['source','settings']){
 for(const kind of ['source','settings']){
  const f=fixture(kind);f.open();await f.settle();const d=defer();f.r.pause={method:kind==='source'?'source.update':'flush',...d};f.write();await tick();
  const before=clone(f.receipt());currentOwner=undefined;d.resolve();await f.settle();assert.deepEqual(f.receipt(),before,'late actual ACK has no retired UI/error publication');
- const count=kind==='source'?f.r.calls.length:f.r.puts;if(kind==='settings')assert.throws(()=>f.write(),/must be installed/,'legacy Settings acquisition remains explicit');else f.write();await f.settle();assert.equal(kind==='source'?f.r.calls.length:f.r.puts,count);
+ const count=kind==='source'?f.r.calls.length:f.r.puts;assert.doesNotThrow(()=>f.write(),'retired physical intent keeps its captured business owner and does not acquire a new Runtime');assert.equal(f.host.orchestrator.owns(f.r),true,'getter does not replace the original finite owner');await f.settle();assert.equal(kind==='source'?f.r.calls.length:f.r.puts,count);
  f.r.pause=undefined;currentOwner=f.r;f.open();await f.settle();assert.equal(f.read().fact,'current');
  if(kind==='source')assert.equal(f.index.sourceSources[0].enabled,false);else assert.equal(f.index.settingsSnapshot.reduceMotion,true,'persisted setting read survives retired delivery');
 }
