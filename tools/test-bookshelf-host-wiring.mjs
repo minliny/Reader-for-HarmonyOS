@@ -17,7 +17,7 @@ assert.doesNotMatch(index, /private getBookshelfManagementOrchestrator\(/,
 for (const method of [
   'openManagement', 'updateGroupName', 'updateGroupOrder', 'selectGroup',
   'clearGroupEditor', 'saveGroup', 'toggleGroupShown', 'deleteGroup',
-  'selectBook', 'updateAssignmentGroup', 'assignSelectedBook', 'assignDefaultGroup', 'loadShelfBook',
+  'selectBook', 'updateAssignmentGroup', 'assignSelectedBook', 'assignDefaultGroup', 'loadShelfBook', 'upsertBook',
 ]) {
   assert.match(host, new RegExp(`\\b${method}\\(`), `BookshelfHost must expose ${method}`);
 }
@@ -27,6 +27,10 @@ assert.match(host, /new BookshelfManagementGateway\(/,
   'BookshelfHost must own the direct management gateway construction');
 assert.match(host, /new ReaderCoreGateway\(this\.owner\(\)\)\.loadShelfBook\(/,
   'BookshelfHost must own the bookshelf detail gateway construction');
+assert.match(host, /new ReaderCoreGateway\(this\.owner\(\)\)\.upsertBook\(/,
+  'BookshelfHost must own the bookshelf upsert gateway construction');
+assert.doesNotMatch(index, /new ReaderCoreGateway\(/,
+  'Index must not construct a direct Core gateway');
 assert.match(host, /private readonly owner: \(\) => ReaderRuntimeOwner/,
   'BookshelfHost must resolve the runtime owner lazily');
 for (const call of [
@@ -36,6 +40,7 @@ for (const call of [
   'bookshelfHost.toggleGroupShown(', 'bookshelfHost.deleteGroup(',
   'bookshelfHost.selectBook(', 'bookshelfHost.updateAssignmentGroup(',
   'bookshelfHost.assignSelectedBook()', 'bookshelfHost.assignDefaultGroup(', 'bookshelfHost.loadShelfBook(',
+  'bookshelfHost.upsertBook(',
 ]) {
   assert.ok(index.includes(`this.${call}`), `Index must forward ${call}`);
 }

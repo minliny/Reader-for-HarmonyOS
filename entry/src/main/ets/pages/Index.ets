@@ -14,10 +14,9 @@ import { ReaderSystemFileOpenHost } from '../app/ReaderSystemFileOpenHost';
 import { errorMessageOf } from '../app/ErrorMessage';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
 import { readerContentSafeTop } from '../features/common/ReaderWindowMetrics';
-import {
-  ReaderCoreGateway,
-  type ShelfBook,
-  type BookshelfState,
+import type {
+  ShelfBook,
+  BookshelfState,
 } from '../app/ReaderCoreGateway';
 import {
   type BookshelfDataState,
@@ -3058,7 +3057,7 @@ struct Index {
     const owner = ReaderRuntimeOwner.current();
     const gateway = new RemoteReadingFlowGateway(owner);
     const offline = new ReadingOfflineGateway(owner);
-    const bookshelf = new ReaderCoreGateway(owner);
+    const bookshelf = this.bookshelfHost;
     const isCurrent = (): boolean => generation === this.navigationGeneration;
     this.offlineMutationGeneration += 1;
     this.offlineMutationActiveKey = '';
@@ -3648,7 +3647,7 @@ struct Index {
     const owner = ReaderRuntimeOwner.current();
     const isCurrent = (): boolean => generation === this.bookshelfAdditionGeneration &&
       this.bookshelfAdditionActiveKey === key;
-    void new ReaderCoreGateway(owner).upsertBook({
+    void this.bookshelfHost.upsertBook({
       sourceId: session.identity.sourceId,
       bookId: session.identity.bookId,
       title: session.book.title,
@@ -3707,7 +3706,7 @@ struct Index {
       .then(async (): Promise<void> => {
         // Strict admission may win the cancellation race. Reconcile that
         // committed fact without deleting the book or its reading position.
-        const saved = await new ReaderCoreGateway(owner).loadShelfBook(book.sourceId, book.bookId);
+        const saved = await this.bookshelfHost.loadShelfBook(book.sourceId, book.bookId);
         if (saved !== undefined) {
           this.refreshBookshelf();
           this.refreshSearchShelfMembership();
@@ -3895,7 +3894,7 @@ struct Index {
     isCurrent: () => boolean,
   ): Promise<void> {
     try {
-      const stored = await new ReaderCoreGateway(owner).loadShelfBook(book.sourceId, book.bookId);
+      const stored = await this.bookshelfHost.loadShelfBook(book.sourceId, book.bookId);
       if (!isCurrent()) {
         return;
       }
@@ -3986,7 +3985,7 @@ struct Index {
     isCurrent: () => boolean,
   ): Promise<void> {
     try {
-      const stored = await new ReaderCoreGateway(owner).loadShelfBook(book.sourceId, book.bookId);
+      const stored = await this.bookshelfHost.loadShelfBook(book.sourceId, book.bookId);
       if (!isCurrent()) {
         return;
       }
@@ -5083,8 +5082,7 @@ struct Index {
             // Switching needs the durable chapter, not an old body's processing
             // seal or scalar offset. Core's shelf projection exposes that chapter
             // even when settings made the old precise anchor unavailable.
-            const canonical = await new ReaderCoreGateway(owner)
-              .loadShelfBook(book.sourceId, book.bookId);
+            const canonical = await this.bookshelfHost.loadShelfBook(book.sourceId, book.bookId);
             if (!isCurrent()) throw new Error('source switch aborted');
             if (canonical?.sourceId !== book.sourceId || canonical.bookId !== book.bookId ||
               canonical.currentChapterIndex === undefined || !Number.isSafeInteger(canonical.currentChapterIndex) ||
@@ -5229,8 +5227,7 @@ struct Index {
       const records = await gateway.listPendingSwitches(ownsRollback);
       if (!ownsRollback() || records.some((record: PendingSourceSwitch): boolean =>
         record.transactionId === transaction.transactionId)) throw error as Error;
-      const canonical = await new ReaderCoreGateway(ReaderRuntimeOwner.current())
-        .loadShelfBook(transaction.targetSourceId, transaction.targetBookId);
+      const canonical = await this.bookshelfHost.loadShelfBook(transaction.targetSourceId, transaction.targetBookId);
       if (!ownsRollback() || canonical === undefined) throw error as Error;
       restored = canonical;
     }
