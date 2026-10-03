@@ -144,8 +144,10 @@ import {
 import {
   RssOrchestrator,
   type RssEntrySnapshot,
+  type RssManagementOperationProjection,
   type RssSourceSnapshot,
 } from '../features/rss/RssOrchestrator';
+import { projectOperationFacts, type OperationFacts } from '../app/ReaderOperationFacts';
 import {
   RssPage,
   type RssMode,
@@ -425,6 +427,9 @@ struct Index {
   @State private directoryReturnTarget: DirectoryReturnTarget = 'detail';
   @State private searchPublicationRevision: number = 0;
   @State private rssPresentation: RssPresentation = { kind: 'feed', subscriptions: [], recentUnread: [] };
+  @State private rssManagementOperation: RssManagementOperationProjection | undefined = undefined;
+  @State private rssManagementRead: OperationFacts<RssSubscription[]> =
+    projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
   @State private selectedRssSubscription: RssSubscription | undefined = undefined;
   @State private selectedRssItems: RssItem[] = [];
   @State private selectedRssItem: RssItem | undefined = undefined;
@@ -933,21 +938,7 @@ struct Index {
           onDiscoverRequested: (): void => this.openDiscover(),
         });
       } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssSubscriptionManagement') {
-        RssSubscriptionManagementPage({
-          items: this.rssSubscriptionManagementItems(),
-          isTablet: deviceInfo.deviceType === 'tablet',
-          focusedSubscriptionId: this.rssManagementFocusSubscriptionId,
-          onBack: (): void => this.returnToRss(),
-          onAdd: (): void => this.onRssSubscriptionAddRequested(),
-          onImport: (): void => this.requestRssSourceImport(),
-          onExport: (): void => this.exportRssSources(),
-          onToggle: (id: string, enabled: boolean): void =>
-            this.getRssOrchestrator().toggleSubscription(id, enabled),
-          onViewArticles: (id: string): void => this.onRssManagementViewArticles(id),
-          onEditSource: (id: string): void => this.onRssSubscriptionEditRequested(id),
-          onRefresh: (id: string): void => this.getRssOrchestrator().refreshSubscription(id),
-          onDelete: (id: string): void => this.requestRssSubscriptionDelete(id),
-        });
+        this.rssSubscriptionManagementContent();
       } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssSubscriptionEditor') {
         RssSubscriptionEditorPage({
           snapshot: this.rssEditorSnapshot,
@@ -1267,6 +1258,31 @@ struct Index {
       .padding({ top: this.readerOwnsWindowEdges() ? 0 : this.appContentTopInset() })
       .expandSafeArea([SafeAreaType.SYSTEM], this.readerOwnsWindowEdges() ?
         [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM] : [SafeAreaEdge.BOTTOM])
+  }
+
+  @Builder
+  private rssSubscriptionManagementContent() {
+    RssSubscriptionManagementPage({
+      items: this.rssSubscriptionManagementItems(),
+      isTablet: deviceInfo.deviceType === 'tablet',
+      focusedSubscriptionId: this.rssManagementFocusSubscriptionId,
+      operation: this.rssManagementOperation,
+      readFacts: this.rssManagementRead,
+      onBack: (): void => this.returnToRss(),
+      onAdd: (): void => this.onRssSubscriptionAddRequested(),
+      onImport: (): void => this.requestRssSourceImport(),
+      onExport: (): void => this.exportRssSources(),
+      onToggle: (id: string, enabled: boolean): void =>
+        this.getRssOrchestrator().toggleSubscription(id, enabled),
+      onViewArticles: (id: string): void => this.onRssManagementViewArticles(id),
+      onEditSource: (id: string): void => this.onRssSubscriptionEditRequested(id),
+      onRefresh: (id: string): void => this.getRssOrchestrator().refreshSubscription(id),
+      onDelete: (id: string): void => this.requestRssSubscriptionDelete(id),
+      onReconcile: (operation: RssManagementOperationProjection): void =>
+        this.getRssOrchestrator().reconcileManagementOperation(operation),
+      onRetryRead: (facts: OperationFacts<RssSubscription[]>): void =>
+        this.getRssOrchestrator().retryManagementRead(facts),
+    });
   }
 
   @Builder
@@ -1949,12 +1965,21 @@ struct Index {
   }
 
   private getRssOrchestrator(): RssOrchestrator {
-    if (this.rssOrchestrator === undefined) {
+    if (this.rssOrchestrator === undefined || !this.rssOrchestrator.owns(ReaderRuntimeOwner.current())) {
+      this.rssManagementOperation = undefined;
+      this.rssManagementRead = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
       this.rssOrchestrator = new RssOrchestrator(
         (subscriptions: RssSubscription[]): void => {
           this.rssPresentation = this.feedPresentation(subscriptions, []);
         },
         (): boolean => this.route === 'rssSubscriptionManagement',
+        ReaderRuntimeOwner.current(),
+        (operation: RssManagementOperationProjection): void => {
+          this.rssManagementOperation = operation;
+        },
+        (facts: OperationFacts<RssSubscription[]>): void => {
+          this.rssManagementRead = facts;
+        },
       );
     }
     return this.rssOrchestrator;

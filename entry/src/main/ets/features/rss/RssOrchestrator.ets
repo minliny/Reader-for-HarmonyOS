@@ -13,8 +13,16 @@ import {
   projectPersistedReceipt,
   type PersistedReceiptProjection,
 } from '../../app/ReaderPersistedReceiptProjection';
+import {
+  projectOperationFacts,
+  type CommitConfirmationKind,
+  type OperationFacts,
+} from '../../app/ReaderOperationFacts';
 
 const DOMAIN = 0x5244;
+// A page @Prop may clone a projection. A process-wide token remains stable
+// across that clone and never collides when the RuntimeOwner is replaced.
+let rssProjectionGeneration: number = 0;
 
 function delay(millis: number): Promise<void> {
   return new Promise<void>((resolve: () => void): void => {
@@ -76,12 +84,14 @@ export class RssOrchestrator {
   private readonly emit: (subscriptions: RssSubscription[]) => void;
   private readonly isCurrent: () => boolean;
   private readonly emitOperation: RssOperationProjectionEmitter;
+  private readonly emitRead: (facts: OperationFacts<RssSubscription[]>) => void;
   /** Bumped on every management-page entry; stale write-backs are discarded. */
   private session: number = 0;
   /** One chain for toggle, refresh, and remove across page entries. */
   private mutationChain: Promise<void> = Promise.resolve();
-  private operationGeneration: number = 0;
   private lastSubscriptions: RssSubscription[] = [];
+  private hasSubscriptions: boolean = false;
+  private latestRead: OperationFacts<RssSubscription[]> = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
   private latestOperation: RssManagementOperationProjection | undefined;
 
   constructor(
@@ -89,12 +99,19 @@ export class RssOrchestrator {
     isCurrent: () => boolean,
     owner: ReaderRuntimeOwner = ReaderRuntimeOwner.current(),
     emitOperation: RssOperationProjectionEmitter = (_operation: RssManagementOperationProjection): void => {},
+    emitRead: (facts: OperationFacts<RssSubscription[]>) => void =
+      (_facts: OperationFacts<RssSubscription[]>): void => {},
   ) {
     this.owner = owner;
     this.gateway = new RssGateway(owner);
     this.emit = emit;
     this.isCurrent = isCurrent;
     this.emitOperation = emitOperation;
+    this.emitRead = emitRead;
+  }
+
+  owns(owner: ReaderRuntimeOwner): boolean {
+    return this.owner === owner;
   }
 
   /** Last durable mutation fact, retained for a late route/read-back observer. */
@@ -106,7 +123,37 @@ export class RssOrchestrator {
   open(): void {
     this.session += 1;
     const session = this.session;
-    void this.loadList(session);
+    this.publishRead(session, 'loading');
+    const operation = this.latestOperation;
+    if (operation !== undefined && operation.projection.receipt.fact !== 'confirmedCurrent') {
+      this.publishOperation(operation.action, operation.subscriptionId, session, 'reading',
+        undefined, undefined, operation.projection.receipt.confirmation);
+    }
+    this.mutationChain = this.mutationChain.then((): Promise<void> => this.loadList(session));
+  }
+
+  /** Retry a failed read only. Generation rejects stale or double-click intents. */
+  retryManagementRead(facts: OperationFacts<RssSubscription[]>): void {
+    const session = this.session;
+    this.mutationChain = this.mutationChain.then(async (): Promise<void> => {
+      if (!this.isCurrentSession(session) || this.latestRead.generation !== facts.generation ||
+        !this.latestRead.canRetry) return;
+      this.publishRead(session, 'loading');
+      await this.loadList(session);
+    });
+  }
+
+  /** Never replay the write: a matching read is not a lost commit acknowledgement. */
+  reconcileManagementOperation(expected: RssManagementOperationProjection): void {
+    const session = this.session;
+    this.mutationChain = this.mutationChain.then(async (): Promise<void> => {
+      const operation = this.latestOperation;
+      if (!this.isCurrentSession(session) || operation === undefined ||
+        operation.projection.facts.generation !== expected.projection.facts.generation ||
+        !operation.projection.facts.canRetry) return;
+      await this.readBack(operation.action, operation.subscriptionId, session,
+        operation.projection.receipt.confirmation);
+    });
   }
 
   toggleSubscription(subscriptionId: string, enabled: boolean): void {
@@ -146,20 +193,35 @@ export class RssOrchestrator {
     onlineUrl?: string,
   ): void {
     const session = this.session;
+    if (!this.isCurrentSession(session)) return;
     this.enqueueRouteTask(
       'source-import',
       replaceExisting ? 'replace' : 'merge',
       async (): Promise<void> => {
-        const result = await this.gateway.importSources(replaceExisting, onlineUrl);
+        let dispatched = false;
+        let result: RssSourceImportResult | undefined;
+        try {
+          result = await this.gateway.importSources(replaceExisting, onlineUrl,
+            (): void => {
+              if (!this.isCurrentSession(session)) throw new Error('RSS import selection no longer active');
+              dispatched = true;
+              this.publishOperation('source-import', replaceExisting ? 'replace' : 'merge',
+                session, 'reading', undefined, undefined, 'unknown');
+            });
+        } catch (error) {
+          if (!dispatched) throw error;
+          this.publishOperation('source-import', replaceExisting ? 'replace' : 'merge',
+            session, 'failed', (error as Error).message, undefined,
+            isPendingTransactionError(error as Error) ? 'undispatched' : 'unknown');
+          return;
+        }
         if (result === undefined) {
           if (this.isCurrentSession(session)) onComplete(undefined);
           return;
         }
-        const subscriptions = await this.loadSubscriptionsWithRetry();
-        if (this.isCurrentSession(session)) {
-          this.emit(subscriptions);
-          onComplete(result);
-        }
+        // The import acknowledgement is durable even if the list read fails.
+        await this.readBack('source-import', replaceExisting ? 'replace' : 'merge', session, 'confirmed');
+        if (this.isCurrentSession(session)) onComplete(result);
       },
       onFailure,
       (): boolean => this.isCurrentSession(session),
@@ -298,6 +360,7 @@ export class RssOrchestrator {
     mutation: RssMutation,
   ): void {
     const session = this.session;
+    if (!this.isCurrentSession(session)) return;
     this.mutationChain = this.mutationChain
       .then((): Promise<void> => this.applyMutation(
         action,
@@ -306,8 +369,10 @@ export class RssOrchestrator {
         session,
       ))
       .catch((error: Error): void => {
+        this.publishOperation(action, subscriptionId, session, 'failed', error.message,
+          undefined, isPendingTransactionError(error) ? 'undispatched' : 'unknown');
         hilog.error(DOMAIN, 'Reader',
-          'RSS management mutation failed; projection unchanged: action=%{private}s subscriptionId=%{private}s err=%{private}s',
+          'RSS management mutation acknowledgement unavailable: action=%{private}s subscriptionId=%{private}s err=%{private}s',
           action, subscriptionId, error.message);
       });
   }
@@ -321,7 +386,10 @@ export class RssOrchestrator {
     isCurrent: RssRouteGuard,
   ): void {
     this.mutationChain = this.mutationChain
-      .then((): Promise<void> => task())
+      .then(async (): Promise<void> => {
+        if (this.owner !== ReaderRuntimeOwner.current()) return;
+        await task();
+      })
       .catch((error: Error): void => {
         hilog.error(DOMAIN, 'Reader',
           'RSS route operation failed: action=%{private}s identity=%{private}s err=%{private}s',
@@ -338,21 +406,35 @@ export class RssOrchestrator {
     mutation: RssMutation,
     session: number,
   ): Promise<void> {
+    if (this.owner !== ReaderRuntimeOwner.current()) return;
+    this.publishOperation(action, subscriptionId, session, 'reading', undefined, undefined, 'unknown');
     await this.runMutationWithRetry(mutation);
-    this.publishOperation(action, subscriptionId, session, 'reading');
+    await this.readBack(action, subscriptionId, session, 'confirmed');
+  }
+
+  private async readBack(
+    action: string,
+    subscriptionId: string,
+    session: number,
+    confirmation: CommitConfirmationKind,
+  ): Promise<void> {
+    if (this.owner !== ReaderRuntimeOwner.current()) return;
+    this.publishOperation(action, subscriptionId, session, 'reading', undefined, undefined, confirmation);
     let subscriptions: RssSubscription[];
     try {
       subscriptions = await this.loadSubscriptionsWithRetry();
     } catch (error) {
       const refreshError = (error as Error).message;
-      this.publishOperation(action, subscriptionId, session, 'failed', refreshError);
+      this.publishOperation(action, subscriptionId, session, 'failed', refreshError, undefined, confirmation);
       hilog.warn(DOMAIN, 'Reader',
-        'RSS management mutation persisted but list reload failed: action=%{private}s subscriptionId=%{private}s err=%{private}s',
-        action, subscriptionId, refreshError);
+        'RSS management readback failed: confirmation=%{private}s action=%{private}s subscriptionId=%{private}s err=%{private}s',
+        confirmation, action, subscriptionId, refreshError);
       return;
     }
     this.lastSubscriptions = subscriptions;
-    this.publishOperation(action, subscriptionId, session, 'succeeded', undefined, subscriptions);
+    this.hasSubscriptions = true;
+    this.publishOperation(action, subscriptionId, session, 'succeeded', undefined, subscriptions, confirmation);
+    this.publishRead(session, 'succeeded');
     // Mutations and their reloads share one chain, so every emitted snapshot
     // is authoritative for all transactions completed before it. Publishing
     // each successful step also ensures a later failed intent cannot conceal
@@ -363,11 +445,17 @@ export class RssOrchestrator {
   }
 
   private async loadList(session: number): Promise<void> {
-    await this.waitForMutations(3000);
+    if (!this.isCurrentSession(session)) return;
     let subscriptions: RssSubscription[];
     try {
       subscriptions = await this.loadSubscriptionsWithRetry();
     } catch (error) {
+      this.publishRead(session, 'failed', (error as Error).message);
+      const operation = this.latestOperation;
+      if (operation !== undefined && operation.projection.receipt.fact !== 'confirmedCurrent') {
+        this.publishOperation(operation.action, operation.subscriptionId, session, 'failed',
+          (error as Error).message, undefined, operation.projection.receipt.confirmation);
+      }
       if (this.isCurrentSession(session)) {
         hilog.error(DOMAIN, 'Reader',
           'RSS subscription management load failed: %{private}s', (error as Error).message);
@@ -375,6 +463,13 @@ export class RssOrchestrator {
       return;
     }
     this.lastSubscriptions = subscriptions;
+    this.hasSubscriptions = true;
+    const operation = this.latestOperation;
+    if (operation !== undefined) {
+      this.publishOperation(operation.action, operation.subscriptionId, session, 'succeeded',
+        undefined, subscriptions, operation.projection.receipt.confirmation);
+    }
+    this.publishRead(session, 'succeeded');
     if (this.isCurrentSession(session)) {
       this.emit(subscriptions);
     }
@@ -387,21 +482,34 @@ export class RssOrchestrator {
     readback: 'reading' | 'failed' | 'succeeded',
     refreshError?: string,
     value?: RssSubscription[],
+    confirmation: CommitConfirmationKind = 'confirmed',
   ): void {
     const projection = projectPersistedReceipt<RssSubscription[]>({
-      confirmation: 'confirmed',
+      confirmation,
       readback,
-      value: value ?? (readback === 'failed' ? this.lastSubscriptions : undefined),
+      value: value ?? (this.hasSubscriptions ? this.lastSubscriptions : undefined),
       refreshError,
       stale: readback === 'failed',
-      canRetry: true,
-      generation: ++this.operationGeneration,
+      canRetry: confirmation !== 'undispatched' && readback !== 'reading' &&
+        (readback === 'failed' || confirmation === 'unknown'),
+      generation: ++rssProjectionGeneration,
     });
     const operation: RssManagementOperationProjection = { action, subscriptionId, projection };
     this.latestOperation = operation;
     if (this.isCurrentSession(session)) {
       this.emitOperation(operation);
     }
+  }
+
+  private publishRead(session: number, phase: 'loading' | 'failed' | 'succeeded', message?: string): void {
+    this.latestRead = projectOperationFacts<RssSubscription[]>({
+      phase,
+      value: this.hasSubscriptions ? this.lastSubscriptions : undefined,
+      canRetry: phase === 'failed',
+      generation: ++rssProjectionGeneration,
+      message,
+    });
+    if (this.isCurrentSession(session)) this.emitRead(this.latestRead);
   }
 
   private async runMutationWithRetry(mutation: RssMutation): Promise<void> {
@@ -414,6 +522,7 @@ export class RssOrchestrator {
         throw err;
       }
       await this.waitForCoreIdle(5000);
+      if (this.owner !== ReaderRuntimeOwner.current()) throw new Error('RSS runtime owner retired');
       await mutation();
     }
   }
@@ -523,11 +632,7 @@ export class RssOrchestrator {
     }
   }
 
-  private waitForMutations(maxMillis: number): Promise<void> {
-    return Promise.race([this.mutationChain, delay(maxMillis)]);
-  }
-
   private isCurrentSession(session: number): boolean {
-    return this.isCurrent() && session === this.session;
+    return this.owner === ReaderRuntimeOwner.current() && this.isCurrent() && session === this.session;
   }
 }

@@ -4,6 +4,9 @@ import { PageBackBar } from '../common/PageBackBar';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { ReaderToggle } from '../common/ReaderToggle';
 import { registerReaderFonts } from '../common/ReaderFonts';
+import { projectOperationFacts, type OperationFacts } from '../../app/ReaderOperationFacts';
+import type { RssSubscription } from './RssGateway';
+import type { RssManagementOperationProjection } from './RssOrchestrator';
 import {
   SurfaceHorizontalFrame,
   SurfaceWidthSpec,
@@ -56,6 +59,12 @@ export struct RssSubscriptionManagementPage {
   @Prop isTablet: boolean;
   /** Optional route identity: expands the matching row without mutating it. */
   @Prop focusedSubscriptionId: string = '';
+  @Prop operation: RssManagementOperationProjection | undefined = undefined;
+  @Prop readFacts: OperationFacts<RssSubscription[]> = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
+  onReconcile: (operation: RssManagementOperationProjection) => void =
+    (_operation: RssManagementOperationProjection): void => {};
+  onRetryRead: (facts: OperationFacts<RssSubscription[]>) => void =
+    (_facts: OperationFacts<RssSubscription[]>): void => {};
   onBack: () => void = (): void => {};
   onAdd: () => void = (): void => {};
   onImport: () => void = (): void => {};
@@ -85,6 +94,7 @@ export struct RssSubscriptionManagementPage {
       Scroll(this.pageScroller) {
         Column() {
           this.stats();
+          this.operationFeedback();
           this.subscriptionList();
         }
         .width('100%')
@@ -134,6 +144,65 @@ export struct RssSubscriptionManagementPage {
       .borderRadius(999)
       .responseRegion({ x: 0, y: -6, width: '100%', height: 44 })
       .onClick((): void => this.onAdd());
+    }
+  }
+
+  @Builder
+  private operationFeedback() {
+    if (this.feedbackMessage().length > 0) {
+      Row({ space: TOK_SPACE_XS }) {
+        Text(this.feedbackMessage())
+          .layoutWeight(1)
+          .fontFamily('ReaderNotoSansSC')
+          .fontWeight(FontWeight.Regular)
+          .fontSize(10)
+          .lineHeight(12.5)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        if (this.canRetryFeedback()) {
+          Text(this.hasOperationFeedback() ? '刷新列表' : '重试')
+            .height(36)
+            .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
+            .textAlign(TextAlign.Center)
+            .fontFamily('ReaderNotoSansSC')
+            .fontWeight(FontWeight.Bold)
+            .fontSize(11)
+            .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
+            .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
+            .borderRadius(8)
+            .onClick((): void => this.retryFeedback());
+        }
+      }
+      .width('100%')
+      .margin({ top: TOK_SPACE_XS });
+    }
+  }
+
+  private hasOperationFeedback(): boolean {
+    return this.operation !== undefined && this.operation.projection.receipt.fact !== 'confirmedCurrent';
+  }
+
+  private feedbackMessage(): string {
+    if (this.hasOperationFeedback() && this.operation !== undefined) {
+      const projection = this.operation.projection;
+      return projection.receipt.message + (projection.refreshError === undefined ? '' : `：${projection.refreshError}`);
+    }
+    if (this.readFacts.fact === 'loading') return '正在加载订阅源…';
+    if (this.readFacts.fact === 'refreshing') return '正在刷新订阅源…';
+    if (this.readFacts.fact === 'failed') return `订阅源加载失败：${this.readFacts.message ?? ''}`;
+    if (this.readFacts.fact === 'refreshFailed') return `刷新失败，保留上次读取结果：${this.readFacts.message ?? ''}`;
+    return '';
+  }
+
+  private canRetryFeedback(): boolean {
+    return this.hasOperationFeedback() && this.operation !== undefined ?
+      this.operation.projection.facts.canRetry : this.readFacts.canRetry;
+  }
+
+  private retryFeedback(): void {
+    if (this.hasOperationFeedback() && this.operation !== undefined) {
+      if (this.operation.projection.facts.canRetry) this.onReconcile(this.operation);
+    } else if (this.readFacts.canRetry) {
+      this.onRetryRead(this.readFacts);
     }
   }
 

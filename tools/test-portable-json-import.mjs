@@ -30,7 +30,7 @@ for (const feature of [source, rules, rssGateway]) {
     'feature import logic must not duplicate Host HTTP transport');
 }
 
-assert.match(rssOrchestrator, /gateway\.importSources\(replaceExisting, onlineUrl\)/);
+assert.match(rssOrchestrator, /gateway\.importSources\(replaceExisting, onlineUrl,/);
 assert.match(dialog, /选择本地 JSON 文件/);
 assert.match(dialog, /从在线链接导入/);
 assert.match(dialog, /onSubmit\([\s\S]*submitOnlineImport\(\)/);

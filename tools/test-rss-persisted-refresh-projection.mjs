@@ -10,12 +10,12 @@ assert.match(source, /projectPersistedReceipt/);
 assert.match(source, /type PersistedReceiptProjection/);
 assert.match(source, /export interface RssManagementOperationProjection/);
 assert.match(source, /private lastSubscriptions: RssSubscription\[\] = \[\]/);
-assert.match(source, /this\.publishOperation\(action, subscriptionId, session, 'reading'\)/);
-assert.match(source, /this\.publishOperation\(action, subscriptionId, session, 'failed', refreshError\)/);
-assert.match(source, /value: value \?\? \(readback === 'failed' \? this\.lastSubscriptions : undefined\)/);
+assert.match(source, /this\.publishOperation\(action, subscriptionId, session, 'reading', undefined, undefined, confirmation\)/);
+assert.match(source, /this\.publishOperation\(action, subscriptionId, session, 'failed', refreshError, undefined, confirmation\)/);
+assert.match(source, /value: value \?\? \(this\.hasSubscriptions \? this\.lastSubscriptions : undefined\)/);
 assert.match(source, /stale: readback === 'failed'/);
-assert.match(source, /canRetry: true/);
-assert.match(source, /this\.publishOperation\(action, subscriptionId, session, 'succeeded', undefined, subscriptions\)/);
+assert.match(source, /canRetry: confirmation !== 'undispatched' && readback !== 'reading'/);
+assert.match(source, /this\.publishOperation\(action, subscriptionId, session, 'succeeded', undefined, subscriptions, confirmation\)/);
 assert.match(source, /this\.latestOperation = operation/);
 
 console.log('RSS persisted-write/read-back projection contract: PASS');
