@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
+import { actualProjectionTypes } from './lib/bookshelf-projection-owner-probe.mjs';
 
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
@@ -71,9 +72,10 @@ const member = (struct, tree, name) => {
 };
 const runtime = createArkUIPropertyRuntimeProbe();
 const nativeRequests = [];
-globalThis.ReaderRuntimeOwner = { current: () => ({ setReadingPreparationContext() {}, request: async method => {
+const nativeRuntime = { setReadingPreparationContext() {}, request: async method => {
   nativeRequests.push(method); assert.fail(`This boundary test must not request Core/network: ${method}`);
-} }) };
+} };
+globalThis.ReaderRuntimeOwner = { current: () => nativeRuntime };
 globalThis.hilog = { warn() {}, error() {}, info() {}, debug() {} };
 const { SearchOrchestrator, SearchQueryRun } = await evaluate([
   'features/common/BookAuthorMetadata.ts',
@@ -126,8 +128,8 @@ let initialParams;
 class ActualSearchPage extends childProbe.Component {
   constructor(...args) { initialParams = args[1]; super(...args); }
 }
-const indexMembers = ['searchHost', 'searchPublicationRevision',
-  'preparePersistedShelfBooks', 'applyBookshelfState', 'copyShelfBookWithSourceName'];
+const indexMembers = ['searchHost', 'searchPublicationRevision', 'applyBookshelfState',
+  'getBookshelfProjection', 'applyBookshelfProjection', 'shelfFilter', 'isCurrentRuntime'];
 const parentSource = `@Component struct Index {\n${indexMembers.map(name => member(indexStruct, indexTree, name)).join('\n')}
 build() { ${searchEntry}; }\n}`;
 class SearchHostProbe {
@@ -140,6 +142,7 @@ class SearchHostProbe {
     this.orchestrator = undefined;
   }
   updateShelf(books) { this.publication.updateShelf(books); this.revision += 1; this.onPublicationChanged(); }
+  sources() { return this.publication.sourcesAt(this.revision); }
   getOrchestrator() {
     if (this.orchestrator === undefined) {
       this.orchestrator = new SearchOrchestrator(
@@ -149,12 +152,21 @@ class SearchHostProbe {
     return this.orchestrator;
   }
 }
+const projectionTypes = actualProjectionTypes(() => nativeRuntime);
 const { owner: host, output: parentOutput } = createReaderBuilderProbe(parentSource,
   [...indexMembers, 'build'], { ...runtime.sdk, SearchPage: ActualSearchPage, LOCAL_SOURCE_ID: 'local', SearchPublication,
-    SearchOrchestrator, SearchViewState, SearchHost: SearchHostProbe, deviceInfo: { deviceType: 'phone' } }, runtime.hooks);
+    SearchOrchestrator, SearchViewState, SearchHost: SearchHostProbe, ReaderRuntimeOwner: projectionTypes.ReaderRuntimeOwner,
+    hilog: globalThis.hilog, DOMAIN: 0, deviceInfo: { deviceType: 'phone' } }, runtime.hooks);
 Object.assign(host, { searchViewState: new SearchViewState(), settingsSnapshot: { reduceMotion: false },
   route: 'search', searchAppForeground: true, shelfBooks: [], bookshelfLoadGeneration: 1,
-  hydrateShelfSourceNames() {}, scheduleBookshelfBackgroundRefresh() {}, sourceDisplayName: () => '源甲' });
+  mountedRuntimeOwner: nativeRuntime, shelfReceiptRetired: false, navigationGeneration: 1,
+  detailShelfAdmissionMount: 1, rssInstanceIdentity: 'search-publication', shelfReadingFilter: 'all', shelfSourceFilter: 'all',
+  bookshelfViewState: { anchorKey: '' }, sourceSources: [], sourceToolsSnapshot: { sources: [] },
+  // These preparation/diagnostic leaf notifications are outside this pure
+  // publication boundary. The complete original projection owner, Host and
+  // Index binding perform the shelf/identity/membership transformations.
+  scheduleBookshelfBackgroundRefresh() {}, preparePersistedShelfBooks() {}, traceStartupStage() {} });
+host.bookshelfHost = new projectionTypes.Host(() => {}, () => true, () => nativeRuntime);
 host.initialRender();
 const page = [...host.children.values()][0];
 assert.ok(page instanceof childProbe.Component, 'actual compiled child constructor ran');
