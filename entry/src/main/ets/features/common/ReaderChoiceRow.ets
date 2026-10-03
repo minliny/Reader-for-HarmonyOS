@@ -54,7 +54,7 @@ export struct ReaderChoiceRow {
     }.width('100%').height(this.rowHeight())
       .padding({ left: this.spec().padding, right: this.spec().padding })
       .alignItems(VerticalAlign.Center).borderRadius(this.spec().radius)
-      .backgroundColor(this.backgroundColor())
+      .backgroundColor(this.rowBackground())
       .enabled(this.enabled).accessibilityText(this.accessibilityLabel())
       .onClick((): void => this.choose());
   }
@@ -72,7 +72,7 @@ export struct ReaderChoiceRow {
         .rotate({ angle: this.chevronAngle })
         .position({ x: this.availableWidth - this.spec().iconRight, y: this.spec().iconTop });
     }.width('100%').height(this.rowHeight())
-      .backgroundColor(this.backgroundColor()).enabled(this.enabled)
+      .backgroundColor(this.rowBackground()).enabled(this.enabled)
       .accessibilityText(this.accessibilityLabel()).onClick((): void => this.choose());
   }
 
@@ -80,7 +80,7 @@ export struct ReaderChoiceRow {
   private textStyle(): ReaderTextStyle { return this.selected ? this.spec().selectedText : this.spec().text; }
   private rowHeight(): number { return this.spec().height - (this.showDivider ? this.spec().dividerHeight : 0); }
   private textColor(): ResourceColor { return readerAppColor(this.selected ? this.spec().selectedTextRole : this.spec().textRole, this.scheme); }
-  private backgroundColor(): ResourceColor {
+  private rowBackground(): ResourceColor {
     return this.selected && this.spec().selectedBackground !== undefined ?
       readerAppColor(this.spec().selectedBackground!, this.scheme) : Color.Transparent;
   }

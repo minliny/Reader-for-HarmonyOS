@@ -14,7 +14,7 @@ export function choiceRowProbe(resolve=resolveReaderChoiceSpec) {
   const properties=createArkUIPropertyRuntimeProbe();
   const probe=createReaderBuilderProbe(choiceSource,
     ['specId','label','selected','showDivider','scheme','availableWidth','chevronAngle','enabled','onChoose',
-      'mounted','aboutToAppear','aboutToDisappear','build','normalRow','positionedRow','spec','textStyle','rowHeight','textColor','backgroundColor','hasIcon','icon','accessibilityLabel','choose'],
+      'mounted','aboutToAppear','aboutToDisappear','build','normalRow','positionedRow','spec','textStyle','rowHeight','textColor','rowBackground','hasIcon','icon','accessibilityLabel','choose'],
     {...properties.sdk,resolveReaderChoiceSpec:resolve},properties.hooks);
   return {...probe,properties,dependencies:{ReaderChoiceRow:probe.Component,resolveReaderChoiceSpec:resolve},
     hooks:{childSources:{ReaderChoiceRow:choiceSource},mountChildren:true,lifecycleChildren:true},
