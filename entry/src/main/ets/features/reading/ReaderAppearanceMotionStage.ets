@@ -109,6 +109,7 @@ export struct ReaderAppearanceMotionStage {
   @BuilderParam moduleNavContent: () => void;
 
   @Prop snapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+  @Prop chineseConversionIdentity: string = '';
   @Prop chineseConversionMode: ReaderChineseConversionMode = 'none';
   @Prop pageTurnStyle: ReaderPageTurnStyle = 'slide';
   @Prop pageTurnSimulationAvailable: boolean = true;
@@ -126,7 +127,7 @@ export struct ReaderAppearanceMotionStage {
     (_current: ReaderAppearanceAlignment): void => {};
   onMetricStep: (metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection) => void =
     (_metric: ReaderAppearanceMetric, _direction: ReaderAppearanceStepDirection): void => {};
-  onChineseConversionChange: (mode: ReaderChineseConversionMode) => void =
+  onChineseConversionChange: (mode: ReaderChineseConversionMode, identity?: string) => void =
     (_mode: ReaderChineseConversionMode): void => {};
   onPageTurnStyleChange: (style: ReaderPageTurnStyle) => void =
     (_style: ReaderPageTurnStyle): void => {};
@@ -267,8 +268,9 @@ export struct ReaderAppearanceMotionStage {
         this.onAlignmentRequest(current),
       onMetricStep: (metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection): void =>
         this.onMetricStep(metric, direction),
-      onChineseConversionChange: (mode: ReaderChineseConversionMode): void =>
-        this.onChineseConversionChange(mode),
+      chineseConversionIdentity: this.chineseConversionIdentity,
+      onChineseConversionChange: (mode: ReaderChineseConversionMode, identity?: string): void =>
+        this.onChineseConversionChange(mode, identity),
       onPageTurnStyleChange: (style: ReaderPageTurnStyle): void =>
         this.onPageTurnStyleChange(style),
     });

@@ -86,6 +86,7 @@ export struct ReaderAppearanceFullPanel {
   @Prop @Watch('onInteractionEnabledChanged') interactionEnabled: boolean = true;
   @Prop showGrabber: boolean = true;
   @Prop snapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+  @Prop chineseConversionIdentity: string = '';
   @Prop chineseConversionMode: ReaderChineseConversionMode = 'none';
   @Prop pageTurnStyle: ReaderPageTurnStyle = 'slide';
   @Prop pageTurnSimulationAvailable: boolean = true;
@@ -102,12 +103,14 @@ export struct ReaderAppearanceFullPanel {
     (_current: ReaderAppearanceAlignment): void => {};
   onMetricStep: (metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection) => void =
     (_metric: ReaderAppearanceMetric, _direction: ReaderAppearanceStepDirection): void => {};
-  onChineseConversionChange: (mode: ReaderChineseConversionMode) => void =
+  onChineseConversionChange: (mode: ReaderChineseConversionMode, identity?: string) => void =
     (_mode: ReaderChineseConversionMode): void => {};
   onPageTurnStyleChange: (style: ReaderPageTurnStyle) => void =
     (_style: ReaderPageTurnStyle): void => {};
   onFontReorderActivityChange: (active: boolean) => void = (_active: boolean): void => {};
   @State private openSelect: string = '';
+  private selectGeneration: number = 0;
+  private selectMounted: boolean = false;
   @State private selectClosing: boolean = false;
   @State private selectAnchorX: number = 0;
   @State private selectAnchorY: number = 0;
@@ -130,7 +133,13 @@ export struct ReaderAppearanceFullPanel {
   private fontTouchId: number = -1;
 
   aboutToAppear(): void {
+    this.selectMounted=true; this.selectGeneration+=1;
     registerReaderFonts(this.getUIContext().getFont());
+  }
+
+  aboutToDisappear(): void {
+    this.selectMounted=false; this.selectGeneration+=1;
+    this.openSelect=''; this.selectClosing=false;
   }
 
   private onInteractionEnabledChanged(): void {
@@ -756,7 +765,7 @@ export struct ReaderAppearanceFullPanel {
               this.requestCloseSelect();
             } else {
               this.selectClosing = false;
-              this.openSelect = kind;
+              this.selectGeneration+=1; this.openSelect = kind;
             }
           },
         })
@@ -805,10 +814,9 @@ export struct ReaderAppearanceFullPanel {
         .backgroundColor(Color.Transparent)
         .hitTestBehavior(HitTestMode.Default)
         .zIndex(9)
-        .onClick((): void => {
-          this.requestCloseSelect();
-        });
+        .onClick(this.selectionCloseAction());
 
+      ForEach([`${this.selectGeneration}:${this.openSelect==='language' ? this.chineseConversionIdentity : ''}`], (_actor: string): void => {
       ReaderSelectPanel({
         value: this.selectValue(this.openSelect),
         options: this.selectOptions(this.openSelect),
@@ -818,17 +826,10 @@ export struct ReaderAppearanceFullPanel {
         reduceMotion: this.reduceMotion,
         closing: this.selectClosing,
         controlWidth: this.selectControlWidth(this.openSelect),
-        onSelect: (option: string): void => {
-          const kind = this.openSelect;
-          this.openSelect = '';
-          this.selectClosing = false;
-          this.applySelectValue(kind, option);
-        },
-        onDismiss: (): void => {
-          this.openSelect = '';
-          this.selectClosing = false;
-        },
+        onSelect: this.conversionSelectionAction(),
+        onDismiss: this.conversionSelectionDismiss(),
       });
+      }, (actor: string): string => actor);
     }
   }
 
@@ -1313,13 +1314,33 @@ export struct ReaderAppearanceFullPanel {
     return Math.max(0, controlX - 9);
   }
 
-  private applySelectValue(kind: string, option: string): void {
+  private selectionCloseAction(): () => void {
+    const generation=this.selectGeneration, conversionIdentity=this.chineseConversionIdentity;
+    return (): void => { if (this.selectMounted && generation===this.selectGeneration &&
+      conversionIdentity===this.chineseConversionIdentity) this.requestCloseSelect(); };
+  }
+  private conversionSelectionAction(): (option: string) => void {
+    const generation=this.selectGeneration, kind=this.openSelect, conversionIdentity=this.chineseConversionIdentity;
+    return (option: string): void => {
+      if (!this.selectMounted || generation!==this.selectGeneration || kind!==this.openSelect || !this.interactionEnabled ||
+        (kind==='language' && conversionIdentity!==this.chineseConversionIdentity)) return;
+      this.openSelect=''; this.selectClosing=false;
+      this.applySelectValue(kind,option,conversionIdentity);
+    };
+  }
+  private conversionSelectionDismiss(): () => void {
+    const generation=this.selectGeneration, conversionIdentity=this.chineseConversionIdentity;
+    return (): void => {
+      if (!this.selectMounted || generation!==this.selectGeneration || conversionIdentity!==this.chineseConversionIdentity) return;
+      this.openSelect=''; this.selectClosing=false;
+    };
+  }
+
+  private applySelectValue(kind: string, option: string, conversionIdentity: string = this.chineseConversionIdentity): void {
     if (kind === 'language') {
       const next: ReaderChineseConversionMode = option === '繁转简' ? 't2s' :
         (option === '简转繁' ? 's2t' : 'none');
-      if (next !== this.chineseConversionMode) {
-        this.onChineseConversionChange(next);
-      }
+      this.onChineseConversionChange(next, conversionIdentity);
     } else if (kind === 'alignment') {
       const next: ReaderAppearanceAlignment = option === '开启' ? 'justify' : 'start';
       if (next !== this.snapshot.alignment) {

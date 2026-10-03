@@ -274,6 +274,7 @@ export struct ReaderControlPanel {
   @Prop replaceState: ReaderReplaceQuickState = createHiddenReaderReplaceQuickState();
   @Prop controlReplaceState: ReaderControlReplaceState = createReaderControlReplaceState();
   @Prop appearanceSnapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+  @Prop chineseConversionIdentity: string = '';
   @Prop chineseConversionMode: ReaderChineseConversionMode = 'none';
   @Prop settingsSnapshot: ReaderSettingsSnapshot = createDefaultReaderSettingsSnapshot();
   /** Native simulation capability for this mounted reading session. */
@@ -377,7 +378,7 @@ export struct ReaderControlPanel {
     (_current: ReaderAppearanceAlignment): void => {};
   onAppearanceMetricStep: (metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection) => void =
     (_metric: ReaderAppearanceMetric, _direction: ReaderAppearanceStepDirection): void => {};
-  onChineseConversionChange: (mode: ReaderChineseConversionMode) => void =
+  onChineseConversionChange: (mode: ReaderChineseConversionMode, identity?: string) => void =
     (_mode: ReaderChineseConversionMode): void => {};
   onSettingsToggleChange: (key: ReaderSettingsToggleKey, value: boolean) => void =
     (_key: ReaderSettingsToggleKey, _value: boolean): void => {};
@@ -1283,8 +1284,9 @@ export struct ReaderControlPanel {
         this.onAppearanceAlignmentRequest(current),
       onMetricStep: (metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection): void =>
         this.onAppearanceMetricStep(metric, direction),
-      onChineseConversionChange: (mode: ReaderChineseConversionMode): void =>
-        this.onChineseConversionChange(mode),
+      chineseConversionIdentity: this.chineseConversionIdentity,
+      onChineseConversionChange: (mode: ReaderChineseConversionMode, identity?: string): void =>
+        this.onChineseConversionChange(mode, identity),
       onPageTurnStyleChange: (style: ReaderPageTurnStyle): void =>
         this.onPageTurnStyleChange(style),
     });

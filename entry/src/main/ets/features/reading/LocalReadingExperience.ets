@@ -1142,6 +1142,9 @@ export struct ReadingExperience {
   @State private controlReplaceState: ReaderControlReplaceState = createReaderControlReplaceState();
   @State private appearanceSnapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   @State private chineseConversionMode: ReaderChineseConversionMode = 'none';
+  @State private chineseConversionOperationId: string = '';
+  private chineseConversionActorKey: string = '';
+  private chineseConversionActor: ((mode: ReaderChineseConversionMode) => void) | undefined;
   @State private readerSettingsSnapshot: ReaderSettingsSnapshot = createDefaultReaderSettingsSnapshot();
   @State private ttsState: ReaderTtsState = createReaderTtsState(false);
   // TTS progress callbacks can arrive out of order around an utterance
@@ -2294,8 +2297,9 @@ export struct ReadingExperience {
           this.toggleAppearanceAlignment(current),
         onAppearanceMetricStep: (metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection): void =>
           this.stepAppearanceMetric(metric, direction),
-        onChineseConversionChange: (mode: ReaderChineseConversionMode): void =>
-          this.changeChineseConversionMode(mode),
+        chineseConversionIdentity: this.chineseConversionIdentity(),
+        onChineseConversionChange: (mode: ReaderChineseConversionMode, identity?: string): void =>
+          this.dispatchChineseConversionAction(mode, identity),
         onSettingsToggleChange: (key: ReaderSettingsToggleKey, value: boolean): void =>
           this.changeReaderSetting(key, value),
         onScreenDirectionChange: (direction: ReaderScreenDirection): void =>
@@ -8650,45 +8654,79 @@ export struct ReadingExperience {
       JSON.stringify(first.customFont) === JSON.stringify(second.customFont));
   }
 
+  private chineseConversionIdentity(): string {
+    return JSON.stringify([this.lifecycleToken,this.sourceId,this.bookId,this.chineseConversionOperationId]);
+  }
+  private dispatchChineseConversionAction(mode: ReaderChineseConversionMode, identity?: string): void {
+    if (identity!==this.chineseConversionIdentity()) return;
+    this.chineseConversionAction()(mode);
+  }
+  private chineseConversionAction(): (mode: ReaderChineseConversionMode) => void {
+    const lifecycleToken=this.lifecycleToken, bookId=this.bookId, sourceId=this.sourceId;
+    const operationId=this.chineseConversionOperationId;
+    const key=JSON.stringify([lifecycleToken,sourceId,bookId,operationId]);
+    if (this.chineseConversionActorKey===key && this.chineseConversionActor!==undefined) return this.chineseConversionActor;
+    this.chineseConversionActorKey=key;
+    this.chineseConversionActor=(mode: ReaderChineseConversionMode): void => {
+      if (this.isSessionActive(lifecycleToken) && this.bookId === bookId && this.sourceId === sourceId)
+        this.changeChineseConversionMode(mode,operationId);
+    };
+    return this.chineseConversionActor;
+  }
   private async loadChineseConversionMode(lifecycleToken: number): Promise<void> {
-    if (this.chineseConversionLoaded) {
-      return;
-    }
-    const mutationGeneration = this.chineseConversionMutationGeneration;
+    if (this.chineseConversionLoaded) return;
+    const mutationGeneration=this.chineseConversionMutationGeneration, bookId=this.bookId, sourceId=this.sourceId;
+    const current=(): boolean=>this.bookId===bookId && this.sourceId===sourceId && this.isSessionActive(lifecycleToken) && mutationGeneration===this.chineseConversionMutationGeneration;
     try {
-      const mode = await this.chineseConversionGateway.getMode();
-      if (!this.isSessionActive(lifecycleToken) ||
-        mutationGeneration !== this.chineseConversionMutationGeneration) {
-        return;
-      }
-      this.chineseConversionMode = mode;
-      this.chineseConversionLoaded = true;
-    } catch (_error) {
-      // Core defaults to no conversion. Keep the already-rendered mode when
-      // startup is unavailable; the reading error boundary remains unchanged.
+      // Pure exact recovery never replays an unknown original on startup.
+      const original=await this.chineseConversionGateway.recoverOriginal(current);
+      if (!current()) return;
+      this.chineseConversionOperationId=original.blocked && original.method==='reader.chinese-conversion.put' ? original.operationId ?? '' : '';
+      const mode=await this.chineseConversionGateway.getMode(current);
+      if (!current()) return;
+      this.chineseConversionMode=mode; this.chineseConversionLoaded=true;
+    } catch (_) {
+      if (!current()) return;
+      const original=this.chineseConversionGateway.snapshot();
+      this.chineseConversionOperationId=original.blocked && original.method==='reader.chinese-conversion.put' ? original.operationId ?? '' : '';
     }
   }
 
-  private changeChineseConversionMode(mode: ReaderChineseConversionMode): void {
-    if (mode === this.chineseConversionMode || !this.mounted) {
-      return;
-    }
+  private changeChineseConversionMode(mode: ReaderChineseConversionMode, capturedOperationId: string = this.chineseConversionOperationId): void {
+    if (!this.mounted || capturedOperationId!==this.chineseConversionOperationId) return;
+    const original=this.chineseConversionGateway.snapshot();
+    if (original.busy) return;
+    const recovering=original.blocked && original.method==='reader.chinese-conversion.put';
+    if (mode===this.chineseConversionMode && !recovering) return;
     this.chineseConversionMutationGeneration = this.chineseConversionMutationGeneration >=
       Number.MAX_SAFE_INTEGER ? 1 : this.chineseConversionMutationGeneration + 1;
     const generation = this.chineseConversionMutationGeneration;
-    const lifecycleToken = this.lifecycleToken;
-    void this.persistBeforeContentMutation().then((positionCurrent): Promise<ReaderChineseConversionMode> => {
-      if (!positionCurrent() || !this.isSessionActive(lifecycleToken) ||
+    const lifecycleToken = this.lifecycleToken, bookId=this.bookId, sourceId=this.sourceId;
+    const presentationCurrent=(): boolean=>this.bookId===bookId && this.sourceId===sourceId && this.isSessionActive(lifecycleToken);
+    const barrier=recovering ? Promise.resolve((): boolean=>presentationCurrent() && generation===this.chineseConversionMutationGeneration) : this.persistBeforeContentMutation();
+    void barrier.then((positionCurrent): Promise<ReaderChineseConversionMode> => {
+      if (!positionCurrent() || !presentationCurrent() ||
         generation !== this.chineseConversionMutationGeneration) throw new Error('READING_CONTENT_MUTATION_SUPERSEDED');
-      return this.chineseConversionGateway.putMode(mode);
+      const current=(): boolean=>positionCurrent() && presentationCurrent() && generation===this.chineseConversionMutationGeneration;
+      if (recovering) {
+        // This click only resumes its preserved original; it cannot substitute
+        // the new selector value for the accepted conversion tuple.
+        return this.chineseConversionGateway.recoverOriginal(current,true).then((settled): Promise<ReaderChineseConversionMode> => {
+          if (settled.blocked) throw new Error(settled.message);
+          return this.chineseConversionGateway.getMode(current);
+        });
+      }
+      return this.chineseConversionGateway.putMode(mode,current);
     })
       .then((storedMode: ReaderChineseConversionMode): void => {
-        if (!this.isSessionActive(lifecycleToken) ||
+        if (!presentationCurrent() ||
           generation !== this.chineseConversionMutationGeneration) {
           return;
         }
         this.chineseConversionMode = storedMode;
         this.chineseConversionLoaded = true;
+        const settled=this.chineseConversionGateway.snapshot();
+        this.chineseConversionOperationId=settled.blocked ? settled.operationId ?? '' : '';
         this.quickSearchPublication.cancel();
         this.publishQuickSearchState({ kind: 'idle' });
         const chapter = this.chapter;
@@ -8697,7 +8735,7 @@ export struct ReadingExperience {
           return;
         }
         const chapterIndex = chapter.chapterIndex;
-        const isCurrent = (): boolean => this.isSessionActive(lifecycleToken) &&
+        const isCurrent = (): boolean => presentationCurrent() &&
           generation === this.chineseConversionMutationGeneration;
         void this.activeGateway().loadToc(this.bookId, isCurrent)
           .then((toc: LocalReadingToc): void => {
@@ -8714,9 +8752,14 @@ export struct ReadingExperience {
             }
           });
       })
-      .catch((_error: Error): void => {
-        // Do not admit an unpersisted mode. The selector stays on Core's last
-        // confirmed setting and can be retried without creating a second store.
+      .catch((error: Error): void => {
+        if (!presentationCurrent() || generation!==this.chineseConversionMutationGeneration) return;
+        const fact=this.chineseConversionGateway.snapshot();
+        this.chineseConversionOperationId=fact.blocked && fact.method==='reader.chinese-conversion.put' ? fact.operationId ?? '' : '';
+        const message=fact.confirmation==='unknown' || fact.blocked ?
+          '转换原操作尚未确认，已保留原内容；再次选择只会核对/继续原操作' :
+          fact.confirmation==='confirmed' ? '转换已保存，当前内容刷新尚未完成，请重试阅读' : `转换未派发：${error.message}`;
+        try { this.getUIContext().getPromptAction().showToast({message}); } catch (_) {}
       });
   }
 

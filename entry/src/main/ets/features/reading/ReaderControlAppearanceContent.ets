@@ -81,6 +81,7 @@ export struct ReaderControlAppearanceContent {
   @Prop importLayout: ReaderControlAppearanceImportLayout = 'ordered-slot-approved';
   @Prop @Watch('requestSelectClose') dismissTemporaryRevision: number = 0;
   @Prop @Watch('onSnapshotChanged') snapshot: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+  @Prop chineseConversionIdentity: string = '';
   @Prop chineseConversionMode: ReaderChineseConversionMode = 'none';
   @Prop pageTurnStyle: ReaderPageTurnStyle = 'slide';
   @Prop pageTurnSimulationAvailable: boolean = true;
@@ -96,7 +97,7 @@ export struct ReaderControlAppearanceContent {
   onAlignmentRequest: (current: ReaderAppearanceAlignment) => void = (_current: ReaderAppearanceAlignment): void => {};
   onMetricStep: (metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection) => void =
     (_metric: ReaderAppearanceMetric, _direction: ReaderAppearanceStepDirection): void => {};
-  onChineseConversionChange: (mode: ReaderChineseConversionMode) => void = (_mode: ReaderChineseConversionMode): void => {};
+  onChineseConversionChange: (mode: ReaderChineseConversionMode, identity?: string) => void = (_mode: ReaderChineseConversionMode): void => {};
   onPageTurnStyleChange: (style: ReaderPageTurnStyle) => void = (_style: ReaderPageTurnStyle): void => {};
   onFontReorderActivityChange: (active: boolean) => void = (_active: boolean): void => {};
   onTemporaryLayerChange: (active: boolean) => void = (_active: boolean): void => {};
@@ -347,11 +348,26 @@ export struct ReaderControlAppearanceContent {
       normalizeReaderAppearanceFontOrder(this.snapshot.fontOrder).join('|')) this.previewFontOrder = [];
   }
 
-  private commitSelect(value: string, identity: string): void {
-    if (identity !== this.selectIdentity || this.openSelect === '' || !this.fullInput()) return;
+  private selectionActorIdentity(): string {
+    return `${this.selectIdentity}:${this.openSelect==='language' ? this.chineseConversionIdentity : ''}`;
+  }
+  private selectionCloseAction(): () => void {
+    const identity=this.selectionActorIdentity();
+    return (): void => { if (identity===this.selectionActorIdentity()) this.requestSelectClose(); };
+  }
+  private conversionSelectionCommit(): (value: string, identity: string) => void {
+    const kind=this.openSelect, conversionIdentity=this.chineseConversionIdentity;
+    return (value: string, identity: string): void => {
+      if (kind==='language' && conversionIdentity!==this.chineseConversionIdentity) return;
+      this.commitSelect(value,identity,conversionIdentity);
+    };
+  }
+
+  private commitSelect(value: string, identity: string, conversionIdentity: string = this.chineseConversionIdentity): void {
+    if (identity !== this.selectionActorIdentity() || this.openSelect === '' || !this.fullInput()) return;
     const kind = this.openSelect;
     if (!this.selectOptions(kind).includes(value)) return;
-    this.applySelect(kind, value);
+    this.applySelect(kind, value, conversionIdentity);
   }
 
   build() {
@@ -677,19 +693,21 @@ export struct ReaderControlAppearanceContent {
   private selectOverlay() {
     if (this.openSelect !== '') {
       Row().width('100%').height('100%').backgroundColor(Color.Transparent).zIndex(9)
-        .onClick((): void => this.requestSelectClose());
+        .onClick(this.selectionCloseAction());
+      ForEach([this.selectionActorIdentity()], (_actor: string): void => {
       ReaderSelectPanel({
         value: this.selectValue(this.openSelect), options: this.selectOptions(this.openSelect),
         x: this.selectAnchorX, y: this.selectAnchorY, variant: 'appearanceLibrary',
         // The menu remains a shared business control. It never contributes a
         // second time/progress channel to this control-bar morph.
         reduceMotion: this.reduceMotion, controlWidth: APPEARANCE_SELECT_MENU_WIDTH,
-        closing: this.selectClosing, selectionId: this.selectIdentity,
-        onCommit: (value: string, identity: string): void => this.commitSelect(value, identity),
+        closing: this.selectClosing, selectionId: _actor,
+        onCommit: this.conversionSelectionCommit(),
         onDismiss: (identity: string): void => {
-          if (identity === this.selectIdentity) this.dismissTemporaryLayer();
+          if (identity === this.selectionActorIdentity()) this.dismissTemporaryLayer();
         },
       });
+      }, (actor: string): string => actor);
     }
   }
 
@@ -742,13 +760,13 @@ export struct ReaderControlAppearanceContent {
       (this.chineseConversionMode === 't2s' ? '繁转简' : '简转繁');
     return '';
   }
-  private applySelect(kind: string, value: string): void {
+  private applySelect(kind: string, value: string, conversionIdentity: string = this.chineseConversionIdentity): void {
     if (kind === 'indent') {
       const indent: ReaderAppearanceIndent = value === '无' ? 'none' : (value === '1字符' ? 'single' : 'firstLine');
       if (indent !== this.snapshot.indent) this.onIndentRequest(indent);
     } else if (kind === 'language') {
       const mode: ReaderChineseConversionMode = value === '繁转简' ? 't2s' : (value === '简转繁' ? 's2t' : 'none');
-      if (mode !== this.chineseConversionMode) this.onChineseConversionChange(mode);
+      this.onChineseConversionChange(mode, conversionIdentity);
     }
   }
   private metricLabel(metric: ReaderAppearanceMetric): string {
