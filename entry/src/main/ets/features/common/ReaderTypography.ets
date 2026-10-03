@@ -136,6 +136,16 @@ export const TYPE_SHELF_CONTINUE_AUTHOR = new ReaderTextStyle(
 export const TYPE_SHELF_ACTION = new ReaderTextStyle(
   READER_FONT_INTER, 800, 13, 15.6, 0, 'system', 'figmaNode');
 
+// Source-switch candidates keep their compact Figma text tuples separate so
+// the shared typography owner can change the row as one unit without changing
+// its latency/chapter column geometry or state-specific colors.
+export const TYPE_SOURCE_SWITCH_NAME = new ReaderTextStyle(
+  READER_FONT_INTER, 500, 10, 12, undefined, 'system', 'figmaNode');
+export const TYPE_SOURCE_SWITCH_LATENCY = new ReaderTextStyle(
+  READER_FONT_INTER, 400, 9, 10, undefined, 'system', 'figmaNode');
+export const TYPE_SOURCE_SWITCH_CHAPTER = new ReaderTextStyle(
+  READER_FONT_INTER, 500, 9, 10, undefined, 'system', 'figmaNode');
+
 // Immersive page chrome. These roles currently share the Figma
 // `Reader/ImmersiveMeta` tuple, but remain separate semantic contracts so a
 // later design change to time, progress, or page ordinal does not couple the
