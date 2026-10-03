@@ -512,6 +512,7 @@
     "test-search-candidate-acquisition.mjs",
     "test-search-cover-continuity.mjs",
     "test-search-history-layout-lifecycle.mjs",
+    "test-search-index-action-attachment.mjs",
     "test-search-native-focus.mjs",
     "test-search-operation-consumer.mjs",
     "test-search-orchestrator.mjs",
