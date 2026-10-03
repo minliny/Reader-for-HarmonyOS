@@ -71,7 +71,16 @@ export struct ReaderTtsConfigOverlay {
       this.previousKeyboardAvoidMode = undefined;
     }
   }
-  private onIdentityChanged(): void { this.stopPreview(); this.generation += 1; this.busy = false; this.errorText = ''; }
+  private onIdentityChanged(): void {
+    this.stopPreview();
+    this.generation += 1;
+    this.busy = false;
+    // A replaced selection invalidates the previous async operation. Release
+    // the parent content-cover gate as well, otherwise its dismiss callback
+    // can remain blocked forever after the stale operation is discarded.
+    this.onBusyChange(false);
+    this.errorText = '';
+  }
   private close(): void { this.stopPreview(); if (!this.busy) this.onClose(this.selectionId); }
 
   private panelWidth(): number {
