@@ -9743,12 +9743,55 @@ export struct ReadingExperience {
   }
 
   private onSessionLaunchReduceMotionChanged(): void {
+    if (this.reduceMotion) this.retirePageTurnForReduceMotion();
     if (!this.reduceMotion || this.sessionLaunch === undefined) return;
     this.sessionLaunch = this.sessionLaunchController.setReduceMotion(true);
     this.commitSessionLaunchControlHidden();
     AppStorage.setOrCreate<boolean>('readerSessionChromeOverlayActive', true);
     this.pageTurnRenderRevision += 1;
     this.applyWindowPolicyForChromeOwner();
+  }
+
+  /** A preference change is an explicit motion retirement, not a native
+   * capability failure. Before the visual endpoint retain the origin; after
+   * it, preserve the dispatched durable decision and join via the static tree. */
+  private retirePageTurnForReduceMotion(): void {
+    if (!this.mounted || (!this.pageTurnSettlementActive && this.bookTurnMotion === undefined &&
+      this.pageTurnSlideTimeline === undefined)) return;
+    const generation = this.bookTurnMotion?.generation ?? this.pageTurnSettlementGeneration;
+    this.pageTurnSettlementGeneration = generation;
+    this.bookTurnSurfaceGeneration = generation;
+    this.pageTurnSlideTimeline = undefined;
+    this.pageTurnAutomaticStart = undefined;
+    this.bookTurnTextureCaptureGeneration += 1;
+    this.bookTurnTextureCaptureScheduled = false;
+    this.bookTurnSurfaceOpacity = 0;
+    if (this.bookTurnMotion !== undefined) stopBookTurnMotion(this.bookTurnMotion);
+    this.bookTurnMotion = undefined;
+    this.bookTurnAwaitingSlotCommit = false;
+    this.clearBookTurnCapturedIdentities();
+    this.bookTurnSession.releaseTerminalFrame(generation);
+    this.bookTurnSession.clearSurface(generation);
+    if (this.pageTurnAnimationFinished && this.pageTurnCommitStarted) {
+      // Never revoke a Core write whose reply is pending. Its original
+      // prepared owner and generation still classify/promote that receipt.
+      if (this.pageTurnSettlingPrepared !== undefined) {
+        if (this.pageTurnCommitFinished) this.finishPreparedPageTurnSettlement(generation);
+      } else if (this.pageTurnCommitFinished && this.pageTurnCommitSucceeded) {
+        // The destination already owns a resident slot. Await its actual
+        // content revision instead of waiting on retired native slot ACKs.
+        this.bookTurn2DFallbackPending = true;
+        this.pageTurnRenderRevision += 1;
+        if (!this.completeBookTurn2DFallback(generation)) this.armPageTurnSettlementDeadline(generation);
+      }
+      return;
+    }
+    this.pageTurnSettlingPrepared = undefined;
+    this.pageTurnStoredProgress = undefined;
+    this.pageTurnCommitStarted = false;
+    this.pageTurnCommitFinished = false;
+    this.pageTurnCommitSucceeded = false;
+    this.finishPageTurnRollback(generation);
   }
 
   private onSessionLaunchTtsState(state: ReaderTtsState): void {
@@ -12879,7 +12922,7 @@ export struct ReadingExperience {
       this.bookTurnArkUIReadyRevision !== this.pageTurnRenderRevision ||
       this.pageTurnSettlingPrepared !== undefined) return false;
     this.bookTurn2DFallbackPending = false;
-    this.bookTurnRuntimeFailed = true;
+    if (!this.reduceMotion) this.bookTurnRuntimeFailed = true;
     this.bookTurnSurfaceOpacity = 0;
     this.bookTurnAwaitingSlotCommit = false;
     this.clearBookTurnCapturedIdentities();

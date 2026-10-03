@@ -150,16 +150,34 @@ struct ReaderPageTurnSurface {
   onContentReady: (revision: number) => void = (_revision: number): void => {};
   /** Scheduling acknowledgement only; never evidence of physical scanout. */
   onPresented: (revision: number) => void = (_revision: number): void => {};
+  private mounted: boolean = false;
+  private lifecycle: number = 0;
+  private frameGeneration: number = 0;
 
   aboutToAppear(): void {
+    this.mounted = true;
+    this.lifecycle += 1;
     this.onRenderRevisionChanged();
   }
 
+  aboutToDisappear(): void {
+    this.mounted = false;
+    this.lifecycle += 1;
+    this.frameGeneration += 1;
+  }
+
   private onRenderRevisionChanged(): void {
+    if (!this.mounted) return;
     const revision = this.renderRevision;
+    const lifecycle = this.lifecycle;
+    const frameGeneration = ++this.frameGeneration;
+    const pageIdentity = this.pageIdentity;
+    const slotIdentity = this.slotIdentity;
     this.onContentReady(revision);
     // Keep content admission separate from the following scheduling callback.
     this.getUIContext().postFrameCallback(new ReaderPageTurnFrameCallback((): void => {
+      if (!this.mounted || lifecycle !== this.lifecycle || frameGeneration !== this.frameGeneration ||
+        revision !== this.renderRevision || pageIdentity !== this.pageIdentity || slotIdentity !== this.slotIdentity) return;
       this.onPresented(revision);
     }));
   }
