@@ -53,5 +53,5 @@ for(const row of contracts.values()){
   assert.throws(()=>verifyNativeDefaultBranches(source.replace('if (this.sourceSwitchFailureMessage.length > 0) {\n          ForEach','if (true) {\n          ForEach'),row.file,row),/exact finite branch guard/);
  }
 }
-assert.equal(controls,14);assert.equal(a11y,4);assert.equal(delegated,6);
+assert.equal(controls,14);assert.equal(a11y,4);assert.equal(delegated,7);
 console.log(`PASS native-default contracts: ${contracts.size} finite native families / ${controls} actual actors (retry has exact exclusive source-switch/reading branches); ${paint} no-glyph actors, ${a11y} exact accessibility actors, ${delegated} actual shared Dialog/finite title hosts, ${inherited} inherited body spans; no physical font overrides fabricated`);

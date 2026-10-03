@@ -29,7 +29,7 @@ class ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {
     if (this.layout === 'full') instance.width('100%');
     instance.height(spec.height);
     if (spec.horizontalPadding > 0) instance.padding({ left: spec.horizontalPadding, right: spec.horizontalPadding });
-    instance.border({ width: TOK_BORDER_W, color: readerAppColor(this.primary ? spec.primaryBorder : spec.secondaryBorder, this.scheme) });
+    if (spec.hasBorder) instance.border({ width: TOK_BORDER_W, color: readerAppColor(this.primary ? spec.primaryBorder : spec.secondaryBorder, this.scheme) });
     if (spec.disabledOpacity < 1) instance.opacity(this.enabled ? 1 : spec.disabledOpacity);
     this.feedback().applyNormalAttribute(instance);
   }

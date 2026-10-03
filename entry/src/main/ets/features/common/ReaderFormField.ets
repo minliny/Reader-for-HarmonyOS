@@ -30,6 +30,7 @@ export struct ReaderFormField {
   @Prop placeholder: string = '';
   @Prop isEditable: boolean = true;
   @Prop password: boolean = false;
+  onSubmit: () => void = (): void => {};
   onTextChange: (value: string) => void = (_value: string): void => {};
   private mounted: boolean = false;
   aboutToAppear(): void { this.mounted = true; }
@@ -39,11 +40,17 @@ export struct ReaderFormField {
       TextInput({ text: this.text, placeholder: this.placeholder }).type(InputType.Password)
         .attributeModifier(new ReaderFormFieldModifier(this.specId, this.scheme))
         .enabled(this.isEditable).onChange((value: string): void => this.change(value));
+    } else if (this.specId === 'form-url') {
+      TextInput({ text: this.text, placeholder: this.placeholder })
+        .attributeModifier(new ReaderFormFieldModifier(this.specId, this.scheme))
+        .enabled(this.isEditable).onChange((value: string): void => this.change(value))
+        .onSubmit((_enterKey: EnterKeyType): void => this.submit());
     } else {
       TextInput({ text: this.text, placeholder: this.placeholder })
         .attributeModifier(new ReaderFormFieldModifier(this.specId, this.scheme))
         .enabled(this.isEditable).onChange((value: string): void => this.change(value));
     }
   }
+  private submit(): void { if (this.mounted && this.isEditable) this.onSubmit(); }
   private change(value: string): void { if (this.mounted && this.isEditable) this.onTextChange(value); }
 }

@@ -18,10 +18,11 @@ export function foundationTypographyCarrier(entry,file,expected,pageSource,targe
   const shared=foundationControls({specs:foundationSpecs({...readerTypographyRoles,...override}),[entry.component==='ReaderButton'?'buttonSource':'fieldSource']:target});
   // SDK field/button source overrides are used by their transform, never just
   // read for a hash. The normal modifier loader also receives actual source.
-  const methods=[entry.origin.method,...(entry.requiredMethods??[])];
+  const binding=entry.bindingMethod??entry.origin.method;
+  const methods=[binding,...(entry.requiredMethods??[])];
   const {owner}=createReaderBuilderProbe(pageSource,methods,shared.dependencies,shared.hooks);
   Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false,facts:{canMutate:true}},...(entry.params??{})});
-  owner[entry.origin.method](...(branch.arguments??entry.arguments).map(arg=>arg==='@callback'?()=>{}:arg));
+  owner[binding](...(branch.arguments??entry.arguments).map(arg=>arg==='@callback'?()=>{}:arg));
   const children=[...owner.children.values()].filter(child=>child instanceof shared.dependencies[entry.component]&&child.specId===entry.specId);
   assert.equal(children.length,1,entry.id+': actual original owner constructs finite shared class');
   const nodes=shared.nodes(children[0]).filter(node=>node.type===expected.kind);

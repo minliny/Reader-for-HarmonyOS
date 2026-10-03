@@ -1,5 +1,6 @@
 import type { RssSubscriptionManagementItem } from './RssPresentationContract';
 export type { RssSubscriptionManagementItem } from './RssPresentationContract';
+import { ReaderButton } from '../common/ReaderButton';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { TYPE_FORM_COMPACT_ACTION, TYPE_SOURCE_MANAGEMENT_META, TYPE_SOURCE_MANAGEMENT_TITLE } from '../common/ReaderTypography';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
@@ -222,17 +223,7 @@ export struct RssSubscriptionManagementPage {
 
   @Builder
   private sourceDocumentAction(label: string, action: () => void) {
-    Text(label)
-      .layoutWeight(1)
-      .height(36)
-      .textAlign(TextAlign.Center)
-      .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)
-      .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)
-      .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)
-      .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-      .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-      .borderRadius(8)
-      .onClick((): void => action());
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'form-document-action', label, layout: 'equal', onAction: action });
   }
 
   @Builder

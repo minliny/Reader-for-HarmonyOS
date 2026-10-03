@@ -4,9 +4,10 @@ import {
   TYPE_SOURCE_TOOLS_COMPACT_ACTION, TYPE_SOURCE_TOOLS_BODY,
   TYPE_RULES_MANAGEMENT_ACTION, TYPE_RULES_COMPACT_ACTION,
   TYPE_RULES_MANAGEMENT_INPUT, TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_SYNC_INPUT,
+  TYPE_FORM_LABEL_ACTION, TYPE_FORM_COMPACT_ACTION, TYPE_FORM_INPUT, TYPE_FORM_URL_INPUT,
 } from './ReaderTypography';
 
-export type ReaderButtonSpecId = 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action';
+export type ReaderButtonSpecId = 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action' | 'form-action' | 'form-busy-action' | 'form-document-action';
 export type ReaderButtonLayout = 'intrinsic' | 'equal' | 'full';
 export interface ReaderButtonSpec {
   text: ReaderTextStyle | ReaderInheritedTextStyle;
@@ -19,11 +20,12 @@ export interface ReaderButtonSpec {
   primaryBorder: ReaderAppColorRole;
   secondaryBorder: ReaderAppColorRole;
   disabledOpacity: number;
+  hasBorder: boolean;
 }
 const SOURCE_ACTION: ReaderButtonSpec = {
   text: TYPE_SOURCE_TOOLS_ACTION, height: 42, radius: 8, horizontalPadding: 0, stacked: false,
   primarySurface: 'TOK_PRIMARY_DARK', secondarySurface: 'TOK_SURFACE_PANEL_SOFT',
-  primaryBorder: 'TOK_PRIMARY_DARK', secondaryBorder: 'TOK_BORDER', disabledOpacity: 0.62,
+  primaryBorder: 'TOK_PRIMARY_DARK', secondaryBorder: 'TOK_BORDER', disabledOpacity: 0.62, hasBorder: true,
 };
 // Named variants retain current physical tuples; callers receive no style bag.
 function copyReaderButtonSpec(): ReaderButtonSpec {
@@ -31,7 +33,7 @@ function copyReaderButtonSpec(): ReaderButtonSpec {
     horizontalPadding: SOURCE_ACTION.horizontalPadding, stacked: SOURCE_ACTION.stacked,
     primarySurface: SOURCE_ACTION.primarySurface, secondarySurface: SOURCE_ACTION.secondarySurface,
     primaryBorder: SOURCE_ACTION.primaryBorder, secondaryBorder: SOURCE_ACTION.secondaryBorder,
-    disabledOpacity: SOURCE_ACTION.disabledOpacity };
+    disabledOpacity: SOURCE_ACTION.disabledOpacity, hasBorder: SOURCE_ACTION.hasBorder };
 }
 const SOURCE_COMPACT: ReaderButtonSpec = copyReaderButtonSpec();
 SOURCE_COMPACT.text = TYPE_SOURCE_TOOLS_COMPACT_ACTION;
@@ -47,13 +49,23 @@ SYNC_ACTION.height = 40; SYNC_ACTION.radius = 10; SYNC_ACTION.stacked = true;
 SYNC_ACTION.primarySurface = 'app.SyncPage.SOLID_BG'; SYNC_ACTION.secondarySurface = 'app.SyncPage.GHOST_BG';
 SYNC_ACTION.primaryBorder = 'app.SyncPage.SOLID_BG'; SYNC_ACTION.secondaryBorder = 'app.SyncPage.GHOST_BORDER';
 SYNC_ACTION.disabledOpacity = 1;
+const FORM_ACTION: ReaderButtonSpec = copyReaderButtonSpec();
+FORM_ACTION.text = TYPE_FORM_LABEL_ACTION; FORM_ACTION.height = 44;
+FORM_ACTION.hasBorder = false; FORM_ACTION.disabledOpacity = 1;
+const FORM_BUSY_ACTION: ReaderButtonSpec = copyReaderButtonSpec();
+FORM_BUSY_ACTION.text = TYPE_FORM_LABEL_ACTION; FORM_BUSY_ACTION.height = 44; FORM_BUSY_ACTION.hasBorder = false;
+const FORM_DOCUMENT_ACTION: ReaderButtonSpec = copyReaderButtonSpec();
+FORM_DOCUMENT_ACTION.text = TYPE_FORM_COMPACT_ACTION; FORM_DOCUMENT_ACTION.height = 36;
+FORM_DOCUMENT_ACTION.hasBorder = false; FORM_DOCUMENT_ACTION.disabledOpacity = 1;
+FORM_DOCUMENT_ACTION.secondarySurface = 'TOK_PRIMARY_SOFT';
 const BUTTONS: Record<ReaderButtonSpecId, ReaderButtonSpec> = {
   'source-action': SOURCE_ACTION, 'source-compact': SOURCE_COMPACT,
   'rules-action': RULES_ACTION, 'rules-compact': RULES_COMPACT, 'sync-action': SYNC_ACTION,
+  'form-action': FORM_ACTION, 'form-busy-action': FORM_BUSY_ACTION, 'form-document-action': FORM_DOCUMENT_ACTION,
 };
 export function resolveReaderButtonSpec(id: ReaderButtonSpecId): ReaderButtonSpec { return BUTTONS[id]; }
 
-export type ReaderFormFieldSpecId = 'source-debug' | 'rules-input' | 'sync-credential';
+export type ReaderFormFieldSpecId = 'source-debug' | 'rules-input' | 'sync-credential' | 'form-body' | 'form-url';
 export interface ReaderFormFieldSpec {
   text: ReaderTextStyle | ReaderInheritedTextStyle;
   height: number;
@@ -64,6 +76,10 @@ export interface ReaderFormFieldSpec {
   placeholderRole: ReaderAppColorRole | undefined;
 }
 const FIELDS: Record<ReaderFormFieldSpecId, ReaderFormFieldSpec> = {
+  'form-body': { text: TYPE_FORM_INPUT, height: 44, radius: 8, horizontalPadding: 12,
+    textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined },
+  'form-url': { text: TYPE_FORM_URL_INPUT, height: 44, radius: 8, horizontalPadding: 12,
+    textRole: 'TOK_INK', surfaceRole: 'TOK_SURFACE_FIELD', placeholderRole: 'TOK_MUTED' },
   'source-debug': { text: TYPE_SOURCE_TOOLS_BODY, height: 40, radius: 8, horizontalPadding: 12,
     textRole: 'TOK_INK', surfaceRole: 'TOK_PAPER', placeholderRole: undefined },
   'rules-input': { text: TYPE_RULES_MANAGEMENT_INPUT, height: 40, radius: 8, horizontalPadding: 12,

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import {bookshelfDialogPresentationFixture} from './lib/bookshelf-dialog-presentation-sdk.mjs';
+import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp,
   readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
@@ -61,11 +62,12 @@ assert.match(jsonSource, /this\.localButton\(\);[\s\S]*?Column\(\{ space: TOK_SP
 assert.match(jsonSource, /new DialogActionView\('importOnline', '从在线链接导入', 'primary'/);
 assert.doesNotMatch(jsonSource, /new DialogActionView\('selectLocal'/,
   'the local-file action is body content, not a trailing dialog action');
+const foundation=foundationControls();
 const { owner: dialog } = createReaderBuilderProbe(jsonSource,
   ['build', 'formBody', 'localButton', 'submitOnlineImport'], {
-  ReaderDialogSurface: LiveSurfaceChild, DialogActionView,
+  ...foundation.dependencies, ReaderDialogSurface: LiveSurfaceChild, DialogActionView,
   registerReaderFonts: () => {},
-}, { allowEmptyBranchAdmission: true });
+}, { ...foundation.hooks, allowEmptyBranchAdmission: true });
 let dismissed = 0, selected = 0, imported = [];
 Object.assign(dialog, { appThemeScheme: 'day', readerWindowMetricsRevision: 0,
   title: '导入 JSON', description: '支持选择本地 JSON 文件，或从在线链接下载后导入。',
@@ -73,24 +75,24 @@ Object.assign(dialog, { appThemeScheme: 'day', readerWindowMetricsRevision: 0,
   onImportOnline: url => imported.push(url),
   urlDraft: '', validationMessage: '' });
 dialog.initialRender();
-const surfaceChild = [...dialog.children.values()][0];
+const surfaceChild = [...dialog.children.values()].find(child=>child instanceof LiveSurfaceChild);
 assert.equal(surfaceChild.params.specId, 'json-import');
 assert.equal(surfaceChild.params.title, '导入 JSON');
 assert.equal(surfaceChild.params.showCloseButton, true);
 assert.deepEqual(surfaceChild.params.actions.map(a => [a.id, a.label, a.tone]),
   [['importOnline', '从在线链接导入', 'primary']],
   'only the trailing online-import action is delegated to the shared actions row');
-const dialogNodes = [...dialog.nodes.values()];
+const dialogNodes = foundation.orderedNodes(dialog);
 const description = dialogNodes.find(n => n.type === 'Text' && n.create === '支持选择本地 JSON 文件，或从在线链接下载后导入。');
 assert.ok(description, 'description renders');
 const localButton = dialogNodes.find(n => n.type === 'Text' && n.create === '选择本地 JSON 文件');
 assert.ok(localButton, 'local-file action renders inside the body');
-assert.ok(description.id < localButton.id,
+assert.ok(dialogNodes.indexOf(description) < dialogNodes.indexOf(localButton),
   'the description precedes the local-file action');
 const urlLabel = dialogNodes.find(n => n.type === 'Text' && n.create === '在线链接');
 const urlInput = dialogNodes.find(n => n.type === 'TextInput');
 assert.ok(urlLabel && urlInput, 'URL form renders');
-assert.ok(localButton.id < urlLabel.id && urlLabel.id < urlInput.id,
+assert.ok(dialogNodes.indexOf(localButton) < dialogNodes.indexOf(urlLabel) && dialogNodes.indexOf(urlLabel) < dialogNodes.indexOf(urlInput),
   'the local-file action precedes the URL form, matching the original order');
 assert.equal(localButton.height, 44);
 assert.equal(localButton.borderRadius, 8);
@@ -99,12 +101,12 @@ assert.equal(typeof localButton.onClick, 'function');
 // Draft update clears validation; submit routes the trimmed URL; the empty
 // draft surfaces the admission message instead of dispatching.
 dialog.urlDraft = '  ';
-dialog.replay();
+foundation.flush(dialog);
 surfaceChild.params.onAction('importOnline');
 assert.deepEqual(imported, [], 'blank drafts never reach the import callback');
 assert.equal(dialog.validationMessage, '请输入在线 JSON 的 HTTP/HTTPS 地址');
-dialog.replay();
-assert.ok([...dialog.nodes.values()].some(n => n.type === 'Text' && n.create === '请输入在线 JSON 的 HTTP/HTTPS 地址'),
+foundation.flush(dialog);
+assert.ok(foundation.nodes(dialog).some(n => n.type === 'Text' && n.create === '请输入在线 JSON 的 HTTP/HTTPS 地址'),
   'the validation message renders after an empty submit');
 urlInput.onChange('https://example.com/books.json');
 assert.equal(dialog.urlDraft, 'https://example.com/books.json', 'draft updates on input');

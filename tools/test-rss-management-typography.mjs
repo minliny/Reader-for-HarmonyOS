@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import { auditTypographyConsumers } from './lib/reader-typography-consumer-audit.mjs';
+import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
+import { sharedTypographyReplacement } from './lib/reader-typography-shared-replacements.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/design/rss-management-typography-baseline.json', import.meta.url)));
@@ -10,6 +12,7 @@ const source = readFileSync(new URL(`../${fixture.path}`, import.meta.url), 'utf
 const verifyMigrationSource = process.argv.includes('--verify-migration-source');
 const consumers = auditTypographyConsumers(source, fixture.path), used = new Set(), edits = [];
 for (const baseline of fixture.nodes) {
+  if(!verifyMigrationSource&&sharedTypographyReplacement(fixture.path,baseline,source))continue;
   const matches = node => node.kind === baseline.kind && node.modifiers.fontSize?.expression === baseline.changes.fontSize;
   const node = consumers.find(node => !used.has(node) && node.method === baseline.method && matches(node) &&
     (!verifyMigrationSource || node.text === baseline.text)) ??
@@ -35,14 +38,15 @@ const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_R
 const syntax=require(sdk+'/lib/validate_ui_syntax.js');
 syntax.componentCollection.customComponents.add('ReaderRecoveryAction');syntax.propCollection.set('ReaderRecoveryAction',new Set([...recoverySource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
 class RecoveryChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
-const renderRecovery=parent=>{const child=[...parent.children.values()][0];const owner=createReaderBuilderProbe(recoverySource,['build']).owner;Object.assign(owner,{enabled:true},child.params,{appThemeScheme:'day'});owner.initialRender();return [...owner.nodes.values()].find(n=>n.type==='Text');};
+const renderRecovery=parent=>{const child=[...parent.children.values()].find(c=>c instanceof RecoveryChild);const owner=createReaderBuilderProbe(recoverySource,['build']).owner;Object.assign(owner,{actionEnabled:true},child.params,{appThemeScheme:'day'});owner.initialRender();return [...owner.nodes.values()].find(n=>n.type==='Text');};
 const names = ['operationFeedback', 'feedbackMessage', 'hasOperationFeedback', 'canRetryFeedback', 'retryFeedback', 'stats', 'enabledCount', 'disabledCount', 'sourceDocumentAction'];
-const { owner } = createReaderBuilderProbe(source, names,{ReaderRecoveryAction:RecoveryChild});
+const shared=foundationControls();
+const { owner } = createReaderBuilderProbe(source, names,{...shared.dependencies,ReaderRecoveryAction:RecoveryChild},shared.hooks);
 let reads = 0, operations = 0, documents = 0;
 Object.assign(owner, { appThemeScheme: 'day', items: [], readFacts: { fact: 'failed', message: '网络错误', canRetry: true },
   onRetryRead: () => reads++, onReconcile: () => operations++ });
 owner.operationFeedback(); owner.stats(); owner.sourceDocumentAction('导入', () => documents++);
-const text = [...owner.nodes.values()].filter(node => node.type === 'Text');
+const text = shared.nodes(owner).filter(node => node.type === 'Text');
 const recovery = renderRecovery(owner), message = text.find(node => String(node.create).startsWith('订阅源加载失败'));
 assert.equal(message.fontSize, 10); assert.equal(message.lineHeight, 12.5); assert.equal(message.fontWeight, 400);
 assert.equal(recovery.fontSize, 11); assert.equal(recovery.fontWeight, 700); assert.equal(recovery.height, 36);

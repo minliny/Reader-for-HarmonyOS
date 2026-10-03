@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { rssRouteFixture,rssSource,rssFacts,settleRss,deferredRss,replaceRssRuntime,rssRpc,RealRssEditor,RssEmptyEditor } from './lib/rss-operation-fixture.mjs';
 class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,id,params:{...params}});}updateStateVars(params){Object.assign(this.params,params);}}
@@ -10,13 +11,13 @@ function fixture(){
   return{...f,editor,snapshots,saved,create,snapshot:()=>snapshots.at(-1),close(){active=false;},reopen(){active=true;}};
 }
 function page(f){
-  const properties=createArkUIPropertyRuntimeProbe();
+  const shared=foundationControls(),properties=shared.properties;
   const {owner}=createReaderBuilderProbe(rssSource('features/rss/RssSubscriptionEditorPage.ets'),['snapshot','operationRecovery','saveAction','recoveryActionIdentities','recoveryGeneration','dispatchRecovery'],
-    {...properties.sdk,EMPTY_RSS_EDITOR_SNAPSHOT:RssEmptyEditor,ReaderRecoveryAction:Child},properties.hooks);
+    {...shared.dependencies,EMPTY_RSS_EDITOR_SNAPSHOT:RssEmptyEditor,ReaderRecoveryAction:Child},{...properties.hooks,...shared.hooks});
   Object.assign(owner,{appThemeScheme:'day',onSave:()=>f.editor.save(),onReconcile:g=>f.editor.reconcile(g),onRetryRead:g=>f.editor.retryLoad(g)});
   owner.updateStateVars({snapshot:f.snapshot()});owner.operationRecovery();owner.saveAction();
-  const save=[...owner.nodes.values()].find(n=>n.type==='Text'&&n.create==='保存');
-  const child=[...owner.children.values()][0];
+  const save=shared.nodes(owner).find(n=>n.type==='Text'&&n.create==='保存');
+  const child=[...owner.children.values()].find(child=>child instanceof Child);
   let clickRecovery;
   if(child){const action=createReaderBuilderProbe(rssSource('features/common/ReaderRecoveryAction.ets'),['build']).owner;
     Object.assign(action,{actionEnabled:true,appThemeScheme:'day',variant:'compact'},child.params);action.initialRender();

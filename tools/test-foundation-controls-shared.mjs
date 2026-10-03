@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { foundationControls, foundationSpecs, foundationModifiers } from './lib/reader-foundation-control-probe.mjs';
+import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 const source=file=>readFileSync(new URL('../entry/src/main/ets/features/'+file+'.ets',import.meta.url),'utf8');
@@ -79,4 +80,48 @@ for(const password of [false,true]){
  const original=foundationSpecs(),specs={...original,resolveReaderButtonSpec:id=>({...original.resolveReaderButtonSpec(id),height:original.resolveReaderButtonSpec(id).height+(id==='source-action'?3:0)})};
  for(const kind of ['source','rules']){const p=parent(kind,{specs});kind==='source'?p.owner.actionButton('变体',false,true,()=>{}):p.owner.actionButton('变体',false,()=>{});assert.equal(p.nodes().find(n=>n.type==='Text').height,kind==='source'?45:40);}
 }
-console.log('PASS foundation controls: three real page consumers, five bounded buttons/three fields, native AUTO/Props/drafts/disabled/unmount and common/variant propagation');
+// Actual RSS caller deliberately omits foundation dependencies. The common
+// SDK resolver must mount real production child and flush its actual @Props.
+{
+ const properties=createArkUIPropertyRuntimeProbe(),calls=[];
+ const probe=createReaderBuilderProbe(source('rss/RssSubscriptionEditorPage'),['snapshot','saveAction'],
+  {...properties.sdk,EMPTY_RSS_EDITOR_SNAPSHOT:{busy:false,canSave:true}},properties.hooks);
+ Object.assign(probe.owner,{appThemeScheme:'day',onSave:()=>calls.push('save')});
+ probe.owner.saveAction();const child=[...probe.owner.children.values()][0];
+ assert.equal(typeof child.commit,'function','real production commit exists');assert.equal(typeof child.aboutToDisappear,'function');
+ assert.ok(child.nodes instanceof Map,'not an empty stand-in child');
+ const label=[...child.nodes.values()].find(n=>n.type==='Text');
+ checkFont(label,readerTypographyRoles.TYPE_FORM_LABEL_ACTION);assert.equal(label.height,44);assert.equal(Object.hasOwn(label,'border'),false);
+ assert.equal(label.opacity,1);label.onClick();assert.equal(calls.length,1);
+ probe.owner.updateStateVars({snapshot:{busy:true,canSave:false}});properties.flush();
+ assert.equal(label.enabled,false,'real parent Prop update reaches actual retained Button');assert.equal(label.opacity,.62);
+ label.onClick();assert.equal(calls.length,1,'old physical action consumes current busy Prop');
+ probe.owner.updateStateVars({snapshot:{busy:false,canSave:true}});properties.flush();label.onClick();assert.equal(calls.length,2);
+ child.aboutToDisappear();label.onClick();assert.equal(calls.length,2);
+}
+// Original JSON and RSS form variants retain native event/placeholder/AUTO
+// differences. URL Enter submission is owned by the same live draft owner.
+{
+ const shared=foundationControls(),calls=[];
+ const {owner}=createReaderBuilderProbe(source('common/JsonImportDialog'),['formBody','localButton','submitOnlineImport'],shared.dependencies,shared.hooks);
+ Object.assign(owner,{appThemeScheme:'day',description:'描述',urlDraft:'https://example.test/a.json',validationMessage:'',onImportOnline:u=>calls.push(u),onSelectLocal:()=>calls.push('local')});
+ owner.formBody();const input=shared.nodes(owner).find(n=>n.type==='TextInput'),button=shared.nodes(owner).find(n=>n.type==='Text'&&n.create==='选择本地 JSON 文件');
+ checkFont(input,readerTypographyRoles.TYPE_FORM_URL_INPUT);assert.equal(input.height,44);assert.equal(input.borderRadius,8);
+ assert.equal(input.placeholderColor,readerAppColor('TOK_MUTED','day'));assert.equal(input.backgroundColor,readerAppColor('TOK_SURFACE_FIELD','day'));
+ assert.equal(Object.hasOwn(button,'border'),false);assert.equal(Object.hasOwn(button,'opacity'),false,'JSON original opacity AUTO');
+ owner.validationMessage='旧错误';input.onChange('  https://example.test/b.json  ');assert.equal(owner.validationMessage,'');input.onSubmit('Enter');assert.deepEqual(calls,['https://example.test/b.json']);
+ button.onClick();assert.deepEqual(calls,['https://example.test/b.json','local']);
+ const field=[...owner.children.values()].find(c=>c instanceof shared.field.Component);
+ updateField(field,{isEditable:false,text:'父层草稿'});shared.properties.flush();input.onChange('旧键盘');input.onSubmit('Enter');assert.equal(calls.length,2);assert.equal(input.create.text,'父层草稿');
+ field.aboutToDisappear();input.onSubmit('Enter');assert.equal(calls.length,2);
+ const rss=createReaderBuilderProbe(source('rss/RssSubscriptionEditorPage'),['editorField'],shared.dependencies,shared.hooks).owner;
+ Object.assign(rss,{appThemeScheme:'day'});rss.editorField('字段','RSS草稿','占位',value=>calls.push(value));
+ const plain=shared.nodes(rss).find(n=>n.type==='TextInput');checkFont(plain,readerTypographyRoles.TYPE_FORM_INPUT);
+ assert.equal(Object.hasOwn(plain,'onSubmit'),false,'RSS plain field retains native submit AUTO');assert.equal(Object.hasOwn(plain,'placeholderColor'),false,'RSS placeholder AUTO');
+ assert.equal(plain.backgroundColor,readerAppColor('TOK_PAPER','day'));plain.onChange('新RSS草稿');assert.equal(calls.at(-1),'新RSS草稿');
+ const management=createReaderBuilderProbe(source('rss/RssSubscriptionManagementPage'),['sourceDocumentAction'],shared.dependencies,shared.hooks).owner;
+ Object.assign(management,{appThemeScheme:'day'});management.sourceDocumentAction('导入',()=>calls.push('import'));
+ const action=shared.nodes(management).find(n=>n.type==='Text');checkFont(action,readerTypographyRoles.TYPE_FORM_COMPACT_ACTION);assert.equal(action.height,36);assert.equal(action.borderRadius,8);assert.equal(action.layoutWeight,1);
+ assert.equal(action.backgroundColor,readerAppColor('TOK_PRIMARY_SOFT','day'));assert.equal(Object.hasOwn(action,'border'),false);assert.equal(Object.hasOwn(action,'opacity'),false);action.onClick();assert.equal(calls.at(-1),'import');
+}
+console.log('PASS foundation controls: three real page consumers, eight bounded buttons/five fields + omitted-dependency actual RSS child, native AUTO/Props/drafts/disabled/unmount and common/variant propagation');

@@ -1,3 +1,5 @@
+import { ReaderButton } from '../common/ReaderButton';
+import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { TYPE_FORM_HINT, TYPE_FORM_INPUT, TYPE_FORM_LABEL_ACTION, TYPE_FORM_NOTE, TYPE_FORM_SECTION_HEADING, TYPE_FORM_STATUS } from '../common/ReaderTypography';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
@@ -205,21 +207,8 @@ export struct RssSubscriptionEditorPage {
 
   @Builder
   private saveAction() {
-    Text('保存')
-      .width('100%')
-      .height(44)
-      .textAlign(TextAlign.Center)
-      .fontFamily(TYPE_FORM_LABEL_ACTION.fontFamily)
-      .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)
-      .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)
-      .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-      .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
-      .borderRadius(8)
-      .opacity(this.snapshot.busy || !this.snapshot.canSave ? 0.62 : 1)
-      .enabled(this.snapshot.canSave && !this.snapshot.busy)
-      .onClick((): void => {
-        if (!this.snapshot.busy && this.snapshot.canSave) this.onSave();
-      });
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'form-busy-action', label: '保存', primary: true, layout: 'full',
+      actionEnabled: this.snapshot.canSave && !this.snapshot.busy, onAction: (): void => this.onSave() });
   }
 
   private bottomContentInset(): number {
@@ -246,17 +235,7 @@ export struct RssSubscriptionEditorPage {
         .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)
         .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-      TextInput({ text: value, placeholder })
-        .width('100%')
-        .height(44)
-        .fontFamily(TYPE_FORM_INPUT.fontFamily as string)
-        .fontSize(TYPE_FORM_INPUT.fontSizeFp)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
-        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-        .borderRadius(8)
-        .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
-        .onChange(onChange);
+      ReaderFormField({ scheme: this.appThemeScheme, specId: 'form-body', text: value, placeholder, onTextChange: onChange });
     }
     .width('100%')
     .constraintSize({ minHeight: 60 });
