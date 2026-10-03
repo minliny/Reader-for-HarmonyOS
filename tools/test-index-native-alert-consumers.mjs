@@ -55,7 +55,7 @@ const cases=[
  {name:'searchReturn',route:'source',show:f=>f.p.showSourceImportResultFromSearch('title','message'),button:'secondaryButton',value:'用新书源搜索「abc」',effect:'returnSearch',
   stale:[f=>f.p.sourceManagementSearchKeyword='new',f=>f.p.sourceManagementReturnTarget='settings']},
  {name:'offlineClear',route:'directory',show:f=>f.p.requestClearDirectoryBookOffline(),button:'secondaryButton',value:'清除',effect:'clearOffline',
-  stale:[f=>f.p.remoteReadingSession={identity:{sourceId:'s',bookId:'new'}},f=>f.p.remoteSessionGeneration++,f=>f.p.offlineMutationActiveKey='new-task']},
+  stale:[f=>f.p.remoteReadingSession={identity:{sourceId:'s',bookId:'new'}},f=>f.p.remoteSessionGeneration++,f=>f.p.offlineOperationActive=true]},
 ];
 for(const c of cases){
  const shared=[f=>f.p.navigationGeneration++,f=>f.p.route='settings',f=>currentOwner={},f=>f.p.shelfReceiptRetired=true,

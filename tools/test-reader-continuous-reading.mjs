@@ -128,7 +128,8 @@ assert.match(stage, /class ContinuousFragmentDataSource implements IDataSource/)
 assert.match(stage, /LazyForEach\(this\.fragmentDataSource/);
 assert.doesNotMatch(stage, /ForEach\(this\.renderFragments\(\)/,
   'long continuous chapters must not eagerly mount every fragment');
-assert.match(experience, /this\.activeGateway\(\)\.resolveAndUpdateProgress\(/);
+assert.match(experience, /this\.progressProducers\.commitContinuous\(/);
+assert.match(experience, /return gateway\.persistPresentedProgress\(bookId, title, anchor, layout, isAdmitted\)/);
 assert.match(experience, /if \(snapshot\.navigationMode === 'continuous'\)/,
   'mode switching must project the current canonical scalar instead of resetting the chapter');
 assert.match(experience, /if \(this\.readerSettingsSnapshot\.navigationMode === 'continuous'\) \{\s*return this\.performContinuousPageTurn\(direction\)/,

@@ -33,12 +33,13 @@ const methods = ['notifyReadingPresentationReady', 'notifyControlSelectionReadin
   'persistTtsConfig', 'coreRateForMultiplier', 'ratePercentForMultiplier'];
 function fixture(file = lre) {
   const Owner = productionMotionMethods(file, methods, dependencies);
-  const owner = new Owner(), frames = [], events = [], http = deferred(), prefs = deferred(), voice = deferred();
+  const frames = [], events = [], http = deferred(), prefs = deferred(), voice = deferred();
   const gateway = new FakeGateway(), host = new FakeHost();
   gateway.putConfig = async (config, onDispatch) => { onDispatch?.(); return { ...config }; };
   gateway.getConfig = async () => { gateway.calls.push('config'); return { engine: 'system', rate: 4, ratePercent: 75, pitch: 0, followSys: false }; };
   host.listSystemVoices = () => { events.push('voices'); return voice.promise; };
   runtime = { gateway, getTtsHost: () => host, http: { list: () => { events.push('http'); return http.promise; } } };
+  const owner=new Owner();
   Object.assign(owner, { mounted: true, exitRequested: false, lifecycleToken: 1, phase: 'ready', sourceId: 'source', bookId: 'book',
     chapter: { chapterIndex: 0, chapterTitle: 'chapter', images: [] }, visiblePage: { startScalar: 0, fragments: [] },
     chapterSelectionToken: 1, visiblePageSelectionToken: 1,

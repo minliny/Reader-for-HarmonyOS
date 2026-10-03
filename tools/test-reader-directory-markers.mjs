@@ -130,7 +130,7 @@ assert.match(fullDirectory, /chapterStartBookmarkCreationEnabled: boolean = fals
 assert.match(fullDirectory, /onCreateChapterStartBookmark: \(request: ReaderDirectoryChapterStartBookmarkRequest\) => void/);
 assert.match(fullDirectory, /chapterStartBookmarkCreationEnabled: this\.chapterStartBookmarkCreationEnabled/);
 assert.match(fullDirectory, /chapterDownloadEnabled: this\.sourceId !== 'local'/);
-assert.match(fullDirectory, /onDownloadChapter: \(index: number\): void => this\.onDownloadChapter\(index\)/);
+assert.match(fullDirectory, /onDownloadChapter: \(index: number\): void => \{ if \(this\.directoryRecovery\.offlineBlocked !== true\) this\.onDownloadChapter\(index\); \}/);
 assert.match(fullDirectory, /onDownloadBook: \(\) => void/);
 assert.match(fullDirectory, /onClearBookOffline: \(\) => void/);
 assert.match(fullDirectory, /Text\('下载整书'\)/);

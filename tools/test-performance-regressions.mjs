@@ -24,17 +24,15 @@ const scheduler = read('entry/src/main/ets/app/BookRequestScheduler.ts');
 assert.match(acquisition, /this\.preparationActive < 2/);
 assert.match(scheduler, /job\.priority !== 'foreground' && this\.active >= 5/,
   'reading retains reserved capacity while source/search work is running');
-const remoteOpen = index.slice(index.indexOf('  private openRemoteBookDetail('),
-  index.indexOf('  private refreshCachedSearchDetailInBackground('));
-assert.match(remoteOpen, /owner\.bookAcquisitions\(\)\s*\.acquireCandidateGroup\(candidates, \{ isCurrent, requireReadable: true, onCatalog: showCandidateCatalog \}\)/,
-  'group fallback uses the shared coordinator with the active navigation guard');
-assert.match(remoteOpen, /owner\.bookAcquisitions\(\)\s*\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/,
-  'fixed-source detail admission uses the shared cache-first/background-refresh coordinator');
-assert.ok(remoteOpen.indexOf('this.route = entryRoute') < remoteOpen.indexOf('const sessionAdmission:'),
-  'detail remains visible before either asynchronous admission branch');
-assert.match(index, /PERF search-detail-admission/,
-  'device runs must expose first-click admission latency instead of relying on subjective timing');
-
+const entry = read('entry/src/main/ets/features/reading/ReadingEntryHost.ts');
+const remoteOpen = entry.slice(entry.indexOf('async openRemote('), entry.indexOf('/** A real reader/source-switch admission'));
+assert.match(remoteOpen, /coordinator\.acquireCandidateGroup\(candidates, \{ isCurrent: admissionCurrent, requireReadable: true,/);
+assert.match(remoteOpen, /coordinator\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent: current \}\)/);
+assert.ok(remoteOpen.indexOf('this.begin(') < remoteOpen.indexOf('const admission ='),
+  'detail projection precedes asynchronous admission');
+const indexOpen = index.slice(index.indexOf('private openRemoteBookDetail('), index.indexOf('private downloadDirectoryChapter('));
+assert.ok(indexOpen.indexOf('this.route = entryRoute') < indexOpen.indexOf('host.openRemote('));
+assert.match(entry, /PERF search-detail-admission/);
 assert.match(search, /SEARCH_PARTIAL_PUBLISH_INTERVAL_MS = 100/);
 assert.match(search, /SEARCH_PARTIAL_PUBLISH_MAX_MS = 200/);
 assert.match(search, /if \(run\.timer >= 0\) return;/, 'arrivals must not extend an already scheduled batch');

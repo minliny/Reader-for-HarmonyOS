@@ -19,7 +19,9 @@ assert.match(host, /new SettingsOrchestrator\(/,
   'SettingsHost must be the single SettingsOrchestrator construction site');
 assert.match(host, /getUIAbilityContext\(\)/,
   'SettingsHost must resolve the UI context lazily at first use');
-for (const call of ['settingsHost.open()', 'settingsHost.toggle(', 'settingsHost.restoreDefaults()']) {
+for (const call of ['settingsHost.open()', 'settingsHost.toggle(']) {
   assert.ok(index.includes(`this.${call}`), `Index must forward ${call}`);
 }
 console.log('Settings host wiring: PASS (Index dispatch boundary and lazy context ownership)');
+
+assert.match(index, /isCurrentSettingsPresentation\(generation, owner, mounting, host\) \? host\.restoreDefaults\(\) : Promise\.resolve\(false\)/, 'retained reset invokes only captured current Settings owner');

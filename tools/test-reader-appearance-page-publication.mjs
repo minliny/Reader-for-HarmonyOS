@@ -9,7 +9,7 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { copyReaderAppearanceSnapshot, createDefaultReaderAppearanceSnapshot } from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
 import * as appearanceStyle from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
 import { ReaderPageChromeSnapshot } from '../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts';
-import { ReadingSessionProgressOwner } from '../entry/src/main/ets/features/reading/ReadingSessionProgressOwner.ts';
+import { ReadingSessionProgressOwner } from './lib/reader-progress-owner-probe.mjs';
 
 // Execute production methods and SDK-emitted Builder closures. These assertions
 // concern publication inputs and async ownership, not native paint timing.

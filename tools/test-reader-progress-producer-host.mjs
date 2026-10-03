@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { ReaderProgressProducerHost } from '../entry/src/main/ets/features/reading/ReaderProgressProducerHost.ts';
-import { ReadingSessionProgressOwner } from '../entry/src/main/ets/features/reading/ReadingSessionProgressOwner.ts';
+import { ReadingSessionProgressOwner } from './lib/reader-progress-owner-probe.mjs';
 
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
 const settle=async()=>{for(let i=0;i<16;i++)await Promise.resolve();};

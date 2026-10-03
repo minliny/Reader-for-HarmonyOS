@@ -68,7 +68,7 @@ function fixture({changedOffset=false,missingProgress=false,legacyProgress=false
  }};
  setRuntime(owner);
  const Index=productionMotionMethods(path('pages/Index.ets'),['openRemoteBookDetail','probeRemoteContentVerdict',
-  'installRemoteReadingSession','onRemoteSessionReady','nextNavigationGeneration','openReading','isKnownDetailChapter','presentPreparedReading','loadRemoteDirectoryProjection','mergeDirectoryBookmarks','remoteContentVerdictLabel'],{
+  'installRemoteReadingSession','onRemoteSessionReady','nextNavigationGeneration','openReading','isKnownDetailChapter','presentPreparedReading','remoteContentVerdictLabel'],{
   ...evidence,captureRemotePositionContext,ReaderRuntimeOwner:{current:()=>owner},RemoteReadingFlowGateway,RemoteChapterCacheRefreshError,
   ReadingOfflineGateway,LocalReadingFlowGateway,ReaderCoreGateway:class{},ReadingEntryHost:Host,EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,generation:0},
   remoteReadingFailureKindOf,verdictForFailureKind,errorMessageOf,LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{info(){},warn(){},error(){}},

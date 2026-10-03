@@ -1,3 +1,4 @@
+import {fixture as sourceSwitchFixture} from './lib/source-switch-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
@@ -50,10 +51,10 @@ for(const scope of ['settings','source','bookshelf']){
 }
 for(const layer of ['delete','json','source-switch','import','group','busy-group']){
   const x=fixture('settings');x.open();
-  if(layer==='delete')x.index.bookRemovalDialogOpen=true;if(layer==='json')x.index.jsonImportVisible=true;if(layer==='source-switch')x.index.sourceSwitchVisible=true;if(layer==='import')x.index.hasVisibleImportDialog=()=>true;
+  if(layer==='delete')x.index.bookRemovalDialogOpen=true;if(layer==='json')x.index.jsonImportVisible=true;if(layer==='source-switch'){const source=sourceSwitchFixture();installed=source.runtime;x.index.mountedRuntimeOwner=source.runtime;x.index.sourceSwitchHost=source.host;x.index.sourceSwitchScopeId=source.changes.at(-1).scopeId;x.index.sourceSwitchVisible=true;x.source=source;}if(layer==='import')x.index.hasVisibleImportDialog=()=>true;
   if(layer.endsWith('group')){x.index.editingShelfGroupBook={bookId:'book'};x.index.editingShelfGroupBusy=layer==='busy-group';}
   assert.equal(x.index.onBackPress(),true);assert.equal(x.f.o.openSelect,'language','Index-owned higher layer wins before settings temporary Back');
-  if(layer==='group')assert.equal(x.index.editingShelfGroupBook,undefined);if(layer==='busy-group')assert.ok(x.index.editingShelfGroupBook);if(!layer.endsWith('group'))assert.deepEqual(x.calls,[layer]);
+  if(layer==='group')assert.equal(x.index.editingShelfGroupBook,undefined);if(layer==='busy-group')assert.ok(x.index.editingShelfGroupBook);if(layer==='source-switch'){assert.deepEqual(x.calls,[]);assert.equal(x.source.changes.at(-1).visible,false,'actual SourceSwitchHost consumes only overlay Back');}else if(!layer.endsWith('group'))assert.deepEqual(x.calls,[layer]);
 }
 {
   const x=fixture('settings');x.index.registerTemporaryBackBridge('settings',1,x.runtime,()=>{throw Error('native close failure');},'throw');assert.equal(x.index.onBackPress(),true);assert.equal(x.index.settingsSection,'general','failed close cannot claim route is clear');

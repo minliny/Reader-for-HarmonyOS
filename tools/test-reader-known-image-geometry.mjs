@@ -99,6 +99,8 @@ function fixture({ repeated = false } = {}) {
   fragments[0].nativeTitle = { retained: true }; fragments[0].continuousSpaceBefore = true;
   const page = { startScalar: 0, endScalar: 10, contentHeight: 90, bodyCapacity: 200, fragments: fragments.slice() };
   const window = new ReadingChapterWindow(); window.configure('local', bookId, [0, 1]); window.setCurrent(chapter);
+  activeRuntime = { captureReadingContentValidity: () => () => current,
+    releaseReadingImage: (...args) => leasesReleased.push(args) };
   const owner = Object.assign(new Owner(), { chapter, sourceId: 'local', bookId, lifecycleToken: 1,
     geometryImageRequests: new Map(), chapterWindow: window, readingImageResources: new ReaderReadingImageResources({ releaseReadingImage: (...args) => leasesReleased.push(args) }),
     chapterImageByStartScalar: new Map(), chapterImagePositionByKey: new Map(),
@@ -120,8 +122,7 @@ function fixture({ repeated = false } = {}) {
     schedulePageTurnPreparation: () => assert.fail('pixel readiness cannot clear measured neighbours'),
     commitContinuousProgress: () => assert.fail('pixel readiness cannot write progress'),
   });
-  activeRuntime = { captureReadingContentValidity: () => () => current,
-    releaseReadingImage: (...args) => leasesReleased.push(args) };
+
   return { owner, chapter, fragments, page, reads, leasesReleased, events,
     freeze(value) { frozen = value; phase = value ? 'settling' : 'idle'; },
     invalidate() { current = false; }, unmount() { mounted = false; },

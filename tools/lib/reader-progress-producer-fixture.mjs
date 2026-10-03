@@ -1,4 +1,4 @@
-import { ReadingSessionProgressOwner } from '../../entry/src/main/ets/features/reading/ReadingSessionProgressOwner.ts';
+import { ReadingSessionProgressOwner } from './reader-progress-owner-probe.mjs';
 
 /** Older method probes provide a storage writer plus a serial I/O gate. This
  * explicit fixture adds the real durable owner/CAS-admission contract around

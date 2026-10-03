@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { createRequire, stripTypeScriptTypes, registerHooks } from 'node:module';
 import { fileURLToPath } from 'node:url';
+registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(s+'.ts',c);throw e;}}});
+const {readingDirectoryRecovery,EMPTY_READING_DIRECTORY_RECOVERY}=await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 const file=p=>fileURLToPath(new URL(`../entry/src/main/ets/${p}`,import.meta.url));
@@ -95,7 +97,7 @@ syntax.componentCollection.customComponents.add('LocalBookDetail');syntax.propCo
 class DirectoryChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
 const enums=Object.fromEntries(['SafeAreaType','SafeAreaEdge'].map(name=>[name,new Proxy({},{get:(_,key)=>`${name}.${String(key)}`})]));
 for(const sourceId of ['local','remote']){
- const {owner,output}=createReaderBuilderProbe(source,['externalDirectory'],{BookDirectoryPage:DirectoryChild,...enums});
+ const {owner,output}=createReaderBuilderProbe(source,['externalDirectory','directoryRecovery','directoryOperationPresentationId','directoryOperationBindingId'],{BookDirectoryPage:DirectoryChild,readingDirectoryRecovery,...enums});
  const host=index(sourceId);Object.assign(owner,host,{settingsSnapshot:{reduceMotion:false},offlineMutationActiveKey:'',detailBookmarkIdentity:()=>({sourceId,bookId:'book'}),appThemeScheme:'day'});
  owner.onDirectoryChapterSelected=host.onDirectoryChapterSelected.bind(host);owner.onDirectoryNavigationTargetSelected=host.onDirectoryNavigationTargetSelected.bind(host);owner.closeDirectory=host.closeDirectory.bind(host);
  owner.externalDirectory();assert.equal(owner.children.size,1);const props=[...owner.children.values()][0].params;
@@ -110,7 +112,7 @@ for(const sourceId of ['local','remote']){
 }
 // The real retained detail observer keeps the same child ID through catalog/back.
 {
- const {owner}=createReaderBuilderProbe(source,['detailContent','detailSurface','externalDirectory','detailBookKey','isCurrentRuntime','hasUnknownShelfWrite','detailReadableAdmission','detailShelfAdmissionIdentity','isCurrentDetailShelfAdmission'],{BookDirectoryPage:DirectoryChild,LocalBookDetail:DirectoryChild,ReaderRuntimeOwner:{current:()=>undefined},LOCAL_SOURCE_ID:'local',EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,message:''},...enums});
+ const {owner}=createReaderBuilderProbe(source,['detailContent','detailSurface','externalDirectory','detailBookKey','isCurrentRuntime','hasUnknownShelfWrite','detailReadableAdmission','detailShelfAdmissionIdentity','isCurrentDetailShelfAdmission','isCurrentDetailPresentation','directoryRecovery','directoryOperationPresentationId','directoryOperationBindingId'],{readingDirectoryRecovery,BookDirectoryPage:DirectoryChild,LocalBookDetail:DirectoryChild,ReaderRuntimeOwner:{current:()=>undefined},LOCAL_SOURCE_ID:'local',EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,message:''},...enums});
  const host=index();host.openFullDirectory();Object.assign(owner,host,{readableAdmissions:[],detailShelfAdmissionMount:1,offlineMutationActiveKey:'',remoteContentVerdict:'readable',remoteContentVerdictLabel:()=>'',appThemeScheme:'day'});
  owner.detailContent();
  const detail=[...owner.children.values()].find(child=>child.params.book);
@@ -127,7 +129,7 @@ for(const sourceId of ['local','remote']){
 console.log('PH119 independent catalog routing, retained detail Builder and exact initial bookmark lifecycle: PASS');
 
 {
- const {owner}=createReaderBuilderProbe(source,['externalDirectory'],{BookDirectoryPage:DirectoryChild,...enums});
+ const {owner}=createReaderBuilderProbe(source,['externalDirectory','directoryRecovery','directoryOperationPresentationId','directoryOperationBindingId'],{BookDirectoryPage:DirectoryChild,readingDirectoryRecovery,...enums});
  const host=index('local');host.detailBook.kind='EPUB';Object.assign(owner,host);
  owner.externalDirectory();const child=[...owner.children.values()][0];
  assert.equal(child.params.bookKind,'EPUB','detail passes the existing Core format without a new fetch');

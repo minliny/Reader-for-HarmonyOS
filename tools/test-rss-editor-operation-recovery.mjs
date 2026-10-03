@@ -11,7 +11,7 @@ function fixture(){
 }
 function page(f){
   const properties=createArkUIPropertyRuntimeProbe();
-  const {owner}=createReaderBuilderProbe(rssSource('features/rss/RssSubscriptionEditorPage.ets'),['snapshot','operationRecovery','saveAction'],
+  const {owner}=createReaderBuilderProbe(rssSource('features/rss/RssSubscriptionEditorPage.ets'),['snapshot','operationRecovery','saveAction','recoveryActionIdentities','recoveryGeneration','dispatchRecovery'],
     {...properties.sdk,EMPTY_RSS_EDITOR_SNAPSHOT:RssEmptyEditor,ReaderRecoveryAction:Child},properties.hooks);
   Object.assign(owner,{appThemeScheme:'day',onSave:()=>f.editor.save(),onReconcile:g=>f.editor.reconcile(g),onRetryRead:g=>f.editor.retryLoad(g)});
   owner.updateStateVars({snapshot:f.snapshot()});owner.operationRecovery();owner.saveAction();

@@ -3,6 +3,8 @@ import {readFileSync} from 'node:fs';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {fixture as sourceFixture,origin,target,session as defaultSession,settle as ownerSettled,deferred,gatewayExports,Runtime,read,ReaderCoreRequestError} from './lib/source-switch-owner-probe.mjs';
 import {makeIndex} from './lib/source-switch-sdk-consumer.mjs';
+import {directoryIndexReadProbe} from './lib/directory-index-read-probe.mjs';
+const directoryReadProbe=await directoryIndexReadProbe();
 import {compileHost,setRuntime} from './lib/reading-entry-owner-probe.mjs';
 const {RemoteReadingGatewayError}=await import('../entry/src/main/ets/features/reading/RemoteReadingContract.ts');
 const evidence=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
@@ -20,7 +22,7 @@ function fixture(options={}){
  setRuntime(f.runtime);h.readingEntryHost=new reading(f.runtime);
  const Methods=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),[
   'openLocalBookDetail','openRemoteBookDetail','onReadingFailure','onSearchResultSelected','searchAcquisitionCandidate','remoteSeedForSearchBook',
-  'openFullDirectory','loadRemoteDirectoryProjection','readingDetailForRemoteSeed','returnFromDetail','returnToSearch','returnToBookshelf',
+  'openFullDirectory','loadDirectoryOperationProjections','readingDetailForRemoteSeed','returnFromDetail','returnToSearch','returnToBookshelf',
   'currentReaderPresentationIdentity','consumeSystemFileOpen'],{...gatewayExports,...evidence,ReaderRuntimeOwner:Runtime,LOCAL_SOURCE_ID:'local',DOMAIN:0,
   hilog:{info(){},warn(){},error(){}},errorMessageOf:e=>e.message,ReadingEntryHost:reading,EMPTY_READABLE_ADMISSION:{generation:0,adding:false,cancelling:false,confirmation:'none'}});
  for(const [n,d] of Object.entries(Object.getOwnPropertyDescriptors(Methods.prototype)))if(n!=='constructor'&&typeof d.value==='function')h[n]=d.value;
@@ -29,6 +31,7 @@ function fixture(options={}){
   bookshelfHost:{loadShelfBook:async()=>canonicalShelf},remoteCatalogRefreshAt:new Map(),directoryBookmarkMutationGeneration:0,offlineMutationGeneration:0,
   showReadingFailure(){assert.fail('must not trap body failures in a modal');},showIndexAlert(){assert.fail('unexpected modal');},
   sourceDisplayName:(id,name)=>name??id,hasDeclaredCoverUrl:()=>true,readingDetailForShelf:b=>({...b})});
+ directoryReadProbe.attach(h,f.runtime,{ReaderRuntimeOwner:Runtime});
  f.runtime.noteReadingPreparationIntent=()=>{};
  f.runtime.request=async(m,p,o)=>{
   if(m==='bookmark.list')return{data:{bookmarks:[]}};

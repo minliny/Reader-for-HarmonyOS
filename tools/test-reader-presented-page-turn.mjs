@@ -57,6 +57,7 @@ function fixture({ capability = true, sourceSwitch = false, gatewaySwitch = fals
     persistPresentedProgress: (...args) => { calls.presented.push(args); return save.promise; },
     runProgressCommitSerial: async operation => operation(),
     resolveAndUpdateProgress: (...args) => { calls.strong.push(args); return save.promise; },
+    persistCanonicalProgress: (...args) => { calls.strong.push(args); return save.promise; },
     loadProgress: async () => ({ kind: 'restored', progress: stored }),
   });
   const chapter = { sourceId: 's', bookId: 'b', chapterIndex: 1, chapterTitle: '正文',

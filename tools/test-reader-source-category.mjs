@@ -61,7 +61,9 @@ assert.match(managementPage, /readerSourceCategoryLabel\(source\.category\)/,
   '管理页必须展示每个书源的类别');
 assert.match(managementPage, /matchesQuery && matchesGroup && matchesCategory && this.matchesStatus/);
 const index = read('entry/src/main/ets/pages/Index.ets');
-assert.match(index, /owner\.bookAcquisitions\(\)[\s\S]*\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/);
+const entry = read('entry/src/main/ets/features/reading/ReadingEntryHost.ts');
+assert.match(index, /host\.openRemote\(/);
+assert.match(entry, /this\.runtime\.bookAcquisitions\(\)[\s\S]*coordinator\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent: current \}\)/);
 const coordinator = read('entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
 assert.match(coordinator, /if \(!isRemoteReadingCacheRecoveryEligible\(classified\)\) throw classified/,
   'only recoverable cache states may pass into live source admission; stopped sources remain offline-readable');

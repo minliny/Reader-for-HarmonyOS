@@ -3,6 +3,7 @@ import { registerHooks,createRequire } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import {ProductionHost,setRuntime} from './lib/reading-entry-owner-probe.mjs';
 import { readingPrefetchOwnerProbe } from './lib/reading-prefetch-owner-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
@@ -16,8 +17,8 @@ const { BookAcquisitionCoordinator }=await import(new URL('entry/src/main/ets/ap
 const file=new URL('entry/src/main/ets/pages/Index.ets',root),checks=[],warnings=[];
 let currentOwner;
 const ownerProbe=readingPrefetchOwnerProbe(()=>currentOwner);
-const Index=productionMotionMethods(file,['applyReadingCommit','prefetchReadingWindow','readingPrefetchLease','mergeDirectoryBookmarks','isRemoteCatalogNearEnd','loadRemoteDirectoryProjection'],{
- ...ownerProbe,ReadingOfflineGateway,RemoteReadingFlowGateway,LocalReadingFlowGateway,sameRemoteSessionEvidence,READING_CACHE_BEFORE:2,READING_CACHE_AFTER:2,CATALOG_REFRESH_NEAR_END:3,CATALOG_REFRESH_RETRY_INTERVAL_MS:30000,DOMAIN:0,hilog:{warn(...v){warnings.push(v);},error(...v){assert.fail(`unexpected directory failure ${v}`);}},
+const Index=productionMotionMethods(file,['applyReadingCommit','prefetchReadingWindow','readingPrefetchLease','isRemoteCatalogNearEnd','bindReadingEntryReader'],{
+ ...ownerProbe,ReadingEntryHost:ProductionHost,EMPTY_READABLE_ADMISSION:{generation:0,adding:false,cancelling:false,confirmation:'none'},LOCAL_SOURCE_ID:'local',ReadingOfflineGateway,RemoteReadingFlowGateway,LocalReadingFlowGateway,sameRemoteSessionEvidence,READING_CACHE_BEFORE:2,READING_CACHE_AFTER:2,CATALOG_REFRESH_NEAR_END:3,CATALOG_REFRESH_RETRY_INTERVAL_MS:30000,DOMAIN:0,hilog:{warn(...v){warnings.push(v);},error(...v){assert.fail(`unexpected directory failure ${v}`);}},
 });
 const deferred=()=>{let resolve;const promise=new Promise(r=>{resolve=r;});return{promise,resolve};};
 // Exact registered Index attributes and exact retained ReaderShell ForEach;
@@ -62,8 +63,8 @@ function fixture(count=1370){
   throw Error('unexpected '+method);
  }
  const runtime={supportsCoreCapability:c=>c==='chapter.content.cacheOnly.v1',captureReadingContentValidity:()=>{const revision=state.contentRevision;return()=>revision===state.contentRevision;},isOfflineImageChapterComplete:async identity=>{state.manifest++;return !state.missingManifests.has(identity.chapterIndex);},markOfflineImageChapterComplete:async identity=>{state.materialized.push(identity);},request:execute};
- currentOwner=runtime;
- const page=Object.assign(new Index(),{mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,shelfReceiptRetired:false,remoteSessionGeneration:1,detailBook:{sourceId,bookId},remoteReadingSession:session,readingSessionActive:true,navigationGeneration:1,readingReadyGeneration:1,consumeSystemFileOpen(){},refreshRemoteCatalogNearEnd(){assert.fail('fixture chapter not near tail');}});
+ currentOwner=runtime;setRuntime(runtime);
+ const page=Object.assign(new Index(),{readingEntryScopeId:-1,route:'reading',readingOriginRoute:'detail',readableAdmissions:[],shelfOperation:{removalKey:'',busy:false},mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,shelfReceiptRetired:false,remoteSessionGeneration:1,detailBook:{sourceId,bookId,...session.book},remoteReadingSession:session,readingSessionActive:true,navigationGeneration:1,readingReadyGeneration:1,consumeSystemFileOpen(){},refreshRemoteCatalogNearEnd(){assert.fail('fixture chapter not near tail');}});
  let publications=0,toc=session.entries.map(e=>({index:e.index,title:e.title,navigable:true,downloadState:'completed',bookmarks:[]}));
  Object.defineProperty(page,'detailToc',{get:()=>toc,set:v=>{publications++;toc=v;}});
  const active=[],prefetch=page.prefetchReadingWindow.bind(page);page.prefetchReadingWindow=(...a)=>{const work=prefetch(...a);active.push(work);return work;};
@@ -152,7 +153,7 @@ if(!baseline){
   const f=fixture(12);f.state.leases=[4,5,6,7,8];f.state.failReport.add(4);await assert.rejects(new ReadingOfflineGateway(f.runtime).prefetchWindow(f.session,4,9));assert.deepEqual(new Set(f.state.reports.map(r=>r.chapterIndex)),new Set([4,5,6,7,8]));assert.equal(f.state.reports.filter(r=>r.chapterIndex===4).length,3);checks.push('one terminal report failure is surfaced without stranding other leases');
  }
  {
-  const f=fixture();const entries=await f.page.loadRemoteDirectoryProjection(new ReadingOfflineGateway(f.runtime),f.runtime,f.session,()=>true);assert.equal(entries.length,1370);assert.ok(entries.every(e=>e.downloadState==='cached'));assert.equal(f.count('cache.book.status'),1);assert.equal(f.count('chapter.content'),0);assert.equal(f.state.manifest,0);assert.equal(f.count('bookmark.list'),1);assert.equal(entries[988].bookmarks[0].content,'书签');checks.push('production Index 1370-entry directory preserves bookmarks with one metadata read and zero body or manifest work');
+  const f=fixture();f.runtime.bookAcquisitions=()=>({setPreparationVisible(){},readingProjectionRevision:()=>0});f.page.bindReadingEntryReader();const entry=f.page.getReadingEntryHost();await entry.projectDirectory(f.page.readingEntryScopeId);const entries=f.page.detailToc;assert.equal(entries.length,1370);assert.ok(entries.every(e=>e.downloadState==='cached'));assert.equal(f.count('cache.book.status'),1);assert.equal(f.count('chapter.content'),0);assert.equal(f.state.manifest,0);assert.equal(f.count('bookmark.list'),1);assert.equal(entries[988].bookmarks[0].content,'书签');checks.push('production Entry/Directory owners and Index 1370-entry directory preserve bookmarks with one metadata read and zero body or manifest work');
  }
  {
   const f=fixture(),gate=deferred();f.state.beforeStatus=async()=>gate.promise;const work=new ReadingOfflineGateway(f.runtime).loadDirectoryProjection(f.session);await until(()=>f.count('cache.book.status')===1);f.state.contentRevision++;gate.resolve();await assert.rejects(work);assert.equal(f.count('chapter.content'),0);checks.push('directory metadata projection rejects content mutation during status read');

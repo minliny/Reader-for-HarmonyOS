@@ -24,7 +24,7 @@ assert.match(host, /private readonly owner: \(\) => ReaderRuntimeOwner/,
   'SourceHost must resolve the runtime owner lazily');
 for (const call of ['sourceHost.open()', 'sourceHost.retryLoad()', 'sourceHost.toggleSource(',
   'sourceHost.checkSource(', 'sourceHost.loginSource(', 'sourceHost.importBookSources(',
-  'sourceHost.loadSourcesForIds(', 'sourceHost.loadSources(']) {
+]) {
   assert.ok(index.includes(`this.${call}`), `Index must forward ${call}`);
 }
 assert.doesNotMatch(index, /new SourceGateway\(/,
@@ -34,3 +34,12 @@ assert.match(index, /sourceSources = sources/,
 assert.match(index, /sourceStatusKind = kind/,
   'Index must retain the existing source status projection');
 console.log('Source host wiring: PASS (Index dispatch boundary and source projections retained)');
+
+const entry = readFileSync(resolve(repo, 'entry/src/main/ets/features/reading/ReadingEntryHost.ts'), 'utf8');
+assert.match(entry, /new SourceGateway\(this\.runtime\)\.loadSources\(session\.identity\.sourceId\)/);
+assert.match(entry, /source\.sourceId === session\.identity\.sourceId/);
+
+const shelfHost=readFileSync(resolve(repo,'entry/src/main/ets/features/bookshelf/BookshelfHost.ets'),'utf8');
+const shelfProjection=readFileSync(resolve(repo,'entry/src/main/ets/features/bookshelf/BookshelfProjectionOwner.ts'),'utf8');
+assert.match(shelfHost, /new SourceGateway\(owner\)\.loadSourcesForIds\(ids, current\)/);
+assert.match(shelfProjection, /this\.loadSources\(books\.map\(book => book\.sourceId\), current\)/);
