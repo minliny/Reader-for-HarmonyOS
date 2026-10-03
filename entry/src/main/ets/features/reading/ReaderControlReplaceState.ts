@@ -10,6 +10,9 @@ export interface ReaderControlReplaceState {
   errorMessage: string;
   writeUncertain: boolean;
   canonicalReloadRequired: boolean;
+  writeOperationId?: string;
+  writeBlocked?: boolean;
+  recoveryLabel?: string;
 }
 
 export interface ReaderControlReplaceTicket { sessionKey: string; revision: number; }
@@ -57,7 +60,8 @@ function copyState(state: ReaderControlReplaceState): ReaderControlReplaceState 
   return { sessionKey: state.sessionKey, defaultScope: state.defaultScope, revision: state.revision, status: state.status,
     rules: state.rules, mutationPending: state.mutationPending,
     errorMessage: state.errorMessage, writeUncertain: state.writeUncertain,
-    canonicalReloadRequired: state.canonicalReloadRequired };
+    canonicalReloadRequired: state.canonicalReloadRequired, writeOperationId: state.writeOperationId,
+    writeBlocked: state.writeBlocked, recoveryLabel: state.recoveryLabel };
 }
 
 export function readerControlReplaceTicket(state: ReaderControlReplaceState): ReaderControlReplaceTicket {
@@ -93,7 +97,7 @@ export function admitReaderControlReplaceLoad(state: ReaderControlReplaceState,
 }
 
 export function beginReaderControlReplaceMutation(state: ReaderControlReplaceState): ReaderControlReplaceState {
-  if (state.mutationPending || state.writeUncertain || state.canonicalReloadRequired || state.status !== 'ready') {
+  if (state.mutationPending || state.writeBlocked || state.writeUncertain || state.canonicalReloadRequired || state.status !== 'ready') {
     throw new Error('请先完成或重新核对当前替换规则操作');
   }
   const next = copyState(state);
@@ -141,7 +145,8 @@ function admitMutation(state: ReaderControlReplaceState, rules: ReaderReplaceRul
 }
 
 export function failReaderControlReplaceRequest(state: ReaderControlReplaceState,
-  ticket: ReaderControlReplaceTicket, message: string, writeUncertain: boolean = false): ReaderControlReplaceState {
+  ticket: ReaderControlReplaceTicket, message: string, writeUncertain: boolean = false,
+  operationId?: string): ReaderControlReplaceState {
   if (!readerControlReplaceTicketCurrent(state, ticket)) return state;
   const next = copyState(state);
   next.mutationPending = false;
@@ -149,7 +154,18 @@ export function failReaderControlReplaceRequest(state: ReaderControlReplaceState
     !state.canonicalReloadRequired ? 'ready' : 'error';
   next.errorMessage = message;
   next.writeUncertain = writeUncertain || state.writeUncertain;
+  if (writeUncertain && next.writeOperationId === undefined) next.writeOperationId = operationId;
   return next;
+}
+
+/** Only this original qualified terminal receipt releases uncertainty. A list
+ * read, another operation's ACK or retirement cannot establish that proof. */
+export function settleReaderControlReplaceOriginal(state: ReaderControlReplaceState,
+  operationId: string | undefined): ReaderControlReplaceState {
+  if (!state.writeUncertain || operationId === undefined || state.writeOperationId !== operationId) return state;
+  const next = copyState(state);
+  next.writeUncertain = false; next.writeOperationId = undefined;
+  next.canonicalReloadRequired = true; next.errorMessage = ''; return next;
 }
 
 export function createReaderControlReplaceDraft(rule?: ReaderReplaceRule, order: number = 0,

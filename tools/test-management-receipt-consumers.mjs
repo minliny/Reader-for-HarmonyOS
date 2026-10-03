@@ -1,3 +1,4 @@
+import { fixture as durableRulesFixture } from './lib/rules-mutation-durable-probe.mjs';
 import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -34,8 +35,25 @@ function rpc(){return{calls:[],failRead:'',failWrite:false,invalidRead:false,wai
  if(['replace-rule.list','txt-toc-rule.list','dict-rule.list'].includes(method))return{data:{rules:this.invalidRead&&method==='replace-rule.list'?[{id:'wrong'}]:[]}};
  throw Error(method);
  },count(m){return this.calls.filter(x=>x===m).length;}};}
-function fixture(kind){const runtime=rpc();currentOwner=runtime;let visible=true,snapshot;const isRules=kind==='rules';
- const cls=isRules?Rules.RulesManagementOrchestrator:Shelf.BookshelfManagementOrchestrator;
+async function fixture(kind){const isRules=kind==='rules',actual=isRules?await durableRulesFixture(true):undefined;
+ const runtime=actual?.runtime??rpc();currentOwner=runtime;let visible=true,snapshot;
+ let rules=Rules;
+ if(actual){
+  actual.Runtime.isCurrent=o=>currentOwner===o;actual.Runtime.current=()=>{if(currentOwner===undefined)throw Error('Runtime unavailable');return currentOwner;};
+  const original=runtime.request.bind(runtime);Object.assign(runtime,{calls:actual.calls,failRead:'',failWrite:false,invalidRead:false,wait:undefined});
+  runtime.request=async(method,params,options)=>{
+   if(method===runtime.failRead){runtime.failRead='';actual.calls.push({method,params:structuredClone(params),failedBeforeRead:true});throw Error('read unavailable');}
+   if(method==='rules.mutation.apply'&&runtime.failWrite){runtime.failWrite=false;actual.options.beforeMethod=method;}
+   if(runtime.wait?.method===method){actual.options.pauseMethod=method;actual.options.gate=runtime.wait;runtime.wait=undefined;}
+   const event=await original(method,params,options);
+   if(runtime.invalidRead&&method==='replace-rule.list')return{...event,data:{rules:[{id:'wrong'}]}};
+   return event;
+  };
+  runtime.count=m=>actual.calls.filter(c=>c.method===m).length;
+  rules=load('features/settings/RulesManagementOrchestrator.ets','{RulesManagementOrchestrator,EMPTY_RULES_MANAGEMENT_SNAPSHOT}',
+   {ReaderRuntimeOwner:actual.Runtime,ReaderWriteEvidence,RulesManagementGateway:actual.Gateway,SourceGateway:unused,RssGateway:unused,hilog:{error(){},warn(){}},projectPersistedReceipt,...facts});
+ }
+ const cls=isRules?rules.RulesManagementOrchestrator:Shelf.BookshelfManagementOrchestrator;
  const owner=new cls(v=>{snapshot=clone(v);},()=>visible,runtime);
  const host={reconcileManagement:g=>owner.reconcile(g),updateGroupName:v=>owner.updateGroupName(v),updateGroupOrder:v=>owner.updateGroupOrder(v),selectGroup(){},clearGroupEditor(){},saveGroup:()=>owner.saveGroup(),toggleGroupShown(){},deleteGroup(){},selectBook(){},updateAssignmentGroup(){},assignSelectedBook(){}};
  const method=isRules?'rulesManagementContent':'bookshelfManagementContent';
@@ -49,33 +67,34 @@ function fixture(kind){const runtime=rpc();currentOwner=runtime;let visible=true
   return{page,recovery};
  }
  return{runtime,owner,page,setVisible:v=>{visible=v;},snapshot:()=>snapshot,write:()=>{if(isRules)owner.saveReplaceRule({name:'x',pattern:'x',replacement:'y',isEnabled:true,isRegex:false,order:0});else{owner.updateGroupName('new');owner.updateGroupOrder('0');owner.saveGroup();}},settle:()=>owner.operationTail};}
+function runtimeAccepted(f,command){return f.runtime.count(command)>0;}
 for(const kind of ['rules','shelf']){
- const command=kind==='rules'?'replace.persist':'book-group.create',read=kind==='rules'?'replace-rule.list':'book-group.list';
+ const command=kind==='rules'?'rules.mutation.apply':'book-group.create',read=kind==='rules'?'replace-rule.list':'book-group.list';
  {
-  const f=fixture(kind);f.owner.open();await f.settle();f.runtime.failRead=read;f.write();await f.settle();
+  const f=await fixture(kind);f.owner.open();await f.settle();f.runtime.failRead=read;f.write();await f.settle();
   assert.equal(f.snapshot().receipt.receipt.fact,'confirmedRefreshFailed');const p=f.page();assert.ok(p.recovery,'actual Index child props -> SDK page renders recovery');
   assert.match(p.page.recovery().message,/已确认.*刷新失败/);p.recovery.params.onReconcile(p.recovery.params.generation);p.recovery.params.onReconcile(p.recovery.params.generation);await f.settle();
   assert.equal(f.runtime.count(command),1);assert.equal(f.snapshot().receipt.receipt.fact,'confirmedCurrent');assert.equal(f.runtime.count(read),3,'double-click admits exactly one recovery read');
  }
  {
-  const f=fixture(kind);f.owner.open();await f.settle();f.runtime.failWrite=true;f.write();await f.settle();assert.equal(f.snapshot().receipt.receipt.confirmation,'unknown');const p=f.page();p.recovery.params.onReconcile(p.recovery.params.generation);await f.settle();assert.equal(f.snapshot().receipt.receipt.fact,'pendingReconciliation');assert.equal(f.runtime.count(command),1);
+  const f=await fixture(kind);f.owner.open();await f.settle();f.runtime.failWrite=true;f.write();await f.settle();assert.equal(f.snapshot().receipt.receipt.confirmation,'unknown');const p=f.page();p.recovery.params.onReconcile(p.recovery.params.generation);await f.settle();assert.equal(f.snapshot().receipt.receipt.fact,'pendingReconciliation');assert.equal(f.runtime.count(command),1);
  }
  {
-  const f=fixture(kind);f.runtime.failRead=read;f.owner.open();await f.settle();const p=f.page();assert.ok(p.recovery);p.recovery.params.onReconcile(p.recovery.params.generation);await f.settle();assert.equal(f.snapshot().receipt,undefined,'read cannot fabricate write');
+  const f=await fixture(kind);f.runtime.failRead=read;f.owner.open();await f.settle();const p=f.page();assert.ok(p.recovery);p.recovery.params.onReconcile(p.recovery.params.generation);await f.settle();assert.equal(f.snapshot().receipt,undefined,'read cannot fabricate write');
   f.runtime.invalidRead=true;f.owner.open();await f.settle();assert.notEqual(f.snapshot().readFacts.fact,'current','malformed payload cannot publish current');
  }
  {
-  const f=fixture(kind);f.owner.open();await f.settle();const d=defer();f.runtime.wait={method:command,...d};f.write();await new Promise(r=>setImmediate(r));const before=clone(f.snapshot());f.setVisible(false);d.resolve();await f.settle();assert.deepEqual(f.snapshot(),before,'closed page ignores late ACK');const calls=f.runtime.calls.length;f.write();await f.settle();assert.equal(f.runtime.calls.length,calls,'closed page dispatches no write');
+  const f=await fixture(kind);f.owner.open();await f.settle();const d=defer();f.runtime.wait={method:command,...d};f.write();while(!runtimeAccepted(f,command))await new Promise(r=>setTimeout(r,5));const before=clone(f.snapshot());f.setVisible(false);d.resolve();await f.settle();assert.deepEqual(f.snapshot(),before,'closed page ignores late ACK');const calls=f.runtime.calls.length;f.write();await f.settle();assert.equal(f.runtime.calls.length,calls,'closed page dispatches no write');
   f.setVisible(true);f.owner.open();await f.settle();
  }
  {
-  const f=fixture(kind);f.owner.open();await f.settle();f.runtime.failRead=read;f.write();await f.settle();const old=f.page().recovery.params;f.owner.open();await f.settle();const n=f.runtime.calls.length;old.onReconcile(old.generation);await f.settle();assert.equal(f.runtime.calls.length,n,'re-entry invalidates captured recovery');currentOwner=rpc();f.write();await f.settle();assert.equal(f.runtime.calls.length,n,'retired owner dispatches no mutation');
+  const f=await fixture(kind);f.owner.open();await f.settle();f.runtime.failRead=read;f.write();await f.settle();const old=f.page().recovery.params;f.owner.open();await f.settle();const n=f.runtime.calls.length;old.onReconcile(old.generation);await f.settle();assert.equal(f.runtime.calls.length,n,'re-entry invalidates captured recovery');currentOwner=rpc();f.write();await f.settle();assert.equal(f.runtime.calls.length,n,'retired owner dispatches no mutation');
  }
 }
 
 for(const kind of ['rules','shelf']){
- const f=fixture(kind);f.owner.open();await f.settle();const command=kind==='rules'?'replace.persist':'book-group.create';
- const d=defer();f.runtime.wait={method:command,...d};f.write();await new Promise(r=>setImmediate(r));const before=clone(f.snapshot());
+ const f=await fixture(kind);f.owner.open();await f.settle();const command=kind==='rules'?'rules.mutation.apply':'book-group.create';
+ const d=defer();f.runtime.wait={method:command,...d};f.write();while(!runtimeAccepted(f,command))await new Promise(r=>setTimeout(r,5));const before=clone(f.snapshot());
  currentOwner=undefined;d.resolve();await f.settle();assert.deepEqual(f.snapshot(),before,'unavailable Runtime cannot turn late ACK into error publication');
  const count=f.runtime.calls.length;assert.doesNotThrow(()=>f.write());await f.settle();assert.equal(f.runtime.calls.length,count,'unavailable Runtime admits no new mutation');
  currentOwner=f.runtime;f.owner.open();await f.settle();assert.equal(f.snapshot().readFacts.fact,'current','independent read after install uses real Gateway');

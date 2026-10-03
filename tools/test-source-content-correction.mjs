@@ -119,7 +119,7 @@ for(const lostReceipt of [false,true]) {
   if(method==='reading.progress.update'){
    order.push('progress-write');writes++;
    if(writes===1){submitted.resolve();await releaseWrite.promise;}
-   assert.equal(options.shouldCancel?.(),false);
+   assert.equal(options.shouldCancel,undefined,'actual dispatched durable progress is not cancelled by a retired UI');
    const current=f.body().positionScope;
    assert.equal(params.expectedBodyVersion,current.bodyVersion);
    assert.equal(params.expectedProcessingVersion,current.processingVersion);

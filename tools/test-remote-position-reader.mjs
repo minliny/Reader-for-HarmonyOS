@@ -3,7 +3,7 @@ import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import {readFileSync} from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { compileHost } from './lib/reading-entry-owner-probe.mjs';
+import { compileHost, ReaderDirectoryHost } from './lib/reading-entry-owner-probe.mjs';
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
 // The shared production map uses a TypeScript constructor parameter property;
 // expand that one syntax node for Node's strip-only loader, preserving methods.
@@ -328,15 +328,20 @@ console.log('PH93 actual reader fresh-body/fallback admission, refresh results, 
  for(const scenario of ['read-failed','new-mutation','new-navigation']){
   let reject;const gate=new Promise((_resolve,no)=>reject=no);
   const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-   ['loadControlBookmarks'],{loadReaderControlBookmarkProjection,ReaderRuntimeOwner:{current:()=>({})},
-    LocalReadingFlowGateway:class{async loadBookmarkProjection(){return gate;}}});
+   ['loadControlBookmarks','directoryBinding','directoryOperationBindingId','isCurrentDirectoryOperationBinding','applyOwnedDirectoryEntries'],
+   {ReaderRuntimeOwner:{current:()=>runtime}});
+  const {LocalReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
+  const runtime={request:()=>gate};
+  const host=new ReaderDirectoryHost({gateway:new LocalReadingFlowGateway(runtime),ownsRuntime:()=>true});
   const fresh=[{index:0,title:'章',bookmarks:[{time:2,chapterOffset:0}]}];
-  const p=Object.assign(new Index(),{detailBook:{sourceId:'s',bookId:'b',title:'书',author:'作者'},readingSessionActive:true,
+  const p=Object.assign(new Index(),{mounted:true,mountedRuntimeOwner:runtime,shelfReceiptRetired:false,route:'directory',
+   detailBook:{sourceId:'s',bookId:'b',title:'书',author:'作者'},readingSessionActive:true,
    navigationGeneration:1,directoryBookmarkMutationGeneration:1,directoryBookmarkMutationActiveKey:'',
    detailToc:[{index:0,title:'章',bookmarks:[]}],directoryBookmarkMutationKey:()=> 'book-key',
-   clearDirectoryBookmarkProjectionFailure(){}});
+   getReaderDirectoryHost:()=>host,getReadingEntryHost:()=>undefined,clearDirectoryBookmarkProjectionFailure(){}});
   const promise=p.loadControlBookmarks('s','b',()=>true);
-  if(scenario==='new-mutation'){p.directoryBookmarkMutationGeneration++;p.detailToc=fresh;}
+  await new Promise(resolve=>setImmediate(resolve));
+  if(scenario==='new-mutation'){host.generation++;p.detailToc=fresh;}
   if(scenario==='new-navigation')p.navigationGeneration++;
   reject(Error('bookmark read failed'));
   if(scenario==='read-failed')await assert.rejects(promise,/bookmark read failed/);

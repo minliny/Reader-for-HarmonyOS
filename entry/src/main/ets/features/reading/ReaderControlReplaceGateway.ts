@@ -1,6 +1,9 @@
 import type { JsonObject } from '@reader/core-harmony';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import { RulesMutationOwner, RulesMutationError } from '../settings/RulesMutationOwner';
+import type { RulesMutationSnapshot } from '../settings/RulesMutationOwner';
+import { RulesManagementGateway } from '../settings/RulesManagementGateway';
+import type { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { errorMessageOf } from '../../app/ErrorMessage';
 import { ReaderReplaceQuickGateway, ReaderReplaceQuickGatewayError } from './ReaderReplaceQuickGateway';
 import { copyReaderReplaceRule, type ReaderReplaceRule } from './ReaderReplaceQuickState';
@@ -56,6 +59,12 @@ export class ReaderControlReplaceGateway extends ReaderReplaceQuickGateway {
   private readonly fullRuntime: ReadingGatewayRuntime;
 
   constructor(runtime: ReadingGatewayRuntime) { super(runtime); this.fullRuntime = runtime; }
+
+  /** The original rule domain gateway qualifies all nine receipt families;
+   * Full/Quick never maintain a second journal or infer ACK from current rows. */
+  async recoverMutation(isCurrent: () => boolean, retryOriginal: boolean = false): Promise<RulesMutationSnapshot> {
+    return new RulesManagementGateway(this.fullRuntime as ReaderRuntimeOwner).recoverMutation(isCurrent, retryOriginal);
+  }
 
   async loadRules(isCurrent: () => boolean = (): boolean => true): Promise<ReaderReplaceRule[]> {
     this.assertCurrent(isCurrent);

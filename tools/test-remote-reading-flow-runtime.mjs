@@ -70,7 +70,10 @@ class FakeRemoteReadingRuntime {
 
   async request(method, params = {}, options = {}) {
     calls.push({ method, params, options });
-    assert.equal(options.shouldCancel?.(), false,
+    if(method==='reading.progress.update') {
+      assert.equal(options.shouldCancel,undefined,'dispatched durable write must not be cancelled by a later retired route');
+      assert.equal(options.canDispatch?.(),true,'write retains original captured final dispatch admission');
+    } else assert.equal(options.shouldCancel?.(), false,
       `${method} must retain the current route/request guard`);
     switch (method) {
       case 'book.detail':

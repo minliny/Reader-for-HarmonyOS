@@ -20,7 +20,9 @@ export class RulesMutationIntentStore {
   private static tail: Promise<void> = Promise.resolve();
   private static warm: RulesMutationIntent | undefined;
   private readonly runtime: ReadingGatewayRuntime;
+  private acceptedIntent: RulesMutationIntent | undefined;
   constructor(runtime: ReadingGatewayRuntime) { this.runtime = runtime; }
+  accepted(): RulesMutationIntent | undefined { return this.acceptedIntent; }
   async load(): Promise<RulesMutationIntent | undefined> {
     return this.serial(async (): Promise<RulesMutationIntent | undefined> => {
       this.assertCurrent(); const disk = await this.read(); this.assertCurrent();
@@ -43,6 +45,7 @@ export class RulesMutationIntentStore {
       const intent: RulesMutationIntent = { version: 1, operationId: `${util.generateRandomUUID()}/${sequence}`,
         sequence, label, mutation: { method, params: fixed } };
       RulesMutationIntentStore.warm = intent;
+      this.acceptedIntent = intent;
       await this.write(intent); return intent;
     });
   }

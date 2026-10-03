@@ -213,6 +213,7 @@ import { RulesMutationOwner } from '../settings/RulesMutationOwner';
 import { ReaderControlReplaceGateway, ReaderControlReplaceGatewayError } from './ReaderControlReplaceGateway';
 import { createReaderControlReplaceState, beginReaderControlReplaceLoad, admitReaderControlReplaceLoad,
   beginReaderControlReplaceMutation, admitReaderControlReplaceRule, admitReaderControlReplaceDeletion,
+  settleReaderControlReplaceOriginal,
   admitReaderControlReplaceImport, failReaderControlReplaceRequest, readerControlReplaceTicket,
   readerControlReplaceTicketCurrent, type ReaderControlReplaceState, type ReaderControlReplaceDraft }
   from './ReaderControlReplaceState';
@@ -2265,7 +2266,7 @@ export struct ReadingExperience {
         onAutoPageFollowHighlightChange: (enabled: boolean): void =>
           this.setAutoPageFollowHighlight(enabled),
         onOpenReplace: (): void => this.openQuickReplace(),
-        onReloadControlReplace: (): Promise<void> => this.reloadControlReplace(),
+        onReloadControlReplace: (operationId?: string): Promise<void> => this.reloadControlReplace(true, operationId),
         onSaveControlReplace: (draft: ReaderControlReplaceDraft): Promise<void> => this.saveControlReplace(draft),
         onToggleControlReplace: (rule: ReaderReplaceRule, value: boolean): Promise<void> =>
           this.toggleControlReplace(rule, value),
@@ -10062,10 +10063,18 @@ export struct ReadingExperience {
 
   private projectReaderReplaceWriteFacts(): void {
     const fact = this.rulesMutationOwner.snapshot();
+    this.controlReplaceState = { ...this.controlReplaceState, writeBlocked: fact.blocked || fact.busy,
+      recoveryLabel: fact.canRetryOriginal ? '重试已保留的原规则操作' : '核对原规则操作' };
     if (fact.confirmation === 'unknown') {
       this.controlReplaceState = failReaderControlReplaceRequest(this.controlReplaceState,
         readerControlReplaceTicket(this.controlReplaceState),
-        fact.message || '规则写入结果尚未确认；可以读取当前列表，但不能继续写入', true);
+        fact.message || '规则写入结果尚未确认；可以读取当前列表，但不能继续写入', true, fact.operationId);
+    } else if (!fact.busy) {
+      this.controlReplaceState = settleReaderControlReplaceOriginal(this.controlReplaceState, fact.operationId);
+    }
+    if (!this.controlReplaceState.writeUncertain) {
+      this.controlReplaceState = { ...this.controlReplaceState, writeOperationId: fact.blocked ? fact.operationId : undefined,
+        errorMessage: fact.blocked ? fact.message : this.controlReplaceState.errorMessage };
     }
   }
 
@@ -10094,12 +10103,16 @@ export struct ReadingExperience {
       readerControlContentLocation(this.controlSession).module === 'replace';
   }
 
-  private async reloadControlReplace(): Promise<void> {
+  private async reloadControlReplace(explicitRecovery: boolean = false, expectedOperationId?: string): Promise<void> {
     const lifecycle = this.lifecycleToken;
     const sourceId = this.sourceId;
     const bookId = this.bookId;
     const panelGeneration = this.replacePanelGeneration;
     if (!this.controlReplaceCurrent(lifecycle, sourceId, bookId, panelGeneration)) throw new Error('规则面板已关闭');
+    const recoveryFact = this.rulesMutationOwner.snapshot();
+    if (expectedOperationId !== undefined && recoveryFact.operationId !== expectedOperationId) return;
+    if (explicitRecovery && (recoveryFact.confirmation === 'unknown' || recoveryFact.blocked) &&
+      recoveryFact.operationId !== expectedOperationId) return;
     this.projectReaderReplaceWriteFacts();
     const wasUncertain = this.controlReplaceState.writeUncertain;
     this.controlReplaceState = beginReaderControlReplaceLoad(this.controlReplaceState);
@@ -10107,6 +10120,12 @@ export struct ReadingExperience {
     const isCurrent = (): boolean => this.controlReplaceCurrent(lifecycle, sourceId, bookId, panelGeneration) &&
       readerControlReplaceTicketCurrent(this.controlReplaceState, ticket);
     try {
+      const prior = this.rulesMutationOwner.snapshot();
+      if (!prior.busy) {
+        await this.replaceGateway.recoverMutation(isCurrent, explicitRecovery && prior.canRetryOriginal);
+        if (!isCurrent()) return;
+        this.projectReaderReplaceWriteFacts();
+      }
       const rules = await this.replaceGateway.loadRules(isCurrent);
       if (!isCurrent()) return;
       this.controlReplaceState = admitReaderControlReplaceLoad(this.controlReplaceState, ticket, rules);
@@ -10134,7 +10153,7 @@ export struct ReadingExperience {
     if (!this.controlReplaceCurrent(lifecycle, sourceId, bookId, panelGeneration)) throw new Error('规则面板已关闭');
     this.projectReaderReplaceWriteFacts();
     const shared = this.rulesMutationOwner.snapshot();
-    if (shared.busy || shared.confirmation === 'unknown') throw new Error(shared.message || '另一规则操作尚未确认');
+    if (shared.busy || shared.blocked || shared.confirmation === 'unknown') throw new Error(shared.message || '另一规则操作尚未确认');
     const next = beginReaderControlReplaceMutation(this.controlReplaceState);
     const generation = this.beginReplaceMutation(lifecycle, bookId, ruleId);
     if (generation < 0) throw new Error('另一条规则正在保存，请等待完成');
@@ -10313,7 +10332,7 @@ export struct ReadingExperience {
     const panelGeneration = this.replacePanelGeneration;
     this.projectReaderReplaceWriteFacts();
     const shared = this.rulesMutationOwner.snapshot();
-    if (shared.busy || shared.confirmation === 'unknown') {
+    if (shared.busy || shared.blocked || shared.confirmation === 'unknown') {
       this.showReaderAlert('preview', { title: '规则操作尚未确认', message: shared.message || '另一规则操作正在执行，请等待确认',
         confirm: { value: '关闭', action: (): void => {} } });
       return;
@@ -10360,7 +10379,7 @@ export struct ReadingExperience {
 
   private beginReplaceMutation(lifecycleToken: number, bookId: string, ruleId: number): number {
     const shared = this.rulesMutationOwner.snapshot();
-    if (shared.busy || shared.confirmation === 'unknown' || !this.readerReplaceRuntimeCurrent()) return -1;
+    if (shared.busy || shared.blocked || shared.confirmation === 'unknown' || !this.readerReplaceRuntimeCurrent()) return -1;
     if (this.replaceMutationActiveGeneration >= 0 &&
       this.replaceMutationActiveLifecycleToken === lifecycleToken &&
       this.replaceMutationActiveBookId === bookId) {

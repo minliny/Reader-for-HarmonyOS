@@ -2,6 +2,7 @@ import { installContentSearchOwnerProbe } from './lib/reader-content-search-owne
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { fixture as rulesSdkFixture } from './lib/rules-mutation-durable-probe.mjs';
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
   if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;
 }}});
@@ -11,7 +12,9 @@ const { RemoteReadingGatewayError, isRemoteReadingCacheFallbackEligible }=
 const { remoteReadingFailureKindOf }=await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
 const replaceState=await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
 const replaceQuick=await import('../entry/src/main/ets/features/reading/ReaderReplaceQuickState.ts');
-const {ReaderControlReplaceGatewayError}=await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGateway.ts');
+const {FullError:ReaderControlReplaceGatewayError}=await rulesSdkFixture(true);
+const capturedReaderRuntime={captureReadingContentValidity:()=>()=>true,waitForReadingContentIdle:async()=>{}};
+const readerRuntimeAuthority={current:()=>capturedReaderRuntime,isCurrent:owner=>owner===capturedReaderRuntime};
 const failure=(reason,code='INVALID_PARAMS')=>Object.assign(new Error(reason==='CONTENT_SEARCH_STALE'
   ? 'Cached content or processing settings changed during search; retry the search'
   : 'text processing settings changed; original reading positions were preserved; restore the previous Chinese conversion or text replacement settings and retry'),
@@ -58,7 +61,7 @@ for(const local of [false,true])for(const reason of ['PROCESSING_CONTEXT_STALE',
   });
 }
 const Reader=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),
-  ['runQuickSearch','loadMoreQuickSearch','updateQuickSearchQuery','publishQuickSearchState'],{READER_CONTENT_SEARCH_PAGE_SIZE:50});
+  ['runQuickSearch','loadMoreQuickSearch','updateQuickSearchQuery','publishQuickSearchState'],{READER_CONTENT_SEARCH_PAGE_SIZE:50,ReaderRuntimeOwner:readerRuntimeAuthority});
 function reader(f){
   const publications=[];
   const owner=Object.assign(new Reader(),{sourceId:f.sourceId,bookId:f.bookId,lifecycleToken:1,searchGeneration:0,
@@ -105,9 +108,10 @@ for(const more of [false,true])for(const code of ['INVALID_PARAMS','CANCELLED'])
 // Successful processing changes invalidate same-control-session results even
 // when body reloading must wait for an in-flight page settlement.
 const processingMethods=['changeChineseConversionMode','reloadCurrentPageAfterReplacePersist',
-  'runControlReplaceMutation','beginReplaceMutation','isReplaceMutationCurrent','finishReplaceMutation'];
+  'runControlReplaceMutation','beginReplaceMutation','isReplaceMutationCurrent','finishReplaceMutation',
+  'readerReplaceRuntimeCurrent','projectReaderReplaceWriteFacts'];
 const Processing=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),
-  processingMethods,{...replaceState,...replaceQuick,ReaderControlReplaceGatewayError});
+  processingMethods,{...replaceState,...replaceQuick,ReaderControlReplaceGatewayError,ReaderRuntimeOwner:readerRuntimeAuthority});
 function processingFixture(settling=false){
   const f=fixture(),r=reader(f),owner=r.owner,reloads=[];
   for(const name of processingMethods)owner[name]=Processing.prototype[name];

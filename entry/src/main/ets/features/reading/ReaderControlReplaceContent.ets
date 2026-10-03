@@ -42,7 +42,7 @@ export struct ReaderControlReplaceContent {
   @Prop @Watch('dismissTemporaryLayer') dismissTemporaryRevision: number = 0;
   onBack: () => void = (): void => {};
   onExpand: () => void = (): void => {};
-  onReload: () => Promise<void> = async (): Promise<void> => {};
+  onReload: (operationId?: string) => Promise<void> = async (): Promise<void> => {};
   onToggle: (rule: ReaderReplaceRule, enabled: boolean) => Promise<void> =
     async (_rule: ReaderReplaceRule, _enabled: boolean): Promise<void> => {};
   onSave: (draft: ReaderControlReplaceDraft) => Promise<void> =
@@ -168,7 +168,7 @@ export struct ReaderControlReplaceContent {
   }
   private readyInput(): boolean {
     return (this.fullInput() || this.quickInput()) && this.state.status === 'ready' &&
-      !this.state.mutationPending && !this.localPending && !this.state.writeUncertain && !this.state.canonicalReloadRequired;
+      !this.state.mutationPending && !this.localPending && !this.state.writeBlocked && !this.state.writeUncertain && !this.state.canonicalReloadRequired;
   }
   private setLayer(layer: string): void {
     this.presentationRevision += 1;
@@ -240,12 +240,12 @@ export struct ReaderControlReplaceContent {
       if (revision === this.presentationRevision && key === this.state.sessionKey) this.localPending = false;
     }
   }
-  private reload(): void {
+  private reload(operationId?: string): void {
     if (this.state.mutationPending || this.localPending) return;
-    // Leave any uncertain editor before a fresh read. Never auto-resubmit a
-    // potentially committed create; the user reviews current canonical facts.
-    this.dismissTemporaryLayer();
-    this.perform(this.onReload);
+    if (operationId !== undefined && this.state.writeOperationId !== operationId) return;
+    // Reconcile the original write while retaining its editor and draft. A
+    // later current list is independent from the original accepted payload.
+    this.perform(async (): Promise<void> => this.onReload(operationId));
   }
   private emptyStateMessage(): string {
     return this.motionProgress === 1 ? '暂无替换规则，点击上方“新增规则”' : '暂无替换规则，可展开后新增';
@@ -440,13 +440,20 @@ export struct ReaderControlReplaceContent {
       .accessibilityLevel(this.quickInput() ? 'auto' : 'no-hide-descendants');
   }
   @Builder
+  private originalRecoveryAction() {
+    ForEach([this.state.writeOperationId || ''], (operationId: string) => {
+      this.textAction(this.state.recoveryLabel || '核对原规则操作', (): void => this.reload(operationId || undefined),
+        (): boolean => !this.state.mutationPending && !this.localPending);
+    }, (operationId: string): string => operationId);
+  }
+  @Builder
   private statusContent() {
     Column({ space: 4 }) {
       Text(this.state.errorMessage || this.localError || (this.state.status === 'loading' || this.state.status === 'idle' ?
         '规则载入中…' : this.emptyStateMessage()))
         .fontFamily(TYPE_READER_REPLACE_RETAINED_STATUS_CONTENT_STATUS.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_STATUS_CONTENT_STATUS.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(3);
       if (this.state.errorMessage.length > 0 || this.localError.length > 0 || this.state.status === 'error') {
-        this.textAction('重新加载核对', (): void => this.reload(), (): boolean => !this.state.mutationPending && !this.localPending);
+        this.originalRecoveryAction();
       }
     }.width('100%').constraintSize({ minHeight: 76 }).justifyContent(FlexAlign.Center)
       .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
@@ -518,8 +525,8 @@ export struct ReaderControlReplaceContent {
           if (this.localError.length > 0 || this.state.errorMessage.length > 0) {
             Text(this.localError || this.state.errorMessage).fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
           }
-          if (this.state.writeUncertain) {
-            this.textAction('重新加载并核对，不重复提交', (): void => this.reload(), (): boolean => !this.localPending);
+          if (this.state.writeUncertain || this.state.writeBlocked) {
+            this.originalRecoveryAction();
           }
           if (this.localPending || this.state.mutationPending) {
             Text('正在等待确认…').fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
@@ -562,7 +569,7 @@ export struct ReaderControlReplaceContent {
         .placeholderColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
         .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(6)
         .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-        .enabled(this.fullInput() && !this.localPending && !this.state.mutationPending && !this.state.writeUncertain)
+        .enabled(this.fullInput() && !this.localPending && !this.state.mutationPending && !this.state.writeBlocked && !this.state.writeUncertain)
         .onChange((text: string): void => change(text));
     }.width('100%').alignItems(HorizontalAlign.Start);
   }

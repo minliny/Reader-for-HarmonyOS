@@ -346,7 +346,7 @@ export struct ReaderControlPanel {
   onOpenRulesManagement: () => void = (): void => {};
   onToggleReplaceRule: (ruleId: number, isEnabled: boolean) => void =
     (_ruleId: number, _isEnabled: boolean): void => {};
-  onReloadControlReplace: () => Promise<void> = async (): Promise<void> => {};
+  onReloadControlReplace: (operationId?: string) => Promise<void> = async (): Promise<void> => {};
   onSaveControlReplace: (draft: ReaderControlReplaceDraft) => Promise<void> =
     async (_draft: ReaderControlReplaceDraft): Promise<void> => {};
   onToggleControlReplace: (rule: ReaderReplaceRule, value: boolean) => Promise<void> =
@@ -1442,7 +1442,7 @@ export struct ReaderControlPanel {
             this.applySemanticSession(expandReaderControlSession(this.controlSession,
               this.reduceMotion ? 0 : READER_CONTROL_EXPAND_MS));
           },
-          onReload: (): Promise<void> => this.onReloadControlReplace(),
+          onReload: (operationId?: string): Promise<void> => this.onReloadControlReplace(operationId),
           onSave: (draft: ReaderControlReplaceDraft): Promise<void> => this.onSaveControlReplace(draft),
           onToggle: (rule: ReaderReplaceRule, value: boolean): Promise<void> => this.onToggleControlReplace(rule, value),
           onDelete: (rule: ReaderReplaceRule): Promise<void> => this.onDeleteControlReplace(rule),

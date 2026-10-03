@@ -123,8 +123,10 @@ assert.doesNotMatch(page, /RuleSubscription|规则订阅|subscriptionCard/);
 assert.match(sourcePage, /statusKind/);
 assert.match(sourcePage, /onRetryLoad/);
 assert.match(rulesGateway, /request\('rule-sub\.list', \{\}\)/);
-assert.match(rulesGateway, /request\('rule-sub\.put'/);
-assert.match(rulesGateway, /request\('rule-sub\.delete'/);
+assert.match(rulesGateway, /requestMutation\('rule-sub\.put'/);
+assert.match(rulesGateway, /requestMutation\('rule-sub\.delete'/);
+assert.match(rulesGateway, /RulesMutationOwner\.forRuntime\(this\.owner\)\.run/,
+  'subscription writes retain original domain exact-receipt ownership rather than direct unguarded requests');
 assert.match(rulesPage, /subscriptions/);
 assert.match(index, /'sourceTools'/);
 assert.match(index, /SourceToolsPage\(/);

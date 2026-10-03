@@ -55,9 +55,9 @@ export async function fixture(official=false,existing,mutantSource) {
  const Gateway=compile('features/settings/RulesManagementGateway.ts','RulesManagementGateway',{ReaderRuntimeOwner:Runtime,RulesMutationOwner:Owner},official);
  const commonReplace={RulesMutationOwner:Owner,RulesMutationError:ownerTypes.RulesMutationError,...(await import('../../entry/src/main/ets/features/reading/ReaderReplaceQuickState.ts')),...(await import('../../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts')),...(await import('../../entry/src/main/ets/app/ErrorMessage.ts'))};
  const quickTypes=compile('features/reading/ReaderReplaceQuickGateway.ts','*',commonReplace,official),Quick=quickTypes.ReaderReplaceQuickGateway;
- const Full=compile('features/reading/ReaderControlReplaceGateway.ts','ReaderControlReplaceGateway',{...commonReplace,...quickTypes},official);
+ const fullTypes=compile('features/reading/ReaderControlReplaceGateway.ts','*',{...commonReplace,...quickTypes,RulesManagementGateway:Gateway},official),Full=fullTypes.ReaderControlReplaceGateway;
  const gateway=new Gateway(runtime),owner=Owner.forRuntime(runtime),store=new Store(runtime);
- return{root,core,files,options,calls,io,runtime,Runtime,Owner,Store,Gateway,Full,Quick,gateway,owner,store,command,
+ return{root,core,files,options,calls,io,runtime,Runtime,Owner,Store,Gateway,Full,Quick,FullError:fullTypes.ReaderControlReplaceGatewayError,gateway,owner,store,command,
   disk:()=>{try{return fs.readFileSync(resolve(files,'reader-rules-mutation-intent-v1.json'),'utf8');}catch(e){if(e.code==='ENOENT')return'';throw e;}},
   writes:()=>calls.filter(c=>c.method==='rules.mutation.apply'),retire:()=>{runtime.closed=true;installed=undefined;},install:o=>{installed=o;},
   recover:retry=>gateway.recoverMutation(()=>Runtime.isCurrent(runtime),retry),
@@ -73,6 +73,8 @@ export function actualRuntimeDirect() {
  assert.deepEqual(tree.parseDiagnostics,[]);
  const klass=tree.statements.find(n=>ts.isClassDeclaration(n)&&n.name.text==='ReaderRuntimeOwner');
  const method=klass.members.find(n=>ts.isMethodDeclaration(n)&&n.name.getText(tree)==='requestDirect');assert.ok(method);
- return compile(path,'ActualRuntimeDirect',{...scheduler,ReaderCoreNotDispatchedError:scheduler.BookRequestNotDispatchedError,DEFAULT_CORE_REQUEST_TIMEOUT_MS:30000,coreAdmissionFailureSummary:()=>undefined,httpResponseFailureSummary:()=>undefined,LOG_DOMAIN:0,hilog:{warn(){}}},true,
+ const methods=compile('features/settings/RulesMutationContract.ts','RULES_MUTATION_METHODS',{},true);
+ const effects=compile('app/ReaderRuleMutationEffects.ts','readerRuleMutationEffects',{RULES_MUTATION_METHODS:methods},true);
+ return compile(path,'ActualRuntimeDirect',{...scheduler,readerRuleMutationEffects:effects,ReaderCoreNotDispatchedError:scheduler.BookRequestNotDispatchedError,DEFAULT_CORE_REQUEST_TIMEOUT_MS:30000,coreAdmissionFailureSummary:()=>undefined,httpResponseFailureSummary:()=>undefined,LOG_DOMAIN:0,hilog:{warn(){}}},true,
   'export class ActualRuntimeDirect {\n'+method.getText(tree)+'\n}');
 }

@@ -50,6 +50,7 @@ export class RulesMutationOwner {
     const current = (): boolean => this.current(isCurrent);
     if (!current()) throw new RulesMutationError('规则请求已过期，未派发', false);
     const evidence = new ReaderWriteEvidence(); const generation = this.state.generation + 1;
+    const assignedBefore = this.intents.accepted();
     this.state = { generation, busy: true, confirmation: 'undispatched', label, method: '', message: '',
       blocked: false, canRetryOriginal: false, writeStage: 'intent' };
     let intent: RulesMutationIntent | undefined;
@@ -98,11 +99,18 @@ export class RulesMutationOwner {
       await this.clearTerminal(intent, 'confirmed', qualifiedReceipt); return value;
     } catch (error) {
       const confirmation = evidence.confirmation();
-      this.state.confirmation = exactRejected ? 'undispatched' : confirmation;
+      const knownPending = this.state.blocked && this.state.confirmation === 'unknown' && this.state.operationId !== undefined;
+      this.state.confirmation = exactRejected ? 'undispatched' : knownPending ? 'unknown' : confirmation;
       const message = error instanceof Error ? error.message : '规则操作异常';
       if (!exactRejected && confirmation !== 'confirmed') {
         try { const pending = await this.intents.load(); if (pending !== undefined) this.admitPending(pending); }
-        catch (_) { this.state.blocked = true; this.state.confirmation = 'unknown'; }
+        catch (_) {
+          const accepted = this.intents.accepted();
+          if (accepted !== undefined && accepted !== assignedBefore) this.admitPending(accepted);
+          else if (confirmation === 'unknown' || knownPending) this.state.blocked = true;
+          // Retirement before accepted identity or actual SDK dispatch is
+          // not a durable unknown. Never borrow the successor's journal.
+        }
       }
       if (this.state.confirmation === 'unknown') this.state.message = `规则原操作记录或 Core 回执尚未确认，已保留原内容；读取列表不能解除保护：${message}`;
       else this.state.message = message;
