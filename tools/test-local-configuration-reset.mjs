@@ -33,7 +33,7 @@ async function fixture(){
  const original=appearance.setReaderAppearanceTheme({...appearance.createDefaultReaderAppearanceSnapshot(),fontSize:24},'warmNight','night');
  let appearanceDisk=copy(original);
  const appearanceStore=new ReaderAppearanceStore({load:async()=>copy(appearanceDisk),save:async x=>{trace.push('appearance');if(fail==='appearance'){fail='';throw Error('flush:appearance');}appearanceDisk=copy(x);}});
- const owner={getUIAbilityContext:()=>context,getAppearanceStore:()=>appearanceStore,request(){throw Error('reset must not issue Core commands');}};current=owner;
+ const owner={waitForPredecessorClose:async()=>{},getUIAbilityContext:()=>context,getAppearanceStore:()=>appearanceStore,request(){throw Error('reset must not issue Core commands');}};current=owner;
  const Runtime={ReaderRuntimeOwner:runtimeOwnerIdentityProbe(()=>current)};
  const themeModule=compile('app/ReaderThemeHost.ts',{
  './ReaderRuntimeOwner':Runtime,'./ReaderWindowCoordinator':{ReaderWindowCoordinator:{updateAppChromeStyle(){}},ReaderWindowChromeStyle:class{}},

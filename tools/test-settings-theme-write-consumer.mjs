@@ -1,3 +1,4 @@
+import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -20,9 +21,10 @@ function platform(){
   flush:async()=>{disk.events.push(['flush']);if(disk.fault==='flush-before'){disk.fault='';throw Error('flush ACK lost');}disk.raw=disk.cache;
    if(disk.fault==='flush-after'){disk.fault='';throw Error('flush ACK lost');}}
  };}}});
- const Host=compile('app/ReaderThemeHost.ts','ReaderThemeHost',{...appearance,...selection,...registry,ReaderAppearanceStore,
+ let currentOwner;
+ const Host=compile('app/ReaderThemeHost.ts','ReaderThemeHost',{...appearance,...selection,...registry,ReaderAppearanceStore,ReaderRuntimeOwner:runtimeOwnerIdentityProbe(()=>currentOwner),
   AppStorage:{setOrCreate:(key,value)=>storage.set(key,value)},ReaderWindowChromeStyle:class{},ReaderWindowCoordinator:{updateAppChromeStyle(){}}});
- const owner=()=>{const store=new ReaderAppearanceStore(new Preferences({}));return{getAppearanceStore:()=>store,store};};
+ const owner=()=>{const store=new ReaderAppearanceStore(new Preferences({}));currentOwner={waitForPredecessorClose:async()=>{},getAppearanceStore:()=>store,store};return currentOwner;};
  return{disk,Host,storage,owner};
 }
 const sdkRequire=createRequire(import.meta.url),sdkRoot=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';

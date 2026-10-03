@@ -163,6 +163,16 @@ export class ReaderRuntimeOwner {
     return ReaderRuntimeOwner.instance;
   }
 
+  /** Theme preferences share platform storage with the previous Ability.
+   * Loading a successor snapshot is subject to the same close boundary as
+   * native startup; a rejected close never silently admits new writes. */
+  async waitForPredecessorClose(): Promise<void> {
+    await this.predecessorClose;
+    if (this.state === 'closing' || this.state === 'closed') {
+      throw new Error('Reader Host was closed before successor admission');
+    }
+  }
+
   async start(): Promise<void> {
     if (this.state === 'closing' || this.state === 'closed') {
       throw new Error('Reader Core runtime is no longer available after teardown');
@@ -711,6 +721,9 @@ export class ReaderRuntimeOwner {
 
   private async closeRuntime(): Promise<void> {
     try {
+      // An owner can retire before start() is called. Preserve the whole
+      // predecessor chain so a third Ability cannot overtake the first one.
+      await this.predecessorClose;
       if (this.startup !== undefined) {
         try {
           await this.startup;
@@ -760,7 +773,7 @@ export class ReaderRuntimeOwner {
   private async startAfterPredecessor(): Promise<void> {
     const trace = ReaderStartupTrace.current();
     const startedAt = trace?.begin('startup.predecessor-close') ?? -1;
-    await this.predecessorClose;
+    await this.waitForPredecessorClose();
     trace?.end('startup.predecessor-close', startedAt);
     if (this.state !== 'starting') {
       throw new Error('Reader Core runtime was closed before successor startup');

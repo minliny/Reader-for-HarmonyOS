@@ -25,6 +25,8 @@ export class ReaderThemeHost {
     const generation = ReaderThemeHost.generation;
     ReaderThemeHost.systemScheme = scheme;
     AppStorage.setOrCreate('readerSystemScheme', scheme);
+    await owner.waitForPredecessorClose();
+    if (generation !== ReaderThemeHost.generation || !ReaderRuntimeOwner.isCurrent(owner)) return;
     const store = owner.getAppearanceStore();
     ReaderThemeHost.store = store;
     ReaderThemeHost.unsubscribe = store.subscribe((snapshot: ReaderAppearanceSnapshot, revision: number): void => {
@@ -36,7 +38,8 @@ export class ReaderThemeHost {
     // scheme must reconcile both scopes before the first page is mounted.
     if (snapshot.appThemeMode === 'system' && readerThemeDefinition(snapshot.activeTheme).scheme !== ReaderThemeHost.systemScheme) {
       const commit = await store.change((current: ReaderAppearanceSnapshot): ReaderAppearanceSnapshot =>
-        changeAppearanceThemeSelection(current, 'system', '', ReaderThemeHost.systemScheme));
+        changeAppearanceThemeSelection(current, 'system', '', ReaderThemeHost.systemScheme),
+        (): boolean => generation === ReaderThemeHost.generation && store === ReaderThemeHost.store && ReaderRuntimeOwner.isCurrent(owner));
       await commit?.saved;
     }
     if (generation === ReaderThemeHost.generation) ReaderThemeHost.publish(store.current(), store.currentRevision());
@@ -67,25 +70,30 @@ export class ReaderThemeHost {
 
   static async systemChanged(scheme: ReaderThemeScheme): Promise<void> {
     if (scheme === ReaderThemeHost.systemScheme) return;
+    const generation = ReaderThemeHost.generation;
     ReaderThemeHost.systemScheme = scheme;
     AppStorage.setOrCreate('readerSystemScheme', scheme);
     await ReaderThemeHost.prepareUserChange();
+    if (generation !== ReaderThemeHost.generation) throw new Error('THEME_OWNER_CHANGED');
     const store = ReaderThemeHost.store;
     if (store === undefined) return;
-    const generation = ReaderThemeHost.generation;
     const commit = await store.change((current: ReaderAppearanceSnapshot): ReaderAppearanceSnapshot =>
       changeAppearanceThemeSelection(current, 'system', '', scheme),
-      (): boolean => generation === ReaderThemeHost.generation && scheme === ReaderThemeHost.systemScheme);
+      (): boolean => generation === ReaderThemeHost.generation && store === ReaderThemeHost.store && scheme === ReaderThemeHost.systemScheme);
     await commit?.saved;
   }
 
   static async selectApp(mode: ReaderAppThemeMode): Promise<void> {
+    const generation = ReaderThemeHost.generation;
     await ReaderThemeHost.prepareUserChange();
+    if (generation !== ReaderThemeHost.generation) throw new Error('THEME_OWNER_CHANGED');
     const store = ReaderThemeHost.store;
     if (store === undefined) throw new Error('THEME_NOT_READY');
     const commit = await store.change((current: ReaderAppearanceSnapshot): ReaderAppearanceSnapshot =>
-      changeAppearanceThemeSelection(current, 'app', mode, ReaderThemeHost.systemScheme));
-    await commit?.saved;
+      changeAppearanceThemeSelection(current, 'app', mode, ReaderThemeHost.systemScheme),
+      (): boolean => generation === ReaderThemeHost.generation && store === ReaderThemeHost.store);
+    if (commit === undefined) throw new Error('THEME_OWNER_CHANGED');
+    await commit.saved;
   }
 
   static async durableBackup(): Promise<ReaderThemeSelectionBackup> {
@@ -115,12 +123,15 @@ export class ReaderThemeHost {
 
   /** Caller must have resolved any sync conflict with the user's explicit choice. */
   static async restore(backup: ReaderThemeSelectionBackup): Promise<string> {
+    const generation = ReaderThemeHost.generation;
     const store = ReaderThemeHost.store;
     if (store === undefined) throw new Error('THEME_NOT_READY');
     const restored = restoreReaderThemeSelection(backup, ReaderThemeHost.systemScheme);
     const commit = await store.change((current: ReaderAppearanceSnapshot): ReaderAppearanceSnapshot =>
-      applyAppearanceThemeSelection(current, restored.selection));
-    await commit?.saved;
+      applyAppearanceThemeSelection(current, restored.selection),
+      (): boolean => generation === ReaderThemeHost.generation && store === ReaderThemeHost.store);
+    if (commit === undefined) throw new Error('THEME_OWNER_CHANGED');
+    await commit.saved;
     return restored.fallbackReason;
   }
 
