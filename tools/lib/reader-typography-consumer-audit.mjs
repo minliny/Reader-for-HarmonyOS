@@ -23,7 +23,7 @@ export function auditTypographyConsumers(source, file = '/tmp/TypographyConsumer
       if (!record) {
         let parent = node;
         while (parent && !ts.isMethodDeclaration(parent)) parent = parent.parent;
-        record = { method: parent?.name?.getText(parsed) ?? '@Styles', kind: root.expression?.getText(parsed),
+        record = { carrierStart: root.getStart(parsed), method: parent?.name?.getText(parsed) ?? '@Styles', kind: root.expression?.getText(parsed),
           text: root.arguments?.[0]?.getText(parsed), modifiers: {}, line: parsed.getLineAndCharacterOfPosition(node.getStart(parsed)).line + 1 };
         groups.set(root.pos, record);
       }
@@ -87,4 +87,26 @@ export function typographyRoleImports(source, file = '/tmp/TypographyImports.ets
     for (const element of bindings.elements) if (/^TYPE_\w+$/.test(element.name.text)) roles.add(element.name.text);
   }
   return roles;
+}
+
+/** Actual native text/control nodes, including carriers with no font calls.
+ * An omitted font tuple means the framework owns rendering; it is not a fake
+ * public role and cannot be discovered by a modifier-count-only gate. */
+export function auditNativeTextElements(source, file = '/tmp/NativeTypography.ets') {
+  const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  assert.equal(parsed.parseDiagnostics.length, 0, `${file}: native element AST parsing`);
+  const fonts = new Map(auditTypographyConsumers(source,file).map(node => [node.carrierStart,node.modifiers]));
+  const attributes = new Map(), result = [], native = new Set(['Text','Span','Button','TextInput','TextArea','Marquee']);
+  const rootOf = node => { while(ts.isCallExpression(node)&&node.expression?.expression)node=node.expression.expression;return node; };
+  const modifiers = node => { if(ts.isCallExpression(node)&&ts.isPropertyAccessExpression(node.expression)) {
+    const root = rootOf(node); if(!attributes.has(root.pos))attributes.set(root.pos,{});
+    attributes.get(root.pos)[node.expression.name.text] = node.arguments[0]?.getText(parsed);
+  } ts.forEachChild(node,modifiers); };modifiers(parsed);
+  const walk = node => { if(ts.isEtsComponentExpression(node)&&ts.isIdentifier(node.expression)&&native.has(node.expression.text)){
+    let parent=node;while(parent&&!ts.isMethodDeclaration(parent))parent=parent.parent;
+    let textParent=node.parent;while(textParent&&!(ts.isEtsComponentExpression(textParent)&&textParent.expression.getText(parsed)==='Text'))textParent=textParent.parent;
+    result.push({kind:node.expression.text,inheritsTextStyle:!!textParent&&Object.keys(fonts.get(textParent.getStart(parsed))??{}).length>0,method:parent?.name?.getText(parsed)??'@module',text:node.arguments[0]?.getText(parsed),
+      line:parsed.getLineAndCharacterOfPosition(node.getStart(parsed)).line+1,hasChildContent:!!node.body,
+      modifiers:fonts.get(node.getStart(parsed))??{},attributes:attributes.get(node.pos)??{}});
+  }ts.forEachChild(node,walk); };walk(parsed);return result;
 }
