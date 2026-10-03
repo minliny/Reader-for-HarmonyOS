@@ -1,3 +1,4 @@
+import { compileHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
 import {readableAdmissionFixture} from './lib/bookshelf-readable-admission-probe.mjs';
 import {ReaderStartupContentOwner} from '../entry/src/main/ets/app/ReaderStartupContentOwner.ts';
 import assert from 'node:assert/strict';
@@ -60,8 +61,6 @@ const stage=()=>({loads:0,getMainWindowSync:()=>({}),loadContent(){this.loads++;
 console.log('PASS: detail mutation settles after exit; stale window completion cannot load content');
 // Cache freshness/request joining live in the coordinator. Exercise the active
 // Index admission call and its generation guards, not the removed wrapper.
-const admission=index.slice(index.indexOf('class RemoteDetailAdmission {'),index.indexOf('\nclass RemoteSessionAttemptOutcome'));
-const RemoteDetailAdmission=new Function(stripTypeScriptTypes(admission)+';return RemoteDetailAdmission;')();
 for(const stale of [false,true]) for(const fails of [false,true]) {
  const shared=deferred(),background=deferred(),calls=[],failures=[],refreshes=[];
  const coordinator={readingProjectionRevision:()=>0,setPreparationVisible(value){assert.equal(value,false);},
@@ -72,22 +71,21 @@ for(const stale of [false,true]) for(const fails of [false,true]) {
      calls.push({seed:candidates[0].seed,options});return shared.promise;
    },
    recentFailures:()=>[]};
+ const owner={bookAcquisitions:()=>coordinator,request:async(method)=>{if(method==='bookmark.list')return {data:{bookmarks:[]}};if(method==='chapter.content')return {data:{sourceId:'s',bookId:'b',chapterTitle:'第一章',via:'rule',content:'完整的故事正文。'.repeat(20),bodyVersion:'body',processingVersion:'processing'}};throw Error('optional IO unavailable: '+method);}}; setRuntime(owner);
+ const EntryHost=compileHost(undefined,{ReaderCoreGateway:class{async loadShelfBook(){return undefined;}}});
+ const backgroundMethod=EntryHost.prototype.refreshInBackground; EntryHost.prototype.refreshInBackground=function(...args){refreshes.push(args);return backgroundMethod.apply(this,args);};
  const CacheClass=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
    ['openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','installRemoteReadingSession'],{
      ...readingEvidence,RemoteChapterCacheRefreshError,...readingAdmission,...readingContract,
-     ReaderRuntimeOwner:{current:()=>({bookAcquisitions:()=>coordinator})},RemoteDetailAdmission,
-     RemoteReadingFlowGateway:class{},ReadingOfflineGateway:class{},
-     ReaderCoreGateway:class{async loadShelfBook(){return undefined;}},
+     ReaderRuntimeOwner:{current:()=>owner},ReadingEntryHost:EntryHost,EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,generation:0},LOCAL_SOURCE_ID:'local',
      DOMAIN:0,hilog:{info(){},warn(){},error(){}},
    });
  const seed={sourceId:'s',bookId:'b',title:'预览',author:'作者'};
  const session={identity:{sourceId:'s',bookId:'b'},book:{title:'已准入',author:'作者'},entries:[{index:0,title:'第一章',url:'/1'}],acquisitionMode:'cache'};
- const h=Object.assign(new CacheClass(),{remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,searchDetailCandidates:[],shelfBooks:[],
-   remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,shelfOperation:{removalKey:'',busy:false,batchRemovalBusy:false},
+ const h=Object.assign(new CacheClass(),{mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,searchDetailCandidates:[],shelfBooks:[],
+   remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,shelfOperation:{generation:0,removalKey:'',busy:false,batchRemovalBusy:false},
    bookshelfHost:{loadShelfBook:async()=>undefined},
-   probeRemoteContentVerdict:async()=>0,loadRemoteDirectoryProjection:async()=>session.entries,
-   showReadingFailure:(...args)=>failures.push(args),
-   refreshCachedSearchDetailInBackground:(...args)=>refreshes.push(args)});
+   showReadingFailure:(...args)=>failures.push(args)});
  h.openRemoteBookDetail(seed,'书源名称');assert.equal(h.route,'detail');await tick();assert.equal(calls.length,1);assert.equal(calls[0].seed,seed);
  assert.equal(calls[0].options.isCurrent(),true);assert.equal(h.detailReturnRoute,'search');
  if(stale){h.nextNavigationGeneration();h.route='bookshelf';assert.equal(calls[0].options.isCurrent(),false);}
@@ -97,7 +95,7 @@ for(const stale of [false,true]) for(const fails of [false,true]) {
  assert.equal(failures.length,0,'detail failure stays in the page, with no modal blocking reading');
  if(!stale&&fails)assert.equal(h.detailLoadingMessage,'synthetic admission failure');
  assert.equal(refreshes.length,!stale&&!fails?1:0,'only the current admission hands off the existing background promise');
- if(!stale&&!fails){assert.equal(h.remoteReadingSession,session);assert.equal(refreshes[0][4],background.promise);}
+ if(!stale&&!fails){assert.deepEqual(h.remoteReadingSession,session);assert.equal(refreshes[0][5],background.promise);}
  else assert.equal(h.remoteReadingSession,undefined,'failure/late admission cannot mount a session');
  background.resolve(session);
 }
@@ -106,14 +104,15 @@ for (const scenario of ['offscreen-existing','not-on-shelf','stale-lookup']) {
  const coordinator={readingProjectionRevision:()=>0,setPreparationVisible(){},recentFailures:()=>[],
   acquireBookWithBackgroundRefresh(){calls.push('fixed');return new Promise(()=>{});},
   acquireCandidateGroup(){calls.push('group');return new Promise(()=>{});}};
+ const owner={bookAcquisitions:()=>coordinator,request:async(method)=>{if(method==='bookmark.list')return {data:{bookmarks:[]}};if(method==='chapter.content')return {data:{sourceId:'s',bookId:'b',chapterTitle:'第一章',via:'rule',content:'完整的故事正文。'.repeat(20),bodyVersion:'body',processingVersion:'processing'}};throw Error('optional IO unavailable: '+method);}}; setRuntime(owner);
+ const EntryHost=compileHost(undefined,{ReaderCoreGateway:class{loadShelfBook(){return lookup.promise;}}});
  const Host=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
   ['openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','installRemoteReadingSession'],{
    ...readingEvidence,RemoteChapterCacheRefreshError,...readingAdmission,...readingContract,
-   ReaderRuntimeOwner:{current:()=>({bookAcquisitions:()=>coordinator})},RemoteDetailAdmission,
-   RemoteReadingFlowGateway:class{},ReadingOfflineGateway:class{},ReaderCoreGateway:class{loadShelfBook(){return lookup.promise;}},
+   ReaderRuntimeOwner:{current:()=>owner},ReadingEntryHost:EntryHost,EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,generation:0},LOCAL_SOURCE_ID:'local',
    DOMAIN:0,hilog:{info(){},warn(){},error(){}}});
- const h=Object.assign(new Host(),{remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,
-  searchDetailCandidates:[],shelfBooks:[],remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,shelfOperation:{removalKey:'',busy:false,batchRemovalBusy:false},
+ const h=Object.assign(new Host(),{mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,
+  searchDetailCandidates:[],shelfBooks:[],remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,shelfOperation:{generation:0,removalKey:'',busy:false,batchRemovalBusy:false},
   bookshelfHost:{loadShelfBook:()=>lookup.promise}});
  const selected={sourceId:'s',bookId:'offscreen',title:'书',author:'作者'};
  h.openRemoteBookDetail(selected,'书源');assert.equal(h.route,'detail');assert.deepEqual(calls,[]);

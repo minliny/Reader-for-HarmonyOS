@@ -11,6 +11,7 @@ const shelf = read('entry/src/main/ets/features/bookshelf/BookshelfPage.ets');
 const shelfFlow = read('entry/src/main/ets/features/bookshelf/BookshelfFlowGateway.ts');
 const shelfMoreMenu = read('entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets');
 const remote = read('entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+const entryHost = read('entry/src/main/ets/features/reading/ReadingEntryHost.ts');
 const sourceSwitchGateway = read('entry/src/main/ets/features/source/SourceSwitchGateway.ts');
 const sourceSwitchWindow = read('entry/src/main/ets/features/source/SourceSwitchWindow.ets');
 const surfaceSpecs = read('entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets');
@@ -28,7 +29,7 @@ for (const declaration of [
 
 assert.match(index, /private openShelfBook\([\s\S]*openRemoteBookDetail\([\s\S]*selection, true\);/,
   'a shelf tap must resume instead of stopping at detail');
-assert.match(index, /owner\.bookAcquisitions\(\)[\s\S]*\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/,
+assert.match(entryHost, /const coordinator = this\.runtime\.bookAcquisitions\(\);[\s\S]*coordinator\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent: current \}\)/,
   'a shelf cold start must admit the durable TOC before online recovery');
 assert.match(read('entry/src/main/ets/app/ReaderCoreGateway.ts'), /\.addReadableBook\(params\)/,
   'remote shelf success requires the selected-source durable readable admission');

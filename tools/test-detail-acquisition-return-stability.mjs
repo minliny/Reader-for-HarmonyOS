@@ -1,3 +1,4 @@
+import { ProductionHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { createRequire, registerHooks } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -40,6 +41,8 @@ function fixture() {
     catalogAt: now, catalogCount: 1, readableAt: now, verificationCurrent: true, stale: false };
   const coordinator = new BookAcquisitionCoordinator(async (method, params) => {
     calls.push(method);
+    if (method === 'bookshelf.get') { const saved=page.shelfBooks.find(book => book.sourceId === params.sourceId && book.bookId === params.bookId); return { data: { book:saved?{...saved,addedAt:1,sortIndex:0}:null } }; }
+    if (method === 'bookmark.list') return {data:{bookmarks:[]}};
     if (method === 'source.list') return { data: { sources: [{ ...source }] } };
     if (method === 'cache.book.status') {
       const snapshot = structuredClone(catalog);
@@ -63,32 +66,29 @@ function fixture() {
     throw Error(`unexpected ${method}`);
   });
   const owner = { bookAcquisitions: () => coordinator, request: (...args) => coordinator.request(...args) };
-  installedOwner = owner;
+  installedOwner = owner; setRuntime(owner);
   const authority = { current: () => { if (installedOwner === undefined) throw Error('Runtime unavailable'); return installedOwner; } };
   const Index = productionMotionMethods(process.env.READER_DETAIL_PROJECTION_SOURCE ?? fileURLToPath(new URL('pages/Index.ets', base)),
-    ['isCurrentDetailProjection', 'refreshDetailAcquisitionProjection', 'installRemoteReadingSession', 'returnToReadingOrigin', 'probeRemoteContentVerdict',
+    ['refreshDetailAcquisitionProjection', 'installRemoteReadingSession', 'returnToReadingOrigin', 'probeRemoteContentVerdict',
       'openRemoteBookDetail', 'readingDetailForRemoteSeed'], {
-      ...evidence, BookAcquisitionProjectionGateway, ReaderRuntimeOwner: authority, LOCAL_SOURCE_ID: 'local',
+      ...evidence, BookAcquisitionProjectionGateway, ReaderRuntimeOwner: authority, ReadingEntryHost: ProductionHost, EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,generation:0}, LOCAL_SOURCE_ID: 'local',
       RemoteReadingFlowGateway, RemoteChapterCacheRefreshError, remoteReadingFailureKindOf, verdictForFailureKind,
       captureRemotePositionContext, RemoteReadingGatewayError, remoteReadingFailureRecord,
-      ReadingOfflineGateway: class {}, ReaderCoreGateway: class { async loadShelfBook() { return undefined; } },
-      RemoteDetailAdmission: class { constructor(session, backgroundRefresh) {
-        Object.assign(this, { session, backgroundRefresh, refreshInBackground: backgroundRefresh !== undefined });
-      } }, hilog: { info() {}, warn() {}, error() {} }, DOMAIN: 0,
+      hilog: { info() {}, warn() {}, error() {} }, DOMAIN: 0,
     });
-  const page = Object.assign(new Index(), { detailBook: { sourceId: 'source', sourceName: '书源', bookId: 'book', title: '书', author: '作者' },
+  const page = Object.assign(new Index(), { mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),detailBook: { sourceId: 'source', sourceName: '书源', bookId: 'book', title: '书', author: '作者' },
     detailToc: session.entries, remoteSessionGeneration: 0, remoteContentProbeGeneration: 0,
     remoteReadabilityProjectionRevision: -1, navigationGeneration: 1, route: 'detail', readingOriginRoute: 'detail',
-    readingSessionActive: false, sourceSwitchVisible: false, bookProjectionLoading: false, bookProjectionAgain: false,
-    candidateAdmissionGeneration: -1, candidateAdmissionFailedGeneration: -1,
+    readingSessionActive: false, sourceSwitchVisible: false,
     shelfBooks: [], searchDetailCandidates: [], detailReturnRoute: 'search', remoteCatalogRefreshAt: new Map(),
-    offlineMutationGeneration: 0, shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false}, directoryBookmarkMutationGeneration: 0,
+    offlineMutationGeneration: 0, shelfOperation: {generation:0,removalKey:'',busy:false,batchRemovalBusy:false}, directoryBookmarkMutationGeneration: 0,
     bookshelfHost: { loadShelfBook: async () => undefined },
-    loadRemoteDirectoryProjection: async (_offline, _owner, session) => session.entries,
     showReadingFailure: (title, message) => failures.push({ title, message }),
     getUIContext() { assert.fail('stale readmission must not require confirmation'); },
     nextNavigationGeneration() { this.remoteContentProbeGeneration++; return ++this.navigationGeneration; },
   });
+  // Compatibility observations read the actual domain's queue; no page producer is simulated.
+  for (const [alias,key] of [['bookProjectionLoading','projectionActive'],['bookProjectionActive','projectionActive'],['bookProjectionPending','projectionPending']]) Object.defineProperty(page,alias,{get:()=>alias==='bookProjectionLoading'?page.readingEntryHost?.[key]!==undefined:page.readingEntryHost?.[key]});
   let verdict = 'verifying';
   Object.defineProperty(page, 'remoteContentVerdict', { get: () => verdict, set(value) { verdict = value; verdicts.push(value); } });
   page.installRemoteReadingSession(evidence.withPreparedRemoteChapter(session, body, coordinator.readingProjectionRevision()));
@@ -97,7 +97,7 @@ function fixture() {
     if (change.reset || change.identities.some(id => id.sourceId === 'source' && id.bookId === 'book')) void page.refreshDetailAcquisitionProjection();
   });
   return { page, coordinator, facts, calls, verdicts, source, catalog, failures, owner,
-    setOwner(value) { installedOwner = value; },
+    setOwner(value) { installedOwner = value; setRuntime(value); if(value !== undefined && value.bookAcquisitions) page.mountedRuntimeOwner=value; },
     overrideProjection(value) { projectionOverride = value; },
     failProjectionOnce() { projectionFailureOnce = true; },
     gateProjection() { projectionGate = deferred(); return projectionGate; },
@@ -156,7 +156,7 @@ for (const inShelf of [false, true]) {
     await f.coordinator.request('source.update', { sourceId: 'source' });
     f.facts.stale = true;
     const bodyGate = f.gateBody();
-    gate.resolve(); await pending; await until(() => !f.page.bookProjectionLoading);
+    gate.resolve(); await pending; // The domain owns readmission through the accepted body probe.
     await until(() => f.calls.includes('chapter.content'));
     assert.equal(f.page.remoteContentVerdict, 'verifying', 'stale evidence launches cache-first admission automatically');
     assert.equal(f.page.remoteReadingSession.preparedChapter, undefined);
@@ -183,7 +183,7 @@ for (const inShelf of [false, true]) {
     f.source.enabled = false; f.catalog.tocAvailable = false; f.facts.stale = true;
     await f.coordinator.request('source.update', { sourceId: 'source' });
     await f.page.refreshDetailAcquisitionProjection();
-    await until(() => f.page.detailLoadingMessage.length > 0 && f.page.candidateAdmissionGeneration === -1);
+    await until(() => f.page.detailLoadingMessage.length > 0 && !ProductionHost.forRuntime(f.page.mountedRuntimeOwner).snapshot().candidateAdmissionActive);
     assert.notEqual(f.page.remoteContentVerdict, 'verifying', 'missing offline cache reaches the existing failure/retry state');
     assert.equal(f.page.route, 'detail'); assert.equal(f.page.detailReturnRoute, 'search');
     const generation = f.page.navigationGeneration;
@@ -242,8 +242,8 @@ for (const name of ['LocalBookDetail', 'NoCoverCover']) {
 sdkRequire(sdkRoot + '/lib/component_map.js').CUSTOM_BUILDER_METHOD.add('externalDirectory');
 function detailSdk(f) {
   const read = file => readFileSync(new URL(file, base), 'utf8');
-  const parent = createReaderBuilderProbe(read('pages/Index.ets'), ['detailContent','detailReadableAdmission','detailBookKey','detailShelfAdmissionIdentity','isCurrentDetailShelfAdmission','isCurrentRuntime'], { EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,message:''},LocalBookDetail: DetailChild, LOCAL_SOURCE_ID: 'local' }).owner;
-  Object.assign(parent, f.page, { shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false}, readableAdmissions: [], detailShelfAdmissionMount:1,
+  const parent = createReaderBuilderProbe(read('pages/Index.ets'), ['detailContent','detailSurface','detailReadableAdmission','detailBookKey','detailShelfAdmissionIdentity','isCurrentDetailShelfAdmission','isCurrentRuntime'], { EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,message:''},LocalBookDetail: DetailChild, LOCAL_SOURCE_ID: 'local' }).owner;
+  Object.assign(parent, f.page, { shelfOperation: {generation:0,removalKey:'',busy:false,batchRemovalBusy:false}, readableAdmissions: [], detailShelfAdmissionMount:1,
     offlineMutationActiveKey: '',
     detailBookKey: b => JSON.stringify([b.sourceId, b.bookId]), hasUnknownShelfWrite: () => false,
     remoteContentVerdictLabel: () => '', remoteContentVerdict: f.page.remoteContentVerdict });
@@ -285,15 +285,17 @@ for (const retire of ['runtime-unset', 'runtime-replacement', 'navigation', 'ent
     f.overrideProjection({ origin: 'source', bookUrl: 'book', name: '迟到标题', acquisition: { ...f.facts } });
     const gate = f.gateProjection(), pending = f.page.refreshDetailAcquisitionProjection();
     await until(() => f.calls.includes('search-book.get'));
+    await f.page.refreshDetailAcquisitionProjection();
+    assert.ok(f.page.bookProjectionPending, 'capture an actual pending original lease before retirement');
     if (retire === 'runtime-unset') f.setOwner(undefined);
     if (retire === 'runtime-replacement') f.setOwner({});
     if (retire === 'navigation') f.page.navigationGeneration++;
-    if (retire === 'entity') f.page.detailBook = { ...oldBook, bookId: 'replacement' };
-    if (retire === 'session') f.page.remoteSessionGeneration++;
+    if (retire === 'entity') { f.page.detailBook = { ...oldBook, bookId: 'replacement' }; f.page.remoteReadingSession=undefined; f.page.bindReadingEntryReader(); }
+    if (retire === 'session') { f.page.installRemoteReadingSession(undefined); f.page.installRemoteReadingSession(oldSession); }
     const expected = f.page.detailBook;
-    f.page.bookProjectionAgain = true; gate.resolve(); await assert.doesNotReject(pending); await pause();
-    assert.equal(f.page.detailBook, expected); assert.equal(f.page.remoteReadingSession, oldSession);
-    assert.equal(f.page.bookProjectionLoading, false);
+    gate.resolve(); await assert.doesNotReject(pending); await pause();
+    assert.equal(f.page.detailBook, expected); assert.equal(f.page.remoteReadingSession, retire==='entity'?undefined:oldSession);
+    assert.equal(ProductionHost.shared?.projectionActive, undefined);
     if (retire.startsWith('runtime')) assert.equal(f.calls.filter(m => m === 'search-book.get').length, 1, 'old owner cannot reacquire a new Runtime for a queued rerun');
   } finally { f.coordinator.close(); }
 }
@@ -304,6 +306,7 @@ for (const failedOld of [false, true]) for (const replacement of ['navigation', 
     if (failedOld) f.failProjectionOnce();
     const gate = f.gateProjection(), old = f.page.refreshDetailAcquisitionProjection();
     await until(() => f.calls.includes('search-book.get'));
+    const oldHost=f.page.readingEntryHost;
     if (replacement === 'runtime') f.setOwner({ ...f.owner });
     else {
       f.page.navigationGeneration++;
@@ -311,15 +314,18 @@ for (const failedOld of [false, true]) for (const replacement of ['navigation', 
       f.page.detailBook = { ...f.page.detailBook, bookId: 'second', title: '第二本' };
       f.page.remoteReadingSession = { ...f.page.remoteReadingSession, identity: { sourceId: 'source', bookId: 'second' }, preparedChapter: undefined };
     }
+    f.page.bindReadingEntryReader();
     f.overrideProjection({ origin: 'source', bookUrl: f.page.detailBook.bookId, name: '新意图标题', acquisition: { ...f.facts } });
-    await f.page.refreshDetailAcquisitionProjection();
-    const pending = f.page.bookProjectionPending;
+    const secondGate=f.gateProjection();
+    const newRead=f.page.refreshDetailAcquisitionProjection();
+    if(replacement==='navigation') await newRead;
+    const pending = f.page.bookProjectionPending ?? f.page.bookProjectionActive;
     assert.ok(pending, 'new call captures its own full lease while old IO remains active');
-    if (replacement === 'runtime') assert.notEqual(pending.owner, f.owner);
-    const secondGate = f.gateProjection(); gate.resolve(); await old;
+    if (replacement === 'runtime') { assert.notEqual(f.page.readingEntryHost,oldHost); assert.equal(oldHost.owns(f.owner),true); }
+    gate.resolve(); await old;
     await until(() => f.calls.filter(m => m === 'search-book.get').length === 2);
-    assert.equal(f.page.bookProjectionActive, pending); assert.equal(f.page.bookProjectionLoading, true, 'old finally cannot clear the freshly started active lease');
-    secondGate.resolve(); await until(() => !f.page.bookProjectionLoading);
+    assert.equal(f.page.bookProjectionActive.lease, pending.lease);assert.equal(f.page.bookProjectionActive.scopeId,pending.scopeId); assert.equal(f.page.bookProjectionLoading, true, 'old finally cannot clear the freshly started active lease');
+    secondGate.resolve(); await newRead; await until(() => !f.page.bookProjectionLoading);
     assert.equal(f.page.detailBook.title, '新意图标题'); assert.ok(detailSdk(f).texts.includes('新意图标题'));
     assert.equal(f.page.bookProjectionPending, undefined); assert.equal(f.page.bookProjectionActive, undefined);
   } finally { f.coordinator.close(); }
@@ -328,11 +334,11 @@ for (const retiredPending of ['navigation', 'runtime-unset', 'entity']) {
   const f = fixture(); try {
     const gate = f.gateProjection(), old = f.page.refreshDetailAcquisitionProjection();
     await until(() => f.calls.includes('search-book.get'));
-    f.page.navigationGeneration++;
+    f.page.navigationGeneration++; f.page.bindReadingEntryReader();
     await f.page.refreshDetailAcquisitionProjection(); assert.ok(f.page.bookProjectionPending);
     if (retiredPending === 'navigation') f.page.navigationGeneration++;
     if (retiredPending === 'runtime-unset') f.setOwner(undefined);
-    if (retiredPending === 'entity') f.page.detailBook = { ...f.page.detailBook, bookId: 'third' };
+    if (retiredPending === 'entity') { f.page.detailBook = { ...f.page.detailBook, bookId: 'third' }; f.page.remoteReadingSession=undefined;f.page.bindReadingEntryReader(); }
     const expected = f.page.detailBook; gate.resolve(); await old; await pause();
     assert.equal(f.calls.filter(m => m === 'search-book.get').length, 1, 'already retired pending intent cannot drain');
     assert.equal(f.page.detailBook, expected); assert.equal(f.page.bookProjectionLoading, false);

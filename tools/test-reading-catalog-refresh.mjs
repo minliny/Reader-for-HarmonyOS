@@ -1,3 +1,4 @@
+import { ProductionHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
 import { readingPrefetchOwnerProbe } from './lib/reading-prefetch-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
@@ -36,16 +37,18 @@ function fixture(cachedSourceVersion=sourceVersion){
    if(tocGate)await tocGate.promise;if(fail)throw Error('HTTP status 503');catalog=allEntries;
    return{data:{sourceId,bookId,sourceVersion,catalogVersion:'new',contextVersion:'context',toc:catalog.map(e=>({...e,variables:{}}))}};
   }
+  if(method==='bookmark.list')return {data:{bookmarks:[]}};
   if(method==='reading.catalog.page')return{data:{kind:'ready',sourceId,bookId,revision:'old-catalog',offset:p.offset,chapterCount:catalog.length,readableChapterCount:catalog.length-7,entries:projection(catalog).slice(p.offset,p.offset+p.limit)}};
   throw Error(`unexpected ${method}`);
  });
  const owner={bookAcquisitions:()=>runtime,request:(...a)=>runtime.request(...a),supportsCoreCapability:c=>c==='reading.catalog.page.v1',captureReadingContentValidity:()=>()=>true};
+ setRuntime(owner);
  const ownerProbe=readingPrefetchOwnerProbe(()=>owner);
- const Index=productionMotionMethods(file('pages/Index.ets'),['readingPrefetchLease','refreshRemoteCatalogNearEnd','isRemoteCatalogNearEnd','onRemoteSessionReady'],{
-  ...ownerProbe,RemoteReadingFlowGateway,canAppendRemoteReadingCatalog,sameRemoteSessionEvidence,CATALOG_REFRESH_INTERVAL_MS:600000,CATALOG_REFRESH_RETRY_INTERVAL_MS:30000,CATALOG_REFRESH_NEAR_END:3,DOMAIN:0,hilog:{warn:(...a)=>warnings.push(a)} });
- const page=Object.assign(new Index(),{mountedRuntimeOwner:owner,detailShelfAdmissionMount:1,shelfReceiptRetired:false,readingSessionActive:true,navigationGeneration:1,remoteSessionGeneration:1,remoteCatalogRefreshAt:new Map(),remoteCatalogRefreshAttemptAt:new Map(),remoteCatalogRefreshInFlight:new Map(),detailBook:{...seed,sourceName:'佩蒲裴榕'},directoryCurrentChapterIndex:955,
+ const Index=productionMotionMethods(file('pages/Index.ets'),['readingPrefetchLease','refreshRemoteCatalogNearEnd','isRemoteCatalogNearEnd','onRemoteSessionReady','installRemoteReadingSession'],{
+  ...ownerProbe,LOCAL_SOURCE_ID:'local',ReadingEntryHost:ProductionHost,EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,generation:0},RemoteReadingFlowGateway,canAppendRemoteReadingCatalog,sameRemoteSessionEvidence,CATALOG_REFRESH_INTERVAL_MS:600000,CATALOG_REFRESH_RETRY_INTERVAL_MS:30000,CATALOG_REFRESH_NEAR_END:3,DOMAIN:0,hilog:{warn:(...a)=>warnings.push(a)} });
+ const page=Object.assign(new Index(),{mountedRuntimeOwner:owner,detailShelfAdmissionMount:1,readingEntryScopeId:-1,shelfOperation:{generation:0,removalKey:'',busy:false},detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),shelfReceiptRetired:false,readingSessionActive:true,navigationGeneration:1,remoteSessionGeneration:1,remoteCatalogRefreshAt:new Map(),remoteCatalogRefreshAttemptAt:new Map(),remoteCatalogRefreshInFlight:new Map(),detailBook:{...seed,sourceName:'佩蒲裴榕'},detailToc:projection(catalog),directoryCurrentChapterIndex:955,
   directoryBookmarkMutationGeneration:0,directoryBookmarkMutationActiveKey:'',offlineMutationGeneration:0,
-  installRemoteReadingSession(s){if(!sameRemoteSessionEvidence(this.remoteReadingSession,s))this.remoteSessionGeneration++;this.remoteReadingSession=s;},refreshBookshelf(){} });
+  refreshBookshelf(){} });
  const authority=ownerProbe.ReadingPrefetchHost.forRuntime(owner);
  for(const [alias,key] of [['remoteCatalogRefreshAt','refreshAt'],['remoteCatalogRefreshAttemptAt','attemptAt'],['remoteCatalogRefreshInFlight','refreshInFlight']])Object.defineProperty(page,alias,{get:()=>authority[key]});
  return{runtime,owner,page,calls,warnings,gate:g=>{tocGate=g;},fail:v=>{fail=v;},catalog:()=>catalog};
@@ -71,7 +74,7 @@ await check('near-end force refresh bypasses prepared/durable catalogs, singlefl
  const f=fixture();try{
   const old=await f.runtime.acquireBook(seed);f.page.remoteReadingSession=old;
   const gateway=new ReadingSessionFlowGateway(sourceId,bookId,{kind:'remote',session:old},f.owner),r=reader(gateway);
-  const install=f.page.installRemoteReadingSession.bind(f.page);f.page.installRemoteReadingSession=s=>{install(s);r.v.remoteSession=s;r.v.onRemoteCatalogChanged();};
+  const publish=f.page.applyReadingEntrySnapshot.bind(f.page);f.page.applyReadingEntrySnapshot=s=>{publish(s);r.v.remoteSession=s.session;r.v.onRemoteCatalogChanged();};
   const gate=deferred();f.gate(gate);f.calls.length=0;
   f.page.refreshRemoteCatalogNearEnd(old);f.page.refreshRemoteCatalogNearEnd(old);await until(()=>f.calls.some(c=>c.method==='book.toc'));
   assert.equal(f.calls.filter(c=>c.method==='book.toc').length,1);assert.equal(f.page.remoteCatalogRefreshAt.size,0);
@@ -115,7 +118,7 @@ await check('cold cached entry acquires only after full catalog near end, and la
   const gateway=new ReadingSessionFlowGateway(sourceId,bookId,{kind:'remote',seed,onSessionReady:s=>f.page.onRemoteSessionReady(s)},f.owner);
   const r=reader(gateway,allEntries.slice(0,956),index);r.v.entryCatalogPending=true;f.page.directoryCurrentChapterIndex=index;
   r.v.onReadingReady=value=>{f.page.directoryCurrentChapterIndex=value;};
-  const install=f.page.installRemoteReadingSession.bind(f.page);f.page.installRemoteReadingSession=s=>{install(s);r.v.remoteSession=s;r.v.onRemoteCatalogChanged();};
+  const publish=f.page.applyReadingEntrySnapshot.bind(f.page);f.page.applyReadingEntrySnapshot=s=>{publish(s);r.v.remoteSession=s.session;r.v.onRemoteCatalogChanged();};
   await r.v.hydrateEntryCatalog();
   if(index===946){assert.equal(gateway.remoteSession(),undefined);assert.ok(f.calls.every(c=>c.method==='reading.catalog.page'));
    r.v.chapter=chapter(953);r.v.chapterWindow.setCurrent(r.v.chapter);r.v.visiblePage={...r.page};
@@ -133,7 +136,7 @@ await check('cold first acquisition joins real coordinator refresh1370; same gat
   await until(()=>f.calls.some(c=>c.method==='book.toc'));
   const gateway=new ReadingSessionFlowGateway(sourceId,bookId,{kind:'remote',seed,onSessionReady:s=>f.page.onRemoteSessionReady(s)},f.owner);
   const r=reader(gateway),neighbour=chapter(954);r.v.chapterWindow.admitNeighbour(neighbour);r.v.entryCatalogPending=true;
-  const install=f.page.installRemoteReadingSession.bind(f.page);f.page.installRemoteReadingSession=s=>{install(s);r.v.remoteSession=s;r.v.onRemoteCatalogChanged();};
+  const publish=f.page.applyReadingEntrySnapshot.bind(f.page);f.page.applyReadingEntrySnapshot=s=>{publish(s);r.v.remoteSession=s.session;r.v.onRemoteCatalogChanged();};
   const docs=readingSessionDocuments(f.owner);docs.configure(sourceId,bookId,allEntries.slice(7,956).map(e=>e.index),()=>true);docs.admit(r.body,true);docs.admit(neighbour,false);
   assert.ok(docs.read(sourceId,bookId,954));await r.v.hydrateEntryCatalog();assert.equal(gateway.remoteSession(),undefined);
   gate.resolve();await refresh;await until(()=>r.v.remoteCatalogSessionPreparation===undefined);
