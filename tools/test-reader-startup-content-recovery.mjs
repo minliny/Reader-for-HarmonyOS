@@ -30,7 +30,7 @@ function fixture(admission=Promise.resolve(),deadline=1000) {
 {
   const f=fixture();await tick();const old=f.callbacks.main;old(17);f.callbacks.recovery(24);
   assert.equal(f.owner.snapshot().phase,'platform-unavailable');f.owner.retry();old(0);
-  assert.deepEqual(f.calls,['main','recovery','unavailable'],'failed native recovery is terminal, with no fake continuation or replay');f.owner.close();
+  await tick();assert.deepEqual(f.calls,['main','recovery','unavailable','exit'],'failed native recovery is terminal, with no fake continuation or replay');f.owner.close();
 }
 {
   const f=fixture();f.driver.loadMain=()=>{throw Error('native dispatch failed');};await tick();
@@ -70,3 +70,40 @@ function fixture(admission=Promise.resolve(),deadline=1000) {
   ability.windowStageGeneration=4;callback({code:0});assert.equal(starts,0);assert.equal(receipts,0);
 }
 console.log('PASS pre-Index recovery: bounded original barrier, explicit retry, native load failure, terminal unavailable fallback, exact WindowStage retirement, no duplicate storage recovery or late EventLoop start');
+
+// An absent native ACK is terminal. A second load would race an OS request
+// that has no cancellation receipt, so it must never be used as a timeout.
+for (const stage of ['main','recovery']) {
+ const f=fixture(Promise.resolve(),8);await tick();
+ if(stage==='recovery')f.callbacks.main(17);
+ const old=f.callbacks[stage];
+ await new Promise(resolve=>setTimeout(resolve,18));await tick();
+ assert.equal(f.owner.snapshot().phase,'platform-unavailable');
+ assert.equal(f.owner.snapshot().reason,stage==='main'?'main-load-pending':'recovery-load-pending');
+ assert.equal(f.owner.snapshot().canRetry,false);
+ const calls=[...f.calls];f.owner.retry();old(0);old(24);await tick();
+ assert.deepEqual(f.calls,calls,'no late ACK, retry or repeated callback can overlap native loads or revive readiness');
+ assert.equal(f.calls.filter(c=>c==='exit').length,1);
+ assert.equal(f.calls.filter(c=>c==='main').length,1);
+ assert.equal(f.calls.filter(c=>c==='recovery').length,stage==='main'?0:1);f.owner.close();
+}
+{
+ const f=fixture(Promise.resolve(),8);f.driver.exit=async()=>{f.calls.push('exit');throw Error('native exit denied');};
+ f.driver.unavailable=()=>{f.calls.push('unavailable');throw Error('logger failed');};
+ f.driver.observerFailed=()=>{throw Error('diagnostic failed');};
+ f.owner.subscribe(()=>{throw Error('observer failed');});await tick();
+ await new Promise(resolve=>setTimeout(resolve,18));await tick();
+ assert.equal(f.owner.snapshot().phase,'platform-unavailable');
+ assert.deepEqual(f.calls,['main','unavailable','exit'],'diagnostics and terminal exit failure cannot start another load');f.owner.close();
+}
+{
+ const f=fixture(Promise.resolve(),8);await tick();f.owner.close();
+ await new Promise(resolve=>setTimeout(resolve,18));assert.deepEqual(f.calls,['main'],'close releases native deadline without terminating the next Ability');
+}
+console.log('PASS native startup settlement: missing main/recovery callbacks are bounded terminal attempts, no overlapping load, once-only exit, late ACK retirement and non-disruptive diagnostics');
+
+{
+ const f=fixture();await tick();
+ f.callbacks.main(17);f.callbacks.recovery(24);f.owner.close();await tick();
+ assert.deepEqual(f.calls,['main','recovery','unavailable'],'retirement before queued terminal exit cannot end the successor stage');
+}

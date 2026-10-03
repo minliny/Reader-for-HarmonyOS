@@ -1,5 +1,5 @@
 export type ReaderStartupContentPhase = 'waiting' | 'loading' | 'recovery-loading' | 'recovery' | 'ready' | 'platform-unavailable' | 'retired';
-export type ReaderStartupRecoveryReason = 'admission-pending' | 'admission-failed' | 'main-load-failed' | 'recovery-load-failed' | 'exit-failed';
+export type ReaderStartupRecoveryReason = 'admission-pending' | 'admission-failed' | 'main-load-failed' | 'main-load-pending' | 'recovery-load-failed' | 'recovery-load-pending' | 'exit-failed';
 export interface ReaderStartupContentState {
   phase: ReaderStartupContentPhase;
   reason: ReaderStartupRecoveryReason;
@@ -74,12 +74,13 @@ export class ReaderStartupContentOwner {
     void this.admission.then((): void => {
       if (!this.current(generation) || this.state.phase !== 'waiting') return;
       this.clearTimer(); this.publish('loading', 'admission-pending', false);
+      this.armNativeDeadline(generation, 'loading', 'main-load-pending');
       try {
         this.driver.loadMain((code: number): void => {
           if (!this.current(generation) || this.state.phase !== 'loading') return;
           if (code !== 0) { this.showRecovery(generation, 'main-load-failed'); return; }
-          this.publish('ready', 'admission-pending', false);
-          try { this.driver.ready(); } catch (error) { this.driver.observerFailed?.(error as Error); }
+          this.clearTimer(); this.publish('ready', 'admission-pending', false);
+          try { this.driver.ready(); } catch (error) { this.reportObserverFailure(error as Error); }
         });
       } catch (_) { if (this.state.phase === 'loading') this.showRecovery(generation, 'main-load-failed'); }
     }, (): void => {
@@ -89,22 +90,43 @@ export class ReaderStartupContentOwner {
   private showRecovery(generation: number, reason: ReaderStartupRecoveryReason): void {
     if (!this.current(generation)) return;
     this.clearTimer(); this.publish('recovery-loading', reason, false);
+    this.armNativeDeadline(generation, 'recovery-loading', 'recovery-load-pending');
     try {
       this.driver.loadRecovery((code: number): void => {
         if (!this.current(generation) || this.state.phase !== 'recovery-loading') return;
         if (code !== 0) { this.failRecovery(); return; }
-        this.publish('recovery', reason, true);
+        this.clearTimer(); this.publish('recovery', reason, true);
       });
     } catch (_) { if (this.state.phase === 'recovery-loading') this.failRecovery(); }
   }
-  private failRecovery(): void {
-    this.publish('platform-unavailable', 'recovery-load-failed', false);
-    this.driver.unavailable();
+  private armNativeDeadline(generation: number, phase: ReaderStartupContentPhase,
+    reason: ReaderStartupRecoveryReason): void {
+    this.timer = setTimeout((): void => {
+      if (this.current(generation) && this.state.phase === phase) this.failRecovery(reason);
+    }, this.deadlineMs);
+  }
+  private failRecovery(reason: ReaderStartupRecoveryReason = 'recovery-load-failed'): void {
+    this.clearTimer(); this.publish('platform-unavailable', reason, false);
+    // loadContent has no cancellation receipt. Never overlap a timed-out
+    // request with another native load; end only this Ability attempt.
+    try { this.driver.unavailable(); } catch (error) { this.reportObserverFailure(error as Error); }
+    if (this.retired || this.exiting) return;
+    this.exiting = true;
+    const generation = this.generation;
+    void Promise.resolve().then(async (): Promise<void> => {
+      if (!this.current(generation)) return;
+      await this.driver.exit();
+    }).catch((error: Error): void => {
+      this.reportObserverFailure(error);
+    }).finally((): void => { this.exiting = false; });
+  }
+  private reportObserverFailure(error: Error): void {
+    try { this.driver.observerFailed?.(error); } catch (_) { /* Diagnostic failure cannot alter startup settlement. */ }
   }
   private current(generation: number): boolean { return !this.retired && generation === this.generation; }
   private clearTimer(): void { if (this.timer >= 0) clearTimeout(this.timer); this.timer = -1; }
   private notify(observer: (state: ReaderStartupContentState) => void): void {
-    try { observer(this.snapshot()); } catch (error) { this.driver.observerFailed?.(error as Error); }
+    try { observer(this.snapshot()); } catch (error) { this.reportObserverFailure(error as Error); }
   }
   private publish(phase: ReaderStartupContentPhase, reason: ReaderStartupRecoveryReason, canRetry: boolean): void {
     this.state = { phase, reason, canRetry };
