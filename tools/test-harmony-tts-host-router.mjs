@@ -320,7 +320,7 @@ const backgroundSource = await readFile(
   'utf8',
 );
 assert.match(backgroundSource, /backgroundTaskManager\.startBackgroundRunning\([\s\S]*?\['audioPlayback'\]/);
-assert.match(backgroundSource, /backgroundTaskManager\.stopBackgroundRunning\(this\.context\)/);
+assert.match(backgroundSource, /backgroundTaskManager\.stopBackgroundRunning\(this\.context, id\)/);
 assert.match(backgroundSource, /wantAgent\.OperationType\.START_ABILITY/);
 assert.match(backgroundSource, /this\.context\.abilityInfo\.bundleName/);
 assert.match(backgroundSource, /canIUse\('SystemCapability\.ResourceSchedule\.BackgroundTaskManager\.ContinuousTask'\)/);

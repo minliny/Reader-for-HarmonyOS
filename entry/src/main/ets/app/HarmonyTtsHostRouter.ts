@@ -22,6 +22,7 @@ export interface ReaderTtsBackgroundSessionBridge {
   activate(): Promise<boolean>;
   deactivate(): Promise<void>;
   isActive(): boolean;
+  setRevocationListener?(listener: (() => void) | undefined): void;
   close(): Promise<void>;
 }
 
@@ -52,12 +53,18 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     http: ReaderTtsClosableHost,
     mediaSession: ReaderTtsMediaSessionBridge,
     backgroundSession?: ReaderTtsBackgroundSessionBridge,
+    isForeground: () => boolean = (): boolean => true,
   ) {
     this.system = system;
     this.http = http;
     this.active = system;
     this.mediaSession = mediaSession;
     this.backgroundSession = backgroundSession;
+    this.backgroundSession?.setRevocationListener?.((): void => {
+      if (!this.closed && this.foregroundSessionActive && this.backgroundPlaybackEnabled && !isForeground()) {
+        this.listener?.({ type: 'backgroundLeaseRevoked' });
+      }
+    });
     this.system.setEventListener((event: ReaderTtsHostEvent): void => this.forward(this.system, event), 'router');
     this.http.setEventListener((event: ReaderTtsHostEvent): void => this.forward(this.http, event), 'router');
     this.mediaSession.setEventListener((event: ReaderTtsHostEvent): void => {
@@ -219,6 +226,7 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     this.listenerOwner = undefined;
     this.foregroundSessionActive = false;
     this.foregroundActivation = undefined;
+    this.backgroundSession?.setRevocationListener?.(undefined);
     this.closeTask = Promise.all([
       this.system.close(),
       this.http.close(),

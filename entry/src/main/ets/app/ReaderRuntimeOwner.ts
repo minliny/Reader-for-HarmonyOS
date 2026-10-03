@@ -132,6 +132,7 @@ export class ReaderRuntimeOwner {
       new HarmonyHttpTtsHost(this),
       new HarmonyTtsMediaSession(context),
       new HarmonyTtsBackgroundSession(context),
+      (): boolean => AppStorage.get<boolean>('readerAppForeground') !== false,
     );
     this.localEpubResourceHost = new LocalEpubResourceHost(context);
     this.readingImageDiskCache = new ReadingImageDiskCache(context);
@@ -725,15 +726,18 @@ export class ReaderRuntimeOwner {
       }
       // Host callbacks must be invalidated before Core is released, otherwise
       // a late platform completion could attempt to advance a closed queue.
-      await this.ttsHost.close();
-      const runtime = this.runtime;
-      this.runtime = undefined;
-      if (runtime !== undefined) {
-        try {
-          await runtime.request('runtime.storage.flush', {}, { timeoutMs: 30000 });
-        } finally {
-          this.host?.setResponseAssetBridge(undefined);
-          runtime.close();
+      try {
+        await this.ttsHost.close();
+      } finally {
+        const runtime = this.runtime;
+        this.runtime = undefined;
+        if (runtime !== undefined) {
+          try {
+            await runtime.request('runtime.storage.flush', {}, { timeoutMs: 30000 });
+          } finally {
+            this.host?.setResponseAssetBridge(undefined);
+            runtime.close();
+          }
         }
       }
     } finally {

@@ -193,7 +193,8 @@
     "test-sync-webdav-product.mjs",
     "test-toc-repair-regressions.mjs",
     "test-transient-transport-acquisition.mjs",
-    "test-conventional-typography-registry.mjs"
+    "test-conventional-typography-registry.mjs",
+    "test-harmony-tts-background-lease.mjs"
   ],
   "integration": [
     "test-action-menu-surface.mjs",
