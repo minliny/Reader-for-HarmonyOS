@@ -10188,6 +10188,7 @@ export struct ReadingExperience {
         const uncertain = error instanceof ReaderControlReplaceGatewayError && error.writeUncertain;
         this.controlReplaceState = failReaderControlReplaceRequest(this.controlReplaceState, ticket,
           this.errorMessage(error), uncertain);
+        this.projectReaderReplaceWriteFacts();
         // An unconfirmed reply is not proof of no write. Re-materialize the
         // original book without retrying the mutation or claiming it succeeded.
         if (uncertain) this.reloadCurrentPageAfterReplacePersist(lifecycle, bookId);
