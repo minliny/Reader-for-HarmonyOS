@@ -172,7 +172,7 @@ export class RulesMutationOwner {
         if (observer !== undefined && observer.confirmedCount < observer.dispatchedCount) observer.confirmed(); }
       else observer?.rejectedBeforeExecution();
       const last = journey.cursor === journey.steps.length - 1;
-      const confirmedImport = journey.facts.filter(f=>f.outcome === 'applied').length + (receipt.outcome === 'applied' ? 1 : 0);
+      const confirmedImport = (journey.settled?.applied ?? journey.facts.filter(f=>f.outcome === 'applied').length) + (receipt.outcome === 'applied' ? 1 : 0);
       // Definite original Source item rejection preserves the previous partial
       // semantics. Unknown transport stops before any later item or timestamp.
       const abort = receipt.outcome === 'rejected' && (journey.kind !== 0 || last);
@@ -199,8 +199,8 @@ export class RulesMutationOwner {
     const j=intent.subscription; if (j === undefined) return;
     const facts=[...j.facts,...(currentReceipt === undefined ? [] : [{ outcome: currentReceipt.outcome, method:currentReceipt.method }])];
     this.state.subscription={ kind:j.kind,cursor:j.cursor,total:j.steps.length,
-      confirmedParts:facts.filter(f=>f.outcome==='applied').length,
-      failedParts:j.localFailures.length+facts.filter(f=>f.outcome==='rejected').length,
+      confirmedParts:(j.settled?.applied ?? j.facts.filter(f=>f.outcome==='applied').length)+(currentReceipt?.outcome==='applied'?1:0),
+      failedParts:j.localFailures.length+(j.settled?.rejected ?? j.facts.filter(f=>f.outcome==='rejected').length)+(currentReceipt?.outcome==='rejected'?1:0),
       metadataConfirmed:facts.some(f=>f.method==='rule-sub.put' && f.outcome==='applied') };
   }
 

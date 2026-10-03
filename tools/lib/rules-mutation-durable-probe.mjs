@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import { promises as fsp } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
@@ -36,7 +37,8 @@ export async function fixture(official=false,existing,mutantSource) {
    finishWrite(){fs.renameSync(this.tmp,this.path);io.finishes++;if(options.loseFinishAt===io.finishes)throw Error('rename accepted; ACK lost');}failWrite(){io.failWrites++;try{fs.unlinkSync(this.tmp);}catch{}}}};
  const atomic=compile('app/ReaderAtomicSnapshotFile.ts','replaceReaderAtomicSnapshot',{fileIo},official);
  const methods=compile('features/settings/RulesMutationContract.ts','RULES_MUTATION_METHODS',{},official);
- const Store=compile('features/settings/RulesMutationIntentStore.ts','RulesMutationIntentStore',{ReaderRuntimeOwner:Runtime,fileIo,util:{generateRandomUUID:()=>`12345678-1234-4234-8123-${String(++uuid).padStart(12,'0')}`},replaceReaderAtomicSnapshot:atomic,RULES_MUTATION_METHODS:methods},official);
+ const sha256Hex=compile('app/BundledBookSourceSupply.ts','sha256Hex',{cryptoFramework:{createMd:()=>{const hash=createHash('sha256');return{update:async({data})=>{hash.update(data);},digest:async()=>({data:new Uint8Array(hash.digest())})};}},util:{TextEncoder:class{encodeInto(text){return new TextEncoder().encode(text);}}}},true);
+ const Store=compile('features/settings/RulesMutationIntentStore.ts','RulesMutationIntentStore',{ReaderRuntimeOwner:Runtime,fileIo,util:{generateRandomUUID:()=>`12345678-1234-4234-8123-${String(++uuid).padStart(12,'0')}`},replaceReaderAtomicSnapshot:atomic,RULES_MUTATION_METHODS:methods,sha256Hex},official);
  const ownerDeps={...scheduler,ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,RULES_MUTATION_METHODS:methods,RulesMutationIntentStore:Store};
  const ownerTypes=compile('features/settings/RulesMutationOwner.ts','*',ownerDeps,official,mutantSource??read('features/settings/RulesMutationOwner.ts')),Owner=ownerTypes.RulesMutationOwner;
  async function command(method,params={}) { const result=await run(binary,['--json',JSON.stringify({protocolVersion:1,requestId:1,method,params}),'--config-json',JSON.stringify({dataDirectory:core})],{maxBuffer:32*1024*1024});const event=result.stdout.trim().split('\n').map(l=>JSON.parse(l)).findLast(e=>e.requestId===1);if(event.type==='error')throw new sdk.ReaderCoreRequestError(event);return event; }
@@ -57,7 +59,8 @@ export async function fixture(official=false,existing,mutantSource) {
  const quickTypes=compile('features/reading/ReaderReplaceQuickGateway.ts','*',commonReplace,official),Quick=quickTypes.ReaderReplaceQuickGateway;
  const fullTypes=compile('features/reading/ReaderControlReplaceGateway.ts','*',{...commonReplace,...quickTypes,RulesManagementGateway:Gateway},official),Full=fullTypes.ReaderControlReplaceGateway;
  const gateway=new Gateway(runtime),owner=Owner.forRuntime(runtime),store=new Store(runtime);
- return{root,core,files,options,calls,io,runtime,Runtime,Owner,Store,Gateway,Full,Quick,FullError:fullTypes.ReaderControlReplaceGatewayError,gateway,owner,store,command,
+ return{root,core,files,options,calls,io,runtime,Runtime,Owner,Store,Gateway,Full,Quick,FullError:fullTypes.ReaderControlReplaceGatewayError,gateway,owner,store,command,sha256Hex,
+  plan:()=>{try{return fs.readFileSync(resolve(files,'reader-rule-subscription-plan-v1.json'),'utf8');}catch(e){if(e.code==='ENOENT')return'';throw e;}},
   disk:()=>{try{return fs.readFileSync(resolve(files,'reader-rules-mutation-intent-v1.json'),'utf8');}catch(e){if(e.code==='ENOENT')return'';throw e;}},
   writes:()=>calls.filter(c=>c.method==='rules.mutation.apply'),retire:()=>{runtime.closed=true;installed=undefined;},install:o=>{installed=o;},
   recover:retry=>gateway.recoverMutation(()=>Runtime.isCurrent(runtime),retry),
