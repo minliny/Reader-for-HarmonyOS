@@ -54,7 +54,7 @@ export struct ReaderSelectPanel {
   @Prop x: number = 0;
   @Prop y: number = 0;
   @Prop variant: ReaderSelectVariant = 'default';
-  @Prop reduceMotion: boolean = false;
+  @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
   @Prop @Watch('onClosingChanged') closing: boolean = false;
   @Prop @Watch('onIdentityChanged') selectionId: string = '';
   // 与 ReaderSelect.controlWidth 成对使用；0 保持按内容测量。
@@ -73,6 +73,7 @@ export struct ReaderSelectPanel {
   private generation: number = 0;
   private closingValue: string = '';
   private closingOptions: string[] = [];
+  private closeFinish: (() => void) | undefined = undefined;
 
   private renderedValue(): string { return this.closeInFlight ? this.closingValue : this.value; }
   private renderedOptions(): string[] { return this.closeInFlight ? this.closingOptions : this.options; }
@@ -80,15 +81,34 @@ export struct ReaderSelectPanel {
   aboutToAppear(): void {
     this.mounted = true;
     this.generation += 1;
+    this.closeFinish = undefined;
     registerReaderFonts(this.getUIContext().getFont());
   }
 
-  aboutToDisappear(): void { this.mounted = false; this.generation += 1; }
+  aboutToDisappear(): void { this.mounted = false; this.generation += 1; this.closeFinish = undefined; }
 
   private onIdentityChanged(): void {
     this.generation += 1;
     this.closeInFlight = false;
+    this.closeFinish = undefined;
     if (this.mounted) this.expandPanel();
+  }
+
+  private onReduceMotionChanged(): void {
+    if (!this.mounted || !this.reduceMotion) return;
+    const generation = ++this.generation;
+    this.getUIContext().animateTo({ duration: 0 }, (): void => {
+      this.expandedHeight = this.closeInFlight ? OPTION_H : this.fullPanelHeight();
+      this.chevronAngle = this.closeInFlight ? 0 : -180;
+    });
+    if (this.closeInFlight) this.finishCollapse(generation);
+  }
+
+  private finishCollapse(generation: number): void {
+    if (!this.mounted || generation !== this.generation || !this.closeInFlight) return;
+    const finish = this.closeFinish;
+    this.closeFinish = undefined;
+    finish?.();
   }
 
   build() {
@@ -260,19 +280,19 @@ export struct ReaderSelectPanel {
     this.closingValue = this.value;
     this.closingOptions = this.options.slice();
     this.closeInFlight = true;
+    this.closeFinish = onFinish;
     const generation = ++this.generation;
     if (onCommit !== undefined) onCommit();
     if (!this.mounted || generation !== this.generation) return;
     if (this.reduceMotion) {
       this.expandedHeight = OPTION_H;
       this.chevronAngle = 0;
-      onFinish();
+      this.finishCollapse(generation);
       return;
     }
     this.getUIContext().animateTo(
       motionAnimateParam('dropdown.menu.collapse', (): void => {
-        if (!this.mounted || generation !== this.generation) return;
-        onFinish();
+        this.finishCollapse(generation);
       }),
       (): void => {
         this.expandedHeight = OPTION_H;

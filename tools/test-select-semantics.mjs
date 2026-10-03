@@ -61,7 +61,7 @@ assert.doesNotMatch(select, /@Prop (appearanceCompact|settingsPage|settingsTable
 assert.doesNotMatch(panel, /@Prop (appearanceCompact|settingsPage|settingsTablet|sourceGroup): boolean/,
   'the overlay must consume the same typed variant contract');
 assert.match(select, /@Prop reduceMotion: boolean = false/);
-assert.match(panel, /@Prop reduceMotion: boolean = false/);
+assert.match(panel, /@Prop @Watch\('onReduceMotionChanged'\) reduceMotion: boolean = false/);
 assert.match(select,
   /private settingsTrigger[\s\S]*?\.height\(34\)[\s\S]*?\.backgroundColor\(readerAppColor\('app\.ReaderSelect\.settingsTrigger\.backgroundColor\.0F2D4A3E', this\.appThemeScheme\)\)[\s\S]*?\.borderRadius\(7\)/,
   'Settings/SelectTrigger must use its page-specific Figma geometry and surface');

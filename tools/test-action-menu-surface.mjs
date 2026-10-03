@@ -13,7 +13,7 @@ function render(kind,resolve) {
   const shared=actionMenuProbe(resolve), actions=[];
   const shelf=kind==='bookshelf';
   const names=shelf?['menuContent','menuActions','performMenuAction','surfaceSpec','actionEnabled','actionLabel','actionIcon',
-    'menuWidth','visiblePanelHeight','menuTop','commitAction','collapseMenu']:
+    'menuWidth','visiblePanelHeight','menuTop','commitAction','collapseMenu','finishCollapse']:
     ['readerMoreMenu','readerMoreActions','readerMoreSurfaceSpec','readerMoreActionEnabled','performMoreAction','dismissMoreMenu','setMoreMenuVisible'];
   const {owner}=createReaderBuilderProbe(source(shelf?'bookshelf/BookshelfMoreMenu':'reading/ReaderControlPanel'),names,shared.dependencies,shared.hooks);
   Object.assign(owner,shelf?{appThemeScheme:'day',overlayWidth:393,overlayHeight:650,anchorBottom:60,panelHeight:212,

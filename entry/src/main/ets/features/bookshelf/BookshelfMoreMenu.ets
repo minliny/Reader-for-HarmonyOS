@@ -23,7 +23,7 @@ export struct BookshelfMoreMenu {
 
   @Prop anchorRight: number = 0;
   @Prop anchorBottom: number = 0;
-  @Prop reduceMotion: boolean = false;
+  @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
   onBatchManage: () => void = (): void => {};
   onLocalImport: () => void = (): void => {};
   onBookshelfSettings: () => void = (): void => {};
@@ -40,6 +40,7 @@ export struct BookshelfMoreMenu {
   @State private closeInFlight: boolean = false;
   private mounted: boolean = false;
   private generation: number = 0;
+  private closeFinish: (() => void) | undefined = undefined;
 
   private surfaceSpec(): PopupSurfaceSpec {
     return resolvePopupSpec('bookshelf-more-menu');
@@ -48,10 +49,28 @@ export struct BookshelfMoreMenu {
   aboutToAppear(): void {
     this.mounted = true;
     this.generation += 1;
+    this.closeInFlight = false;
+    this.closeFinish = undefined;
     registerReaderFonts(this.getUIContext().getFont());
   }
 
-  aboutToDisappear(): void { this.mounted = false; this.generation += 1; }
+  aboutToDisappear(): void { this.mounted = false; this.generation += 1; this.closeFinish = undefined; }
+
+  private onReduceMotionChanged(): void {
+    if (!this.mounted || !this.reduceMotion) return;
+    const generation = ++this.generation;
+    this.getUIContext().animateTo({ duration: 0 }, (): void => {
+      this.panelHeight = this.closeInFlight ? this.surfaceSpec().collapsedHeight : this.surfaceSpec().expandedHeight;
+    });
+    if (this.closeInFlight) this.finishCollapse(generation);
+  }
+
+  private finishCollapse(generation: number): void {
+    if (!this.mounted || generation !== this.generation || !this.closeInFlight) return;
+    const finish = this.closeFinish;
+    this.closeFinish = undefined;
+    finish?.();
+  }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -199,18 +218,18 @@ export struct BookshelfMoreMenu {
       return;
     }
     this.closeInFlight = true;
+    this.closeFinish = onFinish;
     const generation = ++this.generation;
     if (onCommit !== undefined) onCommit();
     if (!this.mounted || generation !== this.generation) return;
     if (this.reduceMotion) {
       this.panelHeight = this.surfaceSpec().collapsedHeight;
-      onFinish();
+      this.finishCollapse(generation);
       return;
     }
     this.getUIContext().animateTo(
       motionAnimateParam('dropdown.menu.collapse', (): void => {
-        if (!this.mounted || generation !== this.generation) return;
-        onFinish();
+        this.finishCollapse(generation);
       }),
       (): void => {
         this.panelHeight = this.surfaceSpec().collapsedHeight;

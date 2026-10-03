@@ -68,7 +68,7 @@ const UI={animateTo:(p,change)=>{animations.push(p);change();},postFrameCallback
 const motionAnimateParam=(id,onFinish)=>({id,onFinish});
 class Callback {constructor(fn){this.fn=fn;}}
 const Select=productionMotionMethods(feature('common/ReaderSelectPanel.ets'),
-  ['selectAndCollapse','collapsePanel','onClosingChanged','aboutToDisappear'],{motionAnimateParam,OPTION_H:36});
+  ['selectAndCollapse','collapsePanel','finishCollapse','onClosingChanged','aboutToDisappear'],{motionAnimateParam,OPTION_H:36});
 for(const reduced of [false,true]) {
   const events=[];
   const menu=Object.assign(new Select(),{mounted:true,generation:1,selectionId:'indent:1',closeInFlight:false,value:'无',options:['无','单字','双字'],

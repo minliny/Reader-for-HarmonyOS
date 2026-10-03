@@ -66,7 +66,7 @@ export struct ReaderFullDirectory {
   // True only for Module Directory -> Full Directory. Detail -> Directory
   // keeps its existing route semantics and does not borrow the Phone motion.
   @Prop animateFromControl: boolean = false;
-  @Prop reduceMotion: boolean = false;
+  @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
   @Prop offlineBookOperationActive: boolean = false;
   // R-LOCAL-TOC-01: forward the chapter tap from the panel body to the
   // owning flow so a full-directory tap actually enters that chapter.
@@ -101,20 +101,26 @@ export struct ReaderFullDirectory {
   @State private offlineMenuVisible: boolean = false;
   private animationGeneration: number = 0;
   private collapseStarted: boolean = false;
+  private mounted: boolean = false;
+  private collapseExit: (() => void) | undefined = undefined;
 
   aboutToAppear(): void {
     // Figma maps the Reader control’s Songti faces to the shipped Noto Serif
     // SC pair.  Do not fall back to a system or synthetic font here.
     registerReaderFonts(this.getUIContext().getFont());
+    this.mounted = true;
     this.collapseStarted = false;
+    this.collapseExit = undefined;
     this.animationGeneration += 1;
     const generation = this.animationGeneration;
     if (this.shouldAnimatePanel()) {
       this.panelProgress = 0;
       setTimeout((): void => {
-        if (generation !== this.animationGeneration || this.collapseStarted) {
+        if (!this.mounted || generation !== this.animationGeneration || this.collapseStarted) {
           return;
         }
+        // Admission is repeated at the actual scheduled animation boundary.
+        if (!this.shouldAnimatePanel()) { this.panelProgress = 1; return; }
         this.getUIContext().animateTo(motionAnimateParam('reader.panel.expand'), (): void => {
           this.panelProgress = 1;
         });
@@ -125,7 +131,25 @@ export struct ReaderFullDirectory {
   }
 
   aboutToDisappear(): void {
+    this.mounted = false;
     this.animationGeneration += 1;
+    this.collapseExit = undefined;
+  }
+
+  private onReduceMotionChanged(): void {
+    if (!this.mounted || !this.reduceMotion) return;
+    const generation = ++this.animationGeneration;
+    this.getUIContext().animateTo({ duration: 0 }, (): void => {
+      this.panelProgress = this.collapseStarted ? 0 : 1;
+    });
+    if (this.collapseStarted) this.finishCollapse(generation);
+  }
+
+  private finishCollapse(generation: number): void {
+    if (!this.mounted || generation !== this.animationGeneration || !this.collapseStarted) return;
+    const exit = this.collapseExit;
+    this.collapseExit = undefined;
+    exit?.();
   }
 
   @Builder
@@ -361,19 +385,18 @@ export struct ReaderFullDirectory {
   }
 
   private requestCollapse(): void {
-    if (this.collapseStarted) {
+    if (!this.mounted || this.collapseStarted) {
       return;
     }
     this.collapseStarted = true;
+    this.collapseExit = this.onExit;
+    const generation = ++this.animationGeneration;
     if (!this.shouldAnimatePanel()) {
-      this.onExit();
+      this.finishCollapse(generation);
       return;
     }
-    const generation = this.animationGeneration;
     this.getUIContext().animateTo(motionAnimateParam('reader.panel.collapse', (): void => {
-      if (generation === this.animationGeneration) {
-        this.onExit();
-      }
+      this.finishCollapse(generation);
     }), (): void => {
       this.panelProgress = 0;
     });

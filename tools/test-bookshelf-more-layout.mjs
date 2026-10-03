@@ -10,7 +10,7 @@ const specSource=readFileSync(new URL('../entry/src/main/ets/features/common/Rea
 const { resolvePopupSpec } = new Function('TextAlign', stripTypeScriptTypes(specSource)
   .replace(/^export /gm,'') + '; return { resolvePopupSpec };')({ Start: 'TextAlign.Start', Center: 'TextAlign.Center' });
 const popupSpec=resolvePopupSpec('bookshelf-more-menu');
-const names=['surfaceSpec','actionEnabled','actionLabel','actionIcon','menuWidth','menuX','menuTop','visiblePanelHeight','pointerX','commitAction','collapseMenu'];
+const names=['surfaceSpec','actionEnabled','actionLabel','actionIcon','menuWidth','menuX','menuTop','visiblePanelHeight','pointerX','commitAction','collapseMenu','finishCollapse'];
 const Methods=productionMotionMethods(file,names,{resolvePopupSpec});
 const menu=Object.assign(new Methods(),{overlayWidth:393,overlayHeight:650,anchorRight:373,anchorBottom:60,panelHeight:212});
 assert.equal(menu.menuWidth(),176);assert.equal(menu.menuTop(),55);assert.equal(menu.visiblePanelHeight(),212);assert.equal(menu.pointerX(),131);

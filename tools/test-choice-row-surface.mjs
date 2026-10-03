@@ -18,7 +18,7 @@ function inline(variant,selected=true,resolve=resolveReaderChoiceSpec) {
   const shared=choiceRowProbe(resolve),commits=[];
   const source=read('common/ReaderSelectPanel');
   const {owner}=createReaderBuilderProbe(source,
-    ['appearanceLibraryOption','selectedRow','optionRow','renderedValue','renderedOptions','selectAndCollapse','collapsePanel'],
+    ['appearanceLibraryOption','selectedRow','optionRow','renderedValue','renderedOptions','selectAndCollapse','collapsePanel','finishCollapse'],
     {...shared.dependencies,OPTION_H:36,motionAnimateParam:(_id,onFinish)=>({onFinish})},shared.hooks);
   Object.assign(owner,{value:'中文',options:['中文','English'],variant,appThemeScheme:'day',mounted:true,closeInFlight:false,
     generation:0,reduceMotion:true,selectionId:'field-1',chevronAngle:-180,expandedHeight:72,
