@@ -79,6 +79,8 @@ export interface SourceSwitchFailureState {
   kind: 'failure';
   message: string;
   transactionId?: string;
+  confirmation?: 'undispatched' | 'confirmed' | 'unknown';
+  reconcile?: boolean;
 }
 
 export type SourceSwitchPanelState =
@@ -202,7 +204,11 @@ export struct SourceSwitchWindow {
       this.messageBody('已切换书源', '');
     } else if (this.state.kind === 'failure') {
       this.failureBody((): string => this.state.kind === 'failure' ? this.state.message : '',
-        (): boolean => this.state.kind === 'failure' && this.state.transactionId !== undefined);
+        (): boolean => this.state.kind === 'failure' && this.state.transactionId !== undefined,
+        (): string => this.state.kind !== 'failure' || this.state.confirmation === undefined ? '换源失败'
+          : this.state.confirmation === 'confirmed' ? '换源已提交'
+          : this.state.confirmation === 'unknown' ? '换源结果未确认' : '换源尚未提交',
+        (): boolean => this.state.kind === 'failure' && this.state.reconcile === true);
     }
   }
 
@@ -297,10 +303,10 @@ export struct SourceSwitchWindow {
   }
 
   @Builder
-  private failureBody(message: () => string, canRollback: () => boolean) {
+  private failureBody(message: () => string, canRollback: () => boolean, title: () => string, canReconcile: () => boolean) {
     Column({ space: 0 }) {
       Blank().layoutWeight(1);
-      Text('换源失败')
+      Text(title())
         .fontFamily(TYPE_SOURCE_STATE_TITLE.fontFamily)
         .fontWeight(TYPE_SOURCE_STATE_TITLE.fontWeight)
         .fontSize(TYPE_SOURCE_STATE_TITLE.fontSizeFp)
@@ -318,8 +324,8 @@ export struct SourceSwitchWindow {
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .textAlign(TextAlign.Center);
-      if (canRollback()) {
-        Text('撤销切换')
+      if (canRollback() || canReconcile()) {
+        Text(canReconcile() ? '重试核对' : '撤销切换')
           .margin({ top: 18 })
           .fontFamily(TYPE_SOURCE_SWITCH_RECOVERY.fontFamily)
           .fontWeight(TYPE_SOURCE_SWITCH_RECOVERY.fontWeight)
@@ -330,7 +336,7 @@ export struct SourceSwitchWindow {
           .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
           .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
           .borderRadius(999)
-          .onClick((): void => this.onRollback());
+          .onClick((): void => { if (canReconcile()) this.onRetry(); else this.onRollback(); });
       }
       Blank().layoutWeight(1);
     }

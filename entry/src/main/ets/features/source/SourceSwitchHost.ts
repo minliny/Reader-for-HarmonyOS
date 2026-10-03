@@ -13,6 +13,8 @@ import type { SourceSwitchPanelState } from './SourceSwitchWindow';
 import { buildSourceSwitchCommitParams, sourceSwitchCandidateKey, SourceSwitchGateway,
   type PendingSourceSwitch, type SourceSwitchCandidate, type SourceSwitchCommitOutcome,
   type SourceSwitchProbeQuery } from './SourceSwitchGateway';
+import type { SourceSwitchTransactionProjection } from './SourceSwitchGateway';
+import { SourceSwitchIntentStore, SourceSwitchIntentRecoveryError, type SourceSwitchIntent } from './SourceSwitchIntentStore';
 
 export interface SourceSwitchAnchor { chapterIndex: number; chapterTitle: string; }
 export interface SourceSwitchPendingTransaction extends PendingSourceSwitch { targetChapterIndex: number; }
@@ -32,6 +34,8 @@ export interface SourceSwitchWriteFact {
   transactionId?: string;
   /** A matching pending journal is actionable, but is not a lost-ACK receipt. */
   observedPending: PendingSourceSwitch[];
+  intentPending?: boolean;
+  readbackFailed?: boolean;
 }
 export interface SourceSwitchSnapshot {
   scopeId: number;
@@ -47,6 +51,7 @@ export type SourceSwitchEffect =
   | { kind: 'targetReady'; book: ShelfBook; session: RemoteReadingSession; chapterIndex: number }
   | { kind: 'restoredForNextChoice'; book: ShelfBook }
   | { kind: 'rollbackReady'; book: ShelfBook }
+  | { kind: 'canonicalReady'; book: ShelfBook }
   | { kind: 'acquisitionFailed'; identity: RemoteReadingIdentity; candidate: SourceSwitchCandidate; message: string }
   | { kind: 'closed' };
 export interface SourceSwitchLease {
@@ -64,6 +69,11 @@ export class SourceSwitchHost {
   private readonly runtime: ReaderRuntimeOwner;
   private readonly gateway: SourceSwitchGateway;
   private readonly shelf: ReaderCoreGateway;
+  private readonly intents: SourceSwitchIntentStore;
+  private fixedIntent: SourceSwitchIntent | undefined;
+  private confirmedIntent: SourceSwitchIntent | undefined;
+  private recoveredTransaction: SourceSwitchTransactionProjection | undefined;
+  private targetSession: RemoteReadingSession | undefined;
   private context: SourceSwitchContext | undefined;
   private lease: SourceSwitchLease | undefined;
   private generation: number = 0;
@@ -79,12 +89,28 @@ export class SourceSwitchHost {
     this.runtime = runtime;
     this.gateway = new SourceSwitchGateway(runtime);
     this.shelf = new ReaderCoreGateway(runtime);
+    this.intents = new SourceSwitchIntentStore(runtime, this.gateway);
   }
 
   current(): SourceSwitchSnapshot { return this.snapshot; }
+  owns(runtime: ReaderRuntimeOwner): boolean { return this.runtime === runtime; }
+
+  /** Rebind only the existing pending journey to its admitted reader after
+   * Index's navigation seam. This does not open UI, execute IO, or mount trees. */
+  bindReader(context: SourceSwitchContext, lease: SourceSwitchLease): boolean {
+    const pending = this.snapshot.pending;
+    if (pending === undefined || this.snapshot.visible || this.snapshot.state.kind === 'switching' ||
+      !ReaderRuntimeOwner.isCurrent(this.runtime) ||
+      !((pending.targetSourceId === context.query.sourceId && pending.targetBookId === context.query.bookId) ||
+        (pending.fromSourceId === context.query.sourceId && pending.fromBookId === context.query.bookId))) return false;
+    this.retire(); this.context = context; this.lease = lease;
+    if (!this.currentLease()) { this.retire(); return false; }
+    this.snapshot = { ...this.snapshot, scopeId: ++this.scopeGeneration };
+    this.publish(); return true;
+  }
 
   open(context: SourceSwitchContext, lease: SourceSwitchLease): boolean {
-    const unknown = this.snapshot.write?.confirmation === 'unknown';
+    const unknown = this.snapshot.write?.confirmation === 'unknown' || this.snapshot.write?.intentPending === true;
     if (context.query.sourceId === 'local' || this.snapshot.visible || this.snapshot.state.kind === 'switching' ||
       this.snapshot.rollbackInFlight || (unknown && (this.context === undefined ||
         !this.sameIdentity(context.query, this.context.query)))) return false;
@@ -95,14 +121,18 @@ export class SourceSwitchHost {
     this.snapshot = { ...this.snapshot, scopeId: ++this.scopeGeneration, visible: true,
       state: unknown ? this.snapshot.state : { kind: 'discovering' }, failureMessage: '' };
     this.publish();
-    if (unknown) void this.reconcileUnknown();
-    else void this.discover(false);
+    void this.openJourney(unknown);
     return true;
   }
 
   retry(scopeId: number): void {
     if (!this.currentScope(scopeId) || !this.snapshot.visible) return;
-    if (this.snapshot.write?.confirmation === 'unknown') { void this.reconcileUnknown(); return; }
+    if (this.snapshot.write?.action === 'rollback' && this.snapshot.write.confirmation === 'unknown') {
+      void this.reconcileRollback(true); return;
+    }
+    if (this.snapshot.write?.confirmation === 'unknown' || this.snapshot.write?.intentPending || this.snapshot.write?.readbackFailed) {
+      void this.recoverIntent(true); return;
+    }
     if (this.snapshot.state.kind === 'discoveryError' || this.snapshot.state.kind === 'empty') void this.discover(true);
   }
 
@@ -196,6 +226,7 @@ export class SourceSwitchHost {
       if (!admitted()) return;
       const toc = await this.gateway.fetchTargetToc(candidate.sourceId, candidate.bookUrl, admitted, candidate);
       if (!admitted()) return;
+      this.targetSession = toc.readingSession;
       const identity = this.identity();
       const progressLane = new ReadingSessionFlowGateway(identity.sourceId, identity.bookId, { kind: 'remote' }, this.runtime);
       let outcome: SourceSwitchCommitOutcome | undefined;
@@ -203,8 +234,10 @@ export class SourceSwitchHost {
         if (!admitted()) throw new Error('source switch aborted');
         const anchor = await this.loadAnchor(generation, restored);
         if (!admitted()) throw new Error('source switch aborted');
-        outcome = await this.gateway.commitSwitch(buildSourceSwitchCommitParams(identity, candidate, toc,
-          anchor.chapterTitle, anchor.chapterIndex, Math.floor(Date.now() / 1000)), admitted, evidence);
+        this.fixedIntent = await this.intents.accept(buildSourceSwitchCommitParams(identity, candidate, toc,
+          anchor.chapterTitle, anchor.chapterIndex, Math.floor(Date.now() / 1000)), admitted);
+        if (!admitted()) throw new Error('source switch aborted');
+        outcome = await this.gateway.commitSwitch(this.fixedIntent.params, admitted, evidence);
       });
       if (outcome === undefined) throw new Error('source switch did not produce an outcome');
       // Settle the accepted command independently of its retired UI lease.
@@ -214,21 +247,33 @@ export class SourceSwitchHost {
         this.snapshot = { ...this.snapshot, pending: { fromSourceId: identity.sourceId, fromBookId: identity.bookId,
           targetSourceId: outcome.book.sourceId, targetBookId: outcome.book.bookId,
           targetChapterIndex: outcome.matchedChapter.order, transactionId: outcome.transactionId } };
+        // ACK establishes Core acceptance. Query provides the actual retained
+        // lineage/phase needed to persist and retire this Host intent safely.
+        await this.recoverIntent(false, false);
+      if (this.fixedIntent !== undefined) return;
         if (!admitted()) return;
         this.hide(); this.deliver({ kind: 'targetReady', book: outcome.book, session: toc.readingSession,
           chapterIndex: outcome.matchedChapter.order });
       } else if (evidence.confirmation() === 'unknown') {
-        await this.reconcileUnknown(generation, candidate);
+        await this.recoverIntent(false);
       } else if (admitted()) {
-        this.snapshot = { ...this.snapshot, state: { kind: 'failure', message: outcome.error,
+        this.snapshot = { ...this.snapshot, write: { ...this.snapshot.write!, intentPending: this.fixedIntent !== undefined },
+          state: { kind: 'failure', message: outcome.error, confirmation: evidence.confirmation(), reconcile: this.fixedIntent !== undefined,
           transactionId: outcome.transactionId } }; this.publish();
       }
     } catch (error) {
       if (evidence.confirmation() !== 'undispatched') {
         this.recordWrite(generation, 'commit', evidence, errorMessageOf(error));
-        await this.reconcileUnknown(generation, candidate);
+        await this.recoverIntent(false);
+      } else if (error instanceof SourceSwitchIntentRecoveryError) {
+        this.snapshot = { ...this.snapshot, write: { generation, action: 'commit', confirmation: 'undispatched',
+          observedPending: [], intentPending: true, message: error.message } };
+        if (admitted()) { this.snapshot = { ...this.snapshot, state: { kind: 'failure', message: error.message } }; this.publish(); }
       } else if (this.snapshot.write?.generation === generation && this.snapshot.write.confirmation === 'unknown') {
-        await this.reconcileUnknown(generation);
+        if (admitted()) { this.snapshot = { ...this.snapshot, state: { kind: 'failure', message: errorMessageOf(error),
+          confirmation: 'unknown', reconcile: true, transactionId: this.snapshot.write.transactionId } }; this.publish(); }
+        if (this.snapshot.write.action === 'rollback') await this.reconcileRollback(false);
+        else await this.reconcileUnknown(generation);
       } else if (admitted()) this.acquisitionFailed(candidate, errorMessageOf(error));
     } finally { this.settleRetired(generation); }
   }
@@ -252,7 +297,7 @@ export class SourceSwitchHost {
     } catch (error) { if (!current()) return; message = errorMessageOf(error); }
     if (!current()) return;
     this.snapshot = { ...this.snapshot, write: { ...write, observedPending: observed, message },
-      state: { kind: 'failure', message: `换源结果尚未确认：${message}`,
+      state: { kind: 'failure', message: `换源结果尚未确认：${message}`, confirmation: 'unknown', reconcile: true,
         transactionId: write.transactionId ?? (observed.length === 1 ? observed[0].transactionId : undefined) } };
     this.publish();
   }
@@ -261,13 +306,13 @@ export class SourceSwitchHost {
   async rollback(scopeId: number): Promise<void> {
     if (!this.currentScope(scopeId) || this.snapshot.rollbackInFlight || this.snapshot.state.kind !== 'failure' ||
       this.snapshot.state.transactionId === undefined) return;
-    await this.rollbackTransaction(this.snapshot.state.transactionId, true);
+    await this.rollbackTransaction(this.snapshot.state.transactionId);
   }
 
   async rollbackPending(): Promise<void> {
     const pending = this.snapshot.pending;
     if (pending === undefined || !this.currentLease() || this.snapshot.rollbackInFlight) return;
-    await this.rollbackTransaction(pending.transactionId, false);
+    await this.rollbackTransaction(pending.transactionId);
   }
 
   async inspectPending(isCurrent: () => boolean): Promise<PendingSourceSwitch[] | undefined> {
@@ -300,10 +345,14 @@ export class SourceSwitchHost {
       !ReaderRuntimeOwner.isCurrent(this.runtime)) return undefined;
     this.snapshot = { ...this.snapshot, pending: undefined, rollbackInFlight: false };
     this.publish();
+    // The real canonical producer already acknowledged this exact ID. Keep
+    // the full durable intent until a pure query verifies its terminal phase;
+    // old UI retirement does not cancel accepted local cleanup IO.
+    void this.finishReaderIntent(transactionId);
     return pending;
   }
 
-  private async rollbackTransaction(transactionId: string, showPanel: boolean): Promise<void> {
+  private async rollbackTransaction(transactionId: string): Promise<void> {
     const generation = ++this.generation, evidence = new ReaderWriteEvidence();
     const admitted = (): boolean => this.admitted(generation);
     this.stopDiscovery();
@@ -313,14 +362,19 @@ export class SourceSwitchHost {
       const result = await this.gateway.rollbackSwitch(transactionId, admitted, evidence);
       this.recordWrite(generation, 'rollback', evidence, undefined, transactionId);
       if (this.snapshot.pending?.transactionId === transactionId) this.snapshot = { ...this.snapshot, pending: undefined };
+      await this.clearTerminalIntent(transactionId, admitted);
       if (!admitted()) return;
       this.hide(); this.deliver({ kind: 'rollbackReady', book: result.restoredBook });
     } catch (error) {
       this.recordWrite(generation, 'rollback', evidence, errorMessageOf(error), transactionId);
       if (admitted()) {
-        this.snapshot = { ...this.snapshot, visible: showPanel || this.snapshot.visible,
-          state: { kind: 'failure', message: errorMessageOf(error), transactionId } }; this.publish();
+        const confirmation = evidence.confirmation();
+        this.snapshot = { ...this.snapshot, visible: true, write: { ...this.snapshot.write!,
+          intentPending: this.fixedIntent !== undefined || this.confirmedIntent !== undefined,
+          readbackFailed: true },
+          state: { kind: 'failure', message: errorMessageOf(error), transactionId, confirmation, reconcile: true } }; this.publish();
       }
+      if (evidence.confirmation() === 'unknown') await this.reconcileRollback(false);
     } finally {
       this.snapshot = { ...this.snapshot, rollbackInFlight: false }; this.publish();
     }
@@ -356,6 +410,8 @@ export class SourceSwitchHost {
       if (!current() || canonical === undefined) throw error as Error;
       restored = canonical;
     }
+    if (!current()) throw new Error('source switch aborted');
+    await this.clearTerminalIntent(transaction.transactionId, current);
     if (!current()) throw new Error('source switch aborted');
     this.snapshot = { ...this.snapshot, pending: undefined };
     this.deliver({ kind: 'restoredForNextChoice', book: restored });
@@ -469,6 +525,193 @@ export class SourceSwitchHost {
     this.snapshot = { ...this.snapshot, write: { generation, action, confirmation: evidence.confirmation(),
       message, transactionId, observedPending: [] } };
   }
+
+  private async openJourney(hasUnknown: boolean): Promise<void> {
+    const generation = this.generation;
+    try {
+      this.fixedIntent = await this.intents.load();
+      if (!this.admitted(generation)) return;
+      if (this.fixedIntent !== undefined) { await this.recoverIntent(false); return; }
+      if (hasUnknown && this.snapshot.write?.action === 'rollback') { await this.reconcileRollback(false); return; }
+      if (hasUnknown) { await this.reconcileUnknown(); return; }
+      await this.discover(false);
+    } catch (error) {
+      if (!this.admitted(generation)) return;
+      const write = this.snapshot.write, confirmation = write?.confirmation ?? 'unknown';
+      this.snapshot = { ...this.snapshot, write: { generation, action: write?.action ?? 'commit', confirmation,
+        transactionId: write?.transactionId, observedPending: [], intentPending: true, readbackFailed: true, message: errorMessageOf(error) },
+        state: { kind: 'failure', message: errorMessageOf(error), confirmation, reconcile: true } }; this.publish();
+    }
+  }
+
+  private async recoverIntent(retryWrite: boolean, deliverResult: boolean = true): Promise<void> {
+    const generation = this.generation, admitted = (): boolean => this.admitted(generation);
+    let intent = this.fixedIntent;
+    try {
+      intent = intent ?? await this.intents.load();
+      this.fixedIntent = intent;
+      if (!admitted()) return;
+      if (intent === undefined) {
+        if (this.recoveredTransaction !== undefined) await this.deliverRecovered(this.recoveredTransaction, generation);
+        else await this.reconcileUnknown();
+        return;
+      }
+      const fixed = intent;
+      let query = await this.gateway.queryTransaction(fixed.operationId, fixed.params, admitted);
+      if (!admitted()) return;
+      if (query.transaction === undefined && retryWrite) {
+        if ((query.head?.sequence ?? 0) !== fixed.sequence - 1) {
+          throw new SourceSwitchIntentRecoveryError('blocked', '换源水位已越过或不连续，缺少此标识的精确回执；记录已保留，不能分配新标识或按书架推断');
+        }
+        await this.intents.ensureDurable(fixed, admitted);
+        if (!admitted()) return;
+        const evidence = new ReaderWriteEvidence();
+        const outcome = await this.gateway.commitSwitch(fixed.params, admitted, evidence);
+        this.recordWrite(generation, 'commit', evidence, outcome.status === 'failed' ? outcome.error : undefined,
+          outcome.transactionId);
+        if (!admitted()) return;
+        query = await this.gateway.queryTransaction(fixed.operationId, fixed.params, admitted);
+        if (!admitted()) return;
+      }
+      const transaction = query.transaction;
+      if (transaction === undefined) {
+        throw new SourceSwitchIntentRecoveryError('pending', (query.head?.sequence ?? 0) >= fixed.sequence
+          ? '换源流水缺少该标识的精确回执，已停止覆盖；不能按当前书架推断结果'
+          : '尚未取得换源精确回执；可重试同一固定标识核对，不能创建新操作');
+      }
+      this.recoveredTransaction = transaction;
+      this.snapshot = { ...this.snapshot, write: { generation, action: transaction.phase === 'rolledBack' ? 'rollback' : 'commit',
+        confirmation: 'confirmed', transactionId: transaction.operationId, observedPending: [], intentPending: true },
+        pending: transaction.phase === 'pending' ? { fromSourceId: transaction.from.sourceId, fromBookId: transaction.from.bookId,
+          targetSourceId: transaction.target.sourceId, targetBookId: transaction.target.bookId,
+          targetChapterIndex: transaction.commit.matchedChapter.order, transactionId: transaction.operationId } : undefined };
+      // Exact Core proof is established before local cleanup. A flush failure
+      // here remains a separate intent cleanup fact, never a false Core failure.
+      await this.intents.confirm(fixed, transaction);
+      // A pending journal is already committed but not finalized. Retain its
+      // full exact payload through the reader seam/Ability replacement so a
+      // rollback's lost ACK can be queried without an identity-only match.
+      if (transaction.phase !== 'pending') await this.intents.clear(fixed);
+      if (!admitted()) return;
+      this.fixedIntent = undefined;
+      this.confirmedIntent = transaction.phase === 'pending' ? fixed : undefined;
+      this.snapshot = { ...this.snapshot, write: { ...this.snapshot.write!, intentPending: false } };
+      if (!deliverResult) return;
+      await this.deliverRecovered(transaction, generation);
+    } catch (error) {
+      if (!admitted()) return;
+      const write = this.snapshot.write;
+      this.snapshot = { ...this.snapshot, write: { generation, action: write?.action ?? 'commit',
+        confirmation: write?.confirmation ?? 'unknown', transactionId: write?.transactionId,
+        observedPending: write?.observedPending ?? [], intentPending: this.fixedIntent !== undefined || write?.intentPending === true,
+        readbackFailed: true, message: errorMessageOf(error) },
+        state: { kind: 'failure', message: errorMessageOf(error), confirmation: write?.confirmation ?? 'unknown', reconcile: true,
+          transactionId: write?.transactionId } }; this.publish();
+    }
+  }
+
+  private async deliverRecovered(transaction: SourceSwitchTransactionProjection, generation: number): Promise<void> {
+    if (!this.admitted(generation)) return;
+    const contextIdentity = this.identity();
+    if (transaction.phase === 'rolledBack') {
+        const history = transaction.restoredBook;
+        if (history === undefined) throw new Error('换源回滚缺少精确恢复书籍');
+        const restored = await this.shelf.loadShelfBook(history.sourceId, history.bookId);
+        if (!this.admitted(generation)) return;
+        if (restored === undefined) throw new Error('换源已撤销，当前书架投影尚未恢复，请重试只读核对');
+        this.hide();
+        if (!this.sameIdentity(contextIdentity, restored)) this.deliver({ kind: 'rollbackReady', book: restored });
+        else this.deliver({ kind: 'closed' });
+      } else if (this.sameIdentity(contextIdentity, transaction.target)) {
+        this.hide(); this.deliver({ kind: 'closed' });
+      } else if (this.sameIdentity(contextIdentity, transaction.from)) {
+        if (transaction.phase === 'pending' && this.targetSession !== undefined &&
+          this.sameIdentity(this.targetSession.identity, transaction.target)) {
+          this.hide(); this.deliver({ kind: 'targetReady', book: transaction.commit.book, session: this.targetSession,
+            chapterIndex: transaction.commit.matchedChapter.order });
+        } else {
+          const canonical = await this.shelf.loadShelfBook(transaction.target.sourceId, transaction.target.bookId);
+          if (!this.admitted(generation)) return;
+          if (canonical === undefined) throw new Error('换源已确认，当前书架投影尚未恢复，请重试只读核对');
+          this.hide(); this.deliver({ kind: 'canonicalReady', book: canonical });
+        }
+      } else {
+        this.snapshot = { ...this.snapshot, state: { kind: 'failure', message: '已有换源已核对，请返回对应书籍继续；当前书籍未改变' } };
+        this.publish();
+    }
+    if (this.snapshot.write !== undefined) this.snapshot = { ...this.snapshot,
+      write: { ...this.snapshot.write, readbackFailed: false } };
+  }
+
+  private async reconcileRollback(retry: boolean): Promise<void> {
+    const intent = this.confirmedIntent ?? this.fixedIntent;
+    const write = this.snapshot.write, generation = this.generation;
+    const current = (): boolean => this.admitted(generation) && this.snapshot.write?.generation === write?.generation &&
+      this.snapshot.write?.action === 'rollback' && this.snapshot.write?.transactionId === write?.transactionId;
+    if (intent === undefined || write?.action !== 'rollback' || write.transactionId !== intent.operationId || !current()) return;
+    try {
+      const query = await this.gateway.queryTransaction(intent.operationId, intent.params, current);
+      if (!current()) return;
+      const transaction = query.transaction;
+      if (transaction === undefined) throw new Error('撤销结果尚未取得精确回执，原记录已保留');
+      if (transaction.phase === 'rolledBack') {
+        this.snapshot = { ...this.snapshot, pending: undefined, write: { ...write, confirmation: 'confirmed' } };
+        this.recoveredTransaction = transaction;
+        await this.clearTerminalIntent(transaction.operationId, current);
+        if (!current()) return;
+        await this.deliverRecovered(transaction, generation);
+      } else if (transaction.phase === 'finalized') {
+        await this.clearTerminalIntent(transaction.operationId, current);
+        if (!current()) return;
+        this.snapshot = { ...this.snapshot, pending: undefined, write: { ...write, confirmation: 'undispatched' },
+          state: { kind: 'failure', message: '阅读位置已经确认，换源不能再撤销；当前阅读已保留', confirmation: 'confirmed' } };
+        this.publish();
+      } else if (retry) {
+        // Core's exact same-ID journal is still pending. This explicit retry
+        // reuses its atomic/idempotent rollback, never an identity-only match.
+        await this.rollbackTransaction(transaction.operationId);
+      }
+    } catch (error) {
+      if (!current()) return;
+      const confirmation = this.snapshot.write?.confirmation ?? 'unknown';
+      this.snapshot = { ...this.snapshot, state: { kind: 'failure', message: errorMessageOf(error),
+        confirmation, reconcile: true, transactionId: write.transactionId },
+        write: { ...this.snapshot.write!, readbackFailed: true,
+          intentPending: this.fixedIntent !== undefined || this.confirmedIntent !== undefined } }; this.publish();
+    }
+  }
+
+  private async clearTerminalIntent(transactionId: string, current: () => boolean): Promise<void> {
+    const intent = this.fixedIntent ?? this.confirmedIntent ?? await this.intents.load();
+    if (!current()) return;
+    if (intent === undefined) return; // legacy Core journal has no caller intent
+    if (intent.operationId !== transactionId) throw new SourceSwitchIntentRecoveryError('blocked', '旧换源不能清除另一固定标识');
+    const query = await this.gateway.queryTransaction(intent.operationId, intent.params, current);
+    if (!current()) return;
+    if (query.transaction === undefined || query.transaction.phase === 'pending') {
+      throw new SourceSwitchIntentRecoveryError('pending', '换源仍缺少精确终结回执，原标识已保留');
+    }
+    this.recoveredTransaction = query.transaction;
+    await this.intents.confirm(intent, query.transaction);
+    await this.intents.clear(intent);
+    if (this.fixedIntent?.operationId === transactionId) this.fixedIntent = undefined;
+    if (this.confirmedIntent?.operationId === transactionId) this.confirmedIntent = undefined;
+    if (this.snapshot.write?.transactionId === transactionId) this.snapshot = { ...this.snapshot,
+      write: { ...this.snapshot.write, intentPending: false, readbackFailed: false } };
+  }
+
+  private async finishReaderIntent(transactionId: string): Promise<void> {
+    const current = (): boolean => ReaderRuntimeOwner.isCurrent(this.runtime);
+    try {
+      await this.clearTerminalIntent(transactionId, current);
+      this.publish();
+    } catch (error) {
+      if (!current() || this.snapshot.write?.transactionId !== transactionId) return;
+      this.snapshot = { ...this.snapshot, write: { ...this.snapshot.write, confirmation: 'confirmed',
+        intentPending: true, readbackFailed: true, message: errorMessageOf(error) } };
+      this.publish();
+    }
+  }
   private settleRetired(generation: number): void {
     if (this.admitted(generation)) return;
     const write = this.snapshot.write;
@@ -478,7 +721,7 @@ export class SourceSwitchHost {
   }
   private busyOrUnknown(): boolean {
     return this.snapshot.state.kind === 'switching' || this.snapshot.rollbackInFlight ||
-      this.snapshot.write?.confirmation === 'unknown';
+      this.snapshot.write?.confirmation === 'unknown' || this.snapshot.write?.intentPending === true;
   }
   private admitted(generation: number): boolean { return generation === this.generation && this.currentLease(); }
   private identity(): RemoteReadingIdentity {
