@@ -1,5 +1,8 @@
 import { bookAuthorIdentity, readBookAuthorIdentity, type BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
+import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
+import type { BookRequestOptions } from '../../app/BookRequestScheduler';
+import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
 import { runBookSourceWorkers } from '../../app/BookRequestScheduler';
 import type { RemoteReadingVariable } from '../reading/RemoteReadingContract';
@@ -739,6 +742,7 @@ export class SourceSwitchGateway {
   async commitSwitch(
     params: SourceSwitchCommitParams,
     isCurrent: (() => boolean) | undefined = undefined,
+    evidence: ReaderWriteEvidence | undefined = undefined,
   ): Promise<SourceSwitchCommitOutcome> {
     this.assertNonBlankString(params.from.sourceId, 'from.sourceId');
     this.assertNonBlankString(params.from.bookId, 'from.bookId');
@@ -753,7 +757,7 @@ export class SourceSwitchGateway {
     if (params.newToc.length === 0) {
       throw new Error('source.switch.commit requires a non-empty newToc');
     }
-    if (!Number.isInteger(params.currentChapterIndex) || params.currentChapterIndex < 0) {
+    if (!Number.isSafeInteger(params.currentChapterIndex) || params.currentChapterIndex < 0) {
       throw new Error('source.switch.commit requires a non-negative currentChapterIndex');
     }
     let transactionId: string | undefined = undefined;
@@ -761,7 +765,7 @@ export class SourceSwitchGateway {
       const result = await this.runtimeOwner.request(
         'source.switch.commit',
         params as unknown as JsonObject,
-        this.requestOptions(isCurrent),
+        evidence === undefined ? this.requestOptions(isCurrent) : this.durableRequestOptions(isCurrent, evidence),
       );
       const rawBook = result.data['book'];
       transactionId = this.requireString(result.data, 'transactionId', 'source.switch.commit');
@@ -772,13 +776,23 @@ export class SourceSwitchGateway {
         throw new Error('source.switch.commit returned an invalid book');
       }
       const matchedChapter = this.decodeMatchedChapter(result.data['matchedChapter']);
-      return {
+      const book = this.decodeShelfBook(rawBook);
+      if (book.sourceId !== params.target.sourceId || book.bookId !== params.target.bookId ||
+        !params.newToc.some((entry): boolean => entry.chapterId === matchedChapter.chapterId &&
+          entry.chapterTitle === matchedChapter.chapterTitle && entry.chapterUrl === matchedChapter.chapterUrl &&
+          entry.order === matchedChapter.order)) {
+        throw new Error('source.switch.commit returned another book or an unadmitted chapter');
+      }
+      const outcome: SourceSwitchCommitOutcome = {
         status: 'success',
-        book: this.decodeShelfBook(rawBook),
+        book,
         matchedChapter,
         transactionId,
       };
+      evidence?.confirmed();
+      return outcome;
     } catch (error) {
+      if (isReaderCoreTransactionPendingError(error)) evidence?.rejectedBeforeExecution();
       const message = errorMessageOf(error);
       return transactionId === undefined
         ? { status: 'failed', error: message }
@@ -793,12 +807,13 @@ export class SourceSwitchGateway {
   async rollbackSwitch(
     transactionId: SourceSwitchTransactionId,
     isCurrent: (() => boolean) | undefined = undefined,
+    evidence: ReaderWriteEvidence | undefined = undefined,
   ): Promise<SourceSwitchRollbackResult> {
     this.assertNonBlankString(transactionId, 'transactionId');
     const result = await this.runtimeOwner.request(
       'source.switch.rollback',
       { transactionId },
-      this.requestOptions(isCurrent),
+      evidence === undefined ? this.requestOptions(isCurrent) : this.durableRequestOptions(isCurrent, evidence),
     );
     if (result.data['transactionId'] !== transactionId || result.data['phase'] !== 'rolledBack' ||
       typeof result.data['changed'] !== 'boolean') {
@@ -808,11 +823,13 @@ export class SourceSwitchGateway {
     if (typeof rawBook !== 'object' || rawBook === null || Array.isArray(rawBook)) {
       throw new Error('source.switch.rollback returned an invalid restored book');
     }
-    return {
+    const outcome: SourceSwitchRollbackResult = {
       transactionId,
       changed: result.data['changed'] as boolean,
       restoredBook: this.decodeShelfBook(rawBook),
     };
+    evidence?.confirmed();
+    return outcome;
   }
 
   /**
@@ -871,6 +888,15 @@ export class SourceSwitchGateway {
     return {
       shouldCancel: (): boolean => !isCurrent(),
     };
+  }
+
+  private durableRequestOptions(isCurrent: (() => boolean) | undefined,
+    evidence: ReaderWriteEvidence): BookRequestOptions {
+    // Runtime checks these after startup, immediately before the real SDK send.
+    // shouldCancel is deliberately absent: UI retirement cannot cancel an
+    // accepted storage transaction or discard its late exact ACK.
+    const admitted = (): boolean => ReaderRuntimeOwner.isCurrent(this.runtimeOwner) && isCurrent?.() !== false;
+    return { canContinue: admitted, canDispatch: admitted, onDispatch: (): void => evidence.dispatched() };
   }
 
   private decodeShelfBook(value: unknown): ShelfBook {
