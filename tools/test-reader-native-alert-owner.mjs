@@ -41,4 +41,17 @@ for (const [id, autoCancel, slots] of [
   }, () => true);
   assert.throws(() => shown.primaryButton.action(), /domain failure/); assert.equal(await lease.decision, 'primary');
 }
-console.log('PASS actual native Alert owner: six finite native specs, AUTO, retained button order/labels/colors, single decision, cancel/retire/reopen, stale actions and native/dispatch exceptions');
+{
+  const owner = new ReaderNativeAlertOwner(); let shown, broken = false;
+  const lease = owner.present(options => { shown = options; }, 'notice', {
+    primaryButton: { value: 'confirm', action() { assert.fail('broken identity cannot dispatch'); } },
+  }, () => { if (broken) throw Error('identity port failed'); return true; });
+  broken = true;
+  assert.throws(() => shown.primaryButton.action(), /identity port failed/);
+  assert.equal(await lease.decision, 'native-failure', 'failed guard still settles the presentation wait');
+  shown.primaryButton.action(); owner.retire();
+  assert.throws(() => owner.present(() => assert.fail('no native show on failed identity'), 'notice', {
+    primaryButton: { value: 'confirm' },
+  }, () => { throw Error('pre-show identity unavailable'); }), /pre-show identity unavailable/);
+}
+console.log('PASS actual native Alert owner: six finite native specs, AUTO, retained button order/labels/colors, single decision, cancel/retire/reopen, stale actions and native/dispatch/identity exceptions');

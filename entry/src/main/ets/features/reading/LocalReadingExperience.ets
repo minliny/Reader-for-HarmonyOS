@@ -6199,13 +6199,16 @@ export struct ReadingExperience {
         this.onExitCancelled();
         this.beginReadingRecordClock(lifecycleToken);
       };
-      this.showReaderAlert('confirmation', { title: '阅读进度尚未保存',
+      const exitNotice = this.showReaderAlert('confirmation', { title: '阅读进度尚未保存',
         message: '请重试保存后退出。当前阅读位置已保留。',
         primaryButton: { value: '重试保存并退出', action: (): void => {
           if (claimDecision()) this.beginExit();
         } },
         secondaryButton: { value: '继续阅读', action: continueReading },
         cancel: continueReading,
+      });
+      void exitNotice.decision.then((decision): void => {
+        if (decision === 'native-failure') continueReading();
       });
       return;
     }

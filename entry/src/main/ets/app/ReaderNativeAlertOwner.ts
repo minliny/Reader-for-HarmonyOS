@@ -42,7 +42,9 @@ export class ReaderNativeAlertLease {
   }
   act(decision: ReaderNativeAlertDecision, action: (() => void) | undefined): void {
     if (this.settled) return;
-    if (!this.isCurrent()) { this.retire(); return; }
+    try {
+      if (!this.isCurrent()) { this.retire(); return; }
+    } catch (error) { this.nativeFailed(); throw error; }
     // A dialog decision is never a business mutation ACK. Settle first so a
     // throwing domain callback cannot strand a caller's presentation wait.
     this.finish(decision);
@@ -62,7 +64,9 @@ export class ReaderNativeAlertOwner {
     this.retire();
     const lease = new ReaderNativeAlertLease(isCurrent);
     this.current = lease;
-    if (!isCurrent()) { lease.retire(); return lease; }
+    try {
+      if (!isCurrent()) { lease.retire(); return lease; }
+    } catch (error) { lease.nativeFailed(); throw error; }
     const spec = readerNativeAlertSpec(id);
     if ((spec.layout === 'confirm') !== (options.confirm !== undefined) ||
       (spec.layout === 'pair') !== (options.secondaryButton !== undefined) ||

@@ -472,6 +472,7 @@
     "test-discover-operation-consumers.mjs",
     "test-reader-native-alert-consumers.mjs",
     "test-index-native-alert-consumers.mjs",
-    "test-native-default-control-contracts.mjs"
+    "test-native-default-control-contracts.mjs",
+    "test-reader-native-alert-exit-faults.mjs"
   ]
 }
