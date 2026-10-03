@@ -138,6 +138,7 @@
     "test-reader-text-selection-lifecycle.mjs",
     "test-reader-tts-audition.mjs",
     "test-reader-tts-launch-intent.mjs",
+    "test-reader-tts-lifecycle.mjs",
     "test-reader-tts-preferences.mjs",
     "test-reader-tts-product-surface.mjs",
     "test-reader-tts-session-coordinator.mjs",
