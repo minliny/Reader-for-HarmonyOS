@@ -5,6 +5,7 @@
     "test-reading-prefetch-host.mjs",
     "test-source-selection-and-rss-projection.mjs",
     "test-system-file-open-navigation-owner.mjs",
+    "test-reader-atomic-snapshot-probe.mjs",
     "test-added-book-preparation.mjs",
     "test-app-shell-safe-geometry.mjs",
     "test-architecture-consumer-baseline.mjs",
