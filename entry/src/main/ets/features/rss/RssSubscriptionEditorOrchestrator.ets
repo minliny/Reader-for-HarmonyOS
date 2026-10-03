@@ -3,6 +3,7 @@ import { projectOperationFacts, type OperationFacts, type CommitConfirmationKind
 import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../app/ReaderPersistedReceiptProjection';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from './RssMutationRecoveryContract';
 import {
   RssGateway,
   type RssSourceDraft,
@@ -40,6 +41,7 @@ export interface RssSubscriptionEditorSnapshot {
   canSave: boolean;
   readFacts: OperationFacts<RssSubscription>;
   operation: PersistedReceiptProjection<RssSubscription> | undefined;
+  original?: RssOriginalMutationProjection;
 }
 
 export const EMPTY_RSS_EDITOR_SNAPSHOT: RssSubscriptionEditorSnapshot = {
@@ -165,7 +167,7 @@ export class RssSubscriptionEditorOrchestrator {
     this.publish({ busy: this.pending.has(this.activeKey), canSave: !this.pending.has(this.activeKey) && receipt?.confirmation !== 'unknown' && receipt?.projection.receipt.readback !== 'reading' &&
       receipt?.projection.receipt.fact !== 'confirmedRefreshFailed',
       operation: receipt?.projection, statusMessage: receipt?.projection.facts.message ?? (mode === 'create' ? '新增 RSS 订阅' : '正在读取 Core 订阅…') });
-    if (mode === 'edit' || receipt !== undefined || this.pending.has(this.activeKey)) {
+    if (mode === 'edit' || receipt !== undefined || this.pending.has(this.activeKey) || this.gateway.supportsOriginalRecovery()) {
       const key = this.activeKey;
       void this.serialize(async (): Promise<void> => { if (this.isCurrentSession(session)) await this.readEditor(key, session); }).catch((error: Error): void => this.fail(session, 'RSS 读取未执行', error));
     }
@@ -211,7 +213,8 @@ export class RssSubscriptionEditorOrchestrator {
 
   save(): void {
     const session = this.session, key = this.activeKey;
-    if (!this.isCurrentSession(session) || !this.snapshot.canSave || this.pending.has(key) || this.receipts.get(key)?.confirmation === 'unknown') return;
+    if (!this.isCurrentSession(session) || !this.snapshot.canSave || this.pending.has(key) || this.receipts.get(key)?.confirmation === 'unknown' ||
+      this.gateway.originalMutationSnapshot()?.blocked===true || this.gateway.originalMutationSnapshot()?.busy===true) return;
     const current = this.copySnapshot(this.snapshot);
     let draft: RssSourceDraft;
     try { draft = this.sourceDraft(current); }
@@ -235,8 +238,10 @@ export class RssSubscriptionEditorOrchestrator {
         this.pending.delete(key);
         const confirmation = evidence.confirmation();
         this.setReceipt(key, session, confirmation, subscriptionId, revision, 'failed', undefined, (error as Error).message);
-        this.patchDraft(key, { busy: false, canSave: confirmation === 'undispatched' });
-        if (this.isCurrentSession(session)) this.publish({ busy: false, canSave: confirmation === 'undispatched',
+        this.patchDraft(key, { busy: false, canSave: confirmation === 'undispatched' && this.gateway.originalMutationSnapshot()?.blocked!==true,
+          original:this.gateway.originalMutationSnapshot() });
+        if (this.isCurrentSession(session)) this.publish({ busy: false, canSave: confirmation === 'undispatched' && this.gateway.originalMutationSnapshot()?.blocked!==true,
+          original:this.gateway.originalMutationSnapshot(),
           statusMessage: this.receipts.get(key)?.projection.facts.message ?? '提交结果待核对' });
         return;
       } finally { this.gateway.observeWrites(undefined); }
@@ -262,6 +267,19 @@ export class RssSubscriptionEditorOrchestrator {
     }).catch((error: Error): void => this.fail(session, 'RSS 核对未执行', error));
   }
 
+  continueOriginal(expected: RssOriginalMutationIdentity, identity?: string): void {
+    const session=this.session,key=this.activeKey;
+    if (expected.scope!=='editor') return;
+    void this.serialize(async (): Promise<void> => {
+      if (!this.isCurrentSession(session) || identity!==undefined && identity!==this.presentationIdentity ||
+        expected.subscriptionId!==(this.drafts.get(key)?.mode==='edit' ? this.drafts.get(key)?.subscriptionId : '')) return;
+      const result=await this.gateway.recoverOriginalRss((): boolean => this.isCurrentSession(session),expected,true);
+      if (result.outcome?.subscription!==undefined) this.setReceipt(key,session,'confirmed',result.outcome.subscription.subscriptionId,
+        this.receipts.get(key)?.revision ?? this.revisions.get(key) ?? 0,'reading');
+      await this.readEditor(key,session,true);
+    }).catch((error: Error): void => this.fail(session,'RSS 原操作未继续',error));
+  }
+
   retryLoad(generation: number): void {
     const session = this.session, key = this.activeKey;
     void this.serialize(async (): Promise<void> => {
@@ -272,13 +290,31 @@ export class RssSubscriptionEditorOrchestrator {
 
   private async readEditor(key: string, session: number, finishSaved: boolean = false): Promise<void> {
     if (!this.ownsRuntime()) return;
-    const draft = this.drafts.get(key);
+    let draft = this.drafts.get(key);
     if (draft === undefined) return;
+    const recovery=await this.gateway.recoverOriginalRss((): boolean => this.isCurrentSession(session));
+    const original=recovery.original;
+    const matchesEditor=original?.scope==='editor' && original.subscriptionId===(draft.mode==='edit' ? draft.subscriptionId : '');
+    if (matchesEditor && original!==undefined) {
+      if (original.blocked && !this.dirty.get(key)) {
+        const accepted=this.gateway.originalSourceDraft();
+        if (accepted!==undefined) {
+          const fields=this.fieldsFromAcceptedDraft(accepted.draft);this.patchDraft(key,fields);
+          if (this.isCurrentSession(session) && this.activeKey===key) this.publish(fields);
+        }
+        draft=this.drafts.get(key) ?? draft;
+      }
+      if (recovery.outcome?.subscription!==undefined || original.blocked && this.receipts.get(key)===undefined ||
+        !original.blocked && original.confirmation==='undispatched' && this.receipts.get(key)?.confirmation==='unknown')
+        this.setReceipt(key,session,original.confirmation,recovery.outcome?.subscription?.subscriptionId ?? draft.subscriptionId,
+          this.receipts.get(key)?.revision ?? this.revisions.get(key) ?? 0,'reading');
+    }
     const receipt = this.receipts.get(key);
     const publishCurrent = (patch: RssSubscriptionEditorPatch): void => {
       this.patchDraft(key, patch);
       if (this.isCurrentSession(session) && this.activeKey === key) this.publish(patch);
     };
+    publishCurrent({original,canSave:original?.blocked!==true && original?.busy!==true && receipt?.confirmation!=='unknown'});
     publishCurrent({ busy: true, canSave: false, readFacts: projectOperationFacts<RssSubscription>({ phase: 'loading',
       value: receipt?.projection.value, generation: ++editorProjectionGeneration }) });
     if (receipt !== undefined) this.setReceipt(key, session, receipt.confirmation, receipt.subscriptionId, receipt.revision, 'reading', receipt.projection.value);
@@ -291,14 +327,15 @@ export class RssSubscriptionEditorOrchestrator {
       if (subscription === undefined && (draft.mode === 'edit' || receipt?.confirmation === 'confirmed')) throw new Error('RSS 订阅已不存在');
       if (receipt !== undefined) this.setReceipt(key, session, receipt.confirmation, receipt.subscriptionId, receipt.revision, 'succeeded', subscription);
       const unchangedDraft = receipt !== undefined && (this.revisions.get(key) ?? 0) === receipt.revision;
-      if (receipt === undefined && subscription !== undefined && !this.dirty.get(key)) {
+      if ((receipt === undefined || recovery.outcome!==undefined && receipt.confirmation==='confirmed') &&
+        subscription !== undefined && !this.dirty.get(key)) {
         publishCurrent(this.fieldsFromSubscription(subscription));
       }
       // A confirmed create owns its returned Core identity. If a newer draft
       // or a later editor entry remains open, subsequent explicit saves update
       // that identity rather than blindly creating a second subscription.
       if (receipt?.confirmation === 'confirmed' && subscription !== undefined) publishCurrent({ mode: 'edit', subscriptionId: subscription.subscriptionId });
-      publishCurrent({ busy: false, canSave: receipt?.confirmation !== 'unknown',
+      publishCurrent({ busy: false, canSave: receipt?.confirmation !== 'unknown' && original?.blocked!==true && original?.busy!==true,
         readFacts: projectOperationFacts<RssSubscription>({ phase: 'succeeded', value: subscription, generation: ++editorProjectionGeneration }),
         statusMessage: receipt?.confirmation === 'unknown' ? '提交结果待核对；已读取当前数据，原提交回执仍未确认，草稿保留' :
           receipt?.confirmation === 'confirmed' ? unchangedDraft ? 'RSS 订阅已保存' : '本次提交已保存，当前草稿仍有未保存更改' : '编辑 RSS 订阅' });
@@ -308,7 +345,7 @@ export class RssSubscriptionEditorOrchestrator {
       }
     } catch (error) {
       if (receipt !== undefined) this.setReceipt(key, session, receipt.confirmation, receipt.subscriptionId, receipt.revision, 'failed', receipt.projection.value, (error as Error).message);
-      publishCurrent({ busy: false, canSave: receipt?.confirmation === 'undispatched' || receipt === undefined,
+      publishCurrent({ busy: false, canSave: (receipt?.confirmation === 'undispatched' || receipt === undefined) && original?.blocked!==true && original?.busy!==true,
         readFacts: projectOperationFacts<RssSubscription>({ phase: 'failed', value: receipt?.projection.value, canRetry: true,
           generation: ++editorProjectionGeneration, message: (error as Error).message }),
         statusMessage: receipt === undefined ? `RSS 订阅读取失败：${(error as Error).message}` :
@@ -322,8 +359,8 @@ export class RssSubscriptionEditorOrchestrator {
       stale: readback === 'failed', canRetry: confirmation !== 'undispatched' && readback !== 'reading' &&
         (readback === 'failed' || confirmation === 'unknown'), generation: ++editorProjectionGeneration });
     this.receipts.set(key, { confirmation, subscriptionId, revision, projection });
-    this.patchDraft(key, { operation: projection });
-    if (this.isCurrentSession(session) && this.activeKey === key) this.publish({ operation: projection });
+    this.patchDraft(key, { operation: projection,original:this.gateway.originalMutationSnapshot() });
+    if (this.isCurrentSession(session) && this.activeKey === key) this.publish({ operation: projection,original:this.gateway.originalMutationSnapshot() });
   }
 
   private fieldsFromSubscription(subscription: RssSubscription): RssSubscriptionEditorPatch {
@@ -333,6 +370,13 @@ export class RssSubscriptionEditorOrchestrator {
       enabledCookieJar: subscription.enabledCookieJar ?? false, ruleArticles: subscription.ruleArticles ?? '',
       ruleNextPage: subscription.ruleNextPage ?? '', ruleTitle: subscription.ruleTitle ?? '', rulePubDate: subscription.rulePubDate ?? '',
       ruleDescription: subscription.ruleDescription ?? '', ruleImage: subscription.ruleImage ?? '', ruleLink: subscription.ruleLink ?? '', ruleContent: subscription.ruleContent ?? '' };
+  }
+  private fieldsFromAcceptedDraft(draft: RssSourceDraft): RssSubscriptionEditorPatch {
+    return {feedUrl:draft.feedUrl,title:draft.title,enabled:draft.enabled,sourceGroup:draft.sourceGroup,
+      customOrder:draft.customOrder?.toString() ?? '',updateIntervalMinutes:draft.updateIntervalMinutes?.toString() ?? '',
+      header:draft.header,enabledCookieJar:draft.enabledCookieJar,ruleArticles:draft.ruleArticles,ruleNextPage:draft.ruleNextPage,
+      ruleTitle:draft.ruleTitle,rulePubDate:draft.rulePubDate,ruleDescription:draft.ruleDescription,ruleImage:draft.ruleImage,
+      ruleLink:draft.ruleLink,ruleContent:draft.ruleContent};
   }
 
   private patchDraft(key: string, patch: RssSubscriptionEditorPatch): void {
@@ -372,6 +416,7 @@ export class RssSubscriptionEditorOrchestrator {
       canSave: patch.canSave ?? current.canSave,
       readFacts: patch.readFacts ?? current.readFacts,
       operation: patch.operation ?? current.operation,
+      original: patch.original ?? current.original,
     };
   }
 
@@ -416,6 +461,7 @@ export class RssSubscriptionEditorOrchestrator {
       canSave: source.canSave,
       readFacts: source.readFacts,
       operation: source.operation,
+      original: source.original,
     };
   }
 
@@ -494,4 +540,5 @@ interface RssSubscriptionEditorPatch {
   canSave?: boolean;
   readFacts?: OperationFacts<RssSubscription>;
   operation?: PersistedReceiptProjection<RssSubscription>;
+  original?: RssOriginalMutationProjection;
 }

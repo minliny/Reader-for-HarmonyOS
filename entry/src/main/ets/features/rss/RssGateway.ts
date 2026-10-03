@@ -1,6 +1,8 @@
 import { isReaderCoreTransactionPendingError, type JsonObject, type ReaderCoreResultEvent } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
+import { RulesMutationOwner } from '../settings/RulesMutationOwner';
+import type { RssOriginalMutationIdentity, RssOriginalMutationProjection, RssOriginalMutationRecovery, RssOriginalMutationOutcome } from './RssMutationRecoveryContract';
 
 export type RssSubscription = {
   subscriptionId: string;
@@ -129,6 +131,94 @@ export class RssGateway {
     this.runtimeOwner = runtimeOwner;
   }
 
+  originalMutationSnapshot(): RssOriginalMutationProjection | undefined {
+    if (!this.supportsOriginalRss()) return undefined;
+    const state=RulesMutationOwner.forRuntime(this.runtimeOwner).snapshot();
+    if (state.operationId===undefined || state.sequence===undefined || state.original===undefined) {
+      if (!state.blocked) return undefined;
+      // A damaged/unreadable original must still block the visible form. Empty
+      // ID/zero sequence are display-only absence, never a qualified retry ID.
+      return {generation:state.generation,operationId:'',sequence:0,method:'',scope:'foreign',subscriptionId:'',guid:'',
+        confirmation:state.confirmation,writeStage:state.writeStage,busy:state.busy,blocked:true,
+        canRetryOriginal:false,message:state.message};
+    }
+    const method=state.original.method,params=state.original.params;
+    const scope=state.subscription!==undefined || !this.isOriginalRssMethod(method) ? 'foreign' :
+      method==='rss-source.put' ? 'editor' : method==='rss.entry.read' || method.startsWith('rss.favorite.') ? 'entry' : 'management';
+    const nested=method==='rss.subscription.persist' ? this.requiredObject(params,'params') : params;
+    return { generation:state.generation,operationId:state.operationId,sequence:state.sequence,method,scope,
+      subscriptionId:typeof nested['subscriptionId']==='string' ? nested['subscriptionId'] as string : '',
+      guid:typeof params['guid']==='string' ? params['guid'] as string : '',
+      confirmation:state.confirmation,writeStage:state.writeStage,busy:state.busy,blocked:state.blocked,
+      canRetryOriginal:scope!=='foreign' && state.canRetryOriginal,message:state.message };
+  }
+  supportsOriginalRecovery(): boolean { return this.supportsOriginalRss(); }
+  /** Only original accepted source content, never a current row heuristic. */
+  originalSourceDraft(): { subscriptionId: string; draft: RssSourceDraft } | undefined {
+    if (!this.supportsOriginalRss()) return undefined;
+    const original=RulesMutationOwner.forRuntime(this.runtimeOwner).snapshot().original;
+    if (original?.method!=='rss-source.put') return undefined;
+    const params=original.params,source=this.requiredObject(params,'source');
+    return {subscriptionId:typeof params['subscriptionId']==='string' ? params['subscriptionId'] as string : '',
+      draft:{feedUrl:this.requiredString(source,'sourceUrl'),title:this.requiredString(source,'sourceName'),
+        enabled:this.requiredBoolean(source,'enabled'),sourceGroup:this.optionalString(source,'sourceGroup') ?? '',
+        customOrder:this.optionalNumber(source,'customOrder'),updateIntervalMinutes:this.optionalNumber(source,'updateIntervalMinutes'),
+        header:this.optionalString(source,'header') ?? '',enabledCookieJar:this.optionalBoolean(source,'enabledCookieJar') ?? false,
+        ruleArticles:this.optionalString(source,'ruleArticles') ?? '',ruleNextPage:this.optionalString(source,'ruleNextPage') ?? '',
+        ruleTitle:this.optionalString(source,'ruleTitle') ?? '',rulePubDate:this.optionalString(source,'rulePubDate') ?? '',
+        ruleDescription:this.optionalString(source,'ruleDescription') ?? '',ruleImage:this.optionalString(source,'ruleImage') ?? '',
+        ruleLink:this.optionalString(source,'ruleLink') ?? '',ruleContent:this.optionalString(source,'ruleContent') ?? ''}};
+  }
+
+  /** Pure query unless the current physical action explicitly supplies the
+   * exact original identity. Never use a new editor draft or matching row. */
+  async recoverOriginalRss(current: () => boolean, expected?: RssOriginalMutationIdentity,
+    retryOriginal: boolean = false): Promise<RssOriginalMutationRecovery> {
+    if (!this.supportsOriginalRss()) return {};
+    const before=this.originalMutationSnapshot();
+    if (before?.busy===true) {
+      if (retryOriginal) throw new Error('RSS 原操作仍在执行，不能重放');
+      return {original:before};
+    }
+    if (retryOriginal && expected===undefined) throw new Error('继续 RSS 原操作需要精确原身份');
+    if (expected!==undefined && (before?.operationId!==expected.operationId || before.generation!==expected.generation ||
+      before.method!==expected.method || before.scope!==expected.scope || before.subscriptionId!==expected.subscriptionId || before.guid!==expected.guid))
+      throw new Error('RSS 恢复动作已退役，未派发');
+    let outcome: RssOriginalMutationOutcome | undefined;
+    try {
+      await RulesMutationOwner.forRuntime(this.runtimeOwner).recoverOriginal(current,
+        (method: string, params: JsonObject, data: JsonObject): void => {
+          const subscription=this.qualifyOriginalRss(method,params,data);
+          outcome={method,params,data,subscription};
+        },retryOriginal,'rss-management',undefined,expected?.operationId,
+        (method: string, params: JsonObject): boolean => {
+          if (expected===undefined) return true;
+          const nested=method==='rss.subscription.persist' ? this.requiredObject(params,'params') : params;
+          return method===expected.method && (nested['subscriptionId'] ?? '')===expected.subscriptionId &&
+            (params['guid'] ?? '')===expected.guid;
+        });
+    } catch (error) {
+      // Durable state remains owned by the shared original authority. A
+      // foreign intent is visible as blocked but never granted a RSS replay.
+      const original=this.originalMutationSnapshot();
+      if (original===undefined || !original.blocked) throw error;
+      return {original};
+    }
+    return {original:this.originalMutationSnapshot(),outcome};
+  }
+
+  private supportsOriginalRss(): boolean {
+    return this.runtimeOwner.supportsCoreCapability?.('rules.mutation.exact.v1')===true &&
+      this.runtimeOwner.supportsCoreCapability?.('rules.mutation.rss-management.v1')===true;
+  }
+  private isOriginalRssMethod(method: string): boolean {
+    return ['rss-source.put','rss-source.import','rss.subscription.persist','rss.subscription.remove',
+      'rss.entry.read','rss.favorite.persist','rss.favorite.remove'].includes(method);
+  }
+  private confirmEvidence(evidence: ReaderWriteEvidence | undefined): void {
+    if (evidence!==undefined && evidence.confirmedCount<evidence.dispatchedCount) evidence.confirmed();
+  }
+
   async loadSubscriptions(): Promise<RssSubscription[]> {
     const result = await this.runtimeOwner.request('rss-source.list', {});
     const rawSources = result.data['sources'];
@@ -167,7 +257,7 @@ export class RssGateway {
       this.requiredObject(sourceData, 'subscription'),
       this.requiredObject(sourceData, 'source'),
     );
-    evidence?.confirmed();
+    this.confirmEvidence(evidence);
     return { created, subscription };
   }
 
@@ -190,7 +280,7 @@ export class RssGateway {
     if (subscription.subscriptionId !== subscriptionId || subscription.enabled !== draft.enabled) {
       throw new Error('rss-source.put returned a mismatched subscription');
     }
-    evidence?.confirmed();
+    this.confirmEvidence(evidence);
     return subscription;
   }
 
@@ -224,7 +314,7 @@ export class RssGateway {
     if (echoedReplace !== replaceExisting) {
       throw new Error('rss-source.import returned a mismatched replaceExisting');
     }
-    evidence?.confirmed();
+    this.confirmEvidence(evidence);
     return { imported, replaceExisting: echoedReplace };
   }
 
@@ -312,7 +402,7 @@ export class RssGateway {
       read: echoedRead,
       unreadCount: this.nonNegativeInteger(result.data, 'unreadCount'),
     };
-    evidence?.confirmed();
+    this.confirmEvidence(evidence);
     return receipt;
   }
 
@@ -372,7 +462,7 @@ export class RssGateway {
     if (created && favorite.addedAt !== addedAt) {
       throw new Error('rss.favorite.persist returned a mismatched creation time');
     }
-    evidence?.confirmed();
+    this.confirmEvidence(evidence);
     return favorite;
   }
 
@@ -390,7 +480,7 @@ export class RssGateway {
     if (echoedSubscriptionId !== subscriptionId || echoedGuid !== guid) {
       throw new Error('rss.favorite.remove returned a mismatched scoped identity');
     }
-    evidence?.confirmed();
+    this.confirmEvidence(evidence);
     return removed;
   }
 
@@ -416,7 +506,7 @@ export class RssGateway {
     if (subscription.subscriptionId !== subscriptionId || subscription.enabled !== enabled) {
       throw new Error('rss.subscription.persist returned a mismatched updated subscription');
     }
-    evidence?.confirmed();
+    this.confirmEvidence(evidence);
     return subscription;
   }
 
@@ -432,7 +522,7 @@ export class RssGateway {
     if (echoedId !== subscriptionId) {
       throw new Error('rss.subscription.remove returned a mismatched subscriptionId');
     }
-    evidence?.confirmed();
+    this.confirmEvidence(evidence);
     return deleted;
   }
 
@@ -495,7 +585,7 @@ export class RssGateway {
       notModified,
       evaluatedAt: this.requiredInteger(result.data, 'evaluatedAt'),
     };
-    evidence?.confirmed();
+    this.confirmEvidence(evidence);
     return receipt;
   }
 
@@ -503,6 +593,13 @@ export class RssGateway {
     evidence: ReaderWriteEvidence | undefined,
     onWriteDispatched: () => void = (): void => {}): Promise<ReaderCoreResultEvent> {
     const admitted = this.writeAdmission;
+    if (this.supportsOriginalRss() && this.isOriginalRssMethod(method)) {
+      return RulesMutationOwner.forRuntime(this.runtimeOwner).run('RSS 原操作',
+        (): boolean => ReaderRuntimeOwner.isCurrent(this.runtimeOwner) && (admitted===undefined || admitted()),
+        async (request,confirmed): Promise<ReaderCoreResultEvent> => {
+          const event=await request(method,params);this.qualifyOriginalRss(method,params,event.data);confirmed();return event;
+        },evidence,undefined,onWriteDispatched);
+    }
     try {
       return await this.runtimeOwner.request(method, params, {
         canDispatch: (): boolean => {
@@ -519,6 +616,57 @@ export class RssGateway {
       if (isReaderCoreTransactionPendingError(error)) evidence?.rejectedBeforeExecution();
       throw error;
     }
+  }
+
+  /** The same original DTO decoder is used for live ACK and exact cold ACK.
+   * It never fetches a current row to assert that an older write succeeded. */
+  private qualifyOriginalRss(method: string, params: JsonObject, data: JsonObject): RssSubscription | undefined {
+    if (method==='rss-source.put') {
+      this.requiredBoolean(data,'created');
+      const projected=this.requiredObject(data,'source');
+      const subscription=this.decodeSubscription(this.requiredObject(projected,'subscription'),this.requiredObject(projected,'source'));
+      const source=this.requiredObject(params,'source');
+      if (params['subscriptionId']!==undefined && subscription.subscriptionId!==params['subscriptionId'] ||
+        subscription.feedUrl!==source['sourceUrl'] || source['enabled']!==undefined && subscription.enabled!==source['enabled'])
+        throw new Error('RSS 原保存回执与完整原内容不匹配');
+      return subscription;
+    }
+    if (method==='rss-source.import') {
+      this.nonNegativeInteger(data,'imported');
+      if (this.requiredBoolean(data,'replaceExisting')!==params['replaceExisting']) throw new Error('RSS 原导入回执不匹配');
+      return undefined;
+    }
+    if (method==='rss.subscription.persist') {
+      if (this.requiredString(data,'operation')!==params['operation']) throw new Error('RSS 原更新回执操作不匹配');
+      const subscription=this.decodeSubscription(this.requiredObject(this.requiredObject(data,'data'),'subscription'));
+      const original=this.requiredObject(params,'params');
+      if (original['subscriptionId']!==undefined && subscription.subscriptionId!==original['subscriptionId'] ||
+        original['enabled']!==undefined && subscription.enabled!==original['enabled']) throw new Error('RSS 原更新回执身份不匹配');
+      return subscription;
+    }
+    if (method==='rss.subscription.remove') {
+      this.requiredBoolean(data,'deleted');
+      if (this.requiredString(data,'subscriptionId')!==params['subscriptionId']) throw new Error('RSS 原删除回执身份不匹配');
+      return undefined;
+    }
+    if (method==='rss.entry.read') {
+      if (!this.requiredBoolean(data,'marked') || this.requiredString(data,'subscriptionId')!==params['subscriptionId'] ||
+        this.requiredString(data,'guid')!==params['guid'] || this.requiredBoolean(data,'read')!==params['read']) throw new Error('RSS 原已读回执身份不匹配');
+      this.nonNegativeInteger(data,'unreadCount');return undefined;
+    }
+    if (method==='rss.favorite.persist') {
+      const created=this.requiredBoolean(data,'created'),favorite=this.decodeFavorite(this.requiredObject(data,'favorite'));
+      if (favorite.subscriptionId!==params['subscriptionId'] || favorite.guid!==params['guid'] || created && favorite.addedAt!==params['addedAt'])
+        throw new Error('RSS 原收藏回执身份不匹配');
+      return undefined;
+    }
+    if (method==='rss.favorite.remove') {
+      this.requiredBoolean(data,'removed');
+      if (this.requiredString(data,'subscriptionId')!==params['subscriptionId'] || this.requiredString(data,'guid')!==params['guid'])
+        throw new Error('RSS 原取消收藏回执身份不匹配');
+      return undefined;
+    }
+    throw new Error('不是 RSS 有限原操作');
   }
 
   private decodeSubscription(value: unknown, source?: JsonObject): RssSubscription {

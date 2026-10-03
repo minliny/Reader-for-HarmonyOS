@@ -489,6 +489,8 @@
     "test-rss-editor-operation-recovery.mjs",
     "test-rss-editor-retained-admission.mjs",
     "test-rss-index-operation-consumers.mjs",
+    "test-rss-management-cold-owner.mjs",
+    "test-rss-management-exact-intents.mjs",
     "test-rss-management-owner-closure.mjs",
     "test-rss-management-typography.mjs",
     "test-rss-page-architecture.mjs",

@@ -1,4 +1,5 @@
 import type { RssSourceSnapshot, RssEntrySnapshot } from './RssPresentationContract';
+import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from './RssMutationRecoveryContract';
 import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { RssRouteOperationHost, type RssRouteOperationProjection, type RssRouteBinding } from './RssRouteOperationHost';
 import {
@@ -62,6 +63,7 @@ export interface RssManagementOperationProjection {
   action: string;
   subscriptionId: string;
   projection: PersistedReceiptProjection<RssSubscription[]>;
+  original?: RssOriginalMutationProjection;
 }
 
 type RssOperationProjectionEmitter = (operation: RssManagementOperationProjection) => void;
@@ -184,6 +186,27 @@ export class RssOrchestrator {
     return this.latestOperation;
   }
 
+  originalMutationProjection(): RssOriginalMutationProjection | undefined { return this.gateway.originalMutationSnapshot(); }
+
+  reconcileOriginal(expected?: RssOriginalMutationIdentity, presentationIdentity?: string): void {
+    this.recoverOriginal(expected,false,presentationIdentity);
+  }
+  continueOriginal(expected: RssOriginalMutationIdentity, presentationIdentity?: string): void {
+    if (expected.scope!=='management') return;
+    this.recoverOriginal(expected,true,presentationIdentity);
+  }
+  private recoverOriginal(expected: RssOriginalMutationIdentity | undefined, retry: boolean, identity?: string): void {
+    const session=this.session;
+    this.mutationChain=this.mutationChain.then(async (): Promise<void> => {
+      if (!this.isCurrentSession(session) || identity!==undefined && identity!==this.presentationIdentity) return;
+      const result=await this.gateway.recoverOriginalRss((): boolean => this.isCurrentSession(session),expected,retry);
+      const original=result.original;
+      if (original!==undefined) this.publishOperation('original-recovery',original.subscriptionId,session,'reading',
+        original.message,undefined,original.confirmation);
+      await this.loadList(session);
+    }).catch((error: Error): void => logRssError('%{private}s',error.message));
+  }
+
   /** Enter management: wait for prior mutations, then read Core truth. */
   open(): void {
     this.session += 1;
@@ -216,6 +239,11 @@ export class RssOrchestrator {
       if (!this.isCurrentSession(session) || operation === undefined ||
         operation.projection.facts.generation !== expected.projection.facts.generation ||
         !operation.projection.facts.canRetry) return;
+      if (operation.original!==undefined) {
+        const result=await this.gateway.recoverOriginalRss((): boolean => this.isCurrentSession(session),operation.original);
+        if (result.original!==undefined && result.original.operationId===operation.original.operationId && result.original.scope==='management')
+          operation.projection=projectPersistedReceipt<RssSubscription[]>({confirmation:result.original.confirmation,readback:'reading',value:operation.projection.value});
+      }
       await this.readBack(operation.action, operation.subscriptionId, session,
         operation.projection.receipt.confirmation);
     });
@@ -379,6 +407,9 @@ export class RssOrchestrator {
   reconcileEntryOperation(expected: RssRouteOperationProjection<RssEntrySnapshot>, binding: RssRouteBinding<RssEntrySnapshot>): void {
     this.routeOperations.reconcileEntry(expected, binding);
   }
+  continueEntryOriginal(expected: RssOriginalMutationIdentity, binding: RssRouteBinding<RssEntrySnapshot>): void {
+    this.routeOperations.continueEntryOriginal(expected,binding);
+  }
 
   retrySourceRead(id: string, expected: OperationFacts<RssSourceSnapshot>, binding: RssRouteBinding<RssSourceSnapshot>): void {
     this.routeOperations.retrySourceRead(id, expected, binding);
@@ -466,6 +497,12 @@ export class RssOrchestrator {
   private async reconcileUnknownManagementWrite(session: number): Promise<boolean> {
     const operation = this.latestOperation;
     if (operation?.projection.receipt.confirmation !== 'unknown') return false;
+    if (operation.original!==undefined) {
+      const result=await this.gateway.recoverOriginalRss((): boolean => this.isCurrentSession(session),operation.original);
+      if (result.original?.operationId===operation.original.operationId && result.original.scope==='management') {
+        await this.readBack(operation.action,operation.subscriptionId,session,result.original.confirmation);return true;
+      }
+    }
     await this.readBack(operation.action, operation.subscriptionId, session, 'unknown');
     return true;
   }
@@ -505,6 +542,11 @@ export class RssOrchestrator {
 
   private async loadList(session: number): Promise<void> {
     if (!this.isCurrentSession(session)) return;
+    const recovery=await this.gateway.recoverOriginalRss((): boolean => this.isCurrentSession(session));
+    if (recovery.original!==undefined && (recovery.original.blocked || this.latestOperation===undefined ||
+      this.latestOperation.original?.operationId===recovery.original.operationId))
+      this.publishOperation('original-recovery',recovery.original.subscriptionId,session,'reading',recovery.original.message,
+        undefined,recovery.original.confirmation);
     let subscriptions: RssSubscription[];
     try {
       subscriptions = await this.loadSubscriptionsWithRetry();
@@ -554,7 +596,8 @@ export class RssOrchestrator {
         (readback === 'failed' || confirmation === 'unknown'),
       generation: ++rssProjectionGeneration,
     });
-    const operation: RssManagementOperationProjection = { action, subscriptionId, projection };
+    const operation: RssManagementOperationProjection = { action, subscriptionId, projection,
+      original:this.gateway.originalMutationSnapshot() };
     this.latestOperation = operation;
     const deliverySession = this.presentationIdentity === undefined ? session : this.session;
     if (this.isCurrentSession(deliverySession)) {

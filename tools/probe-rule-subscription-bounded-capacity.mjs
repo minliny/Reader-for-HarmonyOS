@@ -73,7 +73,10 @@ async function full(n){global.gc?.();const f=build(shaSource),{document,plan}=or
  const description=await f.gateway.refreshSubscription(sub,document,plan,()=>true);
  const elapsedMs=Number(process.hrtime.bigint()-start)/1e6;
  assert.equal(f.stats.rpcWrites,n+1);assert.equal(f.disk.raw,'');assert.equal(f.owner.snapshot().subscription.metadataConfirmed,true);assert.equal(f.owner.snapshot().subscription.confirmedParts,n+1);
- assert.equal(f.stats.writeCalls,n+4);assert.equal(f.stats.readCalls,n+3);assert.equal(f.stats.receiptHashCalls,2*n);assert.equal(f.stats.recordHashCalls,2*n+4);
+ assert.equal(f.stats.writeCalls,n+4);assert.equal(f.stats.readCalls,n+3);
+ // Live apply and exact query ACKs share the Store's production checksum validator;
+ // each advance still verifies only its latest receipt, with constant work.
+ assert.equal(f.stats.receiptHashCalls,4*n+1);assert.equal(f.stats.recordHashCalls,2*n+4);
  const planPath='/controlled-capacity/reader-rule-subscription-plan-v1.json',p=JSON.parse(f.disk.files[planPath]);
  assert.equal(f.stats.fileStats[planPath].writes,1);assert.equal(f.stats.fileStats[planPath].reads,0);
  assert.deepEqual(p.steps,f.disk.first.subscription.steps);assert.equal(p.steps.length,n+1);

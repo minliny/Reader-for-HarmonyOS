@@ -209,16 +209,18 @@ export class RulesMutationIntentStore {
     if (intent.recordFingerprint===undefined && (warm || intent.subscription?.plan===undefined)) return;
     if (typeof intent.recordFingerprint!=='string' || intent.recordFingerprint!==await sha256Hex(this.serialized(intent,false)))
       throw new Error('规则完整原记录校验失败，已保留且停止新写入');
-    const terminal=intent.terminal;
-    if (terminal!==undefined) {
-      const binding=terminal['binding'] as JsonObject;
-      if (binding?.['operationId']!==intent.operationId || binding['sequence']!==intent.sequence ||
+    if (intent.terminal!==undefined) await this.qualifyTerminal(intent,intent.terminal);
+  }
+  /** Shared terminal validation for a live original SDK ACK and its retained
+   * snapshot. Checksum detects damage; it does not authenticate an author. */
+  async qualifyTerminal(intent: RulesMutationIntent, terminal: JsonObject): Promise<void> {
+    const binding=terminal['binding'] as JsonObject;
+    if (binding?.['operationId']!==intent.operationId || binding['sequence']!==intent.sequence ||
         typeof binding['payloadFingerprint']!=='string' || !/^[0-9a-f]{64}$/.test(binding['payloadFingerprint'] as string) ||
         terminal['method']!==intent.mutation.method || !['applied','rejected'].includes(terminal['outcome'] as string) ||
         terminal['data']===null || typeof terminal['data']!=='object' || Array.isArray(terminal['data']) ||
         terminal['ackFingerprint']!==await sha256Hex(JSON.stringify([terminal['method'],terminal['outcome'],terminal['data']])))
         throw new Error('规则保留的终态回执无效，已保留且停止新写入');
-    }
   }
   private async ensurePlan(intent: RulesMutationIntent): Promise<void> {
     const j=intent.subscription; if (j===undefined) return;

@@ -3,6 +3,7 @@ import { projectOperationFacts, type OperationFacts, type CommitConfirmationKind
 import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../app/ReaderPersistedReceiptProjection.ts';
 import type { RssGateway } from './RssGateway';
 import type { RssSourceSnapshot, RssEntrySnapshot } from './RssPresentationContract';
+import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from './RssMutationRecoveryContract';
 
 let routeFactGeneration: number = 0;
 
@@ -11,6 +12,7 @@ export interface RssRouteOperationProjection<T> {
   subscriptionId: string;
   guid: string;
   projection: PersistedReceiptProjection<T>;
+  original?: RssOriginalMutationProjection;
 }
 
 export interface RssRouteBinding<T> {
@@ -97,6 +99,17 @@ export class RssRouteOperationHost {
     this.reconcile(state, expected, binding, (): Promise<RssEntrySnapshot> => this.dependencies.readEntry(expected.subscriptionId, expected.guid));
   }
 
+  continueEntryOriginal(expected: RssOriginalMutationIdentity, binding: RssRouteBinding<RssEntrySnapshot>): void {
+    if (expected.scope!=='entry') return;
+    const state=this.entry(expected.subscriptionId,expected.guid);
+    this.enqueue(state,binding,async (): Promise<void> => {
+      const result=await this.dependencies.gateway.recoverOriginalRss((): boolean => this.admitted(binding),expected,true);
+      if (result.original!==undefined) this.publishOperation(state,binding,'original-recovery',expected.subscriptionId,expected.guid,
+        result.original.confirmation,'reading',result.original.message);
+      await this.read(state,binding,(): Promise<RssEntrySnapshot> => this.dependencies.readEntry(expected.subscriptionId,expected.guid));
+    });
+  }
+
   retrySourceRead(subscriptionId: string, expected: OperationFacts<RssSourceSnapshot>, binding: RssRouteBinding<RssSourceSnapshot>): void {
     this.retryRead(this.source(subscriptionId), expected, binding,
       (): Promise<RssSourceSnapshot> => this.dependencies.readSource(subscriptionId));
@@ -111,6 +124,12 @@ export class RssRouteOperationHost {
     this.enqueue(state, binding, async (): Promise<void> => {
       const current = state.operation;
       if (current === undefined || current.projection.facts.generation !== expected.projection.facts.generation || !current.projection.facts.canRetry) return;
+      if (current.original!==undefined) {
+        const result=await this.dependencies.gateway.recoverOriginalRss((): boolean => this.admitted(binding),current.original);
+        if (result.original?.operationId===current.original.operationId && result.original.scope==='entry' &&
+          result.original.subscriptionId===current.subscriptionId && result.original.guid===current.guid)
+          this.publishOperation(state,binding,'original-recovery',current.subscriptionId,current.guid,result.original.confirmation,'reading');
+      }
       await this.read(state, binding, reader);
     });
   }
@@ -136,6 +155,7 @@ export class RssRouteOperationHost {
     } catch (error) {
       this.publishOperation(state, binding, action, subscriptionId, guid, evidence.confirmation(), 'failed', (error as Error).message);
       if (evidence.confirmation() === 'undispatched') this.reportFailure(binding, error as Error);
+      if (this.dependencies.gateway.originalMutationSnapshot()!==undefined) await this.read(state,binding,reader);
       return;
     } finally { this.dependencies.gateway.observeWrites(undefined); }
     // A dispatched write settles in this owner regardless of route retirement.
@@ -146,6 +166,12 @@ export class RssRouteOperationHost {
 
   private async read<T>(state: RssRouteState<T>, binding: RssRouteBinding<T>, reader: () => Promise<T>): Promise<void> {
     if (!this.ownsRuntime()) return;
+    const recovery=await this.dependencies.gateway.recoverOriginalRss((): boolean => this.admitted(binding));
+    const original=recovery.original,operation=state.operation;
+    if (original!==undefined && operation!==undefined && original.scope==='entry' &&
+      original.subscriptionId===operation.subscriptionId && original.guid===operation.guid &&
+      (operation.original===undefined || operation.original.operationId===original.operationId))
+      this.publishOperation(state,binding,'original-recovery',operation.subscriptionId,operation.guid,original.confirmation,'reading',original.message);
     this.publishRead(state, binding, 'loading');
     this.updateReadback(state, binding, 'reading');
     try {
@@ -178,6 +204,7 @@ export class RssRouteOperationHost {
   private publishOperation<T>(state: RssRouteState<T>, binding: RssRouteBinding<T>, action: string, subscriptionId: string,
     guid: string, confirmation: CommitConfirmationKind, readback: 'reading' | 'failed' | 'succeeded', refreshError?: string): void {
     const operation: RssRouteOperationProjection<T> = { action, subscriptionId, guid,
+      original:this.dependencies.gateway.originalMutationSnapshot(),
       projection: projectPersistedReceipt<T>({ confirmation, readback, value: state.value, refreshError,
         stale: readback === 'failed', canRetry: confirmation !== 'undispatched' && readback !== 'reading' &&
           (readback === 'failed' || confirmation === 'unknown'), generation: ++routeFactGeneration }) };

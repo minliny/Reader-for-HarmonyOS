@@ -11,6 +11,8 @@ export interface RulesMutationSnapshot {
   label: string; method: string; message: string;
   blocked: boolean; canRetryOriginal: boolean; operationId?: string; sequence?: number;
   writeStage: 'intent' | 'core' | 'cleanup';
+  /** Complete original single delta; never a current entity/list projection. */
+  original?: { method: string; params: JsonObject };
   subscription?: { kind: 0 | 1 | 2 | 3; cursor: number; total: number; confirmedParts: number; failedParts: number; metadataConfirmed: boolean };
 }
 interface RulesMutationReceipt {
@@ -41,12 +43,13 @@ export class RulesMutationOwner {
   private readonly runtime: ReadingGatewayRuntime;
   private readonly intents: RulesMutationIntentStore;
   private constructor(runtime: ReadingGatewayRuntime) { this.runtime = runtime; this.intents = new RulesMutationIntentStore(runtime); }
-  snapshot(): RulesMutationSnapshot { return { ...this.state }; }
+  snapshot(): RulesMutationSnapshot { return { ...this.state,
+    original: this.state.original === undefined ? undefined : JSON.parse(JSON.stringify(this.state.original)) as { method: string; params: JsonObject } }; }
 
   async run<T>(label: string, isCurrent: () => boolean,
     operation: (request: (method: string, params: JsonObject) => Promise<ReaderCoreResultEvent>,
       confirmed: () => void) => Promise<T>, observer?: ReaderWriteEvidence,
-    sourceCleanup?: () => Promise<boolean>): Promise<T> {
+    sourceCleanup?: () => Promise<boolean>, onWriteDispatched?: () => void): Promise<T> {
     if (this.state.busy || this.state.blocked || this.state.confirmation === 'unknown')
       throw new RulesMutationError(this.state.busy ? '另一规则操作正在执行' : this.state.message || '先前规则原操作仍需核对', this.state.confirmation === 'unknown');
     const current = (): boolean => this.current(isCurrent);
@@ -71,11 +74,12 @@ export class RulesMutationOwner {
       this.admitIdentity(intent); this.state.writeStage = 'core';
       const options: BookRequestOptions = {
         canDispatch: (): boolean => this.state.generation === generation && this.state.busy && current(),
-        onDispatch: (): void => { evidence.dispatched(); observer?.dispatched(); },
+        onDispatch: (): void => { evidence.dispatched(); observer?.dispatched(); this.state.confirmation='unknown';
+          try { onWriteDispatched?.(); } catch (_) { /* Delivery cannot revoke an accepted write. */ } },
       };
       try {
         const event = await this.runtime.request('rules.mutation.apply', this.params(intent), options);
-        const receipt = this.decodeReceipt(event.data, intent);
+        const receipt = await this.decodeReceipt(event.data, intent);
         if (receipt.outcome === 'rejected') {
           evidence.rejectedBeforeExecution(); observer?.rejectedBeforeExecution(); exactRejected = true;
           await this.clearTerminal(intent, 'undispatched', receipt);
@@ -162,7 +166,7 @@ export class RulesMutationOwner {
       this.projectSubscription(intent);
       const q = intent.terminal === undefined ? await this.query(intent,current) : undefined;
       if (q !== undefined) this.requireSubscriptionCapability(journey.kind);
-      let receipt = intent.terminal === undefined ? q?.receipt : this.decodeReceipt(intent.terminal,intent);
+      let receipt = intent.terminal === undefined ? q?.receipt : await this.decodeReceipt(intent.terminal,intent);
       if (receipt === undefined) {
         const head = q?.head?.sequence ?? 0;
         if (head !== intent.sequence - 1) throw new Error(head >= intent.sequence ? '流水已越过订阅原步骤且无精确回执，保持阻断' : '订阅原流水不连续');
@@ -171,9 +175,9 @@ export class RulesMutationOwner {
         if (!durable) await this.intents.ensureDurable(intent,current);
         this.state.writeStage = 'core';
         const event = await this.runtime.request('rules.mutation.apply',this.params(intent), {
-          canDispatch: current, onDispatch: (): void => observer?.dispatched(),
+          canDispatch: current, onDispatch: (): void => {this.state.confirmation='unknown';observer?.dispatched();},
         });
-        receipt = this.decodeReceipt(event.data,intent);
+        receipt = await this.decodeReceipt(event.data,intent);
       }
       if (receipt.outcome === 'applied') { qualify(intent.mutation.method,intent.mutation.params,receipt.data);
         if (observer !== undefined && observer.confirmedCount < observer.dispatchedCount) observer.confirmed(); }
@@ -215,8 +219,9 @@ export class RulesMutationOwner {
    * null is never "not dispatched", a higher head never confirms an old delta. */
   async recoverOriginal(isCurrent: () => boolean,
     qualify: (method: string, params: JsonObject, data: JsonObject) => void,
-    retryOriginal: boolean = false, family?: 'source-management',
-    sourceCleanup?: (method: string, params: JsonObject) => Promise<boolean>): Promise<RulesMutationSnapshot> {
+    retryOriginal: boolean = false, family?: 'source-management' | 'rss-management',
+    sourceCleanup?: (method: string, params: JsonObject) => Promise<boolean>,
+    expectedOperationId?: string, originalAdmission?: (method: string, params: JsonObject) => boolean): Promise<RulesMutationSnapshot> {
     if (this.state.busy) throw new RulesMutationError('另一规则操作正在执行', this.state.confirmation === 'unknown');
     const current = (): boolean => this.current(isCurrent); if (!current()) throw new RulesMutationError('规则核对入口已退役', true);
     this.state.busy = true; this.state.generation += 1;
@@ -225,9 +230,15 @@ export class RulesMutationOwner {
       if (intent === undefined) { this.state.blocked = false; return this.snapshot(); }
       this.admitPending(intent);
       const sourceFamily = intent.subscription?.kind===3 || intent.mutation.method==='source.update' || intent.mutation.method==='source.delete';
-      if ((family==='source-management') !== sourceFamily) throw new Error('当前入口不能继续另一家族的原操作；原记录保持阻断');
+      const rssFamily = intent.subscription===undefined &&
+        (intent.mutation.method.startsWith('rss.') || intent.mutation.method.startsWith('rss-source.'));
+      if ((family==='source-management') !== sourceFamily || (family==='rss-management') !== rssFamily)
+        throw new Error('当前入口不能继续另一家族的原操作；原记录保持阻断');
+      if (expectedOperationId!==undefined && expectedOperationId!==intent.operationId ||
+        originalAdmission!==undefined && !originalAdmission(intent.mutation.method,intent.mutation.params))
+        throw new Error('当前恢复动作不属于保留的原操作；原记录保持阻断');
       if (intent.subscription !== undefined) return await this.continueSubscription(intent,current,qualify,retryOriginal);
-      let receipt = intent.terminal === undefined ? undefined : this.decodeReceipt(intent.terminal, intent);
+      let receipt = intent.terminal === undefined ? undefined : await this.decodeReceipt(intent.terminal, intent);
       const query = receipt === undefined ? await this.query(intent, current) : undefined;
       if (receipt === undefined) this.requireMethodCapability(intent.mutation.method);
       receipt = receipt ?? query?.receipt;
@@ -239,7 +250,7 @@ export class RulesMutationOwner {
         if (!retryOriginal) { this.state.message = '尚无原操作精确回执；可明确重试已保留的原规则内容，不会创建新标识'; return this.snapshot(); }
         await this.intents.ensureDurable(intent, current); this.state.writeStage = 'core';
         const event = await this.runtime.request('rules.mutation.apply', this.params(intent), { canDispatch: current });
-        receipt = this.decodeReceipt(event.data, intent);
+        receipt = await this.decodeReceipt(event.data, intent);
       }
       if (receipt.outcome === 'applied') {
         qualify(intent.mutation.method, intent.mutation.params, receipt.data);
@@ -281,7 +292,7 @@ export class RulesMutationOwner {
     try { await this.intents.clear(intent, terminal as unknown as JsonObject | undefined); this.state.blocked = false; this.state.message = ''; }
     catch (_) { this.state.blocked = true; this.state.message = `${confirmation === 'confirmed' ? '原规则写入已确认' : '原规则操作未执行'}；原记录清理尚未确认，请核对后再开始下一项`; }
   }
-  private admitIdentity(intent: RulesMutationIntent): void { this.state.operationId = intent.operationId; this.state.sequence = intent.sequence; this.state.label = intent.label; this.state.method = intent.mutation.method; this.projectSubscription(intent); }
+  private admitIdentity(intent: RulesMutationIntent): void { this.state.operationId = intent.operationId; this.state.sequence = intent.sequence; this.state.label = intent.label; this.state.method = intent.mutation.method; this.state.original=intent.mutation; this.projectSubscription(intent); }
   private admitPending(intent: RulesMutationIntent): void {
     this.admitIdentity(intent); this.state.confirmation = 'unknown'; this.state.blocked = true;
     this.state.message = '先前规则原操作仍需核对，不能覆盖原内容或接受另一草稿';
@@ -297,6 +308,8 @@ export class RulesMutationOwner {
     this.requireCapability();
     if ((method==='source.update' || method==='source.delete') && this.runtime.supportsCoreCapability?.('rules.mutation.source-management.v1') !== true)
       throw new Error('当前 Core 不支持书源原管理回执，已停止派发');
+    if ((method.startsWith('rss.') || method==='rss-source.put') && this.runtime.supportsCoreCapability?.('rules.mutation.rss-management.v1') !== true)
+      throw new Error('当前 Core 不支持 RSS 原管理回执，已停止派发');
   }
   private requireCapability(): void { if (this.runtime.supportsCoreCapability?.('rules.mutation.exact.v1') !== true) throw new Error('当前 Core 不具备规则精确回执能力，已停止写入'); }
   private async query(intent: RulesMutationIntent | undefined, current: () => boolean): Promise<RulesMutationQuery> {
@@ -312,17 +325,17 @@ export class RulesMutationOwner {
     const receiptRaw = raw['receipt'];
     if (receiptRaw === null) return { head };
     if (intent === undefined) throw new Error('规则头查询不应返回无归属回执');
-    const receipt = this.decodeReceipt(this.object(receiptRaw, '规则回执'), intent);
+    const receipt = await this.decodeReceipt(this.object(receiptRaw, '规则回执'), intent);
     if (head?.operationId !== receipt.binding.operationId || head.sequence !== receipt.binding.sequence ||
       head.payloadFingerprint !== receipt.binding.payloadFingerprint) throw new Error('规则回执与实际流水不一致');
     return { head, receipt };
   }
-  private decodeReceipt(raw: JsonObject, intent: RulesMutationIntent): RulesMutationReceipt {
+  private async decodeReceipt(raw: JsonObject, intent: RulesMutationIntent): Promise<RulesMutationReceipt> {
     const binding = this.object(raw['binding'], '规则绑定');
     if (binding['operationId'] !== intent.operationId || binding['sequence'] !== intent.sequence ||
       !this.fingerprint(binding['payloadFingerprint']) || !this.fingerprint(raw['ackFingerprint']) ||
       raw['method'] !== intent.mutation.method || (raw['outcome'] !== 'applied' && raw['outcome'] !== 'rejected')) throw new Error('规则原回执与固定标识不匹配');
-    this.object(raw['data'], '规则原数据'); return raw as unknown as RulesMutationReceipt;
+    this.object(raw['data'], '规则原数据'); await this.intents.qualifyTerminal(intent,raw); return raw as unknown as RulesMutationReceipt;
   }
   private rejectionMessage(receipt: RulesMutationReceipt): string { const error = this.object(receipt.data['error'], '规则原拒绝'); return typeof error['message'] === 'string' ? error['message'] : 'Core 明确拒绝原规则操作'; }
   private object(value: unknown, name: string): JsonObject { if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${name}结构无效`); return value as JsonObject; }
