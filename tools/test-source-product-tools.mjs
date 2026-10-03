@@ -77,7 +77,8 @@ assert.match(sourcePage, /onOpenTools/);
 assert.match(sourcePage, /ReaderSearchField\(\{[\s\S]*variant: 'sourceManagement'[\s\S]*mode: 'live'/);
 assert.match(sourcePage, /filteredSources\(\)/);
 assert.match(sourcePage, /source\.group === this\.groupValue/);
-assert.match(sourcePage, /Text\('批量管理'\)/);
+assert.match(sourcePage, /ReaderButton\(\{[^\n]*specId: 'source-management-manage'[^\n]*label: '批量管理'/,
+  'management action uses the actual finite shared Button; native tuples and callbacks are exercised by foundation consumer gates');
 assert.match(page, /Core 生成 Legado 兼容 JSON/);
 assert.match(page, /fullWidthActionButton\('导出全部书源'/,
   'standalone export action must not reuse the row-only layoutWeight button');
