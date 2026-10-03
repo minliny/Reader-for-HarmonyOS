@@ -78,7 +78,9 @@ async function observe(current: () => boolean, queried: () => void): Promise<Inv
     query.set(asset.Tag.RETURN_OFFSET, page * PAGE_SIZE);
     value.queries += 1;
     queried();
-    const rows = await asset.query(query);
+    let rows: asset.AssetMap[];
+    try { rows = await asset.query(query); }
+    catch (error) { throw error; }
     if (!isCurrent(current)) { value.retired = true; return value; }
     if (rows.length > PAGE_SIZE) { value.malformed = true; return value; }
     for (const row of rows) {
