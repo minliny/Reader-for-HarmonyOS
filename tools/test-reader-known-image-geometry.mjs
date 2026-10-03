@@ -1,3 +1,4 @@
+import { ReaderReadingImageResources, sameReaderReadingImageResource } from '../entry/src/main/ets/features/reading/ReaderReadingImageResources.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { registerHooks, stripTypeScriptTypes } from 'node:module';
@@ -87,7 +88,7 @@ const methods = ['resolvePageImagePixels', 'resolveGeometryImagePixels', 'matchi
   'sameReadingImageResource', 'scaledReadingImageHeight', 'consumeReversePageParagraph', 'rebuildContinuousFragments'];
 const Owner = productionMotionMethods(file, methods, { ReadingSurfacePageFragment: Fragment, ...style,
   readerNativeParagraphKey: () => 'title', TYPE_READER_CHAPTER_TITLE: {}, TextAlign: { Center: 'center' },
-  ReaderRuntimeOwner: { current: () => activeRuntime }, hilog: { error() {} } });
+  ReaderRuntimeOwner: { current: () => activeRuntime }, sameReaderReadingImageResource, hilog: { error() {} } });
 function fixture({ repeated = false } = {}) {
   let current = true, mounted = true, frozen = false, phase = 'idle';
   const reads = [], leasesReleased = [], events = [];
@@ -99,7 +100,7 @@ function fixture({ repeated = false } = {}) {
   const page = { startScalar: 0, endScalar: 10, contentHeight: 90, bodyCapacity: 200, fragments: fragments.slice() };
   const window = new ReadingChapterWindow(); window.configure('local', bookId, [0, 1]); window.setCurrent(chapter);
   const owner = Object.assign(new Owner(), { chapter, sourceId: 'local', bookId, lifecycleToken: 1,
-    geometryImageRequests: new Map(), chapterWindow: window, readingImageResources: [],
+    geometryImageRequests: new Map(), chapterWindow: window, readingImageResources: new ReaderReadingImageResources({ releaseReadingImage: (...args) => leasesReleased.push(args) }),
     chapterImageByStartScalar: new Map(), chapterImagePositionByKey: new Map(),
     visibleFragments: page.fragments, visiblePage: page, readingReadyPage: page,
     continuousFragments: fragments.slice(), continuousFragmentIndexByStartScalar: new Map(images.map((i,n)=>[i.startScalar,n])),

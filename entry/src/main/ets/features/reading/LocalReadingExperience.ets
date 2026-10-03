@@ -1,3 +1,4 @@
+import { ReaderReadingImageResources, sameReaderReadingImageResource } from './ReaderReadingImageResources';
 import { ReaderProgressProducerHost, type ReaderProgressProducerIntent, type ReaderContinuousProgressDependencies } from './ReaderProgressProducerHost';
 import { TYPE_READER_READING_FAILURE_TITLE, TYPE_READER_READING_FAILURE_DETAIL } from '../common/ReaderTypography';
 import { ReaderNativeAlertOwner, type ReaderNativeAlertSpecId, type ReaderNativeAlertOptions, ReaderNativeAlertLease } from '../../app/ReaderNativeAlertOwner';
@@ -1239,7 +1240,10 @@ export struct ReadingExperience {
   private readonly pageTurnChapterLoads: Set<string> = new Set<string>();
   private neighbourPreparationKey: string = '';
   /** Unique Host-created display resources owned by this reader session. */
-  private readonly readingImageResources: ReadingSessionImage[] = [];
+  private readonly readingImageResources: ReaderReadingImageResources =
+    new ReaderReadingImageResources(ReaderRuntimeOwner.current(), (error: Error): void => {
+      hilog.error(0x5244, 'Reader', '%{private}s', `Reading image release failed: ${this.errorMessage(error)}`);
+    });
   private readonly knownContentVersions: KnownReadingContentVersion[] = [];
   private chapterLayoutMap: ReadingSurfaceLayoutMap | undefined = undefined;
   private visiblePage: PhysicalReadingPage | undefined = undefined;
@@ -6449,37 +6453,17 @@ export struct ReadingExperience {
   }
 
   private adoptReadingImage(image: ReadingSessionImage): void {
-    if (image.state !== 'ready' || (image.fileUri.length === 0 && image.pixelMap === undefined)) {
-      return;
-    }
-    for (const retained of this.readingImageResources) {
-      if (this.sameReadingImageResource(retained, image)) {
-        // Each Host load acquires one file reference. The session retains one
-        // owner for identical bytes even when several anchors share them.
-        ReaderRuntimeOwner.current().releaseReadingImage(image.fileUri, image.pixelMap);
-        return;
-      }
-    }
-    this.readingImageResources.push(image);
+    this.readingImageResources.adopt(image);
   }
 
   private releaseUnadmittedReadingImage(image: ReadingSessionImage): void {
-    if (image.fileUri.length > 0 || image.pixelMap !== undefined) {
-      ReaderRuntimeOwner.current().releaseReadingImage(image.fileUri, image.pixelMap);
-    }
+    this.readingImageResources.releaseUnadmitted(image);
   }
 
   private releaseUnretainedReadingImages(): void {
-    for (let index = this.readingImageResources.length - 1; index >= 0; index -= 1) {
-      const resource = this.readingImageResources[index];
-      if (this.isReadingImageRetained(resource)) {
-        continue;
-      }
-      if (resource.fileUri.length > 0 || resource.pixelMap !== undefined) {
-        ReaderRuntimeOwner.current().releaseReadingImage(resource.fileUri, resource.pixelMap);
-      }
-      this.readingImageResources.splice(index, 1);
-    }
+    // Retention depends on the current presented/prepared transactions. The
+    // lease owner delegates disposal to the original allocator.
+    this.readingImageResources.prune((resource: ReadingSessionImage): boolean => this.isReadingImageRetained(resource));
   }
 
   private isReadingImageRetained(resource: ReadingSessionImage): boolean {
@@ -6513,19 +6497,11 @@ export struct ReadingExperience {
       if (pending.resolved !== undefined) this.releaseUnadmittedReadingImage(pending.resolved);
     }
     this.geometryImageRequests.clear();
-    for (const resource of this.readingImageResources) {
-      if (resource.fileUri.length > 0 || resource.pixelMap !== undefined) {
-        ReaderRuntimeOwner.current().releaseReadingImage(resource.fileUri, resource.pixelMap);
-      }
-    }
-    this.readingImageResources.splice(0, this.readingImageResources.length);
+    this.readingImageResources.close();
   }
 
   private sameReadingImageResource(left: ReadingSessionImage, right: ReadingSessionImage): boolean {
-    if (left.fileUri.length > 0 || right.fileUri.length > 0) {
-      return left.fileUri.length > 0 && left.fileUri === right.fileUri;
-    }
-    return left.pixelMap !== undefined && left.pixelMap === right.pixelMap;
+    return sameReaderReadingImageResource(left, right);
   }
 
   /**

@@ -494,6 +494,7 @@
     "test-temporary-back-leaf-sdk.mjs",
     "test-architecture-shared-producers.mjs",
     "test-reader-startup-main-load-fault.mjs",
-    "test-temporary-back-index-sdk.mjs"
+    "test-temporary-back-index-sdk.mjs",
+    "test-reader-image-resource-lifecycle.mjs"
   ]
 }
