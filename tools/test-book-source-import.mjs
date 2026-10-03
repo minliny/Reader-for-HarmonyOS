@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync,rmSync } from 'node:fs';
 import { fixture as sourceFixture } from './lib/source-management-durable-probe.mjs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {sourceSharedActionFixture,updateSourceAction} from './lib/source-shared-action-probe.mjs';
+import {sharedActionFeedbackReset} from './lib/shared-action-feedback-state-probe.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
@@ -430,7 +432,15 @@ assert.match(owner, /async selectBookSourceJson\(\)[\s\S]*this\.host\.selectBook
 
 // UI/orchestration: real button intent, serialized mutation, refresh, real log.
 assert.match(page, /onAddSource: \(\) => void/);
-assert.match(page, /\.onClick\(\(\): void => this\.onAddSource\(\)\)/);
+{
+ let imports=0;
+ const ui=sourceSharedActionFixture(['bottomActionBar'],{},{onAddSource:()=>imports++,onOpenTools:()=>{}});
+ ui.owner.bottomActionBar();const add=ui.action('source-management-add','新增书源');
+ sharedActionFeedbackReset(add.actor,add.native);assert.equal(imports,0,'press and cancel-reset alone never open an import');
+ add.click();assert.equal(imports,1,'actual Page -> shared labeled Add -> native click preserves the source import intent');
+ updateSourceAction(ui,add.actor,{actionEnabled:false});assert.equal(add.native.enabled,false);add.click();assert.equal(imports,1,'disabled shared Add cannot open another import');
+ updateSourceAction(ui,add.actor,{actionEnabled:true});add.actor.aboutToDisappear();add.click();assert.equal(imports,1,'old physical Add is retired with its real shared component');
+}
 assert.match(index, /onAddSource: \(\): void => \{ if \(this\.isCurrentSourceManagement\(generation, owner, mounting, host, identity\)\) this\.openJsonImport\('bookSource'\); \}/,
   'the real Add button keeps its import intent and captured original Source presentation admission');
 assert.match(index, /source\.importBookSources\([\s\S]*?sourceIdentity,\n/,
@@ -448,4 +458,8 @@ assert.match(orchestrator, /isReaderCoreTransactionPendingError\(error\)/);
 assert.doesNotMatch(orchestrator, /error\.message\.indexOf|error\.message\.includes/);
 assert.doesNotMatch(orchestrator, /devSeed|fixture|mock|fake/i);
 
+// This decoder test creates and exclusively owns this temporary Core/files
+// fixture. All accepted calls above are awaited before retiring/removing it;
+// no shared CLI, workspace, artifact or evidence directory is touched.
+fixture.retire();rmSync(fixture.root,{recursive:true,force:true});
 console.log('book-source production import contract: PASS');

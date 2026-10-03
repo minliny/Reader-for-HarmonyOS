@@ -8,6 +8,7 @@ import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThem
 import { bookIntroText } from '../entry/src/main/ets/features/common/BookIntroText.ts';
 import { bookAuthorLabel } from '../entry/src/main/ets/features/common/BookAuthorMetadata.ts';
 import { readerSourceCategoryLabel } from '../entry/src/main/ets/features/source/ReaderSourceCategory.ts';
+import {sourceSharedActionFixture} from './lib/source-shared-action-probe.mjs';
 
 const baseline = process.argv.includes('--baseline');
 const read = name => readFileSync(new URL(baseline
@@ -322,29 +323,35 @@ for (const loginUrl of [undefined, 'https://example.test/login']) {
   check(`source name/category/URL remain distinct and login precedes detect (${loginUrl ? 'login' : 'no login'})`, () => {
     const names = ['sourceRow', 'detectButton', 'loginButton', 'statusBadge', 'sourceSwitch'];
     if (sourcePage.includes('private sourceMeta(')) names.push('sourceMeta');
-    const { owner } = createReaderBuilderProbe(sourcePage, names, {
+    const deps = {
       readerSourceCategoryLabel,
       TYPE_SOURCE_MANAGEMENT_META: {
         fontFamily: 'ReaderNotoSansSC', fontWeight: 400, fontSizeFp: 10, lineHeightFp: 12.5,
       },
       StatusBadge: Child, ReaderToggle: Child,
-    });
+    };
+    const ui = baseline ? {owner:createReaderBuilderProbe(sourcePage,names,deps).owner} : sourceSharedActionFixture(names,deps);
+    const { owner } = ui;
     Object.assign(owner, { appThemeScheme: 'day', contentFrame: () => ({ width: 326 }), statusBadgeBackground() {}, statusBadgeDot() {} });
     const source = { sourceId: 'source', name: '实际书源名称', baseUrl: 'https://example.test/very/long/path', category: 'novel', enabled: true, loginUrl, checkState: 'failed', checkMessage: '检测失败，请重试' };
     let logins = 0, detects = 0;
     owner.onLoginSource = id => { assert.equal(id, source.sourceId); logins++; };
     owner.onDetectSource = id => { assert.equal(id, source.sourceId); detects++; };
     owner.sourceRow(source);
-    const nodes = texts(owner), labels = nodes.map(n => n.create);
+    const allNodes = baseline ? [...owner.nodes.values()] : ui.controls.orderedNodes(owner);
+    const nodes = allNodes.filter(n=>n.type==='Text'), labels = nodes.map(n => n.create);
     assert.ok(labels.includes(source.baseUrl)); assert.ok(labels.includes(readerSourceCategoryLabel('novel')));
     assert.ok(labels.includes(source.checkMessage));
     assert.ok(labels.indexOf(readerSourceCategoryLabel('novel')) < labels.indexOf(source.baseUrl));
     const name = nodes.find(n => n.create === source.name), category = nodes.find(n => n.create === readerSourceCategoryLabel('novel'));
     assert.equal(name.flexShrink, 1); assert.equal(category.flexShrink, 0);
     assert.equal(name.maxLines, 1); assert.equal(name.textOverflow.overflow, 'TextOverflow.Ellipsis');
-    const buttons = [...owner.nodes.values()].filter(n => n.type === 'Stack' && n.onClick);
-    if (loginUrl) { assert.ok(labels.indexOf('登录') < labels.indexOf('检测')); buttons[0].onClick(); buttons[1].onClick(); assert.deepEqual([logins, detects], [1, 1]); }
-    else { assert.ok(!labels.includes('登录')); buttons[0].onClick(); assert.deepEqual([logins, detects], [0, 1]); }
+    const buttons = baseline ? [...owner.nodes.values()].filter(n => n.type === 'Stack' && n.onClick).map(native=>({native,click:native.onClick})) :
+      [...(loginUrl ? [ui.action('source-management-login','登录')] : []),ui.action('source-management-detect','检测')];
+    if (loginUrl) { assert.ok(labels.indexOf('登录') < labels.indexOf('检测')); buttons[0].click(); buttons[1].click(); assert.deepEqual([logins, detects], [1, 1]); }
+    else { assert.ok(!labels.includes('登录')); buttons[0].click(); assert.deepEqual([logins, detects], [0, 1]); }
+    if(!baseline){for(const action of buttons){assert.deepEqual([action.native.width,action.native.height,action.native.borderRadius],[44,28,7],'shared native target preserves the original compact geometry');action.actor.aboutToDisappear();action.click();}assert.deepEqual([logins,detects],loginUrl?[1,1]:[0,1],'retired actual compact actors cannot dispatch');
+      owner.detectButton({...source,checkState:'checking'});const busy=ui.action('source-management-detect','检测中');assert.equal(busy.native.opacity,0.62,'busy native feedback preserves the original detect opacity');busy.click();assert.equal(detects,1,'actual Source checking guard prevents a second detection');}
   });
 }
 check('single-book sheet matches cover frame and both layers have straight lower corners', () => {

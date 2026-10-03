@@ -61,10 +61,12 @@ function index(r,text=indexSource){
    'recovery','statusBanner','sourceRow','statusBadgeBackground','statusBadgeDot','statusBadge','detectButton','loginButton','sourceSwitch','bottomActionBar'],{readerRecoveryView:load('app/ReaderRecoveryProjection.ts','readerRecoveryView'),ReaderToggle:Toggle,StatusBadge:Badge,readerSourceCategoryLabel:helpers.readerSourceCategoryLabel},params);
   p.contentFrame=()=>({width:350});p.actionBottomInset=()=>0;
   const switchAction=()=>{p.sourceRow(i.sourceSources[0]);const c=[...p.children.values()].findLast(c=>c instanceof Toggle);c.initialRender();return sdk.nodes(c).find(n=>n.onClick).onClick;};
-  const login=()=>{p.loginButton(r.rows[0]);return [...p.nodes.values()].findLast(n=>n.onClick).onClick;};
-  const detect=()=>{p.detectButton(r.rows[0]);return [...p.nodes.values()].findLast(n=>n.onClick).onClick;};
-  const add=()=>{p.bottomActionBar();return [...p.nodes.values()].filter(n=>n.onClick).at(-1).onClick;};
-  const recovery=()=>{p.statusBanner();return [...p.nodes.values()].findLast(n=>n.create==='重试').onClick;};
+  const action=(spec,label)=>{const actor=sdk.walk(p).findLast(c=>c.specId===spec&&(!label||c.label===label));assert.ok(actor,'actual '+spec+' component');
+   const hit=sdk.nodes(actor).find(n=>typeof n.onClick==='function');assert.ok(hit,'actual '+spec+' native action');return hit.onClick;};
+  const login=()=>{p.loginButton(r.rows[0]);return action('source-management-login','登录');};
+  const detect=()=>{p.detectButton(r.rows[0]);return action('source-management-detect','检测');};
+  const add=()=>{p.bottomActionBar();return action('source-management-add','新增书源');};
+  const recovery=()=>{p.statusBanner();return action('source-management-retry','重试');};
   return{p,params,switchAction,login,detect,add,recovery};
  };
  const json=()=>{i.jsonImportContent();const params=[...i.children.values()].findLast(c=>c.params.onSelectLocal)?.params;

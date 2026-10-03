@@ -29,15 +29,15 @@ const hostText = read('features/search/SearchHost.ets').replace(/^import[^;]+;\s
 // throws if the test accidentally attempts a query or creates another owner.
 const SearchHost = new Function('SearchPublication', 'SearchViewState', 'SearchOrchestrator', stripTypeScriptTypes(hostText) + ';return SearchHost;')(
   SearchPublication, SearchViewState, class { constructor() { assert.fail('Surface test must not dispatch Core/network'); } });
-export function searchAttachmentFixture({ mutatePredicate } = {}) {
+export function searchAttachmentFixture({ mutatePredicate, pageDefinition = pageSource } = {}) {
   const controls = tailControls(), calls = [], native = { bookAcquisitions: () => ({ endSearch() { calls.push(['endSearch']); } }) };
   let currentRuntime = native;
   const dependencies = { ...controls.dependencies, SearchPublication, SearchViewState, SearchResultProjection, SearchBookGroup, SearchResultDataSource,
     ...geometry, ...metrics, ...floating, ...author, registerReaderFonts() {},
     ReaderWindowCoordinator: { metrics: () => metrics.createDefaultReaderWindowMetrics() },
     Scroller: class { scrollEdge() {} }, uiContext: { getFont: () => ({}), postFrameCallback() {} } };
-  const hooks = { ...controls.hooks, childSources: { ...controls.hooks.childSources, SearchPage: pageSource } };
-  const page = compileTailConsumer(pageSource, boundedMembers(pageSource), dependencies, hooks);
+  const hooks = { ...controls.hooks, childSources: { ...controls.hooks.childSources, SearchPage: pageDefinition } };
+  const page = compileTailConsumer(pageDefinition, boundedMembers(pageDefinition), dependencies, hooks);
   const names = ['searchPageContent', 'searchPageSurface', 'isCurrentSearchPresentation', 'isCurrentRuntime', 'returnToBookshelf'];
   const selected = names.map(name => { let text = member(searchIndexSource, name); return name === 'isCurrentSearchPresentation' && mutatePredicate ? mutatePredicate(text) : text; });
   // The production Index Builders, callback lambdas, predicate, and complete
