@@ -682,5 +682,16 @@
         "backgroundColor": 15
       }
     }
+  ],
+  "sharedOwners": [
+    {
+      "file": "entry/src/main/ets/features/common/ReaderActionMenuSurface.ets",
+      "counts": {
+        "fontSize": 1,
+        "backgroundColor": 2
+      },
+      "kind": "spec-driven-shared-menu-implementation",
+      "proof": "tools/test-action-menu-surface.mjs"
+    }
   ]
 }

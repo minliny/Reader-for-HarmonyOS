@@ -1,3 +1,4 @@
+import { actionMenuProbe } from './lib/reader-action-menu-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks } from 'node:module';
@@ -95,15 +96,12 @@ refresh.pageTurnInputOwned=true;const n=calls.length;refresh.refreshCurrentChapt
 const More=productionMotionMethods(panel,['performMoreAction','readerMoreActionEnabled']);let actions=[];const more=Object.assign(new More(),{moreMenuVisible:true,inputEnabled:true,chapterRefreshEnabled:false,bookDownloadEnabled:true,controlObscured:false,
  dismissMoreMenu(){this.moreMenuVisible=false;actions.push('dismiss');},onOpenBookInfo:()=>actions.push('info'),onRefreshChapter:()=>actions.push('refresh')});
 more.performMoreAction('refresh');assert.deepEqual(actions,[]);more.chapterRefreshEnabled=true;more.performMoreAction('refresh');more.performMoreAction('refresh');assert.deepEqual(actions,['dismiss','refresh']);
+const sharedMenu=actionMenuProbe();
 const {owner:menu}=createReaderBuilderProbe(readFileSync(panel,'utf8'),
-  ['readerMoreMenu','readerMoreAction','readerMoreActionEnabled','readerMoreSurfaceSpec'],
-  {resolvePopupSpec:()=>({width:176,pointerWidth:24,pointerHeight:12,borderRadius:16,borderWidth:1,
-    shadowRadius:28,shadowOffsetY:10,actionHeight:50,actionsHeight:150,actionPaddingLeft:18,
-    actionPaddingRight:18,dividerInset:16,dividerHeight:1,actionFontFamily:'ReaderNotoSansSC',
-    actionFontSize:15,actionLineHeight:22,actionTextRole:'TOK_INK',dividerRole:'TOK_DIVIDER',
-    surfaceBackgroundRole:'TOK_BG',surfaceBorderRole:'TOK_BORDER',surfaceShadowRole:'TOK_SHADOW'})});
+  ['readerMoreMenu','readerMoreActions','readerMoreActionEnabled','readerMoreSurfaceSpec'],
+  sharedMenu.dependencies,sharedMenu.hooks);
 Object.assign(menu,{appScheme:'day',inputEnabled:true,controlObscured:false,chapterRefreshEnabled:true,bookDownloadEnabled:true,layout:{viewportWidth:390,viewportHeight:844,topBarTop:48,topBarWidth:340,dockBottomGap:24}});menu.readerMoreMenu();
-assert.deepEqual([...menu.nodes.values()].filter(n=>n.type==='Text').map(n=>n.create),['书籍信息','刷新本章','下载全部章节']);
+assert.deepEqual(sharedMenu.nodes(menu).filter(n=>n.type==='Text').map(n=>n.create),['书籍信息','刷新本章','下载全部章节']);
 console.log('PASS PH56–59 production SDK methods/Builders: measured regions/API fallback, reader underlay, bookmark threshold+ACK ordering, safe force refresh and two-action More; OEM pixels are not asserted');
 
 const Index=productionMotionMethods(file('pages/Index.ets'),['performReaderPageBookmarkCreation','performDirectoryBookmarkDeletion'],

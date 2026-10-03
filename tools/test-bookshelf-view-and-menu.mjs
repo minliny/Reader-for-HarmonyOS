@@ -84,7 +84,8 @@ assert.match(popupSpecs,/'bookshelf-more-menu': new PopupSurfaceSpec\(\{[\s\S]*?
 assert.match(popupSpecs,/'bookshelf-more-menu': new PopupSurfaceSpec\(\{[\s\S]*?pointerHeight: 12/);
 assert.match(popupSpecs,/'bookshelf-more-menu': new PopupSurfaceSpec\(\{[\s\S]*?actionHeight: 50, actionCount: 4/);
 assert.match(popupSpecs,/'bookshelf-more-menu': new PopupSurfaceSpec\(\{[\s\S]*?trailingExtension: 11, anchorOverlap: 5/);
-assert.equal((menu.match(/this.action\(/g)??[]).length,4);
+assert.match(menu,/ReaderActionMenuSurface\(\{/);
+assert.match(menu,/\['batch', 'import', 'update', 'settings'\]/);
 assert.doesNotMatch(menu,/'分组管理'/);for(const label of ['批量管理','本地导入','检查更新','书架设置'])assert.ok(menu.includes(label));
 assert.match(menu,/Polygon\(/);assert.match(menu,/Polyline\(/);assert.match(menu,/this\.surfaceSpec\(\)\.borderRadius/);
 assert.match(menu,/if \(this.reduceMotion\)[\s\S]*?this.panelHeight = this\.surfaceSpec\(\)\.expandedHeight/);

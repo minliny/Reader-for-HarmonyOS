@@ -30,7 +30,7 @@ function walk(dir) {
   }
   return result;
 }
-const base = new Map(baseline.rows.map((row) => [row.file, row.counts]));
+const base = new Map([...baseline.rows, ...(baseline.sharedOwners ?? [])].map((row) => [row.file, row.counts]));
 const violations = [];
 for (const file of walk(featureRoot)) {
   const rel = path.relative(root, file).replaceAll(path.sep, '/');

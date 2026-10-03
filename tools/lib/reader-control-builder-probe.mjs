@@ -43,6 +43,10 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const childSource = readFileSync(new URL('../../entry/src/main/ets/features/reading/ReaderControlSwitchTrack.ets', import.meta.url), 'utf8');
   syntax.componentCollection.customComponents.add(childName);
   syntax.propCollection.set(childName, new Set([...childSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
+  for (const [name, child] of Object.entries(hooks.childSources ?? {})) {
+    syntax.componentCollection.customComponents.add(name);
+    syntax.propCollection.set(name, new Set([...child.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
+  }
   const file = parse(`@Component struct ReaderBuilderProbe {\n${members.join('\n')}\n${names.includes('build') ? '' : 'build() { Column() {} }'}\n}`);
   // The full SDK frontend collects declared method names before transforming
   // @Watch. Preserve that prepass for fixtures that include real decorated fields.
@@ -137,7 +141,10 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       if (typeof record.updateStateVars === 'function') record.updateStateVars(params);
       else Object.assign(record.params, params);
     }
-    static create(child) { child.owner.children.set(child.id, child); }
+    static create(child) {
+      child.owner.children.set(child.id, child);
+      if (hooks.mountChildren && typeof child.initialRender === 'function') child.initialRender();
+    }
   }
   class Child {
     constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }

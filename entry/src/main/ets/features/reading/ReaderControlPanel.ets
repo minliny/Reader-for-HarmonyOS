@@ -1,3 +1,4 @@
+import { ReaderActionMenuSurface, ReaderMenuActionView } from '../common/ReaderActionMenuSurface';
 import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import { readerTtsWaveformSnapshot } from './ReaderTtsWaveform';
@@ -1061,39 +1062,24 @@ export struct ReaderControlPanel {
       (action !== 'download' || this.bookDownloadEnabled);
   }
 
-  @Builder
-  private readerMoreAction(label: string, action: 'info' | 'refresh' | 'download') {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Row() {
-        Text(label).fontFamily(this.readerMoreSurfaceSpec().actionFontFamily).fontWeight(FontWeight.Medium)
-          .fontSize(this.readerMoreSurfaceSpec().actionFontSize).lineHeight(this.readerMoreSurfaceSpec().actionLineHeight)
-          .fontColor(readerAppColor(this.readerMoreSurfaceSpec().actionTextRole, this.appScheme)).maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
-      }.width('100%').height(this.readerMoreSurfaceSpec().actionHeight)
-        .padding({ left: this.readerMoreSurfaceSpec().actionPaddingLeft, right: this.readerMoreSurfaceSpec().actionPaddingRight });
-      if (action !== 'download') {
-        Row().width(`calc(100% - ${this.readerMoreSurfaceSpec().dividerInset * 2}vp)`)
-          .height(this.readerMoreSurfaceSpec().dividerHeight)
-          .backgroundColor(readerAppColor(this.readerMoreSurfaceSpec().dividerRole, this.appScheme))
-          .position({ x: this.readerMoreSurfaceSpec().dividerInset,
-            y: this.readerMoreSurfaceSpec().actionHeight - this.readerMoreSurfaceSpec().dividerHeight });
-      }
-    }.width('100%').height(this.readerMoreSurfaceSpec().actionHeight)
-      .opacity(this.readerMoreActionEnabled(action) ? 1 : 0.45).enabled(this.readerMoreActionEnabled(action))
-      .accessibilityText(label).onClick((): void => this.performMoreAction(action));
+  private readerMoreActions(): ReaderMenuActionView[] {
+    return [
+      new ReaderMenuActionView('info', '书籍信息', this.readerMoreActionEnabled('info')),
+      new ReaderMenuActionView('refresh', '刷新本章', this.readerMoreActionEnabled('refresh')),
+      new ReaderMenuActionView('download', this.bookDownloadActive ? '正在下载章节…' : '下载全部章节',
+        this.readerMoreActionEnabled('download')),
+    ];
   }
 
   @Builder
   private readerMoreMenu() {
-    Scroll() {
-      Column() {
-        this.readerMoreAction('书籍信息', 'info');
-        this.readerMoreAction('刷新本章', 'refresh');
-        this.readerMoreAction(this.bookDownloadActive ? '正在下载章节…' : '下载全部章节', 'download');
-      }.width('100%');
-    }.width('100%')
-      .height(Math.min(this.readerMoreSurfaceSpec().actionsHeight, Math.max(0, this.layout.viewportHeight - 36)))
-      .scrollBar(BarState.Auto).align(Alignment.TopStart);
+    ReaderActionMenuSurface({
+      specId: 'reader-more-menu', scheme: this.appScheme, actions: this.readerMoreActions(),
+      viewportHeight: Math.max(0, this.layout.viewportHeight - 36),
+      onAction: (id: string): void => {
+        if (id === 'info' || id === 'refresh' || id === 'download') this.performMoreAction(id);
+      },
+    });
   }
 
   @Builder

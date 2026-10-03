@@ -1,3 +1,4 @@
+import { ReaderActionMenuSurface, ReaderMenuActionView } from '../common/ReaderActionMenuSurface';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { motionAnimateParam } from '../common/MotionSpec';
 import { registerReaderFonts } from '../common/ReaderFonts';
@@ -93,21 +94,7 @@ export struct BookshelfMoreMenu {
             .strokeLineJoin(LineJoinStyle.Round)
             .position({ x: this.pointerX(), y: 0.5 });
 
-        Scroll() {
-          Column() {
-            this.action('batch', true, (): void => this.onBatchManage());
-            this.action('import', true, (): void => this.onLocalImport());
-            this.action('update', true, (): void => this.onCheckUpdates());
-            this.action('settings', false, (): void => this.onBookshelfSettings());
-          }
-          .width(this.menuWidth())
-          .height(this.surfaceSpec().actionsHeight);
-        }
-        .width(this.menuWidth())
-        .height(Math.max(0, this.visiblePanelHeight() - this.surfaceSpec().pointerHeight))
-        .clip(true)
-        .scrollBar(BarState.Auto)
-        .position({ x: 0, y: this.surfaceSpec().pointerHeight });
+        this.menuContent();
       }
       .width(this.menuWidth())
       .height(this.visiblePanelHeight())
@@ -129,39 +116,27 @@ export struct BookshelfMoreMenu {
   }
 
   @Builder
-  private action(key: string, showDivider: boolean, action: () => void) {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Row({ space: 16 }) {
-        Image(this.actionIcon(key))
-          .width(this.surfaceSpec().actionIconSize)
-          .height(this.surfaceSpec().actionIconSize).opacity(this.actionEnabled(key) ? 1 : 0.45);
+  private menuContent() {
+    ReaderActionMenuSurface({
+      specId: 'bookshelf-more-menu', scheme: this.appThemeScheme,
+      actions: this.menuActions(), availableWidth: this.menuWidth(),
+      viewportHeight: Math.max(0, this.visiblePanelHeight() - this.surfaceSpec().pointerHeight),
+      onAction: (id: string): void => this.performMenuAction(id),
+    }).position({ x: 0, y: this.surfaceSpec().pointerHeight });
+  }
 
-        Text(this.actionLabel(key))
-          .fontFamily(this.surfaceSpec().actionFontFamily)
-          .fontWeight(FontWeight.Medium)
-          .fontSize(this.surfaceSpec().actionFontSize)
-          .lineHeight(this.surfaceSpec().actionLineHeight)
-          .fontColor(this.actionEnabled(key) ? readerAppColor(this.surfaceSpec().actionTextRole, this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
-          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1);
-      }
-      .width(this.menuWidth())
-      .height(this.surfaceSpec().actionHeight)
-      .padding({ left: this.surfaceSpec().actionPaddingLeft, right: this.surfaceSpec().actionPaddingRight });
+  private menuActions(): ReaderMenuActionView[] {
+    return ['batch', 'import', 'update', 'settings'].map((id: string): ReaderMenuActionView =>
+      new ReaderMenuActionView(id, this.actionLabel(id), this.actionEnabled(id), this.actionIcon(id),
+        id === 'update' && !this.canCheckUpdates ? '检查更新，没有在线书籍' : this.actionLabel(id)));
+  }
 
-      if (showDivider) {
-        Divider()
-          .width(Math.max(0, this.menuWidth() - this.surfaceSpec().dividerInset * 2))
-          .height(this.surfaceSpec().dividerHeight)
-          .color(readerAppColor(this.surfaceSpec().dividerRole, this.appThemeScheme))
-          .position({ x: this.surfaceSpec().dividerInset, y: this.surfaceSpec().actionHeight - this.surfaceSpec().dividerHeight });
-      }
-    }
-    .width(this.menuWidth())
-    .height(this.surfaceSpec().actionHeight)
-    .backgroundColor(Color.Transparent)
-    .enabled(this.actionEnabled(key))
-    .accessibilityText(key === 'update' && !this.canCheckUpdates ? '检查更新，没有在线书籍' : this.actionLabel(key))
-    .onClick((): void => { if (this.actionEnabled(key)) this.commitAction(action); });
+  private performMenuAction(id: string): void {
+    if (!this.actionEnabled(id)) return;
+    if (id === 'batch') this.commitAction(this.onBatchManage);
+    else if (id === 'import') this.commitAction(this.onLocalImport);
+    else if (id === 'update') this.commitAction(this.onCheckUpdates);
+    else if (id === 'settings') this.commitAction(this.onBookshelfSettings);
   }
 
   private actionEnabled(key: string): boolean {

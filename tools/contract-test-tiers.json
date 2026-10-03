@@ -195,6 +195,7 @@
     "test-transient-transport-acquisition.mjs"
   ],
   "integration": [
+    "test-action-menu-surface.mjs",
     "test-source-tools-typography-sdk.mjs",
     "test-arkweb-resource-capture.mjs",
     "test-arkweb-resource-diagnostic.mjs",

@@ -338,6 +338,7 @@ export function resolveSheetSpec(id: SheetSpecId): SheetSurfaceSpec {
 export type PopupSpecId = 'bookshelf-more-menu' | 'reader-more-menu' | 'source-switch-window' | 'tts-config-manager' | 'settings-select-tablet';
 
 export interface PopupSurfaceSpecInit {
+  actionMutesContent?: boolean;
   height: number;
   width: number;
   pointerWidth: number;
@@ -369,6 +370,7 @@ export interface PopupSurfaceSpecInit {
 }
 
 export class PopupSurfaceSpec {
+  readonly actionMutesContent: boolean;
   readonly height: number;
   readonly width: number;
   readonly pointerWidth: number;
@@ -399,6 +401,7 @@ export class PopupSurfaceSpec {
   readonly actionLineHeight: number;
 
   constructor(init: PopupSurfaceSpecInit) {
+    this.actionMutesContent = init.actionMutesContent ?? false;
     this.height = init.height;
     this.width = init.width;
     this.pointerWidth = init.pointerWidth;
@@ -447,6 +450,7 @@ const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
   // These values mirror the existing menu until the popup family is migrated
   // and the visual baseline is reviewed as a batch.
   'bookshelf-more-menu': new PopupSurfaceSpec({
+    actionMutesContent: true,
     height: 0,
     width: 176, pointerWidth: 24, pointerHeight: 12,
     actionHeight: 50, actionCount: 4,

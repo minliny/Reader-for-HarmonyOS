@@ -1,3 +1,4 @@
+import { actionMenuProbe, ReaderMenuActionView } from './lib/reader-action-menu-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -20,25 +21,30 @@ for(const [width,height,right,bottom] of [[320,190,312,60],[393,140,393,60],[800
  assert.ok(menu.visiblePanelHeight()>=popupSpec.collapsedHeight,'a compact viewport retains one full scrollable row');
  assert.ok(menu.pointerX()>=0 && menu.pointerX()+popupSpec.pointerWidth<=menu.menuWidth());
 }
-assert.match(source,/Scroll\(\)[\s\S]*?\.height\(this\.surfaceSpec\(\)\.actionsHeight\)/);
-assert.match(source,/\.height\(Math.max\(0, this.visiblePanelHeight\(\) - this\.surfaceSpec\(\)\.pointerHeight\)\)/);
+assert.match(source,/ReaderActionMenuSurface\(\{/);
+assert.match(source,/viewportHeight: Math.max\(0, this.visiblePanelHeight\(\) - this\.surfaceSpec\(\)\.pointerHeight\)/);
 assert.match(source,/resolvePopupSpec\('bookshelf-more-menu'\)/,'menu consumes the shared popup surface registry');
 assert.doesNotMatch(source,/const (MENU_WIDTH|POINTER_HEIGHT|ACTION_HEIGHT|ACTION_COUNT|ACTIONS_HEIGHT|MENU_COLLAPSED_HEIGHT)\s*=/,'menu geometry is owned by the shared surface contract');
-assert.equal((source.match(/this.action\(/g)??[]).length,4);
-const {owner}=createReaderBuilderProbe(source,['action',...names],{resolvePopupSpec});
-let calls=0;Object.assign(owner,{appThemeScheme:'day',overlayWidth:393,overlayHeight:650,canCheckUpdates:false,updateRunning:false,backgroundUpdateRunning:false,
- closeInFlight:false,mounted:true,generation:0,reduceMotion:true,onDismiss(){},getUIContext:()=>({animateTo:(_p,cb)=>cb()})});
-owner.action('update',false,()=>calls++);
-const text=()=>[...owner.nodes.values()].find(n=>n.type==='Text');
-const target=()=>[...owner.nodes.values()].find(n=>n.onClick);
+const shared=actionMenuProbe();
+const {owner}=createReaderBuilderProbe(source,['menuContent','menuActions','performMenuAction',...names],shared.dependencies,shared.hooks);
+let calls=0;Object.assign(owner,{appThemeScheme:'day',overlayWidth:393,overlayHeight:650,panelHeight:212,canCheckUpdates:false,updateRunning:false,backgroundUpdateRunning:false,
+ closeInFlight:false,mounted:true,generation:0,reduceMotion:true,onDismiss(){},onCheckUpdates(){calls++;},getUIContext:()=>({animateTo:(_p,cb)=>cb()})});
+owner.menuContent();
+const nodes=()=>shared.nodes(owner);
+const text=()=>nodes().find(n=>n.type==='Text'&&String(n.create).includes('检查'));
+const target=()=>nodes().find(n=>String(n.accessibilityText).startsWith('检查更新'));
+const replay=()=>{owner.replay();shared.properties.flush();};
+assert.equal(nodes().filter(n=>n.type==='Text').length,4);
 assert.equal(target().enabled,false);target().onClick();assert.equal(calls,0);
-owner.canCheckUpdates=true;owner.replay();assert.equal(target().enabled,true);
-owner.updateRunning=true;owner.updateProgressDone=4;owner.updateProgressTotal=9;owner.replay();
-assert.equal(text().create,'检查中 4/9');assert.equal(target().enabled,false);target().onClick();assert.equal(calls,0);
-owner.updateRunning=false;owner.backgroundUpdateRunning=true;owner.replay();assert.equal(text().create,'正在自动检查');assert.equal(target().enabled,false);
-owner.backgroundUpdateRunning=false;owner.appThemeScheme='night';owner.replay();assert.equal(text().create,'检查更新');
-const icon=[...owner.nodes.values()].find(n=>n.type==='Image');assert.equal(icon.create,'app.media.settings_gen_refresh_theme_night');
-target().onClick();target().onClick();assert.equal(calls,1,'exactly once dispatch before the menu closes');
+const updateRow=target();
+owner.canCheckUpdates=true;replay();assert.equal(updateRow.enabled,true);
+owner.updateRunning=true;owner.updateProgressDone=4;owner.updateProgressTotal=9;replay();
+assert.equal(text().create,'检查中 4/9');assert.equal(updateRow.enabled,false);updateRow.onClick();assert.equal(calls,0);
+owner.updateRunning=false;owner.backgroundUpdateRunning=true;replay();
+assert.equal(nodes().find(n=>n.type==='Text'&&n.create==='正在自动检查').create,'正在自动检查');assert.equal(updateRow.enabled,false);
+owner.backgroundUpdateRunning=false;owner.appThemeScheme='night';replay();assert.equal(text().create,'检查更新');
+const icon=nodes().find(n=>n.type==='Image'&&String(n.create).includes('settings_gen_refresh'));assert.equal(icon.create,'app.media.settings_gen_refresh_theme_night');
+updateRow.onClick();updateRow.onClick();assert.equal(calls,1,'exactly once dispatch before the menu closes');
 // Actual Index readiness -> shared menu admission is exercised by the SDK shell-state test.
 await import('./test-bookshelf-shell-states.mjs');
 console.log('PASS PH60 More: four rows, bounded scrolling geometry, anchored pointer, live progress/theme, empty/background guards and once-only update');

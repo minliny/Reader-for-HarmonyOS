@@ -1,3 +1,4 @@
+import { actionMenuProbe } from './lib/reader-action-menu-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
@@ -25,10 +26,12 @@ const dependencies = {
   TYPE_READER_CONTROL_SOURCE_ACTION: typography,
   resolvePopupSpec: id => { assert.equal(id, 'reader-more-menu'); return readerMoreSurface; },
 };
-const methods = ['topBar', 'readerMoreMenu', 'readerMoreAction', 'readerMoreMenuWidth',
+const methods = ['topBar', 'readerMoreMenu', 'readerMoreActions', 'readerMoreMenuWidth',
   'readerMoreSurfaceSpec', 'readerMoreActionEnabled', 'setMoreMenuVisible', 'dismissMoreMenu', 'performMoreAction'];
 function fixture(scheme = 'day') {
-  const { owner } = createReaderBuilderProbe(source, methods, dependencies);
+  const shared = actionMenuProbe(dependencies.resolvePopupSpec);
+  const { owner } = createReaderBuilderProbe(source, methods, {...dependencies,...shared.dependencies}, shared.hooks);
+  const replay=owner.replay.bind(owner);owner.replay=()=>{replay();shared.properties.flush();};
   const actions = [], measurements = [], temporary = [];
   let textScale = 1;
   Object.assign(owner, {
@@ -50,7 +53,7 @@ function fixture(scheme = 'day') {
     }),
   });
   owner.topBar();
-  const nodes = () => [...owner.nodes.values()];
+  const nodes = () => shared.nodes(owner);
   const anchor = nodes().find(node => node.accessibilityText === '更多');
   return { owner, anchor, nodes, actions, measurements, temporary, setTextScale: scale => { textScale = scale; } };
 }
