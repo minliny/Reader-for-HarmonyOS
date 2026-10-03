@@ -19,6 +19,7 @@ export struct BookshelfShell {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
   onReconcile: (generation: number) => void = (_generation: number): void => {};
+  @Prop @Watch('onNavigationGenerationChanged') navigationGeneration: number = 0;
   @Prop populated: boolean = false;
   @Prop reduceMotion: boolean = false;
   @Prop canCheckUpdates: boolean = false;
@@ -38,8 +39,9 @@ export struct BookshelfShell {
   private moreSelectionId: string = '';
   private mounted: boolean = false;
   private temporaryBackIdentity: string = '';
-  onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string) => void =
-    (_handler: (() => boolean) | undefined, _identity: string): void => {};
+  private temporaryBackGeneration: number = 0;
+  onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string, generation?: number) => void =
+    (_handler: (() => boolean) | undefined, _identity: string, _generation?: number): void => {};
   @State private moreAnchorRight: number = 0;
   @State private moreAnchorBottom: number = 0;
   @State private overlayOriginX: number = 0;
@@ -48,17 +50,34 @@ export struct BookshelfShell {
   aboutToAppear(): void {
     this.mounted = true;
     registerReaderShelfFonts(this.getUIContext().getFont());
-    const identity = `bookshelf-back:${++bookshelfTemporaryGeneration}`;
-    this.temporaryBackIdentity = identity;
-    this.onTemporaryBackBridge((): boolean => this.consumeTemporaryBack(identity), identity);
+    this.registerTemporaryBackGeneration();
   }
 
   aboutToDisappear(): void {
     const identity = this.temporaryBackIdentity;
+    const generation = this.temporaryBackGeneration;
     this.mounted = false;
     this.temporaryBackIdentity = '';
     this.dismissMoreMenu();
-    this.onTemporaryBackBridge(undefined, identity);
+    this.onTemporaryBackBridge(undefined, identity, generation);
+  }
+
+  private onNavigationGenerationChanged(): void {
+    if (!this.mounted) return;
+    this.dismissMoreMenu();
+    this.registerTemporaryBackGeneration();
+  }
+
+  private registerTemporaryBackGeneration(): void {
+    if (!this.mounted) return;
+    const previousIdentity = this.temporaryBackIdentity;
+    const previousGeneration = this.temporaryBackGeneration;
+    const identity = `bookshelf-back:${++bookshelfTemporaryGeneration}`;
+    const generation = this.navigationGeneration;
+    this.temporaryBackIdentity = identity;
+    this.temporaryBackGeneration = generation;
+    if (previousIdentity.length > 0) this.onTemporaryBackBridge(undefined, previousIdentity, previousGeneration);
+    this.onTemporaryBackBridge((): boolean => this.consumeTemporaryBack(identity), identity, generation);
   }
 
   private consumeTemporaryBack(identity: string): boolean {
@@ -172,18 +191,22 @@ export struct BookshelfShell {
           onTap: (): void => this.onSearchRequested(),
         });
 
-        ReaderIconButton({
-          icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more')),
-          boxSize: 44,
-          iconSize: 44,
-          radius: 22,
-          onTap: this.moreOpenAction(this.temporaryBackIdentity),
-        })
-          .accessibilityText('更多')
-          .onAreaChange((_oldValue: Area, newValue: Area): void => {
-            this.moreAnchorRight = Number(newValue.globalPosition.x) + Number(newValue.width);
-            this.moreAnchorBottom = Number(newValue.globalPosition.y) + Number(newValue.height);
-          });
+        // V1 ordinary callbacks are constructor inputs. Only this temporary
+        // trigger gets a fresh identity; bookshelf content/scroll stay mounted.
+        ForEach([this.navigationGeneration], (_generation: number) => {
+          ReaderIconButton({
+            icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more')),
+            boxSize: 44,
+            iconSize: 44,
+            radius: 22,
+            onTap: this.moreOpenAction(this.temporaryBackIdentity),
+          })
+            .accessibilityText('更多')
+            .onAreaChange((_oldValue: Area, newValue: Area): void => {
+              this.moreAnchorRight = Number(newValue.globalPosition.x) + Number(newValue.width);
+              this.moreAnchorBottom = Number(newValue.globalPosition.y) + Number(newValue.height);
+            });
+        }, (generation: number): string => generation.toString());
       }
     }
   }

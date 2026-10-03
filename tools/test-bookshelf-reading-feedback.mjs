@@ -28,8 +28,8 @@ assert.doesNotMatch(source,/BookshelfEntryCoordinator|ReaderEntryPage|entryPrepa
 const shelf = readFileSync(new URL('../entry/src/main/ets/features/bookshelf/BookshelfPage.ets',import.meta.url),'utf8');
 assert.doesNotMatch(shelf,/bookEntryReady|正文准备中|entryReadyKeys/);
 
-const Back = productionMotionMethods(file, ['onBackPress', 'currentSourceSwitchTransactionId']);
-const switching = Object.assign(new Back(), {jsonImportVisible:false,sourceSwitchVisible:false,
+const Back = productionMotionMethods(file, ['consumeTemporaryBackBridge','isCurrentRuntime','onBackPress', 'currentSourceSwitchTransactionId']);
+const switching = Object.assign(new Back(), {hasVisibleImportDialog:()=>false,jsonImportVisible:false,sourceSwitchVisible:false,
   route:'bookshelf',shelfReadingPreparation:true,detailBook:{sourceId:'target',bookId:'book'},
   pendingSourceSwitch:{transactionId:'pending',targetSourceId:'target',targetBookId:'book'},
   nextNavigationGeneration:()=>assert.fail('Back must not orphan a committed source switch')});

@@ -247,6 +247,15 @@ type RulesManagementReturnTarget = 'settings' | 'reader';
 type DetailReturnRoute = 'bookshelf' | 'search';
 type SourceManagementReturnTarget = 'settings' | 'search';
 
+type TemporaryBackScope = 'bookshelf' | 'settings' | 'source';
+interface TemporaryBackLease {
+  scope: TemporaryBackScope;
+  generation: number;
+  owner: ReaderRuntimeOwner;
+  identity: string;
+  handler: () => boolean;
+}
+
 interface BookshelfBackgroundSeeds {
   owner: ReaderRuntimeOwner;
   revision: string;
@@ -584,6 +593,7 @@ struct Index {
   private rulesManagementOrchestrator: RulesManagementOrchestrator | undefined;
   private syncOrchestrator: SyncOrchestrator | undefined;
   private mountedRuntimeOwner: ReaderRuntimeOwner | undefined;
+  private temporaryBackLease: TemporaryBackLease | undefined;
   private sourceHost: SourceHost = new SourceHost(
     (sources: BookSource[]): void => { this.sourceSources = sources; },
     (): boolean => this.route === 'source',
@@ -670,6 +680,7 @@ struct Index {
   }
 
   aboutToDisappear(): void {
+    this.temporaryBackLease = undefined;
     this.nativeAlertOwner.retire();
     this.shelfReceiptRetired = true;
     this.shelfWriteGeneration += 1;
@@ -715,6 +726,15 @@ struct Index {
       this.closeSourceSwitch();
       return true;
     }
+    if (this.hasVisibleImportDialog()) {
+      this.closeImportDialog();
+      return true;
+    }
+    if (this.editingShelfGroupBook !== undefined) {
+      if (!this.editingShelfGroupBusy) this.editingShelfGroupBook = undefined;
+      return true;
+    }
+    if (this.consumeTemporaryBackBridge()) return true;
     if (this.route === 'bookshelf' && this.shelfReadingPreparation) {
       // As in closeSourceSwitch, a durable source move must finish its first
       // page or rollback before navigation can abandon the transaction.
@@ -757,10 +777,6 @@ struct Index {
     }
     if (this.route === 'bookshelfSettings') {
       this.returnFromBookshelfSettings();
-      return true;
-    }
-    if (this.editingShelfGroupBook !== undefined) {
-      if (!this.editingShelfGroupBusy) this.editingShelfGroupBook = undefined;
       return true;
     }
     if (this.route === 'bookshelfManagement') {
@@ -822,10 +838,6 @@ struct Index {
       this.returnFromDetail();
       return true;
     }
-    if (this.hasVisibleImportDialog()) {
-      this.closeImportDialog();
-      return true;
-    }
     return false;
   }
 
@@ -876,8 +888,12 @@ struct Index {
   }
 
   @Builder
-  private bookshelfShellContent() {
+  private bookshelfShellContent(owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner) {
     BookshelfShell({
+      navigationGeneration: this.navigationGeneration,
+      onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string, generation?: number): void => {
+        if (generation !== undefined) this.registerTemporaryBackBridge('bookshelf', generation, owner, handler, identity);
+      },
       populated: this.isBookshelfVisualAdmitted,
       recovery: this.shelfRecovery(),
       onReconcile: (generation: number): void => { void this.reconcileShelfWrite(generation); },
@@ -1522,8 +1538,10 @@ struct Index {
   }
 
   @Builder
-  private settingsContent() {
+  private settingsContent(generation: number = this.navigationGeneration, owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner) {
     SettingsPage({
+      onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void =>
+        this.registerTemporaryBackBridge('settings', generation, owner, handler, identity),
       activeSection: this.settingsSection,
       onSectionChange: (section: 'home' | 'general'): void => { this.settingsSection = section; },
       onRestoreDefaults: (): Promise<boolean> => this.settingsHost.restoreDefaults(),
@@ -1573,8 +1591,10 @@ struct Index {
   }
 
   @Builder
-  private sourceManagementContent() {
+  private sourceManagementContent(generation: number = this.navigationGeneration, owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner) {
     SourceManagementPage({
+      onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void =>
+        this.registerTemporaryBackBridge('source', generation, owner, handler, identity),
       sources: this.sourceSources,
       operation: this.sourceOperation,
       onReconcile: (generation: number): void => this.sourceHost.reconcile(generation),
@@ -1780,6 +1800,42 @@ struct Index {
       return;
     }
     this.getSyncOrchestrator().resolveRestore(overwriteLocal);
+  }
+
+  private registerTemporaryBackBridge(
+    scope: TemporaryBackScope,
+    generation: number,
+    owner: ReaderRuntimeOwner | undefined,
+    handler: (() => boolean) | undefined,
+    identity: string,
+  ): void {
+    if (identity.length === 0 || this.shelfReceiptRetired || owner === undefined ||
+      this.mountedRuntimeOwner !== owner || !this.isCurrentRuntime(owner) ||
+      generation !== this.navigationGeneration || this.route !== scope) return;
+    if (handler === undefined) {
+      const lease = this.temporaryBackLease;
+      if (lease !== undefined && lease.scope === scope && lease.owner === owner &&
+        lease.generation === generation && lease.identity === identity) this.temporaryBackLease = undefined;
+      return;
+    }
+    this.temporaryBackLease = { scope, generation, owner, identity, handler };
+  }
+
+  private consumeTemporaryBackBridge(): boolean {
+    const lease = this.temporaryBackLease;
+    if (lease === undefined) return false;
+    if (this.shelfReceiptRetired || this.mountedRuntimeOwner !== lease.owner ||
+      !this.isCurrentRuntime(lease.owner) || lease.generation !== this.navigationGeneration ||
+      this.route !== lease.scope) {
+      if (this.temporaryBackLease === lease) this.temporaryBackLease = undefined;
+      return false;
+    }
+    try { return lease.handler(); } catch (error) {
+      // A failing close cannot prove that the temporary surface has gone.
+      // Keep this Back inside the current page instead of exiting under it.
+      try { hilog.error(DOMAIN, 'Reader', 'Temporary surface Back failed: %{private}s', errorMessageOf(error)); } catch (_) {}
+      return true;
+    }
   }
 
   private isCurrentRuntime(owner: ReaderRuntimeOwner | undefined): boolean {
@@ -6514,6 +6570,7 @@ struct Index {
   }
 
   private nextNavigationGeneration(): number {
+    this.temporaryBackLease = undefined;
     this.nativeAlertOwner.retire();
     this.shelfReadingPreparation = false;
     this.pendingLocalDirectoryProjection = undefined;

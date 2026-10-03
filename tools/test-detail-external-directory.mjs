@@ -9,10 +9,10 @@ const source=readFileSync(file('pages/Index.ets'),'utf8');
 const experience=readFileSync(file('features/reading/LocalReadingExperience.ets'),'utf8');
 const anchor=experience.slice(experience.indexOf('export class ReaderBookmarkAnchorRequest {'),experience.indexOf('\nclass ReaderDeferredChapterSelection'));
 const Anchor=new Function(`${stripTypeScriptTypes(anchor.replace('export class','class'))}; return ReaderBookmarkAnchorRequest;`)();
-const Index=productionMotionMethods(file('pages/Index.ets'),['onBackPress','openFullDirectory','closeDirectory','onDirectoryChapterSelected','onDirectoryNavigationTargetSelected','onReaderBookmarkSelected','openReading','presentPreparedReading','openReaderControlDirectory','isKnownDetailChapter','readerOwnsWindowEdges'],{LOCAL_SOURCE_ID:'local',ReaderBookmarkAnchorRequest:Anchor});
+const Index=productionMotionMethods(file('pages/Index.ets'),['consumeTemporaryBackBridge','isCurrentRuntime','onBackPress','openFullDirectory','closeDirectory','onDirectoryChapterSelected','onDirectoryNavigationTargetSelected','onReaderBookmarkSelected','openReading','presentPreparedReading','openReaderControlDirectory','isKnownDetailChapter','readerOwnsWindowEdges'],{LOCAL_SOURCE_ID:'local',ReaderBookmarkAnchorRequest:Anchor});
 function index(sourceId='local'){
  const entries=Array.from({length:25},(_,i)=>({index:i,title:`Chapter ${i+1}`,url:`/${i}`,navigable:true,downloadState:'unknown'}));
- const host=Object.assign(new Index(),{route:'detail',readingSessionActive:false,detailBook:{sourceId,bookId:'book',title:'Book',author:'Author'},detailToc:entries,remoteReadingSession:sourceId==='local'?undefined:{identity:{sourceId,bookId:'book'},entries},bookshelfRemovalActiveKey:'',navigationGeneration:1,requestedChapterIndex:undefined,requestedBookmarkAnchor:undefined,directoryCurrentChapterIndex:-1,bookmarkAnchorRequestId:0,preparedReaderRoute:'reading',directoryReturnTarget:'detail',nextNavigationGeneration(){return ++this.navigationGeneration;},returnToReadingOrigin(){this.readingSessionActive=false;this.route='detail';},readingExitRequest:undefined});
+ const host=Object.assign(new Index(),{hasVisibleImportDialog:()=>false,route:'detail',readingSessionActive:false,detailBook:{sourceId,bookId:'book',title:'Book',author:'Author'},detailToc:entries,remoteReadingSession:sourceId==='local'?undefined:{identity:{sourceId,bookId:'book'},entries},bookshelfRemovalActiveKey:'',navigationGeneration:1,requestedChapterIndex:undefined,requestedBookmarkAnchor:undefined,directoryCurrentChapterIndex:-1,bookmarkAnchorRequestId:0,preparedReaderRoute:'reading',directoryReturnTarget:'detail',nextNavigationGeneration(){return ++this.navigationGeneration;},returnToReadingOrigin(){this.readingSessionActive=false;this.route='detail';},readingExitRequest:undefined});
  return host;
 }
 for(const sourceId of ['local','remote']){
@@ -110,7 +110,7 @@ for(const sourceId of ['local','remote']){
 }
 // The real retained detail observer keeps the same child ID through catalog/back.
 {
- const {owner}=createReaderBuilderProbe(source,['detailContent','externalDirectory','detailBookKey','hasUnknownShelfWrite'],{BookDirectoryPage:DirectoryChild,LocalBookDetail:DirectoryChild,ReaderRuntimeOwner:{current:()=>undefined},LOCAL_SOURCE_ID:'local',...enums});
+ const {owner}=createReaderBuilderProbe(source,['detailContent','externalDirectory','detailBookKey','isCurrentRuntime','hasUnknownShelfWrite'],{BookDirectoryPage:DirectoryChild,LocalBookDetail:DirectoryChild,ReaderRuntimeOwner:{current:()=>undefined},LOCAL_SOURCE_ID:'local',...enums});
  const host=index();host.openFullDirectory();Object.assign(owner,host,{offlineMutationActiveKey:'',remoteContentVerdict:'readable',remoteContentVerdictLabel:()=>'',appThemeScheme:'day'});
  owner.detailContent();
  const detail=[...owner.children.values()].find(child=>child.params.book);

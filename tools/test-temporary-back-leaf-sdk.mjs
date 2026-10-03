@@ -51,7 +51,7 @@ function harness(){
   function owner(source,params={}){
     for(const m of source.matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g))require(`${sdkPath}/lib/component_map.js`).CUSTOM_BUILDER_METHOD.add(m[1]);
     const o=createReaderBuilderProbe(source,leafMembers(source),p.deps,{...p.hooks,initialParams:params}).owner;
-    const events=[];o.onTemporaryBackBridge=(handler,identity)=>events.push({handler,identity});
+    const events=[],publish=o.onTemporaryBackBridge;o.onTemporaryBackBridge=(handler,identity,generation)=>{events.push(generation===undefined?{handler,identity}:{handler,identity,generation});publish(handler,identity,generation);};
     o.aboutToAppear();leaves.push(o);return{o,events,p,finishes};
   }
   return{owner,p,finishes};
@@ -76,7 +76,7 @@ function assertCycle(factory){
   const f=factory(),old=f.events.at(-1);assert.equal(typeof old.handler,'function');assert.equal(old.handler(),true);
   if(factory===sourceFixture){f.p.properties.flush();f.finishes.at(-1)();}
   assert.equal(old.handler(),false,'normal page must fall through to Index route handling');
-  f.o.aboutToDisappear();assert.deepEqual(f.events.at(-1),{handler:undefined,identity:old.identity});assert.equal(old.handler(),false);
+  f.o.aboutToDisappear();assert.deepEqual(f.events.at(-1),old.generation===undefined?{handler:undefined,identity:old.identity}:{handler:undefined,identity:old.identity,generation:old.generation});assert.equal(old.handler(),false);
   f.o.aboutToAppear();const current=f.events.at(-1);assert.notEqual(current.identity,old.identity,'every appearance gets a new lease');
   if(factory===settingsFixture)f.o.toggleSelection('startup');
   else if(factory===sourceFixture)f.o.toggleGroupSelection();

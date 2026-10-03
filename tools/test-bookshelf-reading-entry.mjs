@@ -36,7 +36,7 @@ const methods = [
   'installRemoteReadingSession(', 'updateRemoteReadableChapterOrder(', 'onRemoteSessionReady(', 'openShelfBook(', 'openShelfBookInfo(', 'openLocalBookDetail(', 'openRemoteBookDetail(',
   'openReading(', 'presentPreparedReading(', 'returnToReadingOrigin(', 'onReaderExited(',
   'returnFromDetail(', 'requestReaderBookInfo(', 'returnToBookshelf(', 'nextNavigationGeneration(', 'isKnownDetailChapter(',
-  'currentSourceSwitchTransactionId(',
+  'currentSourceSwitchTransactionId(', 'consumeTemporaryBackBridge(', 'isCurrentRuntime(',
   'consumeSystemFileOpen(',
   'async probeRemoteContentVerdict(', 'remoteContentVerdictLabel(', 'onReadingFailure(',
   'openDetailSourceSwitch(',

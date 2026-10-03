@@ -493,6 +493,7 @@
     "test-index-runtime-retirement-admission.mjs",
     "test-temporary-back-leaf-sdk.mjs",
     "test-architecture-shared-producers.mjs",
-    "test-reader-startup-main-load-fault.mjs"
+    "test-reader-startup-main-load-fault.mjs",
+    "test-temporary-back-index-sdk.mjs"
   ]
 }

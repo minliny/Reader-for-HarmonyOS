@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
+import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 
 const root = resolve(import.meta.dirname, '..');
@@ -111,8 +112,8 @@ check('Index state changes update the retained shell child props, including serv
 });
 const shellSource = read('features/bookshelf/BookshelfShell.ets');
 function shellFixture({ populated = false, width = 365, menu = false } = {}) {
-  const { owner } = createReaderBuilderProbe(shellSource, ['content','mounted','temporaryBackIdentity','moreSelectionId','onTemporaryBackBridge','aboutToAppear','aboutToDisappear','consumeTemporaryBack','dismissMoreMenu','moreOpenAction','moreIntentAction','build','shellContent','topBar','requestCheckUpdates','showBottomNav','numericAreaLength'], {
-    ...dependencies, bookshelfTemporaryGeneration:0,registerReaderShelfFonts(){}, BOOKSHELF_WIDE_BREAKPOINT: 600, READER_FLOATING_TOP_BAR_HEIGHT: 58,
+  const { owner } = createReaderBuilderProbe(shellSource, ['content','mounted','temporaryBackIdentity','temporaryBackGeneration','navigationGeneration','onNavigationGenerationChanged','registerTemporaryBackGeneration','moreSelectionId','onTemporaryBackBridge','aboutToAppear','aboutToDisappear','consumeTemporaryBack','dismissMoreMenu','moreOpenAction','moreIntentAction','build','shellContent','topBar','requestCheckUpdates','showBottomNav','numericAreaLength'], {
+    ...dependencies, ...createArkUIPropertyRuntimeProbe().sdk, bookshelfTemporaryGeneration:0,registerReaderShelfFonts(){}, BOOKSHELF_WIDE_BREAKPOINT: 600, READER_FLOATING_TOP_BAR_HEIGHT: 58,
     ReaderWindowCoordinator: { metrics: () => ({ windowRect: { width } }) },
   });
   let contentCalls = 0;

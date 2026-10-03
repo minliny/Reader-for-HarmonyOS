@@ -118,8 +118,8 @@ await check('PH67 SDK previews use four approved light bases and retain four ori
   });
 });
 await check('PH36 real Index Back returns General to Settings before Bookshelf and preserves overlay priority', () => {
-  const Index = productionMotionMethods(path('pages/Index.ets'), ['onBackPress']);
-  const owner = Object.assign(new Index(), { route: 'settings', settingsSection: 'general',
+  const Index = productionMotionMethods(path('pages/Index.ets'), ['consumeTemporaryBackBridge','isCurrentRuntime','onBackPress']);
+  const owner = Object.assign(new Index(), { hasVisibleImportDialog:()=>false, route: 'settings', settingsSection: 'general',
     returnToBookshelf: () => { owner.route = 'bookshelf'; },
     sourceSwitchVisible: true, closeSourceSwitch: () => { owner.sourceSwitchVisible = false; } });
   assert.equal(owner.onBackPress(), true); assert.equal(owner.settingsSection, 'general');
