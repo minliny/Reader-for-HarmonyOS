@@ -1,3 +1,4 @@
+import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { appendExpectedPositionVersions, decodeRemotePositionScope, encodeRemotePositionScope, type RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
@@ -163,7 +164,7 @@ export type LocalReadingAtomicResolution = {
   layout: LocalReadingLayout;
 };
 
-const LOCAL_SOURCE_ID = 'local';
+export const LOCAL_SOURCE_ID = 'local';
 
 /**
  * A reader transaction supplies this guard instead of exposing NAPI request
@@ -369,6 +370,7 @@ export class LocalReadingFlowGateway {
     input: LocalReadingChapterStartBookmarkInput,
     isCurrent?: LocalReadingRequestGuard,
     remoteIdentity?: RemoteReadingIdentity,
+    evidence?: ReaderWriteEvidence,
   ): Promise<LocalReadingBookmark> {
     const captured: LocalReadingPositionBookmarkInput = {
       bookName: input.bookName, bookAuthor: input.bookAuthor, chapterIndex: input.chapterIndex,
@@ -383,7 +385,7 @@ export class LocalReadingFlowGateway {
         await this.loadChapterStartPositionScope(identity, captured.chapterIndex, isCurrent);
     }
     if (isCurrent?.() === false) throw new Error('bookmark creation superseded');
-    return this.createPositionBookmark(captured, isCurrent);
+    return this.createPositionBookmark(captured, isCurrent, evidence);
   }
 
   /** A new chapter-start anchor is always zero in the current Core body.
@@ -424,6 +426,7 @@ export class LocalReadingFlowGateway {
   async createPositionBookmark(
     input: LocalReadingPositionBookmarkInput,
     isCurrent?: LocalReadingRequestGuard,
+    evidence?: ReaderWriteEvidence,
   ): Promise<LocalReadingBookmark> {
     this.assertNonBlankString(input.bookName, 'bookName');
     if (typeof input.bookAuthor !== 'string') {
@@ -440,7 +443,10 @@ export class LocalReadingFlowGateway {
       if (input.positionScope.chapterIndex !== input.chapterIndex) throw new Error('bookmark position scope chapter mismatch');
       params['positionScope'] = encodeRemotePositionScope(input.positionScope);
     }
-    const result = await this.runtimeOwner.request('bookmark.create', params, this.requestOptions(isCurrent));
+    if (isCurrent?.() === false) throw new Error('bookmark creation superseded before dispatch');
+    evidence?.dispatched();
+    // Route retirement cannot cancel or erase a submitted durable write.
+    const result = await this.runtimeOwner.request('bookmark.create', params, {});
     const rawBookmark = this.requireObject(result.data['bookmark'], 'bookmark.create bookmark');
     const time = this.requireSafeInteger(rawBookmark, 'time', 'bookmark.create bookmark');
     const bookName = this.requireString(rawBookmark, 'bookName', 'bookmark.create bookmark');
@@ -465,6 +471,7 @@ export class LocalReadingFlowGateway {
       positionScope.bodyVersion !== input.positionScope.bodyVersion || positionScope.processingVersion !== input.positionScope.processingVersion)) {
       throw new Error('bookmark.create returned a mismatched position scope');
     }
+    evidence?.confirmed();
     return { time, chapterIndex, chapterOffset, chapterTitle, content, bookText,
       ...(positionScope === undefined ? {} : { positionScope }) };
   }
@@ -473,13 +480,14 @@ export class LocalReadingFlowGateway {
   async deleteBookmark(
     time: number,
     isCurrent?: LocalReadingRequestGuard,
+    evidence?: ReaderWriteEvidence,
   ): Promise<boolean> {
     if (!Number.isSafeInteger(time)) {
       throw new Error('time must be a safe integer');
     }
-    const result = await this.runtimeOwner.request('bookmark.delete', {
-      time,
-    }, this.requestOptions(isCurrent));
+    if (isCurrent?.() === false) throw new Error('bookmark deletion superseded before dispatch');
+    evidence?.dispatched();
+    const result = await this.runtimeOwner.request('bookmark.delete', { time }, {});
     const returnedTime = this.requireSafeInteger(result.data, 'time', 'bookmark.delete');
     if (returnedTime !== time) {
       throw new Error('bookmark.delete returned a mismatched time');
@@ -488,6 +496,7 @@ export class LocalReadingFlowGateway {
     if (typeof deleted !== 'boolean') {
       throw new Error('bookmark.delete returned invalid deleted');
     }
+    evidence?.confirmed();
     return deleted;
   }
 

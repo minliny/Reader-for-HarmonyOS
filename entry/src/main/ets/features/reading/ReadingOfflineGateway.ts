@@ -1,3 +1,4 @@
+import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { diagnosticCodeOf } from '../../app/LogPrivacy';
 import type { BookAcquisitionCoordinator } from '../../app/BookAcquisitionCoordinator';
 import type { JsonObject, ReaderCoreResultEvent, RequestOptions } from '@reader/core-harmony';
@@ -231,8 +232,9 @@ export class ReadingOfflineGateway {
     session: RemoteReadingSession,
     chapterIndex: number,
     isCurrent?: OfflineRequestGuard,
+    evidence?: ReaderWriteEvidence,
   ): Promise<LocalReadingTocEntry[]> {
-    return this.prefetchRange(session, chapterIndex, chapterIndex + 1, isCurrent);
+    return this.prefetchRange(session, chapterIndex, chapterIndex + 1, isCurrent, evidence);
   }
 
   /**
@@ -245,6 +247,7 @@ export class ReadingOfflineGateway {
     session: RemoteReadingSession,
     isCurrent?: OfflineRequestGuard,
     onProgress?: (progress: ReadingOfflineBookProgress) => void,
+    evidence?: ReaderWriteEvidence,
   ): Promise<LocalReadingTocEntry[]> {
     const totalChapters = session.entries.filter(entry => entry.navigable !== false && entry.url.trim().length > 0).length;
     if (totalChapters === 0) {
@@ -258,7 +261,7 @@ export class ReadingOfflineGateway {
     for (let startInclusive = 0; startInclusive < session.entries.length;
       startInclusive += READER_OFFLINE_BOOK_CHUNK_SIZE) {
       const endExclusive = Math.min(session.entries.length, startInclusive + READER_OFFLINE_BOOK_CHUNK_SIZE);
-      const result = await this.prefetchRangeResult(session, startInclusive, endExclusive, isCurrent, proofs);
+      const result = await this.prefetchRangeResult(session, startInclusive, endExclusive, isCurrent, proofs, false, evidence);
       projection = result.entries;
       this.assertCurrent(isCurrent);
       processedChapters += session.entries.slice(startInclusive, endExclusive).filter(entry => entry.navigable !== false && entry.url.trim().length > 0).length;
@@ -276,9 +279,10 @@ export class ReadingOfflineGateway {
     startInclusive: number,
     endExclusive: number,
     isCurrent?: OfflineRequestGuard,
+    evidence?: ReaderWriteEvidence,
   ): Promise<LocalReadingTocEntry[]> {
     const proofs = this.runtime.captureReadingContentValidity === undefined ? undefined : new Map<string, OfflineChapterProof>();
-    return (await this.prefetchRangeResult(session, startInclusive, endExclusive, isCurrent, proofs)).entries;
+    return (await this.prefetchRangeResult(session, startInclusive, endExclusive, isCurrent, proofs, false, evidence)).entries;
   }
 
   /** Rolling reader work verifies only its requested window. A full directory
@@ -321,6 +325,7 @@ export class ReadingOfflineGateway {
     isCurrent?: OfflineRequestGuard,
     proofs?: Map<string, OfflineChapterProof>,
     projectWindowOnly: boolean = false,
+    evidence?: ReaderWriteEvidence,
   ): Promise<ReadingOfflineBookProgress> {
     this.assertRange(session, startInclusive, endExclusive);
     this.assertCurrent(isCurrent);
@@ -330,19 +335,21 @@ export class ReadingOfflineGateway {
     if (!session.entries.some(entry => entry.index >= startInclusive && entry.index < endExclusive && entry.navigable !== false && entry.url.trim().length > 0)) {
       return this.loadProjectionResult(projectionSession, isCurrent, proofs);
     }
+    evidence?.dispatched();
     const result = await this.runtime.request('cache.book.prefetch', {
       sourceId: session.identity.sourceId,
       bookId: session.identity.bookId,
       chapterRange: [startInclusive, endExclusive],
       priority: 0,
       requestedAt: Date.now(),
-    }, this.requestOptions(isCurrent, 300000));
+    }, evidence === undefined ? this.requestOptions(isCurrent, 300000) : { timeoutMs: 300000 });
     const materializations = this.assertPrefetchResult(
       result,
       session,
       startInclusive,
       endExclusive,
     );
+    evidence?.confirmed();
     let materializationError: Error | undefined;
     await this.forEachConcurrent(materializations, READER_OFFLINE_CHAPTER_CONCURRENCY,
       async (materialization: CacheChapterMaterializationLease): Promise<void> => {
@@ -424,11 +431,12 @@ export class ReadingOfflineGateway {
     await Promise.all(workers);
   }
 
-  async clearBook(session: RemoteReadingSession, isCurrent?: OfflineRequestGuard): Promise<void> {
+  async clearBook(session: RemoteReadingSession, isCurrent?: OfflineRequestGuard, evidence?: ReaderWriteEvidence): Promise<void> {
     return this.clearBookIdentity(
       session.identity.sourceId,
       session.identity.bookId,
       isCurrent,
+      evidence,
     );
   }
 
@@ -436,6 +444,7 @@ export class ReadingOfflineGateway {
     sourceId: string,
     bookId: string,
     isCurrent?: OfflineRequestGuard,
+    evidence?: ReaderWriteEvidence,
   ): Promise<void> {
     if (sourceId.trim().length === 0 || bookId.trim().length === 0) {
       throw new Error('offline book identity must be non-blank');
@@ -444,14 +453,16 @@ export class ReadingOfflineGateway {
       throw new Error('offline reading image clear capability is unavailable');
     }
     this.assertCurrent(isCurrent);
+    evidence?.dispatched();
     const result = await this.runtime.request('cache.clear', {
       scope: 'book',
       sourceId,
       bookId,
-    }, this.requestOptions(isCurrent));
+    }, evidence === undefined ? this.requestOptions(isCurrent) : {});
     if (result.data['scope'] !== 'book') {
       throw new Error('cache.clear did not confirm the exact book scope');
     }
+    evidence?.confirmed();
     this.assertCurrent(isCurrent);
     // Core clears first, so a Host cleanup failure can only leave unreachable
     // files; retrying the same exact book clear remains safe and monotonic.
