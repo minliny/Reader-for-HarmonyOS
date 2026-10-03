@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
+import {bookshelfDialogPresentationFixture} from './lib/bookshelf-dialog-presentation-sdk.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp,
   readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
@@ -211,85 +212,19 @@ class SelectorChild {
 }
 assert.match(indexSource, /specId: 'shelf-group',[\s\S]*?title: '编辑分组',[\s\S]*?actions: \[\]/);
 assert.match(indexSource,
-  /BookshelfGroupSelector\(\{\s*selected:[\s\S]*?busy: this\.editingShelfGroupBusy,\s*onSelect: \(\): void => \{ void this\.assignShelfDefaultGroup\(\); \}/,
+  /BookshelfGroupSelector\(\{\s*selected:[\s\S]*?busy: this\.editingShelfGroupBusy,\s*onSelect: \(\): void => \{ void this\.assignShelfDefaultGroup\(presentation, generation, owner, mounting, book\); \}/,
   'the selector select intent routes into the default-group assignment');
 assert.match(indexSource,
-  /\.onClick\(\(\): void => \{ if \(!this\.editingShelfGroupBusy\) this\.editingShelfGroupBook = undefined; \}\)/,
+  /\.onClick\(\(\): void => \{\s*if \(!this\.editingShelfGroupBusy && this\.isCurrentShelfGroup\(presentation, generation, owner, mounting, book\)\)\s*this\.editingShelfGroupBook = undefined;/,
   'the mask tap dismisses the overlay only when no assignment is in flight');
-// The builder probe's native stub does not model nested custom-component
-// creation inside a body slot, so the host probe records the parent's own
-// observable state and the actual wiring text is asserted above.
-const selectorChildren = [];
-const groupHostProbe = createReaderBuilderProbe(`import { DialogActionView } from '../features/common/ReaderDialogSurface';
-@Component struct IndexShelfGroupProbe {
-  @State editingShelfGroupBusy: boolean = false;
-  @State editingShelfGroupBook: string = 'book';
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  selected: boolean = true;
-  maskTaps: number = 0;
-  assignCalls: number = 0;
-  assignShelfDefaultGroup(): void { this.assignCalls = this.assignCalls + 1; }
-  build() {
-    Stack({ alignContent: Alignment.Center }) {
-      Row().width('100%').height('100%')
-        .onClick((): void => { if (!this.editingShelfGroupBusy) { this.maskTaps = this.maskTaps + 1; this.editingShelfGroupBook = undefined; } });
-      ReaderDialogSurface({
-        specId: 'shelf-group',
-        title: '编辑分组',
-        actions: [],
-        body: (): void => {
-          BookshelfGroupSelector({
-            selected: this.selected,
-            busy: this.editingShelfGroupBusy,
-            onSelect: (): void => { this.assignShelfDefaultGroup(); },
-          });
-        },
-      })
-    }.width('100%').height('100%');
-  }
-}`, ['build'], {
-  ObservedPropertySimplePU: class {
-    constructor(value, owner, name) {
-      this.value = value;
-      Object.defineProperty(owner, name, {
-        get: () => this.value,
-        set: next => { this.value = next; },
-        configurable: true,
-      });
-    }
-  },
-  ReaderDialogSurface: class {
-    constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
-  },
-  DialogActionView,
-  BookshelfGroupSelector: function (params) {
-    const child = new SelectorChild(undefined, params, undefined, -1);
-    selectorChildren.push(child);
-    return child;
-  },
-  readerAppColor: () => '#000000',
-});
-const groupHost = groupHostProbe.owner;
-Object.assign(groupHost, { maskTaps: 0, assignCalls: 0 });
-groupHost.initialRender();
-const maskNode = [...groupHost.nodes.values()].find(n => n.type === 'Row');
-assert.ok(maskNode, 'the mask is drawn behind the card');
-const groupSurface = [...groupHost.children.values()].find(child => child.params?.specId === 'shelf-group');
-assert.ok(groupSurface, 'the shared surface mounts under the shelf-group spec');
-assert.equal(groupSurface.params.title, '编辑分组');
-assert.deepEqual(groupSurface.params.actions, [], 'dismissal is owned by the mask, not an actions row');
-assert.equal(typeof groupSurface.params.body, 'function', 'the selector mounts through the body slot');
-groupSurface.params.body();
-assert.ok(selectorChildren.length > 0, 'the body slot mounts BookshelfGroupSelector');
-maskNode.onClick();
-assert.equal(groupHost.maskTaps, 1, 'mask tap dismisses while idle');
-assert.equal(groupHost.editingShelfGroupBook, undefined, 'dismissal clears the editing book');
-groupHost.editingShelfGroupBook = 'book';
-groupHost.editingShelfGroupBusy = true;
-groupHost.replay();
-const busyMask = [...groupHost.nodes.values()].find(n => n.type === 'Row');
-busyMask.onClick();
-assert.equal(groupHost.maskTaps, 1, 'the busy guard blocks mask dismissal');
-assert.equal(groupHost.editingShelfGroupBook, 'book', 'busy dismissal never clears the editing book');
+// The actual production named body Builder now mounts the real selector.
+const groupHost=bookshelfDialogPresentationFixture(),book={sourceId:'s',bookId:'book',group:''};
+groupHost.i.openShelfGroup(book);const first=groupHost.group();
+assert.ok(first.select?.onClick && first.mask?.onClick,'actual Index→shared surface→selector native actions');
+groupHost.i.editingShelfGroupBusy=true;first.mask.onClick();assert.equal(groupHost.i.editingShelfGroupBook,book);
+groupHost.i.editingShelfGroupBusy=false;first.mask.onClick();assert.equal(groupHost.i.editingShelfGroupBook,undefined);
+groupHost.i.openShelfGroup(book);const second=groupHost.group();second.select.onClick();await Promise.resolve();await Promise.resolve();
+assert.deepEqual(groupHost.writes,[book],'actual selector routes the captured book into the existing assignment Host');
+assert.equal(groupHost.i.editingShelfGroupBook,undefined);
 
 console.log('json import real consumer: body order, draft/validation/close chain, shared-spec propagation and shelf-group host wiring PASS');

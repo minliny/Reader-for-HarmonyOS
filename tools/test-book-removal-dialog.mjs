@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { resolveHorizontalFrame, SurfaceWidthSpec } from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight, ReaderWindowMetricsSnapshot,
@@ -33,20 +33,28 @@ syntax.propCollection.set('ReaderDialogSurface', new Set(
   [...surfaceSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(match => match[1])));
 syntax.builderParamObjectCollection.set('ReaderDialogSurface', new Set(
   [...surfaceSource.matchAll(/@BuilderParam\s+(\w+)\s*:/g)].map(match => match[1])));
-const Host = productionMotionMethods(file('pages/Index.ets'), [
+syntax.componentCollection.customComponents.add('BookRemovalDialog');
+syntax.componentCollection.customDialogs.add('BookRemovalDialog');syntax.propCollection.set('BookRemovalDialog',new Set(['message']));
+const actualRuntime={};const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>actualRuntime);let activeEvents;
+class NativeController { constructor(options){this.options=options;}open(){activeEvents.push('open');}close(){activeEvents.push('close');} }
+const hostMethods=[
   'openBookRemovalDialog', 'dismissBookRemovalDialog', 'confirmBookRemovalDialog',
   'requestRemoveDetailBook', 'requestRemoveShelfBook', 'requestRemoveShelfBooks',
   'hasUnknownShelfWrite', 'canRemoveDetailBook', 'canRemoveShelfBook', 'isSameDetailBook', 'shelfBookKey', 'onBackPress',
-], { LOCAL_SOURCE_ID: 'local' });
+];
+hostMethods.push('isCurrentRuntime','isCurrentBookRemoval','bookRemovalDialogContent');
+const Host=createReaderBuilderProbe(indexSource,hostMethods,{LOCAL_SOURCE_ID:'local',ReaderRuntimeOwner,
+ CustomDialogController:NativeController,BookRemovalDialog:class{},DialogAlignment:{Center:'center'}}).Component;
+
 const local = { sourceId: 'local', bookId: 'a', title: '本地书' };
 const online = { sourceId: 'source', bookId: 'b', title: '在线书' };
 function fixture(route, book = local) {
-  const events = [];
+  const events = [];activeEvents=events;
   const host = Object.assign(new Host(), { route, detailBook: book, shelfBooks: [local, online],
     bookshelfSelectionBooks: [local, online], bookshelfSelectionReady: true,
     bookshelfBatchRemovalBusy: false, shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false}, offlineMutationActiveKey: '',
     readingSessionActive: false, sourceSwitchVisible: false, pendingSourceSwitch: undefined,
-    navigationGeneration: 1, bookRemovalDialogOpen: false,
+    navigationGeneration: 1, bookRemovalPresentation:0,detailShelfAdmissionMount:1,mountedRuntimeOwner:actualRuntime,shelfReceiptRetired:false,bookRemovalDialogOpen: false,
     bookRemovalDialogController: { open() { events.push('open'); }, close() { events.push('close'); } },
     removeDetailBook(target) { events.push(['detail', target]); },
     removeShelfBook(target) { events.push(['shelf', target]); },

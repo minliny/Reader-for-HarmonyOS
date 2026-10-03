@@ -218,6 +218,7 @@
     "test-bookshelf-continue-reading-publication.mjs",
     "test-bookshelf-detail-control-stability.mjs",
     "test-bookshelf-detail-scroll-layout.mjs",
+    "test-bookshelf-dialog-presentation-sdk.mjs",
     "test-bookshelf-filter-responsibilities.mjs",
     "test-bookshelf-host-wiring.mjs",
     "test-bookshelf-manual-update.mjs",

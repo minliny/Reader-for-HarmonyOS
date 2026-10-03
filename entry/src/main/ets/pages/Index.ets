@@ -294,6 +294,7 @@ struct Index {
   private nativeAlertOwner: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
   @State private editingShelfGroupBook: ShelfBook | undefined = undefined;
   @State private editingShelfGroupBusy: boolean = false;
+  @State private editingShelfGroupPresentation: number = 0;
   private bookshelfSettingsReturnRoute: 'bookshelf' | 'settings' = 'bookshelf';
   @State private shelfBooks: ShelfBook[] = [];
   @StorageLink('readerBookshelfReadingFilter') private shelfReadingFilter: string = 'all';
@@ -425,20 +426,8 @@ struct Index {
   @State private bookRemovalMessage: string = '';
   private bookRemovalDialogOpen: boolean = false;
   private bookRemovalConfirmAction: (() => void) | undefined = undefined;
-  private bookRemovalDialogController: CustomDialogController = new CustomDialogController({
-    builder: BookRemovalDialog({
-      message: this.bookRemovalMessage,
-      onCancel: (): void => this.dismissBookRemovalDialog(),
-      onConfirm: (): void => this.confirmBookRemovalDialog(),
-    }),
-    alignment: DialogAlignment.Center,
-    customStyle: true,
-    autoCancel: true,
-    cancel: (): void => {
-      this.bookRemovalDialogOpen = false;
-      this.bookRemovalConfirmAction = undefined;
-    },
-  });
+  private bookRemovalPresentation: number = 0;
+  private bookRemovalDialogController: CustomDialogController | undefined;
   /** Read generation DTO; the feature-local projection owner owns admission. */
   private bookshelfLoadGeneration: number = 0;
   /**
@@ -795,7 +784,7 @@ struct Index {
         onVisibleBooksChanged: (books: ShelfBook[], presentedNavigation?: number): void => { if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) this.prepareVisibleReadingBooks(books); },
         onBookMultiSelectRequested: (book: ShelfBook, presentedNavigation?: number): void => { if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) this.openBookshelfMultiSelect(book); },
         onBookInfoRequested: (book: ShelfBook, presentedNavigation?: number): void => { if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) this.openShelfBookInfo(book); },
-        onBookGroupRequested: (book: ShelfBook, presentedNavigation?: number): void => { if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) this.editingShelfGroupBook = book; },
+        onBookGroupRequested: (book: ShelfBook, presentedNavigation?: number): void => { if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) this.openShelfGroup(book); },
         onBookRemoveRequested: (book: ShelfBook, presentedNavigation?: number): void => { if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) this.requestRemoveShelfBook(book); },
       })
         .enabled(!this.shelfReadingPreparation && !this.readingSessionActive);
@@ -1078,22 +1067,7 @@ struct Index {
         this.sourceSwitchOverlayContent();
       }
       if (this.route === 'bookshelf' && this.editingShelfGroupBook !== undefined) {
-        Stack({ alignContent: Alignment.Center }) {
-          Row().width('100%').height('100%').backgroundColor(readerAppColor('app.Index.build.backgroundColor.52000000', this.appThemeScheme))
-            .onClick((): void => { if (!this.editingShelfGroupBusy) this.editingShelfGroupBook = undefined; });
-          ReaderDialogSurface({
-            specId: 'shelf-group',
-            title: '编辑分组',
-            actions: [],
-            body: (): void => {
-              BookshelfGroupSelector({
-                selected: (this.editingShelfGroupBook?.group?.trim() ?? '') === '',
-                busy: this.editingShelfGroupBusy,
-                onSelect: (): void => { void this.assignShelfDefaultGroup(); },
-              });
-            },
-          });
-        }.width('100%').height('100%');
+        this.shelfGroupContent();
       }
       if (this.route === 'bookshelf' && this.hasVisibleImportDialog()) {
         this.localImportContent();
@@ -1502,19 +1476,71 @@ struct Index {
     else this.returnToBookshelf();
   }
 
-  private async assignShelfDefaultGroup(): Promise<void> {
-    const book = this.editingShelfGroupBook;
-    if (book === undefined || this.editingShelfGroupBusy) return;
+  private openShelfGroup(book: ShelfBook): void {
+    if (this.editingShelfGroupBusy) return;
+    this.editingShelfGroupPresentation += 1;
+    this.editingShelfGroupBook = book;
+  }
+
+  @Builder
+  private shelfGroupContent() {
+    ForEach([this.editingShelfGroupPresentation], (presentation: number) => {
+      this.shelfGroupSurface(presentation, this.navigationGeneration, this.mountedRuntimeOwner,
+        this.detailShelfAdmissionMount, this.editingShelfGroupBook!);
+    }, (identity: number): string => identity.toString());
+  }
+
+  @Builder
+  private shelfGroupSurface(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, book: ShelfBook) {
+    Stack({ alignContent: Alignment.Center }) {
+      Row().width('100%').height('100%').backgroundColor(readerAppColor('app.Index.build.backgroundColor.52000000', this.appThemeScheme))
+        .onClick((): void => {
+          if (!this.editingShelfGroupBusy && this.isCurrentShelfGroup(presentation, generation, owner, mounting, book))
+            this.editingShelfGroupBook = undefined;
+        });
+      ReaderDialogSurface({
+        specId: 'shelf-group',
+        title: '编辑分组',
+        actions: [],
+        body: (): void => this.shelfGroupBody(presentation, generation, owner, mounting, book),
+      });
+    }.width('100%').height('100%');
+  }
+
+  @Builder
+  private shelfGroupBody(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, book: ShelfBook) {
+    BookshelfGroupSelector({
+      selected: (book.group?.trim() ?? '') === '',
+      busy: this.editingShelfGroupBusy,
+      onSelect: (): void => { void this.assignShelfDefaultGroup(presentation, generation, owner, mounting, book); },
+    });
+  }
+
+  private isCurrentShelfGroup(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, book: ShelfBook): boolean {
+    return this.isCurrentBookshelfPresentation(generation, owner, mounting) &&
+      presentation === this.editingShelfGroupPresentation && this.editingShelfGroupBook === book;
+  }
+
+  private async assignShelfDefaultGroup(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, book: ShelfBook): Promise<void> {
+    const current = (): boolean => this.isCurrentShelfGroup(presentation, generation, owner, mounting, book);
+    if (!current() || this.editingShelfGroupBusy) return;
     this.editingShelfGroupBusy = true;
     try {
       await this.bookshelfHost.assignDefaultGroup(book);
-      this.invalidateBookshelfProjection();
-      if (this.route === 'bookshelf') this.refreshBookshelf();
+      if (!current()) return;
+      this.invalidateBookshelfProjection(); this.refreshBookshelf();
       this.editingShelfGroupBook = undefined;
     } catch (error) {
+      if (!current()) return;
       hilog.error(DOMAIN, 'Reader', 'Group selection failed: %{private}s', errorMessageOf(error));
       this.getUIContext().getPromptAction().showToast({ message: '分组保存失败，请重试' });
-    } finally { this.editingShelfGroupBusy = false; }
+    } finally {
+      if (presentation === this.editingShelfGroupPresentation) this.editingShelfGroupBusy = false;
+    }
   }
 
   @Builder
@@ -3521,29 +3547,68 @@ struct Index {
       (effect: BookshelfReadableAdmissionEffect): void => this.publishReadableAdmission(effect));
   }
 
+  private isCurrentBookRemoval(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && this.bookRemovalDialogOpen &&
+      presentation === this.bookRemovalPresentation && generation === this.navigationGeneration &&
+      mounting === this.detailShelfAdmissionMount && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner);
+  }
+
   private openBookRemovalDialog(message: string, action: () => void): void {
-    if (this.bookRemovalDialogOpen) return;
-    const generation = this.navigationGeneration;
+    const owner = this.mountedRuntimeOwner;
+    if (this.bookRemovalDialogOpen || owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner)) return;
+    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const presentation = ++this.bookRemovalPresentation;
     this.bookRemovalMessage = message;
     this.bookRemovalConfirmAction = (): void => {
-      if (generation === this.navigationGeneration) action();
+      if (presentation === this.bookRemovalPresentation && generation === this.navigationGeneration &&
+        mounting === this.detailShelfAdmissionMount && !this.shelfReceiptRetired &&
+        this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner)) action();
     };
     this.bookRemovalDialogOpen = true;
-    this.bookRemovalDialogController.open();
+    // Native controller and its temporary child are created for this opening.
+    // An old physical callback never reads the next opening's action/controller.
+    let controller: CustomDialogController | undefined;
+    controller = new CustomDialogController({
+      builder: (): void => this.bookRemovalDialogContent(message, presentation, generation, owner, mounting, controller!),
+      alignment: DialogAlignment.Center,
+      customStyle: true,
+      autoCancel: true,
+      cancel: (): void => {
+        if (this.isCurrentBookRemoval(presentation, generation, owner, mounting)) this.dismissBookRemovalDialog(presentation);
+      },
+    });
+    this.bookRemovalDialogController = controller;
+    controller.open();
   }
 
-  private dismissBookRemovalDialog(): void {
-    const wasOpen = this.bookRemovalDialogOpen;
-    this.bookRemovalDialogOpen = false;
-    this.bookRemovalConfirmAction = undefined;
-    if (wasOpen) this.bookRemovalDialogController.close();
+  @Builder
+  private bookRemovalDialogContent(message: string, presentation: number, generation: number, owner: ReaderRuntimeOwner,
+    mounting: number, controller: CustomDialogController) {
+    BookRemovalDialog({
+      controller,
+      message,
+      onCancel: (): void => {
+        if (this.isCurrentBookRemoval(presentation, generation, owner, mounting)) this.dismissBookRemovalDialog(presentation);
+      },
+      onConfirm: (): void => {
+        if (this.isCurrentBookRemoval(presentation, generation, owner, mounting)) this.confirmBookRemovalDialog(presentation);
+      },
+    });
   }
 
-  private confirmBookRemovalDialog(): void {
-    if (!this.bookRemovalDialogOpen) return;
+  private dismissBookRemovalDialog(presentation: number = this.bookRemovalPresentation): void {
+    if (presentation !== this.bookRemovalPresentation) return;
+    const wasOpen = this.bookRemovalDialogOpen, controller = this.bookRemovalDialogController;
+    this.bookRemovalDialogOpen = false; this.bookRemovalConfirmAction = undefined;
+    this.bookRemovalDialogController = undefined;
+    if (wasOpen) controller?.close();
+  }
+
+  private confirmBookRemovalDialog(presentation: number = this.bookRemovalPresentation): void {
+    if (!this.bookRemovalDialogOpen || presentation !== this.bookRemovalPresentation) return;
     const action = this.bookRemovalConfirmAction;
-    // Consume the confirmation before dispatch, including repeated taps.
-    this.dismissBookRemovalDialog();
+    this.dismissBookRemovalDialog(presentation);
     action?.();
   }
 
