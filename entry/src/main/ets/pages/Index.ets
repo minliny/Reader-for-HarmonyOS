@@ -924,6 +924,49 @@ struct Index {
     });
   }
 
+  @Builder
+  private searchPageContent() {
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.searchPageSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount, this.searchHost);
+    }, (generation: number): string => generation.toString());
+  }
+
+  @Builder
+  private searchPageSurface(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: SearchHost) {
+    // Bind UI intents to this page opening. Search's original task and
+    // publication retain their existing lifetime outside this surface.
+    SearchPage({
+      viewState: host.viewState,
+      publication: host.publication,
+      publicationRevision: this.searchPublicationRevision,
+      reduceMotion: this.settingsSnapshot.reduceMotion,
+      isTablet: deviceInfo.deviceType === 'tablet',
+      onBack: (): void => { if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.returnToBookshelf(); },
+      onSearch: (keyword: string, scopeSourceIds?: string[]): void => {
+        if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.performSearch(keyword, scopeSourceIds);
+      },
+      onStop: (): void => { if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.stopSearch(); },
+      onClearHistory: (): void => { if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.clearSearchHistory(); },
+      onRetryHistory: (): void => { if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) host.retryHistory(); },
+      onSelectResult: (book: SearchBook, variants: SearchBook[]): void => {
+        if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.onSearchResultSelected(book, variants);
+      },
+      onVisibleGroups: (groups: SearchBook[][]): void => {
+        if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.scheduleSearchDetailWarmups(groups);
+      },
+      onRetry: (): void => { if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.retrySearch(); },
+      onManageSources: (): void => { if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.manageSourcesFromSearch(); },
+    });
+  }
+
+  private isCurrentSearchPresentation(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: SearchHost): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && this.route === 'search' &&
+      generation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount &&
+      this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) && this.searchHost === host;
+  }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       if (this.route === 'bookshelf') {
@@ -947,24 +990,7 @@ struct Index {
       } else if (this.route === 'bookshelfManagement') {
         this.bookshelfManagementContent();
       } else if (this.route === 'search') {
-        SearchPage({
-          viewState: this.searchHost.viewState,
-          publication: this.searchHost.publication,
-          publicationRevision: this.searchPublicationRevision,
-          reduceMotion: this.settingsSnapshot.reduceMotion,
-          isTablet: deviceInfo.deviceType === 'tablet',
-          onBack: (): void => this.returnToBookshelf(),
-          onSearch: (keyword: string, scopeSourceIds?: string[]): void =>
-            this.performSearch(keyword, scopeSourceIds),
-          onStop: (): void => this.stopSearch(),
-          onClearHistory: (): void => this.clearSearchHistory(),
-          onRetryHistory: (): void => this.searchHost.retryHistory(),
-          onSelectResult: (book: SearchBook, variants: SearchBook[]): void =>
-            this.onSearchResultSelected(book, variants),
-          onVisibleGroups: (groups: SearchBook[][]): void => this.scheduleSearchDetailWarmups(groups),
-          onRetry: (): void => this.retrySearch(),
-          onManageSources: (): void => this.manageSourcesFromSearch(),
-        });
+        this.searchPageContent();
       } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rss') {
         this.rssPageContent();
       } else if (isReaderProductSurfaceEnabled('rss') && this.route === 'rssSubscriptionManagement') {
