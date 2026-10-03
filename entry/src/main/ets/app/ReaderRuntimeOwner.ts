@@ -1,5 +1,7 @@
 import { supplyBundledSources } from './IncrementalBundledSourceSupply';
 import { BookAcquisitionCoordinator } from './BookAcquisitionCoordinator';
+import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError, type BookRequestOptions } from './BookRequestScheduler';
+export { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError } from './BookRequestScheduler';
 import common from '@ohos.app.ability.common';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import {
@@ -206,7 +208,7 @@ export class ReaderRuntimeOwner {
   bookAcquisitions(): BookAcquisitionCoordinator {
     if (this.bookCoordinator === undefined) {
       this.bookCoordinator = new BookAcquisitionCoordinator(
-        (method: string, params: JsonObject, options: RequestOptions): Promise<ReaderCoreResultEvent> =>
+        (method: string, params: JsonObject, options: BookRequestOptions): Promise<ReaderCoreResultEvent> =>
           this.requestDirect(method, params, options),
         (capability: string): boolean => this.supportsCoreCapability(capability),
       );
@@ -214,7 +216,7 @@ export class ReaderRuntimeOwner {
     return this.bookCoordinator;
   }
 
-  async request(method: string, params: JsonObject = {}, options: RequestOptions = {}): Promise<ReaderCoreResultEvent> {
+  async request(method: string, params: JsonObject = {}, options: BookRequestOptions = {}): Promise<ReaderCoreResultEvent> {
     return this.bookAcquisitions().request(method, params, options);
   }
 
@@ -314,7 +316,7 @@ export class ReaderRuntimeOwner {
     return this.readingEntryPreparations().waitForContentIdle(sourceId, bookId);
   }
 
-  private async requestDirect(method: string, params: JsonObject = {}, options: RequestOptions = {}): Promise<ReaderCoreResultEvent> {
+  private async requestDirect(method: string, params: JsonObject = {}, options: BookRequestOptions = {}): Promise<ReaderCoreResultEvent> {
     if (method === 'cache.clear' || method === 'bookshelf.remove' || method === 'bookshelf.removeBatch' ||
       method === 'source.delete' || method === 'source.switch.begin' || method === 'source.switch.commit' ||
       method === 'source.switch.abort' || method === 'runtime.storage.apply' || method === 'runtime.storage.restore')
@@ -327,6 +329,14 @@ export class ReaderRuntimeOwner {
       if (runtime === undefined) {
         throw new Error('Reader Core runtime did not become ready');
       }
+      // Non-scheduled writes can wait on startup/preparation fences. Recheck
+      // their captured authority at the last synchronous dispatch boundary.
+      // Scheduler requests already strip these hooks after their own admission.
+      if (this.state !== 'ready' ||
+        options.canContinue?.() === false || options.canDispatch?.() === false) {
+        throw new ReaderCoreNotDispatchedError('Reader Core request was not dispatched');
+      }
+      options.onDispatch?.();
       if (options.timeoutMs !== undefined) {
         return await runtime.request(method, params, options);
       }

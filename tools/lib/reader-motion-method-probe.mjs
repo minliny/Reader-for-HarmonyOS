@@ -1,4 +1,5 @@
 import { ReadingRecordIntent, ReadingRecordRecoveryError } from '../../entry/src/main/ets/features/reading/ReaderReadingRecordState.ts';
+import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError } from '../../entry/src/main/ets/app/BookRequestScheduler.ts';
 import { ReaderReadingImageResources, sameReaderReadingImageResource } from '../../entry/src/main/ets/features/reading/ReaderReadingImageResources.ts';
 import { ReaderNativeAlertOwner, ReaderNativeAlertLease } from '../../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
 import { readingChapterLayoutMap } from '../../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
@@ -30,7 +31,7 @@ const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
  * This does not simulate ArkUI layout, reactive delivery, or compositor pixels. */
 export function productionMotionMethods(file, names, dependencies = {}) {
   const fixtureRuntime = { captureReadingContentValidity: () => () => true, waitForReadingContentIdle: async () => {} };
-  dependencies = { readerAppColor, readerThemeDefinition, readingChapterLayoutMap, hasKnownReadingImageGeometry, errorMessageOf,
+  dependencies = { ReaderCoreNotDispatchedError, readerAppColor, readerThemeDefinition, readingChapterLayoutMap, hasKnownReadingImageGeometry, errorMessageOf,
     ...readerTypographyRoles, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner, ReaderStartupContentOwner, ReaderProgressProducerHost, ReaderNativeAlertOwner, ReaderNativeAlertLease, ReaderReadingImageResources, sameReaderReadingImageResource, ReaderReadingRecordHost, ReadingRecordRecoveryError,
     hilog: { error() {} }, ReaderRuntimeOwner: runtimeOwnerIdentityProbe(() => fixtureRuntime), ...dependencies };
   // Older fixtures inject current() as the instance-storage seam. Keep their
