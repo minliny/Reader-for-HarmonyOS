@@ -30,7 +30,7 @@ const rulesOwnerFactory = wholeRulesClass(rulesOwnerSource, 'RulesMutationOwner'
   ['ReaderRuntimeOwner', 'BookRequestNotDispatchedError', 'ReaderWriteEvidence', 'RULES_MUTATION_METHODS', 'RulesMutationIntentStore']);
 const storePath = new URL('../../entry/src/main/ets/features/settings/RulesMutationIntentStore.ts', import.meta.url);
 const rulesStoreFactory = existsSync(storePath) ? wholeRulesClass(readFileSync(storePath, 'utf8'), 'RulesMutationIntentStore',
-  ['ReaderRuntimeOwner', 'RULES_MUTATION_METHODS', 'fileIo', 'util', 'replaceReaderAtomicSnapshot']) : undefined;
+  ['ReaderRuntimeOwner', 'RULES_MUTATION_METHODS', 'fileIo', 'util', 'replaceReaderAtomicSnapshot', 'sha256Hex']) : undefined;
 const atomicFactory = wholeRulesClass(readFileSync(new URL('../../entry/src/main/ets/app/ReaderAtomicSnapshotFile.ts', import.meta.url), 'utf8'),
   'replaceReaderAtomicSnapshot', ['fileIo']);
 // A method probe without an actual platform IO seam cannot manufacture a
@@ -43,7 +43,8 @@ function actualRulesMutationOwner(deps) {
   const io = deps.rulesFileIo ?? deps.fileIo ?? missingRulesIo;
   const store = rulesStoreFactory?.(deps.ReaderRuntimeOwner, RULES_MUTATION_METHODS, io,
     deps.rulesUtil ?? deps.util ?? {generateRandomUUID: unsupportedRulesIo},
-    deps.replaceReaderAtomicSnapshot ?? atomicFactory(io));
+    deps.replaceReaderAtomicSnapshot ?? atomicFactory(io),
+    deps.rulesSha256Hex ?? deps.sha256Hex ?? unsupportedRulesIo);
   return rulesOwnerFactory(deps.ReaderRuntimeOwner, ReaderCoreNotDispatchedError, ReaderWriteEvidence, RULES_MUTATION_METHODS, store);
 }
 const rulesContractSource = readFileSync(new URL('../../entry/src/main/ets/features/settings/RulesMutationContract.ts', import.meta.url), 'utf8');
