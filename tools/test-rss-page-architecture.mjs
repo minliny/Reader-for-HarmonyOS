@@ -130,7 +130,7 @@ assert.match(index, /private onRssManage\(\): void \{[\s\S]*this\.route = 'rssSu
 assert.doesNotMatch(index, /RSS subscription management has no admitted route/);
 assert.match(index, /onToggle: \(id: string, enabled: boolean\): void =>[\s\S]*toggleSubscription\(id, enabled\)/);
 assert.match(index, /onRefresh: \(id: string\): void => this\.getRssOrchestrator\(\)\.refreshSubscription\(id\)/);
-assert.match(index, /showAlertDialog\(\{[\s\S]*primaryButton:[\s\S]*value: '取消'[\s\S]*secondaryButton:[\s\S]*value: '删除'/);
+assert.match(index, /showIndexAlert\('confirmation-cancelable', \{[\s\S]*primaryButton:[\s\S]*value: '取消'[\s\S]*secondaryButton:[\s\S]*value: '删除'/);
 assert.match(index, /private confirmRssSubscriptionDelete\(subscriptionId: string\): void \{[\s\S]*removeSubscription\(subscriptionId\);/);
 assert.match(index, /private onRssManagementViewArticles\(subscriptionId: string\): void \{\s*if \(!isReaderProductSurfaceEnabled\('rss'\)\) \{\s*return;\s*\}\s*this\.onRssSubscriptionSelected\(subscriptionId, 'rssSubscriptionManagement'\);/);
 assert.match(index, /private returnFromRssSourceFeed\(\): void \{[\s\S]*this\.route = 'rssSubscriptionManagement';/);

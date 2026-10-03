@@ -468,6 +468,7 @@
     "test-reader-typography-coverage.mjs",
     "test-bookshelf-write-receipt-consumers.mjs",
     "test-discover-operation-consumers.mjs",
-    "test-reader-native-alert-consumers.mjs"
+    "test-reader-native-alert-consumers.mjs",
+    "test-index-native-alert-consumers.mjs"
   ]
 }

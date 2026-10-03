@@ -139,7 +139,7 @@ assert.doesNotMatch(index,
 assert.match(index, /getSourceToolsOrchestrator\(\)\.exportAll\(\)/);
 assert.match(index, /requestSourceDelete\(sourceIds\)/);
 assert.match(index, /getSourceToolsOrchestrator\(\)\.open\(this\.sourceSources\)/);
-assert.match(index, /showAlertDialog\([\s\S]*确定删除所选/);
+assert.match(index, /showIndexAlert\('confirmation-cancelable',[\s\S]*确定删除所选/);
 
 for (const forbidden of [
   'aes-128',

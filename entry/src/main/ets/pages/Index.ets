@@ -1,3 +1,4 @@
+import { ReaderNativeAlertOwner, type ReaderNativeAlertLease, type ReaderNativeAlertOptions, type ReaderNativeAlertSpecId } from '../app/ReaderNativeAlertOwner';
 import { readerRecoveryView, type ReaderRecoveryView } from '../app/ReaderRecoveryProjection';
 import { projectPersistedReceipt, type PersistedReceiptProjection } from '../app/ReaderPersistedReceiptProjection';
 import type { RemoteReadingPositionScope } from '../features/reading/RemoteReadingPositionMigration';
@@ -375,6 +376,7 @@ struct Index {
   private shelfWriteGeneration: number = 0;
   private shelfReconcileBusy: number = 0;
   private shelfReceiptRetired: boolean = false;
+  private nativeAlertOwner: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
   @State private editingShelfGroupBook: ShelfBook | undefined = undefined;
   @State private editingShelfGroupBusy: boolean = false;
   private bookshelfSettingsReturnRoute: 'bookshelf' | 'settings' = 'bookshelf';
@@ -659,6 +661,7 @@ struct Index {
   }
 
   aboutToDisappear(): void {
+    this.nativeAlertOwner.retire();
     this.shelfReceiptRetired = true;
     this.shelfWriteGeneration += 1;
     this.dismissBookRemovalDialog();
@@ -1924,14 +1927,31 @@ struct Index {
     return '支持 Legado 书源 JSON；本地文件和在线链接共用 Core 导入校验。';
   }
 
+  private showIndexAlert(spec: ReaderNativeAlertSpecId, options: ReaderNativeAlertOptions,
+    isCurrent: () => boolean = (): boolean => true): ReaderNativeAlertLease | undefined {
+    const owner = ReaderRuntimeOwner.current();
+    const generation = this.navigationGeneration;
+    const route = this.route;
+    try {
+      return this.nativeAlertOwner.present(
+        (native: ReaderNativeAlertOptions): void => this.getUIContext().showAlertDialog(native), spec, options,
+        (): boolean => !this.shelfReceiptRetired && owner === ReaderRuntimeOwner.current() &&
+          generation === this.navigationGeneration && this.route === route && isCurrent());
+    } catch (error) {
+      // The native notice is a separate platform outcome. A durable import,
+      // deletion or read ACK must survive a synchronous presentation failure.
+      hilog.warn(DOMAIN, 'Reader', 'Native Alert presentation failed: %{private}s', errorMessageOf(error));
+      return undefined;
+    }
+  }
+
   private showSourceImportResult(title: string, message: string): void {
     if (this.route !== 'source') {
       return;
     }
-    this.getUIContext().showAlertDialog({
+    this.showIndexAlert('notice', {
       title,
       message,
-      autoCancel: true,
       primaryButton: {
         value: '知道了',
         action: (): void => {},
@@ -1953,10 +1973,10 @@ struct Index {
       this.showSourceImportResult(title, message);
       return;
     }
-    this.getUIContext().showAlertDialog({
+    const returnTarget = this.sourceManagementReturnTarget;
+    this.showIndexAlert('confirmation-cancelable', {
       title,
       message,
-      autoCancel: true,
       primaryButton: {
         value: '继续管理',
         action: (): void => {},
@@ -1969,7 +1989,8 @@ struct Index {
           }
         },
       },
-    });
+    }, (): boolean => this.sourceManagementSearchKeyword === keyword &&
+      this.sourceManagementReturnTarget === returnTarget);
   }
 
   private requestSourceDelete(sourceIds: string[]): void {
@@ -1980,10 +2001,12 @@ struct Index {
     if (selection.length === 0) {
       return;
     }
-    this.getUIContext().showAlertDialog({
+    const host = this.getSourceToolsOrchestrator();
+    const listRevision = this.sourceToolsSnapshot.sourceListRevision;
+    const selectionRevision = this.sourceToolsSnapshot.selectionRevision;
+    this.showIndexAlert('confirmation-cancelable', {
       title: '删除书源',
       message: `确定删除所选 ${selection.length} 个书源吗？相关 Host 登录会话也会清除，删除后无法恢复。`,
-      autoCancel: true,
       primaryButton: {
         value: '取消',
         action: (): void => {},
@@ -1997,7 +2020,10 @@ struct Index {
           }
         },
       },
-    });
+    }, (): boolean => this.sourceToolsOrchestrator === host && !this.sourceToolsSnapshot.busy &&
+      this.sourceToolsSnapshot.sourceListRevision === listRevision &&
+      this.sourceToolsSnapshot.selectionRevision === selectionRevision && selection.every((id: string): boolean =>
+        this.sourceToolsSnapshot.sources.some((source: BookSource): boolean => source.sourceId === id)));
   }
 
   private openSync(): void {
@@ -2162,10 +2188,9 @@ struct Index {
         'RSS delete confirmation ignored stale subscriptionId=%{private}s', subscriptionId);
       return;
     }
-    this.getUIContext().showAlertDialog({
+    this.showIndexAlert('confirmation-cancelable', {
       title: '删除订阅源',
       message: `确定删除“${subscription.title}”吗？删除后无法恢复。`,
-      autoCancel: true,
       primaryButton: {
         value: '取消',
         action: (): void => {},
@@ -2174,7 +2199,8 @@ struct Index {
         value: '删除',
         action: (): void => this.confirmRssSubscriptionDelete(subscriptionId),
       },
-    });
+    }, (): boolean => this.rssSubscriptions().find((candidate: RssSubscription): boolean =>
+      candidate.subscriptionId === subscriptionId) === subscription);
   }
 
   private requestRssSourceImport(): void {
@@ -2184,10 +2210,11 @@ struct Index {
     if (this.route !== 'rssSubscriptionManagement') {
       return;
     }
-    this.getUIContext().showAlertDialog({
+    const host = this.getRssOrchestrator();
+    const importVisible = this.jsonImportVisible;
+    this.showIndexAlert('confirmation-cancelable', {
       title: '导入 RSS 源',
       message: '“合并导入”保留现有来源；“覆盖全部”会原子替换当前 RSS 来源与阅读状态。',
-      autoCancel: true,
       primaryButton: {
         value: '合并导入',
         action: (): void => this.openJsonImport('rssMerge'),
@@ -2197,7 +2224,7 @@ struct Index {
         fontColor: readerAppColor('app.Index.requestRssSourceImport.showAlertDialog.FFB42318', this.appThemeScheme),
         action: (): void => this.openJsonImport('rssReplace'),
       },
-    });
+    }, (): boolean => this.rssOrchestrator === host && this.jsonImportVisible === importVisible);
   }
 
   private importRssSources(replaceExisting: boolean, onlineUrl?: string): void {
@@ -2237,10 +2264,9 @@ struct Index {
     if (this.route !== 'rssSubscriptionManagement') {
       return;
     }
-    this.getUIContext().showAlertDialog({
+    this.showIndexAlert('notice', {
       title,
       message,
-      autoCancel: true,
       primaryButton: {
         value: '知道了',
         action: (): void => {},
@@ -3626,10 +3652,11 @@ struct Index {
     if (this.remoteReadingSession === undefined || this.offlineMutationActiveKey.length > 0) {
       return;
     }
-    this.getUIContext().showAlertDialog({
+    const session = this.remoteReadingSession;
+    const generation = this.remoteSessionGeneration;
+    this.showIndexAlert('confirmation-cancelable', {
       title: '清除本书离线内容',
       message: '将删除本书已下载的正文和图片，书架、阅读进度与书签不会受影响。',
-      autoCancel: true,
       primaryButton: {
         value: '取消',
         action: (): void => {},
@@ -3639,7 +3666,8 @@ struct Index {
         fontColor: readerAppColor('app.Index.requestClearDirectoryBookOffline.showAlertDialog.FFB42318', this.appThemeScheme),
         action: (): void => this.clearDirectoryBookOffline(),
       },
-    });
+    }, (): boolean => this.remoteReadingSession === session && this.remoteSessionGeneration === generation &&
+      this.offlineMutationActiveKey.length === 0);
   }
 
   private clearDirectoryBookOffline(): void {
@@ -5591,13 +5619,13 @@ struct Index {
       this.showReadingFailure('正文未更新', error.message);
       return undefined;
     }
-    const accepted = await new Promise<boolean>((resolve): void => {
-      this.getUIContext().showAlertDialog({ title: '需要重新验证本章缓存', message: error.message,
-        autoCancel: false,
-        primaryButton: { value: '刷新本章', action: (): void => resolve(true) },
-        secondaryButton: { value: '保留缓存', action: (): void => resolve(false) },
-      });
-    }).catch((): boolean => false);
+    const session = this.remoteReadingSession;
+    const lease = this.showIndexAlert('choice-blocking', {
+      title: '需要重新验证本章缓存', message: error.message,
+      primaryButton: { value: '刷新本章', action: (): void => {} },
+      secondaryButton: { value: '保留缓存', action: (): void => {} },
+    }, (): boolean => isCurrent() && this.remoteReadingSession === session);
+    const accepted = lease !== undefined && await lease.decision === 'primary';
     if (!accepted || !isCurrent()) return undefined;
     this.remoteContentVerdict = 'verifying';
     try {
@@ -5647,10 +5675,9 @@ struct Index {
   }
 
   private showReadingFailure(title: string, message: string): void {
-    this.getUIContext().showAlertDialog({
+    this.showIndexAlert('notice', {
       title,
       message: message.trim().length > 0 ? message : '阅读会话未能继续，请稍后重试。',
-      autoCancel: true,
       primaryButton: {
         value: '知道了',
         action: (): void => {},
@@ -6354,6 +6381,7 @@ struct Index {
   }
 
   private nextNavigationGeneration(): number {
+    this.nativeAlertOwner.retire();
     this.shelfReadingPreparation = false;
     this.pendingLocalDirectoryProjection = undefined;
     this.navigationGeneration += 1;
