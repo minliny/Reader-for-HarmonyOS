@@ -178,6 +178,7 @@
     "test-signing-authority.mjs",
     "test-source-check-progress.mjs",
     "test-source-host-wiring.mjs",
+    "test-source-management-typography.mjs",
     "test-source-product-tools.mjs",
     "test-source-switch-transaction.mjs",
     "test-source-switch-typography.mjs",
