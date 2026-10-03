@@ -45,6 +45,12 @@ const members=['group','build','displayIntro','coverWidth','coverHeight'];
 if (card.includes('private coverErrorHandler')) members.push('coverErrorHandler');
 const { owner } = createReaderBuilderProbe(card,members,{
   ...runtime.sdk, SynchedPropertyNesedObjectPU: runtime.sdk.SynchedPropertyNestedObjectPU, bookIntroText, bookAuthorLabel, ImageFit:{Cover:'Cover'}, LengthMetrics:{vp:v=>v},
+  TYPE_SEARCH_RESULT_COVER_TITLE:{fontFamily:'ReaderNotoSerifSCBold',fontWeight:700,fontSizeFp:15,lineHeightFp:18.3},
+  TYPE_SEARCH_RESULT_TITLE:{fontFamily:'ReaderNotoSerifSCBold',fontWeight:700,fontSizeFp:15,lineHeightFp:18.3},
+  TYPE_SEARCH_RESULT_AUTHOR:{fontFamily:'ReaderNotoSansSCUIRegular',fontWeight:400,fontSizeFp:12,lineHeightFp:15},
+  TYPE_SEARCH_RESULT_CHAPTER:{fontFamily:'ReaderNotoSansSCUIRegular',fontWeight:400,fontSizeFp:11,lineHeightFp:13.75},
+  TYPE_SEARCH_RESULT_INTRO:{fontFamily:'ReaderNotoSansSCUIRegular',fontWeight:400,fontSizeFp:10,lineHeightFp:12},
+  TYPE_SEARCH_RESULT_TAG:{fontFamily:'ReaderInter',fontWeight:700,fontSizeFp:10,lineHeightFp:15},
 },runtime.hooks);
 owner.updateStateVars({group:observed}); owner.appThemeScheme='day'; owner.isTablet=false; owner.cardWidth=390;
 owner.initialRender();
