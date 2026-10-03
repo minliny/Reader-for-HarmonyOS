@@ -1,6 +1,7 @@
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderCoreGateway, type ShelfBook } from '../../app/ReaderCoreGateway';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 
 export interface BookGroup {
   groupId: number;
@@ -29,6 +30,9 @@ export interface BookshelfManagementData {
 export class BookshelfManagementGateway {
   private readonly owner: ReaderRuntimeOwner;
   private readonly shelf: ReaderCoreGateway;
+  private writeEvidence: ReaderWriteEvidence | undefined;
+
+  observeWrites(evidence: ReaderWriteEvidence | undefined): void { this.writeEvidence = evidence; }
 
   constructor(owner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.owner = owner;
@@ -58,21 +62,26 @@ export class BookshelfManagementGateway {
   async createGroup(groupName: string, order: number): Promise<BookGroup> {
     const normalizedName = this.requireGroupName(groupName);
     this.requireInteger(order, 'book-group.create order');
+    this.writeEvidence?.dispatched();
     const result = await this.owner.request('book-group.create', {
       groupName: normalizedName,
       order,
       enableRefresh: true,
       show: true,
     });
-    return this.decodeGroup(this.requiredObject(result.data, 'group', 'book-group.create'));
+    const created = this.decodeGroup(this.requiredObject(result.data, 'group', 'book-group.create'));
+    this.writeEvidence?.confirmed();
+    return created;
   }
 
   async updateGroup(group: BookGroup, groupName: string, order: number): Promise<BookGroup> {
     this.requireInteger(group.groupId, 'book-group.update groupId');
     this.requireInteger(order, 'book-group.update order');
+    const normalizedName = this.requireGroupName(groupName);
+    this.writeEvidence?.dispatched();
     const result = await this.owner.request('book-group.update', {
       groupId: group.groupId,
-      groupName: this.requireGroupName(groupName),
+      groupName: normalizedName,
       order,
       enableRefresh: group.enableRefresh,
       show: group.show,
@@ -81,10 +90,12 @@ export class BookshelfManagementGateway {
     if (updated.groupId !== group.groupId) {
       throw new Error('book-group.update returned a mismatched group id');
     }
+    this.writeEvidence?.confirmed();
     return updated;
   }
 
   async setGroupShown(group: BookGroup, shown: boolean): Promise<BookGroup> {
+    this.writeEvidence?.dispatched();
     const result = await this.owner.request('book-group.update', {
       groupId: group.groupId,
       show: shown,
@@ -93,21 +104,25 @@ export class BookshelfManagementGateway {
     if (updated.groupId !== group.groupId || updated.show !== shown) {
       throw new Error('book-group.update returned inconsistent visibility');
     }
+    this.writeEvidence?.confirmed();
     return updated;
   }
 
   async deleteGroup(groupId: number): Promise<boolean> {
     this.requireInteger(groupId, 'book-group.delete groupId');
+    this.writeEvidence?.dispatched();
     const result = await this.owner.request('book-group.delete', { groupId });
     const deleted = result.data['deleted'];
     const echoedId = result.data['groupId'];
     if (typeof deleted !== 'boolean' || echoedId !== groupId) {
       throw new Error('book-group.delete returned invalid data');
     }
+    this.writeEvidence?.confirmed();
     return deleted;
   }
 
   async assignGroup(book: ShelfBook, group: string): Promise<ShelfBook> {
+    this.writeEvidence?.dispatched();
     const result = await this.owner.request('bookshelf.group.assign', {
       sourceId: book.sourceId,
       bookId: book.bookId,
@@ -119,6 +134,7 @@ export class BookshelfManagementGateway {
     if (updated.sourceId !== book.sourceId || updated.bookId !== book.bookId) {
       throw new Error('bookshelf.group.assign returned a mismatched composite identity');
     }
+    this.writeEvidence?.confirmed();
     return updated;
   }
 

@@ -447,6 +447,7 @@
     "test-conventional-typography.mjs",
     "test-conventional-typography-sdk.mjs",
     "test-conventional-typography-coverage.mjs",
-    "test-choice-row-surface.mjs"
+    "test-choice-row-surface.mjs",
+    "test-management-receipt-consumers.mjs"
   ]
 }

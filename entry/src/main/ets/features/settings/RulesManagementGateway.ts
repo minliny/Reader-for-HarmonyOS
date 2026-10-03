@@ -1,5 +1,6 @@
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 
 export interface ManagedReplaceRule {
   id: number;
@@ -85,6 +86,9 @@ export interface RuleBundleExport {
 /** Typed boundary for the four Core-owned rule entity families. */
 export class RulesManagementGateway {
   private readonly owner: ReaderRuntimeOwner;
+  private writeEvidence: ReaderWriteEvidence | undefined;
+
+  observeWrites(evidence: ReaderWriteEvidence | undefined): void { this.writeEvidence = evidence; }
 
   constructor(owner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.owner = owner;
@@ -119,15 +123,19 @@ export class RulesManagementGateway {
     if (draft.id !== undefined) {
       params['id'] = draft.id;
     }
+    this.writeEvidence?.dispatched();
     await this.owner.request('replace.persist', {
       operation: draft.id === undefined ? 'create' : 'update',
       params,
     });
+    this.writeEvidence?.confirmed();
   }
 
   async deleteReplaceRule(id: number): Promise<void> {
     this.assertSafeInteger(id, 'replace rule id');
+    this.writeEvidence?.dispatched();
     await this.owner.request('replace.persist', { operation: 'delete', params: { id } });
+    this.writeEvidence?.confirmed();
   }
 
   async listTxtTocRules(): Promise<ManagedTxtTocRule[]> {
@@ -144,17 +152,21 @@ export class RulesManagementGateway {
       serialNumber: draft.serialNumber,
       enable: draft.enable,
     };
+    this.writeEvidence?.dispatched();
     if (draft.id === undefined) {
       await this.owner.request('txt-toc-rule.create', params);
     } else {
       params['id'] = draft.id;
       await this.owner.request('txt-toc-rule.update', params);
     }
+    this.writeEvidence?.confirmed();
   }
 
   async deleteTxtTocRule(id: number): Promise<void> {
     this.assertSafeInteger(id, 'TXT TOC rule id');
+    this.writeEvidence?.dispatched();
     await this.owner.request('txt-toc-rule.delete', { id });
+    this.writeEvidence?.confirmed();
   }
 
   async listDictRules(): Promise<ManagedDictRule[]> {
@@ -164,6 +176,7 @@ export class RulesManagementGateway {
   }
 
   async saveDictRule(draft: DictRuleDraft): Promise<void> {
+    this.writeEvidence?.dispatched();
     await this.owner.request('dict-rule.put', {
       name: draft.name.trim(),
       urlRule: draft.urlRule,
@@ -171,10 +184,13 @@ export class RulesManagementGateway {
       enabled: draft.enabled,
       sortNumber: draft.sortNumber,
     });
+    this.writeEvidence?.confirmed();
   }
 
   async deleteDictRule(name: string): Promise<void> {
+    this.writeEvidence?.dispatched();
     await this.owner.request('dict-rule.delete', { name });
+    this.writeEvidence?.confirmed();
   }
 
   async listRuleSubscriptions(): Promise<ManagedRuleSubscription[]> {
@@ -200,6 +216,7 @@ export class RulesManagementGateway {
     if (update < 0) {
       throw new Error('rule subscription update must not be negative');
     }
+    this.writeEvidence?.dispatched();
     await this.owner.request('rule-sub.put', {
       id: draft.id ?? Date.now(),
       name,
@@ -209,6 +226,7 @@ export class RulesManagementGateway {
       autoUpdate: draft.autoUpdate,
       update,
     });
+    this.writeEvidence?.confirmed();
   }
 
   /**
@@ -236,7 +254,9 @@ export class RulesManagementGateway {
 
   async deleteRuleSubscription(id: number): Promise<void> {
     this.assertSafeInteger(id, 'rule subscription id');
+    this.writeEvidence?.dispatched();
     await this.owner.request('rule-sub.delete', { id });
+    this.writeEvidence?.confirmed();
   }
 
   async exportBundle(): Promise<RuleBundleExport> {
@@ -256,13 +276,16 @@ export class RulesManagementGateway {
   }
 
   async importBundle(json: string, replaceExisting: boolean): Promise<string> {
+    this.writeEvidence?.dispatched();
     const result = await this.owner.request('rule-bundle.import', { json, replaceExisting });
     const counts = this.requireObject(result.data['counts'], 'rule-bundle.import counts');
     if (result.data['schemaVersion'] !== 1 || result.data['replaceExisting'] !== replaceExisting) {
       throw new Error('rule-bundle.import returned mismatched data');
     }
-    return `已导入 ${this.requireCount(counts, 'replaceRules') + this.requireCount(counts, 'dictRules') +
+    const status = `已导入 ${this.requireCount(counts, 'replaceRules') + this.requireCount(counts, 'dictRules') +
       this.requireCount(counts, 'txtTocRules') + this.requireCount(counts, 'ruleSubscriptions')} 条 Core 规则实体`;
+    this.writeEvidence?.confirmed();
+    return status;
   }
 
   private decodeReplaceRule(value: unknown): ManagedReplaceRule {

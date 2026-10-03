@@ -1,5 +1,6 @@
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 
 export type RssSubscription = {
   subscriptionId: string;
@@ -116,6 +117,9 @@ export type RssSubscriptionSaveResult = {
  */
 export class RssGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
+  private writeEvidence: ReaderWriteEvidence | undefined;
+
+  observeWrites(evidence: ReaderWriteEvidence | undefined): void { this.writeEvidence = evidence; }
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.runtimeOwner = runtimeOwner;
@@ -203,6 +207,7 @@ export class RssGateway {
     onWriteDispatched: () => void = (): void => {},
   ): Promise<RssSourceImportResult> {
     onWriteDispatched();
+    this.writeEvidence?.dispatched();
     const result = await this.runtimeOwner.request('rss-source.import', {
       json,
       replaceExisting,
@@ -212,6 +217,7 @@ export class RssGateway {
     if (echoedReplace !== replaceExisting) {
       throw new Error('rss-source.import returned a mismatched replaceExisting');
     }
+    this.writeEvidence?.confirmed();
     return { imported, replaceExisting: echoedReplace };
   }
 

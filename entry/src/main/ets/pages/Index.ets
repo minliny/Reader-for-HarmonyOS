@@ -882,27 +882,7 @@ struct Index {
           onRemoveSelected: (keys: string[]): void => this.requestRemoveShelfBooks(keys),
         });
       } else if (this.route === 'bookshelfManagement') {
-        BookshelfManagementPage({
-          snapshot: this.bookshelfManagementSnapshot,
-          onBack: (): void => this.returnToBookshelf(),
-          onGroupNameChanged: (value: string): void =>
-            this.bookshelfHost.updateGroupName(value),
-          onGroupOrderChanged: (value: string): void =>
-            this.bookshelfHost.updateGroupOrder(value),
-          onSelectGroup: (groupId: number): void =>
-            this.bookshelfHost.selectGroup(groupId),
-          onClearGroupEditor: (): void => this.bookshelfHost.clearGroupEditor(),
-          onSaveGroup: (): void => this.bookshelfHost.saveGroup(),
-          onToggleGroupShown: (groupId: number): void =>
-            this.bookshelfHost.toggleGroupShown(groupId),
-          onDeleteGroup: (groupId: number): void =>
-            this.bookshelfHost.deleteGroup(groupId),
-          onSelectBook: (sourceId: string, bookId: string): void =>
-            this.bookshelfHost.selectBook(sourceId, bookId),
-          onAssignmentGroupChanged: (value: string): void =>
-            this.bookshelfHost.updateAssignmentGroup(value),
-          onAssignBook: (): void => this.bookshelfHost.assignSelectedBook(),
-        });
+        this.bookshelfManagementContent();
       } else if (this.route === 'search') {
         SearchPage({
           viewState: this.searchHost.viewState,
@@ -1012,26 +992,7 @@ struct Index {
           onClearCache: (): Promise<boolean> => this.clearTextCache(),
         });
       } else if (this.route === 'rulesManagement') {
-        RulesManagementPage({
-          snapshot: this.rulesManagementSnapshot,
-          onBack: (): void => this.returnFromRulesManagement(),
-          onSaveReplace: (draft: ReplaceRuleDraft): void =>
-            this.getRulesManagementOrchestrator().saveReplaceRule(draft),
-          onDeleteReplace: (id: number): void => this.getRulesManagementOrchestrator().deleteReplaceRule(id),
-          onSaveTxtToc: (draft: TxtTocRuleDraft): void =>
-            this.getRulesManagementOrchestrator().saveTxtTocRule(draft),
-          onDeleteTxtToc: (id: number): void => this.getRulesManagementOrchestrator().deleteTxtTocRule(id),
-          onSaveDict: (draft: DictRuleDraft): void => this.getRulesManagementOrchestrator().saveDictRule(draft),
-          onDeleteDict: (name: string): void => this.getRulesManagementOrchestrator().deleteDictRule(name),
-          onSaveSubscription: (draft: RuleSubscriptionDraft): void =>
-            this.getRulesManagementOrchestrator().saveRuleSubscription(draft),
-          onDeleteSubscription: (id: number): void =>
-            this.getRulesManagementOrchestrator().deleteRuleSubscription(id),
-          onRefreshSubscription: (subscription: ManagedRuleSubscription): void =>
-            this.getRulesManagementOrchestrator().refreshRuleSubscription(subscription),
-          onExportBundle: (): void => this.getRulesManagementOrchestrator().exportBundle(),
-          onImportBundle: (): void => this.openJsonImport('ruleBundle'),
-        });
+        this.rulesManagementContent();
       } else if (this.route === 'source') {
         SourceManagementPage({
           sources: this.sourceSources,
@@ -1472,6 +1433,57 @@ struct Index {
     } finally { this.editingShelfGroupBusy = false; }
   }
 
+  @Builder
+  private bookshelfManagementContent() {
+    BookshelfManagementPage({
+      snapshot: this.bookshelfManagementSnapshot,
+      onBack: (): void => this.returnToBookshelf(),
+      onGroupNameChanged: (value: string): void =>
+        this.bookshelfHost.updateGroupName(value),
+      onGroupOrderChanged: (value: string): void =>
+        this.bookshelfHost.updateGroupOrder(value),
+      onSelectGroup: (groupId: number): void =>
+        this.bookshelfHost.selectGroup(groupId),
+      onClearGroupEditor: (): void => this.bookshelfHost.clearGroupEditor(),
+      onSaveGroup: (): void => this.bookshelfHost.saveGroup(),
+      onToggleGroupShown: (groupId: number): void =>
+        this.bookshelfHost.toggleGroupShown(groupId),
+      onDeleteGroup: (groupId: number): void =>
+        this.bookshelfHost.deleteGroup(groupId),
+      onSelectBook: (sourceId: string, bookId: string): void =>
+        this.bookshelfHost.selectBook(sourceId, bookId),
+      onAssignmentGroupChanged: (value: string): void =>
+        this.bookshelfHost.updateAssignmentGroup(value),
+      onAssignBook: (): void => this.bookshelfHost.assignSelectedBook(),
+      onReconcile: (generation: number): void => this.bookshelfHost.reconcileManagement(generation),
+    });
+  }
+
+  @Builder
+  private rulesManagementContent() {
+    RulesManagementPage({
+      snapshot: this.rulesManagementSnapshot,
+      onReconcile: (generation: number): void => this.getRulesManagementOrchestrator().reconcile(generation),
+      onBack: (): void => this.returnFromRulesManagement(),
+      onSaveReplace: (draft: ReplaceRuleDraft): void =>
+        this.getRulesManagementOrchestrator().saveReplaceRule(draft),
+      onDeleteReplace: (id: number): void => this.getRulesManagementOrchestrator().deleteReplaceRule(id),
+      onSaveTxtToc: (draft: TxtTocRuleDraft): void =>
+        this.getRulesManagementOrchestrator().saveTxtTocRule(draft),
+      onDeleteTxtToc: (id: number): void => this.getRulesManagementOrchestrator().deleteTxtTocRule(id),
+      onSaveDict: (draft: DictRuleDraft): void => this.getRulesManagementOrchestrator().saveDictRule(draft),
+      onDeleteDict: (name: string): void => this.getRulesManagementOrchestrator().deleteDictRule(name),
+      onSaveSubscription: (draft: RuleSubscriptionDraft): void =>
+        this.getRulesManagementOrchestrator().saveRuleSubscription(draft),
+      onDeleteSubscription: (id: number): void =>
+        this.getRulesManagementOrchestrator().deleteRuleSubscription(id),
+      onRefreshSubscription: (subscription: ManagedRuleSubscription): void =>
+        this.getRulesManagementOrchestrator().refreshRuleSubscription(subscription),
+      onExportBundle: (): void => this.getRulesManagementOrchestrator().exportBundle(),
+      onImportBundle: (): void => this.openJsonImport('ruleBundle'),
+    });
+  }
+
   private openBookshelfManagement(): void {
     this.nextNavigationGeneration();
     this.readingSessionActive = false;
@@ -1539,7 +1551,7 @@ struct Index {
   }
 
   private getRulesManagementOrchestrator(): RulesManagementOrchestrator {
-    if (this.rulesManagementOrchestrator === undefined) {
+    if (this.rulesManagementOrchestrator === undefined || !this.rulesManagementOrchestrator.owns(ReaderRuntimeOwner.current())) {
       this.rulesManagementOrchestrator = new RulesManagementOrchestrator(
         (snapshot: RulesManagementSnapshot): void => {
           this.rulesManagementSnapshot = snapshot;

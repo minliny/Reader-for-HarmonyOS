@@ -1,3 +1,5 @@
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PageBackBar } from '../common/PageBackBar';
@@ -53,6 +55,7 @@ export struct BookshelfManagementPage {
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop snapshot: BookshelfManagementSnapshot = EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT;
+  onReconcile: (generation: number) => void = (_generation: number): void => {};
   onBack: () => void = (): void => {};
   onGroupNameChanged: (value: string) => void = (_value: string): void => {};
   onGroupOrderChanged: (value: string) => void = (_value: string): void => {};
@@ -74,6 +77,7 @@ export struct BookshelfManagementPage {
       Scroll() {
         Column({ space: TOK_SPACE_MD }) {
           this.statusCard();
+          this.recoveryAction();
           this.statisticsCard();
           this.groupEditorCard();
           this.groupsCard();
@@ -112,8 +116,17 @@ export struct BookshelfManagementPage {
     return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), TOK_SPACE_MD);
   }
   @Builder
+  private recoveryAction() {
+    if (this.recovery().canRetry) {
+      ReaderRecoveryAction({ generation: this.recovery().generation, onReconcile: this.onReconcile });
+    }
+  }
+
+  private recovery(): ReaderRecoveryView { return readerRecoveryView(this.snapshot.receipt, this.snapshot.readFacts); }
+
+  @Builder
   private statusCard() {
-    Text(this.snapshot.statusMessage)
+    Text(this.recovery().visible ? this.recovery().message : this.snapshot.statusMessage)
       .width('100%')
       .fontFamily(TYPE_SHELF_MANAGEMENT_STATUS.fontFamily)
       .fontWeight(TYPE_SHELF_MANAGEMENT_STATUS.fontWeight)

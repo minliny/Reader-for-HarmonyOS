@@ -54,6 +54,7 @@ export class BookshelfHost {
     this.getManagementOrchestrator().updateAssignmentGroup(value);
   }
   assignSelectedBook(): void { this.getManagementOrchestrator().assignSelectedBook(); }
+  reconcileManagement(generation: number): void { this.getManagementOrchestrator().reconcile(generation); }
 
   assignDefaultGroup(book: ShelfBook): Promise<ShelfBook> {
     return new BookshelfManagementGateway(this.owner()).assignGroup(book, '');
@@ -68,7 +69,7 @@ export class BookshelfHost {
   }
 
   private getManagementOrchestrator(): BookshelfManagementOrchestrator {
-    if (this.managementOrchestrator === undefined) {
+    if (this.managementOrchestrator === undefined || !this.managementOrchestrator.owns(this.owner())) {
       this.managementOrchestrator = new BookshelfManagementOrchestrator(
         this.emitManagementSnapshot,
         this.isManagementCurrent,

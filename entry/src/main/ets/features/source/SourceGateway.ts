@@ -2,6 +2,7 @@ import type { JsonObject } from '@reader/core-harmony';
 import { errorMessageOf } from '../../app/ErrorMessage';
 import { httpUrlHostname, isPrivateNetworkTarget } from '../../app/HttpTransportPolicy';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { classifyReaderSource, type ReaderSourceCategory } from './ReaderSourceCategory';
 
 export type BookSource = {
@@ -133,6 +134,9 @@ const MAX_BOOK_SOURCE_DOCUMENT_ENTRIES = 5000;
  */
 export class SourceGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
+  private writeEvidence: ReaderWriteEvidence | undefined;
+
+  observeWrites(evidence: ReaderWriteEvidence | undefined): void { this.writeEvidence = evidence; }
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.runtimeOwner = runtimeOwner;
@@ -269,6 +273,7 @@ export class SourceGateway {
       }
       this.assertImportCurrent(shouldContinue, sourceIds.length);
       try {
+        this.writeEvidence?.dispatched();
         const result = await this.runtimeOwner.request('source.import', {
           sourceId,
           bookSource,
@@ -281,6 +286,7 @@ export class SourceGateway {
           throw new Error('source.import returned invalid or mismatched data');
         }
         sourceIds.push(echoedSourceId);
+        this.writeEvidence?.confirmed();
       } catch (error) {
         const message = errorMessageOf(error);
         failures.push({ index, sourceId, message });
@@ -421,6 +427,7 @@ export class SourceGateway {
     if (patch.enabled === undefined) {
       throw new Error('source.update requires an enabled flag');
     }
+    this.writeEvidence?.dispatched();
     const result = await this.runtimeOwner.request('source.update', {
       sourceId,
       enabled: patch.enabled,
@@ -436,6 +443,7 @@ export class SourceGateway {
           `got=${source['enabled']}`,
       );
     }
+    this.writeEvidence?.confirmed();
   }
 
   /** Delete sources in Core, then idempotently remove their Host sessions. */
@@ -443,12 +451,14 @@ export class SourceGateway {
     if (sourceIds.length === 0) {
       throw new Error('source.delete requires at least one sourceId');
     }
+    this.writeEvidence?.dispatched();
     const result = await this.runtimeOwner.request('source.delete', { sourceIds });
     const deleted = result.data['deleted'];
     if (typeof deleted !== 'number' || !Number.isInteger(deleted) || deleted < 0 ||
       deleted > sourceIds.length) {
       throw new Error('source.delete returned invalid deleted count');
     }
+    this.writeEvidence?.confirmed();
     let cookieCleanupFailures = 0;
     for (const sourceId of sourceIds) {
       try {

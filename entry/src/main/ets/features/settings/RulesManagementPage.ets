@@ -1,3 +1,5 @@
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_CAPTION, TYPE_FORM_STATUS, TYPE_RULES_COMPACT_ACTION, TYPE_RULES_ENTITY_TITLE, TYPE_RULES_INHERITED_DESCRIPTION, TYPE_RULES_INHERITED_NOTE } from '../common/ReaderTypography';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -56,6 +58,7 @@ export struct RulesManagementPage {
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop snapshot: RulesManagementSnapshot = EMPTY_RULES_MANAGEMENT_SNAPSHOT;
+  onReconcile: (generation: number) => void = (_generation: number): void => {};
   onBack: () => void = (): void => {};
   onSaveReplace: (draft: ReplaceRuleDraft) => void = (_draft: ReplaceRuleDraft): void => {};
   onDeleteReplace: (id: number) => void = (_id: number): void => {};
@@ -108,6 +111,7 @@ export struct RulesManagementPage {
       Scroll() {
         Column({ space: TOK_SPACE_MD }) {
           this.statusCard();
+          this.recoveryAction();
           this.bundleCard();
           this.replaceCard();
           this.txtTocCard();
@@ -139,8 +143,17 @@ export struct RulesManagementPage {
     return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), TOK_SPACE_MD);
   }
   @Builder
+  private recoveryAction() {
+    if (this.recovery().canRetry) {
+      ReaderRecoveryAction({ generation: this.recovery().generation, onReconcile: this.onReconcile });
+    }
+  }
+
+  private recovery(): ReaderRecoveryView { return readerRecoveryView(this.snapshot.receipt, this.snapshot.readFacts); }
+
+  @Builder
   private statusCard() {
-    Text(this.snapshot.statusMessage.length > 0 ? this.snapshot.statusMessage :
+    Text(this.recovery().visible ? this.recovery().message : this.snapshot.statusMessage.length > 0 ? this.snapshot.statusMessage :
       '校验、CRUD、导入导出与持久化均由 Rust Core 负责')
       .width('100%')
       .fontFamily(TYPE_FORM_STATUS.fontFamily as string)
