@@ -5,7 +5,12 @@ import type { ReaderTextStyle } from './ReaderTypography';
 /** The finite row spec keeps AUTO attributes absent, rather than calling a
  * native setter with undefined (which has different platform semantics). */
 class ReaderChoiceLabelModifier implements AttributeModifier<TextAttribute> {
-  constructor(private id: ReaderChoiceSpecId, private selected: boolean) {}
+  private id: ReaderChoiceSpecId;
+  private selected: boolean;
+  constructor(id: ReaderChoiceSpecId, selected: boolean) {
+    this.id = id;
+    this.selected = selected;
+  }
   applyNormalAttribute(instance: TextAttribute): void {
     const spec = resolveReaderChoiceSpec(this.id);
     const text = this.selected ? spec.selectedText : spec.text;

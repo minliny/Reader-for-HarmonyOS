@@ -4,7 +4,14 @@ import { readerAppColor } from './ReaderThemeRegistry';
 /** Controlled native field. Draft and keyboard ownership remain with its
  * caller; AUTO omissions and credential masking belong to finite variants. */
 class ReaderFormFieldModifier implements AttributeModifier<TextInputAttribute> {
-  constructor(private id: ReaderFormFieldSpecId, private scheme: string, private accessibilityLabel: string) {}
+  private id: ReaderFormFieldSpecId;
+  private scheme: string;
+  private accessibilityLabel: string;
+  constructor(id: ReaderFormFieldSpecId, scheme: string, accessibilityLabel: string) {
+    this.id = id;
+    this.scheme = scheme;
+    this.accessibilityLabel = accessibilityLabel;
+  }
   // Shared normal recipe; the two native modifier signatures are thin ArkUI
   // adapters, so input and multiline fields never acquire duplicate recipes.
   applyNormalAttribute(instance: TextInputAttribute | TextAreaAttribute): void {
@@ -36,7 +43,14 @@ class ReaderFormFieldModifier implements AttributeModifier<TextInputAttribute> {
   }
 }
 class ReaderFormAreaModifier implements AttributeModifier<TextAreaAttribute> {
-  constructor(private id: ReaderFormFieldSpecId, private scheme: string, private accessibilityLabel: string) {}
+  private id: ReaderFormFieldSpecId;
+  private scheme: string;
+  private accessibilityLabel: string;
+  constructor(id: ReaderFormFieldSpecId, scheme: string, accessibilityLabel: string) {
+    this.id = id;
+    this.scheme = scheme;
+    this.accessibilityLabel = accessibilityLabel;
+  }
   applyNormalAttribute(instance: TextAreaAttribute): void { new ReaderFormFieldModifier(this.id, this.scheme, this.accessibilityLabel).applyNormalAttribute(instance); }
 }
 @Component
