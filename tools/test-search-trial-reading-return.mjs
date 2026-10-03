@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import {compileHost,setRuntime} from './lib/reading-entry-owner-probe.mjs';
+import {fixture as sourceFixture,setCurrentRuntime,gatewayExports} from './lib/source-switch-owner-probe.mjs';
+import {sourceSwitchMethods} from './lib/source-switch-sdk-consumer.mjs';
 import { registerHooks } from 'node:module';
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
 const {resolveBookshelfBook}=await import('../entry/src/main/ets/features/bookshelf/BookshelfBookIdentity.ts');
@@ -23,11 +26,11 @@ const deferred = () => {
 };
 const methods = ['installRemoteReadingSession',
   'onSearchResultSelected', 'searchAcquisitionCandidate', 'remoteSeedForSearchBook', 'openRemoteBookDetail',
-  'openShelfBook', 'openShelfBookInfo', 'openDetailSourceSwitch', 'onPickSource', 'switchPreviewSource',
+  'openShelfBook', 'openShelfBookInfo', 'openDetailSourceSwitch', 'onPickSource',
   'openReading', 'presentPreparedReading', 'onReaderExited', 'currentReaderPresentationIdentity', 'isCurrentRuntime', 'returnToReadingOrigin',
   'returnFromDetail', 'returnToSearch', 'returnToBookshelf', 'nextNavigationGeneration',
-  'isSourceSwitchActive', 'isKnownDetailChapter', 'probeRemoteContentVerdict',
-  'remoteContentVerdictLabel', 'presentSourceSwitchAcquisitionFailure', 'openSourceSwitch',
+  'isKnownDetailChapter', 'probeRemoteContentVerdict',
+  'remoteContentVerdictLabel','openSourceSwitch',
 ];
 
 function fixture({ firstFails = false, origin = 'search' } = {}) {
@@ -55,7 +58,7 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
       chapterUrl:session.entries[0].url,contentVersion:'body',content:'正文',images:[]};
   };
   const owner = { noteReadingPreparationIntent() {}, bookAcquisitions: () => ({
-    readingProjectionRevision:()=>0, acquireBook: seed => acquire(seed, 'switch.acquire'),
+    readingProjectionRevision:()=>0,sourceRegistryRevision:()=>1,subscribe:()=>()=>{}, acquireBook: seed => acquire(seed, 'switch.acquire'),
     acquireBookWithBackgroundRefresh: async seed => ({ session: await acquire(seed, 'detail.acquire') }),
     acquireCandidateGroup: async (candidates,options) => {
       assert.equal(candidates.length,1,'this navigation fixture selects one new-book candidate');
@@ -67,8 +70,26 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
     },
     setPreparationVisible() {}, recentFailures: () => [], endSearch: () => calls.push('search.end'),
   }) };
-  const Index = productionMotionMethods(source, methods, { resolveBookshelfBook,
-    ...readingEvidence,captureRemotePositionContext,RemoteChapterCacheRefreshError, searchCandidateRank, LOCAL_SOURCE_ID: 'local', ReaderRuntimeOwner: { current: () => owner },
+  owner.getUIAbilityContext=()=>({filesDir:'/private-files'});
+  owner.request=async(method,p)=>{
+    if(method==='bookmark.list')return{data:{bookmarks:[]}};
+    if(method==='source.list')return{data:{sources:[first,second,third].map(b=>({sourceId:b.sourceId,name:b.sourceName,enabled:true,sourceVersion:'v1'}))}};
+    if(method==='search-book.related')return{data:{books:[first,second,third].map(b=>({origin:b.sourceId,bookUrl:b.bookId,name:b.title,author:b.author,time:1,relationKey:'same-book',relationRevision:'r1',sourceVersion:'v1'})),snapshotRevision:'s1',complete:true,
+      sourceVersions:[first,second,third].map(b=>({sourceId:b.sourceId,sourceVersion:'v1',enabled:true}))}};
+    if(method==='change.bookSource')return{data:{candidates:[]}};
+    if(method==='source.switch.pending.list')return{data:{pending:[]}};
+    if(method==='bookshelf.get')return{data:{book:rows.get(p.sourceId+'\0'+p.bookId)??null}};
+    calls.push('UNEXPECTED.native.'+method);throw Error('unexpected trial native IO '+method);
+  };
+  const Source=sourceFixture({shared:true,open:false,preview:true}).Constructor;setCurrentRuntime(owner);setRuntime(owner);
+  const authority={current:()=>owner,isCurrent:r=>r===owner};
+  const Remote=class {async loadProgress(){return{kind:'missing'};}async loadChapter(session){return loadChapter(session);}};
+  const Core=class {async loadShelfBook(sourceId,bookId){calls.push('shelf.read');return rows.get(sourceId+'\0'+bookId);}async upsertBook(){calls.push('UNEXPECTED.shelf.write');throw Error('preview cannot add a book');}};
+  const Entry=compileHost(undefined,{ReaderRuntimeOwner:authority,RemoteReadingFlowGateway:Remote,ReaderCoreGateway:Core,
+    ReadingOfflineGateway:class {async loadDirectoryProjection(session){return session.entries;}}});
+  const emptyAdmission={generation:0,adding:false,cancelling:false,confirmation:'none'};
+  const Index = productionMotionMethods(source, [...new Set([...methods,...sourceSwitchMethods])], { resolveBookshelfBook,
+    ...readingEvidence,...gatewayExports,SourceSwitchHost:Source,ReadingEntryHost:Entry,EMPTY_READABLE_ADMISSION:emptyAdmission,captureRemotePositionContext,RemoteChapterCacheRefreshError, searchCandidateRank, LOCAL_SOURCE_ID: 'local', ReaderRuntimeOwner: { current: () => owner },
     RemoteReadingFlowGateway: class {
       async loadProgress() { return {kind:'missing'}; }
       async loadChapter(session) { return loadChapter(session); }
@@ -82,7 +103,7 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
     RemoteReadingGatewayError: class extends Error {},
     remoteReadingFailureRecord: error => ({ message: error.message }),
     remoteReadingFailureKindOf: () => 'SOURCE_PARSE_FAILED', verdictForFailureKind: () => 'parseFailed',
-    sourceSwitchCandidateKey: (sourceId, bookId) => `${sourceId}\0${bookId}`,
+    sourceSwitchCandidateKey:gatewayExports.sourceSwitchCandidateKey,
     errorMessageOf: error => error.message, DOMAIN: 0,
     hilog: { info() {}, warn() {}, error() {} },
   });
@@ -95,14 +116,14 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
   const orchestrator = { resume: () => calls.push('search.resume'), close: () => calls.push('search.close'),
     open: () => calls.push('UNEXPECTED.search.open'), search: () => calls.push('UNEXPECTED.search.search') };
   Object.assign(h, {
-    mountedRuntimeOwner: owner, shelfReceiptRetired: false,
+    mountedRuntimeOwner: owner, shelfReceiptRetired: false,detailShelfAdmissionMount:1,detailReadableAdmission:()=>emptyAdmission,
     currentSourceSwitchTransactionId:()=>undefined, readingDetailForShelf:book=>({...book}),
     remoteSessionGeneration:0,remoteContentProbeGeneration:0,route: origin, readingOriginRoute: 'detail', detailReturnRoute: 'bookshelf',
     readingSessionActive: false, navigationGeneration: 0, shelfReadingPreparation: false,
-    searchHost:{publication:{shelfAt:()=>[]},resume:()=>calls.push('search.resume'),close:()=>calls.push('search.close')},searchPublicationRevision:0, detailToc: [], detailInBookshelf: false, shelfBooks: [], searchDetailCandidates: [], remoteCatalogRefreshAt: new Map(),
-    shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false}, offlineMutationGeneration: 0,
+    searchHost:{publication:{shelfAt:()=>[]},searchedSourceIds:()=>[],resume:()=>calls.push('search.resume'),close:()=>calls.push('search.close')},searchPublicationRevision:0, detailToc: [], detailInBookshelf: false, shelfBooks: [], searchDetailCandidates: [], remoteCatalogRefreshAt: new Map(),
+    shelfOperation: {generation:0,removalKey:'',busy:false,batchRemovalBusy:false}, offlineMutationGeneration: 0,
     bookshelfHost: { loadShelfBook: async (sourceId, bookId) => rows.get(`${sourceId}\0${bookId}`) },
-    sourceSwitchVisible: false, sourceSwitchState: { kind: 'discovering' },
+    sourceSwitchVisible: false, sourceSwitchState: { kind: 'discovering' },sourceSwitchScopeId:0,readingEntryScopeId:-1,
     searchViewState: view, searchPresentation: presentation, searchOrchestrator: orchestrator,
     getSearchOrchestrator: () => orchestrator,
     readingDetailForRemoteSeed: (seed, sourceName) => ({ ...seed, sourceName }),
@@ -119,6 +140,14 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
   return { h, calls, notices, first, second, third, candidate, view, presentation, rows, sessions, gates };
 }
 
+async function pick(t,book){
+  if(t.h.readingSessionActive)t.h.openSourceSwitch();else t.h.openDetailSourceSwitch();
+  await settle();
+  assert.equal(t.h.sourceSwitchState.kind,'candidates');
+  const displayed=t.h.sourceSwitchState.candidates.find(c=>c.sourceId===book.sourceId&&c.bookUrl===book.bookId);
+  assert.ok(displayed,JSON.stringify(t.h.sourceSwitchState)+' selection uses the candidate and version published by the actual owner');
+  t.h.onPickSource(displayed,t.h.sourceSwitchScopeId);
+}
 const outcomes = [];
 async function check(name, test) {
   try { await test(); outcomes.push({ name, status: 'PASS' }); }
@@ -155,21 +184,21 @@ await check('failed first source -> replacement source -> trial -> detail -> ori
   const t = fixture({ firstFails: true }); t.h.onSearchResultSelected(t.first); await settle();
   assert.equal(t.h.detailReturnRoute, 'search'); assert.match(t.h.detailLoadingMessage, /no readable chapters/); assert.deepEqual(t.notices, []);
   assert.equal(t.h.detailToc.length, 0); assert.equal(t.h.detailInBookshelf, false);
-  if (t.h.readingSessionActive) t.h.openSourceSwitch(); else t.h.openDetailSourceSwitch(); t.h.onPickSource(t.candidate(t.second)); await settle();
+  await pick(t,t.second); await settle();
   assert.equal(t.h.detailBook.sourceId, t.second.sourceId); assert.equal(t.h.sourceSwitchVisible, false);
   await readAndReturn(t);
 });
 await check('repeated preview replacements keep the original search parent', async () => {
   const t = fixture(); t.h.onSearchResultSelected(t.first); await settle();
   for (const book of [t.second, t.third]) {
-    if (t.h.readingSessionActive) t.h.openSourceSwitch(); else t.h.openDetailSourceSwitch(); t.h.onPickSource(t.candidate(book)); await settle();
+    await pick(t,book); await settle();
   }
   await readAndReturn(t);
 });
 await check('late failed first admission cannot replace a new preview or its return target', async () => {
   const t = fixture({ firstFails: true }), old = deferred(); t.gates.set(t.first.sourceId, old);
   t.h.onSearchResultSelected(t.first);
-  if (t.h.readingSessionActive) t.h.openSourceSwitch(); else t.h.openDetailSourceSwitch(); t.h.onPickSource(t.candidate(t.second)); await settle();
+  await pick(t,t.second); await settle();
   old.resolve(); await settle();
   assert.equal(t.notices.length, 0); assert.equal(t.h.detailBook.sourceId, t.second.sourceId);
   await readAndReturn(t);
@@ -177,7 +206,7 @@ await check('late failed first admission cannot replace a new preview or its ret
 await check('leaving preview during replacement rejects late success without changing the new route', async () => {
   const t = fixture(), late = deferred(); t.h.onSearchResultSelected(t.first); await settle();
   t.gates.set(t.second.sourceId, late);
-  if (t.h.readingSessionActive) t.h.openSourceSwitch(); else t.h.openDetailSourceSwitch(); t.h.onPickSource(t.candidate(t.second));
+  await pick(t,t.second);
   t.h.returnFromDetail(); assertSearchRetained(t);
   late.resolve(); await settle();
   assert.equal(t.h.route, 'search'); assert.equal(t.h.detailBook, undefined); noUnexpectedWrites(t);
@@ -185,7 +214,7 @@ await check('leaving preview during replacement rejects late success without cha
 await check('late replacement failure cannot reopen an old detail or replace a newer search', async () => {
   const t = fixture(), late = deferred(); t.h.onSearchResultSelected(t.first); await settle();
   t.gates.set(t.second.sourceId, late);
-  if (t.h.readingSessionActive) t.h.openSourceSwitch(); else t.h.openDetailSourceSwitch(); t.h.onPickSource(t.candidate(t.second));
+  await pick(t,t.second);
   t.h.returnFromDetail(); assertSearchRetained(t);
   late.reject(new Error('late target TOC failure')); await settle();
   assert.equal(t.h.route, 'search'); assert.equal(t.h.detailBook, undefined);
@@ -195,7 +224,7 @@ await check('a failed replacement keeps the original identity and search parent 
   const t = fixture(), failed = deferred(); t.h.onSearchResultSelected(t.first); await settle();
   const originalBook = t.h.detailBook, originalSession = t.h.remoteReadingSession;
   t.gates.set(t.second.sourceId, failed);
-  if (t.h.readingSessionActive) t.h.openSourceSwitch(); else t.h.openDetailSourceSwitch(); t.h.onPickSource(t.candidate(t.second));
+  await pick(t,t.second);
   failed.reject(new Error('target TOC failure')); await settle();
   assert.equal(t.h.route, 'reading'); assert.equal(t.h.sourceSwitchFailureMessage, 'target TOC failure'); assert.equal(t.h.detailReturnRoute, 'search');
   assert.equal(t.h.detailBook, originalBook); assert.equal(t.h.remoteReadingSession, originalSession);

@@ -18,6 +18,7 @@ const methods=['getSourceSwitchHost','sourceSwitchContext','sourceSwitchLease','
  'getReadingEntryHost','readingEntryLease','applyReadingEntrySnapshot','bindReadingEntryReader','retireReadingEntryPresentation',
  'detailReadableAdmission','detailBookKey','chooseCachedChapterRefresh','showReadingFailure','showIndexAlert',
  'applyReadingCommit','getReadingOfflineHost','cleanupRetiredSourceCache','sourceSwitchOverlayContent'];
+export const sourceSwitchMethods=methods.filter(n=>n!=='sourceSwitchOverlayContent');
 const states=['sourceSwitchVisible','sourceSwitchState','sourceSwitchFailureMessage','sourceSwitchScopeId'];
 export function makeIndex(f,{navigation=1,reading=false}={}){
  setEntryRuntime(f.runtime);
