@@ -343,7 +343,9 @@ check('single-book sheet matches cover frame and both layers have straight lower
   for (const available of [240, 326, 352, 630]) assert.equal(width.call({ shelfContentWidth: () => available, isWideViewport: () => available > 500,
     effectiveViewportWidth: () => available + 38 }, { metrics: () => ({}) }, () => 19, () => 19), available);
   assert.match(shelf, /radius: \{ topLeft: 24, topRight: 24, bottomLeft: 0, bottomRight: 0 \}/);
-  assert.match(sheet, /borderRadius\(\{ topLeft: 24, topRight: 24, bottomLeft: 0, bottomRight: 0 \}\)/);
+  assert.match(sheet, /borderRadius\(\{ topLeft: this\.surfaceSpec\(\)\.borderRadius, topRight: this\.surfaceSpec\(\)\.borderRadius, bottomLeft: 0, bottomRight: 0 \}\)/);
+  const surfaceSpecs = read('common/ReaderSurfaceSpecs.ets');
+  assert.match(surfaceSpecs, /bookshelf-book-action[\s\S]*borderRadius: 24/);
 });
 check('44vp source SVG stays 44vp in the single-book more action', () => {
   const shelf = read('bookshelf/BookshelfPage.ets');

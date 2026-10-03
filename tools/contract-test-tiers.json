@@ -196,6 +196,7 @@
     "test-bookshelf-detail-control-stability.mjs",
     "test-bookshelf-detail-scroll-layout.mjs",
     "test-bookshelf-filter-responsibilities.mjs",
+    "test-bookshelf-host-wiring.mjs",
     "test-bookshelf-manual-update.mjs",
     "test-bookshelf-more-layout.mjs",
     "test-bookshelf-paged-projection.mjs",

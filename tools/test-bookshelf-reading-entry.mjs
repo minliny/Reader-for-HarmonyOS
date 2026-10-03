@@ -97,7 +97,7 @@ function create(remote = false) {
   Object.assign(h, {
     remoteSessionGeneration:0,remoteContentProbeGeneration:0,readingOriginRoute: 'detail', shelfReadingPreparation: false, navigationGeneration: 0,
     readingSessionActive: false, detailReturnRoute: 'bookshelf', detailToc: [], shelfBooks: [book],
-    searchDetailCandidates: [], searchPublication: {shelfAt:()=>[]}, searchPublicationRevision:0,
+    searchDetailCandidates: [], searchPublication: {shelfAt:()=>[]}, searchHost: { publication: { shelfAt:()=>[] } }, searchPublicationRevision:0,
     remoteCatalogRefreshAt: new Map(), offlineMutationGeneration: 0, bookshelfRemovalActiveKey: '',
     bookshelfRemovalGeneration: 0, bookshelfLoadGeneration: 0,
     sourceSwitchVisible: false, remoteContentVerdict: 'readable',

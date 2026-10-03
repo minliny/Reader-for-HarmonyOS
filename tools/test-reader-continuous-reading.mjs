@@ -87,8 +87,8 @@ assert.match(experience,
 assert.match(experience,
   /interactionEnabled: this\.phase !== 'failed' && this\.sourceSwitchFailureMessage\.length === 0 &&\s*\(this\.readerSettingsSnapshot\.navigationMode === 'paged' \|\|\s*!this\.hasContinuousRenderContent\(\)\) && this\.isReaderPageInteractionEnabled\(\)/,
   'the paged pointer layer must leave recovery buttons and a live List exposed, while preserving centre-control access for a nonfailed empty projection');
-assert.match(experience, /navigationMode === 'continuous' &&\s*this\.hasContinuousRenderContent\(\)/,
-  'the initial empty-to-ready mode branch must observe the same projection revision as the pointer layer');
+assert.match(experience, /readerRenderStageKind\(this\.readerSettingsSnapshot\.navigationMode, this\.hasContinuousRenderContent\(\)\) === 'continuous'/,
+  'the initial empty-to-ready mode branch must observe the shared render-stage contract');
 assert.match(experience, /if \(navigationChanged && this\.hasCurrentMaterializedChapter\(\)\)/,
   'mode switching during a background measurement must still build the current continuous projection');
 assert.match(experience, /this\.continuousScroller\.scrollPage\(\{ next: direction === 'next', animation: !this\.reduceMotion \}\)/);
