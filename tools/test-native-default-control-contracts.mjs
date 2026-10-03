@@ -6,6 +6,8 @@ import { readFileSync,readdirSync } from 'node:fs';
 import { sharedProducerShape } from './lib/architecture-shared-producer-contract.mjs';
 import { auditNativeTextElements } from './lib/reader-typography-consumer-audit.mjs';
 import { verifyNativeDefaultBranches } from './lib/native-default-control-probe.mjs';
+import { boundedSurfaceSdk,boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
+import { DirectoryRuleDraft } from './lib/reader-reading-field-probe.mjs';
 const fixture=JSON.parse(readFileSync(new URL('./fixtures/design/native-default-control-contracts.json',import.meta.url)));
 const producers=JSON.parse(readFileSync(new URL('./fixtures/architecture-shared-producers.json',import.meta.url)));
 const featureRoot=new URL('../entry/src/main/ets/features/',import.meta.url),normalise=text=>(text??'').replace(/\s+/g,'');
@@ -68,7 +70,7 @@ for(const row of contracts.values()){
   const replacement=row.sharedReplacement,source=readFileSync(new URL('../entry/src/main/ets/'+row.file,import.meta.url),'utf8'),tree=ts.createSourceFile(row.file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
   assert.equal(tree.parseDiagnostics.length,0);assert.ok(tree.statements.some(n=>ts.isImportDeclaration(n)&&n.moduleSpecifier.text===replacement.module&&n.importClause.namedBindings.elements.some(e=>e.name.text===replacement.component)));
   const declaration=tree.statements.find(ts.isStructDeclaration),method=declaration.members.find(n=>ts.isMethodDeclaration(n)&&n.name.text==='build');let matches=0;
-  const visit=n=>{if((ts.isEtsComponentExpression(n)||ts.isCallExpression(n))&&n.expression.getText(tree)===replacement.component){const props=new Map(n.arguments[0].properties.map(p=>[p.name.text,p.initializer.getText(tree)]));if(props.get('specId')==="'directory-rule-level'"){assert.equal(props.get('text'),'rule.level');assert.equal(props.get('placeholder'),undefined);assert.equal(props.get('onTextChange'),replacement.callback);matches++;}}ts.forEachChild(n,visit);};visit(method);assert.equal(matches,1,'exact original rule input consumer');
+  const visit=n=>{if((ts.isEtsComponentExpression(n)||ts.isCallExpression(n))&&n.expression.getText(tree)===replacement.component){const props=new Map(n.arguments[0].properties.map(p=>[p.name.text,p.initializer.getText(tree)]));if(props.get('specId')==="'directory-rule-level'"){assert.equal(props.get('text'),'rule.level');assert.equal(props.get('placeholder'),undefined);assert.equal(props.get('onTextChange'),"(value: string): void => { if (this.ownsActor(identity)) this.edit(rule.id, 'level', value); }",'original exact rule edit now has the shipping lexical opening/book admission');matches++;}}ts.forEachChild(n,visit);};visit(method);assert.equal(matches,1,'exact original rule input consumer');
   const spec=foundationSpecs().resolveReaderFormFieldSpec('directory-rule-level');assert.equal(spec.text,undefined);assert.equal(spec.numberInput,false);assert.equal(spec.width,64);assert.equal(spec.height,40);
   const shared=foundationControls(),child=new shared.field.Component(undefined,{specId:'directory-rule-level',text:'2',isEditable:true});child.aboutToAppear();child.initialRender();const native=shared.nodes(child).find(n=>n.type==='TextInput');assert.ok(native);for(const property of row.typographyOmissions)assert.equal(Object.hasOwn(native,property),false,'actual native level AUTO');assert.equal(native.width,64);assert.equal(native.height,40);assert.equal(native.nativeInputType,undefined);assert.deepEqual(native.create,{text:'2'});assert.equal(typeof native.onChange,'function');row.count=1;controls++;
  }else if(row.sharedReplacement){
@@ -91,6 +93,30 @@ for(const row of contracts.values()){
   assert.throws(()=>verifyNativeDefaultBranches(source.replace('this.onRetryFailedSourceSwitch(scopeId)','this.onRetryFailedSourceSwitch(this.sourceSwitchScopeId)'),row.file,row),/exact actual branch callback/);
   assert.throws(()=>verifyNativeDefaultBranches(source.replace('if (this.sourceSwitchFailureMessage.length > 0) {\n          ForEach','if (true) {\n          ForEach'),row.file,row),/exact finite branch guard/);
  }
+}
+// Execute the real directory Builder→shared native level callback as well as
+// its exact AST mapping. Neither the opening guard nor canEdit is a test stub.
+{
+ const file=new URL('../entry/src/main/ets/features/reading/ReaderDirectoryRules.ets',import.meta.url),source=readFileSync(file,'utf8');
+ const gatewaySource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryRulesGateway.ts',import.meta.url),'utf8');
+ const gatewayTree=ts.createSourceFile('Gateway.ts',gatewaySource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options),declaration=gatewayTree.statements.find(n=>ts.isClassDeclaration(n)&&n.name.text==='ReaderDirectoryRulesGateway');assert.ok(declaration);
+ function actual(definition){
+  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),controls=foundationControls();
+  for(const[name,value]of Object.entries(controls.dependencies))if(!(name in sdk.properties.sdk))sdk.deps[name]=value;
+  Object.assign(sdk.childSources,controls.hooks.childSources);const enter=sdk.hooks.onObserverEnter;sdk.hooks.onObserverEnter=(...args)=>{enter?.(...args);controls.hooks.onObserverEnter?.(...args);};sdk.hooks.lifecycleChildren=true;
+  const owner=sdk.consumer(definition,boundedMembers(definition),{DirectoryRuleDraft},{bookId:'native-book'});
+  const runtime={supportsCoreCapability:()=>false,request:async()=>({data:{status:'ready',rules:[{pattern:'^卷',level:2,boundary:'title'}]}})},authority={snapshot:()=>owner.operation,recoverOriginal:async()=>owner.operation};let liveRuntime=runtime;
+  const Gateway=new Function('ReaderRuntimeOwner','RulesMutationOwner',ts.transpileModule(declaration.getText(gatewayTree).replace(/^export /,''),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText+';return ReaderDirectoryRulesGateway;')({isCurrent:value=>value===liveRuntime},{forRuntime:value=>{assert.equal(value,runtime);return authority;}});
+  Object.assign(owner,{gateway:new Gateway(runtime),mounted:true,loaded:true,busy:false,bookId:'native-book',presentationGeneration:1,rules:[new DirectoryRuleDraft(7,'^卷','2')],preview:[],message:'',directoryRefreshFailed:false,operation:{generation:0,busy:false,confirmation:'undispatched',label:'',method:'',message:'',blocked:false,canRetryOriginal:false,writeStage:'intent'}});
+  assert.equal(owner.gateway.ownsRuntime(),true,'gateway current runtime fixture');assert.equal(owner.canEdit(),true,'real editor admission before render');owner.initialRender();assert.equal(owner.canEdit(),true,'real editor admission after render');return{owner,controls,level:()=>controls.orderedNodes(owner).filter(n=>n.type==='TextInput').at(-1),retire:()=>{liveRuntime=undefined;}};
+ }
+ const f=actual(source),native=f.level();native.onChange('31');assert.equal(f.owner.rules[0].level,'31','actual current native level input reaches original rule ID');
+ for(const property of contracts.get(JSON.stringify(['features/reading/ReaderDirectoryRules.ets','build','TextInput','{text:rule.level}'])).typographyOmissions)assert.equal(Object.hasOwn(native,property),false,'real parent consumer preserves native AUTO '+property);
+ f.owner.bookId='successor-book';f.owner.presentationGeneration++;native.onChange('0');assert.equal(f.owner.rules[0].level,'31','old native input cannot edit a successor entity/opening');
+ for(let i=0;i<8;i++)await Promise.resolve();f.owner.rules=[new DirectoryRuleDraft(7,'^卷','31')];f.owner.loaded=true;f.owner.busy=false;
+ f.owner.initialRender();const fresh=f.level();fresh.onChange('3');assert.equal(f.owner.rules[0].level,'3','new physical actor uses current identity');
+ f.retire();fresh.onChange('4');assert.equal(f.owner.rules[0].level,'3','actual Gateway rejects retired Runtime');
+ const bad=source.replace('identity === this.actorIdentity()','true');assert.notEqual(bad,source);const negative=actual(bad),old=negative.level();negative.owner.presentationGeneration++;old.onChange('30');assert.equal(negative.owner.rules[0].level,'30','guard-removal control reproduces unsafe old physical input');
 }
 assert.equal(controls,14);assert.equal(a11y,4);// One additional finite ReaderButton leading-slot Text is now an actual shared
 // glyph host; native-default families and all private budgets are unchanged.
