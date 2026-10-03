@@ -14,6 +14,9 @@ export class SyncWriteObservation {
   coreApplied: boolean = false;
   hostApplied: boolean = false;
   completed: boolean = false;
+  /** Qualified original immutable record plus acknowledged current-head/cleanup.
+   * Separate from physical dispatch/ACK counters, including lost prepare ACK. */
+  configReceiptQualified: boolean = false;
   remoteConfirmedCount: number = 0;
   /** Exact publisher qualification, separate from generic HTTP2xx counts. */
   uploadQualified: boolean = false;
@@ -30,6 +33,8 @@ export interface SyncOperationProjection {
   remoteConfirmedCount: number;
   uploadQualified: boolean;
   retentionSkipped?: boolean;
+  /** Finite original secure config continuation, never a new save. */
+  canContinueOriginal?: boolean;
 }
 export interface SyncPresentationFacts {
   read: OperationFacts<boolean>;

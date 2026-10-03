@@ -5,7 +5,7 @@ import {join} from 'node:path';
 import {syncIndexFixture as f} from './lib/sync-index-real-fixture.mjs';
 const directory=mkdtempSync(join(tmpdir(),'reader-backup-journal-'));
 const disk=join(directory,'preferences.json');
-const tick=()=>new Promise(r=>setImmediate(r));
+const tick=async predicate=>{for(let i=0;i<2000;i++){if(predicate())return;await new Promise(r=>setTimeout(r,1));}throw Error('actual backup IO boundary absent');};
 const operation=x=>x.snapshot().facts.operation;
 const open=async x=>{x.owner.open();await x.settle();};
 const retry=async x=>{const p=x.page();assert.ok(p.action,'real SDK shared recovery native handler');p.action.onClick();p.action.onClick();await x.settle();};
@@ -88,7 +88,7 @@ try {
  }
  {
   const x=fixture();await open(x);const gate=f.pause(),previous=x.runtime.request;x.runtime.request=async(method,params,opts)=>{if(method==='sync.webdav.transaction.advance')await gate.promise;return previous(method,params,opts);};
-  x.owner.triggerBackup();await tick();const before=x.emitted.length;f.setRuntimeOwner(undefined);gate.resolve();await x.settle();
+  x.owner.triggerBackup();await tick(()=>x.runtime.calls.some(c=>c[0]==='sync.webdav.transaction.advance')||x.requests.some(r=>r.method==='PUT'));const before=x.emitted.length;f.setRuntimeOwner(undefined);gate.resolve();await x.settle();
   assert.equal(x.emitted.length,before,'late accepted IO cannot publish after Runtime.close identity disappears');
   const count=x.requests.length;assert.doesNotThrow(()=>x.owner.triggerBackup());await x.settle();assert.equal(x.requests.length,count);
   const journal=await x.store.loadBackupJournal();assert.equal(journal.phase,'mayDispatch');

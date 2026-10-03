@@ -10,6 +10,7 @@ import { HttpExecuteHost } from '../../app/HttpExecuteHost';
 import {
   type StoredWebDavConfig,
   type WebDavBackupJournal,
+  type WebDavConfigIntent,
   WebDavCredentialStore,
 } from './WebDavCredentialStore';
 
@@ -38,6 +39,11 @@ export type SyncRestoreConflict = {
 export type SyncSnapshot = {
   /** Actual committed save ID read from the same secure envelope. */
   configSaveOperationId?: string;
+  /** Original unresolved identity overrides all historical envelope receipts. */
+  configSaveIntent?: WebDavConfigIntent;
+  configSaveHeadMatchesOriginal?: boolean;
+  canContinueConfigSave?: boolean;
+  configSavePayloadAvailable?: boolean;
   backupReceipt?: SyncBackupReceipt;
   webdavUrl: string;
   webdavUser: string;
@@ -159,6 +165,9 @@ export class SyncGateway {
     const journal = await this.credentials.loadRestoreJournal();
     this.assertOwner();
     if (journal === undefined) return false;
+    // A pending config blocks an actual restore, not unrelated startup/theme
+    // recovery when no approved restore journal exists.
+    await this.credentials.requireConfigSettled();
     const queried = await this.runtimeOwner.request('sync.webdav.transaction.commit', {
       transactionId: journal.operationId, appliedChecksum: journal.checksum, queryOnly: true,
     });
@@ -198,12 +207,16 @@ export class SyncGateway {
   async loadSnapshot(recover: boolean = true): Promise<SyncSnapshot> {
     this.assertOwner();
     if (recover) await this.recoverInterruptedRestore();
+    const configSaveIntent = await this.credentials.loadConfigIntent();
     const state = await this.credentials.loadSerializedState();
+    const configSaveHeadMatchesOriginal = configSaveIntent !== undefined && state.config !== null && state.saveOperationId === configSaveIntent.operationId && state.savePayloadHash === configSaveIntent.payloadHash;
+    const configSavePayloadAvailable = configSaveIntent !== undefined && await this.credentials.canContinueConfigIntent(configSaveIntent.operationId);
+    const canContinueConfigSave = configSaveIntent !== undefined && !configSaveHeadMatchesOriginal;
     const config = state.config;
     const backupReceipt = await this.reconcileBackupReceipt(false);
     this.assertOwner();
     if (config === null) {
-      return { ...this.copySnapshot(DEFAULT_SYNC_SNAPSHOT), backupReceipt };
+      return { ...this.copySnapshot(DEFAULT_SYNC_SNAPSHOT), backupReceipt, configSaveIntent, configSaveHeadMatchesOriginal, canContinueConfigSave, configSavePayloadAvailable };
     }
     return {
       ...this.copySnapshot(DEFAULT_SYNC_SNAPSHOT),
@@ -214,6 +227,7 @@ export class SyncGateway {
       webdavPath: config.directory,
       statusMessage: '已加载安全配置',
       configSaveOperationId: state.saveOperationId,
+      configSaveIntent, configSaveHeadMatchesOriginal, canContinueConfigSave, configSavePayloadAvailable,
       backupReceipt,
     };
   }
@@ -249,6 +263,7 @@ export class SyncGateway {
       const operationId = util.generateRandomUUID(true);
       if (observation !== undefined) observation.operationId = operationId;
       await this.credentials.save(config, observation?.write, (): boolean => this.isOwner() && (admitted === undefined || admitted()), operationId);
+      if (observation !== undefined) observation.configReceiptQualified = true;
       return {
         ok: true,
         snapshot: {
@@ -266,9 +281,32 @@ export class SyncGateway {
 
   async reconcileSavedConfig(operationId: string): Promise<boolean> {
     this.assertOwner();
+    const intent = await this.credentials.loadConfigIntent();
+    if (intent !== undefined && intent.operationId !== operationId) return false;
+    if (intent !== undefined && await this.credentials.reconcileConfigIntent((): boolean => this.isOwner()) !== undefined) return false;
     const confirmed = await this.credentials.hasSaveReceipt(operationId);
     this.assertOwner();
     return confirmed;
+  }
+
+  async continueConfigSave(operationId: string, observation: SyncWriteObservation, admitted?: () => boolean,
+    urlValue?: string, userValue?: string, passValue?: string, backupPassValue?: string, directoryValue?: string): Promise<void> {
+    await this.requireBackupSettled(false);
+    this.assertAdmission(admitted);
+    observation.operationId = operationId;
+    let original: StoredWebDavConfig | undefined;
+    if (!await this.credentials.canContinueConfigIntent(operationId)) {
+      // Missing original secure staging is recoverable only with the complete
+      // exact input. Never reuse a different old envelope's secrets here.
+      if (urlValue === undefined || userValue === undefined || passValue === undefined || backupPassValue === undefined || directoryValue === undefined) throw new Error('请重新填写原配置后继续原操作');
+      original = { url: this.requireBaseUrl(urlValue), user: userValue.trim(), password: passValue,
+        backupPassword: backupPassValue, directory: this.requireDirectory(directoryValue) };
+      this.requireCredentialPair(original);
+      if (original.backupPassword.length === 0) throw new Error('请重新填写原备份加密密码');
+    }
+    await this.credentials.continueConfigIntent(operationId, observation.write,
+      (): boolean => this.isOwner() && (admitted === undefined || admitted()), original);
+    observation.configReceiptQualified = true; observation.completed = true;
   }
 
   async testConnection(
@@ -402,7 +440,8 @@ export class SyncGateway {
       retentionCompleted: completed && durable, retentionSkipped: skipped && durable, durable, undispatched, remotePath: path as string | undefined, contentBytes: bytes as number | undefined };
   }
 
-  private async requireBackupSettled(): Promise<void> {
+  private async requireBackupSettled(checkConfig: boolean = true): Promise<void> {
+    if (checkConfig) await this.credentials.requireConfigSettled();
     const receipt = await this.reconcileBackupReceipt(false);
     if (receipt === undefined) return;
     if (receipt.undispatched) {
@@ -454,6 +493,7 @@ export class SyncGateway {
   }
 
   async resolveRestore(overwriteLocal: boolean, observation?: SyncWriteObservation, admitted?: () => boolean): Promise<SyncRestoreResult> {
+    await this.credentials.requireConfigSettled();
     this.assertAdmission(admitted);
     const transactionId = this.pendingRestoreTransactionId;
     if (transactionId.length === 0) {
@@ -503,6 +543,7 @@ export class SyncGateway {
     if (operation !== 'connectionTest') await this.requireRestoreSettled();
     // The backup caller has already admitted old receipts and flushed its own
     // prepared identity. Do not treat that same new intent as an old recovery.
+    await this.credentials.requireConfigSettled();
     if (operation !== 'connectionTest' && publisherOperationId === undefined) await this.requireBackupSettled();
     const params: JsonObject = {
       operation,

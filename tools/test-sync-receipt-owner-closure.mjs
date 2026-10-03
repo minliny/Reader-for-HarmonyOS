@@ -5,6 +5,19 @@ import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 const require=createRequire(import.meta.url);
+// Thin Node adaptation of the actual platform AtomicFile API. Production
+// snapshot/Store/owner methods remain unmodified and use real durable files.
+const nativeFs=require('node:fs'), nativePath=require('node:path'), nativeOs=require('node:os');
+const realConfigDirectories=[];let configDirectory;
+const fileIo={OpenMode:{READ_WRITE:1,READ_ONLY:0},
+ async readText(path){try{return await nativeFs.promises.readFile(path,'utf8');}catch(e){if(e.code==='ENOENT')throw {code:13900002};throw e;}},
+ async open(path,mode){return nativeFs.promises.open(path,mode===1?'r+':'r');},
+ async fsync(fd){await new Promise((resolve,reject)=>nativeFs.fsync(fd,e=>e?reject(e):resolve()));},
+ async close(file){await file.close();},
+ AtomicFile:class{constructor(path){this.path=path;this.temp=path+'.candidate';}startWrite(){return nativeFs.createWriteStream(this.temp);}finishWrite(){nativeFs.renameSync(this.temp,this.path);}failWrite(){try{nativeFs.unlinkSync(this.temp);}catch(e){if(e.code!=='ENOENT')throw e;}}},
+};
+const cryptoFramework={createMd(){const hash=require('node:crypto').createHash('sha256');return{async update({data}){hash.update(data);},async digest(){return {data:new Uint8Array(hash.digest())};}};}};
+
 const syntax=require((process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/lib/validate_ui_syntax.js');
 const source = p => readFileSync(new URL(`../entry/src/main/ets/${p}`,import.meta.url),'utf8');
 syntax.builderParamObjectCollection.set('ReaderCard',new Set([...source('features/common/ReaderCard.ets').matchAll(/@BuilderParam\s+(\w+):/g)].map(m=>m[1])));
@@ -19,15 +32,17 @@ const config={url:'https://example.test',user:'reader',password:'transient-secre
 const checksum='a'.repeat(64);
 const clone=v=>v===undefined?undefined:structuredClone(v);
 const pause=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {resolve,promise};};
+const until=async predicate=>{for(let i=0;i<2000;i++){if(predicate())return;await new Promise(r=>setTimeout(r,1));}throw Error('actual IO boundary did not arrive');};
 const util={generateRandomUUID:()=>randomUUID(),TextEncoder:globalThis.TextEncoder,TextDecoder:{create:()=>({decodeToString:b=>new TextDecoder('utf8',{fatal:true}).decode(b)})},Base64Helper:class {encodeToStringSync(v){return Buffer.from(v).toString('base64');}}};
-const asset={Tag:{ALIAS:1,RETURN_TYPE:2,SECRET:3,ACCESSIBILITY:4,CONFLICT_RESOLUTION:5},ReturnType:{ALL:1},Accessibility:{DEVICE_POWERED_ON:1},ConflictResolution:{OVERWRITE:1},ErrorCode:{NOT_FOUND:100},record:undefined,calls:[],failAdd:false,failQuery:false,beforeAdd:undefined,
-  async query(){this.calls.push('query');if(this.failQuery){this.failQuery=false;throw Error('read unavailable');}return this.record?[new Map([[3,this.record]])]:[];},
-  async add(attributes){this.calls.push('add');if(this.beforeAdd)await this.beforeAdd();this.record=attributes.get(3);if(this.failAdd){this.failAdd=false;throw Error('lost Asset ACK');}},
-  async remove(){this.calls.push('remove');this.record=undefined;},
+const asset={Tag:{ALIAS:1,RETURN_TYPE:2,SECRET:3,ACCESSIBILITY:4,CONFLICT_RESOLUTION:5},ReturnType:{ALL:1},Accessibility:{DEVICE_POWERED_ON:1},ConflictResolution:{OVERWRITE:0,THROW_ERROR:1},ErrorCode:{NOT_FOUND:100,DUPLICATED:101},record:undefined,records:new Map(),calls:[],failAdd:false,failQuery:false,beforeAdd:undefined,
+ async query(query){this.calls.push('query');if(this.failQuery){this.failQuery=false;throw Error('read unavailable');}const alias=new TextDecoder().decode(query.get(1));const raw=alias==='reader.webdav.config.v2'?this.record:this.records.get(alias);return raw?[new Map([[1,query.get(1)],[3,raw]])]:[];},
+ async add(attributes){this.calls.push('add');if(this.beforeAdd)await this.beforeAdd();const alias=new TextDecoder().decode(attributes.get(1));const existing=alias==='reader.webdav.config.v2'?this.record:this.records.get(alias);if(existing&&attributes.get(5)===1)throw {code:this.ErrorCode.DUPLICATED};if(alias==='reader.webdav.config.v2')this.record=attributes.get(3);else this.records.set(alias,attributes.get(3));if(this.failAdd){this.failAdd=false;throw Error('lost Asset ACK');}},
+ async remove(query){this.calls.push('remove');const alias=new TextDecoder().decode(query.get(1));if(alias==='reader.webdav.config.v2')this.record=undefined;else this.records.delete(alias);},
 };
 let preferenceValues=new Map();
 let nativePreferences={async get(key,fallback){return preferenceValues.has(key)?preferenceValues.get(key):fallback;},async has(key){return preferenceValues.has(key);},async put(key,value){preferenceValues.set(key,value);},async delete(key){preferenceValues.delete(key);},async flush(){}};
-const Store=execute('features/sync/WebDavCredentialStore.ts','WebDavCredentialStore',{asset,util,preferences:{getPreferences:async()=>nativePreferences},errorMessageOf:()=> 'platform failure'});
+const replaceReaderAtomicSnapshot=execute('app/ReaderAtomicSnapshotFile.ts','replaceReaderAtomicSnapshot',{fileIo});
+const Store=execute('features/sync/WebDavCredentialStore.ts','WebDavCredentialStore',{asset,util,fileIo,cryptoFramework,replaceReaderAtomicSnapshot,preferences:{getPreferences:async()=>nativePreferences},errorMessageOf:()=> 'platform failure'});
 let currentOwner,credentialStore,hostFailures=0,hostApplications=0,transport,prepareCalls=0;
 const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
 class Host {async capture(){return {version:1,bookshelfViewMode:'cover',themeSelection:{}};}encode(v){return v;}decode(v){return v;}async apply(){hostApplications++;if(hostFailures>0){hostFailures--;throw Error('Host write unavailable');}}}
@@ -70,9 +85,9 @@ function runtime(){return {
   },count(m){return this.calls.filter(c=>c[0]===m).length;},
 };}
 function fixture({empty=false,preserveAsset=false}={}){
-  if(!preserveAsset)asset.record=empty?undefined:new TextEncoder().encode(JSON.stringify({formatVersion:2,config}));asset.calls=[];asset.failAdd=false;asset.failQuery=false;asset.beforeAdd=undefined;
+  if(!preserveAsset){asset.record=empty?undefined:new TextEncoder().encode(JSON.stringify({formatVersion:2,config}));asset.records=new Map();configDirectory=nativeFs.mkdtempSync(nativePath.join(nativeOs.tmpdir(),'reader-sync-intent-'));realConfigDirectories.push(configDirectory);}asset.calls=[];asset.failAdd=false;asset.failQuery=false;asset.beforeAdd=undefined;
   hostApplications=0;hostFailures=0;prepareCalls=0;const runtimeOwner=runtime();currentOwner=runtimeOwner;
-  preferenceValues=new Map();credentialStore=new Store();credentialStore.attachContext({});credentialStore.loadBookshelfViewMode=async()=> 'cover';let journal;
+  preferenceValues=new Map();credentialStore=new Store();credentialStore.attachContext({filesDir:configDirectory});credentialStore.loadBookshelfViewMode=async()=> 'cover';let journal;
   credentialStore.loadRestoreJournal=async()=>journal;credentialStore.saveRestoreJournal=async v=>{journal=clone(v);};credentialStore.clearRestoreJournal=async()=>{journal=undefined;};
   let route=true,snapshot=clone(DEFAULT_SYNC_SNAPSHOT);const emitted=[];
   transport=async()=>({status:201,body:''});
@@ -82,16 +97,18 @@ function fixture({empty=false,preserveAsset=false}={}){
   class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
   class Card extends Child { initialRender(){this.params.content?.();} }
   const page=()=>{
-    const p=createReaderBuilderProbe(source('features/sync/SyncPage.ets'),['manualActionsSection','sectionHeadingMuted','restoreConflictCard','feedbackView','recoveryLabel','canSkipBackupRetention','backupGeneration','backupRetentionActionIdentities','canMutate','manualActionButton'],{readerRecoveryView,ReaderRecoveryNotice:Child,ReaderRecoveryAction:Child,ReaderCard:Card},{mountChildren:true,childSources:{ReaderCard:source('features/common/ReaderCard.ets')}});
-    Object.assign(p.owner,{snapshot:clone(snapshot),contentFrame:()=>({width:390}),appThemeScheme:'day',onReconcile:g=>owner.reconcile(g),onSkipBackupRetention:g=>owner.skipBackupRetention(g),onTriggerBackup:()=>owner.triggerBackup(),onRestoreLatest:()=>owner.restoreLatest(),restoreConflictCard:()=>{}});
+    const p=createReaderBuilderProbe(source('features/sync/SyncPage.ets'),['manualActionsSection','configSaveContinuationIdentities','canContinueConfigSave','configSaveGeneration','effectiveWebdavUrl','effectiveWebdavUser','effectiveWebdavPath','sectionHeadingMuted','restoreConflictCard','feedbackView','recoveryLabel','canSkipBackupRetention','backupGeneration','backupRetentionActionIdentities','canMutate','manualActionButton'],{readerRecoveryView,ReaderRecoveryNotice:Child,ReaderRecoveryAction:Child,ReaderCard:Card},{mountChildren:true,childSources:{ReaderCard:source('features/common/ReaderCard.ets')}});
+    Object.assign(p.owner,{snapshot:clone(snapshot),contentFrame:()=>({width:390}),appThemeScheme:'day',onReconcile:g=>owner.reconcile(g),onSkipBackupRetention:g=>owner.skipBackupRetention(g),onContinueConfigSave:(...args)=>owner.continueConfigSave(...args),onTriggerBackup:()=>owner.triggerBackup(),onRestoreLatest:()=>owner.restoreLatest(),restoreConflictCard:()=>{}});
     p.owner.manualActionsSection();
     const child=[...p.owner.children.values()].find(c=>c.params.view);
     const n=createReaderBuilderProbe(noticeSource,['build'],{ReaderRecoveryAction:Child});Object.assign(n.owner,{...child.params,appThemeScheme:'day'});n.owner.initialRender();
     const retryChild=[...n.owner.children.values()][0];let action;
     if(retryChild){const a=createReaderBuilderProbe(actionSource,['build']);Object.assign(a.owner,{enabled:true,appThemeScheme:'day',...retryChild.params});a.owner.initialRender();action=[...a.owner.nodes.values()].find(v=>v.height===36);}
+    const continuationChild=[...p.owner.children.values()].find(c=>c.params.label==='继续原操作');let continueAction;
+    if(continuationChild){const a=createReaderBuilderProbe(actionSource,['build']);Object.assign(a.owner,{enabled:true,appThemeScheme:'day',...continuationChild.params});a.owner.initialRender();continueAction=[...a.owner.nodes.values()].find(v=>v.height===36);}
     const skipChild=[...p.owner.children.values()].find(c=>c.params.label==='保留备份，结束清理');let skipAction;
     if(skipChild){const a=createReaderBuilderProbe(actionSource,['build']);Object.assign(a.owner,{enabled:true,appThemeScheme:'day',...skipChild.params});a.owner.initialRender();skipAction=[...a.owner.nodes.values()].find(v=>v.height===36);}
-    return {page:p.owner,view:child.params.view,action,skipAction,notice:n.owner};
+    return {page:p.owner,view:child.params.view,action,skipAction,continueAction,notice:n.owner};
   };
   return {owner,store:credentialStore,runtime:runtimeOwner,settle,page,snapshot:()=>snapshot,emitted,close:()=>{route=false;},reopen:()=>{route=true;owner.open();},journal:()=>journal};
 }
@@ -113,7 +130,8 @@ async function open(f){f.owner.open();await f.settle();assert.equal(f.snapshot()
 }
 {
   const f=fixture();await open(f);asset.failAdd=true;f.owner.saveConfig(config.url,config.user,'','',config.directory);await f.settle();assert.equal(f.snapshot().facts.operation.projection.receipt.confirmation,'unknown');
-  f.page().action.onClick();await f.settle();assert.equal(f.snapshot().facts.operation.projection.receipt.fact,'confirmedCurrent','exact atomic receipt confirms lost ACK without replay');assert.equal(asset.calls.filter(c=>c==='add').length,1);
+  f.page().action.onClick();await f.settle();assert.equal(f.snapshot().facts.operation.projection.receipt.confirmation,'unknown','immutable staging receipt cannot auto-commit current head');assert.equal(asset.calls.filter(c=>c==='add').length,1);
+  const original=f.snapshot().facts.operation.operationId;f.page().continueAction.onClick();await f.settle();assert.equal(f.snapshot().facts.operation.projection.receipt.fact,'confirmedCurrent');assert.equal(f.snapshot().facts.operation.operationId,original);assert.equal(asset.calls.filter(c=>c==='add').length,1,'explicit continuation commits exact staged head without another add');
   // A separate unresolved attempt must still block replacement and backup.
   asset.failAdd=true;asset.beforeAdd=()=>{asset.failQuery=true;};f.owner.saveConfig(config.url,config.user,'','',config.directory);await f.settle();asset.beforeAdd=undefined;f.owner.saveConfig(config.url,config.user,'','',config.directory);f.owner.triggerBackup();await f.settle();assert.equal(asset.calls.filter(c=>c==='add').length,2);assert.equal(f.runtime.count('sync.webdav.transaction.start'),0,'unknown cannot be overwritten by new intent');
 }
@@ -146,14 +164,14 @@ for(const fail of ['none','applyAck','commitAck','host']){
   f.page().action.onClick();await f.settle();assert.equal(f.runtime.count('runtime.storage.apply'),1);assert.equal(f.snapshot().facts.operation.projection.receipt.confirmation,'confirmed');assert.equal(f.journal(),undefined);
 }
 {
-  const f=fixture();await open(f);const p=pause();asset.beforeAdd=()=>p.promise;f.owner.saveConfig(config.url,config.user,'','',config.directory);await new Promise(r=>setImmediate(r));const before=f.emitted.length;f.close();p.resolve();await f.settle();assert.equal(f.emitted.length,before,'close discards late ACK publication');f.reopen();await f.settle();assert.equal(f.snapshot().facts.operation.projection.receipt.confirmation,'confirmed');
+  const f=fixture();await open(f);const p=pause();asset.beforeAdd=()=>p.promise;f.owner.saveConfig(config.url,config.user,'','',config.directory);await until(()=>asset.calls.includes('add'));const before=f.emitted.length;f.close();p.resolve();await f.settle();assert.equal(f.emitted.length,before,'close discards late ACK publication');f.reopen();await f.settle();assert.equal(f.snapshot().facts.operation.projection.receipt.confirmation,'unknown','retired staged add is not a committed head');f.page().continueAction.onClick();await f.settle();assert.equal(f.snapshot().facts.operation.projection.receipt.confirmation,'confirmed');
   const stale=f.snapshot().facts.operation.projection.facts.generation;f.owner.open();await f.settle();const queries=asset.calls.length;f.owner.reconcile(stale);await f.settle();assert.equal(asset.calls.length,queries,'stale recovery token rejected');
 }
 {
-  const f=fixture();await open(f);const gate=pause();credentialStore.writeTail=gate.promise;f.owner.saveConfig(config.url,config.user,'','',config.directory);await new Promise(r=>setImmediate(r));f.close();gate.resolve();await f.settle();assert.equal(asset.calls.filter(c=>c==='add').length,0,'queued intent checks route after prepare/read');
+  const f=fixture();await open(f);const gate=pause();Store.writeTail=gate.promise;f.owner.saveConfig(config.url,config.user,'','',config.directory);await new Promise(r=>setImmediate(r));f.close();gate.resolve();await f.settle();assert.equal(asset.calls.filter(c=>c==='add').length,0,'queued intent checks route after prepare/read');
 }
 {
-  const f=fixture();await open(f);f.owner.restoreLatest();await f.settle();const p=pause();f.runtime.beforeApply=()=>p.promise;f.owner.resolveRestore(true);await new Promise(r=>setImmediate(r));const count=f.emitted.length;currentOwner=runtime();p.resolve();await f.settle();assert.equal(hostApplications,0,'retired runtime never applies Host configuration');assert.equal(f.emitted.length,count);assert.ok(f.journal(),'new startup can resolve already-applied Core receipt');f.owner.triggerBackup();await f.settle();assert.equal(f.runtime.count('sync.webdav.transaction.start'),1);
+  const f=fixture();await open(f);f.owner.restoreLatest();await f.settle();const p=pause();f.runtime.beforeApply=()=>p.promise;f.owner.resolveRestore(true);await until(()=>f.runtime.calls.some(c=>c[0]==='runtime.storage.apply'));const count=f.emitted.length;currentOwner=runtime();p.resolve();await f.settle();assert.equal(hostApplications,0,'retired runtime never applies Host configuration');assert.equal(f.emitted.length,count);assert.ok(f.journal(),'new startup can resolve already-applied Core receipt');f.owner.triggerBackup();await f.settle();assert.equal(f.runtime.count('sync.webdav.transaction.start'),1);
 }
 {
   const f=fixture();await open(f);f.owner.testConnection(config.url,config.user,'',config.directory);await f.settle();assert.equal(f.snapshot().facts.request.fact,'current');assert.equal(asset.calls.filter(c=>c==='add').length,0);assert.equal(f.snapshot().facts.operation,undefined,'read-only connection test does not fabricate write receipt');
@@ -190,10 +208,10 @@ for(const fail of ['none','applyAck','commitAck','host']){
 }
 
 for(const unknown of [false,true]){
- const f=fixture();await open(f);const p=pause();asset.beforeAdd=()=>p.promise;asset.failAdd=unknown;f.owner.saveConfig(config.url,config.user,'','',config.directory);await new Promise(r=>setImmediate(r));
+ const f=fixture();await open(f);const p=pause();asset.beforeAdd=()=>p.promise;asset.failAdd=unknown;f.owner.saveConfig(config.url,config.user,'','',config.directory);await until(()=>asset.calls.includes('add'));
  const count=f.emitted.length;currentOwner=undefined;p.resolve();await f.settle();assert.equal(f.emitted.length,count,'actual Asset ACK/lost ACK cannot publish after Runtime absence');
  const writes=asset.calls.filter(c=>c==='add').length;assert.doesNotThrow(()=>f.owner.saveConfig(config.url,config.user,'','',config.directory));await f.settle();assert.equal(asset.calls.filter(c=>c==='add').length,writes);
- currentOwner=f.runtime;f.owner.open();await f.settle();assert.equal(f.snapshot().facts.operation.projection.receipt.confirmation,unknown?'unknown':'confirmed','retained exact evidence never promotes lost ACK from matching read');
+ currentOwner=f.runtime;f.owner.open();await f.settle();assert.equal(f.snapshot().facts.operation.projection.receipt.confirmation,'unknown','retired staging never promotes to a committed current head');
  assert.equal(asset.calls.filter(c=>c==='add').length,writes,'reopen independent read never repeats save');
 }
 

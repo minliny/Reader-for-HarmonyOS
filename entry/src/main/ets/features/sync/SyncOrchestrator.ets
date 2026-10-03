@@ -72,13 +72,13 @@ export class SyncOrchestrator {
           return;
         }
       }
-      if (operation?.action === 'saveConfig' && operation.projection.receipt.confirmation === 'unknown' && operation.operationId !== undefined) {
+      if (operation?.action === 'saveConfig' && !operation.completed && operation.operationId !== undefined) {
         try {
           if (await this.gateway.reconcileSavedConfig(operation.operationId)) {
             const observation = new SyncWriteObservation();
             observation.writeGeneration = operation.writeGeneration;
             observation.operationId = operation.operationId;
-            observation.write.dispatched(); observation.write.confirmed(); observation.completed = true;
+            observation.configReceiptQualified = true; observation.completed = true;
             this.publishReceipt(session, 'saveConfig', observation, 'reading', '已核对安全存储中的本次保存回执');
           }
         } catch (error) {
@@ -119,6 +119,29 @@ export class SyncOrchestrator {
         await this.load(session);
       } catch (error) {
         if (this.currentSession(session)) this.publishReceiptWithConfirmation(session, operation, 'failed', this.safeError(error));
+      }
+    }).finally((): void => { this.operationInFlight = false; this.deliver(this.session); });
+    this.deliver(session);
+  }
+
+  continueConfigSave(generation: number, url?: string, user?: string, pass?: string, backupPass?: string, directory?: string): void {
+    const operation = this.latestOperation;
+    if (!this.currentSession(this.session) || this.operationInFlight || generation !== this.generation() ||
+      operation?.action !== 'saveConfig' || !operation.canContinueOriginal || operation.operationId === undefined) return;
+    const session = this.session, operationId = operation.operationId;
+    this.operationInFlight = true;
+    this.operationChain = this.operationChain.then(async (): Promise<void> => {
+      if (!this.currentSession(session) || generation !== this.generation() || this.latestOperation?.operationId !== operationId) return;
+      const observation = new SyncWriteObservation(); observation.writeGeneration = operation.writeGeneration; observation.operationId = operationId;
+      try {
+        await this.gateway.continueConfigSave(operationId, observation, (): boolean => this.currentSession(session) &&
+          this.latestOperation?.operationId === operationId && generation === this.generation(), url, user, pass, backupPass, directory);
+        this.publishReceipt(session, 'saveConfig', observation, 'reading', '原配置保存已核定');
+        await this.load(session);
+      } catch (error) {
+        // A failure/no new dispatch cannot erase any previous unknown.
+        this.publishReceiptWithConfirmation(session, operation, 'failed', this.safeError(error));
+        await this.load(session);
       }
     }).finally((): void => { this.operationInFlight = false; this.deliver(this.session); });
     this.deliver(session);
@@ -194,11 +217,13 @@ export class SyncOrchestrator {
     this.status(session, action === 'saveConfig' ? '正在保存安全配置…' : action === 'backup' ? '正在创建配置备份…' : '正在检查恢复事务…');
     this.operationChain = this.operationChain.then(async (): Promise<void> => {
       if (!this.currentSession(session)) return;
-      const admitted = (): boolean => this.currentOwner() && (this.currentSession(session) || observation.write.dispatchedCount > 0);
+      const admitted = (): boolean => this.currentOwner() && (this.currentSession(session) ||
+        (action !== 'saveConfig' && observation.write.dispatchedCount > 0));
       let message: string;
       try { message = await run(observation, admitted); }
       catch (error) {
         this.publishReceipt(session, action, observation, 'failed', this.safeError(error));
+        if (action === 'saveConfig') await this.load(session);
         return;
       }
       if (observation.write.dispatchedCount === 0) {
@@ -219,12 +244,22 @@ export class SyncOrchestrator {
       let current = this.source();
       // A new owner/process may see an atomic committed save even if its ACK
       // was lost. Publish only the ID actually read, never an old/matching intent.
+      if (snapshot.configSaveIntent !== undefined) {
+        const original = snapshot.configSaveIntent;
+        const old = this.latestOperation?.action === 'saveConfig' && this.latestOperation.operationId === original.operationId ? this.latestOperation : undefined;
+        this.latestOperation = { action: 'saveConfig', writeGeneration: old?.writeGeneration ?? new SyncWriteObservation().writeGeneration,
+          operationId: original.operationId, coreApplied: false, hostApplied: false, completed: false, remoteConfirmedCount: 0, uploadQualified: false,
+          canContinueOriginal: snapshot.canContinueConfigSave === true,
+          projection: projectPersistedReceipt<boolean>({ confirmation: 'unknown', readback: 'succeeded',
+            canRetry: true, generation: ++syncProjectionGeneration,
+            message: snapshot.configSaveHeadMatchesOriginal ? '原配置已读到，保存或清理回执尚待核对' : snapshot.configSavePayloadAvailable ? '原配置保存尚未确认；请先核对原操作' : '原配置准备未完成；请重新填写本次配置后继续原操作' }) };
+      }
       if (this.latestOperation === undefined && snapshot.backupReceipt !== undefined) {
         this.publishBackupReceipt(session, snapshot.backupReceipt);
       }
-      if (this.latestOperation === undefined && snapshot.configSaveOperationId !== undefined) {
+      if (snapshot.configSaveIntent === undefined && this.latestOperation === undefined && snapshot.configSaveOperationId !== undefined) {
         const observation = new SyncWriteObservation(); observation.operationId = snapshot.configSaveOperationId;
-        observation.write.dispatched(); observation.write.confirmed(); observation.completed = true;
+        observation.configReceiptQualified = true; observation.completed = true;
         this.publishReceipt(session, 'saveConfig', observation, 'reading');
       }
       current = this.source();
@@ -267,7 +302,8 @@ export class SyncOrchestrator {
 
   private publishReceipt(session: number, action: SyncOperationAction, observation: SyncWriteObservation,
     readback: CommitReadbackPhase, errorOrStatus?: string): void {
-    const confirmation = observation.write.confirmation();
+    const confirmation = action === 'saveConfig' ? observation.configReceiptQualified ? 'confirmed' :
+      observation.write.dispatchedCount > 0 ? 'unknown' : 'undispatched' : observation.write.confirmation();
     const partial = observation.coreApplied && !observation.completed
       ? 'Core 配置已应用，Host 恢复尚未完成；核对已有恢复，不重复覆盖' : undefined;
     const remotePartial = observation.retentionSkipped ? '备份已保留，保留清理已由你结束；已发出的远端请求不会撤回' : !observation.completed && observation.uploadQualified ? '本次备份上传已核实，保留清理尚无完成回执；不自动重传或删除' :
@@ -296,7 +332,7 @@ export class SyncOrchestrator {
   private beginOperation(): boolean {
     if (!this.currentSession(this.session) || this.operationInFlight || this.lastSnapshot === undefined) return false;
     const operation = this.latestOperation;
-    if (operation !== undefined && (operation.projection.receipt.confirmation === 'unknown' ||
+    if (operation !== undefined && ((!operation.completed && operation.action === 'saveConfig') || operation.projection.receipt.confirmation === 'unknown' ||
       (operation.coreApplied && !operation.completed) || (operation.action === 'backup' && !operation.completed && !operation.retentionSkipped && operation.projection.receipt.confirmation === 'confirmed'))) return false;
     this.operationInFlight = true;
     return true;
@@ -313,7 +349,7 @@ export class SyncOrchestrator {
     const operation = this.latestOperation;
     const facts: SyncPresentationFacts = { read: this.readFacts, operation, request: this.requestFacts, busy: this.operationInFlight,
       canMutate: !this.operationInFlight && this.lastSnapshot !== undefined &&
-        operation?.projection.receipt.confirmation !== 'unknown' && !(operation?.coreApplied === true && !operation.completed) &&
+        operation?.projection.receipt.confirmation !== 'unknown' && !(operation?.action === 'saveConfig' && !operation.completed) && !(operation?.coreApplied === true && !operation.completed) &&
         !(operation?.action === 'backup' && !operation.completed && !operation.retentionSkipped && operation.projection.receipt.confirmation === 'confirmed') };
     this.emit({ ...source, webdavPass: '', backupPass: '', facts });
   }

@@ -40,7 +40,7 @@ try {
   x.reopen();await x.settle();const before=x.runtime.calls.length;old.onClick();await x.settle();assert.equal(x.runtime.calls.length,before,'old route generation remains retired after reopen');
  }
  {
-  const x=await unknown();await qualify(x);const gate=f.pause();x.pauseSkip(gate);x.page().skipAction.onClick();await new Promise(r=>setImmediate(r));
+  const x=await unknown();await qualify(x);const gate=f.pause();x.pauseSkip(gate);x.page().skipAction.onClick();for(let n=0;x.runtime.count('sync.webdav.backup.retention.skip')===0&&n<2000;n++)await new Promise(r=>setTimeout(r,1));assert.equal(x.runtime.count('sync.webdav.backup.retention.skip'),1,'actual terminal dispatch before retirement');
   const before=x.emitted.length;f.setRuntimeOwner(undefined);gate.resolve();await x.settle();assert.equal(x.emitted.length,before,'late actual terminal ACK cannot publish into retired owner');
   f.setRuntimeOwner(x.runtime);x.reopen();await x.settle();await retry(x);assert.equal(operation(x).retentionSkipped,true);assert.equal(operation(x).completed,false);
  }

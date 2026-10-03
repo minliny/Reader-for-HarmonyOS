@@ -70,6 +70,8 @@ export struct SyncPage {
   onTestConnection: (url: string, user: string, pass: string, path: string) => void =
     (_url: string, _user: string, _pass: string, _path: string): void => {};
   onReconcile: (generation: number) => void = (_generation: number): void => {};
+  onContinueConfigSave: (generation: number, url: string, user: string, pass: string, backupPass: string, directory: string) => void =
+    (_generation: number, _url: string, _user: string, _pass: string, _backupPass: string, _directory: string): void => {};
   onSkipBackupRetention: (generation: number) => void = (_generation: number): void => {};
   onTriggerBackup: () => void = (): void => {};
   onRestoreLatest: () => void = (): void => {};
@@ -336,6 +338,14 @@ export struct SyncPage {
         Column({ space: TOK_SPACE_SM }) {
           ReaderRecoveryNotice({ view: this.feedbackView(), actionLabel: this.recoveryLabel(),
             onReconcile: (generation: number): void => this.onReconcile(generation) });
+          if (this.canContinueConfigSave()) {
+            ForEach(this.configSaveContinuationIdentities(), (identity: string): void => {
+              ReaderRecoveryAction({ label: '继续原操作', generation: this.configSaveGeneration(identity),
+                enabled: this.snapshot.facts?.busy !== true,
+                onReconcile: (generation: number): void => this.onContinueConfigSave(generation,
+                  this.effectiveWebdavUrl(), this.effectiveWebdavUser(), this.webdavPass, this.backupPass, this.effectiveWebdavPath()) });
+            }, (identity: string): string => identity);
+          }
           if (this.canSkipBackupRetention()) {
             // This mutating consent actor belongs to one exact receipt identity.
             // V1 callback fields are construction-only; rebuild only this action
@@ -677,6 +687,19 @@ export struct SyncPage {
     return readerRecoveryView(facts?.operation?.projection, read);
   }
 
+  private canContinueConfigSave(): boolean {
+    const operation = this.snapshot.facts?.operation;
+    return operation?.action === 'saveConfig' && !operation.completed && operation.canContinueOriginal === true;
+  }
+  private configSaveContinuationIdentities(): string[] {
+    const operation = this.snapshot.facts?.operation;
+    return this.canContinueConfigSave() && operation?.operationId !== undefined ?
+      [`${operation.operationId}:${operation.projection.facts.generation}`] : [];
+  }
+  private configSaveGeneration(identity: string): number {
+    return Number(identity.substring(identity.lastIndexOf(':') + 1));
+  }
+
   private canSkipBackupRetention(): boolean {
     const operation = this.snapshot.facts?.operation;
     return operation?.action === 'backup' && operation.uploadQualified && !operation.completed &&
@@ -696,6 +719,7 @@ export struct SyncPage {
 
   private recoveryLabel(): string {
     const operation = this.snapshot.facts?.operation;
+    if (operation?.action === 'saveConfig' && !operation.completed) return '核对原配置保存';
     if (operation?.action === 'backup' && !operation.completed && !operation.retentionSkipped) return '核对本次备份';
     return operation !== undefined && !operation.completed &&
       (operation.action === 'restore' || operation.action === 'resolveRestore') ? '核对已有恢复' : '重新读取配置';

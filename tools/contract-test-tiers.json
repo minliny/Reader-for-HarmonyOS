@@ -518,6 +518,7 @@
     "test-svg-provenance.mjs",
     "test-sync-backup-durable-receipts.mjs",
     "test-sync-backup-retention-exit.mjs",
+    "test-sync-config-cold-intent.mjs",
     "test-sync-config-durable-receipts.mjs",
     "test-sync-config-durable-sdk.mjs",
     "test-sync-host-configuration.mjs",

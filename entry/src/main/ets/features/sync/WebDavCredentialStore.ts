@@ -1,4 +1,7 @@
 import common from '@ohos.app.ability.common';
+import fileIo from '@ohos.file.fs';
+import cryptoFramework from '@ohos.security.cryptoFramework';
+import { replaceReaderAtomicSnapshot } from '../../app/ReaderAtomicSnapshotFile';
 import preferences from '@ohos.data.preferences';
 import asset from '@ohos.security.asset';
 import util from '@ohos.util';
@@ -6,6 +9,9 @@ import { errorMessageOf } from '../../app/ErrorMessage';
 import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 
 const ASSET_ALIAS = 'reader.webdav.config.v2';
+const CONFIG_RECORD_PREFIX = 'reader.webdav.config-save.';
+const CONFIG_HEAD_FILE = 'reader-webdav-config-head-v1.json';
+const CONFIG_INTENT_FILE = 'reader-webdav-config-intent-v1.json';
 const FORMAT_VERSION = 2;
 const MAX_CONFIG_BYTES = 64 * 1024;
 const MAX_FIELD_LENGTH = 4096;
@@ -44,11 +50,25 @@ type StoredWebDavEnvelope = {
   config: StoredWebDavConfig;
   /** Non-secret identity committed atomically with this exact configuration. */
   saveOperationId?: string;
+  savePayloadHash?: string;
 };
+
+export interface WebDavConfigIntent {
+  version: 1;
+  operationId: string;
+  payloadHash: string;
+  phase: 'prepared' | 'mayDispatch' | 'confirmed';
+  previousOperationId?: string;
+  previousPayloadHash?: string;
+  previousWasLegacy?: boolean;
+}
+
+interface WebDavConfigHead { version: 1; operationId: string; payloadHash: string; }
 
 export interface StoredWebDavState {
   config: StoredWebDavConfig | null;
   saveOperationId?: string;
+  savePayloadHash?: string;
 }
 
 /**
@@ -63,7 +83,10 @@ export interface StoredWebDavState {
 export class WebDavCredentialStore {
   static readonly instance: WebDavCredentialStore = new WebDavCredentialStore();
 
-  private writeTail: Promise<void> = Promise.resolve();
+  private static writeTail: Promise<void> = Promise.resolve();
+  private static warmIntent: WebDavConfigIntent | undefined;
+  private static warmPath: string = '';
+  private static activeConfig: boolean = false;
   private localModeWriteTail: Promise<void> = Promise.resolve();
   private context: common.UIAbilityContext | undefined;
   private localPreferences: preferences.Preferences | undefined;
@@ -84,9 +107,17 @@ export class WebDavCredentialStore {
     return (await this.loadState()).config;
   }
 
-  private async loadState(): Promise<StoredWebDavState> {
+  private async loadState(alias?: string, path: string = this.intentPath()): Promise<StoredWebDavState> {
+    if (alias === undefined) {
+      const head = await this.readConfigHead(path);
+      if (head === null) return { config: null };
+      if (head === undefined) return this.loadState(ASSET_ALIAS, path);
+      const state = await this.loadState(this.configRecordAlias(head.operationId), path);
+      if (!this.matchesConfigIntent(state, head)) throw new Error('WebDAV current immutable configuration binding invalid');
+      return state;
+    }
     const query = new Map<asset.Tag, asset.Value>();
-    query.set(asset.Tag.ALIAS, this.utf8(ASSET_ALIAS));
+    query.set(asset.Tag.ALIAS, this.utf8(alias));
     query.set(asset.Tag.RETURN_TYPE, asset.ReturnType.ALL);
     let records: Array<asset.AssetMap>;
     try {
@@ -115,7 +146,9 @@ export class WebDavCredentialStore {
       throw new Error('WebDAV secure configuration has an unsupported format');
     }
     if (envelope.saveOperationId !== undefined) this.validateSaveOperationId(envelope.saveOperationId);
-    return { saveOperationId: envelope.saveOperationId, config: {
+    if (envelope.savePayloadHash !== undefined && (typeof envelope.savePayloadHash !== 'string' || !/^[0-9a-f]{64}$/.test(envelope.savePayloadHash) ||
+      envelope.savePayloadHash !== await this.configHash(this.normalize(envelope.config)))) throw new Error('WebDAV secure payload binding is invalid');
+    return { saveOperationId: envelope.saveOperationId, savePayloadHash: envelope.savePayloadHash, config: {
       url: envelope.config.url,
       user: envelope.config.user,
       password: envelope.config.password,
@@ -344,73 +377,298 @@ export class WebDavCredentialStore {
 
   /** Serialized read-back; never replays a save or guesses a lost ACK. */
   loadSerialized(): Promise<StoredWebDavConfig | null> {
-    return this.writeTail.then((): Promise<StoredWebDavConfig | null> => this.load());
+    const path = this.intentPath(), generation = this.contextGeneration;
+    return WebDavCredentialStore.writeTail.then(async (): Promise<StoredWebDavConfig | null> => {
+      const state = await this.loadState(undefined, path);
+      this.assertAdmission((): boolean => generation === this.contextGeneration); return state.config;
+    });
   }
 
   /** One atomic read of config plus its qualified commit identity. */
   loadSerializedState(): Promise<StoredWebDavState> {
-    return this.writeTail.then((): Promise<StoredWebDavState> => this.loadState());
+    const path = this.intentPath(), generation = this.contextGeneration;
+    return WebDavCredentialStore.writeTail.then(async (): Promise<StoredWebDavState> => {
+      const state = await this.loadState(undefined, path);
+      this.assertAdmission((): boolean => generation === this.contextGeneration); return state;
+    });
   }
 
   /** Exact receipt query. Matching fields, old envelopes and absence prove no
    * specific save; this query never writes or migrates local preferences. */
   hasSaveReceipt(operationId: string): Promise<boolean> {
     this.validateSaveOperationId(operationId);
-    return this.loadSerializedState().then((state: StoredWebDavState): boolean =>
-      state.config !== null && state.saveOperationId === operationId);
+    const path = this.intentPath(), generation = this.contextGeneration;
+    return WebDavCredentialStore.writeTail.then(async (): Promise<boolean> => {
+      if (await this.readConfigIntent(path) !== undefined) return false;
+      const state = await this.loadState(undefined, path);
+      this.assertAdmission((): boolean => generation === this.contextGeneration);
+      return state.config !== null && state.saveOperationId === operationId;
+    });
   }
 
+  /** One exact intent survives preparation, dispatch and cleanup ACK loss. */
   save(config: StoredWebDavConfig, evidence?: ReaderWriteEvidence, admitted?: () => boolean,
     operationId?: string): Promise<void> {
-    const normalized = this.normalize(config);
-    const identity = operationId ?? util.generateRandomUUID(true);
+    const normalized = this.normalize(config), identity = operationId ?? util.generateRandomUUID(true);
     this.validateSaveOperationId(identity);
-    const next = this.writeTail.catch((): void => {}).then(async (): Promise<void> => {
-      if (admitted !== undefined && !admitted()) throw new Error('WebDAV configuration owner retired before dispatch');
-      // Migrate before removing the legacy field from the next secure record.
+    const path = this.intentPath(), generation = this.contextGeneration;
+    const current = (): boolean => generation === this.contextGeneration && (admitted === undefined || admitted());
+    const next = WebDavCredentialStore.writeTail.then(async (): Promise<void> => {
+      this.assertAdmission(current);
       await this.loadBookshelfViewMode();
-      if (admitted !== undefined && !admitted()) throw new Error('WebDAV configuration owner retired before dispatch');
-      await this.persist(normalized, evidence, identity);
+      this.assertAdmission(current);
+      if (await this.readConfigIntent(path) !== undefined) throw new Error('WebDAV previous configuration intent must be reconciled');
+      const payloadHash = await this.configHash(normalized);
+      this.validatePayloadCapacity(normalized, identity, payloadHash);
+      const existing = await this.loadState(undefined, path);
+      if (existing.saveOperationId === identity) {
+        if (existing.savePayloadHash !== payloadHash) throw new Error('WebDAV configuration identity has different original payload');
+        return;
+      }
+      if ((await this.loadState(this.configRecordAlias(identity), path)).config !== null) throw new Error('WebDAV save identity already has a different historical record');
+      this.assertAdmission(current);
+      const head = await this.readConfigHead(path);
+      const intent: WebDavConfigIntent = { version: 1, operationId: identity, payloadHash,
+        previousOperationId: head?.operationId, previousPayloadHash: head?.payloadHash, previousWasLegacy: head === undefined && existing.config !== null, phase: 'prepared' };
+      WebDavCredentialStore.activeConfig = true;
+      try {
+        await this.writeConfigIntent(intent, evidence, path);
+        this.assertAdmission(current);
+        await this.persist(normalized, evidence, identity, payloadHash, this.configRecordAlias(identity));
+        this.assertAdmission(current);
+        await this.writeConfigIntent({ ...intent, phase: 'mayDispatch' }, evidence, path);
+        this.assertAdmission(current);
+        await this.writeConfigHead(intent, evidence, path, current);
+        await this.finishConfigIntent(intent, evidence, path, current);
+      } finally { WebDavCredentialStore.activeConfig = false; }
     });
-    // Preserve the error for this caller, but do not let one transient
-    // AssetStore failure poison every later save/clear in this process.
-    this.writeTail = next.catch((): void => {});
+    WebDavCredentialStore.writeTail = next.catch((): void => {});
     return next;
+  }
+
+  /** Only exact current secure receipt qualifies cleanup. Old or absent
+   * envelopes never confirm the original pending operation. */
+  reconcileConfigIntent(admitted?: () => boolean): Promise<WebDavConfigIntent | undefined> {
+    const path = this.intentPath(), generation = this.contextGeneration;
+    const current = (): boolean => generation === this.contextGeneration && (admitted === undefined || admitted());
+    const next = WebDavCredentialStore.writeTail.then(async (): Promise<WebDavConfigIntent | undefined> => {
+      this.assertAdmission(current);
+      const intent = await this.readConfigIntent(path);
+      if (intent === undefined) return undefined;
+      if (this.matchesConfigIntent(await this.loadState(undefined, path), intent)) { await this.finishConfigIntent(intent, undefined, path, current); return undefined; }
+      return { ...intent };
+    });
+    WebDavCredentialStore.writeTail = next.then((): void => {}, (): void => {});
+    return next;
+  }
+
+  /** Explicit continuation only creates/qualifies the immutable original UUID
+   * record and commits its exact head. No changed DTO or automatic replay. */
+  continueConfigIntent(operationId: string, evidence?: ReaderWriteEvidence,
+    admitted?: () => boolean, originalConfig?: StoredWebDavConfig): Promise<void> {
+    this.validateSaveOperationId(operationId);
+    const path = this.intentPath(), generation = this.contextGeneration;
+    const current = (): boolean => generation === this.contextGeneration && (admitted === undefined || admitted());
+    const next = WebDavCredentialStore.writeTail.then(async (): Promise<void> => {
+      this.assertAdmission(current);
+      const intent = await this.readConfigIntent(path);
+      if (intent === undefined || intent.operationId !== operationId) throw new Error('WebDAV original configuration identity unavailable');
+      if (this.matchesConfigIntent(await this.loadState(undefined, path), intent)) { await this.finishConfigIntent(intent, evidence, path, current); return; }
+      let pending = await this.loadState(this.configRecordAlias(intent.operationId));
+      if (pending.config === null) {
+        if (originalConfig === undefined) throw new Error('WebDAV original secure payload unavailable; re-enter original configuration');
+        const original = this.normalize(originalConfig);
+        if (await this.configHash(original) !== intent.payloadHash) throw new Error('WebDAV original configuration input differs; original intent retained');
+        this.validatePayloadCapacity(original, intent.operationId, intent.payloadHash);
+        this.assertAdmission(current);
+        await this.writeConfigIntent(intent, evidence, path);
+        this.assertAdmission(current);
+        await this.persist(original, evidence, intent.operationId, intent.payloadHash, this.configRecordAlias(intent.operationId), true);
+        pending = await this.loadState(this.configRecordAlias(intent.operationId));
+      }
+      if (!this.matchesConfigIntent(pending, intent) || pending.config === null) throw new Error('WebDAV original secure payload binding invalid; original intent retained');
+      this.assertAdmission(current);
+      WebDavCredentialStore.activeConfig = true;
+      try {
+        await this.writeConfigIntent({ ...intent, phase: 'mayDispatch' }, evidence, path);
+        this.assertAdmission(current);
+        await this.writeConfigHead(intent, evidence, path, current);
+        await this.finishConfigIntent(intent, evidence, path, current);
+      } finally { WebDavCredentialStore.activeConfig = false; }
+    });
+    WebDavCredentialStore.writeTail = next.catch((): void => {});
+    return next;
+  }
+
+  loadConfigIntent(): Promise<WebDavConfigIntent | undefined> {
+    const path = this.intentPath(), generation = this.contextGeneration;
+    return WebDavCredentialStore.writeTail.then(async (): Promise<WebDavConfigIntent | undefined> => {
+      const intent = await this.readConfigIntent(path);
+      this.assertAdmission((): boolean => generation === this.contextGeneration); return intent === undefined ? undefined : { ...intent };
+    });
+  }
+
+  canContinueConfigIntent(operationId: string): Promise<boolean> {
+    const path = this.intentPath(), generation = this.contextGeneration;
+    return WebDavCredentialStore.writeTail.then(async (): Promise<boolean> => {
+      const intent = await this.readConfigIntent(path);
+      const qualified = intent?.operationId === operationId && this.matchesConfigIntent(await this.loadState(this.configRecordAlias(intent.operationId), path), intent);
+      this.assertAdmission((): boolean => generation === this.contextGeneration); return qualified;
+    });
+  }
+
+  async requireConfigSettled(): Promise<void> {
+    if (WebDavCredentialStore.activeConfig || await this.loadConfigIntent() !== undefined) throw new Error('WebDAV original configuration intent remains unresolved');
+  }
+
+  private assertAdmission(admitted?: () => boolean): void {
+    if (admitted !== undefined && !admitted()) throw new Error('WebDAV configuration owner retired before dispatch');
+  }
+  private matchesConfigIntent(state: StoredWebDavState, intent: { operationId: string; payloadHash: string }): boolean {
+    return state.config !== null && state.saveOperationId === intent.operationId && state.savePayloadHash === intent.payloadHash;
+  }
+  private intentPath(): string {
+    if (this.context === undefined || typeof this.context.filesDir !== 'string' || this.context.filesDir.length === 0) throw new Error('WebDAV local intent context unavailable');
+    return this.context.filesDir + '/' + CONFIG_INTENT_FILE;
+  }
+  private async readConfigIntent(path: string = this.intentPath()): Promise<WebDavConfigIntent | undefined> { let disk: WebDavConfigIntent | undefined;
+    try {
+      const raw = await fileIo.readText(path);
+      if (raw.length > 512) throw new Error('WebDAV fixed intent metadata exceeds format capacity');
+      if (raw !== '') { disk = JSON.parse(raw) as WebDavConfigIntent; this.validateConfigIntent(disk); }
+    } catch (error) {
+      if ((error as Record<string, unknown>)['code'] !== 13900002) throw new Error('WebDAV original intent cannot be read; retained');
+    }
+    const warm = WebDavCredentialStore.warmPath === path ? WebDavCredentialStore.warmIntent : undefined;
+    if (warm !== undefined && disk !== undefined && (warm.operationId !== disk.operationId || warm.payloadHash !== disk.payloadHash)) throw new Error('WebDAV original intent identity conflict; retained');
+    const intent = warm ?? disk;
+    WebDavCredentialStore.warmPath = path; WebDavCredentialStore.warmIntent = intent;
+    return intent;
+  }
+  private validateConfigIntent(value: WebDavConfigIntent): void {
+    if (value?.version !== 1 || (value.phase !== 'prepared' && value.phase !== 'mayDispatch' && value.phase !== 'confirmed') ||
+      typeof value.payloadHash !== 'string' || !/^[0-9a-f]{64}$/.test(value.payloadHash)) throw new Error('WebDAV original intent binding invalid');
+    this.validateSaveOperationId(value.operationId);
+    if (value.previousOperationId !== undefined) { this.validateSaveOperationId(value.previousOperationId); if (typeof value.previousPayloadHash !== 'string' || !/^[0-9a-f]{64}$/.test(value.previousPayloadHash)) throw new Error('WebDAV previous immutable binding invalid'); }
+    if (value.previousPayloadHash !== undefined && value.previousOperationId === undefined ||
+      value.previousWasLegacy !== undefined && typeof value.previousWasLegacy !== 'boolean' ||
+      value.previousWasLegacy === true && value.previousOperationId !== undefined) throw new Error('WebDAV previous/legacy binding invalid');
+  }
+  private async writeConfigIntent(intent: WebDavConfigIntent, evidence?: ReaderWriteEvidence, path: string = this.intentPath()): Promise<void> { this.validateConfigIntent(intent);
+    WebDavCredentialStore.warmPath = path; WebDavCredentialStore.warmIntent = intent;
+    evidence?.dispatched();
+    await replaceReaderAtomicSnapshot(path, path.substring(0, path.lastIndexOf('/')), JSON.stringify(intent)); evidence?.confirmed();
+  }
+  private async finishConfigIntent(intent: WebDavConfigIntent, evidence?: ReaderWriteEvidence, path: string = this.intentPath(), admitted?: () => boolean): Promise<void> {
+    const live = await this.readConfigIntent(path);
+    if (live === undefined || live.operationId !== intent.operationId || live.payloadHash !== intent.payloadHash ||
+      !this.matchesConfigIntent(await this.loadState(undefined, path), intent)) throw new Error('WebDAV original save receipt not qualified');
+    this.assertAdmission(admitted);
+    await this.writeConfigIntent({ ...intent, phase: 'confirmed' }, evidence, path);
+    // Re-establish current head durability before releasing the original barrier.
+    // An old native add/remove can only touch its own opaque UUID alias.
+    this.assertAdmission(admitted);
+    await this.writeConfigHead(intent, evidence, path, admitted);
+    if (intent.previousOperationId !== undefined) {
+      if (intent.previousOperationId === intent.operationId) throw new Error('WebDAV previous configuration identity conflict');
+      const previous = await this.loadState(this.configRecordAlias(intent.previousOperationId));
+      if (previous.config !== null && (previous.saveOperationId !== intent.previousOperationId || previous.savePayloadHash !== intent.previousPayloadHash)) throw new Error('WebDAV previous immutable configuration changed');
+      this.assertAdmission(admitted);
+      if (previous.config !== null) await this.remove(evidence, this.configRecordAlias(intent.previousOperationId));
+    }
+    this.assertAdmission(admitted);
+    if (intent.previousWasLegacy === true && (await this.loadState(ASSET_ALIAS, path)).config !== null) await this.remove(evidence, ASSET_ALIAS);
+    this.assertAdmission(admitted);
+    evidence?.dispatched();
+    await replaceReaderAtomicSnapshot(path, path.substring(0, path.lastIndexOf('/')), ''); evidence?.confirmed();
+    if (WebDavCredentialStore.warmPath !== path || WebDavCredentialStore.warmIntent?.operationId !== intent.operationId) throw new Error('WebDAV original cleanup identity retired');
+    WebDavCredentialStore.warmIntent = undefined;
+  }
+  private configRecordAlias(operationId: string): string {
+    this.validateSaveOperationId(operationId); return CONFIG_RECORD_PREFIX + operationId;
+  }
+  private async readConfigHead(intentPath: string = this.intentPath()): Promise<WebDavConfigHead | null | undefined> {
+    const path = intentPath.replace(CONFIG_INTENT_FILE, CONFIG_HEAD_FILE);
+    let raw: string;
+    try { raw = await fileIo.readText(path); }
+    catch (error) { if ((error as Record<string, unknown>)['code'] === 13900002) return undefined; throw new Error('WebDAV current configuration head cannot be read'); }
+    if (raw.length > 256) throw new Error('WebDAV current configuration head invalid');
+    const value = JSON.parse(raw) as WebDavConfigHead & { cleared?: boolean };
+    if (value?.version === 1 && value.cleared === true && value.operationId === undefined && value.payloadHash === undefined) return null;
+    if (value?.version !== 1 || typeof value.payloadHash !== 'string' || !/^[0-9a-f]{64}$/.test(value.payloadHash)) throw new Error('WebDAV current configuration head binding invalid');
+    this.validateSaveOperationId(value.operationId); return value;
+  }
+  private async writeConfigHead(intent: WebDavConfigIntent, evidence?: ReaderWriteEvidence, intentPath: string = this.intentPath(), admitted?: () => boolean): Promise<void> {
+    const live = await this.readConfigIntent(intentPath);
+    if (live?.operationId !== intent.operationId || live.payloadHash !== intent.payloadHash) throw new Error('WebDAV original head update identity changed');
+    const head = await this.readConfigHead(intentPath);
+    if (head?.operationId !== intent.operationId) {
+      if (intent.previousOperationId !== undefined && (head?.operationId !== intent.previousOperationId || head?.payloadHash !== intent.previousPayloadHash) ||
+        intent.previousOperationId === undefined && head !== undefined && head !== null ||
+        intent.previousWasLegacy === true && head !== undefined) throw new Error('WebDAV current head moved beyond original configuration');
+    }
+    const record = await this.loadState(this.configRecordAlias(intent.operationId));
+    if (!this.matchesConfigIntent(record, intent)) throw new Error('WebDAV immutable original payload not qualified');
+    const path = intentPath.replace(CONFIG_INTENT_FILE, CONFIG_HEAD_FILE);
+    this.assertAdmission(admitted);
+    evidence?.dispatched();
+    await replaceReaderAtomicSnapshot(path, path.substring(0, path.lastIndexOf('/')), JSON.stringify({ version: 1, operationId: intent.operationId, payloadHash: intent.payloadHash }));
+    evidence?.confirmed();
+  }
+
+  private async configHash(config: StoredWebDavConfig): Promise<string> {
+    const digest = cryptoFramework.createMd('SHA256');
+    await digest.update({ data: this.utf8(JSON.stringify(this.normalize(config))) });
+    const output = await digest.digest(); let hex = '';
+    for (let index = 0; index < output.data.length; index += 1) hex += output.data[index].toString(16).padStart(2, '0');
+    return hex;
+  }
+  private validatePayloadCapacity(config: StoredWebDavConfig, operationId: string, payloadHash: string): void {
+    if (this.utf8(JSON.stringify({ formatVersion: FORMAT_VERSION, config, saveOperationId: operationId, savePayloadHash: payloadHash })).length > MAX_CONFIG_BYTES) throw new Error(`WebDAV secure configuration exceeds ${MAX_CONFIG_BYTES} bytes`);
   }
 
   clear(evidence?: ReaderWriteEvidence, admitted?: () => boolean): Promise<void> {
-    const next = this.writeTail.catch((): void => {}).then(async (): Promise<void> => {
+    const next = WebDavCredentialStore.writeTail.catch((): void => {}).then(async (): Promise<void> => {
       if (admitted !== undefined && !admitted()) throw new Error('WebDAV configuration owner retired before dispatch');
       await this.loadBookshelfViewMode();
       if (admitted !== undefined && !admitted()) throw new Error('WebDAV configuration owner retired before dispatch');
-      await this.remove(evidence);
+      if (await this.readConfigIntent() !== undefined) throw new Error('WebDAV original configuration intent remains unresolved');
+      const head = await this.readConfigHead();
+      if (head !== undefined && head !== null) {
+        const path = this.intentPath().replace(CONFIG_INTENT_FILE, CONFIG_HEAD_FILE);
+        evidence?.dispatched();
+        await replaceReaderAtomicSnapshot(path, path.substring(0, path.lastIndexOf('/')), JSON.stringify({ version: 1, cleared: true })); evidence?.confirmed();
+        await this.remove(evidence, this.configRecordAlias(head.operationId));
+      } else await this.remove(evidence);
     });
-    this.writeTail = next.catch((): void => {});
+    WebDavCredentialStore.writeTail = next.catch((): void => {});
     return next;
   }
 
-  private async persist(config: StoredWebDavConfig, evidence?: ReaderWriteEvidence, operationId?: string): Promise<void> {
-    const payload = this.utf8(JSON.stringify({ formatVersion: FORMAT_VERSION, config, saveOperationId: operationId }));
+  private async persist(config: StoredWebDavConfig, evidence?: ReaderWriteEvidence, operationId?: string, payloadHash?: string, alias: string = ASSET_ALIAS, qualifyExisting: boolean = false): Promise<void> {
+    const payload = this.utf8(JSON.stringify({ formatVersion: FORMAT_VERSION, config, saveOperationId: operationId, savePayloadHash: payloadHash }));
     if (payload.length > MAX_CONFIG_BYTES) {
       throw new Error(`WebDAV secure configuration exceeds ${MAX_CONFIG_BYTES} bytes`);
     }
     const attributes = new Map<asset.Tag, asset.Value>();
-    attributes.set(asset.Tag.ALIAS, this.utf8(ASSET_ALIAS));
+    attributes.set(asset.Tag.ALIAS, this.utf8(alias));
     attributes.set(asset.Tag.SECRET, payload);
     attributes.set(asset.Tag.ACCESSIBILITY, asset.Accessibility.DEVICE_POWERED_ON);
-    attributes.set(asset.Tag.CONFLICT_RESOLUTION, asset.ConflictResolution.OVERWRITE);
+    attributes.set(asset.Tag.CONFLICT_RESOLUTION, asset.ConflictResolution.THROW_ERROR);
     try {
       evidence?.dispatched();
       await asset.add(attributes);
       evidence?.confirmed();
     } catch (error) {
+      if (qualifyExisting && this.errorCode(error) === asset.ErrorCode.DUPLICATED && operationId !== undefined && payloadHash !== undefined &&
+        this.matchesConfigIntent(await this.loadState(alias), { operationId, payloadHash })) { return; }
       throw new Error(`WebDAV secure configuration cannot be written: ${this.errorMessage(error)}`);
     }
   }
 
-  private async remove(evidence?: ReaderWriteEvidence): Promise<void> {
+  private async remove(evidence?: ReaderWriteEvidence, alias: string = ASSET_ALIAS): Promise<void> {
     const query = new Map<asset.Tag, asset.Value>();
-    query.set(asset.Tag.ALIAS, this.utf8(ASSET_ALIAS));
+    query.set(asset.Tag.ALIAS, this.utf8(alias));
     try {
       evidence?.dispatched();
       await asset.remove(query);

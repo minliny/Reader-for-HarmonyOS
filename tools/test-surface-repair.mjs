@@ -1,3 +1,4 @@
+import {configIntentFixture} from './lib/sync-config-intent-fixture.mjs';
 import {actualBookshelfOperationTypes,actualBookshelfHostField,bookshelfOperationClass} from './lib/bookshelf-operation-owner-probe.mjs';
 import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
 import {ReaderWriteEvidence} from '../entry/src/main/ets/app/ReaderWriteEvidence.ts';
@@ -11,7 +12,7 @@ const path=f=>new URL(`../entry/src/main/ets/${f}`,import.meta.url);
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
 const settle=async()=>{for(let i=0;i<15;i++)await Promise.resolve();};
 const Store=productionMotionMethods(path('features/sync/WebDavCredentialStore.ts'),[
- 'loadBookshelfViewMode','saveBookshelfViewMode','readOrMigrateViewMode','writeLocalViewMode','save','clear','validateRestoreJournal','validateSaveOperationId'],
+ 'loadBookshelfViewMode','saveBookshelfViewMode','readOrMigrateViewMode','writeLocalViewMode','validateRestoreJournal','validateSaveOperationId'],
  {util:{generateRandomUUID:()=>randomUUID()},LOCAL_VIEW_MODE_KEY:'mode',LOCAL_MIGRATION_KEY:'version',LOCAL_CONFIG_VERSION:1,LOCAL_RESTORE_JOURNAL_KEY:'journal'});
 function fixture(initial={},legacy=null){
  const values=new Map(Object.entries(initial)); let reads=0,writes=0,fail=false;
@@ -20,7 +21,7 @@ function fixture(initial={},legacy=null){
  const s=Object.assign(new Store(),{localModeWriteTail:Promise.resolve(),writeTail:Promise.resolve(),
  contextGeneration:0,pendingBookshelfModeWrites:0,confirmedBookshelfMode:undefined,
  ensureLocalPreferences:async()=>backend,load:async()=>{reads++;return legacy;},normalize:x=>x,persist:async()=>{},remove:async()=>{}});
- return {s,values,reads:()=>reads,writes:()=>writes,fail:()=>{fail=true;}};
+ return {s,values,backend,reads:()=>reads,writes:()=>writes,fail:()=>{fail=true;}};
 }
 {
  const f=fixture({mode:'list'},{bookshelfViewMode:'cover'});
@@ -28,7 +29,10 @@ function fixture(initial={},legacy=null){
  assert.equal(f.values.get('version'),1);
  await Promise.all([f.s.saveBookshelfViewMode('cover'),f.s.saveBookshelfViewMode('list'),f.s.saveBookshelfViewMode('cover')]);
  assert.equal(await f.s.loadBookshelfViewMode(),'cover');assert.equal(f.reads(),0,'mode writes never read/overwrite credentials');
- await f.s.save({url:'new credentials'});await f.s.clear();assert.equal(await f.s.loadBookshelfViewMode(),'cover');
+ const actual=configIntentFixture(),credential=actual.fixture({empty:true});
+ const key=k=>({bookshelfViewMode:'mode',bookshelfConfigVersion:'version',webdavRestoreJournal:'journal'}[k]??k);
+ actual.setPreferences({has:k=>f.backend.has(key(k)),get:(k,d)=>f.backend.get(key(k),d),put:(k,v)=>f.backend.put(key(k),v),delete:k=>f.backend.delete(key(k)),flush:()=>f.backend.flush()});
+ await credential.store.save({...actual.config,url:'https://new.test'});await credential.store.clear();assert.equal(await f.s.loadBookshelfViewMode(),'cover');actual.cleanup();
 }
 {
  const f=fixture({}, {bookshelfViewMode:'list'});assert.equal(await f.s.loadBookshelfViewMode(),'list');
@@ -41,8 +45,11 @@ function fixture(initial={},legacy=null){
  await f.s.saveBookshelfViewMode('cover');assert.equal(await f.s.loadBookshelfViewMode(),'cover');
 }
 {
- const f=fixture({mode:'list',version:1});let fail=true;f.s.persist=async()=>{if(fail){fail=false;throw Error('asset');}};
- await assert.rejects(f.s.save({}),/asset/);await f.s.save({});await f.s.clear();assert.equal(await f.s.loadBookshelfViewMode(),'list');
+ const f=fixture({mode:'list',version:1}),actual=configIntentFixture(),credential=actual.fixture({empty:true});
+ const key=k=>({bookshelfViewMode:'mode',bookshelfConfigVersion:'version',webdavRestoreJournal:'journal'}[k]??k);
+ actual.setPreferences({has:k=>f.backend.has(key(k)),get:(k,d)=>f.backend.get(key(k),d),put:(k,v)=>f.backend.put(key(k),v),delete:k=>f.backend.delete(key(k)),flush:()=>f.backend.flush()});
+ actual.asset.failAdd=true;await assert.rejects(credential.store.save(actual.config),/cannot be written/);
+ const original=(await credential.store.loadConfigIntent()).operationId;await credential.store.continueConfigIntent(original);await credential.store.clear();assert.equal(await f.s.loadBookshelfViewMode(),'list');actual.cleanup();
 }
 const receiptFacts=bookshelfOperationClass('app/ReaderOperationFacts.ts','({projectOperationFacts,projectCommitReadback})');
 const projectPersistedReceipt=bookshelfOperationClass('app/ReaderPersistedReceiptProjection.ts','projectPersistedReceipt',receiptFacts);
