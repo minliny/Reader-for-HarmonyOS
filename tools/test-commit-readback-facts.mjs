@@ -9,7 +9,7 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
 
 const indexSource = read('entry/src/main/ets/pages/Index.ets');
-assert.match(indexSource, /if \(outcome\.shelf !== undefined\) \{[\s\S]*this\.applyBookshelfState\(outcome\.shelf\);/,
+assert.match(indexSource, /if \(presentImportResult && snapshot\.receipt\?\.value !== undefined\) this\.applyBookshelfState\(snapshot\.receipt\.value\);/,
   'Index must guard the optional shelf read-back before applying it');
 assert.match(indexSource, /onReconcileEditor: \(\): void => this\.getSourceToolsOrchestrator\(\)\.reconcileEditor\(\)/,
   'Index must expose the read-only editor reconciliation action');

@@ -99,5 +99,7 @@ assert.match(dialog,/resultItemsNatural\(/);assert.match(dialog,/onAreaChange/);
 assert.match(dialog,/localImportResultLayout\(/);assert.match(dialog,/summaryIcon\(/);
 assert.match(dialog,/duration: 1000, curve: Curve.Linear, iterations: -1/);
 assert.match(dialog,/duration: 220/);assert.match(dialog,/delay: 80, duration: 140/);
-assert.match(index,/presentation.state !== 'fileSelection' \|\| this.importBusyAttempt !== 0/);
+const operationOwner=read('features/bookshelf/BookshelfOperationOwner.ts');
+assert.match(operationOwner,/!this\.canMutate\(\)[\s\S]*this\.presentation\.current\(\)\?\.state !== 'fileSelection'/,'domain owner holds the real mutex and picker-opening admission');
+assert.match(index,/this\.bookshelfHost\.operations\(owner\)\.importFiles\(this\.shelfFilter\(\), current\)/,'page forwards its exact opening/navigation lease to the actual owner');
 console.log('PASS bookshelf/import current approved surfaces: shared four-row typography, separate menus, cover-aligned sheet, measured results and bounded animation');
