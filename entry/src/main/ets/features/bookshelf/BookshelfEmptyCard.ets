@@ -1,3 +1,4 @@
+import { TYPE_FORM_BODY, TYPE_FORM_LABEL_ACTION, TYPE_SHELF_EMPTY_TITLE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderShelfFonts } from '../common/ReaderFonts';
 import {
@@ -73,18 +74,18 @@ export struct BookshelfEmptyCard {
 
       Text('书架还是空的')
         .width('100%')
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(19)
+        .fontFamily(TYPE_SHELF_EMPTY_TITLE.fontFamily)
+        .fontWeight(TYPE_SHELF_EMPTY_TITLE.fontWeight)
+        .fontSize(TYPE_SHELF_EMPTY_TITLE.fontSizeFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .position({ x: 0, y: 137 });
 
       Text('导入本地书籍或通过搜索加入书架。')
         .width('100%')
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(13)
+        .fontFamily(TYPE_FORM_BODY.fontFamily)
+        .fontWeight(TYPE_FORM_BODY.fontWeight)
+        .fontSize(TYPE_FORM_BODY.fontSizeFp)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .position({ x: 0, y: 173 });
@@ -92,9 +93,9 @@ export struct BookshelfEmptyCard {
       // Primary action — 导入本地书籍 (solid): Figma 286:144
       Stack({ alignContent: Alignment.Start }) {
         Text('导入本地书籍')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(13)
+          .fontFamily(TYPE_FORM_LABEL_ACTION.fontFamily)
+          .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)
+          .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
           .margin({ left: TOK_SPACE_CARD_PADDING });
       }
@@ -108,9 +109,9 @@ export struct BookshelfEmptyCard {
       // Secondary action — 搜索并加入书架 (outlined): Figma 286:146
       Stack({ alignContent: Alignment.Start }) {
         Text('搜索并加入书架')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(13)
+          .fontFamily(TYPE_FORM_LABEL_ACTION.fontFamily)
+          .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)
+          .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
           .margin({ left: 13 });
       }

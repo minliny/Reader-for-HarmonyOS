@@ -1,3 +1,4 @@
+import { TYPE_APP_LOADING_BODY, TYPE_SOURCE_STATE_TITLE, TYPE_SOURCE_SWITCH_COLUMN, TYPE_SOURCE_SWITCH_FOOTER, TYPE_SOURCE_SWITCH_HEADING, TYPE_SOURCE_SWITCH_MESSAGE, TYPE_SOURCE_SWITCH_RECOVERY, TYPE_SOURCE_SWITCH_SORT } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { CandidateRow } from './CandidateRow';
 import { sourceSwitchCandidateKey, sourceSwitchSourceCount } from './SourceSwitchGateway';
@@ -143,10 +144,10 @@ export struct SourceSwitchWindow {
           .layoutWeight(1)
           .constraintSize({ minWidth: 0 })
           .height(16)
-          .fontFamily('ReaderNotoSerifSCRegular')
-          .fontWeight(FontWeight.Medium)
-          .fontSize(11)
-          .lineHeight(12.32)
+          .fontFamily(TYPE_SOURCE_SWITCH_HEADING.fontFamily)
+          .fontWeight(TYPE_SOURCE_SWITCH_HEADING.fontWeight)
+          .fontSize(TYPE_SOURCE_SWITCH_HEADING.fontSizeFp)
+          .lineHeight(TYPE_SOURCE_SWITCH_HEADING.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
           .margin({ left: 7 });
 
@@ -189,10 +190,10 @@ export struct SourceSwitchWindow {
   private sortPill() {
     Stack({ alignContent: Alignment.Center }) {
       Text('按延迟排序')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(9)
-        .lineHeight(12)
+        .fontFamily(TYPE_SOURCE_SWITCH_SORT.fontFamily)
+        .fontWeight(TYPE_SOURCE_SWITCH_SORT.fontWeight)
+        .fontSize(TYPE_SOURCE_SWITCH_SORT.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_SWITCH_SORT.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_SS_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.Center);
     }
@@ -209,26 +210,26 @@ export struct SourceSwitchWindow {
       Text('书源')
         .width(this.sourceHeaderWidth())
         .height(12)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(8)
+        .fontFamily(TYPE_SOURCE_SWITCH_COLUMN.fontFamily)
+        .fontWeight(TYPE_SOURCE_SWITCH_COLUMN.fontWeight)
+        .fontSize(TYPE_SOURCE_SWITCH_COLUMN.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_HANDLE', this.appThemeScheme))
         .margin({ left: 10 });
 
       Text('延迟')
         .width(72)
         .height(12)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(8)
+        .fontFamily(TYPE_SOURCE_SWITCH_COLUMN.fontFamily)
+        .fontWeight(TYPE_SOURCE_SWITCH_COLUMN.fontWeight)
+        .fontSize(TYPE_SOURCE_SWITCH_COLUMN.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_HANDLE', this.appThemeScheme));
 
       Text('当前章节')
         .width(100)
         .height(12)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(8)
+        .fontFamily(TYPE_SOURCE_SWITCH_COLUMN.fontFamily)
+        .fontWeight(TYPE_SOURCE_SWITCH_COLUMN.fontWeight)
+        .fontSize(TYPE_SOURCE_SWITCH_COLUMN.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_HANDLE', this.appThemeScheme))
         .textAlign(TextAlign.End);
     }
@@ -266,10 +267,10 @@ export struct SourceSwitchWindow {
         .enableLoading(true);
       Text(isSwitching ? '正在切换书源…' : '正在搜索书源…')
         .margin({ top: 20 })
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(13)
-        .lineHeight(20)
+        .fontFamily(TYPE_APP_LOADING_BODY.fontFamily)
+        .fontWeight(TYPE_APP_LOADING_BODY.fontWeight)
+        .fontSize(TYPE_APP_LOADING_BODY.fontSizeFp)
+        .lineHeight(TYPE_APP_LOADING_BODY.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.Center);
       Blank().layoutWeight(1);
@@ -283,19 +284,19 @@ export struct SourceSwitchWindow {
     Column({ space: 0 }) {
       Blank().layoutWeight(1);
       Text(title)
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(15)
-        .lineHeight(22)
+        .fontFamily(TYPE_SOURCE_STATE_TITLE.fontFamily)
+        .fontWeight(TYPE_SOURCE_STATE_TITLE.fontWeight)
+        .fontSize(TYPE_SOURCE_STATE_TITLE.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_STATE_TITLE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center);
       if (subtitle.length > 0) {
         Text(subtitle)
           .margin({ top: TOK_SPACE_XS })
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(11)
-          .lineHeight(16)
+          .fontFamily(TYPE_SOURCE_SWITCH_MESSAGE.fontFamily)
+          .fontWeight(TYPE_SOURCE_SWITCH_MESSAGE.fontWeight)
+          .fontSize(TYPE_SOURCE_SWITCH_MESSAGE.fontSizeFp)
+          .lineHeight(TYPE_SOURCE_SWITCH_MESSAGE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center);
       }
@@ -310,29 +311,29 @@ export struct SourceSwitchWindow {
     Column({ space: 0 }) {
       Blank().layoutWeight(1);
       Text('书源搜索失败')
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(15)
-        .lineHeight(22)
+        .fontFamily(TYPE_SOURCE_STATE_TITLE.fontFamily)
+        .fontWeight(TYPE_SOURCE_STATE_TITLE.fontWeight)
+        .fontSize(TYPE_SOURCE_STATE_TITLE.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_STATE_TITLE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center);
       Text(message)
         .margin({ top: TOK_SPACE_XS })
         .width(this.messageWidth())
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(11)
-        .lineHeight(16)
+        .fontFamily(TYPE_SOURCE_SWITCH_MESSAGE.fontFamily)
+        .fontWeight(TYPE_SOURCE_SWITCH_MESSAGE.fontWeight)
+        .fontSize(TYPE_SOURCE_SWITCH_MESSAGE.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_SWITCH_MESSAGE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .textAlign(TextAlign.Center);
       Text('重试')
         .margin({ top: 18 })
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(12)
-        .lineHeight(12)
+        .fontFamily(TYPE_SOURCE_SWITCH_RECOVERY.fontFamily)
+        .fontWeight(TYPE_SOURCE_SWITCH_RECOVERY.fontWeight)
+        .fontSize(TYPE_SOURCE_SWITCH_RECOVERY.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_SWITCH_RECOVERY.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .padding({ left: 26, right: 26, top: TOK_SPACE_SM, bottom: TOK_SPACE_SM })
         .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
@@ -350,19 +351,19 @@ export struct SourceSwitchWindow {
     Column({ space: 0 }) {
       Blank().layoutWeight(1);
       Text('换源失败')
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(15)
-        .lineHeight(22)
+        .fontFamily(TYPE_SOURCE_STATE_TITLE.fontFamily)
+        .fontWeight(TYPE_SOURCE_STATE_TITLE.fontWeight)
+        .fontSize(TYPE_SOURCE_STATE_TITLE.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_STATE_TITLE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center);
       Text(message)
         .margin({ top: TOK_SPACE_XS })
         .width(this.messageWidth())
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(11)
-        .lineHeight(16)
+        .fontFamily(TYPE_SOURCE_SWITCH_MESSAGE.fontFamily)
+        .fontWeight(TYPE_SOURCE_SWITCH_MESSAGE.fontWeight)
+        .fontSize(TYPE_SOURCE_SWITCH_MESSAGE.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_SWITCH_MESSAGE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -370,10 +371,10 @@ export struct SourceSwitchWindow {
       if (canRollback) {
         Text('撤销切换')
           .margin({ top: 18 })
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(12)
-          .lineHeight(12)
+          .fontFamily(TYPE_SOURCE_SWITCH_RECOVERY.fontFamily)
+          .fontWeight(TYPE_SOURCE_SWITCH_RECOVERY.fontWeight)
+          .fontSize(TYPE_SOURCE_SWITCH_RECOVERY.fontSizeFp)
+          .lineHeight(TYPE_SOURCE_SWITCH_RECOVERY.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .padding({ left: 26, right: 26, top: TOK_SPACE_SM, bottom: TOK_SPACE_SM })
           .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
@@ -433,10 +434,10 @@ export struct SourceSwitchWindow {
     Text(this.footerText())
       .width('100%')
       .height(22)
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Regular)
-      .fontSize(8)
-      .lineHeight(12)
+      .fontFamily(TYPE_SOURCE_SWITCH_FOOTER.fontFamily)
+      .fontWeight(TYPE_SOURCE_SWITCH_FOOTER.fontWeight)
+      .fontSize(TYPE_SOURCE_SWITCH_FOOTER.fontSizeFp)
+      .lineHeight(TYPE_SOURCE_SWITCH_FOOTER.lineHeightFp as number)
       .fontColor(readerAppColor('TOK_SS_FOOTER_TEXT', this.appThemeScheme))
       .textAlign(TextAlign.Center);
   }

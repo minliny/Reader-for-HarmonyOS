@@ -1,3 +1,4 @@
+import { TYPE_DIALOG_ACTION, TYPE_SELECT_OPTION } from './ReaderTypography';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from './ReaderWindowMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from './SurfaceHorizontalGeometry';
@@ -115,7 +116,7 @@ export struct ReaderDialogSurface {
           .textAlign(this.spec().headerTextAlign);
         Text('关闭')
           .width(52).height(36)
-          .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Regular).fontSize(12)
+          .fontFamily(TYPE_SELECT_OPTION.fontFamily).fontWeight(TYPE_SELECT_OPTION.fontWeight).fontSize(TYPE_SELECT_OPTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center)
           .onClick((): void => this.onClose());
@@ -155,7 +156,7 @@ export struct ReaderDialogSurface {
   private actionCell(action: DialogActionView) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Text(action.label)
-        .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold).fontSize(13).lineHeight(16)
+        .fontFamily(TYPE_DIALOG_ACTION.fontFamily).fontWeight(TYPE_DIALOG_ACTION.fontWeight).fontSize(TYPE_DIALOG_ACTION.fontSizeFp).lineHeight(TYPE_DIALOG_ACTION.lineHeightFp as number)
         .fontColor(this.actionLabelColor(action));
     }
     .width(this.spec().actionsLayout === 'stack' ? '100%' : undefined)

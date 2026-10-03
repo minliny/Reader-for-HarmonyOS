@@ -1,3 +1,4 @@
+import { TYPE_FORM_COMPACT_ACTION, TYPE_FORM_HINT, TYPE_FORM_LABEL_ACTION, TYPE_SEARCH_RESULT_INTRO, TYPE_SOURCE_MANAGEMENT_COUNT, TYPE_SOURCE_MANAGEMENT_STATUS, TYPE_SOURCE_MANAGEMENT_TITLE, TYPE_SOURCE_STATE_TITLE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 // Source Management — rebuilt 2026-08-05 against live Figma nodes
 // 943:4281 (Phone 390×844) / 943:4745 (Tablet 760×960).
@@ -220,10 +221,10 @@ export struct SourceManagementPage {
   private statsRow() {
     Text(this.statsText())
       .width(this.contentFrame().width)
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Regular)
-      .fontSize(10)
-      .lineHeight(12.5)
+      .fontFamily(TYPE_SOURCE_MANAGEMENT_COUNT.fontFamily)
+      .fontWeight(TYPE_SOURCE_MANAGEMENT_COUNT.fontWeight)
+      .fontSize(TYPE_SOURCE_MANAGEMENT_COUNT.fontSizeFp)
+      .lineHeight(TYPE_SOURCE_MANAGEMENT_COUNT.lineHeightFp as number)
       .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
       .maxLines(1)
       .margin({ top: TOK_SPACE_XS });
@@ -234,17 +235,17 @@ export struct SourceManagementPage {
     Row({ space: TOK_SPACE_XS }) {
       Text(this.statusMessage)
         .layoutWeight(1)
-        .fontFamily('ReaderNotoSansSC')
-        .fontSize(11)
-        .lineHeight(16)
+        .fontFamily(TYPE_SOURCE_MANAGEMENT_STATUS.fontFamily as string)
+        .fontSize(TYPE_SOURCE_MANAGEMENT_STATUS.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_MANAGEMENT_STATUS.lineHeightFp as number)
         .fontColor(this.statusKind === 'error' ? readerAppColor('app.SourceManagementPage.STATUS_ERROR_DOT', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       if (this.statusKind === 'error') {
         Text('重试')
-          .fontFamily('ReaderNotoSansSC')
-          .fontSize(11)
-          .fontWeight(FontWeight.Bold)
+          .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)
+          .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)
+          .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)
           .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
           .onClick((): void => this.onRetryLoad());
       }
@@ -283,8 +284,8 @@ export struct SourceManagementPage {
       Row({ space: TOK_SPACE_XS }) {
         ForEach(['all', 'novel', 'comic', 'music', 'download', 'external', 'other'], (category: string) => {
           Text(category === 'all' ? '全部类型' : readerSourceCategoryLabel(category as ReaderSourceCategory))
-            .fontFamily('ReaderNotoSansSC')
-            .fontSize(11)
+            .fontFamily(TYPE_FORM_HINT.fontFamily as string)
+            .fontSize(TYPE_FORM_HINT.fontSizeFp)
             .fontColor(this.categoryValue === category ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
             .backgroundColor(this.categoryValue === category ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
             .borderRadius(16)
@@ -326,9 +327,9 @@ export struct SourceManagementPage {
       .width(this.statusChipWidth(width))
       .height(32)
       .textAlign(TextAlign.Center)
-      .fontFamily('ReaderNotoSansSC')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(11)
+      .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)
+      .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)
+      .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)
       .fontColor(active ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
       .backgroundColor(active ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: active ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('app.SourceManagementPage.CHIP_BORDER', this.appThemeScheme) })
@@ -349,9 +350,9 @@ export struct SourceManagementPage {
       Image((this.appThemeScheme === 'night' ? $r('app.media.source_group_folder_theme_night') : $r('app.media.source_group_folder'))).width(15).height(15);
       Text('分组')
         .margin({ left: 12 })
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(13)
+        .fontFamily(TYPE_FORM_LABEL_ACTION.fontFamily)
+        .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)
+        .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1);
       ReaderSelect({
@@ -397,10 +398,10 @@ export struct SourceManagementPage {
       if (this.sources.length === 0 && this.statusKind !== 'loading') {
         ListItem() {
           Column({ space: TOK_SPACE_XS }) {
-            Text('暂无书源').fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold)
-              .fontSize(15).lineHeight(22).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-            Text('点击下方「＋ 新增书源」导入 Legado 书源 JSON').fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Regular).fontSize(12).lineHeight(18)
+            Text('暂无书源').fontFamily(TYPE_SOURCE_STATE_TITLE.fontFamily).fontWeight(TYPE_SOURCE_STATE_TITLE.fontWeight)
+              .fontSize(TYPE_SOURCE_STATE_TITLE.fontSizeFp).lineHeight(TYPE_SOURCE_STATE_TITLE.lineHeightFp as number).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+            Text('点击下方「＋ 新增书源」导入 Legado 书源 JSON').fontFamily(TYPE_SEARCH_RESULT_INTRO.fontFamily)
+              .fontWeight(TYPE_SEARCH_RESULT_INTRO.fontWeight).fontSize(TYPE_SEARCH_RESULT_INTRO.fontSizeFp).lineHeight(TYPE_SEARCH_RESULT_INTRO.lineHeightFp as number)
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
           }.width('100%').padding({ top: 64 }).alignItems(HorizontalAlign.Center);
         }
@@ -430,10 +431,10 @@ export struct SourceManagementPage {
         Row({ space: 6 }) {
           Text(source.name)
             .constraintSize({ minWidth: 0 }).flexShrink(1)
-            .fontFamily('ReaderNotoSansSC')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(13)
-            .lineHeight(15.34)
+            .fontFamily(TYPE_SOURCE_MANAGEMENT_TITLE.fontFamily)
+            .fontWeight(TYPE_SOURCE_MANAGEMENT_TITLE.fontWeight)
+            .fontSize(TYPE_SOURCE_MANAGEMENT_TITLE.fontSizeFp)
+            .lineHeight(TYPE_SOURCE_MANAGEMENT_TITLE.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -496,9 +497,9 @@ export struct SourceManagementPage {
   private detectButton(source: BookSource) {
     Stack({ alignContent: Alignment.Center }) {
       Text(source.checkState === 'checking' ? '检测中' : '检测')
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(11)
+        .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)
+        .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)
+        .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1);
     }
@@ -519,9 +520,9 @@ export struct SourceManagementPage {
   private loginButton(source: BookSource) {
     Stack({ alignContent: Alignment.Center }) {
       Text('登录')
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(11)
+        .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)
+        .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)
+        .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)
         .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
         .maxLines(1);
     }
@@ -548,9 +549,9 @@ export struct SourceManagementPage {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
       Stack({ alignContent: Alignment.Center }) {
         Text('批量管理')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(13)
+          .fontFamily(TYPE_FORM_LABEL_ACTION.fontFamily)
+          .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)
+          .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1);
       }
@@ -567,9 +568,9 @@ export struct SourceManagementPage {
             .width(18)
             .height(18);
           Text('新增书源')
-            .fontFamily('ReaderNotoSansSC')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(13)
+            .fontFamily(TYPE_FORM_LABEL_ACTION.fontFamily)
+            .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)
+            .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)
             .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
             .maxLines(1);
         }

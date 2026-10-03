@@ -1,3 +1,4 @@
+import { TYPE_APP_COMPACT_BADGE, TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_STATE, TYPE_APP_SECTION_LABEL, TYPE_MAIN_TAB_LABEL, TYPE_SECTION_HEADING } from '../common/ReaderTypography';
 import { BOOKSHELF_WIDE_BREAKPOINT } from './BookshelfShell';
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -354,10 +355,10 @@ export struct BookshelfPage {
       Column({ space: 0 }) {
         Text('继续阅读')
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(900)
-          .fontSize(13)
-          .lineHeight(15.6)
+          .fontFamily(TYPE_SECTION_HEADING.fontFamily)
+          .fontWeight(TYPE_SECTION_HEADING.fontWeight)
+          .fontSize(TYPE_SECTION_HEADING.fontSizeFp)
+          .lineHeight(TYPE_SECTION_HEADING.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -433,10 +434,10 @@ export struct BookshelfPage {
         Row() {
           Text('我的书架')
             .layoutWeight(1)
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(15)
-            .lineHeight(18)
+            .fontFamily(TYPE_APP_SECTION_LABEL.fontFamily)
+            .fontWeight(TYPE_APP_SECTION_LABEL.fontWeight)
+            .fontSize(TYPE_APP_SECTION_LABEL.fontSizeFp)
+            .lineHeight(TYPE_APP_SECTION_LABEL.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .opacity(this.viewSwitchHeaderOpacity);
 
@@ -468,7 +469,7 @@ export struct BookshelfPage {
 
       if (this.viewModeError.length > 0) {
         ListItem() {
-          Text(this.viewModeError).fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+          Text(this.viewModeError).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .onClick((): void => this.retryViewMode());
         }
       }
@@ -476,8 +477,8 @@ export struct BookshelfPage {
       if (this.visibleBookCount === 0) {
         ListItem() {
           Column({ space: 8 }) {
-            Text('没有符合条件的书籍').fontSize(14).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-            Text('清除全部条件').fontSize(12).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
+            Text('没有符合条件的书籍').fontSize(TYPE_APP_INHERITED_STATE.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+            Text('清除全部条件').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
               .height(36).onClick((): void => this.clearFilters());
           }.width('100%').padding({ top: 16, bottom: 16 });
         }
@@ -581,19 +582,19 @@ export struct BookshelfPage {
   private filterRow() {
     Column({ space: 4 }) {
       Row() {
-        Text('筛选').fontSize(12).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).layoutWeight(1);
-        Text('清除').fontSize(12).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
+        Text('筛选').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).layoutWeight(1);
+        Text('清除').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
           .height(28).enabled(this.hasActiveFilters()).opacity(this.hasActiveFilters() ? 1 : 0.5)
           .onClick((): void => this.clearFilters()).accessibilityText('清除阅读状态和类型筛选');
       }.width('100%');
-      Text('阅读状态').width('100%').fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+      Text('阅读状态').width('100%').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
         this.filterChip('reading', 'all', '全部');
         this.filterChip('reading', 'unread', '未读');
         this.filterChip('reading', 'reading', '在读');
         this.filterChip('reading', 'finished', '已读');
       }.width('100%');
-      Text('书籍类型').width('100%').fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+      Text('书籍类型').width('100%').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
         this.filterChip('source', 'all', '全部');
         this.filterChip('source', 'local', '本地');
@@ -605,7 +606,7 @@ export struct BookshelfPage {
   @Builder
   private filterChip(dimension: string, value: string, label: string) {
     Text(label)
-      .fontFamily('ReaderInter').fontWeight(FontWeight.Medium).fontSize(12).lineHeight(18)
+      .fontFamily(TYPE_APP_FILTER_OPTION.fontFamily).fontWeight(TYPE_APP_FILTER_OPTION.fontWeight).fontSize(TYPE_APP_FILTER_OPTION.fontSizeFp).lineHeight(TYPE_APP_FILTER_OPTION.lineHeightFp as number)
       .fontColor(this.isFilterSelected(dimension, value) ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
       .padding({ left: 12, right: 12, top: 5, bottom: 5 })
       .backgroundColor(this.isFilterSelected(dimension, value) ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
@@ -807,9 +808,9 @@ export struct BookshelfPage {
       }
       if ((book.unreadCount ?? 0) > 0) {
         Text(`更新 ${book.unreadCount} 章`)
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(10)
+          .fontFamily(TYPE_APP_COMPACT_BADGE.fontFamily)
+          .fontWeight(TYPE_APP_COMPACT_BADGE.fontWeight)
+          .fontSize(TYPE_APP_COMPACT_BADGE.fontSizeFp)
           .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
           .padding({ left: 7, right: 7, top: 3, bottom: 3 })
           .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
@@ -1122,10 +1123,10 @@ export struct BookshelfPage {
       .height(32);
 
       Text(label)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(11)
-        .lineHeight(18)
+        .fontFamily(TYPE_MAIN_TAB_LABEL.fontFamily)
+        .fontWeight(TYPE_MAIN_TAB_LABEL.fontWeight)
+        .fontSize(TYPE_MAIN_TAB_LABEL.fontSizeFp)
+        .lineHeight(TYPE_MAIN_TAB_LABEL.lineHeightFp as number)
         .fontColor(active ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme));
     }
     .width(66)

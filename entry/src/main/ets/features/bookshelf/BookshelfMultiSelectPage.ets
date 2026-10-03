@@ -1,3 +1,4 @@
+import { TYPE_SHELF_SELECTION_ACTION, TYPE_SHELF_SELECTION_AUTHOR, TYPE_SHELF_SELECTION_AUTHOR_WIDE, TYPE_SHELF_SELECTION_CHECK, TYPE_SHELF_SELECTION_HEADING, TYPE_SHELF_SELECTION_REMOVE, TYPE_SHELF_SELECTION_TITLE, TYPE_SHELF_SELECTION_TITLE_WIDE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ShelfBookListDetails } from './ShelfBookListDetails';
 import { ShelfBookPresentation } from './ShelfBookPresentation';
@@ -101,10 +102,10 @@ export struct BookshelfMultiSelectPage {
     Row() {
       Text('取消')
         .width(72)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(13)
-        .lineHeight(15.6)
+        .fontFamily(TYPE_SHELF_SELECTION_ACTION.fontFamily)
+        .fontWeight(TYPE_SHELF_SELECTION_ACTION.fontWeight)
+        .fontSize(TYPE_SHELF_SELECTION_ACTION.fontSizeFp)
+        .lineHeight(TYPE_SHELF_SELECTION_ACTION.lineHeightFp as number)
         .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionTopBar.fontColor.FF2D4A3E', this.appThemeScheme))
         .onClick((): void => {
           if (!this.busy && this.ready) {
@@ -114,20 +115,20 @@ export struct BookshelfMultiSelectPage {
 
       Text(`已选择 ${this.selectedKeys.length} 本`)
         .layoutWeight(1)
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(24)
-        .lineHeight(34.49)
+        .fontFamily(TYPE_SHELF_SELECTION_HEADING.fontFamily)
+        .fontWeight(TYPE_SHELF_SELECTION_HEADING.fontWeight)
+        .fontSize(TYPE_SHELF_SELECTION_HEADING.fontSizeFp)
+        .lineHeight(TYPE_SHELF_SELECTION_HEADING.lineHeightFp as number)
         .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionTopBar.fontColor.FF1F1B17', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .maxLines(1);
 
       Text(this.allSelected() ? '取消全选' : '全选')
         .width(72)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(13)
-        .lineHeight(15.6)
+        .fontFamily(TYPE_SHELF_SELECTION_ACTION.fontFamily)
+        .fontWeight(TYPE_SHELF_SELECTION_ACTION.fontWeight)
+        .fontSize(TYPE_SHELF_SELECTION_ACTION.fontSizeFp)
+        .lineHeight(TYPE_SHELF_SELECTION_ACTION.lineHeightFp as number)
         .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionTopBar.fontColor.FF2D4A3E', this.appThemeScheme))
         .textAlign(TextAlign.End)
         .onClick((): void => {
@@ -161,9 +162,9 @@ export struct BookshelfMultiSelectPage {
         Stack({ alignContent: Alignment.Center }) {
           if (this.isSelected(book)) {
             Text('✓')
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Bold)
-              .fontSize(14)
+              .fontFamily(TYPE_SHELF_SELECTION_CHECK.fontFamily)
+              .fontWeight(TYPE_SHELF_SELECTION_CHECK.fontWeight)
+              .fontSize(TYPE_SHELF_SELECTION_CHECK.fontSizeFp)
               .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionCard.fontColor.FFFFFFFF', this.appThemeScheme))
               .textAlign(TextAlign.Center);
           }
@@ -181,20 +182,20 @@ export struct BookshelfMultiSelectPage {
 
       Text(book.title)
         .width(this.cardWidth())
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(this.isWide() ? 16 : 13)
-        .lineHeight(this.isWide() ? 19.5 : 16)
+        .fontFamily(TYPE_SHELF_SELECTION_TITLE.fontFamily)
+        .fontWeight(TYPE_SHELF_SELECTION_TITLE.fontWeight)
+        .fontSize(this.isWide() ? TYPE_SHELF_SELECTION_TITLE_WIDE.fontSizeFp : TYPE_SHELF_SELECTION_TITLE.fontSizeFp)
+        .lineHeight(this.isWide() ? TYPE_SHELF_SELECTION_TITLE_WIDE.lineHeightFp as number : TYPE_SHELF_SELECTION_TITLE.lineHeightFp as number)
         .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionCard.fontColor.FF1F1B17', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
 
       Text(book.author)
         .width(this.cardWidth())
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(this.isWide() ? 13 : 11)
-        .lineHeight(this.isWide() ? 16 : 13.5)
+        .fontFamily(TYPE_SHELF_SELECTION_AUTHOR.fontFamily)
+        .fontWeight(TYPE_SHELF_SELECTION_AUTHOR.fontWeight)
+        .fontSize(this.isWide() ? TYPE_SHELF_SELECTION_AUTHOR_WIDE.fontSizeFp : TYPE_SHELF_SELECTION_AUTHOR.fontSizeFp)
+        .lineHeight(this.isWide() ? TYPE_SHELF_SELECTION_AUTHOR_WIDE.lineHeightFp as number : TYPE_SHELF_SELECTION_AUTHOR.lineHeightFp as number)
         .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionCard.fontColor.FF756F69', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -218,10 +219,10 @@ export struct BookshelfMultiSelectPage {
           .width(22)
           .height(22);
         Text(!this.ready ? '正在读取书架' : this.busy ? '正在移除' : '移除书架')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(11)
-          .lineHeight(13.31)
+          .fontFamily(TYPE_SHELF_SELECTION_REMOVE.fontFamily)
+          .fontWeight(TYPE_SHELF_SELECTION_REMOVE.fontWeight)
+          .fontSize(TYPE_SHELF_SELECTION_REMOVE.fontSizeFp)
+          .lineHeight(TYPE_SHELF_SELECTION_REMOVE.lineHeightFp as number)
           .fontColor(readerAppColor('app.BookshelfMultiSelectPage.removeBar.fontColor.FFD7473E', this.appThemeScheme));
       }
       .width(74)
@@ -344,7 +345,7 @@ export struct BookshelfMultiSelectPage {
   private selectionBadge(book: ShelfBook) {
     Stack({ alignContent: Alignment.Center }) {
       if (this.isSelected(book)) {
-        Text('✓').fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(14).fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionBadge.fontColor.FFFFFFFF', this.appThemeScheme));
+        Text('✓').fontFamily(TYPE_SHELF_SELECTION_CHECK.fontFamily).fontWeight(TYPE_SHELF_SELECTION_CHECK.fontWeight).fontSize(TYPE_SHELF_SELECTION_CHECK.fontSizeFp).fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionBadge.fontColor.FFFFFFFF', this.appThemeScheme));
       }
     }
     .width(22).height(22).margin({ right: 2, bottom: 2 })

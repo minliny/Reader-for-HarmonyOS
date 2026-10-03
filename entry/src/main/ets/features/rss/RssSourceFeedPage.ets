@@ -1,3 +1,4 @@
+import { TYPE_APP_SMALL_ACTION, TYPE_RSS_ENTRY_DESCRIPTION, TYPE_RSS_ENTRY_TITLE, TYPE_RSS_LINK_ACTION, TYPE_RSS_META, TYPE_RSS_SECTION_HEADING, TYPE_RSS_SOURCE_TITLE } from '../common/ReaderTypography';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
@@ -114,17 +115,17 @@ export struct RssSourceFeedPage {
       Column({ space: 3 }) {
         Text(this.subscription.title)
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(13)
+          .fontFamily(TYPE_RSS_SOURCE_TITLE.fontFamily)
+          .fontWeight(TYPE_RSS_SOURCE_TITLE.fontWeight)
+          .fontSize(TYPE_RSS_SOURCE_TITLE.fontSizeFp)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         Text(this.sourceSubtitle())
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(10)
+          .fontFamily(TYPE_RSS_META.fontFamily)
+          .fontWeight(TYPE_RSS_META.fontWeight)
+          .fontSize(TYPE_RSS_META.fontSizeFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -165,9 +166,9 @@ export struct RssSourceFeedPage {
       Row({ space: 5 }) {
         Image(icon).width(18).height(18);
         Text(label)
-          .fontFamily('ReaderInter')
-          .fontWeight(800)
-          .fontSize(11)
+          .fontFamily(TYPE_APP_SMALL_ACTION.fontFamily)
+          .fontWeight(TYPE_APP_SMALL_ACTION.fontWeight)
+          .fontSize(TYPE_APP_SMALL_ACTION.fontSizeFp)
           .fontColor(readerAppColor('app.RssSourceFeedPage.actionTarget.fontColor.FF3F372F', this.appThemeScheme))
           .maxLines(1);
       }
@@ -186,17 +187,17 @@ export struct RssSourceFeedPage {
     Row() {
       Text('全部条目')
         .layoutWeight(1)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(15)
+        .fontFamily(TYPE_RSS_SECTION_HEADING.fontFamily)
+        .fontWeight(TYPE_RSS_SECTION_HEADING.fontWeight)
+        .fontSize(TYPE_RSS_SECTION_HEADING.fontSizeFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1);
       Row({ space: 5 }) {
         Image((this.appThemeScheme === 'night' ? $r('app.media.rss_manage_theme_night') : $r('app.media.rss_manage'))).width(16).height(16);
         Text('源操作')
-          .fontFamily('ReaderInter')
-          .fontWeight(900)
-          .fontSize(11)
+          .fontFamily(TYPE_RSS_LINK_ACTION.fontFamily)
+          .fontWeight(TYPE_RSS_LINK_ACTION.fontWeight)
+          .fontSize(TYPE_RSS_LINK_ACTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
           .maxLines(1);
       }
@@ -248,28 +249,28 @@ export struct RssSourceFeedPage {
       Column({ space: 3 }) {
         Text(item.title)
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(13)
-          .lineHeight(16.25)
+          .fontFamily(TYPE_RSS_ENTRY_TITLE.fontFamily)
+          .fontWeight(TYPE_RSS_ENTRY_TITLE.fontWeight)
+          .fontSize(TYPE_RSS_ENTRY_TITLE.fontSizeFp)
+          .lineHeight(TYPE_RSS_ENTRY_TITLE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         Text(this.itemMeta(item))
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(10)
+          .fontFamily(TYPE_RSS_META.fontFamily)
+          .fontWeight(TYPE_RSS_META.fontWeight)
+          .fontSize(TYPE_RSS_META.fontSizeFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         if (item.description !== undefined && item.description.trim().length > 0) {
           Text(item.description)
             .width('100%')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(11)
-            .lineHeight(15.95)
+            .fontFamily(TYPE_RSS_ENTRY_DESCRIPTION.fontFamily)
+            .fontWeight(TYPE_RSS_ENTRY_DESCRIPTION.fontWeight)
+            .fontSize(TYPE_RSS_ENTRY_DESCRIPTION.fontSizeFp)
+            .lineHeight(TYPE_RSS_ENTRY_DESCRIPTION.lineHeightFp as number)
             .fontColor(readerAppColor('app.RssSourceFeedPage.entryRow.fontColor.FF6F655D', this.appThemeScheme))
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis });

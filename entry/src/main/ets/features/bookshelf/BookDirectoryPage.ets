@@ -1,3 +1,4 @@
+import { TYPE_FORM_STATE_BODY } from '../common/ReaderTypography';
 import { ReaderDirectoryRules } from '../reading/ReaderDirectoryRules';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { readerDirectoryScopeKey } from '../reading/ReaderDirectoryNavigation';
@@ -148,7 +149,7 @@ export struct BookDirectoryPage {
             Text(this.emptyMessage())
               .width('100%').height('100%')
               .padding({ left: 20, right: 20, top: 58 + this.toolsHeight + 20, bottom: this.bottomInset() + 20 })
-              .fontFamily('ReaderNotoSansSC').fontSize(14)
+              .fontFamily(TYPE_FORM_STATE_BODY.fontFamily as string).fontSize(TYPE_FORM_STATE_BODY.fontSizeFp)
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
               .textAlign(TextAlign.Center);
           }

@@ -1,3 +1,4 @@
+import { TYPE_APP_SECTION_LABEL, TYPE_APP_SEGMENT_LABEL, TYPE_APP_SMALL_LABEL, TYPE_DISCOVER_AUTHOR, TYPE_DISCOVER_CATEGORY, TYPE_DISCOVER_FILTER_LABEL, TYPE_DISCOVER_FILTER_VALUE, TYPE_DISCOVER_INTRO, TYPE_DISCOVER_RANK_TITLE, TYPE_DISCOVER_SOURCE_META, TYPE_DISCOVER_STATE_TITLE, TYPE_DISCOVER_STATUS } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 // Discover main page — rebuilt 2026-08-06 against live Figma node 376:2
 // (Reference/Discover/Phone · 390×844).
@@ -147,10 +148,10 @@ export struct DiscoverPage {
       Column({ space: 3 }) {
         Text(this.currentSourceName())
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(15)
-          .lineHeight(18)
+          .fontFamily(TYPE_APP_SECTION_LABEL.fontFamily)
+          .fontWeight(TYPE_APP_SECTION_LABEL.fontWeight)
+          .fontSize(TYPE_APP_SECTION_LABEL.fontSizeFp)
+          .lineHeight(TYPE_APP_SECTION_LABEL.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -159,10 +160,10 @@ export struct DiscoverPage {
           `${this.presentation.activeSourceIndex + 1}/${this.presentation.sources.length} · 点击切换书源` :
           '没有已启用发现的书源')
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(600)
-          .fontSize(11)
-          .lineHeight(13.2)
+          .fontFamily(TYPE_DISCOVER_SOURCE_META.fontFamily)
+          .fontWeight(TYPE_DISCOVER_SOURCE_META.fontWeight)
+          .fontSize(TYPE_DISCOVER_SOURCE_META.fontSizeFp)
+          .lineHeight(TYPE_DISCOVER_SOURCE_META.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -189,10 +190,10 @@ export struct DiscoverPage {
         ForEach(this.kindTitles(), (label: string, index: number) => {
           Stack({ alignContent: Alignment.Center }) {
             Text(label)
-              .fontFamily('ReaderInter')
-              .fontWeight(800)
-              .fontSize(12)
-              .lineHeight(15.6)
+              .fontFamily(TYPE_DISCOVER_CATEGORY.fontFamily)
+              .fontWeight(TYPE_DISCOVER_CATEGORY.fontWeight)
+              .fontSize(TYPE_DISCOVER_CATEGORY.fontSizeFp)
+              .lineHeight(TYPE_DISCOVER_CATEGORY.lineHeightFp as number)
               .fontColor(this.presentation.activeKindIndex === index ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('app.DiscoverPage.categoryChips.fontColor.FF3F372F', this.appThemeScheme))
               .maxLines(1);
           }
@@ -221,19 +222,19 @@ export struct DiscoverPage {
       Row() {
         Image((this.appThemeScheme === 'night' ? $r('app.media.discover_filter_theme_night') : $r('app.media.discover_filter'))).width(20).height(20);
         Text('筛选')
-          .fontFamily('ReaderInter')
-          .fontWeight(900)
-          .fontSize(12)
-          .lineHeight(15.6)
+          .fontFamily(TYPE_DISCOVER_FILTER_LABEL.fontFamily)
+          .fontWeight(TYPE_DISCOVER_FILTER_LABEL.fontWeight)
+          .fontSize(TYPE_DISCOVER_FILTER_LABEL.fontSizeFp)
+          .lineHeight(TYPE_DISCOVER_FILTER_LABEL.lineHeightFp as number)
           .fontColor(readerAppColor('app.DiscoverPage.filterRow.fontColor.FF3F372F', this.appThemeScheme))
           .maxLines(1)
           .margin({ left: 3 });
         Text(this.currentFilterText())
           .layoutWeight(1)
-          .fontFamily('ReaderInter')
-          .fontWeight(800)
-          .fontSize(11)
-          .lineHeight(15.56)
+          .fontFamily(TYPE_DISCOVER_FILTER_VALUE.fontFamily)
+          .fontWeight(TYPE_DISCOVER_FILTER_VALUE.fontWeight)
+          .fontSize(TYPE_DISCOVER_FILTER_VALUE.fontSizeFp)
+          .lineHeight(TYPE_DISCOVER_FILTER_VALUE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.RIGHT)
           .maxLines(1)
@@ -252,10 +253,10 @@ export struct DiscoverPage {
       Row() {
         Image($r('app.media.discover_apply')).width(20).height(20);
         Text('应用')
-          .fontFamily('ReaderInter')
-          .fontWeight(900)
-          .fontSize(12)
-          .lineHeight(15.6)
+          .fontFamily(TYPE_DISCOVER_FILTER_LABEL.fontFamily)
+          .fontWeight(TYPE_DISCOVER_FILTER_LABEL.fontWeight)
+          .fontSize(TYPE_DISCOVER_FILTER_LABEL.fontSizeFp)
+          .lineHeight(TYPE_DISCOVER_FILTER_LABEL.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
           .maxLines(1)
           .margin({ left: TOK_SPACE_ROW_BLOCK });
@@ -281,10 +282,10 @@ export struct DiscoverPage {
   private rankingHeader() {
     Text('排行榜')
       .width('100%')
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(15)
-      .lineHeight(18.75)
+      .fontFamily(TYPE_DISCOVER_RANK_TITLE.fontFamily)
+      .fontWeight(TYPE_DISCOVER_RANK_TITLE.fontWeight)
+      .fontSize(TYPE_DISCOVER_RANK_TITLE.fontSizeFp)
+      .lineHeight(TYPE_DISCOVER_RANK_TITLE.lineHeightFp as number)
       .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
       .maxLines(1)
       .padding({ left: 2, right: 2 });
@@ -297,17 +298,17 @@ export struct DiscoverPage {
         Stack({ alignContent: Alignment.Center }) {
           Column({ space: TOK_SPACE_XS }) {
             Text('暂无发现内容')
-              .fontFamily('ReaderInter')
-              .fontWeight(800)
-              .fontSize(14)
-              .lineHeight(18)
+              .fontFamily(TYPE_DISCOVER_STATE_TITLE.fontFamily)
+              .fontWeight(TYPE_DISCOVER_STATE_TITLE.fontWeight)
+              .fontSize(TYPE_DISCOVER_STATE_TITLE.fontSizeFp)
+              .lineHeight(TYPE_DISCOVER_STATE_TITLE.lineHeightFp as number)
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
               .maxLines(1);
             Text(this.presentation.statusMessage)
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Regular)
-              .fontSize(12)
-              .lineHeight(15)
+              .fontFamily(TYPE_DISCOVER_STATUS.fontFamily)
+              .fontWeight(TYPE_DISCOVER_STATUS.fontWeight)
+              .fontSize(TYPE_DISCOVER_STATUS.fontSizeFp)
+              .lineHeight(TYPE_DISCOVER_STATUS.lineHeightFp as number)
               .fontColor(readerAppColor('app.DiscoverPage.resultList.fontColor.FFA19A91', this.appThemeScheme))
               .maxLines(1);
           }
@@ -336,9 +337,9 @@ export struct DiscoverPage {
       Text(`第 ${this.presentation.page} 页`)
         .layoutWeight(1)
         .textAlign(TextAlign.Center)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(12)
+        .fontFamily(TYPE_APP_SEGMENT_LABEL.fontFamily)
+        .fontWeight(TYPE_APP_SEGMENT_LABEL.fontWeight)
+        .fontSize(TYPE_APP_SEGMENT_LABEL.fontSizeFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
       this.pageAction('下一页', this.presentation.hasNext, (): void => this.onNextPage());
     }
@@ -352,9 +353,9 @@ export struct DiscoverPage {
   @Builder
   private pageAction(label: string, enabled: boolean, action: () => void) {
     Text(label)
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(11)
+      .fontFamily(TYPE_APP_SMALL_LABEL.fontFamily)
+      .fontWeight(TYPE_APP_SMALL_LABEL.fontWeight)
+      .fontSize(TYPE_APP_SMALL_LABEL.fontSizeFp)
       .fontColor(enabled ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
       .backgroundColor(enabled ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('app.DiscoverPage.CHIP_BG', this.appThemeScheme))
       .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: 8, bottom: 8 })
@@ -387,20 +388,20 @@ export struct DiscoverPage {
       Column({ space: TOK_SPACE_ROW_BLOCK }) {
         Text(book.name)
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(15)
-          .lineHeight(18.75)
+          .fontFamily(TYPE_DISCOVER_RANK_TITLE.fontFamily)
+          .fontWeight(TYPE_DISCOVER_RANK_TITLE.fontWeight)
+          .fontSize(TYPE_DISCOVER_RANK_TITLE.fontSizeFp)
+          .lineHeight(TYPE_DISCOVER_RANK_TITLE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         if (book.author !== '') {
           Text(book.author)
             .width('100%')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(11)
-            .lineHeight(15.56)
+            .fontFamily(TYPE_DISCOVER_AUTHOR.fontFamily)
+            .fontWeight(TYPE_DISCOVER_AUTHOR.fontWeight)
+            .fontSize(TYPE_DISCOVER_AUTHOR.fontSizeFp)
+            .lineHeight(TYPE_DISCOVER_AUTHOR.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -408,10 +409,10 @@ export struct DiscoverPage {
         if (book.intro !== '') {
           Text(book.intro)
             .width('100%')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(12)
-            .lineHeight(17.4)
+            .fontFamily(TYPE_DISCOVER_INTRO.fontFamily)
+            .fontWeight(TYPE_DISCOVER_INTRO.fontWeight)
+            .fontSize(TYPE_DISCOVER_INTRO.fontSizeFp)
+            .lineHeight(TYPE_DISCOVER_INTRO.lineHeightFp as number)
             .fontColor(readerAppColor('app.DiscoverPage.resultRow.fontColor.FF5C554D', this.appThemeScheme))
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis });

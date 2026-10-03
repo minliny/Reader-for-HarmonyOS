@@ -1,3 +1,4 @@
+import { TYPE_APP_SEGMENT_LABEL } from './ReaderTypography';
 import { readerAppColor } from './ReaderThemeRegistry';
 // ReaderSegmentedControl —— 设置页分段控件 (Figma Settings/ThemeSegment 2114:20635,
 // instance 3888:23486): 容器 #F2EDE5 + 边框 #D1C9BD + r8 + h36, 段 30 高 r6 相邻铺满
@@ -21,9 +22,9 @@ export struct ReaderSegmentedControl {
       ForEach(this.options, (opt: string, index: number) => {
         Stack({ alignContent: Alignment.Center }) {
           Text(opt)
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(12)
+            .fontFamily(TYPE_APP_SEGMENT_LABEL.fontFamily)
+            .fontWeight(TYPE_APP_SEGMENT_LABEL.fontWeight)
+            .fontSize(TYPE_APP_SEGMENT_LABEL.fontSizeFp)
             .fontColor(index === this.selectedIndex ? readerAppColor('app.ReaderSegmentedControl.SEG_TEXT_ACTIVE', this.appThemeScheme) : readerAppColor('app.ReaderSegmentedControl.SEG_TEXT_INACTIVE', this.appThemeScheme))
             .maxLines(1);
         }

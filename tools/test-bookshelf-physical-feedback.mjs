@@ -42,6 +42,8 @@ const check = (name, action) => {
   catch (error) { results.push({ name, passed: false, message: error.message }); }
 };
 const texts = owner => [...owner.nodes.values()].filter(node => node.type === 'Text');
+// Native FontWeight enums and public roles both denote physical numeric weights.
+const physicalWeight = weight => ({ 'FontWeight.Regular': 400, 'FontWeight.Medium': 500, 'FontWeight.Bold': 700 })[weight] ?? weight;
 const stub = name => new Proxy({ name }, { get: (target, key) => key === 'name' ? target.name : () => {} });
 const projectionSource = stripTypeScriptTypes(read('bookshelf/ShelfBookPresentation.ts'))
   .replace(/^import .*$/mg, '').replace('export class ', 'class ');
@@ -213,7 +215,7 @@ check('PH116 detail preview expands up to 20 rows in the outer detail scroll', (
     const chapterTexts = texts(owner).filter(node => /^第\d+章$/.test(node.create));
     assert.equal(chapterTexts.length, Math.min(count, 20));
     assert.deepEqual(owner.visibleToc(), toc.slice(0, 20), 'preview retains exact chapter identity/order');
-    for (const node of chapterTexts) assert.deepEqual([node.fontSize, node.fontWeight], [14, 'FontWeight.Regular']);
+    for (const node of chapterTexts) assert.deepEqual([node.fontSize, physicalWeight(node.fontWeight)], [14, 400]);
     assert.equal(nodes.filter(node => node.type === 'Scroll').length, 0,
       'chapter list must not hide its twenty rows behind a four-row inner scroll');
     assert.ok(nodes.some(node => node.type === 'Stack' &&
@@ -248,7 +250,7 @@ for (const scheme of ['day', 'night']) {
     assert.ok(nodes.some(n => n.create === '作者：作者名'));
     const metadata = ['最新：最新章节', '书源：短书源', '分组：默认'].map(label => nodes.find(n => n.create === label));
     assert.ok(metadata.every(Boolean));
-    for (const node of metadata) assert.deepEqual([node.fontFamily, node.fontWeight, node.fontSize, node.lineHeight, node.height], ['ReaderInter', 'FontWeight.Bold', 12, 15, 18]);
+    for (const node of metadata) assert.deepEqual([node.fontFamily, physicalWeight(node.fontWeight), node.fontSize, node.lineHeight, node.height], ['ReaderInter', 700, 12, 15, 18]);
     const source = metadata[1]; assert.equal(source.width, undefined); assert.equal(source.flexShrink, 1);
     assert.equal(source.textOverflow.overflow, 'TextOverflow.Ellipsis');
     const action = nodes.find(n => n.create === '更换书源');
@@ -282,8 +284,8 @@ check('PH46/47 original author typography and the entire five-line block align w
   assert.equal(column.justifyContent,'FlexAlign.SpaceBetween');
   const title=nodes.find(n=>n.type==='Text'&&n.create==='Title');
   const author=nodes.find(n=>n.type==='Text'&&String(n.create).endsWith('Author'));
-  assert.deepEqual([author.fontFamily,author.fontWeight,author.fontSize,author.lineHeight,author.height],
-    ['ReaderInter','FontWeight.Regular',13,17.55,17.55]);
+  assert.deepEqual([author.fontFamily,physicalWeight(author.fontWeight),author.fontSize,author.lineHeight,author.height],
+    ['ReaderInter',400,13,17.55,17.55]);
   assert.equal(author.fontColor,readerAppColor('TOK_MUTED','day'));
   assert.equal(author.margin,undefined);
   assert.equal(title.height,25.96);

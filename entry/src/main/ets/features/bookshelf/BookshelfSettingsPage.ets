@@ -1,3 +1,4 @@
+import { TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_LABEL, TYPE_APP_INHERITED_OPTION } from '../common/ReaderTypography';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
@@ -41,18 +42,18 @@ export struct BookshelfSettingsPage {
         Column() {
           Column({ space: TOK_SPACE_MD }) {
             Row() {
-              Text('自动检查更新').layoutWeight(1).fontSize(15).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+              Text('自动检查更新').layoutWeight(1).fontSize(TYPE_APP_INHERITED_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
               Toggle({ type: ToggleType.Switch, isOn: this.autoCheckUpdate })
                 .selectedColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).onChange((enabled: boolean): void => this.onAutoCheckUpdate(enabled));
             }.width('100%');
-            Text('自动检查书架中书籍的最新章节').fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width('100%');
+            Text('自动检查书架中书籍的最新章节').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width('100%');
             Row({ space: 12 }) {
-              Text('显示方式').layoutWeight(1).fontSize(15).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+              Text('显示方式').layoutWeight(1).fontSize(TYPE_APP_INHERITED_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
               this.modeOption('cover', '封面');
               this.modeOption('list', '列表');
             }.width('100%');
             if (this.error.length > 0) {
-              Text(this.error).fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+              Text(this.error).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
                 .onClick((): void => this.selectMode(this.requestedMode));
             }
           }.padding(TOK_SPACE_MD).width('100%').backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
@@ -83,7 +84,7 @@ export struct BookshelfSettingsPage {
 
   @Builder
   private modeOption(value: 'cover' | 'list', label: string) {
-    Text(label).fontSize(13).fontColor(this.mode === value ? readerAppColor('app.BookshelfSettingsPage.modeOption.onSelected', this.appThemeScheme) : readerAppColor('TOK_GREEN', this.appThemeScheme))
+    Text(label).fontSize(TYPE_APP_INHERITED_OPTION.fontSizeFp).fontColor(this.mode === value ? readerAppColor('app.BookshelfSettingsPage.modeOption.onSelected', this.appThemeScheme) : readerAppColor('TOK_GREEN', this.appThemeScheme))
       .padding({ left: 14, right: 14, top: 10, bottom: 10 }).borderRadius(20)
       .backgroundColor(this.mode === value ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('TOK_PAPER', this.appThemeScheme))
       .onClick((): void => this.selectMode(value));

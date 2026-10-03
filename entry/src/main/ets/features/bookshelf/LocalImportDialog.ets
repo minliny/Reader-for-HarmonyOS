@@ -1,3 +1,4 @@
+import { TYPE_APP_INHERITED_HINT, TYPE_FILE_IMPORT_ACTION, TYPE_FILE_IMPORT_BADGE, TYPE_FILE_IMPORT_CANCEL, TYPE_FILE_IMPORT_HINT, TYPE_FILE_IMPORT_LABEL, TYPE_FILE_IMPORT_NAME, TYPE_FILE_IMPORT_PROGRESS, TYPE_FILE_IMPORT_TITLE, TYPE_FILE_IMPORT_WAIT } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import curves from '@ohos.curves';
 import { readerMotionNowMs } from '../common/ReaderMotionClock';
@@ -132,10 +133,10 @@ export struct LocalImportDialog {
     Column() {
       Row() {
         Text('导入本地书籍')
-          .fontFamily('ReaderNotoSerifSCBold')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(18)
-          .lineHeight(24.75)
+          .fontFamily(TYPE_FILE_IMPORT_TITLE.fontFamily)
+          .fontWeight(TYPE_FILE_IMPORT_TITLE.fontWeight)
+          .fontSize(TYPE_FILE_IMPORT_TITLE.fontSizeFp)
+          .lineHeight(TYPE_FILE_IMPORT_TITLE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1);
       }
@@ -158,18 +159,18 @@ export struct LocalImportDialog {
 
           Column({ space: 0 }) {
             Text('从系统文件中选择')
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Bold)
-              .fontSize(13)
-              .lineHeight(19.5)
-              .letterSpacing(-0.0762)
+              .fontFamily(TYPE_FILE_IMPORT_LABEL.fontFamily)
+              .fontWeight(TYPE_FILE_IMPORT_LABEL.fontWeight)
+              .fontSize(TYPE_FILE_IMPORT_LABEL.fontSizeFp)
+              .lineHeight(TYPE_FILE_IMPORT_LABEL.lineHeightFp as number)
+              .letterSpacing(TYPE_FILE_IMPORT_LABEL.letterSpacingFp as number)
               .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
             Text('支持多选 TXT、EPUB、MOBI、AZW3')
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Regular)
-              .fontSize(11)
-              .lineHeight(16.5)
-              .letterSpacing(0.0645)
+              .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)
+              .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)
+              .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)
+              .lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)
+              .letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
               .margin({ top: 2 });
           }
@@ -201,11 +202,11 @@ export struct LocalImportDialog {
             .margin({ top: 2 });
           Text(this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。')
             .layoutWeight(1)
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(11)
-            .lineHeight(16.5)
-            .letterSpacing(0.0645)
+            .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)
+            .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)
+            .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)
+            .lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)
+            .letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
         }
         .width('100%')
@@ -216,11 +217,11 @@ export struct LocalImportDialog {
           Row({ space: TOK_SPACE_XS }) {
             Image($r('app.media.import_choose_file')).width(15).height(15);
             Text(this.state === 'pickerOpening' ? '正在选择…' : '选择文件')
-              .fontFamily('ReaderInter')
-              .fontWeight(800)
-              .fontSize(13)
-              .lineHeight(19.5)
-              .letterSpacing(-0.0762)
+              .fontFamily(TYPE_FILE_IMPORT_ACTION.fontFamily)
+              .fontWeight(TYPE_FILE_IMPORT_ACTION.fontWeight)
+              .fontSize(TYPE_FILE_IMPORT_ACTION.fontSizeFp)
+              .lineHeight(TYPE_FILE_IMPORT_ACTION.lineHeightFp as number)
+              .letterSpacing(TYPE_FILE_IMPORT_ACTION.letterSpacingFp as number)
               .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
           }
           .layoutWeight(1)
@@ -234,11 +235,11 @@ export struct LocalImportDialog {
           Row({ space: 6 }) {
             Image((this.appThemeScheme === 'night' ? $r('app.media.import_cancel_theme_night') : $r('app.media.import_cancel'))).width(13).height(13);
             Text('取消')
-              .fontFamily('ReaderInter')
-              .fontWeight(600)
-              .fontSize(13)
-              .lineHeight(19.5)
-              .letterSpacing(-0.0762)
+              .fontFamily(TYPE_FILE_IMPORT_CANCEL.fontFamily)
+              .fontWeight(TYPE_FILE_IMPORT_CANCEL.fontWeight)
+              .fontSize(TYPE_FILE_IMPORT_CANCEL.fontSizeFp)
+              .lineHeight(TYPE_FILE_IMPORT_CANCEL.lineHeightFp as number)
+              .letterSpacing(TYPE_FILE_IMPORT_CANCEL.letterSpacingFp as number)
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
           }
           .height(44)
@@ -275,18 +276,18 @@ export struct LocalImportDialog {
       .margin({ top: 35 });
 
       Text('正在导入')
-        .fontFamily('ReaderInter')
-        .fontWeight(600)
-        .fontSize(14)
-        .lineHeight(21)
+        .fontFamily(TYPE_FILE_IMPORT_PROGRESS.fontFamily)
+        .fontWeight(TYPE_FILE_IMPORT_PROGRESS.fontWeight)
+        .fontSize(TYPE_FILE_IMPORT_PROGRESS.fontSizeFp)
+        .lineHeight(TYPE_FILE_IMPORT_PROGRESS.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .margin({ top: 20 });
 
       Text('请稍候')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(11)
-        .lineHeight(16.5)
+        .fontFamily(TYPE_FILE_IMPORT_WAIT.fontFamily)
+        .fontWeight(TYPE_FILE_IMPORT_WAIT.fontWeight)
+        .fontSize(TYPE_FILE_IMPORT_WAIT.fontSizeFp)
+        .lineHeight(TYPE_FILE_IMPORT_WAIT.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .margin({ top: 8 });
     }
@@ -321,8 +322,8 @@ export struct LocalImportDialog {
   @Builder
   private resultHeader() {
     Column() {
-      Text('导入结果').fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold)
-        .fontSize(18).lineHeight(24.75).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1).width('100%')
+      Text('导入结果').fontFamily(TYPE_FILE_IMPORT_TITLE.fontFamily).fontWeight(TYPE_FILE_IMPORT_TITLE.fontWeight)
+        .fontSize(TYPE_FILE_IMPORT_TITLE.fontSizeFp).lineHeight(TYPE_FILE_IMPORT_TITLE.lineHeightFp as number).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1).width('100%')
         .padding({ left: 20, right: 20, top: 20, bottom: 17 });
       Blank().width('100%').height(1).backgroundColor(readerAppColor('app.LocalImportDialog.resultHeader.backgroundColor.FFE8E2D9', this.appThemeScheme));
     }.width('100%').onAreaChange((_old: Area, next: Area): void => {
@@ -336,8 +337,8 @@ export struct LocalImportDialog {
     Column() {
       Row({ space: 6 }) {
         Image($r('app.media.import_done')).width(14).height(14);
-        Text('完成').fontFamily('ReaderInter').fontWeight(800).fontSize(13).lineHeight(19.5)
-          .letterSpacing(-0.0762).fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
+        Text('完成').fontFamily(TYPE_FILE_IMPORT_ACTION.fontFamily).fontWeight(TYPE_FILE_IMPORT_ACTION.fontWeight).fontSize(TYPE_FILE_IMPORT_ACTION.fontSizeFp).lineHeight(TYPE_FILE_IMPORT_ACTION.lineHeightFp as number)
+          .letterSpacing(TYPE_FILE_IMPORT_ACTION.letterSpacingFp as number).fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
       }.width(this.resultButtonWidth()).height(40).justifyContent(FlexAlign.Center)
         .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme)).borderRadius(20).onClick((): void => this.onClose());
     }.width('100%').padding({ left: 16, right: 16,
@@ -362,18 +363,18 @@ export struct LocalImportDialog {
         .borderRadius(18);
         Column({ space: 1 }) {
           Text(this.summaryTitle())
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(13)
-            .lineHeight(19.5)
-            .letterSpacing(-0.0762)
+            .fontFamily(TYPE_FILE_IMPORT_LABEL.fontFamily)
+            .fontWeight(TYPE_FILE_IMPORT_LABEL.fontWeight)
+            .fontSize(TYPE_FILE_IMPORT_LABEL.fontSizeFp)
+            .lineHeight(TYPE_FILE_IMPORT_LABEL.lineHeightFp as number)
+            .letterSpacing(TYPE_FILE_IMPORT_LABEL.letterSpacingFp as number)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
           Text(this.resultCountText())
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(11)
-            .lineHeight(16.5)
-            .letterSpacing(0.0645)
+            .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)
+            .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)
+            .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)
+            .lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)
+            .letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
         }
         .layoutWeight(1)
@@ -449,10 +450,10 @@ export struct LocalImportDialog {
         Column({ space: 3 }) {
           Text(item.fileName)
             .width('100%')
-            .fontFamily('ReaderInter')
-            .fontWeight(600)
-            .fontSize(12)
-            .lineHeight(18)
+            .fontFamily(TYPE_FILE_IMPORT_NAME.fontFamily)
+            .fontWeight(TYPE_FILE_IMPORT_NAME.fontWeight)
+            .fontSize(TYPE_FILE_IMPORT_NAME.fontSizeFp)
+            .lineHeight(TYPE_FILE_IMPORT_NAME.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -460,7 +461,7 @@ export struct LocalImportDialog {
             (item.disposition === 'created' ? '新增成功' : item.disposition === 'existing' ? '已在书架' : '成功') :
             (item.failure?.code === 'recoveryPending' ? '待确认' : '失败'), item.state === 'success' ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.LocalImportDialog.resultItem.resultBadge.FF5A4A2A', this.appThemeScheme));
           if (item.failure !== undefined) {
-            Text(item.failure.message).fontSize(11).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(2).width('100%');
+            Text(item.failure.message).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(2).width('100%');
           }
         }
         .layoutWeight(1)
@@ -488,11 +489,11 @@ export struct LocalImportDialog {
   @Builder
   private resultBadge(label: string, color: string) {
     Text(label)
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(10)
-      .lineHeight(15)
-      .letterSpacing(0.3672)
+      .fontFamily(TYPE_FILE_IMPORT_BADGE.fontFamily)
+      .fontWeight(TYPE_FILE_IMPORT_BADGE.fontWeight)
+      .fontSize(TYPE_FILE_IMPORT_BADGE.fontSizeFp)
+      .lineHeight(TYPE_FILE_IMPORT_BADGE.lineHeightFp as number)
+      .letterSpacing(TYPE_FILE_IMPORT_BADGE.letterSpacingFp as number)
       .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
       .padding({ left: 6, right: 6, top: 2, bottom: 2 })
       .backgroundColor(color)
@@ -502,11 +503,11 @@ export struct LocalImportDialog {
   @Builder
   private formatBadge(label: string, color: string) {
     Text(label)
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(10)
-      .lineHeight(15)
-      .letterSpacing(0.3672)
+      .fontFamily(TYPE_FILE_IMPORT_BADGE.fontFamily)
+      .fontWeight(TYPE_FILE_IMPORT_BADGE.fontWeight)
+      .fontSize(TYPE_FILE_IMPORT_BADGE.fontSizeFp)
+      .lineHeight(TYPE_FILE_IMPORT_BADGE.lineHeightFp as number)
+      .letterSpacing(TYPE_FILE_IMPORT_BADGE.letterSpacingFp as number)
       .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
       .padding({ left: 6, right: 6, top: 2, bottom: 2 })
       .backgroundColor(color)

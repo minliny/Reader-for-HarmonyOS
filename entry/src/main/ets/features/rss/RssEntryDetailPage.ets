@@ -1,3 +1,4 @@
+import { TYPE_APP_SMALL_ACTION, TYPE_RSS_ARTICLE_BODY, TYPE_RSS_ARTICLE_TITLE, TYPE_RSS_BOTTOM_ACTION, TYPE_RSS_LINK_ACTION, TYPE_RSS_META, TYPE_RSS_SOURCE_TITLE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
   type RssItem,
@@ -163,17 +164,17 @@ export struct RssEntryDetailPage {
       Column({ space: 3 }) {
         Text(this.subscription.title)
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(13)
+          .fontFamily(TYPE_RSS_SOURCE_TITLE.fontFamily)
+          .fontWeight(TYPE_RSS_SOURCE_TITLE.fontWeight)
+          .fontSize(TYPE_RSS_SOURCE_TITLE.fontSizeFp)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         Text(this.itemMeta())
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(10)
+          .fontFamily(TYPE_RSS_META.fontFamily)
+          .fontWeight(TYPE_RSS_META.fontWeight)
+          .fontSize(TYPE_RSS_META.fontSizeFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -184,9 +185,9 @@ export struct RssEntryDetailPage {
       Text('查看源')
         .height(28)
         .padding({ left: 9, right: 9 })
-        .fontFamily('ReaderInter')
-        .fontWeight(900)
-        .fontSize(11)
+        .fontFamily(TYPE_RSS_LINK_ACTION.fontFamily)
+        .fontWeight(TYPE_RSS_LINK_ACTION.fontWeight)
+        .fontSize(TYPE_RSS_LINK_ACTION.fontSizeFp)
         .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
@@ -208,10 +209,10 @@ export struct RssEntryDetailPage {
     Column({ space: TOK_SPACE_XS }) {
       Text(this.item.title)
         .width('100%')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(20)
-        .lineHeight(26)
+        .fontFamily(TYPE_RSS_ARTICLE_TITLE.fontFamily)
+        .fontWeight(TYPE_RSS_ARTICLE_TITLE.fontWeight)
+        .fontSize(TYPE_RSS_ARTICLE_TITLE.fontSizeFp)
+        .lineHeight(TYPE_RSS_ARTICLE_TITLE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -240,9 +241,9 @@ export struct RssEntryDetailPage {
       Row({ space: 5 }) {
         Image(icon).width(18).height(18);
         Text(label)
-          .fontFamily('ReaderInter')
-          .fontWeight(800)
-          .fontSize(11)
+          .fontFamily(TYPE_APP_SMALL_ACTION.fontFamily)
+          .fontWeight(TYPE_APP_SMALL_ACTION.fontWeight)
+          .fontSize(TYPE_APP_SMALL_ACTION.fontSizeFp)
           .fontColor(readerAppColor('app.RssEntryDetailPage.actionTarget.fontColor.FF3F372F', this.appThemeScheme))
           .maxLines(1);
       }
@@ -263,17 +264,17 @@ export struct RssEntryDetailPage {
     Column({ space: TOK_SPACE_SM }) {
       Text('摘要')
         .width('100%')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(13)
+        .fontFamily(TYPE_RSS_SOURCE_TITLE.fontFamily)
+        .fontWeight(TYPE_RSS_SOURCE_TITLE.fontWeight)
+        .fontSize(TYPE_RSS_SOURCE_TITLE.fontSizeFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
       ForEach(this.summaryParagraphs(), (paragraph: string, index: number) => {
         Text(paragraph)
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(15)
-          .lineHeight(26)
+          .fontFamily(TYPE_RSS_ARTICLE_BODY.fontFamily)
+          .fontWeight(TYPE_RSS_ARTICLE_BODY.fontWeight)
+          .fontSize(TYPE_RSS_ARTICLE_BODY.fontSizeFp)
+          .lineHeight(TYPE_RSS_ARTICLE_BODY.lineHeightFp as number)
           .fontColor(readerAppColor('app.RssEntryDetailPage.summaryBodyCard.fontColor.FF3F372F', this.appThemeScheme));
       }, (_paragraph: string, index: number): string =>
         `rss-summary-${this.item.subscriptionId.length}:${this.item.subscriptionId}-${this.item.guid.length}:${this.item.guid}-${index}`);
@@ -300,16 +301,16 @@ export struct RssEntryDetailPage {
       Column({ space: 3 }) {
         Text('原文链接')
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(13)
+          .fontFamily(TYPE_RSS_SOURCE_TITLE.fontFamily)
+          .fontWeight(TYPE_RSS_SOURCE_TITLE.fontWeight)
+          .fontSize(TYPE_RSS_SOURCE_TITLE.fontSizeFp)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1);
         Text(`${this.subscription.title} · 原始条目链接`)
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(10)
+          .fontFamily(TYPE_RSS_META.fontFamily)
+          .fontWeight(TYPE_RSS_META.fontWeight)
+          .fontSize(TYPE_RSS_META.fontSizeFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -320,9 +321,9 @@ export struct RssEntryDetailPage {
       Text('打开')
         .height(28)
         .padding({ left: 9, right: 9 })
-        .fontFamily('ReaderInter')
-        .fontWeight(900)
-        .fontSize(11)
+        .fontFamily(TYPE_RSS_LINK_ACTION.fontFamily)
+        .fontWeight(TYPE_RSS_LINK_ACTION.fontWeight)
+        .fontSize(TYPE_RSS_LINK_ACTION.fontSizeFp)
         .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
@@ -344,9 +345,9 @@ export struct RssEntryDetailPage {
       Text('返回列表')
         .layoutWeight(1)
         .height(46)
-        .fontFamily('ReaderInter')
-        .fontWeight(900)
-        .fontSize(13)
+        .fontFamily(TYPE_RSS_BOTTOM_ACTION.fontFamily)
+        .fontWeight(TYPE_RSS_BOTTOM_ACTION.fontWeight)
+        .fontSize(TYPE_RSS_BOTTOM_ACTION.fontSizeFp)
         .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
@@ -356,9 +357,9 @@ export struct RssEntryDetailPage {
       Text('打开原文')
         .layoutWeight(1)
         .height(46)
-        .fontFamily('ReaderInter')
-        .fontWeight(900)
-        .fontSize(13)
+        .fontFamily(TYPE_RSS_BOTTOM_ACTION.fontFamily)
+        .fontWeight(TYPE_RSS_BOTTOM_ACTION.fontWeight)
+        .fontSize(TYPE_RSS_BOTTOM_ACTION.fontSizeFp)
         .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))

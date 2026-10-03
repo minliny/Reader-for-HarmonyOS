@@ -1,3 +1,4 @@
+import { TYPE_APP_INHERITED_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_ACTION, TYPE_SETTINGS_CACHE_ACTION, TYPE_SETTINGS_DANGER_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 // Settings General — rebuilt 2026-08-05 against live Figma nodes
@@ -158,7 +159,7 @@ export struct SettingsPage {
     }
     this.dangerRow();
     if (this.resetMessage.length > 0) {
-      Text(this.resetMessage).fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+      Text(this.resetMessage).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .width('100%').padding(12);
     }
   }
@@ -336,10 +337,10 @@ export struct SettingsPage {
       this.iconBox(icon);
       Text(label)
         .layoutWeight(1)
-        .fontFamily('ReaderInter')
-        .fontWeight(800)
-        .fontSize(13)
-        .lineHeight(15.34)
+        .fontFamily(TYPE_APP_ROW_LABEL.fontFamily)
+        .fontWeight(TYPE_APP_ROW_LABEL.fontWeight)
+        .fontSize(TYPE_APP_ROW_LABEL.fontSizeFp)
+        .lineHeight(TYPE_APP_ROW_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -361,9 +362,9 @@ export struct SettingsPage {
       // argument boundary.
       Stack({ alignContent: Alignment.Center }) {
         Text(this.cacheActionLabel)
-          .fontFamily('ReaderInter')
-          .fontWeight(800)
-          .fontSize(11).lineHeight(16).maxLines(2)
+          .fontFamily(TYPE_SETTINGS_CACHE_ACTION.fontFamily)
+          .fontWeight(TYPE_SETTINGS_CACHE_ACTION.fontWeight)
+          .fontSize(TYPE_SETTINGS_CACHE_ACTION.fontSizeFp).lineHeight(TYPE_SETTINGS_CACHE_ACTION.lineHeightFp as number).maxLines(2)
           .textAlign(TextAlign.Center)
           .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
       }
@@ -485,9 +486,9 @@ export struct SettingsPage {
   private inlineAction(label: string, width: number) {
     Stack({ alignContent: Alignment.Center }) {
       Text(label)
-        .fontFamily('ReaderInter')
-        .fontWeight(800)
-        .fontSize(11)
+        .fontFamily(TYPE_APP_SMALL_ACTION.fontFamily)
+        .fontWeight(TYPE_APP_SMALL_ACTION.fontWeight)
+        .fontSize(TYPE_APP_SMALL_ACTION.fontSizeFp)
         .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
     }
     .width(width)
@@ -543,10 +544,10 @@ export struct SettingsPage {
 
       Text('恢复默认')
         .layoutWeight(1)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(16)
-        .lineHeight(19.2)
+        .fontFamily(TYPE_SETTINGS_DANGER_LABEL.fontFamily)
+        .fontWeight(TYPE_SETTINGS_DANGER_LABEL.fontWeight)
+        .fontSize(TYPE_SETTINGS_DANGER_LABEL.fontSizeFp)
+        .lineHeight(TYPE_SETTINGS_DANGER_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_DANGER', this.appThemeScheme))
         .maxLines(1);
 

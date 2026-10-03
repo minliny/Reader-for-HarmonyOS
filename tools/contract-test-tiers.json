@@ -192,7 +192,8 @@
     "test-surface-transition-p0.mjs",
     "test-sync-webdav-product.mjs",
     "test-toc-repair-regressions.mjs",
-    "test-transient-transport-acquisition.mjs"
+    "test-transient-transport-acquisition.mjs",
+    "test-conventional-typography-registry.mjs"
   ],
   "integration": [
     "test-action-menu-surface.mjs",
@@ -440,6 +441,9 @@
     "test-theme-page-back-bar.mjs",
     "test-theme-primary-text.mjs",
     "test-webdav-credential-queue.mjs",
-    "test-window-flicker-dedup.mjs"
+    "test-window-flicker-dedup.mjs",
+    "test-conventional-typography.mjs",
+    "test-conventional-typography-sdk.mjs",
+    "test-conventional-typography-coverage.mjs"
   ]
 }

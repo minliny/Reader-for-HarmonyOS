@@ -1,3 +1,4 @@
+import { TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_CAPTION, TYPE_FORM_STATUS, TYPE_RULES_COMPACT_ACTION, TYPE_RULES_ENTITY_TITLE, TYPE_RULES_INHERITED_DESCRIPTION, TYPE_RULES_INHERITED_NOTE } from '../common/ReaderTypography';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderFonts } from '../common/ReaderFonts';
@@ -142,9 +143,9 @@ export struct RulesManagementPage {
     Text(this.snapshot.statusMessage.length > 0 ? this.snapshot.statusMessage :
       '校验、CRUD、导入导出与持久化均由 Rust Core 负责')
       .width('100%')
-      .fontFamily('ReaderNotoSansSC')
-      .fontSize(12)
-      .lineHeight(18)
+      .fontFamily(TYPE_FORM_STATUS.fontFamily as string)
+      .fontSize(TYPE_FORM_STATUS.fontSizeFp)
+      .lineHeight(TYPE_FORM_STATUS.lineHeightFp as number)
       .fontColor(this.snapshot.busy ? readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
       .padding(TOK_SPACE_SM)
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
@@ -157,7 +158,7 @@ export struct RulesManagementPage {
     Column({ space: TOK_SPACE_SM }) {
       this.heading('可携带规则包');
       Text('Core schema v1 包含替换、字典、TXT 目录和规则订阅；导入默认合并且同主键覆盖。')
-        .width('100%').fontSize(11).lineHeight(17).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        .width('100%').fontSize(TYPE_RULES_INHERITED_DESCRIPTION.fontSizeFp).lineHeight(TYPE_RULES_INHERITED_DESCRIPTION.lineHeightFp as number).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       Row({ space: TOK_SPACE_XS }) {
         this.actionButton('导入并合并', false, (): void => this.onImportBundle());
         this.actionButton('导出全部', true, (): void => this.onExportBundle());
@@ -205,7 +206,7 @@ export struct RulesManagementPage {
     Column({ space: TOK_SPACE_SM }) {
       this.heading(`TXT 目录规则（${this.snapshot.txtTocRules.length}）`);
       Text('启用的规则会在下一次 TXT 导入时由 Core 用于切分章节。')
-        .width('100%').fontSize(11).lineHeight(17).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        .width('100%').fontSize(TYPE_RULES_INHERITED_DESCRIPTION.fontSizeFp).lineHeight(TYPE_RULES_INHERITED_DESCRIPTION.lineHeightFp as number).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       this.input(this.txtName, '名称', (value: string): void => { this.txtName = value; });
       this.input(this.txtRule, '章节标题正则', (value: string): void => { this.txtRule = value; });
       this.input(this.txtExample, '示例标题', (value: string): void => { this.txtExample = value; });
@@ -283,7 +284,7 @@ export struct RulesManagementPage {
         this.onSaveSubscription(draft);
       });
       Text('“拉取”会按类型复用书源、RSS 或替换规则的 Core 导入；自动更新仅保存标记，不启动后台调度。')
-        .width('100%').fontSize(10).lineHeight(16).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        .width('100%').fontSize(TYPE_RULES_INHERITED_NOTE.fontSizeFp).lineHeight(TYPE_RULES_INHERITED_NOTE.lineHeightFp as number).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       ForEach(this.snapshot.subscriptions, (rule: ManagedRuleSubscription) => {
         this.subscriptionRow(rule);
       }, (rule: ManagedRuleSubscription): string => `managed-sub-${rule.id}`);
@@ -314,7 +315,7 @@ export struct RulesManagementPage {
   @Builder
   private booleanField(label: string, value: boolean, action: () => void) {
     Row() {
-      Text(label).layoutWeight(1).fontSize(12).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+      Text(label).layoutWeight(1).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
       ReaderToggle({ value, onToggle: action });
     }.layoutWeight(1).height(40);
   }
@@ -337,9 +338,9 @@ export struct RulesManagementPage {
   private entityRow(title: string, detail: string, edit: () => void, remove: () => void) {
     Row({ space: TOK_SPACE_XS }) {
       Column({ space: 3 }) {
-        Text(title.length > 0 ? title : '未命名').width('100%').fontSize(12).fontWeight(FontWeight.Bold)
+        Text(title.length > 0 ? title : '未命名').width('100%').fontSize(TYPE_RULES_ENTITY_TITLE.fontSizeFp).fontWeight(TYPE_RULES_ENTITY_TITLE.fontWeight as number)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1);
-        Text(detail).width('100%').fontSize(10).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1)
+        Text(detail).width('100%').fontSize(TYPE_APP_INHERITED_CAPTION.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
       }.layoutWeight(1).alignItems(HorizontalAlign.Start);
       this.smallButton('编辑', edit);
@@ -353,9 +354,9 @@ export struct RulesManagementPage {
   private subscriptionRow(rule: ManagedRuleSubscription) {
     Row({ space: TOK_SPACE_XS }) {
       Column({ space: 3 }) {
-        Text(rule.name.length > 0 ? rule.name : '未命名').width('100%').fontSize(12)
-          .fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1);
-        Text(`${this.subscriptionTypeLabel(rule.type)} · ${rule.url}`).width('100%').fontSize(10)
+        Text(rule.name.length > 0 ? rule.name : '未命名').width('100%').fontSize(TYPE_RULES_ENTITY_TITLE.fontSizeFp)
+          .fontWeight(TYPE_RULES_ENTITY_TITLE.fontWeight as number).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1);
+        Text(`${this.subscriptionTypeLabel(rule.type)} · ${rule.url}`).width('100%').fontSize(TYPE_APP_INHERITED_CAPTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       }.layoutWeight(1).alignItems(HorizontalAlign.Start);
       this.smallButton('编辑', (): void => this.editSubscription(rule));
@@ -369,7 +370,7 @@ export struct RulesManagementPage {
   @Builder
   private smallButton(label: string, action: () => void) {
     Text(label).height(30).padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
-      .textAlign(TextAlign.Center).fontSize(11).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
+      .textAlign(TextAlign.Center).fontSize(TYPE_RULES_COMPACT_ACTION.fontSizeFp).fontWeight(TYPE_RULES_COMPACT_ACTION.fontWeight as number).fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(7).opacity(this.snapshot.busy ? 0.62 : 1).onClick((): void => {
         if (!this.snapshot.busy) action();
