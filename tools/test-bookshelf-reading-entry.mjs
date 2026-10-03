@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { compileHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
 import * as readerControlState from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
 import * as readerControlHost from '../entry/src/main/ets/features/reading/ReaderControlHostSession.ts';
 import * as readerControlKeyboard from '../entry/src/main/ets/features/reading/ReaderControlHostKeyboard.ts';
@@ -38,6 +39,7 @@ const methods = [
   'openReading(', 'presentPreparedReading(', 'returnToReadingOrigin(', 'onReaderExited(',
   'returnFromDetail(', 'requestReaderBookInfo(', 'returnToBookshelf(', 'nextNavigationGeneration(', 'isKnownDetailChapter(',
   'currentSourceSwitchTransactionId(', 'consumeTemporaryBackBridge(', 'isCurrentRuntime(', 'currentReaderPresentationIdentity(',
+  'getReadingEntryHost(', 'readingEntryLease(', 'applyReadingEntrySnapshot(', 'bindReadingEntryReader(', 'retireReadingEntryPresentation(', 'chooseCachedChapterRefresh(', 'showIndexAlert(',
   'consumeSystemFileOpen(', 'retireSourceSwitchPresentation(', 'retireRssPresentation(',
   'async probeRemoteContentVerdict(', 'remoteContentVerdictLabel(', 'onReadingFailure(',
   'openDetailSourceSwitch(',
@@ -70,27 +72,37 @@ function create(remote = false) {
       return catalog.promise.then(session => ({ session }));
     }, acquireCandidateGroup:()=>assert.fail('a shelf book must not enter automatic candidate substitution'), recentFailures: () => [] }) }) }).current();
   const runtimeAuthority = runtimeOwnerIdentityProbe(() => runtime);
+  runtime.request=async(method)=>{
+    if(method==='bookmark.list')return{data:{bookmarks:[]}};
+    if(method==='source.list')return{data:{sources:[{sourceId:'source',name:'Test source',enabled:true}]}};
+    throw Error('unexpected shelf entry native request '+method);
+  };
+  setRuntime(runtime);
+  const LocalGateway=class { loadToc() { return toc.promise; } loadDirectoryProjection() { return Promise.resolve(entries); } };
+  const RemoteGateway=class {
+    openCachedCatalogSession() { return catalog.promise; }
+    openSession() { return catalog.promise; }
+    async loadProgress() { progressReads.push(book.bookId); return {kind:'restored',progress:{...book,chapterIndex:book.currentChapterIndex,chapterOffset:10,chapterProgress:0,updatedAt:100}}; }
+    loadChapter(_session,index) { probes.push(index);return body.promise.then(()=>({sourceId:book.sourceId,bookId:book.bookId,chapterIndex:index,chapterUrl:`chapter-${index}`,contentVersion:`body-${index}`,content:'正文',images:[]})); }
+  };
+  const Entry=compileHost(undefined,{ReaderRuntimeOwner:runtimeAuthority,LocalReadingFlowGateway:LocalGateway,RemoteReadingFlowGateway:RemoteGateway,
+    ReaderCoreGateway:class {loadShelfBook(){return Promise.resolve(book);}},SourceGateway:class {loadSources(){return Promise.resolve([{sourceId:'source',category:'novel'}]);}}});
+  const emptyAdmission={generation:0,adding:false,cancelling:false,confirmation:'none'};
   const Harness = new Function(
     'resolveBookshelfBook', 'LOCAL_SOURCE_ID', 'ReaderRuntimeOwner', 'LocalReadingFlowGateway', 'RemoteReadingFlowGateway',
     'ReadingOfflineGateway', 'ReaderCoreGateway', 'SourceGateway', 'RemoteDetailAdmission',
-    'hilog', 'DOMAIN', 'readerSourceCategoryIsText', 'readerSourceCategoryLabel',
+    'hilog', 'DOMAIN', 'readerSourceCategoryIsText', 'readerSourceCategoryLabel', 'ReadingEntryHost', 'EMPTY_READABLE_ADMISSION',
     'remoteReadingFailureKindOf', 'verdictForFailureKind', 'isRemoteSourceFailureKind',
     'remoteSourceFailureSummary', 'RemoteReadingGatewayError', 'remoteReadingFailureRecord', 'searchCandidateRank',
     'sameRemoteSessionEvidence','preparedRemoteChapterMatches','preparedRemoteChapterPositionMatches','captureRemotePositionContext','withPreparedRemoteChapter','copyRemoteReadingSession','RemoteChapterCacheRefreshError',
     `${harnessCode}; return Harness;`,
   )(
     resolveBookshelfBook, 'local', runtimeAuthority,
-    class { loadToc() { return toc.promise; } loadDirectoryProjection() { return Promise.resolve(entries); } },
-    class {
-      openCachedCatalogSession() { return catalog.promise; }
-      openSession() { return catalog.promise; }
-      async loadProgress() { progressReads.push(book.bookId); return {kind:'restored',progress:{...book,chapterIndex:book.currentChapterIndex,chapterOffset:10,chapterProgress:0,updatedAt:100}}; }
-      loadChapter(_session, index) { probes.push(index); return body.promise.then(() => ({sourceId:book.sourceId,bookId:book.bookId,chapterIndex:index,chapterUrl:`chapter-${index}`,contentVersion:`body-${index}`,content:'正文',images:[]})); }
-    },
+    LocalGateway,RemoteGateway,
     class {}, class { loadShelfBook() { return Promise.resolve(book); } },
     class { loadSources() { return Promise.resolve([{ sourceId: 'source', category: 'novel' }]); } },
     class { constructor(value) { this.session = value; } },
-    { info() {}, warn() {}, error() {} }, 0, () => true, () => '小说',
+    { info() {}, warn() {}, error() {} }, 0, () => true, () => '小说',Entry,emptyAdmission,
     error => error.kind ?? 'NETWORK_FAILED', () => 'networkFailed',
     kind => kind === 'NETWORK_FAILED', () => '网络请求失败', class extends Error {}, () => ({}), searchCandidateRank,
     readingEvidence.sameRemoteSessionEvidence, readingEvidence.preparedRemoteChapterMatches, readingEvidence.preparedRemoteChapterPositionMatches,captureRemotePositionContext,readingEvidence.withPreparedRemoteChapter, readingEvidence.copyRemoteReadingSession,RemoteChapterCacheRefreshError,
@@ -101,6 +113,7 @@ function create(remote = false) {
   Object.defineProperty(h, 'route', { get: () => route, set: value => { routes.push(value); route = value; } });
   Object.assign(h, {
     mountedRuntimeOwner: runtime, shelfReceiptRetired: false,
+    detailShelfAdmissionMount:1,detailReadableAdmission:()=>emptyAdmission,
     remoteSessionGeneration:0,remoteContentProbeGeneration:0,readingOriginRoute: 'detail', shelfReadingPreparation: false, navigationGeneration: 0,
     readingSessionActive: false, detailReturnRoute: 'bookshelf', detailToc: [], shelfBooks: [book],
     searchDetailCandidates: [], searchPublication: {shelfAt:()=>[]}, searchHost: { publication: { shelfAt:()=>[] } }, searchPublicationRevision:0,

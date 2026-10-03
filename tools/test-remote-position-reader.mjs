@@ -3,6 +3,7 @@ import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import {readFileSync} from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { compileHost } from './lib/reading-entry-owner-probe.mjs';
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
 // The shared production map uses a TypeScript constructor parameter property;
 // expand that one syntax node for Node's strip-only loader, preserving methods.
@@ -207,16 +208,23 @@ console.log('ML cache: offline readable old body, one-session notice, explicit p
    let active=true,revision=0;const calls=[],dialogs=[],failures=[];
    const ErrorKind=RemoteChapterCacheRefreshError;
    const error=new ErrorKind(session,0,position,scenario==='preserved');
-   const runtime={bookAcquisitions:()=>({readingProjectionRevision:()=>revision})};
+   const runtime={bookAcquisitions:()=>({readingProjectionRevision:()=>revision,setPreparationVisible(){}})};
+   const NativeGateway=class{async loadChapter(...args){calls.push(args);revision+=2;
+     if(scenario==='failure')throw Error('synthetic refresh failed');return upgraded;}};
+   const Entry=compileHost(undefined,{ReaderRuntimeOwner:{current:()=>runtime,isCurrent:owner=>owner===runtime},RemoteReadingFlowGateway:NativeGateway});
+   const emptyAdmission={generation:0,adding:false,cancelling:false,confirmation:'none'};
    const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-     ['refreshCachedChapterFromPrompt'],{...admission,withPreparedRemoteChapter,errorMessageOf:e=>e.message,
+     ['refreshCachedChapterFromPrompt','bindReadingEntryReader'],{...admission,withPreparedRemoteChapter,errorMessageOf:e=>e.message,
+       ReadingEntryHost:Entry,EMPTY_READABLE_ADMISSION:emptyAdmission,LOCAL_SOURCE_ID:'local',
        ReaderRuntimeOwner:{current:()=>runtime},hilog:{warn(){}},DOMAIN:0,
-       RemoteReadingFlowGateway:class{async loadChapter(...args){calls.push(args);revision+=2;
-         if(scenario==='failure')throw Error('synthetic refresh failed');return upgraded;}}});
+       RemoteReadingFlowGateway:NativeGateway});
    const page=Object.assign(new Index(),{route:'reading',shelfReceiptRetired:false,remoteSessionGeneration:1,remoteReadingSession:session,navigationGeneration:7,showReadingFailure:(...args)=>failures.push(args),
-     installRemoteReadingSession(value){this.remoteReadingSession=value;},getUIContext:()=>({showAlertDialog(row){
+     mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,detailBook:{sourceId:'s',bookId:'b',title:'书',author:'作者'},detailToc:session.entries,
+     shelfOperation:{generation:0,removalKey:'',busy:false},detailReadableAdmission:()=>emptyAdmission,
+     getUIContext:()=>({showAlertDialog(row){
        dialogs.push(row);if(scenario==='stale')active=false;
        row[scenario==='decline'?'secondaryButton':'primaryButton'].action();}})});
+   page.bindReadingEntryReader();
    const result=await page.refreshCachedChapterFromPrompt(error,()=>active);
    assert.equal(calls.length,scenario==='refresh'||scenario==='failure'?1:0,scenario);
    if(calls.length){assert.equal(calls[0][0],session);assert.equal(calls[0][1],0);
