@@ -16,6 +16,14 @@ import { readerSourceCategoryIsText } from '../source/ReaderSourceCategory';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { registerReaderFonts } from '../common/ReaderFonts';
+import {
+  TYPE_SEARCH_RESULT_AUTHOR,
+  TYPE_SEARCH_RESULT_CHAPTER,
+  TYPE_SEARCH_RESULT_COVER_TITLE,
+  TYPE_SEARCH_RESULT_INTRO,
+  TYPE_SEARCH_RESULT_TAG,
+  TYPE_SEARCH_RESULT_TITLE,
+} from '../common/ReaderTypography';
 import { ReaderSearchField } from '../common/ReaderSearchField';
 import {
   SurfaceHorizontalFrame,
@@ -1414,10 +1422,10 @@ struct SearchResultCard {
           Stack({ alignContent: Alignment.Bottom }) {
             Text(this.group.book.title)
               .width('100%')
-              .fontFamily('ReaderNotoSerifSCBold')
-              .fontWeight(FontWeight.Bold)
-              .fontSize(9)
-              .lineHeight(11.7)
+              .fontFamily(TYPE_SEARCH_RESULT_COVER_TITLE.fontFamily)
+              .fontWeight(TYPE_SEARCH_RESULT_COVER_TITLE.fontWeight)
+              .fontSize(TYPE_SEARCH_RESULT_COVER_TITLE.fontSizeFp)
+              .lineHeight(TYPE_SEARCH_RESULT_COVER_TITLE.lineHeightFp as number)
               .fontColor(readerAppColor('app.SearchResultCard.build.fontColor.99FFFAF4', this.appThemeScheme))
               .textAlign(TextAlign.Center)
               .maxLines(1)
@@ -1441,20 +1449,20 @@ struct SearchResultCard {
         Column({ space: 5 }) {
           Text(this.group.book.title)
             .width('100%')
-            .fontFamily('ReaderNotoSerifSCBold')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(15)
-            .lineHeight(19.5)
+            .fontFamily(TYPE_SEARCH_RESULT_TITLE.fontFamily)
+            .fontWeight(TYPE_SEARCH_RESULT_TITLE.fontWeight)
+            .fontSize(TYPE_SEARCH_RESULT_TITLE.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_RESULT_TITLE.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
 
           Text(bookAuthorLabel(this.group.book.author, this.group.book.authorIdentity, this.group.book.sourceRuleVersion))
             .width('100%')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(12)
-            .lineHeight(12)
+            .fontFamily(TYPE_SEARCH_RESULT_AUTHOR.fontFamily)
+            .fontWeight(TYPE_SEARCH_RESULT_AUTHOR.fontWeight)
+            .fontSize(TYPE_SEARCH_RESULT_AUTHOR.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_RESULT_AUTHOR.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -1463,10 +1471,10 @@ struct SearchResultCard {
             Text(this.group.book.latestChapterTitle)
               .width('100%')
               .opacity(0.8)
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Regular)
-              .fontSize(11)
-              .lineHeight(11)
+              .fontFamily(TYPE_SEARCH_RESULT_CHAPTER.fontFamily)
+              .fontWeight(TYPE_SEARCH_RESULT_CHAPTER.fontWeight)
+              .fontSize(TYPE_SEARCH_RESULT_CHAPTER.fontSizeFp)
+              .lineHeight(TYPE_SEARCH_RESULT_CHAPTER.lineHeightFp as number)
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -1475,10 +1483,10 @@ struct SearchResultCard {
           if (this.displayIntro().length > 0) {
             Text(this.displayIntro())
               .width('100%')
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Regular)
-              .fontSize(12)
-              .lineHeight(18)
+              .fontFamily(TYPE_SEARCH_RESULT_INTRO.fontFamily)
+              .fontWeight(TYPE_SEARCH_RESULT_INTRO.fontWeight)
+              .fontSize(TYPE_SEARCH_RESULT_INTRO.fontSizeFp)
+              .lineHeight(TYPE_SEARCH_RESULT_INTRO.lineHeightFp as number)
               .fontColor(readerAppColor('app.SearchResultCard.build.fontColor.FF9A948E', this.appThemeScheme))
               .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -1490,21 +1498,30 @@ struct SearchResultCard {
         Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
           space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(2) } }) {
           Text(this.group.book.sourceName.length > 0 ? this.group.book.sourceName : this.group.book.sourceId)
-            .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
+            .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
+            .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
+            .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
             .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
             .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
           Text(this.group.book.sourceId === 'local' ? '本地书籍' : `已发现 ${this.group.sourceCount} 个书源`)
-            .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
+            .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
+            .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
+            .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
             .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
             .borderRadius(4).maxLines(1);
           if (this.group.inBookshelf) {
             Text('已在书架')
-              .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
+              .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
+              .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
+              .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
+              .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
               .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
               .padding({ left: 6, right: 6, top: 2, bottom: 2 })
               .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))

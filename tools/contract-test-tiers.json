@@ -145,6 +145,7 @@
     "test-reader-tts-state-machine.mjs",
     "test-reader-tts-state.mjs",
     "test-reader-typography-architecture.mjs",
+    "test-search-result-typography.mjs",
     "test-reading-chapter-window.mjs",
     "test-reading-document-projection.mjs",
     "test-reading-document-window.mjs",

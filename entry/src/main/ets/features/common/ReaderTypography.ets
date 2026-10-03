@@ -100,6 +100,23 @@ export const TYPE_SEARCH_READER_QUICK_INPUT = new ReaderTextStyle(
 export const TYPE_SEARCH_RSS_HINT = new ReaderTextStyle(
   READER_FONT_INTER, 400, 14, undefined, undefined, 'system', 'figmaNode');
 
+// Search result rows keep their current card geometry while moving all of the
+// cover, metadata and tag text tuples into named semantic roles. These roles
+// intentionally preserve the existing values; the later visual pass can tune
+// the whole result surface without leaving page-local font literals behind.
+export const TYPE_SEARCH_RESULT_COVER_TITLE = new ReaderTextStyle(
+  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 9, 11.7, undefined, 'system', 'figmaNode');
+export const TYPE_SEARCH_RESULT_TITLE = new ReaderTextStyle(
+  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 15, 19.5, undefined, 'system', 'figmaNode');
+export const TYPE_SEARCH_RESULT_AUTHOR = new ReaderTextStyle(
+  READER_FONT_INTER, 400, 12, 12, undefined, 'system', 'figmaNode');
+export const TYPE_SEARCH_RESULT_CHAPTER = new ReaderTextStyle(
+  READER_FONT_INTER, 400, 11, 11, undefined, 'system', 'figmaNode');
+export const TYPE_SEARCH_RESULT_INTRO = new ReaderTextStyle(
+  READER_FONT_INTER, 400, 12, 18, undefined, 'system', 'figmaNode');
+export const TYPE_SEARCH_RESULT_TAG = new ReaderTextStyle(
+  READER_FONT_INTER, 700, 10, 15, undefined, 'system', 'figmaNode');
+
 // The chapter title is a reading-surface role, but it is not user body text.
 // Its line height remains owned by the responsive ReadingSurface layout map.
 export const TYPE_READER_CHAPTER_TITLE = new ReaderTextStyle(
