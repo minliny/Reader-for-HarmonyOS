@@ -9,6 +9,8 @@ import {
 import type {
   SearchPresentation,
 } from './SearchPage';
+import { projectOperationFacts } from '../../app/ReaderOperationFacts';
+import type { SearchOperationFacts, SearchOperationValue } from './SearchPresentation';
 import type { SearchBookPatch } from './SearchBookProjection';
 import type { SearchHistoryStatus } from './SearchPresentation';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
@@ -64,6 +66,8 @@ class SearchQueryRun {
   flattened: SearchBook[] = [];
   timer: number = -1;
   pendingSince: number = 0;
+  /** True while an explicit retry is refreshing retained search results. */
+  retrying: boolean = false;
 
   constructor(keyword: string, requestId: string, scope?: string[]) {
     this.keyword = keyword;
@@ -298,7 +302,7 @@ export class SearchOrchestrator {
     this.sweepCompletedSourceCount = 0;
     const run = new SearchQueryRun(keyword, this.gateway.generateSearchRequestId(keyword), this.lastScope);
     this.run = run;
-    this.present({ kind: 'loading', keyword });
+    this.present({ kind: 'loading', keyword, operation: this.operationFactsForRun(run, [], true, false) });
     void this.performSearch(this.work, this.session, run, true, true);
   }
 
@@ -334,6 +338,7 @@ export class SearchOrchestrator {
         keyword: presentation.keyword,
         searchedSourceCount: this.sweepCompletedSourceCount,
         stopped: true,
+        operation: projectOperationFacts({ phase: 'cancelled', canRetry: true, generation: this.work }),
       });
       return;
     }
@@ -354,6 +359,17 @@ export class SearchOrchestrator {
         stopped: true,
         localSearchFailed: presentation.localSearchFailed, sourceListFailed: presentation.sourceListFailed,
         localFailureMessage: presentation.localFailureMessage, sourceListFailureMessage: presentation.sourceListFailureMessage,
+        operation: projectOperationFacts({
+          phase: 'cancelled',
+          value: {
+            resultCount: presentation.results.length,
+            totalSourceCount: presentation.totalSourceCount,
+            completedSourceCount: presentation.completedSourceCount,
+            failedSourceCount: presentation.failedSourceCount,
+          },
+          canRetry: true,
+          generation: this.work,
+        }),
       });
     }
   }
@@ -381,6 +397,7 @@ export class SearchOrchestrator {
         this.sourceLoad = this.gateway.loadSources();
         this.sourceLoadSession = this.session;
       }
+      run.retrying = true;
       this.publishRun(run);
       void this.performSearch(this.work, this.session, run, retryLocal, retryOnline);
       return;
@@ -465,7 +482,8 @@ export class SearchOrchestrator {
           searching: latest.searching, stopped: latest.stopped, totalSourceCount: latest.totalSourceCount,
           completedSourceCount: latest.completedSourceCount, failedSourceCount: latest.failedSourceCount,
           localSearchFailed: latest.localSearchFailed, sourceListFailed: latest.sourceListFailed,
-          localFailureMessage: latest.localFailureMessage, sourceListFailureMessage: latest.sourceListFailureMessage }, false);
+          localFailureMessage: latest.localFailureMessage, sourceListFailureMessage: latest.sourceListFailureMessage,
+          operation: latest.operation }, false);
       } else {
       const results = await this.gateway.refreshBooks(current.results, delta);
       if (this.isCurrentSession(session) && resultGeneration === this.resultGeneration && this.presentation.kind === 'results') {
@@ -501,7 +519,8 @@ export class SearchOrchestrator {
           localSearchFailed: latest.localSearchFailed, sourceListFailed: latest.sourceListFailed,
           localFailureMessage: latest.localFailureMessage, sourceListFailureMessage: latest.sourceListFailureMessage,
           searching: latest.searching, stopped: latest.stopped, totalSourceCount: latest.totalSourceCount,
-          completedSourceCount: latest.completedSourceCount, failedSourceCount: latest.failedSourceCount }, false);
+          completedSourceCount: latest.completedSourceCount, failedSourceCount: latest.failedSourceCount,
+          operation: latest.operation }, false);
       }
       }
 
@@ -599,6 +618,34 @@ export class SearchOrchestrator {
     if (this.run !== undefined) { this.run.timer = -1; this.run.pendingSince = 0; }
   }
 
+  private operationFactsForRun(run: SearchQueryRun, results: SearchBook[], searching: boolean,
+    stopped: boolean): SearchOperationFacts {
+    const value: SearchOperationValue = {
+      resultCount: results.length,
+      totalSourceCount: run.sources.length,
+      completedSourceCount: run.completed.size,
+      failedSourceCount: run.failures.size,
+    };
+    const hasResults = results.length > 0;
+    const failed = run.localFailed || run.sourceListFailed ||
+      (run.sources.length > 0 && run.failures.size === run.sources.length);
+    let phase: 'loading' | 'refreshing' | 'succeeded' | 'empty' | 'partial' | 'failed' | 'cancelled';
+    if (stopped) phase = 'cancelled';
+    else if (run.retrying) phase = 'refreshing';
+    else if (searching) phase = hasResults ? 'partial' : 'loading';
+    else if (!hasResults) phase = failed ? 'failed' : 'empty';
+    else if (failed || run.failures.size > 0) phase = 'partial';
+    else phase = 'succeeded';
+    const canRetry = !searching && (stopped || failed || run.failures.size > 0);
+    return projectOperationFacts({
+      phase,
+      value: hasResults ? value : undefined,
+      canRetry,
+      canCancel: searching,
+      generation: this.work,
+    });
+  }
+
   private publishRun(run: SearchQueryRun, stopped: boolean = false): void {
     if (this.run !== run || !this.sessionOpen) return;
     const results = run.results();
@@ -610,7 +657,8 @@ export class SearchOrchestrator {
       this.present({ kind: 'results', keyword: run.keyword, results, searching,
         totalSourceCount: run.sources.length, completedSourceCount: run.completed.size,
         failedSourceCount: run.failures.size, localSearchFailed: run.localFailed,
-        sourceListFailed: run.sourceListFailed, localFailureMessage, sourceListFailureMessage, stopped: stopped || undefined });
+        sourceListFailed: run.sourceListFailed, localFailureMessage, sourceListFailureMessage, stopped: stopped || undefined,
+        operation: this.operationFactsForRun(run, results, searching, stopped) });
     } else if (!searching) {
       const failed = run.localFailed || run.sourceListFailed ||
         (run.sources.length > 0 && run.failures.size === run.sources.length);
@@ -618,9 +666,11 @@ export class SearchOrchestrator {
         searchedSourceCount: run.completed.size, failedSourceCount: run.failures.size,
         localSearchFailed: run.localFailed, sourceListFailed: run.sourceListFailed,
         localFailureMessage, sourceListFailureMessage,
-        stopped: stopped || undefined });
+        stopped: stopped || undefined,
+        operation: this.operationFactsForRun(run, results, searching, stopped) });
     } else if (this.presentation.kind !== 'loading') {
-      this.present({ kind: 'loading', keyword: run.keyword });
+      this.present({ kind: 'loading', keyword: run.keyword,
+        operation: this.operationFactsForRun(run, results, searching, stopped) });
     }
   }
 
@@ -738,6 +788,7 @@ export class SearchOrchestrator {
     await Promise.all([local(), online()]);
     if (this.isCurrentWork(work, session) && this.run === run) {
       this.cancelRunTimer();
+      run.retrying = false;
       this.publishRun(run);
       this.sweepAlive = run.localStatus === 'running' || run.onlineStatus === 'running';
     }

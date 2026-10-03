@@ -27,6 +27,11 @@ const sourceCategoryImport =
   /^import \{\n(?:  [^\n]+\n)+\} from ['"][^'"]*ReaderSourceCategory['"];\n/m;
 const sourceCategorySingleImport =
   /^import \{ readerSourceCategoryIsText \} from ['"][^'"]*ReaderSourceCategory['"];\n/m;
+const operationFactsModule = stripTypeScriptTypes(
+  read('entry/src/main/ets/app/ReaderOperationFacts.ts'),
+).replace(/^export /gm, '');
+const operationFactsImport =
+  /^import \{ projectOperationFacts \} from ['"][^'"]*ReaderOperationFacts['"];\n/m;
 const gatewaySource = read('entry/src/main/ets/features/search/SearchGateway.ts')
   .replace(/^import \{ SearchBookProjection, type SearchBookPatch \} from .*;$/m, () =>
       readFileSync(resolve(repo, 'entry/src/main/ets/features/search/SearchBookProjection.ts'), 'utf8'))
@@ -38,10 +43,11 @@ const orchestratorSource = read('entry/src/main/ets/features/search/SearchOrches
   .replace(/^import \{[\s\S]*?from '\.\/SearchGateway';\n/m, '')
   .replace(errorMessageImport, '')
   .replace(sourceCategorySingleImport, '')
+  .replace(operationFactsImport, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '')
   .replace(/^import \{ hilog \} from ['"]@kit\.PerformanceAnalysisKit['"];\n/m, '');
 const combined = stripTypeScriptTypes(
-  `${authorMetadataModule}\n${sourceCategoryModule}\n${errorMessageModule}\n${gatewaySource}\n${orchestratorSource}`
+  `${authorMetadataModule}\n${sourceCategoryModule}\n${errorMessageModule}\n${operationFactsModule}\n${gatewaySource}\n${orchestratorSource}`
     .replace(/^import \{[^\n]+\} from ['"][^'"]*BookAuthorMetadata(?:\.ts)?['"];?\n/gm, ''),
 );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(combined).toString('base64')}`;
@@ -325,6 +331,8 @@ console.log('history failure/retry, source independence, clear ordering, stale s
   assert.equal(present.totalSourceCount, 8);
   assert.equal(present.completedSourceCount, 8);
   assert.equal(present.failedSourceCount, 0, 'a fully healthy sweep reports zero failed sources');
+  assert.equal(present.operation.fact, 'current');
+  assert.equal(present.operation.value.resultCount, present.results.length);
   assert.ok(present.results.every((r) => r.searchRequestId === present.results[0].searchRequestId),
     'every result of one sweep carries the same searchRequestId');
   assert.match(present.results[0].searchRequestId, /^search-/,
@@ -371,6 +379,8 @@ console.log('history failure/retry, source independence, clear ordering, stale s
   assert.equal(present.searching, false);
   assert.equal(present.completedSourceCount, 4, 'failures count as completed sources');
   assert.equal(present.failedSourceCount, 1, 'the isolated failure is reported to the surface');
+  assert.equal(present.operation.fact, 'partial');
+  assert.equal(present.operation.canRetry, true);
   assert.equal(owner.state.calls.length, 4, 'a broken source must not cancel later sources');
   assert.deepEqual(
     present.results.map((result) => result.sourceId),
@@ -396,6 +406,8 @@ console.log('history failure/retry, source independence, clear ordering, stale s
   assert.equal(last(presentations).kind, 'error', 'all failing sources yield whole-search error');
   assert.equal(last(presentations).searchedSourceCount, 4, 'error carries the attempted source count');
   assert.equal(last(presentations).failedSourceCount, 4, 'error carries every failed source count');
+  assert.equal(last(presentations).operation.fact, 'failed');
+  assert.equal(last(presentations).operation.canRetry, true);
   assert.equal(owner.state.calls.length, 4, 'every enabled source is attempted before the error surface');
   assert.ok(
     !presentations.some((p) => p.kind === 'results'),
@@ -417,6 +429,7 @@ console.log('history failure/retry, source independence, clear ordering, stale s
 
   assert.equal(last(presentations).kind, 'empty', 'all-success-with-no-results is empty');
   assert.equal(last(presentations).searchedSourceCount, 3, 'empty carries the attempted source count');
+  assert.equal(last(presentations).operation.fact, 'empty');
   assert.ok(
     !presentations.some((p) => p.kind === 'results'),
     'a zero-result sweep keeps the loading surface until the sweep completes');
@@ -689,6 +702,9 @@ for (const delayed of ['history', 'sources']) {
   assert.equal(partial.searching, true, 'the first landing publishes a streaming snapshot');
   assert.equal(partial.totalSourceCount, 2, 'streaming snapshot carries the sweep total');
   assert.equal(partial.completedSourceCount, 1, 'only the landed source is completed so far');
+  assert.equal(partial.operation.fact, 'partial');
+  assert.equal(partial.operation.hasValue, true);
+  assert.equal(partial.operation.canCancel, true);
   assert.deepEqual(partial.results.map((r) => r.bookId), ['/b-source-0'],
     'partial results already carry the first source books');
   assert.equal(last(presentations).kind, 'results', 'no empty/error clobbers a running sweep');
@@ -698,6 +714,8 @@ for (const delayed of ['history', 'sources']) {
   assert.equal(final.kind, 'results');
   assert.equal(final.searching, false, 'the sweep settles to a closed streaming slot');
   assert.equal(final.completedSourceCount, 2);
+  assert.equal(final.operation.fact, 'current');
+  assert.equal(final.operation.canCancel, false);
   assert.equal(final.results.length, 2, 'late books join the final list');
 }
 
@@ -728,9 +746,11 @@ for (const delayed of ['history', 'sources']) {
   assert.equal(emits[0].searching, true);
   assert.equal(emits[0].completedSourceCount, 2, 'the failure counts as completed');
   assert.equal(emits[0].failedSourceCount, 1, 'the streamed snapshot carries the failure count');
+  assert.equal(emits[0].operation.fact, 'partial');
   assert.deepEqual(emits[0].results.map((r) => r.bookId), ['/b-source-1'],
     'only the healthy source contributes books');
   assert.equal(last(presentations).searching, false, 'the sweep settles to closed');
+  assert.equal(last(presentations).operation.fact, 'partial');
 }
 
 // 13. Leaving mid-sweep retains completed work. Restoring the route wakes the
@@ -839,6 +859,8 @@ for (const delayed of ['history', 'sources']) {
   assert.equal(stopped.kind, 'empty', 'a stop before any results lands settles to empty');
   assert.equal(stopped.stopped, true, 'the stopped empty verdict is marked as user-stopped');
   assert.equal(stopped.searchedSourceCount, 0, 'no source had returned when the sweep stopped');
+  assert.equal(stopped.operation.fact, 'cancelled');
+  assert.equal(stopped.operation.canRetry, true);
 
   const callsAtStop = owner.state.calls.length;
   const presentationsAtStop = presentations.length;
@@ -854,6 +876,7 @@ for (const delayed of ['history', 'sources']) {
   await settle(owner.state, callsAtStop + 6);
   assert.equal(last(presentations).kind, 'empty');
   assert.equal(last(presentations).stopped, undefined, 'a fresh retry is not marked stopped');
+  assert.equal(last(presentations).operation.fact, 'empty');
 }
 
 // 17. ACQ-02: stop() during a streaming results sweep keeps the partial
@@ -877,6 +900,8 @@ for (const delayed of ['history', 'sources']) {
   assert.equal(stopped.kind, 'results', 'a stop with partial results stays on results');
   assert.equal(stopped.searching, false, 'the stop closes the streaming in-progress slot');
   assert.equal(stopped.stopped, true, 'the partial results are marked as user-stopped');
+  assert.equal(stopped.operation.fact, 'cancelled');
+  assert.equal(stopped.operation.hasValue, true);
   assert.deepEqual(stopped.results.map((r) => r.bookId), ['/b-source-0'],
     'the partial results stay on the surface');
 
@@ -1351,6 +1376,8 @@ console.log('PH68 stopped query retains completed metadata without restarting so
   const first=last(presentations).results[0], query=first.searchRequestId;
   assert.equal(last(presentations).localSearchFailed,true);assert.equal(last(presentations).failedSourceCount,1);
   failing=false;search.retry();
+  assert.equal(last(presentations).operation.fact, 'refreshing');
+  assert.equal(last(presentations).operation.canCancel, true);
   assert.equal(search.run.localFailureReason,'local read unavailable','retry keeps the last cause until this branch succeeds');
   await waitUntil(owner.state,()=>last(presentations).kind==='results'&&!last(presentations).searching);
   assert.equal(search.run.localFailureReason,undefined);assert.equal(last(presentations).localFailureMessage,undefined);

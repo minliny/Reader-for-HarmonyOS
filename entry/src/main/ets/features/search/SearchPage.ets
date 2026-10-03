@@ -56,6 +56,8 @@ export type {
   SearchErrorPresentation,
   SearchSourceRequiredPresentation,
   SearchSourceLoadErrorPresentation,
+  SearchOperationFacts,
+  SearchOperationValue,
   SearchPresentation,
 } from './SearchPresentation';
 

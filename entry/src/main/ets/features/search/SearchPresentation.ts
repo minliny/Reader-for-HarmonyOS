@@ -1,6 +1,17 @@
 import type { SearchBook, SearchResultDelta } from './SearchGateway';
+import type { OperationFacts } from '../../app/ReaderOperationFacts';
 
 export type SearchHistoryStatus = 'loading' | 'ready' | 'loadFailed' | 'clearFailed';
+
+/** Small summary facts; result rows remain in SearchPresentation. */
+export interface SearchOperationValue {
+  resultCount: number;
+  totalSourceCount: number;
+  completedSourceCount: number;
+  failedSourceCount: number;
+}
+
+export type SearchOperationFacts = OperationFacts<SearchOperationValue>;
 
 /**
  * The search page's full presentation. The three pre-search surfaces retain
@@ -17,6 +28,7 @@ export interface SearchInitialPresentation {
 export interface SearchLoadingPresentation {
   kind: 'loading';
   keyword: string;
+  operation?: SearchOperationFacts;
 }
 
 export interface SearchResultsPresentation {
@@ -43,6 +55,7 @@ export interface SearchResultsPresentation {
   failedSourceCount: number;
   /** True when the user stopped the sweep early (ACQ-02); partial results stay. */
   stopped?: boolean;
+  operation?: SearchOperationFacts;
 }
 
 export interface SearchEmptyPresentation {
@@ -59,6 +72,7 @@ export interface SearchEmptyPresentation {
   failedSourceCount?: number;
   /** True when the sweep was stopped by the user before this verdict (ACQ-02). */
   stopped?: boolean;
+  operation?: SearchOperationFacts;
 }
 
 export interface SearchErrorPresentation {
@@ -73,6 +87,7 @@ export interface SearchErrorPresentation {
   searchedSourceCount: number;
   /** Enabled sources whose `book.search` failed; every source failed here. */
   failedSourceCount?: number;
+  operation?: SearchOperationFacts;
 }
 
 /**
