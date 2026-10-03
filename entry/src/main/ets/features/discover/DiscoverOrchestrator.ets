@@ -40,9 +40,10 @@ interface DiscoverPatch {
   operation?: OperationFacts<DiscoverBook[]>;
 }
 interface DiscoverSourceCandidate { sources: DiscoverSource[]; sourceIndex: number; kinds: DiscoverKind[]; }
-type DiscoverPendingRead = { kind: 'sources' } |
-  { kind: 'source'; sources: DiscoverSource[]; sourceIndex: number; sourceId: string } |
-  { kind: 'page'; sourceId: string; kindIndex: number; url: string; page: number; probingNext: boolean };
+interface DiscoverSourcesRead { kind: 'sources'; }
+interface DiscoverSourceRead { kind: 'source'; sources: DiscoverSource[]; sourceIndex: number; sourceId: string; }
+interface DiscoverPageRead { kind: 'page'; sourceId: string; kindIndex: number; url: string; page: number; probingNext: boolean; }
+type DiscoverPendingRead = DiscoverSourcesRead | DiscoverSourceRead | DiscoverPageRead;
 
 interface DiscoverPresentationLease {
   identity: string;
@@ -106,7 +107,7 @@ export class DiscoverOrchestrator {
     this.session += 1;
     this.retryQueued = false;
     const session = this.session;
-    this.beginRead({ kind: 'sources' }, '正在读取 Core 发现书源…');
+    this.beginRead({ kind: 'sources' } as DiscoverSourcesRead, '正在读取 Core 发现书源…');
     this.enqueue(async (): Promise<void> => this.loadSources(session));
   }
 
@@ -151,7 +152,7 @@ export class DiscoverOrchestrator {
       generation !== operation.generation || this.retryQueued) return;
     const session = this.session;
     this.retryQueued = true;
-    this.publish({ loading: true, operation: { ...operation, canRetry: false } });
+    this.publish({ loading: true, operation: this.copyFacts(operation, false) });
     this.enqueue(async (): Promise<void> => {
       try {
         if (!this.isCurrentSession(session)) return;
@@ -170,7 +171,7 @@ export class DiscoverOrchestrator {
 
   private async loadSources(session: number): Promise<void> {
     if (!this.isCurrentSession(session)) return;
-    const generation = this.beginRead({ kind: 'sources' }, '正在读取 Core 发现书源…');
+    const generation = this.beginRead({ kind: 'sources' } as DiscoverSourcesRead, '正在读取 Core 发现书源…');
     try {
       const stored = await this.sourceGateway.loadSources(undefined, false, (): boolean => this.isCurrentRead(session, generation));
       const sources: DiscoverSource[] = stored.filter((source: BookSource): boolean =>
@@ -185,14 +186,14 @@ export class DiscoverOrchestrator {
       const previousId = this.currentSource()?.sourceId;
       const previousIndex = sources.findIndex((source: DiscoverSource): boolean => source.sourceId === previousId);
       await this.loadSource(session, previousIndex < 0 ? 0 : previousIndex, sources);
-    } catch (error) { this.fail(session, generation, '发现书源读取失败', error); }
+    } catch (error) { this.fail(session, generation, '发现书源读取失败', error as Error); }
   }
 
   private async loadSource(session: number, sourceIndex: number,
     sources: DiscoverSource[] = this.presentation.sources): Promise<void> {
     const source = sources[sourceIndex];
     if (source === undefined || !this.isCurrentSession(session)) return;
-    const generation = this.beginRead({ kind: 'source', sourceIndex, sourceId: source.sourceId, sources },
+    const generation = this.beginRead({ kind: 'source', sourceIndex, sourceId: source.sourceId, sources } as DiscoverSourceRead,
       `正在读取 ${source.name} 的分类…`);
     try {
       let invalidKinds = 0;
@@ -212,7 +213,7 @@ export class DiscoverOrchestrator {
         return;
       }
       await this.loadPage(session, 0, 1, false, { sources, sourceIndex, kinds }, generation, invalidKinds);
-    } catch (error) { this.fail(session, generation, '发现分类读取失败', error); }
+    } catch (error) { this.fail(session, generation, '发现分类读取失败', error as Error); }
   }
 
   private async loadPage(session: number, kindIndex: number, page: number, probingNext: boolean,
@@ -222,7 +223,7 @@ export class DiscoverOrchestrator {
     const kind = kinds[kindIndex];
     if (source === undefined || kind === undefined || !this.isCurrentSession(session)) return;
     const generation = sourceGeneration ?? this.beginRead({ kind: 'page', sourceId: source.sourceId,
-      kindIndex, url: kind.url, page, probingNext }, `正在由 Core 加载第 ${page} 页…`);
+      kindIndex, url: kind.url, page, probingNext } as DiscoverPageRead, `正在由 Core 加载第 ${page} 页…`);
     this.publish({ loading: true, statusMessage: `正在由 Core 加载第 ${page} 页…` });
     try {
       let invalidBooks = 0;
@@ -248,7 +249,7 @@ export class DiscoverOrchestrator {
         loading: false, statusMessage: message,
         operation: projectOperationFacts({ phase: partial > 0 ? 'partial' : books.length === 0 ? 'empty' : 'succeeded',
           value: books, generation, canRetry: partial > 0, message }) });
-    } catch (error) { this.fail(session, generation, '发现页加载失败', error); }
+    } catch (error) { this.fail(session, generation, '发现页加载失败', error as Error); }
   }
 
   private currentSource(): DiscoverSource | undefined { return this.presentation.sources[this.presentation.activeSourceIndex]; }
@@ -285,15 +286,23 @@ export class DiscoverOrchestrator {
       catch (_) { /* A failed observer cannot turn a read result into a domain failure. */ }
     }
   }
-  private fail(session: number, generation: number, label: string, error: unknown): void {
+  private fail(session: number, generation: number, label: string, error: Error): void {
     const message = `${label}：${errorMessageOf(error)}`;
     if (this.isCurrentRead(session, generation)) this.publish({ loading: false, statusMessage: message,
       operation: projectOperationFacts({ phase: 'failed', value: this.retainedBooks(), generation, canRetry: true, message }) });
     hilog.error(DOMAIN, 'Reader', '%{private}s: %{private}s', label, errorMessageOf(error));
   }
   private copy(source: DiscoverPresentation): DiscoverPresentation {
-    return { ...source, sources: source.sources.slice(), kinds: source.kinds.slice(), books: source.books.slice(),
-      operation: source.operation === undefined ? undefined : { ...source.operation,
-        value: source.operation.value?.slice() } };
+    return { sources: source.sources.slice(), activeSourceIndex: source.activeSourceIndex,
+      kinds: source.kinds.slice(), activeKindIndex: source.activeKindIndex, books: source.books.slice(),
+      page: source.page, hasPrevious: source.hasPrevious, hasNext: source.hasNext,
+      loading: source.loading, statusMessage: source.statusMessage,
+      operation: source.operation === undefined ? undefined : this.copyFacts(source.operation, source.operation.canRetry) };
   }
+  private copyFacts(source: OperationFacts<DiscoverBook[]>, canRetry: boolean): OperationFacts<DiscoverBook[]> {
+    return { fact: source.fact, value: source.value?.slice(), hasValue: source.hasValue,
+      stale: source.stale, blocked: source.blocked, canRetry, canCancel: source.canCancel,
+      generation: source.generation, message: source.message, blockedReason: source.blockedReason };
+  }
+
 }

@@ -34,7 +34,7 @@ function fixture(route='rssSourceFeed',runtime=rssRpc()){
  const shared=(params)=>{
   const n=createReaderBuilderProbe(source('features/common/ReaderRecoveryNotice.ets'),['build'],{ReaderRecoveryAction:Child}).owner;
   Object.assign(n,{appThemeScheme:'day'},params);n.initialRender();const c=[...n.children.values()].at(-1);if(!c)return{notice:n};
-  const a=createReaderBuilderProbe(source('features/common/ReaderRecoveryAction.ets'),['build']).owner;Object.assign(a,{appThemeScheme:'day',enabled:true},c.params);a.initialRender();return{notice:n,action:[...a.nodes.values()].find(x=>x.type==='Text'&&x.height===36)};
+  const a=createReaderBuilderProbe(source('features/common/ReaderRecoveryAction.ets'),['build']).owner;Object.assign(a,{appThemeScheme:'day',actionEnabled:true},c.params);a.initialRender();return{notice:n,action:[...a.nodes.values()].find(x=>x.type==='Text'&&x.height===36)};
  };
  const render=(kind)=>{
   const names={main:['rssPageContent','RssPage','readFeedback'],source:['rssSourceFeedContent','RssSourceFeedPage','operationFeedback','retryFeedback'],
@@ -44,7 +44,7 @@ function fixture(route='rssSourceFeed',runtime=rssRpc()){
   Object.assign(b,{appThemeScheme:'day'},clone(Object.fromEntries(Object.entries(props).filter(([,v])=>typeof v!=='function'))),Object.fromEntries(Object.entries(props).filter(([,v])=>typeof v==='function')));
   b[members[0]]();
   const actual=[...b.children.values()].find(x=>x.params.view?.visible);
-  if(kind==='editor'){const c=[...b.children.values()].at(-1);if(c){const a=createReaderBuilderProbe(source('features/common/ReaderRecoveryAction.ets'),['build']).owner;Object.assign(a,{appThemeScheme:'day',enabled:true},c.params);a.initialRender();return{props,page:b,action:[...a.nodes.values()].find(x=>x.type==='Text'&&x.height===36)};}}
+  if(kind==='editor'){const c=[...b.children.values()].at(-1);if(c){const a=createReaderBuilderProbe(source('features/common/ReaderRecoveryAction.ets'),['build']).owner;Object.assign(a,{appThemeScheme:'day',actionEnabled:true},c.params);a.initialRender();return{props,page:b,action:[...a.nodes.values()].find(x=>x.type==='Text'&&x.height===36)};}}
   return{props,page:b,...(actual?shared(actual.params):{})};
  };
  const settle=()=>settleRss(p.getRssOrchestrator());

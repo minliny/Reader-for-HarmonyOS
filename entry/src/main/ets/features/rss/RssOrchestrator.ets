@@ -1,3 +1,4 @@
+import type { RssSourceSnapshot, RssEntrySnapshot } from './RssPresentationContract';
 import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { RssRouteOperationHost, type RssRouteOperationProjection, type RssRouteBinding } from './RssRouteOperationHost';
 import {
@@ -20,6 +21,8 @@ import {
   type CommitConfirmationKind,
   type OperationFacts,
 } from '../../app/ReaderOperationFacts';
+
+export type { RssSourceSnapshot, RssEntrySnapshot } from './RssPresentationContract';
 
 const DOMAIN = 0x5244;
 // A page @Prop may clone a projection. A process-wide token remains stable
@@ -63,19 +66,6 @@ export interface RssManagementOperationProjection {
 
 type RssOperationProjectionEmitter = (operation: RssManagementOperationProjection) => void;
 
-export interface RssSourceSnapshot {
-  subscriptions: RssSubscription[];
-  subscription: RssSubscription;
-  items: RssItem[];
-}
-
-export interface RssEntrySnapshot {
-  subscriptions: RssSubscription[];
-  subscription: RssSubscription;
-  items: RssItem[];
-  item: RssItem;
-  favorite: boolean;
-}
 
 type RssSourceSnapshotEmitter = (snapshot: RssSourceSnapshot) => void;
 type RssEntrySnapshotEmitter = (snapshot: RssEntrySnapshot) => void;
@@ -286,7 +276,7 @@ export class RssOrchestrator {
                 session, 'reading', undefined, undefined, 'unknown');
             });
         } catch (error) {
-          if (!dispatched) throw error;
+          if (!dispatched) throw error as Error;
           this.publishOperation('source-import', replaceExisting ? 'replace' : 'merge',
             session, 'failed', (error as Error).message, undefined,
             evidence.confirmation());

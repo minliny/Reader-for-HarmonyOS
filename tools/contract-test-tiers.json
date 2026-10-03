@@ -522,6 +522,7 @@
     "test-source-content-correction.mjs",
     "test-source-settings-receipt-consumers.mjs",
     "test-source-index-presentation-consumers.mjs",
+    "test-source-runtime-owner-closure.mjs",
     "test-source-supply-chain.mjs",
     "test-source-switch-catalog-seam.mjs",
     "test-source-switch-gateway.mjs",

@@ -62,7 +62,7 @@ export class BookAcquisitionProjectionGateway {
   async load(sourceId: string, bookId: string,
     isCurrent: () => boolean): Promise<BookAcquisitionDetailProjection | undefined> {
     if (!isCurrent()) return undefined;
-    const result = await this.owner.request('search-book.get', { origin: sourceId, bookUrl: bookId }, { isCurrent });
+    const result = await this.owner.request('search-book.get', { origin: sourceId, bookUrl: bookId }, { canDispatch: isCurrent, canContinue: isCurrent });
     if (!isCurrent()) return undefined;
     const raw = result.data['book'];
     if (raw === undefined || raw === null) return undefined;

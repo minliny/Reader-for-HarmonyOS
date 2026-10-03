@@ -8,7 +8,7 @@ import { isReaderCoreTransactionPendingError } from '../entry/vendor/core-harmon
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 const source = name => readFileSync(new URL(`../entry/src/main/ets/${name}`, import.meta.url), 'utf8');
 // Execute complete production owners and protocol decoders, replacing platform imports only.
-const ordinary = text => stripTypeScriptTypes(text.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm, '').replace(/^export /gm, ''));
+const ordinary = text => stripTypeScriptTypes(text.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm, '').replace(/^export type \{[^\n]+from [^\n]+\n/gm,'').replace(/^export /gm, ''));
 const facts = new Function(ordinary(source('app/ReaderOperationFacts.ts')) + ';return {projectOperationFacts,projectCommitReadback};')();
 const projectPersistedReceipt = new Function(...Object.keys(facts), ordinary(source('app/ReaderPersistedReceiptProjection.ts')) + ';return projectPersistedReceipt;')(...Object.values(facts));
 let currentOwner;
@@ -75,7 +75,7 @@ function fixture(runtime=rpc()){
     Object.assign(owner,refresh(),{operation:clone(child.params.operation),readFacts:clone(child.params.readFacts),appThemeScheme:'day'});
     owner.operationFeedback();
     const recoveryChild=[...owner.children.values()][0];
-    if(recoveryChild){const recovery=createReaderBuilderProbe(recoverySource,['build']).owner;Object.assign(recovery,{enabled:true},recoveryChild.params,{appThemeScheme:'day'});recovery.initialRender();
+    if(recoveryChild){const recovery=createReaderBuilderProbe(recoverySource,['build']).owner;Object.assign(recovery,{actionEnabled:true},recoveryChild.params,{appThemeScheme:'day'});recovery.initialRender();
       for(const [id,node] of recovery.nodes)owner.nodes.set(-id,node);}
     return owner;
   };

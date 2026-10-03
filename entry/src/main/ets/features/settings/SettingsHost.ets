@@ -1,9 +1,9 @@
 import { SettingsOrchestrator, type SettingsKey, type SettingsOperationProjection } from './SettingsOrchestrator';
-export type { SettingsOperationProjection } from './SettingsOrchestrator';
 import type { SettingsSnapshot } from './SettingsGateway';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { common } from '@kit.AbilityKit';
 import { SettingsCacheCleanupOwner, type SettingsCacheCleanupSnapshot } from './SettingsCacheCleanupOwner';
+export type { SettingsOperationProjection } from './SettingsOrchestrator';
 export type { SettingsCacheCleanupSnapshot } from './SettingsCacheCleanupOwner';
 
 /**

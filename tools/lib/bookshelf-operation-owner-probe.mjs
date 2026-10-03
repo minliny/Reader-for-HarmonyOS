@@ -8,7 +8,13 @@ const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/C
 const ts=createRequire(import.meta.url)(sdk+'/node_modules/typescript');
 export const bookshelfOperationSource=path=>readFileSync(new URL('../../entry/src/main/ets/'+path,import.meta.url),'utf8');
 export function bookshelfOperationClass(path,result,deps={}) {
- const text=bookshelfOperationSource(path).replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export \{[\s\S]*?\} from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,'');
+ const text=bookshelfOperationSource(path).replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export (?:type )?\{[\s\S]*?\} from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,'');
+ const declarations=ts.createSourceFile(path,text,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS).statements;
+ const ownNames=new Set(declarations.flatMap(statement=>ts.isVariableStatement(statement)?
+   statement.declarationList.declarations.map(node=>node.name.text):statement.name?.text?[statement.name.text]:[]));
+ // A complete production declaration supplies its own top-level binding;
+ // callers may carry the same real type in their wider dependency bundle.
+ deps=Object.fromEntries(Object.entries(deps).filter(([name])=>!ownNames.has(name)));
  const code=ts.transpileModule(text,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
  return new Function(...Object.keys(deps),code+`;return ${result};`)(...Object.values(deps));
 }

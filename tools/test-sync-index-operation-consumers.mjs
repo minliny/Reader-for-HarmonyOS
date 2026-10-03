@@ -49,7 +49,7 @@ function fixture({durable=false}={}){
     const n=createReaderBuilderProbe(f.source('features/common/ReaderRecoveryNotice.ets'),['build'],{ReaderRecoveryAction:Child}).owner;
     Object.assign(n,notice.params,{appThemeScheme:'day'});n.initialRender();const actionChild=[...n.children.values()][0];let action;
     if(actionChild){const a=createReaderBuilderProbe(f.source('features/common/ReaderRecoveryAction.ets'),['build']).owner;
-      Object.assign(a,actionChild.params,{enabled:true,appThemeScheme:'day'});a.initialRender();action=[...a.nodes.values()].find(v=>v.height===36);}
+      Object.assign(a,actionChild.params,{actionEnabled:true,appThemeScheme:'day'});a.initialRender();action=[...a.nodes.values()].find(v=>v.height===36);}
     return{page:p,view:notice.params.view,action};
   };
   const open=async()=>{real.owner.open();assert.equal(index.syncSnapshotReady,true,'owner loading is an actual usable Page payload');await real.settle();};

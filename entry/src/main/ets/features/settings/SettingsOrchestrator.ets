@@ -86,7 +86,7 @@ export class SettingsOrchestrator {
         this.emit(snapshot);
         this.publishRead(session, expectedWrite, 'succeeded');
         const facts = this.gateway.writeFacts();
-        if (facts.pendingReconciliation) this.latestOperation = { ...this.latestOperation, action: facts.action };
+        if (facts.pendingReconciliation) this.latestOperation = { action: facts.action, readFacts: this.latestOperation.readFacts, receipt: this.latestOperation.receipt, canRetryAccepted: this.latestOperation.canRetryAccepted };
         const receipt = this.latestOperation.receipt;
         if (receipt !== undefined || facts.pendingReconciliation) this.publishReceipt(session, expectedWrite,
           facts.pendingReconciliation ? 'unknown' : facts.savedRevision > 0 ? 'confirmed' :
@@ -183,7 +183,7 @@ export class SettingsOrchestrator {
     const session = this.session, write = ++this.writeGeneration;
     const evidence = new ReaderWriteEvidence();
     this.retrying = true;
-    this.latestOperation = { ...this.latestOperation, canRetryAccepted: false };
+    this.latestOperation = { action: this.latestOperation.action, readFacts: this.latestOperation.readFacts, receipt: this.latestOperation.receipt, canRetryAccepted: false };
     this.publishReceipt(session, write, 'unknown', 'reading');
     void this.gateway.retryAccepted(evidence, (): boolean => this.isCurrentSession(session, write))
       .then(async (snapshot: SettingsSnapshot): Promise<void> => {

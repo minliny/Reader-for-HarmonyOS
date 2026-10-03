@@ -1,8 +1,14 @@
-import { SyncGateway, DEFAULT_SYNC_SNAPSHOT, type SyncSnapshot, type SyncRestoreResult, type SyncHistoryEntry, type SyncBackupReceipt } from './SyncGateway';
+import { SyncGateway, DEFAULT_SYNC_SNAPSHOT, type SyncSnapshot, type SyncRestoreResult, type SyncHistoryEntry, type SyncBackupReceipt, type SyncRestoreConflict } from './SyncGateway';
 import { SyncWriteObservation, type SyncOperationAction, type SyncOperationProjection, type SyncPresentationFacts } from './SyncOperationProjection';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { projectOperationFacts, projectCommitReadback, type OperationFacts, type CommitConfirmationKind, type CommitReadbackPhase } from '../../app/ReaderOperationFacts';
 import { projectPersistedReceipt } from '../../app/ReaderPersistedReceiptProjection';
+
+interface SyncSnapshotPatch {
+  history?: SyncHistoryEntry[]; statusMessage?: string;
+  restoreConflict?: SyncRestoreConflict; clearRestoreConflict?: boolean;
+  facts?: SyncPresentationFacts; redactSecrets?: boolean;
+}
 
 let syncProjectionGeneration: number = 0;
 /** Foreground owner. One chain retains accepted write receipts across route
@@ -100,18 +106,18 @@ export class SyncOrchestrator {
         try {
           const recovered = await this.gateway.recoverInterruptedRestore(observation);
           if (recovered) {
-            this.lastSnapshot = { ...this.source(), restoreConflict: undefined };
+            this.lastSnapshot = this.patchedSnapshot(this.source(), { clearRestoreConflict: true });
             this.publishReceipt(session, operation.action, observation, 'reading', '已有恢复已完成，正在读取安全配置');
           }
           else if (operation.projection.receipt.confirmation === 'unknown') {
             // Missing atomic Core receipt proves no configuration apply. This
             // is stronger evidence than a matching later configuration read.
-            this.lastSnapshot = { ...this.source(), restoreConflict: undefined };
+            this.lastSnapshot = this.patchedSnapshot(this.source(), { clearRestoreConflict: true });
             this.publishReceipt(session, operation.action, observation, 'succeeded', '已核对 Core 恢复记录：没有应用本机配置');
           }
         } catch (error) {
-          if (observation.write.dispatchedCount > 0) this.publishReceipt(session, operation.action, observation, 'failed', this.safeError(error));
-          else this.publishReceiptWithConfirmation(session, operation, 'failed', this.safeError(error));
+          if (observation.write.dispatchedCount > 0) this.publishReceipt(session, operation.action, observation, 'failed', this.safeError(error as Error));
+          else this.publishReceiptWithConfirmation(session, operation, 'failed', this.safeError(error as Error));
           return;
         }
       }
@@ -125,7 +131,7 @@ export class SyncOrchestrator {
             this.publishReceipt(session, 'saveConfig', observation, 'reading', '已核对安全存储中的本次保存回执');
           }
         } catch (error) {
-          this.publishReceiptWithConfirmation(session, operation, 'failed', this.safeError(error));
+          this.publishReceiptWithConfirmation(session, operation, 'failed', this.safeError(error as Error));
           return;
         }
       }
@@ -134,11 +140,11 @@ export class SyncOrchestrator {
           const receipt = await this.gateway.reconcileBackupReceipt(true);
           if (receipt !== undefined) this.publishBackupReceipt(session, receipt, operation.writeGeneration);
         } catch (error) {
-          this.publishReceiptWithConfirmation(session, operation, 'failed', this.safeError(error)); return;
+          this.publishReceiptWithConfirmation(session, operation, 'failed', this.safeError(error as Error)); return;
         }
       }
       await this.load(session);
-    }).catch((error: Error): void => this.publishRead(session, 'failed', this.safeError(error)))
+    }).catch((error: Error): void => this.publishRead(session, 'failed', this.safeError(error as Error)))
       .finally((): void => { this.operationInFlight = false; this.deliver(this.session); });
     this.deliver(session);
   }
@@ -161,7 +167,7 @@ export class SyncOrchestrator {
         this.publishBackupReceipt(session, receipt, operation.writeGeneration);
         await this.load(session);
       } catch (error) {
-        if (this.currentSession(session)) this.publishReceiptWithConfirmation(session, operation, 'failed', this.safeError(error));
+        if (this.currentSession(session)) this.publishReceiptWithConfirmation(session, operation, 'failed', this.safeError(error as Error));
       }
     }).finally((): void => { this.operationInFlight = false; this.deliver(this.session); });
     this.deliver(session);
@@ -183,7 +189,7 @@ export class SyncOrchestrator {
         await this.load(session);
       } catch (error) {
         // A failure/no new dispatch cannot erase any previous unknown.
-        this.publishReceiptWithConfirmation(session, operation, 'failed', this.safeError(error));
+        this.publishReceiptWithConfirmation(session, operation, 'failed', this.safeError(error as Error));
         await this.load(session);
       }
     }).finally((): void => { this.operationInFlight = false; this.deliver(this.session); });
@@ -210,7 +216,7 @@ export class SyncOrchestrator {
       if (!this.currentSession(session)) return;
       this.requestFacts = projectOperationFacts<boolean>({ phase: outcome.ok ? 'succeeded' : 'failed', value: outcome.ok ? true : undefined, generation: ++syncProjectionGeneration, message: outcome.ok ? undefined : 'WebDAV 连接测试未完成' });
       this.status(session, outcome.ok ? outcome.note ?? 'WebDAV 连接成功' : outcome.error ?? 'WebDAV 连接失败');
-    }).catch((error: Error): void => { this.requestFacts = projectOperationFacts<boolean>({ phase: 'failed', generation: ++syncProjectionGeneration, message: 'WebDAV 连接测试未完成' }); this.status(session, this.safeError(error)); })
+    }).catch((error: Error): void => { this.requestFacts = projectOperationFacts<boolean>({ phase: 'failed', generation: ++syncProjectionGeneration, message: 'WebDAV 连接测试未完成' }); this.status(session, this.safeError(error as Error)); })
       .finally((): void => { this.operationInFlight = false; this.deliver(this.session); });
   }
 
@@ -220,7 +226,7 @@ export class SyncOrchestrator {
       if (!outcome.ok) throw new Error(outcome.error ?? '备份事务未确认完成');
       const current = this.source();
       const entry: SyncHistoryEntry = { timestamp: this.formatNow(), destination: 'WebDAV', size: outcome.size ?? 0, ok: true };
-      this.lastSnapshot = { ...current, history: [entry].concat(current.history) };
+      this.lastSnapshot = this.patchedSnapshot(current, { history: [entry].concat(current.history) });
       return '备份已上传';
     });
   }
@@ -242,11 +248,11 @@ export class SyncOrchestrator {
   private restoreResult(outcome: SyncRestoreResult, observation: SyncWriteObservation): string {
     const current = this.source();
     if (outcome.conflict !== undefined) {
-      this.lastSnapshot = { ...current, restoreConflict: outcome.conflict };
+      this.lastSnapshot = this.patchedSnapshot(current, { restoreConflict: outcome.conflict });
       return '检测到本机与远端备份冲突，请确认';
     }
     if (!outcome.ok) throw new Error(outcome.error ?? '恢复尚未完成');
-    this.lastSnapshot = { ...current, restoreConflict: undefined };
+    this.lastSnapshot = this.patchedSnapshot(current, { clearRestoreConflict: true });
     observation.completed = true;
     if (outcome.cancelled) return '已取消恢复';
     return outcome.applied ? '恢复已完成；重新进入页面后读取新状态' : '本机数据与最新备份一致，无需重复写入';
@@ -268,7 +274,7 @@ export class SyncOrchestrator {
       let message: string;
       try { message = await run(observation, admitted); }
       catch (error) {
-        this.publishReceipt(session, action, observation, 'failed', this.safeError(error));
+        this.publishReceipt(session, action, observation, 'failed', this.safeError(error as Error));
         if (action === 'saveConfig') await this.load(session);
         return;
       }
@@ -278,7 +284,7 @@ export class SyncOrchestrator {
       }
       this.publishReceipt(session, action, observation, 'reading', message);
       await this.load(session);
-    }).catch((error: Error): void => this.publishReceipt(session, action, observation, 'failed', this.safeError(error)))
+    }).catch((error: Error): void => this.publishReceipt(session, action, observation, 'failed', this.safeError(error as Error)))
       .finally((): void => { this.operationInFlight = false; this.deliver(this.session); });
   }
 
@@ -313,12 +319,12 @@ export class SyncOrchestrator {
       const successMessage = operation?.completed === true && operation.projection.receipt.confirmation === 'confirmed' ?
         operation.action === 'saveConfig' ? '配置已写入系统安全存储' : operation.action === 'backup' ? '备份已上传' : '恢复已完成；重新进入页面后读取新状态' :
         current.statusMessage.length > 0 ? current.statusMessage : snapshot.statusMessage;
-      this.lastSnapshot = { ...snapshot, history: current.history, statusMessage: successMessage, restoreConflict: current.restoreConflict };
+      this.lastSnapshot = this.patchedSnapshot(snapshot, { history: current.history, statusMessage: successMessage, restoreConflict: current.restoreConflict, clearRestoreConflict: current.restoreConflict === undefined });
       this.publishRead(session, 'succeeded');
       if (this.latestOperation !== undefined) this.publishReceiptWithConfirmation(session, this.latestOperation, 'succeeded');
     } catch (error) {
       this.publishRead(session, 'failed', '安全配置读取失败，保留上次已读取内容');
-      if (this.latestOperation !== undefined) this.publishReceiptWithConfirmation(session, this.latestOperation, 'failed', this.safeError(error));
+      if (this.latestOperation !== undefined) this.publishReceiptWithConfirmation(session, this.latestOperation, 'failed', this.safeError(error as Error));
     }
   }
 
@@ -360,14 +366,18 @@ export class SyncOrchestrator {
         refreshError: readback === 'failed' ? errorOrStatus : undefined,
         message: partial !== undefined || remotePartial !== undefined ? projectCommitReadback(confirmation, readback).message + '：' + (partial ?? remotePartial) : undefined, canRetry: (readback === 'failed' || !observation.retentionSkipped) && readback !== 'reading' && (confirmation !== 'undispatched'),
         generation: ++syncProjectionGeneration }) };
-    if (errorOrStatus !== undefined) this.lastSnapshot = { ...this.source(), statusMessage: errorOrStatus };
+    if (errorOrStatus !== undefined) this.lastSnapshot = this.patchedSnapshot(this.source(), { statusMessage: errorOrStatus });
     this.deliver(session);
   }
 
   private publishReceiptWithConfirmation(session: number, operation: SyncOperationProjection, readback: CommitReadbackPhase, error?: string): void {
     const confirmation: CommitConfirmationKind = operation.projection.receipt.confirmation;
     const effectiveReadback = readback === 'succeeded' && confirmation === 'confirmed' && !operation.completed && !operation.retentionSkipped ? 'failed' : readback;
-    this.latestOperation = { ...operation, projection: projectPersistedReceipt<boolean>({ confirmation, readback: effectiveReadback,
+    this.latestOperation = { action: operation.action, writeGeneration: operation.writeGeneration, operationId: operation.operationId,
+      coreApplied: operation.coreApplied, hostApplied: operation.hostApplied, completed: operation.completed,
+      remoteConfirmedCount: operation.remoteConfirmedCount, uploadQualified: operation.uploadQualified,
+      retentionSkipped: operation.retentionSkipped, canContinueOriginal: operation.canContinueOriginal,
+      projection: projectPersistedReceipt<boolean>({ confirmation, readback: effectiveReadback,
       value: this.lastSnapshot === undefined ? undefined : true, refreshError: error,
       message: !operation.completed ? operation.projection.facts.message : undefined,
       canRetry: (readback === 'failed' || !operation.retentionSkipped) && readback !== 'reading' && (readback === 'failed' || confirmation === 'unknown' || !operation.completed) && confirmation !== 'undispatched',
@@ -388,7 +398,7 @@ export class SyncOrchestrator {
   private source(): SyncSnapshot { return this.lastSnapshot ?? this.read(); }
   private currentOwner(): boolean { return ReaderRuntimeOwner.isCurrent(this.owner); }
   private currentSession(session: number): boolean { return this.currentOwner() && this.isCurrent() && session === this.session; }
-  private status(session: number, message: string): void { this.lastSnapshot = { ...this.source(), statusMessage: message }; this.deliver(session); }
+  private status(session: number, message: string): void { this.lastSnapshot = this.patchedSnapshot(this.source(), { statusMessage: message }); this.deliver(session); }
   private deliver(session: number): void {
     if (!this.currentSession(session)) return;
     const source = this.source();
@@ -397,9 +407,23 @@ export class SyncOrchestrator {
       canMutate: !this.operationInFlight && this.lastSnapshot !== undefined &&
         operation?.projection.receipt.confirmation !== 'unknown' && !(operation?.action === 'saveConfig' && !operation.completed) && !(operation?.coreApplied === true && !operation.completed) &&
         !(operation?.action === 'backup' && !operation.completed && !operation.retentionSkipped && operation.projection.receipt.confirmation === 'confirmed') };
-    this.emit({ ...source, webdavPass: '', backupPass: '', facts });
+    this.emit(this.patchedSnapshot(source, { redactSecrets: true, facts }));
   }
-  private safeError(_error: unknown): string { return '操作未完成，请核对当前配置或已有恢复记录'; }
+  private patchedSnapshot(source: SyncSnapshot, patch: SyncSnapshotPatch): SyncSnapshot {
+    return {
+      configSaveOperationId: source.configSaveOperationId, configSaveIntent: source.configSaveIntent,
+      configSaveHeadMatchesOriginal: source.configSaveHeadMatchesOriginal, canContinueConfigSave: source.canContinueConfigSave,
+      configSavePayloadAvailable: source.configSavePayloadAvailable, backupReceipt: source.backupReceipt,
+      webdavUrl: source.webdavUrl, webdavUser: source.webdavUser,
+      webdavPass: patch.redactSecrets ? '' : source.webdavPass, backupPass: patch.redactSecrets ? '' : source.backupPass,
+      webdavPath: source.webdavPath, saveLocation: source.saveLocation,
+      backupFrequency: source.backupFrequency, backupScope: source.backupScope,
+      history: patch.history ?? source.history, statusMessage: patch.statusMessage ?? source.statusMessage,
+      restoreConflict: patch.clearRestoreConflict ? undefined : patch.restoreConflict ?? source.restoreConflict,
+      facts: patch.facts ?? source.facts,
+    };
+  }
+  private safeError(_error: Error): string { return '操作未完成，请核对当前配置或已有恢复记录'; }
   private formatNow(): string {
     const d = new Date(); const pad = (n: number): string => n < 10 ? `0${n}` : `${n}`;
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;

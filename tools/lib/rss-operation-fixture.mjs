@@ -4,7 +4,7 @@ import { stripTypeScriptTypes } from 'node:module';
 import { isReaderCoreTransactionPendingError, ReaderCoreRequestError } from '../../entry/vendor/core-harmony/sdk/reader_core.ts';
 
 export const rssSource = name => readFileSync(new URL(`../../entry/src/main/ets/${name}`, import.meta.url), 'utf8');
-const ordinary = source => stripTypeScriptTypes(source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm, '').replace(/^export /gm, ''));
+const ordinary = source => stripTypeScriptTypes(source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm, '').replace(/^export type \{[^\n]+from [^\n]+\n/gm,'').replace(/^export /gm, ''));
 export const rssFacts = new Function(ordinary(rssSource('app/ReaderOperationFacts.ts')) + ';return {projectOperationFacts,projectCommitReadback};')();
 export const rssProjection = new Function(...Object.keys(rssFacts), ordinary(rssSource('app/ReaderPersistedReceiptProjection.ts')) + ';return projectPersistedReceipt;')(...Object.values(rssFacts));
 export const rssRecoveryView = new Function(ordinary(rssSource('app/ReaderRecoveryProjection.ts')) + ';return readerRecoveryView;')();

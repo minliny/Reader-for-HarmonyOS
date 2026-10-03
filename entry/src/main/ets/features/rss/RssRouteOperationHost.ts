@@ -2,7 +2,7 @@ import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence.ts';
 import { projectOperationFacts, type OperationFacts, type CommitConfirmationKind } from '../../app/ReaderOperationFacts.ts';
 import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../app/ReaderPersistedReceiptProjection.ts';
 import type { RssGateway } from './RssGateway';
-import type { RssSourceSnapshot, RssEntrySnapshot } from './RssOrchestrator';
+import type { RssSourceSnapshot, RssEntrySnapshot } from './RssPresentationContract';
 
 let routeFactGeneration: number = 0;
 

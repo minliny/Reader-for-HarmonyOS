@@ -1,6 +1,5 @@
 import type { RssItem, RssSubscription } from './RssGateway';
-import type { RssPresentation } from './RssPage';
-import type { RssSubscriptionManagementItem } from './RssSubscriptionManagementPage';
+import type { RssPresentation, RssSubscriptionManagementItem } from './RssPresentationContract';
 
 /** Pure current-UI projection of authoritative RSS DTOs. No independent
  * subscription store, request, inferred health or hidden product mode. */

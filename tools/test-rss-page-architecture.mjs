@@ -8,6 +8,9 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => themeDayDesignSource(readFileSync(resolve(repo, path), 'utf8'));
 
 const rss = read('entry/src/main/ets/features/rss/RssPage.ets');
+const rssContract = read('entry/src/main/ets/features/rss/RssPresentationContract.ts');
+assert.match(rss, /import type \{[^\n]*RssPresentation[^\n]*\} from '\.\/RssPresentationContract'/);
+assert.doesNotMatch(rss, /export interface Rss(?:Feed|Refreshing|EmptyUnread|FatalError)Presentation/);
 const sourceFeed = read('entry/src/main/ets/features/rss/RssSourceFeedPage.ets');
 const entryDetail = read('entry/src/main/ets/features/rss/RssEntryDetailPage.ets');
 const management = read('entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets');
@@ -25,13 +28,13 @@ const mainTabShell = read('entry/src/main/ets/features/shell/MainTabShell.ets');
 assert.equal((rss.match(/MainTabShell\(\{/g) ?? []).length, 1);
 assert.doesNotMatch(rss, /PageBackBar/);
 assert.doesNotMatch(rss, /private backBar\(/);
-assert.match(rss, /kind: 'feed'/);
-assert.match(rss, /kind: 'refreshing'/);
-assert.match(rss, /kind: 'emptyUnread'/);
-assert.match(rss, /kind: 'fatalError'/);
-assert.doesNotMatch(rss, /kind: 'empty';/);
-assert.doesNotMatch(rss, /kind: 'error';/);
-assert.match(rss, /interface RssEmptyUnreadPresentation \{\s*kind: 'emptyUnread';\s*subscriptions: RssSubscription\[\];/);
+assert.match(rssContract, /kind: 'feed'/);
+assert.match(rssContract, /kind: 'refreshing'/);
+assert.match(rssContract, /kind: 'emptyUnread'/);
+assert.match(rssContract, /kind: 'fatalError'/);
+assert.doesNotMatch(rssContract, /kind: 'empty';/);
+assert.doesNotMatch(rssContract, /kind: 'error';/);
+assert.match(rssContract, /interface RssEmptyUnreadPresentation \{\s*kind: 'emptyUnread';\s*subscriptions: RssSubscription\[\];/);
 assert.match(rss, /this\.emptyUnreadScroll\(this\.presentation\.subscriptions\)/);
 assert.match(rss, /private emptyUnreadScroll\(subscriptions: RssSubscription\[\]\)[\s\S]*this\.subscriptionSection\(subscriptions\);[\s\S]*this\.emptyUnreadSection\(\);/);
 assert.doesNotMatch(rss, /private emptyContent\(/);
@@ -69,7 +72,7 @@ assert.match(rss, /\.backgroundColor\(TOK_PRIMARY_SOFT\)/);
 
 // Sources / All / Favorites / Rules are main-page content modes. Unsupported
 // modes emit an intent and remain on Sources; they are not added to ReaderRoute.
-assert.match(rss, /export type RssMode = 'sources' \| 'all' \| 'favorites' \| 'rules'/);
+assert.match(rssContract, /export type RssMode = 'sources' \| 'all' \| 'favorites' \| 'rules'/);
 assert.match(rss, /this\.statusTab\('源列表', 'sources'\)/);
 assert.match(rss, /this\.statusTab\('全部', 'all'\)/);
 assert.match(rss, /this\.statusTab\('收藏', 'favorites'\)/);

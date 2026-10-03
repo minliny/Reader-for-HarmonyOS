@@ -159,7 +159,8 @@ export class RssSubscriptionEditorOrchestrator {
     const session = this.session;
     this.activeKey = mode === 'create' ? 'create' : JSON.stringify(['edit', subscriptionId]);
     const saved = this.drafts.get(this.activeKey);
-    this.snapshot = this.copySnapshot(saved ?? { ...EMPTY_RSS_EDITOR_SNAPSHOT, mode, subscriptionId });
+    this.snapshot = this.copySnapshot(saved ?? EMPTY_RSS_EDITOR_SNAPSHOT);
+    if (saved === undefined) { this.snapshot.mode = mode; this.snapshot.subscriptionId = subscriptionId; }
     const receipt = this.receipts.get(this.activeKey);
     this.publish({ busy: this.pending.has(this.activeKey), canSave: !this.pending.has(this.activeKey) && receipt?.confirmation !== 'unknown' && receipt?.projection.receipt.readback !== 'reading' &&
       receipt?.projection.receipt.fact !== 'confirmedRefreshFailed',
@@ -336,7 +337,7 @@ export class RssSubscriptionEditorOrchestrator {
 
   private patchDraft(key: string, patch: RssSubscriptionEditorPatch): void {
     const current = this.drafts.get(key);
-    if (current !== undefined) this.drafts.set(key, { ...current, ...patch });
+    if (current !== undefined) this.drafts.set(key, this.patchedSnapshot(current, patch));
   }
 
   private publishDraft(patch: RssSubscriptionEditorPatch): void {
@@ -346,32 +347,36 @@ export class RssSubscriptionEditorOrchestrator {
     this.publish(patch);
   }
 
-  private publish(patch: RssSubscriptionEditorPatch): void {
-    this.snapshot = {
-      mode: patch.mode ?? this.snapshot.mode,
-      subscriptionId: patch.subscriptionId ?? this.snapshot.subscriptionId,
-      feedUrl: patch.feedUrl ?? this.snapshot.feedUrl,
-      title: patch.title ?? this.snapshot.title,
-      enabled: patch.enabled ?? this.snapshot.enabled,
-      sourceGroup: patch.sourceGroup ?? this.snapshot.sourceGroup,
-      customOrder: patch.customOrder ?? this.snapshot.customOrder,
-      updateIntervalMinutes: patch.updateIntervalMinutes ?? this.snapshot.updateIntervalMinutes,
-      header: patch.header ?? this.snapshot.header,
-      enabledCookieJar: patch.enabledCookieJar ?? this.snapshot.enabledCookieJar,
-      ruleArticles: patch.ruleArticles ?? this.snapshot.ruleArticles,
-      ruleNextPage: patch.ruleNextPage ?? this.snapshot.ruleNextPage,
-      ruleTitle: patch.ruleTitle ?? this.snapshot.ruleTitle,
-      rulePubDate: patch.rulePubDate ?? this.snapshot.rulePubDate,
-      ruleDescription: patch.ruleDescription ?? this.snapshot.ruleDescription,
-      ruleImage: patch.ruleImage ?? this.snapshot.ruleImage,
-      ruleLink: patch.ruleLink ?? this.snapshot.ruleLink,
-      ruleContent: patch.ruleContent ?? this.snapshot.ruleContent,
-      busy: patch.busy ?? this.snapshot.busy,
-      statusMessage: patch.statusMessage ?? this.snapshot.statusMessage,
-      canSave: patch.canSave ?? this.snapshot.canSave,
-      readFacts: patch.readFacts ?? this.snapshot.readFacts,
-      operation: patch.operation ?? this.snapshot.operation,
+  private patchedSnapshot(current: RssSubscriptionEditorSnapshot, patch: RssSubscriptionEditorPatch): RssSubscriptionEditorSnapshot {
+    return {
+      mode: patch.mode ?? current.mode,
+      subscriptionId: patch.subscriptionId ?? current.subscriptionId,
+      feedUrl: patch.feedUrl ?? current.feedUrl,
+      title: patch.title ?? current.title,
+      enabled: patch.enabled ?? current.enabled,
+      sourceGroup: patch.sourceGroup ?? current.sourceGroup,
+      customOrder: patch.customOrder ?? current.customOrder,
+      updateIntervalMinutes: patch.updateIntervalMinutes ?? current.updateIntervalMinutes,
+      header: patch.header ?? current.header,
+      enabledCookieJar: patch.enabledCookieJar ?? current.enabledCookieJar,
+      ruleArticles: patch.ruleArticles ?? current.ruleArticles,
+      ruleNextPage: patch.ruleNextPage ?? current.ruleNextPage,
+      ruleTitle: patch.ruleTitle ?? current.ruleTitle,
+      rulePubDate: patch.rulePubDate ?? current.rulePubDate,
+      ruleDescription: patch.ruleDescription ?? current.ruleDescription,
+      ruleImage: patch.ruleImage ?? current.ruleImage,
+      ruleLink: patch.ruleLink ?? current.ruleLink,
+      ruleContent: patch.ruleContent ?? current.ruleContent,
+      busy: patch.busy ?? current.busy,
+      statusMessage: patch.statusMessage ?? current.statusMessage,
+      canSave: patch.canSave ?? current.canSave,
+      readFacts: patch.readFacts ?? current.readFacts,
+      operation: patch.operation ?? current.operation,
     };
+  }
+
+  private publish(patch: RssSubscriptionEditorPatch): void {
+    this.snapshot = this.patchedSnapshot(this.snapshot, patch);
     this.drafts.set(this.activeKey, this.copySnapshot(this.snapshot));
     if (this.isCurrentSession(this.session)) {
       try { this.emit(this.copySnapshot(this.snapshot)); }

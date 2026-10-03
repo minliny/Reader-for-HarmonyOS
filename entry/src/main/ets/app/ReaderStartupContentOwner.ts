@@ -82,7 +82,7 @@ export class ReaderStartupContentOwner {
           this.clearTimer(); this.publish('ready', 'admission-pending', false);
           try { this.driver.ready(); } catch (error) { this.reportObserverFailure(error as Error); }
         });
-      } catch (_) { if (this.state.phase === 'loading') this.showRecovery(generation, 'main-load-failed'); }
+      } catch (_) { if (this.snapshot().phase === 'loading') this.showRecovery(generation, 'main-load-failed'); }
     }, (): void => {
       if (this.current(generation) && this.state.phase === 'waiting') this.showRecovery(generation, 'admission-failed');
     });

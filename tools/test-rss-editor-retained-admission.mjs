@@ -8,7 +8,7 @@ import { isReaderCoreTransactionPendingError } from '../entry/vendor/core-harmon
 const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts=createRequire(import.meta.url)(sdk+'/node_modules/typescript');
 const compile=(raw,name,deps)=>new Function(...Object.keys(deps),ts.transpileModule(
-  raw.replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,''),
+  raw.replace(/^import[\s\S]*?;\n/gm,'').replace(/^export type \{[^\n]+from [^\n]+\n/gm,'').replace(/^export /gm,''),
   {compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText+`;return ${name};`)(...Object.values(deps));
 const gatewayRaw=rssSource('features/rss/RssGateway.ts'),editorRaw=rssSource('features/rss/RssSubscriptionEditorOrchestrator.ets');
 const gatewayDeps={ReaderRuntimeOwner:RssRuntime,isReaderCoreTransactionPendingError};
