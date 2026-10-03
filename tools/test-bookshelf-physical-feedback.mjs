@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
@@ -96,10 +97,11 @@ check('empty shelf uses the same right-aligned three-action header', () => {
 });
 for (const page of ['BookshelfShell']) {
   check(`${page}: actual shared text header keeps search and More hit targets live`, () => {
-    const { owner } = createReaderBuilderProbe(read(`bookshelf/${page}.ets`), ['topBar'], {
-      AppTopBar: HeaderChild, ReaderIconButton: IconButtonChild,
+    const { owner } = createReaderBuilderProbe(read(`bookshelf/${page}.ets`), ['mounted','temporaryBackIdentity','temporaryBackGeneration','moreSelectionId','onTemporaryBackBridge','navigationGeneration','onNavigationGenerationChanged','registerTemporaryBackGeneration','consumeTemporaryBack','dismissMoreMenu','moreOpenAction','aboutToAppear','topBar'], {
+      ...createArkUIPropertyRuntimeProbe().sdk,bookshelfTemporaryGeneration:0,registerReaderShelfFonts(){},AppTopBar: HeaderChild, ReaderIconButton: IconButtonChild,
       ImageFit: { Contain: 'ImageFit.Contain' },
-    });
+    },{initialParams:{navigationGeneration:1}});
+    owner.aboutToAppear();
     let searches = 0;
     Object.assign(owner, { appThemeScheme: 'day', moreMenuVisible: false,
       topBarLeftInset: () => 20, topBarRightInset: () => 20,
