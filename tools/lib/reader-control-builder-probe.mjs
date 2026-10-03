@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionReaderPressFeedback } from './reader-press-feedback-probe.mjs';
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
+import { foundationControls } from './reader-foundation-control-probe.mjs';
 
 const sdkRoot = process.env.READER_ETS_LOADER_ROOT ??
   '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
@@ -45,6 +46,25 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     }
     return member.getText(original);
   });
+  // Legacy consumers now mount the same production controls as new callers.
+  // Resolve only actual calls in the selected production members, and keep an
+  // explicitly supplied component/property runtime authoritative. Foundation
+  // components themselves do not call either child, so this is not recursive.
+  const missingFoundation = ['ReaderButton', 'ReaderFormField'].filter(name =>
+    dependencies[name] === undefined && new RegExp(`\\b${name}\\s*\\(`).test(members.join('\n')));
+  if (missingFoundation.length > 0) {
+    const foundation = foundationControls();
+    const originalHooks = hooks;
+    dependencies = { ...foundation.dependencies, ...dependencies };
+    hooks = { ...foundation.hooks, ...originalHooks,
+      childSources: { ...foundation.hooks.childSources, ...originalHooks.childSources },
+      mountChildren: true, lifecycleChildren: true,
+      onChildUpdated(child, params) {
+        foundation.properties.flush();
+        originalHooks.onChildUpdated?.(child, params);
+      },
+    };
+  }
   main.partialUpdateConfig.partialUpdateMode = true;
   utils.storedFileInfo.setCurrentArkTsFile();
   // Register the actual shared child Prop names so the SDK emits its real
@@ -160,6 +180,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       hooks.onChildUpdate?.(record, params);
       if (typeof record.updateStateVars === 'function') record.updateStateVars(params);
       else Object.assign(record.params, params);
+      hooks.onChildUpdated?.(record, params);
     }
     static create(child) {
       child.owner.children.set(child.id, child);
