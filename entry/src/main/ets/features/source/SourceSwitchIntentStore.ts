@@ -55,8 +55,10 @@ export class SourceSwitchIntentStore {
       if (disk !== undefined || warm !== undefined) {
         throw new SourceSwitchIntentRecoveryError('blocked', '上一次换源仍需核对，不能覆盖或创建另一标识');
       }
-      const operationId = util.generateRandomUUID();
-      const query = await this.gateway.queryTransaction(operationId, undefined, admitted);
+      const nonce = util.generateRandomUUID();
+      // The opaque nonce query discovers only the domain head. No matching
+      // shelf/row or absence result is treated as a dispatch receipt.
+      const query = await this.gateway.queryTransaction(nonce, undefined, admitted);
       this.assertCurrent(); if (!admitted()) throw new SourceSwitchIntentRecoveryError('pending', '换源操作已退役');
       if (query.transaction !== undefined) throw new SourceSwitchIntentRecoveryError('blocked', '换源标识已存在，不能重新分配');
       const watermark = query.head?.sequence ?? 0;
@@ -64,6 +66,9 @@ export class SourceSwitchIntentStore {
         throw new SourceSwitchIntentRecoveryError('blocked', '换源流水号已达到上限，不能重置');
       }
       const sequence = watermark + 1;
+      // Binding the complete identity to its sequence prevents a pruned old
+      // operationId being resubmitted with a new head, without unbounded IDs.
+      const operationId = `${nonce}/${sequence}`;
       // JSON round-trip fixes optional omissions and breaks mutable page/TOC
       // references before persistence; no hashing or chapter matcher is invented.
       const fixed = JSON.parse(JSON.stringify(params)) as SourceSwitchCommitParams;

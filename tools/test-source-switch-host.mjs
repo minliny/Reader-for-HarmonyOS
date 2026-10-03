@@ -140,7 +140,7 @@ function fixture(options={},productionSource=hostSource) {
     candidate:()=>host.current().state.candidates?.[0]};
 }
 const checks=[];
-const TX='00000000-0000-4000-8000-000000000001';
+const TX='00000000-0000-4000-8000-000000000001/1';
 {
   const f=fixture();await settle();const owner=f.Constructor.forRuntime(f.runtime);
   assert.equal(f.Constructor.forRuntime(f.runtime),owner,'Index remount shares one actual feature owner');
