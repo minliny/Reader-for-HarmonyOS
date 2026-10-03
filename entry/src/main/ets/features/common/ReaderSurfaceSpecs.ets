@@ -182,6 +182,147 @@ export function resolveDialogSpec(id: DialogSpecId): DialogSurfaceSpec {
 }
 
 /**
+ * Finite bottom-sheet surface specs. The host continues to own presentation
+ * and width; the sheet content reads one shared contract for its measured
+ * frame, handle, title and action rows.
+ */
+export type SheetSpecId = 'bookshelf-book-action';
+
+export interface SheetSurfaceSpecInit {
+  height: number;
+  horizontalInset: number;
+  handleWidth: number;
+  handleHeight: number;
+  handleTop: number;
+  titleTop: number;
+  titleInset: number;
+  titleFontFamily: string;
+  titleFontSize: number;
+  titleLineHeight: number;
+  actionStart: number;
+  actionStep: number;
+  actionCount: number;
+  actionHeight: number;
+  actionPaddingLeft: number;
+  actionBorderRadius: number;
+  borderWidth: number;
+  borderRadius: number;
+  shadowRadius: number;
+  shadowOffsetY: number;
+  actionLabelFontFamily: string;
+  actionLabelFontSize: number;
+  actionLabelLineHeight: number;
+  backgroundRole: ReaderAppColorRole;
+  borderRole: ReaderAppColorRole;
+  handleRole: ReaderAppColorRole;
+  titleRole: ReaderAppColorRole;
+  actionTextRole: ReaderAppColorRole;
+  dangerTextRole: ReaderAppColorRole;
+  actionBackgroundRole: ReaderAppColorRole;
+  dangerBackgroundRole: ReaderAppColorRole;
+  shadowRole: ReaderAppColorRole;
+}
+
+export class SheetSurfaceSpec {
+  readonly height: number;
+  readonly horizontalInset: number;
+  readonly handleWidth: number;
+  readonly handleHeight: number;
+  readonly handleTop: number;
+  readonly titleTop: number;
+  readonly titleInset: number;
+  readonly titleFontFamily: string;
+  readonly titleFontSize: number;
+  readonly titleLineHeight: number;
+  readonly actionStart: number;
+  readonly actionStep: number;
+  readonly actionCount: number;
+  readonly actionHeight: number;
+  readonly actionPaddingLeft: number;
+  readonly actionBorderRadius: number;
+  readonly borderWidth: number;
+  readonly borderRadius: number;
+  readonly shadowRadius: number;
+  readonly shadowOffsetY: number;
+  readonly actionLabelFontFamily: string;
+  readonly actionLabelFontSize: number;
+  readonly actionLabelLineHeight: number;
+  readonly backgroundRole: ReaderAppColorRole;
+  readonly borderRole: ReaderAppColorRole;
+  readonly handleRole: ReaderAppColorRole;
+  readonly titleRole: ReaderAppColorRole;
+  readonly actionTextRole: ReaderAppColorRole;
+  readonly dangerTextRole: ReaderAppColorRole;
+  readonly actionBackgroundRole: ReaderAppColorRole;
+  readonly dangerBackgroundRole: ReaderAppColorRole;
+  readonly shadowRole: ReaderAppColorRole;
+
+  constructor(init: SheetSurfaceSpecInit) {
+    this.height = init.height;
+    this.horizontalInset = init.horizontalInset;
+    this.handleWidth = init.handleWidth;
+    this.handleHeight = init.handleHeight;
+    this.handleTop = init.handleTop;
+    this.titleTop = init.titleTop;
+    this.titleInset = init.titleInset;
+    this.titleFontFamily = init.titleFontFamily;
+    this.titleFontSize = init.titleFontSize;
+    this.titleLineHeight = init.titleLineHeight;
+    this.actionStart = init.actionStart;
+    this.actionStep = init.actionStep;
+    this.actionCount = init.actionCount;
+    this.actionHeight = init.actionHeight;
+    this.actionPaddingLeft = init.actionPaddingLeft;
+    this.actionBorderRadius = init.actionBorderRadius;
+    this.borderWidth = init.borderWidth;
+    this.borderRadius = init.borderRadius;
+    this.shadowRadius = init.shadowRadius;
+    this.shadowOffsetY = init.shadowOffsetY;
+    this.actionLabelFontFamily = init.actionLabelFontFamily;
+    this.actionLabelFontSize = init.actionLabelFontSize;
+    this.actionLabelLineHeight = init.actionLabelLineHeight;
+    this.backgroundRole = init.backgroundRole;
+    this.borderRole = init.borderRole;
+    this.handleRole = init.handleRole;
+    this.titleRole = init.titleRole;
+    this.actionTextRole = init.actionTextRole;
+    this.dangerTextRole = init.dangerTextRole;
+    this.actionBackgroundRole = init.actionBackgroundRole;
+    this.dangerBackgroundRole = init.dangerBackgroundRole;
+    this.shadowRole = init.shadowRole;
+  }
+
+  actionY(index: number): number {
+    return this.actionStart + (index * this.actionStep);
+  }
+}
+
+const SHEET_SPECS: Record<SheetSpecId, SheetSurfaceSpec> = {
+  // Figma book action surface; values preserve the current host-bound frame.
+  'bookshelf-book-action': new SheetSurfaceSpec({
+    height: 270, horizontalInset: 14,
+    handleWidth: 42, handleHeight: 4, handleTop: 9,
+    titleTop: 34, titleInset: 14,
+    titleFontFamily: 'ReaderNotoSansSC', titleFontSize: 17, titleLineHeight: 20.4,
+    actionStart: 70, actionStep: 46, actionCount: 4, actionHeight: 40,
+    actionPaddingLeft: 12, actionBorderRadius: 12,
+    borderWidth: 1, borderRadius: 24,
+    shadowRadius: 46, shadowOffsetY: 18,
+    actionLabelFontFamily: 'ReaderNotoSansSC', actionLabelFontSize: 13, actionLabelLineHeight: 15.6,
+    backgroundRole: 'TOK_CARD_BG_HI', borderRole: 'TOK_BORDER', handleRole: 'TOK_MUTED',
+    titleRole: 'TOK_INK', actionTextRole: 'TOK_GREEN',
+    dangerTextRole: 'app.BookshelfBookActionSheet.actionSlot.fontColor.FFD7473E',
+    actionBackgroundRole: 'TOK_PRIMARY_SOFT',
+    dangerBackgroundRole: 'app.BookshelfBookActionSheet.actionSlot.backgroundColor.1AD6473D',
+    shadowRole: 'app.BookshelfBookActionSheet.build.color.29594632',
+  }),
+};
+
+export function resolveSheetSpec(id: SheetSpecId): SheetSurfaceSpec {
+  return SHEET_SPECS[id];
+}
+
+/**
  * Menu/popup surfaces use the same data-only registry as dialogs. The
  * consumer keeps labels, icons, enabled state and callbacks; this contract
  * owns frame geometry, touch rows and visual roles.

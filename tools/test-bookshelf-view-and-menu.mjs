@@ -11,6 +11,9 @@ const batch=read('features/bookshelf/BookshelfMultiSelectPage.ets');
 const list=read('features/bookshelf/ShelfBookListDetails.ets');
 const menu=read('features/bookshelf/BookshelfMoreMenu.ets');
 const popupSpecs=read('features/common/ReaderSurfaceSpecs.ets');
+const { resolveSheetSpec } = new Function('TextAlign', stripTypeScriptTypes(popupSpecs)
+  .replace(/^export /gm,'') + '; return { resolveSheetSpec };')({ Start: 'TextAlign.Start', Center: 'TextAlign.Center' });
+const bookActionSpec=resolveSheetSpec('bookshelf-book-action');
 const action=read('features/bookshelf/BookshelfBookActionSheet.ets');
 const dialog=read('features/bookshelf/LocalImportDialog.ets');
 const index=read('pages/Index.ets');
@@ -63,8 +66,15 @@ assert.match(shelf,/PHONE_LIST_COVER_WIDTH = 48/);assert.match(shelf,/PHONE_LIST
 assert.match(shelf,/TABLET_LIST_COVER_WIDTH = 64/);assert.match(shelf,/TABLET_LIST_COVER_HEIGHT = 104/);
 assert.match(shelf,/\.bindSheet\(this.actionBook !== undefined[\s\S]*?width: this.bookActionWidth\(\)/);
 assert.match(shelf,/return this.shelfContentWidth\(this.isWideViewport\(\)\)/,'single-book sheet uses the same frame as the cover outside edges');
-assert.match(action,/BOOK_ACTION_SHEET_HEIGHT = 270/);assert.match(action,/'编辑分组'.*onEditGroup/);
-assert.match(action,/borderRadius\(\{ topLeft: 24, topRight: 24, bottomLeft: 0, bottomRight: 0 \}\)/);assert.match(action,/TOK_CARD_BG_HI/);
+assert.match(popupSpecs,/'bookshelf-book-action': new SheetSurfaceSpec\(\{[\s\S]*?height: 270/);
+assert.match(popupSpecs,/'bookshelf-book-action': new SheetSurfaceSpec\(\{[\s\S]*?horizontalInset: 14/);
+assert.match(popupSpecs,/'bookshelf-book-action': new SheetSurfaceSpec\(\{[\s\S]*?actionStart: 70, actionStep: 46, actionCount: 4, actionHeight: 40/);
+assert.deepEqual([bookActionSpec.actionY(0), bookActionSpec.actionY(1), bookActionSpec.actionY(2), bookActionSpec.actionY(3)], [70, 116, 162, 208],
+  'sheet action row positions retain the current four-row visual contract');
+assert.match(action,/resolveSheetSpec\('bookshelf-book-action'\)/);
+assert.match(action,/'编辑分组'.*onEditGroup/);
+assert.match(action,/borderRadius\(\{ topLeft: this\.surfaceSpec\(\)\.borderRadius/);
+assert.doesNotMatch(action,/const BOOK_ACTION_(SHEET_HEIGHT|INSET|HEIGHT)\s*=/,'sheet geometry is owned by the shared sheet contract');
 assert.match(popupSpecs,/'bookshelf-more-menu': new PopupSurfaceSpec\(\{[\s\S]*?width: 176/);
 assert.match(popupSpecs,/'bookshelf-more-menu': new PopupSurfaceSpec\(\{[\s\S]*?pointerHeight: 12/);
 assert.match(popupSpecs,/'bookshelf-more-menu': new PopupSurfaceSpec\(\{[\s\S]*?actionHeight: 50, actionCount: 4/);
