@@ -103,4 +103,22 @@ for(const mode of ['success','decline','leave','runtime-unavailable','rules-chan
  x.idx.route='detail';x.idx.onSearchVisibilityChanged();assert.equal(f.preparations.paused,true);f.close();
  checks.push('actual-Index-visible-idle-preparation-delegation-context-and-pause');
 }
+for (const mutated of [false, true]) {
+ const baseline=read('pages/Index.ets');
+ const broken=baseline.replace(/const admitted = host\.snapshot\(\);\n    if \(admitted\.scopeId !== this\.readingEntryScopeId \|\| admitted\.book\?\.sourceId !== this\.detailBook\.sourceId \|\|\n      admitted\.book\?\.bookId !== this\.detailBook\.bookId\)/,
+  'if (host.snapshot().scopeId !== this.readingEntryScopeId)');
+ const f=fixture(),x=makeIndex(f,{indexSource:mutated?broken:baseline});
+ x.idx.openRemoteBookDetail(seed(),'Source',book(),true);x.idx.onRemoteSessionReady(session());
+ const scope=x.owner().snapshot().scopeId,oldSession=x.idx.remoteReadingSession;
+ x.idx.detailBook={...x.idx.detailBook,sourceId:'restored-source',bookId:'restored-book'};x.idx.detailToc=[];
+ const before=f.calls.length;x.idx.installRemoteReadingSession(undefined);
+ if(mutated) assert.equal(x.idx.detailBook.bookId,'book','negative control reproduces the stale same-scope Entry book overwrite');
+ else {
+  assert.equal(x.idx.detailBook.bookId,'restored-book');assert.equal(x.owner().snapshot().book.bookId,'restored-book');
+  assert.notEqual(x.owner().snapshot().scopeId,scope);assert.equal(x.owner().snapshot().session,undefined);
+  assert.notEqual(x.owner().snapshot().session,oldSession);assert.equal(x.idx.remoteReadingSession,undefined);assert.equal(x.idx.detailToc.length,0);
+ }
+ assert.equal(f.calls.length,before,'identity rebinding is admission only, not another acquisition');f.close();
+ checks.push(mutated?'negative-same-scope-old-book-overwrite':'same-scope-restored-identity-rebind-without-old-session-or-extra-IO');
+}
 console.log(JSON.stringify({status:'PASS',checks,scope:'full actual Entry/Gateways/Coordinator/Preparation + Index methods + decorated SDK Detail child/native closures; native layout/device/visual acceptance excluded'}));

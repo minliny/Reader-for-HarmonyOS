@@ -2952,7 +2952,9 @@ struct Index {
     const owner = this.mountedRuntimeOwner, book = this.detailBook;
     const host = this.getReadingEntryHost();
     if (owner === undefined || book === undefined || host === undefined) return;
-    host.bindReader(book, this.remoteReadingSession, this.detailToc, this.detailInBookshelf, this.readingEntryLease(owner));
+    const session = this.remoteReadingSession?.identity.sourceId === book.sourceId &&
+      this.remoteReadingSession?.identity.bookId === book.bookId ? this.remoteReadingSession : undefined;
+    host.bindReader(book, session, this.detailToc, this.detailInBookshelf, this.readingEntryLease(owner));
   }
 
   private retireReadingEntryPresentation(): void {
@@ -4040,7 +4042,7 @@ struct Index {
       this.remoteReadingSeed = { sourceId: effect.book.sourceId, bookId: effect.book.bookId, detailUrl: effect.book.bookId,
         title: effect.book.title, author: effect.book.author, coverUrl: effect.book.coverUrl, intro: effect.book.intro };
       if (previous?.sourceId !== effect.book.sourceId || previous?.bookId !== effect.book.bookId) {
-        this.installRemoteReadingSession(undefined); this.detailToc = [];
+        this.detailToc = []; this.installRemoteReadingSession(undefined);
         this.requestedChapterIndex = undefined; this.requestedBookmarkAnchor = undefined; this.readingExitRequest = undefined;
       }
       this.readingSessionActive = true; this.preparedReaderRoute = 'reading'; this.route = 'reading'; this.refreshBookshelf();
@@ -4200,7 +4202,9 @@ struct Index {
     }
     const host = this.getReadingEntryHost();
     if (host === undefined) return;
-    if (host.snapshot().scopeId !== this.readingEntryScopeId) this.bindReadingEntryReader();
+    const admitted = host.snapshot();
+    if (admitted.scopeId !== this.readingEntryScopeId || admitted.book?.sourceId !== this.detailBook.sourceId ||
+      admitted.book?.bookId !== this.detailBook.bookId) this.bindReadingEntryReader();
     host.acceptSession(session, readableProjectionRevision, readableProjection);
   }
 
