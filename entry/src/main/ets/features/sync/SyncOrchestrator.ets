@@ -27,7 +27,7 @@ export class SyncOrchestrator {
 
   attachPresentation(identity: string, emit: (snapshot: SyncSnapshot) => void,
     read: () => SyncSnapshot, current: () => boolean): boolean {
-    if (identity.length === 0 || !this.currentOwner()) return false;
+    if (identity.length === 0 || !this.currentOwner() || !current()) return false;
     if (identity !== this.presentationIdentity) this.session += 1;
     this.presentationIdentity = identity;
     this.emit = emit; this.read = read; this.isCurrent = current;

@@ -31,6 +31,8 @@ function fixture() {
   assert.equal(a.snapshot.facts.read.fact, 'current');
   assert.equal(f.Orchestrator.forRuntime(x.runtime), x.owner);
   assert.equal(x.owner.isPresentationCurrent('a'), true);
+  assert.equal(x.owner.attachPresentation('stale', () => {}, () => a.snapshot, () => false), false);
+  assert.equal(x.owner.isPresentationCurrent('a'), true, 'stale attach cannot steal a live lease');
   const gate = f.pause(); f.asset.beforeAdd = () => gate.promise;
   x.owner.saveConfig(f.config.url, f.config.user, f.config.password, f.config.backupPassword, f.config.directory);
   await until(() => f.asset.calls.includes('add'));
