@@ -64,6 +64,7 @@ import {
 } from './LocalReadingWholeBookProgress';
 import { ReadingSurfacePageFragment } from './ReadingSurface';
 import { ReaderPageInteractionLayer } from './ReaderPageInteractionLayer';
+import { readerRenderStageKind } from './ReaderRenderStageSpec';
 import {
   cancelReaderPagePan,
   completeReaderPageGestureSettlement,
@@ -2015,8 +2016,7 @@ export struct ReadingExperience {
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       // The normal paper and controls own loading and recoverable errors too.
-      if (this.readerSettingsSnapshot.navigationMode === 'continuous' &&
-        this.hasContinuousRenderContent()) {
+      if (readerRenderStageKind(this.readerSettingsSnapshot.navigationMode, this.hasContinuousRenderContent()) === 'continuous') {
         ReaderContinuousReadingStage({
           chapterIdentity: this.continuousRenderChapterIdentity,
           chapterTitle: this.continuousRenderChapterTitle,
