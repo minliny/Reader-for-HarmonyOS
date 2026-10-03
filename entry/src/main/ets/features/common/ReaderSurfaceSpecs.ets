@@ -335,7 +335,7 @@ export function resolveSheetSpec(id: SheetSpecId): SheetSurfaceSpec {
  * consumer keeps labels, icons, enabled state and callbacks; this contract
  * owns frame geometry, touch rows and visual roles.
  */
-export type PopupSpecId = 'bookshelf-more-menu' | 'source-switch-window';
+export type PopupSpecId = 'bookshelf-more-menu' | 'source-switch-window' | 'tts-config-manager';
 
 export interface PopupSurfaceSpecInit {
   height: number;
@@ -485,6 +485,26 @@ const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
     actionTextRole: 'TOK_SS_FOOTER_TEXT',
     dividerRole: 'TOK_SS_WINDOW_BORDER',
     actionFontFamily: 'ReaderInter', actionFontSize: 0, actionLineHeight: 0,
+  }),
+  // TTS manager content-cover card. The form remains owned by the TTS
+  // consumer; this finite entry owns only the existing modal frame geometry
+  // and visual roles so the host does not repeat its panel contract.
+  'tts-config-manager': new PopupSurfaceSpec({
+    height: 0, width: 364, pointerWidth: 0, pointerHeight: 0,
+    actionHeight: 0, actionCount: 0,
+    trailingExtension: 0, anchorOverlap: 0,
+    borderWidth: 0.5, borderRadius: 22,
+    shadowRadius: 48, shadowOffsetY: 18,
+    actionPaddingLeft: 0, actionPaddingRight: 0,
+    actionIconSize: 0, dividerInset: 0, dividerHeight: 0,
+    pointerPoints: [],
+    surfaceBackgroundRole: 'app.ReaderTtsConfigOverlay.build.backgroundColor.FFFFFAF4',
+    surfaceBorderRole: 'app.ReaderTtsConfigOverlay.build.color.66B4A697',
+    surfaceShadowRole: 'app.ReaderTtsConfigOverlay.build.color.471F1B17',
+    pointerFillRole: 'app.ReaderTtsConfigOverlay.build.backgroundColor.FFFFFAF4',
+    pointerStrokeRole: 'app.ReaderTtsConfigOverlay.build.color.66B4A697',
+    actionTextRole: 'TOK_TTS_INK', dividerRole: 'app.ReaderTtsConfigOverlay.build.color.66B4A697',
+    actionFontFamily: 'ReaderNotoSansSCUIRegular', actionFontSize: 0, actionLineHeight: 0,
   }),
 };
 

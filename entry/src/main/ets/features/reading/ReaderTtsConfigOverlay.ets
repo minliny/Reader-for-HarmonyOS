@@ -5,6 +5,7 @@ import { KeyboardAvoidMode } from '@kit.ArkUI';
 import type { ReaderTtsConfigChoice } from './ReaderTtsConfigOptions';
 import { TOK_TTS_INK, TOK_TTS_MUTED, TOK_TTS_TEAL, TOK_TTS_TEAL_SOFT,
   TOK_TTS_PAPER, TOK_TTS_LINE } from './ReaderControlTtsStyle';
+import { PopupSurfaceSpec, resolvePopupSpec } from '../common/ReaderSurfaceSpecs';
 
 /** Temporary choices/forms live in the viewport, never inside a clipped 48vp row. */
 @Component
@@ -74,8 +75,11 @@ export struct ReaderTtsConfigOverlay {
   private close(): void { this.stopPreview(); if (!this.busy) this.onClose(this.selectionId); }
 
   private panelWidth(): number {
-    return this.manager ? 364 :
+    return this.manager ? this.managerSurfaceSpec().width :
       Math.max(0, Math.min(this.voicePicker ? this.availableWidth - 42 : 260, this.availableWidth - 16));
+  }
+  private managerSurfaceSpec(): PopupSurfaceSpec {
+    return resolvePopupSpec('tts-config-manager');
   }
   private compactManager(): boolean { return this.manager && this.modalUsableHeight <= 166; }
   private managerOuterPadding(): number {
@@ -173,10 +177,14 @@ export struct ReaderTtsConfigOverlay {
         }
       }
       }.width(this.manager ? '100%' : this.panelWidth()).height(this.panelHeight())
-        .constraintSize({ maxWidth: this.manager ? 364 : this.panelWidth(), maxHeight: '100%' }).backgroundColor(readerAppColor('app.ReaderTtsConfigOverlay.build.backgroundColor.FFFFFAF4', this.appThemeScheme))
-        .border({ width: .5, color: readerAppColor('app.ReaderTtsConfigOverlay.build.color.66B4A697', this.appThemeScheme) }).borderRadius(this.manager ? 22 : 14)
-        .shadow({ radius: this.manager ? 48 : 36, color: this.manager ? readerAppColor('app.ReaderTtsConfigOverlay.build.color.471F1B17', this.appThemeScheme) : readerAppColor('app.ReaderTtsConfigOverlay.build.color.381F1B17', this.appThemeScheme),
-          offsetY: this.manager ? 18 : 14 }).clip(true)
+        .constraintSize({ maxWidth: this.manager ? this.managerSurfaceSpec().width : this.panelWidth(), maxHeight: '100%' })
+        .backgroundColor(readerAppColor(this.manager ? this.managerSurfaceSpec().surfaceBackgroundRole : 'app.ReaderTtsConfigOverlay.build.backgroundColor.FFFFFAF4', this.appThemeScheme))
+        .border({ width: this.manager ? this.managerSurfaceSpec().borderWidth : 0.5,
+          color: readerAppColor(this.manager ? this.managerSurfaceSpec().surfaceBorderRole : 'app.ReaderTtsConfigOverlay.build.color.66B4A697', this.appThemeScheme) })
+        .borderRadius(this.manager ? this.managerSurfaceSpec().borderRadius : 14)
+        .shadow({ radius: this.manager ? this.managerSurfaceSpec().shadowRadius : 36,
+          color: this.manager ? readerAppColor(this.managerSurfaceSpec().surfaceShadowRole, this.appThemeScheme) : readerAppColor('app.ReaderTtsConfigOverlay.build.color.381F1B17', this.appThemeScheme),
+          offsetY: this.manager ? this.managerSurfaceSpec().shadowOffsetY : 14 }).clip(true)
       }.width(this.manager ? '100%' : this.panelWidth()).height(this.manager ? '100%' : this.panelHeight())
         .justifyContent(FlexAlign.End).alignItems(HorizontalAlign.Center)
         .padding(this.manager ? { left: 13, right: 13,
