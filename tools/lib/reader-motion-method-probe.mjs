@@ -10,7 +10,7 @@ import { errorMessageOf } from '../../entry/src/main/ets/app/ErrorMessage.ts';
 import { ReaderParagraphLayoutOwner } from '../../entry/src/main/ets/features/reading/ReaderParagraphLayoutOwner.ts';
 import { ReaderPhysicalPaginationOwner } from '../../entry/src/main/ets/features/reading/ReaderPhysicalPaginationOwner.ts';
 import { ReaderProgressProducerHost } from '../../entry/src/main/ets/features/reading/ReaderProgressProducerHost.ts';
-import { RulesMutationOwner } from '../../entry/src/main/ets/features/settings/RulesMutationOwner.ts';
+import { ReaderWriteEvidence } from '../../entry/src/main/ets/app/ReaderWriteEvidence.ts';
 import { RssPresentationProjection } from '../../entry/src/main/ets/features/rss/RssPresentationProjection.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -23,6 +23,9 @@ const recordHostSource = readFileSync(new URL('../../entry/src/main/ets/features
 const ReaderReadingRecordHost = new Function('ReadingRecordIntent', 'ReadingRecordRecoveryError',
   stripTypeScriptTypes(recordHostSource.replace(/^import[\s\S]*?;\n/gm, '')).replace('export class ', 'class ') +
   '; return ReaderReadingRecordHost;')(ReadingRecordIntent, ReadingRecordRecoveryError);
+const rulesOwnerSource = readFileSync(new URL('../../entry/src/main/ets/features/settings/RulesMutationOwner.ts', import.meta.url), 'utf8');
+const RulesMutationOwner = new Function('BookRequestNotDispatchedError', 'ReaderWriteEvidence',
+  stripTypeScriptTypes(rulesOwnerSource.replace(/^import[\s\S]*?;\n/gm, '')).replace(/\bexport /g, '') + ';return RulesMutationOwner;')(ReaderCoreNotDispatchedError, ReaderWriteEvidence);
 const require = createRequire(import.meta.url);
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts = require(`${sdk}/node_modules/typescript`);
