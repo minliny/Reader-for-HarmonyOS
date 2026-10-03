@@ -109,7 +109,7 @@ assert.doesNotMatch(local, /ReaderBookTurn diagnostic/,
 assert.doesNotMatch(local, /ReaderInput diagnostic/,
   'temporary raw-input tracing must not remain in the frame path');
 assert.match(local,
-  /private shouldMountBookTurnSurface\(\): boolean[\s\S]*pageTransition === 'simulation'/,
+  /readerBookTurnRuntimeSpec\([\s\S]*this\.bookTurnRuntimeFailed[\s\S]*\.mountSurface/,
   'a transient native capability failure must not change the selected surface lifecycle');
 assert.match(local, /if \(this\.shouldMountBookTurnSurface\(\)\)/,
   'the selected simulation XComponent must stay mounted through a transient runtime failure');

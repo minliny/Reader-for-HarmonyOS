@@ -64,7 +64,7 @@ import {
 } from './LocalReadingWholeBookProgress';
 import { ReadingSurfacePageFragment } from './ReadingSurface';
 import { ReaderPageInteractionLayer } from './ReaderPageInteractionLayer';
-import { readerRenderStageKind } from './ReaderRenderStageSpec';
+import { readerBookTurnRuntimeSpec, readerRenderStageKind } from './ReaderRenderStageSpec';
 import {
   cancelReaderPagePan,
   completeReaderPageGestureSettlement,
@@ -2453,9 +2453,12 @@ export struct ReadingExperience {
   }
 
   private usesBookTurnSimulation(): boolean {
-    return this.readerSettingsSnapshot.navigationMode === 'paged' &&
-      this.readerSettingsSnapshot.pageTransition === 'simulation' && !this.reduceMotion &&
-      !this.bookTurnRuntimeFailed;
+    return readerBookTurnRuntimeSpec(
+      this.readerSettingsSnapshot.navigationMode,
+      this.readerSettingsSnapshot.pageTransition,
+      this.reduceMotion,
+      this.bookTurnRuntimeFailed,
+    ).simulationActive;
   }
 
   /**
@@ -2469,8 +2472,12 @@ export struct ReadingExperience {
    * not a fallback to a partially working native renderer.
    */
   private shouldMountBookTurnSurface(): boolean {
-    return this.readerSettingsSnapshot.navigationMode === 'paged' &&
-      this.readerSettingsSnapshot.pageTransition === 'simulation' && !this.reduceMotion;
+    return readerBookTurnRuntimeSpec(
+      this.readerSettingsSnapshot.navigationMode,
+      this.readerSettingsSnapshot.pageTransition,
+      this.reduceMotion,
+      this.bookTurnRuntimeFailed,
+    ).mountSurface;
   }
 
   /**
