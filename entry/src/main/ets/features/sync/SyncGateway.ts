@@ -497,7 +497,7 @@ export class SyncGateway {
     throw new Error(`Core WebDAV 事务超过 ${MAX_TRANSACTION_STEPS} 个阶段`);
   }
 
-  private isOwner(): boolean { return this.runtimeOwner === ReaderRuntimeOwner.current(); }
+  private isOwner(): boolean { return ReaderRuntimeOwner.isCurrent(this.runtimeOwner); }
 
   private assertOwner(): void {
     if (!this.isOwner()) throw new Error('WebDAV runtime owner retired');

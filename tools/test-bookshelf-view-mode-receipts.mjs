@@ -1,3 +1,4 @@
+import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes,createRequire} from 'node:module';
@@ -15,7 +16,7 @@ const Store=productionMotionMethods(file('features/sync/WebDavCredentialStore.ts
  {LOCAL_VIEW_MODE_KEY:'mode',LOCAL_MIGRATION_KEY:'version',LOCAL_CONFIG_VERSION:1,LOCAL_RESTORE_JOURNAL_KEY:'journal'});
 const Host=new Function('WebDavCredentialStore','ReaderThemeHost','ReaderRuntimeOwner','ReaderWriteEvidence','errorMessageOf','projectOperationFacts','projectPersistedReceipt',
  stripTypeScriptTypes(source('features/bookshelf/BookshelfViewModeHost.ts').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''))+';return BookshelfViewModeHost;')(
- {instance:{}},{prepareUserChange:async()=>{}},{current:()=>runtime},ReaderWriteEvidence,e=>e.message,projectOperationFacts,projectPersistedReceipt);
+ {instance:{}},{prepareUserChange:async()=>{}},runtimeOwnerIdentityProbe(()=>runtime),ReaderWriteEvidence,e=>e.message,projectOperationFacts,projectPersistedReceipt);
 const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const syntax=require(sdk+'/lib/validate_ui_syntax.js'),maps=require(sdk+'/lib/component_map.js');
 for(const name of ['ReaderRecoveryNotice','ReaderRecoveryAction','PageBackBar']){
@@ -90,4 +91,14 @@ for(const settings of[false,true]){
 {const f=fixture();f.values.delete('mode');await assert.rejects(f.store.loadBookshelfViewMode(false),/MISSING/);assert.equal(f.flushes(),0,'strict reconciliation cannot run migration writes');}
 {const f=fixture(),p=f.page();const gate=f.gate();p.select('list');await tick();p.select('cover');gate.reject(Error('lost ACK'));await tick();await tick();assert.equal(f.flushes(),1,'queued newer intent cannot replay after previous unknown');assert.equal(p.p.viewModeSnapshot.receipt.receipt.confirmation,'unknown');}
 {const f=fixture(),p=f.page();const gate=f.gate();p.select('list');await tick();runtime={};gate.reject(Error('lost ACK'));await tick();await tick();assert.equal(p.p.viewModeSnapshot.receipt,undefined,'retired runtime cannot deliver old value');const next=f.page(true);next.load();await tick();await tick();assert.equal(next.p.viewModeSnapshot.receipt.receipt.confirmation,'unknown','feature retains unknown while new runtime reads current value');assert.equal(f.flushes(),1);}
+
+for(const unknown of [false,true]){
+ const f=fixture(),p=f.page();const gate=f.gate();p.select('list');await tick();runtime=undefined;if(unknown)gate.reject(Error('lost ACK'));else gate.resolve();await f.host.writeTail;await tick();
+ assert.equal(p.p.viewModeSnapshot.receipt,undefined,'Runtime absence prevents old ACK/error delivery');assert.equal(f.flushes(),1);
+ assert.equal(await f.host.load(()=>true),undefined);const denied=await f.host.save('cover',()=>true);if(unknown)assert.equal(denied.receipt.receipt.confirmation,'unknown','blocked optional entry preserves unknown');else assert.equal(denied,undefined,'optional entry rejects unavailable owner');assert.equal(f.flushes(),1);
+ runtime={};const next=f.page(true);next.load();for(let i=0;i<6;i++)await tick();assert.equal(next.p.mode,f.values.get('mode'),'new Runtime independently reads actual current preference/cache without assuming unknown outcome');if(!unknown)assert.equal(next.p.mode,'list');
+ if(unknown)assert.equal(next.p.viewModeSnapshot.receipt.receipt.confirmation,'unknown','matching read never acknowledges unknown');
+ assert.equal(f.flushes(),1,'independent recovery never replays mutation');
+}
+
 console.log('PASS bookshelf mode actual preference gateway→one shared feature owner→both SDK consumers→shared recovery native actions: real dispatch/flush ACK, readonly reconciliation, unknown across close/reopen/consumer/runtime, rapid identity and restore gates');

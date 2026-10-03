@@ -27,7 +27,7 @@ const deps = { projectReaderDirectoryEntries, snapshotReaderDirectoryData, sameR
   readerDirectorySignalScrollCommand: bookId => completedScrolls.push(bookId),
   setTimeout: action => { pending.push(action); } };
 const methods = ['aboutToAppear', 'aboutToDisappear', 'identity', 'rowIsCurrent', 'onIdentityChanged',
-  'supportsDirectoryRules', 'onRulesKindChanged',
+  'supportsDirectoryRules', 'supportsCurrentDirectoryView', 'onRulesKindChanged',
   'onEntriesChanged', 'admitEntries', 'applySearch', 'toggleSort', 'scheduleTopScroll', 'scrollToEdge',
   'emptyMessage', 'contentFrame', 'bottomInset', 'publishProjection', 'onListFirstLayout', 'onListUserScroll', 'flushPendingScroll'];
 const Page = productionMotionMethods(path, methods, deps);
@@ -132,11 +132,11 @@ for (const [name, props] of Object.entries({ ReaderDirectoryRules: ['bookId'], P
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
 {
   const result = fixture(); result.page.aboutToAppear(); flush(); result.page.onListFirstLayout(result.page.identity());
-  const { owner, output } = createReaderBuilderProbe(source, ['build', 'flatList', 'chapterRow'], {
+  const { owner, output } = createReaderBuilderProbe(source, ['build', 'flatList', 'chapterRow', 'supportsCurrentDirectoryView'], {
     ...deps, ReaderDirectoryRules: Child, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
     ReaderDirectoryNavigationSurface: Child, ReaderDirectoryChapterRow: Child });
   Object.assign(owner, result.page);
-  for (const name of methods) owner[name] = Page.prototype[name].bind(owner);
+  for (const name of methods.filter(name=>name!=='supportsCurrentDirectoryView')) owner[name] = Page.prototype[name].bind(owner);
   owner.initialRender();
   const children = [...owner.children.values()];
   const bar = children.find(child => child.params.title === '目录'); assert.ok(bar);
@@ -182,6 +182,7 @@ class Child { constructor(owner, params, _storage, id) { Object.assign(this, { o
   assert.doesNotMatch(output, /ReaderFullDirectory|FullDirectoryPanel|ReaderShell|ReadingExperience/);
   assert.doesNotMatch(source, /Text\('(?:书签|当前章节|收起)'\)/);
 }
+{const p=fixture().page;const getter=deps.ReaderRuntimeOwner.current;deps.ReaderRuntimeOwner.current=()=>{throw Error('ReaderRuntimeOwner must be installed by EntryAbility');};assert.equal(p.supportsCurrentDirectoryView(),false);deps.ReaderRuntimeOwner.current=()=>({supportsCoreCapability(){throw Error('provider failure');}});assert.throws(()=>p.supportsCurrentDirectoryView(),/provider failure/,'identity adaptation cannot swallow platform/business failure');deps.ReaderRuntimeOwner.current=getter;}
 console.log('PH119 standalone BookDirectoryPage actual methods and SDK Builder: PASS');
 
 // Render the actual page branch with persisted Core format metadata. Filename
@@ -195,12 +196,12 @@ for (const [sourceId, bookKind, capability, expected] of [
   const result = fixture();
   Object.assign(result.page, { sourceId, bookKind, bookId: 'misleading.txt', rulesExpanded: true, rulesRevision: 0 });
   result.page.aboutToAppear(); flush();
-  const { owner } = createReaderBuilderProbe(source, ['build', 'flatList', 'chapterRow'], {
+  const { owner } = createReaderBuilderProbe(source, ['build', 'flatList', 'chapterRow', 'supportsCurrentDirectoryView'], {
     ...deps, ReaderRuntimeOwner: { current: () => ({ supportsCoreCapability: () => capability }) },
     ReaderDirectoryRules: Child, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
     ReaderDirectoryNavigationSurface: Child, ReaderDirectoryChapterRow: Child });
   Object.assign(owner, result.page);
-  for (const name of methods) owner[name] = Page.prototype[name].bind(owner);
+  for (const name of methods.filter(name=>name!=='supportsCurrentDirectoryView')) owner[name] = Page.prototype[name].bind(owner);
   owner.initialRender();
   assert.equal([...owner.nodes.values()].some(node => node.createWithLabel === '收起层级规则'), expected,
     `directory rule control eligibility: ${sourceId}/${bookKind}/${capability}`);

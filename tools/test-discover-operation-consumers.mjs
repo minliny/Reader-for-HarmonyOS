@@ -1,3 +1,4 @@
+import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes,createRequire} from 'node:module';
@@ -5,7 +6,7 @@ import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 const source=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const load=(p,n,deps={})=>new Function(...Object.keys(deps),stripTypeScriptTypes(source(p).replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''))+`;return ${n};`)(...Object.values(deps));
 const projectOperationFacts=load('app/ReaderOperationFacts.ts','projectOperationFacts'),readerRecoveryView=load('app/ReaderRecoveryProjection.ts','readerRecoveryView');
-let currentOwner;const ReaderRuntimeOwner={current:()=>currentOwner};
+let currentOwner;const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
 const helpers={...load('app/ErrorMessage.ts','{errorMessageOf}'),...load('app/HttpTransportPolicy.ts','{httpUrlHostname,isPrivateNetworkTarget}'),...load('features/source/ReaderSourceCategory.ts','{classifyReaderSource,readerSourceCategoryIsText}')};
 const SourceGateway=load('features/source/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner,isReaderCoreTransactionPendingError:()=>false,...helpers});
 const DiscoverGateway=load('features/discover/DiscoverGateway.ts','DiscoverGateway',{ReaderRuntimeOwner});
@@ -47,4 +48,9 @@ for(const partial of ['kinds','allKinds','books','allBooks']){const f=fixture();
 {const f=fixture();f.r.fail='source.list';await f.open();const old=clone(f.op());f.owner.retryRead(old.generation+1);await f.settle();assert.equal(f.r.count('source.list'),1,'incorrect identity never issues a read');f.r.fail='source.list';await f.retry(f.page());assert.equal(f.op().fact,'failed');assert.ok(f.op().generation!==old.generation,'retry failure has new live identity');}
 assert.match(source('features/discover/DiscoverPage.ets'),/JSON\.stringify\(\[book\.sourceId, book\.bookId\]\)/,'view identity contains source + book');
 assert.match(source('pages/Index.ets'),/isReaderProductSurfaceEnabled\('discover'\) && this\.route === 'discover'/,'hidden product gate remains');
+
+{const f=fixture();await f.open();const d=defer();f.r.pause={method:'source.explore',...d};f.owner.refresh();await tick();const before=clone(f.p());currentOwner=undefined;d.resolve();await f.settle();
+ assert.deepEqual(f.p(),before,'Runtime absence rejects late read without failure projection');const calls=f.r.calls.length;f.owner.refresh();await f.settle();assert.equal(f.r.calls.length,calls);
+ currentOwner=f.r;f.owner.open();await f.settle();assert.equal(f.op().fact,'current');}
+
 console.log('Discover actual Gateway -> owner -> Index -> SDK read/recovery: PASS (sources/kinds/pages/scope retention/partial/empty/read-only/identity/reopen/close/late/owner/concurrency).');

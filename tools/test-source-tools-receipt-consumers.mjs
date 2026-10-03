@@ -1,3 +1,4 @@
+import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes,createRequire} from 'node:module';
@@ -7,7 +8,7 @@ const ordinary=s=>stripTypeScriptTypes(s.replace(/^import[\s\S]*?from ['"][^'"]+
 const load=(p,n,deps={})=>new Function(...Object.keys(deps),ordinary(source(p))+`;return ${n};`)(...Object.values(deps));
 const facts=load('app/ReaderOperationFacts.ts','{projectOperationFacts,projectCommitReadback}');
 const projectPersistedReceipt=load('app/ReaderPersistedReceiptProjection.ts','projectPersistedReceipt',facts),ReaderWriteEvidence=load('app/ReaderWriteEvidence.ts','ReaderWriteEvidence'),readerRecoveryView=load('app/ReaderRecoveryProjection.ts','readerRecoveryView');
-let currentOwner;const ReaderRuntimeOwner={current:()=>currentOwner};
+let currentOwner;const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
 const helpers={...load('app/ErrorMessage.ts','{errorMessageOf}'),...load('app/HttpTransportPolicy.ts','{httpUrlHostname,isPrivateNetworkTarget}'),...load('features/source/ReaderSourceCategory.ts','{classifyReaderSource}')};
 const SourceGateway=load('features/source/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner,isReaderCoreTransactionPendingError:()=>false,...helpers});
 const {SourceToolsOrchestrator,EMPTY_SOURCE_TOOLS_SNAPSHOT}=load('features/source/SourceToolsOrchestrator.ets','{SourceToolsOrchestrator,EMPTY_SOURCE_TOOLS_SNAPSHOT}',{SourceGateway,ReaderRuntimeOwner,ReaderWriteEvidence,hilog:{error(){},warn(){},info(){}},projectPersistedReceipt,...facts});
@@ -51,4 +52,10 @@ for(const action of ['toggle','delete','editor']){
  const f=fixture();f.r.readFail=1;await f.open();const p=f.page();f.retry(p);await f.settle();assert.equal(f.index.sourceToolsSnapshot.readFacts.fact,'current');assert.equal(f.receipt(),undefined);
  f.r.readFail=1;f.owner.deleteSelected(['https://a.test']);await f.settle();const stale=f.page();f.owner.open([]);await f.settle();const count=f.r.calls.length;f.retry(stale);await f.settle();assert.equal(f.r.calls.length,count,'reopen invalidates recovery identity');
 }
+
+{const f=fixture();await f.open();const d=defer();f.r.pause={method:'source.update',...d};f.owner.setSelectedEnabled(['https://a.test'],false);await tick();
+ const before=clone(f.index.sourceToolsSnapshot);currentOwner=undefined;d.resolve();await f.settle();assert.deepEqual(f.index.sourceToolsSnapshot,before,'teardown rejects late ACK/error emission');
+ const count=f.r.calls.length;f.owner.setSelectedEnabled(['https://a.test'],true);await f.settle();assert.equal(f.r.calls.length,count);
+ currentOwner=f.r;f.owner.open([]);await f.settle();assert.equal(f.index.sourceToolsSnapshot.readFacts.fact,'current');assert.equal(f.index.sourceToolsSnapshot.sources[0].enabled,false);}
+
 console.log('Source tools actual Gateway -> Index -> SDK consumer: PASS (CRUD/editor/partial/unknown/only-read retry/close/late/owner/reopen).');

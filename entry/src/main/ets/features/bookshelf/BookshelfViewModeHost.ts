@@ -44,9 +44,10 @@ export class BookshelfViewModeHost {
     }
     const generation = ++bookshelfModeGeneration;
     const revision = ++this.revision;
-    const owner = ReaderRuntimeOwner.current();
+    let owner: ReaderRuntimeOwner;
+    try { owner = ReaderRuntimeOwner.current(); } catch (_) { return undefined; }
     const context = this.store.bookshelfModeContextGeneration();
-    const current = (): boolean => revision === this.revision && owner === ReaderRuntimeOwner.current() &&
+    const current = (): boolean => revision === this.revision && ReaderRuntimeOwner.isCurrent(owner) &&
       context === this.store.bookshelfModeContextGeneration() && isCurrent();
     try {
       const value = await this.store.loadBookshelfViewMode();
@@ -64,7 +65,8 @@ export class BookshelfViewModeHost {
   save(mode: BookshelfViewMode, isCurrent: () => boolean): Promise<BookshelfViewModeSnapshot | undefined> {
     if (!this.canSave()) return Promise.resolve(this.snapshot);
     const revision = ++this.revision;
-    const owner = ReaderRuntimeOwner.current();
+    let owner: ReaderRuntimeOwner;
+    try { owner = ReaderRuntimeOwner.current(); } catch (_) { return Promise.resolve(undefined); }
     const context = this.store.bookshelfModeContextGeneration();
     const work = this.writeTail.then((): Promise<BookshelfViewModeSnapshot | undefined> =>
       this.performSave(mode, revision, owner, context, isCurrent));
@@ -79,7 +81,7 @@ export class BookshelfViewModeHost {
     context: number, isCurrent: () => boolean): Promise<BookshelfViewModeSnapshot | undefined> {
     if (!this.canSave()) return this.snapshot;
     const generation = ++bookshelfModeGeneration;
-    const owns = (): boolean => owner === ReaderRuntimeOwner.current() &&
+    const owns = (): boolean => ReaderRuntimeOwner.isCurrent(owner) &&
       context === this.store.bookshelfModeContextGeneration();
     const admitted = (): boolean => owns() && revision === this.revision && isCurrent();
     const evidence = new ReaderWriteEvidence();
@@ -124,9 +126,10 @@ export class BookshelfViewModeHost {
       !(receipt?.facts.canRetry ?? read?.canRetry)) return undefined;
     this.reconcileBusy = true;
     const revision = this.revision;
-    const owner = ReaderRuntimeOwner.current();
+    let owner: ReaderRuntimeOwner;
+    try { owner = ReaderRuntimeOwner.current(); } catch (_) { this.reconcileBusy = false; return undefined; }
     const context = this.store.bookshelfModeContextGeneration();
-    const current = (): boolean => revision === this.revision && owner === ReaderRuntimeOwner.current() &&
+    const current = (): boolean => revision === this.revision && ReaderRuntimeOwner.isCurrent(owner) &&
       context === this.store.bookshelfModeContextGeneration() && isCurrent();
     let canonical = this.snapshot.canonical;
     let refreshError: string | undefined;

@@ -67,7 +67,7 @@ export class LocalConfigurationReset {
   }
 
   private static assertOwner(owner: ReaderRuntimeOwner): void {
-    if (ReaderRuntimeOwner.current() !== owner) throw new Error('CONFIGURATION_OWNER_CHANGED');
+    if (!ReaderRuntimeOwner.isCurrent(owner)) throw new Error('CONFIGURATION_OWNER_CHANGED');
   }
 
   private static async apply(owner: ReaderRuntimeOwner, requested: boolean): Promise<boolean> {

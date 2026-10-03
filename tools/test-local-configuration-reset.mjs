@@ -1,3 +1,4 @@
+import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -33,7 +34,7 @@ async function fixture(){
  let appearanceDisk=copy(original);
  const appearanceStore=new ReaderAppearanceStore({load:async()=>copy(appearanceDisk),save:async x=>{trace.push('appearance');if(fail==='appearance'){fail='';throw Error('flush:appearance');}appearanceDisk=copy(x);}});
  const owner={getUIAbilityContext:()=>context,getAppearanceStore:()=>appearanceStore,request(){throw Error('reset must not issue Core commands');}};current=owner;
- const Runtime={ReaderRuntimeOwner:{current:()=>current}};
+ const Runtime={ReaderRuntimeOwner:runtimeOwnerIdentityProbe(()=>current)};
  const themeModule=compile('app/ReaderThemeHost.ts',{
  './ReaderRuntimeOwner':Runtime,'./ReaderWindowCoordinator':{ReaderWindowCoordinator:{updateAppChromeStyle(){}},ReaderWindowChromeStyle:class{}},
  '../features/reading/ReaderAppearanceStore':{ReaderAppearanceStore},'../features/reading/ReaderAppearanceState':appearance,

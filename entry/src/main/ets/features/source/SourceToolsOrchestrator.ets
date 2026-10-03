@@ -793,7 +793,7 @@ export class SourceToolsOrchestrator {
       busy: patch.busy ?? this.snapshot.busy,
       statusMessage: patch.statusMessage ?? this.snapshot.statusMessage,
     };
-    if (this.isCurrent()) {
+    if (ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent()) {
       this.emit(this.copySnapshot(this.snapshot));
     }
   }
@@ -854,7 +854,7 @@ export class SourceToolsOrchestrator {
   }
 
   private isCurrentSession(session: number): boolean {
-    return this.owner === ReaderRuntimeOwner.current() && this.isCurrent() && this.session === session;
+    return ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent() && this.session === session;
   }
 }
 

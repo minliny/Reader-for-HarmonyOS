@@ -267,9 +267,9 @@ export class BookshelfManagementOrchestrator {
   }
 
   private enqueue(operation: () => Promise<void>): void {
-    if (!this.isCurrent()) return;
+    if (!ReaderRuntimeOwner.isCurrent(this.owner) || !this.isCurrent()) return;
     this.operationTail = this.operationTail.then(async (): Promise<void> => {
-      if (this.owner !== ReaderRuntimeOwner.current()) return;
+      if (!ReaderRuntimeOwner.isCurrent(this.owner)) return;
       await operation();
     }).catch((error: Error): void => {
       hilog.error(DOMAIN, 'Reader', 'Bookshelf management operation failed: %{private}s', error.message);
@@ -290,7 +290,7 @@ export class BookshelfManagementOrchestrator {
       receipt: patch.receipt ?? this.snapshot.receipt,
       readFacts: patch.readFacts ?? this.snapshot.readFacts,
     };
-    if (this.isCurrent()) this.emit(this.copySnapshot(this.snapshot));
+    if (ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent()) this.emit(this.copySnapshot(this.snapshot));
   }
 
   private publishIfCurrent(session: number, patch: BookshelfManagementPatch): void {
@@ -303,7 +303,7 @@ export class BookshelfManagementOrchestrator {
   }
 
   private isCurrentSession(session: number): boolean {
-    return this.owner === ReaderRuntimeOwner.current() && this.isCurrent() && session === this.session;
+    return ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent() && session === this.session;
   }
 
   private copySnapshot(source: BookshelfManagementSnapshot): BookshelfManagementSnapshot {

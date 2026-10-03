@@ -1,3 +1,4 @@
+import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes,createRequire} from 'node:module';
@@ -9,7 +10,7 @@ const facts=load('app/ReaderOperationFacts.ts','{projectOperationFacts,projectCo
 const projectPersistedReceipt=load('app/ReaderPersistedReceiptProjection.ts','projectPersistedReceipt',facts);
 const ReaderWriteEvidence=load('app/ReaderWriteEvidence.ts','ReaderWriteEvidence');
 const readerRecoveryView=load('app/ReaderRecoveryProjection.ts','readerRecoveryView');
-let currentOwner;const ReaderRuntimeOwner={current:()=>currentOwner};
+let currentOwner;const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
 const RulesManagementGateway=load('features/settings/RulesManagementGateway.ts','RulesManagementGateway',{ReaderRuntimeOwner});
 const unused=class{observeWrites(){}};
 const Rules=load('features/settings/RulesManagementOrchestrator.ets','{RulesManagementOrchestrator,EMPTY_RULES_MANAGEMENT_SNAPSHOT}',{ReaderRuntimeOwner,ReaderWriteEvidence,RulesManagementGateway,SourceGateway:unused,RssGateway:unused,hilog:{error(){},warn(){}},projectPersistedReceipt,...facts});
@@ -71,4 +72,13 @@ for(const kind of ['rules','shelf']){
   const f=fixture(kind);f.owner.open();await f.settle();f.runtime.failRead=read;f.write();await f.settle();const old=f.page().recovery.params;f.owner.open();await f.settle();const n=f.runtime.calls.length;old.onReconcile(old.generation);await f.settle();assert.equal(f.runtime.calls.length,n,'re-entry invalidates captured recovery');currentOwner=rpc();f.write();await f.settle();assert.equal(f.runtime.calls.length,n,'retired owner dispatches no mutation');
  }
 }
+
+for(const kind of ['rules','shelf']){
+ const f=fixture(kind);f.owner.open();await f.settle();const command=kind==='rules'?'replace.persist':'book-group.create';
+ const d=defer();f.runtime.wait={method:command,...d};f.write();await new Promise(r=>setImmediate(r));const before=clone(f.snapshot());
+ currentOwner=undefined;d.resolve();await f.settle();assert.deepEqual(f.snapshot(),before,'unavailable Runtime cannot turn late ACK into error publication');
+ const count=f.runtime.calls.length;assert.doesNotThrow(()=>f.write());await f.settle();assert.equal(f.runtime.calls.length,count,'unavailable Runtime admits no new mutation');
+ currentOwner=f.runtime;f.owner.open();await f.settle();assert.equal(f.snapshot().readFacts.fact,'current','independent read after install uses real Gateway');
+}
+
 console.log('Management actual Gateway -> Index -> SDK consumers: PASS (read/write/unknown/retry/close/reopen/late/owner/malformed).');

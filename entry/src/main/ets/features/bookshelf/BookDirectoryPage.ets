@@ -76,10 +76,16 @@ export struct BookDirectoryPage {
     this.pendingScrollUserIntent = false;
   }
 
+  private supportsCurrentDirectoryView(): boolean {
+    let owner: ReaderRuntimeOwner;
+    try { owner = ReaderRuntimeOwner.current(); } catch (_) { return false; }
+    return owner.supportsCoreCapability('reading.directory.view.v2');
+  }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       Column() {
-      if (this.supportsDirectoryRules() && ReaderRuntimeOwner.current().supportsCoreCapability('reading.directory.view.v2')) {
+      if (this.supportsDirectoryRules() && this.supportsCurrentDirectoryView()) {
         Button(this.rulesExpanded ? '收起层级规则' : '本书目录层级规则').onClick((): void => { this.rulesExpanded = !this.rulesExpanded; });
         if (this.rulesExpanded) { ReaderDirectoryRules({ bookId: this.bookId, onApplied: (): void => { this.rulesRevision += 1; } }); }
       }

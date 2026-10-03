@@ -188,7 +188,7 @@ export class SettingsOrchestrator {
   }
 
   private isCurrentSession(session: number, expectedWrite: number): boolean {
-    return this.owner === ReaderRuntimeOwner.current() && this.isCurrent() && session === this.session && expectedWrite === this.writeGeneration;
+    return ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent() && session === this.session && expectedWrite === this.writeGeneration;
   }
 
   private withSetting(key: SettingsKey, value: boolean): SettingsSnapshot {

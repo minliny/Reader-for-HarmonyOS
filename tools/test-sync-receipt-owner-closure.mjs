@@ -1,3 +1,4 @@
+import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -25,7 +26,7 @@ const asset={Tag:{ALIAS:1,RETURN_TYPE:2,SECRET:3,ACCESSIBILITY:4,CONFLICT_RESOLU
 };
 const Store=execute('features/sync/WebDavCredentialStore.ts','WebDavCredentialStore',{asset,util,preferences:{},errorMessageOf:()=> 'platform failure'});
 let currentOwner,credentialStore,hostFailures=0,hostApplications=0,transport,prepareCalls=0;
-const ReaderRuntimeOwner={current:()=>currentOwner};
+const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
 class Host {async capture(){return {version:1,bookshelfViewMode:'cover',themeSelection:{}};}encode(v){return v;}decode(v){return v;}async apply(){hostApplications++;if(hostFailures>0){hostFailures--;throw Error('Host write unavailable');}}}
 const ReaderThemeHost={prepareUserChange:async()=>{prepareCalls++;},observedSystemScheme:()=> 'day'};
 const Gateway=execute('features/sync/SyncGateway.ts','SyncGateway',{SyncHostConfigurationGateway:Host,ReaderRuntimeOwner,WebDavCredentialStore:{get instance(){return credentialStore;}},ReaderThemeHost,HttpExecuteHost:{instance:{execute:async request=>transport(request)}},util,url:{URL:{parseURL:v=>new URL(v)}},errorMessageOf:()=> 'platform failure',AppStorage:{setOrCreate(){}}});
@@ -180,4 +181,13 @@ for(const fail of ['none','applyAck','commitAck','host']){
   full.owner.updateStateVars({snapshot:{...clone(full.owner.snapshot),facts:{...full.owner.snapshot.facts,operation:{...operation,projection:projectPersistedReceipt({confirmation:'confirmed',readback:'succeeded',generation:901})}}}});
   assert.equal(full.owner.webdavPass,'later-draft','read-only recovery never re-clears a later secret draft');assert.equal(full.owner.backupPass,'later-backup');
 }
+
+for(const unknown of [false,true]){
+ const f=fixture();await open(f);const p=pause();asset.beforeAdd=()=>p.promise;asset.failAdd=unknown;f.owner.saveConfig(config.url,config.user,'','',config.directory);await new Promise(r=>setImmediate(r));
+ const count=f.emitted.length;currentOwner=undefined;p.resolve();await f.settle();assert.equal(f.emitted.length,count,'actual Asset ACK/lost ACK cannot publish after Runtime absence');
+ const writes=asset.calls.filter(c=>c==='add').length;assert.doesNotThrow(()=>f.owner.saveConfig(config.url,config.user,'','',config.directory));await f.settle();assert.equal(asset.calls.filter(c=>c==='add').length,writes);
+ currentOwner=f.runtime;f.owner.open();await f.settle();assert.equal(f.snapshot().facts.operation.projection.receipt.confirmation,unknown?'unknown':'confirmed','retained exact evidence never promotes lost ACK from matching read');
+ assert.equal(asset.calls.filter(c=>c==='add').length,writes,'reopen independent read never repeats save');
+}
+
 console.log('PASS Sync actual AssetStore -> Gateway -> owner -> SDK shared recovery: read/save/unknown/backup/partial-restore/durable receipt/re-entry/generation/owner/queue/secret boundary.');

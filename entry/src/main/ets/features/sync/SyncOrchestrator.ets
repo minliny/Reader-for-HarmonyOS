@@ -229,7 +229,7 @@ export class SyncOrchestrator {
 
   private generation(): number { return this.latestOperation?.projection.facts.generation ?? this.readFacts.generation; }
   private source(): SyncSnapshot { return this.lastSnapshot ?? this.read(); }
-  private currentOwner(): boolean { return this.owner === ReaderRuntimeOwner.current(); }
+  private currentOwner(): boolean { return ReaderRuntimeOwner.isCurrent(this.owner); }
   private currentSession(session: number): boolean { return this.currentOwner() && this.isCurrent() && session === this.session; }
   private status(session: number, message: string): void { this.lastSnapshot = { ...this.source(), statusMessage: message }; this.deliver(session); }
   private deliver(session: number): void {

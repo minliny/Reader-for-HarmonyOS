@@ -308,7 +308,7 @@ export class RulesManagementOrchestrator {
 
   private enqueue(operation: () => Promise<void>): void {
     this.operationTail = this.operationTail.then(async (): Promise<void> => {
-      if (this.owner !== ReaderRuntimeOwner.current()) return;
+      if (!ReaderRuntimeOwner.isCurrent(this.owner)) return;
       await operation();
     }).catch((error: Error): void => {
       hilog.error(DOMAIN, 'Reader', 'Rules management operation failed: %{private}s', error.message);
@@ -338,7 +338,7 @@ export class RulesManagementOrchestrator {
       readFacts: patch.readFacts ?? this.snapshot.readFacts,
       confirmedParts: patch.confirmedParts ?? this.snapshot.confirmedParts,
     };
-    if (this.isCurrent()) this.emit(this.copy(this.snapshot));
+    if (ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent()) this.emit(this.copy(this.snapshot));
   }
 
   private copy(source: RulesManagementSnapshot): RulesManagementSnapshot {
@@ -356,7 +356,7 @@ export class RulesManagementOrchestrator {
   }
 
   private isCurrentSession(session: number): boolean {
-    return this.owner === ReaderRuntimeOwner.current() && this.isCurrent() && this.session === session;
+    return ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent() && this.session === session;
   }
 
   private subscriptionTypeLabel(type: number): string {

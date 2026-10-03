@@ -1,3 +1,4 @@
+import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes,createRequire} from 'node:module';
@@ -8,7 +9,7 @@ const load=(p,n,deps={})=>new Function(...Object.keys(deps),ordinary(source(p))+
 const facts=load('app/ReaderOperationFacts.ts','{projectOperationFacts,projectCommitReadback}');
 const projectPersistedReceipt=load('app/ReaderPersistedReceiptProjection.ts','projectPersistedReceipt',facts);
 const ReaderWriteEvidence=load('app/ReaderWriteEvidence.ts','ReaderWriteEvidence'),readerRecoveryView=load('app/ReaderRecoveryProjection.ts','readerRecoveryView');
-let currentOwner;const ReaderRuntimeOwner={current:()=>currentOwner};
+let currentOwner;const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
 const helpers={...load('app/ErrorMessage.ts','{errorMessageOf}'),...load('app/HttpTransportPolicy.ts','{httpUrlHostname,isPrivateNetworkTarget}'),...load('features/source/ReaderSourceCategory.ts','{classifyReaderSource}')};
 const typed=e=>e.typedAdmission===true;
 const SourceGateway=load('features/source/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner,isReaderCoreTransactionPendingError:typed,...helpers});
@@ -63,4 +64,13 @@ for(const kind of ['source','settings']){
 {
  const f=fixture('source');f.host.open();await f.settle();f.r.admission=true;f.write();await f.settle();assert.equal(f.r.count('source.update'),2,'only typed admission refusal can retry a write');assert.equal(f.receipt().receipt.receipt.confirmation,'confirmed','actual gateway excludes the pre-execution refusal from dispatched writes');
 }
+
+for(const kind of ['source','settings']){
+ const f=fixture(kind);f.host.open();await f.settle();const d=defer();f.r.pause={method:kind==='source'?'source.update':'flush',...d};f.write();await tick();
+ const before=clone(f.receipt());currentOwner=undefined;d.resolve();await f.settle();assert.deepEqual(f.receipt(),before,'late actual ACK has no retired UI/error publication');
+ const count=kind==='source'?f.r.calls.length:f.r.puts;assert.throws(()=>f.write(),/must be installed/,'Host hard acquisition remains explicit; retired owner callbacks were already safely rejected');await f.settle();assert.equal(kind==='source'?f.r.calls.length:f.r.puts,count);
+ f.r.pause=undefined;currentOwner=f.r;f.host.open();await f.settle();assert.equal(f.read().fact,'current');
+ if(kind==='source')assert.equal(f.index.sourceSources[0].enabled,false);else assert.equal(f.index.settingsSnapshot.reduceMotion,true,'persisted setting read survives retired delivery');
+}
+
 console.log('Source/Settings actual Gateway -> Index -> SDK consumers: PASS (ACK/read failure/unknown/read-only retry/close/reopen/late/owner/malformed/typed admission).');

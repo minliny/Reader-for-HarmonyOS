@@ -150,6 +150,12 @@ export class ReaderRuntimeOwner {
     return ReaderRuntimeOwner.instance;
   }
 
+  /** Identity-only admission for late callbacks. Teardown means false; callers
+   * that require an installed owner still use the throwing current() getter. */
+  static isCurrent(owner: ReaderRuntimeOwner): boolean {
+    return ReaderRuntimeOwner.instance === owner;
+  }
+
   static current(): ReaderRuntimeOwner {
     if (ReaderRuntimeOwner.instance === undefined) {
       throw new Error('ReaderRuntimeOwner must be installed by EntryAbility');

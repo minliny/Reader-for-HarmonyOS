@@ -218,8 +218,8 @@ export class DiscoverOrchestrator {
   private currentSource(): DiscoverSource | undefined { return this.presentation.sources[this.presentation.activeSourceIndex]; }
   private currentKind(): DiscoverKind | undefined { return this.presentation.kinds[this.presentation.activeKindIndex]; }
   private retainedBooks(): DiscoverBook[] | undefined { return this.presentation.books.length === 0 ? undefined : this.presentation.books; }
-  private admitsIntent(): boolean { return this.isCurrent() && this.owns(ReaderRuntimeOwner.current()) && !this.presentation.loading; }
-  private isCurrentSession(session: number): boolean { return this.isCurrent() && this.owns(ReaderRuntimeOwner.current()) && session === this.session; }
+  private admitsIntent(): boolean { return ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent() && !this.presentation.loading; }
+  private isCurrentSession(session: number): boolean { return ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent() && session === this.session; }
   private isCurrentRead(session: number, generation: number): boolean {
     return this.isCurrentSession(session) && this.presentation.operation?.generation === generation;
   }
@@ -244,7 +244,7 @@ export class DiscoverOrchestrator {
       loading: patch.loading ?? this.presentation.loading, statusMessage: patch.statusMessage ?? this.presentation.statusMessage,
       operation: patch.operation ?? this.presentation.operation,
     };
-    if (this.isCurrent() && this.owns(ReaderRuntimeOwner.current())) this.emit(this.copy(this.presentation));
+    if (ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent()) this.emit(this.copy(this.presentation));
   }
   private fail(session: number, generation: number, label: string, error: unknown): void {
     const message = `${label}：${errorMessageOf(error)}`;

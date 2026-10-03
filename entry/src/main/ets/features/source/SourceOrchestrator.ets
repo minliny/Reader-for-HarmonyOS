@@ -128,7 +128,7 @@ export class SourceOrchestrator {
   }
 
   retryLoad(): void {
-    if (this.isCurrent()) {
+    if (ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent()) {
       this.open();
     }
   }
@@ -410,7 +410,7 @@ export class SourceOrchestrator {
     // until the bus is free. Wait until Core reports idle, then retry once —
     // the serial chain means this retry only waits out the external operation,
     // never a concurrent toggle.
-    if (this.owner !== ReaderRuntimeOwner.current()) return;
+    if (!ReaderRuntimeOwner.isCurrent(this.owner)) return;
     const evidence = new ReaderWriteEvidence();
     this.gateway.observeWrites(evidence);
     try { await this.updateSourceWithRetry(id, enabled); }
@@ -571,7 +571,7 @@ export class SourceOrchestrator {
       // reports idle, then retry once; a genuine mismatch echo is rethrown
       // above and never retried.
       await this.waitForCoreIdle(5000);
-      if (this.owner !== ReaderRuntimeOwner.current()) throw new Error('Source runtime owner retired');
+      if (!ReaderRuntimeOwner.isCurrent(this.owner)) throw new Error('Source runtime owner retired');
       await this.gateway.updateSource(id, { enabled });
     }
   }
@@ -616,7 +616,7 @@ export class SourceOrchestrator {
   }
 
   private isCurrentSession(session: number): boolean {
-    return this.owner === ReaderRuntimeOwner.current() && this.isCurrent() && session === this.session;
+    return ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent() && session === this.session;
   }
 
   private presentSources(sources: BookSource[]): void {
@@ -636,11 +636,11 @@ export class SourceOrchestrator {
         checkMessage: checked?.checkMessage ?? source.checkMessage,
       };
     });
-    if (this.owner === ReaderRuntimeOwner.current() && this.isCurrent()) this.emit(this.sources);
+    if (ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent()) this.emit(this.sources);
   }
 
   private publishStatus(kind: SourceManagementStatusKind, message: string): void {
-    if (this.owner === ReaderRuntimeOwner.current() && this.isCurrent()) {
+    if (ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent()) {
       this.emitStatus(kind, message);
     }
   }
