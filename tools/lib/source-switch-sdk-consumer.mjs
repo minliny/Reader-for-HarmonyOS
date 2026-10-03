@@ -1,3 +1,4 @@
+import {actualGeneralSettingsTypes,actualGeneralSettingsHostField} from './general-settings-owner-probe.mjs';
 import {actualSourceManagementTypes,actualSourceManagementHostField} from './source-management-owner-probe.mjs';
 import {actualBookshelfOperationTypes,actualBookshelfHostField} from './bookshelf-operation-owner-probe.mjs';
 import assert from 'node:assert/strict';
@@ -16,7 +17,7 @@ const methods=['getSourceSwitchHost','sourceSwitchContext','sourceSwitchLease','
  'bindSourceSwitchReader','applySourceSwitchEffect','openSourceSwitch','openDetailSourceSwitch','retrySourceSwitch','refreshSourceSwitch',
  'sourceSwitchProbeQuery','knownSearchSourceCandidates','onPickSource','retryFailedSourceSwitch','dismissSourceSwitchFailure','onRollbackSourceSwitch',
  'closeSourceSwitch','performSourceSwitchSeam','resolveReaderSourceSwitchTransaction','reconcilePendingSourceSwitches','currentSourceSwitchTransactionId',
- 'retireSourceManagementPresentation','nextNavigationGeneration','isCurrentRuntime','openReading','onRemoteSessionReady','installRemoteReadingSession',
+ 'retireSettingsPresentation','retireSourceManagementPresentation','nextNavigationGeneration','isCurrentRuntime','openReading','onRemoteSessionReady','installRemoteReadingSession',
  'getReadingEntryHost','readingEntryLease','applyReadingEntrySnapshot','bindReadingEntryReader','retireReadingEntryPresentation',
  'detailReadableAdmission','detailBookKey','chooseCachedChapterRefresh','showReadingFailure','showIndexAlert',
  'applyReadingCommit','getReadingOfflineHost','cleanupRetiredSourceCache','sourceSwitchOverlayContent',
@@ -57,6 +58,9 @@ export function makeIndex(f,{navigation=1,reading=false,cacheAuthority}={}){
  const sourceTypes=actualSourceManagementTypes({ReaderRuntimeOwner:Runtime});
  index.sourcePresentationIdentity='';
  index.sourceHost=actualSourceManagementHostField(index,sourceTypes.SourceHost);
+ const settingsTypes=actualGeneralSettingsTypes({ReaderRuntimeOwner:Runtime});
+ index.settingsPresentationIdentity='';
+ index.settingsHost=actualGeneralSettingsHostField(index,settingsTypes.SettingsHost);
  const acquire=f.runtime.bookAcquisitions;f.runtime.bookAcquisitions=()=>({...acquire(),readingProjectionRevision:()=>0,setPreparationVisible(){}});
  const mount=()=>{index.sourceSwitchOverlayContent();return p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchPanel).at(-1);};
  const rows=()=>p.walk(index).filter(x=>x instanceof leafDeps.CandidateRow);

@@ -56,6 +56,7 @@ const require = createRequire(import.meta.url);
 import {bookshelfSourceDisplayName} from '../../entry/src/main/ets/features/bookshelf/BookshelfSourceNameProjection.ts';
 import {actualBookshelfOperationTypes} from './bookshelf-operation-owner-probe.mjs';
 import {actualSourceManagementTypes} from './source-management-owner-probe.mjs';
+import {actualGeneralSettingsTypes} from './general-settings-owner-probe.mjs';
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts = require(`${sdk}/node_modules/typescript`);
 const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
@@ -99,7 +100,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
   let expanded;
   do {
     expanded = false;
-    for (const helper of ['waitForPredecessorClose', 'errorMessage', 'isCurrentDetailProjection', 'consumeTemporaryBackBridge', 'isCurrentRuntime', 'showReaderAlert', 'showIndexAlert', 'isMountedToken', 'isSelectionCurrent', 'preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent', 'retireSourceSwitchPresentation', 'retireSourceManagementPresentation', 'retireRssPresentation', 'retireRssEditorPresentation', 'retireBookshelfCatalogPresentation', 'isCurrentRssEditorPresentation', 'persistMeasuredCanonicalProgress', 'readingPrefetchLease', 'getReadingEntryHost', 'readingEntryLease', 'applyReadingEntrySnapshot', 'bindReadingEntryReader', 'retireReadingEntryPresentation', 'readingPreparationContext', 'sharedReadingPreparationSeeds', 'chooseCachedChapterRefresh', 'readerReplaceRuntimeCurrent', 'projectReaderReplaceWriteFacts', 'loadDirectoryOperationProjections', 'detailReadableAdmission', 'detailBookKey']) {
+    for (const helper of ['waitForPredecessorClose', 'errorMessage', 'isCurrentDetailProjection', 'consumeTemporaryBackBridge', 'isCurrentRuntime', 'showReaderAlert', 'showIndexAlert', 'isMountedToken', 'isSelectionCurrent', 'preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent', 'retireSourceSwitchPresentation', 'retireSourceManagementPresentation', 'retireSettingsPresentation', 'retireRssPresentation', 'retireRssEditorPresentation', 'retireBookshelfCatalogPresentation', 'isCurrentRssEditorPresentation', 'persistMeasuredCanonicalProgress', 'readingPrefetchLease', 'getReadingEntryHost', 'readingEntryLease', 'applyReadingEntrySnapshot', 'bindReadingEntryReader', 'retireReadingEntryPresentation', 'readingPreparationContext', 'sharedReadingPreparationSeeds', 'chooseCachedChapterRefresh', 'readerReplaceRuntimeCurrent', 'projectReaderReplaceWriteFacts', 'loadDirectoryOperationProjections', 'detailReadableAdmission', 'detailBookKey']) {
     if (!names.includes(helper) && type.members.some(m => m.name?.getText(tree) === helper) &&
       (capturedOwnerFields.includes(`this.${helper}(`) || type.members.some(m => names.includes(m.name?.getText(tree)) && m.getText(tree).includes(`this.${helper}(`)))) { names.push(helper); expanded = true; }
     }
@@ -107,6 +108,10 @@ export function productionMotionMethods(file, names, dependencies = {}) {
   if (type.name?.text === 'Index' && names.includes('retireSourceManagementPresentation')) {
     dependencies.SourceHost ??= actualSourceManagementTypes(dependencies).SourceHost;
     capturedOwnerFields += '\n'+type.members.filter(m=>['sourceHost','sourcePresentationIdentity'].includes(m.name?.getText(tree))).map(m=>m.getText(tree)).join('\n');
+  }
+  if (type.name?.text === 'Index' && names.includes('retireSettingsPresentation')) {
+    dependencies.SettingsHost ??= actualGeneralSettingsTypes(dependencies).SettingsHost;
+    capturedOwnerFields += '\n'+type.members.filter(m=>['settingsHost','settingsPresentationIdentity'].includes(m.name?.getText(tree))).map(m=>m.getText(tree)).join('\n');
   }
   const methods = names.flatMap(name => type.members.filter(m => m.name?.getText(tree) === name).map(m => m.getText(tree))).join('\n');
   const Probe = new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(`class Probe {

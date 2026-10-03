@@ -1,3 +1,5 @@
+import {actualBookshelfOperationTypes,actualBookshelfHostField} from './lib/bookshelf-operation-owner-probe.mjs';
+import {actualSourceManagementTypes,actualSourceManagementHostField} from './lib/source-management-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import {compileHost,setRuntime} from './lib/reading-entry-owner-probe.mjs';
@@ -122,7 +124,6 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
     readingSessionActive: false, navigationGeneration: 0, shelfReadingPreparation: false,
     searchHost:{publication:{shelfAt:()=>[]},searchedSourceIds:()=>[],resume:()=>calls.push('search.resume'),close:()=>calls.push('search.close')},searchPublicationRevision:0, detailToc: [], detailInBookshelf: false, shelfBooks: [], searchDetailCandidates: [], remoteCatalogRefreshAt: new Map(),
     shelfOperation: {generation:0,removalKey:'',busy:false,batchRemovalBusy:false}, offlineMutationGeneration: 0,
-    bookshelfHost: { loadShelfBook: async (sourceId, bookId) => rows.get(`${sourceId}\0${bookId}`) },
     sourceSwitchVisible: false, sourceSwitchState: { kind: 'discovering' },sourceSwitchScopeId:0,readingEntryScopeId:-1,
     searchViewState: view, searchPresentation: presentation, searchOrchestrator: orchestrator,
     getSearchOrchestrator: () => orchestrator,
@@ -135,6 +136,11 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
     getSourceSwitchGateway: () => ({ commitSwitch: async () => { calls.push('UNEXPECTED.switch.commit'); } }),
     startSourceDiscovery: () => { h.sourceSwitchState = { kind: 'candidates', candidates: [] }; },
   });
+  const shelfTypes=actualBookshelfOperationTypes({ReaderRuntimeOwner:authority});
+  h.bookshelfHost=actualBookshelfHostField(h,shelfTypes.Host,{setOrCreate(){}});
+  const sourceTypes=actualSourceManagementTypes({ReaderRuntimeOwner:authority});
+  h.sourcePresentationIdentity='';
+  h.sourceHost=actualSourceManagementHostField(h,sourceTypes.SourceHost);
   const candidate = book => ({ sourceId: book.sourceId, bookUrl: book.bookId, bookName: book.title,
     author: book.author, sourceName: book.sourceName });
   return { h, calls, notices, first, second, third, candidate, view, presentation, rows, sessions, gates };
