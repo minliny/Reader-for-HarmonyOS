@@ -77,6 +77,213 @@
       "module": "../common/ReaderRecoveryNotice",
       "view": "this.viewModeRecovery()",
       "proof": "test-bookshelf-view-mode-receipts.mjs + test-typography-carrier-successors.mjs"
+    },
+    {
+      "id": "source-switch-shared-heading",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/source/SourceSwitchWindow.ets",
+        "method": "header",
+        "kind": "Text",
+        "text": "'换源'"
+      },
+      "component": "ReaderBoundedSurfaceHeader",
+      "module": "../common/ReaderBoundedSurfaceHeader",
+      "specId": "source-switch-window",
+      "nativeText": "换源",
+      "bindingMethod": "header",
+      "methodEdges": [],
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets",
+        "method": "titleText",
+        "kind": "Text",
+        "text": "this.title"
+      },
+      "proof": "test-bounded-typography-carriers.mjs + actual composed SDK family probe"
+    },
+    {
+      "id": "local-import-shared-selection-heading",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "fileSelectionPanel",
+        "kind": "Text",
+        "text": "'导入本地书籍'"
+      },
+      "component": "ReaderBoundedSurfaceHeader",
+      "module": "../common/ReaderBoundedSurfaceHeader",
+      "specId": "local-import-selection",
+      "nativeText": "导入本地书籍",
+      "bindingMethod": "fileSelectionHeader",
+      "methodEdges": [
+        [
+          "fileSelectionPanel",
+          "fileSelectionHeader"
+        ]
+      ],
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets",
+        "method": "importTitle",
+        "kind": "Text",
+        "text": "this.title"
+      },
+      "proof": "test-bounded-typography-carriers.mjs + actual composed SDK family probe"
+    },
+    {
+      "id": "local-import-shared-result-heading",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "resultHeader",
+        "kind": "Text",
+        "text": "'导入结果'"
+      },
+      "component": "ReaderBoundedSurfaceHeader",
+      "module": "../common/ReaderBoundedSurfaceHeader",
+      "specId": "local-import-result-content",
+      "nativeText": "导入结果",
+      "bindingMethod": "resultHeader",
+      "methodEdges": [],
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets",
+        "method": "localImportHeader",
+        "kind": "Text",
+        "text": "this.title"
+      },
+      "proof": "test-bounded-typography-carriers.mjs + actual composed SDK family probe"
+    },
+    {
+      "id": "local-import-shared-selection-primary",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "fileSelectionPanel",
+        "kind": "Text",
+        "text": "this.state === 'pickerOpening' ? '正在选择…' : '选择文件'"
+      },
+      "component": "ReaderBoundedSurfaceActions",
+      "module": "../common/ReaderBoundedSurfaceActions",
+      "specId": "local-file-selection",
+      "nativeText": "选择文件",
+      "bindingMethod": "fileSelectionActions",
+      "methodEdges": [
+        [
+          "fileSelectionPanel",
+          "fileSelectionActions"
+        ]
+      ],
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceActions.ets",
+        "method": "fileAction",
+        "kind": "Text",
+        "text": "this.primaryLabel"
+      },
+      "proof": "test-bounded-typography-carriers.mjs + actual composed SDK family probe"
+    },
+    {
+      "id": "local-import-shared-selection-cancel",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "fileSelectionPanel",
+        "kind": "Text",
+        "text": "'取消'"
+      },
+      "component": "ReaderBoundedSurfaceActions",
+      "module": "../common/ReaderBoundedSurfaceActions",
+      "specId": "local-file-selection",
+      "nativeText": "取消",
+      "bindingMethod": "fileSelectionActions",
+      "methodEdges": [
+        [
+          "fileSelectionPanel",
+          "fileSelectionActions"
+        ]
+      ],
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceActions.ets",
+        "method": "fileAction",
+        "kind": "Text",
+        "text": "'取消'"
+      },
+      "proof": "test-bounded-typography-carriers.mjs + actual composed SDK family probe"
+    },
+    {
+      "id": "local-import-shared-result-primary",
+      "kind": "bounded",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "resultFooter",
+        "kind": "Text",
+        "text": "'完成'"
+      },
+      "component": "ReaderBoundedSurfaceActions",
+      "module": "../common/ReaderBoundedSurfaceActions",
+      "specId": "local-import-result",
+      "nativeText": "完成",
+      "bindingMethod": "resultFooter",
+      "methodEdges": [],
+      "target": {
+        "path": "entry/src/main/ets/features/common/ReaderBoundedSurfaceActions.ets",
+        "method": "fileAction",
+        "kind": "Text",
+        "text": "this.primaryLabel"
+      },
+      "proof": "test-bounded-typography-carriers.mjs + actual composed SDK family probe"
+    },
+    {
+      "id": "local-import-body-1",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "fileSelectionPanel",
+        "kind": "Text",
+        "text": "'从系统文件中选择'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "fileSelectionBody",
+        "kind": "Text",
+        "text": "'从系统文件中选择'"
+      },
+      "edge": "this.fileSelectionBody()",
+      "proof": "test-bounded-local-import-composition.mjs + immutable tuple gate"
+    },
+    {
+      "id": "local-import-body-2",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "fileSelectionPanel",
+        "kind": "Text",
+        "text": "'支持多选 TXT、EPUB、MOBI、AZW3'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "fileSelectionBody",
+        "kind": "Text",
+        "text": "'支持多选 TXT、EPUB、MOBI、AZW3'"
+      },
+      "edge": "this.fileSelectionBody()",
+      "proof": "test-bounded-local-import-composition.mjs + immutable tuple gate"
+    },
+    {
+      "id": "local-import-body-3",
+      "kind": "sameFile",
+      "origin": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "fileSelectionPanel",
+        "kind": "Text",
+        "text": "this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。'"
+      },
+      "target": {
+        "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+        "method": "fileSelectionBody",
+        "kind": "Text",
+        "text": "this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。'"
+      },
+      "edge": "this.fileSelectionBody()",
+      "proof": "test-bounded-local-import-composition.mjs + immutable tuple gate"
     }
   ]
 }

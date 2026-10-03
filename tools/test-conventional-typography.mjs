@@ -27,12 +27,12 @@ for (const file of baseline.files) {
   const source = verifyMigrationSource && successor ? restoreTypographyMigration(liveSource, successor) : liveSource;
   const expectedNodes = file.nodes.map(node => verifyMigrationSource ? node : typographySuccessorNode(node, successor));
   const importedRoles = typographyRoleImports(source, file.path);
-  for (const expected of expectedNodes) for (const replacement of Object.values(expected.changes))
-    for (const match of replacement.matchAll(/TYPE_\w+/g))
-      assert.ok(importedRoles.has(match[0]), `${file.path}: actual public semantic role import ${match[0]}`);
   const consumers = auditTypographyConsumers(source, file.path), used = new Set(), edits = [];
   for (const expected of expectedNodes) {
     const replacement = verifyMigrationSource ? undefined : sharedTypographyReplacement(file.path, expected, source);
+    const producerRoles = replacement?.producerPath ? typographyRoleImports(readFileSync(new URL('../' + replacement.producerPath, import.meta.url), 'utf8'), replacement.producerPath) : importedRoles;
+    for (const expression of Object.values(expected.changes)) for (const match of expression.matchAll(/TYPE_\w+/g))
+      assert.ok(producerRoles.has(match[0]), `${file.path}: actual native producer public semantic role import ${match[0]}`);
     const actual = replacement ?? consumers.find(node => !used.has(node) && node.method === (verifyMigrationSource ? expected.method : typographyCarrierMethod(file.path, expected, source)) && node.kind === expected.kind &&
       (!verifyMigrationSource || node.text === expected.text) && node.modifiers.fontSize?.expression === expected.changes.fontSize);
     assert.ok(actual, `${file.path}/${expected.method}: actual production consumer, not a registration row`);

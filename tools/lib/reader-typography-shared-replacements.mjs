@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { auditTypographyConsumers } from './reader-typography-consumer-audit.mjs';
+import { boundedTypographyCarrier } from './bounded-typography-carrier-probe.mjs';
 const require = createRequire(import.meta.url);
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts = require(`${sdk}/node_modules/typescript`);
@@ -48,6 +49,26 @@ export function typographyCarrierMethod(file, expected, pageSource) {
  * rows/counts, physical values or AUTO omissions are changed. */
 export function sharedTypographyReplacement(file, expected, pageSource, targetSource) {
   const entry = successor(file, expected);
+  if (entry?.kind === 'bounded') {
+    for (const [origin, target] of entry.methodEdges ?? []) callsMethod(pageSource, file, origin, target);
+    const { tree, method } = methodOf(pageSource, file, entry.bindingMethod);
+    assert.ok(tree.statements.some(node => ts.isImportDeclaration(node) && node.moduleSpecifier?.text === entry.module &&
+      node.importClause?.namedBindings?.elements?.some(element => element.name?.text === entry.component)), `${entry.id}: actual finite component import`);
+    let found = false;
+    const visit = node => {
+      if ((ts.isCallExpression(node) || ts.isEtsComponentExpression?.(node)) && node.expression?.getText(tree) === entry.component) {
+        const props = node.arguments?.[0];
+        if (props && ts.isObjectLiteralExpression(props)) {
+          const spec = props.properties.find(property => property.name?.text === 'specId');
+          if (spec?.initializer?.text === entry.specId) found = true;
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(method);
+    assert.ok(found, `${entry.id}: real finite binding, not a comment or unrelated shared node`);
+    return boundedTypographyCarrier(entry, file, expected, pageSource, targetSource);
+  }
   if (entry?.kind !== 'shared') return undefined;
   const { tree, method } = methodOf(pageSource, file, expected.method); let found = false;
   assert.ok(tree.statements.some(node => ts.isImportDeclaration(node) && node.moduleSpecifier?.text === entry.module &&
@@ -74,5 +95,5 @@ export function sharedTypographyReplacement(file, expected, pageSource, targetSo
     assert.equal(actual.modifiers[property]?.expression, value, 'exact original shared role is preserved');
     assert.deepEqual(actual.modifiers[property]?.extra, expected.extra[property], 'native secondary options remain exact');
   }
-  return actual;
+  return { ...actual, producerPath: target };
 }

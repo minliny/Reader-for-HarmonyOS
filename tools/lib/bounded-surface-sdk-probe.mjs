@@ -25,9 +25,10 @@ function classOf(source,name,deps){const start=source.indexOf(`export class ${na
 export function boundedSurfaceSdk(options={}){
   const properties=createArkUIPropertyRuntimeProbe();
   const childSources=Object.fromEntries(['ReaderRecoveryAction','ReaderRecoveryNotice','ReaderBoundedSurface','ReaderBoundedSurfaceHeader','ReaderBoundedSurfaceActions'].map(n=>[n,options[n]??read(n)]));
-  const deps={...properties.sdk,...specs,...tokens,readerAppColor,
+  const typography = {...readerTypographyRoles,...options.typographyRoles};
+  const deps={...properties.sdk,...specs,...tokens,...typography,readerAppColor,
     ReaderBoundedFrameModifier:classOf(childSources.ReaderBoundedSurface,'ReaderBoundedFrameModifier',{...specs,readerAppColor}),
-    ReaderBoundedTitleModifier:classOf(childSources.ReaderBoundedSurfaceHeader,'ReaderBoundedTitleModifier',{readerAppColor,...readerTypographyRoles}),
+    ReaderBoundedTitleModifier:classOf(childSources.ReaderBoundedSurfaceHeader,'ReaderBoundedTitleModifier',{readerAppColor,...typography}),
     ReaderBoundedFileActionModifier:classOf(childSources.ReaderBoundedSurfaceActions,'ReaderBoundedFileActionModifier',{}),
   };
   const hooks={...properties.hooks,childSources,mountChildren:true,allowEmptyBranchAdmission:options.allowEmptyBranchAdmission===true};
