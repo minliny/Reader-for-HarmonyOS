@@ -125,12 +125,15 @@ menu.aboutToAppear(); menu.aboutToDisappear();
 const Overlay=productionMotionMethods(file('reading/ReaderTtsConfigOverlay.ets'),
   ['stopPreview','choose','aboutToDisappear','onIdentityChanged']);
 let complete, closed=[];
+const busyChanges=[];
 const overlay=Object.assign(new Overlay(),{mounted:true,generation:0,previewGeneration:0,onPreviewStop(){},busy:false,selectionId:'engine:1',choices:[{id:'system',label:'系统'}],
-  onChoose:()=>new Promise(resolve=>complete=resolve),onClose:id=>closed.push(id)});
+  onChoose:()=>new Promise(resolve=>complete=resolve),onBusyChange:busy=>busyChanges.push(busy),onClose:id=>closed.push(id)});
 overlay.choose('system'); overlay.choose('system'); overlay.selectionId='voice:2'; overlay.onIdentityChanged();
+assert.deepEqual(busyChanges,[false],'replaced selection releases the parent content-cover gate');
 complete(); await tick(); assert.deepEqual(closed,[],'old completion cannot close a newer menu');
 overlay.onChoose=async()=>{throw new Error('切换失败');}; overlay.choose('system'); await tick();
 assert.equal(overlay.errorText,'切换失败'); assert.equal(overlay.busy,false);
+assert.deepEqual(busyChanges,[false],'choice transaction does not own the manager content-cover callback');
 
 // Real adapter methods must reapply changed audio strategy while avoiding
 // repeated activation for identical policy; this is not platform audio proof.
