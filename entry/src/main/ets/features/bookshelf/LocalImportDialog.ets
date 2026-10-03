@@ -9,6 +9,7 @@ import {
   SurfaceWidthSpec,
   resolveHorizontalFrame,
 } from '../common/SurfaceHorizontalGeometry';
+import { DialogSurfaceSpec, resolveDialogSpec } from '../common/ReaderSurfaceSpecs';
 import {
   readerInteractiveSafeLeft,
   readerInteractiveSafeRight,
@@ -27,13 +28,9 @@ import {
   TOK_SPACE_SM,
   TOK_SPACE_XS,
   TOK_BORDER_W,
-  TOK_SURFACE_SOLID,
 } from '../common/ReaderTokens';
 
 import { registerReaderFonts } from '../common/ReaderFonts';
-
-const LOCAL_IMPORT_PANEL_MAX_WIDTH = 350;
-const LOCAL_IMPORT_EDGE_GAP = 20;
 
 export type LocalImportDialogState = 'fileSelection' | 'pickerOpening' | 'importing' | 'result';
 
@@ -77,6 +74,10 @@ export struct LocalImportDialog {
   onSelectFiles: () => void = (): void => {};
   onClose: () => void = (): void => {};
 
+  private surfaceSpec(): DialogSurfaceSpec {
+    return resolveDialogSpec('local-import');
+  }
+
   aboutToAppear(): void {
     this.mounted = true;
     registerReaderFonts(this.getUIContext().getFont());
@@ -100,7 +101,7 @@ export struct LocalImportDialog {
         } else {
           // One persistent opaque shell owns the importing -> result handoff.
           Row().width(this.panelFrame().width).height(this.shellHeight)
-            .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme)).borderRadius(20)
+            .backgroundColor(readerAppColor(this.surfaceSpec().backgroundRole, this.appThemeScheme)).borderRadius(this.surfaceSpec().borderRadius)
             .shadow({ radius: 50, color: readerAppColor('app.LocalImportDialog.build.color.40000000', this.appThemeScheme), offsetX: 0, offsetY: 25 });
           this.importingPanel();
           if (this.batch !== undefined) this.resultPanel();
@@ -255,8 +256,8 @@ export struct LocalImportDialog {
     }
     .width(this.panelFrame().width)
     .height(399.75)
-    .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
-    .borderRadius(20)
+    .backgroundColor(readerAppColor(this.surfaceSpec().backgroundRole, this.appThemeScheme))
+    .borderRadius(this.surfaceSpec().borderRadius)
     .shadow({ radius: 50, color: readerAppColor('app.LocalImportDialog.fileSelectionPanel.color.40000000', this.appThemeScheme), offsetX: 0, offsetY: 25 });
   }
 
@@ -527,9 +528,9 @@ export struct LocalImportDialog {
       readerInteractiveSafeLeft(metrics),
       readerInteractiveSafeRight(metrics),
       new SurfaceWidthSpec(
-        LOCAL_IMPORT_PANEL_MAX_WIDTH,
-        LOCAL_IMPORT_EDGE_GAP,
-        LOCAL_IMPORT_EDGE_GAP,
+        this.surfaceSpec().maxWidth,
+        this.surfaceSpec().edgeGap,
+        this.surfaceSpec().edgeGap,
       ),
     );
   }

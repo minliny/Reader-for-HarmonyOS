@@ -6,7 +6,7 @@ import type { ReaderAppColorRole } from './ReaderThemeRegistry';
  * consumer while a per-variant change stays scoped. Visual values are owned
  * here, not re-derived by callers.
  */
-export type DialogSpecId = 'book-removal' | 'json-import' | 'shelf-group';
+export type DialogSpecId = 'book-removal' | 'json-import' | 'shelf-group' | 'local-import';
 
 export type DialogHeaderFontFamily = 'ReaderNotoSansSC' | 'ReaderNotoSerifSCBold';
 
@@ -161,6 +161,19 @@ const DIALOG_SPECS: Record<DialogSpecId, DialogSurfaceSpec> = {
     actionsLayout: 'row', actionHeight: 0, actionBorderRadius: 0, actionUsesPressFeedback: false,
     actionExtendsTouchRegion: false,
     actionPrimarySurfaceRole: 'TOK_SURFACE_PANEL_SOFT', actionPrimaryLabelRole: 'TOK_INK',
+  }),
+  // Local file import keeps its measured state-specific heights and state
+  // machine. This entry owns only the outer frame and safe horizontal role.
+  'local-import': new DialogSurfaceSpec({
+    maxWidth: 350, edgeGap: 20, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,
+    padding: 20, borderRadius: 20,
+    backgroundRole: 'TOK_SURFACE_SOLID', hasShadow: true, hasBorder: false,
+    headerFontSize: 18, headerFontFamily: 'ReaderNotoSerifSCBold', headerTextAlign: TextAlign.Start,
+    headerLineHeight: 24.75,
+    headerGap: 17, bodyActionsGap: 16, bodyActionsOwnMargin: 0,
+    actionsLayout: 'stack', actionHeight: 44, actionBorderRadius: 22, actionUsesPressFeedback: false,
+    actionExtendsTouchRegion: false,
+    actionPrimarySurfaceRole: 'TOK_PRIMARY_DARK', actionPrimaryLabelRole: 'TOK_ON_PRIMARY',
   }),
 };
 
