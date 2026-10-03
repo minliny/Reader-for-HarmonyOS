@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
@@ -37,7 +38,7 @@ const executable = stripTypeScriptTypes(
 assert.doesNotMatch(executable, /^import /m, 'the Node harness must not retain platform imports');
 
 let currentOwner;
-globalThis.ReaderRuntimeOwner={current:()=>currentOwner};
+globalThis.ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
 globalThis.isReaderCoreTransactionPendingError=()=>false;
 globalThis.hilog = {
   warn() {}, error() {}, info() {}, debug() {}, fatal() {},

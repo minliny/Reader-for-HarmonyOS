@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
 
 import {
   SurfaceWidthSpec,
@@ -75,8 +76,14 @@ assert.match(directory, /readerInteractiveSafeBottom\(ReaderWindowCoordinator\.m
 assert.doesNotMatch(directory, /@Prop isTablet/,
   'Full Directory must select its layout from the live container');
 
-assert.match(sourceSwitch, /\.width\(this\.windowWidth\(\)\)/);
-assert.match(sourceSwitch, /\.height\(this\.windowHeight\(\)\)/);
+assert.match(sourceSwitch, /ReaderBoundedSurface\(\{ specId: 'source-switch-window', width: this\.windowWidth\(\), height: this\.windowHeight\(\)/);
+for (const [width,height] of [[240,300],[300,385],[280,320]]) {
+  const kit=boundedSurfaceSdk();
+  const frame=kit.consumer(read('entry/src/main/ets/features/common/ReaderBoundedSurface.ets'),undefined,{}, {specId:'source-switch-window',width,height});
+  frame.initialRender();
+  const painted=[...frame.nodes.values()].find(node=>node.backgroundColor);
+  assert.equal(painted.width,width);assert.equal(painted.height,height,'actual SDK shared frame respects clamped owner geometry');
+}
 assert.match(sourceSwitch, /readerInteractiveSafeLeft\(metrics\)/);
 assert.doesNotMatch(sourceSwitch, /\.width\(300\)/,
   'Source Switch children must follow the clamped live window');
