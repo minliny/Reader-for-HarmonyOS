@@ -29,6 +29,7 @@ let currentRuntime;
 export const setCurrentRuntime=value=>{currentRuntime=value;};
 export const Runtime = { current: () => currentRuntime, isCurrent: runtime => currentRuntime === runtime && !runtime.closed };
 const common = { ReaderRuntimeOwner: Runtime, ...sdk, ...errors, ...metadata, ...acquisition, ...category, ...scheduler };
+export const ReaderCoreRequestError = sdk.ReaderCoreRequestError;
 export const Gateway = compile(read('features/source/SourceSwitchGateway.ts'), 'SourceSwitchGateway', common);
 const Core = compile(read('app/ReaderCoreGateway.ts'), 'ReaderCoreGateway', common);
 export const gatewayExports = compile(read('features/source/SourceSwitchGateway.ts'),
