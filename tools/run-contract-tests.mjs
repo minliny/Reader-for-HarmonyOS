@@ -33,8 +33,13 @@ export function runContracts(root, tier) {
 /** Opt-in bounded execution of the same classified inventory. Each test has
  * its own process and log. All started tests settle; every failure is retained
  * and the gate is nonzero. No test result or prior source snapshot is reused. */
-export async function runContractsBounded(root, tier, workers = 1) {
+export async function runContractsBounded(root, tier, workers = 1, testOptions = {}) {
   assert.ok(Number.isInteger(workers) && workers >= 1 && workers <= 4, 'workers must be an integer in 1..4');
+  // Shorter deadlines are only an imported test seam, never a CLI/env option.
+  const timeoutMs = testOptions.timeoutMs ?? 300_000;
+  const killGraceMs = testOptions.killGraceMs ?? 1_000;
+  assert.ok(Number.isInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= 300_000, 'invalid test deadline');
+  assert.ok(Number.isInteger(killGraceMs) && killGraceMs > 0 && killGraceMs <= 10_000, 'invalid termination grace');
   const { selected, integrationCount } = contractTests(root, tier);
   const logRoot = mkdtempSync(resolve(tmpdir(), 'reader-contract-run-'));
   const results = []; let cursor = 0;
@@ -43,27 +48,44 @@ export async function runContractsBounded(root, tier, workers = 1) {
       const name = selected[cursor++], started = Date.now(), log = resolve(logRoot, name + '.log');
       const fd = openSync(log, 'wx');
       const result = await new Promise(resolveResult => {
-        let child;
+        let child, error, deadline, escalation;
+        let timedOut = false, exited = false;
+        const termination = [];
         try {
           child = spawn(process.execPath, [resolve(root, 'tools', name)],
-            { cwd: root, stdio: ['ignore', fd, fd], timeout: 300_000 });
-        } catch (error) { resolveResult({ error: error.code ?? error.message }); return; }
-        let error;
+            { cwd: root, stdio: ['ignore', fd, fd] });
+        } catch (failure) { resolveResult({ error: failure.code ?? failure.message, timedOut, termination }); return; }
+        const terminate = signal => {
+          try { termination.push({ signal, sent: child.kill(signal) }); }
+          catch (failure) { error ??= failure.code ?? failure.message; termination.push({ signal, sent: false }); }
+        };
+        deadline = setTimeout(() => {
+          if (exited) return;
+          timedOut = true;
+          terminate('SIGTERM');
+          escalation = setTimeout(() => { if (!exited) terminate('SIGKILL'); }, killGraceMs);
+        }, timeoutMs);
         child.once('error', event => { error = event.code ?? event.message; });
-        child.once('close', (status, signal) => resolveResult({ status, signal, error }));
+        child.once('exit', () => { exited = true; clearTimeout(deadline); clearTimeout(escalation); });
+        child.once('close', (status, signal) => {
+          clearTimeout(deadline); clearTimeout(escalation);
+          resolveResult({ status, signal, error, timedOut, termination });
+        });
       });
       closeSync(fd);
       const row = { name, ...result, milliseconds: Date.now() - started, log };
       results.push(row);
-      console.log(`${name}: ${!row.error && row.status === 0 ? 'PASS' : 'FAIL'} (${row.milliseconds}ms)`);
+      console.log(`${name}: ${!row.error && !row.timedOut && row.status === 0 ? 'PASS' : 'FAIL'} (${row.milliseconds}ms)`);
     }
   }
   await Promise.all(Array.from({ length: Math.min(workers, selected.length) }, worker));
   results.sort((a, b) => a.name.localeCompare(b.name));
   assert.equal(results.length, selected.length, 'every selected test must settle');
   writeFileSync(resolve(logRoot, 'results.json'), JSON.stringify({ tier, workers, results }, null, 2) + '\n');
-  const failed = results.filter(row => row.error || row.status !== 0);
-  if (failed.length) throw new Error(failed.map(row => `${row.name} failed (${row.error ?? row.status ?? row.signal}); ${row.log}`).join('\n'));
+  const failed = results.filter(row => row.error || row.timedOut || row.status !== 0);
+  if (failed.length) throw new Error(failed.map(row => `${row.name} failed (${row.timedOut
+    ? `timeout ${timeoutMs}ms; exit ${row.status ?? row.signal}; termination ${row.termination.map(entry => entry.signal).join(',')}`
+    : row.error ?? row.status ?? row.signal}); ${row.log}`).join('\n'));
   console.log(`Host ${tier} contract tests passed: ${selected.length}; integration tests classified: ${integrationCount}; logs: ${logRoot}`);
   return { selected, results, logRoot };
 }

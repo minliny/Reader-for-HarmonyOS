@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runContracts, runContractsBounded, contractTests } from './run-contract-tests.mjs';
 
@@ -32,6 +32,61 @@ try {
   writeFileSync(join(root, 'tools/test-fail.mjs'), 'process.exit(0)');
   const completed = await runContractsBounded(root, 'full', 2);
   assert.deepEqual(completed.results.map(row => row.name).sort(), ['test-fail.mjs', 'test-pass.mjs']);
-  assert.ok(completed.results.every(row => row.status === 0));
-  console.log('PASS: failed, unclassified, duplicate and empty test tiers cannot report success');
+  assert.ok(completed.results.every(row => row.status === 0 && row.timedOut === false && row.termination.length === 0));
+
+  const nativeFixture = (label, scripts) => {
+    const directory = join(root, label); mkdirSync(join(directory, 'tools'), { recursive: true });
+    for (const [name, source] of Object.entries(scripts)) writeFileSync(join(directory, 'tools', name), source);
+    writeFileSync(join(directory, 'tools/contract-test-tiers.json'), JSON.stringify({ schemaVersion: 1, source: Object.keys(scripts), integration: [] }));
+    return directory;
+  };
+  const failedResults = async (directory, workers, options, expected) => {
+    let failure;
+    try { await runContractsBounded(directory, 'full', workers, options); } catch (error) { failure = error; }
+    assert.ok(failure, 'an actual failed/expired child cannot report PASS');
+    assert.match(failure.message, expected);
+    const log = failure.message.match(/\); ([^\n]+\.log)/)?.[1]; assert.ok(log, 'per-child failure log retained');
+    return JSON.parse(readFileSync(join(dirname(log), 'results.json'), 'utf8')).results;
+  };
+
+  // A child which cleans up and exits zero after TERM still exceeded its deadline.
+  const cleanTimeout = nativeFixture('term-clean-exit', {
+    'test-cleanup.mjs': "process.on('SIGTERM',()=>process.exit(0));setInterval(()=>{},1000);",
+    'test-after.mjs': 'process.exit(0);',
+  });
+  const cleanRows = await failedResults(cleanTimeout, 1, { timeoutMs: 1_000, killGraceMs: 180 }, /test-cleanup.mjs failed \(timeout/);
+  const cleanRow = cleanRows.find(row => row.name === 'test-cleanup.mjs');
+  assert.equal(cleanRow.status, 0); assert.equal(cleanRow.signal, null); assert.equal(cleanRow.timedOut, true);
+  assert.deepEqual(cleanRow.termination, [{ signal: 'SIGTERM', sent: true }]);
+  assert.equal(cleanRows.find(row => row.name === 'test-after.mjs').status, 0, 'other selected child still executes');
+
+  // An uncooperative real child is forcibly reaped after a finite grace period.
+  const ignoreTimeout = nativeFixture('term-ignored', {
+    'test-ignore.mjs': "process.on('SIGTERM',()=>{});setInterval(()=>{},1000);",
+    'test-after.mjs': 'process.exit(0);',
+  });
+  const ignoredRows = await failedResults(ignoreTimeout, 1, { timeoutMs: 1_000, killGraceMs: 180 }, /test-ignore.mjs failed \(timeout/);
+  const ignored = ignoredRows.find(row => row.name === 'test-ignore.mjs');
+  assert.equal(ignored.status, null); assert.equal(ignored.signal, 'SIGKILL'); assert.equal(ignored.timedOut, true);
+  assert.deepEqual(ignored.termination, [{ signal: 'SIGTERM', sent: true }, { signal: 'SIGKILL', sent: true }]);
+  assert.equal(ignoredRows.find(row => row.name === 'test-after.mjs').status, 0);
+
+  // Observe real process overlap, failure exit 7 and all eight settlements.
+  const trace = join(root, 'native-child-overlap.jsonl'), scripts = {};
+  for (let index = 0; index < 8; index++) scripts[`test-child-${index}.mjs`] =
+    `import {appendFileSync} from 'node:fs';const trace=${JSON.stringify(trace)};` +
+    `appendFileSync(trace,JSON.stringify({kind:'start',pid:process.pid})+'\\n');` +
+    `setTimeout(()=>{appendFileSync(trace,JSON.stringify({kind:'end',pid:process.pid})+'\\n');process.exit(${index === 0 ? 7 : 0});},80);`;
+  const concurrent = nativeFixture('actual-concurrency', scripts);
+  const rows = await failedResults(concurrent, 2, { timeoutMs: 2_000, killGraceMs: 180 }, /test-child-0.mjs failed \(7\)/);
+  assert.deepEqual(rows.map(row => row.name), Object.keys(scripts));
+  assert.equal(rows[0].status, 7); assert.ok(rows.slice(1).every(row => row.status === 0 && !row.timedOut));
+  let active = 0, peak = 0; const pids = new Set();
+  for (const event of readFileSync(trace, 'utf8').trim().split('\n').map(line => JSON.parse(line))) {
+    if (event.kind === 'start') { assert.equal(pids.has(event.pid), false); pids.add(event.pid); active++; peak = Math.max(peak, active); }
+    else { assert.equal(pids.delete(event.pid), true); active--; }
+    assert.ok(active >= 0 && active <= 2, 'actual native overlap stays within the configured two workers');
+  }
+  assert.equal(active, 0); assert.equal(peak, 2); assert.equal(pids.size, 0);
+  console.log('PASS: failed/unclassified/duplicate/empty tiers, timeout cleanup exit0, TERM ignore/KILL, actual concurrency bound and every selected settlement');
 } finally { rmSync(root, { recursive: true, force: true }); }
