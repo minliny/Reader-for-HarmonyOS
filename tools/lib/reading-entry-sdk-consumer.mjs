@@ -15,7 +15,7 @@ const methods=['getReadingEntryHost','readingEntryLease','applyReadingEntrySnaps
  'readingPreparationContext','sharedReadingPreparationSeeds','preparePersistedShelfBooks','prepareVisibleReadingBooks','onSearchVisibilityChanged',
  'openLocalBookDetail','openRemoteBookDetail','onRemoteSessionReady','installRemoteReadingSession','probeRemoteContentVerdict','refreshCachedChapterFromPrompt','chooseCachedChapterRefresh',
  'refreshDetailAcquisitionProjection','openReading','isKnownDetailChapter','presentPreparedReading','returnToReadingOrigin','applyReaderDirectoryProjection',
- 'nextNavigationGeneration','retireSourceSwitchPresentation','retireRssPresentation','isCurrentRuntime','showIndexAlert','showReadingFailure',
+ 'nextNavigationGeneration','retireSourceSwitchPresentation','retireRssPresentation','retireRssEditorPresentation','isCurrentRuntime','showIndexAlert','showReadingFailure',
  'externalDirectory','detailContent','detailSurface','isCurrentDetailPresentation','detailShelfAdmissionIdentity','isCurrentDetailShelfAdmission','detailReadableAdmission','detailBookKey','remoteContentVerdictLabel'];
 const Runtime={current:()=>{throw Error('consumer must use captured mounted Runtime');},isCurrent:owner=>ProductionHost.forRuntime(owner).owns(owner)};
 const emptyAdmission={key:'',generation:0,adding:false,cancelling:false,message:'',confirmation:'none'};

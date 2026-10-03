@@ -52,6 +52,7 @@ const effectsSource = readFileSync(new URL('../../entry/src/main/ets/app/ReaderR
 const readerRuleMutationEffects = new Function('RULES_MUTATION_METHODS',
   stripTypeScriptTypes(effectsSource.replace(/^import[\s\S]*?;\n/gm, '')).replace(/\bexport /g, '') + ';return readerRuleMutationEffects;')(RULES_MUTATION_METHODS);
 const require = createRequire(import.meta.url);
+import {bookshelfSourceDisplayName} from '../../entry/src/main/ets/features/bookshelf/BookshelfSourceNameProjection.ts';
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts = require(`${sdk}/node_modules/typescript`);
 const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
@@ -61,7 +62,7 @@ const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
  * This does not simulate ArkUI layout, reactive delivery, or compositor pixels. */
 export function productionMotionMethods(file, names, dependencies = {}) {
   const fixtureRuntime = { captureReadingContentValidity: () => () => true, waitForReadingContentIdle: async () => {} };
-  dependencies = { ReaderCoreNotDispatchedError, readerAppColor, readerThemeDefinition, readingChapterLayoutMap, hasKnownReadingImageGeometry, errorMessageOf,
+  dependencies = { bookshelfSourceDisplayName, ReaderCoreNotDispatchedError, readerAppColor, readerThemeDefinition, readingChapterLayoutMap, hasKnownReadingImageGeometry, errorMessageOf,
     ...readerTypographyRoles, readerRuleMutationEffects, RssPresentationProjection, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner, ReaderStartupContentOwner, ReaderProgressProducerHost, ReaderNativeAlertOwner, ReaderNativeAlertLease, ReaderReadingImageResources, sameReaderReadingImageResource, ReaderReadingRecordHost, ReadingRecordRecoveryError,
     hilog: { error() {} }, ReaderRuntimeOwner: runtimeOwnerIdentityProbe(() => fixtureRuntime), ...dependencies };
   // Older fixtures inject current() as the instance-storage seam. Keep their
@@ -88,7 +89,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
   let expanded;
   do {
     expanded = false;
-    for (const helper of ['waitForPredecessorClose', 'errorMessage', 'isCurrentDetailProjection', 'consumeTemporaryBackBridge', 'isCurrentRuntime', 'showReaderAlert', 'showIndexAlert', 'isMountedToken', 'isSelectionCurrent', 'preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent', 'retireSourceSwitchPresentation', 'retireRssPresentation', 'retireRssEditorPresentation', 'isCurrentRssEditorPresentation', 'persistMeasuredCanonicalProgress', 'readingPrefetchLease', 'getReadingEntryHost', 'readingEntryLease', 'applyReadingEntrySnapshot', 'bindReadingEntryReader', 'retireReadingEntryPresentation', 'readingPreparationContext', 'sharedReadingPreparationSeeds', 'chooseCachedChapterRefresh', 'readerReplaceRuntimeCurrent', 'projectReaderReplaceWriteFacts']) {
+    for (const helper of ['waitForPredecessorClose', 'errorMessage', 'isCurrentDetailProjection', 'consumeTemporaryBackBridge', 'isCurrentRuntime', 'showReaderAlert', 'showIndexAlert', 'isMountedToken', 'isSelectionCurrent', 'preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent', 'retireSourceSwitchPresentation', 'retireRssPresentation', 'retireRssEditorPresentation', 'isCurrentRssEditorPresentation', 'persistMeasuredCanonicalProgress', 'readingPrefetchLease', 'getReadingEntryHost', 'readingEntryLease', 'applyReadingEntrySnapshot', 'bindReadingEntryReader', 'retireReadingEntryPresentation', 'readingPreparationContext', 'sharedReadingPreparationSeeds', 'chooseCachedChapterRefresh', 'readerReplaceRuntimeCurrent', 'projectReaderReplaceWriteFacts', 'loadDirectoryOperationProjections', 'detailReadableAdmission', 'detailBookKey']) {
     if (!names.includes(helper) && type.members.some(m => m.name?.getText(tree) === helper) &&
       (capturedOwnerFields.includes(`this.${helper}(`) || type.members.some(m => names.includes(m.name?.getText(tree)) && m.getText(tree).includes(`this.${helper}(`)))) { names.push(helper); expanded = true; }
     }
