@@ -1,0 +1,13 @@
+# Source Management actual Index consumer boundary
+
+Input owner: root d1c6019b, exact original-Runtime SourceOrchestrator/SourceHost. Index now binds once for its instance/mount/navigation Source identity and checks that attachment on each of the nine physical page callbacks. A same-identity getter never reattaches after another live Index owns the presentation. Navigation/disappearance detaches only the original identity. Sources/status/operation remain DTO projections from the original owner.
+
+SourceManagementPage is the existing temporary page keyed only by navigation generation; its row dimensions, state badges, toggle, detector/login controls, toolbar and all wording remain unchanged. No persistent Reader tree is remounted. Its actual row ReaderToggle callback captures the row and the page's original scoped Index callback. TemporaryBack registration follows the same Source lease.
+
+The existing JSON dialog's generation/nav/mount/Runtime admission additionally carries the original SourceHost and Source presentation ID. executeJsonImport carries the same original identity into the original serialized owner. Late picker/results cannot publish into a successor Source visit or Index. A native import-result search-return action also checks that original Source lease even when both Index instances are still alive in the same Runtime/navigation values.
+
+New test-source-index-presentation-consumers executes the production SourceHost initializer and complete production Host/Orchestrator/Gateway, installed SDK Index Builder and Source page row/ReaderToggle, detector/login, JSON local button, and the actual native Alert owner. Eleven groups cover live physical controls; all old page/modal callbacks; alive getter versus successor attachment; confirmed write plus read failure; unknown plus pure native retry and remount; accepted before/after-startup toggle; late picker; nav/mount/runtime retirement; native search-return; and removal of the production attachment guard as an observable negative control. Controlled RPC transport is a local dependency seam, not Core SQLite or native scheduling/layout proof.
+
+Existing Source/Settings receipt matrix, Rules 14 actual Core SQLite/SDK cases, portable JSON transport/static contract and JSON real shell/draft/validation/propagation gates retain their original assertions. Root's new Source lifetime test is registered in the source tier; the new actual Index/SDK consumer gate is integration. The 100 private-style budgets remain unchanged.
+
+Warm Source ownership is now consumed by the application. Cold Source ordinary update/delete exact receipt/intent coverage is a separate required Core/Host gap and is not declared passed by this consumer migration.

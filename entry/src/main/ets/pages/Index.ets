@@ -490,15 +490,20 @@ struct Index {
   private syncPresentationIdentity: string = '';
   private mountedRuntimeOwner: ReaderRuntimeOwner | undefined;
   private temporaryBackLease: TemporaryBackLease | undefined;
+  private sourcePresentationIdentity: string = '';
   private sourceHost: SourceHost = new SourceHost(
-    (sources: BookSource[]): void => { this.sourceSources = sources; },
+    (sources: BookSource[]): void => { if (this.isCurrentSourceManagement(this.navigationGeneration, this.mountedRuntimeOwner,
+      this.detailShelfAdmissionMount, this.sourceHost, this.sourcePresentationIdentity)) this.sourceSources = sources; },
     (): boolean => this.route === 'source',
     (kind: SourceManagementStatusKind, message: string): void => {
-      this.sourceStatusKind = kind;
-      this.sourceStatusMessage = message;
+      if (this.isCurrentSourceManagement(this.navigationGeneration, this.mountedRuntimeOwner,
+        this.detailShelfAdmissionMount, this.sourceHost, this.sourcePresentationIdentity)) {
+        this.sourceStatusKind = kind; this.sourceStatusMessage = message;
+      }
     },
     undefined,
-    (operation: SourceManagementProjection): void => { this.sourceOperation = operation; },
+    (operation: SourceManagementProjection): void => { if (this.isCurrentSourceManagement(this.navigationGeneration, this.mountedRuntimeOwner,
+      this.detailShelfAdmissionMount, this.sourceHost, this.sourcePresentationIdentity)) this.sourceOperation = operation; },
   );
   private sourceToolsOrchestrator: SourceToolsOrchestrator | undefined;
   private readonly sourceToolsInstanceIdentity: number = ++sourceToolsIndexInstance;
@@ -576,6 +581,7 @@ struct Index {
   }
 
   aboutToDisappear(): void {
+    this.retireSourceManagementPresentation();
     this.temporaryBackLease = undefined;
     this.nativeAlertOwner.retire();
     this.shelfReceiptRetired = true;
@@ -1668,25 +1674,59 @@ struct Index {
   }
 
   @Builder
-  private sourceManagementContent(generation: number = this.navigationGeneration, owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner) {
+  private sourceManagementContent() {
+    ForEach([this.navigationGeneration], (generation: number) => {
+      this.sourceManagementSurface(generation, this.mountedRuntimeOwner, this.detailShelfAdmissionMount,
+        this.sourceHost, this.sourcePresentationIdentity);
+    }, (generation: number): string => generation.toString());
+  }
+  @Builder
+  private sourceManagementSurface(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: SourceHost, identity: string) {
     SourceManagementPage({
-      onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void =>
-        this.registerTemporaryBackBridge('source', generation, owner, handler, identity),
+      onTemporaryBackBridge: (handler: (() => boolean) | undefined, bridgeIdentity: string): void => {
+        if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity))
+          this.registerTemporaryBackBridge('source', generation, owner, handler, bridgeIdentity);
+      },
       sources: this.sourceSources,
       operation: this.sourceOperation,
-      onReconcile: (generation: number): void => this.sourceHost.reconcile(generation),
+      onReconcile: (expected: number): void => {
+        if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) host.reconcile(expected, identity);
+      },
       statusKind: this.sourceStatusKind,
       statusMessage: this.sourceStatusMessage,
       isTablet: deviceInfo.deviceType === 'tablet',
       reduceMotion: this.settingsSnapshot.reduceMotion,
-      onBack: (): void => this.returnFromSourceManagement(),
-      onToggleSource: (id: string, enabled: boolean): void => this.onSourceToggled(id, enabled),
-      onDetectSource: (id: string): void => this.onSourceDetectionRequested(id),
-      onLoginSource: (id: string): void => this.onSourceLoginRequested(id),
-      onAddSource: (): void => this.openJsonImport('bookSource'),
-      onOpenTools: (): void => this.openSourceTools(),
-      onRetryLoad: (): void => this.sourceHost.retryLoad(),
+      onBack: (): void => { if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) this.returnFromSourceManagement(); },
+      onToggleSource: (id: string, enabled: boolean): void => {
+        if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) host.toggleSource(id, enabled, identity);
+      },
+      onDetectSource: (id: string): void => { if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) host.checkSource(id, identity); },
+      onLoginSource: (id: string): void => { if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) host.loginSource(id, identity); },
+      onAddSource: (): void => { if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) this.openJsonImport('bookSource'); },
+      onOpenTools: (): void => { if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) this.openSourceTools(); },
+      onRetryLoad: (): void => { if (this.isCurrentSourceManagement(generation, owner, mounting, host, identity)) host.retryLoad(identity); },
     });
+  }
+  private bindSourceManagement(): boolean {
+    const owner = this.mountedRuntimeOwner, host = this.sourceHost;
+    const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    if (owner === undefined || !this.isCurrentSourceManagement(generation, owner, mounting, host, '', false)) return false;
+    const identity = JSON.stringify([this.rssInstanceIdentity, mounting, generation, 'source']);
+    if (identity === this.sourcePresentationIdentity) return host.isPresentationCurrent(owner, identity);
+    host.detachPresentation(this.sourcePresentationIdentity); this.sourcePresentationIdentity = identity;
+    return host.bindPresentation(owner, identity,
+      (): boolean => this.isCurrentSourceManagement(generation, owner, mounting, host, identity, false));
+  }
+  private isCurrentSourceManagement(generation: number, owner: ReaderRuntimeOwner | undefined,
+    mounting: number, host: SourceHost, identity: string, attached: boolean = true): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && this.route === 'source' &&
+      generation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount &&
+      owner === this.mountedRuntimeOwner && this.isCurrentRuntime(owner) && host === this.sourceHost &&
+      (!attached || (identity.length > 0 && identity === this.sourcePresentationIdentity && host.isPresentationCurrent(owner, identity)));
+  }
+  private retireSourceManagementPresentation(): void {
+    this.sourceHost.detachPresentation(this.sourcePresentationIdentity); this.sourcePresentationIdentity = '';
   }
 
   @Builder
@@ -2038,7 +2078,7 @@ struct Index {
     this.sourceManagementReturnTarget = returnTarget;
     this.sourceManagementSearchKeyword = searchKeyword;
     this.route = 'source';
-    this.sourceHost.open();
+    if (this.bindSourceManagement()) this.sourceHost.open(this.sourcePresentationIdentity);
   }
 
   /** Enter Source Management from the Search page's add/manage-source intents. */
@@ -2085,7 +2125,7 @@ struct Index {
   private returnToSourceManagement(): void {
     this.nextNavigationGeneration();
     this.route = 'source';
-    this.sourceHost.open();
+    if (this.bindSourceManagement()) this.sourceHost.open(this.sourcePresentationIdentity);
   }
 
   private returnToSettings(): void {
@@ -2144,52 +2184,62 @@ struct Index {
   private onSourceToggled(id: string, enabled: boolean): void {
     // SS-SOURCE-TOGGLE-01 orchestration (serial chain, Core-idle retry, session
     // guards) lives in SourceOrchestrator; Index only forwards the intent.
-    this.sourceHost.toggleSource(id, enabled);
+    const owner = this.mountedRuntimeOwner;
+    if (this.isCurrentSourceManagement(this.navigationGeneration, owner, this.detailShelfAdmissionMount, this.sourceHost, this.sourcePresentationIdentity))
+      this.sourceHost.toggleSource(id, enabled, this.sourcePresentationIdentity);
   }
 
   private onSourceDetectionRequested(id: string): void {
-    this.sourceHost.checkSource(id);
+    const owner = this.mountedRuntimeOwner;
+    if (this.isCurrentSourceManagement(this.navigationGeneration, owner, this.detailShelfAdmissionMount, this.sourceHost, this.sourcePresentationIdentity))
+      this.sourceHost.checkSource(id, this.sourcePresentationIdentity);
   }
 
   private onSourceLoginRequested(id: string): void {
-    this.sourceHost.loginSource(id);
+    const owner = this.mountedRuntimeOwner;
+    if (this.isCurrentSourceManagement(this.navigationGeneration, owner, this.detailShelfAdmissionMount, this.sourceHost, this.sourcePresentationIdentity))
+      this.sourceHost.loginSource(id, this.sourcePresentationIdentity);
   }
 
   @Builder
   private jsonImportContent() {
     ForEach([this.jsonImportGeneration], (presentation: number) => {
       this.jsonImportSurface(presentation, this.navigationGeneration, this.mountedRuntimeOwner,
-        this.detailShelfAdmissionMount, this.jsonImportContext, this.rulesManagementOrchestrator, this.rulesPresentationIdentity);
+        this.detailShelfAdmissionMount, this.jsonImportContext, this.rulesManagementOrchestrator, this.rulesPresentationIdentity,
+        this.sourceHost, this.sourcePresentationIdentity);
     }, (identity: number): string => identity.toString());
   }
 
   @Builder
   private jsonImportSurface(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
-    mounting: number, context: JsonImportContext, rules: RulesManagementOrchestrator | undefined, identity: string) {
+    mounting: number, context: JsonImportContext, rules: RulesManagementOrchestrator | undefined, identity: string,
+    source: SourceHost, sourceIdentity: string) {
     JsonImportDialog({
       title: this.jsonImportTitle(),
       description: this.jsonImportDescription(),
       isTablet: deviceInfo.deviceType === 'tablet',
       onDismiss: (): void => {
-        if (this.isCurrentJsonImportPresentation(presentation, generation, owner, mounting, context, rules, identity)) this.dismissJsonImport();
+        if (this.isCurrentJsonImportPresentation(presentation, generation, owner, mounting, context, rules, identity, source, sourceIdentity)) this.dismissJsonImport();
       },
       onSelectLocal: (): void => {
-        if (!this.isCurrentJsonImportPresentation(presentation, generation, owner, mounting, context, rules, identity)) return;
-        this.dismissJsonImport(); this.executeJsonImport(context, undefined, rules, identity);
+        if (!this.isCurrentJsonImportPresentation(presentation, generation, owner, mounting, context, rules, identity, source, sourceIdentity)) return;
+        this.dismissJsonImport(); this.executeJsonImport(context, undefined, rules, identity, source, sourceIdentity);
       },
       onImportOnline: (url: string): void => {
-        if (!this.isCurrentJsonImportPresentation(presentation, generation, owner, mounting, context, rules, identity)) return;
-        this.dismissJsonImport(); this.executeJsonImport(context, url, rules, identity);
+        if (!this.isCurrentJsonImportPresentation(presentation, generation, owner, mounting, context, rules, identity, source, sourceIdentity)) return;
+        this.dismissJsonImport(); this.executeJsonImport(context, url, rules, identity, source, sourceIdentity);
       },
     });
   }
 
   private isCurrentJsonImportPresentation(presentation: number, generation: number, owner: ReaderRuntimeOwner | undefined,
-    mounting: number, context: JsonImportContext, rules: RulesManagementOrchestrator | undefined, identity: string): boolean {
+    mounting: number, context: JsonImportContext, rules: RulesManagementOrchestrator | undefined, identity: string,
+    source: SourceHost = this.sourceHost, sourceIdentity: string = this.sourcePresentationIdentity): boolean {
     return owner !== undefined && !this.shelfReceiptRetired && this.jsonImportVisible &&
       presentation === this.jsonImportGeneration && generation === this.navigationGeneration &&
       mounting === this.detailShelfAdmissionMount && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) &&
-      context === this.jsonImportContext && (context !== 'ruleBundle' || (rules !== undefined &&
+      context === this.jsonImportContext && (context !== 'bookSource' ||
+        this.isCurrentSourceManagement(generation, owner, mounting, source, sourceIdentity)) && (context !== 'ruleBundle' || (rules !== undefined &&
         this.isCurrentRulesPresentation(generation, owner, mounting, rules, identity)));
   }
 
@@ -2216,21 +2266,27 @@ struct Index {
   }
 
   private executeJsonImport(context: JsonImportContext, onlineUrl?: string,
-    rules: RulesManagementOrchestrator | undefined = this.rulesManagementOrchestrator, identity: string = this.rulesPresentationIdentity): void {
+    rules: RulesManagementOrchestrator | undefined = this.rulesManagementOrchestrator, identity: string = this.rulesPresentationIdentity,
+    source: SourceHost = this.sourceHost, sourceIdentity: string = this.sourcePresentationIdentity): void {
     if (context === 'bookSource' && this.route === 'source') {
-      this.sourceHost.importBookSources(
+      const generation = this.navigationGeneration, owner = this.mountedRuntimeOwner, mounting = this.detailShelfAdmissionMount;
+      const current = (): boolean => this.isCurrentSourceManagement(generation, owner, mounting, source, sourceIdentity);
+      if (!current()) return;
+      source.importBookSources(
         onlineUrl,
         (completion: SourceImportCompletion): void => {
+          if (!current()) return;
           const base = completion.refreshWarning ?? `Core 已导入 ${completion.importedCount} 个书源`;
           const message = completion.failureSummary === undefined ?
             `${base}。` : `${base}，${completion.failureSummary}`;
           if (this.sourceManagementReturnTarget === 'search') {
-            this.showSourceImportResultFromSearch('书源导入完成', message);
+            this.showSourceImportResultFromSearch('书源导入完成', message, current);
             return;
           }
-          this.showSourceImportResult('书源导入完成', message);
+          this.showSourceImportResult('书源导入完成', message, current);
         },
-        (error: Error): void => this.showSourceImportResult('书源导入失败', error.message),
+        (error: Error): void => { if (current()) this.showSourceImportResult('书源导入失败', error.message, current); },
+        sourceIdentity,
       );
       return;
     }
@@ -2288,8 +2344,8 @@ struct Index {
     }
   }
 
-  private showSourceImportResult(title: string, message: string): void {
-    if (this.route !== 'source') {
+  private showSourceImportResult(title: string, message: string, current: () => boolean = (): boolean => true): void {
+    if (this.route !== 'source' || !current()) {
       return;
     }
     this.showIndexAlert('notice', {
@@ -2299,7 +2355,7 @@ struct Index {
         value: '知道了',
         action: (): void => {},
       },
-    });
+    }, current);
   }
 
   /**
@@ -2307,13 +2363,13 @@ struct Index {
    * one-tap re-search with the original keyword. With no keyword recorded
    * (entry from a sourceRequired state) the plain result dialog applies.
    */
-  private showSourceImportResultFromSearch(title: string, message: string): void {
-    if (this.route !== 'source') {
+  private showSourceImportResultFromSearch(title: string, message: string, current: () => boolean = (): boolean => true): void {
+    if (this.route !== 'source' || !current()) {
       return;
     }
     const keyword = this.sourceManagementSearchKeyword;
     if (keyword.length === 0) {
-      this.showSourceImportResult(title, message);
+      this.showSourceImportResult(title, message, current);
       return;
     }
     const returnTarget = this.sourceManagementReturnTarget;
@@ -2327,12 +2383,12 @@ struct Index {
       secondaryButton: {
         value: `用新书源搜索「${keyword}」`,
         action: (): void => {
-          if (this.route === 'source') {
+          if (current() && this.route === 'source') {
             this.returnFromSourceManagement(true);
           }
         },
       },
-    }, (): boolean => this.sourceManagementSearchKeyword === keyword &&
+    }, (): boolean => current() && this.sourceManagementSearchKeyword === keyword &&
       this.sourceManagementReturnTarget === returnTarget);
   }
 
@@ -5024,6 +5080,7 @@ struct Index {
   }
 
   private nextNavigationGeneration(): number {
+    this.retireSourceManagementPresentation();
     this.retireSourceSwitchPresentation();
     this.retireRssEditorPresentation();
     this.retireRssPresentation();
