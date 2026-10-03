@@ -31,7 +31,8 @@ export function makeIndex(f,{route='search',mount=1,indexSource=read('pages/Inde
  p.hooks.childSources.BookDirectoryPage=read('features/bookshelf/BookDirectoryPage.ets');
  const leaf=createReaderBuilderProbe(src,leafNames,leafDeps,p.hooks).Component;
  const idx=p.consumer(indexSource,[...properties(indexSource).filter(n=>[
-  'detailBook','detailToc','detailInBookshelf','detailLoadingMessage','remoteReadingSession','remoteReadingSeed','remoteContentVerdict'].includes(n)),...methods],
+  'detailBook','detailToc','detailInBookshelf','detailLoadingMessage','remoteReadingSession','remoteReadingSeed','remoteContentVerdict'].includes(n)),...methods,
+  ...(indexSource.includes('private retireBookshelfCatalogPresentation(') ? ['retireBookshelfCatalogPresentation'] : [])],
   {...leafDeps,LocalBookDetail:leaf,ReadingEntryHost:ProductionHost,ReaderRuntimeOwner:{current:()=>{if(f.runtime.closed)throw Error('Runtime unavailable');return f.runtime;},isCurrent:owner=>owner===f.runtime&&!owner.closed},
    ...evidence,ReaderNativeAlertOwner,EMPTY_READABLE_ADMISSION:emptyAdmission,LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{info(){},warn(){},error(){}}});
  Object.assign(idx,{mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:mount,navigationGeneration:0,
