@@ -375,6 +375,7 @@
     "test-reader-tts-gateway.mjs",
     "test-reader-tts-navigation-generation.mjs",
     "test-reader-tts-page-follow.mjs",
+    "test-reader-tts-popup-surface.mjs",
     "test-reader-tts-quick-preparation.mjs",
     "test-reader-tts-short-window.mjs",
     "test-reader-tts-waveform.mjs",
