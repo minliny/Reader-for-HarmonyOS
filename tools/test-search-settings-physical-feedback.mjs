@@ -22,6 +22,15 @@ function registerBuilders(source) { for (const m of source.matchAll(/@Builder\s+
 class NativeChild {
   constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
 }
+// BookshelfManagementPage now consumes named ReaderTypography roles. This
+// layout probe only exercises Scroll alignment, so provide stable style
+// objects for the imported roles without changing the production tuples.
+const shelfTypography = Object.fromEntries([
+  'NOTE', 'STATUS', 'BODY', 'BODY_MUTED', 'META', 'GROUP_TITLE', 'ROW_ACTION',
+  'BOOK_TITLE', 'HEADING', 'BUTTON', 'SMALL_ACTION',
+].map(name => [`TYPE_SHELF_MANAGEMENT_${name}`, {
+  fontFamily: 'ReaderNotoSansSC', fontWeight: 400, fontSizeFp: 12, lineHeightFp: 16,
+}]));
 for (const [name, file] of [['CategoryRow', 'features/settings/CategoryRow.ets'], ['PageBackBar', 'features/common/PageBackBar.ets'], ['MainTabBar', 'features/shell/MainTabBar.ets'], ['ReaderToggle', 'features/common/ReaderToggle.ets']]) {
   syntax.componentCollection.customComponents.add(name);
   syntax.propCollection.set(name, new Set([...read(file).matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
@@ -125,6 +134,7 @@ await check('PH34 actual General and Rules Scrolls align short contents at the t
     for (const m of source.matchAll(/@BuilderParam\s+(\w+)\s*:/g)) builders.add(m[1]);
     const { owner } = createReaderBuilderProbe(source, ['build'], {
       PageBackBar: NativeChild, ReaderToggle: NativeChild, READER_FLOATING_TOP_BAR_HEIGHT: 58,
+      ...shelfTypography,
     });
     Object.assign(owner, { activeSection: 'general', showOverlay: false, appThemeScheme: 'day',
       contentFrame: () => ({ left: 18, right: 18 }), generalBottomContentInset: () => 34,
