@@ -456,6 +456,7 @@
     "test-reading-catalog-refresh.mjs",
     "test-reading-directory-fixture.mjs",
     "test-reading-entry-preparation.mjs",
+    "test-reading-entry-host.mjs",
     "test-reading-neighbour-preparation.mjs",
     "test-reading-offline-completion.mjs",
     "test-reading-offline-gateway.mjs",
