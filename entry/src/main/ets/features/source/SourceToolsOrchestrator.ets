@@ -150,6 +150,11 @@ export class SourceToolsOrchestrator {
     this.presentationIdentity = ''; this.emit = (): void => {}; this.isCurrent = (): boolean => false;
   }
 
+  isPresentationCurrent(identity: string): boolean {
+    try { return identity.length > 0 && identity === this.presentationIdentity &&
+      ReaderRuntimeOwner.isCurrent(this.owner) && this.isCurrent(); } catch (_) { return false; }
+  }
+
   current(): SourceToolsSnapshot { return this.copySnapshot(this.snapshot); }
 
   private readonly gateway: SourceGateway;

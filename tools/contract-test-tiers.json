@@ -526,6 +526,7 @@
     "test-shelf-resume-handoff.mjs",
     "test-shelf-source-name-resolution.mjs",
     "test-source-canonical-progress-owner.mjs",
+    "test-source-cold-index-consumers.mjs",
     "test-source-content-correction.mjs",
     "test-source-index-presentation-consumers.mjs",
     "test-source-management-cold-owner.mjs",

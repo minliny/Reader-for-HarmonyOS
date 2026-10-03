@@ -1,5 +1,7 @@
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import type { SourceManagementProjection } from './SourceHost';
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { TYPE_FORM_COMPACT_ACTION, TYPE_FORM_HINT, TYPE_FORM_LABEL_ACTION, TYPE_SEARCH_RESULT_INTRO, TYPE_SOURCE_MANAGEMENT_COUNT, TYPE_SOURCE_MANAGEMENT_STATUS, TYPE_SOURCE_MANAGEMENT_TITLE, TYPE_SOURCE_STATE_TITLE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 // Source Management — rebuilt 2026-08-05 against live Figma nodes
@@ -101,6 +103,7 @@ export struct SourceManagementPage {
   @Prop reduceMotion: boolean = false;
   @Prop operation: SourceManagementProjection = { action: 'load', sourceId: '' };
   onReconcile: (generation: number) => void = (_generation: number): void => {};
+  onContinueOriginal: (generation: number) => void = (_generation: number): void => {};
   @Prop statusKind: SourceManagementStatusKind = 'idle';
   @Prop statusMessage: string = '';
   onBack: () => void = (): void => {};
@@ -287,6 +290,38 @@ export struct SourceManagementPage {
 
   private recovery(): ReaderRecoveryView { return readerRecoveryView(this.operation.receipt, this.operation.readFacts, this.operation.confirmedParts ?? 0); }
 
+  private originalRecoveryView(): ReaderRecoveryView {
+    const original = this.operation.original;
+    return { message: original?.message ?? '', visible: original?.blocked === true,
+      canRetry: false, generation: original?.generation ?? 0 };
+  }
+
+  private originalActionIdentities(): string[] {
+    const original = this.operation.original;
+    if (original?.blocked !== true) return [];
+    return [JSON.stringify([this.temporaryBackIdentity, original.operationId ?? '', original.generation, original.writeStage])];
+  }
+
+  private originalActionGeneration(identity: string): number { return Number((JSON.parse(identity) as string[])[2]); }
+  private originalActionCurrent(identity: string): boolean {
+    return this.mounted && this.originalActionIdentities().indexOf(identity) >= 0 && this.operation.original?.busy !== true;
+  }
+
+  @Builder
+  private originalRecovery() {
+    ReaderRecoveryNotice({ view: this.originalRecoveryView() });
+    ForEach(this.originalActionIdentities(), (identity: string) => {
+      ReaderRecoveryAction({ label: '核对原操作回执', generation: this.originalActionGeneration(identity),
+        actionEnabled: this.operation.original?.busy !== true,
+        onReconcile: (generation: number): void => { if (this.originalActionCurrent(identity)) this.onReconcile(generation); } });
+      if (this.operation.original?.canRetryOriginal === true) {
+        ReaderRecoveryAction({ label: this.operation.original?.confirmation === 'confirmed' && this.operation.original?.writeStage === 'cleanup' ? '继续原清理' : '继续原操作',
+          generation: this.originalActionGeneration(identity), actionEnabled: this.operation.original?.busy !== true,
+          onReconcile: (generation: number): void => { if (this.originalActionCurrent(identity)) this.onContinueOriginal(generation); } });
+      }
+    }, (identity: string): string => identity);
+  }
+
   @Builder
   private statusBanner() {
     Row({ space: TOK_SPACE_XS }) {
@@ -445,7 +480,8 @@ export struct SourceManagementPage {
         Column() {
           this.searchField();
           this.statsRow();
-          if (this.statusKind !== 'idle' || this.recovery().visible) { this.statusBanner(); }
+          if (this.operation.original?.blocked === true) { this.originalRecovery(); }
+          else if (this.statusKind !== 'idle' || this.recovery().visible) { this.statusBanner(); }
           this.filterArea();
           this.categoryFilter();
         }.width('100%').padding({ bottom: TOK_SPACE_CONTROL_INLINE });
@@ -538,7 +574,7 @@ export struct SourceManagementPage {
         this.statusBadgeDot(source),
       );
 
-      this.sourceSwitch(source.enabled, (): void => this.onToggleSource(source.sourceId, !source.enabled));
+      this.sourceSwitch(source.enabled, (): void => { if (this.operation.original?.blocked !== true) this.onToggleSource(source.sourceId, !source.enabled); });
 
     }
     .width(this.contentFrame().width)

@@ -6,9 +6,13 @@ import {ReaderNativeAlertOwner} from '../entry/src/main/ets/app/ReaderNativeAler
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {compileHost} from './lib/reading-entry-owner-probe.mjs';
 import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
+import {actualSourceManagementTypes} from './lib/source-management-owner-probe.mjs';
 const file=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
 let currentOwner, unavailable=false;
 const authority=runtimeOwnerIdentityProbe(()=>unavailable?undefined:currentOwner);
+const sourceTypes=actualSourceManagementTypes({ReaderRuntimeOwner:authority});
+const ActualTools=bookshelfOperationClass('features/source/SourceToolsOrchestrator.ets','SourceToolsOrchestrator',
+ {ReaderRuntimeOwner:authority,SourceGateway:sourceTypes.SourceGateway});
 const Entry=compileHost(undefined,{ReaderRuntimeOwner:authority,
  RemoteReadingFlowGateway:class {constructor(owner){this.owner=owner;}async loadChapter(session,index){this.owner.calls.push('chapter.content');this.owner.revision+=2;
  return{sourceId:session.identity.sourceId,bookId:session.identity.bookId,chapterIndex:index,chapterUrl:session.entries[0].url,
@@ -17,7 +21,7 @@ const EMPTY_READABLE_ADMISSION={generation:0,adding:false,cancelling:false,confi
 const Index=productionMotionMethods(file,['showIndexAlert','showSourceImportResult','showSourceImportResultFromSearch',
  'requestSourceDelete','requestRssSubscriptionDelete','requestRssSourceImport','showRssOperationResult',
  'requestClearDirectoryBookOffline','refreshCachedChapterFromPrompt','showReadingFailure','nextNavigationGeneration',
- 'aboutToDisappear','confirmRssSubscriptionDelete','rssSubscriptions','importRssSources','bindReadingEntryReader'],{
+ 'aboutToDisappear','confirmRssSubscriptionDelete','rssSubscriptions','importRssSources','bindReadingEntryReader','isCurrentSourceToolsPresentation'],{
  ReadingEntryHost:Entry,EMPTY_READABLE_ADMISSION,LOCAL_SOURCE_ID:'local',
  RssPresentationProjection,ReaderNativeAlertOwner,ReaderRuntimeOwner:{current:()=>{if(unavailable)throw Error('runtime unavailable');return currentOwner;}},isReaderProductSurfaceEnabled:()=>true,
  hilog:{warn(){}},DOMAIN:1,verdictForFailureKind:()=> 'networkFailed',remoteReadingFailureKindOf:()=> 'networkFailed',
@@ -27,20 +31,27 @@ const Index=productionMotionMethods(file,['showIndexAlert','showSourceImportResu
 const ActualBookshelfHost=bookshelfOperationClass('features/bookshelf/BookshelfHost.ets','BookshelfHost');
 function fixture(route='source'){
  unavailable=false;let shown,fail=false;const calls=[];
- const owner={calls,revision:3,bookAcquisitions(){return{readingProjectionRevision:()=>owner.revision,endSearch(){},setPreparationVisible(){}};},readingEntryPreparations:()=>({setPaused(){}})};currentOwner=owner;
+ const owner={calls,revision:3,supportsCoreCapability:()=>false,bookAcquisitions(){return{readingProjectionRevision:()=>owner.revision,endSearch(){},setPreparationVisible(){}};},readingEntryPreparations:()=>({setPaused(){}})};currentOwner=owner;
  const host={deleteSelected(ids){calls.push(['deleteSources',ids]);},removeSubscription(id){calls.push(['deleteRss',id]);},importSources(_replace,done,failed){calls.push('rss.confirmed-write');try{done({imported:2});}catch(error){failed(error);}},exportSources(){}};
  const p=Object.assign(new Index(),{bookshelfHost:new ActualBookshelfHost(()=>{},()=>false),nativeAlertOwner:new ReaderNativeAlertOwner(),route,navigationGeneration:1,shelfReceiptRetired:false,
   mountedRuntimeOwner:owner,detailShelfAdmissionMount:1,detailBook:{sourceId:'s',bookId:'b',title:'书',author:'作者'},
   detailToc:[{index:0,title:'章',url:'/0'}],shelfOperation:{generation:0,removalKey:'',busy:false},detailReadableAdmission:()=>EMPTY_READABLE_ADMISSION,
   sourceManagementReturnTarget:'search',sourceManagementSearchKeyword:'abc',sourceToolsSnapshot:{sources:[{sourceId:'s'}],sourceListRevision:3,selectionRevision:4,busy:false},
-  sourceToolsOrchestrator:host,rssOrchestrator:host,rssPresentation:{kind:'feed',subscriptions:[{subscriptionId:'rss',title:'源'}]},jsonImportVisible:false,
+  sourceToolsPresentationIdentity:'native-tools:1',rssOrchestrator:host,rssPresentation:{kind:'feed',subscriptions:[{subscriptionId:'rss',title:'源'}]},jsonImportVisible:false,
   remoteSessionGeneration:2,remoteReadingSession:{identity:{sourceId:'s',bookId:'b'},book:{title:'书',author:'作者'},sourceVersion:'v',catalogVersion:'c',contextVersion:'x',
    entries:[{index:0,title:'章',url:'/0',variables:[]}],acquisitionMode:'online',hostRequirements:[],continuationVariables:[]},offlineMutationActiveKey:'',
   getSourceToolsOrchestrator:()=>host,getRssOrchestrator:()=>host,returnFromSourceManagement:()=>calls.push('returnSearch'),
   openJsonImport:context=>{calls.push(context);p.jsonImportVisible=true;},clearDirectoryBookOffline:()=>calls.push('clearOffline'),
   getUIContext:()=>({showAlertDialog(options){if(fail)throw Error('platform unavailable');shown=options;}}),
   shelfWriteGeneration:0,searchHost:{close(){}},dismissBookRemovalDialog(){}});
- host.consumeSelection=ids=>{p.sourceToolsSnapshot.selectionRevision++;return ids.filter(id=>p.sourceToolsSnapshot.sources.some(x=>x.sourceId===id));};
+ // The original test observes native effect dispatch rather than a mutation
+ // ACK. Attachment/selection are the actual whole domain class; the new cold
+ // consumer gate separately proves the complete Core/Atomic write journey.
+ const tools=new ActualTools(()=>{},()=>false,owner);tools.snapshot={...tools.current(),...p.sourceToolsSnapshot,
+  selectedSourceIds:['s'],selectedSourceCount:1};p.sourceToolsOrchestrator=tools;
+ tools.deleteSelected=ids=>calls.push(['deleteSources',ids]);
+ tools.attachPresentation(p.sourceToolsPresentationIdentity,snapshot=>p.sourceToolsSnapshot=snapshot,
+  ()=>authority.isCurrent(owner)&&p.route==='sourceTools'&&!p.shelfReceiptRetired);
  host.detachPresentation=()=>{};
  p.bindReadingEntryReader();
  return{p,calls,host,owner,shown:()=>shown,nativeFail:()=>{fail=true;}};
