@@ -42,6 +42,7 @@ import {
 import { NoCoverCover } from './NoCoverCover';
 import { registerReaderShelfFonts } from '../common/ReaderFonts';
 import { BookshelfBookActionSheet } from './BookshelfBookActionSheet';
+import { SheetSurfaceSpec, resolveSheetSpec } from '../common/ReaderSurfaceSpecs';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
   READER_FLOATING_TOP_BAR_HEIGHT,
@@ -285,19 +286,23 @@ export struct BookshelfPage {
       }
     })
     .bindSheet(this.actionBook !== undefined, this.bookActionSheetContent, {
-      height: 270,
+      height: this.bookActionSheetSpec().height,
       width: this.bookActionWidth(),
       preferType: SheetType.CENTER,
       dragBar: false,
       showClose: false,
-      backgroundColor: readerAppColor('app.BookshelfPage.bookshelfTabContent.bindSheet.FFFFFCF8', this.appThemeScheme),
-      radius: { topLeft: 24, topRight: 24, bottomLeft: 0, bottomRight: 0 },
-      maskColor: readerAppColor('app.BookshelfPage.bookshelfTabContent.bindSheet.52000000', this.appThemeScheme),
+      backgroundColor: readerAppColor(this.bookActionSheetSpec().hostBackgroundRole, this.appThemeScheme),
+      radius: { topLeft: this.bookActionSheetSpec().borderRadius, topRight: this.bookActionSheetSpec().borderRadius, bottomLeft: 0, bottomRight: 0 },
+      maskColor: readerAppColor(this.bookActionSheetSpec().hostMaskRole, this.appThemeScheme),
       enableOutsideInteractive: false,
       onDisappear: (): void => {
         this.actionBook = undefined;
       },
     });
+  }
+
+  private bookActionSheetSpec(): SheetSurfaceSpec {
+    return resolveSheetSpec('bookshelf-book-action');
   }
 
   @Builder

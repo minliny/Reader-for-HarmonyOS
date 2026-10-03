@@ -221,6 +221,8 @@ export interface SheetSurfaceSpecInit {
   actionBackgroundRole: ReaderAppColorRole;
   dangerBackgroundRole: ReaderAppColorRole;
   shadowRole: ReaderAppColorRole;
+  hostBackgroundRole: ReaderAppColorRole;
+  hostMaskRole: ReaderAppColorRole;
 }
 
 export class SheetSurfaceSpec {
@@ -256,6 +258,8 @@ export class SheetSurfaceSpec {
   readonly actionBackgroundRole: ReaderAppColorRole;
   readonly dangerBackgroundRole: ReaderAppColorRole;
   readonly shadowRole: ReaderAppColorRole;
+  readonly hostBackgroundRole: ReaderAppColorRole;
+  readonly hostMaskRole: ReaderAppColorRole;
 
   constructor(init: SheetSurfaceSpecInit) {
     this.height = init.height;
@@ -290,6 +294,8 @@ export class SheetSurfaceSpec {
     this.actionBackgroundRole = init.actionBackgroundRole;
     this.dangerBackgroundRole = init.dangerBackgroundRole;
     this.shadowRole = init.shadowRole;
+    this.hostBackgroundRole = init.hostBackgroundRole;
+    this.hostMaskRole = init.hostMaskRole;
   }
 
   actionY(index: number): number {
@@ -315,6 +321,8 @@ const SHEET_SPECS: Record<SheetSpecId, SheetSurfaceSpec> = {
     actionBackgroundRole: 'TOK_PRIMARY_SOFT',
     dangerBackgroundRole: 'app.BookshelfBookActionSheet.actionSlot.backgroundColor.1AD6473D',
     shadowRole: 'app.BookshelfBookActionSheet.build.color.29594632',
+    hostBackgroundRole: 'app.BookshelfPage.bookshelfTabContent.bindSheet.FFFFFCF8',
+    hostMaskRole: 'app.BookshelfPage.bookshelfTabContent.bindSheet.52000000',
   }),
 };
 
