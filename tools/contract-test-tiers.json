@@ -136,6 +136,7 @@
     "test-reader-status-measurement.mjs",
     "test-reader-system-event-host.mjs",
     "test-reader-text-selection-lifecycle.mjs",
+    "test-reader-tts-audio-lease.mjs",
     "test-reader-tts-audition.mjs",
     "test-reader-tts-launch-intent.mjs",
     "test-reader-tts-lifecycle.mjs",

@@ -1,3 +1,4 @@
+import { harmonyTtsAudioSessionLease } from './HarmonyTtsAudioSessionLease';
 import { textToSpeech } from '@kit.CoreSpeechKit';
 import { audio } from '@kit.AudioKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -71,8 +72,8 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   private listenerOwner: string | undefined = undefined;
   private currentRequestId: string | undefined = undefined;
   private audioListenersInstalled: boolean = false;
-  private audioSessionActive: boolean = false;
-  private audioSessionAllowMixing: boolean | undefined = undefined;
+  private readonly audioSessionLease = harmonyTtsAudioSessionLease;
+  private readonly audioSessionOwner: string = this.audioSessionLease.createOwner('system');
   private closed: boolean = false;
 
   constructor() {
@@ -129,33 +130,13 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
 
   async activateAudioSession(allowMixing: boolean): Promise<void> {
     this.assertOpen();
-    let audioSessionManager = this.audioSessionManager;
-    if (audioSessionManager === undefined) {
-      audioSessionManager = audio.getAudioManager().getSessionManager();
-      this.audioSessionManager = audioSessionManager;
-    }
     this.installAudioListeners();
-    if (!this.audioSessionActive || this.audioSessionAllowMixing !== allowMixing) {
-      audioSessionManager.setAudioSessionScene(audio.AudioSessionScene.AUDIO_SESSION_SCENE_MEDIA);
-      const concurrencyMode = allowMixing
-        ? audio.AudioConcurrencyMode.CONCURRENCY_MIX_WITH_OTHERS
-        : audio.AudioConcurrencyMode.CONCURRENCY_PAUSE_OTHERS;
-      await audioSessionManager.activateAudioSession({ concurrencyMode });
-      this.audioSessionActive = true;
-      this.audioSessionAllowMixing = allowMixing;
-    }
+    await this.audioSessionLease.activate(this.audioSessionOwner, allowMixing);
+    this.assertOpen();
   }
 
   async deactivateAudioSession(): Promise<void> {
-    if (!this.audioSessionActive) return;
-    const audioSessionManager = this.audioSessionManager;
-    if (audioSessionManager === undefined) return;
-    try {
-      await audioSessionManager.deactivateAudioSession();
-    } finally {
-      this.audioSessionActive = false;
-      this.audioSessionAllowMixing = undefined;
-    }
+    await this.audioSessionLease.deactivate(this.audioSessionOwner);
   }
 
   async speak(request: ReaderTtsHostSpeakRequest): Promise<void> {

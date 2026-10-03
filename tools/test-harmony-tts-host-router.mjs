@@ -212,6 +212,55 @@ sharedRouter.clearEventListener('coordinator-B');
 sharedRouter.system.emit({ type: 'start', requestId: 'after-final-teardown' });
 assert.equal(pageBEvents.length, 1, 'clearing the current owner must detach the listener');
 
+// Retired mandatory focus ACKs cannot revive foreground/background state, even
+// when the retired transport was waiting as the page stopped or closed.
+for (const ending of ['deactivate', 'close', 'replace']) {
+  let acknowledge;
+  const focus = new Promise(resolve => { acknowledge = resolve; });
+  const speech = new FakeHost('system');
+  speech.activateAudioSession = async () => { await focus; };
+  const lease = { calls: 0, active: false,
+    async activate() { this.calls += 1; this.active = true; return true; },
+    async deactivate() { this.active = false; }, isActive() { return this.active; },
+    async close() { this.active = false; } };
+  const media = { calls: 0, setEventListener() {}, async activate() { this.calls += 1; }, publish() {}, async close() {} };
+  const router = new HarmonyTtsHostRouter(speech, new FakeHost('http'), media, lease);
+  const activation = router.activateAudioSession(false);
+  const retired = assert.rejects(activation, /admission retired/);
+  const observation = router.waitForBackgroundPlaybackAdmission();
+  if (ending === 'deactivate') await router.deactivateAudioSession();
+  if (ending === 'close') await router.close();
+  if (ending === 'replace') await router.selectEngine('http-tts:42');
+  acknowledge(); await retired;
+  assert.equal(await observation, false, 'old admission cannot report successor capability');
+  assert.equal(router.isBackgroundPlaybackActive(), false);
+  assert.equal(lease.calls, 0); assert.equal(media.calls, 0);
+  if (ending !== 'close') {
+    speech.activateAudioSession = async () => {};
+    await router.activateAudioSession(false);
+    assert.equal(await router.waitForBackgroundPlaybackAdmission(), true, 'fresh admission remains usable');
+    await router.close();
+  }
+  await assert.rejects(router.activateAudioSession(false), /closed/);
+  assert.equal((await router.probe()).available, false);
+}
+
+// A delayed selection or event cannot replace/notify a successor after close.
+{
+  let select;
+  const speech = new FakeHost('system'), http = new FakeHost('http');
+  http.selectEngine = async () => new Promise(resolve => { select = resolve; });
+  let mediaListener;
+  const router = new HarmonyTtsHostRouter(speech, http, {setEventListener(listener){mediaListener=listener;},async activate(){},publish(){},async close(){}});
+  const events=[];router.setEventListener(event=>events.push(event),'page');
+  const pending=router.selectEngine('http-tts:42');
+  await router.selectEngine('system');select(true);
+  assert.equal(await pending,false);assert.equal(router.active,speech);
+  await router.close();router.setEventListener(event=>events.push(event),'late-page');
+  speech.emit({type:'start',requestId:'old'});mediaListener({type:'mediaControl',action:'play'});
+  assert.deepEqual(events,[]);
+}
+
 const httpHostSource = await readFile(
   new URL('../entry/src/main/ets/app/HarmonyHttpTtsHost.ts', import.meta.url),
   'utf8',
