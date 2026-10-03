@@ -93,7 +93,7 @@ assert.doesNotMatch(menu,/'分组管理'/);for(const label of ['批量管理','�
 assert.match(menu,/Polygon\(/);assert.match(menu,/Polyline\(/);assert.match(menu,/this\.surfaceSpec\(\)\.borderRadius/);
 assert.match(menu,/if \(this.reduceMotion\)[\s\S]*?this.panelHeight = this\.surfaceSpec\(\)\.expandedHeight/);
 assert.match(index,/onBookshelfSettingsRequested: \(\): void => this.openBookshelfSettings\(\)/);
-assert.match(index,/BookshelfSettingsPage\(/);assert.match(index,/onOpenBookshelfSettings: \(\): void => this.openBookshelfSettings\(\)/);
+assert.match(index,/BookshelfSettingsPage\(/);assert.match(index,/onOpenBookshelfSettings: \(\): void => \{ if \(this\.isCurrentSettingsPresentation\(generation, owner, mounting, host, 'settings', identity\)\) this\.openBookshelfSettings\(\); \}/);
 assert.match(dialog,/this.panelFrame\(\).width - 32/,'Figma 2657:906 full inner width');
 assert.match(dialog,/resultItemsNatural\(/);assert.match(dialog,/onAreaChange/);assert.doesNotMatch(dialog,/count \* 61|Math.min\(410|Math.min\(636/);
 assert.match(dialog,/localImportResultLayout\(/);assert.match(dialog,/summaryIcon\(/);

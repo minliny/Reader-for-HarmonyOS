@@ -13,12 +13,12 @@ function makeSettings(f,{mount=1}={}){
   'clearTextCache','applyCacheCleanup','onCacheCleanupChanged','mounted','themeOwner','temporaryBackIdentity','resetMessage','cacheCleanupInFlight','cacheActionLabel'];
  const pageDeps={ReaderRuntimeOwner:f.Runtime,readerRecoveryView,ReaderNativeAlertOwner};p.hooks.childSources.SettingsPage=pageSource;
  const leaf=p.consumer(pageSource,pageNames,pageDeps).constructor;
- const idx=p.consumer(read('pages/Index.ets'),['settingsSnapshot','settingsOperation','settingsCacheCleanup','settingsContent','isCurrentSettingsPresentation','isCurrentRuntime','reconcileSettingsCache','clearTextCache'],
+ const idx=p.consumer(read('pages/Index.ets'),['settingsSnapshot','settingsOperation','settingsCacheCleanup','settingsContent','settingsSurface','bindSettingsPresentation','retireSettingsPresentation','isCurrentSettingsPresentation','isCurrentRuntime','reconcileSettingsCache','clearTextCache'],
   {ReaderRuntimeOwner:f.Runtime,SettingsPage:leaf,deviceInfo:{deviceType:'phone'}});
  Object.assign(idx,{route:'settings',navigationGeneration:1,detailShelfAdmissionMount:mount,mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,
-  settingsSnapshot:{autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true},settingsOperation:{action:'load'},settingsSection:'general'});
- const host=new f.SettingsHost(()=>{},()=>idx.settingsSnapshot,()=>idx.route==='settings',undefined,()=>{},(snapshot,owner)=>{if(idx.isCurrentRuntime(owner)&&idx.route==='settings')idx.settingsCacheCleanup=snapshot;});
- idx.settingsHost=host;
+  rssInstanceIdentity:1,settingsPresentationIdentity:'',settingsSnapshot:{autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true},settingsOperation:{action:'load'},settingsSection:'general'});
+ const host=new f.SettingsHost(()=>{},()=>idx.settingsSnapshot,()=>idx.route==='settings',()=>f.runtime.getUIAbilityContext(),()=>{},(snapshot,owner)=>{if(idx.isCurrentRuntime(owner)&&idx.route==='settings')idx.settingsCacheCleanup=snapshot;});
+ idx.settingsHost=host;assert.equal(idx.bindSettingsPresentation(),true);
  let rendered=false;const render=()=>{if(!rendered){idx.settingsContent();rendered=true;}else idx.replay();const page=[...idx.children.values()].find(c=>c instanceof leaf);Object.assign(page,{mounted:true,themeOwner:f.runtime,temporaryBackIdentity:'settings:'+mount,appThemeScheme:'day'});page.operationFeedback();return page;};
  const actors=page=>p.walk(page).filter(c=>c instanceof p.deps.ReaderRecoveryAction);
  const native=(page,label)=>{const a=actors(page).find(c=>c.label===label);assert.ok(a,label);const n=[...a.nodes.values()].find(n=>n.onClick);assert.equal(n.height,36);assert.equal(n.borderRadius,6);return n.onClick;};

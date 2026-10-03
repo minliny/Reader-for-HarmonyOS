@@ -1,3 +1,5 @@
+import {removalFixture} from './lib/bookshelf-removal-durable-probe.mjs';
+import {until} from './lib/bookshelf-management-durable-probe.mjs';
 import {projectionIndexMethods} from './lib/bookshelf-projection-owner-probe.mjs';
 import {configIntentFixture} from './lib/sync-config-intent-fixture.mjs';
 import {actualBookshelfOperationTypes,actualBookshelfHostField,bookshelfOperationClass} from './lib/bookshelf-operation-owner-probe.mjs';
@@ -60,31 +62,33 @@ class Gateway {selectLocalBookInputs(){const d=deferred();picks.push(d);return d
 const operationTypes=actualBookshelfOperationTypes({ReaderRuntimeOwner:Runtime,BookshelfFlowGateway:Gateway,projectPersistedReceipt,ReaderWriteEvidence});
 const Index=productionMotionMethods(path('pages/Index.ets'),[...projectionIndexMethods,'beginImport','isCurrentImport','closeImportDialog','openImportDialog','hasUnknownShelfWrite',
  'hasVisibleImportDialog','visibleImportDialogState','visibleImportBatch','currentImportPresentation','reconcileImportPresentation'], {ReaderRuntimeOwner:Runtime});
-function index(){currentOwner={};let serialized='';const page=Object.assign(new Index(),{route:'bookshelf',navigationGeneration:1,shelfReceiptRetired:false,
+async function index(){const actual=await removalFixture();currentOwner=actual.runtime;actual.Runtime.isCurrent=owner=>Runtime.isCurrent(owner);
+ const actualTypes=actualBookshelfOperationTypes({...actual,ReaderRuntimeOwner:Runtime,BookshelfManagementIntentStore:actual.Store,BookshelfRemovalGateway:actual.BookshelfRemovalGateway,BookshelfFlowGateway:Gateway,projectPersistedReceipt,ReaderWriteEvidence});
+ let serialized='';const page=Object.assign(new Index(),{route:'bookshelf',navigationGeneration:1,shelfReceiptRetired:false,
  mountedRuntimeOwner:currentOwner,detailShelfAdmissionMount:1,rssInstanceIdentity:1,bookshelfViewState:{anchorKey:'',anchorOffset:0},searchHost:{sources:()=>[],updateShelf(){}},sourceSources:[],sourceToolsSnapshot:{sources:[]},scheduleBookshelfBackgroundRefresh(){},preparePersistedShelfBooks(){},bookshelfLoadGeneration:0,shelfOperation:{...operationTypes.EMPTY_BOOKSHELF_OPERATION_SNAPSHOT},storedImportPresentation:'',shelfReadingFilter:'all',shelfSourceFilter:'all',
  applyBookshelfState:x=>applied.push(x)});
- page.bookshelfHost=actualBookshelfHostField(page,operationTypes.Host,{setOrCreate:(_k,value)=>{serialized=value;presented.push(value?JSON.parse(value):undefined);}});
- page.reconcileImportPresentation();page.openImportDialog();return page;}
+ page.bookshelfHost=actualBookshelfHostField(page,actualTypes.Host,{setOrCreate:(_k,value)=>{serialized=value;presented.push(value?JSON.parse(value):undefined);}});
+ page.reconcileImportPresentation();await until(()=>!page.bookshelfHost.operations(currentOwner).current().reconcileBusy);page.openImportDialog();return page;}
 const outcome=(batch,shelf)=>{const projection=projectPersistedReceipt({confirmation:'confirmed',readback:'succeeded',value:shelf});return{batch,shelf,readback:projection.receipt,operation:projection.facts};};
 const batch={state:'completed',items:[{fileName:'a',state:'success'}],imported:1,failed:0};
 {
- const i=index();const work=i.beginImport();await i.beginImport();assert.equal(picks.length,1,'pickerOpening prevents duplicate picker');
+ const i=await index();const before=picks.length,work=i.beginImport();await i.beginImport();await until(()=>picks.length===before+1);assert.equal(picks.length,1,'pickerOpening prevents duplicate picker');
  picks.at(-1).resolve([{state:'ready'}]);await settle();i.route='reading';i.navigationGeneration++;
  imports.at(-1).resolve(outcome(batch,'committed'));await work;
  assert.equal(applied.length,0,'navigation during import cannot use an old bool');assert.equal(i.bookshelfLoadGeneration,1);
 }
 {
- const i=index();const old=i.beginImport();i.closeImportDialog();i.openImportDialog();const count=picks.length;await i.beginImport();assert.equal(picks.length,count,'closing picker retains accepted mutex');
+ const i=await index();const before=picks.length,old=i.beginImport();await until(()=>picks.length===before+1);i.closeImportDialog();i.openImportDialog();const count=picks.length;await i.beginImport();assert.equal(picks.length,count,'closing picker retains accepted mutex');
  picks.at(-1).resolve([{state:'ready'}]);await old;assert.equal(released.length,1,'unused stale picker resources released');
- const fresh=i.beginImport();picks.at(-1).resolve([]);await fresh;assert.equal(presented.at(-1).state,'fileSelection','picker cancellation is not a result');
+ const countBefore=picks.length,fresh=i.beginImport();await until(()=>picks.length===countBefore+1);picks.at(-1).resolve([]);await fresh;assert.equal(presented.at(-1).state,'fileSelection','picker cancellation is not a result');
 }
 {
- const i=index();const work=i.beginImport();picks.at(-1).resolve([{state:'ready'}]);await settle();
+ const i=await index();const before=picks.length,work=i.beginImport();await until(()=>picks.length===before+1);picks.at(-1).resolve([{state:'ready'}]);await settle();
  i.closeImportDialog();i.openImportDialog();imports.at(-1).resolve(outcome(batch,'old'));await work;
  assert.equal(applied.length,0,'same-route close/reopen revokes old result');assert.equal(presented.at(-1).state,'fileSelection');
 }
 {
- const i=index();const work=i.beginImport();picks.at(-1).resolve([{state:'ready'}]);await settle();
+ const i=await index();const before=picks.length,work=i.beginImport();await until(()=>picks.length===before+1);picks.at(-1).resolve([{state:'ready'}]);await settle();
  currentOwner={};imports.at(-1).resolve(outcome(batch,'old-runtime'));await work;assert.equal(applied.length,0);currentOwner=owner;
 }
 const books=[{sourceId:'https://bad.test',bookId:'1',title:'a',author:'b',currentChapterTitle:'current',group:''},

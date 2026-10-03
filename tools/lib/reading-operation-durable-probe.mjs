@@ -1,3 +1,5 @@
+import {fixture as actualGeneralSettingsFixture} from './general-settings-persistence-probe.mjs';
+import {runtimeOwnerIdentityProbe} from './reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import { promises as fsp } from 'node:fs';
@@ -40,7 +42,7 @@ export async function until(predicate){for(let i=0;i<200;i++){if(predicate())ret
 export async function fixture(official=false,existing){
  const root=existing?.root??await fsp.mkdtemp(resolve(tmpdir(),'reader-host-durable-')),files=resolve(root,'files'),core=resolve(root,'core');await fsp.mkdir(files,{recursive:true});
  const options={},calls=[],publications=[],io={finishes:0,failWrites:0,fsyncs:0};let installed,uuid=0;
- const Runtime={isCurrent:o=>installed===o&&!o.closed};
+ const Runtime=runtimeOwnerIdentityProbe(()=>installed);
  const fileIo={OpenMode:{READ_ONLY:fs.constants.O_RDONLY,READ_WRITE:fs.constants.O_RDWR},
   async readText(path){try{return await fsp.readFile(path,'utf8');}catch(e){if(e.code==='ENOENT')throw {code:13900002};throw e;}},
   async open(path,flags){return {fd:fs.openSync(path,flags)};},async close(handle){fs.closeSync(handle.fd);},
@@ -78,7 +80,11 @@ export async function fixture(official=false,existing){
  const Offline=compile('features/reading/ReadingOfflineHost.ts','ReadingOfflineHost',{ReaderWriteEvidence,projectPersistedReceipt,ReadingOfflineGateway},official);
  const SettingsGateway=compile('features/settings/SettingsCacheGateway.ts','SettingsCacheGateway',{CacheClearOperationIntentStore:types.CacheClearOperationIntentStore},official);
  const SettingsOwner=compile('features/settings/SettingsCacheCleanupOwner.ts','SettingsCacheCleanupOwner',{ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,projectOperationFacts,SettingsCacheGateway:SettingsGateway},official);
- const SettingsHost=compile('features/settings/SettingsHost.ets','SettingsHost',{ReaderRuntimeOwner:Runtime,SettingsCacheCleanupOwner:SettingsOwner,SettingsOrchestrator:class{}},official);
+ const general=actualGeneralSettingsFixture();general.setActive(runtime);
+ general.Runtime.isCurrent=owner=>Runtime.isCurrent(owner);general.Runtime.current=()=>Runtime.current();
+ const generalHost=new general.Host(()=>{},()=>({autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true}),()=>true,()=>runtime.getUIAbilityContext());
+ assert.equal(generalHost.bindPresentation(runtime,'reading-cache-general-factory',()=>Runtime.isCurrent(runtime)),true);
+ const SettingsHost=compile('features/settings/SettingsHost.ets','SettingsHost',{ReaderRuntimeOwner:Runtime,SettingsCacheCleanupOwner:SettingsOwner,SettingsOrchestrator:generalHost.orchestrator.constructor},official);
  const bookmarkStore=new types.BookmarkOperationIntentStore(runtime,()=>Runtime.isCurrent(runtime)),clearStore=new types.CacheClearOperationIntentStore(runtime,()=>Runtime.isCurrent(runtime));
  const directory=Directory.forRuntime(runtime,()=>Runtime.isCurrent(runtime),undefined,bookmarkStore),offline=Offline.forRuntime(runtime,()=>Runtime.isCurrent(runtime),undefined,clearStore),settings=SettingsOwner.forRuntime(runtime,v=>publications.push(structuredClone(v)));
  let entries=[{index:0,title:'Chapter',level:2,downloadState:'completed',bookmarks:[]}],route=true;

@@ -16,8 +16,8 @@ const checks = [
   ['duplicate taps are gated', settings.includes('cacheCleanupInFlight')],
   ['typed gateway invokes canonical text-only method', gateway.includes("this.intents.execute('cache.clear', { scope: 'cache' }, { sourceId: 'cache', bookId: 'global-text' }") && !index.includes("request('cache.clear'")],
   ['typed gateway validates returned scope and all counts', gateway.includes("data['scope'] !== 'cache'") && gateway.includes('Number.isSafeInteger')],
-  ['Settings wiring consumes typed result under captured presentation', index.includes('this.clearTextCache(generation, owner)')],
-  ['existing Host owns finite cleanup', host.includes('new SettingsCacheCleanupOwner(owner') && index.includes('this.settingsHost.clearCache(owner, current)')],
+  ['Settings wiring consumes typed result under captured presentation', index.includes('this.clearTextCache(generation, owner, mounting, host, identity)')],
+  ['existing Host owns finite cleanup', host.includes('SettingsCacheCleanupOwner.forRuntime(owner') && index.includes('return host.clearCache(owner, current)')],
   ['lost ACK cannot replay command', owner.includes("this.snapshot.confirmation === 'unknown'") && owner.includes("canRetry: confirmation === 'undispatched'")],
 ];
 
