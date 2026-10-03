@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
+import { fixture as sourceFixture } from './lib/source-management-durable-probe.mjs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -13,41 +13,16 @@ const orchestrator = read('entry/src/main/ets/features/source/SourceOrchestrator
 const page = read('entry/src/main/ets/features/source/SourceManagementPage.ets');
 const index = read('entry/src/main/ets/pages/Index.ets');
 
-// Exercise the real gateway decoder/contract logic with an injected owner.
-// The helper modules are inlined because data-URL loads cannot resolve
-// relative specifiers like '../../app/ErrorMessage'.
-const errorMessageModule = stripTypeScriptTypes(read('entry/src/main/ets/app/ErrorMessage.ts'))
-  .replace('export function errorMessageOf', 'function errorMessageOf');
-const errorMessageImport =
-  /^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage(\.ts)?['"];$/m;
-const sourceCategoryModule = stripTypeScriptTypes(
-  read('entry/src/main/ets/features/source/ReaderSourceCategory.ts'),
-).replace(/^export /gm, '');
-const sourceCategoryImport =
-  /^import \{ classifyReaderSource, type ReaderSourceCategory \} from ['"]\.\/ReaderSourceCategory['"];$/m;
-// P1-5: the import-time URL gate lives in the shared HttpTransportPolicy;
-// inline the same production module so the harness exercises the real judge.
-const transportPolicyModule = stripTypeScriptTypes(
-  read('entry/src/main/ets/app/HttpTransportPolicy.ts'),
-).replace(/^export /gm, '');
-const transportPolicyImport =
-  /^import \{ httpUrlHostname, isPrivateNetworkTarget \} from ['"][^'"]*HttpTransportPolicy(\.ts)?['"];$/m;
-const executableGateway = stripTypeScriptTypes(
-  gatewaySource
-    .replace(/^import \{ isReaderCoreTransactionPendingError \} from ['"]@reader\/core-harmony['"];$/m, 'const isReaderCoreTransactionPendingError = () => false;')
-    .replace(errorMessageImport, () => errorMessageModule)
-    .replace(transportPolicyImport, () => transportPolicyModule)
-    .replace(sourceCategoryImport, () => sourceCategoryModule)
-    .replace(/^import url from ['"]@ohos\.url['"];$/m, 'const url = { URL };')
-    .replace(/^import type \{ JsonObject \} from ['"]@reader\/core-harmony['"];$/m, '')
-    .replace(/^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m, ''),
-);
-const gatewayUrl = `data:text/javascript;base64,${Buffer.from(executableGateway).toString('base64')}`;
-const { SourceGateway } = await import(gatewayUrl);
-
+// Load the complete production gateway and its genuine Rules owner/store with
+// the installed SDK. This historical decoder suite intentionally exercises
+// the explicitly unsupported-capability path; exact modern ACK/cold recovery
+// is separately covered by the source-management durable suites.
+const fixture = await sourceFixture();
+fixture.options.capability = false;
+const { SourceGateway } = fixture;
 const calls = [];
-const runtimeOwner = {
-  request: async (method, params) => {
+const runtimeOwner = fixture.runtime;
+runtimeOwner.request = async (method, params) => {
     calls.push({ method, params });
     assert.equal(method, 'source.import');
     return {
@@ -57,8 +32,7 @@ const runtimeOwner = {
         imported: true,
       },
     };
-  },
-};
+  };
 const gateway = new SourceGateway(runtimeOwner);
 const single = {
   bookSourceUrl: 'https://source-a.example#remark',

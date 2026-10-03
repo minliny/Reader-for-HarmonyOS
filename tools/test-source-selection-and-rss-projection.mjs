@@ -1,17 +1,16 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
+import { fixture as sourceFixture } from './lib/source-management-durable-probe.mjs';
 import { RssPresentationProjection } from '../entry/src/main/ets/features/rss/RssPresentationProjection.ts';
 
 const read = file => readFileSync(new URL('../entry/src/main/ets/' + file, import.meta.url), 'utf8');
-const code = stripTypeScriptTypes(read('features/source/SourceToolsOrchestrator.ets').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
-let live;
-const { SourceToolsOrchestrator, EMPTY_SOURCE_TOOLS_SNAPSHOT } = new Function('ReaderRuntimeOwner', 'SourceGateway',
-  code + '; return { SourceToolsOrchestrator, EMPTY_SOURCE_TOOLS_SNAPSHOT };')(
-  { current: () => live, isCurrent: owner => owner === live }, class Gateway {});
-const owner = {}; live = owner; let pageCurrent = true; const emitted = [];
+const fixture = await sourceFixture();
+fixture.options.capability = false;
+const { SourceToolsOrchestrator } = fixture;
+const owner = fixture.runtime;
+let pageCurrent = true; const emitted = [];
 const host = new SourceToolsOrchestrator(snapshot => emitted.push(snapshot), () => pageCurrent, owner);
-host.snapshot = { ...EMPTY_SOURCE_TOOLS_SNAPSHOT, sources: [{ sourceId: 'a' }, { sourceId: 'b' }] };
+host.snapshot = { ...host.snapshot, sources: [{ sourceId: 'a' }, { sourceId: 'b' }] };
 const staleUiSelection = host.snapshot.selectedSourceIds;
 host.toggleSelection('a'); host.toggleSelection('a');
 assert.deepEqual(staleUiSelection, []); assert.deepEqual(host.snapshot.selectedSourceIds, [],
@@ -24,7 +23,7 @@ host.setSelection(['a']); host.snapshot.busy = true;
 host.toggleSelection('b'); assert.deepEqual(host.consumeSelection(['a']), []); assert.deepEqual(host.snapshot.selectedSourceIds, ['a']);
 host.snapshot.busy = false; host.pendingOperations = 1; host.selectAll(); assert.deepEqual(host.snapshot.selectedSourceIds, ['a']);
 host.pendingOperations = 0; pageCurrent = false; assert.deepEqual(host.consumeSelection(['a']), []);
-pageCurrent = true; live = {}; assert.deepEqual(host.consumeSelection(['a']), []);
+pageCurrent = true; fixture.install({}); assert.deepEqual(host.consumeSelection(['a']), []);
 
 // Characterized current-UI contract, independent of whether Index still
 // contains the previous implementations. Construct the local-time input so
