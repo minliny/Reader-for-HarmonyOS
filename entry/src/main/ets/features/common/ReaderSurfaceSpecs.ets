@@ -335,7 +335,7 @@ export function resolveSheetSpec(id: SheetSpecId): SheetSurfaceSpec {
  * consumer keeps labels, icons, enabled state and callbacks; this contract
  * owns frame geometry, touch rows and visual roles.
  */
-export type PopupSpecId = 'bookshelf-more-menu' | 'reader-more-menu' | 'source-switch-window' | 'tts-config-manager';
+export type PopupSpecId = 'bookshelf-more-menu' | 'reader-more-menu' | 'source-switch-window' | 'tts-config-manager' | 'settings-select-tablet';
 
 export interface PopupSurfaceSpecInit {
   height: number;
@@ -527,6 +527,27 @@ const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
     pointerStrokeRole: 'app.ReaderTtsConfigOverlay.build.color.66B4A697',
     actionTextRole: 'TOK_TTS_INK', dividerRole: 'app.ReaderTtsConfigOverlay.build.color.66B4A697',
     actionFontFamily: 'ReaderNotoSansSCUIRegular', actionFontSize: 0, actionLineHeight: 0,
+  }),
+  // Tablet settings selector popover.  The options and selection callbacks
+  // remain owned by SettingsSelectOverlay; this entry owns the finite panel
+  // frame and row geometry that used to be duplicated in that consumer.
+  'settings-select-tablet': new PopupSurfaceSpec({
+    height: 0, width: 160, pointerWidth: 0, pointerHeight: 0,
+    actionHeight: 42, actionCount: 0,
+    trailingExtension: 0, anchorOverlap: 6,
+    borderWidth: 1, borderRadius: 10,
+    shadowRadius: 24, shadowOffsetY: 8,
+    actionPaddingLeft: 14, actionPaddingRight: 14,
+    actionIconSize: 14, dividerInset: 14, dividerHeight: 1,
+    pointerPoints: [],
+    surfaceBackgroundRole: 'app.SettingsSelectOverlay.tabletPanel.backgroundColor.FFFAF7F2',
+    surfaceBorderRole: 'app.SettingsSelectOverlay.tabletPanel.color.FFC1C7CD',
+    surfaceShadowRole: 'app.SettingsSelectOverlay.tabletPanel.color.1F1B171F',
+    pointerFillRole: 'app.SettingsSelectOverlay.tabletPanel.backgroundColor.FFFAF7F2',
+    pointerStrokeRole: 'app.SettingsSelectOverlay.tabletPanel.color.FFC1C7CD',
+    actionTextRole: 'app.SettingsSelectOverlay.tabletOption.fontColor.FF1F1B17',
+    dividerRole: 'app.SettingsSelectOverlay.tabletOption.backgroundColor.FFC1C7CD',
+    actionFontFamily: 'ReaderNotoSansSCUIRegular', actionFontSize: 13, actionLineHeight: 16,
   }),
 };
 
