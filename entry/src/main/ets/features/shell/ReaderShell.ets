@@ -81,8 +81,8 @@ export struct ReaderShell {
 
   // 回调 (全部由 Index 提供, 透传到对应子组件)。
   onExitRequestHandler: (requestExit: (intent?: 'navigation') => void) => void = (): void => {};
-  onExit: () => void = (): void => {};
-  onExitCancelled: () => void = (): void => {};
+  onExit: (readerIdentity: string) => void = (_readerIdentity: string): void => {};
+  onExitCancelled: (readerIdentity: string) => void = (_readerIdentity: string): void => {};
   onReadingReady: (chapterIndex: number, sourceId: string, bookId: string, generation: number) => void =
     (_chapterIndex: number, _sourceId: string, _bookId: string, _generation: number): void => {};
   onRemoteSessionReady: (session: RemoteReadingSession) => void = (_session: RemoteReadingSession): void => {};
@@ -179,10 +179,10 @@ export struct ReaderShell {
             if (_identity === this.readingIdentityKey()) this.onExitRequestHandler(requestExit);
           },
           onExit: (): void => {
-            if (_identity === this.readingIdentityKey()) this.onExit();
+            if (_identity === this.readingIdentityKey()) this.onExit(_identity);
           },
           onExitCancelled: (): void => {
-            if (_identity === this.readingIdentityKey()) this.onExitCancelled();
+            if (_identity === this.readingIdentityKey()) this.onExitCancelled(_identity);
           },
           onReadingReady: (chapterIndex: number): void => {
             if (_identity === this.readingIdentityKey())

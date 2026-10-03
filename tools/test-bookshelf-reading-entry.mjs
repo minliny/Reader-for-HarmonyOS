@@ -2,6 +2,7 @@ import { ReaderNativeAlertOwner } from '../entry/src/main/ets/app/ReaderNativeAl
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import * as readerControlState from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
 import * as readerControlHost from '../entry/src/main/ets/features/reading/ReaderControlHostSession.ts';
@@ -36,7 +37,7 @@ const methods = [
   'installRemoteReadingSession(', 'updateRemoteReadableChapterOrder(', 'onRemoteSessionReady(', 'openShelfBook(', 'openShelfBookInfo(', 'openLocalBookDetail(', 'openRemoteBookDetail(',
   'openReading(', 'presentPreparedReading(', 'returnToReadingOrigin(', 'onReaderExited(',
   'returnFromDetail(', 'requestReaderBookInfo(', 'returnToBookshelf(', 'nextNavigationGeneration(', 'isKnownDetailChapter(',
-  'currentSourceSwitchTransactionId(', 'consumeTemporaryBackBridge(', 'isCurrentRuntime(',
+  'currentSourceSwitchTransactionId(', 'consumeTemporaryBackBridge(', 'isCurrentRuntime(', 'currentReaderPresentationIdentity(',
   'consumeSystemFileOpen(',
   'async probeRemoteContentVerdict(', 'remoteContentVerdictLabel(', 'onReadingFailure(',
   'openDetailSourceSwitch(',
@@ -61,6 +62,14 @@ function create(remote = false) {
   const entries = [...(remote ? [{ index: 5, title: '卷一', url: '' }] : []), { index: 7, title: 'Chapter seven', url: 'chapter-7' }];
   const session = { identity: book, book, entries, acquisitionMode: 'cache' };
   const probes = [], progressReads = [];
+  const runtime = ({ current: () => ({ noteReadingPreparationIntent(sourceId, bookId) {
+      assert.equal(sourceId, book.sourceId); assert.equal(bookId, book.bookId);
+    }, bookAcquisitions: () => ({ readingProjectionRevision:()=>0, endSearch() {}, setPreparationVisible() {}, acquireBookWithBackgroundRefresh: (seed) => {
+      assert.equal(seed.sourceId,book.sourceId,'a shelf preview or resume keeps its durable source identity');
+      assert.equal(seed.bookId,book.bookId,'a shelf preview or resume keeps its durable book identity');
+      return catalog.promise.then(session => ({ session }));
+    }, acquireCandidateGroup:()=>assert.fail('a shelf book must not enter automatic candidate substitution'), recentFailures: () => [] }) }) }).current();
+  const runtimeAuthority = runtimeOwnerIdentityProbe(() => runtime);
   const Harness = new Function(
     'resolveBookshelfBook', 'LOCAL_SOURCE_ID', 'ReaderRuntimeOwner', 'LocalReadingFlowGateway', 'RemoteReadingFlowGateway',
     'ReadingOfflineGateway', 'ReaderCoreGateway', 'SourceGateway', 'RemoteDetailAdmission',
@@ -70,13 +79,7 @@ function create(remote = false) {
     'sameRemoteSessionEvidence','preparedRemoteChapterMatches','preparedRemoteChapterPositionMatches','captureRemotePositionContext','withPreparedRemoteChapter','copyRemoteReadingSession','RemoteChapterCacheRefreshError',
     `${harnessCode}; return Harness;`,
   )(
-    resolveBookshelfBook, 'local', { current: () => ({ noteReadingPreparationIntent(sourceId, bookId) {
-      assert.equal(sourceId, book.sourceId); assert.equal(bookId, book.bookId);
-    }, bookAcquisitions: () => ({ readingProjectionRevision:()=>0, endSearch() {}, setPreparationVisible() {}, acquireBookWithBackgroundRefresh: (seed) => {
-      assert.equal(seed.sourceId,book.sourceId,'a shelf preview or resume keeps its durable source identity');
-      assert.equal(seed.bookId,book.bookId,'a shelf preview or resume keeps its durable book identity');
-      return catalog.promise.then(session => ({ session }));
-    }, acquireCandidateGroup:()=>assert.fail('a shelf book must not enter automatic candidate substitution'), recentFailures: () => [] }) }) },
+    resolveBookshelfBook, 'local', runtimeAuthority,
     class { loadToc() { return toc.promise; } loadDirectoryProjection() { return Promise.resolve(entries); } },
     class {
       openCachedCatalogSession() { return catalog.promise; }
@@ -97,6 +100,7 @@ function create(remote = false) {
   let route = 'bookshelf';
   Object.defineProperty(h, 'route', { get: () => route, set: value => { routes.push(value); route = value; } });
   Object.assign(h, {
+    mountedRuntimeOwner: runtime, shelfReceiptRetired: false,
     remoteSessionGeneration:0,remoteContentProbeGeneration:0,readingOriginRoute: 'detail', shelfReadingPreparation: false, navigationGeneration: 0,
     readingSessionActive: false, detailReturnRoute: 'bookshelf', detailToc: [], shelfBooks: [book],
     searchDetailCandidates: [], searchPublication: {shelfAt:()=>[]}, searchHost: { publication: { shelfAt:()=>[] } }, searchPublicationRevision:0,
@@ -141,7 +145,7 @@ for (const remote of [false, true]) {
   h.presentPreparedReading(7);
   assert.equal(h.route, 'reading');
   if (remote) assert.equal(h.remoteContentVerdict, 'readable', 'real first-page admission also updates the retained detail verdict');
-  h.onReaderExited();
+  h.onReaderExited(JSON.stringify([h.detailBook?.sourceId,h.detailBook?.bookId,h.readingReadyGeneration]));
   assert.equal(h.route, 'bookshelf', 'reader back follows the shelf origin');
   assert.equal(h.readingSessionActive, false);
   assert.ok(!t.routes.includes('detail'), 'no transient detail route anywhere in the shelf journey');
@@ -158,7 +162,7 @@ for (const remote of [false, true]) {
   assert.equal(t.h.readingSessionActive, false, 'long-press info must not automatically read');
   t.h.openReading(undefined);
   t.h.presentPreparedReading(7);
-  t.h.onReaderExited();
+  t.h.onReaderExited(JSON.stringify([t.h.detailBook?.sourceId,t.h.detailBook?.bookId,t.h.readingReadyGeneration]));
   assert.equal(t.h.route, 'detail', 'explicit detail entry returns to detail');
 }
 
@@ -197,7 +201,7 @@ for (const remote of [false, true]) {
   t.h.presentPreparedReading(7);
   assert.equal(t.h.route, 'reading', 'Back waits for the mounted reader exit transaction');
   assert.equal(exits, 1);
-  t.h.onReaderExited();
+  t.h.onReaderExited(JSON.stringify([t.h.detailBook?.sourceId,t.h.detailBook?.bookId,t.h.readingReadyGeneration]));
   assert.equal(t.h.readingSessionActive, false);
 }
 
@@ -229,7 +233,7 @@ for (const remote of [false, true]) {
   assert.equal(h.route, 'reading');
   assert.equal(h.readingSessionActive, true);
   assert.deepEqual(t.alerts, [], 'source errors stay in the reader; no old exit/dialog action may own navigation');
-  h.onReaderExited();
+  h.onReaderExited(JSON.stringify([h.detailBook?.sourceId,h.detailBook?.bookId,h.readingReadyGeneration]));
   assert.equal(h.route, 'bookshelf');
   assert.equal(h.readingSessionActive, false);
 }
@@ -253,7 +257,7 @@ for (const snapshot of [undefined, true]) {
  const t=create(true),h=t.h;resumeAcquisition(h,t.book);t.catalog.resolve(t.session);t.body.resolve('body');await settle();
  const session=h.remoteReadingSession,toc=h.detailToc;let exits=0;h.readingExitRequest=()=>{exits++;};
  h.requestReaderBookInfo();assert.equal(exits,1);assert.equal(h.readingSessionActive,true,'information waits for normal serialized exit');
- h.onReaderExited();assert.equal(h.route,'detail');assert.equal(h.detailReturnRoute,'bookshelf');
+ h.onReaderExited(JSON.stringify([h.detailBook?.sourceId,h.detailBook?.bookId,h.readingReadyGeneration]));assert.equal(h.route,'detail');assert.equal(h.detailReturnRoute,'bookshelf');
  assert.equal(h.remoteReadingSession,session);assert.equal(h.detailToc,toc,'information reuses exact admitted directory');
 }
 
@@ -312,10 +316,10 @@ async function infoExitHarness(state) {
   index.route = 'reading';
   const calls = [], stop = deferred(), record = deferred(), progress = deferred();
   const onExited = index.onReaderExited.bind(index), onCancelled = index.cancelReaderExitDestination.bind(index);
-  index.onReaderExited = () => { calls.push('route'); onExited(); };
-  index.cancelReaderExitDestination = () => { calls.push('exit-cancelled'); onCancelled(); };
+  index.onReaderExited = identity => { calls.push('route'); onExited(identity); };
+  index.cancelReaderExitDestination = identity => { calls.push('exit-cancelled'); onCancelled(identity); };
   const shell = exitCallbacksAt(indexTree, shellTree, 'ReaderShell', index);
-  Object.assign(shell, { sourceId: index.detailBook.sourceId, bookId: index.detailBook.bookId,
+  Object.assign(shell, { sourceId: index.detailBook.sourceId, bookId: index.detailBook.bookId, readingReadyGeneration: index.readingReadyGeneration,
     readingIdentityKey: ShellIdentity.prototype.readingIdentityKey });
   const readingCallbacks = exitCallbacksAt(shellTree, readingTree, 'ReadingExperience', shell);
   const reading = Object.assign(new Reading(), {

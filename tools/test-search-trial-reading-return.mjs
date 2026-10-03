@@ -24,7 +24,7 @@ const deferred = () => {
 const methods = ['installRemoteReadingSession',
   'onSearchResultSelected', 'searchAcquisitionCandidate', 'remoteSeedForSearchBook', 'openRemoteBookDetail',
   'openShelfBook', 'openShelfBookInfo', 'openDetailSourceSwitch', 'onPickSource', 'switchPreviewSource',
-  'openReading', 'presentPreparedReading', 'onReaderExited', 'returnToReadingOrigin',
+  'openReading', 'presentPreparedReading', 'onReaderExited', 'currentReaderPresentationIdentity', 'isCurrentRuntime', 'returnToReadingOrigin',
   'returnFromDetail', 'returnToSearch', 'returnToBookshelf', 'nextNavigationGeneration',
   'isSourceSwitchActive', 'isKnownDetailChapter', 'probeRemoteContentVerdict',
   'remoteContentVerdictLabel', 'presentSourceSwitchAcquisitionFailure', 'openSourceSwitch',
@@ -95,6 +95,7 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
   const orchestrator = { resume: () => calls.push('search.resume'), close: () => calls.push('search.close'),
     open: () => calls.push('UNEXPECTED.search.open'), search: () => calls.push('UNEXPECTED.search.search') };
   Object.assign(h, {
+    mountedRuntimeOwner: owner, shelfReceiptRetired: false,
     currentSourceSwitchTransactionId:()=>undefined, readingDetailForShelf:book=>({...book}),
     remoteSessionGeneration:0,remoteContentProbeGeneration:0,route: origin, readingOriginRoute: 'detail', detailReturnRoute: 'bookshelf',
     readingSessionActive: false, navigationGeneration: 0, shelfReadingPreparation: false,
@@ -141,7 +142,7 @@ async function readAndReturn(t) {
   if (!t.h.readingSessionActive) t.h.openReading(undefined); assert.equal(t.h.route, 'reading');
   assert.equal(t.h.readingSessionActive, true);
   t.h.presentPreparedReading(0); assert.equal(t.h.route, 'reading');
-  t.h.onReaderExited(); assert.equal(t.h.route, 'detail');
+  t.h.onReaderExited(JSON.stringify([t.h.detailBook?.sourceId,t.h.detailBook?.bookId,t.h.readingReadyGeneration])); assert.equal(t.h.route, 'detail');
   assert.equal(t.h.detailBook, detail); assert.equal(t.h.detailToc, toc); assert.equal(t.h.remoteReadingSession, session);
   assert.equal(t.h.detailInBookshelf, false, 'reading without explicit add remains a preview');
   t.h.returnFromDetail(); assertSearchRetained(t);
@@ -207,7 +208,7 @@ for (const info of [false, true]) {
     if (info) t.h.openShelfBookInfo(t.first); else t.h.openShelfBook(t.first);
     await settle();
     if (info) { assert.equal(t.h.route, 'detail'); t.h.openReading(undefined); }
-    t.h.presentPreparedReading(0); assert.equal(t.h.route, 'reading'); t.h.onReaderExited();
+    t.h.presentPreparedReading(0); assert.equal(t.h.route, 'reading'); t.h.onReaderExited(JSON.stringify([t.h.detailBook?.sourceId,t.h.detailBook?.bookId,t.h.readingReadyGeneration]));
     assert.equal(t.h.route, info ? 'detail' : 'bookshelf');
     if (info) { t.h.returnFromDetail(); assert.equal(t.h.route, 'bookshelf'); }
     noUnexpectedWrites(t);

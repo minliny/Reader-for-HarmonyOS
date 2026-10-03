@@ -13,7 +13,7 @@ import { resolveBookshelfBook } from '../features/bookshelf/BookshelfBookIdentit
 import { BookshelfViewState } from '../features/bookshelf/BookshelfViewState';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
 import { ReaderStartupTrace } from '../app/ReaderStartupTrace';
-import { ReaderSystemFileOpenHost } from '../app/ReaderSystemFileOpenHost';
+import { ReaderSystemFileOpenNavigationHost, type SystemFileOpenNavigationView, type SystemFileOpenReaderIdentity } from '../app/ReaderSystemFileOpenNavigationHost';
 import { errorMessageOf } from '../app/ErrorMessage';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
 import { readerContentSafeTop } from '../features/common/ReaderWindowMetrics';
@@ -630,13 +630,7 @@ struct Index {
    * changed back to the bookshelf or explicit Book Detail entry.
    */
   private readingExitRequest: ((intent?: 'navigation') => void) | undefined = undefined;
-  private systemFileOpenUnsubscribe: (() => void) | undefined = undefined;
-  private systemFileOpenExitId: number = 0;
-  private systemFileOpenNoticeId: number = 0;
-  private systemFileOpenApplying: boolean = false;
-  private systemFileOpenMounted: boolean = false;
-  private systemFileOpenChecking: string = '';
-  private systemFileOpenChecked: string = '';
+  private systemFileOpenNavigation: ReaderSystemFileOpenNavigationHost | undefined;
   /** A Back press during hidden first-page preparation still exits serially. */
   private exitToDetailOriginAfterReader: boolean = false;
   private bookInfoAfterReaderExit: string | undefined = undefined;
@@ -666,7 +660,6 @@ struct Index {
     this.shelfReceiptRetired = false;
     this.detailShelfAdmissionMount += 1;
     this.bookshelfHost.readable(this.mountedRuntimeOwner);
-    this.systemFileOpenMounted = true;
     // Index is mounted after configuration recovery. Reading these settings
     // inside that recovery barrier itself would recursively wait on it.
     this.applicationSettingsUnsubscribe?.();
@@ -695,8 +688,7 @@ struct Index {
     // actually rolls a transaction back.
     this.refreshBookshelf();
     void this.reconcilePendingSourceSwitches();
-    this.systemFileOpenUnsubscribe?.();
-    this.systemFileOpenUnsubscribe = ReaderSystemFileOpenHost.subscribe((): void => this.consumeSystemFileOpen());
+    this.mountSystemFileOpenNavigation(this.mountedRuntimeOwner);
   }
 
   aboutToDisappear(): void {
@@ -713,10 +705,8 @@ struct Index {
     this.navigationBackfillObserverDisposer?.();
     this.navigationBackfillObserverDisposer = undefined;
     this.navigationBackfillObservedKey = '';
-    this.systemFileOpenMounted = false;
-    this.systemFileOpenChecking = '';
-    this.systemFileOpenUnsubscribe?.();
-    this.systemFileOpenUnsubscribe = undefined;
+    this.systemFileOpenNavigation?.dispose();
+    this.systemFileOpenNavigation = undefined;
     this.applicationSettingsUnsubscribe?.();
     this.applicationSettingsUnsubscribe = undefined;
     this.applicationSettingsSnapshot = undefined;
@@ -1117,8 +1107,8 @@ struct Index {
             this.readingExitRequest = requestExit;
             this.consumeSystemFileOpen();
           },
-          onExit: (): void => this.onReaderExited(),
-          onExitCancelled: (): void => this.cancelReaderExitDestination(),
+          onExit: (readerIdentity: string): void => this.onReaderExited(readerIdentity),
+          onExitCancelled: (readerIdentity: string): void => this.cancelReaderExitDestination(readerIdentity),
           onOpenBookInfo: (): void => this.requestReaderBookInfo(),
           readingReadyGeneration: this.readingReadyGeneration,
           onReadingReady: (chapterIndex: number, sourceId: string, bookId: string, generation: number): void =>
@@ -4383,7 +4373,7 @@ struct Index {
     this.navigationBackfillObservedKey = key;
     hilog.info(DOMAIN, 'Reader', 'Directory backfill stage=queued generation=%{public}d', generation);
     const owner = ReaderRuntimeOwner.current();
-    const isCurrent = (): boolean => this.systemFileOpenMounted && this.readingSessionActive &&
+    const isCurrent = (): boolean => !this.shelfReceiptRetired && this.readingSessionActive &&
       this.readingReadyGeneration === generation && this.navigationGeneration === navigationGeneration &&
       this.detailBook?.sourceId === sourceId && this.detailBook?.bookId === bookId &&
       this.isCurrentRuntime(owner);
@@ -4476,18 +4466,24 @@ struct Index {
     requestExit('navigation');
   }
 
-  private cancelReaderExitDestination(): void {
-    if (this.systemFileOpenExitId > 0) ReaderSystemFileOpenHost.acknowledge(this.systemFileOpenExitId);
-    this.systemFileOpenExitId = 0;
+  private currentReaderPresentationIdentity(): string {
+    return JSON.stringify([this.detailBook?.sourceId, this.detailBook?.bookId, this.readingReadyGeneration]);
+  }
+
+  private cancelReaderExitDestination(readerIdentity: string): void {
+    if (this.shelfReceiptRetired || !this.isCurrentRuntime(this.mountedRuntimeOwner) ||
+      readerIdentity !== this.currentReaderPresentationIdentity()) return;
+    this.systemFileOpenNavigation?.cancelExit(readerIdentity);
     this.bookInfoAfterReaderExit = undefined;
     this.openRulesManagementAfterReaderExit = false;
     this.exitToDetailOriginAfterReader = false;
   }
 
-  private onReaderExited(): void {
+  private onReaderExited(readerIdentity: string): void {
+    if (this.shelfReceiptRetired || !this.isCurrentRuntime(this.mountedRuntimeOwner) ||
+      readerIdentity !== this.currentReaderPresentationIdentity()) return;
     this.readingExitRequest = undefined;
-    if (this.systemFileOpenExitId > 0) {
-      this.systemFileOpenExitId = 0;
+    if (this.systemFileOpenNavigation?.readerExited(readerIdentity) === true) {
       this.bookInfoAfterReaderExit = undefined;
       this.openRulesManagementAfterReaderExit = false;
       this.returnToBookshelf();
@@ -5997,80 +5993,42 @@ struct Index {
     this.consumeSystemFileOpen();
   }
 
-  private consumeSystemFileOpen(): void {
-    if (!this.systemFileOpenMounted || !this.searchAppForeground || this.systemFileOpenApplying) return;
-    const result = ReaderSystemFileOpenHost.peek();
-    if (result === undefined) return;
-    if (result.failure !== undefined || result.book === undefined) {
-      try { this.getUIContext().getPromptAction().showToast({
-        message: result.failure?.message ?? '文件暂时无法打开，请从文件管理器重试',
-      }); } catch (_) {}
-      ReaderSystemFileOpenHost.acknowledge(result.id);
-      return;
-    }
-    // External file opening cannot finalize or abandon an uncommitted source
-    // switch. The durable local import is safe on the shelf while it waits.
-    const pendingSwitch = this.pendingSourceSwitch;
-    const activeSwitch = this.readingSessionActive && pendingSwitch !== undefined &&
-      this.detailBook?.sourceId === pendingSwitch.targetSourceId && this.detailBook?.bookId === pendingSwitch.targetBookId;
-    if (activeSwitch || this.sourceSwitchRollbackInFlight ||
-      (this.sourceSwitchVisible && (this.sourceSwitchState.kind === 'switching' ||
-        (this.sourceSwitchState.kind === 'failure' && this.sourceSwitchState.transactionId !== undefined)))) {
-      if (this.systemFileOpenNoticeId !== result.id) {
-        this.systemFileOpenNoticeId = result.id;
-        try { this.getUIContext().getPromptAction().showToast({
-          message: '文件已保存到书架，当前换源完成后打开',
-        }); } catch (_) {}
-      }
-      return;
-    }
-    if (this.readingSessionActive) {
-      const book = this.detailBook;
-      const identity = book === undefined ? '' : JSON.stringify([result.id, this.navigationGeneration, book.sourceId, book.bookId]);
-      if (book !== undefined && book.sourceId !== LOCAL_SOURCE_ID && this.systemFileOpenChecked !== identity) {
-        // A cold-resumed reader may not yet have discovered its durable
-        // source-switch journal. Resolve that existing guard before exit.
-        if (this.systemFileOpenChecking !== identity) {
-          this.systemFileOpenChecking = identity;
-          void this.resolveReaderSourceSwitchTransaction(book.sourceId, book.bookId)
-            .then((): void => {
-              if (this.systemFileOpenChecking !== identity) return;
-              this.systemFileOpenChecking = '';
-              this.systemFileOpenChecked = identity;
-              this.consumeSystemFileOpen();
-            }).catch((): void => {
-              if (this.systemFileOpenChecking !== identity) return;
-              this.systemFileOpenChecking = '';
-              if (!this.systemFileOpenMounted || ReaderSystemFileOpenHost.peek()?.id !== result.id) return;
-              try { this.getUIContext().getPromptAction().showToast({
-                message: '文件已保存到书架，当前阅读状态未能确认，请稍后打开',
-              }); } catch (_) {}
-              ReaderSystemFileOpenHost.acknowledge(result.id);
-            });
-        }
-        return;
-      }
-      const requestExit = this.readingExitRequest;
-      if (requestExit !== undefined && this.systemFileOpenExitId !== result.id) {
-        this.systemFileOpenExitId = result.id;
-        requestExit('navigation');
-      }
-      return;
-    }
-    this.systemFileOpenApplying = true;
-    try {
-      this.sourceSwitchUnsubscribe?.();
-      this.sourceSwitchUnsubscribe = undefined;
-      this.sourceSwitchVisible = false;
-      this.closeImportDialog();
-      this.jsonImportVisible = false;
-      this.returnToBookshelf();
-      this.openShelfBook(result.book);
-      ReaderSystemFileOpenHost.acknowledge(result.id);
-    } finally {
-      this.systemFileOpenApplying = false;
-    }
+  private mountSystemFileOpenNavigation(owner: ReaderRuntimeOwner): void {
+    this.systemFileOpenNavigation?.dispose();
+    const mounting = this.detailShelfAdmissionMount;
+    const host: ReaderSystemFileOpenNavigationHost = new ReaderSystemFileOpenNavigationHost(owner, {
+      isCurrent: (): boolean => this.systemFileOpenNavigation === host && !this.shelfReceiptRetired &&
+        mounting === this.detailShelfAdmissionMount && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner),
+      view: (): SystemFileOpenNavigationView => this.systemFileOpenNavigationView(),
+      resolveReaderTransaction: (book: SystemFileOpenReaderIdentity): Promise<void> =>
+        this.resolveReaderSourceSwitchTransaction(book.sourceId, book.bookId),
+      notice: (message: string): void => { this.getUIContext().getPromptAction().showToast({message}); },
+      open: (book: ShelfBook): void => {
+        this.sourceSwitchUnsubscribe?.(); this.sourceSwitchUnsubscribe = undefined;
+        this.sourceSwitchVisible = false;
+        this.closeImportDialog(); this.jsonImportVisible = false;
+        this.returnToBookshelf(); this.openShelfBook(book);
+      },
+    });
+    this.systemFileOpenNavigation = host;
+    host.mount();
   }
+
+  private systemFileOpenNavigationView(): SystemFileOpenNavigationView {
+    const book = this.detailBook; const pending = this.pendingSourceSwitch;
+    const activeSwitch = this.readingSessionActive && pending !== undefined &&
+      book?.sourceId === pending.targetSourceId && book?.bookId === pending.targetBookId;
+    return {
+      foreground: this.searchAppForeground, reading: this.readingSessionActive, navigationGeneration: this.navigationGeneration,
+      readerIdentity: this.currentReaderPresentationIdentity(),
+      book: book === undefined ? undefined : {sourceId: book.sourceId, bookId: book.bookId},
+      switchBlocked: activeSwitch || this.sourceSwitchRollbackInFlight || (this.sourceSwitchVisible &&
+        (this.sourceSwitchState.kind === 'switching' || (this.sourceSwitchState.kind === 'failure' && this.sourceSwitchState.transactionId !== undefined))),
+      requestExit: this.readingExitRequest,
+    };
+  }
+
+  private consumeSystemFileOpen(): void { this.systemFileOpenNavigation?.consume(); }
 
   private currentSourceSwitchTransactionId(): string | undefined {
     const pending = this.pendingSourceSwitch;

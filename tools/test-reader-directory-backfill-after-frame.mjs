@@ -23,7 +23,7 @@ const Index = productionMotionMethods(indexPath,
 function reader(bookId, kind = 'epub') {
   const presented = [];
   const page = Object.assign(new Index(), {
-    systemFileOpenMounted: true, readingSessionActive: true, route: 'reading',
+    shelfReceiptRetired: false, readingSessionActive: true, route: 'reading',
     detailBook: { sourceId: 'local', bookId, kind },
     readingReadyGeneration: 7, navigationGeneration: 3,
     navigationBackfillObservedKey: '', navigationBackfillAttempted: new Set(),

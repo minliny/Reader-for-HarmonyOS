@@ -12,9 +12,9 @@ assert.match(buildRouteBlock,
   /this\.detailBook !== undefined && \(this\.route === 'detail' \|\|[\s\S]*!this\.readingSessionActive && \(this\.route === 'reading' \|\| this\.route === 'directory'\)/,
   'P0: a stale reading/directory route without a live ReaderShell must still render controllable book detail');
 
-assert.match(index, /onExit: \(\): void => this\.onReaderExited\(\)/,
+assert.match(index, /onExit: \(readerIdentity: string\): void => this\.onReaderExited\(readerIdentity\)/,
   'the reader exit callback must retain the normal serialized exit route');
-const exitStart = index.indexOf('private onReaderExited(): void');
+const exitStart = index.indexOf('private onReaderExited(readerIdentity: string): void');
 const exitEnd = index.indexOf('private closeDirectory(): void', exitStart);
 const exitBlock = index.slice(exitStart, exitEnd);
 assert.doesNotMatch(exitBlock, /pendingReadingFailureAction|openDetailSourceSwitch\(/,
