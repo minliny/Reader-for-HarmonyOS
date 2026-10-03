@@ -111,19 +111,21 @@ check('Index state changes update the retained shell child props, including serv
 });
 const shellSource = read('features/bookshelf/BookshelfShell.ets');
 function shellFixture({ populated = false, width = 365, menu = false } = {}) {
-  const { owner } = createReaderBuilderProbe(shellSource, ['content','build','shellContent','topBar','requestCheckUpdates','showBottomNav','numericAreaLength'], {
-    ...dependencies, BOOKSHELF_WIDE_BREAKPOINT: 600, READER_FLOATING_TOP_BAR_HEIGHT: 58,
+  const { owner } = createReaderBuilderProbe(shellSource, ['content','mounted','temporaryBackIdentity','moreSelectionId','onTemporaryBackBridge','aboutToAppear','aboutToDisappear','consumeTemporaryBack','dismissMoreMenu','moreOpenAction','moreIntentAction','build','shellContent','topBar','requestCheckUpdates','showBottomNav','numericAreaLength'], {
+    ...dependencies, bookshelfTemporaryGeneration:0,registerReaderShelfFonts(){}, BOOKSHELF_WIDE_BREAKPOINT: 600, READER_FLOATING_TOP_BAR_HEIGHT: 58,
     ReaderWindowCoordinator: { metrics: () => ({ windowRect: { width } }) },
   });
   let contentCalls = 0;
   Object.assign(owner, { appThemeScheme: 'day', readerWindowMetricsRevision: 0, populated, viewportWidth: 0,
     recovery: {message:'',visible:false,canRetry:false,generation:0},
-    moreMenuVisible: menu, moreAnchorRight: 0, moreAnchorBottom: 0, overlayOriginX: 0, overlayOriginY: 0,
+    moreMenuVisible: false, moreAnchorRight: 0, moreAnchorBottom: 0, overlayOriginX: 0, overlayOriginY: 0,
     canCheckUpdates: populated, updateRunning: false, backgroundUpdateRunning: false, updateProgressDone: 0, updateProgressTotal: 0,
     reduceMotion: false, content: () => { contentCalls++; }, calls: [] });
   for (const action of ['onSearchRequested','onImportRequested','onBatchManageRequested','onBookshelfSettingsRequested','onCheckUpdatesRequested','onMainTab']) {
     owner[action] = (key) => owner.calls.push(key ? `${action}:${key}` : action);
   }
+  owner.aboutToAppear();
+  if(menu)owner.moreOpenAction(owner.temporaryBackIdentity)();
   owner.initialRender();
   const nav = childOf(owner, 'MainTabShell')[0]; nav.params.content();
   const header = childOf(owner, 'AppTopBar')[0]; header.params.trailing();
@@ -175,9 +177,11 @@ check('More retains measured global-to-local anchor, live progress and guarded c
   assert.equal(owner.moreMenuVisible,false);
   owner.canCheckUpdates = false; more.params.onCheckUpdates(); assert.equal(owner.calls.length,1);
   for (const [action,callback] of [['onBatchManage','onBatchManageRequested'],['onLocalImport','onImportRequested'],['onBookshelfSettings','onBookshelfSettingsRequested']]) {
-    owner.moreMenuVisible = true; more.params[action](); assert.equal(owner.moreMenuVisible,false); assert.equal(owner.calls.at(-1),callback);
+    owner.moreOpenAction(owner.temporaryBackIdentity)(); owner.shellContent();
+    childOf(owner,'BookshelfMoreMenu').at(-1).params[action](); assert.equal(owner.moreMenuVisible,false); assert.equal(owner.calls.at(-1),callback);
   }
-  owner.moreMenuVisible = true; more.params.onDismiss(); assert.equal(owner.moreMenuVisible,false);
+  owner.moreOpenAction(owner.temporaryBackIdentity)(); owner.shellContent();
+  childOf(owner,'BookshelfMoreMenu').at(-1).params.onDismiss(); assert.equal(owner.moreMenuVisible,false);
 });
 for (const failed of [false,true]) check(`status ${failed ? 'failure' : 'loading'} actual content preserves retry/spinner and live theme`, () => {
   const { owner } = createReaderBuilderProbe(read('features/bookshelf/BookshelfStatusContent.ets'), ['build'], {

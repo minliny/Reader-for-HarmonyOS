@@ -53,6 +53,7 @@ import {
 
 const GROUP_FILTER_WIDTH = 350;
 const GROUP_SELECT_WIDTH = 276;
+let sourceTemporaryGeneration: number = 0;
 
 class SourceListDataSource implements IDataSource {
   private items: BookSource[] = [];
@@ -115,6 +116,11 @@ export struct SourceManagementPage {
   @State private groupValue: string = '全部分组';
   @State private groupOpen: boolean = false;
   @State private groupClosing: boolean = false;
+  @State private groupSelectionId: string = '';
+  private mounted: boolean = false;
+  private temporaryBackIdentity: string = '';
+  onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string) => void =
+    (_handler: (() => boolean) | undefined, _identity: string): void => {};
   @State private projectedSources: BookSource[] = [];
   private readonly sourceDataSource: SourceListDataSource = new SourceListDataSource();
   // 展开面板锚点: 触发条全局坐标 - 根 Stack 原点 = 面板相对根 Stack 位置。
@@ -125,8 +131,59 @@ export struct SourceManagementPage {
   @State private viewportWidth: number = 0;
 
   aboutToAppear(): void {
+    this.mounted = true;
     registerReaderFonts(this.getUIContext().getFont());
     this.rebuildSourceProjection();
+    const identity = `source-back:${++sourceTemporaryGeneration}`;
+    this.temporaryBackIdentity = identity;
+    this.onTemporaryBackBridge((): boolean => this.consumeTemporaryBack(identity), identity);
+  }
+
+  aboutToDisappear(): void {
+    const identity = this.temporaryBackIdentity;
+    this.mounted = false;
+    this.temporaryBackIdentity = '';
+    this.retireGroupSelection();
+    this.onTemporaryBackBridge(undefined, identity);
+  }
+
+  private consumeTemporaryBack(identity: string): boolean {
+    if (!this.mounted || identity !== this.temporaryBackIdentity || !this.groupOpen) return false;
+    // Keep consuming while the existing panel owns its collapse animation.
+    this.groupClosing = true;
+    return true;
+  }
+
+  private retireGroupSelection(): void {
+    this.groupOpen = false;
+    this.groupClosing = false;
+    this.groupSelectionId = '';
+  }
+
+  private ownsGroupSelection(identity: string): boolean {
+    return this.mounted && this.groupOpen && identity.length > 0 && identity === this.groupSelectionId;
+  }
+
+  private toggleGroupSelection(): void {
+    if (!this.mounted || this.groupOptions().length <= 1) return;
+    if (this.groupOpen) { this.groupClosing = true; return; }
+    this.groupSelectionId = `source-group:${++sourceTemporaryGeneration}`;
+    this.groupClosing = false;
+    this.groupOpen = true;
+  }
+
+  private groupCloseAction(identity: string): () => void {
+    return (): void => { if (this.ownsGroupSelection(identity)) this.groupClosing = true; };
+  }
+
+  private commitGroupSelection(option: string, identity: string): void {
+    if (!this.ownsGroupSelection(identity) || this.groupClosing || this.groupOptions().indexOf(option) < 0) return;
+    this.groupValue = option;
+    this.rebuildSourceProjection();
+  }
+
+  private dismissGroupSelection(identity: string): void {
+    if (this.ownsGroupSelection(identity)) this.retireGroupSelection();
   }
 
   build() {
@@ -156,7 +213,7 @@ export struct SourceManagementPage {
 
       if (this.groupOpen) {
         Row().width('100%').height('100%').backgroundColor(Color.Transparent)
-          .onClick((): void => { this.groupClosing = true; });
+          .onClick(this.groupCloseAction(this.groupSelectionId));
         ReaderSelectPanel({
           value: this.groupValue,
           options: this.groupOptions(),
@@ -164,17 +221,11 @@ export struct SourceManagementPage {
           controlWidth: this.groupSelectWidth(),
           reduceMotion: this.reduceMotion,
           closing: this.groupClosing,
-          selectionId: 'source-group',
+          selectionId: this.groupSelectionId,
           x: this.groupX - this.originX,
           y: this.groupY - this.originY,
-          onCommit: (opt: string, _identity: string): void => {
-            this.groupValue = opt;
-            this.rebuildSourceProjection();
-          },
-          onDismiss: (): void => {
-            this.groupOpen = false;
-            this.groupClosing = false;
-          },
+          onCommit: (opt: string, identity: string): void => this.commitGroupSelection(opt, identity),
+          onDismiss: (identity: string): void => this.dismissGroupSelection(identity),
         });
       }
     }
@@ -371,12 +422,7 @@ export struct SourceManagementPage {
         isOpen: this.groupOpen,
         variant: 'sourceGroup',
         reduceMotion: this.reduceMotion,
-        onToggle: (): void => {
-          if (this.groupOptions().length > 1) {
-            if (this.groupOpen) this.groupClosing = true;
-            else { this.groupClosing = false; this.groupOpen = true; }
-          }
-        },
+        onToggle: (): void => this.toggleGroupSelection(),
       })
       .margin({ left: 22 })
       .onAreaChange((_oldValue: Area, newValue: Area): void => {

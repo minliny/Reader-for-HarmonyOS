@@ -86,6 +86,9 @@ export struct SettingsPage {
   @State private resetMessage: string = '';
   private readonly nativeAlertOwner: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
   private mounted: boolean = false;
+  private temporaryBackIdentity: string = '';
+  onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string) => void =
+    (_handler: (() => boolean) | undefined, _identity: string): void => {};
   private resetRevision: number = 0;
   @State private openSelect: SettingsSelectField | '' = '';
   @State private selectionId: string = '';
@@ -113,9 +116,26 @@ export struct SettingsPage {
     this.mounted = true;
     registerReaderFonts(this.getUIContext().getFont());
     this.syncSnapshotValues();
+    const identity = `settings-back:${++settingsSelectionGeneration}`;
+    this.temporaryBackIdentity = identity;
+    this.onTemporaryBackBridge((): boolean => this.consumeTemporaryBack(identity), identity);
   }
 
-  aboutToDisappear(): void { this.nativeAlertOwner.retire(); this.mounted = false; this.resetRevision += 1; this.retireSelection(); }
+  aboutToDisappear(): void {
+    const identity = this.temporaryBackIdentity;
+    this.mounted = false;
+    this.temporaryBackIdentity = '';
+    this.nativeAlertOwner.retire();
+    this.resetRevision += 1;
+    this.retireSelection();
+    this.onTemporaryBackBridge(undefined, identity);
+  }
+
+  private consumeTemporaryBack(identity: string): boolean {
+    if (!this.mounted || identity !== this.temporaryBackIdentity || !this.ownsSelection(this.selectionId)) return false;
+    this.retireSelection();
+    return true;
+  }
 
   build() {
     SettingsShell({

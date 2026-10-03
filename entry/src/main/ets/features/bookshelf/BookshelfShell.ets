@@ -9,6 +9,7 @@ import { BookshelfMoreMenu } from './BookshelfMoreMenu';
 import { READER_FLOATING_TOP_BAR_HEIGHT } from '../common/ReaderFloatingBarMetrics';
 
 export const BOOKSHELF_WIDE_BREAKPOINT = 600;
+let bookshelfTemporaryGeneration: number = 0;
 
 // Index mounts this shell once for the bookshelf route. Core readiness only
 // changes the content slot, preserving the title, navigation and menu anchor.
@@ -34,13 +35,56 @@ export struct BookshelfShell {
   @BuilderParam content: () => void;
   @State private viewportWidth: number = 0;
   @State private moreMenuVisible: boolean = false;
+  private moreSelectionId: string = '';
+  private mounted: boolean = false;
+  private temporaryBackIdentity: string = '';
+  onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string) => void =
+    (_handler: (() => boolean) | undefined, _identity: string): void => {};
   @State private moreAnchorRight: number = 0;
   @State private moreAnchorBottom: number = 0;
   @State private overlayOriginX: number = 0;
   @State private overlayOriginY: number = 0;
 
   aboutToAppear(): void {
+    this.mounted = true;
     registerReaderShelfFonts(this.getUIContext().getFont());
+    const identity = `bookshelf-back:${++bookshelfTemporaryGeneration}`;
+    this.temporaryBackIdentity = identity;
+    this.onTemporaryBackBridge((): boolean => this.consumeTemporaryBack(identity), identity);
+  }
+
+  aboutToDisappear(): void {
+    const identity = this.temporaryBackIdentity;
+    this.mounted = false;
+    this.temporaryBackIdentity = '';
+    this.dismissMoreMenu();
+    this.onTemporaryBackBridge(undefined, identity);
+  }
+
+  private consumeTemporaryBack(identity: string): boolean {
+    if (!this.mounted || identity !== this.temporaryBackIdentity || !this.moreMenuVisible) return false;
+    this.dismissMoreMenu();
+    return true;
+  }
+
+  private dismissMoreMenu(): void {
+    this.moreMenuVisible = false;
+    this.moreSelectionId = '';
+  }
+
+  private moreOpenAction(identity: string): () => void {
+    return (): void => {
+      if (!this.mounted || identity !== this.temporaryBackIdentity || this.moreMenuVisible) return;
+      this.moreSelectionId = `bookshelf-more:${++bookshelfTemporaryGeneration}`;
+      this.moreMenuVisible = true;
+    };
+  }
+
+  private moreIntentAction(identity: string, action: () => void): () => void {
+    return (): void => {
+      if (!this.mounted || !this.moreMenuVisible || identity.length === 0 || identity !== this.moreSelectionId) return;
+      action();
+    };
   }
 
   build() {
@@ -87,22 +131,20 @@ export struct BookshelfShell {
           backgroundUpdateRunning: this.backgroundUpdateRunning,
           updateProgressDone: this.updateProgressDone,
           updateProgressTotal: this.updateProgressTotal,
-          onCheckUpdates: (): void => this.requestCheckUpdates(),
-          onBatchManage: (): void => {
-            this.moreMenuVisible = false;
+          onCheckUpdates: this.moreIntentAction(this.moreSelectionId, (): void => this.requestCheckUpdates()),
+          onBatchManage: this.moreIntentAction(this.moreSelectionId, (): void => {
+            this.dismissMoreMenu();
             this.onBatchManageRequested();
-          },
-          onLocalImport: (): void => {
-            this.moreMenuVisible = false;
+          }),
+          onLocalImport: this.moreIntentAction(this.moreSelectionId, (): void => {
+            this.dismissMoreMenu();
             this.onImportRequested();
-          },
-          onBookshelfSettings: (): void => {
-            this.moreMenuVisible = false;
+          }),
+          onBookshelfSettings: this.moreIntentAction(this.moreSelectionId, (): void => {
+            this.dismissMoreMenu();
             this.onBookshelfSettingsRequested();
-          },
-          onDismiss: (): void => {
-            this.moreMenuVisible = false;
-          },
+          }),
+          onDismiss: this.moreIntentAction(this.moreSelectionId, (): void => this.dismissMoreMenu()),
         });
       }
     }
@@ -135,9 +177,7 @@ export struct BookshelfShell {
           boxSize: 44,
           iconSize: 44,
           radius: 22,
-          onTap: (): void => {
-            this.moreMenuVisible = true;
-          },
+          onTap: this.moreOpenAction(this.temporaryBackIdentity),
         })
           .accessibilityText('更多')
           .onAreaChange((_oldValue: Area, newValue: Area): void => {
@@ -150,7 +190,7 @@ export struct BookshelfShell {
 
   private requestCheckUpdates(): void {
     if (!this.canCheckUpdates || this.updateRunning || this.backgroundUpdateRunning) return;
-    this.moreMenuVisible = false;
+    this.dismissMoreMenu();
     this.onCheckUpdatesRequested();
   }
 
