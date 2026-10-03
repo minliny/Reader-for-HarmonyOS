@@ -23,6 +23,16 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const options = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
   const parse = text => ts.createSourceFile('/tmp/ReaderBuilderProbe.ets', text,
     ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  const childProps = definition => {
+    const tree = parse(definition);
+    assert.equal(tree.parseDiagnostics.length, 0, 'actual shared child ETS parses');
+    const declaration = tree.statements.find(node => node.members && node.members.some(member => member.name?.getText(tree) === 'build'));
+    return new Set((declaration?.members ?? []).filter(member => ts.isPropertyDeclaration(member) &&
+      ts.getAllDecorators(member).some(decorator => {
+        const expression = decorator.expression;
+        return (ts.isCallExpression(expression) ? expression.expression : expression).getText(tree) === 'Prop';
+      })).map(member => member.name.getText(tree)));
+  };
   const original = parse(source);
   assert.equal(original.parseDiagnostics.length, 0, 'production ETS parses');
   const struct = original.statements.find(n => n.members && n.name &&
@@ -42,18 +52,18 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const childName = 'ReaderControlSwitchTrack';
   const childSource = readFileSync(new URL('../../entry/src/main/ets/features/reading/ReaderControlSwitchTrack.ets', import.meta.url), 'utf8');
   syntax.componentCollection.customComponents.add(childName);
-  syntax.propCollection.set(childName, new Set([...childSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
+  syntax.propCollection.set(childName, childProps(childSource));
   const recoveryChildren = ['ReaderRecoveryAction', 'ReaderRecoveryNotice'];
   for (const name of recoveryChildren) {
     const child = new URL(`../../entry/src/main/ets/features/common/${name}.ets`, import.meta.url);
     if (!existsSync(child)) continue;
     const definition = readFileSync(child, 'utf8');
     syntax.componentCollection.customComponents.add(name);
-    syntax.propCollection.set(name, new Set([...definition.matchAll(/@Prop\s+(\w+)\s*:/g)].map(match => match[1])));
+    syntax.propCollection.set(name, childProps(definition));
   }
   for (const [name, child] of Object.entries(hooks.childSources ?? {})) {
     syntax.componentCollection.customComponents.add(name);
-    syntax.propCollection.set(name, new Set([...child.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
+    syntax.propCollection.set(name, childProps(child));
   }
   const file = parse(`@Component struct ReaderBuilderProbe {\n${members.join('\n')}\n${names.includes('build') ? '' : 'build() { Column() {} }'}\n}`);
   // The full SDK frontend collects declared method names before transforming
