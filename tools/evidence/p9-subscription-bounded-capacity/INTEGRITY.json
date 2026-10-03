@@ -1,0 +1,37 @@
+[
+  {
+    "name": "future DTO damage",
+    "blocked": true,
+    "error": "订阅固定完整计划损坏，已保留且停止新写入",
+    "rpcWrites": 0,
+    "localWrites": 0
+  },
+  {
+    "name": "latest receipt damage",
+    "blocked": true,
+    "error": "订阅完整原记录校验失败，已保留且停止新写入",
+    "rpcWrites": 0,
+    "localWrites": 0
+  },
+  {
+    "name": "latest receipt body, only outer digest rewritten",
+    "blocked": true,
+    "error": "订阅最新原回执与固定步骤不匹配，已保留",
+    "rpcWrites": 0,
+    "localWrites": 0
+  },
+  {
+    "name": "future plan and both digests rewritten: no authentication",
+    "blocked": false,
+    "error": null,
+    "rpcWrites": 0,
+    "localWrites": 0
+  },
+  {
+    "name": "latest receipt and both digests rewritten: no authentication",
+    "blocked": false,
+    "error": null,
+    "rpcWrites": 0,
+    "localWrites": 0
+  }
+]

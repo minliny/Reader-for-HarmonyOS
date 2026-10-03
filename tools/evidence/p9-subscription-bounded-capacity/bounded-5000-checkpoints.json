@@ -1,0 +1,122 @@
+[
+  {
+    "cursor": 0,
+    "currentBytes": 1190,
+    "planBytes": 3929184,
+    "elapsedMs": 35.821334,
+    "readCalls": 2,
+    "readBytes": 3930374,
+    "writeCalls": 0,
+    "writeBytes": 0,
+    "hashCalls": 3,
+    "hashBytes": 3931390,
+    "recordHashCalls": 3,
+    "recordHashBytes": 3931390,
+    "receiptHashCalls": 0,
+    "receiptHashBytes": 0,
+    "finishes": 0,
+    "fsyncs": 0,
+    "maxSnapshotBytes": 0,
+    "maxRssBytes": 313966592,
+    "snapshotBytes": [],
+    "rpcCalls": 1,
+    "rpcWrites": 0,
+    "payloadPreserved": true,
+    "fileStats": {
+      "/controlled-capacity/reader-rules-mutation-intent-v1.json": {
+        "reads": 1,
+        "readBytes": 1190,
+        "writes": 0,
+        "writeBytes": 0,
+        "maxBytes": 0
+      },
+      "/controlled-capacity/reader-rule-subscription-plan-v1.json": {
+        "reads": 1,
+        "readBytes": 3929184,
+        "writes": 0,
+        "writeBytes": 0,
+        "maxBytes": 0
+      }
+    }
+  },
+  {
+    "cursor": 2500,
+    "currentBytes": 1860,
+    "planBytes": 3929187,
+    "elapsedMs": 34.760916,
+    "readCalls": 2,
+    "readBytes": 3931047,
+    "writeCalls": 0,
+    "writeBytes": 0,
+    "hashCalls": 5,
+    "hashBytes": 3932993,
+    "recordHashCalls": 3,
+    "recordHashBytes": 3932733,
+    "receiptHashCalls": 2,
+    "receiptHashBytes": 260,
+    "finishes": 0,
+    "fsyncs": 0,
+    "maxSnapshotBytes": 0,
+    "maxRssBytes": 394641408,
+    "snapshotBytes": [],
+    "rpcCalls": 1,
+    "rpcWrites": 0,
+    "payloadPreserved": true,
+    "fileStats": {
+      "/controlled-capacity/reader-rules-mutation-intent-v1.json": {
+        "reads": 1,
+        "readBytes": 1860,
+        "writes": 0,
+        "writeBytes": 0,
+        "maxBytes": 0
+      },
+      "/controlled-capacity/reader-rule-subscription-plan-v1.json": {
+        "reads": 1,
+        "readBytes": 3929187,
+        "writes": 0,
+        "writeBytes": 0,
+        "maxBytes": 0
+      }
+    }
+  },
+  {
+    "cursor": 5000,
+    "currentBytes": 1290,
+    "planBytes": 3929187,
+    "elapsedMs": 34.674542,
+    "readCalls": 2,
+    "readBytes": 3930477,
+    "writeCalls": 0,
+    "writeBytes": 0,
+    "hashCalls": 5,
+    "hashBytes": 3931853,
+    "recordHashCalls": 3,
+    "recordHashBytes": 3931593,
+    "receiptHashCalls": 2,
+    "receiptHashBytes": 260,
+    "finishes": 0,
+    "fsyncs": 0,
+    "maxSnapshotBytes": 0,
+    "maxRssBytes": 423247872,
+    "snapshotBytes": [],
+    "rpcCalls": 1,
+    "rpcWrites": 0,
+    "payloadPreserved": true,
+    "fileStats": {
+      "/controlled-capacity/reader-rules-mutation-intent-v1.json": {
+        "reads": 1,
+        "readBytes": 1290,
+        "writes": 0,
+        "writeBytes": 0,
+        "maxBytes": 0
+      },
+      "/controlled-capacity/reader-rule-subscription-plan-v1.json": {
+        "reads": 1,
+        "readBytes": 3929187,
+        "writes": 0,
+        "writeBytes": 0,
+        "maxBytes": 0
+      }
+    }
+  }
+]

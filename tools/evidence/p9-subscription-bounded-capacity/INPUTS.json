@@ -1,0 +1,27 @@
+{
+  "hostDependencyBase": "3df16be152bcb7701a08670a218cb90b964d6cca",
+  "candidateCommit": "49e1b12d",
+  "storeSource": "file:///Users/minliny/Documents/Reader/.reader-isolated/p4-subscription-capacity-20261003/Reader-for-HarmonyOS/tools/evidence/p9-subscription-bounded-capacity/store-candidate.txt",
+  "storeSha256": "54cfdfae2d1c1362f9d8e007d5ae82d4c3e8f201dbb48cd6e62a6946192facf0",
+  "ownerSource": "file:///Users/minliny/Documents/Reader/.reader-isolated/p4-subscription-capacity-20261003/Reader-for-HarmonyOS/tools/evidence/p9-subscription-bounded-capacity/owner-candidate.txt",
+  "ownerSha256": "8c247c4bf5b0cc69bcf931d200f7a90a729addfc1662c7b3b4f97444df62d493",
+  "dependencyHashes": {
+    "app/ReaderAtomicSnapshotFile.ts": "1de439f8eac4a38af0526645aa959e1ca850190e99c5074ed8877d8d3ab29d68",
+    "app/BundledBookSourceSupply.ts": "a230651e50cd9984112b5ae29d908c97cf8938d750016444cdacbc3edef0ac90",
+    "features/settings/RulesManagementGateway.ts": "f5d30f221b7d4d3c0db031356c6bb02027b1afceae559de9320d72bcf547fcce",
+    "features/settings/RulesMutationContract.ts": "fab135f714d0f1acb36e7dbf0a8093f8b4893d2a07f7bc3476dcad50eab0fbfc",
+    "features/source/SourceGateway.ts": "0f5db7873da3bcab73efdf3d0ac447292ffac0af465eaba92b9ea48cf8af3dbd"
+  },
+  "environment": {
+    "node": "v26.0.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "loader": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader",
+    "sdkTypeScriptVersion": "4.9.5"
+  },
+  "boundaries": [
+    "Full production methods compiled with installed SDK; controlled memory file and official crypto API seams",
+    "50/500/5000 complete Host protocol chains use typed observations, zero Core database writes",
+    "Mac probe CPU/RSS are not HarmonyOS target/device budgets or Atomic crash durability"
+  ]
+}
