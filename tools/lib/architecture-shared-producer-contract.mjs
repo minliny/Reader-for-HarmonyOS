@@ -77,6 +77,20 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
   assert.deepEqual(edges.map(({keys,...e})=>e),producer.consumers.map(({keys,...e})=>e),'actual producer/consumer/spec edges changed: '+producer.id);
   for(const e of edges)for(const key of e.keys)assert.ok(publicFields.has(key),'illegal shared input '+producer.id+':'+key);
   for(const row of inventory.rows)for(const e of row.elements.filter(e=>e.kind===producer.component))assert.equal(e.modifiers.some(m=>appearance.has(m.property)),false,'caller privately overrides shared appearance '+row.file+':'+e.line);
+  // A finite domain wrapper must also prove its actual child delegation;
+  // registering five incoming callers alone cannot prove shared rendering.
+  for(const delegate of producer.delegates??[]){
+    assert.equal(delegate.file,'entry/src/main/ets/features/common/'+delegate.component+'.ets','exact shared primitive target');
+    const childShape=sharedProducerShape(readSource(delegate.file),delegate.file);
+    assert.deepEqual(childShape,delegate.shape,'actual shared delegate implementation changed: '+delegate.component);
+    const child=childShape.declarations.find(d=>d.name===delegate.component);assert.ok(child,'actual delegate struct');
+    const fields=new Set(child.publicFields.map(field=>field.name));
+    const outgoing=producerConsumerEdges(inventory,delegate.component).filter(edge=>edge.file===relative(producer.file));
+    assert.deepEqual(outgoing,delegate.consumers,'actual shared delegate edges changed: '+producer.component+'→'+delegate.component);
+    assert.ok(outgoing.length>0,'real child consumer required');
+    for(const edge of outgoing)for(const key of edge.keys)assert.ok(fields.has(key),'illegal shared delegate input '+key);
+  }
+
  }
  return{budgetRows:baseline.rows.length,sharedOwners:baseline.sharedOwners.length,outsideBudgetPolicies:baseline.uiPolicies.length,uiFiles:inventory.rows.filter(r=>r.elements.length).length,producers:contract.producers.length};
 }

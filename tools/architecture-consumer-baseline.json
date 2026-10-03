@@ -785,6 +785,15 @@
       "reason": "6 finite original RSS icon/label variants; actual icon/label/Row/Stack, 32/34/44vp and response regions; finite danger/divider business variants only; original role/normal geometry and AUTO omissions",
       "kind": "finite-spec-actual-shared-producer",
       "proof": "tools/test-architecture-shared-producers.mjs"
+    },
+    {
+      "file": "entry/src/main/ets/features/rss/RssOriginalRecoverySurface.ets",
+      "kind": "business-slot-wrapper",
+      "owner": "RSS existing original mutation owners / exact presentation identity",
+      "reason": "Finite RSS original-receipt recovery composition shared by the five actual RSS page consumers. It consumes existing ReaderRecoveryNotice and ReaderRecoveryAction, owns only immutable physical identity/qualification and pure-query versus explicit-original intent forwarding, and has zero private typography/background/native-overlay implementation. This exact file grants no style or shell exception to another page.",
+      "counts": {},
+      "status": "REGISTERED_FINITE_BUSINESS_COMPOSITION_NOT_DEVICE_ACCEPTANCE",
+      "contractId": "shared-RssOriginalRecoverySurface"
     }
   ],
   "uiPolicies": [
@@ -958,14 +967,6 @@
       "kind": "business-slot-wrapper",
       "owner": "ReaderDirectoryHost / ReadingOfflineHost projection",
       "reason": "Finite bookmark/offline recovery composition consumes existing shared Notice/Action surfaces; it owns only presentation identity and read versus explicit original-intent forwarding, with zero private typography/background/native-overlay implementation.",
-      "counts": {},
-      "status": "REGISTERED_FINITE_BUSINESS_COMPOSITION_NOT_DEVICE_ACCEPTANCE"
-    },
-    {
-      "file": "entry/src/main/ets/features/rss/RssOriginalRecoverySurface.ets",
-      "kind": "business-slot-wrapper",
-      "owner": "RSS existing original mutation owners / exact presentation identity",
-      "reason": "Finite RSS original-receipt recovery composition shared by the five actual RSS page consumers. It consumes existing ReaderRecoveryNotice and ReaderRecoveryAction, owns only immutable physical identity/qualification and pure-query versus explicit-original intent forwarding, and has zero private typography/background/native-overlay implementation. This exact file grants no style or shell exception to another page.",
       "counts": {},
       "status": "REGISTERED_FINITE_BUSINESS_COMPOSITION_NOT_DEVICE_ACCEPTANCE"
     }
