@@ -118,8 +118,12 @@ export type RssSubscriptionSaveResult = {
 export class RssGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
   private writeEvidence: ReaderWriteEvidence | undefined;
+  private writeAdmission: (() => boolean) | undefined;
 
-  observeWrites(evidence: ReaderWriteEvidence | undefined): void { this.writeEvidence = evidence; }
+  observeWrites(evidence: ReaderWriteEvidence | undefined, admitted?: () => boolean): void {
+    this.writeEvidence = evidence;
+    this.writeAdmission = admitted;
+  }
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.runtimeOwner = runtimeOwner;
@@ -210,12 +214,11 @@ export class RssGateway {
     replaceExisting: boolean,
     onWriteDispatched: () => void = (): void => {},
   ): Promise<RssSourceImportResult> {
-    onWriteDispatched();
     const evidence = this.writeEvidence;
     const result = await this.mutationRequest('rss-source.import', {
       json,
       replaceExisting,
-    }, evidence);
+    }, evidence, onWriteDispatched);
     const imported = this.nonNegativeInteger(result.data, 'imported');
     const echoedReplace = this.requiredBoolean(result.data, 'replaceExisting');
     if (echoedReplace !== replaceExisting) {
@@ -497,12 +500,21 @@ export class RssGateway {
   }
 
   private async mutationRequest(method: string, params: JsonObject,
-    evidence: ReaderWriteEvidence | undefined): Promise<ReaderCoreResultEvent> {
-    // Arguments (including source/identity validation) were evaluated before
-    // this boundary. Only this runtime request is a dispatched mutation.
-    evidence?.dispatched();
+    evidence: ReaderWriteEvidence | undefined,
+    onWriteDispatched: () => void = (): void => {}): Promise<ReaderCoreResultEvent> {
+    const admitted = this.writeAdmission;
     try {
-      return await this.runtimeOwner.request(method, params);
+      return await this.runtimeOwner.request(method, params, {
+        canDispatch: (): boolean => {
+          try { return ReaderRuntimeOwner.isCurrent(this.runtimeOwner) && (admitted === undefined || admitted()); }
+          catch (_error) { return false; }
+        },
+        onDispatch: (): void => {
+          evidence?.dispatched();
+          // Observer delivery cannot change an already admitted write.
+          try { onWriteDispatched(); } catch (_error) {}
+        },
+      });
     } catch (error) {
       if (isReaderCoreTransactionPendingError(error)) evidence?.rejectedBeforeExecution();
       throw error;

@@ -36,7 +36,9 @@ const settle=async orchestrator=>{await orchestrator.mutationChain;};
 function rpc(){return {
   subscriptions:[sub('a'),sub('b')],calls:[],readFailures:[],writeFailure:undefined,beforeRequest:undefined,selection:{text:'[]'},
   async selectRssSourceJson(){return this.selection;},async loadOnlineJsonDocument(){return this.selection;},
-  async request(method,params){
+  async request(method,params,options){
+    if(options?.canDispatch?.()===false)throw Error('original presentation retired before dispatch');
+    options?.onDispatch?.();
     this.calls.push([method,clone(params)]);if(this.beforeRequest)await this.beforeRequest(method,params);
     if(method==='runtime.status')return {data:{pendingHostOperationCount:0}};
     if(method==='rss-source.list'){

@@ -10,6 +10,9 @@ import {
 } from './RssGateway';
 
 const DOMAIN = 0x5244;
+function logEditorError(error: Error): void {
+  try { hilog.error(DOMAIN, 'Reader', '%{private}s', error.message); } catch (_error) {}
+}
 let editorProjectionGeneration: number = 0;
 interface RssEditorReceipt { confirmation: CommitConfirmationKind; subscriptionId: string; revision: number; projection: PersistedReceiptProjection<RssSubscription>; }
 
@@ -67,6 +70,19 @@ export const EMPTY_RSS_EDITOR_SNAPSHOT: RssSubscriptionEditorSnapshot = {
 
 /** Thin UI coordinator over canonical Core rss.subscription.create/update. */
 export class RssSubscriptionEditorOrchestrator {
+  private static readonly retained: WeakMap<ReaderRuntimeOwner, RssSubscriptionEditorOrchestrator> = new WeakMap();
+
+  /** Warm owner retention does not manufacture a cold Core receipt. */
+  static forRuntime(owner: ReaderRuntimeOwner,
+    serialize: (work: () => Promise<void>) => Promise<void>): RssSubscriptionEditorOrchestrator | undefined {
+    if (!ReaderRuntimeOwner.isCurrent(owner)) return undefined;
+    const retained = RssSubscriptionEditorOrchestrator.retained.get(owner);
+    if (retained !== undefined) return retained;
+    const editor = new RssSubscriptionEditorOrchestrator((_snapshot: RssSubscriptionEditorSnapshot): void => {},
+      (_id: string): void => {}, (): boolean => false, owner, serialize);
+    RssSubscriptionEditorOrchestrator.retained.set(owner, editor);
+    return editor;
+  }
   private readonly gateway: RssGateway;
   private readonly owner: ReaderRuntimeOwner;
   private readonly serialize: (work: () => Promise<void>) => Promise<void>;
@@ -77,9 +93,10 @@ export class RssSubscriptionEditorOrchestrator {
   private readonly dirty: Map<string, boolean> = new Map();
   private readonly receipts: Map<string, RssEditorReceipt> = new Map();
   private readonly pending: Set<string> = new Set();
-  private readonly emit: (snapshot: RssSubscriptionEditorSnapshot) => void;
-  private readonly onSaved: (subscriptionId: string) => void;
-  private readonly isCurrent: () => boolean;
+  private emit: (snapshot: RssSubscriptionEditorSnapshot) => void;
+  private onSaved: (subscriptionId: string) => void;
+  private isCurrent: () => boolean;
+  private presentationIdentity: string | undefined = undefined;
   private snapshot: RssSubscriptionEditorSnapshot = EMPTY_RSS_EDITOR_SNAPSHOT;
   private session: number = 0;
 
@@ -105,11 +122,36 @@ export class RssSubscriptionEditorOrchestrator {
 
   owns(owner: ReaderRuntimeOwner): boolean { return this.owner === owner; }
 
+  attachPresentation(identity: string, emit: (snapshot: RssSubscriptionEditorSnapshot) => void,
+    onSaved: (subscriptionId: string) => void, isCurrent: () => boolean, admitted: () => boolean): boolean {
+    if (!this.ownsRuntime() || identity.length === 0) return false;
+    try { if (!admitted()) return false; } catch (_error) { return false; }
+    if (this.presentationIdentity !== identity) this.session += 1;
+    this.presentationIdentity = identity;
+    this.emit = emit;
+    this.onSaved = onSaved;
+    this.isCurrent = isCurrent;
+    if (this.isCurrentSession(this.session)) {
+      try { this.emit(this.copySnapshot(this.snapshot)); } catch (error) { logEditorError(error as Error); }
+    }
+    return true;
+  }
+
+  detachPresentation(identity: string): void {
+    if (this.presentationIdentity !== identity) return;
+    this.presentationIdentity = undefined;
+    this.session += 1;
+    this.emit = (_snapshot: RssSubscriptionEditorSnapshot): void => {};
+    this.onSaved = (_id: string): void => {};
+    this.isCurrent = (): boolean => false;
+  }
+
   openCreate(): void { this.open('create', ''); }
 
   openEdit(subscriptionId: string): void { this.open('edit', subscriptionId); }
 
   private open(mode: 'create' | 'edit', subscriptionId: string): void {
+    if (!this.isCurrentSession(this.session)) return;
     this.session += 1;
     const session = this.session;
     this.activeKey = mode === 'create' ? 'create' : JSON.stringify(['edit', subscriptionId]);
@@ -180,7 +222,7 @@ export class RssSubscriptionEditorOrchestrator {
         return;
       }
       const evidence = new ReaderWriteEvidence();
-      this.gateway.observeWrites(evidence);
+      this.gateway.observeWrites(evidence, (): boolean => this.isCurrentSession(session));
       let subscriptionId = current.subscriptionId;
       try {
         if (current.mode === 'create') subscriptionId = (await this.gateway.createSubscription(draft)).subscription.subscriptionId;
@@ -258,7 +300,7 @@ export class RssSubscriptionEditorOrchestrator {
           receipt?.confirmation === 'confirmed' ? unchangedDraft ? 'RSS 订阅已保存' : '本次提交已保存，当前草稿仍有未保存更改' : '编辑 RSS 订阅' });
       if (finishSaved && receipt?.confirmation === 'confirmed' && unchangedDraft && this.isCurrentSession(session)) {
         this.drafts.delete(key); this.dirty.delete(key); this.revisions.delete(key); this.receipts.delete(key);
-        try { this.onSaved(receipt.subscriptionId); } catch (error) { hilog.error(DOMAIN, 'Reader', '%{private}s', (error as Error).message); }
+        try { this.onSaved(receipt.subscriptionId); } catch (error) { logEditorError(error as Error); }
       }
     } catch (error) {
       if (receipt !== undefined) this.setReceipt(key, session, receipt.confirmation, receipt.subscriptionId, receipt.revision, 'failed', receipt.projection.value, (error as Error).message);
@@ -295,6 +337,7 @@ export class RssSubscriptionEditorOrchestrator {
   }
 
   private publishDraft(patch: RssSubscriptionEditorPatch): void {
+    if (!this.isCurrentSession(this.session)) return;
     const key = this.activeKey;
     this.dirty.set(key, true); this.revisions.set(key, (this.revisions.get(key) ?? 0) + 1);
     this.publish(patch);
@@ -327,9 +370,9 @@ export class RssSubscriptionEditorOrchestrator {
       operation: patch.operation ?? this.snapshot.operation,
     };
     this.drafts.set(this.activeKey, this.copySnapshot(this.snapshot));
-    if (this.ownsRuntime() && this.isCurrent()) {
+    if (this.isCurrentSession(this.session)) {
       try { this.emit(this.copySnapshot(this.snapshot)); }
-      catch (error) { hilog.error(DOMAIN, 'Reader', '%{private}s', (error as Error).message); }
+      catch (error) { logEditorError(error as Error); }
     }
   }
 
@@ -337,7 +380,7 @@ export class RssSubscriptionEditorOrchestrator {
     if (this.isCurrentSession(session)) {
       this.publish({ busy: false, statusMessage: `${label}：${error.message}` });
     }
-    hilog.error(DOMAIN, 'Reader', '%{private}s: %{private}s', label, error.message);
+    logEditorError(error);
   }
 
   private copySnapshot(source: RssSubscriptionEditorSnapshot): RssSubscriptionEditorSnapshot {
@@ -376,7 +419,8 @@ export class RssSubscriptionEditorOrchestrator {
   }
 
   private isCurrentSession(session: number): boolean {
-    return this.ownsRuntime() && this.isCurrent() && session === this.session;
+    try { return this.ownsRuntime() && this.isCurrent() && session === this.session; }
+    catch (_error) { return false; }
   }
 
   private sourceDraft(snapshot: RssSubscriptionEditorSnapshot): RssSourceDraft {

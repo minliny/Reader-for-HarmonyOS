@@ -129,7 +129,7 @@ export class RssRouteOperationHost {
     // prove a lost ACK or exclude an old submitted mutation committing later.
     if (state.operation?.projection.receipt.confirmation === 'unknown') { await this.read(state, binding, reader); return; }
     const evidence = new ReaderWriteEvidence();
-    this.dependencies.gateway.observeWrites(evidence);
+    this.dependencies.gateway.observeWrites(evidence, (): boolean => this.admitted(binding));
     this.publishOperation(state, binding, action, subscriptionId, guid, 'undispatched', 'reading');
     try {
       await this.dependencies.mutate(mutation, (): boolean => this.admitted(binding));

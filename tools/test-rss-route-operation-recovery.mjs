@@ -74,7 +74,7 @@ for(const lost of [false,true]){
   await assert.rejects(gateway.persistFavorite('', 'g',1));assert.equal(evidence.confirmation(),'undispatched');assert.equal(runtime.count('rss.favorite.persist'),0);
   runtime.lost.add('rss.favorite.persist');await assert.rejects(gateway.persistFavorite('s','g',1));assert.equal(evidence.confirmation(),'unknown');
   const refused=new RssWriteEvidence();gateway.observeWrites(refused);runtime.refused.add('rss.favorite.remove');await assert.rejects(gateway.removeFavorite('s','g'));assert.equal(refused.confirmation(),'undispatched','typed no-execution response is not an unknown write');
-  const malformed=new RssWriteEvidence();gateway.observeWrites(malformed);const request=runtime.request.bind(runtime);runtime.request=async(method,params)=>{const result=await request(method,params);if(method==='rss.entry.read')result.data.guid='foreign';return result;};
+  const malformed=new RssWriteEvidence();gateway.observeWrites(malformed);const request=runtime.request.bind(runtime);runtime.request=async(method,params,options)=>{const result=await request(method,params,options);if(method==='rss.entry.read')result.data.guid='foreign';return result;};
   await assert.rejects(gateway.setEntryRead('s','g',true));assert.equal(malformed.confirmation(),'unknown','invalid echoed ACK never claims confirmation');
 }
 {

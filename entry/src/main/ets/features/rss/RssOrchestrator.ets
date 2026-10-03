@@ -276,10 +276,11 @@ export class RssOrchestrator {
         if (await this.reconcileUnknownManagementWrite(session)) return;
         let dispatched = false;
         let result: RssSourceImportResult | undefined;
+        const evidence = new ReaderWriteEvidence();
+        this.gateway.observeWrites(evidence, (): boolean => this.isCurrentSession(session));
         try {
           result = await this.gateway.importSources(replaceExisting, onlineUrl,
             (): void => {
-              if (!this.isCurrentSession(session)) throw new Error('RSS import selection no longer active');
               dispatched = true;
               this.publishOperation('source-import', replaceExisting ? 'replace' : 'merge',
                 session, 'reading', undefined, undefined, 'unknown');
@@ -288,9 +289,9 @@ export class RssOrchestrator {
           if (!dispatched) throw error;
           this.publishOperation('source-import', replaceExisting ? 'replace' : 'merge',
             session, 'failed', (error as Error).message, undefined,
-            isPendingTransactionError(error as Error) ? 'undispatched' : 'unknown');
+            evidence.confirmation());
           return;
-        }
+        } finally { this.gateway.observeWrites(undefined); }
         if (result === undefined) {
           if (this.isCurrentSession(session)) onComplete(undefined);
           return;
@@ -451,7 +452,7 @@ export class RssOrchestrator {
   ): Promise<void> {
     if (!this.isCurrentSession(session) || await this.reconcileUnknownManagementWrite(session)) return;
     const evidence = new ReaderWriteEvidence();
-    this.gateway.observeWrites(evidence);
+    this.gateway.observeWrites(evidence, (): boolean => this.isCurrentSession(session));
     this.publishOperation(action, subscriptionId, session, 'reading', undefined, undefined, 'undispatched');
     try {
       await this.runMutationWithRetry(mutation, (): boolean => this.isCurrentSession(session));

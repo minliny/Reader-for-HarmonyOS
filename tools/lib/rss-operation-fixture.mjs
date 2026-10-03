@@ -27,7 +27,9 @@ export function rssRpc() {
   return { calls:[],subscriptions:[{subscriptionId:'s',feedUrl:'https://example.test/feed',title:'source',enabled:true,unreadCount:1}],
     items:[{subscriptionId:'s',guid:'g',title:'entry',read:false,firstSeenAt:1}], favorites:[],sources:new Map(),
     readFailures:new Map(),lost:new Set(),before:undefined,afterWrite:undefined,refused:new Set(),
-    async request(method,params){
+    async request(method,params,options){
+      if(options?.canDispatch?.()===false)throw Error('original presentation retired before dispatch');
+      options?.onDispatch?.();
       this.calls.push([method,clone(params)]);if(this.before)await this.before(method,params);
       if(this.refused.delete(method))throw pendingRssError();
       const failed=this.readFailures.get(method);if(failed){this.readFailures.delete(method);throw failed;}
