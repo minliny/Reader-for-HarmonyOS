@@ -40,8 +40,8 @@ import {
   type BookshelfManagementSnapshot,
 } from '../features/bookshelf/BookshelfHost';
 import { BookshelfProjectionOwner, type BookshelfProjectionBinding, type BookshelfProjectionSnapshot } from '../features/bookshelf/BookshelfProjectionOwner';
-import { BookshelfCatalogOwner, type BookshelfCatalogBinding, type BookshelfCatalogSnapshot } from '../features/bookshelf/BookshelfCatalogOwner';
-import { bookshelfSourceDisplayName } from '../features/bookshelf/BookshelfSourceNameProjection';
+import { BookshelfCatalogOwner, type BookshelfCatalogBinding, type BookshelfCatalogSnapshot, type BookshelfCatalogSeeds } from '../features/bookshelf/BookshelfCatalogOwner';
+import { bookshelfSourceDisplayName, type BookshelfNamedSource } from '../features/bookshelf/BookshelfSourceNameProjection';
 import { DiscoverPage } from '../features/discover/DiscoverPage';
 import {
   DiscoverOrchestrator,
@@ -238,11 +238,7 @@ interface TemporaryBackLease {
   handler: () => boolean;
 }
 
-interface BookshelfBackgroundSeeds {
-  owner: ReaderRuntimeOwner;
-  revision: string;
-  seeds: Promise<ReadingEntrySeed[] | undefined>;
-}
+type BookshelfBackgroundSeeds = BookshelfCatalogSeeds;
 
 /** Chinese one-liner for a book-source failure kind (user confirmation UI). */
 function remoteSourceFailureSummary(kind: RemoteReadingFailureKind): string {
@@ -288,7 +284,7 @@ struct Index {
   private navigationBackfillAttempted: Set<string> = new Set<string>();
   private navigationBackfillObservedKey: string = '';
   private navigationBackfillObserverDisposer: (() => void) | undefined;
-  @State private shelfOperation: BookshelfOperationSnapshot = { ...EMPTY_BOOKSHELF_OPERATION_SNAPSHOT };
+  @State private shelfOperation: BookshelfOperationSnapshot = EMPTY_BOOKSHELF_OPERATION_SNAPSHOT;
   private shelfOperationOwner: ReaderRuntimeOwner | undefined;
   private shelfReceiptRetired: boolean = false;
   private nativeAlertOwner: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
@@ -3435,7 +3431,11 @@ struct Index {
     return { session, current, currentEntries: (): LocalReadingTocEntry[] => this.detailToc,
       emitEntries: (entries: LocalReadingTocEntry[]): void => this.applyOwnedDirectoryEntries(entries),
       emitOperation: (operation: ReadingOfflineOperation): void => {
-        this.offlineOperation = { ...operation };
+        this.offlineOperation = { action: operation.action, sourceId: operation.sourceId, bookId: operation.bookId,
+          chapterIndex: operation.chapterIndex, generation: operation.generation, materialization: operation.materialization,
+          materializationFailure: operation.materializationFailure, operationFailure: operation.operationFailure,
+          canContinueOriginal: operation.canContinueOriginal, blockingClear: operation.blockingClear,
+          progress: operation.progress, projection: operation.projection };
         this.offlineOperationActive = operation.materialization === 'running';
       },
       onProgress: (progress: ReadingOfflineBookProgress, finished: boolean): void => {
@@ -4186,7 +4186,9 @@ struct Index {
       (isRequestCurrent?.() ?? true) && this.detailBook?.title === book.title && this.detailBook?.author === book.author,
       currentEntries: (): LocalReadingTocEntry[] => this.detailToc,
       emitEntries: (entries: LocalReadingTocEntry[]): void => this.applyOwnedDirectoryEntries(entries),
-      emitOperation: (operation: ReaderDirectoryOperation): void => { this.directoryOperation = { ...operation }; },
+      emitOperation: (operation: ReaderDirectoryOperation): void => { this.directoryOperation = { action: operation.action, book: operation.book, generation: operation.generation,
+        requestedCount: operation.requestedCount, confirmedCount: operation.confirmedCount, completion: operation.completion,
+        canContinueOriginal: operation.canContinueOriginal, projection: operation.projection }; },
       failed: (error: Error): void => { hilog.error(DOMAIN, 'Reader', 'Bookmark operation/projection: %{private}s', error.message); },
       onSettled };
   }
@@ -4292,7 +4294,7 @@ struct Index {
             .onClick((): void => this.closeSourceSwitch(scopeId));
           SourceSwitchPanel({
             state: this.sourceSwitchState,
-            currentSourceId: this.detailBook.sourceId,
+            currentSourceId: this.detailBook?.sourceId ?? '',
             onClose: (): void => this.closeSourceSwitch(scopeId),
             onRetry: (): void => this.retrySourceSwitch(scopeId),
             onRefresh: (): void => this.refreshSourceSwitch(scopeId),
@@ -4757,8 +4759,9 @@ struct Index {
       isCurrent: (): boolean => this.systemFileOpenNavigation === host && !this.shelfReceiptRetired &&
         mounting === this.detailShelfAdmissionMount && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner),
       view: (): SystemFileOpenNavigationView => this.systemFileOpenNavigationView(),
-      resolveReaderTransaction: (book: SystemFileOpenReaderIdentity): Promise<void> =>
-        this.resolveReaderSourceSwitchTransaction(book.sourceId, book.bookId),
+      resolveReaderTransaction: async (book: SystemFileOpenReaderIdentity): Promise<void> => {
+        await this.resolveReaderSourceSwitchTransaction(book.sourceId, book.bookId);
+      },
       notice: (message: string): void => { this.getUIContext().getPromptAction().showToast({message}); },
       open: (book: ShelfBook): void => {
         this.retireSourceSwitchPresentation();
@@ -4966,7 +4969,7 @@ struct Index {
         current: (): boolean => !this.shelfReceiptRetired && this.isCurrentRuntime(owner) &&
           owner === this.mountedRuntimeOwner && navigation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount && route === this.route,
         anchorKey: (): string => this.bookshelfViewState.anchorKey,
-        sources: (): BookSource[][] => [this.searchHost.sources(), this.sourceSources, this.sourceToolsSnapshot.sources],
+        sources: (): BookshelfNamedSource[][] => [this.searchHost.sources(), this.sourceSources, this.sourceToolsSnapshot.sources],
         emit: (snapshot: BookshelfProjectionSnapshot): void => this.applyBookshelfProjection(snapshot, owner, navigation),
         membership: (books: ShelfBook[]): void => this.searchHost.updateShelf(books),
         membershipNeeded: (): boolean => this.route === 'search',

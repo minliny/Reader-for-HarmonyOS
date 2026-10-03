@@ -89,7 +89,7 @@ export class BookshelfOperationOwner {
     } catch (error) {
       // Only the gateway's actual import.persist invocation marks dispatch.
       // A generic throw never proves a mutation was not executed.
-      if (evidence.confirmation() === 'unknown') this.receipt(projectPersistedReceipt({ confirmation: 'unknown', readback: 'notStarted',
+      if (evidence.confirmation() === 'unknown') this.receipt(projectPersistedReceipt({ confirmation: 'unknown', readback: 'idle',
         generation, canRetry: true, message: '导入结果待核对；已成功保存的书籍会保留' }), generation);
       if (current()) {
         this.presentation.write(identity, 'fileSelection');

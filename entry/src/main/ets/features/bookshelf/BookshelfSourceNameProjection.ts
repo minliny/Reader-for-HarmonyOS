@@ -1,4 +1,6 @@
 import type { BookSource } from '../source/SourceGateway';
+import type { SearchSource } from '../search/SearchGateway';
+export type BookshelfNamedSource = BookSource | SearchSource;
 
 /** One exact-source metadata policy shared by shelf and reading projections. */
 export function readableBookshelfSourceName(sourceId: string, name: string): boolean {
@@ -6,7 +8,7 @@ export function readableBookshelfSourceName(sourceId: string, name: string): boo
     name !== '书源已移除' && !/^[a-z][a-z0-9+.-]*:/i.test(name) && !/^www\./i.test(name);
 }
 export function bookshelfSourceDisplayName(sourceId: string, persistedName: string,
-  sources: BookSource[][]): string {
+  sources: BookshelfNamedSource[][]): string {
   if (sourceId === 'local') return '本地书籍';
   const saved = persistedName.trim();
   if (saved === '书源已移除' || readableBookshelfSourceName(sourceId, saved)) return saved;

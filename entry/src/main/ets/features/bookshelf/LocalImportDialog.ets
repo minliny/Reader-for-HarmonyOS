@@ -423,7 +423,7 @@ export struct LocalImportDialog {
             (item().disposition === 'created' ? '新增成功' : item().disposition === 'existing' ? '已在书架' : '成功') :
             (item().failure?.code === 'recoveryPending' ? '待确认' : '失败'), (): string => item().state === 'success' ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.LocalImportDialog.resultItem.resultBadge.FF5A4A2A', this.appThemeScheme));
           if (item().failure !== undefined) {
-            Text(item().failure.message).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(2).width('100%');
+            Text(item().failure?.message ?? '').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(2).width('100%');
           }
         }
         .layoutWeight(1)

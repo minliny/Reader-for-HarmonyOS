@@ -178,8 +178,9 @@ export class BookshelfHost {
   catalogTargets(owner: ReaderRuntimeOwner, books: ShelfBook[], revision: string,
     automatic: boolean, current: () => boolean): Promise<BookshelfState | undefined> {
     // Only a complete exact revision can be shared with durable preparation.
+    const retained: BookshelfState | undefined = current() ? { books, total: books.length } : undefined;
     return revision.length > 0 ? new BookshelfFlowGateway(owner, { readingState: 'all', sourceKind: 'all' }, automatic)
-      .loadAll(current) : Promise.resolve(current() ? { books, total: books.length } : undefined);
+      .loadAll(current) : Promise.resolve(retained);
   }
 
   refreshCatalogs(owner: ReaderRuntimeOwner, books: ShelfBook[], automatic: boolean,

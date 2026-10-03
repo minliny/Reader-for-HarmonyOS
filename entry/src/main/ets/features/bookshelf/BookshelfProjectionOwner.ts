@@ -5,7 +5,7 @@ import { BookshelfReadOwner } from './BookshelfReadOwner';
 import type { BookshelfReadResult } from './BookshelfReadOwner';
 import type { BookshelfDataState, BookshelfFilter, BookshelfFlowGateway } from './BookshelfFlowGateway';
 import type { BookSource } from '../source/SourceGateway';
-import { bookshelfSourceDisplayName, readableBookshelfSourceName } from './BookshelfSourceNameProjection';
+import { bookshelfSourceDisplayName, readableBookshelfSourceName, type BookshelfNamedSource } from './BookshelfSourceNameProjection';
 
 export interface BookshelfProjectionSnapshot {
   generation: number;
@@ -26,7 +26,7 @@ export interface BookshelfProjectionBinding {
   identity: string;
   current: () => boolean;
   anchorKey: () => string;
-  sources: () => BookSource[][];
+  sources: () => BookshelfNamedSource[][];
   emit: (snapshot: BookshelfProjectionSnapshot) => void;
   membership: (books: ShelfBook[]) => void;
   membershipNeeded?: () => boolean;

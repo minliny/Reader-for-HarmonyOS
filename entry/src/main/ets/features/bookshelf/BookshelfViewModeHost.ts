@@ -99,7 +99,7 @@ export class BookshelfViewModeHost {
         // Retain the feature's unresolved write fact across runtime/context
         // replacement, without delivering the old owner's value into its UI.
         this.snapshot = { canonical: undefined, receipt: projectPersistedReceipt({ confirmation: 'unknown',
-          readback: 'notRequested', canRetry: true, generation }) };
+          readback: 'idle', canRetry: true, generation }) };
       }
       return undefined;
     }
