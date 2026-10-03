@@ -83,13 +83,14 @@ export struct LocalBookDetail {
   @Prop adding: boolean = false;
   @Prop cancellingAdd: boolean = false;
   @Prop shelfMessage: string = '';
+  @Prop admissionIdentity: string = '';
   @Prop loadingMessage: string = '';
   onContinue: () => void = (): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
   onOpenDirectory: () => void = (): void => {};
   onSwitchSource: () => void = (): void => {};
-  onRemove: () => void = (): void => {};
-  onCancelAdd: () => void = (): void => {};
+  onRemove: (identity?: string) => void = (_identity?: string): void => {};
+  onCancelAdd: (identity?: string) => void = (_identity?: string): void => {};
   onBack: () => void = (): void => {};
   @State private viewportWidth: number = 0;
 
@@ -454,29 +455,31 @@ export struct LocalBookDetail {
         }
       });
 
-      Stack({ alignContent: Alignment.Center }) {
-        Text(this.shelfActionLabel())
-          .fontFamily(TYPE_BOOK_DETAIL_ACTION.fontFamily)
-          .fontWeight(TYPE_BOOK_DETAIL_ACTION.fontWeight)
-          .fontSize(TYPE_BOOK_DETAIL_ACTION.fontSizeFp)
-          .lineHeight(TYPE_BOOK_DETAIL_ACTION.lineHeightFp as number)
-          .fontColor(this.inBookshelf ? readerAppColor('TOK_DANGER', this.appThemeScheme) : readerAppColor('TOK_GREEN', this.appThemeScheme));
-      }
-      .width(this.actionButtonWidth())
-      .margin({ left: 4, right: 4 })
-      .height(46)
-      .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_ACTION_DIVIDER', this.appThemeScheme) })
-      .borderRadius(999)
-      .enabled(this.removalEnabled && !this.removing && !this.cancellingAdd)
-      .opacity(this.removalEnabled && !this.removing && !this.cancellingAdd ? 1 : 0.4)
-      .accessibilityText(this.shelfActionLabel())
-      .onClick((): void => {
-        if (this.removalEnabled && !this.removing && !this.cancellingAdd) {
-          if (this.adding) this.onCancelAdd();
-          else this.onRemove();
+      ForEach([this.admissionIdentity], (identity: string): void => {
+        Stack({ alignContent: Alignment.Center }) {
+          Text(this.shelfActionLabel())
+            .fontFamily(TYPE_BOOK_DETAIL_ACTION.fontFamily)
+            .fontWeight(TYPE_BOOK_DETAIL_ACTION.fontWeight)
+            .fontSize(TYPE_BOOK_DETAIL_ACTION.fontSizeFp)
+            .lineHeight(TYPE_BOOK_DETAIL_ACTION.lineHeightFp as number)
+            .fontColor(this.inBookshelf ? readerAppColor('TOK_DANGER', this.appThemeScheme) : readerAppColor('TOK_GREEN', this.appThemeScheme));
         }
-      });
+        .width(this.actionButtonWidth())
+        .margin({ left: 4, right: 4 })
+        .height(46)
+        .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
+        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_ACTION_DIVIDER', this.appThemeScheme) })
+        .borderRadius(999)
+        .enabled(this.removalEnabled && !this.removing && !this.cancellingAdd)
+        .opacity(this.removalEnabled && !this.removing && !this.cancellingAdd ? 1 : 0.4)
+        .accessibilityText(this.shelfActionLabel())
+        .onClick((): void => {
+          if (this.removalEnabled && !this.removing && !this.cancellingAdd) {
+            if (this.adding) this.onCancelAdd(identity);
+            else this.onRemove(identity);
+          }
+        });
+      }, (identity: string): string => identity);
     }
     .width(this.contentWidth())
     .height(DETAIL_ACTION_AREA_HEIGHT)

@@ -11,8 +11,9 @@ export function bookshelfOperationClass(path,result,deps={}) {
 export function actualBookshelfOperationTypes(deps) {
  const presentation=bookshelfOperationClass('features/bookshelf/LocalImportPresentationOwner.ts','({LocalImportPresentation,LocalImportPresentationOwner,LOCAL_IMPORT_PRESENTATION_KEY})');
  const operation=bookshelfOperationClass('features/bookshelf/BookshelfOperationOwner.ts','({BookshelfOperationOwner,EMPTY_BOOKSHELF_OPERATION_SNAPSHOT})',{...deps,...presentation});
- const Host=bookshelfOperationClass('features/bookshelf/BookshelfHost.ets','BookshelfHost',{...deps,...operation});
- return {...presentation,...operation,Host};
+ const readable=bookshelfOperationClass('features/bookshelf/BookshelfReadableAdmissionOwner.ts','({BookshelfReadableAdmissionOwner,EMPTY_READABLE_ADMISSION})',deps);
+ const Host=bookshelfOperationClass('features/bookshelf/BookshelfHost.ets','BookshelfHost',{...deps,...operation,...readable});
+ return {...presentation,...operation,...readable,Host};
 }
 export function actualBookshelfHostField(index,Host,AppStorage) {
  const text=bookshelfOperationSource('pages/Index.ets'),start=text.indexOf('  private bookshelfHost:'),end=text.indexOf('\n  );',start)+6;

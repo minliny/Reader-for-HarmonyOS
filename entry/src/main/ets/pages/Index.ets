@@ -27,6 +27,7 @@ import {
   BookshelfFlowGateway,
   type BookshelfRemovalTarget,
 } from '../features/bookshelf/BookshelfFlowGateway';
+import { EMPTY_READABLE_ADMISSION, type BookshelfReadableAdmissionSnapshot, type BookshelfReadableAdmissionEffect } from '../features/bookshelf/BookshelfReadableAdmissionOwner';
 import { EMPTY_BOOKSHELF_OPERATION_SNAPSHOT, type BookshelfOperationSnapshot } from '../features/bookshelf/BookshelfOperationOwner';
 import { LOCAL_IMPORT_PRESENTATION_KEY, type LocalImportPresentation } from '../features/bookshelf/LocalImportPresentationOwner';
 import { BookshelfPage } from '../features/bookshelf/BookshelfPage';
@@ -514,11 +515,8 @@ struct Index {
   private offlineMutationGeneration: number = 0;
   @State private offlineMutationActiveKey: string = '';
   /** Serializes the destructive detail-page removal for one exact book. */
-  @State private bookshelfAdditionActiveKey: string = '';
-  @State private bookshelfAdditionCancellingKey: string = '';
-  @State private bookshelfAdditionErrorKey: string = '';
-  @State private bookshelfAdditionError: string = '';
-  private bookshelfAdditionGeneration: number = 0;
+  @State private detailShelfAdmissionMount: number = 0;
+  @State private readableAdmissions: BookshelfReadableAdmissionSnapshot[] = [];
   @State private bookRemovalMessage: string = '';
   private bookRemovalDialogOpen: boolean = false;
   private bookRemovalConfirmAction: (() => void) | undefined = undefined;
@@ -595,6 +593,9 @@ struct Index {
       this.shelfOperationOwner = owner; this.shelfOperation = snapshot;
       if (presentImportResult && snapshot.receipt?.value !== undefined) this.applyBookshelfState(snapshot.receipt.value);
     },
+    (snapshots: BookshelfReadableAdmissionSnapshot[], owner: ReaderRuntimeOwner): void => {
+      if (!this.shelfReceiptRetired && this.isCurrentRuntime(owner)) this.readableAdmissions = snapshots;
+    },
   );
   private settingsHost: SettingsHost = new SettingsHost(
     (snapshot: SettingsSnapshot): void => { this.settingsSnapshot = snapshot; },
@@ -663,6 +664,8 @@ struct Index {
     this.mountedRuntimeOwner = ReaderRuntimeOwner.current();
     this.settingsCacheCleanup = this.settingsHost.cacheCleanupSnapshot(this.mountedRuntimeOwner);
     this.shelfReceiptRetired = false;
+    this.detailShelfAdmissionMount += 1;
+    this.bookshelfHost.readable(this.mountedRuntimeOwner);
     this.systemFileOpenMounted = true;
     // Index is mounted after configuration recovery. Reading these settings
     // inside that recovery barrier itself would recursively wait on it.
@@ -706,6 +709,7 @@ struct Index {
     this.bookshelfBackgroundRefreshRunning = false;
     this.dismissBookRemovalDialog();
     this.bookshelfHost.detachOperationPresentation();
+    this.bookshelfHost.detachReadablePresentation();
     this.navigationBackfillObserverDisposer?.();
     this.navigationBackfillObserverDisposer = undefined;
     this.navigationBackfillObservedKey = '';
@@ -1406,7 +1410,7 @@ struct Index {
         toc: this.detailToc,
         sourceSwitchEnabled: this.detailBook.sourceId !== LOCAL_SOURCE_ID &&
           this.shelfOperation.removalKey.length === 0 &&
-          this.bookshelfAdditionActiveKey !== this.detailBookKey(this.detailBook),
+          !this.detailReadableAdmission(this.detailBook).adding,
         readingEnabled: this.remoteContentVerdict === 'readable',
         readingBlockedReason: this.remoteContentVerdictLabel(this.remoteContentVerdict),
         inBookshelf: this.detailInBookshelf,
@@ -1415,15 +1419,16 @@ struct Index {
           this.pendingSourceSwitch === undefined && this.offlineMutationActiveKey.length === 0 &&
           this.shelfOperation.removalKey.length === 0 && !this.hasUnknownShelfWrite(),
         removing: this.shelfOperation.removalKey.length > 0,
-        adding: this.bookshelfAdditionActiveKey === this.detailBookKey(this.detailBook),
-        cancellingAdd: this.bookshelfAdditionCancellingKey === this.detailBookKey(this.detailBook),
-        shelfMessage: this.bookshelfAdditionErrorKey === this.detailBookKey(this.detailBook) ? this.bookshelfAdditionError : '',
+        adding: this.detailReadableAdmission(this.detailBook).adding,
+        cancellingAdd: this.detailReadableAdmission(this.detailBook).cancelling,
+        shelfMessage: this.detailReadableAdmission(this.detailBook).message,
         onContinue: (): void => this.openReading(undefined),
         onSelectChapter: (chapterIndex: number): void => this.openReading(chapterIndex),
         onOpenDirectory: (): void => this.openFullDirectory(),
         onSwitchSource: (): void => this.openDetailSourceSwitch(),
-        onRemove: (): void => this.requestDetailShelfMutation(),
-        onCancelAdd: (): void => this.cancelDetailBookAddition(),
+        admissionIdentity: this.detailShelfAdmissionIdentity(),
+        onRemove: (identity?: string): void => { if (this.isCurrentDetailShelfAdmission(identity)) this.requestDetailShelfMutation(); },
+        onCancelAdd: (identity?: string): void => { if (this.isCurrentDetailShelfAdmission(identity)) this.cancelDetailBookAddition(); },
         onBack: (): void => this.returnFromDetail(),
       })
         .width('100%').height('100%')
@@ -3992,103 +3997,59 @@ struct Index {
     this.addDetailBook();
   }
 
+  private detailShelfAdmissionIdentity(): string {
+    const book = this.detailBook;
+    return book === undefined ? '' : `${this.detailShelfAdmissionMount}:${this.navigationGeneration}:${JSON.stringify([book.sourceId, book.bookId])}`;
+  }
+
+  private isCurrentDetailShelfAdmission(identity: string | undefined): boolean {
+    return identity !== undefined && identity === this.detailShelfAdmissionIdentity() && !this.shelfReceiptRetired &&
+      this.isCurrentRuntime(this.mountedRuntimeOwner) && this.route === 'detail';
+  }
+
+  private detailReadableAdmission(book: ReadingBookDetail): BookshelfReadableAdmissionSnapshot {
+    return this.readableAdmissions.find((snapshot: BookshelfReadableAdmissionSnapshot): boolean => snapshot.key === this.detailBookKey(book)) ?? EMPTY_READABLE_ADMISSION;
+  }
+
+  private readableAdmissionCurrent(identity: RemoteReadingIdentity, owner: ReaderRuntimeOwner, navigation: number): boolean {
+    return !this.shelfReceiptRetired && this.isCurrentRuntime(owner) && this.navigationGeneration === navigation &&
+      this.route === 'detail' && this.detailBook?.sourceId === identity.sourceId && this.detailBook?.bookId === identity.bookId;
+  }
+
+  private publishReadableAdmission(effect: BookshelfReadableAdmissionEffect): void {
+    if (effect.snapshot.membership !== undefined) {
+      this.detailInBookshelf = effect.snapshot.membership;
+      if (effect.snapshot.membership) { this.refreshBookshelf(); this.refreshSearchShelfMembership(); }
+    } else if (effect.duplicate) this.refreshSearchShelfMembership();
+  }
+
   private addDetailBook(): void {
     const book = this.detailBook;
     const session = this.remoteReadingSession;
-    if (book === undefined || session === undefined || book.sourceId === LOCAL_SOURCE_ID ||
-      !this.canRemoveDetailBook(book) || this.bookshelfAdditionActiveKey === this.detailBookKey(book)) {
-      return;
-    }
+    if (book === undefined || session === undefined || book.sourceId === LOCAL_SOURCE_ID || !this.canRemoveDetailBook(book)) return;
     if (session.identity.sourceId !== book.sourceId || session.identity.bookId !== book.bookId) {
-      this.showReadingFailure('加入书架失败', '书籍详情已变更，请重新打开详情后再加入书架。');
-      return;
+      this.showReadingFailure('加入书架失败', '书籍详情已变更，请重新打开详情后再加入书架。'); return;
     }
-    const generation = ++this.bookshelfAdditionGeneration;
-    const key = this.detailBookKey(book);
-    this.bookshelfAdditionActiveKey = key;
-    this.bookshelfAdditionCancellingKey = '';
-    this.bookshelfAdditionErrorKey = '';
-    this.bookshelfAdditionError = '';
-    const owner = ReaderRuntimeOwner.current();
-    const isCurrent = (): boolean => generation === this.bookshelfAdditionGeneration &&
-      this.bookshelfAdditionActiveKey === key;
-    void this.bookshelfHost.upsertBook({
-      sourceId: session.identity.sourceId,
-      bookId: session.identity.bookId,
-      title: session.book.title,
-      author: session.book.author,
-      coverUrl: session.book.coverUrl,
-      intro: session.book.intro,
-      kind: session.book.kind,
-      lastChapter: session.book.lastChapter,
-    })
-      .then((): void => {
-        this.refreshBookshelf();
-        if (!isCurrent()) {
-          return;
-        }
-        if (this.isSameDetailBook(book)) {
-          this.detailInBookshelf = true;
-        }
-        // Core reports success only after the first readable entry is durable.
-        // The application owner resumes the remaining chapter window later.
-      })
-      .catch((error: Error): void => {
-        if (isCurrent()) {
-          if (error instanceof ReaderCoreRequestError && error.event.error.code === 'BOOK_ALREADY_ON_SHELF') {
-            this.refreshSearchShelfMembership();
-            this.bookshelfAdditionError = '这本书已加入书架，请从书架打开已有书籍后换源。';
-          } else {
-            this.bookshelfAdditionError = `加入书架未完成：${error.message}`;
-          }
-          this.bookshelfAdditionErrorKey = key;
-        }
-      })
-      .finally((): void => {
-        // Pending admission is scoped to its detail button. It must never
-        // hold the global removal gate while another shelf book is opened.
-        if (generation === this.bookshelfAdditionGeneration &&
-          this.bookshelfAdditionActiveKey === key) {
-          this.bookshelfAdditionActiveKey = '';
-        }
-      });
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || !this.isCurrentRuntime(owner)) return;
+    const navigation = this.navigationGeneration;
+    const identity: RemoteReadingIdentity = {sourceId: book.sourceId, bookId: book.bookId};
+    void this.bookshelfHost.readable(owner).add({
+      sourceId: session.identity.sourceId, bookId: session.identity.bookId, title: session.book.title,
+      author: session.book.author, coverUrl: session.book.coverUrl, intro: session.book.intro,
+      kind: session.book.kind, lastChapter: session.book.lastChapter,
+    }, (): boolean => this.readableAdmissionCurrent(identity, owner, navigation),
+      (effect: BookshelfReadableAdmissionEffect): void => this.publishReadableAdmission(effect));
   }
 
   private cancelDetailBookAddition(): void {
-    const book = this.detailBook;
-    if (book === undefined) return;
-    const key = this.detailBookKey(book);
-    if (this.bookshelfAdditionActiveKey !== key || this.bookshelfAdditionCancellingKey === key) return;
-    const generation = ++this.bookshelfAdditionGeneration;
-    this.bookshelfAdditionCancellingKey = key;
-    this.bookshelfAdditionError = '';
-    this.bookshelfAdditionErrorKey = key;
-    const owner = ReaderRuntimeOwner.current();
-    const isCurrent = (): boolean => generation === this.bookshelfAdditionGeneration &&
-      this.bookshelfAdditionActiveKey === key;
-    let settled = false;
-    void owner.bookAcquisitions().cancelReadableBook(book.sourceId, book.bookId)
-      .then(async (): Promise<void> => {
-        // Strict admission may win the cancellation race. Reconcile that
-        // committed fact without deleting the book or its reading position.
-        const saved = await this.bookshelfHost.loadShelfBook(book.sourceId, book.bookId);
-        if (saved !== undefined) {
-          this.refreshBookshelf();
-          this.refreshSearchShelfMembership();
-        }
-        settled = true;
-        if (!isCurrent()) return;
-        if (this.isSameDetailBook(book)) this.detailInBookshelf = saved !== undefined;
-        this.bookshelfAdditionError = saved === undefined ? '已取消加入书架' : '';
-      })
-      .catch((error: Error): void => {
-        if (isCurrent()) this.bookshelfAdditionError = `取消状态未确认，请重试：${error.message}`;
-      })
-      .finally((): void => {
-        if (!isCurrent()) return;
-        this.bookshelfAdditionCancellingKey = '';
-        if (settled) this.bookshelfAdditionActiveKey = '';
-      });
+    const book = this.detailBook; const owner = this.mountedRuntimeOwner;
+    if (book === undefined || owner === undefined || !this.isCurrentRuntime(owner)) return;
+    const navigation = this.navigationGeneration;
+    const identity: RemoteReadingIdentity = {sourceId: book.sourceId, bookId: book.bookId};
+    void this.bookshelfHost.readable(owner).cancel(book.sourceId, book.bookId,
+      (): boolean => this.readableAdmissionCurrent(identity, owner, navigation),
+      (effect: BookshelfReadableAdmissionEffect): void => this.publishReadableAdmission(effect));
   }
 
   private openBookRemovalDialog(message: string, action: () => void): void {

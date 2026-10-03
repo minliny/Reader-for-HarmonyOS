@@ -231,6 +231,7 @@
     "test-bookshelf-view-mode-receipts.mjs",
     "test-bookshelf-viewport-return.mjs",
     "test-bookshelf-write-receipt-consumers.mjs",
+    "test-readable-admission-index-owner.mjs",
     "test-bounded-local-import-composition.mjs",
     "test-bounded-replace-composition.mjs",
     "test-bounded-source-tts-composition.mjs",

@@ -54,7 +54,7 @@ function rpc(){return{calls:[],rows:[book('a'),book('b')],readFail:0,writeFail:f
  },count(m){return this.calls.filter(x=>x===m).length;}};}
 function fixture({runtime,stored='',reconstruct=false}={}){const r=runtime??rpc();currentOwner=r;let serialized=stored;
  const index=Object.assign(new Index(),{route:'bookshelf',settingsSnapshot:{reduceMotion:true},navigationGeneration:1,mountedRuntimeOwner:r,
- bookshelfLoadGeneration:0,bookshelfAdditionActiveKey:'',shelfOperation:{...operationTypes.EMPTY_BOOKSHELF_OPERATION_SNAPSHOT},shelfReceiptRetired:false,
+ bookshelfLoadGeneration:0,shelfOperation:{...operationTypes.EMPTY_BOOKSHELF_OPERATION_SNAPSHOT},shelfReceiptRetired:false,
  storedImportPresentation:stored,shelfBooks:clone(r.rows),shelfProjectionRevision:'',isBookshelfVisualAdmitted:true,readingSessionActive:false,sourceSwitchVisible:false,pendingSourceSwitch:undefined,offlineMutationActiveKey:'',shelfReadingFilter:'all',shelfSourceFilter:'all',
  isSameDetailBook:b=>index.detailBook?.bookId===b.bookId,detailBookKey:b=>JSON.stringify([b.sourceId,b.bookId]),
  applyBookshelfState:s=>{index.shelfBooks=clone(s.shelf.books);index.continueReading=s.continueReading;},nextNavigationGeneration:()=>++index.navigationGeneration,

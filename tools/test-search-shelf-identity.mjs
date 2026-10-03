@@ -1,3 +1,4 @@
+import {readableAdmissionFixture} from './lib/bookshelf-readable-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
@@ -61,10 +62,6 @@ for(const books of [[{...saved,sourceId:'local'}],[{...saved,author:''}]]){
 }
 
 let writeCount=0,writeError;
-const Add=productionMotionMethods(index,['addDetailBook','isSameDetailBook'],{
-  LOCAL_SOURCE_ID:'local',ReaderCoreRequestError,ReaderRuntimeOwner:{current:()=>({})},
-  ReaderCoreGateway:class{async upsertBook(){writeCount++;if(writeError)throw writeError;return {created:true};}},
-});
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 const localSaved={...saved,sourceId:'local',bookId:'import-one',sourceName:'本地导入'};
 const localFull={...localSaved,kind:'EPUB',coverUrl:'file://local-cover',intro:'完整简介',
@@ -133,25 +130,17 @@ const localResult={...result,sourceId:'local',bookId:'import-one',sourceName:'�
   assert.equal(calls.length,1,'the newer search selection is admitted');
   assert.equal(localCalls.length,0,'an older local lookup cannot replace a newer result on the same route');
 }
-function addFixture(){const notices=[];const host=Object.assign(new Add(),{
-  detailBook:result,remoteReadingSession:{identity:result,book:result},bookshelfRemovalGeneration:0,
-  bookshelfHost:{upsertBook:async()=>{writeCount++;if(writeError)throw writeError;return {created:true};}},
-  bookshelfAdditionGeneration:0,bookshelfAdditionActiveKey:'',bookshelfAdditionError:'',
-  shelfOperation:{removalKey:'',busy:false,batchRemovalBusy:false},canRemoveDetailBook:()=>true,detailBookKey:()=> 'search-source:/new',
-  showReadingFailure:(...args)=>notices.push(args),refreshBookshelf(){},refreshSearchShelfMembership(){this.refreshed=true;},
-});return {host,notices};}
+function addFixture(){const f=readableAdmissionFixture({book:result,add:async()=>{writeCount++;if(writeError)throw writeError;return {data:{sourceId:result.sourceId,bookId:result.bookId,created:true,addedAt:1}};}});return {host:f.page,notices:f.notices};}
 {
-  const {host,notices}=addFixture();host.remoteReadingSession={identity:saved,book:saved};
-  host.addDetailBook();await settle();assert.equal(writeCount,0);assert.match(notices[0][1],/详情已变更/);
+ const {host,notices}=addFixture();host.remoteReadingSession={identity:saved,book:saved};
+ host.addDetailBook();await settle();assert.equal(writeCount,0);assert.match(notices[0][1],/详情已变更/);
 }
 {
-  const {host,notices}=addFixture();
-  writeError=new ReaderCoreRequestError({error:{code:'BOOK_ALREADY_ON_SHELF',message:'already exists',
-    details:{existingSourceId:saved.sourceId,existingBookId:saved.bookId}}});
-  host.addDetailBook();await settle();
-  assert.equal(writeCount,1);assert.equal(host.detailInBookshelf,undefined,'another identity never becomes this detail row');
-  assert.equal(host.refreshed,true);assert.equal(notices.length,0);
-  assert.match(host.bookshelfAdditionError,/已加入书架/);
-  assert.equal(host.shelfOperation.removalKey,'');writeError=undefined;
+ const {host,notices}=addFixture();
+ writeError=new ReaderCoreRequestError({error:{code:'BOOK_ALREADY_ON_SHELF',message:'already exists',details:{existingSourceId:saved.sourceId,existingBookId:saved.bookId}}});
+ host.addDetailBook();await settle();assert.equal(writeCount,1);
+ assert.equal(host.detailInBookshelf,false,'another identity never becomes this detail row');
+ assert.equal(host.memberships,1);assert.equal(notices.length,0);assert.match(host.detailReadableAdmission(host.detailBook).message,/已加入书架/);
+ assert.equal(host.shelfOperation.removalKey,'');writeError=undefined;
 }
 console.log('PASS: search selection preserves saved identity; sparse offscreen membership loads full local detail with stale guards; ambiguous and duplicate ownership remains safe');

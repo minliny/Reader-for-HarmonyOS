@@ -7,6 +7,7 @@ import type { RemoteReadingSession } from '../reading/RemoteReadingContract';
 import { BookshelfReadOwner, type BookshelfReadResult } from './BookshelfReadOwner';
 import type { BookshelfDataState, BookshelfFilter } from './BookshelfFlowGateway';
 import { BookshelfOperationOwner, type BookshelfOperationSnapshot } from './BookshelfOperationOwner';
+import { BookshelfReadableAdmissionOwner, type BookshelfReadableAdmissionSnapshot } from './BookshelfReadableAdmissionOwner';
 import type { OperationFacts } from '../../app/ReaderOperationFacts';
 import {
   BookshelfManagementGateway,
@@ -31,6 +32,9 @@ export {
 export class BookshelfHost {
   // One feature-local Runtime lane survives Index reconstruction caused by
   // the system picker. It is never an application-wide task/error registry.
+  private static readableOwner: BookshelfReadableAdmissionOwner | undefined;
+  private readableSubscription: (() => void) | undefined;
+  private subscribedReadable: BookshelfReadableAdmissionOwner | undefined;
   private static operationOwner: BookshelfOperationOwner | undefined;
   private operationSubscription: (() => void) | undefined;
   private subscribedOperation: BookshelfOperationOwner | undefined;
@@ -38,6 +42,7 @@ export class BookshelfHost {
   private readonly emitManagementSnapshot: (snapshot: BookshelfManagementSnapshot) => void;
   private readonly isManagementCurrent: () => boolean;
   private readonly owner: () => ReaderRuntimeOwner;
+  private readonly emitReadable: (snapshot: BookshelfReadableAdmissionSnapshot[], owner: ReaderRuntimeOwner) => void;
   private readonly emitOperation: (snapshot: BookshelfOperationSnapshot, owner: ReaderRuntimeOwner) => void;
 
   readShelf(owner: ReaderRuntimeOwner, filter: BookshelfFilter, generation: number, current: () => boolean,
@@ -54,7 +59,9 @@ export class BookshelfHost {
     isManagementCurrent: () => boolean,
     owner?: () => ReaderRuntimeOwner,
     emitOperation: (snapshot: BookshelfOperationSnapshot, owner: ReaderRuntimeOwner) => void = (): void => {},
+    emitReadable: (snapshot: BookshelfReadableAdmissionSnapshot[], owner: ReaderRuntimeOwner) => void = (): void => {},
   ) {
+    this.emitReadable = emitReadable;
     this.emitOperation = emitOperation;
     this.emitManagementSnapshot = emitManagementSnapshot;
     this.isManagementCurrent = isManagementCurrent;
@@ -80,6 +87,23 @@ export class BookshelfHost {
     return operation;
   }
   detachOperationPresentation(): void { this.operationSubscription?.(); this.operationSubscription = undefined; }
+
+  readable(owner: ReaderRuntimeOwner): BookshelfReadableAdmissionOwner {
+    if (!ReaderRuntimeOwner.isCurrent(owner)) {
+      if (this.subscribedReadable?.owns(owner)) return this.subscribedReadable;
+      throw new Error('BOOKSHELF_READABLE_OWNER_RETIRED');
+    }
+    if (BookshelfHost.readableOwner === undefined || !BookshelfHost.readableOwner.owns(owner))
+      BookshelfHost.readableOwner = new BookshelfReadableAdmissionOwner(owner);
+    const readable = BookshelfHost.readableOwner;
+    if (this.subscribedReadable !== readable || this.readableSubscription === undefined) {
+      this.readableSubscription?.(); this.subscribedReadable = readable;
+      this.readableSubscription = readable.subscribe((snapshots: BookshelfReadableAdmissionSnapshot[]): void => this.emitReadable(snapshots, owner));
+      this.emitReadable(readable.current(), owner);
+    }
+    return readable;
+  }
+  detachReadablePresentation(): void { this.readableSubscription?.(); this.readableSubscription = undefined; }
 
   openManagement(): void { this.getManagementOrchestrator().open(); }
   updateGroupName(value: string): void { this.getManagementOrchestrator().updateGroupName(value); }

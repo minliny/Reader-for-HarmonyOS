@@ -205,10 +205,13 @@ export class ReaderCoreGateway {
    * the Core composite identity intact instead of creating a second local
    * lookup protocol in ArkUI.
    */
-  async loadShelfBook(sourceId: string, bookId: string): Promise<ShelfBook | undefined> {
+  async loadShelfBook(sourceId: string, bookId: string, current?: () => boolean): Promise<ShelfBook | undefined> {
     this.assertNonBlankString(sourceId, 'sourceId');
     this.assertNonBlankString(bookId, 'bookId');
-    const result = await this.runtimeOwner.request('bookshelf.get', { sourceId, bookId });
+    if (current !== undefined && !current()) throw new Error('BOOKSHELF_READ_RETIRED');
+    const result = await this.runtimeOwner.request('bookshelf.get', { sourceId, bookId },
+      current === undefined ? undefined : { shouldCancel: (): boolean => !current() });
+    if (current !== undefined && !current()) throw new Error('BOOKSHELF_READ_RETIRED');
     const rawBook = result.data['book'];
     if (rawBook === null) {
       return undefined;
