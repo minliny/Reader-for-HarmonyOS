@@ -470,20 +470,8 @@ export struct SyncPage {
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center)
           .padding({ top: TOK_SPACE_LG, bottom: TOK_SPACE_SM });
-        Text('立即备份')
-          .width('100%')
-          .fontFamily(TYPE_SYNC_BACKUP_ACTION.fontFamily)
-          .fontWeight(TYPE_SYNC_BACKUP_ACTION.fontWeight)
-          .fontSize(TYPE_SYNC_BACKUP_ACTION.fontSizeFp)
-          .lineHeight(TYPE_SYNC_BACKUP_ACTION.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-          .textAlign(TextAlign.Center)
-          .padding({ top: 9, bottom: 9 })
-          .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
-          .borderRadius(999)
-          .margin({ bottom: TOK_SPACE_MD, left: TOK_SPACE_MD, right: TOK_SPACE_MD })
-          .enabled(this.canMutate())
-          .onClick((): void => this.onTriggerBackup());
+        ReaderButton({ scheme: this.appThemeScheme, specId: 'sync-empty-backup', label: '立即备份', layout: 'full',
+          actionEnabled: this.canMutate(), onAction: (): void => this.onTriggerBackup() });
       }
       .width('100%');
     }

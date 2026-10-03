@@ -1,12 +1,17 @@
+import { TOK_SPACE_CONTROL_INLINE, TOK_SPACE_ROW_BLOCK } from './ReaderTokens';
 import type { ReaderAppColorRole } from './ReaderThemeRegistry';
 import { ReaderTextStyle, ReaderInheritedTextStyle, TYPE_FORM_LABEL_ACTION, TYPE_APP_SMALL_ACTION,
-  TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_FORM_COMPACT_ACTION, TYPE_RSS_LINK_ACTION } from './ReaderTypography';
+  TYPE_DISCOVER_FILTER_LABEL, TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_FORM_COMPACT_ACTION, TYPE_RSS_LINK_ACTION } from './ReaderTypography';
 
 export type ReaderLabeledIconActionSpecId = 'rss-feed' | 'rss-entry' | 'rss-management' |
-  'rss-manage' | 'rss-source-operations' | 'rss-view-all' | 'source-management-add';
+  'rss-manage' | 'rss-source-operations' | 'rss-view-all' | 'source-management-add' | 'discover-apply';
 export interface ReaderLabeledIconActionSpec {
   text: ReaderTextStyle | ReaderInheritedTextStyle;
   textRole: ReaderAppColorRole;
+  labelMarginLeft: number | undefined;
+  leftPaddingOnly: boolean;
+  gradientStart: ReaderAppColorRole | undefined;
+  gradientEnd: ReaderAppColorRole | undefined;
   dangerRole: ReaderAppColorRole | undefined;
   surfaceRole: ReaderAppColorRole | undefined;
   borderRole: ReaderAppColorRole | undefined;
@@ -24,13 +29,13 @@ export interface ReaderLabeledIconActionSpec {
   responseOffset: number | undefined;
 }
 const FEED: ReaderLabeledIconActionSpec = {
-  text: TYPE_APP_SMALL_ACTION, textRole: 'app.RssSourceFeedPage.actionTarget.fontColor.FF3F372F',
+  labelMarginLeft: undefined, leftPaddingOnly: false, gradientStart: undefined, gradientEnd: undefined, text: TYPE_APP_SMALL_ACTION, textRole: 'app.RssSourceFeedPage.actionTarget.fontColor.FF3F372F',
   dangerRole: undefined, surfaceRole: 'app.RssSourceFeedPage.ACTION_BG', borderRole: undefined,
   divided: false, iconSize: 18, rowHeight: 32, gap: 5, surfaceOnHit: false, rowWidth: undefined, horizontalPadding: 9,
   radius: 999, centerRow: false, outerHit: true, equalLayout: false, responseOffset: undefined,
 };
 function copyReaderLabeledIconActionSpec(): ReaderLabeledIconActionSpec {
-  return { text: FEED.text, textRole: FEED.textRole, dangerRole: FEED.dangerRole,
+  return { labelMarginLeft: FEED.labelMarginLeft, leftPaddingOnly: FEED.leftPaddingOnly, gradientStart: FEED.gradientStart, gradientEnd: FEED.gradientEnd, text: FEED.text, textRole: FEED.textRole, dangerRole: FEED.dangerRole,
     surfaceRole: FEED.surfaceRole, borderRole: FEED.borderRole, divided: FEED.divided,
     iconSize: FEED.iconSize, rowHeight: FEED.rowHeight, gap: FEED.gap, surfaceOnHit: FEED.surfaceOnHit, rowWidth: FEED.rowWidth,
     horizontalPadding: FEED.horizontalPadding, radius: FEED.radius, centerRow: FEED.centerRow,
@@ -65,8 +70,16 @@ SOURCE_ADD.text = TYPE_FORM_LABEL_ACTION; SOURCE_ADD.textRole = 'TOK_ON_PRIMARY'
 SOURCE_ADD.surfaceRole = 'TOK_PRIMARY_DARK'; SOURCE_ADD.iconSize = 18; SOURCE_ADD.gap = 8;
 SOURCE_ADD.rowHeight = undefined; SOURCE_ADD.horizontalPadding = undefined; SOURCE_ADD.radius = 8;
 SOURCE_ADD.surfaceOnHit = true; SOURCE_ADD.equalLayout = true;
+const DISCOVER_APPLY: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
+DISCOVER_APPLY.text = TYPE_DISCOVER_FILTER_LABEL; DISCOVER_APPLY.textRole = 'TOK_ON_PRIMARY';
+DISCOVER_APPLY.iconSize = 20; DISCOVER_APPLY.rowHeight = 34; DISCOVER_APPLY.rowWidth = 69.097;
+DISCOVER_APPLY.gap = 0; DISCOVER_APPLY.labelMarginLeft = TOK_SPACE_ROW_BLOCK; DISCOVER_APPLY.horizontalPadding = TOK_SPACE_CONTROL_INLINE; DISCOVER_APPLY.leftPaddingOnly = true;
+DISCOVER_APPLY.radius = 8; DISCOVER_APPLY.outerHit = false; DISCOVER_APPLY.surfaceRole = undefined;
+DISCOVER_APPLY.borderRole = 'app.DiscoverPage.APPLY_BORDER';
+DISCOVER_APPLY.gradientStart = 'app.DiscoverPage.filterRow.linearGradient.FF436F88';
+DISCOVER_APPLY.gradientEnd = 'app.DiscoverPage.filterRow.linearGradient.FF315F78';
 const SPECS: Record<ReaderLabeledIconActionSpecId, ReaderLabeledIconActionSpec> = {
-  'rss-feed': FEED, 'rss-entry': ENTRY, 'rss-management': MANAGEMENT,
+  'discover-apply': DISCOVER_APPLY, 'rss-feed': FEED, 'rss-entry': ENTRY, 'rss-management': MANAGEMENT,
   'rss-manage': MANAGE, 'rss-source-operations': SOURCE_OPERATIONS, 'rss-view-all': VIEW_ALL, 'source-management-add': SOURCE_ADD,
 };
 export function resolveReaderLabeledIconActionSpec(id: ReaderLabeledIconActionSpecId): ReaderLabeledIconActionSpec { return SPECS[id]; }

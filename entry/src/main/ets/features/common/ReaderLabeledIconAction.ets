@@ -12,6 +12,7 @@ class ReaderLabeledIconLabelModifier implements AttributeModifier<TextAttribute>
     instance.fontSize(text.fontSizeFp);
     if (text.lineHeightFp !== undefined) instance.lineHeight(text.lineHeightFp);
     if (text.letterSpacingFp !== undefined) instance.letterSpacing(text.letterSpacingFp);
+    if (spec.labelMarginLeft !== undefined) instance.margin({ left: spec.labelMarginLeft });
     instance.fontColor(readerAppColor(this.danger && spec.dangerRole !== undefined ? spec.dangerRole : spec.textRole, this.scheme)).maxLines(1);
   }
 }
@@ -22,7 +23,10 @@ class ReaderLabeledIconRowModifier implements AttributeModifier<RowAttribute> {
     if (spec.rowHeight !== undefined) instance.height(spec.rowHeight);
     instance.alignItems(VerticalAlign.Center);
     if (spec.rowWidth !== undefined) instance.width(spec.rowWidth);
-    if (spec.horizontalPadding !== undefined) instance.padding({ left: spec.horizontalPadding, right: spec.horizontalPadding });
+    if (spec.horizontalPadding !== undefined) {
+      if (spec.leftPaddingOnly) instance.padding({ left: spec.horizontalPadding });
+      else instance.padding({ left: spec.horizontalPadding, right: spec.horizontalPadding });
+    }
     if (spec.centerRow) instance.justifyContent(FlexAlign.Center);
     if (spec.borderRole !== undefined) {
       if (spec.divided) instance.border({ width: { left: this.divider ? TOK_BORDER_W : 0 }, color: readerAppColor(spec.borderRole, this.scheme) });
@@ -30,13 +34,21 @@ class ReaderLabeledIconRowModifier implements AttributeModifier<RowAttribute> {
     }
     if (spec.surfaceRole !== undefined && !spec.surfaceOnHit) this.feedback().applyNormalAttribute(instance);
     else if (spec.radius !== undefined && !spec.surfaceOnHit) instance.borderRadius(spec.radius);
+    if (spec.gradientStart !== undefined && spec.gradientEnd !== undefined) this.gradient(instance, false);
     if (!spec.outerHit) {
       if (spec.equalLayout) instance.layoutWeight(1);
       if (spec.responseOffset !== undefined) instance.responseRegion({ x: 0, y: spec.responseOffset, width: '100%', height: 44 });
     }
   }
-  applyPressedAttribute(instance: RowAttribute): void { this.applyNormalAttribute(instance); if (resolveReaderLabeledIconActionSpec(this.id).surfaceRole !== undefined && !resolveReaderLabeledIconActionSpec(this.id).surfaceOnHit) this.feedback().applyPressedAttribute(instance); }
+  applyPressedAttribute(instance: RowAttribute): void { this.applyNormalAttribute(instance); const spec = resolveReaderLabeledIconActionSpec(this.id); if (spec.gradientStart !== undefined && spec.gradientEnd !== undefined) this.gradient(instance, true); else if (spec.surfaceRole !== undefined && !spec.surfaceOnHit) this.feedback().applyPressedAttribute(instance); }
   applyDisabledAttribute(instance: RowAttribute): void { this.applyNormalAttribute(instance); }
+  private gradient(instance: RowAttribute, pressed: boolean): void {
+    const spec = resolveReaderLabeledIconActionSpec(this.id);
+    if (spec.gradientStart === undefined || spec.gradientEnd === undefined) return;
+    const start = readerAppColor(spec.gradientStart, this.scheme), end = readerAppColor(spec.gradientEnd, this.scheme);
+    instance.linearGradient({ angle: 270, colors: [[pressed ? new ReaderPressFeedback(start, this.scheme, 0, 0, this.enabled).pressedSurface() : start, 0],
+      [pressed ? new ReaderPressFeedback(end, this.scheme, 0, 0, this.enabled).pressedSurface() : end, 1]] });
+  }
   private feedback(): ReaderPressFeedback {
     const spec = resolveReaderLabeledIconActionSpec(this.id);
     return new ReaderPressFeedback(readerAppColor(spec.surfaceRole ?? 'TOK_PAPER', this.scheme), this.scheme, spec.radius ?? 0, spec.radius ?? 0, this.enabled);

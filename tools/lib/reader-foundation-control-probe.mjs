@@ -26,7 +26,7 @@ export function foundationSpecs(roles=readerTypographyRoles,source=readFileSync(
 }
 export function foundationModifiers(specs=foundationSpecs(),ColorMetrics,sourceOverrides={}) {
  const feedback=productionReaderPressFeedback({ColorMetrics});
- const common={...readerFoundationTokens,...specs,readerAppColor,ReaderPressFeedback:feedback,TextAlign:{Center:'TextAlign.Center'},Color:{Transparent:'Color.Transparent'}};
+ const common={...readerFoundationTokens,...specs,readerAppColor,ReaderPressFeedback:feedback,TextAlign:{Center:'TextAlign.Center'},TextOverflow:{Ellipsis:'TextOverflow.Ellipsis'},VerticalAlign:{Center:'VerticalAlign.Center'},Color:{Transparent:'Color.Transparent'}};
  const load=(source,names)=>new Function(...Object.keys(common),executable(withoutImports(source.slice(0,source.indexOf('@Component'))))+';return {'+names.join(',')+'};')(...Object.values(common));
  return {...load(sourceOverrides.buttonSource??buttonSource,['ReaderButtonLabelModifier','ReaderButtonFrameModifier','ReaderButtonTextModifier']),...load(sourceOverrides.fieldSource??fieldSource,['ReaderFormFieldModifier','ReaderFormAreaModifier'])};
 }
@@ -35,7 +35,8 @@ export function foundationControls({specs=foundationSpecs(),ColorMetrics,buttonS
  const beforeObserver=properties.hooks.onObserverEnter;properties.hooks.onObserverEnter=(owner,id)=>{beforeObserver?.(owner,id);let nodes=creationOrder.get(owner);if(!nodes)creationOrder.set(owner,nodes=new Map());if(!nodes.has(id))nodes.set(id,creationSequence++);};
  const modifiers=foundationModifiers(specs,ColorMetrics,{buttonSource:buttonDefinition,fieldSource:fieldDefinition});
  const deps={...properties.sdk,...readerFoundationTokens,...specs,...modifiers,InputType:{Password:'InputType.Password',Number:'InputType.Number'}};
- const button=createReaderBuilderProbe(buttonDefinition,['scheme','specId','label','primary','actionEnabled','layout','isBusy','availableWidth','onAction','mounted','aboutToAppear','aboutToDisappear','build','commit'],deps,properties.hooks);
+ createRequire(import.meta.url)(sdk+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('ReaderButton',new Set(['leading']));
+ const button=createReaderBuilderProbe(buttonDefinition,['scheme','specId','label','primary','actionEnabled','layout','isBusy','availableWidth','actionAccessibilityLabel','leading','emptyLeading','onAction','mounted','aboutToAppear','aboutToDisappear','build','commit'],deps,properties.hooks);
  const field=createReaderBuilderProbe(fieldDefinition,['scheme','specId','text','placeholder','isEditable','password','inputIdentity','fieldAccessibilityLabel','inputController','onEditingChange','editChanged','onTextChange','onSubmit','submit','mounted','aboutToAppear','aboutToDisappear','build','change'],deps,properties.hooks);
  const dependencies={...deps,ReaderButton:button.Component,ReaderFormField:field.Component};
  return {button,field,properties,dependencies,hooks:{onObserverEnter:properties.hooks.onObserverEnter,childSources:{ReaderButton:buttonDefinition,ReaderFormField:fieldDefinition},mountChildren:true,lifecycleChildren:true},

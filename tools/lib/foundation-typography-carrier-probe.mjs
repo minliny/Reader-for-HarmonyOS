@@ -1,3 +1,4 @@
+import {tailControls,seedTailOwner} from './foundation-tail-consumer-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes, createRequire } from 'node:module';
@@ -23,11 +24,11 @@ export function foundationTypographyCarrier(entry,file,expected,pageSource,targe
  const roles=typographyRoleImports(specSource,'ReaderControlSpecs.ets');
  const native=(branch,override={})=>{
   const foundation=foundationControls({specs:foundationSpecs({...readerTypographyRoles,...override}),...(entry.component==='ReaderLabeledIconAction'?{}:{[entry.component==='ReaderButton'?'buttonSource':'fieldSource']:target})});
-  const shared=labeledIconControls({foundation,specs:labeledIconSpecs({...readerTypographyRoles,...override}),...(entry.component==='ReaderLabeledIconAction'?{source:target}:{})});
+  const shared=entry.tailFamily?tailControls({foundation,roles:override}):labeledIconControls({foundation,specs:labeledIconSpecs({...readerTypographyRoles,...override}),...(entry.component==='ReaderLabeledIconAction'?{source:target}:{})});
   // SDK field/button source overrides are used by their transform, never just
   // read for a hash. The normal modifier loader also receives actual source.
   const binding=entry.bindingMethod??entry.origin.method;
-  const methods=[binding,...(entry.requiredMethods??[])];
+  const methods=[...new Set([binding,...(entry.requiredMethods??[])])];
   const constants={};
   if(entry.sourceConstants){
    const tree=ts.createSourceFile(file,pageSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.equal(tree.parseDiagnostics.length,0);
@@ -42,7 +43,8 @@ export function foundationTypographyCarrier(entry,file,expected,pageSource,targe
   const ids=req(sdk+'/lib/component_map.js').ID_ATTRS,savedIds=new Map(ids);let owner;
   ids.clear();try{({owner}=createReaderBuilderProbe(pageSource,methods,{...shared.dependencies,...constants,DirectoryRuleDraft,readerControlReplaceEndpoint,readerRecoveryView,readerSourceCategoryLabel,ScrollDirection:{Horizontal:'ScrollDirection.Horizontal'}},shared.hooks));}
   finally{ids.clear();for(const[key,value]of savedIds)ids.set(key,value);}
-  Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false,facts:{canMutate:true}},...(entry.params??{})});
+  if(entry.tailFamily)seedTailOwner(owner);
+  Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false,facts:{canMutate:true}},...(entry.params??{}),...(branch.params??{})});
   if (entry.params?.contentFrameOverride) owner.contentFrame=()=>entry.params.contentFrameOverride;
   if(entry.params?.frameOverride)owner.frame=()=>entry.params.frameOverride;
   if(entry.params?.presentationOverride)owner.presentation=()=>entry.params.presentationOverride;
@@ -56,10 +58,11 @@ export function foundationTypographyCarrier(entry,file,expected,pageSource,targe
   assert.equal(nodes.length,1,entry.id+': one actual native carrier');
   return tuple(nodes[0]);
  };
- const original=Object.fromEntries(Object.entries(expected.changes).map(([p,expr])=>[p,new Function(...Object.keys(readerTypographyRoles),'return ('+stripTypeScriptTypes(expr)+');')(...Object.values(readerTypographyRoles))]));
  for(const branch of entry.cases??[{}]){
+  const context={...(entry.params??{}),...(branch.params??{})},bindings=entry.expressionBindings??{};
+  const original=Object.fromEntries(Object.entries(expected.changes).map(([p,expr])=>[p,new Function(...Object.keys(readerTypographyRoles),...Object.keys(bindings),'return ('+stripTypeScriptTypes(expr)+');').call(context,...Object.values(readerTypographyRoles),...Object.values(bindings))]));
   const actual=native(branch);assert.deepEqual(Object.keys(actual).sort(),Object.keys(expected.original).sort(),entry.id+': exact AUTO omissions');assert.deepEqual(actual,original,entry.id+': exact immutable original native tuple');
-  const role=expected.changes.fontSize.match(/^(TYPE_\w+)\.fontSizeFp$/)?.[1];assert.ok(role&&roles.has(role),entry.id+': actual finite spec role import');
+  const role=branch.role??expected.changes.fontSize.match(/^(TYPE_\w+)\.fontSizeFp$/)?.[1];assert.ok(role&&roles.has(role),entry.id+': actual finite spec role import');
   const changed=native(branch,{[role]:{...readerTypographyRoles[role],fontSizeFp:readerTypographyRoles[role].fontSizeFp+2}});
   assert.deepEqual(changed,{...actual,fontSize:actual.fontSize+2},entry.id+': real role propagation through spec/owner/native');
  }
