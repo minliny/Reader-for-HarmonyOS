@@ -54,25 +54,30 @@ export struct SettingsSelectOverlay {
   aboutToDisappear(): void { this.mounted = false; this.closed = true; }
 
   private onFieldChanged(): void { this.closed = false; }
-  private dismiss(): void {
-    if (!this.mounted || this.closed) return;
-    this.closed = true;
-    this.onDismiss(this.selectionId);
+  private ownsOpening(identity: string): boolean {
+    return this.mounted && !this.closed && identity.length > 0 && identity === this.selectionId;
   }
-  private choose(option: string): void {
-    if (!this.mounted || this.closed || this.options.indexOf(option) < 0) return;
+  private dismiss(identity: string): void {
+    if (!this.ownsOpening(identity)) return;
     this.closed = true;
-    this.onSelect(option, this.selectionId);
+    this.onDismiss(identity);
+  }
+  private choose(option: string, identity: string): void {
+    if (!this.ownsOpening(identity) || this.options.indexOf(option) < 0) return;
+    this.closed = true;
+    this.onSelect(option, identity);
   }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Row()
-        .width('100%')
-        .height('100%')
-        .backgroundColor(this.isTablet ? Color.Transparent : readerAppColor('app.SettingsSelectOverlay.build.backgroundColor.521F1B17', this.appThemeScheme))
-        .hitTestBehavior(HitTestMode.Default)
-        .onClick((): void => this.dismiss());
+      ForEach([this.selectionId], (identity: string) => {
+        Row()
+          .width('100%')
+          .height('100%')
+          .backgroundColor(this.isTablet ? Color.Transparent : readerAppColor('app.SettingsSelectOverlay.build.backgroundColor.521F1B17', this.appThemeScheme))
+          .hitTestBehavior(HitTestMode.Default)
+          .onClick((): void => this.dismiss(identity));
+      }, (identity: string): string => identity);
 
       if (this.isTablet) {
         this.tabletPanel();
@@ -132,20 +137,22 @@ export struct SettingsSelectOverlay {
 
       Blank().width('100%').height(PHONE_CANCEL_GAP);
 
-      Stack({ alignContent: Alignment.Center }) {
-        Text('取消')
-          .fontFamily(TYPE_SETTINGS_SELECT_PHONE_CANCEL.fontFamily)
-          .fontWeight(TYPE_SETTINGS_SELECT_PHONE_CANCEL.fontWeight)
-          .fontSize(TYPE_SETTINGS_SELECT_PHONE_CANCEL.fontSizeFp)
-          .lineHeight(TYPE_SETTINGS_SELECT_PHONE_CANCEL.lineHeightFp as number)
-          .fontColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.fontColor.FF41484C', this.appThemeScheme));
-      }
-      .width('100%')
-      .height(PHONE_OPTION_HEIGHT)
-      .backgroundColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.backgroundColor.FFFFFCF8', this.appThemeScheme))
-      .border({ width: 1, color: readerAppColor('app.SettingsSelectOverlay.phoneSheet.color.FFC1C7CD', this.appThemeScheme) })
-      .borderRadius(PHONE_RADIUS)
-      .onClick((): void => this.dismiss());
+      ForEach([this.selectionId], (identity: string) => {
+        Stack({ alignContent: Alignment.Center }) {
+          Text('取消')
+            .fontFamily(TYPE_SETTINGS_SELECT_PHONE_CANCEL.fontFamily)
+            .fontWeight(TYPE_SETTINGS_SELECT_PHONE_CANCEL.fontWeight)
+            .fontSize(TYPE_SETTINGS_SELECT_PHONE_CANCEL.fontSizeFp)
+            .lineHeight(TYPE_SETTINGS_SELECT_PHONE_CANCEL.lineHeightFp as number)
+            .fontColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.fontColor.FF41484C', this.appThemeScheme));
+        }
+        .width('100%')
+        .height(PHONE_OPTION_HEIGHT)
+        .backgroundColor(readerAppColor('app.SettingsSelectOverlay.phoneSheet.backgroundColor.FFFFFCF8', this.appThemeScheme))
+        .border({ width: 1, color: readerAppColor('app.SettingsSelectOverlay.phoneSheet.color.FFC1C7CD', this.appThemeScheme) })
+        .borderRadius(PHONE_RADIUS)
+        .onClick((): void => this.dismiss(identity));
+      }, (identity: string): string => identity);
     }
     .width('100%')
     .padding({
@@ -163,11 +170,13 @@ export struct SettingsSelectOverlay {
 
   @Builder
   private phoneOption(option: string, index: number) {
-    ReaderChoiceRow({
-      specId: 'settings-phone', label: option, selected: this.isSelected(option),
-      showDivider: index < this.options.length - 1, scheme: this.appThemeScheme,
-      onChoose: (value: string): void => this.choose(value),
-    });
+    ForEach([this.selectionId], (identity: string) => {
+      ReaderChoiceRow({
+        specId: 'settings-phone', label: option, selected: this.isSelected(option),
+        showDivider: index < this.options.length - 1, scheme: this.appThemeScheme,
+        onChoose: (value: string): void => this.choose(value, identity),
+      });
+    }, (identity: string): string => identity);
   }
 
   @Builder
@@ -191,11 +200,13 @@ export struct SettingsSelectOverlay {
 
   @Builder
   private tabletOption(option: string, index: number) {
-    ReaderChoiceRow({
-      specId: 'settings-tablet', label: option, selected: this.isSelected(option),
-      showDivider: index < this.options.length - 1, scheme: this.appThemeScheme,
-      onChoose: (value: string): void => this.choose(value),
-    });
+    ForEach([this.selectionId], (identity: string) => {
+      ReaderChoiceRow({
+        specId: 'settings-tablet', label: option, selected: this.isSelected(option),
+        showDivider: index < this.options.length - 1, scheme: this.appThemeScheme,
+        onChoose: (value: string): void => this.choose(value, identity),
+      });
+    }, (identity: string): string => identity);
   }
 
   private tabletSpec(): PopupSurfaceSpec {
