@@ -36,10 +36,10 @@ function page(f,runtime,identity='settings-back:first'){
  const methods=Object.assign(new Methods(),{mounted:true,themeOwner:runtime,temporaryBackIdentity:identity,
   getUIContext:()=>({getPromptAction:()=>({showToast:options=>notices.push(options.message)})})});
  const result=createReaderBuilderProbe(source('features/settings/SettingsPage.ets'),['segmentRow','appThemeControl'],{ReaderSegmentedControl:Child,SEG_OPTIONS:['跟随','浅色','深色'],TOK_SPACE_SM:12,TOK_BORDER_W:1,SELECT_ROW_H:58},
-  {childSources:{ReaderSegmentedControl:source('features/common/ReaderSegmentedControl.ets')}});
+  {allowEmptyBranchAdmission:true,childSources:{ReaderSegmentedControl:source('features/common/ReaderSegmentedControl.ets')}});
  Object.assign(result.owner,methods,{labelColumn(){},themeIndex:()=>methods.themeIndex(),selectAppTheme:(...args)=>methods.selectAppTheme(...args),appThemeScheme:'day',temporaryBackIdentity:identity});
  const render=()=>{methods.appThemeMode=f.storage.get('readerAppThemeMode');result.owner.segmentRow('App主题',()=>({}));return [...result.owner.children.values()].at(-1).params;};
- return{methods,notices,render,setRuntime:value=>{authority.isCurrent=owner=>owner===value;},setIdentity:value=>{methods.temporaryBackIdentity=value;result.owner.temporaryBackIdentity=value;}};
+ return{methods,notices,render,parent:result.owner,setRuntime:value=>{authority.isCurrent=owner=>owner===value;},setIdentity:value=>{methods.temporaryBackIdentity=value;result.owner.temporaryBackIdentity=value;}};
 }
 for(const fault of ['put-before','put-after','flush-before','flush-after']){
  const f=platform(),owner=f.owner();await f.Host.install(owner,'day');f.disk.events.length=0;f.disk.fault=fault;
@@ -53,9 +53,13 @@ for(const fault of ['put-before','put-after','flush-before','flush-after']){
 {
  const f=platform(),old=f.owner();await f.Host.install(old,'day');const consumer=page(f,old),oldPhysical=consumer.render().onSelect;
  consumer.setIdentity('settings-back:reopened');oldPhysical(2);await tick();assert.equal(old.store.current().appThemeMode,'system');
+ const oldActor=[...consumer.parent.children.values()].at(-1);consumer.parent.replay();
+ const freshActor=[...consumer.parent.children.values()].at(-1);assert.notEqual(freshActor,oldActor,'real SDK keyed tiny actor reconstructs ordinary callback after page identity changes');
+ freshActor.params.onSelect(1);await until(()=>old.store.current().appThemeMode==='day');await old.store.flush();
+ assert.equal(oldActor.params.selectedIndex,0);assert.equal(consumer.notices.length,0);
  const newOwner=f.owner();await f.Host.install(newOwner,'day');consumer.setRuntime(newOwner);
- oldPhysical(2);consumer.render().onSelect(2);await tick();assert.equal(newOwner.store.current().appThemeMode,'system');assert.equal(consumer.notices.length,0);
- assert.equal(f.disk.events.filter(event=>event[0]==='put').length,0,'old page or old native callback cannot write successor owner');f.Host.detach();
+ oldPhysical(2);consumer.render().onSelect(2);await tick();assert.equal(newOwner.store.current().appThemeMode,'day');assert.equal(consumer.notices.length,0);
+ assert.equal(f.disk.events.filter(event=>event[0]==='put').length,1,'old page or old native callback cannot write successor owner');f.Host.detach();
 }
 {
  const f=platform(),owner=f.owner();await f.Host.install(owner,'day');const consumer=page(f,owner);f.disk.fault='put-after';

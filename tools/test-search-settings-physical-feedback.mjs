@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { readerAppColor, READER_THEME_DEFINITIONS } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import * as style from '../entry/src/main/ets/features/reading/ReaderControlAppearanceStyle.ts';
@@ -152,9 +153,10 @@ await check('PH34 actual General and Rules Scrolls align short contents at the t
 });
 await check('PH35 real cache action has intrinsic height, bounded width and retained pending/result label', async () => {
   const source = read('features/settings/SettingsPage.ets'); registerBuilders(source);
-  const { owner } = createReaderBuilderProbe(source, ['cacheActionRow', 'clearTextCache'], { CategoryRow: NativeChild });
+  const runtime={},ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>runtime);
+  const { owner } = createReaderBuilderProbe(source, ['cacheActionRow', 'clearTextCache','applyCacheCleanup'], { CategoryRow: NativeChild,ReaderRuntimeOwner });
   let resolveClear, calls = 0;
-  Object.assign(owner, { appThemeScheme: 'day', cacheActionLabel: '清理文字缓存', cacheCleanupInFlight: false,
+  Object.assign(owner, { mounted:true,themeOwner:runtime,temporaryBackIdentity:'settings-back:physical',appThemeScheme: 'day', cacheActionLabel: '清理文字缓存', cacheCleanupInFlight: false,
     onClearCache: () => { calls++; return new Promise(resolve => { resolveClear = resolve; }); } });
   owner.cacheActionRow();
   const row = [...owner.children.values()][0];
@@ -166,9 +168,9 @@ await check('PH35 real cache action has intrinsic height, bounded width and reta
   assert.equal(label.maxLines, 2); assert.equal(label.textAlign, 'TextAlign.Center');
   row.params.onRowClick(); row.params.onRowClick(); owner.replay();
   assert.equal(calls, 1); assert.equal(label.create, '清理中');
-  resolveClear(true); await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); owner.replay();
+  resolveClear({busy:false,confirmation:'confirmed',operation:{}}); await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); owner.replay();
   assert.equal(label.create, '已清理'); assert.equal(owner.cacheCleanupInFlight, false);
-  row.params.onRowClick(); resolveClear(false); await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); owner.replay();
+  row.params.onRowClick(); resolveClear({busy:false,confirmation:'undispatched',operation:{}}); await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); owner.replay();
   assert.equal(label.create, '清理失败');
 });
 for (const result of results) console.log(JSON.stringify(result));

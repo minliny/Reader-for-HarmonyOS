@@ -3,17 +3,22 @@ import fs from 'node:fs';
 
 const settings = fs.readFileSync('entry/src/main/ets/features/settings/SettingsPage.ets', 'utf8');
 const index = fs.readFileSync('entry/src/main/ets/pages/Index.ets', 'utf8');
+const gateway = fs.readFileSync('entry/src/main/ets/features/settings/SettingsCacheGateway.ts', 'utf8');
+const host = fs.readFileSync('entry/src/main/ets/features/settings/SettingsHost.ets', 'utf8');
+const owner = fs.readFileSync('entry/src/main/ets/features/settings/SettingsCacheCleanupOwner.ts', 'utf8');
 
 const checks = [
-  ['settings exposes async cache callback', settings.includes('onClearCache: () => Promise<boolean>')],
-  ['cache row is clickable', settings.includes('onRowClick: (): void => this.clearTextCache()')],
+  ['settings exposes async cache callback', settings.includes('onClearCache: () => Promise<SettingsCacheCleanupSnapshot | undefined>')],
+  ['cache row is clickable', settings.includes('onRowClick: (): void => this.clearTextCache(capturedIdentity)')],
   ['cache action is explicitly text-only', settings.includes("'清理文字缓存'")],
   ['cache action observes state in concrete component tree', settings.includes('Text(this.cacheActionLabel)')],
   ['cache action does not cross builder argument boundary', !settings.includes('this.inlineAction(this.cacheActionLabel, 66)')],
   ['duplicate taps are gated', settings.includes('cacheCleanupInFlight')],
-  ['Index invokes canonical Core method', index.includes("request('cache.clear', { scope: 'cache' })")],
-  ['Index validates returned scope', index.includes("result.data['scope'] !== 'cache'")],
-  ['Settings wiring consumes result', index.includes('onClearCache: (): Promise<boolean> => this.clearTextCache()')],
+  ['typed gateway invokes canonical text-only method', gateway.includes("request('cache.clear', { scope: 'cache' }") && !index.includes("request('cache.clear'")],
+  ['typed gateway validates returned scope and all counts', gateway.includes("data['scope'] !== 'cache'") && gateway.includes('Number.isSafeInteger')],
+  ['Settings wiring consumes typed result under captured presentation', index.includes('this.clearTextCache(generation, owner)')],
+  ['existing Host owns finite cleanup', host.includes('new SettingsCacheCleanupOwner(owner') && index.includes('this.settingsHost.clearCache(owner, current)')],
+  ['lost ACK cannot replay command', owner.includes("this.snapshot.confirmation === 'unknown'") && owner.includes("canRetry: confirmation === 'undispatched'")],
 ];
 
 for (const [label, passed] of checks) {

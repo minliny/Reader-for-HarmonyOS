@@ -1,6 +1,6 @@
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
-import type { SettingsOperationProjection } from './SettingsHost';
+import type { SettingsOperationProjection, SettingsCacheCleanupSnapshot } from './SettingsHost';
 import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '../../app/ReaderNativeAlertOwner';
 import { TYPE_APP_INHERITED_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_ACTION, TYPE_SETTINGS_CACHE_ACTION, TYPE_SETTINGS_DANGER_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -72,6 +72,7 @@ export struct SettingsPage {
   };
   @Prop isTablet: boolean;
   @Prop operation: SettingsOperationProjection = { action: 'load' };
+  @Prop @Watch('onCacheCleanupChanged') cacheCleanup: SettingsCacheCleanupSnapshot | undefined = undefined;
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   @StorageLink('readerAppThemeMode') private appThemeMode: string = 'system';
   @State private languageValue: string = '简体中文';
@@ -88,7 +89,7 @@ export struct SettingsPage {
   private readonly nativeAlertOwner: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
   private mounted: boolean = false;
   private themeOwner: ReaderRuntimeOwner | undefined = undefined;
-  private temporaryBackIdentity: string = '';
+  @State private temporaryBackIdentity: string = '';
   onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string) => void =
     (_handler: (() => boolean) | undefined, _identity: string): void => {};
   private resetRevision: number = 0;
@@ -109,7 +110,7 @@ export struct SettingsPage {
   onOpenSync: () => void = (): void => {};
   onRssRequested: () => void = (): void => {};
   onDiscoverRequested: () => void = (): void => {};
-  onClearCache: () => Promise<boolean> = async (): Promise<boolean> => false;
+  onClearCache: () => Promise<SettingsCacheCleanupSnapshot | undefined> = async (): Promise<SettingsCacheCleanupSnapshot | undefined> => undefined;
   onRestoreDefaults: () => Promise<boolean> = async (): Promise<boolean> => false;
   onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog', value: boolean) => void =
     (_key: string, _value: boolean): void => {};
@@ -120,6 +121,7 @@ export struct SettingsPage {
     catch (_unavailable) { this.themeOwner = undefined; }
     registerReaderFonts(this.getUIContext().getFont());
     this.syncSnapshotValues();
+    this.onCacheCleanupChanged();
     const identity = `settings-back:${++settingsSelectionGeneration}`;
     this.temporaryBackIdentity = identity;
     this.onTemporaryBackBridge((): boolean => this.consumeTemporaryBack(identity), identity);
@@ -361,7 +363,7 @@ export struct SettingsPage {
     Row({ space: 12 }) {
       this.labelColumn(label, icon);
 
-      this.appThemeControl(this.temporaryBackIdentity);
+      this.appThemeControl();
     }
     .width('100%')
     .constraintSize({ minHeight: SELECT_ROW_H })
@@ -371,12 +373,14 @@ export struct SettingsPage {
   }
 
   @Builder
-  private appThemeControl(identity: string) {
-    ReaderSegmentedControl({
-      options: SEG_OPTIONS,
-      selectedIndex: this.themeIndex(),
-      onSelect: (index: number): void => this.selectAppTheme(index, identity),
-    });
+  private appThemeControl() {
+    ForEach([this.temporaryBackIdentity], (capturedIdentity: string): void => {
+      ReaderSegmentedControl({
+        options: SEG_OPTIONS,
+        selectedIndex: this.themeIndex(),
+        onSelect: (index: number): void => this.selectAppTheme(index, capturedIdentity),
+      });
+    }, (capturedIdentity: string): string => capturedIdentity);
   }
 
   private selectAppTheme(index: number, identity: string): void {
@@ -414,45 +418,63 @@ export struct SettingsPage {
 
   @Builder
   private cacheActionRow() {
-    CategoryRow({
-      icon: (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_cache_theme_night') : $r('app.media.settings_gen_cache')),
-      label: '缓存清理',
-      onRowClick: (): void => this.clearTextCache(),
-    }) {
-      // Keep the reactive state read in the concrete component tree. ArkUI
-      // does not invalidate this slot when the value crosses a @Builder
-      // argument boundary.
-      Stack({ alignContent: Alignment.Center }) {
-        Text(this.cacheActionLabel)
-          .fontFamily(TYPE_SETTINGS_CACHE_ACTION.fontFamily)
-          .fontWeight(TYPE_SETTINGS_CACHE_ACTION.fontWeight)
-          .fontSize(TYPE_SETTINGS_CACHE_ACTION.fontSizeFp).lineHeight(TYPE_SETTINGS_CACHE_ACTION.lineHeightFp as number).maxLines(2)
-          .textAlign(TextAlign.Center)
-          .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
+    ForEach([this.temporaryBackIdentity], (capturedIdentity: string): void => {
+      CategoryRow({
+        icon: (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_cache_theme_night') : $r('app.media.settings_gen_cache')),
+        label: '缓存清理',
+        onRowClick: (): void => this.clearTextCache(capturedIdentity),
+      }) {
+        // Keep the reactive state read in the concrete component tree. ArkUI
+        // does not invalidate this slot when the value crosses a @Builder
+        // argument boundary.
+        Stack({ alignContent: Alignment.Center }) {
+          Text(this.cacheActionLabel)
+            .fontFamily(TYPE_SETTINGS_CACHE_ACTION.fontFamily)
+            .fontWeight(TYPE_SETTINGS_CACHE_ACTION.fontWeight)
+            .fontSize(TYPE_SETTINGS_CACHE_ACTION.fontSizeFp).lineHeight(TYPE_SETTINGS_CACHE_ACTION.lineHeightFp as number).maxLines(2)
+            .textAlign(TextAlign.Center)
+            .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
+        }
+        .constraintSize({ minWidth: 66, maxWidth: '55%', minHeight: 34 })
+        .padding({ left: 10, right: 10, top: 8, bottom: 8 })
+        .borderRadius(6)
+        .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme));
       }
-      .constraintSize({ minWidth: 66, maxWidth: '55%', minHeight: 34 })
-      .padding({ left: 10, right: 10, top: 8, bottom: 8 })
-      .borderRadius(6)
-      .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme));
-    }
+    }, (capturedIdentity: string): string => capturedIdentity);
   }
 
-  private clearTextCache(): void {
-    if (this.cacheCleanupInFlight) {
+  private clearTextCache(identity: string = this.temporaryBackIdentity): void {
+    const current = (): boolean => this.mounted && identity === this.temporaryBackIdentity &&
+      ReaderRuntimeOwner.isCurrent(this.themeOwner);
+    if (!current() || this.cacheCleanupInFlight) return;
+    if (this.cacheCleanup?.confirmation === 'unknown') {
+      try { this.getUIContext().getPromptAction().showToast({ message: this.cacheCleanup.operation.message ?? '清理结果尚未确认' }); }
+      catch (_notice) { /* No native notice failure may dispatch a second clear. */ }
       return;
     }
     this.cacheCleanupInFlight = true;
     this.cacheActionLabel = '清理中';
     void this.onClearCache()
-      .then((cleared: boolean): void => {
-        this.cacheActionLabel = cleared ? '已清理' : '清理失败';
+      .then((snapshot: SettingsCacheCleanupSnapshot | undefined): void => {
+        if (!current() || snapshot === undefined) return;
+        this.applyCacheCleanup(snapshot);
       })
       .catch((): void => {
-        this.cacheActionLabel = '清理失败';
+        if (current()) this.cacheActionLabel = '结果未确认';
       })
       .finally((): void => {
-        this.cacheCleanupInFlight = false;
+        if (current()) this.cacheCleanupInFlight = false;
       });
+  }
+
+  private onCacheCleanupChanged(): void {
+    if (this.cacheCleanup !== undefined) this.applyCacheCleanup(this.cacheCleanup);
+  }
+
+  private applyCacheCleanup(snapshot: SettingsCacheCleanupSnapshot): void {
+    this.cacheCleanupInFlight = snapshot.busy;
+    this.cacheActionLabel = snapshot.busy ? '清理中' : snapshot.confirmation === 'confirmed' ? '已清理' :
+      snapshot.confirmation === 'unknown' ? '结果未确认' : snapshot.confirmation === 'undispatched' ? '清理失败' : '清理文字缓存';
   }
 
   @Builder

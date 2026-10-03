@@ -161,7 +161,7 @@ import {
 } from '../features/rss/RssPage';
 import { SettingsPage, type SettingsSnapshot } from '../features/settings/SettingsPage';
 import { SettingsHost } from '../features/settings/SettingsHost';
-import type { SettingsOperationProjection } from '../features/settings/SettingsHost';
+import type { SettingsOperationProjection, SettingsCacheCleanupSnapshot } from '../features/settings/SettingsHost';
 import { SettingsGateway } from '../features/settings/SettingsGateway';
 import { RulesManagementPage } from '../features/settings/RulesManagementPage';
 import {
@@ -486,6 +486,7 @@ struct Index {
   @State private sourceStatusMessage: string = '';
   @State private sourceOperation: SourceManagementProjection = { action: 'load', sourceId: '' };
   @State private settingsOperation: SettingsOperationProjection = { action: 'load' };
+  @State private settingsCacheCleanup: SettingsCacheCleanupSnapshot | undefined = undefined;
   @State private sourceToolsSnapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   @State private rulesManagementSnapshot: RulesManagementSnapshot = EMPTY_RULES_MANAGEMENT_SNAPSHOT;
   @State private discoverPresentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
@@ -609,6 +610,9 @@ struct Index {
     (): boolean => this.route === 'settings' || this.route === 'bookshelfSettings',
     undefined,
     (operation: SettingsOperationProjection): void => { this.settingsOperation = operation; },
+    (snapshot: SettingsCacheCleanupSnapshot, owner: ReaderRuntimeOwner): void => {
+      if (this.isCurrentRuntime(owner) && this.route === 'settings') this.settingsCacheCleanup = snapshot;
+    },
   );
   private rulesManagementOrchestrator: RulesManagementOrchestrator | undefined;
   private syncOrchestrator: SyncOrchestrator | undefined;
@@ -665,6 +669,7 @@ struct Index {
 
   aboutToAppear(): void {
     this.mountedRuntimeOwner = ReaderRuntimeOwner.current();
+    this.settingsCacheCleanup = this.settingsHost.cacheCleanupSnapshot(this.mountedRuntimeOwner);
     this.shelfReceiptRetired = false;
     this.systemFileOpenMounted = true;
     // Index is mounted after configuration recovery. Reading these settings
@@ -1536,6 +1541,7 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'settings';
+    this.settingsCacheCleanup = this.settingsHost.cacheCleanupSnapshot(this.mountedRuntimeOwner);
     this.settingsHost.open();
   }
 
@@ -1576,6 +1582,7 @@ struct Index {
       onRestoreDefaults: (): Promise<boolean> => this.settingsHost.restoreDefaults(),
       snapshot: this.settingsSnapshot,
       operation: this.settingsOperation,
+      cacheCleanup: this.settingsCacheCleanup,
       onReconcile: (generation: number): void => this.settingsHost.reconcile(generation),
       isTablet: deviceInfo.deviceType === 'tablet',
       onBack: (): void => this.returnToBookshelf(),
@@ -1587,7 +1594,7 @@ struct Index {
       onDiscoverRequested: (): void => this.openDiscover(),
       onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
         value: boolean): void => this.onSettingToggled(key, value),
-      onClearCache: (): Promise<boolean> => this.clearTextCache(),
+      onClearCache: (): Promise<SettingsCacheCleanupSnapshot | undefined> => this.clearTextCache(generation, owner),
     });
   }
 
@@ -1777,23 +1784,12 @@ struct Index {
     this.settingsHost.toggle(key, value);
   }
 
-  private async clearTextCache(): Promise<boolean> {
-    try {
-      const result = await ReaderRuntimeOwner.current().request('cache.clear', { scope: 'cache' });
-      if (result.data['scope'] !== 'cache') {
-        throw new Error('cache.clear returned an unexpected scope');
-      }
-      hilog.info(DOMAIN, 'Reader',
-        'Text cache cleanup completed: cache=%{private}s chapters=%{private}s queue=%{private}s',
-        `${result.data['cacheEntriesRemoved'] ?? 0}`,
-        `${result.data['chapterEntriesRemoved'] ?? 0}`,
-        `${result.data['queueEntriesRemoved'] ?? 0}`);
-      return true;
-    } catch (error) {
-      const message = errorMessageOf(error);
-      hilog.error(DOMAIN, 'Reader', 'Text cache cleanup failed: %{private}s', message);
-      return false;
-    }
+  private async clearTextCache(generation: number = this.navigationGeneration,
+    owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner): Promise<SettingsCacheCleanupSnapshot | undefined> {
+    const current = (): boolean => owner !== undefined && this.isCurrentRuntime(owner) &&
+      generation === this.navigationGeneration && this.route === 'settings' && !this.shelfReceiptRetired;
+    if (owner === undefined || !current()) return undefined;
+    return this.settingsHost.clearCache(owner, current);
   }
 
   private onSyncSaveConfig(url: string, user: string, pass: string, backupPass: string, path: string): void {
@@ -1996,6 +1992,7 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'settings';
+    this.settingsCacheCleanup = this.settingsHost.cacheCleanupSnapshot(this.mountedRuntimeOwner);
   }
 
   private returnFromRulesManagement(): void {

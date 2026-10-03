@@ -15,7 +15,7 @@ function leafMembers(source){
   const tree=ts.createSourceFile('/tmp/TemporaryBackLeaf.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(`${sdkPath}/lib/ets_checker.js`).compilerOptions);
   const struct=tree.statements.find(n=>n.members&&n.members.some(m=>m.name?.getText(tree)==='build'));
   const methods=source.includes('export struct SettingsPage')?
-    ['aboutToAppear','aboutToDisappear','consumeTemporaryBack','onSnapshotChanged','syncSnapshotValues','buildOverlay','currentValue','selectOptions','setSelectValue','toggleSelection','retireSelection','ownsSelection','commitSelection','dismissSelection']:
+    ['aboutToAppear','aboutToDisappear','consumeTemporaryBack','onSnapshotChanged','onCacheCleanupChanged','applyCacheCleanup','syncSnapshotValues','buildOverlay','currentValue','selectOptions','setSelectValue','toggleSelection','retireSelection','ownsSelection','commitSelection','dismissSelection']:
     source.includes('export struct SourceManagementPage')?
     ['aboutToAppear','aboutToDisappear','consumeTemporaryBack','retireGroupSelection','ownsGroupSelection','toggleGroupSelection','groupCloseAction','commitGroupSelection','dismissGroupSelection','build','groupOptions','onSourcesChanged','rebuildSourceProjection','filteredSources','matchesStatus','numericAreaLength']:
     boundedMembers(source);
