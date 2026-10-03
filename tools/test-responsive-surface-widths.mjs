@@ -96,7 +96,8 @@ assert.match(sourceManagement,
 assert.match(sourceManagement,
   /return Math\.max\(0, \(this\.contentFrame\(\)\.width - 20\) \/ 2\)/,
   'tablet source filters must share the remaining row width');
-assert.match(sourceManagement, /\.width\(this\.statusChipWidth\(width\)\)/);
+assert.match(sourceManagement, /availableWidth: this\.filterControlWidth\(\)/, 'shared finite status buttons consume the original measured filter frame');
+assert.doesNotMatch(sourceManagement, /private statusChipWidth\(/, 'responsive button formula has one shared producer');
 
 assert.match(sync, /@State private viewportWidth: number = 0/);
 assert.match(sync,

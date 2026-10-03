@@ -19,7 +19,7 @@ for(const [name,path] of [['SourceManagementPage','features/source/SourceManagem
 }
 // The full decorated consumer is compiled. Only its existing recovery surface
 // is executed here; auxiliary controls use their actual source metadata.
-for(const name of ['ReaderSelectPanel','ReaderSearchField','ReaderSelect','ReaderToggle','StatusBadge','ReaderButton','ReaderFormField','PageBackBar']){
+for(const name of ['ReaderSelectPanel','ReaderSearchField','ReaderSelect','ReaderToggle','StatusBadge','ReaderButton','ReaderFormField','ReaderLabeledIconAction','ReaderIconButton','PageBackBar']){
  const text=read('features/common/'+name+'.ets');syntax.componentCollection.customComponents.add(name);
  syntax.propCollection.set(name,new Set([...text.matchAll(/@Prop(?:\s+@Watch\([^)]*\))?\s+(\w+)\s*:/g)].map(m=>m[1])));
  syntax.builderParamObjectCollection.set(name,new Set([...text.matchAll(/@BuilderParam\s+(\w+)/g)].map(m=>m[1])));

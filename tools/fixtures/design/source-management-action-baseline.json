@@ -1,0 +1,973 @@
+{
+  "sha": "295b44d74d1c2757a7bb6328ac7af8a51c042459",
+  "methods": {
+    "statusBanner": "  private statusBanner() {\n    Row({ space: TOK_SPACE_XS }) {\n      Text(this.recovery().visible ? this.recovery().message : this.statusMessage)\n        .layoutWeight(1)\n        .fontFamily(TYPE_SOURCE_MANAGEMENT_STATUS.fontFamily as string)\n        .fontSize(TYPE_SOURCE_MANAGEMENT_STATUS.fontSizeFp)\n        .lineHeight(TYPE_SOURCE_MANAGEMENT_STATUS.lineHeightFp as number)\n        .fontColor(this.statusKind === 'error' ? readerAppColor('app.SourceManagementPage.STATUS_ERROR_DOT', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))\n        .maxLines(2)\n        .textOverflow({ overflow: TextOverflow.Ellipsis });\n      if (this.recovery().canRetry || this.statusKind === 'error') {\n        Text('重试')\n          .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)\n          .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)\n          .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)\n          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))\n          .onClick((): void => {\n            if (this.recovery().canRetry) this.onReconcile(this.recovery().generation);\n            else this.onRetryLoad();\n          });\n      }\n    }\n    .width(this.contentFrame().width)\n    .padding(TOK_SPACE_XS)\n    .margin({ top: TOK_SPACE_XS })\n    .backgroundColor(this.statusKind === 'error' ? readerAppColor('app.SourceManagementPage.STATUS_ERROR_BG', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))\n    .borderRadius(7);\n  }",
+    "categoryFilter": "  private categoryFilter() {\n    Scroll() {\n      Row({ space: TOK_SPACE_XS }) {\n        ForEach(['all', 'novel', 'comic', 'music', 'download', 'external', 'other'], (category: string) => {\n          Text(category === 'all' ? '全部类型' : readerSourceCategoryLabel(category as ReaderSourceCategory))\n            .fontFamily(TYPE_FORM_HINT.fontFamily as string)\n            .fontSize(TYPE_FORM_HINT.fontSizeFp)\n            .fontColor(this.categoryValue === category ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))\n            .backgroundColor(this.categoryValue === category ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))\n            .borderRadius(16)\n            .padding({ left: 12, right: 12 })\n            .height(32)\n            .id(`source-category-${category}`)\n            .onClick((): void => {\n              this.categoryValue = category;\n              this.rebuildSourceProjection();\n            });\n        }, (category: string): string => category);\n      }\n    }\n    .scrollable(ScrollDirection.Horizontal)\n    .scrollBar(BarState.Off)\n    .width(this.contentFrame().width)\n    .height(40)\n    .margin({ top: TOK_SPACE_XS });\n  }",
+    "chip": "  private chip(label: string, width: number, active: boolean, enabled: boolean) {\n    Text(label)\n      .width(this.statusChipWidth(width))\n      .height(32)\n      .textAlign(TextAlign.Center)\n      .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)\n      .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)\n      .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)\n      .fontColor(active ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))\n      .backgroundColor(active ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))\n      .border({ width: TOK_BORDER_W, color: active ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('app.SourceManagementPage.CHIP_BORDER', this.appThemeScheme) })\n      .borderRadius(16)\n      .maxLines(1)\n      .opacity(enabled ? 1 : 0.45)\n      .onClick((): void => {\n        if (enabled) {\n          this.statusValue = label;\n          this.rebuildSourceProjection();\n        }\n      });\n  }",
+    "detectButton": "  private detectButton(source: BookSource) {\n    Stack({ alignContent: Alignment.Center }) {\n      Text(source.checkState === 'checking' ? '检测中' : '检测')\n        .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)\n        .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)\n        .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)\n        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))\n        .maxLines(1);\n    }\n    .width(44)\n    .height(28)\n    .borderRadius(7)\n    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))\n    .border({ width: TOK_BORDER_W, color: readerAppColor('app.SourceManagementPage.CHIP_BORDER', this.appThemeScheme) })\n    .opacity(source.checkState === 'checking' ? 0.62 : 1)\n    .onClick((): void => {\n      if (source.checkState !== 'checking') {\n        this.onDetectSource(source.sourceId);\n      }\n    });\n  }",
+    "loginButton": "  private loginButton(source: BookSource) {\n    Stack({ alignContent: Alignment.Center }) {\n      Text('登录')\n        .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)\n        .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)\n        .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)\n        .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))\n        .maxLines(1);\n    }\n    .width(44)\n    .height(28)\n    .borderRadius(7)\n    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))\n    .border({ width: TOK_BORDER_W, color: readerAppColor('app.SourceManagementPage.CHIP_BORDER', this.appThemeScheme) })\n    .onClick((): void => this.onLoginSource(source.sourceId));\n  }",
+    "bottomActionBar": "  private bottomActionBar() {\n    Row({ space: TOK_SPACE_CONTROL_INLINE }) {\n      Stack({ alignContent: Alignment.Center }) {\n        Text('批量管理')\n          .fontFamily(TYPE_FORM_LABEL_ACTION.fontFamily)\n          .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)\n          .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)\n          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))\n          .maxLines(1);\n      }\n      .layoutWeight(1)\n      .height(44)\n      .borderRadius(8)\n      .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))\n      .border({ width: TOK_BORDER_W, color: readerAppColor('app.SourceManagementPage.SEARCH_FIELD_BORDER', this.appThemeScheme) })\n      .onClick((): void => this.onOpenTools());\n\n      Stack({ alignContent: Alignment.Center }) {\n        Row({ space: TOK_SPACE_XS }) {\n          Image($r('app.media.source_add'))\n            .width(18)\n            .height(18);\n          Text('新增书源')\n            .fontFamily(TYPE_FORM_LABEL_ACTION.fontFamily)\n            .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)\n            .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)\n            .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))\n            .maxLines(1);\n        }\n        .alignItems(VerticalAlign.Center);\n      }\n      .layoutWeight(1)\n      .height(44)\n      .borderRadius(8)\n      .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))\n      .onClick((): void => this.onAddSource());\n    }\n    .width(this.contentFrame().width)\n    .height(44)\n    .alignItems(VerticalAlign.Center)\n    .margin({ top: TOK_SPACE_SM, bottom: this.actionBottomInset() })\n    .hitTestBehavior(HitTestMode.Transparent);\n  }",
+    "backBar": "  private backBar() {\n    PageBackBar({\n      title: '书源管理',\n      onBack: (): void => this.onBack(),\n    }) {\n      Stack({ alignContent: Alignment.Center }) {\n        Image((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more'))).width(20).height(20);\n      }\n      .width(44)\n      .height(44)\n      .borderRadius(22)\n      .onClick((): void => this.onOpenTools());\n    }\n  }",
+    "statusChipWidth": "  private statusChipWidth(designWidth: number): number {\n    const gapWidth = TOK_SPACE_XS * 4;\n    const availableForChips = Math.max(0, this.filterControlWidth() - gapWidth);\n    return designWidth * Math.min(1, availableForChips / 318);\n  }"
+  },
+  "cases": [
+    {
+      "id": "source-management-retry",
+      "method": "statusBanner",
+      "label": "重试",
+      "scheme": "day",
+      "active": false,
+      "types": [
+        "Text"
+      ],
+      "physical": [
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FF1F3528"
+        }
+      ]
+    },
+    {
+      "id": "source-management-retry",
+      "method": "statusBanner",
+      "label": "重试",
+      "scheme": "day",
+      "active": true,
+      "types": [
+        "Text"
+      ],
+      "physical": [
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FF1F3528"
+        }
+      ]
+    },
+    {
+      "id": "source-management-retry",
+      "method": "statusBanner",
+      "label": "重试",
+      "scheme": "night",
+      "active": false,
+      "types": [
+        "Text"
+      ],
+      "physical": [
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FFD2BD96"
+        }
+      ]
+    },
+    {
+      "id": "source-management-retry",
+      "method": "statusBanner",
+      "label": "重试",
+      "scheme": "night",
+      "active": true,
+      "types": [
+        "Text"
+      ],
+      "physical": [
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FFD2BD96"
+        }
+      ]
+    },
+    {
+      "id": "source-management-category",
+      "method": "categoryFilter",
+      "label": "全部类型",
+      "scheme": "day",
+      "active": false,
+      "types": [
+        "Text"
+      ],
+      "physical": [
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontSize": 11,
+          "fontColor": "#FF1F1B17",
+          "height": 32,
+          "padding": {
+            "left": 12,
+            "right": 12
+          },
+          "backgroundColor": "#E6FFFCF8",
+          "borderRadius": 16
+        }
+      ]
+    },
+    {
+      "id": "source-management-category",
+      "method": "categoryFilter",
+      "label": "全部类型",
+      "scheme": "day",
+      "active": true,
+      "types": [
+        "Text"
+      ],
+      "physical": [
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontSize": 11,
+          "fontColor": "#FFFFFAF4",
+          "height": 32,
+          "padding": {
+            "left": 12,
+            "right": 12
+          },
+          "backgroundColor": "#FF1F3528",
+          "borderRadius": 16
+        }
+      ]
+    },
+    {
+      "id": "source-management-category",
+      "method": "categoryFilter",
+      "label": "全部类型",
+      "scheme": "night",
+      "active": false,
+      "types": [
+        "Text"
+      ],
+      "physical": [
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontSize": 11,
+          "fontColor": "#FFEADFCE",
+          "height": 32,
+          "padding": {
+            "left": 12,
+            "right": 12
+          },
+          "backgroundColor": "#E62A2622",
+          "borderRadius": 16
+        }
+      ]
+    },
+    {
+      "id": "source-management-category",
+      "method": "categoryFilter",
+      "label": "全部类型",
+      "scheme": "night",
+      "active": true,
+      "types": [
+        "Text"
+      ],
+      "physical": [
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontSize": 11,
+          "fontColor": "#FFFFFAF4",
+          "height": 32,
+          "padding": {
+            "left": 12,
+            "right": 12
+          },
+          "backgroundColor": "#FF7A684F",
+          "borderRadius": 16
+        }
+      ]
+    },
+    {
+      "id": "source-management-status-compact",
+      "method": "chip",
+      "label": "启用",
+      "scheme": "day",
+      "active": false,
+      "types": [
+        "Text"
+      ],
+      "physical": [
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FF1F1B17",
+          "textAlign": "TextAlign.Center",
+          "maxLines": 1,
+          "width": 45.23270440251573,
+          "height": 32,
+          "backgroundColor": "#E6FFFCF8",
+          "border": {
+            "width": 1,
+            "color": "#85B4A697"
+          },
+          "borderRadius": 16,
+          "opacity": 1
+        }
+      ]
+    },
+    {
+      "id": "source-management-status-compact",
+      "method": "chip",
+      "label": "启用",
+      "scheme": "day",
+      "active": true,
+      "types": [
+        "Text"
+      ],
+      "physical": [
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FFFFFAF4",
+          "textAlign": "TextAlign.Center",
+          "maxLines": 1,
+          "width": 45.23270440251573,
+          "height": 32,
+          "backgroundColor": "#FF1F3528",
+          "border": {
+            "width": 1,
+            "color": "#FF1F3528"
+          },
+          "borderRadius": 16,
+          "opacity": 0.45
+        }
+      ]
+    },
+    {
+      "id": "source-management-status-compact",
+      "method": "chip",
+      "label": "启用",
+      "scheme": "night",
+      "active": false,
+      "types": [
+        "Text"
+      ],
+      "physical": [
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FFEADFCE",
+          "textAlign": "TextAlign.Center",
+          "maxLines": 1,
+          "width": 45.23270440251573,
+          "height": 32,
+          "backgroundColor": "#E62A2622",
+          "border": {
+            "width": 1,
+            "color": "#85E2D1B9"
+          },
+          "borderRadius": 16,
+          "opacity": 1
+        }
+      ]
+    },
+    {
+      "id": "source-management-status-compact",
+      "method": "chip",
+      "label": "启用",
+      "scheme": "night",
+      "active": true,
+      "types": [
+        "Text"
+      ],
+      "physical": [
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FFFFFAF4",
+          "textAlign": "TextAlign.Center",
+          "maxLines": 1,
+          "width": 45.23270440251573,
+          "height": 32,
+          "backgroundColor": "#FF7A684F",
+          "border": {
+            "width": 1,
+            "color": "#FF7A684F"
+          },
+          "borderRadius": 16,
+          "opacity": 0.45
+        }
+      ]
+    },
+    {
+      "id": "source-management-status-wide",
+      "method": "chip",
+      "label": "未检测",
+      "scheme": "day",
+      "active": false,
+      "types": [
+        "Text"
+      ],
+      "physical": [
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FF1F1B17",
+          "textAlign": "TextAlign.Center",
+          "maxLines": 1,
+          "width": 56.15094339622642,
+          "height": 32,
+          "backgroundColor": "#E6FFFCF8",
+          "border": {
+            "width": 1,
+            "color": "#85B4A697"
+          },
+          "borderRadius": 16,
+          "opacity": 1
+        }
+      ]
+    },
+    {
+      "id": "source-management-status-wide",
+      "method": "chip",
+      "label": "未检测",
+      "scheme": "day",
+      "active": true,
+      "types": [
+        "Text"
+      ],
+      "physical": [
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FFFFFAF4",
+          "textAlign": "TextAlign.Center",
+          "maxLines": 1,
+          "width": 56.15094339622642,
+          "height": 32,
+          "backgroundColor": "#FF1F3528",
+          "border": {
+            "width": 1,
+            "color": "#FF1F3528"
+          },
+          "borderRadius": 16,
+          "opacity": 0.45
+        }
+      ]
+    },
+    {
+      "id": "source-management-status-wide",
+      "method": "chip",
+      "label": "未检测",
+      "scheme": "night",
+      "active": false,
+      "types": [
+        "Text"
+      ],
+      "physical": [
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FFEADFCE",
+          "textAlign": "TextAlign.Center",
+          "maxLines": 1,
+          "width": 56.15094339622642,
+          "height": 32,
+          "backgroundColor": "#E62A2622",
+          "border": {
+            "width": 1,
+            "color": "#85E2D1B9"
+          },
+          "borderRadius": 16,
+          "opacity": 1
+        }
+      ]
+    },
+    {
+      "id": "source-management-status-wide",
+      "method": "chip",
+      "label": "未检测",
+      "scheme": "night",
+      "active": true,
+      "types": [
+        "Text"
+      ],
+      "physical": [
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FFFFFAF4",
+          "textAlign": "TextAlign.Center",
+          "maxLines": 1,
+          "width": 56.15094339622642,
+          "height": 32,
+          "backgroundColor": "#FF7A684F",
+          "border": {
+            "width": 1,
+            "color": "#FF7A684F"
+          },
+          "borderRadius": 16,
+          "opacity": 0.45
+        }
+      ]
+    },
+    {
+      "id": "source-management-detect",
+      "method": "detectButton",
+      "label": "检测",
+      "scheme": "day",
+      "active": false,
+      "types": [
+        "Stack",
+        "Text"
+      ],
+      "physical": [
+        {
+          "width": 44,
+          "height": 28,
+          "backgroundColor": "#E6FFFCF8",
+          "border": {
+            "width": 1,
+            "color": "#85B4A697"
+          },
+          "borderRadius": 7,
+          "opacity": 1
+        },
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FF1F1B17",
+          "maxLines": 1
+        }
+      ]
+    },
+    {
+      "id": "source-management-detect",
+      "method": "detectButton",
+      "label": "检测",
+      "scheme": "day",
+      "active": true,
+      "types": [
+        "Stack",
+        "Text"
+      ],
+      "physical": [
+        {
+          "width": 44,
+          "height": 28,
+          "backgroundColor": "#E6FFFCF8",
+          "border": {
+            "width": 1,
+            "color": "#85B4A697"
+          },
+          "borderRadius": 7,
+          "opacity": 0.62
+        },
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FF1F1B17",
+          "maxLines": 1
+        }
+      ]
+    },
+    {
+      "id": "source-management-detect",
+      "method": "detectButton",
+      "label": "检测",
+      "scheme": "night",
+      "active": false,
+      "types": [
+        "Stack",
+        "Text"
+      ],
+      "physical": [
+        {
+          "width": 44,
+          "height": 28,
+          "backgroundColor": "#E62A2622",
+          "border": {
+            "width": 1,
+            "color": "#85E2D1B9"
+          },
+          "borderRadius": 7,
+          "opacity": 1
+        },
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FFEADFCE",
+          "maxLines": 1
+        }
+      ]
+    },
+    {
+      "id": "source-management-detect",
+      "method": "detectButton",
+      "label": "检测",
+      "scheme": "night",
+      "active": true,
+      "types": [
+        "Stack",
+        "Text"
+      ],
+      "physical": [
+        {
+          "width": 44,
+          "height": 28,
+          "backgroundColor": "#E62A2622",
+          "border": {
+            "width": 1,
+            "color": "#85E2D1B9"
+          },
+          "borderRadius": 7,
+          "opacity": 0.62
+        },
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FFEADFCE",
+          "maxLines": 1
+        }
+      ]
+    },
+    {
+      "id": "source-management-login",
+      "method": "loginButton",
+      "label": "登录",
+      "scheme": "day",
+      "active": false,
+      "types": [
+        "Stack",
+        "Text"
+      ],
+      "physical": [
+        {
+          "width": 44,
+          "height": 28,
+          "backgroundColor": "#E6FFFCF8",
+          "border": {
+            "width": 1,
+            "color": "#85B4A697"
+          },
+          "borderRadius": 7
+        },
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FF1F3528",
+          "maxLines": 1
+        }
+      ]
+    },
+    {
+      "id": "source-management-login",
+      "method": "loginButton",
+      "label": "登录",
+      "scheme": "day",
+      "active": true,
+      "types": [
+        "Stack",
+        "Text"
+      ],
+      "physical": [
+        {
+          "width": 44,
+          "height": 28,
+          "backgroundColor": "#E6FFFCF8",
+          "border": {
+            "width": 1,
+            "color": "#85B4A697"
+          },
+          "borderRadius": 7
+        },
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FF1F3528",
+          "maxLines": 1
+        }
+      ]
+    },
+    {
+      "id": "source-management-login",
+      "method": "loginButton",
+      "label": "登录",
+      "scheme": "night",
+      "active": false,
+      "types": [
+        "Stack",
+        "Text"
+      ],
+      "physical": [
+        {
+          "width": 44,
+          "height": 28,
+          "backgroundColor": "#E62A2622",
+          "border": {
+            "width": 1,
+            "color": "#85E2D1B9"
+          },
+          "borderRadius": 7
+        },
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FFD2BD96",
+          "maxLines": 1
+        }
+      ]
+    },
+    {
+      "id": "source-management-login",
+      "method": "loginButton",
+      "label": "登录",
+      "scheme": "night",
+      "active": true,
+      "types": [
+        "Stack",
+        "Text"
+      ],
+      "physical": [
+        {
+          "width": 44,
+          "height": 28,
+          "backgroundColor": "#E62A2622",
+          "border": {
+            "width": 1,
+            "color": "#85E2D1B9"
+          },
+          "borderRadius": 7
+        },
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 11,
+          "fontColor": "#FFD2BD96",
+          "maxLines": 1
+        }
+      ]
+    },
+    {
+      "id": "source-management-manage",
+      "method": "bottomActionBar",
+      "label": "批量管理",
+      "scheme": "day",
+      "active": false,
+      "types": [
+        "Stack",
+        "Text"
+      ],
+      "physical": [
+        {
+          "height": 44,
+          "layoutWeight": 1,
+          "backgroundColor": "#FFFFFCF8",
+          "border": {
+            "width": 1,
+            "color": "#75B4A697"
+          },
+          "borderRadius": 8
+        },
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 13,
+          "fontColor": "#FF1F1B17",
+          "maxLines": 1
+        }
+      ]
+    },
+    {
+      "id": "source-management-manage",
+      "method": "bottomActionBar",
+      "label": "批量管理",
+      "scheme": "day",
+      "active": true,
+      "types": [
+        "Stack",
+        "Text"
+      ],
+      "physical": [
+        {
+          "height": 44,
+          "layoutWeight": 1,
+          "backgroundColor": "#FFFFFCF8",
+          "border": {
+            "width": 1,
+            "color": "#75B4A697"
+          },
+          "borderRadius": 8
+        },
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 13,
+          "fontColor": "#FF1F1B17",
+          "maxLines": 1
+        }
+      ]
+    },
+    {
+      "id": "source-management-manage",
+      "method": "bottomActionBar",
+      "label": "批量管理",
+      "scheme": "night",
+      "active": false,
+      "types": [
+        "Stack",
+        "Text"
+      ],
+      "physical": [
+        {
+          "height": 44,
+          "layoutWeight": 1,
+          "backgroundColor": "#FF2A2622",
+          "border": {
+            "width": 1,
+            "color": "#75E2D1B9"
+          },
+          "borderRadius": 8
+        },
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 13,
+          "fontColor": "#FFEADFCE",
+          "maxLines": 1
+        }
+      ]
+    },
+    {
+      "id": "source-management-manage",
+      "method": "bottomActionBar",
+      "label": "批量管理",
+      "scheme": "night",
+      "active": true,
+      "types": [
+        "Stack",
+        "Text"
+      ],
+      "physical": [
+        {
+          "height": 44,
+          "layoutWeight": 1,
+          "backgroundColor": "#FF2A2622",
+          "border": {
+            "width": 1,
+            "color": "#75E2D1B9"
+          },
+          "borderRadius": 8
+        },
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 13,
+          "fontColor": "#FFEADFCE",
+          "maxLines": 1
+        }
+      ]
+    },
+    {
+      "id": "source-management-add",
+      "method": "bottomActionBar",
+      "label": "新增书源",
+      "scheme": "day",
+      "active": false,
+      "types": [
+        "Stack",
+        "Row",
+        "Image",
+        "Text"
+      ],
+      "physical": [
+        {
+          "height": 44,
+          "layoutWeight": 1,
+          "backgroundColor": "#FF1F3528",
+          "borderRadius": 8
+        },
+        {},
+        {
+          "width": 18,
+          "height": 18
+        },
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 13,
+          "fontColor": "#FFFFFAF4",
+          "maxLines": 1
+        }
+      ]
+    },
+    {
+      "id": "source-management-add",
+      "method": "bottomActionBar",
+      "label": "新增书源",
+      "scheme": "day",
+      "active": true,
+      "types": [
+        "Stack",
+        "Row",
+        "Image",
+        "Text"
+      ],
+      "physical": [
+        {
+          "height": 44,
+          "layoutWeight": 1,
+          "backgroundColor": "#FF1F3528",
+          "borderRadius": 8
+        },
+        {},
+        {
+          "width": 18,
+          "height": 18
+        },
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 13,
+          "fontColor": "#FFFFFAF4",
+          "maxLines": 1
+        }
+      ]
+    },
+    {
+      "id": "source-management-add",
+      "method": "bottomActionBar",
+      "label": "新增书源",
+      "scheme": "night",
+      "active": false,
+      "types": [
+        "Stack",
+        "Row",
+        "Image",
+        "Text"
+      ],
+      "physical": [
+        {
+          "height": 44,
+          "layoutWeight": 1,
+          "backgroundColor": "#FF7A684F",
+          "borderRadius": 8
+        },
+        {},
+        {
+          "width": 18,
+          "height": 18
+        },
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 13,
+          "fontColor": "#FFFFFAF4",
+          "maxLines": 1
+        }
+      ]
+    },
+    {
+      "id": "source-management-add",
+      "method": "bottomActionBar",
+      "label": "新增书源",
+      "scheme": "night",
+      "active": true,
+      "types": [
+        "Stack",
+        "Row",
+        "Image",
+        "Text"
+      ],
+      "physical": [
+        {
+          "height": 44,
+          "layoutWeight": 1,
+          "backgroundColor": "#FF7A684F",
+          "borderRadius": 8
+        },
+        {},
+        {
+          "width": 18,
+          "height": 18
+        },
+        {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSize": 13,
+          "fontColor": "#FFFFFAF4",
+          "maxLines": 1
+        }
+      ]
+    }
+  ],
+  "widths": [
+    {
+      "availableWidth": 0,
+      "width": 58,
+      "expected": 0
+    },
+    {
+      "availableWidth": 0,
+      "width": 72,
+      "expected": 0
+    },
+    {
+      "availableWidth": 32,
+      "width": 58,
+      "expected": 0
+    },
+    {
+      "availableWidth": 32,
+      "width": 72,
+      "expected": 0
+    },
+    {
+      "availableWidth": 150,
+      "width": 58,
+      "expected": 21.52201257861635
+    },
+    {
+      "availableWidth": 150,
+      "width": 72,
+      "expected": 26.71698113207547
+    },
+    {
+      "availableWidth": 280,
+      "width": 58,
+      "expected": 45.23270440251573
+    },
+    {
+      "availableWidth": 280,
+      "width": 72,
+      "expected": 56.15094339622642
+    },
+    {
+      "availableWidth": 350,
+      "width": 58,
+      "expected": 58
+    },
+    {
+      "availableWidth": 350,
+      "width": 72,
+      "expected": 72
+    },
+    {
+      "availableWidth": 760,
+      "width": 58,
+      "expected": 58
+    },
+    {
+      "availableWidth": 760,
+      "width": 72,
+      "expected": 72
+    }
+  ]
+}
