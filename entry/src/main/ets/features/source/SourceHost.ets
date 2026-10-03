@@ -1,5 +1,5 @@
 import { SourceOrchestrator } from './SourceOrchestrator';
-import type { BookSource } from './SourceGateway';
+import { SourceGateway, type BookSource } from './SourceGateway';
 import type {
   SourceImportCompletion,
   SourceManagementStatusKind,
@@ -44,6 +44,22 @@ export class SourceHost {
     onFailure: (error: Error) => void = (_error: Error): void => {},
   ): void {
     this.getOrchestrator().importBookSources(onlineUrl, onComplete, onFailure);
+  }
+
+  /**
+   * Resolve only the exact source identities already admitted by another
+   * owner (for example, a shelf or remote detail projection).  The page keeps
+   * its own route-generation guard; this boundary supplies the Core read and
+   * never invents a source row when the registry is unavailable.
+   */
+  loadSourcesForIds(sourceIds: string[], isCurrent: () => boolean): Promise<BookSource[]> {
+    return new SourceGateway(this.owner()).loadSourcesForIds(sourceIds, isCurrent);
+  }
+
+  /** Read an optional exact source projection without exposing SourceGateway
+   * construction to Index.  Callers own the lifetime/cancellation policy. */
+  loadSources(sourceId?: string): Promise<BookSource[]> {
+    return new SourceGateway(this.owner()).loadSources(sourceId);
   }
 
   private getOrchestrator(): SourceOrchestrator {

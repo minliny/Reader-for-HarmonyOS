@@ -15,13 +15,14 @@ async function check(name, fn) { try { await fn(); results.push({name,status:'PA
   catch (e) { results.push({name,status:'FAIL',message:e.message}); } }
 function fixture(initial = []) {
   const requests = []; let owner = { setReadingPreparationContext() {} };
+  const SourceHost = class { loadSourcesForIds() { const request = pending(); requests.push(request); return request.promise; } };
   const Host = productionMotionMethods(file('pages/Index.ets'),
     ['applyBookshelfState','sourceDisplayName','hydrateShelfSourceNames','copyShelfBookWithSourceName','readingDetailForShelf'], {
       LOCAL_SOURCE_ID: 'local', ReaderRuntimeOwner: { current: () => owner },
-      SourceGateway: class { loadSourcesForIds() { const request = pending(); requests.push(request); return request.promise; } },
+      SourceHost,
     });
   const host = Object.assign(new Host(), { searchHost:{sources:()=>[],updateShelf() {}}, searchPublication:new SearchPublication(),searchPublicationRevision:0,shelfBooks: initial, bookshelfLoadGeneration: 1, bookshelfSourceNameRequest: 0,
-    searchSources: [], sourceSources: [], sourceToolsSnapshot: {sources: []}, scheduleBookshelfBackgroundRefresh() {} });
+    searchSources: [], sourceSources: [], sourceToolsSnapshot: {sources: []}, sourceHost: new SourceHost(), scheduleBookshelfBackgroundRefresh() {} });
   return {host, requests, changeOwner: () => { owner = { setReadingPreparationContext() {} }; }, apply: books => host.applyBookshelfState({kind:'populated',shelf:{books,total:books.length},continueReading:undefined})};
 }
 await check('missing/invalid name is unknown, not evidence of source removal', () => {

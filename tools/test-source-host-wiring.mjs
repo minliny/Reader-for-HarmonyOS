@@ -15,14 +15,20 @@ assert.doesNotMatch(index, /private getSourceOrchestrator\(/,
 for (const method of ['open', 'retryLoad', 'toggleSource', 'checkSource', 'loginSource', 'importBookSources']) {
   assert.match(host, new RegExp(`\\b${method}\\(`), `SourceHost must expose ${method}`);
 }
+for (const method of ['loadSourcesForIds', 'loadSources']) {
+  assert.match(host, new RegExp(`\\b${method}\\(`), `SourceHost must expose ${method}`);
+}
 assert.match(host, /new SourceOrchestrator\(/,
   'SourceHost must be the single SourceOrchestrator construction site');
 assert.match(host, /private readonly owner: \(\) => ReaderRuntimeOwner/,
   'SourceHost must resolve the runtime owner lazily');
 for (const call of ['sourceHost.open()', 'sourceHost.retryLoad()', 'sourceHost.toggleSource(',
-  'sourceHost.checkSource(', 'sourceHost.loginSource(', 'sourceHost.importBookSources(']) {
+  'sourceHost.checkSource(', 'sourceHost.loginSource(', 'sourceHost.importBookSources(',
+  'sourceHost.loadSourcesForIds(', 'sourceHost.loadSources(']) {
   assert.ok(index.includes(`this.${call}`), `Index must forward ${call}`);
 }
+assert.doesNotMatch(index, /new SourceGateway\(/,
+  'Index must not construct SourceGateway for display or admitted-book projections');
 assert.match(index, /sourceSources = sources/,
   'Index must retain the existing source list projection');
 assert.match(index, /sourceStatusKind = kind/,

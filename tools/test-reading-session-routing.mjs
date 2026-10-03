@@ -21,7 +21,7 @@ assert.doesNotMatch(index.slice(index.indexOf('private openRemoteBookDetail('), 
   'opening a search result is a preview and must not mutate the bookshelf');
 assert.match(index, /private addDetailBook\(\): void \{[\s\S]*this\.bookshelfHost\.upsertBook\(\{[\s\S]*sourceId: session\.identity\.sourceId,[\s\S]*bookId: session\.identity\.bookId/,
   'only the explicit detail action may join a remote book to the shelf');
-assert.match(index, /new SourceGateway\(owner\)\.loadSources\(\)[\s\S]*source\.sourceId !== session\.identity\.sourceId/,
+assert.match(index, /this\.sourceHost\.loadSources\(session\.identity\.sourceId\)[\s\S]*source\.sourceId !== session\.identity\.sourceId/,
   'a persisted shelf book must resolve its display name from the existing Core source registry');
 const remoteOpen = index.slice(index.indexOf('private openRemoteBookDetail('), index.indexOf('private openReading('));
 assert.ok(remoteOpen.indexOf('this.route = entryRoute') < remoteOpen.indexOf('.acquireBookWithBackgroundRefresh(seed, { isCurrent })'),

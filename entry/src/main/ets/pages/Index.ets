@@ -168,7 +168,6 @@ import type {
   TxtTocRuleDraft,
 } from '../features/settings/RulesManagementGateway';
 import {
-  SourceGateway,
   type BookSource,
 } from '../features/source/SourceGateway';
 import { readerSourceCategoryIsText, readerSourceCategoryLabel } from '../features/source/ReaderSourceCategory';
@@ -3356,7 +3355,7 @@ struct Index {
     session: RemoteReadingSession,
     isCurrent: () => boolean,
   ): Promise<void> {
-    return new SourceGateway(owner).loadSources()
+    return this.sourceHost.loadSources(session.identity.sourceId)
       .then((sources: BookSource[]): void => {
         if (!isCurrent()) {
           return;
@@ -6434,7 +6433,7 @@ struct Index {
     const admittedBooks = this.shelfBooks;
     const isCurrent = (): boolean => request === this.bookshelfSourceNameRequest && owner === ReaderRuntimeOwner.current() &&
       generation === this.bookshelfLoadGeneration && admittedBooks === this.shelfBooks && this.shelfBooks.length > 0;
-    void new SourceGateway(owner).loadSourcesForIds(admittedBooks.map((book: ShelfBook): string => book.sourceId), isCurrent)
+    void this.sourceHost.loadSourcesForIds(admittedBooks.map((book: ShelfBook): string => book.sourceId), isCurrent)
       .then((sources: BookSource[]): void => {
         if (!isCurrent()) return;
         const names = new Map<string, string>();
