@@ -53,6 +53,7 @@ export struct ReaderShell {
   @Prop remoteBookSeed: RemoteReadingBookSeed | undefined = undefined;
   entryPresentationProvider: () => ReaderRetainedPresentation | undefined = (): ReaderRetainedPresentation | undefined => undefined;
   @Prop sourceSwitchFailureMessage: string = '';
+  @Prop sourceSwitchScopeId: number = 0;
   @Prop sourceSwitchTransactionId: string | undefined = undefined;
   @Prop totalChapters: number = 0;
   @Prop requestedChapterIndex: number | undefined = undefined;
@@ -86,8 +87,8 @@ export struct ReaderShell {
   onReadingReady: (chapterIndex: number, sourceId: string, bookId: string, generation: number) => void =
     (_chapterIndex: number, _sourceId: string, _bookId: string, _generation: number): void => {};
   onRemoteSessionReady: (session: RemoteReadingSession) => void = (_session: RemoteReadingSession): void => {};
-  onRetryFailedSourceSwitch: () => void = (): void => {};
-  onDismissSourceSwitchFailure: () => void = (): void => {};
+  onRetryFailedSourceSwitch: (scopeId?: number) => void = (): void => {};
+  onDismissSourceSwitchFailure: (scopeId?: number) => void = (): void => {};
   resolveSourceSwitchTransactionId: (sourceId: string, bookId: string) => Promise<string | undefined> =
     (_sourceId: string, _bookId: string): Promise<string | undefined> => Promise.resolve(undefined);
   onReadingCommitted: (commit: ReadingCommit) => void = (_commit: ReadingCommit): void => {};
@@ -121,11 +122,11 @@ export struct ReaderShell {
   onOpenBookInfo: () => void = (): void => {};
   onSwitchSource: () => void = (): void => {};
   onOpenRulesManagement: () => void = (): void => {};
-  onCloseSourceSwitch: () => void = (): void => {};
-  onRetrySourceSwitch: () => void = (): void => {};
-  onRefreshSourceSwitch: () => void = (): void => {};
-  onPickSource: (candidate: SourceSwitchCandidate) => void = (_candidate: SourceSwitchCandidate): void => {};
-  onRollbackSourceSwitch: () => void = (): void => {};
+  onCloseSourceSwitch: (scopeId?: number) => void = (): void => {};
+  onRetrySourceSwitch: (scopeId?: number) => void = (): void => {};
+  onRefreshSourceSwitch: (scopeId?: number) => void = (): void => {};
+  onPickSource: (candidate: SourceSwitchCandidate, scopeId?: number) => void = (_candidate: SourceSwitchCandidate): void => {};
+  onRollbackSourceSwitch: (scopeId?: number) => void = (): void => {};
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -147,11 +148,12 @@ export struct ReaderShell {
           entryPresentationProvider: (): ReaderRetainedPresentation | undefined =>
             _identity === this.readingIdentityKey() ? this.entryPresentationProvider() : undefined,
           sourceSwitchFailureMessage: this.sourceSwitchFailureMessage,
-          onRetryFailedSourceSwitch: (): void => {
-            if (_identity === this.readingIdentityKey()) this.onRetryFailedSourceSwitch();
+          sourceSwitchScopeId: this.sourceSwitchScopeId,
+          onRetryFailedSourceSwitch: (scopeId?: number): void => {
+            if (_identity === this.readingIdentityKey()) this.onRetryFailedSourceSwitch(scopeId);
           },
-          onDismissSourceSwitchFailure: (): void => {
-            if (_identity === this.readingIdentityKey()) this.onDismissSourceSwitchFailure();
+          onDismissSourceSwitchFailure: (scopeId?: number): void => {
+            if (_identity === this.readingIdentityKey()) this.onDismissSourceSwitchFailure(scopeId);
           },
           resolveSourceSwitchTransactionId: (sourceId: string, bookId: string): Promise<string | undefined> =>
             _identity === this.readingIdentityKey() ?
@@ -274,24 +276,7 @@ export struct ReaderShell {
       }
 
       if (this.sourceSwitchVisible) {
-        Stack({ alignContent: Alignment.Center }) {
-          Stack()
-            .width('100%')
-            .height('100%')
-            .backgroundColor(readerAppColor('app.ReaderShell.build.backgroundColor.40FFFFFF', this.appThemeScheme))
-            .onClick((): void => this.onCloseSourceSwitch());
-          SourceSwitchPanel({
-            state: this.sourceSwitchState,
-            currentSourceId: this.sourceId,
-            onClose: (): void => this.onCloseSourceSwitch(),
-            onRetry: (): void => this.onRetrySourceSwitch(),
-            onRefresh: (): void => this.onRefreshSourceSwitch(),
-            onSelectCandidate: (candidate: SourceSwitchCandidate): void => this.onPickSource(candidate),
-            onRollback: (): void => this.onRollbackSourceSwitch(),
-          });
-        }
-        .width('100%')
-        .height('100%');
+        this.sourceSwitchOverlayContent();
       }
       this.overlayStatusBarUnderlay();
     }
@@ -305,6 +290,30 @@ export struct ReaderShell {
     .backgroundColor(this.chromeUnderlayColor)
     .opacity(this.visible ? 1 : 0)
     .hitTestBehavior(this.visible ? HitTestMode.Default : HitTestMode.Transparent);
+  }
+
+  @Builder
+  private sourceSwitchOverlayContent() {
+        ForEach([this.sourceSwitchScopeId], (scopeId: number) => {
+        Stack({ alignContent: Alignment.Center }) {
+          Stack()
+            .width('100%')
+            .height('100%')
+            .backgroundColor(readerAppColor('app.ReaderShell.build.backgroundColor.40FFFFFF', this.appThemeScheme))
+            .onClick((): void => this.onCloseSourceSwitch(scopeId));
+          SourceSwitchPanel({
+            state: this.sourceSwitchState,
+            currentSourceId: this.sourceId,
+            onClose: (): void => this.onCloseSourceSwitch(scopeId),
+            onRetry: (): void => this.onRetrySourceSwitch(scopeId),
+            onRefresh: (): void => this.onRefreshSourceSwitch(scopeId),
+            onSelectCandidate: (candidate: SourceSwitchCandidate): void => this.onPickSource(candidate, scopeId),
+            onRollback: (): void => this.onRollbackSourceSwitch(scopeId),
+          });
+        }
+        .width('100%')
+        .height('100%');
+        }, (scopeId: number): string => scopeId.toString());
   }
 
   private readingIdentityKey(): string {

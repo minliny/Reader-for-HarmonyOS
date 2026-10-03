@@ -35,7 +35,7 @@ function fixture(size) {
     throw Error(`unexpected ${method}`);
   });
   const runtime = { bookAcquisitions: () => coordinator, request: (...args) => coordinator.request(...args) };
-  const Index = productionMotionMethods(file('pages/Index.ets'), ['performSourceSwitchSeam', 'onRemoteSessionReady',
+  const Index = productionMotionMethods(file('pages/Index.ets'), ['performSourceSwitchSeam', 'retireSourceSwitchPresentation', 'getSourceSwitchHost', 'onRemoteSessionReady',
     'isRemoteCatalogNearEnd', 'refreshRemoteCatalogNearEnd', 'applyReadingCommit', 'applyDirectoryChapter'], {
     RemoteReadingFlowGateway, ReaderRuntimeOwner: { current: () => runtime }, sameRemoteSessionEvidence,
     canAppendRemoteReadingCatalog, CATALOG_REFRESH_NEAR_END: 3, CATALOG_REFRESH_INTERVAL_MS: 600000,

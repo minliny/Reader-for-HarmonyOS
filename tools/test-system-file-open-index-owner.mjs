@@ -57,7 +57,7 @@ for(const stale of ['nav','book','mutated-book','runtime','unset','unmount','rea
 }
 {
  const f=systemFileIndexFixture();f.page.readingSessionActive=true;f.page.detailBook={sourceId:'remote',bookId:'remote-book'};
- f.page.pendingSourceSwitch={targetSourceId:'remote',targetBookId:'remote-book'};f.mount();await f.enqueue();f.page.consumeSystemFileOpen();
+ f.page.pendingSourceSwitch={transactionId:'actual-pending-fixture',targetSourceId:'remote',targetBookId:'remote-book'};f.mount();await f.enqueue();f.page.consumeSystemFileOpen();
  assert.equal(f.events.filter(e=>e[0]==='toast').length,1);assert.ok(f.queue.peek());
  f.page.pendingSourceSwitch=undefined;f.page.readingExitRequest=()=>f.events.push(['exit']);f.page.consumeSystemFileOpen();await tick();assert.equal(f.events.at(-1)[0],'exit');f.dispose();
 }

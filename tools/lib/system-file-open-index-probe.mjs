@@ -12,7 +12,9 @@ export function systemFileIndexFixture({bridge,book={sourceId:'local',bookId:'lo
  bridge??={peek:()=>queue.peek(),subscribe:cb=>queue.subscribe(cb),acknowledge:id=>{events.push(['ack',id]);queue.acknowledge(id);}};
  const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>installed);
  const Navigation=new Function('ReaderRuntimeOwner','ReaderSystemFileOpenHost',stripTypeScriptTypes(systemFileSource('app/ReaderSystemFileOpenNavigationHost.ts').replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,''))+';return ReaderSystemFileOpenNavigationHost;')(ReaderRuntimeOwner,bridge);
- const Index=productionMotionMethods(new URL('../../entry/src/main/ets/pages/Index.ets',import.meta.url),['mountSystemFileOpenNavigation','systemFileOpenNavigationView','consumeSystemFileOpen','cancelReaderExitDestination','onReaderExited','currentReaderPresentationIdentity'],{ReaderRuntimeOwner,ReaderSystemFileOpenNavigationHost:Navigation,LOCAL_SOURCE_ID:'local'});
+ const Index=productionMotionMethods(new URL('../../entry/src/main/ets/pages/Index.ets',import.meta.url),['mountSystemFileOpenNavigation','systemFileOpenNavigationView','consumeSystemFileOpen','cancelReaderExitDestination','onReaderExited','currentReaderPresentationIdentity','retireSourceSwitchPresentation'],{ReaderRuntimeOwner,ReaderSystemFileOpenNavigationHost:Navigation,LOCAL_SOURCE_ID:'local'});
+ const Switch=productionMotionMethods(new URL('../../entry/src/main/ets/features/source/SourceSwitchHost.ts',import.meta.url),
+  ['current','blocksExit','currentTransactionId','busyOrUnknown','retire','stopDiscovery']);
  const make=()=>{
   const page=Object.assign(new Index(),{mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,searchAppForeground:true,readingSessionActive:false,readingReadyGeneration:1,navigationGeneration:1,
    sourceSwitchVisible:false,sourceSwitchState:{kind:'discovering'},sourceSwitchRollbackInFlight:false,settingsSnapshot:{reduceMotion:false},detailToc:[],detailBook:{...book},
@@ -21,6 +23,12 @@ export function systemFileIndexFixture({bridge,book={sourceId:'local',bookId:'lo
    returnToBookshelf(){events.push(['shelf']);this.readingSessionActive=false;this.navigationGeneration++;},
    openShelfBook:b=>{events.push(['open',b]);},closeImportDialog:()=>events.push(['close-import']),
    returnToReadingOrigin:()=>events.push(['origin']),presentRulesManagementFromReader:()=>events.push(['rules']),returnFromDetail:()=>events.push(['detail'])});
+  const switchOwner=Object.assign(new Switch(),{generation:0,reconciliationGeneration:0,snapshot:{scopeId:0,visible:false,state:{kind:'discovering'},failureMessage:'',rollbackInFlight:false}});
+  page.sourceSwitchScopeId=0;page.sourceSwitchHost=switchOwner;
+  // Old queue fixtures assign controlled domain facts through these aliases;
+  // the actual shipped bounded owner methods decide blocking/retirement.
+  for(const [alias,field] of [['pendingSourceSwitch','pending'],['sourceSwitchVisible','visible'],['sourceSwitchState','state']])
+   Object.defineProperty(page,alias,{get:()=>switchOwner.snapshot[field],set:value=>{switchOwner.snapshot={...switchOwner.snapshot,[field]:value};},configurable:true});
   return page;
  };
  const page=make();return {page,owner,book,events,ReaderRuntimeOwner,Navigation,bridge,queue,make,

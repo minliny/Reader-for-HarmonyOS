@@ -87,7 +87,6 @@ import {
   RemoteChapterCacheRefreshError,
   RemoteReadingFlowGateway,
   type RemoteReadingBookSeed,
-  type RemoteReadingProgressState,
   type RemoteReadingSession,
   type RemoteReadingTocEntry,
 } from '../features/reading/RemoteReadingFlowGateway';
@@ -96,6 +95,7 @@ import { canAppendRemoteReadingCatalog, sameRemoteSessionEvidence, preparedRemot
 import { captureRemotePositionContext, type RemoteReadingPositionContext } from '../features/reading/RemoteReadingPositionMigration';
 import type { ReadingSessionChapter } from '../features/reading/ReadingChapterWindow';
 import type { ReadingEntrySeed } from '../features/reading/ReadingEntryPreparation';
+import { ReadingOfflineHost } from '../features/reading/ReadingOfflineHost';
 import { ReadingOfflineGateway, type ReadingOfflineBookProgress } from '../features/reading/ReadingOfflineGateway';
 import {
   isRemoteSourceFailureKind,
@@ -186,17 +186,11 @@ import {
   type SourceManagementProjection,
 } from '../features/source/SourceHost';
 import {
-  buildSourceSwitchCommitParams,
-  sourceSwitchCandidateKey,
-  SourceSwitchGateway,
   type SourceSwitchCandidate,
-  type SourceSwitchCommitOutcome,
-  type SourceSwitchDiscoveryOutcome,
-  type PendingSourceSwitch,
   type SourceSwitchProbeQuery,
-  type SourceSwitchRollbackResult,
-  type SourceSwitchTargetToc,
 } from '../features/source/SourceSwitchGateway';
+import { SourceSwitchHost, type SourceSwitchContext, type SourceSwitchSnapshot,
+  type SourceSwitchLease, type SourceSwitchEffect, type SourceSwitchAnchor, type SourceSwitchPendingTransaction } from '../features/source/SourceSwitchHost';
 import { SourceManagementPage } from '../features/source/SourceManagementPage';
 import { SourceToolsPage } from '../features/source/SourceToolsPage';
 import {
@@ -262,41 +256,6 @@ interface BookshelfBackgroundSeeds {
   owner: ReaderRuntimeOwner;
   revision: string;
   seeds: Promise<ReadingEntrySeed[] | undefined>;
-}
-
-class SourceSwitchAnchor {
-  chapterIndex: number;
-  chapterTitle: string;
-
-  constructor(chapterIndex: number, chapterTitle: string) {
-    this.chapterIndex = chapterIndex;
-    this.chapterTitle = chapterTitle;
-  }
-}
-
-class PendingSourceSwitchTransaction {
-  fromSourceId: string;
-  fromBookId: string;
-  targetSourceId: string;
-  targetBookId: string;
-  targetChapterIndex: number;
-  transactionId: string;
-
-  constructor(
-    fromSourceId: string,
-    fromBookId: string,
-    targetSourceId: string,
-    targetBookId: string,
-    targetChapterIndex: number,
-    transactionId: string,
-  ) {
-    this.fromSourceId = fromSourceId;
-    this.fromBookId = fromBookId;
-    this.targetSourceId = targetSourceId;
-    this.targetBookId = targetBookId;
-    this.targetChapterIndex = targetChapterIndex;
-    this.transactionId = transactionId;
-  }
 }
 
 interface DetailProjectionIntent {
@@ -500,14 +459,11 @@ struct Index {
   @State private sourceSwitchVisible: boolean = false;
   @State private sourceSwitchState: SourceSwitchPanelState = { kind: 'discovering' };
   @State private sourceSwitchFailureMessage: string = '';
-  private failedSourceSwitchCandidate: SourceSwitchCandidate | undefined = undefined;
-  private failedSourceSwitchIdentity: string = '';
-  private sourceSwitchGateway: SourceSwitchGateway | undefined;
+  @State private sourceSwitchScopeId: number = 0;
+  private sourceSwitchHost: SourceSwitchHost | undefined;
   private searchDetailCandidates: SearchBook[] = [];
   /** Retained until the target chapter's first measured progress commit. */
-  private pendingSourceSwitch: PendingSourceSwitchTransaction | undefined = undefined;
-  private sourceSwitchRollbackInFlight: boolean = false;
-  private sourceSwitchReconciliationGeneration: number = 0;
+  private pendingSourceSwitch: SourceSwitchPendingTransaction | undefined = undefined;
   /** The original reader owns loading, layout, errors and first-page commit. */
   @State private readingSessionActive: boolean = false;
   private navigationGeneration: number = 0;
@@ -561,7 +517,6 @@ struct Index {
   private readingWindowPrefetchActive: ReadingWindowPrefetchIntent | undefined = undefined;
   private readingWindowPrefetchCompleted: ReadingWindowPrefetchIntent | undefined = undefined;
   private readingWindowPrefetchTask: Promise<void> | undefined = undefined;
-  private sourceSwitchUnsubscribe: (() => void) | undefined = undefined;
   private bookProjectionUnsubscribe: (() => void) | undefined = undefined;
   private bookProjectionLoading: boolean = false;
   private bookProjectionActive: DetailProjectionIntent | undefined = undefined;
@@ -719,8 +674,7 @@ struct Index {
     this.applicationSettingsSnapshot = undefined;
     this.bookProjectionUnsubscribe?.();
     this.bookProjectionUnsubscribe = undefined;
-    this.sourceSwitchUnsubscribe?.();
-    this.sourceSwitchUnsubscribe = undefined;
+    this.retireSourceSwitchPresentation();
     this.searchHost.close();
     // Retire resources only in the owner captured when this Index mounted.
     // An unavailable/replacement runtime owns its own cleanup and must never
@@ -745,7 +699,7 @@ struct Index {
     if (this.sourceSwitchVisible) {
       // The detail/reading overlay must win over the route-specific exit
       // branch so Back only closes the source-switch panel.
-      this.closeSourceSwitch();
+      this.sourceSwitchHost?.consumeBack(this.sourceSwitchScopeId);
       return true;
     }
     if (this.hasVisibleImportDialog()) {
@@ -1085,8 +1039,9 @@ struct Index {
             this.detailBook === undefined ? undefined :
               readerEntryPresentation(this.detailBook.sourceId, this.detailBook.bookId),
           sourceSwitchFailureMessage: this.sourceSwitchFailureMessage,
-          onRetryFailedSourceSwitch: (): void => this.retryFailedSourceSwitch(),
-          onDismissSourceSwitchFailure: (): void => this.dismissSourceSwitchFailure(),
+          sourceSwitchScopeId: this.sourceSwitchScopeId,
+          onRetryFailedSourceSwitch: (scopeId?: number): void => this.retryFailedSourceSwitch(scopeId),
+          onDismissSourceSwitchFailure: (scopeId?: number): void => this.dismissSourceSwitchFailure(scopeId),
           resolveSourceSwitchTransactionId: (sourceId: string, bookId: string): Promise<string | undefined> =>
             this.resolveReaderSourceSwitchTransaction(sourceId, bookId),
           onRemoteSessionReady: (session: RemoteReadingSession): void => this.onRemoteSessionReady(session),
@@ -1149,33 +1104,16 @@ struct Index {
           onOpenDirectory: (): void => this.openReaderControlDirectory(),
           onSwitchSource: (): void => this.openSourceSwitch(),
           onOpenRulesManagement: (): void => this.requestRulesManagementFromReader(),
-          onCloseSourceSwitch: (): void => this.closeSourceSwitch(),
-          onRetrySourceSwitch: (): void => this.retrySourceSwitch(),
-          onRefreshSourceSwitch: (): void => this.refreshSourceSwitch(),
-          onPickSource: (candidate: SourceSwitchCandidate): void => this.onPickSource(candidate),
-          onRollbackSourceSwitch: (): void => this.onRollbackSourceSwitch(),
+          onCloseSourceSwitch: (scopeId?: number): void => this.closeSourceSwitch(scopeId),
+          onRetrySourceSwitch: (scopeId?: number): void => this.retrySourceSwitch(scopeId),
+          onRefreshSourceSwitch: (scopeId?: number): void => this.refreshSourceSwitch(scopeId),
+          onPickSource: (candidate: SourceSwitchCandidate, scopeId?: number): void => this.onPickSource(candidate, scopeId),
+          onRollbackSourceSwitch: (scopeId?: number): void => this.onRollbackSourceSwitch(scopeId),
         });
       }
       if ((this.route === 'detail' || this.route === 'bookshelf') &&
         !this.readingSessionActive && this.sourceSwitchVisible && this.detailBook !== undefined) {
-        Stack({ alignContent: Alignment.Center }) {
-          Stack()
-            .width('100%')
-            .height('100%')
-            .backgroundColor(readerAppColor('app.Index.build.backgroundColor.40FFFFFF', this.appThemeScheme))
-            .onClick((): void => this.closeSourceSwitch());
-          SourceSwitchPanel({
-            state: this.sourceSwitchState,
-            currentSourceId: this.detailBook.sourceId,
-            onClose: (): void => this.closeSourceSwitch(),
-            onRetry: (): void => this.retrySourceSwitch(),
-            onRefresh: (): void => this.refreshSourceSwitch(),
-            onSelectCandidate: (candidate: SourceSwitchCandidate): void => this.onPickSource(candidate),
-            onRollback: (): void => this.onRollbackSourceSwitch(),
-          });
-        }
-        .width('100%')
-        .height('100%');
+        this.sourceSwitchOverlayContent();
       }
       if (this.route === 'bookshelf' && this.editingShelfGroupBook !== undefined) {
         Stack({ alignContent: Alignment.Center }) {
@@ -4883,190 +4821,128 @@ struct Index {
     });
   }
 
-  private getSourceSwitchGateway(): SourceSwitchGateway {
-    if (this.sourceSwitchGateway === undefined) {
-      this.sourceSwitchGateway = new SourceSwitchGateway(ReaderRuntimeOwner.current());
-    }
-    return this.sourceSwitchGateway;
+  @Builder
+  private sourceSwitchOverlayContent() {
+        ForEach([this.sourceSwitchScopeId], (scopeId: number) => {
+        Stack({ alignContent: Alignment.Center }) {
+          Stack()
+            .width('100%')
+            .height('100%')
+            .backgroundColor(readerAppColor('app.Index.build.backgroundColor.40FFFFFF', this.appThemeScheme))
+            .onClick((): void => this.closeSourceSwitch(scopeId));
+          SourceSwitchPanel({
+            state: this.sourceSwitchState,
+            currentSourceId: this.detailBook.sourceId,
+            onClose: (): void => this.closeSourceSwitch(scopeId),
+            onRetry: (): void => this.retrySourceSwitch(scopeId),
+            onRefresh: (): void => this.refreshSourceSwitch(scopeId),
+            onSelectCandidate: (candidate: SourceSwitchCandidate): void => this.onPickSource(candidate, scopeId),
+            onRollback: (): void => this.onRollbackSourceSwitch(scopeId),
+          });
+        }
+        .width('100%')
+        .height('100%');
+        }, (scopeId: number): string => scopeId.toString());
   }
 
-  private isSourceSwitchActive(generation: number): boolean {
-    return generation === this.navigationGeneration && this.sourceSwitchVisible;
+  private getSourceSwitchHost(): SourceSwitchHost | undefined {
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner)) return undefined;
+    if (this.sourceSwitchHost?.owns(owner) !== true) this.sourceSwitchHost = SourceSwitchHost.forRuntime(owner);
+    return this.sourceSwitchHost;
+  }
+
+  private sourceSwitchContext(): SourceSwitchContext {
+    const query = this.sourceSwitchProbeQuery();
+    return { query, inBookshelf: this.detailInBookshelf,
+      toc: this.detailToc.map((entry: LocalReadingTocEntry): SourceSwitchAnchor => ({ chapterIndex: entry.index, chapterTitle: entry.title })),
+      shelfBook: this.shelfBooks.find((book: ShelfBook): boolean => book.sourceId === query.sourceId && book.bookId === query.bookId),
+      knownCandidates: this.knownSearchSourceCandidates(query), searchedSourceIds: this.detailReturnRoute === 'search' ? this.searchHost.searchedSourceIds() : [] };
+  }
+
+  private sourceSwitchLease(host: SourceSwitchHost): SourceSwitchLease {
+    const owner = this.mountedRuntimeOwner, navigation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const current = (identity: RemoteReadingIdentity): boolean => owner !== undefined && !this.shelfReceiptRetired &&
+      this.sourceSwitchHost === host && this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) &&
+      navigation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount &&
+      this.detailBook?.sourceId === identity.sourceId && this.detailBook?.bookId === identity.bookId;
+    return { isCurrent: current,
+      changed: (snapshot: SourceSwitchSnapshot): void => {
+        const book = this.detailBook;
+        if (book !== undefined && current(book)) this.applySourceSwitchSnapshot(snapshot);
+      },
+      effect: (effect: SourceSwitchEffect): void => {
+        const book = this.detailBook;
+        if (book !== undefined && current(book)) this.applySourceSwitchEffect(host, effect);
+      } };
+  }
+
+  /** These fields are the current presentation DTO, not independent authority. */
+  private applySourceSwitchSnapshot(snapshot: SourceSwitchSnapshot): void {
+    this.sourceSwitchScopeId = snapshot.scopeId;
+    this.sourceSwitchVisible = snapshot.visible;
+    this.sourceSwitchState = snapshot.state;
+    this.sourceSwitchFailureMessage = snapshot.failureMessage;
+    this.pendingSourceSwitch = snapshot.pending;
+  }
+
+  private retireSourceSwitchPresentation(): void {
+    const host = this.sourceSwitchHost;
+    if (host !== undefined && host.current().scopeId === this.sourceSwitchScopeId) host.retire();
+    this.sourceSwitchVisible = false;
+  }
+
+  private bindSourceSwitchReader(host: SourceSwitchHost): void {
+    if (!this.readingSessionActive || this.detailBook === undefined || this.sourceSwitchHost !== host) return;
+    host.bindReader(this.sourceSwitchContext(), this.sourceSwitchLease(host));
+  }
+
+  private applySourceSwitchEffect(host: SourceSwitchHost, effect: SourceSwitchEffect): void {
+    if (effect.kind === 'previewReady') {
+      const parent = this.detailReturnRoute;
+      this.openRemoteBookDetail(effect.seed, effect.candidate.sourceName ?? effect.candidate.sourceId,
+        undefined, true, [], [], parent, effect.session);
+    } else if (effect.kind === 'targetReady') {
+      this.performSourceSwitchSeam(effect.book, effect.session, effect.chapterIndex);
+      this.bindSourceSwitchReader(host);
+    } else if (effect.kind === 'rollbackReady' || effect.kind === 'canonicalReady') {
+      this.refreshBookshelf(); this.reopenSwitchedBook(effect.book);
+    } else if (effect.kind === 'restoredForNextChoice') {
+      const previous = this.detailBook;
+      this.detailBook = this.readingDetailForShelf(effect.book);
+      this.remoteReadingSeed = { sourceId: effect.book.sourceId, bookId: effect.book.bookId, detailUrl: effect.book.bookId,
+        title: effect.book.title, author: effect.book.author, coverUrl: effect.book.coverUrl, intro: effect.book.intro };
+      if (previous?.sourceId !== effect.book.sourceId || previous?.bookId !== effect.book.bookId) {
+        this.installRemoteReadingSession(undefined); this.detailToc = [];
+        this.requestedChapterIndex = undefined; this.requestedBookmarkAnchor = undefined; this.readingExitRequest = undefined;
+      }
+      this.readingSessionActive = true; this.preparedReaderRoute = 'reading'; this.route = 'reading'; this.refreshBookshelf();
+    } else if (effect.kind === 'acquisitionFailed') {
+      if (this.detailBook?.sourceId !== effect.identity.sourceId || this.detailBook?.bookId !== effect.identity.bookId) return;
+      if (!this.readingSessionActive) this.openReading(undefined);
+      this.route = 'reading'; this.bindSourceSwitchReader(host);
+    } else if (effect.kind === 'closed') this.consumeSystemFileOpen();
   }
 
   private openSourceSwitch(): void {
-    if (this.detailBook === undefined || this.detailBook.sourceId === LOCAL_SOURCE_ID || this.sourceSwitchVisible) {
-      return;
-    }
-    if (!this.readingSessionActive) {
-      // A failure dialog can outlive the reader that produced it. Route that
-      // late action through the origin screen overlay; `reading` without an
-      // active ReaderShell has no render owner and previously caused P0 blank.
-      this.returnToReadingOrigin();
-      this.openDetailSourceSwitch();
-      return;
-    }
-    const generation = this.nextNavigationGeneration();
-    this.exitToDetailOriginAfterReader = false;
-    // SS-SOURCE-SWITCH-01: the window floats over the reading surface (Figma
-    // 3572:41345), so close the directory and let the surface be the backdrop.
-    this.preparedReaderRoute = 'reading';
-    this.route = 'reading';
-    this.sourceSwitchVisible = true;
-    this.sourceSwitchState = { kind: 'discovering' };
-    this.startSourceDiscovery(generation);
+    if (this.detailBook === undefined || this.detailBook.sourceId === LOCAL_SOURCE_ID || this.sourceSwitchVisible) return;
+    if (!this.readingSessionActive) { this.returnToReadingOrigin(); this.openDetailSourceSwitch(); return; }
+    const host = this.getSourceSwitchHost(); if (host === undefined) return;
+    this.nextNavigationGeneration(); this.exitToDetailOriginAfterReader = false;
+    this.preparedReaderRoute = 'reading'; this.route = 'reading';
+    host.open(this.sourceSwitchContext(), this.sourceSwitchLease(host));
   }
 
   private openDetailSourceSwitch(): void {
-    if (this.route !== this.readingOriginRoute || this.detailBook === undefined ||
-      this.detailBook.sourceId === LOCAL_SOURCE_ID || this.sourceSwitchVisible ||
-      this.shelfOperation.removalKey.length > 0) {
-      return;
-    }
-    const generation = this.nextNavigationGeneration();
-    this.exitToDetailOriginAfterReader = false;
-    this.sourceSwitchVisible = true;
-    this.sourceSwitchState = { kind: 'discovering' };
-    this.startSourceDiscovery(generation);
+    if (this.route !== this.readingOriginRoute || this.detailBook === undefined || this.detailBook.sourceId === LOCAL_SOURCE_ID ||
+      this.sourceSwitchVisible || this.shelfOperation.removalKey.length > 0) return;
+    const host = this.getSourceSwitchHost(); if (host === undefined) return;
+    this.nextNavigationGeneration(); this.exitToDetailOriginAfterReader = false;
+    host.open(this.sourceSwitchContext(), this.sourceSwitchLease(host));
   }
 
-  private retrySourceSwitch(): void {
-    const kind = this.sourceSwitchState.kind;
-    if (!this.sourceSwitchVisible || (kind !== 'discoveryError' && kind !== 'empty')) {
-      return;
-    }
-    const generation = this.nextNavigationGeneration();
-    this.sourceSwitchState = { kind: 'discovering' };
-    this.startSourceDiscovery(generation, false, true);
-  }
-
-  private refreshSourceSwitch(): void {
-    if (!this.sourceSwitchVisible || this.sourceSwitchState.kind !== 'candidates' ||
-      this.sourceSwitchState.refreshing === true) {
-      return;
-    }
-    const generation = this.nextNavigationGeneration();
-    this.startSourceDiscovery(generation, false, true);
-  }
-
-  private startSourceDiscovery(
-    generation: number,
-    autoPickFirst: boolean = false,
-    forceRefresh: boolean = false,
-  ): void {
-    if (this.detailBook === undefined) {
-      return;
-    }
-    let query: SourceSwitchProbeQuery;
-    try {
-      query = this.sourceSwitchProbeQuery();
-    } catch (error) {
-      const message = errorMessageOf(error);
-      this.sourceSwitchState = { kind: 'discoveryError', message };
-      return;
-    }
-    const gateway = this.getSourceSwitchGateway();
-    const known = this.knownSearchSourceCandidates(query);
-    if (!forceRefresh && known.length > 0) {
-      this.sourceSwitchState = { kind: 'candidates', candidates: known, refreshing: false };
-    }
-    const isCurrent = (): boolean => this.isSourceSwitchActive(generation);
-    this.sourceSwitchUnsubscribe?.();
-    // Serialize dirty publications behind the initial snapshot as well; a
-    // slow first read must not overwrite a newer candidate update.
-    let refreshingProjection = true;
-    let refreshProjectionAgain = false;
-    let projectionReset = false;
-    const projectionDirty = new Map<string, RemoteReadingIdentity>();
-    const refreshProjection = (change: BookAcquisitionChange): void => {
-      if (!isCurrent()) return;
-      projectionReset = projectionReset || change.reset;
-      for (const identity of change.identities) projectionDirty.set(
-        sourceSwitchCandidateKey(identity.sourceId, identity.bookId), identity);
-      if (!projectionReset && projectionDirty.size === 0) return;
-      if (refreshingProjection) { refreshProjectionAgain = true; return; }
-      if (this.sourceSwitchState.kind !== 'candidates' &&
-        this.sourceSwitchState.kind !== 'empty' && this.sourceSwitchState.kind !== 'discovering') return;
-      refreshProjectionAgain = false;
-      refreshingProjection = true;
-      const batch: BookAcquisitionChange = { reset: projectionReset, identities: Array.from(projectionDirty.values()) };
-      projectionReset = false;
-      projectionDirty.clear();
-      void gateway.loadCachedCandidates(query, isCurrent, known, batch).then((candidates: SourceSwitchCandidate[]): void => {
-        if (!isCurrent()) return;
-        if (candidates.length > 0) this.sourceSwitchState = { kind: 'candidates', candidates,
-          refreshing: this.sourceSwitchState.kind === 'candidates' && this.sourceSwitchState.refreshing === true };
-        else if (this.sourceSwitchState.kind !== 'candidates' || this.sourceSwitchState.refreshing !== true) {
-          this.sourceSwitchState = { kind: 'empty' };
-        }
-      }).catch((): void => {
-        if (!isCurrent()) return;
-        // Keep failed work for the next real publication. A transient read
-        // must not lose identities/reset consumed before the await, and must
-        // not manufacture an unbounded automatic retry loop.
-        projectionReset = projectionReset || batch.reset;
-        for (const identity of batch.identities) projectionDirty.set(
-          sourceSwitchCandidateKey(identity.sourceId, identity.bookId), identity);
-      }).finally((): void => {
-        refreshingProjection = false;
-        if (refreshProjectionAgain) refreshProjection({ reset: false, identities: [] });
-      });
-    };
-    this.sourceSwitchUnsubscribe = ReaderRuntimeOwner.current().bookAcquisitions().subscribe(refreshProjection);
-    const previousCandidates = this.sourceSwitchState.kind === 'candidates'
-      ? this.sourceSwitchState.candidates
-      : [];
-    if (forceRefresh && previousCandidates.length > 0) {
-      this.sourceSwitchState = { kind: 'candidates', candidates: previousCandidates, refreshing: true };
-    }
-    const load = forceRefresh
-      ? gateway.refreshCandidates(query, isCurrent)
-      : gateway.loadCachedCandidates(query, isCurrent, known)
-        .then((cached: SourceSwitchCandidate[]): Promise<SourceSwitchDiscoveryOutcome> |
-          SourceSwitchDiscoveryOutcome => cached.length > 0
-          ? { kind: 'sources', candidates: cached }
-          : gateway.refreshCandidates(query, isCurrent,
-            this.detailReturnRoute === 'search' ? this.searchHost.searchedSourceIds() : []));
-    load
-      .then((outcome: SourceSwitchDiscoveryOutcome): void => {
-        if (!isCurrent()) {
-          return;
-        }
-        if (outcome.kind === 'noSources' || outcome.candidates.length === 0) {
-          this.sourceSwitchState = { kind: 'empty' };
-          return;
-        }
-        this.sourceSwitchState = { kind: 'candidates', candidates: outcome.candidates, refreshing: false };
-        if (autoPickFirst) {
-          const candidate = outcome.candidates.find((value: SourceSwitchCandidate): boolean =>
-            value.isCurrent !== true && value.offline !== true && value.timeout !== true);
-          if (candidate !== undefined) {
-            this.onPickSource(candidate);
-          }
-        }
-      })
-      .catch((error: Error): void => {
-        if (!isCurrent()) {
-          return;
-        }
-        // change.bookSource is remote. Any Host transport constraint is
-        // surfaced through the admitted discovery failure state.
-        hilog.warn(DOMAIN, 'Reader', 'SS-SOURCE-SWITCH-01: candidate discovery failed: %{private}s', error.message);
-        if (forceRefresh && previousCandidates.length > 0) {
-          this.sourceSwitchState = {
-            kind: 'candidates',
-            candidates: previousCandidates,
-            refreshing: false,
-            refreshError: error.message,
-          };
-        } else {
-          this.sourceSwitchState = { kind: 'discoveryError', message: error.message };
-        }
-      }).finally((): void => {
-        refreshingProjection = false;
-        if (refreshProjectionAgain) refreshProjection({ reset: false, identities: [] });
-      });
-  }
+  private retrySourceSwitch(scopeId?: number): void { if (scopeId !== undefined) this.sourceSwitchHost?.retry(scopeId); }
+  private refreshSourceSwitch(scopeId?: number): void { if (scopeId !== undefined) this.sourceSwitchHost?.refresh(scopeId); }
 
   private sourceSwitchProbeQuery(): SourceSwitchProbeQuery {
     const book = this.detailBook;
@@ -5113,345 +4989,18 @@ struct Index {
     });
   }
 
-  private onPickSource(candidate: SourceSwitchCandidate): void {
-    if (this.sourceSwitchState.kind !== 'candidates' || this.detailBook === undefined) {
-      return;
-    }
-    let book = this.detailBook;
-    if (sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl) ===
-      sourceSwitchCandidateKey(book.sourceId, book.bookId)) {
-      return;
-    }
-    const generation = this.nextNavigationGeneration();
-    this.sourceSwitchState = { kind: 'switching', targetSourceId: candidate.sourceId };
-    const gateway = this.getSourceSwitchGateway();
-    const isCurrent = (): boolean => this.isSourceSwitchActive(generation);
-    this.sourceSwitchFailureMessage = '';
-    this.failedSourceSwitchCandidate = undefined;
-    let targetSession: RemoteReadingSession | undefined = undefined;
-    let restoredBook: ShelfBook | undefined = undefined;
-    let commitStarted = false;
-    if (!this.detailInBookshelf) {
-      void this.switchPreviewSource(candidate, isCurrent).catch((error: Error): void => {
-        if (isCurrent()) this.presentSourceSwitchAcquisitionFailure(book, candidate, error.message);
-      });
-      return;
-    }
-    this.preparePendingSourceSwitchForNextChoice(book, generation)
-      .then((restored: ShelfBook | undefined): Promise<SourceSwitchTargetToc> => {
-        if (!isCurrent()) throw new Error('source switch aborted');
-        restoredBook = restored;
-        if (restored !== undefined) book = this.readingDetailForShelf(restored);
-        return gateway.fetchTargetToc(candidate.sourceId, candidate.bookUrl, isCurrent, candidate);
-      })
-      .then(async (toc: SourceSwitchTargetToc): Promise<SourceSwitchCommitOutcome> => {
-        if (!isCurrent()) {
-          return Promise.reject(new Error('source switch aborted'));
-        }
-        targetSession = toc.readingSession;
-        // A displayed ordinary page may still be waiting on its CAS receipt.
-        // Share the reader's per-book lane so its latest position is durable
-        // before matching, and cannot cross the source identity transaction.
-        const owner = ReaderRuntimeOwner.current();
-        const progressGateway = new ReadingSessionFlowGateway(book.sourceId, book.bookId,
-          { kind: 'remote' }, owner);
-        let outcome: SourceSwitchCommitOutcome | undefined = undefined;
-        await progressGateway.runProgressCommitSerial(async (): Promise<void> => {
-          if (!isCurrent()) throw new Error('source switch aborted');
-          let anchor: SourceSwitchAnchor;
-          try {
-            const progress = await new RemoteReadingFlowGateway(owner).loadProgress(
-              { sourceId: book.sourceId, bookId: book.bookId }, isCurrent);
-            if (!isCurrent()) throw new Error('source switch aborted');
-            anchor = this.resolveSourceSwitchAnchor(progress, restoredBook);
-          } catch (error) {
-            if (!isCurrent() || remoteReadingFailureKindOf(error) !== 'POSITION_CONTEXT_STALE') throw error as Error;
-            // Switching needs the durable chapter, not an old body's processing
-            // seal or scalar offset. Core's shelf projection exposes that chapter
-            // even when settings made the old precise anchor unavailable.
-            const canonical = await this.bookshelfHost.loadShelfBook(book.sourceId, book.bookId);
-            if (!isCurrent()) throw new Error('source switch aborted');
-            if (canonical?.sourceId !== book.sourceId || canonical.bookId !== book.bookId ||
-              canonical.currentChapterIndex === undefined || !Number.isSafeInteger(canonical.currentChapterIndex) ||
-              canonical.currentChapterIndex < 0) throw error as Error;
-            const entry = this.detailToc.find((item: LocalReadingTocEntry): boolean =>
-              item.index === canonical.currentChapterIndex);
-            // A shelf title can lag its durable chapter. Without an admitted TOC
-            // title, pass empty text so Core's existing index matcher owns fallback.
-            anchor = new SourceSwitchAnchor(canonical.currentChapterIndex, entry?.title ?? '');
-          }
-          const params = buildSourceSwitchCommitParams(
-            { sourceId: book.sourceId, bookId: book.bookId },
-            candidate,
-            toc,
-            anchor.chapterTitle,
-            anchor.chapterIndex,
-            Math.floor(Date.now() / 1000),
-          );
-          commitStarted = true;
-          outcome = await gateway.commitSwitch(params, isCurrent);
-        });
-        if (outcome === undefined) throw new Error('source switch did not produce an outcome');
-        return outcome;
-      })
-      .then((outcome: SourceSwitchCommitOutcome): void => {
-        if (!isCurrent()) {
-          return;
-        }
-        if (outcome.status === 'success') {
-          this.pendingSourceSwitch = new PendingSourceSwitchTransaction(
-            book.sourceId,
-            book.bookId,
-            outcome.book.sourceId,
-            outcome.book.bookId,
-            outcome.matchedChapter.order,
-            outcome.transactionId,
-          );
-          this.sourceSwitchState = { kind: 'success' };
-          this.performSourceSwitchSeam(outcome.book, targetSession, outcome.matchedChapter.order);
-          return;
-        }
-        if (outcome.transactionId !== undefined) {
-          this.sourceSwitchState = {
-            kind: 'failure',
-            message: outcome.error,
-            transactionId: outcome.transactionId,
-          };
-          return;
-        }
-        void this.reconcileUnknownSourceSwitchCommit(book, candidate, outcome.error, generation);
-      })
-      .catch((error: Error): void => {
-        if (!isCurrent()) {
-          return;
-        }
-        hilog.warn(DOMAIN, 'Reader', 'SS-SOURCE-SWITCH-01: source switch failed: %{private}s', error.message);
-        if (commitStarted) {
-          void this.reconcileUnknownSourceSwitchCommit(book, candidate, error.message, generation);
-        } else {
-          this.presentSourceSwitchAcquisitionFailure(book, candidate, error.message);
-        }
-      });
+  private onPickSource(candidate: SourceSwitchCandidate, scopeId?: number): void {
+    if (scopeId !== undefined) void this.sourceSwitchHost?.pick(candidate, scopeId);
   }
-
-  private async switchPreviewSource(candidate: SourceSwitchCandidate, isCurrent: () => boolean): Promise<void> {
-    const detailReturnRoute = this.detailReturnRoute;
-    const owner = ReaderRuntimeOwner.current();
-    const seed: RemoteReadingBookSeed = { sourceId: candidate.sourceId, bookId: candidate.bookUrl,
-      detailUrl: candidate.bookUrl, title: candidate.bookName, author: candidate.author ?? '',
-      sourceVersion: candidate.sourceVersion, authorIdentity: candidate.authorIdentity,
-      coverUrl: candidate.coverUrl, searchVariables: candidate.searchVariables };
-    const session = await owner.bookAcquisitions().acquireBook(seed, { isCurrent });
-    if (!isCurrent()) return;
-    this.sourceSwitchUnsubscribe?.();
-    this.sourceSwitchUnsubscribe = undefined;
-    this.sourceSwitchVisible = false;
-    this.sourceSwitchState = { kind: 'discovering' };
-    this.openRemoteBookDetail(seed, candidate.sourceName ?? candidate.sourceId,
-      undefined, true, [], [], detailReturnRoute, session);
-  }
-
-  private presentSourceSwitchAcquisitionFailure(book: ReadingBookDetail,
-    candidate: SourceSwitchCandidate, message: string): void {
-    if (this.detailBook?.sourceId !== book.sourceId || this.detailBook?.bookId !== book.bookId) return;
-    this.sourceSwitchUnsubscribe?.();
-    this.sourceSwitchUnsubscribe = undefined;
-    this.sourceSwitchVisible = false;
-    this.sourceSwitchState = { kind: 'discovering' };
-    this.failedSourceSwitchCandidate = candidate;
-    this.failedSourceSwitchIdentity = `${book.sourceId}\u0000${book.bookId}`;
-    if (!this.readingSessionActive) this.openReading(undefined);
-    this.route = 'reading';
-    this.sourceSwitchFailureMessage = message;
-  }
-
-  private retryFailedSourceSwitch(): void {
-    const book = this.detailBook;
-    const candidate = this.failedSourceSwitchCandidate;
-    if (book === undefined || candidate === undefined || this.sourceSwitchVisible ||
-      this.failedSourceSwitchIdentity !== `${book.sourceId}\u0000${book.bookId}`) return;
-    this.sourceSwitchVisible = true;
-    this.sourceSwitchState = { kind: 'candidates', candidates: [candidate] };
-    this.onPickSource(candidate);
-  }
-
-  private dismissSourceSwitchFailure(): void {
-    this.sourceSwitchFailureMessage = '';
-    this.failedSourceSwitchCandidate = undefined;
-    this.failedSourceSwitchIdentity = '';
-  }
-
-  private async preparePendingSourceSwitchForNextChoice(book: ReadingBookDetail,
-    generation: number): Promise<ShelfBook | undefined> {
-    const isCurrent = (): boolean => this.isSourceSwitchActive(generation) &&
-      this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId;
-    const gateway = this.getSourceSwitchGateway();
-    let pending = this.pendingSourceSwitch;
-    if (pending?.targetSourceId !== book.sourceId || pending.targetBookId !== book.bookId) {
-      const records = await gateway.listPendingSwitches(isCurrent);
-      if (!isCurrent()) throw new Error('source switch aborted');
-      const matches = records.filter((record: PendingSourceSwitch): boolean =>
-        record.targetSourceId === book.sourceId && record.targetBookId === book.bookId);
-      if (matches.length > 1) throw new Error('当前书籍存在多个未完成的换源记录，请重试');
-      if (matches.length === 0) return undefined;
-      const record = matches[0];
-      pending = new PendingSourceSwitchTransaction(record.fromSourceId, record.fromBookId,
-        record.targetSourceId, record.targetBookId, -1, record.transactionId);
-      this.pendingSourceSwitch = pending;
-    }
-    const transaction = pending;
-    const ownsRollback = (): boolean => isCurrent() && this.pendingSourceSwitch === transaction;
-    let restored: ShelfBook;
-    try {
-      const outcome = await gateway.rollbackSwitch(transaction.transactionId, ownsRollback);
-      if (!ownsRollback()) throw new Error('source switch aborted');
-      restored = outcome.restoredBook;
-    } catch (error) {
-      if (!ownsRollback()) throw error as Error;
-      if (!(error instanceof ReaderCoreRequestError) ||
-        error.event.error.details?.['reason'] !== 'already_finalized' ||
-        error.event.error.details?.['transactionId'] !== transaction.transactionId) throw error as Error;
-      const records = await gateway.listPendingSwitches(ownsRollback);
-      if (!ownsRollback() || records.some((record: PendingSourceSwitch): boolean =>
-        record.transactionId === transaction.transactionId)) throw error as Error;
-      const canonical = await this.bookshelfHost.loadShelfBook(transaction.targetSourceId, transaction.targetBookId);
-      if (!ownsRollback() || canonical === undefined) throw error as Error;
-      restored = canonical;
-    }
-    if (!ownsRollback()) throw new Error('source switch aborted');
-    this.pendingSourceSwitch = undefined;
-    // Reconcile the exact Core shelf identity inside the current reading route;
-    // never open a detail page or finalize an unmeasured target merely to switch.
-    this.detailBook = this.readingDetailForShelf(restored);
-    this.remoteReadingSeed = { sourceId: restored.sourceId, bookId: restored.bookId, detailUrl: restored.bookId,
-      title: restored.title, author: restored.author, coverUrl: restored.coverUrl, intro: restored.intro };
-    if (restored.sourceId !== book.sourceId || restored.bookId !== book.bookId) {
-      this.installRemoteReadingSession(undefined);
-      this.detailToc = [];
-      this.requestedChapterIndex = undefined;
-      this.requestedBookmarkAnchor = undefined;
-      this.readingExitRequest = undefined;
-    }
-    this.readingSessionActive = true;
-    this.preparedReaderRoute = 'reading';
-    this.route = 'reading';
-    this.refreshBookshelf();
-    return restored;
-  }
-
-  private async reconcileUnknownSourceSwitchCommit(
-    book: ReadingBookDetail,
-    candidate: SourceSwitchCandidate,
-    message: string,
-    generation: number,
-  ): Promise<void> {
-    const isCurrent = (): boolean => this.isSourceSwitchActive(generation);
-    const gateway = this.getSourceSwitchGateway();
-    try {
-      const pending = await gateway.listPendingSwitches(isCurrent);
-      if (!isCurrent()) {
-        return;
-      }
-      const matches = pending.filter((transaction: PendingSourceSwitch): boolean =>
-        transaction.fromSourceId === book.sourceId && transaction.fromBookId === book.bookId &&
-        transaction.targetSourceId === candidate.sourceId && transaction.targetBookId === candidate.bookUrl);
-      if (matches.length !== 1) {
-        this.sourceSwitchState = { kind: 'failure', message };
-        return;
-      }
-      const transaction = matches[0];
-      await gateway.rollbackSwitch(transaction.transactionId, isCurrent);
-      if (!isCurrent()) {
-        return;
-      }
-      this.refreshBookshelf();
-      this.sourceSwitchState = { kind: 'failure', message };
-    } catch (error) {
-      if (!isCurrent()) {
-        return;
-      }
-      const failure = errorMessageOf(error);
-      this.sourceSwitchState = { kind: 'failure', message: failure };
-    }
-  }
-
-  private resolveSourceSwitchAnchor(progress: RemoteReadingProgressState,
-    restoredBook?: ShelfBook): SourceSwitchAnchor {
-    if (restoredBook?.currentChapterTitle !== undefined && restoredBook.currentChapterIndex !== undefined &&
-      (progress.kind === 'missing' || progress.progress.chapterIndex === restoredBook.currentChapterIndex)) {
-      return new SourceSwitchAnchor(restoredBook.currentChapterIndex, restoredBook.currentChapterTitle);
-    }
-    if (this.detailToc.length === 0) {
-      const stored = this.shelfBooks.find((book: ShelfBook): boolean =>
-        book.sourceId === this.detailBook?.sourceId && book.bookId === this.detailBook?.bookId);
-      if (stored?.currentChapterTitle !== undefined && stored.currentChapterIndex !== undefined &&
-        (progress.kind === 'missing' || progress.progress.chapterIndex === stored.currentChapterIndex)) {
-        return new SourceSwitchAnchor(stored.currentChapterIndex, stored.currentChapterTitle);
-      }
-      if (progress.kind === 'restored' && Number.isSafeInteger(progress.progress.chapterIndex) &&
-        progress.progress.chapterIndex >= 0) return new SourceSwitchAnchor(progress.progress.chapterIndex, '');
-      throw new Error('当前目录不可用，且没有可核对的阅读位置，请先恢复目录');
-    }
-    const index = progress.kind === 'restored' ? progress.progress.chapterIndex : this.detailToc[0].index;
-    for (const entry of this.detailToc) {
-      if (entry.index === index) {
-        return new SourceSwitchAnchor(entry.index, entry.title);
-      }
-    }
-    if (progress.kind === 'restored' && Number.isSafeInteger(index) && index >= 0) return new SourceSwitchAnchor(index, '');
-    throw new Error('Core progress chapter is absent from the admitted current TOC');
-  }
-
-  private onRollbackSourceSwitch(): void {
-    if (this.sourceSwitchState.kind !== 'failure' || this.sourceSwitchState.transactionId === undefined) {
-      return;
-    }
-    const transactionId = this.sourceSwitchState.transactionId;
-    const generation = this.nextNavigationGeneration();
-    this.sourceSwitchState = { kind: 'switching', targetSourceId: '' };
-    const gateway = this.getSourceSwitchGateway();
-    gateway.rollbackSwitch(transactionId, (): boolean => this.isSourceSwitchActive(generation))
-      .then((result: SourceSwitchRollbackResult): void => {
-        if (!this.isSourceSwitchActive(generation)) {
-          return;
-        }
-        this.performSourceSwitchSeam(result.restoredBook);
-      })
-      .catch((error: Error): void => {
-        if (!this.isSourceSwitchActive(generation)) {
-          return;
-        }
-        hilog.warn(DOMAIN, 'Reader', 'SS-SOURCE-SWITCH-01: rollback failed: %{private}s', error.message);
-        this.sourceSwitchState = { kind: 'failure', message: error.message, transactionId };
-      });
-  }
-
-  private closeSourceSwitch(): void {
-    if (!this.sourceSwitchVisible) {
-      return;
-    }
-    if (this.sourceSwitchState.kind === 'switching' ||
-      (this.sourceSwitchState.kind === 'failure' && this.sourceSwitchState.transactionId !== undefined)) {
-      // Closing after Core has entered the durable commit, or while its opaque
-      // transaction still needs rollback, could strand a pending shelf move.
-      return;
-    }
-    this.nextNavigationGeneration();
-    this.sourceSwitchUnsubscribe?.();
-    this.sourceSwitchUnsubscribe = undefined;
-    this.sourceSwitchVisible = false;
-    this.sourceSwitchState = { kind: 'discovering' };
-    this.consumeSystemFileOpen();
-  }
+  private retryFailedSourceSwitch(scopeId?: number): void { if (scopeId !== undefined) this.sourceSwitchHost?.retryFailed(scopeId); }
+  private dismissSourceSwitchFailure(scopeId?: number): void { if (scopeId !== undefined) this.sourceSwitchHost?.dismissFailure(scopeId); }
+  private onRollbackSourceSwitch(scopeId?: number): void { if (scopeId !== undefined) this.sourceSwitchHost?.rollback(scopeId); }
+  private closeSourceSwitch(scopeId?: number): void { if (scopeId !== undefined) this.sourceSwitchHost?.close(scopeId); }
 
   private performSourceSwitchSeam(book: ShelfBook, session?: RemoteReadingSession,
     chapterIndex?: number): void {
-    this.sourceSwitchUnsubscribe?.();
-    this.sourceSwitchUnsubscribe = undefined;
+    this.retireSourceSwitchPresentation();
     this.sourceSwitchVisible = false;
-    this.sourceSwitchState = { kind: 'discovering' };
-    this.sourceSwitchFailureMessage = '';
-    this.failedSourceSwitchCandidate = undefined;
     if (session === undefined || session.identity.sourceId !== book.sourceId ||
       session.identity.bookId !== book.bookId) {
       this.reopenSwitchedBook(book);
@@ -5730,84 +5279,27 @@ struct Index {
 
   /** Startup observes durable pending facts; opening a target resumes its id. */
   private async reconcilePendingSourceSwitches(): Promise<void> {
-    const generation = ++this.sourceSwitchReconciliationGeneration;
-    try {
-      const records = await this.getSourceSwitchGateway().listPendingSwitches(
-        (): boolean => generation === this.sourceSwitchReconciliationGeneration);
-      if (generation !== this.sourceSwitchReconciliationGeneration) return;
-      hilog.info(DOMAIN, 'Reader', 'Retained pending source switches: %{public}d', records.length);
-    } catch (error) {
-      hilog.warn(DOMAIN, 'Reader', 'Pending source switch read failed: %{private}s', errorMessageOf(error));
-    }
+    const owner = this.mountedRuntimeOwner, mounting = this.detailShelfAdmissionMount;
+    const current = (): boolean => owner !== undefined && !this.shelfReceiptRetired &&
+      this.mountedRuntimeOwner === owner && mounting === this.detailShelfAdmissionMount && this.isCurrentRuntime(owner);
+    if (!current()) return;
+    const host = this.getSourceSwitchHost(); if (host === undefined) return;
+    try { const records = await host.inspectPending(current); if (current()) hilog.info(DOMAIN, 'Reader', 'Retained pending source switches: %{public}d', records?.length ?? 0); }
+    catch (error) { if (current()) hilog.warn(DOMAIN, 'Reader', 'Pending source switch read failed: %{private}s', errorMessageOf(error)); }
   }
 
   private async resolveReaderSourceSwitchTransaction(sourceId: string, bookId: string): Promise<string | undefined> {
     if (sourceId === LOCAL_SOURCE_ID) return undefined;
-    const current = (): boolean => this.readingSessionActive &&
-      this.detailBook?.sourceId === sourceId && this.detailBook?.bookId === bookId;
+    const owner = this.mountedRuntimeOwner, mounting = this.detailShelfAdmissionMount, navigation = this.navigationGeneration;
+    const current = (): boolean => owner !== undefined && !this.shelfReceiptRetired && this.mountedRuntimeOwner === owner &&
+      this.isCurrentRuntime(owner) && mounting === this.detailShelfAdmissionMount && navigation === this.navigationGeneration &&
+      this.readingSessionActive && this.detailBook?.sourceId === sourceId && this.detailBook?.bookId === bookId;
     if (!current()) return undefined;
-    const active = this.pendingSourceSwitch;
-    if (active?.targetSourceId === sourceId && active.targetBookId === bookId) return active.transactionId;
-    const records = await this.getSourceSwitchGateway().listPendingSwitches(current);
+    const host = this.getSourceSwitchHost(); if (host === undefined) return undefined;
+    const transactionId = await host.resolveTransaction({ sourceId, bookId }, current);
     if (!current()) return undefined;
-    const matches = records.filter((record: PendingSourceSwitch): boolean =>
-      record.targetSourceId === sourceId && record.targetBookId === bookId);
-    if (matches.length > 1) throw new Error('当前书籍存在多个未完成的换源记录，请重试');
-    if (matches.length === 0) return undefined;
-    const record = matches[0];
-    // Core alone validates the eventual chapter/anchor. -1 is Host bookkeeping,
-    // never a requested chapter or a value supplied to Core progress methods.
-    this.pendingSourceSwitch = new PendingSourceSwitchTransaction(record.fromSourceId, record.fromBookId,
-      record.targetSourceId, record.targetBookId, -1, record.transactionId);
-    return record.transactionId;
-  }
-
-  private rollbackPendingSourceSwitch(reason: string): void {
-    const pending = this.pendingSourceSwitch;
-    if (pending === undefined || this.sourceSwitchRollbackInFlight) {
-      return;
-    }
-    this.sourceSwitchRollbackInFlight = true;
-    hilog.warn(DOMAIN, 'Reader',
-      'Source switch target admission failed; rolling back: %{private}s', reason);
-    const gateway = this.getSourceSwitchGateway();
-    void gateway.rollbackSwitch(
-      pending.transactionId,
-      (): boolean => this.pendingSourceSwitch === pending,
-    )
-      .then((result: SourceSwitchRollbackResult): void => {
-        if (this.pendingSourceSwitch !== pending) {
-          return;
-        }
-        this.pendingSourceSwitch = undefined;
-        this.sourceSwitchUnsubscribe?.();
-        this.sourceSwitchUnsubscribe = undefined;
-        this.sourceSwitchVisible = false;
-        this.sourceSwitchState = { kind: 'discovering' };
-        this.refreshBookshelf();
-        this.reopenSwitchedBook(result.restoredBook);
-      })
-      .catch((error: Error): void => {
-        if (this.pendingSourceSwitch !== pending) {
-          return;
-        }
-        hilog.error(DOMAIN, 'Reader', 'Source switch automatic rollback failed: %{private}s', error.message);
-        // Core rejects finalized/stale compensation rather than overwriting
-        // newer progress. Return to the canonical shelf projection; retain
-        // only the opaque transaction id for an explicit retry.
-        this.sourceSwitchUnsubscribe?.();
-        this.sourceSwitchUnsubscribe = undefined;
-        this.sourceSwitchVisible = false;
-        this.sourceSwitchState = {
-          kind: 'failure',
-          message: error.message,
-          transactionId: pending.transactionId,
-        };
-        this.returnToBookshelf();
-      })
-      .finally((): void => {
-        this.sourceSwitchRollbackInFlight = false;
-      });
+    this.bindSourceSwitchReader(host);
+    return transactionId;
   }
 
   private reopenSwitchedBook(book: ShelfBook): void {
@@ -5894,22 +5386,10 @@ struct Index {
       this.detailBook?.sourceId !== commit.sourceId || this.detailBook?.bookId !== commit.bookId) {
       return;
     }
-    const pending = this.pendingSourceSwitch;
-    if (pending !== undefined && pending.targetSourceId === commit.sourceId &&
-      pending.targetBookId === commit.bookId) {
-      this.pendingSourceSwitch = undefined;
-      this.sourceSwitchRollbackInFlight = false;
-      // The gateway finalized this transaction with the actual first committed
-      // chapter, which may differ from the original matched chapter after retry.
-      // The target has now loaded, paginated, and durably committed its first
-      // canonical scalar anchor. Old per-book body/image caches are no longer
-      // reachable and can be cleared without touching the source-wide cookie
-      // session that other books may share.
-      void new ReadingOfflineGateway(ReaderRuntimeOwner.current())
-        .clearBookIdentity(pending.fromSourceId, pending.fromBookId)
-        .catch((error: Error): void => {
-          hilog.warn(DOMAIN, 'Reader', 'Old source book cache cleanup failed: %{private}s', error.message);
-        });
+    const host = this.getSourceSwitchHost();
+    if (host !== undefined && commit.sourceSwitchTransactionId !== undefined) {
+      const finalized = host.targetCommitted({ sourceId: commit.sourceId, bookId: commit.bookId }, commit.sourceSwitchTransactionId);
+      if (finalized !== undefined) this.cleanupRetiredSourceCache(finalized);
     }
     const session = this.remoteReadingSession;
     if (session !== undefined && session.identity.sourceId === commit.sourceId &&
@@ -5925,6 +5405,21 @@ struct Index {
     this.consumeSystemFileOpen();
   }
 
+  private getReadingOfflineHost(owner: ReaderRuntimeOwner): ReadingOfflineHost | undefined {
+    return ReadingOfflineHost.forRuntime(owner, (): boolean => ReaderRuntimeOwner.isCurrent(owner),
+      (error: Error): void => hilog.warn(DOMAIN, 'Reader', 'Offline presentation delivery failed: %{private}s', error.message));
+  }
+
+  private cleanupRetiredSourceCache(finalized: SourceSwitchPendingTransaction): void {
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || !this.isCurrentRuntime(owner)) return;
+    // This cleanup belongs to the existing offline owner; its exact receipt is independent of the finalized source move.
+    void this.getReadingOfflineHost(owner)?.cleanupRetiredSource({ sourceId: finalized.fromSourceId, bookId: finalized.fromBookId })
+      .catch((error: Error): void => {
+        hilog.warn(DOMAIN, 'Reader', 'Old source book cache cleanup failed: %{private}s', error.message);
+      });
+  }
+
   private mountSystemFileOpenNavigation(owner: ReaderRuntimeOwner): void {
     this.systemFileOpenNavigation?.dispose();
     const mounting = this.detailShelfAdmissionMount;
@@ -5936,8 +5431,7 @@ struct Index {
         this.resolveReaderSourceSwitchTransaction(book.sourceId, book.bookId),
       notice: (message: string): void => { this.getUIContext().getPromptAction().showToast({message}); },
       open: (book: ShelfBook): void => {
-        this.sourceSwitchUnsubscribe?.(); this.sourceSwitchUnsubscribe = undefined;
-        this.sourceSwitchVisible = false;
+        this.retireSourceSwitchPresentation();
         this.closeImportDialog(); this.jsonImportVisible = false;
         this.returnToBookshelf(); this.openShelfBook(book);
       },
@@ -5947,29 +5441,14 @@ struct Index {
   }
 
   private systemFileOpenNavigationView(): SystemFileOpenNavigationView {
-    const book = this.detailBook; const pending = this.pendingSourceSwitch;
-    const activeSwitch = this.readingSessionActive && pending !== undefined &&
-      book?.sourceId === pending.targetSourceId && book?.bookId === pending.targetBookId;
-    return {
-      foreground: this.searchAppForeground, reading: this.readingSessionActive, navigationGeneration: this.navigationGeneration,
-      readerIdentity: this.currentReaderPresentationIdentity(),
-      book: book === undefined ? undefined : {sourceId: book.sourceId, bookId: book.bookId},
-      switchBlocked: activeSwitch || this.sourceSwitchRollbackInFlight || (this.sourceSwitchVisible &&
-        (this.sourceSwitchState.kind === 'switching' || (this.sourceSwitchState.kind === 'failure' && this.sourceSwitchState.transactionId !== undefined))),
-      requestExit: this.readingExitRequest,
-    };
+    const book = this.detailBook;
+    return { foreground: this.searchAppForeground, reading: this.readingSessionActive, navigationGeneration: this.navigationGeneration,
+      readerIdentity: this.currentReaderPresentationIdentity(), book: book === undefined ? undefined : { sourceId: book.sourceId, bookId: book.bookId },
+      switchBlocked: book !== undefined && this.sourceSwitchHost?.blocksExit(book) === true, requestExit: this.readingExitRequest };
   }
-
   private consumeSystemFileOpen(): void { this.systemFileOpenNavigation?.consume(); }
-
   private currentSourceSwitchTransactionId(): string | undefined {
-    const pending = this.pendingSourceSwitch;
-    const detail = this.detailBook;
-    if (pending === undefined || detail === undefined || pending.targetSourceId !== detail.sourceId ||
-      pending.targetBookId !== detail.bookId) {
-      return undefined;
-    }
-    return pending.transactionId;
+    const book = this.detailBook; return book === undefined ? undefined : this.sourceSwitchHost?.currentTransactionId(book);
   }
 
   private readingDetailForShelf(book: ShelfBook): ReadingBookDetail {
@@ -6379,6 +5858,7 @@ struct Index {
   }
 
   private nextNavigationGeneration(): number {
+    this.retireSourceSwitchPresentation();
     this.bookshelfCatalogEpoch += 1;
     this.bookshelfBackgroundEpoch += 1;
     this.bookshelfUpdateRunning = false;
