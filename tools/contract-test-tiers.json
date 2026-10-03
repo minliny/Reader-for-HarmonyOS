@@ -4,6 +4,7 @@
   "source": [
     "test-added-book-preparation.mjs",
     "test-app-shell-safe-geometry.mjs",
+    "test-architecture-consumer-baseline.mjs",
     "test-arkweb-network-policy.mjs",
     "test-arkweb-network-recovery.mjs",
     "test-book-acquisition-coordinator.mjs",
