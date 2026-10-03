@@ -1,3 +1,4 @@
+import { TYPE_READER_AUTO_SPEED_LABEL_FULL, TYPE_READER_AUTO_SPEED_LABEL_QUICK, TYPE_READER_AUTO_SPEED_VALUE_FULL, TYPE_READER_AUTO_SPEED_VALUE_QUICK } from '../common/ReaderTypography';
 import { TYPE_READER_AUTO_PAGE_RETAINED_CHAPTER_BUTTON_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_FOLLOW_HIGHLIGHT_ROW_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_META, TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_BACK_BACK, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_META, TYPE_READER_AUTO_PAGE_RETAINED_RUNNING_BUTTON_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_SPEED_ROW_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_SPEED_STEP_BUTTON_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_STOP_BUTTON_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_SECONDARY, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_TERTIARY, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_META } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PathShape } from '@ohos.arkui.shape';
@@ -415,7 +416,7 @@ export struct ReaderControlAutoPageContent {
       value: this.currentTimerValue(minutes),
       minimum: minutes ? READER_AUTO_PAGE_FULL_MIN_MINUTES : READER_AUTO_PAGE_FULL_MIN_SECONDS,
       maximum: minutes ? READER_AUTO_PAGE_FULL_MAX_MINUTES : READER_AUTO_PAGE_FULL_MAX_SECONDS,
-      wheelWidth: this.timerWheelWidth(), rowHeight: 34, neighbours: 1, selectedSize: 17, neighbourSize: 11,
+      wheelWidth: this.timerWheelWidth(), rowHeight: 34, neighbours: 1,
       unit: minutes ? '分' : '秒', interactionEnabled: this.fullInput(),
       onStep: (delta: number): void => this.commitTimerStep(minutes, delta),
     }).position({ x: minutes ? 0 : this.timerWheelWidth() + 24, y: 0 });
@@ -547,14 +548,14 @@ export struct ReaderControlAutoPageContent {
       Stack({ alignContent: Alignment.TopStart }) {
         Text('翻页速度').id(this.speedActorId('title'))
           .width(this.speedActor('title').width).height(this.speedActor('title').height)
-          .fontFamily('ReaderInter').fontWeight(FontWeight.Bold)
-          .fontSize(readerControlLerp(11, 10, this.p())).lineHeight(13)
+          .fontFamily(TYPE_READER_AUTO_SPEED_LABEL_QUICK.fontFamily).fontWeight(TYPE_READER_AUTO_SPEED_LABEL_QUICK.fontWeight)
+          .fontSize(readerControlLerp(TYPE_READER_AUTO_SPEED_LABEL_QUICK.fontSizeFp, TYPE_READER_AUTO_SPEED_LABEL_FULL.fontSizeFp, this.p())).lineHeight(TYPE_READER_AUTO_SPEED_LABEL_QUICK.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1)
           .position({ x: this.speedActor('title').x, y: this.speedActor('title').y });
         Text(`${this.effectiveSpeedSeconds()} 秒`).id(this.speedActorId('current'))
           .width(this.speedActor('current').width).height(this.speedActor('current').height)
-          .fontFamily('ReaderInter').fontWeight(Math.round(readerControlLerp(900, 400, this.p())))
-          .fontSize(readerControlLerp(11, 10, this.p())).lineHeight(13)
+          .fontFamily(TYPE_READER_AUTO_SPEED_VALUE_QUICK.fontFamily).fontWeight(Math.round(readerControlLerp(TYPE_READER_AUTO_SPEED_VALUE_QUICK.fontWeight, TYPE_READER_AUTO_SPEED_VALUE_FULL.fontWeight, this.p())))
+          .fontSize(readerControlLerp(TYPE_READER_AUTO_SPEED_VALUE_QUICK.fontSizeFp, TYPE_READER_AUTO_SPEED_VALUE_FULL.fontSizeFp, this.p())).lineHeight(TYPE_READER_AUTO_SPEED_VALUE_QUICK.lineHeightFp as number)
           .fontColor(readerAppColor(this.p() === 0 ? 'TOK_READ_PRIMARY' : 'TOK_READ_MUTED', this.appScheme))
           .textAlign(TextAlign.Center).maxLines(1)
           .position({ x: this.speedActor('current').x, y: this.speedActor('current').y });

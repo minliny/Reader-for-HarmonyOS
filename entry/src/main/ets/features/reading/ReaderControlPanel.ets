@@ -1,3 +1,4 @@
+import { TYPE_READER_CONTROL_COLLAPSE_INTER, TYPE_READER_CONTROL_COLLAPSE_UI, TYPE_READER_CONTROL_HEADER_INTER, TYPE_READER_CONTROL_HEADER_UI } from '../common/ReaderTypography';
 import { TYPE_READER_CONTROLS_RETAINED_BRIGHTNESS_RAIL_LABEL, TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_COLLAPSE, TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_VALUE, TYPE_READER_CONTROLS_RETAINED_MODULE_BUTTON_LABEL, TYPE_READER_CONTROLS_RETAINED_PROGRESS_ROW_LABEL, TYPE_READER_CONTROLS_RETAINED_QUICK_ACTION_LABEL, TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL, TYPE_READER_CONTROLS_RETAINED_REPLACE_HEADER_LABEL_SECONDARY } from '../common/ReaderTypography';
 import { ReaderActionMenuSurface, ReaderMenuActionView } from '../common/ReaderActionMenuSurface';
 import type { JsonObject } from '@reader/core-harmony';
@@ -1146,15 +1147,15 @@ export struct ReaderControlPanel {
     Stack({ alignContent: Alignment.TopStart }) {
       Image(this.headerIcon()).width(16).height(16).position({ x: 0, y: 7 })
         .hitTestBehavior(HitTestMode.None);
-      Text(this.contentTitle()).fontFamily(this.headerInter() ? 'ReaderInter' : 'ReaderNotoSansSCUIBold')
-        .fontWeight(TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_VALUE.fontWeight as number, { enableVariableFontWeight: true }).fontSize(TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_VALUE.fontSizeFp).lineHeight(this.headerInter() ? 16.8 : 20)
+      Text(this.contentTitle()).fontFamily(this.headerInter() ? TYPE_READER_CONTROL_HEADER_INTER.fontFamily : TYPE_READER_CONTROL_HEADER_UI.fontFamily)
+        .fontWeight(this.headerInter() ? TYPE_READER_CONTROL_HEADER_INTER.fontWeight : TYPE_READER_CONTROL_HEADER_UI.fontWeight, { enableVariableFontWeight: true }).fontSize(this.headerInter() ? TYPE_READER_CONTROL_HEADER_INTER.fontSizeFp : TYPE_READER_CONTROL_HEADER_UI.fontSizeFp).lineHeight((this.headerInter() ? TYPE_READER_CONTROL_HEADER_INTER.lineHeightFp : TYPE_READER_CONTROL_HEADER_UI.lineHeightFp) as number)
         .fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .width(Math.max(0, this.headerFrame().width - 74)).height(this.headerInter() ? 17 : 20)
         .position({ x: 24, y: this.headerInter() ? 6.5 : 5 });
       Stack({ alignContent: Alignment.TopStart }) {
         Text('收起').width(20).height(this.headerInter() ? 12 : 14)
-          .fontFamily(this.headerInter() ? 'ReaderInter' : 'ReaderNotoSansSCUIBold')
-          .fontWeight(TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_COLLAPSE.fontWeight as number, { enableVariableFontWeight: true }).fontSize(TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_COLLAPSE.fontSizeFp).lineHeight(this.headerInter() ? 12 : 14)
+          .fontFamily(this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.fontFamily : TYPE_READER_CONTROL_COLLAPSE_UI.fontFamily)
+          .fontWeight(this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.fontWeight : TYPE_READER_CONTROL_COLLAPSE_UI.fontWeight, { enableVariableFontWeight: true }).fontSize(this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.fontSizeFp : TYPE_READER_CONTROL_COLLAPSE_UI.fontSizeFp).lineHeight((this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.lineHeightFp : TYPE_READER_CONTROL_COLLAPSE_UI.lineHeightFp) as number)
           .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme)).textAlign(TextAlign.Center)
           .position({ x: 10, y: this.headerInter() ? 7 : 6 });
       }.width(40).height(26).position({ x: Math.max(0, this.headerFrame().width - 40), y: 2 })

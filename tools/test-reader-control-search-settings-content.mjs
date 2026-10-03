@@ -392,7 +392,7 @@ if (readerBuilderSdkAvailable) {
   let geometrySamples = 0, paintSamples = 0;
   const { owner } = createReaderBuilderProbe(settingsUI, [...new Set(settingsBuilderMembers)], {
     ReaderControlSettingsOptionModifier: productionSettingsOptionModifier(),
-    ...settingsPolicy, ...settingsConstants, ...motionDeps, readerControlUnit, readerControlSettingsLabel, readerControlSettingsBar,
+    ...settingsPolicy, ...settingsConstants, ...motionDeps, readerControlUnit, readerControlLerp, readerControlSettingsLabel, readerControlSettingsBar,
     sampleReaderControlSettings: (...args) => { geometrySamples++; return sampleReaderControlSettings(...args); },
     sampleReaderControlMotionPresentation: (...args) => { paintSamples++; return presentation.sampleReaderControlMotionPresentation(...args); },
     readerControlSettingsChoice, readerControlSettingsAddedChild });

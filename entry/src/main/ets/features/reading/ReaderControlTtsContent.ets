@@ -1,3 +1,4 @@
+import { TYPE_READER_TTS_QUICK_PLAYBACK_LABEL, TYPE_READER_TTS_QUICK_SETTING_LABEL, TYPE_READER_TTS_SECTION_META, TYPE_READER_TTS_SECTION_SPEED_META } from '../common/ReaderTypography';
 import { TYPE_READER_TTS_RETAINED_MODULE_HEADER_VALUE, TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_LABEL, TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE, TYPE_READER_TTS_RETAINED_PLAYBACK_LABEL, TYPE_READER_TTS_RETAINED_PLAYBACK_STATUS, TYPE_READER_TTS_RETAINED_QUICK_LABEL_VALUE, TYPE_READER_TTS_RETAINED_RATE_PRESET_VALUE, TYPE_READER_TTS_RETAINED_ROUND_CONTROL_LABEL, TYPE_READER_TTS_RETAINED_SECTION_HEADER_LABEL, TYPE_READER_TTS_RETAINED_SECTION_HEADER_META, TYPE_READER_TTS_RETAINED_SPEED_VALUE, TYPE_READER_TTS_RETAINED_SPEED_VALUE_SECONDARY, TYPE_READER_TTS_RETAINED_TIMER_LABEL, TYPE_READER_TTS_RETAINED_TIMER_LABEL_SECONDARY, TYPE_READER_TTS_RETAINED_TIMER_META, TYPE_READER_TTS_RETAINED_TIMER_PRESET_VALUE, TYPE_READER_TTS_RETAINED_TIMER_STEPPER_VALUE, TYPE_READER_TTS_RETAINED_TOGGLE_ROW_VALUE, TYPE_READER_TTS_RETAINED_TTS_CLOSED_CONFIG_ROW_VALUE, TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE, TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY, TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE, TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY, TYPE_READER_TTS_RETAINED_VOICE_SELECTOR_ROW_LABEL } from '../common/ReaderTypography';
 import { ReaderTtsWaveform } from './ReaderTtsWaveform';
 import type { ReaderTtsWaveformSample } from './ReaderTtsWaveformModel';
@@ -487,9 +488,9 @@ export struct ReaderControlTtsContent {
         } else if (kind === 'timer') {
           Image($r(this.appScheme === 'night' ? 'app.media.reader_tts_clock_theme_night' : 'app.media.reader_tts_clock')).width(13).height(13);
         }
-        Text(this.headerMeta(kind)).fontFamily(kind === 'speed' ? 'ReaderInter' : 'ReaderNotoSansSCUIMedium')
-          .fontWeight(FontWeight.Medium, { enableVariableFontWeight: true }).fontSize(kind === 'speed' ? 11 : 10)
-          .lineHeight(14).fontColor(kind === 'timer' && this.timerMode === 'off' ? readerAppColor('TOK_TTS_MUTED', this.appScheme) :
+        Text(this.headerMeta(kind)).fontFamily(kind === 'speed' ? TYPE_READER_TTS_SECTION_SPEED_META.fontFamily : TYPE_READER_TTS_SECTION_META.fontFamily)
+          .fontWeight(kind === 'speed' ? TYPE_READER_TTS_SECTION_SPEED_META.fontWeight : TYPE_READER_TTS_SECTION_META.fontWeight, { enableVariableFontWeight: true }).fontSize(kind === 'speed' ? TYPE_READER_TTS_SECTION_SPEED_META.fontSizeFp : TYPE_READER_TTS_SECTION_META.fontSizeFp)
+          .lineHeight((kind === 'speed' ? TYPE_READER_TTS_SECTION_SPEED_META.lineHeightFp : TYPE_READER_TTS_SECTION_META.lineHeightFp) as number).fontColor(kind === 'timer' && this.timerMode === 'off' ? readerAppColor('TOK_TTS_MUTED', this.appScheme) :
             kind === 'playback' && !this.isActivelySpeaking() ? readerAppColor('TOK_TTS_MUTED', this.appScheme) : readerAppColor('TOK_TTS_TEAL', this.appScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       }.height(18).padding({ left: kind === 'playback' ? 8 : 0, right: kind === 'playback' ? 8 : 0 })
@@ -514,7 +515,7 @@ export struct ReaderControlTtsContent {
         .border({ width: 0.5, color: readerAppColor('TOK_TTS_TEAL_LINE', this.appScheme) });
       Column({ space: 0 }) {
         Text(kind === 'playback' ? '播放' : (kind === 'timer' ? '定时' : '语速'))
-          .fontFamily('ReaderNotoSansSCUIBold').fontWeight(FontWeight.Bold).fontSize(kind === 'playback' ? 13 : 12)
+          .fontFamily(kind === 'playback' ? TYPE_READER_TTS_QUICK_PLAYBACK_LABEL.fontFamily : TYPE_READER_TTS_QUICK_SETTING_LABEL.fontFamily).fontWeight(kind === 'playback' ? TYPE_READER_TTS_QUICK_PLAYBACK_LABEL.fontWeight : TYPE_READER_TTS_QUICK_SETTING_LABEL.fontWeight).fontSize(kind === 'playback' ? TYPE_READER_TTS_QUICK_PLAYBACK_LABEL.fontSizeFp : TYPE_READER_TTS_QUICK_SETTING_LABEL.fontSizeFp)
           .fontColor(readerAppColor('TOK_TTS_INK', this.appScheme)).height(kind === 'playback' ? 16 : 18).maxLines(1);
         if (kind === 'playback') {
           Row({ space: 4 }) {

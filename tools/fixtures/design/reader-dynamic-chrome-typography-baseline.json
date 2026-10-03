@@ -1,0 +1,652 @@
+{
+  "schemaVersion": 1,
+  "baselineCommit": "7fcf3447",
+  "description": "Complete finite-state/morph/inherited emphasis contract migration. Owner progress, callbacks and AUTO remain unchanged.",
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderAppearanceModulePanel.ets",
+      "sha256": "bc29e9fbeb5dafe1d70b5020391bf0fc4aab722207dc8f04c814b788aa864d58",
+      "roleImport": "import { TYPE_READER_THEME_SUMMARY_PHONE, TYPE_READER_THEME_SUMMARY_TABLET } from '../common/ReaderTypography';\n",
+      "extras": [],
+      "nodes": [
+        {
+          "method": "themeSection",
+          "kind": "Text",
+          "text": "this.themeSummary()",
+          "original": {
+            "lineHeight": "8",
+            "fontSize": "this.isTablet ? 8 : 7.5",
+            "fontWeight": "FontWeight.Medium",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "(this.isTablet ? TYPE_READER_THEME_SUMMARY_TABLET.lineHeightFp : TYPE_READER_THEME_SUMMARY_PHONE.lineHeightFp) as number",
+            "fontSize": "this.isTablet ? TYPE_READER_THEME_SUMMARY_TABLET.fontSizeFp : TYPE_READER_THEME_SUMMARY_PHONE.fontSizeFp",
+            "fontWeight": "this.isTablet ? TYPE_READER_THEME_SUMMARY_TABLET.fontWeight : TYPE_READER_THEME_SUMMARY_PHONE.fontWeight",
+            "fontFamily": "this.isTablet ? TYPE_READER_THEME_SUMMARY_TABLET.fontFamily : TYPE_READER_THEME_SUMMARY_PHONE.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderAutoPageFullPanel.ets",
+      "sha256": "fc81cb81999e4a3a75301f91010ccff72babdc746b516d8072cef0891f5122d8",
+      "roleImport": "import { TYPE_READER_TIMER_WHEEL_NEIGHBOUR, TYPE_READER_TIMER_WHEEL_SELECTED } from '../common/ReaderTypography';\n",
+      "extras": [],
+      "nodes": [
+        {
+          "method": "timerWheelText",
+          "kind": "Text",
+          "text": "formatReaderAutoPageFullWheelValue(value)",
+          "original": {
+            "lineHeight": "selected ? 17 : 11",
+            "fontSize": "selected ? 17 : 11",
+            "fontWeight": "selected ? 800 : 600",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "(selected ? TYPE_READER_TIMER_WHEEL_SELECTED.lineHeightFp : TYPE_READER_TIMER_WHEEL_NEIGHBOUR.lineHeightFp) as number",
+            "fontSize": "selected ? TYPE_READER_TIMER_WHEEL_SELECTED.fontSizeFp : TYPE_READER_TIMER_WHEEL_NEIGHBOUR.fontSizeFp",
+            "fontWeight": "selected ? TYPE_READER_TIMER_WHEEL_SELECTED.fontWeight : TYPE_READER_TIMER_WHEEL_NEIGHBOUR.fontWeight",
+            "fontFamily": "selected ? TYPE_READER_TIMER_WHEEL_SELECTED.fontFamily : TYPE_READER_TIMER_WHEEL_NEIGHBOUR.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets",
+      "sha256": "333732d75b13c2844a77ada9a0b44a5d62a5d67d47ceeebdf01ac31b22cdf93d",
+      "roleImport": "import { TYPE_READER_AUTO_SPEED_LABEL_FULL, TYPE_READER_AUTO_SPEED_LABEL_QUICK, TYPE_READER_AUTO_SPEED_VALUE_FULL, TYPE_READER_AUTO_SPEED_VALUE_QUICK } from '../common/ReaderTypography';\n",
+      "extras": [
+        {
+          "before": "neighbours: 1, selectedSize: 17, neighbourSize: 11,",
+          "after": "neighbours: 1,"
+        }
+      ],
+      "nodes": [
+        {
+          "method": "speedRow",
+          "kind": "Text",
+          "text": "'翻页速度'",
+          "original": {
+            "lineHeight": "13",
+            "fontSize": "readerControlLerp(11, 10, this.p())",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_READER_AUTO_SPEED_LABEL_QUICK.lineHeightFp as number",
+            "fontSize": "readerControlLerp(TYPE_READER_AUTO_SPEED_LABEL_QUICK.fontSizeFp, TYPE_READER_AUTO_SPEED_LABEL_FULL.fontSizeFp, this.p())",
+            "fontWeight": "TYPE_READER_AUTO_SPEED_LABEL_QUICK.fontWeight",
+            "fontFamily": "TYPE_READER_AUTO_SPEED_LABEL_QUICK.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "speedRow",
+          "kind": "Text",
+          "text": "`${this.effectiveSpeedSeconds()} 秒`",
+          "original": {
+            "lineHeight": "13",
+            "fontSize": "readerControlLerp(11, 10, this.p())",
+            "fontWeight": "Math.round(readerControlLerp(900, 400, this.p()))",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "lineHeight": "TYPE_READER_AUTO_SPEED_VALUE_QUICK.lineHeightFp as number",
+            "fontSize": "readerControlLerp(TYPE_READER_AUTO_SPEED_VALUE_QUICK.fontSizeFp, TYPE_READER_AUTO_SPEED_VALUE_FULL.fontSizeFp, this.p())",
+            "fontWeight": "Math.round(readerControlLerp(TYPE_READER_AUTO_SPEED_VALUE_QUICK.fontWeight, TYPE_READER_AUTO_SPEED_VALUE_FULL.fontWeight, this.p()))",
+            "fontFamily": "TYPE_READER_AUTO_SPEED_VALUE_QUICK.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+      "sha256": "de8faa37c1a1fde12c117c188dfd6067b8c5bbbc8c1525153d716b6722594a26",
+      "roleImport": "import { TYPE_READER_CONTROL_COLLAPSE_INTER, TYPE_READER_CONTROL_COLLAPSE_UI, TYPE_READER_CONTROL_HEADER_INTER, TYPE_READER_CONTROL_HEADER_UI } from '../common/ReaderTypography';\n",
+      "extras": [],
+      "nodes": [
+        {
+          "method": "controlHeader",
+          "kind": "Text",
+          "text": "this.contentTitle()",
+          "original": {
+            "lineHeight": "this.headerInter() ? 16.8 : 20",
+            "fontSize": "TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_VALUE.fontSizeFp",
+            "fontWeight": "TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_VALUE.fontWeight as number",
+            "fontFamily": "this.headerInter() ? 'ReaderInter' : 'ReaderNotoSansSCUIBold'"
+          },
+          "changes": {
+            "lineHeight": "(this.headerInter() ? TYPE_READER_CONTROL_HEADER_INTER.lineHeightFp : TYPE_READER_CONTROL_HEADER_UI.lineHeightFp) as number",
+            "fontSize": "this.headerInter() ? TYPE_READER_CONTROL_HEADER_INTER.fontSizeFp : TYPE_READER_CONTROL_HEADER_UI.fontSizeFp",
+            "fontWeight": "this.headerInter() ? TYPE_READER_CONTROL_HEADER_INTER.fontWeight : TYPE_READER_CONTROL_HEADER_UI.fontWeight",
+            "fontFamily": "this.headerInter() ? TYPE_READER_CONTROL_HEADER_INTER.fontFamily : TYPE_READER_CONTROL_HEADER_UI.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [
+              "{ enableVariableFontWeight: true }"
+            ],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "controlHeader",
+          "kind": "Text",
+          "text": "'收起'",
+          "original": {
+            "lineHeight": "this.headerInter() ? 12 : 14",
+            "fontSize": "TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_COLLAPSE.fontSizeFp",
+            "fontWeight": "TYPE_READER_CONTROLS_RETAINED_CONTROL_HEADER_COLLAPSE.fontWeight as number",
+            "fontFamily": "this.headerInter() ? 'ReaderInter' : 'ReaderNotoSansSCUIBold'"
+          },
+          "changes": {
+            "lineHeight": "(this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.lineHeightFp : TYPE_READER_CONTROL_COLLAPSE_UI.lineHeightFp) as number",
+            "fontSize": "this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.fontSizeFp : TYPE_READER_CONTROL_COLLAPSE_UI.fontSizeFp",
+            "fontWeight": "this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.fontWeight : TYPE_READER_CONTROL_COLLAPSE_UI.fontWeight",
+            "fontFamily": "this.headerInter() ? TYPE_READER_CONTROL_COLLAPSE_INTER.fontFamily : TYPE_READER_CONTROL_COLLAPSE_UI.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [
+              "{ enableVariableFontWeight: true }"
+            ],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+      "sha256": "a9f0cdc3efded2deeaf6380f769ca52bb5ce291897084bae387d72c71065f4a8",
+      "roleImport": "import { TYPE_READER_REPLACE_RULE_NAME } from '../common/ReaderTypography';\n",
+      "extras": [
+        {
+          "before": "// M-02: frame.nameSize is the fixed Full native font, never morph-scaled.",
+          "after": "// M-02: the shared rule-name role is fixed Full native typography, never morph-scaled."
+        }
+      ],
+      "nodes": [
+        {
+          "method": "ruleRow",
+          "kind": "Text",
+          "text": "rule().name",
+          "original": {
+            "fontWeight": "FontWeight.Bold",
+            "fontSize": "this.frame().nameSize",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontWeight": "TYPE_READER_REPLACE_RULE_NAME.fontWeight",
+            "fontSize": "TYPE_READER_REPLACE_RULE_NAME.fontSizeFp",
+            "fontFamily": "TYPE_READER_REPLACE_RULE_NAME.fontFamily"
+          },
+          "extra": {
+            "fontWeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets",
+      "sha256": "cca3576db9575a651346e25d4154abca0d334976ec22e9b2eca9c7a4a82a44ae",
+      "roleImport": "import { TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL, TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK } from '../common/ReaderTypography';\n",
+      "extras": [],
+      "nodes": [
+        {
+          "method": "segmentRow",
+          "kind": "Text",
+          "text": "this.groupLabel(group)",
+          "original": {
+            "lineHeight": "this.label(row).height",
+            "fontSize": "10 + this.p()",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "lineHeight": "this.label(row).height",
+            "fontSize": "readerControlLerp(TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.fontSizeFp, TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL.fontSizeFp, this.p())",
+            "fontWeight": "TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.fontWeight",
+            "fontFamily": "TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlTimerWheel.ets",
+      "sha256": "ec0ae699f9cbc207f8433c57ed388438a084d0850b185bac277ab4ce2cf10541",
+      "roleImport": "import { TYPE_READER_TIMER_WHEEL_RETAINED_NEIGHBOUR, TYPE_READER_TIMER_WHEEL_RETAINED_SELECTED } from '../common/ReaderTypography';\n",
+      "extras": [
+        {
+          "before": "  @Prop neighbours: number = 1;\n  @Prop selectedSize: number = 17;\n  @Prop neighbourSize: number = 11;\n",
+          "after": "  @Prop neighbours: number = 1;\n"
+        }
+      ],
+      "nodes": [
+        {
+          "method": "build",
+          "kind": "Text",
+          "text": "this.label(delta)",
+          "original": {
+            "fontSize": "delta === 0 ? this.selectedSize : this.neighbourSize",
+            "fontWeight": "delta === 0 ? 800 : 600",
+            "fontFamily": "'ReaderInter'"
+          },
+          "changes": {
+            "fontSize": "delta === 0 ? TYPE_READER_TIMER_WHEEL_RETAINED_SELECTED.fontSizeFp : TYPE_READER_TIMER_WHEEL_RETAINED_NEIGHBOUR.fontSizeFp",
+            "fontWeight": "delta === 0 ? TYPE_READER_TIMER_WHEEL_RETAINED_SELECTED.fontWeight : TYPE_READER_TIMER_WHEEL_RETAINED_NEIGHBOUR.fontWeight",
+            "fontFamily": "delta === 0 ? TYPE_READER_TIMER_WHEEL_RETAINED_SELECTED.fontFamily : TYPE_READER_TIMER_WHEEL_RETAINED_NEIGHBOUR.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlTtsContent.ets",
+      "sha256": "f2b30878e7571c727f2f401e11d015bf38f0b8d355c5a125653bfe044d308613",
+      "roleImport": "import { TYPE_READER_TTS_QUICK_PLAYBACK_LABEL, TYPE_READER_TTS_QUICK_SETTING_LABEL, TYPE_READER_TTS_SECTION_META, TYPE_READER_TTS_SECTION_SPEED_META } from '../common/ReaderTypography';\n",
+      "extras": [],
+      "nodes": [
+        {
+          "method": "moduleHeader",
+          "kind": "Text",
+          "text": "this.headerMeta(kind)",
+          "original": {
+            "lineHeight": "14",
+            "fontSize": "kind === 'speed' ? 11 : 10",
+            "fontWeight": "FontWeight.Medium",
+            "fontFamily": "kind === 'speed' ? 'ReaderInter' : 'ReaderNotoSansSCUIMedium'"
+          },
+          "changes": {
+            "lineHeight": "(kind === 'speed' ? TYPE_READER_TTS_SECTION_SPEED_META.lineHeightFp : TYPE_READER_TTS_SECTION_META.lineHeightFp) as number",
+            "fontSize": "kind === 'speed' ? TYPE_READER_TTS_SECTION_SPEED_META.fontSizeFp : TYPE_READER_TTS_SECTION_META.fontSizeFp",
+            "fontWeight": "kind === 'speed' ? TYPE_READER_TTS_SECTION_SPEED_META.fontWeight : TYPE_READER_TTS_SECTION_META.fontWeight",
+            "fontFamily": "kind === 'speed' ? TYPE_READER_TTS_SECTION_SPEED_META.fontFamily : TYPE_READER_TTS_SECTION_META.fontFamily"
+          },
+          "extra": {
+            "lineHeight": [],
+            "fontSize": [],
+            "fontWeight": [
+              "{ enableVariableFontWeight: true }"
+            ],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "quickLabel",
+          "kind": "Text",
+          "text": "kind === 'playback' ? '播放' : (kind === 'timer' ? '定时' : '语速')",
+          "original": {
+            "fontSize": "kind === 'playback' ? 13 : 12",
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSCUIBold'"
+          },
+          "changes": {
+            "fontSize": "kind === 'playback' ? TYPE_READER_TTS_QUICK_PLAYBACK_LABEL.fontSizeFp : TYPE_READER_TTS_QUICK_SETTING_LABEL.fontSizeFp",
+            "fontWeight": "kind === 'playback' ? TYPE_READER_TTS_QUICK_PLAYBACK_LABEL.fontWeight : TYPE_READER_TTS_QUICK_SETTING_LABEL.fontWeight",
+            "fontFamily": "kind === 'playback' ? TYPE_READER_TTS_QUICK_PLAYBACK_LABEL.fontFamily : TYPE_READER_TTS_QUICK_SETTING_LABEL.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+      "sha256": "343d5498ba006178c09e32fd21d39b8f579d366d0d6db2cd533ddca2926ff1e1",
+      "roleImport": "import { TYPE_READER_TTS_CHOICE_REGULAR, TYPE_READER_TTS_CHOICE_SELECTED, TYPE_READER_TTS_CONFIGURATION_TITLE, TYPE_READER_TTS_MANAGER_TITLE, TYPE_READER_TTS_VOICE_REGULAR, TYPE_READER_TTS_VOICE_SELECTED } from '../common/ReaderTypography';\n",
+      "extras": [],
+      "nodes": [
+        {
+          "method": "configurationHeader",
+          "kind": "Text",
+          "text": "this.title",
+          "original": {
+            "fontWeight": "FontWeight.Bold",
+            "fontSize": "this.manager ? 15 : 12",
+            "fontFamily": "'ReaderNotoSansSCUIBold'"
+          },
+          "changes": {
+            "fontWeight": "this.manager ? TYPE_READER_TTS_MANAGER_TITLE.fontWeight : TYPE_READER_TTS_CONFIGURATION_TITLE.fontWeight",
+            "fontSize": "this.manager ? TYPE_READER_TTS_MANAGER_TITLE.fontSizeFp : TYPE_READER_TTS_CONFIGURATION_TITLE.fontSizeFp",
+            "fontFamily": "this.manager ? TYPE_READER_TTS_MANAGER_TITLE.fontFamily : TYPE_READER_TTS_CONFIGURATION_TITLE.fontFamily"
+          },
+          "extra": {
+            "fontWeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "choiceRow",
+          "kind": "Text",
+          "text": "this.voicePicker ? choice.label.split(' · ')[0] : choice.label",
+          "original": {
+            "fontWeight": "choice.id === this.selectedId ? FontWeight.Bold : FontWeight.Medium",
+            "lineHeight": "17",
+            "fontSize": "this.voicePicker ? 13 : 12",
+            "fontFamily": "choice.id === this.selectedId ? 'ReaderNotoSansSCUIBold' : 'ReaderNotoSansSCUIMedium'"
+          },
+          "changes": {
+            "fontWeight": "this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.fontWeight : TYPE_READER_TTS_VOICE_REGULAR.fontWeight) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.fontWeight : TYPE_READER_TTS_CHOICE_REGULAR.fontWeight)",
+            "lineHeight": "(this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.lineHeightFp : TYPE_READER_TTS_VOICE_REGULAR.lineHeightFp) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.lineHeightFp : TYPE_READER_TTS_CHOICE_REGULAR.lineHeightFp)) as number",
+            "fontSize": "this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.fontSizeFp : TYPE_READER_TTS_VOICE_REGULAR.fontSizeFp) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.fontSizeFp : TYPE_READER_TTS_CHOICE_REGULAR.fontSizeFp)",
+            "fontFamily": "this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.fontFamily : TYPE_READER_TTS_VOICE_REGULAR.fontFamily) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.fontFamily : TYPE_READER_TTS_CHOICE_REGULAR.fontFamily)"
+          },
+          "extra": {
+            "fontWeight": [
+              "{ enableVariableFontWeight: true }"
+            ],
+            "lineHeight": [],
+            "fontSize": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderAppearanceFullPanel.ets",
+      "sha256": "1207414de4320418d48824dc6ef0949ff972a84a5715a69bf7cac4830280fe77",
+      "roleImport": "import { TYPE_READER_INDENT_OPTION_REGULAR, TYPE_READER_INDENT_OPTION_SELECTED } from '../common/ReaderTypography';\n",
+      "extras": [],
+      "nodes": [
+        {
+          "method": "indentOption",
+          "kind": "Text",
+          "text": "label",
+          "original": {
+            "fontSize": "TYPE_READER_APPEARANCE_FULL_COMPAT_INDENT_OPTION_LABEL.fontSizeFp",
+            "fontWeight": "this.indentOptionActive(value) ? FontWeight.Bold : FontWeight.Medium",
+            "fontFamily": "TYPE_READER_APPEARANCE_FULL_COMPAT_INDENT_OPTION_LABEL.fontFamily as string"
+          },
+          "changes": {
+            "fontSize": "this.indentOptionActive(value) ? TYPE_READER_INDENT_OPTION_SELECTED.fontSizeFp : TYPE_READER_INDENT_OPTION_REGULAR.fontSizeFp",
+            "fontWeight": "this.indentOptionActive(value) ? TYPE_READER_INDENT_OPTION_SELECTED.fontWeight : TYPE_READER_INDENT_OPTION_REGULAR.fontWeight",
+            "fontFamily": "this.indentOptionActive(value) ? TYPE_READER_INDENT_OPTION_SELECTED.fontFamily : TYPE_READER_INDENT_OPTION_REGULAR.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderSettingsModulePanel.ets",
+      "sha256": "3ac22fc1e8cdc99caca5dbd43cf0d268ad87e64824f208d413ed83fbadc2d407",
+      "roleImport": "import { TYPE_READER_SETTINGS_OPTION_REGULAR, TYPE_READER_SETTINGS_OPTION_SELECTED } from '../common/ReaderTypography';\n",
+      "extras": [],
+      "nodes": [
+        {
+          "method": "segmentOption",
+          "kind": "Text",
+          "text": "this.optionLabel(group, option)",
+          "original": {
+            "fontSize": "TYPE_READER_SETTINGS_QUICK_COMPAT_SEGMENT_OPTION_VALUE.fontSizeFp",
+            "fontWeight": "this.isActive(group, option) ? FontWeight.Bold : FontWeight.Medium",
+            "fontFamily": "TYPE_READER_SETTINGS_QUICK_COMPAT_SEGMENT_OPTION_VALUE.fontFamily as string"
+          },
+          "changes": {
+            "fontSize": "this.isActive(group, option) ? TYPE_READER_SETTINGS_OPTION_SELECTED.fontSizeFp : TYPE_READER_SETTINGS_OPTION_REGULAR.fontSizeFp",
+            "fontWeight": "this.isActive(group, option) ? TYPE_READER_SETTINGS_OPTION_SELECTED.fontWeight : TYPE_READER_SETTINGS_OPTION_REGULAR.fontWeight",
+            "fontFamily": "this.isActive(group, option) ? TYPE_READER_SETTINGS_OPTION_SELECTED.fontFamily : TYPE_READER_SETTINGS_OPTION_REGULAR.fontFamily"
+          },
+          "extra": {
+            "fontSize": [],
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlSearchContent.ets",
+      "sha256": "3bc888485c9a22ded988b656c585b2f9d190866b93b5446163a73cba82825dee",
+      "roleImport": "import { TYPE_READER_SNIPPET_INLINE_MATCH, TYPE_READER_SNIPPET_INLINE_REGULAR } from '../common/ReaderTypography';\n",
+      "extras": [],
+      "nodes": [
+        {
+          "method": "resultSnippet",
+          "kind": "Span",
+          "text": "this.currentSnippet(chapterIndex, chapterOffset).prefix",
+          "original": {
+            "fontWeight": "FontWeight.Regular"
+          },
+          "changes": {
+            "fontWeight": "TYPE_READER_SNIPPET_INLINE_REGULAR.fontWeight"
+          },
+          "extra": {
+            "fontWeight": []
+          }
+        },
+        {
+          "method": "resultSnippet",
+          "kind": "Span",
+          "text": "this.currentSnippet(chapterIndex, chapterOffset).match",
+          "original": {
+            "fontWeight": "FontWeight.Bold"
+          },
+          "changes": {
+            "fontWeight": "TYPE_READER_SNIPPET_INLINE_MATCH.fontWeight"
+          },
+          "extra": {
+            "fontWeight": []
+          }
+        },
+        {
+          "method": "resultSnippet",
+          "kind": "Span",
+          "text": "this.currentSnippet(chapterIndex, chapterOffset).suffix",
+          "original": {
+            "fontWeight": "FontWeight.Regular"
+          },
+          "changes": {
+            "fontWeight": "TYPE_READER_SNIPPET_INLINE_REGULAR.fontWeight"
+          },
+          "extra": {
+            "fontWeight": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderQuickSearchPanel.ets",
+      "sha256": "fb376776a541be4ea86afe1df751ba720e8c43232ae21de72352140da86ebd09",
+      "roleImport": "import { TYPE_READER_SNIPPET_NOTO_MATCH, TYPE_READER_SNIPPET_NOTO_REGULAR } from '../common/ReaderTypography';\n",
+      "extras": [],
+      "nodes": [
+        {
+          "method": "resultSnippet",
+          "kind": "Span",
+          "text": "splitReaderSearchSnippet(result.snippet, result.snippetStart,\n          result.chapterOffset, result.matchLength).prefix",
+          "original": {
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontWeight": "TYPE_READER_SNIPPET_NOTO_REGULAR.fontWeight",
+            "fontFamily": "TYPE_READER_SNIPPET_NOTO_REGULAR.fontFamily as string"
+          },
+          "extra": {
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultSnippet",
+          "kind": "Span",
+          "text": "splitReaderSearchSnippet(result.snippet, result.snippetStart,\n          result.chapterOffset, result.matchLength).match",
+          "original": {
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontWeight": "TYPE_READER_SNIPPET_NOTO_MATCH.fontWeight",
+            "fontFamily": "TYPE_READER_SNIPPET_NOTO_MATCH.fontFamily as string"
+          },
+          "extra": {
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultSnippet",
+          "kind": "Span",
+          "text": "splitReaderSearchSnippet(result.snippet, result.snippetStart,\n          result.chapterOffset, result.matchLength).suffix",
+          "original": {
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontWeight": "TYPE_READER_SNIPPET_NOTO_REGULAR.fontWeight",
+            "fontFamily": "TYPE_READER_SNIPPET_NOTO_REGULAR.fontFamily as string"
+          },
+          "extra": {
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderSearchFullPanel.ets",
+      "sha256": "fee26e77ff2effc8509a069f73e548721107f110573b713a60b799d949a06740",
+      "roleImport": "import { TYPE_READER_SNIPPET_NOTO_MATCH, TYPE_READER_SNIPPET_NOTO_REGULAR } from '../common/ReaderTypography';\n",
+      "extras": [],
+      "nodes": [
+        {
+          "method": "resultSnippet",
+          "kind": "Span",
+          "text": "splitReaderSearchSnippet(result.snippet, result.snippetStart,\n          result.chapterOffset, result.matchLength).prefix",
+          "original": {
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontWeight": "TYPE_READER_SNIPPET_NOTO_REGULAR.fontWeight",
+            "fontFamily": "TYPE_READER_SNIPPET_NOTO_REGULAR.fontFamily as string"
+          },
+          "extra": {
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultSnippet",
+          "kind": "Span",
+          "text": "splitReaderSearchSnippet(result.snippet, result.snippetStart,\n          result.chapterOffset, result.matchLength).match",
+          "original": {
+            "fontWeight": "FontWeight.Bold",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontWeight": "TYPE_READER_SNIPPET_NOTO_MATCH.fontWeight",
+            "fontFamily": "TYPE_READER_SNIPPET_NOTO_MATCH.fontFamily as string"
+          },
+          "extra": {
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        },
+        {
+          "method": "resultSnippet",
+          "kind": "Span",
+          "text": "splitReaderSearchSnippet(result.snippet, result.snippetStart,\n          result.chapterOffset, result.matchLength).suffix",
+          "original": {
+            "fontWeight": "FontWeight.Regular",
+            "fontFamily": "'ReaderNotoSansSC'"
+          },
+          "changes": {
+            "fontWeight": "TYPE_READER_SNIPPET_NOTO_REGULAR.fontWeight",
+            "fontFamily": "TYPE_READER_SNIPPET_NOTO_REGULAR.fontFamily as string"
+          },
+          "extra": {
+            "fontWeight": [],
+            "fontFamily": []
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "sha256": "d71ed9a56ae9b512db6d24ca583e86701f1f65554e36d9944f498cbe7a1df890",
+      "roleImport": "import { TYPE_READER_READING_FAILURE_TITLE, TYPE_READER_READING_FAILURE_DETAIL } from '../common/ReaderTypography';\n",
+      "extras": [],
+      "nodes": [
+        {
+          "method": "readingFailureContent",
+          "kind": "Text",
+          "text": "this.sourceSwitchFailureMessage.length > 0 ? '换源未完成' : '正文暂时无法显示'",
+          "original": {
+            "fontWeight": "FontWeight.Medium",
+            "fontSize": "20"
+          },
+          "changes": {
+            "fontWeight": "TYPE_READER_READING_FAILURE_TITLE.fontWeight as number",
+            "fontSize": "TYPE_READER_READING_FAILURE_TITLE.fontSizeFp"
+          },
+          "extra": {
+            "fontWeight": [],
+            "fontSize": []
+          }
+        },
+        {
+          "method": "readingFailureContent",
+          "kind": "Text",
+          "text": "this.sourceSwitchFailureMessage.length > 0 ? this.sourceSwitchFailureMessage : this.failureCode",
+          "original": {
+            "fontSize": "16"
+          },
+          "changes": {
+            "fontSize": "TYPE_READER_READING_FAILURE_DETAIL.fontSizeFp"
+          },
+          "extra": {
+            "fontSize": []
+          }
+        }
+      ]
+    }
+  ]
+}

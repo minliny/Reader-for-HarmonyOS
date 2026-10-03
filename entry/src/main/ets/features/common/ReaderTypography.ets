@@ -879,3 +879,72 @@ export const TYPE_READER_TTS_QUICK_COMPAT_TIMER_ROW_LABEL = TYPE_READER_TTS_QUIC
 export const TYPE_READER_TTS_QUICK_COMPAT_TIMER_ROW_VALUE = TYPE_APP_SEGMENT_LABEL;
 export const TYPE_READER_TTS_QUICK_COMPAT_RATE_ROW_LABEL = TYPE_READER_TTS_QUICK_COMPAT_PLAYBACK_ROW_VALUE;
 export const TYPE_READER_TTS_QUICK_COMPAT_RATE_ROW_VALUE = TYPE_SOURCE_SWITCH_RECOVERY;
+
+/** Inline emphasis inherits the snippet parent's shared font size and line box.
+ * This partial contract cannot invent a dummy size or override body layout. */
+export class ReaderInlineTextStyle {
+  readonly fontFamily: string | undefined;
+  readonly fontWeight: number;
+  constructor(fontFamily: string | undefined, fontWeight: number) {
+    this.fontFamily = fontFamily; this.fontWeight = fontWeight;
+  }
+}
+
+// Reading control finite variants and bounded morph endpoints. Timing and
+// geometry remain in their original persistent owners.
+export const TYPE_READER_THEME_SUMMARY_PHONE = TYPE_READER_APPEARANCE_SHARED_COMPAT_SHARED_THEME_HEADER_META;
+export const TYPE_READER_THEME_SUMMARY_TABLET = new ReaderTextStyle(
+  'ReaderNotoSansSC', 500, 8, 8, undefined, 'system', 'appBaseline');
+export const TYPE_READER_TIMER_WHEEL_SELECTED = new ReaderTextStyle(
+  'ReaderInter', 800, 17, 17, undefined, 'system', 'appBaseline');
+export const TYPE_READER_TIMER_WHEEL_NEIGHBOUR = new ReaderTextStyle(
+  'ReaderInter', 600, 11, 11, undefined, 'system', 'appBaseline');
+export const TYPE_READER_TIMER_WHEEL_RETAINED_SELECTED = TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEEL_VALUE_SECONDARY;
+export const TYPE_READER_TIMER_WHEEL_RETAINED_NEIGHBOUR = new ReaderTextStyle(
+  'ReaderInter', 600, 11, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_READER_AUTO_SPEED_LABEL_QUICK = new ReaderTextStyle(
+  'ReaderInter', 700, 11, 13, undefined, 'system', 'appBaseline');
+export const TYPE_READER_AUTO_SPEED_LABEL_FULL = TYPE_READER_TTS_FULL_COMPAT_HEADER_COLLAPSE;
+export const TYPE_READER_AUTO_SPEED_VALUE_QUICK = new ReaderTextStyle(
+  'ReaderInter', 900, 11, 13, undefined, 'system', 'appBaseline');
+export const TYPE_READER_AUTO_SPEED_VALUE_FULL = TYPE_READER_AUTO_PAGE_FULL_COMPAT_SPEED_ROW_LABEL_SECONDARY;
+export const TYPE_READER_CONTROL_HEADER_INTER = TYPE_READER_AUTO_PAGE_FULL_COMPAT_HEADER_LABEL;
+export const TYPE_READER_CONTROL_HEADER_UI = new ReaderTextStyle(
+  'ReaderNotoSansSCUIBold', 700, 14, 20, undefined, 'system', 'appBaseline');
+export const TYPE_READER_CONTROL_COLLAPSE_INTER = new ReaderTextStyle(
+  'ReaderInter', 700, 10, 12, undefined, 'system', 'appBaseline');
+export const TYPE_READER_CONTROL_COLLAPSE_UI = new ReaderTextStyle(
+  'ReaderNotoSansSCUIBold', 700, 10, 14, undefined, 'system', 'appBaseline');
+export const TYPE_READER_REPLACE_RULE_NAME = TYPE_SOURCE_TOOLS_ACTION;
+export const TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK = TYPE_READER_SETTINGS_FULL_COMPAT_HEADER_COLLAPSE;
+export const TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL = TYPE_READER_TTS_FULL_COMPAT_TOGGLE_ROW_LABEL;
+export const TYPE_READER_TTS_SECTION_SPEED_META = new ReaderTextStyle(
+  'ReaderInter', 500, 11, 14, undefined, 'system', 'appBaseline');
+export const TYPE_READER_TTS_SECTION_META = new ReaderTextStyle(
+  'ReaderNotoSansSCUIMedium', 500, 10, 14, undefined, 'system', 'appBaseline');
+export const TYPE_READER_TTS_QUICK_PLAYBACK_LABEL = TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE;
+export const TYPE_READER_TTS_QUICK_SETTING_LABEL = TYPE_READER_TTS_RETAINED_SECTION_HEADER_LABEL;
+export const TYPE_READER_TTS_MANAGER_TITLE = new ReaderTextStyle(
+  'ReaderNotoSansSCUIBold', 700, 15, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_READER_TTS_CONFIGURATION_TITLE = TYPE_READER_TTS_QUICK_SETTING_LABEL;
+export const TYPE_READER_TTS_CHOICE_REGULAR = new ReaderTextStyle(
+  'ReaderNotoSansSCUIMedium', 500, 12, 17, undefined, 'system', 'appBaseline');
+export const TYPE_READER_TTS_CHOICE_SELECTED = TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL_SECONDARY;
+export const TYPE_READER_TTS_VOICE_REGULAR = TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL;
+export const TYPE_READER_TTS_VOICE_SELECTED = new ReaderTextStyle(
+  'ReaderNotoSansSCUIBold', 700, 13, 17, undefined, 'system', 'appBaseline');
+export const TYPE_READER_INDENT_OPTION_REGULAR = TYPE_READER_SETTINGS_FULL_COMPAT_FULL_SEGMENT_OPTION_VALUE;
+export const TYPE_READER_INDENT_OPTION_SELECTED = new ReaderTextStyle(
+  'ReaderNotoSansSC', 700, 9, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_READER_SETTINGS_OPTION_REGULAR = TYPE_READER_INDENT_OPTION_REGULAR;
+export const TYPE_READER_SETTINGS_OPTION_SELECTED = TYPE_READER_INDENT_OPTION_SELECTED;
+export const TYPE_READER_SNIPPET_INLINE_REGULAR = new ReaderInlineTextStyle(undefined, 400);
+export const TYPE_READER_SNIPPET_INLINE_MATCH = new ReaderInlineTextStyle(undefined, 700);
+export const TYPE_READER_SNIPPET_NOTO_REGULAR = new ReaderInlineTextStyle('ReaderNotoSansSC', 400);
+export const TYPE_READER_SNIPPET_NOTO_MATCH = new ReaderInlineTextStyle('ReaderNotoSansSC', 700);
+
+// Failure text deliberately keeps ArkUI's inherited family and AUTO line box.
+export const TYPE_READER_READING_FAILURE_TITLE = new ReaderInheritedTextStyle(
+  undefined, 500, 20, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_READER_READING_FAILURE_DETAIL = new ReaderInheritedTextStyle(
+  undefined, undefined, 16, undefined, undefined, 'system', 'appBaseline');

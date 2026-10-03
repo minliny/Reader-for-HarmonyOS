@@ -40,8 +40,8 @@ assert.equal(q.rowHeight, 28);
 assert.equal(f.rowHeight, 77);
 assert.equal(q.rowGap, 0);
 assert.equal(f.rowGap, 7);
-assert.equal(q.nameSize, 12, 'M-02 keeps the Full native rule-name font in Quick; no 9→12 text growth');
-assert.equal(f.nameSize, 12);
+assert.equal(Object.hasOwn(q, 'nameSize'), false, 'geometry no longer owns a duplicate physical font recipe');
+assert.equal(Object.hasOwn(f, 'nameSize'), false);
 assert.equal(q.toolbar.y, 60, '71px shell static top + 18px source translate - 29px Quick Stage slot');
 assert.equal(f.toolbar.y, 14, '71px shell static top - 57px Full Stage slot');
 assert.equal(q.list.height, q.rowHeight * 3, 'Quick clips exactly three shared rows');
@@ -64,7 +64,7 @@ if (motion) {
 }
 for (const p of [0, .01, .2, .49, .5, .83, 1]) {
   const pose = sample(p, 286 + 52 * p, 190 + 476 * p, 100);
-  assert.equal(pose.nameSize, 12, 'fixed native list text is independent of shared morph progress');
+  assert.equal(Object.hasOwn(pose, 'nameSize'), false, 'fixed typography belongs to the shared role and actual Text tests');
   close(pose.rowHeight, 28 + 49 * p);
   close(pose.rowGap, 7 * p);
   close(pose.rowPadding, 5 + 8 * p);

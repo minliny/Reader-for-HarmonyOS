@@ -462,6 +462,8 @@
     "test-reader-startup-content-recovery.mjs",
     "test-reader-startup-recovery-surface.mjs",
     "test-search-operation-consumer.mjs",
-    "test-reader-static-chrome-typography.mjs"
+    "test-reader-static-chrome-typography.mjs",
+    "test-reader-dynamic-chrome-typography.mjs",
+    "test-reader-typography-coverage.mjs"
   ]
 }

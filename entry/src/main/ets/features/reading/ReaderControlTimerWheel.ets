@@ -1,3 +1,4 @@
+import { TYPE_READER_TIMER_WHEEL_RETAINED_NEIGHBOUR, TYPE_READER_TIMER_WHEEL_RETAINED_SELECTED } from '../common/ReaderTypography';
 import { TYPE_READER_TIMER_RETAINED_BUILD_VALUE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { TOK_BORDER_W, TOK_LINE, TOK_READ_INK, TOK_READ_MUTED } from '../common/ReaderTokens';
@@ -15,8 +16,6 @@ export struct ReaderControlTimerWheel {
   @Prop wheelWidth: number = 76;
   @Prop rowHeight: number = 34;
   @Prop neighbours: number = 1;
-  @Prop selectedSize: number = 17;
-  @Prop neighbourSize: number = 11;
   @Prop unit: string = '秒';
   @Prop interactionEnabled: boolean = true;
   onStep: (delta: number) => void = (_delta: number): void => {};
@@ -37,8 +36,8 @@ export struct ReaderControlTimerWheel {
       Stack({ alignContent: Alignment.TopStart }) {
         ForEach(this.offsets(), (delta: number) => {
           Text(this.label(delta)).width(this.wheelWidth).height(this.rowHeight)
-            .fontFamily('ReaderInter').fontWeight(delta === 0 ? 800 : 600)
-            .fontSize(delta === 0 ? this.selectedSize : this.neighbourSize)
+            .fontFamily(delta === 0 ? TYPE_READER_TIMER_WHEEL_RETAINED_SELECTED.fontFamily : TYPE_READER_TIMER_WHEEL_RETAINED_NEIGHBOUR.fontFamily).fontWeight(delta === 0 ? TYPE_READER_TIMER_WHEEL_RETAINED_SELECTED.fontWeight : TYPE_READER_TIMER_WHEEL_RETAINED_NEIGHBOUR.fontWeight)
+            .fontSize(delta === 0 ? TYPE_READER_TIMER_WHEEL_RETAINED_SELECTED.fontSizeFp : TYPE_READER_TIMER_WHEEL_RETAINED_NEIGHBOUR.fontSizeFp)
             .fontColor(delta === 0 ? readerAppColor('TOK_READ_INK', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
             .opacity(delta === 0 ? 1 : (Math.abs(delta) === 2 ? 0.2 : 0.56))
             .textAlign(TextAlign.Center)

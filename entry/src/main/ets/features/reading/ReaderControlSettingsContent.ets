@@ -1,3 +1,4 @@
+import { TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL, TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK } from '../common/ReaderTypography';
 import { TYPE_READER_SETTINGS_RETAINED_ADDED_GROUP_LABEL, TYPE_READER_SETTINGS_RETAINED_JUSTIFY_TOGGLE_ROW_LABEL, TYPE_READER_SETTINGS_RETAINED_SCREEN_GROUP_LABEL, TYPE_READER_SETTINGS_RETAINED_SEGMENT_ROW_VALUE, TYPE_READER_SETTINGS_RETAINED_TOGGLE_ROW_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PathShape, RectShape } from '@ohos.arkui.shape';
@@ -212,8 +213,8 @@ export struct ReaderControlSettingsContent {
   @Builder
   private segmentRow(group: ReaderControlSettingsGroup, row: number) {
     Text(this.groupLabel(group)).width(this.label(row).width).height(this.label(row).height)
-      .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold)
-      .fontSize(10 + this.p()).lineHeight(this.label(row).height)
+      .fontFamily(TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.fontFamily).fontWeight(TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.fontWeight)
+      .fontSize(readerControlLerp(TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.fontSizeFp, TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL.fontSizeFp, this.p())).lineHeight(this.label(row).height)
       .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1)
       .position({ x: this.label(row).x, y: this.label(row).y })
       .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)

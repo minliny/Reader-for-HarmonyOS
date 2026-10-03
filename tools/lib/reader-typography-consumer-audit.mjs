@@ -39,8 +39,8 @@ export function auditTypographyConsumers(source, file = '/tmp/TypographyConsumer
 
 /** Recognise complete role/spec arguments, rather than a TYPE_ substring.
  * Mixed public/private ternaries and page-local numeric overrides stay debt.
- * The sole conventional arithmetic exception is the existing proportional
- * cover geometry; its base font tuple remains owned by the public role. */
+ * Proportional cover geometry and the reader's existing bounded interpolation
+ * may use public role endpoints. Numeric/mixed endpoint overrides stay debt. */
 export function isSharedTypographyExpression(expression) {
   if (expression === 'TYPE_SHELF_COVER_PLACEHOLDER.fontSizeFp * this.coverWidth / 96.96' ||
       expression === '(TYPE_SHELF_COVER_PLACEHOLDER.lineHeightFp as number) * this.coverWidth / 96.96') return true;
@@ -51,6 +51,16 @@ export function isSharedTypographyExpression(expression) {
     if (!node) return false;
     if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node)) return visit(node.expression);
     if (ts.isConditionalExpression(node)) return visit(node.whenTrue) && visit(node.whenFalse);
+    if (ts.isCallExpression(node)) {
+      if (ts.isIdentifier(node.expression) && node.expression.text === 'readerControlLerp' && node.arguments.length === 3) {
+        const [from, to, progress] = node.arguments;
+        return visit(from) && visit(to) && ts.isPropertyAccessExpression(from) && ts.isPropertyAccessExpression(to) &&
+          from.name.text === to.name.text && ['fontSizeFp', 'fontWeight'].includes(from.name.text) &&
+          progress.getText(parsed) === 'this.p()';
+      }
+      if (node.expression.getText(parsed) === 'Math.round' && node.arguments.length === 1)
+        return ts.isCallExpression(node.arguments[0]) && visit(node.arguments[0]);
+    }
     if (ts.isPropertyAccessExpression(node)) {
       if (ts.isIdentifier(node.expression) && /^TYPE_\w+$/.test(node.expression.text)) return true;
       const callee = node.expression;

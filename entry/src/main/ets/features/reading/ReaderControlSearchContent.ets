@@ -1,3 +1,4 @@
+import { TYPE_READER_SNIPPET_INLINE_MATCH, TYPE_READER_SNIPPET_INLINE_REGULAR } from '../common/ReaderTypography';
 import { TYPE_READER_SEARCH_RETAINED_LOAD_MORE_ACTION_STATUS, TYPE_READER_SEARCH_RETAINED_QUICK_BACK_BACK, TYPE_READER_SEARCH_RETAINED_RESULTS_BODY_STATUS, TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE, TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PathShape } from '@ohos.arkui.shape';
@@ -535,11 +536,11 @@ export struct ReaderControlSearchContent {
   private resultSnippet(chapterIndex: number, chapterOffset: number) {
     Text() {
       Span(this.currentSnippet(chapterIndex, chapterOffset).prefix)
-        .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).fontWeight(FontWeight.Regular);
+        .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).fontWeight(TYPE_READER_SNIPPET_INLINE_REGULAR.fontWeight);
       Span(this.currentSnippet(chapterIndex, chapterOffset).match)
-        .fontColor(readerAppColor('TOK_DANGER', this.appThemeScheme)).fontWeight(FontWeight.Bold);
+        .fontColor(readerAppColor('TOK_DANGER', this.appThemeScheme)).fontWeight(TYPE_READER_SNIPPET_INLINE_MATCH.fontWeight);
       Span(this.currentSnippet(chapterIndex, chapterOffset).suffix)
-        .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).fontWeight(FontWeight.Regular);
+        .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).fontWeight(TYPE_READER_SNIPPET_INLINE_REGULAR.fontWeight);
     }
     .width(Math.max(0, this.frame().firstResult.width - 18)).height(28)
     .padding({ left: 11 }).border({ width: { left: TOK_BORDER_W }, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })

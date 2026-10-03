@@ -3,4 +3,4 @@ for (const probe of ['test-conventional-typography.mjs', 'test-conventional-typo
   process.stdout.write(execFileSync(process.execPath, [new URL(`./${probe}`, import.meta.url).pathname,
     '--fixture=reader-static-chrome-typography-baseline.json', ...(process.argv.includes('--verify-migration-source') ? ['--verify-migration-source'] : [])], { encoding: 'utf8' }));
 }
-console.log('PASS reader static chrome: 230 carriers; eleven dynamic-size consumers remain explicitly OPEN for the bounded-motion batch');
+console.log('PASS reader static chrome: 230 baseline carriers; audited finite-state successors are accepted without freezing business sources');

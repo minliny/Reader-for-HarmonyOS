@@ -1,3 +1,4 @@
+import { TYPE_READER_THEME_SUMMARY_PHONE, TYPE_READER_THEME_SUMMARY_TABLET } from '../common/ReaderTypography';
 import { TYPE_READER_APPEARANCE_QUICK_COMPAT_COMPACT_FONT_CELL_PREVIEW, TYPE_READER_APPEARANCE_QUICK_COMPAT_FONT_SECTION_LABEL, TYPE_READER_APPEARANCE_QUICK_COMPAT_THEME_SECTION_LABEL } from '../common/ReaderTypography';
 import { readerControlAppearanceThemeSwatch, readerControlAppearanceThemeLabel } from './ReaderControlAppearanceStyle';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -85,10 +86,10 @@ export struct ReaderAppearanceModulePanel {
           .width(88)
           .height(9)
           .margin({ left: this.themeSummaryGap(), top: 3.95 })
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Medium)
-          .fontSize(this.isTablet ? 8 : 7.5)
-          .lineHeight(8)
+          .fontFamily(this.isTablet ? TYPE_READER_THEME_SUMMARY_TABLET.fontFamily : TYPE_READER_THEME_SUMMARY_PHONE.fontFamily)
+          .fontWeight(this.isTablet ? TYPE_READER_THEME_SUMMARY_TABLET.fontWeight : TYPE_READER_THEME_SUMMARY_PHONE.fontWeight)
+          .fontSize(this.isTablet ? TYPE_READER_THEME_SUMMARY_TABLET.fontSizeFp : TYPE_READER_THEME_SUMMARY_PHONE.fontSizeFp)
+          .lineHeight((this.isTablet ? TYPE_READER_THEME_SUMMARY_TABLET.lineHeightFp : TYPE_READER_THEME_SUMMARY_PHONE.lineHeightFp) as number)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.End)
           .maxLines(1);

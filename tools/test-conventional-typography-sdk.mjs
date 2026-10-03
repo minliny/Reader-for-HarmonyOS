@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { auditTypographyConsumers, typographyProperties } from './lib/reader-typography-consumer-audit.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { typographySuccessorFile, typographySuccessorNode } from './lib/reader-typography-migration-fixture.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 
 const fixtureArgument = process.argv.find(argument => argument.startsWith('--fixture='));
@@ -15,7 +16,9 @@ const sites = [];
 for (const file of baseline.files) {
   const source = readFileSync(new URL(`../${file.path}`, import.meta.url), 'utf8');
   const consumers = auditTypographyConsumers(source, file.path), used = new Set();
-  for (const expected of file.nodes) {
+  const successor = typographySuccessorFile(baseline, file.path);
+  for (const originalExpected of file.nodes) {
+    const expected = typographySuccessorNode(originalExpected, successor);
     const actual = consumers.find(node => !used.has(node) && node.method === (file.path.endsWith('/SettingsPage.ets') && expected.method === 'buildGeneral' ? 'operationFeedback' : expected.method) && node.kind === expected.kind &&
       node.modifiers.fontSize?.expression === expected.changes.fontSize);
     assert.ok(actual, `${file.path}/${expected.method}: actual SDK parsed consumer`);

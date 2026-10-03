@@ -1,4 +1,5 @@
 import { ReaderProgressProducerHost, type ReaderProgressProducerIntent, type ReaderContinuousProgressDependencies } from './ReaderProgressProducerHost';
+import { TYPE_READER_READING_FAILURE_TITLE, TYPE_READER_READING_FAILURE_DETAIL } from '../common/ReaderTypography';
 import { ReaderParagraphLayoutOwner } from './ReaderParagraphLayoutOwner';
 import { ReaderPhysicalPaginationOwner } from './ReaderPhysicalPaginationOwner';
 import type { JsonObject } from '@reader/core-harmony';
@@ -13546,11 +13547,11 @@ export struct ReadingExperience {
     Scroll() {
       Column({ space: 20 }) {
         Text(this.sourceSwitchFailureMessage.length > 0 ? '换源未完成' : '正文暂时无法显示')
-          .fontSize(20)
-          .fontWeight(FontWeight.Medium)
+          .fontSize(TYPE_READER_READING_FAILURE_TITLE.fontSizeFp)
+          .fontWeight(TYPE_READER_READING_FAILURE_TITLE.fontWeight as number)
           .fontColor(readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink);
         Text(this.sourceSwitchFailureMessage.length > 0 ? this.sourceSwitchFailureMessage : this.failureCode)
-          .fontSize(16)
+          .fontSize(TYPE_READER_READING_FAILURE_DETAIL.fontSizeFp)
           .fontColor(readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink)
           .width('100%');
         Button('重试')

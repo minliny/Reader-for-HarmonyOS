@@ -1,3 +1,4 @@
+import { TYPE_READER_REPLACE_RULE_NAME } from '../common/ReaderTypography';
 import { TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL, TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE, TYPE_READER_REPLACE_RETAINED_EDITOR_FIELDS_LABEL, TYPE_READER_REPLACE_RETAINED_EDITOR_FLAG_LABEL, TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_INPUT, TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_LABEL, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_LABEL_SECONDARY, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_TITLE, TYPE_READER_REPLACE_RETAINED_PREVIEW_CONTENT_VALUE, TYPE_READER_REPLACE_RETAINED_QUICK_BACK_BACK, TYPE_READER_REPLACE_RETAINED_RULE_ROW_META, TYPE_READER_REPLACE_RETAINED_RULE_ROW_PATTERN, TYPE_READER_REPLACE_RETAINED_STATUS_CONTENT_STATUS, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE, TYPE_READER_REPLACE_RETAINED_TEXT_ACTION_LABEL, TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PathShape } from '@ohos.arkui.shape';
@@ -383,10 +384,10 @@ export struct ReaderControlReplaceContent {
             this.perform(async (): Promise<void> => this.onToggle(current, !current.isEnabled));
           }
         });
-      // M-02: frame.nameSize is the fixed Full native font, never morph-scaled.
+      // M-02: the shared rule-name role is fixed Full native typography, never morph-scaled.
       // Keep the text box movement; the RuleList parent owns source clipping.
-      Text(rule().name).fontFamily('ReaderNotoSansSC').fontSize(this.frame().nameSize)
-        .fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+      Text(rule().name).fontFamily(TYPE_READER_REPLACE_RULE_NAME.fontFamily).fontSize(TYPE_READER_REPLACE_RULE_NAME.fontSizeFp)
+        .fontWeight(TYPE_READER_REPLACE_RULE_NAME.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .width(Math.max(0, this.frame().list.width - this.frame().rowPadding * 2 - this.frame().toggleWidth -
           10 - 75 * this.frame().progress))
         .height(17).position({ x: this.frame().rowPadding + this.frame().toggleWidth + 10,

@@ -1,3 +1,4 @@
+import { TYPE_READER_TTS_CHOICE_REGULAR, TYPE_READER_TTS_CHOICE_SELECTED, TYPE_READER_TTS_CONFIGURATION_TITLE, TYPE_READER_TTS_MANAGER_TITLE, TYPE_READER_TTS_VOICE_REGULAR, TYPE_READER_TTS_VOICE_SELECTED } from '../common/ReaderTypography';
 import { TYPE_READER_TTS_CONFIG_BUILD_LABEL, TYPE_READER_TTS_CONFIG_BUILD_STATUS, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY, TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE, TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT, TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY, TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL, TYPE_READER_TTS_CONFIG_MANAGER_FORM_STATUS, TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import type { ReaderTtsEngineOption } from './ReaderTtsFullPanel';
@@ -119,8 +120,8 @@ export struct ReaderTtsConfigOverlay {
   private configurationHeader() {
     Row({ space: 8 }) {
       if (this.manager) { Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_online_engine_theme_night') : $r('app.media.reader_tts_online_engine'))).width(20).height(20); }
-      Text(this.title).layoutWeight(1).fontFamily('ReaderNotoSansSCUIBold')
-        .fontSize(this.manager ? 15 : 12).fontWeight(FontWeight.Bold)
+      Text(this.title).layoutWeight(1).fontFamily(this.manager ? TYPE_READER_TTS_MANAGER_TITLE.fontFamily : TYPE_READER_TTS_CONFIGURATION_TITLE.fontFamily)
+        .fontSize(this.manager ? TYPE_READER_TTS_MANAGER_TITLE.fontSizeFp : TYPE_READER_TTS_CONFIGURATION_TITLE.fontSizeFp).fontWeight(this.manager ? TYPE_READER_TTS_MANAGER_TITLE.fontWeight : TYPE_READER_TTS_CONFIGURATION_TITLE.fontWeight)
         .fontColor(readerAppColor('TOK_TTS_INK', this.appThemeScheme));
       Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_make_close_theme_night') : $r('app.media.reader_tts_make_close'))).width(16).height(16)
         .responseRegion({ x: -6, y: -6, width: 28, height: 28 }).enabled(!this.busy)
@@ -222,8 +223,8 @@ export struct ReaderTtsConfigOverlay {
       }
       Column({ space: 0 }) {
         Text(this.voicePicker ? choice.label.split(' · ')[0] : choice.label).width('100%')
-          .fontFamily(choice.id === this.selectedId ? 'ReaderNotoSansSCUIBold' : 'ReaderNotoSansSCUIMedium').fontSize(this.voicePicker ? 13 : 12).lineHeight(17)
-          .fontWeight(choice.id === this.selectedId ? FontWeight.Bold : FontWeight.Medium,
+          .fontFamily(this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.fontFamily : TYPE_READER_TTS_VOICE_REGULAR.fontFamily) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.fontFamily : TYPE_READER_TTS_CHOICE_REGULAR.fontFamily)).fontSize(this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.fontSizeFp : TYPE_READER_TTS_VOICE_REGULAR.fontSizeFp) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.fontSizeFp : TYPE_READER_TTS_CHOICE_REGULAR.fontSizeFp)).lineHeight((this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.lineHeightFp : TYPE_READER_TTS_VOICE_REGULAR.lineHeightFp) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.lineHeightFp : TYPE_READER_TTS_CHOICE_REGULAR.lineHeightFp)) as number)
+          .fontWeight(this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.fontWeight : TYPE_READER_TTS_VOICE_REGULAR.fontWeight) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.fontWeight : TYPE_READER_TTS_CHOICE_REGULAR.fontWeight),
             { enableVariableFontWeight: true })
           .fontColor(choice.id === this.selectedId ? readerAppColor('TOK_TTS_TEAL', this.appThemeScheme) : readerAppColor('TOK_TTS_INK', this.appThemeScheme))
           .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });

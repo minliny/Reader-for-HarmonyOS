@@ -378,11 +378,11 @@ if (readerBuilderSdkAvailable) {
     assert.ok(source.includes(before), `mutation must replace real production expression: ${before}`);
     return source.replace(before, after);
   };
-  assert.throws(() => checkMountedRuleTypography(mutate('.fontSize(this.frame().nameSize)',
+  assert.throws(() => checkMountedRuleTypography(mutate('.fontSize(TYPE_READER_REPLACE_RULE_NAME.fontSizeFp)',
     '.fontSize(9 + 3 * this.frame().progress)')), /actual mounted rule-name Text stays 12/,
     'actual SDK observers reject reintroduced 9→12 font growth');
-  assert.throws(() => checkMountedRuleTypography(mutate('.fontSize(this.frame().nameSize)',
-    '.fontSize(this.frame().nameSize).scale({ x: 0.75 + 0.25 * this.frame().progress, y: 0.75 + 0.25 * this.frame().progress })')),
+  assert.throws(() => checkMountedRuleTypography(mutate('.fontSize(TYPE_READER_REPLACE_RULE_NAME.fontSizeFp)',
+    '.fontSize(TYPE_READER_REPLACE_RULE_NAME.fontSizeFp).scale({ x: 0.75 + 0.25 * this.frame().progress, y: 0.75 + 0.25 * this.frame().progress })')),
     /text transform/, 'a parent-approved font cannot conceal a glyph scale regression');
   assert.throws(() => checkMountedRuleTypography(mutate('.height(this.frame().rowHeight).clip(false)',
     '.height(this.frame().rowHeight).clip(true)')), /no blanket layout clip/,
