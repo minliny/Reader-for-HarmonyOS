@@ -4,7 +4,7 @@ import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { ReaderNativeAlertOwner } from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { boundedSurfaceSdk, boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
-import { choiceSource, resolveReaderChoiceSpec } from './lib/reader-choice-row-probe.mjs';
+import { choiceSource, resolveReaderChoiceSpec, compileReaderChoiceLabelModifier } from './lib/reader-choice-row-probe.mjs';
 import { menuSource, ReaderMenuActionView } from './lib/reader-action-menu-probe.mjs';
 const read=path=>readFileSync(new URL(`../entry/src/main/ets/${path}.ets`,import.meta.url),'utf8');
 const settingsSource=read('features/settings/SettingsPage'),sourceSource=read('features/source/SourceManagementPage'),shelfSource=read('features/bookshelf/BookshelfShell');
@@ -26,7 +26,7 @@ const SourceListDataSource=new Function(stripTypeScriptTypes(classSource)+';retu
 const inertNative=new Proxy({}, {get:(_,key)=>key==='name'?'PointerNativeBoundary':()=>inertNative});
 function harness(){
   const p=boundedSurfaceSdk(),finishes=[];
-  Object.assign(p.deps,{ReaderNativeAlertOwner,SourceListDataSource,settingsSelectionGeneration:0,sourceTemporaryGeneration:0,bookshelfTemporaryGeneration:0,
+  Object.assign(p.deps,{ReaderNativeAlertOwner,SourceListDataSource,ReaderChoiceLabelModifier:compileReaderChoiceLabelModifier(),settingsSelectionGeneration:0,sourceTemporaryGeneration:0,bookshelfTemporaryGeneration:0,
     GROUP_FILTER_WIDTH:350,GROUP_SELECT_WIDTH:276,BOOKSHELF_WIDE_BREAKPOINT:600,READER_FLOATING_TOP_BAR_HEIGHT:58,
     OPTION_H:36,SELECT_PAD:10,CHEVRON_GAP:8,CHEVRON_W:12,CHEVRON_H:8,SELECT_CHROME:40,
     APPEARANCE_SELECT_OPTION_HEIGHT:25,appearanceSelectMenuHeight:n=>n*25,
