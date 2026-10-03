@@ -1,9 +1,10 @@
+import { ReadingRecordRecoveryError } from '../entry/src/main/ets/features/reading/ReaderReadingRecordState.ts';
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 let diagnosticFails = false;
 const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
-  ['finishExit'], { hilog: { warn() { if (diagnosticFails) throw Error('diagnostic unavailable'); } } });
+  ['finishExit'], { ReadingRecordRecoveryError, hilog: { warn() { if (diagnosticFails) throw Error('diagnostic unavailable'); } } });
 
 function fixture() {
   let failed = true;

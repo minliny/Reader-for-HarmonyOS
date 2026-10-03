@@ -22,7 +22,7 @@ function fixture() {
     events.push(['release-diagnostic']); if (diagnosticFails) throw Error('diagnostic unavailable');
   });
   const owner = Object.assign(new ResourceReader(), {
-    readingImageResources: resources, geometryImageRequests: new Map(),
+    readingImageResources: resources, readingRecordHost: { retire() {} }, geometryImageRequests: new Map(),
     chapter: { images: [] }, chapterWindow: { retainedImages: () => [], clear: () => events.push(['chapter-clear']) },
     visibleFragments: [], mounted: true, lifecycleToken: 1, isReaderIdentityCurrent: () => false,
     bookTurnSession: { setEventListener() {} }, quickSearchPublication: { cancel() {} },

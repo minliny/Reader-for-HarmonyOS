@@ -1,3 +1,5 @@
+import { ReaderReadingRecordHost } from './ReaderReadingRecordHost';
+import { ReadingRecordRecoveryError } from './ReaderReadingRecordState';
 import { ReaderReadingImageResources, sameReaderReadingImageResource } from './ReaderReadingImageResources';
 import { ReaderProgressProducerHost, type ReaderProgressProducerIntent, type ReaderContinuousProgressDependencies } from './ReaderProgressProducerHost';
 import { TYPE_READER_READING_FAILURE_TITLE, TYPE_READER_READING_FAILURE_DETAIL } from '../common/ReaderTypography';
@@ -900,7 +902,6 @@ const PAGE_TURN_PREPARATION_RETRY_BASE_MS = 250;
 const PAGE_TURN_PREPARATION_RETRY_MAX_MS = 2000;
 const PAGE_TURN_PREPARATION_RETRY_LIMIT = 16;
 /** Persist real foreground reading time in bounded atomic deltas. */
-const READING_RECORD_FLUSH_INTERVAL_MS = 30000;
 /** One visible search page; Core returns an explicit hasMore bit for the rest. */
 const READER_CONTENT_SEARCH_PAGE_SIZE = 50;
 
@@ -1439,10 +1440,9 @@ export struct ReadingExperience {
   @State private exitRequested: boolean = false;
   private exitDelivered: boolean = false;
   private exitAttemptGeneration: number = 0;
-  private readingRecordActiveSinceMs: number = 0;
-  private readingRecordPendingMillis: number = 0;
-  private readingRecordTimer: number = -1;
-  private readingRecordFlushTail: Promise<void> = Promise.resolve();
+  private readonly readingRecordHost: ReaderReadingRecordHost = new ReaderReadingRecordHost(
+    this.readingRecordGateway, (): string => this.bookTitle.trim().length > 0 ? this.bookTitle.trim() : this.bookId,
+    (error: Error): void => hilog.error(0x5244, 'Reader', '%{private}s', `Reading duration: ${this.errorMessage(error)}`));
   private chineseConversionMutationGeneration: number = 0;
   private contentMetricsLoading: boolean = false;
   private contentMetricIndex: LocalReadingContentMetricIndex = new LocalReadingContentMetricIndex();
@@ -1521,9 +1521,7 @@ export struct ReadingExperience {
     this.applyWindowPolicyForChromeOwner();
     this.exitRequested = false;
     this.exitDelivered = false;
-    this.readingRecordActiveSinceMs = 0;
-    this.readingRecordPendingMillis = 0;
-    this.clearReadingRecordTimer();
+    this.readingRecordHost.retire();
     this.commitInFlight = false;
     this.progressProducers.retireContinuous();
     this.continuousUserInteractionActive = false;
@@ -1931,9 +1929,7 @@ export struct ReadingExperience {
     this.clearPageChromeStatusTimer();
     this.pendingPageChromeClockText = undefined;
     this.pendingSessionCapsuleType = undefined;
-    this.clearReadingRecordTimer();
-    this.readingRecordActiveSinceMs = 0;
-    this.readingRecordPendingMillis = 0;
+    this.readingRecordHost.retire();
     const ttsCoordinator = this.ttsCoordinator;
     this.ttsConfigurationHost?.retire();
     this.ttsConfigurationHost = undefined;
@@ -6205,8 +6201,9 @@ export struct ReadingExperience {
         this.onExitCancelled();
         this.beginReadingRecordClock(lifecycleToken);
       };
-      const exitNotice = this.showReaderAlert('confirmation', { title: '阅读进度尚未保存',
-        message: '请重试保存后退出。当前阅读位置已保留。',
+      const durationPending = error instanceof ReadingRecordRecoveryError;
+      const exitNotice = this.showReaderAlert('confirmation', { title: durationPending ? '阅读时长尚未确认' : '阅读进度尚未保存',
+        message: durationPending ? (error as ReadingRecordRecoveryError).message : '请重试保存后退出。当前阅读位置已保留。',
         primaryButton: { value: '重试保存并退出', action: (): void => {
           if (claimDecision()) this.beginExit();
         } },
@@ -8333,7 +8330,9 @@ export struct ReadingExperience {
       this.screenAwakeLease?.setForeground(false);
       this.captureReadingRecordElapsed(false);
       this.clearReadingRecordTimer();
-      void this.flushReadingRecord();
+      void this.flushReadingRecord().catch((error: Error): void => {
+        try { hilog.error(0x5244, 'Reader', '%{private}s', `Reading duration: ${this.errorMessage(error)}`); } catch (_diagnosticError) {}
+      });
       this.pauseAutoPage('background');
       const coordinator = this.ttsCoordinator;
       if (coordinator !== undefined) {
@@ -8365,83 +8364,19 @@ export struct ReadingExperience {
   }
 
   private beginReadingRecordClock(lifecycleToken: number): void {
-    if (!this.isSessionActive(lifecycleToken) || !this.appForeground || this.exitRequested) {
-      return;
-    }
-    if (this.readingRecordActiveSinceMs <= 0) {
-      this.readingRecordActiveSinceMs = Date.now();
-    }
-    this.armReadingRecordTimer(lifecycleToken);
+    const sourceId = this.sourceId;
+    const bookId = this.bookId;
+    this.readingRecordHost.begin((): boolean => this.isSessionActive(lifecycleToken) &&
+      sourceId === this.sourceId && bookId === this.bookId && this.appForeground && !this.exitRequested);
   }
 
-  private armReadingRecordTimer(lifecycleToken: number): void {
-    this.clearReadingRecordTimer();
-    if (!this.isSessionActive(lifecycleToken) || this.readingRecordActiveSinceMs <= 0) {
-      return;
-    }
-    this.readingRecordTimer = setTimeout((): void => {
-      this.readingRecordTimer = -1;
-      if (!this.isSessionActive(lifecycleToken) || !this.appForeground || this.exitRequested) {
-        return;
-      }
-      this.captureReadingRecordElapsed(true);
-      void this.flushReadingRecord();
-      this.armReadingRecordTimer(lifecycleToken);
-    }, READING_RECORD_FLUSH_INTERVAL_MS);
-  }
+  private clearReadingRecordTimer(): void { this.readingRecordHost.clearTimer(); }
 
-  private clearReadingRecordTimer(): void {
-    if (this.readingRecordTimer >= 0) {
-      clearTimeout(this.readingRecordTimer);
-      this.readingRecordTimer = -1;
-    }
-  }
+  private captureReadingRecordElapsed(continueClock: boolean): void { this.readingRecordHost.capture(continueClock); }
 
-  private captureReadingRecordElapsed(continueClock: boolean): void {
-    if (this.readingRecordActiveSinceMs <= 0) {
-      return;
-    }
-    const now = Date.now();
-    const elapsed = Math.max(0, now - this.readingRecordActiveSinceMs);
-    this.readingRecordActiveSinceMs = continueClock ? now : 0;
-    if (elapsed <= 0) {
-      return;
-    }
-    const accumulated = this.readingRecordPendingMillis + elapsed;
-    this.readingRecordPendingMillis = Number.isSafeInteger(accumulated) ? accumulated : Number.MAX_SAFE_INTEGER;
-  }
+  private flushReadingRecord(): Promise<void> { return this.readingRecordHost.flush(); }
 
-  private flushReadingRecord(): Promise<void> {
-    if (this.readingRecordPendingMillis <= 0) {
-      return this.readingRecordFlushTail;
-    }
-    const elapsedMillis = this.readingRecordPendingMillis;
-    const readAt = Date.now();
-    const bookName = this.bookTitle.trim().length > 0 ? this.bookTitle.trim() : this.bookId;
-    const lifecycleToken = this.lifecycleToken;
-    this.readingRecordPendingMillis = 0;
-    this.readingRecordFlushTail = this.readingRecordFlushTail
-      .then(async (): Promise<void> => {
-        await this.readingRecordGateway.accumulate(bookName, elapsedMillis, readAt);
-      })
-      .catch((error: Error): void => {
-        if (this.isMountedToken(lifecycleToken) && !this.exitDelivered) {
-          const restored = this.readingRecordPendingMillis + elapsedMillis;
-          this.readingRecordPendingMillis = Number.isSafeInteger(restored) ? restored : Number.MAX_SAFE_INTEGER;
-        }
-        hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience read-record flush failed: ${this.errorMessage(error)}`);
-      });
-    return this.readingRecordFlushTail;
-  }
-
-  private async flushReadingRecordForExit(): Promise<void> {
-    await this.flushReadingRecord();
-    // One bounded retry covers a transient Core transaction boundary while
-    // preserving the exit guarantee that no new write starts after unmount.
-    if (this.readingRecordPendingMillis > 0) {
-      await this.flushReadingRecord();
-    }
-  }
+  private flushReadingRecordForExit(): Promise<void> { return this.readingRecordHost.flushForExit(); }
 
   private onControlObscuredChanged(): void {
     this.onControlInputBoundaryChanged();
