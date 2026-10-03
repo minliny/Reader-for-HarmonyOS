@@ -1,3 +1,4 @@
+import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../app/ReaderPersistedReceiptProjection';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
@@ -37,6 +38,23 @@ export interface ReadingOfflineDependencies {
  * durable queue and lease algorithm; this owner has one mutex, one progress
  * snapshot and one receipt, with no body store or generic retry machinery. */
 export class ReadingOfflineHost {
+  private static retainedRuntime: ReadingGatewayRuntime | undefined;
+  private static retainedHost: ReadingOfflineHost | undefined;
+
+  /** A recreated Index in the same Runtime shares accepted writes/mutex.
+   * A lookup from an obsolete Runtime must not replace the current cache. */
+  static forRuntime(runtime: ReadingGatewayRuntime, ownsRuntime: () => boolean,
+    deliveryFailed?: (error: Error) => void): ReadingOfflineHost | undefined {
+    let current = false;
+    try { current = ownsRuntime(); } catch (_error) { return undefined; }
+    if (!current) return undefined;
+    if (ReadingOfflineHost.retainedRuntime === runtime && ReadingOfflineHost.retainedHost !== undefined) return ReadingOfflineHost.retainedHost;
+    const host = new ReadingOfflineHost({ gateway: new ReadingOfflineGateway(runtime), ownsRuntime, deliveryFailed });
+    ReadingOfflineHost.retainedRuntime = runtime;
+    ReadingOfflineHost.retainedHost = host;
+    return host;
+  }
+
   private readonly dependencies: ReadingOfflineDependencies;
   private active: boolean = false;
   private generation: number = 0;

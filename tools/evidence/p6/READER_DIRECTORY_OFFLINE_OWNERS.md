@@ -14,7 +14,7 @@ Per-call ReaderWriteEvidence is marked immediately at actual Gateway request inv
 
 ## Exact interfaces for Index integrator
 
-Construct once per captured ReaderRuntimeOwner, with the actual gateway and `ownsRuntime: () => ReaderRuntimeOwner.isCurrent(owner)`; never call throwing `current()` inside boolean admission. Replace the leaf when Runtime changes; retain it across navigation within one Runtime. No parallel local mutex in Index.
+Use each feature-local `Host.forRuntime(runtime, ownsRuntime, deliveryFailed?)` factory (returns Host or undefined), with `ownsRuntime: () => ReaderRuntimeOwner.isCurrent(owner)`; never call throwing `current()` inside boolean admission. The finite static factory retains one exact Runtime/Host pair: recreated Index shares accepted mutation/mutex; an obsolete Runtime lookup returns undefined and cannot replace the successor. It constructs the actual Gateway, does not add owners to GodRuntime. No parallel local mutex in Index.
 
 Directory binding: `{book,current,currentEntries,emitEntries,emitOperation?,failed?,onSettled?}`. `current` checks captured Runtime/nav/session/book sourceId+bookId+title+author; callback errors are delivery failures only. Public async methods: `createChapterStart(chapterIndex,binding)`, `createPosition(LocalReadingPositionBookmarkInput,binding)`, `deleteBookmarks(times,binding)`, `load(binding)`, `reconcile(writeGeneration,binding)`, `busy()`, `snapshot()`.
 

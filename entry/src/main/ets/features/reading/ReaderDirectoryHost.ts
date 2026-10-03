@@ -1,3 +1,4 @@
+import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../app/ReaderPersistedReceiptProjection';
 import type { CommitReadbackPhase } from '../../app/ReaderOperationFacts';
@@ -38,6 +39,23 @@ export interface ReaderDirectoryDependencies {
  * navigation and its current TOC; this finite owner retains one receipt and
  * one mutex, never another bookmark database or generic task journal. */
 export class ReaderDirectoryHost {
+  private static retainedRuntime: ReadingGatewayRuntime | undefined;
+  private static retainedHost: ReaderDirectoryHost | undefined;
+
+  /** A recreated Index in the same Runtime shares accepted writes/mutex.
+   * A lookup from an obsolete Runtime must not replace the current cache. */
+  static forRuntime(runtime: ReadingGatewayRuntime, ownsRuntime: () => boolean,
+    deliveryFailed?: (error: Error) => void): ReaderDirectoryHost | undefined {
+    let current = false;
+    try { current = ownsRuntime(); } catch (_error) { return undefined; }
+    if (!current) return undefined;
+    if (ReaderDirectoryHost.retainedRuntime === runtime && ReaderDirectoryHost.retainedHost !== undefined) return ReaderDirectoryHost.retainedHost;
+    const host = new ReaderDirectoryHost({ gateway: new LocalReadingFlowGateway(runtime), ownsRuntime, deliveryFailed });
+    ReaderDirectoryHost.retainedRuntime = runtime;
+    ReaderDirectoryHost.retainedHost = host;
+    return host;
+  }
+
   private readonly dependencies: ReaderDirectoryDependencies;
   private generation: number = 0;
   private active: boolean = false;

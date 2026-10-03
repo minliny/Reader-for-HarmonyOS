@@ -16,7 +16,7 @@ function fixture(){let runtimeCurrent=true,routeCurrent=true;const delivered=[],
   if(method==='bookmark.delete'){this.rows=this.rows.filter(r=>r.time!==params.time);if(this.deleteFailAt===params.time)throw Error('lost delete ACK');return{data:{time:params.time,deleted:true}};}
   throw Error(method);
  }};
- const host=new ReaderDirectoryHost({gateway:new LocalReadingFlowGateway(rpc),ownsRuntime:()=>runtimeCurrent});
+ const host=ReaderDirectoryHost.forRuntime(rpc,()=>runtimeCurrent);
  const binding={book,current:()=>routeCurrent,currentEntries:()=>entries,emitEntries:v=>entries=v,emitOperation:o=>delivered.push(clone(o)),failed:()=>{},onSettled:v=>settled.push(v)};
  const create=()=>host.createPosition({bookName:book.title,bookAuthor:book.author,chapterIndex:0,chapterOffset:0,chapterTitle:'Chapter'},binding);
  return{rpc,host,binding,create,delivered,settled,entries:()=>entries,setEntries:v=>entries=v,retire:()=>routeCurrent=false,unset:()=>runtimeCurrent=false,restore:()=>{routeCurrent=runtimeCurrent=true;}};
@@ -43,5 +43,12 @@ for(const retire of ['retire','unset']){
 }
 {
  const f=fixture();f.binding.emitOperation=()=>{throw Error('presentation failed');};await f.create();assert.equal(f.host.snapshot().projection.receipt.fact,'confirmedCurrent','presentation exception does not alter mutation receipt');
+}
+{
+ const f=fixture();assert.equal(ReaderDirectoryHost.forRuntime(f.rpc,()=>true),f.host,'same Runtime Index reconstruction retains exact Host');
+ f.unset();assert.equal(ReaderDirectoryHost.forRuntime(f.rpc,()=>false),undefined);
+ const successor=fixture();assert.notEqual(successor.host,f.host);
+ assert.equal(ReaderDirectoryHost.forRuntime(f.rpc,()=>false),undefined,'retired lookup cannot replace successor cached owner');
+ assert.equal(ReaderDirectoryHost.forRuntime(successor.rpc,()=>true),successor.host);
 }
 console.log('PASS actual LocalReadingFlowGateway -> ReaderDirectoryHost: qualified ACK/unknown/partial/retirement/runtime-unset/read-only reconciliation/foreign keys/presentation isolation');

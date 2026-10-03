@@ -16,7 +16,7 @@ function fixture(){let route=true,owner=true,entries=[{index:0,title:'Chapter',l
   if(method==='cache.clear'){assert.equal(options.shouldCancel,undefined);if(this.pause)await this.pause.promise;this.state='missing';this.bytes=0;if(this.lost)throw Error('lost clear ACK');return{data:{scope:'book'}};}
   throw Error(method);
  },supportsCoreCapability:c=>c==='chapter.content.cacheOnly.v1',async markOfflineImageChapterComplete(){this.manifest=true;},async isOfflineImageChapterComplete(){return this.manifest;},async clearOfflineBookImages(){this.calls.push({method:'host.clearImages'});if(this.cleanupFail)throw Error('image cleanup failed');this.manifest=false;}};
- const host=new ReadingOfflineHost({gateway:new ReadingOfflineGateway(rpc),ownsRuntime:()=>owner});
+ const host=ReadingOfflineHost.forRuntime(rpc,()=>owner);
  const binding={session,current:()=>route,currentEntries:()=>entries,emitEntries:e=>entries=e,emitOperation:o=>delivered.push(clone(o)),failed:()=>{},onProgress:()=>{}};
  return {rpc,host,binding,delivered,entries:()=>entries,retire:()=>route=false,unset:()=>owner=false,restore:()=>route=owner=true};
 }
@@ -39,5 +39,12 @@ for(const action of ['downloadChapter','clearBook'])for(const retire of ['retire
 }
 {
  const f=fixture();f.rpc.readFail=true;await f.host.downloadBook(f.binding);assert.equal(f.host.snapshot().projection.receipt.fact,'confirmedRefreshFailed');f.rpc.readFail=false;const count=f.rpc.calls.length;await f.host.reconcile(f.host.snapshot().generation,f.binding);assert.equal(f.host.snapshot().projection.receipt.confirmation,'confirmed');assert.ok(f.rpc.calls.slice(count).every(c=>c.method==='cache.book.status'),'recovery only canonical status');
+}
+{
+ const f=fixture();assert.equal(ReadingOfflineHost.forRuntime(f.rpc,()=>true),f.host,'same Runtime Index reconstruction retains exact Host');
+ f.unset();assert.equal(ReadingOfflineHost.forRuntime(f.rpc,()=>false),undefined);
+ const successor=fixture();assert.notEqual(successor.host,f.host);
+ assert.equal(ReadingOfflineHost.forRuntime(f.rpc,()=>false),undefined,'retired lookup cannot replace successor cached owner');
+ assert.equal(ReadingOfflineHost.forRuntime(successor.rpc,()=>true),successor.host);
 }
 console.log('PASS actual ReadingOfflineGateway -> ReadingOfflineHost: queue ACK/materialization/cleanup separation, cached partials, unknown pure reads, mutex, session retirement, terminal lease report and runtime-unset');
