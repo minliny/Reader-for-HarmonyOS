@@ -4513,6 +4513,174 @@
         "tools/test-rss-original-recovery-surface-sdk.mjs",
         "tools/test-rss-cold-index-consumers.mjs"
       ]
+    },
+    {
+      "id": "shared-ReaderCard",
+      "file": "entry/src/main/ets/features/common/ReaderCard.ets",
+      "component": "ReaderCard",
+      "registrationKind": "legacy-business-budget",
+      "specPolicy": "Three finite semantic ids; settings-category/sync-config resolve to the same standard spec, four sync-status sites retain r13. Only content Builder and measured cardWidth remain public; no bg/cardBorder/radius or caller appearance overrides. This exact producer still occupies its unchanged original100 backgroundColor1 budget row.",
+      "shape": {
+        "types": [],
+        "declarations": [
+          {
+            "name": "ReaderCard",
+            "publicFields": [
+              {
+                "name": "specId",
+                "type": "ReaderCardSpecId",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "cardWidth",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "content",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderCard",
+            "method": "build",
+            "property": "borderRadius",
+            "args": [
+              "resolveReaderCardSpec(this.specId).radius"
+            ]
+          },
+          {
+            "owner": "ReaderCard",
+            "method": "build",
+            "property": "border",
+            "args": [
+              "{ width: resolveReaderCardSpec(this.specId).borderWidth, color: readerAppColor(resolveReaderCardSpec(this.specId).borderRole, this.appThemeScheme) }"
+            ]
+          },
+          {
+            "owner": "ReaderCard",
+            "method": "build",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(resolveReaderCardSpec(this.specId).backgroundRole, this.appThemeScheme)"
+            ]
+          },
+          {
+            "owner": "ReaderCard",
+            "method": "build",
+            "property": "constraintSize",
+            "args": [
+              "{ maxWidth: resolveReaderCardSpec(this.specId).maxWidth }"
+            ]
+          },
+          {
+            "owner": "ReaderCard",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "this.cardWidth > 0 ? this.cardWidth : '100%'"
+            ]
+          }
+        ],
+        "implementation": "import { readerAppColor } from './ReaderThemeRegistry';\nimport { ReaderCardSpecId, resolveReaderCardSpec } from './ReaderCardSpecs';\n@Component\nexport struct ReaderCard extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        specId?: ReaderCardSpecId;\n        cardWidth?: number;\n        content?: () => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    specId: ReaderCardSpecId = 'settings-category';\n    @Prop\n    cardWidth: number = 0;\n    @BuilderParam\n    content: () => void;\n    build() {\n            .width<\n    >(this.cardWidth > 0 ? this.cardWidth : '100%')\n            .constraintSize<\n    >({ maxWidth: resolveReaderCardSpec(this.specId).maxWidth })\n            .backgroundColor<\n    >(readerAppColor(resolveReaderCardSpec(this.specId).backgroundRole, this.appThemeScheme))\n            .border<\n    >({ width: resolveReaderCardSpec(this.specId).borderWidth, color: readerAppColor(resolveReaderCardSpec(this.specId).borderRole, this.appThemeScheme) })\n            .borderRadius<\n    >(resolveReaderCardSpec(this.specId).radius);\n    }\n}\n"
+      },
+      "specSources": [
+        {
+          "file": "entry/src/main/ets/features/common/ReaderCardSpecs.ets",
+          "shape": {
+            "types": [
+              {
+                "name": "ReaderCardSpecId",
+                "type": "'settings-category' | 'sync-config' | 'sync-status'"
+              }
+            ],
+            "declarations": [],
+            "styles": [],
+            "implementation": "import type { ReaderAppColorRole } from './ReaderThemeRegistry';\nimport { TOK_BORDER_W, TOK_CONTENT_MAX_W_TABLET, TOK_RADIUS_MD } from './ReaderTokens';\nexport type ReaderCardSpecId = 'settings-category' | 'sync-config' | 'sync-status';\nexport interface ReaderCardSpec {\n    backgroundRole: ReaderAppColorRole;\n    borderRole: ReaderAppColorRole;\n    borderWidth: number;\n    radius: number;\n    maxWidth: number;\n}\nconst STANDARD_CARD: ReaderCardSpec = {\n    backgroundRole: 'TOK_CARD_BG', borderRole: 'TOK_BORDER',\n    borderWidth: TOK_BORDER_W, radius: TOK_RADIUS_MD, maxWidth: TOK_CONTENT_MAX_W_TABLET,\n};\nconst SYNC_STATUS_CARD: ReaderCardSpec = {\n    backgroundRole: 'TOK_SURFACE_SOLID', borderRole: 'app.SyncPage.CARD_BORDER_SOFT',\n    borderWidth: TOK_BORDER_W, radius: 13, maxWidth: TOK_CONTENT_MAX_W_TABLET,\n};\nexport function resolveReaderCardSpec(id: ReaderCardSpecId): ReaderCardSpec {\n    if (id === 'sync-status')\n        return SYNC_STATUS_CARD;\n    return STANDARD_CARD;\n}\n"
+          }
+        }
+      ],
+      "consumers": [
+        {
+          "file": "features/settings/CategorySection.ets",
+          "method": "features/settings/CategorySection.ets#CategorySection#build",
+          "component": "ReaderCard",
+          "specId": "'settings-category'",
+          "keys": [
+            "specId",
+            "cardWidth"
+          ]
+        },
+        {
+          "file": "features/sync/SyncPage.ets",
+          "method": "features/sync/SyncPage.ets#SyncPage#webdavSection",
+          "component": "ReaderCard",
+          "specId": "'sync-config'",
+          "keys": [
+            "specId",
+            "cardWidth"
+          ]
+        },
+        {
+          "file": "features/sync/SyncPage.ets",
+          "method": "features/sync/SyncPage.ets#SyncPage#manualActionsSection",
+          "component": "ReaderCard",
+          "specId": "'sync-status'",
+          "keys": [
+            "specId",
+            "cardWidth"
+          ]
+        },
+        {
+          "file": "features/sync/SyncPage.ets",
+          "method": "features/sync/SyncPage.ets#SyncPage#autoBackupSection",
+          "component": "ReaderCard",
+          "specId": "'sync-status'",
+          "keys": [
+            "specId",
+            "cardWidth"
+          ]
+        },
+        {
+          "file": "features/sync/SyncPage.ets",
+          "method": "features/sync/SyncPage.ets#SyncPage#emptyState",
+          "component": "ReaderCard",
+          "specId": "'sync-status'",
+          "keys": [
+            "specId",
+            "cardWidth"
+          ]
+        },
+        {
+          "file": "features/sync/SyncPage.ets",
+          "method": "features/sync/SyncPage.ets#SyncPage#historyRow",
+          "component": "ReaderCard",
+          "specId": "'sync-status'",
+          "keys": [
+            "specId",
+            "cardWidth"
+          ]
+        }
+      ],
+      "removalProofs": [
+        "docs/evidence/r0-r8-card-finite-spec-20261004.md",
+        "tools/fixtures/reader-card-illegal-input-before.json",
+        "tools/fixtures/reader-card-ui-baseline.json"
+      ],
+      "sdkProofs": [
+        "tools/test-reader-card-finite-specs.mjs",
+        "tools/lib/reader-card-probe.mjs"
+      ]
     }
   ],
   "legacyBusinessRowsSha256": "3f7f18a54b7bf56a1bb557d3c48574f3e9b4f7e869a25dce2541c04b30f924d0",

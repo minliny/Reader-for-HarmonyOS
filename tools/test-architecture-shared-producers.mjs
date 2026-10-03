@@ -5,8 +5,8 @@ import { verifyArchitectureRegistration, registeredProducerTypographySlots } fro
 const root=process.cwd(),baseline=JSON.parse(readFileSync('tools/architecture-consumer-baseline.json','utf8')),contract=JSON.parse(readFileSync('tools/fixtures/architecture-shared-producers.json','utf8'));
 const inventory=JSON.parse(execFileSync(process.execPath,['tools/audit-architecture-consumers.mjs','--stdout=json'],{cwd:root,encoding:'utf8',maxBuffer:16*1024*1024,stdio:['ignore','pipe','ignore']}));
 const result=verifyArchitectureRegistration(inventory,baseline,contract,root);
-assert.equal(result.budgetRows,100,'legacy business private budgets are preserved');assert.equal(result.producers,9);
-assert.deepEqual(contract.producers.map(row=>row.component).sort(),['ReaderBoundedSurface','ReaderBoundedSurfaceActions','ReaderBoundedSurfaceHeader','ReaderButton','ReaderFormField','ReaderLabeledIconAction','ReaderSheetActionList','ReaderChoiceRow','RssOriginalRecoverySurface'].sort(),'only exact finite shared producers gain owner treatment');
+assert.equal(result.budgetRows,100,'legacy business private budgets are preserved');assert.equal(result.producers,10);
+assert.deepEqual(contract.producers.map(row=>row.component).sort(),['ReaderBoundedSurface','ReaderBoundedSurfaceActions','ReaderBoundedSurfaceHeader','ReaderButton','ReaderFormField','ReaderLabeledIconAction','ReaderSheetActionList','ReaderChoiceRow','RssOriginalRecoverySurface','ReaderCard'].sort(),'only exact finite shared producers gain owner treatment');
 const header='entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets',original=readFileSync(header,'utf8');
 const read=file=>file===header?original.replace('.fontSize(type.fontSizeFp)','.fontSize(99)'):readFileSync(file,'utf8');
 assert.notEqual(read(header),original);assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,contract,root,read),/finite shared physical inputs/,'same font call count cannot hide a private literal in a shared alias');
@@ -28,4 +28,21 @@ assert.throws(()=>verifyArchitectureRegistration(illegal,baseline,contract,root)
 const missingRssDelegate=structuredClone(inventory),rssWrapper=missingRssDelegate.rows.find(row=>row.file==='features/rss/RssOriginalRecoverySurface.ets');
 assert.ok(rssWrapper);const actualAction=rssWrapper.elements.findIndex(element=>element.kind==='ReaderRecoveryAction');assert.ok(actualAction>=0);rssWrapper.elements.splice(actualAction,1);
 assert.throws(()=>verifyArchitectureRegistration(missingRssDelegate,baseline,contract,root),/actual shared delegate edges changed/,'five incoming Page rows cannot hide a missing shared action implementation');
+const cardRow=inventory.rows.find(row=>row.file==='features/sync/SyncPage.ets');
+const originalCardCall=cardRow.elements.find(e=>e.kind==='ReaderCard');assert.ok(originalCardCall);
+for(const property of ['radius','bg','cardBorder']){
+ const negative=structuredClone(inventory),call=negative.rows.find(r=>r.file===cardRow.file).elements.find(e=>e.kind==='ReaderCard');
+ call.args[0]=call.args[0].replace('{ specId:', '{ '+property+': 99, specId:');
+ assert.throws(()=>verifyArchitectureRegistration(negative,baseline,contract,root),/illegal shared input shared-ReaderCard/,'removed appearance prop '+property+' cannot bypass finite Card contract');
+}
+const wrongVariant=structuredClone(inventory),wrongCard=wrongVariant.rows.find(r=>r.file===cardRow.file).elements.find(e=>e.kind==='ReaderCard');
+wrongCard.args[0]=wrongCard.args[0].replace("'sync-config'","'private99'");
+assert.throws(()=>verifyArchitectureRegistration(wrongVariant,baseline,contract,root),/producer\/consumer\/spec edges changed/,'unknown finite Card spec rejected');
+const overridden=structuredClone(inventory);overridden.rows.find(r=>r.file===cardRow.file).elements.find(e=>e.kind==='ReaderCard').modifiers.push({property:'borderRadius',args:['99']});
+assert.throws(()=>verifyArchitectureRegistration(overridden,baseline,contract,root),/caller privately overrides shared appearance/);
+for(const property of ['width','height','constraintSize','padding']){const shapeOverride=structuredClone(inventory);shapeOverride.rows.find(r=>r.file===cardRow.file).elements.find(e=>e.kind==='ReaderCard').modifiers.push({property,args:['99']});assert.throws(()=>verifyArchitectureRegistration(shapeOverride,baseline,contract,root),/caller privately overrides shared appearance/,'Card geometry goes through measured cardWidth, no outer '+property+' override');}
+const copiedMode=structuredClone(contract);copiedMode.producers.find(p=>p.component==='ReaderButton').registrationKind='legacy-business-budget';
+assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,copiedMode,root),/only the exact existing Card budget/,'Card historical budget policy is not a common-path exemption');
+const cardSource=readFileSync('entry/src/main/ets/features/common/ReaderCard.ets','utf8');
+assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,contract,root,file=>file.endsWith('/ReaderCard.ets')?cardSource.replace('.borderRadius(resolveReaderCardSpec(this.specId).radius)', '.borderRadius(99)'):readFileSync(file,'utf8')),/finite shared physical inputs/,'same-count literal99 in actual Card implementation rejected');
 console.log('PASS P0 actual UI/finite shared producer gate: unchanged100 budgets, exact producer/spec/consumer/interface/physical-inputs, retained outside100 policy; literal-same-count, wildcard, absent zero-style UI and arbitrary consumer override rejected. SDK proof suites are separate.');
