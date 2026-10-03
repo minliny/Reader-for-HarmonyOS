@@ -28,7 +28,6 @@ import {
 import {
   TOK_BORDER,
   TOK_BORDER_W,
-  TOK_CARD_BG,
   TOK_CONTENT_MAX_W_TABLET,
   TOK_CONTROL_INK,
   TOK_FIELD_SURFACE,
@@ -38,7 +37,6 @@ import {
   TOK_ON_PRIMARY,
   TOK_PAPER,
   TOK_PRIMARY_DARK,
-  TOK_RADIUS_MD,
   TOK_READ_PRIMARY,
   TOK_SCREEN_INSET,
   TOK_SETTING_ICON_BG,
@@ -49,7 +47,6 @@ import {
   TOK_SPACE_SM,
   TOK_SPACE_XS,
   TOK_SURFACE_PANEL_SOFT,
-  TOK_SURFACE_SOLID,
 } from '../common/ReaderTokens';
 
 // Sync Backup — rebuilt 2026-08-05 against live Figma nodes
@@ -182,7 +179,7 @@ export struct SyncPage {
   private webdavSection() {
     Column({ space: TOK_SPACE_XS }) {
       this.sectionHeadingDark('WebDAV 配置');
-      ReaderCard({ bg: readerAppColor('TOK_CARD_BG', this.appThemeScheme), cardBorder: readerAppColor('TOK_BORDER', this.appThemeScheme), radius: TOK_RADIUS_MD,
+      ReaderCard({ specId: 'sync-config',
         cardWidth: this.contentFrame().width }) {
         Column({ space: TOK_SPACE_XS }) {
           Text('连接信息')
@@ -273,7 +270,7 @@ export struct SyncPage {
   private manualActionsSection() {
     Column({ space: TOK_SPACE_XS }) {
       this.sectionHeadingMuted('前台手动备份');
-      ReaderCard({ bg: readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme), cardBorder: readerAppColor('app.SyncPage.CARD_BORDER_SOFT', this.appThemeScheme), radius: 13,
+      ReaderCard({ specId: 'sync-status',
         cardWidth: this.contentFrame().width }) {
         Column({ space: TOK_SPACE_SM }) {
           ReaderRecoveryNotice({ view: this.feedbackView(), actionLabel: this.recoveryLabel(),
@@ -357,7 +354,7 @@ export struct SyncPage {
   private autoBackupSection() {
     Column({ space: TOK_SPACE_XS }) {
       this.sectionHeadingMuted('自动备份（尚未启用）');
-      ReaderCard({ bg: readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme), cardBorder: readerAppColor('app.SyncPage.CARD_BORDER_SOFT', this.appThemeScheme), radius: 13,
+      ReaderCard({ specId: 'sync-status',
         cardWidth: this.contentFrame().width }) {
         Column() {
           this.gatedRow('保存位置', this.snapshot.saveLocation);
@@ -458,7 +455,7 @@ export struct SyncPage {
   // node) and is kept as-is, restyled to the new card tokens.
   @Builder
   private emptyState() {
-    ReaderCard({ bg: readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme), cardBorder: readerAppColor('app.SyncPage.CARD_BORDER_SOFT', this.appThemeScheme), radius: 13,
+    ReaderCard({ specId: 'sync-status',
       cardWidth: this.contentFrame().width }) {
       Column({ space: 0 }) {
         Text('暂无备份记录')
@@ -480,9 +477,7 @@ export struct SyncPage {
   @Builder
   private historyRow(entry: SyncHistoryEntry) {
     ReaderCard({
-      bg: readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme),
-      cardBorder: readerAppColor('app.SyncPage.CARD_BORDER_SOFT', this.appThemeScheme),
-      radius: 13,
+      specId: 'sync-status',
       cardWidth: this.contentFrame().width,
     }) {
       Column() {

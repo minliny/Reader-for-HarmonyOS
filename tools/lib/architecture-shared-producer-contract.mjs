@@ -66,7 +66,18 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
  for(const row of inventory.rows.filter(r=>r.elements.length))assert.ok(registered.has(row.file),'unregistered actual UI file: '+row.file);
  for(const row of baseline.uiPolicies??[]){assert.ok(row.reason?.length>20&&row.owner?.length>0&&row.kind?.length>0,'outside100 needs actual owner/reason');assert.ok(inventory.rows.some(r=>r.file===relative(row.file)&&r.elements.length),'orphan UI policy '+row.file);}
  for(const producer of contract.producers){
-  const registration=baseline.sharedOwners.find(r=>r.file===producer.file);assert.equal(registration?.contractId,producer.id,'shared owner must bind exact approved contract');
+  if(producer.registrationKind==='legacy-business-budget'){
+    // ReaderCard already occupies one immutable legacy budget row. Keep that
+    // historical row rather than inventing a second policy or raising budgets;
+    // all producer/spec/consumer/SDK checks below still apply without exception.
+    assert.equal(producer.file,'entry/src/main/ets/features/common/ReaderCard.ets','only the exact existing Card budget can bind this producer');
+    assert.equal(producer.component,'ReaderCard');assert.equal(producer.id,'shared-ReaderCard');
+    assert.deepEqual(baseline.rows.filter(r=>r.file===producer.file),[{file:producer.file,counts:{backgroundColor:1}}],'exact unchanged Card legacy budget row required');
+    assert.equal(baseline.sharedOwners.some(r=>r.file===producer.file),false,'Card keeps one policy; no duplicate shared exemption');
+  }else{
+    assert.equal(producer.registrationKind??'shared-owner','shared-owner','unknown producer registration mode');
+    const registration=baseline.sharedOwners.find(r=>r.file===producer.file);assert.equal(registration?.contractId,producer.id,'shared owner must bind exact approved contract');
+  }
   assert.ok(producer.specPolicy&&producer.removalProofs.length&&producer.sdkProofs.length,'spec→delete→SDK chain required');
   for(const proof of [...producer.removalProofs,...producer.sdkProofs])assert.ok(readSource(proof).length>0,'actual existing proof: '+proof);
   const shape=sharedProducerShape(readSource(producer.file),producer.file);assert.deepEqual(shape,producer.shape,'finite shared physical inputs/interface changed: '+producer.file);
@@ -76,7 +87,7 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
   const edges=producerConsumerEdges(inventory,producer.component);assert.ok(edges.length>0,'shared producer must be consumed');
   assert.deepEqual(edges.map(({keys,...e})=>e),producer.consumers.map(({keys,...e})=>e),'actual producer/consumer/spec edges changed: '+producer.id);
   for(const e of edges)for(const key of e.keys)assert.ok(publicFields.has(key),'illegal shared input '+producer.id+':'+key);
-  for(const row of inventory.rows)for(const e of row.elements.filter(e=>e.kind===producer.component))assert.equal(e.modifiers.some(m=>appearance.has(m.property)),false,'caller privately overrides shared appearance '+row.file+':'+e.line);
+  for(const row of inventory.rows)for(const e of row.elements.filter(e=>e.kind===producer.component))assert.equal(e.modifiers.some(m=>(producer.component==='ReaderCard'?physical:appearance).has(m.property)),false,'caller privately overrides shared appearance '+row.file+':'+e.line);
   // A finite domain wrapper must also prove its actual child delegation;
   // registering five incoming callers alone cannot prove shared rendering.
   for(const delegate of producer.delegates??[]){

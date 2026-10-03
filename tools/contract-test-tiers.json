@@ -313,6 +313,7 @@
     "test-reader-brightness-control.mjs",
     "test-reader-brightness-perception.mjs",
     "test-reader-capsule-page-turn.mjs",
+    "test-reader-card-finite-specs.mjs",
     "test-reader-chapter-first-title-publication.mjs",
     "test-reader-chinese-conversion-sdk-actors.mjs",
     "test-reader-chinese-conversion.mjs",

@@ -1,0 +1,20 @@
+{
+  "sourceHost": "ad419847f6454b49564521fc75cc8133ec2e1933",
+  "sourceFilesUnmodified": true,
+  "actualGateResult": {
+    "budgetRows": 100,
+    "sharedOwners": 12,
+    "outsideBudgetPolicies": 19,
+    "uiFiles": 127,
+    "producers": 9
+  },
+  "syntheticNegative": {
+    "file": "features/sync/SyncPage.ets",
+    "line": 276,
+    "component": "ReaderCard",
+    "before": "{ bg: readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme), cardBorder: readerAppColor('app.SyncPage.CARD_BORDER_SOFT', this.appThemeScheme), radius: 13,\n        cardWidth: this.contentFrame().width }",
+    "after": "{ bg: readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme), cardBorder: readerAppColor('app.SyncPage.CARD_BORDER_SOFT', this.appThemeScheme), radius: 99,\n        cardWidth: this.contentFrame().width }",
+    "accepted": true,
+    "error": ""
+  }
+}
