@@ -25,12 +25,14 @@ const asset={Tag:{ALIAS:1,RETURN_TYPE:2,SECRET:3,ACCESSIBILITY:4,CONFLICT_RESOLU
   async add(attributes){this.calls.push('add');if(this.beforeAdd)await this.beforeAdd();this.record=attributes.get(3);if(this.failAdd){this.failAdd=false;throw Error('lost Asset ACK');}},
   async remove(){this.calls.push('remove');this.record=undefined;},
 };
-const Store=execute('features/sync/WebDavCredentialStore.ts','WebDavCredentialStore',{asset,util,preferences:{},errorMessageOf:()=> 'platform failure'});
+let preferenceValues=new Map();
+let nativePreferences={async get(key,fallback){return preferenceValues.has(key)?preferenceValues.get(key):fallback;},async has(key){return preferenceValues.has(key);},async put(key,value){preferenceValues.set(key,value);},async delete(key){preferenceValues.delete(key);},async flush(){}};
+const Store=execute('features/sync/WebDavCredentialStore.ts','WebDavCredentialStore',{asset,util,preferences:{getPreferences:async()=>nativePreferences},errorMessageOf:()=> 'platform failure'});
 let currentOwner,credentialStore,hostFailures=0,hostApplications=0,transport,prepareCalls=0;
 const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
 class Host {async capture(){return {version:1,bookshelfViewMode:'cover',themeSelection:{}};}encode(v){return v;}decode(v){return v;}async apply(){hostApplications++;if(hostFailures>0){hostFailures--;throw Error('Host write unavailable');}}}
 const ReaderThemeHost={prepareUserChange:async()=>{prepareCalls++;},observedSystemScheme:()=> 'day'};
-const Gateway=execute('features/sync/SyncGateway.ts','SyncGateway',{SyncHostConfigurationGateway:Host,ReaderRuntimeOwner,WebDavCredentialStore:{get instance(){return credentialStore;}},ReaderThemeHost,HttpExecuteHost:{instance:{execute:async request=>transport(request)}},util,url:{URL:{parseURL:v=>new URL(v)}},errorMessageOf:()=> 'platform failure',AppStorage:{setOrCreate(){}}});
+const Gateway=execute('features/sync/SyncGateway.ts','SyncGateway',{SyncWriteObservation,SyncHostConfigurationGateway:Host,ReaderRuntimeOwner,WebDavCredentialStore:{get instance(){return credentialStore;}},ReaderThemeHost,HttpExecuteHost:{instance:{execute:async request=>transport(request)}},util,url:{URL:{parseURL:v=>new URL(v)}},errorMessageOf:()=> 'platform failure',AppStorage:{setOrCreate(){}}});
 const DEFAULT_SYNC_SNAPSHOT=execute('features/sync/SyncGateway.ts','DEFAULT_SYNC_SNAPSHOT',{SyncHostConfigurationGateway:Host,ReaderRuntimeOwner,WebDavCredentialStore:{get instance(){return credentialStore;}},ReaderThemeHost,HttpExecuteHost:{},util,url:{},errorMessageOf:()=> '',AppStorage:{}});
 const Orchestrator=execute('features/sync/SyncOrchestrator.ets','SyncOrchestrator',{SyncGateway:Gateway,SyncWriteObservation,ReaderRuntimeOwner,projectPersistedReceipt,...facts});
 function runtime(){return {
@@ -39,13 +41,14 @@ function runtime(){return {
     this.calls.push([method,clone(params)]);
     if(method==='sync.webdav.transaction.start'){
       if(params.operation==='connectionTest')return {data:{transactionId:'test',status:'completed',phase:'connectionCompleted'}};
-      if(params.operation==='backup')return {data:{transactionId:'backup',status:'hostRequired',phase:'upload',requests:[{method:'PUT',url:'https://example.test/backup/package'}]}};
+      if(params.operation==='backup'){this.backupOperationId=params.operationId;return {data:{transactionId:params.operationId,status:'hostRequired',phase:'backupUpload',requests:[{method:'PUT',url:'https://example.test/backup/package'}]}};}
       return {data:{transactionId:'restore',status:'conflict',phase:'restoreConflict',conflict:{backupId:'candidate',remotePath:'/backup/package',localChecksum:'b'.repeat(64),remoteChecksum:checksum,localExportedAt:1,remoteExportedAt:2}}};
     }
     if(method==='sync.webdav.transaction.advance'){
       if(this.failBackupAdvance){this.failBackupAdvance=false;throw Error('lost backup completion');}
-      return {data:{transactionId:'backup',status:'completed',phase:'backupCompleted',contentBytes:100,remotePath:'/backup/package'}};
+      return {data:{transactionId:this.backupOperationId,status:'completed',phase:'backupCompleted',contentBytes:100,remotePath:'/backup/package'}};
     }
+    if(method==='sync.webdav.backup.receipt.query')return {data:{transactionId:params.transactionId,receiptState:'prepared',uploadQualified:false,retentionCompleted:false,durable:true,request:{method:'GET',url:'https://example.test/backup/package'}}};
     if(method==='sync.webdav.transaction.resolve'){
       if(this.beforeResolve)await this.beforeResolve();
       if(params.choice==='cancel')return {data:{transactionId:'restore',status:'completed',phase:'restoreCancelled'}};
@@ -69,7 +72,7 @@ function runtime(){return {
 function fixture({empty=false,preserveAsset=false}={}){
   if(!preserveAsset)asset.record=empty?undefined:new TextEncoder().encode(JSON.stringify({formatVersion:2,config}));asset.calls=[];asset.failAdd=false;asset.failQuery=false;asset.beforeAdd=undefined;
   hostApplications=0;hostFailures=0;prepareCalls=0;const runtimeOwner=runtime();currentOwner=runtimeOwner;
-  credentialStore=new Store();credentialStore.loadBookshelfViewMode=async()=> 'cover';let journal;
+  preferenceValues=new Map();credentialStore=new Store();credentialStore.attachContext({});credentialStore.loadBookshelfViewMode=async()=> 'cover';let journal;
   credentialStore.loadRestoreJournal=async()=>journal;credentialStore.saveRestoreJournal=async v=>{journal=clone(v);};credentialStore.clearRestoreJournal=async()=>{journal=undefined;};
   let route=true,snapshot=clone(DEFAULT_SYNC_SNAPSHOT);const emitted=[];
   transport=async()=>({status:201,body:''});

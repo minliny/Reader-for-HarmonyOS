@@ -86,11 +86,11 @@ console.log('PASS WebDAV Host production recovery: durable choices, allow-list, 
 }
 {
  const diagnostics=new Map();let params,barrier=0;
- const Start=productionMotionMethods(path('features/sync/SyncGateway.ts'),['startTransaction','decodeTransaction'],{
+ const Start=productionMotionMethods(path('features/sync/SyncGateway.ts'),['startTransaction','decodeTransaction','requireBackupSettled','reconcileBackupReceipt'],{
    MAX_TRANSACTION_REQUESTS:100,ReaderThemeHost:{prepareUserChange:async()=>{barrier++;},observedSystemScheme:()=> 'night'},
    AppStorage:{setOrCreate:(k,v)=>diagnostics.set(k,v)},
  });
- const start=Object.assign(new Start(),{assertOwner:()=>{},assertAdmission:()=>{},requireRestoreSettled:async()=>{},recoverInterruptedRestore:async()=>false,authorization:()=>undefined,
+ const start=Object.assign(new Start(),{credentials:{loadBackupJournal:async()=>undefined},assertOwner:()=>{},assertAdmission:()=>{},requireRestoreSettled:async()=>{},recoverInterruptedRestore:async()=>false,authorization:()=>undefined,
    hostConfiguration:{capture:async()=>prior,encode:x=>host.encode(x)},runtimeOwner:{request:async(_name,p)=>{params=p;return{data:{transactionId:'migrate-1',status:'conflict',phase:'restoreConflict',requests:[],themeMigrationReason:'legacy-unknown-reader:system:night'}};}}});
  await start.startTransaction('restore',{url:'https://example.invalid',directory:'/backup',backupPassword:'not-a-real-secret'},true);
  assert.equal(barrier,1);assert.equal(params.systemScheme,'night');assert.equal(params.hostConfig.themeSelection.reader.scheme,'day','system observation is independent from selected reading scheme');

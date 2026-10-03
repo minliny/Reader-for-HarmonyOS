@@ -490,6 +490,7 @@
     "test-bounded-replace-composition.mjs",
     "test-bookshelf-native-sheet-owner.mjs",
     "test-sync-config-durable-receipts.mjs",
+    "test-sync-backup-durable-receipts.mjs",
     "test-sync-config-durable-sdk.mjs",
     "test-index-runtime-retirement-admission.mjs",
     "test-temporary-back-leaf-sdk.mjs",

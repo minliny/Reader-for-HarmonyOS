@@ -9,6 +9,7 @@ import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { HttpExecuteHost } from '../../app/HttpExecuteHost';
 import {
   type StoredWebDavConfig,
+  type WebDavBackupJournal,
   WebDavCredentialStore,
 } from './WebDavCredentialStore';
 
@@ -37,6 +38,7 @@ export type SyncRestoreConflict = {
 export type SyncSnapshot = {
   /** Actual committed save ID read from the same secure envelope. */
   configSaveOperationId?: string;
+  backupReceipt?: SyncBackupReceipt;
   webdavUrl: string;
   webdavUser: string;
   /** Persisted secrets are never emitted back into ArkUI state. */
@@ -56,6 +58,16 @@ export type SyncSnapshot = {
 export type SyncTestResult = { ok: boolean; error?: string; note?: string };
 export type SyncSaveResult = { ok: boolean; error?: string; snapshot?: SyncSnapshot };
 export type SyncBackupResult = { ok: boolean; size?: number; path?: string; error?: string };
+export type SyncBackupReceipt = {
+  operationId: string;
+  receiptState: string;
+  uploadQualified: boolean;
+  retentionCompleted: boolean;
+  undispatched: boolean;
+  durable: boolean;
+  remotePath?: string;
+  contentBytes?: number;
+};
 export type SyncRestoreResult = {
   ok: boolean;
   applied?: boolean;
@@ -185,9 +197,10 @@ export class SyncGateway {
     if (recover) await this.recoverInterruptedRestore();
     const state = await this.credentials.loadSerializedState();
     const config = state.config;
+    const backupReceipt = await this.reconcileBackupReceipt(false);
     this.assertOwner();
     if (config === null) {
-      return this.copySnapshot(DEFAULT_SYNC_SNAPSHOT);
+      return { ...this.copySnapshot(DEFAULT_SYNC_SNAPSHOT), backupReceipt };
     }
     return {
       ...this.copySnapshot(DEFAULT_SYNC_SNAPSHOT),
@@ -198,6 +211,7 @@ export class SyncGateway {
       webdavPath: config.directory,
       statusMessage: '已加载安全配置',
       configSaveOperationId: state.saveOperationId,
+      backupReceipt,
     };
   }
 
@@ -211,6 +225,7 @@ export class SyncGateway {
     admitted?: () => boolean,
   ): Promise<SyncSaveResult> {
     try {
+      await this.requireBackupSettled();
       const existing = await this.credentials.loadSerialized();
       const normalizedUrl = this.requireBaseUrl(urlValue);
       const user = userValue.trim();
@@ -278,28 +293,92 @@ export class SyncGateway {
 
   async triggerBackup(observation?: SyncWriteObservation, admitted?: () => boolean): Promise<SyncBackupResult> {
     let transactionId = '';
+    const actual = observation ?? new SyncWriteObservation();
     try {
-      const config = await this.requireStoredConfig();
+      await this.requireBackupSettled();
+      const storedState = await this.credentials.loadSerializedState();
+      const config = await this.requireStoredConfig(storedState.config);
       this.assertAdmission(admitted);
-      const started = await this.startTransaction('backup', config, true, admitted);
-      transactionId = started.transactionId;
-      const completed = await this.driveTransaction(started, observation, admitted);
+      transactionId = 'webdav-' + util.generateRandomUUID(true).replace(/-/g, '').toLowerCase();
+      actual.operationId = transactionId;
+      await this.credentials.saveBackupJournal({ version: 1, operationId: transactionId, phase: 'prepared', configSaveOperationId: storedState.saveOperationId });
+      this.assertAdmission(admitted);
+      const started = await this.startTransaction('backup', config, true, admitted, transactionId);
+      this.assertTransactionIdentity(transactionId, started.transactionId, 'Core 备份创建');
+      const completed = await this.driveTransaction(started, actual, admitted);
       if (completed.status !== 'completed' || completed.phase !== 'backupCompleted') {
         throw new Error('Core 未完成 WebDAV 备份事务');
       }
-      if (observation !== undefined) {
-        if (observation.write.dispatchedCount > 0) observation.write.confirmed();
-        observation.completed = true;
-      }
+      if (actual.write.dispatchedCount > 0) actual.write.confirmed();
+      actual.uploadQualified = true; actual.completed = true;
+      await this.credentials.clearBackupJournal(transactionId);
       return {
         ok: true,
         size: completed.contentBytes ?? 0,
         path: completed.remotePath,
       };
     } catch (error) {
-      await this.abortBestEffort(transactionId);
+      // This qualification comes from the real HTTP dispatch counter, not
+      // the kind/message of the error. Never discard a maybe-sent publisher.
+      const undispatched = actual.write.dispatchedCount === 0;
+      const aborted = await this.abortBestEffort(transactionId, undispatched);
+      if (undispatched && transactionId.length > 0 && aborted) {
+        try { await this.credentials.clearBackupJournal(transactionId); } catch (_) { /* exact Core undispatched receipt remains queryable */ }
+      }
       return { ok: false, error: this.errorMessage(error) };
     }
+  }
+
+  /** Read-only exact publication query. A matching GET qualifies the upload
+   * only. Neither a new PUT nor retention DELETE is a recovery action. */
+  async reconcileBackupReceipt(allowRemote: boolean = true): Promise<SyncBackupReceipt | undefined> {
+    this.assertOwner();
+    const journal = await this.credentials.loadBackupJournal();
+    this.assertOwner(); if (journal === undefined) return undefined;
+    const queried = await this.runtimeOwner.request('sync.webdav.backup.receipt.query', { transactionId: journal.operationId });
+    this.assertOwner();
+    let receipt = this.decodeBackupReceipt(queried.data, journal);
+    const requestValue = queried.data['request'];
+    if (allowRemote && journal.phase === 'mayDispatch' && !receipt.uploadQualified && requestValue !== undefined) {
+      const request = this.requireObject(requestValue, 'Core 备份核对请求');
+      if (request['method'] !== 'GET' || typeof request['url'] !== 'string') throw new Error('备份核对必须是原路径只读请求');
+      const current = await this.credentials.loadSerializedState(); this.assertOwner();
+      if (current.config === null || journal.configSaveOperationId !== undefined && current.saveOperationId !== journal.configSaveOperationId) throw new Error('原备份凭据已变化，不能核对远端');
+      const configured = url.URL.parseURL(current.config.url), target = url.URL.parseURL(request['url'] as string);
+      if (target.protocol !== 'https:' || target.origin !== configured.origin ||
+        !target.pathname.startsWith(configured.pathname.replace(/\/$/, '') + '/')) throw new Error('备份核对地址不属于原安全配置');
+      const headers = request['headers'] === undefined ? {} : this.requireObject(request['headers'], '备份核对请求头');
+      const authorization = this.authorization(current.config); if (authorization !== undefined) headers['Authorization'] = authorization;
+      const response = await HttpExecuteHost.instance.execute({ ...request, headers, httpsOnly: true, sameOriginRedirectsOnly: true });
+      this.assertOwner();
+      const checked = await this.runtimeOwner.request('sync.webdav.backup.receipt.query', { transactionId: journal.operationId, response });
+      this.assertOwner(); receipt = this.decodeBackupReceipt(checked.data, journal);
+    }
+    return receipt;
+  }
+
+  private decodeBackupReceipt(data: JsonObject, journal: WebDavBackupJournal): SyncBackupReceipt {
+    this.assertTransactionIdentity(journal.operationId, data['transactionId'] as string, '备份发布记录');
+    const state = data['receiptState'], uploaded = data['uploadQualified'], completed = data['retentionCompleted'], durable = data['durable'];
+    if (typeof state !== 'string' || !['missing','prepared','undispatched','uploadAcknowledged','retentionCompleted'].includes(state) ||
+      typeof uploaded !== 'boolean' || typeof completed !== 'boolean' || typeof durable !== 'boolean' || completed && !uploaded ||
+      state === 'undispatched' && (uploaded || completed)) throw new Error('Core 备份发布记录无效');
+    const undispatched = state === 'undispatched' || journal.phase === 'prepared' && !uploaded && !completed;
+    const path = data['remotePath'], bytes = data['contentBytes'];
+    if (path !== undefined && (typeof path !== 'string' || path.length > 4096) || bytes !== undefined && (typeof bytes !== 'number' || !Number.isSafeInteger(bytes) || bytes < 0)) throw new Error('Core 备份发布摘要无效');
+    return { operationId: journal.operationId, receiptState: state, uploadQualified: uploaded && durable,
+      retentionCompleted: completed && durable, durable, undispatched, remotePath: path as string | undefined, contentBytes: bytes as number | undefined };
+  }
+
+  private async requireBackupSettled(): Promise<void> {
+    const receipt = await this.reconcileBackupReceipt(false);
+    if (receipt === undefined) return;
+    if (receipt.undispatched) {
+      if (!await this.abortBestEffort(receipt.operationId, true)) throw new Error('上一次未发送备份仍在清理');
+      this.assertOwner(); await this.credentials.clearBackupJournal(receipt.operationId); this.assertOwner(); return;
+    }
+    if (!receipt.retentionCompleted) throw new Error('上一次备份发布或保留清理尚未核定，不重传');
+    await this.credentials.clearBackupJournal(receipt.operationId); this.assertOwner();
   }
 
   async restoreLatest(observation?: SyncWriteObservation, admitted?: () => boolean): Promise<SyncRestoreResult> {
@@ -384,17 +463,22 @@ export class SyncGateway {
     config: StoredWebDavConfig,
     includeEncryption: boolean,
     admitted?: () => boolean,
+    publisherOperationId?: string,
   ): Promise<CoreWebDavTransaction> {
     this.assertOwner();
     if (operation !== 'connectionTest') await ReaderThemeHost.prepareUserChange();
     this.assertOwner();
     if (operation !== 'connectionTest') await this.requireRestoreSettled();
+    // The backup caller has already admitted old receipts and flushed its own
+    // prepared identity. Do not treat that same new intent as an old recovery.
+    if (operation !== 'connectionTest' && publisherOperationId === undefined) await this.requireBackupSettled();
     const params: JsonObject = {
       operation,
       baseUrl: config.url,
       directory: config.directory,
       maxBackups: 5,
     };
+    if (publisherOperationId !== undefined) params['operationId'] = publisherOperationId;
     if (operation === 'backup' || operation === 'restore') {
       params['hostConfig'] = this.hostConfiguration.encode(await this.hostConfiguration.capture());
       params['systemScheme'] = ReaderThemeHost.observedSystemScheme();
@@ -433,6 +517,13 @@ export class SyncGateway {
           const mutable = typeof method === 'string' && !['GET', 'HEAD', 'OPTIONS', 'PROPFIND'].includes(method.toUpperCase());
           if (mutable && observation !== undefined && observation.write.dispatchedCount === 0) {
             this.assertAdmission(admitted);
+            if (current.phase === 'backupUpload') {
+              const journal = await this.credentials.loadBackupJournal();
+              this.assertAdmission(admitted);
+              if (journal === undefined || journal.operationId !== current.transactionId) throw new Error('备份发布记录已变化');
+              await this.credentials.saveBackupJournal({ ...journal, phase: 'mayDispatch' });
+              this.assertAdmission(admitted);
+            }
             observation.write.dispatched();
           }
           const response = await HttpExecuteHost.instance.execute({
@@ -640,12 +731,12 @@ export class SyncGateway {
     };
   }
 
-  private async abortBestEffort(transactionId: string): Promise<boolean> {
+  private async abortBestEffort(transactionId: string, publisherUndispatched: boolean = false): Promise<boolean> {
     if (transactionId.length === 0) {
       return true;
     }
     try {
-      await this.runtimeOwner.request('sync.webdav.transaction.abort', { transactionId });
+      await this.runtimeOwner.request('sync.webdav.transaction.abort', publisherUndispatched ? { transactionId, publisherUndispatched: true } : { transactionId });
       return true;
     } catch (error) {
       // Core removes a transaction atomically on completion/abort. If the
@@ -711,8 +802,8 @@ export class SyncGateway {
     return '';
   }
 
-  private async requireStoredConfig(): Promise<StoredWebDavConfig> {
-    const config = await this.credentials.loadSerialized();
+  private async requireStoredConfig(observed?: StoredWebDavConfig | null): Promise<StoredWebDavConfig> {
+    const config = observed === undefined ? await this.credentials.loadSerialized() : observed;
     if (config === null) {
       throw new Error('请先安全保存 WebDAV 配置');
     }

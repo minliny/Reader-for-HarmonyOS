@@ -1,4 +1,4 @@
-import { SyncGateway, type SyncSnapshot, type SyncRestoreResult, type SyncHistoryEntry } from './SyncGateway';
+import { SyncGateway, type SyncSnapshot, type SyncRestoreResult, type SyncHistoryEntry, type SyncBackupReceipt } from './SyncGateway';
 import { SyncWriteObservation, type SyncOperationAction, type SyncOperationProjection, type SyncPresentationFacts } from './SyncOperationProjection';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { projectOperationFacts, projectCommitReadback, type OperationFacts, type CommitConfirmationKind, type CommitReadbackPhase } from '../../app/ReaderOperationFacts';
@@ -84,6 +84,14 @@ export class SyncOrchestrator {
         } catch (error) {
           this.publishReceiptWithConfirmation(session, operation, 'failed', this.safeError(error));
           return;
+        }
+      }
+      if (operation?.action === 'backup') {
+        try {
+          const receipt = await this.gateway.reconcileBackupReceipt(true);
+          if (receipt !== undefined) this.publishBackupReceipt(session, receipt, operation.writeGeneration);
+        } catch (error) {
+          this.publishReceiptWithConfirmation(session, operation, 'failed', this.safeError(error)); return;
         }
       }
       await this.load(session);
@@ -184,14 +192,18 @@ export class SyncOrchestrator {
     try {
       // Startup owns automatic journal recovery. A page read is read-only.
       const snapshot = await this.gateway.loadSnapshot(false);
-      const current = this.source();
+      let current = this.source();
       // A new owner/process may see an atomic committed save even if its ACK
       // was lost. Publish only the ID actually read, never an old/matching intent.
+      if (this.latestOperation === undefined && snapshot.backupReceipt !== undefined) {
+        this.publishBackupReceipt(session, snapshot.backupReceipt);
+      }
       if (this.latestOperation === undefined && snapshot.configSaveOperationId !== undefined) {
         const observation = new SyncWriteObservation(); observation.operationId = snapshot.configSaveOperationId;
         observation.write.dispatched(); observation.write.confirmed(); observation.completed = true;
         this.publishReceipt(session, 'saveConfig', observation, 'reading');
       }
+      current = this.source();
       const operation = this.latestOperation;
       const successMessage = operation?.completed === true && operation.projection.receipt.confirmation === 'confirmed' ?
         operation.action === 'saveConfig' ? '配置已写入系统安全存储' : operation.action === 'backup' ? '备份已上传' : '恢复已完成；重新进入页面后读取新状态' :
@@ -211,15 +223,32 @@ export class SyncOrchestrator {
     this.deliver(session);
   }
 
+  private publishBackupReceipt(session: number, receipt: SyncBackupReceipt, writeGeneration?: number): void {
+    const observation = new SyncWriteObservation();
+    const previouslyQualified = this.latestOperation?.action === 'backup' && this.latestOperation.operationId === receipt.operationId && this.latestOperation.uploadQualified;
+    const uploadQualified = receipt.uploadQualified || previouslyQualified;
+    if (writeGeneration !== undefined) observation.writeGeneration = writeGeneration;
+    observation.operationId = receipt.operationId;
+    // Rehydrate a durable mayDispatch fact conservatively; this observation
+    // is UI qualification only and is never reused as an HTTP IO counter.
+    if (!receipt.undispatched) observation.write.dispatched();
+    if (uploadQualified) observation.write.confirmed();
+    observation.uploadQualified = uploadQualified;
+    observation.completed = receipt.retentionCompleted;
+    this.publishReceipt(session, 'backup', observation, receipt.retentionCompleted ? 'reading' : 'failed',
+      receipt.retentionCompleted ? '已核对本次备份及保留清理完成回执' : receipt.undispatched ? '本次备份尚未发出，可重新提交' :
+        uploadQualified ? '本次备份上传已核实，保留清理尚未完成；不会自动重传或删除' : '本次备份远端结果待核对，不重复上传');
+  }
+
   private publishReceipt(session: number, action: SyncOperationAction, observation: SyncWriteObservation,
     readback: CommitReadbackPhase, errorOrStatus?: string): void {
     const confirmation = observation.write.confirmation();
     const partial = observation.coreApplied && !observation.completed
       ? 'Core 配置已应用，Host 恢复尚未完成；核对已有恢复，不重复覆盖' : undefined;
-    const remotePartial = !observation.completed && observation.remoteConfirmedCount > 0
-      ? `已有 ${observation.remoteConfirmedCount} 个远端写入响应，备份完成回执待核对；不自动重传` : undefined;
+    const remotePartial = !observation.completed && observation.uploadQualified ? '本次备份上传已核实，保留清理尚无完成回执；不自动重传或删除' :
+      !observation.completed && observation.remoteConfirmedCount > 0 ? `已有 ${observation.remoteConfirmedCount} 个远端写入响应，备份完成回执待核对；不自动重传` : undefined;
     this.latestOperation = { action, writeGeneration: observation.writeGeneration, operationId: observation.operationId, coreApplied: observation.coreApplied, hostApplied: observation.hostApplied,
-      completed: observation.completed, remoteConfirmedCount: observation.remoteConfirmedCount,
+      completed: observation.completed, remoteConfirmedCount: observation.remoteConfirmedCount, uploadQualified: observation.uploadQualified,
       projection: projectPersistedReceipt<boolean>({ confirmation, readback, value: this.lastSnapshot === undefined ? undefined : true,
         refreshError: readback === 'failed' ? errorOrStatus : undefined,
         message: partial !== undefined || remotePartial !== undefined ? projectCommitReadback(confirmation, readback).message + '：' + (partial ?? remotePartial) : undefined, canRetry: readback !== 'reading' && (confirmation !== 'undispatched'),
@@ -243,7 +272,7 @@ export class SyncOrchestrator {
     if (!this.currentSession(this.session) || this.operationInFlight || this.lastSnapshot === undefined) return false;
     const operation = this.latestOperation;
     if (operation !== undefined && (operation.projection.receipt.confirmation === 'unknown' ||
-      (operation.coreApplied && !operation.completed))) return false;
+      (operation.coreApplied && !operation.completed) || (operation.action === 'backup' && !operation.completed && operation.projection.receipt.confirmation === 'confirmed'))) return false;
     this.operationInFlight = true;
     return true;
   }
@@ -259,7 +288,8 @@ export class SyncOrchestrator {
     const operation = this.latestOperation;
     const facts: SyncPresentationFacts = { read: this.readFacts, operation, request: this.requestFacts, busy: this.operationInFlight,
       canMutate: !this.operationInFlight && this.lastSnapshot !== undefined &&
-        operation?.projection.receipt.confirmation !== 'unknown' && !(operation?.coreApplied === true && !operation.completed) };
+        operation?.projection.receipt.confirmation !== 'unknown' && !(operation?.coreApplied === true && !operation.completed) &&
+        !(operation?.action === 'backup' && !operation.completed && operation.projection.receipt.confirmation === 'confirmed') };
     this.emit({ ...source, webdavPass: '', backupPass: '', facts });
   }
   private safeError(_error: unknown): string { return '操作未完成，请核对当前配置或已有恢复记录'; }

@@ -14,6 +14,14 @@ const LOCAL_VIEW_MODE_KEY = 'bookshelfViewMode';
 const LOCAL_MIGRATION_KEY = 'bookshelfConfigVersion';
 const LOCAL_CONFIG_VERSION = 1;
 const LOCAL_RESTORE_JOURNAL_KEY = 'webdavRestoreJournal';
+const LOCAL_BACKUP_JOURNAL_KEY = 'webdavBackupJournal';
+
+export interface WebDavBackupJournal {
+  version: number;
+  operationId: string;
+  phase: 'prepared' | 'mayDispatch';
+  configSaveOperationId?: string;
+}
 
 export interface WebDavRestoreJournal {
   version: number;
@@ -227,6 +235,65 @@ export class WebDavCredentialStore {
     });
     this.localModeWriteTail = next.then((): void => {}, (): void => {});
     return next;
+  }
+
+  loadBackupJournal(): Promise<WebDavBackupJournal | undefined> {
+    const generation = this.contextGeneration;
+    const next = this.localModeWriteTail.then(async (): Promise<WebDavBackupJournal | undefined> => {
+      const store = await this.ensureLocalPreferences();
+      const raw = await store.get(LOCAL_BACKUP_JOURNAL_KEY, '');
+      if (generation !== this.contextGeneration) throw new Error('备份记录所属窗口已变化');
+      if (raw === '') return undefined;
+      if (typeof raw !== 'string' || raw.length > 1024) throw new Error('备份记录无效，请保留当前数据');
+      const value = JSON.parse(raw) as WebDavBackupJournal;
+      this.validateBackupJournal(value); return value;
+    });
+    this.localModeWriteTail = next.then((): void => {}, (): void => {});
+    return next;
+  }
+
+  saveBackupJournal(value: WebDavBackupJournal): Promise<void> {
+    this.validateBackupJournal(value);
+    const generation = this.contextGeneration;
+    const next = this.localModeWriteTail.then(async (): Promise<void> => {
+      const store = await this.ensureLocalPreferences();
+      const prior = await store.get(LOCAL_BACKUP_JOURNAL_KEY, '');
+      if (generation !== this.contextGeneration) throw new Error('备份记录所属窗口已变化');
+      if (prior !== '') {
+        if (typeof prior !== 'string' || prior.length > 1024) throw new Error('备份记录无效');
+        const previous = JSON.parse(prior) as WebDavBackupJournal;
+        this.validateBackupJournal(previous);
+        if (previous.operationId !== value.operationId || previous.phase === 'mayDispatch' && value.phase !== 'mayDispatch' ||
+          previous.configSaveOperationId !== value.configSaveOperationId) throw new Error('上一次备份尚未核定');
+      }
+      try { await store.put(LOCAL_BACKUP_JOURNAL_KEY, JSON.stringify(value)); await store.flush(); }
+      catch (error) { await store.put(LOCAL_BACKUP_JOURNAL_KEY, prior); throw error; }
+    });
+    this.localModeWriteTail = next.then((): void => {}, (): void => {});
+    return next;
+  }
+
+  clearBackupJournal(operationId: string): Promise<void> {
+    const generation = this.contextGeneration;
+    const next = this.localModeWriteTail.then(async (): Promise<void> => {
+      const store = await this.ensureLocalPreferences();
+      const raw = await store.get(LOCAL_BACKUP_JOURNAL_KEY, '');
+      if (generation !== this.contextGeneration) throw new Error('备份记录所属窗口已变化');
+      if (raw === '') return;
+      if (typeof raw !== 'string' || raw.length > 1024) throw new Error('备份记录无效');
+      const prior = JSON.parse(raw) as WebDavBackupJournal; this.validateBackupJournal(prior);
+      if (prior.operationId !== operationId) throw new Error('备份记录已被替换');
+      try { await store.delete(LOCAL_BACKUP_JOURNAL_KEY); await store.flush(); }
+      catch (error) { await store.put(LOCAL_BACKUP_JOURNAL_KEY, raw); throw error; }
+    });
+    this.localModeWriteTail = next.then((): void => {}, (): void => {});
+    return next;
+  }
+
+  private validateBackupJournal(value: WebDavBackupJournal): void {
+    if (value.version !== 1 || typeof value.operationId !== 'string' || !/^webdav-[0-9a-f]{32}$/.test(value.operationId) ||
+      !['prepared', 'mayDispatch'].includes(value.phase)) throw new Error('备份记录无效');
+    if (value.configSaveOperationId !== undefined) this.validateSaveOperationId(value.configSaveOperationId);
   }
 
   saveRestoreJournal(value: WebDavRestoreJournal): Promise<void> {
