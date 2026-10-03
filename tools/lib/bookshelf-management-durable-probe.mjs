@@ -14,7 +14,7 @@ import * as scheduler from '../../entry/src/main/ets/app/BookRequestScheduler.ts
 import * as sdk from '../../entry/vendor/core-harmony/sdk/reader_core.ts';
 
 const run=promisify(execFile),host=fileURLToPath(new URL('../../',import.meta.url));
-export const coreRoot=process.env.READER_BOOKSHELF_MANAGEMENT_CORE_ROOT??resolve(host,'../Reader-Core-Native');
+export const coreRoot=process.env.READER_BOOKSHELF_MANAGEMENT_CORE_ROOT??process.env.READER_CORE_ROOT??resolve(host,'../Reader-Core-Native');
 export const binary=resolve(coreRoot,'target/debug/reader-cli');
 export const read=p=>fs.readFileSync(resolve(host,'entry/src/main/ets',p),'utf8');
 
