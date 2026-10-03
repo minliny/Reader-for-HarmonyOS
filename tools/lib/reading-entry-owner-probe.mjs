@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,existsSync} from 'node:fs';
 import {registerHooks, createRequire} from 'node:module';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {resolve} from 'node:path';
@@ -8,7 +8,10 @@ const require=createRequire(import.meta.url);
 const ets=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts=require(ets+'/node_modules/typescript');
 const root=fileURLToPath(new URL('../../',import.meta.url));
-const sdk=await import(pathToFileURL(resolve(root,'../../../Reader-Core-Native/bindings/harmony/sdk/reader_core.ts')).href);
+const coreRoots=[process.env.READER_CORE_ROOT,resolve(root,'../../../Reader-Core-Native'),resolve(root,'../../Reader-Core-Native')].filter(Boolean);
+const coreRoot=coreRoots.find(path=>existsSync(resolve(path,'bindings/harmony/sdk/reader_core.ts')));
+assert.ok(coreRoot,'actual Core SDK fixture input exists');
+const sdk=await import(pathToFileURL(resolve(coreRoot,'bindings/harmony/sdk/reader_core.ts')).href);
 const errors=await import('../../entry/src/main/ets/app/ErrorMessage.ts');
 const receipt=await import('../../entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts');
 const evidence=await import('../../entry/src/main/ets/app/ReaderWriteEvidence.ts');

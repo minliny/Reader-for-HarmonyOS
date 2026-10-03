@@ -32,7 +32,7 @@ export interface ReadingEntrySnapshot {
   backgroundError?: string;
 }
 export interface ReadingEntryMembership {
-  generation: number;
+  generation: number | string;
   blocked: boolean;
   value: boolean;
 }
@@ -96,7 +96,7 @@ export class ReadingEntryHost {
   private projectionActive: DetailProjectionIntent | undefined;
   private projectionPending: DetailProjectionIntent | undefined;
   private preparationGeneration: number = 0;
-  private membershipGeneration: number = 0;
+  private membershipGeneration: number | string = 0;
 
   constructor(runtime: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) { this.runtime = runtime; }
   static forRuntime(runtime: ReaderRuntimeOwner = ReaderRuntimeOwner.current()): ReadingEntryHost {
@@ -286,6 +286,26 @@ export class ReadingEntryHost {
     return undefined;
   }
 
+  /** Native first-frame TOC is a displayed DTO. Updating it neither starts
+   * another acquisition nor changes the persistent reader's scope/session. */
+  replaceDirectory(scope: number, entries: LocalReadingTocEntry[]): void {
+    const lease = this.lease;
+    if (lease === undefined || !this.current(scope, lease)()) return;
+    const seen = new Set<number>();
+    for (const entry of entries) {
+      if (!Number.isSafeInteger(entry.index) || entry.index < 0 || entry.title.trim().length === 0 || seen.has(entry.index)) return;
+      seen.add(entry.index);
+    }
+    this.state = { ...this.state, toc: entries }; this.publish(scope, lease);
+  }
+
+  async recoverCachedChapter(scope: number, error: RemoteChapterCacheRefreshError,
+    admitted: () => boolean): Promise<number | undefined> {
+    const lease = this.lease;
+    if (lease === undefined) return undefined;
+    return this.refreshCachedChapter(error, scope, lease, (): boolean => this.current(scope, lease)() && admitted());
+  }
+
   async projectDirectory(scope: number): Promise<void> {
     const lease = this.lease, book = this.state.book, session = this.state.session;
     if (lease === undefined || book === undefined) return;
@@ -414,7 +434,7 @@ export class ReadingEntryHost {
     const scope = this.state.scopeId + 1; this.lease = lease; this.probeGeneration += 1; this.projectionPending = undefined;
     this.membershipGeneration = lease.membership().generation;
     this.state = { scopeId: scope, sessionGeneration: this.state.sessionGeneration, book, seed, toc: [], inBookshelf,
-      loadingMessage, verdict: 'verifying', candidateAdmissionActive: false, candidateAdmissionFailed: false };
+      loadingMessage, verdict: book.sourceId === LOCAL_SOURCE_ID ? 'readable' : 'verifying', candidateAdmissionActive: false, candidateAdmissionFailed: false };
     this.readableRevision = -1; this.install(session); this.runtime.bookAcquisitions().setPreparationVisible(false);
     this.publish(scope, lease); return scope;
   }
