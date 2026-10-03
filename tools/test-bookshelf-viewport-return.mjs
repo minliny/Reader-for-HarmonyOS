@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
+import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import {BookshelfViewState} from '../entry/src/main/ets/features/bookshelf/BookshelfViewState.ts';
 const source=new URL('../entry/src/main/ets/features/bookshelf/BookshelfPage.ets',import.meta.url);
 class Frame { constructor(callback){this.callback=callback;} }
-const Page=productionMotionMethods(source,['shelfHeaderItems','saveShelfViewport','restoreShelfViewport','publishVisibleReadingBooks','aboutToDisappear','aboutToAppear'],{
- BookshelfMotionFrameCallback:Frame, ScrollAlign:{START:'start'}, Edge:{Top:'top'}, registerReaderShelfFonts(){}
+const Page=productionMotionMethods(source,['shelfHeaderItems','saveShelfViewport','restoreShelfViewport','publishVisibleReadingBooks','aboutToDisappear','aboutToAppear','viewModeRecovery'],{
+ readerRecoveryView, BookshelfMotionFrameCallback:Frame, ScrollAlign:{START:'start'}, Edge:{Top:'top'}, registerReaderShelfFonts(){}
 });
 const state=new BookshelfViewState(); const frames=[]; const calls=[]; const prepared=[];
 const books=[{sourceId:'source',bookId:'first',group:'历史分组'},{sourceId:'another',bookId:'same',group:'默认'}].map(Object.freeze);
@@ -14,6 +15,7 @@ function page(){ return Object.assign(new Page(), {
  viewState:state,mounted:true,viewportRestored:true,viewportRestoreGeneration:0,firstVisibleItem:3,
  continueReading:{},filterRowVisible:true,viewModeError:'',viewModeRevision:0,
  webDavCredentials:{currentBookshelfViewMode:()=>undefined},
+ viewModeHost:{current:()=>({canonical:undefined})},viewModeSnapshot:{canonical:undefined},
  storedViewMode:'list',storedSelectedGroup:'默认',readingFilter:'reading',sourceFilter:'online',books,
  shelfScroller:{currentOffset:()=>({yOffset:offset}),getItemRect:()=>({y:itemY}),
   scrollTo:args=>calls.push(['offset',args.yOffset]),scrollEdge:edge=>calls.push(['edge',edge]),

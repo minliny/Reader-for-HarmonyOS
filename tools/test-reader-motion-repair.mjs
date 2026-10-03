@@ -125,7 +125,7 @@ const viewMotion={totalMs:1000,layoutCommitMs:150,outgoingDurationMs:120,headerI
  movingCoverFadeStartMs:690,movingCoverFadeDurationMs:30,coverMoveDurationMs:420,coverScaleDurationMs:250};
 for(const at of [80,300,680,900]){
  frames=[];const shelf=Object.assign(new Shelf(),{viewMode:'cover',reduceMotion:false,viewSwitchRunning:false,viewSwitchToken:0,
-  webDavCredentials:{saveBookshelfViewMode:async()=>{}},persistRequestedViewMode:async()=>true,viewModeRevision:0,confirmedViewMode:'cover',mounted:true,
+  webDavCredentials:{saveBookshelfViewMode:async()=>{}},viewModeHost:{canSave:()=>true},persistRequestedViewMode:async()=>true,viewModeRevision:0,confirmedViewMode:'cover',mounted:true,
   viewMotion,viewFadeCurve:curve,viewContentCurve:curve,viewMoveCurve:curve,viewScaleCurve:curve,getUIContext:()=>UI});
  shelf.setViewMode('list');now+=at;frames.shift()();
  const before=[shelf.projectionListProgress(1),shelf.viewSwitchGridContentOpacity,shelf.viewSwitchListContentOpacity,

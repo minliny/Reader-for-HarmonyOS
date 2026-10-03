@@ -31,7 +31,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
   if (dependencies.ReaderRuntimeOwner.isCurrent === undefined) {
     const injected = dependencies.ReaderRuntimeOwner;
     const authority = runtimeOwnerIdentityProbe(() => { try { return injected.current(); } catch (_error) { return undefined; } });
-    dependencies.ReaderRuntimeOwner = { ...injected, isCurrent: authority.isCurrent.bind(authority) };
+    dependencies.ReaderRuntimeOwner = Object.assign(Object.create(injected), { isCurrent: authority.isCurrent.bind(authority) });
   }
   const source = readFileSync(file, 'utf8');
   const tree = ts.createSourceFile('/tmp/ReaderMotionProbe.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);

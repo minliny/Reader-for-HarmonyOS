@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { bookIntroText } from '../entry/src/main/ets/features/common/BookIntroText.ts';
 import { bookAuthorLabel } from '../entry/src/main/ets/features/common/BookAuthorMetadata.ts';
@@ -351,7 +352,15 @@ check('single-book sheet matches cover frame and both layers have straight lower
   for (const available of [240, 326, 352, 630]) assert.equal(width.call({ shelfContentWidth: () => available, isWideViewport: () => available > 500,
     effectiveViewportWidth: () => available + 38 }, { metrics: () => ({}) }, () => 19, () => 19), available);
   assert.match(shelf, /radius: \{ topLeft: this\.bookActionSheetSpec\(\)\.borderRadius, topRight: this\.bookActionSheetSpec\(\)\.borderRadius, bottomLeft: 0, bottomRight: 0 \}/);
-  assert.match(sheet, /borderRadius\(\{ topLeft: this\.surfaceSpec\(\)\.borderRadius, topRight: this\.surfaceSpec\(\)\.borderRadius, bottomLeft: 0, bottomRight: 0 \}\)/);
+  if (baseline) assert.match(sheet, /borderRadius\(\{ topLeft: this\.surfaceSpec\(\)\.borderRadius, topRight: this\.surfaceSpec\(\)\.borderRadius, bottomLeft: 0, bottomRight: 0 \}\)/);
+  else {
+    assert.match(sheet, /ReaderBoundedSurface\(\{ specId: 'bookshelf-book-action'/);
+    const kit = boundedSurfaceSdk();
+    const frame = kit.consumer(read('common/ReaderBoundedSurface.ets'), undefined, {}, { specId: 'bookshelf-book-action' });
+    frame.initialRender();
+    const painted = [...frame.nodes.values()].find(node => node.backgroundColor);
+    assert.deepEqual(painted.borderRadius, { topLeft: 24, topRight: 24, bottomLeft: 0, bottomRight: 0 }, 'actual SDK shared frame retains both straight lower corners');
+  }
   const surfaceSpecs = read('common/ReaderSurfaceSpecs.ets');
   assert.match(surfaceSpecs, /bookshelf-book-action[\s\S]*borderRadius: 24/);
 });
