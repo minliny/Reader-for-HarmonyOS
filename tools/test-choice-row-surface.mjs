@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
-import {choiceRowProbe,resolveReaderChoiceSpec} from './lib/reader-choice-row-probe.mjs';
+import {choiceRowProbe,resolveReaderChoiceSpec,choiceSource} from './lib/reader-choice-row-probe.mjs';
 
 const read=file=>readFileSync(new URL(`../entry/src/main/ets/features/${file}.ets`,import.meta.url),'utf8');
 function settings(tablet,resolve=resolveReaderChoiceSpec) {
@@ -42,6 +42,14 @@ for(const [id,render,height,size,line,iconWidth] of cases) {
   assert.equal(view.child.constructor,view.shared.Component,`${id}: real parent constructs shared production row`);
   assert.equal(text.fontSize,size,`${id}: preserves current size`);
   assert.equal(text.lineHeight,line,`${id}: preserves current line box`);
+  const calls=view.child.attributeCalls.filter(call=>call.id===text.id),spec=resolveReaderChoiceSpec(view.child.specId);
+  assert.equal(calls.some(call=>call.property==='lineHeight'),line!==undefined,`${id}: AUTO means setter is absent, not undefined`);
+  if(spec.layout==='row'){
+    assert.equal(calls.some(call=>call.property==='textAlign'),spec.textAlignStart,`${id}: native text alignment AUTO`);
+    assert.equal(calls.some(call=>call.property==='textOverflow'),spec.ellipsis,`${id}: native overflow AUTO`);
+    assert.deepEqual(calls.find(call=>call.property==='fontWeight').args.length,spec.variableWeight?2:1,`${id}: optional font-weight settings are omitted unless authored`);
+  }
+  assert.ok(!calls.some(call=>['fontFamily','fontWeight','fontSize','lineHeight','textAlign','textOverflow'].includes(call.property)&&call.args.some(arg=>arg===undefined)),`${id}: no explicit undefined native attribute`);
   assert.equal(view.nodes().find(n=>n.onClick).height,id.startsWith('settings')?height-1:height);
   const image=view.nodes().find(n=>n.type==='Image');
   assert.equal(image?.width??0,iconWidth,`${id}: keeps authored icon geometry`);
@@ -73,5 +81,16 @@ for(const [render,expectedHeight] of [[()=>settings(false,changed),51],[()=>sett
   click();assert.deepEqual(view.commits,['fresh:中文']);
   view.owner.closed=false;view.owner.mounted=false;click();assert.equal(view.commits.length,1,'retired owner ignores retained callback');
   view.owner.mounted=true;child.aboutToDisappear();click();assert.equal(view.commits.length,1,'retired shared row rejects a native callback');
+}
+// These negative controls execute altered actual production modifiers and
+// actual SDK Text observers. Getter equality alone would miss undefined calls.
+for(const [id,source,property]of[
+ ['default-selected',choiceSource.replace('if (text.lineHeightFp !== undefined) instance.lineHeight(text.lineHeightFp);','instance.lineHeight(text.lineHeightFp);'),'lineHeight'],
+ ['settings-phone',choiceSource.replace('if (spec.textAlignStart) instance.textAlign(TextAlign.Start);','instance.textAlign(spec.textAlignStart ? TextAlign.Start : undefined);'),'textAlign'],
+ ['settings-tablet',choiceSource.replace('if (spec.ellipsis) instance.textOverflow({ overflow: TextOverflow.Ellipsis });','instance.textOverflow(spec.ellipsis ? { overflow: TextOverflow.Ellipsis } : undefined);'),'textOverflow'],
+]){
+ assert.notEqual(source,choiceSource,'mutation binds actual source');const shared=choiceRowProbe(resolveReaderChoiceSpec,source),child=new shared.Component(undefined,{specId:id,label:'负控',selected:true});child.aboutToAppear();child.initialRender();const text=shared.nodes(child).find(node=>node.type==='Text');
+ assert.throws(()=>assert.equal(child.attributeCalls.some(call=>call.id===text.id&&call.property===property),false),/strictly equal/,'explicit undefined setter cannot pass AUTO contract '+property);
+ assert.equal(child.attributeCalls.find(call=>call.id===text.id&&call.property===property).args[0],undefined,'actual negative SDK native call carries undefined');
 }
 console.log('PASS shared choice rows: 8 finite current-UI variants, two production families, SDK Prop updates, guarded intent, common/variant propagation');
