@@ -150,7 +150,7 @@ check('history loading, failure and retry render independently on every entry su
     assert.ok(!empty.nodes().some(node => /搜索历史.*失败|正在读取搜索历史/.test(String(node.create ?? ''))));
   }
   const index = readFileSync(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'utf8');
-  assert.match(index, /onRetryHistory:.*getSearchOrchestrator\(\)\.retryHistory\(\)/);
+  assert.match(index, /onRetryHistory:.*searchHost\.retryHistory\(\)/);
 });
 check('native focus waits for layout and a removed or returning page never steals it',()=>{
   const path=new URL('../entry/src/main/ets/features/common/ReaderSearchField.ets',import.meta.url);
