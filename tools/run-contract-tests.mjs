@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdtempSync, openSync, closeSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, spawn } from 'node:child_process';
 
 export function contractTests(root, tier) {
   assert.ok(['source', 'full'].includes(tier));
@@ -29,8 +30,47 @@ export function runContracts(root, tier) {
   console.log(`Host ${tier} contract tests passed: ${selected.length}; integration tests classified: ${integrationCount}`);
 }
 
+/** Opt-in bounded execution of the same classified inventory. Each test has
+ * its own process and log. All started tests settle; every failure is retained
+ * and the gate is nonzero. No test result or prior source snapshot is reused. */
+export async function runContractsBounded(root, tier, workers = 1) {
+  assert.ok(Number.isInteger(workers) && workers >= 1 && workers <= 4, 'workers must be an integer in 1..4');
+  const { selected, integrationCount } = contractTests(root, tier);
+  const logRoot = mkdtempSync(resolve(tmpdir(), 'reader-contract-run-'));
+  const results = []; let cursor = 0;
+  async function worker() {
+    while (cursor < selected.length) {
+      const name = selected[cursor++], started = Date.now(), log = resolve(logRoot, name + '.log');
+      const fd = openSync(log, 'wx');
+      const result = await new Promise(resolveResult => {
+        let child;
+        try {
+          child = spawn(process.execPath, [resolve(root, 'tools', name)],
+            { cwd: root, stdio: ['ignore', fd, fd], timeout: 300_000 });
+        } catch (error) { resolveResult({ error: error.code ?? error.message }); return; }
+        let error;
+        child.once('error', event => { error = event.code ?? event.message; });
+        child.once('close', (status, signal) => resolveResult({ status, signal, error }));
+      });
+      closeSync(fd);
+      const row = { name, ...result, milliseconds: Date.now() - started, log };
+      results.push(row);
+      console.log(`${name}: ${!row.error && row.status === 0 ? 'PASS' : 'FAIL'} (${row.milliseconds}ms)`);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(workers, selected.length) }, worker));
+  results.sort((a, b) => a.name.localeCompare(b.name));
+  assert.equal(results.length, selected.length, 'every selected test must settle');
+  writeFileSync(resolve(logRoot, 'results.json'), JSON.stringify({ tier, workers, results }, null, 2) + '\n');
+  const failed = results.filter(row => row.error || row.status !== 0);
+  if (failed.length) throw new Error(failed.map(row => `${row.name} failed (${row.error ?? row.status ?? row.signal}); ${row.log}`).join('\n'));
+  console.log(`Host ${tier} contract tests passed: ${selected.length}; integration tests classified: ${integrationCount}; logs: ${logRoot}`);
+  return { selected, results, logRoot };
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   assert.ok(['--source', '--full'].includes(process.argv[2]) && process.argv.length === 3,
     'Usage: node tools/run-contract-tests.mjs --source|--full');
-  runContracts(resolve(dirname(fileURLToPath(import.meta.url)), '..'), process.argv[2].slice(2));
+  await runContractsBounded(resolve(dirname(fileURLToPath(import.meta.url)), '..'), process.argv[2].slice(2),
+    Number(process.env.READER_CONTRACT_TEST_WORKERS ?? 1));
 }

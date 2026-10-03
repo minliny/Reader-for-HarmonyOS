@@ -14,15 +14,4 @@ fi
 
 node tools/generate-theme-registry.mjs --check
 
-test_count=0
-while IFS= read -r test_file; do
-  node "$test_file"
-  test_count=$((test_count + 1))
-done < <(find tools -maxdepth 1 -type f -name 'test-*.mjs' ! -name 'test-*-server.mjs' | sort)
-
-if [[ "$test_count" -eq 0 ]]; then
-  echo "No non-server Harmony contract tests found" >&2
-  exit 1
-fi
-
-echo "Harmony contract tests passed: $test_count"
+node tools/run-contract-tests.mjs --full
