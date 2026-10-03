@@ -1,9 +1,7 @@
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
-import {
-  projectCommitReadback,
-  type CommitReadbackSummary,
-} from '../../app/ReaderOperationFacts';
+import type { CommitReadbackSummary } from '../../app/ReaderOperationFacts';
+import { projectPersistedReceipt } from '../../app/ReaderPersistedReceiptProjection';
 import {
   SourceGateway,
   type BookSource,
@@ -490,7 +488,8 @@ export class SourceToolsOrchestrator {
           // instead of closing it (which would hint that nothing was saved)
           // or reporting a save failure (which would hint that a re-submit is
           // required). Only the read-back failed.
-          const fact = projectCommitReadback('confirmed', 'failed');
+          const fact = projectPersistedReceipt({ confirmation: 'confirmed', readback: 'failed',
+            refreshError: (error as Error).message }).receipt;
           this.publish({
             busy: false,
             editorReadback: fact,
@@ -507,7 +506,7 @@ export class SourceToolsOrchestrator {
           sources,
           editorSourceId: '',
           editorText: '',
-          editorReadback: projectCommitReadback('confirmed', 'succeeded'),
+          editorReadback: projectPersistedReceipt({ confirmation: 'confirmed', readback: 'succeeded' }).receipt,
           busy: false,
           statusMessage: '书源已由 Core 校验并保存',
         });
@@ -537,7 +536,7 @@ export class SourceToolsOrchestrator {
             sources,
             editorSourceId: '',
             editorText: '',
-            editorReadback: projectCommitReadback('confirmed', 'succeeded'),
+            editorReadback: projectPersistedReceipt({ confirmation: 'confirmed', readback: 'succeeded' }).receipt,
             busy: false,
             statusMessage: '已确认，当前读取结果可用',
           });
@@ -545,14 +544,14 @@ export class SourceToolsOrchestrator {
         }
         this.publish({
           sources,
-          editorReadback: projectCommitReadback('confirmed', 'failed'),
+          editorReadback: projectPersistedReceipt({ confirmation: 'confirmed', readback: 'failed' }).receipt,
           busy: false,
           statusMessage: '已确认，但当前列表未找到该书源；草稿保留供核对',
         });
       } catch (error) {
         if (this.isCurrentSession(session)) {
           this.publish({
-            editorReadback: projectCommitReadback('confirmed', 'failed'),
+            editorReadback: projectPersistedReceipt({ confirmation: 'confirmed', readback: 'failed' }).receipt,
             busy: false,
             statusMessage: `书源已确认，刷新失败：${(error as Error).message}；草稿保留供核对`,
           });

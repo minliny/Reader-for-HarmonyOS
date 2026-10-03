@@ -100,6 +100,9 @@ const sourceCategorySource = read('entry/src/main/ets/features/source/ReaderSour
   .replace(/^export /gm, '');
 const operationFactsSource = read('entry/src/main/ets/app/ReaderOperationFacts.ts')
   .replace(/^export /gm, '');
+const persistedReceiptProjectionSource = read('entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts')
+  .replace(/^import \{[\s\S]*?\} from ['"]\.\/ReaderOperationFacts['"];\n/m, '')
+  .replace(/^export /gm, '');
 const gatewaySource = read('entry/src/main/ets/features/source/SourceGateway.ts')
   .replace(/^import type \{ JsonObject \} from ['"]@reader\/core-harmony['"];\n/m, '')
   .replace(/^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage['"];\n/m, '')
@@ -110,9 +113,10 @@ const orchestratorSource = read('entry/src/main/ets/features/source/SourceToolsO
   .replace(/^import \{ hilog \} from ['"]@kit\.PerformanceAnalysisKit['"];\n/m, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '')
   .replace(/^import \{ projectCommitReadback \} from ['"][^'"]*ReaderOperationFacts['"];\n/m, '')
+  .replace(/^import \{ projectPersistedReceipt \} from ['"][^'"]*ReaderPersistedReceiptProjection['"];\n/m, '')
   .replace(/^import \{[\s\S]*?\} from ['"]\.\/SourceGateway['"];\n/m, '');
 const executable = stripTypeScriptTypes(
-  `${errorMessageSource}\n${transportPolicySource}\n${sourceCategorySource}\n${operationFactsSource}\n${gatewaySource}\n${orchestratorSource}`,
+  `${errorMessageSource}\n${transportPolicySource}\n${sourceCategorySource}\n${operationFactsSource}\n${persistedReceiptProjectionSource}\n${gatewaySource}\n${orchestratorSource}`,
 );
 assert.doesNotMatch(executable, /^import /m, 'the Node harness must not retain platform imports');
 
@@ -274,6 +278,7 @@ const flowSource = read('entry/src/main/ets/features/bookshelf/BookshelfFlowGate
   .replace(/^import \{[\s\S]*?\} from ['"][^'"]*ReaderCoreGateway['"];\n/m, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '')
   .replace(/^import \{[\s\S]*?\} from ['"][^'"]*ReaderOperationFacts['"];\n/m, '')
+  .replace(/^import \{ projectPersistedReceipt \} from ['"][^'"]*ReaderPersistedReceiptProjection['"];\n/m, '')
   .replace(/^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage['"];\n/m, '')
   .replace(/^import \{[\s\S]*?\} from ['"]\.\/LocalBookImportGateway['"];\n/m, '')
   .replace(/^import type \{ LocalBookPreparation \} from ['"][^'"]*ReaderHostRegistry['"];\n/m, '');
@@ -284,7 +289,7 @@ const flowExecutableSource = flowSource.replace(
   /constructor\(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner\.current\(\),\n\s*private readonly filter: BookshelfFilter = \{ readingState: 'all', sourceKind: 'all' \},\n\s*private readonly background: boolean = false\) \{/,
   "constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current(), filter: BookshelfFilter = { readingState: 'all', sourceKind: 'all' }, background: boolean = false) {\n    this.filter = filter;\n    this.background = background;",
 ).replace(/^export /gm, '');
-const flowExecutable = stripTypeScriptTypes(`${operationFactsSource}\n${flowExecutableSource}`);
+const flowExecutable = stripTypeScriptTypes(`${operationFactsSource}\n${persistedReceiptProjectionSource}\n${flowExecutableSource}`);
 assert.doesNotMatch(flowExecutable, /^import /m, 'flow harness must not retain platform imports');
 const flowFactory = new Function(
   'ReaderCoreGateway',
