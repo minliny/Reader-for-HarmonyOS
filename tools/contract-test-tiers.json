@@ -381,6 +381,7 @@
     "test-reader-title-recipe-lifetime.mjs",
     "test-reader-tts-background-admission.mjs",
     "test-reader-reduce-motion-retirement.mjs",
+    "test-reader-layout-pagination-owners.mjs",
     "test-reader-tts-config-interaction.mjs",
     "test-reader-tts-configuration-host.mjs",
     "test-reader-tts-exit-progress.mjs",

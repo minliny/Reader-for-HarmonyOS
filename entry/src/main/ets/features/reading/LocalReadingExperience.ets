@@ -1,3 +1,5 @@
+import { ReaderParagraphLayoutOwner } from './ReaderParagraphLayoutOwner';
+import { ReaderPhysicalPaginationOwner } from './ReaderPhysicalPaginationOwner';
 import type { JsonObject } from '@reader/core-harmony';
 import { drawing } from '@kit.ArkGraphics2D';
 import { ParagraphRange, MeasurementParagraph, MeasuredReadingLine, PhysicalReadingPage } from './ReadingMeasurementModels';
@@ -218,11 +220,9 @@ import {
   type ReadingSurfaceLineMetric,
 } from './ReadingSurfaceLayoutMap';
 import {
-  ReadingPaginationIndex,
   ReadingPaginationPrefix,
   createReadingPaginationLayoutSignature,
   type ReadingPaginationKey,
-  type ReadingPaginationPrefixObservation,
 } from './ReadingPaginationIndex';
 import {
   ReadingChapterWindow, retainReadingEntryImageHandles, hasKnownReadingImageGeometry,
@@ -1226,9 +1226,10 @@ export struct ReadingExperience {
   private chapterTitleMeasurementController: TextController = new TextController();
   private measuredChapterTitleHeightVp: number = 0;
   private measuredNativeTitle: ReaderNativeParagraphRecipe | undefined = undefined;
-  private paragraphRanges: ParagraphRange[] = [];
-  private readonly measurementBatch: MeasurementParagraph[] = [];
-  private readonly paginationIndex: ReadingPaginationIndex = new ReadingPaginationIndex();
+  private readonly paragraphLayout: ReaderParagraphLayoutOwner<ParagraphRange, MeasurementParagraph> =
+    new ReaderParagraphLayoutOwner<ParagraphRange, MeasurementParagraph>();
+  private readonly physicalPagination: ReaderPhysicalPaginationOwner<ReadingSurfacePageFragment> =
+    new ReaderPhysicalPaginationOwner<ReadingSurfacePageFragment>();
   private readonly chapterWindow: ReadingChapterWindow = new ReadingChapterWindow();
   private readonly geometryImageRequests: Map<string, DeferredReadingImagePixels> = new Map();
   private readonly pageTurnChapterLoads: Set<string> = new Set<string>();
@@ -1317,8 +1318,6 @@ export struct ReadingExperience {
   private pageTurnPendingProjectionChapterIndex: number = -1;
   private pageTurnPendingRequestedChapterChange: boolean = false;
   private pageTurnPendingChapterSelection: ReaderDeferredChapterSelection | undefined = undefined;
-  private paginationDraft: ReadingPaginationPrefix | undefined = undefined;
-  private measurementRequestedAnchorScalar: number = -1;
   private materializedContentVersion: string = '';
   private brightnessRequestGeneration: number = 0;
   private brightnessMutationQueue: Promise<void> = Promise.resolve();
@@ -1335,12 +1334,6 @@ export struct ReadingExperience {
   // invalidate their observers so a paused/stopped update cannot be stranded.
   @State private pageTurnSessionCapsuleFrozen: boolean = false;
   private pageTurnSessionCapsuleSnapshot: ReaderSessionCapsuleSnapshot | undefined = undefined;
-  private pendingPageFragments: ReadingSurfacePageFragment[] = [];
-  private pendingPageStartScalar: number = -1;
-  private pendingPageEndScalar: number = -1;
-  private pendingPageHeight: number = 0;
-  private nextRangeIndex: number = 0;
-  private firstRangeStartScalar: number = 0;
   private batchProcessing: boolean = false;
   private measurementDeadlineTimer: number = -1;
   /** Bounds a first entry that has no previously committed visible body. */
@@ -1384,7 +1377,7 @@ export struct ReadingExperience {
   private canonicalModeAnchor: number = -1;
   private desiredChapterOffset: number = 0;
   private desiredChapterProgress: number = 0;
-  private currentMeasurementGeneration(): number { return this.paginationIndex.measurementGeneration(); }
+  private currentMeasurementGeneration(): number { return this.physicalPagination.index.measurementGeneration(); }
   /** Covers pagination, resolveLocation, and the initial progress write. */
   private measurementCompleting: boolean = false;
   /** Ordinary first-page persistence outlives its completed measurement lease. */
@@ -1436,7 +1429,7 @@ export struct ReadingExperience {
   /** The selection token that owns `chapter` and its layout map. */
   private materializedChapterSelectionToken: number = -1;
   /** The selection token that owns the currently mounted hidden measurement tree. */
-  private currentMeasurementSelection(): number { return this.paginationIndex.measurementSelection(); }
+  private currentMeasurementSelection(): number { return this.physicalPagination.index.measurementSelection(); }
   /** The selection token that owns the visible physical page. */
   private visiblePageSelectionToken: number = -1;
   @State private mounted: boolean = false;
@@ -1752,8 +1745,8 @@ export struct ReadingExperience {
     this.restoreMaterializedChapterContext(snapshot.context, true);
     // The handoff stays constant-size. Neighbour preparation expands a new
     // run, never the retained snapshot, and always starts with the real page.
-    this.paginationDraft = new ReadingPaginationPrefix(retainedKey, observation);
-    this.measurementRequestedAnchorScalar = observation.requestScalar;
+    this.physicalPagination.draft = new ReadingPaginationPrefix(retainedKey, observation);
+    this.physicalPagination.requestedAnchor = observation.requestScalar;
     this.materializedChapterSelectionToken = selectionToken;
     this.setCurrentReadingChapter(snapshot.context.chapter);
     this.rebuildChapterImageIndexes(snapshot.context.chapter);
@@ -1803,9 +1796,9 @@ export struct ReadingExperience {
     // Optional retention cannot first copy/serialize an arbitrarily large
     // catalog and only then discover that it exceeds the resource budget.
     const byteLimit = 16 * 1024 * 1024;
-    if (chapter.content.length * 12 > byteLimit || this.paragraphRanges.length > 4096 ||
+    if (chapter.content.length * 12 > byteLimit || this.paragraphLayout.ranges.length > 4096 ||
       this.tocEntries.length > 4096 || page.fragments.length > 1024) return;
-    let retainedBytes = chapter.content.length * 12 + this.paragraphRanges.length * 96 + 256;
+    let retainedBytes = chapter.content.length * 12 + this.paragraphLayout.ranges.length * 96 + 256;
     for (const entry of this.tocEntries) {
       retainedBytes += entry.title.length * 2 + 128;
       if (retainedBytes > byteLimit) return;
@@ -2430,7 +2423,7 @@ export struct ReadingExperience {
       // A reflow invalidates both the continuous draft and every complete
       // manifest measured under the predecessor geometry. The new signature
       // can never accidentally address those physical page boundaries.
-      this.paginationIndex.invalidateLayout(
+      this.physicalPagination.index.invalidateLayout(
         this.sourceId,
         this.bookId,
         previousLayoutSignature,
@@ -3017,8 +3010,8 @@ export struct ReadingExperience {
     }
     if (target.contentVersion !== this.materializedContentVersion) return;
     const key = this.currentPaginationKey();
-    const current = this.paginationIndex.findContainingPage(key, this.visiblePage.startScalar);
-    const destination = this.paginationIndex.findContainingPage(key, target.scalar);
+    const current = this.physicalPagination.index.findContainingPage(key, this.visiblePage.startScalar);
+    const destination = this.physicalPagination.index.findContainingPage(key, target.scalar);
     if (current === undefined) return;
     if (destination?.pageIndex === current.pageIndex) { this.ttsPageFollow.aligned(target); return; }
     if (target.scalar < this.visiblePage.startScalar && !target.allowBackward) {
@@ -3254,7 +3247,7 @@ export struct ReadingExperience {
     const chapterIndex = origin?.chapter.chapterIndex ?? this.chapter?.chapterIndex ?? -1;
     const pageStart = this.visiblePage?.startScalar ?? -1;
     const contentVersion = origin?.contentVersion ?? this.materializedContentVersion;
-    const paginationDraft = origin?.paginationDraft ?? this.paginationDraft;
+    const paginationDraft = origin?.paginationDraft ?? this.physicalPagination.draft;
     const scalarCount = origin?.layoutMap.scalarCount() ?? this.chapterLayoutMap?.scalarCount() ?? 0;
     const key = this.pageChromePaginationKey(chapterIndex, contentVersion);
     const chrome = this.pageChromeSnapshot(chapterIndex, pageStart, scalarCount, key, paginationDraft);
@@ -3405,7 +3398,7 @@ export struct ReadingExperience {
     this.measureNativeChapterTitle();
     // A batch bounds allocation, not first-page work. Shape a paragraph only
     // when page admission reaches it; an unneeded suffix must not gate paint.
-    for (const paragraph of this.measurementBatch) paragraph.nativeMeasured = false;
+    for (const paragraph of this.paragraphLayout.batch) paragraph.nativeMeasured = false;
   }
 
   /** Title capacity can be queried after a body paragraph is already shaped.
@@ -3730,7 +3723,7 @@ export struct ReadingExperience {
       this.materializedContentVersion = expanded.contentVersion;
       this.setCurrentReadingChapter(expanded);
       this.rebuildChapterImageIndexes(expanded);
-      this.paragraphRanges = preparedRanges;
+      this.paragraphLayout.ranges = preparedRanges;
       this.retainCurrentChapterWindow();
       if (this.readerSettingsSnapshot.navigationMode === 'continuous') this.rebuildContinuousFragments(true);
       // Existing visible native nodes and absolute page facts stay unchanged.
@@ -4003,7 +3996,7 @@ export struct ReadingExperience {
     // The callback arrives after the metrics/form changed, so the predecessor
     // signature is no longer reconstructible. Invalidate this book's local
     // manifests and remeasure the committed anchor under the new snapshot.
-    this.paginationIndex.invalidateBook(this.sourceId, this.bookId);
+    this.physicalPagination.index.invalidateBook(this.sourceId, this.bookId);
     this.resetPaginationDraft();
     this.applyWindowChrome();
     if (this.hasCurrentMaterializedChapter() && this.phase !== 'failed') {
@@ -4026,14 +4019,14 @@ export struct ReadingExperience {
     this.ordinaryPageMeasurementSelection = -1;
     this.invalidatePageTurnRuntime(true, preserveRapidPageTarget, preserveTtsFollow);
     this.previousChapterMeasurement = undefined;
-    this.paginationIndex.invalidateMeasurement();
+    this.physicalPagination.index.invalidateMeasurement();
     this.materializedChapterSelectionToken = -1;
     this.measurementCompleting = false;
     this.remeasurePending = false;
     this.batchProcessing = false;
     this.nativeTextMeasurement.clear();
-    this.measurementBatch.length = 0;
-    this.paragraphRanges.length = 0;
+    this.paragraphLayout.batch.length = 0;
+    this.paragraphLayout.ranges.length = 0;
     this.clearContinuousRenderProjection();
     this.continuousInitialFragmentIndex = 0;
     this.continuousInitialFragmentProgress = 0;
@@ -4046,8 +4039,8 @@ export struct ReadingExperience {
     this.chapterImageByStartScalar.clear();
     this.chapterImagePositionByKey.clear();
     this.resetPendingPage();
-    this.nextRangeIndex = 0;
-    this.firstRangeStartScalar = 0;
+    this.paragraphLayout.nextRangeIndex = 0;
+    this.paragraphLayout.firstRangeStartScalar = 0;
     this.chapter = undefined;
     this.chapterLayoutMap = undefined;
     this.materializedContentVersion = '';
@@ -4548,7 +4541,7 @@ export struct ReadingExperience {
     try {
       this.retainNativeParagraphResources();
       this.nativeTextMeasurement.clear();
-      this.measurementBatch.length = 0;
+      this.paragraphLayout.batch.length = 0;
       if (this.measuringRanges().length === 0) {
         this.collectParagraphRanges(chapter.content);
       }
@@ -4563,7 +4556,7 @@ export struct ReadingExperience {
       const scalarCount = map.scalarCount();
       if (this.measuringOffset() < map.residentStart() ||
         this.measuringOffset() >= map.residentEnd() && map.residentEnd() < scalarCount) {
-        this.paginationIndex.beginMeasurement(selectionToken);
+        this.physicalPagination.index.beginMeasurement(selectionToken);
         this.phase = 'measuring';
         this.expandMeasurementParagraphWindow(this.measuringOffset() < map.residentStart() ? 'before' : 'after',
           this.currentMeasurementGeneration(), selectionToken, lifecycleToken);
@@ -4604,8 +4597,8 @@ export struct ReadingExperience {
         this.rebuildContinuousFragments();
         this.setContinuousInitialAnchor(this.measuringOffset());
       }
-      this.nextRangeIndex = this.rangeIndexForOffset(this.measuringOffset());
-      this.firstRangeStartScalar = this.measuringOffset();
+      this.paragraphLayout.nextRangeIndex = this.rangeIndexForOffset(this.measuringOffset());
+      this.paragraphLayout.firstRangeStartScalar = this.measuringOffset();
       this.resetPendingPage();
       // A chapter selection may be in progress behind the non-opaque Full
       // Directory panel. Preserve an already committed display snapshot until
@@ -4618,7 +4611,7 @@ export struct ReadingExperience {
         this.showChapterTitle = false;
         this.ensureFirstPageReadyDeadline(lifecycleToken, selectionToken);
       }
-      this.paginationIndex.beginMeasurement(selectionToken);
+      this.physicalPagination.index.beginMeasurement(selectionToken);
       if (!this.unicodeProbeVerified) {
         this.unicodeProbeEmptyAttempts = 0;
       }
@@ -4656,7 +4649,7 @@ export struct ReadingExperience {
       this.reportMeasurementGatePending(lifecycleToken, true, false, true);
       return;
     }
-    if (this.measurementBatch.length === 0) return;
+    if (this.paragraphLayout.batch.length === 0) return;
     this.batchProcessing = true;
     this.consumeMeasuredBatch(generation, selectionToken, lifecycleToken);
   }
@@ -4687,11 +4680,11 @@ export struct ReadingExperience {
         this.consumeReversePageParagraph(generation, selectionToken, lifecycleToken);
         return;
       }
-      for (let batchIndex = 0; batchIndex < this.measurementBatch.length; batchIndex += 1) {
-        const paragraph = this.measurementBatch[batchIndex];
+      for (let batchIndex = 0; batchIndex < this.paragraphLayout.batch.length; batchIndex += 1) {
+        const paragraph = this.paragraphLayout.batch[batchIndex];
         const knownEnd = this.measuredPageEndLimit();
         if (knownEnd !== undefined && paragraph.chapterStartScalar >= knownEnd) {
-          this.pendingPageEndScalar = knownEnd;
+          this.physicalPagination.endScalar = knownEnd;
           this.beginFirstPageCommit(generation, selectionToken, lifecycleToken); return;
         }
         const bodyImage = this.readingImageForParagraph(paragraph);
@@ -4700,14 +4693,13 @@ export struct ReadingExperience {
           if (!Number.isFinite(lineCapacity) || lineCapacity <= 0) {
             throw new Error('PAGINATION_SURFACE_HEIGHT_INVALID');
           }
-          const paragraphSpace = this.pendingPageFragments.length > 0 ?
+          const paragraphSpace = this.physicalPagination.fragments.length > 0 ?
             this.appearanceSnapshot.paragraphSpacing : 0;
           // Even an unknown image has the renderer's existing 1vp minimum
           // (or its failed-block line height). A full text page cannot admit
           // either outcome, so it must not wait for the next page's decode.
           const minimumImageHeight = Math.min(1, readerAppearanceLineHeight(this.appearanceSnapshot));
-          if (this.pendingPageFragments.length > 0 &&
-            this.pendingPageHeight + paragraphSpace + minimumImageHeight > lineCapacity) {
+          if (!this.physicalPagination.canFit(minimumImageHeight, paragraphSpace, lineCapacity)) {
             this.beginFirstPageCommit(generation, selectionToken, lifecycleToken);
             return;
           }
@@ -4716,7 +4708,7 @@ export struct ReadingExperience {
             // only this image and the unconsumed suffix so the async resume
             // cannot duplicate earlier layout observations.
             if (batchIndex > 0) {
-              this.measurementBatch.splice(0, batchIndex);
+              this.paragraphLayout.batch.splice(0, batchIndex);
             }
             this.resolvePendingReadingImage(
               bodyImage,
@@ -4729,19 +4721,18 @@ export struct ReadingExperience {
           let imageHeight = bodyImage.state === 'ready' || hasKnownReadingImageGeometry(bodyImage) ?
             this.scaledReadingImageHeight(bodyImage, lineCapacity) :
             readerAppearanceLineHeight(this.appearanceSnapshot);
-          if (this.pendingPageFragments.length > 0 &&
-            this.pendingPageHeight + paragraphSpace + imageHeight > lineCapacity) {
+          if (!this.physicalPagination.canFit(imageHeight, paragraphSpace, lineCapacity)) {
             this.beginFirstPageCommit(generation, selectionToken, lifecycleToken);
             return;
           }
-          const admittedParagraphSpace = this.pendingPageFragments.length > 0 ?
+          const admittedParagraphSpace = this.physicalPagination.fragments.length > 0 ?
             this.appearanceSnapshot.paragraphSpacing : 0;
-          if (this.pendingPageFragments.length === 0) {
-            this.pendingPageStartScalar = bodyImage.startScalar;
+          if (this.physicalPagination.fragments.length === 0) {
+            this.physicalPagination.startScalar = bodyImage.startScalar;
           }
-          this.pendingPageHeight += admittedParagraphSpace + imageHeight;
-          this.pendingPageEndScalar = bodyImage.endScalar;
-          this.pendingPageFragments.push(new ReadingSurfacePageFragment(
+          this.physicalPagination.height += admittedParagraphSpace + imageHeight;
+          this.physicalPagination.endScalar = bodyImage.endScalar;
+          this.physicalPagination.fragments.push(new ReadingSurfacePageFragment(
             `chapter-${this.requireMeasurementChapter().chapterIndex}:image:${bodyImage.startScalar}-${bodyImage.endScalar}`,
             '',
             true,
@@ -4761,7 +4752,7 @@ export struct ReadingExperience {
         // but remove their batch entries so a later didLayout cannot repeat them.
         this.measureNativeParagraph(paragraph);
         if (!this.paragraphHasLayout(paragraph, batchIndex)) {
-          if (batchIndex > 0) this.measurementBatch.splice(0, batchIndex);
+          if (batchIndex > 0) this.paragraphLayout.batch.splice(0, batchIndex);
           this.batchProcessing = false;
           this.reportMeasurementGatePending(lifecycleToken, true, true, false);
           return;
@@ -4772,7 +4763,7 @@ export struct ReadingExperience {
         let transferred: boolean = false;
         for (const line of lines) {
           if (knownEnd !== undefined && line.startScalar >= knownEnd) {
-            this.pendingPageEndScalar = knownEnd;
+            this.physicalPagination.endScalar = knownEnd;
             this.beginFirstPageCommit(generation, selectionToken, lifecycleToken); return;
           }
           if (knownEnd !== undefined && line.endScalar > knownEnd)
@@ -4785,17 +4776,16 @@ export struct ReadingExperience {
           let candidateHeight = this.getUIContext().px2vp(readerNativeParagraphHeight(
             paragraph.controller.getLayoutManager(), nativeRecipe?.firstLine ?? line.lineIndex, line.lineIndex));
           let admittedLineHeight = candidateHeight - nativeHeight;
-          const paragraphSpace = isParagraphStart && this.pendingPageFragments.length > 0 ?
+          const paragraphSpace = isParagraphStart && this.physicalPagination.fragments.length > 0 ?
             this.appearanceSnapshot.paragraphSpacing : 0;
-          if (this.pendingPageFragments.length > 0 &&
-            this.pendingPageHeight + paragraphSpace + admittedLineHeight > lineCapacity) {
+          if (!this.physicalPagination.canFit(admittedLineHeight, paragraphSpace, lineCapacity)) {
             this.beginFirstPageCommit(generation, selectionToken, lifecycleToken);
             return;
           }
-          const admittedParagraphSpace = isParagraphStart && this.pendingPageFragments.length > 0 ?
+          const admittedParagraphSpace = isParagraphStart && this.physicalPagination.fragments.length > 0 ?
             this.appearanceSnapshot.paragraphSpacing : 0;
-          if (this.pendingPageFragments.length === 0) {
-            this.pendingPageStartScalar = line.startScalar;
+          if (this.physicalPagination.fragments.length === 0) {
+            this.physicalPagination.startScalar = line.startScalar;
           }
           const firstNativeLine = nativeRecipe === undefined;
           if (nativeRecipe === undefined) {
@@ -4821,14 +4811,14 @@ export struct ReadingExperience {
           }
           nativeRecipe.lastLine = line.lineIndex;
           nativeHeight = candidateHeight;
-          this.pendingPageHeight += admittedParagraphSpace + admittedLineHeight;
-          this.pendingPageEndScalar = line.endScalar;
+          this.physicalPagination.height += admittedParagraphSpace + admittedLineHeight;
+          this.physicalPagination.endScalar = line.endScalar;
           // ReadingSurface uses this id as its ArkUI ForEach identity. A
           // paragraph starts at zero in every chapter, so the local paragraph
           // id alone would let a new chapter reuse an old visible Text child.
           // Bind the fragment to the Core-returned chapter identity; this is
           // presentation identity only and never changes the scalar anchor.
-          this.pendingPageFragments.push(new ReadingSurfacePageFragment(
+          this.physicalPagination.fragments.push(new ReadingSurfacePageFragment(
             `chapter-${this.requireMeasurementChapter().chapterIndex}:${paragraph.id}:${line.startScalar}-${line.endScalar}`,
             this.presentationLineText(paragraph.text.substring(line.startUtf16, line.endUtf16)),
             isParagraphStart,
@@ -4839,7 +4829,7 @@ export struct ReadingExperience {
             undefined,
             admittedLineHeight,
           ));
-          const fragment = this.pendingPageFragments[this.pendingPageFragments.length - 1];
+          const fragment = this.physicalPagination.fragments[this.physicalPagination.fragments.length - 1];
           fragment.nativeParagraph = nativeRecipe;
           fragment.nativeParagraphFirst = firstNativeLine;
         }
@@ -4848,10 +4838,10 @@ export struct ReadingExperience {
       // All controller-derived data from this batch has now been copied into
       // plain fragments.  Release it before moving to the next bounded batch.
       this.nativeTextMeasurement.clear();
-      this.measurementBatch.length = 0;
+      this.paragraphLayout.batch.length = 0;
       const knownEnd = this.measuredPageEndLimit();
-      if (knownEnd !== undefined && this.pendingPageEndScalar >= knownEnd) {
-        this.pendingPageEndScalar = knownEnd;
+      if (knownEnd !== undefined && this.physicalPagination.endScalar >= knownEnd) {
+        this.physicalPagination.endScalar = knownEnd;
         this.beginFirstPageCommit(generation, selectionToken, lifecycleToken); return;
       }
       if (this.prepareNextMeasurementBatch()) {
@@ -5026,7 +5016,7 @@ export struct ReadingExperience {
         Math.min(pending.originalChapterOffset, known?.requestScalar ?? pending.originalChapterOffset) : map.scalarCount();
     }
     this.resetPendingPage();
-    this.pendingPageEndScalar = pending.endScalar;
+    this.physicalPagination.endScalar = pending.endScalar;
     this.setMeasuringRequestedAnchor(pending.endScalar);
     this.measuredNativeTitle = undefined;
     this.measuredChapterTitleHeightVp = 0;
@@ -5034,7 +5024,7 @@ export struct ReadingExperience {
     pending.nextRangeIndex = this.measuringRanges().length - 1;
     while (pending.nextRangeIndex >= 0 &&
       this.measuringRanges()[pending.nextRangeIndex].startScalar >= pending.endScalar) pending.nextRangeIndex -= 1;
-    this.paginationIndex.beginMeasurement(selectionToken);
+    this.physicalPagination.index.beginMeasurement(selectionToken);
     this.measurementCompleting = false;
     this.batchProcessing = false;
     this.phase = 'measuring';
@@ -5058,7 +5048,7 @@ export struct ReadingExperience {
     const range = this.measuringRanges()[index];
     const text = this.requireMeasurementChapter().content.substring(range.startUtf16, range.endUtf16);
     this.nativeTextMeasurement.clear();
-    this.measurementBatch.splice(0, this.measurementBatch.length,
+    this.paragraphLayout.batch.splice(0, this.paragraphLayout.batch.length,
       new MeasurementParagraph(range.id, index, text, range.startScalar,
         new ReadingSurfaceLayoutMap(text), new TextController(), true, range.startScalar));
     return true;
@@ -5107,11 +5097,11 @@ export struct ReadingExperience {
     try {
       if (!this.isMeasurementCurrent(generation, selectionToken, lifecycleToken)) return;
       const pending = this.previousChapterMeasurement;
-      const paragraph = this.measurementBatch[0];
+      const paragraph = this.paragraphLayout.batch[0];
       if (pending === undefined || paragraph === undefined) return;
       if (!this.hasValidUnicodeProbe(lifecycleToken)) return;
       const image = this.readingImageForParagraph(paragraph);
-      const gap = this.pendingPageFragments.length > 0 ? this.appearanceSnapshot.paragraphSpacing : 0;
+      const gap = this.physicalPagination.fragments.length > 0 ? this.appearanceSnapshot.paragraphSpacing : 0;
       let full = false;
       if (image !== undefined) {
         if (image.state === 'pending' && !hasKnownReadingImageGeometry(image)) {
@@ -5121,14 +5111,14 @@ export struct ReadingExperience {
           const capacity = this.reversePageCapacityAt(image.startScalar);
           const height = image.state === 'ready' || hasKnownReadingImageGeometry(image) ? this.scaledReadingImageHeight(image, capacity) :
             readerAppearanceLineHeight(this.appearanceSnapshot);
-          full = this.pendingPageFragments.length > 0 && this.pendingPageHeight + gap + height > capacity;
+          full = this.physicalPagination.fragments.length > 0 && this.physicalPagination.height + gap + height > capacity;
           if (!full) {
-            this.pendingPageFragments.unshift(new ReadingSurfacePageFragment(
+            this.physicalPagination.fragments.unshift(new ReadingSurfacePageFragment(
               `chapter-${pending.targetChapterIndex}:image:${image.startScalar}-${image.endScalar}`, '', true,
               image.startScalar, image.endScalar, image.state === 'ready' ? image.pixelMap : undefined,
               height, image.state === 'ready' ? image.fileUri : undefined, height, image.imageWidthBasisPoints));
-            this.pendingPageStartScalar = image.startScalar;
-            this.pendingPageHeight += gap + height;
+            this.physicalPagination.startScalar = image.startScalar;
+            this.physicalPagination.height += gap + height;
           }
         }
       } else {
@@ -5140,8 +5130,8 @@ export struct ReadingExperience {
           const candidate = this.getUIContext().px2vp(readerNativeParagraphHeight(
             paragraph.controller.getLayoutManager(), line.lineIndex, lines[0].lineIndex));
           const capacity = this.reversePageCapacityAt(line.startScalar);
-          if ((this.pendingPageFragments.length > 0 || selected.length > 0) &&
-            this.pendingPageHeight + gap + candidate > capacity) { full = true; break; }
+          if ((this.physicalPagination.fragments.length > 0 || selected.length > 0) &&
+            this.physicalPagination.height + gap + candidate > capacity) { full = true; break; }
           selected.unshift(line); height = candidate;
         }
         if (selected.length > 0) {
@@ -5172,21 +5162,21 @@ export struct ReadingExperience {
           const window = new ReaderNativeTextWindow(this.getUIContext(), this.nativeTextMeasurement.take(paragraph.controller),
             paragraph.controller, this.getUIContext().vp2px(this.measurementTextWidth()), recipe.firstLine, recipe.lastLine);
           this.nativeParagraphResources.set(recipe.key, window, paragraph.layoutMap);
-          this.pendingPageFragments = fragments.concat(this.pendingPageFragments);
-          this.pendingPageStartScalar = selected[0].startScalar;
-          this.pendingPageHeight += gap + height;
+          this.physicalPagination.fragments = fragments.concat(this.physicalPagination.fragments);
+          this.physicalPagination.startScalar = selected[0].startScalar;
+          this.physicalPagination.height += gap + height;
         }
       }
-      this.nativeTextMeasurement.clear(); this.measurementBatch.length = 0;
+      this.nativeTextMeasurement.clear(); this.paragraphLayout.batch.length = 0;
       if (!full && this.preparePreviousMeasurementParagraph()) {
         this.consumeReversePageParagraph(generation, selectionToken, lifecycleToken); return;
       }
       if (!full && this.requireMeasurementLayoutMap().residentStart() > 0) {
         this.expandMeasurementParagraphWindow('before', generation, selectionToken, lifecycleToken); return;
       }
-      if (this.pendingPageFragments.length === 0) throw new Error('PAGINATION_NO_PREVIOUS_PAGE');
-      this.setMeasuringOffset(this.pendingPageStartScalar);
-      this.setMeasuringRequestedAnchor(this.pendingPageStartScalar);
+      if (this.physicalPagination.fragments.length === 0) throw new Error('PAGINATION_NO_PREVIOUS_PAGE');
+      this.setMeasuringOffset(this.physicalPagination.startScalar);
+      this.setMeasuringRequestedAnchor(this.physicalPagination.startScalar);
       this.beginFirstPageCommit(generation, selectionToken, lifecycleToken);
     } catch (error) {
       if (this.isMeasurementCurrent(generation, selectionToken, lifecycleToken)) this.fail(error as Error, lifecycleToken);
@@ -5254,7 +5244,7 @@ export struct ReadingExperience {
       const observed = draft.observationForRequest(request) ?? draft.observationForPageStart(request);
       if (observed !== undefined) return observed.endScalarExclusive;
     }
-    const indexed = this.paginationIndex.findContainingPage(key, request);
+    const indexed = this.physicalPagination.index.findContainingPage(key, request);
     return indexed?.startScalar === request ? indexed.endScalarExclusive : undefined;
   }
 
@@ -5296,7 +5286,7 @@ export struct ReadingExperience {
         range.startScalar, range.endScalar));
     const lane = this.adjacentMeasurementContext;
     if (lane === undefined) {
-      this.chapter = cropped; this.chapterLayoutMap = map; this.paragraphRanges = retained;
+      this.chapter = cropped; this.chapterLayoutMap = map; this.paragraphLayout.ranges = retained;
       this.setCurrentReadingChapter(cropped); this.rebuildChapterImageIndexes(cropped);
     } else {
       lane.chapter = cropped; lane.layoutMap = map; lane.paragraphRanges = retained;
@@ -5316,7 +5306,7 @@ export struct ReadingExperience {
       this.measuringChapter() === chapter && this.adjacentMeasurementContext === lane &&
       this.previousChapterMeasurement === pending;
     this.cancelMeasurementDeadline();
-    this.nativeTextMeasurement.clear(); this.measurementBatch.length = 0;
+    this.nativeTextMeasurement.clear(); this.paragraphLayout.batch.length = 0;
     this.batchProcessing = false;
     const mode = readingParagraphBoundaryMode(this.sourceId, this.bookKind);
     void this.activeGateway().loadParagraphWindow(chapter,
@@ -5331,7 +5321,7 @@ export struct ReadingExperience {
         `paragraph-${index}-${item.startUtf16}`, item.startUtf16, item.endUtf16,
         map.scalarForUtf16(item.startUtf16), map.scalarForUtf16(item.endUtf16)));
       if (lane === undefined) {
-        this.chapter = expanded; this.chapterLayoutMap = map; this.paragraphRanges = paragraphs;
+        this.chapter = expanded; this.chapterLayoutMap = map; this.paragraphLayout.ranges = paragraphs;
         this.setCurrentReadingChapter(expanded); this.rebuildChapterImageIndexes(expanded);
       } else {
         lane.chapter = expanded; lane.layoutMap = map; lane.paragraphRanges = paragraphs;
@@ -5509,7 +5499,7 @@ export struct ReadingExperience {
       }
     }
     if (this.matchingImageChapter(this.adjacentMeasurementContext?.chapter ?? this.chapter, pending.chapter))
-      this.replaceFragmentPixels(this.pendingPageFragments, image);
+      this.replaceFragmentPixels(this.physicalPagination.fragments, image);
     this.retainCurrentChapterWindow();
     return changed;
   }
@@ -5606,42 +5596,42 @@ export struct ReadingExperience {
     if (!this.isMeasurementCurrent(generation, selectionToken, lifecycleToken)) {
       return;
     }
-    if (this.pendingPageFragments.length === 0 || this.pendingPageStartScalar < 0 ||
-      this.pendingPageEndScalar < this.pendingPageStartScalar) {
+    if (this.physicalPagination.fragments.length === 0 || this.physicalPagination.startScalar < 0 ||
+      this.physicalPagination.endScalar < this.physicalPagination.startScalar) {
       this.fail(new Error('PAGINATION_NO_PHYSICAL_PAGE'), lifecycleToken);
       return;
     }
     const resident = this.measuringChapter()?.documentRange;
     const knownEnd = this.previousChapterMeasurement === undefined ? this.measuredPageEndLimit() : undefined;
-    if (knownEnd !== undefined && this.pendingPageEndScalar < knownEnd) {
+    if (knownEnd !== undefined && this.physicalPagination.endScalar < knownEnd) {
       if (resident !== undefined && resident.endScalar < knownEnd) {
         this.expandMeasurementParagraphWindow('after', generation, selectionToken, lifecycleToken); return;
       }
-      const gap = this.requireMeasurementLayoutMap().sliceByScalar(this.pendingPageEndScalar, knownEnd);
+      const gap = this.requireMeasurementLayoutMap().sliceByScalar(this.physicalPagination.endScalar, knownEnd);
       if (gap.trim().length !== 0) throw new Error('PAGINATION_KNOWN_PAGE_BOUNDARY_CHANGED');
-      this.pendingPageEndScalar = knownEnd;
+      this.physicalPagination.endScalar = knownEnd;
     }
     if (resident !== undefined && resident.endScalar < resident.totalScalars &&
       this.previousChapterMeasurement === undefined && knownEnd === undefined &&
-      this.pendingPageEndScalar > this.lastMeasurableScalar()) {
+      this.physicalPagination.endScalar > this.lastMeasurableScalar()) {
       this.expandMeasurementParagraphWindow('after', generation, selectionToken, lifecycleToken);
       return;
     }
-    if (this.measuredNativeTitle !== undefined && this.measurementIncludesChapterTitle() && this.pendingPageFragments.length > 0) {
-      this.pendingPageFragments[0].nativeTitle = this.measuredNativeTitle;
+    if (this.measuredNativeTitle !== undefined && this.measurementIncludesChapterTitle() && this.physicalPagination.fragments.length > 0) {
+      this.physicalPagination.fragments[0].nativeTitle = this.measuredNativeTitle;
     }
     const page = new PhysicalReadingPage(
-      [...this.pendingPageFragments],
-      this.pendingPageStartScalar,
-      this.pendingPageEndScalar,
-      this.pendingPageHeight,
+      [...this.physicalPagination.fragments],
+      this.physicalPagination.startScalar,
+      this.physicalPagination.endScalar,
+      this.physicalPagination.height,
       this.pendingPageBodyCapacity(),
       copyReaderAppearanceSnapshot(this.appearanceSnapshot),
     );
     this.observeMeasuredPhysicalPage(page);
     this.retainMeasuredParagraphWindow(page);
     this.nativeTextMeasurement.clear();
-    this.measurementBatch.length = 0;
+    this.paragraphLayout.batch.length = 0;
     this.batchProcessing = false;
     this.measurementCompleting = true;
     this.cancelMeasurementDeadline();
@@ -5664,11 +5654,11 @@ export struct ReadingExperience {
 
   private beginCanonicalModeMeasurement(anchor: number): void {
     const key = this.currentPaginationKey();
-    const target = Math.max(this.paragraphRanges[0].startScalar, Math.min(this.lastMeasurableScalar(), anchor));
-    const known = this.paginationIndex.findContainingPage(key, target);
-    const prefix = this.paginationDraft;
+    const target = Math.max(this.paragraphLayout.ranges[0].startScalar, Math.min(this.lastMeasurableScalar(), anchor));
+    const known = this.physicalPagination.index.findContainingPage(key, target);
+    const prefix = this.physicalPagination.draft;
     const headPrefix = prefix !== undefined && prefix.matches(key) &&
-      prefix.startsAtRequest(this.paragraphRanges[0].startScalar) ? prefix : undefined;
+      prefix.startsAtRequest(this.paragraphLayout.ranges[0].startScalar) ? prefix : undefined;
     // A scalar between a page's end request and the next visible glyph can
     // be whitespace. Match complete-index semantics (the preceding page),
     // rather than skipping all the way to the prefix's measured frontier.
@@ -5677,7 +5667,7 @@ export struct ReadingExperience {
     this.canonicalModeAnchor = knownStart === undefined ? target : -1;
     // Reuse exact layout facts where available. Otherwise advance the existing
     // bounded, frame-driven measurement lane only as far as the containing page.
-    this.desiredChapterOffset = knownStart ?? headPrefix?.nextRequestScalar() ?? this.paragraphRanges[0].startScalar;
+    this.desiredChapterOffset = knownStart ?? headPrefix?.nextRequestScalar() ?? this.paragraphLayout.ranges[0].startScalar;
     this.desiredChapterProgress = this.requireChapterLayoutMap().scalarCount() === 0 ? 0 :
       this.desiredChapterOffset / this.requireChapterLayoutMap().scalarCount();
     this.beginMeasurement(this.lifecycleToken);
@@ -5789,7 +5779,7 @@ export struct ReadingExperience {
     );
     this.previousChapterMeasurement = undefined;
     this.measurementCompleting = false;
-    this.paginationIndex.finishMeasurement();
+    this.physicalPagination.index.finishMeasurement();
     this.finishAdjacentMeasurementContext();
     this.phase = 'ready';
     if (pending.pageTurnGeneration === this.pageTurnGeneration) {
@@ -5808,7 +5798,7 @@ export struct ReadingExperience {
     const origin = pending.origin;
     this.previousChapterMeasurement = undefined;
     this.measurementCompleting = false;
-    this.paginationIndex.finishMeasurement();
+    this.physicalPagination.index.finishMeasurement();
     this.finishAdjacentMeasurementContext();
     this.phase = this.visiblePage === undefined ? 'loading' : 'ready';
     this.releaseUnretainedReadingImages();
@@ -5846,7 +5836,7 @@ export struct ReadingExperience {
     }
     this.finishAdjacentMeasurementContext();
     this.measurementCompleting = false;
-    this.paginationIndex.finishMeasurement();
+    this.physicalPagination.index.finishMeasurement();
     this.phase = 'ready';
     this.pageTurnRenderRevision += 1;
     this.resolvePageImagePixels(targetContext.chapter, page.fragments);
@@ -5882,7 +5872,7 @@ export struct ReadingExperience {
         this.publishMeasuredFirstPage(visiblePage, chapter, selectionToken);
         this.desiredChapterOffset = visiblePage.startScalar;
         this.desiredChapterProgress = visibleProgress;
-        this.paginationIndex.finishMeasurement();
+        this.physicalPagination.index.finishMeasurement();
         this.measurementCompleting = false;
         this.cancelFirstPageReadyDeadline();
         this.cancelFirstPageCompletionDeadline();
@@ -5961,7 +5951,7 @@ export struct ReadingExperience {
         this.cancelFirstPageCompletionDeadline();
         this.firstPageCompletionRetryCount = 0;
         this.chapterTitle = chapter.chapterTitle;
-        this.paginationIndex.finishMeasurement();
+        this.physicalPagination.index.finishMeasurement();
         this.traceInitialReadingPhase?.('presentation-submit', lifecycleToken);
         this.traceInitialReadingPhase?.('input-ready', lifecycleToken);
         // Publish the final page-turn owner before durable observers can act.
@@ -6513,7 +6503,7 @@ export struct ReadingExperience {
         // A body replacement invalidates every physical layout for that
         // chapter; retaining a versioned but unreachable manifest would hide
         // the fact that the current body has never been measured.
-        this.paginationIndex.invalidateChapter(this.sourceId, this.bookId, chapterIndex);
+        this.physicalPagination.index.invalidateChapter(this.sourceId, this.bookId, chapterIndex);
         known.contentVersion = contentVersion;
         this.resetPaginationDraft();
       }
@@ -6533,7 +6523,7 @@ export struct ReadingExperience {
 
   private retainCurrentChapterWindow(): void {
     const retained = this.chapterWindow.retainedChapterIndexes();
-    this.paginationIndex.retainChapterWindow(this.sourceId, this.bookId, retained);
+    this.physicalPagination.index.retainChapterWindow(this.sourceId, this.bookId, retained);
     for (let index = this.knownContentVersions.length - 1; index >= 0; index -= 1) {
       if (retained.indexOf(this.knownContentVersions[index].chapterIndex) < 0) {
         this.knownContentVersions.splice(index, 1);
@@ -6593,7 +6583,7 @@ export struct ReadingExperience {
     }
     const preparedFragments = (this.preparedPreviousPage?.page.fragments ?? [])
       .concat(this.preparedNextPage?.page.fragments ?? []);
-    for (const fragment of this.visibleFragments.concat(this.pendingPageFragments, preparedFragments)) {
+    for (const fragment of this.visibleFragments.concat(this.physicalPagination.fragments, preparedFragments)) {
       if ((resource.fileUri.length > 0 && fragment.fileUri === resource.fileUri) ||
         (resource.pixelMap !== undefined && fragment.imageSource === resource.pixelMap)) {
         return true;
@@ -6629,73 +6619,30 @@ export struct ReadingExperience {
    * No page boundary before the first observation is inferred.
    */
   private observeMeasuredPhysicalPage(page: PhysicalReadingPage): void {
-    const key = this.measurementPaginationKey();
     if (this.measuringRanges().length === 0 || this.measuringRequestedAnchor() < 0) {
       this.resetMeasurementPaginationDraft();
       return;
     }
-
-    const chapterStartRequest = this.measuringRanges()[0].startScalar;
-    const requestedAnchor = this.measuringRequestedAnchor();
-    const observation: ReadingPaginationPrefixObservation = {
-      requestScalar: requestedAnchor,
-      startScalar: page.startScalar,
-      endScalarExclusive: page.endScalar,
-    };
-    const draft = this.measuringDraft();
-    if (draft !== undefined && draft.matches(key) && draft.admit(observation)) {
-      // Exact re-observations preserve the known prefix; only the continuous
-      // frontier can extend it. This makes an already measured previous page
-      // usable without turning the prefix into a navigation-history stack.
-    } else {
-      if (this.previousChapterMeasurement !== undefined && draft !== undefined && draft.matches(key))
-        throw new Error('PAGINATION_PREVIOUS_PAGE_NOT_ADJACENT');
-      this.setMeasuringDraft(new ReadingPaginationPrefix(key, observation));
-    }
-
-    const activeDraft = this.measuringDraft();
-    if (activeDraft === undefined || !this.samePaginationKey(activeDraft.key, key)) {
-      return;
-    }
-    if (page.paginationObservation !== undefined) {
-      const original = page.paginationObservation;
-      if (page.paginationKey === undefined || !this.samePaginationKey(page.paginationKey, key) ||
-        original.requestScalar !== observation.requestScalar || original.startScalar !== observation.startScalar ||
-        original.endScalarExclusive !== observation.endScalarExclusive)
-        throw new Error('PAGINATION_PAGE_OBSERVATION_CHANGED');
-    } else {
-      // These are scalar facts only; retaining a page cannot retain a growing
-      // chapter run. Subsequent measurements create their own page receipt.
-      page.paginationKey = activeDraft.key;
-      page.paginationObservation = observation;
-    }
     const chapter = this.requireMeasurementChapter();
     const map = this.requireMeasurementLayoutMap();
-    if (page.endScalar <= this.lastVisibleScalar(chapter.content, map)) {
-      return;
-    }
-    if (chapter.documentRange !== undefined || !activeDraft.isCanonicalPrefixForChapterStart(chapterStartRequest)) {
-      // A continuous suffix remains useful for exact in-session previous-page
-      // lookup, but it cannot claim the unmeasured chapter prefix.
-      return;
-    }
-    this.paginationIndex.recordChapter({
-      key,
-      contentScalarLength: map.scalarCount(),
-      pageStartScalars: activeDraft.pageStartScalars(),
+    const ranges = this.measuringRanges();
+    const result = this.physicalPagination.observe(page, {
+      key: this.measurementPaginationKey(), requestedAnchor: this.measuringRequestedAnchor(),
+      chapterStartRequest: ranges.length === 0 ? undefined : ranges[0].startScalar,
+      draft: this.measuringDraft(), previousChapterMeasurement: this.previousChapterMeasurement !== undefined,
+      lastVisibleScalar: this.lastVisibleScalar(chapter.content, map), contentScalarLength: map.scalarCount(),
+      partialDocument: chapter.documentRange !== undefined,
     });
-    this.resetMeasurementPaginationDraft();
+    this.setMeasuringDraft(result.draft);
+    if (result.completed) this.setMeasuringRequestedAnchor(-1);
   }
 
   private resetPaginationDraft(): void {
-    this.paginationDraft = undefined;
-    this.measurementRequestedAnchorScalar = -1;
+    this.physicalPagination.resetDraft();
   }
 
   private samePaginationKey(left: ReadingPaginationKey, right: ReadingPaginationKey): boolean {
-    return left.sourceId === right.sourceId && left.bookId === right.bookId &&
-      left.chapterIndex === right.chapterIndex && left.layoutSignature === right.layoutSignature &&
-      left.contentVersion === right.contentVersion;
+    return this.physicalPagination.sameKey(left, right);
   }
 
   private collectParagraphRanges(content: string): void {
@@ -6719,7 +6666,7 @@ export struct ReadingExperience {
   private rebuildContinuousFragments(preserveExisting: boolean = false): void {
     const chapter = this.chapter;
     const chapterMap = this.chapterLayoutMap;
-    if (chapter === undefined || chapterMap === undefined || this.paragraphRanges.length === 0) {
+    if (chapter === undefined || chapterMap === undefined || this.paragraphLayout.ranges.length === 0) {
       this.clearContinuousRenderProjection();
       return;
     }
@@ -6729,7 +6676,7 @@ export struct ReadingExperience {
     if (preserveExisting) {
       for (const fragment of this.continuousFragments) retained.set(fragment.startScalar, fragment);
     }
-    for (const range of this.paragraphRanges) {
+    for (const range of this.paragraphLayout.ranges) {
       const existing = retained.get(range.startScalar);
       if (existing !== undefined && existing.endScalar === range.endScalar) {
         fragments.push(existing);
@@ -6926,58 +6873,17 @@ export struct ReadingExperience {
    * platform checkpoint, cutting that text would change its shaping. */
   private prepareNextMeasurementBatch(): boolean {
     const chapter = this.requireMeasurementChapter();
-    const chapterMap = this.requireMeasurementLayoutMap();
-    this.nativeTextMeasurement.clear();
-    this.measurementBatch.length = 0;
-    let totalUtf16 = 0;
-    while (this.nextRangeIndex < this.measuringRanges().length &&
-      this.measurementBatch.length < MAX_MEASUREMENT_BATCH_PARAGRAPHS) {
-      const range = this.measuringRanges()[this.nextRangeIndex];
-      const startScalar = Math.max(range.startScalar, this.firstRangeStartScalar);
-      if (startScalar >= range.endScalar) {
-        this.nextRangeIndex += 1;
-        this.firstRangeStartScalar = 0;
-        continue;
-      }
-      const startUtf16 = range.startUtf16;
-      const utf16Length = range.endUtf16 - startUtf16;
-      if (utf16Length <= 0) {
-        this.nextRangeIndex += 1;
-        this.firstRangeStartScalar = 0;
-        continue;
-      }
-      if (this.measurementBatch.length > 0 && totalUtf16 + utf16Length > MAX_MEASUREMENT_BATCH_UTF16) {
-        break;
-      }
-      const endUtf16 = range.endUtf16;
-      const text = chapter.content.substring(startUtf16, endUtf16);
-      this.measurementBatch.push(new MeasurementParagraph(
-        `${range.id}:${startScalar}`,
-        this.nextRangeIndex,
-        text,
-        range.startScalar,
-        new ReadingSurfaceLayoutMap(text),
-        new TextController(),
-        true,
-        startScalar,
-      ));
-      totalUtf16 += endUtf16 - startUtf16;
-      this.nextRangeIndex += 1;
-      this.firstRangeStartScalar = 0;
-    }
-    return this.measurementBatch.length > 0;
+    this.requireMeasurementLayoutMap();
+    return this.paragraphLayout.prepareBatch(chapter.content, this.measuringRanges(),
+      MAX_MEASUREMENT_BATCH_PARAGRAPHS, MAX_MEASUREMENT_BATCH_UTF16,
+      (): void => this.nativeTextMeasurement.clear(),
+      (range: ParagraphRange, index: number, text: string, requestedStart: number): MeasurementParagraph =>
+        new MeasurementParagraph(`${range.id}:${requestedStart}`, index, text, range.startScalar,
+          new ReadingSurfaceLayoutMap(text), new TextController(), true, requestedStart));
   }
 
-
   private rangeIndexForOffset(offset: number): number {
-    for (let index = 0; index < this.measuringRanges().length; index += 1) {
-      if (offset < this.measuringRanges()[index].endScalar) {
-        return index;
-      }
-    }
-    // The call site clamps EOF to a real scalar.  Keep this defensive branch
-    // for a malformed paragraph split rather than reading past the array.
-    return Math.max(0, this.measuringRanges().length - 1);
+    return this.paragraphLayout.rangeIndexForOffset(this.measuringRanges(), offset);
   }
 
   /**
@@ -7002,10 +6908,7 @@ export struct ReadingExperience {
   }
 
   private resetPendingPage(): void {
-    this.pendingPageFragments = [];
-    this.pendingPageStartScalar = -1;
-    this.pendingPageEndScalar = -1;
-    this.pendingPageHeight = 0;
+    this.physicalPagination.resetPage();
   }
 
   private requireChapterLayoutMap(): ReadingSurfaceLayoutMap {
@@ -7061,12 +6964,12 @@ export struct ReadingExperience {
 
   private isChapterFirstPageStart(startScalar: number): boolean {
     return (this.chapter?.documentRange?.startScalar ?? 0) === 0 &&
-      this.paragraphRanges.length > 0 && startScalar === this.paragraphRanges[0].startScalar;
+      this.paragraphLayout.ranges.length > 0 && startScalar === this.paragraphLayout.ranges[0].startScalar;
   }
 
   private pendingPageBodyCapacity(): number {
-    const pageStartScalar = this.pendingPageStartScalar >= 0 ?
-      this.pendingPageStartScalar : this.measuringRequestedAnchor();
+    const pageStartScalar = this.physicalPagination.startScalar >= 0 ?
+      this.physicalPagination.startScalar : this.measuringRequestedAnchor();
     if (!this.isMeasurementChapterFirstPageStart(pageStartScalar)) {
       return this.readingLayout().bodyHeightAfterTitle(0);
     }
@@ -7175,7 +7078,7 @@ export struct ReadingExperience {
       // Break the suspended completion chain: its isMeasurementCurrent checks
       // compare against the pre-bump generation, so the pending promise
       // becomes inert whenever it eventually returns, and re-measure.
-      this.paginationIndex.invalidateMeasurement();
+      this.physicalPagination.index.invalidateMeasurement();
       this.measurementCompleting = false;
       this.batchProcessing = false;
       this.beginMeasurement(this.lifecycleToken);
@@ -7463,8 +7366,8 @@ export struct ReadingExperience {
     }
     if (prefix?.matches(key) === true && prefix.observationForPageStart(pageStartScalar) !== undefined &&
       !prefix.isCanonicalPrefixForChapterStart(0)) return undefined;
-    const page = this.paginationIndex.findContainingPage(key, pageStartScalar);
-    const last = this.paginationIndex.findLastPage(key);
+    const page = this.physicalPagination.index.findContainingPage(key, pageStartScalar);
+    const last = this.physicalPagination.index.findLastPage(key);
     if (page !== undefined && last !== undefined) {
       return new ReaderPageOrdinal(page.pageIndex, last.pageIndex + 1);
     }
@@ -9413,7 +9316,7 @@ export struct ReadingExperience {
       return;
     }
     if (previousLayoutSignature !== undefined && previousLayoutSignature !== this.paginationLayoutSignature()) {
-      this.paginationIndex.invalidateLayout(this.sourceId, this.bookId, previousLayoutSignature);
+      this.physicalPagination.index.invalidateLayout(this.sourceId, this.bookId, previousLayoutSignature);
     }
     this.resetPaginationDraft();
     if (!this.hasCurrentMaterializedChapter() || this.phase === 'failed') {
@@ -9731,7 +9634,7 @@ export struct ReadingExperience {
       const chapter = this.chapter;
       const key = this.pageChromePaginationKey(chapter?.chapterIndex ?? -1, this.materializedContentVersion);
       this.sessionLaunchChrome = this.pageChromeSnapshot(chapter?.chapterIndex ?? -1,
-        this.visiblePage?.startScalar ?? -1, this.chapterLayoutMap?.scalarCount() ?? 0, key, this.paginationDraft);
+        this.visiblePage?.startScalar ?? -1, this.chapterLayoutMap?.scalarCount() ?? 0, key, this.physicalPagination.draft);
     }
     return this.sessionLaunchChrome;
   }
@@ -10280,7 +10183,7 @@ export struct ReadingExperience {
       return;
     }
     this.contentMetrics = undefined;
-    this.paginationIndex.invalidateBook(this.sourceId, this.bookId);
+    this.physicalPagination.index.invalidateBook(this.sourceId, this.bookId);
     this.chapterWindow.clear();
     this.knownContentVersions.splice(0, this.knownContentVersions.length);
     this.resetPaginationDraft();
@@ -10630,7 +10533,7 @@ export struct ReadingExperience {
     // This must happen even when the user closed the panel and started a page
     // turn before replace.persist returned.
     this.contentMetrics = undefined;
-    this.paginationIndex.invalidateBook(this.sourceId, this.bookId);
+    this.physicalPagination.index.invalidateBook(this.sourceId, this.bookId);
     this.chapterWindow.clear();
     this.knownContentVersions.splice(0, this.knownContentVersions.length);
     this.resetPaginationDraft();
@@ -11397,13 +11300,13 @@ export struct ReadingExperience {
     return this.adjacentMeasurementContext === undefined ? this.chapterLayoutMap : this.adjacentMeasurementContext.layoutMap;
   }
   private measuringRanges(): ParagraphRange[] {
-    return this.adjacentMeasurementContext === undefined ? this.paragraphRanges : this.adjacentMeasurementContext.paragraphRanges;
+    return this.adjacentMeasurementContext === undefined ? this.paragraphLayout.ranges : this.adjacentMeasurementContext.paragraphRanges;
   }
   private measuringDraft(): ReadingPaginationPrefix | undefined {
-    return this.adjacentMeasurementContext === undefined ? this.paginationDraft : this.adjacentMeasurementContext.paginationDraft;
+    return this.adjacentMeasurementContext === undefined ? this.physicalPagination.draft : this.adjacentMeasurementContext.paginationDraft;
   }
   private setMeasuringDraft(value: ReadingPaginationPrefix | undefined): void {
-    if (this.adjacentMeasurementContext === undefined) this.paginationDraft = value;
+    if (this.adjacentMeasurementContext === undefined) this.physicalPagination.draft = value;
     else this.adjacentMeasurementContext.paginationDraft = value;
   }
   private measuringOffset(): number {
@@ -11421,10 +11324,10 @@ export struct ReadingExperience {
     else this.adjacentMeasurementContext.desiredChapterProgress = value;
   }
   private measuringRequestedAnchor(): number {
-    return this.adjacentMeasurementContext === undefined ? this.measurementRequestedAnchorScalar : this.adjacentMeasurementContext.measurementRequestedAnchorScalar;
+    return this.adjacentMeasurementContext === undefined ? this.physicalPagination.requestedAnchor : this.adjacentMeasurementContext.measurementRequestedAnchorScalar;
   }
   private setMeasuringRequestedAnchor(value: number): void {
-    if (this.adjacentMeasurementContext === undefined) this.measurementRequestedAnchorScalar = value;
+    if (this.adjacentMeasurementContext === undefined) this.physicalPagination.requestedAnchor = value;
     else this.adjacentMeasurementContext.measurementRequestedAnchorScalar = value;
   }
   private requireMeasurementChapter(): ReadingSessionChapter {
@@ -11461,11 +11364,11 @@ export struct ReadingExperience {
       chapter,
       this.requireChapterLayoutMap(),
       this.materializedContentVersion,
-      this.copyParagraphRanges(this.paragraphRanges),
-      this.paginationDraft,
+      this.copyParagraphRanges(this.paragraphLayout.ranges),
+      this.physicalPagination.draft,
       this.desiredChapterOffset,
       this.desiredChapterProgress,
-      this.measurementRequestedAnchorScalar,
+      this.physicalPagination.requestedAnchor,
     );
   }
 
@@ -11477,11 +11380,11 @@ export struct ReadingExperience {
     this.rebuildChapterImageIndexes(context.chapter);
     this.chapterLayoutMap = context.layoutMap;
     this.materializedContentVersion = context.contentVersion;
-    this.paragraphRanges.splice(0, this.paragraphRanges.length, ...this.copyParagraphRanges(context.paragraphRanges));
-    this.paginationDraft = context.paginationDraft;
+    this.paragraphLayout.ranges.splice(0, this.paragraphLayout.ranges.length, ...this.copyParagraphRanges(context.paragraphRanges));
+    this.physicalPagination.draft = context.paginationDraft;
     this.desiredChapterOffset = context.desiredChapterOffset;
     this.desiredChapterProgress = context.desiredChapterProgress;
-    this.measurementRequestedAnchorScalar = context.measurementRequestedAnchorScalar;
+    this.physicalPagination.requestedAnchor = context.measurementRequestedAnchorScalar;
     this.materializedChapterSelectionToken = this.chapterSelectionToken;
     if (admitWindowCurrent) {
       this.setCurrentReadingChapter(context.chapter);
@@ -11580,11 +11483,11 @@ export struct ReadingExperience {
       return;
     }
 
-    this.paginationIndex.invalidateMeasurement();
+    this.physicalPagination.index.invalidateMeasurement();
     this.measurementCompleting = false;
     this.batchProcessing = false;
     this.nativeTextMeasurement.clear();
-    this.measurementBatch.length = 0;
+    this.paragraphLayout.batch.length = 0;
     this.resetPendingPage();
     this.cancelMeasurementDeadline();
     this.measurementEpoch += 1;
@@ -11604,12 +11507,12 @@ export struct ReadingExperience {
     }
     hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience page-turn preparation failed: ${this.errorMessage(error)}`);
     this.pageTurnPreparation = undefined;
-    this.paginationIndex.invalidateMeasurement();
+    this.physicalPagination.index.invalidateMeasurement();
     this.measurementCompleting = false;
     this.remeasurePending = false;
     this.batchProcessing = false;
     this.nativeTextMeasurement.clear();
-    this.measurementBatch.length = 0;
+    this.paragraphLayout.batch.length = 0;
     this.resetPendingPage();
     this.cancelMeasurementDeadline();
     this.measurementEpoch += 1;
@@ -11639,7 +11542,7 @@ export struct ReadingExperience {
   private finishAdjacentMeasurementContext(): void {
     const lane = this.adjacentMeasurementContext;
     if (lane !== undefined && lane.chapter.chapterIndex === this.chapter?.chapterIndex && lane.paginationDraft !== undefined &&
-      lane.paginationDraft.matches(this.currentPaginationKey())) this.paginationDraft = lane.paginationDraft;
+      lane.paginationDraft.matches(this.currentPaginationKey())) this.physicalPagination.draft = lane.paginationDraft;
     this.adjacentMeasurementContext = undefined;
   }
 
@@ -11662,11 +11565,11 @@ export struct ReadingExperience {
     this.finishAdjacentMeasurementContext();
     this.pageTurnPreparation = undefined;
     if (this.previousChapterMeasurement?.prepareOnly) this.previousChapterMeasurement = undefined;
-    this.paginationIndex.invalidateMeasurement();
+    this.physicalPagination.index.invalidateMeasurement();
     this.measurementCompleting = false;
     this.batchProcessing = false;
     this.nativeTextMeasurement.clear();
-    this.measurementBatch.length = 0;
+    this.paragraphLayout.batch.length = 0;
     this.resetPendingPage();
     this.cancelMeasurementDeadline();
     this.measurementEpoch += 1;
@@ -11787,7 +11690,7 @@ export struct ReadingExperience {
       return undefined;
     }
     if (direction === 'next') {
-      const draft = this.paginationDraft;
+      const draft = this.physicalPagination.draft;
       const knownNext = draft?.matches(this.currentPaginationKey()) === true ?
         draft.nextRequestForPageStart(page.startScalar) : undefined;
       if (knownNext !== undefined) return new ReaderPageTurnTarget(chapter.chapterIndex, knownNext);
@@ -11801,16 +11704,16 @@ export struct ReadingExperience {
 
     const key = this.currentPaginationKey();
     const previousChapterIndex = this.adjacentChapterIndex(chapter.chapterIndex, -1);
-    const observed = this.paginationDraft?.matches(key) === true ?
-      this.paginationDraft.observationForPageStart(page.startScalar) : undefined;
-    const indexed = this.paginationIndex.findContainingPage(key, page.startScalar);
+    const observed = this.physicalPagination.draft?.matches(key) === true ?
+      this.physicalPagination.draft.observationForPageStart(page.startScalar) : undefined;
+    const indexed = this.physicalPagination.index.findContainingPage(key, page.startScalar);
     const containingPage = indexed?.startScalar === page.startScalar && indexed.endScalarExclusive === page.endScalar ? indexed : undefined;
     if (observed !== undefined) {
-      const previousRequest = this.paginationDraft?.previousRequestForPageStart(page.startScalar);
+      const previousRequest = this.physicalPagination.draft?.previousRequestForPageStart(page.startScalar);
       if (previousRequest !== undefined) return new ReaderPageTurnTarget(chapter.chapterIndex, previousRequest);
     }
     if (containingPage === undefined) {
-      const prefix = this.paginationDraft;
+      const prefix = this.physicalPagination.draft;
       const previousRequest = prefix !== undefined && prefix.matches(key) ?
         prefix.previousRequestForPageStart(page.startScalar) : undefined;
       if (previousRequest !== undefined) {
@@ -11820,7 +11723,7 @@ export struct ReadingExperience {
     }
     const previousChapterKey = containingPage.pageIndex === 0 && previousChapterIndex !== undefined ?
       this.paginationKeyForChapter(previousChapterIndex) ?? null : null;
-    const previous = this.paginationIndex.findPreviousPage(key, page.startScalar, previousChapterKey);
+    const previous = this.physicalPagination.index.findPreviousPage(key, page.startScalar, previousChapterKey);
     return previous.kind === 'page' ?
       new ReaderPageTurnTarget(previous.page.key.chapterIndex, previous.page.startScalar) : undefined;
   }
@@ -11836,10 +11739,10 @@ export struct ReadingExperience {
     const chapter = this.chapter;
     if (!this.mounted || page === undefined || chapter === undefined ||
       this.previousChapterMeasurement !== undefined || this.pageTurnPreparation !== undefined ||
-      this.paragraphRanges.length === 0 || !this.canTurnPage()) {
+      this.paragraphLayout.ranges.length === 0 || !this.canTurnPage()) {
       return false;
     }
-    const head = this.paragraphRanges[0].startScalar;
+    const head = this.paragraphLayout.ranges[0].startScalar;
     const previousChapter = this.adjacentChapterIndex(chapter.chapterIndex, -1);
     if (this.requireChapterLayoutMap().residentStart() === 0 && page.startScalar <= head) {
       if (previousChapter === undefined) return false;
@@ -13279,14 +13182,14 @@ export struct ReadingExperience {
     }
 
     const previousChapterIndex = this.adjacentChapterIndex(chapter.chapterIndex, -1);
-    const containingPage = this.paginationIndex.findContainingPage(this.currentPaginationKey(), page.startScalar);
+    const containingPage = this.physicalPagination.index.findContainingPage(this.currentPaginationKey(), page.startScalar);
     if (containingPage !== undefined && containingPage.startScalar === page.startScalar &&
       containingPage.endScalarExclusive === page.endScalar) {
       return containingPage.pageIndex === 0 && previousChapterIndex === undefined ?
         { kind: 'boundary', edge: 'start' } : undefined;
     }
-    return previousChapterIndex === undefined && this.paragraphRanges.length > 0 &&
-      page.startScalar <= this.paragraphRanges[0].startScalar ?
+    return previousChapterIndex === undefined && this.paragraphLayout.ranges.length > 0 &&
+      page.startScalar <= this.paragraphLayout.ranges[0].startScalar ?
       { kind: 'boundary', edge: 'start' } : undefined;
   }
 
@@ -13353,7 +13256,7 @@ export struct ReadingExperience {
     }
     const page = this.visiblePage as PhysicalReadingPage;
     const chapter = this.chapter as ReadingSessionChapter;
-    const draft = this.paginationDraft;
+    const draft = this.physicalPagination.draft;
     const nextOffset = draft?.matches(this.currentPaginationKey()) === true ?
       draft.nextRequestForPageStart(page.startScalar) ?? page.endScalar : page.endScalar;
     const lastVisible = this.lastVisibleScalar(chapter.content, this.requireChapterLayoutMap());
@@ -13379,15 +13282,15 @@ export struct ReadingExperience {
     const chapter = this.chapter as ReadingSessionChapter;
     const key = this.currentPaginationKey();
     const previousChapterIndex = this.adjacentChapterIndex(chapter.chapterIndex, -1);
-    const indexed = this.paginationIndex.findContainingPage(key, page.startScalar);
+    const indexed = this.physicalPagination.index.findContainingPage(key, page.startScalar);
     const containingPage = indexed?.startScalar === page.startScalar && indexed.endScalarExclusive === page.endScalar ? indexed : undefined;
-    const measuredPrevious = this.paginationDraft?.matches(key) === true ?
-      this.paginationDraft.previousRequestForPageStart(page.startScalar) : undefined;
+    const measuredPrevious = this.physicalPagination.draft?.matches(key) === true ?
+      this.physicalPagination.draft.previousRequestForPageStart(page.startScalar) : undefined;
     if (measuredPrevious !== undefined) {
       this.measureCommittedPageAt(measuredPrevious); return { kind: 'started' };
     }
     if (containingPage === undefined) {
-      const prefix = this.paginationDraft;
+      const prefix = this.physicalPagination.draft;
       const previousRequest = prefix !== undefined && prefix.matches(key) ?
         prefix.previousRequestForPageStart(page.startScalar) : undefined;
       if (previousRequest !== undefined) {
@@ -13398,13 +13301,13 @@ export struct ReadingExperience {
         return { kind: 'started' };
       }
       if (previousChapterIndex !== undefined &&
-        this.requireChapterLayoutMap().residentStart() === 0 && this.paragraphRanges.length > 0 &&
-        page.startScalar <= this.paragraphRanges[0].startScalar) {
+        this.requireChapterLayoutMap().residentStart() === 0 && this.paragraphLayout.ranges.length > 0 &&
+        page.startScalar <= this.paragraphLayout.ranges[0].startScalar) {
         return this.turnToPreviousChapter(previousChapterIndex, chapter.chapterIndex, page.startScalar) ?
           { kind: 'started' } : { kind: 'busy' };
       }
-      if (previousChapterIndex === undefined && this.requireChapterLayoutMap().residentStart() === 0 && this.paragraphRanges.length > 0 &&
-        page.startScalar <= this.paragraphRanges[0].startScalar) {
+      if (previousChapterIndex === undefined && this.requireChapterLayoutMap().residentStart() === 0 && this.paragraphLayout.ranges.length > 0 &&
+        page.startScalar <= this.paragraphLayout.ranges[0].startScalar) {
         if (this.isUnknownCatalogEdge(chapter.chapterIndex, 'previous')) {
           this.requestCatalogForTurn(); return { kind: 'preparing' };
         }
@@ -13429,7 +13332,7 @@ export struct ReadingExperience {
     }
     const previousChapterKey = containingPage.pageIndex === 0 && previousChapterIndex !== undefined ?
       this.paginationKeyForChapter(previousChapterIndex) as ReadingPaginationKey : null;
-    const previous = this.paginationIndex.findPreviousPage(key, page.startScalar, previousChapterKey);
+    const previous = this.physicalPagination.index.findPreviousPage(key, page.startScalar, previousChapterKey);
     if (previous.kind === 'manifestRequired' && previousChapterIndex !== undefined &&
       previous.key.chapterIndex === previousChapterIndex) {
       return this.turnToPreviousChapter(previousChapterIndex, chapter.chapterIndex, page.startScalar) ?
@@ -13459,7 +13362,7 @@ export struct ReadingExperience {
     }
     const previousKey = this.paginationKeyForChapter(previousChapterIndex);
     if (previousKey !== undefined) {
-      const lastPage = this.paginationIndex.findLastPage(previousKey);
+      const lastPage = this.physicalPagination.index.findLastPage(previousKey);
       if (lastPage !== undefined) {
         return this.openPageTurnChapter(previousChapterIndex, lastPage.startScalar);
       }
@@ -13503,7 +13406,7 @@ export struct ReadingExperience {
   ): boolean {
     if (!this.mounted || this.previousChapterMeasurement !== undefined ||
       this.chapter === undefined || this.chapter.chapterIndex !== chapterIndex ||
-      this.paragraphRanges.length === 0) {
+      this.paragraphLayout.ranges.length === 0) {
       return false;
     }
     this.previousChapterMeasurement = new PreviousChapterMeasurement(
@@ -13625,7 +13528,7 @@ export struct ReadingExperience {
   }
 
   private isMeasurementCurrent(generation: number, selectionToken: number, lifecycleToken: number): boolean {
-    return this.isSessionActive(lifecycleToken) && this.paginationIndex.isMeasurementCurrent(generation, selectionToken) && this.isSelectionCurrent(selectionToken) &&
+    return this.isSessionActive(lifecycleToken) && this.physicalPagination.index.isMeasurementCurrent(generation, selectionToken) && this.isSelectionCurrent(selectionToken) &&
       this.materializedChapterSelectionToken === selectionToken && this.phase === 'measuring';
   }
 
@@ -13669,11 +13572,11 @@ export struct ReadingExperience {
     hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience previous chapter measurement failed: ${this.errorMessage(error)}`);
     if (pending.prepareOnly) {
       this.previousChapterMeasurement = undefined;
-      this.paginationIndex.invalidateMeasurement();
+      this.physicalPagination.index.invalidateMeasurement();
       this.measurementCompleting = false;
       this.batchProcessing = false;
       this.nativeTextMeasurement.clear();
-      this.measurementBatch.length = 0;
+      this.paragraphLayout.batch.length = 0;
       this.resetPendingPage();
       this.cancelMeasurementDeadline();
       this.measurementEpoch += 1;
@@ -13736,7 +13639,7 @@ export struct ReadingExperience {
     this.measurementCompleting = false;
     this.remeasurePending = false;
     this.resetPaginationDraft();
-    this.paginationIndex.invalidateMeasurement();
+    this.physicalPagination.index.invalidateMeasurement();
     hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience failed: ${this.failureCode}`);
     // The stable failure taxonomy lets the host separate book-source failures
     // (user-confirmed switch/retry) from local pagination/layout/storage ones.

@@ -2,6 +2,8 @@ import { readingChapterLayoutMap } from '../../entry/src/main/ets/features/readi
 import { hasKnownReadingImageGeometry } from '../../entry/src/main/ets/features/reading/ReadingChapterWindow.ts';
 import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { errorMessageOf } from '../../entry/src/main/ets/app/ErrorMessage.ts';
+import { ReaderParagraphLayoutOwner } from '../../entry/src/main/ets/features/reading/ReaderParagraphLayoutOwner.ts';
+import { ReaderPhysicalPaginationOwner } from '../../entry/src/main/ets/features/reading/ReaderPhysicalPaginationOwner.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -16,7 +18,7 @@ const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
  * This does not simulate ArkUI layout, reactive delivery, or compositor pixels. */
 export function productionMotionMethods(file, names, dependencies = {}) {
   dependencies = { readerAppColor, readerThemeDefinition, readingChapterLayoutMap, hasKnownReadingImageGeometry, errorMessageOf,
-    ...readerTypographyRoles,
+    ...readerTypographyRoles, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner,
     ReaderRuntimeOwner: { current: () => ({ captureReadingContentValidity: () => () => true,
       waitForReadingContentIdle: async () => {} }) }, ...dependencies };
   const source = readFileSync(file, 'utf8');
@@ -32,5 +34,20 @@ export function productionMotionMethods(file, names, dependencies = {}) {
       type.members.some(m => names.includes(m.name?.getText(tree)) && m.getText(tree).includes(`this.${helper}(`))) names.push(helper);
   }
   const methods = names.flatMap(name => type.members.filter(m => m.name?.getText(tree) === name).map(m => m.getText(tree))).join('\n');
-  return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(`class Probe { nativeTextMeasurement = { clear() {} }; nativeParagraphResources = { close() {}, retain() {} }; ${methods} }`)}; return Probe;`)(...Object.values(dependencies));
+  const Probe = new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(`class Probe {
+    paragraphLayout = new ReaderParagraphLayoutOwner(); physicalPagination = new ReaderPhysicalPaginationOwner();
+    nativeTextMeasurement = { clear() {} }; nativeParagraphResources = { close() {}, retain() {} }; ${methods} }`)}; return Probe;`)(...Object.values(dependencies));
+  // Existing probes describe pre-refactor component fields. Route those fixture
+  // assignments to the real production owners; no production struct accessors
+  // or duplicated batching/index-admission algorithm is introduced.
+  for (const [alias, owner, field] of [
+    ['paragraphRanges', 'paragraphLayout', 'ranges'], ['measurementBatch', 'paragraphLayout', 'batch'],
+    ['nextRangeIndex', 'paragraphLayout', 'nextRangeIndex'], ['firstRangeStartScalar', 'paragraphLayout', 'firstRangeStartScalar'],
+    ['paginationIndex', 'physicalPagination', 'index'], ['paginationDraft', 'physicalPagination', 'draft'],
+    ['measurementRequestedAnchorScalar', 'physicalPagination', 'requestedAnchor'],
+    ['pendingPageFragments', 'physicalPagination', 'fragments'], ['pendingPageStartScalar', 'physicalPagination', 'startScalar'],
+    ['pendingPageEndScalar', 'physicalPagination', 'endScalar'], ['pendingPageHeight', 'physicalPagination', 'height'],
+  ]) Object.defineProperty(Probe.prototype, alias, { get() { return this[owner][field]; },
+    set(value) { this[owner][field] = value; }, configurable: true });
+  return Probe;
 }

@@ -1,7 +1,31 @@
 import { ReadingPaginationIndex } from '../../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts';
+import { ReaderParagraphLayoutOwner } from '../../entry/src/main/ets/features/reading/ReaderParagraphLayoutOwner.ts';
+import { ReaderPhysicalPaginationOwner } from '../../entry/src/main/ets/features/reading/ReaderPhysicalPaginationOwner.ts';
+
+export function installReaderLayoutOwners(subject) {
+  subject.paragraphLayout ??= new ReaderParagraphLayoutOwner();
+  subject.physicalPagination ??= new ReaderPhysicalPaginationOwner();
+  for (const [alias, owner, field] of [
+    ['paragraphRanges','paragraphLayout','ranges'], ['measurementBatch','paragraphLayout','batch'],
+    ['nextRangeIndex','paragraphLayout','nextRangeIndex'], ['firstRangeStartScalar','paragraphLayout','firstRangeStartScalar'],
+    ['paginationIndex','physicalPagination','index'], ['paginationDraft','physicalPagination','draft'],
+    ['measurementRequestedAnchorScalar','physicalPagination','requestedAnchor'],
+    ['pendingPageFragments','physicalPagination','fragments'], ['pendingPageStartScalar','physicalPagination','startScalar'],
+    ['pendingPageEndScalar','physicalPagination','endScalar'], ['pendingPageHeight','physicalPagination','height'],
+  ]) {
+    if (Object.hasOwn(subject, alias)) {
+      subject[owner][field] = subject[alias];
+      delete subject[alias];
+    }
+    Object.defineProperty(subject, alias, { configurable: true,
+      get() { return this[owner][field]; }, set(value) { this[owner][field] = value; } });
+  }
+  return subject;
+}
 
 /** Connect extracted production page methods to the production lease owner. */
 export function installReaderMeasurementOwner(subject) {
+  installReaderLayoutOwners(subject);
   // Geometry is supplied by each scenario; the native platform adapter has
   // its own installed-SDK and VM qualification suite.
   subject.nativeTextMeasurement ??= { clear() {} };
