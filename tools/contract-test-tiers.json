@@ -391,6 +391,7 @@
     "test-reader-motion-repair.mjs",
     "test-reader-native-alert-consumers.mjs",
     "test-reader-native-alert-exit-faults.mjs",
+    "test-reader-native-alert-type-contract.mjs",
     "test-reader-native-paragraph-owner.mjs",
     "test-reader-native-paragraph-view.mjs",
     "test-reader-native-text-measurement.mjs",

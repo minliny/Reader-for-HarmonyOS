@@ -3,10 +3,8 @@
 export type ReaderNativeAlertSpecId = 'notice' | 'confirmation' | 'confirmation-cancelable' |
   'choice-blocking' | 'retry-blocking' | 'preview';
 export type ReaderNativeAlertDecision = 'primary' | 'secondary' | 'confirm' | 'cancel' | 'retired' | 'native-failure';
-export interface ReaderNativeAlertOptions extends AlertDialogParamWithConfirm {
-  primaryButton?: AlertDialogButtonBaseOptions;
-  secondaryButton?: AlertDialogButtonBaseOptions;
-}
+import type { ReaderNativeAlertOptions } from './ReaderNativeAlertContract';
+export type { ReaderNativeAlertOptions } from './ReaderNativeAlertContract';
 interface ReaderNativeAlertSpec {
   autoCancel: boolean | undefined;
   layout: 'primary' | 'pair' | 'confirm';
