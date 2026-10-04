@@ -273,6 +273,7 @@
     "test-general-settings-write-confirmation.mjs",
     "test-hap-pipeline-contract.mjs",
     "test-hap-retention.mjs",
+    "test-hap-retention-install-race.mjs",
     "test-hap-source-inputs.mjs",
     "test-icon-button-finite-specs.mjs",
     "test-import-refresh-geometry.mjs",

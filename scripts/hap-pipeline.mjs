@@ -258,8 +258,28 @@ export function planHapRetention(root, keepRuns = DEFAULT_RETAIN_RUNS, reserve =
     bytes: remove.reduce((sum, run) => sum + run.files.reduce((total, file) => total + file.bytes, 0), 0) };
 }
 
-/** Caller holds ARTIFACT_LOCK, shared with build and install. Keep all evidence. */
+/** Lock immutable runs, rather than an unrelated workspace's entire build. */
+export function withHapRunLock(directory, action) {
+  const canonical = realpathSync(directory);
+  const lock = join(process.platform === 'darwin' ? '/private/tmp' : tmpdir(),
+    `reader-harmony-hap-run-${sha256Bytes(canonical)}.lock`);
+  acquireLock(lock, { pid: process.pid, directory: canonical,
+    startedAt: new Date().toISOString(), protocol: 'hap-run-lock-v1' }, false);
+  try { return action(); } finally { rmSync(lock, { recursive: true, force: true }); }
+}
+
+function withHapRunLocks(directories, action, index = 0) {
+  return index === directories.length ? action() :
+    withHapRunLock(directories[index], () => withHapRunLocks(directories, action, index + 1));
+}
+
+/** Recheck the inventory and every byte under the same locks used by install. */
 export function applyHapRetention(plan) {
+  const directories = plan.remove.map(run => resolve(plan.root, run.runId)).sort();
+  return withHapRunLocks(directories, () => applyLockedHapRetention(plan));
+}
+
+function applyLockedHapRetention(plan) {
   // Verify every candidate before deleting any file. Never trust arbitrary paths
   // passed back by a caller or a stale dry-run plan.
   const current = planHapRetention(plan.root, plan.keepRuns, plan.reserve);
@@ -547,7 +567,7 @@ function processExists(pid) {
   }
 }
 
-function acquireLock(lockDir, owner) {
+function acquireLock(lockDir, owner, reclaimStale = true) {
   try {
     mkdirSync(lockDir);
   } catch (error) {
@@ -562,6 +582,9 @@ function acquireLock(lockDir, owner) {
     if (!Number.isInteger(previous.pid) || processExists(previous.pid)) {
       fail(`lock is busy: ${lockDir}`);
     }
+    // Concurrent run/target users cannot safely delete a dead owner's lock:
+    // a second contender could remove the first contender's replacement.
+    if (!reclaimStale) fail(`stale lock requires coordinated recovery: ${lockDir}`);
     rmSync(lockDir, { recursive: true, force: true });
     mkdirSync(lockDir);
   }
@@ -1339,7 +1362,7 @@ function installDeployment(options) {
     targetKind,
     targetRef,
     startedAt: new Date().toISOString(),
-  });
+  }, false);
   try {
     const resolved = resolveDeployment(options);
     if (!resolved.route.allowed) fail(`deployment stopped: ${resolved.route.reason}`, 3);
@@ -1442,11 +1465,12 @@ function main() {
       })),
     }));
   } else if (command === 'inspect') inspectDeployment(options);
-  else if (command === 'install') withArtifactLock(() => installDeployment(options));
-  else if (command === 'prune') withArtifactLock(() => {
+  else if (command === 'install') withHapRunLock(dirname(resolve(requiredOption(options, '--manifest'))),
+    () => installDeployment(options));
+  else if (command === 'prune') {
     const plan = planHapRetention(resolve(option(options, '--artifact-root', DEFAULT_ARTIFACT_ROOT)), retentionLimit(options));
     console.log(JSON.stringify(options.get('--apply') === true ? applyHapRetention(plan) : plan, null, 2));
-  });
+  }
   else {
     usage();
     fail(`unknown command: ${command}`, 2);
