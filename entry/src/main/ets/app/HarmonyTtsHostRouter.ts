@@ -5,6 +5,7 @@ import {
   type ReaderTtsHostSpeakRequest,
 } from '../features/reading/ReaderTtsSessionCoordinator.ts';
 import type { ReaderTtsVoiceOption } from '../features/reading/ReaderTtsPreferencesState';
+import { ReaderStartupTrace } from './ReaderStartupTrace.ts';
 import type {
   ReaderTtsMediaSessionBridge,
   ReaderTtsPublishedPlaybackState,
@@ -47,6 +48,9 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
   private selectionGeneration: number = 0;
   private backgroundPreferenceGeneration: number = 0;
   private closeTask: Promise<void> | undefined = undefined;
+  private traceOperationId: number | undefined = undefined;
+  private traceRequest: { requestId: string; owner: string | undefined;
+    source: ReaderTtsHost; selectionGeneration: number; audioGeneration: number } | undefined = undefined;
 
   constructor(
     system: ReaderTtsSystemHost,
@@ -62,6 +66,7 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     this.backgroundSession = backgroundSession;
     this.backgroundSession?.setRevocationListener?.((): void => {
       if (!this.closed && this.foregroundSessionActive && this.backgroundPlaybackEnabled && !isForeground()) {
+        this.markTrace('tts.background-revoke');
         this.listener?.({ type: 'backgroundLeaseRevoked' });
       }
     });
@@ -74,18 +79,26 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
 
   setEventListener(listener: ((event: ReaderTtsHostEvent) => void) | undefined, owner: string): void {
     if (this.closed) return;
+    if (this.listenerOwner !== undefined && this.listenerOwner !== owner) {
+      this.markTrace('tts.owner-revoke');
+      this.traceRequest = undefined;
+      this.traceOperationId = undefined;
+    }
     this.listener = listener;
     this.listenerOwner = owner;
   }
 
   clearEventListener(owner: string): void {
     if (this.listenerOwner !== owner) return;
+    this.markTrace('tts.listener-release');
+    this.traceRequest = undefined;
     this.listener = undefined;
     this.listenerOwner = undefined;
   }
 
   async selectEngine(engine?: string): Promise<boolean> {
     this.assertOpen();
+    this.traceRequest = undefined;
     const generation = ++this.selectionGeneration;
     const target = engine?.startsWith('http-tts:') ? this.http : this.system;
     // Retire before awaiting engine selection. Releasing one transport cannot
@@ -146,6 +159,8 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
   }
 
   async deactivateAudioSession(): Promise<void> {
+    const operationId = this.traceOperationId;
+    this.traceRequest = undefined;
     this.audioGeneration += 1;
     this.foregroundSessionActive = false;
     this.foregroundActivation = undefined;
@@ -154,6 +169,7 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
       this.active.deactivateAudioSession(),
       this.backgroundSession?.deactivate() ?? Promise.resolve(),
     ]);
+    if (operationId !== undefined) ReaderStartupTrace.currentTts()?.markTts('tts.audio-release', operationId, 'ready');
   }
 
   isBackgroundPlaybackActive(): boolean {
@@ -194,7 +210,22 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
 
   speak(request: ReaderTtsHostSpeakRequest): Promise<void> {
     this.assertOpen();
-    return this.active.speak(request);
+    const trace = ReaderStartupTrace.currentTts();
+    if (trace === undefined || request.traceOperationId === undefined) return this.active.speak(request);
+    const operationId = request.traceOperationId;
+    this.traceOperationId = operationId;
+    this.traceRequest = { requestId: request.requestId, owner: this.listenerOwner, source: this.active,
+      selectionGeneration: this.selectionGeneration, audioGeneration: this.audioGeneration };
+    trace.markTts('tts.speak-dispatch', operationId);
+    try {
+      return this.active.speak(request).catch((error: Error): never => {
+        trace.markTts('tts.speak-failure', operationId, 'failed');
+        throw error;
+      });
+    } catch (error) {
+      trace.markTts('tts.speak-failure', operationId, 'failed');
+      throw error;
+    }
   }
 
   prefetchNext(request: ReaderTtsHostSpeakRequest): void {
@@ -209,7 +240,18 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
 
   stop(): Promise<void> {
     if (this.closed) return Promise.resolve();
-    return this.active.stop();
+    const trace = ReaderStartupTrace.currentTts();
+    const operationId = this.traceOperationId;
+    this.traceRequest = undefined;
+    if (trace === undefined || operationId === undefined) return this.active.stop();
+    trace.markTts('tts.host-stop', operationId);
+    try {
+      return this.active.stop().then((): void => trace.markTts('tts.host-stop-ack', operationId, 'ready'),
+        (error: Error): never => { trace.markTts('tts.host-stop-ack', operationId, 'failed'); throw error; });
+    } catch (error) {
+      trace.markTts('tts.host-stop-ack', operationId, 'failed');
+      throw error;
+    }
   }
 
   publishPlaybackState(state: ReaderTtsPublishedPlaybackState): void {
@@ -220,6 +262,8 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
   async close(): Promise<void> {
     if (this.closeTask !== undefined) { await this.closeTask; return; }
     this.closed = true;
+    const operationId = this.traceOperationId;
+    this.traceRequest = undefined;
     this.audioGeneration += 1;
     this.selectionGeneration += 1;
     this.listener = undefined;
@@ -234,10 +278,26 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
       this.mediaSession.close(),
     ]).then((): void => {});
     await this.closeTask;
+    if (operationId !== undefined) ReaderStartupTrace.currentTts()?.markTts('tts.host-release', operationId, 'ready');
   }
 
   private forward(source: ReaderTtsHost, event: ReaderTtsHostEvent): void {
-    if (!this.closed && source === this.active) this.listener?.(event);
+    if (this.closed || source !== this.active) return;
+    const request = this.traceRequest;
+    if (request !== undefined && 'requestId' in event && event.requestId === request.requestId &&
+      source === request.source && request.owner === this.listenerOwner &&
+      request.selectionGeneration === this.selectionGeneration && request.audioGeneration === this.audioGeneration) {
+      if (event.type === 'start') this.markTrace('tts.platform-start', 'callback');
+      else if (event.type === 'error') this.markTrace('tts.platform-error', 'failed');
+      else if (event.type === 'stop') this.markTrace('tts.platform-stop', 'callback');
+    }
+    this.listener?.(event);
+  }
+
+  private markTrace(stage: string, status: string = 'event'): void {
+    if (this.traceOperationId !== undefined) {
+      ReaderStartupTrace.currentTts()?.markTts(stage, this.traceOperationId, status);
+    }
   }
 
   private activateOptionalSessions(): void {

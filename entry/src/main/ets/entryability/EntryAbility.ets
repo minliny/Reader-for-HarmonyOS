@@ -39,7 +39,7 @@ export default class EntryAbility extends UIAbility {
   onCreate(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
     const trace = ReaderStartupTrace.install(readerMotionNowMs, (sample: ReaderStartupSample): void => {
       hilog.info(DOMAIN, 'Reader', 'READER_STARTUP %{public}s', JSON.stringify(sample));
-    }, DEBUG === true && BUILD_MODE_NAME === 'debug');
+    }, DEBUG === true && BUILD_MODE_NAME === 'debug', want.parameters?.readerTtsTrace === true);
     trace.mark('ability.create');
     // Diagnostics require a cold start, debug build, and exact primitive
     // boolean parameters. Warm file Wants use the guarded import/exit queue.

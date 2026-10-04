@@ -1,4 +1,5 @@
 import { diagnosticCodeOf } from '../../app/LogPrivacy.ts';
+import { ReaderStartupTrace } from '../../app/ReaderStartupTrace.ts';
 import { errorMessageOf } from '../../app/ErrorMessage.ts';
 import {
   createReaderTtsState,
@@ -38,6 +39,8 @@ type StartWaiter = { generation: number; resolve: (started: boolean) => void };
 
 export type ReaderTtsHostSpeakRequest = {
   requestId: string;
+  /** Process-local diagnostics identity, never speech/book/provider data. */
+  traceOperationId?: number;
   text: string;
   rate: number;
   pitch: number;
@@ -161,6 +164,7 @@ interface ReaderTtsAuditionSession {
 
 type ActiveSession = {
   identity: ReaderTtsSessionIdentity;
+  traceOperationId?: number;
   input: ReaderTtsStartInput;
   plan?: ReaderTtsSlicePlan;
   config?: ReaderTtsConfig;
@@ -229,6 +233,7 @@ export class ReaderTtsSessionCoordinator {
   private startConfirmedRequestId: string | undefined = undefined;
   private startWatchdogHandle: number = -1;
   private awaitingStartToken: ReaderTtsUtteranceToken | undefined = undefined;
+  private lastTraceOperationId: number | undefined = undefined;
 
   constructor(
     gateway: ReaderTtsCoordinatorGateway | ReaderTtsGateway,
@@ -494,6 +499,8 @@ export class ReaderTtsSessionCoordinator {
 
   start(input: ReaderTtsStartInput, desiredPlaying: boolean = true): Promise<void> {
     this.assertStartInput(input);
+    const traceOperationId = ReaderStartupTrace.currentTts()?.beginTtsOperation();
+    this.lastTraceOperationId = traceOperationId;
     this.voidLogged(this.stopAudition(), 'audition.formal-start');
     this.desiredPlaying = desiredPlaying;
     const chapterKey = this.chapterKey(input.chapter);
@@ -527,7 +534,7 @@ export class ReaderTtsSessionCoordinator {
     const identity = this.sessionIdentity(input.contentVersion, chapterKey);
     const prior = this.active;
     const hostStopTask = prior === undefined ? undefined : this.stopHostTransportImmediately();
-    this.active = { identity, input: { ...input, rate } };
+    this.active = { identity, traceOperationId, input: { ...input, rate } };
     return this.enqueue(async (): Promise<void> => this.prepareNewSession(identity, prior, hostStopTask));
   }
 
@@ -779,6 +786,9 @@ export class ReaderTtsSessionCoordinator {
 
   stop(reason: 'user' | 'timer' | 'lifecycle' | 'contentChanged' | 'screenOff' |
     'systemInterruption' = 'user'): Promise<void> {
+    if (this.lastTraceOperationId !== undefined) {
+      ReaderStartupTrace.currentTts()?.markTts('tts.stop-intent', this.lastTraceOperationId);
+    }
     this.voidLogged(this.stopAudition(), 'audition.stop');
     const active = this.active;
     this.clearTimer();
@@ -844,6 +854,9 @@ export class ReaderTtsSessionCoordinator {
     this.resolveStartWaiters(false);
     await this.stop('lifecycle');
     this.host.clearEventListener(this.ownerToken);
+    if (this.lastTraceOperationId !== undefined) {
+      ReaderStartupTrace.currentTts()?.markTts('tts.owner-release', this.lastTraceOperationId, 'ready');
+    }
   }
 
   async whenSettled(): Promise<void> {
@@ -927,6 +940,9 @@ export class ReaderTtsSessionCoordinator {
     this.clearStartWatchdog();
     this.awaitingStartToken = undefined;
     const active = this.active;
+    if (active?.traceOperationId !== undefined) {
+      ReaderStartupTrace.currentTts()?.markTts('tts.session-failure', active.traceOperationId, 'failed');
+    }
     this.active = undefined;
     this.clearUtteranceCorrelations();
     this.startConfirmedRequestId = undefined;
@@ -1037,7 +1053,7 @@ export class ReaderTtsSessionCoordinator {
     if (slice === undefined) throw new Error('Reader TTS Core cursor is outside the slice plan');
     if (!this.isSessionCurrent(active.identity)) return;
     const utteranceGeneration = this.nextGeneration(this.transport.utteranceGeneration);
-    const requestId = `tts-s${this.transport.sessionGeneration}-u${utteranceGeneration}` +
+    const requestId = `${this.ownerToken}-tts-s${this.transport.sessionGeneration}-u${utteranceGeneration}` +
       `-c${active.input.chapter.chapterIndex}-i${slice.index}`;
     this.transport = {
       ...this.transport,
@@ -1086,6 +1102,7 @@ export class ReaderTtsSessionCoordinator {
     try {
       await this.host.speak({
         requestId: token.requestId,
+        traceOperationId: active.traceOperationId,
         text: slice.text,
         rate: active.input.rate ?? 1,
         pitch: active.input.pitch ?? 1,
