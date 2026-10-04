@@ -105,6 +105,8 @@ export struct DiscoverPage {
       ReaderIconButton({
         icon: (this.appThemeScheme === 'night' ? $r('app.media.discover_refresh_theme_night') : $r('app.media.discover_refresh')),
         specId: 'toolbar-standard',
+        accessibilityLabel: '刷新',
+        actionEnabled: !this.presentation.loading,
         onTap: (): void => this.onRefresh(),
       });
     }

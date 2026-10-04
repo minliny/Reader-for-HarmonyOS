@@ -27,6 +27,7 @@ export function iconButtonControls({ source = iconButtonSource, specSource = ico
   properties = createArkUIPropertyRuntimeProbe(), ColorMetrics } = {}) {
   const resolveReaderIconButtonSpec = compileIconButtonSpecs(specSource);
   const dependencies = { ...properties.sdk, resolveReaderIconButtonSpec,
+    AccessibilityRoleType: { BUTTON: 'AccessibilityRoleType.BUTTON' },
     ReaderPressFeedback: productionReaderPressFeedback({ Color: { Transparent: 'Color.Transparent' }, ColorMetrics }) };
   const hooks = { ...properties.hooks, childSources: { ReaderIconButton: source }, mountChildren: true, lifecycleChildren: true };
   const icon = createReaderBuilderProbe(source, boundedMembers(source), dependencies, hooks);

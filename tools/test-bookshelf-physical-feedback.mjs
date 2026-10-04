@@ -143,6 +143,7 @@ for (const page of ['BookshelfShell']) {
       const actual = iconButtonControls({ source: read('common/ReaderIconButton.ets') });
       const hitOwner = new actual.icon.Component(undefined, button.params);
       hitOwner.appThemeScheme = 'day';
+      hitOwner.aboutToAppear();
       hitOwner.initialRender();
       const hit = [...hitOwner.nodes.values()].find(node => node.type === 'Stack');
       assert.deepEqual([hit.width, hit.height], [44, 44]);

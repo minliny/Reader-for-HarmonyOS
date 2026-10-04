@@ -531,7 +531,7 @@ export struct SearchPage {
   private searchBar() {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
       ReaderIconButton({ icon: (this.appThemeScheme === 'night' ? $r('app.media.search_back_theme_night') : $r('app.media.search_back')),
-        specId: 'navigation-back', onTap: (): void => this.onBack() });
+        specId: 'navigation-back', accessibilityLabel: '返回', onTap: (): void => this.onBack() });
 
       Row() {
         ReaderSearchField({
