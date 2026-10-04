@@ -433,6 +433,7 @@
     "test-reader-replace-editor-feedback.mjs",
     "test-reader-runtime-dispatch-admission.mjs",
     "test-reader-session-launch-recovery.mjs",
+    "test-reader-settings-manga-retention.mjs",
     "test-reader-settings-rounded-clip.mjs",
     "test-reader-settings-write-facts.mjs",
     "test-reader-source-correction-window.mjs",
