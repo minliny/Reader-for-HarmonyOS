@@ -19,8 +19,10 @@ export const binary=resolve(coreRoot,'target/debug/reader-cli');
 export const read=p=>fs.readFileSync(resolve(host,'entry/src/main/ets',p),'utf8');
 
 /** Actual AtomicFile adapter + complete production SDK-emitted classes. Every
- * Core RPC starts a separate CLI process against the same SQLite directory;
- * replacing the fixture module deliberately removes only warm JS statics. */
+ * Core RPC starts a separate CLI process against the same SQLite directory.
+ * Serialize those cold process opens: production shares one initialized Core
+ * instance, while each schema-37 CLI open acquires SQLite initialization locks.
+ * Replacing the fixture module deliberately removes only warm JS statics. */
 export async function managementFixture(existing, suppliedRuntime, gatewaySource) {
  const root=existing?.root??await fsp.mkdtemp(resolve(tmpdir(),'reader-bookshelf-management-durable-'));
  const files=resolve(root,'files'),core=resolve(root,'core');await fsp.mkdir(files,{recursive:true});
@@ -36,10 +38,18 @@ export async function managementFixture(existing, suppliedRuntime, gatewaySource
  const sha256Hex=compile('app/BundledBookSourceSupply.ts','sha256Hex',{cryptoFramework:{createMd:()=>{const hash=createHash('sha256');return{update:async({data})=>{hash.update(data);},digest:async()=>({data:new Uint8Array(hash.digest())})};}},util:{TextEncoder:class{encodeInto(text){return new TextEncoder().encode(text);}}}},true);
  const Store=compile('features/bookshelf/BookshelfManagementIntentStore.ts','BookshelfManagementIntentStore',{
   ReaderRuntimeOwner:Runtime,...scheduler,fileIo,util:{generateRandomUUID:()=>`12345678-1234-4234-8123-${String(++uuid).padStart(12,'0')}`},replaceReaderAtomicSnapshot,sha256Hex},true);
- async function command(method,params={}) {
+ let coldCommandTail=Promise.resolve();
+ async function coldCommand(method,params={}) {
   const result=await run(binary,['--json',JSON.stringify({protocolVersion:1,requestId:1,method,params}),'--config-json',JSON.stringify({dataDirectory:core})],{maxBuffer:32*1024*1024});
   const event=result.stdout.trim().split('\n').map(l=>JSON.parse(l)).findLast(e=>e.requestId===1);
   if(event.type==='error')throw new sdk.ReaderCoreRequestError(event);return event;
+ }
+ function command(method,params={}) {
+  const result=coldCommandTail.then(()=>coldCommand(method,params));
+  // No retries: a rejected or lost mutation ACK must remain observable, and
+  // must not prevent the next real SQLite readback/recovery from executing.
+  coldCommandTail=result.then(()=>undefined,()=>undefined);
+  return result;
  }
  // Initialize the fresh SQLite database before an owner launches its three
  // independent read projections. Production uses one native Core instance;
