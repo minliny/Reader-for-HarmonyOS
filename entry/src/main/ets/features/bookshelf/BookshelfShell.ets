@@ -33,7 +33,7 @@ export struct BookshelfShell {
   @Prop backgroundUpdateRunning: boolean = false;
   @Prop updateProgressDone: number = 0;
   @Prop updateProgressTotal: number = 0;
-  onSearchRequested: () => void = (): void => {};
+  onSearchRequested: (generation?: number) => void = (_generation?: number): void => {};
   onImportRequested: () => void = (): void => {};
   onBatchManageRequested: () => void = (): void => {};
   onBookshelfSettingsRequested: () => void = (): void => {};
@@ -215,25 +215,25 @@ export struct BookshelfShell {
   private topBar() {
     AppTopBar({ title: '书架' }) {
       Row({ space: 18 }) {
-        ReaderIconButton({
-          icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_search_theme_night') : $r('app.media.bookshelf_search')),
-          boxSize: 44,
-          iconSize: 24,
-          radius: 22,
-          onTap: (): void => this.onSearchRequested(),
-        });
+        // Only this action actor changes; the bookshelf content stays mounted.
+        ForEach([this.navigationGeneration], (presentedGeneration: number): void => {
+          ReaderIconButton({
+            icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_search_theme_night') : $r('app.media.bookshelf_search')),
+            specId: 'toolbar-standard',
+            accessibilityLabel: '搜索',
+            onTap: (): void => this.onSearchRequested(presentedGeneration),
+          });
+        }, (generation: number): string => generation.toString());
 
         // V1 ordinary callbacks are constructor inputs. Only this temporary
         // trigger gets a fresh identity; bookshelf content/scroll stay mounted.
         ForEach([this.navigationGeneration], (_generation: number) => {
           ReaderIconButton({
             icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more')),
-            boxSize: 44,
-            iconSize: 44,
-            radius: 22,
+            specId: 'toolbar-wide',
+            accessibilityLabel: '更多',
             onTap: this.moreOpenAction(this.temporaryBackIdentity),
           })
-            .accessibilityText('更多')
             .onAreaChange((_oldValue: Area, newValue: Area): void => {
               this.moreAnchorRight = Number(newValue.globalPosition.x) + Number(newValue.width);
               this.moreAnchorBottom = Number(newValue.globalPosition.y) + Number(newValue.height);

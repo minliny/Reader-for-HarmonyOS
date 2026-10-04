@@ -5,8 +5,8 @@ import { verifyArchitectureRegistration, registeredProducerTypographySlots } fro
 const root=process.cwd(),baseline=JSON.parse(readFileSync('tools/architecture-consumer-baseline.json','utf8')),contract=JSON.parse(readFileSync('tools/fixtures/architecture-shared-producers.json','utf8'));
 const inventory=JSON.parse(execFileSync(process.execPath,['tools/audit-architecture-consumers.mjs','--stdout=json'],{cwd:root,encoding:'utf8',maxBuffer:16*1024*1024,stdio:['ignore','pipe','ignore']}));
 const result=verifyArchitectureRegistration(inventory,baseline,contract,root);
-assert.equal(result.budgetRows,100,'legacy business private budgets are preserved');assert.equal(result.producers,12);
-assert.deepEqual(contract.producers.map(row=>row.component).sort(),['ReaderBoundedSurface','ReaderBoundedSurfaceActions','ReaderBoundedSurfaceHeader','ReaderButton','ReaderFormField','ReaderLabeledIconAction','ReaderSheetActionList','ReaderChoiceRow','RssOriginalRecoverySurface','ReaderCard','ReaderToggle','ReaderSegmentedControl'].sort(),'only exact finite shared producers gain owner treatment');
+assert.equal(result.budgetRows,100,'legacy business private budgets are preserved');assert.equal(result.producers,13);
+assert.deepEqual(contract.producers.map(row=>row.component).sort(),['ReaderBoundedSurface','ReaderBoundedSurfaceActions','ReaderBoundedSurfaceHeader','ReaderButton','ReaderFormField','ReaderLabeledIconAction','ReaderSheetActionList','ReaderChoiceRow','RssOriginalRecoverySurface','ReaderCard','ReaderToggle','ReaderSegmentedControl','ReaderIconButton'].sort(),'only exact finite shared producers gain owner treatment');
 const header='entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets',original=readFileSync(header,'utf8');
 const read=file=>file===header?original.replace('.fontSize(type.fontSizeFp)','.fontSize(99)'):readFileSync(file,'utf8');
 assert.notEqual(read(header),original);assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,contract,root,read),/finite shared physical inputs/,'same font call count cannot hide a private literal in a shared alias');
@@ -75,3 +75,24 @@ for (const component of ['ReaderToggle','ReaderSegmentedControl']) {
  bad.args[0]=bad.args[0].replace(component==='ReaderToggle'?"'standard-toggle'":"'app-theme-segment'", "'private99'");
  assert.throws(()=>verifyArchitectureRegistration(privateSpec,baseline,contract,root), /producer\/consumer\/spec edges changed/, 'exact finite F04 spec cannot drift');
 }
+const iconSites=inventory.rows.flatMap(row=>row.elements.filter(element=>element.kind==='ReaderIconButton').map(element=>({row,element})));
+assert.equal(iconSites.length,5,'all five actual finite icon consumers registered');
+for(const {row:site,element:originalCall} of iconSites){
+ const index=site.elements.indexOf(originalCall);
+ for(const property of ['boxSize','iconSize','radius']){
+  const negative=structuredClone(inventory),call=negative.rows.find(row=>row.file===site.file).elements[index];
+  call.args[0]=call.args[0].replace('{','{ '+property+': 99,');
+  assert.throws(()=>verifyArchitectureRegistration(negative,baseline,contract,root),/illegal shared input/,'removed icon '+property+' cannot bypass finite spec');
+ }
+ for(const property of ['width','height','padding','constraintSize','responseRegion']){
+  const negative=structuredClone(inventory);negative.rows.find(row=>row.file===site.file).elements[index].modifiers.push({property,args:['99']});
+  assert.throws(()=>verifyArchitectureRegistration(negative,baseline,contract,root),/caller privately overrides shared appearance/,'outer icon '+property+' cannot bypass finite spec');
+ }
+ const removed=structuredClone(inventory);removed.rows.find(row=>row.file===site.file).elements.splice(index,1);
+ assert.throws(()=>verifyArchitectureRegistration(removed,baseline,contract,root),/producer\/consumer\/spec edges changed/,'each real icon consumer remains registered');
+ const privateVariant=structuredClone(inventory),privateCall=privateVariant.rows.find(row=>row.file===site.file).elements[index];
+ privateCall.args[0]=privateCall.args[0].replace(/specId:\s*'[^']+'/,"specId: 'private99'");
+ assert.throws(()=>verifyArchitectureRegistration(privateVariant,baseline,contract,root),/producer\/consumer\/spec edges changed/,'every finite icon variant is an exact consumer binding');
+}
+const iconPath='entry/src/main/ets/features/common/ReaderIconButton.ets',iconSource=readFileSync(iconPath,'utf8');
+assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,contract,root,file=>file===iconPath?iconSource.replace('.width(resolveReaderIconButtonSpec(this.specId).boxSize)','.width(99)'):readFileSync(file,'utf8')),/finite shared physical inputs/,'same-count literal icon geometry rejected');

@@ -9,6 +9,7 @@ import { bookIntroText } from '../entry/src/main/ets/features/common/BookIntroTe
 import { bookAuthorLabel } from '../entry/src/main/ets/features/common/BookAuthorMetadata.ts';
 import { readerSourceCategoryLabel } from '../entry/src/main/ets/features/source/ReaderSourceCategory.ts';
 import {sourceSharedActionFixture} from './lib/source-shared-action-probe.mjs';
+import { iconButtonControls } from './lib/reader-icon-button-probe.mjs';
 
 const baseline = process.argv.includes('--baseline');
 const read = name => readFileSync(new URL(baseline
@@ -139,8 +140,10 @@ for (const page of ['BookshelfShell']) {
     assert.equal(buttons.length, 2);
     for (const [index, button] of buttons.entries()) {
       assert.equal(button.params.icon, `app.media.bookshelf_${index === 0 ? 'search' : 'more'}`);
-      const { owner: hitOwner } = createReaderBuilderProbe(read('common/ReaderIconButton.ets'), ['build']);
-      Object.assign(hitOwner, button.params, { appThemeScheme: 'day' });
+      const actual = iconButtonControls({ source: read('common/ReaderIconButton.ets') });
+      const hitOwner = new actual.icon.Component(undefined, button.params);
+      hitOwner.appThemeScheme = 'day';
+      hitOwner.aboutToAppear();
       hitOwner.initialRender();
       const hit = [...hitOwner.nodes.values()].find(node => node.type === 'Stack');
       assert.deepEqual([hit.width, hit.height], [44, 44]);

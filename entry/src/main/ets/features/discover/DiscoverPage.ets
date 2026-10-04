@@ -104,9 +104,9 @@ export struct DiscoverPage {
     AppTopBar({ title: '发现' }) {
       ReaderIconButton({
         icon: (this.appThemeScheme === 'night' ? $r('app.media.discover_refresh_theme_night') : $r('app.media.discover_refresh')),
-        boxSize: 44,
-        iconSize: 24,
-        radius: 22,
+        specId: 'toolbar-standard',
+        accessibilityLabel: '刷新',
+        actionEnabled: !this.presentation.loading,
         onTap: (): void => this.onRefresh(),
       });
     }

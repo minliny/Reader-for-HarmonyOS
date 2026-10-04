@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {readFileSync} from 'node:fs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
-import {productionReaderPressFeedback} from './lib/reader-press-feedback-probe.mjs';
 import {labeledIconControls} from './lib/reader-labeled-icon-action-probe.mjs';
+import {iconButtonControls} from './lib/reader-icon-button-probe.mjs';
 import {readerSourceCategoryLabel} from '../entry/src/main/ets/features/source/ReaderSourceCategory.ts';
 const source=readFileSync(new URL('../entry/src/main/ets/features/source/SourceManagementPage.ets',import.meta.url),'utf8');
 const golden=JSON.parse(readFileSync(new URL('./fixtures/design/source-management-action-baseline.json',import.meta.url),'utf8'));
@@ -38,7 +38,7 @@ syntax.builderParamObjectCollection.set('PageBackBar',new Set(['trailing']));
 // Actual shared native icon hit target consumes the Page's real trailing slot.
 for(const scheme of ['day','night']){
  const p=labeledIconControls(),iconSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderIconButton.ets',import.meta.url),'utf8');
- const Icon=createReaderBuilderProbe(iconSource,['icon','boxSize','iconSize','radius','onTap','build'],{...p.dependencies,Color:{Transparent:'#00000000'},ReaderPressFeedback:productionReaderPressFeedback({})},p.hooks).Component;
+ const Icon=iconButtonControls({properties:p.properties}).icon.Component;
  class Back{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id},params);}initialRender(){}}
  const owner=createReaderBuilderProbe(source,['backBar'],{...p.dependencies,ReaderIconButton:Icon,PageBackBar:Back},{...p.hooks,childSources:{...p.hooks.childSources,ReaderIconButton:iconSource,PageBackBar:readFileSync(new URL('../entry/src/main/ets/features/common/PageBackBar.ets',import.meta.url),'utf8')}}).owner;
  let clicks=0;Object.assign(owner,{appThemeScheme:scheme,onOpenTools:()=>clicks++,onBack(){}});owner.backBar();

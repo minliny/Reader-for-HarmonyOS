@@ -11,6 +11,27 @@ import {
   TYPE_SHELF_MANAGEMENT_BUTTON, TYPE_SHELF_MANAGEMENT_SMALL_ACTION, TYPE_SHELF_MANAGEMENT_ROW_ACTION, TYPE_RSS_BOTTOM_ACTION, TYPE_SOURCE_TOOLS_CODE_INPUT,
 } from './ReaderTypography';
 
+export type ReaderIconButtonSpecId = 'toolbar-standard' | 'toolbar-wide' | 'navigation-back' | 'toolbar-compact';
+export interface ReaderIconButtonSpec {
+  boxSize: number;
+  iconSize: number;
+  radius: number;
+  pressedRadius: number;
+}
+// Preserve every current target; bookshelf Search and gated Discover Refresh
+// share one actual specification rather than copying the same geometry.
+const TOOLBAR_STANDARD_ICON: ReaderIconButtonSpec = { boxSize: 44, iconSize: 24, radius: 22, pressedRadius: 12 };
+const TOOLBAR_WIDE_ICON: ReaderIconButtonSpec = { boxSize: 44, iconSize: 44, radius: 22, pressedRadius: 12 };
+const NAVIGATION_BACK_ICON: ReaderIconButtonSpec = { boxSize: 32, iconSize: 20, radius: 16, pressedRadius: 12 };
+const TOOLBAR_COMPACT_ICON: ReaderIconButtonSpec = { boxSize: 44, iconSize: 20, radius: 22, pressedRadius: 12 };
+export function resolveReaderIconButtonSpec(id: ReaderIconButtonSpecId): ReaderIconButtonSpec {
+  if (id === 'toolbar-standard') return TOOLBAR_STANDARD_ICON;
+  if (id === 'toolbar-wide') return TOOLBAR_WIDE_ICON;
+  if (id === 'navigation-back') return NAVIGATION_BACK_ICON;
+  if (id === 'toolbar-compact') return TOOLBAR_COMPACT_ICON;
+  throw new Error('Unknown ReaderIconButton specification');
+}
+
 export type ReaderButtonSpecId = 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action' | 'form-action' | 'form-busy-action' | 'form-document-action' | 'search-primary' | 'search-secondary' | 'discover-page' | 'rss-mode-tab' | 'rss-state' | 'rss-source-link' | 'shelf-action' | 'shelf-small' | 'shelf-row-edit' | 'shelf-row-select' | 'rss-detail-bottom' | 'rss-filter' | 'sync-config-test' | 'sync-config-save' | 'source-management-retry' | 'source-management-category' | 'source-management-status-compact' | 'source-management-status-wide' | 'source-management-detect' | 'source-management-login' | 'source-management-manage' | 'search-field-phone' | 'search-field-wide' | 'search-history-clear' | 'search-history-keyword' | 'search-scope' | 'search-retry-status-spaced' | 'search-retry-status' | 'search-retry-progress' | 'search-error-retry' | 'search-error-source' | 'discover-category' | 'sync-empty-backup';
 export type ReaderButtonLayout = 'intrinsic' | 'equal' | 'full';
 export interface ReaderButtonMargin { top?: number; right?: number; bottom?: number; left?: number; }
