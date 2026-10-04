@@ -3422,6 +3422,10 @@ struct Index {
   }
 
   private openShelfBook(selection: ShelfBook): void {
+    if (selection.contentKind === 'manga' || selection.contentKind === 'audio') {
+      this.showReadingFailure('暂不支持此类阅读', '当前版本未接入此类阅读器，书籍和已下载内容仍保留。');
+      return;
+    }
     if (this.route === 'bookshelf') {
       this.beginReadingStartupTrace?.();
       this.shelfEntryTraceAttempt += 1;
@@ -3627,6 +3631,11 @@ struct Index {
   ): void {
     const owner = this.mountedRuntimeOwner;
     if (owner === undefined || !this.isCurrentRuntime(owner) || this.shelfReceiptRetired) return;
+    const contentKind = shelfSnapshot?.contentKind ?? seed.contentKind;
+    if (contentKind === 'manga' || contentKind === 'audio') {
+      this.showReadingFailure('暂不支持此类阅读', '当前版本未接入此类阅读器，书籍和已下载内容仍保留。');
+      return;
+    }
     const retainedSession = this.remoteReadingSession;
     const originRoute = this.route, generation = this.nextNavigationGeneration();
     const entryRoute = resumeImmediately ? this.readingOriginRoute : 'detail';

@@ -11,10 +11,27 @@ import { stripTypeScriptTypes } from 'node:module';
 // to a real temporary filesystem; this is not device or platform durability proof.
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const source = readFileSync(join(repo, 'entry/src/main/ets/app/ReadingImageDiskCache.ts'), 'utf8');
-const executable = stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
+// Negative control restores the former whole-book deletion in the executed
+// class. The same filesystem assertions must catch its ownership violation.
+const negativeControl = process.argv.includes('--negative-control=whole-tree-clear');
+const broadClear = `const removeTree = async (path) => {
+  if (!(await fileIo.access(path))) return;
+  for (const name of await fileIo.listFile(path)) {
+    const child = path + '/' + name;
+    if ((await fileIo.stat(child)).isDirectory()) await removeTree(child);
+    else await fileIo.unlink(child);
+  }
+  await fileIo.rmdir(path);
+};
+await removeTree(this.rootDirectory() + '/' + await this.bookHash(sourceId, bookId));
+    const legacyBook`;
+const testedSource = negativeControl ? source.replace(/const book = `\$\{this\.rootDirectory\(\)\}[\s\S]*?\n    const legacyBook/, broadClear) : source;
+if (negativeControl) assert.notEqual(testedSource, source, 'negative control must mutate the production clear');
+const executable = stripTypeScriptTypes(testedSource.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
 const handles = new Map();
 let failRename = () => false;
 let failUnlink = () => false;
+let failRead = () => false;
 let beforeSync = async () => {};
 const io = {
   OpenMode: { CREATE: 1, READ_WRITE: 2, TRUNC: 4 },
@@ -41,7 +58,10 @@ const io = {
   },
   AtomicFile: class {
     constructor(path) { this.path = path; }
-    readFully() { const bytes = readFileSync(this.path); return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength); }
+    readFully() {
+      if (failRead(this.path)) throw new Error('injected ownership read failure');
+      const bytes = readFileSync(this.path); return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    }
   },
 };
 const util = {
@@ -68,6 +88,11 @@ const bytes = new Uint8Array([1, 2, 3]);
 const checks = [];
 const pass = name => checks.push(name);
 const legacyDir = identity => join(root, 'reader-offline/images-v1', hash(`${identity.sourceId}\0${identity.bookId}`), `${identity.chapterIndex}`);
+const exists = path => fs.access(path).then(() => true, () => false);
+async function seedFile(path, value = bytes) {
+  await fs.mkdir(dirname(path), { recursive: true }); await fs.writeFile(path, value);
+  return path;
+}
 async function seedLegacy(identity, override = {}) {
   const directory = legacyDir(identity);
   const resourceHash = hash(`${identity.contentVersion}\0${identity.imageUrl}\0${canonicalBase(identity.baseUrl) ?? ''}`);
@@ -169,18 +194,130 @@ try {
   await seedLegacy(interrupted);
   await cache.loadResource(interrupted);
   const blockedPath = await cache.resourcePath(interrupted);
+  const pendingPath = await cache.clearMarkerPath(interrupted.sourceId, interrupted.bookId);
   failUnlink = path => path === blockedPath;
   await assert.rejects(cache.clearBook(interrupted.sourceId, interrupted.bookId), /unlink failure/);
+  assert.equal(await exists(pendingPath), true);
+  assert.equal(await exists(`${pendingPath}.legacy-revoked`), false);
+  assert.equal(await exists(join(dirname(blockedPath), 'text-identity.json')), true);
   const reopened = new Cache({ filesDir: root });
   await assert.rejects(reopened.loadResource(interrupted), /unlink failure/);
   failUnlink = () => false;
   assert.equal(await reopened.loadResource(interrupted), undefined);
+  assert.equal(await exists(pendingPath), false);
+  assert.equal(await exists(`${pendingPath}.legacy-revoked`), true);
   // Even an unidentifiable v1 leftover becoming readable cannot revive after clear.
   await seedLegacy(interrupted);
   assert.equal(await reopened.loadResource(interrupted), undefined);
   await reopened.storeResource(interrupted, bytes);
   assert.deepEqual(await reopened.loadResource(interrupted), bytes);
   pass('failed clear survives restart, denies reads until cleanup completes, and permanently revokes v1 fallback');
+
+  const mixed = { ...image, bookId: 'mixed-owners' };
+  await cache.storeResource(mixed, bytes);
+  assert.equal(await cache.isChapterComplete(mixed), false, 'text ownership is not an offline-completion manifest');
+  await cache.markChapterComplete(mixed, [mixed]);
+  const mixedDirectory = await cache.chapterDirectory(mixed);
+  const mixedBook = dirname(dirname(mixedDirectory));
+  const preserved = [];
+  const keep = async (path, value = bytes) => { await seedFile(path, value); preserved.push([path, new Uint8Array(await fs.readFile(path))]); };
+  await keep(join(mixedBook, '.manga', hash('stable-chapter'), hash('read-version'), 'manga-identity.json'),
+    JSON.stringify({ sourceId: mixed.sourceId, bookId: mixed.bookId, chapterId: 'stable-chapter', contentVersion: 'read-version' }));
+  await keep(join(mixedBook, '.manga', hash('stable-chapter'), hash('read-version'), 'original.bin'));
+  const oldManga = { ...mixed, chapterIndex: 8, contentVersion: 'old-manga' };
+  const oldMangaDirectory = await cache.chapterDirectory(oldManga);
+  await keep(join(oldMangaDirectory, 'manifest.json'), JSON.stringify({ formatVersion: 2, ...oldManga,
+    manga: true, resourceHashes: [hash('old manga resource')], completedAt: 1 }));
+  await keep(join(oldMangaDirectory, `${hash('old manga resource')}.bin`));
+  const legacyManga = { ...mixed, chapterIndex: 9, contentVersion: 'legacy-manga' };
+  await seedLegacy(legacyManga, { manga: true, chapterId: 'legacy-chapter' });
+  for (const name of await fs.readdir(legacyDir(legacyManga))) {
+    const path = join(legacyDir(legacyManga), name); preserved.push([path, new Uint8Array(await fs.readFile(path))]);
+  }
+  const profiledDirectory = await cache.chapterDirectory({ ...mixed, chapterIndex: 10, contentVersion: 'profiled' });
+  await keep(join(profiledDirectory, 'manifest-script-bgra-v2.json'), JSON.stringify({ formatVersion: 2,
+    ...mixed, chapterIndex: 10, contentVersion: 'profiled', manga: true, mangaCacheProfile: 'script-bgra-v2' }));
+  await keep(join(profiledDirectory, 'profile.bin'));
+  const identityDirectory = await cache.chapterDirectory({ ...mixed, chapterIndex: 11, contentVersion: 'partial-manga' });
+  await keep(join(identityDirectory, 'manga-identity.json'), JSON.stringify({ sourceId: mixed.sourceId,
+    bookId: mixed.bookId, chapterId: 'partial-manga', contentVersion: 'partial-manga' }));
+  await keep(join(identityDirectory, 'partial.bin'));
+  // Unknown bytes can even occupy an exact-looking ordinal/version path.
+  // Their shape alone must not authorize deletion or post-clear admission.
+  const unowned = { ...mixed, chapterIndex: 12, contentVersion: 'unowned' };
+  await keep(await cache.resourcePath(unowned));
+  await keep(join(mixedBook, 'another-owner', 'private.db'));
+  await keep(join(mixedDirectory, 'another-owner', 'private.db'));
+  await keep(join(mixedDirectory, `${hash('unlisted resource')}.bin`));
+  await keep(join(mixedBook, '13', hash('corrupt'), 'manifest.json'), '{broken');
+  await keep(join(mixedBook, '13', hash('corrupt'), 'unknown.bin'));
+  const foreign = { ...mixed, chapterIndex: 14, contentVersion: 'foreign' };
+  const foreignDirectory = await cache.chapterDirectory(foreign);
+  await keep(join(foreignDirectory, 'manifest.json'), JSON.stringify({ formatVersion: 2, ...foreign,
+    sourceId: 'another-source', resourceHashes: [hash('foreign resource')], completedAt: 1 }));
+  await keep(join(foreignDirectory, `${hash('foreign resource')}.bin`));
+  const mixedLegacyText = { ...mixed, chapterIndex: 15, contentVersion: 'legacy-text' };
+  await seedLegacy(mixedLegacyText);
+  const beforeMixedClear = cache.captureValidity(mixed.sourceId, mixed.bookId);
+  await cache.clearBook(mixed.sourceId, mixed.bookId);
+  assert.equal(await exists(await cache.resourcePath(mixed)), false);
+  assert.equal(await exists(join(mixedDirectory, 'manifest.json')), false);
+  assert.equal(await exists(join(mixedDirectory, 'text-identity.json')), false);
+  assert.equal(await exists(legacyDir(mixedLegacyText)), false);
+  for (const [path, expected] of preserved) assert.deepEqual(new Uint8Array(await fs.readFile(path)), expected,
+    `clear must preserve foreign/manga bytes: ${path}`);
+  assert.equal(await cache.loadResource(unowned), undefined, 'unowned historical bytes must not revive after clear');
+  await assert.rejects(cache.storeResource(mixed, bytes, beforeMixedClear), /superseded/);
+  await cache.storeResource(unowned, new Uint8Array([7, 8]));
+  assert.deepEqual(await new Cache({ filesDir: root }).loadResource(unowned), new Uint8Array([7, 8]),
+    'fresh partial text ownership must survive restart without completing a chapter');
+  assert.equal(await cache.isChapterComplete(unowned), false);
+  pass('mixed clear removes only exact text resources; manga, unknown owners and unlisted nested files stay byte-identical');
+
+  const pendingMixed = { ...image, bookId: 'old-pending-mixed' };
+  await cache.storeResource(pendingMixed, bytes); await cache.markChapterComplete(pendingMixed, [pendingMixed]);
+  const pendingMixedBook = dirname(dirname(await cache.chapterDirectory(pendingMixed)));
+  const pendingManga = await seedFile(join(pendingMixedBook, '.manga', 'retained', 'bytes.bin'));
+  const pendingUnknown = await seedFile(join(pendingMixedBook, 'unknown-owner', 'bytes.bin'));
+  const oldPending = await cache.clearMarkerPath(pendingMixed.sourceId, pendingMixed.bookId);
+  await seedFile(oldPending, 'clear');
+  const pendingReopened = new Cache({ filesDir: root });
+  assert.equal(await pendingReopened.loadResource(pendingMixed), undefined);
+  assert.equal(await exists(oldPending), false);
+  assert.equal(await exists(`${oldPending}.legacy-revoked`), true);
+  assert.deepEqual(new Uint8Array(await fs.readFile(pendingManga)), bytes);
+  assert.deepEqual(new Uint8Array(await fs.readFile(pendingUnknown)), bytes);
+  pass('a historical broad pending intent resumes with current text ownership, preserving other owners');
+
+  const ownershipReadFailure = { ...image, bookId: 'ownership-read-failure' };
+  await cache.storeResource(ownershipReadFailure, bytes); await cache.markChapterComplete(ownershipReadFailure, [ownershipReadFailure]);
+  const ownershipManifest = join(await cache.chapterDirectory(ownershipReadFailure), 'manifest.json');
+  const readFailurePending = await cache.clearMarkerPath(ownershipReadFailure.sourceId, ownershipReadFailure.bookId);
+  failRead = path => path === ownershipManifest;
+  await assert.rejects(cache.clearBook(ownershipReadFailure.sourceId, ownershipReadFailure.bookId), /ownership read failure/);
+  assert.equal(await exists(readFailurePending), true);
+  assert.equal(await exists(`${readFailurePending}.legacy-revoked`), false);
+  assert.deepEqual(new Uint8Array(await fs.readFile(await cache.resourcePath(ownershipReadFailure))), bytes);
+  failRead = () => false;
+  assert.equal(await new Cache({ filesDir: root }).loadResource(ownershipReadFailure), undefined);
+  assert.equal(await exists(readFailurePending), false);
+  pass('ownership I/O failure remains retryable and never publishes a completed clear');
+
+  const markerFailure = { ...image, bookId: 'marker-failure' };
+  await cache.storeResource(markerFailure, bytes);
+  const markerPending = await cache.clearMarkerPath(markerFailure.sourceId, markerFailure.bookId);
+  failRename = path => path === `${markerPending}.legacy-revoked`;
+  await assert.rejects(cache.clearBook(markerFailure.sourceId, markerFailure.bookId), /rename failure/);
+  assert.equal(await exists(markerPending), true);
+  assert.equal(await exists(`${markerPending}.legacy-revoked`), false);
+  failRename = () => false;
+  failUnlink = path => path === markerPending;
+  await assert.rejects(new Cache({ filesDir: root }).loadResource(markerFailure), /unlink failure/);
+  assert.equal(await exists(markerPending), true);
+  failUnlink = () => false;
+  assert.equal(await new Cache({ filesDir: root }).loadResource(markerFailure), undefined);
+  assert.equal(await exists(markerPending), false);
+  pass('revocation publication and pending-marker removal failures cannot falsely settle clear and retry after restart');
 
   const closing = new Cache({ filesDir: root });
   const beforeClose = closing.captureValidity(image.sourceId, image.bookId);
@@ -189,8 +326,10 @@ try {
   await assert.rejects(closing.loadResource(image), /superseded/);
   pass('runtime close invalidates queued and newly requested cache operations');
 
-  console.log(JSON.stringify({ status: 'PASS', productionSourceSha256: hash(source), checks }, null, 2));
+  console.log(JSON.stringify({ status: 'PASS', productionSourceSha256: hash(source), negativeControl, checks }, null, 2));
 } finally {
   failUnlink = () => false;
+  failRead = () => false;
+  failRename = () => false;
   await fs.rm(root, { recursive: true, force: true });
 }

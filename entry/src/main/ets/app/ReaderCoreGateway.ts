@@ -11,6 +11,8 @@ export type ShelfBook = {
   author: string;
   /** Core-owned book kind. Local imports use values such as `TXT` / `EPUB`. */
   kind?: string;
+  /** Core media type, independent of format/genre and preserved in shelf display. */
+  contentKind?: 'text' | 'manga' | 'audio';
   coverUrl?: string;
   intro?: string;
   lastChapter?: string;
@@ -73,6 +75,7 @@ export type BookshelfListParams = {
   projectionRevision?: string;
   readingState?: string;
   sourceKind?: string;
+  contentKind?: 'all' | 'text' | 'manga';
   offset?: number;
   hasReadingProgress?: boolean;
   sortBy?: 'manual' | 'addedAt' | 'lastReadAt' | 'title' | 'author';
@@ -360,6 +363,10 @@ export class ReaderCoreGateway {
     const intro = this.optionalString(book, 'intro');
     const sourceName = this.optionalString(book, 'sourceName');
     const kind = this.optionalString(book, 'kind');
+    const contentKind = this.optionalString(book, 'contentKind');
+    if (contentKind !== undefined && contentKind !== 'text' && contentKind !== 'manga' && contentKind !== 'audio')
+      throw new Error('bookshelf returned an invalid contentKind');
+    if (contentKind !== undefined) decoded.contentKind = contentKind;
     const lastChapter = this.optionalString(book, 'lastChapter');
     const lastReadAt = this.optionalNumber(book, 'lastReadAt');
     const group = this.optionalString(book, 'group');
