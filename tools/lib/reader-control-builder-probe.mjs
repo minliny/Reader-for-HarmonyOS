@@ -27,10 +27,11 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const options = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
   const parse = text => ts.createSourceFile('/tmp/ReaderBuilderProbe.ets', text,
     ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
-  const childProps = definition => {
+  const childProps = (definition, name) => {
     const tree = parse(definition);
     assert.equal(tree.parseDiagnostics.length, 0, 'actual shared child ETS parses');
-    const declaration = tree.statements.find(node => node.members && node.members.some(member => member.name?.getText(tree) === 'build'));
+    const declarations = tree.statements.filter(node => node.members && node.members.some(member => member.name?.getText(tree) === 'build'));
+    const declaration = declarations.find(node => node.name?.getText(tree) === name) ?? declarations[0];
     return new Set((declaration?.members ?? []).filter(member => ts.isPropertyDeclaration(member) &&
       ts.getAllDecorators(member).some(decorator => {
         const expression = decorator.expression;
@@ -40,6 +41,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const original = parse(source);
   assert.equal(original.parseDiagnostics.length, 0, 'production ETS parses');
   const struct = original.statements.find(n => n.members && n.name &&
+    (hooks.componentName === undefined || n.name.getText(original) === hooks.componentName) &&
     n.members.some(m => m.name?.getText(original) === 'build'));
   const members = names.map(name => {
     const member = struct.members.find(n => n.name?.getText(original) === name);
@@ -117,7 +119,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   }
   for (const [name, child] of Object.entries(hooks.childSources ?? {})) {
     syntax.componentCollection.customComponents.add(name);
-    syntax.propCollection.set(name, childProps(child));
+    syntax.propCollection.set(name, childProps(child, name));
   }
   const file = parse(`@Component struct ReaderBuilderProbe {\n${members.join('\n')}\n${names.includes('build') ? '' : 'build() { Column() {} }'}\n}`);
   // The full SDK frontend collects declared method names before transforming
@@ -146,6 +148,14 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const output = ts.createPrinter().printNode(ts.EmitHint.Unspecified, transformed, file);
   assert.match(output, /observeComponentCreation2/, 'exercise real SDK observer closures');
   let activeOwner, activeId;
+  // The SDK lowers .animation to Context start/reset instructions. Record
+  // their actual emitted attributes without simulating native motion frames.
+  const nativeContext = { animation(value) {
+    if (activeOwner === undefined) return;
+    const record = activeOwner.nodes.get(activeId);
+    activeOwner.attributeCalls.push({ id: activeId, property: 'contextAnimation', args: [value] });
+    if (value !== null && value !== undefined) record.animation = value;
+  } };
   const native = name => { const instance = new Proxy({ name }, { get(target, property) {
     if (property === 'name') return name;
     return (...args) => {
@@ -181,9 +191,14 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     }
     runObserver(id, initial) {
       activeOwner = this; activeId = id;
+      const previousContext = globalThis.Context;
+      globalThis.Context = nativeContext;
       hooks.onObserverEnter?.(this, id);
       try { this.observers[id](id, initial); }
-      finally { hooks.onObserverExit?.(this, id); activeOwner = undefined; }
+      finally {
+        try { hooks.onObserverExit?.(this, id); }
+        finally { globalThis.Context = previousContext; activeOwner = undefined; }
+      }
     }
     replayOnly(ids) { for (const id of ids) this.runObserver(id, false); }
     replay() {
@@ -233,11 +248,22 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Path', 'Text', 'TextInput', 'TextArea', 'Select', 'Span', 'Marquee', 'Image', 'Slider', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
     ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment', 'AccessibilityRoleType',
-      'LineCapStyle', 'TextAlign', 'TextOverflow', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
+      'LineCapStyle', 'TextAlign', 'TextOverflow', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign', 'SafeAreaType', 'SafeAreaEdge', 'LayoutSafeAreaType', 'LayoutSafeAreaEdge'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
     ...readerTypographyRoles,
     ...dependencies };
   globals.ReaderPressFeedback ??= productionReaderPressFeedback({ Color: globals.Color });
+  // This exact directory adapter is production code, not an attribute stub.
+  // Compile its real setter with the consuming Builder so palette changes and
+  // a missing/incorrect native apply are observable in every directory probe.
+  if (globals.ReaderDirectoryRowBackgroundModifier === undefined &&
+      /new ReaderDirectoryRowBackgroundModifier\(/.test(members.join('\n'))) {
+    const declaration = original.statements.find(node => ts.isClassDeclaration(node) &&
+      node.name?.text === 'ReaderDirectoryRowBackgroundModifier');
+    assert.ok(declaration, 'actual directory native row paint adapter declaration');
+    globals.ReaderDirectoryRowBackgroundModifier = new Function(
+      `${stripTypeScriptTypes(declaration.getText(original))}; return ReaderDirectoryRowBackgroundModifier;`)();
+  }
   const Component = new Function(...Object.keys(globals), `${stripTypeScriptTypes(output)}; return ReaderBuilderProbe;`)(...Object.values(globals));
   return { owner: new Component(undefined, hooks.initialParams ?? {}), Component, output };
 }

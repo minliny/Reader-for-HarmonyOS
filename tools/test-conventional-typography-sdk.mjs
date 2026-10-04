@@ -5,8 +5,10 @@ import { auditTypographyConsumers, typographyProperties } from './lib/reader-typ
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { typographySuccessorFile, typographySuccessorNode } from './lib/reader-typography-migration-fixture.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
+import { verifyMangaTypographyContracts } from './lib/manga-typography-contract.mjs';
 
 const fixtureArgument = process.argv.find(argument => argument.startsWith('--fixture='));
+assert.equal(verifyMangaTypographyContracts({ sdk: true }), 71, 'manga exact imported tuple through actual SDK');
 const fixtureName = fixtureArgument?.slice('--fixture='.length) ?? 'conventional-typography-baseline.json';
 assert.ok(/^[a-z0-9-]+\.json$/.test(fixtureName), 'bounded fixture filename');
 const baseline = JSON.parse(readFileSync(new URL(`./fixtures/design/${fixtureName}`, import.meta.url)));

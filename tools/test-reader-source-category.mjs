@@ -13,6 +13,7 @@ const categoryUrl = `data:text/javascript;base64,${Buffer.from(categorySource).t
 const {
   classifyReaderSource,
   readerSourceCategoryIsText,
+  readerSourceCategoryIsReadable,
   readerSourceCategoryLabel,
 } = await import(categoryUrl);
 
@@ -43,6 +44,10 @@ for (const category of ['comic', 'music', 'download', 'external', 'other']) {
   assert.notEqual(readerSourceCategoryLabel(category), '小说');
 }
 
+assert.equal(readerSourceCategoryIsReadable('comic'),true);
+assert.equal(readerSourceCategoryIsReadable('novel'),true);
+for(const category of ['music','download','external','other']) assert.equal(readerSourceCategoryIsReadable(category),false);
+
 const searchGateway = read('entry/src/main/ets/features/search/SearchGateway.ts');
 const searchOrchestrator = read('entry/src/main/ets/features/search/SearchOrchestrator.ets');
 const searchPage = read('entry/src/main/ets/features/search/SearchPage.ets');
@@ -50,12 +55,12 @@ const discoverOrchestrator = read('entry/src/main/ets/features/discover/Discover
 const switchGateway = read('entry/src/main/ets/features/source/SourceSwitchGateway.ts');
 const managementPage = read('entry/src/main/ets/features/source/SourceManagementPage.ets');
 
-assert.match(searchGateway, /if \(!readerSourceCategoryIsText\(sourceCategory\)\)/);
-assert.match(searchOrchestrator, /readerSourceCategoryIsText\(source\.category\)/);
+assert.match(searchGateway, /if \(!readerSourceCategoryIsReadable\(sourceCategory\)\)/);
+assert.match(searchOrchestrator, /readerSourceCategoryIsReadable\(source\.category\)/);
 assert.match(searchPage, /本地/);
-assert.match(searchOrchestrator, /readerSourceCategoryIsText\(source\.category\)/);
+assert.match(searchOrchestrator, /readerSourceCategoryIsReadable\(source\.category\)/);
 assert.match(discoverOrchestrator, /readerSourceCategoryIsText\(source\.category\)/);
-assert.ok((switchGateway.match(/if \(!readerSourceCategoryIsText\(category\)\) continue;/g) ?? []).length >= 2,
+assert.match(switchGateway, /contentKind === 'manga' \? category !== 'comic' : !readerSourceCategoryIsText\(category\)/,
   '实时换源与缓存换源都必须排除非小说类型');
 assert.match(managementPage, /readerSourceCategoryLabel\(source\.category\)/,
   '管理页必须展示每个书源的类别');

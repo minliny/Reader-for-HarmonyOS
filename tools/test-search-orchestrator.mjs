@@ -26,7 +26,7 @@ const sourceCategoryModule = stripTypeScriptTypes(
 const sourceCategoryImport =
   /^import \{\n(?:  [^\n]+\n)+\} from ['"][^'"]*ReaderSourceCategory['"];\n/m;
 const sourceCategorySingleImport =
-  /^import \{ readerSourceCategoryIsText \} from ['"][^'"]*ReaderSourceCategory['"];\n/m;
+  /^import \{ readerSourceCategoryIs(?:Text|Readable) \} from ['"][^'"]*ReaderSourceCategory['"];\n/m;
 const operationFactsModule = stripTypeScriptTypes(
   read('entry/src/main/ets/app/ReaderOperationFacts.ts'),
 ).replace(/^export /gm, '');

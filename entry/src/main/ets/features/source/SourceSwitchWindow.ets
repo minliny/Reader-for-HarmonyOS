@@ -1,4 +1,5 @@
 import { ReaderBoundedSurface } from '../common/ReaderBoundedSurface';
+import { MangaSourceSwitchWindow } from './MangaSourceSwitchWindow';
 import { ReaderBoundedSurfaceHeader } from '../common/ReaderBoundedSurfaceHeader';
 import { TYPE_APP_LOADING_BODY, TYPE_SOURCE_STATE_TITLE, TYPE_SOURCE_SWITCH_COLUMN, TYPE_SOURCE_SWITCH_FOOTER, TYPE_SOURCE_SWITCH_HEADING, TYPE_SOURCE_SWITCH_MESSAGE, TYPE_SOURCE_SWITCH_RECOVERY, TYPE_SOURCE_SWITCH_SORT } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -54,6 +55,15 @@ export struct SourceSwitchWindow {
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop state: SourceSwitchPanelState;
   @Prop currentSourceId: string = '';
+  @Prop bookTitle: string = '';
+  @Prop author: string = '';
+  @Prop coverUrl: string = '';
+  @Prop currentSourceName: string = '';
+  @Prop currentChapterTitle: string = '';
+  @Prop contentKind: string = 'text';
+  @Prop reduceMotion: boolean = false;
+  @Prop consumeTopInset: boolean = true;
+  onStop: () => void = (): void => {};
   onClose: () => void = (): void => {};
   onRetry: () => void = (): void => {};
   onRefresh: () => void = (): void => {};
@@ -70,9 +80,22 @@ export struct SourceSwitchWindow {
   }
 
   build() {
-    ReaderBoundedSurface({ specId: 'source-switch-window', surfaceWidth: this.windowWidth(), surfaceHeight: this.windowHeight(),
-      header: (): void => { this.header(); }, body: (): void => { this.windowBody(); }, actions: (): void => { this.footer(); } })
-      .translate({ x: this.windowTranslateX(), y: this.windowTranslateY() });
+    if (this.contentKind === 'manga') {
+      MangaSourceSwitchWindow({
+        state: this.state, currentSourceId: this.currentSourceId,
+        bookTitle: this.bookTitle, author: this.author, coverUrl: this.coverUrl,
+        currentSourceName: this.currentSourceName, currentChapterTitle: this.currentChapterTitle,
+        contentKind: this.contentKind, reduceMotion: this.reduceMotion, consumeTopInset: this.consumeTopInset,
+        onStop: (): void => this.onStop(), onClose: (): void => this.onClose(),
+        onRetry: (): void => this.onRetry(), onRefresh: (): void => this.onRefresh(),
+        onSelectCandidate: (candidate: SourceSwitchCandidate): void => this.onSelectCandidate(candidate),
+        onRollback: (): void => this.onRollback(),
+      });
+    } else {
+      ReaderBoundedSurface({ specId: 'source-switch-window', surfaceWidth: this.windowWidth(), surfaceHeight: this.windowHeight(),
+        header: (): void => { this.header(); }, body: (): void => { this.windowBody(); }, actions: (): void => { this.footer(); } })
+        .translate({ x: this.windowTranslateX(), y: this.windowTranslateY() });
+    }
   }
 
   @Builder

@@ -6,10 +6,15 @@ const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve
 function fixture(capabilities=[]){
  const clock=[],events=[],requests=[],native=deferred(),cleanup=deferred();let createError=false, opens=0;
  let migrationStarted=false, migrationResult=Promise.resolve(false);
+ const MetadataBody=productionMotionMethods(new URL('../entry/src/main/ets/app/ReadingBodyImageHost.ts',import.meta.url),['setMangaMetadataInspector'],{
+  util:{LRUCache:class {constructor(capacity){assert.equal(capacity,128);}clear(){}}}
+ });
+ const body=Object.assign(new MetadataBody(),{mangaMetadataGeneration:0});
  const runtime={assetBridge:()=>({}),setCapabilityRouter(){},close(){events.push('native.close');},
   async request(method,params){events.push(method);requests.push({method,params:structuredClone(params)});return{data:{capabilities,buildIdentity:{},recovered:0}};}};
  const Owner=productionMotionMethods(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url),
- ['start','startAfterPredecessor','requestDirect','startRuntime','scheduleImportFinalizeCleanup','supportsCoreCapability'],{ReaderStartupTrace,LOG_DOMAIN:0,hilog:{info(){},error(){},warn(){}},errorMessageOf:e=>e.message,
+ ['start','startAfterPredecessor','requestDirect','startRuntime','scheduleImportFinalizeCleanup','supportsCoreCapability'],{ReaderStartupTrace,ReadingBodyImageHost:{instance:body},
+  MangaImageMetadataHost:{instance:{async inspect(){throw Error('startup fixture does not request image metadata');}}},LOG_DOMAIN:0,hilog:{info(){},error(){},warn(){}},errorMessageOf:e=>e.message,
   DEFAULT_CORE_REQUEST_TIMEOUT_MS:30000,coreAdmissionFailureSummary:()=>undefined,httpResponseFailureSummary:()=>undefined,
   setTimeout:fn=>{clock.push(fn);return clock.length;},createReaderCoreRuntimeAsync:async(_config,current)=>{
    opens+=1;if(createError)throw Error('open failed');await native.promise;
@@ -23,13 +28,14 @@ function fixture(capabilities=[]){
   requireCoreBuildIdentity:value=>value,requireSourceSwitchRecoveryCount:value=>value,
   async recoverPendingLocalImportFinalizes(){events.push('cleanup');await cleanup.promise;},
   async installBundledBookSourceCollection(){return{collectionRecords:0,uniqueSourceIds:0,processed:0,installedOrUpgraded:0,failed:0,interrupted:false};}});
- return{owner,runtime,native,cleanup,events,requests,clock,fail(){createError=true;},recover(){createError=false;},opens:()=>opens,
+ return{owner,runtime,native,cleanup,events,requests,clock,body,fail(){createError=true;},recover(){createError=false;},opens:()=>opens,
   migrationStarted:()=>migrationStarted, migration(value){migrationResult=value;}};
 }
 {
  const f=fixture();const start=f.owner.startRuntime();await tick();assert.deepEqual(f.events,[]);
  assert.equal(f.migrationStarted(),true,'read-only Host marker I/O overlaps outstanding native open');
  f.native.resolve();await start;assert.equal(f.owner.state,'ready');assert.equal(f.owner.runtime,f.runtime);
+ assert.equal(f.body.mangaMetadataGeneration,1);assert.equal(typeof f.body.mangaMetadataInspector,'function','ready runtime installs the actual metadata port');
  assert.ok(!f.events.includes('cleanup'),'confirmed import cleanup cannot gate ready');
  f.clock.shift()();await tick();assert.equal(f.events.at(-1),'cleanup');
  let settled=false;f.owner.importFinalizeTask.then(()=>{settled=true;});await tick();assert.equal(settled,false);

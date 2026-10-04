@@ -131,8 +131,10 @@ for (const type of ['TYPE_SYSTEM', 'TYPE_CUTOUT', 'TYPE_SYSTEM_GESTURE',
   assert.ok(coordinator.includes(type), `window metrics must include ${type}`);
 }
 assert.match(coordinator,
-  /statusBarColor: ReaderWindowCoordinator\.nativeStatusBarColor\(request\),[\s\S]*navigationBarColor: request\.style\.underlayColor,[\s\S]*statusBarContentColor: contentColor/,
+  /statusBarColor: ReaderWindowCoordinator\.nativeStatusBarColor\(request\),[\s\S]*navigationBarColor: request\.style\.transparentSystemBars \? '#00000000' : request\.style\.underlayColor,[\s\S]*statusBarContentColor: contentColor,[\s\S]*navigationBarContentColor: contentColor/,
   'native status composition, navigation underlay and semantic content tone must change atomically from one style');
+assert.match(coordinator, /nativeStatusBarColor\(request: ReaderWindowChromeRequest\): string \{\s*if \(request\.style\.transparentSystemBars\) return '#00000000';/,
+  'manga transparency uses the same finite window style for both native bars');
 assert.match(coordinator, /while \(ReaderWindowCoordinator\.mainWindow !== undefined[\s\S]*desiredChromeRevision/,
   'asynchronous chrome writes must use a last-write-wins revision loop');
 
@@ -142,8 +144,10 @@ assert.match(index, /readerContentSafeTop\(ReaderWindowCoordinator\.metrics\(\)\
 assert.doesNotMatch(shell, /\.padding\(\{ top:/,
   'ReaderShell must not add a second status-bar offset');
 assert.match(shell,
-  /expandSafeArea\(\[SafeAreaType\.SYSTEM\], \[SafeAreaEdge\.TOP, SafeAreaEdge\.BOTTOM\]\)/,
+  /expandSafeArea\(this\.contentKind === 'manga' \? \[SafeAreaType\.SYSTEM, SafeAreaType\.CUTOUT\] : \[SafeAreaType\.SYSTEM\],\s*this\.contentKind === 'manga' \? \[SafeAreaEdge\.TOP, SafeAreaEdge\.BOTTOM, SafeAreaEdge\.START, SafeAreaEdge\.END\] :\s*\[SafeAreaEdge\.TOP, SafeAreaEdge\.BOTTOM\]\)/,
   'the themed reader background must paint continuously behind both system bars');
+assert.match(shell, /ignoreLayoutSafeArea\(this\.contentKind === 'manga' \? \[LayoutSafeAreaType\.SYSTEM\] : \[\],\s*this\.contentKind === 'manga' \? \[LayoutSafeAreaEdge\.ALL\] : \[\]\)/,
+  'only manga ignores system layout insets; novel retains its prior layout policy');
 assert.match(shell, /windowChromeOverlayActive:[\s\S]*this\.route === 'directory'[\s\S]*this\.sourceSwitchVisible/,
   'fixed-light reader overlays must explicitly own a dark system-content tone');
 

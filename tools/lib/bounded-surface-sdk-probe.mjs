@@ -31,8 +31,13 @@ export function boundedSurfaceSdk(options={}){
     ReaderBoundedTitleModifier:classOf(childSources.ReaderBoundedSurfaceHeader,'ReaderBoundedTitleModifier',{readerAppColor,...typography}),
     ReaderBoundedFileActionModifier:classOf(childSources.ReaderBoundedSurfaceActions,'ReaderBoundedFileActionModifier',{}),
   };
+  // Text-only bounded consumers still compile the shipping manga branch. Its
+  // actual Prop declaration is authoritative even while that branch is idle;
+  // the mounted manga window has separate shared-ui-closure SDK coverage.
+  childSources.MangaSourceSwitchWindow=readFileSync(new URL('../../entry/src/main/ets/features/source/MangaSourceSwitchWindow.ets',import.meta.url),'utf8');
+  deps.MangaSourceSwitchWindow=class {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}};
   const hooks={...properties.hooks,childSources,mountChildren:true,allowEmptyBranchAdmission:options.allowEmptyBranchAdmission===true};
-  for(const name of Object.keys(childSources))deps[name]=createReaderBuilderProbe(childSources[name],boundedMembers(childSources[name]),deps,hooks).Component;
+  for(const name of ['ReaderRecoveryAction','ReaderRecoveryNotice','ReaderBoundedSurface','ReaderBoundedSurfaceHeader','ReaderBoundedSurfaceActions'])deps[name]=createReaderBuilderProbe(childSources[name],boundedMembers(childSources[name]),deps,hooks).Component;
   const walk=owner=>[owner,...[...owner.children.values()].flatMap(child=>child.nodes?walk(child):[])];
   return {properties,deps,hooks,childSources,walk,nodes:owner=>walk(owner).flatMap(x=>[...x.nodes.values()]),
     consumer(source,names=boundedMembers(source),extra={},initialParams={}){return createReaderBuilderProbe(source,names,{...deps,...extra},{...hooks,initialParams}).owner;}};

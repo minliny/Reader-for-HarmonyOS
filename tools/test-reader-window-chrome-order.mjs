@@ -163,6 +163,26 @@ await check('show superseded by hide converges and same-size rotation does not r
  f.displayInfo.rotation=2;w.events.get('windowRectChange')({});assert.equal(f.C.metrics().statusBarHeight,0,'180-degree rotation has no measured band yet');
  f.C.detach();
 });
+await check('manga transparent bars preserve opaque underlay and dedup across text/app ownership',async()=>{
+ const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+ const appColor=w.properties.statusBarColor;
+ const underlay='#FFF9F7EF',ink='#FF1F1B17';
+ const opaque=new f.S(underlay,'dark',ink);
+ assert.equal(opaque.transparentSystemBars,false,'existing callers default to opaque native bars');
+ f.C.requestReaderChrome(opaque);await settle();
+ assert.equal(w.properties.statusBarColor,underlay);assert.equal(w.properties.navigationBarColor,underlay);
+ const before=f.colors(w).length;
+ f.C.requestReaderChrome(new f.S(underlay,'dark',ink,'',true));await settle();
+ assert.equal(f.colors(w).length,before+1,'transparency is part of chrome request identity');
+ assert.equal(w.properties.statusBarColor,'#00000000');assert.equal(w.properties.navigationBarColor,'#00000000');
+ assert.equal(w.properties.statusBarContentColor,ink);assert.equal(f.app.get('readerWindowChromeUnderlayColor'),underlay,
+  'system bands are transparent while the Reader-owned content backing remains opaque');
+ const unchanged=f.colors(w).length;
+ f.C.requestReaderChrome(new f.S(underlay,'dark',ink,'',true));await settle();assert.equal(f.colors(w).length,unchanged);
+ f.C.requestReaderChrome(opaque);await settle();assert.equal(w.properties.navigationBarColor,underlay);
+ f.C.requestAppChrome();await settle();assert.equal(w.properties.statusBarColor,appColor);
+ f.C.detach();
+});
 for(const result of cases)console.log(JSON.stringify(result));
 assert.equal(cases.filter(x=>x.status==='FAIL').length,0,'production window chrome scenarios');
 console.log('PASS actual Coordinator + LRE palette requests; controlled Window promise completions only, no device pixel or failure-frequency claim.');

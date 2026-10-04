@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {stripTypeScriptTypes} from 'node:module';
 import * as families from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
@@ -15,7 +16,7 @@ const loaderSource=readFileSync(new URL('../entry/src/main/ets/app/ReaderFontLoa
 const {loadReaderFontChecked,readerFontLoadReady}=new Function('text',stripTypeScriptTypes(loaderSource)+
  ';return {loadReaderFontChecked,readerFontLoadReady};')(text);
 const registrar=new Function(...Object.keys(families),'$rawfile','loadReaderFontChecked','readerFontLoadReady','hilog',stripTypeScriptTypes(source)+
- ';return {registerReaderFonts,registerReaderShelfFonts,readerRegisteredFontFamily,prepareReaderFonts,prepareReaderShelfFonts,prepareReaderFontFamily,readerFontFamilyReady,loadReaderFontChecked};')
+ ';return {registerReaderFonts,registerReaderShelfFonts,readerRegisteredFontFamily,prepareReaderFonts,prepareReaderShelfFonts,prepareReaderFontFamily,readerFontFamilyReady,loadReaderFontChecked,prepareMangaSheetFonts};')
  (...Object.values(families),value=>value,loadReaderFontChecked,readerFontLoadReady,{warn(){}});
 const platform={registerFont(){throw Error('unchecked registration must not run');}};
 assert.equal(registrar.readerFontFamilyReady('HarmonyOS Sans'),true);
@@ -65,6 +66,41 @@ assert.equal(registrar.readerFontFamilyReady('ReaderCustom_hash'),true);
 assert.equal(registrar.loadReaderFontChecked('ReaderCustom_hash','file:///owned/hash.ttf'),retry);
 synchronousFailure=true;await assert.rejects(registrar.loadReaderFontChecked('new-face','file:///new.ttf'),/sync font error/);synchronousFailure=false;
 assert.equal(registrar.readerFontFamilyReady('new-face'),false);
+
+const mangaFamilies=[families.READER_FONT_NOTO_SANS_SC_UI_550,
+ families.READER_FONT_NOTO_SANS_SC_UI_600,families.READER_FONT_NOTO_SANS_SC_UI_900];
+assert.ok(!calls.some(c=>mangaFamilies.includes(c.family)),
+ 'shelf/startup must not load manga-only static faces');
+const provenance=JSON.parse(readFileSync(new URL('../docs/ui-design/MANGA_SHEET_FONTS_PROVENANCE.json',import.meta.url),'utf8'));
+const hash=relative=>createHash('sha256').update(readFileSync(new URL(`../${relative}`,import.meta.url))).digest('hex');
+assert.equal(hash(provenance.source),provenance.sourceSha256);
+assert.equal(hash(provenance.reused400.output),provenance.reused400.sha256);
+assert.equal(provenance.tool,'fonttools 4.60.2 instantiateVariableFont');
+assert.deepEqual(provenance.outputs.map(f=>f.axis.wght),[550,600,900]);
+for(const output of provenance.outputs){
+ assert.equal(output.variable,false);assert.equal(hash(output.output),output.sha256);
+ if(output.axis.wght!==900){
+  assert.equal(output.coverage,'fullCJK');
+  assert.ok(output.glyphCount>30000&&output.unicodeCount>30000,'keep full CJK chapter coverage');
+ }else{
+  assert.equal(output.coverage,'fixedPanelTitles');assert.ok(output.bytes<100000);
+  assert.deepEqual(output.requiredTitles,['章节目录','阅读方式','漫画阅读设置','更多']);
+ }
+}
+const beforeManga=calls.length;
+let mangaReady=false;const manga=registrar.prepareMangaSheetFonts().then(value=>{mangaReady=value;});
+assert.deepEqual(calls.slice(beforeManga).map(c=>c.family),mangaFamilies);
+assert.deepEqual(calls.slice(beforeManga).map(c=>c.src),provenance.outputs.map(f=>f.output.split('/').at(-1)));
+const mangaPending=pending.splice(0);
+mangaPending[0].resolve();mangaPending[1].resolve();
+await new Promise(resolve=>setImmediate(resolve));
+assert.equal(mangaReady,false,'two completed faces cannot authorize a panel using a third');
+mangaPending[2].reject(Error('900 failed'));await assert.rejects(manga,/900 failed/);
+assert.equal(registrar.readerFontFamilyReady(mangaFamilies[2]),false);
+const mangaRetry=registrar.prepareMangaSheetFonts();
+assert.equal(calls.length,beforeManga+4,'only failed face is reloaded');
+pending.shift().resolve();assert.equal(await mangaRetry,true);
+await registrar.prepareMangaSheetFonts();assert.equal(calls.length,beforeManga+4);
 
 const previewLoads=[];const previewPending=[];const previewReady=new Set(['HarmonyOS Sans']);
 const Preview=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets',import.meta.url),

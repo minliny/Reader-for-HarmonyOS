@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const cache = readFileSync(resolve(repo,
@@ -23,7 +24,13 @@ assert.match(cache, /bookHash[\s\S]*return this\.sha256\(JSON\.stringify\(\[sour
   'book paths must use opaque hashes rather than source URLs or credentials');
 assert.match(cache, /new fileIo\.AtomicFile\(path\)/);
 assert.match(cache, /manifest cannot reference missing bytes/);
-assert.match(cache, /writeAtomicBytes\(`\$\{directory\}\/manifest\.json`, manifestBytes, isCurrent\)/);
+const Paths = productionMotionMethods(new URL('../entry/src/main/ets/app/ReadingImageDiskCache.ts', import.meta.url),
+  ['manifestPath', 'mangaCacheProfile'], { MANGA_SCRIPT_CACHE_PROFILE: 'script-bgra-v2' });
+const paths = new Paths();
+assert.equal(paths.manifestPath('/chapter', paths.mangaCacheProfile('identity-v1')), '/chapter/manifest.json');
+assert.equal(paths.manifestPath('/chapter', paths.mangaCacheProfile('bytes-v1')), '/chapter/manifest-script-bgra-v2.json');
+assert.throws(() => paths.mangaCacheProfile('unknown'), /MANGA_CACHE_PROFILE_REQUIRED/);
+assert.match(cache, /writeAtomicBytes\(this\.manifestPath\(directory, profile\), manifestBytes, isCurrent\)/);
 assert.match(
   cache,
   /performAtomicWrite[\s\S]*await fileIo\.open\([\s\S]*await fileIo\.write\([\s\S]*await fileIo\.fsync[\s\S]*await fileIo\.rename\(tmpPath, path\)[\s\S]*await fileIo\.unlink\(tmpPath\)/,
@@ -51,11 +58,11 @@ assert.doesNotMatch(cache, /bodyBase64|PixelMap/,
 
 const diskLookup = owner.indexOf('this.readingImageDiskCache.loadResource(identity, cacheCurrent)');
 const offlineFailure = owner.indexOf("if (!allowNetwork) {");
-const networkDescriptor = owner.indexOf('this.resolveReadingImageRequest(sourceId, imageUrl, identity.baseUrl');
+const networkDescriptor = owner.indexOf('this.prepareReadingImageBytes(identity, cacheCurrent');
 assert.ok(diskLookup >= 0 && offlineFailure > diskLookup && networkDescriptor > offlineFailure,
   'offline image resolution must try exact disk bytes and reject before source/HTTP request construction');
 assert.match(owner,
-  /void this\.readingImageDiskCache\.storeResource\(identity, bytes, cacheCurrent\)[\s\S]*\.catch\([\s\S]*return this\.admitReadingImage\(payload, cacheCurrent\)/,
+  /const stored = this\.readingImageDiskCache\.storeResource\(identity, bytes, cacheCurrent\)[\s\S]*\.catch\([\s\S]*return this\.admitReadingImage\(payload, cacheCurrent\)/,
   'ordinary online reads must publish decoded pixels without awaiting the persistent cache write');
 assert.match(owner, /async prefetchReadingImage\([\s\S]*await this\.readingImageDiskCache\.storeResource\(identity, bytes, cacheCurrent\)/);
 assert.match(cache, /canonicalReadingImageBaseUrl\(identity\.baseUrl\)/,

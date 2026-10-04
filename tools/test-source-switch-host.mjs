@@ -263,9 +263,11 @@ for(const loseSyncAt of [3,4]) {
   const f=fixture({loseCommitAck:true,failExactQuery:true});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
   const source=read('features/source/SourceSwitchWindow.ets'),p=boundedSurfaceSdk();
   p.hooks.childSources.CandidateRow=read('features/source/CandidateRow.ets');
+  p.hooks.childSources.MangaSourceSwitchWindow=read('features/source/MangaSourceSwitchWindow.ets');
   const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
   const scope=f.host.current().scopeId;
   const owner=p.consumer(source,boundedMembers(source),{...horizontal,...metricsApi,
+    MangaSourceSwitchWindow:class {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}},
     ReaderWindowCoordinator:{metrics:()=>metrics},registerReaderFonts(){},...gatewayExports,
     sourceSwitchSourceCount:candidates=>candidates.length},{state:f.host.current().state});
   owner.onRetry=()=>f.host.retry(scope);owner.onClose=()=>f.host.close(scope);

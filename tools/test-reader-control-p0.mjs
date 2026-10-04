@@ -230,7 +230,13 @@ assert.match(shell, /controlObscured: this\.route === 'directory'/);
 assert.match(shell, /interactionBlocked: !this\.visible \|\| this\.route !== 'reading' \|\| this\.sourceSwitchVisible/,
   'hidden, directory, and source-switch layers must transfer pointer ownership away from reading');
 assert.match(shell, /onDeleteBookmarks: \(bookmarkTimes: number\[\]\): void => this\.onDeleteBookmarks\(bookmarkTimes\)/);
-assert.equal((shell.match(/reduceMotion: this\.reduceMotion/g) ?? []).length, 2);
+assert.equal((shell.match(/reduceMotion: this\.reduceMotion/g) ?? []).length, 4,
+  'novel reader/directory and manga reader/source picker share the admitted motion setting');
+for (const component of ['ReadingExperience', 'ReaderFullDirectory', 'MangaReadingSurface', 'SourceSwitchPanel']) {
+  const payload = shell.match(new RegExp(component + '\\(\\{([\\s\\S]*?)\\n\\s*\\}\\)'));
+  assert.ok(payload, component + ': actual mounted payload');
+  assert.match(payload[1], /reduceMotion: this\.reduceMotion/, component + ': same owner setting');
+}
 assert.match(shell, /\.opacity\(this\.visible \? 1 : 0\)/);
 
 const index = read('entry/src/main/ets/pages/Index.ets');

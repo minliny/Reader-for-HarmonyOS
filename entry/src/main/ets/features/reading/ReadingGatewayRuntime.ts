@@ -15,6 +15,7 @@ export type ReadingGatewayImage = {
   height: number;
   intrinsicWidth?: number;
   intrinsicHeight?: number;
+  regionY?: number;
   revision: string;
 };
 
@@ -23,7 +24,9 @@ export type ReadingGatewayImageCacheIdentity = {
   bookId: string;
   chapterIndex: number;
   contentVersion: string;
+  mangaDecodeRevision?: string;
   imageUrl: string;
+  resourceRef?: string;
   baseUrl?: string;
 };
 
@@ -32,10 +35,14 @@ export type ReadingGatewayImageChapterIdentity = {
   bookId: string;
   chapterIndex: number;
   contentVersion: string;
+  mangaDecodeRevision?: string;
 };
 
 /** The only Core request surface feature gateways may consume. */
 export interface ReadingGatewayRuntime {
+  /** Ephemeral diagnostic observation; never arms networking or persists state. */
+  subscribeMangaOfflineProbe?(listener: (state: string) => void): () => void;
+  finishMangaOfflineProbe?(sourceId: string, bookId: string): void;
   /** Existing Ability context supplies only platform IO to finite mutation intents. */
   getUIAbilityContext?(): common.UIAbilityContext;
   /** Optional preparation has read authority only; foreground gateways own repairs. */
@@ -58,7 +65,8 @@ export interface ReadingGatewayRuntime {
 
   /**
    * Optional in pure gateway tests; production ReaderRuntimeOwner implements
-   * it with Core `source.imageRequest` plus the existing Host HTTP adapter.
+   * novel images with Core `source.imageRequest`, and opaque manga refs with
+   * `manga.resource.prepare`, both using the existing Host HTTP/asset adapters.
    */
   loadReadingImage?(
     sourceId: string,
@@ -69,19 +77,30 @@ export interface ReadingGatewayRuntime {
     baseUrl: string | undefined,
     allowNetwork: boolean,
     isCurrent?: () => boolean,
+    resourceRef?: string,
+    mangaPosition?: number,
+    expectedSourceVersion?: string,
+    mangaPreview?: boolean,
+    mangaDecodeRevision?: string,
   ): Promise<ReadingGatewayImage>;
 
   prefetchReadingImage?(
     identity: ReadingGatewayImageCacheIdentity,
     isCurrent?: () => boolean,
+    expectedSourceVersion?: string,
+    allowNetwork?: boolean,
   ): Promise<void>;
 
   markOfflineImageChapterComplete?(
     chapter: ReadingGatewayImageChapterIdentity,
     resources: ReadingGatewayImageCacheIdentity[],
+    isCurrent?: () => boolean,
   ): Promise<void>;
 
-  isOfflineImageChapterComplete?(chapter: ReadingGatewayImageChapterIdentity): Promise<boolean>;
+  isOfflineImageChapterComplete?(chapter: ReadingGatewayImageChapterIdentity, manga?: boolean,
+    isCurrent?: () => boolean): Promise<boolean>;
+
+  isOfflineImageChapterMaterialized?(sourceId: string, bookId: string, chapterIndex: number): Promise<boolean>;
 
   clearOfflineBookImages?(sourceId: string, bookId: string): Promise<void>;
 

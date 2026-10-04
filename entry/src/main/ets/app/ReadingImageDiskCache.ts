@@ -12,9 +12,13 @@ import {
 
 const CACHE_FORMAT_VERSION = 2;
 const LEGACY_CACHE_FORMAT_VERSION = 1;
+const MANGA_SCRIPT_CACHE_PROFILE = 'script-bgra-v2';
 const MAX_READING_IMAGE_BYTES = 16 * 1024 * 1024;
+const READING_IMAGE_WRITE_CHUNK_BYTES = 1024 * 1024;
 const MIN_READING_IMAGE_FREE_RESERVE_BYTES = 16 * 1024 * 1024;
 const FILE_SYSTEM_NO_SPACE_ERROR = 13900025;
+
+interface ReadingImageDigestProof { fingerprint: string; digest: string; }
 
 export interface ReadingImageFreeSpaceProbe {
   getFreeBytes(path: string): Promise<number>;
@@ -31,7 +35,9 @@ export type ReadingImageCacheIdentity = {
   bookId: string;
   chapterIndex: number;
   contentVersion: string;
+  mangaDecodeRevision?: string;
   imageUrl: string;
+  resourceRef?: string;
   baseUrl?: string;
 };
 
@@ -40,10 +46,14 @@ export type ReadingImageChapterIdentity = {
   bookId: string;
   chapterIndex: number;
   contentVersion: string;
+  mangaDecodeRevision?: string;
 };
 
 /** One canonical identity form shared by projection, requests, and disk keys. */
 type ReadingImageChapterManifest = {
+  mangaCacheProfile?: string;
+  manga?: boolean;
+  resourceDigests?: Record<string, string>;
   formatVersion: number;
   sourceId: string;
   bookId: string;
@@ -65,6 +75,8 @@ type ReadingImageChapterManifest = {
 export class ReadingImageDiskCache {
   private readonly context: common.UIAbilityContext;
   private readonly freeSpaceProbe: ReadingImageFreeSpaceProbe;
+  // Reuse the platform LRU; this contains no pixels or credentials.
+  private readonly verifiedDigests: util.LRUCache<string, ReadingImageDigestProof> = new util.LRUCache<string, ReadingImageDigestProof>(16384);
   private readonly inFlightWrites = new Map<string, Promise<void>>();
   /**
    * Serializes destructive/constructive mutations for one book identity.
@@ -97,7 +109,7 @@ export class ReadingImageDiskCache {
   }
 
   close(): void {
-    this.closed = true;
+    this.closed = true; this.verifiedDigests.clear();
   }
 
   async loadResource(
@@ -112,6 +124,13 @@ export class ReadingImageDiskCache {
       await this.finishPendingClear(requestedIdentity.sourceId, requestedIdentity.bookId);
       const path = await this.resourcePath(requestedIdentity);
       result = await this.readResourceBytes(path);
+      if (result === undefined && this.mangaCacheProfile(requestedIdentity.mangaDecodeRevision) !== undefined &&
+        await this.validResourceFile(`${await this.chapterDirectory(requestedIdentity)}/${await this.legacyMangaResourceHash(requestedIdentity)}.bin`)) {
+        // Old v2 persisted the prepared output, not the source input. Keep it
+        // untouched, but never display/reseal an unversioned scripted image.
+        this.assertCurrent(isCurrent);
+        throw new Error('READING_IMAGE_REPROCESS_REQUIRED');
+      }
       const legacyRevocation = `${await this.clearMarkerPath(requestedIdentity.sourceId, requestedIdentity.bookId)}.legacy-revoked`;
       if (result === undefined && this.hasUnambiguousLegacyResourceIdentity(requestedIdentity) &&
         !(await fileIo.access(legacyRevocation))) {
@@ -166,7 +185,9 @@ export class ReadingImageDiskCache {
     await this.enqueueBookMutation(this.bookMutationKey(identity.sourceId, identity.bookId), async (): Promise<void> => {
       this.assertCurrent(isCurrent);
       await this.finishPendingClear(requestedIdentity.sourceId, requestedIdentity.bookId);
-      await this.unlinkIfPresent(await this.resourcePath(requestedIdentity));
+      const path = await this.resourcePath(requestedIdentity);
+      this.verifiedDigests.remove(path);
+      await this.unlinkIfPresent(path);
       // Do not permit a corrupt migrated resource to be loaded again from v1.
       const legacyDirectory = await this.legacyChapterDirectory(requestedIdentity);
       const manifest = await this.readValidManifest(legacyDirectory, LEGACY_CACHE_FORMAT_VERSION);
@@ -190,13 +211,24 @@ export class ReadingImageDiskCache {
       this.assertCurrent(isCurrent);
       await this.finishPendingClear(requestedChapter.sourceId, requestedChapter.bookId);
       const resourceHashes: string[] = [];
+      const manga = requestedResources.some(resource => resource.resourceRef !== undefined);
+      if (manga && requestedChapter.mangaDecodeRevision === undefined) throw new Error('MANGA_CACHE_PROFILE_REQUIRED');
+      const profile = this.mangaCacheProfile(requestedChapter.mangaDecodeRevision);
+      if (manga && requestedResources.some(resource => resource.resourceRef === undefined)) throw new Error('mixed manga resource manifest');
+      const resourceDigests: Record<string, string> = {};
       const directory = await this.chapterDirectory(requestedChapter);
       for (const resource of requestedResources) {
         this.assertResourceIdentity(resource);
         this.assertSameChapter(requestedChapter, resource);
+        if (manga && resource.mangaDecodeRevision !== requestedChapter.mangaDecodeRevision) throw new Error('MANGA_CACHE_PROFILE_REQUIRED');
         const hash = await this.resourceHash(resource);
         if (!(await this.validResourceFile(`${directory}/${hash}.bin`))) {
           throw new Error('offline reading image manifest cannot reference missing bytes');
+        }
+        if (manga) {
+          const bytes = await this.readResourceBytes(`${directory}/${hash}.bin`);
+          if (bytes === undefined) throw new Error('offline manga bytes disappeared');
+          resourceDigests[hash] = await this.sha256Bytes(bytes);
         }
         if (resourceHashes.indexOf(hash) < 0) resourceHashes.push(hash);
       }
@@ -210,10 +242,12 @@ export class ReadingImageDiskCache {
         resourceHashes,
         completedAt: Date.now(),
       };
+      if (manga) { manifest.manga = true; manifest.resourceDigests = resourceDigests; }
+      if (profile !== undefined) manifest.mangaCacheProfile = profile;
       await this.ensureDirectory(directory);
       const manifestBytes = new util.TextEncoder().encodeInto(JSON.stringify(manifest));
       await this.assertWriteCapacity(directory, manifestBytes.byteLength);
-      await this.writeAtomicBytes(`${directory}/manifest.json`, manifestBytes, isCurrent);
+      await this.writeAtomicBytes(this.manifestPath(directory, profile), manifestBytes, isCurrent);
       // Publication never reclaims another version (or an active display's
       // resources). Only an explicit Core-first book clear owns that decision.
     });
@@ -227,20 +261,39 @@ export class ReadingImageDiskCache {
     await this.enqueueBookMutation(this.bookMutationKey(chapter.sourceId, chapter.bookId), async (): Promise<void> => {
       this.assertCurrent(isCurrent);
       await this.finishPendingClear(requestedChapter.sourceId, requestedChapter.bookId);
-      const value = await this.readValidManifest(await this.chapterDirectory(requestedChapter), CACHE_FORMAT_VERSION);
+      const value = await this.readValidManifest(await this.chapterDirectory(requestedChapter), CACHE_FORMAT_VERSION,
+        this.mangaCacheProfile(requestedChapter.mangaDecodeRevision));
       this.assertCurrent(isCurrent);
-      complete = value !== undefined && this.sameChapter(value, requestedChapter);
+      complete = value !== undefined && this.sameChapter(value, requestedChapter) &&
+        (value.manga !== true || requestedChapter.mangaDecodeRevision !== undefined);
     });
     return complete;
   }
 
-  private async readValidManifest(directory: string, formatVersion: number): Promise<ReadingImageChapterManifest | undefined> {
+  /** An ordinal without a body version cannot prove the current catalog's assets. */
+  async isChapterMaterialized(sourceId: string, bookId: string, chapterIndex: number): Promise<boolean> {
+    this.assertNonBlank(sourceId, 'sourceId');
+    this.assertNonBlank(bookId, 'bookId');
+    if (!Number.isSafeInteger(chapterIndex) || chapterIndex < 0) {
+      throw new Error('chapterIndex must be a non-negative safe integer');
+    }
+    // Core must supply its stable chapter/body scope before this projection
+    // can report completeness. Exact version checks remain available above.
+    return false;
+  }
+
+  private async readValidManifest(directory: string, formatVersion: number, profile?: string): Promise<ReadingImageChapterManifest | undefined> {
     try {
-      const value = await this.readManifestIdentity(directory, formatVersion);
+      const value = await this.readManifestIdentity(directory, formatVersion, profile);
       if (value === undefined || !Array.isArray(value.resourceHashes)) return undefined;
       for (const hash of value.resourceHashes) {
         if (typeof hash !== 'string' || !/^[0-9a-f]{64}$/.test(hash) ||
           !(await this.validResourceFile(`${directory}/${hash}.bin`))) return undefined;
+        if (value.manga === true) {
+          const expected = value.resourceDigests?.[hash];
+          if (expected === undefined || !/^[0-9a-f]{64}$/.test(expected) ||
+            !(await this.matchesResourceDigest(`${directory}/${hash}.bin`, expected))) return undefined;
+        }
       }
       return value;
     } catch (_) {
@@ -248,15 +301,35 @@ export class ReadingImageDiskCache {
     }
   }
 
-  private async readManifestIdentity(directory: string, formatVersion: number): Promise<ReadingImageChapterManifest | undefined> {
-    const path = `${directory}/manifest.json`;
+  /** Second-resolution stat values cannot safely cache same-size writes. */
+  private async resourceFingerprint(path: string): Promise<string | undefined> {
+    const stat = await fileIo.stat(path);
+    if (!stat.isFile() || typeof stat.mtimeNs !== 'bigint' || typeof stat.ctimeNs !== 'bigint') return undefined;
+    return `${stat.ino.toString()}:${stat.size}:${stat.mtimeNs.toString()}:${stat.ctimeNs.toString()}`;
+  }
+
+  private async matchesResourceDigest(path: string, expected: string): Promise<boolean> {
+    const before = await this.resourceFingerprint(path);
+    const verified = this.verifiedDigests.get(path);
+    if (before !== undefined && verified?.fingerprint === before && verified.digest === expected) return true;
+    this.verifiedDigests.remove(path);
+    const bytes = await this.readResourceBytes(path);
+    if (bytes === undefined || await this.sha256Bytes(bytes) !== expected) return false;
+    const after = await this.resourceFingerprint(path);
+    if (before !== undefined && after !== before) return false;
+    if (after !== undefined && before === after) this.verifiedDigests.put(path, { fingerprint: after, digest: expected });
+    return true;
+  }
+
+  private async readManifestIdentity(directory: string, formatVersion: number, profile?: string): Promise<ReadingImageChapterManifest | undefined> {
+    const path = this.manifestPath(directory, profile);
     if (!(await fileIo.access(path))) return undefined;
     try {
       const raw = util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(
         new Uint8Array(new fileIo.AtomicFile(path).readFully()),
       );
       const value = JSON.parse(raw) as ReadingImageChapterManifest;
-      if (value.formatVersion !== formatVersion || typeof value.sourceId !== 'string' ||
+      if (value.mangaCacheProfile !== profile || value.formatVersion !== formatVersion || typeof value.sourceId !== 'string' ||
         typeof value.bookId !== 'string' || !Number.isSafeInteger(value.chapterIndex) || value.chapterIndex < 0 ||
         typeof value.contentVersion !== 'string' || value.contentVersion.trim().length === 0) return undefined;
       return value;
@@ -272,6 +345,8 @@ export class ReadingImageDiskCache {
     const key = this.bookMutationKey(sourceId, bookId);
     this.bookClearGenerations.set(key, (this.bookClearGenerations.get(key) ?? 0) + 1);
     await this.enqueueBookMutation(key, async (): Promise<void> => {
+      const directory = `${this.rootDirectory()}/${await this.bookHash(sourceId, bookId)}`;
+      for (const proofPath of this.verifiedDigests.keys()) if (proofPath.startsWith(`${directory}/`)) this.verifiedDigests.remove(proofPath);
       const marker = await this.clearMarkerPath(sourceId, bookId);
       await this.ensureDirectory(`${this.rootDirectory()}/.clear`);
       // Keep this small durable intent until deletion finishes. After a crash,
@@ -352,13 +427,32 @@ export class ReadingImageDiskCache {
   }
 
   private async resourceHash(identity: ReadingImageCacheIdentity): Promise<string> {
+    if (identity.resourceRef !== undefined) {
+      const profile = this.mangaCacheProfile(identity.mangaDecodeRevision);
+      return profile === undefined ? this.legacyMangaResourceHash(identity) :
+        this.sha256(JSON.stringify(['manga-resource-v2', profile, identity.contentVersion, identity.resourceRef]));
+    }
     const baseUrl = canonicalReadingImageBaseUrl(identity.baseUrl);
     return this.sha256(JSON.stringify([identity.contentVersion, identity.imageUrl, baseUrl ?? '']));
   }
 
+  private async legacyMangaResourceHash(identity: ReadingImageCacheIdentity): Promise<string> {
+    return this.sha256(JSON.stringify(['manga-resource-v1', identity.contentVersion, identity.resourceRef]));
+  }
+
+  private mangaCacheProfile(revision?: string): string | undefined {
+    if (revision === 'bytes-v1') return MANGA_SCRIPT_CACHE_PROFILE;
+    if (revision === undefined || revision === 'identity-v1') return undefined;
+    throw new Error('MANGA_CACHE_PROFILE_REQUIRED');
+  }
+
+  private manifestPath(directory: string, profile?: string): string {
+    return profile === undefined ? `${directory}/manifest.json` : `${directory}/manifest-${profile}.json`;
+  }
+
   private hasUnambiguousLegacyResourceIdentity(identity: ReadingImageCacheIdentity): boolean {
     // v1 has no URL metadata to disambiguate delimiter-bearing resource keys.
-    return identity.imageUrl.indexOf('\u0000') < 0 &&
+    return identity.resourceRef === undefined && identity.imageUrl.indexOf('\u0000') < 0 &&
       (canonicalReadingImageBaseUrl(identity.baseUrl) ?? '').indexOf('\u0000') < 0;
   }
 
@@ -368,8 +462,12 @@ export class ReadingImageDiskCache {
   }
 
   private async sha256(value: string): Promise<string> {
+    return this.sha256Bytes(new util.TextEncoder().encodeInto(value));
+  }
+
+  private async sha256Bytes(value: Uint8Array): Promise<string> {
     const digest = cryptoFramework.createMd('SHA256');
-    await digest.update({ data: new util.TextEncoder().encodeInto(value) });
+    await digest.update({ data: value });
     const output = await digest.digest();
     const alphabet = '0123456789abcdef';
     let result = '';
@@ -389,6 +487,7 @@ export class ReadingImageDiskCache {
   }
 
   private async writeAtomicBytes(path: string, bytes: Uint8Array, isCurrent?: () => boolean): Promise<void> {
+    this.verifiedDigests.remove(path);
     const existing = this.inFlightWrites.get(path);
     if (existing !== undefined) {
       return existing;
@@ -439,7 +538,10 @@ export class ReadingImageDiskCache {
       try {
         let writtenBytes = 0;
         while (writtenBytes < bytes.byteLength) {
-          const chunk = bytes.slice(writtenBytes);
+          this.assertCurrent(isCurrent);
+          // FileIO has no source-buffer offset; reuse the bounded chunk pattern
+          // of book/font staging and retry partial writes from the next byte.
+          const chunk = bytes.slice(writtenBytes, Math.min(bytes.byteLength, writtenBytes + READING_IMAGE_WRITE_CHUNK_BYTES));
           const written = await fileIo.write(file.fd, chunk.buffer);
           if (!Number.isSafeInteger(written) || written <= 0 || written > chunk.byteLength) {
             throw new Error('offline reading image destination stopped accepting bytes');
@@ -537,13 +639,19 @@ export class ReadingImageDiskCache {
 
   private assertResourceIdentity(identity: ReadingImageCacheIdentity): void {
     this.assertChapterIdentity(identity);
+    if (identity.resourceRef !== undefined && identity.mangaDecodeRevision === undefined) throw new Error('MANGA_CACHE_PROFILE_REQUIRED');
+    this.mangaCacheProfile(identity.mangaDecodeRevision);
     this.assertNonBlank(identity.imageUrl, 'imageUrl');
+    if (identity.resourceRef !== undefined && !/^manga:mp1:[0-9a-f]{64}$/.test(identity.resourceRef)) {
+      throw new Error('invalid manga resourceRef');
+    }
   }
 
   private assertChapterIdentity(identity: ReadingImageChapterIdentity): void {
     this.assertNonBlank(identity.sourceId, 'sourceId');
     this.assertNonBlank(identity.bookId, 'bookId');
     this.assertNonBlank(identity.contentVersion, 'contentVersion');
+    this.mangaCacheProfile(identity.mangaDecodeRevision);
     if (!Number.isSafeInteger(identity.chapterIndex) || identity.chapterIndex < 0) {
       throw new Error('chapterIndex must be a non-negative safe integer');
     }

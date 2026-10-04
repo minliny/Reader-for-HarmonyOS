@@ -1,3 +1,5 @@
+import { MangaSessionGateway } from '../manga/MangaSessionGateway';
+import { MangaSourceSwitchGateway } from '../manga/MangaSourceSwitchGateway';
 import { ReaderCoreRequestError } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { ReaderCoreGateway, type ShelfBook } from '../../app/ReaderCoreGateway';
@@ -142,6 +144,7 @@ export class SourceSwitchHost {
 
   retry(scopeId: number): void {
     if (!this.currentScope(scopeId) || !this.snapshot.visible) return;
+    if (this.context?.query.contentKind === 'manga' && this.snapshot.write?.confirmation === 'unknown') return;
     if (this.snapshot.write?.action === 'rollback' && this.snapshot.write.confirmation === 'unknown') {
       void this.reconcileRollback(true); return;
     }
@@ -154,6 +157,14 @@ export class SourceSwitchHost {
   refresh(scopeId: number): void {
     if (this.currentScope(scopeId) && this.snapshot.visible && this.snapshot.state.kind === 'candidates' &&
       this.snapshot.state.refreshing !== true) void this.discover(true);
+  }
+
+  stop(scopeId: number): void {
+    if (!this.currentScope(scopeId) || !this.snapshot.visible || this.busyOrUnknown()) return;
+    this.generation += 1; this.stopDiscovery();
+    if (this.snapshot.state.kind === 'candidates')
+      this.snapshot = { ...this.snapshot, state: { ...this.snapshot.state, refreshing: false } };
+    this.publish();
   }
 
   /** Close/Back consumes the overlay even when durable safety forbids closing. */
@@ -233,6 +244,10 @@ export class SourceSwitchHost {
         this.hide(); this.deliver({ kind: 'previewReady', seed, session, candidate });
       } catch (error) { if (admitted()) this.acquisitionFailed(candidate, errorMessageOf(error)); }
       finally { this.settleRetired(generation); }
+      return;
+    }
+    if (context.query.contentKind === 'manga') {
+      await this.pickManga(candidate, generation);
       return;
     }
     const evidence = new ReaderWriteEvidence();
@@ -440,6 +455,47 @@ export class SourceSwitchHost {
     return restored;
   }
 
+  /** Manga has its own image receipt and progress CAS; never use text anchors. */
+  private async pickManga(candidate: SourceSwitchCandidate, generation: number): Promise<void> {
+    const context = this.context, current = (): boolean => this.admitted(generation);
+    if (context === undefined || !current()) return;
+    const identity = this.identity(), evidence = new ReaderWriteEvidence();
+    try {
+      if (candidate.category !== 'comic') throw new Error('MANGA_SWITCH_CONTENT_KIND_MISMATCH');
+      const previous = await new RemoteReadingFlowGateway(this.runtime).openCachedCatalogSession({
+        contentKind: 'manga', ...identity, detailUrl: identity.bookId,
+        title: context.query.bookName, author: context.query.author ?? '' }, current);
+      const saved = await new MangaSessionGateway(this.runtime).progress(identity.sourceId, identity.bookId, current);
+      if (!current()) return;
+      const entry = previous.entries.find(row => row.url === saved.location?.chapter.chapterId);
+      if (entry === undefined) throw new Error('MANGA_SWITCH_SAVED_CHAPTER_REQUIRED');
+      const toc = await this.gateway.fetchTargetToc(candidate.sourceId, candidate.bookUrl, current, candidate);
+      if (!current()) return;
+      const gateway = new MangaSourceSwitchGateway(this.runtime);
+      const proposal = await gateway.prepare(identity.sourceId, identity.bookId, toc.readingSession,
+        entry.title, entry.index, current);
+      if (!current()) return;
+      if (proposal.expectedFrom.epoch !== saved.token.epoch || proposal.expectedFrom.revision !== saved.token.revision)
+        throw new Error('MANGA_SWITCH_PROGRESS_CHANGED');
+      await gateway.commit(proposal, true, current, evidence);
+      this.recordWrite(generation, 'commit', evidence);
+      if (!current()) return;
+      const book = await this.shelf.loadShelfBook(candidate.sourceId, candidate.bookUrl);
+      if (!current()) return;
+      if (book?.contentKind !== 'manga') throw new Error('MANGA_SWITCH_CANONICAL_READBACK_REQUIRED');
+      this.hide(); this.deliver({ kind: 'targetReady', book, session: toc.readingSession,
+        chapterIndex: proposal.firstImage.chapterIndex });
+    } catch (error) {
+      this.recordWrite(generation, 'commit', evidence, errorMessageOf(error));
+      if (current()) {
+        if (evidence.confirmation() === 'unknown') {
+          this.snapshot = { ...this.snapshot, state: { kind: 'failure', confirmation: 'unknown',
+            message: errorMessageOf(error), reconcile: false } }; this.publish();
+        } else this.acquisitionFailed(candidate, errorMessageOf(error));
+      }
+    } finally { this.settleRetired(generation); }
+  }
+
   private async loadAnchor(generation: number, restored?: ShelfBook): Promise<SourceSwitchAnchor> {
     const context = this.context;
     if (context === undefined) throw new Error('source switch aborted');
@@ -544,6 +600,10 @@ export class SourceSwitchHost {
   private async openJourney(hasUnknown: boolean): Promise<void> {
     const generation = this.generation;
     try {
+      if (this.context?.query.contentKind === 'manga') {
+        if (!hasUnknown) await this.discover(false);
+        return;
+      }
       this.fixedIntent = await this.intents.load();
       if (!this.admitted(generation)) return;
       if (this.fixedIntent !== undefined) { await this.recoverIntent(false); return; }
@@ -752,7 +812,7 @@ export class SourceSwitchHost {
     return left.sourceId === right.sourceId && left.bookId === right.bookId;
   }
   private seed(candidate: SourceSwitchCandidate): RemoteReadingBookSeed {
-    return { sourceId: candidate.sourceId, bookId: candidate.bookUrl, detailUrl: candidate.bookUrl,
+    return { contentKind: candidate.category === 'comic' ? 'manga' : 'text', sourceId: candidate.sourceId, bookId: candidate.bookUrl, detailUrl: candidate.bookUrl,
       title: candidate.bookName, author: candidate.author ?? '', sourceVersion: candidate.sourceVersion,
       authorIdentity: candidate.authorIdentity, coverUrl: candidate.coverUrl, searchVariables: candidate.searchVariables };
   }

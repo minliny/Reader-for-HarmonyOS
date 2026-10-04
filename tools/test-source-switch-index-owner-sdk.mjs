@@ -123,6 +123,7 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
  for(let i=0;i<200&&x.index.getReadingOfflineHost(f.runtime).busy();i++)await new Promise(r=>setTimeout(r,5));
  const receipt=x.index.getReadingOfflineHost(f.runtime).snapshot();
  assert.equal(f.host.current().pending,undefined,'resource cleanup cannot undo actual source finalization');
+ assert.ok(cleanup.length, `exact source cleanup must dispatch: ${JSON.stringify(receipt)}`);
  assert.equal(cleanup[0][0],'Core');assert.equal(cleanup[0][1].scope,'book');assert.equal(cleanup[0][1].sourceId,'old');assert.equal(cleanup[0][1].bookId,'book');
  assert.match(cleanup[0][1].operationId,/\/1$/);assert.equal(cleanup[0][1].sequence,1,'actual mandatory authority supplies one exact bounded original identity');
  assert.equal(receipt.sourceId,'old');assert.equal(receipt.bookId,'book');

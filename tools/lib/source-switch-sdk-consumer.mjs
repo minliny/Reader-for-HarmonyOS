@@ -32,6 +32,10 @@ export function makeIndex(f,{navigation=1,reading=false,cacheAuthority}={}){
  const leafDeps={Repeat,Refresh:new Proxy({name:"Refresh"},{get:(t,k)=>k==="name"?"Refresh":()=>{}}),...p.deps,...horizontal,...metricsApi,...gatewayExports,ReaderWindowCoordinator:{metrics:()=>metrics},registerReaderFonts(){},
    sourceSwitchSourceCount:candidates=>new Set(candidates.map(c=>c.sourceId)).size};
  p.hooks.childSources.SourceSwitchPanel=read('features/source/SourceSwitchWindow.ets');
+ p.hooks.childSources.MangaSourceSwitchWindow=read('features/source/MangaSourceSwitchWindow.ets');
+ // These tests exercise the retained text window; the manga child payload and
+ // selection/reconciliation behavior run in test-manga-shared-ui-closure.
+ leafDeps.MangaSourceSwitchWindow=class {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}};
  p.hooks.childSources.CandidateRow=read('features/source/CandidateRow.ets');
  p.hooks.childSources.LatencyBar=read('features/source/LatencyBar.ets');
  leafDeps.LatencyBar=createReaderBuilderProbe(p.hooks.childSources.LatencyBar,boundedMembers(p.hooks.childSources.LatencyBar),leafDeps,p.hooks).Component;

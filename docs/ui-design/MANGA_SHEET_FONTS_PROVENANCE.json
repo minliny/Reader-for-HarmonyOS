@@ -1,0 +1,65 @@
+{
+  "source": "entry/src/main/resources/rawfile/NotoSansSC-VF.otf",
+  "sourceSha256": "d13ed01ec8aa45d6178999b648e96fb92150683e9f8e2a581f2acf208dcbe44b",
+  "license": "entry/src/main/resources/rawfile/Noto-OFL.txt",
+  "tool": "fonttools 4.60.2 instantiateVariableFont",
+  "generator": "tools/generate-manga-sheet-fonts.py",
+  "metadataAdjustment": "Unique family/full/PostScript/unique-ID names; upstream setRibbiBits for single-face Regular style; preserved copyright and OFL; full 550/600 CJK; upstream title subset for 900",
+  "reused400": {
+    "family": "ReaderNotoSansSCUIRegular",
+    "output": "entry/src/main/resources/rawfile/NotoSansSC-UIRegular.otf",
+    "sha256": "26903423458d18bb9be20b12f7982a604118e10f10c62c83b45d10f04dfb939e"
+  },
+  "outputs": [
+    {
+      "axis": {
+        "wght": 550
+      },
+      "family": "ReaderMangaSans550",
+      "output": "entry/src/main/resources/rawfile/ReaderMangaSans550.otf",
+      "sha256": "c2028eca8a27dff3f67c59de85007c8eb30a4ce46b93cf9d139f00d6bcdac909",
+      "bytes": 7708476,
+      "glyphCount": 31036,
+      "unicodeCount": 30890,
+      "variable": false,
+      "outlineTable": "CFF2",
+      "coverage": "fullCJK",
+      "requiredTitles": []
+    },
+    {
+      "axis": {
+        "wght": 600
+      },
+      "family": "ReaderMangaSans600",
+      "output": "entry/src/main/resources/rawfile/ReaderMangaSans600.otf",
+      "sha256": "6829ecf59c4da77c541030f3d9385d7cca521b6acb2068f982f2cd84c1298d54",
+      "bytes": 7713748,
+      "glyphCount": 31036,
+      "unicodeCount": 30890,
+      "variable": false,
+      "outlineTable": "CFF2",
+      "coverage": "fullCJK",
+      "requiredTitles": []
+    },
+    {
+      "axis": {
+        "wght": 900
+      },
+      "family": "ReaderMangaSans900",
+      "output": "entry/src/main/resources/rawfile/ReaderMangaSans900.otf",
+      "sha256": "7c32c5d463417d843e28ac55c4dcc04e78f45502536e704f5395badda0a26d11",
+      "bytes": 5980,
+      "glyphCount": 15,
+      "unicodeCount": 14,
+      "variable": false,
+      "outlineTable": "CFF2",
+      "coverage": "fixedPanelTitles",
+      "requiredTitles": [
+        "章节目录",
+        "阅读方式",
+        "漫画阅读设置",
+        "更多"
+      ]
+    }
+  ]
+}

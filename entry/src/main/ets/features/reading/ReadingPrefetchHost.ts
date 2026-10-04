@@ -78,12 +78,13 @@ export class ReadingPrefetchHost {
 
   async prefetch(session: RemoteReadingSession, preferredChapterIndex: number | undefined,
     lease: ReadingPrefetchLease, mode: ReadingPrefetchMode = 'opportunistic'): Promise<void> {
+    if (session.contentKind === 'manga') return;
     const readerOwned = mode === 'reader';
     const lifecycle = this.lifecycle;
     const contentCurrent = this.runtime.captureReadingContentValidity?.(session.identity.sourceId, session.identity.bookId);
-    const current = (): boolean => lifecycle === this.lifecycle && ReaderRuntimeOwner.isCurrent(this.runtime) &&
+    const current = (): boolean => session.contentKind !== 'manga' && lifecycle === this.lifecycle && ReaderRuntimeOwner.isCurrent(this.runtime) &&
       contentCurrent?.() !== false && lease.isCurrent() &&
-      (!readerOwned || sameRemoteSessionEvidence(lease.displayedSession(), session));
+      (!readerOwned || (lease.displayedSession()?.contentKind !== 'manga' && sameRemoteSessionEvidence(lease.displayedSession(), session)));
     if (!current() || session.entries.length === 0) return;
     const indexes = readerOwned ? this.readableIndexes(session) : session.entries
       .filter((entry): boolean => entry.navigable !== false && entry.url.trim().length > 0)
@@ -118,14 +119,16 @@ export class ReadingPrefetchHost {
   }
 
   nearEnd(session: RemoteReadingSession, chapterIndex: number): boolean {
+    if (session.contentKind === 'manga') return false;
     const indexes = this.readableIndexes(session), position = this.positions.get(chapterIndex);
     return position !== undefined && indexes.length - position - 1 <= CATALOG_REFRESH_NEAR_END;
   }
 
   async refreshNearEnd(session: RemoteReadingSession, lease: ReadingPrefetchLease): Promise<void> {
+    if (session.contentKind === 'manga') return;
     const lifecycle = this.lifecycle;
-    const current = (): boolean => lifecycle === this.lifecycle && ReaderRuntimeOwner.isCurrent(this.runtime) &&
-      lease.isCurrent() && sameRemoteSessionEvidence(lease.displayedSession(), session);
+    const current = (): boolean => session.contentKind !== 'manga' && lifecycle === this.lifecycle && ReaderRuntimeOwner.isCurrent(this.runtime) &&
+      lease.isCurrent() && lease.displayedSession()?.contentKind !== 'manga' && sameRemoteSessionEvidence(lease.displayedSession(), session);
     if (!current()) return;
     const key = this.key(session.identity), now = Date.now();
     this.pruneSettledTimes(now);
@@ -142,7 +145,7 @@ export class ReadingPrefetchHost {
         sourceVersion: session.sourceVersion, searchVariables: session.continuationVariables,
       }, { isCurrent: current, forceRefresh: true });
       if (!current()) return;
-      if (!canAppendRemoteReadingCatalog(session, refreshed)) throw new Error('READING_CATALOG_REFRESH_REQUIRES_REOPEN');
+      if (refreshed.contentKind === 'manga' || !canAppendRemoteReadingCatalog(session, refreshed)) throw new Error('READING_CATALOG_REFRESH_REQUIRES_REOPEN');
       this.refreshAt.set(key, Date.now());
       try { lease.refreshed(refreshed); } catch (_) { /* UI delivery cannot undo actual catalog acceptance. */ }
     } catch (error) { if (current()) this.diagnostic(lease, 'catalog', errorMessageOf(error)); }

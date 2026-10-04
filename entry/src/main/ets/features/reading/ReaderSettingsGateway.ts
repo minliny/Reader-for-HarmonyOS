@@ -15,6 +15,13 @@ import {
 const READER_SETTINGS_PREFERENCES_NAME = 'reader_reading_settings_v1';
 const READER_SETTINGS_SNAPSHOT_KEY = 'snapshot';
 
+export interface ReaderMangaPreferences {
+  mangaDirection?: 'vertical' | 'horizontal';
+  mangaFit?: 'source' | 'width' | 'contain';
+  mangaBackground?: 'paper' | 'white' | 'ink';
+  mangaPageNumbers?: boolean;
+}
+
 export interface ReaderSettingsWriteFacts {
   acceptedRevision: number;
   savedRevision: number;
@@ -88,7 +95,43 @@ export class ReaderSettingsGateway {
       const store = await this.ensureStore();
       await store.get(READER_SETTINGS_SNAPSHOT_KEY, '');
       this.assertAdmitted(isAdmitted);
+      // Older text forms own text fields only. Their whole-snapshot save must
+      // retain the latest manga choices; the explicit reset still clears them.
+      if (!resetOwned) {
+        const latest = this.current() ?? await this.readSnapshot(store, (): boolean => isAdmitted?.() !== false);
+        if (latest.mangaDirection !== undefined) requestedSnapshot.mangaDirection = latest.mangaDirection;
+        if (latest.mangaFit !== undefined) requestedSnapshot.mangaFit = latest.mangaFit;
+        if (latest.mangaBackground !== undefined) requestedSnapshot.mangaBackground = latest.mangaBackground;
+        if (latest.mangaPageNumbers !== undefined) requestedSnapshot.mangaPageNumbers = latest.mangaPageNumbers;
+      }
+      this.assertAdmitted(isAdmitted);
       return this.writeSnapshot(store, requestedSnapshot);
+    });
+  }
+
+  async updateMangaDirection(horizontal: boolean): Promise<void> {
+    await this.updateMangaPreferences({ mangaDirection: horizontal ? 'horizontal' : 'vertical' });
+  }
+
+  async updateMangaFit(fit: 'source' | 'width' | 'contain'): Promise<void> {
+    await this.updateMangaPreferences({ mangaFit: fit });
+  }
+
+  /** Narrow manga writes use the same file queue, owner admission and real
+   * accepted/saved receipts as text settings. An unknown flush is not reverted. */
+  async updateMangaPreferences(patch: ReaderMangaPreferences, isAdmitted?: () => boolean): Promise<void> {
+    await ReaderThemeHost.prepareUserChange();
+    await this.withSettingsAccess(async (): Promise<void> => {
+      const store = await this.ensureStore();
+      await store.get(READER_SETTINGS_SNAPSHOT_KEY, '');
+      this.assertAdmitted(isAdmitted);
+      const snapshot = this.current() ?? await this.readSnapshot(store, (): boolean => isAdmitted?.() !== false);
+      if (patch.mangaDirection !== undefined) snapshot.mangaDirection = patch.mangaDirection;
+      if (patch.mangaFit !== undefined) snapshot.mangaFit = patch.mangaFit;
+      if (patch.mangaBackground !== undefined) snapshot.mangaBackground = patch.mangaBackground;
+      if (patch.mangaPageNumbers !== undefined) snapshot.mangaPageNumbers = patch.mangaPageNumbers;
+      this.assertAdmitted(isAdmitted);
+      await this.writeSnapshot(store, normalizeReaderSettingsSnapshot(snapshot));
     });
   }
 

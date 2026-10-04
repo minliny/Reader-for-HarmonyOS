@@ -15,6 +15,7 @@ import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import {
   classifyReaderSource,
   readerSourceCategoryIsText,
+  readerSourceCategoryIsReadable,
   type ReaderSourceCategory,
 } from './ReaderSourceCategory';
 
@@ -50,12 +51,14 @@ export type SourceSwitchCandidate = {
   chapterWordCount?: number;
   checkedAt?: number;
   latencyMs?: number;
+  latencyKind?: 'search';
   offline?: boolean;
   timeout?: boolean;
   isCurrent?: boolean;
 };
 
 export type SourceSwitchProbeQuery = {
+  contentKind?: 'text' | 'manga';
   sourceId: string;
   bookId: string;
   bookName: string;
@@ -242,7 +245,9 @@ export class SourceSwitchGateway {
     _change: BookAcquisitionChange | undefined = undefined,
   ): Promise<SourceSwitchCandidate[]> {
     this.validateProbeQuery(query);
-    const enabledSources = await this.loadEnabledSources(isCurrent);
+    const enabledSources = new Map(await this.loadEnabledSources(isCurrent));
+    for (const [id, source] of enabledSources)
+      if ((source.category === 'comic') !== (query.contentKind === 'manga')) enabledSources.delete(id);
     const scope = sourceSwitchCandidateKey(query.sourceId, query.bookId);
     const confirmed = new Set(this.confirmedScope === scope ? this.confirmedCandidates : []);
     const revision = this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision();
@@ -396,7 +401,7 @@ export class SourceSwitchGateway {
     excludedSourceIds: string[] = [],
   ): Promise<SourceSwitchDiscoveryOutcome> {
     this.validateProbeQuery(query);
-    await this.discoverCandidates(query.sourceId, query.bookId, query.bookName, isCurrent, excludedSourceIds);
+    await this.discoverCandidates(query.sourceId, query.bookId, query.bookName, isCurrent, excludedSourceIds, query.contentKind);
     const candidates = await this.loadCachedCandidates(query, isCurrent);
     return candidates.length === 0 ? { kind: 'noSources' } : { kind: 'sources', candidates };
   }
@@ -412,6 +417,7 @@ export class SourceSwitchGateway {
     keyword: string,
     isCurrent: (() => boolean) | undefined = undefined,
     excludedSourceIds: string[] = [],
+    contentKind: 'text' | 'manga' = 'text',
   ): Promise<SourceSwitchDiscoveryOutcome> {
     this.assertNonBlankString(sourceId, 'sourceId');
     this.assertNonBlankString(bookId, 'bookId');
@@ -450,7 +456,7 @@ export class SourceSwitchGateway {
         }
         const category = classifyReaderSource({ bookSourceType, name: sourceName, group, sourceId,
           baseUrl: this.optionalString(source, 'baseUrl') });
-        if (!readerSourceCategoryIsText(category)) continue;
+        if (contentKind === 'manga' ? category !== 'comic' : !readerSourceCategoryIsText(category)) continue;
         sources.push({
           sourceId,
           sourceName: sourceName === undefined || sourceName.trim().length === 0 ? sourceId : sourceName,
@@ -596,7 +602,7 @@ export class SourceSwitchGateway {
       // coordinator already reconciles that row and its rule-bound variables.
       let seed: RemoteReadingBookSeed;
       if (candidate !== undefined) {
-        seed = { sourceId, bookId, detailUrl: bookId, title: candidate.bookName,
+        seed = { contentKind: candidate.category === 'comic' ? 'manga' : 'text', sourceId, bookId, detailUrl: bookId, title: candidate.bookName,
           author: candidate.author ?? '', authorIdentity: candidate.authorIdentity,
           sourceVersion: candidate.sourceVersion, searchVariables: candidate.searchVariables,
           coverUrl: candidate.coverUrl, lastChapter: candidate.latestChapterTitle };
@@ -1120,7 +1126,7 @@ export class SourceSwitchGateway {
         }
         const category = classifyReaderSource({ bookSourceType, name: sourceName, group, sourceId,
           baseUrl: this.optionalString(source, 'baseUrl') });
-        if (!readerSourceCategoryIsText(category)) continue;
+        if (!readerSourceCategoryIsReadable(category)) continue;
         sources.set(sourceId, {
           sourceId,
           sourceName: sourceName === undefined || sourceName.trim().length === 0 ? sourceId : sourceName,

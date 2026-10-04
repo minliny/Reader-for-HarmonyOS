@@ -55,7 +55,7 @@ export class BookshelfCatalogUpdate {
     if (!current()) { result.cancelled = true; return result; }
     result.attempted = 1;
     try {
-      const session = await this.owner.bookAcquisitions().acquireBook({ sourceId: book.sourceId, bookId: book.bookId,
+      const session = await this.owner.bookAcquisitions().acquireBook({ contentKind: book.contentKind, sourceId: book.sourceId, bookId: book.bookId,
         detailUrl: book.bookId, title: book.title, author: book.author, coverUrl: book.coverUrl,
         intro: book.intro, lastChapter: book.lastChapter },
         { forceRefresh: true, isCurrent: current, canDispatch: current }, automatic ? 'background' : 'foreground');

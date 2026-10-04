@@ -971,6 +971,36 @@
       "reason": "Finite bookmark/offline recovery composition consumes existing shared Notice/Action surfaces; it owns only presentation identity and read versus explicit original-intent forwarding, with zero private typography/background/native-overlay implementation.",
       "counts": {},
       "status": "REGISTERED_FINITE_BUSINESS_COMPOSITION_NOT_DEVICE_ACCEPTANCE"
+    },
+    {
+      "file": "entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets",
+      "kind": "feature-shared-list",
+      "owner": "MangaReadingSurface / canonical manga directory projection owner",
+      "reason": "Exact manga fallback directory list preserves admitted source/book identity, canonical entry data, query/collapse projection and chapter-selection callbacks. Retains one current state-background paint site; private typography and native overlays have zero allowance and must consume public roles/specs.",
+      "counts": {
+        "backgroundColor": 1
+      },
+      "status": "REGISTERED_EXACT_UI_OWNER_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "kind": "native-stage",
+      "owner": "MangaReadingSurface / mounted manga image, chrome and sheet owner",
+      "reason": "Exact manga image/chrome/sheet stage retains mounted source/book identity, viewport/image resource ownership and progress restoration. Retains 21 current canvas/chrome/sheet background paint sites; private typography and native overlays have zero allowance and must consume public roles/specs.",
+      "counts": {
+        "backgroundColor": 21
+      },
+      "status": "REGISTERED_EXACT_UI_OWNER_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/features/source/MangaSourceSwitchWindow.ets",
+      "kind": "business-state-surface",
+      "owner": "MangaSourceSwitchGateway / manga source-switch presentation owner",
+      "reason": "Exact manga source-switch surface retains candidate presentation identity, idle reorder/anchor lifecycle and original switch/reconcile/rollback action admission. Retains six current state/surface background paint sites; private typography and native overlays have zero allowance and must consume public roles/specs.",
+      "counts": {
+        "backgroundColor": 6
+      },
+      "status": "REGISTERED_EXACT_UI_OWNER_NOT_MIGRATION_COMPLETION"
     }
   ]
 }

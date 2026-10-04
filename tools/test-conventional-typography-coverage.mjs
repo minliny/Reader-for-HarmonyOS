@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { auditTypographyConsumers, typographyExpressionContext, isSharedTypographyExpression } from './lib/reader-typography-consumer-audit.mjs';
 import { registeredProducerTypographySlots } from './lib/architecture-shared-producer-contract.mjs';
+import { verifyMangaTypographyContracts } from './lib/manga-typography-contract.mjs';
 
 const root = new URL('../entry/src/main/ets/features/', import.meta.url);
 const producerContract=JSON.parse(readFileSync(new URL('./fixtures/architecture-shared-producers.json',import.meta.url),'utf8'));
@@ -31,6 +32,7 @@ for (const [method, role] of [['phoneOption', 'TYPE_SETTINGS_SELECT_PHONE_OPTION
   allow('settings/SettingsSelectOverlay.ets', method, 'fontWeight', `this.isSelected(option) ? FontWeight.Bold : ${role}.fontWeight`, 1, 'integrator owns the shared choice-row selected-weight migration');
 allow('common/ReaderActionMenuSurface.ets', 'actionRow', 'fontWeight', 'FontWeight.Medium', 1, 'integrator moved the actual shared action row; weight getter remains pending');
 let files = 0, consumers = 0, sharedArguments = 0, sharedProducerArguments = 0, privateArguments = 0;
+assert.equal(verifyMangaTypographyContracts(), 71, 'new manga roles retain imported physical tuples');
 for (const file of readdirSync(root, { recursive: true }).filter(file => file.endsWith('.ets') && !file.startsWith('reading/'))) {
   files++;
   const source=readFileSync(new URL(file, root), 'utf8');

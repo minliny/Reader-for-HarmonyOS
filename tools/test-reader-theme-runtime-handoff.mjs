@@ -19,22 +19,25 @@ function fixture(){
   preferences:{async getPreferences(){return{get:async()=>disk.cache,put:async(_key,value)=>{events.push(['put',JSON.parse(value).activeTheme]);disk.cache=value;},
    flush:async()=>{disk.raw=disk.cache;if(disk.failFlush){disk.failFlush=false;throw Error('flush ACK lost');}}};}}});
  const authority=runtimeOwnerIdentityProbe(()=>current);
+ const MetadataBody=productionMotionMethods(file('app/ReadingBodyImageHost.ts'),['setMangaMetadataInspector']);
+ const body=Object.assign(new MetadataBody(),{mangaMetadataGeneration:0,releaseAllDisplayFiles(){events.push(['release']);}});
  const Owner=productionMotionMethods(file('app/ReaderRuntimeOwner.ts'),['getAppearanceStore','close','closeRuntime','waitForPredecessorClose'],
   {ReaderRuntimeOwner:authority,ReaderAppearanceStore,ReaderAppearancePreferences:Preferences,LOG_DOMAIN:0,
-   ReadingBodyImageHost:{instance:{releaseAllDisplayFiles(){events.push(['release']);}}},hilog:{warn(){}}});
+   ReadingBodyImageHost:{instance:body},hilog:{warn(){}}});
  const Host=compile('app/ReaderThemeHost.ts','ReaderThemeHost',{...appearance,...selection,...registry,ReaderAppearanceStore,ReaderRuntimeOwner:authority,
   AppStorage:{setOrCreate:(key,value)=>storage.set(key,value)},ReaderWindowChromeStyle:class{},ReaderWindowCoordinator:{updateAppChromeStyle(){}}});
  function owner(predecessorClose=Promise.resolve()){
   current=Object.assign(new Owner(),{state:'new',predecessorClose,preparationWakeTimer:-1,readingImageDiskCache:{close(){}},
    host:{getContext:()=>({})},ttsHost:{async close(){}},sourceSupplyTask:Promise.resolve(),importFinalizeTask:Promise.resolve(),flushTail:Promise.resolve()});return current;
  }
- return{Host,owner,disk,events,storage};
+ return{Host,owner,disk,events,storage,body};
 }
 {
  const f=fixture(),old=f.owner();await f.Host.install(old,'day');f.disk.failFlush=true;
  const change=await old.getAppearanceStore().change(snapshot=>appearance.setReaderAppearanceTheme(snapshot,'warm','day'));
  await assert.rejects(change.saved,/ACK lost/);assert.equal(old.appearanceStore.hasUnsavedChanges(),true);
  const supply=deferred();old.sourceSupplyTask=supply.promise;const closing=old.close();
+ assert.equal(f.body.mangaMetadataGeneration,1,'actual image metadata setter is part of close admission');
  const next=f.owner(closing),installed=f.Host.install(next,'day');f.Host.setRecoveryBarrier(()=>installed);
  const selecting=f.Host.selectApp('night');await tick();
  assert.equal(next.appearanceStore,undefined,'successor does not load or subscribe ahead of the old final flush');

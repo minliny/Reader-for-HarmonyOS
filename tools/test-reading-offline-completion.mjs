@@ -26,7 +26,10 @@ const io = { OpenMode: { CREATE: 1, READ_WRITE: 2, TRUNC: 4 }, access: async p =
   write: async (fd, b) => (await handles.get(fd).write(new Uint8Array(b))).bytesWritten,
   fsync: async fd => handles.get(fd).sync(), close: async h => { handles.delete(h.fd); await h.close(); }, rename: (a, b) => fs.rename(a, b),
   AtomicFile: class { constructor(p) { this.path = p; } readFully() { const b = readFileSync(this.path); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); } } };
-const util = { TextEncoder: class { encodeInto(v) { return new TextEncoder().encode(v); } },
+const util = {
+  // Native API boundary only; the full production validity logic runs below.
+  LRUCache: class { constructor(capacity){this.capacity=capacity;this.items=new Map();} get(key){return this.items.get(key);} put(key,value){this.items.delete(key);this.items.set(key,value);if(this.items.size>this.capacity)this.items.delete(this.items.keys().next().value);} remove(key){this.items.delete(key);} keys(){return [...this.items.keys()];} clear(){this.items.clear();} },
+  TextEncoder: class { encodeInto(v) { return new TextEncoder().encode(v); } },
   TextDecoder: { create: (_, options) => ({ decodeToString: b => new TextDecoder('utf-8', options).decode(b) }) } };
 const crypto = { createMd: () => { const h = createHash('sha256'); return { update: async ({ data }) => { h.update(data); }, digest: async () => ({ data: h.digest() }) }; } };
 const Cache = new Function('fileIo', 'statfs', 'cryptoFramework', 'util', 'canonicalReadingImageBaseUrl',

@@ -15,6 +15,7 @@ export interface BookAcquisitionDetailFacts {
 export interface BookAcquisitionDetailProjection {
   origin: string;
   bookUrl: string;
+  contentKind?: 'text' | 'manga' | 'audio';
   name?: string;
   author?: string;
   intro?: string;
@@ -53,6 +54,14 @@ function flag(row: JsonObject, field: string): boolean | undefined {
   return value;
 }
 
+function contentKind(row: JsonObject): 'text' | 'manga' | 'audio' | undefined {
+  const value = text(row, 'contentKind');
+  if (value !== undefined && value !== 'text' && value !== 'manga' && value !== 'audio') {
+    throw new Error('Invalid cached book contentKind');
+  }
+  return value;
+}
+
 /** This gateway supplies typed cache data, never an inferred write receipt. */
 export class BookAcquisitionProjectionGateway {
   private readonly owner: ReaderRuntimeOwner;
@@ -72,7 +81,7 @@ export class BookAcquisitionProjectionGateway {
     if (row['origin'] !== sourceId || row['bookUrl'] !== bookId) throw new Error('Cached book identity mismatch');
     const projection: BookAcquisitionDetailProjection = { origin: sourceId, bookUrl: bookId,
       name: text(row, 'name'), author: text(row, 'author'), intro: text(row, 'intro'),
-      coverUrl: text(row, 'coverUrl'), kind: text(row, 'kind'), latestChapterTitle: text(row, 'latestChapterTitle') };
+      coverUrl: text(row, 'coverUrl'), contentKind: contentKind(row), kind: text(row, 'kind'), latestChapterTitle: text(row, 'latestChapterTitle') };
     if (row['acquisition'] !== undefined && row['acquisition'] !== null) {
       const facts = record(row['acquisition'], 'acquisition');
       projection.acquisition = { schemaVersion: count(facts, 'schemaVersion'),

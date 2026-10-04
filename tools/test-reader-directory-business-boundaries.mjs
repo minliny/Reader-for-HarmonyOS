@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { registerHooks } from 'node:module';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {BookshelfCatalogUpdate}=await import('../entry/src/main/ets/features/bookshelf/BookshelfCatalogUpdate.ts');
+const {bookshelfOperationClass}=await import('./lib/bookshelf-operation-owner-probe.mjs');
+const BookshelfCatalogUpdate=bookshelfOperationClass('features/bookshelf/BookshelfCatalogUpdate.ts','BookshelfCatalogUpdate');
 const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
@@ -83,3 +84,27 @@ console.log('PASS accepted-session index rebuilt once, constant-time commits, un
  assert.equal(prefetched.length,count,'automatic refresh remains catalog only');
 }
 console.log('PASS actual manual shelf refresh -> acquisition -> independent readable prefetch; visible session and directory are preserved');
+
+{
+ const calls=[], manga={...session,contentKind:'manga',identity:{sourceId:'manga-source',bookId:'manga-book'}};
+ runtime={bookAcquisitions:()=>({acquireBook:async(seed,options,priority)=>{
+  calls.push({seed,options,priority});assert.equal(seed.contentKind,'manga');assert.equal(options.isCurrent(),true);return manga;
+ }}),request:async()=>{assert.fail('manga catalog update must not read text progress/body');}};
+ const host=fixture(), originalSession=host.remoteReadingSession, originalDirectory=[{index:100,title:'visible other book'}];
+ host.detailToc=originalDirectory;prefetched.length=0;
+ const targets=[{...manga.identity,contentKind:'manga',title:'manga',author:'author'}];
+ const result=await new BookshelfCatalogUpdate(runtime).run(targets,false,600000,()=>true,
+  (acquired,current)=>host.prefetchReadingWindow(acquired,undefined,current,runtime),()=>{});
+ assert.equal(result.succeeded,1);assert.equal(result.preparationFailed,0);assert.equal(calls.length,1);
+ assert.deepEqual(calls[0].seed,{contentKind:'manga',...manga.identity,detailUrl:'manga-book',title:'manga',author:'author',coverUrl:undefined,intro:undefined,lastChapter:undefined});
+ assert.equal(calls[0].options.forceRefresh,true);assert.equal(calls[0].priority,'foreground');
+ assert.equal(prefetched.length,0,'manual manga catalog acquisition stays outside the text prefetch owner');
+ assert.equal(host.remoteReadingSession,originalSession);assert.equal(host.detailToc,originalDirectory);
+ const automatic=await new BookshelfCatalogUpdate(runtime).run(targets,true,600000,()=>true,
+  ()=>assert.fail('automatic catalog must not prefetch'),()=>{});
+ assert.equal(automatic.succeeded,1);assert.equal(calls[1].seed.contentKind,'manga');assert.equal(calls[1].priority,'background');
+ const before=calls.length;const retired=await new BookshelfCatalogUpdate(runtime).run(targets,false,600000,()=>false,
+  ()=>assert.fail('retired owner must not prefetch'),()=>{});
+ assert.equal(retired.cancelled,true);assert.equal(calls.length,before);
+}
+console.log('PASS real manual/automatic catalog update carries manga type and excludes text preparation without replacing reader ownership');

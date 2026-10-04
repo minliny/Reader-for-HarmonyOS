@@ -43,17 +43,17 @@ function check(name, action) {
   try { action(); results.push({ name, passed: true }); }
   catch (error) { results.push({ name, passed: false, message: error.message }); }
 }
-function indexFixture(state, source = 'online') {
-  const names = ['build'];
+function indexFixture(state, source = 'online', definition = index) {
+  const names = ['build', 'readerOwnsWindowEdges', 'mangaOwnsWindowEdges'];
   if (index.includes('private bookshelfContent(')) names.push('bookshelfContent');
   if (index.includes('private bookshelfShellContent(')) names.push('bookshelfShellContent');
-  const { owner } = createReaderBuilderProbe(index, names, {
+  const { owner } = createReaderBuilderProbe(definition, names, {
     ...dependencies, SafeAreaType: enumValues('SafeAreaType'), SafeAreaEdge: enumValues('SafeAreaEdge'),
   });
   Object.assign(owner, { route: 'bookshelf', isBookshelfVisualAdmitted: state === 'populated',
     isCoreShelfEmpty: state === 'empty', bookshelfLoadFailed: state === 'failure',
     appThemeScheme: 'day', settingsSnapshot: { reduceMotion: false }, shelfProjectionRevision: '',
-    shelfBooks: [{ sourceId: source }], readingSessionActive: false, readerOwnsWindowEdges: () => false,
+    shelfBooks: [{ sourceId: source }], readingSessionActive: false, readingContentKind: 'novel',
     shelfRecovery: () => ({message:'',visible:false,canRetry:false,generation:0}),
     shelfReadRecovery: () => ({message:'',visible:false,canRetry:false,generation:0}),
     appContentTopInset: () => 39, hasVisibleImportDialog: () => false });
@@ -73,6 +73,41 @@ for (const state of ['loading', 'empty', 'populated', 'failure']) {
     assert.equal(shells.length, 1, 'every real Index bookshelf state must retain the same shell');
   });
 }
+// Replay only the real outer Stack observer. The mounted bookshelf actors
+// remain the original branch; this checks the root's actual safe-area request,
+// not a synthetic ReaderShell branch or native layout.
+function assertIndexWindowEdges(owner) {
+  const root = owner.nodes.get(0);
+  assert.equal(root.type, 'Stack');
+  const app = { pad:39, expands:[['SafeAreaType.SYSTEM'],['SafeAreaEdge.BOTTOM']], ignores:[[],[]] };
+  const novel = { pad:0, expands:[['SafeAreaType.SYSTEM'],['SafeAreaEdge.TOP','SafeAreaEdge.BOTTOM']], ignores:[[],[]] };
+  const manga = { pad:0, expands:[['SafeAreaType.SYSTEM','SafeAreaType.CUTOUT'],
+    ['SafeAreaEdge.TOP','SafeAreaEdge.BOTTOM','SafeAreaEdge.START','SafeAreaEdge.END']],
+    ignores:[['LayoutSafeAreaType.SYSTEM'],['LayoutSafeAreaEdge.ALL']] };
+  for (const [route, active, kind, target, expected, mangaOwns] of [
+    ['bookshelf',false,'novel','',app,false],
+    ['reading',true,'novel','',novel,false],
+    ['reading',true,'manga','',manga,true],
+    ['directory',true,'manga','readerControl',manga,true],
+    ['reading',false,'manga','',app,false],
+    ['bookshelf',true,'manga','',app,false],
+  ]) {
+    Object.assign(owner,{route,readingSessionActive:active,readingContentKind:kind,directoryReturnTarget:target});
+    owner.replayOnly([root.id]);
+    assert.equal(owner.mangaOwnsWindowEdges(),mangaOwns, `${route}/${kind}/${active}: production manga predicate`);
+    assert.deepEqual(root.padding,{top:expected.pad});
+    assert.deepEqual(root.expandSafeArea,expected.expands);
+    assert.deepEqual(root.ignoreLayoutSafeArea,expected.ignores);
+  }
+}
+check('Index real root safe-area observer preserves app/novel edges and manga-only full-window ownership', () => {
+  assertIndexWindowEdges(indexFixture('loading'));
+  const oldKind = "this.readingContentKind === 'manga' && this.readerOwnsWindowEdges()";
+  assert.equal(index.split(oldKind).length,2,'one actual production manga-edge predicate');
+  assert.throws(() => assertIndexWindowEdges(indexFixture('loading','online',
+    index.replace(oldKind,"this.readingContentKind === 'novel' && this.readerOwnsWindowEdges()"))),
+    /production manga predicate/, 'real source wrong-kind mutation cannot satisfy the root boundary');
+});
 const childOf = (owner, name) => [...owner.children.values()].filter(child => child instanceof dependencies[name]);
 const nodesOf = (owner, type) => [...owner.nodes.values()].filter(node => node.type === type);
 for (const state of ['loading', 'empty', 'populated', 'failure']) {

@@ -68,3 +68,13 @@ export function readerSourceCategoryLabel(category: ReaderSourceCategory): strin
 export function readerSourceCategoryIsText(category: ReaderSourceCategory): boolean {
   return category === 'novel';
 }
+
+/** Categories with a real Host reading surface. */
+export function readerSourceCategoryIsReadable(category: ReaderSourceCategory): boolean {
+  return category === 'novel' || category === 'comic';
+}
+
+/** Keep manga and text display groups separate while retaining legacy text keys. */
+export function readerMediaIdentity(manga: boolean, value: string): string {
+  return manga ? JSON.stringify(['manga', value]) : value;
+}

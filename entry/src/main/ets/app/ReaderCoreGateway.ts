@@ -3,6 +3,7 @@ import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from './ReaderRuntimeOwner';
 
 export type ShelfBook = {
+  contentKind?: 'text' | 'manga' | 'audio';
   sourceId: string;
   /** Core projects the existing durable source registry, independent of source.list. */
   sourceName?: string;
@@ -73,6 +74,7 @@ export type BookshelfListParams = {
   projectionRevision?: string;
   readingState?: string;
   sourceKind?: string;
+  contentKind?: string;
   offset?: number;
   hasReadingProgress?: boolean;
   sortBy?: 'manual' | 'addedAt' | 'lastReadAt' | 'title' | 'author';
@@ -113,6 +115,10 @@ export class ReaderCoreGateway {
 
   async loadBookshelf(params: BookshelfListParams = {}, isCurrent?: () => boolean, background: boolean = false): Promise<BookshelfState> {
     if (isCurrent?.() === false) throw new Error('BOOKSHELF_READ_CANCELLED');
+    if (params.contentKind !== undefined && params.contentKind !== 'all' &&
+      this.runtimeOwner.supportsCoreCapability?.('bookshelf.contentKindFilter.v1') !== true)
+      throw new Error('漫画类型筛选需要配套的 Core 版本，请更新应用');
+    if (params.contentKind === 'all') delete params.contentKind;
     const options = { shouldCancel: (): boolean => isCurrent?.() === false };
     const result = background ? await this.runtimeOwner.bookAcquisitions().request('bookshelf.list', params, options, 'background') :
       await this.runtimeOwner.request('bookshelf.list', params, options);
@@ -357,6 +363,11 @@ export class ReaderCoreGateway {
       chapterCount: this.optionalNonNegativeInteger(book, 'chapterCount', 'bookshelf.list') ?? 0,
     };
     const coverUrl = this.optionalString(book, 'coverUrl');
+    const contentKind = this.optionalString(book, 'contentKind');
+    if (contentKind !== undefined) {
+      if (contentKind !== 'text' && contentKind !== 'manga' && contentKind !== 'audio') throw new Error('invalid shelf contentKind');
+      decoded.contentKind = contentKind;
+    }
     const intro = this.optionalString(book, 'intro');
     const sourceName = this.optionalString(book, 'sourceName');
     const kind = this.optionalString(book, 'kind');

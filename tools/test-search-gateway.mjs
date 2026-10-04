@@ -182,7 +182,7 @@ const mixedCategoryGateway = new SearchGateway({
     throw new Error('非小说书源不应进入 Core 搜索');
   },
 });
-for (const category of ['music', 'comic', 'download', 'external', 'other']) {
+for (const category of ['music', 'download', 'external', 'other']) {
   const outcome = await mixedCategoryGateway.searchBySource({
     sourceId: `source-${category}`,
     name: `source-${category}`,
@@ -193,7 +193,15 @@ for (const category of ['music', 'comic', 'download', 'external', 'other']) {
   assert.match(outcome.error, /not supported by the novel reader/);
 }
 assert.equal(mixedCategoryRequestCount, 0,
-  '音乐、漫画、下载和外部媒体源不得进入小说搜索链路');
+  '音乐、下载和外部媒体源不得进入阅读搜索链路');
+
+const mangaGateway = new SearchGateway({request: async () => ({data:{sourceId:'comic',contentKind:'manga',books:[{bookId:'/m',title:'Same title',author:'Same author'}]}})});
+const manga = await mangaGateway.searchBySource({sourceId:'comic',name:'Manga',enabled:true,category:'comic'},'Same title');
+assert.equal(manga.ok,true);
+assert.equal(manga.results[0].category,'comic');
+assert.equal(manga.results[0].groupKey,JSON.stringify(['manga','same title\u0000same author']));
+const wrongKind = new SearchGateway({request: async()=>({data:{sourceId:'comic',contentKind:'text',books:[]}})});
+assert.equal((await wrongKind.searchBySource({sourceId:'comic',name:'Manga',enabled:true,category:'comic'},'Book')).ok,false);
 
 // Identity: the rule version comes from Core and changes when rules change,
 // including when the same sourceId retains its baseUrl.

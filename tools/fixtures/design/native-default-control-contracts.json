@@ -392,5 +392,570 @@
       "reason": "Current application intentionally delegates the omitted physical attributes to the actual upstream native ArkUI component; no new Reader style/empty modifier is added.",
       "sourceLineAtAudit": 125
     }
-  ]
+  ],
+  "mangaNativeControls": {
+    "file": "features/manga/MangaReadingSurface.ets",
+    "component": "MangaReadingSurface",
+    "policy": "Add only these exact genuine ArkUI default actors. Original novel 13-family/14-actor, a11y 4 and delegated 14 budgets remain independent. Slider/Blank are finite non-text proofs, never typography exceptions.",
+    "budgets": {
+      "nativeGlyphFamilies": 4,
+      "nativeGlyphActors": 4,
+      "sliders": 2,
+      "blanks": 4
+    },
+    "consumers": [
+      {
+        "id": "MANGA-NATIVE-01",
+        "variant": "nativeImageErrorText",
+        "reason": "One primary failed image row displays the genuine native text error; no action or font override.",
+        "kind": "Text",
+        "method": "imageViewport",
+        "argument": "this.displayError(this.imageError(row))",
+        "branches": [
+          {
+            "guard": "this.isPrimaryErrorRow(row)",
+            "branch": "then"
+          },
+          {
+            "guard": "this.rowHasError(row)",
+            "branch": "then"
+          },
+          {
+            "guard": "this.controller?.tile(row.ordinal, row.tileIndex)?.image !== undefined",
+            "branch": "else"
+          }
+        ],
+        "parents": [
+          {
+            "kind": "Column",
+            "argument": "",
+            "attributes": {
+              "justifyContent": "FlexAlign.Center",
+              "height": "this.rowDisplayWidth(row) * row.height / row.width",
+              "width": "this.rowDisplayWidth(row)"
+            }
+          },
+          {
+            "kind": "ListItem",
+            "argument": "",
+            "attributes": {
+              "onAppear": "(): void => this.onRowAppear(index)",
+              "align": "Alignment.Center",
+              "height": "this.rowDisplayHeight(row)",
+              "width": "'100%'"
+            }
+          },
+          {
+            "kind": "List",
+            "argument": "{ scroller: this.scroller, space: 0 }",
+            "attributes": {
+              "onScrollStop": "(): void => { this.onViewportScroll(); this.saveVisible(); }",
+              "onTouch": "(event: TouchEvent): void => { if (event.type === TouchType.Down) this.onViewportTouch(); }",
+              "onScrollIndex": "(first: number, last: number): void => {\n          if (this.seekingPage !== undefined && first >= 0 && first < this.data.totalCount() &&\n            this.data.getData(first).ordinal !== this.seekingPage) return;\n          const unchanged = this.first === first && this.last === last;\n          this.first = first; this.last = last;\n          this.refreshLoginRequiredForControls();\n          if (this.restoringAnchor) {\n            if (!unchanged) this.notifyPublishedRows(false);\n            this.onViewportScroll(); return;\n          }\n          if (unchanged && this.viewportRangeObserved) return;\n          this.viewportRangeObserved = true;\n          this.layoutGeneration++; this.updateViewport();\n        }",
+              "onScroll": "(): void => { this.onViewportScroll(); }",
+              "cachedCount": "0",
+              "width": "this.viewportWidth * this.zoom",
+              "height": "'100%'"
+            }
+          },
+          {
+            "kind": "Scroll",
+            "argument": "this.horizontalScroller",
+            "attributes": {
+              "parallelGesture": "GestureGroup(GestureMode.Exclusive, PinchGesture({ fingers: 2 })\n        .onActionStart((): void => { this.rememberVisible(); this.pinchAnchor = this.visibleAnchor; this.pinchStartScale = this.zoom; })\n        .onActionUpdate((event: GestureEvent): void => { this.changeZoom(this.pinchStartScale * event.scale); })\n        .onActionEnd((): void => { this.pinchAnchor = undefined; this.saveVisible(); })\n        .onActionCancel((): void => { this.pinchAnchor = undefined; }),\n        SwipeGesture({ direction: SwipeDirection.Horizontal }).onAction((event: GestureEvent): void => {\n          if (this.horizontal && this.zoom === 1) {\n            if (this.horizontalPage + 1 === this.horizontalPageCount && Math.abs(event.angle) > 90) void this.openChapterEnd();\n            else this.turnPage(Math.abs(event.angle) > 90 ? 1 : -1);\n          }\n        }),\n        TapGesture({ count: 1 }).onAction((): void => this.toggleControls()))",
+              "onScrollStop": "(): void => { this.onViewportScroll(); this.saveVisible(); }",
+              "onScroll": "(): void => { this.onViewportScroll(); }",
+              "onAreaChange": "(_old: Area, area: Area): void => {\n        this.resizeViewport(Number(area.width), Number(area.height));\n        this.recordImageViewportArea(area);\n      }",
+              "scrollable": "ScrollDirection.Horizontal",
+              "width": "'100%'",
+              "height": "'100%'"
+            }
+          }
+        ],
+        "loop": {
+          "input": "this.data",
+          "key": "(row: MangaStripRow): string => this.rowRenderKey(row)"
+        },
+        "requiredAttributes": {
+          "maxLines": "4",
+          "fontColor": "this.errorColor"
+        }
+      },
+      {
+        "id": "MANGA-NATIVE-02",
+        "variant": "nativeMangaLabelButton",
+        "reason": "Primary image error owns one retry button bound to the captured LazyForEach row; controller/chapter/presentation fences own late completion.",
+        "kind": "Button",
+        "method": "imageViewport",
+        "argument": "'重试'",
+        "branches": [
+          {
+            "guard": "this.isPrimaryErrorRow(row)",
+            "branch": "then"
+          },
+          {
+            "guard": "this.rowHasError(row)",
+            "branch": "then"
+          },
+          {
+            "guard": "this.controller?.tile(row.ordinal, row.tileIndex)?.image !== undefined",
+            "branch": "else"
+          }
+        ],
+        "parents": [
+          {
+            "kind": "Column",
+            "argument": "",
+            "attributes": {
+              "justifyContent": "FlexAlign.Center",
+              "height": "this.rowDisplayWidth(row) * row.height / row.width",
+              "width": "this.rowDisplayWidth(row)"
+            }
+          },
+          {
+            "kind": "ListItem",
+            "argument": "",
+            "attributes": {
+              "onAppear": "(): void => this.onRowAppear(index)",
+              "align": "Alignment.Center",
+              "height": "this.rowDisplayHeight(row)",
+              "width": "'100%'"
+            }
+          },
+          {
+            "kind": "List",
+            "argument": "{ scroller: this.scroller, space: 0 }",
+            "attributes": {
+              "onScrollStop": "(): void => { this.onViewportScroll(); this.saveVisible(); }",
+              "onTouch": "(event: TouchEvent): void => { if (event.type === TouchType.Down) this.onViewportTouch(); }",
+              "onScrollIndex": "(first: number, last: number): void => {\n          if (this.seekingPage !== undefined && first >= 0 && first < this.data.totalCount() &&\n            this.data.getData(first).ordinal !== this.seekingPage) return;\n          const unchanged = this.first === first && this.last === last;\n          this.first = first; this.last = last;\n          this.refreshLoginRequiredForControls();\n          if (this.restoringAnchor) {\n            if (!unchanged) this.notifyPublishedRows(false);\n            this.onViewportScroll(); return;\n          }\n          if (unchanged && this.viewportRangeObserved) return;\n          this.viewportRangeObserved = true;\n          this.layoutGeneration++; this.updateViewport();\n        }",
+              "onScroll": "(): void => { this.onViewportScroll(); }",
+              "cachedCount": "0",
+              "width": "this.viewportWidth * this.zoom",
+              "height": "'100%'"
+            }
+          },
+          {
+            "kind": "Scroll",
+            "argument": "this.horizontalScroller",
+            "attributes": {
+              "parallelGesture": "GestureGroup(GestureMode.Exclusive, PinchGesture({ fingers: 2 })\n        .onActionStart((): void => { this.rememberVisible(); this.pinchAnchor = this.visibleAnchor; this.pinchStartScale = this.zoom; })\n        .onActionUpdate((event: GestureEvent): void => { this.changeZoom(this.pinchStartScale * event.scale); })\n        .onActionEnd((): void => { this.pinchAnchor = undefined; this.saveVisible(); })\n        .onActionCancel((): void => { this.pinchAnchor = undefined; }),\n        SwipeGesture({ direction: SwipeDirection.Horizontal }).onAction((event: GestureEvent): void => {\n          if (this.horizontal && this.zoom === 1) {\n            if (this.horizontalPage + 1 === this.horizontalPageCount && Math.abs(event.angle) > 90) void this.openChapterEnd();\n            else this.turnPage(Math.abs(event.angle) > 90 ? 1 : -1);\n          }\n        }),\n        TapGesture({ count: 1 }).onAction((): void => this.toggleControls()))",
+              "onScrollStop": "(): void => { this.onViewportScroll(); this.saveVisible(); }",
+              "onScroll": "(): void => { this.onViewportScroll(); }",
+              "onAreaChange": "(_old: Area, area: Area): void => {\n        this.resizeViewport(Number(area.width), Number(area.height));\n        this.recordImageViewportArea(area);\n      }",
+              "scrollable": "ScrollDirection.Horizontal",
+              "width": "'100%'",
+              "height": "'100%'"
+            }
+          }
+        ],
+        "loop": {
+          "input": "this.data",
+          "key": "(row: MangaStripRow): string => this.rowRenderKey(row)"
+        },
+        "requiredAttributes": {
+          "onClick": "(): void => this.retry(row)"
+        }
+      },
+      {
+        "id": "MANGA-NATIVE-03",
+        "variant": "nativeNoGlyphLayout",
+        "reason": "Adjacent failed row keeps its measured image slot without duplicated error glyphs or retry actions.",
+        "kind": "Blank",
+        "method": "imageViewport",
+        "argument": "",
+        "branches": [
+          {
+            "guard": "this.isPrimaryErrorRow(row)",
+            "branch": "else"
+          },
+          {
+            "guard": "this.rowHasError(row)",
+            "branch": "then"
+          },
+          {
+            "guard": "this.controller?.tile(row.ordinal, row.tileIndex)?.image !== undefined",
+            "branch": "else"
+          }
+        ],
+        "parents": [
+          {
+            "kind": "Column",
+            "argument": "",
+            "attributes": {
+              "justifyContent": "FlexAlign.Center",
+              "height": "this.rowDisplayWidth(row) * row.height / row.width",
+              "width": "this.rowDisplayWidth(row)"
+            }
+          },
+          {
+            "kind": "ListItem",
+            "argument": "",
+            "attributes": {
+              "onAppear": "(): void => this.onRowAppear(index)",
+              "align": "Alignment.Center",
+              "height": "this.rowDisplayHeight(row)",
+              "width": "'100%'"
+            }
+          },
+          {
+            "kind": "List",
+            "argument": "{ scroller: this.scroller, space: 0 }",
+            "attributes": {
+              "onScrollStop": "(): void => { this.onViewportScroll(); this.saveVisible(); }",
+              "onTouch": "(event: TouchEvent): void => { if (event.type === TouchType.Down) this.onViewportTouch(); }",
+              "onScrollIndex": "(first: number, last: number): void => {\n          if (this.seekingPage !== undefined && first >= 0 && first < this.data.totalCount() &&\n            this.data.getData(first).ordinal !== this.seekingPage) return;\n          const unchanged = this.first === first && this.last === last;\n          this.first = first; this.last = last;\n          this.refreshLoginRequiredForControls();\n          if (this.restoringAnchor) {\n            if (!unchanged) this.notifyPublishedRows(false);\n            this.onViewportScroll(); return;\n          }\n          if (unchanged && this.viewportRangeObserved) return;\n          this.viewportRangeObserved = true;\n          this.layoutGeneration++; this.updateViewport();\n        }",
+              "onScroll": "(): void => { this.onViewportScroll(); }",
+              "cachedCount": "0",
+              "width": "this.viewportWidth * this.zoom",
+              "height": "'100%'"
+            }
+          },
+          {
+            "kind": "Scroll",
+            "argument": "this.horizontalScroller",
+            "attributes": {
+              "parallelGesture": "GestureGroup(GestureMode.Exclusive, PinchGesture({ fingers: 2 })\n        .onActionStart((): void => { this.rememberVisible(); this.pinchAnchor = this.visibleAnchor; this.pinchStartScale = this.zoom; })\n        .onActionUpdate((event: GestureEvent): void => { this.changeZoom(this.pinchStartScale * event.scale); })\n        .onActionEnd((): void => { this.pinchAnchor = undefined; this.saveVisible(); })\n        .onActionCancel((): void => { this.pinchAnchor = undefined; }),\n        SwipeGesture({ direction: SwipeDirection.Horizontal }).onAction((event: GestureEvent): void => {\n          if (this.horizontal && this.zoom === 1) {\n            if (this.horizontalPage + 1 === this.horizontalPageCount && Math.abs(event.angle) > 90) void this.openChapterEnd();\n            else this.turnPage(Math.abs(event.angle) > 90 ? 1 : -1);\n          }\n        }),\n        TapGesture({ count: 1 }).onAction((): void => this.toggleControls()))",
+              "onScrollStop": "(): void => { this.onViewportScroll(); this.saveVisible(); }",
+              "onScroll": "(): void => { this.onViewportScroll(); }",
+              "onAreaChange": "(_old: Area, area: Area): void => {\n        this.resizeViewport(Number(area.width), Number(area.height));\n        this.recordImageViewportArea(area);\n      }",
+              "scrollable": "ScrollDirection.Horizontal",
+              "width": "'100%'",
+              "height": "'100%'"
+            }
+          }
+        ],
+        "loop": {
+          "input": "this.data",
+          "key": "(row: MangaStripRow): string => this.rowRenderKey(row)"
+        },
+        "requiredAttributes": {}
+      },
+      {
+        "id": "MANGA-NATIVE-04",
+        "variant": "nativeNoGlyphLayout",
+        "reason": "Fixed 44vp return-side spacer balances the 88vp top toolbar side against its action side.",
+        "kind": "Blank",
+        "method": "topControls",
+        "argument": "",
+        "branches": [],
+        "parents": [
+          {
+            "kind": "Row",
+            "argument": "",
+            "attributes": {
+              "width": "88"
+            }
+          },
+          {
+            "kind": "Row",
+            "argument": "",
+            "attributes": {
+              "shadow": "{ radius: this.appThemeScheme === 'night' ? 0 : 18,\n          color: this.appThemeScheme === 'night' ? '#22000000' : '#1A594632', offsetX: 0, offsetY: 5 }",
+              "clip": "true",
+              "borderRadius": "18",
+              "border": "{ width: TOK_BORDER_W, color: this.lineColor() }",
+              "backgroundColor": "this.surfaceColor()",
+              "width": "'100%'",
+              "height": "52"
+            }
+          },
+          {
+            "kind": "Column",
+            "argument": "{ space: 8 }",
+            "attributes": {
+              "padding": "{ left: 16, right: 16, top: 10 }",
+              "width": "'100%'"
+            }
+          }
+        ],
+        "requiredAttributes": {
+          "width": "44"
+        }
+      },
+      {
+        "id": "MANGA-NATIVE-05",
+        "variant": "nativeMangaLabelButton",
+        "reason": "Opening retry retains native label typography and 44vp input geometry; disabled during its current controller-owned retry.",
+        "kind": "Button",
+        "method": "topControls",
+        "argument": "this.openingRetry ? '重试中' : '重试'",
+        "branches": [
+          {
+            "guard": "(this.error.length > 0 || this.openingRetry) && !this.opened && !this.offline",
+            "branch": "then"
+          }
+        ],
+        "parents": [
+          {
+            "kind": "Column",
+            "argument": "{ space: 8 }",
+            "attributes": {
+              "padding": "{ left: 16, right: 16, top: 10 }",
+              "width": "'100%'"
+            }
+          }
+        ],
+        "requiredAttributes": {
+          "onClick": "(): void => { void this.retryOpen(); }",
+          "enabled": "!this.openingRetry",
+          "height": "44"
+        }
+      },
+      {
+        "id": "MANGA-NATIVE-06",
+        "variant": "nativeMangaLabelButton",
+        "reason": "Source login retry retains native typography and 44vp geometry; current login generation/controller/manifest gates retry.",
+        "kind": "Button",
+        "method": "topControls",
+        "argument": "this.loggingIn ? '登录处理中' : '登录书源后重试'",
+        "branches": [
+          {
+            "guard": "this.loginRequiredForControls",
+            "branch": "then"
+          }
+        ],
+        "parents": [
+          {
+            "kind": "Column",
+            "argument": "{ space: 8 }",
+            "attributes": {
+              "padding": "{ left: 16, right: 16, top: 10 }",
+              "width": "'100%'"
+            }
+          }
+        ],
+        "requiredAttributes": {
+          "onClick": "(): void => { void this.loginAndRetry(); }",
+          "enabled": "!this.loggingIn",
+          "height": "44"
+        }
+      },
+      {
+        "id": "MANGA-NATIVE-07",
+        "variant": "nativeNonTextSlider",
+        "reason": "Native non-text page selector retains one-based integer range 1..max(1,pageCount), 24vp track and End-only rounded zero-based seek; production seek guards current chapter.",
+        "kind": "Slider",
+        "method": "bottomControls",
+        "argument": "{ value: this.pageOrdinal() + 1, min: 1, max: Math.max(1, this.horizontalPageCount), step: 1 }",
+        "branches": [],
+        "parents": [
+          {
+            "kind": "Column",
+            "argument": "{ space: 3 }",
+            "attributes": {
+              "layoutWeight": "1"
+            }
+          },
+          {
+            "kind": "Row",
+            "argument": "{ space: 10 }",
+            "attributes": {
+              "alignItems": "VerticalAlign.Top",
+              "height": "48",
+              "width": "'100%'"
+            }
+          },
+          {
+            "kind": "Column",
+            "argument": "{ space: 4 }",
+            "attributes": {
+              "constraintSize": "{ maxWidth: 560 }",
+              "shadow": "{ radius: this.appThemeScheme === 'night' ? 8 : 18,\n        color: this.appThemeScheme === 'night' ? '#44000000' : '#1A594632', offsetX: 0, offsetY: -4 }",
+              "margin": "{ left: 16, right: 16, bottom: 12 }",
+              "clip": "true",
+              "border": "{ width: TOK_BORDER_W, color: this.lineColor() }",
+              "borderRadius": "24",
+              "backgroundColor": "this.surfaceColor()",
+              "padding": "{ left: 14, right: 14, top: 13, bottom: 11 }",
+              "width": "Math.max(1, this.viewportWidth - 32 - this.interactiveInsets(this.windowMetricsRevision).left -\n      this.interactiveInsets(this.windowMetricsRevision).right)"
+            }
+          }
+        ],
+        "requiredAttributes": {
+          "onChange": "(value: number, mode: SliderChangeMode): void => { if (mode === SliderChangeMode.End) void this.seekPage(Math.round(value) - 1); }",
+          "enabled": "this.opened && this.horizontalPageCount > 1",
+          "trackColor": "this.lineColor()",
+          "blockColor": "this.backgroundPreference === 'ink' ? '#ABC39E' : this.greenColor()",
+          "selectedColor": "this.backgroundPreference === 'ink' ? '#ABC39E' : this.greenColor()",
+          "layoutWeight": "1",
+          "height": "24"
+        }
+      },
+      {
+        "id": "MANGA-NATIVE-08",
+        "variant": "nativeNoGlyphLayout",
+        "reason": "Flexible no-glyph directory toolbar spacer separates locate-current and ordering controls.",
+        "kind": "Blank",
+        "method": "directoryTools",
+        "argument": "",
+        "branches": [],
+        "parents": [
+          {
+            "kind": "Row",
+            "argument": "",
+            "attributes": {
+              "margin": "{ top: 6, bottom: 29 }",
+              "width": "'100%'"
+            }
+          }
+        ],
+        "requiredAttributes": {}
+      },
+      {
+        "id": "MANGA-NATIVE-09",
+        "variant": "nativeNonTextSlider",
+        "reason": "Native non-text brightness selector displays 20..100 without writing a prior lower setting; real callback uses current brightness lease and generation.",
+        "kind": "Slider",
+        "method": "settingsPanel",
+        "argument": "{ value: this.displayedBrightnessPercent(), min: 20, max: 100, step: 1 }",
+        "branches": [],
+        "parents": [
+          {
+            "kind": "Column",
+            "argument": "",
+            "attributes": {
+              "width": "'100%'"
+            }
+          }
+        ],
+        "requiredAttributes": {
+          "accessibilityText": "'阅读亮度'",
+          "onChange": "(value: number): void => this.setBrightness(value)",
+          "trackColor": "this.lineColor()",
+          "blockColor": "this.backgroundPreference === 'ink' ? '#ABC39E' : this.greenColor()",
+          "selectedColor": "this.backgroundPreference === 'ink' ? '#ABC39E' : this.greenColor()",
+          "height": "24",
+          "width": "'100%'"
+        }
+      },
+      {
+        "id": "MANGA-NATIVE-10",
+        "variant": "nativeNoGlyphLayout",
+        "reason": "Chapter-end no-glyph actor consumes remaining column height above the end card; it draws no fabricated text.",
+        "kind": "Blank",
+        "method": "chapterEndContent",
+        "argument": "",
+        "branches": [],
+        "parents": [
+          {
+            "kind": "Column",
+            "argument": "",
+            "attributes": {
+              "padding": "{\n        left: 12 + this.interactiveInsets(this.windowMetricsRevision).left,\n        right: 12 + this.interactiveInsets(this.windowMetricsRevision).right,\n        top: this.interactiveInsets(this.windowMetricsRevision).top,\n        bottom: 48 + this.interactiveInsets(this.windowMetricsRevision).bottom,\n      }",
+              "height": "'100%'",
+              "width": "'100%'"
+            }
+          },
+          {
+            "kind": "Stack",
+            "argument": "{ alignContent: Alignment.Bottom }",
+            "attributes": {
+              "height": "'100%'",
+              "width": "'100%'"
+            }
+          }
+        ],
+        "requiredAttributes": {
+          "layoutWeight": "1"
+        }
+      }
+    ]
+  },
+  "mangaSourceSwitchNativeControls": {
+    "file": "features/source/MangaSourceSwitchWindow.ets",
+    "component": "MangaSourceSwitchWindow",
+    "policy": "Exact no-glyph native 44x44 Image-button plus flexible header Blank; original typography/a11y/delegation budgets do not change.",
+    "budgets": {
+      "iconButtons": 1,
+      "blanks": 1
+    },
+    "consumers": [
+      {
+        "id": "MANGA-SOURCE-NATIVE-01",
+        "variant": "nativeImageButton",
+        "reason": "The 44x44 native Normal Button has only its exact 20x20 close Image child; accessibilityText announces return and real busy/rollback admission disables its callback host.",
+        "kind": "Button",
+        "method": "header",
+        "argument": "{ type: ButtonType.Normal }",
+        "branches": [],
+        "parents": [
+          {
+            "kind": "Row",
+            "argument": "",
+            "attributes": {
+              "height": "44",
+              "width": "'100%'"
+            }
+          },
+          {
+            "kind": "Stack",
+            "argument": "{ alignContent: Alignment.Center }",
+            "attributes": {
+              "hitTestBehavior": "HitTestMode.Transparent",
+              "borderRadius": "18",
+              "border": "{ width: 1, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }",
+              "backgroundColor": "readerAppColor('TOK_CARD_BG', this.appThemeScheme)",
+              "padding": "3",
+              "height": "52",
+              "width": "'100%'"
+            }
+          }
+        ],
+        "children": [
+          {
+            "kind": "Image",
+            "argument": "this.appThemeScheme === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close')",
+            "attributes": {
+              "height": "20",
+              "width": "20"
+            }
+          }
+        ],
+        "requiredAttributes": {
+          "onClick": "(): void => this.onClose()",
+          "enabled": "!this.busy() && !this.rollbackRequired()",
+          "accessibilityText": "'返回'",
+          "backgroundColor": "Color.Transparent",
+          "height": "44",
+          "width": "44"
+        }
+      },
+      {
+        "id": "MANGA-SOURCE-NATIVE-02",
+        "variant": "nativeNoGlyphLayout",
+        "reason": "The no-glyph flexible header Blank balances the close icon and refresh action within the 44vp Row.",
+        "kind": "Blank",
+        "method": "header",
+        "argument": "",
+        "branches": [],
+        "parents": [
+          {
+            "kind": "Row",
+            "argument": "",
+            "attributes": {
+              "height": "44",
+              "width": "'100%'"
+            }
+          },
+          {
+            "kind": "Stack",
+            "argument": "{ alignContent: Alignment.Center }",
+            "attributes": {
+              "hitTestBehavior": "HitTestMode.Transparent",
+              "borderRadius": "18",
+              "border": "{ width: 1, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }",
+              "backgroundColor": "readerAppColor('TOK_CARD_BG', this.appThemeScheme)",
+              "padding": "3",
+              "height": "52",
+              "width": "'100%'"
+            }
+          }
+        ],
+        "requiredAttributes": {
+          "layoutWeight": "1"
+        }
+      }
+    ]
+  }
 }

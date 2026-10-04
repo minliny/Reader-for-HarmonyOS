@@ -43,6 +43,31 @@ for(const failure of ['before','after','put']){
 }
 console.log('PASS actual ReaderSettings Gateway accepted/current vs flush-confirmed, no compensation and same-snapshot finite retry.');
 {
+ const f=fixture();await f.owner.update(initial);
+ await f.owner.updateMangaPreferences({mangaDirection:'horizontal',mangaFit:'contain',mangaBackground:'ink',mangaPageNumbers:false});
+ await f.owner.update(choice);
+ assert.deepEqual({...f.owner.current()}, {...choice,mangaDirection:'horizontal',mangaFit:'contain',mangaBackground:'ink',mangaPageNumbers:false},
+  'an old text snapshot does not erase current narrow manga preferences');
+ const gate=deferred();f.hangFlush(gate);const fit=f.owner.updateMangaFit('width');await settle();
+ const before=f.events.filter(e=>e[0]==='put').length;
+ const background=f.owner.updateMangaPreferences({mangaBackground:'paper'});await settle();
+ assert.equal(f.events.filter(e=>e[0]==='put').length,before,'manga narrow writes share the current file lane through ACK');
+ gate.resolve();await Promise.all([fit,background]);assert.equal(f.owner.current().mangaFit,'width');
+ assert.equal(f.owner.current().mangaBackground,'paper');assert.equal(f.owner.current().alignPageBottom,true);
+ const saved=f.owner.writeFacts().saved;f.failFlush('after');
+ await assert.rejects(f.owner.updateMangaDirection(false),/ACK/);
+ assert.equal(f.owner.current().mangaDirection,'vertical','accepted manga change survives unknown native acknowledgement');
+ assert.deepEqual(f.owner.writeFacts().saved,saved);assert.equal(f.owner.writeFacts().pendingReconciliation,true);
+ await f.owner.retryAccepted();assert.equal(f.owner.writeFacts().pendingReconciliation,false);
+ await f.owner.update(initial,true);assert.equal(f.owner.current().mangaDirection,undefined,'explicit reset alone clears manga preferences');
+}
+{
+ const f=fixture(),gate=deferred();await f.owner.update(initial);f.hangRead(gate);
+ const work=f.owner.updateMangaPreferences({mangaFit:'width'}),rejected=assert.rejects(work,/SUPERSEDED/);
+ await settle();f.retire();gate.resolve();await rejected;
+ assert.equal(f.events.filter(e=>e[0]==='put').length,1,'retired runtime cannot first-dispatch a narrow manga write');
+}
+{
  const f=fixture(),gate=deferred();await f.owner.update(initial);f.hangFlush(gate);const old=f.owner.update(choice);await settle();
  const warm=f.remount();assert.deepEqual(await warm.load(),choice,'warm owner reads current choice before old flush settles');
  const newer=state.setReaderSettingsToggle(choice,'longPressSelectText',false),next=warm.update(newer);await settle();

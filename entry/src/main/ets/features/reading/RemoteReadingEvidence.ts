@@ -18,6 +18,7 @@ export function sameRemoteSessionEvidence(
 ): boolean {
   if (left === undefined || right === undefined) return left === right;
   if (left.identity.sourceId !== right.identity.sourceId || left.identity.bookId !== right.identity.bookId ||
+    (left.contentKind ?? 'text') !== (right.contentKind ?? 'text') ||
     left.sourceVersion !== right.sourceVersion || left.acquisitionMode !== right.acquisitionMode ||
     left.requiresContextRefresh !== right.requiresContextRefresh) return false;
   if (left.catalogVersion !== undefined && left.contextVersion !== undefined &&
@@ -33,6 +34,7 @@ export function sameRemoteSessionEvidence(
  * rather than their layer/order, decide whether existing bodies stay valid. */
 export function canAppendRemoteReadingCatalog(previous: RemoteReadingSession, next: RemoteReadingSession): boolean {
   if (previous.identity.sourceId !== next.identity.sourceId || previous.identity.bookId !== next.identity.bookId ||
+    (previous.contentKind ?? 'text') !== (next.contentKind ?? 'text') ||
     previous.sourceVersion === undefined || previous.sourceVersion !== next.sourceVersion ||
     next.catalogVersion === undefined || next.contextVersion === undefined ||
     next.entries.length < previous.entries.length ||
@@ -50,7 +52,7 @@ export function canAppendRemoteReadingCatalog(previous: RemoteReadingSession, ne
 
 export function preparedRemoteChapterMatches(prepared: RemoteReadingPreparedChapter | undefined,
   session: RemoteReadingSession, chapterIndex: number | undefined, projectionRevision: number): boolean {
-  if (prepared === undefined || prepared.projectionRevision !== projectionRevision ||
+  if ((session.contentKind ?? 'text') !== 'text' || prepared === undefined || prepared.projectionRevision !== projectionRevision ||
     !sameRemoteSessionEvidence(prepared.session, session)) return false;
   const chapter = prepared.chapter;
   if (chapter.sourceId !== session.identity.sourceId || chapter.bookId !== session.identity.bookId ||

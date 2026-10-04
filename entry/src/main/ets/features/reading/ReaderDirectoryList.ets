@@ -34,9 +34,14 @@ export struct ReaderDirectoryList {
   @Prop @Watch('onEntriesChanged') deferEntriesDuringMotion: boolean = false;
   private readonly dataSource: DirectoryListDataSource = new DirectoryListDataSource();
   @Prop @Watch('onRowHeightChanged') rowHeight: number = 40;
+  /** Manga titles wrap naturally; text keeps its existing fixed virtual extent. */
+  @Prop naturalRowHeight: boolean = false;
   @State private itemSizes: ChildrenMainSize = new ChildrenMainSize(40);
   @Prop listPaddingX: number = 0;
+  @Prop listPaddingRight: number = -1;
   @Prop listPaddingY: number = 0;
+  @Prop listPaddingTop: number = -1;
+  @Prop listPaddingBottom: number = -1;
   @Prop contentStartInset: number = 0;
   @Prop contentEndInset: number = 0;
   @Prop edgeEffectMode: EdgeEffect = EdgeEffect.None;
@@ -152,20 +157,22 @@ export struct ReaderDirectoryList {
             this.rowBuilder({ item: entry, index: index });
           }
           .width('100%')
-          .height(this.rowHeight);
+          .height(this.naturalRowHeight ? undefined : this.rowHeight);
         }, (entry: LocalReadingTocEntry): string => `reader-directory-row-${entry.index}-${JSON.stringify(entry)}`);
     }
     .width('100%')
     .height('100%')
-    .childrenMainSize(this.itemSizes)
-    .contentStartOffset(this.contentStartInset)
-    .contentEndOffset(this.contentEndInset)
+    .childrenMainSize(this.naturalRowHeight ? undefined : this.itemSizes)
     .padding({
       left: this.listPaddingX,
-      right: this.listPaddingX,
-      top: this.listPaddingY,
-      bottom: this.listPaddingY,
+      right: this.listPaddingRight >= 0 ? this.listPaddingRight : this.listPaddingX,
+      top: this.naturalRowHeight ? 0 : this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY,
+      bottom: this.naturalRowHeight ? 0 : this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY,
     })
+    .contentStartOffset(this.contentStartInset + (this.naturalRowHeight ?
+      (this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY) : 0))
+    .contentEndOffset(this.contentEndInset + (this.naturalRowHeight ?
+      (this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY) : 0))
     .scrollBar(BarState.Off)
     .edgeEffect(this.edgeEffectMode)
     // API 21 drag ownership is reported even before a positive scroll delta.

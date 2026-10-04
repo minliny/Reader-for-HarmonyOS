@@ -76,7 +76,10 @@ for (const component of ['ReaderToggle','ReaderSegmentedControl']) {
  assert.throws(()=>verifyArchitectureRegistration(privateSpec,baseline,contract,root), /producer\/consumer\/spec edges changed/, 'exact finite F04 spec cannot drift');
 }
 const iconSites=inventory.rows.flatMap(row=>row.elements.filter(element=>element.kind==='ReaderIconButton').map(element=>({row,element})));
-assert.equal(iconSites.length,5,'all five actual finite icon consumers registered');
+assert.equal(iconSites.length,6,'all five existing and the exact manga finite icon consumers registered');
+const mangaIconSites=iconSites.filter(({row,element})=>row.file==='features/manga/MangaReadingSurface.ets'&&element.method==='features/manga/MangaReadingSurface.ets#MangaReadingSurface#iconAction');
+assert.equal(mangaIconSites.length,1,'the actual manga iconAction is one exact finite consumer');
+assert.equal(iconSites.filter(({row})=>row.file!=='features/manga/MangaReadingSurface.ets').length,5,'all five original icon consumer sites remain');
 for(const {row:site,element:originalCall} of iconSites){
  const index=site.elements.indexOf(originalCall);
  for(const property of ['boxSize','iconSize','radius']){

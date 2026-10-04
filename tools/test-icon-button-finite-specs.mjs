@@ -17,8 +17,8 @@ const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.a
 const req = createRequire(import.meta.url), ts = req(sdk + '/node_modules/typescript'), options = req(sdk + '/lib/ets_checker.js').compilerOptions;
 const syntax = req(sdk + '/lib/validate_ui_syntax.js');
 const parse = source => ts.createSourceFile('/tmp/IconConsumer.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
-const ids = ['toolbar-standard', 'toolbar-wide', 'navigation-back', 'toolbar-compact'];
-const tuples = [[44, 24, 22], [44, 44, 22], [32, 20, 16], [44, 20, 22]];
+const ids = ['toolbar-standard', 'toolbar-wide', 'navigation-back', 'toolbar-compact', 'manga-toolbar'];
+const tuples = [[44, 24, 22], [44, 44, 22], [32, 20, 16], [44, 20, 22], [44, 22, 22]];
 const expected = { 'bookshelf/BookshelfShell.ets': ['toolbar-standard', 'toolbar-wide'],
   'discover/DiscoverPage.ets': ['toolbar-standard'], 'search/SearchPage.ets': ['navigation-back'], 'source/SourceManagementPage.ets': ['toolbar-compact'] };
 const labels = { 'bookshelf/BookshelfShell.ets': ['搜索', '更多'], 'discover/DiscoverPage.ets': ['刷新'],
@@ -92,6 +92,24 @@ for (const frozen of golden.methods) {
   }
 }
 assert.doesNotMatch(iconButtonSource, /@Prop\s+(?:boxSize|iconSize|radius)\s*:/, 'remove all free producer fields');
+{
+  // Compile the actual manga Builder through the real shared producer. The
+  // historical free props silently left accessibilityLabel empty and disabled
+  // every action; an outer accessibilityText cannot qualify the native actor.
+  const surface = read(root + 'manga/MangaReadingSurface.ets'), p = iconButtonControls();
+  const owner = p.consumer(surface, ['iconAction']); let taps = 0;
+  owner.iconAction('manga-back', '返回', () => taps++);
+  const actor = p.walk(owner).find(c => c instanceof p.icon.Component), hit = p.nodes(actor).find(n => n.onClick);
+  assert.ok(actor); assert.deepEqual([hit.width, hit.height], [44, 44]);
+  assert.equal(p.nodes(actor).find(n => n.type === 'Image').width, 22);
+  assert.equal(hit.accessibilityText, '返回'); assert.equal(hit.enabled, true); hit.onClick(); assert.equal(taps, 1);
+  p.update(actor, { icon: 'manga-back', specId: 'manga-toolbar', accessibilityLabel: '返回', actionEnabled: false }); hit.onClick(); assert.equal(taps, 1, 'disabled manga actor fails closed');
+  p.update(actor, { icon: 'manga-back', specId: 'manga-toolbar', accessibilityLabel: '返回', actionEnabled: true }); actor.aboutToDisappear(); hit.onClick(); assert.equal(taps, 1, 'retired manga actor fails closed');
+  const negative = p.consumer(surface.replace('accessibilityLabel: label, ', ''), ['iconAction']);
+  negative.iconAction('manga-back', '返回', () => taps++);
+  const anonymous = p.walk(negative).find(c => c instanceof p.icon.Component), missing = p.nodes(anonymous).find(n => n.onClick);
+  assert.equal(missing.enabled, false); missing.onClick(); assert.equal(taps, 1, 'removing real label reproduces rejected action');
+}
 let comparisons = 0;
 for (const [i, id] of ids.entries()) for (const scheme of ['day', 'night']) {
   const ColorMetrics = { resourceColor(value) {
@@ -242,4 +260,4 @@ for (const file of Object.keys(expected)) {
     assert.equal(hit.width, actor.specId === 'toolbar-standard' ? 46 : tuples[ids.indexOf(actor.specId)][0]);
   }
 }
-console.log(`PASS F01 actual SDK: ${comparisons} original/current four-spec and five-site day/night native comparisons; exact names/role/focus, real loading/retained eligibility, unnamed and guard-removal negatives, lexical Search generation/persistent header, same-spec propagation/variant isolation, retained Props, original callbacks/old More identity, 15 literal99 consumer negatives and removed free inputs. ArkUI native scheduling/device remain separate.`);
+console.log(`PASS F01 actual SDK: ${comparisons} original/current five-spec and six-site day/night native comparisons; exact manga44/22 native action/disabled/retired/label-removal proof; real loading/retained eligibility, unnamed and guard-removal negatives, lexical Search generation/persistent header, same-spec propagation/variant isolation, retained Props, original callbacks/old More identity, 15 literal99 original consumer negatives and removed free inputs. ArkUI native scheduling/device remain separate.`);

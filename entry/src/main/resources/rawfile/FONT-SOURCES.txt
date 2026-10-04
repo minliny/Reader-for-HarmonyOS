@@ -13,6 +13,15 @@ NotoSerifSC-Regular.ttf SHA-256: 9502147ceba7b5bc7fd3415083f6a5d133f22d8f9efb497
 NotoSerifSC-Bold.ttf SHA-256: 3fb07709c24ed05993636d0b137917ea0bae5cf976f157d5e258fd068399a894
 License: Noto-OFL.txt
 
+Reader manga static Noto Sans SC instances
+Input: bundled NotoSansSC-VF.otf above; frozen R8 fontTools static wght instances.
+Family names: ReaderMangaSans550 / ReaderMangaSans600 / ReaderMangaSans900
+ReaderMangaSans550.otf SHA-256: c2028eca8a27dff3f67c59de85007c8eb30a4ce46b93cf9d139f00d6bcdac909
+ReaderMangaSans600.otf SHA-256: 6829ecf59c4da77c541030f3d9385d7cca521b6acb2068f982f2cd84c1298d54
+ReaderMangaSans900.otf SHA-256: 7c32c5d463417d843e28ac55c4dcc04e78f45502536e704f5395badda0a26d11
+License: Noto-OFL.txt
+Purpose: checked on-demand manga panel faces; existing shelf startup faces unchanged.
+
 LXGW WenKai Lite Regular 1.522
 Source: https://github.com/lxgw/LxgwWenKai-Lite/releases/tag/v1.522
 File SHA-256: 140c99ba4e28e817cec49bf82a0c5fcdc4fe633fb9dfda16d0ee8d59a8545f15

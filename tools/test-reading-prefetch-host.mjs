@@ -137,4 +137,33 @@ function fixture(count=1370){
  } finally {Date.now=realNow;}
  checks.push('expired-settled-deadlines-only-future-clock-and-inflight-retained');
 }
+{
+ const f=fixture(12),manga={...f.session,contentKind:'manga'};
+ const lease={isCurrent:()=>true,displayedSession:()=>manga,directory:()=>f.page.detailToc,
+   projected(){assert.fail('manga cannot publish text cache rows');},refreshed(){assert.fail('manga cannot publish text refresh');},diagnostic(){assert.fail('manga text work is excluded before dispatch');}};
+ f.runtime.bookAcquisitions=()=>({async currentSourceVersion(){assert.fail('manga cannot start text-owner offline work');},
+   async request(){assert.fail('manga cannot dispatch text-owner cache work');},async acquireBook(){assert.fail('manga cannot use text catalog refresh');}});
+ for(const mode of ['reader','shelf','opportunistic']) await f.host.prefetch(manga,undefined,lease,mode);
+ assert.equal(f.host.nearEnd(manga,11),false);await f.host.refreshNearEnd(manga,lease);
+ assert.deepEqual(f.calls,[]);delete f.runtime.bookAcquisitions;await f.commit(8);assert.equal(f.count('cache.book.prefetch'),1);
+ checks.push('manga-excludes-all-text-prefetch-modes-and-catalog-refresh-with-text-lane-preserved');
+}
+{
+ const f=fixture(),gate=deferred();f.state.leases=[986,987,988,989,990];f.state.beforeBody=async()=>gate.promise;
+ const work=f.commit(988);await until(()=>f.count('chapter.content')===2);
+ f.page.remoteReadingSession={...f.session,contentKind:'manga'};gate.resolve();await work;
+ assert.equal(f.publications(),0);assert.equal(f.count('chapter.content'),2);
+ assert.deepEqual(new Set(f.state.reports.map(r=>r.chapterIndex)),new Set(f.state.leases));
+ assert.ok(f.state.reports.every(r=>r.outcome==='failed'));
+ checks.push('displayed-manga-cancels-text-window-with-same-catalog-evidence-and-drains-native-leases');
+}
+{
+ const f=fixture(12),diagnostics=[];let published=0;
+ f.runtime.bookAcquisitions=()=>({async acquireBook(){return{...f.session,contentKind:'manga',catalogVersion:'manga-catalog'};}});
+ const lease={isCurrent:()=>true,displayedSession:()=>f.session,directory:()=>f.page.detailToc,
+   projected(){},refreshed(){published++;},diagnostic:(_,message)=>diagnostics.push(message)};
+ await f.host.refreshNearEnd(f.session,lease);
+ assert.equal(published,0);assert.deepEqual(diagnostics,['READING_CATALOG_REFRESH_REQUIRES_REOPEN']);
+ checks.push('newly-acquired-manga-catalog-cannot-append-into-retained-text-reader');
+}
 console.log(JSON.stringify({status:'PASS',checks,scope:'actual ReadingPrefetchHost + complete actual Offline/Remote Gateways; controlled native/core IO; Index integration/native targets remain separate'}));

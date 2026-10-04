@@ -27,7 +27,9 @@ import { HarmonyTtsHostRouter } from './HarmonyTtsHostRouter';
 import { HarmonyTtsMediaSession } from './HarmonyTtsMediaSession';
 import { HarmonyTtsBackgroundSession } from './HarmonyTtsBackgroundSession';
 import { LocalEpubResourceHost } from './LocalEpubResourceHost';
-import { ReadingBodyImageHost, type ReadingBodyImagePayload } from './ReadingBodyImageHost';
+import { ReadingBodyImageHost, type ReadingBodyImagePayload, type MangaImageMetadataProof } from './ReadingBodyImageHost';
+import { MangaImageDecodeHost } from './MangaImageDecodeHost';
+import { MangaImageMetadataHost } from './MangaImageMetadataHost';
 import {
   ReadingImageDiskCache,
   type ReadingImageCacheIdentity,
@@ -53,6 +55,9 @@ import { ReaderPreparationNetworkHost } from './ReaderPreparationNetworkHost';
 import { ReaderStartupTrace } from './ReaderStartupTrace';
 
 type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
+
+/** A manga display may publish before its own encoded-byte storage drain. */
+type MangaImageWork = { drain?: Promise<void> };
 
 // Local import and materialized chapter reads may perform file and parsing I/O.
 // The SDK's generic 2s default is unsuitable; callers may still opt into a
@@ -102,6 +107,9 @@ export class ReaderRuntimeOwner {
   private startup: Promise<void> | undefined = undefined;
   /** Serializes background storage flushes with teardown. */
   private flushTail: Promise<void> = Promise.resolve();
+  /** Shared by foreground regions, adjacent preparation and explicit offline work. */
+  private mangaImageTail: Promise<void> = Promise.resolve();
+  private mangaImagePending: number = 0;
   /** Lets concurrent Ability teardown callers await the same cleanup. */
   private closeTask: Promise<void> | undefined = undefined;
   /** Background source seeding never gates page availability. */
@@ -212,6 +220,7 @@ export class ReaderRuntimeOwner {
         (method: string, params: JsonObject, options: BookRequestOptions): Promise<ReaderCoreResultEvent> =>
           this.requestDirect(method, params, options),
         (capability: string): boolean => this.supportsCoreCapability(capability),
+        this,
       );
     }
     return this.bookCoordinator;
@@ -406,9 +415,14 @@ export class ReaderRuntimeOwner {
     baseUrl: string | undefined,
     allowNetwork: boolean,
     isCurrent?: () => boolean,
+    resourceRef?: string,
+    mangaPosition?: number,
+    expectedSourceVersion?: string,
+    mangaPreview?: boolean,
+    mangaDecodeRevision?: string,
   ): Promise<ReadingBodyImagePayload> {
     this.assertReadingImageCurrent(isCurrent);
-    if (imageUrl.trim().toLowerCase().startsWith('data:image/')) {
+    if (resourceRef === undefined && imageUrl.trim().toLowerCase().startsWith('data:image/')) {
       const embedded = await ReadingBodyImageHost.instance.loadDataUri(imageUrl, isCurrent);
       return this.admitReadingImage(embedded, isCurrent);
     }
@@ -424,13 +438,39 @@ export class ReaderRuntimeOwner {
       imageUrl,
       baseUrl,
     );
+    if (resourceRef !== undefined) {
+      if (mangaDecodeRevision !== 'identity-v1' && mangaDecodeRevision !== 'bytes-v1') throw new Error('MANGA_CACHE_PROFILE_REQUIRED');
+      identity.resourceRef = resourceRef;
+      identity.mangaDecodeRevision = mangaDecodeRevision;
+      // Manga chapter identity is a Core business key, including any fragment.
+      identity.baseUrl = baseUrl;
+    }
     const cacheCurrent = this.readingImageDiskCache.captureValidity(identity.sourceId, identity.bookId, isCurrent);
-    const cachedBytes = await this.readingImageDiskCache.loadResource(identity, cacheCurrent);
+    if (resourceRef !== undefined || mangaPosition !== undefined) {
+      return this.runMangaImageWork(cacheCurrent, (work: MangaImageWork): Promise<ReadingBodyImagePayload> =>
+        this.loadReadingImageOwned(identity, allowNetwork, cacheCurrent, mangaPosition, expectedSourceVersion, mangaPreview, work));
+    }
+    return this.loadReadingImageOwned(identity, allowNetwork, cacheCurrent, mangaPosition, expectedSourceVersion, mangaPreview);
+  }
+
+  /** Called only after the manga lane is acquired, or by the unchanged novel path. */
+  private async loadReadingImageOwned(identity: ReadingImageCacheIdentity, allowNetwork: boolean,
+    cacheCurrent: () => boolean, mangaPosition?: number, expectedSourceVersion?: string, mangaPreview?: boolean,
+    work?: MangaImageWork): Promise<ReadingBodyImagePayload> {
+    let cachedBytes: Uint8Array | undefined;
+    try { cachedBytes = await this.readingImageDiskCache.loadResource(identity, cacheCurrent); }
+    catch (error) {
+      // A previous Host's transformed payload is retained for recovery. Only
+      // online preparation may replace its usability, in a new profile path.
+      if (!allowNetwork || !(error instanceof Error) || error.message !== 'READING_IMAGE_REPROCESS_REQUIRED') throw error;
+    }
     if (cachedBytes !== undefined) {
       try {
-        const cached = await ReadingBodyImageHost.instance.loadBytes(cachedBytes, cacheCurrent);
+        const cached = await ReadingBodyImageHost.instance.loadBytes(cachedBytes, cacheCurrent, mangaPosition, mangaPreview);
         return this.admitReadingImage(cached, cacheCurrent);
       } catch (error) {
+        // Unsupported regional decoding does not make cached original bytes corrupt.
+        if (mangaPosition !== undefined && error instanceof Error && error.message.startsWith('MANGA_REGION_')) throw error;
         await this.readingImageDiskCache.removeResource(identity, cacheCurrent);
         if (!allowNetwork) {
           throw error;
@@ -440,16 +480,18 @@ export class ReaderRuntimeOwner {
     if (!allowNetwork) {
       throw new Error('REMOTE_READING_IMAGE_NOT_DOWNLOADED');
     }
-    const request = await this.resolveReadingImageRequest(sourceId, imageUrl, identity.baseUrl, cacheCurrent);
-    const bytes = await ReadingBodyImageHost.instance.fetchRequestBytes(request, cacheCurrent);
-    const payload = await ReadingBodyImageHost.instance.loadBytes(bytes, cacheCurrent);
+    const bytes = await this.prepareReadingImageBytes(identity, cacheCurrent, expectedSourceVersion);
+    const payload = await ReadingBodyImageHost.instance.loadBytes(bytes, cacheCurrent, mangaPosition, mangaPreview);
     // The display resource is already decoded and actionable. Persistent
     // cache maintenance must not keep first paint waiting for a second disk
     // write; explicit offline prefetch retains its strict awaited path below.
-    void this.readingImageDiskCache.storeResource(identity, bytes, cacheCurrent)
+    const stored = this.readingImageDiskCache.storeResource(identity, bytes, cacheCurrent)
       .catch((error: Error): void => {
         hilog.error(LOG_DOMAIN, 'Reader', 'Reader body image cache write failed: %{private}s', error.message);
       });
+    // The first image can paint now; only this operation's retained cache bytes
+    // keep the manga lane occupied. Unrelated disk-cache writes are not joined.
+    if (work !== undefined) work.drain = stored;
     return this.admitReadingImage(payload, cacheCurrent);
   }
 
@@ -457,39 +499,128 @@ export class ReaderRuntimeOwner {
   async prefetchReadingImage(
     identity: ReadingImageCacheIdentity,
     isCurrent?: () => boolean,
+    expectedSourceVersion?: string,
+    allowNetwork: boolean = true,
   ): Promise<void> {
     this.assertReadingImageCurrent(isCurrent);
-    const cacheCurrent = this.readingImageDiskCache.captureValidity(identity.sourceId, identity.bookId, isCurrent);
-    const cachedBytes = await this.readingImageDiskCache.loadResource(identity, cacheCurrent);
+    const ownedIdentity: ReadingImageCacheIdentity = identity.resourceRef === undefined ? identity : { ...identity };
+    const cacheCurrent = this.readingImageDiskCache.captureValidity(ownedIdentity.sourceId, ownedIdentity.bookId, isCurrent);
+    if (ownedIdentity.resourceRef !== undefined) {
+      // Capture the cache generation before waiting: a queued request cannot
+      // become current again after a book clear or owner teardown.
+      return this.runMangaImageWork(cacheCurrent, (): Promise<void> =>
+        this.prefetchReadingImageOwned(ownedIdentity, cacheCurrent, expectedSourceVersion, allowNetwork));
+    }
+    return this.prefetchReadingImageOwned(ownedIdentity, cacheCurrent, expectedSourceVersion, allowNetwork);
+  }
+
+  private async prefetchReadingImageOwned(identity: ReadingImageCacheIdentity, cacheCurrent: () => boolean,
+    expectedSourceVersion?: string, allowNetwork: boolean = true): Promise<void> {
+    let cachedBytes: Uint8Array | undefined;
+    try { cachedBytes = await this.readingImageDiskCache.loadResource(identity, cacheCurrent); }
+    catch (error) {
+      // A previous Host's transformed payload is retained for recovery. Only
+      // online preparation may replace its usability, in a new profile path.
+      if (!allowNetwork || !(error instanceof Error) || error.message !== 'READING_IMAGE_REPROCESS_REQUIRED') throw error;
+    }
     if (cachedBytes !== undefined) {
       try {
-        await ReadingBodyImageHost.instance.validateBytes(cachedBytes, cacheCurrent);
+        await ReadingBodyImageHost.instance.validateBytes(cachedBytes, cacheCurrent, identity.resourceRef === undefined ? undefined : 0);
         return;
-      } catch (_) {
+      } catch (error) {
+        if (identity.resourceRef !== undefined && error instanceof Error && error.message.startsWith('MANGA_REGION_')) throw error;
         await this.readingImageDiskCache.removeResource(identity, cacheCurrent);
       }
     }
-    const request = await this.resolveReadingImageRequest(
-      identity.sourceId,
-      identity.imageUrl,
-      identity.baseUrl,
-      cacheCurrent,
-    );
-    const bytes = await ReadingBodyImageHost.instance.fetchRequestBytes(request, cacheCurrent);
-    await ReadingBodyImageHost.instance.validateBytes(bytes, cacheCurrent);
+    if (!allowNetwork) throw new Error('REMOTE_READING_IMAGE_NOT_DOWNLOADED');
+    const bytes = await this.prepareReadingImageBytes(identity, cacheCurrent, expectedSourceVersion);
+    await ReadingBodyImageHost.instance.validateBytes(bytes, cacheCurrent, identity.resourceRef === undefined ? undefined : 0);
     this.assertReadingImageCurrent(cacheCurrent);
     await this.readingImageDiskCache.storeResource(identity, bytes, cacheCurrent);
+  }
+
+  /** Reuses the former regionTail ownership at the only allocating Runtime
+   * entry. Queued callbacks contain descriptors, never fetched image bytes.
+   * Core transfer/metadata callbacks belong to the running operation and must
+   * not acquire this lane again while their Core request waits for them. */
+  private async runMangaImageWork<T>(current: () => boolean,
+    run: (work: MangaImageWork) => Promise<T>): Promise<T> {
+    this.assertReadingImageCurrent(current);
+    if (this.mangaImagePending >= 16) throw new Error('MANGA_DECODE_CAPACITY');
+    this.mangaImagePending++;
+    const previous = this.mangaImageTail;
+    let release: () => void = (): void => {};
+    this.mangaImageTail = new Promise<void>((resolve): void => { release = resolve; });
+    await previous;
+    const work: MangaImageWork = {};
+    try {
+      this.assertReadingImageCurrent(current);
+      return await run(work);
+    } finally {
+      // Resolving the image result is independent of freeing the work lane.
+      // Cache failure has already been logged; it cannot poison later work.
+      void (async (): Promise<void> => {
+        try { await work.drain; }
+        catch (_) { /* The owner of the drain reports the storage failure. */ }
+        finally { this.mangaImagePending--; release(); }
+      })();
+    }
+  }
+
+  private async prepareReadingImageBytes(identity: ReadingImageCacheIdentity,
+    isCurrent: () => boolean, expectedSourceVersion?: string): Promise<Uint8Array> {
+    if (identity.resourceRef !== undefined) {
+      if (expectedSourceVersion === undefined || identity.baseUrl === undefined) throw new Error('MANGA_DECODE_IDENTITY');
+      return MangaImageDecodeHost.instance.prepare({
+        chapter: { sourceId: identity.sourceId, bookId: identity.bookId, chapterId: identity.baseUrl },
+        manifestVersion: identity.contentVersion,
+        resourceRef: identity.resourceRef,
+        sourceRuleVersion: expectedSourceVersion,
+      }, (params: JsonObject): Promise<ReaderCoreResultEvent> => this.request('manga.resource.prepare', params,
+        { timeoutMs: 30000, shouldCancel: (): boolean => !isCurrent() }), isCurrent);
+    }
+    return ReadingBodyImageHost.instance.fetchRequestBytes(
+      await this.resolveReadingImageRequest(identity.sourceId, identity.imageUrl, identity.baseUrl, isCurrent, expectedSourceVersion), isCurrent);
   }
 
   async markOfflineImageChapterComplete(
     chapter: ReadingImageChapterIdentity,
     resources: ReadingImageCacheIdentity[],
+    isCurrent?: () => boolean,
   ): Promise<void> {
-    await this.readingImageDiskCache.markChapterComplete(chapter, resources);
+    const current = this.readingImageDiskCache.captureValidity(chapter.sourceId, chapter.bookId, isCurrent);
+    if (resources.some(resource => resource.resourceRef !== undefined)) {
+      const ownedChapter: ReadingImageChapterIdentity = { ...chapter };
+      const ownedResources: ReadingImageCacheIdentity[] = resources.map(resource => ({ ...resource }));
+      // Acquire the image lane before the existing per-book mutation lock.
+      // Digest reads own encoded bytes too; DiskCache never reenters this lane.
+      return this.runMangaImageWork(current, (): Promise<void> =>
+        this.readingImageDiskCache.markChapterComplete(ownedChapter, ownedResources, current));
+    }
+    await this.readingImageDiskCache.markChapterComplete(chapter, resources, current);
   }
 
-  async isOfflineImageChapterComplete(chapter: ReadingImageChapterIdentity): Promise<boolean> {
+  async isOfflineImageChapterComplete(chapter: ReadingImageChapterIdentity, manga: boolean = false,
+    isCurrent?: () => boolean): Promise<boolean> {
+    if (manga) {
+      if (chapter.mangaDecodeRevision !== 'identity-v1' && chapter.mangaDecodeRevision !== 'bytes-v1') throw new Error('MANGA_CACHE_PROFILE_REQUIRED');
+      const ownedChapter: ReadingImageChapterIdentity = { ...chapter };
+      const current = this.readingImageDiskCache.captureValidity(chapter.sourceId, chapter.bookId, isCurrent);
+      return this.runMangaImageWork(current, async (): Promise<boolean> => {
+        const complete = await this.readingImageDiskCache.isChapterComplete(ownedChapter);
+        this.assertReadingImageCurrent(current);
+        return complete;
+      });
+    }
     return this.readingImageDiskCache.isChapterComplete(chapter);
+  }
+
+  async isOfflineImageChapterMaterialized(
+    sourceId: string,
+    bookId: string,
+    chapterIndex: number,
+  ): Promise<boolean> {
+    return this.readingImageDiskCache.isChapterMaterialized(sourceId, bookId, chapterIndex);
   }
 
   async clearOfflineBookImages(sourceId: string, bookId: string): Promise<void> {
@@ -501,8 +632,10 @@ export class ReaderRuntimeOwner {
     imageUrl: string,
     baseUrl: string | undefined,
     isCurrent?: () => boolean,
+    expectedSourceVersion?: string,
   ): Promise<JsonObject> {
     const params: JsonObject = { sourceId, imageUrl };
+    if (expectedSourceVersion !== undefined) params['expectedSourceVersion'] = expectedSourceVersion;
     const canonicalBaseUrl = canonicalReadingImageBaseUrl(baseUrl);
     if (canonicalBaseUrl !== undefined) {
       params['baseUrl'] = canonicalBaseUrl;
@@ -706,6 +839,7 @@ export class ReaderRuntimeOwner {
     }
     this.state = 'closing';
     this.readingImageDiskCache.close();
+    ReadingBodyImageHost.instance.setMangaMetadataInspector(undefined);
     this.closeTask = this.closeRuntime();
     return this.closeTask;
   }
@@ -746,7 +880,7 @@ export class ReaderRuntimeOwner {
       }
       // `close()` sets state=closing first, so the supply loop stops after its
       // current local Core request. Wait for that request before closing Core.
-      await Promise.all([this.sourceSupplyTask, this.importFinalizeTask]);
+      await Promise.all([this.sourceSupplyTask, this.importFinalizeTask, this.mangaImageTail]);
       // A foreground/background flush that began before `closing` must finish
       // before the runtime is released. Later flush calls see `closing` and
       // become no-ops, so they cannot race this final flush/close pair.
@@ -817,11 +951,16 @@ export class ReaderRuntimeOwner {
     try {
       this.host.setResponseAssetBridge(runtime.assetBridge());
       runtime.setCapabilityRouter(this.host.createCapabilityRouter());
+      ReadingBodyImageHost.instance.setMangaMetadataInspector((bytes: Uint8Array, digest: string, current: () => boolean): Promise<MangaImageMetadataProof> =>
+        MangaImageMetadataHost.instance.inspect(bytes, digest,
+          (params: JsonObject): Promise<ReaderCoreResultEvent> => runtime.request('manga.resource.inspect', params,
+            { timeoutMs: 15000, shouldCancel: (): boolean => !current() }), current));
       const hostCapabilities: JsonObject = {
         capabilities: [
           'persistence.get',
           'persistence.put',
           'http.execute',
+          'manga.resource.transfer',
           'cookie.get',
           'cookie.set',
           'webview.evaluateJavaScript',

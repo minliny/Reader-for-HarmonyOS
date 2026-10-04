@@ -17,10 +17,12 @@ export interface SourceSwitchCandidatesState {
   candidates: SourceSwitchCandidate[];
   refreshing?: boolean;
   refreshError?: string;
+  stopped?: boolean;
 }
 
 export interface SourceSwitchEmptyState {
   kind: 'empty';
+  stopped?: boolean;
 }
 
 export interface SourceSwitchDiscoveryErrorState {
@@ -53,4 +55,3 @@ export type SourceSwitchPanelState =
   | SourceSwitchSwitchingState
   | SourceSwitchSuccessState
   | SourceSwitchFailureState;
-

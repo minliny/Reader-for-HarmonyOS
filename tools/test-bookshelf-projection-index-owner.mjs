@@ -72,6 +72,47 @@ for(const retired of ['route','nav','runtime-unset','newRuntime','unmounted']){
  f.model.rows[0].sourceName='书源已移除';f.idx.refreshBookshelf();await until(()=>f.idx.shelfBooks[0].sourceName==='书源已移除');assert.equal(f.idx.shelfBooks[0].sourceName,'书源已移除');checks.push('one source-name policy preserves exact progress/all metadata and confirmed deletion');
 }
 {
+ const f=fixture({count:3,source:'s'}),sourceWait=f.pauseSources();
+ f.model.rows=[
+  {...book(0,'s'),contentKind:'manga',kind:'comic',chapterCount:2,currentChapterIndex:10,currentChapterTitle:'Chapter ten',readProgress:5000,lastReadAt:42,unreadCount:1,group:'comics'},
+  {...book(1,'s'),contentKind:'text',kind:'novel',readingPosition:{chapterIndex:4,chapterOffset:6,updatedAt:7},readProgress:3400},
+  {...book(2,'s'),kind:'legacy',lastChapter:'Latest legacy chapter'}
+ ];
+ f.model.sourceRows=[{sourceId:'s',name:'Hydrated source',enabled:true}];f.idx.refreshBookshelf();
+ await until(()=>f.calls.some(c=>c.method==='source.list'));
+ const before=f.idx.shelfBooks;
+ assert.deepEqual(before.map(b=>b.contentKind),['manga','text',undefined],'initial projection keeps exact Core content kinds');
+ assert.equal(Object.hasOwn(before[2],'contentKind'),false,'legacy row does not acquire an inferred content kind');
+ assert.ok(before.every(b=>b.sourceName!=='Hydrated source'),'source-name read is still pending');
+ sourceWait.resolve();await until(()=>f.idx.shelfBooks.every(b=>b.sourceName==='Hydrated source'));
+ assert.notEqual(f.idx.shelfBooks,before,'actual asynchronous hydration publishes new rows');
+ assert.deepEqual(f.idx.shelfBooks,before.map(b=>({...b,sourceName:'Hydrated source'})),'hydration changes only source name, including sparse manga chapter/progress metadata');
+ assert.equal(Object.hasOwn(f.idx.shelfBooks[0],'readingPosition'),false,'manga receives no invented text progress');
+ assert.equal(Object.hasOwn(f.idx.shelfBooks[2],'contentKind'),false);
+ assert.equal(f.member.at(-1),f.idx.shelfBooks,'canonical membership receives the hydrated rows');
+ checks.push('actual async source-name hydration retains manga/text/legacy kinds and exact chapter/progress metadata');
+}
+for(const retired of ['generation','runtime','binding']){
+ const f=fixture({source:'s'}),sourceWait=f.pauseSources();
+ f.model.rows[0]={...book(0,'s'),contentKind:'manga',chapterCount:2,currentChapterIndex:10,readProgress:5000};
+ f.model.sourceRows=[{sourceId:'s',name:'Old source',enabled:true}];f.idx.refreshBookshelf();
+ await until(()=>f.calls.some(c=>c.method==='source.list'));
+ let target=f.idx;
+ if(retired==='generation')f.owner.invalidate();
+ if(retired==='runtime')f.setOwner({});
+ if(retired==='binding'){
+  const next=actualProjectionIndex(f.runtime,f.types,{identity:9999});assert.equal(next.owner,f.owner);target=next.idx;
+ }
+ const rows=f.owner.snapshot().books,membershipCount=f.member.length;
+ sourceWait.resolve();await tick();await tick();
+ assert.equal(f.owner.snapshot().books,rows,'late '+retired+' hydration cannot replace owner rows');
+ assert.equal(target.shelfBooks,rows,'late '+retired+' hydration cannot publish into the current binding');
+ assert.equal(target.shelfBooks[0].contentKind,'manga');assert.equal(target.shelfBooks[0].currentChapterIndex,10);
+ assert.notEqual(target.shelfBooks[0].sourceName,'Old source');
+ assert.equal(f.member.length,membershipCount,'late '+retired+' hydration cannot republish membership');
+ checks.push('same manga identity rejects deferred source hydration after '+retired+' retirement');
+}
+{
  const f=fixture({source:'s'}),sourceWait=f.pauseSources();f.model.sourceRows=[{sourceId:'s',name:'Old source',enabled:true}];
  f.idx.refreshBookshelf();await until(()=>f.calls.some(c=>c.method==='source.list'));
  f.idx.applyBookshelfState(plain([book(99,'other')]));sourceWait.resolve();await tick();await tick();assert.equal(f.idx.shelfBooks[0].bookId,'99');assert.notEqual(f.idx.shelfBooks[0].sourceName,'Old source');checks.push('late source-name hydration cannot decorate successor book');

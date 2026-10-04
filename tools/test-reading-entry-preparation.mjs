@@ -805,3 +805,55 @@ console.log('PASS bounded shelf preparation: TXT, EPUB explicit breaks, remote, 
   prep.close();
 }
 console.log('PASS content mutation epoch: stale chapter fenced, progress save retained, retry waits for idle');
+
+// Manga entry work belongs to the image reader, including the narrow snapshot path.
+for (const modern of [false, true]) {
+  const f = fixture();
+  f.runtime.supportsCoreCapability = name => modern && name === 'reading.entry.snapshot.v1';
+  const manga = Array.from({ length: 8 }, (_, n) => ({ ...seed(`manga-${n}`, 's1'), contentKind: 'manga' }));
+  const nested = seed('nested-manga', 's2'); nested.remoteBookSeed.contentKind = 'manga';
+  f.preparations.setVisibleBooks([...manga, nested]);
+  await tick(); await tick();
+  assert.deepEqual(f.calls, [], 'manga cannot dispatch text snapshot, progress or chapter work');
+  if (!modern) {
+    f.preparations.setVisibleBooks([...manga, nested, seed('novel')]);
+    assert.ok(await f.ready('local', 'novel'), 'excluded manga does not consume the six text viewport slots');
+    assert.ok(f.calls.every(call => call.params.bookId === 'novel'));
+  }
+  f.preparations.close();
+}
+
+// A legacy seed can acquire a manga session; stop before its text progress/body.
+{
+  const f = fixture(), coordinator = f.runtime.bookAcquisitions(), acquire = coordinator.acquireBook;
+  coordinator.acquireBook = async (...args) => ({ ...await acquire(...args), contentKind: 'manga' });
+  f.preparations.setVisibleBooks([seed('discovered-manga', 's1')]);
+  await f.settled();
+  assert.equal(f.preparations.take('s1', 'discovered-manga'), undefined);
+  assert.deepEqual(f.calls.map(call => call.method), ['source.switch.pending.list', 'acquireBook']);
+  f.preparations.close();
+}
+
+// Typed manga is excluded from visible priority, persisted sweep and cached retry.
+{
+  const calls = []; let retry = true;
+  const runtime = { supportsCoreCapability: name => name === 'reading.entry.prepare.v1',
+    bookAcquisitions: () => ({ request: async (method, params) => {
+      calls.push({ method, params });
+      return preparedResult(params, retry && params.neighborOffset === 0 ? 'missing' : 'ready',
+        retry && params.neighborOffset === 0 ? 'contentMissing' : 'prepared');
+    } }) };
+  const preparations = new ReadingEntryPreparation(runtime, false);
+  const nested = seed('nested-manga', 's2'); nested.remoteBookSeed.contentKind = 'manga';
+  const seeds = [{ ...seed('manga', 's1'), contentKind: 'manga' }, nested, seed('novel')];
+  preparations.setVisibleBooks(seeds);
+  await preparations.preparePersistedShelf('typed-shelf', async () => seeds, () => true);
+  assert.equal(calls.length, 7);
+  assert.ok(calls.every(call => call.method === 'reading.entry.prepare' && call.params.bookId === 'novel'));
+  retry = false;
+  await preparations.preparePersistedShelf('typed-shelf', async () => { throw Error('reuse accepted seed scan'); }, () => true);
+  assert.equal(calls.length, 8, 'retry retains only the incomplete text target');
+  assert.ok(calls.every(call => call.params.bookId === 'novel'));
+  preparations.close();
+}
+console.log('PASS manga text-preparation exclusion: visible narrow/legacy, acquired type, persisted priority and cached retry');

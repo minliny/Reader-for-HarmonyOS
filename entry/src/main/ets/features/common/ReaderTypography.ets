@@ -2,6 +2,9 @@ import {
   READER_FONT_INTER,
   READER_FONT_NOTO_SANS_SC,
   READER_FONT_NOTO_SANS_SC_UI_REGULAR,
+  READER_FONT_NOTO_SANS_SC_UI_550,
+  READER_FONT_NOTO_SANS_SC_UI_600,
+  READER_FONT_NOTO_SANS_SC_UI_900,
   READER_FONT_NOTO_SERIF_SC_BOLD,
   READER_FONT_NOTO_SERIF_SC_REGULAR,
 } from './ReaderFontFamilies.ts';
@@ -951,3 +954,70 @@ export const TYPE_READER_READING_FAILURE_DETAIL = new ReaderInheritedTextStyle(
 
 // The current content-search placeholder is Noto10 with native weight/line AUTO.
 export const TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_PLACEHOLDER = TYPE_SOURCE_TOOLS_CAPTION;
+
+// Manga roles preserve the imported R8 UI tuples. Only authored modifiers are
+// consumed; inherited/native AUTO attributes stay omitted at each carrier.
+export const TYPE_MANGA_TOP_TITLE = new ReaderTextStyle(
+  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 17, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_CATALOG_TITLE = new ReaderTextStyle(
+  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 18, 26, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_CATALOG_TITLE_NARROW = new ReaderTextStyle(
+  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 16, 26, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_CATALOG_LABEL = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 10, 17, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_PANEL_HEADING_WIDE = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_600, 600, 15, 24, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_PANEL_HEADING_PHONE = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_900, 900, 18, 26, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_SHEET_SECTION = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_600, 600, 13, 21, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_SHEET_OPTION = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 12, 18, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_SHEET_INPUT = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 13, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_SHEET_ACTION_SELECTED = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_600, 600, 13, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_SHEET_HINT = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 11, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_DIRECTORY_TITLE = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 13, 22, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_DIRECTORY_CURRENT_TITLE = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_550, 400, 13, 22, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_DIRECTORY_CATALOG_TITLE = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 12, 20, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_DIRECTORY_CATALOG_TITLE_NARROW = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 11, 20, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_DIRECTORY_META = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 10, 16, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_DIRECTORY_CURRENT = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 10, 17, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_DIRECTORY_CATALOG_CURRENT = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 9, 17, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_DIRECTORY_CATALOG_CURRENT_NARROW = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 8, 17, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_DIRECTORY_EMPTY = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 12, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_SOURCE_NAME = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 500, 15, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_SOURCE_CHAPTER = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC, 400, 10, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_SOURCE_LATENCY = new ReaderTextStyle(
+  READER_FONT_INTER, 400, 17, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_SOURCE_HEADING = new ReaderTextStyle(
+  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 18, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_SOURCE_BOOK_TITLE = new ReaderTextStyle(
+  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 21, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_SOURCE_CONTEXT = new ReaderInheritedTextStyle(
+  READER_FONT_NOTO_SANS_SC, undefined, 12, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_SOURCE_STATUS = new ReaderInheritedTextStyle(
+  READER_FONT_NOTO_SANS_SC, undefined, 11, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_SOURCE_CAPTION = new ReaderInheritedTextStyle(
+  READER_FONT_NOTO_SANS_SC, undefined, 10, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_SOURCE_EMPTY = new ReaderInheritedTextStyle(
+  READER_FONT_NOTO_SANS_SC, undefined, 15, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_PAGE_STEP = new ReaderInheritedTextStyle(
+  undefined, undefined, 20, undefined, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_CHAPTER_END_META = new ReaderInheritedTextStyle(
+  undefined, undefined, 11, 19, undefined, 'system', 'appBaseline');
+export const TYPE_MANGA_LATENCY_UNIT = new ReaderInheritedTextStyle(
+  undefined, undefined, 9, undefined, undefined, 'system', 'appBaseline');

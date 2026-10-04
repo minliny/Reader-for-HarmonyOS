@@ -8,6 +8,9 @@ import {
   READER_FONT_LXGW_WENKAI_GB_LITE,
   READER_FONT_NOTO_SANS_SC,
   READER_FONT_NOTO_SANS_SC_UI_REGULAR,
+  READER_FONT_NOTO_SANS_SC_UI_550,
+  READER_FONT_NOTO_SANS_SC_UI_600,
+  READER_FONT_NOTO_SANS_SC_UI_900,
   READER_FONT_NOTO_SERIF_SC_BOLD,
   READER_FONT_NOTO_SERIF_SC_REGULAR,
   READER_FONT_SARASA_MONO_SC,
@@ -19,6 +22,9 @@ function bundledFontSource(family: string): Resource | undefined {
   if (family === READER_FONT_NOTO_SERIF_SC_BOLD) return $rawfile('NotoSerifSC-Bold.ttf');
   if (family === READER_FONT_NOTO_SERIF_SC_REGULAR) return $rawfile('NotoSerifSC-Regular.ttf');
   if (family === READER_FONT_NOTO_SANS_SC_UI_REGULAR) return $rawfile('NotoSansSC-UIRegular.otf');
+  if (family === READER_FONT_NOTO_SANS_SC_UI_550) return $rawfile('ReaderMangaSans550.otf');
+  if (family === READER_FONT_NOTO_SANS_SC_UI_600) return $rawfile('ReaderMangaSans600.otf');
+  if (family === READER_FONT_NOTO_SANS_SC_UI_900) return $rawfile('ReaderMangaSans900.otf');
   if (family === 'ReaderNotoSansSCUIMedium') return $rawfile('NotoSansSC-UIMedium.otf');
   if (family === 'ReaderNotoSansSCUIBold') return $rawfile('NotoSansSC-UIBold.otf');
   if (family === READER_FONT_NOTO_SANS_SC) return $rawfile('NotoSansSC-VF.otf');
@@ -40,6 +46,17 @@ export function prepareReaderFontFamily(family: string): Promise<void> {
  * Only the platform default needs no checked file-load receipt. */
 export function readerFontFamilyReady(family: string): boolean {
   return family === READER_FONT_HARMONYOS_SANS || readerFontLoadReady(family);
+}
+
+/** Manga panels admit their exact text faces only after checked load receipts.
+ * Shelf startup remains limited to its existing faces. */
+export function prepareMangaSheetFonts(): Promise<boolean> {
+  const families: string[] = [READER_FONT_NOTO_SANS_SC_UI_REGULAR,
+    READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600,
+    READER_FONT_NOTO_SANS_SC_UI_900];
+  return Promise.all(families.map((family: string): Promise<void> =>
+    prepareReaderFontFamily(family))).then((): boolean =>
+    families.every((family: string): boolean => readerFontFamilyReady(family)));
 }
 
 /** Only faces used by the initial bookshelf shell need a checked receipt

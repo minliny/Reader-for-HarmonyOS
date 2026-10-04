@@ -8,16 +8,37 @@ import { auditNativeTextElements } from './lib/reader-typography-consumer-audit.
 import { verifyNativeDefaultBranches } from './lib/native-default-control-probe.mjs';
 import { boundedSurfaceSdk,boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { DirectoryRuleDraft } from './lib/reader-reading-field-probe.mjs';
+import { mangaNativeDefaultKey,verifyMangaNativeActorContracts,verifyMangaNativeDefaultSdk,verifyMangaNativeIconContracts,verifyMangaNativeIconSdk } from './lib/manga-native-default-control-probe.mjs';
 const fixture=JSON.parse(readFileSync(new URL('./fixtures/design/native-default-control-contracts.json',import.meta.url)));
 const producers=JSON.parse(readFileSync(new URL('./fixtures/architecture-shared-producers.json',import.meta.url)));
 const featureRoot=new URL('../entry/src/main/ets/features/',import.meta.url),normalise=text=>(text??'').replace(/\s+/g,'');
 const contracts=new Map(fixture.consumers.map(row=>[JSON.stringify([row.file,row.method,row.kind,normalise(row.argument)]),{...row,count:0}]));
 assert.equal(contracts.size,13);
-let controls=0,paint=0,a11y=0,delegated=0,inherited=0;
+const mangaFixture=fixture.mangaNativeControls,mangaSource=readFileSync(new URL('../entry/src/main/ets/'+mangaFixture.file,import.meta.url),'utf8');
+verifyMangaNativeActorContracts(mangaSource,mangaFixture);
+const mangaContracts=new Map(mangaFixture.consumers.filter(row=>['Text','Button'].includes(row.kind)).map(row=>[mangaNativeDefaultKey(row),{...row,count:0}]));
+assert.equal(mangaContracts.size,4,'manga genuine native default glyph permission remains finite and independent');
+const mangaIconFixture=fixture.mangaSourceSwitchNativeControls,mangaIconSource=readFileSync(new URL('../entry/src/main/ets/'+mangaIconFixture.file,import.meta.url),'utf8');
+verifyMangaNativeIconContracts(mangaIconSource,mangaIconFixture);
+const mangaIconContract=mangaIconFixture.consumers.find(row=>row.kind==='Button');
+let controls=0,paint=0,a11y=0,delegated=0,inherited=0,mangaGlyphs=0,mangaIcons=0;
 for(const file of readdirSync(featureRoot,{recursive:true}).filter(file=>file.endsWith('.ets'))){
  const rel='features/'+file,source=readFileSync(new URL(file,featureRoot),'utf8');
  for(const node of auditNativeTextElements(source,rel)){
   if(Object.keys(node.modifiers).length)continue;
+  if(rel===mangaFixture.file){
+   const contract=mangaContracts.get(mangaNativeDefaultKey(node));
+   assert.ok(contract,`${rel}:${node.line}: manga native-default glyph requires its exact bounded contract`);
+   assert.equal(++contract.count,1,`${contract.id}: no copied default manga glyph actors`);
+   assert.deepEqual(node.attributes,contract.requiredAttributes,`${contract.id}: actual actor keeps genuine native defaults and callback`);
+   mangaGlyphs++;continue;
+  }
+  if(rel===mangaIconFixture.file){
+   assert.equal(mangaNativeDefaultKey(node),mangaNativeDefaultKey(mangaIconContract),'only exact manga no-glyph icon Button is admitted');
+   assert.equal(++mangaIcons,1,'no copied manga no-glyph icon actor');
+   assert.equal(node.hasChildContent,true,'actual Image child is verified separately, never a native label exception');
+   assert.deepEqual(node.attributes,mangaIconContract.requiredAttributes,'exact44x44 manga icon native attrs/action');continue;
+  }
   if(node.kind==='Span'&&node.inheritsTextStyle){inherited++;continue;}
   // No visible glyph exists in a blank paint actor or unlabelled event host.
   if(node.kind==='Text'&&["''",'""'].includes(node.text)||node.kind==='Button'&&node.text===undefined){paint++;continue;}
@@ -121,4 +142,13 @@ for(const row of contracts.values()){
 assert.equal(controls,14);assert.equal(a11y,4);// One additional finite ReaderButton leading-slot Text is now an actual shared
 // glyph host; native-default families and all private budgets are unchanged.
 assert.equal(delegated,14);
-console.log(`PASS native-default contracts: ${contracts.size} finite native families / ${controls} actual actors (retry has exact exclusive source-switch/reading branches); ${paint} no-glyph actors, ${a11y} exact accessibility actors, ${delegated} actual bounded shared glyph hosts, ${inherited} inherited body spans; no physical font overrides fabricated`);
+assert.equal(mangaGlyphs,4);for(const contract of mangaContracts.values())assert.equal(contract.count,1,'each exact manga glyph owner is still present');
+const manga=await verifyMangaNativeDefaultSdk(mangaSource,mangaFixture);
+assert.equal(mangaIcons,1);const mangaIcon=verifyMangaNativeIconSdk(mangaIconSource,mangaIconFixture);
+// Mutation controls exercise contract narrowing independently of unrelated
+// production text/font migrations. No whole-source hash binds these actors.
+assert.throws(()=>verifyMangaNativeActorContracts(mangaSource.replace("Button('重试').onClick((): void => this.retry(row))","Button('重试').onClick((): void => this.retry(row)); Button('重试').onClick((): void => this.retry(row))"),mangaFixture),/copied manga native/);
+assert.throws(()=>verifyMangaNativeActorContracts(mangaSource.replace('min: 1, max: Math.max(1, this.horizontalPageCount), step: 1','min: 0, max: Math.max(1, this.horizontalPageCount), step: 1'),mangaFixture),/exact unique actual actor/);
+assert.throws(()=>verifyMangaNativeActorContracts(mangaSource.replace('Blank().width(44)','Blank().width(45)'),mangaFixture),/exact native attributes/);
+assert.throws(()=>verifyMangaNativeActorContracts(mangaSource.replace('if (this.isPrimaryErrorRow(row))','if (true)'),mangaFixture),/exact actual branch ownership/);
+console.log(`PASS native-default contracts: original ${contracts.size} finite native families / ${controls} actual actors (retry has exact exclusive source-switch/reading branches); ${paint} no-glyph actors, ${a11y} exact accessibility actors, ${delegated} actual bounded shared glyph hosts, ${inherited} inherited body spans; separate manga ${manga.nativeGlyphActors} exact native glyph actors, ${manga.sliders} bounded non-text sliders, ${manga.blanks+mangaIcon.blanks} purpose-bound Blank actors and ${mangaIcon.iconButtons} no-glyph Image Button pass actual SDK callbacks/lifecycle; no physical font overrides fabricated`);

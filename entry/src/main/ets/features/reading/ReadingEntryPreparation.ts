@@ -12,8 +12,13 @@ import type { ReadingSessionChapter } from './ReadingChapterWindow';
 export interface ReadingEntrySeed {
   sourceId: string;
   bookId: string;
+  contentKind?: 'text' | 'manga' | 'audio';
   bookKind?: string;
   remoteBookSeed?: RemoteReadingBookSeed;
+}
+
+function isMangaEntrySeed(seed: ReadingEntrySeed): boolean {
+  return seed.contentKind === 'manga' || seed.remoteBookSeed?.contentKind === 'manga';
 }
 
 export interface ReadingEntrySnapshot {
@@ -192,6 +197,7 @@ export class ReadingEntryPreparation {
     let complete = true;
     const prepareTargets = async (seeds: ReadingEntrySeed[], neighborOffset: number): Promise<void> => {
       for (const seed of seeds) {
+        if (isMangaEntrySeed(seed)) continue;
         const targetKey = this.key(seed.sourceId, seed.bookId);
         const offsetBit = 1 << (neighborOffset + 3);
         if (((this.persistedTargets.get(targetKey)?.offsets ?? 0) & offsetBit) !== 0) continue;
@@ -243,10 +249,11 @@ export class ReadingEntryPreparation {
     const prioritySeeds = this.visibleSeeds.slice();
     await prepareTargets(prioritySeeds, 0);
     if (!current()) return;
-    const seeds = this.persistedSeeds ?? await loadSeeds(current);
-    if (seeds === undefined || !current()) return;
+    const loadedSeeds = this.persistedSeeds ?? await loadSeeds(current);
+    if (loadedSeeds === undefined || !current()) return;
+    const seeds = loadedSeeds.filter((seed: ReadingEntrySeed): boolean => !isMangaEntrySeed(seed));
     if (this.persistedSeeds === undefined) this.persistedSeeds = seeds.map((seed: ReadingEntrySeed): ReadingEntrySeed =>
-      ({ sourceId: seed.sourceId, bookId: seed.bookId }));
+      ({ sourceId: seed.sourceId, bookId: seed.bookId, contentKind: seed.contentKind ?? seed.remoteBookSeed?.contentKind }));
     const prioritized = new Set(prioritySeeds.map((seed: ReadingEntrySeed): string => this.key(seed.sourceId, seed.bookId)));
     // Every book's current target still precedes every optional neighbour.
     for (const neighborOffset of [0, 1, -1, 2, -2, 3, -3]) {
@@ -265,6 +272,7 @@ export class ReadingEntryPreparation {
     if (this.closed) return;
     const selected: Map<string, ReadingEntrySeed> = new Map();
     for (const seed of seeds) {
+      if (isMangaEntrySeed(seed)) continue;
       if (selected.size >= VISIBLE_BOOK_LIMIT) break;
       if (seed.sourceId.trim().length === 0 || seed.bookId.trim().length === 0) continue;
       const key = this.key(seed.sourceId, seed.bookId);
@@ -610,6 +618,7 @@ export class ReadingEntryPreparation {
 
   private async prepare(seed: ReadingEntrySeed, isCurrent: () => boolean,
     onAcquired: () => void): Promise<ReadingEntrySnapshot | undefined> {
+    if (isMangaEntrySeed(seed)) return undefined;
     let remoteSession: RemoteReadingSession | undefined;
     const coordinator = this.runtime.bookAcquisitions?.();
     // All gateway requests use the existing coordinator's background lane.
@@ -672,7 +681,7 @@ export class ReadingEntryPreparation {
       if (!Array.isArray(pending.data['pending']) || pending.data['pending'].length > 0 || !isCurrent()) return undefined;
       remoteSession = await coordinator.acquireBook(remoteSeed,
         { isCurrent, canDispatch: isCurrent }, 'background');
-      if (!isCurrent()) return undefined;
+      if (!isCurrent() || remoteSession.contentKind === 'manga') return undefined;
       // A prior foreground handoff is not this preparation's chapter. Avoid
       // retaining another body through a nested session snapshot.
       remoteSession = { ...remoteSession, preparedChapter: undefined };

@@ -64,10 +64,10 @@ function checkRenderWiring(text) {
     'row-height updates must carry a lifecycle generation');
   assert.match(text, /private scheduleRowHeightFlush\(\): void \{[\s\S]*?setTimeout\(\(\): void => \{/,
     'row-height extent writes must be deferred to the next turn');
-  assert.equal((text.match(/\.childrenMainSize\(this\.itemSizes\)/g) ?? []).length, 1,
-    'the actual List receives exactly one shared extent container');
-  assert.equal((text.match(/\.height\(this\.rowHeight\)/g) ?? []).length, 1,
-    'materialized ListItem height uses the same source as virtual extent');
+  assert.equal((text.match(/\.childrenMainSize\(this\.naturalRowHeight \? undefined : this\.itemSizes\)/g) ?? []).length, 1,
+    'the text List receives one shared extent container; manga natural rows omit it');
+  assert.equal((text.match(/\.height\(this\.naturalRowHeight \? undefined : this\.rowHeight\)/g) ?? []).length, 1,
+    'text materialized height uses its virtual extent; manga titles can wrap naturally');
   assert.match(text, /LazyForEach\(this\.dataSource/,
     'extent correction must preserve lazy rows and a notified data source');
 }
@@ -107,7 +107,7 @@ assert.throws(() => checkLifecycle(loadList(source.replace(
 assert.throws(() => checkLifecycle(loadList(source.replace(
   'this.itemSizes.childDefaultSize = initialSize;', 'this.itemSizes.childDefaultSize = 40;'))),
   'missing initial Quick extent synchronization is detected');
-assert.throws(() => checkRenderWiring(source.replace('.childrenMainSize(this.itemSizes)', '')),
+assert.throws(() => checkRenderWiring(source.replace('.childrenMainSize(this.naturalRowHeight ? undefined : this.itemSizes)', '')),
   'disconnected native List extent is detected');
 
 console.log('reader directory extent: production lifecycle + wiring passed (not native virtualization/anchor acceptance)');

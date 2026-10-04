@@ -209,6 +209,7 @@ export class BookshelfProjectionOwner {
   private diagnose(binding: BookshelfProjectionBinding, error: Error): void { this.deliver(binding, (): void => binding.failed?.(error)); }
   private copyName(book: ShelfBook, sourceName: string): ShelfBook {
     const copy: ShelfBook = { sourceId: book.sourceId, sourceName, bookId: book.bookId, title: book.title, author: book.author, addedAt: book.addedAt };
+    if (book.contentKind !== undefined) copy.contentKind = book.contentKind;
     if (book.kind !== undefined) copy.kind = book.kind;
     if (book.coverUrl !== undefined) copy.coverUrl = book.coverUrl;
     if (book.intro !== undefined) copy.intro = book.intro;

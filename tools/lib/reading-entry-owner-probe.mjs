@@ -24,6 +24,7 @@ const readingEvidence=await import('../../entry/src/main/ets/features/reading/Re
 const position=await import('../../entry/src/main/ets/features/reading/RemoteReadingPositionMigration.ts');
 const content=await import('../../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
 const bookmarks=await import('../../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts');
+const mangaPresentation=await import('../../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
 const {ReadingOfflineGateway}=await import('../../entry/src/main/ets/features/reading/ReadingOfflineGateway.ts');
 export const {BookAcquisitionCoordinator}=await import('../../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
 export const {ReadingEntryPreparation}=await import('../../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
@@ -43,7 +44,10 @@ function emit(path,name,deps,source=read(path)){
  const exports={};new Function('exports',...Object.keys(deps),result.outputText)(exports,...Object.values(deps));return exports[name];
 }
 const common={ReaderRuntimeOwner:Runtime,...sdk,...errors,...receipt,...evidence,...policy,...category,...importFailure,...local,...remote,
- ...readingEvidence,...position,...content,...bookmarks,ReadingOfflineGateway,hilog:{warn(){},error(){},info(){}}};
+ ...readingEvidence,...position,...content,...bookmarks,...mangaPresentation,ReadingOfflineGateway,hilog:{warn(){},error(){},info(){}}};
+const MangaSessionGateway=emit('features/manga/MangaSessionGateway.ts','MangaSessionGateway',common);
+const MangaResourceGateway=emit('features/manga/MangaResourceGateway.ts','MangaResourceGateway',common);
+const MangaAdmissionGateway=emit('features/manga/MangaAdmissionGateway.ts','MangaAdmissionGateway',{...common,MangaSessionGateway,MangaResourceGateway});
 const ReaderCoreGateway=emit('app/ReaderCoreGateway.ts','ReaderCoreGateway',common);
 const LocalBookImportGateway=emit('features/bookshelf/LocalBookImportGateway.ts','LocalBookImportGateway',{...common,ReaderCoreGateway});
 const BookshelfFlowGateway=emit('features/bookshelf/BookshelfFlowGateway.ts','BookshelfFlowGateway',{...common,ReaderCoreGateway,LocalBookImportGateway});
@@ -52,5 +56,5 @@ const BookAcquisitionProjectionGateway=emit('app/BookAcquisitionProjectionGatewa
 export const ReaderDirectoryHost=emit('features/reading/ReaderDirectoryHost.ts','ReaderDirectoryHost',common);
 const ReadingPrefetchHost=emit('features/reading/ReadingPrefetchHost.ts','ReadingPrefetchHost',common);
 export const compileHost=(source=read('features/reading/ReadingEntryHost.ts'),dependencies={})=>emit('features/reading/ReadingEntryHost.ts','ReadingEntryHost',
- {...common,ReaderCoreGateway,BookshelfFlowGateway,SourceGateway,BookAcquisitionProjectionGateway,ReaderDirectoryHost,ReadingPrefetchHost,...dependencies},source);
+ {...common,ReaderCoreGateway,BookshelfFlowGateway,SourceGateway,BookAcquisitionProjectionGateway,ReaderDirectoryHost,ReadingPrefetchHost,MangaAdmissionGateway,...dependencies},source);
 export const ProductionHost=compileHost();

@@ -34,6 +34,15 @@ export {
 export struct SourceSwitchPanel {
   @Prop state: SourceSwitchPanelState;
   @Prop currentSourceId: string = '';
+  @Prop bookTitle: string = '';
+  @Prop author: string = '';
+  @Prop coverUrl: string = '';
+  @Prop currentSourceName: string = '';
+  @Prop currentChapterTitle: string = '';
+  @Prop contentKind: string = 'text';
+  @Prop reduceMotion: boolean = false;
+  @Prop consumeTopInset: boolean = true;
+  onStop: () => void = (): void => {};
   onClose: () => void = (): void => {};
   onRetry: () => void = (): void => {};
   onRefresh: () => void = (): void => {};
@@ -45,6 +54,10 @@ export struct SourceSwitchPanel {
     SourceSwitchWindow({
       state: this.state,
       currentSourceId: this.currentSourceId,
+      bookTitle: this.bookTitle, author: this.author, coverUrl: this.coverUrl,
+      currentSourceName: this.currentSourceName, currentChapterTitle: this.currentChapterTitle,
+      contentKind: this.contentKind,
+      reduceMotion: this.reduceMotion, consumeTopInset: this.consumeTopInset, onStop: this.onStop,
       onClose: this.onClose,
       onRetry: this.onRetry,
       onRefresh: this.onRefresh,

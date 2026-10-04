@@ -17,6 +17,8 @@ import { ReaderDirectoryHost } from './ReaderDirectoryHost';
 import { ReadingPrefetchHost } from './ReadingPrefetchHost';
 import type { ReadingBookDetail } from './ReadingBookDetail';
 import type { ReadingEntrySeed } from './ReadingEntryPreparation';
+import { MangaAdmissionGateway } from '../manga/MangaAdmissionGateway';
+import { MangaBookPresentation } from '../manga/MangaBookPresentation';
 
 export interface ReadingEntrySnapshot {
   scopeId: number;
@@ -119,7 +121,7 @@ export class ReadingEntryHost {
     if (selection.sourceId !== LOCAL_SOURCE_ID) throw new Error('LOCAL_DETAIL_SOURCE_MISMATCH');
     const scope = this.begin(lease, { sourceId: selection.sourceId, sourceName: '本地书籍', bookId: selection.bookId,
       title: selection.title, author: selection.author, kind: selection.kind, coverUrl: selection.coverUrl,
-      intro: selection.intro, lastChapter: selection.lastChapter }, true, '正在读取本地目录…');
+      intro: selection.intro, lastChapter: selection.lastChapter, contentKind: selection.contentKind }, true, '正在读取本地目录…');
     if (resumeImmediately) return;
     const current = this.current(scope, lease);
     try {
@@ -135,7 +137,8 @@ export class ReadingEntryHost {
   }
 
   async openRemote(input: RemoteReadingEntryInput, lease: ReadingEntryLease): Promise<void> {
-    const seed = input.seed;
+    const seed: RemoteReadingBookSeed = { ...input.seed, contentKind: input.shelfSnapshot?.contentKind ??
+      input.validatedSession?.contentKind ?? input.seed.contentKind };
     const retained = input.shelfSnapshot !== undefined && this.sameBook(input.retainedSession, seed) ? input.retainedSession : undefined;
     const scope = this.begin(lease, this.detail(seed, input.sourceName), input.shelfSnapshot !== undefined,
       input.shelfSnapshot === undefined ? '正在获取在线目录…' : '正在读取本地目录…', seed, retained);
@@ -175,7 +178,7 @@ export class ReadingEntryHost {
       this.publish(scope, lease);
       const choiceGeneration = lease.membership().generation;
       const admissionCurrent = (): boolean => current() && (!group || choiceGeneration === lease.membership().generation);
-      const supplied = this.sameBook(input.validatedSession, seed) && preparedRemoteChapterMatches(
+      const supplied = input.validatedSession?.contentKind !== 'manga' && this.sameBook(input.validatedSession, seed) && preparedRemoteChapterMatches(
         input.validatedSession?.preparedChapter, input.validatedSession!, undefined, coordinator.readingProjectionRevision());
       const admission = supplied ? { session: input.validatedSession!, backgroundRefresh: undefined } : group ?
         await coordinator.acquireCandidateGroup(candidates, { isCurrent: admissionCurrent, requireReadable: true,
@@ -259,8 +262,27 @@ export class ReadingEntryHost {
     positionContext = captureRemotePositionContext(positionContext);
     const generation = ++this.probeGeneration, coordinator = this.runtime.bookAcquisitions();
     const revision = coordinator.readingProjectionRevision();
-    const ownerCurrent = (): boolean => current() && generation === this.probeGeneration && sameRemoteSessionEvidence(this.state.session, session);
+    const ownerCurrent = (): boolean => current() && generation === this.probeGeneration && (this.state.session?.contentKind ?? 'text') === (session.contentKind ?? 'text') &&
+      sameRemoteSessionEvidence(this.state.session, session);
     const probeCurrent = (): boolean => ownerCurrent() && revision === coordinator.readingProjectionRevision();
+    if (session.contentKind === 'manga') {
+      this.setVerdict('verifying', scope, lease);
+      // First-image admission proves this exact leading chapter. Manga resume
+      // is owned by MangaSessionGate, never a novel chapter/offset probe.
+      const entry = session.entries.find(row => row.navigable !== false && row.url.trim().length > 0);
+      if (entry === undefined || (preferredChapterIndex !== undefined && preferredChapterIndex !== entry.index)) {
+        this.setVerdict('contentUnavailable', scope, lease); return undefined;
+      }
+      try {
+        await new MangaAdmissionGateway(this.runtime).verify(session, probeCurrent);
+        if (!probeCurrent()) return undefined;
+        this.readableRevision = revision; this.setVerdict('readable', scope, lease);
+        return entry.index;
+      } catch (error) {
+        if (probeCurrent()) this.setVerdict(verdictForFailureKind(remoteReadingFailureKindOf(error)), scope, lease);
+        return undefined;
+      }
+    }
     const prepared = this.state.session?.preparedChapter;
     if (preparedRemoteChapterMatches(prepared, session, preferredChapterIndex, revision) &&
       preparedRemoteChapterPositionMatches(prepared, positionContext)) {
@@ -363,18 +385,20 @@ export class ReadingEntryHost {
         const snapshot = await new ReaderCoreGateway(this.runtime).loadShelfBook(book.sourceId, book.bookId);
         if (!current()) return;
         await this.openRemote({ seed: { sourceId: book.sourceId, bookId: book.bookId, detailUrl: book.bookId,
-          title: book.title, author: book.author, intro: book.intro, coverUrl: book.coverUrl, kind: book.kind, lastChapter: book.lastChapter },
+          title: book.title, author: book.author, intro: book.intro, coverUrl: book.coverUrl, kind: book.kind, lastChapter: book.lastChapter, contentKind: book.contentKind },
           sourceName: book.sourceName, shelfSnapshot: snapshot, retainAdmissionThroughProbe: true }, lease);
         return;
       }
+      const contentKind = row.contentKind ?? book.contentKind;
       const detail: ReadingBookDetail = { ...book, title: row.name ?? book.title, author: row.author ?? book.author,
         intro: row.intro ?? book.intro, coverUrl: row.coverUrl ?? book.coverUrl, kind: row.kind ?? book.kind,
-        lastChapter: row.latestChapterTitle ?? book.lastChapter };
+        lastChapter: row.latestChapterTitle ?? book.lastChapter, contentKind,
+        mangaPosition: contentKind === 'manga' ? MangaBookPresentation.get(book.sourceId, book.bookId) : undefined };
       this.state = { ...this.state, book: detail };
       const wasReadable = this.state.verdict === 'readable';
       if (previous !== undefined && previous.catalogVersion !== undefined && previous.contextVersion !== undefined &&
         facts.catalogVersion === previous.catalogVersion && facts.contextVersion === previous.contextVersion && facts.sourceVersion === previous.sourceVersion) {
-        const merged = copyRemoteReadingSession(previous); merged.book = this.remoteDetail(detail);
+        const merged = copyRemoteReadingSession(previous); merged.book = this.remoteDetail(detail); merged.contentKind = detail.contentKind ?? previous.contentKind;
         this.install(merged, wasReadable && facts.schemaVersion === 2 && facts.verificationCurrent === true ? revision : undefined, row);
         this.publish(intent.scopeId, lease);
         if (wasReadable && this.state.verdict === 'verifying') await this.probe(intent.scopeId);
@@ -382,7 +406,7 @@ export class ReadingEntryHost {
       }
       if (typeof facts.catalogAt !== 'number') { this.publish(intent.scopeId, lease); return; }
       const session = await new RemoteReadingFlowGateway(this.runtime).openCachedCatalogSession({ sourceId: book.sourceId,
-        bookId: book.bookId, detailUrl: book.bookId, title: detail.title, author: detail.author, sourceVersion: facts.sourceVersion }, current, true);
+        bookId: book.bookId, detailUrl: book.bookId, title: detail.title, author: detail.author, sourceVersion: facts.sourceVersion, contentKind: detail.contentKind }, current, true);
       if (!current()) return;
       if (revision !== this.runtime.bookAcquisitions().readingProjectionRevision()) { this.projectionPending ??= intent; return; }
       const merged = copyRemoteReadingSession(session); merged.book = this.remoteDetail(detail);
@@ -413,7 +437,8 @@ export class ReadingEntryHost {
       }
       const shelf = await new BookshelfFlowGateway(this.runtime, { readingState: 'all', sourceKind: 'all' }, true).loadAll(current, true);
       if (!current() || (shelf !== undefined && shelf.projectionRevision !== revision)) return undefined;
-      return shelf?.books.map(book => ({ sourceId: book.sourceId, bookId: book.bookId }));
+      return shelf?.books.filter(book => book.contentKind !== 'manga').map(book =>
+        ({ sourceId: book.sourceId, bookId: book.bookId, ...(book.contentKind === undefined ? {} : { contentKind: book.contentKind }) }));
     }, allowed).catch(error => { if (allowed()) { try { context.diagnostic(errorMessageOf(error)); } catch (_) {} } });
   }
   preparationVisibilityChanged(context: ReadingPreparationContext, shared?: ReadingSharedShelfSeeds): void {
@@ -424,11 +449,11 @@ export class ReadingEntryHost {
   }
   prepareVisible(books: ShelfBook[], context: ReadingPreparationContext, shared?: ReadingSharedShelfSeeds): void {
     if (!this.runtimeCurrent() || !context.isCurrent() || !context.shelfVisible() || context.readingActive() || !context.foreground()) return;
-    const entries: ReadingEntrySeed[] = books.map(book => book.sourceId === LOCAL_SOURCE_ID ?
-      { sourceId: book.sourceId, bookId: book.bookId, bookKind: book.kind } :
-      { sourceId: book.sourceId, bookId: book.bookId, bookKind: book.kind, remoteBookSeed: {
+    const entries: ReadingEntrySeed[] = books.filter(book => book.contentKind !== 'manga').map(book => book.sourceId === LOCAL_SOURCE_ID ?
+      { sourceId: book.sourceId, bookId: book.bookId, bookKind: book.kind, contentKind: book.contentKind } :
+      { sourceId: book.sourceId, bookId: book.bookId, bookKind: book.kind, contentKind: book.contentKind, remoteBookSeed: {
         sourceId: book.sourceId, bookId: book.bookId, detailUrl: book.bookId, title: book.title, author: book.author,
-        coverUrl: book.coverUrl, intro: book.intro, lastChapter: book.lastChapter } });
+        coverUrl: book.coverUrl, intro: book.intro, lastChapter: book.lastChapter, contentKind: book.contentKind } });
     this.runtime.readingEntryPreparations().setVisibleBooks(entries); this.runtime.readingEntryPreparations().setPaused(false);
     this.preparePersisted(context, shared);
     void this.runtime.getAppearanceStore().load().catch((): void => {});
@@ -445,11 +470,11 @@ export class ReadingEntryHost {
     this.publish(scope, lease); return scope;
   }
   private install(session: RemoteReadingSession | undefined, readableRevision?: number, projection?: BookAcquisitionDetailProjection): void {
-    const previous = this.state.session, same = sameRemoteSessionEvidence(previous, session);
+    const previous = this.state.session, same = sameRemoteSessionEvidence(previous, session) && (previous?.contentKind ?? 'text') === (session?.contentKind ?? 'text');
     if (!same) { this.state = { ...this.state, sessionGeneration: this.state.sessionGeneration + 1 }; this.probeGeneration += 1; }
     if (session === undefined) { this.state = { ...this.state, session: undefined }; this.readableRevision = -1; return; }
     const revision = this.runtime.bookAcquisitions().readingProjectionRevision();
-    const prepared = session.preparedChapter ?? (same ? previous?.preparedChapter : undefined);
+    const prepared = session.contentKind === 'manga' ? undefined : session.preparedChapter ?? (same ? previous?.preparedChapter : undefined);
     const valid = preparedRemoteChapterMatches(prepared, session, undefined, revision);
     let installed = session;
     if (prepared !== session.preparedChapter || (!valid && session.preparedChapter !== undefined)) {
@@ -457,7 +482,7 @@ export class ReadingEntryHost {
     }
     this.state = { ...this.state, session: installed };
     const facts = projection?.acquisition;
-    const confirmed = readableRevision === revision && facts?.schemaVersion === 2 && facts.verificationCurrent === true && facts.stale !== true &&
+    const confirmed = session.contentKind !== 'manga' && readableRevision === revision && facts?.schemaVersion === 2 && facts.verificationCurrent === true && facts.stale !== true &&
       projection?.origin === session.identity.sourceId && projection.bookUrl === session.identity.bookId &&
       session.sourceVersion !== undefined && session.catalogVersion !== undefined && session.contextVersion !== undefined &&
       facts.sourceVersion === session.sourceVersion && facts.catalogVersion === session.catalogVersion && facts.contextVersion === session.contextVersion &&
@@ -586,10 +611,12 @@ export class ReadingEntryHost {
   }
   private detail(seed: RemoteReadingBookSeed, name: string): ReadingBookDetail {
     return { sourceId: seed.sourceId, sourceName: name.trim() || seed.sourceId, bookId: seed.bookId, title: seed.title,
-      author: seed.author, kind: seed.kind, coverUrl: seed.coverUrl, intro: seed.intro, lastChapter: seed.lastChapter };
+      author: seed.author, kind: seed.kind, coverUrl: seed.coverUrl, intro: seed.intro, lastChapter: seed.lastChapter,
+      contentKind: seed.contentKind, mangaPosition: seed.contentKind === 'manga' ? MangaBookPresentation.get(seed.sourceId, seed.bookId) : undefined };
   }
   private sessionDetail(session: RemoteReadingSession, name: string): ReadingBookDetail {
-    return { sourceId: session.identity.sourceId, sourceName: name, bookId: session.identity.bookId, ...this.remoteDetail(session.book) };
+    return { sourceId: session.identity.sourceId, sourceName: name, bookId: session.identity.bookId, ...this.remoteDetail(session.book), contentKind: session.contentKind,
+      mangaPosition: session.contentKind === 'manga' ? MangaBookPresentation.get(session.identity.sourceId, session.identity.bookId) : undefined };
   }
   private remoteDetail(book: { title: string; author: string; intro?: string; coverUrl?: string; kind?: string; lastChapter?: string }):
     { title: string; author: string; intro?: string; coverUrl?: string; kind?: string; lastChapter?: string } {

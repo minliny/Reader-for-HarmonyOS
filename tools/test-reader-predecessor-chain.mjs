@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 // A source root override permits a read-only audit of an integrator's WIP.
 // Normal canonical execution always reads this checkout's production source.
@@ -26,17 +27,19 @@ function loadRuntime(productionSource=source) {
   const members=declaration.members.filter(node=>ts.isConstructorDeclaration(node)||ts.isPropertyDeclaration(node)||methods.has(node.name?.getText(tree)))
     .map(node=>node.getText(tree)).join('\n');
   const events=[];
+  const MetadataBody=productionMotionMethods(new URL('entry/src/main/ets/app/ReadingBodyImageHost.ts',sourceRoot),['setMangaMetadataInspector']);
+  const body=Object.assign(new MetadataBody(),{mangaMetadataGeneration:0,releaseAllDisplayFiles(){events.push('display.release');}});
   class PlatformHost {constructor(context){this.context=context;}getContext(){return this.context;}close(){events.push('platform.close');}}
   const deps={ReaderHostRegistry:PlatformHost,HarmonyTtsHostRouter:PlatformHost,HarmonySystemTtsHost:PlatformHost,
     HarmonyHttpTtsHost:PlatformHost,HarmonyTtsMediaSession:PlatformHost,HarmonyTtsBackgroundSession:PlatformHost,
     LocalEpubResourceHost:PlatformHost,ReadingImageDiskCache:PlatformHost,
-    ReadingBodyImageHost:{setDisplayCacheDir(){},instance:{releaseAllDisplayFiles(){events.push('display.release');}}},
+    ReadingBodyImageHost:{setDisplayCacheDir(){},instance:body},
     ReaderStartupTrace:{current:()=>undefined},hilog:{warn(){}},LOG_DOMAIN:0,errorMessageOf:error=>error.message};
   const Runtime=new Function(...Object.keys(deps),`${stripTypeScriptTypes(`class ReaderRuntimeOwner { ${members} }`)};return ReaderRuntimeOwner;`)(...Object.values(deps));
   // The native startup body has separate capability/restore tests. This seam
   // observes whether the real start/predecessor methods admit it at all.
   Runtime.prototype.startRuntime=async function(){events.push(`native.open:${this.host.context.id}`);this.state='ready';};
-  return{Runtime,events};
+  return{Runtime,events,body};
 }
 const context=id=>({id,cacheDir:'/controlled/cache'});
 function readyNative(owner,events,flush) {
@@ -46,12 +49,16 @@ function readyNative(owner,events,flush) {
   owner.host.setResponseAssetBridge=()=>{};
 }
 async function threeGenerations(productionSource=source) {
-  const{Runtime,events}=loadRuntime(productionSource),gate=deferred(),first=Runtime.install(context('first'));
+  const{Runtime,events,body}=loadRuntime(productionSource),gate=deferred(),first=Runtime.install(context('first'));
   readyNative(first,events);first.sourceSupplyTask=gate.promise;
   const closingFirst=first.close();const firstObserved=closingFirst.catch(()=>{});
+  assert.equal(body.mangaMetadataGeneration,1,'actual metadata setter ran before installing the second owner');
+  assert.ok(first.closeTask instanceof Promise,'first close entered the actual predecessor barrier');
   const second=Runtime.install(context('second'));
   // In particular, no second.start(): this is the omission in the old chain.
   const closingSecond=second.close();const secondObserved=closingSecond.catch(()=>{});
+  assert.equal(body.mangaMetadataGeneration,2);
+  assert.ok(second.closeTask instanceof Promise,'unstarted second still publishes its actual close barrier');
   const third=Runtime.install(context('third')),waiting=third.waitForPredecessorClose(),starting=third.start();
   let admitted=false;const waited=waiting.then(()=>{admitted=true;});const started=starting.catch(()=>{});
   try{

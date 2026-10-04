@@ -7,7 +7,8 @@ import { SearchBookProjection, type SearchBookPatch } from './SearchBookProjecti
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import {
   classifyReaderSource,
-  readerSourceCategoryIsText,
+  readerSourceCategoryIsReadable,
+  readerMediaIdentity,
   type ReaderSourceCategory,
 } from '../source/ReaderSourceCategory';
 
@@ -188,7 +189,7 @@ export class SearchGateway {
     // callers represent the legacy text-source contract; the source-list
     // decoder always supplies an explicit category for real app traffic.
     const sourceCategory = source.category ?? 'novel';
-    if (!readerSourceCategoryIsText(sourceCategory)) {
+    if (!readerSourceCategoryIsReadable(sourceCategory)) {
       return { ok: false, error: `source category ${sourceCategory} is not supported by the novel reader` };
     }
     const requestId = searchRequestId !== undefined && searchRequestId.length > 0 ?
@@ -216,6 +217,10 @@ export class SearchGateway {
         identity.sourceRuleVersion = data['sourceVersion'] as string;
       }
       const rawBooks = data['books'];
+      if ((sourceCategory === 'comic' && data['contentKind'] !== 'manga') ||
+        (sourceCategory === 'novel' && data['contentKind'] !== undefined && data['contentKind'] !== 'text')) {
+        return { ok: false, error: 'book.search returned a mismatched contentKind' };
+      }
       if (!Array.isArray(rawBooks)) {
         return { ok: false, error: 'book.search returned invalid books' };
       }
@@ -567,8 +572,8 @@ function decodeBookSearchResult(
     searchRequestId: identity.searchRequestId,
     sourceRuleVersion: identity.sourceRuleVersion,
     category: source.category ?? 'novel',
-    groupKey: bookTitleAuthorKey(requiredNonBlankString(book, 'title'), optionalString(book, 'author') ?? '',
-      authorIdentity, identity.sourceRuleVersion),
+    groupKey: readerMediaIdentity(source.category === 'comic', bookTitleAuthorKey(requiredNonBlankString(book, 'title'), optionalString(book, 'author') ?? '',
+      authorIdentity, identity.sourceRuleVersion)),
     title: requiredNonBlankString(book, 'title'),
     author: optionalString(book, 'author') ?? '',
     variables: decodeBookSearchVariables(book['variables']),

@@ -18,6 +18,8 @@ const acquisition = await import('../../entry/src/main/ets/features/common/BookA
 const category = await import('../../entry/src/main/ets/features/source/ReaderSourceCategory.ts');
 const scheduler = await import('../../entry/src/main/ets/app/BookRequestScheduler.ts');
 const { ReaderWriteEvidence } = await import('../../entry/src/main/ets/app/ReaderWriteEvidence.ts');
+const { MangaSessionGateway } = await import('../../entry/src/main/ets/features/manga/MangaSessionGateway.ts');
+const { MangaSourceSwitchGateway } = await import('../../entry/src/main/ets/features/manga/MangaSourceSwitchGateway.ts');
 const repo=fileURLToPath(new URL('../../',import.meta.url)),siblingCore=resolve(repo,'../Reader-Core-Native');
 const coreRoot=process.env.READER_SOURCE_SWITCH_CORE_ROOT??(existsSync(resolve(siblingCore,'bindings/harmony/sdk/reader_core.ts'))
   ?siblingCore:resolve(repo,'../../Reader-Core-Native'));
@@ -65,7 +67,7 @@ export function fixture(options={},productionSource=hostSource) {
   const intentClasses=compile(read('features/source/SourceSwitchIntentStore.ts'),'{SourceSwitchIntentStore,SourceSwitchIntentRecoveryError}',
     {...common,SourceSwitchGateway:Gateway,util:{generateRandomUUID:()=> `00000000-0000-4000-8000-${String(++uuid).padStart(12,'0')}`},fileIo,replaceReaderAtomicSnapshot});
   const ProductionHost=compile(productionSource,'SourceSwitchHost',{...common,...gatewayExports,SourceSwitchGateway:Gateway,
-    ReaderCoreGateway:Core,ReadingSessionFlowGateway,RemoteReadingFlowGateway,...content,ReaderWriteEvidence,...intentClasses});
+    ReaderCoreGateway:Core,ReadingSessionFlowGateway,RemoteReadingFlowGateway,...content,ReaderWriteEvidence,MangaSessionGateway,MangaSourceSwitchGateway,...intentClasses});
   const runtime={closed:false,getUIAbilityContext:()=>({filesDir:'/private-files'}), bookAcquisitions:()=>({sourceRegistryRevision:()=>1,
     subscribe(callback){subscriptions.add(callback);return()=>subscriptions.delete(callback);},
     async acquireBook(seed,admission){calls.push(['acquire',seed]);if(options.acquireGate)await options.acquireGate.promise;
@@ -124,6 +126,7 @@ export function fixture(options={},productionSource=hostSource) {
       }
       assert.fail(`unhandled actual gateway request ${method}`);
     }};
+  options.configureRuntime?.(runtime,calls);
   currentRuntime=runtime;
   const host=options.shared?ProductionHost.forRuntime(runtime):new ProductionHost(runtime),context={query:{sourceId:'old',bookId:'book',bookName:'Book',author:'Writer',
     currentChapterIndex:0,currentChapterTitle:'Chapter 1'},inBookshelf:options.preview!==true,

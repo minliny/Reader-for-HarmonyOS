@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { bookshelfCatalogHost, catalogIndexMethods } from './lib/bookshelf-catalog-host-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { ProductionHost as ReadingEntryHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
+import { ProductionHost as ReadingEntryHost, setRuntime, ReadingEntryPreparation } from './lib/reading-entry-owner-probe.mjs';
 
 const index = new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url);
 const pause = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -171,4 +171,36 @@ for (const options of [{ failFull: true }, { fullRevision: 'rev-2' }]) {
   assert.deepEqual(f.scans, [], 'actual Core admission rejects a retired owner before any membership RPC');
 }
 
+{
+  const f = fixture();
+  f.books[1].contentKind = 'manga';
+  f.page.scheduleBookshelfBackgroundRefresh(f.page.shelfBooks);
+  f.page.preparePersistedShelfBooks();
+  await until(() => !f.page.bookshelfBackgroundRefreshRunning);
+  const admission = f.admissions[0];
+  const seeds = await admission.loadSeeds(admission.allowed);
+  assert.deepEqual(seeds, [
+    { sourceId: 'local', bookId: 'visible' },
+    { contentKind: 'manga', sourceId: 'remote', bookId: 'offscreen' },
+  ], 'real complete catalog-owner seed mapping preserves Core manga kind without changing legacy shape');
+  assert.deepEqual(f.scans, [{ membershipOnly: false }]);
+  const prepared = [], request = f.owner.request;
+  f.owner.supportsCoreCapability = capability => capability === 'reading.entry.prepare.v1' || capability === 'bookshelf.pageProjection.v1';
+  f.owner.request = async (method, params, options) => {
+    if (method !== 'reading.entry.prepare') return request(method, params, options);
+    assert.equal(options.shouldCancel(), false);
+    prepared.push(params);
+    return { data: { sourceId: params.sourceId, bookId: params.bookId,
+      kind: 'ready', reason: 'prepared', chapterIndex: 3 + params.neighborOffset } };
+  };
+  const actual = new ReadingEntryPreparation(f.owner, false);
+  await actual.preparePersistedShelf('rev-1', admission.loadSeeds, admission.allowed);
+  assert.equal(prepared.length, 7, 'the existing actual preparation owner still prepares all seven text offsets');
+  assert.ok(prepared.every(params => params.sourceId === 'local' && params.bookId === 'visible'),
+    'typed manga from the real shared catalog scan never becomes text preparation');
+  assert.equal(f.scans.length, 1, 'actual preparation reuses the same admitted complete scan');
+  actual.close();
+}
+
 console.log('bookshelf shared scan: PASS (single scan, fallback, revision fencing, bounded retry)');
+console.log('PASS real shared catalog manga kind -> actual text-preparation exclusion; exact legacy seeds retained');
