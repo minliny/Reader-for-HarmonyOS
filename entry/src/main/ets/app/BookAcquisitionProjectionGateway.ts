@@ -56,10 +56,11 @@ function flag(row: JsonObject, field: string): boolean | undefined {
 
 function contentKind(row: JsonObject): 'text' | 'manga' | 'audio' | undefined {
   const value = text(row, 'contentKind');
-  if (value !== undefined && value !== 'text' && value !== 'manga' && value !== 'audio') {
-    throw new Error('Invalid cached book contentKind');
-  }
-  return value;
+  if (value === undefined) return undefined;
+  if (value === 'text') return 'text';
+  if (value === 'manga') return 'manga';
+  if (value === 'audio') return 'audio';
+  throw new Error('Invalid cached book contentKind');
 }
 
 /** This gateway supplies typed cache data, never an inferred write receipt. */

@@ -452,7 +452,6 @@ struct Index {
   @State private offlineOperationActive: boolean = false;
   @State private directoryPresentationGeneration: number = 0;
   private mangaShelfMutationAfterExit: string | undefined = undefined;
-  private shelfContentFilter: string = 'all';
   private mangaProjectionQueue: MangaPositionProjectionJob[] = [];
   private mangaProjectionWorkers: number = 0;
   private mangaProjectionGeneration: number = 0;
@@ -3899,27 +3898,6 @@ struct Index {
     return message;
   }
 
-  private showChapterDownloadFailure(error: Error): void {
-    const text = errorMessageOf(error);
-    const failure = normalizeReadingOfflineMaterializationError(error instanceof Error ? error : new Error(text));
-    const category = diagnosticCodeOf(text);
-    if (failure.code === 'cancelled' ||
-      (failure.code === 'host_materialization_failed' && category === 'CANCELLED')) return;
-    // Present only fixed product copy; raw Host/source messages can contain
-    // signed URLs, headers or credentials and remain in private diagnostics.
-    let message = '请稍后重试。';
-    if (failure.code === 'storage_full' || category === 'NO_SPACE') {
-      message = '存储空间不足，请释放空间后重试。';
-    } else if (isDomainResolutionFailure(error)) {
-      message = '当前网络无法解析书源域名，请检查代理或网络连接后重试。';
-    } else if (isNetworkEnvironmentFailure(error) || category === 'NETWORK') {
-      message = '当前网络无法完成下载，请检查代理或网络连接后重试。';
-    } else if (category === 'TIMEOUT') {
-      message = '下载请求超时，请稍后重试。';
-    }
-    this.showOfflineDownloadFeedback(`本章下载失败：${message}`);
-  }
-
   private showOfflineDownloadFeedback(message: string): void {
     try {
       this.getUIContext().getPromptAction().showToast({ message });
@@ -5436,7 +5414,7 @@ struct Index {
   }
 
   private shelfFilter(): BookshelfFilter {
-    return { readingState: this.shelfReadingFilter, sourceKind: this.shelfSourceFilter, contentKind: this.shelfContentFilter };
+    return { readingState: this.shelfReadingFilter, sourceKind: this.shelfSourceFilter };
   }
 
   private isCurrentBookshelfPresentation(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number): boolean {

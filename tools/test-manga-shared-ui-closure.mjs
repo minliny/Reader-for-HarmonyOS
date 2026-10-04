@@ -9,6 +9,31 @@ import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThem
 
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
 const read = name => readFileSync(file(name), 'utf8');
+
+// The R9 full ArkTS build exposed missing resources after the leaf builders
+// passed. Verify the actual resource files used by all three manga builders.
+const sheetResourceNames = [
+  ...['vertical', 'horizontal', 'sun', 'moon'].flatMap(name =>
+    [name, `${name}_theme_night`, `${name}_active`]),
+  ...['close', 'search', 'locate', 'check', 'vertical_accent', 'chevron_down', 'chevron_right']
+    .flatMap(name => [name, `${name}_theme_night`]),
+].map(name => `manga_sheet_${name}`).sort();
+assert.equal(sheetResourceNames.length, 26);
+const sheetResourceReferences = [
+  'features/manga/MangaReadingSurface.ets',
+  'features/manga/MangaReadingDirectoryFallback.ets',
+  'features/reading/ReaderDirectoryNavigationList.ets',
+].flatMap(name => [...read(name).matchAll(/app\.media\.(manga_sheet_[A-Za-z0-9_]+)/g)]
+  .map(match => match[1]));
+assert.deepEqual([...new Set(sheetResourceReferences)].sort(), sheetResourceNames,
+  'all manga sheet resource literals resolve to the preserved 26 SVG variants');
+for (const name of sheetResourceNames) {
+  const svg = readFileSync(new URL(`../entry/src/main/resources/base/media/${name}.svg`, import.meta.url), 'utf8');
+  assert.match(svg, /<svg\b[^>]*\bxmlns="http:\/\/www\.w3\.org\/2000\/svg"/, `${name}: real SVG root`);
+  assert.match(svg, /\bviewBox="0 0 15 15"/, `${name}: preserved Radix viewBox`);
+  assert.match(svg, /<path\b[^>]*\bd="[^"]+"/, `${name}: nonempty upstream path`);
+  assert.match(svg, /<\/svg>\s*$/, `${name}: complete SVG asset`);
+}
 const defaults = settings.createDefaultReaderSettingsSnapshot();
 for (const mangaDirection of ['vertical', 'horizontal'])
 for (const mangaFit of ['source', 'width', 'contain'])
@@ -201,4 +226,4 @@ assert.deepEqual(retry.createWithLabel, ['重试核对', { type: 'normal' }]); r
     assert.throws(() => verifyPaint(bad), /same production Row paint setter/, 'missing/wrong actual native apply is rejected');
   }
 }
-console.log('PASS shared manga UI closure: optional settings/copy, novel captions, full native directory viewport and composed offsets, actual SDK panel/window props, preserved text surface, current candidate identity and failure reconciliation; one real row paint setter preserves novel/manga day/night/current/group bounds and colors with missing/wrong-apply negatives');
+console.log('PASS shared manga UI closure: all 26 actual manga sheet SVG resources, optional settings/copy, novel captions, full native directory viewport and composed offsets, actual SDK panel/window props, preserved text surface, current candidate identity and failure reconciliation; one real row paint setter preserves novel/manga day/night/current/group bounds and colors with missing/wrong-apply negatives');
