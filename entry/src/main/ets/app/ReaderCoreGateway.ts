@@ -366,7 +366,7 @@ export class ReaderCoreGateway {
     const contentKind = this.optionalString(book, 'contentKind');
     if (contentKind !== undefined && contentKind !== 'text' && contentKind !== 'manga' && contentKind !== 'audio')
       throw new Error('bookshelf returned an invalid contentKind');
-    if (contentKind !== undefined) decoded.contentKind = contentKind;
+    if (contentKind !== undefined) decoded.contentKind = contentKind as 'text' | 'manga' | 'audio';
     const lastChapter = this.optionalString(book, 'lastChapter');
     const lastReadAt = this.optionalNumber(book, 'lastReadAt');
     const group = this.optionalString(book, 'group');
