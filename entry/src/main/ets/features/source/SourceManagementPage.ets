@@ -247,7 +247,7 @@ export struct SourceManagementPage {
       onBack: (): void => this.onBack(),
     }) {
       ReaderIconButton({ icon: this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more'),
-        boxSize: 44, iconSize: 20, radius: 22, onTap: (): void => this.onOpenTools() });
+        specId: 'toolbar-compact', onTap: (): void => this.onOpenTools() });
     }
   }
 

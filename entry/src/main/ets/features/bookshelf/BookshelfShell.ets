@@ -217,9 +217,7 @@ export struct BookshelfShell {
       Row({ space: 18 }) {
         ReaderIconButton({
           icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_search_theme_night') : $r('app.media.bookshelf_search')),
-          boxSize: 44,
-          iconSize: 24,
-          radius: 22,
+          specId: 'toolbar-standard',
           onTap: (): void => this.onSearchRequested(),
         });
 
@@ -228,9 +226,7 @@ export struct BookshelfShell {
         ForEach([this.navigationGeneration], (_generation: number) => {
           ReaderIconButton({
             icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more')),
-            boxSize: 44,
-            iconSize: 44,
-            radius: 22,
+            specId: 'toolbar-wide',
             onTap: this.moreOpenAction(this.temporaryBackIdentity),
           })
             .accessibilityText('更多')

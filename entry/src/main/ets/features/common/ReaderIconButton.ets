@@ -1,26 +1,25 @@
 import { ReaderPressFeedback } from './ReaderPressFeedback';
+import { ReaderIconButtonSpecId, resolveReaderIconButtonSpec } from './ReaderControlSpecs';
 
-// 方形/圆形图标按钮: boxSize 命中区内居中一枚 iconSize 图标, radius 控制圆角
-// (0 = 方形, boxSize/2 = 圆形), 点击回调可选。
-// 供 Search 返回、Source Mgmt 顶栏、BookshelfEmpty/Discover 动作、Bookshelf 顶栏按钮复用。
+// Actual icon/hit/press geometry belongs to one finite current-UI recipe.
+// Pages supply the icon and their existing captured business action only.
 @Component
 export struct ReaderIconButton {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop icon: Resource;
-  @Prop boxSize: number;
-  @Prop iconSize: number;
-  @Prop radius: number = 0;
+  @Prop specId: ReaderIconButtonSpecId = 'toolbar-standard';
   onTap: () => void = (): void => {};
 
   build() {
     Stack({ alignContent: Alignment.Center }) {
       Image(this.icon)
-        .width(this.iconSize)
-        .height(this.iconSize);
+        .width(resolveReaderIconButtonSpec(this.specId).iconSize)
+        .height(resolveReaderIconButtonSpec(this.specId).iconSize);
     }
-    .width(this.boxSize)
-    .height(this.boxSize)
-    .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, this.radius, 12))
+    .width(resolveReaderIconButtonSpec(this.specId).boxSize)
+    .height(resolveReaderIconButtonSpec(this.specId).boxSize)
+    .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme,
+      resolveReaderIconButtonSpec(this.specId).radius, resolveReaderIconButtonSpec(this.specId).pressedRadius))
     .onClick((): void => this.onTap());
   }
 }

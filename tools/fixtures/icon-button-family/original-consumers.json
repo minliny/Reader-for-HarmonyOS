@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "sourceHead": "db29173bdfe244f2790829365bc33103bd1e9749",
+  "iconSourceSha256": "c202bd70a60ec9f59975a008828a3951f6ee546acd87afa8c8be636870f27647",
+  "methods": [
+    {
+      "file": "bookshelf/BookshelfShell.ets",
+      "name": "topBar",
+      "source": "@Builder\n  private topBar() {\n    AppTopBar({ title: '书架' }) {\n      Row({ space: 18 }) {\n        ReaderIconButton({\n          icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_search_theme_night') : $r('app.media.bookshelf_search')),\n          boxSize: 44,\n          iconSize: 24,\n          radius: 22,\n          onTap: (): void => this.onSearchRequested(),\n        });\n\n        // V1 ordinary callbacks are constructor inputs. Only this temporary\n        // trigger gets a fresh identity; bookshelf content/scroll stay mounted.\n        ForEach([this.navigationGeneration], (_generation: number) => {\n          ReaderIconButton({\n            icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more')),\n            boxSize: 44,\n            iconSize: 44,\n            radius: 22,\n            onTap: this.moreOpenAction(this.temporaryBackIdentity),\n          })\n            .accessibilityText('更多')\n            .onAreaChange((_oldValue: Area, newValue: Area): void => {\n              this.moreAnchorRight = Number(newValue.globalPosition.x) + Number(newValue.width);\n              this.moreAnchorBottom = Number(newValue.globalPosition.y) + Number(newValue.height);\n            });\n        }, (generation: number): string => generation.toString());\n      }\n    }\n  }",
+      "sha256": "5a39b96777b25ad22030afc106c78d425c22b4638c024474d0977133dc9921db"
+    },
+    {
+      "file": "discover/DiscoverPage.ets",
+      "name": "homeTopBar",
+      "source": "@Builder\n  private homeTopBar() {\n    AppTopBar({ title: '发现' }) {\n      ReaderIconButton({\n        icon: (this.appThemeScheme === 'night' ? $r('app.media.discover_refresh_theme_night') : $r('app.media.discover_refresh')),\n        boxSize: 44,\n        iconSize: 24,\n        radius: 22,\n        onTap: (): void => this.onRefresh(),\n      });\n    }\n  }",
+      "sha256": "6d07d3532ccc49709935d93417e4739993647bfe76f3effe6b1d59ea95ee7896"
+    },
+    {
+      "file": "search/SearchPage.ets",
+      "name": "searchBar",
+      "source": "@Builder\n  private searchBar() {\n    Row({ space: TOK_SPACE_CONTROL_INLINE }) {\n      ReaderIconButton({ icon: (this.appThemeScheme === 'night' ? $r('app.media.search_back_theme_night') : $r('app.media.search_back')),\n        boxSize: 32, iconSize: 20, radius: 16, onTap: (): void => this.onBack() });\n\n      Row() {\n        ReaderSearchField({\n          variant: 'bookPage',\n          mode: 'submit',\n          focusOnAppear: this.focusInputOnAppear,\n          text: this.keyword,\n          placeholder: '搜索书名、作者...',\n          accessibilityLabel: '搜索书名或作者',\n          isTablet: this.isTablet,\n          clearable: true,\n          submitEnabled: this.presentation.kind !== 'loading',\n          onTextChange: (value: string): void => {\n            this.keyword = value;\n            this.viewState.keywordDraft = value;\n          },\n          onSubmit: (): void => this.submitSearch(),\n        });\n      }\n      .layoutWeight(1)\n      .height(this.isTablet ? 40 : 36)\n      .alignItems(VerticalAlign.Center);\n\n      // The search action doubles as the ACQ-02 stop control: while a sweep\n      // is live the pill reads 停止 and stops the sweep; otherwise it submits.\n      // Loading additionally inlines a 13px spinner and submitSearch prevents\n      // re-entry.\n      ReaderButton({ scheme: this.appThemeScheme, specId: this.isTablet ? 'search-field-wide' : 'search-field-phone',\n        label: this.isSweeping() ? '停止' : '搜索', isBusy: this.isSweeping(), actionEnabled: this.canSubmit(),\n        leading: (): void => this.searchActionLeading(),\n        onAction: (): void => { if (this.isSweeping()) this.onStop(); else this.submitSearch(); } });\n    }\n    .width(this.contentFrame().width)\n    .height(this.isTablet ? 56 : 52)\n    .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: TOK_SPACE_XS })\n    .alignItems(VerticalAlign.Center)\n    .hitTestBehavior(HitTestMode.Transparent);\n  }",
+      "sha256": "820b5520af42993dffe1f93464db9d9c491fd042650e4eb0630369db96ff84c6"
+    },
+    {
+      "file": "source/SourceManagementPage.ets",
+      "name": "backBar",
+      "source": "@Builder\n  private backBar() {\n    PageBackBar({\n      title: '书源管理',\n      onBack: (): void => this.onBack(),\n    }) {\n      ReaderIconButton({ icon: this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more'),\n        boxSize: 44, iconSize: 20, radius: 22, onTap: (): void => this.onOpenTools() });\n    }\n  }",
+      "sha256": "9578ba32e051d09572183f9cf5f84c7ee1ded36ce5e76c891c0bdea80e43d8b0"
+    }
+  ]
+}
