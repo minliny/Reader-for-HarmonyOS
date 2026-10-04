@@ -536,6 +536,7 @@
     "test-settings-selection-owner.mjs",
     "test-settings-theme-icons.mjs",
     "test-settings-theme-write-consumer.mjs",
+    "test-shared-action-role-focus-sdk.mjs",
     "test-shelf-progress-projection.mjs",
     "test-shelf-resume-handoff.mjs",
     "test-shelf-source-name-resolution.mjs",

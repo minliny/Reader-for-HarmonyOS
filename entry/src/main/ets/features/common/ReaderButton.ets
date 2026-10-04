@@ -135,10 +135,14 @@ export struct ReaderButton {
           Text(this.label).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme));
         }
       }.attributeModifier(new ReaderButtonFrameModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy, this.availableWidth))
-        .enabled(this.actionEnabled).accessibilityText(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label).onClick((): void => this.commit());
+        .enabled(this.actionEnabled).focusable(this.actionEnabled)
+        .accessibilityRole(AccessibilityRoleType.BUTTON)
+        .accessibilityText(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label).onClick((): void => this.commit());
     } else {
       Text(this.label).attributeModifier(new ReaderButtonTextModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy, this.availableWidth))
-        .enabled(this.actionEnabled).accessibilityText(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label).onClick((): void => this.commit());
+        .enabled(this.actionEnabled).focusable(this.actionEnabled)
+        .accessibilityRole(AccessibilityRoleType.BUTTON)
+        .accessibilityText(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label).onClick((): void => this.commit());
     }
   }
   private commit(): void { if (this.mounted && this.actionEnabled) this.onAction(); }
