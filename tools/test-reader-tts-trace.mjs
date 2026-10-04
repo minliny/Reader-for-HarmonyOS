@@ -86,9 +86,30 @@ const pending = new SystemHost();
 const speaking = pending.speak(request);
 await pending.stop();
 const delayedEngine = makeEngine(); releaseEngine(delayedEngine);
-await speaking;
+await assert.rejects(speaking, /engine initialization retired/);
 assert.equal(delayedEngine.calls.some(call => call[0] === 'speak'), false);
 await pending.close(); createGate = undefined;
+
+// A predecessor creation can finish after stop and a successor's real engine.
+// Execute both real ensureEngine admissions in the reversed completion order.
+let releaseOldEngine;
+createGate = new Promise(resolve => { releaseOldEngine = resolve; });
+const overlapped = new SystemHost(), overlapEvents = [];
+overlapped.setEventListener(event => overlapEvents.push(event), 'successor-owner');
+const oldSpeaking = overlapped.speak({ ...request, requestId: 'old-owner' });
+await overlapped.stop();
+createGate = undefined;
+await overlapped.speak({ ...request, requestId: 'new-owner' });
+const successorEngine = engines.at(-1);
+const lateEngine = makeEngine(); releaseOldEngine(lateEngine);
+await assert.rejects(oldSpeaking, /engine initialization retired/);
+assert.equal(lateEngine.calls.filter(call => call[0] === 'shutdown').length, 1);
+assert.equal(overlapped.engine, successorEngine, 'late predecessor cannot overwrite successor engine');
+successorEngine.listener.onStart('new-owner', {});
+assert.deepEqual(overlapEvents, [{ type: 'start', requestId: 'new-owner' }]);
+await overlapped.close();
+assert.equal(successorEngine.calls.filter(call => call[0] === 'shutdown').length, 1,
+  'close must release the surviving successor engine');
 
 // A successor owner must not accept a predecessor's numerically identical session.
 const shared = new FakeHost();
