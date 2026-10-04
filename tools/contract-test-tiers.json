@@ -148,6 +148,7 @@
     "test-reader-tts-session-coordinator.mjs",
     "test-reader-tts-state-machine.mjs",
     "test-reader-tts-state.mjs",
+    "test-reader-tts-trace.mjs",
     "test-reader-typography-architecture.mjs",
     "test-reading-chapter-window.mjs",
     "test-reading-document-projection.mjs",
