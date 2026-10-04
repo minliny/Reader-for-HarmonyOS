@@ -88,6 +88,17 @@ export class ReaderSettingsGateway {
       const store = await this.ensureStore();
       await store.get(READER_SETTINGS_SNAPSHOT_KEY, '');
       this.assertAdmitted(isAdmitted);
+      // Text forms own the text fields. Their whole-snapshot setter must not
+      // erase already accepted manga choices, including an unconfirmed flush.
+      // An explicitly admitted full reading reset retains its original scope.
+      if (!resetOwned) {
+        const latest = this.current() ?? await this.readSnapshot(store, (): boolean => isAdmitted?.() !== false);
+        if (latest.mangaDirection !== undefined) requestedSnapshot.mangaDirection = latest.mangaDirection;
+        if (latest.mangaFit !== undefined) requestedSnapshot.mangaFit = latest.mangaFit;
+        if (latest.mangaBackground !== undefined) requestedSnapshot.mangaBackground = latest.mangaBackground;
+        if (latest.mangaPageNumbers !== undefined) requestedSnapshot.mangaPageNumbers = latest.mangaPageNumbers;
+      }
+      this.assertAdmitted(isAdmitted);
       return this.writeSnapshot(store, requestedSnapshot);
     });
   }
