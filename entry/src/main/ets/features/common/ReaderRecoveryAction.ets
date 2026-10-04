@@ -23,6 +23,8 @@ export struct ReaderRecoveryAction {
       .borderRadius(this.variant === 'rssManagement' ? 8 : 6)
       .textAlign(TextAlign.Center)
       .enabled(this.actionEnabled)
+      .focusable(this.actionEnabled)
+      .accessibilityRole(AccessibilityRoleType.BUTTON)
       .accessibilityText(this.label)
       .onClick((): void => { if (this.actionEnabled) this.onReconcile(this.generation); });
   }

@@ -119,11 +119,15 @@ export struct ReaderLabeledIconAction {
         Row({ space: resolveReaderLabeledIconActionSpec(this.specId).gap }) { this.labelContents(); }
           .attributeModifier(new ReaderLabeledIconRowModifier(this.specId, this.showDivider, this.scheme, this.actionEnabled));
       }.attributeModifier(new ReaderLabeledIconHitModifier(this.specId, this.scheme, this.actionEnabled))
-        .enabled(this.actionEnabled).accessibilityText(this.label).onClick((): void => this.commit());
+        .enabled(this.actionEnabled).focusable(this.actionEnabled)
+        .accessibilityRole(AccessibilityRoleType.BUTTON)
+        .accessibilityText(this.label).onClick((): void => this.commit());
     } else {
       Row({ space: resolveReaderLabeledIconActionSpec(this.specId).gap }) { this.labelContents(); }
         .attributeModifier(new ReaderLabeledIconRowModifier(this.specId, this.showDivider, this.scheme, this.actionEnabled))
-        .enabled(this.actionEnabled).accessibilityText(this.label).onClick((): void => this.commit());
+        .enabled(this.actionEnabled).focusable(this.actionEnabled)
+        .accessibilityRole(AccessibilityRoleType.BUTTON)
+        .accessibilityText(this.label).onClick((): void => this.commit());
     }
   }
   private commit(): void { if (this.mounted && this.actionEnabled) this.onAction(); }
