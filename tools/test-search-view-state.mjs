@@ -17,7 +17,8 @@ const authorMetadataModule = read('entry/src/main/ets/features/common/BookAuthor
 const page = read('entry/src/main/ets/features/search/SearchPage.ets');
 const classes = page.slice(page.indexOf('@Observed\nclass SearchBookGroup'), page.indexOf('/**\n * Figma-backed Book Search'))
   .replace('@Observed\n', '');
-const source = stripTypeScriptTypes(`const DataOperationType = { ADD: "add", DELETE: "delete", CHANGE: "change", RELOAD: "reload", MOVE: "move" };\n${authorMetadataModule}\n${read('entry/src/main/ets/features/search/SearchViewState.ts')}\n${classes}\nexport { SearchBookGroup, SearchResultDataSource };`);
+const sourceCategoryUrl = new URL('../entry/src/main/ets/features/source/ReaderSourceCategory.ts', import.meta.url).href;
+const source = stripTypeScriptTypes(`import { readerMediaIdentity } from ${JSON.stringify(sourceCategoryUrl)};\nconst DataOperationType = { ADD: "add", DELETE: "delete", CHANGE: "change", RELOAD: "reload", MOVE: "move" };\n${authorMetadataModule}\n${read('entry/src/main/ets/features/search/SearchViewState.ts')}\n${classes}\nexport { SearchBookGroup, SearchResultDataSource };`);
 const { SearchBookGroup, SearchResultDataSource, SearchViewState } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
 // Keep the production module graph intact, including bookshelf identity and
 // candidate policy. Stripping every import hides new real dependencies.
@@ -94,6 +95,21 @@ fallback.replace([new SearchBookGroup({ sourceId: 'x', bookId: '1', title: ' A '
 const fallbackRow = fallback.getData(0);
 fallback.replace([new SearchBookGroup({ sourceId: 'y', bookId: '2', title: 'a', author: 'b' }, 1, false)]);
 assert.equal(fallback.getData(0), fallbackRow, 'legacy aliases retain their normalization semantics');
+
+// Real media identity keeps legacy aliases distinct across manga/text while
+// each category retains its own observed row through enrichment and reordering.
+const mediaFallback = new SearchResultDataSource();
+const mediaGroup = (id, category, title = ' A ', author = ' B ') => new SearchBookGroup({
+  sourceId: id, bookId: id, title, author, category,
+}, 1, false);
+mediaFallback.replace([mediaGroup('text-a', 'novel'), mediaGroup('comic-a', 'comic')]);
+const textFallbackRow = mediaFallback.getData(0), comicFallbackRow = mediaFallback.getData(1);
+assert.notEqual(textFallbackRow, comicFallbackRow, 'same title/author media categories have separate rows');
+mediaFallback.replace([mediaGroup('comic-b', 'comic', 'a', 'b'), mediaGroup('text-b', 'novel', 'a', 'b')]);
+assert.equal(mediaFallback.getData(0), comicFallbackRow, 'manga fallback retains its own identity across equivalent aliases');
+assert.equal(mediaFallback.getData(1), textFallbackRow, 'manga/text fallback keys cannot reuse each other’s observed row');
+assert.equal(comicFallbackRow.book.category, 'comic');
+
 
 const navigation = new SearchViewState();
 assert.deepEqual(['b', 'a', 'c'].map(key => navigation.rank(key)), [0, 1, 2]);
