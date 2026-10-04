@@ -10,6 +10,7 @@ import {SearchViewState} from '../../entry/src/main/ets/features/search/SearchVi
 import {boundedMembers} from './bounded-surface-sdk-probe.mjs';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
 import {compileCardSpecs} from './reader-card-probe.mjs';
+import {compileIconButtonSpecs} from './reader-icon-button-probe.mjs';
 const req=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const map=req(sdk+'/lib/component_map.js');
 export function compileTailConsumer(source,names,deps,hooks){const saved=new Map(map.ID_ATTRS);map.ID_ATTRS.clear();try{return createReaderBuilderProbe(source,names,deps,hooks);}finally{map.ID_ATTRS.clear();for(const[k,v]of saved)map.ID_ATTRS.set(k,v);}}
@@ -26,7 +27,7 @@ export function tailControls(options={}){
  childSources.SearchResultCard=page.slice(page.lastIndexOf('@Component',page.indexOf('struct SearchResultCard')));
  const hooks={...shared.hooks,childSources:{...shared.hooks.childSources,...childSources}};
  const enumValues=name=>new Proxy({},{get:(_,key)=>`${name}.${String(key)}`});
- const dependencies={...shared.dependencies,...readerFoundationTokens,...roles,readerAppColor,SearchViewState,resolveReaderCardSpec:compileCardSpecs(),
+ const dependencies={...shared.dependencies,...readerFoundationTokens,...roles,readerAppColor,SearchViewState,resolveReaderCardSpec:compileCardSpecs(),resolveReaderIconButtonSpec:compileIconButtonSpecs(),
   LazyForEach:{create(_id,_owner,data){assert.equal(data.totalCount(),0,'tail parent fixture mounts original empty native lazy list; results row algorithms are separate contracts');},pop(){}},SynchedPropertyNesedObjectPU:shared.properties.sdk.SynchedPropertyNestedObjectPU,ReaderPressFeedback:productionReaderPressFeedback({}),Edge:enumValues('Edge'),ScrollDirection:enumValues('ScrollDirection'),TouchType:enumValues('TouchType')};
  const syntax=req(sdk+'/lib/validate_ui_syntax.js');syntax.builderParamObjectCollection.set('ReaderCard',new Set(['content']));
  assert.match(page,/@Observed\s+(?:export )?class SearchBookGroup/);syntax.observedClassCollection.add('SearchBookGroup');

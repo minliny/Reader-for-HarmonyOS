@@ -864,7 +864,9 @@ struct Index {
       updateProgressDone: this.bookshelfUpdateDone,
       updateProgressTotal: this.bookshelfUpdateTotal,
       onImportRequested: (): void => this.openImportDialog(),
-      onSearchRequested: (): void => this.openSearch(),
+      onSearchRequested: (presentedNavigation?: number): void => {
+        if (this.isCurrentBookshelfPresentation(presentedNavigation ?? navigation, owner, mounting)) this.openSearch();
+      },
       onBookshelfSettingsRequested: (): void => this.openBookshelfSettings(),
       onBatchManageRequested: (): void => this.openBookshelfMultiSelect(),
       onCheckUpdatesRequested: (): void => this.startManualBookshelfUpdate(),

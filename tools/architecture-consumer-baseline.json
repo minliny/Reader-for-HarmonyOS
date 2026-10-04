@@ -794,6 +794,16 @@
       "counts": {},
       "status": "REGISTERED_FINITE_BUSINESS_COMPOSITION_NOT_DEVICE_ACCEPTANCE",
       "contractId": "shared-RssOriginalRecoverySurface"
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderIconButton.ets",
+      "kind": "finite-spec-actual-shared-producer",
+      "owner": "ReaderIconButton",
+      "reason": "Four finite current-UI icon geometry variants consumed by five actual navigation/tool callers. Actual Stack/Image and press feedback own all physical geometry; pages supply only icon, named specification and original callback. This is geometry/SDK proof, not full native accessibility or workflow acceptance. Shared accessible name/button role/eligibility and current-owner callback qualification are verified by actual SDK composition, separately from native OS dispatch.",
+      "counts": {},
+      "status": "REGISTERED_FINITE_PRODUCER_NOT_DEVICE_ACCEPTANCE",
+      "contractId": "shared-ReaderIconButton",
+      "proof": "tools/test-icon-button-finite-specs.mjs"
     }
   ],
   "uiPolicies": [
@@ -813,14 +823,6 @@
       "kind": "layout-composition",
       "owner": "BookshelfShell / Bookshelf state owner",
       "reason": "Existing shared shelf layout slots; no own text/style arguments. Consumer must keep page/scroll identity.",
-      "counts": {},
-      "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
-    },
-    {
-      "file": "entry/src/main/ets/features/common/ReaderIconButton.ets",
-      "kind": "existing-shared-control",
-      "owner": "ReaderIconButton",
-      "reason": "Existing actual native icon event target; shared implementation already imported by real callers, with no private font/background calls.",
       "counts": {},
       "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
     },

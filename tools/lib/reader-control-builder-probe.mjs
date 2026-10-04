@@ -7,6 +7,7 @@ import { readerTypographyRoles } from './reader-typography-probe.mjs';
 import { labeledIconControls } from './reader-labeled-icon-action-probe.mjs';
 import { foundationControls } from './reader-foundation-control-probe.mjs';
 import { switchControls } from './reader-switch-control-probe.mjs';
+import { iconButtonControls } from './reader-icon-button-probe.mjs';
 
 const sdkRoot = process.env.READER_ETS_LOADER_ROOT ??
   '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
@@ -74,6 +75,19 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     dependencies[name] === undefined && new RegExp(`\\b${name}\\s*\\(`).test(members.join('\n')));
   if (missingSwitch.length > 0) {
     const controls = switchControls();
+    const originalHooks = hooks;
+    dependencies = { ...controls.dependencies, ...dependencies };
+    hooks = { ...controls.hooks, ...originalHooks,
+      childSources: { ...controls.hooks.childSources, ...originalHooks.childSources },
+      mountChildren: true, lifecycleChildren: true,
+      onChildUpdated(child, params) {
+        controls.properties.flush();
+        originalHooks.onChildUpdated?.(child, params);
+      },
+    };
+  }
+  if (dependencies.ReaderIconButton === undefined && /\bReaderIconButton\s*\(/.test(members.join('\n'))) {
+    const controls = iconButtonControls();
     const originalHooks = hooks;
     dependencies = { ...controls.dependencies, ...dependencies };
     hooks = { ...controls.hooks, ...originalHooks,
@@ -218,7 +232,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     ...Object.fromEntries(recoveryChildren.map(name => [name, Child])), $r: value => value,
     ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Path', 'Text', 'TextInput', 'TextArea', 'Select', 'Span', 'Marquee', 'Image', 'Slider', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
-    ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment',
+    ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment', 'AccessibilityRoleType',
       'LineCapStyle', 'TextAlign', 'TextOverflow', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
     ...readerTypographyRoles,
