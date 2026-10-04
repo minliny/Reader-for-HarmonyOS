@@ -74,7 +74,8 @@ export class BookshelfCatalogOwner {
     const targets = this.targets(books, revision, true, current);
     if (revision.length > 0) this.value = { ...this.value, seeds: { owner: this.owner, revision,
       seeds: targets.then(shelf => shelf !== undefined && shelf.projectionRevision === revision ?
-        shelf.books.map(book => ({ sourceId: book.sourceId, bookId: book.bookId })) : undefined).catch(() => undefined) } };
+        shelf.books.filter(book => book.contentKind === undefined || book.contentKind === 'text')
+          .map(book => ({ sourceId: book.sourceId, bookId: book.bookId })) : undefined).catch(() => undefined) } };
     this.publish();
     void targets.then(async shelf => {
       if (!current() || shelf === undefined || (revision.length > 0 && shelf.projectionRevision !== revision)) return;

@@ -12,6 +12,7 @@ import {
 
 const CACHE_FORMAT_VERSION = 2;
 const LEGACY_CACHE_FORMAT_VERSION = 1;
+const TEXT_CACHE_OWNER = 'reader-text-images-v2';
 const MAX_READING_IMAGE_BYTES = 16 * 1024 * 1024;
 const MIN_READING_IMAGE_FREE_RESERVE_BYTES = 16 * 1024 * 1024;
 const FILE_SYSTEM_NO_SPACE_ERROR = 13900025;
@@ -44,6 +45,11 @@ export type ReadingImageChapterIdentity = {
 
 /** One canonical identity form shared by projection, requests, and disk keys. */
 type ReadingImageChapterManifest = {
+  /** Upstream manga manifests and partial text ownership use separate files. */
+  manga?: boolean;
+  mangaCacheProfile?: string;
+  chapterId?: string;
+  cacheOwner?: string;
   formatVersion: number;
   sourceId: string;
   bookId: string;
@@ -111,8 +117,12 @@ export class ReadingImageDiskCache {
       this.assertCurrent(isCurrent);
       await this.finishPendingClear(requestedIdentity.sourceId, requestedIdentity.bookId);
       const path = await this.resourcePath(requestedIdentity);
-      result = await this.readResourceBytes(path);
       const legacyRevocation = `${await this.clearMarkerPath(requestedIdentity.sourceId, requestedIdentity.bookId)}.legacy-revoked`;
+      // An old clear cannot delete unidentifiable bytes, but it also cannot
+      // admit them again. Fresh text writes carry their own exact ownership.
+      if (!(await fileIo.access(legacyRevocation)) || await this.ownsTextResource(requestedIdentity)) {
+        result = await this.readResourceBytes(path);
+      }
       if (result === undefined && this.hasUnambiguousLegacyResourceIdentity(requestedIdentity) &&
         !(await fileIo.access(legacyRevocation))) {
         // A legacy ordinal alone is never evidence. Only its exact manifest
@@ -127,6 +137,7 @@ export class ReadingImageDiskCache {
             const target = await this.chapterDirectory(requestedIdentity);
             await this.ensureDirectory(target);
             await this.assertWriteCapacity(target, result.byteLength);
+            await this.recordTextResourceOwnership(requestedIdentity, isCurrent);
             await this.writeAtomicBytes(path, result, isCurrent);
           }
         }
@@ -153,6 +164,7 @@ export class ReadingImageDiskCache {
       const directory = await this.chapterDirectory(requestedIdentity);
       await this.ensureDirectory(directory);
       await this.assertWriteCapacity(directory, payload.byteLength);
+      await this.recordTextResourceOwnership(requestedIdentity, isCurrent);
       await this.writeAtomicBytes(await this.resourcePath(requestedIdentity), payload, isCurrent);
     });
   }
@@ -237,7 +249,7 @@ export class ReadingImageDiskCache {
   private async readValidManifest(directory: string, formatVersion: number): Promise<ReadingImageChapterManifest | undefined> {
     try {
       const value = await this.readManifestIdentity(directory, formatVersion);
-      if (value === undefined || !Array.isArray(value.resourceHashes)) return undefined;
+      if (value === undefined || !this.isTextOwnership(value)) return undefined;
       for (const hash of value.resourceHashes) {
         if (typeof hash !== 'string' || !/^[0-9a-f]{64}$/.test(hash) ||
           !(await this.validResourceFile(`${directory}/${hash}.bin`))) return undefined;
@@ -248,13 +260,19 @@ export class ReadingImageDiskCache {
     }
   }
 
-  private async readManifestIdentity(directory: string, formatVersion: number): Promise<ReadingImageChapterManifest | undefined> {
-    const path = `${directory}/manifest.json`;
+  private async readManifestIdentity(directory: string, formatVersion: number, fileName: string = 'manifest.json',
+    retryIoErrors: boolean = false): Promise<ReadingImageChapterManifest | undefined> {
+    const path = `${directory}/${fileName}`;
     if (!(await fileIo.access(path))) return undefined;
+    let bytes: Uint8Array;
     try {
-      const raw = util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(
-        new Uint8Array(new fileIo.AtomicFile(path).readFully()),
-      );
+      bytes = new Uint8Array(new fileIo.AtomicFile(path).readFully());
+    } catch (error) {
+      if (retryIoErrors) throw error;
+      return undefined;
+    }
+    try {
+      const raw = util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(bytes);
       const value = JSON.parse(raw) as ReadingImageChapterManifest;
       if (value.formatVersion !== formatVersion || typeof value.sourceId !== 'string' ||
         typeof value.bookId !== 'string' || !Number.isSafeInteger(value.chapterIndex) || value.chapterIndex < 0 ||
@@ -284,23 +302,118 @@ export class ReadingImageDiskCache {
   private async finishPendingClear(sourceId: string, bookId: string): Promise<void> {
     const marker = await this.clearMarkerPath(sourceId, bookId);
     if (!(await fileIo.access(marker))) return;
-    await this.removeTree(`${this.rootDirectory()}/${await this.bookHash(sourceId, bookId)}`);
+    const book = `${this.rootDirectory()}/${await this.bookHash(sourceId, bookId)}`;
+    if (await fileIo.access(book)) {
+      for (const ordinal of await fileIo.listFile(book)) {
+        if (!/^(0|[1-9][0-9]*)$/.test(ordinal)) continue;
+        const chapter = `${book}/${ordinal}`;
+        if (!(await fileIo.stat(chapter)).isDirectory()) continue;
+        for (const version of await fileIo.listFile(chapter)) {
+          if (!/^[0-9a-f]{64}$/.test(version)) continue;
+          const directory = `${chapter}/${version}`;
+          if (!(await fileIo.stat(directory)).isDirectory()) continue;
+          await this.clearOwnedTextDirectory(directory, CACHE_FORMAT_VERSION, sourceId, bookId, ordinal, version);
+        }
+        await this.removeEmptyDirectory(chapter);
+      }
+      await this.removeEmptyDirectory(book);
+    }
     const legacyBook = `${this.legacyRootDirectory()}/${await this.legacyBookHash(sourceId, bookId)}`;
     if (await fileIo.access(legacyBook)) {
       for (const name of await fileIo.listFile(legacyBook)) {
         if (!/^(0|[1-9][0-9]*)$/.test(name)) continue;
         const directory = `${legacyBook}/${name}`;
-        const value = await this.readManifestIdentity(directory, LEGACY_CACHE_FORMAT_VERSION);
         // v1 delimiter keys could collide. Never delete another pair's data,
         // nor claim unidentifiable legacy garbage merely by directory number.
-        if (value !== undefined && value.sourceId === sourceId && value.bookId === bookId &&
-          `${value.chapterIndex}` === name) await this.removeTree(directory);
+        if ((await fileIo.stat(directory)).isDirectory()) {
+          await this.clearOwnedTextDirectory(directory, LEGACY_CACHE_FORMAT_VERSION, sourceId, bookId, name);
+        }
       }
+      await this.removeEmptyDirectory(legacyBook);
     }
     // Revocation survives successful cleanup too: unreadable/unidentifiable
     // legacy leftovers must never become readable after a later restart.
     await this.writeAtomicBytes(`${marker}.legacy-revoked`, new util.TextEncoder().encodeInto('cleared'));
     await this.unlinkIfPresent(marker);
+  }
+
+  /** Same manga signals used by the upstream Host; no retention policy here. */
+  private async containsMangaManifest(directory: string): Promise<boolean> {
+    for (const name of await fileIo.listFile(directory)) {
+      const path = `${directory}/${name}`;
+      if (name === '.manga' || name === 'manga-identity.json' || name === 'manifest-script-bgra-v2.json') return true;
+      const stat = await fileIo.stat(path);
+      if (stat.isDirectory()) {
+        if (await this.containsMangaManifest(path)) return true;
+      } else if (name === 'manifest.json') {
+        const value = await this.readManifestIdentity(directory, CACHE_FORMAT_VERSION, name, true) ??
+          await this.readManifestIdentity(directory, LEGACY_CACHE_FORMAT_VERSION, name, true);
+        if (value?.manga === true || value?.chapterId !== undefined || value?.mangaCacheProfile !== undefined) return true;
+      }
+    }
+    return false;
+  }
+
+  private isTextOwnership(value: ReadingImageChapterManifest): boolean {
+    return value.manga !== true && value.chapterId === undefined && value.mangaCacheProfile === undefined &&
+      (value.cacheOwner === undefined || value.cacheOwner === TEXT_CACHE_OWNER) && Array.isArray(value.resourceHashes) &&
+      value.resourceHashes.every((hash: string): boolean => typeof hash === 'string' && /^[0-9a-f]{64}$/.test(hash));
+  }
+
+  private async clearOwnedTextDirectory(directory: string, formatVersion: number, sourceId: string, bookId: string,
+    ordinal: string, version?: string): Promise<void> {
+    if (await this.containsMangaManifest(directory)) return;
+    const files = formatVersion === CACHE_FORMAT_VERSION ? ['manifest.json', 'text-identity.json'] : ['manifest.json'];
+    const ownedFiles: string[] = [];
+    const hashes: Set<string> = new Set<string>();
+    for (const fileName of files) {
+      const value = await this.readManifestIdentity(directory, formatVersion, fileName, true);
+      if (value === undefined || !this.isTextOwnership(value) || value.sourceId !== sourceId || value.bookId !== bookId ||
+        `${value.chapterIndex}` !== ordinal || (version !== undefined && await this.sha256(value.contentVersion) !== version) ||
+        (fileName === 'text-identity.json' && value.cacheOwner !== TEXT_CACHE_OWNER)) continue;
+      ownedFiles.push(fileName);
+      for (const hash of value.resourceHashes) hashes.add(hash);
+    }
+    if (ownedFiles.length === 0) return;
+    // Keep ownership until all named bytes have been removed. A failure must
+    // leave both the original pending intent and enough proof for its retry.
+    for (const hash of hashes) {
+      const path = `${directory}/${hash}.bin`;
+      if (await fileIo.access(path) && !(await fileIo.stat(path)).isDirectory()) await fileIo.unlink(path);
+    }
+    for (const fileName of ownedFiles) await this.unlinkIfPresent(`${directory}/${fileName}`);
+    await this.removeEmptyDirectory(directory);
+  }
+
+  private async removeEmptyDirectory(directory: string): Promise<void> {
+    if (await fileIo.access(directory) && (await fileIo.listFile(directory)).length === 0) await fileIo.rmdir(directory);
+  }
+
+  private async ownsTextResource(identity: ReadingImageCacheIdentity): Promise<boolean> {
+    const directory = await this.chapterDirectory(identity);
+    const hash = await this.resourceHash(identity);
+    for (const fileName of ['manifest.json', 'text-identity.json']) {
+      const value = await this.readManifestIdentity(directory, CACHE_FORMAT_VERSION, fileName, true);
+      if (value !== undefined && this.isTextOwnership(value) && this.sameChapter(value, identity) &&
+        (fileName !== 'text-identity.json' || value.cacheOwner === TEXT_CACHE_OWNER) && value.resourceHashes.indexOf(hash) >= 0) return true;
+    }
+    return false;
+  }
+
+  /** Partial writes need durable ownership without publishing completion. */
+  private async recordTextResourceOwnership(identity: ReadingImageCacheIdentity, current: () => boolean): Promise<void> {
+    const directory = await this.chapterDirectory(identity);
+    if (await this.containsMangaManifest(directory)) throw new Error('text image cache cannot overwrite manga ownership');
+    const previous = await this.readManifestIdentity(directory, CACHE_FORMAT_VERSION, 'text-identity.json', true);
+    if ((previous === undefined && await fileIo.access(`${directory}/text-identity.json`)) ||
+      (previous !== undefined && (!this.isTextOwnership(previous) || previous.cacheOwner !== TEXT_CACHE_OWNER ||
+      !this.sameChapter(previous, identity)))) throw new Error('text image cache ownership mismatch');
+    const hashes = new Set<string>(previous?.resourceHashes ?? []);
+    hashes.add(await this.resourceHash(identity));
+    const ownership: ReadingImageChapterManifest = { formatVersion: CACHE_FORMAT_VERSION, cacheOwner: TEXT_CACHE_OWNER,
+      sourceId: identity.sourceId, bookId: identity.bookId, chapterIndex: identity.chapterIndex,
+      contentVersion: identity.contentVersion, resourceHashes: Array.from(hashes).sort(), completedAt: 0 };
+    await this.writeAtomicBytes(`${directory}/text-identity.json`, new util.TextEncoder().encodeInto(JSON.stringify(ownership)), current);
   }
 
   private async clearMarkerPath(sourceId: string, bookId: string): Promise<string> {
@@ -493,23 +606,6 @@ export class ReadingImageDiskCache {
     if (await fileIo.access(path)) {
       await fileIo.unlink(path);
     }
-  }
-
-  private async removeTree(path: string): Promise<void> {
-    if (!(await fileIo.access(path))) {
-      return;
-    }
-    const names = await fileIo.listFile(path);
-    for (const name of names) {
-      const child = `${path}/${name}`;
-      const stat = await fileIo.stat(child);
-      if (stat.isDirectory()) {
-        await this.removeTree(child);
-      } else {
-        await fileIo.unlink(child);
-      }
-    }
-    await fileIo.rmdir(path);
   }
 
   private async validResourceFile(path: string): Promise<boolean> {

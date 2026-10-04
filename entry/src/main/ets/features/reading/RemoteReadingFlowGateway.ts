@@ -33,6 +33,7 @@ import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import type { RemoteReadingPreparedChapter } from './RemoteReadingEvidence';
 
 export type RemoteReadingBookSeed = {
+  contentKind?: 'text' | 'manga' | 'audio';
   sourceVersion?: string;
   sourceId: string;
   bookId: string;
@@ -50,6 +51,7 @@ export type RemoteReadingBookSeed = {
 };
 
 export type RemoteReadingBookDetail = {
+  contentKind?: 'text' | 'manga' | 'audio';
   title: string;
   author: string;
   authorIdentity?: BookAuthorIdentityProof;
@@ -209,6 +211,7 @@ export class RemoteReadingFlowGateway {
     seed: RemoteReadingBookSeed,
     options: RemoteReadingOpenOptions = {},
   ): Promise<RemoteReadingSession> {
+    this.assertTextContentKind(seed.contentKind, 'book.detail');
     const coordinator = this.runtimeOwner.bookAcquisitions?.();
     if (coordinator !== undefined) return coordinator.acquireBook(seed, options);
     const identity = createRemoteReadingIdentity(seed.sourceId, seed.bookId);
@@ -243,7 +246,9 @@ export class RemoteReadingFlowGateway {
         'book.detail',
       );
     }
+    this.assertTextContentKind(detailResult.data['contentKind'], 'book.detail');
     const book = this.decodeBookDetail(rawBook);
+    if (detailResult.data['contentKind'] === 'text') book.contentKind = 'text';
     book.authorIdentity = readBookAuthorIdentity(rawBook['authorIdentity'], book.author,
       this.optionalString(detailResult.data, 'sourceVersion', 'book.detail') ?? seed.sourceVersion);
     const tocUrl = this.optionalString(detailResult.data, 'tocUrl', 'book.detail');
@@ -338,6 +343,7 @@ export class RemoteReadingFlowGateway {
   }
 
   private async readCachedSession(seed: RemoteReadingBookSeed, isCurrent?: () => boolean): Promise<RemoteReadingSession> {
+    this.assertTextContentKind(seed.contentKind, 'cache.book.status');
     const identity = createRemoteReadingIdentity(seed.sourceId, seed.bookId);
     assertRemoteReadingNonBlankString(seed.detailUrl, 'detailUrl');
     assertRemoteReadingNonBlankString(seed.title, 'title');
@@ -1026,6 +1032,13 @@ export class RemoteReadingFlowGateway {
       book['variables'] = encodeRemoteReadingVariables(variables);
     }
     return book;
+  }
+
+  private assertTextContentKind(value: unknown, command: RemoteReadingCommand): void {
+    if (value === undefined || value === null || value === 'text') return;
+    if (value === 'manga' || value === 'audio')
+      throw new RemoteReadingGatewayError('nonTextChapter', '当前版本未接入此类阅读器，书籍和已下载内容仍保留。', command);
+    throw new RemoteReadingGatewayError('invalidResponse', 'Core returned an invalid contentKind', command);
   }
 
   private decodeBookDetail(value: JsonObject): RemoteReadingBookDetail {

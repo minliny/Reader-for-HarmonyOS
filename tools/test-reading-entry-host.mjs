@@ -121,11 +121,15 @@ const checkpoints=[];
 }
 {
  const f=fixture();f.shelves.set(f.key('local','local-book'),book('local-book','local'));let visible=false;
+ const supports=f.runtime.supportsCoreCapability;f.runtime.supportsCoreCapability=(capability)=>capability==='bookshelf.pageProjection.v1'||supports(capability);
+ f.shelves.set(f.key('s1','manga'),{...book('manga'),contentKind:'manga'});
  const context={...f.preparationContext,shelfVisible:()=>visible};
  f.host.preparationVisibilityChanged(context);assert.equal(f.preparations.paused,true);assert.equal(f.calls.some(c=>c.method==='bookshelf.list'),false);
  visible=true;f.host.preparationVisibilityChanged(context);assert.equal(f.preparations.paused,false);
  await until(()=>f.preparations.persistedCompletedRevision==='r1');
- assert.equal(f.calls.filter(c=>c.method==='bookshelf.list').length,1,'no shared seeds falls back to one actual complete membership projection');
+ assert.equal(f.calls.filter(c=>c.method==='bookshelf.list').length,1,'no shared seeds falls back to one actual complete typed shelf projection');
+ assert.equal(f.calls.find(c=>c.method==='bookshelf.list').p.membershipOnly,false,'fallback retains Core media facts and the same full-page revision scope');
+ assert.equal(f.calls.some(c=>c.method==='reading.entry.prepare'&&c.p.bookId==='manga'),false,'typed fallback cannot admit retained manga to text preparation');
  assert.equal(f.calls.filter(c=>c.method==='reading.entry.prepare').length,7);
  f.close();checkpoints.push('actual-preparation-visibility-pause-resume-complete-shelf-fallback');
 }
@@ -219,5 +223,30 @@ const checkpoints=[];
  await tick();f.host.retire();gate.resolve([{sourceId:'local',bookId:'old'}]);await new Promise(r=>setTimeout(r,270));
  assert.equal(f.calls.some(c=>c.method==='reading.entry.prepare'),false,'retired UI admission cannot dispatch prepared work');
  f.close();checkpoints.push('retired-preparation-admission-keeps-existing-Runtime-owner-no-late-Core-dispatch');
+}
+for (const contentKind of ['manga', 'audio']) {
+ const f=fixture(), original=f.host.snapshot();
+ await f.host.openRemote({seed:{...seed(),contentKind},sourceName:'Source',resumeImmediately:true},f.lease);
+ assert.equal(f.calls.length,0,'unsupported media never dispatches preparation intent or body');
+ assert.deepEqual(f.host.snapshot(),original,'unsupported entry preserves prior reader owner');
+ assert.equal(f.notices.length,1);assert.match(f.notices[0].message,/仍保留/);
+ await f.host.openRemote({seed:seed(),sourceName:'Source',shelfSnapshot:{...book(),contentKind}},f.lease);
+ assert.equal(f.calls.length,0,'Core shelf media type overrides untyped legacy seed');f.close();
+}
+checkpoints.push('actual-media-entry-guard-preserves-owner-and-stored-books-with-no-dispatch');
+{
+ const f=fixture(), retained=[{...book('manga'),contentKind:'manga'},{...book('audio'),contentKind:'audio'},book('text','local')];
+ f.host.prepareVisible(retained,f.preparationContext,{runtime:f.runtime,revision:'r1',seeds:Promise.resolve([])});
+ assert.deepEqual(f.preparations.visibleSeeds.map(row=>row.bookId),['text']);
+ assert.equal(retained.length,3,'preparation cannot filter the displayed or stored shelf');f.close();
+ checkpoints.push('actual-visible-preparation-only-text-retains-display-input');
+}
+{
+ const source=read('features/reading/ReadingEntryHost.ts');
+ const unsafe=source.replace("if (contentKind === 'manga' || contentKind === 'audio') {",'if (false) {');
+ assert.notEqual(source,unsafe);const f=fixture(compileHost(unsafe));
+ await f.host.openRemote({seed:{...seed(),contentKind:'manga'},sourceName:'Source',shelfSnapshot:book(),resumeImmediately:true},f.lease);
+ assert.equal(f.calls.some(call=>call.method==='intent'),true,'deleting actual guard reopens unsupported preparation admission');f.close();
+ checkpoints.push('actual-media-entry-guard-deletion-negative');
 }
 console.log(JSON.stringify({status:'PASS',checkpoints,scope:'complete production owner and Gateways through installed SDK emitter + actual coordinator/preparation; controlled native IO; Index/native target proof remains separate'}));

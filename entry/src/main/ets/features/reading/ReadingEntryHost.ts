@@ -136,6 +136,11 @@ export class ReadingEntryHost {
 
   async openRemote(input: RemoteReadingEntryInput, lease: ReadingEntryLease): Promise<void> {
     const seed = input.seed;
+    const contentKind = input.shelfSnapshot?.contentKind ?? seed.contentKind;
+    if (contentKind === 'manga' || contentKind === 'audio') {
+      if (this.runtimeCurrent() && lease.isCurrent()) lease.notice('暂不支持此类阅读', '当前版本未接入此类阅读器，书籍和已下载内容仍保留。');
+      return;
+    }
     const retained = input.shelfSnapshot !== undefined && this.sameBook(input.retainedSession, seed) ? input.retainedSession : undefined;
     const scope = this.begin(lease, this.detail(seed, input.sourceName), input.shelfSnapshot !== undefined,
       input.shelfSnapshot === undefined ? '正在获取在线目录…' : '正在读取本地目录…', seed, retained);
@@ -411,9 +416,10 @@ export class ReadingEntryHost {
       if (shared !== undefined && shared.runtime === this.runtime && shared.revision === revision) {
         const seeds = await shared.seeds; if (!current()) return undefined; if (seeds !== undefined) return seeds;
       }
-      const shelf = await new BookshelfFlowGateway(this.runtime, { readingState: 'all', sourceKind: 'all' }, true).loadAll(current, true);
+      const shelf = await new BookshelfFlowGateway(this.runtime, { readingState: 'all', sourceKind: 'all' }, true).loadAll(current);
       if (!current() || (shelf !== undefined && shelf.projectionRevision !== revision)) return undefined;
-      return shelf?.books.map(book => ({ sourceId: book.sourceId, bookId: book.bookId }));
+      return shelf?.books.filter(book => book.contentKind === undefined || book.contentKind === 'text')
+        .map(book => ({ sourceId: book.sourceId, bookId: book.bookId }));
     }, allowed).catch(error => { if (allowed()) { try { context.diagnostic(errorMessageOf(error)); } catch (_) {} } });
   }
   preparationVisibilityChanged(context: ReadingPreparationContext, shared?: ReadingSharedShelfSeeds): void {
@@ -424,7 +430,8 @@ export class ReadingEntryHost {
   }
   prepareVisible(books: ShelfBook[], context: ReadingPreparationContext, shared?: ReadingSharedShelfSeeds): void {
     if (!this.runtimeCurrent() || !context.isCurrent() || !context.shelfVisible() || context.readingActive() || !context.foreground()) return;
-    const entries: ReadingEntrySeed[] = books.map(book => book.sourceId === LOCAL_SOURCE_ID ?
+    const entries: ReadingEntrySeed[] = books.filter(book => book.contentKind === undefined || book.contentKind === 'text')
+      .map(book => book.sourceId === LOCAL_SOURCE_ID ?
       { sourceId: book.sourceId, bookId: book.bookId, bookKind: book.kind } :
       { sourceId: book.sourceId, bookId: book.bookId, bookKind: book.kind, remoteBookSeed: {
         sourceId: book.sourceId, bookId: book.bookId, detailUrl: book.bookId, title: book.title, author: book.author,
