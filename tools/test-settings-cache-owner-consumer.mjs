@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes, createRequire } from 'node:module';
 import { ReaderWriteEvidence } from '../entry/src/main/ets/app/ReaderWriteEvidence.ts';
 import { projectOperationFacts } from '../entry/src/main/ets/app/ReaderOperationFacts.ts';
-import { ReaderNativeAlertOwner } from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
+import { ReaderNativeAlertOwner } from './lib/reader-native-alert-sdk-probe.mjs';
 import { ReaderCoreRequestError, isReaderCoreTransactionPendingError } from '../entry/vendor/core-harmony/sdk/reader_core.ts';
 import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
-import {ReaderNativeAlertOwner} from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
+import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
 import {rssSource, rssFacts, rssRecoveryView, RssRuntime,replaceRssRuntime,RealRssOrchestrator,RealRssEditor,RssEmptyEditor,rssRpc,settleRss,deferredRss} from './lib/rss-operation-fixture.mjs';
 const source=rssSource,file=p=>new URL('../entry/src/main/ets/'+p,import.meta.url),clone=v=>v===undefined?undefined:structuredClone(v);
 const methods=['isCurrentRssPresentation','isCurrentRssHostPresentation','rssFeedBinding','reconcileRssFeedOriginal','rssSubscriptionManagementItems','getRssOrchestrator','retireRssPresentation','getRssEditorOrchestrator','retireRssEditorPresentation','isCurrentRssEditorPresentation','loadRss','feedPresentation','rssSubscriptions','rssSourceBinding','rssEntryBinding','isCurrentRoute',

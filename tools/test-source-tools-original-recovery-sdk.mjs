@@ -7,7 +7,7 @@ import {foundationControls} from './lib/reader-foundation-control-probe.mjs';
 import {boundedMembers} from './lib/bounded-surface-sdk-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
-import {ReaderNativeAlertOwner} from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
+import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
 import {ReaderWindowMetricsSnapshot,ReaderRectVp,readerVisualSafeLeft,readerVisualSafeRight,readerInteractiveSafeLeft,readerInteractiveSafeRight} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import {READER_FLOATING_TOP_BAR_HEIGHT,readerFloatingBarBottomInset} from './lib/reader-floating-bar-metrics-probe.mjs';
 const path='features/source/SourceToolsPage.ets',read=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8'),pageSource=read(path),recoverySource=read('features/common/ReaderRecoveryAction.ets'),headerSource=read('features/common/PageBackBar.ets');

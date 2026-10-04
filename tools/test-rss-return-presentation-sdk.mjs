@@ -8,7 +8,7 @@ import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {actualBookshelfOperationTypes,actualBookshelfHostField} from './lib/bookshelf-operation-owner-probe.mjs';
 import {actualSourceManagementTypes,actualSourceManagementHostField} from './lib/source-management-owner-probe.mjs';
 import {actualGeneralSettingsTypes,actualGeneralSettingsHostField} from './lib/general-settings-owner-probe.mjs';
-import {ReaderNativeAlertOwner} from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
+import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
 import {projectOperationFacts} from '../entry/src/main/ets/app/ReaderOperationFacts.ts';
 import {RssPresentationProjection} from '../entry/src/main/ets/features/rss/RssPresentationProjection.ts';
 import {isReaderProductSurfaceEnabled} from '../entry/src/main/ets/app/ReaderProductScope.ts';

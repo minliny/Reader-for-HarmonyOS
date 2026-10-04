@@ -10,7 +10,7 @@ const {ProductionHost:ReadingEntryHost,setRuntime:setEntryRuntime}=await import(
 const evidence=await import('../../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
 import * as horizontal from '../../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
 import * as metricsApi from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-const {ReaderNativeAlertOwner}=await import('../../entry/src/main/ets/app/ReaderNativeAlertOwner.ts');
+const {ReaderNativeAlertOwner}=await import('./reader-native-alert-sdk-probe.mjs');
 const {ReadingOfflineHost}=await import('./reader-reading-owner-sdk-probe.mjs');
 const settle=async()=>{await settleOwner();await new Promise(setImmediate);await settleOwner();};
 const methods=['getSourceSwitchHost','sourceSwitchContext','sourceSwitchLease','applySourceSwitchSnapshot','retireRssPresentation','retireRssEditorPresentation','retireSourceSwitchPresentation',

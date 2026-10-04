@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { ReaderNativeAlertOwner, ReaderNativeAlertLease } from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
+import { ReaderNativeAlertOwner, ReaderNativeAlertLease } from './lib/reader-native-alert-sdk-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
 const Reading = productionMotionMethods(file('features/reading/LocalReadingExperience.ets'),

@@ -1,10 +1,14 @@
+import { readerNativeAlertButtonCopy } from './ReaderNativeAlertButtonCopy';
 /** The OS still renders AlertDialog. This adapter owns only one host's
  * presentation decision, preserving native geometry and caller business work. */
 export type ReaderNativeAlertSpecId = 'notice' | 'confirmation' | 'confirmation-cancelable' |
   'choice-blocking' | 'retry-blocking' | 'preview';
 export type ReaderNativeAlertDecision = 'primary' | 'secondary' | 'confirm' | 'cancel' | 'retired' | 'native-failure';
-import type { ReaderNativeAlertOptions } from './ReaderNativeAlertContract';
-export type { ReaderNativeAlertOptions } from './ReaderNativeAlertContract';
+export interface ReaderNativeAlertOptions extends AlertDialogParamWithConfirm {
+  primaryButton?: AlertDialogButtonBaseOptions;
+  secondaryButton?: AlertDialogButtonBaseOptions;
+}
+
 interface ReaderNativeAlertSpec {
   autoCancel: boolean | undefined;
   layout: 'primary' | 'pair' | 'confirm';
@@ -42,7 +46,7 @@ export class ReaderNativeAlertLease {
     if (this.settled) return;
     try {
       if (!this.isCurrent()) { this.retire(); return; }
-    } catch (error) { this.nativeFailed(); throw error; }
+    } catch (error) { this.nativeFailed(); throw (error as Error); }
     // A dialog decision is never a business mutation ACK. Settle first so a
     // throwing domain callback cannot strand a caller's presentation wait.
     this.finish(decision);
@@ -64,7 +68,7 @@ export class ReaderNativeAlertOwner {
     this.current = lease;
     try {
       if (!isCurrent()) { lease.retire(); return lease; }
-    } catch (error) { lease.nativeFailed(); throw error; }
+    } catch (error) { lease.nativeFailed(); throw (error as Error); }
     const spec = readerNativeAlertSpec(id);
     if ((spec.layout === 'confirm') !== (options.confirm !== undefined) ||
       (spec.layout === 'pair') !== (options.secondaryButton !== undefined) ||
@@ -81,11 +85,11 @@ export class ReaderNativeAlertOwner {
     };
     // AUTO remains omitted, including native platform font/layout defaults.
     if (spec.autoCancel !== undefined) native.autoCancel = spec.autoCancel;
-    if (primary !== undefined) native.primaryButton = { ...primary, action: (): void => lease.act('primary', primary.action) };
-    if (secondary !== undefined) native.secondaryButton = { ...secondary, action: (): void => lease.act('secondary', secondary.action) };
-    if (confirm !== undefined) native.confirm = { ...confirm, action: (): void => lease.act('confirm', confirm.action) };
+    if (primary !== undefined) native.primaryButton = readerNativeAlertButtonCopy(primary, (): void => lease.act('primary', primary.action));
+    if (secondary !== undefined) native.secondaryButton = readerNativeAlertButtonCopy(secondary, (): void => lease.act('secondary', secondary.action));
+    if (confirm !== undefined) native.confirm = readerNativeAlertButtonCopy(confirm, (): void => lease.act('confirm', confirm.action));
     try { show(native); }
-    catch (error) { lease.nativeFailed(); throw error; }
+    catch (error) { lease.nativeFailed(); throw (error as Error); }
     return lease;
   }
 }
