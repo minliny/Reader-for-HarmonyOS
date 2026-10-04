@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { ReaderNativeAlertOwner } from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
+import { ReaderNativeAlertOwner } from './lib/reader-native-alert-sdk-probe.mjs';
 
 for (const [id, autoCancel, slots] of [
   ['notice', true, ['primaryButton']], ['confirmation', undefined, ['primaryButton', 'secondaryButton']],
@@ -53,5 +53,41 @@ for (const [id, autoCancel, slots] of [
   assert.throws(() => owner.present(() => assert.fail('no native show on failed identity'), 'notice', {
     primaryButton: { value: 'confirm' },
   }, () => { throw Error('pre-show identity unavailable'); }), /pre-show identity unavailable/);
+}
+// Erased ArkTS Error assertions must preserve the exact original thrown
+// value, including unsupported non-Error values from an external callback.
+for (const phase of ['guard-entry', 'guard-action', 'native-show']) {
+  for (const thrown of ['nonError', 17, null, { original: 'foreign thrown object' }]) {
+    const owner = new ReaderNativeAlertOwner(); let shown, live = true, caught;
+    try {
+      owner.present(options => { shown = options; if (phase === 'native-show') throw thrown; },
+        'notice', { primaryButton: { value: '原按钮', action() {} } }, () => {
+          if (phase === 'guard-entry' || phase === 'guard-action' && !live) throw thrown;
+          return true;
+        });
+      if (phase === 'guard-action') { live = false; shown.primaryButton.action(); }
+    } catch (error) { caught = error; }
+    assert.equal(caught, thrown, `${phase}: exact original non-Error rethrow`);
+  }
+}
+for (const [id, slots] of [
+  ['notice', ['primaryButton']], ['confirmation', ['primaryButton', 'secondaryButton']],
+  ['confirmation-cancelable', ['primaryButton', 'secondaryButton']],
+  ['choice-blocking', ['primaryButton', 'secondaryButton']], ['retry-blocking', ['primaryButton']],
+  ['preview', ['confirm']],
+]) {
+  const owner = new ReaderNativeAlertOwner(), action = () => {}, input = {};
+  for (const slot of slots) input[slot] = { value: '原按钮', action, fontColor: '#123456',
+    backgroundColor: '#654321', enabled: false, defaultFocus: true, style: 1 };
+  let native;
+  owner.present(options => { native = options; }, id, input, () => true);
+  for (const slot of slots) {
+    assert.notEqual(native[slot], input[slot], 'native guarded button remains a separate copy');
+    assert.equal(input[slot].action, action, 'caller button callback is untouched');
+    assert.notEqual(native[slot].action, action);
+    const { action: originalAction, ...before } = input[slot];
+    const { action: nativeAction, ...after } = native[slot];
+    assert.deepEqual(after, before, 'all enumerable original SDK fields are preserved');
+  }
 }
 console.log('PASS actual native Alert owner: six finite native specs, AUTO, retained button order/labels/colors, single decision, cancel/retire/reopen, stale actions and native/dispatch/identity exceptions');

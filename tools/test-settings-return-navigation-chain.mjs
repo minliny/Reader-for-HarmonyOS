@@ -5,7 +5,7 @@ import {fixture, defaults, deferred, settle} from './lib/general-settings-persis
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {boundedMembers} from './lib/bounded-surface-sdk-probe.mjs';
 import {cardSdk} from './lib/reader-card-probe.mjs';
-import {ReaderNativeAlertOwner} from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
+import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import {isReaderProductSurfaceEnabled} from '../entry/src/main/ets/app/ReaderProductScope.ts';
 

@@ -6,7 +6,7 @@ import {compile,deferred,until} from './lib/rules-mutation-durable-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {boundedMembers,boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
-import {ReaderNativeAlertOwner} from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
+import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
 import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 const read=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const document=JSON.stringify({bookSourceUrl:'https://index-original.test',bookSourceName:'Original',enabled:true});

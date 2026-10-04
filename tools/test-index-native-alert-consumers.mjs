@@ -3,7 +3,7 @@ import { RssPresentationProjection } from '../entry/src/main/ets/features/rss/Rs
 import {bookshelfOperationClass} from './lib/bookshelf-operation-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {ReaderNativeAlertOwner} from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
+import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {compileHost} from './lib/reading-entry-owner-probe.mjs';
 import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';

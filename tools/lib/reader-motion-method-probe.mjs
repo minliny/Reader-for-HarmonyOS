@@ -1,7 +1,7 @@
 import { ReadingRecordIntent, ReadingRecordRecoveryError } from '../../entry/src/main/ets/features/reading/ReaderReadingRecordState.ts';
 import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError } from '../../entry/src/main/ets/app/BookRequestScheduler.ts';
 import { ReaderReadingImageResources, sameReaderReadingImageResource } from '../../entry/src/main/ets/features/reading/ReaderReadingImageResources.ts';
-import { ReaderNativeAlertOwner, ReaderNativeAlertLease } from '../../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
+import { ReaderNativeAlertOwner, ReaderNativeAlertLease } from './reader-native-alert-sdk-probe.mjs';
 import { readingChapterLayoutMap } from '../../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
 import { hasKnownReadingImageGeometry } from '../../entry/src/main/ets/features/reading/ReadingChapterWindow.ts';
 import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';

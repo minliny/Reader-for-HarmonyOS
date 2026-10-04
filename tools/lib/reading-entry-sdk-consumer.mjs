@@ -9,7 +9,7 @@ import {fixture,seed,book,session,deferred,until,tick} from './reading-entry-ind
 import {ProductionHost,read,setRuntime,readingEvidence as evidence} from './reading-entry-owner-probe.mjs';
 import * as geometry from '../../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
 import * as metricsApi from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import {ReaderNativeAlertOwner} from '../../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
+import {ReaderNativeAlertOwner} from './reader-native-alert-sdk-probe.mjs';
 const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript');
 const parsed=(source)=>ts.createSourceFile('/tmp/EntryConsumer.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);

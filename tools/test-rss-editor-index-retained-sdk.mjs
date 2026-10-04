@@ -3,7 +3,7 @@ import {createRequire} from 'node:module';
 import {rssRecoverySurfaceSdk as boundedSurfaceSdk} from './lib/rss-recovery-surface-sdk-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {rssSource as read,rssFacts,rssProjection,RssWriteEvidence,RssRuntime,replaceRssRuntime,rssRpc,settleRss,deferredRss,RealRssRouteHost} from './lib/rss-operation-fixture.mjs';
-import {ReaderNativeAlertOwner} from '../entry/src/main/ets/app/ReaderNativeAlertOwner.ts';
+import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
 import {isReaderCoreTransactionPendingError} from '../entry/vendor/core-harmony/sdk/reader_core.ts';
 import {actualBookshelfOperationTypes, actualBookshelfHostField} from './lib/bookshelf-operation-owner-probe.mjs';
 import {actualSourceManagementTypes} from './lib/source-management-owner-probe.mjs';
