@@ -1,3 +1,19 @@
+export interface ReaderCapacityCounters {
+  retainedRequestCount: number;
+  queuedCommandCount: number;
+  queuedInputBytes: number;
+  inputReservedBytes: number;
+  resultReservedBytes: number;
+  hostReservedBytes: number;
+  pendingDeliveryCount: number;
+  hostOperationCount: number;
+}
+
+export interface ReaderCapacityObservation {
+  current: ReaderCapacityCounters;
+  peak: ReaderCapacityCounters;
+}
+
 /** Code milestones only. Neither a ready model nor loadContent's callback
  * proves that a frame reached the display. Native/visual evidence stays separate. */
 export interface ReaderStartupSample {
@@ -11,6 +27,7 @@ export interface ReaderStartupSample {
   evidence: string;
   durationMs?: number;
   operationId?: number;
+  capacity?: ReaderCapacityObservation;
 }
 
 /** Small process-local log adapter; uses the existing platform uptime clock.
@@ -116,6 +133,14 @@ export class ReaderStartupTrace {
     }
   }
 
+  /** Same process uptime clock and collector, used only by explicit debug probe. */
+  monotonicNowMs(): number { return this.sampleTime(); }
+
+  observeCapacity(status: string, capacity?: ReaderCapacityObservation, at?: number): void {
+    if (!this.enabled) return;
+    this.emit('runtime.capacity', status, 0, undefined, at === undefined ? this.sampleTime() : at, undefined, capacity);
+  }
+
   private sampleTime(): number {
     try {
       const at = this.now();
@@ -124,13 +149,14 @@ export class ReaderStartupTrace {
   }
 
   private emit(stage: string, status: string, entryId: number, durationMs: number | undefined,
-    at: number = this.sampleTime(), operationId?: number): void {
+    at: number = this.sampleTime(), operationId?: number, capacity?: ReaderCapacityObservation): void {
     if (at < 0 || this.createdAt < 0 || at < this.createdAt) return;
     this.sequence += 1;
     const sample: ReaderStartupSample = { processId: this.processId, sequence: this.sequence, uptimeMs: at,
       sinceCreateMs: at - this.createdAt, stage, status, entryId, evidence: 'application-code' };
     if (durationMs !== undefined) sample.durationMs = durationMs;
     if (operationId !== undefined) sample.operationId = operationId;
+    if (capacity !== undefined) sample.capacity = capacity;
     // Diagnostic delivery must never alter startup or entry admission.
     try { this.record(sample); } catch (_) {}
   }

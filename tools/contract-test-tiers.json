@@ -65,6 +65,7 @@
     "test-reader-bookmark-projection.mjs",
     "test-reader-brightness-writer.mjs",
     "test-reader-cache-only-chapter.mjs",
+    "test-reader-capacity-probe.mjs",
     "test-reader-cold-entry-recovery.mjs",
     "test-reader-content-business.mjs",
     "test-reader-content-search-cursor.mjs",

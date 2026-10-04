@@ -18,6 +18,8 @@ import { ReaderEventLoopProbe, ReaderEventLoopSample, readerEventLoopProbeEnable
 import { probeReaderAtomicSnapshot, type ReaderAtomicSnapshotSample } from '../app/ReaderAtomicSnapshotProbe';
 import { probeReaderAssetInventory, type ReaderAssetInventorySample } from '../app/ReaderAssetInventoryProbe';
 import { ReaderStartupTrace, type ReaderStartupSample } from '../app/ReaderStartupTrace';
+import { ReaderCapacityProbe, type ReaderCapacityQueryOptions } from '../app/ReaderCapacityProbe';
+import type { JsonObject } from '@reader/core-harmony';
 import { readerMotionNowMs } from '../features/common/ReaderMotionClock';
 import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
 import { WebDavCredentialStore } from '../features/sync/WebDavCredentialStore';
@@ -33,6 +35,7 @@ export default class EntryAbility extends UIAbility {
   private bookshelfModeReady: Promise<void> = Promise.resolve();
   private shelfFontsReady: Promise<void> = Promise.resolve();
   private eventLoopProbe: ReaderEventLoopProbe | undefined = undefined;
+  private capacityProbe: ReaderCapacityProbe | undefined = undefined;
   private preparedReadingFontOwner: ReaderRuntimeOwner | undefined = undefined;
   private preparedReadingFontSnapshot: ReaderAppearanceSnapshot | undefined = undefined;
 
@@ -72,6 +75,11 @@ export default class EntryAbility extends UIAbility {
     const owner = ReaderRuntimeOwner.install(this.context,
       readerDisableOptionalEntryMemory(DEBUG, BUILD_MODE_NAME, want.parameters?.readerDisableOptionalEntryMemory));
     this.runtimeOwner = owner;
+    if (DEBUG === true && BUILD_MODE_NAME === 'debug' && want.parameters?.readerCapacityTrace === true) {
+      this.capacityProbe = ReaderCapacityProbe.create(DEBUG, BUILD_MODE_NAME, want.parameters?.readerCapacityTrace,
+        async (method: string, params: JsonObject, options: ReaderCapacityQueryOptions): Promise<JsonObject> => (await owner.request(method, params, options)).data,
+        (): boolean => this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner));
+    }
     this.themeReady = trace.measure('startup.theme', (): Promise<void> => ReaderThemeHost.install(owner,
       this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'night' : 'day'))
       .catch((error: Error): void => {
@@ -201,7 +209,10 @@ export default class EntryAbility extends UIAbility {
       loadRecovery: (done: (code: number) => void): void => {
         windowStage.loadContent('pages/ReaderStartupRecovery', (error): void => done(error.code));
       },
-      ready: (): void => { if (generation === this.windowStageGeneration) this.eventLoopProbe?.start(); },
+      ready: (): void => { if (generation === this.windowStageGeneration) {
+        this.eventLoopProbe?.start();
+        this.capacityProbe?.start();
+      } },
       unavailable: (): void => {
         hilog.error(DOMAIN, 'Reader', 'Startup recovery content could not be mounted; platform recovery remains unavailable');
       },
@@ -213,6 +224,7 @@ export default class EntryAbility extends UIAbility {
 
   onWindowStageDestroy(): void {
     this.eventLoopProbe?.stop('window-destroyed');
+    this.capacityProbe?.stop();
     this.startupContent?.close();
     this.startupContent = undefined;
     this.windowStageGeneration += 1;
@@ -242,6 +254,7 @@ export default class EntryAbility extends UIAbility {
     AppStorage.setOrCreate('readerAppForeground', false);
     this.runtimeOwner?.setReadingPreparationContext(false, false);
     this.eventLoopProbe?.stop('background');
+    this.capacityProbe?.stop();
     this.runtimeOwner?.flush().catch((error: Error): void => {
       hilog.error(DOMAIN, 'Reader', 'Core storage flush failed: %{private}s', error.message);
     });
@@ -253,6 +266,7 @@ export default class EntryAbility extends UIAbility {
 
   onDestroy(): void {
     this.eventLoopProbe?.stop('destroyed');
+    this.capacityProbe?.stop();
     this.startupContent?.close();
     this.startupContent = undefined;
     ReaderThemeHost.detach();
