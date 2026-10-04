@@ -75,6 +75,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   private readonly audioSessionLease = harmonyTtsAudioSessionLease;
   private readonly audioSessionOwner: string = this.audioSessionLease.createOwner('system');
   private closed: boolean = false;
+  private speakGeneration: number = 0;
 
   constructor() {
     this.audioSessionDeactivatedCallback = (_event: audio.AudioSessionDeactivatedEvent): void => {
@@ -141,7 +142,9 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
 
   async speak(request: ReaderTtsHostSpeakRequest): Promise<void> {
     this.assertSpeakRequest(request);
+    const generation = ++this.speakGeneration;
     const engine = await this.ensureEngine(request.language, request.person);
+    if (this.closed || generation !== this.speakGeneration) return;
     this.currentRequestId = request.requestId;
     const params: textToSpeech.SpeakParams = {
       requestId: request.requestId,
@@ -196,6 +199,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   }
 
   async stop(): Promise<void> {
+    this.speakGeneration += 1;
     const engine = this.engine;
     this.currentRequestId = undefined;
     if (engine === undefined) return;
@@ -211,6 +215,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
+    this.speakGeneration += 1;
     this.currentRequestId = undefined;
     this.listener = undefined;
     const engine = this.engine;
@@ -276,7 +281,9 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
       effectivePerson = DEFAULT_PERSON;
       engine = await this.createEngine(effectiveLanguage, effectivePerson);
     }
-    engine.setListener(new EngineSpeakListener((event: ReaderTtsHostEvent): void => this.emit(event)));
+    engine.setListener(new EngineSpeakListener((event: ReaderTtsHostEvent): void => {
+      if (this.engine === engine) this.emit(event);
+    }));
     if (this.closed) {
       engine.shutdown();
       throw new Error('Reader system TTS Host closed during engine initialization');
