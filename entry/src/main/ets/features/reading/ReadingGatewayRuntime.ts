@@ -65,7 +65,7 @@ export interface ReadingGatewayRuntime {
     options?: BookRequestOptions,
   ): Promise<ReaderCoreResultEvent>;
 
-  requestBook?(method: string, params?: JsonObject, options?: RequestOptions,
+  requestBook?(method: string, params?: JsonObject, options?: BookRequestOptions,
     priority?: 'foreground' | 'background'): Promise<ReaderCoreResultEvent>;
   allowOptionalMangaPreparation?(): boolean;
   isMangaPreparationForeground?(): boolean;

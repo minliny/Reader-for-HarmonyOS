@@ -14,6 +14,7 @@ import { BookshelfGroupSelector } from '../features/bookshelf/BookshelfGroupSele
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderCoreRequestError } from '@reader/core-harmony';
 import { SearchHost } from '../features/search/SearchHost';
+import type { SearchPresentation } from '../features/search/SearchPresentation';
 import { resolveBookshelfBook } from '../features/bookshelf/BookshelfBookIdentity';
 import { BookshelfViewState } from '../features/bookshelf/BookshelfViewState';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
@@ -197,6 +198,8 @@ import {
   type SourceManagementProjection,
 } from '../features/source/SourceHost';
 import {
+  sourceSwitchCandidateKey,
+  type SourceSwitchGateway,
   type SourceSwitchCandidate,
   type SourceSwitchProbeQuery,
 } from '../features/source/SourceSwitchGateway';
@@ -3487,9 +3490,9 @@ struct Index {
       const next = latest.get(key) ?? previous;
       if (!seen.has(key)) { merged.push(next); seen.add(key); }
     }
-    for (const [key, candidate] of latest) {
+    latest.forEach((candidate: SearchBook, key: string): void => {
       if (!seen.has(key)) { merged.push(candidate); seen.add(key); }
-    }
+    });
     const changed = merged.length !== this.searchDetailCandidates.length ||
       merged.some((candidate: SearchBook, index: number): boolean => candidate !== this.searchDetailCandidates[index]);
     if (changed) this.searchDetailCandidates = merged;

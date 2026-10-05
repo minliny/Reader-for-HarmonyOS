@@ -28,7 +28,7 @@ export struct ReaderMangaDownloadPopup {
       .onClick((): void => this.onOpen())
       .bindPopup(this.visible, this.popupOptions(this.generation));
   }
-  private popupOptions(generation: number): PopupOptions {
+  private popupOptions(generation: number): CustomPopupOptions {
     return { builder: (): void => { this.popupContent(generation); },
       placement: Placement.BottomLeft, enableArrow: false,
       popupColor: readerAppColor('TOK_CARD_BG', this.appThemeScheme),

@@ -8,26 +8,27 @@ import { SearchSpinner } from '../search/SearchSpinner';
 import { NoCoverCover } from '../bookshelf/NoCoverCover';
 import { sourceSwitchCandidateKey, sourceSwitchSourceCount } from './SourceSwitchGateway';
 import type { SourceSwitchCandidate } from './SourceSwitchGateway';
+import {
+  SourceSwitchPanelState,
+  SourceSwitchDiscoveringState,
+  SourceSwitchCandidatesState,
+  SourceSwitchEmptyState,
+  SourceSwitchDiscoveryErrorState,
+  SourceSwitchSwitchingState,
+  SourceSwitchSuccessState,
+  SourceSwitchFailureState,
+} from './SourceSwitchPresentationState';
 
-export interface SourceSwitchDiscoveringState { kind: 'discovering'; }
-export interface SourceSwitchCandidatesState {
-  kind: 'candidates';
-  candidates: SourceSwitchCandidate[];
-  refreshing?: boolean;
-  refreshError?: string;
-  stopped?: boolean;
-}
-export interface SourceSwitchEmptyState { kind: 'empty'; stopped?: boolean; }
-export interface SourceSwitchDiscoveryErrorState { kind: 'discoveryError'; message: string; }
-export interface SourceSwitchSwitchingState { kind: 'switching'; targetSourceId: string; }
-export interface SourceSwitchSuccessState { kind: 'success'; }
-export interface SourceSwitchFailureState {
-  kind: 'failure'; message: string; transactionId?: string;
-  confirmation?: 'undispatched' | 'confirmed' | 'unknown'; reconcile?: boolean;
-}
-export type SourceSwitchPanelState = SourceSwitchDiscoveringState | SourceSwitchCandidatesState |
-  SourceSwitchEmptyState | SourceSwitchDiscoveryErrorState | SourceSwitchSwitchingState |
-  SourceSwitchSuccessState | SourceSwitchFailureState;
+export {
+  SourceSwitchPanelState,
+  SourceSwitchDiscoveringState,
+  SourceSwitchCandidatesState,
+  SourceSwitchEmptyState,
+  SourceSwitchDiscoveryErrorState,
+  SourceSwitchSwitchingState,
+  SourceSwitchSuccessState,
+  SourceSwitchFailureState,
+};
 
 class SourceSwitchLayoutFrame extends FrameCallback {
   private action: () => void;

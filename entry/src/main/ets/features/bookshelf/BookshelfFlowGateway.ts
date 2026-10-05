@@ -129,10 +129,12 @@ export class BookshelfFlowGateway {
   }
 
   async loadPage(offset: number, projectionRevision?: string, membershipOnly: boolean = false, isCurrent?: () => boolean): Promise<BookshelfState> {
+    const contentKind: 'all' | 'text' | 'manga' = this.filter.contentKind === 'text' ? 'text' :
+      this.filter.contentKind === 'manga' ? 'manga' : 'all';
     const params: BookshelfListParams = { pageProjection: true, membershipOnly,
       sortBy: 'lastReadAt', sortDirection: 'descending', limit: BOOKSHELF_PAGE_SIZE, offset,
       readingState: membershipOnly ? 'all' : this.filter.readingState,
-      contentKind: membershipOnly ? 'all' : this.filter.contentKind ?? 'all',
+      contentKind: membershipOnly ? 'all' : contentKind,
       sourceKind: membershipOnly ? 'all' : this.filter.sourceKind };
     if (projectionRevision !== undefined) params.projectionRevision = projectionRevision;
     const page = await this.bookshelf.loadBookshelf(params, isCurrent, this.background);
@@ -145,9 +147,11 @@ export class BookshelfFlowGateway {
     isCurrent: () => boolean): Promise<BookshelfState | undefined> {
     if (!isCurrent()) return undefined;
     if (!this.bookshelf.supportsShelfAnchorPages()) return this.loadPage(0, undefined, false, isCurrent);
+    const contentKind: 'all' | 'text' | 'manga' = this.filter.contentKind === 'text' ? 'text' :
+      this.filter.contentKind === 'manga' ? 'manga' : 'all';
     const page = await this.bookshelf.loadBookshelf({ pageProjection: true, anchor,
       sortBy: 'lastReadAt', sortDirection: 'descending', limit: BOOKSHELF_PAGE_SIZE,
-      offset: fallbackOffset, readingState: this.filter.readingState, sourceKind: this.filter.sourceKind, contentKind: this.filter.contentKind ?? 'all' }, isCurrent);
+      offset: fallbackOffset, readingState: this.filter.readingState, sourceKind: this.filter.sourceKind, contentKind }, isCurrent);
     if (!isCurrent()) return undefined;
     if (page.changed) throw new Error('BOOKSHELF_PROJECTION_CHANGED');
     return page;
