@@ -11,6 +11,7 @@ const siblingCore = resolve(repo, '../Reader-Core-Native');
 const core = process.env.READER_SOURCE_SWITCH_CORE_ROOT ?? (existsSync(resolve(siblingCore, 'bindings/harmony/sdk/reader_core.ts'))
   ? siblingCore : resolve(repo, '../../Reader-Core-Native'));
 const coreSdkUrl = pathToFileURL(resolve(core, 'bindings/harmony/sdk/reader_core.ts')).href;
+const { ReaderCoreRequestError } = await import(coreSdkUrl);
 const authorMetadataModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/common/BookAuthorMetadata.ts'), 'utf8');
 const factModule = stripTypeScriptTypes(readFileSync(resolve(repo, 'entry/src/main/ets/features/common/BookAcquisitionPresentation.ts'), 'utf8'));
 const { acquisitionCandidateRank } = await import(`data:text/javascript;base64,${Buffer.from(factModule).toString('base64')}`);
@@ -171,10 +172,15 @@ assert.deepEqual(
   const result = await run;
   assert.deepEqual(result.candidates.map(item => item.sourceId), Array.from({ length: 12 }, (_, i) => `s${i}`));
 }
-{
+for (const envelope of ['host-diagnostics', 'native-cause']) {
   const requests = [];
-  const environment = Object.assign(new Error('代理路由失败'), { event: { error: { code: 'HOST_ERROR',
-    details: { host: { diagnostics: { details: { category: 'NETWORK_ENVIRONMENT' } } } } } } });
+  const details = { category: 'NETWORK_ENVIRONMENT', phase: 'route' };
+  const environment = new ReaderCoreRequestError({ protocolVersion: 1, type: 'error', requestId: 2,
+    error: { code: 'INTERNAL', message: '代理路由失败', retryable: true,
+      details: envelope === 'native-cause'
+        ? { category: 'NETWORK_ENVIRONMENT', cause: details,
+          host: { operationId: 1, requestId: 2, capability: 'http.execute' } }
+        : { host: { diagnostics: { details } } } } });
   const gateway = new SourceSwitchGateway({ request: async (method, params) => {
     if (method === 'source.list') return { data: { sources: Array.from({ length: 20 }, (_, i) =>
       ({ sourceId: `proxy${i}`, name: `proxy${i}`, enabled: true })) } };
@@ -187,13 +193,15 @@ assert.deepEqual(
 
 // A per-domain DNS rejection is not evidence that every enabled source or the
 // device network is unavailable. Exercise the real batch and worker cursor.
+for (const envelope of ['host-diagnostics', 'native-cause'])
 for (const scenario of ['one-dns', 'all-dns', 'dns-and-empty', 'late-dns']) {
   const requests=[];
-  const dns=Object.assign(new Error('当前网络无法解析书源域名，请检查代理或网络连接后重试'),{
-    event:{error:{code:'HOST_ERROR',details:{category:'NETWORK_ENVIRONMENT',host:{diagnostics:{details:{
-      category:'NETWORK_ENVIRONMENT',phase:'dns',
-    }}}}}},
-  });
+  const details={category:'NETWORK_ENVIRONMENT',phase:'dns'};
+  const dns=new ReaderCoreRequestError({protocolVersion:1,type:'error',requestId:2,
+    error:{code:'INTERNAL',message:'当前网络无法解析书源域名，请检查代理或网络连接后重试',retryable:true,
+      details:envelope==='native-cause'
+        ? {category:'NETWORK_ENVIRONMENT',cause:details,host:{operationId:1,requestId:2,capability:'http.execute'}}
+        : {category:'NETWORK_ENVIRONMENT',host:{diagnostics:{details}}}}});
   const gateway=new SourceSwitchGateway({async request(method,params){
     if(method==='source.list') return {data:{sources:Array.from({length:12},(_,i)=>({sourceId:`dns-${i}`,enabled:true}))}};
     assert.equal(params.sourceId,'unresolvable-old-source');assert.equal(params.keyword,'终宋');

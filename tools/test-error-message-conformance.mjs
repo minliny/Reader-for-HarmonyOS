@@ -49,13 +49,17 @@ assert.equal(errorMessageOf({}), String({}), 'empty object falls back to String(
 
 for (const phase of ['dns','route','transport',undefined]) {
   const details={category:'NETWORK_ENVIRONMENT',...(phase===undefined?{}:{phase})};
-  for (const failure of [{details},{event:{error:{details:{host:{diagnostics:{details}}}}}}]) {
+  for (const failure of [{details},{event:{error:{details:{host:{diagnostics:{details}}}}}},
+    {event:{error:{details:{category:'NETWORK_ENVIRONMENT',cause:details,
+      host:{operationId:1,requestId:2,capability:'http.execute'}}}}}]) {
     assert.equal(isNetworkEnvironmentFailure(failure),true);
     assert.equal(isDomainResolutionFailure(failure),phase==='dns','only structured DNS may be isolated per domain');
   }
 }
+const causeCycle={};causeCycle.cause=causeCycle;
 for (const failure of [{message:'NETWORK_ENVIRONMENT dns'},{body:{category:'NETWORK_ENVIRONMENT',phase:'dns'}},
-  {details:{phase:'dns'}},cyclic]) assert.equal(isDomainResolutionFailure(failure),false);
+  {details:{phase:'dns'}},{details:{category:'NETWORK_ENVIRONMENT',cause:{body:{category:'NETWORK_ENVIRONMENT',phase:'dns'}}}},
+  cyclic,causeCycle]) assert.equal(isDomainResolutionFailure(failure),false);
 
 // --- Repo-wide sweep: the "[object Object]" flattening patterns are gone. ---
 const etsRoot = resolve(repo, 'entry/src/main/ets');
