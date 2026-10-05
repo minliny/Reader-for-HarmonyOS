@@ -120,7 +120,7 @@
               },
               {
                 "scheme": "file",
-                "type": "io.reader.harmonyos.kf8",
+                "type": "io.reader.minliny.kf8",
                 "linkFeature": "FileOpen",
                 "maxFileSupported": 1
               }
