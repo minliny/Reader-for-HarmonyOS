@@ -183,8 +183,10 @@ assert.match(index, /private startManualBookshelfUpdate\(\)/,
   'SHF-03: Index must dispatch the user foreground update intent');
 const catalogOwner = read('entry/src/main/ets/features/bookshelf/BookshelfCatalogOwner.ts');
 assert.match(index, /this\.bookshelfHost\.catalog\(owner\)/, 'SHF-03: existing BookshelfHost owns the exact Runtime sweep');
-assert.match(catalogOwner, /new BookshelfCatalogUpdate\(this\.owner\)\.run\(books, automatic/,
+assert.match(catalogOwner, /new BookshelfCatalogUpdate\(this\.owner\)\.run\(targets, automatic/,
   'SHF-03: original bounded sweep uses the exact owner');
+assert.match(catalogOwner, /const targets = automatic \? books\.filter\(book =>\s*this\.owner\.mangaOfflineProbeProtectsAutomaticCatalog\?\.\(book\.sourceId, book\.bookId\) !== true\) : books;/,
+  'automatic refresh protects an active manga offline probe; the explicit manual sweep retains its full target set');
 assert.match(catalogOwner, /done: value\.attempted/,
   'SHF-03: the sweep reports attempted chunk progress, distinct from result success counts');
 assert.match(catalogOwner, /if \(this\.active !== undefined \|\| !this\.current\(binding\)\) return;/,

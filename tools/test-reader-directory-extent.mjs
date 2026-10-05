@@ -75,9 +75,9 @@ function checkRenderWiring(text) {
   // keeps its legacy fixed row padding and extent.
   assert.match(text, /\.padding\(\{[\s\S]*?top: this\.naturalRowHeight \? 0 : this\.listPaddingTop/,
     'manga natural rows must not shrink the native viewport with List padding');
-  assert.match(text, /\.contentStartOffset\(this\.naturalRowHeight \? \(this\.listPaddingTop >= 0 \? this\.listPaddingTop : this\.listPaddingY\) : 0\)/,
+  assert.match(text, /\.contentStartOffset\(this\.naturalRowHeight \? \(this\.listPaddingTop >= 0 \? this\.listPaddingTop : this\.listPaddingY\) : this\.contentStartInset\)/,
     'manga top clearance is a content offset rather than viewport padding');
-  assert.match(text, /\.contentEndOffset\(this\.naturalRowHeight \? \(this\.listPaddingBottom >= 0 \? this\.listPaddingBottom : this\.listPaddingY\) : 0\)/,
+  assert.match(text, /\.contentEndOffset\(this\.naturalRowHeight \? \(this\.listPaddingBottom >= 0 \? this\.listPaddingBottom : this\.listPaddingY\) : this\.contentEndInset\)/,
     'manga bottom clearance is a content offset rather than viewport padding');
   assert.match(text, /top: this\.naturalRowHeight \? 0 : this\.listPaddingTop >= 0 \? this\.listPaddingTop : this\.listPaddingY,\n      bottom: this\.naturalRowHeight \? 0 : this\.listPaddingBottom >= 0 \? this\.listPaddingBottom : this\.listPaddingY/,
     'text directory retains the existing explicit List padding branch');

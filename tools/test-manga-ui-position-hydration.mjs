@@ -6,10 +6,14 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
 import {ProductionHost as ReadingEntryHost,setRuntime as setEntryRuntime} from './lib/reading-entry-owner-probe.mjs';
 import {localBookDetailSdk} from './lib/local-book-detail-sdk-probe.mjs';
-import {EMPTY_READING_DIRECTORY_RECOVERY,readingDirectoryRecovery} from '../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts';
+// The actual Owner probe registers the ArkTS-relative resolver during module
+// evaluation. Link the production recovery graph only after that resolver is
+// active, retaining its real receipt/privacy projection and imported helpers.
+const {EMPTY_READING_DIRECTORY_RECOVERY,readingDirectoryRecovery}=await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
 const EMPTY_READABLE_ADMISSION={generation:0,adding:false,cancelling:false,confirmation:'none'};
 const file=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
 let runtime={},pending=[],writes=[],nullEntryBooks=new Set();
+const runtimeAuthority={current:()=>runtime};
 class Gateway {
   constructor(owner){this.owner=owner;}
   entry(sourceId,bookId,_index,current){return new Promise(resolve=>pending.push({owner:this.owner,sourceId,bookId,current,resolve,kind:'entry',entryNull:nullEntryBooks.has(bookId)}));}
@@ -17,7 +21,7 @@ class Gateway {
 }
 const Host=productionMotionMethods(file,['hydrateMangaPositions','mangaPositionProjectionCurrent','pumpMangaPositionProjections','projectMangaPosition',
   'refreshDetailMangaPosition','refreshDetailAcquisitionProjection','returnToReadingOrigin','onReaderExited','currentReaderPresentationIdentity'],{
-  ReaderRuntimeOwner:{current:()=>runtime},MangaSessionGateway:Gateway,MangaBookPresentation,
+  ReaderRuntimeOwner:runtimeAuthority,MangaSessionGateway:Gateway,MangaBookPresentation,
   AppStorage:{setOrCreate:(_key,value)=>writes.push(value)},LOCAL_SOURCE_ID:'local',
   ReadingEntryHost,EMPTY_READABLE_ADMISSION,hilog:{warn(){}},DOMAIN:0,
   copyRemoteReadingSession:session=>({...session}) });
@@ -287,10 +291,10 @@ async function drain(){
   initial.chapter.chapterTitle='01';initial.chapter.totalPages=36;first.resolve(initial);await tick();
   const {owner,output}=createReaderBuilderProbe(readFileSync(file,'utf8'),['detailContent','detailSurface','externalDirectory','detailBookKey',
     'hydrateMangaPositions','mangaPositionProjectionCurrent','pumpMangaPositionProjections','projectMangaPosition',
-    'refreshDetailMangaPosition','returnToReadingOrigin','onReaderExited','currentReaderPresentationIdentity','directoryRecovery'],{
+    'refreshDetailMangaPosition','returnToReadingOrigin','onReaderExited','currentReaderPresentationIdentity','isCurrentRuntime','directoryRecovery'],{
       LocalBookDetail:Child,BookDirectoryPage:Child,LOCAL_SOURCE_ID:'local',MangaBookPresentation,
       EMPTY_READABLE_ADMISSION,EMPTY_READING_DIRECTORY_RECOVERY,readingDirectoryRecovery,
-      ReaderRuntimeOwner:{current:()=>runtime},MangaSessionGateway:Gateway,
+      ReaderRuntimeOwner:runtimeAuthority,MangaSessionGateway:Gateway,
       AppStorage:{setOrCreate:(_key,value)=>writes.push(value)},
     },{childSources:{LocalBookDetail:detailSource,BookDirectoryPage:directorySource}});
   const emitted=ts.createSourceFile('/tmp/IndexPositionHydrationEmission.ts',output,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
