@@ -125,14 +125,15 @@ class ActualSearchPage extends childProbe.Component {
   constructor(...args) { initialParams = args[1]; super(...args); }
 }
 const indexMembers = ['searchPublication', 'searchPublicationRevision',
-  'searchOrchestrator', 'getSearchOrchestrator', 'preparePersistedShelfBooks', 'applyBookshelfState', 'copyShelfBookWithSourceName'];
+  'searchOrchestrator', 'getSearchOrchestrator', 'searchJourneyActive', 'syncSearchDetailCandidates',
+  'preparePersistedShelfBooks', 'applyBookshelfState', 'copyShelfBookWithSourceName'];
 const parentSource = `@Component struct Index {\n${indexMembers.map(name => member(indexStruct, indexTree, name)).join('\n')}
 build() { ${searchEntry}; }\n}`;
 const { owner: host, output: parentOutput } = createReaderBuilderProbe(parentSource,
   [...indexMembers, 'build'], { ...runtime.sdk, SearchPage: ActualSearchPage, LOCAL_SOURCE_ID: 'local', SearchPublication,
     SearchOrchestrator, deviceInfo: { deviceType: 'phone' } }, runtime.hooks);
 Object.assign(host, { searchViewState: new SearchViewState(), settingsSnapshot: { reduceMotion: false },
-  route: 'search', searchAppForeground: true, shelfBooks: [], bookshelfLoadGeneration: 1,
+  route: 'search', searchAppForeground: true, detailReturnRoute: 'search', searchDetailCandidates: [], shelfBooks: [], bookshelfLoadGeneration: 1,
   hydrateShelfSourceNames() {}, scheduleBookshelfBackgroundRefresh() {}, sourceDisplayName: () => '源甲' });
 host.initialRender();
 const page = [...host.children.values()][0];
@@ -150,6 +151,7 @@ const orchestrator = host.getSearchOrchestrator(); orchestrator.sessionOpen = tr
 function startRun(keyword, count, suffix) {
   const run = new SearchQueryRun(keyword, `request-${suffix}`);
   run.sources = ['source-a', 'empty-a', 'empty-b'].map(sourceId => ({ sourceId, name: sourceId, enabled: true }));
+  run.totalSourceCount = run.sources.length;
   run.localStatus = 'done'; run.completed.add('source-a');
   const books = Array.from({ length: count }, (_, index) => ({ sourceId: 'source-a', bookId: `${suffix}-${index}`,
     sourceName: '源甲', bookSourceUrl: 'source-a', detailUrl: `${suffix}-${index}`, category: 'novel',

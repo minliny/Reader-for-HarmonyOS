@@ -861,6 +861,17 @@ export struct SearchPage {
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
                 .onClick((): void => this.onRetry());
             }
+            if ((this.presentation.skippedSourceCount ?? 0) > 0) {
+              Text(` · 跳过 ${this.presentation.skippedSourceCount} 个近期不可用书源，重试`)
+                .fontFamily('ReaderInter')
+                .fontWeight(FontWeight.Regular)
+                .fontSize(11)
+                .lineHeight(16.5)
+                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .onClick((): void => this.onRetry());
+            }
           }
         }
         .width(this.contentFrame().width)
@@ -1051,7 +1062,11 @@ export struct SearchPage {
     if (this.presentation.localSearchFailed) messages.push(`本地检索：${this.presentation.localFailureMessage ?? '读取未完成，请重试'}`);
     if (this.presentation.sourceListFailed) messages.push(`书源列表：${this.presentation.sourceListFailureMessage ?? '读取未完成，请重试'}`);
     if (messages.length > 0) return messages.join('；');
-    return (this.presentation.failedSourceCount ?? 0) > 0 ? `${this.presentation.failedSourceCount} 个书源请求失败，可重试或检查书源状态` : '';
+    const failed = (this.presentation.failedSourceCount ?? 0) > 0 ?
+      `${this.presentation.failedSourceCount} 个书源请求失败，可重试或检查书源状态` : '';
+    const skipped = (this.presentation.skippedSourceCount ?? 0) > 0 ?
+      `${this.presentation.skippedSourceCount} 个近期不可用书源已跳过，可点击重试` : '';
+    return [failed, skipped].filter((message: string): boolean => message.length > 0).join('；');
   }
 
   private searchFailureTitle(): string {

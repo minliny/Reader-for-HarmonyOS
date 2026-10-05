@@ -2695,14 +2695,66 @@ struct Index {
         (presentation: SearchPresentation): void => {
           this.searchPublication.publish(presentation);
           this.searchPublicationRevision += 1;
+          // Search remains the source of truth for a search-origin detail or
+          // reader journey.  The selected page must receive late source
+          // results and acquisition facts too; keeping only the click-time
+          // snapshot makes the source-switch surface stale as soon as the
+          // next source finishes.
+          this.syncSearchDetailCandidates(presentation);
         },
         (sources: SearchSource[]): void => {
           this.searchPublication.updateSources(sources);
         },
-        (): boolean => this.route === 'search' && this.searchAppForeground,
+        (): boolean => this.searchJourneyActive(),
       );
     }
     return this.searchOrchestrator;
+  }
+
+  /**
+   * A search query owns one navigation journey until its origin is closed.
+   * Detail, reader, and directory are still allowed to consume late search
+   * results and source-health projections, while bookshelf/settings remain a
+   * hard cancellation boundary.
+   */
+  private searchJourneyActive(): boolean {
+    if (!this.searchAppForeground) return false;
+    if (this.route === 'search') return true;
+    return this.detailReturnRoute === 'search' &&
+      (this.route === 'detail' || this.route === 'reading' || this.route === 'directory');
+  }
+
+  /** Merge late search publications into the selected same-book candidate set. */
+  private syncSearchDetailCandidates(presentation: SearchPresentation): void {
+    if (presentation.kind !== 'results' || this.searchDetailCandidates.length === 0) return;
+    // A prior preview can leave its candidate list alive while Search is
+    // visible again.  Only the mounted detail/reader journey may reconcile
+    // that list; a new Search query must never inherit the old group.
+    if (this.detailReturnRoute !== 'search' ||
+      (this.route !== 'detail' && this.route !== 'reading' && this.route !== 'directory')) return;
+    const anchor = this.searchDetailCandidates[0];
+    if (anchor === undefined) return;
+    const sameGroup = (candidate: SearchBook): boolean =>
+      (anchor.groupKey !== undefined && candidate.groupKey === anchor.groupKey) ||
+      (candidate.title === anchor.title && candidate.author === anchor.author);
+    const latest = new Map<string, SearchBook>();
+    for (const candidate of presentation.results) {
+      if (sameGroup(candidate)) latest.set(`${candidate.sourceId}\u0000${candidate.bookId}`, candidate);
+    }
+    if (latest.size === 0) return;
+    const merged: SearchBook[] = [];
+    const seen = new Set<string>();
+    for (const previous of this.searchDetailCandidates) {
+      const key = `${previous.sourceId}\u0000${previous.bookId}`;
+      const next = latest.get(key) ?? previous;
+      if (!seen.has(key)) { merged.push(next); seen.add(key); }
+    }
+    for (const [key, candidate] of latest) {
+      if (!seen.has(key)) { merged.push(candidate); seen.add(key); }
+    }
+    const changed = merged.length !== this.searchDetailCandidates.length ||
+      merged.some((candidate: SearchBook, index: number): boolean => candidate !== this.searchDetailCandidates[index]);
+    if (changed) this.searchDetailCandidates = merged;
   }
 
   private retrySearch(): void {
@@ -3087,6 +3139,10 @@ struct Index {
     // Readability is reported within the surface, never on its entry button.
     this.remoteContentVerdict = 'verifying';
     this.route = entryRoute;
+    // A search-origin query may have workers parked on the old Search route.
+    // Route ownership now includes this detail/reader journey, so wake those
+    // workers after the navigation boundary has committed.
+    this.searchOrchestrator?.visibilityChanged();
     ReaderRuntimeOwner.current().bookAcquisitions().setPreparationVisible(false);
     if (resumeImmediately) {
       if (validatedSession !== undefined && validatedSession.identity.sourceId === seed.sourceId &&
@@ -4929,9 +4985,10 @@ struct Index {
       return;
     }
     const gateway = this.getSourceSwitchGateway();
-    const known = this.knownSearchSourceCandidates(query);
-    if (!forceRefresh && known.length > 0) {
-      this.sourceSwitchState = { kind: 'candidates', candidates: known, refreshing: false };
+    const knownCandidates = (): SourceSwitchCandidate[] => this.knownSearchSourceCandidates(query);
+    const initialKnown = knownCandidates();
+    if (!forceRefresh && initialKnown.length > 0) {
+      this.sourceSwitchState = { kind: 'candidates', candidates: initialKnown, refreshing: false };
     }
     const isCurrent = (): boolean => this.isSourceSwitchActive(generation);
     this.sourceSwitchUnsubscribe?.();
@@ -4955,7 +5012,7 @@ struct Index {
       const batch: BookAcquisitionChange = { reset: projectionReset, identities: Array.from(projectionDirty.values()) };
       projectionReset = false;
       projectionDirty.clear();
-      void gateway.loadCachedCandidates(query, isCurrent, known, batch).then((candidates: SourceSwitchCandidate[]): void => {
+      void gateway.loadCachedCandidates(query, isCurrent, knownCandidates(), batch).then((candidates: SourceSwitchCandidate[]): void => {
         if (!isCurrent()) return;
         if (candidates.length > 0) this.sourceSwitchState = { kind: 'candidates', candidates,
           refreshing: this.sourceSwitchState.kind === 'candidates' && this.sourceSwitchState.refreshing === true };
@@ -4984,7 +5041,7 @@ struct Index {
     }
     const load = forceRefresh
       ? gateway.refreshCandidates(query, isCurrent)
-      : gateway.loadCachedCandidates(query, isCurrent, known)
+      : gateway.loadCachedCandidates(query, isCurrent, knownCandidates())
         .then((cached: SourceSwitchCandidate[]): Promise<SourceSwitchDiscoveryOutcome> |
           SourceSwitchDiscoveryOutcome => cached.length > 0
           ? { kind: 'sources', candidates: cached }

@@ -123,7 +123,13 @@ export class SearchResultProjection {
     const changedKeys = new Set<string>();
     for (const key of affected) {
       if ((this.members.get(key)?.size ?? 0) > 0) navigation.redirects.delete(key);
-      const variants = Array.from(this.members.get(key)?.values() ?? []);
+      const allVariants = Array.from(this.members.get(key)?.values() ?? []);
+      // A current, confirmed catalog/detail failure should not inflate the
+      // visible source count when another source has usable evidence. Keep a
+      // failed-only group visible so the user can still retry the sole source.
+      const usableVariants = allVariants.filter((variant: SearchBook): boolean =>
+        searchCandidateRank(variant) < 3);
+      const variants = usableVariants.length > 0 ? usableVariants : allVariants;
       const previous = this.rows.get(key);
       if (variants.length === 0) {
         if (this.rows.delete(key)) { changedKeys.add(key); orderChanged = true; }
