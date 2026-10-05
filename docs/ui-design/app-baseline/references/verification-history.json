@@ -1,0 +1,41 @@
+{
+  "evidence": "design-artifact-only",
+  "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+  "observations": [
+    {
+      "id": "source-reference-bounds",
+      "symptom": "ReaderControlAppearanceGeometry.ts reference 164 exceeded file bounds",
+      "fix": "reference updated to actual drop function line 145",
+      "status": "static-check-passed"
+    },
+    {
+      "id": "preview-selector-collision",
+      "symptom": "viewport data-screen/data-variant collided with navigation selectors",
+      "fix": "viewport metadata renamed data-active-screen/data-active-variant",
+      "status": "173-state-browser-check-passed"
+    },
+    {
+      "id": "overlay-pointer-order",
+      "symptom": "underlying reading hit area intercepted TTS manager header click",
+      "trigger": "new TTS manager overlay; measurement click",
+      "designSourceSha256": "28dff3c8862d525b0bbf39bff611c984b07bdd4543b20596eb9f78a168da97be",
+      "fix": "bound app-screen and app-overlay to distinct stacking contexts",
+      "status": "637-reference-browser-regression-passed"
+    },
+    {
+      "id": "settings-phone-width",
+      "symptom": "phone settings scroll shrank to intrinsic content width instead of source content frame",
+      "trigger": "visual review of general dark reference",
+      "fix": "explicit full-width scroll envelope with live safe-inset width cap",
+      "status": "geometry-and-reference-check-passed"
+    },
+    {
+      "id": "large-text-settings-actions",
+      "symptom": "200% pressure sample cramped theme segment labels and cache label on 320 window",
+      "fix": "theme selector and cache action wrap to a full second row with measurable labels",
+      "status": "button-and-row-label-text-fit-check-passed"
+    }
+  ],
+  "finalDesignSourceSha256": "ec32ce560dc63f5a3e0bbcae0bfb2a578250ceeee2dfb4c22c9294a9cb5ab0cd",
+  "finalReferenceImages": 637
+}
