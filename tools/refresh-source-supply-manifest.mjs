@@ -10,6 +10,8 @@ import { fileURLToPath } from 'node:url';
 import { applyReadingAssistantMetadataCorrection } from './reading-assistant-source-correction.mjs';
 import { applyQidianDirectoryCorrection } from './qidian-directory-source-correction.mjs';
 import { applyPopofreeQuoteCorrection } from './popofree-source-correction.mjs';
+import { applyBaoziImageSourceCorrection } from './baozi-image-source-correction.mjs';
+import { applyTencentPictureSourceCorrection } from './tencent-picture-source-correction.mjs';
 import {
   BUILTIN_VERSION,
   SUITE_VERSION,
@@ -293,6 +295,8 @@ const sources = ordered.map(record => record.source);
 applyReadingAssistantMetadataCorrection(sources);
 applyPopofreeQuoteCorrection(sources);
 applyQidianDirectoryCorrection(sources);
+applyBaoziImageSourceCorrection(sources);
+applyTencentPictureSourceCorrection(sources);
 
 // Keep the portable collection comfortably below the product's bounded JSON
 // import limit. The payload remains ordinary JSON and can be pretty-printed by
