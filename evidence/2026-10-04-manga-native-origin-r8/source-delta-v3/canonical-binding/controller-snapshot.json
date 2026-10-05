@@ -1,0 +1,4142 @@
+{
+  "schemaVersion": 1,
+  "inputs": [
+    "scripts/check-local.sh",
+    "scripts/hap-pipeline.mjs",
+    "tools"
+  ],
+  "fileCount": 590,
+  "fingerprint": "192cf1aaa8c3c500dbe6bbf6987a0e02c7f588dc8d6d388603e8e1b626c2156c",
+  "files": [
+    {
+      "path": "scripts/check-local.sh",
+      "type": "file",
+      "mode": 493,
+      "bytes": 650,
+      "sha256": "4ca391149b02e36610974a1b288cd46541c2e6765b843e17a6c0bde673d09f37"
+    },
+    {
+      "path": "scripts/hap-pipeline.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 65654,
+      "sha256": "882b0bbdc7a8e701fb2a2c7ae4289cc035a51e0d04a91666ae4421e1d4b2441c"
+    },
+    {
+      "path": "tools/baozi-image-source-correction.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4152,
+      "sha256": "f4fbd346748a42a9ee785b90e25f9eb908e795dbaa1ee9db052bff4ec1cf2ad9"
+    },
+    {
+      "path": "tools/fixtures/arkweb-source.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 852,
+      "sha256": "52df8adf03672d72824a127e40b9242d8bf7e793274c6c6a34d17780f524bb42"
+    },
+    {
+      "path": "tools/fixtures/arkweb-timeout-source.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 824,
+      "sha256": "ae2a4d6087e94f0b327d236d34997d8ad4c8370be187824d4b77d9080effdb3d"
+    },
+    {
+      "path": "tools/fixtures/cookie-session-sources-v3.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1275,
+      "sha256": "eaa265c54392e9e534c9f8158f0af64d5ec7d3bc166c7702e029b3356b923e10"
+    },
+    {
+      "path": "tools/fixtures/cookie-session-sources-vm.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1273,
+      "sha256": "d45f7f3dd732094d7fddbb70dce4cd8a544f4f48a6e50335e3ab933e09029fae"
+    },
+    {
+      "path": "tools/fixtures/cookie-session-sources.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1309,
+      "sha256": "d3d6b526fefac19f4a90a3025b12f4c0422b654859b652456caa8ebb4f15dc3c"
+    },
+    {
+      "path": "tools/fixtures/http-conformance/http-transport-v1.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6249,
+      "sha256": "ad87a5423ee60de43b7056e9fa2d6683302bb1b9378139dd271a7943b625c331"
+    },
+    {
+      "path": "tools/fixtures/http-vm-sources.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1953,
+      "sha256": "41a349196c7a5f5030b56c4a79fb39f8f53fa516cd51470b0488e556fa2a3665"
+    },
+    {
+      "path": "tools/fixtures/manga-graphics/expected-bgra.bin",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3296,
+      "sha256": "d0583d69986f82b11b09b7b0e1b2db0c3f6340417ec6f928f306dfa8bc61d0cf"
+    },
+    {
+      "path": "tools/fixtures/manga-graphics/expected-rgba.bin",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3296,
+      "sha256": "a4629c4785ddd6b58bbfbf879eb2a17d76517b49b9acd217e63461552bde5fcc"
+    },
+    {
+      "path": "tools/fixtures/manga-graphics/expected.jpg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1044,
+      "sha256": "808c5540ff936cf01268aae7f1eb419c15782671e84dc116f29ac4ac8ec09a4c"
+    },
+    {
+      "path": "tools/fixtures/manga-graphics/input-bgra.bin",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3296,
+      "sha256": "99c35d7fb71260bcff7124a5a5308e5e2ef24fe2c096ba9ed42bdcbd229cc623"
+    },
+    {
+      "path": "tools/fixtures/manga-graphics/input-rgba.bin",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3296,
+      "sha256": "76ee5d948abdb0720c023577e395b7650805efcf8f0db7d7eeb7c040d41ecabf"
+    },
+    {
+      "path": "tools/fixtures/manga-graphics/input.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 121,
+      "sha256": "2b4c65c7c152560c6f51c56d263c314f46140addd63b0d74f24ebe4eb343035d"
+    },
+    {
+      "path": "tools/fixtures/manga-graphics/legacy-rgba-misread.jpg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1001,
+      "sha256": "f5e2afedb5e4e2ab400cc8555a77c98fe0047e4edc9c95d5a0045e2c316f2428"
+    },
+    {
+      "path": "tools/fixtures/manga-graphics/plan.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1173,
+      "sha256": "10cb6d7d467ce5b6ee3acad004e4991308b36778e7b4c3df46f728be36609c20"
+    },
+    {
+      "path": "tools/fixtures/manga-graphics/provenance.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1649,
+      "sha256": "1de73e4df34992e99fa0996f4576523aaf255cf4e7872fea43391a047990b674"
+    },
+    {
+      "path": "tools/fixtures/manga-graphics/REGIONAL_READBACK.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2387,
+      "sha256": "3fb7aec22c0fc7cd8ebc76409dd25cf320872db8c2a3c81be71d65851e1d9ae3"
+    },
+    {
+      "path": "tools/fixtures/manga-metadata/bad-exif.jpg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 655,
+      "sha256": "e4bb1ee4e4df577d1f3feb9cf9f4d3bd7be244f64467e290fb6c9ac61b2d84d0"
+    },
+    {
+      "path": "tools/fixtures/manga-metadata/bad-exif.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 107,
+      "sha256": "67c59bad74b70a09b5946905ab2198b59032b95d66b78d42c7c69e8d2a7d3df0"
+    },
+    {
+      "path": "tools/fixtures/manga-metadata/bad-exif.webp",
+      "type": "file",
+      "mode": 420,
+      "bytes": 106,
+      "sha256": "4033cdbd4c46d88f065dd534f79e61a2ba8220eaa67dabc3671b099c02efad83"
+    },
+    {
+      "path": "tools/fixtures/manga-metadata/jpeg-coefficient-padding-proof.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 866,
+      "sha256": "914a123c5963c344cd81a4437a683a97cb7e1edfa29f1a2d025b1adb2f21c46c"
+    },
+    {
+      "path": "tools/fixtures/manga-metadata/jpeg-coefficient-padding.jpg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10764,
+      "sha256": "7d2c82a32f52a967ac7693fdaccf469a5009a86d7b4d8c78b15094de700f62a6"
+    },
+    {
+      "path": "tools/fixtures/manga-metadata/no-exif.jpg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 633,
+      "sha256": "dcaca20dd321080558ae0130f42794a4ef41d6af312c4928f4667df1849feeee"
+    },
+    {
+      "path": "tools/fixtures/manga-metadata/no-exif.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 83,
+      "sha256": "2ec9b6f202f69dbec797aea5180ecd0b8026b85bf406554aede11ac66a031437"
+    },
+    {
+      "path": "tools/fixtures/manga-metadata/no-exif.webp",
+      "type": "file",
+      "mode": 420,
+      "bytes": 68,
+      "sha256": "68b1cabb307cccdebcc9b51a03e1f57e59d3bb4f6292afe6298c3daee8030ef7"
+    },
+    {
+      "path": "tools/fixtures/manga-metadata/orientation-6.jpg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 669,
+      "sha256": "dad996428b9744ce1a605b5da4757c64e00222bd692d6fa126dab73f28551db3"
+    },
+    {
+      "path": "tools/fixtures/manga-metadata/orientation-6.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 121,
+      "sha256": "a1f816d0380ed155ed55bf37f75db84c871d222847a3dbc22436ab4b52fa8d4a"
+    },
+    {
+      "path": "tools/fixtures/manga-metadata/orientation-6.webp",
+      "type": "file",
+      "mode": 420,
+      "bytes": 120,
+      "sha256": "0e629883ed5d3c042395b5b5dc9bd57159c5ed28dca1321c7066ee159b70b64d"
+    },
+    {
+      "path": "tools/fixtures/manga-metadata/provenance.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 987,
+      "sha256": "ce357765f0934e06b97636d9c16716fa295660355f88969f0d8a62ea3479012e"
+    },
+    {
+      "path": "tools/fixtures/manga-metadata/README.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 681,
+      "sha256": "49259b7a3968cb5d77cafe4c5077e76433b46ff50a56cb8f15243ab828bafdd9"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/generate.py",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2308,
+      "sha256": "98a0984cd4d87cf8340497a6b6605d224cba0e857dd82b94f6dc26ac681b7a63"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/goldens.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 755709,
+      "sha256": "87e52fd141b274e8d26dd0744c9d9e48301010cd10e0d045934941909037f9c1"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/long-1.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6588,
+      "sha256": "ffc2cb298f4a92f41d0c8f552d625ff952a541ef33cfee94cf663f9ce6c4ad0b"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/long-2.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6588,
+      "sha256": "43a559dee341ec10601d85abbf3e0e77a96f833826531d589d03fb54fc5206cb"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/long-3.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6588,
+      "sha256": "b6f571096c773b9916695211ba93c37b3d6113a87d90dfaf3da7120b235a15a4"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/long-4.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6588,
+      "sha256": "5bdc42b299427aa349fb652afcc4e003c03a1c25b08a678ae304dde712d78ef9"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/long-5.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2622,
+      "sha256": "4c45fe716a2e440a4c5f1dcad4c0d7a1d117026fc816a4bc997a330385d392b1"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/long-6.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2622,
+      "sha256": "83aa0e080e610f36dbdeb679f7a5f3d5ccec2718ce643b8d4063edd93ec93667"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/long-7.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2622,
+      "sha256": "cd848582f75de6c9996279838a75e4b667507f9f65d2cf5a8a8de0ce121444aa"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/long-8.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2622,
+      "sha256": "eaab8f260f0fe4630ac787bbd588c328b5b6037eae99ee282ed93c1a13f8dc2a"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-1.jpg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 918,
+      "sha256": "a7a518fbe8b7421583f339e3762330454f76d7de90bd1204cf1da15bf0fe6e07"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-1.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 124,
+      "sha256": "8cae310db29dec5752d72885b0bb063add4a2773da320d54cec2d2434eb6b5d5"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-1.webp",
+      "type": "file",
+      "mode": 420,
+      "bytes": 140,
+      "sha256": "96f6be9ba473c4576cc7bb42f9b6b78756715d7ab82f6fa81666223e1eafdf90"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-2.jpg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 918,
+      "sha256": "99bc5e0c32d800a05feda6c56fdd575bc1e5004d6f3b837d2fac3147e3d2d4b4"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-2.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 124,
+      "sha256": "7e1e02d9f2a81109d92c061ace7b4ccc2bfb46dae84ca8e91429c262ccfad4ab"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-2.webp",
+      "type": "file",
+      "mode": 420,
+      "bytes": 140,
+      "sha256": "ec719b04ab6471cf35b4bb60d1689c6cb7091fe082d1eabc55a684109417f239"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-3.jpg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 918,
+      "sha256": "3804e412d1d8d965e1476690c46a3bbb7142ea85da0624c764f9a0e18c17697e"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-3.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 124,
+      "sha256": "f28023ab327d901c5e30fd5ab42e71418f978dfa6568151455f337d5d2416a57"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-3.webp",
+      "type": "file",
+      "mode": 420,
+      "bytes": 140,
+      "sha256": "44c612b5e8ad6b8865a7175451575c2ff889c50b8d9397b9d898a57ba166bd24"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-4.jpg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 918,
+      "sha256": "6336adec019e68f835fb0db851fac9346838c0f091f925582e01574584c4a938"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-4.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 124,
+      "sha256": "a48d97d2265d60f4aa6ddbc8cf6d33da171e962e1d64289fc9424b2acf01d0c5"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-4.webp",
+      "type": "file",
+      "mode": 420,
+      "bytes": 140,
+      "sha256": "15e6238ff1ae2141c2a3edd7c65b3b92bbf5f42584c3092f11b12cb64b148ec2"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-5.jpg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 918,
+      "sha256": "96c54330dbc06f06834231d50f996f72acb4e8ef191fc9840bf715ac8e5db209"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-5.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 124,
+      "sha256": "28a9ccc4272d3bd6cfa30ba13901cdd9476992402bf006dc589d3bcf6bb8c756"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-5.webp",
+      "type": "file",
+      "mode": 420,
+      "bytes": 140,
+      "sha256": "bc66eead94bf1b866d918a7a6cf3b35fc301a8150257fd1f35391eaf797f5039"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-6.jpg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 918,
+      "sha256": "ef97cc7188a83fdd74bbd5b90b03c98069c1ac8c760bb6dc197ba7bd121a254f"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-6.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 124,
+      "sha256": "f416e84905214aec55f55c2905aed82fdadcd0aef1653cdb3b70a00887a15f0b"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-6.webp",
+      "type": "file",
+      "mode": 420,
+      "bytes": 140,
+      "sha256": "9dbb0f885064940d3e213aa3091b72a82ecc42b2944811f176401c2df15f31fa"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-7.jpg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 918,
+      "sha256": "a43a90c5153f9d76200580c1f34a785e31856dd9540acc1e78ae4f2a5f5be49b"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-7.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 124,
+      "sha256": "f44ce72fcfb7aadb28c56dba885ee79d0282a277fc8c685f70236b239767b22a"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-7.webp",
+      "type": "file",
+      "mode": 420,
+      "bytes": 140,
+      "sha256": "6fffc199cc0226d9a6db08635b811fb125d18bf0384ccc5602b56619c1944e2e"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-8.jpg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 918,
+      "sha256": "188550ba978109d4be83d1972b9e72956c6dd1ff9fc243c124fedab266f913a5"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-8.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 124,
+      "sha256": "e40a71a188856ad7873cb0900ec59d660e1a450945c93598d0efa80a7971ed56"
+    },
+    {
+      "path": "tools/fixtures/manga-orientation/orientation-8.webp",
+      "type": "file",
+      "mode": 420,
+      "bytes": 140,
+      "sha256": "c8e73af7c3742ee814e4cf8c79649f1d47e42e6173b2a96954c1fa823f3ca6d0"
+    },
+    {
+      "path": "tools/fixtures/manga-platform-large/first.rgba.deflate",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8308,
+      "sha256": "62b2ec46d4dee2c3b849cca369331b039724b1353b2cd6a2a295384445f634ea"
+    },
+    {
+      "path": "tools/fixtures/manga-platform-large/last.rgba.deflate",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8311,
+      "sha256": "92c56dac852b6a99c776d865424c6d5605382c70fe9b036016d3510191770923"
+    },
+    {
+      "path": "tools/fixtures/manga-platform-large/middle.rgba.deflate",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8310,
+      "sha256": "9b3e9ba165e3f6e574e47b6dbe97bf7e090e82d2df8b1dfe5ba475ca11b2c2df"
+    },
+    {
+      "path": "tools/fixtures/manga-system-bars-r5/MangaReadingSurface.ets",
+      "type": "file",
+      "mode": 420,
+      "bytes": 101068,
+      "sha256": "0f5e6d2654e8cc228b43b2ab2c9023e728db904193a147ce71da425113a6b897"
+    },
+    {
+      "path": "tools/fixtures/manga-system-bars-r5/ReaderShell.ets",
+      "type": "file",
+      "mode": 420,
+      "bytes": 24844,
+      "sha256": "ea6dddd9fcb6eecf76ea4871419d70e32c69a12cc5812c5aea34716c89cf85ba"
+    },
+    {
+      "path": "tools/fixtures/manga-viewport-r6/Index.ets",
+      "type": "file",
+      "mode": 420,
+      "bytes": 335378,
+      "sha256": "0e54a722f8bd7da88e50acd021e58f1380cfdd945608b6ea5938ab68962692c5"
+    },
+    {
+      "path": "tools/fixtures/manga-viewport-r6/MangaReadingSurface.ets",
+      "type": "file",
+      "mode": 420,
+      "bytes": 104797,
+      "sha256": "f84e5289f30711f31b9c7df2999fdba30dc6af4d175d6100c0e0bfb801ee3448"
+    },
+    {
+      "path": "tools/fixtures/openharmony/arkComponent-5.0.0.js.gz",
+      "type": "file",
+      "mode": 420,
+      "bytes": 88473,
+      "sha256": "b7541032613c7e743cf043bfd18d0801d6083dd5add3a9dfea8279ec7b86c1a3"
+    },
+    {
+      "path": "tools/fixtures/openharmony/arkComponent-5.0.0.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 472,
+      "sha256": "a17c7e14a684526ae41b04499d7df70a9f78f7eb3d9895cf1cfded8f96858896"
+    },
+    {
+      "path": "tools/fixtures/openharmony/jsEnumStyle-5.0.0.js.gz",
+      "type": "file",
+      "mode": 420,
+      "bytes": 22888,
+      "sha256": "d97642230fbe3fff1b49fafdf19e0dfbec2e6b8580a65e884ce0506e0553fe7d"
+    },
+    {
+      "path": "tools/fixtures/openharmony/jsEnumStyle-5.0.0.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 419,
+      "sha256": "22b66cea27b458782f18e8651d88f49b802c7c2d3e3906fc1e369b7aed4b95e3"
+    },
+    {
+      "path": "tools/fixtures/openharmony/LICENSE",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10173,
+      "sha256": "0cec06e0e55fbc3dc5cee4fca9b607f66cb8f4e4dbcf3b3c013594dd156732e9"
+    },
+    {
+      "path": "tools/fixtures/openharmony/README.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 945,
+      "sha256": "42aefafd3c2b6b1926debf099f6d410a76c1a1ae50198bd4042bcf87c4e15d52"
+    },
+    {
+      "path": "tools/fixtures/reader-appearance-motion-figma-n-o.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 42516,
+      "sha256": "85ed5814fc98406f2735f89b3123a8b15c79fc066f68127517d72fd45e200df8"
+    },
+    {
+      "path": "tools/fixtures/reader-auto-quick-native-layout-20260913.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2371,
+      "sha256": "a948cbd88ee78c6bc48b33fcbec943653df32ff3267852439f209b2b67aefe1f"
+    },
+    {
+      "path": "tools/fixtures/reader-control-bookmark-live-20260906.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 21889,
+      "sha256": "05caf9e26dc30ea2c7ae449a39d0ad6e27072dc932222138a17c4d8504712411"
+    },
+    {
+      "path": "tools/fixtures/reader-control-playback-live-20260905.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 34391,
+      "sha256": "59694a1857cba187df301a5682c2e0869692d5c717a104f95cda257dcb97642c"
+    },
+    {
+      "path": "tools/fixtures/reader-control-restored-baseline-20260905.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 302608,
+      "sha256": "cd3895d292cf8ec21daf25ea5426363f2edb266c2eb802fba949e051e2ad4e40"
+    },
+    {
+      "path": "tools/fixtures/reader-control-search-results-clip-live-20260906.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6301,
+      "sha256": "89b632085f82bd5b7f1ebb9b3c7551b40a816721fbc76b8c6ab24dfd4ac478dd"
+    },
+    {
+      "path": "tools/fixtures/reader-control-search-settings-live-20260905.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 162710,
+      "sha256": "265f849cbca5b39436fe1a471046e551371ea7aef0cd31020a898d41a2e5fe69"
+    },
+    {
+      "path": "tools/fixtures/reader-control-shared-layer-live-20260906.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 50200,
+      "sha256": "eb1c11f019017dedd946b9b863053c23a937166b7ac07aeb9574df75d145b769"
+    },
+    {
+      "path": "tools/fixtures/reader-control-tts-make-20260911.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3491,
+      "sha256": "53cfb304a67a9311beb69cadd22501fc78ad33adc747cbd8b8d3a39371cd590d"
+    },
+    {
+      "path": "tools/fixtures/reader-directory-toolbar-hierarchy-20260905.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 77202,
+      "sha256": "e1e0db2b114f11b80f86e93a38a3269c4eeeb74310a3be7f92a842b12f855af6"
+    },
+    {
+      "path": "tools/fixtures/reader-local-image-core-first-frame.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 88113,
+      "sha256": "1625aa6acb252523c0841ed499910f300b2fe66eda97ee9b9282affdb1b64df1"
+    },
+    {
+      "path": "tools/fixtures/reader-local-image-core-first-frame.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2794,
+      "sha256": "e6f83baff9a4ca0f88fe011e7de2d3515a65b8502259d39addaab13c295f1e1f"
+    },
+    {
+      "path": "tools/fixtures/ReaderControlMotionVerification.ets",
+      "type": "file",
+      "mode": 420,
+      "bytes": 360,
+      "sha256": "84fc872f185b5bd1ac863b7515df112263794e600b20a38afba40737f8a06017"
+    },
+    {
+      "path": "tools/fixtures/ReaderPlatformParagraphProbe.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 733,
+      "sha256": "b243ad1f3546e60209f0eb4e10227c764375634d8b7829f469ee0dc0a94a9039"
+    },
+    {
+      "path": "tools/fixtures/ReaderPlatformParagraphProbe.ts",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1786,
+      "sha256": "ceb4b9832348898e5942e5cec72dcfb0c2949e1f652506b05c3841d8700cfb9b"
+    },
+    {
+      "path": "tools/fixtures/reading-assistant-metadata.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2800,
+      "sha256": "d4d1a8719a3474f765362839baf2d158529f18f3cf38c9c4f3c4ffe2ca65546f"
+    },
+    {
+      "path": "tools/fixtures/reading-directory-volume.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 610,
+      "sha256": "fb24bb1b4218dd605733103df26dc3519759ff1ca2d90bc3014ef0e630ef2aab"
+    },
+    {
+      "path": "tools/fixtures/reading-directory-volume.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3190,
+      "sha256": "0714c82dd6d68d952790ad6f6d65ec6f6f24d495756e082ec2fa7a8dd8e8e965"
+    },
+    {
+      "path": "tools/fixtures/reading-image-source.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 828,
+      "sha256": "782f4285eb6e3dd6d67c036c498ff0c2ebe89d86da1a1f8adae799ba3580c44a"
+    },
+    {
+      "path": "tools/fixtures/reading-text-sources.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1467,
+      "sha256": "a0cf5aa654f60267b6b59c74c23ba7050d546d6a84c8b36a6ea45bf865e2123c"
+    },
+    {
+      "path": "tools/fixtures/remote-refresh-core-wire.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14382,
+      "sha256": "e97101cdc6f4ff07bda8f17ade6629afb5831b5fd6261b69bfb91c5af53c0760"
+    },
+    {
+      "path": "tools/generate-build-provenance-manifest.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 15057,
+      "sha256": "56cbd72cd7a5da26a425bdb061bbf7348b3d85b072277f0d969a111e7f62b0c1"
+    },
+    {
+      "path": "tools/generate-bundled-source-index.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1841,
+      "sha256": "d7c0966f7d51e18026153f8eb172ff0b178927442cea58265e39d1a8551c6b29"
+    },
+    {
+      "path": "tools/generate-manga-platform-fixtures.py",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3807,
+      "sha256": "377ca8f0c1d5ea93359b74b11972f74c923274bf1e9658f96d4aadaa60b2da69"
+    },
+    {
+      "path": "tools/generate-manga-platform-large-fixtures.py",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3756,
+      "sha256": "d7a2559d6edcdbc648d7b6b3459e13651f90621283736de7f5e6efa2cad52604"
+    },
+    {
+      "path": "tools/generate-manga-sheet-fonts.py",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5110,
+      "sha256": "ebd8ae73e8e7a760b0a3967fcacb5e8bb2085291c6182e79bfcf58b658cae1b9"
+    },
+    {
+      "path": "tools/generate-theme-icons.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3581,
+      "sha256": "4bb299b99adf6fcd8119c27f5d28e410a147a6a7b6fc6e03fa2c23a9b78946af"
+    },
+    {
+      "path": "tools/generate-theme-registry.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4353,
+      "sha256": "708df3ded9187d668cc1f4b1de1a3c9bcd36e8da2ba372e8a8641a5c5f00b963"
+    },
+    {
+      "path": "tools/http-execute-test-server.js",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7605,
+      "sha256": "3b5f8b4bbfcccb02132b3b7d964ebda4332b04bfd916e59dd498df6d82ecdca4"
+    },
+    {
+      "path": "tools/lib/arkui-property-runtime-probe.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6087,
+      "sha256": "70671c006f1fde5aab7b8259e0e4647071df1ebf0755f92d4a87ccee30bf75ce"
+    },
+    {
+      "path": "tools/lib/manga-surface-sdk-probe.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3832,
+      "sha256": "670446eee86859281b45c4693abde30b1ac2382dfd7af64399eb58741cfb2332"
+    },
+    {
+      "path": "tools/lib/reader-book-turn-owner-fixture.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1218,
+      "sha256": "114fb0c1c49dc76ea755a6b6a7efead588a089ec2cf8045d1b286d0fdb3a27c9"
+    },
+    {
+      "path": "tools/lib/reader-content-search-list-probe.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9001,
+      "sha256": "4b267cb0c415387b41e8908bb83a569f2ab4b016a22a181e6e4c8abdfc3024bf"
+    },
+    {
+      "path": "tools/lib/reader-content-search-owner-probe.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1391,
+      "sha256": "688b2851be392447e9f266b39d9235e5ca75c3a0839cc9057cdf405de2190362"
+    },
+    {
+      "path": "tools/lib/reader-control-builder-probe.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10428,
+      "sha256": "ef3b77ee13b462bda5c43a162c843e3f7ae5e478a810f3acea66b078c651ad49"
+    },
+    {
+      "path": "tools/lib/reader-control-option-modifier-probe.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 957,
+      "sha256": "c37b68048f13e2543d9a112f4af4a9d5642e57756d7fe1107e2ff5aebf733ebd"
+    },
+    {
+      "path": "tools/lib/reader-measurement-owner-fixture.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1482,
+      "sha256": "c91ddad3443fc5e5147dd422f2539adc59ee3a3ff953973eddfce1d7e41af3c4"
+    },
+    {
+      "path": "tools/lib/reader-motion-method-probe.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5455,
+      "sha256": "09837d8a6713ff1e3294e7afd8b17c7a4a8f1f626c6fb9a36208276580bd81a8"
+    },
+    {
+      "path": "tools/lib/reader-page-chrome-measurement-probe.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1408,
+      "sha256": "4b6eb3eb18dbb9a94ef01dd45c78005adb63478176fa7de4af94fa1a21adcf55"
+    },
+    {
+      "path": "tools/lib/reader-resource-branch-probe.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 428,
+      "sha256": "3bc4a0bfcb6df419061175c45b551faf8b32434f0b09a23ca742cc0a1cf9d135"
+    },
+    {
+      "path": "tools/lib/reader-theme-design-source.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 781,
+      "sha256": "a2a49884a617269f117d7eb321293c32a64cdbba16d3f0de1075efe63bd8c830"
+    },
+    {
+      "path": "tools/lib/reader-tts-fixtures.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4631,
+      "sha256": "39f2fbb85b258c3019a5aa11389cb90d439411d2e845f2f60fd83c158c012e21"
+    },
+    {
+      "path": "tools/manga-sheet-fonts-requirements.txt",
+      "type": "file",
+      "mode": 420,
+      "bytes": 18,
+      "sha256": "d55516a12a68401b16830976578408af7918e0063b51c4b79543080542d197f9"
+    },
+    {
+      "path": "tools/migrate-theme-consumers.cjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8344,
+      "sha256": "75c4a8eb78fa6d9a7be5d65aff0c5fc117cedd818a291981f5dfaa9a3e30984c"
+    },
+    {
+      "path": "tools/native/READER_CONTROL_DEVICE_PROBE_TOUCH.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8221,
+      "sha256": "a79b610509e84477089f3f32b2a52c10301ca9d5eebe31fe392281de6ad0d1c8"
+    },
+    {
+      "path": "tools/native/READER_CONTROL_TOUCH_SEQUENCE.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5920,
+      "sha256": "d889a5154d1d6fc238a20630d8b85d51ea51d526966287ed58d8d99f8994f3b8"
+    },
+    {
+      "path": "tools/native/reader-control-touch-sequence.c",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12353,
+      "sha256": "61b48e4915ce1c08c0794bf03716a419eee012bb9f8994863a4e560b0a4c0805"
+    },
+    {
+      "path": "tools/popofree-source-correction.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3278,
+      "sha256": "9146c45d6c7857e1ceb9d46e6def212250ffeea4c0cf35f2294328f964624267"
+    },
+    {
+      "path": "tools/qidian-directory-source-correction.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3081,
+      "sha256": "edce811f98658c51a8915435556d844b6297fbdb3149fc5ef8095e8fe1052947"
+    },
+    {
+      "path": "tools/reader-build-tools.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1766,
+      "sha256": "16a0d10e61d3acbaf32fe9aa217e3be0557aea5f2cf22f6625cdaf147ab201a2"
+    },
+    {
+      "path": "tools/reader-control-device-probe.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 43711,
+      "sha256": "5a5896fe813e465614cd0a7f24213ea89c722563e9db9015e6abfe4ca4382074"
+    },
+    {
+      "path": "tools/reader-control-fast-capture.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7524,
+      "sha256": "6846f662bdf7b4299afa07436db018cd93c6f12f9048e051de9bc5d3b0dd2741"
+    },
+    {
+      "path": "tools/reader-hdc-lease.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8576,
+      "sha256": "d689090413195749ee9e38e4bc3826ddedca3586b5bc13658924272ea76980e3"
+    },
+    {
+      "path": "tools/reader-signing-authority.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2334,
+      "sha256": "b940c72ee23f9604df750c18878fcdb9474e80993add7dd505fb0feed014aeee"
+    },
+    {
+      "path": "tools/reading-assistant-source-correction.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2361,
+      "sha256": "a596e89c9146aaa175af5f936d511fefe4467e4d575e55a9ae37d0d478b1d8cb"
+    },
+    {
+      "path": "tools/refresh-source-supply-manifest.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14754,
+      "sha256": "88f6c7f48b76aaf03515232f75814c180d3bd5630c37d2b45edb94f08aec6183"
+    },
+    {
+      "path": "tools/sanitize-bundled-source-credentials.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6417,
+      "sha256": "c18fed665f10c604a3334c76058d1d1d39477916d1eb3100cf86b26cb744cada"
+    },
+    {
+      "path": "tools/source-supply-lib.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 16031,
+      "sha256": "432be728855011f09fd5fe7f7f914f4f489e083321807456da0f9336a66f1030"
+    },
+    {
+      "path": "tools/svg-provenance.config.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 23090,
+      "sha256": "b42c51861051ee91c3d280967221bf4bd73d274e0e5e78598e12988a37ffa027"
+    },
+    {
+      "path": "tools/sync-svg-assets.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 17432,
+      "sha256": "62fcdc6e857cccb23f6a1fa1289edc25db68a592cf06bd531872cb12f999373d"
+    },
+    {
+      "path": "tools/tencent-picture-source-correction.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6042,
+      "sha256": "ad1ea2300ba071f182737c12886398dfecaabca77be895e08ac2e8af2ee9f569"
+    },
+    {
+      "path": "tools/test-added-book-preparation.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 32102,
+      "sha256": "c45a920ba4d932b8e8d8391033879514564235c02f265719baba089b10c9d900"
+    },
+    {
+      "path": "tools/test-app-shell-safe-geometry.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2310,
+      "sha256": "8802248b3a7a1176d987be1be003bfff960df302a580f87c0723b598c0f97458"
+    },
+    {
+      "path": "tools/test-arkweb-network-policy.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5111,
+      "sha256": "6afb7dc1f4cfac267071aa415e15a22b9534c6cd6789dc02e9d837b942ad38c7"
+    },
+    {
+      "path": "tools/test-arkweb-resource-capture.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 31536,
+      "sha256": "8aac77c459f5085f4d7310b6b84051899ab6fada6ef7d2aa3e0a705c924a5913"
+    },
+    {
+      "path": "tools/test-arkweb-resource-diagnostic.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 18895,
+      "sha256": "2455f6dca06d91a890a6300d8a0b7ef8bba1a85328ab6c7b6b80a9be28eec5c1"
+    },
+    {
+      "path": "tools/test-arkweb-source-server.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5968,
+      "sha256": "1db4de46ccf30cf78a50c655c545e9eb8e01991da668e3b200f4aa683d83b199"
+    },
+    {
+      "path": "tools/test-baozi-image-source-correction.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3008,
+      "sha256": "0955e15a9fee8d65f7d2361ca61a3eb106346778d98861ed028ea23fc886b541"
+    },
+    {
+      "path": "tools/test-book-acquisition-coordinator.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 31674,
+      "sha256": "720f2df69cea6662bd98440ae2882b34c5553449bb39213454c6b330458b7710"
+    },
+    {
+      "path": "tools/test-book-author-metadata.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8747,
+      "sha256": "e4946e9249ad03c25d9ff4ca35d6b3c808a55b7f2988a52d30581b259dffdcca"
+    },
+    {
+      "path": "tools/test-book-directory-page.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 19104,
+      "sha256": "2dc052767e4db77ca4901bec0f8c07fd1e543bdf5ca18ed8433081c8871e5025"
+    },
+    {
+      "path": "tools/test-book-metadata-presentation.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 19740,
+      "sha256": "f69897a11985797474c312bc9f9b2e17533249e0bd613bd74ae5bbe5c2875375"
+    },
+    {
+      "path": "tools/test-book-source-import.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 15671,
+      "sha256": "da2ee4f4879fec03161160376822df20dc80b2e56b197c586007b856d50d87c9"
+    },
+    {
+      "path": "tools/test-bookshelf-continue-card-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8343,
+      "sha256": "e2e0bffab79bebedb742decfe1468ea2a7f069668cc215d80d78a4df18321435"
+    },
+    {
+      "path": "tools/test-bookshelf-detail-control-stability.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9625,
+      "sha256": "cf368a4981464af5fff8e16b1e8477231e56bac7e2487eceb6f54d142c8666da"
+    },
+    {
+      "path": "tools/test-bookshelf-detail-removal.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4448,
+      "sha256": "0caa0dec5e209f8d3af541632f30cb6c005b96086de15a9464e35c1a0dc5a854"
+    },
+    {
+      "path": "tools/test-bookshelf-filter-responsibilities.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7109,
+      "sha256": "498ddf5495962f889c98d9522db1f4379351c1badeb87af23cd8d22dcbb8e680"
+    },
+    {
+      "path": "tools/test-bookshelf-management.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2721,
+      "sha256": "50931eae05caadab066e34d7b8ad5280b69e25e7b428d6bf57c7a6a76fde6357"
+    },
+    {
+      "path": "tools/test-bookshelf-manual-update.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 16918,
+      "sha256": "9482431f7db1671911e94c8c03b7b0ca301877fe9ca74b3720861d751c51d336"
+    },
+    {
+      "path": "tools/test-bookshelf-more-layout.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3592,
+      "sha256": "e9b1aafae7f339d7f29e36529231ec795793eac7393203591dbaae35d11e220a"
+    },
+    {
+      "path": "tools/test-bookshelf-paged-projection.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7669,
+      "sha256": "66d5fc117fdd0911ac87d4a36ad0e21851a6446669dd999cabf67b5895dd8be8"
+    },
+    {
+      "path": "tools/test-bookshelf-physical-feedback.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 18273,
+      "sha256": "ffd02d913299658d32bf97c289d828925365743cec63eee30a84f62dfe88da2b"
+    },
+    {
+      "path": "tools/test-bookshelf-reading-entry.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 27333,
+      "sha256": "911fb9e79e1a7b4ad8c4a9daaf5ac33b1c9bd2c9ee54b630c3afc01c6d429ec7"
+    },
+    {
+      "path": "tools/test-bookshelf-reading-feedback.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2766,
+      "sha256": "566f67f85f6820609f1465d7c378943f9661b30ba163526ad560349a010f3276"
+    },
+    {
+      "path": "tools/test-bookshelf-shared-scan.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7451,
+      "sha256": "70939746e086a066ba0dabe87f9f38202df6db61b6dd4a9491cb8f6fef1d7a09"
+    },
+    {
+      "path": "tools/test-bookshelf-source-name-durability.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5556,
+      "sha256": "82e8bf6428570b88ca82f35cc03d2c686c219b2585cb915b2cce110f662c7cc0"
+    },
+    {
+      "path": "tools/test-bookshelf-startup-readiness.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 13595,
+      "sha256": "74e18060e0dfc65cb49671b26cb64ec5a8705281bce7c7845f2b1d9897e8fa83"
+    },
+    {
+      "path": "tools/test-bookshelf-tablet-navigation.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1535,
+      "sha256": "31ea6c9af2dd5d2a6c0d48d8f39be635ca644026007f90a391c7f9a306a58313"
+    },
+    {
+      "path": "tools/test-bookshelf-view-and-menu.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6299,
+      "sha256": "1bf0d578c151b7badeadecbc7df73ce6de774fb8df76e08a0d8cd1a2110fa05e"
+    },
+    {
+      "path": "tools/test-bookshelf-view-handoff.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14877,
+      "sha256": "237fc5820682bbcbbd599e8a8eda05960db35a25bb1c3ecc7ae3dc327dec0937"
+    },
+    {
+      "path": "tools/test-bookshelf-viewport-return.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4811,
+      "sha256": "21c04d10c3807d5dc7d5bce459f193d6fda54931a799ad4f23276c8924b706a3"
+    },
+    {
+      "path": "tools/test-build-provenance-manifest.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1690,
+      "sha256": "d5044f1bc4998f8d034002cc903a0577b15574103fa972793dfa27f90499223f"
+    },
+    {
+      "path": "tools/test-bundled-source-host-boundary.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5086,
+      "sha256": "5f179eeec48eb847d51998825274a19e6f850da05104d0feec64f142e15141cc"
+    },
+    {
+      "path": "tools/test-bundled-test-book-sources.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7756,
+      "sha256": "5386be5abb4aa136b399d2602211d92f617a2f308c69b40f7e8a0f0b9f2787a0"
+    },
+    {
+      "path": "tools/test-cookie-security-policy.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1828,
+      "sha256": "102f32d5ee51605315815d228135895825a47b23f53dc1d5aa27ec09e1bff676"
+    },
+    {
+      "path": "tools/test-cookie-session-server.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8460,
+      "sha256": "94410fbce91cc84ea7e2e09663856a5726446b151946a2ea54d3c9eb2949b780"
+    },
+    {
+      "path": "tools/test-core-admission-diagnostics.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2291,
+      "sha256": "d836eb4f8af07989b170a3db428c9aed05a7d25fca775ffb2b8d2c5f88e1c5f2"
+    },
+    {
+      "path": "tools/test-core-build-identity.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1372,
+      "sha256": "fd9e41f9eafe6b788349bdfe25aef14ec0b67c0a396025bb213f248c763c77df"
+    },
+    {
+      "path": "tools/test-demo-async-recovery.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 21328,
+      "sha256": "6d6a1161c6ef08b70bfcef464df1b8be6efa4cd7714aba5dc3b3758af7b549aa"
+    },
+    {
+      "path": "tools/test-detail-acquisition-return-stability.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 15754,
+      "sha256": "881297e25afb5862e7fb6bfbc74d430b248aa22aa3dfee7715562821ca9cc940"
+    },
+    {
+      "path": "tools/test-detail-external-directory.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 15847,
+      "sha256": "db6b30454543017371cc663acae7064112cef0e337df5d32666194edfc3a9907"
+    },
+    {
+      "path": "tools/test-discover-product-flow.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2788,
+      "sha256": "d079dd1d819c0f61f2a70749e906ef38c14cc19d8d7d274c45417018d53606fd"
+    },
+    {
+      "path": "tools/test-dynamic-list-refresh.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4103,
+      "sha256": "c57dd2b63c71857797831310c6103da213737429d28c6b42defa57a3f9c67aae"
+    },
+    {
+      "path": "tools/test-error-message-conformance.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6853,
+      "sha256": "2c51c2bf2c8066742e7fbdffe8a513deb73bc6e80018c688b23d6a8fbf8fd1b7"
+    },
+    {
+      "path": "tools/test-hap-pipeline-contract.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14963,
+      "sha256": "dc13da7f970e671f8214cd84182ef4c45bf2a4c9f29c7d4605d97edf8e2a6fd8"
+    },
+    {
+      "path": "tools/test-hap-retention.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4452,
+      "sha256": "54015a9f7b4aac404826933f9c34fa260b572d1a4c510271bb60b5da1012f89f"
+    },
+    {
+      "path": "tools/test-harmony-tts-host-router.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 19588,
+      "sha256": "b587e00cd2a83175f2258e2f1750c4af4031540798803d6bf1acd3756f00e4f0"
+    },
+    {
+      "path": "tools/test-host-persistence-recovery.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14407,
+      "sha256": "c6c717d6f951c6081695a765fc1314853dd9e8789d24fd33ce5f3ae4b6b8174c"
+    },
+    {
+      "path": "tools/test-host-stage-recovery-retry.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1748,
+      "sha256": "28c1ec3810ac121e7da60453d8cb28ea4160768d86d6f92e7ecc3dba9f836d3f"
+    },
+    {
+      "path": "tools/test-http-request-payload.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4259,
+      "sha256": "e063982721b8ddc0cbbb2a2a7ee6196d2f39adef97409d1da1605def383a8038"
+    },
+    {
+      "path": "tools/test-http-response-bytes.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 20750,
+      "sha256": "127c9fcadd31edbae28081692ed7f9fd5d167ff8bbf2b8517cb90ad1bbc121fc"
+    },
+    {
+      "path": "tools/test-http-transport-conformance.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10569,
+      "sha256": "59242c8c031d25b2159be09057f55a7c7b95ee060ae19a807e4336bc3601ebc1"
+    },
+    {
+      "path": "tools/test-http-url-normalization.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5581,
+      "sha256": "19768a7e471a0572389a2f3a39697799f00d36b6c08d5f2167a5a043ad74cba7"
+    },
+    {
+      "path": "tools/test-icon-design-contract.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7658,
+      "sha256": "f5ec0bf713eb8e3220e492fceeab8fb269d0254a98d51b1fc6546cca30245267"
+    },
+    {
+      "path": "tools/test-import-refresh-geometry.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2750,
+      "sha256": "9b0415fce7d94e18587dd73a626fb8af3e36e2a3c91a8b18f8163dfef6237b38"
+    },
+    {
+      "path": "tools/test-incremental-bundled-source-supply.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2736,
+      "sha256": "5d6b6f82eba3e6bb298e2db8b6ad86a3df5d4c6a554a7049d08342e8266de735"
+    },
+    {
+      "path": "tools/test-legado-product-logic.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8704,
+      "sha256": "792c135e3e31ea57ecd31838bd59aa7950ffeacaa510c576091e14496c9c8322"
+    },
+    {
+      "path": "tools/test-local-book-format-entry.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2807,
+      "sha256": "62fcb58ef71fc6e25bef99a5a92b5920d6741f6193250cd415c13b47be4370b8"
+    },
+    {
+      "path": "tools/test-local-configuration-reset.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12065,
+      "sha256": "d0f1bdeb8924fc3a9a510ac2f21d7b4d2965b606e01b63f8705d6fe3e848e6ce"
+    },
+    {
+      "path": "tools/test-local-epub-image-reuse-runtime.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7471,
+      "sha256": "db861771f742aa1ef915dd1bf0b3332a80940959bc6ec455e13caf855d41851f"
+    },
+    {
+      "path": "tools/test-local-epub-resource-architecture.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6368,
+      "sha256": "594f26a5ff704686e3b951fda5d298717f12f606fd3bcbcba8d9979fec2f7b01"
+    },
+    {
+      "path": "tools/test-local-epub-style-preparation.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6423,
+      "sha256": "d42f3df3c0c09b8d776c3078594a4d4166dd3b55978721259bf8df9ca4293883"
+    },
+    {
+      "path": "tools/test-local-import-finalize-recovery.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9287,
+      "sha256": "e6712f8c49dd31772e49fd3ed25530282201380ed8cf847d77f1ba7bab0eaa1b"
+    },
+    {
+      "path": "tools/test-local-shelf-entry-projection.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7278,
+      "sha256": "c4dcdc15d5b6b7b827f54085f8ef6621acb49633f51b72ca07efd7850c70805e"
+    },
+    {
+      "path": "tools/test-log-privacy.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1458,
+      "sha256": "5e9677838ce45b585c450bc958601cc8c70f9968d29b20d2369f8e5cf9425b08"
+    },
+    {
+      "path": "tools/test-manga-admission.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8185,
+      "sha256": "ec5da450d6ad67e5d1782b9f0d7aa5e2285d3578d7b47a705c982339d8fa8bce"
+    },
+    {
+      "path": "tools/test-manga-auth-recovery.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4547,
+      "sha256": "05acbd1b403cf32a8a4faf6702ab0fa939359a691e7ea7123858c40172e9dec1"
+    },
+    {
+      "path": "tools/test-manga-book-presentation.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6774,
+      "sha256": "23054a87f9040176b75bf1cc611760bf0195dfd2fe72efb68d77ed137ca72c45"
+    },
+    {
+      "path": "tools/test-manga-cancelled-banner.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3221,
+      "sha256": "d920ab8c34b55f9f10d821da51d1dfda3509604efb889315c261741a906ecd9a"
+    },
+    {
+      "path": "tools/test-manga-cross-chapter-counter-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4190,
+      "sha256": "78c9a57aec60fcf37dc73be9caa23ba7b5323fcd792af1e42ef37720ee9019a1"
+    },
+    {
+      "path": "tools/test-manga-directory-demo-parity-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 34039,
+      "sha256": "9df88f0c4ad6ed8159929e57454f6b80901484dbfb7e66363239a0544c34198a"
+    },
+    {
+      "path": "tools/test-manga-directory-font-readiness-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 24932,
+      "sha256": "ab4379a6cba5955d40de5782bdbe54f7eead63b6c139430f4e9d920e5b710e60"
+    },
+    {
+      "path": "tools/test-manga-directory-route.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12321,
+      "sha256": "d1f5668f737b54327026512a7884915470e9cdb9f916b35072598ea3192119b3"
+    },
+    {
+      "path": "tools/test-manga-display-policy.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4517,
+      "sha256": "7885fecb0503e891998fbea8561d3720321318d66819750fdfd3b4fe097f6c3b"
+    },
+    {
+      "path": "tools/test-manga-error-recovery.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12376,
+      "sha256": "537167dc61fe6a23df5541fa2207ebe89887ec8c9f189fefc5bb69916188b348"
+    },
+    {
+      "path": "tools/test-manga-far-page-tile-retirement.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2437,
+      "sha256": "1fcacad06f9a0070dae6d7efda79451be51286d6e69e0d80a5fb3f1f3ac74cc4"
+    },
+    {
+      "path": "tools/test-manga-image-decode.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14972,
+      "sha256": "f68fe97b115da636faceadf8ae35978d27b0246b7fec16a99835a05b99ef563e"
+    },
+    {
+      "path": "tools/test-manga-image-graphics.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12872,
+      "sha256": "bbe5a22fcb324741106b176379c66741c69585f392c2e52e1e004b4f023c1248"
+    },
+    {
+      "path": "tools/test-manga-image-metadata-transfer.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3167,
+      "sha256": "688949f2db75c1cbddb2ccef5e13ac21dd2c41cf3b8352ef9870866a1101132f"
+    },
+    {
+      "path": "tools/test-manga-metadata-ui.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 16493,
+      "sha256": "91970cb4a6b595abe86f6da2294645a71899176bd4f2a5e6135a91f03d0c9913"
+    },
+    {
+      "path": "tools/test-manga-motion-progress.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 20396,
+      "sha256": "99f756e7433a487a1838715b3f38d778189f299d7b899efcc3cf6e22b7ff624d"
+    },
+    {
+      "path": "tools/test-manga-native-image-geometry-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 26820,
+      "sha256": "36522f7a479f3b18a1b0165aea2a92d12f53962d50f89e5928d2fe7c328c4994"
+    },
+    {
+      "path": "tools/test-manga-navigation.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9136,
+      "sha256": "c6bb0ca273c253fa7549e6396eb3c935abc3335a2fa3c81a483d5eb9b6add917"
+    },
+    {
+      "path": "tools/test-manga-offline-network-probe.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 21092,
+      "sha256": "4fadafb5ce6e6686f2cae35046a011e98898931eb5926dca291472e82b66f6d8"
+    },
+    {
+      "path": "tools/test-manga-offline.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14382,
+      "sha256": "735784787daf32c9d6515496704fb79ffcaa50f64a0473e641521f1793f0ac77"
+    },
+    {
+      "path": "tools/test-manga-orientation.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5413,
+      "sha256": "8c54092459fb4fe375eafc6278f3f38e8c0981df40c70d7b8d497b1b536a8273"
+    },
+    {
+      "path": "tools/test-manga-platform-probe-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9303,
+      "sha256": "4bc0080929c81f15d1be3486eea8ad01503ba979147e00383beec5f0d096e3c0"
+    },
+    {
+      "path": "tools/test-manga-platform-probe.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 17453,
+      "sha256": "9e99569c5e0b4885467b8f1fa1af48fa82e3481aaca3a1a3904cfb4598f31b8b"
+    },
+    {
+      "path": "tools/test-manga-reading-directory-fallback.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 27549,
+      "sha256": "726c8ef27a7c8161abc1d32cc78b545997a5bbc4f32ff8a2f81c1dc6d20a9161"
+    },
+    {
+      "path": "tools/test-manga-region-decode.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 18619,
+      "sha256": "7cb449c1ddedb1453b45d5f78917669d86c927e124de74383e1a8765874c78c8"
+    },
+    {
+      "path": "tools/test-manga-resource-gateway.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4956,
+      "sha256": "5e7e5db244b6acbf90d054fa14e83c9168bce0b4afd079fbe7ca27b6227fec30"
+    },
+    {
+      "path": "tools/test-manga-runtime-image-lane.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 15227,
+      "sha256": "10256f8c062925172e0bf6804f6b265f6092c8db12d995ea1944dd98e36c8fc7"
+    },
+    {
+      "path": "tools/test-manga-scroll-stability-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 19762,
+      "sha256": "469fb167a738b8baf6e68b7047e3dd1b281ddc42e5e366a0bb4443361ac73bb8"
+    },
+    {
+      "path": "tools/test-manga-session.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 57713,
+      "sha256": "09740a039630e368b30771e1778b0f544680fff8ced2144612bb2be5978f45ad"
+    },
+    {
+      "path": "tools/test-manga-sheet-motion-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 27203,
+      "sha256": "5a88bab60718ae4fb42e8ee00e6cf0c8851654d12146ed0090a30faff035ef09"
+    },
+    {
+      "path": "tools/test-manga-sheet-selection-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 13009,
+      "sha256": "aefa1f1ca63110e7632d8d8be2a0f4b82bca02caa650f256ee3afd318cf62295"
+    },
+    {
+      "path": "tools/test-manga-source-switch.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6077,
+      "sha256": "4aa86c10442f8c5831edb4f34b40d52af2b7f8fa3ccc76ace956e3b4c9fa54e0"
+    },
+    {
+      "path": "tools/test-manga-strip.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4956,
+      "sha256": "0a0b178aca3ac8725434e21975aaa0d75c4b5c2210f19dfffde9e1542e728bc8"
+    },
+    {
+      "path": "tools/test-manga-surface-render-key-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 13013,
+      "sha256": "fe51c157ad931ca1161c62bcc3c760a0e21ca3832525471d9cac65a25576c43a"
+    },
+    {
+      "path": "tools/test-manga-surface-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 21453,
+      "sha256": "512b72f020ba3731705e1a604a5309d0f800ef97d395708f45da32876ff5084a"
+    },
+    {
+      "path": "tools/test-manga-system-bar-viewport-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 18186,
+      "sha256": "d1f73d11d71b1022bbf7f327db1398b337e4c0dc5307b8e99b3ef615a34a9077"
+    },
+    {
+      "path": "tools/test-manga-tile-window.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10086,
+      "sha256": "61c8ee80c14d438cf207b9757f282cac521ccf4c0f6fe1ca2d29e19ad4ad529e"
+    },
+    {
+      "path": "tools/test-manga-ui-assembly-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9510,
+      "sha256": "3eed62cca2864f754a4459480b256d296ab91b5fc3d8640039b382f0d79ebca6"
+    },
+    {
+      "path": "tools/test-manga-ui-floating-bars.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7869,
+      "sha256": "51f1ed3a59f0e733b6d01ce0c346451d46513b0648700fdca8d33b60a7894027"
+    },
+    {
+      "path": "tools/test-manga-ui-position-hydration.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 20989,
+      "sha256": "0f77093e87f897cefd0ded8888018530c9fd1f67bf1440c0a1e960abd4994444"
+    },
+    {
+      "path": "tools/test-manga-ui-source-switch-discovery.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 19783,
+      "sha256": "44998ca4b0ddd97aff0638b8ff2027044d42eb556db80a3278cb82ac5f52bd79"
+    },
+    {
+      "path": "tools/test-manga-ui-source-switch-window.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9401,
+      "sha256": "1a9202f3ef8c863d9f019a9de95ebba296525c7fc7ed42aaab67fbb5c51fc254"
+    },
+    {
+      "path": "tools/test-manga-ui-state.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7676,
+      "sha256": "1c41c77954b6a5d24bd1a48fa73faae8b6c0d255aa34089e1ee5441621656934"
+    },
+    {
+      "path": "tools/test-manga-viewport-restore-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 11681,
+      "sha256": "ec3d08e6e41edd1a62d3ea6b30045c7280d63a8928f680ff4ccce744719a0d05"
+    },
+    {
+      "path": "tools/test-manga-visible-tile-retention.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8047,
+      "sha256": "a8c5f04b75b5d9c65eabac4a1cbcf13866eb004c8dd359dd021119712a62f452"
+    },
+    {
+      "path": "tools/test-manga-window-publication.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5720,
+      "sha256": "71aad4ba791c4f2e6fc0afd33d5a725c27fb15a703f1ce0cd196361023feb35c"
+    },
+    {
+      "path": "tools/test-navigation-performance.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10924,
+      "sha256": "8836249a99457ebf8afe62204f4decb91e3cd7acf061094bbad4a40cfd6b0797"
+    },
+    {
+      "path": "tools/test-network-route-policy.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 21139,
+      "sha256": "fcf9db21937344a04c5c3e760ffd2bae45d12d9e557618b4492be588ece87354"
+    },
+    {
+      "path": "tools/test-online-directory-level-admission.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1799,
+      "sha256": "98c05cb07d863e37c0ec135d31a64c10a0619183243cac10d91150aafecd84b0"
+    },
+    {
+      "path": "tools/test-performance-regressions.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7049,
+      "sha256": "dde564b8712bf06738e7cd6d6dbadfbb090032ec6df63764606b2c799ce50acc"
+    },
+    {
+      "path": "tools/test-phone-layout-figma-regressions.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3768,
+      "sha256": "f86330a9f0ba29f1511d982542331f96988cdecc5afd837e75267227af8fe6e4"
+    },
+    {
+      "path": "tools/test-popofree-source-correction.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5959,
+      "sha256": "3ede02ce035843ef22131e33f9affa6102fc83543d599bf07b5bef99dab8115a"
+    },
+    {
+      "path": "tools/test-portable-json-import.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2719,
+      "sha256": "c57f4af3af0eb0be6721eb41455a8f54d5a6d9e257faf9e1c9b5bde1c63f7957"
+    },
+    {
+      "path": "tools/test-qidian-directory-source-correction.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1551,
+      "sha256": "650ad898d8f1f9a5f30d85e5397945f731c23822d3309ecad5650a7bc7e91ec9"
+    },
+    {
+      "path": "tools/test-reader-appearance-lifecycle.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9111,
+      "sha256": "afd3fab73b4a59e51b2b9782909aca272eaae191bd8bd5220878b643de0306a4"
+    },
+    {
+      "path": "tools/test-reader-appearance-make.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5475,
+      "sha256": "e707e7eb88dbcaabd1941011802e134ea65d7f1d7a86c0c2b6badb0cca250531"
+    },
+    {
+      "path": "tools/test-reader-appearance-motion-driver.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7444,
+      "sha256": "64364543bfad6fb555230aa3c99a9e9f14ee23a2d3e2ddce48695abc96af066a"
+    },
+    {
+      "path": "tools/test-reader-appearance-motion-fixture.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5795,
+      "sha256": "255681a640fd84b51203ea41d373838f983018c800cb59065c805bb9bfa91c91"
+    },
+    {
+      "path": "tools/test-reader-appearance-motion-gesture.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7424,
+      "sha256": "7a9828b2a222fd89f668fed81f70ec092963ddf112e2fbdc4874732ed2d85381"
+    },
+    {
+      "path": "tools/test-reader-appearance-motion-sampler.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7606,
+      "sha256": "d60eb2f32304b906c466b5bcafbc6161150ba516336b9364addd0bc3ce2815e9"
+    },
+    {
+      "path": "tools/test-reader-appearance-motion-state.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 11319,
+      "sha256": "597ba3e61c90bc9421d1c3db804182384b334d7272cb870ab94c17612082f8a0"
+    },
+    {
+      "path": "tools/test-reader-appearance-motion-tree.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5816,
+      "sha256": "6e19a98d7937e1e3b2da4245f0cb71f0bf1c15233e319feb1a41f472fcab29c9"
+    },
+    {
+      "path": "tools/test-reader-appearance-page-publication.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 22361,
+      "sha256": "9ce02bcfadd5822a4733811f16165c5e8517d33f2d2392d053a28367cb964988"
+    },
+    {
+      "path": "tools/test-reader-appearance-store.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 15654,
+      "sha256": "4dedc35250bb0d481c888310fe9c38a6a08337af96abdae28192880f180c258c"
+    },
+    {
+      "path": "tools/test-reader-appearance-theme-extension.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5380,
+      "sha256": "335f3feb482a05917d841f154d787303226567ea93be8f3d6b4daf55d2ea3e32"
+    },
+    {
+      "path": "tools/test-reader-appearance.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 26113,
+      "sha256": "61177922f839e8f1150f63aaf6be9ebe263c7efc7237416ef481f6ec53e562a5"
+    },
+    {
+      "path": "tools/test-reader-auto-page-coordinator.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7439,
+      "sha256": "7851004f787d0562266da250075a6cb034a63c7c863c873b98b4ed5b829d9ec1"
+    },
+    {
+      "path": "tools/test-reader-auto-page-full.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 15211,
+      "sha256": "bb14fd03ed28f264133d434cfae33dcc5623f5156f439922526bd32fca013e2f"
+    },
+    {
+      "path": "tools/test-reader-auto-page-native-layout.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6476,
+      "sha256": "c621274df9038ac5733352ed489ce5246ed87b591abaffd3dc6df7466a6ef578"
+    },
+    {
+      "path": "tools/test-reader-auto-page-state.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6394,
+      "sha256": "61a11dcd55f61903027b64cadf8eb41ed4645fe476ee96933d253405b1c55481"
+    },
+    {
+      "path": "tools/test-reader-auto-timer-native-layout.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6854,
+      "sha256": "82c53da9d4f4bb8eded572ea2e72953f85c437bdc0a56fa8ca42ada03e7ca6a6"
+    },
+    {
+      "path": "tools/test-reader-automatic-page-start.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8519,
+      "sha256": "d21ab7a5191ddbc74bb59d777d40578adb38ea1e6b58e9fcd57ac52dfa724da9"
+    },
+    {
+      "path": "tools/test-reader-binary-consumers.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3664,
+      "sha256": "e7883726475b9ec6377e2f7f97c384e629852e5b0318537c6b648bc27cbd83a1"
+    },
+    {
+      "path": "tools/test-reader-book-turn-architecture.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 23252,
+      "sha256": "181eb6b55d9b219e0ec3f8ee6ec3a3f160e8d347eb6ddb11ef5d2350838fbf7e"
+    },
+    {
+      "path": "tools/test-reader-book-turn-automatic-bridge.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6391,
+      "sha256": "5c22f90e23a2496d6341a45247063e7450e2d6a3dacec211a9ae3ec7c2376542"
+    },
+    {
+      "path": "tools/test-reader-book-turn-event-dispatch.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4630,
+      "sha256": "6af6cf240360fd6c7aefb1f55f4f999093da509bcdf142f88c0ea395d70cae9e"
+    },
+    {
+      "path": "tools/test-reader-book-turn-host-runtime.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1520,
+      "sha256": "979fbf6f3f2b44aaf3a3471e0eb46781de5f36f3b866d1e1af9752eddca1757c"
+    },
+    {
+      "path": "tools/test-reader-book-turn-motion.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3254,
+      "sha256": "346db07832e6df9a3f5cccbebe63cd8e05c00a174116d59deba7fd3e13267bab"
+    },
+    {
+      "path": "tools/test-reader-book-turn-native-core.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1069,
+      "sha256": "a61538ecf8a5e5e7885b6257a2f2b9f2212f77360ad8ca9bf727c2fc51c23c34"
+    },
+    {
+      "path": "tools/test-reader-book-turn-present-barrier.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1241,
+      "sha256": "675cb18fe4d98a7b0af5a249212791b9b8596f8a4ea3c28fc021b16e00639a8d"
+    },
+    {
+      "path": "tools/test-reader-book-turn-presentation-owner.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2598,
+      "sha256": "4be41ad87a0af47679e45844703bf4be175d7f19e5eb8f840efbba4840fbd0e2"
+    },
+    {
+      "path": "tools/test-reader-book-turn-surface-recovery.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7022,
+      "sha256": "1a5199f2bcd31837ebe25a0a91b2e2fe426a4c945452c27654f290aa0ccf4ec1"
+    },
+    {
+      "path": "tools/test-reader-bookmark-panels.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8059,
+      "sha256": "599513bd1dc68d73b2a853ab707c122b6a3042e14b32608d63f7a48a82d39ef6"
+    },
+    {
+      "path": "tools/test-reader-bookmark-projection.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14097,
+      "sha256": "ff03623b4abf8f9b93c6f4c1fb8fd9e000fb587ab176c8b53c2caca0ce95f5f3"
+    },
+    {
+      "path": "tools/test-reader-bookmark-top-info.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 22011,
+      "sha256": "6337847f1ea556cffe957deb3c93624d0f53f194868c417c33c81dc022a09c84"
+    },
+    {
+      "path": "tools/test-reader-brightness-cancel-ui.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4119,
+      "sha256": "d22d41dcd5255e56f83c6390e6f91af8244a87d8b4d74993f6ffac89ca2bc9ff"
+    },
+    {
+      "path": "tools/test-reader-brightness-control.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2526,
+      "sha256": "a3263ded8169ddaed8873e3fbea56b409cd1def2076224b77793424d8fa3e917"
+    },
+    {
+      "path": "tools/test-reader-brightness-perception.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7799,
+      "sha256": "d9dca01ccb8107f0bb8405d2db82ea53de9b82703a718a863f468c1d2cc4ea8a"
+    },
+    {
+      "path": "tools/test-reader-brightness-writer.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8387,
+      "sha256": "88fbb8fa2941d7d10d91773a7eda28296bf2de3cda7f6250ecf08a22cc7fde9b"
+    },
+    {
+      "path": "tools/test-reader-cache-only-chapter.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3636,
+      "sha256": "1b63995971fffa99f45ea1427f96c72eafa4d38916aa88482d3d2adf0e2124ca"
+    },
+    {
+      "path": "tools/test-reader-capsule-page-turn.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12070,
+      "sha256": "c7b842a854a7a65c02efbeaeae0b2d70ac523ec015e7410ce3eade0af9f1f8eb"
+    },
+    {
+      "path": "tools/test-reader-chapter-download-feedback.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6424,
+      "sha256": "8d45cada26cb7abcc06d6c0f8b9660cd63b7ab193c5f7ddfb5c4e5e92eaf1192"
+    },
+    {
+      "path": "tools/test-reader-chapter-first-title-publication.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 13740,
+      "sha256": "0bf84794be29181403fd0907b43544f74121968745fabf31ebb8417bd1e5c65a"
+    },
+    {
+      "path": "tools/test-reader-chinese-conversion.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1225,
+      "sha256": "fc3142e67ec6cf635d416a234b0ed5252407e592443dc7e79df2dc6e6399c4ac"
+    },
+    {
+      "path": "tools/test-reader-cold-entry-recovery.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7981,
+      "sha256": "1d1244833e00c92a0a29a1c7b3944ddc8e7e528252f94687d91f16634d7cfa6b"
+    },
+    {
+      "path": "tools/test-reader-content-business.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1967,
+      "sha256": "7970b2bff6bebec334fd6c6e05bd0e8dd8e504a0b28a697b69008c5045226a3d"
+    },
+    {
+      "path": "tools/test-reader-content-position-boundary.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5899,
+      "sha256": "d3a29965e9d4a074a4435c560d015fef9c524ecb64c7660dcd836950fb798404"
+    },
+    {
+      "path": "tools/test-reader-content-search-cursor.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4420,
+      "sha256": "c8e568de3db9137c3452061c1474e699db4091fa5284c0523756b36d99651a05"
+    },
+    {
+      "path": "tools/test-reader-content-search-error-boundary.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14951,
+      "sha256": "89662d7729b626e1869f509bb303aa76044f627699e99e35cbf787c975b2b071"
+    },
+    {
+      "path": "tools/test-reader-content-search-focus.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2664,
+      "sha256": "8e385f4731b5519fb2176876d2d401261dbec5c50b4622b15747ffb756225c06"
+    },
+    {
+      "path": "tools/test-reader-content-search-native-list.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10975,
+      "sha256": "e827d17e80bc5206a6079d5df2ff9015702225becda9c8c8e035693dcf07f439"
+    },
+    {
+      "path": "tools/test-reader-content-search-open-cost.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9867,
+      "sha256": "375b3c786e6132a57ec23ffb521125f659abbff4b92e03e0b2c69257c576e9df"
+    },
+    {
+      "path": "tools/test-reader-content-search-publication.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9264,
+      "sha256": "855f8704d003261adf2fb9415330e0f9590ae61d01f547bcba81992ad81393c2"
+    },
+    {
+      "path": "tools/test-reader-continuous-initial-offset.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 11404,
+      "sha256": "0fb075887190da2fac99d29844e0646bd78210bb175f4be96bf9cf9032d416d7"
+    },
+    {
+      "path": "tools/test-reader-continuous-input-runtime.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 27799,
+      "sha256": "f6a9bd5f1fd00c7fe731770275ffaf6c6d3dea078937f79c08cc8717937aaa24"
+    },
+    {
+      "path": "tools/test-reader-continuous-reading.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14599,
+      "sha256": "09eff3b0f32d365e54623cf7898d22ecf47823217614c87cfcd2f10865611858"
+    },
+    {
+      "path": "tools/test-reader-control-accessibility.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12746,
+      "sha256": "b2cd5875c66bdb1c250f7475eb8293113bbc06ab10dd2c6606704e8d85301c95"
+    },
+    {
+      "path": "tools/test-reader-control-actor-geometry.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2941,
+      "sha256": "7543ab113d162cc1dfc21f94cf66f9e04f1c4215cf445515d54ec2de99c73167"
+    },
+    {
+      "path": "tools/test-reader-control-appearance-geometry.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 15186,
+      "sha256": "9735ef8ac43b0f7edda16bc22882c16a0a8c3f6dd420cbd5a54cb968fe517694"
+    },
+    {
+      "path": "tools/test-reader-control-backdrop-publication.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1512,
+      "sha256": "3d8360edeaed5a366944d3272bbca5a348688921588ea86d044a01f69f95fdfd"
+    },
+    {
+      "path": "tools/test-reader-control-backdrop-touch.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5658,
+      "sha256": "765316b3ab1d1dd453c8e9a6e055c79a8c79f8bbb4a417206e6148ffed37fa55"
+    },
+    {
+      "path": "tools/test-reader-control-bookmark-content.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 17013,
+      "sha256": "e000d6e4f328ae1d2a8c1dd93b7fb985a081c456fba454bbecb9a19c0c578169"
+    },
+    {
+      "path": "tools/test-reader-control-bookmark-load.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12772,
+      "sha256": "2b97a34fb22f77017504d8eb735bbf59584d58c22079571742e416c71608dc3a"
+    },
+    {
+      "path": "tools/test-reader-control-bookmark-mutation-recovery.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12752,
+      "sha256": "5df055287df08127d22baa6f9a92414ecb1d07fa11bb19fd64da50eee4ca75ac"
+    },
+    {
+      "path": "tools/test-reader-control-content-surface.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3917,
+      "sha256": "91ba6efd53a4291d40bea912a3fa8665a12e8ac7c12568bef953b4ec4973de8c"
+    },
+    {
+      "path": "tools/test-reader-control-device-probe.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 15186,
+      "sha256": "7e64ec46a889fafc5dc0bcbfbcc890f0f1d481c2a017b9df19dc747282e805ec"
+    },
+    {
+      "path": "tools/test-reader-control-directory-content.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14241,
+      "sha256": "3c52c849eb5122e302c18ed1bc86795f492d4e11fc7320a0a5bfd362dd70283c"
+    },
+    {
+      "path": "tools/test-reader-control-directory-model.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12627,
+      "sha256": "532ef6a614ae60c32a8733c70dbc2681d69f305cec02cd06081942429d1c243c"
+    },
+    {
+      "path": "tools/test-reader-control-geometry.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9152,
+      "sha256": "d4668405b324e86c8859c9a0d98e5f45ffc37323ecfebcd6c8b4ab73552847ba"
+    },
+    {
+      "path": "tools/test-reader-control-gesture-continuation.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5914,
+      "sha256": "c59c98e16b8a346f1f7cc000962683cc9d22e460c0fbe42ffde5236c9b494e67"
+    },
+    {
+      "path": "tools/test-reader-control-gesture-driver.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10879,
+      "sha256": "09a88d701a56d7c8d652ba28bd194e5f3c38aac99c45f581ea8d595fad1ce937"
+    },
+    {
+      "path": "tools/test-reader-control-global-presentation.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10825,
+      "sha256": "44abc8a0b662fc984ffa735b812d313e00fd346899e17932c9432c39d886b14f"
+    },
+    {
+      "path": "tools/test-reader-control-grabber-input.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 15411,
+      "sha256": "9c6635b04db458df36f26d22f87b35fc3ba4aaf9e0ef8cc61c764fb1b0831ca2"
+    },
+    {
+      "path": "tools/test-reader-control-header-content.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4812,
+      "sha256": "c33575e33f82c649501c50f14bc945fc893e16c221905ce503cb8044197e652a"
+    },
+    {
+      "path": "tools/test-reader-control-host-input.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10877,
+      "sha256": "b0c4366ef103f25228100a4dfa00d54ef4495069658707f553965d4b382d0434"
+    },
+    {
+      "path": "tools/test-reader-control-host-keyboard.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9285,
+      "sha256": "9ed63019c13441dbd5061d69c06e2976ce4bee806c2cba057194f5908c694914"
+    },
+    {
+      "path": "tools/test-reader-control-host-session.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6352,
+      "sha256": "3dba0d04f7a43b1b5fff2560e61d2342a9f23f35964dac17e0c4ff40acd23f0f"
+    },
+    {
+      "path": "tools/test-reader-control-input-routing.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8681,
+      "sha256": "4d40d2436a9dc2ef1f1a52fb0674056dc5dc1a5e39cd30486dabcfdf55aa7bf3"
+    },
+    {
+      "path": "tools/test-reader-control-integration-events.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7282,
+      "sha256": "8998eecb00d239e5f8b6fbf8cb848491c878db06b241b083530c293c2da4ea8a"
+    },
+    {
+      "path": "tools/test-reader-control-internal-selection.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14384,
+      "sha256": "4c570d34b1a68042695888b33cf123f9d807106e7e976442345f7a41d1dba58b"
+    },
+    {
+      "path": "tools/test-reader-control-layout-rebase.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 13320,
+      "sha256": "119397ee60c53f2c9873419137cf1d2b9764bccc9cd7a2bc4f183a2331c41280"
+    },
+    {
+      "path": "tools/test-reader-control-list-positioning.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9665,
+      "sha256": "16fdb706d8ce6afbd38615b8ad0a8fc800f99568d238826803d3acf068cfcf04"
+    },
+    {
+      "path": "tools/test-reader-control-morph-scroll.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 11878,
+      "sha256": "cb259f265ffadf5c35044fd0c9644ae64623a68848cbfc8917adcd10470149c1"
+    },
+    {
+      "path": "tools/test-reader-control-motion-geometry.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8443,
+      "sha256": "e12ee1ebb4605ee571776cd4728a9e2efaabc78c0b59baac3456c96cff0a246f"
+    },
+    {
+      "path": "tools/test-reader-control-motion-policy.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5329,
+      "sha256": "bfbfe5206c04a8125229f8b69afd14502e2bf06db0bb03248adeba630fc25aa8"
+    },
+    {
+      "path": "tools/test-reader-control-motion-presentation.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8250,
+      "sha256": "9d385c9db495a175014a7841aa350333f751b77030b3a6d818024f190ca50fe6"
+    },
+    {
+      "path": "tools/test-reader-control-narrow-widths.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8979,
+      "sha256": "0ad09c31bce054da3a64ec2ae96c52138ccd9b22b6f7756f5c9e7bdb47e976bf"
+    },
+    {
+      "path": "tools/test-reader-control-option-update.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4655,
+      "sha256": "290af340377f829434c115a9b59daf72190a69bd44609c91280c828fc159fdda"
+    },
+    {
+      "path": "tools/test-reader-control-p0.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 23887,
+      "sha256": "4c3f75e4f96ce2bc8fb5d7b4239299c1889e7eefd87bb3919353e91796aa0990"
+    },
+    {
+      "path": "tools/test-reader-control-playback-content.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 33252,
+      "sha256": "74e906ad67bb7c9a9b7d954e91a7192b08ba4ddb2fb36d64a1c8e69fc431b816"
+    },
+    {
+      "path": "tools/test-reader-control-playback-host-intents.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12152,
+      "sha256": "2485183a9543691f8ec394be3ac238e17c9fb066b43615c106948f34bffb3e91"
+    },
+    {
+      "path": "tools/test-reader-control-replace-content.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 23165,
+      "sha256": "b6d5852cc118579d849f30258b85d78327b3d916c7a902c0131e88cd5b57dc11"
+    },
+    {
+      "path": "tools/test-reader-control-replace-gateway.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7700,
+      "sha256": "9f82aaca1529f588675641892d7b25f49a57652fa256c4a11e0857cd4792632f"
+    },
+    {
+      "path": "tools/test-reader-control-replace-geometry.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6291,
+      "sha256": "ae81763aced54eca96f0150c3c615d8ef37e8a26a86990630f14efe8d065a5f5"
+    },
+    {
+      "path": "tools/test-reader-control-replace-host.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 16277,
+      "sha256": "9eb7ad243f7a0c5a4dd73b2450c9efeef5e2c327b002365e25108168c2066592"
+    },
+    {
+      "path": "tools/test-reader-control-replace-state.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5717,
+      "sha256": "cd7fdad11b16ae61105313a2064568b888da01f57145fc1c0b47a2efbfddcfa9"
+    },
+    {
+      "path": "tools/test-reader-control-resume-timing.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10878,
+      "sha256": "fa4c7ee516cff72af30ebc15bb7114a0ffc832fe39c8a70c8fb27ad5a8530e36"
+    },
+    {
+      "path": "tools/test-reader-control-runtime.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10738,
+      "sha256": "68b58534ced72f6972c73b5893a55bf355415f4d842e02a9e553486d2e14191c"
+    },
+    {
+      "path": "tools/test-reader-control-search-scroll.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 23833,
+      "sha256": "d16b49cae68de0c71b6a70313c35dd285a7e3545bfa1b1e2635f7ccd5933c7c2"
+    },
+    {
+      "path": "tools/test-reader-control-search-settings-content.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 31152,
+      "sha256": "c836e33564d78b775a09b10d648916f5e5db59a3f0a314f3e8069683e3a2fce8"
+    },
+    {
+      "path": "tools/test-reader-control-selection-recovery.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5610,
+      "sha256": "1272572ebed9dbaa39c58eca55174234be82f545e3e18e7def02e291e4b4b8ed"
+    },
+    {
+      "path": "tools/test-reader-control-selection-transaction.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5529,
+      "sha256": "df197c1ec8539f367420935a3c0d44b190298c7a2176ba3410a24ac346a8e2cd"
+    },
+    {
+      "path": "tools/test-reader-control-session-state.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8815,
+      "sha256": "455abbb5195a61519a8303304859a54916888467e7de8051aeb58ed6d973c2ad"
+    },
+    {
+      "path": "tools/test-reader-control-spatial-path.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7311,
+      "sha256": "63256c115a6aa4ead1d0bb0730ac90dc04bdb1705566f90cbc6a3f229e1fb2ca"
+    },
+    {
+      "path": "tools/test-reader-control-stage-composition.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14100,
+      "sha256": "d380ae19e5cdcd4c2b03f8f47dad2b03eaa53d414d9a7c32799e0ed1a4af4b8d"
+    },
+    {
+      "path": "tools/test-reader-control-stage-lifecycle.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 31507,
+      "sha256": "3e23e43f3c6c91faccc35b09105be4670fd7611dcf043cca796bfac89933f53a"
+    },
+    {
+      "path": "tools/test-reader-control-touch-plan.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4172,
+      "sha256": "a1c100b403df8cd33f50dd623a52e80b630b36063035a93c84b2a6ae06a2c954"
+    },
+    {
+      "path": "tools/test-reader-control-tts-make.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6446,
+      "sha256": "5a0cc21fef8cc48de274125c25b397e4deb3d0d412dc8fd0a70504ea5015e009"
+    },
+    {
+      "path": "tools/test-reader-control-verification-launch.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4599,
+      "sha256": "cb056d1d55793e2ff7e5fbd4e958875c6fe95fb6a00413f3def615cc02b2d9af"
+    },
+    {
+      "path": "tools/test-reader-controls-ph104-108.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 15160,
+      "sha256": "0c506e52e930f76b910a2d0ef4bdd1ed425699658e95e1e03a1f90aaef798fa6"
+    },
+    {
+      "path": "tools/test-reader-custom-font-boundary.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7705,
+      "sha256": "23c2198e3c229c247f3f1b57f972596a188be36393d4324b2175d38708df8580"
+    },
+    {
+      "path": "tools/test-reader-cutout-body-layout.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 11828,
+      "sha256": "f3001aadc42288d9b735d6bbfe97d198923cca38a81af1f497c18d18a567d28b"
+    },
+    {
+      "path": "tools/test-reader-cutout-setting-reflow.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5011,
+      "sha256": "7b6e08c90bb26e35c9e83ef2145a18edc3ab96e56b0f3412b0972116500ebe4f"
+    },
+    {
+      "path": "tools/test-reader-direct-entry-recovery.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 19445,
+      "sha256": "4045f1f05cf8d4b9a1d211e0f25c47f1f4c9869d4571603d39a0d6b678fc1c2b"
+    },
+    {
+      "path": "tools/test-reader-direct-presented-page.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9067,
+      "sha256": "1faf88b86bafa4529bc5fc8620eca446b8c92c1eaed240e3e72a5f58549abd9f"
+    },
+    {
+      "path": "tools/test-reader-directory-backfill-after-frame.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6240,
+      "sha256": "a73018f4ceb9eb4dfe44f4c87a00fc2c308ab90876e62158174a6869b755bf9e"
+    },
+    {
+      "path": "tools/test-reader-directory-business-boundaries.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5847,
+      "sha256": "3190b75260db512d8d004dcb93c7de16c76858be18cf98e9178d488f74814766"
+    },
+    {
+      "path": "tools/test-reader-directory-data-snapshot.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8448,
+      "sha256": "499fcf14687441d1b9dd83e4c9ab7b2704feabdd1440c64787a18d013401e9a0"
+    },
+    {
+      "path": "tools/test-reader-directory-depth-contract.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4575,
+      "sha256": "bfbca3a23ef74d92a0cab364edac2d8b920002afe415d1a1588281561b216f33"
+    },
+    {
+      "path": "tools/test-reader-directory-extent.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7079,
+      "sha256": "540933e51b8e8368114c56d249544a0f2eb3c1a85ee064fc6d691bbe8595e620"
+    },
+    {
+      "path": "tools/test-reader-directory-hierarchy.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2457,
+      "sha256": "ac94d87485b8683c311b25acde9dbf49a6b9852222621c2bc6ef154bab6de219"
+    },
+    {
+      "path": "tools/test-reader-directory-markers.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 16949,
+      "sha256": "b050fceee277e501a9e4c2cd697393db2a208a23b7fe37805f51df09a65e5bbb"
+    },
+    {
+      "path": "tools/test-reader-directory-navigation-ui.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 42846,
+      "sha256": "345756e73d1df28cca4b3d03ccb0d5d325213950987b33d6beadfa50455068e2"
+    },
+    {
+      "path": "tools/test-reader-directory-navigation.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 15639,
+      "sha256": "07680acbfab16dee624b461799930b398aaad646fb3a82899728ef687aef2d69"
+    },
+    {
+      "path": "tools/test-reader-directory-projection.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1650,
+      "sha256": "662169490391d3f0b2fe598c3309ef153554a296c0e23ecdce6c700e5dfc2548"
+    },
+    {
+      "path": "tools/test-reader-directory-rules.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9688,
+      "sha256": "23970043b044179cd5fd487b6ba62a2292ca691bbb1b21c0bb39db3870e96af1"
+    },
+    {
+      "path": "tools/test-reader-directory-shared-content.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10734,
+      "sha256": "eb373afda1ab19b46e2612ad6417369b27973d0590eb5285bebeceed60f18e5b"
+    },
+    {
+      "path": "tools/test-reader-directory-viewport.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12978,
+      "sha256": "c61caa03107b3da109a47c253b3e9501c18ed312a9bd1bcc7611244ded3952a8"
+    },
+    {
+      "path": "tools/test-reader-directory-window-publication.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3371,
+      "sha256": "980f8708a78f0651fda0d8ed7ef39805813f85086e88fee7b48e2bb8bd36fe9c"
+    },
+    {
+      "path": "tools/test-reader-drag-follow-gate.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4823,
+      "sha256": "9e5d08c9a3ee7d67ea50afa282dd5f45e5a0babec6c382572fa26c447b71d89f"
+    },
+    {
+      "path": "tools/test-reader-dynamic-highlight.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3450,
+      "sha256": "663cdefdd4b9bb80752417159dd3ab711c32ad36356b8a7d12582b3e16639858"
+    },
+    {
+      "path": "tools/test-reader-entry-handoff.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 15785,
+      "sha256": "e1d40597432826c8507c983d4e09d062b9c356e3fc672a1f660e500046f8433b"
+    },
+    {
+      "path": "tools/test-reader-entry-phase-timing.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10485,
+      "sha256": "a5870131f65bd7a83c63086e59cf14d48762c6640313d45d1320a22e0457c591"
+    },
+    {
+      "path": "tools/test-reader-entry-presentation.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7984,
+      "sha256": "1bfa9677089f225b828b1afd5a551cfec9f6e6447a1686c6848ef3712a104c46"
+    },
+    {
+      "path": "tools/test-reader-entry-text-reuse.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7892,
+      "sha256": "55787bac67991497fb70c433b59f603aac2a239a237a0dd74f6ea89cc7b0512e"
+    },
+    {
+      "path": "tools/test-reader-entry-window.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 20168,
+      "sha256": "0eaf4d897959d259c24e2db688066aba469db2c147b06d76117215eb99c39b16"
+    },
+    {
+      "path": "tools/test-reader-epub-image-width.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4539,
+      "sha256": "1861fb7dfd6ab58d70cde7d2a61936801c2f9d1fcb1ec21e8179a8ec7e482767"
+    },
+    {
+      "path": "tools/test-reader-event-loop-probe.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3100,
+      "sha256": "09bdb1f77e8c859331f5941555bfc090434c3d409d2023c516b2a79f1936ed93"
+    },
+    {
+      "path": "tools/test-reader-feedback-regressions.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7966,
+      "sha256": "c92f33f1c44cc1887ddf4285adcbc302490591b0f5659e814f4fa02f07aca1a7"
+    },
+    {
+      "path": "tools/test-reader-first-page-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8832,
+      "sha256": "b43debc85e50e096576b04e42bfebceda076e62cb7009ed9f690a7ebe842e9d8"
+    },
+    {
+      "path": "tools/test-reader-font-demand.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9334,
+      "sha256": "0daf282615d654b69c84bacd010997249f0edfe10b34124719dcd93882d2d54f"
+    },
+    {
+      "path": "tools/test-reader-hdc-lease.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3033,
+      "sha256": "ce2e646a480b7218c0f364a51f1b89f56f0f82a021b3afd599163302774ec87c"
+    },
+    {
+      "path": "tools/test-reader-historical-directory-resume.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12599,
+      "sha256": "5384ace86e985939106c3c89f71924130e443378d9bb33e200e5b433f773d3b5"
+    },
+    {
+      "path": "tools/test-reader-host-path-boundary.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3505,
+      "sha256": "16b46cf11e538950f8562f91a801ab0cfeb117471ce451183b42528d6b3e9208"
+    },
+    {
+      "path": "tools/test-reader-host-selection-boundary.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3619,
+      "sha256": "9d6b00a29cb56b5665ca7a33cb80d1a1aecac5af451679c4588b7d716ad2329f"
+    },
+    {
+      "path": "tools/test-reader-http-tts-gateway.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8126,
+      "sha256": "e692019820fd48f7b1a6806c14559d0cd314c28b50d4ef97ce28227e2bb6e231"
+    },
+    {
+      "path": "tools/test-reader-indent-measurement.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6765,
+      "sha256": "ca35da78b91c5f2c0480364a58040aac178b6ee3f54a69e56f905f8eba9c10a8"
+    },
+    {
+      "path": "tools/test-reader-initial-layout-overlap.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7367,
+      "sha256": "25d407232a481a5a8d3dcecf1c577a424147caabdc4651e97b97572a26f75478"
+    },
+    {
+      "path": "tools/test-reader-known-image-geometry.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 20432,
+      "sha256": "40f500e8e7256dcddeeca0a985f0d90182a96604e2a0a237ea50d91805b4c3be"
+    },
+    {
+      "path": "tools/test-reader-layout-architecture.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10640,
+      "sha256": "861e19bf5df62d474c6653cf483894e6e3843c14428f66a69a790cdc0142435a"
+    },
+    {
+      "path": "tools/test-reader-local-image-core-contract.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5783,
+      "sha256": "79a7044bc9eb14e2dd65e3434d6acac748570577e465b3317f1b8e66956e94e0"
+    },
+    {
+      "path": "tools/test-reader-local-reverse-page.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 33836,
+      "sha256": "c10d3bb943535850f9040878e8baa68f385893141c230ae902f53d1705aa46a6"
+    },
+    {
+      "path": "tools/test-reader-measurement-prefix.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 13367,
+      "sha256": "6c82e4f8b433611d5dd2db6bd4e45f0f45067babc86fb530162ba1a4f63fc53b"
+    },
+    {
+      "path": "tools/test-reader-module-selection.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2528,
+      "sha256": "4c7c96ab8a66ce72d03eb4ebe5fba76396cd52e17dcd3d77a2d3239e9318440f"
+    },
+    {
+      "path": "tools/test-reader-more-popup.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8985,
+      "sha256": "d63610073dbe9178d2e6489e1d9e99b35c59fcc3cd37f83cc4aa2f2746a2b59b"
+    },
+    {
+      "path": "tools/test-reader-motion-repair.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 11129,
+      "sha256": "c31f357db17928f44357306680e353f4bc13528f060210af6b6fb0dbf4a501bc"
+    },
+    {
+      "path": "tools/test-reader-native-paragraph-owner.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7821,
+      "sha256": "33c583055d13c81c2a8ff695ef894fca599891e42db7e9c55f5fde8e7dc96abd"
+    },
+    {
+      "path": "tools/test-reader-native-paragraph-view.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5958,
+      "sha256": "d597c63d00094f81bc0d5257131715fdb89faaee807f23759c2bf127750f44d6"
+    },
+    {
+      "path": "tools/test-reader-native-text-measurement.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4089,
+      "sha256": "bb7083e118f435e40ec924792375b5be37783e0f085d48a4c76cffd4226ff96e"
+    },
+    {
+      "path": "tools/test-reader-navigable-toc.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3323,
+      "sha256": "7505f08e3a06ef279a2abc9470c14c8213e045e15b841538b6e39e25099bcd21"
+    },
+    {
+      "path": "tools/test-reader-offscreen-fragment-publication.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 13110,
+      "sha256": "82883b3065107232a1888ee1b55af36214963d8ffe813b77db2e0e76b1072f7d"
+    },
+    {
+      "path": "tools/test-reader-optional-entry-memory-launch.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 18305,
+      "sha256": "10dc8be4fcaf398a4736a574623dd65a883e57abd946d07ffcf849886a27b4f6"
+    },
+    {
+      "path": "tools/test-reader-page-bottom-justify.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 770,
+      "sha256": "90e72fa49b31db59f5daab605c19c29c38ad1b6f0fb2fd7382448e72ece8bfcd"
+    },
+    {
+      "path": "tools/test-reader-page-chrome.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 13358,
+      "sha256": "be6d4c3e0e5d1e8e512423050bed3fef2a2ccfb2d5b917685e1faaadb17712cf"
+    },
+    {
+      "path": "tools/test-reader-page-gesture-state.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7374,
+      "sha256": "7a884cb4e9422f29513d6023977ab17e117169442284e22179061a39af196f1e"
+    },
+    {
+      "path": "tools/test-reader-page-input-runtime.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9701,
+      "sha256": "a25af27d718f30a9e4933f49b6cae67b84a5683feafc9165ff9d89e197e289b7"
+    },
+    {
+      "path": "tools/test-reader-page-preparation-runtime.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 21170,
+      "sha256": "0822dbc575d937b1051887ebf68a11d6e6d09d5ead2eebd768bacf528b95b51f"
+    },
+    {
+      "path": "tools/test-reader-page-progress-runtime.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2342,
+      "sha256": "298033279971e320e023d95492da183236c9d931230f2a4ac4bd1bce8c9fd1c2"
+    },
+    {
+      "path": "tools/test-reader-page-settlement-runtime.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5888,
+      "sha256": "fb76d5f2e6825cacb891897b469981c95f5eaeac96fb7ceba8a1119c8ff52e19"
+    },
+    {
+      "path": "tools/test-reader-page-turn-pipeline.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 28502,
+      "sha256": "d4cf84689cfa944d2b20ffe09ae23b41787fd34d8725874bca762da70ed9f0ed"
+    },
+    {
+      "path": "tools/test-reader-page-turn-stage.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10600,
+      "sha256": "e8640a1b3f10af813c85b0ba6972e78bdbc85f0d4c1358fd138964abc9a1c362"
+    },
+    {
+      "path": "tools/test-reader-paper-chrome-composition.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10076,
+      "sha256": "bbef59bb67b684e41a330dda3c152958650d9627df7df92f43d2c66912e52aa5"
+    },
+    {
+      "path": "tools/test-reader-paragraph-diagnostic.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14634,
+      "sha256": "57a3ad93adb5f4546bf4e5c8e801fde804a1d9e7995719ee9ef83e5a284e944f"
+    },
+    {
+      "path": "tools/test-reader-paragraph-indent.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10061,
+      "sha256": "3036e9248e0bf27062ea0bbf66831993505539acffcff6be59888c75f6d29916"
+    },
+    {
+      "path": "tools/test-reader-persisted-first-build.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10820,
+      "sha256": "8eea2091f7192aca4214270c4e5787681f2e98fe0a14f3ff3c6d319ff55171f7"
+    },
+    {
+      "path": "tools/test-reader-physical-control-details.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3081,
+      "sha256": "e7ecda21f1c80971664b5aa3109ddd44ad9ac60836f8f567e810b29eedaf1d70"
+    },
+    {
+      "path": "tools/test-reader-physical-reading-repair.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 15568,
+      "sha256": "364d55ce55083d65a6d4e9fc1ad1877bb471ac4598e3d9ecea00b70b144a6393"
+    },
+    {
+      "path": "tools/test-reader-physical-window-bookmark-refresh.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 17428,
+      "sha256": "bf9251e629020965281824a6e0d3f167e48117e6313d84e883fc9a1a76fc5164"
+    },
+    {
+      "path": "tools/test-reader-platform-paragraph-probe.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2502,
+      "sha256": "107d6d68d1a67b267008e822dca128d20f97ead299f092ff12a178410f149c7e"
+    },
+    {
+      "path": "tools/test-reader-position-handoff.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1672,
+      "sha256": "a83844144a86c89ac5dc9187df68f3cd3a75aefc2ecffe7a4ef8931f56913f2f"
+    },
+    {
+      "path": "tools/test-reader-preparation-network.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3932,
+      "sha256": "ddfd9ddc1df3b33e69713df27e31ee734abfbb8f7416aec6935a17b835af3b9d"
+    },
+    {
+      "path": "tools/test-reader-preparation-runtime.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3299,
+      "sha256": "d5c6a5d772a15f829f3ff4a0b1b006c8359f7b350310e07a31a157773e0eb2cf"
+    },
+    {
+      "path": "tools/test-reader-prepared-title-boundary.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2491,
+      "sha256": "fe5313462c4e5f4f44cbf47b5337d4362774ec8c305959237f793ae94b8b6312"
+    },
+    {
+      "path": "tools/test-reader-presentation-recovery.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4376,
+      "sha256": "4a98a7672d71d9c9ad84b2c2de8f53298e7b9804e37b68116b17abbcc3b76593"
+    },
+    {
+      "path": "tools/test-reader-presented-page-turn.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 16596,
+      "sha256": "c4349e490267c951f11f7cb7fdd119086e1763ae687f9383a190ccc7c7c37757"
+    },
+    {
+      "path": "tools/test-reader-presented-progress-owner.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14308,
+      "sha256": "bc1b7d5393284798efeb4d69a2d98edc56284cc123cf622b85ea3d42ce28ca23"
+    },
+    {
+      "path": "tools/test-reader-presented-progress-queue.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12211,
+      "sha256": "bd90f79cb5fefd336de79f15d062d47056eab703ebc4beec55edd80bb2afed1d"
+    },
+    {
+      "path": "tools/test-reader-product-scope.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2963,
+      "sha256": "0cb7b7676f097d01834f45a71ebf6c57071a9d65271d8416c1674d2f6169f9a5"
+    },
+    {
+      "path": "tools/test-reader-progress-observation.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6654,
+      "sha256": "4e34917847229a5cd16b27d714db5a1b15d6d726672d5e3a16dd772b069a451a"
+    },
+    {
+      "path": "tools/test-reader-quick-search-auto-header.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5672,
+      "sha256": "fc7d3896e2bb5ca0ecbf7c58b069dc1991091b7d983fed9adbb79dd03283ffef"
+    },
+    {
+      "path": "tools/test-reader-rapid-page-turn-state.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3612,
+      "sha256": "141ab70eb80dd3a7ef4efcbf8d0f88f173881204b2ff5b0dc55a47b406ac73dd"
+    },
+    {
+      "path": "tools/test-reader-readable-progress.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3906,
+      "sha256": "11800990a97fb0f1276501e091e5f154a8c77c7f9ae77dc9a49306b877b68ad7"
+    },
+    {
+      "path": "tools/test-reader-reading-ready-publication.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 22886,
+      "sha256": "72e2eeb14b0592c3d2b53cdc5f51fc2e056e2dee472e06f5220d997cbb597ea4"
+    },
+    {
+      "path": "tools/test-reader-recoverable-entry.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 27673,
+      "sha256": "0c7b81dae3d9a526de23c92075c864c873f854c3da6c589fe675c2337f672f02"
+    },
+    {
+      "path": "tools/test-reader-refresh-coordination.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7943,
+      "sha256": "9125f2c5df608ed4af4baf92ee86bb65af243063e16ce5d7b2f3ae65a3a2a681"
+    },
+    {
+      "path": "tools/test-reader-refresh-display-recovery.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4223,
+      "sha256": "1d96b07065da4be99ee81820aeca002ed01afdf0792c07aa8708c38afcc0bbf8"
+    },
+    {
+      "path": "tools/test-reader-render-work.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 13917,
+      "sha256": "a9bdefc84549ff3c149e84ee0d49e0794a5800aa8269dc25c5422080473918ce"
+    },
+    {
+      "path": "tools/test-reader-replace-editor-feedback.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9404,
+      "sha256": "48cadf39e8305a325eabd4849490a09c35d93474b748a1a31cfe61441ba11d71"
+    },
+    {
+      "path": "tools/test-reader-replace-quick.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 13183,
+      "sha256": "9b0d5c5d729a9b07e220e1d4648ae9e53b697ce4187feebb68e8bae8b2aefc4d"
+    },
+    {
+      "path": "tools/test-reader-runtime-owner-lifecycle.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5329,
+      "sha256": "a514b66f14230970374a0f63de15b584b54e311d89d5f06aa5000e8d2033d0c8"
+    },
+    {
+      "path": "tools/test-reader-scoped-source-entry.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2917,
+      "sha256": "7b829849b08d36987293650035cea58f305b48f602bab717f64f3ee1286b1722"
+    },
+    {
+      "path": "tools/test-reader-screen-awake-lease.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2031,
+      "sha256": "fa50ec6797d8cc5ec1e15d4825617c48ae4b6f8dc55a3f152daa4346aa9604d9"
+    },
+    {
+      "path": "tools/test-reader-search-highlight.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 721,
+      "sha256": "50f10f833147b6e91bedbdecd50d97c16bb01a1538688d0defc690866610e03c"
+    },
+    {
+      "path": "tools/test-reader-selection-copy.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5135,
+      "sha256": "a3bae763e198f60c3b034f5f9e3d9513c860afc4e8b8f5a6c50cc0456de1cbc8"
+    },
+    {
+      "path": "tools/test-reader-session-capsule.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2115,
+      "sha256": "a8b7aa57cb2978646e8fa161756247db153ca9206d92f52657dd6bf98080f0e2"
+    },
+    {
+      "path": "tools/test-reader-session-launch-recovery.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9797,
+      "sha256": "37b29187c021f10d6cad66d0ed644e81f50d5bb79141083315c7988372c7cd32"
+    },
+    {
+      "path": "tools/test-reader-session-launch.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12791,
+      "sha256": "af76609984cb512f584703adcf5fd547083000874d9e05933380fca3a63857a9"
+    },
+    {
+      "path": "tools/test-reader-session-morph-state.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 793,
+      "sha256": "62fda5293f262841de0b93656a679981eecda8aaf92ffdc00cf77109fa8b7b32"
+    },
+    {
+      "path": "tools/test-reader-settings-rounded-clip.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9038,
+      "sha256": "6b2d0f5517bac504c544c320c1bc0117688259d64576e1310bce1c484ec3d3ac"
+    },
+    {
+      "path": "tools/test-reader-settings.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 16174,
+      "sha256": "cfd295dce9b943f1e5607a9fe3ce59ef1aa47918cd6f71126e061ed27ee11ec5"
+    },
+    {
+      "path": "tools/test-reader-source-category.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5655,
+      "sha256": "9656b04a051d74510684c22e4cd95f40fd9c398bab487be892fb480f617cd36a"
+    },
+    {
+      "path": "tools/test-reader-source-correction-window.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1638,
+      "sha256": "a7e61ad5e71a1d42aa6d41c4f9e7846cf2e39e28d46fafc457c1c2e05f217ad9"
+    },
+    {
+      "path": "tools/test-reader-source-failure-p0.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4180,
+      "sha256": "25adfd9331ce4ba376becc2ef853d982cb504115bd1ca74f12927bfcb8422171"
+    },
+    {
+      "path": "tools/test-reader-startup-boundaries.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6264,
+      "sha256": "d9c2709d1efe308da2eabae540eac76990297e91ea18ef7b7c787cea1812cc19"
+    },
+    {
+      "path": "tools/test-reader-startup-entry-trace.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3310,
+      "sha256": "c0cb17ee89d98be04f7cc9cc9de08d2bccbc383543eb9a214962f463baf1bcc9"
+    },
+    {
+      "path": "tools/test-reader-startup-reading-settings.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9937,
+      "sha256": "c3006654e7a6d7145da5f96ff1f14cec25e2f0102863a6583bcce2b9164db0e7"
+    },
+    {
+      "path": "tools/test-reader-startup-selected-font.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9851,
+      "sha256": "cb2ecc5abb47b9ec75e664670bc663e01358e37ea0707551b0bdf36fde0ae044"
+    },
+    {
+      "path": "tools/test-reader-startup-trace.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6709,
+      "sha256": "612a6fa87a528c54e020433240a188767ae540acae982b644144d9cdb87c508b"
+    },
+    {
+      "path": "tools/test-reader-status-measurement.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2006,
+      "sha256": "96618193e5e5fc4116ec9286fb262fe348906d247cf40a45cb37fd4c09614462"
+    },
+    {
+      "path": "tools/test-reader-status-underlay-reactivity.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6111,
+      "sha256": "033b01354720be7ee079044209efcf63c31aed61dfad5099c3309faba7772b07"
+    },
+    {
+      "path": "tools/test-reader-system-event-host.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1053,
+      "sha256": "472a89b34bafac8a9d0d5f6463c1684bfe24f8dab3afa3a91a5bc8dc332898f4"
+    },
+    {
+      "path": "tools/test-reader-system-status-typography.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6464,
+      "sha256": "f363f61583f4a49f477a32a0abd3e420b884cff15aeda874d9756ba82330768f"
+    },
+    {
+      "path": "tools/test-reader-text-selection-lifecycle.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3389,
+      "sha256": "9cbfc6be166e1d743c12dd39cd06ebae0ccd9e55468b0b978a70185c24653c57"
+    },
+    {
+      "path": "tools/test-reader-textnode-diagnostic.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12921,
+      "sha256": "a2b2523b5b493c96da153bad56ef52b67e42d7484f8cfe129b7c9bf8151333cd"
+    },
+    {
+      "path": "tools/test-reader-theme-host.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3456,
+      "sha256": "f375d3658bc1fa419fe432bfc5d8fabc8f89cda6a031a8693c9d51a4a1d897c6"
+    },
+    {
+      "path": "tools/test-reader-theme-paper-origin.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4002,
+      "sha256": "c9289888db27ae1801102f33b2f29c77d9f465aa251760da4b92381c3b0e4277"
+    },
+    {
+      "path": "tools/test-reader-theme-selection.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6730,
+      "sha256": "69276aa5c081a86c762f1bcabc6eee49346eaf6babf4b63636228e5cb175f7ab"
+    },
+    {
+      "path": "tools/test-reader-tts-audition.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4548,
+      "sha256": "1a112e0a61963ae1f0183ddbc2fea662bd158826d7ae552aaa8e37c53c28392d"
+    },
+    {
+      "path": "tools/test-reader-tts-background-admission.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2477,
+      "sha256": "6b883bd2dc559e8ad62d905aabd035f1d6cb04060ca59eb61605408ac732f56a"
+    },
+    {
+      "path": "tools/test-reader-tts-config-interaction.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 11385,
+      "sha256": "724c2ef3238ec70127b393e8fec46d66ed26169f887735232bcb0edee37f96cb"
+    },
+    {
+      "path": "tools/test-reader-tts-exit-progress.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5201,
+      "sha256": "a426998691a8f49ac57a087475f49c4af2d8d68029c0832fd73976a975c9939e"
+    },
+    {
+      "path": "tools/test-reader-tts-gateway.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12793,
+      "sha256": "0ae7ea477c230e24f2bb372209379e3f777e846163f250ba8fae9d4f4c2197d0"
+    },
+    {
+      "path": "tools/test-reader-tts-launch-intent.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2582,
+      "sha256": "cc6e01503ebf841786fdb3d0bdb2da8b1c29bb4d0ec0c425b7f7b3eb94c4ae13"
+    },
+    {
+      "path": "tools/test-reader-tts-navigation-generation.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2394,
+      "sha256": "b0a1a87c730e8bb9dae27c16c569912353c8ad7f6e685fdae6bf8d506d97b431"
+    },
+    {
+      "path": "tools/test-reader-tts-page-follow.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9489,
+      "sha256": "be6bc75da5ed55bccf269c6646a68fec1a53739fecc4d7ed2219c6bf2150c8e5"
+    },
+    {
+      "path": "tools/test-reader-tts-preferences.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4982,
+      "sha256": "25c5cb4fac80a97005611c867e00aa5056465949a54dcaea641a10b0303abc8b"
+    },
+    {
+      "path": "tools/test-reader-tts-product-surface.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 13530,
+      "sha256": "996c7b0a4a9fc0ee58d402e35b816b5626fde0b0fdb2f7e6d529bc46cc82315f"
+    },
+    {
+      "path": "tools/test-reader-tts-quick-preparation.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 13043,
+      "sha256": "0eacff6d2dd11b698159fdb12fa682592793f99c9edcb341957b9a3da43ff8ae"
+    },
+    {
+      "path": "tools/test-reader-tts-session-coordinator.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 22914,
+      "sha256": "c2ac978216c04a3daaebc770294cccaa3b7d461debe9e9f8d1a3afedc6bad37a"
+    },
+    {
+      "path": "tools/test-reader-tts-short-window.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2004,
+      "sha256": "74778397b4f3c3ef7b66e46e37be057b81f6fec2c3bd4e061a529ec29294c976"
+    },
+    {
+      "path": "tools/test-reader-tts-state-machine.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 19550,
+      "sha256": "06411814cc7ec402b07895daa1ee2b178a64b92b24154318c293d85d5e5843a1"
+    },
+    {
+      "path": "tools/test-reader-tts-state.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3115,
+      "sha256": "ccdcabae3b3a1f53a13333455f1bb9d20888a4e1245c245ce596154defd2a935"
+    },
+    {
+      "path": "tools/test-reader-tts-waveform.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6372,
+      "sha256": "c288c780529d371cfae78df16df52afbc4cf196021b8a3563c7595c090fcba74"
+    },
+    {
+      "path": "tools/test-reader-typography-architecture.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5168,
+      "sha256": "8fc58aeff5ca963b696547f74bee06cedbea0532e2cc9e4e81eb1c8f76274a1d"
+    },
+    {
+      "path": "tools/test-reader-unknown-image-first-build.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14961,
+      "sha256": "ccf15a3f295bf24a2f719a958eaa3fc7c436c4d9a29e2b283217bcae29838677"
+    },
+    {
+      "path": "tools/test-reader-unread-chapter-admission.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7371,
+      "sha256": "60dc6489e8157f502d34975846b53a1fa0ca490da3dc1819742ca414f808efd0"
+    },
+    {
+      "path": "tools/test-reader-window-chrome-diagnostics.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14436,
+      "sha256": "8b2b813321419c9d36328ba6f114bf57689775fe6b55c809a0e15c98e7156303"
+    },
+    {
+      "path": "tools/test-reader-window-chrome-order.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 34595,
+      "sha256": "a1758b08a3bce06be29579e2dfd543078ebba87ab08a1cc56f61451d567a159f"
+    },
+    {
+      "path": "tools/test-reader-window-chrome-p0.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4850,
+      "sha256": "41de8853231c26a4a0477b0e37ab509119b975c74e60e1f36a3d571a76ba5333"
+    },
+    {
+      "path": "tools/test-reading-assistant-source.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9736,
+      "sha256": "8a2fe8bd5f2688d7893a4c44721b1e3cef77389d8e1418f767c79ed37dc09886"
+    },
+    {
+      "path": "tools/test-reading-chapter-window.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4687,
+      "sha256": "3ef26020757c2b053803af08ec3836ce0e1400798eec15d9df2420afa4551f6d"
+    },
+    {
+      "path": "tools/test-reading-directory-fixture.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4017,
+      "sha256": "ddac036d031a81359007b104ec614e7121ac3a7201da6897d71ba8c7771af9f0"
+    },
+    {
+      "path": "tools/test-reading-document-projection.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5557,
+      "sha256": "e176460c841e380f49031da7725663996140d59e12f62cf93a2cfbda4516bef0"
+    },
+    {
+      "path": "tools/test-reading-document-window.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12344,
+      "sha256": "80782da46e4c2d06d2325b13e44285a329efaf575a345b0a3c2821619bff1a15"
+    },
+    {
+      "path": "tools/test-reading-entry-preparation.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 48025,
+      "sha256": "2055d4c67a631f0876f48e2b0f97b73da63e381f6be03ab4e83afc9d8b819428"
+    },
+    {
+      "path": "tools/test-reading-entry-priority.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7198,
+      "sha256": "e6721a2300f486f67fce19487713d048676f28f0900dc426f5ae7ba8c2051e04"
+    },
+    {
+      "path": "tools/test-reading-entry-snapshot.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10122,
+      "sha256": "3eaa277b17c7db3a04b494fcfaf77c48d39eb81c22f52bbe4fd493f76ce63528"
+    },
+    {
+      "path": "tools/test-reading-image-source-server.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 17578,
+      "sha256": "d5d395405f239ae512ec781291e73151fc955d92273bd6f4f098f071f88082b9"
+    },
+    {
+      "path": "tools/test-reading-local-page-facts.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7633,
+      "sha256": "490530bb2250a47b276f6aed1eb239014b6a5c06389de495790a38f2ce089be9"
+    },
+    {
+      "path": "tools/test-reading-neighbour-preparation.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3536,
+      "sha256": "83fa0bd20793e7ce26485b060a57bab4ef81e022e065d482b9035204634b210a"
+    },
+    {
+      "path": "tools/test-reading-offline-gateway.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 18781,
+      "sha256": "1aa019086acbca8827c433d2b380cfd728043e508aeb53750c373baf5ce2a003"
+    },
+    {
+      "path": "tools/test-reading-offline-image-cache-runtime.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 23566,
+      "sha256": "cc0242ca63ca5964284422e183e8249e62c973492a9a7c77e80a5e8686381c33"
+    },
+    {
+      "path": "tools/test-reading-offline-image-cache.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9864,
+      "sha256": "9ade8c1fb093f6bab52aab5fa459832d023135ae737e30d1a5c6434846eeaa8b"
+    },
+    {
+      "path": "tools/test-reading-pagination-index.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12388,
+      "sha256": "cafdd3014cad2f071c9eb15cea3d6b6ce86402ec172b52eeebb229ff2ef8bfda"
+    },
+    {
+      "path": "tools/test-reading-pagination-integration.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 18672,
+      "sha256": "d6c5e918d2e6cdeb17201bbd8872b52f76427894cdce4f0c7c5a8c298301cf26"
+    },
+    {
+      "path": "tools/test-reading-paragraph-window.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9252,
+      "sha256": "4179f920325fb7cdb727f05eb193d7d0f068025288cf38fb1332ec402b4aaee2"
+    },
+    {
+      "path": "tools/test-reading-phone-tablet-shared-architecture.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6357,
+      "sha256": "d31526eee2c887a1bed02eb3c86edf0dd50124b31d86b8a2e0d2799f192c574b"
+    },
+    {
+      "path": "tools/test-reading-record-accumulation.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3001,
+      "sha256": "78e135693b2103417b0f27970dc05d455bd7ee6147f9f5105645e89952811780"
+    },
+    {
+      "path": "tools/test-reading-session-documents.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4762,
+      "sha256": "f2ef6a517deaf49e176a6ef3c749243e48f87ad41103786a647b71e0bfe4b73a"
+    },
+    {
+      "path": "tools/test-reading-session-entry-admission.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 11784,
+      "sha256": "8b7eecfb2326b0728f31b94d628fb2234b666f4f63e5701a9c506682ccfb8384"
+    },
+    {
+      "path": "tools/test-reading-session-ownership.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4658,
+      "sha256": "a6fd6f95d130768c6befc97056f6a2632236a1c94d3845b97fcea95a56057c3b"
+    },
+    {
+      "path": "tools/test-reading-session-routing.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6526,
+      "sha256": "d6e152400437ccbb5519ca6c80d8a07dede73b8f956ce915eb7ce0a65cb43868"
+    },
+    {
+      "path": "tools/test-reading-text-source-server.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9042,
+      "sha256": "c59d642e2004bd7c7a72ed7d8770c7a380d1a2c05e38c38ee0137206497e6303"
+    },
+    {
+      "path": "tools/test-reading-whole-book-progress.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7057,
+      "sha256": "9dde86730a7c6eb4863aef5af406c62b95d7d44355a890eb3b67836fe0d931fa"
+    },
+    {
+      "path": "tools/test-remote-content-admission.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 19450,
+      "sha256": "3f9aed5475ba0dccb203dc0925977c3a6e544143949fd20b3c4f29daf6669a28"
+    },
+    {
+      "path": "tools/test-remote-position-migration.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 16788,
+      "sha256": "419e8cce0d7b26a0706a5bbc0ee0a69d6b075edab4d0d1d509bd85078e408e53"
+    },
+    {
+      "path": "tools/test-remote-position-reader.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 26286,
+      "sha256": "c6180a7b8c92d0e4bcc11c5ca6d698e3fdf4118268dd7cbca959cc261a1e981a"
+    },
+    {
+      "path": "tools/test-remote-reading-evidence.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9743,
+      "sha256": "9c49f08c07141cd1f09eb9705d1a936ce9cd9b3e9c7daabd29f5e08cffc2a519"
+    },
+    {
+      "path": "tools/test-remote-reading-flow-gateway.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8674,
+      "sha256": "e17111af00ac93c19acd4be4d9518e9148fc8be61be4619d222085dd031f425f"
+    },
+    {
+      "path": "tools/test-remote-reading-flow-runtime.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 19769,
+      "sha256": "40fd8d635fe5693cc6d7aa9f54940dc8de47b6ed2330e4c65dc4b94d8599b8ef"
+    },
+    {
+      "path": "tools/test-responsive-surface-widths.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14234,
+      "sha256": "985432070084c0a2004532becfcca7f0482297274335a30d6249b0369334907b"
+    },
+    {
+      "path": "tools/test-rss-discover-responsive-layout.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3944,
+      "sha256": "edd168f326fda0192b09e0b800abbfc8d8e6c7a4226208ac4af61611d207e1c1"
+    },
+    {
+      "path": "tools/test-rss-page-architecture.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 19235,
+      "sha256": "95ab0ae3ca6f7a6d753d71fa9676bf8b38d9bf096b545d1c218ec4dea942afcb"
+    },
+    {
+      "path": "tools/test-rss-subscription-management-page.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3774,
+      "sha256": "d396ecad0b1ed1fda1b6378b9614ddfcc802feae736334db9d62e5ef90a31d78"
+    },
+    {
+      "path": "tools/test-rule-entity-management.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4139,
+      "sha256": "bf2312fb992fac8eedbfa271c611e33284e08fda58315238db1d3e39dc20108c"
+    },
+    {
+      "path": "tools/test-search-candidate-acquisition.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 35068,
+      "sha256": "a82fb7024b9cd6b611eeea7fee5d72bf6a97a5d79577a21d7278fea2ca2163ba"
+    },
+    {
+      "path": "tools/test-search-cover-continuity.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6614,
+      "sha256": "a9a498f407d98b2d325e7fe80a6d66786e805808235f4f2be1b1402b1a9a4031"
+    },
+    {
+      "path": "tools/test-search-detail-cache-first.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2198,
+      "sha256": "01c1cfcbae5f90a3d6d19a6f6a81993e8742995f6f50c839f2465df3329e7b8c"
+    },
+    {
+      "path": "tools/test-search-gateway.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 24377,
+      "sha256": "6438d80ca69501402c87a0c157c7219b530caa2b7626abf80895ae299ed61ca9"
+    },
+    {
+      "path": "tools/test-search-history-layout-lifecycle.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8687,
+      "sha256": "f3fcc579bad2ded3482bdce41f148dbc6e05d387261e990972b356ebeb894197"
+    },
+    {
+      "path": "tools/test-search-native-focus.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2274,
+      "sha256": "96d069468b12003f3e5489488edb8df4de4c983dd98b7001b7400b8acc522348"
+    },
+    {
+      "path": "tools/test-search-orchestrator.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 82714,
+      "sha256": "98a1435c33b4ac5f6e6c681b1dcc1fb544c42f066ebd8df17b2d2910e62d4ee2"
+    },
+    {
+      "path": "tools/test-search-physical-layout.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5474,
+      "sha256": "9f90c52c275efbbe823ca7ee799e0efce4b8a7ffd34262de8c31ac80084d8116"
+    },
+    {
+      "path": "tools/test-search-publication-boundary.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 18684,
+      "sha256": "cc6bd52abfa66fbf7b5b8a710de1b219f1ad5d4185eae6446069445cfee65057"
+    },
+    {
+      "path": "tools/test-search-publication-state.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2372,
+      "sha256": "1dbb717bfb7487aacdddd7e308a41ee94ba6bd420405080e7a39810d53e2c052"
+    },
+    {
+      "path": "tools/test-search-settings-physical-feedback.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12573,
+      "sha256": "b885f38d632dad9125df1edf2db215c922b63062cc0172171abc03f39bfee263"
+    },
+    {
+      "path": "tools/test-search-shelf-identity.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9479,
+      "sha256": "5607988f500aefabecf9c502a28faeff41013d2335037205be8a03efe766f756"
+    },
+    {
+      "path": "tools/test-search-trial-reading-return.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14903,
+      "sha256": "fec75cb89982ac8dee8f1f17812a963b40f7bb8c2cd063baf626025905f8e83b"
+    },
+    {
+      "path": "tools/test-search-view-state.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 35536,
+      "sha256": "8fa2cffc792409f13453d4910f7217df36cad71c6d81a9efd6233f8026c1882d"
+    },
+    {
+      "path": "tools/test-select-semantics.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8520,
+      "sha256": "31a7a7d18a3f877b93d727e5d465c8ee644310de0348f018bf655d8f9d17b82d"
+    },
+    {
+      "path": "tools/test-settings-cache-cleanup.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1415,
+      "sha256": "2f43b793e2c750ddfca2e9a76ac169ecc5cd3c2e2b348691f294c8977d7c487e"
+    },
+    {
+      "path": "tools/test-settings-select-overlay.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2931,
+      "sha256": "47458b12f88da3401e0e2a3997982214e01361fd6a171d8c4637b7a380aa73b7"
+    },
+    {
+      "path": "tools/test-settings-theme-icons.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2604,
+      "sha256": "d0b3c7d92e2c08c2ffaf0fa671528daf98c7050ce870cf0aa239a79e912d263e"
+    },
+    {
+      "path": "tools/test-shelf-resume-handoff.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 15067,
+      "sha256": "785a9d2e968a21d2c97e42ee8ce769fd7c1a8336f0d8a7c598dd17c7b3bb9774"
+    },
+    {
+      "path": "tools/test-shelf-source-name-resolution.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7443,
+      "sha256": "79ab578bdd8380672b8e8abf64c2378c60e5d8cfa16f3cd83abead67b2d40bcb"
+    },
+    {
+      "path": "tools/test-source-check-progress.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 18603,
+      "sha256": "daa29955f6622e5f51e3e81217c7ed44b5b41efb0f556b27c7f0d7d19949c932"
+    },
+    {
+      "path": "tools/test-source-content-correction.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 13631,
+      "sha256": "767f7e7d9739f069f026c9a0ad09df73bdd9aa5fb2edb08940762839c4e4ebd4"
+    },
+    {
+      "path": "tools/test-source-product-tools.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9581,
+      "sha256": "b5f564424e5fe234773a2530acbbc5557857a07b96d59bacae7a4e6855418a25"
+    },
+    {
+      "path": "tools/test-source-supply-chain.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9682,
+      "sha256": "96f00e870cf96d8daccdc94c210b95856b83e35963623378be9167ba8ec72452"
+    },
+    {
+      "path": "tools/test-source-switch-gateway.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 41605,
+      "sha256": "bcab97013203c3109a8c06f59a31bcda84de256033a1677861b601234c403b94"
+    },
+    {
+      "path": "tools/test-source-switch-transaction.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9826,
+      "sha256": "34b92cf140189e6b596248ad28ccb123f66ae16e9b6ed15e82218da5eba791dc"
+    },
+    {
+      "path": "tools/test-surface-horizontal-geometry.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4632,
+      "sha256": "d168dd48eec16e69ee393d20c3280ad2977de9c025007a10008f3914298f03af"
+    },
+    {
+      "path": "tools/test-surface-repair.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9135,
+      "sha256": "99f4dd1ed63300e29be766283ab011477b526423c90ae5c57f7b98488d418f40"
+    },
+    {
+      "path": "tools/test-surface-transition-p0.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3602,
+      "sha256": "6faef2c89f9aacae32595c30e599d15cee38f9aaaf3e628608c179e9fecafee6"
+    },
+    {
+      "path": "tools/test-svg-provenance.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 173,
+      "sha256": "7574a9215ef00bd10c2a00bc54aa52092f8f24e7b54b23e962bc81254bdb53e5"
+    },
+    {
+      "path": "tools/test-sync-host-configuration.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10129,
+      "sha256": "577c67d813a690ab587281cb1b5a47a5f0b6ce88e9633ed3c02e110dd472caba"
+    },
+    {
+      "path": "tools/test-sync-webdav-product.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9380,
+      "sha256": "b0a2cf24008e21bed0ed3d781a8661c437bb37f9cfb7ea38b531d25d92189017"
+    },
+    {
+      "path": "tools/test-system-file-open.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 13856,
+      "sha256": "7e5c693385214eea4e34d53a6108b0bbe0a48ceab7ae286d995df1ecccab5fbc"
+    },
+    {
+      "path": "tools/test-tencent-picture-source-correction.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 9801,
+      "sha256": "96b39fbd5ee22ddf25fb6c4cea6902484f2a19dff237e281f3a0f27884d92873"
+    },
+    {
+      "path": "tools/test-theme-appearance-controls.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3376,
+      "sha256": "cb2e634cc46695b486d2c4a920703e37be36823abd5c3fa271bdfe2b5ab0de0b"
+    },
+    {
+      "path": "tools/test-theme-dynamic-icons.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8734,
+      "sha256": "68db577f5b65c6878ca9202d524250768e0decb6b5450601ba16e826c5272d71"
+    },
+    {
+      "path": "tools/test-theme-local-consumers.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3091,
+      "sha256": "08c6991be6a6f32bcf0c01f1ce17fd343b57919a8a7c06c924d5660e54ddcba4"
+    },
+    {
+      "path": "tools/test-theme-page-back-bar.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1956,
+      "sha256": "07ee34659a8409f872ee14348f0892d22f4302ce5fa8c4bdfc3a8b5243979e6a"
+    },
+    {
+      "path": "tools/test-theme-primary-text.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6077,
+      "sha256": "6d1d5a6297d483ff4214d6cdf2bb55b5b155bb994c05ea17843714a589f48c41"
+    },
+    {
+      "path": "tools/test-toc-repair-regressions.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10080,
+      "sha256": "f4e57a5177666cae42ee70b074c301fbb89da1f42db256047b6dd9550db2c66b"
+    },
+    {
+      "path": "tools/test-transient-transport-acquisition.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 11453,
+      "sha256": "2dd42f1b2647ca3e00b802aef33b8755a67ba28c2deefc32d7359b607199b891"
+    },
+    {
+      "path": "tools/test-webdav-credential-queue.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 115,
+      "sha256": "9a23a47ec42fc09d79d7001d1461f04b8517761d29db2ff0937214de8f3edf29"
+    },
+    {
+      "path": "tools/test-window-flicker-dedup.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6567,
+      "sha256": "f00238878b501f15401c59de42d121e9905729801df1673d034ddc7af9de3cdf"
+    },
+    {
+      "path": "tools/theme-svg-variants.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4179,
+      "sha256": "751e6ecb0a7f0b636f4c491ff99cf8a7534f6245608edce7d93289cd878793a2"
+    },
+    {
+      "path": "tools/vendor/aosp-brightness/BrightnessUtils.java",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6372,
+      "sha256": "7d9a706e4b4ff49ae8decef1406719ca8c6b518d652488f171a22e1800785247"
+    },
+    {
+      "path": "tools/vendor/aosp-brightness/README.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 985,
+      "sha256": "9fc65fe8e81a4e2ac8da54c37fc0f9cdc90503673f5ca9aa6006cc2b7427c196"
+    },
+    {
+      "path": "tools/verify-bundled-test-book-source-haps.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2179,
+      "sha256": "5cc9204e80b6199aa462457d9c3ac884220ccbd805716369bfa5a50808b77283"
+    },
+    {
+      "path": "tools/verify-bundled-test-book-sources-live.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2551,
+      "sha256": "d68136f607141663c8a2f35c57d19b1ac780685bc621651dcf31605528595c15"
+    },
+    {
+      "path": "tools/verify-source-supply-admission.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 13303,
+      "sha256": "6e1b166b2cb2ffd954c598f0b5af699c364c104fb2d07585247476e329695da6"
+    },
+    {
+      "path": "tools/webdav-product-test-server.js",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6332,
+      "sha256": "405826e74274a1039e01f9d54c88509626e4b5bac8b7161f0aa8da2182293d7b"
+    }
+  ]
+}

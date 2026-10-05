@@ -1,0 +1,265 @@
+{
+  "recordedAt": "2026-10-03T13:48:36.166406+00:00",
+  "target": "127.0.0.1:5555",
+  "server": "127.0.0.1:8710",
+  "runId": "20261003T132254Z-568ec4e3-d6c1d5d4",
+  "signedHapSha256": "0c57c7221e3a7612bf764c471655d120f3d37fe63e7f003c8a93a7b5d837bff7",
+  "deploymentReceipt": "canonical-delivery/deploy-vm-6460677a198b-20261003T133542Z.json",
+  "dataPolicy": "preserve",
+  "scenes": [
+    {
+      "scenario": "immersive-entry",
+      "files": [
+        {
+          "path": "vm/immersive.jpeg",
+          "bytes": 457571,
+          "sha256": "2887d62ba3127a5be87829694d6226058b79893c6292ed05acf052877606bb84"
+        },
+        {
+          "path": "vm/immersive.json",
+          "bytes": 17441,
+          "sha256": "da206b3d469ed28273d6ada933ef5a39476445b388b1a403e36165d9accec1a5"
+        }
+      ],
+      "visualObservation": {
+        "statusVisible": false,
+        "navigationIndicatorVisible": false,
+        "note": "Initial immersive image has no native status glyphs or navigation indicator. Page 5 / 32."
+      },
+      "sampledWindowScenes": [],
+      "pageText": [
+        "5 / 32"
+      ]
+    },
+    {
+      "scenario": "controls-initial",
+      "files": [
+        {
+          "path": "vm/controls.jpeg",
+          "bytes": 380759,
+          "sha256": "9f5eef25cd686990af19d4ee52de0903927fc178559bc30d1002c12e34660a7a"
+        },
+        {
+          "path": "vm/controls.json",
+          "bytes": 70564,
+          "sha256": "5174092978209983ca7e82dc914b78e35108232f2c447221990d7fbd5d227072"
+        }
+      ],
+      "visualObservation": {
+        "statusVisible": true,
+        "navigationIndicatorVisible": null,
+        "note": "Immediate sample: status glyphs visible; bottom indicator not discerned and app bounds differ from later UI tree. Not used for settled geometry acceptance."
+      },
+      "sampledWindowScenes": [
+        {
+          "type": "WindowScene",
+          "bounds": "[0,0][1280,136]",
+          "bundleName": "com.ohos.sceneboard",
+          "hostWindowId": "21"
+        }
+      ],
+      "pageText": [
+        "5 / 32"
+      ]
+    },
+    {
+      "scenario": "directory-initial",
+      "files": [
+        {
+          "path": "vm/directory.jpeg",
+          "bytes": 156431,
+          "sha256": "df33d29ffaf308132f7ed5e630dade44bbbaf9795d5c69fdd93551d4ad72c479"
+        },
+        {
+          "path": "vm/directory.json",
+          "bytes": 114181,
+          "sha256": "46d5aef82777f2d5cc7ad0e55a2faf6017a460756630e32abe61de2d1c4f15e0"
+        }
+      ],
+      "visualObservation": {
+        "statusVisible": true,
+        "navigationIndicatorVisible": null,
+        "note": "First directory sample retained. Final directory visual judgement uses directory-settled."
+      },
+      "sampledWindowScenes": [
+        {
+          "type": "WindowScene",
+          "bounds": "[0,0][1280,136]",
+          "bundleName": "com.ohos.sceneboard",
+          "hostWindowId": "21"
+        }
+      ],
+      "pageText": [
+        "5 / 32"
+      ]
+    },
+    {
+      "scenario": "directory-settled",
+      "files": [
+        {
+          "path": "vm/directory-settled.jpeg",
+          "bytes": 156341,
+          "sha256": "1ddb1490c878787447f70ca69dea1b10dea05974583db1b9e98e3870dd9e875e"
+        },
+        {
+          "path": "vm/directory-settled.json",
+          "bytes": 114553,
+          "sha256": "1f4556b99a0eb694aedf86fe50240d54b99f2baa9c8fab0e0e965d76a0298969"
+        }
+      ],
+      "visualObservation": {
+        "statusVisible": true,
+        "navigationIndicatorVisible": true,
+        "note": "Original pixels show both native bars, indicator bbox approximately x444..835 y2794..2811. Directory contains 05 current row. Native bar positions are separate from sheet entrance timing."
+      },
+      "sampledWindowScenes": [
+        {
+          "type": "WindowScene",
+          "bounds": "[0,0][1280,136]",
+          "bundleName": "com.ohos.sceneboard",
+          "hostWindowId": "21"
+        }
+      ],
+      "pageText": [
+        "5 / 32"
+      ]
+    },
+    {
+      "scenario": "controls-settled",
+      "files": [
+        {
+          "path": "vm/controls-settled.jpeg",
+          "bytes": 365762,
+          "sha256": "b2b3dcc5d4aaba71105bf58b0cc6cb029a790c55e14eab58c1b7d0bcad64f61e"
+        },
+        {
+          "path": "vm/controls-settled.json",
+          "bytes": 70792,
+          "sha256": "96db27963f06ce51dd5d2d6320f7a7974fe32b16b238d087b22eb0e72c25711d"
+        }
+      ],
+      "visualObservation": {
+        "statusVisible": true,
+        "navigationIndicatorVisible": true,
+        "note": "Both native bars visible. Top card approximately y171..353, bottom card y2229..2693; sampled UI tree agrees. Indicator inside native gesture window band, clear gap below controls."
+      },
+      "sampledWindowScenes": [
+        {
+          "type": "WindowScene",
+          "bounds": "[0,0][1280,136]",
+          "bundleName": "com.ohos.sceneboard",
+          "hostWindowId": "21"
+        }
+      ],
+      "pageText": [
+        "5 / 32"
+      ]
+    },
+    {
+      "scenario": "hidden-settled",
+      "files": [
+        {
+          "path": "vm/hidden-settled.jpeg",
+          "bytes": 457571,
+          "sha256": "2887d62ba3127a5be87829694d6226058b79893c6292ed05acf052877606bb84"
+        },
+        {
+          "path": "vm/hidden-settled.json",
+          "bytes": 17567,
+          "sha256": "c804016af649754d176ef412ec880aa0ccca81a626ec2f0c0bb333435d9e0344"
+        }
+      ],
+      "visualObservation": {
+        "statusVisible": false,
+        "navigationIndicatorVisible": false,
+        "note": "After closing directory and hiding controls, no status glyphs or native indicator in original pixels; tree contains only application Window 102. Page 5 / 32."
+      },
+      "sampledWindowScenes": [],
+      "pageText": [
+        "5 / 32"
+      ]
+    },
+    {
+      "scenario": "returned",
+      "files": [
+        {
+          "path": "vm/returned.jpeg",
+          "bytes": 187494,
+          "sha256": "b67f7f2409a979201da0a8c16d5565eaf0a867311f9cbcb8fbe5b2b993025072"
+        },
+        {
+          "path": "vm/returned.json",
+          "bytes": 114422,
+          "sha256": "bda359b1334829fca76dd5378db72fba4d11b8a97404de28a49e30e5e315441c"
+        }
+      ],
+      "visualObservation": {
+        "statusVisible": true,
+        "navigationIndicatorVisible": true,
+        "note": "Back action restores bookshelf, both native bars visible. Continue card still says 05, page 5 / 32."
+      },
+      "sampledWindowScenes": [
+        {
+          "type": "WindowScene",
+          "bounds": "[0,0][1280,136]",
+          "bundleName": "com.ohos.sceneboard",
+          "hostWindowId": "21"
+        }
+      ],
+      "pageText": [
+        "05 · 5 页 / 32 页",
+        "05 · 第 5 页 / 32 页"
+      ]
+    }
+  ],
+  "readonlyDiagnostic": {
+    "windowManagerObservedGestureNavBar": {
+      "windowName": "SCBGestureNavBar16",
+      "windowId": 19,
+      "type": 2111,
+      "zOrder": 2200,
+      "rectPixels": [
+        0,
+        2734,
+        1280,
+        98
+      ]
+    },
+    "windowManagerObservedStatusBar": {
+      "windowName": "SCBStatusBar18",
+      "windowId": 21,
+      "type": 2108,
+      "zOrder": 2202,
+      "rectPixels": [
+        0,
+        0,
+        1280,
+        136
+      ]
+    },
+    "windowManagerEvidence": "Direct leased HDC stdout observed by root; failed zero-byte redirection files are preserved separately and are not valid window dumps.",
+    "readerLog": "vm/reader-settled.txt",
+    "boundedReaderLogSystemBarWarningFound": false,
+    "failedProbes": [
+      "hidumper quoted argument/redirection emitted empty file; not a valid dump",
+      "hilog -x plus -z rejected CODE -31; empty file retained. Valid bounded tail used -z 100 -T Reader."
+    ]
+  },
+  "targetOwnership": {
+    "beforeFirstInspection": "Canonical install completed and released lease; root acquired bound lease.",
+    "uiLeaseReleased": true,
+    "subsequentExitSceneLeaseReleased": true,
+    "finalLeaseOwnerInventory": []
+  },
+  "finalPage": "bookshelf",
+  "verificationBoundary": {
+    "currentVmSettledHideShowAndReturn": "PASS",
+    "firstRevealFrameLayoutAndCompositorTiming": "OPEN",
+    "navigationForegroundExactNativeColorMapping": "OPEN",
+    "fullPixelReadingPositionRestoration": "OPEN; sampled chapter and ordinal preserved only",
+    "physicalDevice": "NOT_RUN",
+    "horizontalAndTabletNative": "NOT_RUN",
+    "mainlineIntegration": "NOT_DONE",
+    "userAcceptance": "OPEN"
+  }
+}

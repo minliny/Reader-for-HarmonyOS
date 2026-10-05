@@ -1,0 +1,410 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Published R7 build/source binding only",
+  "recordedAt": "2026-10-03T15:44:25.566851+00:00",
+  "runId": "20261003T154124Z-568ec4e3-a61c8e77",
+  "buildClass": "iteration",
+  "acceptanceEligible": false,
+  "canonicalManifest": {
+    "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261003T154124Z-568ec4e3-a61c8e77/manifest.json",
+    "bytes": 15164,
+    "sha256": "d1d85d95beeb104d57aef5d7b4799cc5559697703a916e33273027b5113ad6f2",
+    "preservedCopy": "published-manifest.json"
+  },
+  "sourceOrigin": {
+    "harmony": {
+      "repo": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS",
+      "commit": "568ec4e32a2bdce01f62724cfb04a3f6b5a63a60",
+      "dirty": true,
+      "status": [
+        "M docs/ui-design/SVG_PROVENANCE.json",
+        " M entry/libs/arm64-v8a/libreader_core_napi.so",
+        " M entry/src/main/ets/app/BundledBookSourceSupply.ts",
+        " M entry/src/main/ets/app/BundledSourceIndexIdentity.ts",
+        " M entry/src/main/ets/app/ReaderRuntimeOwner.ts",
+        " M entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+        " M entry/src/main/ets/features/bookshelf/BookshelfFlowGateway.ts",
+        " M entry/src/main/ets/features/bookshelf/BookshelfPage.ets",
+        " M entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
+        " M entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts",
+        " M entry/src/main/ets/features/common/ReaderFontFamilies.ts",
+        " M entry/src/main/ets/features/common/ReaderFonts.ets",
+        " M entry/src/main/ets/features/manga/MangaLayoutPolicy.ts",
+        " M entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+        " M entry/src/main/ets/features/manga/MangaSessionController.ts",
+        " M entry/src/main/ets/features/manga/MangaStripProjection.ts",
+        " M entry/src/main/ets/features/manga/MangaUserError.ts",
+        " M entry/src/main/ets/features/reading/FullDirectoryPanel.ets",
+        " M entry/src/main/ets/features/reading/ReaderDirectoryChapterRow.ets",
+        " M entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts",
+        " M entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets",
+        " M entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets",
+        " M entry/src/main/ets/features/shell/ReaderShell.ets",
+        " M entry/src/main/ets/pages/Index.ets",
+        " M entry/src/main/resources/rawfile/bundled-sources/10da66bab1ce68684d062abc15b146444b12c52984a3bd9aa75b4819d4cd7a8c.json",
+        " M entry/src/main/resources/rawfile/bundled-sources/134f600a7512c9d0bfbc3dcc1e9ccb557bf742acffb4d1d250de616c632b4fb1.json",
+        " M entry/src/main/resources/rawfile/bundled-sources/index.json",
+        " M entry/src/main/resources/rawfile/reader-tested-book-source-collection.json",
+        " M evidence/2026-09-11-make-style-parity/appearance-reference/.figma/attachments/image-0.png",
+        " M evidence/2026-09-11-make-style-parity/appearance-reference/src/imports/1789045487585.png",
+        " M \"evidence/2026-09-11-make-style-parity/appearance-reference/src/imports/\\345\\256\\214\\346\\225\\264\\347\\225\\214\\351\\235\\242\\347\\256\\200\\347\\271\\201\\345\\261\\225\\345\\274\\200/99d77078d4edc59bf6fc0f8d5cf678d7361665e5.png\"",
+        " M evidence/2026-09-11-make-style-parity/tts-reference/.figma/attachments/image-0.png",
+        " M evidence/2026-09-11-make-style-parity/tts-reference/imports/99d77078d4edc59bf6fc0f8d5cf678d7361665e5.png",
+        " M evidence/2026-09-11-make-style-parity/tts-reference/src/imports/ScreenAnimatedPhone390844-1/99d77078d4edc59bf6fc0f8d5cf678d7361665e5.png",
+        " M evidence/2026-09-11-make-style-parity/tts-reference/src/imports/ScreenAnimatedPhone390844/99d77078d4edc59bf6fc0f8d5cf678d7361665e5.png",
+        " M tools/lib/manga-surface-sdk-probe.mjs",
+        " M tools/lib/reader-control-builder-probe.mjs",
+        " M tools/lib/reader-motion-method-probe.mjs",
+        " M tools/refresh-source-supply-manifest.mjs",
+        " M tools/svg-provenance.config.mjs",
+        " M tools/sync-svg-assets.mjs",
+        " M tools/test-bookshelf-startup-readiness.mjs",
+        " M tools/test-manga-book-presentation.mjs",
+        " M tools/test-manga-cancelled-banner.mjs",
+        " M tools/test-manga-cross-chapter-counter-sdk.mjs",
+        " M tools/test-manga-metadata-ui.mjs",
+        " M tools/test-manga-motion-progress.mjs",
+        " M tools/test-manga-navigation.mjs",
+        " M tools/test-manga-session.mjs",
+        " M tools/test-manga-surface-render-key-sdk.mjs",
+        " M tools/test-manga-surface-sdk.mjs",
+        " M tools/test-manga-tile-window.mjs",
+        " M tools/test-manga-ui-assembly-sdk.mjs",
+        " M tools/test-manga-ui-position-hydration.mjs",
+        " M tools/test-manga-ui-state.mjs",
+        " M tools/test-manga-viewport-restore-sdk.mjs",
+        " M tools/test-phone-layout-figma-regressions.mjs",
+        " M tools/test-reader-control-p0.mjs",
+        " M tools/test-reader-directory-depth-contract.mjs",
+        " M tools/test-reader-font-demand.mjs",
+        " M tools/test-reader-layout-architecture.mjs",
+        " M tools/test-reader-window-chrome-order.mjs",
+        " M tools/test-reader-window-chrome-p0.mjs",
+        "?? docs/MANGA_DIRECTORY_FALLBACK_FOLD_20261003.md",
+        "?? docs/MANGA_OVERALL_IMPLEMENTATION_20261003.md",
+        "?? docs/MANGA_READER_SHEETS_PARITY_20261003.md",
+        "?? docs/MANGA_READING_CHAIN_REPAIR_20261003.md",
+        "?? docs/MANGA_SHEET_ICON_LICENSE.md",
+        "?? docs/MANGA_SHEET_MOTION_20261003.md",
+        "?? docs/ui-design/MANGA_SHEET_FONTS_PROVENANCE.json",
+        "?? docs/ui-design/svg-provenance/radix-icons/",
+        "?? entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets",
+        "?? entry/src/main/resources/base/media/manga_sheet_check.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_check_theme_night.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_chevron_down.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_chevron_down_theme_night.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_chevron_right.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_chevron_right_theme_night.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_close.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_close_theme_night.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_horizontal.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_horizontal_active.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_horizontal_theme_night.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_locate.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_locate_theme_night.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_moon.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_moon_active.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_moon_theme_night.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_search.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_search_theme_night.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_sun.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_sun_active.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_sun_theme_night.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_vertical.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_vertical_accent.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_vertical_accent_theme_night.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_vertical_active.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_vertical_theme_night.svg",
+        "?? entry/src/main/resources/rawfile/ReaderMangaSans550.otf",
+        "?? entry/src/main/resources/rawfile/ReaderMangaSans600.otf",
+        "?? entry/src/main/resources/rawfile/ReaderMangaSans900.otf",
+        "?? evidence/2026-10-03-baozi-image-source/",
+        "?? evidence/2026-10-03-continue-card-sdk/",
+        "?? evidence/2026-10-03-manga-presentation-return/",
+        "?? evidence/2026-10-03-manga-reader-sheets-r2/",
+        "?? evidence/2026-10-03-manga-reader-sheets-r3/",
+        "?? evidence/2026-10-03-manga-reader-sheets-r4/",
+        "?? evidence/2026-10-03-manga-reader-sheets-r5/",
+        "?? evidence/2026-10-03-manga-reader-sheets-r6/",
+        "?? evidence/2026-10-03-manga-reader-sheets/",
+        "?? evidence/2026-10-03-manga-reader-stable-viewport-r7/",
+        "?? evidence/2026-10-03-manga-reader-system-bars-r6/",
+        "?? evidence/2026-10-03-manga-reader-system-bars-r7/",
+        "?? evidence/2026-10-03-manga-scroll-flicker/",
+        "?? evidence/2026-10-03-manga-vm-reading/",
+        "?? evidence/2026-10-03-tencent-free-picture-source/",
+        "?? tools/baozi-image-source-correction.mjs",
+        "?? tools/fixtures/manga-system-bars-r5/",
+        "?? tools/fixtures/manga-viewport-r6/",
+        "?? tools/generate-manga-sheet-fonts.py",
+        "?? tools/manga-sheet-fonts-requirements.txt",
+        "?? tools/tencent-picture-source-correction.mjs",
+        "?? tools/test-baozi-image-source-correction.mjs",
+        "?? tools/test-bookshelf-continue-card-sdk.mjs",
+        "?? tools/test-manga-directory-demo-parity-sdk.mjs",
+        "?? tools/test-manga-directory-font-readiness-sdk.mjs",
+        "?? tools/test-manga-error-recovery.mjs",
+        "?? tools/test-manga-reading-directory-fallback.mjs",
+        "?? tools/test-manga-scroll-stability-sdk.mjs",
+        "?? tools/test-manga-sheet-motion-sdk.mjs",
+        "?? tools/test-manga-sheet-selection-sdk.mjs",
+        "?? tools/test-manga-system-bar-viewport-sdk.mjs",
+        "?? tools/test-manga-visible-tile-retention.mjs",
+        "?? tools/test-manga-window-publication.mjs",
+        "?? tools/test-tencent-picture-source-correction.mjs"
+      ]
+    },
+    "core": {
+      "repo": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-Core-Native",
+      "commit": "dfd729cffd79ed11da6d44be9e1ba10c4223247f",
+      "dirty": true,
+      "status": [
+        "M crates/reader-runtime/build.rs",
+        " M crates/reader-runtime/src/remote.rs",
+        " M crates/reader-runtime/src/remote/local_navigation.rs",
+        " M crates/reader-runtime/src/remote/local_navigation/sidecar.rs",
+        " M crates/reader-runtime/src/remote/manga.rs",
+        " M crates/reader-runtime/src/remote/source_supply.rs",
+        " M crates/reader-runtime/tests/manga_pages_extract_commands.rs",
+        " M crates/reader-runtime/tests/runtime_integration.rs",
+        " M crates/reader-storage/src/lib.rs",
+        " M crates/reader-storage/src/manga.rs",
+        " M crates/reader-storage/src/sqlite_backend/manga.rs",
+        " M crates/reader-storage/src/sqlite_backend/manga_entry.rs",
+        " M crates/reader-storage/src/sqlite_backend/shelf_projection.rs",
+        " M crates/reader-storage/tests/manga_store.rs",
+        " M scripts/build-harmony-napi.sh",
+        " M tests/fixtures/corpus/sources/src-2196-6781cc801619.json",
+        " M tests/fixtures/corpus/sources/src-250-bb44193bd3bd.json",
+        "?? crates/reader-content/tests/baozi_source_rule.rs",
+        "?? crates/reader-content/tests/tencent_source_rule.rs",
+        "?? crates/reader-runtime/tests/manga_shelf_progress_commands.rs",
+        "?? scripts/test-build-identity-refresh.mjs",
+        "?? tests/fixtures/manga/"
+      ]
+    }
+  },
+  "sourceReconstruction": {
+    "parentChain": {
+      "r4Archive": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/source-preservation/reader-source.tar.gz",
+      "r4ArchiveSha256": "765627819aa7433c1fa9c575240bee471ea7a3174217af8272e338fdad275132",
+      "r4InventorySha256": "2509d275fd5cc0eec76bd578111f3e209a3fee4a0bb6d196560604ab5106504a",
+      "r5Archive": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/source-delta/r5-source-delta.tar.gz",
+      "r5ArchiveSha256": "a1bba804791fc0873bb924d6696755fd91132629c645c5331391d112c6a04137",
+      "r5ManifestSha256": "0d83bee3013ac925b9688270a2d2eab95eec3af278e25261cd2399955c3d26a9",
+      "r6Archive": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/r6-source-delta.tar.gz",
+      "r6ArchiveSha256": "bcaad688874908ffb83bfb9d0de8a21497c1dce55f56887b4721a7c843132a55",
+      "r6ManifestSha256": "02430e6d0880be8dd0c5178f742f62cbfacd1cd92f8a1b1b45cf2b0255b78d93",
+      "effectiveInventorySha256": "b1faa2eb9df37ac6b16fc97f2efe93a159a5afbfb06ed1692774d9ad7a07a475"
+    },
+    "deltaArchiveSha256": "6bb34e5d026ea86ace1608e6d3d295b16fa64f5a86fb9fd9e60500ba9a27c386",
+    "effectiveInventorySha256": "58975951a8fb45a827d56c85b4d33ed9388922ab4a444393a228d450a0b8431f",
+    "effectiveSourceFingerprint": "b469a1b25e2b0fd907c0a70b08c1faf31ac98534a1a6f000b821efa42afa44d1",
+    "sourceRecords": 7116,
+    "changedSourceSha256": {
+      "Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts": "35ab98291f518958f33a53a117fdc2e1c3ccb47322064d2b3c4fed7129b5b27d",
+      "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaReadingSurface.ets": "4e8cda54f879494a574de75ab2c85821d02edd96b70bdbf8e3e1085150461676",
+      "Reader-for-HarmonyOS/entry/src/main/ets/features/shell/ReaderShell.ets": "420928dc7906498d6c1bc54301cf3f624300ef8600e720904e611fcaed411336",
+      "Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets": "1b7004f488376fbd172073af0a1b9fe65025effcd730d0f2faec1de274d79d71",
+      "Reader-for-HarmonyOS/tools/fixtures/manga-viewport-r6/Index.ets": "0e54a722f8bd7da88e50acd021e58f1380cfdd945608b6ea5938ab68962692c5",
+      "Reader-for-HarmonyOS/tools/fixtures/manga-viewport-r6/MangaReadingSurface.ets": "f84e5289f30711f31b9c7df2999fdba30dc6af4d175d6100c0e0bfb801ee3448",
+      "Reader-for-HarmonyOS/tools/lib/manga-surface-sdk-probe.mjs": "5931c0ead2dc19f2c00e3b2b948d9bdbc85abc5f123514aac46f94792799950e",
+      "Reader-for-HarmonyOS/tools/test-manga-sheet-motion-sdk.mjs": "5a88bab60718ae4fb42e8ee00e6cf0c8851654d12146ed0090a30faff035ef09",
+      "Reader-for-HarmonyOS/tools/test-manga-surface-sdk.mjs": "512b72f020ba3731705e1a604a5309d0f800ef97d395708f45da32876ff5084a",
+      "Reader-for-HarmonyOS/tools/test-manga-system-bar-viewport-sdk.mjs": "d1f73d11d71b1022bbf7f327db1398b337e4c0dc5307b8e99b3ef615a34a9077",
+      "Reader-for-HarmonyOS/tools/test-reader-layout-architecture.mjs": "861e19bf5df62d474c6653cf483894e6e3843c14428f66a69a790cdc0142435a",
+      "Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs": "a1758b08a3bce06be29579e2dfd543078ebba87ab08a1cc56f61451d567a159f",
+      "Reader-for-HarmonyOS/tools/test-reader-window-chrome-p0.mjs": "41de8853231c26a4a0477b0e37ab509119b975c74e60e1f36a3d571a76ba5333"
+    },
+    "canonicalSnapshots": [
+      {
+        "scope": "harmony",
+        "snapshot": "source-snapshot.json",
+        "fingerprint": "a61c8e7797c476ab28e9ad5bfc0384588ba04cb957a9d4852e3b239b539eb56f",
+        "matchedRecords": 1824,
+        "missingRecords": [],
+        "differentRecords": []
+      },
+      {
+        "scope": "controller",
+        "snapshot": "controller-snapshot.json",
+        "fingerprint": "8767e243d6841f11d47a31e7cc96ee0bcd8307eb9cb918f02f1ee0c51c567afe",
+        "matchedRecords": 589,
+        "missingRecords": [],
+        "differentRecords": []
+      },
+      {
+        "scope": "workspace",
+        "snapshot": "workspace-contract-snapshot.json",
+        "fingerprint": "06641c99065ad9042257bf0b51568b9680b45adf6f7c8ccd3c7a31a2a7ed35e7",
+        "matchedRecords": 18,
+        "missingRecords": [],
+        "differentRecords": []
+      }
+    ],
+    "canonicalCounterfactualFixtures": [
+      "tools/fixtures/manga-system-bars-r5/MangaReadingSurface.ets",
+      "tools/fixtures/manga-system-bars-r5/ReaderShell.ets",
+      "tools/fixtures/manga-viewport-r6/Index.ets",
+      "tools/fixtures/manga-viewport-r6/MangaReadingSurface.ets"
+    ],
+    "allCanonicalInputsReconstructible": true
+  },
+  "native": {
+    "coreBuildInputFingerprint": "9e97919470b42d81d87082c2c257984778da5e5e5e55798273b3242c99608c4b",
+    "originalHostAndSdkSoSha256": "1fabbfa63b996e39da9a3ec01f6b396cf841f0d0b4016303daac56a974c17996",
+    "sdkParentArchiveSha256": "0100e26efb0589baf76ca449bcd5aaeba7000e61e856879a99d3ff4268e3355d",
+    "provenance": [
+      {
+        "file": "iteration-entry-default-signed-provenance.json",
+        "coreBuildInputFingerprint": "9e97919470b42d81d87082c2c257984778da5e5e5e55798273b3242c99608c4b",
+        "nativePackageMembers": 7,
+        "originalNativeSoSha256": "1fabbfa63b996e39da9a3ec01f6b396cf841f0d0b4016303daac56a974c17996",
+        "nativePackaging": {
+          "tool": {
+            "path": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/llvm/bin/llvm-objcopy",
+            "bytes": 4121632,
+            "sha256": "7063ece0b289cdb0d25f2dc215f14e66a16bc6d1dda7092e3b9aa8dff1fb1bd1"
+          },
+          "arguments": [
+            "--strip-all"
+          ],
+          "output": {
+            "bytes": 17908136,
+            "sha256": "adb383b33be91db7d605e5e343c578c45f0ea82c24e81ac8d6e8c22a482c3f06"
+          }
+        },
+        "matched": true
+      },
+      {
+        "file": "iteration-entry-default-unsigned-provenance.json",
+        "coreBuildInputFingerprint": "9e97919470b42d81d87082c2c257984778da5e5e5e55798273b3242c99608c4b",
+        "nativePackageMembers": 7,
+        "originalNativeSoSha256": "1fabbfa63b996e39da9a3ec01f6b396cf841f0d0b4016303daac56a974c17996",
+        "nativePackaging": {
+          "tool": {
+            "path": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/llvm/bin/llvm-objcopy",
+            "bytes": 4121632,
+            "sha256": "7063ece0b289cdb0d25f2dc215f14e66a16bc6d1dda7092e3b9aa8dff1fb1bd1"
+          },
+          "arguments": [
+            "--strip-all"
+          ],
+          "output": {
+            "bytes": 17908136,
+            "sha256": "adb383b33be91db7d605e5e343c578c45f0ea82c24e81ac8d6e8c22a482c3f06"
+          }
+        },
+        "matched": true
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "kind": "signed",
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261003T154124Z-568ec4e3-a61c8e77/entry-default-signed.hap",
+      "bytes": 198678735,
+      "sha256": "cb3cbf1a615edc8b1822290fd778cb4fd3ef3ef1fd0e45d4961c09c583c5f778",
+      "signature": {
+        "status": "signed",
+        "verified": true,
+        "profileType": "debug",
+        "appIdSha256": "ff8e00ed180524004dd842c160f410ac46644a7bba5bf7c4ce309876ce53bcd8",
+        "appIdentifierSha256": "8fb560b4b330d1b0b70f7ad9c7a9e410600e7c0177306f0eb0257ae9c26d2d01",
+        "certificateSha256": "3a563778e5bf17cd3ead0218e13b4a5030de3f5d7d4e21e0336d8eb37b676dc4"
+      },
+      "embeddedCoreNapi": {
+        "path": "libs/arm64-v8a/libreader_core_napi.so",
+        "bytes": 17908136,
+        "sha256": "adb383b33be91db7d605e5e343c578c45f0ea82c24e81ac8d6e8c22a482c3f06"
+      },
+      "actualArtifactAndEmbeddedBytesVerified": true
+    },
+    {
+      "kind": "unsigned",
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261003T154124Z-568ec4e3-a61c8e77/entry-default-unsigned.hap",
+      "bytes": 198375014,
+      "sha256": "11dccd856a63ebebb8e6557b14a56d6ed479d60a15233406080fe4f1d9a79092",
+      "signature": {
+        "status": "unsigned",
+        "verified": false,
+        "profileType": "none"
+      },
+      "embeddedCoreNapi": {
+        "path": "libs/arm64-v8a/libreader_core_napi.so",
+        "bytes": 17908136,
+        "sha256": "adb383b33be91db7d605e5e343c578c45f0ea82c24e81ac8d6e8c22a482c3f06"
+      },
+      "actualArtifactAndEmbeddedBytesVerified": true
+    }
+  ],
+  "publishedBuildGates": {
+    "harmonyContracts": "PASS",
+    "controllerInputs": {
+      "fingerprint": "8767e243d6841f11d47a31e7cc96ee0bcd8307eb9cb918f02f1ee0c51c567afe",
+      "fileCount": 589,
+      "snapshot": "controller-snapshot.json"
+    },
+    "workspaceContractInputs": {
+      "fingerprint": "06641c99065ad9042257bf0b51568b9680b45adf6f7c8ccd3c7a31a2a7ed35e7",
+      "fileCount": 18,
+      "snapshot": "workspace-contract-snapshot.json"
+    },
+    "liveBookSources": "NOT_RUN",
+    "liveBookSourceEvidence": {
+      "transport": "reader-cli/ureq",
+      "scope": "Core CLI L1-L5 diagnostic",
+      "harmonyHostEquivalent": false,
+      "harmonyHostJourney": "OPEN"
+    },
+    "arktsTypeCheck": "PASS",
+    "nonIncrementalBuild": "PASS",
+    "bundledSourceBytes": "PASS"
+  },
+  "effectiveBuildProfile": {
+    "mode": "local",
+    "bytes": 1579,
+    "sha256": "592a5dc18097ea87de782f1a2de04c688eb6be67e98d051c6af4972f9144b975",
+    "secretMaterialArchived": false
+  },
+  "scope": {
+    "sourceBytesAndPublishedArtifacts": true,
+    "buildExecutionPerformedByParent": true,
+    "childBuiltOrUsedDevice": false,
+    "privateSigningMaterialCopied": false,
+    "vmPhysicalInteractionOrUserAcceptanceClaim": false
+  },
+  "frozenR4R5R6AndR7SourceDeltaUnchanged": true,
+  "savedPublicRecords": [
+    {
+      "path": "published-manifest.json",
+      "bytes": 15164,
+      "sha256": "d1d85d95beeb104d57aef5d7b4799cc5559697703a916e33273027b5113ad6f2"
+    },
+    {
+      "path": "source-snapshot.json",
+      "bytes": 485626,
+      "sha256": "e6265beebb654be899e41712428dd8da6bdcc94a7881fe274de7f3e9315017d0"
+    },
+    {
+      "path": "controller-snapshot.json",
+      "bytes": 128696,
+      "sha256": "6c381335694e48eef7ddbe5bd5ea062299609bbc5ab07de52652d3e1dde32a80"
+    },
+    {
+      "path": "workspace-contract-snapshot.json",
+      "bytes": 4677,
+      "sha256": "a4f1591a3b0f9549d510ff12f91c06e4062ab743c2f8eb7a42fb122f1946e24f"
+    },
+    {
+      "path": "iteration-entry-default-signed-provenance.json",
+      "bytes": 22007,
+      "sha256": "848b1a9440df7bf04eafc7b892356690e596dc079e50877a36bcb267072aca0f"
+    },
+    {
+      "path": "iteration-entry-default-unsigned-provenance.json",
+      "bytes": 22013,
+      "sha256": "69b33cd77c58b3c9a583d7025334c725c30f06c606d0771dad30301f13eca8c6"
+    }
+  ]
+}

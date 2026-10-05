@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "name": "r5-source-delta",
+  "sourceFileCount": 2,
+  "sourceBytes": 48254,
+  "inventoryFingerprint": "d4614de0a89068461d0c3fabe4f4d2aaac734a7542953a73728d58b9b1e22270",
+  "archive": {
+    "path": "r5-source-delta.tar.gz",
+    "bytes": 11530,
+    "sha256": "a1bba804791fc0873bb924d6696755fd91132629c645c5331391d112c6a04137"
+  },
+  "files": [
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets",
+      "type": "file",
+      "mode": 420,
+      "bytes": 23385,
+      "sha256": "00087dbd1fc42a843b93242f4c450d17f7f70dde8bd7e1ea575431aebfce3685"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/test-manga-directory-font-readiness-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 24869,
+      "sha256": "d70ab1686040b7a45408b6b87b951966106c934ec8a417be9287ad6cc9e22f67"
+    }
+  ],
+  "verification": {
+    "fullArchiveRead": true,
+    "everyFileSha256": true,
+    "everyFileMode": true,
+    "exactMemberSet": true,
+    "sourceUnchangedDuringArchive": true,
+    "files": 2,
+    "bytes": 48254
+  }
+}

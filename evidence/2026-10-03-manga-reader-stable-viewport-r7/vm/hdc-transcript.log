@@ -1,0 +1,105 @@
+{"at":"2026-10-03T15:45:42.158Z","args":["list","targets"]}
+127.0.0.1:5555
+{"at":"2026-10-03T15:45:42.180Z","args":["shell","param get bootevent.boot.completed"]}
+true 
+{"at":"2026-10-03T15:45:42.203Z","args":["shell","pidof com.ohos.sceneboard"]}
+15675
+{"at":"2026-10-03T15:45:42.234Z","args":["shell","snapshot_display -i 0 -f /data/local/tmp/manga-r7-shelf.jpeg -t jpeg"]}
+fileType: jpeg
+process: display 0, file type: jpeg, width: 1280, height: 2832
+fileType: jpeg
+snapshot: pixel format is: 3
+snapshot: convert rgba8888 to rgb888 successfully.
+
+success: snapshot display 0 , write to /data/local/tmp/manga-r7-shelf.jpeg as jpeg, width: 1280, height: 2832
+{"at":"2026-10-03T15:45:42.442Z","args":["shell","uitest dumpLayout -p /data/local/tmp/manga-r7-shelf.json -a"]}
+DumpLayout saved to:/data/local/tmp/manga-r7-shelf.json
+{"at":"2026-10-03T15:45:50.848Z","args":["file","recv","/data/local/tmp/manga-r7-shelf.jpeg","/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-stable-viewport-r7/vm/shelf-entry.jpeg"]}
+FileTransfer finish, Size:186749, File count = 1, time:16ms rate:11671.81kB/s
+{"at":"2026-10-03T15:45:50.888Z","args":["file","recv","/data/local/tmp/manga-r7-shelf.json","/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-stable-viewport-r7/vm/shelf-entry.json"]}
+FileTransfer finish, Size:114280, File count = 1, time:14ms rate:8162.86kB/s
+{"at":"2026-10-03T15:46:08.619Z","args":["shell","uitest uiInput click 1075 654"]}
+No Error
+{"at":"2026-10-03T15:46:19.076Z","args":["shell","snapshot_display -i 0 -f /data/local/tmp/manga-r7-immersive-a.jpeg -t jpeg"]}
+fileType: jpeg
+process: display 0, file type: jpeg, width: 1280, height: 2832
+fileType: jpeg
+snapshot: pixel format is: 3
+snapshot: convert rgba8888 to rgb888 successfully.
+
+success: snapshot display 0 , write to /data/local/tmp/manga-r7-immersive-a.jpeg as jpeg, width: 1280, height: 2832
+{"at":"2026-10-03T15:46:19.635Z","args":["shell","uitest dumpLayout -p /data/local/tmp/manga-r7-immersive-a.json -a"]}
+DumpLayout saved to:/data/local/tmp/manga-r7-immersive-a.json
+{"at":"2026-10-03T15:46:22.467Z","args":["file","recv","/data/local/tmp/manga-r7-immersive-a.jpeg","/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-stable-viewport-r7/vm/immersive-a.jpeg"]}
+FileTransfer finish, Size:455724, File count = 1, time:13ms rate:35055.69kB/s
+{"at":"2026-10-03T15:46:22.506Z","args":["file","recv","/data/local/tmp/manga-r7-immersive-a.json","/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-stable-viewport-r7/vm/immersive-a.json"]}
+FileTransfer finish, Size:17431, File count = 1, time:13ms rate:1340.85kB/s
+{"at":"2026-10-03T15:46:47.057Z","args":["shell","uitest uiInput click 640 1400"]}
+No Error
+{"at":"2026-10-03T15:46:58.626Z","args":["shell","snapshot_display -i 0 -f /data/local/tmp/manga-r7-controls-b.jpeg -t jpeg"]}
+fileType: jpeg
+process: display 0, file type: jpeg, width: 1280, height: 2832
+fileType: jpeg
+snapshot: pixel format is: 3
+snapshot: convert rgba8888 to rgb888 successfully.
+
+success: snapshot display 0 , write to /data/local/tmp/manga-r7-controls-b.jpeg as jpeg, width: 1280, height: 2832
+{"at":"2026-10-03T15:46:58.792Z","args":["shell","uitest dumpLayout -p /data/local/tmp/manga-r7-controls-b.json -a"]}
+DumpLayout saved to:/data/local/tmp/manga-r7-controls-b.json
+{"at":"2026-10-03T15:47:03.583Z","args":["file","recv","/data/local/tmp/manga-r7-controls-b.jpeg","/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-stable-viewport-r7/vm/controls-b.jpeg"]}
+FileTransfer finish, Size:385817, File count = 1, time:13ms rate:29678.23kB/s
+{"at":"2026-10-03T15:47:03.627Z","args":["file","recv","/data/local/tmp/manga-r7-controls-b.json","/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-stable-viewport-r7/vm/controls-b.json"]}
+FileTransfer finish, Size:70511, File count = 1, time:11ms rate:6410.09kB/s
+{"at":"2026-10-03T15:47:34.256Z","args":["shell","uitest uiInput click 285 2602"]}
+No Error
+{"at":"2026-10-03T15:47:44.134Z","args":["shell","snapshot_display -i 0 -f /data/local/tmp/manga-r7-directory-c.jpeg -t jpeg"]}
+fileType: jpeg
+process: display 0, file type: jpeg, width: 1280, height: 2832
+fileType: jpeg
+snapshot: pixel format is: 3
+snapshot: convert rgba8888 to rgb888 successfully.
+
+success: snapshot display 0 , write to /data/local/tmp/manga-r7-directory-c.jpeg as jpeg, width: 1280, height: 2832
+{"at":"2026-10-03T15:47:44.254Z","args":["shell","uitest dumpLayout -p /data/local/tmp/manga-r7-directory-c.json -a"]}
+DumpLayout saved to:/data/local/tmp/manga-r7-directory-c.json
+{"at":"2026-10-03T15:47:49.029Z","args":["file","recv","/data/local/tmp/manga-r7-directory-c.jpeg","/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-stable-viewport-r7/vm/directory-c.jpeg"]}
+FileTransfer finish, Size:158270, File count = 1, time:18ms rate:8792.78kB/s
+{"at":"2026-10-03T15:47:49.079Z","args":["file","recv","/data/local/tmp/manga-r7-directory-c.json","/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-stable-viewport-r7/vm/directory-c.json"]}
+FileTransfer finish, Size:114124, File count = 1, time:13ms rate:8778.77kB/s
+{"at":"2026-10-03T15:48:17.902Z","args":["shell","uitest uiInput click 1175 930"]}
+No Error
+{"at":"2026-10-03T15:48:26.685Z","args":["shell","uitest uiInput click 640 1400"]}
+No Error
+{"at":"2026-10-03T15:48:37.347Z","args":["shell","snapshot_display -i 0 -f /data/local/tmp/manga-r7-immersive-d.jpeg -t jpeg"]}
+fileType: jpeg
+process: display 0, file type: jpeg, width: 1280, height: 2832
+fileType: jpeg
+snapshot: pixel format is: 3
+snapshot: convert rgba8888 to rgb888 successfully.
+
+success: snapshot display 0 , write to /data/local/tmp/manga-r7-immersive-d.jpeg as jpeg, width: 1280, height: 2832
+{"at":"2026-10-03T15:48:37.547Z","args":["shell","uitest dumpLayout -p /data/local/tmp/manga-r7-immersive-d.json -a"]}
+DumpLayout saved to:/data/local/tmp/manga-r7-immersive-d.json
+{"at":"2026-10-03T15:48:40.221Z","args":["file","recv","/data/local/tmp/manga-r7-immersive-d.jpeg","/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-stable-viewport-r7/vm/immersive-d.jpeg"]}
+FileTransfer finish, Size:455724, File count = 1, time:20ms rate:22786.20kB/s
+{"at":"2026-10-03T15:48:40.267Z","args":["file","recv","/data/local/tmp/manga-r7-immersive-d.json","/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-stable-viewport-r7/vm/immersive-d.json"]}
+FileTransfer finish, Size:17557, File count = 1, time:18ms rate:975.39kB/s
+{"at":"2026-10-03T15:49:06.929Z","args":["shell","uitest uiInput click 640 1400"]}
+No Error
+{"at":"2026-10-03T15:49:24.858Z","args":["shell","uitest uiInput click 135 262"]}
+No Error
+{"at":"2026-10-03T15:50:07.769Z","args":["shell","snapshot_display -i 0 -f /data/local/tmp/manga-r7-shelf-exit.jpeg -t jpeg"]}
+fileType: jpeg
+process: display 0, file type: jpeg, width: 1280, height: 2832
+fileType: jpeg
+snapshot: pixel format is: 3
+snapshot: convert rgba8888 to rgb888 successfully.
+
+success: snapshot display 0 , write to /data/local/tmp/manga-r7-shelf-exit.jpeg as jpeg, width: 1280, height: 2832
+{"at":"2026-10-03T15:50:07.972Z","args":["shell","uitest dumpLayout -p /data/local/tmp/manga-r7-shelf-exit.json -a"]}
+DumpLayout saved to:/data/local/tmp/manga-r7-shelf-exit.json
+{"at":"2026-10-03T15:50:12.835Z","args":["file","recv","/data/local/tmp/manga-r7-shelf-exit.jpeg","/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-stable-viewport-r7/vm/shelf-exit.jpeg"]}
+FileTransfer finish, Size:186746, File count = 1, time:11ms rate:16976.91kB/s
+{"at":"2026-10-03T15:50:12.871Z","args":["file","recv","/data/local/tmp/manga-r7-shelf-exit.json","/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-stable-viewport-r7/vm/shelf-exit.json"]}
+FileTransfer finish, Size:114422, File count = 1, time:12ms rate:9535.17kB/s
+{"at":"2026-10-03T15:50:12.918Z","args":["exit"]}

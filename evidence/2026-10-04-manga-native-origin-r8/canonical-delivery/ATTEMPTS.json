@@ -1,0 +1,58 @@
+{
+  "at": "2026-10-04T00:09:05.334683+00:00",
+  "historicalFailedAttempts": [
+    {
+      "attempt": 1,
+      "path": "manga-r8-native-origin-build.log",
+      "sha256": "31df4692044f14499af4b368861f8b03915551f368236cab206c521d381564c8",
+      "bytes": 112
+    },
+    {
+      "attempt": 2,
+      "path": "manga-r8-native-origin-build-2.log",
+      "sha256": "06de90b6b6f54d70d1f976de76a15a542b74a33e7068c49e2dd542778846a3e3",
+      "bytes": 191
+    },
+    {
+      "attempt": 3,
+      "path": "manga-r8-native-origin-build-3.log",
+      "sha256": "af4537bb4dbbac6fcacac59e91d77962d5841b04503679a7d4f52e6a53b496b2",
+      "bytes": 126296
+    },
+    {
+      "attempt": 4,
+      "path": "manga-r8-native-origin-build-4.log",
+      "sha256": "f1900f2e660b3ddaeb23d18d5e21a27436d2aeddee4826c4a282abbebf5ad63f",
+      "bytes": 274147
+    },
+    {
+      "attempt": 5,
+      "path": "manga-r8-native-origin-build-5.log",
+      "sha256": "4cb7a887d1ea8ad49a3bb0c02c7f8c98ca35e93bbae4c0c193eed442c7cf5b37",
+      "bytes": 161342
+    },
+    {
+      "attempt": 6,
+      "path": "manga-r8-native-origin-build-6.log",
+      "sha256": "2d4c7fb726b70328e3835687824cf04341699649fac4859720e695ab795c1410",
+      "bytes": 162626
+    }
+  ],
+  "causes": {
+    "1": "git-lfs not on PATH",
+    "2": "wrong parent artifact-root caused retention preflight refusal; no HAP published",
+    "3": "strict optional-entry AppStorage expected write-list requires new default probe reset; fixed only exact expectation",
+    "4": "438 contract gates passed; actual CompileArkTS refused inferred any at Surface:984; explicit string | undefined saved in v3",
+    "5": "Offline metadata gate requires current Core CLI; rebuildable debug CLI was removed with cache cleanup. No gate bypass and no HAP published.",
+    "6": "Current Core CLI metadata gate passed; loopback directory fixture was blocked by sandbox listen EPERM at 127.0.0.1. Attempt7 runs canonical pipeline with approved local execution permissions; no tests bypassed."
+  },
+  "currentAttempt": 7,
+  "state": "PASS",
+  "sourceV3SHA256": "282b5e26357252c0787881fcb34bf39b194fa7e2432258ed235a47618a0f973d",
+  "noImageCacheOrSourceBytesExtracted": true,
+  "coreCliRebuildRecord": "CLI_REBUILD.json",
+  "manifest": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261004T002116Z-568ec4e3-3eec7853/manifest.json",
+  "runId": "20261004T002116Z-568ec4e3-3eec7853",
+  "logSHA256": "b585cbfd97fda3446e06f87d90c856b54f18c5ddfc2cbd999ab7c04d590a5a1b",
+  "completedAt": "2026-10-04T00:22:19.611965+00:00"
+}

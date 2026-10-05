@@ -1,0 +1,14 @@
+# R8 independent source preservation
+
+Root owns the new native image-origin investigation and HAP/device workflow. Production and test agents own source edits. This agent prepares and later freezes the exact source-to-artifact preservation chain. It does not build, use HDC, alter layout/settings/source selection, read cache contents, edit production or test code, or rewrite prior evidence.
+
+The frozen parent is R7 final version 2: 7,116 effective source records, inventory fingerprint `b469a1b25e2b0fd907c0a70b08c1faf31ac98534a1a6f000b821efa42afa44d1`, effective inventory SHA-256 `58975951a8fb45a827d56c85b4d33ed9388922ab4a444393a228d450a0b8431f`, and source delta archive SHA-256 `6bb34e5d026ea86ace1608e6d3d295b16fa64f5a86fb9fd9e60500ba9a27c386`. R7 source/HAP binding is PASS while its full-screen image-origin scenario remains OPEN. R8 must not use the R7 package to claim new-source acceptance.
+
+1. Wait for the final product/test allowlist, hashes and explicit freeze. Do not snapshot, archive or copy files still being edited. The expected paths are provisional only: EntryAbility, MangaReadingSurface, added MangaImageOriginGeometry, the manga SDK probe helper and a new geometry SDK test.
+2. Validate persistent replacements against the exact R7 parent and require authorized additions to be absent before copying. Check every frozen candidate's bytes and mode before and after the narrow copy. Any unrelated drift is recorded before mutation.
+3. Compare all parent records against the frozen independent delivery workspace, allowing only the final explicit additions/replacements. Verify Core's canonical input fingerprint, Native package and original Host SO stay unchanged.
+4. Write each freeze version into its own new directory without moving an existing attempt. Reconstruct R4 + R5 + R6 + R7 + R8 in a new temporary directory and read back every path, type, length, mode and SHA-256. Preserve failures and corrections as separate records. Never silently rename or overwrite older attempt directories or frozen declarations.
+5. After Root publishes the R8 canonical manifest, append exact public snapshots and bind all source/controller/workspace inputs to reconstructed source. Read back the actual HAP and embedded Native bytes; keep the original unstripped SO and packaged strip output hashes separate. Do not copy private signing material.
+6. Document production probes as numeric geometry evidence only. Source preservation does not prove native image-origin pixels, layout, asynchronous OS delivery or user acceptance. Final R8 evidence closure waits for Root's explicit no-more-writes notice and independent reviews; R4, R5, R6 and R7 remain immutable.
+
+R7's source-preservation metadata limitation and duplicate-filename observations remain disclosed in its frozen records. R8 starts a new evidence stage and does not rewrite that history. Root's `ISSUE_RECORD.md` and `PLAN.json` are separate ownership and remain untouched by this agent.

@@ -1,0 +1,25 @@
+{
+  "sourceFrozen": true,
+  "files": [
+    {
+      "path": "entry/src/main/ets/entryability/EntryAbility.ets",
+      "sha256": "f21073d3703a24ae8f01a85dc2bb15f1b3ef517c6de59772b47352b73acac533",
+      "baselineSHA": "93103aeb63972889b788424272620cddef92be7fa51646cdfed34c70cb0f9d1d"
+    },
+    {
+      "path": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "sha256": "b16c0207277a58ab13d00c076085371b24adf20d11fcce2a6e8f373b61694fe3",
+      "baselineSHA": "4e8cda54f879494a574de75ab2c85821d02edd96b70bdbf8e3e1085150461676"
+    },
+    {
+      "path": "entry/src/main/ets/features/manga/MangaImageOriginGeometry.ts",
+      "sha256": "bf19329bb7371939324b50fdd3d081882b2fb851a853ce1528bb79c002453a0b",
+      "baselineSHA": null
+    },
+    {
+      "path": "tools/lib/manga-surface-sdk-probe.mjs",
+      "sha256": "670446eee86859281b45c4693abde30b1ac2382dfd7af64399eb58741cfb2332",
+      "baselineSHA": "5931c0ead2dc19f2c00e3b2b948d9bdbc85abc5f123514aac46f94792799950e"
+    }
+  ]
+}

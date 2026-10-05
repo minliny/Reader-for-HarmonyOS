@@ -1,0 +1,14 @@
+{
+  "type": "error",
+  "protocolVersion": 1,
+  "requestId": 900,
+  "error": {
+    "code": "INTERNAL",
+    "message": "rule engine error: JavaScript rule failed: Syntax: expecting ';'",
+    "retryable": true,
+    "details": {
+      "category": "SOURCE_RULE_FAILED",
+      "stage": "chapter.content"
+    }
+  }
+}

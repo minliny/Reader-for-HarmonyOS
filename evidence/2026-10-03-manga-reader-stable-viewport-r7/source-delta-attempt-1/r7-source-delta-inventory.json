@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "name": "r7-source-delta",
+  "sourceFileCount": 13,
+  "sourceBytes": 1065673,
+  "inventoryFingerprint": "7f6d130b95cd365b906dce2b293d173d77ebb5960cbf437d4e6b5d7700e5e839",
+  "archive": {
+    "path": "r7-source-delta.tar.gz",
+    "bytes": 217702,
+    "sha256": "6bb34e5d026ea86ace1608e6d3d295b16fa64f5a86fb9fd9e60500ba9a27c386"
+  },
+  "files": [
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+      "type": "file",
+      "mode": 420,
+      "bytes": 35761,
+      "sha256": "35ab98291f518958f33a53a117fdc2e1c3ccb47322064d2b3c4fed7129b5b27d"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "type": "file",
+      "mode": 420,
+      "bytes": 107730,
+      "sha256": "4e8cda54f879494a574de75ab2c85821d02edd96b70bdbf8e3e1085150461676"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/shell/ReaderShell.ets",
+      "type": "file",
+      "mode": 420,
+      "bytes": 25506,
+      "sha256": "420928dc7906498d6c1bc54301cf3f624300ef8600e720904e611fcaed411336"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets",
+      "type": "file",
+      "mode": 420,
+      "bytes": 335892,
+      "sha256": "1b7004f488376fbd172073af0a1b9fe65025effcd730d0f2faec1de274d79d71"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/fixtures/manga-viewport-r6/Index.ets",
+      "type": "file",
+      "mode": 420,
+      "bytes": 335378,
+      "sha256": "0e54a722f8bd7da88e50acd021e58f1380cfdd945608b6ea5938ab68962692c5"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/fixtures/manga-viewport-r6/MangaReadingSurface.ets",
+      "type": "file",
+      "mode": 420,
+      "bytes": 104797,
+      "sha256": "f84e5289f30711f31b9c7df2999fdba30dc6af4d175d6100c0e0bfb801ee3448"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/lib/manga-surface-sdk-probe.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3682,
+      "sha256": "5931c0ead2dc19f2c00e3b2b948d9bdbc85abc5f123514aac46f94792799950e"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/test-manga-sheet-motion-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 27203,
+      "sha256": "5a88bab60718ae4fb42e8ee00e6cf0c8851654d12146ed0090a30faff035ef09"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/test-manga-surface-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 21453,
+      "sha256": "512b72f020ba3731705e1a604a5309d0f800ef97d395708f45da32876ff5084a"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/test-manga-system-bar-viewport-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 18186,
+      "sha256": "d1f73d11d71b1022bbf7f327db1398b337e4c0dc5307b8e99b3ef615a34a9077"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/test-reader-layout-architecture.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10640,
+      "sha256": "861e19bf5df62d474c6653cf483894e6e3843c14428f66a69a790cdc0142435a"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 34595,
+      "sha256": "a1758b08a3bce06be29579e2dfd543078ebba87ab08a1cc56f61451d567a159f"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/test-reader-window-chrome-p0.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4850,
+      "sha256": "41de8853231c26a4a0477b0e37ab509119b975c74e60e1f36a3d571a76ba5333"
+    }
+  ],
+  "verification": {
+    "fullArchiveRead": true,
+    "everyFileSha256": true,
+    "everyFileMode": true,
+    "exactMemberSet": true,
+    "sourceUnchangedDuringArchive": true,
+    "files": 13,
+    "bytes": 1065673
+  }
+}

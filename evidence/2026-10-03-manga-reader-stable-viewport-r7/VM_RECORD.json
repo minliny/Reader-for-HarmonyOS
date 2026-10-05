@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03T15:52:53.395460+00:00",
+  "runId": "20261003T154124Z-568ec4e3-a61c8e77",
+  "signedHapSha256": "cb3cbf1a615edc8b1822290fd778cb4fd3ef3ef1fd0e45d4961c09c583c5f778",
+  "manifestSha256": "d1d85d95beeb104d57aef5d7b4799cc5559697703a916e33273027b5113ad6f2",
+  "deploymentReceipt": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261003T154124Z-568ec4e3-a61c8e77/deploy-vm-6460677a198b-20261003T154514Z.json",
+  "target": "127.0.0.1:5555",
+  "targetKind": "vm",
+  "bootCompleted": true,
+  "sceneBoardPid": 15675,
+  "install": "PASS",
+  "launch": "PASS",
+  "dataPolicy": "preserve",
+  "sourceCodeAndSDKGate": "PASS see system-bars-r7 SDK INPUTS_FROZEN/REVIEW and canonical build 437 gates",
+  "scenario": {
+    "book": "斗破苍穹",
+    "chapter": "02",
+    "pageOrdinal": 1,
+    "pageCount": 24,
+    "note": "Actual current continue-reading entry. No chapter selection or source switch. Do not claim prior 05 page5 restoration accepted."
+  },
+  "actions": [
+    "continue-reading",
+    "capture immersive-A",
+    "show-controls capture B",
+    "open-directory without selecting entry capture C",
+    "close-directory hide-controls capture immersive-D",
+    "show-controls return-bookshelf capture exit"
+  ],
+  "observations": {
+    "imagePositionStability": "PASS decoded A/B unobscured pixel equality and A/D full image equality; supporting source-state SDK regression already PASS",
+    "nativeBarsHideShow": "Observed hide in A/D and overlay icons in B/C; bookshelf bars restored on exit",
+    "fullScreenContentOrigin": "OPEN user observed 80px top light strip; code chain audited but raw source/tile first pixels not yet available; root withdrew initial full-screen interpretation",
+    "directoryAnimation": "OPEN static originals do not prove native temporal motion",
+    "userAcceptance": "OPEN"
+  },
+  "files": [
+    {
+      "path": "vm/controls-b.jpeg",
+      "sha256": "4acbc64c89ce2d0772e755e479a4ad2d1957c94c15c4193147cfebc3a504a861",
+      "bytes": 385817
+    },
+    {
+      "path": "vm/controls-b.json",
+      "sha256": "44cab2e076ba6d19456cef73e3758fc10fe5ef86165ff94802e040ac9bed1f88",
+      "bytes": 70511
+    },
+    {
+      "path": "vm/directory-c.jpeg",
+      "sha256": "9b79a860fca108c5c9e052d783c6700556f45a5ceaf6877a2e87e71ceae696b3",
+      "bytes": 158270
+    },
+    {
+      "path": "vm/directory-c.json",
+      "sha256": "2168676bc0edf6faa1f43b330cd4502ce4d692c7ef384702647eb7d56893953d",
+      "bytes": 114124
+    },
+    {
+      "path": "vm/hdc-transcript.log",
+      "sha256": "5dcdbd4e927491737fc483df09c0ad9134e32598c01d1f4d5ffa4ee00b097f76",
+      "bytes": 8570
+    },
+    {
+      "path": "vm/immersive-a.jpeg",
+      "sha256": "3244afdb60f09f1b253454e1b18691f5d8d4ea8d3c2c6a2015d33433b8894914",
+      "bytes": 455724
+    },
+    {
+      "path": "vm/immersive-a.json",
+      "sha256": "05dc4a1c93d190fdb83cb6f478982bbd97bbdb8ac52e6f3eb61d6b8b571429c1",
+      "bytes": 17431
+    },
+    {
+      "path": "vm/immersive-d.jpeg",
+      "sha256": "3244afdb60f09f1b253454e1b18691f5d8d4ea8d3c2c6a2015d33433b8894914",
+      "bytes": 455724
+    },
+    {
+      "path": "vm/immersive-d.json",
+      "sha256": "2a66460a9767bc8d067d1d3d93bd3905e0168e3e6f86f79e818b06f1499fa6f2",
+      "bytes": 17557
+    },
+    {
+      "path": "vm/shelf-entry.jpeg",
+      "sha256": "1655a4d3b41afaa36dd16eb43f1081f503e165453832323f08614c2fa56c9556",
+      "bytes": 186749
+    },
+    {
+      "path": "vm/shelf-entry.json",
+      "sha256": "58df1abb7f0a9e38174cb43b377ef0109888856a0abbba2d4caca01553f8c5da",
+      "bytes": 114280
+    },
+    {
+      "path": "vm/shelf-exit.jpeg",
+      "sha256": "285ff646d79841cd11d5e7a5489f043a472119bc55af21a26e9b4659b1c42d0e",
+      "bytes": 186746
+    },
+    {
+      "path": "vm/shelf-exit.json",
+      "sha256": "7b2eb7265b460fec78f0726e0a852b16bd625f5ffc6b6c00c719311504f4dab5",
+      "bytes": 114422
+    }
+  ],
+  "lease": "released after shelf-exit; no current target operation",
+  "newAcceptanceRule": "Every acceptance must pass production code regression, pure visual acceptance is rejected by user. Pixel comparisons alone cannot close origin question.",
+  "cachePermission": "Denied by user: no extraction; continue code-side. No cache bytes were read.",
+  "supplementaryCodeProof": "code-origin/image-origin-sdk.mjs PASS, current original pixels still OPEN"
+}

@@ -1,0 +1,78 @@
+{
+  "productionWorkspace": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS",
+  "canonicalInputMutation": false,
+  "command": "node /Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-stable-viewport-r7/code-origin/image-origin-sdk.mjs /private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS",
+  "exitCode": 0,
+  "inputs": [
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "sha256": "4e8cda54f879494a574de75ab2c85821d02edd96b70bdbf8e3e1085150461676"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaStripProjection.ts",
+      "sha256": "a478eaf8d41cdc1d3fe097f53dab2982fe9ea5a5a68fe20ab7839fdea16c0363"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaSessionController.ts",
+      "sha256": "88007c3ced534ee439348af492de53942c28606127313e8912d714fe60390857"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaResourceGateway.ts",
+      "sha256": "c1c94073f97e5a2db641a1aec1cca17c93551b876dded3e352b95415cd269105"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderRuntimeOwner.ts",
+      "sha256": "77758b6ecac7701f36964c554691b90464d1764ba57bd5ce350bb63033d68e05"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingBodyImageHost.ts",
+      "sha256": "63fed92b1bc7808a49ffac8f48eb237b01d016830ba054102a3b764a43ae1f1e"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/entry/src/main/ets/app/ReadingImageDiskCache.ts",
+      "sha256": "95d28248120eaa1d2a704b0579a1c829e6a0774f18521465413bbade3ec1c0bc"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/entry/src/main/ets/app/MangaImageGraphicsPlan.ts",
+      "sha256": "a3e559256d7503d331c5e1d1dd97133dc9cdd6b3ee668d0a43ffa7eac79d64f9"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/entry/src/main/ets/app/MangaImageGraphicsHost.ts",
+      "sha256": "002b4475f33fceb699f78b99ce6e01eeaa3305f96e04b8c8797e5005c1721090"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs",
+      "sha256": "ef3b77ee13b462bda5c43a162c843e3f7ae5e478a810f3acea66b078c651ad49"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/arkui-property-runtime-probe.mjs",
+      "sha256": "70671c006f1fde5aab7b8259e0e4647071df1ebf0755f92d4a87ccee30bf75ce"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/manga-surface-sdk-probe.mjs",
+      "sha256": "5931c0ead2dc19f2c00e3b2b948d9bdbc85abc5f123514aac46f94792799950e"
+    }
+  ],
+  "probeSHA256": "c7d63ca230869528bcd661a5cba309a62a5963ab1f85530b98c6628b49635ab0",
+  "logSHA256": "ec1c7f100f3277599f92679a1afdd6562b2f384f14a5603af639499269e7ad07",
+  "sdk": [
+    {
+      "path": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader/lib/process_component_class.js",
+      "sha256": "a71a14e2817c7acba1fe22a7a536308e14e5bdb61350ea24c9e8c688c58c8143"
+    },
+    {
+      "path": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader/lib/process_component_build.js",
+      "sha256": "d631f9478232d2686fa693ed1969a6591306fe845afb4d1f4785ab971220d5a4"
+    },
+    {
+      "path": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader/lib/component_map.js",
+      "sha256": "8a0f96d842218b30a42c705369f8e3502d6ee3edf10c7ff87dc56cec1569c4ab"
+    }
+  ],
+  "sourceTileAssociation": {
+    "status": "not obtained",
+    "reason": "awaiting exact single-image authorization in parent; no HDC or cache extraction by this task"
+  },
+  "claim": "Production layout/crop origin requests and source mutations, not native first-pixel proof",
+  "workspaceArgument": "optional absolute Host path; default is verified temp delivery Host; strict frozen Manga source SHA still required"
+}

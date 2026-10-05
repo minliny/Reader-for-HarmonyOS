@@ -1,0 +1,37 @@
+{
+  "status": "PASS",
+  "sixPathsOperationsAndR7BeforeRecordsSame": true,
+  "unchangedV2AfterRecords": 5,
+  "changedV2AfterRecords": [
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "before": {
+        "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+        "type": "file",
+        "mode": 420,
+        "bytes": 118522,
+        "sha256": "b16c0207277a58ab13d00c076085371b24adf20d11fcce2a6e8f373b61694fe3"
+      },
+      "after": {
+        "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+        "type": "file",
+        "mode": 420,
+        "bytes": 118564,
+        "sha256": "282b5e26357252c0787881fcb34bf39b194fa7e2432258ed235a47618a0f973d"
+      }
+    }
+  ],
+  "singleLineOnly": true,
+  "diff": [
+    "--- \n",
+    "+++ \n",
+    "@@ -982,5 +982,5 @@\n",
+    "     if (existing !== undefined) return existing;",
+    "     if (this.geometrySamples.size >= 8) {",
+    "-      const first = this.geometrySamples.keys().next().value;",
+    "+      const first: string | undefined = this.geometrySamples.keys().next().value as string | undefined;",
+    "       if (first !== undefined) this.geometrySamples.delete(first);",
+    "     }"
+  ],
+  "scope": "Exact archive-byte comparison; not strict ArkTS or native behavior acceptance"
+}

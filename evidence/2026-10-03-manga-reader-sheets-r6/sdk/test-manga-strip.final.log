@@ -1,0 +1,4 @@
+PASS manga strip: last crop, unknown geometry, original-image position, stable anchors after geometry expansion
+PASS actual manga surface preserves observed original-image anchor across width changes and missing geometry; obsolete resize discarded
+(node:24030) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

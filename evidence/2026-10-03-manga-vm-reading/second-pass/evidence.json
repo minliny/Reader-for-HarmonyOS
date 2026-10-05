@@ -1,0 +1,26 @@
+{
+  "status": "BLOCKED_FINAL_HANDOFF",
+  "runId": "20261003T072625Z-568ec4e3-0320176a",
+  "signedHapSha256": "27f6dd3617b9934ab3eff0567b03672137097d2f77430b828e6221d060bcc05c",
+  "dataPreserved": true,
+  "target": "127.0.0.1:5555",
+  "targetKind": "vm",
+  "passed": [
+    "real images from official Tencent comic 531040",
+    "cold restore chapter04 page3/24",
+    "header and footer anchored correctly",
+    "in-reader canonical flat directory",
+    "chapter02 to chapter03 via reading directory",
+    "horizontal page1 to page2",
+    "slider page24 of chapter03",
+    "chapter end to adjacent chapter04",
+    "vertical scrolling to page2",
+    "Info exit shows04 page2",
+    "ordinary detail return updates04 page3",
+    "shelf chapter basis-point value59 and position04 page3"
+  ],
+  "remaining": [
+    "continue card retains previous novel on return",
+    "cold continue card selects manga but says unread while actual reading restores04 page3"
+  ]
+}

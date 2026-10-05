@@ -1,0 +1,4 @@
+{"name": "reader-source", "files": 7111, "bytes": 442945264, "archiveSha256": "765627819aa7433c1fa9c575240bee471ea7a3174217af8272e338fdad275132", "allBytesAndModesVerified": true}
+{"name": "approved-design-source", "files": 70, "bytes": 47063306, "archiveSha256": "1415dbf6f7c334fbf967c8e7e1a6b229a5f8be76737e83ff74f72a6079539dd0", "allBytesAndModesVerified": true}
+{"name": "native-sdk", "files": 11, "bytes": 23481344, "archiveSha256": "0100e26efb0589baf76ca449bcd5aaeba7000e61e856879a99d3ff4268e3355d", "allBytesAndModesVerified": true}
+{"result": "PASS", "canonicalCoreInputs": 1069, "coreFingerprint": "9e97919470b42d81d87082c2c257984778da5e5e5e55798273b3242c99608c4b", "hostAndSdkSoSha256": "1fabbfa63b996e39da9a3ec01f6b396cf841f0d0b4016303daac56a974c17996", "r4SurfaceSha256": "0f5e6d2654e8cc228b43b2ab2c9023e728db904193a147ce71da425113a6b897", "originalSourceRequired": false}

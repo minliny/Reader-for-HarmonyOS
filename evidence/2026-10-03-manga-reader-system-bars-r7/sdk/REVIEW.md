@@ -1,0 +1,21 @@
+# R7 independent SDK regression
+
+The six bounded relevant commands recorded in INPUTS_FROZEN.json exited 0. The new viewport regression lowers the unchanged production Manga, Index and ReaderShell Builders with the installed SDK and runs retained observer closures with actual SDK property classes. Its two exact R6 first-party source fixtures are part of tools, loaded by relative URL and checked by fixed SHA; they fail the intended actual emitted actor assertions (whole-image safe padding and missing Index layout-safe-area exclusion).
+
+The retained Manga Image/ListItem actors preserve URI, width/height requests, row presentation geometry, key and anchor across false/true controls and live positive/zero/asymmetric avoid facts. The source's Area callbacks receive controlled stable full-window dimensions, and native Scroller inputs are controlled. The test verifies no restore/scroll requests under those inputs. Index retains zero app top for active manga; its actual source state changes preserve the normal App and novel policy. ReaderShell's retained root uses manga all-edge expansion/layout-safe-area ignore and returns to the prior text policy through actual Prop updates. The four short-phone panel constraints remain min <= max, and split panes project a physical left cutout to the catalog rather than consuming it again in the image controls/right panel.
+
+The order regression now records transparent native status/navigation colors while keeping the opaque semantic paper underlay; a same-owner transparent -> opaque -> transparent round-trip proves the new flag participates in Coordinator deduplication. Manga extendIntoCutout stays true. The preexisting identity, App restore, late hide, actual auth refresh and native setSpecific third-argument assertions remain. Order is 25/25; existing surface, sheet-motion, P0 and whole-entry UI-assembly contracts pass.
+
+These are compiler/property/production-method and native-request assertions. They do not implement a renderer, infer physical viewport bounds from Area callbacks, or prove OS delivery, native safe-area expansion, pixels, compositor timing or device acceptance. The Shell branch probe retains historical child records; it proves retained root policy requests rather than native branch replacement.
+
+First failures remain in their original logs: the motion fixture lacked the production metrics helper, the P0 literal contracts still expected the previous native-color/Index form, and repeated independent full-source lowering reused the SDK's global id registry across different member line positions. The fixes add actual production dependencies and correct current contracts. Each independent viewport compilation now uses the installed SDK resetComponentMap; diagnostics remain strict and the exact baselines are unchanged. No product failure is inferred from those harness errors, and no diagnostic was filtered.
+
+All eight listed tool/fixture inputs are frozen. The local check script discovers test-*.mjs automatically. No product, R6/R5 evidence, native artifact, device or app data was modified by this task. Parent canonical full gate/build and target verification remain separate.
+
+## Canonical gate follow-up (v2)
+
+The first complete canonical local gate stopped at test-reader-layout-architecture.mjs:133 before package/signing. Its unchanged-source log is preserved as canonical-build-v1-fail.log, bound in CANONICAL_FAILURE_V1.json. Original INPUTS_FROZEN/REVIEW/SHASUMS bytes are retained in their .v1 files.
+
+Only test-reader-layout-architecture.mjs was added to the tool change allowlist. The atomic assertion now anchors the four paired native properties to one setWindowSystemBarProperties object, requires the explicit transparent flag branch and opaque else-underlay, and protects default transparency=false. Its subsequent old Shell expansion assertion was migrated to the actual manga conditional while retaining the novel SYSTEM and TOP/BOTTOM branch. No product, fixture or previous eight tool input changed.
+
+Three bounded follow-ups exited 0: reader-layout-architecture, original P0, and actual palette/window order (25/25). Prior six SDK results remain valid with unchanged source/tool SHA. Nine tool/fixture inputs and four production inputs are verified and frozen in the v2 manifest. Physical native/target boundaries remain unchanged.

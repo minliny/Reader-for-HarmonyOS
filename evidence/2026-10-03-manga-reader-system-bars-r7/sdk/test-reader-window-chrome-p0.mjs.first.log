@@ -1,0 +1,243 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: one revision must expose the owned paper while preserving paired navigation base and content ink
+    at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-reader-window-chrome-p0.mjs:20:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: "import { display, window } from '@kit.ArkUI';\n" +
+    "import { hilog } from '@kit.PerformanceAnalysisKit';\n" +
+    "import type { BusinessError } from '@kit.BasicServicesKit';\n" +
+    "import { ReaderBrightnessWriter, type ReaderBrightnessWindow } from './ReaderBrightnessWriter';\n" +
+    "import { ReaderStatusBarMeasurement } from './ReaderStatusBarMeasurement';\n" +
+    "import { findReaderTheme } from '../features/common/ReaderThemeRegistry';\n" +
+    'import {\n' +
+    '  ReaderInsetsVp,\n' +
+    '  ReaderRectVp,\n' +
+    '  ReaderDisplayCornerVp,\n' +
+    '  ReaderWindowMetricsSnapshot,\n' +
+    '  createDefaultReaderWindowMetrics,\n' +
+    "} from '../features/common/ReaderWindowMetrics';\n" +
+    '\n' +
+    "export type ReaderWindowChromeOwner = 'app' | 'reader' | 'overlay';\n" +
+    "export type ReaderWindowChromeTone = 'light' | 'dark';\n" +
+    "export type ReaderWindowOrientationPolicy = 'system' | 'portrait' | 'landscape';\n" +
+    '\n' +
+    '/** Semantic reader-owned window behavior; raw Harmony enums stay in this host. */\n' +
+    'export class ReaderWindowPolicy {\n' +
+    '  orientation: ReaderWindowOrientationPolicy;\n' +
+    '  keepScreenOn: boolean;\n' +
+    '  hideStatusBar: boolean;\n' +
+    '  hideNavigationBar: boolean;\n' +
+    '  extendIntoCutout: boolean;\n' +
+    '\n' +
+    '  constructor(\n' +
+    "    orientation: ReaderWindowOrientationPolicy = 'system',\n" +
+    '    keepScreenOn: boolean = false,\n' +
+    '    hideStatusBar: boolean = false,\n' +
+    '    hideNavigationBar: boolean = false,\n' +
+    '    extendIntoCutout: boolean = false,\n' +
+    '  ) {\n' +
+    '    this.orientation = orientation;\n' +
+    '    this.keepScreenOn = keepScreenOn;\n' +
+    '    this.hideStatusBar = hideStatusBar;\n' +
+    '    this.hideNavigationBar = hideNavigationBar;\n' +
+    '    this.extendIntoCutout = extendIntoCutout;\n' +
+    '  }\n' +
+    '}\n' +
+    '\n' +
+    '/** One atomic system-bar visual: the painted underlay and matching foreground. */\n' +
+    'export class ReaderWindowChromeStyle {\n' +
+    '  underlayColor: string;\n' +
+    '  tone: ReaderWindowChromeTone;\n' +
+    "  /** Exact opaque foreground from the owning surface's semantic palette. */\n" +
+    '  contentColor: string;\n' +
+    '  /** Non-empty only when the reader paints the matching full paper below chrome. */\n' +
+    '  paperThemeId: string;\n' +
+    '  /** Image readers paint through both system bands; their content background stays opaque. */\n' +
+    '  transparentSystemBars: boolean;\n' +
+    '\n' +
+    '  constructor(underlayColor: string, tone: ReaderWindowChromeTone, contentColor?: string,\n' +
+    "    paperThemeId: string = '', transparentSystemBars: boolean = false) {\n" +
+    '    this.underlayColor = underlayColor;\n' +
+    '    this.tone = tone;\n' +
+    '    // Keep tone as a compatibility fallback while reader-owned chrome passes\n' +
+    "    // the active theme's exact ink color.\n" +
+    "    this.contentColor = contentColor ?? (tone === 'light' ? '#FFFFFFFF' : '#FF000000');\n" +
+    "    this.paperThemeId = findReaderTheme(paperThemeId)?.id ?? '';\n" +
+    '    this.transparentSystemBars = transparentSystemBars;\n' +
+    '  }\n' +
+    '}\n' +
+    '\n' +
+    'class ReaderWindowChromeRequest {\n' +
+    '  owner: ReaderWindowChromeOwner;\n' +
+    '  style: ReaderWindowChromeStyle;\n' +
+    '\n' +
+    '  constructor(owner: ReaderWindowChromeOwner, style: ReaderWindowChromeStyle) {\n' +
+    '    this.owner = owner;\n' +
+    '    this.style = style;\n' +
+    '  }\n' +
+    '}\n' +
+    '\n' +
+    'interface ReaderWindowChromeDiagnostic {\n' +
+    "  result: 'applied' | 'write-failed';\n" +
+    '  owner: ReaderWindowChromeOwner;\n' +
+    '  revision: number;\n' +
+    '  currentWindow: boolean;\n' +
+    '  expectedStatusBg: string;\n' +
+    '  expectedForeground: string;\n' +
+    '  underlayColor: string;\n' +
+    '  paperThemeId: string;\n' +
+    "  nativeReadback: 'known' | 'unavailable' | 'failed' | 'not-read';\n" +
+    '  nativeBackground: string;\n' +
+    '  nativeForeground: string;\n' +
+    '  errorCode: string;\n' +
+    '  readbackErrorCode: string;\n' +
+    '  metricsRevisionAtRequest: number;\n' +
+    '  statusRectAtRequest: ReaderRectVp;\n' +
+    '  windowRectAtRequest: ReaderRectVp;\n' +
+    '}\n' +
+    '\n' +
+    "const APP_CHROME_STYLE = new ReaderWindowChromeStyle('#F8F4EC', 'dark', '#FF2B241D');\n" +
+    '\n' +
+    '/**\n' +
+    ' * The single HarmonyOS window boundary for Reader.\n' +
+    ' *\n' +
+    ' * It owns Window callbacks and system-bar writes. UI components consume a vp\n' +
+    ' * snapshot and request one semantic underlay/tone style; they never retain Window or\n' +
+    ' * inspect px avoid areas themselves.\n' +
+    ' */\n' +
+    'export class ReaderWindowCoordinator {\n' +
+    '  private static appChromeStyle: ReaderWindowChromeStyle = APP_CHROME_STYLE;\n' +
+    '  private static mainWindow: window.Window | undefined = undefined;\n' +
+    '  private static brightnessWriter: ReaderBrightnessWriter = new ReaderBrightnessWriter(\n' +
+    '    (): Promise<ReaderBrightnessWindow> => {\n' +
+    '      const win = ReaderWindowCoordinator.mainWindow;\n' +
+    "      return win === undefined ? Promise.reject(new Error('Reader main window is unavailable')) :\n" +
+    '        Promise.resolve(win);\n' +
+    '    });\n' +
+    '  private static metricsSnapshot: ReaderWindowMetricsSnapshot = createDefaultReaderWindowMetrics();\n' +
+    '  private static statusBarMeasurement: ReaderStatusBarMeasurement = new ReaderStatusBarMeasurement();\n' +
+    '  private static statusBarHiddenApplied: boolean = false;\n' +
+    '  // A visibility Promise acknowledges the request, not the visible avoid area.\n' +
+    "  // Retain this window geometry's measured band until the reveal is observed.\n" +
+    '  private static statusBarRevealPending: boolean = false;\n' +
+    '  private static windowRectListener: ((options: window.RectChangeOptions) => void) | undefined = undefined;\n' +
+    '  private static displayChangeListener: ((id: number) => void) | undefined = undefined;\n' +
+    '  private static windowSizeListener: ((size: window.Size) => void) | undefined = undefined;\n' +
+    '  private static avoidAreaListener: ((options: window.AvoidAreaOptions) => void) | undefined = undefined;\n' +
+    '  private static desiredChrome: ReaderWindowChromeRequest =\n' +
+    "    new ReaderWindowChromeRequest('app', APP_CHROME_STYLE);\n" +
+    '  private static desiredChromeRevision: number = 0;\n' +
+    '  private static appliedChromeRevision: number = -1;\n' +
+    '  private static chromeFlushRunning: boolean = false;\n' +
+    '  private static appOrientation: window.Orientation = window.Orientation.UNSPECIFIED;\n' +
+    '  private static appKeepScreenOn: boolean = false;\n' +
+    '  private static windowPolicyRevision: number = 0;\n' +
+    '  private static windowPolicyTail: Promise<void> = Promise.resolve();\n' +
+    "  private static desiredWindowPolicyOwner: 'app' | 'reader' = 'app';\n" +
+    '  private static desiredReaderWindowPolicy: ReaderWindowPolicy = new ReaderWindowPolicy();\n' +
+    '  private static appliedPolicyRevision: number = -1;\n' +
+    '  /**\n' +
+    '   * Install/detach race guard. detach() and every install() bump this epoch;\n' +
+    '   * each await inside install() re-checks it, so an async install that has been\n' +
+    '   * superseded (window destroyed, new window installed, or detach) aborts\n' +
+    '   * before registering stale listeners on a dead window or clobbering the new\n' +
+    '   * coordinator state.\n' +
+    '   */\n' +
+    '  private static installEpoch: number = 0;\n' +
+    '\n' +
+    '  static async install(win: window.Window): Promise<boolean> {\n' +
+    '    ReaderWindowCoordinator.detach();\n' +
+    '    ReaderWindowCoordinator.installEpoch += 1;\n' +
+    '    const epoch = ReaderWindowCoordinator.installEpoch;\n' +
+    '    ReaderWindowCoordinator.mainWindow = win;\n' +
+    "    ReaderWindowCoordinator.desiredWindowPolicyOwner = 'app';\n" +
+    '    ReaderWindowCoordinator.appOrientation = win.getPreferredOrientation();\n' +
+    '    ReaderWindowCoordinator.appKeepScreenOn = win.getWindowProperties().isKeepScreenOn;\n' +
+    '    await win.setWindowLayoutFullScreen(true);\n' +
+    '    if (!ReaderWindowCoordinator.installStillCurrent(epoch, win)) {\n' +
+    '      return false;\n' +
+    '    }\n' +
+    "    await win.setWindowSystemBarEnable(['status', 'navigation']);\n" +
+    '    if (!ReaderWindowCoordinator.installStillCurrent(epoch, win)) {\n' +
+    '      return false;\n' +
+    '    }\n' +
+    '    ReaderWindowCoordinator.registerWindowListeners(win);\n' +
+    '    if (!ReaderWindowCoordinator.installStillCurrent(epoch, win)) {\n' +
+    '      return false;\n' +
+    '    }\n' +
+    '    ReaderWindowCoordinator.refreshMetrics();\n' +
+    '    ReaderWindowCoordinator.requestAppChrome();\n' +
+    '    return true;\n' +
+    '  }\n' +
+    '\n' +
+    '  /**\n' +
+    '   * True when `win` is still the installed main window and no newer install\n' +
+    '   * or detach claimed the coordinator during an await boundary.\n' +
+    '   */\n' +
+    '  private static installStillCurrent(epoch: number, win: window.Window): boolean {\n' +
+    '    return epoch === ReaderWindowCoordinator.installEpoch &&\n' +
+    '      win === ReaderWindowCoordinator.mainWindow;\n' +
+    '  }\n' +
+    '\n' +
+    '  static detach(): void {\n' +
+    '    ReaderWindowCoordinator.brightnessWriter.reset();\n' +
+    '    ReaderWindowCoordinator.statusBarMeasurement = new ReaderStatusBarMeasurement();\n' +
+    '    ReaderWindowCoordinator.statusBarHiddenApplied = false;\n' +
+    '    ReaderWindowCoordinator.statusBarRevealPending = false;\n' +
+    '    const win = ReaderWindowCoordinator.mainWindow;\n' +
+    '    if (win !== undefined) {\n' +
+    '      try {\n' +
+    '        if (ReaderWindowCoordinator.windowSizeListener !== undefined) {\n' +
+    "          win.off('windowSizeChange', ReaderWindowCoordinator.windowSizeListener);\n" +
+    '        }\n' +
+    '        if (ReaderWindowCoordinator.avoidAreaListener !== undefined) {\n' +
+    "          win.off('avoidAreaChange', ReaderWindowCoordinator.avoidAreaListener);\n" +
+    '        }\n' +
+    '      } catch (_error) {\n' +
+    '        // A destroyed Window can reject listener removal. The references still\n' +
+    '        // must be cleared so the next stage never reuses stale callbacks.\n' +
+    '      }\n' +
+    '    }\n' +
+    '    if (win !== undefined && ReaderWindowCoordinator.windowRectListener !== undefined) {\n' +
+    "      try { win.off('windowRectChange', ReaderWindowCoordinator.windowRectListener); } catch (_error) {}\n" +
+    "      try { win.off('rectChangeInGlobalDisplay', ReaderWindowCoordinator.windowRectListener); } catch (_error) {}\n" +
+    '    }\n' +
+    '    if (ReaderWindowCoordinator.displayChangeListener !== undefined) {\n' +
+    "      try { display.off('change', ReaderWindowCoordinator.displayChangeListener); } catch (_error) {}\n" +
+    '    }\n' +
+    '    ReaderWindowCoordinator.windowRectListener = undefined;\n' +
+    '    ReaderWindowCoordinator.displayChangeListener = undefined;\n' +
+    '    ReaderWindowCoordinator.installEpoch += 1;\n' +
+    '    ReaderWindowCoordinator.mainWindow = undefined;\n' +
+    '    ReaderWindowCoordinator.windowPolicyRevision += 1;\n' +
+    '    ReaderWindowCoordinator.windowSizeListener = undefined;\n' +
+    '    ReaderWindowCoordinator.avoidAreaListener = undefined;\n' +
+    '    ReaderWindowCoordinator.appliedPolicyRevision = -1;\n' +
+    '    ReaderWindowCoordinator.appliedChromeRevision = -1;\n' +
+    '  }\n' +
+    '\n' +
+    '  static metrics(): ReaderWindowMetricsSnapshot {\n' +
+    '    return ReaderWindowCoordinator.metricsSnapshot;\n' +
+    '  }\n' +
+    '\n' +
+    '  static brightness(): ReaderBrightnessWriter {\n' +
+    '    return ReaderWindowCoordinator.brightnessWriter;\n' +
+    '  }\n' +
+    '\n' +
+    '  static requestAppChrome(): void {\n' +
+    "    ReaderWindowCoordinator.requestChrome(new ReaderWindowChromeRequest('app', ReaderWindowCoordinator.appChromeStyle));\n" +
+    '  }\n' +
+    '\n' +
+    '  static updateAppChromeStyle(style: ReaderWindowChromeStyle): vo'... 25761 more characters,
+  expected: /statusBarColor: ReaderWindowCoordinator\.nativeStatusBarColor\(request\),[\s\S]*navigationBarColor: request\.style\.underlayColor,[\s\S]*statusBarContentColor: contentColor/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

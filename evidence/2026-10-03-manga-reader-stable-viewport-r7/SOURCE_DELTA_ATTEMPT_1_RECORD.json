@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03T15:37:11.856823+00:00",
+  "purpose": "Preserve source delta completed by interrupted background command before canonical static architecture gate failure",
+  "previousLocation": "source-delta",
+  "preservedLocation": "source-delta-attempt-1",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 1802,
+      "mode": 420,
+      "sha256": "5a626cbe01ee4ae9c0c2d53fa2380cf9a71e7b6fb2045e5a389e61a0cc5415c7"
+    },
+    {
+      "path": "canonical-binding/bind_canonical.py",
+      "bytes": 11148,
+      "mode": 420,
+      "sha256": "6596980cca76fc228baab4c7d19ba5e7e09a4a0cb8cc95108aad890fea933975"
+    },
+    {
+      "path": "canonical-binding/verify_binding.py",
+      "bytes": 6165,
+      "mode": 420,
+      "sha256": "315b7f8ac4fb628e5bcb41b3a420c62e6fdb06193fbc1ceecab3cdc5b588ea21"
+    },
+    {
+      "path": "comparison.json",
+      "bytes": 146009,
+      "mode": 420,
+      "sha256": "5359bb900aad6aa44a6b68eb4db50199ba495e529dd165d5ba8debae1b923298"
+    },
+    {
+      "path": "delta-manifest.json",
+      "bytes": 9916,
+      "mode": 420,
+      "sha256": "900ab61e8bd1678996d9796e599d8e99037fca6b639e6bc54be8707fed9a5554"
+    },
+    {
+      "path": "effective-source-inventory.json",
+      "bytes": 1855191,
+      "mode": 420,
+      "sha256": "ce425de5aba0efff95e8a629688389425168e1e4c8db987a172c1d4aafccc15b"
+    },
+    {
+      "path": "freeze-inputs.json",
+      "bytes": 4504,
+      "mode": 420,
+      "sha256": "d3be88efc5d0f7a5d90b6fcb71a7d5ced99103c0975f5e05a26b96a91602008c"
+    },
+    {
+      "path": "preserve_r7_delta.py",
+      "bytes": 11613,
+      "mode": 420,
+      "sha256": "ef60e5a4700b700fc324eefe5d6a126001436fa4e669d0b6359fe8bc5f5e26ed"
+    },
+    {
+      "path": "r7-core-build-snapshot.json",
+      "bytes": 318333,
+      "mode": 420,
+      "sha256": "8b77dfffbab2bdb2942ff085e03877d5079e3bc6c771afb5ac92e61a9889556a"
+    },
+    {
+      "path": "r7-source-delta-inventory.json",
+      "bytes": 3488,
+      "mode": 420,
+      "sha256": "7e0905bd58ec3a29984a2075fd751641f705f0c89252a6039e5f7717c934e8f2"
+    },
+    {
+      "path": "r7-source-delta.tar.gz",
+      "bytes": 214533,
+      "mode": 420,
+      "sha256": "4a582979e0a31f5cee691856f66b8f39c8457002fe2c379c9e854f168d9badc2"
+    },
+    {
+      "path": "verify_delta.py",
+      "bytes": 8021,
+      "mode": 420,
+      "sha256": "cb254a99364b697b1d124698d7b3f0e8688cf29e1802b72930a77b0c176696eb"
+    }
+  ],
+  "allByteModeReadbackPassed": true,
+  "deltaOperations": 12,
+  "freezeSha256": "d3be88efc5d0f7a5d90b6fcb71a7d5ced99103c0975f5e05a26b96a91602008c",
+  "canonicalRunPublished": false,
+  "supersededByFinalFreezeSha256": "d9173c18182c450d58453ac6cfcd0b272c639c2ffb70b31b9a5b7d76b05a291d",
+  "earlierRecordBytesUnchanged": true
+}

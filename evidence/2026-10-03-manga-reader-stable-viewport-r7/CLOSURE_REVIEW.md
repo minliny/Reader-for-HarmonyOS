@@ -1,0 +1,15 @@
+# R7 partial evidence closure
+
+This is an evidence freeze with `scenarioAcceptanceStatus=PARTIAL` and `fullScreenContentOriginStatus=OPEN`. It does not turn the remaining top light-blue strip into a passed scenario. Root confirmed it will make no further changes to these two R7 evidence directories; continued native-origin diagnosis is a separate R8 stage.
+
+The final source-to-HAP chain remains PASS. A last readback checked all 13 frozen production/test operations in both source trees, both actual HAPs and the canonical manifest. That record is `FINAL_SOURCE_ARTIFACT_READBACK.json`. The source inventory has 7,116 records and all 2,431 canonical inputs are reconstructible from R4 + R5 + R6 + final R7. No R8 source change is covered by R7 package or acceptance evidence.
+
+The VM report supports image geometry stability across the controls transition and native system-bar hide/show. Full-screen source/tile origin, native temporal animation, other devices and user acceptance remain OPEN. The user requires production-code regression for acceptance; static screenshots alone do not close the origin question. Cache extraction was rejected by automatic approval review, then explicitly declined by the user. No cache content was extracted, and no alternate bypass was used.
+
+Independent reports are frozen: `VM_VISUAL_REVIEW.md` SHA-256 `43115ffaaac8cb429dea8301d6ead5797e015cdc2862c01e8873299fff357a7a` and `code-origin/CODE_CHAIN_FOLLOWUP.md` SHA-256 `446413f53122eb0ce30078e8cd00b0dc6d46ad53f3bb278ad288b6694b9bbb32`. Their controlled-native boundary and source-origin OPEN conclusion remain intact.
+
+Preservation limitations remain disclosed. The agent retracted its earlier original-version-1 metadata-retention claim after path drift. Exact version 1 source archive, delta inventory, effective inventory and freeze bytes were reconstructed to their original recorded hashes. Original version 1 delta-manifest and comparison contents remain unavailable; their hashes are retained rather than fabricating contents. The observed misnamed version 2 directory is retained, and a later change from its helper directory to `canonical-binding 2` is separately recorded. The final source-delta binding records remain unchanged.
+
+The SDK original 24 version 2 records retain their frozen bytes and modes. Three additional ` 2` filenames are retained as unexplained duplicates of version 1 bytes, not canonical version 2 inputs. Evidence of the failed first canonical gate, failed probes and later corrections remains visible. The final inventory covers both `evidence/2026-10-03-manga-reader-stable-viewport-r7/` and `evidence/2026-10-03-manga-reader-system-bars-r7/`, including these ancillary anomalies.
+
+The closure copies evidence records to the temporary delivery tree only after matching all existing common files, then verifies every path, length, mode and SHA-256 in both trees. It does not edit production code or tests, build, use HDC, change private signing materials, rewrite R4/R5/R6, or overwrite canonical manifest/HAP bytes.

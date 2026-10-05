@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 2222,
+      "sha256": "a71390d2b4e8b524b6b5e14d6319fc07765953e63fd894264b5ba1efe1ce9279"
+    },
+    {
+      "path": "REVIEW.md",
+      "bytes": 428,
+      "sha256": "6bdc72c0cdf40d83f61a59e9bd06e4c7ce8121e3d1f4d096e0428a9d3ac0d24f"
+    },
+    {
+      "path": "bind_canonical.py",
+      "bytes": 12983,
+      "sha256": "092607f2204c0f4483637264c993fabf51702b470faf70f25ecded899c8bc54e"
+    },
+    {
+      "path": "binding-result.json",
+      "bytes": 368,
+      "sha256": "c2221ff5461f83cce56b1e38ee12c5ab8a4e6b330b75aabccee8b79bfe8df20f"
+    },
+    {
+      "path": "binding.json",
+      "bytes": 19005,
+      "sha256": "05a50b7ceb30b4c95b57f1e477c55c43f5d9e1c67bfbda0e49012fb853398b31"
+    },
+    {
+      "path": "controller-snapshot.json",
+      "bytes": 127555,
+      "sha256": "a4177ea15821199382d3eaf9cf1e137b8338fb9dd7bc83619447e2370aa96f8c"
+    },
+    {
+      "path": "independent-binding-verification.json",
+      "bytes": 284,
+      "sha256": "60720b31c74b1adac7cfd4548ab50d17c9c9ab176c56162b90560dca80708988"
+    },
+    {
+      "path": "iteration-entry-default-signed-provenance.json",
+      "bytes": 21369,
+      "sha256": "514caa0e481eba71b43bdee5477d768444d0ff2d3803661ef6159159d89e44f9"
+    },
+    {
+      "path": "iteration-entry-default-unsigned-provenance.json",
+      "bytes": 21375,
+      "sha256": "22f1e7be5c212124b3c10e6cc21d5758e950796a50ce7ba89ccb947f4cd3573a"
+    },
+    {
+      "path": "privacy-and-freeze-check.json",
+      "bytes": 215,
+      "sha256": "3f88ca6ded7a6bb6e455c41fdec6c0430dd5a2c8966248b6e953587fc6b41abc"
+    },
+    {
+      "path": "published-manifest.json",
+      "bytes": 14526,
+      "sha256": "34ff8b60a7892cf502dd0407a31dd189c22c7d68b94c20f2f8b1d0cb2fd78c5e"
+    },
+    {
+      "path": "source-snapshot.json",
+      "bytes": 485626,
+      "sha256": "5ae50d0276965e307e6ad4367fa20cb4f1a79300d9a2316620fcc792414e14a6"
+    },
+    {
+      "path": "verify_binding.py",
+      "bytes": 4202,
+      "sha256": "a711328323ec4a3fa608a1a2aea7c6a91690c68dca324566590d3140262de6a8"
+    },
+    {
+      "path": "workspace-contract-snapshot.json",
+      "bytes": 4677,
+      "sha256": "a4f1591a3b0f9549d510ff12f91c06e4062ab743c2f8eb7a42fb122f1946e24f"
+    }
+  ]
+}

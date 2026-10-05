@@ -1,0 +1,75 @@
+{
+  "status": "PASS",
+  "runId": "20261004T002116Z-568ec4e3-3eec7853",
+  "buildClass": "iteration",
+  "acceptanceEligible": false,
+  "canonicalManifest": {
+    "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261004T002116Z-568ec4e3-3eec7853/manifest.json",
+    "bytes": 14263,
+    "sha256": "555eaba03fe4c3c130352c42ca4929763cc1ff039bd7f59ee1adde31b0293712",
+    "preservedCopy": "published-manifest.json"
+  },
+  "sourceSnapshotMatches": [
+    {
+      "scope": "harmony",
+      "snapshot": "source-snapshot.json",
+      "fingerprint": "3eec78537fc634e23bbd1954d3a103cc79dffc84870135909ea07927461df032",
+      "matchedRecords": 1825,
+      "missingRecords": [],
+      "differentRecords": []
+    },
+    {
+      "scope": "controller",
+      "snapshot": "controller-snapshot.json",
+      "fingerprint": "192cf1aaa8c3c500dbe6bbf6987a0e02c7f588dc8d6d388603e8e1b626c2156c",
+      "matchedRecords": 590,
+      "missingRecords": [],
+      "differentRecords": []
+    },
+    {
+      "scope": "workspace",
+      "snapshot": "workspace-contract-snapshot.json",
+      "fingerprint": "06641c99065ad9042257bf0b51568b9680b45adf6f7c8ccd3c7a31a2a7ed35e7",
+      "matchedRecords": 18,
+      "missingRecords": [],
+      "differentRecords": []
+    }
+  ],
+  "frozenSixInputCoverage": {
+    "Reader-for-HarmonyOS/entry/src/main/ets/entryability/EntryAbility.ets": [
+      "harmony"
+    ],
+    "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaImageOriginGeometry.ts": [
+      "harmony"
+    ],
+    "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaReadingSurface.ets": [
+      "harmony"
+    ],
+    "Reader-for-HarmonyOS/tools/lib/manga-surface-sdk-probe.mjs": [
+      "controller"
+    ],
+    "Reader-for-HarmonyOS/tools/test-manga-native-image-geometry-sdk.mjs": [
+      "controller"
+    ],
+    "Reader-for-HarmonyOS/tools/test-reader-optional-entry-memory-launch.mjs": [
+      "controller"
+    ]
+  },
+  "allSixFrozenInputsInCanonicalSnapshots": true,
+  "signedArtifactSha256": "9b5f34be522060a84bb4e2e805e62ca538cc0d2ae4d68f1a81f716cdf2c1ac56",
+  "artifactsWithActualByteAndEmbeddedNativeReadback": 2,
+  "authorizedCertificateSha256": "3A563778E5BF17CD3EAD0218E13B4A5030DE3F5D7D4E21E0336D8EB37B676DC4",
+  "signatureCryptographicVerification": "Parent canonical pipeline verified=true in hash-bound manifest; child independently checks artifact hash plus public identity metadata",
+  "rawSdkAndHostNativeSha256": "1fabbfa63b996e39da9a3ec01f6b396cf841f0d0b4016303daac56a974c17996",
+  "embeddedNativeSha256": "adb383b33be91db7d605e5e343c578c45f0ea82c24e81ac8d6e8c22a482c3f06",
+  "coreBuildInputFingerprint": "9e97919470b42d81d87082c2c257984778da5e5e5e55798273b3242c99608c4b",
+  "r4R5R6R7R8V1V2AndV3PreservationFilesUnchanged": true,
+  "preservedFailureAttemptsUnchanged": true,
+  "scope": {
+    "sourcePackageAndPublishedGateBinding": true,
+    "childBuildOrTestRun": false,
+    "childDeviceUse": false,
+    "privateSigningMaterialCopied": false,
+    "vmNativeCallerFullScreenOrUserAcceptanceClaim": false
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "target": "127.0.0.1:5555",
+  "server": "127.0.0.1:8710",
+  "vmName": "Mate 80 Pro",
+  "instancePath": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+  "emulatorPid": 32275,
+  "tracePipe": "trace_45645_commandPipe",
+  "buildClass": "iteration",
+  "ownership": "No owner found before root acquired lease; exact-target read-only preflight lease released",
+  "hdcTargets": [
+    "127.0.0.1:5555"
+  ],
+  "bootCompleted": true,
+  "sceneBoardPid": 15675,
+  "emulatorBootLog": {
+    "path": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro/Log/Emulator.log",
+    "line": 2010,
+    "text": "2026-10-01 20:05:05.849 6438891520 [Info] [QemuManager.cpp(EmitGuestOSBootComplete:131)]Guest OS Boot Completed!!",
+    "sessionTraceLine": 1974
+  },
+  "notes": [
+    "Guest SceneBoard PID matches previous stable R6 sampling. Bounded tag query returned no output; not a full log health claim.",
+    "Sandbox ps was denied; authorized escalated read-only process inventory succeeded. qemu.log contained no boot-complete match; correct Emulator.log session was used.",
+    "No UI mutation, source/preferences change, restart or install performed by preflight.",
+    "Before install, recheck exact-target lease and SceneBoard PID; CLI inspect/install reverify current connection and preserve identity."
+  ]
+}

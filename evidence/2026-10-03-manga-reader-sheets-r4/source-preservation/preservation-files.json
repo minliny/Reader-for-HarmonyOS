@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 4599,
+      "sha256": "895ba6cac06b003ab739302072710837d504afc6bd32a9d8897d479a19cf8230"
+    },
+    {
+      "path": "approved-design-source-inventory.json",
+      "bytes": 16213,
+      "sha256": "1f05226425a99936923960d7e9f8d1599ac666c80f15380f060735ffebb84b1f"
+    },
+    {
+      "path": "approved-design-source.tar.gz",
+      "bytes": 29272946,
+      "sha256": "1415dbf6f7c334fbf967c8e7e1a6b229a5f8be76737e83ff74f72a6079539dd0"
+    },
+    {
+      "path": "core-build-snapshot-after.json",
+      "bytes": 318333,
+      "sha256": "8b77dfffbab2bdb2942ff085e03877d5079e3bc6c771afb5ac92e61a9889556a"
+    },
+    {
+      "path": "core-build-snapshot-before.json",
+      "bytes": 318333,
+      "sha256": "8b77dfffbab2bdb2942ff085e03877d5079e3bc6c771afb5ac92e61a9889556a"
+    },
+    {
+      "path": "independent-verification.jsonl",
+      "bytes": 885,
+      "sha256": "24e1f7fe12285b3c4e716248c361a82e49efb6f9e31ef11dd0dcf9ec2c73a0a1"
+    },
+    {
+      "path": "native-sdk-inventory.json",
+      "bytes": 2928,
+      "sha256": "b4b064fc5ba6ace360e6e9f45e5cf0496d49f71cb4e3f3df1696774db7773843"
+    },
+    {
+      "path": "native-sdk.tar.gz",
+      "bytes": 9662167,
+      "sha256": "0100e26efb0589baf76ca449bcd5aaeba7000e61e856879a99d3ff4268e3355d"
+    },
+    {
+      "path": "preflight.json",
+      "bytes": 3561853,
+      "sha256": "4d5d4a38250a3469f0d7ffbdeff057f98eb629067b02f724aef5d04bbe99c24e"
+    },
+    {
+      "path": "preservation-run.jsonl",
+      "bytes": 934,
+      "sha256": "c3060232a148754a318ef8086a4ac79a6af588bfc4d899e11dae5b19973df5bd"
+    },
+    {
+      "path": "preserve_sources.py",
+      "bytes": 21462,
+      "sha256": "84545fe6a98341cc4a47142d07c3fe087c343ab4c189bb9d3e1f662dc2d40f78"
+    },
+    {
+      "path": "reader-source-inventory.json",
+      "bytes": 1854356,
+      "sha256": "2509d275fd5cc0eec76bd578111f3e209a3fee4a0bb6d196560604ab5106504a"
+    },
+    {
+      "path": "reader-source.tar.gz",
+      "bytes": 209937914,
+      "sha256": "765627819aa7433c1fa9c575240bee471ea7a3174217af8272e338fdad275132"
+    },
+    {
+      "path": "verification.json",
+      "bytes": 2451,
+      "sha256": "20e0942c22ea5c9110f24b5d6b8e593c96a54f0772fbefd7bae8905582c3f61d"
+    },
+    {
+      "path": "verify_archives.py",
+      "bytes": 4988,
+      "sha256": "08cb433aef232be632a145e8ec1d85cdde1d08e13b9a60b6b0b4c19f912419b1"
+    }
+  ]
+}

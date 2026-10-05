@@ -1,0 +1,72 @@
+{
+  "scene": "settings-open",
+  "frames": {
+    "0": {
+      "phase": "closed"
+    },
+    "1": {
+      "phase": "closed"
+    },
+    "2": {
+      "phase": "closed"
+    },
+    "3": {
+      "phase": "middle",
+      "anchor_y": {
+        "handle_top": 1186,
+        "title_top": 1226,
+        "section_top": 1297
+      },
+      "content_visible": true
+    },
+    "4": {
+      "phase": "middle",
+      "anchor_y": {
+        "handle_top": 788,
+        "title_top": 828,
+        "section_top": 898
+      },
+      "content_visible": true
+    },
+    "5": {
+      "phase": "open",
+      "anchor_y": {
+        "handle_top": 768,
+        "title_top": 808,
+        "section_top": 879
+      },
+      "content_visible": true,
+      "note": "Rounded anchor pixels match final; frame5 antialiasing differs, so not counted as another middle position"
+    },
+    "6": {
+      "phase": "open",
+      "anchor_y": {
+        "handle_top": 768,
+        "title_top": 808,
+        "section_top": 879
+      },
+      "content_visible": true
+    },
+    "7": {
+      "phase": "open",
+      "anchor_y": {
+        "handle_top": 768,
+        "title_top": 808,
+        "section_top": 879
+      },
+      "content_visible": true
+    },
+    "8": {
+      "phase": "open",
+      "anchor_y": {
+        "handle_top": 768,
+        "title_top": 808,
+        "section_top": 879
+      },
+      "content_visible": true
+    }
+  },
+  "source_directory": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-open",
+  "coordinate_space": "Original 640x1416 native JPEG pixels; integer raster anchors, not continuous transform values",
+  "manual_basis": "Viewed original distinct native JPEGs; all repeats independently decoded and exact RGB hashes checked"
+}

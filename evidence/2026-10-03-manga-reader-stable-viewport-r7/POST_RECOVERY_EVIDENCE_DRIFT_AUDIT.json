@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03T16:09:45.299485+00:00",
+  "reason": "Final preflight detected ancillary source-delta-attempt-1 helper directory renamed after the recorded recovery snapshot",
+  "scope": "Historical observed directory only; final source-delta canonical binding records not changed",
+  "previousObservation": "SOURCE_DELTA_V2_PATH_RECOVERY.json",
+  "missingPaths": [
+    "canonical-binding/bind_canonical.py",
+    "canonical-binding/verify_binding.py"
+  ],
+  "addedPaths": [
+    {
+      "path": "canonical-binding 2/bind_canonical.py",
+      "bytes": 11148,
+      "mode": 420,
+      "sha256": "6596980cca76fc228baab4c7d19ba5e7e09a4a0cb8cc95108aad890fea933975"
+    },
+    {
+      "path": "canonical-binding 2/verify_binding.py",
+      "bytes": 6165,
+      "mode": 420,
+      "sha256": "315b7f8ac4fb628e5bcb41b3a420c62e6fdb06193fbc1ceecab3cdc5b588ea21"
+    }
+  ],
+  "changedCommonRecords": [],
+  "actorOrCauseEstablished": false,
+  "originalHelperBytesRecoverableFromFinalSourceDelta": true,
+  "operation": "Read-only record; no rename, delete or overwrite of existing records",
+  "scenarioAcceptanceStatus": "PARTIAL",
+  "fullScreenContentOriginStatus": "OPEN"
+}

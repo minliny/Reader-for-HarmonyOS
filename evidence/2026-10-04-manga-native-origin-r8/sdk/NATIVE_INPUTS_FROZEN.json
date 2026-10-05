@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "frozen": true,
+  "layer": "production-code / installed SDK emitted callbacks and executed Entry guard",
+  "recordedAt": "2026-10-03T16:25:15Z",
+  "command": "node tools/test-manga-native-image-geometry-sdk.mjs",
+  "exitCode": 0,
+  "positiveRejectionLifecycleCases": 65,
+  "realSourceNegativeMutations": 2,
+  "codeSdkGate": "PASS",
+  "nativeCallerSample": "OPEN",
+  "submittedPaint": "not-proven",
+  "sourceContentOrigin": "OPEN",
+  "cacheOrUserdataRead": false,
+  "hdcOrImageAction": false,
+  "files": [
+    {
+      "relativePath": "tools/test-manga-native-image-geometry-sdk.mjs",
+      "sha256": "36522f7a479f3b18a1b0165aea2a92d12f53962d50f89e5928d2fe7c328c4994",
+      "bytes": 26820
+    },
+    {
+      "relativePath": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "sha256": "b16c0207277a58ab13d00c076085371b24adf20d11fcce2a6e8f373b61694fe3",
+      "bytes": 118522
+    },
+    {
+      "relativePath": "entry/src/main/ets/features/manga/MangaImageOriginGeometry.ts",
+      "sha256": "bf19329bb7371939324b50fdd3d081882b2fb851a853ce1528bb79c002453a0b",
+      "bytes": 2048
+    },
+    {
+      "relativePath": "entry/src/main/ets/entryability/EntryAbility.ets",
+      "sha256": "f21073d3703a24ae8f01a85dc2bb15f1b3ef517c6de59772b47352b73acac533",
+      "bytes": 14232
+    },
+    {
+      "relativePath": "tools/lib/manga-surface-sdk-probe.mjs",
+      "sha256": "670446eee86859281b45c4693abde30b1ac2382dfd7af64399eb58741cfb2332",
+      "bytes": 3832
+    },
+    {
+      "relativePath": "tools/lib/reader-control-builder-probe.mjs",
+      "sha256": "ef3b77ee13b462bda5c43a162c843e3f7ae5e478a810f3acea66b078c651ad49",
+      "bytes": 10428
+    },
+    {
+      "relativePath": "tools/lib/arkui-property-runtime-probe.mjs",
+      "sha256": "70671c006f1fde5aab7b8259e0e4647071df1ebf0755f92d4a87ccee30bf75ce",
+      "bytes": 6087
+    },
+    {
+      "relativePath": "evidence/2026-10-04-manga-native-origin-r8/sdk/native-image-geometry-sdk.log",
+      "sha256": "3162c7c7473313d5150b7e61a13602240ed2486ce458074be3a05e20e04d228c",
+      "bytes": 1887
+    },
+    {
+      "relativePath": "evidence/2026-10-04-manga-native-origin-r8/sdk/REVIEW.md",
+      "sha256": "3338acf2f7ec57d8049284838bd69a8da66a882dbc2355ba28cd3bad396c57fc",
+      "bytes": 8710
+    }
+  ],
+  "sdkDeclarations": [
+    {
+      "path": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/component/image.d.ts",
+      "sha256": "4c23708108b40a99dfbbf39f2eefe55ba64649244dc25bf290874d1991f07284"
+    },
+    {
+      "path": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/component/units.d.ts",
+      "sha256": "cd7d02a068b061d1adf3c2dc3f543221b7b2874f5905e76678b3353434700f59"
+    }
+  ],
+  "emittedComponentSHA256": "d7d4bad6cc18de58594e19af18f529c4a0583590d10b9e6d8202260536c789bb",
+  "sdkPropertyRuntime": {
+    "path": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib",
+    "classesSha256": "6140bfa5cf6705ddee40349c2e082083778a920f0ff870cc51dccb0f030ccbd5",
+    "layer": "actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels"
+  },
+  "previousR7Evidence": "unchanged"
+}

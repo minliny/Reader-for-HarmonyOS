@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03T16:39:48.937219+00:00",
+  "source": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-04-manga-native-origin-r8/sdk-followup-v2",
+  "target": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-04-manga-native-origin-r8/sdk-followup-v2",
+  "files": [
+    {
+      "path": "ISSUE_RECORD.md",
+      "bytes": 1493,
+      "mode": 420,
+      "sha256": "85edfc64feb901e5e88ee02cf4c7586d0905709ddf03bf76efcc583bded4068f"
+    },
+    {
+      "path": "RESULT.json",
+      "bytes": 3129,
+      "mode": 420,
+      "sha256": "1906ed2fc671a435cae072f69a891bd5aeab497e7555e013108235d872dd8731"
+    },
+    {
+      "path": "after-pass.log",
+      "bytes": 417,
+      "mode": 420,
+      "sha256": "b3e9800448182bcd89cfc6ef6e43246e8b26e7fcb4aeb2f85e581fefdc9323af"
+    },
+    {
+      "path": "before-failure.log",
+      "bytes": 723,
+      "mode": 420,
+      "sha256": "11acff842237a9c83add942c036023a236dfd72de79a546ac59e5da6306fc7a3"
+    },
+    {
+      "path": "change.patch",
+      "bytes": 1126,
+      "mode": 420,
+      "sha256": "94908fd89e6ee735a10beb03f6b6826834afdc74f07f0bcaf7032ed6406fbde4"
+    }
+  ],
+  "allByteModeReadbackPassed": true,
+  "originalV1SdkAndSourcesUnchanged": true,
+  "strictOrderedAssertionPreserved": true,
+  "buildOrDeviceOperation": false
+}

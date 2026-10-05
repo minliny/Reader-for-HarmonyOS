@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03T15:44:11.061450+00:00",
+  "source": "source-delta-attempt-1",
+  "destination": "source-delta",
+  "recoveredVersion": 2,
+  "records": [
+    {
+      "path": "README.md",
+      "bytes": 2247,
+      "mode": 420,
+      "mtimeNs": 1791041889000000000,
+      "sha256": "dbd372cffb8b5a631ad05b30844ed8f9b026fbb6f6d810013a9a09b5cbfc4c5f"
+    },
+    {
+      "path": "canonical-binding/bind_canonical.py",
+      "bytes": 11148,
+      "mode": 420,
+      "mtimeNs": 1791040358987329833,
+      "sha256": "6596980cca76fc228baab4c7d19ba5e7e09a4a0cb8cc95108aad890fea933975"
+    },
+    {
+      "path": "canonical-binding/verify_binding.py",
+      "bytes": 6165,
+      "mode": 420,
+      "mtimeNs": 1791040339130269788,
+      "sha256": "315b7f8ac4fb628e5bcb41b3a420c62e6fdb06193fbc1ceecab3cdc5b588ea21"
+    },
+    {
+      "path": "comparison.json",
+      "bytes": 147391,
+      "mode": 420,
+      "mtimeNs": 1791041881000000000,
+      "sha256": "ff49eea2775f02021fc092d8a961f611d4cd2e5bdb4e880adccc4cd7713b0f61"
+    },
+    {
+      "path": "delta-manifest.json",
+      "bytes": 10562,
+      "mode": 420,
+      "mtimeNs": 1791041881000000000,
+      "sha256": "509c73c162be9ae4246fc1c4de38b938d67804359dedfacbf771b98570e4aeb2"
+    },
+    {
+      "path": "effective-source-inventory.json",
+      "bytes": 1855192,
+      "mode": 420,
+      "mtimeNs": 1791041864000000000,
+      "sha256": "58975951a8fb45a827d56c85b4d33ed9388922ab4a444393a228d450a0b8431f"
+    },
+    {
+      "path": "freeze-inputs.json",
+      "bytes": 5959,
+      "mode": 420,
+      "mtimeNs": 1791041831000000000,
+      "sha256": "d9173c18182c450d58453ac6cfcd0b272c639c2ffb70b31b9a5b7d76b05a291d"
+    },
+    {
+      "path": "preservation-result.json",
+      "bytes": 1078,
+      "mode": 420,
+      "mtimeNs": 1791041910907617882,
+      "sha256": "4dc919c7d4ea35e3a71d4765d985c934e904345ae79c4ab619d81c69738057cd"
+    },
+    {
+      "path": "preserve_r7_delta.py",
+      "bytes": 11613,
+      "mode": 420,
+      "mtimeNs": 1791041192547775848,
+      "sha256": "ef60e5a4700b700fc324eefe5d6a126001436fa4e669d0b6359fe8bc5f5e26ed"
+    },
+    {
+      "path": "r7-core-build-snapshot.json",
+      "bytes": 318333,
+      "mode": 420,
+      "mtimeNs": 1791041247772373719,
+      "sha256": "8b77dfffbab2bdb2942ff085e03877d5079e3bc6c771afb5ac92e61a9889556a"
+    },
+    {
+      "path": "r7-source-delta-inventory.json",
+      "bytes": 3727,
+      "mode": 420,
+      "mtimeNs": 1791041864000000000,
+      "sha256": "2730566c93b8879d8fe7bf805ab5a82408ea275fd46780d9edefab05febaa133"
+    },
+    {
+      "path": "r7-source-delta.tar.gz",
+      "bytes": 217702,
+      "mode": 420,
+      "mtimeNs": 1791041864000000000,
+      "sha256": "6bb34e5d026ea86ace1608e6d3d295b16fa64f5a86fb9fd9e60500ba9a27c386"
+    },
+    {
+      "path": "verify_delta.py",
+      "bytes": 8021,
+      "mode": 420,
+      "mtimeNs": 1791041192553060832,
+      "sha256": "cb254a99364b697b1d124698d7b3f0e8688cf29e1802b72930a77b0c176696eb"
+    }
+  ],
+  "allBytesAndModesAndMtimesMatch": true,
+  "observedSourceUntouched": true,
+  "earlierV1OriginalMetadataRetainedClaim": false
+}

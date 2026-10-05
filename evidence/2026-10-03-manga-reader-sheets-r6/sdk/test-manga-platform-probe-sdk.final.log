@@ -1,0 +1,5 @@
+PASS real installed SDK ImageKit readback/native hash/file APIs and counterfactual invalid buffer, actual ArkUI lowering, unique frame acknowledgement and dispose cancellation. No native pixel result asserted by this host test.
+PASS actual BodyHost production region/preview allocation and PixelMap stride methods against installed SDK (including invalid enum counterfactual).
+PASS actual GraphicsHost BGRA source format and regional read API against installed SDK; Native pixels remain a separate target gate.
+(node:23735) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

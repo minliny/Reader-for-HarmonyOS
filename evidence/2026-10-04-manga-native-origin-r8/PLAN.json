@@ -1,0 +1,9 @@
+{
+  "recordedAt": "2026-10-03T16:10:12.987061+00:00",
+  "scope": "Production Image native destination metadata, opt-in debug only, no image cache extraction",
+  "r7Status": "frozen PARTIAL",
+  "sourcePixelOwnership": "OPEN excluded from native-geometry claim",
+  "productionChanges": "Pending minimal observer and numerical acceptance boundary",
+  "buildInstall": "canonical signed preserve-data only, pending",
+  "userAcceptance": "OPEN"
+}

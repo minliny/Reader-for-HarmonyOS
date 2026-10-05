@@ -1,0 +1,6 @@
+PASS production long-image horizontal projection, bounded upstream zoom, delayed gesture layout anchor, both-axis save, page boundaries and independent reading preferences
+PASS unified system/button back: first leaves zoom, second awaits accepted progress before exit
+PASS targeted manga error messages preserve unknown failures and explain animation/offline recovery
+PASS manga catalog/download and source controls use existing shell routes after position capture; disposed actions cannot navigate
+(node:22251) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

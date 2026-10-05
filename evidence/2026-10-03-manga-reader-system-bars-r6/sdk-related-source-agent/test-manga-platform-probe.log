@@ -1,0 +1,4 @@
+PASS fixed SHA/golden assets, actual runner negative pixel/preencode/display cases, native-boundary ownership accounting, cancellation, release gate, stale detach, bounded readback, no user-data/network route. Native calls are mocked here; target evidence remains OPEN.
+PASS actual production regional decode and strip transform observation: exact independent pre-encode pixels, cancellation after native allocation, balanced release, unchanged queue settlement.
+(node:18766) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Frozen R8 delta over exact R4 source plus R5, R6 and R7 deltas",
+  "recordedAt": "2026-10-04T00:13:19.299999+00:00",
+  "freeze": {
+    "path": "freeze-inputs.json",
+    "sha256": "3fd4aa464455d4c1dc30780a4e685586ae77d6aad6b8d806f81a11c4f9183890"
+  },
+  "parent": {
+    "r4Archive": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/source-preservation/reader-source.tar.gz",
+    "r4ArchiveSha256": "765627819aa7433c1fa9c575240bee471ea7a3174217af8272e338fdad275132",
+    "r4InventorySha256": "2509d275fd5cc0eec76bd578111f3e209a3fee4a0bb6d196560604ab5106504a",
+    "r5Archive": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/source-delta/r5-source-delta.tar.gz",
+    "r5ArchiveSha256": "a1bba804791fc0873bb924d6696755fd91132629c645c5331391d112c6a04137",
+    "r5ManifestSha256": "0d83bee3013ac925b9688270a2d2eab95eec3af278e25261cd2399955c3d26a9",
+    "r6Archive": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/r6-source-delta.tar.gz",
+    "r6ArchiveSha256": "bcaad688874908ffb83bfb9d0de8a21497c1dce55f56887b4721a7c843132a55",
+    "r6ManifestSha256": "02430e6d0880be8dd0c5178f742f62cbfacd1cd92f8a1b1b45cf2b0255b78d93",
+    "r7Archive": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-stable-viewport-r7/source-delta/r7-source-delta.tar.gz",
+    "r7ArchiveSha256": "6bb34e5d026ea86ace1608e6d3d295b16fa64f5a86fb9fd9e60500ba9a27c386",
+    "r7ManifestSha256": "509c73c162be9ae4246fc1c4de38b938d67804359dedfacbf771b98570e4aeb2",
+    "effectiveInventorySha256": "58975951a8fb45a827d56c85b4d33ed9388922ab4a444393a228d450a0b8431f"
+  },
+  "archive": {
+    "path": "r8-source-delta.tar.gz",
+    "bytes": 42835,
+    "sha256": "5980bd3cb451e5449ad0471336d35614b3678642d7f9ad7d2287e79848e25a55"
+  },
+  "operations": [
+    {
+      "operation": "replace",
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/entryability/EntryAbility.ets",
+      "before": {
+        "path": "Reader-for-HarmonyOS/entry/src/main/ets/entryability/EntryAbility.ets",
+        "type": "file",
+        "mode": 420,
+        "bytes": 13841,
+        "sha256": "93103aeb63972889b788424272620cddef92be7fa51646cdfed34c70cb0f9d1d"
+      },
+      "after": {
+        "path": "Reader-for-HarmonyOS/entry/src/main/ets/entryability/EntryAbility.ets",
+        "type": "file",
+        "mode": 420,
+        "bytes": 14232,
+        "sha256": "f21073d3703a24ae8f01a85dc2bb15f1b3ef517c6de59772b47352b73acac533"
+      }
+    },
+    {
+      "operation": "add",
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaImageOriginGeometry.ts",
+      "before": null,
+      "after": {
+        "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaImageOriginGeometry.ts",
+        "type": "file",
+        "mode": 420,
+        "bytes": 2048,
+        "sha256": "bf19329bb7371939324b50fdd3d081882b2fb851a853ce1528bb79c002453a0b"
+      }
+    },
+    {
+      "operation": "replace",
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "before": {
+        "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+        "type": "file",
+        "mode": 420,
+        "bytes": 107730,
+        "sha256": "4e8cda54f879494a574de75ab2c85821d02edd96b70bdbf8e3e1085150461676"
+      },
+      "after": {
+        "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+        "type": "file",
+        "mode": 420,
+        "bytes": 118564,
+        "sha256": "282b5e26357252c0787881fcb34bf39b194fa7e2432258ed235a47618a0f973d"
+      }
+    },
+    {
+      "operation": "replace",
+      "path": "Reader-for-HarmonyOS/tools/lib/manga-surface-sdk-probe.mjs",
+      "before": {
+        "path": "Reader-for-HarmonyOS/tools/lib/manga-surface-sdk-probe.mjs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 3682,
+        "sha256": "5931c0ead2dc19f2c00e3b2b948d9bdbc85abc5f123514aac46f94792799950e"
+      },
+      "after": {
+        "path": "Reader-for-HarmonyOS/tools/lib/manga-surface-sdk-probe.mjs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 3832,
+        "sha256": "670446eee86859281b45c4693abde30b1ac2382dfd7af64399eb58741cfb2332"
+      }
+    },
+    {
+      "operation": "add",
+      "path": "Reader-for-HarmonyOS/tools/test-manga-native-image-geometry-sdk.mjs",
+      "before": null,
+      "after": {
+        "path": "Reader-for-HarmonyOS/tools/test-manga-native-image-geometry-sdk.mjs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 26820,
+        "sha256": "36522f7a479f3b18a1b0165aea2a92d12f53962d50f89e5928d2fe7c328c4994"
+      }
+    },
+    {
+      "operation": "replace",
+      "path": "Reader-for-HarmonyOS/tools/test-reader-optional-entry-memory-launch.mjs",
+      "before": {
+        "path": "Reader-for-HarmonyOS/tools/test-reader-optional-entry-memory-launch.mjs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 18180,
+        "sha256": "8c5ce38343fc35ba39b9ca67b1224039ee8e6bb8fb492843644cd162dd0dab89"
+      },
+      "after": {
+        "path": "Reader-for-HarmonyOS/tools/test-reader-optional-entry-memory-launch.mjs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 18305,
+        "sha256": "10dc8be4fcaf398a4736a574623dd65a883e57abd946d07ffcf849886a27b4f6"
+      }
+    }
+  ],
+  "effectiveInventory": {
+    "path": "effective-source-inventory.json",
+    "sha256": "c947e27c4833526956b0411d26e4a19235fe6b5f2d970994f48d2cf6e303aca2",
+    "fingerprint": "5830ae7317784d8676d29316ab9b5595d7a1b6dcd27f996070af02d1c6b55c59",
+    "files": 7118,
+    "sourceBytes": 443614716
+  },
+  "coreBuildInputFingerprint": "9e97919470b42d81d87082c2c257984778da5e5e5e55798273b3242c99608c4b",
+  "nativeParent": {
+    "archive": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/source-preservation/native-sdk.tar.gz",
+    "sha256": "0100e26efb0589baf76ca449bcd5aaeba7000e61e856879a99d3ff4268e3355d",
+    "hostSoSha256": "1fabbfa63b996e39da9a3ec01f6b396cf841f0d0b4016303daac56a974c17996",
+    "exactPackageAndIdentityUnchanged": true
+  },
+  "verification": {
+    "status": "PASS",
+    "fullFilesystemReconstruction": false,
+    "fullStreamingReconstruction": true,
+    "files": 7118,
+    "everyReconstructedByteAndModeVerified": true,
+    "deliverySourcesUnchanged": true,
+    "frozenR4R5R6R7AndR8V1V2EvidenceUnchanged": true
+  },
+  "sourceMutation": false,
+  "buildOrDeviceOperation": false
+}

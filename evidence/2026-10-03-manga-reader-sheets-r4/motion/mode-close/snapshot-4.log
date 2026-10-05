@@ -1,0 +1,7 @@
+fileType: jpeg
+process: display 0, file type: jpeg, width: 1280, height: 2832
+fileType: jpeg
+snapshot: pixel format is: 3
+snapshot: convert rgba8888 to rgb888 successfully.
+
+success: snapshot display 0 , write to /data/local/tmp/manga-windowed-progressive-202610032002-mode-close/frame-4.jpeg as jpeg, width: 640, height: 1416

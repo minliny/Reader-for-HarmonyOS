@@ -1,0 +1,199 @@
+PASS actual manga row keys transfer one visible retry card after scrolling and prior-row recovery
+PASS actual manga retry callbacks preserve new failures and fence navigation, refresh, replacement and disposal
+PASS actual recovery confirmation follows refreshed controller facts and fences late acknowledgement/failure
+(node:18695) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: opening status participates in ArkUI state publication
+    at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-error-recovery.mjs:154:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: "import deviceInfo from '@ohos.deviceInfo';\n" +
+    "import hilog from '@ohos.hilog';\n" +
+    "import curves from '@ohos.curves';\n" +
+    "import inputMethod from '@ohos.inputMethod';\n" +
+    "import { FrameCallback } from '@kit.ArkUI';\n" +
+    "import type { JsonObject } from '@reader/core-harmony';\n" +
+    "import { ReaderWindowCoordinator, ReaderWindowChromeStyle, ReaderWindowPolicy } from '../../app/ReaderWindowCoordinator';\n" +
+    "import { readerInteractiveSafeInsets, type ReaderInsetsVp } from '../common/ReaderWindowMetrics';\n" +
+    "import { mangaUserError } from './MangaUserError';\n" +
+    "import type { ReaderSettingsGateway } from '../reading/ReaderSettingsGateway';\n" +
+    "import type { ReadingGatewayRuntime } from '../reading/ReadingGatewayRuntime';\n" +
+    "import { RemoteReadingFlowGateway, type RemoteReadingBookSeed, type RemoteReadingSession, type RemoteReadingTocEntry } from '../reading/RemoteReadingFlowGateway';\n" +
+    "import { MangaSessionGateway } from './MangaSessionGateway';\n" +
+    "import type { MangaManifest } from './MangaContract';\n" +
+    "import { MangaSessionController, MangaTileRequest } from './MangaSessionController';\n" +
+    "import { PhotoViewScaleModel } from './vendor/photoview/PhotoViewScaleModel';\n" +
+    "import { MangaStripProjection, MangaStripRow } from './MangaStripProjection';\n" +
+    "import { ReaderIconButton } from '../common/ReaderIconButton';\n" +
+    "import { ReaderDirectoryNavigationSurface } from '../reading/ReaderDirectoryNavigationSurface';\n" +
+    "import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';\n" +
+    "import type { RemoteReadingPositionScope } from '../reading/RemoteReadingPositionMigration';\n" +
+    "import { mangaUsesPersistentDirectory, mangaDirectoryColumnWidth } from './MangaLayoutPolicy';\n" +
+    "import { MangaBookPresentation } from './MangaBookPresentation';\n" +
+    "import { MangaReadingDirectoryFallback } from './MangaReadingDirectoryFallback';\n" +
+    "import { readerBrightnessControlPercent, readerBrightnessWindowValue } from '../reading/ReaderBrightnessCurve';\n" +
+    "import { TOK_BORDER_W } from '../common/ReaderTokens';\n" +
+    'import { READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_600,\n' +
+    "  READER_FONT_NOTO_SANS_SC_UI_900 } from '../common/ReaderFontFamilies';\n" +
+    "import { prepareMangaSheetFonts } from '../common/ReaderFonts';\n" +
+    '\n' +
+    'interface MangaViewportAnchor { ordinal: number; y: number; x?: number; }\n' +
+    'interface MangaConfirmedPosition { controller: MangaSessionController; manifest: MangaManifest; identity: string; anchor: MangaViewportAnchor; }\n' +
+    '\n' +
+    'class MangaLayoutFrame extends FrameCallback {\n' +
+    '  private readonly action: () => void;\n' +
+    '  constructor(action: () => void) { super(); this.action = action; }\n' +
+    '  onFrame(_time: number): void { this.action(); }\n' +
+    '  onIdle(_remaining: number): void {}\n' +
+    '}\n' +
+    '\n' +
+    '/** Sheet admission has its own frame fence; it does not own image layout. */\n' +
+    'class MangaSheetFrame extends FrameCallback {\n' +
+    '  private readonly action: () => void;\n' +
+    '  constructor(action: () => void) { super(); this.action = action; }\n' +
+    '  onFrame(_time: number): void { this.action(); }\n' +
+    '  onIdle(_remaining: number): void {}\n' +
+    '}\n' +
+    '\n' +
+    'class MangaStripDataSource implements IDataSource {\n' +
+    '  readonly projection: MangaStripProjection = new MangaStripProjection();\n' +
+    '  private listeners: DataChangeListener[] = [];\n' +
+    '  totalCount(): number { return this.projection.totalCount(); }\n' +
+    '  getData(index: number): MangaStripRow { return this.projection.row(index); }\n' +
+    '  registerDataChangeListener(listener: DataChangeListener): void { this.listeners.push(listener); }\n' +
+    '  unregisterDataChangeListener(listener: DataChangeListener): void {\n' +
+    '    this.listeners = this.listeners.filter((item: DataChangeListener): boolean => item !== listener);\n' +
+    '  }\n' +
+    '  notify(structure: boolean, first: number, last: number): void {\n' +
+    '    for (const listener of this.listeners) {\n' +
+    '      if (structure) listener.onDataReloaded();\n' +
+    '      else for (let index = first; index <= Math.min(last, this.totalCount() - 1); index++) listener.onDataChange(index);\n' +
+    '    }\n' +
+    '  }\n' +
+    '}\n' +
+    '\n' +
+    '/** Native virtual list; a tile is a temporary presentation of one logical page. */\n' +
+    '@Component\n' +
+    'export struct MangaReadingSurface {\n' +
+    "  @StorageLink('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;\n" +
+    '  settingsGateway: ReaderSettingsGateway | undefined = undefined;\n' +
+    '  runtime: ReadingGatewayRuntime | undefined = undefined;\n' +
+    "  sourceId: string = '';\n" +
+    "  bookId: string = '';\n" +
+    '  chapterIndex: number | undefined = undefined;\n' +
+    '  directoryTargetProof: JsonObject | undefined = undefined;\n' +
+    '  @Prop remoteSession: RemoteReadingSession | undefined = undefined;\n' +
+    '  remoteBookSeed: RemoteReadingBookSeed | undefined = undefined;\n' +
+    '  onRemoteSessionReady: (session: RemoteReadingSession) => void = (): void => {};\n' +
+    '  onChapterCommitted: (index: number, title: string) => void = (): void => {};\n' +
+    '  offline: boolean = false;\n' +
+    '  onSaveFailure: (message: string) => void = (_message: string): void => {};\n' +
+    '  onBack: () => void = (): void => {};\n' +
+    '  onDirectory: () => void = (): void => {};\n' +
+    "  @Prop bookTitle: string = '';\n" +
+    '  @Prop inBookshelf: boolean = true;\n' +
+    '  @Prop reduceMotion: boolean = false;\n' +
+    "  @Prop @Watch('onWindowChromeChanged') windowChromeActive: boolean = false;\n" +
+    "  @Prop @Watch('onWindowChromeChanged') windowChromeOverlayActive: boolean = false;\n" +
+    '  isReaderIdentityCurrent: () => boolean = (): boolean => true;\n' +
+    '  private windowChromeOwned: boolean = false;\n' +
+    '  onDetail: () => void = (): void => {};\n' +
+    '  onToggleShelf: () => void = (): void => {};\n' +
+    '  onDownloadChapter: () => void = (): void => {};\n' +
+    '  onSelectDirectoryTarget: (chapterIndex: number, proof?: JsonObject) => void = (_index: number, _proof?: JsonObject): void => {};\n' +
+    '  onSwitchSource: () => void = (): void => {};\n' +
+    '  onLoginSource: () => Promise<void> = async (): Promise<void> => {};\n' +
+    "  @Prop mangaBackgroundColor: string = '#111111';\n" +
+    "  @Prop mangaForegroundColor: string = '#eeeeee';\n" +
+    "  @Prop errorColor: string = '#ffb4ab';\n" +
+    "  onExitRequestHandler: (exit: (intent?: 'navigation') => void) => void = (): void => {};\n" +
+    '  onChapter: (direction: number) => void = (_direction: number): void => {};\n' +
+    "  @State @Watch('onWindowChromeChanged') private error: string = '';\n" +
+    "  @State private offlineProbeStatus: string = '';\n" +
+    '  private detachOfflineProbe: (() => void) | undefined;\n' +
+    "  @State private title: string = '';\n" +
+    "  @State @Watch('onWindowChromeChanged') private recovering: boolean = false;\n" +
+    '  @State private opened: boolean = false;\n' +
+    '  private controller: MangaSessionController | undefined;\n' +
+    '  private readonly data: MangaStripDataSource = new MangaStripDataSource();\n' +
+    '  private readonly scroller: ListScroller = new ListScroller();\n' +
+    '  private readonly horizontalScroller: Scroller = new Scroller();\n' +
+    '  private readonly scalePolicy: PhotoViewScaleModel = new PhotoViewScaleModel();\n' +
+    '  @State private zoom: number = 1;\n' +
+    '  @State private horizontal: boolean = false;\n' +
+    '  @State private horizontalPage: number = 0;\n' +
+    '  @State private horizontalPageCount: number = 0;\n' +
+    '  private pinchStartScale: number = 1;\n' +
+    '  private pinchAnchor: MangaViewportAnchor | undefined;\n' +
+    '  private first: number = 0;\n' +
+    '  private last: number = 0;\n' +
+    '  private viewportRangeObserved: boolean = false;\n' +
+    '  private readonly publishedRowKeys: Map<number, string> = new Map<number, string>();\n' +
+    '  private mounted: boolean = false;\n' +
+    '  private chapterCommitted: boolean = false;\n' +
+    '  private readonly reportedErrorCodes: Set<string> = new Set<string>();\n' +
+    '  @State private viewportWidth: number = 1;\n' +
+    '  @State private viewportHeight: number = 1;\n' +
+    "  @State private fitPreference: 'source' | 'width' | 'contain' = 'source';\n" +
+    '  @State private loggingIn: boolean = false;\n' +
+    "  @State @Watch('onWindowChromeChanged') private loginRequiredForControls: boolean = false;\n" +
+    '  private loginGeneration: number = 0;\n' +
+    "  @State @Watch('onWindowChromeChanged') private openingRetry: boolean = false;\n" +
+    '  private layoutGeneration: number = 0;\n' +
+    '  private viewportGeneration: number = 0;\n' +
+    '  private presentationGeneration: number = 0;\n' +
+    '  private visibleAnchor: MangaViewportAnchor | undefined;\n' +
+    '  private confirmedPosition: MangaConfirmedPosition | undefined;\n' +
+    '  private appliedLayoutGeneration: number = -1;\n' +
+    "  private publishedManifestVersion: string = '';\n" +
+    '  private restoringAnchor: boolean = false;\n' +
+    '  private pendingTurnOrdinal: number | undefined;\n' +
+    "  private mountedTurnRowKey: string = '';\n" +
+    '  private exiting: boolean = false;\n' +
+    "  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';\n" +
+    "  @State @Watch('onWindowChromeChanged') private controlsVisible: boolean = false;\n" +
+    "  @State @Watch('onWindowChromeChanged') private panel: string = '';\n" +
+    '  @State private panelOffset: number = 0;\n' +
+    '  @State private panelScrimOpacity: number = 0;\n' +
+    "  @State private panelPhase: string = 'closed';\n" +
+    '  private panelGeneration: number = 0;\n' +
+    '  private panelActionGeneration: number = 0;\n' +
+    '  private panelCloseTask: Promise<boolean> | undefined;\n' +
+    '  private panelCloseResolve: ((closed: boolean) => void) | undefined;\n' +
+    '  @State private panelFontsReady: boolean = false;\n' +
+    '  private panelFontGeneration: number = 0;\n' +
+    "  @State @Watch('onWindowChromeChanged') private chapterEnd: boolean = false;\n" +
+    '  @State private displayedPage: number = 0;\n' +
+    "  @State @Watch('onWindowChromeChanged') private backgroundPreference: 'paper' | 'white' | 'ink' = 'paper';\n" +
+    '  @State private showPageNumbers: boolean = true;\n' +
+    "  @State private directoryQuery: string = '';\n" +
+    '  @State private directoryAscending: boolean = true;\n' +
+    '  @State private directoryRevision: number = 0;\n' +
+    '  @State private directoryOpenRevision: number = 0;\n' +
+    '  @State private brightnessPercent: number = 50;\n' +
+    '  @State private automaticBrightness: boolean = true;\n' +
+    '  private brightnessOwner: number = 0;\n' +
+    '  private brightnessGeneration: number = 0;\n' +
+    '  private seekingPage: number | undefined;\n' +
+    '  @State private stageWidth: number = 1;\n' +
+    '  @State private stageHeight: number = 1;\n' +
+    '\n' +
+    '  aboutToAppear(): void {\n' +
+    '    this.mounted = true;\n' +
+    "    this.backgroundPreference = this.settingsGateway?.current()?.mangaBackground ?? (this.appThemeScheme === 'night' ? 'ink' : 'paper');\n" +
+    '    if (this.runtime === undefined) {\n' +
+    "      this.error = 'MANGA_RESOURCE_HOST_UNAVAILABLE';\n" +
+    '      this.onWindowChromeChanged();\n' +
+    '      return;\n' +
+    '    }\n' +
+    '    const presentationRevision = MangaBookPresen'... 94140 more characters,
+  expected: /@State\s+private openingRetry:/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

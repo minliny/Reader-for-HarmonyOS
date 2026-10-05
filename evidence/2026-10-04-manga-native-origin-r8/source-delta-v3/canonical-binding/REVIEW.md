@@ -1,0 +1,7 @@
+R8 v3 canonical binding PASS
+
+Run 20261004T002116Z-568ec4e3-3eec7853 is an iteration artifact, not acceptance. Actual signed/unsigned HAP bytes and each embedded Native member match the immutable canonical manifest. Authorized minliny_HarmonyOS public certificate identity is bound to the signed artifact; cryptographic verification was performed by the parent canonical pipeline and its verified=true result is in the hash-bound manifest.
+
+All 1,825 Harmony, 590 controller and 18 workspace snapshot records match the frozen v3 effective inventory (2,433 total). All six R8 inputs are explicitly present in the canonical snapshots, and four R5/R6 counterfactual fixtures remain in the controller closure. Exact Core fingerprint, archived Native build identity/input snapshot/package members and Host vendor members match preserved inputs. Raw Native SHA 1fabbfa63b996e39da9a3ec01f6b396cf841f0d0b4016303daac56a974c17996 differs from the canonical stripped embedded Native SHA adb383b33be91db7d605e5e343c578c45f0ea82c24e81ac8d6e8c22a482c3f06 as recorded by provenance.
+
+Independent verify_binding.py --require-artifacts PASS reads both real HAP files. Parent R4–R7, R8 v1/v2, initial v3 preservation records and failure attempts remain unchanged. The 14 informational persistent-workspace differences are outside canonical temp source authority. No child build, SDK/product test, HDC, private material copy or source mutation occurred. Native callback/runtime, full-screen origin, VM and user acceptance remain separate evidence layers for the parent.

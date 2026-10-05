@@ -1,0 +1,29 @@
+(node:855) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"manga actual SDK State Watch + production mount/toggle false→true→false hides/shows all three bars","status":"PASS"}
+{"name":"manga actual forced error/retry/recovery and explicit interactive chapter end show then return to immersive","status":"PASS"}
+{"name":"manga plain controller auth facts → production publication/viewport refresh → real State Watch → bars","status":"PASS"}
+{"name":"manga internal panels and actual SDK outer-overlay Props show all bars; clearing returns immersive","status":"PASS"}
+{"name":"manga inactive Prop restores captured landscape/awake App owner; hidden state writes cannot reclaim it","status":"PASS"}
+{"name":"manga old identity State/dispose cannot overwrite a newer chapter reader owner","status":"PASS"}
+{"name":"manga late native status-hide completion after actual SDK inactive/exit converges to captured App","status":"PASS"}
+{"name":"manga actual background State synchronizes solid paired paper/white/ink chrome and tone","status":"PASS"}
+{"name":"ReaderShell actual SDK Prop→retained Manga child Watch→Coordinator and chapter identity handoff","status":"PASS"}
+{"name":"negative: frozen R5 production source fails immersive native three-bar assertion","status":"PASS"}
+{"name":"negative: frozen R5 Shell fails actual active-child propagation","status":"PASS"}
+{"name":"negative: missing control State Watch is rejected by actual production toggle","status":"PASS"}
+{"name":"negative: omitting manga navigation/indicator hiding is rejected by native three-bar assertion","status":"PASS"}
+{"name":"negative: stale identity dispose guard removal is rejected after new chapter owner mount","status":"PASS"}
+{"name":"explicit manga transparency remains separate from paper underlay and same-owner transparent/opaque changes are not deduplicated","status":"PASS"}
+{"name":"eight real reading palettes survive hide/show and same/cross-scheme changes through actual Coordinator","status":"PASS"}
+{"name":"new theme is drained after the previous native color write rejects","status":"PASS"}
+{"name":"old window success cannot strand new window chrome","status":"PASS"}
+{"name":"old window reject cannot strand new window chrome","status":"PASS"}
+{"name":"failed latest request stays pending without an automatic retry loop and explicit reapply recovers","status":"PASS"}
+{"name":"showing controls retries a failed color even when visible-bar policy and geometry are unchanged","status":"PASS"}
+{"name":"actual cutout setting true to false preserves measured band across delayed show area and all eight themes","status":"PASS"}
+{"name":"pending status reveal never borrows another window geometry or replacement window measurement","status":"PASS"}
+{"name":"early positive event cannot end pending reveal before ACK; repeated show and app ownership preserve it","status":"PASS"}
+{"name":"show superseded by hide converges and same-size rotation does not reuse the pending band","status":"PASS"}
+{"sdkEvidence":{"mangaSourceSHA":"4e8cda54f879494a574de75ab2c85821d02edd96b70bdbf8e3e1085150461676","shellSourceSHA":"420928dc7906498d6c1bc54301cf3f624300ef8600e720904e611fcaed411336","mangaEmittedSHA":"658714dce2d8e969530d2f643421bc4d48fe4cb3bcbc56dca7a12d37a58e86a9","propertyRuntime":{"path":"/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib","classesSha256":"6140bfa5cf6705ddee40349c2e082083778a920f0ff870cc51dccb0f030ccbd5","layer":"actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels"},"shellEmittedSHA":"0de002fcdc95b1772e1a3a9a0dab4062939ff7488f60aaeef1fc59b332b0c04a"},"cases":25}
+PASS actual SDK Manga/Shell Props/State Watch → production intent → actual Coordinator, plus existing LRE palette/order cases and five production counterfactuals. Native subscriber delivery and Window promises are controlled; no device pixel, compositor, failure-frequency or native-bar acceptance claim.

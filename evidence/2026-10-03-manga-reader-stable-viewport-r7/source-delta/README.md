@@ -1,0 +1,11 @@
+# R7 final source delta, input version 2
+
+The final R7 delta follows the exact R4 full source archive, R5 two-file delta and frozen R6 twelve-file delta. The parent R6 effective inventory is 7,113 files, SHA-256 `b1faa2eb9df37ac6b16fc97f2efe93a159a5afbfb06ed1692774d9ad7a07a475`, fingerprint `c71936aced3644d4ea9fc8c0bb7610bc72467dcd7b3f3a4362b6892bbca49e4b`. R4, R5 and R6 records are immutable.
+
+The exact final freeze declaration is `freeze-inputs.json`, SHA-256 `d9173c18182c450d58453ac6cfcd0b272c639c2ffb70b31b9a5b7d76b05a291d`. It authorizes four production replacements and nine test/tool operations. The final delta contains 13 operations: ten replacements and three additions. The additions are the SDK viewport test and two exact R6 source fixtures under `tools/fixtures/manga-viewport-r6/`.
+
+The original version 1 source archive, manifest, helper scripts and inventory are retained byte-for-byte in sibling `source-delta-attempt-1/`. Its first canonical build failed at a static architecture assertion before ArkTS compilation, signing, publication or VM installation. Version 2 adds only the explicitly frozen test adaptation `tools/test-reader-layout-architecture.mjs`; the four product inputs and the other eight tool inputs remain unchanged. SDK evidence preserves the original three freeze/report/hash files as exact `.v1` records and records the canonical failure separately.
+
+`preserve_r7_delta.py --freeze-sha256 CONFIRMED_HASH` rejects unrelated source changes or additions, checks Core and Native SDK identity, and physically reconstructs the complete parent chain plus R7 in a fresh temporary directory. Every reconstructed source byte and mode is read back. `verify_delta.py --expected-freeze-sha256 CONFIRMED_HASH` independently verifies the archives without the original temporary delivery or persistent source trees.
+
+After canonical publication, `canonical-binding/bind_canonical.py --manifest ABSOLUTE_PATH --expected-signed-sha256 CONFIRMED_HASH` appends public source/artifact binding. Both legacy R5 fixtures and every added R7 fixture must be included in the canonical controller snapshot. No private signing material is preserved. Source/archive binding and device/visual/user acceptance remain separate records.

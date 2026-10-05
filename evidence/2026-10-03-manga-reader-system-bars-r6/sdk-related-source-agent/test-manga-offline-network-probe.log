@@ -1,0 +1,14 @@
+PASS exact debug cold Want, arm-before-selection scope, immutable identity, wrong/text selection, bounded tombstones and actual nonzero denial counts
+PASS actual Registry Core HTTP variants and Body fetch boundaries: non-target preserved, data URI excluded, late callbacks blocked after release/settlement
+PASS actual DecodeHost suspended fetch after cancellation/timeout cannot allocate an input asset or dispatch HTTP
+PASS production Runtime send/wait binding, ordinary request isolation, timeout settlement, progress-save survival and capacity before dispatch
+<anonymous_script>:3
+class Probe { nativeTextMeasurement = { clear() {} }; nativeParagraphResources = { close() {}, retain() {} };  @Watch('onWindowChromeChanged')         panel         = '';
+                                                                                                               ^
+
+SyntaxError: Invalid or unexpected token
+    at new Function (<anonymous>)
+    at productionMotionMethods (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-motion-method-probe.mjs:50:10)
+    at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-offline-network-probe.mjs:142:15
+
+Node.js v26.0.0

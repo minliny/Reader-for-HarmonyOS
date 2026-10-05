@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "status": "PASS",
+  "deltaFiles": 12,
+  "replaceFiles": 10,
+  "addFiles": 2,
+  "archive": {
+    "path": "r6-source-delta.tar.gz",
+    "bytes": 101374,
+    "sha256": "bcaad688874908ffb83bfb9d0de8a21497c1dce55f56887b4721a7c843132a55"
+  },
+  "reconstructedFiles": 7113,
+  "effectiveSourceFingerprint": "c71936aced3644d4ea9fc8c0bb7610bc72467dcd7b3f3a4362b6892bbca49e4b",
+  "coreBuildInputFingerprint": "9e97919470b42d81d87082c2c257984778da5e5e5e55798273b3242c99608c4b",
+  "actualFullFilesystemReconstructionPassed": true,
+  "allReconstructedBytesAndModesVerified": true,
+  "frozenDeliverySourceUnchangedDuringArchive": true,
+  "r4R5EvidenceHashesUnchanged": true,
+  "nativePackageAndIdentityUnchanged": true,
+  "buildOrDeviceOperation": false,
+  "visualOrUserAcceptanceClaim": false
+}

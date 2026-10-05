@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "status": "PASS",
+  "inputVersion": 1,
+  "freezeSha256": "5ef244921c2aa0c20be627aed129a04213f2826daa578aa210b94be4f31bf505",
+  "parentSourceFiles": 7116,
+  "deltaFiles": 5,
+  "replaceFiles": 3,
+  "addFiles": 2,
+  "unchangedParentFiles": 7113,
+  "archive": {
+    "path": "r8-source-delta.tar.gz",
+    "bytes": 37791,
+    "sha256": "39ec951c9dcd12072a304f0a681db93e728ee3aa9cdfd9baaf6a87c3085afb91"
+  },
+  "reconstructedFiles": 7118,
+  "effectiveSourceFingerprint": "d5392672dc097c1b9ea4849fc413eda95e68f6af08e956ed162784209420cf7c",
+  "coreBuildInputFingerprint": "9e97919470b42d81d87082c2c257984778da5e5e5e55798273b3242c99608c4b",
+  "actualFullFilesystemReconstructionPassed": true,
+  "everySourceByteAndModeVerified": true,
+  "frozenDeliverySourceUnchangedDuringArchive": true,
+  "frozenR4R5R6R7EvidenceUnchanged": true,
+  "nativePackageAndIdentityUnchanged": true,
+  "originalDeliverySourceRequiredForIndependentVerifier": false,
+  "priorAttemptRenamedOrOverwritten": false,
+  "buildOrDeviceOperation": false,
+  "nativeImageGeometryOrFullScreenOriginAcceptanceClaim": false
+}

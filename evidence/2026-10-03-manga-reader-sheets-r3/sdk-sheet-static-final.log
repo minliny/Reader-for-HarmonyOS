@@ -1,0 +1,135 @@
+Frozen manga sheet static fonts / responsive UI and native method SDK regression
+started: 2026-10-03 10:57:20 UTC
+frozen: 2026-10-03 10:58:05 UTC
+Boundary: actual installed ETS compiler lowering and SDK property/proxy classes; scheduler, animator, font/input I/O, and native child boundaries instrumented. No HAP/VM/compositor/pixel acceptance.
+source and test SHA-256 inventory:
+e1a1fc0eb140881b4346303c129b0a638b8e6682adc8ac185ac562b5afd9b874  entry/src/main/ets/features/manga/MangaReadingSurface.ets
+67980a6895eaf34454fcac84fab7e889558c81b5c4d6ed2fa7b1ecb1ff7ed929  entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets
+898d27ea8260860194ed697dc9ab13ebc892f32bb3bce5f0c4260d4aeb06d64d  tools/test-manga-sheet-motion-sdk.mjs
+581d6d7b8ca565b6c80d1a7e1458694b54bcbbd3571798ab41a342bb6e4a63bf  tools/test-manga-sheet-selection-sdk.mjs
+a6c031943dc0fd9c31f940273f23301fee73c17ed933bacc23bde366f5d1839f  tools/test-manga-surface-sdk.mjs
+726c8ef27a7c8161abc1d32cc78b545997a5bbc4f32ff8a2f81c1dc6d20a9161  tools/test-manga-reading-directory-fallback.mjs
+4924610d0db7ccd4d3568c54e0776a7e0f3e96205ee08cf4f51a8753b44f3fe2  tools/lib/manga-surface-sdk-probe.mjs
+2638db6589472362b0750bf89dd3ff65df2b8425d1a12b4929d013cac34d220b  tools/lib/reader-motion-method-probe.mjs
+ef3b77ee13b462bda5c43a162c843e3f7ae5e478a810f3acea66b078c651ad49  tools/lib/reader-control-builder-probe.mjs
+3eed62cca2864f754a4459480b256d296ab91b5fc3d8640039b382f0d79ebca6  tools/test-manga-ui-assembly-sdk.mjs
+4c3f75e4f96ce2bc8fb5d7b4239299c1889e7eefd87bb3919353e91796aa0990  tools/test-reader-control-p0.mjs
+99f756e7433a487a1838715b3f38d778189f299d7b899efcc3cf6e22b7ff624d  tools/test-manga-motion-progress.mjs
+6f8513887361f6e18072882c7e5f039f3fe54446187c77ee256cc7899cc4e5d2  tools/test-manga-session.mjs
+14b59c9fd3bedc4304fff9b01f66dc86cbc23cda209a710e2e4beae7bf00e892  tools/test-manga-error-recovery.mjs
+
+
+command: node tools/test-manga-sheet-motion-sdk.mjs
+exit_code: 0
+PASS actual SDK-lowered manga sheet lifecycle: all four static faces before directory/mode/settings/more and persistent text admission, exact 400/600/900 family actors, demo reset preserving dark preference, reachable tablet right directory and left catalog choices in mode/settings via close/save/proof, two-frame callback-before-build, native springs and 160ms scrim, retained exit/block, drag/reduce-motion and late target/save/reopen/unmount; missing receipt/incorrect static face/old reset/unreachable or blocked catalog and lifecycle negative controls rejected
+Boundary: native scheduling, input/font I/O and animator are instrumented; compositor frames, physical font paint and VM motion still require separate continuous evidence.
+(node:80545) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+command: node tools/test-manga-sheet-selection-sdk.mjs
+exit_code: 0
+PASS actual SDK retained manga sheets: paper/ink and vertical/horizontal return trips, all fit check branches, icon/paint/accessibility updates, native SwitchStyle and whole-row single pointer owner, themed slider, legacy white/low brightness preserved; captured-parameter/fake selection/fake label/duplicate pointer negative controls rejected
+(node:80547) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+command: node tools/test-manga-surface-sdk.mjs
+exit_code: 0
+PASS actual SDK root padding + live window revision: portrait status/gesture, asymmetric landscape and cleared insets (native layout not tested)
+(node:80546) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual ArkUI SDK surface lowering; save waits for CAS; disposed layout cannot scroll (native paint not tested)
+PASS actual SDK tablet directory mounts while controls are hidden, bounded left column and independent right-panel geometry (native paint not tested)
+PASS actual SDK four demo sheets: paper/ink, natural phone height + per-panel caps, landscape bounds, grabber/close, paired mode choices and separated fit rows (native layout not tested)
+PASS actual SDK responsive catalog/header/search admission, stage 1180/922,920/662,800/542,650/482, wide negative margins and day/night progress accent (native layout/paint not tested)
+
+
+command: node tools/test-manga-reading-directory-fallback.mjs
+exit_code: 0
+PASS actual manga reading flat fallback: v2 unavailable→681 rows, nested explicit folds, unchanged canonical targets, unknown/stale guards, full-catalog search/count, retained SDK List/arrow and 400↔550 face, phone58/wide50/catalog48/group44/narrow, content-first top line/empty/catalog tail, wide7/locate12 and regression controls
+{"path":"/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib","classesSha256":"6140bfa5cf6705ddee40349c2e082083778a920f0ff870cc51dccb0f030ccbd5","layer":"actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels"}
+(node:80548) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+command: node tools/test-manga-ui-assembly-sdk.mjs
+exit_code: 0
+PASS installed SDK parses 356 production ETS/TS files, 118 custom components registered
+PASS 684 actual custom-component field bindings in Index/Shell/manga/bookshelf/detail/directory/source/Native directory assembly
+PASS SDK component transform pages/Index.ets
+PASS SDK component transform features/shell/ReaderShell.ets
+PASS SDK component transform features/manga/MangaReadingSurface.ets
+PASS SDK component transform features/bookshelf/BookshelfPage.ets
+PASS SDK component transform features/bookshelf/LocalBookDetail.ets
+PASS SDK component transform features/bookshelf/BookDirectoryPage.ets
+PASS SDK component transform features/reading/SourceSwitchPanel.ets
+PASS SDK component transform features/source/SourceSwitchWindow.ets
+PASS SDK component transform features/reading/ReaderDirectoryNavigationSurface.ets
+PASS SDK component transform features/reading/ReaderDirectoryNavigationList.ets
+PASS SDK component transform features/reading/ReaderDirectoryList.ets
+(node:80551) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual SDK demo settings: paper/ink selection colors, 38×23 native page switch, equal bottom-color choices, brightness/reset and preference callbacks
+Boundary: SDK parsing/member lowering + exact initializer field names; no project-wide semantic typecheck, package, native layout or device proof.
+
+
+command: node tools/test-manga-motion-progress.mjs
+exit_code: 0
+(node:80552) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual Surface + Controller + Gateway: zoom before timer, after timer, early frame, matching native layout and serial manga-only CAS
+PASS actual touch cancellation and superseding restore: stale frames cannot clear the new anchor; user geometry can settle
+PASS delayed turn CAS: direction, A→B→A, zoom, chapter replacement, refresh intent and exit all fence obsolete publication
+PASS mounted decoded horizontal image is the saved return position even before native geometry settles
+PASS mounted spinner then decoded tile confirms the page; return awaits its CAS before closing
+PASS restore target is not a confirmed page; same-ID chapter replacement invalidates the old confirmed owner
+PASS actual preview cleanup + exit: old position is accepted before lease release and survives close through existing CAS lane
+PASS actual refresh lifecycle: same-manifest
+PASS actual refresh lifecycle: changed-exact
+PASS actual refresh lifecycle: changed-unresolved
+PASS actual refresh lifecycle: failure
+PASS actual refresh lifecycle: exit
+PASS real controller vertical seek retains explicit anchor through image publication and never persists an unpainted target
+
+
+command: node tools/test-manga-session.mjs
+exit_code: 0
+(node:80553) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS manga session: bounded window, stable resources, serialized CAS, invalid anchor, teardown, late release, explicit recovery, offline manifest, duplicate IDs
+PASS replaced tile windows discard old queued work; only decoded visible regions can save progress
+PASS first frame admits before neighbor and reuses first-region lease; failed explicit refresh retains old view
+PASS pending neighbor selection joins decode and admits a visible tile without a second scroll
+PASS narrow cold entry: 3 of 10000 real page facts, no full manifest/catalog/progress RPC, bounded end window, invalid ordinal and disposed request rejected
+PASS nonblocking disposal: pixel leases released immediately, admitted CAS survives owner close, rapid reopen waits, failed tail stays observable
+PASS actual surface first admits narrow pixels, then starts catalog; stale catalog cannot publish after disposal
+PASS removed-chapter cold resume retains old CAS position, rejects automatic/refresh save until confirmation, and preserves explicit chapter navigation
+PASS byte-decode entry, exact refreshed global page and xy/CAS, stale/ambiguous proof fencing, visible-only bounded expiration recovery
+PASS contain preview controller uses one image row, bounds neighbors, forwards preview mode, keeps original geometry/CAS and restores full-resolution region when width mode returns
+PASS automatic refresh maps unsaved selected page rather than old durable anchor; ambiguous proof retains confirmation and exact status prevents text-triggered retries
+PASS automatic refresh updates actual horizontal surface with current anchor and is fenced by a later selection or close
+PASS next chapter: canonical nonconsecutive catalog identity, early manifest, near-end first image only, shared-cache next entry, no user-data writes, silent bounded failures/offline/source fences and visible-image priority
+PASS optional adjacent work cannot survive session close or recapture a cleared content scope
+PASS real manga surface/gateway/controller carries exact directory proof on cached and live paths, rejection admits no pixels/writes, implicit resume retains historical image xy/CAS
+PASS actual Surface/Gateway/Controller cached entry renewal: changed source opens fresh; same source refreshes once using exact/unresolved Core anchor proof; unchanged durable xy/CAS, explicit recovery, bounded failures, cached/offline/live-error exclusions and exit fences
+PASS actual SDK Shell/retained Surface/property runtime plus cold Controller entry: later catalog updates directory and next chapter; flat/proof-backed picks reach existing Index guards, preserve proof and save ordering; no remount or user-data writes
+
+
+command: node tools/test-manga-error-recovery.mjs
+exit_code: 0
+PASS actual manga row keys transfer one visible retry card after scrolling and prior-row recovery
+(node:80549) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual manga retry callbacks preserve new failures and fence navigation, refresh, replacement and disposal
+PASS actual recovery confirmation follows refreshed controller facts and fences late acknowledgement/failure
+PASS actual opening retry has one session owner and SDK-emitted disabled in-progress control
+PASS actual registered navigation exit bypasses back tiers, waits for one save, fences disposal and retains ordinary panel/end/zoom back behavior
+Boundary: production methods and SDK control lowering; VM pixels and native list scheduling require separate delivery evidence.
+
+
+command: node tools/test-reader-control-p0.mjs
+exit_code: 0
+reader-control-p0 static contract: PASS
+
+git diff --check: exit 0

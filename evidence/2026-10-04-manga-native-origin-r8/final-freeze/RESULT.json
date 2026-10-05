@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "recordedUtc": "2026-10-04T03:07:52.840310+00:00",
+  "status": "PARTIAL",
+  "acceptanceStatus": "OPEN",
+  "runtimeExitCode": 2,
+  "preservationReadback": "PASS",
+  "inventoryPath": "INVENTORY.json",
+  "inventorySha256": "a2abd139c5ec1126100b9725c2400482952b4920c0957cfa6751da76d62febf5",
+  "evidenceRecords": 134,
+  "evidenceBytes": 9929506,
+  "externalReferences": 39,
+  "allRecordedBytesModesAndHashesMatched": true,
+  "allPreexistingR8FilesUnchanged": true,
+  "largeCopiesBuildTestsOrDeviceActions": false,
+  "runId": "20261004T002116Z-568ec4e3-3eec7853",
+  "signedHapSha256": "9b5f34be522060a84bb4e2e805e62ca538cc0d2ae4d68f1a81f716cdf2c1ac56",
+  "manifestSha256": "555eaba03fe4c3c130352c42ca4929763cc1ff039bd7f59ee1adde31b0293712",
+  "remainingOpen": {
+    "strictPhaseGeneration": "OPEN",
+    "submittedPaint": "OPEN",
+    "sourcePixelOwnership": "OPEN",
+    "sourcePixelsOrCache": "NOT_READ",
+    "userAcceptance": "OPEN",
+    "exactVmRsImplementation": "OPEN"
+  }
+}

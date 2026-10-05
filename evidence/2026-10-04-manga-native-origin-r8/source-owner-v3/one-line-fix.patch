@@ -1,0 +1,11 @@
+--- v2/MangaReadingSurface.ets
++++ v3/MangaReadingSurface.ets
+@@ -981,7 +981,7 @@
+     const existing = this.geometrySamples.get(key);
+     if (existing !== undefined) return existing;
+     if (this.geometrySamples.size >= 8) {
+-      const first = this.geometrySamples.keys().next().value;
++      const first: string | undefined = this.geometrySamples.keys().next().value as string | undefined;
+       if (first !== undefined) this.geometrySamples.delete(first);
+     }
+     const sample: MangaGeometrySample = { ordinal, tileIndex, receiptGeneration: 0,

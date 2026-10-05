@@ -1,0 +1,72 @@
+--- R4-frozen/ReaderDirectoryNavigationSurface.ets
++++ R5-frozen/ReaderDirectoryNavigationSurface.ets
+@@ -66,6 +66,8 @@
+   @BuilderParam fallbackBuilder: () => void;
+   @State private view: ReaderDirectoryNavigationReady | undefined = undefined;
+   @State private mangaFontsReady: boolean = false;
++  private mangaFontGeneration: number = 0;
++  private mangaFontTask: Promise<boolean> | undefined = undefined;
+   private gateway: ReaderDirectoryNavigationGateway | undefined = undefined;
+   private mounted: boolean = false;
+   private generation: number = 0;
+@@ -83,6 +85,9 @@
+ 
+   aboutToAppear(): void {
+     this.mounted = true;
++    if (this.mangaDisplay) {
++      void this.prepareMangaFonts();
++    }
+     this.scrollIntentUnsubscribe = readerDirectoryObserveScrollIntent(readerDirectoryScopeKey(this.sourceId, this.bookId),
+       (): void => this.onProgrammaticScrollIntent());
+     this.lastQuery = this.query;
+@@ -94,11 +99,33 @@
+ 
+   aboutToDisappear(): void {
+     this.mounted = false;
++    this.mangaFontGeneration += 1;
++    this.mangaFontTask = undefined;
++    this.mangaFontsReady = false;
+     this.cancelQueryTimer();
+     this.generation += 1;
+     this.openingGeneration = -1;
+     this.scrollIntentUnsubscribe?.();
+     this.scrollIntentUnsubscribe = undefined;
++  }
++
++  private prepareMangaFonts(): Promise<boolean> {
++    if (!this.mounted || !this.mangaDisplay) return Promise.resolve(false);
++    if (this.mangaFontsReady) return Promise.resolve(true);
++    if (this.mangaFontTask !== undefined) return this.mangaFontTask;
++    const generation = ++this.mangaFontGeneration;
++    const task = prepareMangaSheetFonts().then((ready: boolean): boolean => {
++      if (!this.mounted || generation !== this.mangaFontGeneration || !this.mangaDisplay) return false;
++      // Font registration belongs to this mounted display, independently of
++      // tree/query generations and the entering/retained-exit interaction gate.
++      this.mangaFontsReady = ready;
++      return ready;
++    }).catch((_error: Error): boolean => false);
++    this.mangaFontTask = task;
++    void task.then((): void => {
++      if (generation === this.mangaFontGeneration && this.mangaFontTask === task) this.mangaFontTask = undefined;
++    });
++    return task;
+   }
+ 
+   private onIdentityChanged(): void {
+@@ -301,7 +328,7 @@
+     // The permanent tablet catalog can mount without a phone-sheet opening.
+     // Admit neither its tree nor its fallback text before the same receipts.
+     // Novel callers preserve their existing direct navigation task.
+-    const opening = this.mangaDisplay ? prepareMangaSheetFonts().then((ready: boolean): Promise<ReaderDirectoryNavigationReady | undefined> | undefined => {
++    const opening = this.mangaDisplay ? this.prepareMangaFonts().then((ready: boolean): Promise<ReaderDirectoryNavigationReady | undefined> | undefined => {
+       if (!this.mounted || generation !== this.generation || this.bookId !== bookId || this.sourceId !== sourceId) return undefined;
+       if (!ready) throw new Error('manga directory fonts are unavailable');
+       if (!this.interactionEnabled) {
+@@ -311,7 +338,6 @@
+         this.pendingQueryRefresh = false;
+         return undefined;
+       }
+-      this.mangaFontsReady = true;
+       return open();
+     }) : open();
+     void opening

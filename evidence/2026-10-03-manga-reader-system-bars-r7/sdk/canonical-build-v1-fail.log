@@ -1,0 +1,1339 @@
+{"stage":"artifactRetention","keepRuns":10,"removedRuns":[],"removedBytes":0}
+workspace selection PASS: schema/identity/release scope/declared pins/ancestor commits/Host SDK; final delivery receipt still required
+Reader HAP build-system docs and skills contract: PASS
+PASS durable reading preparation: strict first-readable add, search-body reuse, restart resume, 50-book fairness/current±3, raw-only rebuild, pause/403/resource boundaries, unchanged progress and real RPC cleanup fence
+PASS cancel readable add: pre-dispatch/in-flight begin fences, prompt HTTP cancellation, per-book isolation, resumed task guard, newer attempt ownership and strict-add CAS race
+app shell safe geometry: PASS
+PASS: ArkWeb document DNS pin plus same-host navigation/resource enforcement
+PASS: ArkWeb queue and cookie capture retain their admitted session generation
+PASS: ArkWeb cookie capture keeps exact admitted host scope
+(node:12843) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual resource callbacks: first full match before page-ready, no timeline or refetch
+PASS serialized matching preserves callback order across delayed evaluations
+PASS source initialization runs once and its real resource event completes capture
+PASS an earlier admitted match wins over a later resource-budget terminal marker
+PASS terminal cleanup and late callback suppression: timeout
+PASS terminal cleanup and late callback suppression: cancel
+PASS terminal cleanup and late callback suppression: detach
+PASS terminal cleanup and late callback suppression: cookie-generation
+PASS terminal cleanup and late callback suppression: network
+PASS terminal cleanup and late callback suppression: budget
+PASS terminal cleanup and late callback suppression: invalid-matcher
+PASS source profiles retain isolated cookie hydration/capture and generation
+PASS POST HTML capture, bounded matcher admission and production callback wiring
+PASS execution failure is terminal with bounded cleanup: matcher-reject
+PASS execution failure is terminal with bounded cleanup: matcher-sync-throw
+PASS execution failure is terminal with bounded cleanup: initialization-reject
+PASS execution failure is terminal with bounded cleanup: load-throw
+PASS late asynchronous matcher completion cannot publish into the next source profile
+PASS quotes and executable-looking text in observed URLs remain JSON-encoded data
+PASS SDK native callback isolation: old resource/pageEnd/pageBegin/network/detach/attach/actions cannot contaminate a new surface; same new URL is accepted
+PASS missing native retirement ACK times out without controller reuse, Host remount or cookie crossover, then recovers after ACK
+PASS never-mounted surface cancellation/retirement/recovery: cancel-before-mount
+PASS never-mounted surface cancellation/retirement/recovery: timeout-before-mount
+PASS never-mounted surface cancellation/retirement/recovery: host-detach-before-mount
+PASS controller constructor failure preserves the original error, clears active state and recovers; prior retired surface=false
+PASS controller constructor failure preserves the original error, clears active state and recovers; prior retired surface=true
+PH76 Host production-path resource capture: 26 scenario groups passed; SDK closure checks are local, native lifecycle timing still requires VM evidence
+PASS system route waits for native restore ACK before loading, including public IP literals
+PASS system synthetic DNS retains the admitted address pin and Host/TLS hostname
+PASS cancel during DIRECT setup: late apply/cleanup ACK is isolated, native configuration serializes and next route restores system
+PASS timeout during DIRECT setup: late apply/cleanup ACK is isolated, native configuration serializes and next route restores system
+PASS missing cleanup ACK bounds later jobs, retains no expired waiters, and permits recovery only after real cleanup ACK
+PASS synchronous proxy apply failure is typed; setup can recover, unconfirmed cleanup blocks all later loads
+PASS synchronous proxy remove failure is typed; setup can recover, unconfirmed cleanup blocks all later loads
+PASS SDK main-frame failure classification: proxy
+PASS SDK main-frame failure classification: 407
+PASS SDK main-frame failure classification: TLS
+PASS SDK main-frame failure classification: 404
+PASS SDK main-frame failure classification: generic-connect
+PASS SDK main-frame failure classification: numeric-only
+PASS SDK main-frame failure classification: direct407
+PASS SDK main-frame failure classification: lookalike-url
+PASS pre-load/about:blank/subresource failures cannot poison the main document
+PH92 ArkWeb proxy lifecycle/native failure: 16 additional scenario groups passed; no device or native timing acceptance claimed
+PASS existing HTML challenge classification precedes ordinary HTTP 401 failure
+PASS existing HTML challenge classification precedes ordinary HTTP 403 failure
+PASS existing HTML challenge classification precedes ordinary HTTP 429 failure
+PASS an ordinary forbidden document stays a source HTTP failure after challenge detection
+PASS native detach cancels pending proxy ACK immediately and late configuration is cleaned
+PH92 proxy/challenge compatibility: 5 additional scenario groups passed
+PASS production blank lifecycle before/after real load never sets page ready, final URL or schedules source initialization (2 scenarios)
+(node:12858) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS diagnostic early fixture, fixed admission, measurement and timer/observer cleanup
+PASS early timing uses this run and exact target document: native blank initialization excluded, premature/foreign/incomplete evidence still fails (11 scenarios)
+PASS bounded data diagnostics and exact native URI-Base64 admission: tamper/unsupported/malformed/oversized remain denied, no URL or body disclosure
+PASS diagnostic rejects incomplete new-surface evidence: missing-resource
+PASS diagnostic rejects incomplete new-surface evidence: missing-match
+PASS diagnostic rejects incomplete new-surface evidence: reversed
+PASS diagnostic rejects incomplete new-surface evidence: wrong-match
+PASS diagnostic attributes old resource token during new job: lateOld=false
+PASS diagnostic attributes old resource token during new job: lateOld=true
+PASS disposing the pilot cancels only owned jobs and clears response timers/observer
+PASS diagnostic execution errors retain a failure receipt
+PASS actual SDK Host callback: exact main document, tamper rejection, policy-first order and redacted navigation labels
+PASS new run rejects previous run main URL and data document
+PH76 diagnostic runner: 12 scenario groups plus actual SDK Host callback/default/policy wiring passed; these are local checks, not VM evidence
+PASS safe preload diagnostics: 6 native operation receipts and arbitrary-error URL/credential suppression
+(node:12905) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Baozi builtin image URL correction, pinned revision and historical provenance: PASS
+shared book acquisition lifecycle, identities, and scheduling: PASS
+shared detail/TOC/body cancellation: each consumer owns its lifetime; Core cancellation cannot be revived PASS
+PH65 registry epoch: five mutation entries success/failure and late list deletion race PASS
+R1/R2 cache-refresh separation, original freshness, dispatch consumers and scoped facts: PASS
+PASS actual cache handoff: ordinary prefetch preserves other/current books; real mutations invalidate; title projection skips chapter-state scans
+Entry catalog reuse: exact admitted projection, cancellation, conversion and external catalog invalidation PASS
+PASS real coordinator metadata scheduling: admission, background cap, foreground dispatch and pre-dispatch cancellation
+author metadata: 33 shared Core/Host cases, actual search decode/group/shelf/alias/source-switch chains PASS
+source-bound @ author: SDK result decode → initial group/relevance → candidate/switch proof, genuine @ and @@/stale/malformed negatives PASS
+(node:12996) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH119 standalone BookDirectoryPage actual methods and SDK Builder: PASS
+PASS manga directory header SDK frame: asymmetric cutout stays inside contentFrame
+PASS actual directory rules entry: Core TXT metadata, parent updates and identity/format revocation
+(node:13011) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13093) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+shared metadata: identical 56/55 and transitive 74/73 URL/source sets, rename/remount, no network, synopsis presentation: PASS
+book-source production import contract: PASS
+(node:13100) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual SDK retained continue card: novel/comic metadata and cover, current click identity, hydration-only StorageLink delivery, source isolation, late removal and stable actors
+(node:13118) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS 52 production bookshelf timeline/Builder samples; retained detail action actors and real safety gates. Native pixels remain unverified.
+(node:13156) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf detail removal: PASS
+PASS shelf filters: content/origin dimensions and live chips survive gear removal; shared order, legacy data and hidden batch-selection safety
+(node:13210) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf management Core ownership contract: PASS
+(node:13275) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"manual update bypasses prepared sessions and executes real Gateway detail/TOC","status":"PASS"}
+{"name":"manual update also bypasses durable catalog cache after prepared eviction","status":"PASS"}
+{"name":"manual request waits for a cache-only in-flight acquisition then refreshes","status":"PASS"}
+{"name":"per-book failure/empty results preserve old records, settle flags and continue bounded batch","status":"PASS"}
+{"name":"automatic checks retain 10-minute threshold and disabled/local/active-sweep exclusions","status":"PASS"}
+{"name":"cold scoped manga skips only automatic catalog refresh while other and manual checks continue","status":"PASS"}
+{"name":"automatic work waits for settings and yields to reading; manual work stays explicit","status":"PASS"}
+{"name":"paged filtered shelf automatic sweep covers offscreen targets and cancels before network","status":"PASS"}
+{"name":"automatic catalog projection does not rescan its own new revision","status":"PASS"}
+{"name":"multiple force waiters share one refresh after the nonforce admission settles","status":"PASS"}
+{"name":"force waiting revalidates cancel before new network work","status":"PASS"}
+{"name":"force waiting revalidates close before new network work","status":"PASS"}
+{"name":"force waiting revalidates source-delete before new network work","status":"PASS"}
+PH60 real Index → Gateway → Coordinator manual catalog refresh and bounded failure recovery PASS
+PASS PH60 More: four rows, bounded scrolling geometry, anchored pointer, live progress/theme, empty/background guards and once-only update
+(node:13417) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13475) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS shelf pages: bounded first read, independent continue summary, filtered-empty distinction, complete membership, stale revision restart, cancellation and anchor extension
+PASS shelf page UI ownership: single request, append, stale generation/runtime rejection, changed revision refresh and duplicate-page rejection
+PASS 1001-book forward/backward bounded windows, partial-tail alignment and one-query deep anchor
+PASS synchronous native reload cannot overwrite the old visible-book anchor
+PASS TXT uses format identity without changing Core metadata
+PASS default group retains empty and explicit default identities without mutating legacy groups
+PASS three remaining section actions preserve the filter toggle without entering settings or groups
+PASS empty shelf uses the same right-aligned three-action header
+PASS compact shelf keeps two tags and live independent progress after row reuse
+PASS detail preview retains at most 20 Core identities in the outer scroll and volume rows only fold
+PASS day: current source and author facts remain exact while the source action follows permission
+PASS night: current source and author facts remain exact while the source action follows permission
+PASS detail cover and two-line title use the approved natural hero instead of a fixed five-line block
+PASS missing synopsis is explained without contaminating metadata and expansion preserves content
+PASS empty chapters expose status: 暂无章节信息
+PASS empty chapters expose status: 正在读取本地目录…
+PASS empty chapters expose status: 目录读取失败，请重试
+PASS source name/category/URL remain distinct and login precedes detect (no login)
+PASS source name/category/URL remain distinct and login precedes detect (login)
+PASS single-book sheet matches cover frame and both layers have straight lower corners
+PASS 44vp source SVG stays 44vp in the single-book more action
+(node:13529) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13599) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf reading entry: PASS (local/remote, info/search, back, cancellation, failure, retry/source switch)
+Reader Info production chain: explicit navigation, serialized stop/record/progress, save failure/retry and layered Back PASS
+PASS original shelf dispatch: unread/read, local/remote; no snapshot prerequisite or loading overlay; source-switch Back protection. Device first-frame timing is not measured by this test.
+(node:13666) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:13727) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf shared scan: PASS (single scan, fallback, revision fencing, bounded retry)
+(node:13791) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS Core shelf-name DTO, cold source.list failure, rename/delete/source identity, legacy field compatibility and progress-preserving Host projection
+shelf source fallback: exact unique identities only, cancellation and foreign-result rejection PASS
+PASS bookshelf startup readiness: authoritative first-page card, global filtered/truncated fallback, delayed/failing reads, acknowledged mode reuse, write/restore context fencing and no duplicate projection
+(node:13826) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+bookshelf tablet navigation contract: PASS
+PASS surface repair: production import lifecycle, serialized local mode migration/failure, shared projection, responsive sizing, history and spinner ownership
+PASS bookshelf/import current approved surfaces: shared compact metadata and retained blank author, separate menus, cover-aligned sheet, measured results and bounded animation
+(node:13880) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS bookshelf cover handoff: bidirectional opacity, whole-cover composition, final-frame continuity, retained default/image actors, historical negative controls; native pixels remain separate
+(node:13940) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS bookshelf route return: identity+item offset, list/state/type filters, removed group-filter migration, reordered books, late callback isolation
+(node:13981) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+build provenance embedded NAPI contract: PASS
+(node:14019) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Bundled source Host boundary: controlled paths, unchanged I/O guards, real supply-to-Host wiring PASS
+bundled book-source import collection: PASS (1046 tested records, 919 unique identities)
+cookie exact-host and HttpOnly script-isolation policy: PASS
+Core admission diagnostics: native codes preserved, private data excluded, original rejection retained PASS
+(node:14050) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+core build identity startup contract: PASS
+(node:14084) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: detail mutation settles after exit; stale window completion cannot load content
+PASS search preview uses exact Core membership before source fallback; partial shelf and stale membership lookup cannot substitute a saved source
+PASS: active detail admission retains one shared refresh with success/failure/stale guards; startup preserves complete EPUB resources
+PASS: ambiguous persist reply preserves EPUB resources and asks to reconcile before retry
+PASS: deterministic import.persist rejection discards staged input without recovery orphan
+PASS: lost bookshelf.add reply reconciles durable shelf truth before compensation
+PASS: deterministic bookshelf.add rejection never reports an older shelf row as a new commit
+(node:14145) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production Index + actual Coordinator/Gateway: stable return/new catalog, exact evidence negatives, source/processing races, delayed offline readmission. No device pixel claim.
+(node:14224) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH119 independent catalog routing, retained detail Builder and exact initial bookmark lifecycle: PASS
+discover source filter and pagination contract: PASS
+dynamic ArkUI list refresh contracts: PASS
+PASS bookshelf append/trim native notifications, unchanged projection and position-independent identities
+(node:14282) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+error-message conformance: PASS (138 sources swept)
+(node:14313) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+HarmonyOS HAP pipeline contract: PASS
+PASS HAP retention: 10-run cap, deployment/pin protection, reservation, evidence, tampering and symlinks
+Harmony HttpTTS credential URL encoding and expansion bounds: PASS
+(node:14342) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Harmony TTS Host router and HttpTTS transport contract: PASS
+(node:14354) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: 18 interrupted writes, durable clears, legacy migration and DNS cancellation
+PASS: DNS pins serialize concurrent leases and reject rebound private addresses
+PASS: clearing a session invalidates late HTTP/WebView cookies and allows a fresh login
+PASS: HTTPS-only requests reject cleartext redirect downgrades
+PASS: same-origin comparison normalizes host case and default HTTPS port
+PASS: credential-bearing URL redirects stay on the same effective origin
+PASS: custom credential-header redirects stay on the same effective origin
+Host staging recovery retry: PASS
+(node:14361) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production request payload and HTTP POST: empty/Chinese UTF-8, GBK, form join, exact/over byte limit and multipart with broken platform TextEncoder
+Encoder evidence: actual SDK wrapper with bounded UTF-8/GBK fixtures; native variant is independently runnable
+(node:14376) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual HTTP transport: HEAD/204/205/304 absent or empty bodies, 200 empty string and binary bytes (22 cases)
+PASS nonempty decoded strings and unknown body representations fail with bounded status/type diagnostics
+PASS bodyless 4xx/5xx keeps explicit HTTP source rejection; actual rejection body remains unchanged
+PASS actual redirect chain keeps empty hop Location and rejects private targets before dispatch; empty success survives final response conversion
+PASS WebDAV redirect policy: downgrade and foreign origin rejected; same-origin HTTPS redirect admitted
+PASS TypeError stage/source-line diagnostics preserve original failures, deduplicate, cap at 16 and cover payload and outer cookie paths without raw stack
+PASS native request failure codes retain numeric/string integers, deduplicate and exclude arbitrary messages/URLs while retaining transport origin
+PASS unknown native 2300999 preserves per-request transient HTTP evidence, not a global network outage or a source rule verdict
+(node:14389) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual Host -> SDK -> CoreError input -> reading classifier and safe search summary: TLS/23/no-code retain HTTP cause, only known transient codes retry; per-operation association survives repeats, cancellation and later independent failures stay separate
+PASS raw binary Host: no Base64, same buffer, native/actual limits, private-target, HTTPS, cancellation and MIME protections
+PASS declared body size rejects before decode; representation metadata on a bodyless response is preserved
+PASS bounded text transport: native, declared and actual byte limits precede decoding
+http transport conformance: PASS (23 vectors, ad87a5423ee60de43b7056e9fa2d6683302bb1b9378139dd271a7943b625c331)
+(node:14402) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual execute/redirect/cookie/DNS/transport URL normalization: Chinese/space, existing GBK percent escapes, query/fragment, method/body preservation and private target rejection
+(node:14409) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+icon design contract: PASS (23 confirmed slots + 2 latent coupling/tint risks)
+PASS import refresh: Figma C arc/source unchanged, 18vp slot, 23.754vp paint, 1.5vp stroke; retained Day/Night/Day.
+(node:14424) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14462) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+incremental source supply: no-resource unchanged path, selective reads, failure/no seal, cancellation, index integrity PASS
+PASS production near-end and prefetch canonical readable boundaries
+PASS accepted-session index rebuilt once, constant-time commits, unknown/group boundaries and stale prefetch ownership
+PASS actual manual shelf refresh -> acquisition -> independent readable prefetch; visible session and directory are preserved
+search stable rows, enrichment and navigation state: PASS
+search relevance: late exact title, stable ties, canonical variants, category scope, keyword cache PASS
+progressive relevance ties, retained row identity, measured anchor and remount restoration PASS
+PH65 4000 retained rows + 1 changed + 1 added; repeated publication 0 changes PASS
+PH65 4000 retained grouping facts + one new row bounded normalization; canonical shelf label PASS
+current-version catalog group representative; stale and other-version facts are not verified PASS
+R6 query=1000 single metadata: newGroups=1 rowUpdates=1 structuralNotifications=0 normalize=0 groupSort=0; progress all=0 PASS
+R6 4000 reversed rows: native batch=1 reload=1 Reader index scans=0 splice shifts=0 PASS
+R7 layout-key resolution, mid-layout list changes, query/page guards, user cancellation, programmatic callbacks, merge/neighbors and late layout PASS
+R1 display rank: schema2 current verification only; stale/v1/target-only/storage-refresh facts never grant or revoke whole-book readability PASS
+R3 partial/stopped-empty/error safe classified messages and SDK disappearance hook PASS
+PASS manga/novel grouping, shelf badges and virtual row identities remain separate
+H1 actual SDK type chips + production projection: combined scope, same-type variants, unknown/local facts, stream, resume/reset and zero filter search/retry PASS; existing warmups preserved
+Legado product behavior contract: PASS
+(node:14473) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+local book format picker contract: PASS
+(node:14522) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production configuration reset: confirmed scope, durable intent, six failure points, restart continuation, newer user intent ordering, owner replacement, shared queues, failed-cache rollback and stale-dialog guard. No Core data/credential mutation.
+(node:14552) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"result":"PASS","stats":{"archiveReads":5,"decodes":5,"writes":5},"checks":7}
+local EPUB resource architecture: PASS
+(node:14570) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS private immutable archive lookup, legacy compatibility, local-only idle preparation and foreground cancellation; no foreground source parsing
+PASS book-scoped presentation invalidation including lost reply; position proofs, other books and completed shelf pass preserved
+local import finalize recovery queue and lost-upsert metadata reconciliation: PASS
+(node:14651) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14652) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS local direct entry before RPC; original detail projection, cancellation, same-book generation and bookmark mutation protection
+Evidence boundary: controlled Core replies and production methods; no native frame or device latency claim.
+log privacy: PASS (finite public error codes; reading details use private fields)
+PASS manga admission: exact intent/manifest/page/source scope, decode-before-add, no admission on failure, lease release and cancellation
+PASS manga preview and one bounded cached-resource renewal
+PASS actual Index manga detail gate follows image success/failure without novel body or shelf writes
+PASS manga detail rejects legacy text download actions before queue mutation
+PASS manga admission skips non-readable groups even with URLs and refuses group-only catalogs before side effects
+PASS actual BookAcquisitionCoordinator manga admission wrapper preserves both manifest decode revisions to owner argument 13 and admission receipt
+(node:14688) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14727) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production image HTTP classification and explicit reader login: bounded platform parser boundary, no guessed 403 refresh, single owner, absent login, stale navigation and no text route
+PASS manga display facts: identity, immutable receipt, unknown percentage, source isolation and independent text progress
+PASS actual manga surface methods: stale save/viewport cancellation does not obscure a visible image; current failures remain visible
+(node:14771) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual SDK lowered manga counter and button react to chapter admission at unchanged ordinal zero
+(node:14797) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14943) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS manga directory actual gateway -> SDK parity: fixed 400/550/600 families without VF dependence, Radix SVG, one depth normalization, full-tree metadata, group spacing, flat search, phone58/wide50/catalog48+narrow, content-owned first-rank boundary, 50/12 positioning and preserved native anchors; same native group Image receives 0/-90/0 with live title/count/second click and same-view page admission; fifteen old-implementation negative controls rejected. SDK animation requests verified, compositor frames require VM evidence
+PASS manga directory fixed-font SDK binding, deferred checked receipt, fallback/tree admission, stale/closing fences, same actor responsive styles, phone/catalog open50 and side-panel open7 through SDK scroll requests, explicit locate12, novel direct/center path; 5 old-implementation negative controls, same mounted SDK Blank-to-prepared-fallback branch request while interaction disabled, retained closing display, dispose/remount receipt fences and unchanged tree/target admission. Native branch removal, glyph pixels and motion frames remain target acceptance.
+(node:15312) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual SDK manga directory child: cold resume→chapter 0, current image readiness routing, failure/stale fences, late catalog and cached sparse chapter navigation (native scheduling/paint not tested)
+PASS integrated v2 manga proof routing, four-argument readiness/session fencing, no text anchor, same-chapter revalidation and resume-only group exit
+(node:15536) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production imageStyle width/contain, explicit preference priority, whole-image crop geometry, both-axis anchor, height reflow, login one-retry/no-refresh/fences, exact refresh restores global ordinal and ambiguous recovery remains explicit
+(node:15601) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual manga row keys transfer one visible retry card after scrolling and prior-row recovery
+(node:15624) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual manga retry callbacks preserve new failures and fence navigation, refresh, replacement and disposal
+PASS actual recovery confirmation follows refreshed controller facts and fences late acknowledgement/failure
+PASS actual opening retry has one session owner and SDK-emitted disabled in-progress control
+PASS actual registered navigation exit bypasses back tiers, waits for one save, fences disposal and retains ordinary panel/end/zoom back behavior
+Boundary: production methods and SDK control lowering; VM pixels and native list scheduling require separate delivery evidence.
+PASS far-page selection retires the obsolete tile before a new viewport callback
+(node:15706) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS manga asset transfer: bound owner, validation before ack, exact chunks, cancellation, invalid output and release
+PASS production ReaderRuntimeOwner: cached manga stays offline, decoded bytes persist, exact chapter identity and regional offline validation
+PASS manga transfer preserves actionable HTTP failure identity across generic Core host rejection
+PASS decoded online-dependent bytes survive owner reopen with network explicitly disabled
+PASS nested online key/library typed HTTP status shares image login/retry classification; unrelated rule failures retain identity
+PASS Core advertised 8/16MiB binds fetch/input/graphics/output/receipt; oversize rejects before inspect/read/validate, invalid advertisements do not fetch, native budget classification never falls back to original bytes
+PASS actual Body transport applies Core limit to HTTP and before base64 decode; ordinary images retain 16MiB and invalid limits have no transport side effects
+PASS final prepared receipt cannot advertise bytes above its accepted input transfer limit
+(node:15728) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15803) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS manga graphics: real bundled-rule 14-strip golden coordinates, independent Pillow BGRA, explicit ImageKit source format, narrow dimensions/coverage, actual methods, cancellation/release, decoded-byte transfer (native ImageKit codec pixels remain target gate)
+PASS graphics rejects former 16Mip double-RGBA allocation before native pixels; padded native surface rechecks and releases; encoded/pack buffers enter independent working-set gate.
+PASS codec source release finishes after readback/input release and before RGB565/packer allocation; async drain, cancellation and native release errors call each owner once and preserve explicit failure receipts.
+PASS graphics coefficient working-set preflight includes maximum JPEG sampling-factor padding before any pixel allocation.
+PASS metadata asset adapter: exact bytes/hash, owner, cancellation and no transport or imageDecode
+PASS exact Core decodeProfile transfer; valid scanline/interlace/full-frame, absent legacy proof, malformed types/geometry/class mismatch rejected.
+PASS actual manga directory SDK Builder and Core locate: group/target/disabled, independent folds, current target and natural height
+PASS actual detail SDK Builder: full scroll viewport, 104×150 manga cover, centered floating header, two-line title, folded intro and floating dock
+(node:15894) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15923) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual Surface + Controller + Gateway: zoom before timer, after timer, early frame, matching native layout and serial manga-only CAS
+PASS actual touch cancellation and superseding restore: stale frames cannot clear the new anchor; user geometry can settle
+PASS delayed turn CAS: direction, A→B→A, zoom, chapter replacement, refresh intent and exit all fence obsolete publication
+PASS mounted decoded horizontal image is the saved return position even before native geometry settles
+PASS mounted spinner then decoded tile confirms the page; return awaits its CAS before closing
+PASS restore target is not a confirmed page; same-ID chapter replacement invalidates the old confirmed owner
+PASS actual preview cleanup + exit: old position is accepted before lease release and survives close through existing CAS lane
+PASS actual refresh lifecycle: same-manifest
+PASS actual refresh lifecycle: changed-exact
+PASS actual refresh lifecycle: changed-unresolved
+PASS actual refresh lifecycle: failure
+PASS actual refresh lifecycle: exit
+PASS real controller vertical seek retains explicit anchor through image publication and never persists an unpainted target
+PASS production long-image horizontal projection, bounded upstream zoom, delayed gesture layout anchor, both-axis save, page boundaries and independent reading preferences
+PASS unified system/button back: first leaves zoom, second awaits accepted progress before exit
+PASS targeted manga error messages preserve unknown failures and explain animation/offline recovery
+PASS manga catalog/download and source controls use existing shell routes after position capture; disposed actions cannot navigate
+(node:15946) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS exact debug cold Want, arm-before-selection scope, immutable identity, wrong/text selection, bounded tombstones and actual nonzero denial counts
+PASS actual Registry Core HTTP variants and Body fetch boundaries: non-target preserved, data URI excluded, late callbacks blocked after release/settlement
+PASS actual DecodeHost suspended fetch after cancellation/timeout cannot allocate an input asset or dispatch HTTP
+PASS production Runtime send/wait binding, ordinary request isolation, timeout settlement, progress-save survival and capacity before dispatch
+(node:15965) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production offline Surface uses only cached catalog, preserves downloaded entry on absent optional TOC, and fences controller before releasing probe
+PASS actual cached gateway returns fresh owned sessions; offline Surface manga tagging preserves frozen Core input, seed and other session owners
+PASS actual ordinary shelf click claims exact manga and enters existing resume route without authorizing network preparation
+PASS installed SDK Want and actual Core SDK send/wait types, with invalid request-id counterfactual; no device/Native result claimed
+PASS manga offline: shared queue opt-in, original-resource completeness, atomic manifest before report, interrupted missing-only retry, cancellation, exact version projection, same-size corruption and old-Core refusal
+PASS three-chapter claimed batch settles every lease after first failure and cancellation
+PASS changed manga source refreshes acquisition once, fences cancellation and rejects changed requested chapter identities before queue claims
+PASS mixed manga offline range materializes only readable chapters; groups are projected and readable-to-group refresh rejects before claim
+PASS offline projection reads the bounded cold manifest decode fact, passes scripted profile, rejects missing revision and downgrades changed versions without any online/progress command
+PASS a missing cold entry downgrades only its chapter; cancellation is not swallowed by per-chapter completion recovery
+(node:16081) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS 32 real PNG/JPEG/WebP fixture hashes and Pillow eight-direction pixel goldens; long image 2048/2048/15 crops join exactly; bounded region requests; normalized display coordinates; cancellation releases native objects. Codec and PixelMap are mocked; target pixels remain OPEN.
+(node:16109) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS real installed SDK ImageKit readback/native hash/file APIs and counterfactual invalid buffer, actual ArkUI lowering, unique frame acknowledgement and dispose cancellation. No native pixel result asserted by this host test.
+PASS actual BodyHost production region/preview allocation and PixelMap stride methods against installed SDK (including invalid enum counterfactual).
+PASS actual GraphicsHost BGRA source format and regional read API against installed SDK; Native pixels remain a separate target gate.
+(node:16118) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS fixed SHA/golden assets, actual runner negative pixel/preencode/display cases, native-boundary ownership accounting, cancellation, release gate, stale detach, bounded readback, no user-data/network route. Native calls are mocked here; target evidence remains OPEN.
+PASS actual production regional decode and strip transform observation: exact independent pre-encode pixels, cancellation after native allocation, balanced release, unchanged queue settlement.
+(node:16443) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual manga reading flat fallback: v2 unavailable→681 rows, nested explicit folds, unchanged canonical targets, unknown/stale guards, full-catalog search/count, retained SDK List/arrow and 400↔550 face, phone58/wide50/catalog48/group44/narrow, content-first top line/empty/catalog tail, wide7/locate12 and regression controls
+{"path":"/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib","classesSha256":"6140bfa5cf6705ddee40349c2e082083778a920f0ff870cc51dccb0f030ccbd5","layer":"actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels"}
+(node:16557) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS manga region decode: original resolution, bounded native region, exact crop receipt, separate file identity, native release, invalid region and novel compatibility
+PASS manga static JPEG/PNG/WebP metadata admission; eight valid directions normalize; animated, unknown format and unavailable metadata reject before pixel allocation
+PASS inspector injection and native EXIF ambiguity: absent metadata admitted, corruption rejects, exact-byte proof reused across crops, changed digest and cleared owner never reuse proof
+PASS inspector owner replacement discards late proof and closes the native image source
+PASS partial Uint8Array view: metadata, digest and native decode share exact bytes; full-span input remains zero-copy
+PASS shared real PNG/JPEG/WebP corpus: absent EXIF accepted, rotated images normalized/malformed proofs rejected, absent proof cannot replace successful native decode (platform codec mocked)
+PASS contain thumbnails request <=1Mi pixels and <=2048 dimensions before native decode, preserve original oriented geometry, use distinct display derivative, reject wrong dimensions and retain original input admission
+PASS asynchronous PixelMap release retains the crop slot until settled and handles rejection before ImageSource cleanup
+PASS allocation-profile dimensions, scanline/native sample ceiling, encoded-axis interlace, full-frame and absent-proof preflight, explicit SDR/RGBA, 1023-wide and post-rotation stride rejection, format/byte mismatch and release. No total codec/process peak assertion.
+PASS Tencent actual 1200x1906 contain uses 600x953; 4000x6000 uses 500x750; odd dimensions and EXIF transpose do not cross native sample bucket, sample8 over-budget rejects before decode.
+PASS odd-height JPEG threshold and width-one max(1) native-bucket fallback stay within preflight budget.
+PASS cjpeg-generated 1x65500 progressive 4x2/1x1/1x1 fixture: old 4192256B estimate undercounts 5240320B coefficient plane; 32x32 guard rejects region and contain before createPixelMap. Header/native boundaries mocked in this Host test.
+(node:16629) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS manga resource gateway: contract parity, request semantics, offline, duplicate pages, identity, cancellation, lease release, invalid image and error propagation
+PASS manifest decode revision reaches foreground/cache-only and adjacent prefetch; missing and unknown revisions reject before I/O
+(node:16652) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16653) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production manga Runtime lane: foreground/cache-only/adjacent/offline/seal/checksum serialization before I/O, nested validation, early first frame with owned store drain, unrelated novel writes, queue bounds, cancellation/generation/teardown fencing and failure recovery.
+(node:16695) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS unchanged scroll notifications retain decoded visible Images and row geometry
+PASS same native range is idempotent after the first mounted callback
+PASS a changed native range still commits its exact tile window
+PASS first native callback still demands tiles even when its range equals the initial fields
+PASS same range during restore still measures and confirms its native anchor
+PASS retained Images and rows still resize through real SDK zoom dependencies without data notifications
+PASS retained Images still follow changed viewport width without row invalidation
+PASS a real tile replacement notifies only its changed row
+PASS repeated Controller publication with no row changes is silent
+PASS equal-value geometry reentry must not reload the list or restore during scrolling
+{"case":"equal-value-reentry","before":{"keys":["[\"page-0:0\",true,600,600,0,1200,\"file://stable-0-retry.png\",\"r0-new\",\"\",false]","[\"page-0:1\",true,600,600,600,1200,\"file://stable-1.png\",\"r1\",\"\",false]"],"actors":[20,11],"mounts":3,"reloads":0,"changes":3,"timers":0,"heights":[300,300]},"after":{"keys":["[\"page-0:0\",true,600,600,0,1200,\"file://stable-0-retry.png\",\"r0-new\",\"\",false]","[\"page-0:1\",true,600,600,600,1200,\"file://stable-1.png\",\"r1\",\"\",false]"],"actors":[20,11],"mounts":3,"reloads":0,"changes":3,"timers":0,"heights":[300,300]}}
+PASS offscreen neighbor geometry must not restore stable visible Images
+PASS same visible keys do retain Image actors in the strict-key SDK boundary
+{"case":"offscreen-neighbor","before":{"keys":["[\"page-0:0\",true,600,600,0,1200,\"file://stable-0-retry.png\",\"r0-new\",\"\",false]","[\"page-0:1\",true,600,600,600,1200,\"file://stable-1.png\",\"r1\",\"\",false]"],"actors":[20,11],"mounts":3,"reloads":0,"changes":3,"timers":0,"heights":[300,300]},"after":{"keys":["[\"page-0:0\",true,600,600,0,1200,\"file://stable-0-retry.png\",\"r0-new\",\"\",false]","[\"page-0:1\",true,600,600,600,1200,\"file://stable-1.png\",\"r1\",\"\",false]"],"actors":[20,11],"mounts":3,"reloads":1,"changes":3,"timers":0,"heights":[300,300]}}
+PASS real current-page geometry change must retain normalized anchor and request one restore
+PASS real layout change before the visible page must restore the shifted row index
+PASS retained failed text still updates its theme color through the real SDK dependency
+PASS error card ownership still transfers on viewport movement; tile eviction remains Controller-owned
+PASS a retried error row still publishes its ready Image
+PASS horizontal selected page ignores earlier neighbor geometry outside its list
+PASS horizontal selected page still restores for its own real geometry change
+PASS failed unknown-geometry viewport transfers retry ownership without a Controller publication
+PASS settled failed viewport remains silent on a repeated same-range callback
+PASS scroll stability regression; native motion/pixels require separate delivery evidence
+(node:16727) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS manga session: bounded window, stable resources, serialized CAS, invalid anchor, teardown, late release, explicit recovery, offline manifest, duplicate IDs
+PASS replaced tile windows discard old queued work; only decoded visible regions can save progress
+PASS first frame admits before neighbor and reuses first-region lease; failed explicit refresh retains old view
+PASS pending neighbor selection joins decode and admits a visible tile without a second scroll
+PASS narrow cold entry: 3 of 10000 real page facts, no full manifest/catalog/progress RPC, bounded end window, invalid ordinal and disposed request rejected
+PASS nonblocking disposal: pixel leases released immediately, admitted CAS survives owner close, rapid reopen waits, failed tail stays observable
+PASS actual surface first admits narrow pixels, then starts catalog; stale catalog cannot publish after disposal
+PASS removed-chapter cold resume retains old CAS position, rejects automatic/refresh save until confirmation, and preserves explicit chapter navigation
+PASS byte-decode entry, exact refreshed global page and xy/CAS, stale/ambiguous proof fencing, visible-only bounded expiration recovery
+PASS contain preview controller uses one image row, bounds neighbors, forwards preview mode, keeps original geometry/CAS and restores full-resolution region when width mode returns
+PASS automatic refresh maps unsaved selected page rather than old durable anchor; ambiguous proof retains confirmation and exact status prevents text-triggered retries
+PASS automatic refresh updates actual horizontal surface with current anchor and is fenced by a later selection or close
+PASS next chapter: canonical nonconsecutive catalog identity, early manifest, near-end first image only, shared-cache next entry, no user-data writes, silent bounded failures/offline/source fences and visible-image priority
+PASS optional adjacent work cannot survive session close or recapture a cleared content scope
+PASS real manga surface/gateway/controller carries exact directory proof on cached and live paths, rejection admits no pixels/writes, implicit resume retains historical image xy/CAS
+PASS actual Surface/Gateway/Controller cached entry renewal: changed source opens fresh; same source refreshes once using exact/unresolved Core anchor proof; unchanged durable xy/CAS, explicit recovery, bounded failures, cached/offline/live-error exclusions and exit fences
+PASS actual SDK Shell/retained Surface/property runtime plus cold Controller entry: later catalog updates directory and next chapter; flat/proof-backed picks reach existing Index guards, preserve proof and save ordering; no remount or user-data writes
+PASS actual SDK-lowered manga sheet lifecycle: all four static faces before directory/mode/settings/more and persistent text admission, exact 400/600/900 family actors, demo reset preserving dark preference, reachable tablet right directory and left catalog choices in mode/settings via close/save/proof, two-frame callback-before-build, native springs and 160ms scrim, retained exit/block, drag/reduce-motion and late target/save/reopen/unmount; missing receipt/incorrect static face/old reset/unreachable or blocked catalog and lifecycle negative controls rejected
+Boundary: native scheduling, input/font I/O and animator are instrumented; compositor frames, physical font paint and VM motion still require separate continuous evidence.
+(node:16765) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual SDK retained manga sheets: paper/ink and vertical/horizontal return trips, all fit check branches, icon/paint/accessibility updates, native SwitchStyle and whole-row single pointer owner, themed slider, legacy white/low brightness preserved; captured-parameter/fake selection/fake label/duplicate pointer negative controls rejected
+(node:16851) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS manga switch directly selects after saved-position and first/landing-image validation, retains old shelf on failed image, fences cancellation
+PASS actual Index manga switch: saved chapter, direct selection with first/landing-image validation, cancelled/failed preparation, lost commit response reconciliation and navigation fence
+PASS manga source switching matches only readable titles/indices and refuses URL-bearing groups
+(node:16891) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS manga strip: last crop, unknown geometry, original-image position, stable anchors after geometry expansion
+PASS actual manga surface preserves observed original-image anchor across width changes and missing geometry; obsolete resize discarded
+(node:16910) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual SDK Image draggable=false on first/replacement tile; scrolling parents retain hit testing, enabled state and real touch/scroll callbacks (native gesture outcome not tested)
+PASS actual SDK LazyForEach item/key callbacks with strict per-index retention: placeholder geometry, ready image, errors, retry, URI/revision changes, unchanged and nonvisible stability, logical identity and anchor preservation, actual publish to the next requested visible tile (native layout/pixels not tested)
+PASS actual SDK retained failure rows transfer a visible retry card after viewport scrolling and preceding-image recovery
+(node:16925) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual SDK full-window image root and overlay-only safe padding with live window revision: portrait status/gesture, asymmetric landscape and cleared insets (native layout not tested)
+(node:16937) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual ArkUI SDK surface lowering; save waits for CAS; disposed layout cannot scroll (native paint not tested)
+PASS actual SDK tablet directory mounts while controls are hidden, bounded left column and independent right-panel geometry (native paint not tested)
+PASS actual SDK four demo sheets: paper/ink, natural phone height + per-panel caps, landscape bounds, grabber/close, paired mode choices and separated fit rows (native layout not tested)
+PASS actual SDK responsive catalog/header/search admission, stage 1180/922,920/662,800/542,650/482, wide negative margins and day/night progress accent (native layout/paint not tested)
+{"sourceSHA":"4e8cda54f879494a574de75ab2c85821d02edd96b70bdbf8e3e1085150461676","indexSHA":"1b7004f488376fbd172073af0a1b9fe65025effcd730d0f2faec1de274d79d71","shellSHA":"420928dc7906498d6c1bc54301cf3f624300ef8600e720904e611fcaed411336","mangaEmittedSHA":"dace2f3d9b0070decae086d8ccca1c857b1870a98f2e19dd1fd99a0482e0ff56","propertyRuntime":{"path":"/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib","classesSha256":"6140bfa5cf6705ddee40349c2e082083778a920f0ff870cc51dccb0f030ccbd5","layer":"actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels"},"areaSamples":7,"indexEmittedSHA":"6295b924a6126d25f3c7fd002ac3066e6145096a0998d5a8460fffcb2c717add","shellEmittedSHA":"3fae977f95f1c46dc004a885dd14dc3cbb821e644310a170414ff344bbe0a4e3"}
+PASS actual SDK manga root/Index/Shell full-window layout requests, same retained Image/ListItem dimensions and row key/anchor across controls and live avoid/cached-status changes, no restore/scroll request, overlay-only safe padding, short-panel constraints/split-pane projection, novel/app preservation and two exact R6 negative fixtures. Native safe-area expansion, physical bounds/pixels and OS Area delivery remain target acceptance; supplied Area/Scroller inputs are controlled and no layout engine is simulated.
+(node:17047) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17087) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual double Surface viewport joins one tile decode and latest generation commits once
+PASS mounted third slice is admitted even before native range catches up
+PASS tile eviction/reentry separates attempts and stale finalizers preserve the new join
+PASS close/reopen cannot join or publish the old generation tile
+PASS preview change retires pending region work and width reentry starts a fresh attempt
+PASS shared tile failure and explicit retry preserve one current attempt
+PASS installed SDK parses 356 production ETS/TS files, 118 custom components registered
+PASS 687 actual custom-component field bindings in Index/Shell/manga/bookshelf/detail/directory/source/Native directory assembly
+PASS SDK component transform pages/Index.ets
+PASS SDK component transform features/shell/ReaderShell.ets
+PASS SDK component transform features/manga/MangaReadingSurface.ets
+PASS SDK component transform features/bookshelf/BookshelfPage.ets
+PASS SDK component transform features/bookshelf/LocalBookDetail.ets
+PASS SDK component transform features/bookshelf/BookDirectoryPage.ets
+PASS SDK component transform features/reading/SourceSwitchPanel.ets
+PASS SDK component transform features/source/SourceSwitchWindow.ets
+PASS SDK component transform features/reading/ReaderDirectoryNavigationSurface.ets
+PASS SDK component transform features/reading/ReaderDirectoryNavigationList.ets
+PASS SDK component transform features/reading/ReaderDirectoryList.ets
+PASS actual SDK demo settings: paper/ink selection colors, 38×23 native page switch, equal bottom-color choices, brightness/reset and preference callbacks
+Boundary: SDK parsing/member lowering + exact initializer field names; no project-wide semantic typecheck, package, native layout or device proof.
+(node:17101) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual main tab SDK Builder: 2/3/4 items, narrow/equal slots, safe frame, 68/R34 clip, transparent container, outline selection and route callbacks
+PASS actual centered header SDK Builder: symmetric 44vp slots, 19/28 title, 52/R18 float, asymmetric parent safe frame and one back dispatch
+PASS actual MainTabShell SDK Builder: navigation overlays full-size content on phone and tablet
+(node:17123) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual Index manga position projection: bounded queue, route/source/owner fencing, ordinary/Info return, unchanged revision detail refresh, clearing, concurrent metadata/hydration, filtered/paged global card retention; real SDK retained detail/catalog props and reading facts/highlight
+(node:17140) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17147) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS progressive source discovery: early rows, live acquisition projection, measured search ordering, stable ties, legacy exclusion and generation-safe cancellation
+PASS manga/text discovery and same-type cached relation filtering; spoofed source rejection; remeasure keeps identities
+source-switch live window: progressive state, stable touch identity, real callbacks, zero/failure/refresh, search latency, anchor and lifecycle PASS
+(node:17154) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17168) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production manga preference migration, stale novel form preservation, write rollback/serialization, actual readable neighbors, confirmed chapter-end and disposed seek fencing
+PASS phone portrait/landscape versus tablet directory ownership and bounded persistent column
+(node:17170) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS SDK restore preserves same-index 0..1 with/without synchronous callback; actual publish and tile requests include the same next row
+PASS actual post-frame Scroller samples three visible tiles, short-content rectangles and an eight-tile cap shared with publication
+PASS invalid indices, unavailable rectangles and unmeasured height retain the last valid range
+PASS native layout events preserve restore; supersession, real touch, later scroll and close fence obsolete timer/frame work
+Boundary: actual installed ETS-generated methods/callbacks and SDK property runtime; native Scroller geometry/frame delivery are controlled inputs, not platform layout, pixels or device proof.
+(node:17225) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual multi-page viewport keeps exact display leases and ready metadata; far navigation/close retire once, budget stays eight
+PASS precise visible pending tiles join one decode; far selection fences and releases late pixels
+PASS retained visible tile survives cancelled header reentry without an orphan pending marker or widened prefetch
+(node:17226) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS 50 identical real Controller windows publish no unchanged state and do not decode or release pixels
+PASS pending joins are silent while new attempt, failure, retry, ready and tile retirement still publish
+PASS silent unchanged window still performs late metadata resource cleanup exactly once
+navigation performance static contract: PASS
+PASS: production proxy/DNS/transparent-gateway admission, selected-network exclusions, PAC, network changes and structured errors
+PASS: actual HTTP hop preserves URL/system proxy, never pins proxy DNS, direct DNS queried once
+(node:17231) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS: cancelled never-settling HTTP frees DNS lease; queued cancellation preserves predecessor and same-host recovery
+PASS: vendored SDK emits a legal CoreError code and preserves Host network semantics, message and retryability through NAPI JSON
+PASS: native proxy getter failures/missing API/invalid return preserve fixed operation and numeric code without leaking native messages or guessing DIRECT
+PASS: undefined/null/wrong-type results from each native proxy API identify the exact operation
+PASS: API 23 active PAC getter replaces throwing legacy getter; numeric string native codes survive without retaining messages
+PASS online/cached Core directory legacy levels 1..32 preserved; invalid levels rejected; group readability unchanged
+performance regression contracts: PASS
+physical phone Figma layout regressions: PASS
+PASS: exact source, pinned old revision, idempotent correction, Core-tested rule identity; actual legacy v6/v7→v8 preserves discovery edits/deletions and rejects content edits
+(node:17252) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+portable JSON local/online import boundary: PASS
+Qidian builtin directory correction: PASS
+{
+  "contract": "PH110 full production appearance lifecycle",
+  "memberCount": 145,
+  "boundary": "actual SDK compiler and property runtime; native Scroller, font service and child rendering instrumented; no device pixels",
+  "results": [
+    {
+      "custom": false,
+      "endpoint": 0,
+      "status": "PASS",
+      "mountedNodes": 127
+    },
+    {
+      "custom": false,
+      "endpoint": 1,
+      "status": "PASS",
+      "mountedNodes": 127
+    },
+    {
+      "custom": true,
+      "endpoint": 0,
+      "status": "PASS",
+      "mountedNodes": 130
+    },
+    {
+      "custom": true,
+      "endpoint": 1,
+      "status": "PASS",
+      "mountedNodes": 130
+    }
+  ]
+}
+(node:17259) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS Make V9 appearance: real selection handlers, stale menus, scroll/viewport placement, Quick/Full swatches and persisted theme identity. Native pixels remain separate.
+(node:17281) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader appearance Figma N per-actor driver: PASS
+reader appearance Figma N fixture: PASS
+reader appearance measured-screen gesture: PASS
+reader appearance Figma N sampler: PASS
+reader appearance master motion state: PASS
+reader appearance unified production tree (structural only): PASS
+(node:17311) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"passed":true,"scenarios":18,"cases":["20→21→22:paged:ACK","20→21→22:continuous:ACK","queued-old-layout","obsolete-reject","obsolete-wrong-anchor","current-reject","obsolete-generation","unmount","cold-first-page","cold-projection-reflow:paged","cold-projection-reflow:continuous","theme-immediate-during-reflow","page-turn-defers-latest-appearance","measured-page-copy-and-adjacent-DTO","SDK-slot-bindings-initial-and-update","native-batch-uses-latest-intent","negative:old-stage-binding","negative:obsolete-ACK-publication"],"boundary":"Actual production methods/classes and SDK Builder closure inputs with controlled Core receipts; no assertion of native reactive scheduling, paint frames, device flicker or user acceptance."}
+(node:17348) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader appearance shared store, page races and persistence recovery: PASS
+appearance Preferences adapter migration and persistence compatibility: PASS
+application appearance background flush and teardown isolation: PASS
+PASS appearance theme extension: 8 unchanged, 9/12/24 geometry, registry cache, quick/full scroll reversal, SDK selection
+(node:17358) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader appearance pure/static contract: PASS
+automatic reading coordinator: deadlines, 500 ms presentation isolation, full reading interval, interruption and commit barrier PASS
+(node:17382) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+automatic reading coordinator: deadlines, 500 ms presentation isolation, full reading interval, interruption and commit barrier PASS
+reader Full Auto Page pure/static contract: PASS
+AutoPage actual SDK Builder bounds, single current value, Quick +/- and Full range, 84 reversible samples PASS
+(node:17403) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader auto-page pure state: PASS
+automatic reading coordinator: deadlines, 500 ms presentation isolation, full reading interval, interruption and commit barrier PASS
+Auto Full timer actual SDK Builder parent/child width budget, original306 baseline, 42 retained reversible poses, wheel paint Prop and mutation PASS
+(node:17409) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+automatic page start production methods: origin profiles/preparation, ordered single ACK, stale events, no pre-ACK progress, immediate cancellation, same-generation rollback and manual regrab PASS
+automatic start missing-event/ACK watchdog and rejected frame scheduling converge safely without progress writes PASS
+(node:17417) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual image/TTS consumers without Base64 API, PCM headroom, late network/player rejection, old-release race and completion resource release
+(node:17430) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader book-turn architecture contract: PASS
+automatic bridge: 35 checks, 0 failures
+automatic profile, token transport and bridge declarations: PASS
+event delivery: 22 checks, 0 failures
+bookturn_motion_test: 1062 checks, 0 failures
+373 checks, 0 failures
+scenario: successful next turn
+scenario: previous turn (reverse direction)
+scenario: stale confirmations rejected
+scenario: rollback clears after ArkUI restoration
+scenario: rapid consecutive turns, late stale release
+scenario: cross-chapter texture refresh during retention
+scenario: slow progress storage holds the terminal frame
+scenario: arkui presentation timeout keeps the terminal frame
+scenario: page exit (detach) and re-attach
+scenario: detach drops stale surface mailbox work
+scenario: window reflow during retention
+754 checks, 0 failures
+reader book-turn motion state: PASS
+T01 roll-radius PASS (390->42.9000, 200->28.0000, 1000->64.0000)
+T02 schedule bijection+boundaries PASS (worst roundtrip 1.79e-07 over 1001 samples)
+T03 INV-1 no-freeze PASS (next: least step 0.566vp, final fold 0.000vp; previous: least step 0.975vp, initial fold 0.000vp)
+T04 INV-2 no-commit-pop PASS (next tau=1: maxX 0.000vp <= 11.70, maxZ 0.000; prev commit maxX 390.000vp, maxZ 0.000; worst coverage step -1.089vp over tau 0.75..1)
+T05 INV-3 cancel-reversal PASS (worst |reverse-forward| 0.00e+00 vp over tau0 0.2/0.4/0.6/0.8)
+T06 previous semantics PASS (31 same-edge points worst schedule diff 0.00e+00; start maxX 0.000vp, commit maxX 390.000vp)
+T07 S3/S4 schedule deviation PASS (worst beta 0.00e+00 rad <= 8.73e-03, worst radius 2.60e-07 vp, worst |gripPhi-beta| 0.00e+00)
+T08 C1 seam at tau=0.5 PASS (worst |dAxis| 0.4605 vp (bounds 2/1/0.5), worst |phi-pi| 0.00e+00)
+T09 milestone phi=pi/2 + continuity PASS (crossing delta 14.868 vp vs 14.868 expected, edge.x 375.1; regular worst 0.0351 rad, S5 schedule worst 0.157 rad <= 0.2, onset worst 0.631 rad [documented scope])
+T10 developability PASS (a: A-grade cylinder worst 6.57e-05 <= 1e-3; b: strict phi<=pi/4 p95 6.104e-05 max 5.293e-04 vs 1e-3/5e-3; band p95 2.078e-02 max 2.082e-02 vs 2.5e-2 [2026-08-30 apex-law recalibration, pi*r'=0.0432])
+T11 binding-edge PASS (a: theta=0 worst x 0.00e+00, y 0.00e+00, z 0.00e+00; b: theta=54deg worst 0.000 vp at tau=0.00)
+T12 touch error (fit segment) PASS (worst screen-plane err 3.05e-05 vp <= 1.0; solver targetError incl. curl z up to 84.96 vp — scope note)
+T13 free-edge inside page (fit segment) PASS (min 0.000 >= -0.26, max 378.072 <= 390.26)
+T14 purity PASS (field-exact repeats, with and without previous)
+T15 stage boundaries PASS (FLAT@W, LIFT@x(0.09), FLIP@x(0.3), ROLL@x(0.6), SPINE@x(0.8), COLLAPSE@x(0.95))
+T16 tilt regressions PASS (cap 57.184 deg <= 60.0001, jitter 1.273 deg <= 2, sweep worst 0.00278 rad <= 0.02, zero-signbit +0/-0 honored)
+T17 verticalPrevious smoke PASS (edge.x W/200/0 all finite, tilt within cap)
+T18 strict three-branch PASS (anti-M second diff 6.866e-05 <= 1e-4; seam steps f 0.5000 z 0.5000 <= 0.501 at step 0.5)
+235 checks, 0 failures
+scenario: successful next turn
+scenario: previous turn (reverse direction)
+scenario: stale confirmations rejected
+scenario: rollback clears after ArkUI restoration
+scenario: rapid consecutive turns, late stale release
+scenario: cross-chapter texture refresh during retention
+scenario: slow progress storage holds the terminal frame
+scenario: arkui presentation timeout keeps the terminal frame
+scenario: page exit (detach) and re-attach
+scenario: detach drops stale surface mailbox work
+scenario: window reflow during retention
+754 checks, 0 failures
+native presentation owner: uploaded identity, matching slot ACK, stale upload and single bitmap release PASS
+(node:18141) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Production Surface recovery: unwritten rollback, uncertain write retention, promoted completion, late failure PASS (7 scenarios)
+(node:18156) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader bookmark panels static contract: PASS
+reader bookmark projection behavior: PASS
+PASS unmapped remote references keep original quotes/notes/ownership, expose separate unverified location, and never use new-body percentages; current scopes and local anchors remain usable
+PASS PH86 normal motion: 6 completion orders/12 lifecycles without intermediate inversion; cancelled/failed/page-invalidated/duplicate/old ACK cases
+PASS PH86: 20 real chrome/bookmark Builder geometries, clock/title/cutout separation, native visibility, gesture threshold/rebound/ACK and page/book ownership
+PASS PH86 actual SDK Stage/slot/ReadingSurface/Chrome Prop chain across drag and rebound; outer viewport clip retained
+(node:18178) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS brightness cancel UI: issued ACK, preview retention, cancelled pending, newer intent, failed write convergence
+(node:18216) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader brightness control contract: PASS
+PASS brightness: HLG low-range allocation, 991 inverse samples, two-way pending toggle, system observation races, and SDK shared track clip
+(node:18235) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader brightness production writer: PASS (held MOVE, coalescing, ownership, restore, failure, cancel, microtask tail)
+PASS brightness Cancel settles in-flight success/failure, drops pending, and isolates Window owner
+PASS brightness failure boundaries: stale Window/owner lookup, current rejection, synchronous properties failure and subsequent drain
+PASS atomic cache-only gateway: hit, miss, explicit refresh, old Core, online read, context recovery, cancellation
+{"name":"tts/paused/tap or timer: retained page survives hidden measurement","status":"PASS"}
+{"name":"tts/paused/gesture release: retained page survives hidden measurement","status":"PASS"}
+{"name":"tts/interrupted/tap or timer: retained page survives hidden measurement","status":"PASS"}
+{"name":"tts/interrupted/gesture release: retained page survives hidden measurement","status":"PASS"}
+{"name":"autoPage/paused/tap or timer: retained page survives hidden measurement","status":"PASS"}
+{"name":"autoPage/paused/gesture release: retained page survives hidden measurement","status":"PASS"}
+{"name":"autoPage/running/tap or timer: retained page survives hidden measurement","status":"PASS"}
+{"name":"autoPage/running/gesture release: retained page survives hidden measurement","status":"PASS"}
+{"name":"freeze release remains an observed dependency of the real capsule If","status":"PASS"}
+{"name":"chapter loading retains the capsule while the committed reading body remains visible","status":"PASS"}
+{"name":"first load, real failure, controls, obstruction and exit still hide the capsule","status":"PASS"}
+{"name":"a no-animation gesture rollback releases its held capsule snapshot","status":"PASS"}
+{"name":"a direct gesture commit releases session state and countdown updates","status":"PASS"}
+(node:18252) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:18275) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual Index chapter download + production safe classifiers + existing Toast: current DNS visible; source/book/closed/generation stale silent; three cancellation shapes silent; fixed storage/timeout/unknown copy excludes secrets; success bookmarks and active-key fencing preserved; unavailable UI cannot reject download settlement
+PASS actual SDK stage/slot/texture -> ReadingSurface and native resource owner: measured title/body origin stable through resident promotion, warm update, old-live/texture negative control, legacy array, empty owner and non-first page
+(node:18300) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader Chinese conversion gateway contract: PASS
+reader cold-entry recovery contract: PASS
+reader content business isolation: PASS
+local Core versions + content-mutation visible-position confirmation and migrated-anchor reload: PASS
+(node:18325) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS negotiated cursor wire, legacy fallback, one-shot close, stale/late cleanup, single continuation, stable dedup and visible failure
+(node:18332) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:18341) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH117 actual content-search Gateway/LRE typed errors, retry/cancel, and processing-ACK retained-row invalidation PASS
+PH90 actual SDK field Builder: full visual field requests unique native input focus, disabled/unmounted/failure guards; geometry unchanged PASS (not native IME acceptance)
+(node:18355) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"contract":"PH90 native List","reports":[{"count":50,"maxNativeDemand":14,"finalDataCount":100},{"count":2000,"maxNativeDemand":14,"finalDataCount":2050},{"count":10000,"maxNativeDemand":14,"finalDataCount":10050}],"sdkLazyProviderVerified":true,"boundary":"SDK bindings, policy and paint equations passed; actual Ace range admission and pixel timing require VM validation"}
+(node:18364) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:18377) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"baseline":false,"sdk":{"path":"/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib","classesSha256":"6140bfa5cf6705ddee40349c2e082083778a920f0ff870cc51dccb0f030ccbd5","layer":"actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels"},"componentSha256":"b337116f993cda9598e0857f728d271b7f4cd53a03e1c846cdde7dd49320d159","scenarios":[{"count":0,"payloadHandoffMs":0.0003749999999627107,"legacyDeepCopies":0,"dataPublishMs":0.4023329999999987,"buildMs":0.4352079999999887,"replayMs":0.07833299999998644,"linearFindVisits":0,"mountedRows":0,"nativeRequestedIndices":[],"providerTotalCount":0},{"count":50,"payloadHandoffMs":0.00033400000000938235,"legacyDeepCopies":0,"dataPublishMs":0.09766700000000128,"buildMs":1.6476669999999558,"replayMs":1.32587500000011,"linearFindVisits":0,"mountedRows":8,"nativeRequestedIndices":[0,1,2,3,4,5,6,7],"providerTotalCount":50},{"count":500,"payloadHandoffMs":0.00041600000008656934,"legacyDeepCopies":0,"dataPublishMs":0.14879099999996015,"buildMs":0.7073329999999487,"replayMs":0.4217909999999847,"linearFindVisits":0,"mountedRows":8,"nativeRequestedIndices":[0,1,2,3,4,5,6,7],"providerTotalCount":500},{"count":2000,"payloadHandoffMs":0.00029200000005857873,"legacyDeepCopies":0,"dataPublishMs":0.17020899999999983,"buildMs":0.8997080000000324,"replayMs":0.2919999999999163,"linearFindVisits":0,"mountedRows":8,"nativeRequestedIndices":[0,1,2,3,4,5,6,7],"providerTotalCount":2000}],"emptyEntryAndTypingCoreCalls":0,"cumulativePagination":{"pages":40,"pageSize":50,"results":2000,"lateGenerationRejected":true},"boundary":"Actual SDK row generation follows explicit requests at the native LazyForEach boundary; the full source is unsliced. No native range-selection, same-frame paint, IME or device frame-time claim"}
+{"passed":true,"sdk":{"path":"/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib","classesSha256":"6140bfa5cf6705ddee40349c2e082083778a920f0ff870cc51dccb0f030ccbd5","layer":"actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels"},"componentSha256":"b337116f993cda9598e0857f728d271b7f4cd53a03e1c846cdde7dd49320d159","rows":2000,"morphSamples":21,"payloadPropCopies":0,"appended":50,"finalDataSourceCount":0,"dataNotifications":{"initialReloads":1,"morph":0,"metadata":0,"added":50,"changed":[1999],"idleReloads":1},"boundary":"actual SDK compiler + property/proxy dispatch; no native List/IME/renderer timing"}
+(node:18394) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS continuous initial-attach: prepared owner before attach, one jump, title, legal EOF semantic fence, identity replacement, native input ownership, release and stale callback rejection; pixels remain a VM gate
+(node:18401) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+continuous production pointer, same-row anchor and trailing exit commit: PASS
+production batched image reflow preserves leading fragment fraction and concurrent scroll: PASS
+(node:18419) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+continuous mode change save/error/obsolete ownership and late stop receipt: PASS
+production continuous cold-entry projection branch observes its reactive revision: PASS
+continuous scalar quantization: five positions, 100 repeat round trips each: PASS
+continuous restore suppresses premature stops and unknown-geometry progress writes: PASS
+continuous padded viewport: native line offsets at START, positive y and negative y round trips: PASS
+native List shared pointer ownership: quiet DOWN, extra finger, UP/CANCEL/disable/unmount, late drain: PASS
+production continuous image row identity: decoder admission replaces placeholder, unchanged siblings retained: PASS
+continuous short tap and stationary long UP share paged 500ms clock boundary: PASS
+continuous-to-paged anchor: warm/cold/partial/foreign layout, containing page only: PASS
+measured prefix whitespace gaps match complete canonical page identity: PASS
+native List queued programmatic scroll cannot inherit prior multi-finger manual chapter-edge ownership: PASS
+PASS native continuous insertion notifications preserve original rows and exact intermediate source state
+reader continuous reading and canonical progress pipeline: PASS
+(node:18440) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Control accessibility: actual Host close/Back + SDK virtual-node mounted observers PASS; NOT native screen-reader acceptance
+(node:18448) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control shared actor geometry: production bidirectional/concurrent/pure sampling PASS
+reader control appearance production geometry + independent source endpoints: PASS (810 ordered import drag cases)
+Reader control backdrop publication: stable array/rect identity across motion PASS
+(node:18476) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control backdrop DOWN ownership and one-shot raw tap: PASS
+Actual SDK nonempty bookmark row: mounted reversible actors, live metadata/identity and clip mutations PASS
+PASS bookmark production geometry, native row-height extent binding and same-open anchor continuation; NOT native visual acceptance
+PASS actual quick/full bookmark row Builders preserve historical excerpt, separate location/owner labels and retain latest admitted click proof
+(node:18492) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:18501) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control bookmarks: production merge/async ownership/failure retry PASS; wiring assertions are not native acceptance
+PASS real post-refresh bookmark load/merge preserves volume heading and chapter navigability, current title/download facts and original TOC
+(node:18504) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Bookmark mutation recovery: actual Index CRUD/reload and Host error/retry functions PASS; not native acceptance
+reader control independent FullContentSurface source geometry and single-background wiring: PASS
+Device probe actual runtime closures: ticket/dry-run/SHA/auth-denial/DOWN-based sampling/revocation PASS (mock transport only; no HDC/device/filesystem writes).
+reader control directory content: structural wiring passed (not runtime or visual evidence)
+Production directory model: late load, centering ownership, route/data independence PASS
+Production Directory virtual-row capture, fraction, frame coalescing and late-user-input guards PASS
+Production Directory rapid tab replacement, endpoint anchor release and user-scroll ownership PASS
+Production Directory finite-tail Quick→Full→Quick semantic anchor restoration PASS
+(node:18521) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control geometry parameter contract: PASS
+reader control bounded finger residue and distinct continuation timings: PASS
+reader control gesture production driver behavior: PASS
+PASS global presentation: shared policies, production actor-local clips, retained overflow, actual SDK font content/outline separation and reversal; device evidence separate
+(node:18531) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH48/49/55 PASS: authoritative grabber actor, actual Host/native-parent admission, 7 modules x Quick/Full reversal, 28 hidden-hold UP/CANCEL paths, .2/.7/1 captured-visibility driver crossings, tap, actual Slider End/Click; two negative mutations rejected. Native compositor/physical touch remains separate.
+PASS actual SDK cold-control subtree omission, first-open command and retained close ownership
+(node:18550) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control source FullHeader geometry + mounted SDK closure roundtrip: PASS
+(node:18596) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control Host: actual SDK V1 member transform reproduces dropped accessor; ordinary-method input/backdrop gates PASS
+Reader control Host input: actual production methods PASS (not device hit-testing/visual acceptance)
+(node:18615) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control keyboard: production visibility/Back/hide failure cases PASS; structural Host wiring PASS (not native IME acceptance)
+Reader control keyboard layout: actual Host methods/binding dependency and 414→700vp budget PASS (not native IME acceptance)
+(node:18629) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader control Host session: production projection, command, close-commit and lifecycle cases PASS
+Reader control Host wiring: structural checks PASS (not ArkUI execution or visual acceptance)
+Reader control input routing: PASS (actual SDK Header ancestor/child callback, 7 modules, runtime + Link delivery; native touch remains VM evidence)
+(node:18644) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control integration event ownership, CANCEL, and exact mixed-path behavior: PASS
+PASS internal/user selection ownership: actual Host methods, stale reopen, TTS/projection negative mutations and committed-close semantics; NOT device acceptance
+(node:18660) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control atomic layout rebase production policy: PASS (no Stage/runtime visual claim)
+reader control list positioning: production policy tests passed
+PASS PH110 playback anchors: TTS/AutoPage reject unbound or non-finite full measurements, retain quick measurements, resume accurate full reporting after binding
+PASS PH110 replacement source: unbound reset remains pending, binding replays it once and admits the confirmed native position
+PASS PH110 TTS configuration: missing native offset retains the saved display anchor without a synthetic zero or state write
+PASS shared scroll lifecycle: 5 actual component adapters, latest-offset handoff, held endpoint reversals, delayed native reset, shared/full-only roles, new expansion top; NOT visual acceptance
+(node:18673) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+MR1 archived show/hide capture absent; optional evidence checks skipped
+PASS reader control motion geometry (production functions; no runtime/visual claim)
+PASS all control modules 320/260/200/220, initial opening 220, remaining-distance release, hold/regrab/reverse, monotone velocity continuation; device acceptance separate
+PASS TTS softened-content trial: nonzero middle fade, reversible content-only blur, Full details retain their original reveal, offscreen outlines, actual mounted SDK paint observers; NOT device visual acceptance
+(node:18692) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control narrow-width contract: PASS (10 viewport widths)
+{"result":"PASS","layer":"real upstream 5.0 attribute diff + production modifier; not native layout or VM performance","mountedNodes":13,"mountedCalls":156,"poses":120,"legacyAttributeCalls":24960,"patchedAttributeCalls":7440,"reductionPercent":70.19,"reverseResizeBusinessAndCallback":"PASS"}
+(node:18703) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader-control-p0 static contract: PASS
+Actual SDK Auto/TTS mounted Builder observers: reversible actor geometry + live strings/numbers/booleans/child Prop payloads PASS
+Reader control playback: live-track geometry, child clipping/min-height, persistent content, actual measurement identity, SDK syntax and 5 mutations PASS
+(node:18717) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader playback Host intents: PASS (production methods; immediate visual, delayed ACK, pause intent, barriers, 350/1750 ownership)
+(node:18728) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:18741) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Replace actual SDK mounted rule font: fixed 12, preserved row tracks, parent-only clip, same rule identity and 4 mutations PASS
+PASS reader-control-replace-content: actual async production methods, confirmation/failure/retry, session and preview dismissal guards; NOT ArkUI pixel evidence
+{"name":"actual TextInput uses explicit compact geometry and live app-theme text without repeating label","status":"PASS"}
+{"name":"actual editor has distinct back and fixed bottom save/cancel outside scrolling fields","status":"PASS"}
+{"name":"actual reading draft uses real book/source defaults and editing/global creation remain independent","status":"PASS"}
+{"name":"save failure retains draft, confirmed save closes, cancel performs no write and pending Back cannot dismiss","status":"PASS"}
+{"name":"same mounted footer reacts to mutation, uncertain writes and endpoint input guards","status":"PASS"}
+{"name":"actual standalone settings Add action has no inherited reading scope","status":"PASS"}
+PH52–54 actual SDK editor and business behavior PASS (6 groups); no device evidence.
+PASS reader-control-replace-gateway: real production requests, all rules, lossless partial CRUD, guards, receipts, preview and replace-only bundle
+archived replace motion capture absent; optional source-value checks skipped
+PASS reader-control-replace-geometry: production endpoint/midpoint sampling, widths and one-tree wiring; NOT native pixel acceptance
+(node:18771) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS Replace Host actual methods: reopen/import canonical read, stale reads, write ownership, uncertainty and Promise rejection; NOT device acceptance
+PASS reader-control-replace-state: canonical all rows, partial/full guards, uncertainty, import and stale sessions
+reader control original-operation resume, MR1 timing and mixed restoration: PASS
+Production control runtime: seven modules, frame revocation, regrab, close, lifecycle PASS
+Production Panel scalar projection: seven modules x 101 frames retain route identity and current input state PASS
+(node:18782) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS Search scroll: production row projection, source origin/end-padding, both-end reachability, guarded async rebase, clamp/user continuation, callback ownership and 9 mutations; NOT device acceptance
+(node:18788) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Actual SDK normalized List: parent clip, authored child origin, extent, same-instance roundtrip PASS
+Actual SDK Search/Settings mounted Builder observers: live payload/geometry/capability/switch changes PASS
+PASS Search/Settings real actor geometry + production callback methods; not native/visual acceptance
+(node:18793) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control selection production reconciliation: PASS
+PH93 refreshed body and processing versions gate actual error recovery, even at identical chapter/scalar PASS
+reader control selection transaction: production ownership/commit policy passed
+reader control session production state behavior: PASS
+reader control shared spatial sampler and inverse production behavior: PASS
+reader control Stage composition + diagnostic timing wiring: PASS (structure only; not pixels/touch)
+reader control Stage lifecycle: production adapter methods passed (mock frame queue; not native/touch/visual acceptance)
+(node:18819) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Native diagnostic production parser: 4 valid + 18 malformed plans, CLI and non-injecting host gates PASS; authorization/runtime cleanup not executed.
+PASS Make TTS: scroll-aware crossing occlusion, reverse poses, narrow layout, explicit timer modes, five-minute range and precise speed callbacks
+(node:18919) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader control diagnostic cold-start production admission + packaging wiring: PASS
+(node:18945) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"PH108: real SDK If observes the control visibility edge with extension enabled","status":"PASS"}
+{"name":"PH108: every theme-only change invalidates page textures without repagination","status":"PASS"}
+{"name":"PH108: shell repaints the reader band above directory and source-switch overlays","status":"PASS"}
+{"name":"PH104: moving launch blocks native captures and adjacent preparation, hold resumes","status":"PASS"}
+{"name":"PH107: native volume subscriptions are absent in controls, overlays and background","status":"PASS"}
+{"name":"PH107: actual InputKit host releases partial registrations, deduplicates and disposes","status":"PASS"}
+{"name":"PH106: import stays an action; a separate selected custom font survives restore and reorder","status":"PASS"}
+{"name":"PH106: actual font Host registers persisted sandbox font through file URI","status":"PASS"}
+{"name":"PH105: download feedback starts immediately, verifies completion and ignores stale owner","status":"PASS"}
+custom font boundary: pre-copy and changing-provider limits, failed-load cleanup, active-font preservation PASS
+PASS PH114 200 production geometry cases and actual reader cache/signature/reflow: body follows measured information lanes, clears cutouts, survives chrome timing and preserves its scalar anchor. No device pixel claim.
+(node:19000) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:19011) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual cutout settings/reflow: control open/closed, both directions, unchanged native geometry, save rollback, stable reading anchor and stale lifecycle isolation
+(node:19027) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH116 actual entry/recovery/source-switch methods: immediate local/remote routes, exact target session reuse, scoped callbacks/retries, retained failed transaction, semantic reader identity PASS
+PASS production direct-page presentation: exact intent, input before receipt, late/unknown writes, strong boundaries and exit owner barrier
+(node:19035) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH42 retained EPUB backfill only after directory miss and readable frame: PASS
+PASS production TXT local/TXT tags, case/whitespace normalization, visible-frame admission and stale-session rejection
+PASS same-book manual chapter generation rearms navigation backfill
+(node:19043) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production near-end and prefetch canonical readable boundaries
+PASS accepted-session index rebuilt once, constant-time commits, unknown/group boundaries and stale prefetch ownership
+PASS actual manual shelf refresh -> acquisition -> independent readable prefetch; visible session and directory are preserved
+(node:19056) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader directory business-value snapshot and no-op prop refresh: PASS (native scroll still separate)
+PASS complete bookmark excerpt/proof snapshots, every scope field, removal, excerpt-only and in-place updates
+PASS real FullDirectoryPanel deferred scope/quote-only update retains viewport, keeps morph tree stable, and updates exact click proof at the endpoint
+(node:19060) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual SDK tree rows: v2 wire -> real gateway one-based admission, v1 compatibility, bounded indent and full accessibility actions
+(node:19076) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader directory extent: production lifecycle + wiring passed (not native virtualization/anchor acceptance)
+(node:19083) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS local EPUB directory hierarchy projection, bounded indentation and accessible depth
+reader-directory-markers static contract: PASS
+PH42 tree bookmark, target validation, rank position and debounced query fencing: PASS
+PASS directory disclosure actual SDK Builder: fold/unfold arrow, accessibility and callback capture refresh only the changed row
+PASS directory search actual SDK State dispatch: submit/miss/clear update mounted tree parameters without sorting; plain-query negative control reproduces stale child
+PASS actual SDK directory empty-result presentation without replacing list lifecycle
+PASS directory diagnostics separate disposed query cancellation from active failure
+PASS tree download actual SDK Builder and Core target fencing: day/night states, group exclusion, queued/stale/source guards and download-state refresh
+PASS actual SDK Quick/Full/Surface download prop and callback propagation
+(node:19094) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH42 directory navigation protocol, revision fencing and retained-source backfill: PASS
+reader directory v2 scope and target contracts passed
+directory selection uses independent immutable authority through deferred context
+PASS local/TXT alias dispatch and cancellation preserve TXT body/rules path; EPUB/MOBI-family retain archive path
+reader directory projection behavior: PASS
+(node:19117) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+directory rules editor: full persisted list, preview fencing, default rules and failed-read preservation PASS
+directory hierarchy editor actual SDK Builder syntax PASS
+PASS directory TXT non-empty actual SDK Builder: pattern/level/boundary editing, preview/apply callbacks, delete and add
+PASS TXT rule admission: invalid rules, absent/rejected preview and late cross-book apply are fenced
+PASS shared directory toolbar/chapter row: actual SDK Builders, retained props, actions, marker gates and control wrappers
+(node:19128) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PH42 tree viewport continuity, ancestor accessibility and bounded page cache: PASS
+(node:19139) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production directory: immediate 7-row window, true 1368 total/global position; full search/sort/edges deferred; old lifecycle rejected
+(node:19152) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader drag-follow gate contract: PASS
+dynamic highlight geometry/color/identity and static snapshot separation: PASS; pixels require runtime verification
+(node:19161) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+optional confirmed entry handoff: synchronous real body, ownership/layout fences, old remote image lease removed without mutation, catalog/body byte cap, image/custom-font refusal and annotation isolation PASS
+(node:19165) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:19185) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+production entry milestones: independent barriers, durable ready delivery, quiet later pages and throwing diagnostic sink PASS
+(node:19201) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS entry presentation: all themes, shared confirmed settings, owner isolation, reset/failure, nonblocking window calls and stale callback guards.
+PASS entry text reuse: one Unicode scan through real admission/cropping/handoff, absolute emoji/CRLF/bidi offsets, strict bad-block/scope rejection, bounded text without timers and cooperative full/image paths
+(node:19216) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+entry window: narrow first chapter, global count, stale entry and deferred last-intent selection PASS
+partial catalog: body-only entry, true/unknown edges and deferred manual/auto resume with stale owner rejection PASS
+chapter controls: pending catalog resumes newest step only; stale ownership, errors and real boundaries do not select PASS
+PASS narrow prepared entry handoff and latest in-memory progress precedence
+PASS presented paged entry schedules no automatic full chapter read
+explicit complete-text consumer: post-frame expansion, in-flight save ownership, native page retention, queued turn resume, stale lifecycle/layout rejection and no false EOF/title PASS
+entry range interaction: paged turns prepare/use adjacent facts without full hydration; TTS explicitly awaits complete text and respects cancelled play intent PASS
+PASS expansion atomic admission and cancellation during cooperative indexing
+PASS continuous window initial-restore fence and no false chapter-boundary navigation
+PASS real projection, chapter ownership, native payload handoff, image sizing and paged/continuous width wiring; no pixel acceptance claim
+(node:19234) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Debug-only event-loop probe: strict opt-in, actual delayed ticks, independent windows, bounded lifetime, background/late-load ownership PASS; this is not FPS evidence.
+(node:19247) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader reported feedback regressions: PASS
+(node:19249) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+actual SDK first-page admission: viewport/chapter order, stale selection and adjacent context PASS
+(node:19260) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:19271) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+font demand: checked readiness, lazy serial visible previews, shared loads and retry PASS
+reader HDC target lease serialization: PASS
+PASS actual snapshot/gateway/reading-owner/window: historical current reaches measurement, hydration and real next chapter; selection/TTS isolation and leave revocation. Native shaping is a fixture, not device first-frame evidence.
+PASS partial historical entry full-body expansion reproves implicit current scope; changed identity/version and revoked owner reject
+PASS actual serial progress owner short reopen: durable write before implicit proof, saved offset restored; scope/offset drift, later intent, explicit selection and stale lifecycle reject
+(node:19315) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader Host staging/asset path boundary: PASS
+(node:19352) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Reader Host picker selection boundary: PASS
+(node:19359) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+reader HttpTTS strict gateway: PASS
+reader HttpTTS profile, secret boundary and nullable playback: PASS
+reader HttpTTS URL credential placeholder boundary: PASS
+reader OnlineTTS profile validator and credential alias binding: PASS
+paragraph indent production measurement: Unicode offsets and continued fragments PASS (controlled metrics)
+PASS original paragraph resume and giant-paragraph context fallback, no synthetic prefix or truncated shaping
+PASS deep native paragraph line lookup reads only binary-search path plus one-page overflow
+(node:19389) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:19407) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual initial chapter acquisition overlaps layout; publication/measurement, stale selection, refresh and rejection barriers remain intact
+reading image resolve failed: Error: READING_IMAGE_INTRINSIC_GEOMETRY_MISMATCH
+PASS known image geometry: prepared admission, invalid/remote fallback, original versus decoded sizes, mismatch rejection, forward-independent reverse/continuous geometry, deduplicated late leases, frozen pages, texture invalidation, stale/exit protection and invariant page/progress/scroll anchors. No device pixel claim.
+(node:19418) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: native status composition, navigation underlay and semantic content tone must change atomically from one style
+    at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-reader-layout-architecture.mjs:133:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: "import { display, window } from '@kit.ArkUI';\n" +
+    "import { hilog } from '@kit.PerformanceAnalysisKit';\n" +
+    "import type { BusinessError } from '@kit.BasicServicesKit';\n" +
+    "import { ReaderBrightnessWriter, type ReaderBrightnessWindow } from './ReaderBrightnessWriter';\n" +
+    "import { ReaderStatusBarMeasurement } from './ReaderStatusBarMeasurement';\n" +
+    "import { findReaderTheme } from '../features/common/ReaderThemeRegistry';\n" +
+    'import {\n' +
+    '  ReaderInsetsVp,\n' +
+    '  ReaderRectVp,\n' +
+    '  ReaderDisplayCornerVp,\n' +
+    '  ReaderWindowMetricsSnapshot,\n' +
+    '  createDefaultReaderWindowMetrics,\n' +
+    "} from '../features/common/ReaderWindowMetrics';\n" +
+    '\n' +
+    "export type ReaderWindowChromeOwner = 'app' | 'reader' | 'overlay';\n" +
+    "export type ReaderWindowChromeTone = 'light' | 'dark';\n" +
+    "export type ReaderWindowOrientationPolicy = 'system' | 'portrait' | 'landscape';\n" +
+    '\n' +
+    '/** Semantic reader-owned window behavior; raw Harmony enums stay in this host. */\n' +
+    'export class ReaderWindowPolicy {\n' +
+    '  orientation: ReaderWindowOrientationPolicy;\n' +
+    '  keepScreenOn: boolean;\n' +
+    '  hideStatusBar: boolean;\n' +
+    '  hideNavigationBar: boolean;\n' +
+    '  extendIntoCutout: boolean;\n' +
+    '\n' +
+    '  constructor(\n' +
+    "    orientation: ReaderWindowOrientationPolicy = 'system',\n" +
+    '    keepScreenOn: boolean = false,\n' +
+    '    hideStatusBar: boolean = false,\n' +
+    '    hideNavigationBar: boolean = false,\n' +
+    '    extendIntoCutout: boolean = false,\n' +
+    '  ) {\n' +
+    '    this.orientation = orientation;\n' +
+    '    this.keepScreenOn = keepScreenOn;\n' +
+    '    this.hideStatusBar = hideStatusBar;\n' +
+    '    this.hideNavigationBar = hideNavigationBar;\n' +
+    '    this.extendIntoCutout = extendIntoCutout;\n' +
+    '  }\n' +
+    '}\n' +
+    '\n' +
+    '/** One atomic system-bar visual: the painted underlay and matching foreground. */\n' +
+    'export class ReaderWindowChromeStyle {\n' +
+    '  underlayColor: string;\n' +
+    '  tone: ReaderWindowChromeTone;\n' +
+    "  /** Exact opaque foreground from the owning surface's semantic palette. */\n" +
+    '  contentColor: string;\n' +
+    '  /** Non-empty only when the reader paints the matching full paper below chrome. */\n' +
+    '  paperThemeId: string;\n' +
+    '  /** Image readers paint through both system bands; their content background stays opaque. */\n' +
+    '  transparentSystemBars: boolean;\n' +
+    '\n' +
+    '  constructor(underlayColor: string, tone: ReaderWindowChromeTone, contentColor?: string,\n' +
+    "    paperThemeId: string = '', transparentSystemBars: boolean = false) {\n" +
+    '    this.underlayColor = underlayColor;\n' +
+    '    this.tone = tone;\n' +
+    '    // Keep tone as a compatibility fallback while reader-owned chrome passes\n' +
+    "    // the active theme's exact ink color.\n" +
+    "    this.contentColor = contentColor ?? (tone === 'light' ? '#FFFFFFFF' : '#FF000000');\n" +
+    "    this.paperThemeId = findReaderTheme(paperThemeId)?.id ?? '';\n" +
+    '    this.transparentSystemBars = transparentSystemBars;\n' +
+    '  }\n' +
+    '}\n' +
+    '\n' +
+    'class ReaderWindowChromeRequest {\n' +
+    '  owner: ReaderWindowChromeOwner;\n' +
+    '  style: ReaderWindowChromeStyle;\n' +
+    '\n' +
+    '  constructor(owner: ReaderWindowChromeOwner, style: ReaderWindowChromeStyle) {\n' +
+    '    this.owner = owner;\n' +
+    '    this.style = style;\n' +
+    '  }\n' +
+    '}\n' +
+    '\n' +
+    'interface ReaderWindowChromeDiagnostic {\n' +
+    "  result: 'applied' | 'write-failed';\n" +
+    '  owner: ReaderWindowChromeOwner;\n' +
+    '  revision: number;\n' +
+    '  currentWindow: boolean;\n' +
+    '  expectedStatusBg: string;\n' +
+    '  expectedForeground: string;\n' +
+    '  underlayColor: string;\n' +
+    '  paperThemeId: string;\n' +
+    "  nativeReadback: 'known' | 'unavailable' | 'failed' | 'not-read';\n" +
+    '  nativeBackground: string;\n' +
+    '  nativeForeground: string;\n' +
+    '  errorCode: string;\n' +
+    '  readbackErrorCode: string;\n' +
+    '  metricsRevisionAtRequest: number;\n' +
+    '  statusRectAtRequest: ReaderRectVp;\n' +
+    '  windowRectAtRequest: ReaderRectVp;\n' +
+    '}\n' +
+    '\n' +
+    "const APP_CHROME_STYLE = new ReaderWindowChromeStyle('#F8F4EC', 'dark', '#FF2B241D');\n" +
+    '\n' +
+    '/**\n' +
+    ' * The single HarmonyOS window boundary for Reader.\n' +
+    ' *\n' +
+    ' * It owns Window callbacks and system-bar writes. UI components consume a vp\n' +
+    ' * snapshot and request one semantic underlay/tone style; they never retain Window or\n' +
+    ' * inspect px avoid areas themselves.\n' +
+    ' */\n' +
+    'export class ReaderWindowCoordinator {\n' +
+    '  private static appChromeStyle: ReaderWindowChromeStyle = APP_CHROME_STYLE;\n' +
+    '  private static mainWindow: window.Window | undefined = undefined;\n' +
+    '  private static brightnessWriter: ReaderBrightnessWriter = new ReaderBrightnessWriter(\n' +
+    '    (): Promise<ReaderBrightnessWindow> => {\n' +
+    '      const win = ReaderWindowCoordinator.mainWindow;\n' +
+    "      return win === undefined ? Promise.reject(new Error('Reader main window is unavailable')) :\n" +
+    '        Promise.resolve(win);\n' +
+    '    });\n' +
+    '  private static metricsSnapshot: ReaderWindowMetricsSnapshot = createDefaultReaderWindowMetrics();\n' +
+    '  private static statusBarMeasurement: ReaderStatusBarMeasurement = new ReaderStatusBarMeasurement();\n' +
+    '  private static statusBarHiddenApplied: boolean = false;\n' +
+    '  // A visibility Promise acknowledges the request, not the visible avoid area.\n' +
+    "  // Retain this window geometry's measured band until the reveal is observed.\n" +
+    '  private static statusBarRevealPending: boolean = false;\n' +
+    '  private static windowRectListener: ((options: window.RectChangeOptions) => void) | undefined = undefined;\n' +
+    '  private static displayChangeListener: ((id: number) => void) | undefined = undefined;\n' +
+    '  private static windowSizeListener: ((size: window.Size) => void) | undefined = undefined;\n' +
+    '  private static avoidAreaListener: ((options: window.AvoidAreaOptions) => void) | undefined = undefined;\n' +
+    '  private static desiredChrome: ReaderWindowChromeRequest =\n' +
+    "    new ReaderWindowChromeRequest('app', APP_CHROME_STYLE);\n" +
+    '  private static desiredChromeRevision: number = 0;\n' +
+    '  private static appliedChromeRevision: number = -1;\n' +
+    '  private static chromeFlushRunning: boolean = false;\n' +
+    '  private static appOrientation: window.Orientation = window.Orientation.UNSPECIFIED;\n' +
+    '  private static appKeepScreenOn: boolean = false;\n' +
+    '  private static windowPolicyRevision: number = 0;\n' +
+    '  private static windowPolicyTail: Promise<void> = Promise.resolve();\n' +
+    "  private static desiredWindowPolicyOwner: 'app' | 'reader' = 'app';\n" +
+    '  private static desiredReaderWindowPolicy: ReaderWindowPolicy = new ReaderWindowPolicy();\n' +
+    '  private static appliedPolicyRevision: number = -1;\n' +
+    '  /**\n' +
+    '   * Install/detach race guard. detach() and every install() bump this epoch;\n' +
+    '   * each await inside install() re-checks it, so an async install that has been\n' +
+    '   * superseded (window destroyed, new window installed, or detach) aborts\n' +
+    '   * before registering stale listeners on a dead window or clobbering the new\n' +
+    '   * coordinator state.\n' +
+    '   */\n' +
+    '  private static installEpoch: number = 0;\n' +
+    '\n' +
+    '  static async install(win: window.Window): Promise<boolean> {\n' +
+    '    ReaderWindowCoordinator.detach();\n' +
+    '    ReaderWindowCoordinator.installEpoch += 1;\n' +
+    '    const epoch = ReaderWindowCoordinator.installEpoch;\n' +
+    '    ReaderWindowCoordinator.mainWindow = win;\n' +
+    "    ReaderWindowCoordinator.desiredWindowPolicyOwner = 'app';\n" +
+    '    ReaderWindowCoordinator.appOrientation = win.getPreferredOrientation();\n' +
+    '    ReaderWindowCoordinator.appKeepScreenOn = win.getWindowProperties().isKeepScreenOn;\n' +
+    '    await win.setWindowLayoutFullScreen(true);\n' +
+    '    if (!ReaderWindowCoordinator.installStillCurrent(epoch, win)) {\n' +
+    '      return false;\n' +
+    '    }\n' +
+    "    await win.setWindowSystemBarEnable(['status', 'navigation']);\n" +
+    '    if (!ReaderWindowCoordinator.installStillCurrent(epoch, win)) {\n' +
+    '      return false;\n' +
+    '    }\n' +
+    '    ReaderWindowCoordinator.registerWindowListeners(win);\n' +
+    '    if (!ReaderWindowCoordinator.installStillCurrent(epoch, win)) {\n' +
+    '      return false;\n' +
+    '    }\n' +
+    '    ReaderWindowCoordinator.refreshMetrics();\n' +
+    '    ReaderWindowCoordinator.requestAppChrome();\n' +
+    '    return true;\n' +
+    '  }\n' +
+    '\n' +
+    '  /**\n' +
+    '   * True when `win` is still the installed main window and no newer install\n' +
+    '   * or detach claimed the coordinator during an await boundary.\n' +
+    '   */\n' +
+    '  private static installStillCurrent(epoch: number, win: window.Window): boolean {\n' +
+    '    return epoch === ReaderWindowCoordinator.installEpoch &&\n' +
+    '      win === ReaderWindowCoordinator.mainWindow;\n' +
+    '  }\n' +
+    '\n' +
+    '  static detach(): void {\n' +
+    '    ReaderWindowCoordinator.brightnessWriter.reset();\n' +
+    '    ReaderWindowCoordinator.statusBarMeasurement = new ReaderStatusBarMeasurement();\n' +
+    '    ReaderWindowCoordinator.statusBarHiddenApplied = false;\n' +
+    '    ReaderWindowCoordinator.statusBarRevealPending = false;\n' +
+    '    const win = ReaderWindowCoordinator.mainWindow;\n' +
+    '    if (win !== undefined) {\n' +
+    '      try {\n' +
+    '        if (ReaderWindowCoordinator.windowSizeListener !== undefined) {\n' +
+    "          win.off('windowSizeChange', ReaderWindowCoordinator.windowSizeListener);\n" +
+    '        }\n' +
+    '        if (ReaderWindowCoordinator.avoidAreaListener !== undefined) {\n' +
+    "          win.off('avoidAreaChange', ReaderWindowCoordinator.avoidAreaListener);\n" +
+    '        }\n' +
+    '      } catch (_error) {\n' +
+    '        // A destroyed Window can reject listener removal. The references still\n' +
+    '        // must be cleared so the next stage never reuses stale callbacks.\n' +
+    '      }\n' +
+    '    }\n' +
+    '    if (win !== undefined && ReaderWindowCoordinator.windowRectListener !== undefined) {\n' +
+    "      try { win.off('windowRectChange', ReaderWindowCoordinator.windowRectListener); } catch (_error) {}\n" +
+    "      try { win.off('rectChangeInGlobalDisplay', ReaderWindowCoordinator.windowRectListener); } catch (_error) {}\n" +
+    '    }\n' +
+    '    if (ReaderWindowCoordinator.displayChangeListener !== undefined) {\n' +
+    "      try { display.off('change', ReaderWindowCoordinator.displayChangeListener); } catch (_error) {}\n" +
+    '    }\n' +
+    '    ReaderWindowCoordinator.windowRectListener = undefined;\n' +
+    '    ReaderWindowCoordinator.displayChangeListener = undefined;\n' +
+    '    ReaderWindowCoordinator.installEpoch += 1;\n' +
+    '    ReaderWindowCoordinator.mainWindow = undefined;\n' +
+    '    ReaderWindowCoordinator.windowPolicyRevision += 1;\n' +
+    '    ReaderWindowCoordinator.windowSizeListener = undefined;\n' +
+    '    ReaderWindowCoordinator.avoidAreaListener = undefined;\n' +
+    '    ReaderWindowCoordinator.appliedPolicyRevision = -1;\n' +
+    '    ReaderWindowCoordinator.appliedChromeRevision = -1;\n' +
+    '  }\n' +
+    '\n' +
+    '  static metrics(): ReaderWindowMetricsSnapshot {\n' +
+    '    return ReaderWindowCoordinator.metricsSnapshot;\n' +
+    '  }\n' +
+    '\n' +
+    '  static brightness(): ReaderBrightnessWriter {\n' +
+    '    return ReaderWindowCoordinator.brightnessWriter;\n' +
+    '  }\n' +
+    '\n' +
+    '  static requestAppChrome(): void {\n' +
+    "    ReaderWindowCoordinator.requestChrome(new ReaderWindowChromeRequest('app', ReaderWindowCoordinator.appChromeStyle));\n" +
+    '  }\n' +
+    '\n' +
+    '  static updateAppChromeStyle(style: ReaderWindowChromeStyle): vo'... 25761 more characters,
+  expected: /statusBarColor: ReaderWindowCoordinator\.nativeStatusBarColor\(request\),[\s\S]*navigationBarColor: request\.style\.underlayColor,[\s\S]*statusBarContentColor: contentColor/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v26.0.0
+/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/scripts/check-local.sh failed (1): <no output>

@@ -1,0 +1,52 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: exact R6 image-padding source fails actual SDK actor assertion
+    at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-system-bar-viewport-sdk.mjs:168:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: AssertionError [ERR_ASSERTION]: real SDK Builder/member transform has no diagnostics
+  + actual - expected
+  
+  + [
+  +   {
+  +     message: 'The current component id "reader-manga-offline-probe-status" is duplicate with /tmp/ReaderBuilderProbe.ets:1336:133.',
+  +     pos: 77543,
+  +     type: 'WARN'
+  +   }
+  + ]
+  - []
+  
+      at createReaderBuilderProbe (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:67:10)
+      at mangaFixture (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-system-bar-viewport-sdk.mjs:51:14)
+      at verifyManga (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-system-bar-viewport-sdk.mjs:84:10)
+      at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-system-bar-viewport-sdk.mjs:168:19
+      at getActual (node:assert:580:5)
+      at strict.throws (node:assert:728:24)
+      at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-system-bar-viewport-sdk.mjs:168:8
+      at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+      at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+      at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [
+      {
+        type: 'WARN',
+        message: 'The current component id "reader-manga-offline-probe-status" is duplicate with /tmp/ReaderBuilderProbe.ets:1336:133.',
+        pos: 77543
+      }
+    ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  },
+  expected: /image ancestor has no safe-area reservation/,
+  operator: 'throws',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

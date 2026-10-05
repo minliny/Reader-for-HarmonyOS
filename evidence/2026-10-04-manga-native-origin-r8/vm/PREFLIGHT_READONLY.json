@@ -1,0 +1,29 @@
+{
+  "at": "2026-10-04T00:27:05.197545+00:00",
+  "vmName": "Mate 80 Pro",
+  "vmPath": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+  "hostPid": 32275,
+  "hostPidObservedInReadOnlyPs": true,
+  "hostInstanceTrace": "trace_45645_commandPipe",
+  "hdcServer": "127.0.0.1:8710",
+  "currentDiscoveredTargets": [
+    "127.0.0.1:5555"
+  ],
+  "exactTarget": "127.0.0.1:5555",
+  "bootCompleted": "true",
+  "sceneBoardPid": 15675,
+  "emulatorBootCompletedLine": "2026-10-01 20:05:05.849 6438891520 [Info] [QemuManager.cpp(EmitGuestOSBootComplete:131)]Guest OS Boot Completed!!",
+  "nativeOwnershipEvidence": "architecture root UNEXPECTED_ROUTE_STATE.json records targetLeaseReleased true and stopped native actions; current manga-completion thread works on isolated Core/Host code; lease directory had no lock at acquire",
+  "probeSessionNonce": "5479f9aa-3cd5-4f30-a8b6-cd7197d3e2f4",
+  "onlyReadOnlyOps": [
+    "targets",
+    "boot",
+    "sceneboard",
+    "hilogHelp"
+  ],
+  "leaseReleased": true,
+  "appActions": "NOT_SENT",
+  "numericTranscriptSHA256": "f8b88ac67766661768464d43d3c7ee3b4b80a1b1548de32901b5595f55bb8020",
+  "dataCompatibility": "OPEN source-only comparison in progress",
+  "install": "NOT_SENT"
+}

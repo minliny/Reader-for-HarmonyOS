@@ -1,0 +1,7 @@
+{
+  "status": "PASS",
+  "publicJsonRecordsChecked": 10,
+  "privateKeyCertificateOrPasswordFieldPayloadsDetected": false,
+  "frozenSourceDeltaMetadataFilesChecked": 11,
+  "frozenSourceDeltaMetadataUnchanged": true
+}

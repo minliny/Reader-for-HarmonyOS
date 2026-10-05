@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "inputs": [
+    "Reader-Core-Native/governance/workspace",
+    "Reader-Core-Native/scripts/sync-workspace.mjs",
+    "Reader-Core-Native/scripts/validate-workspace.py",
+    "README.md",
+    "ARCHITECTURE.md",
+    "HAP_BUILD_SYSTEM.md",
+    "scripts/check-development.sh",
+    "scripts/check-hap-build-system.mjs",
+    ".agents/skills/reader-harmonyos-hap-pipeline",
+    ".agents/skills/reader-cross-platform-delivery"
+  ],
+  "fileCount": 18,
+  "fingerprint": "06641c99065ad9042257bf0b51568b9680b45adf6f7c8ccd3c7a31a2a7ed35e7",
+  "files": [
+    {
+      "path": ".agents/skills/reader-cross-platform-delivery/agents/openai.yaml",
+      "type": "file",
+      "mode": 420,
+      "bytes": 333,
+      "sha256": "14cfb03e8a0b9f054af2afd666ca285b0ba3aaf398f02bc785bea79c7876a59a"
+    },
+    {
+      "path": ".agents/skills/reader-cross-platform-delivery/references/harmonyos-build-install.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 977,
+      "sha256": "0872023682b85bd7b1f56094ba261c91079d5b5949269dcc13e68af6d4b74b63"
+    },
+    {
+      "path": ".agents/skills/reader-cross-platform-delivery/references/official-tooling.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5878,
+      "sha256": "182fee7f2048de80100b125491eccb3586e25eb95f2b3880fc4e0be156cb1c5f"
+    },
+    {
+      "path": ".agents/skills/reader-cross-platform-delivery/references/platform-readiness.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2554,
+      "sha256": "5d13e36eb0f533b84aa6a443b4b5a5f5db9723060543ccbca08aa70f9dcd4d8f"
+    },
+    {
+      "path": ".agents/skills/reader-cross-platform-delivery/scripts/harmony-preflight.sh",
+      "type": "file",
+      "mode": 493,
+      "bytes": 206,
+      "sha256": "8a2be1447455a4923974bb734c1bb8abf3b5ca54a9bf21ae11dee23b4700cd7a"
+    },
+    {
+      "path": ".agents/skills/reader-cross-platform-delivery/SKILL.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4753,
+      "sha256": "bc4ca5ea353839223ee0b2151a7309a490d8726572bc59c98ee1654536653fa9"
+    },
+    {
+      "path": ".agents/skills/reader-harmonyos-hap-pipeline/agents/openai.yaml",
+      "type": "file",
+      "mode": 420,
+      "bytes": 316,
+      "sha256": "8d2155207122a707b1cc06758f8df5cf609ef2e893e8f239f90f5a38a3fed4a4"
+    },
+    {
+      "path": ".agents/skills/reader-harmonyos-hap-pipeline/references/build.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2218,
+      "sha256": "e4cb19473a18439d90f961a764492bdd88bcbe5938fa40bbba8251d865fcb58a"
+    },
+    {
+      "path": ".agents/skills/reader-harmonyos-hap-pipeline/references/deploy.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1850,
+      "sha256": "07efb40a24f39ece7ebfac47b027be90c0ec18b5fdf804b7bc19c2d0e032edaa"
+    },
+    {
+      "path": ".agents/skills/reader-harmonyos-hap-pipeline/SKILL.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3099,
+      "sha256": "7af203f08659a264704ce1f1d3b6df74738d9e7e73479c01b02bea348fb1342b"
+    },
+    {
+      "path": "ARCHITECTURE.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6669,
+      "sha256": "e9af2190d2b18dec3e9b520e6319a99bd8645a264eb6e14970bd4eb00dd9faa7"
+    },
+    {
+      "path": "HAP_BUILD_SYSTEM.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 11790,
+      "sha256": "cfdb80439cbe8a0e9eba05fd9b8cd9b3e120e79e453104ea90eb1333f63f04de"
+    },
+    {
+      "path": "Reader-Core-Native/governance/workspace/workspace.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2284,
+      "sha256": "ab27adca7122039cd5bc1eb017e0a935b7e9cfb9519c8f2270ba4790f6ff9f84"
+    },
+    {
+      "path": "Reader-Core-Native/governance/workspace/workspace.schema.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2247,
+      "sha256": "7168925db841cd38f19a055c82bb114425235fca8a14eb75d7656cb519aa8492"
+    },
+    {
+      "path": "Reader-Core-Native/scripts/validate-workspace.py",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5140,
+      "sha256": "8d5f284d526482ca25fb61e3d062c8a3dc2c06b4e1fc76299869425cf455e432"
+    },
+    {
+      "path": "README.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 8195,
+      "sha256": "9f87249787c28f766035e347a3c519679e7f5f409210771f735d53557952964e"
+    },
+    {
+      "path": "scripts/check-development.sh",
+      "type": "file",
+      "mode": 493,
+      "bytes": 1291,
+      "sha256": "6dded1a4e424dd70426384c7636397bc2f8c4052040e69af86af87c78c401c88"
+    },
+    {
+      "path": "scripts/check-hap-build-system.mjs",
+      "type": "file",
+      "mode": 493,
+      "bytes": 2567,
+      "sha256": "de79be29ca557ca0095e70af31b02c727000da926a94f96c18a5670331b1fb4f"
+    }
+  ]
+}

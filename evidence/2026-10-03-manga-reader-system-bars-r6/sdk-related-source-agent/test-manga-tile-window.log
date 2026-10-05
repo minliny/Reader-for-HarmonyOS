@@ -1,0 +1,12 @@
+(node:18912) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+<anonymous_script>:73
+    this.refreshLoginRequiredForControls();
+         ^
+
+TypeError: this.refreshLoginRequiredForControls is not a function
+    at Probe.notifyPublishedRows (eval at productionMotionMethods (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-motion-method-probe.mjs:50:10), <anonymous>:73:10)
+    at Probe.updateViewport (eval at productionMotionMethods (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-motion-method-probe.mjs:50:10), <anonymous>:11:10)
+    at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-tile-window.mjs:39:25
+
+Node.js v26.0.0

@@ -1,0 +1,84 @@
+{
+  "scene": "dir-open",
+  "frames": {
+    "0": {
+      "phase": "closed"
+    },
+    "1": {
+      "phase": "closed"
+    },
+    "2": {
+      "phase": "closed"
+    },
+    "3": {
+      "phase": "middle",
+      "note": "A small cream sheet edge/shadow is visible at the screen bottom. No title or chapter row is within the visible sheet portion; no content anchor assigned."
+    },
+    "4": {
+      "phase": "middle",
+      "anchor_y": {
+        "sheet_top": 568,
+        "handle_top": 590,
+        "title_top": 629,
+        "chapter04_ink_top": 955,
+        "chapter05_ink_top": 1057,
+        "chapter06_ink_top": 1158
+      },
+      "content_visible": true,
+      "note": "04, 05 highlighted with 正在读, 06 and lower ordinary rows are actually visible before the sheet reaches its settled position. Raster anchor differences are 176–177 pixels."
+    },
+    "5": {
+      "phase": "middle",
+      "anchor_y": {
+        "sheet_top": 415,
+        "handle_top": 437,
+        "title_top": 477,
+        "chapter04_ink_top": 802,
+        "chapter05_ink_top": 904,
+        "chapter06_ink_top": 1005
+      },
+      "content_visible": true,
+      "note": "Header and chapter rows remain visible; settled displacement is 23–24 raster pixels."
+    },
+    "6": {
+      "phase": "middle",
+      "anchor_y": {
+        "sheet_top": 393,
+        "handle_top": 415,
+        "title_top": 455,
+        "chapter04_ink_top": 781,
+        "chapter05_ink_top": 883,
+        "chapter06_ink_top": 984
+      },
+      "content_visible": true,
+      "note": "Small 2–3 pixel tail displacement; do not infer a continuous curve from this raster sample."
+    },
+    "7": {
+      "phase": "open",
+      "anchor_y": {
+        "sheet_top": 391,
+        "handle_top": 413,
+        "title_top": 453,
+        "chapter04_ink_top": 779,
+        "chapter05_ink_top": 880,
+        "chapter06_ink_top": 982
+      },
+      "content_visible": true
+    },
+    "8": {
+      "phase": "open",
+      "anchor_y": {
+        "sheet_top": 391,
+        "handle_top": 413,
+        "title_top": 453,
+        "chapter04_ink_top": 779,
+        "chapter05_ink_top": 880,
+        "chapter06_ink_top": 982
+      },
+      "content_visible": true
+    }
+  },
+  "source_directory": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open",
+  "coordinate_space": "Original native 640×1416 JPEG raster pixels. Approximate edge anchors and glyph ink bboxes are not vp, continuous transforms or VSync timestamps.",
+  "manual_basis": "All 18 native originals were opened individually with view_image(original); semantic row/current/header observations were made before these annotations. Pixel threshold reads were used only to refine the manually identified anchors."
+}

@@ -1,0 +1,53 @@
+(node:22250) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS manga session: bounded window, stable resources, serialized CAS, invalid anchor, teardown, late release, explicit recovery, offline manifest, duplicate IDs
+PASS replaced tile windows discard old queued work; only decoded visible regions can save progress
+PASS first frame admits before neighbor and reuses first-region lease; failed explicit refresh retains old view
+PASS pending neighbor selection joins decode and admits a visible tile without a second scroll
+PASS narrow cold entry: 3 of 10000 real page facts, no full manifest/catalog/progress RPC, bounded end window, invalid ordinal and disposed request rejected
+PASS nonblocking disposal: pixel leases released immediately, admitted CAS survives owner close, rapid reopen waits, failed tail stays observable
+PASS actual surface first admits narrow pixels, then starts catalog; stale catalog cannot publish after disposal
+PASS removed-chapter cold resume retains old CAS position, rejects automatic/refresh save until confirmation, and preserves explicit chapter navigation
+PASS byte-decode entry, exact refreshed global page and xy/CAS, stale/ambiguous proof fencing, visible-only bounded expiration recovery
+PASS contain preview controller uses one image row, bounds neighbors, forwards preview mode, keeps original geometry/CAS and restores full-resolution region when width mode returns
+PASS automatic refresh maps unsaved selected page rather than old durable anchor; ambiguous proof retains confirmation and exact status prevents text-triggered retries
+PASS automatic refresh updates actual horizontal surface with current anchor and is fenced by a later selection or close
+PASS next chapter: canonical nonconsecutive catalog identity, early manifest, near-end first image only, shared-cache next entry, no user-data writes, silent bounded failures/offline/source fences and visible-image priority
+PASS optional adjacent work cannot survive session close or recapture a cleared content scope
+PASS real manga surface/gateway/controller carries exact directory proof on cached and live paths, rejection admits no pixels/writes, implicit resume retains historical image xy/CAS
+PASS actual Surface/Gateway/Controller cached entry renewal: changed source opens fresh; same source refreshes once using exact/unresolved Core anchor proof; unchanged durable xy/CAS, explicit recovery, bounded failures, cached/offline/live-error exclusions and exit fences
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: real SDK Builder/member transform has no diagnostics
++ actual - expected
+
++ [
++   {
++     code: '10905301',
++     message: "'@Watch' cannot be used with 'onWindowChromeChanged'. Apply it only to parameters that correspond to existing methods.",
++     pos: 14925,
++     type: 'ERROR'
++   }
++ ]
+- []
+
+    at createReaderBuilderProbe (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:67:10)
+    at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-session.mjs:529:17 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [
+    {
+      type: 'ERROR',
+      message: "'@Watch' cannot be used with 'onWindowChromeChanged'. Apply it only to parameters that correspond to existing methods.",
+      pos: 14925,
+      code: '10905301'
+    }
+  ],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

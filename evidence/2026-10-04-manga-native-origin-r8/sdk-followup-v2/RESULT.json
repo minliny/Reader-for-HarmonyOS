@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "frozen": true,
+  "issue": "canonical build attempt 3 stopped at legacy exact AppStorage write expectation",
+  "changedTest": "tools/test-reader-optional-entry-memory-launch.mjs",
+  "beforeSHA256": "8c5ce38343fc35ba39b9ca67b1224039ee8e6bb8fb492843644cd162dd0dab89",
+  "afterSHA256": "10dc8be4fcaf398a4736a574623dd65a883e57abd946d07ffcf849886a27b4f6",
+  "editScope": "one strict expected ordered list plus assertion message; no filtering, no other assertions edited",
+  "exactExpectedWrites": [
+    [
+      "readerMangaImageOriginProbe",
+      false
+    ],
+    [
+      "readerAppForeground",
+      true
+    ]
+  ],
+  "beforeCommand": "node tools/test-reader-optional-entry-memory-launch.mjs",
+  "beforeExitCode": 1,
+  "afterCommand": "node tools/test-reader-optional-entry-memory-launch.mjs",
+  "afterExitCode": 0,
+  "diffCheck": "PASS",
+  "singleEditProof": "reconstructed pre-edit file hashes to original source; delta is exactly one assertion",
+  "optionalMemoryBehavior": "all prior strict flags, nonpersistent state, RAM-only release, absence of diagnostic settings/AppStorage writes and ordinary preparation assertions retained",
+  "unchangedBindings": {
+    "entry/src/main/ets/features/manga/MangaReadingSurface.ets": "b16c0207277a58ab13d00c076085371b24adf20d11fcce2a6e8f373b61694fe3",
+    "entry/src/main/ets/features/manga/MangaImageOriginGeometry.ts": "bf19329bb7371939324b50fdd3d081882b2fb851a853ce1528bb79c002453a0b",
+    "entry/src/main/ets/entryability/EntryAbility.ets": "f21073d3703a24ae8f01a85dc2bb15f1b3ef517c6de59772b47352b73acac533",
+    "tools/lib/manga-surface-sdk-probe.mjs": "670446eee86859281b45c4693abde30b1ac2382dfd7af64399eb58741cfb2332",
+    "tools/test-manga-native-image-geometry-sdk.mjs": "36522f7a479f3b18a1b0165aea2a92d12f53962d50f89e5928d2fe7c328c4994",
+    "evidence/2026-10-04-manga-native-origin-r8/sdk/REVIEW.md": "3338acf2f7ec57d8049284838bd69a8da66a882dbc2355ba28cd3bad396c57fc",
+    "evidence/2026-10-04-manga-native-origin-r8/sdk/NATIVE_INPUTS_FROZEN.json": "b0407de028093ef8872b1286157ea85a7e2330f68c291973b68f37ccd8b00839"
+  },
+  "evidenceFiles": [
+    {
+      "relativePath": "evidence/2026-10-04-manga-native-origin-r8/sdk-followup-v2/ISSUE_RECORD.md",
+      "sha256": "85edfc64feb901e5e88ee02cf4c7586d0905709ddf03bf76efcc583bded4068f",
+      "bytes": 1493
+    },
+    {
+      "relativePath": "evidence/2026-10-04-manga-native-origin-r8/sdk-followup-v2/after-pass.log",
+      "sha256": "b3e9800448182bcd89cfc6ef6e43246e8b26e7fcb4aeb2f85e581fefdc9323af",
+      "bytes": 417
+    },
+    {
+      "relativePath": "evidence/2026-10-04-manga-native-origin-r8/sdk-followup-v2/before-failure.log",
+      "sha256": "11acff842237a9c83add942c036023a236dfd72de79a546ac59e5da6306fc7a3",
+      "bytes": 723
+    },
+    {
+      "relativePath": "evidence/2026-10-04-manga-native-origin-r8/sdk-followup-v2/change.patch",
+      "sha256": "94908fd89e6ee735a10beb03f6b6826834afdc74f07f0bcaf7032ed6406fbde4",
+      "bytes": 1126
+    }
+  ],
+  "canonicalRebuild": "parent-owned pending separate v2 delta",
+  "nativeCallerOrSourceOriginAcceptance": "not assessed by this follow-up"
+}

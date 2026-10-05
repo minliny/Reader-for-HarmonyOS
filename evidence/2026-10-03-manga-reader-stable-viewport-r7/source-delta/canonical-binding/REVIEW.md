@@ -1,0 +1,16 @@
+# R7 source-to-package binding review
+
+PASS for the final version 2 source and artifact chain. This agent did not build, install, use HDC, edit production or test inputs, stage or commit files. Evidence-history recovery and its limitation are disclosed below.
+
+- Canonical iteration run: `20261003T154124Z-568ec4e3-a61c8e77`; `acceptanceEligible=false`.
+- Manifest: 15,164 bytes, SHA-256 `d1d85d95beeb104d57aef5d7b4799cc5559697703a916e33273027b5113ad6f2`.
+- Signed HAP: 198,678,735 bytes, SHA-256 `cb3cbf1a615edc8b1822290fd778cb4fd3ef3ef1fd0e45d4961c09c583c5f778`, authorized certificate SHA-256 `3A563778E5BF17CD3EAD0218E13B4A5030DE3F5D7D4E21E0336D8EB37B676DC4`.
+- All 2,431 canonical input records match the R4 + R5 + R6 + final R7 source inventory: 1,824 Harmony source, 589 controller and 18 workspace records. Both R5 negative-control fixtures and both new exact R6 fixtures are included in the canonical controller snapshot.
+- Effective source inventory: 7,116 files, fingerprint `b469a1b25e2b0fd907c0a70b08c1faf31ac98534a1a6f000b821efa42afa44d1`. The R7 final delta is 13 operations: ten replacements and three additions; the other 7,103 parent source records are unchanged.
+- Core input fingerprint remains `9e97919470b42d81d87082c2c257984778da5e5e5e55798273b3242c99608c4b`. Original Host/SDK Native SO remains `1fabbfa63b996e39da9a3ec01f6b396cf841f0d0b4016303daac56a974c17996`. Embedded Native is the documented strip output, 17,908,136 bytes, SHA-256 `adb383b33be91db7d605e5e343c578c45f0ea82c24e81ac8d6e8c22a482c3f06`; the original and embedded hashes are distinct.
+- Both real HAPs and their embedded Native entries were read back. The unsigned HAP SHA-256 `11dccd856a63ebebb8e6557b14a56d6ed479d60a15233406080fe4f1d9a79092` is provenance only; this agent did not install it. Native build identity, SDK package manifest and vendored entries match the preserved package.
+- No private signing material was copied. Exact public manifest, source/controller/workspace input snapshots and Native provenance are saved. `verify_binding.py --require-artifacts` independently passed without the original temporary source tree.
+
+Preservation correction: the agent's earlier claim that original version 1 metadata was still preserved in `source-delta-attempt-1/` is retracted. Readback found that directory held version 2 while the final directory was absent. Every observed file was recorded before recovery; no preservation process was active, and available evidence does not establish the actor or timing. The exact version 2 records were copied back into the final path. Original version 1 source archive, delta inventory, effective inventory and freeze bytes were reconstructed and match their previously recorded hashes. The original version 1 `delta-manifest.json` and `comparison.json` contents remain unavailable; their hashes and this limitation are retained. See `../HISTORY_CORRECTION.md` and the root drift/recovery reports. No product, test, HAP, manifest or R4/R5/R6 bytes changed during recovery.
+
+This review establishes source/package binding only. It makes no claim about VM pixels, stable image geometry, operating-system delivery timing, physical devices, animation timing or user acceptance. Those remain separate scenario evidence owned by Root.

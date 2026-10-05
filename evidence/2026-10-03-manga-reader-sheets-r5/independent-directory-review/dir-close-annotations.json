@@ -1,0 +1,83 @@
+{
+  "scene": "dir-close",
+  "frames": {
+    "0": {
+      "phase": "open",
+      "anchor_y": {
+        "sheet_top": 391,
+        "handle_top": 413,
+        "title_top": 453,
+        "chapter04_ink_top": 779,
+        "chapter05_ink_top": 880,
+        "chapter06_ink_top": 982
+      },
+      "content_visible": true
+    },
+    "1": {
+      "phase": "open",
+      "anchor_y": {
+        "sheet_top": 391,
+        "handle_top": 413,
+        "title_top": 453,
+        "chapter04_ink_top": 779,
+        "chapter05_ink_top": 880,
+        "chapter06_ink_top": 982
+      },
+      "content_visible": true
+    },
+    "2": {
+      "phase": "open",
+      "anchor_y": {
+        "sheet_top": 391,
+        "handle_top": 413,
+        "title_top": 453,
+        "chapter04_ink_top": 779,
+        "chapter05_ink_top": 880,
+        "chapter06_ink_top": 982
+      },
+      "content_visible": true
+    },
+    "3": {
+      "phase": "middle",
+      "anchor_y": {
+        "sheet_top": 422,
+        "handle_top": 444,
+        "title_top": 484,
+        "chapter04_ink_top": 809,
+        "chapter05_ink_top": 911,
+        "chapter06_ink_top": 1012
+      },
+      "content_visible": true,
+      "note": "Title, search, tools, 04/05 current/06 and lower rows are retained at a real 30–31 pixel intermediate translation."
+    },
+    "4": {
+      "phase": "middle",
+      "anchor_y": {
+        "sheet_top": 1042,
+        "handle_top": 1064,
+        "title_top": 1104
+      },
+      "content_visible": true,
+      "note": "Title/search/tools remain visibly drawn. Expected chapter rows at this translation lie below the 1416px image, so their absence from the screen is not evidence of early destruction. Sheet edge is antialiased at 1042–1043px."
+    },
+    "5": {
+      "phase": "middle",
+      "anchor_y": {
+        "handle_top": 1392
+      },
+      "note": "Only the lower sheet edge/grabber sliver remains. No title or chapter row is on screen; no claim that all native nodes are retained."
+    },
+    "6": {
+      "phase": "closed"
+    },
+    "7": {
+      "phase": "closed"
+    },
+    "8": {
+      "phase": "closed"
+    }
+  },
+  "source_directory": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close",
+  "coordinate_space": "Original native 640×1416 JPEG raster pixels. Approximate edge anchors and glyph ink bboxes are not vp, continuous transforms or VSync timestamps.",
+  "manual_basis": "All 18 native originals were opened individually with view_image(original); semantic row/current/header observations were made before these annotations. Pixel threshold reads were used only to refine the manually identified anchors."
+}

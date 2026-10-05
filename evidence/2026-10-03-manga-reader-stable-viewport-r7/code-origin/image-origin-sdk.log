@@ -1,0 +1,126 @@
+{
+  "sourceSHA256": "4e8cda54f879494a574de75ab2c85821d02edd96b70bdbf8e3e1085150461676",
+  "projectionSHA256": "a478eaf8d41cdc1d3fe097f53dab2982fe9ea5a5a68fe20ab7839fdea16c0363",
+  "sdkEnums": {
+    "path": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/component/enums.d.ts",
+    "sha256": "4bff4490fb71b710a60db5f6a1b128db67526ebb3f145dffc2119591fa2f8de8",
+    "ImageFit": {
+      "0": "Contain",
+      "1": "Cover",
+      "2": "Auto",
+      "3": "Fill",
+      "4": "ScaleDown",
+      "5": "None",
+      "7": "TOP_START",
+      "8": "TOP",
+      "9": "TOP_END",
+      "10": "START",
+      "11": "CENTER",
+      "12": "END",
+      "13": "BOTTOM_START",
+      "14": "BOTTOM",
+      "15": "BOTTOM_END",
+      "16": "MATRIX",
+      "Contain": 0,
+      "Cover": 1,
+      "Auto": 2,
+      "Fill": 3,
+      "ScaleDown": 4,
+      "None": 5,
+      "TOP_START": 7,
+      "TOP": 8,
+      "TOP_END": 9,
+      "START": 10,
+      "CENTER": 11,
+      "END": 12,
+      "BOTTOM_START": 13,
+      "BOTTOM": 14,
+      "BOTTOM_END": 15,
+      "MATRIX": 16
+    }
+  },
+  "cases": [
+    {
+      "fit": "source",
+      "firstRow": {
+        "actors": [
+          8,
+          6,
+          4,
+          5
+        ],
+        "uri": "file://controlled-exact-region-0.png",
+        "width": 390,
+        "height": 159.65625,
+        "itemHeight": 159.65625,
+        "top": 0,
+        "left": 0,
+        "sourceY": 0,
+        "viewport": [
+          390,
+          844
+        ],
+        "key": "[\"p0:0\",true,1600,655,0,2667,\"file://controlled-exact-region-0.png\",\"controlled-tile\",\"\",false]",
+        "anchor": {
+          "ordinal": 0,
+          "y": 0,
+          "x": 0
+        }
+      },
+      "emittedSHA256": "dace2f3d9b0070decae086d8ccca1c857b1870a98f2e19dd1fd99a0482e0ff56",
+      "propertyRuntime": {
+        "path": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib",
+        "classesSha256": "6140bfa5cf6705ddee40349c2e082083778a920f0ff870cc51dccb0f030ccbd5",
+        "layer": "actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels"
+      }
+    },
+    {
+      "fit": "width",
+      "firstRow": {
+        "actors": [
+          8,
+          6,
+          4,
+          5
+        ],
+        "uri": "file://controlled-exact-region-0.png",
+        "width": 390,
+        "height": 159.65625,
+        "itemHeight": 159.65625,
+        "top": 0,
+        "left": 0,
+        "sourceY": 0,
+        "viewport": [
+          390,
+          844
+        ],
+        "key": "[\"p0:0\",true,1600,655,0,2667,\"file://controlled-exact-region-0.png\",\"controlled-tile\",\"\",false]",
+        "anchor": {
+          "ordinal": 0,
+          "y": 0,
+          "x": 0
+        }
+      },
+      "emittedSHA256": "dace2f3d9b0070decae086d8ccca1c857b1870a98f2e19dd1fd99a0482e0ff56",
+      "propertyRuntime": {
+        "path": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib",
+        "classesSha256": "6140bfa5cf6705ddee40349c2e082083778a920f0ff870cc51dccb0f030ccbd5",
+        "layer": "actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels"
+      }
+    }
+  ],
+  "negativeControls": [
+    {
+      "mutation": "actual Image margin.top=24",
+      "result": "rejected by emitted native actor"
+    },
+    {
+      "mutation": "actual Image objectFit Contain",
+      "result": "rejected by emitted native actor"
+    }
+  ],
+  "boundary": "Actual SDK compiler and property classes execute production Builders/geometry/Projection. Native Area/Scroller controlled. Origin is a production mapping request, not native paint/pixel proof. No extracted source/tile bytes have been associated yet."
+}
+PASS actual SDK Image-origin request: source/width first tile sourceY/top/left=0, Fill, no padding/margin/offset/translate on seven image-path actors, same admitted actors/geometry/URI across controls/avoid facts; two narrow real-source negative controls rejected.
+(node:70636) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

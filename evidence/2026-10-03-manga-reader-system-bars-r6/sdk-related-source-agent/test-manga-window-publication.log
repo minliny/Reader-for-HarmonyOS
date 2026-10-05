@@ -1,0 +1,5 @@
+PASS 50 identical real Controller windows publish no unchanged state and do not decode or release pixels
+PASS pending joins are silent while new attempt, failure, retry, ready and tile retirement still publish
+PASS silent unchanged window still performs late metadata resource cleanup exactly once
+(node:19022) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

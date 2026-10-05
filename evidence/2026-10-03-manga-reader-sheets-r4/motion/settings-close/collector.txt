@@ -1,0 +1,1 @@
+scene=settings-close size=640 parallel=3 stagger_ms=30,80,150 postcommand_sequential=3 late_gap_ms=800 planned_frames=9 max_native_snapshots=3 coordinate_space=original_display

@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03T15:20:32.102624+00:00",
+  "authorization": "Parent explicitly frozen four R7 production files; tests pending final allowlist",
+  "source": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913",
+  "target": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002",
+  "parentEffectiveInventorySha256": "b1faa2eb9df37ac6b16fc97f2efe93a159a5afbfb06ed1692774d9ad7a07a475",
+  "files": [
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "before": {
+        "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+        "type": "file",
+        "mode": 420,
+        "bytes": 104797,
+        "sha256": "f84e5289f30711f31b9c7df2999fdba30dc6af4d175d6100c0e0bfb801ee3448"
+      },
+      "after": {
+        "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+        "type": "file",
+        "mode": 420,
+        "bytes": 107730,
+        "sha256": "4e8cda54f879494a574de75ab2c85821d02edd96b70bdbf8e3e1085150461676"
+      }
+    },
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/shell/ReaderShell.ets",
+      "before": {
+        "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/shell/ReaderShell.ets",
+        "type": "file",
+        "mode": 420,
+        "bytes": 25114,
+        "sha256": "edd9b4ade1b4f2ebe7953816742460b38263b1ae804b345f7f4dd4ebd906d560"
+      },
+      "after": {
+        "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/shell/ReaderShell.ets",
+        "type": "file",
+        "mode": 420,
+        "bytes": 25506,
+        "sha256": "420928dc7906498d6c1bc54301cf3f624300ef8600e720904e611fcaed411336"
+      }
+    },
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets",
+      "before": {
+        "path": "Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets",
+        "type": "file",
+        "mode": 420,
+        "bytes": 335378,
+        "sha256": "0e54a722f8bd7da88e50acd021e58f1380cfdd945608b6ea5938ab68962692c5"
+      },
+      "after": {
+        "path": "Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets",
+        "type": "file",
+        "mode": 420,
+        "bytes": 335892,
+        "sha256": "1b7004f488376fbd172073af0a1b9fe65025effcd730d0f2faec1de274d79d71"
+      }
+    },
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+      "before": {
+        "path": "Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+        "type": "file",
+        "mode": 420,
+        "bytes": 35304,
+        "sha256": "60a7ea600175454a3351be9266077575e6b910709a945ff204447f531722a1e9"
+      },
+      "after": {
+        "path": "Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+        "type": "file",
+        "mode": 420,
+        "bytes": 35761,
+        "sha256": "35ab98291f518958f33a53a117fdc2e1c3ccb47322064d2b3c4fed7129b5b27d"
+      }
+    }
+  ],
+  "allSourceAndTargetByteModeChecksPassed": true,
+  "otherParentNonToolPathsVerified": 6525,
+  "excludedUnfrozenTestToolPaths": 584,
+  "testToolsCopied": false,
+  "finalDeltaGenerated": false,
+  "priorR4R5R6EvidenceMutation": false
+}

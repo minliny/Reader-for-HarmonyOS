@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-10-04T02:52:41.012237+00:00",
+  "historicalVersion": {
+    "path": "numeric-vm-session-reviewed-v2.mjs",
+    "sha256": "5f4b676c6bd0b5da67a1011b2f27b7c486a1532bf37428cc19b11f4e801432f2",
+    "bytes": 4933,
+    "preservationMethod": "reconstructed from current bytes by reverting the two documented fixed UI-tree labels; exact pre-existing review SHA-256 matched",
+    "executedThisStep": false
+  },
+  "currentVersion": {
+    "path": "../numeric-vm-session.mjs",
+    "sha256": "c59bcf322320b33847cbd17a66285dc47c686599c416b83293a828655bf402d2",
+    "bytes": 4961
+  },
+  "exactChange": {
+    "before": "const labels = new Set(['shelf', 'a', 'b', 'c', 'd', 'exit', 'normal']);",
+    "after": "const labels = new Set(['shelf', 'a', 'aSettled', 'b', 'c', 'd', 'exit', 'normal', 'normalReader']);"
+  },
+  "otherBytesUnchanged": true,
+  "newOperations": false,
+  "newArbitraryReadPort": false,
+  "sdkRuntimeReviewModified": false,
+  "scope": "same-session created UI-tree only; adds one-shot settled A and actual loaded normal-reader names without overwriting earlier raw evidence",
+  "actualR8Scenes": [
+    "shelf",
+    "a early",
+    "aSettled",
+    "b controls",
+    "d immersive",
+    "exit shelf",
+    "normal shelf",
+    "normalReader loaded"
+  ],
+  "directoryCObservedThisR8": false,
+  "vmCommandsExecutedThisPreservationStep": false
+}

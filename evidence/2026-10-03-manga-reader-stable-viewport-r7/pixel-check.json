@@ -1,0 +1,688 @@
+{
+  "method": "Original saved native JPEG RGB and UI-tree reads; exact crop comparisons; no resizing/interpolation/HDC",
+  "inputSHA256": {
+    "immersive-a.jpeg": "3244afdb60f09f1b253454e1b18691f5d8d4ea8d3c2c6a2015d33433b8894914",
+    "immersive-a.json": "05dc4a1c93d190fdb83cb6f478982bbd97bbdb8ac52e6f3eb61d6b8b571429c1",
+    "controls-b.jpeg": "4acbc64c89ce2d0772e755e479a4ad2d1957c94c15c4193147cfebc3a504a861",
+    "controls-b.json": "44cab2e076ba6d19456cef73e3758fc10fe5ef86165ff94802e040ac9bed1f88",
+    "directory-c.jpeg": "9b79a860fca108c5c9e052d783c6700556f45a5ceaf6877a2e87e71ceae696b3",
+    "directory-c.json": "2168676bc0edf6faa1f43b330cd4502ce4d692c7ef384702647eb7d56893953d",
+    "immersive-d.jpeg": "3244afdb60f09f1b253454e1b18691f5d8d4ea8d3c2c6a2015d33433b8894914",
+    "immersive-d.json": "2a66460a9767bc8d067d1d3d93bd3905e0168e3e6f86f79e818b06f1499fa6f2"
+  },
+  "imageSizes": {
+    "immersive-a": [
+      1280,
+      2832
+    ],
+    "controls-b": [
+      1280,
+      2832
+    ],
+    "directory-c": [
+      1280,
+      2832
+    ],
+    "immersive-d": [
+      1280,
+      2832
+    ]
+  },
+  "abSameCoordinateRegions": [
+    {
+      "box": [
+        0,
+        440,
+        1280,
+        2180
+      ],
+      "differenceBBox": null,
+      "channelExtrema": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "box": [
+        300,
+        600,
+        1000,
+        1900
+      ],
+      "differenceBBox": null,
+      "channelExtrema": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "box": [
+        0,
+        500,
+        100,
+        2000
+      ],
+      "differenceBBox": null,
+      "channelExtrema": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ]
+    }
+  ],
+  "adFullImage": {
+    "differenceBBox": null,
+    "channelExtrema": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        0
+      ]
+    ]
+  },
+  "acDarkenedPatchGeometry": [
+    {
+      "sourceBox": [
+        600,
+        450,
+        680,
+        530
+      ],
+      "integerSearchRange": [
+        -8,
+        8
+      ],
+      "best": {
+        "dx": 0,
+        "dy": 0,
+        "rmse": 3.354344921715712,
+        "slope": 0.6584174486384027,
+        "intercept": 0.28859469676664046
+      },
+      "nearestNonzeroCandidate": {
+        "dx": -1,
+        "dy": 0,
+        "rmse": 11.267256567535767,
+        "slope": 0.6505141284818444,
+        "intercept": 1.7194505688476056
+      },
+      "sourceVariance": 11533.561873437502
+    },
+    {
+      "sourceBox": [
+        850,
+        570,
+        930,
+        650
+      ],
+      "integerSearchRange": [
+        -8,
+        8
+      ],
+      "best": {
+        "dx": 0,
+        "dy": 0,
+        "rmse": 3.9535309357800155,
+        "slope": 0.6592752687096389,
+        "intercept": 0.05669045968839782
+      },
+      "nearestNonzeroCandidate": {
+        "dx": 1,
+        "dy": 0,
+        "rmse": 18.038956100165088,
+        "slope": 0.6346533822159606,
+        "intercept": 4.213927480845213
+      },
+      "sourceVariance": 9485.81838317871
+    },
+    {
+      "sourceBox": [
+        180,
+        480,
+        260,
+        560
+      ],
+      "integerSearchRange": [
+        -8,
+        8
+      ],
+      "best": {
+        "dx": 0,
+        "dy": 0,
+        "rmse": 5.913880855699926,
+        "slope": 0.654981317985326,
+        "intercept": 1.0750730563461002
+      },
+      "nearestNonzeroCandidate": {
+        "dx": 0,
+        "dy": 1,
+        "rmse": 17.8187057627842,
+        "slope": 0.5848254869380982,
+        "intercept": 16.376716735119533
+      },
+      "sourceVariance": 3330.5620456787105
+    }
+  ],
+  "treeFacts": {
+    "immersive-a": {
+      "scroll": {
+        "type": "Scroll",
+        "bounds": "[0,0][1280,2832]",
+        "origBounds": "[0,0][1280,2832]",
+        "hostWindowId": "103",
+        "hierarchy": "ROOT103,0,0,0,0,0,0,0"
+      },
+      "list": {
+        "type": "List",
+        "bounds": "[0,0][1280,2832]",
+        "origBounds": "[0,0][1280,2832]",
+        "hostWindowId": "103",
+        "hierarchy": "ROOT103,0,0,0,0,0,0,0,0"
+      },
+      "bodyImages": [
+        {
+          "type": "Image",
+          "bounds": "[0,0][1280,524]",
+          "origBounds": "[0,0][1280,524]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,0,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,524][1280,1048]",
+          "origBounds": "[0,524][1280,1048]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,1,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,1048][1280,1572]",
+          "origBounds": "[0,1048][1280,1572]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,2,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,1572][1280,2096]",
+          "origBounds": "[0,1572][1280,2096]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,3,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,2096][1280,2133]",
+          "origBounds": "[0,2096][1280,2133]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,4,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,2133][1280,2657]",
+          "origBounds": "[0,2133][1280,2657]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,5,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,2657][1280,2832]",
+          "origBounds": "[0,2657][1280,3181]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,6,0"
+        }
+      ],
+      "statusWindows": [],
+      "pageLabels": [
+        {
+          "text": "1 / 24",
+          "bounds": "[1069,2711][1238,2790]",
+          "origBounds": "[1069,2711][1238,2790]"
+        }
+      ]
+    },
+    "controls-b": {
+      "scroll": {
+        "type": "Scroll",
+        "bounds": "[0,137][1280,2832]",
+        "origBounds": "[0,0][1280,2832]",
+        "hostWindowId": "103",
+        "hierarchy": "ROOT103,0,0,0,0,0,0,0"
+      },
+      "list": {
+        "type": "List",
+        "bounds": "[0,137][1280,2832]",
+        "origBounds": "[0,0][1280,2832]",
+        "hostWindowId": "103",
+        "hierarchy": "ROOT103,0,0,0,0,0,0,0,0"
+      },
+      "bodyImages": [
+        {
+          "type": "Image",
+          "bounds": "[0,137][1280,524]",
+          "origBounds": "[0,0][1280,524]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,0,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,524][1280,1048]",
+          "origBounds": "[0,524][1280,1048]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,1,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,1048][1280,1572]",
+          "origBounds": "[0,1048][1280,1572]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,2,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,1572][1280,2096]",
+          "origBounds": "[0,1572][1280,2096]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,3,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,2096][1280,2133]",
+          "origBounds": "[0,2096][1280,2133]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,4,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,2133][1280,2657]",
+          "origBounds": "[0,2133][1280,2657]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,5,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,2657][1280,2832]",
+          "origBounds": "[0,2657][1280,3181]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,6,0"
+        }
+      ],
+      "statusWindows": [
+        {
+          "type": "WindowScene",
+          "bounds": "[0,0][1280,136]",
+          "origBounds": "[0,0][1280,136]",
+          "hostWindowId": "21",
+          "hierarchy": "ROOT21"
+        }
+      ],
+      "pageLabels": [
+        {
+          "text": "02",
+          "bounds": "[618,285][662,330]",
+          "origBounds": "[618,285][662,330]"
+        },
+        {
+          "text": "1 / 24",
+          "bounds": "[573,2397][663,2438]",
+          "origBounds": "[573,2397][663,2438]"
+        }
+      ]
+    },
+    "directory-c": {
+      "scroll": {
+        "type": "Scroll",
+        "bounds": "[0,137][1280,2832]",
+        "origBounds": "[0,0][1280,2832]",
+        "hostWindowId": "103",
+        "hierarchy": "ROOT103,0,0,0,0,0,0,0"
+      },
+      "list": {
+        "type": "List",
+        "bounds": "[0,137][1280,2832]",
+        "origBounds": "[0,0][1280,2832]",
+        "hostWindowId": "103",
+        "hierarchy": "ROOT103,0,0,0,0,0,0,0,0"
+      },
+      "bodyImages": [
+        {
+          "type": "Image",
+          "bounds": "[0,137][1280,524]",
+          "origBounds": "[0,0][1280,524]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,0,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,524][1280,1048]",
+          "origBounds": "[0,524][1280,1048]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,1,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,1048][1280,1572]",
+          "origBounds": "[0,1048][1280,1572]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,2,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,1572][1280,2096]",
+          "origBounds": "[0,1572][1280,2096]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,3,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,2096][1280,2133]",
+          "origBounds": "[0,2096][1280,2133]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,4,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,2133][1280,2657]",
+          "origBounds": "[0,2133][1280,2657]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,5,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,2657][1280,2832]",
+          "origBounds": "[0,2657][1280,3181]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,6,0"
+        }
+      ],
+      "statusWindows": [
+        {
+          "type": "WindowScene",
+          "bounds": "[0,0][1280,136]",
+          "origBounds": "[0,0][1280,136]",
+          "hostWindowId": "21",
+          "hierarchy": "ROOT21"
+        }
+      ],
+      "pageLabels": [
+        {
+          "text": "02",
+          "bounds": "[618,285][662,330]",
+          "origBounds": "[618,285][662,330]"
+        },
+        {
+          "text": "1 / 24",
+          "bounds": "[573,2397][663,2438]",
+          "origBounds": "[573,2397][663,2438]"
+        },
+        {
+          "text": "\u7ae0\u8282\u76ee\u5f55",
+          "bounds": "[0,887][1280,1027]",
+          "origBounds": "[0,887][1280,1027]"
+        },
+        {
+          "text": "02",
+          "bounds": "[98,1732][151,1809]",
+          "origBounds": "[98,1732][151,1809]"
+        },
+        {
+          "text": "\u6b63\u5728\u8bfb",
+          "bounds": "[1076,1741][1182,1800]",
+          "origBounds": "[1076,1741][1182,1800]"
+        }
+      ]
+    },
+    "immersive-d": {
+      "scroll": {
+        "type": "Scroll",
+        "bounds": "[0,0][1280,2832]",
+        "origBounds": "[0,0][1280,2832]",
+        "hostWindowId": "103",
+        "hierarchy": "ROOT103,0,0,0,0,0,0,0"
+      },
+      "list": {
+        "type": "List",
+        "bounds": "[0,0][1280,2832]",
+        "origBounds": "[0,0][1280,2832]",
+        "hostWindowId": "103",
+        "hierarchy": "ROOT103,0,0,0,0,0,0,0,0"
+      },
+      "bodyImages": [
+        {
+          "type": "Image",
+          "bounds": "[0,0][1280,524]",
+          "origBounds": "[0,0][1280,524]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,0,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,524][1280,1048]",
+          "origBounds": "[0,524][1280,1048]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,1,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,1048][1280,1572]",
+          "origBounds": "[0,1048][1280,1572]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,2,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,1572][1280,2096]",
+          "origBounds": "[0,1572][1280,2096]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,3,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,2096][1280,2133]",
+          "origBounds": "[0,2096][1280,2133]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,4,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,2133][1280,2657]",
+          "origBounds": "[0,2133][1280,2657]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,5,0"
+        },
+        {
+          "type": "Image",
+          "bounds": "[0,2657][1280,2832]",
+          "origBounds": "[0,2657][1280,3181]",
+          "hostWindowId": "103",
+          "hierarchy": "ROOT103,0,0,0,0,0,0,0,0,6,0"
+        }
+      ],
+      "statusWindows": [],
+      "pageLabels": [
+        {
+          "text": "1 / 24",
+          "bounds": "[1069,2711][1238,2790]",
+          "origBounds": "[1069,2711][1238,2790]"
+        }
+      ]
+    }
+  },
+  "bodyImageOrigBoundsEqualAcrossABCD": true,
+  "aTopUniformBandObservation": {
+    "referenceRGB": [
+      238,
+      247,
+      255
+    ],
+    "rows": [
+      {
+        "y": 0,
+        "centerRGB": [
+          238,
+          247,
+          255
+        ],
+        "pixelsNearBaseWithin2": 1280
+      },
+      {
+        "y": 10,
+        "centerRGB": [
+          238,
+          247,
+          255
+        ],
+        "pixelsNearBaseWithin2": 1280
+      },
+      {
+        "y": 20,
+        "centerRGB": [
+          238,
+          247,
+          255
+        ],
+        "pixelsNearBaseWithin2": 1280
+      },
+      {
+        "y": 40,
+        "centerRGB": [
+          238,
+          247,
+          255
+        ],
+        "pixelsNearBaseWithin2": 1280
+      },
+      {
+        "y": 60,
+        "centerRGB": [
+          238,
+          247,
+          255
+        ],
+        "pixelsNearBaseWithin2": 1280
+      },
+      {
+        "y": 70,
+        "centerRGB": [
+          239,
+          246,
+          255
+        ],
+        "pixelsNearBaseWithin2": 1071
+      },
+      {
+        "y": 72,
+        "centerRGB": [
+          241,
+          248,
+          255
+        ],
+        "pixelsNearBaseWithin2": 676
+      },
+      {
+        "y": 75,
+        "centerRGB": [
+          245,
+          250,
+          254
+        ],
+        "pixelsNearBaseWithin2": 250
+      },
+      {
+        "y": 79,
+        "centerRGB": [
+          255,
+          249,
+          251
+        ],
+        "pixelsNearBaseWithin2": 62
+      },
+      {
+        "y": 80,
+        "centerRGB": [
+          255,
+          231,
+          235
+        ],
+        "pixelsNearBaseWithin2": 42
+      },
+      {
+        "y": 81,
+        "centerRGB": [
+          199,
+          160,
+          165
+        ],
+        "pixelsNearBaseWithin2": 39
+      },
+      {
+        "y": 100,
+        "centerRGB": [
+          216,
+          165,
+          170
+        ],
+        "pixelsNearBaseWithin2": 34
+      },
+      {
+        "y": 136,
+        "centerRGB": [
+          216,
+          167,
+          173
+        ],
+        "pixelsNearBaseWithin2": 21
+      },
+      {
+        "y": 137,
+        "centerRGB": [
+          210,
+          163,
+          169
+        ],
+        "pixelsNearBaseWithin2": 21
+      }
+    ],
+    "origin": "No source-tile pixels inspected by this mechanical script; source margin vs rendered empty band remains separate evidence"
+  },
+  "limits": [
+    "Static endpoints only, no compositor timing or transient-frame claim",
+    "UI visible bounds are clipped rectangles; origBounds are recorded separately",
+    "A/D equality and unchanged body geometry do not prove the origin of top uniform pixels",
+    "No animation curve, HAP verification, physical-device or user acceptance result"
+  ]
+}

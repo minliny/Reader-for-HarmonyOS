@@ -1,0 +1,2805 @@
+{
+  "status": "PASS",
+  "sourceAuthority": "Frozen temp delivery; persistent other-agent differences are outside v3 source/archive",
+  "informationalPersistentDifferences": {
+    "count": 14,
+    "path": "ATTEMPT1_WORKSPACE_MISMATCH.json",
+    "sha256": "9bb24e0c7fc8d3c84baf6cf05c0b1f808dda18f4b2c12d9f7dc74a611a14ccda"
+  },
+  "comparedParentPaths": 7116,
+  "changedPaths": [
+    "Reader-for-HarmonyOS/entry/src/main/ets/entryability/EntryAbility.ets",
+    "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+    "Reader-for-HarmonyOS/tools/lib/manga-surface-sdk-probe.mjs",
+    "Reader-for-HarmonyOS/tools/test-reader-optional-entry-memory-launch.mjs"
+  ],
+  "addedPaths": [
+    "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaImageOriginGeometry.ts",
+    "Reader-for-HarmonyOS/tools/test-manga-native-image-geometry-sdk.mjs"
+  ],
+  "unchangedParentPaths": 7112,
+  "extraProductionOrToolPaths": [],
+  "repoStates": [
+    {
+      "repo": "Reader-Core-Native",
+      "head": "dfd729cffd79ed11da6d44be9e1ba10c4223247f",
+      "dirty": [
+        {
+          "status": " M",
+          "path": "crates/reader-runtime/build.rs"
+        },
+        {
+          "status": " M",
+          "path": "crates/reader-runtime/src/remote.rs"
+        },
+        {
+          "status": " M",
+          "path": "crates/reader-runtime/src/remote/local_navigation.rs"
+        },
+        {
+          "status": " M",
+          "path": "crates/reader-runtime/src/remote/local_navigation/sidecar.rs"
+        },
+        {
+          "status": " M",
+          "path": "crates/reader-runtime/src/remote/manga.rs"
+        },
+        {
+          "status": " M",
+          "path": "crates/reader-runtime/src/remote/source_supply.rs"
+        },
+        {
+          "status": " M",
+          "path": "crates/reader-runtime/tests/manga_pages_extract_commands.rs"
+        },
+        {
+          "status": " M",
+          "path": "crates/reader-runtime/tests/runtime_integration.rs"
+        },
+        {
+          "status": " M",
+          "path": "crates/reader-storage/src/lib.rs"
+        },
+        {
+          "status": " M",
+          "path": "crates/reader-storage/src/manga.rs"
+        },
+        {
+          "status": " M",
+          "path": "crates/reader-storage/src/sqlite_backend/manga.rs"
+        },
+        {
+          "status": " M",
+          "path": "crates/reader-storage/src/sqlite_backend/manga_entry.rs"
+        },
+        {
+          "status": " M",
+          "path": "crates/reader-storage/src/sqlite_backend/shelf_projection.rs"
+        },
+        {
+          "status": " M",
+          "path": "crates/reader-storage/tests/manga_store.rs"
+        },
+        {
+          "status": " M",
+          "path": "scripts/build-harmony-napi.sh"
+        },
+        {
+          "status": " M",
+          "path": "tests/fixtures/corpus/sources/src-2196-6781cc801619.json"
+        },
+        {
+          "status": " M",
+          "path": "tests/fixtures/corpus/sources/src-250-bb44193bd3bd.json"
+        },
+        {
+          "status": "??",
+          "path": "crates/reader-content/tests/baozi_source_rule.rs"
+        },
+        {
+          "status": "??",
+          "path": "crates/reader-content/tests/tencent_source_rule.rs"
+        },
+        {
+          "status": "??",
+          "path": "crates/reader-runtime/tests/manga_shelf_progress_commands.rs"
+        },
+        {
+          "status": "??",
+          "path": "scripts/test-build-identity-refresh.mjs"
+        },
+        {
+          "status": "??",
+          "path": "tests/fixtures/manga/tencent-free-chapter-531040-1-pages.json"
+        },
+        {
+          "status": "??",
+          "path": "tests/fixtures/manga/tencent-free-chapter-531040-1.html"
+        }
+      ],
+      "additionalNonEvidencePaths": []
+    },
+    {
+      "repo": "Reader-UI",
+      "head": "2922d9cd236942a4fdba3fdf1fd8c228a60b0fc0",
+      "dirty": [],
+      "additionalNonEvidencePaths": []
+    },
+    {
+      "repo": "Reader-for-HarmonyOS",
+      "head": "568ec4e32a2bdce01f62724cfb04a3f6b5a63a60",
+      "dirty": [
+        {
+          "status": " M",
+          "path": "docs/ui-design/SVG_PROVENANCE.json"
+        },
+        {
+          "status": " M",
+          "path": "entry/libs/arm64-v8a/libreader_core_napi.so"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/app/BundledBookSourceSupply.ts"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/app/BundledSourceIndexIdentity.ts"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/entryability/EntryAbility.ets"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/features/bookshelf/BookshelfFlowGateway.ts"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/features/bookshelf/BookshelfPage.ets"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/features/common/ReaderFontFamilies.ts"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/features/common/ReaderFonts.ets"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/features/manga/MangaLayoutPolicy.ts"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/features/manga/MangaReadingSurface.ets"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/features/manga/MangaSessionController.ts"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/features/manga/MangaStripProjection.ts"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/features/manga/MangaUserError.ts"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/features/reading/FullDirectoryPanel.ets"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryChapterRow.ets"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/features/shell/ReaderShell.ets"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/ets/pages/Index.ets"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/resources/rawfile/bundled-sources/10da66bab1ce68684d062abc15b146444b12c52984a3bd9aa75b4819d4cd7a8c.json"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/resources/rawfile/bundled-sources/134f600a7512c9d0bfbc3dcc1e9ccb557bf742acffb4d1d250de616c632b4fb1.json"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/resources/rawfile/bundled-sources/index.json"
+        },
+        {
+          "status": " M",
+          "path": "entry/src/main/resources/rawfile/reader-tested-book-source-collection.json"
+        },
+        {
+          "status": " M",
+          "path": "tools/lib/manga-surface-sdk-probe.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/lib/reader-control-builder-probe.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/lib/reader-motion-method-probe.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/refresh-source-supply-manifest.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/svg-provenance.config.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/sync-svg-assets.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-bookshelf-startup-readiness.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-manga-book-presentation.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-manga-cancelled-banner.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-manga-cross-chapter-counter-sdk.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-manga-metadata-ui.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-manga-motion-progress.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-manga-navigation.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-manga-session.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-manga-surface-render-key-sdk.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-manga-surface-sdk.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-manga-tile-window.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-manga-ui-assembly-sdk.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-manga-ui-position-hydration.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-manga-ui-state.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-manga-viewport-restore-sdk.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-phone-layout-figma-regressions.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-reader-control-p0.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-reader-directory-depth-contract.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-reader-font-demand.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-reader-layout-architecture.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-reader-optional-entry-memory-launch.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-reader-window-chrome-order.mjs"
+        },
+        {
+          "status": " M",
+          "path": "tools/test-reader-window-chrome-p0.mjs"
+        },
+        {
+          "status": "??",
+          "path": "docs/MANGA_DIRECTORY_FALLBACK_FOLD_20261003.md"
+        },
+        {
+          "status": "??",
+          "path": "docs/MANGA_OVERALL_IMPLEMENTATION_20261003.md"
+        },
+        {
+          "status": "??",
+          "path": "docs/MANGA_READER_SHEETS_PARITY_20261003.md"
+        },
+        {
+          "status": "??",
+          "path": "docs/MANGA_READING_CHAIN_REPAIR_20261003.md"
+        },
+        {
+          "status": "??",
+          "path": "docs/MANGA_SHEET_ICON_LICENSE.md"
+        },
+        {
+          "status": "??",
+          "path": "docs/MANGA_SHEET_MOTION_20261003.md"
+        },
+        {
+          "status": "??",
+          "path": "docs/ui-design/MANGA_SHEET_FONTS_PROVENANCE.json"
+        },
+        {
+          "status": "??",
+          "path": "docs/ui-design/svg-provenance/radix-icons/CheckIcon.svg"
+        },
+        {
+          "status": "??",
+          "path": "docs/ui-design/svg-provenance/radix-icons/ChevronDownIcon.svg"
+        },
+        {
+          "status": "??",
+          "path": "docs/ui-design/svg-provenance/radix-icons/ChevronRightIcon.svg"
+        },
+        {
+          "status": "??",
+          "path": "docs/ui-design/svg-provenance/radix-icons/Cross2Icon.svg"
+        },
+        {
+          "status": "??",
+          "path": "docs/ui-design/svg-provenance/radix-icons/LICENSE"
+        },
+        {
+          "status": "??",
+          "path": "docs/ui-design/svg-provenance/radix-icons/MagnifyingGlassIcon.svg"
+        },
+        {
+          "status": "??",
+          "path": "docs/ui-design/svg-provenance/radix-icons/MoonIcon.svg"
+        },
+        {
+          "status": "??",
+          "path": "docs/ui-design/svg-provenance/radix-icons/ReaderIcon.svg"
+        },
+        {
+          "status": "??",
+          "path": "docs/ui-design/svg-provenance/radix-icons/SOURCE.json"
+        },
+        {
+          "status": "??",
+          "path": "docs/ui-design/svg-provenance/radix-icons/SunIcon.svg"
+        },
+        {
+          "status": "??",
+          "path": "docs/ui-design/svg-provenance/radix-icons/ViewHorizontalIcon.svg"
+        },
+        {
+          "status": "??",
+          "path": "docs/ui-design/svg-provenance/radix-icons/ViewVerticalIcon.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/ets/features/manga/MangaImageOriginGeometry.ts"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_check.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_check_theme_night.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_chevron_down.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_chevron_down_theme_night.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_chevron_right.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_chevron_right_theme_night.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_close.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_close_theme_night.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_horizontal.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_horizontal_active.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_horizontal_theme_night.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_locate.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_locate_theme_night.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_moon.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_moon_active.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_moon_theme_night.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_search.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_search_theme_night.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_sun.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_sun_active.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_sun_theme_night.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_vertical.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_vertical_accent.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_vertical_accent_theme_night.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_vertical_active.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/base/media/manga_sheet_vertical_theme_night.svg"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/rawfile/ReaderMangaSans550.otf"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/rawfile/ReaderMangaSans600.otf"
+        },
+        {
+          "status": "??",
+          "path": "entry/src/main/resources/rawfile/ReaderMangaSans900.otf"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-baozi-image-source/cache-refresh-summary.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-baozi-image-source/summary.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-continue-card-sdk/README.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-presentation-return/README.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/REVIEW.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/core-input-drift-r3.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/demo/demo-open-close.webm"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/demo/directory-styles.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/demo/directory.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/demo/mode-styles.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/demo/mode.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/demo/motion-dom.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/demo/page@0d1cb3e58f00a1fd503ce325509e286d.webm"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/demo/page@3d55b1cb3c5770dae6a4e780a4b60c1a.webm"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/demo/page@6178b05fbba600763525ad3a03c7cd67.webm"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/demo/page@6a775eca4dc2078d0c6ac44aa78525a6.webm"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/demo/reader.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/demo/settings-styles.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/demo/settings.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/directory-open-inset-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/directory-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/directory-static-font-followup.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/directory-static-font-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/directory-static-font-variants-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/font-audit.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/font-demand.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/font-regenerate.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/manga-r3-hap-build.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/manga-r3-storage-full-regression.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/manga-r3-storage-sqlite-regression.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/controls.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/click-output.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/click-time.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-0.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-1.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-10.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-11.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-12.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-13.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-14.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-15.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-16.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-17.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-18.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-19.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-2.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-20.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-21.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-3.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-4.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-5.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-6.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-7.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-8.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/frame-9.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/snapshot.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/dir-open/timestamps.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/directory.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/launch.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/launch.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/reader.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r2/vm/reader.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/VM_REVIEW.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close-review/original-contact.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close-review/report.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/click-command-ready.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/click-output.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/click-time.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/collector.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/frame-0-time.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/frame-0.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/frame-1-time.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/frame-1.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/frame-2-time.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/frame-2.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/frame-3-time.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/frame-3.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/frame-4-time.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/frame-4.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/snapshot-0.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/snapshot-1.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/snapshot-2.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/snapshot-3.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/snapshot-4.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close/timestamps.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open-review/original-contact.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open-review/report.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/click-command-ready.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/click-output.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/click-time.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/collector.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/frame-0-time.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/frame-0.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/frame-1-time.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/frame-1.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/frame-2-time.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/frame-2.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/frame-3-time.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/frame-3.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/frame-4-time.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/frame-4.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/snapshot-0.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/snapshot-1.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/snapshot-2.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/snapshot-3.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/snapshot-4.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-open/timestamps.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/sdk-sheet-border-order.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/sdk-sheet-static-final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/vm/controls.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/vm/directory-first-open-preparing.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/vm/directory.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/vm/directory.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/vm/mode-settled.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/vm/mode-settled.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/vm/mode.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/vm/mode.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/vm/reader.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/vm/settings-night.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/vm/settings-night.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/vm/settings-restored.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/vm/settings.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/vm/settings.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/vm/shelf.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/vm/toggle-off.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r3/vm/toggle-on.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r5/REVIEW.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r5/font-readiness-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r5/manga-sheet-motion-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r5/manga-surface-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r5/manga-ui-assembly-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r5/reader-directory-navigation-ui.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r5/sdk-validation.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r5/source-r4-to-r5.diff"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/FINAL_INPUTS.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/REVIEW.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/SHA256SUMS.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/baseline-manga-reading-surface.ets"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/baseline-reader-shell.ets"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/baseline-source.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/manga-final-results.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-admission.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-auth-recovery.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-book-presentation.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-cancelled-banner.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-cancelled-banner.mjs.after.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-cross-chapter-counter-sdk.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-cross-chapter-counter-sdk.mjs.before.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-directory-demo-parity-sdk.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-directory-font-readiness-sdk.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-directory-font-readiness-sdk.mjs.after.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-directory-route.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-display-policy.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-error-recovery.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-error-recovery.mjs.after.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-far-page-tile-retirement.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-image-decode.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-image-graphics.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-image-metadata-transfer.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-metadata-ui.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-motion-progress.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-motion-progress.mjs.after.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-motion-progress.mjs.before.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-navigation.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-navigation.mjs.after.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-offline-network-probe.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-offline-network-probe.mjs.after.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-offline.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-orientation.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-platform-probe-sdk.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-platform-probe.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-reading-directory-fallback.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-region-decode.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-resource-gateway.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-runtime-image-lane.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-scroll-stability-sdk.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-session.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-session.mjs.after.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-session.mjs.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-sheet-motion-sdk.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-sheet-motion-sdk.mjs.after.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-sheet-motion-sdk.mjs.before.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-sheet-selection-sdk.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-sheet-selection-sdk.mjs.after.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-sheet-selection-sdk.mjs.before.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-source-switch.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-strip.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-strip.mjs.after.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-surface-render-key-sdk.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-surface-render-key-sdk.mjs.before.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-surface-sdk.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-surface-sdk.mjs.after.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-surface-sdk.mjs.before.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-tile-window.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-tile-window.mjs.after.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-ui-assembly-sdk.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-ui-assembly-sdk.mjs.before.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-ui-floating-bars.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-ui-position-hydration.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-ui-source-switch-discovery.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-ui-source-switch-window.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-ui-state.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-ui-state.mjs.after.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-viewport-restore-sdk.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-viewport-restore-sdk.mjs.before.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-visible-tile-retention.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-window-publication.final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-window-publication.mjs.before.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/window-order-final.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/window-order-first-pass.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/window-order-running.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/build-attempts.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/delivery.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/deploy-vm-6460677a198b-20261003T085922Z.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/hap-attempt-dark-range-review-stop.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/hap-attempt-directory-review-stop.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/hap-attempt-svg-registry-failure.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheet-final-surface-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheet-sdk-replay-audit.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheet-selection-sdk-final-green.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheet-selection-sdk-green.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheet-vm-hilog-20261003.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheet-vm-readiness-20261003.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-close-directory.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-close-mode-night.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-close-mode.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-close-settings-return.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-close-settings.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-controls.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-delivery-hilog.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-delivery-readiness.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-directory-cleared.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-directory-empty-ink.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-directory-empty-ink.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-directory-empty-visible.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-directory-empty-visible.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-directory-ink.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-directory-ink.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-directory-paper.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-directory-paper.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-final-controls.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-final-controls.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-hap-delivery-20261003.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-inspect-20261003.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-install-20261003.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-installed.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-installed.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-mode-contain.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-mode-contain.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-mode-horizontal.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-mode-horizontal.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-mode-ink.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-mode-ink.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-mode-paper.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-mode-paper.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-mode-return.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-mode-return.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-mode-width.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-mode-width.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-reader.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-reader.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-settings-ink.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-settings-ink.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-settings-page-off.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-settings-paper.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-settings-paper.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-settings-return-entry.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/manga-sheets-settings-return.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/sdk-fallback-fold-green.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/sdk-motion-r2-green.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/vm-sheets-ink.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-sheets/vm-sheets-paper.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/BUILD_RECORD.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/CLOSURE_ATTEMPT_RECORD.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/CLOSURE_REVIEW.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/FINAL_COPY_RECEIPT.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/FINAL_SHA256SUMS.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/ISSUE_RECORD.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/PLAN.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/RESULT.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/VM_RECORD.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/VM_SCOPE.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/canonical-delivery/build.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/canonical-delivery/deploy-vm-6460677a198b-20261003T133542Z.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/canonical-delivery/inspect.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/canonical-delivery/install-attempt-build-lock.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/canonical-delivery/install.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/canonical-delivery/verify.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-final-copy.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent-copy.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/FAIL_REVIEW.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/SUMMARY.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/run-index.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-admission.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-auth-recovery.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-book-presentation.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-cancelled-banner.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-cross-chapter-counter-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-directory-demo-parity-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-directory-font-readiness-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-directory-route.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-display-policy.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-error-recovery.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-far-page-tile-retirement.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-image-decode.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-image-graphics.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-image-metadata-transfer.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-metadata-ui.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-motion-progress.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-navigation.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-offline-network-probe.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-offline.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-orientation.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-platform-probe-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-platform-probe.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-reading-directory-fallback.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-region-decode.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-resource-gateway.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-runtime-image-lane.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-scroll-stability-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-session.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-sheet-motion-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-sheet-selection-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-source-switch.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-strip.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-surface-render-key-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-surface-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-tile-window.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-ui-assembly-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-ui-floating-bars.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-ui-position-hydration.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-ui-source-switch-discovery.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-ui-source-switch-window.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-ui-state.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-viewport-restore-sdk.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-visible-tile-retention.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-window-publication.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-copy-product.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-copy-tools.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/README.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/README.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/REVIEW.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/bind_canonical.py"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/binding-files.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/binding-result.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/binding.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/controller-snapshot.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/iteration-entry-default-signed-provenance.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/iteration-entry-default-unsigned-provenance.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/published-manifest.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/source-snapshot.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/verify_binding.py"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/workspace-contract-snapshot.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/comparison.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/delta-manifest.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/effective-source-inventory.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/freeze-inputs.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/preservation-result.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/preserve_r6_delta.py"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/r6-core-build-snapshot.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/r6-source-delta-inventory.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/r6-source-delta.tar.gz"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/verify_delta.py"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/verify_final_evidence.py"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/INDEPENDENT_REVIEW.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/controls-settled.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/controls-settled.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/controls.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/controls.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/directory-settled.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/directory-settled.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/directory.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/directory.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/hidden-settled.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/hidden-settled.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/immersive.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/immersive.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/reader-log.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/reader-settled.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/restored-controls.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/returned.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/returned.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/shelf.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/window-directory.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/window-settled.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/build-attempts.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/cold-session-observation.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/controller-snapshot.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/deploy-vm-6460677a198b-20261003T092846Z.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/evidence.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/manga-scroll-final-cold-home-ready.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/manga-scroll-final-cold-home.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/manga-scroll-final-cold-reader.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/manga-scroll-final-cold-ready.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/manga-scroll-final-contact-1.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/manga-scroll-final-contact-2.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/manga-scroll-final-contact-3.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/manga-scroll-final-home.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/manga-scroll-final-inspect.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/manga-scroll-final-install.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/manga-scroll-final-open.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/manga-scroll-final-open.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/manga-scroll-final-preflight.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/manga-scroll-final-ready.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/manga-scroll-final-reentry-ready.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/manga-scroll-final-verify.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/manifest.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-0.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-1.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-10.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-11.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-12.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-13.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-14.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-2.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-3.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-4.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-5.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-6.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-7.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-8.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-9.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-final-exit.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-final-fast-down.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-final-fast-down.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-final-fast-settled.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-final-fast-up.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-final-fast-up.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-final-hidden.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-final-reentry.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-final-reentry.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-final-slow-down.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-control-probe-1791019803001-25a5c808-99bd-4494-9dbd-f1af05f3702b.jsonl"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/final-pass/reader-manga-scroll-delivery-20261003.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/first-pass/evidence.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/first-pass/manga-scroll-after-readiness.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/first-pass/manga-scroll-after-start.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/first-pass/manga-scroll-after-start.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/first-pass/manga-scroll-slow-hilog.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/first-pass/manga-scroll-slow-top.txt"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/first-pass/reader-control-d2c0c929-d17e-44ac-bfaa-dacdab5eddf7-frame-0.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/first-pass/reader-control-d2c0c929-d17e-44ac-bfaa-dacdab5eddf7-frame-1.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/first-pass/reader-control-d2c0c929-d17e-44ac-bfaa-dacdab5eddf7-frame-2.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/first-pass/reader-control-d2c0c929-d17e-44ac-bfaa-dacdab5eddf7-frame-3.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/first-pass/reader-control-d2c0c929-d17e-44ac-bfaa-dacdab5eddf7-frame-4.png"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/first-pass/reader-control-probe-1791018589659-ef2e13d7-ed8c-436f-9c17-23703da3103d.jsonl"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/followup-local-evidence.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/local-evidence.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/manga-41-tests-summary.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/manga-flicker-before.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/manga-flicker-before.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/manga-flicker-readiness.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/manga-scroll-stability-sdk-green.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-scroll-flicker/manga-scroll-stability-sdk-red.log"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/evidence.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-ch05-p2.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-ch05-p2.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-ch05.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-cold-card.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-cold-card.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-cold-reader.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-cold-reader.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-detail.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-detail.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-directory.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-filter-card.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-handoff.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-manga-card-again.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-manga-card-again.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-manga-filter.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-more.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-novel-card.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-novel-card.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-novel-reader.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-reader.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-reader.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-shelf.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-shelf.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-warm-card.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-warm-card.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/final-pass/manga-final3-warm-restore.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/first-pass/evidence.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/first-pass/manga-after-exit.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/first-pass/manga-chapter02.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/first-pass/manga-cold-controls.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/first-pass/manga-cold-resume-ready.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/first-pass/manga-cold-shelf.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/first-pass/manga-controls-misplaced.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/first-pass/manga-controls.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/first-pass/manga-detail.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/first-pass/manga-detail.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/first-pass/manga-final-shelf.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/first-pass/manga-full-directory.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/first-pass/manga-horizontal-ready.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/first-pass/manga-horizontal.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/first-pass/manga-reader-directory.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/first-pass/manga-reader-first.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/first-pass/manga-reader-scroll.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/evidence.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-back-detail.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-back-detail.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-ch03-page2.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-ch03.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-ch03.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-cold-resume.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-cold-resume.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-cold-shelf.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-controls.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-controls.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-directory.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-directory.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-end.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-end.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-info-detail.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-lastpage.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-mode.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-more.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-page3.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-shelf.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-updated-shelf.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-updated-shelf.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-vertical-page2.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-vertical-ready.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-vertical.jpeg"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/second-pass/manga-final2-vertical.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/space-recovery/evidence.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/space-recovery/manga-preserve-traces-20261003.list"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/space-recovery/manga-preserve-traces-20261003.sha256"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-manga-vm-reading/space-recovery/verification.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-tencent-free-picture-source/README.md"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-tencent-free-picture-source/after-manga-extract.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-tencent-free-picture-source/before-manga-extract.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-tencent-free-picture-source/live-preferred-source.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-tencent-free-picture-source/live-simple-source.json"
+        },
+        {
+          "status": "??",
+          "path": "evidence/2026-10-03-tencent-free-picture-source/summary.json"
+        },
+        {
+          "status": "??",
+          "path": "tools/baozi-image-source-correction.mjs"
+        },
+        {
+          "status": "??",
+          "path": "tools/fixtures/manga-system-bars-r5/MangaReadingSurface.ets"
+        },
+        {
+          "status": "??",
+          "path": "tools/fixtures/manga-system-bars-r5/ReaderShell.ets"
+        },
+        {
+          "status": "??",
+          "path": "tools/fixtures/manga-viewport-r6/Index.ets"
+        },
+        {
+          "status": "??",
+          "path": "tools/fixtures/manga-viewport-r6/MangaReadingSurface.ets"
+        },
+        {
+          "status": "??",
+          "path": "tools/generate-manga-sheet-fonts.py"
+        },
+        {
+          "status": "??",
+          "path": "tools/manga-sheet-fonts-requirements.txt"
+        },
+        {
+          "status": "??",
+          "path": "tools/tencent-picture-source-correction.mjs"
+        },
+        {
+          "status": "??",
+          "path": "tools/test-baozi-image-source-correction.mjs"
+        },
+        {
+          "status": "??",
+          "path": "tools/test-bookshelf-continue-card-sdk.mjs"
+        },
+        {
+          "status": "??",
+          "path": "tools/test-manga-directory-demo-parity-sdk.mjs"
+        },
+        {
+          "status": "??",
+          "path": "tools/test-manga-directory-font-readiness-sdk.mjs"
+        },
+        {
+          "status": "??",
+          "path": "tools/test-manga-error-recovery.mjs"
+        },
+        {
+          "status": "??",
+          "path": "tools/test-manga-native-image-geometry-sdk.mjs"
+        },
+        {
+          "status": "??",
+          "path": "tools/test-manga-reading-directory-fallback.mjs"
+        },
+        {
+          "status": "??",
+          "path": "tools/test-manga-scroll-stability-sdk.mjs"
+        },
+        {
+          "status": "??",
+          "path": "tools/test-manga-sheet-motion-sdk.mjs"
+        },
+        {
+          "status": "??",
+          "path": "tools/test-manga-sheet-selection-sdk.mjs"
+        },
+        {
+          "status": "??",
+          "path": "tools/test-manga-system-bar-viewport-sdk.mjs"
+        },
+        {
+          "status": "??",
+          "path": "tools/test-manga-visible-tile-retention.mjs"
+        },
+        {
+          "status": "??",
+          "path": "tools/test-manga-window-publication.mjs"
+        },
+        {
+          "status": "??",
+          "path": "tools/test-tencent-picture-source-correction.mjs"
+        }
+      ],
+      "additionalNonEvidencePaths": [
+        "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaImageOriginGeometry.ts",
+        "Reader-for-HarmonyOS/tools/test-manga-native-image-geometry-sdk.mjs"
+      ]
+    }
+  ],
+  "allOtherSourceBytesAndModesUnchanged": true,
+  "tempEveryEffectiveFileByteModeMatch": true,
+  "persistentSixFrozenInputsByteModeMatch": true,
+  "persistentFrozenChangesMatch": true,
+  "coreBuildInputFingerprint": "9e97919470b42d81d87082c2c257984778da5e5e5e55798273b3242c99608c4b",
+  "nativePackageAndIdentityUnchanged": true
+}

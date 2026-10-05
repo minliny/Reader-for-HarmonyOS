@@ -1,0 +1,63 @@
+{
+  "scope": "fresh decoded local native destination + same logged image Area only; full phase/submitted frame association remains OPEN",
+  "observedFirstDecodedRecord": {
+    "sequence": 2,
+    "observedAtMs": 1791073933873,
+    "stateGeneration": 4,
+    "receiptGeneration": 2,
+    "receiptStateGeneration": 4,
+    "retainedReceipt": 0,
+    "submittedPaintEvidence": 0,
+    "destinationStatus": "PASS",
+    "destinationReason": "native-destination",
+    "ordinal": 0,
+    "tileIndex": 0,
+    "fit": "width",
+    "zoom": 1,
+    "controls": 0,
+    "panelPhase": "closed",
+    "windowMetricsRevision": 2,
+    "densityPixels": 3.5,
+    "nativeWidth": 1600,
+    "nativeHeight": 655,
+    "loadingStatus": 1,
+    "componentWidth": 1280,
+    "componentHeight": 524,
+    "contentWidth": 1280,
+    "contentHeight": 524,
+    "contentOffsetX": 0,
+    "contentOffsetY": 0,
+    "imageAreaWidthVp": 365.7142857142857,
+    "imageAreaHeightVp": 149.71428571428572,
+    "imageGlobalXVp": 0,
+    "imageGlobalYVp": 0,
+    "imageAreaGeneration": 2,
+    "imageAreaStateGeneration": 4,
+    "viewportWidthVp": 365.7142857142857,
+    "viewportHeightVp": 809.1428571428571,
+    "viewportGlobalXVp": 0,
+    "viewportGlobalYVp": 0,
+    "viewportAreaGeneration": 1,
+    "viewportAreaStateGeneration": 2
+  },
+  "uniqueSourceLogSequence": 2,
+  "actualProductionValidatorResult": {
+    "status": "PASS",
+    "reason": "native-destination"
+  },
+  "imageGlobalReportedVp": [
+    0,
+    0
+  ],
+  "sameRecordDensity": 3.5,
+  "matchesFirstUiOriginalRect": [
+    0,
+    0,
+    1280,
+    524
+  ],
+  "viewportAreaStateGeneration": 2,
+  "stateGeneration": 4,
+  "strictPhaseAssociation": "OPEN; viewport Area receipt belongs to earlier generation, B/D are retained; never relabelled fresh",
+  "noSourcePixelsRead": true
+}

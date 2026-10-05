@@ -1,0 +1,296 @@
+{
+  "status": "LOCAL_AND_BUILD_PASS_VM_BOUNDED_SCROLL_OBSERVATION_PASS_USER_ACCEPTANCE_OPEN",
+  "issue": "MR-19 whole reading content jumps/flickers while scrolling",
+  "runId": "20261003T092724Z-568ec4e3-1f9ba943",
+  "signedSha256": "334cbc5ddd1c76857b949492869995d193fa5e02ab8a4c2c0d1cbf308a12b162",
+  "target": {
+    "id": "127.0.0.1:5555",
+    "ref": "6460677a198b",
+    "model": "Mate 80 Pro",
+    "display": "1280x2832",
+    "bundleUpdateTime": 1791019725987
+  },
+  "sourceBinding": "Runtime claims bind to this archived manifest/controller snapshot, not later concurrent panel or Core edits.",
+  "schema": 34,
+  "dataPolicy": "preserve",
+  "buildClass": "iteration",
+  "acceptanceEligible": false,
+  "validation": {
+    "boundedMangaTests": 41,
+    "fullHarmonyContracts": 433,
+    "arktsCompile": "PASS",
+    "canonicalSignatureVerify": "PASS",
+    "installLaunch": "PASS",
+    "probeCommands": 62,
+    "probeCommandFailures": 0,
+    "sampleFrames": 15,
+    "slowScroll": "one unsampled slow drag, two sampled forward drags page3to4to5, one sampled reverse page5to4; sampled content moved in gesture direction without observed whole-page reset or whole-content blank",
+    "fastScroll": "four swipes with controls hidden, page4to6to4; lower newly entered region temporarily blank then filled; no full-content clearing observed",
+    "normalReentry": "exit card05 page4/32, reentry page4/32; after loading, same image content and within-page offset as exit",
+    "coldReentry": "force-stop/start preserved card05 page4/32, continue opened page4/32; same visible image content and within-page offset after loading"
+  },
+  "sampleTriggerAfterMs": [
+    1601.772,
+    3200.239,
+    5313.234,
+    7368.877,
+    8607.372,
+    1602.558,
+    3264.14,
+    4460.207,
+    5689.07,
+    7181.579,
+    1600.862,
+    2714.136,
+    4336.973,
+    5442.124,
+    6287.883
+  ],
+  "limits": [
+    "15 sparse screenshot samples are not video, frame-rate measurements or proof that every frame is flicker-free.",
+    "sampledDrag elapsedMs includes serial screenshot/receive waiting; do not compare it as pure gesture latency.",
+    "Initial loading spinners and newly entered-image blank regions were observed and retained in evidence.",
+    "Directory/panel visual and animation work remains in another task; this evidence does not accept those UIs.",
+    "No physical-device, mainline merge, clean acceptance or user acceptance claim."
+  ],
+  "firstPassFailure": "../first-pass/evidence.json preserves failed30s sampled drag on085836 package; not counted as passing",
+  "leaseReleased": true,
+  "architectureNotified": true,
+  "files": [
+    {
+      "path": "cold-session-observation.json",
+      "bytes": 1131,
+      "sha256": "7d3932e92cbbb861ff7b2ed33dffc091dbbeb30e2741707bfc996187676fc5ae"
+    },
+    {
+      "path": "controller-snapshot.json",
+      "bytes": 126465,
+      "sha256": "6eedd9e37ba6222892b6972df6a00f6fc0039b9479086a1f586655bb777153d9"
+    },
+    {
+      "path": "deploy-vm-6460677a198b-20261003T092846Z.json",
+      "bytes": 1751,
+      "sha256": "0ccfb430b0295f0290c0b5b40bebb1884ffe0c7259ceb321da87dd7c5994609c"
+    },
+    {
+      "path": "manga-scroll-final-cold-home-ready.json",
+      "bytes": 101948,
+      "sha256": "dc06e9fdea81d0547a24a477d7827b935fc00be63abf82d431112a698c9ffcb0"
+    },
+    {
+      "path": "manga-scroll-final-cold-home.json",
+      "bytes": 55806,
+      "sha256": "3baa0f381610bc315139c2ed26e3677e3cb82e25762ade2587333376917ff7c9"
+    },
+    {
+      "path": "manga-scroll-final-cold-reader.json",
+      "bytes": 45500,
+      "sha256": "b5f68a1d6356e874e755bcc821a78f5fe7c02ce822c887f933ca99bf4e462307"
+    },
+    {
+      "path": "manga-scroll-final-cold-ready.jpeg",
+      "bytes": 444183,
+      "sha256": "89bb7f481c1c41f09ea8ff8ce817941d077cd784bae2da4fd0d636b14cb62216"
+    },
+    {
+      "path": "manga-scroll-final-contact-1.png",
+      "bytes": 1212768,
+      "sha256": "e49cc3a8162e1e4f3ec15ace9e9b5df1e2e9b65af2059582a06e5de129433c2f"
+    },
+    {
+      "path": "manga-scroll-final-contact-2.png",
+      "bytes": 1213378,
+      "sha256": "de446a45080407876c8d88a60713ae69c840ffdf62fa81d69730cb9d1c0bb6f0"
+    },
+    {
+      "path": "manga-scroll-final-contact-3.png",
+      "bytes": 1497009,
+      "sha256": "56de7fb323a8ceaf9072436929a7a6667880a60b0e65e14147fc484a433eb08a"
+    },
+    {
+      "path": "manga-scroll-final-home.json",
+      "bytes": 101948,
+      "sha256": "b456d1318fe8adef35bb81b09216721445dd1d9a99078c499f6aa5f16ce111fa"
+    },
+    {
+      "path": "manga-scroll-final-inspect.log",
+      "bytes": 1171,
+      "sha256": "fc2e55aa2fa1175591ae7a2d9c213321b0ffe42d05a5d39ed26b2476a57df3eb"
+    },
+    {
+      "path": "manga-scroll-final-install.log",
+      "bytes": 241,
+      "sha256": "29f3e35d15ec8ecbadb94d2c236ba18f391df6bafe6b458b88f771c1ecb50f58"
+    },
+    {
+      "path": "manga-scroll-final-open.jpeg",
+      "bytes": 304855,
+      "sha256": "75330c436c294081aa289b2f1ccc130691d59d21a7092da60e663e1c119db9d6"
+    },
+    {
+      "path": "manga-scroll-final-open.json",
+      "bytes": 44225,
+      "sha256": "a3d93ca39151511cc8463fd570b5f2c472bdfad3143b92effe14f88bca2e99be"
+    },
+    {
+      "path": "manga-scroll-final-preflight.log",
+      "bytes": 36231,
+      "sha256": "352fe6f97176ffc4ad2ec180d19784c25bd092733949ab40192d0e45e5660cb1"
+    },
+    {
+      "path": "manga-scroll-final-ready.jpeg",
+      "bytes": 495703,
+      "sha256": "8a76b0f14d49fbf7bbe4679fc2acaf535c1d4040e2dbf7e4ce71c39c9a23fe30"
+    },
+    {
+      "path": "manga-scroll-final-reentry-ready.jpeg",
+      "bytes": 444103,
+      "sha256": "23b5e159b7c2f12a4d3ca451284c920905f6a489e2db3822a09177a7f14e0d5e"
+    },
+    {
+      "path": "manga-scroll-final-verify.log",
+      "bytes": 736,
+      "sha256": "ec6a530f6e3d1f9c6f5f70620d254881130636c7201b338057c4ef04b79e2493"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 11627,
+      "sha256": "b00332efbc5b7ba94f9a2b55f0b4c011841362da3e97524d3d25752d4a21c9b4"
+    },
+    {
+      "path": "reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-0.png",
+      "bytes": 3235966,
+      "sha256": "287af2cb8cd2134c22a8bbc8bc8093555874012764e4fa83b1eefcd0ed73084c"
+    },
+    {
+      "path": "reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-1.png",
+      "bytes": 3296060,
+      "sha256": "fcec38b3cf5a7f3679125abdb7c375d9f7407f07e7972dd2e5ec10cc25a75ac7"
+    },
+    {
+      "path": "reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-10.png",
+      "bytes": 4071328,
+      "sha256": "957c5a953145ff1024c8f16d5848b82049dd200c96fc4b75b171b3f4301589ad"
+    },
+    {
+      "path": "reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-11.png",
+      "bytes": 4039953,
+      "sha256": "60b4717d8f376d1d2af41ddae9a91405cc2f272d65bc055cc38dd6185b43866e"
+    },
+    {
+      "path": "reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-12.png",
+      "bytes": 3978433,
+      "sha256": "0e9b1f62754043d544c14e8c15f28acfb8dd8cc41ae64ce83467dedb439898ce"
+    },
+    {
+      "path": "reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-13.png",
+      "bytes": 3910989,
+      "sha256": "ddccf8989b7746a95bebdc24f48499cf6d6c50e9cb23e5493a6b90fd4a4b4de4"
+    },
+    {
+      "path": "reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-14.png",
+      "bytes": 3013942,
+      "sha256": "1b3a9234a5c4a5f89f3c0331e897cb27b1f45c5cd5108887d88d0cea0d7b25a1"
+    },
+    {
+      "path": "reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-2.png",
+      "bytes": 2798946,
+      "sha256": "384a89b7eb9014154f7566bf5749c387fca2235fbaa974ad9dc97a0ebe875d25"
+    },
+    {
+      "path": "reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-3.png",
+      "bytes": 2929904,
+      "sha256": "e3e69c9d25797020341698b613c8713015dcb3983774f202ba91cbd82ca34d6d"
+    },
+    {
+      "path": "reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-4.png",
+      "bytes": 2978100,
+      "sha256": "8ac3294121270b94b6294b6c4a87335565a7eb8b0bf26df377e4c2e72b9b406a"
+    },
+    {
+      "path": "reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-5.png",
+      "bytes": 3003360,
+      "sha256": "5356f4c3f6818f54b89043b3282911436bed807631954efbb952f82f317c90fc"
+    },
+    {
+      "path": "reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-6.png",
+      "bytes": 3146713,
+      "sha256": "ef86b109603e1add6abc055611c8d388d61fea04d312f80eb835b44401cf564b"
+    },
+    {
+      "path": "reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-7.png",
+      "bytes": 3052186,
+      "sha256": "0be818082f82defa385eb79ce97b2d737c772d2e7a1b2828aa7814fbdea6fba6"
+    },
+    {
+      "path": "reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-8.png",
+      "bytes": 3105731,
+      "sha256": "a44269d6b67afdee3c22c178c65309bca770751a9b573df1c57128317237f97d"
+    },
+    {
+      "path": "reader-control-e34fd933-8e74-4434-b602-ec6bd750bca6-frame-9.png",
+      "bytes": 3227478,
+      "sha256": "163f26c986fd6b9bf90dc9fda6e9e2002c6267ed0ac8dcfa5a076c09d213ff70"
+    },
+    {
+      "path": "reader-control-final-exit.json",
+      "bytes": 102296,
+      "sha256": "421713f4e831cb57aa2968c909282d13bfa40e0d33cb361224213d9493cdfaaf"
+    },
+    {
+      "path": "reader-control-final-fast-down.json",
+      "bytes": 42884,
+      "sha256": "6c723da4e345554be2ef8a59bba7312c2124bd239012164a3be3faa23a727034"
+    },
+    {
+      "path": "reader-control-final-fast-down.png",
+      "bytes": 3155685,
+      "sha256": "9604029c08e302f62fd366e5e845b361927a4e82ee9bc95c377ca4a6a67a6f9c"
+    },
+    {
+      "path": "reader-control-final-fast-settled.png",
+      "bytes": 4290985,
+      "sha256": "6130de229c04e497e537c24569e56d8da142189bf5660e92b9c4e4882c7780bc"
+    },
+    {
+      "path": "reader-control-final-fast-up.json",
+      "bytes": 42912,
+      "sha256": "7e4730b7bccc1bde3232dc6c0e2271254bd9723d0e93b1c53240ae2b63810799"
+    },
+    {
+      "path": "reader-control-final-fast-up.png",
+      "bytes": 3812456,
+      "sha256": "232beb5a5939372a873b7658fdf6a87bdba16284ce1ade744d66436b1fd32769"
+    },
+    {
+      "path": "reader-control-final-hidden.png",
+      "bytes": 3776242,
+      "sha256": "cd744d7e962699c410c513cdc16a3e5e6e0ca3bde713f841247967058e749389"
+    },
+    {
+      "path": "reader-control-final-reentry.json",
+      "bytes": 46207,
+      "sha256": "465f5561ff23ebf98d7ae2e1083ac517dd51b96e71a099da28719b1d67d63307"
+    },
+    {
+      "path": "reader-control-final-reentry.png",
+      "bytes": 1444481,
+      "sha256": "89eb667be9e633ae9f5ad11d22895be9746ab2ae53c18cf02a6e4c884298eca9"
+    },
+    {
+      "path": "reader-control-final-slow-down.json",
+      "bytes": 64859,
+      "sha256": "918fa8dfff51050c62c20195a257a51f1901e45c50c67757059d2584b298017b"
+    },
+    {
+      "path": "reader-control-probe-1791019803001-25a5c808-99bd-4494-9dbd-f1af05f3702b.jsonl",
+      "bytes": 42084,
+      "sha256": "fe62ae021938778e9651e604a616c69b2fedde49689cb4f3f773102db2d4642b"
+    },
+    {
+      "path": "reader-manga-scroll-delivery-20261003.log",
+      "bytes": 264855,
+      "sha256": "ddc1c93bc9f03837822df6a7e26cc6c36d118a1554850b0ffc3d8a0efc236587"
+    }
+  ]
+}

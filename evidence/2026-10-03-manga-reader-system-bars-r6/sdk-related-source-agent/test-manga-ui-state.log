@@ -1,0 +1,12 @@
+(node:19012) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+<anonymous_script>:3
+class Probe { nativeTextMeasurement = { clear() {} }; nativeParagraphResources = { close() {}, retain() {} };                  publishedRowKeys                      = new Map                (); @Watch('onWindowChromeChanged')         panel         = '';
+                                                                                                                                                                                                  ^
+
+SyntaxError: Invalid or unexpected token
+    at new Function (<anonymous>)
+    at productionMotionMethods (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-motion-method-probe.mjs:50:10)
+    at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-ui-state.mjs:71:17
+
+Node.js v26.0.0

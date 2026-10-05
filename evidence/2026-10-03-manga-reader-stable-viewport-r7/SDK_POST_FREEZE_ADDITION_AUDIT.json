@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03T15:50:43.243220+00:00",
+  "reason": "Parent reports unexplained INPUTS_FROZEN 2.json addition after SDK freeze",
+  "observations": [
+    {
+      "tree": "persistent",
+      "root": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-system-bars-r7/sdk",
+      "currentFiles": 27,
+      "original24FrozenRecordsChanged": [],
+      "additionalPaths": [
+        {
+          "path": "INPUTS_FROZEN 2.json",
+          "bytes": 4504,
+          "mode": 384,
+          "sha256": "d3be88efc5d0f7a5d90b6fcb71a7d5ced99103c0975f5e05a26b96a91602008c",
+          "mtimeNs": 1791041118000000000
+        },
+        {
+          "path": "REVIEW 2.md",
+          "bytes": 3174,
+          "mode": 384,
+          "sha256": "e7a65d34beaf925be21c0638f185d67fbced6d887449a58ab251de5ab174c30e",
+          "mtimeNs": 1791041182000000000
+        },
+        {
+          "path": "SHASUMS 2.sha256",
+          "bytes": 1509,
+          "mode": 384,
+          "sha256": "a95d085f4e6758e48436905866cedfa1acf8bd0a89f0a98156b07504ee233065",
+          "mtimeNs": 1791041209000000000
+        }
+      ]
+    },
+    {
+      "tree": "temporary",
+      "root": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-system-bars-r7/sdk",
+      "currentFiles": 24,
+      "original24FrozenRecordsChanged": [],
+      "additionalPaths": []
+    }
+  ],
+  "scope": "Read-only SDK membership/hash comparison; no deletion, rename, overwrite or source mutation",
+  "extraPathsNotTreatedAsOriginalFrozenInputs": true,
+  "actorOrCauseEstablished": false,
+  "finalEvidenceClosureStillPending": true
+}

@@ -1,0 +1,537 @@
+{
+  "scene": "dir-open",
+  "source_directory": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/dir-open",
+  "original_dimensions": [
+    640,
+    1416
+  ],
+  "roi": [
+    0,
+    380,
+    640,
+    1368
+  ],
+  "frame_count": 9,
+  "click": {
+    "label": "click",
+    "index": null,
+    "start": "1791028767.648914095",
+    "end": "1791028767.925990636",
+    "exit_code": 0,
+    "valid_clock_window": true,
+    "command_duration_ms": 277.076541
+  },
+  "command_window_problems": [],
+  "invalid_lines": [],
+  "duplicate_indices": [],
+  "capture_command_duration_ms": {
+    "min": 104.310584,
+    "median": 168.127625,
+    "max": 204.829959
+  },
+  "file_ordinal_pixel_groups": [
+    {
+      "roi_sha256": "b6e17351c598d29772069466f74f3410cead1b645bdd44aeeda4a0c8f5cba976",
+      "indices": [
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "roi_sha256": "877e602817aee2032ad6deadea5a0e242f328ef7a98e156c7f41098158c97a50",
+      "indices": [
+        3
+      ]
+    },
+    {
+      "roi_sha256": "3bd8fa59781004113230bcb01dd69506106d9c883153ddf9acb447a727f4a5b2",
+      "indices": [
+        4
+      ]
+    },
+    {
+      "roi_sha256": "d93404eba2a0744283e56a69a021a616ad9117f67e849e62037dec401f4db27b",
+      "indices": [
+        5
+      ]
+    },
+    {
+      "roi_sha256": "e520bb396797f8c6641340df712b350439e7adb92ac41b25a6ed0f0ec05d24b4",
+      "indices": [
+        6,
+        7,
+        8
+      ]
+    }
+  ],
+  "request_start_order_differs_from_file_ordinal": false,
+  "capture_request_start_order": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "overlap_groups": [
+    {
+      "indices": [
+        0
+      ],
+      "start": "1791028767.483351053",
+      "end": "1791028767.632600928"
+    },
+    {
+      "indices": [
+        1,
+        2,
+        3
+      ],
+      "start": "1791028767.729454553",
+      "end": "1791028768.040122303"
+    },
+    {
+      "indices": [
+        4
+      ],
+      "start": "1791028768.065985595",
+      "end": "1791028768.253967345"
+    },
+    {
+      "indices": [
+        5
+      ],
+      "start": "1791028768.271868387",
+      "end": "1791028768.475623345"
+    },
+    {
+      "indices": [
+        6
+      ],
+      "start": "1791028768.491663303",
+      "end": "1791028768.696493262"
+    },
+    {
+      "indices": [
+        7
+      ],
+      "start": "1791028768.711867595",
+      "end": "1791028768.844421220"
+    },
+    {
+      "indices": [
+        8
+      ],
+      "start": "1791028769.674270762",
+      "end": "1791028769.778581346"
+    }
+  ],
+  "manual_anchor_movement": [
+    {
+      "frame": 3,
+      "anchor_keys": [
+        "search",
+        "title"
+      ],
+      "y_displacements_to_reference": [
+        744,
+        743
+      ],
+      "at_least_two_anchors_co_translate": true,
+      "content_visible_manual": true
+    },
+    {
+      "frame": 4,
+      "anchor_keys": [
+        "search",
+        "title"
+      ],
+      "y_displacements_to_reference": [
+        23,
+        23
+      ],
+      "at_least_two_anchors_co_translate": true,
+      "content_visible_manual": true
+    }
+  ],
+  "frames": [
+    {
+      "index": 0,
+      "filename": "frame-0.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "f6a3cfd826033b388c229467543651171c70760d5513ed80dbe71906f691b031",
+      "rgb_sha256": "ce7db5409d8dc8d49ff000bbce0f17e52489e3e8cd0caf5be31c51d1fcc117c6",
+      "roi_sha256": "b6e17351c598d29772069466f74f3410cead1b645bdd44aeeda4a0c8f5cba976",
+      "phase": "closed",
+      "annotation": {
+        "phase": "closed",
+        "note": "Directory absent; reader controls visible."
+      },
+      "capture": {
+        "label": "frame-0",
+        "index": 0,
+        "start": "1791028767.483351053",
+        "end": "1791028767.632600928",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 149.249875
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 0.0,
+      "roi_mean_absolute_rgb_difference_from_last": 65.87569743168017,
+      "scrim_roi_mean_rgb": [
+        254.1326530612245,
+        254.1326530612245,
+        254.1326530612245
+      ],
+      "scrim_roi_luma_proxy": 254.13265306122446,
+      "capture_request_relative_to_click_command_ms": [
+        -442.639583,
+        -16.313167
+      ]
+    },
+    {
+      "index": 1,
+      "filename": "frame-1.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "f6a3cfd826033b388c229467543651171c70760d5513ed80dbe71906f691b031",
+      "rgb_sha256": "ce7db5409d8dc8d49ff000bbce0f17e52489e3e8cd0caf5be31c51d1fcc117c6",
+      "roi_sha256": "b6e17351c598d29772069466f74f3410cead1b645bdd44aeeda4a0c8f5cba976",
+      "phase": "closed",
+      "annotation": {
+        "phase": "closed",
+        "note": "Decoded pixels exactly match frame0."
+      },
+      "capture": {
+        "label": "frame-1",
+        "index": 1,
+        "start": "1791028767.729454553",
+        "end": "1791028767.897582178",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 168.127625
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 0.0,
+      "roi_mean_absolute_rgb_difference_from_last": 65.87569743168017,
+      "scrim_roi_mean_rgb": [
+        254.1326530612245,
+        254.1326530612245,
+        254.1326530612245
+      ],
+      "scrim_roi_luma_proxy": 254.13265306122446,
+      "capture_request_relative_to_click_command_ms": [
+        -196.536083,
+        248.668083
+      ]
+    },
+    {
+      "index": 2,
+      "filename": "frame-2.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "f6a3cfd826033b388c229467543651171c70760d5513ed80dbe71906f691b031",
+      "rgb_sha256": "ce7db5409d8dc8d49ff000bbce0f17e52489e3e8cd0caf5be31c51d1fcc117c6",
+      "roi_sha256": "b6e17351c598d29772069466f74f3410cead1b645bdd44aeeda4a0c8f5cba976",
+      "phase": "closed",
+      "annotation": {
+        "phase": "closed",
+        "note": "Decoded pixels exactly match frame0."
+      },
+      "capture": {
+        "label": "frame-2",
+        "index": 2,
+        "start": "1791028767.769134345",
+        "end": "1791028767.931483595",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 162.34925
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 0.0,
+      "roi_mean_absolute_rgb_difference_from_last": 65.87569743168017,
+      "scrim_roi_mean_rgb": [
+        254.1326530612245,
+        254.1326530612245,
+        254.1326530612245
+      ],
+      "scrim_roi_luma_proxy": 254.13265306122446,
+      "capture_request_relative_to_click_command_ms": [
+        -156.856291,
+        282.5695
+      ]
+    },
+    {
+      "index": 3,
+      "filename": "frame-3.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "0831a263431b772b68d9111a6c809823e6f02be1198d69c9761c9d3c439f3f59",
+      "rgb_sha256": "eee4e62960eb82aacf68e6f6413f4909fb1cafda0712d3a35e1340e94c3a2362",
+      "roi_sha256": "877e602817aee2032ad6deadea5a0e242f328ef7a98e156c7f41098158c97a50",
+      "phase": "middle",
+      "annotation": {
+        "phase": "middle",
+        "anchor_y": {
+          "title": 1196,
+          "search": 1282
+        },
+        "content_visible": true,
+        "note": "Title and search appear near screen bottom; both move by about743/744 pixels relative to open reference. Rows below viewport not claimed visible."
+      },
+      "capture": {
+        "label": "frame-3",
+        "index": 3,
+        "start": "1791028767.846594511",
+        "end": "1791028768.040122303",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 193.527792
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 13.06939418859649,
+      "roi_mean_absolute_rgb_difference_from_last": 69.21534613275979,
+      "scrim_roi_mean_rgb": [
+        238.17551020408163,
+        238.17551020408163,
+        238.17551020408163
+      ],
+      "scrim_roi_luma_proxy": 238.1755102040816,
+      "capture_request_relative_to_click_command_ms": [
+        -79.396125,
+        391.208208
+      ]
+    },
+    {
+      "index": 4,
+      "filename": "frame-4.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "771c9214f80685bc05157cac38d9f34096f1d91d1a4430ba845d3a7eda09baeb",
+      "rgb_sha256": "ea899ae53a4e6b3f87d6b2f0cc12ce28c7d929e2bb2a112de643b4f850aecd05",
+      "roi_sha256": "3bd8fa59781004113230bcb01dd69506106d9c883153ddf9acb447a727f4a5b2",
+      "phase": "middle",
+      "annotation": {
+        "phase": "middle",
+        "anchor_y": {
+          "title": 476,
+          "search": 561
+        },
+        "content_visible": true,
+        "note": "Both independent text anchors remain23 pixels below settled reference; directory rows not yet visibly populated."
+      },
+      "capture": {
+        "label": "frame-4",
+        "index": 4,
+        "start": "1791028768.065985595",
+        "end": "1791028768.253967345",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 187.98175
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 65.50513611251687,
+      "roi_mean_absolute_rgb_difference_from_last": 9.066708839406209,
+      "scrim_roi_mean_rgb": [
+        167.17551020408163,
+        167.17551020408163,
+        167.17551020408163
+      ],
+      "scrim_roi_luma_proxy": 167.1755102040816,
+      "capture_request_relative_to_click_command_ms": [
+        139.994959,
+        605.05325
+      ]
+    },
+    {
+      "index": 5,
+      "filename": "frame-5.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "cf76cc607cbb97a0ee7e1912ff4a9a4514df6618ba46db74471473f0fdb57d47",
+      "rgb_sha256": "27dd8d21babc2c5b51630c8c01309d7f3a1008eca294a799eb2ba99373bfaa76",
+      "roi_sha256": "d93404eba2a0744283e56a69a021a616ad9117f67e849e62037dec401f4db27b",
+      "phase": "unreviewed",
+      "annotation": {
+        "phase": "unreviewed",
+        "content_visible": true,
+        "note": "Near-final position with approximately1px residual glyph/search raster difference; not used as independent middle-state proof. Rows not yet visible."
+      },
+      "capture": {
+        "label": "frame-5",
+        "index": 5,
+        "start": "1791028768.271868387",
+        "end": "1791028768.475623345",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 203.754958
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 65.9749736420378,
+      "roi_mean_absolute_rgb_difference_from_last": 3.1359801998987855,
+      "scrim_roi_mean_rgb": [
+        167.17551020408163,
+        167.17551020408163,
+        167.17551020408163
+      ],
+      "scrim_roi_luma_proxy": 167.1755102040816,
+      "capture_request_relative_to_click_command_ms": [
+        345.877751,
+        826.70925
+      ]
+    },
+    {
+      "index": 6,
+      "filename": "frame-6.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "b3821613ae7daa878cd4e04ea9ddd91466425fcd1992542fe31a98415383f68c",
+      "rgb_sha256": "3214805dd17222a797c12e5819ae301ff6b74c10f090559ba8e3a618b659968f",
+      "roi_sha256": "e520bb396797f8c6641340df712b350439e7adb92ac41b25a6ed0f0ec05d24b4",
+      "phase": "open",
+      "annotation": {
+        "phase": "open",
+        "anchor_y": {
+          "title": 453,
+          "search": 538
+        },
+        "content_visible": true,
+        "note": "Settled with actual04-09 rows and05 currently reading."
+      },
+      "capture": {
+        "label": "frame-6",
+        "index": 6,
+        "start": "1791028768.491663303",
+        "end": "1791028768.696493262",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 204.829959
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 65.87569743168017,
+      "roi_mean_absolute_rgb_difference_from_last": 0.0,
+      "scrim_roi_mean_rgb": [
+        167.17551020408163,
+        167.17551020408163,
+        167.17551020408163
+      ],
+      "scrim_roi_luma_proxy": 167.1755102040816,
+      "capture_request_relative_to_click_command_ms": [
+        565.672667,
+        1047.579167
+      ]
+    },
+    {
+      "index": 7,
+      "filename": "frame-7.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "b3821613ae7daa878cd4e04ea9ddd91466425fcd1992542fe31a98415383f68c",
+      "rgb_sha256": "3214805dd17222a797c12e5819ae301ff6b74c10f090559ba8e3a618b659968f",
+      "roi_sha256": "e520bb396797f8c6641340df712b350439e7adb92ac41b25a6ed0f0ec05d24b4",
+      "phase": "open",
+      "annotation": {
+        "phase": "open",
+        "anchor_y": {
+          "title": 453,
+          "search": 538
+        },
+        "content_visible": true,
+        "note": "Decoded pixels exactly match frame6."
+      },
+      "capture": {
+        "label": "frame-7",
+        "index": 7,
+        "start": "1791028768.711867595",
+        "end": "1791028768.844421220",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 132.553625
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 65.87569743168017,
+      "roi_mean_absolute_rgb_difference_from_last": 0.0,
+      "scrim_roi_mean_rgb": [
+        167.17551020408163,
+        167.17551020408163,
+        167.17551020408163
+      ],
+      "scrim_roi_luma_proxy": 167.1755102040816,
+      "capture_request_relative_to_click_command_ms": [
+        785.876959,
+        1195.507125
+      ]
+    },
+    {
+      "index": 8,
+      "filename": "frame-8.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "b3821613ae7daa878cd4e04ea9ddd91466425fcd1992542fe31a98415383f68c",
+      "rgb_sha256": "3214805dd17222a797c12e5819ae301ff6b74c10f090559ba8e3a618b659968f",
+      "roi_sha256": "e520bb396797f8c6641340df712b350439e7adb92ac41b25a6ed0f0ec05d24b4",
+      "phase": "open",
+      "annotation": {
+        "phase": "open",
+        "anchor_y": {
+          "title": 453,
+          "search": 538
+        },
+        "content_visible": true,
+        "note": "Decoded pixels exactly match frame6; reference open position."
+      },
+      "capture": {
+        "label": "frame-8",
+        "index": 8,
+        "start": "1791028769.674270762",
+        "end": "1791028769.778581346",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 104.310584
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 65.87569743168017,
+      "roi_mean_absolute_rgb_difference_from_last": 0.0,
+      "scrim_roi_mean_rgb": [
+        167.17551020408163,
+        167.17551020408163,
+        167.17551020408163
+      ],
+      "scrim_roi_luma_proxy": 167.1755102040816,
+      "capture_request_relative_to_click_command_ms": [
+        1748.280126,
+        2129.667251
+      ]
+    }
+  ],
+  "transition_existence": "OBSERVED_REAL_MIDDLE_POSITION",
+  "exit_content_retention": "NOT_APPLICABLE",
+  "timing_window_integrity": "VALID_COMMAND_WINDOWS",
+  "actual_curve_duration_scrim_equivalence": "OPEN",
+  "boundary": "Command wall-clock windows are not exact input/VSync/present timestamps. Native snapshot calls can serialize, reuse a committed buffer and perturb rendering. Pixel differences alone are not semantic motion; original-image inspection and declared anchors are required. No interpolated frames, UI reconstruction, font-paint or curve pass is produced.",
+  "scrim_roi": [
+    140,
+    198,
+    175,
+    212
+  ],
+  "nonendpoint_scrim_luma_candidates": [
+    3
+  ],
+  "scrim_proxy_boundary": "Candidates only: verify this is the same static underlying image region, above sheet/shadow and other changing controls. Luma changes cannot alone prove scrim fade or its timing."
+}

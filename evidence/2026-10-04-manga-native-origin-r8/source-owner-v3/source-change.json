@@ -1,0 +1,8 @@
+{
+  "beforeSurfaceSha256": "b16c0207277a58ab13d00c076085371b24adf20d11fcce2a6e8f373b61694fe3",
+  "afterSurfaceSha256": "282b5e26357252c0787881fcb34bf39b194fa7e2432258ed235a47618a0f973d",
+  "build4Log": "/private/tmp/manga-r8-native-origin-build-4.log",
+  "build4LogSha256": "f1900f2e660b3ddaeb23d18d5e21a27436d2aeddee4826c4a282abbebf5ad63f",
+  "change": "Explicit string | undefined declaration and assertion for Map iterator value; no behavior change.",
+  "strictCompileStatus": "OPEN: parent canonical rebuild required; no bare Hvigor or HDC run by source owner."
+}

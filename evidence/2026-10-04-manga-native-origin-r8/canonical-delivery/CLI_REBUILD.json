@@ -1,0 +1,20 @@
+{
+  "at": "2026-10-04T00:13:32.422550+00:00",
+  "command": [
+    "cargo",
+    "build",
+    "--locked",
+    "--offline",
+    "-p",
+    "reader-cli"
+  ],
+  "cwd": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-Core-Native",
+  "exitCode": 0,
+  "cliPath": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-Core-Native/target/debug/reader-cli",
+  "cliBytes": 97671448,
+  "cliSHA256": "9b0f36295f441c7ae5d28424e6c91211a710da62e275833cf684e43161ed550d",
+  "coreSourceIsCurrentTempDeliveryInput": true,
+  "logSHA256": "cba90dca63635e3a36a9feccef8871e07caae124f63a89c26fdbb3779bc2b119",
+  "onlyRequiredCLIRebuilt": true,
+  "nativePackageNotRebuiltOrReplaced": true
+}

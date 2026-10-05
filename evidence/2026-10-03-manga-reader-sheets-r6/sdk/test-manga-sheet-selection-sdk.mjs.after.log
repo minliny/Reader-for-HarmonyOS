@@ -1,0 +1,3 @@
+PASS actual SDK retained manga sheets: paper/ink and vertical/horizontal return trips, all fit check branches, icon/paint/accessibility updates, native SwitchStyle and whole-row single pointer owner, themed slider, legacy white/low brightness preserved; captured-parameter/fake selection/fake label/duplicate pointer negative controls rejected
+(node:22428) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

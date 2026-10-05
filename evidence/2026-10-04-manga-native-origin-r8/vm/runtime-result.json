@@ -1,0 +1,3367 @@
+{
+  "schemaVersion": 1,
+  "scope": "bounded current-process numeric destination and UI original layout; no submitted-paint or source-pixel proof",
+  "inputHashes": {
+    "manifest": {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261004T002116Z-568ec4e3-3eec7853/manifest.json",
+      "sha256": "555eaba03fe4c3c130352c42ca4929763cc1ff039bd7f59ee1adde31b0293712"
+    },
+    "session": {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-04-manga-native-origin-r8/vm/numeric-session.jsonl",
+      "sha256": "cfa99bb09c17e39f7fe7aa7eff67e3167a2e9f68365c7b5bea3cd125077e9dd1"
+    },
+    "a": {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-04-manga-native-origin-r8/vm/aSettled.json",
+      "sha256": "c55157a69d8650ebc5622d9e86f082bdb4d23044c3dd43de45c43c6686a9d794"
+    },
+    "b": {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-04-manga-native-origin-r8/vm/b.json",
+      "sha256": "9ae55570eeb47d6b717d6591ce678fb76304e2fb0175c3bad48324f207b6e604"
+    },
+    "d": {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-04-manga-native-origin-r8/vm/d.json",
+      "sha256": "d97243ad2bb49f1dd1d46021a20ef0ed1d5f435a93e1d1168c79c804bf879e66"
+    },
+    "metadata": {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-04-manga-native-origin-r8/vm/metadata.json",
+      "sha256": "e3684f9e0701a412777d4d3f1154eb18c929bd0629146bc516f5e06155c0d019"
+    },
+    "validator": {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaImageOriginGeometry.ts",
+      "sha256": "bf19329bb7371939324b50fdd3d081882b2fb851a853ce1528bb79c002453a0b"
+    }
+  },
+  "sourceSnapshotSha256": "6f6cf4fe39fcb50715d5cb115caf2782e47987ed7b7c0c1aee4a25494e1eb0ca",
+  "binding": {
+    "pid": 25061,
+    "guestEpochStartSeconds": 1791073903,
+    "runId": "20261004T002116Z-568ec4e3-3eec7853",
+    "signedHapSha256": "9b5f34be522060a84bb4e2e805e62ca538cc0d2ae4d68f1a81f716cdf2c1ac56",
+    "productionValidatorSha256": "bf19329bb7371939324b50fdd3d081882b2fb851a853ce1528bb79c002453a0b"
+  },
+  "manifest": {
+    "status": "PASS",
+    "reason": "manifest-and-production-validator-bound"
+  },
+  "runtimeProvenance": {
+    "status": "PASS",
+    "reason": "baseline-cold-start-observed-PID-and-guest-epoch-bound",
+    "baselineNumericRecords": 0,
+    "observedPids": [
+      25061
+    ],
+    "observedEpochs": [
+      1791073903,
+      1791073933,
+      1791073936,
+      1791074071,
+      1791074186,
+      1791074191,
+      1791074245,
+      1791074248,
+      1791074416
+    ]
+  },
+  "ui": {
+    "a": {
+      "check": {
+        "status": "PASS",
+        "reason": "image-original-layout-covers-full-window"
+      },
+      "rows": [
+        {
+          "id": "118:308",
+          "original": [
+            0,
+            0,
+            1280,
+            524
+          ],
+          "visibleBounds": [
+            0,
+            0,
+            1280,
+            524
+          ],
+          "itemId": "118:306",
+          "item": [
+            0,
+            0,
+            1280,
+            524
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        },
+        {
+          "id": "118:359",
+          "original": [
+            0,
+            524,
+            1280,
+            1048
+          ],
+          "visibleBounds": [
+            0,
+            524,
+            1280,
+            1048
+          ],
+          "itemId": "118:357",
+          "item": [
+            0,
+            524,
+            1280,
+            1048
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        },
+        {
+          "id": "118:362",
+          "original": [
+            0,
+            1048,
+            1280,
+            1572
+          ],
+          "visibleBounds": [
+            0,
+            1048,
+            1280,
+            1572
+          ],
+          "itemId": "118:360",
+          "item": [
+            0,
+            1048,
+            1280,
+            1572
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        },
+        {
+          "id": "118:365",
+          "original": [
+            0,
+            1572,
+            1280,
+            2096
+          ],
+          "visibleBounds": [
+            0,
+            1572,
+            1280,
+            2096
+          ],
+          "itemId": "118:363",
+          "item": [
+            0,
+            1572,
+            1280,
+            2096
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        },
+        {
+          "id": "118:368",
+          "original": [
+            0,
+            2096,
+            1280,
+            2133
+          ],
+          "visibleBounds": [
+            0,
+            2096,
+            1280,
+            2133
+          ],
+          "itemId": "118:366",
+          "item": [
+            0,
+            2096,
+            1280,
+            2133
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        },
+        {
+          "id": "118:351",
+          "original": [
+            0,
+            2133,
+            1280,
+            2657
+          ],
+          "visibleBounds": [
+            0,
+            2133,
+            1280,
+            2657
+          ],
+          "itemId": "118:349",
+          "item": [
+            0,
+            2133,
+            1280,
+            2657
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        },
+        {
+          "id": "118:371",
+          "original": [
+            0,
+            2657,
+            1280,
+            3181
+          ],
+          "visibleBounds": [
+            0,
+            2657,
+            1280,
+            2832
+          ],
+          "itemId": "118:369",
+          "item": [
+            0,
+            2657,
+            1280,
+            3181
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        }
+      ],
+      "window": [
+        0,
+        0,
+        1280,
+        2832
+      ],
+      "windowFrameSource": "empty-UITest-wrapper-bounds",
+      "originalReaderRoot": [
+        0,
+        0,
+        1280,
+        2832
+      ],
+      "visibleWindow": [
+        0,
+        0,
+        1280,
+        2832
+      ],
+      "visibleReaderRoot": [
+        0,
+        0,
+        1280,
+        2832
+      ],
+      "first": {
+        "id": "118:308",
+        "original": [
+          0,
+          0,
+          1280,
+          524
+        ],
+        "visibleBounds": [
+          0,
+          0,
+          1280,
+          524
+        ],
+        "itemId": "118:306",
+        "item": [
+          0,
+          0,
+          1280,
+          524
+        ],
+        "listId": "118:178",
+        "list": [
+          0,
+          0,
+          1280,
+          2832
+        ],
+        "scrollId": "118:177",
+        "scroll": [
+          0,
+          0,
+          1280,
+          2832
+        ]
+      },
+      "bottom": {
+        "id": "118:371",
+        "original": [
+          0,
+          2657,
+          1280,
+          3181
+        ],
+        "visibleBounds": [
+          0,
+          2657,
+          1280,
+          2832
+        ],
+        "itemId": "118:369",
+        "item": [
+          0,
+          2657,
+          1280,
+          3181
+        ],
+        "listId": "118:178",
+        "list": [
+          0,
+          0,
+          1280,
+          2832
+        ],
+        "scrollId": "118:177",
+        "scroll": [
+          0,
+          0,
+          1280,
+          2832
+        ]
+      }
+    },
+    "b": {
+      "check": {
+        "status": "PASS",
+        "reason": "image-original-layout-covers-full-window"
+      },
+      "rows": [
+        {
+          "id": "118:308",
+          "original": [
+            0,
+            0,
+            1280,
+            524
+          ],
+          "visibleBounds": [
+            0,
+            137,
+            1280,
+            524
+          ],
+          "itemId": "118:306",
+          "item": [
+            0,
+            0,
+            1280,
+            524
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        },
+        {
+          "id": "118:359",
+          "original": [
+            0,
+            524,
+            1280,
+            1048
+          ],
+          "visibleBounds": [
+            0,
+            524,
+            1280,
+            1048
+          ],
+          "itemId": "118:357",
+          "item": [
+            0,
+            524,
+            1280,
+            1048
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        },
+        {
+          "id": "118:362",
+          "original": [
+            0,
+            1048,
+            1280,
+            1572
+          ],
+          "visibleBounds": [
+            0,
+            1048,
+            1280,
+            1572
+          ],
+          "itemId": "118:360",
+          "item": [
+            0,
+            1048,
+            1280,
+            1572
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        },
+        {
+          "id": "118:365",
+          "original": [
+            0,
+            1572,
+            1280,
+            2096
+          ],
+          "visibleBounds": [
+            0,
+            1572,
+            1280,
+            2096
+          ],
+          "itemId": "118:363",
+          "item": [
+            0,
+            1572,
+            1280,
+            2096
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        },
+        {
+          "id": "118:368",
+          "original": [
+            0,
+            2096,
+            1280,
+            2133
+          ],
+          "visibleBounds": [
+            0,
+            2096,
+            1280,
+            2133
+          ],
+          "itemId": "118:366",
+          "item": [
+            0,
+            2096,
+            1280,
+            2133
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        },
+        {
+          "id": "118:351",
+          "original": [
+            0,
+            2133,
+            1280,
+            2657
+          ],
+          "visibleBounds": [
+            0,
+            2133,
+            1280,
+            2657
+          ],
+          "itemId": "118:349",
+          "item": [
+            0,
+            2133,
+            1280,
+            2657
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        },
+        {
+          "id": "118:371",
+          "original": [
+            0,
+            2657,
+            1280,
+            3181
+          ],
+          "visibleBounds": [
+            0,
+            2657,
+            1280,
+            2832
+          ],
+          "itemId": "118:369",
+          "item": [
+            0,
+            2657,
+            1280,
+            3181
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        }
+      ],
+      "window": [
+        0,
+        0,
+        1280,
+        2832
+      ],
+      "windowFrameSource": "empty-UITest-wrapper-bounds",
+      "originalReaderRoot": [
+        0,
+        0,
+        1280,
+        2832
+      ],
+      "visibleWindow": [
+        0,
+        0,
+        1280,
+        2832
+      ],
+      "visibleReaderRoot": [
+        0,
+        137,
+        1280,
+        2832
+      ],
+      "first": {
+        "id": "118:308",
+        "original": [
+          0,
+          0,
+          1280,
+          524
+        ],
+        "visibleBounds": [
+          0,
+          137,
+          1280,
+          524
+        ],
+        "itemId": "118:306",
+        "item": [
+          0,
+          0,
+          1280,
+          524
+        ],
+        "listId": "118:178",
+        "list": [
+          0,
+          0,
+          1280,
+          2832
+        ],
+        "scrollId": "118:177",
+        "scroll": [
+          0,
+          0,
+          1280,
+          2832
+        ]
+      },
+      "bottom": {
+        "id": "118:371",
+        "original": [
+          0,
+          2657,
+          1280,
+          3181
+        ],
+        "visibleBounds": [
+          0,
+          2657,
+          1280,
+          2832
+        ],
+        "itemId": "118:369",
+        "item": [
+          0,
+          2657,
+          1280,
+          3181
+        ],
+        "listId": "118:178",
+        "list": [
+          0,
+          0,
+          1280,
+          2832
+        ],
+        "scrollId": "118:177",
+        "scroll": [
+          0,
+          0,
+          1280,
+          2832
+        ]
+      }
+    },
+    "d": {
+      "check": {
+        "status": "PASS",
+        "reason": "image-original-layout-covers-full-window"
+      },
+      "rows": [
+        {
+          "id": "118:308",
+          "original": [
+            0,
+            0,
+            1280,
+            524
+          ],
+          "visibleBounds": [
+            0,
+            0,
+            1280,
+            524
+          ],
+          "itemId": "118:306",
+          "item": [
+            0,
+            0,
+            1280,
+            524
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        },
+        {
+          "id": "118:359",
+          "original": [
+            0,
+            524,
+            1280,
+            1048
+          ],
+          "visibleBounds": [
+            0,
+            524,
+            1280,
+            1048
+          ],
+          "itemId": "118:357",
+          "item": [
+            0,
+            524,
+            1280,
+            1048
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        },
+        {
+          "id": "118:362",
+          "original": [
+            0,
+            1048,
+            1280,
+            1572
+          ],
+          "visibleBounds": [
+            0,
+            1048,
+            1280,
+            1572
+          ],
+          "itemId": "118:360",
+          "item": [
+            0,
+            1048,
+            1280,
+            1572
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        },
+        {
+          "id": "118:365",
+          "original": [
+            0,
+            1572,
+            1280,
+            2096
+          ],
+          "visibleBounds": [
+            0,
+            1572,
+            1280,
+            2096
+          ],
+          "itemId": "118:363",
+          "item": [
+            0,
+            1572,
+            1280,
+            2096
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        },
+        {
+          "id": "118:368",
+          "original": [
+            0,
+            2096,
+            1280,
+            2133
+          ],
+          "visibleBounds": [
+            0,
+            2096,
+            1280,
+            2133
+          ],
+          "itemId": "118:366",
+          "item": [
+            0,
+            2096,
+            1280,
+            2133
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        },
+        {
+          "id": "118:351",
+          "original": [
+            0,
+            2133,
+            1280,
+            2657
+          ],
+          "visibleBounds": [
+            0,
+            2133,
+            1280,
+            2657
+          ],
+          "itemId": "118:349",
+          "item": [
+            0,
+            2133,
+            1280,
+            2657
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        },
+        {
+          "id": "118:371",
+          "original": [
+            0,
+            2657,
+            1280,
+            3181
+          ],
+          "visibleBounds": [
+            0,
+            2657,
+            1280,
+            2832
+          ],
+          "itemId": "118:369",
+          "item": [
+            0,
+            2657,
+            1280,
+            3181
+          ],
+          "listId": "118:178",
+          "list": [
+            0,
+            0,
+            1280,
+            2832
+          ],
+          "scrollId": "118:177",
+          "scroll": [
+            0,
+            0,
+            1280,
+            2832
+          ]
+        }
+      ],
+      "window": [
+        0,
+        0,
+        1280,
+        2832
+      ],
+      "windowFrameSource": "empty-UITest-wrapper-bounds",
+      "originalReaderRoot": [
+        0,
+        0,
+        1280,
+        2832
+      ],
+      "visibleWindow": [
+        0,
+        0,
+        1280,
+        2832
+      ],
+      "visibleReaderRoot": [
+        0,
+        0,
+        1280,
+        2832
+      ],
+      "first": {
+        "id": "118:308",
+        "original": [
+          0,
+          0,
+          1280,
+          524
+        ],
+        "visibleBounds": [
+          0,
+          0,
+          1280,
+          524
+        ],
+        "itemId": "118:306",
+        "item": [
+          0,
+          0,
+          1280,
+          524
+        ],
+        "listId": "118:178",
+        "list": [
+          0,
+          0,
+          1280,
+          2832
+        ],
+        "scrollId": "118:177",
+        "scroll": [
+          0,
+          0,
+          1280,
+          2832
+        ]
+      },
+      "bottom": {
+        "id": "118:371",
+        "original": [
+          0,
+          2657,
+          1280,
+          3181
+        ],
+        "visibleBounds": [
+          0,
+          2657,
+          1280,
+          2832
+        ],
+        "itemId": "118:369",
+        "item": [
+          0,
+          2657,
+          1280,
+          3181
+        ],
+        "listId": "118:178",
+        "list": [
+          0,
+          0,
+          1280,
+          2832
+        ],
+        "scrollId": "118:177",
+        "scroll": [
+          0,
+          0,
+          1280,
+          2832
+        ]
+      }
+    }
+  },
+  "originalLayoutStability": {
+    "status": "PASS",
+    "reason": "same-image-row-list-scroll-actors-and-original-layout-A-B-D"
+  },
+  "immersiveVisibleEdges": {
+    "a": {
+      "status": "PASS",
+      "reason": "immersive-visible-image-edges-cover-window"
+    },
+    "d": {
+      "status": "PASS",
+      "reason": "immersive-visible-image-edges-cover-window"
+    }
+  },
+  "nativeDestination": {
+    "status": "PASS",
+    "reason": "production-validator-accepted-fresh-native-destination-any-sample"
+  },
+  "nativePhaseAssociation": {
+    "a": {
+      "status": "OPEN",
+      "reason": "no-fresh-phase-associated-first-image-receipt"
+    },
+    "b": {
+      "status": "OPEN",
+      "reason": "no-fresh-phase-associated-first-image-receipt"
+    },
+    "d": {
+      "status": "OPEN",
+      "reason": "no-fresh-phase-associated-first-image-receipt"
+    }
+  },
+  "treeRequestLink": {
+    "a": "REQUEST_RECORDED",
+    "b": "REQUEST_RECORDED",
+    "d": "REQUEST_RECORDED"
+  },
+  "nativeRecords": [
+    {
+      "sequence": 1,
+      "observedAtMs": 1791073933840,
+      "ordinal": 0,
+      "tileIndex": 0,
+      "controls": 0,
+      "stateGeneration": 4,
+      "receiptGeneration": 1,
+      "receiptStateGeneration": 4,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 0,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "not-decoded"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 2,
+      "observedAtMs": 1791073933873,
+      "ordinal": 0,
+      "tileIndex": 0,
+      "controls": 0,
+      "stateGeneration": 4,
+      "receiptGeneration": 2,
+      "receiptStateGeneration": 4,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 3,
+      "observedAtMs": 1791073933964,
+      "ordinal": 1,
+      "tileIndex": 0,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 4,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 4,
+      "observedAtMs": 1791073934027,
+      "ordinal": 1,
+      "tileIndex": 0,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 4,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 5,
+      "observedAtMs": 1791073934027,
+      "ordinal": 0,
+      "tileIndex": 1,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 6,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 6,
+      "observedAtMs": 1791073934120,
+      "ordinal": 1,
+      "tileIndex": 0,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 4,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 7,
+      "observedAtMs": 1791073934120,
+      "ordinal": 0,
+      "tileIndex": 1,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 6,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 8,
+      "observedAtMs": 1791073934120,
+      "ordinal": 0,
+      "tileIndex": 2,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 8,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 9,
+      "observedAtMs": 1791073934214,
+      "ordinal": 1,
+      "tileIndex": 0,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 4,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 10,
+      "observedAtMs": 1791073934214,
+      "ordinal": 0,
+      "tileIndex": 1,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 6,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 11,
+      "observedAtMs": 1791073934214,
+      "ordinal": 0,
+      "tileIndex": 2,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 8,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 12,
+      "observedAtMs": 1791073934214,
+      "ordinal": 0,
+      "tileIndex": 3,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 9,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 0,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "not-decoded"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 13,
+      "observedAtMs": 1791073934245,
+      "ordinal": 1,
+      "tileIndex": 0,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 4,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 14,
+      "observedAtMs": 1791073934245,
+      "ordinal": 0,
+      "tileIndex": 1,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 6,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 15,
+      "observedAtMs": 1791073934245,
+      "ordinal": 0,
+      "tileIndex": 2,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 8,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 16,
+      "observedAtMs": 1791073934245,
+      "ordinal": 0,
+      "tileIndex": 3,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 11,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 17,
+      "observedAtMs": 1791073934245,
+      "ordinal": 0,
+      "tileIndex": 4,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 12,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 46,
+        "componentWidth": 1280,
+        "componentHeight": 36.80000305175781,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 36.80000305175781,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 18,
+      "observedAtMs": 1791073934323,
+      "ordinal": 1,
+      "tileIndex": 0,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 4,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 19,
+      "observedAtMs": 1791073934323,
+      "ordinal": 0,
+      "tileIndex": 1,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 6,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 20,
+      "observedAtMs": 1791073934323,
+      "ordinal": 0,
+      "tileIndex": 2,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 8,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 21,
+      "observedAtMs": 1791073934323,
+      "ordinal": 0,
+      "tileIndex": 3,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 11,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 22,
+      "observedAtMs": 1791073934323,
+      "ordinal": 0,
+      "tileIndex": 4,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 12,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 46,
+        "componentWidth": 1280,
+        "componentHeight": 36.80000305175781,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 36.80000305175781,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 23,
+      "observedAtMs": 1791073934323,
+      "ordinal": 1,
+      "tileIndex": 1,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 13,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 0,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "not-decoded"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 24,
+      "observedAtMs": 1791073934354,
+      "ordinal": 1,
+      "tileIndex": 0,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 4,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 25,
+      "observedAtMs": 1791073934355,
+      "ordinal": 0,
+      "tileIndex": 1,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 6,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 26,
+      "observedAtMs": 1791073934355,
+      "ordinal": 0,
+      "tileIndex": 2,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 8,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 27,
+      "observedAtMs": 1791073934355,
+      "ordinal": 0,
+      "tileIndex": 3,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 11,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 28,
+      "observedAtMs": 1791073934355,
+      "ordinal": 0,
+      "tileIndex": 4,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 12,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 46,
+        "componentWidth": 1280,
+        "componentHeight": 36.80000305175781,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 36.80000305175781,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 29,
+      "observedAtMs": 1791073934355,
+      "ordinal": 1,
+      "tileIndex": 1,
+      "controls": 0,
+      "stateGeneration": 5,
+      "receiptGeneration": 14,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 0,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "PASS",
+        "reason": "native-destination"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 30,
+      "observedAtMs": 1791074186305,
+      "ordinal": 1,
+      "tileIndex": 0,
+      "controls": 1,
+      "stateGeneration": 6,
+      "receiptGeneration": 4,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 31,
+      "observedAtMs": 1791074186305,
+      "ordinal": 0,
+      "tileIndex": 1,
+      "controls": 1,
+      "stateGeneration": 6,
+      "receiptGeneration": 6,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 32,
+      "observedAtMs": 1791074186305,
+      "ordinal": 0,
+      "tileIndex": 2,
+      "controls": 1,
+      "stateGeneration": 6,
+      "receiptGeneration": 8,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 33,
+      "observedAtMs": 1791074186305,
+      "ordinal": 0,
+      "tileIndex": 3,
+      "controls": 1,
+      "stateGeneration": 6,
+      "receiptGeneration": 11,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 34,
+      "observedAtMs": 1791074186305,
+      "ordinal": 0,
+      "tileIndex": 4,
+      "controls": 1,
+      "stateGeneration": 6,
+      "receiptGeneration": 12,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 46,
+        "componentWidth": 1280,
+        "componentHeight": 36.80000305175781,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 36.80000305175781,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 35,
+      "observedAtMs": 1791074186305,
+      "ordinal": 1,
+      "tileIndex": 1,
+      "controls": 1,
+      "stateGeneration": 6,
+      "receiptGeneration": 14,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 36,
+      "observedAtMs": 1791074186438,
+      "ordinal": 1,
+      "tileIndex": 0,
+      "controls": 1,
+      "stateGeneration": 7,
+      "receiptGeneration": 4,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 37,
+      "observedAtMs": 1791074186438,
+      "ordinal": 0,
+      "tileIndex": 1,
+      "controls": 1,
+      "stateGeneration": 7,
+      "receiptGeneration": 6,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 38,
+      "observedAtMs": 1791074186438,
+      "ordinal": 0,
+      "tileIndex": 2,
+      "controls": 1,
+      "stateGeneration": 7,
+      "receiptGeneration": 8,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 39,
+      "observedAtMs": 1791074186438,
+      "ordinal": 0,
+      "tileIndex": 3,
+      "controls": 1,
+      "stateGeneration": 7,
+      "receiptGeneration": 11,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 40,
+      "observedAtMs": 1791074186438,
+      "ordinal": 0,
+      "tileIndex": 4,
+      "controls": 1,
+      "stateGeneration": 7,
+      "receiptGeneration": 12,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 46,
+        "componentWidth": 1280,
+        "componentHeight": 36.80000305175781,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 36.80000305175781,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 41,
+      "observedAtMs": 1791074186438,
+      "ordinal": 1,
+      "tileIndex": 1,
+      "controls": 1,
+      "stateGeneration": 7,
+      "receiptGeneration": 14,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        }
+      }
+    },
+    {
+      "sequence": 42,
+      "observedAtMs": 1791074245535,
+      "ordinal": 1,
+      "tileIndex": 0,
+      "controls": 0,
+      "stateGeneration": 8,
+      "receiptGeneration": 4,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        }
+      }
+    },
+    {
+      "sequence": 43,
+      "observedAtMs": 1791074245535,
+      "ordinal": 0,
+      "tileIndex": 1,
+      "controls": 0,
+      "stateGeneration": 8,
+      "receiptGeneration": 6,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        }
+      }
+    },
+    {
+      "sequence": 44,
+      "observedAtMs": 1791074245535,
+      "ordinal": 0,
+      "tileIndex": 2,
+      "controls": 0,
+      "stateGeneration": 8,
+      "receiptGeneration": 8,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        }
+      }
+    },
+    {
+      "sequence": 45,
+      "observedAtMs": 1791074245535,
+      "ordinal": 0,
+      "tileIndex": 3,
+      "controls": 0,
+      "stateGeneration": 8,
+      "receiptGeneration": 11,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        }
+      }
+    },
+    {
+      "sequence": 46,
+      "observedAtMs": 1791074245535,
+      "ordinal": 0,
+      "tileIndex": 4,
+      "controls": 0,
+      "stateGeneration": 8,
+      "receiptGeneration": 12,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 46,
+        "componentWidth": 1280,
+        "componentHeight": 36.80000305175781,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 36.80000305175781,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        }
+      }
+    },
+    {
+      "sequence": 47,
+      "observedAtMs": 1791074245535,
+      "ordinal": 1,
+      "tileIndex": 1,
+      "controls": 0,
+      "stateGeneration": 8,
+      "receiptGeneration": 14,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        }
+      }
+    },
+    {
+      "sequence": 48,
+      "observedAtMs": 1791074245557,
+      "ordinal": 1,
+      "tileIndex": 0,
+      "controls": 0,
+      "stateGeneration": 9,
+      "receiptGeneration": 4,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        }
+      }
+    },
+    {
+      "sequence": 49,
+      "observedAtMs": 1791074245557,
+      "ordinal": 0,
+      "tileIndex": 1,
+      "controls": 0,
+      "stateGeneration": 9,
+      "receiptGeneration": 6,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        }
+      }
+    },
+    {
+      "sequence": 50,
+      "observedAtMs": 1791074245557,
+      "ordinal": 0,
+      "tileIndex": 2,
+      "controls": 0,
+      "stateGeneration": 9,
+      "receiptGeneration": 8,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        }
+      }
+    },
+    {
+      "sequence": 51,
+      "observedAtMs": 1791074245557,
+      "ordinal": 0,
+      "tileIndex": 3,
+      "controls": 0,
+      "stateGeneration": 9,
+      "receiptGeneration": 11,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        }
+      }
+    },
+    {
+      "sequence": 52,
+      "observedAtMs": 1791074245557,
+      "ordinal": 0,
+      "tileIndex": 4,
+      "controls": 0,
+      "stateGeneration": 9,
+      "receiptGeneration": 12,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 46,
+        "componentWidth": 1280,
+        "componentHeight": 36.80000305175781,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 36.80000305175781,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        }
+      }
+    },
+    {
+      "sequence": 53,
+      "observedAtMs": 1791074245557,
+      "ordinal": 1,
+      "tileIndex": 1,
+      "controls": 0,
+      "stateGeneration": 9,
+      "receiptGeneration": 14,
+      "receiptStateGeneration": 5,
+      "retainedReceipt": 1,
+      "densityPixels": 3.5,
+      "event": {
+        "width": 1600,
+        "height": 655,
+        "componentWidth": 1280,
+        "componentHeight": 524,
+        "loadingStatus": 1,
+        "contentWidth": 1280,
+        "contentHeight": 524,
+        "contentOffsetX": 0,
+        "contentOffsetY": 0
+      },
+      "check": {
+        "status": "OPEN",
+        "reason": "retained-or-generation-incomplete-receipt"
+      },
+      "phases": {
+        "a": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "b": {
+          "status": "OPEN",
+          "reason": "record-outside-phase-window"
+        },
+        "d": {
+          "status": "OPEN",
+          "reason": "fresh-destination-current-area-or-tree-missing"
+        }
+      }
+    }
+  ],
+  "ignored": {
+    "otherPidOrUnparsedPrefix": 0,
+    "beforeStart": 0,
+    "baseline": 0,
+    "outsideProbe": 49,
+    "duplicate": 70,
+    "malformed": 0
+  },
+  "acceptanceStatus": "OPEN",
+  "boundaries": {
+    "submittedPaint": "OPEN",
+    "sourceFirstPixelColor": "NOT_READ",
+    "sourceImageOrCache": "NOT_READ",
+    "visibleBoundsMayClipUnderControls": "reported separately; never used to infer original image reflow",
+    "nativeEventUnits": "component/content compared together by production validator; not converted to vp",
+    "areaUnits": "vp converted only with density from that same logged record"
+  }
+}

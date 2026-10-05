@@ -1,0 +1,15 @@
+{
+  "scene": "dir-close",
+  "inspection": "All nine original 640x1416 JPEGs inspected through original-size contact copies. Text top-y anchors measured in independent title/search regions of original JPEGs, not reconstructed frames.",
+  "frames": {
+    "0": {"phase": "open", "anchor_y": {"title": 453, "search": 538}, "content_visible": true, "note": "Actual04-09 rows and05 currently reading; reference open position."},
+    "1": {"phase": "open", "anchor_y": {"title": 453, "search": 538}, "content_visible": true, "note": "Decoded pixels exactly match frame0."},
+    "2": {"phase": "open", "anchor_y": {"title": 453, "search": 538}, "content_visible": true, "note": "Decoded pixels exactly match frame0."},
+    "3": {"phase": "middle", "anchor_y": {"title": 484, "search": 569}, "content_visible": true, "note": "Both independent text anchors move down31 pixels. Title, search,tools,04-09 rows and05 currently reading remain visible in shifted sheet."},
+    "4": {"phase": "middle", "anchor_y": {"title": 1104, "search": 1189}, "content_visible": true, "note": "Both anchors move down651 pixels. Real title, search and tools remain rendered; lower rows now offscreen."},
+    "5": {"phase": "unreviewed", "content_visible": true, "note": "Handle and top fragment of title remain at screen bottom; title top1406, clipped at1416. Search now offscreen, so not used as two-anchor retention proof."},
+    "6": {"phase": "closed", "note": "Directory gone, reader dock restored; same chapter05 and5/32 position."},
+    "7": {"phase": "closed", "note": "Decoded pixels exactly match frame6."},
+    "8": {"phase": "closed", "note": "Decoded pixels exactly match frame6."}
+  }
+}

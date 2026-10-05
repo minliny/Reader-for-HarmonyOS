@@ -1,0 +1,4 @@
+PASS manga resource gateway: contract parity, request semantics, offline, duplicate pages, identity, cancellation, lease release, invalid image and error propagation
+PASS manifest decode revision reaches foreground/cache-only and adjacent prefetch; missing and unknown revisions reject before I/O
+(node:23846) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

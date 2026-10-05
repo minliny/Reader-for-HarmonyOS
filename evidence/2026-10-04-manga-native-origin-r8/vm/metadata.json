@@ -1,0 +1,28 @@
+{
+  "pid": 25061,
+  "guestEpochStartSeconds": 1791073903,
+  "guestEpochEndSeconds": 1791074416,
+  "manifestRunId": "20261004T002116Z-568ec4e3-3eec7853",
+  "signedHapSha256": "9b5f34be522060a84bb4e2e805e62ca538cc0d2ae4d68f1a81f716cdf2c1ac56",
+  "phaseWindows": {
+    "a": {
+      "startMs": 1791073933000,
+      "endMs": 1791074185999
+    },
+    "b": {
+      "startMs": 1791074186000,
+      "endMs": 1791074244999
+    },
+    "d": {
+      "startMs": 1791074245000,
+      "endMs": 1791074383999
+    }
+  },
+  "phaseWindowBasis": "guestEpoch queries and actual later toggle numeric timestamps; seconds precision; A uses aSettled tree after initial final-tile decode",
+  "normalLaunch": {
+    "pid": 26139,
+    "guestEpochStartSeconds": 1791074416,
+    "guestEpochEndSeconds": 1791074446,
+    "readerUiTree": "normalReader.json"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "kind": "Frozen independent original-image evidence",
+  "files": {
+    "REVIEW.md": "ac2855018f207bf4b51dcb3376d275a68730124e4f59abb1d86468f04b79f2fb",
+    "mode-close-analysis/report.json": "2573c79aa2b703928dcf45400a0737a00003c1697d18656efd9a9d074383a6e1",
+    "mode-close-annotations.json": "3763aa99bda6be09e77878c876fc52f7d754c3b68b195655547919a0af0d475e",
+    "mode-close-quiet-analysis/report.json": "9e33f983268ecb51487d154eb278d1e868b38eb8f15a5e4b814bd98dc9b48c5c",
+    "mode-close-quiet-annotations.json": "171d07127ba0fdf2221c10b3cec5dc4c8a29244638e71ddbd5c73726adcf653b",
+    "mode-open-analysis/report.json": "65ff097c88cfd4ec08a93c4c7cdb127a63051be219d5cd85b5fe8e83ba537fca",
+    "mode-open-annotations.json": "e285b9e20e769797614b8bc43798d3362d1edff647d546769c8747cd3d0fc389",
+    "mode-open-quiet-analysis/report.json": "56c2399fed55b69d02121077e3d50491a438e79b41074ee53b28a941b8ba589e",
+    "mode-open-quiet-annotations.json": "012701dcb10978b37ee3ac96487a73dda24d8156cba7dcb3bc854a79b3b8557a",
+    "original-inventory.json": "8deadfd8e40fa7e46c516a41b0f286b4a1d3f5d91eb185113f70a16cb03897e1",
+    "settings-close-analysis/report.json": "81df25f28b6a70aa8e8f055c2c3fcdbd8bbf23743c98973d3a94b4ae7b0596f7",
+    "settings-close-annotations.json": "e6eca2604e6b3035d21ecfd5b529de8c281f8d3d31b8027c6b4fb3df623dd2e0",
+    "settings-open-analysis/report.json": "49bd0ff390e45d7a2ef35c66919ada1ee51e9f169d7e19a7ced93fc8a1a9d16b",
+    "settings-open-annotations.json": "5825ac96d9fe93b6f98ce1839d93d66fa9271ed2f7b7724692ebe6c2aac313ca"
+  }
+}

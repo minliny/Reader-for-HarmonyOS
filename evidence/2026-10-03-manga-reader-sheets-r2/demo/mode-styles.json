@@ -1,0 +1,19 @@
+[
+  {
+    "text": "阅读方式",
+    "rect": {
+      "x": 541.5,
+      "y": 641,
+      "width": 357,
+      "height": 26,
+      "top": 641,
+      "right": 898.5,
+      "bottom": 667,
+      "left": 541.5
+    },
+    "family": "\"Reader Sans\", sans-serif",
+    "weight": "900",
+    "size": "18px",
+    "line": "normal"
+  }
+]

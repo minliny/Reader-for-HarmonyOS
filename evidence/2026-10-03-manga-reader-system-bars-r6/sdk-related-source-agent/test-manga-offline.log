@@ -1,0 +1,8 @@
+PASS manga offline: shared queue opt-in, original-resource completeness, atomic manifest before report, interrupted missing-only retry, cancellation, exact version projection, same-size corruption and old-Core refusal
+PASS three-chapter claimed batch settles every lease after first failure and cancellation
+PASS changed manga source refreshes acquisition once, fences cancellation and rejects changed requested chapter identities before queue claims
+PASS mixed manga offline range materializes only readable chapters; groups are projected and readable-to-group refresh rejects before claim
+PASS offline projection reads the bounded cold manifest decode fact, passes scripted profile, rejects missing revision and downgrades changed versions without any online/progress command
+PASS a missing cold entry downgrades only its chapter; cancellation is not swallowed by per-chapter completion recovery
+(node:18762) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

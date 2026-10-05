@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03",
+  "issue": "MR-08",
+  "status": "core-fixed-local-production-runtime-regression-passed",
+  "rootCause": "manga.chapter.get cacheFirst returned the old manifest after the stored source version changed. cached_resources correctly refused old request bindings, but the result had an empty resources array and never re-extracted corrected chapter requests.",
+  "implementation": {
+    "file": "Reader-Core-Native/crates/reader-runtime/src/remote/manga.rs",
+    "refreshCondition": "policy=cacheFirst, a cached manifest exists, stored source remains enabled manga, and its canonical Source version differs from manifest.sourceRuleVersion",
+    "path": "existing extraction/continuation/publication with previous_version preserved",
+    "directoryFence": "catalogSourceChanged remains authoritative until the Host refreshes the current source directory",
+    "offlineBoundary": "cacheOnly, deleted or disabled sources, and a source converted to another content kind retain the old read-only manifest without network",
+    "progressBoundary": "historical manifest and durable progress remain unchanged; sourceOrDecodeChanged returns unresolved mapping instead of inventing equivalence",
+    "failureBoundary": "failed HTTP refresh publishes no replacement manifest and preserves prior progress"
+  },
+  "redRegression": {
+    "test": "manga_cache_first_refreshes_changed_source_manifest_and_preserves_old_progress_facts",
+    "beforeFix": "FAILED: stale cached manifest was emitted with cached=true, resources=[] and sameManifest exact progress mapping"
+  },
+  "localVerification": [
+    {
+      "command": "cargo test -p reader-runtime --test runtime_integration manga_",
+      "passed": 49,
+      "failed": 0
+    },
+    {
+      "command": "cargo test -p reader-runtime --lib source_supply",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 1,
+      "note": "Includes v6-to-v7 correction preserving user explore edits, disabled state, custom rules, user-import ownership and deletion suppression. Explicit entire-corpus check is intentionally ignored by default."
+    },
+    {
+      "command": "cargo test -p reader-content --test baozi_source_rule",
+      "passed": 1,
+      "failed": 0
+    }
+  ],
+  "acceptanceBoundary": "This record proves production Core restoration and data preservation locally. It does not certify a new HAP, installation, VM pixels, paging, progress restoration, chapter switching or source switching."
+}

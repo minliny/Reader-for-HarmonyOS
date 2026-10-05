@@ -1,0 +1,294 @@
+{
+  "total": 41,
+  "passed": 41,
+  "failed": [],
+  "results": [
+    {
+      "file": "tools/test-manga-admission.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.559,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-admission.log"
+    },
+    {
+      "file": "tools/test-manga-auth-recovery.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.472,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-auth-recovery.log"
+    },
+    {
+      "file": "tools/test-manga-book-presentation.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.104,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-book-presentation.log"
+    },
+    {
+      "file": "tools/test-manga-cancelled-banner.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.444,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-cancelled-banner.log"
+    },
+    {
+      "file": "tools/test-manga-cross-chapter-counter-sdk.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.522,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-cross-chapter-counter-sdk.log"
+    },
+    {
+      "file": "tools/test-manga-directory-route.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.447,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-directory-route.log"
+    },
+    {
+      "file": "tools/test-manga-display-policy.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.402,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-display-policy.log"
+    },
+    {
+      "file": "tools/test-manga-error-recovery.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.418,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-error-recovery.log"
+    },
+    {
+      "file": "tools/test-manga-far-page-tile-retirement.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.107,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-far-page-tile-retirement.log"
+    },
+    {
+      "file": "tools/test-manga-image-decode.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.415,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-image-decode.log"
+    },
+    {
+      "file": "tools/test-manga-image-graphics.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.416,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-image-graphics.log"
+    },
+    {
+      "file": "tools/test-manga-image-metadata-transfer.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.1,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-image-metadata-transfer.log"
+    },
+    {
+      "file": "tools/test-manga-metadata-ui.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.562,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-metadata-ui.log"
+    },
+    {
+      "file": "tools/test-manga-motion-progress.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.43,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-motion-progress.log"
+    },
+    {
+      "file": "tools/test-manga-navigation.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.408,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-navigation.log"
+    },
+    {
+      "file": "tools/test-manga-offline-network-probe.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 1.849,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-offline-network-probe.log"
+    },
+    {
+      "file": "tools/test-manga-offline.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.44,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-offline.log"
+    },
+    {
+      "file": "tools/test-manga-orientation.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.139,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-orientation.log"
+    },
+    {
+      "file": "tools/test-manga-platform-probe-sdk.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 4.685,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-platform-probe-sdk.log"
+    },
+    {
+      "file": "tools/test-manga-platform-probe.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.84,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-platform-probe.log"
+    },
+    {
+      "file": "tools/test-manga-reading-directory-fallback.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.533,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-reading-directory-fallback.log"
+    },
+    {
+      "file": "tools/test-manga-region-decode.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.123,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-region-decode.log"
+    },
+    {
+      "file": "tools/test-manga-resource-gateway.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.098,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-resource-gateway.log"
+    },
+    {
+      "file": "tools/test-manga-runtime-image-lane.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.456,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-runtime-image-lane.log"
+    },
+    {
+      "file": "tools/test-manga-scroll-stability-sdk.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.579,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-scroll-stability-sdk.log"
+    },
+    {
+      "file": "tools/test-manga-session.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.829,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-session.log"
+    },
+    {
+      "file": "tools/test-manga-sheet-selection-sdk.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.892,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-sheet-selection-sdk.log"
+    },
+    {
+      "file": "tools/test-manga-source-switch.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.663,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-source-switch.log"
+    },
+    {
+      "file": "tools/test-manga-strip.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.516,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-strip.log"
+    },
+    {
+      "file": "tools/test-manga-surface-render-key-sdk.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.567,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-surface-render-key-sdk.log"
+    },
+    {
+      "file": "tools/test-manga-surface-sdk.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 1.914,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-surface-sdk.log"
+    },
+    {
+      "file": "tools/test-manga-tile-window.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.47,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-tile-window.log"
+    },
+    {
+      "file": "tools/test-manga-ui-assembly-sdk.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 1.173,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-ui-assembly-sdk.log"
+    },
+    {
+      "file": "tools/test-manga-ui-floating-bars.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.62,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-ui-floating-bars.log"
+    },
+    {
+      "file": "tools/test-manga-ui-position-hydration.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.579,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-ui-position-hydration.log"
+    },
+    {
+      "file": "tools/test-manga-ui-source-switch-discovery.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.145,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-ui-source-switch-discovery.log"
+    },
+    {
+      "file": "tools/test-manga-ui-source-switch-window.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.431,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-ui-source-switch-window.log"
+    },
+    {
+      "file": "tools/test-manga-ui-state.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.425,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-ui-state.log"
+    },
+    {
+      "file": "tools/test-manga-viewport-restore-sdk.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 1.449,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-viewport-restore-sdk.log"
+    },
+    {
+      "file": "tools/test-manga-visible-tile-retention.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.119,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-visible-tile-retention.log"
+    },
+    {
+      "file": "tools/test-manga-window-publication.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.112,
+      "log": "/private/tmp/manga-all-bounded-final-20261003-1791019393/test-manga-window-publication.log"
+    }
+  ]
+}

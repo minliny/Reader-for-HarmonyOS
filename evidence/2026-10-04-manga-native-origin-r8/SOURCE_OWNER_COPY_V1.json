@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03T16:30:06.750889+00:00",
+  "source": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-04-manga-native-origin-r8/source-owner",
+  "target": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-04-manga-native-origin-r8/source-owner",
+  "files": [
+    {
+      "path": "SHASUMS.sha256",
+      "bytes": 335,
+      "mode": 420,
+      "sha256": "23fc964dddc512978c75ff2ccab5e0cd8efc3d16a7491a327f3462fcb59294aa"
+    },
+    {
+      "path": "SOURCE_REVIEW.md",
+      "bytes": 5230,
+      "mode": 420,
+      "sha256": "f2c36cf36d2ad8fc47c51aa6cc3d4827b8b1651248f3d6cf4c7894023e4e9a83"
+    },
+    {
+      "path": "related-sdk.json",
+      "bytes": 7708,
+      "mode": 420,
+      "sha256": "782b4b82373887e56e64f6ec5ad5b6668759947524bae82f57117f5315249bbc"
+    },
+    {
+      "path": "source-diff.patch",
+      "bytes": 19360,
+      "mode": 420,
+      "sha256": "7d14f41a7e3f5c7afef02b11e8858c5cf15e69963165a3263747bb39747fe5a9"
+    },
+    {
+      "path": "source-hashes.json",
+      "bytes": 997,
+      "mode": 420,
+      "sha256": "66b766556acecab6b475ebf5e0de9eb906600ef192eb7fd26315ee7c73c71221"
+    }
+  ],
+  "allByteModeReadbackPassed": true,
+  "scope": "Exact frozen source-owner evidence, numeric metadata code only",
+  "deviceOrNativeGeometryAcceptanceClaim": false
+}

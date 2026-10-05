@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "name": "r8-source-delta",
+  "sourceFileCount": 5,
+  "sourceBytes": 165454,
+  "inventoryFingerprint": "31cf3a2d9afea9e27f33dd52049961554f343160db32429a16e71d3b528c2162",
+  "archive": {
+    "path": "r8-source-delta.tar.gz",
+    "bytes": 37791,
+    "sha256": "39ec951c9dcd12072a304f0a681db93e728ee3aa9cdfd9baaf6a87c3085afb91"
+  },
+  "files": [
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/entryability/EntryAbility.ets",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14232,
+      "sha256": "f21073d3703a24ae8f01a85dc2bb15f1b3ef517c6de59772b47352b73acac533"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaImageOriginGeometry.ts",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2048,
+      "sha256": "bf19329bb7371939324b50fdd3d081882b2fb851a853ce1528bb79c002453a0b"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "type": "file",
+      "mode": 420,
+      "bytes": 118522,
+      "sha256": "b16c0207277a58ab13d00c076085371b24adf20d11fcce2a6e8f373b61694fe3"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/lib/manga-surface-sdk-probe.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3832,
+      "sha256": "670446eee86859281b45c4693abde30b1ac2382dfd7af64399eb58741cfb2332"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/test-manga-native-image-geometry-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 26820,
+      "sha256": "36522f7a479f3b18a1b0165aea2a92d12f53962d50f89e5928d2fe7c328c4994"
+    }
+  ],
+  "verification": {
+    "fullArchiveRead": true,
+    "everyFileSha256": true,
+    "everyFileMode": true,
+    "exactMemberSet": true,
+    "sourceUnchangedDuringArchive": true,
+    "files": 5,
+    "bytes": 165454
+  }
+}

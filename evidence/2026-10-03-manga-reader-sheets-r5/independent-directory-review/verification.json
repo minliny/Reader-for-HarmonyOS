@@ -1,0 +1,494 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03T12:50:59.984352+00:00",
+  "onlyEvidenceCreated": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/independent-directory-review",
+  "productAndTestSourceUnchangedSha256": {
+    "entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets": "00087dbd1fc42a843b93242f4c450d17f7f70dde8bd7e1ea575431aebfce3685",
+    "tools/test-manga-directory-font-readiness-sdk.mjs": "d70ab1686040b7a45408b6b87b951966106c934ec8a417be9287ad6cc9e22f67"
+  },
+  "inputFilesVerifiedUnchanged": [
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/click-command-ready.txt",
+      "sha256": "dca531cc52f85372866c8a904e15cb5a34e5078b3487b8c56e79efb91cc7a308",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/click-output.txt",
+      "sha256": "d5da5d856aa87d9ad05685ea0208cbb8d01722e78fc391d2c2fbacba47910b14",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/click-time.txt",
+      "sha256": "0b51ff46c272ab72e0e1b4fb3723b74496a1a64cd887c2fb0eaa281e96a0cad3",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/collector.txt",
+      "sha256": "09891db6da36bfa225f97b7536a0f51404fd7ffbed4c3dbdb8808df79df785a6",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/frame-0-time.txt",
+      "sha256": "016a163c5470fd5e6e205dc4e9cf9872799ae2884c39796571003d3ab737cc17",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/frame-0.jpeg",
+      "sha256": "cc750804738a1c81fd9e2f383c6ca21359b574818b2edad279d14d5e4f2cec84",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/frame-1-time.txt",
+      "sha256": "9e9fa21cdc5af31b3db12bd62635e8fb4574803540593258533202170036805b",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/frame-1.jpeg",
+      "sha256": "cc750804738a1c81fd9e2f383c6ca21359b574818b2edad279d14d5e4f2cec84",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/frame-2-time.txt",
+      "sha256": "26b89196c30e19a39c78377512f205ee36475411e6371040d7d47de54bfed541",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/frame-2.jpeg",
+      "sha256": "cc750804738a1c81fd9e2f383c6ca21359b574818b2edad279d14d5e4f2cec84",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/frame-3-time.txt",
+      "sha256": "1f8b3a172a5b065f529fa89d8bc5941054ee59403adf414906a91446e066ff44",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/frame-3.jpeg",
+      "sha256": "d89ac77880d9d9dd2b0a74d2301072689eb2ecaa4a445000d31d5026be99f9e7",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/frame-4-time.txt",
+      "sha256": "e3380d361e4b11e6509d36afe6cb060e8b971bc86a553046454a5930ff13213d",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/frame-4.jpeg",
+      "sha256": "bc0f392cf3ebf8dad337dea368cb36b1eb13926181fe41c0c469eb9be398531b",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/frame-5-time.txt",
+      "sha256": "7ec2d2cc3fdaf554d1f14992314d0d5237f346a8de0ab5b5546393088259f089",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/frame-5.jpeg",
+      "sha256": "9455b3831c55d0d58a29bb7256d8ab1f1306e2b0e95196b2a70a9545827e1f0d",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/frame-6-time.txt",
+      "sha256": "1000663f79d7effc5171135ad4fd0c30403b0780c5076618922bf1a53b5bbf14",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/frame-6.jpeg",
+      "sha256": "6007f5c448826d4dd6b1b1c589faf6010a5d7bca4b3792be27b9731c2fec8bc5",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/frame-7-time.txt",
+      "sha256": "9b63567eef5c4be169270a00a180b6509a7d8f728fafa672da43c7ec446374b0",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/frame-7.jpeg",
+      "sha256": "3dc772be1ca0fd6856a4ca4c274bac85c6526b9c2a5fbec70c202ca17b9804f7",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/frame-8-time.txt",
+      "sha256": "b30d3e1d3f137395aa4a00e335095e6fbaba74707950de60fe8bf16296821fd0",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/frame-8.jpeg",
+      "sha256": "3dc772be1ca0fd6856a4ca4c274bac85c6526b9c2a5fbec70c202ca17b9804f7",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/snapshot-0.log",
+      "sha256": "000afb32243485a828f28aab4d8ca501f97ab75e857fbd0f02090d32da1a8d24",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/snapshot-1.log",
+      "sha256": "07d1c80f123ae4354d984c369ea4e974381a6bf8c36a26f9f7815273c9423824",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/snapshot-2.log",
+      "sha256": "2f44da5b25e4a525d4800d1393e79f4b88e1bda5970bb23de8123f2318fb251f",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/snapshot-3.log",
+      "sha256": "dafe07cb667d8c4cdabefe17280970abffeb0ffc7b51781a682905a9be8d38a2",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/snapshot-4.log",
+      "sha256": "ed24d2a327e5860cf2daef0f3e8a365576e867cef88e89f5ecfefc8faa41007a",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/snapshot-5.log",
+      "sha256": "2618bba51f430e16935dc02bf27ab4ce9d39210d939f8a616c69462d1a8834a6",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/snapshot-6.log",
+      "sha256": "c16e9e3dfe798e48f67a24b1ff2135139b1b1af707eaca000fa73c3e3289434d",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/snapshot-7.log",
+      "sha256": "391ddc2f9aeb6d10fcf3600ff161cc2392b447790e299235f4b12d2b9790547b",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/snapshot-8.log",
+      "sha256": "45f1bc28c551b7a9c9fa6abe16ac0411244a454f07aca6c2a4debe06b398c17c",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-open/timestamps.txt",
+      "sha256": "c3fe647bad1fef1dc9673f1e8782979d397dd117e5173c877cd2dd2e1bea3563",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/click-command-ready.txt",
+      "sha256": "3f26b08ebe489c455016a3cff51b2bf481ec67c2f74125c6e98e0a198add7723",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/click-output.txt",
+      "sha256": "d5da5d856aa87d9ad05685ea0208cbb8d01722e78fc391d2c2fbacba47910b14",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/click-time.txt",
+      "sha256": "847974b5b286c3cdcbbaa01c0c25ab2ba13c23bf261c5efc5f1410d6c883523b",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/collector.txt",
+      "sha256": "caa01da9f9771be57d6273ba29cf9de5ac8527c8fb13983916b163391f91c761",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/frame-0-time.txt",
+      "sha256": "12148b3d8944abda1b22af8391fc0efd855b4c11f3690730f159b8e490d7891e",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/frame-0.jpeg",
+      "sha256": "7112798668ccb731018054f71e8a88e73cf3a30b7954d4351d9f9bd3200c3d7d",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/frame-1-time.txt",
+      "sha256": "c0b2895414e5f84c57b981448dd7c4716809e5b679e49c7aa484df19c69e066f",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/frame-1.jpeg",
+      "sha256": "7112798668ccb731018054f71e8a88e73cf3a30b7954d4351d9f9bd3200c3d7d",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/frame-2-time.txt",
+      "sha256": "fd0759a3044dcf4b4b7b636e02ae8b551295651985cc814661b14efafdadc141",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/frame-2.jpeg",
+      "sha256": "7112798668ccb731018054f71e8a88e73cf3a30b7954d4351d9f9bd3200c3d7d",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/frame-3-time.txt",
+      "sha256": "afbb4be783f7f03df11ca538972a583f6c9bd47f9afd241d9728187105edf100",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/frame-3.jpeg",
+      "sha256": "afd39893bf80cc398bbd6d930da5114a38a073d156689138aa7ee087b7a228ea",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/frame-4-time.txt",
+      "sha256": "867f79dc4bf6734878e6bb45f1c2d3044d85a0f239fe6de4e797e7a0cf98133d",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/frame-4.jpeg",
+      "sha256": "ad0d2498e0f530a9c559fc147ad2b339cbf75c8cdd3f6378586909eaf7a6397b",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/frame-5-time.txt",
+      "sha256": "46fd1f330c5ad32ea537728e9645c333607d8bd50901ba375eb4a86e35bf40ac",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/frame-5.jpeg",
+      "sha256": "7ac7d81a20bb6e245c63f097949be33847b412a105084e9aec5eabd86de108ea",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/frame-6-time.txt",
+      "sha256": "07f1cd397d23fdd6dc9fbbd9e320bd123a77d4df01e9de36120bb8252b036faf",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/frame-6.jpeg",
+      "sha256": "bb7ea0ace23565ac66bd6209c372941446378883ffe838c467256e994161c0ce",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/frame-7-time.txt",
+      "sha256": "fd88e6a80a2df2c54a0eb577263497bbde314c64f8d0a21aef2299b28978f59c",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/frame-7.jpeg",
+      "sha256": "bb7ea0ace23565ac66bd6209c372941446378883ffe838c467256e994161c0ce",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/frame-8-time.txt",
+      "sha256": "c11d2adbe41c0748a4c825da15725330637da3dae99f5c74bf2b396f9d3c5a72",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/frame-8.jpeg",
+      "sha256": "bb7ea0ace23565ac66bd6209c372941446378883ffe838c467256e994161c0ce",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/snapshot-0.log",
+      "sha256": "1380538d1d154b9dff80e5e2331c16f66f6cfa068251849e9e11bdf69e739d7e",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/snapshot-1.log",
+      "sha256": "1c2372f218a022c13da6a7b27520d976517344e6e671e755977a3d2f1b931671",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/snapshot-2.log",
+      "sha256": "dc670ee2131b9c5d408231ff10748f1097180d5b962683ae5b55c7e644648d9f",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/snapshot-3.log",
+      "sha256": "50fcaaa4326985c62f948087adb39b5b528eb9d9ccf5e25f2f9e25bd725707f6",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/snapshot-4.log",
+      "sha256": "478ba5311c82991f2dea8beda316f1bc61a41e46088c8d3659842d87bbc946ef",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/snapshot-5.log",
+      "sha256": "c86ccd43b59012b9b023e4a01998552ccf128f13fdf06584b7c244301bc9b902",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/snapshot-6.log",
+      "sha256": "a9a926618facaf71831b436f63a48c839e52997d245751224a6a473d1d715094",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/snapshot-7.log",
+      "sha256": "69a92f12526286d0869e66cf2c391096bf9dd7646ee1535c9d23ff89c41cfdd7",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/snapshot-8.log",
+      "sha256": "067688d782546110526d9135863b5c99b3fd15e24f86fdfa4d716589184d0683",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/motion/dir-close/timestamps.txt",
+      "sha256": "0066edbfb4e583c19bf2ee441315912b704bdf3ce9844d63f5f8a23acf4575f4",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/vm/directory-initial.jpeg",
+      "sha256": "e8a3a4224f1bdba4a016c2f1aaa9a40ab84039b5df0dca7c4652b28c742921bd",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/vm/directory-initial.json",
+      "sha256": "9e8ec07aea148b0ecdb9b934b8a476451b26c15aeeed416ba9be9ec965c535e2",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/vm/directory.jpeg",
+      "sha256": "ea2ea3ba4f423705af360ebc072389446065569286432d144de6a842fb49ae89",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/vm/directory.json",
+      "sha256": "05d21ba943d7f39c804d30934d6df526b0d7bb5df8b67aa2b3f33f762cce5f75",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/vm/final-directory.jpeg",
+      "sha256": "68e8a372ed1213673a01c6daa2111e58238313061a9a665bedd85d41c4d25a03",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/vm/final-directory.json",
+      "sha256": "04d1998a3dee700d02329f3333990a1de8cf33ce705cbaedaa322b21118626eb",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r2/demo/directory.png",
+      "sha256": "9fb92c7a88998fbe24bfeb7967c2e20ad83308e538a0302170f61fdc2ef8690f",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r2/demo/directory-styles.json",
+      "sha256": "90547a92d9e54d79cfe7ef3ae415a82b1d61c014f400c939da630d232d3fcd61",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/dir-open/frame-4.jpeg",
+      "sha256": "771c9214f80685bc05157cac38d9f34096f1d91d1a4430ba845d3a7eda09baeb",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/dir-open/frame-5.jpeg",
+      "sha256": "cf76cc607cbb97a0ee7e1912ff4a9a4514df6618ba46db74471473f0fdb57d47",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/evidence/2026-10-02-manga-ui-demo/src/mobile/BottomSheet.tsx",
+      "sha256": "f9c376dc78b8b5feb1c8752aa23414993ab66013d11e81b2ebb8342c570032ac",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/evidence/2026-10-02-manga-ui-demo/src/styles.css",
+      "sha256": "844c67b27cf5e38ba395153145d058c929c6479199d245cd046f3646badd719d",
+      "unchanged": true
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/evidence/2026-10-02-manga-ui-demo/src/prototype.css",
+      "sha256": "2526218e8ff3512e0edc8f743360b1554911fdae3eef16fda9a87842666b0f7c",
+      "unchanged": true
+    }
+  ],
+  "contactPixelsVerified": [
+    {
+      "scene": "dir-open",
+      "frame": 0,
+      "originalRgbEqualsContactBlock": true
+    },
+    {
+      "scene": "dir-open",
+      "frame": 1,
+      "originalRgbEqualsContactBlock": true
+    },
+    {
+      "scene": "dir-open",
+      "frame": 2,
+      "originalRgbEqualsContactBlock": true
+    },
+    {
+      "scene": "dir-open",
+      "frame": 3,
+      "originalRgbEqualsContactBlock": true
+    },
+    {
+      "scene": "dir-open",
+      "frame": 4,
+      "originalRgbEqualsContactBlock": true
+    },
+    {
+      "scene": "dir-open",
+      "frame": 5,
+      "originalRgbEqualsContactBlock": true
+    },
+    {
+      "scene": "dir-open",
+      "frame": 6,
+      "originalRgbEqualsContactBlock": true
+    },
+    {
+      "scene": "dir-open",
+      "frame": 7,
+      "originalRgbEqualsContactBlock": true
+    },
+    {
+      "scene": "dir-open",
+      "frame": 8,
+      "originalRgbEqualsContactBlock": true
+    },
+    {
+      "scene": "dir-close",
+      "frame": 0,
+      "originalRgbEqualsContactBlock": true
+    },
+    {
+      "scene": "dir-close",
+      "frame": 1,
+      "originalRgbEqualsContactBlock": true
+    },
+    {
+      "scene": "dir-close",
+      "frame": 2,
+      "originalRgbEqualsContactBlock": true
+    },
+    {
+      "scene": "dir-close",
+      "frame": 3,
+      "originalRgbEqualsContactBlock": true
+    },
+    {
+      "scene": "dir-close",
+      "frame": 4,
+      "originalRgbEqualsContactBlock": true
+    },
+    {
+      "scene": "dir-close",
+      "frame": 5,
+      "originalRgbEqualsContactBlock": true
+    },
+    {
+      "scene": "dir-close",
+      "frame": 6,
+      "originalRgbEqualsContactBlock": true
+    },
+    {
+      "scene": "dir-close",
+      "frame": 7,
+      "originalRgbEqualsContactBlock": true
+    },
+    {
+      "scene": "dir-close",
+      "frame": 8,
+      "originalRgbEqualsContactBlock": true
+    }
+  ],
+  "nativeCommandsUsedByReviewer": false,
+  "noInterpolatedOrReconstructedFrames": true,
+  "limitations": [
+    "Contact proof compares decoded local JPEG RGB pixels, not device-side bytes.",
+    "Actual frame/VSync/paint timing and exact curves remain OPEN."
+  ]
+}

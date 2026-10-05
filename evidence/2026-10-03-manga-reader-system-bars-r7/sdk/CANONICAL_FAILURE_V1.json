@@ -1,0 +1,10 @@
+{
+  "event": "canonical full local gate failed before packaging/signing",
+  "test": "tools/test-reader-layout-architecture.mjs:133",
+  "failure": "static assertion still requires navigationBarColor: request.style.underlayColor instead of explicit transparentSystemBars conditional",
+  "log": "canonical-build-v1-fail.log",
+  "logSHA256": "7f8495f51267611a783c67719d1a0c3684520ff3f684e302bde553dedb8c86cf",
+  "productFilesRemainFrozen": true,
+  "inputManifestV1SHA256": "d3be88efc5d0f7a5d90b6fcb71a7d5ced99103c0975f5e05a26b96a91602008c",
+  "followup": "minimal test-only current atomic-style and novel/App opaque-default contract migration; retained v1 evidence"
+}

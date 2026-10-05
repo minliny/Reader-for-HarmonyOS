@@ -1,0 +1,10 @@
+<anonymous_script>:3
+class Probe { nativeTextMeasurement = { clear() {} }; nativeParagraphResources = { close() {}, retain() {} };                  publishedRowKeys                      = new Map                (); @Watch('onWindowChromeChanged')         panel         = '';
+                                                                                                                                                                                                  ^
+
+SyntaxError: Invalid or unexpected token
+    at new Function (<anonymous>)
+    at productionMotionMethods (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-motion-method-probe.mjs:50:10)
+    at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-motion-progress.mjs:43:17
+
+Node.js v26.0.0

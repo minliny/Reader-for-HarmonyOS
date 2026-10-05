@@ -1,0 +1,13 @@
+{
+  "scene": "dir-open",
+  "frames": 9,
+  "pixel_groups": 6,
+  "transition_existence": "OBSERVED_REAL_MIDDLE_POSITION",
+  "timing_window_integrity": "VALID_COMMAND_WINDOWS",
+  "capture_command_duration_ms": {
+    "min": 80.427916,
+    "median": 116.916167,
+    "max": 128.412542
+  },
+  "report": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/independent-directory-review/dir-open-analysis/report.json"
+}

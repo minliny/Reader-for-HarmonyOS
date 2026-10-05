@@ -1,0 +1,49 @@
+{
+  "status": "LOCAL_PASS_NEW_HAP_VM_OPEN",
+  "verified": [
+    "50 same ready tile windows: 0 extra decode/release, onChange50 to0",
+    "30 pending joins:0 duplicate publication, retry/retirement still notify",
+    "20 same first/last SDK callbacks:20 to1 window,60 to0 row notifications",
+    "all-failed unknown geometry viewport owner0to1:row1 changes once, repeated0",
+    "real zoom/width/errorColor reactive updates retain actors without row notifications",
+    "all41 bounded manga tests PASS; fake interfaces repaired without weakening assertions"
+  ],
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "sha256": "a1c24c6b7008f049d535131866ce8276a11c16e9634805a3b16feef69610d8db"
+    },
+    {
+      "path": "entry/src/main/ets/features/manga/MangaStripProjection.ts",
+      "sha256": "a478eaf8d41cdc1d3fe097f53dab2982fe9ea5a5a68fe20ab7839fdea16c0363"
+    },
+    {
+      "path": "entry/src/main/ets/features/manga/MangaSessionController.ts",
+      "sha256": "88007c3ced534ee439348af492de53942c28606127313e8912d714fe60390857"
+    },
+    {
+      "path": "tools/test-manga-scroll-stability-sdk.mjs",
+      "sha256": "469fb167a738b8baf6e68b7047e3dd1b281ddc42e5e366a0bb4443361ac73bb8"
+    },
+    {
+      "path": "tools/test-manga-window-publication.mjs",
+      "sha256": "71aad4ba791c4f2e6fc0afd33d5a725c27fb15a703f1ce0cd196361023feb35c"
+    },
+    {
+      "path": "tools/test-manga-visible-tile-retention.mjs",
+      "sha256": "a8c5f04b75b5d9c65eabac4a1cbcf13866eb004c8dd359dd021119712a62f452"
+    },
+    {
+      "path": "tools/test-manga-cancelled-banner.mjs",
+      "sha256": "d920ab8c34b55f9f10d821da51d1dfda3509604efb889315c261741a906ecd9a"
+    },
+    {
+      "path": "tools/test-manga-cross-chapter-counter-sdk.mjs",
+      "sha256": "78c9a57aec60fcf37dc73be9caa23ba7b5323fcd792af1e42ef37720ee9019a1"
+    },
+    {
+      "path": "tools/lib/reader-motion-method-probe.mjs",
+      "sha256": "7db6e65f3cf8f2bbc29e4e00a5a072df138679e44475b4ae5ed090e0d5287862"
+    }
+  ]
+}

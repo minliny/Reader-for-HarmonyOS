@@ -1,0 +1,45 @@
+{
+  "runId": "20261003T065125Z-568ec4e3-559f9de5",
+  "signedSha256": "069307e02cc4c54c2eaec13dcb949ea2f73dd544828f71047290c26441ecd78f",
+  "target": "127.0.0.1:5555",
+  "dataPreserved": true,
+  "sample": {
+    "sourceId": "corpus-6781cc801619",
+    "bookId": "https://ac.qq.com/Comic/comicInfo/id/531040"
+  },
+  "passed": [
+    "search/detail/681-entry catalog",
+    "chapter 01 actual 36-page comic",
+    "vertical scrolling",
+    "full directory selection chapter 02, actual 24-page comic",
+    "normal exit and cold launch retained chapter 02 page 2/24",
+    "cold bookshelf resume restored actual pixels and viewport",
+    "horizontal paging to chapter 02 page 3/24"
+  ],
+  "open": [
+    "MR15 overlay positioning",
+    "MR16 flat reader directory fallback",
+    "MR17 stale detail on ordinary Back",
+    "MR18 chapter percent and continue-reading projection"
+  ],
+  "screenshots": [
+    "manga-final-shelf.jpeg",
+    "manga-detail.jpeg",
+    "manga-detail.json",
+    "manga-reader-first.jpeg",
+    "manga-reader-scroll.jpeg",
+    "manga-controls-misplaced.jpeg",
+    "manga-controls.json",
+    "manga-reader-directory.json",
+    "manga-full-directory.json",
+    "manga-chapter02.jpeg",
+    "manga-after-exit.json",
+    "manga-cold-shelf.json",
+    "manga-cold-resume-ready.jpeg",
+    "manga-cold-controls.json",
+    "manga-horizontal-ready.jpeg",
+    "manga-horizontal.json"
+  ],
+  "acceptance": "BLOCKED pending UI and presentation repairs; not final delivery",
+  "uiNote": "Immediate screenshots included normal loading frames; ready screenshots are the pixel evidence. A swipe accidentally hit the open keyboard, adding parentheses to the unsubmitted search draft; the submitted search remained original."
+}

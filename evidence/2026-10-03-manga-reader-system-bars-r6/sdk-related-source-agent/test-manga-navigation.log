@@ -1,0 +1,13 @@
+<anonymous_script>:3
+class Probe { nativeTextMeasurement = { clear() {} }; nativeParagraphResources = { close() {}, retain() {} };                  publishedRowKeys                      = new Map                (); @Watch('onWindowChromeChanged')         panel         = '';
+                                                                                                                                                                                                  ^
+
+SyntaxError: Invalid or unexpected token
+    at new Function (<anonymous>)
+    at productionMotionMethods (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-motion-method-probe.mjs:50:10)
+    at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-navigation.mjs:41:15
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v26.0.0

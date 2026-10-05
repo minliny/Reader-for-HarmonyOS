@@ -1,0 +1,15 @@
+{
+  "scene": "dir-open",
+  "inspection": "All nine original 640x1416 JPEGs inspected through original-size contact copies. Text top-y anchors measured in independent title/search regions of original JPEGs, not reconstructed frames.",
+  "frames": {
+    "0": {"phase": "closed", "note": "Directory absent; reader controls visible."},
+    "1": {"phase": "closed", "note": "Decoded pixels exactly match frame0."},
+    "2": {"phase": "closed", "note": "Decoded pixels exactly match frame0."},
+    "3": {"phase": "middle", "anchor_y": {"title": 1196, "search": 1282}, "content_visible": true, "note": "Title and search appear near screen bottom; both move by about743/744 pixels relative to open reference. Rows below viewport not claimed visible."},
+    "4": {"phase": "middle", "anchor_y": {"title": 476, "search": 561}, "content_visible": true, "note": "Both independent text anchors remain23 pixels below settled reference; directory rows not yet visibly populated."},
+    "5": {"phase": "unreviewed", "content_visible": true, "note": "Near-final position with approximately1px residual glyph/search raster difference; not used as independent middle-state proof. Rows not yet visible."},
+    "6": {"phase": "open", "anchor_y": {"title": 453, "search": 538}, "content_visible": true, "note": "Settled with actual04-09 rows and05 currently reading."},
+    "7": {"phase": "open", "anchor_y": {"title": 453, "search": 538}, "content_visible": true, "note": "Decoded pixels exactly match frame6."},
+    "8": {"phase": "open", "anchor_y": {"title": 453, "search": 538}, "content_visible": true, "note": "Decoded pixels exactly match frame6; reference open position."}
+  }
+}

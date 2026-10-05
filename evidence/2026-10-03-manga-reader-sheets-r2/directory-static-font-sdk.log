@@ -1,0 +1,58 @@
+Directory fixed-face follow-up targeted SDK/local gates. No HAP or VM operation.
+
+$ node --experimental-strip-types tools/test-manga-directory-demo-parity-sdk.mjs
+exit 0
+(node:48501) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS manga directory actual gateway -> SDK parity: fixed 400/550/600 families without VF dependence, Radix SVG, one depth normalization, full-tree metadata, group spacing, flat search, phone58/wide50, content-owned first-rank boundary, 50/12 positioning and preserved native anchors; same native group Image receives 0/-90/0 with live title/count/second click and same-view page admission; thirteen old-implementation negative controls rejected. SDK animation requests verified, compositor frames require VM evidence
+
+$ node --experimental-strip-types tools/test-manga-directory-font-readiness-sdk.mjs
+exit 0
+PASS manga directory fixed-font SDK binding, deferred checked receipt, fallback/tree admission, stale/closing fences, novel direct path; 2 old-implementation negative controls. Glyph pixels remain target visual acceptance.
+(node:48506) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+$ node --experimental-strip-types tools/test-manga-metadata-ui.mjs
+exit 0
+PASS actual manga directory SDK Builder and Core locate: group/target/disabled, independent folds, current target and natural height
+PASS actual detail SDK Builder: full scroll viewport, 104×150 manga cover, centered floating header, two-line title, folded intro and floating dock
+(node:48509) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+$ node --experimental-strip-types tools/test-reader-directory-depth-contract.mjs
+exit 0
+PASS actual SDK tree rows: v2 wire -> real gateway one-based admission, v1 compatibility, bounded indent and full accessibility actions
+(node:48502) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+$ node --experimental-strip-types tools/test-reader-directory-navigation.mjs
+exit 0
+PH42 directory navigation protocol, revision fencing and retained-source backfill: PASS
+reader directory v2 scope and target contracts passed
+directory selection uses independent immutable authority through deferred context
+PASS local/TXT alias dispatch and cancellation preserve TXT body/rules path; EPUB/MOBI-family retain archive path
+
+$ node --experimental-strip-types tools/test-reader-directory-navigation-ui.mjs
+exit 0
+PH42 tree bookmark, target validation, rank position and debounced query fencing: PASS
+PASS directory disclosure actual SDK Builder: fold/unfold arrow, accessibility and callback capture refresh only the changed row
+PASS directory search actual SDK State dispatch: submit/miss/clear update mounted tree parameters without sorting; plain-query negative control reproduces stale child
+PASS actual SDK directory empty-result presentation without replacing list lifecycle
+PASS directory diagnostics separate disposed query cancellation from active failure
+PASS tree download actual SDK Builder and Core target fencing: day/night states, group exclusion, queued/stale/source guards and download-state refresh
+PASS actual SDK Quick/Full/Surface download prop and callback propagation
+(node:48504) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+$ node --experimental-strip-types tools/test-reader-directory-viewport.mjs
+exit 0
+PH42 tree viewport continuity, ancestor accessibility and bounded page cache: PASS
+(node:48507) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+$ node --experimental-strip-types tools/test-reader-font-demand.mjs
+exit 0
+(node:48505) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+font demand: checked readiness, lazy serial visible previews, shared loads and retry PASS
+

@@ -1,0 +1,4 @@
+PASS actual manga directory SDK Builder and Core locate: group/target/disabled, independent folds, current target and natural height
+PASS actual detail SDK Builder: full scroll viewport, 104×150 manga cover, centered floating header, two-line title, folded intro and floating dock
+(node:23681) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

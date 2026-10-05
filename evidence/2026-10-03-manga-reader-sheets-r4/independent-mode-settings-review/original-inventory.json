@@ -1,0 +1,1035 @@
+{
+  "review_kind": "Read-only independent original-image/clock-window review; no HDC/product/test/build operation",
+  "source_surface": {
+    "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+    "sha256": "0f5e6d2654e8cc228b43b2ab2c9023e728db904193a147ce71da425113a6b897"
+  },
+  "demo_source_sha256": {
+    "/Users/minliny/Documents/Reader/evidence/2026-10-02-manga-ui-demo/src/mobile/BottomSheet.tsx": "f9c376dc78b8b5feb1c8752aa23414993ab66013d11e81b2ebb8342c570032ac",
+    "/Users/minliny/Documents/Reader/evidence/2026-10-02-manga-ui-demo/src/styles.css": "844c67b27cf5e38ba395153145d058c929c6479199d245cd046f3646badd719d",
+    "/Users/minliny/Documents/Reader/evidence/2026-10-02-manga-ui-demo/src/prototype.css": "2526218e8ff3512e0edc8f743360b1554911fdae3eef16fda9a87842666b0f7c"
+  },
+  "stable_files_sha256": {
+    "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/vm/mode.jpeg": "d7f933d8acb464bbf859d3ae03cbe90e931b1e6d98d928fbf807a8ce91b67b5e",
+    "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/vm/mode.json": "a575bfaccca1668772122899e07329724c33353333c2a53d927fd4bb5519c1fb",
+    "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/vm/settings.jpeg": "e3e194dafd50802fe3e6ef714504d2fcbac7ec1a8d02c56184957a1fc3c56e7b",
+    "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/vm/settings.json": "a9c62c1206421ed1f062abe4409f661598d65b56edcd577a9c44189368ea4f60"
+  },
+  "motion_app_roi": [
+    0,
+    68,
+    640,
+    1300
+  ],
+  "static_scrim_roi": [
+    20,
+    220,
+    80,
+    60
+  ],
+  "scrim_boundary": "Same static comic-image region manually verified in original frames; outside header, sheet and its shadow. Luma proxies are candidate shade evidence, not precise native alpha or VSync values.",
+  "scenes": [
+    {
+      "folder": "mode-open",
+      "scene": "mode-open",
+      "original_frame_count": 9,
+      "invalid_timestamp_lines": [],
+      "click_valid": true,
+      "command_ms": {
+        "min": 269.240208,
+        "median": 382.688667,
+        "max": 1118.847251
+      },
+      "frames": [
+        {
+          "index": 0,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-open/frame-0.jpeg",
+          "jpeg_sha256": "49ba7dee13f4c669928b4664cee6a429b3f808a1e57f44941446ce542aa31e6f",
+          "decoded_rgb_sha256": "e78fa68f1e597d75d639da80aa2e6745c1929a238206babcff008107c83ef5a0",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028868.995279018",
+          "native_command_end": "1791028869.269940685",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 274.661667,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 1,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-open/frame-1.jpeg",
+          "jpeg_sha256": "49ba7dee13f4c669928b4664cee6a429b3f808a1e57f44941446ce542aa31e6f",
+          "decoded_rgb_sha256": "e78fa68f1e597d75d639da80aa2e6745c1929a238206babcff008107c83ef5a0",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028869.385645393",
+          "native_command_end": "1791028869.754637852",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 368.992459,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 2,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-open/frame-2.jpeg",
+          "jpeg_sha256": "49ba7dee13f4c669928b4664cee6a429b3f808a1e57f44941446ce542aa31e6f",
+          "decoded_rgb_sha256": "e78fa68f1e597d75d639da80aa2e6745c1929a238206babcff008107c83ef5a0",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028869.422577601",
+          "native_command_end": "1791028869.719932143",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 297.354542,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 3,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-open/frame-3.jpeg",
+          "jpeg_sha256": "49ba7dee13f4c669928b4664cee6a429b3f808a1e57f44941446ce542aa31e6f",
+          "decoded_rgb_sha256": "e78fa68f1e597d75d639da80aa2e6745c1929a238206babcff008107c83ef5a0",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028869.498926935",
+          "native_command_end": "1791028869.881615602",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 382.688667,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 4,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-open/frame-4.jpeg",
+          "jpeg_sha256": "a188a12f4e9d808d5a3832a28935c88771cea5b465857d61be0cba8584ac946f",
+          "decoded_rgb_sha256": "831e381347cbea6e3e00dacc7997e19712eaee3c2ee257cb5003496faa7c3351",
+          "app_roi_sha256": "37a2e5be148027ca82c5239cb7730c8788aa00bcd923ec4346e41a58c0b067d9",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028869.909954935",
+          "native_command_end": "1791028870.401832560",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 491.877625,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 5,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-open/frame-5.jpeg",
+          "jpeg_sha256": "77605ef5c432d65fc73024d1524c83904da8812480e654897a6bd42dc91d19ad",
+          "decoded_rgb_sha256": "72b54ed9241804c0ed417ed5325d6239062109ffc700e5e3ba59c7cf28018fa7",
+          "app_roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028870.421219894",
+          "native_command_end": "1791028870.972128519",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 550.908625,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 6,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-open/frame-6.jpeg",
+          "jpeg_sha256": "77605ef5c432d65fc73024d1524c83904da8812480e654897a6bd42dc91d19ad",
+          "decoded_rgb_sha256": "72b54ed9241804c0ed417ed5325d6239062109ffc700e5e3ba59c7cf28018fa7",
+          "app_roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028871.050774602",
+          "native_command_end": "1791028872.169621853",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 1118.847251,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 7,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-open/frame-7.jpeg",
+          "jpeg_sha256": "77605ef5c432d65fc73024d1524c83904da8812480e654897a6bd42dc91d19ad",
+          "decoded_rgb_sha256": "72b54ed9241804c0ed417ed5325d6239062109ffc700e5e3ba59c7cf28018fa7",
+          "app_roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028872.188734811",
+          "native_command_end": "1791028872.854420478",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 665.685667,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 8,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-open/frame-8.jpeg",
+          "jpeg_sha256": "77605ef5c432d65fc73024d1524c83904da8812480e654897a6bd42dc91d19ad",
+          "decoded_rgb_sha256": "72b54ed9241804c0ed417ed5325d6239062109ffc700e5e3ba59c7cf28018fa7",
+          "app_roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028873.686576937",
+          "native_command_end": "1791028873.955817145",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 269.240208,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        }
+      ]
+    },
+    {
+      "folder": "mode-close",
+      "scene": "mode-close",
+      "original_frame_count": 9,
+      "invalid_timestamp_lines": [],
+      "click_valid": true,
+      "command_ms": {
+        "min": 148.524375,
+        "median": 489.327291,
+        "max": 1113.004709
+      },
+      "frames": [
+        {
+          "index": 0,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-close/frame-0.jpeg",
+          "jpeg_sha256": "77605ef5c432d65fc73024d1524c83904da8812480e654897a6bd42dc91d19ad",
+          "decoded_rgb_sha256": "72b54ed9241804c0ed417ed5325d6239062109ffc700e5e3ba59c7cf28018fa7",
+          "app_roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028864.076131641",
+          "native_command_end": "1791028864.565458932",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 489.327291,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 1,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-close/frame-1.jpeg",
+          "jpeg_sha256": "77605ef5c432d65fc73024d1524c83904da8812480e654897a6bd42dc91d19ad",
+          "decoded_rgb_sha256": "72b54ed9241804c0ed417ed5325d6239062109ffc700e5e3ba59c7cf28018fa7",
+          "app_roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028864.694318391",
+          "native_command_end": "1791028865.579137850",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 884.819459,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 2,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-close/frame-2.jpeg",
+          "jpeg_sha256": "77605ef5c432d65fc73024d1524c83904da8812480e654897a6bd42dc91d19ad",
+          "decoded_rgb_sha256": "72b54ed9241804c0ed417ed5325d6239062109ffc700e5e3ba59c7cf28018fa7",
+          "app_roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028864.739140141",
+          "native_command_end": "1791028865.852144850",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 1113.004709,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 3,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-close/frame-3.jpeg",
+          "jpeg_sha256": "77605ef5c432d65fc73024d1524c83904da8812480e654897a6bd42dc91d19ad",
+          "decoded_rgb_sha256": "72b54ed9241804c0ed417ed5325d6239062109ffc700e5e3ba59c7cf28018fa7",
+          "app_roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028864.802597808",
+          "native_command_end": "1791028865.830196808",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 1027.599,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 4,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-close/frame-4.jpeg",
+          "jpeg_sha256": "49ba7dee13f4c669928b4664cee6a429b3f808a1e57f44941446ce542aa31e6f",
+          "decoded_rgb_sha256": "e78fa68f1e597d75d639da80aa2e6745c1929a238206babcff008107c83ef5a0",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028865.898195141",
+          "native_command_end": "1791028866.532633767",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 634.438626,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 5,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-close/frame-5.jpeg",
+          "jpeg_sha256": "49ba7dee13f4c669928b4664cee6a429b3f808a1e57f44941446ce542aa31e6f",
+          "decoded_rgb_sha256": "e78fa68f1e597d75d639da80aa2e6745c1929a238206babcff008107c83ef5a0",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028866.562144892",
+          "native_command_end": "1791028866.847261725",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 285.116833,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 6,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-close/frame-6.jpeg",
+          "jpeg_sha256": "49ba7dee13f4c669928b4664cee6a429b3f808a1e57f44941446ce542aa31e6f",
+          "decoded_rgb_sha256": "e78fa68f1e597d75d639da80aa2e6745c1929a238206babcff008107c83ef5a0",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028866.868682559",
+          "native_command_end": "1791028867.172588809",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 303.90625,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 7,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-close/frame-7.jpeg",
+          "jpeg_sha256": "49ba7dee13f4c669928b4664cee6a429b3f808a1e57f44941446ce542aa31e6f",
+          "decoded_rgb_sha256": "e78fa68f1e597d75d639da80aa2e6745c1929a238206babcff008107c83ef5a0",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028867.195690309",
+          "native_command_end": "1791028867.459572351",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 263.882042,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 8,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-close/frame-8.jpeg",
+          "jpeg_sha256": "49ba7dee13f4c669928b4664cee6a429b3f808a1e57f44941446ce542aa31e6f",
+          "decoded_rgb_sha256": "e78fa68f1e597d75d639da80aa2e6745c1929a238206babcff008107c83ef5a0",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028868.287443059",
+          "native_command_end": "1791028868.435967434",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 148.524375,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        }
+      ]
+    },
+    {
+      "folder": "mode-open-quiet",
+      "scene": "mode-open",
+      "original_frame_count": 9,
+      "invalid_timestamp_lines": [],
+      "click_valid": true,
+      "command_ms": {
+        "min": 71.967792,
+        "median": 167.590458,
+        "max": 225.706292
+      },
+      "frames": [
+        {
+          "index": 0,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-open-quiet/frame-0.jpeg",
+          "jpeg_sha256": "28c8f7e8e8ebbd1ff46f3672e4819743ba1b15393eeea8cb4eb812ad9c88704b",
+          "decoded_rgb_sha256": "4cb24de4a8451390e9f9ad81b603cbae9a2467e795187ec1372a9ec49cffd910",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791029117.967537637",
+          "native_command_end": "1791029118.087872387",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 120.33475,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 1,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-open-quiet/frame-1.jpeg",
+          "jpeg_sha256": "28c8f7e8e8ebbd1ff46f3672e4819743ba1b15393eeea8cb4eb812ad9c88704b",
+          "decoded_rgb_sha256": "4cb24de4a8451390e9f9ad81b603cbae9a2467e795187ec1372a9ec49cffd910",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791029118.162564303",
+          "native_command_end": "1791029118.341212970",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 178.648667,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 2,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-open-quiet/frame-2.jpeg",
+          "jpeg_sha256": "28c8f7e8e8ebbd1ff46f3672e4819743ba1b15393eeea8cb4eb812ad9c88704b",
+          "decoded_rgb_sha256": "4cb24de4a8451390e9f9ad81b603cbae9a2467e795187ec1372a9ec49cffd910",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791029118.206104303",
+          "native_command_end": "1791029118.418021179",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 211.916876,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 3,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-open-quiet/frame-3.jpeg",
+          "jpeg_sha256": "64d7602c8dad1894b58b6e42da40c822d51e6e9fd60baac46a61d8ed78bacc3e",
+          "decoded_rgb_sha256": "fb02de9c4b04d2182c63d8b4c0802a88a58acee7d302cbf6e18ad36684c40a6e",
+          "app_roi_sha256": "269eaae271004f4bcd3d1e181bbb07ef98db2560d64b48f9f6237db6504eb013",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791029118.272375512",
+          "native_command_end": "1791029118.498081804",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 225.706292,
+          "static_scrim_roi_luma_proxy": 220.54047791666667
+        },
+        {
+          "index": 4,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-open-quiet/frame-4.jpeg",
+          "jpeg_sha256": "80ee2181d2e615c310fc10223bcc8f0767be8c272d6cbd7820499bdc486b006d",
+          "decoded_rgb_sha256": "3ef689f4b86447c5cf26f0577a981593c9e179d75ffd54fcef855907c37fb52a",
+          "app_roi_sha256": "8092ee6e4d7c0f758d8d940737419e3e2141504b9283e5b9f715a08f0c4caeaa",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791029118.516792137",
+          "native_command_end": "1791029118.684382595",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 167.590458,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 5,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-open-quiet/frame-5.jpeg",
+          "jpeg_sha256": "903bc5510e8da228b866ca704ce046b36c1390e18f08b11a6de4d09abfc85a4f",
+          "decoded_rgb_sha256": "24c65c6b58cee9676ba9039670eb8629ed96e9a292c4b074a0f0939c40a7959c",
+          "app_roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791029118.714277179",
+          "native_command_end": "1791029118.931437179",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 217.16,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 6,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-open-quiet/frame-6.jpeg",
+          "jpeg_sha256": "903bc5510e8da228b866ca704ce046b36c1390e18f08b11a6de4d09abfc85a4f",
+          "decoded_rgb_sha256": "24c65c6b58cee9676ba9039670eb8629ed96e9a292c4b074a0f0939c40a7959c",
+          "app_roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791029118.946091470",
+          "native_command_end": "1791029119.060188054",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 114.096584,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 7,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-open-quiet/frame-7.jpeg",
+          "jpeg_sha256": "903bc5510e8da228b866ca704ce046b36c1390e18f08b11a6de4d09abfc85a4f",
+          "decoded_rgb_sha256": "24c65c6b58cee9676ba9039670eb8629ed96e9a292c4b074a0f0939c40a7959c",
+          "app_roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791029119.070580679",
+          "native_command_end": "1791029119.169294554",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 98.713875,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 8,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-open-quiet/frame-8.jpeg",
+          "jpeg_sha256": "903bc5510e8da228b866ca704ce046b36c1390e18f08b11a6de4d09abfc85a4f",
+          "decoded_rgb_sha256": "24c65c6b58cee9676ba9039670eb8629ed96e9a292c4b074a0f0939c40a7959c",
+          "app_roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791029119.984983304",
+          "native_command_end": "1791029120.056951096",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 71.967792,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        }
+      ]
+    },
+    {
+      "folder": "mode-close-quiet",
+      "scene": "mode-close",
+      "original_frame_count": 9,
+      "invalid_timestamp_lines": [],
+      "click_valid": true,
+      "command_ms": {
+        "min": 65.043125,
+        "median": 94.436625,
+        "max": 133.345208
+      },
+      "frames": [
+        {
+          "index": 0,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-close-quiet/frame-0.jpeg",
+          "jpeg_sha256": "903bc5510e8da228b866ca704ce046b36c1390e18f08b11a6de4d09abfc85a4f",
+          "decoded_rgb_sha256": "24c65c6b58cee9676ba9039670eb8629ed96e9a292c4b074a0f0939c40a7959c",
+          "app_roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791029115.715290011",
+          "native_command_end": "1791029115.795856886",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 80.566875,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 1,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-close-quiet/frame-1.jpeg",
+          "jpeg_sha256": "903bc5510e8da228b866ca704ce046b36c1390e18f08b11a6de4d09abfc85a4f",
+          "decoded_rgb_sha256": "24c65c6b58cee9676ba9039670eb8629ed96e9a292c4b074a0f0939c40a7959c",
+          "app_roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791029115.847202219",
+          "native_command_end": "1791029115.912245344",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 65.043125,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 2,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-close-quiet/frame-2.jpeg",
+          "jpeg_sha256": "903bc5510e8da228b866ca704ce046b36c1390e18f08b11a6de4d09abfc85a4f",
+          "decoded_rgb_sha256": "24c65c6b58cee9676ba9039670eb8629ed96e9a292c4b074a0f0939c40a7959c",
+          "app_roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791029115.892805011",
+          "native_command_end": "1791029115.965391469",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 72.586458,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 3,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-close-quiet/frame-3.jpeg",
+          "jpeg_sha256": "5b1e831615e5a5ce43e864dc03b4377f041670fd254ec096c2adad1f93669f90",
+          "decoded_rgb_sha256": "a68f220112257ddbc1a3ea138947e634ae05db83d7b0d7dd2d62daf5b309e7cf",
+          "app_roi_sha256": "c02b424259171dfc1c40c343f226480aa00b03bface3bca9d8947934bcc60936",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791029115.964315636",
+          "native_command_end": "1791029116.046766511",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 82.450875,
+          "static_scrim_roi_luma_proxy": 160.69444458333334
+        },
+        {
+          "index": 4,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-close-quiet/frame-4.jpeg",
+          "jpeg_sha256": "93d36990e2be5789214576c3f2d106b7b95687222e1bb76ff583e4c060cde379",
+          "decoded_rgb_sha256": "6ea049957fa12db4b7ddc317a9b9752613047e9b76da037c1c0a5b50b164cb7b",
+          "app_roi_sha256": "1095e9ea29fa57a31d7a73627cd80427cade9bd1b1615df91f26c3a984a0de8a",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791029116.054681011",
+          "native_command_end": "1791029116.149117636",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 94.436625,
+          "static_scrim_roi_luma_proxy": 226.86840708333335
+        },
+        {
+          "index": 5,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-close-quiet/frame-5.jpeg",
+          "jpeg_sha256": "28c8f7e8e8ebbd1ff46f3672e4819743ba1b15393eeea8cb4eb812ad9c88704b",
+          "decoded_rgb_sha256": "4cb24de4a8451390e9f9ad81b603cbae9a2467e795187ec1372a9ec49cffd910",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791029116.156375261",
+          "native_command_end": "1791029116.253543303",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 97.168042,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 6,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-close-quiet/frame-6.jpeg",
+          "jpeg_sha256": "28c8f7e8e8ebbd1ff46f3672e4819743ba1b15393eeea8cb4eb812ad9c88704b",
+          "decoded_rgb_sha256": "4cb24de4a8451390e9f9ad81b603cbae9a2467e795187ec1372a9ec49cffd910",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791029116.261280928",
+          "native_command_end": "1791029116.371619386",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 110.338458,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 7,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-close-quiet/frame-7.jpeg",
+          "jpeg_sha256": "28c8f7e8e8ebbd1ff46f3672e4819743ba1b15393eeea8cb4eb812ad9c88704b",
+          "decoded_rgb_sha256": "4cb24de4a8451390e9f9ad81b603cbae9a2467e795187ec1372a9ec49cffd910",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791029116.379464761",
+          "native_command_end": "1791029116.493769803",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 114.305042,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 8,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-close-quiet/frame-8.jpeg",
+          "jpeg_sha256": "28c8f7e8e8ebbd1ff46f3672e4819743ba1b15393eeea8cb4eb812ad9c88704b",
+          "decoded_rgb_sha256": "4cb24de4a8451390e9f9ad81b603cbae9a2467e795187ec1372a9ec49cffd910",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791029117.341194470",
+          "native_command_end": "1791029117.474539678",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 133.345208,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        }
+      ]
+    },
+    {
+      "folder": "settings-open",
+      "scene": "settings-open",
+      "original_frame_count": 9,
+      "invalid_timestamp_lines": [],
+      "click_valid": true,
+      "command_ms": {
+        "min": 98.685875,
+        "median": 159.092167,
+        "max": 218.433792
+      },
+      "frames": [
+        {
+          "index": 0,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-open/frame-0.jpeg",
+          "jpeg_sha256": "42be75e2af1e16e2bed83609801b2f565199a935414bc09216256ced693211fa",
+          "decoded_rgb_sha256": "88650a051ceffcb5d58cea6629c59d774e8a6c36e385a88cc86d2c4f7bf39336",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028986.980706824",
+          "native_command_end": "1791028987.105423533",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 124.716709,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 1,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-open/frame-1.jpeg",
+          "jpeg_sha256": "42be75e2af1e16e2bed83609801b2f565199a935414bc09216256ced693211fa",
+          "decoded_rgb_sha256": "88650a051ceffcb5d58cea6629c59d774e8a6c36e385a88cc86d2c4f7bf39336",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028987.208898533",
+          "native_command_end": "1791028987.402277449",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 193.378916,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 2,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-open/frame-2.jpeg",
+          "jpeg_sha256": "42be75e2af1e16e2bed83609801b2f565199a935414bc09216256ced693211fa",
+          "decoded_rgb_sha256": "88650a051ceffcb5d58cea6629c59d774e8a6c36e385a88cc86d2c4f7bf39336",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028987.240827824",
+          "native_command_end": "1791028987.449868866",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 209.041042,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 3,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-open/frame-3.jpeg",
+          "jpeg_sha256": "615b08010f5c4309ab60f56c4f8eebef5c277db31f5efcb1c62e78532f565497",
+          "decoded_rgb_sha256": "4107088d7c64c4b30f9f7ff780bd0c6ad553ee645e5df697c22907d78010edd9",
+          "app_roi_sha256": "3dbe2b8bca6a0894c231ba332abbb09e0ed83073c1f098cc15278b3d4b15a827",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028987.335586574",
+          "native_command_end": "1791028987.554020366",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 218.433792,
+          "static_scrim_roi_luma_proxy": 195.68813312499998
+        },
+        {
+          "index": 4,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-open/frame-4.jpeg",
+          "jpeg_sha256": "5d861d8655d9480f77436d63740e4d893fbc463f4a0ec65a84413435a70d6e3a",
+          "decoded_rgb_sha256": "abb633d780973fe9395b25e319bd8dbba3b1b5c260c52c245d10955d764e7a10",
+          "app_roi_sha256": "16e12e13c551a6c90af750ef9f124303c4d9281547f0ddcfed7aea70f3e7cb91",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028987.571188199",
+          "native_command_end": "1791028987.739245116",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 168.056917,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 5,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-open/frame-5.jpeg",
+          "jpeg_sha256": "18f6f835ad2cce4bad0f97ab55c09053087aa4edbb26c9ab6c70cb4d2d2319d5",
+          "decoded_rgb_sha256": "570603f245d18d3b1c3b2260656c1bae36e3b91344a2f7549f4c476e2ff5127f",
+          "app_roi_sha256": "d4ad379a122ec9d2eebb908c5eec19b907a5ebbec644e19882bbcd724ced79a2",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028987.768983491",
+          "native_command_end": "1791028987.928075658",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 159.092167,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 6,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-open/frame-6.jpeg",
+          "jpeg_sha256": "9fd5baa90feb5e67ca7f2de69062b212bfad1cef9e9597ba923805075621a09a",
+          "decoded_rgb_sha256": "63e5fd6057af578152a08f1d16b8fb71297dfb0469432fbc330df76549ca632a",
+          "app_roi_sha256": "528b43209fa2a878006d595d763f198c4fdab002511c1812d99f634622aeac0c",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028987.940745908",
+          "native_command_end": "1791028988.070964700",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 130.218792,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 7,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-open/frame-7.jpeg",
+          "jpeg_sha256": "9fd5baa90feb5e67ca7f2de69062b212bfad1cef9e9597ba923805075621a09a",
+          "decoded_rgb_sha256": "63e5fd6057af578152a08f1d16b8fb71297dfb0469432fbc330df76549ca632a",
+          "app_roi_sha256": "528b43209fa2a878006d595d763f198c4fdab002511c1812d99f634622aeac0c",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028988.127548741",
+          "native_command_end": "1791028988.239010658",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 111.461917,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 8,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-open/frame-8.jpeg",
+          "jpeg_sha256": "9fd5baa90feb5e67ca7f2de69062b212bfad1cef9e9597ba923805075621a09a",
+          "decoded_rgb_sha256": "63e5fd6057af578152a08f1d16b8fb71297dfb0469432fbc330df76549ca632a",
+          "app_roi_sha256": "528b43209fa2a878006d595d763f198c4fdab002511c1812d99f634622aeac0c",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028989.076886200",
+          "native_command_end": "1791028989.175572075",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 98.685875,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        }
+      ]
+    },
+    {
+      "folder": "settings-close",
+      "scene": "settings-close",
+      "original_frame_count": 9,
+      "invalid_timestamp_lines": [],
+      "click_valid": true,
+      "command_ms": {
+        "min": 119.889458,
+        "median": 188.110375,
+        "max": 247.244541
+      },
+      "frames": [
+        {
+          "index": 0,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-close/frame-0.jpeg",
+          "jpeg_sha256": "9fd5baa90feb5e67ca7f2de69062b212bfad1cef9e9597ba923805075621a09a",
+          "decoded_rgb_sha256": "63e5fd6057af578152a08f1d16b8fb71297dfb0469432fbc330df76549ca632a",
+          "app_roi_sha256": "528b43209fa2a878006d595d763f198c4fdab002511c1812d99f634622aeac0c",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028984.146248198",
+          "native_command_end": "1791028984.331995365",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 185.747167,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 1,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-close/frame-1.jpeg",
+          "jpeg_sha256": "9fd5baa90feb5e67ca7f2de69062b212bfad1cef9e9597ba923805075621a09a",
+          "decoded_rgb_sha256": "63e5fd6057af578152a08f1d16b8fb71297dfb0469432fbc330df76549ca632a",
+          "app_roi_sha256": "528b43209fa2a878006d595d763f198c4fdab002511c1812d99f634622aeac0c",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028984.386132865",
+          "native_command_end": "1791028984.633377406",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 247.244541,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 2,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-close/frame-2.jpeg",
+          "jpeg_sha256": "9fd5baa90feb5e67ca7f2de69062b212bfad1cef9e9597ba923805075621a09a",
+          "decoded_rgb_sha256": "63e5fd6057af578152a08f1d16b8fb71297dfb0469432fbc330df76549ca632a",
+          "app_roi_sha256": "528b43209fa2a878006d595d763f198c4fdab002511c1812d99f634622aeac0c",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028984.469963948",
+          "native_command_end": "1791028984.677602531",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 207.638583,
+          "static_scrim_roi_luma_proxy": 154.29772062499998
+        },
+        {
+          "index": 3,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-close/frame-3.jpeg",
+          "jpeg_sha256": "f7c40903258cc9cc11b98a400feb98a4e7bd30c306224e313c8ce05de3b359de",
+          "decoded_rgb_sha256": "5170339cf032b9e6b88e001d1a1cb02a4fc3770ae71a730f0dba99b097baca62",
+          "app_roi_sha256": "ae53a0d8123860c9cc3d646681eac9b96d800f2097c697d2fc98df22ed796b28",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028984.518704781",
+          "native_command_end": "1791028984.745496865",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 226.792084,
+          "static_scrim_roi_luma_proxy": 193.9007125
+        },
+        {
+          "index": 4,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-close/frame-4.jpeg",
+          "jpeg_sha256": "42be75e2af1e16e2bed83609801b2f565199a935414bc09216256ced693211fa",
+          "decoded_rgb_sha256": "88650a051ceffcb5d58cea6629c59d774e8a6c36e385a88cc86d2c4f7bf39336",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028984.759745365",
+          "native_command_end": "1791028984.915561782",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 155.816417,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 5,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-close/frame-5.jpeg",
+          "jpeg_sha256": "42be75e2af1e16e2bed83609801b2f565199a935414bc09216256ced693211fa",
+          "decoded_rgb_sha256": "88650a051ceffcb5d58cea6629c59d774e8a6c36e385a88cc86d2c4f7bf39336",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028984.936007740",
+          "native_command_end": "1791028985.124118115",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 188.110375,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 6,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-close/frame-6.jpeg",
+          "jpeg_sha256": "42be75e2af1e16e2bed83609801b2f565199a935414bc09216256ced693211fa",
+          "decoded_rgb_sha256": "88650a051ceffcb5d58cea6629c59d774e8a6c36e385a88cc86d2c4f7bf39336",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028985.143013532",
+          "native_command_end": "1791028985.335915282",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 192.90175,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 7,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-close/frame-7.jpeg",
+          "jpeg_sha256": "42be75e2af1e16e2bed83609801b2f565199a935414bc09216256ced693211fa",
+          "decoded_rgb_sha256": "88650a051ceffcb5d58cea6629c59d774e8a6c36e385a88cc86d2c4f7bf39336",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028985.360957615",
+          "native_command_end": "1791028985.488000615",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 127.043,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        },
+        {
+          "index": 8,
+          "file": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-close/frame-8.jpeg",
+          "jpeg_sha256": "42be75e2af1e16e2bed83609801b2f565199a935414bc09216256ced693211fa",
+          "decoded_rgb_sha256": "88650a051ceffcb5d58cea6629c59d774e8a6c36e385a88cc86d2c4f7bf39336",
+          "app_roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+          "dimensions": [
+            640,
+            1416
+          ],
+          "native_command_start": "1791028986.300581199",
+          "native_command_end": "1791028986.420470657",
+          "exit_code": 0,
+          "valid_command_window": true,
+          "command_ms": 119.889458,
+          "static_scrim_roi_luma_proxy": 233.69640979166667
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,513 @@
+{
+  "schemaVersion": 1,
+  "name": "approved-design-source",
+  "sourceFileCount": 70,
+  "sourceBytes": 47063306,
+  "inventoryFingerprint": "9e3b36a0c9fb530e4438ca821d49086334e9d897096275dc7bb1d86dd12a2f35",
+  "archive": {
+    "path": "approved-design-source.tar.gz",
+    "bytes": 29272946,
+    "sha256": "1415dbf6f7c334fbf967c8e7e1a6b229a5f8be76737e83ff74f72a6079539dd0"
+  },
+  "files": [
+    {
+      "path": "approved-design/AGENTS.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14675,
+      "sha256": "3117004818252ec23e71335ed94c0ea2b6742550e6aef5892681a0b0996622d3"
+    },
+    {
+      "path": "approved-design/DESIGN_PLAN.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 13727,
+      "sha256": "79cf1f8aa27792d6fb61b22d9f590d3bc2ae6670c01b1358e9137d7a8d8ca325"
+    },
+    {
+      "path": "approved-design/index.html",
+      "type": "file",
+      "mode": 420,
+      "bytes": 321,
+      "sha256": "f3af4eb6fe7633dabb70157d4c4eccc3fa1c67f8899b943097f7ce3fabcdf972"
+    },
+    {
+      "path": "approved-design/mobile-runtime.lock.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2800,
+      "sha256": "54ad5b0bd5ceebbe73261b5e343859cbddaf621e6320c6eaaecec87c4a39ce5d"
+    },
+    {
+      "path": "approved-design/package-lock.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 76961,
+      "sha256": "f9e45c70baf5988b6d725d375bb5c029fdbea603bcc45cb57008637fc60d502a"
+    },
+    {
+      "path": "approved-design/package.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1040,
+      "sha256": "6450889e540d6340569327564b552c5c5574e570aa8645c7007206a7ad96e05e"
+    },
+    {
+      "path": "approved-design/playwright.config.ts",
+      "type": "file",
+      "mode": 420,
+      "bytes": 539,
+      "sha256": "a75849b516724e663b31107209177f5372afd8aa76e6e6375dc24e839d4af3b5"
+    },
+    {
+      "path": "approved-design/public/assets/android/Keyboard.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 42695,
+      "sha256": "6085e50be17ca2705b4351283187be2c5b01b58262c70b90d74b3376efb4adfe"
+    },
+    {
+      "path": "approved-design/public/assets/android/Pixel10.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 214337,
+      "sha256": "a87c1250ba20756f5d020b5351a7ae71d663dcfc64aca3a1cd56452e8a05233e"
+    },
+    {
+      "path": "approved-design/public/assets/android/navigation-bar.svg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 542,
+      "sha256": "077a782a3b6c2915fc518dfb4bba825c8c5861b2572f9522a7024902b9cb2850"
+    },
+    {
+      "path": "approved-design/public/assets/iphone/Bezel.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 353980,
+      "sha256": "ee2514d74d2f75f3541405fa2f20811f159879a66586778cfd8c9c84c44959df"
+    },
+    {
+      "path": "approved-design/public/assets/iphone/Keyboard.png",
+      "type": "file",
+      "mode": 420,
+      "bytes": 53341,
+      "sha256": "292e2d83d69adaeb663d6a840ce8db8d0a5257710b472c20713e03f56b08ea88"
+    },
+    {
+      "path": "approved-design/public/assets/reader/01-bookshelf.jpeg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 145113,
+      "sha256": "ee28a1feee9c9ae229b313faf06b4d10a6def90dbc4953c4ba3d99a4e8dd38e9"
+    },
+    {
+      "path": "approved-design/public/assets/reader/03-detail-top.jpeg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 210117,
+      "sha256": "d4335c498dcf738f909227b93732eed8f2a10d1396feec04e3840f4c80449275"
+    },
+    {
+      "path": "approved-design/public/assets/reader/04-detail-scroll.jpeg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 168552,
+      "sha256": "6cca22ab6237d5d19abcc4d04d6d86dd752830f4193f5cae9630122eb54d2933"
+    },
+    {
+      "path": "approved-design/public/assets/reader/05-detail-end.jpeg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 155276,
+      "sha256": "452ba4ab7df6e412f5e073be8eeaa3ded27b87357e82d95e7e5b57ebe8849573"
+    },
+    {
+      "path": "approved-design/public/assets/reader/NotoSansSC-VF.otf",
+      "type": "file",
+      "mode": 420,
+      "bytes": 15054748,
+      "sha256": "d13ed01ec8aa45d6178999b648e96fb92150683e9f8e2a581f2acf208dcbe44b"
+    },
+    {
+      "path": "approved-design/public/assets/reader/NotoSerifSC-Bold.ttf",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14853692,
+      "sha256": "3fb07709c24ed05993636d0b137917ea0bae5cf976f157d5e258fd068399a894"
+    },
+    {
+      "path": "approved-design/public/assets/reader/NotoSerifSC-Regular.ttf",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14854712,
+      "sha256": "9502147ceba7b5bc7fd3415083f6a5d133f22d8f9efb4974d4b85f3a97ea2d3a"
+    },
+    {
+      "path": "approved-design/public/assets/reader/book_detail_back.svg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 564,
+      "sha256": "1522ea73ddfe8a6fb66e9032021ebbdfa29f00572a6f3ca14b6b019f54a3afba"
+    },
+    {
+      "path": "approved-design/public/assets/reader/book_detail_directory.svg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 884,
+      "sha256": "3b09f1beff55699da076451ed8a7e641aa2c23c28930ba332ccc9275f4266412"
+    },
+    {
+      "path": "approved-design/public/assets/reader/bookshelf_filter.svg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 487,
+      "sha256": "7a6aa2f19feea44e685b21a209894622018e9e19045d75e9689af4d939315362"
+    },
+    {
+      "path": "approved-design/public/assets/reader/bookshelf_grid_outline.svg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1955,
+      "sha256": "cacb654b88613941e104bf28758237b47e5c25f15aa8b84514998d5449441dcc"
+    },
+    {
+      "path": "approved-design/public/assets/reader/bookshelf_library_active.svg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1463,
+      "sha256": "01bf345c1850c480ae5adaf68c2880c734084025beb40572b291e0fe5262b631"
+    },
+    {
+      "path": "approved-design/public/assets/reader/bookshelf_library_outline.svg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1463,
+      "sha256": "7b7208a08c5f77a474fac7f713e9db46401ae5a0da8071bc2eadf20dab1203cb"
+    },
+    {
+      "path": "approved-design/public/assets/reader/bookshelf_list_active.svg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 956,
+      "sha256": "39ef610830c5ffe72f2682a40899841c4f0c7ff7ea7ddb4fd263bc97bec5b8ac"
+    },
+    {
+      "path": "approved-design/public/assets/reader/bookshelf_more.svg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 495,
+      "sha256": "579508df8257c11fe5d458753773f58a0237e39908eef767b8f396de237d6147"
+    },
+    {
+      "path": "approved-design/public/assets/reader/bookshelf_search.svg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1164,
+      "sha256": "4f01cd169355eb9e5729efc05f0024671e1a9446e30f330fc9bd9dc6b5be7e72"
+    },
+    {
+      "path": "approved-design/public/assets/reader/bookshelf_settings_active.svg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2433,
+      "sha256": "306497f835b92461bba6d4fdea759a79948241517095ed893dc0efffd721d559"
+    },
+    {
+      "path": "approved-design/public/assets/reader/bookshelf_settings_outline.svg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2433,
+      "sha256": "d9e93c48b3e57ed16733197f3d50b311a720e53d864993730f557a91806abbd5"
+    },
+    {
+      "path": "approved-design/public/assets/reader/capsule-over-content.jpg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 20506,
+      "sha256": "04f9fb15180b42f220dafd0c1afcd24e7393ca53471134e8ab5c82a281de11e4"
+    },
+    {
+      "path": "approved-design/public/assets/reader/capsule-screen.jpg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 25086,
+      "sha256": "6a02f6de2ea77bd6c6f9756df783ddaac60c1749a3277a89ee22a27565ccb8e1"
+    },
+    {
+      "path": "approved-design/public/assets/reader/demo-detail-screen.jpg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 34890,
+      "sha256": "26e6f5dd56880aff365a45ee32bf0945e9e795e0891b53c0dddf55f24da78911"
+    },
+    {
+      "path": "approved-design/public/assets/reader/doupo-cover.jpg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 64813,
+      "sha256": "4991d609f6626983fb2db32407400d0c97e2b5c220d75e04bebb4cb83d79474d"
+    },
+    {
+      "path": "approved-design/public/assets/reader/doupo-cover.provenance.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 921,
+      "sha256": "0d36cfacc2beda49f2649e50141efe70b86e211839d82b9e011a7ea30dcc6185"
+    },
+    {
+      "path": "approved-design/public/assets/reader/harmony-current-bookshelf.jpeg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 145025,
+      "sha256": "e2259291025701e8d49b46f0c636d43af91a80067e0528ce190742de03977e3c"
+    },
+    {
+      "path": "approved-design/public/assets/reader/huawei-reading-main.jpeg",
+      "type": "file",
+      "mode": 384,
+      "bytes": 334162,
+      "sha256": "d0bb3fc726a24c254f84ed8266c967d880323b92fb9eb7d4db13766313d86e51"
+    },
+    {
+      "path": "approved-design/public/assets/status/ios-status-icons.svg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2765,
+      "sha256": "40e218b274d0973d519b50f42884e6e05ef0f2b6a0e46e102fda54218784466d"
+    },
+    {
+      "path": "approved-design/public/assets/status/status-icons.svg",
+      "type": "file",
+      "mode": 420,
+      "bytes": 824,
+      "sha256": "1a8bd4207cf34532ae514bdcdca693acc9a2b8ebc9d3182dc163c3e9ddcc4823"
+    },
+    {
+      "path": "approved-design/scripts/check-mobile-runtime.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1212,
+      "sha256": "ee85738cc2ef889c0b457d8ccac61e017b8c5d16f393e766ec9fb7d11c9aff7f"
+    },
+    {
+      "path": "approved-design/scripts/prepare-sites-build.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 910,
+      "sha256": "b6a6adaa4fab3234676116dd1c9cb6611275ab9d92dd26f5bf402393e3744bf6"
+    },
+    {
+      "path": "approved-design/scripts/update-mobile-runtime-lock.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1732,
+      "sha256": "b4e1aa41133f19ba8bb32685b3ec05798b1ceabaf72c328419d545aa60fe1f0b"
+    },
+    {
+      "path": "approved-design/src/App.tsx",
+      "type": "file",
+      "mode": 420,
+      "bytes": 191,
+      "sha256": "7054b4e14304ab33153d3a2e860aa43d2a4f69e8a69630b4a37a2cbcd4ad2f16"
+    },
+    {
+      "path": "approved-design/src/Prototype.tsx",
+      "type": "file",
+      "mode": 420,
+      "bytes": 46394,
+      "sha256": "cafc51e4c3afcb28a761fde2f1df1813a797d14614ece394cb3564b6e894fe2d"
+    },
+    {
+      "path": "approved-design/src/main.tsx",
+      "type": "file",
+      "mode": 420,
+      "bytes": 307,
+      "sha256": "01b7049715148ab645637905ccbbc91fc3f87659198a309541c2d1f03bb537d0"
+    },
+    {
+      "path": "approved-design/src/mobile/BottomSheet.tsx",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4316,
+      "sha256": "f9c376dc78b8b5feb1c8752aa23414993ab66013d11e81b2ebb8342c570032ac"
+    },
+    {
+      "path": "approved-design/src/mobile/COMPONENTS.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1982,
+      "sha256": "678379569b09d9ab789d96e8030a0eebb6606b880d8ad5b74de513f8a7b2787b"
+    },
+    {
+      "path": "approved-design/src/mobile/Carousel.tsx",
+      "type": "file",
+      "mode": 420,
+      "bytes": 10162,
+      "sha256": "242f4a7488e18c35e9b43651c9d5877288655a6f9f1734e03e56108f17526bf7"
+    },
+    {
+      "path": "approved-design/src/mobile/Device.tsx",
+      "type": "file",
+      "mode": 420,
+      "bytes": 3537,
+      "sha256": "867de9c65220f2ac7202f895d2b10a64c747f211a4b22cd8f81a1a1d66e52fc2"
+    },
+    {
+      "path": "approved-design/src/mobile/FlowStack.tsx",
+      "type": "file",
+      "mode": 420,
+      "bytes": 7244,
+      "sha256": "1e85744c5f1c1138dd5e8b7b27fbb6c05139d5aac93d94c45084a018eddd4ebc"
+    },
+    {
+      "path": "approved-design/src/mobile/Keyboard.tsx",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6831,
+      "sha256": "862587264375499846385ce817ea1b813db8f118140cdb6da163f989a6946cac"
+    },
+    {
+      "path": "approved-design/src/mobile/MobileCursor.tsx",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2171,
+      "sha256": "be2353205e05d823bc23ecae88179d712781ee9ede8fa317057c194c7c23ee7d"
+    },
+    {
+      "path": "approved-design/src/mobile/MobileRuntime.tsx",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1338,
+      "sha256": "1ffe80a9582460005d66f10fc73deaff08b81431785a506887cc0d8320be747f"
+    },
+    {
+      "path": "approved-design/src/mobile/MobileScroll.tsx",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14325,
+      "sha256": "ea3e3691f587ea13753162b9e64c1981263e5b9beddebea21a6a1551dce76430"
+    },
+    {
+      "path": "approved-design/src/mobile/PhoneFrame.tsx",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4448,
+      "sha256": "73015590b468acbb4b58e3f6fe5eef99c5f68f67722caffd8f00d271ba00a91d"
+    },
+    {
+      "path": "approved-design/src/mobile/assets.ts",
+      "type": "file",
+      "mode": 420,
+      "bytes": 232,
+      "sha256": "d40cb8e5390fd2b54618266e7694e40349006dfe480f65d60559316ca8c9c234"
+    },
+    {
+      "path": "approved-design/src/mobile/components.tsx",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2691,
+      "sha256": "20b02f6c6de4cfd08aa6a49bf9bc261c0ea000864b37e1001afdcd892afe4bc8"
+    },
+    {
+      "path": "approved-design/src/mobile/geometry.ts",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1244,
+      "sha256": "f1382e5d6cc9adfd7ac142304f2f9a5a2330db1d74b3f0848adbaf311676bf16"
+    },
+    {
+      "path": "approved-design/src/mobile/index.ts",
+      "type": "file",
+      "mode": 420,
+      "bytes": 802,
+      "sha256": "ee69d9341571db5dee84dd2d7452a62eef09085a84a85f198a3edc48047e0412"
+    },
+    {
+      "path": "approved-design/src/prototype.css",
+      "type": "file",
+      "mode": 420,
+      "bytes": 56158,
+      "sha256": "2526218e8ff3512e0edc8f743360b1554911fdae3eef16fda9a87842666b0f7c"
+    },
+    {
+      "path": "approved-design/src/styles.css",
+      "type": "file",
+      "mode": 420,
+      "bytes": 14264,
+      "sha256": "844c67b27cf5e38ba395153145d058c929c6479199d245cd046f3646badd719d"
+    },
+    {
+      "path": "approved-design/src/vite-env.d.ts",
+      "type": "file",
+      "mode": 420,
+      "bytes": 38,
+      "sha256": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5"
+    },
+    {
+      "path": "approved-design/tests/mobile-runtime.spec.ts",
+      "type": "file",
+      "mode": 420,
+      "bytes": 11097,
+      "sha256": "8585d11c768d853f26eef5d5dcc38edd32312646f8a83aecb23291da9235a975"
+    },
+    {
+      "path": "approved-design/tests/runtime-fixture.css",
+      "type": "file",
+      "mode": 420,
+      "bytes": 1249,
+      "sha256": "2445079492e348809e9ab48a016e1ab40e99026d6853c0fe036e34cfd062cbff"
+    },
+    {
+      "path": "approved-design/tests/runtime-fixture.html",
+      "type": "file",
+      "mode": 420,
+      "bytes": 334,
+      "sha256": "5d76636ac5d6a7ba916ada52e8b5cd9d9311887cbb2e17c73c10560091a26bb5"
+    },
+    {
+      "path": "approved-design/tests/runtime-fixture.tsx",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4156,
+      "sha256": "5151193645265a13e8e1aea05264d089512312ac85f67b0fc35d7f956b0d26ed"
+    },
+    {
+      "path": "approved-design/tests/sites-worker.test.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2219,
+      "sha256": "96af7b48906c6460c793356d7b6952f7d5026dbf5a502bec0d9297ff04201c26"
+    },
+    {
+      "path": "approved-design/tsconfig.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 527,
+      "sha256": "83efc1798334967d5a907f26b8cba31fa213f16b5ac0ed5c02fd38e7cf0ceb66"
+    },
+    {
+      "path": "approved-design/vite.config.ts",
+      "type": "file",
+      "mode": 420,
+      "bytes": 255,
+      "sha256": "da36eba05b845c3b0d69d823a515f6f7d9612992126ed2fe32c2809815ec73ba"
+    },
+    {
+      "path": "approved-design/worker/index.js",
+      "type": "file",
+      "mode": 420,
+      "bytes": 483,
+      "sha256": "2dd0615a445143933d88d4271f54f5d63ee951421fcd08c5a7617bb09c564389"
+    }
+  ],
+  "verification": {
+    "fullArchiveRead": true,
+    "everyFileSha256": true,
+    "everyFileMode": true,
+    "exactMemberSet": true,
+    "sourceUnchangedDuringArchive": true,
+    "files": 70,
+    "bytes": 47063306
+  }
+}

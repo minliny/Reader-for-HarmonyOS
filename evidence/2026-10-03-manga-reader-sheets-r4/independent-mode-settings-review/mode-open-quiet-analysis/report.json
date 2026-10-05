@@ -1,0 +1,532 @@
+{
+  "scene": "mode-open",
+  "source_directory": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/mode-open-quiet",
+  "original_dimensions": [
+    640,
+    1416
+  ],
+  "roi": [
+    0,
+    68,
+    640,
+    1368
+  ],
+  "frame_count": 9,
+  "click": {
+    "label": "click",
+    "index": null,
+    "start": "1791029118.103350178",
+    "end": "1791029118.331704095",
+    "exit_code": 0,
+    "valid_clock_window": true,
+    "command_duration_ms": 228.353917
+  },
+  "command_window_problems": [],
+  "invalid_lines": [],
+  "duplicate_indices": [],
+  "capture_command_duration_ms": {
+    "min": 71.967792,
+    "median": 167.590458,
+    "max": 225.706292
+  },
+  "file_ordinal_pixel_groups": [
+    {
+      "roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+      "indices": [
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "roi_sha256": "269eaae271004f4bcd3d1e181bbb07ef98db2560d64b48f9f6237db6504eb013",
+      "indices": [
+        3
+      ]
+    },
+    {
+      "roi_sha256": "8092ee6e4d7c0f758d8d940737419e3e2141504b9283e5b9f715a08f0c4caeaa",
+      "indices": [
+        4
+      ]
+    },
+    {
+      "roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+      "indices": [
+        5,
+        6,
+        7,
+        8
+      ]
+    }
+  ],
+  "request_start_order_differs_from_file_ordinal": false,
+  "capture_request_start_order": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "overlap_groups": [
+    {
+      "indices": [
+        0
+      ],
+      "start": "1791029117.967537637",
+      "end": "1791029118.087872387"
+    },
+    {
+      "indices": [
+        1,
+        2,
+        3
+      ],
+      "start": "1791029118.162564303",
+      "end": "1791029118.498081804"
+    },
+    {
+      "indices": [
+        4
+      ],
+      "start": "1791029118.516792137",
+      "end": "1791029118.684382595"
+    },
+    {
+      "indices": [
+        5
+      ],
+      "start": "1791029118.714277179",
+      "end": "1791029118.931437179"
+    },
+    {
+      "indices": [
+        6
+      ],
+      "start": "1791029118.946091470",
+      "end": "1791029119.060188054"
+    },
+    {
+      "indices": [
+        7
+      ],
+      "start": "1791029119.070580679",
+      "end": "1791029119.169294554"
+    },
+    {
+      "indices": [
+        8
+      ],
+      "start": "1791029119.984983304",
+      "end": "1791029120.056951096"
+    }
+  ],
+  "manual_anchor_movement": [
+    {
+      "frame": 3,
+      "anchor_keys": [
+        "handle_top"
+      ],
+      "y_displacements_to_reference": [
+        653
+      ],
+      "at_least_two_anchors_co_translate": false,
+      "content_visible_manual": true
+    },
+    {
+      "frame": 4,
+      "anchor_keys": [
+        "handle_top",
+        "section_top",
+        "title_top"
+      ],
+      "y_displacements_to_reference": [
+        28,
+        27,
+        27
+      ],
+      "at_least_two_anchors_co_translate": true,
+      "content_visible_manual": true
+    }
+  ],
+  "frames": [
+    {
+      "index": 0,
+      "filename": "frame-0.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "28c8f7e8e8ebbd1ff46f3672e4819743ba1b15393eeea8cb4eb812ad9c88704b",
+      "rgb_sha256": "4cb24de4a8451390e9f9ad81b603cbae9a2467e795187ec1372a9ec49cffd910",
+      "roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+      "phase": "closed",
+      "annotation": {
+        "phase": "closed"
+      },
+      "capture": {
+        "label": "frame-0",
+        "index": 0,
+        "start": "1791029117.967537637",
+        "end": "1791029118.087872387",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 120.33475
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 0.0,
+      "roi_mean_absolute_rgb_difference_from_last": 61.37527443910256,
+      "scrim_roi_mean_rgb": [
+        221.01104166666667,
+        238.15541666666667,
+        244.00770833333334
+      ],
+      "scrim_roi_luma_proxy": 233.69640979166667,
+      "capture_request_relative_to_click_command_ms": [
+        -364.166458,
+        -15.477791
+      ]
+    },
+    {
+      "index": 1,
+      "filename": "frame-1.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "28c8f7e8e8ebbd1ff46f3672e4819743ba1b15393eeea8cb4eb812ad9c88704b",
+      "rgb_sha256": "4cb24de4a8451390e9f9ad81b603cbae9a2467e795187ec1372a9ec49cffd910",
+      "roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+      "phase": "closed",
+      "annotation": {
+        "phase": "closed"
+      },
+      "capture": {
+        "label": "frame-1",
+        "index": 1,
+        "start": "1791029118.162564303",
+        "end": "1791029118.341212970",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 178.648667
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 0.0,
+      "roi_mean_absolute_rgb_difference_from_last": 61.37527443910256,
+      "scrim_roi_mean_rgb": [
+        221.01104166666667,
+        238.15541666666667,
+        244.00770833333334
+      ],
+      "scrim_roi_luma_proxy": 233.69640979166667,
+      "capture_request_relative_to_click_command_ms": [
+        -169.139792,
+        237.862792
+      ]
+    },
+    {
+      "index": 2,
+      "filename": "frame-2.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "28c8f7e8e8ebbd1ff46f3672e4819743ba1b15393eeea8cb4eb812ad9c88704b",
+      "rgb_sha256": "4cb24de4a8451390e9f9ad81b603cbae9a2467e795187ec1372a9ec49cffd910",
+      "roi_sha256": "82e0349bd1aeda1fa5245389d67202885d82bd3b14df08298ac8324811d6e1e8",
+      "phase": "closed",
+      "annotation": {
+        "phase": "closed"
+      },
+      "capture": {
+        "label": "frame-2",
+        "index": 2,
+        "start": "1791029118.206104303",
+        "end": "1791029118.418021179",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 211.916876
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 0.0,
+      "roi_mean_absolute_rgb_difference_from_last": 61.37527443910256,
+      "scrim_roi_mean_rgb": [
+        221.01104166666667,
+        238.15541666666667,
+        244.00770833333334
+      ],
+      "scrim_roi_luma_proxy": 233.69640979166667,
+      "capture_request_relative_to_click_command_ms": [
+        -125.599792,
+        314.671001
+      ]
+    },
+    {
+      "index": 3,
+      "filename": "frame-3.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "64d7602c8dad1894b58b6e42da40c822d51e6e9fd60baac46a61d8ed78bacc3e",
+      "rgb_sha256": "fb02de9c4b04d2182c63d8b4c0802a88a58acee7d302cbf6e18ad36684c40a6e",
+      "roi_sha256": "269eaae271004f4bcd3d1e181bbb07ef98db2560d64b48f9f6237db6504eb013",
+      "phase": "middle",
+      "annotation": {
+        "phase": "middle",
+        "anchor_y": {
+          "handle_top": 1403
+        },
+        "content_visible": true,
+        "note": "Sheet edge/handle visible at screen bottom; title is outside screen, so one content anchor only"
+      },
+      "capture": {
+        "label": "frame-3",
+        "index": 3,
+        "start": "1791029118.272375512",
+        "end": "1791029118.498081804",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 225.706292
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 11.386868189102564,
+      "roi_mean_absolute_rgb_difference_from_last": 59.766800480769234,
+      "scrim_roi_mean_rgb": [
+        208.38020833333334,
+        224.708125,
+        230.97479166666668
+      ],
+      "scrim_roi_luma_proxy": 220.54047791666667,
+      "capture_request_relative_to_click_command_ms": [
+        -59.328583,
+        394.731626
+      ]
+    },
+    {
+      "index": 4,
+      "filename": "frame-4.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "80ee2181d2e615c310fc10223bcc8f0767be8c272d6cbd7820499bdc486b006d",
+      "rgb_sha256": "3ef689f4b86447c5cf26f0577a981593c9e179d75ffd54fcef855907c37fb52a",
+      "roi_sha256": "8092ee6e4d7c0f758d8d940737419e3e2141504b9283e5b9f715a08f0c4caeaa",
+      "phase": "middle",
+      "annotation": {
+        "phase": "middle",
+        "anchor_y": {
+          "handle_top": 778,
+          "title_top": 817,
+          "section_top": 888
+        },
+        "content_visible": true
+      },
+      "capture": {
+        "label": "frame-4",
+        "index": 4,
+        "start": "1791029118.516792137",
+        "end": "1791029118.684382595",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 167.590458
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 59.46351883012821,
+      "roi_mean_absolute_rgb_difference_from_last": 11.811079326923078,
+      "scrim_roi_mean_rgb": [
+        145.82479166666667,
+        157.21208333333334,
+        161.51416666666665
+      ],
+      "scrim_roi_luma_proxy": 154.29772062499998,
+      "capture_request_relative_to_click_command_ms": [
+        185.088042,
+        581.032417
+      ]
+    },
+    {
+      "index": 5,
+      "filename": "frame-5.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "903bc5510e8da228b866ca704ce046b36c1390e18f08b11a6de4d09abfc85a4f",
+      "rgb_sha256": "24c65c6b58cee9676ba9039670eb8629ed96e9a292c4b074a0f0939c40a7959c",
+      "roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+      "phase": "open",
+      "annotation": {
+        "phase": "open",
+        "anchor_y": {
+          "handle_top": 750,
+          "title_top": 790,
+          "section_top": 861
+        },
+        "content_visible": true
+      },
+      "capture": {
+        "label": "frame-5",
+        "index": 5,
+        "start": "1791029118.714277179",
+        "end": "1791029118.931437179",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 217.16
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 61.37527443910256,
+      "roi_mean_absolute_rgb_difference_from_last": 0.0,
+      "scrim_roi_mean_rgb": [
+        145.82479166666667,
+        157.21208333333334,
+        161.51416666666665
+      ],
+      "scrim_roi_luma_proxy": 154.29772062499998,
+      "capture_request_relative_to_click_command_ms": [
+        382.573084,
+        828.087001
+      ]
+    },
+    {
+      "index": 6,
+      "filename": "frame-6.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "903bc5510e8da228b866ca704ce046b36c1390e18f08b11a6de4d09abfc85a4f",
+      "rgb_sha256": "24c65c6b58cee9676ba9039670eb8629ed96e9a292c4b074a0f0939c40a7959c",
+      "roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+      "phase": "open",
+      "annotation": {
+        "phase": "open",
+        "anchor_y": {
+          "handle_top": 750,
+          "title_top": 790,
+          "section_top": 861
+        },
+        "content_visible": true
+      },
+      "capture": {
+        "label": "frame-6",
+        "index": 6,
+        "start": "1791029118.946091470",
+        "end": "1791029119.060188054",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 114.096584
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 61.37527443910256,
+      "roi_mean_absolute_rgb_difference_from_last": 0.0,
+      "scrim_roi_mean_rgb": [
+        145.82479166666667,
+        157.21208333333334,
+        161.51416666666665
+      ],
+      "scrim_roi_luma_proxy": 154.29772062499998,
+      "capture_request_relative_to_click_command_ms": [
+        614.387375,
+        956.837876
+      ]
+    },
+    {
+      "index": 7,
+      "filename": "frame-7.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "903bc5510e8da228b866ca704ce046b36c1390e18f08b11a6de4d09abfc85a4f",
+      "rgb_sha256": "24c65c6b58cee9676ba9039670eb8629ed96e9a292c4b074a0f0939c40a7959c",
+      "roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+      "phase": "open",
+      "annotation": {
+        "phase": "open",
+        "anchor_y": {
+          "handle_top": 750,
+          "title_top": 790,
+          "section_top": 861
+        },
+        "content_visible": true
+      },
+      "capture": {
+        "label": "frame-7",
+        "index": 7,
+        "start": "1791029119.070580679",
+        "end": "1791029119.169294554",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 98.713875
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 61.37527443910256,
+      "roi_mean_absolute_rgb_difference_from_last": 0.0,
+      "scrim_roi_mean_rgb": [
+        145.82479166666667,
+        157.21208333333334,
+        161.51416666666665
+      ],
+      "scrim_roi_luma_proxy": 154.29772062499998,
+      "capture_request_relative_to_click_command_ms": [
+        738.876584,
+        1065.944376
+      ]
+    },
+    {
+      "index": 8,
+      "filename": "frame-8.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "903bc5510e8da228b866ca704ce046b36c1390e18f08b11a6de4d09abfc85a4f",
+      "rgb_sha256": "24c65c6b58cee9676ba9039670eb8629ed96e9a292c4b074a0f0939c40a7959c",
+      "roi_sha256": "24b7b8c07a0a630ca3749828e59ea1e8b14a27ba91d71ce5d0f6a2688d4d74b4",
+      "phase": "open",
+      "annotation": {
+        "phase": "open",
+        "anchor_y": {
+          "handle_top": 750,
+          "title_top": 790,
+          "section_top": 861
+        },
+        "content_visible": true
+      },
+      "capture": {
+        "label": "frame-8",
+        "index": 8,
+        "start": "1791029119.984983304",
+        "end": "1791029120.056951096",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 71.967792
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 61.37527443910256,
+      "roi_mean_absolute_rgb_difference_from_last": 0.0,
+      "scrim_roi_mean_rgb": [
+        145.82479166666667,
+        157.21208333333334,
+        161.51416666666665
+      ],
+      "scrim_roi_luma_proxy": 154.29772062499998,
+      "capture_request_relative_to_click_command_ms": [
+        1653.279209,
+        1953.600918
+      ]
+    }
+  ],
+  "transition_existence": "OBSERVED_REAL_MIDDLE_POSITION",
+  "exit_content_retention": "NOT_APPLICABLE",
+  "timing_window_integrity": "VALID_COMMAND_WINDOWS",
+  "actual_curve_duration_scrim_equivalence": "OPEN",
+  "boundary": "Command wall-clock windows are not exact input/VSync/present timestamps. Native snapshot calls can serialize, reuse a committed buffer and perturb rendering. Pixel differences alone are not semantic motion; original-image inspection and declared anchors are required. No interpolated frames, UI reconstruction, font-paint or curve pass is produced.",
+  "scrim_roi": [
+    20,
+    220,
+    100,
+    280
+  ],
+  "nonendpoint_scrim_luma_candidates": [
+    3
+  ],
+  "scrim_proxy_boundary": "Candidates only: verify this is the same static underlying image region, above sheet/shadow and other changing controls. Luma changes cannot alone prove scrim fade or its timing."
+}

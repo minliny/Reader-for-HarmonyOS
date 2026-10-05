@@ -1,0 +1,1123 @@
+{
+  "schemaVersion": 1,
+  "recordedUtc": "2026-10-04T03:07:52.428244+00:00",
+  "status": "PARTIAL",
+  "preservationStatus": "EVIDENCE_CLOSED_WITH_OPEN_ACCEPTANCE",
+  "acceptanceStatus": "OPEN",
+  "runtimeExitCode": 2,
+  "root": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-04-manga-native-origin-r8",
+  "sourceAuthority": "frozen temp canonical run; persistent other-agent drift outside this HAP",
+  "currentRunId": "20261004T002116Z-568ec4e3-3eec7853",
+  "signedHapSha256": "9b5f34be522060a84bb4e2e805e62ca538cc0d2ae4d68f1a81f716cdf2c1ac56",
+  "manifestSha256": "555eaba03fe4c3c130352c42ca4929763cc1ff039bd7f59ee1adde31b0293712",
+  "actualScenes": [
+    "A settled immersive",
+    "B controls",
+    "D immersive",
+    "default-off loaded reader"
+  ],
+  "directoryC": "NOT_OBSERVED",
+  "boundaries": {
+    "strictPhaseGeneration": "OPEN",
+    "submittedPaint": "OPEN",
+    "sourcePixelOwnership": "OPEN",
+    "sourcePixelsOrCache": "NOT_READ",
+    "userAcceptance": "OPEN",
+    "exactVmRsImplementation": "OPEN"
+  },
+  "selfExcludedPaths": [
+    "final-freeze/INVENTORY.json",
+    "final-freeze/RESULT.json"
+  ],
+  "evidenceFiles": 134,
+  "evidenceBytes": 9929506,
+  "files": [
+    {
+      "path": "ISSUE_RECORD.md",
+      "bytes": 6270,
+      "mode": 420,
+      "sha256": "cc85daf8c172b6e503af724cfb2490ea155cd30ba4eb5b2ad898c12c48db4ba4"
+    },
+    {
+      "path": "PLAN.json",
+      "bytes": 441,
+      "mode": 420,
+      "sha256": "0cb6c1ed1d95eb049105efbea29d7f1b8d82affc68be53db6b30149a49616db7"
+    },
+    {
+      "path": "PRESERVATION_PLAN.md",
+      "bytes": 2968,
+      "mode": 420,
+      "sha256": "97397efdac6df5704288aa7c57b84852eec33dff08149cf768e6443c0feb78c9"
+    },
+    {
+      "path": "SDK_COPY_V1.json",
+      "bytes": 1123,
+      "mode": 420,
+      "sha256": "133ae6d0857c363938842e90dc1a95bc1f316a0820d876ba20fd5f0568d4bff4"
+    },
+    {
+      "path": "SDK_FOLLOWUP_COPY_V2.json",
+      "bytes": 1406,
+      "mode": 420,
+      "sha256": "3919c183faf522251ef124780565094d576b91dae667b4152fd9867ece9aab41"
+    },
+    {
+      "path": "SOURCE_COPY_V1.json",
+      "bytes": 3295,
+      "mode": 420,
+      "sha256": "5ac6c4c23f6a21970d5cce57ed40b00a120fb274f937e1e8937c54bffbd4713b"
+    },
+    {
+      "path": "SOURCE_COPY_V2.json",
+      "bytes": 1019,
+      "mode": 420,
+      "sha256": "832988aeef4654ca51406908d640e1ea8a4a7fb0477517cf2a0f34d4057b17ee"
+    },
+    {
+      "path": "SOURCE_OWNER_COPY_V1.json",
+      "bytes": 1417,
+      "mode": 420,
+      "sha256": "08a63c2b863169771ba291b00aac878567646a752e6641bd11fafb5047b0af84"
+    },
+    {
+      "path": "STATUS.md",
+      "bytes": 5361,
+      "mode": 420,
+      "sha256": "9f1d30aec9d411ba9b4ffb9f14d8b2d105d465b7caeba5fc69770ee98e252fd3"
+    },
+    {
+      "path": "VM_PREFLIGHT_HOST.json",
+      "bytes": 589,
+      "mode": 420,
+      "sha256": "f4b3267db0992c0fd0f65ec5d878426425566443eed18ee79c24bfd8cc7db220"
+    },
+    {
+      "path": "VM_SCOPE.md",
+      "bytes": 1255,
+      "mode": 420,
+      "sha256": "142906567ee404b37569bfcc42e22c42b90a0f6471e5b376d7c7123cb45fb75f"
+    },
+    {
+      "path": "canonical-delivery/ATTEMPTS.json",
+      "bytes": 2609,
+      "mode": 420,
+      "sha256": "f43477db358aadf43aae1a09cf6b2d5aa76c128a97e5278e736a55e4de4eb391"
+    },
+    {
+      "path": "canonical-delivery/CLI_REBUILD.json",
+      "bytes": 693,
+      "mode": 420,
+      "sha256": "be6c575a6646bdeb472f17b107d128877487118c91f3af224f981a73a241fc90"
+    },
+    {
+      "path": "canonical-delivery/RESULT.json",
+      "bytes": 6943,
+      "mode": 420,
+      "sha256": "3c27cd8cba77a9a76a1a2f3a4043d2abaa8a5a5d6f0ab297d324735dea57217a"
+    },
+    {
+      "path": "canonical-delivery/SOURCE_COMPATIBILITY.md",
+      "bytes": 7820,
+      "mode": 420,
+      "sha256": "a8d8339bc8f2e491f3bbb8972877246c7917486a226011a664bcb4d01aa469cf"
+    },
+    {
+      "path": "canonical-delivery/manga-r8-core-cli-rebuild.log",
+      "bytes": 10791,
+      "mode": 420,
+      "sha256": "cba90dca63635e3a36a9feccef8871e07caae124f63a89c26fdbb3779bc2b119"
+    },
+    {
+      "path": "canonical-delivery/manga-r8-native-origin-build-2.log",
+      "bytes": 191,
+      "mode": 420,
+      "sha256": "06de90b6b6f54d70d1f976de76a15a542b74a33e7068c49e2dd542778846a3e3"
+    },
+    {
+      "path": "canonical-delivery/manga-r8-native-origin-build-3.log",
+      "bytes": 126296,
+      "mode": 420,
+      "sha256": "af4537bb4dbbac6fcacac59e91d77962d5841b04503679a7d4f52e6a53b496b2"
+    },
+    {
+      "path": "canonical-delivery/manga-r8-native-origin-build-4.log",
+      "bytes": 274147,
+      "mode": 420,
+      "sha256": "f1900f2e660b3ddaeb23d18d5e21a27436d2aeddee4826c4a282abbebf5ad63f"
+    },
+    {
+      "path": "canonical-delivery/manga-r8-native-origin-build-5.log",
+      "bytes": 161342,
+      "mode": 420,
+      "sha256": "4cb7a887d1ea8ad49a3bb0c02c7f8c98ca35e93bbae4c0c193eed442c7cf5b37"
+    },
+    {
+      "path": "canonical-delivery/manga-r8-native-origin-build-6.log",
+      "bytes": 162626,
+      "mode": 420,
+      "sha256": "2d4c7fb726b70328e3835687824cf04341699649fac4859720e695ab795c1410"
+    },
+    {
+      "path": "canonical-delivery/manga-r8-native-origin-build-7.log",
+      "bytes": 274484,
+      "mode": 420,
+      "sha256": "b585cbfd97fda3446e06f87d90c856b54f18c5ddfc2cbd999ab7c04d590a5a1b"
+    },
+    {
+      "path": "canonical-delivery/manga-r8-native-origin-build.log",
+      "bytes": 112,
+      "mode": 420,
+      "sha256": "31df4692044f14499af4b368861f8b03915551f368236cab206c521d381564c8"
+    },
+    {
+      "path": "canonical-delivery/manga-r8-native-origin-inspect.log",
+      "bytes": 1171,
+      "mode": 420,
+      "sha256": "db915e3b99b48f89560c9e06e5aba268e654c457526b8e4ba24778f0fe53b85e"
+    },
+    {
+      "path": "canonical-delivery/manga-r8-native-origin-install.log",
+      "bytes": 265,
+      "mode": 420,
+      "sha256": "043d81e181cfb7d5e43aeee6ede2ad11be082d58ea0378cbe6643b7c43c67925"
+    },
+    {
+      "path": "canonical-delivery/manga-r8-native-origin-verify.log",
+      "bytes": 736,
+      "mode": 420,
+      "sha256": "4fffd7be0607a8c3ae248a96b98de6be9cb311a8bc10941514c12f8e468c50b3"
+    },
+    {
+      "path": "canonical-delivery/manga-r8-native-runtime-check.log",
+      "bytes": 0,
+      "mode": 420,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "code-runtime-check/READING_SEMANTICS_FIX.md",
+      "bytes": 2445,
+      "mode": 420,
+      "sha256": "aa6350f535c8624ad4581a32bd46ca9cc7b386bf2eb9312dec42bbcc45254ce9"
+    },
+    {
+      "path": "code-runtime-check/README.md",
+      "bytes": 5604,
+      "mode": 420,
+      "sha256": "e10ce44783774de76c1ff0f849769170f311e65bad17c186f1ca11efc2536847"
+    },
+    {
+      "path": "code-runtime-check/check-native-runtime.mjs",
+      "bytes": 18707,
+      "mode": 420,
+      "sha256": "f7f6a121981d13a357c911360696debe19a3267f11ecd12f91a17a408fa1532b"
+    },
+    {
+      "path": "code-runtime-check/revisions/v1/README.md",
+      "bytes": 4549,
+      "mode": 420,
+      "sha256": "cfe5783469d98074d1a3dee3e946cfaa9c5e2da255cc2855f8fc78eb8d85da2b"
+    },
+    {
+      "path": "code-runtime-check/revisions/v1/check-native-runtime.mjs",
+      "bytes": 17736,
+      "mode": 420,
+      "sha256": "cf8fa91b451f1b653ebf3ffec1a030e992acd90986837f5db170e034b59b94f6"
+    },
+    {
+      "path": "final-freeze/ATTEMPT1_FAILURE.md",
+      "bytes": 520,
+      "mode": 420,
+      "sha256": "e4740862e7f58361fea52b17f1174d3db789ff4bdc846cd962a5c81c79a45eeb"
+    },
+    {
+      "path": "final-freeze/REVIEW.md",
+      "bytes": 1484,
+      "mode": 420,
+      "sha256": "b64c326c6020081cb8d2f5a260daef5e9d7afb89d54f9e7f3b6acff310a8392f"
+    },
+    {
+      "path": "final-freeze/verify_final_inventory.py",
+      "bytes": 1667,
+      "mode": 420,
+      "sha256": "31364670fa321384ac93301f3f9f792b872920a66ba833f67ec8e84b796d64c4"
+    },
+    {
+      "path": "helper-revisions/REVIEW.md",
+      "bytes": 1285,
+      "mode": 420,
+      "sha256": "9c426c95218bc58c3dde029767389bf6afb285eb8fae392bbf6e3cf9dee7b516"
+    },
+    {
+      "path": "helper-revisions/REVISION.json",
+      "bytes": 1375,
+      "mode": 420,
+      "sha256": "659006ad547c3394af2c71017b7ae43291dbf22fcb31401639ed38210e01471b"
+    },
+    {
+      "path": "helper-revisions/numeric-vm-session-reviewed-v2.mjs",
+      "bytes": 4933,
+      "mode": 420,
+      "sha256": "5f4b676c6bd0b5da67a1011b2f27b7c486a1532bf37428cc19b11f4e801432f2"
+    },
+    {
+      "path": "numeric-vm-session.mjs",
+      "bytes": 4961,
+      "mode": 420,
+      "sha256": "c59bcf322320b33847cbd17a66285dc47c686599c416b83293a828655bf402d2"
+    },
+    {
+      "path": "rs-actor-bridge-review/REVIEW.md",
+      "bytes": 6209,
+      "mode": 420,
+      "sha256": "00cf69d28c84759fa64d245f964172ea2da36cc642b4dc3bbf5294451f55fb41"
+    },
+    {
+      "path": "rs-source-review/REVIEW.md",
+      "bytes": 9578,
+      "mode": 420,
+      "sha256": "67956f58a71dcd3d5f9059b1b9347cdf4c8038b67da2d504278caeb027a398ae"
+    },
+    {
+      "path": "rs-source-review/SOURCES.json",
+      "bytes": 4414,
+      "mode": 420,
+      "sha256": "692819aa316fac0f5eacf4c25c82a6ea966b2ebe76221762077793f87a0afaaa"
+    },
+    {
+      "path": "sdk/NATIVE_INPUTS_FROZEN.json",
+      "bytes": 3245,
+      "mode": 420,
+      "sha256": "b0407de028093ef8872b1286157ea85a7e2330f68c291973b68f37ccd8b00839"
+    },
+    {
+      "path": "sdk/REVIEW.md",
+      "bytes": 8710,
+      "mode": 420,
+      "sha256": "3338acf2f7ec57d8049284838bd69a8da66a882dbc2355ba28cd3bad396c57fc"
+    },
+    {
+      "path": "sdk/native-image-geometry-sdk.log",
+      "bytes": 1887,
+      "mode": 420,
+      "sha256": "3162c7c7473313d5150b7e61a13602240ed2486ce458074be3a05e20e04d228c"
+    },
+    {
+      "path": "sdk-followup-v2/ISSUE_RECORD.md",
+      "bytes": 1493,
+      "mode": 420,
+      "sha256": "85edfc64feb901e5e88ee02cf4c7586d0905709ddf03bf76efcc583bded4068f"
+    },
+    {
+      "path": "sdk-followup-v2/RESULT.json",
+      "bytes": 3129,
+      "mode": 420,
+      "sha256": "1906ed2fc671a435cae072f69a891bd5aeab497e7555e013108235d872dd8731"
+    },
+    {
+      "path": "sdk-followup-v2/after-pass.log",
+      "bytes": 417,
+      "mode": 420,
+      "sha256": "b3e9800448182bcd89cfc6ef6e43246e8b26e7fcb4aeb2f85e581fefdc9323af"
+    },
+    {
+      "path": "sdk-followup-v2/before-failure.log",
+      "bytes": 723,
+      "mode": 420,
+      "sha256": "11acff842237a9c83add942c036023a236dfd72de79a546ac59e5da6306fc7a3"
+    },
+    {
+      "path": "sdk-followup-v2/change.patch",
+      "bytes": 1126,
+      "mode": 420,
+      "sha256": "94908fd89e6ee735a10beb03f6b6826834afdc74f07f0bcaf7032ed6406fbde4"
+    },
+    {
+      "path": "sdk-runtime-review/REVIEW.md",
+      "bytes": 9952,
+      "mode": 420,
+      "sha256": "ebe04661acf378b81c8ea7db0180eb075863dea31a17261f292bb9dac2c5b3aa"
+    },
+    {
+      "path": "source-delta-v1/README.md",
+      "bytes": 1875,
+      "mode": 420,
+      "sha256": "57563e6b976394d30256e0a88f10c3fd0f0fd43b0d46f40b4b4b0bf8ded0ffed"
+    },
+    {
+      "path": "source-delta-v1/canonical-binding/bind_canonical.py",
+      "bytes": 11369,
+      "mode": 420,
+      "sha256": "18789623090466afa625387bc733d7f23f54edd33799ac84c35ec6e3151c40cb"
+    },
+    {
+      "path": "source-delta-v1/canonical-binding/verify_binding.py",
+      "bytes": 6165,
+      "mode": 420,
+      "sha256": "1015a03d5f1eb6bc7437b51f0edec012b24599f30a0b7c921c17a11968f76eb2"
+    },
+    {
+      "path": "source-delta-v1/comparison.json",
+      "bytes": 163808,
+      "mode": 420,
+      "sha256": "3b4581f4f501eff9e7736834f8fee011dfe2643034a3fd544bf0231bec2adb03"
+    },
+    {
+      "path": "source-delta-v1/delta-manifest.json",
+      "bytes": 6067,
+      "mode": 420,
+      "sha256": "4c2a479b654b77d15335e970d7647cc6220f02ca97e80041f4aa234ce4f6295b"
+    },
+    {
+      "path": "source-delta-v1/effective-source-inventory.json",
+      "bytes": 1855694,
+      "mode": 420,
+      "sha256": "877a1fe9070a64ff06e059c07f92fe69c9a0e7b63460e79aabc0526e18aa83e4"
+    },
+    {
+      "path": "source-delta-v1/freeze-inputs.json",
+      "bytes": 1355,
+      "mode": 420,
+      "sha256": "5ef244921c2aa0c20be627aed129a04213f2826daa578aa210b94be4f31bf505"
+    },
+    {
+      "path": "source-delta-v1/preservation-result.json",
+      "bytes": 1104,
+      "mode": 420,
+      "sha256": "1a1b0e898d743e9e5625023f36b97e668010a19a4d26f7a98804f956dfedbb5f"
+    },
+    {
+      "path": "source-delta-v1/preserve_r8_delta.py",
+      "bytes": 12266,
+      "mode": 420,
+      "sha256": "74b1f8eb0842da8af28aa75733c3a8ee6337657a2dc90d0b68d8fcc4b4edf91f"
+    },
+    {
+      "path": "source-delta-v1/r8-core-build-snapshot.json",
+      "bytes": 318333,
+      "mode": 420,
+      "sha256": "8b77dfffbab2bdb2942ff085e03877d5079e3bc6c771afb5ac92e61a9889556a"
+    },
+    {
+      "path": "source-delta-v1/r8-source-delta-inventory.json",
+      "bytes": 1827,
+      "mode": 420,
+      "sha256": "c9e1c47d2318054d2b16e50922dcd4e118a95aae21ad8c8fecfb64220a541440"
+    },
+    {
+      "path": "source-delta-v1/r8-source-delta.tar.gz",
+      "bytes": 37791,
+      "mode": 420,
+      "sha256": "39ec951c9dcd12072a304f0a681db93e728ee3aa9cdfd9baaf6a87c3085afb91"
+    },
+    {
+      "path": "source-delta-v1/verify_delta.py",
+      "bytes": 9366,
+      "mode": 420,
+      "sha256": "0b1a4ae6b0cf3d7c1df15d7fe10b5eb7129e48686a561fdbdc603cec74b22f9d"
+    },
+    {
+      "path": "source-delta-v2/README.md",
+      "bytes": 1885,
+      "mode": 420,
+      "sha256": "4106f946be22c6300e838e07de1dcce1b8e9a2a1debc1054cfc77d3e952ba3ee"
+    },
+    {
+      "path": "source-delta-v2/canonical-binding/bind_canonical.py",
+      "bytes": 11447,
+      "mode": 420,
+      "sha256": "bd61d6c4a562d3a9555cd58be5ef03c0c7ffc9b17ec6173d22dabfe48afd3cc6"
+    },
+    {
+      "path": "source-delta-v2/canonical-binding/verify_binding.py",
+      "bytes": 6165,
+      "mode": 420,
+      "sha256": "1015a03d5f1eb6bc7437b51f0edec012b24599f30a0b7c921c17a11968f76eb2"
+    },
+    {
+      "path": "source-delta-v2/comparison.json",
+      "bytes": 164850,
+      "mode": 420,
+      "sha256": "4ca6bc6d6c4877b1d6b34bd6886f970e16e687edba8619389c49bc5a2f9df1bd"
+    },
+    {
+      "path": "source-delta-v2/delta-manifest.json",
+      "bytes": 6741,
+      "mode": 420,
+      "sha256": "55c31867e19b803e39cdc155cd0ae500658163d363d7bcb538340b1beb603010"
+    },
+    {
+      "path": "source-delta-v2/effective-source-inventory.json",
+      "bytes": 1855694,
+      "mode": 420,
+      "sha256": "b14a0196406615b85bb39ac857a4dae3f27220742742476dac99dcc7c9dbc328"
+    },
+    {
+      "path": "source-delta-v2/freeze-inputs.json",
+      "bytes": 1800,
+      "mode": 420,
+      "sha256": "3f131ce3d62dffeaf5ad5672887e18677d4b231ceba65472dabee7d577e047d7"
+    },
+    {
+      "path": "source-delta-v2/preservation-result.json",
+      "bytes": 1108,
+      "mode": 420,
+      "sha256": "bb78937f92565504946462b3b6a954994d5bdfcbb66b3c1570fb95e18e4ec094"
+    },
+    {
+      "path": "source-delta-v2/preserve_r8_delta.py",
+      "bytes": 12354,
+      "mode": 420,
+      "sha256": "bf81451cc51b28160e461dee89a67544425fe5e1291695416e20a16cd55d964e"
+    },
+    {
+      "path": "source-delta-v2/r8-core-build-snapshot.json",
+      "bytes": 318333,
+      "mode": 420,
+      "sha256": "8b77dfffbab2bdb2942ff085e03877d5079e3bc6c771afb5ac92e61a9889556a"
+    },
+    {
+      "path": "source-delta-v2/r8-source-delta-inventory.json",
+      "bytes": 2075,
+      "mode": 420,
+      "sha256": "8b5ea3ddd4ed9d574657c4be863a9c2a3a48c2db909954941059fe33374b228c"
+    },
+    {
+      "path": "source-delta-v2/r8-source-delta.tar.gz",
+      "bytes": 42823,
+      "mode": 420,
+      "sha256": "e8797ae848c632ba3e8ef2f55c8114305e0f5f6718e78ed14039bfe8290c2c8d"
+    },
+    {
+      "path": "source-delta-v2/verify_delta.py",
+      "bytes": 9366,
+      "mode": 420,
+      "sha256": "0b1a4ae6b0cf3d7c1df15d7fe10b5eb7129e48686a561fdbdc603cec74b22f9d"
+    },
+    {
+      "path": "source-delta-v3/ATTEMPT1_FAILURE.md",
+      "bytes": 642,
+      "mode": 420,
+      "sha256": "c54dd52d073e18aa5b6cfe6d209831308924ba0bbcf84a0fa6bd1ad8cebbabd5"
+    },
+    {
+      "path": "source-delta-v3/ATTEMPT1_WORKSPACE_MISMATCH.json",
+      "bytes": 9916,
+      "mode": 420,
+      "sha256": "9bb24e0c7fc8d3c84baf6cf05c0b1f808dda18f4b2c12d9f7dc74a611a14ccda"
+    },
+    {
+      "path": "source-delta-v3/README.md",
+      "bytes": 615,
+      "mode": 420,
+      "sha256": "34606e0fb94e84eacc6c485fc3689cad44492747fb6494ed8c1faa3cb2e483da"
+    },
+    {
+      "path": "source-delta-v3/SOURCE_FREEZE_V3.json",
+      "bytes": 1737,
+      "mode": 420,
+      "sha256": "afc6d5ecd7474514613b447cf1efca89d5337bd111a92b33088724a7d59fa2f5"
+    },
+    {
+      "path": "source-delta-v3/SOURCE_PRESERVATION_FILES.json",
+      "bytes": 3703,
+      "mode": 420,
+      "sha256": "d32719a6ae95e534368bc2a380c595b1903c34e916fb3a348de03608b6088383"
+    },
+    {
+      "path": "source-delta-v3/V2_TO_V3_ONE_LINE_READBACK.json",
+      "bytes": 1376,
+      "mode": 420,
+      "sha256": "0d1708dac34cb03b14bdb6e8a4790dc6761cd65b0883a36f99bc04f6d6f9fd77"
+    },
+    {
+      "path": "source-delta-v3/attempt1-preserve_r8_delta.py",
+      "bytes": 13593,
+      "mode": 420,
+      "sha256": "13663baaea67de1c39817b64d7393fd93abb59cb271bbc207204ca0d0ff4053a"
+    },
+    {
+      "path": "source-delta-v3/canonical-binding/CANONICAL_BINDING_REVIEW.json",
+      "bytes": 3104,
+      "mode": 420,
+      "sha256": "c8a9bd6954eb98f7fa50f2b37d2447d18c3f5faa2969386b5411de1d4e9a8c28"
+    },
+    {
+      "path": "source-delta-v3/canonical-binding/REVIEW.md",
+      "bytes": 1553,
+      "mode": 420,
+      "sha256": "5fd2285a2f4382fbdad1352df2de73327519961d907562f6bd5f237e4c96ffed"
+    },
+    {
+      "path": "source-delta-v3/canonical-binding/bind_canonical.py",
+      "bytes": 11726,
+      "mode": 420,
+      "sha256": "b6876b0e2272730d32f66f412c827bdb896e7bfe1010884d7eea8986bbab2b2c"
+    },
+    {
+      "path": "source-delta-v3/canonical-binding/binding-files.json",
+      "bytes": 2444,
+      "mode": 420,
+      "sha256": "e5f0364ce995b4196e18d3c2c24b1fd8976a164092f3e325594cb18aac754350"
+    },
+    {
+      "path": "source-delta-v3/canonical-binding/binding-result.json",
+      "bytes": 414,
+      "mode": 420,
+      "sha256": "4f9c3ec487473d86ea5f6d7a6cf3cd426fedcc156025606525ca18abaa9c9be9"
+    },
+    {
+      "path": "source-delta-v3/canonical-binding/binding.json",
+      "bytes": 21176,
+      "mode": 420,
+      "sha256": "f425a78b886aa38fa71c005e952e4cdeaf280ac6d2492d8e93072b002e0f7fad"
+    },
+    {
+      "path": "source-delta-v3/canonical-binding/controller-snapshot.json",
+      "bytes": 128919,
+      "mode": 420,
+      "sha256": "43f1eca8dec26608df0c86a1c83811bf9e8207e309f8f820b1eb3fda9bb4712e"
+    },
+    {
+      "path": "source-delta-v3/canonical-binding/independent-binding-verification.json",
+      "bytes": 343,
+      "mode": 420,
+      "sha256": "46870dd7d6fe2dcda75247ff377f4ac8f94a3f35da7e9a97cba4bc651caf098f"
+    },
+    {
+      "path": "source-delta-v3/canonical-binding/iteration-entry-default-signed-provenance.json",
+      "bytes": 21106,
+      "mode": 420,
+      "sha256": "0c93829e9f5ac2b12229693732c2be2045e7aed1f96119071cdf843e61bc929c"
+    },
+    {
+      "path": "source-delta-v3/canonical-binding/iteration-entry-default-unsigned-provenance.json",
+      "bytes": 21112,
+      "mode": 420,
+      "sha256": "defbfabba1ee56baf34fb405a6770a4888dbc43addaa9802ebd33e11b0444adc"
+    },
+    {
+      "path": "source-delta-v3/canonical-binding/published-manifest.json",
+      "bytes": 14263,
+      "mode": 420,
+      "sha256": "555eaba03fe4c3c130352c42ca4929763cc1ff039bd7f59ee1adde31b0293712"
+    },
+    {
+      "path": "source-delta-v3/canonical-binding/source-snapshot.json",
+      "bytes": 485863,
+      "mode": 420,
+      "sha256": "6f6cf4fe39fcb50715d5cb115caf2782e47987ed7b7c0c1aee4a25494e1eb0ca"
+    },
+    {
+      "path": "source-delta-v3/canonical-binding/verify_binding.py",
+      "bytes": 6165,
+      "mode": 420,
+      "sha256": "1015a03d5f1eb6bc7437b51f0edec012b24599f30a0b7c921c17a11968f76eb2"
+    },
+    {
+      "path": "source-delta-v3/canonical-binding/workspace-contract-snapshot.json",
+      "bytes": 4677,
+      "mode": 420,
+      "sha256": "a4f1591a3b0f9549d510ff12f91c06e4062ab743c2f8eb7a42fb122f1946e24f"
+    },
+    {
+      "path": "source-delta-v3/comparison.json",
+      "bytes": 98830,
+      "mode": 420,
+      "sha256": "b1ca44fca77381f8fb9e4cc05e3bd85aba13a64256913d76978f5820eda92650"
+    },
+    {
+      "path": "source-delta-v3/delta-manifest.json",
+      "bytes": 6789,
+      "mode": 420,
+      "sha256": "fefb5a2fad07c4e0a1d135ee2b180439f926a6791378bbab0fab30731c685620"
+    },
+    {
+      "path": "source-delta-v3/effective-source-inventory.json",
+      "bytes": 1855694,
+      "mode": 420,
+      "sha256": "c947e27c4833526956b0411d26e4a19235fe6b5f2d970994f48d2cf6e303aca2"
+    },
+    {
+      "path": "source-delta-v3/freeze-inputs.json",
+      "bytes": 1942,
+      "mode": 420,
+      "sha256": "3fd4aa464455d4c1dc30780a4e685586ae77d6aad6b8d806f81a11c4f9183890"
+    },
+    {
+      "path": "source-delta-v3/independent-verification.json",
+      "bytes": 457,
+      "mode": 420,
+      "sha256": "4f6f7429036561ff3b3fb9c7fce5f8d1ebe7bef34dd011c2be7994e8e980ab85"
+    },
+    {
+      "path": "source-delta-v3/preservation-result-attempt2.json",
+      "bytes": 439,
+      "mode": 420,
+      "sha256": "ab1b4be3883cfe22535bb68edc66b1c41035974b615706ae17b1d1d591025674"
+    },
+    {
+      "path": "source-delta-v3/preservation-result.json",
+      "bytes": 0,
+      "mode": 420,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "source-delta-v3/preserve_r8_delta.py",
+      "bytes": 13876,
+      "mode": 420,
+      "sha256": "24af8a6c8d3ebd69c26a0dee8781a6997543e473f925795a5daf16a291e54d74"
+    },
+    {
+      "path": "source-delta-v3/r8-core-build-snapshot.json",
+      "bytes": 318333,
+      "mode": 420,
+      "sha256": "8b77dfffbab2bdb2942ff085e03877d5079e3bc6c771afb5ac92e61a9889556a"
+    },
+    {
+      "path": "source-delta-v3/r8-source-delta-inventory.json",
+      "bytes": 2075,
+      "mode": 420,
+      "sha256": "64ee20371bba3b7a66ba060a11d2e786f68ae4954a229644c4c3416550302e52"
+    },
+    {
+      "path": "source-delta-v3/r8-source-delta.tar.gz",
+      "bytes": 42835,
+      "mode": 420,
+      "sha256": "5980bd3cb451e5449ad0471336d35614b3678642d7f9ad7d2287e79848e25a55"
+    },
+    {
+      "path": "source-delta-v3/verify_delta.py",
+      "bytes": 9366,
+      "mode": 420,
+      "sha256": "0b1a4ae6b0cf3d7c1df15d7fe10b5eb7129e48686a561fdbdc603cec74b22f9d"
+    },
+    {
+      "path": "source-owner/SHASUMS.sha256",
+      "bytes": 335,
+      "mode": 420,
+      "sha256": "23fc964dddc512978c75ff2ccab5e0cd8efc3d16a7491a327f3462fcb59294aa"
+    },
+    {
+      "path": "source-owner/SOURCE_REVIEW.md",
+      "bytes": 5230,
+      "mode": 420,
+      "sha256": "f2c36cf36d2ad8fc47c51aa6cc3d4827b8b1651248f3d6cf4c7894023e4e9a83"
+    },
+    {
+      "path": "source-owner/related-sdk.json",
+      "bytes": 7708,
+      "mode": 420,
+      "sha256": "782b4b82373887e56e64f6ec5ad5b6668759947524bae82f57117f5315249bbc"
+    },
+    {
+      "path": "source-owner/source-diff.patch",
+      "bytes": 19360,
+      "mode": 420,
+      "sha256": "7d14f41a7e3f5c7afef02b11e8858c5cf15e69963165a3263747bb39747fe5a9"
+    },
+    {
+      "path": "source-owner/source-hashes.json",
+      "bytes": 997,
+      "mode": 420,
+      "sha256": "66b766556acecab6b475ebf5e0de9eb906600ef192eb7fd26315ee7c73c71221"
+    },
+    {
+      "path": "source-owner-v3/COPY_PENDING_BUILD.json",
+      "bytes": 2205,
+      "mode": 420,
+      "sha256": "6b6c9d7384a25228894d04398ebc90e3c748b5acd665517bcae41d31ae537ca0"
+    },
+    {
+      "path": "source-owner-v3/build4-failure.txt",
+      "bytes": 629,
+      "mode": 420,
+      "sha256": "eac1221d0efca4411a8fc82036d9864c8abcd0f1e7c00108376b45a3f87309ae"
+    },
+    {
+      "path": "source-owner-v3/native-image-geometry-sdk.log",
+      "bytes": 1887,
+      "mode": 420,
+      "sha256": "8586aa14cb71ea97138f0b6766109fce6319d606268a3d968465a20072ce4cec"
+    },
+    {
+      "path": "source-owner-v3/one-line-fix.patch",
+      "bytes": 556,
+      "mode": 420,
+      "sha256": "86aa714b731974ca9e75b4416426fc6f1789a2c8cf4bce816637e967d9bfa277"
+    },
+    {
+      "path": "source-owner-v3/source-change.json",
+      "bytes": 568,
+      "mode": 420,
+      "sha256": "fea7b1d26bce585706008e073b6f43450eaab1005deda696cea871d753225caa"
+    },
+    {
+      "path": "vm/DEFAULT_OFF_RESULT.json",
+      "bytes": 1417,
+      "mode": 420,
+      "sha256": "94c9d478bf42b47e8ec0de2da425ae5637706e101b850f52214cbc12068367ce"
+    },
+    {
+      "path": "vm/FIRST_NATIVE_DESTINATION.json",
+      "bytes": 1782,
+      "mode": 420,
+      "sha256": "d11874a3310f3ecee2fb9fb74381c0d3afd6af48a9690e3eb912a9f37a9878a8"
+    },
+    {
+      "path": "vm/PREFLIGHT_READONLY.json",
+      "bytes": 1215,
+      "mode": 420,
+      "sha256": "5e59a7f5a085117b49f0d22d6316707add6cb18d51a46fc3c172b5178a49bcd9"
+    },
+    {
+      "path": "vm/a.json",
+      "bytes": 17432,
+      "mode": 420,
+      "sha256": "cf74a06f4fa40d84348d4b80286a2557d7f710440da83aeb22215f9d99516bcd"
+    },
+    {
+      "path": "vm/aSettled.json",
+      "bytes": 17569,
+      "mode": 420,
+      "sha256": "c55157a69d8650ebc5622d9e86f082bdb4d23044c3dd43de45c43c6686a9d794"
+    },
+    {
+      "path": "vm/b.json",
+      "bytes": 70511,
+      "mode": 420,
+      "sha256": "9ae55570eeb47d6b717d6591ce678fb76304e2fb0175c3bad48324f207b6e604"
+    },
+    {
+      "path": "vm/d.json",
+      "bytes": 17557,
+      "mode": 420,
+      "sha256": "d97243ad2bb49f1dd1d46021a20ef0ed1d5f435a93e1d1168c79c804bf879e66"
+    },
+    {
+      "path": "vm/exit.json",
+      "bytes": 114422,
+      "mode": 420,
+      "sha256": "6fcff2dafd5e8b970280e0864b381554cf96f8955901962308cf17e5706e89a7"
+    },
+    {
+      "path": "vm/metadata.json",
+      "bytes": 829,
+      "mode": 420,
+      "sha256": "e3684f9e0701a412777d4d3f1154eb18c929bd0629146bc516f5e06155c0d019"
+    },
+    {
+      "path": "vm/normal.json",
+      "bytes": 114280,
+      "mode": 420,
+      "sha256": "a56948b3745aae7e8b040601feb48ddd6f7474c1c53fe83d2dc75d31534b3b77"
+    },
+    {
+      "path": "vm/normalReader.json",
+      "bytes": 17431,
+      "mode": 420,
+      "sha256": "f714fbc4bc6a85a294dd0b527764b371e476d9ba12328bbfbb8ffeb4bd1e8cec"
+    },
+    {
+      "path": "vm/numeric-session.jsonl",
+      "bytes": 185161,
+      "mode": 420,
+      "sha256": "cfa99bb09c17e39f7fe7aa7eff67e3167a2e9f68365c7b5bea3cd125077e9dd1"
+    },
+    {
+      "path": "vm/runtime-result.json",
+      "bytes": 77882,
+      "mode": 420,
+      "sha256": "9b5f80f405af7099a210c2dc7dee4cf184f2413f22d2748d7a5e583f783d9bef"
+    },
+    {
+      "path": "vm/shelf.json",
+      "bytes": 114280,
+      "mode": 420,
+      "sha256": "c9651c7f98629f16b763fbcbed8c50afc39ac223359ce0385c9adefc7c5099bf"
+    }
+  ],
+  "externalRefs": [
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261004T002116Z-568ec4e3-3eec7853/controller-snapshot.json",
+      "bytes": 128919,
+      "mode": 420,
+      "sha256": "43f1eca8dec26608df0c86a1c83811bf9e8207e309f8f820b1eb3fda9bb4712e",
+      "group": "canonical-run"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261004T002116Z-568ec4e3-3eec7853/deploy-vm-6460677a198b-20261004T003052Z.json",
+      "bytes": 1751,
+      "mode": 420,
+      "sha256": "ea40e694cb511945a07294d5c465bc1e814ffc86002722822271a14cfac1ac5a",
+      "group": "preserve-data-vm-receipt"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261004T002116Z-568ec4e3-3eec7853/entry-default-signed.hap",
+      "bytes": 198713523,
+      "mode": 420,
+      "sha256": "9b5f34be522060a84bb4e2e805e62ca538cc0d2ae4d68f1a81f716cdf2c1ac56",
+      "group": "canonical-hap"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261004T002116Z-568ec4e3-3eec7853/entry-default-unsigned.hap",
+      "bytes": 198406090,
+      "mode": 420,
+      "sha256": "9a761bca8d1e5b3170d2718e128aa7374b1b0e3d0549ef56909c892077089f68",
+      "group": "canonical-hap"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261004T002116Z-568ec4e3-3eec7853/iteration-entry-default-signed-provenance.json",
+      "bytes": 21106,
+      "mode": 420,
+      "sha256": "0c93829e9f5ac2b12229693732c2be2045e7aed1f96119071cdf843e61bc929c",
+      "group": "canonical-run"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261004T002116Z-568ec4e3-3eec7853/iteration-entry-default-unsigned-provenance.json",
+      "bytes": 21112,
+      "mode": 420,
+      "sha256": "defbfabba1ee56baf34fb405a6770a4888dbc43addaa9802ebd33e11b0444adc",
+      "group": "canonical-run"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261004T002116Z-568ec4e3-3eec7853/manifest.json",
+      "bytes": 14263,
+      "mode": 420,
+      "sha256": "555eaba03fe4c3c130352c42ca4929763cc1ff039bd7f59ee1adde31b0293712",
+      "group": "runtime-input"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261004T002116Z-568ec4e3-3eec7853/source-snapshot.json",
+      "bytes": 485863,
+      "mode": 420,
+      "sha256": "6f6cf4fe39fcb50715d5cb115caf2782e47987ed7b7c0c1aee4a25494e1eb0ca",
+      "group": "canonical-run"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261004T002116Z-568ec4e3-3eec7853/workspace-contract-snapshot.json",
+      "bytes": 4677,
+      "mode": 420,
+      "sha256": "a4f1591a3b0f9549d510ff12f91c06e4062ab743c2f8eb7a42fb122f1946e24f",
+      "group": "canonical-run"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/source-preservation/native-sdk-inventory.json",
+      "bytes": 2928,
+      "mode": 420,
+      "sha256": "b4b064fc5ba6ace360e6e9f45e5cf0496d49f71cb4e3f3df1696774db7773843",
+      "group": "native-parent"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/source-preservation/native-sdk.tar.gz",
+      "bytes": 9662167,
+      "mode": 420,
+      "sha256": "0100e26efb0589baf76ca449bcd5aaeba7000e61e856879a99d3ff4268e3355d",
+      "group": "native-parent"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/source-preservation/reader-source-inventory.json",
+      "bytes": 1854356,
+      "mode": 420,
+      "sha256": "2509d275fd5cc0eec76bd578111f3e209a3fee4a0bb6d196560604ab5106504a",
+      "group": "source-parent-chain"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/source-preservation/reader-source.tar.gz",
+      "bytes": 209937914,
+      "mode": 420,
+      "sha256": "765627819aa7433c1fa9c575240bee471ea7a3174217af8272e338fdad275132",
+      "group": "source-parent-chain"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/source-delta/delta-manifest.json",
+      "bytes": 3454,
+      "mode": 420,
+      "sha256": "0d83bee3013ac925b9688270a2d2eab95eec3af278e25261cd2399955c3d26a9",
+      "group": "source-parent-chain"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r5/source-delta/r5-source-delta.tar.gz",
+      "bytes": 11530,
+      "mode": 420,
+      "sha256": "a1bba804791fc0873bb924d6696755fd91132629c645c5331391d112c6a04137",
+      "group": "source-parent-chain"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-stable-viewport-r7/source-delta/delta-manifest.json",
+      "bytes": 10562,
+      "mode": 420,
+      "sha256": "509c73c162be9ae4246fc1c4de38b938d67804359dedfacbf771b98570e4aeb2",
+      "group": "source-parent-chain"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-stable-viewport-r7/source-delta/effective-source-inventory.json",
+      "bytes": 1855192,
+      "mode": 420,
+      "sha256": "58975951a8fb45a827d56c85b4d33ed9388922ab4a444393a228d450a0b8431f",
+      "group": "source-parent-chain"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-stable-viewport-r7/source-delta/r7-source-delta.tar.gz",
+      "bytes": 217702,
+      "mode": 420,
+      "sha256": "6bb34e5d026ea86ace1608e6d3d295b16fa64f5a86fb9fd9e60500ba9a27c386",
+      "group": "source-parent-chain"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/delta-manifest.json",
+      "bytes": 9772,
+      "mode": 420,
+      "sha256": "02430e6d0880be8dd0c5178f742f62cbfacd1cd92f8a1b1b45cf2b0255b78d93",
+      "group": "source-parent-chain"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/r6-source-delta.tar.gz",
+      "bytes": 101374,
+      "mode": 420,
+      "sha256": "bcaad688874908ffb83bfb9d0de8a21497c1dce55f56887b4721a7c843132a55",
+      "group": "source-parent-chain"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/evidence/2026-10-04-manga-task-storage-cleanup/post-r8-build/AUDIT.json",
+      "bytes": 650605,
+      "mode": 420,
+      "sha256": "c6d247c07b9fc952c47d7506a5ea36563ab096b3af00cc5bfde63f6c4746d264",
+      "group": "post-build-cleanup"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/evidence/2026-10-04-manga-task-storage-cleanup/post-r8-build/REPORT.md",
+      "bytes": 969,
+      "mode": 420,
+      "sha256": "54bf555b27bf36e3348b14c11ce7e60137e8db1e48964442bd5110a903ccd8c5",
+      "group": "post-build-cleanup"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/evidence/2026-10-04-manga-task-storage-cleanup/post-r8-build/RESULT.json",
+      "bytes": 863,
+      "mode": 420,
+      "sha256": "5128fd8179842d3f2d223c11c6331a0aeccfd44af79c916739dc67024f7e33c7",
+      "group": "post-build-cleanup"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/evidence/2026-10-04-manga-task-storage-cleanup/post-r8-build/cli-help.stderr.log",
+      "bytes": 274,
+      "mode": 420,
+      "sha256": "3bcbf114fcd63019bd600d51594b049d0ee0e2b908bd4c364dfd0603f46cd425",
+      "group": "post-build-cleanup"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/evidence/2026-10-04-manga-task-storage-cleanup/post-r8-build/cli-help.stdout.log",
+      "bytes": 0,
+      "mode": 420,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "group": "post-build-cleanup"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/evidence/2026-10-04-manga-task-storage-cleanup/post-r8-build/file-inventory.json",
+      "bytes": 598131,
+      "mode": 420,
+      "sha256": "3810519aac9ab65bf7d50e60bb2d45092a91e0fac8a7623154dfd58581c7dbe1",
+      "group": "post-build-cleanup"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-Core-Native/target/debug/reader-cli",
+      "bytes": 97671448,
+      "mode": 493,
+      "sha256": "9b0f36295f441c7ae5d28424e6c91211a710da62e275833cf684e43161ed550d",
+      "group": "preserved-required-cli"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-Core-Native/target/harmony-napi/arm64-v8a/core-build-identity.json",
+      "bytes": 390,
+      "mode": 420,
+      "sha256": "b4d5d81b91bb7efb8e840612bcab4004f81ece34c51b01bc6233d1a08cc8fb89",
+      "group": "frozen-temp-native"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-Core-Native/target/harmony-napi/arm64-v8a/core-input-snapshot.json",
+      "bytes": 318333,
+      "mode": 420,
+      "sha256": "8b77dfffbab2bdb2942ff085e03877d5079e3bc6c771afb5ac92e61a9889556a",
+      "group": "frozen-temp-native"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-Core-Native/target/harmony-napi/arm64-v8a/harmony-napi-build-evidence.txt",
+      "bytes": 2083,
+      "mode": 420,
+      "sha256": "51cc90066f7ecfaca36cd0695c2ca3c83b9f538e88c32f6d837095e656ce9bbf",
+      "group": "frozen-temp-native"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-Core-Native/target/harmony-napi/arm64-v8a/harmony-package-manifest.sha256",
+      "bytes": 629,
+      "mode": 420,
+      "sha256": "470619694beb2127f3259e618aa8801c02db9794e757906068f90e51305f24c9",
+      "group": "frozen-temp-native"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-Core-Native/target/harmony-napi/arm64-v8a/package/Index.ts",
+      "bytes": 4281,
+      "mode": 420,
+      "sha256": "2406a6f175f27615fba71938a6c8a7b6f320d4c19b4144c286d251dd059a61ac",
+      "group": "frozen-temp-native"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-Core-Native/target/harmony-napi/arm64-v8a/package/README.md",
+      "bytes": 379,
+      "mode": 420,
+      "sha256": "bc38d17933de7f590a505b927643e0845ccc0832fcb9f85d42431149059034cf",
+      "group": "frozen-temp-native"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-Core-Native/target/harmony-napi/arm64-v8a/package/STATUS.md",
+      "bytes": 450,
+      "mode": 420,
+      "sha256": "da6e38be7e15c23a1e30da1a10150dafb7db9d0c8370b2bc3c8391592b78536c",
+      "group": "frozen-temp-native"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-Core-Native/target/harmony-napi/arm64-v8a/package/libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 23109344,
+      "mode": 493,
+      "sha256": "1fabbfa63b996e39da9a3ec01f6b396cf841f0d0b4016303daac56a974c17996",
+      "group": "frozen-temp-native"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-Core-Native/target/harmony-napi/arm64-v8a/package/oh-package.json5",
+      "bytes": 202,
+      "mode": 420,
+      "sha256": "2e889f9c2867397bbb4cfbfd734fb86ec191b948353a306dcdaea5c592c7be68",
+      "group": "frozen-temp-native"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-Core-Native/target/harmony-napi/arm64-v8a/package/sdk/reader_core.ts",
+      "bytes": 38818,
+      "mode": 420,
+      "sha256": "09e894fbddd163f5016137961ffb796984850e7890b88c0f5abbc76e2787c273",
+      "group": "frozen-temp-native"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-Core-Native/target/harmony-napi/arm64-v8a/package/sdk/smoke_report.ts",
+      "bytes": 6435,
+      "mode": 420,
+      "sha256": "a4988e8a5f15f5a7b82cdd9f6888f11c4cbfdf7404b22f9cedad3726943da957",
+      "group": "frozen-temp-native"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaImageOriginGeometry.ts",
+      "bytes": 2048,
+      "mode": 420,
+      "sha256": "bf19329bb7371939324b50fdd3d081882b2fb851a853ce1528bb79c002453a0b",
+      "group": "runtime-input"
+    }
+  ],
+  "scope": {
+    "sourceParentProofsReusedNoRepeatedReconstruction": true,
+    "actualExternalRefsReadback": true,
+    "allPriorR8FilesPreserved": true,
+    "largeCopiesOrNewBuildTests": false,
+    "deviceActions": false,
+    "existingFreezeRewritten": false
+  }
+}

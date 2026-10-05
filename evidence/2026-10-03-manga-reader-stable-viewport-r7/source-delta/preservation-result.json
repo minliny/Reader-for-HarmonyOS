@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "status": "PASS",
+  "inputVersion": 2,
+  "freezeSha256": "d9173c18182c450d58453ac6cfcd0b272c639c2ffb70b31b9a5b7d76b05a291d",
+  "parentSourceFiles": 7113,
+  "deltaFiles": 13,
+  "replaceFiles": 10,
+  "addFiles": 3,
+  "unchangedParentFiles": 7103,
+  "archive": {
+    "path": "r7-source-delta.tar.gz",
+    "bytes": 217702,
+    "sha256": "6bb34e5d026ea86ace1608e6d3d295b16fa64f5a86fb9fd9e60500ba9a27c386"
+  },
+  "reconstructedFiles": 7116,
+  "effectiveSourceFingerprint": "b469a1b25e2b0fd907c0a70b08c1faf31ac98534a1a6f000b821efa42afa44d1",
+  "coreBuildInputFingerprint": "9e97919470b42d81d87082c2c257984778da5e5e5e55798273b3242c99608c4b",
+  "actualFullFilesystemReconstructionPassed": true,
+  "everySourceByteAndModeVerified": true,
+  "frozenDeliverySourceUnchangedDuringArchive": true,
+  "frozenR4R5R6EvidenceUnchanged": true,
+  "nativePackageAndIdentityUnchanged": true,
+  "v1AttemptAndSdkHistoryPreserved": true,
+  "originalDeliverySourceRequiredForIndependentVerifier": false,
+  "buildOrDeviceOperation": false,
+  "visualOrUserAcceptanceClaim": false
+}

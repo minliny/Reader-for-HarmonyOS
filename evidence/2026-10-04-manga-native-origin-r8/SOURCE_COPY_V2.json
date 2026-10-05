@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03T16:38:23.374931+00:00",
+  "version": 2,
+  "parentSourceInventory": "R7 final version 2; unified six-operation delta",
+  "additionalFrozenSourceCopy": {
+    "before": {
+      "path": "Reader-for-HarmonyOS/tools/test-reader-optional-entry-memory-launch.mjs",
+      "type": "file",
+      "bytes": 18180,
+      "mode": 420,
+      "sha256": "8c5ce38343fc35ba39b9ca67b1224039ee8e6bb8fb492843644cd162dd0dab89"
+    },
+    "after": {
+      "path": "Reader-for-HarmonyOS/tools/test-reader-optional-entry-memory-launch.mjs",
+      "type": "file",
+      "bytes": 18305,
+      "mode": 420,
+      "sha256": "10dc8be4fcaf398a4736a574623dd65a883e57abd946d07ffcf849886a27b4f6"
+    }
+  },
+  "allOriginalFiveFrozenInputsUnchanged": true,
+  "allSourceAndTargetBytesAndModesMatch": true,
+  "v1DirectoryMovedOrOverwritten": false,
+  "freezeSha256": "3f131ce3d62dffeaf5ad5672887e18677d4b231ceba65472dabee7d577e047d7",
+  "priorR7EvidenceMutation": false,
+  "buildOrDeviceOperation": false
+}

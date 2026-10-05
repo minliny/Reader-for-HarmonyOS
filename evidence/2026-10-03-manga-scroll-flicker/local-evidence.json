@@ -1,0 +1,49 @@
+{
+  "status": "LOCAL_PASS_VM_OPEN",
+  "userSymptom": "整片阅读内容跳动、闪烁",
+  "priorMangaRun": "20261003T074818Z-568ec4e3-ae09e248",
+  "priorHapSha256": "efb9de39eb25343365c3fc4d588e5f91f5453f4be181de45ae9b5f097ff18fc9",
+  "deviceBundleUpdateTime": 1791013746745,
+  "findings": [
+    "equal geometry objects on reentry caused full reload and forced scroll restore",
+    "offscreen neighbor geometry caused unnecessary anchor restore, including unselected horizontal pages",
+    "ordinal +/-1 metadata window prematurely retired exact still-visible third-page tiles",
+    "retention correction only keeps ready metadata; obsolete pending pages remain retired"
+  ],
+  "verified": [
+    "old Surface/Projection negative control fails 3 regression cases",
+    "new equal-geometry reload/restore zero; offscreen neighbor restore zero",
+    "actual changed current/before-anchor geometry still restores normalized position",
+    "strict SDK key retention keeps Image actors for unchanged rows",
+    "Controller repeated three-page viewport no extra decode/release",
+    "far navigation/close/late completion still retire exact resources",
+    "obsolete pending metadata retry can recover; no stranded pending marker"
+  ],
+  "limits": [
+    "Native scheduling/pixels need final package VM evidence",
+    "Existing LazyForEach and resource window are reused; no new generic cache or renderer",
+    "Only Host changed; Core Native schema34 unchanged"
+  ],
+  "sourceFiles": [
+    {
+      "path": "entry/src/main/ets/features/manga/MangaStripProjection.ts",
+      "sha256": "a478eaf8d41cdc1d3fe097f53dab2982fe9ea5a5a68fe20ab7839fdea16c0363"
+    },
+    {
+      "path": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "sha256": "6a59ffce98a9a44215a3bcd6103b1094878ff75285005a26ee7fe1534cd461fb"
+    },
+    {
+      "path": "entry/src/main/ets/features/manga/MangaSessionController.ts",
+      "sha256": "f3de1195d6684c6c683e11847f33e8769a66b290a6288cbc8b0a26e13936c010"
+    },
+    {
+      "path": "tools/test-manga-scroll-stability-sdk.mjs",
+      "sha256": "14e87331d29bc9c7164362543a9c082fb4e988dadba2acb9f8bb135de6528f94"
+    },
+    {
+      "path": "tools/test-manga-visible-tile-retention.mjs",
+      "sha256": "a8c5f04b75b5d9c65eabac4a1cbcf13866eb004c8dd359dd021119712a62f452"
+    }
+  ]
+}

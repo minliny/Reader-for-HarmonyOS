@@ -1,0 +1,3 @@
+PASS actual manga surface methods: stale save/viewport cancellation does not obscure a visible image; current failures remain visible
+(node:22229) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

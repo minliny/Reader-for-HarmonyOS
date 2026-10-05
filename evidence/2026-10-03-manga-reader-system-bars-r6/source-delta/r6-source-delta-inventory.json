@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "name": "r6-source-delta",
+  "sourceFileCount": 12,
+  "sourceBytes": 450490,
+  "inventoryFingerprint": "b6889da5334096e012cc5f653dc1e167f9ce7820bcd51186f031757da0e6a38c",
+  "archive": {
+    "path": "r6-source-delta.tar.gz",
+    "bytes": 101374,
+    "sha256": "bcaad688874908ffb83bfb9d0de8a21497c1dce55f56887b4721a7c843132a55"
+  },
+  "files": [
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "type": "file",
+      "mode": 420,
+      "bytes": 104797,
+      "sha256": "f84e5289f30711f31b9c7df2999fdba30dc6af4d175d6100c0e0bfb801ee3448"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/entry/src/main/ets/features/shell/ReaderShell.ets",
+      "type": "file",
+      "mode": 420,
+      "bytes": 25114,
+      "sha256": "edd9b4ade1b4f2ebe7953816742460b38263b1ae804b345f7f4dd4ebd906d560"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/fixtures/manga-system-bars-r5/MangaReadingSurface.ets",
+      "type": "file",
+      "mode": 420,
+      "bytes": 101068,
+      "sha256": "0f5e6d2654e8cc228b43b2ab2c9023e728db904193a147ce71da425113a6b897"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/fixtures/manga-system-bars-r5/ReaderShell.ets",
+      "type": "file",
+      "mode": 420,
+      "bytes": 24844,
+      "sha256": "ea6dddd9fcb6eecf76ea4871419d70e32c69a12cc5812c5aea34716c89cf85ba"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/lib/reader-motion-method-probe.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 5455,
+      "sha256": "09837d8a6713ff1e3294e7afd8b17c7a4a8f1f626c6fb9a36208276580bd81a8"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/test-manga-directory-font-readiness-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 24932,
+      "sha256": "ab4379a6cba5955d40de5782bdbe54f7eead63b6c139430f4e9d920e5b710e60"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/test-manga-error-recovery.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 12376,
+      "sha256": "537167dc61fe6a23df5541fa2207ebe89887ec8c9f189fefc5bb69916188b348"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/test-manga-session.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 57713,
+      "sha256": "09740a039630e368b30771e1778b0f544680fff8ced2144612bb2be5978f45ad"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/test-manga-sheet-motion-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 26726,
+      "sha256": "035128ae8a2047edd40db48f85829624c0473fdc0aa6fe6a065f1e4bc59c61d5"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/test-manga-sheet-selection-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 13009,
+      "sha256": "aefa1f1ca63110e7632d8d8be2a0f4b82bca02caa650f256ee3afd318cf62295"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/test-manga-surface-sdk.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 20614,
+      "sha256": "b57e8880d5539a23c127a5b5210332d6662cd85b356570015f5919997f7efd05"
+    },
+    {
+      "path": "Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs",
+      "type": "file",
+      "mode": 420,
+      "bytes": 33842,
+      "sha256": "b578e446443037785e7c8d5aa093dbfbebb50d64d810cd5f5aaa71db4871879f"
+    }
+  ],
+  "verification": {
+    "fullArchiveRead": true,
+    "everyFileSha256": true,
+    "everyFileMode": true,
+    "exactMemberSet": true,
+    "sourceUnchangedDuringArchive": true,
+    "files": 12,
+    "bytes": 450490
+  }
+}

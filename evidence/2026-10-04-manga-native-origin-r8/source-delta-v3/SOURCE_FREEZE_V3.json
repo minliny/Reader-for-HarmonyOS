@@ -1,0 +1,46 @@
+{
+  "status": "SOURCE_PRESERVATION_PASS_CANONICAL_PENDING",
+  "recordedUtc": "2026-10-04T00:15:07.464373+00:00",
+  "version": 3,
+  "sourceAuthority": "Frozen temp delivery",
+  "deltaOperations": 6,
+  "replaceFiles": 4,
+  "addFiles": 2,
+  "sourceRecords": 7118,
+  "unchangedR7Records": 7112,
+  "freezeSha256": "3fd4aa464455d4c1dc30780a4e685586ae77d6aad6b8d806f81a11c4f9183890",
+  "archive": {
+    "path": "r8-source-delta.tar.gz",
+    "bytes": 42835,
+    "sha256": "5980bd3cb451e5449ad0471336d35614b3678642d7f9ad7d2287e79848e25a55"
+  },
+  "manifestSha256": "fefb5a2fad07c4e0a1d135ee2b180439f926a6791378bbab0fab30731c685620",
+  "effectiveInventory": {
+    "path": "effective-source-inventory.json",
+    "sha256": "c947e27c4833526956b0411d26e4a19235fe6b5f2d970994f48d2cf6e303aca2",
+    "fingerprint": "5830ae7317784d8676d29316ab9b5595d7a1b6dcd27f996070af02d1c6b55c59",
+    "files": 7118,
+    "sourceBytes": 443614716
+  },
+  "sourceVerification": {
+    "fullStreamingReconstruction": true,
+    "filesystemExpansionPerformed": false,
+    "eachArchiveMemberByteAndModeReadback": true,
+    "tempEveryEffectiveInputByteModeMatches": true,
+    "sixFrozenInputsMatchBothWorkspaces": true,
+    "persistentOtherDifferences": 14,
+    "persistentDifferencesOutsideDelta": true
+  },
+  "coreInputFingerprint": "9e97919470b42d81d87082c2c257984778da5e5e5e55798273b3242c99608c4b",
+  "tempNativePackageAndIdentityUnchanged": true,
+  "v1V2AndR4R5R6R7EvidenceUnchanged": true,
+  "initialAttemptRetained": true,
+  "canonicalBinding": "PREPARED_PENDING_PARENT_MANIFEST",
+  "strictArkTS": "PENDING_PARENT_BUILD",
+  "scope": {
+    "testOrBuildRun": false,
+    "deviceUse": false,
+    "sourceMutation": false,
+    "fullScreenOrNativeCallerAcceptance": false
+  }
+}

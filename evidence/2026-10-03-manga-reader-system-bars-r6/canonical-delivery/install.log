@@ -1,0 +1,3 @@
+QUEUE: bound R6 signed manifest, wait for shared build lock and target/server lease; no HDC until free
+ATTEMPT 1 EXIT 0
+{"status":"PASS","receipt":"/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261003T132254Z-568ec4e3-d6c1d5d4/deploy-vm-6460677a198b-20261003T133542Z.json","dataPreserved":true}

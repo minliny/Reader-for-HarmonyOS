@@ -1,0 +1,544 @@
+{
+  "scene": "dir-close",
+  "source_directory": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/dir-close",
+  "original_dimensions": [
+    640,
+    1416
+  ],
+  "roi": [
+    0,
+    380,
+    640,
+    1368
+  ],
+  "frame_count": 9,
+  "click": {
+    "label": "click",
+    "index": null,
+    "start": "1791028765.040990843",
+    "end": "1791028765.223319802",
+    "exit_code": 0,
+    "valid_clock_window": true,
+    "command_duration_ms": 182.328959
+  },
+  "command_window_problems": [],
+  "invalid_lines": [],
+  "duplicate_indices": [],
+  "capture_command_duration_ms": {
+    "min": 68.557167,
+    "median": 87.509,
+    "max": 144.413292
+  },
+  "file_ordinal_pixel_groups": [
+    {
+      "roi_sha256": "e520bb396797f8c6641340df712b350439e7adb92ac41b25a6ed0f0ec05d24b4",
+      "indices": [
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "roi_sha256": "ca57e8038f979b709be9ab7095e17d9be8b76b3785f3184ef6ba687660fa2b1d",
+      "indices": [
+        3
+      ]
+    },
+    {
+      "roi_sha256": "5b07dbd4110b8e0749fbac64e527be1b9a35325dc5916f3f48a333d9778740b5",
+      "indices": [
+        4
+      ]
+    },
+    {
+      "roi_sha256": "fdb0c68a8c6561a5140543de0a0423486d0697e61fb0d6bad1cdbde022d94609",
+      "indices": [
+        5
+      ]
+    },
+    {
+      "roi_sha256": "b6e17351c598d29772069466f74f3410cead1b645bdd44aeeda4a0c8f5cba976",
+      "indices": [
+        6,
+        7,
+        8
+      ]
+    }
+  ],
+  "request_start_order_differs_from_file_ordinal": false,
+  "capture_request_start_order": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "overlap_groups": [
+    {
+      "indices": [
+        0
+      ],
+      "start": "1791028764.890503885",
+      "end": "1791028765.034917177"
+    },
+    {
+      "indices": [
+        1,
+        2
+      ],
+      "start": "1791028765.088130968",
+      "end": "1791028765.200696177"
+    },
+    {
+      "indices": [
+        3
+      ],
+      "start": "1791028765.204207385",
+      "end": "1791028765.306878885"
+    },
+    {
+      "indices": [
+        4
+      ],
+      "start": "1791028765.315492135",
+      "end": "1791028765.400277844"
+    },
+    {
+      "indices": [
+        5
+      ],
+      "start": "1791028765.408810052",
+      "end": "1791028765.495489927"
+    },
+    {
+      "indices": [
+        6
+      ],
+      "start": "1791028765.511607385",
+      "end": "1791028765.599116385"
+    },
+    {
+      "indices": [
+        7
+      ],
+      "start": "1791028765.606524010",
+      "end": "1791028765.703366052"
+    },
+    {
+      "indices": [
+        8
+      ],
+      "start": "1791028766.572871261",
+      "end": "1791028766.695444511"
+    }
+  ],
+  "manual_anchor_movement": [
+    {
+      "frame": 3,
+      "anchor_keys": [
+        "search",
+        "title"
+      ],
+      "y_displacements_to_reference": [
+        31,
+        31
+      ],
+      "at_least_two_anchors_co_translate": true,
+      "content_visible_manual": true
+    },
+    {
+      "frame": 4,
+      "anchor_keys": [
+        "search",
+        "title"
+      ],
+      "y_displacements_to_reference": [
+        651,
+        651
+      ],
+      "at_least_two_anchors_co_translate": true,
+      "content_visible_manual": true
+    }
+  ],
+  "frames": [
+    {
+      "index": 0,
+      "filename": "frame-0.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "b3821613ae7daa878cd4e04ea9ddd91466425fcd1992542fe31a98415383f68c",
+      "rgb_sha256": "3214805dd17222a797c12e5819ae301ff6b74c10f090559ba8e3a618b659968f",
+      "roi_sha256": "e520bb396797f8c6641340df712b350439e7adb92ac41b25a6ed0f0ec05d24b4",
+      "phase": "open",
+      "annotation": {
+        "phase": "open",
+        "anchor_y": {
+          "title": 453,
+          "search": 538
+        },
+        "content_visible": true,
+        "note": "Actual04-09 rows and05 currently reading; reference open position."
+      },
+      "capture": {
+        "label": "frame-0",
+        "index": 0,
+        "start": "1791028764.890503885",
+        "end": "1791028765.034917177",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 144.413292
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 0.0,
+      "roi_mean_absolute_rgb_difference_from_last": 65.87569743168017,
+      "scrim_roi_mean_rgb": [
+        167.17551020408163,
+        167.17551020408163,
+        167.17551020408163
+      ],
+      "scrim_roi_luma_proxy": 167.1755102040816,
+      "capture_request_relative_to_click_command_ms": [
+        -332.815917,
+        -6.073666
+      ]
+    },
+    {
+      "index": 1,
+      "filename": "frame-1.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "b3821613ae7daa878cd4e04ea9ddd91466425fcd1992542fe31a98415383f68c",
+      "rgb_sha256": "3214805dd17222a797c12e5819ae301ff6b74c10f090559ba8e3a618b659968f",
+      "roi_sha256": "e520bb396797f8c6641340df712b350439e7adb92ac41b25a6ed0f0ec05d24b4",
+      "phase": "open",
+      "annotation": {
+        "phase": "open",
+        "anchor_y": {
+          "title": 453,
+          "search": 538
+        },
+        "content_visible": true,
+        "note": "Decoded pixels exactly match frame0."
+      },
+      "capture": {
+        "label": "frame-1",
+        "index": 1,
+        "start": "1791028765.088130968",
+        "end": "1791028765.171251802",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 83.120834
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 0.0,
+      "roi_mean_absolute_rgb_difference_from_last": 65.87569743168017,
+      "scrim_roi_mean_rgb": [
+        167.17551020408163,
+        167.17551020408163,
+        167.17551020408163
+      ],
+      "scrim_roi_luma_proxy": 167.1755102040816,
+      "capture_request_relative_to_click_command_ms": [
+        -135.188834,
+        130.260959
+      ]
+    },
+    {
+      "index": 2,
+      "filename": "frame-2.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "b3821613ae7daa878cd4e04ea9ddd91466425fcd1992542fe31a98415383f68c",
+      "rgb_sha256": "3214805dd17222a797c12e5819ae301ff6b74c10f090559ba8e3a618b659968f",
+      "roi_sha256": "e520bb396797f8c6641340df712b350439e7adb92ac41b25a6ed0f0ec05d24b4",
+      "phase": "open",
+      "annotation": {
+        "phase": "open",
+        "anchor_y": {
+          "title": 453,
+          "search": 538
+        },
+        "content_visible": true,
+        "note": "Decoded pixels exactly match frame0."
+      },
+      "capture": {
+        "label": "frame-2",
+        "index": 2,
+        "start": "1791028765.132139010",
+        "end": "1791028765.200696177",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 68.557167
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 0.0,
+      "roi_mean_absolute_rgb_difference_from_last": 65.87569743168017,
+      "scrim_roi_mean_rgb": [
+        167.17551020408163,
+        167.17551020408163,
+        167.17551020408163
+      ],
+      "scrim_roi_luma_proxy": 167.1755102040816,
+      "capture_request_relative_to_click_command_ms": [
+        -91.180792,
+        159.705334
+      ]
+    },
+    {
+      "index": 3,
+      "filename": "frame-3.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "385fcd77b63da1f0fdc8bba994057bb1006bcd5ef2780bc6dece1c20b28f5900",
+      "rgb_sha256": "bfb4d9f9e6d094be643b402343b3fe5d3a5ad5fe3bb79a23fa2377a1e0ebe62c",
+      "roi_sha256": "ca57e8038f979b709be9ab7095e17d9be8b76b3785f3184ef6ba687660fa2b1d",
+      "phase": "middle",
+      "annotation": {
+        "phase": "middle",
+        "anchor_y": {
+          "title": 484,
+          "search": 569
+        },
+        "content_visible": true,
+        "note": "Both independent text anchors move down31 pixels. Title, search,tools,04-09 rows and05 currently reading remain visible in shifted sheet."
+      },
+      "capture": {
+        "label": "frame-3",
+        "index": 3,
+        "start": "1791028765.204207385",
+        "end": "1791028765.306878885",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 102.6715
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 10.13673720057355,
+      "roi_mean_absolute_rgb_difference_from_last": 66.07094825404857,
+      "scrim_roi_mean_rgb": [
+        169.17551020408163,
+        169.17551020408163,
+        169.17551020408163
+      ],
+      "scrim_roi_luma_proxy": 169.17551020408163,
+      "capture_request_relative_to_click_command_ms": [
+        -19.112417,
+        265.888042
+      ]
+    },
+    {
+      "index": 4,
+      "filename": "frame-4.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "4cc22f80af2cebce564b9a8cb138bccc4f2775b949aedf27fc94c7533cb25c2e",
+      "rgb_sha256": "1cf927bcb51cab671c7c5592e70e1743e52f96114857cc163db3d000e41f603b",
+      "roi_sha256": "5b07dbd4110b8e0749fbac64e527be1b9a35325dc5916f3f48a333d9778740b5",
+      "phase": "middle",
+      "annotation": {
+        "phase": "middle",
+        "anchor_y": {
+          "title": 1104,
+          "search": 1189
+        },
+        "content_visible": true,
+        "note": "Both anchors move down651 pixels. Real title, search and tools remain rendered; lower rows now offscreen."
+      },
+      "capture": {
+        "label": "frame-4",
+        "index": 4,
+        "start": "1791028765.315492135",
+        "end": "1791028765.400277844",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 84.785709
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 60.36688543775304,
+      "roi_mean_absolute_rgb_difference_from_last": 14.035154141363023,
+      "scrim_roi_mean_rgb": [
+        246.17551020408163,
+        246.17551020408163,
+        246.17551020408163
+      ],
+      "scrim_roi_luma_proxy": 246.17551020408163,
+      "capture_request_relative_to_click_command_ms": [
+        92.172333,
+        359.287001
+      ]
+    },
+    {
+      "index": 5,
+      "filename": "frame-5.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "5009e5c3a9ace8f77980143c2d792551dc770b9059f57c874ac75fcd2f707dab",
+      "rgb_sha256": "146d7591ce6cc75dd4ce7a404f28cd41bb855481b10ff70625b61fa2ee6b3324",
+      "roi_sha256": "fdb0c68a8c6561a5140543de0a0423486d0697e61fb0d6bad1cdbde022d94609",
+      "phase": "unreviewed",
+      "annotation": {
+        "phase": "unreviewed",
+        "content_visible": true,
+        "note": "Handle and top fragment of title remain at screen bottom; title top1406, clipped at1416. Search now offscreen, so not used as two-anchor retention proof."
+      },
+      "capture": {
+        "label": "frame-5",
+        "index": 5,
+        "start": "1791028765.408810052",
+        "end": "1791028765.495489927",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 86.679875
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 64.61923656798245,
+      "roi_mean_absolute_rgb_difference_from_last": 2.1712381916329284,
+      "scrim_roi_mean_rgb": [
+        254.1326530612245,
+        254.1326530612245,
+        254.1326530612245
+      ],
+      "scrim_roi_luma_proxy": 254.13265306122446,
+      "capture_request_relative_to_click_command_ms": [
+        185.49025,
+        454.499084
+      ]
+    },
+    {
+      "index": 6,
+      "filename": "frame-6.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "f6a3cfd826033b388c229467543651171c70760d5513ed80dbe71906f691b031",
+      "rgb_sha256": "ce7db5409d8dc8d49ff000bbce0f17e52489e3e8cd0caf5be31c51d1fcc117c6",
+      "roi_sha256": "b6e17351c598d29772069466f74f3410cead1b645bdd44aeeda4a0c8f5cba976",
+      "phase": "closed",
+      "annotation": {
+        "phase": "closed",
+        "note": "Directory gone, reader dock restored; same chapter05 and5/32 position."
+      },
+      "capture": {
+        "label": "frame-6",
+        "index": 6,
+        "start": "1791028765.511607385",
+        "end": "1791028765.599116385",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 87.509
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 65.87569743168017,
+      "roi_mean_absolute_rgb_difference_from_last": 0.0,
+      "scrim_roi_mean_rgb": [
+        254.1326530612245,
+        254.1326530612245,
+        254.1326530612245
+      ],
+      "scrim_roi_luma_proxy": 254.13265306122446,
+      "capture_request_relative_to_click_command_ms": [
+        288.287583,
+        558.125542
+      ]
+    },
+    {
+      "index": 7,
+      "filename": "frame-7.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "f6a3cfd826033b388c229467543651171c70760d5513ed80dbe71906f691b031",
+      "rgb_sha256": "ce7db5409d8dc8d49ff000bbce0f17e52489e3e8cd0caf5be31c51d1fcc117c6",
+      "roi_sha256": "b6e17351c598d29772069466f74f3410cead1b645bdd44aeeda4a0c8f5cba976",
+      "phase": "closed",
+      "annotation": {
+        "phase": "closed",
+        "note": "Decoded pixels exactly match frame6."
+      },
+      "capture": {
+        "label": "frame-7",
+        "index": 7,
+        "start": "1791028765.606524010",
+        "end": "1791028765.703366052",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 96.842042
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 65.87569743168017,
+      "roi_mean_absolute_rgb_difference_from_last": 0.0,
+      "scrim_roi_mean_rgb": [
+        254.1326530612245,
+        254.1326530612245,
+        254.1326530612245
+      ],
+      "scrim_roi_luma_proxy": 254.13265306122446,
+      "capture_request_relative_to_click_command_ms": [
+        383.204208,
+        662.375209
+      ]
+    },
+    {
+      "index": 8,
+      "filename": "frame-8.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "f6a3cfd826033b388c229467543651171c70760d5513ed80dbe71906f691b031",
+      "rgb_sha256": "ce7db5409d8dc8d49ff000bbce0f17e52489e3e8cd0caf5be31c51d1fcc117c6",
+      "roi_sha256": "b6e17351c598d29772069466f74f3410cead1b645bdd44aeeda4a0c8f5cba976",
+      "phase": "closed",
+      "annotation": {
+        "phase": "closed",
+        "note": "Decoded pixels exactly match frame6."
+      },
+      "capture": {
+        "label": "frame-8",
+        "index": 8,
+        "start": "1791028766.572871261",
+        "end": "1791028766.695444511",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 122.57325
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 65.87569743168017,
+      "roi_mean_absolute_rgb_difference_from_last": 0.0,
+      "scrim_roi_mean_rgb": [
+        254.1326530612245,
+        254.1326530612245,
+        254.1326530612245
+      ],
+      "scrim_roi_luma_proxy": 254.13265306122446,
+      "capture_request_relative_to_click_command_ms": [
+        1349.551459,
+        1654.453668
+      ]
+    }
+  ],
+  "transition_existence": "OBSERVED_REAL_MIDDLE_POSITION",
+  "exit_content_retention": "OBSERVED_CONTENT_IN_EXIT_MIDDLE",
+  "timing_window_integrity": "VALID_COMMAND_WINDOWS",
+  "actual_curve_duration_scrim_equivalence": "OPEN",
+  "boundary": "Command wall-clock windows are not exact input/VSync/present timestamps. Native snapshot calls can serialize, reuse a committed buffer and perturb rendering. Pixel differences alone are not semantic motion; original-image inspection and declared anchors are required. No interpolated frames, UI reconstruction, font-paint or curve pass is produced.",
+  "scrim_roi": [
+    140,
+    198,
+    175,
+    212
+  ],
+  "nonendpoint_scrim_luma_candidates": [
+    3,
+    4
+  ],
+  "scrim_proxy_boundary": "Candidates only: verify this is the same static underlying image region, above sheet/shadow and other changing controls. Luma changes cannot alone prove scrim fade or its timing."
+}

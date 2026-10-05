@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "name": "native-sdk",
+  "sourceFileCount": 11,
+  "sourceBytes": 23481344,
+  "inventoryFingerprint": "178a69cfa53e7b53a88fd7b8e3a0d4da7fab9e2bc6374f97cfcfb1219a3ca0ff",
+  "archive": {
+    "path": "native-sdk.tar.gz",
+    "bytes": 9662167,
+    "sha256": "0100e26efb0589baf76ca449bcd5aaeba7000e61e856879a99d3ff4268e3355d"
+  },
+  "files": [
+    {
+      "path": "native-sdk/core-build-identity.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 390,
+      "sha256": "b4d5d81b91bb7efb8e840612bcab4004f81ece34c51b01bc6233d1a08cc8fb89"
+    },
+    {
+      "path": "native-sdk/core-input-snapshot.json",
+      "type": "file",
+      "mode": 420,
+      "bytes": 318333,
+      "sha256": "8b77dfffbab2bdb2942ff085e03877d5079e3bc6c771afb5ac92e61a9889556a"
+    },
+    {
+      "path": "native-sdk/harmony-napi-build-evidence.txt",
+      "type": "file",
+      "mode": 420,
+      "bytes": 2083,
+      "sha256": "51cc90066f7ecfaca36cd0695c2ca3c83b9f538e88c32f6d837095e656ce9bbf"
+    },
+    {
+      "path": "native-sdk/harmony-package-manifest.sha256",
+      "type": "file",
+      "mode": 420,
+      "bytes": 629,
+      "sha256": "470619694beb2127f3259e618aa8801c02db9794e757906068f90e51305f24c9"
+    },
+    {
+      "path": "native-sdk/package/Index.ts",
+      "type": "file",
+      "mode": 420,
+      "bytes": 4281,
+      "sha256": "2406a6f175f27615fba71938a6c8a7b6f320d4c19b4144c286d251dd059a61ac"
+    },
+    {
+      "path": "native-sdk/package/README.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 379,
+      "sha256": "bc38d17933de7f590a505b927643e0845ccc0832fcb9f85d42431149059034cf"
+    },
+    {
+      "path": "native-sdk/package/STATUS.md",
+      "type": "file",
+      "mode": 420,
+      "bytes": 450,
+      "sha256": "da6e38be7e15c23a1e30da1a10150dafb7db9d0c8370b2bc3c8391592b78536c"
+    },
+    {
+      "path": "native-sdk/package/libs/arm64-v8a/libreader_core_napi.so",
+      "type": "file",
+      "mode": 493,
+      "bytes": 23109344,
+      "sha256": "1fabbfa63b996e39da9a3ec01f6b396cf841f0d0b4016303daac56a974c17996"
+    },
+    {
+      "path": "native-sdk/package/oh-package.json5",
+      "type": "file",
+      "mode": 420,
+      "bytes": 202,
+      "sha256": "2e889f9c2867397bbb4cfbfd734fb86ec191b948353a306dcdaea5c592c7be68"
+    },
+    {
+      "path": "native-sdk/package/sdk/reader_core.ts",
+      "type": "file",
+      "mode": 420,
+      "bytes": 38818,
+      "sha256": "09e894fbddd163f5016137961ffb796984850e7890b88c0f5abbc76e2787c273"
+    },
+    {
+      "path": "native-sdk/package/sdk/smoke_report.ts",
+      "type": "file",
+      "mode": 420,
+      "bytes": 6435,
+      "sha256": "a4988e8a5f15f5a7b82cdd9f6888f11c4cbfdf7404b22f9cedad3726943da957"
+    }
+  ],
+  "verification": {
+    "fullArchiveRead": true,
+    "everyFileSha256": true,
+    "everyFileMode": true,
+    "exactMemberSet": true,
+    "sourceUnchangedDuringArchive": true,
+    "files": 11,
+    "bytes": 23481344
+  }
+}

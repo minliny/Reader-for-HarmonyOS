@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03T15:46:01.114024+00:00",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 823,
+      "mode": 420,
+      "sha256": "63054c62e2cb2c17cd5236bbac5f0e904a4efa925f9e2f9b0fdd5cb07c72e46c"
+    },
+    {
+      "path": "REVIEW.md",
+      "bytes": 3267,
+      "mode": 420,
+      "sha256": "70521ea5de5c3bfbef0c57c5db47de01ef029ec4e66d0d446176a4090e0ad378"
+    },
+    {
+      "path": "bind_canonical.py",
+      "bytes": 11148,
+      "mode": 420,
+      "sha256": "6596980cca76fc228baab4c7d19ba5e7e09a4a0cb8cc95108aad890fea933975"
+    },
+    {
+      "path": "binding-result.json",
+      "bytes": 887,
+      "mode": 420,
+      "sha256": "85364ecfae63e2cf0dbbe3a21b555df7aed5277eeb2fb79c6aba47f9ecabb858"
+    },
+    {
+      "path": "binding.json",
+      "bytes": 22641,
+      "mode": 420,
+      "sha256": "9d69a00704c98c6a520e2e4a8791ad850786a3d61948d9bd53e7eca687038311"
+    },
+    {
+      "path": "controller-snapshot.json",
+      "bytes": 128696,
+      "mode": 420,
+      "sha256": "6c381335694e48eef7ddbe5bd5ea062299609bbc5ab07de52652d3e1dde32a80"
+    },
+    {
+      "path": "iteration-entry-default-signed-provenance.json",
+      "bytes": 22007,
+      "mode": 420,
+      "sha256": "848b1a9440df7bf04eafc7b892356690e596dc079e50877a36bcb267072aca0f"
+    },
+    {
+      "path": "iteration-entry-default-unsigned-provenance.json",
+      "bytes": 22013,
+      "mode": 420,
+      "sha256": "69b33cd77c58b3c9a583d7025334c725c30f06c606d0771dad30301f13eca8c6"
+    },
+    {
+      "path": "published-manifest.json",
+      "bytes": 15164,
+      "mode": 420,
+      "sha256": "d1d85d95beeb104d57aef5d7b4799cc5559697703a916e33273027b5113ad6f2"
+    },
+    {
+      "path": "source-snapshot.json",
+      "bytes": 485626,
+      "mode": 420,
+      "sha256": "e6265beebb654be899e41712428dd8da6bdcc94a7881fe274de7f3e9315017d0"
+    },
+    {
+      "path": "verify_binding.py",
+      "bytes": 6165,
+      "mode": 420,
+      "sha256": "315b7f8ac4fb628e5bcb41b3a420c62e6fdb06193fbc1ceecab3cdc5b588ea21"
+    },
+    {
+      "path": "workspace-contract-snapshot.json",
+      "bytes": 4677,
+      "mode": 420,
+      "sha256": "a4f1591a3b0f9549d510ff12f91c06e4062ab743c2f8eb7a42fb122f1946e24f"
+    }
+  ],
+  "scope": "Canonical binding files before this self-excluding inventory",
+  "evidenceHistoryLimitationDisclosed": true
+}

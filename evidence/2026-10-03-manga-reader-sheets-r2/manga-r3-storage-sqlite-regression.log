@@ -1,0 +1,55 @@
+warning: function `migrate_retention_to_head` is never used
+   --> crates/reader-storage/src/sqlite_backend/manga_retention.rs:230:15
+    |
+230 | pub(super) fn migrate_retention_to_head(
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `reader-storage` (lib) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.28s
+     Running tests/manga_store.rs (target/debug/deps/manga_store-cb76a929a3f2258c)
+
+running 33 tests
+test manga_epoch_child_process ... ok
+test legacy_snapshot_migration_does_not_reinterpret_text_data ... ok
+test manga_eviction_rules_in_memory ... ok
+test manga_retention_lifecycle_in_memory ... ok
+test manga_eviction_rules_sqlite ... ok
+test manga_shelf_progress_in_memory_preserves_failed_cas_and_snapshot_time ... ok
+test manga_retention_lifecycle_sqlite ... ok
+test manga_and_novel_with_identical_names_keep_distinct_shelf_identity ... ok
+test manga_shelf_progress_uses_seconds_and_later_novel_read_wins ... ok
+test manga_retention_survives_snapshot_but_runtime_facts_do_not ... ok
+test manga_resource_bindings_are_atomic_restartable_and_not_restored_credentials ... ok
+test manga_admission_consumes_intent_without_manufacturing_progress_or_offline_completion ... ok
+test manga_refresh_cold_entry_maps_global_ordinal_without_mutating_progress_and_survives_restore ... ok
+test memory_manga_transactions_and_restore_fence ... ok
+test manga_shelf_progress_reopens_existing_schema34_without_metadata_rewrite ... ok
+test manga_shelf_progress_without_shelf_entry_never_adds_one ... ok
+test manga_source_delete_revokes_requests_but_reads_and_reimport_preserve_facts ... ok
+test manga_offline_failed_lease_settles_after_source_and_head_change ... ok
+test manga_directory_groups_are_not_new_targets_but_saved_group_resume_is_preserved ... ok
+test narrow_entry_does_not_invent_reading_position_from_partial_cache_coverage ... ok
+test manga_switch_is_atomic_consent_bound_and_revokes_old_progress ... ok
+test narrow_entry_resolves_page_id_when_saved_fallback_ordinal_is_stale ... ok
+test narrow_entry_rejects_duplicate_catalog_urls_for_default_and_explicit_chapters ... ok
+test manga_shelf_progress_sqlite_updates_clock_only_for_committed_facts ... ok
+
+running 1 test
+test sqlite_v33_ddl_failure_keeps_v32_and_rolls_back_all_new_indexes ... ok
+test manga_epoch_child_process ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 32 filtered out; finished in 0.01s
+
+test sqlite_manga_cold_process_and_live_connection_share_restore_fence ... ok
+test sqlite_manga_transactions_snapshot_parity_and_reopen ... ok
+test narrow_entry_restart_restore_rebuild_and_source_change_strip_requests ... ok
+test sqlite_v28_upgrade_preserves_existing_rows ... ok
+test sqlite_v34_upgrade_adds_retention_schema_and_preserves_rows ... ok
+test manga_admission_rejects_stale_or_invalid_receipts_atomically ... ok
+test sqlite_v32_upgrade_keeps_mixed_facts_and_verified_backup_restores_them ... ok
+test narrow_entry_reads_three_of_ten_thousand_pages_and_fences_head ... ok
+
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.93s
+

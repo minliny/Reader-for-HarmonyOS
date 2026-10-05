@@ -1,0 +1,270 @@
+{
+  "status": "WORKSPACE_MISMATCH",
+  "recordedUtc": "2026-10-04T00:11:57.006787+00:00",
+  "scope": "Read-only check of both effective source workspaces; no source mutation or build/test",
+  "checkedSourceRecords": 7118,
+  "deltaAllowedPaths": [
+    "Reader-for-HarmonyOS/entry/src/main/ets/entryability/EntryAbility.ets",
+    "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaImageOriginGeometry.ts",
+    "Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+    "Reader-for-HarmonyOS/tools/lib/manga-surface-sdk-probe.mjs",
+    "Reader-for-HarmonyOS/tools/test-manga-native-image-geometry-sdk.mjs",
+    "Reader-for-HarmonyOS/tools/test-reader-optional-entry-memory-launch.mjs"
+  ],
+  "mismatches": [
+    {
+      "workspace": "persistent",
+      "path": "Reader-Core-Native/crates/reader-contract/src/lib.rs",
+      "expected": {
+        "path": "Reader-Core-Native/crates/reader-contract/src/lib.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 191442,
+        "sha256": "bb411a01388141f9bc816f078bdd41af8740a1f80d29c5e4452ddbe2da5f0c7c"
+      },
+      "observed": {
+        "path": "Reader-Core-Native/crates/reader-contract/src/lib.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 193495,
+        "sha256": "b30c0a3cc23166edd70083a64f809b696d6541e7456f3f6b5f1fe4866653bf89"
+      }
+    },
+    {
+      "workspace": "persistent",
+      "path": "Reader-Core-Native/crates/reader-contract/src/remote.rs",
+      "expected": {
+        "path": "Reader-Core-Native/crates/reader-contract/src/remote.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 380743,
+        "sha256": "6ca4b92a5db3bd3c834fcb20c17d85b4b5dcdc7f035544c6abbeae81f27ac2ea"
+      },
+      "observed": {
+        "path": "Reader-Core-Native/crates/reader-contract/src/remote.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 386361,
+        "sha256": "9e379852f701252ace9c0601ff0d0fc200d1bb16e9226260e8af36084611cb14"
+      }
+    },
+    {
+      "workspace": "persistent",
+      "path": "Reader-Core-Native/crates/reader-runtime/src/remote.rs",
+      "expected": {
+        "path": "Reader-Core-Native/crates/reader-runtime/src/remote.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 897058,
+        "sha256": "f2ed480b0ecc5ded1d6875ab717ee49250175d671e8911fb58f48bc8f1c270ab"
+      },
+      "observed": {
+        "path": "Reader-Core-Native/crates/reader-runtime/src/remote.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 901570,
+        "sha256": "84d92d1ec565b65c0c49997a833b28b118777eb9c4a5a88fc4e94b9331f83f70"
+      }
+    },
+    {
+      "workspace": "persistent",
+      "path": "Reader-Core-Native/crates/reader-runtime/src/remote/manga.rs",
+      "expected": {
+        "path": "Reader-Core-Native/crates/reader-runtime/src/remote/manga.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 17300,
+        "sha256": "010f43635c28705faf192f865bfb57f7c413cfbf416d86efe1140f520b9b1ae7"
+      },
+      "observed": {
+        "path": "Reader-Core-Native/crates/reader-runtime/src/remote/manga.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 22276,
+        "sha256": "e0428215fb2db3cc5a1c0d1b9b8b78ce041962262b8d6c6e8a773732ce4c5348"
+      }
+    },
+    {
+      "workspace": "persistent",
+      "path": "Reader-Core-Native/crates/reader-runtime/tests/runtime_integration.rs",
+      "expected": {
+        "path": "Reader-Core-Native/crates/reader-runtime/tests/runtime_integration.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 2809,
+        "sha256": "17b93242320034b015116d0c15a96cd196d19387dd9b0fda4d496dfedd9aeb2e"
+      },
+      "observed": {
+        "path": "Reader-Core-Native/crates/reader-runtime/tests/runtime_integration.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 2874,
+        "sha256": "e68916a6cc758f4a38e7f73a9ec56b0ec32b5d62eeb627d453989f23bd10acf8"
+      }
+    },
+    {
+      "workspace": "persistent",
+      "path": "Reader-Core-Native/crates/reader-storage/src/lib.rs",
+      "expected": {
+        "path": "Reader-Core-Native/crates/reader-storage/src/lib.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 537620,
+        "sha256": "d4cdc3f3b06585e030418707c8f937788b2d7502a1d47eddf7db535d75185ca4"
+      },
+      "observed": {
+        "path": "Reader-Core-Native/crates/reader-storage/src/lib.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 544064,
+        "sha256": "0562b0c443eb1ee2dafc9e2b2c7524bd710e7ead3f0ceaca83b0df38791e7db5"
+      }
+    },
+    {
+      "workspace": "persistent",
+      "path": "Reader-Core-Native/crates/reader-storage/src/manga.rs",
+      "expected": {
+        "path": "Reader-Core-Native/crates/reader-storage/src/manga.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 10896,
+        "sha256": "907c9ef1af4d654c755ce0a29adbaa49f33eec04dc9a34dd4c5e449e2cd60308"
+      },
+      "observed": {
+        "path": "Reader-Core-Native/crates/reader-storage/src/manga.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 21630,
+        "sha256": "66f4771ca852219a006fbe7d311cd2584165cdcfa21cb612ab783464f8564eab"
+      }
+    },
+    {
+      "workspace": "persistent",
+      "path": "Reader-Core-Native/crates/reader-storage/src/sqlite_backend.rs",
+      "expected": {
+        "path": "Reader-Core-Native/crates/reader-storage/src/sqlite_backend.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 377250,
+        "sha256": "b19d426470b89c11ccf24ddd798bf945dc8717d8ff967874c46ea703f7fd0814"
+      },
+      "observed": {
+        "path": "Reader-Core-Native/crates/reader-storage/src/sqlite_backend.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 378858,
+        "sha256": "ac5cee98724822e36b9776f29de1225ff73c177fb22c6815edbef4e8add92d42"
+      }
+    },
+    {
+      "workspace": "persistent",
+      "path": "Reader-Core-Native/crates/reader-storage/src/sqlite_backend/manga.rs",
+      "expected": {
+        "path": "Reader-Core-Native/crates/reader-storage/src/sqlite_backend/manga.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 24683,
+        "sha256": "0e152ed7a219781ce477c5e98b0a6c472c992465bfd2b5197a2ea1a9ede2d72a"
+      },
+      "observed": {
+        "path": "Reader-Core-Native/crates/reader-storage/src/sqlite_backend/manga.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 26933,
+        "sha256": "4d9eedcd02ae4854e06d403cbfc0866ad8de22ce2e396a9abd46ca3e602a841a"
+      }
+    },
+    {
+      "workspace": "persistent",
+      "path": "Reader-Core-Native/crates/reader-storage/tests/cache_maintenance.rs",
+      "expected": {
+        "path": "Reader-Core-Native/crates/reader-storage/tests/cache_maintenance.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 23795,
+        "sha256": "a6b3e73e7bdd4bac7dfa4daa2af0d4e852b5d3d2accc7117d5d9c6c49b77b044"
+      },
+      "observed": {
+        "path": "Reader-Core-Native/crates/reader-storage/tests/cache_maintenance.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 26327,
+        "sha256": "80251407d7faa14750f30acf272cdd835fcf3374237aa89249582bfe3972ce2e"
+      }
+    },
+    {
+      "workspace": "persistent",
+      "path": "Reader-Core-Native/crates/reader-storage/tests/manga_store.rs",
+      "expected": {
+        "path": "Reader-Core-Native/crates/reader-storage/tests/manga_store.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 57104,
+        "sha256": "dd7b3eb2a36d76d854c7c671eeaa843f94793a54bd160be2252f81eaeff87afd"
+      },
+      "observed": {
+        "path": "Reader-Core-Native/crates/reader-storage/tests/manga_store.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 67863,
+        "sha256": "57cd8318452c1da24852acb82ed45446dbbc209d2277c75814bb2a9b1176b62f"
+      }
+    },
+    {
+      "workspace": "persistent",
+      "path": "Reader-Core-Native/protocol/reader-command.schema.json",
+      "expected": {
+        "path": "Reader-Core-Native/protocol/reader-command.schema.json",
+        "type": "file",
+        "mode": 420,
+        "bytes": 276645,
+        "sha256": "ec601388607a223d931beb86fffe9daf26fd343d492c1766ea6355c2daf8ec63"
+      },
+      "observed": {
+        "path": "Reader-Core-Native/protocol/reader-command.schema.json",
+        "type": "file",
+        "mode": 420,
+        "bytes": 276966,
+        "sha256": "83c7002921be6d77d231f5cbcc83b3c7b147411d8d6e8627a4e41af1f14ecf4d"
+      }
+    },
+    {
+      "workspace": "persistent",
+      "path": "Reader-for-HarmonyOS/entry/libs/arm64-v8a/libreader_core_napi.so",
+      "expected": {
+        "path": "Reader-for-HarmonyOS/entry/libs/arm64-v8a/libreader_core_napi.so",
+        "type": "file",
+        "mode": 420,
+        "bytes": 23109344,
+        "sha256": "1fabbfa63b996e39da9a3ec01f6b396cf841f0d0b4016303daac56a974c17996"
+      },
+      "observed": {
+        "path": "Reader-for-HarmonyOS/entry/libs/arm64-v8a/libreader_core_napi.so",
+        "type": "file",
+        "mode": 420,
+        "bytes": 23109480,
+        "sha256": "70a312763d3e4c6b2d0602a287094c9ca256b55e0f2012e7ed6835742127d0b4"
+      }
+    },
+    {
+      "workspace": "persistent",
+      "path": "Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r2/REVIEW.md",
+      "expected": {
+        "path": "Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r2/REVIEW.md",
+        "type": "file",
+        "mode": 420,
+        "bytes": 16796,
+        "sha256": "48efc3b82feda74bb283adb7690f444c59b4f68f9c4983b9145d24c7bf0cad60"
+      },
+      "observed": {
+        "path": "Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r2/REVIEW.md",
+        "type": "file",
+        "mode": 420,
+        "bytes": 12155,
+        "sha256": "b916fd47b26cb66a84d1cae3ff2af6fa00db882f6668cf1c07f0f67bebc907c0"
+      }
+    }
+  ],
+  "tempMismatchCount": 0,
+  "persistentMismatchCount": 14
+}

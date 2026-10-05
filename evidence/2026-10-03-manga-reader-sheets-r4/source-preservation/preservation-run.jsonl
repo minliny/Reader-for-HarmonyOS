@@ -1,0 +1,5 @@
+{"preflight": "PASS", "sourceFiles": 7111, "designFiles": 70, "nativeFiles": 11, "excludedFiles": 10186, "coreFingerprint": "9e97919470b42d81d87082c2c257984778da5e5e5e55798273b3242c99608c4b"}
+{"name": "reader-source", "sourceFileCount": 7111, "sourceBytes": 442945264, "archive": {"path": "reader-source.tar.gz", "bytes": 209937914, "sha256": "765627819aa7433c1fa9c575240bee471ea7a3174217af8272e338fdad275132"}}
+{"name": "approved-design-source", "sourceFileCount": 70, "sourceBytes": 47063306, "archive": {"path": "approved-design-source.tar.gz", "bytes": 29272946, "sha256": "1415dbf6f7c334fbf967c8e7e1a6b229a5f8be76737e83ff74f72a6079539dd0"}}
+{"name": "native-sdk", "sourceFileCount": 11, "sourceBytes": 23481344, "archive": {"path": "native-sdk.tar.gz", "bytes": 9662167, "sha256": "0100e26efb0589baf76ca449bcd5aaeba7000e61e856879a99d3ff4268e3355d"}}
+{"result": "PASS", "archiveCount": 3, "files": 7192, "sourceBytes": 513489914}

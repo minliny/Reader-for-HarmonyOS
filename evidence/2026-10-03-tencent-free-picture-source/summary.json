@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-03T06:23:20Z",
+  "scope": "Two exact controlled Tencent source variants; no Core engine or paid-content change.",
+  "source": {
+    "sourceId": "https://ac.qq.com",
+    "revisions": [
+      {
+        "builtinId": "reader-builtin-corpus-f359be41c7fe",
+        "name": "腾讯漫画",
+        "previousVersion": 6,
+        "builtinVersion": 7,
+        "previousRuleFingerprint": "8c685367a76da5bfe71d9d2a942f3b321d9435e6dbd4f2624e7d8feb952a597e",
+        "ruleFingerprint": "794cfde2ccabd0a1a1f77cf0915aaca592ebd20f87570b8c993e8d575cf7b2c4",
+        "historicalVerifiedAtRetained": "2026-07-09T09:37:16Z",
+        "contentAliases": [
+          "ruleContent",
+          "contentRule"
+        ]
+      },
+      {
+        "builtinId": "reader-builtin-corpus-6781cc801619",
+        "name": "🔖腾讯漫画",
+        "previousVersion": 6,
+        "builtinVersion": 7,
+        "previousRuleFingerprint": "8b1a75305044cee376a89e200193cda668e6d292b54564b777982595e7c681c9",
+        "ruleFingerprint": "55fc0bed121c1e3e38a9f7b33e0d9fdb89293a611837b20384cc25bc83b76ac1",
+        "historicalVerifiedAtRetained": "2026-07-09T09:37:16Z",
+        "contentAliases": [
+          "ruleContent"
+        ]
+      }
+    ],
+    "preferredBuiltinId": "reader-builtin-corpus-6781cc801619",
+    "coreCurrentCorpus": "tests/fixtures/corpus/sources/src-2196-6781cc801619.json",
+    "coreArchivedCorpus": "src-1930-f359be41c7fe.json is absent in current Core, retained through reviewed historical regeneration plus targeted correction; not recreated."
+  },
+  "publicSample": {
+    "title": "斗破苍穹",
+    "bookUrl": "https://ac.qq.com/Comic/comicInfo/id/531040",
+    "officialMobileDetail": "https://m.ac.qq.com/comic/index/id/531040",
+    "chapterTitle": "01",
+    "chapterUrl": "https://ac.qq.com/ComicView/index/id/531040/cid/1",
+    "authentication": "none",
+    "access": "Official free first chapter; decoded chapter.canRead true, is_app_chapter 0.",
+    "officialTrialNotice": "可试读至160话",
+    "officialTrialNoticeSource": "Official mobile detail retrieved using web open; directory line 34 and 101. It is a catalog position, not a cid upper bound.",
+    "currentDesktopBoundary": [
+      {
+        "catalogPosition": 1,
+        "chapterUrl": "https://ac.qq.com/ComicView/index/id/531040/cid/1",
+        "icon": "ui-icon-free"
+      },
+      {
+        "catalogPosition": 160,
+        "chapterUrl": "https://ac.qq.com/ComicView/index/id/531040/cid/162",
+        "icon": "ui-icon-free"
+      },
+      {
+        "catalogPosition": 161,
+        "chapterUrl": "https://ac.qq.com/ComicView/index/id/531040/cid/163",
+        "icon": "ui-icon-pay"
+      }
+    ],
+    "testedChapterScope": "Only first free chapter tested; no verification claim for all 160 trial chapters or paid chapters."
+  },
+  "rootCause": {
+    "greedyPictureRegex": "Old picture array regex includes the following ads object, producing invalid JS and Syntax: expecting semicolon.",
+    "nonceRule": "Use official all-token digit + ASCII-letter boundary /\\d+[a-zA-Z]+/g, rather than non-global /\\d+\\w+/.",
+    "pictureDecode": "JSON.parse(java.base64Decode(data)).picture; ads are parsed as another field and never emitted as pages.",
+    "aliases": "Synchronize present ruleContent.content and contentRule.content; Core selects the legacy alias when both exist.",
+    "misleadingFailureStage": "The normal manga.pages.extract path shared an error mapper with text chapter.content. The parser failure is a bad controlled source rule, not accidental text routing.",
+    "officialScriptUrl": "https://gtimgcdn.ac.qq.com/media/js/ac.page.chapter.view_v2.7.0.js?v=202608131026",
+    "officialScriptSha256": "acb216cd31d5e1b12481a873fda883d00b447110ab40b1f1fb65aa9c456b0eea"
+  },
+  "replay": {
+    "method": "manga.pages.extract",
+    "pageCount": 36,
+    "before": "error: JS Syntax expecting semicolon",
+    "after": "36 exact ordered official picture URLs, no ads URLs",
+    "fixture": "Reader-Core-Native/tests/fixtures/manga/tencent-free-chapter-531040-1.html",
+    "fixtureSha256": "9bee9e417661141043607f82b7bb5378b5ea957390123452051a128d958b744e",
+    "fixtureBytes": 8989,
+    "fixtureCapture": "Exact DATA value and window nonce script bytes from the public response; surrounding unrelated page HTML omitted.",
+    "fullResponseSha256": "2f6bea0302004f509e863a56582cbf1ffaa39bd6d1e653e20495b8b036465107",
+    "fullResponseBytes": 515071,
+    "expectedPages": "Reader-Core-Native/tests/fixtures/manga/tencent-free-chapter-531040-1-pages.json",
+    "expectedPagesSha256": "3f13b5094be41f6b3a7fddefacf8787efcc4d424c123828e8188c1e019c8d140"
+  },
+  "imageChecks": [
+    {
+      "page": 1,
+      "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_50_5fc8559355b7024515c70f0f586d7f8b_1733478617057.jpg/0",
+      "status": 200,
+      "contentType": "image/jpeg",
+      "bytes": 547167,
+      "size": "1600x2666",
+      "sha256": "fff2c193f20d7b88b860d84c00d4ee7d1fcfe7cb64f65360c22d2f21075a5c03",
+      "visual": "Official illustrated chapter frontmatter, not app-promotion image; inspected locally."
+    },
+    {
+      "page": 2,
+      "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_48_520e4ee037c280bc8ac19bc77e0f3056_1733478531499.jpg/0",
+      "status": 200,
+      "contentType": "image/jpeg",
+      "bytes": 551968,
+      "size": "1600x2666",
+      "sha256": "4eb2768de9a7329f9e4b9efaf51482d5ade780c144a27a053f9eac9a4ba9fe80",
+      "visual": "Official illustrated chapter frontmatter, not app-promotion image; inspected locally."
+    }
+  ],
+  "localTests": {
+    "coreProductionParser": "cargo test -p reader-content --test tencent_source_rule: 2 passed",
+    "harmonyCorrectionAndOwner": "node tools/test-tencent-picture-source-correction.mjs: PASS; both variants replay all 36 pages; actual RuntimeOwner clean upgrade, edited rules, user copies, aliases edited/deleted/previously absent, enabled state and discovery edits protected.",
+    "baoziRegression": "node tools/test-baozi-image-source-correction.mjs: PASS",
+    "generatedIndex": "node tools/generate-bundled-source-index.mjs --check: PASS, 919 preferred identities"
+  },
+  "liveSimpleSource": {
+    "report": "live-simple-source.json",
+    "L1toL5": "all pass",
+    "durationMs": 6098,
+    "searchResults": 27,
+    "tocChapters": 681,
+    "selectedFirstChapter": "01",
+    "limit": "CLI HTTP Host; not application/device proof."
+  },
+  "provenance": {
+    "coreHEAD": "dfd729cffd79ed11da6d44be9e1ba10c4223247f",
+    "harmonyHEAD": "568ec4e32a2bdce01f62724cfb04a3f6b5a63a60",
+    "cliSha256": "11fdd028abfa3ea752f4378c9d55be0f14c5e965d239ec49905cb156779eeb04",
+    "sourceCollectionSha256": "865c2db9e615dda17f7da20f123ab033fc241c0a73cc06be3ee6ebb79c0a0523",
+    "candidate": "Dirty isolated manga-ui worktree; HEAD alone does not identify source edits."
+  },
+  "acceptanceBoundary": {
+    "localParser": "PASS",
+    "liveRepresentativeFreeChain": "PASS for both exact controlled variants; each selected only official free chapter 01",
+    "device": "Not performed by this task",
+    "userVisual": "Not claimed"
+  },
+  "applicationOpen": "After v7 managed source upgrade, search 斗破苍穹 using 🔖腾讯漫画 (https://ac.qq.com), choose official id/531040, open chapter 01. A user-customized same-domain source stays untouched.",
+  "livePreferredSource": {
+    "report": "live-preferred-source.json",
+    "L1toL5": "all pass",
+    "durationMs": 26117,
+    "searchResults": 27,
+    "tocChapters": 681,
+    "selectedFirstChapter": "01",
+    "author": "知音漫客 x 任翔",
+    "limit": "CLI HTTP Host; not application/device proof."
+  }
+}

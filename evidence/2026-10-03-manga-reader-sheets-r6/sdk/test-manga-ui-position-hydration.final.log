@@ -1,0 +1,3 @@
+PASS actual Index manga position projection: bounded queue, route/source/owner fencing, ordinary/Info return, unchanged revision detail refresh, clearing, concurrent metadata/hydration, filtered/paged global card retention; real SDK retained detail/catalog props and reading facts/highlight
+(node:24159) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

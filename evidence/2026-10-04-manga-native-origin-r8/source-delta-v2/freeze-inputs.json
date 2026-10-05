@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "inputsFrozen": true,
+  "recordedAt": "2026-10-03T16:38:23.374598+00:00",
+  "authorization": "Parent explicitly frozen sixth existing test; preserve first five v1 source/probe inputs",
+  "tools": [
+    {
+      "path": "tools/lib/manga-surface-sdk-probe.mjs",
+      "sha256": "670446eee86859281b45c4693abde30b1ac2382dfd7af64399eb58741cfb2332"
+    },
+    {
+      "path": "tools/test-manga-native-image-geometry-sdk.mjs",
+      "sha256": "36522f7a479f3b18a1b0165aea2a92d12f53962d50f89e5928d2fe7c328c4994"
+    },
+    {
+      "path": "tools/test-reader-optional-entry-memory-launch.mjs",
+      "sha256": "10dc8be4fcaf398a4736a574623dd65a883e57abd946d07ffcf849886a27b4f6"
+    }
+  ],
+  "productInputs": [
+    {
+      "path": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "sha256": "b16c0207277a58ab13d00c076085371b24adf20d11fcce2a6e8f373b61694fe3"
+    },
+    {
+      "path": "entry/src/main/ets/entryability/EntryAbility.ets",
+      "sha256": "f21073d3703a24ae8f01a85dc2bb15f1b3ef517c6de59772b47352b73acac533"
+    },
+    {
+      "path": "entry/src/main/ets/features/manga/MangaImageOriginGeometry.ts",
+      "sha256": "bf19329bb7371939324b50fdd3d081882b2fb851a853ce1528bb79c002453a0b"
+    }
+  ],
+  "sourceWorkspace": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS",
+  "sourceParent": "R7 final version 2 effective inventory",
+  "scope": "Numeric native image-origin metadata probes and actual SDK regression, no layout/settings/source/cache changes authorized",
+  "version": 2,
+  "previousVersion": {
+    "path": "source-delta-v1/freeze-inputs.json",
+    "sha256": "5ef244921c2aa0c20be627aed129a04213f2826daa578aa210b94be4f31bf505",
+    "archiveSha256": "39ec951c9dcd12072a304f0a681db93e728ee3aa9cdfd9baaf6a87c3085afb91"
+  }
+}

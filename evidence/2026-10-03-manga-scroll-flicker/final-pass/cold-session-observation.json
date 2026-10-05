@@ -1,0 +1,27 @@
+{
+  "recordedAt": "2026-10-03T09:40:00Z",
+  "recordType": "operator-observed tool output summary; not raw automatic transcript",
+  "helper": "/private/tmp/reader-manga-vm-session.mjs",
+  "target": "127.0.0.1:5555",
+  "commands": [
+    {
+      "operation": "aa force-stop io.reader.minliny",
+      "result": "force stop process successfully; exit0"
+    },
+    {
+      "operation": "aa start -a EntryAbility -b io.reader.minliny -m entry",
+      "result": "start ability successfully; exit0"
+    },
+    {
+      "operation": "bm dump -n io.reader.minliny",
+      "result": {
+        "bundleName": "io.reader.minliny",
+        "updateTime": 1791019725987,
+        "fingerprint": "3A563778E5BF17CD3EAD0218E13B4A5030DE3F5D7D4E21E0336D8EB37B676DC4"
+      }
+    }
+  ],
+  "readinessNote": "First immediate cold-home dump captured launcher; later cold-home-ready captured the running app. Empty redirected bundle output was not used as evidence; direct bm dump verified identity.",
+  "lease": "released; architecture task notified",
+  "coldReader": "05 page4/32 and same visible comic panels/page-internal offset after image tiles loaded"
+}

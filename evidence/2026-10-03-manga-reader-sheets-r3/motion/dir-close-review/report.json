@@ -1,0 +1,230 @@
+{
+  "scene": "dir-close",
+  "source_directory": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r3/motion/dir-close",
+  "original_dimensions": [
+    640,
+    1416
+  ],
+  "roi": [
+    0,
+    0,
+    640,
+    1416
+  ],
+  "frame_count": 5,
+  "click": {
+    "label": "click",
+    "index": null,
+    "start": "1791027761.816022657",
+    "end": "1791027762.038242323",
+    "exit_code": 0,
+    "valid_clock_window": true,
+    "command_duration_ms": 222.219666
+  },
+  "command_window_problems": [],
+  "invalid_lines": [],
+  "duplicate_indices": [],
+  "capture_command_duration_ms": {
+    "min": 124.504792,
+    "median": 170.092792,
+    "max": 257.876958
+  },
+  "file_ordinal_pixel_groups": [
+    {
+      "roi_sha256": "ae162c7ab6e1ddac649705f3c20782f069e9d7fc51b4e69a37c24777c6b16165",
+      "indices": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "roi_sha256": "fa5d6400b563f981e2fe7d3bb2f96017992ddb37fc1d6657a78e811f2972f16c",
+      "indices": [
+        4
+      ]
+    }
+  ],
+  "request_start_order_differs_from_file_ordinal": false,
+  "capture_request_start_order": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "overlap_groups": [
+    {
+      "indices": [
+        0
+      ],
+      "start": "1791027761.613705032",
+      "end": "1791027761.807023657"
+    },
+    {
+      "indices": [
+        1,
+        2,
+        3
+      ],
+      "start": "1791027761.881093865",
+      "end": "1791027762.138970823"
+    },
+    {
+      "indices": [
+        4
+      ],
+      "start": "1791027762.161218490",
+      "end": "1791027762.288791365"
+    }
+  ],
+  "manual_anchor_movement": [],
+  "frames": [
+    {
+      "index": 0,
+      "filename": "frame-0.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "aaefbd343d36999bd20bf844cdff2d4e08ca3c92dd9ec78c80ef42ca36e6da61",
+      "rgb_sha256": "ae162c7ab6e1ddac649705f3c20782f069e9d7fc51b4e69a37c24777c6b16165",
+      "roi_sha256": "ae162c7ab6e1ddac649705f3c20782f069e9d7fc51b4e69a37c24777c6b16165",
+      "phase": "unreviewed",
+      "annotation": {},
+      "capture": {
+        "label": "frame-0",
+        "index": 0,
+        "start": "1791027761.613705032",
+        "end": "1791027761.807023657",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 193.318625
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 0.0,
+      "roi_mean_absolute_rgb_difference_from_last": 60.94432453507533,
+      "capture_request_relative_to_click_command_ms": [
+        -424.537291,
+        -8.999
+      ]
+    },
+    {
+      "index": 1,
+      "filename": "frame-1.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "aaefbd343d36999bd20bf844cdff2d4e08ca3c92dd9ec78c80ef42ca36e6da61",
+      "rgb_sha256": "ae162c7ab6e1ddac649705f3c20782f069e9d7fc51b4e69a37c24777c6b16165",
+      "roi_sha256": "ae162c7ab6e1ddac649705f3c20782f069e9d7fc51b4e69a37c24777c6b16165",
+      "phase": "unreviewed",
+      "annotation": {},
+      "capture": {
+        "label": "frame-1",
+        "index": 1,
+        "start": "1791027761.881093865",
+        "end": "1791027762.138970823",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 257.876958
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 0.0,
+      "roi_mean_absolute_rgb_difference_from_last": 60.94432453507533,
+      "capture_request_relative_to_click_command_ms": [
+        -157.148458,
+        322.948166
+      ]
+    },
+    {
+      "index": 2,
+      "filename": "frame-2.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "aaefbd343d36999bd20bf844cdff2d4e08ca3c92dd9ec78c80ef42ca36e6da61",
+      "rgb_sha256": "ae162c7ab6e1ddac649705f3c20782f069e9d7fc51b4e69a37c24777c6b16165",
+      "roi_sha256": "ae162c7ab6e1ddac649705f3c20782f069e9d7fc51b4e69a37c24777c6b16165",
+      "phase": "unreviewed",
+      "annotation": {},
+      "capture": {
+        "label": "frame-2",
+        "index": 2,
+        "start": "1791027761.907817073",
+        "end": "1791027762.077909865",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 170.092792
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 0.0,
+      "roi_mean_absolute_rgb_difference_from_last": 60.94432453507533,
+      "capture_request_relative_to_click_command_ms": [
+        -130.42525,
+        261.887208
+      ]
+    },
+    {
+      "index": 3,
+      "filename": "frame-3.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "aaefbd343d36999bd20bf844cdff2d4e08ca3c92dd9ec78c80ef42ca36e6da61",
+      "rgb_sha256": "ae162c7ab6e1ddac649705f3c20782f069e9d7fc51b4e69a37c24777c6b16165",
+      "roi_sha256": "ae162c7ab6e1ddac649705f3c20782f069e9d7fc51b4e69a37c24777c6b16165",
+      "phase": "unreviewed",
+      "annotation": {},
+      "capture": {
+        "label": "frame-3",
+        "index": 3,
+        "start": "1791027761.978382073",
+        "end": "1791027762.102886865",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 124.504792
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 0.0,
+      "roi_mean_absolute_rgb_difference_from_last": 60.94432453507533,
+      "capture_request_relative_to_click_command_ms": [
+        -59.86025,
+        286.864208
+      ]
+    },
+    {
+      "index": 4,
+      "filename": "frame-4.jpeg",
+      "dimensions": [
+        640,
+        1416
+      ],
+      "jpeg_sha256": "de0bab5a75ab0c37801e50e00ad4b4676f2ab5abf3c5cb78eee8ea5f82c792d6",
+      "rgb_sha256": "fa5d6400b563f981e2fe7d3bb2f96017992ddb37fc1d6657a78e811f2972f16c",
+      "roi_sha256": "fa5d6400b563f981e2fe7d3bb2f96017992ddb37fc1d6657a78e811f2972f16c",
+      "phase": "unreviewed",
+      "annotation": {},
+      "capture": {
+        "label": "frame-4",
+        "index": 4,
+        "start": "1791027762.161218490",
+        "end": "1791027762.288791365",
+        "exit_code": 0,
+        "valid_clock_window": true,
+        "command_duration_ms": 127.572875
+      },
+      "roi_mean_absolute_rgb_difference_from_first": 60.94432453507533,
+      "roi_mean_absolute_rgb_difference_from_last": 0.0,
+      "capture_request_relative_to_click_command_ms": [
+        122.976167,
+        472.768708
+      ]
+    }
+  ],
+  "transition_existence": "OPEN",
+  "exit_content_retention": "OPEN",
+  "timing_window_integrity": "VALID_COMMAND_WINDOWS",
+  "actual_curve_duration_scrim_equivalence": "OPEN",
+  "boundary": "Command wall-clock windows are not exact input/VSync/present timestamps. Native snapshot calls can serialize, reuse a committed buffer and perturb rendering. Pixel differences alone are not semantic motion; original-image inspection and declared anchors are required. No interpolated frames, UI reconstruction, font-paint or curve pass is produced."
+}

@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "status": "PASS",
+  "archives": [
+    {
+      "name": "reader-source",
+      "sourceFileCount": 7111,
+      "sourceBytes": 442945264,
+      "inventoryFingerprint": "ce5b37860fb7fd25be91f97b094ba8b30f3e88e5d1d44223aecfdac9a67df46d",
+      "archive": {
+        "path": "reader-source.tar.gz",
+        "bytes": 209937914,
+        "sha256": "765627819aa7433c1fa9c575240bee471ea7a3174217af8272e338fdad275132"
+      },
+      "verification": {
+        "fullArchiveRead": true,
+        "everyFileSha256": true,
+        "everyFileMode": true,
+        "exactMemberSet": true,
+        "sourceUnchangedDuringArchive": true,
+        "files": 7111,
+        "bytes": 442945264
+      }
+    },
+    {
+      "name": "approved-design-source",
+      "sourceFileCount": 70,
+      "sourceBytes": 47063306,
+      "inventoryFingerprint": "9e3b36a0c9fb530e4438ca821d49086334e9d897096275dc7bb1d86dd12a2f35",
+      "archive": {
+        "path": "approved-design-source.tar.gz",
+        "bytes": 29272946,
+        "sha256": "1415dbf6f7c334fbf967c8e7e1a6b229a5f8be76737e83ff74f72a6079539dd0"
+      },
+      "verification": {
+        "fullArchiveRead": true,
+        "everyFileSha256": true,
+        "everyFileMode": true,
+        "exactMemberSet": true,
+        "sourceUnchangedDuringArchive": true,
+        "files": 70,
+        "bytes": 47063306
+      }
+    },
+    {
+      "name": "native-sdk",
+      "sourceFileCount": 11,
+      "sourceBytes": 23481344,
+      "inventoryFingerprint": "178a69cfa53e7b53a88fd7b8e3a0d4da7fab9e2bc6374f97cfcfb1219a3ca0ff",
+      "archive": {
+        "path": "native-sdk.tar.gz",
+        "bytes": 9662167,
+        "sha256": "0100e26efb0589baf76ca449bcd5aaeba7000e61e856879a99d3ff4268e3355d"
+      },
+      "verification": {
+        "fullArchiveRead": true,
+        "everyFileSha256": true,
+        "everyFileMode": true,
+        "exactMemberSet": true,
+        "sourceUnchangedDuringArchive": true,
+        "files": 11,
+        "bytes": 23481344
+      }
+    }
+  ],
+  "coreBuildInputFingerprint": "9e97919470b42d81d87082c2c257984778da5e5e5e55798273b3242c99608c4b",
+  "nativeSoSha256": "1fabbfa63b996e39da9a3ec01f6b396cf841f0d0b4016303daac56a974c17996",
+  "sourceMutation": false,
+  "privateSigningMaterialIncluded": false,
+  "originalCanonicalHapRun": "Preserved separately by the parent; this bundle claims source/SDK preservation only.",
+  "scriptSha256": "84545fe6a98341cc4a47142d07c3fe087c343ab4c189bb9d3e1f662dc2d40f78"
+}

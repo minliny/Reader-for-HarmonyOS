@@ -1,0 +1,1 @@
+{"status": "PASS", "runId": "20261004T002116Z-568ec4e3-3eec7853", "buildClass": "iteration", "acceptanceEligible": false, "canonicalSourceRecordsMatched": 2433, "counterfactualFixtureInputsBound": true, "artifactAndEmbeddedNativeFilesVerified": 2, "originalTemporarySourceRequired": false, "vmPhysicalInteractionOrUserAcceptanceClaim": false}

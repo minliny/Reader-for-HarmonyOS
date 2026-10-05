@@ -1,0 +1,57 @@
+{
+  "status": "COPIED_PENDING_STRICT_BUILD",
+  "createdUtc": "2026-10-03T17:36:46.561867+00:00",
+  "purpose": "Minimal source/evidence preservation before user-authorized local disk cleanup; delivery paused.",
+  "surface": {
+    "path": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+    "beforeSha256": "b16c0207277a58ab13d00c076085371b24adf20d11fcce2a6e8f373b61694fe3",
+    "copiedSha256": "282b5e26357252c0787881fcb34bf39b194fa7e2432258ed235a47618a0f973d",
+    "bytes": 118564,
+    "mode": "0o644",
+    "exactByteModeReadback": "PASS"
+  },
+  "evidenceFiles": [
+    {
+      "path": "build4-failure.txt",
+      "bytes": 629,
+      "mode": "0o644",
+      "sha256": "eac1221d0efca4411a8fc82036d9864c8abcd0f1e7c00108376b45a3f87309ae",
+      "exactByteModeReadback": "PASS"
+    },
+    {
+      "path": "native-image-geometry-sdk.log",
+      "bytes": 1887,
+      "mode": "0o644",
+      "sha256": "8586aa14cb71ea97138f0b6766109fce6319d606268a3d968465a20072ce4cec",
+      "exactByteModeReadback": "PASS"
+    },
+    {
+      "path": "one-line-fix.patch",
+      "bytes": 556,
+      "mode": "0o644",
+      "sha256": "86aa714b731974ca9e75b4416426fc6f1789a2c8cf4bce816637e967d9bfa277",
+      "exactByteModeReadback": "PASS"
+    },
+    {
+      "path": "source-change.json",
+      "bytes": 568,
+      "mode": "0o644",
+      "sha256": "fea7b1d26bce585706008e073b6f43450eaab1005deda696cea871d753225caa",
+      "exactByteModeReadback": "PASS"
+    }
+  ],
+  "sdk": {
+    "reportedCases": 65,
+    "status": "PASS",
+    "boundLogSha256": "8586aa14cb71ea97138f0b6766109fce6319d606268a3d968465a20072ce4cec",
+    "scope": "Controlled SDK test; not a native caller or layout acceptance claim."
+  },
+  "strictArkTS": "PENDING_AFTER_ONE_LINE_TYPE_FIX",
+  "r8Artifact": "NO_NEW_HAP_PUBLISHED",
+  "v1V2ArchivesUnchanged": {
+    "evidence/2026-10-04-manga-native-origin-r8/source-delta-v1/r8-source-delta.tar.gz": "39ec951c9dcd12072a304f0a681db93e728ee3aa9cdfd9baaf6a87c3085afb91",
+    "evidence/2026-10-04-manga-native-origin-r8/source-delta-v2/r8-source-delta.tar.gz": "e8797ae848c632ba3e8ef2f55c8114305e0f5f6718e78ed14039bfe8290c2c8d"
+  },
+  "noTestsBuildOrFullInventoryRun": true,
+  "sourceDeltaV3": "NOT_GENERATED"
+}

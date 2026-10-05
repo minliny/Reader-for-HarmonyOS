@@ -1,0 +1,78 @@
+{
+  "scope": "source-only; no VM/HDC/cache/DB/source image access",
+  "reviewedAt": "2026-10-04",
+  "officialSources": [
+    {
+      "repository": "https://github.com/openharmony/graphic_graphic_2d",
+      "ref": "OpenHarmony-6.1-Release",
+      "commit": "71200d49198db3ba28e246b456cac04c758dda10",
+      "path": "rosen/modules/render_service/main/render_server/rs_render_service.cpp",
+      "bytes": 39793,
+      "sha256": "b1e300d28dd51ccb5bd4cdba2ec24b2804ec42f99618b12699dfeef8afed8570",
+      "source": "https://github.com/openharmony/graphic_graphic_2d/blob/71200d49198db3ba28e246b456cac04c758dda10/rosen/modules/render_service/main/render_server/rs_render_service.cpp",
+      "fullSourceCopied": false
+    },
+    {
+      "repository": "https://github.com/openharmony/graphic_graphic_2d",
+      "ref": "OpenHarmony-6.1-Release",
+      "commit": "71200d49198db3ba28e246b456cac04c758dda10",
+      "path": "rosen/modules/render_service_base/include/gfx/dump/rs_dump_manager.h",
+      "bytes": 5962,
+      "sha256": "730dd8c6d3b9264f85feea09ae5148e2b2499cd9cbf8cdf9ab3eda58ed24dbe2",
+      "source": "https://github.com/openharmony/graphic_graphic_2d/blob/71200d49198db3ba28e246b456cac04c758dda10/rosen/modules/render_service_base/include/gfx/dump/rs_dump_manager.h",
+      "fullSourceCopied": false
+    },
+    {
+      "repository": "https://github.com/openharmony/graphic_graphic_2d",
+      "ref": "OpenHarmony-6.1-Release",
+      "commit": "71200d49198db3ba28e246b456cac04c758dda10",
+      "path": "rosen/modules/render_service_base/src/gfx/dump/rs_dump_manager.cpp",
+      "bytes": 5429,
+      "sha256": "b47bce1196377204a9f53eb2c4b3b49b5da7951d3e0a4a713d6f961055d35440",
+      "source": "https://github.com/openharmony/graphic_graphic_2d/blob/71200d49198db3ba28e246b456cac04c758dda10/rosen/modules/render_service_base/src/gfx/dump/rs_dump_manager.cpp",
+      "fullSourceCopied": false
+    },
+    {
+      "repository": "https://github.com/openharmony/graphic_graphic_2d",
+      "ref": "OpenHarmony-6.1-Release",
+      "commit": "71200d49198db3ba28e246b456cac04c758dda10",
+      "path": "rosen/modules/render_service/core/pipeline/main_thread/rs_main_thread.cpp",
+      "bytes": 218981,
+      "sha256": "d5a62920f50a715a63ed8c1425fdcf8075a962e19c247ee1da54732d393b5dd4",
+      "source": "https://github.com/openharmony/graphic_graphic_2d/blob/71200d49198db3ba28e246b456cac04c758dda10/rosen/modules/render_service/core/pipeline/main_thread/rs_main_thread.cpp",
+      "fullSourceCopied": false
+    },
+    {
+      "repository": "https://github.com/openharmony/graphic_graphic_2d",
+      "ref": "OpenHarmony-6.1-Release",
+      "commit": "71200d49198db3ba28e246b456cac04c758dda10",
+      "path": "rosen/modules/render_service_base/src/pipeline/rs_render_node.cpp",
+      "bytes": 207537,
+      "sha256": "153ac17dddf0b327892f1adf11c3fbb0d3d6a3cfdf4020a05beed0ae377b5314",
+      "source": "https://github.com/openharmony/graphic_graphic_2d/blob/71200d49198db3ba28e246b456cac04c758dda10/rosen/modules/render_service_base/src/pipeline/rs_render_node.cpp",
+      "fullSourceCopied": false
+    },
+    {
+      "repository": "https://github.com/openharmony/graphic_graphic_2d",
+      "ref": "OpenHarmony-6.1-Release",
+      "commit": "71200d49198db3ba28e246b456cac04c758dda10",
+      "path": "rosen/modules/render_service_base/src/property/rs_properties.cpp",
+      "bytes": 176414,
+      "sha256": "fb2c04c8512b7507ff7f3049679b35989054a430fce34ec0f154c6c67a4ac328",
+      "source": "https://github.com/openharmony/graphic_graphic_2d/blob/71200d49198db3ba28e246b456cac04c758dda10/rosen/modules/render_service_base/src/property/rs_properties.cpp",
+      "fullSourceCopied": false
+    },
+    {
+      "repository": "https://github.com/openharmony/graphic_graphic_2d",
+      "ref": "OpenHarmony-6.1-Release",
+      "commit": "71200d49198db3ba28e246b456cac04c758dda10",
+      "path": "rosen/modules/render_service/core/pipeline/render_thread/rs_uni_render_thread.cpp",
+      "bytes": 43730,
+      "sha256": "ab82e1f9602a966f174db0b28cb84dce6256d170981949d00fc5823440631f35",
+      "source": "https://github.com/openharmony/graphic_graphic_2d/blob/71200d49198db3ba28e246b456cac04c758dda10/rosen/modules/render_service/core/pipeline/render_thread/rs_uni_render_thread.cpp",
+      "fullSourceCopied": false
+    }
+  ],
+  "masterReferenceCommit": "3afbed23db3daf75607cd890e76a4755947fec53",
+  "targetVersionEquivalence": "OPEN"
+}

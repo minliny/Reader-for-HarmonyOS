@@ -1,0 +1,13 @@
+{
+  "recordedAt": "2026-10-03T15:31:29.069866+00:00",
+  "buildAttempt": 1,
+  "result": "FAIL",
+  "gate": "tools/test-reader-layout-architecture.mjs:133",
+  "reason": "Static atomic-style regex requires old opaque navigationBarColor literal and rejects new explicit transparent image-reader branch.",
+  "artifactPublished": false,
+  "vmInstallAttempted": false,
+  "productionSourceChanged": false,
+  "log": "canonical-delivery/build-attempt-1-gate-failure.log",
+  "logSha256": "7f8495f51267611a783c67719d1a0c3684520ff3f684e302bde553dedb8c86cf",
+  "next": "Test fixture-only assertion update, preserve atomic style and opaque nonmanga branch, rerun required gate, freeze added allowlist input, then canonical rebuild."
+}

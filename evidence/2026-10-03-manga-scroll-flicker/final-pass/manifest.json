@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 2,
+  "name": "reader-harmonyos-hap-run",
+  "nativeProvenance": [
+    "iteration-entry-default-signed-provenance.json",
+    "iteration-entry-default-unsigned-provenance.json"
+  ],
+  "runId": "20261003T092724Z-568ec4e3-1f9ba943",
+  "buildClass": "iteration",
+  "acceptanceEligible": false,
+  "startedAt": "2026-10-03T09:26:55.355Z",
+  "finishedAt": "2026-10-03T09:27:23.577Z",
+  "source": {
+    "harmony": {
+      "repo": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS",
+      "commit": "568ec4e32a2bdce01f62724cfb04a3f6b5a63a60",
+      "dirty": true,
+      "status": [
+        "M docs/ui-design/SVG_PROVENANCE.json",
+        " M entry/libs/arm64-v8a/libreader_core_napi.so",
+        " M entry/src/main/ets/app/BundledBookSourceSupply.ts",
+        " M entry/src/main/ets/app/BundledSourceIndexIdentity.ts",
+        " M entry/src/main/ets/app/ReaderRuntimeOwner.ts",
+        " M entry/src/main/ets/features/bookshelf/BookshelfFlowGateway.ts",
+        " M entry/src/main/ets/features/bookshelf/BookshelfPage.ets",
+        " M entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
+        " M entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts",
+        " M entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+        " M entry/src/main/ets/features/manga/MangaSessionController.ts",
+        " M entry/src/main/ets/features/manga/MangaStripProjection.ts",
+        " M entry/src/main/ets/features/manga/MangaUserError.ts",
+        " M entry/src/main/ets/features/reading/FullDirectoryPanel.ets",
+        " M entry/src/main/ets/features/reading/ReaderDirectoryChapterRow.ets",
+        " M entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets",
+        " M entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets",
+        " M entry/src/main/ets/features/shell/ReaderShell.ets",
+        " M entry/src/main/ets/pages/Index.ets",
+        " M entry/src/main/resources/rawfile/bundled-sources/10da66bab1ce68684d062abc15b146444b12c52984a3bd9aa75b4819d4cd7a8c.json",
+        " M entry/src/main/resources/rawfile/bundled-sources/134f600a7512c9d0bfbc3dcc1e9ccb557bf742acffb4d1d250de616c632b4fb1.json",
+        " M entry/src/main/resources/rawfile/bundled-sources/index.json",
+        " M entry/src/main/resources/rawfile/reader-tested-book-source-collection.json",
+        " M tools/lib/manga-surface-sdk-probe.mjs",
+        " M tools/lib/reader-motion-method-probe.mjs",
+        " M tools/refresh-source-supply-manifest.mjs",
+        " M tools/svg-provenance.config.mjs",
+        " M tools/sync-svg-assets.mjs",
+        " M tools/test-bookshelf-startup-readiness.mjs",
+        " M tools/test-manga-book-presentation.mjs",
+        " M tools/test-manga-cancelled-banner.mjs",
+        " M tools/test-manga-cross-chapter-counter-sdk.mjs",
+        " M tools/test-manga-metadata-ui.mjs",
+        " M tools/test-manga-motion-progress.mjs",
+        " M tools/test-manga-navigation.mjs",
+        " M tools/test-manga-session.mjs",
+        " M tools/test-manga-surface-render-key-sdk.mjs",
+        " M tools/test-manga-surface-sdk.mjs",
+        " M tools/test-manga-tile-window.mjs",
+        " M tools/test-manga-ui-assembly-sdk.mjs",
+        " M tools/test-manga-ui-position-hydration.mjs",
+        " M tools/test-manga-ui-state.mjs",
+        " M tools/test-manga-viewport-restore-sdk.mjs",
+        " M tools/test-phone-layout-figma-regressions.mjs",
+        "?? docs/MANGA_READER_SHEETS_PARITY_20261003.md",
+        "?? docs/MANGA_READING_CHAIN_REPAIR_20261003.md",
+        "?? docs/MANGA_SHEET_ICON_LICENSE.md",
+        "?? docs/ui-design/svg-provenance/radix-icons/",
+        "?? entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets",
+        "?? entry/src/main/resources/base/media/manga_sheet_check.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_check_theme_night.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_close.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_close_theme_night.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_horizontal.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_horizontal_active.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_horizontal_theme_night.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_locate.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_locate_theme_night.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_moon.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_moon_active.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_moon_theme_night.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_search.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_search_theme_night.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_sun.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_sun_active.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_sun_theme_night.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_vertical.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_vertical_accent.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_vertical_accent_theme_night.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_vertical_active.svg",
+        "?? entry/src/main/resources/base/media/manga_sheet_vertical_theme_night.svg",
+        "?? evidence/2026-10-03-baozi-image-source/",
+        "?? evidence/2026-10-03-continue-card-sdk/",
+        "?? evidence/2026-10-03-manga-presentation-return/",
+        "?? evidence/2026-10-03-manga-reader-sheets/",
+        "?? evidence/2026-10-03-manga-scroll-flicker/",
+        "?? evidence/2026-10-03-manga-vm-reading/",
+        "?? evidence/2026-10-03-tencent-free-picture-source/",
+        "?? tools/baozi-image-source-correction.mjs",
+        "?? tools/tencent-picture-source-correction.mjs",
+        "?? tools/test-baozi-image-source-correction.mjs",
+        "?? tools/test-bookshelf-continue-card-sdk.mjs",
+        "?? tools/test-manga-error-recovery.mjs",
+        "?? tools/test-manga-reading-directory-fallback.mjs",
+        "?? tools/test-manga-scroll-stability-sdk.mjs",
+        "?? tools/test-manga-sheet-selection-sdk.mjs",
+        "?? tools/test-manga-visible-tile-retention.mjs",
+        "?? tools/test-manga-window-publication.mjs",
+        "?? tools/test-tencent-picture-source-correction.mjs"
+      ]
+    },
+    "core": {
+      "repo": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-Core-Native",
+      "commit": "dfd729cffd79ed11da6d44be9e1ba10c4223247f",
+      "dirty": true,
+      "status": [
+        "M crates/reader-runtime/build.rs",
+        " M crates/reader-runtime/src/remote.rs",
+        " M crates/reader-runtime/src/remote/manga.rs",
+        " M crates/reader-runtime/src/remote/source_supply.rs",
+        " M crates/reader-runtime/tests/manga_pages_extract_commands.rs",
+        " M crates/reader-runtime/tests/runtime_integration.rs",
+        " M crates/reader-storage/src/lib.rs",
+        " M crates/reader-storage/src/manga.rs",
+        " M crates/reader-storage/src/sqlite_backend/manga.rs",
+        " M crates/reader-storage/src/sqlite_backend/manga_entry.rs",
+        " M crates/reader-storage/src/sqlite_backend/shelf_projection.rs",
+        " M crates/reader-storage/tests/manga_store.rs",
+        " M scripts/build-harmony-napi.sh",
+        " M tests/fixtures/corpus/sources/src-2196-6781cc801619.json",
+        " M tests/fixtures/corpus/sources/src-250-bb44193bd3bd.json",
+        "?? crates/reader-content/tests/baozi_source_rule.rs",
+        "?? crates/reader-content/tests/tencent_source_rule.rs",
+        "?? crates/reader-runtime/tests/manga_shelf_progress_commands.rs",
+        "?? scripts/test-build-identity-refresh.mjs",
+        "?? tests/fixtures/manga/"
+      ]
+    },
+    "buildInputs": {
+      "fingerprint": "1f9ba9437a309ba03694ecce4577631ad62a1245033fdd111da3d65ff836f986",
+      "fileCount": 1817,
+      "snapshot": "source-snapshot.json"
+    },
+    "effectiveBuildProfile": {
+      "mode": "local",
+      "bytes": 1606,
+      "sha256": "ea2e6c67b767d62438abf5e092a2b65013a28a9097a65516ee41c579af8a2a30",
+      "secretMaterialArchived": false
+    },
+    "vendoredCoreNapi": {
+      "path": "entry/libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 23104360,
+      "sha256": "63f1690eb95f9a83dde42cb805adb14e822fea00bfc37b10193e5c997f1fcf27"
+    }
+  },
+  "gates": {
+    "harmonyContracts": "PASS",
+    "controllerInputs": {
+      "fingerprint": "e0dd73e3296a70d354318497077700c94b2da2e69a137ff3b22fe8b29c0dca5a",
+      "fileCount": 579,
+      "snapshot": "controller-snapshot.json"
+    },
+    "workspaceContractInputs": {
+      "fingerprint": "06641c99065ad9042257bf0b51568b9680b45adf6f7c8ccd3c7a31a2a7ed35e7",
+      "fileCount": 18,
+      "snapshot": "workspace-contract-snapshot.json"
+    },
+    "liveBookSources": "NOT_RUN",
+    "liveBookSourceEvidence": {
+      "transport": "reader-cli/ureq",
+      "scope": "Core CLI L1-L5 diagnostic",
+      "harmonyHostEquivalent": false,
+      "harmonyHostJourney": "OPEN"
+    },
+    "arktsTypeCheck": "PASS",
+    "nonIncrementalBuild": "PASS",
+    "bundledSourceBytes": "PASS"
+  },
+  "toolchain": {
+    "packageManager": {
+      "pnpm": "10.34.5"
+    },
+    "hvigorw": "/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw",
+    "hvigorVersion": "6.24.4",
+    "buildCommand": "/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw assembleHap --mode module -p product=default -p module=entry@default -p buildMode=debug --no-daemon --no-incremental"
+  },
+  "artifacts": [
+    {
+      "kind": "signed",
+      "path": "entry-default-signed.hap",
+      "bytes": 183095570,
+      "sha256": "334cbc5ddd1c76857b949492869995d193fa5e02ab8a4c2c0d1cbf308a12b162",
+      "signature": {
+        "status": "signed",
+        "verified": true,
+        "profileType": "debug",
+        "appIdSha256": "ff8e00ed180524004dd842c160f410ac46644a7bba5bf7c4ce309876ce53bcd8",
+        "appIdentifierSha256": "8fb560b4b330d1b0b70f7ad9c7a9e410600e7c0177306f0eb0257ae9c26d2d01",
+        "certificateSha256": "3a563778e5bf17cd3ead0218e13b4a5030de3f5d7d4e21e0336d8eb37b676dc4"
+      },
+      "nativeEntries": [
+        "libs/arm64-v8a/libc++_shared.so",
+        "libs/arm64-v8a/libreader_bookturn_napi.so",
+        "libs/arm64-v8a/libreader_core_napi.so"
+      ],
+      "embeddedCoreNapi": {
+        "path": "libs/arm64-v8a/libreader_core_napi.so",
+        "bytes": 17904184,
+        "sha256": "a93a5bbeded3d4b8faab37a24005cfb62daf715c0f9e32aec9e3676fb1c9c7dc"
+      }
+    },
+    {
+      "kind": "unsigned",
+      "path": "entry-default-unsigned.hap",
+      "bytes": 182788407,
+      "sha256": "77bfcb17993d059142c36d6d486569afba72942334ae4e43f9ba1449666a475c",
+      "signature": {
+        "status": "unsigned",
+        "verified": false,
+        "profileType": "none"
+      },
+      "nativeEntries": [
+        "libs/arm64-v8a/libc++_shared.so",
+        "libs/arm64-v8a/libreader_bookturn_napi.so",
+        "libs/arm64-v8a/libreader_core_napi.so"
+      ],
+      "embeddedCoreNapi": {
+        "path": "libs/arm64-v8a/libreader_core_napi.so",
+        "bytes": 17904184,
+        "sha256": "a93a5bbeded3d4b8faab37a24005cfb62daf715c0f9e32aec9e3676fb1c9c7dc"
+      }
+    }
+  ],
+  "acceptanceProvenance": null,
+  "evidenceBoundary": {
+    "packageBuild": "PASS",
+    "vmInstall": "OPEN",
+    "physicalInstall": "OPEN",
+    "featureInteraction": "OPEN",
+    "userAcceptance": "OPEN"
+  }
+}

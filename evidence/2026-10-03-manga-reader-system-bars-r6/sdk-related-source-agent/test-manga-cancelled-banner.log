@@ -1,0 +1,10 @@
+<anonymous_script>:98
+    this.refreshLoginRequiredForControls();
+         ^
+
+TypeError: this.refreshLoginRequiredForControls is not a function
+    at Probe.notifyPublishedRows (eval at productionMotionMethods (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-motion-method-probe.mjs:50:10), <anonymous>:98:10)
+    at Probe.updateViewport (eval at productionMotionMethods (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-motion-method-probe.mjs:50:10), <anonymous>:58:10)
+    at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-cancelled-banner.mjs:45:15
+
+Node.js v26.0.0

@@ -1,0 +1,84 @@
+{
+  "inputs": [
+    {
+      "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+      "sha256": "35ab98291f518958f33a53a117fdc2e1c3ccb47322064d2b3c4fed7129b5b27d",
+      "bytes": 35761
+    },
+    {
+      "path": "entry/src/main/ets/entryability/EntryAbility.ets",
+      "sha256": "93103aeb63972889b788424272620cddef92be7fa51646cdfed34c70cb0f9d1d",
+      "bytes": 13841
+    },
+    {
+      "path": "entry/src/main/ets/pages/Index.ets",
+      "sha256": "1b7004f488376fbd172073af0a1b9fe65025effcd730d0f2faec1de274d79d71",
+      "bytes": 335892
+    },
+    {
+      "path": "entry/src/main/ets/features/shell/ReaderShell.ets",
+      "sha256": "420928dc7906498d6c1bc54301cf3f624300ef8600e720904e611fcaed411336",
+      "bytes": 25506
+    },
+    {
+      "path": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "sha256": "4e8cda54f879494a574de75ab2c85821d02edd96b70bdbf8e3e1085150461676",
+      "bytes": 107730
+    },
+    {
+      "path": "entry/src/main/module.json5",
+      "sha256": "19c043e91c3eb627476131aa8e0ab59587c727e7578397cd74d21c6e31285a32",
+      "bytes": 3793
+    }
+  ],
+  "findings": [
+    {
+      "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+      "lines": "143-165",
+      "conclusion": "Window install awaits setWindowLayoutFullScreen(true) before native bar setup and metric-listener initialization. No later source call changes layout-fullscreen false."
+    },
+    {
+      "path": "entry/src/main/ets/entryability/EntryAbility.ets",
+      "lines": "162-184",
+      "conclusion": "Normal loadMainContent awaits install completed. Explicit error fallback can still load content after native install failure; SDK success and current origin facts must not erase this failure boundary."
+    },
+    {
+      "path": "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+      "lines": "370-402",
+      "conclusion": "Reader visibility policy applies orientation/keep-on/status/navigation/indicator with epoch/revision guards; no height, resize, paper fill, offset or cutout rectangle mutation. extendIntoCutout is semantic AppStorage/layout policy, not native window pixel offset API."
+    },
+    {
+      "path": "entry/src/main/ets/pages/Index.ets",
+      "lines": "1266-1274",
+      "conclusion": "Manga current root padtop0, all-edge SYSTEM+CUTOUT expansion and SYSTEM layout-safe ignore. Ordinary app retains status padding."
+    },
+    {
+      "path": "entry/src/main/ets/features/shell/ReaderShell.ets",
+      "lines": "300-326",
+      "conclusion": "Manga Shell all-edge expansion and layout-safe ignore, manga underlay overlay suppressed. Text retains its own prior policy."
+    },
+    {
+      "path": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "lines": "1253-1289",
+      "conclusion": "ImageViewport is first independent full-size sibling; only control docks and indicators consume positive cached status/gesture/cutout insets; image branch receives none."
+    },
+    {
+      "path": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "lines": "1316-1363",
+      "conclusion": "Scroll/List create space0 and original-aspect Image Fill. List/Scroll native clips are at same full window frame; no authored header, normal padding, top margin or image translation."
+    },
+    {
+      "path": "entry/src/main/module.json5",
+      "conclusion": "No avoid_cutout metadata; module does not opt into automatic cutout avoidance."
+    }
+  ],
+  "officialReference": {
+    "url": "https://raw.githubusercontent.com/openharmony/docs/master/en/application-dev/reference/apis-arkui/arkui-ts/ts-universal-attributes-expand-safe-area.md",
+    "checkedAt": "2026-10-03T16:00Z",
+    "boundary": "Current upstream docs semantics only, not exact device OS source/binary parity. SYSTEM layout safe includes cutout, camera cutout not automatically avoided unless module metadata opts in. Rendering expansion is component-local and not a global paint-origin proof."
+  },
+  "codeProof": "Supplementary actual SDK origin probe PASS; no current code path reserving 72-80px top band found",
+  "actualTopPixels": "OPEN, cannot establish current PNG source pixels from layout request; user selected no cache extraction",
+  "deviceActions": "none; earlier visual lease released",
+  "status": "PARTIAL"
+}

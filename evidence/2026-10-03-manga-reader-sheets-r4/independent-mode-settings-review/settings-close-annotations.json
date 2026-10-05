@@ -1,0 +1,59 @@
+{
+  "scene": "settings-close",
+  "frames": {
+    "0": {
+      "phase": "open",
+      "anchor_y": {
+        "handle_top": 768,
+        "title_top": 808,
+        "section_top": 879
+      },
+      "content_visible": true
+    },
+    "1": {
+      "phase": "open",
+      "anchor_y": {
+        "handle_top": 768,
+        "title_top": 808,
+        "section_top": 879
+      },
+      "content_visible": true
+    },
+    "2": {
+      "phase": "open",
+      "anchor_y": {
+        "handle_top": 768,
+        "title_top": 808,
+        "section_top": 879
+      },
+      "content_visible": true
+    },
+    "3": {
+      "phase": "middle",
+      "anchor_y": {
+        "handle_top": 1102,
+        "title_top": 1142,
+        "section_top": 1213
+      },
+      "content_visible": true
+    },
+    "4": {
+      "phase": "closed"
+    },
+    "5": {
+      "phase": "closed"
+    },
+    "6": {
+      "phase": "closed"
+    },
+    "7": {
+      "phase": "closed"
+    },
+    "8": {
+      "phase": "closed"
+    }
+  },
+  "source_directory": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/evidence/2026-10-03-manga-reader-sheets-r4/motion/settings-close",
+  "coordinate_space": "Original 640x1416 native JPEG pixels; integer raster anchors, not continuous transform values",
+  "manual_basis": "Viewed original distinct native JPEGs; all repeats independently decoded and exact RGB hashes checked"
+}

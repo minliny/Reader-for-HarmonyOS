@@ -1,0 +1,7 @@
+R8 final bounded evidence preservation
+
+Status: PARTIAL; runtime acceptance OPEN; actual checker exit 2 is preserved. Code/SDK, actual ArkTS build, authorized signed HAP, canonical input binding and preserve-data install have scoped PASS evidence. Fresh first-image destination, seven unchanged Image/ListItem/List/Scroll actors across actual A/B/D and A/D window edges, and default-off loaded-reader absence checks have scoped PASS evidence. Strict phase generation, submitted paint, top color-band/source-pixel ownership and user acceptance remain OPEN. Cache/source pixels were NOT_READ. Directory C was not observed in R8.
+
+The historical reviewed helper is explicitly reconstructed to its pre-existing full SHA and preserved, separate from the current two-label-only revision. Old SDK/runtime reports, failed builds, early A tree, v1/v2/v3 and zero-byte failed logs remain unchanged. Canonical source authority is frozen temp delivery; persistent other-actor drift is not restored or attributed to this HAP. Official source-only RS reviews do not establish current VM implementation equivalence or submitted frames.
+
+This new inventory preserves all R8 files and actual external canonical, source-parent, Native, deployment and post-build-cleanup references. It does not expand/copy large directories, rebuild/test, use a device or modify existing evidence. Older parent-chain validation proofs are reused; actual byte/mode/hash readback is performed for every inventory record.

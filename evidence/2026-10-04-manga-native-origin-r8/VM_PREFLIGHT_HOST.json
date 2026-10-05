@@ -1,0 +1,17 @@
+{
+  "capturedAt": "2026-10-03T16:20:43.496248+00:00",
+  "target": "127.0.0.1:5555",
+  "targetKind": "vm",
+  "hostPid": 32275,
+  "deployment": "/Users/minliny/.Huawei/Emulator/deployed/Mate 80 Pro",
+  "trace": "trace_45645_commandPipe",
+  "model": "Mate 80 Pro",
+  "os": "6.1.0.115",
+  "api": 23,
+  "abi": "arm64",
+  "bootLogLine": 2010,
+  "bootLog": "2026-10-01 20:05:05.849 Guest OS Boot Completed!!",
+  "activeLeaseOwners": [],
+  "guestBootAndSceneBoard": "PENDING fresh leased read before install",
+  "helperSha256": "c5257bd93f066db623bc9b85081ca0bcd355ae58c8f07a4fa57fd3ddf49ba42f"
+}

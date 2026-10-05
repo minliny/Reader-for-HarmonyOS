@@ -1,0 +1,316 @@
+--- R7/entry/src/main/ets/entryability/EntryAbility.ets
++++ R8/entry/src/main/ets/entryability/EntryAbility.ets
+@@ -33,6 +33,10 @@
+   private preparedReadingFontSnapshot: ReaderAppearanceSnapshot | undefined = undefined;
+ 
+   onCreate(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
++    // Numeric geometry diagnostics require an explicit primitive cold-start
++    // Want. Warm Wants cannot arm them and every new ability resets the flag.
++    AppStorage.setOrCreate('readerMangaImageOriginProbe', DEBUG === true && BUILD_MODE_NAME === 'debug' &&
++      want.parameters?.readerMangaImageOriginProbe === true);
+     const trace = ReaderStartupTrace.install(readerMotionNowMs, (sample: ReaderStartupSample): void => {
+       hilog.info(DOMAIN, 'Reader', 'READER_STARTUP %{public}s', JSON.stringify(sample));
+     }, DEBUG === true && BUILD_MODE_NAME === 'debug');
+@@ -222,6 +226,7 @@
+   }
+ 
+   onDestroy(): void {
++    AppStorage.setOrCreate('readerMangaImageOriginProbe', false);
+     this.eventLoopProbe?.stop('destroyed');
+     ReaderThemeHost.detach();
+     this.windowStageGeneration += 1;
+--- R7/entry/src/main/ets/features/manga/MangaReadingSurface.ets
++++ R8/entry/src/main/ets/features/manga/MangaReadingSurface.ets
+@@ -27,9 +27,15 @@
+ import { READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_600,
+   READER_FONT_NOTO_SANS_SC_UI_900 } from '../common/ReaderFontFamilies';
+ import { prepareMangaSheetFonts } from '../common/ReaderFonts';
++import { checkMangaImageOriginGeometry, type MangaNativeImageGeometry, type MangaImageOriginGeometryCheck } from './MangaImageOriginGeometry';
+ 
+ interface MangaViewportAnchor { ordinal: number; y: number; x?: number; }
+ interface MangaConfirmedPosition { controller: MangaSessionController; manifest: MangaManifest; identity: string; anchor: MangaViewportAnchor; }
++interface MangaGeometryArea { width: number; height: number; globalX: number; globalY: number; generation: number; stateGeneration: number; }
++interface MangaGeometrySample {
++  ordinal: number; tileIndex: number; receiptGeneration: number; stateGeneration: number;
++  native?: MangaNativeImageGeometry; check: MangaImageOriginGeometryCheck; area?: MangaGeometryArea;
++}
+ 
+ class MangaLayoutFrame extends FrameCallback {
+   private readonly action: () => void;
+@@ -66,7 +72,16 @@
+ /** Native virtual list; a tile is a temporary presentation of one logical page. */
+ @Component
+ export struct MangaReadingSurface {
+-  @StorageLink('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
++  @StorageLink('readerWindowMetricsRevision') @Watch('onWindowChromeChanged') private windowMetricsRevision: number = 0;
++  @StorageLink('readerMangaImageOriginProbe') private geometryProbeEnabled: boolean = false;
++  private readonly geometrySamples: Map<string, MangaGeometrySample> = new Map<string, MangaGeometrySample>();
++  private geometryViewportArea: MangaGeometryArea | undefined;
++  private geometryStateGeneration: number = 0;
++  private geometryReceiptGeneration: number = 0;
++  private geometryAreaGeneration: number = 0;
++  private geometryFrameGeneration: number = 0;
++  private geometryFramePending: boolean = false;
++  private geometrySequence: number = 0;
+   settingsGateway: ReaderSettingsGateway | undefined = undefined;
+   runtime: ReadingGatewayRuntime | undefined = undefined;
+   sourceId: string = '';
+@@ -197,6 +212,7 @@
+   aboutToDisappear(): void {
+     // Withdraw before resetting watched state: disposal cannot reissue reader policy.
+     this.mounted = false;
++    if (this.geometryProbeEnabled === true) this.invalidateImageGeometrySamples(true);
+     this.restoreAppWindowChrome();
+     this.invalidatePanelMotion();
+     this.panel = ''; this.panelPhase = 'closed'; this.panelOffset = 0; this.panelScrimOpacity = 0;
+@@ -402,6 +418,13 @@
+     // when ArkUI mounts them, without a chapter-wide notification scan.
+     this.publishedRowKeys.clear();
+     next.forEach((key: string, index: number): void => { this.publishedRowKeys.set(index, key); });
++    if (this.geometryProbeEnabled === true) {
++      if (structure) this.invalidateImageGeometrySamples();
++      else for (const index of changed) {
++        const row = this.data.getData(index);
++        this.geometrySamples.delete(`${row.ordinal}:${row.tileIndex}`);
++      }
++    }
+     if (structure) this.data.notify(true, this.first, this.requestedLast());
+     else for (const index of changed) this.data.notify(false, index, index);
+   }
+@@ -889,11 +912,157 @@
+     const required = this.loginRequired();
+     if (required !== this.loginRequiredForControls) this.loginRequiredForControls = required;
+   }
+-  private onWindowChromeChanged(): void {
+-    if (!this.mounted || this.isReaderIdentityCurrent?.() === false) return;
++  private onWindowChromeChanged(changedProperty?: string): void {
++    // This new Watch is diagnostic only. A metrics update must not enqueue
++    // another chrome/policy write in the existing window owner.
++    if (changedProperty === 'windowMetricsRevision') {
++      if (this.geometryProbeEnabled === true) this.imageGeometryStateChanged();
++      return;
++    }
++    if (!this.mounted || this.isReaderIdentityCurrent?.() === false) {
++      if (this.geometryProbeEnabled === true) this.invalidateImageGeometrySamples(true);
++      return;
++    }
++    if (this.geometryProbeEnabled === true) this.imageGeometryStateChanged();
+     this.refreshLoginRequiredForControls();
+     this.applyWindowChrome();
+     this.applyWindowPolicyForChromeOwner();
++  }
++  private invalidateImageGeometrySamples(disposed: boolean = false): void {
++    this.geometrySamples.clear();
++    this.geometryStateGeneration++;
++    this.geometryFrameGeneration++;
++    this.geometryFramePending = false;
++    if (disposed) this.geometryViewportArea = undefined;
++  }
++  private imageGeometryStateChanged(): void {
++    if (this.geometryProbeEnabled !== true || !this.mounted) return;
++    if (this.isReaderIdentityCurrent?.() === false) { this.invalidateImageGeometrySamples(true); return; }
++    this.geometryStateGeneration++;
++    this.scheduleImageGeometrySnapshot();
++  }
++  /** Capture only in-memory ownership and the existing presentation key. No
++   * URI, source/title identity or image bytes enter the diagnostic payload. */
++  private imageGeometryOwner(row: MangaStripRow, index: number): () => boolean {
++    const controller = this.controller;
++    const chapter = controller?.chapter;
++    const tile = controller?.tile(row.ordinal, row.tileIndex);
++    const image = tile?.image;
++    const key = row.key;
++    const presentationKey = this.publishedRowKeys.get(index);
++    const width = row.width, height = row.height, sourceY = row.sourceY, sourceHeight = row.sourceHeight;
++    return (): boolean => {
++      if (this.geometryProbeEnabled !== true || !this.mounted || this.exiting || this.isReaderIdentityCurrent?.() === false ||
++        controller === undefined || chapter === undefined || tile === undefined || image === undefined ||
++        this.controller !== controller || controller.chapter !== chapter ||
++        this.publishedRowKeys.get(index) !== presentationKey ||
++        controller.tile(row.ordinal, row.tileIndex) !== tile || tile.image !== image) return false;
++      try {
++        const current = this.data.getData(index);
++        return current.key === key && current.width === width && current.height === height &&
++          current.sourceY === sourceY && current.sourceHeight === sourceHeight;
++      } catch (_error) { return false; }
++    };
++  }
++  private imageGeometryCallback(row: MangaStripRow, index: number): (event?: MangaNativeImageGeometry) => void {
++    const current = this.imageGeometryOwner(row, index);
++    return (event?: MangaNativeImageGeometry): void => {
++      if (current()) this.onImageGeometryComplete(row.ordinal, row.tileIndex, event);
++    };
++  }
++  private imageGeometryAreaCallback(row: MangaStripRow, index: number): (_old: Area, area: Area) => void {
++    const current = this.imageGeometryOwner(row, index);
++    return (_old: Area, area: Area): void => {
++      if (current()) this.onImageGeometryArea(row.ordinal, row.tileIndex, area);
++    };
++  }
++  private imageGeometrySample(ordinal: number, tileIndex: number): MangaGeometrySample {
++    const key = `${ordinal}:${tileIndex}`;
++    const existing = this.geometrySamples.get(key);
++    if (existing !== undefined) return existing;
++    if (this.geometrySamples.size >= 8) {
++      const first = this.geometrySamples.keys().next().value;
++      if (first !== undefined) this.geometrySamples.delete(first);
++    }
++    const sample: MangaGeometrySample = { ordinal, tileIndex, receiptGeneration: 0,
++      stateGeneration: this.geometryStateGeneration, check: checkMangaImageOriginGeometry(undefined) };
++    this.geometrySamples.set(key, sample);
++    return sample;
++  }
++  private onImageGeometryComplete(ordinal: number, tileIndex: number, event?: MangaNativeImageGeometry): void {
++    const sample = this.imageGeometrySample(ordinal, tileIndex);
++    sample.receiptGeneration = ++this.geometryReceiptGeneration;
++    sample.stateGeneration = this.geometryStateGeneration;
++    sample.check = checkMangaImageOriginGeometry(event);
++    // Explicit numeric whitelist: no spreading the native event or retaining
++    // arbitrary callback fields. Invalid/missing data remains OPEN.
++    sample.native = event !== undefined && [event.width, event.height, event.componentWidth, event.componentHeight,
++      event.loadingStatus, event.contentWidth, event.contentHeight, event.contentOffsetX, event.contentOffsetY].every(Number.isFinite) ?
++      { width: event.width, height: event.height, componentWidth: event.componentWidth, componentHeight: event.componentHeight,
++        loadingStatus: event.loadingStatus, contentWidth: event.contentWidth, contentHeight: event.contentHeight,
++        contentOffsetX: event.contentOffsetX, contentOffsetY: event.contentOffsetY } : undefined;
++    this.scheduleImageGeometrySnapshot();
++  }
++  private imageGeometryArea(area: Area): MangaGeometryArea | undefined {
++    if (area === undefined || area.globalPosition === undefined) return undefined;
++    const width = Number(area.width), height = Number(area.height);
++    const globalX = Number(area.globalPosition.x), globalY = Number(area.globalPosition.y);
++    if (![width, height, globalX, globalY].every(Number.isFinite) || width <= 0 || height <= 0) return undefined;
++    return { width, height, globalX, globalY, generation: ++this.geometryAreaGeneration,
++      stateGeneration: this.geometryStateGeneration };
++  }
++  private onImageGeometryArea(ordinal: number, tileIndex: number, area: Area): void {
++    this.imageGeometrySample(ordinal, tileIndex).area = this.imageGeometryArea(area);
++    this.scheduleImageGeometrySnapshot();
++  }
++  private recordImageViewportArea(area: Area): void {
++    if (this.geometryProbeEnabled !== true || !this.mounted || this.isReaderIdentityCurrent?.() === false) return;
++    this.geometryViewportArea = this.imageGeometryArea(area);
++    this.scheduleImageGeometrySnapshot();
++  }
++  private scheduleImageGeometrySnapshot(): void {
++    if (this.geometryProbeEnabled !== true || !this.mounted || this.geometryFramePending || this.geometrySequence >= 128) return;
++    this.geometryFramePending = true;
++    const generation = this.geometryFrameGeneration;
++    try {
++      this.getUIContext().postFrameCallback(new MangaSheetFrame((): void => {
++        if (generation !== this.geometryFrameGeneration) return;
++        this.geometryFramePending = false;
++        if (this.geometryProbeEnabled !== true || !this.mounted || this.exiting || this.isReaderIdentityCurrent?.() === false) {
++          this.invalidateImageGeometrySamples(true); return;
++        }
++        this.emitImageGeometrySnapshot();
++      }));
++    } catch (_error) { this.geometryFramePending = false; }
++  }
++  private emitImageGeometrySnapshot(): void {
++    if (this.geometryProbeEnabled !== true || !this.mounted || this.exiting || this.isReaderIdentityCurrent?.() === false) return;
++    const metrics = ReaderWindowCoordinator.metrics();
++    for (const sample of this.geometrySamples.values()) {
++      if (this.geometrySequence >= 128) break;
++      const stale = sample.stateGeneration !== this.geometryStateGeneration;
++      const area = sample.area, viewport = this.geometryViewportArea, native = sample.native;
++      // Native destination fields use their shared native event unit. Areas
++      // are independently reported in vp; this never labels a submitted paint.
++      hilog.info(0x5244, 'MangaGeometry', 'READER_MANGA_GEOMETRY %{public}s', JSON.stringify({
++        sequence: ++this.geometrySequence, observedAtMs: Date.now(), stateGeneration: this.geometryStateGeneration,
++        receiptGeneration: sample.receiptGeneration, receiptStateGeneration: sample.stateGeneration,
++        retainedReceipt: stale ? 1 : 0, submittedPaintEvidence: 0,
++        destinationStatus: stale ? 'OPEN' : sample.check.status, destinationReason: stale ? 'retained-native-receipt' : sample.check.reason,
++        ordinal: sample.ordinal, tileIndex: sample.tileIndex, fit: this.effectiveFit(), zoom: this.zoom,
++        controls: this.controlsPresentedForWindow() ? 1 : 0, panelPhase: this.panelPhase,
++        windowMetricsRevision: this.windowMetricsRevision, densityPixels: metrics.densityPixels,
++        nativeWidth: native?.width, nativeHeight: native?.height, loadingStatus: native?.loadingStatus,
++        componentWidth: native?.componentWidth, componentHeight: native?.componentHeight,
++        contentWidth: native?.contentWidth, contentHeight: native?.contentHeight,
++        contentOffsetX: native?.contentOffsetX, contentOffsetY: native?.contentOffsetY,
++        imageAreaWidthVp: area?.width, imageAreaHeightVp: area?.height, imageGlobalXVp: area?.globalX, imageGlobalYVp: area?.globalY,
++        imageAreaGeneration: area?.generation, imageAreaStateGeneration: area?.stateGeneration,
++        viewportWidthVp: viewport?.width, viewportHeightVp: viewport?.height,
++        viewportGlobalXVp: viewport?.globalX, viewportGlobalYVp: viewport?.globalY,
++        viewportAreaGeneration: viewport?.generation, viewportAreaStateGeneration: viewport?.stateGeneration,
++      }));
++    }
+   }
+   private applyWindowChrome(): void {
+     if (!this.mounted || this.isReaderIdentityCurrent?.() === false) return;
+@@ -1321,6 +1490,8 @@
+             if (this.controller?.tile(row.ordinal, row.tileIndex)?.image !== undefined) {
+               Image(this.controller?.tile(row.ordinal, row.tileIndex)?.image?.fileUri)
+                 .width(this.rowDisplayWidth(row)).height(this.rowDisplayWidth(row) * row.height / row.width).objectFit(ImageFit.Fill).draggable(false)
++                .onComplete(this.imageGeometryCallback(row, index))
++                .onAreaChange(this.imageGeometryAreaCallback(row, index))
+             } else {
+               Column() {
+               if (this.rowHasError(row)) {
+@@ -1357,7 +1528,10 @@
+         .onTouch((event: TouchEvent): void => { if (event.type === TouchType.Down) this.onViewportTouch(); })
+         .onScrollStop((): void => { this.onViewportScroll(); this.saveVisible(); })
+     }.height('100%').width('100%').scrollable(ScrollDirection.Horizontal)
+-      .onAreaChange((_old: Area, area: Area): void => { this.resizeViewport(Number(area.width), Number(area.height)); })
++      .onAreaChange((_old: Area, area: Area): void => {
++        this.resizeViewport(Number(area.width), Number(area.height));
++        this.recordImageViewportArea(area);
++      })
+       .onScroll((): void => { this.onViewportScroll(); })
+       .onScrollStop((): void => { this.onViewportScroll(); this.saveVisible(); })
+       .parallelGesture(GestureGroup(GestureMode.Exclusive, PinchGesture({ fingers: 2 })
+--- R7/entry/src/main/ets/features/manga/MangaImageOriginGeometry.ts
++++ R8/entry/src/main/ets/features/manga/MangaImageOriginGeometry.ts
+@@ -0,0 +1,35 @@
++/** Native Image.onComplete payload. Component/content fields share the native
++ * event's unit; no source pixels or vp layout coordinates are inspected here. */
++export interface MangaNativeImageGeometry {
++  width: number; height: number;
++  componentWidth: number; componentHeight: number;
++  loadingStatus: number;
++  contentWidth: number; contentHeight: number;
++  contentOffsetX: number; contentOffsetY: number;
++}
++
++export interface MangaImageOriginGeometryCheck {
++  status: 'OPEN' | 'PASS' | 'FAIL';
++  reason: 'missing' | 'not-decoded' | 'invalid-numeric-geometry' | 'destination-offset' | 'destination-size' | 'native-destination';
++}
++
++/** This checks only the destination inside Image. It is not proof of a
++ * submitted frame, an ancestor's screen origin, or the source's first color. */
++export function checkMangaImageOriginGeometry(event: MangaNativeImageGeometry | undefined): MangaImageOriginGeometryCheck {
++  if (event === undefined) return { status: 'OPEN', reason: 'missing' };
++  if (event.loadingStatus !== 1) return { status: 'OPEN', reason: 'not-decoded' };
++  if (![event.width, event.height, event.componentWidth, event.componentHeight,
++    event.contentWidth, event.contentHeight, event.contentOffsetX, event.contentOffsetY].every(Number.isFinite) ||
++    event.width <= 0 || event.height <= 0 || event.componentWidth <= 0 || event.componentHeight <= 0 ||
++    event.contentWidth <= 0 || event.contentHeight <= 0) {
++    return { status: 'OPEN', reason: 'invalid-numeric-geometry' };
++  }
++  // Half a native unit tolerates subpixel rounding; it does not subtract any
++  // status/gesture height or transform the reported destination rectangle.
++  if (Math.abs(event.contentOffsetX) > 0.5 || Math.abs(event.contentOffsetY) > 0.5)
++    return { status: 'FAIL', reason: 'destination-offset' };
++  if (Math.abs(event.contentWidth - event.componentWidth) > 0.5 ||
++    Math.abs(event.contentHeight - event.componentHeight) > 0.5)
++    return { status: 'FAIL', reason: 'destination-size' };
++  return { status: 'PASS', reason: 'native-destination' };
++}
+--- R7/tools/lib/manga-surface-sdk-probe.mjs
++++ R8/tools/lib/manga-surface-sdk-probe.mjs
+@@ -2,6 +2,7 @@
+ import { readFileSync } from 'node:fs';
+ import { mangaUsesPersistentDirectory, mangaDirectoryColumnWidth } from '../../entry/src/main/ets/features/manga/MangaLayoutPolicy.ts';
+ import { MangaBookPresentation } from '../../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
++import { checkMangaImageOriginGeometry } from '../../entry/src/main/ets/features/manga/MangaImageOriginGeometry.ts';
+ import { readerInteractiveSafeInsets } from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+ import { READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550,
+   READER_FONT_NOTO_SANS_SC_UI_600, READER_FONT_NOTO_SANS_SC_UI_900 } from '../../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+@@ -43,6 +44,7 @@
+   ReaderDirectoryNavigationSurface: ImportedChildBoundary,
+   MangaReadingDirectoryFallback: ImportedChildBoundary,
+   MangaBookPresentation,
++  checkMangaImageOriginGeometry,
+   readerInteractiveSafeInsets,
+   mangaUsesPersistentDirectory, mangaDirectoryColumnWidth, deviceInfo:{deviceType:'phone'},
+   ToggleType:{Switch:'switch'},

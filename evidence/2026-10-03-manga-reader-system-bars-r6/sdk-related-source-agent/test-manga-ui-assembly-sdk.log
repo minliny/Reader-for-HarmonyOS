@@ -1,0 +1,17 @@
+PASS installed SDK parses 356 production ETS/TS files, 118 custom components registered
+PASS 687 actual custom-component field bindings in Index/Shell/manga/bookshelf/detail/directory/source/Native directory assembly
+PASS SDK component transform pages/Index.ets
+PASS SDK component transform features/shell/ReaderShell.ets
+PASS SDK component transform features/manga/MangaReadingSurface.ets
+PASS SDK component transform features/bookshelf/BookshelfPage.ets
+PASS SDK component transform features/bookshelf/LocalBookDetail.ets
+PASS SDK component transform features/bookshelf/BookDirectoryPage.ets
+PASS SDK component transform features/reading/SourceSwitchPanel.ets
+PASS SDK component transform features/source/SourceSwitchWindow.ets
+PASS SDK component transform features/reading/ReaderDirectoryNavigationSurface.ets
+PASS SDK component transform features/reading/ReaderDirectoryNavigationList.ets
+PASS SDK component transform features/reading/ReaderDirectoryList.ets
+PASS actual SDK demo settings: paper/ink selection colors, 38×23 native page switch, equal bottom-color choices, brightness/reset and preference callbacks
+Boundary: SDK parsing/member lowering + exact initializer field names; no project-wide semantic typecheck, package, native layout or device proof.
+(node:18938) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "scope": "v3 initial preservation files before canonical binding; self excluded",
+  "files": [
+    {
+      "path": "ATTEMPT1_FAILURE.md",
+      "bytes": 642,
+      "mode": 420,
+      "sha256": "c54dd52d073e18aa5b6cfe6d209831308924ba0bbcf84a0fa6bd1ad8cebbabd5"
+    },
+    {
+      "path": "ATTEMPT1_WORKSPACE_MISMATCH.json",
+      "bytes": 9916,
+      "mode": 420,
+      "sha256": "9bb24e0c7fc8d3c84baf6cf05c0b1f808dda18f4b2c12d9f7dc74a611a14ccda"
+    },
+    {
+      "path": "README.md",
+      "bytes": 615,
+      "mode": 420,
+      "sha256": "34606e0fb94e84eacc6c485fc3689cad44492747fb6494ed8c1faa3cb2e483da"
+    },
+    {
+      "path": "SOURCE_FREEZE_V3.json",
+      "bytes": 1737,
+      "mode": 420,
+      "sha256": "afc6d5ecd7474514613b447cf1efca89d5337bd111a92b33088724a7d59fa2f5"
+    },
+    {
+      "path": "V2_TO_V3_ONE_LINE_READBACK.json",
+      "bytes": 1376,
+      "mode": 420,
+      "sha256": "0d1708dac34cb03b14bdb6e8a4790dc6761cd65b0883a36f99bc04f6d6f9fd77"
+    },
+    {
+      "path": "attempt1-preserve_r8_delta.py",
+      "bytes": 13593,
+      "mode": 420,
+      "sha256": "13663baaea67de1c39817b64d7393fd93abb59cb271bbc207204ca0d0ff4053a"
+    },
+    {
+      "path": "canonical-binding/bind_canonical.py",
+      "bytes": 11726,
+      "mode": 420,
+      "sha256": "b6876b0e2272730d32f66f412c827bdb896e7bfe1010884d7eea8986bbab2b2c"
+    },
+    {
+      "path": "canonical-binding/verify_binding.py",
+      "bytes": 6165,
+      "mode": 420,
+      "sha256": "1015a03d5f1eb6bc7437b51f0edec012b24599f30a0b7c921c17a11968f76eb2"
+    },
+    {
+      "path": "comparison.json",
+      "bytes": 98830,
+      "mode": 420,
+      "sha256": "b1ca44fca77381f8fb9e4cc05e3bd85aba13a64256913d76978f5820eda92650"
+    },
+    {
+      "path": "delta-manifest.json",
+      "bytes": 6789,
+      "mode": 420,
+      "sha256": "fefb5a2fad07c4e0a1d135ee2b180439f926a6791378bbab0fab30731c685620"
+    },
+    {
+      "path": "effective-source-inventory.json",
+      "bytes": 1855694,
+      "mode": 420,
+      "sha256": "c947e27c4833526956b0411d26e4a19235fe6b5f2d970994f48d2cf6e303aca2"
+    },
+    {
+      "path": "freeze-inputs.json",
+      "bytes": 1942,
+      "mode": 420,
+      "sha256": "3fd4aa464455d4c1dc30780a4e685586ae77d6aad6b8d806f81a11c4f9183890"
+    },
+    {
+      "path": "independent-verification.json",
+      "bytes": 457,
+      "mode": 420,
+      "sha256": "4f6f7429036561ff3b3fb9c7fce5f8d1ebe7bef34dd011c2be7994e8e980ab85"
+    },
+    {
+      "path": "preservation-result-attempt2.json",
+      "bytes": 439,
+      "mode": 420,
+      "sha256": "ab1b4be3883cfe22535bb68edc66b1c41035974b615706ae17b1d1d591025674"
+    },
+    {
+      "path": "preservation-result.json",
+      "bytes": 0,
+      "mode": 420,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "preserve_r8_delta.py",
+      "bytes": 13876,
+      "mode": 420,
+      "sha256": "24af8a6c8d3ebd69c26a0dee8781a6997543e473f925795a5daf16a291e54d74"
+    },
+    {
+      "path": "r8-core-build-snapshot.json",
+      "bytes": 318333,
+      "mode": 420,
+      "sha256": "8b77dfffbab2bdb2942ff085e03877d5079e3bc6c771afb5ac92e61a9889556a"
+    },
+    {
+      "path": "r8-source-delta-inventory.json",
+      "bytes": 2075,
+      "mode": 420,
+      "sha256": "64ee20371bba3b7a66ba060a11d2e786f68ae4954a229644c4c3416550302e52"
+    },
+    {
+      "path": "r8-source-delta.tar.gz",
+      "bytes": 42835,
+      "mode": 420,
+      "sha256": "5980bd3cb451e5449ad0471336d35614b3678642d7f9ad7d2287e79848e25a55"
+    },
+    {
+      "path": "verify_delta.py",
+      "bytes": 9366,
+      "mode": 420,
+      "sha256": "0b1a4ae6b0cf3d7c1df15d7fe10b5eb7129e48686a561fdbdc603cec74b22f9d"
+    }
+  ]
+}

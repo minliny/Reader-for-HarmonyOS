@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 2948,
+      "sha256": "70318a05be60f897cd56ba0ea4d8c58c5d010479d7c50103be481259f6682a04"
+    },
+    {
+      "path": "comparison.json",
+      "bytes": 112231,
+      "sha256": "fafbe3397fcf587b4279b71080fdc7b3d27cf102d43fb4dfef1034daae102b9d"
+    },
+    {
+      "path": "delta-manifest.json",
+      "bytes": 3454,
+      "sha256": "0d83bee3013ac925b9688270a2d2eab95eec3af278e25261cd2399955c3d26a9"
+    },
+    {
+      "path": "effective-source-inventory.json",
+      "bytes": 1853946,
+      "sha256": "b12d9258e697fbce0c7c198549cfaf1178f7114946eaf5e72d9171ac2159f1fa"
+    },
+    {
+      "path": "independent-verification.json",
+      "bytes": 405,
+      "sha256": "0ff556147b0fc672511969f14c87996117f58a24db0cba831b8b917486951527"
+    },
+    {
+      "path": "preservation-result.json",
+      "bytes": 405,
+      "sha256": "6f2e32c1ae0c1279b301a6044c7d74e7bed7f0645f59dfabe8d348a819aa94e4"
+    },
+    {
+      "path": "preserve_r5_delta.py",
+      "bytes": 10667,
+      "sha256": "7c52c1f17e7ee9b7afc1379d26e9e917c6344245c76f1f0b90952a8a546a3f19"
+    },
+    {
+      "path": "r5-core-build-snapshot.json",
+      "bytes": 318333,
+      "sha256": "8b77dfffbab2bdb2942ff085e03877d5079e3bc6c771afb5ac92e61a9889556a"
+    },
+    {
+      "path": "r5-source-delta-inventory.json",
+      "bytes": 1104,
+      "sha256": "63a7bc6ada60eed707e7c412b1bcf71367e0ab71d21c9a1396b075d4cd4aa8f9"
+    },
+    {
+      "path": "r5-source-delta.tar.gz",
+      "bytes": 11530,
+      "sha256": "a1bba804791fc0873bb924d6696755fd91132629c645c5331391d112c6a04137"
+    },
+    {
+      "path": "verify_delta.py",
+      "bytes": 4884,
+      "sha256": "c39c8fb9074d88197ec2d743cc5e355f7e38969b8973d6bc272560f1cc094f27"
+    }
+  ]
+}

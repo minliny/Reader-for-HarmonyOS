@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "runId": "20261003T123734Z-568ec4e3-52338352",
+  "sourceOrigin": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913",
+  "persistentWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002",
+  "buildClass": "iteration",
+  "acceptanceEligible": false,
+  "artifact": {
+    "manifest": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261003T123734Z-568ec4e3-52338352/manifest.json",
+    "manifestSha256": "34ff8b60a7892cf502dd0407a31dd189c22c7d68b94c20f2f8b1d0cb2fd78c5e",
+    "kind": "signed",
+    "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261003T123734Z-568ec4e3-52338352/entry-default-signed.hap",
+    "sha256": "f00ebc4a15240832ee5decf39f660cf30eafcf7454759c85875dd94af4f74719",
+    "bytes": 198660353,
+    "certificateSha256": "3a563778e5bf17cd3ead0218e13b4a5030de3f5d7d4e21e0336d8eb37b676dc4"
+  },
+  "source": {
+    "harmonyHead": "568ec4e32a2bdce01f62724cfb04a3f6b5a63a60",
+    "coreHead": "dfd729cffd79ed11da6d44be9e1ba10c4223247f",
+    "dirty": true,
+    "buildInputsFingerprint": "5233835271869872bea123bba6cadb72e35d54d66028d3eeace57ad6d5fc0804",
+    "navigationSurfaceSha256": "00087dbd1fc42a843b93242f4c450d17f7f70dde8bd7e1ea575431aebfce3685",
+    "fontSdkGateSha256": "d70ab1686040b7a45408b6b87b951966106c934ec8a417be9287ad6cc9e22f67",
+    "coreInputFingerprint": "9e97919470b42d81d87082c2c257984778da5e5e5e55798273b3242c99608c4b"
+  },
+  "stages": {
+    "codeAudit": "PASS",
+    "relatedSdkGates": 5,
+    "relatedSdkGatesResult": "PASS",
+    "completeHarmonyContracts": 436,
+    "completeHarmonyContractsResult": "PASS",
+    "arktsBuild": "PASS",
+    "signedArtifactVerification": "PASS",
+    "inspect": "PASS",
+    "install": "PASS",
+    "launch": "PASS",
+    "dataPolicy": "preserve",
+    "vmDirectoryEntryContent": "OBSERVED",
+    "vmDirectoryExitVisibleContent": "OBSERVED",
+    "vmDiscreteScrimIntermediate": "OBSERVED",
+    "exactMotionCurveDurationSmoothness": "OPEN",
+    "responsiveHierarchicalNativeScenarios": "OPEN",
+    "physicalDevice": "NOT_RUN",
+    "userAcceptance": "OPEN"
+  },
+  "target": {
+    "kind": "vm",
+    "ref": "6460677a198b",
+    "completedAt": "2026-10-03T12:38:52.097Z",
+    "receipt": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261003T123734Z-568ec4e3-52338352/deploy-vm-6460677a198b-20261003T123852Z.json",
+    "leaseReleased": true,
+    "endingScene": "directory open, real current05, visible page5of32"
+  },
+  "evidence": {
+    "independentReport": "independent-directory-review/REVIEW.md",
+    "independentReportSha256": "e0442bb222c4ce6815949a0db333275a51cf6754000f15e3d2bb0b576985245f",
+    "currentScreenshot": "vm/final-directory.jpeg",
+    "currentScreenshotSha256": "68e8a372ed1213673a01c6daa2111e58238313061a9a665bedd85d41c4d25a03",
+    "currentUiTree": "vm/final-directory.json",
+    "fixedNativeMotionOriginals": 18,
+    "session": "SESSION_RECORD.md",
+    "sourceDelta": "source-delta/README.md",
+    "canonicalBinding": "source-delta/canonical-binding/binding.json"
+  },
+  "scope": "Directory R5 content-entry delta; previous mode/settings native evidence remains bound to unchanged R4 source and R4 artifact, not relabeled as R5 capture.",
+  "recordCorrections": [
+    "Before freeze, the manually transcribed Core fingerprint had a repeated e5 pair; replaced with exact 64-character canonical-binding value. No source, package or deployment changed."
+  ]
+}

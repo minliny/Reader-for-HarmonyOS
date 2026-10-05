@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03T16:09:16.369825+00:00",
+  "sourceInputsVerified": 13,
+  "persistentAndTemporaryProductionInputBytesAndModesMatch": true,
+  "sourceArchiveParentChainPreviouslyVerified": true,
+  "sourceParentGuards": {
+    "evidence/2026-10-03-manga-reader-sheets-r4/source-preservation/reader-source.tar.gz": "765627819aa7433c1fa9c575240bee471ea7a3174217af8272e338fdad275132",
+    "evidence/2026-10-03-manga-reader-sheets-r5/source-delta/r5-source-delta.tar.gz": "a1bba804791fc0873bb924d6696755fd91132629c645c5331391d112c6a04137",
+    "evidence/2026-10-03-manga-reader-system-bars-r6/FINAL_SHA256SUMS.json": "4d273722ddaea9f4ce9edda74e060fbaccb0baa9e778c57a339fd671ac45630d",
+    "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/r6-source-delta.tar.gz": "bcaad688874908ffb83bfb9d0de8a21497c1dce55f56887b4721a7c843132a55"
+  },
+  "canonicalArtifacts": [
+    {
+      "kind": "signed",
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261003T154124Z-568ec4e3-a61c8e77/entry-default-signed.hap",
+      "bytes": 198678735,
+      "sha256": "cb3cbf1a615edc8b1822290fd778cb4fd3ef3ef1fd0e45d4961c09c583c5f778"
+    },
+    {
+      "kind": "unsigned",
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/manga-sheet-ui-20261003/hap/20261003T154124Z-568ec4e3-a61c8e77/entry-default-unsigned.hap",
+      "bytes": 198375014,
+      "sha256": "11dccd856a63ebebb8e6557b14a56d6ed479d60a15233406080fe4f1d9a79092"
+    }
+  ],
+  "manifestSha256": "d1d85d95beeb104d57aef5d7b4799cc5559697703a916e33273027b5113ad6f2",
+  "sourceToHapBindingStatus": "PASS",
+  "scenarioAcceptanceStatus": "PARTIAL",
+  "fullScreenContentOriginStatus": "OPEN",
+  "newR8SourceChangesNotCovered": true,
+  "buildOrDeviceOperation": false
+}

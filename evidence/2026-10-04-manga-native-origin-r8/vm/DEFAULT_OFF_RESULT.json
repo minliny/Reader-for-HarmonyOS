@@ -1,0 +1,48 @@
+{
+  "status": "PASS",
+  "scope": "default cold launch reader Image components mounted; no native geometry diagnostic records for exact new PID/time; no submitted pixel claim",
+  "pid": 26139,
+  "guestEpochStartSeconds": 1791074416,
+  "guestEpochEndSeconds": 1791074446,
+  "newNumericRecordCount": 0,
+  "readerImageNodes": [
+    {
+      "hashcode": "118:198",
+      "bounds": "[0,0][1280,524]",
+      "origBounds": "[0,0][1280,524]"
+    },
+    {
+      "hashcode": "118:249",
+      "bounds": "[0,524][1280,1048]",
+      "origBounds": "[0,524][1280,1048]"
+    },
+    {
+      "hashcode": "118:252",
+      "bounds": "[0,1048][1280,1572]",
+      "origBounds": "[0,1048][1280,1572]"
+    },
+    {
+      "hashcode": "118:255",
+      "bounds": "[0,1572][1280,2096]",
+      "origBounds": "[0,1572][1280,2096]"
+    },
+    {
+      "hashcode": "118:258",
+      "bounds": "[0,2096][1280,2133]",
+      "origBounds": "[0,2096][1280,2133]"
+    },
+    {
+      "hashcode": "118:241",
+      "bounds": "[0,2133][1280,2657]",
+      "origBounds": "[0,2133][1280,2657]"
+    },
+    {
+      "hashcode": "118:261",
+      "bounds": "[0,2657][1280,2832]",
+      "origBounds": "[0,2657][1280,3181]"
+    }
+  ],
+  "treeSHA256": "f714fbc4bc6a85a294dd0b527764b371e476d9ba12328bbfbb8ffeb4bd1e8cec",
+  "normalWantHasProbeFlag": false,
+  "sourceGuardTests": "canonical full gate contains actual EntryAbility reset/exact bool DEBUG/debug fixture checks"
+}

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "frozenAt": "2026-10-03T12:50:59.989897+00:00",
+  "files": [
+    {
+      "path": "REVIEW.md",
+      "bytes": 11479,
+      "sha256": "e0442bb222c4ce6815949a0db333275a51cf6754000f15e3d2bb0b576985245f"
+    },
+    {
+      "path": "dir-close-analysis/original-contact.png",
+      "bytes": 3454377,
+      "sha256": "f3dd61905a7d7ef25b6382a21af1bf66ee190de1cb262f83dd01c555c17057ff"
+    },
+    {
+      "path": "dir-close-analysis/report.json",
+      "bytes": 16478,
+      "sha256": "9f2993ac8100dc058ae9f9172ae31a3f87eef12fb2020d316878bb3066b39924"
+    },
+    {
+      "path": "dir-close-analysis-output.txt",
+      "bytes": 487,
+      "sha256": "6822c8ea1b8264e4f0ac7476c66b8f31854e43d8d3ec25805ed73a725686f639"
+    },
+    {
+      "path": "dir-close-annotations.json",
+      "bytes": 2701,
+      "sha256": "efbd779788f2c9a6ad19f2c5de210d483a4f7eb8accf8eb38d84f30b95818c23"
+    },
+    {
+      "path": "dir-open-analysis/original-contact.png",
+      "bytes": 3104393,
+      "sha256": "927ea88470f6106a8a70e3e2de76d2bec2afd4caabb3681edddf025ecb51be46"
+    },
+    {
+      "path": "dir-open-analysis/report.json",
+      "bytes": 17178,
+      "sha256": "49ddce768445d570a614ec65c4b4e42db0660d43255687bd364a63c5779b006f"
+    },
+    {
+      "path": "dir-open-analysis-output.txt",
+      "bytes": 490,
+      "sha256": "a91ad0c8e1cfb9e2e1f6d84adee5c4e7eedf917fdfb852b2958555bbb7155b7f"
+    },
+    {
+      "path": "dir-open-annotations.json",
+      "bytes": 2800,
+      "sha256": "4735cbe704a626d55c1e3173c9dc6d28f9ad53429400e4312f5f0e0829e54f7d"
+    },
+    {
+      "path": "native-samples.py",
+      "bytes": 14347,
+      "sha256": "3f01a1b647512dff8a03313542549836e1b55f4ba6acffe6da507b28ade0fd29"
+    },
+    {
+      "path": "original-inventory-and-run-context.json",
+      "bytes": 32486,
+      "sha256": "928c0666f5497dacb2817d5e27aa4d7ed5f26852bb67f643b4c0f9721dd90acb"
+    },
+    {
+      "path": "verification.json",
+      "bytes": 25620,
+      "sha256": "4708feb31d0ab601b9ea44ee03c1f47b2473782cf1d165994d171733225eed21"
+    }
+  ],
+  "manifestExcludesItself": true,
+  "sourceAndOriginalsUntouched": true
+}

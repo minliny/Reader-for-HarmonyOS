@@ -1,0 +1,31 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: diagnostic flag is not stored in settings or AppStorage
++ actual - expected
+
+  [
+    [
++     'readerMangaImageOriginProbe',
++     false
++   ],
++   [
+      'readerAppForeground',
+      true
+    ]
+  ]
+
+    at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-reader-optional-entry-memory-launch.mjs:72:10 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [
+    [ 'readerMangaImageOriginProbe', false ],
+    [ 'readerAppForeground', true ]
+  ],
+  expected: [ [ 'readerAppForeground', true ] ],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

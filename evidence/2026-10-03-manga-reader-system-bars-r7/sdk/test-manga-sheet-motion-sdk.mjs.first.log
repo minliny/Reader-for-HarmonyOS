@@ -1,0 +1,17 @@
+<anonymous_script>:496
+        const insets = readerInteractiveSafeInsets(metrics);
+                       ^
+
+ReferenceError: readerInteractiveSafeInsets is not defined
+    at ReaderBuilderProbe.windowInteractiveInsets (eval at createReaderBuilderProbe (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:167:21), <anonymous>:496:24)
+    at ReaderBuilderProbe.interactiveInsets (eval at createReaderBuilderProbe (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:167:21), <anonymous>:505:29)
+    at ReaderBuilderProbe.panelInsets (eval at createReaderBuilderProbe (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:167:21), <anonymous>:513:29)
+    at Array.eval (eval at createReaderBuilderProbe (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:167:21), <anonymous>:605:28)
+    at ReaderBuilderProbe.runObserver (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:116:31)
+    at ReaderBuilderProbe.observeComponentCreation2 (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:109:12)
+    at ReaderBuilderProbe.panelOverlay (eval at createReaderBuilderProbe (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:167:21), <anonymous>:601:14)
+    at assertOpening (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-sheet-motion-sdk.mjs:70:11)
+    at verifyMotion (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-sheet-motion-sdk.mjs:101:5)
+    at async file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-sheet-motion-sdk.mjs:147:1
+
+Node.js v26.0.0

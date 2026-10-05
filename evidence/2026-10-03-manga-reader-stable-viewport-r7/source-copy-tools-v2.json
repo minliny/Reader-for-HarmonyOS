@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03T15:37:35.006212+00:00",
+  "freezeSha256": "d9173c18182c450d58453ac6cfcd0b272c639c2ffb70b31b9a5b7d76b05a291d",
+  "additionalFile": {
+    "path": "tools/test-reader-layout-architecture.mjs",
+    "before": {
+      "bytes": 9963,
+      "mode": 420,
+      "sha256": "8e392f1c2ea97b045e8a2ea940939044e45869e52aeea4430e4f4414393c86ba"
+    },
+    "after": {
+      "bytes": 10640,
+      "mode": 420,
+      "sha256": "861e19bf5df62d474c6653cf483894e6e3843c14428f66a69a790cdc0142435a"
+    }
+  },
+  "other12FrozenInputsUnchanged": true,
+  "allByteModeReadbackPassed": true,
+  "sourceOrTestEditingPerformed": false
+}
