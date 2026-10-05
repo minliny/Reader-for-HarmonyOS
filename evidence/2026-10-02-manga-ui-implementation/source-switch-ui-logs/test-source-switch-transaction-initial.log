@@ -1,0 +1,205 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: local detail keeps the source-switch pill visible but disables interaction
+    at file:///Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/tools/test-source-switch-transaction.mjs:58:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: "import { bookAuthorLabel } from '../common/BookAuthorMetadata';\n" +
+    "import { readerAppColor } from '../common/ReaderThemeRegistry';\n" +
+    "import type { ReadingBookDetail } from '../reading/ReadingBookDetail';\n" +
+    "import { bookIntroText } from '../common/BookIntroText';\n" +
+    "import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';\n" +
+    'import { readerVisualSafeLeft, readerVisualSafeRight, readerInteractiveSafeTop,\n' +
+    "  readerInteractiveSafeBottom } from '../common/ReaderWindowMetrics';\n" +
+    "import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from '../common/SurfaceHorizontalGeometry';\n" +
+    "import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';\n" +
+    "import { MangaBookPresentation } from '../manga/MangaBookPresentation';\n" +
+    "import { NoCoverCover } from './NoCoverCover';\n" +
+    "import { registerReaderFonts } from '../common/ReaderFonts';\n" +
+    "import { PageBackBar } from '../common/PageBackBar';\n" +
+    '\n' +
+    'const CHAPTER_PREVIEW_LIMIT: number = 20;\n' +
+    '\n' +
+    '/** Shared detail presentation. Core facts decide the type and readable rows. */\n' +
+    '@Component\n' +
+    'export struct LocalBookDetail {\n' +
+    "  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';\n" +
+    "  @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;\n" +
+    '  @Prop book: ReadingBookDetail;\n' +
+    '  @Prop toc: LocalReadingTocEntry[] = [];\n' +
+    '  @Prop sourceSwitchEnabled: boolean = false;\n' +
+    '  @Prop readingEnabled: boolean = true;\n' +
+    "  @Prop readingBlockedReason: string = '';\n" +
+    '  @Prop inBookshelf: boolean = true;\n' +
+    '  @Prop removalEnabled: boolean = true;\n' +
+    '  @Prop removing: boolean = false;\n' +
+    '  @Prop adding: boolean = false;\n' +
+    '  @Prop cancellingAdd: boolean = false;\n' +
+    "  @Prop shelfMessage: string = '';\n" +
+    "  @Prop loadingMessage: string = '';\n" +
+    '  onContinue: () => void = (): void => {};\n' +
+    '  onSelectChapter: (index: number) => void = (_index: number): void => {};\n' +
+    '  onOpenDirectory: () => void = (): void => {};\n' +
+    '  onSwitchSource: () => void = (): void => {};\n' +
+    '  onRemove: () => void = (): void => {};\n' +
+    '  onCancelAdd: () => void = (): void => {};\n' +
+    '  onBack: () => void = (): void => {};\n' +
+    '  @State private viewportWidth: number = 0;\n' +
+    '  @State private introExpanded: boolean = false;\n' +
+    '  @State private collapsedGroups: number[] = [];\n' +
+    '\n' +
+    '  aboutToAppear(): void {\n' +
+    '    registerReaderFonts(this.getUIContext().getFont());\n' +
+    '  }\n' +
+    '\n' +
+    '  build() {\n' +
+    '    Stack({ alignContent: Alignment.Top }) {\n' +
+    '      // Bars float over one full-viewport scroll owner. Only content inside\n' +
+    '      // Scroll receives clearance; corner pixels remain paintable and draggable.\n' +
+    '      Scroll() {\n' +
+    '        Column({ space: 24 }) {\n' +
+    '          this.hero();\n' +
+    '          this.readingFacts();\n' +
+    '          this.summary();\n' +
+    '          this.catalog();\n' +
+    '          if (this.shelfMessage.length > 0) {\n' +
+    "            Text(this.shelfMessage).width('100%').fontSize(12)\n" +
+    "              .fontColor(readerAppColor('TOK_DANGER', this.appThemeScheme));\n" +
+    '          }\n' +
+    '        }.width(this.contentFrame().width).alignItems(HorizontalAlign.Start)\n' +
+    '          .margin({ left: this.contentFrame().left, right: this.contentFrame().right })\n' +
+    '          .padding({ top: this.topInset() + 76, bottom: this.bottomInset() + 104 });\n' +
+    "      }.width('100%').height('100%').scrollBar(BarState.Off);\n" +
+    '      Row() {\n' +
+    "        PageBackBar({ title: '书籍详情', floating: true, centered: true,\n" +
+    "          backIcon: this.appThemeScheme === 'night' ? $r('app.media.book_detail_back_theme_night') : $r('app.media.book_detail_back'),\n" +
+    '          onBack: (): void => this.onBack() });\n' +
+    "      }.width('100%').padding({ left: 16 + this.safeLeft(), right: 16 + this.safeRight(), top: this.topInset() + 6 })\n" +
+    '        .align(Alignment.Top).hitTestBehavior(HitTestMode.Transparent);\n' +
+    '      this.actionArea();\n' +
+    "    }.width('100%').height('100%')\n" +
+    "      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))\n" +
+    '      .onAreaChange((_old: Area, area: Area): void => {\n' +
+    '        const width = Number(area.width);\n' +
+    '        if (Number.isFinite(width) && width > 0) this.viewportWidth = width;\n' +
+    '      });\n' +
+    '  }\n' +
+    '\n' +
+    '  @Builder\n' +
+    '  private hero() {\n' +
+    '    Row({ space: 18 }) {\n' +
+    '      if (this.hasCover()) {\n' +
+    '        Image(this.book.coverUrl as string).width(84).height(122).objectFit(ImageFit.Cover).borderRadius(8);\n' +
+    '      } else {\n' +
+    '        NoCoverCover({ coverWidth: 84, coverHeight: 122 });\n' +
+    '      }\n' +
+    '      Column({ space: 8 }) {\n' +
+    "        Text(this.book.title).width('100%').fontFamily('ReaderNotoSerifSCBold')\n" +
+    '          .fontWeight(FontWeight.Bold).fontSize(24).lineHeight(34)\n' +
+    "          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))\n" +
+    '          .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });\n' +
+    "        Text(bookAuthorLabel(this.book.author)).width('100%').fontFamily('ReaderNotoSansSC')\n" +
+    "          .fontSize(13).lineHeight(20).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))\n" +
+    '          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });\n' +
+    '        Row({ space: 6 }) {\n' +
+    "          this.metadataTag(this.book.contentKind === 'manga' ? '漫画' : this.book.contentKind === 'audio' ? '有声' : '小说');\n" +
+    "          this.metadataTag(this.book.sourceId === 'local' ? '本地' : '在线');\n" +
+    "        }.width('100%');\n" +
+    '      }.layoutWeight(1).constraintSize({ minWidth: 0 }).alignItems(HorizontalAlign.Start);\n' +
+    "    }.width('100%').constraintSize({ minHeight: 122 }).alignItems(VerticalAlign.Top);\n" +
+    '  }\n' +
+    '\n' +
+    '  @Builder\n' +
+    '  private metadataTag(label: string) {\n' +
+    '    Text(label).fontSize(10).lineHeight(18).padding({ left: 7, right: 7 })\n' +
+    "      .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))\n" +
+    "      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))\n" +
+    "      .border({ width: 0.5, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(4);\n" +
+    '  }\n' +
+    '\n' +
+    '  @Builder\n' +
+    '  private readingFacts() {\n' +
+    '    Column({ space: 9 }) {\n' +
+    '      Row({ space: 12 }) {\n' +
+    '        Text(`当前来源：${this.book.sourceName}`).layoutWeight(1).constraintSize({ minWidth: 0 })\n' +
+    "          .fontSize(13).lineHeight(20).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))\n" +
+    '          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });\n' +
+    '        if (this.sourceSwitchEnabled) {\n' +
+    "          Text('换源').height(32).padding({ left: 12, right: 12 }).fontSize(12)\n" +
+    "            .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))\n" +
+    "            .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme)).borderRadius(10)\n" +
+    '            .textAlign(TextAlign.Center).onClick((): void => { if (this.sourceSwitchEnabled) this.onSwitchSource(); });\n' +
+    '        }\n' +
+    "      }.width('100%');\n" +
+    "      Text(`最新：${this.book.lastChapter?.trim() || '暂无最新章节'}`).width('100%')\n" +
+    "        .fontSize(12).lineHeight(20).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));\n" +
+    "      if (this.book.contentKind === 'manga') {\n" +
+    "        Text(MangaBookPresentation.label(this.book.mangaPosition)).width('100%')\n" +
+    "          .fontSize(13).lineHeight(22).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));\n" +
+    '      }\n' +
+    "    }.width('100%').alignItems(HorizontalAlign.Start);\n" +
+    '  }\n' +
+    '\n' +
+    '  @Builder\n' +
+    '  private summary() {\n' +
+    '    Column({ space: 8 }) {\n' +
+    "      Text('简介').fontSize(15).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));\n" +
+    "      Text(this.displayIntro() || '暂无简介').width('100%').fontFamily('ReaderNotoSansSC')\n" +
+    "        .fontSize(13).lineHeight(24).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))\n" +
+    '        .maxLines(this.introExpanded ? 10000 : 3).textOverflow({ overflow: TextOverflow.Ellipsis });\n' +
+    '      if (this.displayIntro().length > 0) {\n' +
+    "        Text(this.introExpanded ? '收起' : '展开').height(32).fontSize(12)\n" +
+    "          .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))\n" +
+    '          .onClick((): void => { this.introExpanded = !this.introExpanded; });\n' +
+    '      }\n' +
+    "    }.width('100%').alignItems(HorizontalAlign.Start);\n" +
+    '  }\n' +
+    '\n' +
+    '  @Builder\n' +
+    '  private catalog() {\n' +
+    '    Column() {\n' +
+    '      Row({ space: 8 }) {\n' +
+    "        Text('目录').fontSize(15).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));\n" +
+    '        Text(`${this.toc.filter((entry: LocalReadingTocEntry): boolean => entry.navigable !== false).length} 个可读条目`)\n' +
+    "          .layoutWeight(1).fontSize(11).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));\n" +
+    "        Text('完整目录 ›').height(44).fontSize(12).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))\n" +
+    '          .enabled(!this.removing).onClick((): void => { if (!this.removing) this.onOpenDirectory(); });\n' +
+    "      }.width('100%').constraintSize({ minHeight: 44 });\n" +
+    '      ForEach(this.visibleToc(), (entry: LocalReadingTocEntry) => {\n' +
+    '        this.chapterRow(entry);\n' +
+    '      }, (entry: LocalReadingTocEntry): string => `${this.book.sourceId}:${this.book.bookId}:${entry.index}`);\n' +
+    '      if (this.toc.length === 0) {\n' +
+    "        Text(this.chapterEmptyMessage()).width('100%').padding({ top: 16, bottom: 16 })\n" +
+    "          .fontSize(13).lineHeight(22).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));\n" +
+    '      }\n' +
+    "    }.width('100%');\n" +
+    '  }\n' +
+    '\n' +
+    '  @Builder\n' +
+    '  private chapterRow(entry: LocalReadingTocEntry) {\n' +
+    '    Row({ space: 8 }) {\n' +
+    '      Text(entry.title).layoutWeight(1).constraintSize({ minWidth: 0 })\n' +
+    "        .fontFamily('ReaderNotoSansSC').fontSize(14).lineHeight(22)\n" +
+    '        .fontWeight(entry.navigable === false ? FontWeight.Medium : FontWeight.Regular)\n' +
+    "        .fontColor(readerAppColor(entry.navigable === false ? 'TOK_MUTED' : 'TOK_INK', this.appThemeScheme));\n" +
+    '      if (entry.navigable === false) {\n' +
+    "        Text(this.collapsedGroups.includes(entry.index) ? '›' : '⌄').width(24).fontSize(18)\n" +
+    "          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));\n" +
+    '      } else if (this.isCurrentChapter(entry)) {\n' +
+    "        Text('正在读').fontSize(11).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));\n" +
+    '      }\n' +
+    "    }.width('100%').constraintSize({ minHeight: entry.navigable === false ? 44 : 58 })\n" +
+    '      .padding({ left: this.chapterIndent(entry), right: 10, top: 10, bottom: 10 })\n' +
+    "      .border({ width: { bottom: 0.5 }, color: { bottom: readerAppColor('TOK_CHAPTER_DIVIDER', this.appThemeScheme) } })\n" +
+    "      .backgroundColor(this.isCurrentChapter(entry) ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appTheme"... 4950 more characters,
+  expected: /\.enabled\(this\.sourceSwitchEnabled\)/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

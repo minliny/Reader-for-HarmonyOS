@@ -5,6 +5,7 @@ import { ReaderWriteEvidence } from '../../entry/src/main/ets/app/ReaderWriteEvi
 import { projectPersistedReceipt } from '../../entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts';
 import { LocalReadingFlowGateway, LOCAL_SOURCE_ID } from '../../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts';
 import { ReadingOfflineGateway } from '../../entry/src/main/ets/features/reading/ReadingOfflineGateway.ts';
+import { MangaDownloadActionsGateway } from '../../entry/src/main/ets/features/manga/MangaDownloadActionsGateway.ts';
 import { loadReaderControlBookmarkProjection } from '../../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts';
 const require=createRequire(import.meta.url);
 const sdk=process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
@@ -21,4 +22,4 @@ function emit(name,dependencies){
  return exports[name];
 }
 export const ReaderDirectoryHost=emit('ReaderDirectoryHost',{ReaderWriteEvidence,projectPersistedReceipt,LocalReadingFlowGateway,LOCAL_SOURCE_ID,loadReaderControlBookmarkProjection});
-export const ReadingOfflineHost=emit('ReadingOfflineHost',{ReaderWriteEvidence,projectPersistedReceipt,ReadingOfflineGateway});
+export const ReadingOfflineHost=emit('ReadingOfflineHost',{ReaderWriteEvidence,projectPersistedReceipt,ReadingOfflineGateway,MangaDownloadActionsGateway});

@@ -11,6 +11,7 @@ registerHooks({ resolve(specifier, context, next) {
 } });
 const { ReadingSessionFlowGateway } = await import('../../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
 const { RemoteReadingFlowGateway } = await import('../../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+const { MangaAdmissionGateway } = await import('../../entry/src/main/ets/features/manga/MangaAdmissionGateway.ts');
 const content = await import('../../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
 const errors = await import('../../entry/src/main/ets/app/ErrorMessage.ts');
 const metadata = await import('../../entry/src/main/ets/features/common/BookAuthorMetadata.ts');
@@ -65,7 +66,7 @@ export function fixture(options={},productionSource=hostSource) {
   const intentClasses=compile(read('features/source/SourceSwitchIntentStore.ts'),'{SourceSwitchIntentStore,SourceSwitchIntentRecoveryError}',
     {...common,SourceSwitchGateway:Gateway,util:{generateRandomUUID:()=> `00000000-0000-4000-8000-${String(++uuid).padStart(12,'0')}`},fileIo,replaceReaderAtomicSnapshot});
   const ProductionHost=compile(productionSource,'SourceSwitchHost',{...common,...gatewayExports,SourceSwitchGateway:Gateway,
-    ReaderCoreGateway:Core,ReadingSessionFlowGateway,RemoteReadingFlowGateway,...content,ReaderWriteEvidence,...intentClasses});
+    ReaderCoreGateway:Core,ReadingSessionFlowGateway,RemoteReadingFlowGateway,MangaAdmissionGateway,...content,ReaderWriteEvidence,...intentClasses});
   const runtime={closed:false,getUIAbilityContext:()=>({filesDir:'/private-files'}), bookAcquisitions:()=>({sourceRegistryRevision:()=>1,
     subscribe(callback){subscriptions.add(callback);return()=>subscriptions.delete(callback);},
     async acquireBook(seed,admission){calls.push(['acquire',seed]);if(options.acquireGate)await options.acquireGate.promise;

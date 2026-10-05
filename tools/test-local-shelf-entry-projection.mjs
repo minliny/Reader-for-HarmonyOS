@@ -50,7 +50,7 @@ function fixture() {
   ], {ReadingEntryHost:ProductionHost,EMPTY_READABLE_ADMISSION:{generation:0,adding:false,cancelling:false,confirmation:'none'}, LOCAL_SOURCE_ID: 'local', ReaderRuntimeOwner: { current: () => owner }, LocalReadingFlowGateway,
     DOMAIN: 0, hilog: { info() {}, error() {} } });
   const p = Object.assign(new Index(), {
-    mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,readableAdmissions:[],offlineMutationGeneration:0,remoteSessionGeneration:0,
+    searchHost:{visibilityChanged(){},close(){},resume(){}},mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,readableAdmissions:[],offlineMutationGeneration:0,remoteSessionGeneration:0,
     route: 'bookshelf', readingOriginRoute: 'bookshelf', navigationGeneration: 0,
     readingSessionActive: false, shelfReadingPreparation: false, detailToc: [],
     shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false}, directoryBookmarkMutationGeneration: 0, directoryBookmarkMutationActiveKey: '',

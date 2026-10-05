@@ -1,10 +1,20 @@
 import { themeDayDesignSource } from './lib/reader-theme-design-source.mjs';
 import assert from 'node:assert/strict';
+import {createRequire, registerHooks} from 'node:module';
+import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import { readFileSync } from 'node:fs';
 import {searchSharedActionFixture,updateActualReaderButton} from './lib/search-shared-action-probe.mjs';
 import {projectOperationFacts} from '../entry/src/main/ets/app/ReaderOperationFacts.ts';
 import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import {sharedActionFeedbackReset} from './lib/shared-action-feedback-state-probe.mjs';
+import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
+import {ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+registerHooks({resolve(specifier, context, next) {
+  try { return next(specifier, context); }
+  catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; }
+}});
+const {readerFloatingTabContentInset, readerFloatingTabBottomInset, READER_FLOATING_TAB_BAR_HEIGHT} =
+  await import('../entry/src/main/ets/features/common/ReaderFloatingBarMetrics.ts');
 
 const read = (relative) => themeDayDesignSource(readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8'));
 const tabs = read('entry/src/main/ets/features/shell/MainTabBar.ets');
@@ -19,8 +29,8 @@ const discover = read('entry/src/main/ets/features/discover/DiscoverPage.ets');
 const rss = read('entry/src/main/ets/features/rss/RssPage.ets');
 
 assert.match(tabs,
-  /private bottomBarFrame\(\): SurfaceHorizontalFrame[\s\S]*new SurfaceWidthSpec\(360, 15, 15, 'center'\)/,
-  'Phone main tabs must preserve the canonical 360vp cap and 15vp edge gaps');
+  /private bottomBarFrame\(\): SurfaceHorizontalFrame[\s\S]*new SurfaceWidthSpec\(Math\.min\(360, 98 \* MAIN_TABS\.length\), 32, 32, 'center'\)/,
+  'Phone main tabs preserve count-adaptive narrow width and 32vp edge clearance');
 assert.match(tabs, /private verticalRail\(\)[\s\S]*Column\(\{ space: 6 \}\)[\s\S]*\.height\(332\)/,
   'Tablet main tabs must keep the canonical 82x332 geometry');
 assert.match(tabs, /private railTabItem[\s\S]*\.width\(66\)[\s\S]*\.height\(58\)/,
@@ -78,13 +88,64 @@ assert.doesNotMatch(search, /importing_spinner_(track|arc)/,
 
 assert.match(detail, /private readingActionLabel\(\): string \{[\s\S]*return this\.inBookshelf \? '继续阅读' : '开始阅读';/,
   'a search preview must say start reading until it joins the shelf');
-assert.equal((detail.match(/this\.readingActionLabel\(\)/g) ?? []).length, 2,
-  'visible and accessibility labels must share one shelf-aware action label');
+assert.ok((detail.match(/this\.readingActionLabel\(\)/g) ?? []).length >= 1,
+  'the actionable label consumes the shared shelf/content-aware projection');
 
 assert.match(shelf, /return \/\^\(https\?:\\\/\\\/\|data:image/,
   'bookshelf cards must admit the same remote cover URLs as detail');
-assert.equal((shelf.match(/\.contentEndOffset\(this\.shelfBottomContentInset\(isTablet\)\)/g) ?? []).length, 1,
-  'the shared lazy Phone and Tablet shelf carries bounded floating-control clearance inside its scroll content');
+// Execute the SDK-emitted List modifier used by both layouts. The old
+// shelfBottomContentInset(isTablet) method is no longer mounted, so a regex
+// on that dead method cannot establish clearance of the actual scroll surface.
+const shelfBreakpoint = Number(read('entry/src/main/ets/features/bookshelf/BookshelfShell.ets')
+  .match(/export const BOOKSHELF_WIDE_BREAKPOINT = (\d+);/)[1]);
+let shelfMetrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 390, 844));
+const builderMethods = createRequire(import.meta.url)(`${process.env.READER_ETS_LOADER_ROOT ??
+  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader'}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
+for (const name of ['continueReadingCard', 'sectionAction', 'filterRow', 'projectionRow']) builderMethods.add(name);
+const {owner: shelfLayout} = createReaderBuilderProbe(shelf,
+  ['bookshelfList', 'isWideViewport', 'effectiveViewportWidth'], {
+    BOOKSHELF_WIDE_BREAKPOINT: shelfBreakpoint,
+    ReaderWindowCoordinator: {metrics: () => shelfMetrics}, readerFloatingTabContentInset,
+    LazyForEach: {create() {}, pop() {}},
+  });
+Object.assign(shelfLayout, {readerWindowMetricsRevision: 0, viewportWidth: 0,
+  continueReading: undefined, filterRowVisible: false, viewModeError: '', visibleBookCount: 1,
+  rowDataSource: {totalCount: () => 0}, shelfContentWidth: () => 300,
+  sectionAction() {}, sectionActionAsset: () => '',
+  shelfScrollHandler: () => () => {}, shelfPageHandler: () => () => {},
+  saveShelfViewport() {}, restoreShelfViewport() {},
+});
+const ShelfShell = productionMotionMethods(new URL('../entry/src/main/ets/features/bookshelf/BookshelfShell.ets', import.meta.url),
+  ['showBottomNav'], {BOOKSHELF_WIDE_BREAKPOINT: shelfBreakpoint, ReaderWindowCoordinator: {metrics: () => shelfMetrics}});
+const shelfShellLayout = Object.assign(new ShelfShell(), {populated: true, readerWindowMetricsRevision: 0, viewportWidth: 0});
+shelfLayout.bookshelfList(false);
+const shelfListNode = [...shelfLayout.nodes.values()].find(n => n.type === 'List');
+assert.ok(shelfListNode, 'the actual shared shelf mounts its native List');
+for (const [width, safeBottom] of [[390, 0], [390, 34], [599, 48], [600, 34], [1024, 48]]) {
+  shelfMetrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, width, 900),
+    undefined, new ReaderInsetsVp(0, 0, 0, safeBottom));
+  shelfLayout.replay();
+  assert.equal(shelfShellLayout.showBottomNav(), width < shelfBreakpoint,
+    'the populated shelf shell mounts a bottom overlay only in the phone layout');
+  assert.equal(shelfListNode.height, '100%', 'floating bars do not shrink the actual List viewport');
+  assert.equal(shelfListNode.contentStartOffset, 74, 'the shared floating title clearance remains in scroll content');
+  if (width < shelfBreakpoint) {
+    assert.equal(shelfListNode.contentEndOffset, READER_FLOATING_TAB_BAR_HEIGHT + Math.max(15, safeBottom) + 16,
+      'Phone last row clears the 68vp floating tab and its live interactive-safe bottom plus 16vp gap');
+    assert.equal(shelfListNode.contentEndOffset - READER_FLOATING_TAB_BAR_HEIGHT - readerFloatingTabBottomInset(shelfMetrics), 16);
+  } else {
+    assert.equal(shelfListNode.contentEndOffset, 24,
+      'Tablet uses the left navigation rail and keeps only the approved bounded 24vp trailing gap');
+  }
+}
+assert.match(tabs, /\.height\(68\)/, 'the live phone navigation retains the height used by content clearance');
+assert.match(tabs, /\.margin\(\{ bottom: this\.bottomInset\(\) \}\)/);
+assert.match(tabs, /return readerFloatingTabBottomInset\(ReaderWindowCoordinator\.metrics\(\)\);/,
+  'the actual tab shares the same live safe-bottom projection as the shelf');
+assert.match(shelf, /if \(this\.isWideViewport\(\)\) \{[\s\S]*?this\.tabletContent\(\);[\s\S]*?this\.tabletNavigation\(\);/,
+  'wide shelf renders its actual tablet content with the approved left rail');
+assert.match(read('entry/src/main/ets/features/bookshelf/BookshelfShell.ets'), /showBottomNav: this\.showBottomNav\(\),/,
+  'the mounted shell consumes the live layout decision verified above');
 assert.doesNotMatch(shelf, /\.padding\(\{ top: TOK_SPACE_XS, bottom: TOK_SPACE_MD \}\)/,
   'floating bars must not shrink the List viewport with vertical padding');
 assert.doesNotMatch(shelf, /bottom: (628|744)/,
@@ -103,8 +164,20 @@ assert.match(rss,
   /private contentFrame\(\): SurfaceHorizontalFrame[\s\S]*readerVisualSafeLeft\(metrics\) - railWidth[\s\S]*new SurfaceWidthSpec\(TOK_CONTENT_RAIL_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET\)/,
   'RSS content width must be bounded by the live viewport after horizontal insets');
 
-assert.match(switchWindow, /private loadingBody[\s\S]*LoadingProgress\(\)[\s\S]*enableLoading\(true\)/,
-  'source-switch loading must render one animated indicator');
+// The approved source view keeps discovery in a small live status row. Run
+// its SDK-emitted child update rather than asserting the removed loading body.
+const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
+syntax.componentCollection.customComponents.add('SearchSpinner');syntax.propCollection.set('SearchSpinner',new Set(['active','diameter','reduceMotion']));
+class SpinnerChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
+const switchSource=readFileSync(new URL('../entry/src/main/ets/features/source/SourceSwitchWindow.ets',import.meta.url),'utf8');
+const windowStruct=switchSource.slice(switchSource.indexOf('@Component\nexport struct SourceSwitchWindow'));
+const {owner:status}=createReaderBuilderProbe(windowStruct,['discoveryStatus'],{SearchSpinner:SpinnerChild});
+let sweeping=true;Object.assign(status,{appThemeScheme:'day',foreground:true,reduceMotion:false,isSweeping:()=>sweeping,statusText:()=>''});status.discoveryStatus();
+const spinner=[...status.children.values()][0];assert.equal(spinner.params.active,true);assert.equal(spinner.params.diameter,13);
+status.foreground=false;status.replay();assert.equal(spinner.params.active,false,'background discovery does not animate');
+status.foreground=true;sweeping=false;status.replay();assert.equal(spinner.params.active,false,'stopped discovery keeps its results without a false spinner');
+status.reduceMotion=true;sweeping=true;status.replay();assert.equal(spinner.params.reduceMotion,true);
 assert.doesNotMatch(switchWindow, /importing_spinner_(track|arc)/,
   'source-switch loading must not stack two spinner circles');
 

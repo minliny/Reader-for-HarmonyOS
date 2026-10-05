@@ -31,6 +31,7 @@ for (const family of [
   'READER_FONT_NOTO_SERIF_SC_REGULAR',
   'READER_FONT_NOTO_SANS_SC',
   'READER_FONT_NOTO_SANS_SC_UI_REGULAR',
+  'READER_FONT_NOTO_SANS_SC_UI_BOLD',
   'READER_FONT_LXGW_WENKAI_LITE',
   'READER_FONT_LXGW_WENKAI_GB_LITE',
   'READER_FONT_ZHUQUE_FANGSONG',
@@ -43,6 +44,7 @@ for (const family of [
 assert.match(fonts, /from '\.\/ReaderFontFamilies\.ts'/,
   'font registration and runtime render helpers must share a TS-safe physical-family layer');
 for (const rawfile of [
+  'NotoSansSC-UIBold.otf',
   'LXGWWenKaiGBLite-Regular.ttf',
   'ZhuqueFangsong-Regular.ttf',
   'SarasaMonoSC-Regular.ttf',

@@ -67,7 +67,8 @@ export class BookshelfProjectionOwner {
     this.attach(binding); this.invalidate();
     const generation = this.value.generation;
     this.deliveryFailed = false;
-    const captured = { readingState: filter.readingState, sourceKind: filter.sourceKind };
+    const captured: BookshelfFilter = { readingState: filter.readingState, sourceKind: filter.sourceKind,
+      contentKind: filter.contentKind ?? 'all' };
     this.value = { ...this.value, filter: captured };
     const current = (): boolean => this.current(binding) && generation === this.value.generation;
     const retained = this.value.value;
@@ -124,7 +125,8 @@ export class BookshelfProjectionOwner {
     let facts = this.value.facts;
     if (facts?.fact === 'refreshFailed' || facts?.fact === 'partial') facts = projectOperationFacts({
       phase: state.kind === 'empty' ? 'empty' : 'succeeded', value: state, generation, canRetry: false });
-    this.value = { ...this.value, filter: { readingState: filter.readingState, sourceKind: filter.sourceKind }, value: state,
+    this.value = { ...this.value, filter: { readingState: filter.readingState, sourceKind: filter.sourceKind,
+      contentKind: filter.contentKind ?? 'all' }, value: state,
       books, facts, revision: state.shelf.projectionRevision ?? '', matchedTotal: state.shelf.total,
       offset: state.shelf.offset ?? 0, hasOnlineBooks: (state.shelf.unfilteredOnlineTotal ?? 0) > 0,
       continueReading: state.continueReading, coreEmpty: state.kind === 'empty', visualAdmitted: state.kind === 'populated' };
@@ -199,7 +201,8 @@ export class BookshelfProjectionOwner {
     } catch (_) { /* Exact Core persisted name survives a transient registry read. */ }
   }
   private completeMembership(): boolean { return this.value.revision.length === 0 ||
-    (this.value.filter.readingState === 'all' && this.value.filter.sourceKind === 'all' && this.value.books.length === this.value.matchedTotal); }
+    (this.value.filter.readingState === 'all' && this.value.filter.sourceKind === 'all' &&
+      (this.value.filter.contentKind ?? 'all') === 'all' && this.value.books.length === this.value.matchedTotal); }
   private key(book: ShelfBook): string { return JSON.stringify([book.sourceId, book.bookId]); }
   private admitted(binding: BookshelfProjectionBinding): boolean { try { return this.ownsRuntime() && binding.current(); } catch (_) { return false; } }
   private current(binding: BookshelfProjectionBinding): boolean { return this.binding === binding && this.admitted(binding); }

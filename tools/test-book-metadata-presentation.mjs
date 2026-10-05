@@ -12,7 +12,7 @@ const { SourceSwitchGateway, sourceSwitchCandidateKey, sourceSwitchSourceCount }
 const page = read('features/search/SearchPage.ets');
 const groupSource = page.slice(page.indexOf('class SearchBookGroup'), page.indexOf('class SearchResultDataSource'));
 const window = read('features/source/SourceSwitchWindow.ets');
-const footer = window.slice(window.indexOf('  private footerText()'), window.indexOf('  private horizontalFrame()'));
+const footer = window.slice(window.indexOf('  private statusText()'), window.indexOf('  private safeTop()'));
 const { SearchBookGroup, FooterProbe } = await executable(`${groupSource}
   ${switchSource.slice(switchSource.indexOf('export function sourceSwitchSourceCount'), switchSource.indexOf('function deduplicateSourceSwitchCandidates'))}
   class FooterProbe { ${footer} } export { SearchBookGroup, FooterProbe };`);
@@ -88,12 +88,15 @@ for (const book of refreshed.slice(1)) group.admit(book, false);
 assert.equal(group.sourceCount, 55);
 assert.equal(sourceSwitchSourceCount(candidates), group.sourceCount);
 const panel = new FooterProbe();
+panel.displayedCandidates = candidates;
+panel.isSweeping = () => panel.state?.kind === 'candidates' && panel.state?.refreshing === true;
+panel.busy = () => false;
 panel.state = { kind: 'candidates', candidates };
-assert.equal(panel.footerText(), `共 ${group.sourceCount} 个书源`);
+assert.equal(panel.statusText(), `查找完成 · ${group.sourceCount} 个来源`);
 panel.state.refreshing = true;
-assert.equal(panel.footerText(), `正在刷新 · 已有 ${group.sourceCount} 个书源`);
+assert.equal(panel.statusText(), `正在查找 · ${group.sourceCount} 个来源`);
 panel.state.refreshError = '网络不可用';
-assert.equal(panel.footerText(), '刷新失败 · 已保留 56 个本地记录', 'record count is explicitly labelled as records');
+assert.equal(panel.errorText(), '网络不可用', 'refresh failure remains visible while records stay displayed');
 assert.equal(candidates.find(row => row.sourceId === 'source-1').acquisitionState, 'failed');
 for(const sourceId of ['source-3','source-4']) {
   assert.equal(candidates.find(row => row.sourceId === sourceId).acquisitionState,'attemptFailed');
@@ -224,9 +227,9 @@ assert.ok(calls.every(method => ['source.list', 'search-book.batch.get', 'search
 }
 
 const detail = read('features/bookshelf/LocalBookDetail.ets');
-const detailIntro = detail.slice(detail.indexOf('  private displayIntro()'), detail.indexOf('  private contentWidth()'));
+const detailIntro = detail.slice(detail.indexOf('  private displayIntro()'), detail.indexOf('  private chapterEmptyMessage()'));
 const cardStart = page.indexOf('struct SearchResultCard');
-const cardIntro = page.slice(page.indexOf('  private displayIntro()', cardStart), page.indexOf('  build()', cardStart));
+const cardIntro = page.slice(page.indexOf('  private displayIntro()', cardStart), page.indexOf('  private coverWidth()', cardStart));
 const { bookIntroText, DetailIntro, SearchIntro } = await executable(`${read('features/common/BookIntroText.ts')}
   class DetailIntro { ${detailIntro} } class SearchIntro { ${cardIntro} } export { DetailIntro, SearchIntro };`);
 const detailProbe = new DetailIntro();
@@ -254,5 +257,5 @@ assert.equal(bookIntroText(longIntro), '正文 & '.repeat(10000).trim(), 'large 
 assert.equal(bookIntroText(`<span ${' '.repeat(100000)}`), '<span', 'an unfinished tag remains text without nested whitespace backtracking');
 assert.match(page.slice(cardStart), /if \(this\.displayIntro\(\)\.length > 0\)/, 'markup-only search summaries must not reserve a blank row');
 assert.match(page.slice(cardStart), /Text\(this\.displayIntro\(\)\)/);
-assert.match(detail, /Text\(this\.displayIntro\(\)\.length > 0 \? this\.displayIntro\(\) : '暂无简介'\)/);
+assert.match(detail, /Text\(this\.displayIntro\(\) \|\| '暂无简介'\)/);
 console.log('shared metadata: identical 56/55 and transitive 74/73 URL/source sets, rename/remount, no network, synopsis presentation: PASS');

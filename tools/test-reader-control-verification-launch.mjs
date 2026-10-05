@@ -37,7 +37,7 @@ assert.match(ability, /onNewWant\(want: Want,[\s\S]*?ReaderSystemFileOpenHost\.r
   'warm file wants enter the import queue without changing diagnostic routes or reloading the window');
 assert.doesNotMatch(ability, /want\.(?:uri|action)|want\.parameters\?\.\[['"](?:route|page|url)['"]\]/,
   'no arbitrary external route enters loadContent');
-assert.match(ability, /ReaderRuntimeOwner\.install\(this\.context,\s*readerDisableOptionalEntryMemory\(DEBUG, BUILD_MODE_NAME, want\.parameters\?\.readerDisableOptionalEntryMemory\)\)/);
+assert.match(ability, /ReaderRuntimeOwner\.install\(this\.context,\s*readerDisableOptionalEntryMemory\(DEBUG, BUILD_MODE_NAME, want\.parameters\?\.readerDisableOptionalEntryMemory\),/);
 assert.match(ability, /this\.runtimeOwner\?\.flush\(\)/);
 assert.match(ability, /owner\?\.release\(\)/);
 

@@ -7,6 +7,7 @@ import { ReaderIconButton } from '../common/ReaderIconButton';
 import { registerReaderShelfFonts } from '../common/ReaderFonts';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { BookshelfMoreMenu } from './BookshelfMoreMenu';
+import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../common/ReaderWindowMetrics';
 import { READER_FLOATING_TOP_BAR_HEIGHT } from '../common/ReaderFloatingBarMetrics';
 
 export const BOOKSHELF_WIDE_BREAKPOINT = 600;
@@ -147,7 +148,9 @@ export struct BookshelfShell {
         this.topBar();
       }
       .width('100%')
-      .height(READER_FLOATING_TOP_BAR_HEIGHT)
+      .height(60)
+      .padding({ left: Math.max(16, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics())),
+        right: Math.max(16, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics())), top: 8 })
       .hitTestBehavior(HitTestMode.Transparent);
 
       if (this.moreMenuVisible) {
@@ -213,34 +216,23 @@ export struct BookshelfShell {
 
   @Builder
   private topBar() {
-    AppTopBar({ title: '书架' }) {
-      Row({ space: 18 }) {
-        // Only this action actor changes; the bookshelf content stays mounted.
-        ForEach([this.navigationGeneration], (presentedGeneration: number): void => {
-          ReaderIconButton({
-            icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_search_theme_night') : $r('app.media.bookshelf_search')),
-            specId: 'toolbar-standard',
-            accessibilityLabel: '搜索',
-            onTap: (): void => this.onSearchRequested(presentedGeneration),
+    ForEach([this.navigationGeneration], (presentedGeneration: number) => {
+      AppTopBar({ title: '书架', floating: true, centered: true, showLeadingSearch: true,
+        onLeadingTap: (): void => {
+          if (this.mounted && this.navigationGeneration === presentedGeneration) this.onSearchRequested(presentedGeneration);
+        } }) {
+        ReaderIconButton({
+          icon: this.appThemeScheme === 'night' ? $r('app.media.rc_dots_theme_night') : $r('app.media.rc_dots'),
+          specId: 'floating-more',
+          accessibilityLabel: '更多',
+          onTap: this.moreOpenAction(this.temporaryBackIdentity),
+        })
+          .onAreaChange((_oldValue: Area, newValue: Area): void => {
+            this.moreAnchorRight = Number(newValue.globalPosition.x) + Number(newValue.width);
+            this.moreAnchorBottom = Number(newValue.globalPosition.y) + Number(newValue.height);
           });
-        }, (generation: number): string => generation.toString());
-
-        // V1 ordinary callbacks are constructor inputs. Only this temporary
-        // trigger gets a fresh identity; bookshelf content/scroll stay mounted.
-        ForEach([this.navigationGeneration], (_generation: number) => {
-          ReaderIconButton({
-            icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more')),
-            specId: 'toolbar-wide',
-            accessibilityLabel: '更多',
-            onTap: this.moreOpenAction(this.temporaryBackIdentity),
-          })
-            .onAreaChange((_oldValue: Area, newValue: Area): void => {
-              this.moreAnchorRight = Number(newValue.globalPosition.x) + Number(newValue.width);
-              this.moreAnchorBottom = Number(newValue.globalPosition.y) + Number(newValue.height);
-            });
-        }, (generation: number): string => generation.toString());
       }
-    }
+    }, (generation: number): string => generation.toString());
   }
 
   private requestCheckUpdates(): void {

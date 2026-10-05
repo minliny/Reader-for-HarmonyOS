@@ -2,6 +2,26 @@ import assert from 'node:assert/strict';
 import {ProductionHost,compileHost,read,setRuntime,readingEvidence,content} from './lib/reading-entry-owner-probe.mjs';
 import {fixture,deferred,tick,until,seed,book,session} from './lib/reading-entry-index-fixture.mjs';
 const checkpoints=[];
+function mangaFixture(){
+ const f=fixture(),sourceId='s1',bookId='book',chapterId='https://source/book/0',pageId='mp1:'+'1'.repeat(64);
+ const manga={...session(),contentKind:'manga'};
+ manga.entries=[{index:0,title:'卷一',url:'group',level:0,navigable:false},
+  {index:1,title:'第一话',url:chapterId,level:1,navigable:true}];
+ const chapter={chapterIndex:1,chapterTitle:'第一话',cached:false,
+  manifest:{chapter:{sourceId,bookId,chapterId},sourceRuleVersion:'v1',manifestVersion:'manifest',decodeRevision:'identity-v1',
+   pages:[{ordinal:0,pageId,resourceRef:'manga:'+pageId}]},resources:[{resourceRef:'manga:'+pageId,request:{url:'https://images.invalid/first'}}]};
+ let imageGate,fail=false;const released=[];
+ f.runtime.supportsCoreCapability=c=>c.startsWith('manga.');
+ f.runtime.request=async(method,p,options)=>{f.calls.push({method,p,options});assert.equal(method,'manga.chapter.get','manga probe has no chapter.content lane');
+  assert.equal(p.chapterIndex,1);assert.equal(p.policy,'cacheFirst');return {data:structuredClone(chapter)};};
+ f.runtime.loadReadingImage=async(...args)=>{f.calls.push({method:'image',p:args});if(imageGate)await imageGate.promise;
+  if(fail)throw Error('image missing');assert.equal(args[0],sourceId);assert.equal(args[1],bookId);assert.equal(args[2],1);
+  assert.equal(args[4],'https://images.invalid/first');assert.equal(args[10],'v1');assert.equal(args[12],'identity-v1');
+  return{fileUri:'/sandbox/first',width:600,height:1000,revision:'image-version'};};
+ f.runtime.releaseReadingImage=(uri)=>released.push(uri);
+ return{...f,manga,chapter,released,setImageGate:g=>imageGate=g,failImage:()=>fail=true};
+}
+
 
 {
  const f=fixture();await f.host.openLocal(book('local-book','local'),f.lease,true);assert.equal(f.calls.length,0,'shelf resume performs no detail IO');
@@ -224,7 +244,7 @@ const checkpoints=[];
  assert.equal(f.calls.some(c=>c.method==='reading.entry.prepare'),false,'retired UI admission cannot dispatch prepared work');
  f.close();checkpoints.push('retired-preparation-admission-keeps-existing-Runtime-owner-no-late-Core-dispatch');
 }
-for (const contentKind of ['manga', 'audio']) {
+for (const contentKind of ['audio']) {
  const f=fixture(), original=f.host.snapshot();
  await f.host.openRemote({seed:{...seed(),contentKind},sourceName:'Source',resumeImmediately:true},f.lease);
  assert.equal(f.calls.length,0,'unsupported media never dispatches preparation intent or body');
@@ -243,10 +263,54 @@ checkpoints.push('actual-media-entry-guard-preserves-owner-and-stored-books-with
 }
 {
  const source=read('features/reading/ReadingEntryHost.ts');
- const unsafe=source.replace("if (contentKind === 'manga' || contentKind === 'audio') {",'if (false) {');
+ const unsafe=source.replace("if (seed.contentKind === 'audio') {",'if (false) {');
  assert.notEqual(source,unsafe);const f=fixture(compileHost(unsafe));
- await f.host.openRemote({seed:{...seed(),contentKind:'manga'},sourceName:'Source',shelfSnapshot:book(),resumeImmediately:true},f.lease);
+ await f.host.openRemote({seed:{...seed(),contentKind:'audio'},sourceName:'Source',shelfSnapshot:book(),resumeImmediately:true},f.lease);
  assert.equal(f.calls.some(call=>call.method==='intent'),true,'deleting actual guard reopens unsupported preparation admission');f.close();
  checkpoints.push('actual-media-entry-guard-deletion-negative');
+}
+{
+ const f=mangaFixture();await f.host.openRemote({seed:{...seed(),contentKind:'manga'},sourceName:'Source',
+  shelfSnapshot:{...book(),contentKind:'manga'},resumeImmediately:true},f.lease);
+ assert.equal(f.host.snapshot().book.contentKind,'manga');assert.equal(f.host.snapshot().session,undefined);
+ assert.equal(f.host.snapshot().toc.length,0,'shelf reader may open directly before a catalog is available');
+ assert.equal(f.calls.some(c=>c.method!=='intent'),false,'historical manga entry performs no text/catalog admission');
+ f.host.bindReader({...book(),contentKind:'manga'},f.manga,[],true,f.lease);
+ assert.equal(await f.host.probe(f.host.snapshot().scopeId),1);assert.equal(f.host.snapshot().verdict,'readable');
+ assert.equal(f.host.snapshot().session.preparedChapter,undefined,'a first-image receipt never masquerades as a text body');
+ assert.deepEqual(f.released,['/sandbox/first']);assert.equal(f.calls.some(c=>c.method==='chapter.content'),false);
+ assert.equal(f.host.readerSessionReady(f.manga),true);assert.equal(f.host.snapshot().toc[0].level,0);
+ assert.equal(f.host.snapshot().toc[0].navigable,false);assert.equal(f.host.snapshot().toc[1].level,1);
+ assert.equal(f.host.snapshot().book.contentKind,'manga');f.close();
+ checkpoints.push('actual-manga-shelf-entry-before-catalog-first-image-readability-type-and-volume-projection');
+}
+{
+ const f=mangaFixture(),gate=deferred();f.setImageGate(gate);
+ f.host.bindReader({...book(),contentKind:'manga'},f.manga,[],true,f.lease);
+ const old=f.host.probe(f.host.snapshot().scopeId);await until(()=>f.calls.some(c=>c.method==='image'));
+ f.host.bindReader(book('new'),session('new'),[],false,f.lease);const changes=f.changes.length;
+ gate.resolve();assert.equal(await old,undefined);assert.equal(f.changes.length,changes);
+ assert.equal(f.host.snapshot().verdict,'verifying');assert.deepEqual(f.released,['/sandbox/first']);f.close();
+ checkpoints.push('late-manga-first-image-cannot-publish-after-reader-type-or-scope-replacement');
+}
+{
+ const f=mangaFixture();f.failImage();f.host.bindReader({...book(),contentKind:'manga'},f.manga,[],true,f.lease);
+ assert.equal(await f.host.probe(f.host.snapshot().scopeId),undefined);
+ assert.notEqual(f.host.snapshot().verdict,'readable');assert.equal(f.host.snapshot().book.contentKind,'manga');
+ assert.equal(f.host.snapshot().session,f.manga,'failed first image preserves admitted catalog/book');f.close();
+ checkpoints.push('manga-catalog-only-cannot-fabricate-readability-or-delete-admitted-session');
+}
+{
+ const f=fixture(),typed=[{sourceId:'s1',bookId:'manga',contentKind:'manga'},
+  {sourceId:'s1',bookId:'audio',contentKind:'audio'},{sourceId:'local',bookId:'local-book',contentKind:'text'}];
+ f.preparations.setVisibleBooks(typed);assert.deepEqual(f.preparations.visibleSeeds.map(row=>row.bookId),['local-book']);
+ f.host.prepareVisible([{...book('local-book','local'),contentKind:'text'}],f.preparationContext,
+  {runtime:f.runtime,revision:'r1',seeds:Promise.resolve(typed)});
+ await until(()=>f.preparations.persistedCompletedRevision==='r1');
+ assert.equal(f.calls.filter(c=>c.method==='reading.entry.prepare').length,7);
+ assert.ok(f.calls.filter(c=>c.method==='reading.entry.prepare').every(c=>c.p.bookId==='local-book'),
+  'shared typed manga/audio identities cannot enter a text cached-chapter warm sweep');
+ assert.ok(f.preparations.persistedSeeds.every(row=>row.contentKind==='text'),'cached sweep seeds preserve their finite kind fact');
+ f.close();checkpoints.push('actual-shared-typed-seeds-and-direct-preparation-owner-exclude-manga-audio');
 }
 console.log(JSON.stringify({status:'PASS',checkpoints,scope:'complete production owner and Gateways through installed SDK emitter + actual coordinator/preparation; controlled native IO; Index/native target proof remains separate'}));

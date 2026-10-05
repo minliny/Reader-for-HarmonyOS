@@ -2,6 +2,7 @@ import { ReaderCoreRequestError } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { ReaderCoreGateway, type ShelfBook } from '../../app/ReaderCoreGateway';
 import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
+import { MangaAdmissionGateway } from '../manga/MangaAdmissionGateway';
 import { errorMessageOf } from '../../app/ErrorMessage';
 import { ReadingSessionFlowGateway } from '../reading/ReadingSessionFlowGateway';
 import { RemoteReadingFlowGateway, type RemoteReadingBookSeed, type RemoteReadingProgressState,
@@ -95,6 +96,34 @@ export class SourceSwitchHost {
     this.intents = new SourceSwitchIntentStore(runtime, this.gateway);
   }
 
+  /** Typed manga preparation shares the feature's captured Runtime/gateway.
+   * Manga's own progress transaction remains with its existing Core adapter. */
+  mangaPreparationGateway(): SourceSwitchGateway {
+    if (!ReaderRuntimeOwner.isCurrent(this.runtime)) throw new Error('MANGA_SESSION_CANCELLED');
+    return this.gateway;
+  }
+
+  async readMangaShelf(sourceId: string, bookId: string, isCurrent: () => boolean): Promise<ShelfBook | undefined> {
+    const current = (): boolean => ReaderRuntimeOwner.isCurrent(this.runtime) && isCurrent();
+    if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
+    const book = await this.shelf.loadShelfBook(sourceId, bookId);
+    if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
+    return book;
+  }
+
+  async prepareMangaPreview(candidate: SourceSwitchCandidate, isCurrent: () => boolean): Promise<RemoteReadingSession> {
+    const current = (): boolean => ReaderRuntimeOwner.isCurrent(this.runtime) && isCurrent();
+    if (!current() || candidate.category !== 'comic') throw new Error('MANGA_SESSION_CANCELLED');
+    const seed: RemoteReadingBookSeed = { ...this.seed(candidate), contentKind: 'manga' };
+    const session = await this.runtime.bookAcquisitions().acquireBook(seed, { isCurrent: current, canDispatch: current });
+    if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
+    if (session.contentKind !== 'manga' || !this.sameIdentity(session.identity, seed))
+      throw new Error('漫画换源返回了其他书籍的阅读会话');
+    await new MangaAdmissionGateway(this.runtime).verify(session, current);
+    if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
+    return session;
+  }
+
   /** One finite feature owner survives Index remounts for this exact Runtime.
    * A retired Runtime cannot evict a successor or borrow its pending work. */
   static forRuntime(runtime: ReaderRuntimeOwner = ReaderRuntimeOwner.current()): SourceSwitchHost {
@@ -151,6 +180,15 @@ export class SourceSwitchHost {
       void this.recoverIntent(true); return;
     }
     if (this.snapshot.state.kind === 'discoveryError' || this.snapshot.state.kind === 'empty') void this.discover(true);
+  }
+
+  stop(scopeId: number): void {
+    if (!this.currentScope(scopeId) || !this.snapshot.visible || this.busyOrUnknown()) return;
+    this.generation += 1; this.stopDiscovery();
+    const state = this.snapshot.state;
+    this.snapshot = { ...this.snapshot, state: state.kind === 'candidates' ?
+      { ...state, refreshing: false, stopped: true } : { kind: 'empty', stopped: true } };
+    this.publish();
   }
 
   refresh(scopeId: number): void {

@@ -129,7 +129,9 @@ export class BookshelfCatalogOwner {
   private async runBatch(books: ShelfBook[], binding: BookshelfCatalogBinding, automatic: boolean, intervalMs: number,
     current: () => boolean, published?: (revision: string) => void,
     progress?: (value: BookshelfCatalogProgress) => void): Promise<BookshelfCatalogProgress> {
-    const result = await new BookshelfCatalogUpdate(this.owner).run(books, automatic, intervalMs, current,
+    const targets = automatic ? books.filter(book =>
+      this.owner.mangaOfflineProbeProtectsAutomaticCatalog?.(book.sourceId, book.bookId) !== true) : books;
+    const result = await new BookshelfCatalogUpdate(this.owner).run(targets, automatic, intervalMs, current,
       (session, live) => binding.prefetch(session, live), value => progress?.(value));
     if (!current() || result.cancelled || result.total === 0) return result;
     try {

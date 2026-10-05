@@ -45,15 +45,17 @@ assert.match(imageHost, /MAX_READING_IMAGE_PIXELS[\s\S]*options\.desiredSize[\s\
   'oversized compressed images must be downsampled before their PixelMap is allocated');
 assert.match(imageHost, /finally \{[\s\S]*pixelMap\.release\(\)[\s\S]*imageSource\.release\(\)/,
   'decode-only PixelMap and ImageSource objects must be released before publication');
-assert.match(imageHost, /displayFileReferences[\s\S]*release\(fileUri:[\s\S]*unlinkBestEffort\(path\)/,
-  'display files must be reference-counted and removed at their final session release');
+assert.match(imageHost, /displayFileReferences[\s\S]*release\(fileUri:[\s\S]*if \(!this\.mangaDisplay\?\.isRetained\(path\)\) this\.removeDisplayFile\(path\)/,
+  'final session release removes novel display files and preserves retained manga display files');
+assert.match(imageHost, /private removeDisplayFile[\s\S]*displayFileReferences\.has\(path\)[\s\S]*unlinkBestEffort\(path,/,
+  'physical display removal rechecks the real reference owner before unlink');
 assert.match(imageHost, /MAX_READING_DISPLAY_FILE_BYTES[\s\S]*await fs\.stat\(tmpPath\)[\s\S]*await this\.unlinkBestEffort\(tmpPath\)/,
   'downsampled display files must remain byte-bounded and clean partial writes');
 assert.match(imageHost, /configureDisplayCache[\s\S]*void this\.cleanupDisplayCache/,
   'startup must launch display-cache maintenance asynchronously');
 assert.match(imageHost, /async cleanupDisplayCache[\s\S]*displayFileReferences\.size > 0[\s\S]*await fs\.listFile\(directory\)[\s\S]*await this\.removeDisplayFile/,
   'a new process must reclaim crash-left display files without racing an active reading session');
-assert.match(imageHost, /cleanupDisplayCache[\s\S]*await fs\.listFile\(cacheDir\)[\s\S]*LEGACY_DISPLAY_FILE_PREFIX[\s\S]*LEGACY_DISPLAY_TEMP_PREFIX[\s\S]*unlinkBestEffort/,
+assert.match(imageHost, /cleanupDisplayCache[\s\S]*await fs\.listFile\(cacheDir\)[\s\S]*LEGACY_DISPLAY_FILE_PREFIX[\s\S]*LEGACY_DISPLAY_TEMP_PREFIX[\s\S]*await this\.removeDisplayFile/,
   'an upgraded process must reclaim legacy display files outside the startup critical path');
 assert.doesNotMatch(imageHost, /openSync|writeSync|statSync|renameSync|listFileSync|unlinkSync/,
   'display-image materialization and cleanup must never block the ArkUI thread with sync filesystem calls');

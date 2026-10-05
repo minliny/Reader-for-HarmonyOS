@@ -25,9 +25,9 @@ const checks=[];
 {
  const f=fixture({shared:true,open:false}),x=makeIndex(f);x.index.openDetailSourceSwitch();await settle();
  assert.equal(x.index.sourceSwitchState.kind,'candidates');assert.equal(x.index.sourceSwitchScopeId,f.host.current().scopeId);
- const panel=x.mount(),row=x.rows().find(r=>r.sourceId==='new');assert.ok(row);
- const originalFrame=x.p.walk(panel).find(c=>c instanceof x.p.deps.ReaderBoundedSurface);
- assert.equal(x.p.nodes(originalFrame).find(n=>n.type==='Column').height,385);
+ const panel=x.mount(),row=x.rows().find(r=>r.candidate.sourceId==='new');assert.ok(row);
+ const originalFrame=[...panel.nodes.values()].find(n=>n.type==='Stack'&&n.width==='100%'&&n.height==='100%');
+ assert.ok(originalFrame,'the actual picker follows the confirmed full-viewport layout');
  row.onSelect();await settle();assert.equal(f.host.current().write.confirmation,'confirmed');
  assert.equal(x.index.detailBook.sourceId,'new');assert.equal(x.index.route,'reading');assert.equal(x.index.requestedChapterIndex,0);
  assert.equal(x.index.remoteReadingSession.identity.sourceId,'new');assert.equal(x.index.currentSourceSwitchTransactionId(),f.host.current().pending.transactionId);
@@ -57,7 +57,7 @@ const checks=[];
  x.index.openDetailSourceSwitch();await settle();const panel=x.mount();panel.onSelectCandidate(f.candidate());await settle();
  assert.equal(f.host.current().write.confirmation,'unknown');assert.equal(x.index.sourceSwitchState.confirmation,'unknown');
  const rendered=x.mount();assert.ok(x.p.nodes(rendered).some(n=>n.create==='换源结果未确认'));
- const action=x.p.nodes(rendered).find(n=>n.create==='重试核对');assert.ok(action?.onClick);
+ const action=x.p.nodes(rendered).find(n=>n.type==='Button'&&n.createWithLabel?.[0]==='重试核对');assert.ok(action?.onClick);
  panel.onClose();assert.equal(f.host.current().visible,true);
  f.options.failExactQuery=false;action.onClick();await settle();assert.equal(f.host.current().write.confirmation,'confirmed');
  assert.equal(x.index.detailBook.sourceId,'new');assert.equal(f.calls.filter(([m])=>m==='source.switch.commit').length,1);
@@ -117,7 +117,10 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
   return cacheAuthority.runtime.request(method,params,options);
  };
  f.runtime.clearOfflineBookImages=async(sourceId,bookId)=>{cleanup.push(['images',sourceId,bookId]);if(outcome==='platform-failure')throw Error('old cache images unavailable');};
- x.index.openDetailSourceSwitch();await settle();x.mount().onSelectCandidate(f.candidate());await settle();
+ x.index.openDetailSourceSwitch();await settle();x.mount().onSelectCandidate(f.candidate());
+ for(let i=0;i<200&&x.index.detailBook.sourceId!=='new';i++)await new Promise(r=>setTimeout(r,5));
+ assert.equal(x.index.detailBook.sourceId,'new','actual accepted source seam completes before visible reading commit');
+ assert.equal(f.host.current().write.confirmation,'confirmed');
  const tx=f.host.current().pending.transactionId;f.setPhase('finalized');
  x.index.applyReadingCommit({...target,chapterIndex:0,sourceSwitchTransactionId:tx});
  for(let i=0;i<200&&x.index.getReadingOfflineHost(f.runtime).busy();i++)await new Promise(r=>setTimeout(r,5));
@@ -148,4 +151,4 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
  assert.equal(f.calls.filter(([m])=>m==='source.switch.commit').length,0);
  checks.push('actual-ReaderShell-overlay-oldscope-preserved-without-reader-tree-remount');
 }
-console.log(JSON.stringify({status:'PASS',checks,scope:'actual Host/Gateway/full durable intent + unmodified Index delegates/seam + decorated SDK Window/CandidateRow/bounded frame; controlled runtime/native file boundary. Native layout/removal/focus/device remain separate.'}));
+console.log(JSON.stringify({status:'PASS',checks,scope:'actual Host/Gateway/full durable intent + unmodified Index delegates/seam + decorated SDK exported fullviewport Window/LiveRow; controlled runtime/native file boundary. Native layout/removal/focus/device remain separate.'}));

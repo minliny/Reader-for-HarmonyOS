@@ -11,12 +11,14 @@ import { window } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
 import { ReaderStartupContentOwner } from '../app/ReaderStartupContentOwner';
+import { installMangaAtomicPayloadReader } from '../app/MangaAtomicPayloadReader';
 import { ReaderSystemFileOpenHost } from '../app/ReaderSystemFileOpenHost';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
-import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory } from '../app/ReaderControlVerificationLaunch';
+import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } from '../app/ReaderControlVerificationLaunch';
 import { ReaderEventLoopProbe, ReaderEventLoopSample, readerEventLoopProbeEnabled } from '../app/ReaderEventLoopProbe';
 import { probeReaderAtomicSnapshot, type ReaderAtomicSnapshotSample } from '../app/ReaderAtomicSnapshotProbe';
 import { probeReaderAssetInventory, type ReaderAssetInventorySample } from '../app/ReaderAssetInventoryProbe';
+import { ReaderMangaPlatformDiagnostic } from '../app/ReaderMangaPlatformDiagnostic';
 import { ReaderStartupTrace, type ReaderStartupSample } from '../app/ReaderStartupTrace';
 import { ReaderCapacityProbe, type ReaderCapacityQueryOptions } from '../app/ReaderCapacityProbe';
 import type { JsonObject } from '@reader/core-harmony';
@@ -36,10 +38,12 @@ export default class EntryAbility extends UIAbility {
   private shelfFontsReady: Promise<void> = Promise.resolve();
   private eventLoopProbe: ReaderEventLoopProbe | undefined = undefined;
   private capacityProbe: ReaderCapacityProbe | undefined = undefined;
+  private mangaPlatformDiagnostic: ReaderMangaPlatformDiagnostic | undefined = undefined;
   private preparedReadingFontOwner: ReaderRuntimeOwner | undefined = undefined;
   private preparedReadingFontSnapshot: ReaderAppearanceSnapshot | undefined = undefined;
 
   onCreate(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
+    installMangaAtomicPayloadReader();
     const trace = ReaderStartupTrace.install(readerMotionNowMs, (sample: ReaderStartupSample): void => {
       hilog.info(DOMAIN, 'Reader', 'READER_STARTUP %{public}s', JSON.stringify(sample));
     }, DEBUG === true && BUILD_MODE_NAME === 'debug', want.parameters?.readerTtsTrace === true);
@@ -72,8 +76,26 @@ export default class EntryAbility extends UIAbility {
       .catch((error: Error): void => {
         hilog.error(DOMAIN, 'Reader', 'Shelf font preparation failed: %{private}s', error.message);
       });
+    // Selection diagnostics have no inferred identity. Conflicting diagnostic
+    // flags reject both selection modes; exact Want scope semantics stay intact.
+    const mangaSelectFlag = want.parameters?.readerMangaOfflineProbeSelectManga === true ||
+      want.parameters?.readerMangaReadingProbeSelectManga === true;
+    const mangaSelectionMode = this.coldStartPage === 'pages/Index' ? readerMangaProbeSelectionMode(DEBUG, BUILD_MODE_NAME,
+      want.parameters?.readerMangaOfflineProbeSelectManga, want.parameters?.readerMangaReadingProbeSelectManga,
+      [want.parameters?.readerMangaOfflineProbe, want.parameters?.readerMangaReadingProbe,
+        want.parameters?.readerControlMotionVerification, want.parameters?.readerOpenSourcePilot,
+        want.parameters?.readerEventLoopProbe, want.parameters?.readerDisableOptionalEntryMemory]) : undefined;
+    this.mangaPlatformDiagnostic = ReaderMangaPlatformDiagnostic.install(mangaSelectionMode,
+      want.parameters?.readerMangaRecordedJankR31 === true);
     const owner = ReaderRuntimeOwner.install(this.context,
-      readerDisableOptionalEntryMemory(DEBUG, BUILD_MODE_NAME, want.parameters?.readerDisableOptionalEntryMemory));
+      readerDisableOptionalEntryMemory(DEBUG, BUILD_MODE_NAME, want.parameters?.readerDisableOptionalEntryMemory),
+      this.coldStartPage === 'pages/Index' ? readerMangaOfflineProbeScope(DEBUG, BUILD_MODE_NAME,
+        want.parameters?.readerMangaOfflineProbe, want.parameters?.readerMangaOfflineSourceId,
+        want.parameters?.readerMangaOfflineBookId, mangaSelectFlag ? true : want.parameters?.readerMangaReadingProbe) : undefined,
+      this.coldStartPage === 'pages/Index' ? readerMangaReadingProbeScope(DEBUG, BUILD_MODE_NAME,
+        want.parameters?.readerMangaReadingProbe, want.parameters?.readerMangaOfflineSourceId,
+        want.parameters?.readerMangaOfflineBookId, mangaSelectFlag ? true : want.parameters?.readerMangaOfflineProbe) : undefined,
+      mangaSelectionMode);
     this.runtimeOwner = owner;
     if (DEBUG === true && BUILD_MODE_NAME === 'debug' && want.parameters?.readerCapacityTrace === true) {
       this.capacityProbe = ReaderCapacityProbe.create(DEBUG, BUILD_MODE_NAME, want.parameters?.readerCapacityTrace,
@@ -253,6 +275,7 @@ export default class EntryAbility extends UIAbility {
   onBackground(): void {
     AppStorage.setOrCreate('readerAppForeground', false);
     this.runtimeOwner?.setReadingPreparationContext(false, false);
+    this.runtimeOwner?.releaseMangaOfflineProbe();
     this.eventLoopProbe?.stop('background');
     this.capacityProbe?.stop();
     this.runtimeOwner?.flush().catch((error: Error): void => {
@@ -265,6 +288,7 @@ export default class EntryAbility extends UIAbility {
   }
 
   onDestroy(): void {
+    this.mangaPlatformDiagnostic?.stop(); this.mangaPlatformDiagnostic = undefined;
     this.eventLoopProbe?.stop('destroyed');
     this.capacityProbe?.stop();
     this.startupContent?.close();

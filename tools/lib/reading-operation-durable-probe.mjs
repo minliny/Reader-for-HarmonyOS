@@ -15,6 +15,7 @@ const { projectPersistedReceipt } = await import('../../entry/src/main/ets/app/R
 const { projectOperationFacts } = await import('../../entry/src/main/ets/app/ReaderOperationFacts.ts');
 const { LocalReadingFlowGateway, LOCAL_SOURCE_ID } = await import('../../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
 const { ReadingOfflineGateway } = await import('../../entry/src/main/ets/features/reading/ReadingOfflineGateway.ts');
+const { MangaDownloadActionsGateway } = await import('../../entry/src/main/ets/features/manga/MangaDownloadActionsGateway.ts');
 const { loadReaderControlBookmarkProjection } = await import('../../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts');
 const sdk = await import('../../entry/vendor/core-harmony/sdk/reader_core.ts');
 const run = promisify(execFile), require=createRequire(import.meta.url);
@@ -77,7 +78,7 @@ export async function fixture(official=false,existing){
  installed=runtime;
  const dirDeps={ReaderWriteEvidence,projectPersistedReceipt,LocalReadingFlowGateway,LOCAL_SOURCE_ID,loadReaderControlBookmarkProjection};
  const Directory=compile('features/reading/ReaderDirectoryHost.ts','ReaderDirectoryHost',dirDeps,official);
- const Offline=compile('features/reading/ReadingOfflineHost.ts','ReadingOfflineHost',{ReaderWriteEvidence,projectPersistedReceipt,ReadingOfflineGateway},official);
+ const Offline=compile('features/reading/ReadingOfflineHost.ts','ReadingOfflineHost',{ReaderWriteEvidence,projectPersistedReceipt,ReadingOfflineGateway,MangaDownloadActionsGateway},official);
  const SettingsGateway=compile('features/settings/SettingsCacheGateway.ts','SettingsCacheGateway',{CacheClearOperationIntentStore:types.CacheClearOperationIntentStore},official);
  const SettingsOwner=compile('features/settings/SettingsCacheCleanupOwner.ts','SettingsCacheCleanupOwner',{ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,projectOperationFacts,SettingsCacheGateway:SettingsGateway},official);
  const general=actualGeneralSettingsFixture();general.setActive(runtime);

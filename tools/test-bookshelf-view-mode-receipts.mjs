@@ -7,6 +7,8 @@ import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {ReaderWriteEvidence} from '../entry/src/main/ets/app/ReaderWriteEvidence.ts';
 import {projectOperationFacts,projectCommitReadback} from '../entry/src/main/ets/app/ReaderOperationFacts.ts';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
+import {readerFloatingTabContentInset} from './lib/reader-floating-bar-metrics-probe.mjs';
+import {createDefaultReaderWindowMetrics} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 const file=p=>new URL('../entry/src/main/ets/'+p,import.meta.url),source=p=>readFileSync(file(p),'utf8');
 const projectPersistedReceipt=new Function('projectOperationFacts','projectCommitReadback',stripTypeScriptTypes(source('app/ReaderPersistedReceiptProjection.ts').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''))+';return projectPersistedReceipt;')(projectOperationFacts,projectCommitReadback);
 const tick=()=>new Promise(resolve=>setImmediate(resolve)),defer=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
@@ -47,10 +49,10 @@ function fixture(){
   return{p,select:mode=>p[settings?'selectMode':'setViewMode'](mode),load:()=>p[settings?'loadMode':'loadViewMode'](),
    retry:g=>p[settings?'retryMode':'retryViewMode'](g),close:()=>p.aboutToDisappear(),
    render(){
-    const selected=settings?['build','modeOption','settingsRecovery','settingsRecoveryIdentity','settingsRecoveryCurrent','retrySettingsRecovery']:['bookshelfList','shelfPageHandler','shelfScrollHandler','isShelfPresentationCurrent'];
-    const deps={readerRecoveryView,ViewStackProcessor:{StartGetAccessRecordingFor(){},StopGetAccessRecording(){}},LazyForEach:{create(){},pop(){}},READER_FLOATING_TOP_BAR_HEIGHT:56,ReaderRecoveryNotice:Child,PageBackBar:Child,Toggle:{create(){},isOn(){},selectedColor(){},onChange(){},pop(){}},ToggleType:{Switch:'Switch'}};
+    const selected=settings?['build','modeOption','settingsRecovery','settingsRecoveryIdentity','settingsRecoveryCurrent','retrySettingsRecovery']:['bookshelfList','isWideViewport','effectiveViewportWidth','shelfPageHandler','shelfScrollHandler','isShelfPresentationCurrent'];
+    const deps={readerRecoveryView,BOOKSHELF_WIDE_BREAKPOINT:600,readerFloatingTabContentInset,ReaderWindowCoordinator:{metrics:createDefaultReaderWindowMetrics},ViewStackProcessor:{StartGetAccessRecordingFor(){},StopGetAccessRecording(){}},LazyForEach:{create(){},pop(){}},READER_FLOATING_TOP_BAR_HEIGHT:56,ReaderRecoveryNotice:Child,PageBackBar:Child,Toggle:{create(){},isOn(){},selectedColor(){},onChange(){},pop(){}},ToggleType:{Switch:'Switch'}};
     const b=createReaderBuilderProbe(source(path),selected,deps).owner;
-    Object.assign(b,p,{appThemeScheme:'day',books:[],operation:{action:'load'},continueReading:undefined,filterRowVisible:false,visibleBookCount:1,autoCheckUpdate:true,
+    Object.assign(b,p,{readerWindowMetricsRevision:0,viewportWidth:390,appThemeScheme:'day',books:[],operation:{action:'load'},continueReading:undefined,filterRowVisible:false,visibleBookCount:1,autoCheckUpdate:true,
      shelfContentWidth:()=>300,contentFrame:()=>({left:0,right:0}),bottomContentInset:()=>16,shelfBottomContentInset:()=>16,
      sectionHeader(){},sectionHeaderContent(){},sectionAction(){},filterRow(){},rebuildShelfProjection(){},shelfListHeight:()=>100,gridRows(){},bookList(){},gridBookRows(){},continueReadingCard(){},
      lazyRows(){},shelfRowContent(){},rowDataSource:{},shelfScroller:{},gridShelfRows(){},bookGridRows(){},viewModeRecovery:()=>p.viewModeRecovery(),retryMode:g=>p.retryMode(g),retryViewMode:g=>p.retryViewMode(g),modeOption(){}});

@@ -41,7 +41,8 @@ for(const specId of ['local-file-selection','local-import-result','tts-manager',
 }
 // All style inputs are finite. Native node reuse between incompatible family IDs
 // is intentionally absent: callers retain same-family instances per opening.
-assert.match(source,/ReaderBoundedSurface\(\{[^]*header: \(\): void => \{ this\.header\(\); \}, body: \(\): void => \{ this\.windowBody\(\); \}, actions: \(\): void => \{ this\.footer\(\); \}/);
+assert.doesNotMatch(source,/ReaderBoundedSurface\(\{/,'approved fullviewport source picker no longer consumes the retained legacy popup spec');
+assert.match(source,/export struct SourceSwitchWindow/);assert.match(source,/\.width\('100%'\)\.height\('100%'\)/);
 assert.match(tts,/ReaderBoundedSurface\(\{[^]*header: \(\): void => \{ this\.boundedHeader\(\); \}, body: \(\): void => \{ this\.boundedContent\(\); \}, actions: \(\): void => \{ this\.boundedActions\(\); \}/);
 assert.doesNotMatch(source,/\.backgroundColor\(readerAppColor\(this\.surfaceSpec\(\)\.surfaceBackgroundRole/);
 assert.doesNotMatch(tts,/\.borderRadius\(this\.manager \? this\.managerSurfaceSpec/);

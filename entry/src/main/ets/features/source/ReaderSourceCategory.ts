@@ -68,3 +68,13 @@ export function readerSourceCategoryLabel(category: ReaderSourceCategory): strin
 export function readerSourceCategoryIsText(category: ReaderSourceCategory): boolean {
   return category === 'novel';
 }
+
+/** Search may discover comics; successful first-image verification admits reading. */
+export function readerSourceCategoryIsReadable(category: ReaderSourceCategory): boolean {
+  return category === 'novel' || category === 'comic';
+}
+
+/** Keep legacy text keys; JSON escaping separates manga from raw NUL-delimited text keys. */
+export function readerMediaIdentity(manga: boolean, key: string): string {
+  return manga ? JSON.stringify(['manga', key]) : key;
+}

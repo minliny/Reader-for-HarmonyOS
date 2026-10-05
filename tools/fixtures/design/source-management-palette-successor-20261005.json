@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "approval": "Existing implementation palette approved in Reader-UI READER_REPAIR_SPEC section 2; this successor preserves every historical source-management-action-baseline tuple except these exact night role bindings.",
+  "source": "Reader-UI/theme/registry.json",
+  "sourceUiCommit": "8e8e7bcea9eab851c8f68d5169e6ef9c209f9e549",
+  "registrySha256": "a577925b17af4a5a1d1a1937bb3552fe07de642d38d4bc00b3be057e9bc3085a",
+  "scheme": "night",
+  "values": {
+    "TOK_INK": "#FFEAE7DE",
+    "TOK_CARD_BG": "#FF282C25"
+  },
+  "bindings": [
+    {
+      "id": "source-management-category",
+      "active": false,
+      "node": 0,
+      "property": "fontColor",
+      "role": "TOK_INK",
+      "original": "#FFEADFCE"
+    },
+    {
+      "id": "source-management-category",
+      "active": false,
+      "node": 0,
+      "property": "backgroundColor",
+      "role": "TOK_CARD_BG",
+      "original": "#E62A2622"
+    },
+    {
+      "id": "source-management-status-compact",
+      "active": false,
+      "node": 0,
+      "property": "fontColor",
+      "role": "TOK_INK",
+      "original": "#FFEADFCE"
+    },
+    {
+      "id": "source-management-status-compact",
+      "active": false,
+      "node": 0,
+      "property": "backgroundColor",
+      "role": "TOK_CARD_BG",
+      "original": "#E62A2622"
+    },
+    {
+      "id": "source-management-status-wide",
+      "active": false,
+      "node": 0,
+      "property": "fontColor",
+      "role": "TOK_INK",
+      "original": "#FFEADFCE"
+    },
+    {
+      "id": "source-management-status-wide",
+      "active": false,
+      "node": 0,
+      "property": "backgroundColor",
+      "role": "TOK_CARD_BG",
+      "original": "#E62A2622"
+    },
+    {
+      "id": "source-management-detect",
+      "active": false,
+      "node": 0,
+      "property": "backgroundColor",
+      "role": "TOK_CARD_BG",
+      "original": "#E62A2622"
+    },
+    {
+      "id": "source-management-detect",
+      "active": false,
+      "node": 1,
+      "property": "fontColor",
+      "role": "TOK_INK",
+      "original": "#FFEADFCE"
+    },
+    {
+      "id": "source-management-login",
+      "active": false,
+      "node": 0,
+      "property": "backgroundColor",
+      "role": "TOK_CARD_BG",
+      "original": "#E62A2622"
+    },
+    {
+      "id": "source-management-manage",
+      "active": false,
+      "node": 1,
+      "property": "fontColor",
+      "role": "TOK_INK",
+      "original": "#FFEADFCE"
+    },
+    {
+      "id": "source-management-detect",
+      "active": true,
+      "node": 0,
+      "property": "backgroundColor",
+      "role": "TOK_CARD_BG",
+      "original": "#E62A2622"
+    },
+    {
+      "id": "source-management-detect",
+      "active": true,
+      "node": 1,
+      "property": "fontColor",
+      "role": "TOK_INK",
+      "original": "#FFEADFCE"
+    },
+    {
+      "id": "source-management-login",
+      "active": true,
+      "node": 0,
+      "property": "backgroundColor",
+      "role": "TOK_CARD_BG",
+      "original": "#E62A2622"
+    },
+    {
+      "id": "source-management-manage",
+      "active": true,
+      "node": 1,
+      "property": "fontColor",
+      "role": "TOK_INK",
+      "original": "#FFEADFCE"
+    }
+  ]
+}

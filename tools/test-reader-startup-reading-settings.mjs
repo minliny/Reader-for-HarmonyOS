@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
+import { readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { createMangaAtomicPayloadInstallerFixture } from './lib/manga-atomic-payload-probe.mjs';
 import { ReaderStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace.ts';
 import * as settings from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
 
 const base = new URL('../entry/src/main/ets/', import.meta.url);
+const installMangaAtomicPayloadReader = createMangaAtomicPayloadInstallerFixture({});
 const source = readFileSync(new URL('features/reading/ReaderSettingsGateway.ts', base), 'utf8');
 const stores = new WeakMap();
 let barrierCalls = 0;
@@ -90,6 +93,37 @@ for (const raw of ['', '{invalid']) {
   assert.deepEqual(await successor.gateway.loadAfterConfigurationRecovery(() => true), saved);
 }
 
+// Manga changes merge into the same serialized settings snapshot, and an old
+// novel-control snapshot cannot undo them. Failed flush retains the accepted choice
+// while saved facts remain on the last acknowledged snapshot.
+{
+  const f = fixture(); const old = await f.gateway.load();
+  await f.gateway.updateMangaDirection(true);
+  await f.gateway.updateMangaFit('contain');
+  assert.equal(f.gateway.current().mangaFit, 'contain');
+  assert.equal(f.gateway.current().mangaDirection, 'horizontal');
+  await f.gateway.update({ ...old, pageTransition: 'cover' });
+  assert.equal(f.gateway.current().mangaDirection, 'horizontal');
+  assert.equal(f.gateway.current().pageTransition, 'cover');
+  assert.equal(f.gateway.current().mangaFit, 'contain');
+  f.store.flush = async () => { throw Error('manga flush failed'); };
+  await assert.rejects(f.gateway.updateMangaDirection(false), /manga flush failed/);
+  await assert.rejects(f.gateway.updateMangaFit('width'), /manga flush failed/);
+  assert.equal(f.gateway.current().mangaFit, 'width');
+  assert.equal(f.gateway.current().mangaDirection, 'vertical');
+  assert.equal(f.gateway.writeFacts().pendingReconciliation, true);
+  assert.equal(f.gateway.writeFacts().saved.mangaFit, 'contain');
+  assert.equal(f.gateway.writeFacts().saved.mangaDirection, 'horizontal');
+  f.store.flush = async () => {};
+  await f.gateway.retryAccepted();
+  assert.equal(f.gateway.writeFacts().pendingReconciliation, false);
+  assert.equal(f.gateway.writeFacts().saved.mangaFit, 'width');
+  assert.equal(f.gateway.writeFacts().saved.mangaDirection, 'vertical');
+  await f.gateway.update(defaults, true);
+  assert.equal(f.gateway.current().mangaDirection, undefined);
+  assert.equal(f.gateway.current().mangaFit, undefined);
+}
+
 // Execute actual Ability startup and window publication, with the real gateway.
 // Only native platform work, configuration recovery I/O and font I/O are controlled.
 const abilityFile = new URL('entryability/EntryAbility.ets', base);
@@ -100,7 +134,9 @@ for (const failRead of [false, true]) {
   const Ability = productionMotionMethods(abilityFile, ['onCreate', 'onWindowStageCreate'], {
     ReaderStartupTrace, readerMotionNowMs: () => performance.now(),
     DEBUG: true, BUILD_MODE_NAME: 'debug', DOMAIN: 0x5244,
-    readerControlVerificationColdStartPage: () => 'pages/Index', readerDisableOptionalEntryMemory: () => false,
+    installMangaAtomicPayloadReader,
+    ReaderMangaPlatformDiagnostic: { install: () => undefined }, // Separate focused production-module probe owns SDK diagnostics.
+    readerControlVerificationColdStartPage: () => 'pages/Index', readerDisableOptionalEntryMemory: () => false, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode,
     readerEventLoopProbeEnabled: () => false, ReaderRuntimeOwner: { install: () => f.owner },
     ReaderSystemFileOpenHost: { install() {}, receive() {} },
     AppStorage: { setOrCreate() {} }, WebDavCredentialStore: { instance: { attachContext() {}, loadBookshelfViewMode: async () => null } },

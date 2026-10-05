@@ -4,10 +4,26 @@ import {readFileSync} from 'node:fs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {labeledIconControls} from './lib/reader-labeled-icon-action-probe.mjs';
 import {iconButtonControls} from './lib/reader-icon-button-probe.mjs';
+import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import {readerSourceCategoryLabel} from '../entry/src/main/ets/features/source/ReaderSourceCategory.ts';
 const source=readFileSync(new URL('../entry/src/main/ets/features/source/SourceManagementPage.ets',import.meta.url),'utf8');
 const golden=JSON.parse(readFileSync(new URL('./fixtures/design/source-management-action-baseline.json',import.meta.url),'utf8'));
 assert.equal(golden.sha,'295b44d74d1c2757a7bb6328ac7af8a51c042459');
+const palette=JSON.parse(readFileSync(new URL('./fixtures/design/source-management-palette-successor-20261005.json',import.meta.url),'utf8'));
+assert.equal(palette.scheme,'night');assert.equal(palette.bindings.length,14);
+for(const[role,value]of Object.entries(palette.values))assert.equal(readerAppColor(role,'night'),value,'exact approved Reader-UI night palette, not an arbitrary color exemption');
+let successorProperties=0;
+function originalWithApprovedPalette(g,p){
+ const expected=structuredClone(g.physical);
+ if(g.scheme!==palette.scheme)return expected;
+ for(const binding of palette.bindings.filter(row=>row.id===g.id&&row.active===g.active)){
+  const spec=p.dependencies.resolveReaderButtonSpec(g.id);
+  assert.equal(spec[binding.property==='fontColor'?'secondaryText':'secondarySurface'],binding.role,'exact finite semantic producer binding');
+  assert.equal(expected[binding.node][binding.property],binding.original,'historical palette witness remains immutable');
+  expected[binding.node][binding.property]=palette.values[binding.role];successorProperties++;
+ }
+ return expected;
+}
 const keys=['fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','textAlign','maxLines','width','height','layoutWeight','padding','backgroundColor','border','borderRadius','opacity'];
 const physical=n=>Object.fromEntries(keys.filter(k=>Object.hasOwn(n,k)).map(k=>[k,n[k]]));
 let count=0;
@@ -20,7 +36,7 @@ for(const g of golden.cases){
  const actor=[...owner.children.values()].find(c=>c.specId===id&&(c.label===label||id==='source-management-detect'&&c.label==='检测中'));
  assert.ok(actor,id+' actual Page constructs the finite shared component');
  const actual=p.orderedNodes(actor).filter(n=>['Text','Image','Row','Stack'].includes(n.type));
- assert.deepEqual(actual.map(n=>n.type),g.types,id+' exact original native structure');assert.deepEqual(actual.map(physical),g.physical,id+' original physical roles/AUTO/geometry');
+ assert.deepEqual(actual.map(n=>n.type),g.types,id+' exact original native structure');assert.deepEqual(actual.map(physical),originalWithApprovedPalette(g,p),id+' original physical roles/AUTO/geometry plus exact approved night palette');
  const hit=actual.find(n=>n.onClick);assert.ok(hit,id+' actual native handler');hit.onClick();
  const enabled=method!=='chip'||!active,dispatch=enabled&&!(method==='detectButton'&&active);
  assert.equal(calls.length,dispatch?1:0,id+' actual page admission/callback');
@@ -29,6 +45,7 @@ for(const g of golden.cases){
  if(method==='statusBanner')assert.deepEqual(calls[0],['reconcile',9]);
  actor.aboutToDisappear();hit.onClick();assert.equal(calls.length,dispatch?1:0,id+' retired common physical actor rejects late click');count++;
 }
+assert.equal(successorProperties,palette.bindings.length,'all and only exact palette successor properties are exercised');
 // Frozen old UI producer outputs, now consumed through the actual new Page.
 for(const g of golden.widths){const p=labeledIconControls(),owner=createReaderBuilderProbe(source,['chip'],p.dependencies,p.hooks).owner;
  Object.assign(owner,{appThemeScheme:'day',filterControlWidth:()=>g.availableWidth,rebuildSourceProjection(){}});owner.chip('有限状态',g.width,false,true);

@@ -111,7 +111,7 @@ function create(remote = false) {
     detailShelfAdmissionMount:1,detailReadableAdmission:()=>emptyAdmission,
     remoteSessionGeneration:0,remoteContentProbeGeneration:0,readingOriginRoute: 'detail', shelfReadingPreparation: false, navigationGeneration: 0,
     readingSessionActive: false, detailReturnRoute: 'bookshelf', detailToc: [], shelfBooks: [book],
-    searchDetailCandidates: [], searchPublication: {shelfAt:()=>[]}, searchHost: { publication: { shelfAt:()=>[] } }, searchPublicationRevision:0,
+    searchDetailCandidates: [], searchPublication: {shelfAt:()=>[]}, searchHost: { publication: { shelfAt:()=>[] }, visibilityChanged() {}, close() {}, resume() {} }, searchPublicationRevision:0,
     remoteCatalogRefreshAt: new Map(), offlineMutationGeneration: 0, shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false},
     bookshelfRemovalGeneration: 0, bookshelfLoadGeneration: 0,
     sourceSwitchVisible: false, remoteContentVerdict: 'readable',

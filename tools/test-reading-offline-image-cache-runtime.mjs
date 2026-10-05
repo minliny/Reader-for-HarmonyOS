@@ -6,6 +6,10 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { stripTypeScriptTypes } from 'node:module';
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { createMangaAtomicPayloadReaderFixture, createMangaAtomicPayloadBindingFixture, checkMangaAtomicPayloadSdk } from './lib/manga-atomic-payload-probe.mjs';
+
+checkMangaAtomicPayloadSdk();
 
 // Execute the whole production class. Only Harmony's platform APIs are adapted
 // to a real temporary filesystem; this is not device or platform durability proof.
@@ -27,16 +31,31 @@ await removeTree(this.rootDirectory() + '/' + await this.bookHash(sourceId, book
     const legacyBook`;
 const testedSource = negativeControl ? source.replace(/const book = `\$\{this\.rootDirectory\(\)\}[\s\S]*?\n    const legacyBook/, broadClear) : source;
 if (negativeControl) assert.notEqual(testedSource, source, 'negative control must mutate the production clear');
-const executable = stripTypeScriptTypes(testedSource.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
+let executable = stripTypeScriptTypes(testedSource.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
 const handles = new Map();
 let failRename = () => false;
 let failUnlink = () => false;
 let failRead = () => false;
+// Focused RED control: replay the former synchronous payload call inside the
+// unchanged production class. It must fail the worker-wait regression below.
+if (process.env.READER_MANGA_ATOMIC_READ_MUTANT === 'host-sync') executable = executable.replace(
+  'await readMangaAtomicPayload(path, stat.size, MAX_READING_IMAGE_BYTES, isCurrent)',
+  'new Uint8Array(new fileIo.AtomicFile(path).readFully())');
+let nanosecondStats = true;
+let resourceReads = 0;
 let beforeSync = async () => {};
+let beforeWrite = async () => {};
+let writeLimit = Infinity;
+const writeSizes = [];
 const io = {
   OpenMode: { CREATE: 1, READ_WRITE: 2, TRUNC: 4 },
   access: async path => fs.access(path).then(() => true, () => false),
-  stat: path => fs.stat(path),
+  stat: async path => {
+    const stat = await fs.stat(path); const ns = await fs.stat(path, { bigint: true });
+    return { size:stat.size,dev:stat.dev,ino:stat.ino,mtime:Math.floor(stat.mtimeMs/1000),ctime:Math.floor(stat.ctimeMs/1000),
+      mtimeNs:nanosecondStats ? ns.mtimeNs : undefined,ctimeNs:nanosecondStats ? ns.ctimeNs : undefined,
+      isFile:()=>stat.isFile(),isDirectory:()=>stat.isDirectory() };
+  },
   mkdir: (path, recursive) => fs.mkdir(path, { recursive }),
   listFile: path => fs.readdir(path),
   rmdir: path => fs.rmdir(path),
@@ -49,7 +68,10 @@ const io = {
     handles.set(handle.fd, handle);
     return handle;
   },
-  write: async (fd, bytes) => (await handles.get(fd).write(new Uint8Array(bytes))).bytesWritten,
+  write: async (fd, bytes) => {
+    writeSizes.push(bytes.byteLength);await beforeWrite(bytes);
+    return (await handles.get(fd).write(new Uint8Array(bytes,0,Math.min(bytes.byteLength,writeLimit)))).bytesWritten;
+  },
   fsync: async fd => { await beforeSync(); await handles.get(fd).sync(); },
   close: async handle => { handles.delete(handle.fd); await handle.close(); },
   rename: async (from, to) => {
@@ -59,12 +81,16 @@ const io = {
   AtomicFile: class {
     constructor(path) { this.path = path; }
     readFully() {
+      if(this.path.endsWith('.bin')) resourceReads++;
       if (failRead(this.path)) throw new Error('injected ownership read failure');
       const bytes = readFileSync(this.path); return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
     }
   },
 };
 const util = {
+  // Platform LRU substitute only for the native API boundary; cache validity
+  // policy remains the production class exercised below.
+  LRUCache: class { constructor(capacity){this.capacity=capacity;this.items=new Map();} get(key){return this.items.get(key);} put(key,value){this.items.delete(key);this.items.set(key,value);if(this.items.size>this.capacity)this.items.delete(this.items.keys().next().value);} remove(key){this.items.delete(key);} keys(){return [...this.items.keys()];} clear(){this.items.clear();} },
   TextEncoder: class { encodeInto(value) { return new TextEncoder().encode(value); } },
   TextDecoder: { create: (_, options) => ({ decodeToString: bytes => new TextDecoder('utf-8', options).decode(bytes) }) },
 };
@@ -73,11 +99,13 @@ const crypto = { createMd: () => {
   return { update: async ({ data }) => { hash.update(data); }, digest: async () => ({ data: hash.digest() }) };
 } };
 const canonicalBase = base => base?.trim().split('#')[0] || undefined;
+const atomicReadHooks = {};
+const readMangaAtomicPayload = createMangaAtomicPayloadReaderFixture(io, atomicReadHooks);
 class MaterializationError extends Error {}
 const Cache = new Function('fileIo', 'statfs', 'cryptoFramework', 'util', 'canonicalReadingImageBaseUrl',
-  'assertReadingOfflineWriteCapacity', 'ReadingOfflineMaterializationError', `${executable}\nreturn ReadingImageDiskCache;`)(
+  'assertReadingOfflineWriteCapacity', 'ReadingOfflineMaterializationError', 'readMangaAtomicPayload', `${executable}\nreturn ReadingImageDiskCache;`)(
   io, { getFreeSize: async () => 1e9 }, crypto, util, canonicalBase,
-  (free, bytes, reserve) => { if (free < bytes + reserve) throw new Error('storage_full'); }, MaterializationError,
+  (free, bytes, reserve) => { if (free < bytes + reserve) throw new Error('storage_full'); }, MaterializationError, readMangaAtomicPayload,
 );
 const root = await fs.mkdtemp(join(tmpdir(), 'reader-image-cache-'));
 const cache = new Cache({ filesDir: root });
@@ -102,6 +130,133 @@ async function seedLegacy(identity, override = {}) {
   return directory;
 }
 try {
+  // Historical v2 contains prepared JPEG bytes, without a processing profile.
+  // This fixture deliberately interprets the independent regional BGRA golden
+  // as RGBA via Pillow JPEG; it models the old channel mistake, not native codec proof.
+  const scripted = { ...image, bookId: 'profile-upgrade', contentVersion: 'stable-manga',
+    resourceRef: `manga:mp1:${'c'.repeat(64)}`, mangaDecodeRevision: 'bytes-v1' };
+  const profileDir = await cache.chapterDirectory(scripted);
+  const legacyHash = hash(JSON.stringify(['manga-resource-v1', scripted.contentVersion, scripted.resourceRef]));
+  const oldPath = join(profileDir, `${legacyHash}.bin`), oldManifestPath = join(profileDir, 'manifest.json');
+  const oldBytes = new Uint8Array(readFileSync(join(repo, 'tools/fixtures/manga-graphics/legacy-rgba-misread.jpg')));
+  const corrected = new Uint8Array(readFileSync(join(repo, 'tools/fixtures/manga-graphics/expected.jpg')));
+  assert.notDeepEqual(oldBytes, corrected);
+  const oldManifest = JSON.stringify({ formatVersion: 2, ...scripted, manga: true,
+    resourceHashes: [legacyHash], resourceDigests: { [legacyHash]: hash(oldBytes) }, completedAt: 1 });
+  await fs.mkdir(profileDir, { recursive: true });
+  await fs.writeFile(oldPath, oldBytes);await fs.writeFile(oldManifestPath, oldManifest);
+  await assert.rejects(cache.loadResource(scripted), /READING_IMAGE_REPROCESS_REQUIRED/,
+    'a valid old wrong-channel JPEG must not bypass the fixed graphics path');
+  assert.equal(await cache.isChapterComplete(scripted), false, 'old matching digest is not the current Host processing receipt');
+  const rawManga = { ...scripted, mangaDecodeRevision: 'identity-v1' };
+  assert.deepEqual(await cache.loadResource(rawManga), oldBytes, 'identity-v1 retains its existing exact cache key');
+  assert.equal(await cache.isChapterComplete(rawManga), true);
+  assert.equal(await cache.isChapterComplete({ ...scripted, mangaDecodeRevision: undefined }), false, 'Disk API cannot certify an unknown manga profile as raw identity');
+  for (const revision of [undefined, '', 'bytes-v99']) {
+    await assert.rejects(cache.loadResource({ ...scripted, mangaDecodeRevision: revision }), /MANGA_CACHE_PROFILE_REQUIRED/);
+  }
+  let prepareCalls = 0, current = true, prepareFailure = false;
+  const Owner = productionMotionMethods(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url),
+    ['loadReadingImageOwned', 'prefetchReadingImageOwned', 'prepareReadingImageBytes', 'mangaStorageChapter'], {
+      MangaImageDecodeHost: { instance: { async prepare(params, request, valid) {
+        prepareCalls++;if (prepareFailure) throw Error('injected prepare failure');
+        assert.equal(valid(), true);await request(params);return corrected;
+      } } },
+      ReadingBodyImageHost: { instance: { async loadBytes(value) { assert.deepEqual(value, corrected);return { fileUri: 'file://prepared', width: 8, height: 103 }; },
+        async loadMangaBytes(value) { assert.deepEqual(value, corrected);return {fileUri:'file://prepared',width:8,height:103}; },
+        async prepareMangaDisplay(value) { assert.deepEqual(value, corrected); },
+        async validateBytes(value) { assert.deepEqual(value, corrected); } } },
+      hilog: { error() {} }, LOG_DOMAIN: 0,
+    });
+  const owner = Object.assign(new Owner(), { readingImageDiskCache: cache,
+    async request(method) { assert.equal(method, 'manga.resource.prepare');return { data: {} }; },
+    admitReadingImage(value) { return value; }, assertReadingImageCurrent(valid) { if (valid?.() === false) throw Error('cancelled'); } });
+  await assert.rejects(owner.loadReadingImageOwned(scripted, false, () => current, 0, 'source-rules'), /REPROCESS_REQUIRED/);
+  await assert.rejects(owner.prefetchReadingImageOwned(scripted, () => current, 'source-rules', false), /REPROCESS_REQUIRED/);
+  assert.equal(prepareCalls, 0, 'offline cold entry with opaque resourceRef does not fetch or replay a script');
+  prepareFailure = true;
+  await assert.rejects(owner.prefetchReadingImageOwned(scripted, () => current, 'source-rules', true), /prepare failure/);
+  prepareFailure = false;
+  beforeSync = async () => { current = false; };
+  await assert.rejects(owner.prefetchReadingImageOwned(scripted, () => current, 'source-rules', true), /superseded/);
+  beforeSync = async () => {};current = true;
+  assert.equal(await cache.isChapterComplete(scripted), false);
+  assert.deepEqual(new Uint8Array(await fs.readFile(oldPath)), oldBytes);assert.equal(await fs.readFile(oldManifestPath, 'utf8'), oldManifest);
+  const work = {};
+  await owner.loadReadingImageOwned(scripted, true, () => current, 0, 'source-rules', false, work);await work.drain;
+  assert.deepEqual(await cache.loadResource(scripted), corrected);
+  assert.notEqual(await cache.resourcePath(scripted), oldPath);
+  await cache.markChapterComplete(scripted, [scripted]);
+  assert.equal(await cache.isChapterComplete(scripted), true);
+  const profileManifestPath = join(profileDir, 'manifest-script-bgra-v2.json');
+  const profileManifest = JSON.parse(await fs.readFile(profileManifestPath, 'utf8'));assert.equal(profileManifest.mangaCacheProfile, 'script-bgra-v2');
+  assert.deepEqual(profileManifest.resourceHashes, [hash(JSON.stringify(['manga-resource-v2', 'script-bgra-v2', scripted.contentVersion, scripted.resourceRef]))]);
+  await fs.writeFile(profileManifestPath, JSON.stringify({ ...profileManifest, mangaCacheProfile: 'unknown-profile' }));
+  assert.equal(await cache.isChapterComplete(scripted), false, 'a filename alone is not a current processing receipt');
+  await fs.writeFile(profileManifestPath, JSON.stringify(profileManifest));
+  await assert.rejects(cache.markChapterComplete(scripted, [rawManga]), /MANGA_CACHE_PROFILE_REQUIRED/, 'raw and transformed receipts cannot be mixed');
+  const cold = new Cache({ filesDir: root });assert.equal(await cold.isChapterComplete(scripted), true);
+  assert.deepEqual(await cold.loadResource({ ...scripted, imageUrl: scripted.resourceRef }), corrected, 'cold entry needs no transport URL');
+  const callsAfterRepair = prepareCalls;owner.readingImageDiskCache = cold;
+  await owner.loadReadingImageOwned({ ...scripted, imageUrl: scripted.resourceRef }, false, () => current, 0, 'source-rules');
+  assert.equal(prepareCalls, callsAfterRepair, 'actual Runtime cold path reads only the new profile without any URL');
+  await owner.prefetchReadingImageOwned(scripted, () => current, 'source-rules', false);assert.equal(prepareCalls, callsAfterRepair);
+  assert.deepEqual(new Uint8Array(await fs.readFile(oldPath)), oldBytes);assert.equal(await fs.readFile(oldManifestPath, 'utf8'), oldManifest);
+  pass('scripted profile isolates legacy wrong-channel JPEG and completion; cold opaque refs, online repair, failed/cancelled repair preserve old bytes; identity-v1 retains the original path');
+  // >2MiB and a nonzero view prevent an accidental whole-backing-buffer write.
+  // Partial writes must preserve all bytes while each platform call is <=1MiB.
+  const chunked={...image,bookId:'bounded-write'};
+  const backing=new Uint8Array(2*1024*1024+173);for(let i=0;i<backing.length;i++)backing[i]=(i*13)%251;
+  const window=backing.subarray(19,backing.length-37),expected=window.slice();
+  writeSizes.length=0;writeLimit=333333;
+  const storing=cache.storeResource(chunked,window);window.fill(7);await storing;writeLimit=Infinity;
+  assert.deepEqual(await cache.loadResource(chunked),expected,'store snapshot isolates caller mutation and respects the input view');
+  assert.ok(writeSizes.length>3);assert.ok(Math.max(...writeSizes)<=1024*1024,'every platform write uses at most a 1MiB source window');
+  const stablePath=await cache.resourcePath(chunked);let live=true,writes=0;writeSizes.length=0;
+  beforeWrite=async()=>{writes++;live=false;};
+  await assert.rejects(cache.storeResource(chunked,expected,()=>live),/superseded/);beforeWrite=async()=>{};
+  assert.equal(writes,1,'cancellation is checked before the next byte window');
+  assert.deepEqual(new Uint8Array(await fs.readFile(stablePath)),expected,'cancelled replacement preserves the previous file');
+  assert.equal((await fs.readdir(dirname(stablePath))).some(name=>name.includes('.tmp-')),false,'cancelled temporary output is removed');
+  assert.equal(handles.size,0,'cancelled write closes its descriptor');
+  beforeWrite=async()=>{throw Object.assign(Error('injected disk full'),{code:13900025});};
+  await assert.rejects(cache.storeResource(chunked,expected),/storage_full/);beforeWrite=async()=>{};
+  assert.deepEqual(new Uint8Array(await fs.readFile(stablePath)),expected);
+  assert.equal(handles.size,0);assert.equal((await fs.readdir(dirname(stablePath))).some(name=>name.includes('.tmp-')),false);
+  pass('1MiB partial-write windows preserve nonzero-view snapshots; cancellation and ENOSPC keep old bytes and close/delete partial output');
+  const manga = { ...image, bookId: 'manga-proof-book', contentVersion: 'manga-v1', mangaDecodeRevision: 'identity-v1', resourceRef: `manga:mp1:${'a'.repeat(64)}` };
+  await cache.storeResource(manga, bytes);
+  const renewed = { ...manga, imageUrl: 'https://new-cdn/image?signature=renewed', baseUrl: 'https://new-cdn/' };
+  assert.deepEqual(await cache.loadResource(renewed), bytes, 'signed transport changes do not change page identity');
+  const duplicate = { ...manga, resourceRef: `manga:mp1:${'b'.repeat(64)}` };
+  assert.equal(await cache.loadResource(duplicate), undefined, 'same URL is not a second logical page receipt');
+  await cache.storeResource(duplicate, new Uint8Array([8, 9]));
+  assert.deepEqual(await cache.loadResource(manga), bytes);
+  assert.deepEqual(await cache.loadResource(duplicate), new Uint8Array([8, 9]));
+  assert.notEqual(await cache.resourcePath(manga), await cache.resourcePath({ ...manga, contentVersion: 'manga-v2' }));
+  pass('manga stable resource refs survive signed URL changes; duplicate logical pages and manifest versions remain isolated');
+  await cache.markChapterComplete(manga, [manga, duplicate]);
+  assert.equal(await cache.isChapterComplete(manga), true);
+  resourceReads = 0;
+  for(let i=0;i<5;i++) assert.equal(await cache.isChapterComplete(manga), true);
+  assert.equal(resourceReads,0,'unchanged high-resolution file identities avoid repeated whole-image reads');
+  const mangaPath=await cache.resourcePath(manga);
+  await fs.writeFile(mangaPath,new Uint8Array([9,2,3])); // Same length, same second.
+  assert.equal(await cache.isChapterComplete(manga),false,'same-size corruption must invalidate verification proof');
+  await cache.storeResource(manga,bytes);assert.equal(await cache.isChapterComplete(manga),true);
+  nanosecondStats=false;resourceReads=0;
+  assert.equal(await cache.isChapterComplete(manga),true);assert.equal(await cache.isChapterComplete(manga),true);
+  assert.ok(resourceReads>=4,'coarse timestamp platforms retain complete digest verification');
+  nanosecondStats=true;
+  await cache.clearBook(manga.sourceId,manga.bookId);
+  assert.equal(await cache.isChapterComplete(manga),true,'ordinary clear preserves an old manga whose Core retention is unknown');
+  await fs.writeFile(mangaPath,new Uint8Array([9,2,3]));
+  assert.equal(await cache.isChapterComplete(manga),false,'a preserved file still cannot reuse a stale digest proof');
+  await cache.storeResource(manga,bytes);await cache.storeResource(duplicate,new Uint8Array([8,9]));
+  await cache.markChapterComplete(manga,[manga,duplicate]);
+  const reopenedProofs=new Cache({filesDir:root});resourceReads=0;
+  assert.equal(await reopenedProofs.isChapterComplete(manga),true);assert.ok(resourceReads>=2,'cold cache must verify bytes again');
+  pass('bounded native LRU skips repeated hash I/O only with nanosecond identity; same-size damage, coarse clocks, conservative manga clear and restart remain verified');
   await cache.storeResource(image, bytes);
   await cache.markChapterComplete(chapter, [image, image]);
   const second = { ...image, contentVersion: 'B' };
@@ -113,7 +268,8 @@ try {
   assert.deepEqual(await cache.loadResource(image), bytes);
   assert.deepEqual(await cache.loadResource(second), new Uint8Array([4, 5]));
   assert.notEqual(await cache.chapterDirectory(image), await cache.chapterDirectory(second));
-  assert.equal(typeof cache.isChapterMaterialized, 'undefined');
+  assert.equal(await cache.isChapterMaterialized(chapter.sourceId, chapter.bookId, chapter.chapterIndex), false,
+    'an ordinal alone cannot certify assets without the exact body version');
   pass('old/new versions and late old manifest coexist; completeness requires exact identity');
 
   const corrupt = { ...image, contentVersion: 'corrupt' };
@@ -325,6 +481,93 @@ try {
   await assert.rejects(closing.storeResource(image, bytes, beforeClose), /superseded/);
   await assert.rejects(closing.loadResource(image), /superseded/);
   pass('runtime close invalidates queued and newly requested cache operations');
+
+  const foreground = { ...image, bookId:'worker-foreground', chapterId:'https://chapter/foreground',
+    resourceRef:`manga:mp1:${'7'.repeat(64)}`, mangaDecodeRevision:'identity-v1' };
+  const waiting = { ...foreground, bookId:'worker-waiting', chapterId:'https://chapter/waiting', resourceRef:`manga:mp1:${'8'.repeat(64)}` };
+  await cache.storeResource(foreground, bytes); await cache.storeResource(waiting, bytes);
+  const foregroundPath = await cache.resourcePath(foreground), waitingPath = await cache.resourcePath(waiting);
+  let entered, proceed, admitted;
+  const atWorker = new Promise(resolve => { entered = resolve; });
+  const heldWorker = new Promise(resolve => { proceed = resolve; });
+  const atWaiting = new Promise(resolve => { admitted = resolve; });
+  const jobs = []; let waitingCurrent = true, first = true;
+  atomicReadHooks.onAdmission = args => { if (args[0] === waitingPath) admitted(); };
+  atomicReadHooks.beforeExecute = async args => {
+    jobs.push(args[0]);
+    if (args[0] === foregroundPath && first) { first = false; entered(); await heldWorker; }
+  };
+  let foregroundRead, waitingRead;
+  try {
+    const beforeRead = resourceReads;
+    foregroundRead = cache.loadResource(foreground);
+    await Promise.race([atWorker, foregroundRead.then(() => { throw Error('payload returned before any SDK worker dispatch'); })]);
+    assert.equal(resourceReads, beforeRead, 'the held SDK dispatch must precede any original payload read');
+    assert.ok(cache.mangaBusy.size > 0, 'chapter pin spans queued/active platform work');
+    waitingRead = cache.loadResource(waiting, () => waitingCurrent);
+    const waitingRejected = assert.rejects(waitingRead, /MANGA_RESOURCE_CANCELLED/);
+    await atWaiting; waitingCurrent = false;
+    assert.equal(jobs.includes(waitingPath), false, 'a second book is only a descriptor while the native read is active');
+    proceed();
+    assert.deepEqual(await foregroundRead, bytes); await waitingRejected;
+    assert.equal(jobs.includes(waitingPath), false, 'invalidated queued content must not reach AtomicFile');
+    assert.equal(cache.mangaBusy.size, 0, 'both chapter pins release after their owned waits settle');
+    assert.deepEqual(new Uint8Array(await fs.readFile(waitingPath)), bytes, 'cancellation preserves valid original bytes');
+  } finally {
+    proceed(); await Promise.allSettled([foregroundRead, waitingRead]);
+    delete atomicReadHooks.onAdmission; delete atomicReadHooks.beforeExecute;
+  }
+  pass('SDK worker wait retains chapter pins; cross-book queued cancellation reads no original bytes and preserves downloads');
+
+  let readCompleted, settle, activeCurrent = true, activeFirst = true;
+  const atRead = new Promise(resolve => { readCompleted = resolve; });
+  const heldReceipt = new Promise(resolve => { settle = resolve; });
+  atomicReadHooks.afterExecute = async args => {
+    if (args[0] === waitingPath && activeFirst) { activeFirst = false; readCompleted(); await heldReceipt; }
+  };
+  let activeRead;
+  try {
+    const beforeRead = resourceReads;
+    activeRead = cache.loadResource(waiting, () => activeCurrent);
+    const rejected = assert.rejects(activeRead, /MANGA_RESOURCE_CANCELLED/);
+    await atRead;
+    assert.ok(resourceReads > beforeRead, 'the real AtomicFile port read has already executed');
+    activeCurrent = false;
+    assert.ok(cache.mangaBusy.size > 0, 'invalidation cannot release a pin before platform completion settles');
+    settle(); await rejected;
+    assert.equal(cache.mangaBusy.size, 0); assert.deepEqual(new Uint8Array(await fs.readFile(waitingPath)), bytes);
+  } finally { settle(); await Promise.allSettled([activeRead]); delete atomicReadHooks.afterExecute; }
+  pass('started read keeps its chapter pin until completion settles, then rejects stale bytes without deleting originals');
+
+  atomicReadHooks.beforeExecute = () => { throw Error('injected worker initialization failure'); };
+  try { await assert.rejects(cache.loadResource(waiting), /worker initialization failure/); }
+  finally { delete atomicReadHooks.beforeExecute; }
+  assert.deepEqual(new Uint8Array(await fs.readFile(waitingPath)), bytes);
+  assert.deepEqual(await cache.loadResource(waiting), bytes, 'a failed worker must not poison the admission lane');
+  await assert.rejects(readMangaAtomicPayload(waitingPath, 0, 16 * 1024 * 1024, () => true), /MANGA_ATOMIC_PAYLOAD_BUDGET/);
+  await assert.rejects(readMangaAtomicPayload(waitingPath, bytes.length + 1, 16 * 1024 * 1024, () => true), /MANGA_ATOMIC_PAYLOAD_CHANGED/);
+  pass('worker failure has no synchronous fallback/deletion; later reads recover and byte/extent budgets remain enforced');
+
+  // Native taskpool results may cross a realm boundary as a typed-array view.
+  // The production envelope must validate byte length without relying on
+  // `instanceof ArrayBuffer`, while still returning the same bytes.
+  atomicReadHooks.afterExecute = (_args, result) => new Uint8Array(result);
+  try {
+    assert.deepEqual(await readMangaAtomicPayload(waitingPath, bytes.length, 16 * 1024 * 1024, () => true), bytes,
+      'cross-thread typed-array payloads remain readable');
+  } finally { delete atomicReadHooks.afterExecute; }
+  pass('cross-thread binary result accepts a typed-array transport envelope');
+
+  const binding = createMangaAtomicPayloadBindingFixture(io), beforeBindingRead = resourceReads;
+  await assert.rejects(binding.readMangaAtomicPayload(waitingPath, bytes.length, 16 * 1024 * 1024, () => true), /MANGA_ATOMIC_READER_UNAVAILABLE/);
+  assert.equal(resourceReads, beforeBindingRead, 'missing ETS installation fails closed without a synchronous payload fallback');
+  assert.equal(binding.installMangaAtomicPayloadReader(), undefined);
+  assert.equal(binding.installMangaAtomicPayloadReader(), undefined, 'the same process worker installs idempotently');
+  assert.deepEqual(await binding.readMangaAtomicPayload(waitingPath, bytes.length, 16 * 1024 * 1024, () => true), bytes);
+  assert.throws(() => binding.bindMangaAtomicPayloadReader(async () => new Uint8Array([99])), /MANGA_ATOMIC_READER_ALREADY_INSTALLED/);
+  assert.deepEqual(await binding.readMangaAtomicPayload(waitingPath, bytes.length, 16 * 1024 * 1024, () => true), bytes,
+    'a conflicting late install cannot replace the stable worker binding');
+  pass('actual TS port fails closed before ETS install, installs idempotently and rejects conflicting rebinding');
 
   console.log(JSON.stringify({ status: 'PASS', productionSourceSha256: hash(source), negativeControl, checks }, null, 2));
 } finally {

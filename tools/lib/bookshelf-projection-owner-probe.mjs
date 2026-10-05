@@ -12,6 +12,7 @@ import {productionMotionMethods} from './reader-motion-method-probe.mjs';
 import {isReaderCoreTransactionPendingError} from '../../entry/vendor/core-harmony/sdk/reader_core.ts';
 import {errorMessageOf} from '../../entry/src/main/ets/app/ErrorMessage.ts';
 import {localImportFailure} from '../../entry/src/main/ets/app/LocalImportFailure.ts';
+import * as metricsApi from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import {readerRecoveryView} from '../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 export function actualProjectionTypes(readRuntime) {
  const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(readRuntime);
@@ -32,7 +33,7 @@ export function actualProjectionIndex(runtime,types,{filter={readingState:'all',
   {...types,readerRecoveryView,DOMAIN:0,hilog:{warn(){}}});
  const member=[],accepted=[],faults=[];
  const idx=Object.assign(new Index(),{mountedRuntimeOwner:runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:1,navigationGeneration:1,
-  rssInstanceIdentity:identity??++mount,route:'bookshelf',shelfReadingFilter:filter.readingState,shelfSourceFilter:filter.sourceKind,
+  rssInstanceIdentity:identity??++mount,route:'bookshelf',shelfReadingFilter:filter.readingState,shelfSourceFilter:filter.sourceKind,shelfContentFilter:filter.contentKind??'all',
   bookshelfViewState:{anchorKey:'',anchorOffset:0},sourceSources:[],sourceToolsSnapshot:{sources:[]},
   searchHost:{sources:()=>[],updateShelf:books=>member.push(books)},
   scheduleBookshelfBackgroundRefresh:state=>accepted.push(state),preparePersistedShelfBooks(){},traceStartupStage(){},beginStartupStage:()=>0,endStartupStage(){},
@@ -63,7 +64,7 @@ export function actualProjectionSdkFeedback(f) {
       if(typeof f.idx[name]==='function')parent[name]=f.idx[name].bind(f.idx);
     parent.bookshelfContent();parent.bookshelfShellContent();
     const shelf=[...parent.children.values()].find(child=>child.params.books),props=[...parent.children.values()].find(child=>child.params.readRecovery).params;
-    const shell=sdk.consumer(shellText,['shellContent','content','recoveryNoticeContent'],{BookshelfMoreMenu:Child,READER_FLOATING_TOP_BAR_HEIGHT:56});
+    const shell=sdk.consumer(shellText,['shellContent','content','recoveryNoticeContent'],{BookshelfMoreMenu:Child,...metricsApi,ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics},READER_FLOATING_TOP_BAR_HEIGHT:58});
     Object.assign(shell,props,{content(){},topBar(){},moreMenuVisible:false});shell.shellContent();
     const notice=sdk.walk(shell).find(owner=>owner instanceof sdk.deps.ReaderRecoveryNotice);
     const action=sdk.nodes(shell).find(node=>node.height===36&&node.onClick);

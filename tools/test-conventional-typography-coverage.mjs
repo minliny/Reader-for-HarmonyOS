@@ -1,3 +1,4 @@
+import { approvedTypographyContract, approvedTypographyFile } from './lib/approved-manga-typography-carriers.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { auditTypographyConsumers, typographyExpressionContext, isSharedTypographyExpression } from './lib/reader-typography-consumer-audit.mjs';
@@ -12,25 +13,28 @@ const producerContract = JSON.parse(readFileSync(new URL('./fixtures/architectur
 function verifySource(source, file) {
   const expressionContext = typographyExpressionContext(source, 'entry/src/main/ets/features/' + file);
   const producerSlots = registeredProducerTypographySlots(source, 'entry/src/main/ets/features/' + file, producerContract);
-  let consumers = 0, sharedArguments = 0, sharedProducerArguments = 0;
+  const approved = approvedTypographyContract(source, file);
+  let consumers = 0, sharedArguments = 0, sharedProducerArguments = 0, approvedArguments = 0;
   for (const node of auditTypographyConsumers(source, file)) {
     consumers++;
     for (const [property, modifier] of Object.entries(node.modifiers)) {
       if (isSharedTypographyExpression(modifier.expression, expressionContext, node.owner)) { sharedArguments++; continue; }
       if (producerSlots.has(node.method, property, modifier.expression)) { sharedProducerArguments++; continue; }
+      if (approved.has(node)) { approvedArguments++; continue; }
       assert.fail(`${file}:${node.line}/${property}: private style must consume the public role/spec or exact finite producer (${modifier.expression})`);
     }
   }
-  return { consumers, sharedArguments, sharedProducerArguments };
+  return { consumers, sharedArguments, sharedProducerArguments, approvedArguments };
 }
 
-let files = 0, consumers = 0, sharedArguments = 0, sharedProducerArguments = 0;
+let files = 0, consumers = 0, sharedArguments = 0, sharedProducerArguments = 0, approvedArguments = 0;
 for (const file of readdirSync(root, { recursive: true }).filter(file => file.endsWith('.ets') && !file.startsWith('reading/'))) {
   files++;
   const result = verifySource(readFileSync(new URL(file, root), 'utf8'), file);
   consumers += result.consumers;
   sharedArguments += result.sharedArguments;
   sharedProducerArguments += result.sharedProducerArguments;
+  approvedArguments += result.approvedArguments;
 }
 
 // Exercise actual current consumers in memory. Neither negative control edits
@@ -53,4 +57,11 @@ const legacySelectedRow = select.replace(phoneMethod, phoneMethod + '\n    Text(
 assert.throws(() => verifySource(legacySelectedRow, selectFile),
   /private style.*FontWeight\.Bold/, 'retired selected-weight row must not regain admission');
 
-console.log(`PASS conventional Typography coverage: ${files} files, ${consumers} real modifier carriers, ${sharedArguments} public role/spec arguments + ${sharedProducerArguments} exact finite producer arguments; 0 private arguments, no retired migration-debt exceptions; 2 actual-source regression controls rejected`);
+console.log(`PASS conventional Typography coverage: ${files} files, ${consumers} real modifier carriers, ${sharedArguments} public role/spec arguments + ${sharedProducerArguments} exact finite producer arguments; ${approvedArguments} exact approved manga arguments, no unregistered private arguments or retired debt; 2 actual-source regression controls rejected`);
+
+// Approval is finite: retain the whole real carrier, including AUTO omissions.
+const approvedFile='manga/MangaDownloadOperationsPanel.ets';
+const approvedSource=readFileSync(new URL(approvedFile,root),'utf8');
+assert.throws(()=>verifySource(approvedSource.replace('.fontSize(13)', '.fontSize(99)'),approvedFile), /exact approved typography carrier\/tuple changed/);
+assert.throws(()=>verifySource(approvedSource.replace('.fontSize(13)', '.fontSize(13).letterSpacing(99)'),approvedFile), /exact approved typography carrier\/tuple changed/);
+assert.throws(()=>verifySource(approvedSource.replace('Column({ space: 8 }) {', "Column({ space: 8 }) { Text('未经批准').fontSize(13);"),approvedFile), /exact approved typography carrier\/tuple changed/);

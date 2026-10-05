@@ -1,3 +1,4 @@
+import { approvedTypographyContract, approvedTypographyFile } from './lib/approved-manga-typography-carriers.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -10,10 +11,13 @@ const scenarios = [
 ];
 const evaluate = (expression, owner) => new Function('FontWeight', 'label', ...Object.keys(readerTypographyRoles),
   `return (${stripTypeScriptTypes(expression)});`).call(owner, weights, '当前', ...Object.values(readerTypographyRoles));
+const approvedFiles=new Map();
+for(const file of baseline.files){const source=readFileSync(new URL('../'+file.path,import.meta.url),'utf8');const approved=approvedTypographyContract(source,file.path);if(approved.registered)approvedFiles.set(file.path,approved);}
 const usedRoles = new Set();
 let nodes = 0;
 for (const file of baseline.files) for (const node of file.nodes) {
   nodes++;
+  if(approvedFiles.has(file.path))continue;
   for (const [property, replacement] of Object.entries(node.changes)) {
     const names = [...replacement.matchAll(/TYPE_\w+/g)].map(match => match[0]);
     assert.ok(names.length, `${file.path}/${node.method}/${property}: finite semantic role`);
@@ -30,4 +34,4 @@ for (const file of baseline.files) for (const node of file.nodes) {
   }
 }
 assert.equal(nodes, 248);
-console.log(`PASS conventional Typography registry: ${nodes} consumers, ${usedRoles.size} semantic roles, exact current baseline and finite variants`);
+console.log(`PASS conventional Typography registry: ${nodes} consumers, ${usedRoles.size} semantic roles, ${approvedFiles.size} approved successor carrier sets, retained original public baseline and finite variants`);

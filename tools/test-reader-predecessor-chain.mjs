@@ -27,12 +27,16 @@ function loadRuntime(productionSource=source) {
     .map(node=>node.getText(tree)).join('\n');
   const events=[];
   class PlatformHost {constructor(context){this.context=context;}getContext(){return this.context;}close(){events.push('platform.close');}}
-  const deps={ReaderHostRegistry:PlatformHost,HarmonyTtsHostRouter:PlatformHost,HarmonySystemTtsHost:PlatformHost,
+  const deps={MangaChapterPreparationCoordinator:{forRuntime:()=>({close:async()=>{}})},
+    ReaderHostRegistry:PlatformHost,HarmonyTtsHostRouter:PlatformHost,HarmonySystemTtsHost:PlatformHost,
     HarmonyHttpTtsHost:PlatformHost,HarmonyTtsMediaSession:PlatformHost,HarmonyTtsBackgroundSession:PlatformHost,
     LocalEpubResourceHost:PlatformHost,ReadingImageDiskCache:PlatformHost,
-    ReadingBodyImageHost:{setDisplayCacheDir(){},instance:{releaseAllDisplayFiles(){events.push('display.release');}}},
+    ReadingBodyImageHost:{setDisplayCacheDir(){},instance:{setMangaMetadataInspector(){},releaseAllDisplayFiles(){events.push('display.release');}}},
     ReaderStartupTrace:{current:()=>undefined},hilog:{warn(){}},LOG_DOMAIN:0,errorMessageOf:error=>error.message};
   const Runtime=new Function(...Object.keys(deps),`${stripTypeScriptTypes(`class ReaderRuntimeOwner { ${members} }`)};return ReaderRuntimeOwner;`)(...Object.values(deps));
+  // Policy RPC and disk admission have their separate actual Owner/Disk
+  // probes. This fixture controls only their constructor-time platform port.
+  Runtime.prototype.bindMangaStorage=()=>{};
   // The native startup body has separate capability/restore tests. This seam
   // observes whether the real start/predecessor methods admit it at all.
   Runtime.prototype.startRuntime=async function(){events.push(`native.open:${this.host.context.id}`);this.state='ready';};

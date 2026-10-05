@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { bookIntroText } from '../entry/src/main/ets/features/common/BookIntroText.ts';
 import { bookAuthorLabel } from '../entry/src/main/ets/features/common/BookAuthorMetadata.ts';
@@ -14,25 +15,36 @@ const tokens = Object.fromEntries(['TOK_SPACE_SM', 'TOK_SPACE_CARD_PADDING', 'TO
 }));
 const card = source.slice(source.indexOf('@Component\nstruct SearchResultCard'))
   .replace('  build() {', '  build() { Column() {} }\n  @Builder\n  resultBody() {');
-for (const scheme of ['day', 'night']) {
+for (const category of ['novel', 'comic']) for (const sourceId of ['source', 'local']) for (const scheme of ['day', 'night']) {
   for (const inBookshelf of [false, true]) {
     for (const [width, isTablet] of [[320, false], [390, false], [736, true]]) {
       const { owner } = createReaderBuilderProbe(card, ['resultBody', 'displayIntro', 'coverWidth', 'coverHeight', 'coverErrorHandler'], {
         bookIntroText, bookAuthorLabel, ImageFit: { Cover: 'Cover' }, LengthMetrics: { vp: value => value }, ...tokens,
-        TYPE_SEARCH_RESULT_COVER_TITLE:{fontFamily:'ReaderNotoSerifSCBold',fontWeight:700,fontSizeFp:15,lineHeightFp:18.3},
-        TYPE_SEARCH_RESULT_TITLE:{fontFamily:'ReaderNotoSerifSCBold',fontWeight:700,fontSizeFp:15,lineHeightFp:18.3},
-        TYPE_SEARCH_RESULT_AUTHOR:{fontFamily:'ReaderNotoSansSCUIRegular',fontWeight:400,fontSizeFp:12,lineHeightFp:15},
-        TYPE_SEARCH_RESULT_CHAPTER:{fontFamily:'ReaderNotoSansSCUIRegular',fontWeight:400,fontSizeFp:11,lineHeightFp:13.75},
-        TYPE_SEARCH_RESULT_INTRO:{fontFamily:'ReaderNotoSansSCUIRegular',fontWeight:400,fontSizeFp:10,lineHeightFp:12},
-        TYPE_SEARCH_RESULT_TAG:{fontFamily:'ReaderInter',fontWeight:700,fontSizeFp:10,lineHeightFp:15},
+        ...readerTypographyRoles,
       });
-      const book = { title: '终宋', author: '作者', sourceId: 'source', sourceName: '实际书源', coverUrl: 'https://example.test/cover', intro: '正文简介', latestChapterTitle: '  ' };
+      const book = { title: '终宋', author: '作者', sourceId, sourceName: '实际书源', category, coverUrl: 'https://example.test/cover', intro: '正文简介', latestChapterTitle: '  ' };
       Object.assign(owner, { group: { book, coverUrl: book.coverUrl, variants: [book], sourceCount: 2, inBookshelf },
         isTablet, cardWidth: width, appThemeScheme: scheme });
       owner.resultBody();
       const nodes = () => [...owner.nodes.values()];
       const tags = () => nodes().filter(n => n.type === 'Text' && n.borderRadius === 4);
-      assert.equal(tags().length, inBookshelf ? 3 : 2);
+      const comic = category === 'comic';
+      assert.equal(tags().length, (comic ? 2 : 3) + (inBookshelf ? 1 : 0), 'real visible metadata: original novel type/source/count plus optional shelf; manga compact identity is separate');
+      assert.ok(nodes().filter(n => n.type === 'Text').every(n => n.opacity !== 0 && n.width !== 0 && n.height !== 0), 'no hidden legacy metadata actors may be retained for contract probes');
+      const identity = nodes().filter(n => n.type === 'Text' && n.borderRadius === 5);
+      assert.equal(identity.length, comic ? 2 : 0, 'only the approved manga variant renders compact type/origin chips');
+      if (comic) {
+        assert.deepEqual(identity.map(n => n.create), ['漫画', sourceId === 'local' ? '本地' : '在线']);
+        for (const tag of identity) {
+          assert.deepEqual([tag.fontFamily, tag.fontWeight, tag.fontSize, tag.lineHeight], ['ReaderNotoSansSC', 'FontWeight.Medium', 9, 14]);
+          assert.deepEqual([tag.width, tag.height, tag.borderRadius], [30, 16, 5]);
+          assert.equal(tag.textAlign, 'TextAlign.Center');
+        }
+        assert.equal(identity[0].backgroundColor, readerAppColor('TOK_GREEN', scheme));
+        assert.equal(identity[1].backgroundColor, readerAppColor('TOK_PRIMARY_SOFT', scheme));
+      } else {
+        assert.ok(tags().some(n => n.create === '小说'), 'original novel type badge remains visible');
+      }
       for (const tag of tags()) {
         assert.deepEqual([tag.fontFamily, tag.fontWeight, tag.fontSize, tag.lineHeight], ['ReaderInter', 700, 10, 15]);
         assert.deepEqual(tag.padding, { left: 6, right: 6, top: 2, bottom: 2 });
@@ -40,14 +52,15 @@ for (const scheme of ['day', 'night']) {
         assert.equal(tag.maxLines, 1);
         assert.equal(tag.margin, undefined, 'tag ink edge has no trailing bottom/right margin');
       }
-      const row = nodes().find(n => n.type === 'Flex');
-      assert.deepEqual(row.create, { direction: 'FlexDirection.Row', wrap: 'FlexWrap.Wrap', alignItems: 'ItemAlign.Center',
+      const rows = nodes().filter(n => n.type === 'Flex');
+      assert.equal(rows.length, comic ? 2 : 1);
+      for (const row of rows) { assert.deepEqual(row.create, { direction: 'FlexDirection.Row', wrap: 'FlexWrap.Wrap', alignItems: 'ItemAlign.Center',
         space: { main: 6, cross: 2 } });
-      assert.equal(row.width, '100%');
+      assert.equal(row.width, '100%'); }
       const sourceTag = tags().find(n => n.create === '实际书源');
       assert.equal(sourceTag.constraintSize.maxWidth, '100%');
       assert.equal(sourceTag.textOverflow.overflow, 'TextOverflow.Ellipsis');
-      assert.ok(tags().some(n => n.create === '已发现 2 个书源'));
+      assert.ok(tags().some(n => n.create === (sourceId === 'local' ? '本地书籍' : '已发现 2 个书源')));
       let selected;
       owner.onSelectResult = (chosen, variants) => { selected = { chosen, variants }; };
       const hit = nodes().find(n => n.type === 'Row' && n.width === width && n.onClick);
@@ -70,9 +83,9 @@ for (const scheme of ['day', 'night']) {
       }
       owner.group = { ...owner.group, sourceCount: 15, book: { ...book, sourceName: '很长的真实书源名称'.repeat(15) } };
       owner.replay();
-      assert.ok(tags().some(n => n.create === '已发现 15 个书源'));
+      assert.ok(tags().some(n => n.create === (sourceId === 'local' ? '本地书籍' : '已发现 15 个书源')));
       assert.equal(sourceTag.create, owner.group.book.sourceName, 'late metadata updates without remounting tag actors');
     }
   }
 }
-console.log('PASS PH63/PH99 actual SDK card constraints across phone/tablet and themes: bottom alignment, proportional cover, native wrapping, no blank latest row, live metadata and selection retained; no native pixels asserted');
+console.log('PASS PH63/PH99 actual SDK card constraints across phone/tablet and themes: original visible novel tags and approved manga identity, no hidden metadata, bottom alignment, proportional cover, native wrapping, no blank latest row, live metadata and selection retained; no native pixels asserted');

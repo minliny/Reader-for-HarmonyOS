@@ -5,6 +5,8 @@ import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { motionSegment } from '../entry/src/main/ets/features/common/MotionTimeline.ts';
+import { readerInteractiveSafeBottom } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 
 const file = path => fileURLToPath(new URL(`../entry/src/main/ets/${path}`, import.meta.url));
 const shelfFile = file('features/bookshelf/BookshelfPage.ets');
@@ -20,6 +22,8 @@ const viewMotion = new Function('curves', 'Curve',
   `${stripTypeScriptTypes(declaration)}; return BOOKSHELF_VIEW_MOTION;`)(
   { cubicBezierCurve: () => curve }, { Linear: 'linear', EaseOut: 'easeOut' });
 const Motion = productionMotionMethods(shelfFile, ['sampleViewSwitch'], { motionSegment });
+const readerMetrics = { windowRect: { width: 390, height: 844 }, systemInsets: { top: 48, bottom: 34, left: 0, right: 0 }, cutoutInsets: {}, gestureInsets: {}, navigationInsets: {}, keyboardInsets: {} };
+const readerFloatingTabContentInset = metrics => 68 + Math.max(15, readerInteractiveSafeBottom(metrics)) + 16;
 const sampler = Object.assign(new Motion(), { viewMotion, viewFadeCurve: curve,
   viewContentCurve: curve, viewSwitchSourceMode: 'cover', viewSwitchDestinationMode: 'list' });
 let shelfSamples = 0;
@@ -30,6 +34,7 @@ for (const theme of ['day', 'night']) {
     READER_FLOATING_TOP_BAR_HEIGHT: 58,
     LazyForEach: { create() {}, pop() {} },
     ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
+    readerFloatingTabContentInset, ReaderWindowCoordinator: { metrics: () => readerMetrics },
   }, {
     onObserverExit(owner, id) {
       const node = owner.nodes.get(id);
@@ -42,7 +47,7 @@ for (const theme of ['day', 'night']) {
   Object.assign(owner, { appThemeScheme: theme, viewMode: 'cover', viewSwitchHeaderOpacity: 1,
     continueReading: undefined, filterRowVisible: false,
     viewModeError: '', visibleBookCount: 0, rowDataSource: {},
-    shelfContentWidth: () => 352, shelfBottomContentInset: () => 99, hasActiveFilters: () => false });
+    shelfContentWidth: () => 352, readerFloatingTabContentInset, ReaderWindowCoordinator: { metrics: () => readerMetrics }, hasActiveFilters: () => false, isWideViewport: () => false });
   owner.bookshelfList(false);
   const icons = [...owner.nodes.values()].filter(node => node.type === 'Image');
   assert.equal(icons.length, 3);
@@ -75,26 +80,54 @@ for (const theme of ['day', 'night']) {
 // Detail is a presentation component. Metadata/progress refreshes must keep
 // its two existing actors; only an active shelf mutation gates reading.
 const detailSource = readFileSync(file('features/bookshelf/LocalBookDetail.ets'), 'utf8');
+const actionAreaSource = detailSource.slice(detailSource.indexOf('private actionArea()'), detailSource.indexOf('\n  private contentFrame()'));
+assert.match(actionAreaSource, /Stack\(\{ alignContent: Alignment\.Center \}\)/,
+  'detail action dock centers its button row inside the painted capsule');
+assert.doesNotMatch(actionAreaSource, /\.align\(Alignment\.Bottom\)/,
+  'detail action dock must not bottom-align its inner row a second time');
 const { owner: detail } = createReaderBuilderProbe(detailSource, ['actionArea',
-  'readingActionLabel', 'shelfActionLabel', 'actionButtonWidth'], {
-  DETAIL_ACTION_AREA_HEIGHT: 77, TOK_SPACE_CONTROL_INLINE: 10,
-});
+  'readingActionLabel', 'shelfActionLabel'], {
+    GradientDirection: { Bottom: 'bottom' },
+    READER_FONT_NOTO_SANS_SC_UI_BOLD: 'ReaderNotoSansSCUIBold',
+  });
 Object.assign(detail, { appThemeScheme: 'day', toc: [{ index: 0, title: '第一章' }],
   book: { title: '书', author: '作者' }, readingEnabled: true, readingBlockedReason: '',
   inBookshelf: true, removalEnabled: true, removing: false, loadingMessage: '',
-  contentWidth: () => 352 });
+  contentWidth: () => 352, actionButtonWidth: () => 171 });
+detail.dockFrame = () => ({ width: 352 });
+detail.bottomInset = () => 0;
 detail.actionArea();
-const buttons = [...detail.nodes.values()].filter(node => node.type === 'Stack');
+const buttons = [...detail.nodes.values()].filter(node => node.type === 'Text' && ['继续阅读', '移除书架'].includes(node.create));
 assert.equal(buttons.length, 2);
-assert.deepEqual(buttons.map(node => node.margin), [{ left: 4, right: 4 }, { left: 4, right: 4 }]);
+assert.deepEqual(buttons.map(node => node.margin), [undefined, undefined], 'dock padding owns spacing without shrinking 48vp actions');
 const buttonIds = buttons.map(node => node.id);
+assert.equal(buttons[0].fontFamily, 'ReaderNotoSansSCUIBold', 'primary action uses the bundled static UI bold face');
+assert.equal(buttons[1].fontFamily, 'ReaderNotoSansSCUIMedium', 'secondary action uses the bundled static UI medium face');
+assert.equal(buttons[1].fontWeight, 500, 'secondary action uses medium weight');
+assert.deepEqual(buttons[1].border, { width: 1, color: readerAppColor('TOK_LINE', 'day') },
+  'secondary action keeps the one-pixel neutral outline');
+assert.equal(buttons[1].backgroundColor, readerAppColor('TOK_SURFACE_PANEL_SOFT', 'day'),
+  'secondary action uses the neutral soft surface');
+assert.equal(buttons[1].fontColor, readerAppColor('TOK_MUTED', 'day'),
+  'secondary action uses muted text');
+Object.assign(detail, { inBookshelf: false, adding: false, cancellingAdd: false, removing: false });
+detail.replay();
+assert.equal(buttons[1].create, '加入书架');
+assert.equal(buttons[1].fontColor, readerAppColor('TOK_GREEN', 'day'),
+  'add-to-shelf action keeps the positive green affordance');
+Object.assign(detail, { inBookshelf: true });
+detail.replay();
+assert.equal(buttons[1].create, '移除书架');
+assert.equal(buttons[1].fontColor, readerAppColor('TOK_MUTED', 'day'),
+  'remove-from-shelf action uses muted text');
 for (let progress = 1; progress <= 4; progress += 1) {
   detail.book = { ...detail.book, currentChapterIndex: progress, readProgress: progress * 100 };
   detail.toc = detail.toc.map(entry => ({ ...entry }));
   detail.replay();
-  assert.deepEqual([...detail.nodes.values()].filter(node => node.type === 'Stack').map(node => node.id), buttonIds);
+  assert.deepEqual([...detail.nodes.values()].filter(node => node.type === 'Text' && ['继续阅读', '移除书架'].includes(node.create)).map(node => node.id), buttonIds);
   assert.deepEqual(buttons.map(node => [node.opacity, node.enabled, node.width, node.height]),
-    [[1, true, 163, 46], [1, true, 163, 46]]);
+    [[1, true, undefined, 48], [1, true, 94, 48]]);
+  assert.equal(buttons[0].layoutWeight, 1);
 }
 let continues=0;detail.onContinue=()=>{continues++;};
 for (const inBookshelf of [false,true]) for(const failure of ['目录读取失败','正文处理设置已改变']) {

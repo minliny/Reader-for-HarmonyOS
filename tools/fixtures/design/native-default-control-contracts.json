@@ -31,13 +31,13 @@
       "id": "NATIVE-DEFAULT-01",
       "file": "features/bookshelf/BookDirectoryPage.ets",
       "component": "BookDirectoryPage",
-      "method": "build",
+      "method": "standardBody",
       "kind": "Button",
       "argument": "this.rulesExpanded ? '收起层级规则' : '本书目录层级规则'",
       "variant": "nativeLabelButton",
       "businessOwner": "BookDirectoryPage rulesExpanded local display state",
       "nativeRenderingOwner": "ArkUI Button",
-      "consumerHost": "BookDirectoryPage.build",
+      "consumerHost": "BookDirectoryPage.standardBody",
       "requiredAttributes": {},
       "hasAction": true,
       "typographyOmissions": [
@@ -49,7 +49,10 @@
       ],
       "status": "RETAINED_PLATFORM_DEFAULT_CONTRACT",
       "reason": "Current application intentionally delegates the omitted physical attributes to the actual upstream native ArkUI component; no new Reader style/empty modifier is added.",
-      "sourceLineAtAudit": 83
+      "sourceLineAtAudit": 83,
+      "originMethod": "build",
+      "successorProof": "tools/test-book-directory-page.mjs",
+      "successorReason": "Approved manga dispatcher retains this original novel/local directory rules native button in standardBody."
     },
     {
       "id": "NATIVE-DEFAULT-02",

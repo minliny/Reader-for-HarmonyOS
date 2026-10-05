@@ -73,6 +73,7 @@ export type RemoteReadingTocEntry = {
 };
 
 export type RemoteReadingSession = {
+  contentKind?: 'text' | 'manga' | 'audio';
   sourceVersion?: string;
   /** Core-owned canonical catalog snapshot; absent on legacy caches. */
   catalogAt?: number;
@@ -239,6 +240,10 @@ export class RemoteReadingFlowGateway {
       );
     }
     const rawBook = this.requireObject(detailResult.data['book'], 'book.detail book');
+    const declaredKind = detailResult.data['contentKind'];
+    if (declaredKind !== undefined && declaredKind !== 'text' && declaredKind !== 'manga' && declaredKind !== 'audio') {
+      throw new RemoteReadingGatewayError('invalidInput', 'unsupported contentKind', 'book.detail');
+    }
     if (this.requireNonBlankString(rawBook, 'bookId', 'book.detail book') !== identity.bookId) {
       throw new RemoteReadingGatewayError(
         'identityMismatch',
@@ -309,6 +314,8 @@ export class RemoteReadingFlowGateway {
     }
     return {
       acquisitionMode: 'online',
+      contentKind: detailResult.data['contentKind'] === 'manga' ? 'manga' :
+        detailResult.data['contentKind'] === 'audio' ? 'audio' : 'text',
       sourceVersion: tocVersion ?? detailVersion,
       ...snapshot,
       identity,

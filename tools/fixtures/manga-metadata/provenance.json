@@ -1,0 +1,16 @@
+{
+  "generator": "Pillow",
+  "version": "11.3.0",
+  "source": "Reader synthetic 16x12 RGB fixture generated from constant pixels; no third-party image content",
+  "sha256": {
+    "bad-exif.webp": "4033cdbd4c46d88f065dd534f79e61a2ba8220eaa67dabc3671b099c02efad83",
+    "orientation-6.png": "a1f816d0380ed155ed55bf37f75db84c871d222847a3dbc22436ab4b52fa8d4a",
+    "orientation-6.jpg": "dad996428b9744ce1a605b5da4757c64e00222bd692d6fa126dab73f28551db3",
+    "no-exif.webp": "68b1cabb307cccdebcc9b51a03e1f57e59d3bb4f6292afe6298c3daee8030ef7",
+    "bad-exif.jpg": "e4bb1ee4e4df577d1f3feb9cf9f4d3bd7be244f64467e290fb6c9ac61b2d84d0",
+    "bad-exif.png": "67c59bad74b70a09b5946905ab2198b59032b95d66b78d42c7c69e8d2a7d3df0",
+    "no-exif.png": "2ec9b6f202f69dbec797aea5180ecd0b8026b85bf406554aede11ac66a031437",
+    "no-exif.jpg": "dcaca20dd321080558ae0130f42794a4ef41d6af312c4928f4667df1849feeee",
+    "orientation-6.webp": "0e629883ed5d3c042395b5b5dc9bd57159c5ed28dca1321c7066ee159b70b64d"
+  }
+}

@@ -1,7 +1,10 @@
+import { MangaChapterPreparationCoordinator } from '../manga/MangaChapterPreparationCoordinator';
 import type { CacheClearOperationIntentStore, ReadingOperationContext, ReadingOperationIntent, ReadingRecoveredOperation } from './ReadingOperationIntents';
 import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { diagnosticCodeOf } from '../../app/LogPrivacy';
 import type { BookAcquisitionCoordinator } from '../../app/BookAcquisitionCoordinator';
+import { MangaSessionGateway } from '../manga/MangaSessionGateway';
+import type { MangaChapterResult, MangaPreparedEntry } from '../manga/MangaContract';
 import type { JsonObject, ReaderCoreResultEvent, RequestOptions } from '@reader/core-harmony';
 import type { LocalReadingDownloadState, LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import {
@@ -22,8 +25,24 @@ import {
 } from './ReadingOfflineContract';
 
 type OfflineRequestGuard = () => boolean;
+type OfflineChapterGuard = (chapterIndex: number) => boolean;
+
+type MangaPendingClaim = {
+  startInclusive: number;
+  endExclusive: number;
+  settled: Promise<void>;
+};
+type MangaMaterializationWork = {
+  chapterIndex: number;
+  started: boolean;
+  settled: Promise<void>;
+  finish: () => void;
+  cancelIfExcluded: () => Promise<void>;
+};
+
 
 type CacheChapterProjection = {
+  mangaManifestVersion?: string;
   chapterIndex: number;
   state: LocalReadingDownloadState;
   cachedBytes: number;
@@ -31,6 +50,7 @@ type CacheChapterProjection = {
 };
 
 type CacheChapterMaterializationLease = {
+  manga?: MangaChapterResult;
   chapterIndex: number;
   token: string;
 };
@@ -66,6 +86,9 @@ const READER_OFFLINE_IMAGE_CONCURRENCY = 3;
 export class ReadingOfflineGateway {
   private readonly runtime: ReadingGatewayRuntime;
   private readonly remote: RemoteReadingFlowGateway;
+  private refreshedMangaSession?: RemoteReadingSession;
+  private readonly pendingMangaClaims: Set<MangaPendingClaim> = new Set();
+  private readonly mangaMaterializations: Set<MangaMaterializationWork> = new Set();
 
   private clearIntents?: CacheClearOperationIntentStore;
   constructor(runtime: ReadingGatewayRuntime, clearIntents?: CacheClearOperationIntentStore) {
@@ -82,13 +105,13 @@ export class ReadingOfflineGateway {
     return (await this.loadProjectionResult(session, isCurrent)).entries;
   }
 
-  /** A directory needs durable body availability, not a whole-book image
-   * verification. Exact completion is checked by explicit download actions. */
+  /** Text directories need durable body availability only. Manga completion
+   * also requires its retained exact manifest and the existing Host files. */
   async loadDirectoryProjection(
     session: RemoteReadingSession,
     isCurrent?: OfflineRequestGuard,
   ): Promise<LocalReadingTocEntry[]> {
-    return (await this.loadProjectionResult(session, isCurrent, undefined, false)).entries;
+    return (await this.loadProjectionResult(session, isCurrent, undefined, session.contentKind === 'manga')).entries;
   }
 
   private async loadProjectionResult(
@@ -102,13 +125,30 @@ export class ReadingOfflineGateway {
     const current = this.contentGuard(session, isCurrent);
     this.assertCurrent(current);
     const statuses = await this.loadCoreStatuses(session, current);
+    const retained = new Map<string, string>();
+    if (session.contentKind === 'manga') {
+      const result = await this.runtime.request('manga.retention.list', {
+        sourceId: session.identity.sourceId, bookId: session.identity.bookId,
+      }, this.requestOptions(current));
+      this.assertCurrent(current);
+      if (!Array.isArray(result.data['retentions'])) throw new Error('manga retention projection is unavailable');
+      for (const value of result.data['retentions'] as JsonObject[]) {
+        const row = this.requireObject(value, 'manga.retention.list row');
+        const chapter = this.requireObject(row['chapter'], 'manga retention chapter');
+        if (chapter['sourceId'] !== session.identity.sourceId || chapter['bookId'] !== session.identity.bookId ||
+          typeof chapter['chapterId'] !== 'string' || (chapter['chapterId'] as string).trim().length === 0 ||
+          typeof row['manifestVersion'] !== 'string' || (row['manifestVersion'] as string).trim().length === 0 ||
+          retained.has(chapter['chapterId'] as string)) throw new Error('manga retention identity changed');
+        retained.set(chapter['chapterId'] as string, row['manifestVersion'] as string);
+      }
+    }
     const stateByChapter = new Map<number, LocalReadingDownloadState>();
     for (const status of statuses) {
       // A failed/cancelled image materialization must not hide the already
       // durable text body. Core remains the byte-level truth; `cached` means
       // text is readable while external images may still need a retry.
       stateByChapter.set(status.chapterIndex,
-        status.cachedBytes > 0 && status.state !== 'completed' ? 'cached' : status.state);
+        session.contentKind !== 'manga' && status.cachedBytes > 0 && status.state !== 'completed' && status.state !== 'paused' ? 'cached' : status.state);
     }
     const entries: LocalReadingTocEntry[] = [];
     const manifestChecks: number[] = [];
@@ -122,6 +162,8 @@ export class ReadingOfflineGateway {
       }
       readableIndexes.add(tocEntry.index);
       let state: LocalReadingDownloadState = stateByChapter.get(tocEntry.index) ?? 'missing';
+      if (session.contentKind === 'manga' && state === 'completed' &&
+        retained.get(tocEntry.url) !== statuses.find(status => status.chapterIndex === tocEntry.index)?.mangaManifestVersion) state = 'cached';
       if (state === 'completed' && verifyImages &&
         this.runtime.isOfflineImageChapterComplete !== undefined) {
         manifestChecks.push(position);
@@ -137,6 +179,23 @@ export class ReadingOfflineGateway {
       async (position: number): Promise<void> => {
         this.assertCurrent(current);
         const entry = entries[position];
+        if (session.contentKind === 'manga') {
+          const version = statuses.find(status => status.chapterIndex === entry.index)?.mangaManifestVersion;
+          let prepared: MangaPreparedEntry | null = null;
+          if (version !== undefined) {
+            try {
+              prepared = await new MangaSessionGateway(this.runtime).entry(session.identity.sourceId,
+                session.identity.bookId, entry.index, current);
+            } catch (_) { this.assertCurrent(current); }
+          }
+          const materialized = prepared !== null && prepared.chapter.manifest.manifestVersion === version &&
+            await this.runtime.isOfflineImageChapterComplete!({ sourceId: session.identity.sourceId,
+              bookId: session.identity.bookId, chapterIndex: entry.index, chapterId: prepared.chapter.manifest.chapter.chapterId, contentVersion: version!,
+              mangaDecodeRevision: prepared.chapter.manifest.decodeRevision }, true, current);
+          this.assertCurrent(current);
+          entry.downloadState = materialized ? 'completed' : 'cached';
+          return;
+        }
         const key = this.proofKey(session, entry.index);
         const saved = proofs?.get(key);
         const identity = saved !== undefined && saved.isCurrent() ? saved.identity :
@@ -241,6 +300,29 @@ export class ReadingOfflineGateway {
     return this.prefetchRange(session, chapterIndex, chapterIndex + 1, isCurrent, evidence);
   }
 
+  /** Explicit replacement only; the old selected download remains owned until
+   * all new files are verified and Core completes the replacement transaction. */
+  async updateMangaChapter(session: RemoteReadingSession, chapterIndex: number,
+    isCurrent?: OfflineRequestGuard, evidence?: ReaderWriteEvidence): Promise<LocalReadingTocEntry[]> {
+    if (session.contentKind !== 'manga') throw new Error('MANGA_UPDATE_REQUIRES_MANGA');
+    const readable = session.entries.find(entry => entry.index === chapterIndex &&
+      entry.navigable !== false && entry.url.trim().length > 0);
+    if (readable === undefined) throw new Error('MANGA_UPDATE_REQUIRES_READABLE_CHAPTER');
+    const valid = this.runtime.captureReadingContentValidity?.(session.identity.sourceId, session.identity.bookId);
+    const current = (): boolean => isCurrent?.() !== false && valid?.() !== false;
+    this.assertCurrent(current);
+    const statuses = await this.loadCoreStatuses(session, current);
+    if (statuses.some(status => status.chapterIndex === chapterIndex && status.state === 'paused'))
+      throw new Error('MANGA_DOWNLOAD_PAUSED_RESUME_REQUIRED');
+    evidence?.dispatched();
+    const refreshed = await new MangaSessionGateway(this.runtime).chapter(session.identity.sourceId,
+      session.identity.bookId, chapterIndex, 'refresh', current);
+    this.assertCurrent(current);
+    if (refreshed.manifest.chapter.chapterId !== readable.url) throw new Error('MANGA_DOWNLOAD_CATALOG_CHANGED_REOPEN_REQUIRED');
+    evidence?.confirmed();
+    return this.prefetchChapter(session, chapterIndex, current, evidence);
+  }
+
   /**
    * Resumes a whole-book request in bounded slices while Core remains the only
    * durable queue and byte store. Re-entering this method is safe: Core skips
@@ -251,8 +333,11 @@ export class ReadingOfflineGateway {
     session: RemoteReadingSession,
     isCurrent?: OfflineRequestGuard,
     onProgress?: (progress: ReadingOfflineBookProgress) => void,
-    evidence?: ReaderWriteEvidence,
+    evidenceOrChapterCurrent?: ReaderWriteEvidence | OfflineChapterGuard,
+    requestedChapterCurrent?: OfflineChapterGuard,
   ): Promise<LocalReadingTocEntry[]> {
+    const evidence = typeof evidenceOrChapterCurrent === 'function' ? undefined : evidenceOrChapterCurrent;
+    const chapterCurrent = typeof evidenceOrChapterCurrent === 'function' ? evidenceOrChapterCurrent : requestedChapterCurrent;
     const totalChapters = session.entries.filter(entry => entry.navigable !== false && entry.url.trim().length > 0).length;
     if (totalChapters === 0) {
       return this.loadProjection(session, isCurrent);
@@ -265,7 +350,7 @@ export class ReadingOfflineGateway {
     for (let startInclusive = 0; startInclusive < session.entries.length;
       startInclusive += READER_OFFLINE_BOOK_CHUNK_SIZE) {
       const endExclusive = Math.min(session.entries.length, startInclusive + READER_OFFLINE_BOOK_CHUNK_SIZE);
-      const result = await this.prefetchRangeResult(session, startInclusive, endExclusive, isCurrent, proofs, false, evidence);
+      const result = await this.prefetchRangeResult(session, startInclusive, endExclusive, isCurrent, proofs, false, evidence, chapterCurrent);
       projection = result.entries;
       this.assertCurrent(isCurrent);
       processedChapters += session.entries.slice(startInclusive, endExclusive).filter(entry => entry.navigable !== false && entry.url.trim().length > 0).length;
@@ -283,10 +368,13 @@ export class ReadingOfflineGateway {
     startInclusive: number,
     endExclusive: number,
     isCurrent?: OfflineRequestGuard,
-    evidence?: ReaderWriteEvidence,
+    evidenceOrChapterCurrent?: ReaderWriteEvidence | OfflineChapterGuard,
+    requestedChapterCurrent?: OfflineChapterGuard,
   ): Promise<LocalReadingTocEntry[]> {
+    const evidence = typeof evidenceOrChapterCurrent === 'function' ? undefined : evidenceOrChapterCurrent;
+    const chapterCurrent = typeof evidenceOrChapterCurrent === 'function' ? evidenceOrChapterCurrent : requestedChapterCurrent;
     const proofs = this.runtime.captureReadingContentValidity === undefined ? undefined : new Map<string, OfflineChapterProof>();
-    return (await this.prefetchRangeResult(session, startInclusive, endExclusive, isCurrent, proofs, false, evidence)).entries;
+    return (await this.prefetchRangeResult(session, startInclusive, endExclusive, isCurrent, proofs, false, evidence, chapterCurrent)).entries;
   }
 
   /** Rolling reader work verifies only its requested window. A full directory
@@ -310,12 +398,12 @@ export class ReadingOfflineGateway {
       request: (method: string, params: JsonObject = {}, options: RequestOptions = {}): Promise<ReaderCoreResultEvent> =>
         coordinator.request(method, params, options, 'background'),
       prefetchReadingImage: runtime.prefetchReadingImage === undefined ? undefined :
-        (identity: ReadingGatewayImageCacheIdentity, current?: OfflineRequestGuard): Promise<void> => runtime.prefetchReadingImage!(identity, current),
+        (identity: ReadingGatewayImageCacheIdentity, current?: OfflineRequestGuard, sourceVersion?: string, allowNetwork?: boolean): Promise<void> => runtime.prefetchReadingImage!(identity, current, sourceVersion, allowNetwork),
       markOfflineImageChapterComplete: runtime.markOfflineImageChapterComplete === undefined ? undefined :
-        (identity: ReadingGatewayImageChapterIdentity, resources: ReadingGatewayImageCacheIdentity[]): Promise<void> =>
-          runtime.markOfflineImageChapterComplete!(identity, resources),
+        (identity: ReadingGatewayImageChapterIdentity, resources: ReadingGatewayImageCacheIdentity[], current?: OfflineRequestGuard): Promise<void> =>
+          runtime.markOfflineImageChapterComplete!(identity, resources, current),
       isOfflineImageChapterComplete: runtime.isOfflineImageChapterComplete === undefined ? undefined :
-        (identity: ReadingGatewayImageChapterIdentity): Promise<boolean> => runtime.isOfflineImageChapterComplete!(identity),
+        (identity: ReadingGatewayImageChapterIdentity, manga?: boolean, current?: OfflineRequestGuard): Promise<boolean> => runtime.isOfflineImageChapterComplete!(identity, manga, current),
     };
     const proofs = runtime.captureReadingContentValidity === undefined ? undefined : new Map<string, OfflineChapterProof>();
     return new ReadingOfflineGateway(background)
@@ -330,30 +418,120 @@ export class ReadingOfflineGateway {
     proofs?: Map<string, OfflineChapterProof>,
     projectWindowOnly: boolean = false,
     evidence?: ReaderWriteEvidence,
+    chapterCurrent?: OfflineChapterGuard,
   ): Promise<ReadingOfflineBookProgress> {
+    const current = this.contentGuard(session, isCurrent);
+    this.assertCurrent(current);
+    if (session.contentKind === 'manga') {
+      const requestedSession = session;
+      const coordinator = this.runtime.bookAcquisitions?.();
+      if (coordinator !== undefined) {
+        const version = await coordinator.currentSourceVersion(session.identity.sourceId);
+        this.assertCurrent(current);
+        const prior = this.refreshedMangaSession;
+        if (prior !== undefined && prior.identity.sourceId === session.identity.sourceId &&
+          prior.identity.bookId === session.identity.bookId && prior.sourceVersion === version) session = prior;
+        if (version !== undefined && session.sourceVersion !== version) {
+          const fresh = await this.remote.openSession({ ...session.book, ...session.identity,
+            detailUrl: session.detailUrl, sourceVersion: version, contentKind: 'manga', searchVariables: [] },
+            { forceRefresh: true, isCurrent: current });
+          this.assertCurrent(current);
+          if (fresh.contentKind !== 'manga') throw new Error('MANGA_DOWNLOAD_KIND_CHANGED_REOPEN_REQUIRED');
+          this.refreshedMangaSession = fresh;
+          session = fresh;
+        }
+        // Reusing a refreshed catalog must also preserve every requested identity.
+        for (const old of requestedSession.entries.filter(entry => entry.index >= startInclusive && entry.index < endExclusive)) {
+          if (!session.entries.some(entry => entry.index === old.index && entry.url === old.url &&
+            (old.navigable === false || entry.navigable !== false))) {
+            throw new Error('MANGA_DOWNLOAD_CATALOG_CHANGED_REOPEN_REQUIRED');
+          }
+        }
+      }
+    }
     this.assertRange(session, startInclusive, endExclusive);
     this.assertCurrent(isCurrent);
     const projectionSession: RemoteReadingSession = projectWindowOnly ? {
       ...session, entries: session.entries.slice(startInclusive, endExclusive), preparedChapter: undefined,
     } : session;
+    if (session.contentKind === 'manga' && this.runtime.supportsCoreCapability?.('manga.offline.v1') !== true) throw new Error('MANGA_OFFLINE_CORE_REQUIRED');
+    if (session.contentKind === 'manga' && chapterCurrent !== undefined &&
+      session.entries.some(entry => entry.index >= startInclusive && entry.index < endExclusive && !chapterCurrent(entry.index))) {
+      // Keep Core's contiguous lease transaction; excluded paused/cancelled
+      // chapters cannot be reclaimed by a later whole-book slice.
+      for (let start = startInclusive; start < endExclusive;) {
+        if (!chapterCurrent(start)) { start += 1; continue; }
+        let end = start + 1;
+        while (end < endExclusive && chapterCurrent(end)) end += 1;
+        await this.prefetchRangeResult(session, start, end, current, proofs, false, evidence, chapterCurrent);
+        start = end;
+      }
+      return this.loadProjectionResult(projectionSession, current, proofs);
+    }
     if (!session.entries.some(entry => entry.index >= startInclusive && entry.index < endExclusive && entry.navigable !== false && entry.url.trim().length > 0)) {
       return this.loadProjectionResult(projectionSession, isCurrent, proofs);
     }
     evidence?.dispatched();
-    const result = await this.runtime.request('cache.book.prefetch', {
+    const params: JsonObject = {
       sourceId: session.identity.sourceId,
       bookId: session.identity.bookId,
       chapterRange: [startInclusive, endExclusive],
       priority: 0,
       requestedAt: Date.now(),
-    }, evidence === undefined ? this.requestOptions(isCurrent, 300000) : { timeoutMs: 300000 });
-    const materializations = this.assertPrefetchResult(
-      result,
-      session,
-      startInclusive,
-      endExclusive,
-    );
-    evidence?.confirmed();
+    };
+    if (session.contentKind === 'manga') params['contentKind'] = 'manga';
+    let finishClaim = (): void => {};
+    const pending: MangaPendingClaim | undefined = session.contentKind === 'manga' ? {
+      startInclusive, endExclusive, settled: new Promise<void>(resolve => { finishClaim = resolve; }),
+    } : undefined;
+    // Register before the native await: a pause can arrive before Core's
+    // newly claimed lease is visible to the Host.
+    if (pending !== undefined) this.pendingMangaClaims.add(pending);
+    let materializations: CacheChapterMaterializationLease[];
+    const mangaWorks: MangaMaterializationWork[] = [];
+    try {
+      const result = await this.runtime.request('cache.book.prefetch', params, evidence === undefined ? this.requestOptions(current, 300000) : { timeoutMs: 300000 });
+      materializations = this.assertPrefetchResult(result, session, startInclusive, endExclusive);
+      evidence?.confirmed();
+      if (session.contentKind === 'manga') {
+        for (const lease of materializations) {
+          const chapterValid = (): boolean => current() && chapterCurrent?.(lease.chapterIndex) !== false;
+          mangaWorks.push(this.registerMangaMaterialization(session, lease, chapterValid));
+        }
+      }
+    } finally {
+      if (pending !== undefined) this.pendingMangaClaims.delete(pending);
+      // All chapter drains are registered before closing the claim gap.
+      finishClaim();
+    }
+    if (session.contentKind === 'manga') {
+      // Every claimed lease must settle, including work not started after a
+      // cancellation or failure. Otherwise Core retains an InProgress row.
+      let firstFailure: Error | undefined;
+      for (let index = 0; index < materializations.length; index += 1) {
+        const lease = materializations[index], work = mangaWorks[index];
+        if (work.started) { await work.settled; continue; }
+        work.started = true;
+        try {
+          if (firstFailure !== undefined || chapterCurrent?.(lease.chapterIndex) === false) {
+            try { await this.reportMaterialization(session, lease, 'failed', 'cancelled'); }
+            catch (error) { console.warn(`Manga lease settlement failed: ${diagnosticCodeOf((error as Error).message)}`); }
+            continue;
+          }
+          try {
+            await this.materializeManga(session, lease, (): boolean => current() && chapterCurrent?.(lease.chapterIndex) !== false);
+          } catch (error) {
+            // A Core-fenced chapter is isolated from the still-valid book.
+            // Genuine content/book cancellation retains the old batch rules.
+            if (!current() || chapterCurrent?.(lease.chapterIndex) !== false) firstFailure = error as Error;
+          }
+        } finally {
+          work.finish();
+        }
+      }
+      if (firstFailure !== undefined) throw firstFailure;
+      return this.loadProjectionResult(projectionSession, current, proofs);
+    }
     let materializationError: Error | undefined;
     await this.forEachConcurrent(materializations, READER_OFFLINE_CHAPTER_CONCURRENCY,
       async (materialization: CacheChapterMaterializationLease): Promise<void> => {
@@ -366,6 +544,60 @@ export class ReadingOfflineGateway {
     if (materializationError !== undefined) throw materializationError;
     this.assertCurrent(isCurrent);
     return this.loadProjectionResult(projectionSession, isCurrent, proofs);
+  }
+
+  /** Wait only the target consumer, including a native claim not yet returned.
+   * Unstarted excluded leases can settle while another chapter is still loading. */
+  async waitForMangaChapter(chapterIndex: number): Promise<void> {
+    for (;;) {
+      const pending = Array.from(this.pendingMangaClaims).filter(claim =>
+        chapterIndex >= claim.startInclusive && chapterIndex < claim.endExclusive);
+      if (pending.length > 0) await Promise.all(pending.map(claim => claim.settled));
+      const works = Array.from(this.mangaMaterializations).filter(work => work.chapterIndex === chapterIndex);
+      await Promise.all(works.map(async (work): Promise<void> => {
+        await work.cancelIfExcluded();
+        await work.settled;
+      }));
+      if (!Array.from(this.pendingMangaClaims).some(claim => chapterIndex >= claim.startInclusive && chapterIndex < claim.endExclusive) &&
+        !Array.from(this.mangaMaterializations).some(work => work.chapterIndex === chapterIndex)) return;
+    }
+  }
+
+  private registerMangaMaterialization(session: RemoteReadingSession, lease: CacheChapterMaterializationLease,
+    current: OfflineRequestGuard): MangaMaterializationWork {
+    let resolveWork = (): void => {};
+    const work: MangaMaterializationWork = {
+      chapterIndex: lease.chapterIndex, started: false,
+      settled: new Promise<void>(resolve => { resolveWork = resolve; }),
+      finish: (): void => { this.mangaMaterializations.delete(work); resolveWork(); },
+      cancelIfExcluded: async (): Promise<void> => {
+        if (work.started || current()) return;
+        work.started = true;
+        try { await this.reportMaterialization(session, lease, 'failed', 'cancelled'); }
+        catch (error) { console.warn(`Manga lease settlement failed: ${diagnosticCodeOf((error as Error).message)}`); }
+        finally { work.finish(); }
+      },
+    };
+    this.mangaMaterializations.add(work);
+    return work;
+  }
+
+  private async materializeManga(session: RemoteReadingSession, lease: CacheChapterMaterializationLease,
+    isCurrent: OfflineRequestGuard): Promise<void> {
+    try {
+      this.assertCurrent(isCurrent);
+      if (this.runtime.prefetchReadingImage === undefined || this.runtime.markOfflineImageChapterComplete === undefined ||
+        this.runtime.isOfflineImageChapterComplete === undefined || lease.manga === undefined) throw new Error('MANGA_OFFLINE_HOST_REQUIRED');
+      const data = lease.manga;
+      await MangaChapterPreparationCoordinator.forRuntime(this.runtime).prepareDownload(data, data.manifest.pages.length,
+        (): boolean => isCurrent?.() !== false);
+      this.assertCurrent(isCurrent);
+    } catch (error) {
+      const failure = normalizeReadingOfflineMaterializationError(error);
+      await this.reportMaterialization(session, lease, 'failed', failure.code);
+      throw failure;
+    }
+    await this.reportMaterialization(session, lease, 'completed');
   }
 
   private async materializeChapter(
@@ -441,6 +673,7 @@ export class ReadingOfflineGateway {
       session.identity.bookId,
       isCurrent,
       evidence,
+      session.contentKind === 'manga',
     );
   }
 
@@ -449,6 +682,7 @@ export class ReadingOfflineGateway {
     bookId: string,
     isCurrent?: OfflineRequestGuard,
     evidence?: ReaderWriteEvidence,
+    manga: boolean = false,
   ): Promise<void> {
     if (sourceId.trim().length === 0 || bookId.trim().length === 0) {
       throw new Error('offline book identity must be non-blank');
@@ -474,7 +708,7 @@ export class ReadingOfflineGateway {
     this.assertCurrent(isCurrent);
     // Core confirmation and platform image cleanup are independent. Recovery
     // never silently repeats either destructive step.
-    await this.runtime.clearOfflineBookImages(sourceId, bookId);
+    await this.runtime.clearOfflineBookImages(sourceId, bookId, manga);
     this.assertCurrent(isCurrent);
   }
 
@@ -517,6 +751,7 @@ export class ReadingOfflineGateway {
       const raw = this.requireObject(rawValue, 'cache.book.status chapter');
       const chapterIndex = this.requireNonNegativeInteger(raw['chapterIndex'], 'chapterIndex');
       statuses.push({
+        mangaManifestVersion: typeof raw['mangaManifestVersion'] === 'string' && (raw['mangaManifestVersion'] as string).length > 0 ? raw['mangaManifestVersion'] as string : undefined,
         chapterIndex,
         state: this.requireDownloadState(raw['state']),
         cachedBytes: this.requireNonNegativeInteger(raw['cachedBytes'] ?? 0, 'cachedBytes'),
@@ -588,7 +823,13 @@ export class ReadingOfflineGateway {
         throw new Error('cache.book.prefetch returned an invalid materialization lease');
       }
       seenIndexes.add(chapterIndex);
-      materializations.push({ chapterIndex, token });
+      let manga: MangaChapterResult | undefined = undefined;
+      if (session.contentKind === 'manga') {
+        manga = new MangaSessionGateway(this.runtime).validateChapter(raw['manga'] as unknown as MangaChapterResult,
+          session.identity.sourceId, session.identity.bookId, chapterIndex);
+        if (manga.manifest.chapter.chapterId !== session.entries.find(entry => entry.index === chapterIndex)?.url) throw new Error('MANGA_OFFLINE_CATALOG_CHANGED');
+      } else if (raw['manga'] !== undefined) throw new Error('MANGA_OFFLINE_KIND_MISMATCH');
+      materializations.push({ chapterIndex, token, manga });
     }
     return materializations;
   }
@@ -610,6 +851,11 @@ export class ReadingOfflineGateway {
     if (errorCode !== undefined) {
       params['errorCode'] = errorCode;
     }
+    if (materialization.manga !== undefined) {
+      const manifest = materialization.manga.manifest;
+      params['manga'] = { chapter: manifest.chapter as unknown as JsonObject, manifestVersion: manifest.manifestVersion,
+        resourceRefs: manifest.pages.map(page => page.resourceRef) };
+    }
     // This terminal report deliberately has no route cancellation guard. The
     // opaque token makes it safe after navigation and prevents a stale task
     // from changing a newer attempt.
@@ -624,7 +870,7 @@ export class ReadingOfflineGateway {
         if (result.data['sourceId'] !== session.identity.sourceId ||
           result.data['bookId'] !== session.identity.bookId ||
           result.data['chapterIndex'] !== materialization.chapterIndex ||
-          result.data['state'] !== outcome || result.data['retainedCachedBody'] !== true) {
+          result.data['state'] !== outcome || result.data['retainedCachedBody'] !== (materialization.manga === undefined)) {
           throw new Error('cache.chapter.materialization.report returned a mismatched result');
         }
         return;
@@ -670,7 +916,7 @@ export class ReadingOfflineGateway {
   }
 
   private requireDownloadState(value: unknown): LocalReadingDownloadState {
-    if (value === 'missing' || value === 'queued' || value === 'inProgress' || value === 'cached' ||
+    if (value === 'missing' || value === 'queued' || value === 'paused' || value === 'inProgress' || value === 'cached' ||
       value === 'completed' || value === 'failed' || value === 'cancelled') {
       return value;
     }

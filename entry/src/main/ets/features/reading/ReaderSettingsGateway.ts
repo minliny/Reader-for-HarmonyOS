@@ -12,6 +12,13 @@ import {
   type ReaderSettingsSnapshotV4,
 } from './ReaderSettingsState';
 
+export interface ReaderMangaPreferences {
+  mangaDirection?: 'vertical' | 'horizontal';
+  mangaFit?: 'source' | 'width' | 'contain';
+  mangaBackground?: 'paper' | 'white' | 'ink';
+  mangaPageNumbers?: boolean;
+}
+
 const READER_SETTINGS_PREFERENCES_NAME = 'reader_reading_settings_v1';
 const READER_SETTINGS_SNAPSHOT_KEY = 'snapshot';
 
@@ -100,6 +107,30 @@ export class ReaderSettingsGateway {
       }
       this.assertAdmitted(isAdmitted);
       return this.writeSnapshot(store, requestedSnapshot);
+    });
+  }
+
+  /** Manga choices use the same finite accepted/saved write lane as text settings. */
+  async updateMangaDirection(horizontal: boolean): Promise<void> {
+    await this.updateMangaPreferences({ mangaDirection: horizontal ? 'horizontal' : 'vertical' });
+  }
+
+  async updateMangaFit(fit: 'source' | 'width' | 'contain'): Promise<void> {
+    await this.updateMangaPreferences({ mangaFit: fit });
+  }
+
+  async updateMangaPreferences(patch: ReaderMangaPreferences, isAdmitted?: () => boolean): Promise<void> {
+    await ReaderThemeHost.prepareUserChange();
+    return this.withSettingsAccess(async (): Promise<void> => {
+      const store = await this.ensureStore();
+      this.assertAdmitted(isAdmitted);
+      const snapshot = this.current() ?? await this.readSnapshot(store, (): boolean => isAdmitted?.() !== false);
+      if (patch.mangaDirection !== undefined) snapshot.mangaDirection = patch.mangaDirection;
+      if (patch.mangaFit !== undefined) snapshot.mangaFit = patch.mangaFit;
+      if (patch.mangaBackground !== undefined) snapshot.mangaBackground = patch.mangaBackground;
+      if (patch.mangaPageNumbers !== undefined) snapshot.mangaPageNumbers = patch.mangaPageNumbers;
+      this.assertAdmitted(isAdmitted);
+      await this.writeSnapshot(store, normalizeReaderSettingsSnapshot(snapshot));
     });
   }
 

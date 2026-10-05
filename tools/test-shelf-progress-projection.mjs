@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
+import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 
@@ -29,7 +30,7 @@ const geometry = constants(pageSource, ['PHONE_BOOK_WIDTH', 'PHONE_BOOK_HEIGHT_R
   'TABLET_BOOK_HEIGHT_RATIO', 'PHONE_LIST_COVER_WIDTH', 'PHONE_LIST_COVER_HEIGHT', 'TABLET_LIST_COVER_WIDTH', 'TABLET_LIST_COVER_HEIGHT']);
 const tokens = constants(read('common/ReaderTokens.ets'), ['TOK_SPACE_XS', 'TOK_SPACE_CONTROL_INLINE']);
 function projection(text) {
-  return new Function(stripTypeScriptTypes(text).replace(/^import .*;$/gm, '').replace(/^export /gm, '') + ';return ShelfBookPresentation;')();
+  return new Function('MangaBookPresentation', stripTypeScriptTypes(text).replace(/^import .*;$/gm, '').replace(/^export /gm, '') + ';return ShelfBookPresentation;')(MangaBookPresentation);
 }
 const positiveRule = projectionSource.replace('Math.floor(value)', 'Math.ceil(value)');
 const gridOnlyRule = projectionSource.replace("variant === 'grid-caption' ? '' : '未读'", "variant === 'grid-caption' ? '网格零态探针' : '未读'");
@@ -66,7 +67,7 @@ function grid(text, Projection, book, tablet = false, scheme = 'day') {
 }
 function list(Projection, book, scheme = 'day') {
   const properties = createArkUIPropertyRuntimeProbe();
-  const { owner } = createReaderBuilderProbe(listSource, ['appThemeScheme', 'book', 'statusPill', 'build'],
+  const { owner } = createReaderBuilderProbe(listSource, ['appThemeScheme', 'book', 'mangaRevision', 'positionLabel', 'metadataTag', 'build'],
     { ...properties.sdk, ShelfBookPresentation: Projection, runtime: forbiddenTransport },
     { ...properties.hooks, initialParams: { book } });
   owner.appThemeScheme = scheme; owner.initialRender();
@@ -117,7 +118,7 @@ assert.equal(textNodes(grid(frozenGrid, ShelfBookPresentation, row(Infinity))).a
 // run real SDK one-way Prop updates. Keep the already-mounted child/nodes.
 {
   const properties = createArkUIPropertyRuntimeProbe();
-  const child = createReaderBuilderProbe(listSource, ['appThemeScheme', 'book', 'statusPill', 'build'],
+  const child = createReaderBuilderProbe(listSource, ['appThemeScheme', 'book', 'mangaRevision', 'positionLabel', 'metadataTag', 'build'],
     { ...properties.sdk, ShelfBookPresentation }, properties.hooks);
   const names = ['projectionListDetails', 'projectionListDetailsWidth', 'listCoverWidth', 'listCoverHeight',
     'bookActionPresentationHandler', 'isShelfPresentationCurrent', 'presentBookActionSheet'];

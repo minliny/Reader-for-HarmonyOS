@@ -8,6 +8,8 @@ import { boundedMembers, boundedSurfaceSdk } from './lib/bounded-surface-sdk-pro
 import { projectOperationFacts } from '../entry/src/main/ets/app/ReaderOperationFacts.ts';
 import { readerRecoveryView } from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { MangaOfflineNetworkProbe } from '../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts';
+import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return nextResolve(`${specifier}.ts`, context); throw error; }
@@ -64,7 +66,7 @@ function fixture(books=[book('/one')]) {
     LOCAL_SOURCE_ID:'local',CATALOG_REFRESH_INTERVAL_MS:600000,DOMAIN:0,
     hilog:{info:(...args)=>log.push(args),warn:(...args)=>{if(diagnosticThrows)throw Error('diagnostic unavailable');log.push(args);}}
   });
-  const page=Object.assign(new Index(),{mountedRuntimeOwner:owner,detailShelfAdmissionMount:1,rssInstanceIdentity:1,shelfReadingFilter:'all',shelfSourceFilter:'all',bookshelfHost:bookshelfCatalogHost(Flow,()=>installedOwner),shelfReceiptRetired:false,shelfProjectionRevision:'',navigationGeneration:1,bookshelfCatalogEpoch:0,bookshelfBackgroundEpoch:0,route:'bookshelf',shelfBooks:books,settingsSnapshot:{autoCheckUpdate:true},
+  const page=Object.assign(new Index(),{mountedRuntimeOwner:owner,detailShelfAdmissionMount:1,rssInstanceIdentity:1,shelfReadingFilter:'all',shelfSourceFilter:'all',shelfContentFilter:'all',bookshelfHost:bookshelfCatalogHost(Flow,()=>installedOwner),shelfReceiptRetired:false,shelfProjectionRevision:'',navigationGeneration:1,bookshelfCatalogEpoch:0,bookshelfBackgroundEpoch:0,route:'bookshelf',shelfBooks:books,settingsSnapshot:{autoCheckUpdate:true},
     applicationSettingsSnapshot:{autoCheckUpdate:true},searchAppForeground:true,readingSessionActive:false,
     bookshelfUpdateRunning:false,bookshelfBackgroundRefreshRunning:false,bookshelfUpdateDone:0,bookshelfUpdateTotal:0,
     bookshelfLoadGeneration:0,prefetchReadingWindow:async session=>prefetched.push(session),invalidateBookshelfProjection(){this.bookshelfLoadGeneration++;},applyBookshelfState(){}});
@@ -91,7 +93,7 @@ function actualRecovery(f) {
  parent.isCurrentBookshelfPresentation=f.page.isCurrentBookshelfPresentation.bind(f.page);
  parent.bookshelfShellContent();const props=[...parent.children.values()][0].params;
  composition.childSources.BookshelfMoreMenu=ets('features/bookshelf/BookshelfMoreMenu.ets');
- const shell=composition.consumer(shellSource,['shellContent','content','recoveryNoticeContent'],{BookshelfMoreMenu:Child,READER_FLOATING_TOP_BAR_HEIGHT:56});
+ const shell=composition.consumer(shellSource,['shellContent','content','recoveryNoticeContent'],{BookshelfMoreMenu:Child,READER_FLOATING_TOP_BAR_HEIGHT:58,...metricsApi,ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics}});
  Object.assign(shell,props,{topBar(){},content(){},moreMenuVisible:false});shell.shellContent();
  const notice=composition.walk(shell).find(owner=>owner instanceof composition.deps.ReaderRecoveryNotice);
  assert.ok(notice,'real Shell -> shared RecoveryNotice consumes the catalog facts');
@@ -167,6 +169,36 @@ await check('automatic checks retain 10-minute threshold and disabled/local/acti
     assert.equal(f.catalogs.get('/due').length,2,'automatic check still gets the new catalog');
     assert.equal(f.prefetched.length,0,'automatic catalogs cannot launch competing body sweeps');
   }finally{f.runtime.close();}
+});
+await check('cold scoped manga skips only automatic catalog refresh while other and manual checks continue',async()=>{
+  const protectedBook=book('/offline',{contentKind:'manga'}),other=book('/other');
+  const f=fixture([protectedBook,other]);
+  const probe=new MangaOfflineNetworkProbe({sourceId,bookId:'/offline'});
+  f.owner.mangaOfflineProbeProtectsAutomaticCatalog=(source,book)=>probe.protectsAutomaticCatalog(source,book);
+  try {
+    f.page.scheduleBookshelfBackgroundRefresh(f.page.shelfBooks);
+    await until(()=>!f.page.bookshelfBackgroundRefreshRunning);
+    assert.deepEqual(f.calls.filter(c=>c.method==='book.detail').map(c=>c.params.book.bookId),['/other'],
+      'armed exact target must never enter automatic detail acquisition');
+    assert.equal(f.calls.some(c=>c.method==='book.toc'&&c.params.bookId==='/offline'),false);
+    assert.equal(JSON.parse(probe.snapshot()).coreHttpAttempts,0,'the skip cannot redefine the HTTP attempt counter');
+    f.calls.length=0;
+    probe.select(sourceId,'/offline',true);
+    f.page.scheduleBookshelfBackgroundRefresh(f.page.shelfBooks);
+    await until(()=>!f.page.bookshelfBackgroundRefreshRunning);
+    assert.equal(f.calls.some(c=>c.method==='book.detail'&&c.params.book.bookId==='/offline'),false,
+      'active exact target remains protected before the next automatic dispatch');
+    f.calls.length=0;
+    f.page.startManualBookshelfUpdate();await until(()=>!f.page.bookshelfUpdateRunning);
+    assert.equal(f.calls.some(c=>c.method==='book.detail'&&c.params.book.bookId==='/offline'),true,
+      'explicit user update retains the normal catalog path');
+    f.calls.length=0;
+    probe.release('reader-left');
+    f.page.scheduleBookshelfBackgroundRefresh(f.page.shelfBooks);
+    await until(()=>!f.page.bookshelfBackgroundRefreshRunning);
+    assert.equal(f.calls.some(c=>c.method==='book.detail'&&c.params.book.bookId==='/offline'),true,
+      'released debug scope restores ordinary automatic catalog checks');
+  } finally {f.runtime.close();}
 });
 await check('automatic work waits for settings and yields to reading; manual work stays explicit',async()=>{
   const f=fixture([book('/a'),book('/b'),book('/c')]);try {

@@ -1,0 +1,80 @@
+{
+  "__readerMangaGraphicsPlan": true,
+  "width": 8,
+  "height": 103,
+  "pixelFormat": "rgb565",
+  "format": "jpeg",
+  "quality": 90,
+  "strips": [
+    {
+      "sourceY": 0,
+      "targetY": 96,
+      "height": 7
+    },
+    {
+      "sourceY": 7,
+      "targetY": 89,
+      "height": 7
+    },
+    {
+      "sourceY": 14,
+      "targetY": 82,
+      "height": 7
+    },
+    {
+      "sourceY": 21,
+      "targetY": 75,
+      "height": 7
+    },
+    {
+      "sourceY": 28,
+      "targetY": 68,
+      "height": 7
+    },
+    {
+      "sourceY": 35,
+      "targetY": 61,
+      "height": 7
+    },
+    {
+      "sourceY": 42,
+      "targetY": 54,
+      "height": 7
+    },
+    {
+      "sourceY": 49,
+      "targetY": 47,
+      "height": 7
+    },
+    {
+      "sourceY": 56,
+      "targetY": 40,
+      "height": 7
+    },
+    {
+      "sourceY": 63,
+      "targetY": 33,
+      "height": 7
+    },
+    {
+      "sourceY": 70,
+      "targetY": 26,
+      "height": 7
+    },
+    {
+      "sourceY": 77,
+      "targetY": 19,
+      "height": 7
+    },
+    {
+      "sourceY": 84,
+      "targetY": 12,
+      "height": 7
+    },
+    {
+      "sourceY": 91,
+      "targetY": 0,
+      "height": 12
+    }
+  ]
+}

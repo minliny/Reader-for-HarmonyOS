@@ -1,0 +1,5 @@
+PASS manga switch requires consent, checks first and landing image, retains old shelf on failed image, fences cancellation
+PASS actual Index manga switch: saved chapter, explicit approximation consent, cancelled/failed preparation, lost commit response reconciliation and navigation fence
+PASS manga source switching matches only readable titles/indices and refuses URL-bearing groups
+(node:62040) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

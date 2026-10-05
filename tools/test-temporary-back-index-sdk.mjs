@@ -12,10 +12,12 @@ import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mj
 import {actualSourceManagementTypes,actualSourceManagementHostField} from './lib/source-management-owner-probe.mjs';
 import {fixture as generalSettingsFixture} from './lib/general-settings-persistence-probe.mjs';
 import {admitBookshelfSdkCarrier} from './lib/bookshelf-projection-owner-probe.mjs';
+import * as readerWindowMetrics from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import {isReaderProductSurfaceEnabled} from '../entry/src/main/ets/app/ReaderProductScope.ts';
 // Reuse only the real leaf constructors/fixtures, not that test's assertions.
 const fixtureUrl=new URL('./test-temporary-back-leaf-sdk.mjs',import.meta.url);
 const fixtureSource=readFileSync(fixtureUrl,'utf8').split('function assertCycle(')[0].replace(/^import[^\n]+\n/gm,'').replaceAll('import.meta.url',JSON.stringify(fixtureUrl.href));
-const deps={assert,readFileSync,createRequire,stripTypeScriptTypes,ReaderNativeAlertOwner,createReaderBuilderProbe,boundedSurfaceSdk,boundedMembers,choiceSource,resolveReaderChoiceSpec,compileReaderChoiceLabelModifier,menuSource,ReaderMenuActionView};
+const deps={readerWindowMetrics,assert,readFileSync,createRequire,stripTypeScriptTypes,ReaderNativeAlertOwner,createReaderBuilderProbe,boundedSurfaceSdk,boundedMembers,choiceSource,resolveReaderChoiceSpec,compileReaderChoiceLabelModifier,menuSource,ReaderMenuActionView};
 const leaf=new Function(...Object.keys(deps),fixtureSource+';return{harness,settingsSource,sourceSource,shelfSource,read};')(...Object.values(deps));
 const syntax=createRequire(import.meta.url)((process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/lib/validate_ui_syntax.js');syntax.builderParamObjectCollection.set('BookshelfShell',new Set(['content']));createRequire(import.meta.url)((process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/lib/component_map.js').CUSTOM_BUILDER_METHOD.add('bookshelfContent');
 const indexPath=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),indexSource=readFileSync(indexPath,'utf8');
@@ -38,7 +40,7 @@ function fixture(scope){
   const h=leaf.harness(),source=scope==='settings'?leaf.settingsSource:scope==='source'?leaf.sourceSource:leaf.shelfSource;
   const method=scope==='settings'?'settingsContent':scope==='source'?'sourceManagementContent':'bookshelfShellContent';
   let parent;
-  function props(){parent=createReaderBuilderProbe(indexSource,[method,...(scope==='source'?['sourceManagementSurface']:scope==='settings'?['settingsSurface']:[])],{SettingsPage:Child,SourceManagementPage:Child,BookshelfShell:Child,deviceInfo:{deviceType:'phone'}},{childSources:{SettingsPage:leaf.settingsSource,SourceManagementPage:leaf.sourceSource,BookshelfShell:leaf.shelfSource}}).owner;Object.assign(parent,index);parent.registerTemporaryBackBridge=index.registerTemporaryBackBridge.bind(index);parent.isCurrentSourceManagement=index.isCurrentSourceManagement.bind(index);parent.isCurrentSettingsPresentation=index.isCurrentSettingsPresentation.bind(index);parent[method]();return[...parent.children.values()].at(-1).params;}
+  function props(){parent=createReaderBuilderProbe(indexSource,[method,...(scope==='source'?['sourceManagementSurface']:scope==='settings'?['settingsSurface']:[])],{...readerWindowMetrics,isReaderProductSurfaceEnabled,SettingsPage:Child,SourceManagementPage:Child,BookshelfShell:Child,deviceInfo:{deviceType:'phone'}},{childSources:{SettingsPage:leaf.settingsSource,SourceManagementPage:leaf.sourceSource,BookshelfShell:leaf.shelfSource}}).owner;Object.assign(parent,index);parent.registerTemporaryBackBridge=index.registerTemporaryBackBridge.bind(index);parent.isCurrentSourceManagement=index.isCurrentSourceManagement.bind(index);parent.isCurrentSettingsPresentation=index.isCurrentSettingsPresentation.bind(index);parent[method]();return[...parent.children.values()].at(-1).params;}
   const f=h.owner(source,{...props(),sources:[],groups:['A','B']});
   const open=()=>{if(scope==='settings')f.o.toggleSelection('language');else if(scope==='source')f.o.toggleGroupSelection();else f.o.moreOpenAction(f.o.temporaryBackIdentity)();};
   const finish=()=>{if(scope==='source'){f.o.dismissGroupSelection(f.o.groupSelectionId);}};

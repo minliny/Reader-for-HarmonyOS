@@ -7,7 +7,7 @@ import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { SearchResultProjection } from './SearchResultProjection';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { SearchSpinner } from './SearchSpinner';
-import { SearchViewState } from './SearchViewState';
+import { SearchViewState, type SearchContentType } from './SearchViewState';
 import { SearchPublication } from './SearchPublication';
 import type { SearchPresentation } from './SearchPresentation';
 import { bookIntroText } from '../common/BookIntroText';
@@ -16,7 +16,7 @@ import {
   type SearchSource,
 } from './SearchGateway';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
-import { readerSourceCategoryIsText } from '../source/ReaderSourceCategory';
+import { readerSourceCategoryIsText, readerMediaIdentity } from '../source/ReaderSourceCategory';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { registerReaderFonts } from '../common/ReaderFonts';
@@ -160,7 +160,7 @@ class SearchResultDataSource implements IDataSource {
     if (book.sourceId === 'local') return `local:${book.bookId}`;
     if (book.groupKey !== undefined) return `online:${book.groupKey}`;
     const alias = bookTitleAuthorKey(book.title, book.author, book.authorIdentity, book.sourceRuleVersion);
-    return `online:${alias}`;
+    return `online:${readerMediaIdentity(book.category === 'comic', alias)}`;
   }
 
   private sameBook(left: SearchBook, right: SearchBook): boolean {
@@ -346,10 +346,12 @@ export struct SearchPage {
   // Product result categories filter one session; changing a chip never
   // starts another network sweep.
   @State selectedGroupName: string = '全部';
+  @State private selectedContentType: SearchContentType = '全部类型';
   @State private visibleGroups: SearchBookGroup[] = [];
   private acceptedVisibleGroups: SearchBookGroup[] | undefined = undefined;
   private resultDataSource: SearchResultDataSource = new SearchResultDataSource();
   private groupedCategory: string = '';
+  private groupedContentType: string = '';
   private groupedResultsCache: SearchBookGroup[] = [];
   private resultProjection: SearchResultProjection | undefined = undefined;
   private projectedGroups: Map<string, SearchBookGroup> = new Map();
@@ -382,6 +384,7 @@ export struct SearchPage {
     this.restoreItemY = this.viewState.anchorItemY;
     this.scrollRestored = false;
     this.selectedGroupName = this.viewState.category;
+    this.selectedContentType = this.viewState.contentType;
     this.focusInputOnAppear = this.viewState.consumeInputFocusRequest();
     this.keyword = this.viewState.keywordDraft;
     this.acceptPublication();
@@ -418,6 +421,7 @@ export struct SearchPage {
         this.searchBar();
         if (this.presentation.kind === 'results' || this.presentation.kind === 'empty') {
           this.groupScopeRow();
+          this.contentTypeRow();
         }
       }.width('100%').height(this.searchHeaderHeight())
         .position({ top: 0, left: 0 }).hitTestBehavior(HitTestMode.Transparent);
@@ -500,6 +504,7 @@ export struct SearchPage {
     }
     this.viewState.reset(keyword);
     this.selectedGroupName = '全部';
+    this.selectedContentType = '全部类型';
     this.onSearch(keyword, scope);
   }
 
@@ -525,6 +530,25 @@ export struct SearchPage {
     this.viewState.anchorNeighbors = []; this.scrollRestored = false;
     this.resultScroller.scrollEdge(Edge.Top);
     this.refreshVisibleResults();
+  }
+
+  private selectContentType(contentType: SearchContentType): void {
+    if (this.selectedContentType === contentType) return;
+    this.selectedContentType = contentType;
+    this.viewState.contentType = contentType;
+    // Reuse scope navigation/anchor handling without changing the query run.
+    this.selectGroup(this.selectedGroupName);
+  }
+
+  private filteredEmptyMessage(): string {
+    const selection = `${this.selectedGroupName} · ${this.selectedContentType}`;
+    if (this.presentation.kind === 'results' && this.presentation.searching) {
+      return `当前筛选（${selection}）下暂无结果，搜索仍在继续。`;
+    }
+    if (this.presentation.kind === 'results' && this.presentation.stopped === true) {
+      return `搜索已停止，已返回的结果中没有符合当前筛选（${selection}）的书籍。可切换范围或内容类型。`;
+    }
+    return `已返回的结果中没有符合当前筛选（${selection}）的书籍，可切换范围或内容类型。`;
   }
 
   @Builder
@@ -688,21 +712,33 @@ export struct SearchPage {
   @Builder
   private groupScopeRow() {
     if (this.groupNames().length > 0) {
-      Scroll() {
-        Row({ space: TOK_SPACE_XS }) {
-          this.groupScopeChip('全部');
-          ForEach(this.groupNames(), (name: string) => {
-            this.groupScopeChip(name);
-          }, (name: string): string => `search-group-${name}`);
+      Row({ space: TOK_SPACE_XS }) {
+        Text('来源')
+          .width(51)
+          .fontFamily('ReaderNotoSansSC')
+          .fontSize(11)
+          .lineHeight(17)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        Scroll() {
+          Row({ space: TOK_SPACE_XS }) {
+            this.groupScopeChip('全部');
+            ForEach(this.groupNames(), (name: string) => {
+              this.groupScopeChip(name);
+            }, (name: string): string => `search-group-${name}`);
+          }
+          .alignItems(VerticalAlign.Center)
+          .padding({ right: this.isTablet ? 20 : 16 });
         }
-        .alignItems(VerticalAlign.Center)
-        .padding({ left: this.isTablet ? 20 : 16, right: this.isTablet ? 20 : 16 });
+        .layoutWeight(1)
+        .scrollable(ScrollDirection.Horizontal)
+        .scrollBar(BarState.Off)
+        .height(41.5)
+        .align(Alignment.Start);
       }
-      .scrollable(ScrollDirection.Horizontal)
-      .scrollBar(BarState.Off)
       .width('100%')
       .height(41.5)
-      .align(Alignment.Start);
+      .padding({ left: this.isTablet ? 20 : 16, right: this.isTablet ? 20 : 16 })
+      .alignItems(VerticalAlign.Center);
     }
   }
 
@@ -711,6 +747,52 @@ export struct SearchPage {
     ReaderButton({ scheme: this.appThemeScheme, specId: 'search-scope', label, primary: this.selectedGroupName === label,
       actionAccessibilityLabel: this.selectedGroupName === label ? `当前搜索范围:${label}` : `筛选搜索结果:${label}`,
       onAction: (): void => this.selectGroup(label) });
+  }
+
+  @Builder
+  private contentTypeRow() {
+    Row({ space: TOK_SPACE_XS }) {
+      Text('内容类型')
+        .width(51)
+        .fontFamily('ReaderNotoSansSC')
+        .fontSize(11)
+        .lineHeight(17)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+      Scroll() {
+        Row({ space: TOK_SPACE_XS }) {
+          this.contentTypeChip('全部类型');
+          this.contentTypeChip('小说');
+          this.contentTypeChip('漫画');
+        }
+        .alignItems(VerticalAlign.Center)
+        .padding({ right: this.isTablet ? 20 : 16 });
+      }
+      .layoutWeight(1)
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off)
+      .height(41.5)
+      .align(Alignment.Start);
+    }
+    .width('100%')
+    .height(41.5)
+    .padding({ left: this.isTablet ? 20 : 16, right: this.isTablet ? 20 : 16 })
+    .alignItems(VerticalAlign.Center);
+  }
+
+  @Builder
+  private contentTypeChip(label: SearchContentType) {
+    Text(label)
+      .fontFamily('ReaderInter')
+      .fontWeight(this.selectedContentType === label ? FontWeight.Bold : FontWeight.Medium)
+      .fontSize(12).lineHeight(12)
+      .fontColor(this.selectedContentType === label ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
+      .padding({ left: 10, right: 10, top: 5.5, bottom: 5.5 })
+      .backgroundColor(this.selectedContentType === label ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('TOK_PAPER', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: this.selectedContentType === label ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
+      .borderRadius(999).maxLines(1)
+      .id(`search-content-type-${label}`)
+      .onClick((): void => this.selectContentType(label))
+      .accessibilityText(this.selectedContentType === label ? `当前内容类型:${label}` : `筛选内容类型:${label}`);
   }
 
   @Builder
@@ -723,6 +805,7 @@ export struct SearchPage {
     if (this.viewStateRevision !== this.viewState.revision) {
       this.viewStateRevision = this.viewState.revision;
       this.selectedGroupName = this.viewState.category;
+      this.selectedContentType = this.viewState.contentType;
       this.keyword = this.viewState.keywordDraft;
       this.restoreKey = this.viewState.anchorKey;
       this.restoreOffset = this.viewState.anchorOffset;
@@ -849,6 +932,12 @@ export struct SearchPage {
           }
         });
 
+        if (this.visibleGroups.length === 0) {
+          Text(this.filteredEmptyMessage())
+            .fontFamily('ReaderInter').fontSize(13).lineHeight(20)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .textAlign(TextAlign.Center).padding(24).width('100%');
+        }
         List({ scroller: this.resultScroller }) {
           LazyForEach(this.resultDataSource, (group: SearchBookGroup) => {
             ListItem() {
@@ -899,10 +988,21 @@ export struct SearchPage {
       group.book = row.book;
       this.projectedGroups.set(key, group);
     }
+    const contentType = this.selectedContentType ?? '全部类型';
     const categoryChanged = this.groupedCategory !== this.selectedGroupName;
-    if (update.orderChanged || categoryChanged || this.projectedGroupKeys === undefined) {
-      this.projectedGroupKeys = update.orderedKeys.filter((key: string): boolean =>
-        this.selectedGroupName === '全部' || (this.selectedGroupName === '本地' ? key.startsWith('local:') : !key.startsWith('local:')));
+    const typeChanged = this.groupedContentType !== contentType;
+    if (update.orderChanged || categoryChanged || typeChanged ||
+      (contentType !== '全部类型' && update.changedKeys.size > 0) || this.projectedGroupKeys === undefined) {
+      this.projectedGroupKeys = update.orderedKeys.filter((key: string): boolean => {
+        const scopeMatches = this.selectedGroupName === '全部' ||
+          (this.selectedGroupName === '本地' ? key.startsWith('local:') : !key.startsWith('local:'));
+        const book = (this.projectedGroups.get(key) as SearchBookGroup).book;
+        // Facts admitted by the gateway determine type. Unknown declarations
+        // remain visible under All; titles/genres never grant type admission.
+        const typeMatches = contentType === '全部类型' || (contentType === '漫画' ? book.category === 'comic' :
+          book.category === 'novel' || (book.sourceId === 'local' && book.category === undefined));
+        return scopeMatches && typeMatches;
+      });
       this.groupedResultsCache = this.projectedGroupKeys.map((key: string): SearchBookGroup => this.projectedGroups.get(key) as SearchBookGroup);
       this.projectedGroupIndexes = new Map();
       for (let index = 0; index < this.projectedGroupKeys.length; index++) this.projectedGroupIndexes.set(this.projectedGroupKeys[index], index);
@@ -913,6 +1013,7 @@ export struct SearchPage {
       }
     }
     this.groupedCategory = this.selectedGroupName;
+    this.groupedContentType = contentType;
     return this.groupedResultsCache;
   }
 
@@ -1011,7 +1112,7 @@ export struct SearchPage {
 
   private resultGroupKey(book: SearchBook): string {
     return book.sourceId === 'local' ? `local:${book.bookId}` :
-      `online:${book.groupKey ?? this.normalizedBookKey(book.title, book.author)}`;
+      `online:${book.groupKey ?? readerMediaIdentity(book.category === 'comic', this.normalizedBookKey(book.title, book.author))}`;
   }
 
   private normalizedBookKey(title: string, author: string): string {
@@ -1359,7 +1460,25 @@ struct SearchResultCard {
       .borderRadius(6);
 
       Column() {
-        Column({ space: 5 }) {
+        if (this.group.book.category === 'comic') {
+          Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
+            space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(2) } }) {
+            Text('漫画').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(9).lineHeight(14)
+              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme)).width(30).height(16)
+              .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).borderRadius(5);
+            if (this.group.book.sourceId === 'local') {
+              Text('本地').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(9).lineHeight(14)
+                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width(30).height(16)
+                .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme)).borderRadius(5);
+            } else {
+              Text('在线').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(9).lineHeight(14)
+                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width(30).height(16)
+                .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme)).borderRadius(5);
+            }
+          }.width('100%');
+        }
+
+        Column({ space: 4 }) {
           Text(this.group.book.title)
             .width('100%')
             .fontFamily(TYPE_SEARCH_RESULT_TITLE.fontFamily)
@@ -1381,7 +1500,7 @@ struct SearchResultCard {
             .textOverflow({ overflow: TextOverflow.Ellipsis });
 
           if ((this.group.book.latestChapterTitle?.trim().length ?? 0) > 0) {
-            Text(this.group.book.latestChapterTitle)
+            Text(this.group.book.category === 'comic' ? `最新 · ${this.group.book.latestChapterTitle}` : this.group.book.latestChapterTitle)
               .width('100%')
               .opacity(0.8)
               .fontFamily(TYPE_SEARCH_RESULT_CHAPTER.fontFamily)
@@ -1394,6 +1513,7 @@ struct SearchResultCard {
           }
 
           if (this.displayIntro().length > 0) {
+            if (this.group.book.category !== 'comic') {
             Text(this.displayIntro())
               .width('100%')
               .fontFamily(TYPE_SEARCH_RESULT_INTRO.fontFamily)
@@ -1403,6 +1523,7 @@ struct SearchResultCard {
               .fontColor(readerAppColor('app.SearchResultCard.build.fontColor.FF9A948E', this.appThemeScheme))
               .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
+            }
           }
         }
         .width('100%')
@@ -1410,6 +1531,17 @@ struct SearchResultCard {
 
         Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
           space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(2) } }) {
+          if (this.group.book.category !== 'comic') {
+            Text('小说')
+              .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
+              .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
+              .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
+              .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
+              .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
+              .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+              .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
+              .borderRadius(4).maxLines(1);
+          }
           Text(this.group.book.sourceName.length > 0 ? this.group.book.sourceName : this.group.book.sourceId)
             .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
             .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
@@ -1455,6 +1587,21 @@ struct SearchResultCard {
     .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: TOK_SPACE_CARD_PADDING, bottom: 14.5 })
     .alignItems(VerticalAlign.Bottom)
     .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: readerAppColor('TOK_BORDER', this.appThemeScheme) } })
-    .onClick((): void => this.onSelectResult(this.group.book, this.group.variants));
+      .onClick((): void => this.onSelectResult(this.group.book, this.group.variants));
+  }
+
+  @Builder
+  private resultTag(label: string, primary: boolean) {
+    Text(label)
+      .fontFamily('ReaderNotoSansSC')
+      .fontWeight(FontWeight.Medium)
+      .fontSize(9)
+      .lineHeight(14)
+      .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
+      .width(30)
+      .height(16)
+      .textAlign(TextAlign.Center)
+      .backgroundColor(primary ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
+      .borderRadius(4);
   }
 }

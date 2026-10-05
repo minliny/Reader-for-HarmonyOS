@@ -6,10 +6,12 @@ const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve
 function fixture(capabilities=[]){
  const clock=[],events=[],requests=[],native=deferred(),cleanup=deferred();let createError=false, opens=0;
  let migrationStarted=false, migrationResult=Promise.resolve(false);
+ let inspector, metadataCalls=0, cacheClosed=false;
  const runtime={assetBridge:()=>({}),setCapabilityRouter(){},close(){events.push('native.close');},
   async request(method,params){events.push(method);requests.push({method,params:structuredClone(params)});return{data:{capabilities,buildIdentity:{},recovered:0}};}};
  const Owner=productionMotionMethods(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url),
- ['start','startAfterPredecessor','requestDirect','startRuntime','scheduleImportFinalizeCleanup','supportsCoreCapability'],{ReaderStartupTrace,LOG_DOMAIN:0,hilog:{info(){},error(){},warn(){}},errorMessageOf:e=>e.message,
+ ['start','startAfterPredecessor','requestDirect','startRuntime','scheduleImportFinalizeCleanup','supportsCoreCapability','close','detachMangaReadingProbe'], {ReadingBodyImageHost:{instance:{setMangaMetadataInspector:callback=>{inspector=callback;}}},
+  MangaImageMetadataHost:{instance:{inspect:async(bytes,digest,request,current)=>{metadataCalls++;assert.equal(current(),true);await request({inputSha256:digest});return{status:'absent',orientation:null,sha256:digest,bytes:bytes.length};}}},ReaderStartupTrace,LOG_DOMAIN:0,hilog:{info(){},error(){},warn(){}},errorMessageOf:e=>e.message,
   DEFAULT_CORE_REQUEST_TIMEOUT_MS:30000,coreAdmissionFailureSummary:()=>undefined,httpResponseFailureSummary:()=>undefined,
   setTimeout:fn=>{clock.push(fn);return clock.length;},createReaderCoreRuntimeAsync:async(_config,current)=>{
    opens+=1;if(createError)throw Error('open failed');await native.promise;
@@ -17,6 +19,7 @@ function fixture(capabilities=[]){
   }});
  const owner=Object.assign(new Owner(),{state:'starting',coreCapabilities:new Set(),predecessorClose:Promise.resolve(),
   readingEntryPreparations:()=>({beginRequest:()=>false}),
+  preparationWakeTimer:-1,readingImageDiskCache:{close(){cacheClosed=true;}},async closeRuntime(){this.state='closed';},
   host:{getContext:()=>({filesDir:'/controlled'}),setResponseAssetBridge(){},createCapabilityRouter:()=>({}),
    needsLegacySnapshotMigration(){migrationStarted=true;return migrationResult;},
    async markLegacySnapshotMigrated(){events.push('migration-marker-write');}},
@@ -24,6 +27,7 @@ function fixture(capabilities=[]){
   async recoverPendingLocalImportFinalizes(){events.push('cleanup');await cleanup.promise;},
   async installBundledBookSourceCollection(){return{collectionRecords:0,uniqueSourceIds:0,processed:0,installedOrUpgraded:0,failed:0,interrupted:false};}});
  return{owner,runtime,native,cleanup,events,requests,clock,fail(){createError=true;},recover(){createError=false;},opens:()=>opens,
+  inspector:()=>inspector,metadataCalls:()=>metadataCalls,cacheClosed:()=>cacheClosed,
   migrationStarted:()=>migrationStarted, migration(value){migrationResult=value;}};
 }
 {
@@ -95,3 +99,14 @@ console.log('startup boundaries: parallel Host marker/native open, restore barri
  assert.equal(f.opens(),2,'closed owners cannot silently reopen');
 }
 console.log('search entry concurrent startup failure, shared retry, recovery barrier and closed-owner rejection PASS');
+
+{
+ const f=fixture();f.native.resolve();await f.owner.startRuntime();
+ assert.equal(typeof f.inspector(),'function','startup installs metadata only after native runtime exists');
+ const digest='a'.repeat(64);const proof=await f.inspector()(new Uint8Array([1,2,3]),digest,()=>true);
+ assert.deepEqual(proof,{status:'absent',orientation:null,sha256:digest,bytes:3});
+ assert.equal(f.metadataCalls(),1);assert.ok(f.events.includes('manga.resource.inspect'),'the installed callback uses the exact owned runtime');
+ await f.owner.close();assert.equal(f.inspector(),undefined,'public close detaches metadata inspection before releasing owned resources');
+ assert.equal(f.cacheClosed(),true);
+}
+console.log('PASS production metadata lifecycle: startup injects inspector, callback uses owned Core request, public close detaches and closes image cache');

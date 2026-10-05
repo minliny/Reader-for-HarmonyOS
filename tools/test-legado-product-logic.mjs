@@ -139,7 +139,7 @@ assert.doesNotMatch(shelf, /bookDataSource/,
   'SHF-02: cover/list switching must not duplicate the lazy data source');
 assert.match(shelf, /private rebuildShelfProjection\(\)/,
   'SHF-02: filtering and row projection must be rebuilt once per input change');
-assert.match(shelf, /ShelfBookPresentation\.visible\(this\.books, '', this\.readingFilter, this\.sourceFilter\)/,
+assert.match(shelf, /ShelfBookPresentation\.visible\(this\.books, '', 'all', this\.sourceFilter\)/,
   'SHF-02 revised: the removed group entry cannot leave an unreachable group condition');
 assert.match(shelfMoreMenu, /检查更新/,
   'SHF-03: More must present a manual shelf-wide update entry');

@@ -2,6 +2,10 @@ import {admitBookshelfSdkCarrier} from './lib/bookshelf-projection-owner-probe.m
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { readerFloatingTabContentInset } from './lib/reader-floating-bar-metrics-probe.mjs';
+import { createDefaultReaderWindowMetrics } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
+import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 
@@ -36,8 +40,9 @@ const hooks = { ...runtime.hooks, onObserverExit(owner, id) {
   if (!mounted.has(id)) { mounted.add(id); node.create[0](); }
 } };
 const { Component: Page } = createReaderBuilderProbe(pageSource,
-  ['continueReading','navigationGeneration','onShelfPresentationChanged','dismissBookActionSheet','publishVisibleReadingBooks','bookSelectionHandler','isShelfPresentationCurrent','shelfScrollHandler','shelfPageHandler','bookshelfList', 'continueReadingCard', 'hasCover'], {
-    READER_FLOATING_TOP_BAR_HEIGHT: 58,
+  ['continueReading','navigationGeneration','onShelfPresentationChanged','dismissBookActionSheet','publishVisibleReadingBooks','bookSelectionHandler','isShelfPresentationCurrent','shelfScrollHandler','shelfPageHandler','bookshelfList', 'continueReadingCard', 'hasCover', 'continueReadingPosition', 'mangaReadingPosition', 'isWideViewport', 'effectiveViewportWidth'], {
+    READER_FLOATING_TOP_BAR_HEIGHT: 58, BOOKSHELF_WIDE_BREAKPOINT: 600, readerFloatingTabContentInset,
+    ReaderWindowCoordinator: { metrics: createDefaultReaderWindowMetrics }, ShelfBookPresentation, MangaBookPresentation,
     ...shelfTypography,
     ...runtime.sdk, NoCoverCover: Child, ImageFit: { Cover: 'cover' },
     LazyForEach: { create() {}, pop() {} }, ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
@@ -47,9 +52,9 @@ class ShelfChild extends Child {
   constructor(owner, params, storage, id) {
     super(owner, params, storage, id); pageMounts++;
     page = new Page(undefined, params);
-    Object.assign(page, { actionSheetId:'',mounted:true,appThemeScheme: 'day', filterRowVisible: false, viewModeError: '', visibleBookCount: 2,
+    Object.assign(page, { readerWindowMetricsRevision: 0, viewportWidth: 390, mangaRevision: 0, actionSheetId:'',mounted:true,appThemeScheme: 'day', filterRowVisible: false, viewModeError: '', visibleBookCount: 2,
       viewSwitchHeaderOpacity: 1, shelfScroller: {}, rowDataSource: {}, sectionAction() {}, filterRow() {}, projectionRow() {},
-      shelfContentWidth: () => 352, shelfBottomContentInset: () => 99, onBookSelected: params.onBookSelected });
+      shelfContentWidth: () => 352, onBookSelected: params.onBookSelected });
     page.bookshelfList(false);
   }
   updateStateVars(params) {
@@ -83,7 +88,7 @@ assert.equal(cover !== undefined, withCover);
 const childIds = [...page.children.keys()];
 if (!withCover) {
   assert.equal(page.children.size, 1, 'the original NoCover actor is mounted once');
-  assert.deepEqual([...page.children.values()][0].params, { coverWidth: 62, coverHeight: 93 });
+  assert.deepEqual([...page.children.values()][0].params, { coverWidth: 48, coverHeight: 72 });
 }
 index.shelfBooks = [b, a]; index.continueReading = b;
 runtime.flush();

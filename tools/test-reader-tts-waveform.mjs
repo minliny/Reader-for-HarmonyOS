@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { READER_TTS_WAVEFORM_HEIGHTS, ReaderTtsWaveformMotion, ReaderTtsWaveformClock } from '../entry/src/main/ets/features/reading/ReaderTtsWaveformModel.ts';
 import { readerAppearanceCubicBezierProgress as bezier } from '../entry/src/main/ets/features/reading/ReaderAppearanceMotionGeometry.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';

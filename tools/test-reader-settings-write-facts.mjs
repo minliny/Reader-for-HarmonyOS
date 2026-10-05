@@ -80,6 +80,25 @@ for(const text of ['', 'null','{broken']){
  const f=fixture();f.cache.set('snapshot',text);assert.deepEqual(await f.owner.load(),initial);assert.equal(f.events.some(e=>e[0]==='put'),false);
 }
 
+// Narrow manga choices have exactly the same accepted/ACK and finite-owner contract.
+for (const failure of ['before', 'after', 'put']) {
+ const f=fixture();await f.owner.update(initial);const before=f.events.length;
+ if(failure==='put')f.failPut();else f.failFlush(failure);
+ await assert.rejects(f.owner.updateMangaPreferences({mangaDirection:'horizontal',mangaFit:'contain'}));
+ const accepted=f.owner.current();assert.equal(accepted.mangaDirection,'horizontal');assert.equal(accepted.mangaFit,'contain');
+ assert.equal(f.owner.writeFacts().pendingReconciliation,true);assert.equal(f.owner.writeFacts().saved.mangaDirection,undefined);
+ assert.equal(f.events.slice(before).filter(e=>e[0]==='put').length,1,'a failed manga flush never compensates the platform cache');
+ const warm=f.remount();await warm.update({...initial,pageTransition:'cover'});
+ assert.equal(warm.current().mangaDirection,'horizontal');assert.equal(warm.current().mangaFit,'contain');
+ assert.equal(warm.writeFacts().pendingReconciliation,false);assert.equal(warm.writeFacts().saved.mangaFit,'contain');
+}
+{
+ const f=fixture(),gate=deferred();await f.owner.update(initial);f.setBarrier(()=>gate.promise);
+ const writing=f.owner.updateMangaPreferences({mangaFit:'width'}),rejected=assert.rejects(writing,/SUPERSEDED/);
+ await settle();f.remount();gate.resolve();await rejected;
+ assert.equal(f.events.filter(e=>e[0]==='put').length,1,'retired manga owner cannot dispatch its narrow patch');
+}
+
 function reader(f,file=new URL('LocalReadingExperience.ets',dir)){
  const events=[];
  const Reader=productionMotionMethods(file,['commitReaderSessionSettings','commitReaderWindowSettings','changeReaderPageTurnStyle',

@@ -1,3 +1,4 @@
+import {approvedTypographyContract} from './lib/approved-manga-typography-carriers.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -44,11 +45,11 @@ for (const role of roles) {
   assert.match(card, new RegExp(`${role}\\.fontSizeFp`), `${role} owns the result size`);
   assert.match(card, new RegExp(`${role}\\.lineHeightFp`), `${role} owns the result line box`);
 }
-assert.equal((card.match(/TYPE_SEARCH_RESULT_TAG\.fontFamily/g) ?? []).length, 3,
-  'one tag role is shared by source, count and bookshelf badges');
-assert.doesNotMatch(card, /fontFamily\('(ReaderInter|ReaderNotoSerifSCBold)'\)/,
-  'SearchResultCard no longer owns physical font family literals');
-assert.doesNotMatch(card, /fontSize\((?:9|10|11|12|15)\)\s*\.lineHeight\((?:11|11\.7|12|15|18|19\.5)\)/,
-  'SearchResultCard no longer owns duplicated physical text tuples');
+assert.equal((card.match(/TYPE_SEARCH_RESULT_TAG\.fontFamily/g) ?? []).length, 4,
+  'one tag role is shared by the novel type, source, count and bookshelf badges');
+assert.equal(approvedTypographyContract(page,'search/SearchPage.ets').registered,true,
+  'approved compact type/origin chips and result carriers retain exact tuples beside public novel roles');
+assert.throws(()=>approvedTypographyContract(page.replace('.fontSize(9).lineHeight(14)', '.fontSize(99).lineHeight(14)'), 'search/SearchPage.ets'),
+  /exact approved typography carrier\/tuple changed/, 'a new private tuple cannot enter the approved chips');
 
 console.log('PASS search result card uses shared ReaderTypography roles without changing tuples');

@@ -83,10 +83,10 @@ assert.match(coordinator,
   /class ReaderWindowChromeStyle[\s\S]*underlayColor: string;[\s\S]*tone: ReaderWindowChromeTone;/,
   'system-bar underlay and icon tone must be one style value');
 assert.match(coordinator,
-  /statusBarColor: ReaderWindowCoordinator\.nativeStatusBarColor\(request\),[\s\S]*navigationBarColor: request\.style\.underlayColor,[\s\S]*statusBarContentColor: contentColor/,
+  /statusBarColor: ReaderWindowCoordinator\.nativeStatusBarColor\(request\),[\s\S]*navigationBarColor: request\.style\.transparentSystemBars \? '#00000000' : request\.style\.underlayColor,[\s\S]*statusBarContentColor: contentColor/,
   'one revision must expose the owned paper while preserving paired navigation base and content ink');
 assert.match(coordinator,
-  /contentColor: string;[\s\S]*constructor\(underlayColor: string, tone: ReaderWindowChromeTone, contentColor\?: string,[\s\S]*paperThemeId: string = ''\)[\s\S]*this\.contentColor = contentColor \?\? /,
+  /contentColor: string;[\s\S]*constructor\(underlayColor: string, tone: ReaderWindowChromeTone, contentColor\?: string,[\s\S]*paperThemeId: string = '', transparentSystemBars: boolean = false\)[\s\S]*this\.contentColor = contentColor \?\? /,
   'chrome style must carry an explicit foreground color with a tone fallback');
 assert.doesNotMatch(coordinator, /#99000000/, 'system-bar content must not use translucent black');
 assert.doesNotMatch(coordinator, /requestOverlayChrome\(tone:/,
@@ -105,8 +105,11 @@ assert.match(index,
   /padding\(\{ top: this\.readerOwnsWindowEdges\(\) \? 0 : this\.appContentTopInset\(\) \}\)/,
   'safe-top removal must depend on visible reader edge ownership');
 assert.match(index,
-  /expandSafeArea\(\[SafeAreaType\.SYSTEM\], this\.readerOwnsWindowEdges\(\) \?\s*\[SafeAreaEdge\.TOP, SafeAreaEdge\.BOTTOM\] : \[SafeAreaEdge\.BOTTOM\]\)/,
+  /expandSafeArea\(this\.mangaOwnsWindowEdges\(\) \? \[SafeAreaType\.SYSTEM, SafeAreaType\.CUTOUT\] : \[SafeAreaType\.SYSTEM\],[\s\S]*?this\.mangaOwnsWindowEdges\(\) \? \[SafeAreaEdge\.TOP, SafeAreaEdge\.BOTTOM, SafeAreaEdge\.START, SafeAreaEdge\.END\] :\s*this\.readerOwnsWindowEdges\(\) \? \[SafeAreaEdge\.TOP, SafeAreaEdge\.BOTTOM\] : \[SafeAreaEdge\.BOTTOM\]\)/,
   'the root must also grant the reader the full top edge; a child cannot restore an excluded ancestor viewport');
+assert.match(index,
+  /ignoreLayoutSafeArea\(this\.mangaOwnsWindowEdges\(\) \? \[LayoutSafeAreaType\.SYSTEM\] : \[\],[\s\S]*?this\.mangaOwnsWindowEdges\(\) \? \[LayoutSafeAreaEdge\.ALL\] : \[\]\)/,
+  'only active manga bypasses layout safe-area exclusion; novel/App preserve their layout policy');
 const EdgeOwner = productionMotionMethods(fileURLToPath(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url)), ['readerOwnsWindowEdges']);
 for (const [route, readingSessionActive, directoryReturnTarget, expected] of [
   ['detail', false, 'detail', false], ['detail', true, 'detail', false],

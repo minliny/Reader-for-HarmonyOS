@@ -6,6 +6,7 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { boundedSurfaceSdk, boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { choiceSource, resolveReaderChoiceSpec, compileReaderChoiceLabelModifier } from './lib/reader-choice-row-probe.mjs';
 import { menuSource, ReaderMenuActionView } from './lib/reader-action-menu-probe.mjs';
+import * as readerWindowMetrics from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 const read=path=>readFileSync(new URL(`../entry/src/main/ets/${path}.ets`,import.meta.url),'utf8');
 const settingsSource=read('features/settings/SettingsPage'),sourceSource=read('features/source/SourceManagementPage'),shelfSource=read('features/bookshelf/BookshelfShell');
 const settingsOverlay=read('features/settings/SettingsSelectOverlay'),selectPanel=read('features/common/ReaderSelectPanel'),moreMenu=read('features/bookshelf/BookshelfMoreMenu');
@@ -26,7 +27,7 @@ const SourceListDataSource=new Function(stripTypeScriptTypes(classSource)+';retu
 const inertNative=new Proxy({}, {get:(_,key)=>key==='name'?'PointerNativeBoundary':()=>inertNative});
 function harness(){
   const p=boundedSurfaceSdk(),finishes=[];
-  Object.assign(p.deps,{ReaderNativeAlertOwner,SourceListDataSource,ReaderChoiceLabelModifier:compileReaderChoiceLabelModifier(),settingsSelectionGeneration:0,sourceTemporaryGeneration:0,bookshelfTemporaryGeneration:0,
+  Object.assign(p.deps,{...readerWindowMetrics,ReaderNativeAlertOwner,SourceListDataSource,ReaderChoiceLabelModifier:compileReaderChoiceLabelModifier(),settingsSelectionGeneration:0,sourceTemporaryGeneration:0,bookshelfTemporaryGeneration:0,
     GROUP_FILTER_WIDTH:350,GROUP_SELECT_WIDTH:276,BOOKSHELF_WIDE_BREAKPOINT:600,READER_FLOATING_TOP_BAR_HEIGHT:58,
     OPTION_H:36,SELECT_PAD:10,CHEVRON_GAP:8,CHEVRON_W:12,CHEVRON_H:8,SELECT_CHROME:40,
     APPEARANCE_SELECT_OPTION_HEIGHT:25,appearanceSelectMenuHeight:n=>n*25,
@@ -34,7 +35,7 @@ function harness(){
     SURFACE_ASSET_WIDTH:232,SURFACE_ASSET_HEIGHT:268,SURFACE_SHADOW_INSET_X:28,SURFACE_SHADOW_INSET_TOP:18,
     ReaderMenuActionView,resolveReaderChoiceSpec,Polygon:inertNative,Polyline:inertNative,LineJoinStyle:{Round:'LineJoinStyle.Round'},
     registerReaderFonts(){},registerReaderShelfFonts(){},
-    ReaderWindowCoordinator:{metrics:()=>({windowRect:{width:390,height:844}})},
+    ReaderWindowCoordinator:{metrics:()=>{const metrics=readerWindowMetrics.createDefaultReaderWindowMetrics();metrics.windowRect=new readerWindowMetrics.ReaderRectVp(0,0,390,844);return metrics;}},
     motionAnimateParam:(id,onFinish)=>({id,onFinish}),uiContext:{getFont:()=>({}),animateTo:(param,action)=>{action();if(param.onFinish)finishes.push(param.onFinish);}}
   });
   p.hooks.lifecycleChildren=true;

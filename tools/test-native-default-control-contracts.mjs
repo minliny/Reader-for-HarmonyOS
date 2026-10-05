@@ -1,3 +1,4 @@
+import {approvedTypographyContract} from './lib/approved-manga-typography-carriers.mjs';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { foundationControls, foundationSpecs } from './lib/reader-foundation-control-probe.mjs';
@@ -13,9 +14,10 @@ const producers=JSON.parse(readFileSync(new URL('./fixtures/architecture-shared-
 const featureRoot=new URL('../entry/src/main/ets/features/',import.meta.url),normalise=text=>(text??'').replace(/\s+/g,'');
 const contracts=new Map(fixture.consumers.map(row=>[JSON.stringify([row.file,row.method,row.kind,normalise(row.argument)]),{...row,count:0}]));
 assert.equal(contracts.size,13);
-let controls=0,paint=0,a11y=0,delegated=0,inherited=0;
+let controls=0,paint=0,a11y=0,delegated=0,inherited=0,approvedNative=0;
 for(const file of readdirSync(featureRoot,{recursive:true}).filter(file=>file.endsWith('.ets'))){
  const rel='features/'+file,source=readFileSync(new URL(file,featureRoot),'utf8');
+ const approved=approvedTypographyContract(source,rel);
  for(const node of auditNativeTextElements(source,rel)){
   if(Object.keys(node.modifiers).length)continue;
   if(node.kind==='Span'&&node.inheritsTextStyle){inherited++;continue;}
@@ -53,6 +55,7 @@ for(const file of readdirSync(featureRoot,{recursive:true}).filter(file=>file.en
     delegated++;continue;
   }
   const contract=contracts.get(JSON.stringify([rel,node.method,node.kind,normalise(node.text)]));
+  if(!contract&&approved.hasNative?.(node)){approvedNative++;continue;}
   assert.ok(contract,`${rel}:${node.line}: a visible native-default element needs a bounded platform-default contract, not a fake TYPE modifier`);
   assert.equal(node.attributes.attributeModifier, undefined, `${contract.id}: do not add an empty modifier to fake a public migration`);
   assert.ok(++contract.count<=(contract.branchInstances?.length??1),`${contract.id}: prevent copied native default exceptions`);
@@ -121,4 +124,4 @@ for(const row of contracts.values()){
 assert.equal(controls,14);assert.equal(a11y,4);// One additional finite ReaderButton leading-slot Text is now an actual shared
 // glyph host; native-default families and all private budgets are unchanged.
 assert.equal(delegated,14);
-console.log(`PASS native-default contracts: ${contracts.size} finite native families / ${controls} actual actors (retry has exact exclusive source-switch/reading branches); ${paint} no-glyph actors, ${a11y} exact accessibility actors, ${delegated} actual bounded shared glyph hosts, ${inherited} inherited body spans; no physical font overrides fabricated`);
+console.log(`PASS native-default contracts: ${contracts.size} finite native families / ${controls} actual actors (retry has exact exclusive source-switch/reading branches); ${paint} no-glyph actors, ${a11y} exact accessibility actors, ${delegated} actual bounded shared glyph hosts, ${inherited} inherited body spans, ${approvedNative} exact approved AUTO carriers; no physical font overrides fabricated`);

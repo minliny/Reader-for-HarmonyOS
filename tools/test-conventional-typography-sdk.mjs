@@ -1,6 +1,8 @@
+import { approvedTypographyContract, approvedTypographyFile } from './lib/approved-manga-typography-carriers.mjs';
 import { sharedTypographyReplacement, typographyCarrierMethod } from './lib/reader-typography-shared-replacements.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import { auditTypographyConsumers, typographyProperties } from './lib/reader-typography-consumer-audit.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { typographySuccessorFile, typographySuccessorNode } from './lib/reader-typography-migration-fixture.mjs';
@@ -16,6 +18,8 @@ const carriers = { Text: "Text('consumer')", Span: "Span('consumer')", Button: "
 const sites = [];
 for (const file of baseline.files) {
   const source = readFileSync(new URL(`../${file.path}`, import.meta.url), 'utf8');
+  const approved=approvedTypographyContract(source,file.path);
+  if(approved.registered)continue;
   const consumers = auditTypographyConsumers(source, file.path), used = new Set();
   const successor = typographySuccessorFile(baseline, file.path);
   for (const originalExpected of file.nodes) {
@@ -27,6 +31,17 @@ for (const file of baseline.files) {
     used.add(actual); sites.push({ expected, actual, file: file.path, method: `site${sites.length}` });
   }
 }
+// Approved successor static native tuples are also sent through the installed
+// SDK. Dynamic expressions retain their exact AST/occurrence contract and their
+// actual owning component regressions; no fake semantic-role migration occurs.
+for(const file of baseline.files){const source=readFileSync(new URL('../'+file.path,import.meta.url),'utf8');const approved=approvedTypographyContract(source,file.path);if(!approved.registered)continue;
+ for(const node of auditTypographyConsumers(source,file.path)){
+  const staticArgument=value=>/^(?:TYPE_\w+\.\w+(?: as number)?|READER_FONT_\w+|FontWeight\.\w+|[0-9.]+|['"][^'"]*['"])$/.test(value);
+  if(!Object.values(node.modifiers).every(m=>staticArgument(m.expression))||!carriers[node.kind])continue;
+  const values=Object.fromEntries(Object.entries(node.modifiers).map(([k,m])=>[k,m.expression]));
+  sites.push({expected:{kind:node.kind,original:values,changes:values,extra:Object.fromEntries(Object.entries(node.modifiers).map(([k,m])=>[k,m.extra]))},actual:node,file:file.path,method:`site${sites.length}`});
+ }
+}
 // Compile the exact authored typography modifier expressions from every real
 // consumer onto its native ArkUI carrier. Business/layout preservation is
 // independently proved by byte-identical source restoration in the audit gate.
@@ -37,7 +52,7 @@ const sourceFor = original => `@Component struct TypographyConsumerProbe {\n${si
   return `@Builder private ${site.method}(label: string) { ${carriers[site.expected.kind]}\n${modifiers}\n }`;
 }).join('\n')}\nbuild() { Column() {} }\n}`;
 const names = sites.map(site => site.method);
-const dependencies = { FontWeight: { Regular: 400, Medium: 500, Bold: 700 },
+const dependencies = { ...fontFamilies, FontWeight: { Regular: 400, Medium: 500, Bold: 700 },
   fontId: 'preview-face', font: 'preview-face', value: 0, group: 'screen', option: '当前',
   readerAppearanceFontSlotFamily: (_snapshot, slot) => `Preview:${slot}`,
   readerRegisteredFontFamily: (_registry, family) => family,

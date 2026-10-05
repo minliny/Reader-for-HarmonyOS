@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
-import { registerHooks, stripTypeScriptTypes } from 'node:module';
+import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
 registerHooks({ resolve(specifier, context, next) {
   try { return next(specifier, context); } catch (error) {
     if ((specifier.startsWith('./') || specifier.startsWith('../')) && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context);
@@ -26,7 +26,15 @@ const io = { OpenMode: { CREATE: 1, READ_WRITE: 2, TRUNC: 4 }, access: async p =
   write: async (fd, b) => (await handles.get(fd).write(new Uint8Array(b))).bytesWritten,
   fsync: async fd => handles.get(fd).sync(), close: async h => { handles.delete(h.fd); await h.close(); }, rename: (a, b) => fs.rename(a, b),
   AtomicFile: class { constructor(p) { this.path = p; } readFully() { const b = readFileSync(this.path); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); } } };
-const util = { TextEncoder: class { encodeInto(v) { return new TextEncoder().encode(v); } },
+// Platform util.LRUCache is an IO seam in Node; delegate eviction to the
+// SDK's installed ISC lru-cache 5.1.1 instead of implementing another cache.
+const sdkLru = createRequire(import.meta.url)(`${process.env.READER_ETS_LOADER_ROOT ??
+  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader'}/node_modules/lru-cache`);
+const util = { LRUCache: class {
+  constructor(capacity) { this.cache = new sdkLru({max: capacity}); }
+  get(key) { return this.cache.get(key); } put(key, value) { this.cache.set(key, value); }
+  remove(key) { return this.cache.del(key); } keys() { return this.cache.keys(); } clear() { this.cache.reset(); }
+}, TextEncoder: class { encodeInto(v) { return new TextEncoder().encode(v); } },
   TextDecoder: { create: (_, options) => ({ decodeToString: b => new TextDecoder('utf-8', options).decode(b) }) } };
 const crypto = { createMd: () => { const h = createHash('sha256'); return { update: async ({ data }) => { h.update(data); }, digest: async () => ({ data: h.digest() }) }; } };
 const Cache = new Function('fileIo', 'statfs', 'cryptoFramework', 'util', 'canonicalReadingImageBaseUrl',

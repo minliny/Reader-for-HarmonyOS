@@ -8,10 +8,15 @@ const read=name=>readFileSync(new URL(`../../entry/src/main/ets/features/common/
 const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const require=createRequire(import.meta.url),ts=require(`${sdk}/node_modules/typescript`);
 const compilerOptions=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-export function boundedMembers(source){
+export function boundedMembers(source,componentName){
   const tree=ts.createSourceFile('/tmp/BoundedConsumer.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,compilerOptions);
   if(tree.parseDiagnostics.length)throw Error('real ETS parse diagnostics');
-  return tree.statements.find(n=>n.members&&n.members.some(m=>m.name?.getText(tree)==='build')).members.filter(m=>m.name).map(m=>m.name.getText(tree));
+  const components=tree.statements.filter(n=>n.members&&n.name&&n.members.some(m=>m.name?.getText(tree)==='build'));
+  const exact=componentName===undefined?undefined:components.find(n=>n.name.getText(tree)===componentName);
+  const exported=components.filter(n=>n.modifiers?.some(m=>m.kind===ts.SyntaxKind.ExportKeyword));
+  const component=exact??(exported.length===1?exported[0]:components.length===1?components[0]:undefined);
+  if(component===undefined)throw Error('select explicit componentName for multi-component ETS');
+  return component.members.filter(m=>m.name).map(m=>m.name.getText(tree));
 }
 const stripped=source=>stripTypeScriptTypes(source).replace(/^export /gm,'');
 const tokenSource=read('ReaderTokens'),tokenNames=[...tokenSource.matchAll(/^export const (\w+)/gm)].map(m=>m[1]);
@@ -35,5 +40,5 @@ export function boundedSurfaceSdk(options={}){
   for(const name of Object.keys(childSources))deps[name]=createReaderBuilderProbe(childSources[name],boundedMembers(childSources[name]),deps,hooks).Component;
   const walk=owner=>[owner,...[...owner.children.values()].flatMap(child=>child.nodes?walk(child):[])];
   return {properties,deps,hooks,childSources,walk,nodes:owner=>walk(owner).flatMap(x=>[...x.nodes.values()]),
-    consumer(source,names=boundedMembers(source),extra={},initialParams={}){return createReaderBuilderProbe(source,names,{...deps,...extra},{...hooks,initialParams}).owner;}};
+    consumer(source,names=boundedMembers(source),extra={},initialParams={},componentName){return createReaderBuilderProbe(source,names,{...deps,...extra},{...hooks,initialParams,componentName}).owner;}};
 }

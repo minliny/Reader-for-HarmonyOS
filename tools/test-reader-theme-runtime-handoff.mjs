@@ -21,7 +21,8 @@ function fixture(){
  const authority=runtimeOwnerIdentityProbe(()=>current);
  const Owner=productionMotionMethods(file('app/ReaderRuntimeOwner.ts'),['getAppearanceStore','close','closeRuntime','waitForPredecessorClose'],
   {ReaderRuntimeOwner:authority,ReaderAppearanceStore,ReaderAppearancePreferences:Preferences,LOG_DOMAIN:0,
-   ReadingBodyImageHost:{instance:{releaseAllDisplayFiles(){events.push(['release']);}}},hilog:{warn(){}}});
+   MangaChapterPreparationCoordinator:{forRuntime:()=>({close:async()=>{}})},
+   ReadingBodyImageHost:{instance:{setMangaMetadataInspector(){},releaseAllDisplayFiles(){events.push(['release']);}}},hilog:{warn(){}}});
  const Host=compile('app/ReaderThemeHost.ts','ReaderThemeHost',{...appearance,...selection,...registry,ReaderAppearanceStore,ReaderRuntimeOwner:authority,
   AppStorage:{setOrCreate:(key,value)=>storage.set(key,value)},ReaderWindowChromeStyle:class{},ReaderWindowCoordinator:{updateAppChromeStyle(){}}});
  function owner(predecessorClose=Promise.resolve()){

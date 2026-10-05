@@ -5,6 +5,11 @@ import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { iconButtonControls } from './lib/reader-icon-button-probe.mjs';
+import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
+import { readerFoundationTokens } from './lib/reader-foundation-control-probe.mjs';
+import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
+import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 
 const root = resolve(import.meta.dirname, '..');
 const read = file => readFileSync(resolve(root, 'entry/src/main/ets', file), 'utf8');
@@ -44,11 +49,12 @@ function check(name, action) {
   catch (error) { results.push({ name, passed: false, message: error.message }); }
 }
 function indexFixture(state, source = 'online') {
-  const names = ['build'];
+  const names = ['build', 'mangaOwnsWindowEdges'];
   if (index.includes('private bookshelfContent(')) names.push('bookshelfContent');
   if (index.includes('private bookshelfShellContent(')) names.push('bookshelfShellContent');
   const { owner } = createReaderBuilderProbe(index, names, {
     ...dependencies, SafeAreaType: enumValues('SafeAreaType'), SafeAreaEdge: enumValues('SafeAreaEdge'),
+    LayoutSafeAreaType: enumValues('LayoutSafeAreaType'), LayoutSafeAreaEdge: enumValues('LayoutSafeAreaEdge'),
   });
   Object.assign(owner, { route: 'bookshelf', isBookshelfVisualAdmitted: state === 'populated',
     isCoreShelfEmpty: state === 'empty', bookshelfLoadFailed: state === 'failure',
@@ -116,12 +122,18 @@ check('Index state changes update the retained shell child props, including serv
 const shellSource = read('features/bookshelf/BookshelfShell.ets');
 const actualIcons = iconButtonControls();
 dependencies.ReaderIconButton = actualIcons.icon.Component;
+const actualHeaderSource = read('features/common/AppTopBar.ets');
+const actualHeader = createReaderBuilderProbe(actualHeaderSource, boundedMembers(actualHeaderSource), {
+  ...actualIcons.dependencies, ...readerFoundationTokens, ...readerTypographyRoles, ...fontFamilies, ...metricsApi,
+  ReaderWindowCoordinator: { metrics: metricsApi.createDefaultReaderWindowMetrics },
+}, actualIcons.hooks);
+dependencies.AppTopBar = actualHeader.Component;
 const iconHit = actor => actualIcons.nodes(actor).find(node => node.type === 'Stack' && node.onClick);
 function shellFixture({ populated = false, width = 365, menu = false } = {}) {
   const { owner } = createReaderBuilderProbe(shellSource, ['content','mounted','temporaryBackIdentity','temporaryBackGeneration','navigationGeneration','onNavigationGenerationChanged','registerTemporaryBackGeneration','moreSelectionId','onTemporaryBackBridge','aboutToAppear','aboutToDisappear','consumeTemporaryBack','dismissMoreMenu','moreOpenAction','moreIntentAction','build','shellContent','recoveryNoticeContent','topBar','requestCheckUpdates','showBottomNav','numericAreaLength'], {
-    ...dependencies, ...actualIcons.dependencies, bookshelfTemporaryGeneration:0,registerReaderShelfFonts(){}, BOOKSHELF_WIDE_BREAKPOINT: 600, READER_FLOATING_TOP_BAR_HEIGHT: 58,
-    ReaderWindowCoordinator: { metrics: () => ({ windowRect: { width } }) },
-  }, actualIcons.hooks);
+    ...dependencies, ...actualIcons.dependencies, ...metricsApi, bookshelfTemporaryGeneration:0,registerReaderShelfFonts(){}, BOOKSHELF_WIDE_BREAKPOINT: 600, READER_FLOATING_TOP_BAR_HEIGHT: 58,
+    ReaderWindowCoordinator: { metrics: () => new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0,0,width,844)) },
+  }, { ...actualIcons.hooks, childSources: { ...actualIcons.hooks.childSources, AppTopBar: actualHeaderSource } });
   let contentCalls = 0;
   Object.assign(owner, { appThemeScheme: 'day', readerWindowMetricsRevision: 0, populated, viewportWidth: 0,
     recovery: {message:'',visible:false,canRetry:false,generation:0},
@@ -135,26 +147,34 @@ function shellFixture({ populated = false, width = 365, menu = false } = {}) {
   if(menu)owner.moreOpenAction(owner.temporaryBackIdentity)();
   owner.initialRender();
   const nav = childOf(owner, 'MainTabShell')[0]; nav.params.content();
-  const header = childOf(owner, 'AppTopBar')[0]; header.params.trailing();
-  assert.equal(contentCalls, 1); assert.equal(header.params.title, '书架'); assert.equal(header.params.divider ?? false, false);
+  const header = childOf(owner, 'AppTopBar')[0];
+  assert.equal(contentCalls, 1); assert.equal(header.title, '书架'); assert.equal(header.divider, false);
+  assert.deepEqual([header.floating, header.centered, header.showLeadingSearch], [true, true, true]);
   return { owner, nav, header };
 }
 check('one shell keeps title/actions/nav actors through day-night and populated changes', () => {
   const { owner, nav, header } = shellFixture();
   const buttons = childOf(owner, 'ReaderIconButton');
-  assert.equal(buttons.length, 2);
+  assert.equal(buttons.length, 1, 'More is the shared icon actor; Search is the actual AppTopBar leading native Stack');
   const before = [...owner.children.values()];
   for (const scheme of ['night','day','night']) {
-    owner.appThemeScheme = scheme; owner.populated = !owner.populated; owner.replay(); actualIcons.properties.flush();
+    // StorageLink delivery is a platform seam in this SDK carrier. Deliver
+    // the same global scheme to the retained Header and Shell owners.
+    owner.appThemeScheme = scheme; header.appThemeScheme = scheme;
+    owner.populated = !owner.populated; owner.replay(); header.replay(); actualIcons.properties.flush();
     assert.deepEqual([...owner.children.values()], before);
     assert.equal(childOf(owner, 'AppTopBar')[0], header); assert.equal(childOf(owner, 'MainTabShell')[0], nav);
-    assert.deepEqual(buttons.map(button => button.icon), ['search','more'].map(asset => `app.media.bookshelf_${asset}${scheme === 'night' ? '_theme_night' : ''}`));
+    assert.equal(buttons[0].icon, `app.media.rc_dots${scheme === 'night' ? '_theme_night' : ''}`);
+    assert.equal(nodesOf(header, 'Image').find(node => String(node.create).includes('bookshelf_search')).create,
+      `app.media.bookshelf_search${scheme === 'night' ? '_theme_night' : ''}`);
   }
-  iconHit(buttons[0]).onClick(); assert.deepEqual(owner.calls, ['onSearchRequested']);
-  assert.equal(owner.moreMenuVisible, false); iconHit(buttons[1]).onClick(); assert.equal(owner.moreMenuVisible, true);
+  const search = nodesOf(header, 'Stack').find(node => node.width === 44 && node.height === 44 && node.onClick);
+  assert.ok(search, 'Search dispatch belongs to the actual floating Header');
+  search.onClick(); assert.deepEqual(owner.calls, ['onSearchRequested']);
+  assert.equal(owner.moreMenuVisible, false); iconHit(buttons[0]).onClick(); assert.equal(owner.moreMenuVisible, true);
   nav.params.onMainTab('settings'); assert.deepEqual(owner.calls, ['onSearchRequested','onMainTab:settings']);
   assert.ok(nodesOf(owner, 'Stack').some(node => node.height === '100%' && node.width === '100%'), 'content retains its full viewport under the floating header');
-  assert.ok(nodesOf(owner, 'Row').some(node => node.height === 58 && node.hitTestBehavior === 'HitTestMode.Transparent'),
+  assert.ok(nodesOf(owner, 'Row').some(node => node.height === 60 && node.hitTestBehavior === 'HitTestMode.Transparent'),
     'the floating header does not turn its empty area into a scroll shield');
 });
 check('shell navigation keeps phone fallback and existing populated tablet rail threshold', () => {
@@ -181,7 +201,9 @@ check('More retains measured global-to-local anchor, live progress and guarded c
     typeof node.onAreaChange === 'function' && owner.children.get(node.id + 1) === moreActor);
   assert.ok(target, 'actual SDK custom-child wrapper retains the original area callback');
   assert.equal(target.accessibilityText, undefined, 'measurement does not duplicate the shared button name');
-  assert.notEqual(owner.children.get(target.id + 1), childOf(owner, 'ReaderIconButton').find(child => child.accessibilityLabel === '搜索'), 'More measurement cannot bind the Search actor');
+  const header = childOf(owner, 'AppTopBar')[0];
+  assert.notEqual(owner.children.get(target.id + 1), header, 'More measurement cannot bind the Search Header owner');
+  assert.ok(nodesOf(header, 'Stack').some(node => node.width === 44 && node.onClick), 'Search remains a separate native header action');
   assert.match(owner.observers[target.id + 1].toString(), /new ReaderIconButton\(/, 'wrapper/child adjacency is the actual SDK emission');
   target.onAreaChange({}, {width:44,height:44,globalPosition:{x:311,y:47}});
   owner.updateRunning = true; owner.updateProgressDone = 4; owner.updateProgressTotal = 9; owner.reduceMotion = true;

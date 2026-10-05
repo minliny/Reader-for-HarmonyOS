@@ -2,10 +2,13 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
+import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory,
+  readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
 import { ReaderStartupContentOwner } from '../entry/src/main/ets/app/ReaderStartupContentOwner.ts';
 import { ReaderStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { createMangaAtomicPayloadInstallerFixture } from './lib/manga-atomic-payload-probe.mjs';
+const installMangaAtomicPayloadReader=createMangaAtomicPayloadInstallerFixture({});
 const abilityFile=new URL('../entry/src/main/ets/entryability/EntryAbility.ets',import.meta.url),missing='pages/__ReaderStartupMainLoadFailure';
 const index='pages/Index',recovery='pages/ReaderStartupRecovery';
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
@@ -31,6 +34,8 @@ function fixture(debug=true,mode='debug',parameters={readerStartupMainLoadFailur
       'onCreate','onNewWant','onWindowStageCreate','onWindowStageDestroy','onDestroy','loadMainContent'],{
       DEBUG:debug,BUILD_MODE_NAME:mode,ReaderStartupTrace,ReaderStartupContentOwner,readerMotionNowMs:()=>performance.now(),
       readerControlVerificationColdStartPage,readerDisableOptionalEntryMemory,readerEventLoopProbeEnabled:()=>false,
+      readerMangaOfflineProbeScope,readerMangaReadingProbeScope,readerMangaProbeSelectionMode,
+      installMangaAtomicPayloadReader,ReaderMangaPlatformDiagnostic:{install:()=>undefined},
       ReaderRuntimeOwner:{install:()=>runtime},DOMAIN:0x5244,hilog:{error:(...args)=>errors.push(args),warn() {},info() {}},
       ConfigurationConstant:{ColorMode:{COLOR_MODE_DARK:1}},AppStorage:{setOrCreate() {}},
       WebDavCredentialStore:{instance:{attachContext() {},loadBookshelfViewMode:()=>bookMode.promise}},

@@ -1,0 +1,3 @@
+PASS actual SDK stage/slot/texture -> ReadingSurface and native resource owner: measured title/body origin stable through resident promotion, warm update, old-live/texture negative control, legacy array, empty owner and non-first page
+(node:34583) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

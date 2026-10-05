@@ -6,6 +6,7 @@ import {actualBookshelfHostField} from './lib/bookshelf-operation-owner-probe.mj
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {boundedMembers,boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
+import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 const require=createRequire(import.meta.url),sdkRoot=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const syntax=require(sdkRoot+'/lib/validate_ui_syntax.js');
@@ -27,7 +28,7 @@ function makeIndex(f) {
    {...f,ReaderRuntimeOwner:f.Runtime,BookshelfHost:f.Host,readerRecoveryView});
  const index=new Index();let publications=0;
  Object.assign(index,{mountedRuntimeOwner:f.runtime,shelfOperationOwner:f.runtime,shelfReceiptRetired:false,route:'bookshelf',navigationGeneration:1,
-  detailShelfAdmissionMount:1,settingsSnapshot:{reduceMotion:false},shelfProjectionRevision:'',shelfBooks:[],isBookshelfVisualAdmitted:true,shelfHasOnlineBooks:false,shelfReadingFilter:'all',shelfSourceFilter:'all',shelfOperation:{...f.EMPTY_BOOKSHELF_OPERATION_SNAPSHOT},
+  detailShelfAdmissionMount:1,settingsSnapshot:{reduceMotion:false},shelfProjectionRevision:'',shelfBooks:[],isBookshelfVisualAdmitted:true,shelfHasOnlineBooks:false,shelfReadingFilter:'all',shelfSourceFilter:'all',shelfContentFilter:'all',shelfOperation:{...f.EMPTY_BOOKSHELF_OPERATION_SNAPSHOT},
   invalidateBookshelfProjection:()=>publications++,applyBookshelfState:value=>{index.acceptedShelf=value;},shelfReadRecovery:()=>index.emptyShelfRecovery()});
  index.bookshelfHost=actualBookshelfHostField(index,f.Host,{setOrCreate(){}});const owner=index.bookshelfHost.operations(f.runtime);
  index.shelfOperation=owner.current();
@@ -41,7 +42,7 @@ function render(f,index) {
  i.bookshelfShellContent();const params=[...i.children.values()].find(c=>c instanceof ShellChild).params;
  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
  const shell=sdk.consumer(read('features/bookshelf/BookshelfShell.ets'),boundedMembers(read('features/bookshelf/BookshelfShell.ets')),
-  {bookshelfTemporaryGeneration:0,registerReaderShelfFonts:()=>{}},params);
+  {bookshelfTemporaryGeneration:0,registerReaderShelfFonts:()=>{},...metricsApi,ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics}},params);
  shell.aboutToAppear();shell.recoveryNoticeContent(shell.recovery,false);
  const nodes=()=>sdk.nodes(shell),action=label=>nodes().find(n=>n.type==='Text'&&n.create===label&&n.height===36);
  return{parent,params,sdk,shell,nodes,action};

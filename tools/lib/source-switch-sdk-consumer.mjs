@@ -2,7 +2,7 @@ import {actualGeneralSettingsTypes,actualGeneralSettingsHostField} from './gener
 import {actualSourceManagementTypes,actualSourceManagementHostField} from './source-management-owner-probe.mjs';
 import {actualBookshelfOperationTypes,actualBookshelfHostField} from './bookshelf-operation-owner-probe.mjs';
 import assert from 'node:assert/strict';
-import {createRequire} from 'node:module';
+import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
 import {boundedSurfaceSdk,boundedMembers} from './bounded-surface-sdk-probe.mjs';
 import {fixture,settle as settleOwner,deferred,origin,target,session,Runtime,read,gatewayExports,setCurrentRuntime,Core} from './source-switch-owner-probe.mjs';
@@ -16,7 +16,7 @@ const settle=async()=>{await settleOwner();await new Promise(setImmediate);await
 const methods=['getSourceSwitchHost','sourceSwitchContext','sourceSwitchLease','applySourceSwitchSnapshot','retireRssPresentation','retireRssEditorPresentation','retireSourceSwitchPresentation',
  'bindSourceSwitchReader','applySourceSwitchEffect','openSourceSwitch','openDetailSourceSwitch','retrySourceSwitch','refreshSourceSwitch',
  'sourceSwitchProbeQuery','knownSearchSourceCandidates','onPickSource','retryFailedSourceSwitch','dismissSourceSwitchFailure','onRollbackSourceSwitch',
- 'closeSourceSwitch','performSourceSwitchSeam','resolveReaderSourceSwitchTransaction','reconcilePendingSourceSwitches','currentSourceSwitchTransactionId',
+ 'closeSourceSwitch','clearMangaSourceSwitchSelection','stopSourceDiscovery','readerOwnsWindowEdges','canCancelMangaSourcePreparation','performSourceSwitchSeam','resolveReaderSourceSwitchTransaction','reconcilePendingSourceSwitches','currentSourceSwitchTransactionId',
  'retireSettingsPresentation','retireSourceManagementPresentation','nextNavigationGeneration','isCurrentRuntime','openReading','onRemoteSessionReady','installRemoteReadingSession',
  'getReadingEntryHost','readingEntryLease','applyReadingEntrySnapshot','bindReadingEntryReader','retireReadingEntryPresentation',
  'detailReadableAdmission','detailBookKey','chooseCachedChapterRefresh','showReadingFailure','showIndexAlert',
@@ -24,27 +24,47 @@ const methods=['getSourceSwitchHost','sourceSwitchContext','sourceSwitchLease','
  ...(read('pages/Index.ets').includes('private retireBookshelfCatalogPresentation(') ? ['retireBookshelfCatalogPresentation'] : [])];
 export const sourceSwitchMethods=methods.filter(n=>n!=='sourceSwitchOverlayContent');
 const states=['sourceSwitchVisible','sourceSwitchState','sourceSwitchFailureMessage','sourceSwitchScopeId'];
+/** Compose the actual exported live picker and its actual row/cover/spinner
+ * components. Native Repeat, scroller and frame scheduling are controlled ports;
+ * production state, UI builders and callback guards are emitted by the SDK. */
+export function sourceSwitchLiveSdk(p,extra={}) {
+ const windowSource=read('features/source/SourceSwitchWindow.ets');
+ const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+ const ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
+ const tree=ts.createSourceFile('/tmp/SourceSwitchLiveFixture.ets',windowSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+ const frame=tree.statements.find(node=>node.name?.getText(tree)==='SourceSwitchLayoutFrame');
+ const SourceSwitchLayoutFrame=new Function('FrameCallback',stripTypeScriptTypes(frame.getText(tree))+';return SourceSwitchLayoutFrame;')(class FrameCallback{});
+ const gatewayTree=ts.createSourceFile('/tmp/SourceCountFixture.ts',read('features/source/SourceSwitchGateway.ts'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
+ const count=gatewayTree.statements.find(node=>node.name?.getText(gatewayTree)==='sourceSwitchSourceCount');
+ const sourceSwitchSourceCount=new Function(stripTypeScriptTypes(count.getText(gatewayTree)).replace(/^export /,'')+';return sourceSwitchSourceCount;')();
+ const Repeat=items=>({each(generator){this.generator=generator;return this;},key(){return this;},virtualScroll(){return this;},render(){items.forEach((item,index)=>this.generator({item,index}));}});
+ const deps={...p.deps,...horizontal,...metricsApi,...gatewayExports,sourceSwitchSourceCount,SourceSwitchLayoutFrame,Repeat,
+   Scroller:class Scroller{},ScrollAlign:{START:'start'},TouchType:{Down:'down',Up:'up',Cancel:'cancel'},
+   Curve:{EaseInOut:'ease-in-out'},ImageFit:{Cover:'cover'},ButtonType:{Normal:'normal'},
+   registerReaderFonts(){},uiContext:{getFont:()=>({}),animateTo(_options,action){action();},postFrameCallback(){}},...extra};
+ p.hooks.lifecycleChildren=true;
+ p.hooks.childSources.SourceSwitchPanel=windowSource;
+ p.hooks.childSources.SourceSwitchLiveRow=windowSource;
+ for(const [name,path] of [['NoCoverCover','features/bookshelf/NoCoverCover.ets'],['SearchSpinner','features/search/SearchSpinner.ets']]){
+   p.hooks.childSources[name]=read(path);deps[name]=createReaderBuilderProbe(p.hooks.childSources[name],boundedMembers(p.hooks.childSources[name]),deps,p.hooks).Component;
+ }
+ deps.SourceSwitchLiveRow=createReaderBuilderProbe(windowSource,boundedMembers(windowSource,'SourceSwitchLiveRow'),deps,{...p.hooks,componentName:'SourceSwitchLiveRow'}).Component;
+ deps.SourceSwitchPanel=createReaderBuilderProbe(windowSource,boundedMembers(windowSource,'SourceSwitchWindow'),deps,{...p.hooks,componentName:'SourceSwitchWindow'}).Component;
+ deps.SourceSwitchPanel.prototype.__Repeat=Repeat;
+ return deps;
+}
 export function makeIndex(f,{navigation=1,reading=false,cacheAuthority}={}){
  setEntryRuntime(f.runtime);
  const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
  const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
- const Repeat=function Repeat(items){return{each(fn){this.generator=fn;return this;},key(){return this;},virtualScroll(){return this;},render(){items.forEach((item,index)=>this.generator({item,index}));}};};
- const leafDeps={Repeat,Refresh:new Proxy({name:"Refresh"},{get:(t,k)=>k==="name"?"Refresh":()=>{}}),...p.deps,...horizontal,...metricsApi,...gatewayExports,ReaderWindowCoordinator:{metrics:()=>metrics},registerReaderFonts(){},
-   sourceSwitchSourceCount:candidates=>new Set(candidates.map(c=>c.sourceId)).size};
- p.hooks.childSources.SourceSwitchPanel=read('features/source/SourceSwitchWindow.ets');
- p.hooks.childSources.CandidateRow=read('features/source/CandidateRow.ets');
- p.hooks.childSources.LatencyBar=read('features/source/LatencyBar.ets');
- leafDeps.LatencyBar=createReaderBuilderProbe(p.hooks.childSources.LatencyBar,boundedMembers(p.hooks.childSources.LatencyBar),leafDeps,p.hooks).Component;
- leafDeps.CandidateRow=createReaderBuilderProbe(p.hooks.childSources.CandidateRow,boundedMembers(p.hooks.childSources.CandidateRow),
-   {...leafDeps,LATENCY_TEXT_W:28,CHAPTER_TEXT_W:100},p.hooks).Component;
- leafDeps.SourceSwitchPanel=createReaderBuilderProbe(p.hooks.childSources.SourceSwitchPanel,boundedMembers(p.hooks.childSources.SourceSwitchPanel),leafDeps,p.hooks).Component;
- leafDeps.SourceSwitchPanel.prototype.__Repeat=items=>Repeat(items);
+ const leafDeps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics}});
  const index=p.consumer(read('pages/Index.ets'),[...states,...methods],{...leafDeps,...evidence,ReaderRuntimeOwner:Runtime,
    SourceSwitchHost:f.Constructor,ReadingEntryHost,EMPTY_READABLE_ADMISSION:{key:'',generation:0,adding:false,cancelling:false,confirmation:'none'},ReadingOfflineHost,CacheClearOperationIntentStore:cacheAuthority?.types.CacheClearOperationIntentStore,LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{info(){},warn(){}},ReaderNativeAlertOwner},{sourceSwitchScopeId:0});
  Object.assign(index,{mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:1,navigationGeneration:navigation,
+   settingsSnapshot:{reduceMotion:false},directoryChapterTitle:'Chapter 1',directoryReturnTarget:'detail',
    route:reading?'reading':'detail',readingOriginRoute:'detail',detailReturnRoute:'bookshelf',readingSessionActive:reading,detailBook:{...origin,sourceName:'Old'},
    shelfBooks:[origin],detailToc:[{index:0,title:'Chapter 1',navigable:true}],detailInBookshelf:f.context.inBookshelf,
-   sourceSwitchHost:undefined,readingEntryScopeId:-1,readableAdmissions:[],shelfOperation:{generation:0,busy:false,removalKey:''},searchDetailCandidates:[],searchHost:{searchedSourceIds:()=>[]},
+   mangaSourceSwitchCommitGeneration:-1,mangaSourceSwitchSelectionVisible:false,sourceSwitchHost:undefined,readingEntryScopeId:-1,readableAdmissions:[],shelfOperation:{generation:0,busy:false,removalKey:''},searchDetailCandidates:[],searchHost:{searchedSourceIds:()=>[]},
    remoteSessionGeneration:0,remoteContentProbeGeneration:0,remoteReadableChapterIndexes:[],remoteReadableChapterOrder:new Map(),
    directoryCurrentChapterIndex:0,requestedChapterIndex:0,readingReadyGeneration:1,bookshelfCatalogEpoch:0,bookshelfBackgroundEpoch:0,
    nativeAlertOwner:new ReaderNativeAlertOwner(),effects:[],cleanup:[],refreshBookshelf(){this.effects.push('refreshShelf');},
@@ -63,7 +83,7 @@ export function makeIndex(f,{navigation=1,reading=false,cacheAuthority}={}){
  index.settingsHost=actualGeneralSettingsHostField(index,settingsTypes.SettingsHost);
  const acquire=f.runtime.bookAcquisitions;f.runtime.bookAcquisitions=()=>({...acquire(),readingProjectionRevision:()=>0,setPreparationVisible(){}});
  const mount=()=>{index.sourceSwitchOverlayContent();return p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchPanel).at(-1);};
- const rows=()=>p.walk(index).filter(x=>x instanceof leafDeps.CandidateRow);
+ const rows=()=>p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchLiveRow);
  return{p,index,mount,rows,leafDeps};
 }
 export function failureChain(x){

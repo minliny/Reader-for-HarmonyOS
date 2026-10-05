@@ -12,8 +12,6 @@ const detail = readFileSync(resolve(repo,
   'entry/src/main/ets/features/bookshelf/LocalBookDetail.ets'), 'utf8');
 const window = readFileSync(resolve(repo,
   'entry/src/main/ets/features/source/SourceSwitchWindow.ets'), 'utf8');
-const candidateRow = readFileSync(resolve(repo,
-  'entry/src/main/ets/features/source/CandidateRow.ets'), 'utf8');
 
 const sourceHost = readFileSync(resolve(repo, 'entry/src/main/ets/features/source/SourceSwitchHost.ts'), 'utf8');
 const commitSuccess = sourceHost.slice(
@@ -55,8 +53,10 @@ assert.match(reader, /ReadingSessionFlowGateway\.open\([\s\S]*sourceSwitchTransa
 
 assert.match(detail, /@Prop sourceSwitchEnabled: boolean = false/);
 assert.match(detail, /onSwitchSource: \(\) => void/);
-assert.match(detail, /\.enabled\(this\.sourceSwitchEnabled\)/,
-  'local detail keeps the source-switch pill visible but disables interaction');
+assert.match(detail, /if \(this\.sourceSwitchEnabled\)[\s\S]*Text\('换源'\)/,
+  'the current detail surface exposes source switching only for supported sources');
+assert.match(detail, /onClick\(\(\): void => \{ if \(this\.sourceSwitchEnabled\) this\.onSwitchSource\(\); \}\)/,
+  'the action rechecks eligibility when invoked');
 assert.match(index, /sourceSwitchEnabled: this\.detailBook\.sourceId !== LOCAL_SOURCE_ID/);
 assert.match(index, /onSwitchSource: \(\): void => \{ if \(this\.isCurrentDetailPresentation\(identity, owner\)\) this\.openDetailSourceSwitch\(\); \}/);
 
@@ -86,12 +86,11 @@ assert.doesNotMatch(detailOpen, /this\.route\s*=\s*'reading'/,
 assert.match(window,
   /sourceSwitchCandidateKey\(candidate\.sourceId, candidate\.bookUrl\)/,
   'Repeat must key candidates by exact composite identity');
-assert.match(window, /isCurrent: repeatItem\.item\.isCurrent === true/);
-assert.match(window, /Repeat\(this\.candidates\(\)\)[\s\S]*\.virtualScroll\(\{ reusable: true \}\)/);
-assert.match(candidateRow, /@Prop isCurrent: boolean = false/);
-assert.match(candidateRow, /if \(this\.isCurrent\)/);
-assert.doesNotMatch(candidateRow, /currentSourceId/,
-  'candidate current state must not collapse all rows from the active source');
+assert.match(window, /Repeat\(this\.displayedCandidates\)[\s\S]*\.virtualScroll\(\{ reusable: true \}\)/);
+assert.match(window, /this\.state\.candidates\.filter\([\s\S]*candidate\.isCurrent !== true\)/,
+  'the exact current identity is shown in context and excluded from alternate rows');
+assert.match(window, /candidate === undefined \|\| candidate\.isCurrent === true/,
+  'click admission resolves the latest exact identity, including same-source alternate URLs');
 
 const pickStart=sourceHost.indexOf('async pick(candidate: SourceSwitchCandidate');
 const pickSource=sourceHost.slice(pickStart,sourceHost.indexOf('async rollback(',pickStart));
@@ -108,6 +107,27 @@ assert.match(sourceHost,/record\.targetSourceId === identity\.sourceId && record
 assert.match(sourceHost,/error instanceof ReaderCoreRequestError/);
 assert.doesNotMatch(index, /AppStorage.*transactionId|StorageLink.*sourceSwitch/,
   'source switch journal identity must not be copied into an ArkUI store');
+
+const probeStart = index.indexOf('private sourceSwitchProbeQuery(): SourceSwitchProbeQuery');
+const probeEnd = index.indexOf('\n  private knownSearchSourceCandidates', probeStart);
+const probe = index.slice(probeStart, probeEnd);
+assert.match(probe, /contentKind: \(session\?\.contentKind \?\? book\.contentKind\) === 'manga' \? 'manga' : 'text'/,
+  'a no-TOC probe preserves the durable book content kind');
+assert.match(probe, /contentKind: \(session\?\.contentKind \?\? book\.contentKind\) === 'manga' \? 'manga' : 'text'/,
+  'a TOC-backed probe preserves the exact active session or book content kind');
+const mangaSwitchStart = index.indexOf('private async switchMangaSource(');
+const mangaSwitchEnd = index.indexOf('\n  private async switchPreviewSource', mangaSwitchStart);
+const mangaSwitch = index.slice(mangaSwitchStart, mangaSwitchEnd);
+assert.match(mangaSwitch, /this\.remoteReadingSession\?\.identity\.sourceId === original\.sourceId/,
+  'manga source switch binds session identity to the displayed source/book');
+assert.match(mangaSwitch, /openCachedCatalogSession\(\{ contentKind: 'manga'/,
+  'missing in-memory session restores an exact manga catalog before prepare');
+assert.match(mangaSwitch, /previous\.contentKind !== 'manga'/);
+assert.match(mangaSwitch, /previous\.identity\.bookId !== original\.bookId/);
+assert.match(index, /refreshCandidates\(query, isCurrent, \[\], onProgress, gateway\.withoutSearchTiming\(previousCandidates\)\)/,
+  'force refresh retains prior candidate identities while replacing timing');
+assert.match(index, /refreshCandidates\(query, isCurrent,[\s\S]*onProgress, cached\)/,
+  'initial cached candidates seed incremental discovery');
 
 console.log('source-switch post-commit transaction contract: PASS');
 

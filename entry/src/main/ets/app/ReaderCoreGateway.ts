@@ -116,6 +116,10 @@ export class ReaderCoreGateway {
 
   async loadBookshelf(params: BookshelfListParams = {}, isCurrent?: () => boolean, background: boolean = false): Promise<BookshelfState> {
     if (isCurrent?.() === false) throw new Error('BOOKSHELF_READ_CANCELLED');
+    if (params.contentKind !== undefined && params.contentKind !== 'all' &&
+      this.runtimeOwner.supportsCoreCapability?.('bookshelf.contentKindFilter.v1') !== true)
+      throw new Error('漫画类型筛选需要配套的 Core 版本，请更新应用');
+    if (params.contentKind === 'all') delete params.contentKind;
     const options = { shouldCancel: (): boolean => isCurrent?.() === false };
     const result = background ? await this.runtimeOwner.bookAcquisitions().request('bookshelf.list', params, options, 'background') :
       await this.runtimeOwner.request('bookshelf.list', params, options);
@@ -360,13 +364,14 @@ export class ReaderCoreGateway {
       chapterCount: this.optionalNonNegativeInteger(book, 'chapterCount', 'bookshelf.list') ?? 0,
     };
     const coverUrl = this.optionalString(book, 'coverUrl');
+    const contentKind = this.optionalString(book, 'contentKind');
+    if (contentKind !== undefined) {
+      if (contentKind !== 'text' && contentKind !== 'manga' && contentKind !== 'audio') throw new Error('invalid shelf contentKind');
+      decoded.contentKind = contentKind;
+    }
     const intro = this.optionalString(book, 'intro');
     const sourceName = this.optionalString(book, 'sourceName');
     const kind = this.optionalString(book, 'kind');
-    const contentKind = this.optionalString(book, 'contentKind');
-    if (contentKind !== undefined && contentKind !== 'text' && contentKind !== 'manga' && contentKind !== 'audio')
-      throw new Error('bookshelf returned an invalid contentKind');
-    if (contentKind !== undefined) decoded.contentKind = contentKind as 'text' | 'manga' | 'audio';
     const lastChapter = this.optionalString(book, 'lastChapter');
     const lastReadAt = this.optionalNumber(book, 'lastReadAt');
     const group = this.optionalString(book, 'group');

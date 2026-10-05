@@ -57,3 +57,140 @@ for(const action of ['downloadChapter','clearBook'])for(const retire of ['retire
  assert.match(f.host.snapshot().progress.firstFailure.reason,/存储空间不足/);
 }
 console.log('PASS actual ReadingOfflineGateway -> ReadingOfflineHost: queue ACK/materialization/cleanup separation, cached partials, unknown pure reads, mutex, session retirement, terminal lease report and runtime-unset');
+
+// Actual Host + OfflineGateway + MangaDownloadActionsGateway. Only Core/native
+// queue IO and Host image files are controlled; the owners execute unchanged.
+async function until(predicate){for(let n=0;n<1000;n++){if(predicate())return;await tick();}assert.fail('manga owner boundary did not settle');}
+function mangaFixture(count=3){
+ let live=true,entries=Array.from({length:count},(_,index)=>({index,title:`话${index}`,level:1,navigable:true,downloadState:'missing',bookmarks:[{time:index}]}));
+ const sourceId='manga-source',bookId='manga-book',session={contentKind:'manga',sourceVersion:'rules',identity:{sourceId,bookId},
+ book:{title:'漫画',author:'作者'},detailUrl:'/manga',entries:entries.map(e=>({...e,url:`/c${e.index}`}))};
+ const state=Array.from({length:count},()=> 'missing'),versions=Array.from({length:count},()=>0),retained=new Map(),files=new Set(),leases=new Map(),preparations=new Map(),calls=[],errors=[];
+ const imageGates=new Map();let claimGate,nextToken=0;
+ const version=index=>`version-${index}-${versions[index]}`,key=(index,v=version(index))=>`${index}:${v}`;
+ function chapter(index,cached=false){const pageId='mp1:'+String(index+1).padStart(64,'0');return {chapterIndex:index,chapterTitle:`话${index}`,cached,
+  manifest:{chapter:{sourceId,bookId,chapterId:`/c${index}`},sourceRuleVersion:'rules',manifestVersion:version(index),decodeRevision:'identity-v1',
+   pages:[{ordinal:0,pageId,resourceRef:'manga:'+pageId}]},resources:cached?[]:[{resourceRef:'manga:'+pageId,request:{url:`https://image.invalid/${index}`}}]};}
+ const runtime={supportsCoreCapability:()=>true,captureReadingContentValidity:()=>()=>live,
+  async request(method,p={},options={}){
+   calls.push({method,p:clone(p),options});
+   if(method==='cache.book.status')return{data:{sourceId,bookId,chapters:session.entries.map(e=>({chapterIndex:e.index,url:e.url,navigable:true,
+    state:state[e.index],cachedBytes:0,attempts:0,maxAttempts:3,mangaManifestVersion:version(e.index)}))}};
+   if(method==='cache.book.prefetch'){
+    assert.equal(p.contentKind,'manga');assert.equal(options.shouldCancel,undefined,'accepted manual manga queue cannot inherit a route cancellation');
+    const materializations=[];
+    for(let index=p.chapterRange[0];index<p.chapterRange[1];index++)if(!['completed','paused','inProgress'].includes(state[index])){
+     state[index]='inProgress';const token=`queue-${++nextToken}`;leases.set(token,index);materializations.push({chapterIndex:index,token,manga:chapter(index)});
+    }
+    if(claimGate){const gate=claimGate;claimGate=undefined;await gate.promise;}
+    return{data:{sourceId,bookId,chapterRange:p.chapterRange,materializations}};
+   }
+   if(method==='manga.cache.materialization.prepare'){const token=`preparation-${++nextToken}`;preparations.set(token,p);return{data:{...p,token}};}
+   if(method==='manga.cache.materialization.complete'){
+    const intent=preparations.get(p.token);assert.ok(intent);assert.equal(intent.intent,'download');
+    const index=Number(intent.chapter.chapterId.slice(2));assert.equal(files.has(key(index,intent.manifestVersion)),true);
+    retained.set(index,intent.manifestVersion);preparations.delete(p.token);return{data:{completed:true,manifestVersion:intent.manifestVersion}};
+   }
+   if(method==='manga.cache.materialization.abort')return{data:{aborted:preparations.delete(p.token)}};
+   if(method==='cache.chapter.materialization.report'){
+    assert.equal(options.shouldCancel,undefined,'opaque terminal reports outlive presentation/stop');
+    const index=leases.get(p.token);assert.equal(index,p.chapterIndex);leases.delete(p.token);
+    if(!['paused','cancelled'].includes(state[index]))state[index]=p.outcome;
+    return{data:{sourceId,bookId,chapterIndex:index,state:p.outcome,retainedCachedBody:false}};
+   }
+   if(method.startsWith('cache.download.')){
+    const action=method.split('.').at(-1),index=p.chapterIndex;
+    state[index]=action==='resume'?'queued':action==='pause'?'paused':'cancelled';
+    return{data:{sourceId,bookId,chapterIndex:index,status:action==='resume'?'pending':state[index],attempts:0,maxAttempts:3}};
+   }
+   if(method==='manga.retention.list')return{data:{retentions:[...retained].map(([index,manifestVersion])=>({chapter:{sourceId,bookId,chapterId:`/c${index}`},manifestVersion,retainedAt:1}))}};
+   if(method==='manga.retention.set'){const index=Number(p.chapter.chapterId.slice(2));assert.equal(p.retain,false);retained.delete(index);return{data:{retention:null}};}
+   if(method==='manga.entry.get')return{data:{entry:{chapter:{...chapter(p.chapterIndex,true),pageStart:0,totalPages:1},targetOrdinal:0,recoveryRequired:false,
+    progress:{token:{epoch:1,revision:0},location:null}}}};
+   if(method==='manga.chapter.get'){assert.equal(p.policy,'refresh');versions[p.chapterIndex]++;state[p.chapterIndex]='cached';return{data:chapter(p.chapterIndex)};}
+   if(method==='cache.clear'){assert.equal(leases.size,0,'old Host reports settle before a destructive clear');
+    for(let i=0;i<count;i++)if(!retained.has(i))state[i]='missing';return{data:{scope:'book'}};}
+   throw Error('unexpected manga native command '+method);
+  },
+  async prefetchReadingImage(identity,current){calls.push({method:'image',p:clone(identity)});const gate=imageGates.get(identity.chapterIndex);if(gate)await gate.promise;
+   if(!current())throw Error('cancelled');},
+  async markOfflineImageChapterComplete(identity,_resources,current){assert.equal(current(),true);files.add(key(identity.chapterIndex,identity.contentVersion));},
+  async isOfflineImageChapterComplete(identity){return files.has(key(identity.chapterIndex,identity.contentVersion));},
+  async clearOfflineBookImages(_s,_b,manga){assert.equal(manga,true);calls.push({method:'host.clearImages'});},
+  async listMangaDownloadChapters(){return[...new Set([...retained.keys(),...[...files].map(k=>Number(k.split(':')[0]))])].map(index=>({sourceId,bookId,chapterId:`/c${index}`}));},
+  async listMangaDownloadVersions(ch){return[...files].filter(k=>k.startsWith(ch.chapterId.slice(2)+':')).map(k=>k.slice(k.indexOf(':')+1));},
+  async deleteMangaDownload(ch,v){const index=Number(ch.chapterId.slice(2));assert.equal([...leases.values()].includes(index),false,'old target consumer settles before deletion');calls.push({method:'host.delete',p:{index,v}});return files.delete(key(index,v));},
+ };
+ const host=ReadingOfflineHost.forRuntime(runtime,()=>live),binding={session,current:()=>live,currentEntries:()=>entries,
+ emitEntries:e=>entries=e,emitOperation(){},onProgress(){},failed:e=>errors.push(e)};
+ return{host,binding,runtime,session,state,calls,errors,retained,files,leases,preparations,imageGates,
+ claimGate:g=>claimGate=g,entries:()=>entries,seedRetained(index){state[index]='completed';retained.set(index,version(index));files.add(key(index));},close:()=>live=false};
+}
+{
+ const f=mangaFixture(),gate=defer();f.imageGates.set(0,gate);const work=f.host.downloadBook(f.binding);
+ await until(()=>f.calls.some(c=>c.method==='image'));const generation=f.host.snapshot().generation;
+ await f.host.operateManga('pause',1,f.binding);
+ assert.equal(f.state[1],'paused');assert.equal(f.leases.size,2,'target unstarted lease settles without waiting for another image');
+ assert.equal(f.calls.some(c=>c.method==='image'&&c.p.chapterIndex===1),false);assert.equal(f.host.busy(),true);
+ await f.host.operateManga('resume',1,f.binding);await until(()=>f.retained.has(1));
+ assert.equal(f.host.snapshot().generation,generation,'supplemental resume retains the original finite operation');
+ assert.deepEqual(f.calls.filter(c=>c.method==='cache.book.prefetch').map(c=>c.p.chapterRange),[[0,3],[1,2]]);
+ gate.resolve();await work;assert.deepEqual(f.state,['completed','completed','completed']);assert.equal(f.host.busy(),false);
+ assert.equal(f.host.snapshot().projection.receipt.confirmation,'confirmed');assert.equal(f.leases.size,0);assert.equal(f.preparations.size,0);
+ assert.ok(f.entries().every(e=>e.bookmarks[0].time===e.index),'download projection preserves newer bookmark rows');
+}
+{
+ const f=mangaFixture(41),gate=defer();f.state[25]='paused';f.imageGates.set(0,gate);const work=f.host.downloadBook(f.binding);
+ await until(()=>f.calls.some(c=>c.method==='image'));await f.host.operateManga('cancel',25,f.binding);gate.resolve();await work;
+ assert.equal(f.state[25],'cancelled');assert.equal(f.calls.some(c=>c.method==='image'&&c.p.chapterIndex===25),false);
+ assert.ok(f.calls.filter(c=>c.method==='cache.book.prefetch').every(c=>!(c.p.chapterRange[0]<=25&&c.p.chapterRange[1]>25)),
+  'later whole-book slices cannot reclaim a cancelled chapter');assert.equal(f.retained.size,40);
+}
+{
+ const f=mangaFixture(),gate=defer();f.claimGate(gate);const work=f.host.downloadBook(f.binding);
+ await until(()=>f.calls.some(c=>c.method==='cache.book.prefetch'));
+ let stopped=false;const stop=f.host.operateManga('pause',undefined,f.binding).then(()=>stopped=true);
+ await until(()=>f.state.every(s=>s==='paused'));assert.equal(stopped,false,'stop waits for an accepted claim still absent from Host results');
+ gate.resolve();await Promise.all([work,stop]);assert.equal(f.calls.some(c=>c.method==='image'),false);
+ assert.equal(f.leases.size,0);assert.equal(f.host.busy(),false);assert.equal(f.host.snapshot().projection.receipt.confirmation,'confirmed');
+}
+{
+ const f=mangaFixture(),gate=defer();f.seedRetained(1);f.imageGates.set(0,gate);const work=f.host.downloadBook(f.binding);
+ await until(()=>f.calls.some(c=>c.method==='image'));const clear=f.host.clearBook(f.binding);await tick();
+ assert.equal(f.calls.some(c=>c.method==='cache.clear'),false,'clear cannot race the old explicit download consumer');
+ gate.resolve();await Promise.all([work,clear]);assert.equal(f.calls.filter(c=>c.method==='cache.clear').length,1);
+ assert.equal(f.retained.has(1),true);assert.equal(f.entries()[1].downloadState,'completed','ordinary clear preserves permanent downloads');
+ assert.ok(f.calls.findIndex(c=>c.method==='cache.clear')>f.calls.findLastIndex(c=>c.method==='cache.chapter.materialization.report'));
+}
+{
+ const f=mangaFixture(),gate=defer();f.seedRetained(1);f.imageGates.set(1,gate);
+ const update=f.host.operateManga('updateChapter',1,f.binding);await until(()=>f.calls.some(c=>c.method==='image'));
+ assert.equal(f.retained.get(1),'version-1-0','old selected download remains owned while replacement files are incomplete');
+ assert.ok(f.calls.findIndex(c=>c.method==='manga.chapter.get')<f.calls.findIndex(c=>c.method==='cache.book.prefetch'));
+ gate.resolve();await update;assert.equal(f.retained.get(1),'version-1-1');assert.equal(f.entries()[1].downloadState,'completed');
+}
+{
+ const f=mangaFixture(),gate=defer();f.imageGates.set(0,gate);const work=f.host.downloadBook(f.binding);
+ await until(()=>f.calls.some(c=>c.method==='image'));await f.host.operateManga('cancel',1,f.binding);
+ gate.resolve();await work;assert.equal(f.state[1],'cancelled');assert.equal(f.retained.has(1),false);
+ const before=f.calls.filter(c=>c.method==='cache.book.prefetch').length;await f.host.operateManga('resume',undefined,f.binding);
+ assert.equal(f.calls.filter(c=>c.method==='cache.book.prefetch').length,before,'resume never restarts cancelled chapters or a new whole-book scope');
+ const outcome=await f.host.operateManga('deleteDownloads',0,f.binding);assert.equal(outcome.removedVersions,1);
+ assert.equal(f.retained.has(0),false);assert.equal(f.files.has('0:version-0-0'),false);
+}
+console.log('PASS actual manga download Owner + Gateways: pending-claim pause, excluded future slice, exact resumed supplement, replacement retention, clear/delete drain, permanent-cache separation and same-operation receipts');
+
+{
+ const f=mangaFixture(1);await f.host.downloadBook(f.binding);
+ const gateway=new ReadingOfflineGateway(f.runtime);
+ assert.equal((await gateway.loadDirectoryProjection(f.session))[0].downloadState,'completed',
+  'a directory preserves verified permanent manga completion');
+ f.files.clear();assert.equal((await gateway.loadDirectoryProjection(f.session))[0].downloadState,'cached',
+  'damaged permanent chapter bytes cannot be published completed');
+ f.seedRetained(0);f.retained.clear();const before=f.calls.length;
+ assert.equal((await gateway.loadDirectoryProjection(f.session))[0].downloadState,'cached',
+  'released permanent ownership is reusable cache, not a completed download');
+ assert.equal(f.calls.slice(before).some(c=>c.method==='manga.entry.get'),false,
+  'released retention downgrades before exact-file verification without new cache state');
+}
+console.log('PASS manga directory exact existing retention/manifest/file projection: completed, damaged and released states');

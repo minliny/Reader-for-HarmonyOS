@@ -27,10 +27,20 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const options = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
   const parse = text => ts.createSourceFile('/tmp/ReaderBuilderProbe.ets', text,
     ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
-  const childProps = definition => {
+  const componentDeclaration = (tree, name) => {
+    const declarations = tree.statements.filter(node => node.members && node.name &&
+      node.members.some(member => member.name?.getText(tree) === 'build'));
+    const exact = name === undefined ? undefined : declarations.find(node => node.name.getText(tree) === name);
+    if (exact !== undefined) return exact;
+    const exported = declarations.filter(node => node.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword));
+    assert.ok(exported.length === 1 || declarations.length === 1,
+      'multi-component production ETS requires an explicit componentName or one exported component');
+    return exported[0] ?? declarations[0];
+  };
+  const childProps = (definition, name) => {
     const tree = parse(definition);
     assert.equal(tree.parseDiagnostics.length, 0, 'actual shared child ETS parses');
-    const declaration = tree.statements.find(node => node.members && node.members.some(member => member.name?.getText(tree) === 'build'));
+    const declaration = componentDeclaration(tree, name);
     return new Set((declaration?.members ?? []).filter(member => ts.isPropertyDeclaration(member) &&
       ts.getAllDecorators(member).some(decorator => {
         const expression = decorator.expression;
@@ -39,8 +49,8 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   };
   const original = parse(source);
   assert.equal(original.parseDiagnostics.length, 0, 'production ETS parses');
-  const struct = original.statements.find(n => n.members && n.name &&
-    n.members.some(m => m.name?.getText(original) === 'build'));
+  const struct = componentDeclaration(original, hooks.componentName);
+  assert.ok(struct, 'production component declaration exists');
   const members = names.map(name => {
     const member = struct.members.find(n => n.name?.getText(original) === name);
     assert.ok(member, `production member ${name}`);
@@ -117,7 +127,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   }
   for (const [name, child] of Object.entries(hooks.childSources ?? {})) {
     syntax.componentCollection.customComponents.add(name);
-    syntax.propCollection.set(name, childProps(child));
+    syntax.propCollection.set(name, childProps(child, name));
   }
   const file = parse(`@Component struct ReaderBuilderProbe {\n${members.join('\n')}\n${names.includes('build') ? '' : 'build() { Column() {} }'}\n}`);
   // The full SDK frontend collects declared method names before transforming
@@ -146,6 +156,15 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const output = ts.createPrinter().printNode(ts.EmitHint.Unspecified, transformed, file);
   assert.match(output, /observeComponentCreation2/, 'exercise real SDK observer closures');
   let activeOwner, activeId;
+  // The SDK lowers a component .animation modifier to Context start/reset
+  // instructions surrounding its native attributes. Record those unmodified
+  // instructions on the active observer; never pretend to render their frames.
+  const nativeContext = { animation(value) {
+    if (activeOwner === undefined) return;
+    const record = activeOwner.nodes.get(activeId);
+    activeOwner.attributeCalls.push({ id: activeId, property: 'contextAnimation', args: [value] });
+    if (value !== null && value !== undefined) record.animation = value;
+  } };
   const native = name => { const instance = new Proxy({ name }, { get(target, property) {
     if (property === 'name') return name;
     return (...args) => {
@@ -181,9 +200,14 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     }
     runObserver(id, initial) {
       activeOwner = this; activeId = id;
+      const previousContext = globalThis.Context;
+      globalThis.Context = nativeContext;
       hooks.onObserverEnter?.(this, id);
       try { this.observers[id](id, initial); }
-      finally { hooks.onObserverExit?.(this, id); activeOwner = undefined; }
+      finally {
+        try { hooks.onObserverExit?.(this, id); }
+        finally { globalThis.Context = previousContext; activeOwner = undefined; }
+      }
     }
     replayOnly(ids) { for (const id of ids) this.runObserver(id, false); }
     replay() {
@@ -230,7 +254,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const globals = { readerRegisteredFontFamily: (_font, family) => family,
     readerFontFamilyReady: () => true, readerAppColor, readerThemeDefinition, ViewPU, ReaderControlSwitchTrack: Child,
     ...Object.fromEntries(recoveryChildren.map(name => [name, Child])), $r: value => value,
-    ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Path', 'Text', 'TextInput', 'TextArea', 'Select', 'Span', 'Marquee', 'Image', 'Slider', 'ForEach', 'If', '__Common__']
+    ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Path', 'Text', 'TextInput', 'TextArea', 'Select', 'Span', 'Marquee', 'Image', 'Slider', 'Toggle', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
     ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment', 'AccessibilityRoleType',
       'LineCapStyle', 'TextAlign', 'TextOverflow', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),

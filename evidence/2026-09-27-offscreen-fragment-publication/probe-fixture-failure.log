@@ -1,0 +1,21 @@
+same title/showTitle/revision captures: [{"body":["chapter-14:body"],"title":"one measured title","images":[]},{"body":["chapter-15:image:image:file:///chapter-15:image.png:file","chapter-15:body"],"title":"one measured title","images":[{"uri":"file:///chapter-15:image.png","sync":true}]},{"body":["chapter-16:body"],"title":"one measured title","images":[{"uri":"file:///chapter-15:image.png","sync":true}]},{"body":["chapter-14:body"],"title":"one measured title","images":[{"uri":"file:///chapter-15:image.png","sync":true}]}]
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'chapter-14:last'
+- 'new chapter title'
+
+    at file:///Users/minliny/Documents/Reader/.reader-isolated/ph42-cross-source/Reader-for-HarmonyOS/tools/test-reader-offscreen-fragment-publication.mjs:144:8 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'chapter-14:last',
+  expected: 'new chapter title',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

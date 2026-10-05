@@ -9,6 +9,7 @@ import { iconButtonControls } from './lib/reader-icon-button-probe.mjs';
 import { foundationControls, readerFoundationTokens } from './lib/reader-foundation-control-probe.mjs';
 import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
+import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { createDefaultReaderWindowMetrics, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 
@@ -54,7 +55,7 @@ function fixture() {
   // The SDK carrier admits a new keyed actor and retains the old actor for
   // the negative callback check; native removal/layout are not simulated.
   controls.hooks.allowEmptyBranchAdmission = true;
-  Object.assign(controls.dependencies, foundation.dependencies, readerFoundationTokens, readerTypographyRoles, {
+  Object.assign(controls.dependencies, foundation.dependencies, readerFoundationTokens, readerTypographyRoles, fontFamilies, {
     ReaderIconButton: controls.icon.Component, readerAppColor, ReaderWindowCoordinator: { metrics: createDefaultReaderWindowMetrics },
     readerInteractiveSafeLeft, readerInteractiveSafeRight, bookshelfTemporaryGeneration: 0,
   });
@@ -68,8 +69,12 @@ function fixture() {
   const shell = controls.consumer(source, boundedMembers(source), {}, props);
   shell.mounted = true; shell.temporaryBackIdentity = 'bookshelf:7'; shell.moreMenuVisible = false;
   shell.topBar();
-  const actors = () => controls.walk(shell).filter(child => child instanceof controls.icon.Component && child.specId === 'toolbar-standard');
-  const event = actor => controls.nodes(actor).find(node => node.onClick).onClick;
+  const actors = () => controls.walk(shell).filter(child => child instanceof controls.dependencies.AppTopBar && child.showLeadingSearch);
+  const event = actor => {
+    const native = [...actor.nodes.values()].find(node => node.type === 'Stack' && node.width === 44 && node.height === 44 && node.onClick);
+    assert.ok(native, 'actual AppTopBar owns the native leading Search Stack');
+    return native.onClick;
+  };
   return { index, props, shell, controls, actors, event, calls, setRuntime(value) { current = value; } };
 }
 
@@ -111,4 +116,4 @@ for (const retirement of ['route', 'navigation', 'mount', 'retired', 'runtime', 
   assert.equal(f.shell, owner, 'persistent bookshelf shell is retained');
   f.event(next)(); assert.equal(f.index.route, 'search'); assert.equal(f.calls.at(-1), 'open'); cases++;
 }
-console.log(`PASS ${cases} actual Index→Shell→Icon SDK search admission groups: current entry, duplicate, route/navigation/mount/runtime retirement, reader preservation and retained-shell fresh actor. Native dispatch is separate.`);
+console.log(`PASS ${cases} actual Index→Shell→AppTopBar SDK search admission groups: current entry, duplicate, route/navigation/mount/runtime retirement, reader preservation and retained-shell fresh actor. Native dispatch is separate.`);

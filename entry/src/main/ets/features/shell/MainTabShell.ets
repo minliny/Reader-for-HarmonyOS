@@ -45,12 +45,12 @@ export struct MainTabShell {
       .height('100%')
       .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
     } else {
-      Stack({ alignContent: Alignment.TopStart }) {
+      Stack({ alignContent: Alignment.Bottom }) {
         Stack({ alignContent: Alignment.TopStart }) {
           this.content();
         }
-        .width('100%')
-        .height('100%');
+        .height('100%')
+        .width('100%');
 
         if (this.showBottomNav) {
           Stack({ alignContent: Alignment.Bottom }) {

@@ -267,10 +267,11 @@ console.log('appearance Preferences adapter migration and persistence compatibil
   const closeStart = source.indexOf('  private async closeRuntime(): Promise<void>');
   const close = source.slice(closeStart, source.indexOf('\n  private async startRuntime', closeStart));
   let notices = 0, releases = 0;
-  const Runtime = new Function('hilog', 'LOG_DOMAIN', 'errorMessageOf', 'ReadingBodyImageHost', 'ReaderStartupTrace',
+  const Runtime = new Function('hilog', 'LOG_DOMAIN', 'errorMessageOf', 'ReadingBodyImageHost', 'ReaderStartupTrace', 'MangaChapterPreparationCoordinator',
     stripTypeScriptTypes(`class ReaderRuntimeOwner { ${flush} ${close} }`) + ';return ReaderRuntimeOwner;')(
     { warn() { notices++; } }, 0, error => error.message,
-    { instance: { releaseAllDisplayFiles() { releases++; } } }, ReaderStartupTrace);
+    { instance: { releaseAllDisplayFiles() { releases++; } } }, ReaderStartupTrace,
+    { forRuntime: () => ({ close: async () => {} }) });
   const events = [], runtime = new Runtime();
   let failCore = true, failAppearance = false;
   Object.assign(runtime, {

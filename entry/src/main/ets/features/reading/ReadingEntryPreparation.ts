@@ -12,6 +12,7 @@ import type { ReadingSessionChapter } from './ReadingChapterWindow';
 export interface ReadingEntrySeed {
   sourceId: string;
   bookId: string;
+  contentKind?: 'text' | 'manga' | 'audio';
   bookKind?: string;
   remoteBookSeed?: RemoteReadingBookSeed;
 }
@@ -192,6 +193,7 @@ export class ReadingEntryPreparation {
     let complete = true;
     const prepareTargets = async (seeds: ReadingEntrySeed[], neighborOffset: number): Promise<void> => {
       for (const seed of seeds) {
+        if (!this.textSeed(seed)) continue;
         const targetKey = this.key(seed.sourceId, seed.bookId);
         const offsetBit = 1 << (neighborOffset + 3);
         if (((this.persistedTargets.get(targetKey)?.offsets ?? 0) & offsetBit) !== 0) continue;
@@ -243,10 +245,11 @@ export class ReadingEntryPreparation {
     const prioritySeeds = this.visibleSeeds.slice();
     await prepareTargets(prioritySeeds, 0);
     if (!current()) return;
-    const seeds = this.persistedSeeds ?? await loadSeeds(current);
-    if (seeds === undefined || !current()) return;
+    const suppliedSeeds = this.persistedSeeds ?? await loadSeeds(current);
+    if (suppliedSeeds === undefined || !current()) return;
+    const seeds = suppliedSeeds.filter((seed: ReadingEntrySeed): boolean => this.textSeed(seed));
     if (this.persistedSeeds === undefined) this.persistedSeeds = seeds.map((seed: ReadingEntrySeed): ReadingEntrySeed =>
-      ({ sourceId: seed.sourceId, bookId: seed.bookId }));
+      ({ sourceId: seed.sourceId, bookId: seed.bookId, contentKind: seed.contentKind }));
     const prioritized = new Set(prioritySeeds.map((seed: ReadingEntrySeed): string => this.key(seed.sourceId, seed.bookId)));
     // Every book's current target still precedes every optional neighbour.
     for (const neighborOffset of [0, 1, -1, 2, -2, 3, -3]) {
@@ -265,6 +268,7 @@ export class ReadingEntryPreparation {
     if (this.closed) return;
     const selected: Map<string, ReadingEntrySeed> = new Map();
     for (const seed of seeds) {
+      if (!this.textSeed(seed)) continue;
       if (selected.size >= VISIBLE_BOOK_LIMIT) break;
       if (seed.sourceId.trim().length === 0 || seed.bookId.trim().length === 0) continue;
       const key = this.key(seed.sourceId, seed.bookId);
@@ -290,6 +294,11 @@ export class ReadingEntryPreparation {
     }
     this.visible = next;
     this.drain();
+  }
+
+  /** Manga owns its image-first entry; optional text warm-up cannot acquire it. */
+  private textSeed(seed: ReadingEntrySeed): boolean {
+    return (seed.contentKind ?? seed.remoteBookSeed?.contentKind ?? 'text') === 'text';
   }
 
   setPaused(paused: boolean): void {
@@ -415,7 +424,7 @@ export class ReadingEntryPreparation {
       method === 'local_book.import' || method === 'local_book.reimport' || method === 'local_book.remove' ||
       method === 'local_book.delete' || method === 'bookshelf.remove' || method === 'bookshelf.removeBatch' ||
       method === 'bookshelf.add' || method === 'source.import' || method === 'source.update' || method === 'source.delete' ||
-      (method.startsWith('source.switch.') && method !== 'source.switch.pending.list') ||
+      method === 'manga.sourceSwitch.commit' || (method.startsWith('source.switch.') && method !== 'source.switch.pending.list') ||
       method === 'cache.clear' || (method === 'chapter.content' && (params['forceRefresh'] === true || params['upgradeCachedContent'] === true)) ||
       method === 'reader.chinese-conversion.put' || method === 'replace.persist' || method === 'replace.undo' ||
       method === 'replace-rule.create' || method === 'replace-rule.update' || method === 'replace-rule.delete' ||
@@ -491,6 +500,13 @@ export class ReadingEntryPreparation {
         if (!keys.has(key)) { keys.add(key); scopes.push(scope); }
       }
       return scopes;
+    }
+    if (method === 'manga.sourceSwitch.commit') {
+      const from = this.bookScope({ sourceId: params['fromSourceId'], bookId: params['fromBookId'] });
+      const receipt = preparationObject(params['firstImage']);
+      const target = this.bookScope(preparationObject(receipt['chapter']));
+      if (from.kind !== 'book' || target.kind !== 'book') return [{ kind: 'global' }];
+      return from.sourceId === target.sourceId && from.bookId === target.bookId ? [from] : [from, target];
     }
     if (method === 'source.switch.commit') {
       const from = this.bookScope(preparationObject(params['from']));
@@ -610,6 +626,7 @@ export class ReadingEntryPreparation {
 
   private async prepare(seed: ReadingEntrySeed, isCurrent: () => boolean,
     onAcquired: () => void): Promise<ReadingEntrySnapshot | undefined> {
+    if (!this.textSeed(seed)) return undefined;
     let remoteSession: RemoteReadingSession | undefined;
     const coordinator = this.runtime.bookAcquisitions?.();
     // All gateway requests use the existing coordinator's background lane.
@@ -621,7 +638,7 @@ export class ReadingEntryPreparation {
         coordinator?.hasCurrentCatalogProjection?.(session) === true,
       request: (method: string, params: JsonObject = {}, options: RequestOptions = {}): Promise<ReaderCoreResultEvent> => {
         if (!isCurrent() || params['forceRefresh'] === true || params['upgradeCachedContent'] === true || method === 'reading.progress.update' ||
-          (method.startsWith('source.switch.') && method !== 'source.switch.pending.list')) {
+          method === 'manga.sourceSwitch.commit' || (method.startsWith('source.switch.') && method !== 'source.switch.pending.list')) {
           return Promise.reject(new Error('READING_ENTRY_PREPARATION_CANCELLED'));
         }
         const guarded: RequestOptions = { ...options,

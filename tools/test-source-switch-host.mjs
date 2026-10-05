@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import {sourceSwitchLiveSdk} from './lib/source-switch-sdk-consumer.mjs';
 import { boundedSurfaceSdk, boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import * as horizontal from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
 import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
@@ -262,27 +263,28 @@ for(const loseSyncAt of [3,4]) {
 {
   const f=fixture({loseCommitAck:true,failExactQuery:true});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
   const source=read('features/source/SourceSwitchWindow.ets'),p=boundedSurfaceSdk();
-  p.hooks.childSources.CandidateRow=read('features/source/CandidateRow.ets');
+
   const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
   const scope=f.host.current().scopeId;
-  const owner=p.consumer(source,boundedMembers(source),{...horizontal,...metricsApi,
-    ReaderWindowCoordinator:{metrics:()=>metrics},registerReaderFonts(){},...gatewayExports,
-    sourceSwitchSourceCount:candidates=>candidates.length},{state:f.host.current().state});
+  const deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics}});
+  const owner=p.consumer(source,boundedMembers(source,'SourceSwitchWindow'),deps,{state:f.host.current().state},'SourceSwitchWindow');
+  owner.__Repeat=deps.SourceSwitchPanel.prototype.__Repeat;
   owner.onRetry=()=>f.host.retry(scope);owner.onClose=()=>f.host.close(scope);
   f.lease.changed=snapshot=>{owner.updateStateVars({state:snapshot.state,currentSourceId:'old'});p.properties.flush();};
-  owner.initialRender();const nodes=p.nodes(owner);
+  owner.aboutToAppear();owner.initialRender();const nodes=p.nodes(owner);
   assert.ok(nodes.some(node=>node.type==='Text'&&node.create==='换源结果未确认'));
   assert.equal(nodes.some(node=>node.type==='Text'&&node.create==='换源失败'),false,'unknown Core must not render a failed-commit title');
-  const retry=nodes.find(node=>node.type==='Text'&&node.create==='重试核对');assert.ok(retry?.onClick);
-  const frame=p.walk(owner).find(child=>child instanceof p.deps.ReaderBoundedSurface);
-  const originalFrame=[...frame.nodes.values()].find(node=>node.type==='Column');assert.equal(originalFrame.height,385);
+  const retry=nodes.find(node=>node.type==='Button'&&node.createWithLabel?.[0]==='重试核对');assert.ok(retry?.onClick);
+  const originalFrame=[...owner.nodes.values()].find(node=>node.type==='Stack'&&node.width==='100%'&&node.height==='100%');
+  assert.ok(originalFrame,'the approved live picker retains one full-viewport owner');
+  assert.equal(p.walk(owner).some(child=>child instanceof p.deps.ReaderBoundedSurface),false,'the full-screen design does not restore the retired 385vp popup');
   const oldRetry=owner.onRetry;f.options.failExactQuery=false;retry.onClick();await settle();p.properties.flush();
   assert.equal(f.host.current().write.confirmation,'confirmed');assert.equal(f.effects.at(-1).kind,'targetReady');
   assert.equal(f.calls.filter(([method])=>method==='source.switch.commit').length,1);
-  assert.equal([...frame.nodes.values()].find(node=>node.type==='Column').id,originalFrame.id,'actual property updates retain the bounded frame');
+  assert.equal([...owner.nodes.values()].find(node=>node.type==='Stack'&&node.width==='100%'&&node.height==='100%').id,originalFrame.id,'actual property updates retain the full-viewport frame');
   assert.equal(f.host.open(f.context,f.lease),true);await settle();oldRetry();await settle();
   assert.equal(f.calls.filter(([method])=>method==='source.switch.commit').length,1,'old SDK-consumer callback cannot dispatch in the reopened scope');
-  checks.push('actual-SDK-Host-to-bounded-frame-honest-state-recovery-and-old-callback');
+  checks.push('actual-SDK-Host-to-live-picker-honest-state-recovery-and-old-callback');
 }
 // Installed SDK parses the full new production owner. Native rendering and
 // scheduler/SDK-send proof are separate tiers; this probe does not claim them.
@@ -308,4 +310,4 @@ assert.notEqual(unsafe,hostSource);
   assert.equal(f.calls.filter(([method])=>method==='source.switch.commit').length,1,
     'negative control proves an old closure can mutate the reopened scope without the actual generation admission');
 }
-console.log(JSON.stringify({status:'PASS',checks,scope:'actual full SourceSwitchHost/Gateway/IntentStore + actual progress lane/gateway; installed SDK bounded V1 state/closure propagation; runtime and AtomicFile IO are controlled fixtures; actual OS atomic/fsync, focus and layout remain unverified'}));
+console.log(JSON.stringify({status:'PASS',checks,scope:'actual full SourceSwitchHost/Gateway/IntentStore + actual progress lane/gateway; installed SDK exported full-viewport picker and actual live-row V1 state/closure propagation; runtime and AtomicFile IO are controlled fixtures; actual OS atomic/fsync, focus and layout remain unverified'}));

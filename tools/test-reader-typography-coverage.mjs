@@ -1,3 +1,4 @@
+import { approvedTypographyContract, approvedTypographyFile } from './lib/approved-manga-typography-carriers.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { auditTypographyConsumers, typographyExpressionContext, isSharedTypographyExpression, typographyRoleImports } from './lib/reader-typography-consumer-audit.mjs';
@@ -29,9 +30,10 @@ assert.match(calibration,/return TYPE_READER_IMMERSIVE_TIME/);
 assert.match(calibration,/new ReaderTextStyle\(READER_FONT_HARMONYOS_SANS, 400, fp, undefined,[\s\S]*'platformCalibration'/);
 const isCalibrated = (file,node,property,expression) => file === 'ReaderPageChrome.ets' && node.method === 'build' &&
   expression === `this.topTextStyle().${({fontSize:'fontSizeFp',lineHeight:'lineHeightFp',letterSpacing:'letterSpacingFp'})[property]??property}`;
-let files=0,carriers=0,shared=0,calibrated=0,runtime=0;
+let files=0,carriers=0,shared=0,calibrated=0,runtime=0,approvedArguments=0;
 for (const file of readdirSync(root).filter(file=>file.endsWith('.ets'))) {
   files++; const source=readFileSync(new URL(file,root),'utf8'),imports=typographyRoleImports(source,file),expressionContext=typographyExpressionContext(source,'entry/src/main/ets/features/reading/'+file);
+  const approved=approvedTypographyContract(source,'reading/'+file);
   for (const node of auditTypographyConsumers(source,file)) {
     carriers++;
     for (const [property,modifier] of Object.entries(node.modifiers)) {
@@ -43,6 +45,7 @@ for (const file of readdirSync(root).filter(file=>file.endsWith('.ets'))) {
         shared++;continue;
       }
       if(isCalibrated(file,node,property,modifier.expression)){calibrated++;continue;}
+      if(approved.has(node)){approvedArguments++;continue;}
       const receipt=contracts.get(JSON.stringify([file,node.method,property,modifier.expression]));
       assert.ok(receipt,`${file}:${node.line}/${property}: private typography must consume the public role (${modifier.expression})`);
       assert.ok(++receipt.count<=receipt.maximum,`${file}/${node.method}: no copied runtime exception`);runtime++;
@@ -51,4 +54,4 @@ for (const file of readdirSync(root).filter(file=>file.endsWith('.ets'))) {
 }
 assert.equal(runtime,16,'exact bounded runtime contracts, no generic reader exclusion');
 assert.equal(calibrated,10,'both calibrated top labels share one actual implementation');
-console.log(`PASS reading Typography actual AST: ${files} files, ${carriers} carriers, ${shared+calibrated} public/calibrated arguments; ${runtime} documented runtime arguments; zero private chrome debt`);
+console.log(`PASS reading Typography actual AST: ${files} files, ${carriers} carriers, ${shared+calibrated} public/calibrated arguments; ${runtime} documented runtime arguments; ${approvedArguments} exact approved manga directory arguments; zero unregistered private chrome debt`);

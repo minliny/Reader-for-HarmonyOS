@@ -1,4 +1,8 @@
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../reading/ReadingDirectoryRecovery';
+import { ReaderSettingsGateway } from '../reading/ReaderSettingsGateway';
+import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import { MangaReadingSurface } from '../manga/MangaReadingSurface';
+import type { MangaDownloadAction, MangaDownloadActionId } from '../manga/MangaDownloadActionsGateway';
 import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from '../reading/RemoteReadingPositionMigration';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -37,6 +41,7 @@ type PreparedReaderRoute = 'reading' | 'directory';
 
 @Component
 export struct ReaderShell {
+  private readonly mangaSettingsGateway: ReaderSettingsGateway = new ReaderSettingsGateway(ReaderRuntimeOwner.current());
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowChromeUnderlayColor') private chromeUnderlayColor: string =
     readerAppColor('app.window.background', 'day');
@@ -50,6 +55,13 @@ export struct ReaderShell {
   @Prop sourceId: string = '';
   @Prop sourceName: string = '';
   @Prop bookKind: string | undefined = undefined;
+  // Explicit Core content fact; never infer this from the free-form genre.
+  @Prop contentKind: 'text' | 'manga' = 'text';
+  @Prop inBookshelf: boolean = true;
+  @Prop bookAuthor: string = '';
+  @Prop bookCoverUrl: string = '';
+  onToggleShelf: () => void = (): void => {};
+  onStopSourceSwitch: (scopeId?: number) => void = (): void => {};
   @Prop remoteSession: RemoteReadingSession | undefined = undefined;
   @Prop remoteBookSeed: RemoteReadingBookSeed | undefined = undefined;
   entryPresentationProvider: () => ReaderRetainedPresentation | undefined = (): ReaderRetainedPresentation | undefined => undefined;
@@ -58,6 +70,9 @@ export struct ReaderShell {
   @Prop sourceSwitchTransactionId: string | undefined = undefined;
   @Prop totalChapters: number = 0;
   @Prop requestedChapterIndex: number | undefined = undefined;
+  @Prop mangaChapterRequestGeneration: number = 0;
+  @Prop mangaStartAtChapterFirst: boolean = false;
+  @Prop requestedMangaDirectoryTargetProof: JsonObject | undefined = undefined;
   @Prop isTablet: boolean = false;
   @Prop reduceMotion: boolean = false;
   // 阅读会话可见性: route 决定 ReadingExperience 是否露出版面。
@@ -77,6 +92,9 @@ export struct ReaderShell {
   @Prop directoryChapterTitle: string = '';
   @Prop directoryOpenedFromControl: boolean = false;
   @Prop offlineBookOperationActive: boolean = false;
+  @Prop mangaDownloadEnabled: boolean = false;
+  onLoadMangaDownloadActions: (chapterIndex?: number) => Promise<MangaDownloadAction[]> = async (): Promise<MangaDownloadAction[]> => [];
+  onMangaDownloadAction: (action: MangaDownloadActionId, chapterIndex?: number) => Promise<void> = async (): Promise<void> => {};
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   // 书签 tab 精确锚点接线: requestedBookmarkAnchor 经 @Prop @Watch 触发阅读会话
   // 的精确 (章节, Unicode 标量偏移) 跳转; bookmarkIdentity 是会话期静态书籍身份,
@@ -85,6 +103,7 @@ export struct ReaderShell {
   @Prop bookmarkIdentity: ReaderBookIdentity | undefined = undefined;
   // 换源 overlay。
   @Prop sourceSwitchVisible: boolean = false;
+  @Prop allowCancelSourceSwitchWhilePreparing: boolean = false;
   @Prop sourceSwitchState: SourceSwitchPanelState = { kind: 'discovering' };
 
   // 回调 (全部由 Index 提供, 透传到对应子组件)。
@@ -128,6 +147,7 @@ export struct ReaderShell {
   onOpenDirectory: () => void = (): void => {};
   onOpenBookInfo: () => void = (): void => {};
   onSwitchSource: () => void = (): void => {};
+  onMangaLogin: () => Promise<void> = (): Promise<void> => Promise.reject(new Error('MANGA_SOURCE_LOGIN_UNAVAILABLE'));
   onOpenRulesManagement: () => void = (): void => {};
   onCloseSourceSwitch: (scopeId?: number) => void = (): void => {};
   onRetrySourceSwitch: (scopeId?: number) => void = (): void => {};
@@ -144,6 +164,9 @@ export struct ReaderShell {
       Stack({ alignContent: Alignment.TopStart }) {
         // A new source/book needs fresh gateways and lifecycle tokens. Theme,
         // font, chapter and overlay changes retain this same reading owner.
+        if (this.contentKind === 'manga') {
+          this.mangaSurface()
+        } else {
         ForEach([this.readingIdentityKey()], (_identity: string) => {
         ReadingExperience({
           sourceId: this.sourceId,
@@ -235,7 +258,7 @@ export struct ReaderShell {
           onLoadControlBookmarks: (sourceId: string, bookId: string, isCurrent: () => boolean): Promise<void> =>
             _identity === this.readingIdentityKey() ? this.onLoadControlBookmarks(sourceId, bookId,
               (): boolean => _identity === this.readingIdentityKey() && isCurrent()) : Promise.resolve(),
-          chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+          chapterStartBookmarkCreationEnabled: this.contentKind !== 'manga' && this.chapterStartBookmarkCreationEnabled,
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void => {
             if (_identity === this.readingIdentityKey()) this.onCreateChapterStartBookmark(request);
           },
@@ -247,6 +270,7 @@ export struct ReaderShell {
           .height('100%')
           .opacity(this.route === 'reading' || this.route === 'directory' ? 1 : 0);
         }, (identity: string): string => identity);
+        }
       }
       .width('100%')
       .height('100%')
@@ -279,7 +303,7 @@ export struct ReaderShell {
           onDownloadBook: (): void => this.onDownloadBook(),
           onClearBookOffline: (): void => this.onClearBookOffline(),
           onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
-          chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+          chapterStartBookmarkCreationEnabled: this.contentKind !== 'manga' && this.chapterStartBookmarkCreationEnabled,
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
             this.onCreateChapterStartBookmark(request),
           onSwitchSource: (): void => this.onSwitchSource(),
@@ -294,7 +318,11 @@ export struct ReaderShell {
     }
     .width('100%')
     .height('100%')
-    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+    .expandSafeArea(this.contentKind === 'manga' ? [SafeAreaType.SYSTEM, SafeAreaType.CUTOUT] : [SafeAreaType.SYSTEM],
+      this.contentKind === 'manga' ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END] :
+        [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+    .ignoreLayoutSafeArea(this.contentKind === 'manga' ? [LayoutSafeAreaType.SYSTEM] : [],
+      this.contentKind === 'manga' ? [LayoutSafeAreaEdge.ALL] : [])
     // Keep the route opaque while the reading owner measures and admits its
     // first physical page. Without a shell-owned underlay, the route switch
     // can expose the Index/window background for a few frames before
@@ -316,6 +344,10 @@ export struct ReaderShell {
           SourceSwitchPanel({
             state: this.sourceSwitchState,
             currentSourceId: this.sourceId,
+            bookTitle: this.bookTitle, author: this.bookAuthor, coverUrl: this.bookCoverUrl, currentSourceName: this.sourceName,
+            currentChapterTitle: this.directoryChapterTitle, reduceMotion: this.reduceMotion,
+            contentKind: this.contentKind, allowCancelWhileSwitching: this.allowCancelSourceSwitchWhilePreparing,
+            onStop: (): void => this.onStopSourceSwitch(scopeId),
             onClose: (): void => this.onCloseSourceSwitch(scopeId),
             onRetry: (): void => this.onRetrySourceSwitch(scopeId),
             onRefresh: (): void => this.onRefreshSourceSwitch(scopeId),
@@ -326,6 +358,88 @@ export struct ReaderShell {
         .width('100%')
         .height('100%');
         }, (scopeId: number): string => scopeId.toString());
+  }
+
+  @Builder
+  private mangaSurface() {
+    ForEach([this.mangaIdentityKey()], (_identity: string) => {
+      MangaReadingSurface({
+        windowChromeActive: this.visible,
+        windowChromeOverlayActive: this.visible && (this.route === 'directory' || this.sourceSwitchVisible),
+        isReaderIdentityCurrent: (): boolean => this.contentKind === 'manga' && _identity === this.mangaIdentityKey(),
+        retainPreparationOnDisappear: (): boolean => this.keepsMangaReadingSession(_identity),
+        reduceMotion: this.reduceMotion,
+        offline: ReaderRuntimeOwner.current().mangaOfflineProbeFor?.(this.sourceId, this.bookId) === true || this.remoteSession?.acquisitionMode === 'offline',
+        settingsGateway: this.mangaSettingsGateway,
+        bookTitle: this.bookTitle, inBookshelf: this.inBookshelf,
+        downloadEnabled: this.mangaDownloadEnabled,
+        directoryProjection: this.tocEntries,
+        onLoadDownloadActions: (chapterIndex?: number): Promise<MangaDownloadAction[]> =>
+          _identity === this.mangaIdentityKey() ? this.onLoadMangaDownloadActions(chapterIndex) : Promise.resolve([]),
+        onDownloadAction: (action: MangaDownloadActionId, chapterIndex?: number): Promise<void> =>
+          _identity === this.mangaIdentityKey() ? this.onMangaDownloadAction(action, chapterIndex) : Promise.resolve(),
+        onDownloadBook: (): void => { if (_identity === this.mangaIdentityKey()) this.onDownloadBook(); },
+        onDetail: (): void => this.onOpenBookInfo(),
+        onToggleShelf: (): void => this.onToggleShelf(),
+        onDownloadChapter: (): void => {
+          if (this.contentKind !== 'manga' || _identity !== this.mangaIdentityKey()) return;
+          const index = this.directoryCurrentChapterIndex;
+          if (index >= 0) this.onDownloadChapter(index);
+        },
+        onSelectDirectoryTarget: (chapterIndex: number, directoryTargetProof?: JsonObject): void => {
+          if (directoryTargetProof === undefined) this.onSelectChapter(chapterIndex);
+          else this.onSelectNavigationTarget(chapterIndex, 0, undefined, directoryTargetProof);
+        },
+        mangaBackgroundColor: readerAppColor('app.window.background', this.appThemeScheme),
+        mangaForegroundColor: readerAppColor('app.window.foreground', this.appThemeScheme),
+        errorColor: readerAppColor('TOK_DANGER', this.appThemeScheme),
+        onDirectory: (): void => this.onOpenDirectory(),
+        onSwitchSource: (): void => this.onSwitchSource(),
+        onLoginSource: (): Promise<void> => this.onMangaLogin(),
+        onSaveFailure: (message: string): void => this.onReadingFailure(this.sourceId, this.bookId, message),
+        runtime: ReaderRuntimeOwner.current(), sourceId: this.sourceId, bookId: this.bookId,
+        chapterIndex: this.requestedChapterIndex,
+        startAtChapterFirst: this.mangaStartAtChapterFirst,
+        directoryTargetProof: this.requestedMangaDirectoryTargetProof,
+        remoteSession: this.remoteSession, remoteBookSeed: this.remoteBookSeed,
+        onRemoteSessionReady: (session: RemoteReadingSession): void => this.onRemoteSessionReady(session),
+        onChapterCommitted: (index: number, title: string): void => this.onMangaChapterReady(_identity, index, title),
+        onBack: (): void => { if (_identity === this.mangaIdentityKey()) this.onExit(this.readingIdentityKey()); },
+        onExitRequestHandler: (exit: () => void): void => this.onExitRequestHandler(exit),
+        onChapter: (direction: number): void => {
+          if (this.contentKind === 'manga' && _identity === this.mangaIdentityKey()) this.selectAdjacentMangaChapter(direction);
+        },
+      })
+    }, (identity: string): string => identity)
+  }
+
+  private mangaIdentityKey(): string {
+    return JSON.stringify([this.sourceId, this.bookId, this.readingReadyGeneration,
+      this.requestedChapterIndex ?? null, this.mangaChapterRequestGeneration]);
+  }
+
+  private keepsMangaReadingSession(identity: string): boolean {
+    const previous = JSON.parse(identity) as (string | number | null)[];
+    return this.contentKind === 'manga' && (this.route === 'reading' || this.route === 'directory') &&
+      previous[0] === this.sourceId && previous[1] === this.bookId;
+  }
+
+  private onMangaChapterReady(identity: string, chapterIndex: number, chapterTitle: string): void {
+    if (this.contentKind !== 'manga' || identity !== this.mangaIdentityKey() ||
+      !Number.isSafeInteger(chapterIndex) || chapterIndex < 0 ||
+      (this.requestedChapterIndex !== undefined && this.requestedChapterIndex !== chapterIndex)) return;
+    this.onChapterCommitted(chapterIndex, chapterTitle);
+    this.onReadingReady(chapterIndex, this.sourceId, this.bookId, this.readingReadyGeneration);
+  }
+
+  private selectAdjacentMangaChapter(direction: number): void {
+    if (direction !== -1 && direction !== 1) return;
+    const current = this.tocEntries.findIndex(entry => entry.index === (this.requestedChapterIndex ?? this.directoryCurrentChapterIndex));
+    if (current < 0) return;
+    // A historical cached group can be resumed without becoming selectable.
+    for (let next = current + direction; next >= 0 && next < this.tocEntries.length; next += direction) {
+      if (this.tocEntries[next].navigable !== false) { this.onSelectChapter(this.tocEntries[next].index); return; }
+    }
   }
 
   private readingIdentityKey(): string {
@@ -341,7 +455,7 @@ export struct ReaderShell {
     // Sibling directory and source-switch surfaces can paint over the band's
     // child in ReadingExperience. Repaint above those surfaces with the same
     // owner-requested color; do not derive an independent application tone.
-    if (this.visible && (this.route === 'directory' || this.sourceSwitchVisible)) {
+    if (this.contentKind !== 'manga' && this.visible && (this.route === 'directory' || this.sourceSwitchVisible)) {
       ReaderStatusBarPaper({
         theme: this.chromePaperThemeId,
         fallbackColor: this.chromeUnderlayColor,

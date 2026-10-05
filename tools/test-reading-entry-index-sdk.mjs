@@ -50,8 +50,8 @@ const checks=[];
  assert.equal(f.calls.filter(c=>c.method==='bookmark.list').length,1);
  x.idx.replay();const leaf=loadingLeaf;assert.equal(x.p.walk(x.idx).filter(c=>c instanceof x.leaf).length,1,'same-admission detail remains mounted through async property updates');assert.equal(leaf.loadingMessage,'');assert.equal(leaf.book.bookId,'book');assert.equal(leaf.toc.length,3);assert.equal(leaf.readingEnabled,true);
  assert.equal(leaf.readingBlockedReason,'');leaf.actionArea();
- const action=x.p.nodes(leaf).find(n=>n.type==='Stack'&&n.height===46&&n.accessibilityText==='开始阅读');assert.ok(action?.onClick);
- assert.equal(action.borderRadius,999);const before=f.calls.length;action.onClick();
+ const action=x.p.nodes(leaf).find(n=>n.type==='Text'&&n.height===48&&n.create==='开始阅读');assert.ok(action?.onClick);
+ assert.equal(action.borderRadius,16);const before=f.calls.length;action.onClick();
  assert.equal(x.idx.route,'reading');assert.equal(x.idx.readingSessionActive,true);assert.equal(f.calls.length,before,'actual native action does not run parent probe again');
  f.close();checks.push('actual-Gateway-Coordinator-Entry-Index-decorated-detail-and-native-reading-action');
 }

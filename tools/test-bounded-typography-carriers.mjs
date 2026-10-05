@@ -1,3 +1,4 @@
+import {approvedTypographyContract} from './lib/approved-manga-typography-carriers.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { sharedTypographyReplacement, typographyCarrierMethod } from './lib/reader-typography-shared-replacements.mjs';
@@ -6,7 +7,9 @@ const baseline = JSON.parse(read('tools/fixtures/design/conventional-typography-
 const registry = JSON.parse(read('tools/fixtures/design/typography-carrier-successors.json'));
 const entries = registry.entries.filter(entry => entry.kind === 'bounded' && /SourceSwitchWindow|LocalImportDialog/.test(entry.origin.path));
 assert.equal(entries.length, 6, 'bounded existing Source and import title/action carriers');
-for (const entry of entries) {
+const approvedSource='entry/src/main/ets/features/source/SourceSwitchWindow.ets';
+assert.equal(approvedTypographyContract(read(approvedSource),approvedSource).registered,true,'fullviewport typography successor is exact and approved');
+for (const entry of entries.filter(entry=>entry.origin.path!==approvedSource)) {
   const file = baseline.files.find(file => file.path === entry.origin.path);
   const expected = file.nodes.find(node => node.method === entry.origin.method && node.kind === entry.origin.kind && node.text === entry.origin.text);
   assert.ok(expected);
@@ -37,4 +40,4 @@ const file = baseline.files.find(file => file.path.endsWith('/LocalImportDialog.
 for (const node of file.nodes.filter(node => node.method === 'fileSelectionPanel' && [1, 2, 3].includes(node.index))) {
   assert.equal(typographyCarrierMethod(file.path, node, read(file.path)), 'fileSelectionBody');
 }
-console.log('bounded typography carriers PASS: six original contracts prove actual owners→shared SDK native Text, exact tuple/AUTO and active public roles; three exact same-file body successors; missing imports/finite bindings/comment edges/private literals/drift reject');
+console.log('bounded typography carriers PASS: three retained import contracts and exact approved fullviewport source successor prove actual owners→shared SDK native Text, exact tuple/AUTO and active public roles; three exact same-file body successors; missing imports/finite bindings/comment edges/private literals/drift reject');

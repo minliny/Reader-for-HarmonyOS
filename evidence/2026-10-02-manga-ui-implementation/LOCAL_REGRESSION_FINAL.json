@@ -1,0 +1,59 @@
+{
+  "tier": "Local production methods and installed SDK component probes; no full semantic build, HAP, native pixels, VM/device or user acceptance",
+  "sdkAssembly": "PASS: test-manga-ui-assembly-sdk.mjs (355 source parses, 117 components, 657 field bindings, 11 page transforms)",
+  "focusedPasses": [
+    "test-manga-ui-floating-bars",
+    "test-manga-ui-source-switch-discovery",
+    "test-manga-ui-source-switch-window",
+    "test-manga-book-presentation",
+    "test-manga-metadata-ui",
+    "test-manga-ui-state",
+    "test-manga-surface-sdk",
+    "test-manga-surface-render-key-sdk",
+    "test-manga-viewport-restore-sdk",
+    "test-manga-cross-chapter-counter-sdk",
+    "test-manga-motion-progress",
+    "test-manga-display-policy",
+    "test-manga-cancelled-banner",
+    "test-reader-settings",
+    "test-bookshelf-filter-responsibilities",
+    "test-bookshelf-physical-feedback",
+    "test-bookshelf-view-and-menu",
+    "test-detail-external-directory",
+    "test-book-directory-page",
+    "test-reader-directory-extent",
+    "test-app-shell-safe-geometry",
+    "test-bookshelf-view-handoff",
+    "test-bookshelf-paged-projection",
+    "test-bookshelf-reading-entry",
+    "test-bookshelf-detail-removal",
+    "test-reader-directory-hierarchy",
+    "test-reader-directory-navigation",
+    "test-reader-directory-projection",
+    "test-reader-directory-viewport",
+    "test-reader-directory-window-publication",
+    "test-reader-directory-shared-content",
+    "test-manga-admission",
+    "test-manga-session-core",
+    "test-manga-directory-route",
+    "test-manga-orientation",
+    "test-manga-strip",
+    "test-manga-source-switch-window",
+    "test-theme-page-back-bar",
+    "test-detail-acquisition-return-stability",
+    "test-source-switch-gateway",
+    "test-source-switch-transaction",
+    "test-manga-source-switch"
+  ],
+  "knownFixtureBoundaries": [
+    {
+      "test": "test-manga-session.mjs",
+      "status": "legacy controlled fixture does not supply a complete prepared entry for the current open path; core session/controller portions pass."
+    },
+    {
+      "test": "test-manga-navigation.mjs",
+      "status": "legacy regex expects inline Button onClick; current component routes system and button back through handleBack/onExitRequestHandler; SDK assembly passes."
+    }
+  ],
+  "buildBoundary": "Canonical unsigned HAP preflight stopped because fresh Core arm64 native identity input is missing; no HAP or device claim."
+}

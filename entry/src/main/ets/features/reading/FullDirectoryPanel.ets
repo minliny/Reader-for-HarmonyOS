@@ -712,7 +712,8 @@ export struct FullDirectoryPanel {
             .borderRadius(999);
         }
         Stack({ alignContent: Alignment.Center }) {
-          Text(repeatItem.item.title)
+          Text(repeatItem.item.title.trim().length > 0 && repeatItem.item.title.trim() !== '第话' && repeatItem.item.title.trim() !== '第 话' ?
+            repeatItem.item.title : `第${Math.max(1, repeatItem.item.index + 1)}话`)
             .width('100%')
             .padding({ left: 9 + readerDirectoryIndentVp(repeatItem.item), right: 9 })
             .fontFamily(TYPE_READER_DIRECTORY_TITLE_INTER.fontFamily)
@@ -862,6 +863,13 @@ export struct FullDirectoryPanel {
         .height(1)
         .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
       Row({ space: TOK_SPACE_CONTROL_INLINE }) {
+        Text('当前章节')
+          .flexShrink(0)
+          .fontFamily('ReaderNotoSansSC')
+          .fontWeight(FontWeight.Regular)
+          .fontSize(9)
+          .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
+          .maxLines(1);
         Text(this.currentTitle())
           .layoutWeight(1)
           .constraintSize({ minWidth: 0 })
@@ -1635,13 +1643,15 @@ export struct FullDirectoryPanel {
 
   private currentTitle(): string {
     const entry = this.currentEntry();
-    return entry === undefined ? '' : entry.title;
+    if (entry === undefined) return '尚未开始阅读';
+    return entry.title.trim().length > 0 && entry.title.trim() !== '第话' && entry.title.trim() !== '第 话' ?
+      entry.title : `第${Math.max(1, entry.index + 1)}话`;
   }
 
   private currentPosition(): string {
     const entry = this.currentEntry();
     if (entry === undefined) {
-      return '';
+      return '—';
     }
     let ordinal = 0;
     let count = 0;

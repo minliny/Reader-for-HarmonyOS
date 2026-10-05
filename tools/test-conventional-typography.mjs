@@ -1,3 +1,4 @@
+import { approvedTypographyContract, approvedTypographyFile } from './lib/approved-manga-typography-carriers.mjs';
 import { sharedTypographyReplacement, typographyCarrierMethod } from './lib/reader-typography-shared-replacements.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -20,10 +21,16 @@ const scenarios = [
 const evaluate = (expression, owner) => new Function('FontWeight', 'label', 'value', 'group', 'option', ...Object.keys(readerTypographyRoles),
   `return (${stripTypeScriptTypes(expression)});`).call(owner, fontWeights, '当前', 'firstLine', 'direction', '当前', ...Object.values(readerTypographyRoles));
 const verifyMigrationSource = process.argv.includes('--verify-migration-source');
-let sites = 0, argumentsChecked = 0;
+let sites = 0, argumentsChecked = 0, approvedSites = 0, supersededSites = 0;
 for (const file of baseline.files) {
   const successor = typographySuccessorFile(baseline, file.path);
   const liveSource = readFileSync(new URL(`../${file.path}`, import.meta.url), 'utf8');
+  const approved=approvedTypographyContract(liveSource,file.path);
+  if(approved.registered){
+    // Original source/golden remains historical evidence; the user-approved
+    // successor proves every actual carrier and complete tuple separately.
+    supersededSites+=file.nodes.length;approvedSites+=approved.count;continue;
+  }
   const source = verifyMigrationSource && successor ? restoreTypographyMigration(liveSource, successor) : liveSource;
   const expectedNodes = file.nodes.map(node => verifyMigrationSource ? node : typographySuccessorNode(node, successor));
   const importedRoles = typographyRoleImports(source, file.path);
@@ -61,5 +68,5 @@ for (const file of baseline.files) {
   if (verifyMigrationSource) assert.equal(createHash('sha256').update(restored).digest('hex'), file.sha256,
     `${file.path}: layout, callbacks, business guards and content match the immutable pre-migration source`);
 }
-assert.equal(sites, baseline.files.reduce((sum, file) => sum + file.nodes.length, 0));
-console.log(`PASS conventional Typography: ${baseline.files.length} files, ${sites} consumer contracts, ${argumentsChecked} arguments, ${verifyMigrationSource ? "exact source restoration/" : ""}AUTO/dynamic variants`);
+assert.equal(sites+supersededSites, baseline.files.reduce((sum, file) => sum + file.nodes.length, 0));
+console.log(`PASS conventional Typography: ${baseline.files.length} files, ${sites} retained consumer contracts + ${approvedSites} exact approved carriers replacing ${supersededSites} historical sites, ${argumentsChecked} arguments, ${verifyMigrationSource ? "exact source restoration/" : ""}AUTO/dynamic variants`);

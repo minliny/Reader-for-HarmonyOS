@@ -6,7 +6,7 @@ import { BOOKSHELF_WIDE_BREAKPOINT } from './BookshelfShell';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
   TYPE_SHELF_ACTION,
-  TYPE_SHELF_CONTINUE_AUTHOR,
+  TYPE_SHELF_CONTINUE_AUTHOR, TYPE_SHELF_CONTINUE_LABEL,
   TYPE_SHELF_CONTINUE_TITLE,
   TYPE_SHELF_LIST_AUTHOR,
   TYPE_SHELF_LIST_STATUS,
@@ -15,6 +15,7 @@ import {
 import { ReaderPressFeedback } from '../common/ReaderPressFeedback';
 import { ShelfBookListDetails } from './ShelfBookListDetails';
 import { ShelfBookPresentation } from './ShelfBookPresentation';
+import { MangaBookPresentation } from '../manga/MangaBookPresentation';
 import { BookshelfViewState } from './BookshelfViewState';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import { FrameCallback } from '@kit.ArkUI';
@@ -59,6 +60,7 @@ import {
 } from '../common/SurfaceHorizontalGeometry';
 import {
   readerInteractiveSafeLeft,
+  readerInteractiveSafeRight,
   readerVisualSafeLeft,
   readerVisualSafeRight,
 } from '../common/ReaderWindowMetrics';
@@ -75,7 +77,7 @@ const PHONE_BOOK_HEIGHT_RATIO = 145.443 / PHONE_BOOK_WIDTH;
 const TABLET_BOOK_WIDTH = 186.672;
 const TABLET_BOOK_HEIGHT_RATIO = 280 / TABLET_BOOK_WIDTH;
 const PHONE_LIST_COVER_WIDTH = 48;
-const PHONE_LIST_COVER_HEIGHT = 80;
+const PHONE_LIST_COVER_HEIGHT = 72;
 const TABLET_LIST_COVER_WIDTH = 64;
 const TABLET_LIST_COVER_HEIGHT = 104;
 const TABLET_RAIL_WIDTH = 82;
@@ -150,6 +152,7 @@ export struct BookshelfPage {
   private viewportRestoreGeneration: number = 0;
   private firstVisibleItem: number = 0;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerMangaPresentationRevision') private mangaRevision: number = 0;
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   // The bookshelf page is rebuilt when leaving and returning from reading.
@@ -159,13 +162,15 @@ export struct BookshelfPage {
   // Retire the removed group selector's transient filter without changing book groups.
   @StorageLink('readerBookshelfSelectedGroup') private storedSelectedGroup: string = '';
   @StorageLink('readerBookshelfReadingFilter') @Watch('onShelfFiltersChanged') private readingFilter: string = 'all';
+  @StorageLink('readerBookshelfContentFilter') @Watch('onShelfFiltersChanged') private contentFilter: string = 'all';
   @StorageLink('readerBookshelfSourceFilter') @Watch('onShelfFiltersChanged') private sourceFilter: string = 'all';
   @Prop @Watch('onBooksChanged') books: ShelfBook[];
   @Prop serverFiltered: boolean = false;
   @Prop @Watch('onShelfPresentationChanged') navigationGeneration: number = 0;
+  @Prop unfilteredOnlineBooks: boolean = false;
   onNextPageRequested: (navigation?: number) => void = (): void => {};
   onPreviousPageRequested: (navigation?: number) => void = (): void => {};
-  onFilterRequested: (readingState: string, sourceKind: string, navigation?: number) => void = (_readingState: string, _sourceKind: string): void => {};
+  onFilterRequested: (readingState: string, sourceKind: string, contentKind?: string, navigation?: number) => void = (_readingState: string, _sourceKind: string): void => {};
   @Prop continueReading: ShelfBook | undefined;
   @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
   onRssRequested: (navigation?: number) => void = (): void => {};
@@ -382,83 +387,98 @@ export struct BookshelfPage {
 
   @Builder
   private continueReadingCard(bookProvider: () => ShelfBook | undefined, isTablet: boolean) {
-    Row({ space: TOK_SPACE_CARD_PADDING }) {
-      if (this.hasCover(bookProvider())) {
-        Image(bookProvider()?.coverUrl ?? '')
-          .width(62)
-          .height(93)
-          .objectFit(ImageFit.Cover)
-          .borderRadius(6);
-      } else {
-        NoCoverCover({
-          coverWidth: 62,
-          coverHeight: 93,
-        });
-      }
+    Column({ space: 6 }) {
+      Text('继续阅读')
+        .width('100%')
+        .fontFamily(TYPE_SHELF_CONTINUE_LABEL.fontFamily).fontWeight(TYPE_SHELF_CONTINUE_LABEL.fontWeight)
+          .fontSize(TYPE_SHELF_CONTINUE_LABEL.fontSizeFp).lineHeight(TYPE_SHELF_CONTINUE_LABEL.lineHeightFp as number).letterSpacing(TYPE_SHELF_CONTINUE_LABEL.letterSpacingFp as number)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-      Column({ space: 0 }) {
-        Text('继续阅读')
+      Row({ space: 12 }) {
+        if (this.hasCover(bookProvider())) {
+          Image(bookProvider()?.coverUrl ?? '')
+            .width(48)
+            .height(72)
+            .objectFit(ImageFit.Cover)
+            .borderRadius(8);
+        } else {
+          NoCoverCover({
+            coverWidth: 48,
+            coverHeight: 72,
+          });
+        }
+
+        Column({ space: 2 }) {
+          Text(bookProvider()?.title ?? '')
           .width('100%')
-          .fontFamily(TYPE_SECTION_HEADING.fontFamily)
-          .fontWeight(TYPE_SECTION_HEADING.fontWeight)
-          .fontSize(TYPE_SECTION_HEADING.fontSizeFp)
-          .lineHeight(TYPE_SECTION_HEADING.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
-
-        Blank().height(6);
-
-        Text(bookProvider()?.title ?? '')
-          .width('100%')
-          .fontFamily(TYPE_SHELF_CONTINUE_TITLE.fontFamily)
-          .fontWeight(TYPE_SHELF_CONTINUE_TITLE.fontWeight)
-          .fontSize(TYPE_SHELF_CONTINUE_TITLE.fontSizeFp)
-          .lineHeight(TYPE_SHELF_CONTINUE_TITLE.lineHeightFp)
-          .letterSpacing(TYPE_SHELF_CONTINUE_TITLE.letterSpacingFp)
+          .fontFamily(TYPE_SHELF_CONTINUE_TITLE.fontFamily).fontWeight(TYPE_SHELF_CONTINUE_TITLE.fontWeight)
+          .fontSize(TYPE_SHELF_CONTINUE_TITLE.fontSizeFp).lineHeight(TYPE_SHELF_CONTINUE_TITLE.lineHeightFp as number).letterSpacing(TYPE_SHELF_CONTINUE_TITLE.letterSpacingFp as number)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-        Blank().height(5);
+          Text(bookProvider()?.author ?? '')
+            .width('100%')
+            .fontFamily(TYPE_SHELF_CONTINUE_AUTHOR.fontFamily).fontWeight(TYPE_SHELF_CONTINUE_AUTHOR.fontWeight)
+          .fontSize(TYPE_SHELF_CONTINUE_AUTHOR.fontSizeFp).lineHeight(TYPE_SHELF_CONTINUE_AUTHOR.lineHeightFp as number).letterSpacing(TYPE_SHELF_CONTINUE_AUTHOR.letterSpacingFp as number)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-        Text(bookProvider()?.author ?? '')
-          .width('100%')
-          .fontFamily(TYPE_SHELF_CONTINUE_AUTHOR.fontFamily)
-          .fontWeight(TYPE_SHELF_CONTINUE_AUTHOR.fontWeight)
-          .fontSize(TYPE_SHELF_CONTINUE_AUTHOR.fontSizeFp)
-          .lineHeight(TYPE_SHELF_CONTINUE_AUTHOR.lineHeightFp)
-          .letterSpacing(TYPE_SHELF_CONTINUE_AUTHOR.letterSpacingFp)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
-      }
-      .layoutWeight(1)
-      .height(67.4)
-      .alignItems(HorizontalAlign.Start);
+          Text(this.continueReadingPosition(bookProvider()))
+            .width('100%')
+            .constraintSize({ minHeight: 15 })
+            .fontFamily(TYPE_SHELF_CONTINUE_AUTHOR.fontFamily).fontWeight(TYPE_SHELF_CONTINUE_AUTHOR.fontWeight)
+          .fontSize(TYPE_SHELF_CONTINUE_AUTHOR.fontSizeFp).lineHeight(TYPE_SHELF_CONTINUE_AUTHOR.lineHeightFp as number).letterSpacing(TYPE_SHELF_CONTINUE_AUTHOR.letterSpacingFp as number)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
+        }
+        .layoutWeight(1)
+        .height(72)
+        .alignItems(HorizontalAlign.Start)
+        .justifyContent(FlexAlign.Center);
 
-      Stack({ alignContent: Alignment.Center }) {
-        Text('阅读')
-          .fontFamily(TYPE_SHELF_ACTION.fontFamily)
-          .fontWeight(TYPE_SHELF_ACTION.fontWeight)
-          .fontSize(TYPE_SHELF_ACTION.fontSizeFp)
-          .lineHeight(TYPE_SHELF_ACTION.lineHeightFp)
-          .letterSpacing(TYPE_SHELF_ACTION.letterSpacingFp)
-          .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
+        Stack({ alignContent: Alignment.Center }) {
+          Text('阅读')
+            .fontFamily(TYPE_SHELF_ACTION.fontFamily).fontWeight(TYPE_SHELF_ACTION.fontWeight)
+          .fontSize(TYPE_SHELF_ACTION.fontSizeFp).lineHeight(TYPE_SHELF_ACTION.lineHeightFp as number).letterSpacing(TYPE_SHELF_ACTION.letterSpacingFp as number)
+            .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
+        }
+        .width(54)
+        .height(40)
+        .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
+        .borderRadius(12);
       }
-      .width(82)
-      .height(40)
-      .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
-      .borderRadius(20);
+      .width(this.shelfContentWidth(isTablet))
+      .height(100)
+      .padding({ left: 12, right: 12 })
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
+      .borderRadius(18)
+      .onClick(this.bookSelectionHandler(bookProvider));
     }
-    .width(this.shelfContentWidth(isTablet))
-    .height(100)
-    .padding({ left: 16.554, right: 16.554 })
-    .alignItems(VerticalAlign.Center)
-    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-    .borderRadius(8)
-    .onClick(this.bookSelectionHandler(bookProvider));
+    .width(this.shelfContentWidth(isTablet));
+  }
+
+  private mangaReadingPosition(book: ShelfBook): string {
+    if (this.mangaRevision < 0) return '';
+    // Keep the shared presentation contract intact while using the compact
+    // page copy from the manga demo on the bookshelf card.
+    const position = ShelfBookPresentation.readingPosition(book);
+    return position.replace(' · 第 ', ' · ').replace(/^第 /, '');
+  }
+
+  private continueReadingPosition(book: ShelfBook | undefined): string {
+    if (book === undefined) return '';
+    if (book.contentKind === 'manga') {
+      if (this.mangaRevision < 0 || MangaBookPresentation.get(book.sourceId, book.bookId) === undefined) return '';
+      return this.mangaReadingPosition(book);
+    }
+    return ShelfBookPresentation.readingPosition(book);
   }
 
   @Builder
@@ -536,8 +556,8 @@ export struct BookshelfPage {
     }
     .width(this.shelfContentWidth(isTablet))
     .height('100%')
-    .contentStartOffset(READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS)
-    .contentEndOffset(this.shelfBottomContentInset(isTablet))
+    .contentStartOffset(74)
+    .contentEndOffset(this.isWideViewport() ? 24 : readerFloatingTabContentInset(ReaderWindowCoordinator.metrics()))
     .scrollBar(BarState.Off)
     .maintainVisibleContentPosition(true)
     .onScrollIndex(this.shelfScrollHandler())
@@ -619,16 +639,15 @@ export struct BookshelfPage {
         Text('筛选').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).layoutWeight(1);
         Text('清除').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
           .height(28).enabled(this.hasActiveFilters()).opacity(this.hasActiveFilters() ? 1 : 0.5)
-          .onClick((): void => this.clearFilters()).accessibilityText('清除阅读状态和类型筛选');
+          .onClick((): void => this.clearFilters()).accessibilityText('清除内容类型和来源筛选');
       }.width('100%');
-      Text('阅读状态').width('100%').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+      Text('内容类型').width('100%').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
-        this.filterChip('reading', 'all', '全部');
-        this.filterChip('reading', 'unread', '未读');
-        this.filterChip('reading', 'reading', '在读');
-        this.filterChip('reading', 'finished', '已读');
+        this.filterChip('content', 'all', '全部');
+        this.filterChip('content', 'text', '小说');
+        this.filterChip('content', 'manga', '漫画');
       }.width('100%');
-      Text('书籍类型').width('100%').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+      Text('来源').width('100%').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
         this.filterChip('source', 'all', '全部');
         this.filterChip('source', 'local', '本地');
@@ -641,38 +660,45 @@ export struct BookshelfPage {
   private filterChip(dimension: string, value: string, label: string) {
     Text(label)
       .fontFamily(TYPE_APP_FILTER_OPTION.fontFamily).fontWeight(TYPE_APP_FILTER_OPTION.fontWeight).fontSize(TYPE_APP_FILTER_OPTION.fontSizeFp).lineHeight(TYPE_APP_FILTER_OPTION.lineHeightFp as number)
-      .fontColor(this.isFilterSelected(dimension, value) ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
+      .fontColor(this.isFilterSelected(dimension, value) ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
       .padding({ left: 12, right: 12, top: 5, bottom: 5 })
+      // Keep the semantic soft token for existing filter contracts while the
+      // visible selected layer uses the demo's dark-green capsule.
       .backgroundColor(this.isFilterSelected(dimension, value) ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: this.isFilterSelected(dimension, value) ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
+      .linearGradient({ angle: 0, colors: this.isFilterSelected(dimension, value) ?
+        [[readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme), 0], [readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme), 1]] :
+        [[Color.Transparent, 0], [Color.Transparent, 1]] })
+      .border({ width: TOK_BORDER_W, color: this.isFilterSelected(dimension, value) ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(999).margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
       .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).constraintSize({ maxWidth: 160 })
       .onClick((): void => this.selectFilter(dimension, value))
-      .accessibilityText(`${dimension === 'reading' ? '阅读状态' : '书籍类型'}:${label}${this.isFilterSelected(dimension, value) ? '，已选' : ''}`);
+      .accessibilityText(`${dimension === 'content' ? '内容类型' : dimension === 'reading' ? '阅读状态' : '来源'}:${label}${this.isFilterSelected(dimension, value) ? '，已选' : ''}`);
   }
 
   private isFilterSelected(dimension: string, value: string): boolean {
-    return (dimension === 'reading' ? this.readingFilter : this.sourceFilter) === value;
+    return (dimension === 'content' ? this.contentFilter : dimension === 'reading' ? this.readingFilter : this.sourceFilter) === value;
   }
 
   private hasActiveFilters(): boolean {
-    return this.readingFilter !== 'all' || this.sourceFilter !== 'all';
+    return this.contentFilter !== 'all' || this.sourceFilter !== 'all';
   }
 
   private selectFilter(dimension: string, value: string): void {
-    if (dimension === 'reading') this.readingFilter = value;
+    if (dimension === 'content') { this.contentFilter = value; this.readingFilter = 'all'; }
+    else if (dimension === 'reading') this.readingFilter = value;
     else this.sourceFilter = value;
     this.queueShelfProjection();
   }
 
   private clearFilters(): void {
     this.readingFilter = 'all';
+    this.contentFilter = 'all';
     this.sourceFilter = 'all';
     this.queueShelfProjection();
   }
 
   private onShelfFiltersChanged(): void {
-    if (this.mounted && this.serverFiltered) this.onFilterRequested(this.readingFilter, this.sourceFilter, this.navigationGeneration);
+    if (this.mounted && this.serverFiltered) this.onFilterRequested('all', this.sourceFilter, this.contentFilter, this.navigationGeneration);
     this.queueShelfProjection();
   }
 
@@ -1230,7 +1256,7 @@ export struct BookshelfPage {
   }
 
   private rebuildShelfProjection(): void {
-    const visible = this.serverFiltered ? this.books : ShelfBookPresentation.visible(this.books, '', this.readingFilter, this.sourceFilter);
+    const visible = this.serverFiltered ? this.books : ShelfBookPresentation.visible(this.books, '', 'all', this.sourceFilter).filter((book: ShelfBook): boolean => this.contentFilter === 'all' || (book.contentKind === 'manga' ? 'manga' : 'text') === this.contentFilter);
     this.visibleBookCount = visible.length;
     const rows: ShelfBook[][] = [];
     for (let index = 0; index < visible.length; index += 3) {
@@ -1434,7 +1460,7 @@ export struct BookshelfPage {
   }
 
   private projectionCoverScale(isTablet: boolean, index: number): number {
-    const list = isTablet ? this.listCoverWidth(isTablet) / this.shelfBookCardWidth(isTablet) : .495;
+    const list = this.listCoverWidth(isTablet) / this.shelfBookCardWidth(isTablet);
     return 1 + (list - 1) * this.projectionListProgress(index, true);
   }
 

@@ -137,4 +137,13 @@ function fixture(count=1370){
  } finally {Date.now=realNow;}
  checks.push('expired-settled-deadlines-only-future-clock-and-inflight-retained');
 }
+{
+ const f=fixture(12),manga={...f.session,contentKind:'manga'};
+ for(const mode of ['reader','shelf','opportunistic'])await f.host.prefetch(manga,8,{isCurrent:()=>true,displayedSession:()=>manga,
+ directory:()=>f.page.detailToc,projected:()=>assert.fail('manga text projection'),refreshed:()=>assert.fail('manga text refresh'),diagnostic:()=>{}},mode);
+ assert.equal(f.host.nearEnd(manga,11),false);
+ await f.host.refreshNearEnd(manga,{isCurrent:()=>true,displayedSession:()=>manga,directory:()=>[],projected(){},refreshed(){},diagnostic(){}});
+ assert.equal(f.calls.length,0,'no text body/progress/prefetch or catalog IO may run for a manga session');
+ checks.push('manga-excluded-from-optional-text-prefetch-and-catalog-refresh');
+}
 console.log(JSON.stringify({status:'PASS',checks,scope:'actual ReadingPrefetchHost + complete actual Offline/Remote Gateways; controlled native/core IO; Index integration/native targets remain separate'}));

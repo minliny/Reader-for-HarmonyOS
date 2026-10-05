@@ -25,6 +25,8 @@ const position=await import('../../entry/src/main/ets/features/reading/RemoteRea
 const content=await import('../../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
 const bookmarks=await import('../../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts');
 const {ReadingOfflineGateway}=await import('../../entry/src/main/ets/features/reading/ReadingOfflineGateway.ts');
+const {MangaAdmissionGateway}=await import('../../entry/src/main/ets/features/manga/MangaAdmissionGateway.ts');
+const {MangaBookPresentation}=await import('../../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
 export const {BookAcquisitionCoordinator}=await import('../../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
 export const {ReadingEntryPreparation}=await import('../../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
 export {readingEvidence,position,content};
@@ -43,7 +45,7 @@ function emit(path,name,deps,source=read(path)){
  const exports={};new Function('exports',...Object.keys(deps),result.outputText)(exports,...Object.values(deps));return exports[name];
 }
 const common={ReaderRuntimeOwner:Runtime,...sdk,...errors,...receipt,...evidence,...policy,...category,...importFailure,...local,...remote,
- ...readingEvidence,...position,...content,...bookmarks,ReadingOfflineGateway,hilog:{warn(){},error(){},info(){}}};
+ ...readingEvidence,...position,...content,...bookmarks,ReadingOfflineGateway,MangaAdmissionGateway,MangaBookPresentation,hilog:{warn(){},error(){},info(){}}};
 const ReaderCoreGateway=emit('app/ReaderCoreGateway.ts','ReaderCoreGateway',common);
 const LocalBookImportGateway=emit('features/bookshelf/LocalBookImportGateway.ts','LocalBookImportGateway',{...common,ReaderCoreGateway});
 const BookshelfFlowGateway=emit('features/bookshelf/BookshelfFlowGateway.ts','BookshelfFlowGateway',{...common,ReaderCoreGateway,LocalBookImportGateway});

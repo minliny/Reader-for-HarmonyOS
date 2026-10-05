@@ -33,7 +33,9 @@ export struct ReaderDirectoryChapterRow {
         if (this.entry.index === this.currentChapterIndex) {
           Row().width(3).height(this.rowHeight).borderRadius(999).backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme));
         }
-        Text(this.entry.title).layoutWeight(1).padding({ left: 9 + readerDirectoryIndentVp(this.entry), right: 9 })
+        Text(this.entry.title.trim().length > 0 && this.entry.title.trim() !== '第话' && this.entry.title.trim() !== '第 话' ?
+          this.entry.title : `第${Math.max(1, this.entry.index + 1)}话`).layoutWeight(1)
+          .padding({ left: 9 + readerDirectoryIndentVp(this.entry), right: 9 })
           .fontFamily(TYPE_READER_DIRECTORY_TITLE.fontFamily).fontWeight(TYPE_READER_DIRECTORY_TITLE.fontWeight).fontSize(TYPE_READER_DIRECTORY_TITLE.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       }.layoutWeight(1).height(this.rowHeight).accessibilityText(readerDirectoryAccessibilityText(this.entry))

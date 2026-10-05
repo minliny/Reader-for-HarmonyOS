@@ -10,6 +10,7 @@ import {ProductionHost,read,setRuntime,readingEvidence as evidence} from './read
 import * as geometry from '../../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
 import * as metricsApi from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import {ReaderNativeAlertOwner} from './reader-native-alert-sdk-probe.mjs';
+import {localBookDetailSdk} from './local-book-detail-sdk-probe.mjs';
 const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript');
 const parsed=(source)=>ts.createSourceFile('/tmp/EntryConsumer.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
@@ -26,13 +27,11 @@ export function makeIndex(f,{route='search',mount=1,indexSource=read('pages/Inde
  const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
  const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
  const src=read('features/bookshelf/LocalBookDetail.ets');
- const leafNames=[...properties(src),'onContinue','onSelectChapter','onOpenDirectory','onSwitchSource','onRemove','onCancelAdd','onBack','actionArea','actionButtonWidth','contentWidth','contentFrame','liveViewportWidth','usesWideContent','numericAreaLength',
-  'readingActionLabel','shelfActionLabel','chapterEmptyMessage'];
  const leafDeps={...p.deps,...geometry,...metricsApi,ReaderWindowCoordinator:{metrics:()=>metrics},
-  DETAIL_ACTION_AREA_HEIGHT:77,TOK_CONTENT_MAX_W_TABLET:640,BookDirectoryPage:class {}};
+  BookDirectoryPage:class {}};
  p.hooks.childSources.LocalBookDetail=src;
  p.hooks.childSources.BookDirectoryPage=read('features/bookshelf/BookDirectoryPage.ets');
- const leaf=createReaderBuilderProbe(src,leafNames,leafDeps,p.hooks).Component;
+ const leaf=localBookDetailSdk(leafDeps,p.hooks).Component;
  const idx=p.consumer(indexSource,[...properties(indexSource).filter(n=>[
   'detailBook','detailToc','detailInBookshelf','detailLoadingMessage','remoteReadingSession','remoteReadingSeed','remoteContentVerdict'].includes(n)),...methods,
   ...(indexSource.includes('private retireBookshelfCatalogPresentation(') ? ['retireBookshelfCatalogPresentation'] : [])],

@@ -11,7 +11,7 @@ import {
   TYPE_SHELF_MANAGEMENT_BUTTON, TYPE_SHELF_MANAGEMENT_SMALL_ACTION, TYPE_SHELF_MANAGEMENT_ROW_ACTION, TYPE_RSS_BOTTOM_ACTION, TYPE_SOURCE_TOOLS_CODE_INPUT,
 } from './ReaderTypography';
 
-export type ReaderIconButtonSpecId = 'toolbar-standard' | 'toolbar-wide' | 'navigation-back' | 'toolbar-compact';
+export type ReaderIconButtonSpecId = 'toolbar-standard' | 'toolbar-wide' | 'navigation-back' | 'toolbar-compact' | 'floating-more' | 'manga-reader-action';
 export interface ReaderIconButtonSpec {
   boxSize: number;
   iconSize: number;
@@ -24,11 +24,16 @@ const TOOLBAR_STANDARD_ICON: ReaderIconButtonSpec = { boxSize: 44, iconSize: 24,
 const TOOLBAR_WIDE_ICON: ReaderIconButtonSpec = { boxSize: 44, iconSize: 44, radius: 22, pressedRadius: 12 };
 const NAVIGATION_BACK_ICON: ReaderIconButtonSpec = { boxSize: 32, iconSize: 20, radius: 16, pressedRadius: 12 };
 const TOOLBAR_COMPACT_ICON: ReaderIconButtonSpec = { boxSize: 44, iconSize: 20, radius: 22, pressedRadius: 12 };
+// Approved manga/floating toolbar geometry, with shared eligibility/feedback.
+const FLOATING_MORE_ICON: ReaderIconButtonSpec = { boxSize: 44, iconSize: 24, radius: 0, pressedRadius: 12 };
+const MANGA_READER_ACTION_ICON: ReaderIconButtonSpec = { boxSize: 44, iconSize: 22, radius: 22, pressedRadius: 12 };
 export function resolveReaderIconButtonSpec(id: ReaderIconButtonSpecId): ReaderIconButtonSpec {
   if (id === 'toolbar-standard') return TOOLBAR_STANDARD_ICON;
   if (id === 'toolbar-wide') return TOOLBAR_WIDE_ICON;
   if (id === 'navigation-back') return NAVIGATION_BACK_ICON;
   if (id === 'toolbar-compact') return TOOLBAR_COMPACT_ICON;
+  if (id === 'floating-more') return FLOATING_MORE_ICON;
+  if (id === 'manga-reader-action') return MANGA_READER_ACTION_ICON;
   throw new Error('Unknown ReaderIconButton specification');
 }
 

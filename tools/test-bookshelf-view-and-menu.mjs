@@ -32,40 +32,42 @@ for(const source of [shelf,batch]) {
  assert.match(source,/ShelfBookListDetails\(\{ book \}\)/);
  assert.match(source,/ShelfBookPresentation.visible\(/,'ordinary/batch share exact order and filter');
 }
-for(const role of ['TYPE_SHELF_LIST_TITLE', 'TYPE_SHELF_LIST_AUTHOR', 'TYPE_SHELF_LIST_CHAPTER', 'TYPE_SHELF_LIST_STATUS']) {
- assert.match(list,new RegExp(`${role}\\.fontSizeFp[\\s\\S]*?${role}\\.lineHeightFp`));
-}
-assert.match(list,/textAlign\(TextAlign.Start\)/);
-assert.match(list,/this.statusPill\(true\);\s*this.statusPill\(false\)/,'progress left and source right');
-assert.match(list,/layoutWeight\(1\).constraintSize\(\{ minWidth: 0 \}\)/,'both slots divide available width independent of content');
-assert.match(list,/maxLines\(1\).textOverflow\(\{ overflow: TextOverflow.Ellipsis \}\)/);
-// Compile the exact production body with the SDK, then inspect its native
-// layout attributes. Empty Text does not acquire a glyph line from lineHeight.
-// Rename only the entry method so the existing Builder probe can invoke it.
+// Inspect the real SDK-emitted details: two metadata tags, independent manga
+// position, compact same-colour facts and the thin whole-book progress track.
 const probeSource=list.replace('  build() {', '  build() { Column() {} }\n  @Builder\n  shelfDetails() {');
 const Blank=new Proxy({name:'Blank'},{get:(target,key)=>key==='name'?target.name:()=>{}});
-const {owner:details}=createReaderBuilderProbe(probeSource,['shelfDetails','statusPill'],{
- ShelfBookPresentation,Blank,...typographyRoles,
-});
-details.appThemeScheme='day';
+const {owner:details}=createReaderBuilderProbe(probeSource,['shelfDetails','metadataTag','positionLabel'],{ShelfBookPresentation,Blank});
+details.appThemeScheme='day'; details.mangaRevision=0;
 details.book={sourceId:'local',bookId:'empty-author',title:'书名',author:'',lastChapter:'最新章节',readProgress:0};
 details.shelfDetails();
 const textNodes=()=>[...details.nodes.values()].filter(n=>n.type==='Text');
 const verifyAuthor=expected=>{
  const texts=textNodes();
- assert.equal(texts[1].create,expected,'the actual author field stays empty without invented metadata');
- assert.equal(texts[1].constraintSize?.minHeight,15,'empty authors must reserve the original 15vp second row');
- assert.equal(texts[1].fontSize,12);assert.equal(texts[1].lineHeight,15);
- for(const text of texts.slice(1)) assert.equal(text.fontFamily,'ReaderNotoSansSCUIRegular',
-  'author, chapter and both status labels use the fixed 400 face');
- assert.equal(texts[2].create,'最新章节');
- assert.equal(texts[2].lineHeight,13.75);
+ const author=texts.find(n=>n.create===expected && n.fontSize===11 && n.lineHeight===14);
+ assert.ok(author,'the actual author field stays empty without invented metadata');
+ assert.equal(author.constraintSize?.minHeight,14,'empty authors reserve the approved 14vp second row');
+ assert.equal(author.fontFamily,'ReaderNotoSansSCUIRegular');
+ const latest=texts.find(n=>n.create==='最新：最新章节');
+ assert.equal(latest.fontSize,11);assert.equal(latest.lineHeight,14);
+ const position=texts.find(n=>n.create==='尚未阅读');
+ assert.equal(position.fontColor,latest.fontColor,'secondary facts share one muted colour');
+ const title=texts.find(n=>n.create==='书名');
+ assert.equal(title.fontSize,15);assert.equal(title.lineHeight,18);
+ const tags=texts.filter(n=>n.height===16);
+ assert.deepEqual(tags.map(n=>n.create),['小说','本地'],'only content type and origin are metadata tags');
+ assert.ok(tags.every(n=>n.borderRadius===4));
+ const track=[...details.nodes.values()].find(n=>n.type==='Progress');
+ assert.equal(track.height,3);assert.equal(track.style.strokeWidth,3);
 };
 verifyAuthor('');
 details.book={...details.book,author:'Reader test'};details.replay();verifyAuthor('Reader test');
 details.book={...details.book,author:''};details.replay();verifyAuthor('');
-assert.match(shelf,/PHONE_LIST_COVER_WIDTH = 48/);assert.match(shelf,/PHONE_LIST_COVER_HEIGHT = 80/);
+assert.match(shelf,/PHONE_LIST_COVER_WIDTH = 48/);assert.match(shelf,/PHONE_LIST_COVER_HEIGHT = 72/);
 assert.match(shelf,/TABLET_LIST_COVER_WIDTH = 64/);assert.match(shelf,/TABLET_LIST_COVER_HEIGHT = 104/);
+assert.match(shelf,/\.contentStartOffset\(74\)/,
+  'bookshelf header clearance belongs to native List content, preserving the viewport for the floating tab bar');
+assert.match(shelf,/\.contentEndOffset\(this\.isWideViewport\(\) \? 24 : readerFloatingTabContentInset\(ReaderWindowCoordinator\.metrics\(\)\)\)/,
+  'bookshelf bottom clearance includes floating tab geometry without shrinking the List frame');
 assert.match(shelf,/\.bindSheet\(this.actionBook !== undefined[\s\S]*?width: this.bookActionWidth\(\)/);
 assert.match(shelf,/return this.shelfContentWidth\(this.isWideViewport\(\)\)/,'single-book sheet uses the same frame as the cover outside edges');
 assert.match(shelf,/bookActionSheetSpec\(\)\.hostBackgroundRole/);

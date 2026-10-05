@@ -1,3 +1,4 @@
+import {localBookDetailSdk} from './lib/local-book-detail-sdk-probe.mjs';
 import { ProductionHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { createRequire, registerHooks } from 'node:module';
@@ -249,9 +250,9 @@ function detailSdk(f) {
     remoteContentVerdictLabel: () => '', remoteContentVerdict: f.page.remoteContentVerdict });
   parent.detailContent();
   const props = [...parent.children.values()][0].params;
-  const child = createReaderBuilderProbe(read('features/bookshelf/LocalBookDetail.ets'), ['heroCard', 'hasCover'], { NoCoverCover: CoverChild, TOK_BORDER_W: 1, TOK_SPACE_CARD_PADDING: 15, TOK_SPACE_XS: 8, bookAuthorLabel: value => value || '未知作者' }).owner;
+  const child = localBookDetailSdk({ NoCoverCover: CoverChild }).owner;
   Object.assign(child, props, { appThemeScheme: 'day', contentWidth: () => 352 });
-  child.heroCard();
+  child.hero();
   return { props, texts: [...child.nodes.values()].filter(node => node.type === 'Text').map(node => node.create) };
 }
 for (const invalid of [null, [], { origin: 'other', bookUrl: 'book' }, { origin: 'source', bookUrl: 'other' },
@@ -276,7 +277,7 @@ for (const invalid of [null, [], { origin: 'other', bookUrl: 'book' }, { origin:
     await f.page.refreshDetailAcquisitionProjection();
     const actual = detailSdk(f);
     assert.equal(actual.props.book.title, '新标题'); assert.ok(actual.texts.includes('新标题'));
-    assert.ok(actual.texts.includes('作者：新作者')); assert.equal(actual.props.readingEnabled, true);
+    assert.ok(actual.texts.includes('新作者')); assert.equal(actual.props.readingEnabled, true);
   } finally { f.coordinator.close(); }
 }
 for (const retire of ['runtime-unset', 'runtime-replacement', 'navigation', 'entity', 'session']) {

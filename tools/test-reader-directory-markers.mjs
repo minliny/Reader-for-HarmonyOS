@@ -167,7 +167,8 @@ assert.match(index,/ReaderDirectoryHost\.forRuntime\(owner,[\s\S]*new BookmarkOp
 assert.match(index,/ReadingOfflineHost\.forRuntime\(owner,[\s\S]*new CacheClearOperationIntentStore/);
 assert.match(index,/host\.downloadChapter\(chapterIndex, this\.offlineBinding\(owner, session\)\)/);
 assert.match(index,/host\.downloadBook\(this\.offlineBinding\(owner, session\)\)/);assert.match(index,/host\.clearBook\(this\.offlineBinding\(owner, session\)\)/);
-assert.match(index,/title: '清除本书离线内容'[\s\S]*?value: '取消'[\s\S]*?value: '清除'/);
+assert.match(index,/title: session\.contentKind === 'manga' \? '清除本书普通阅读缓存' : '清除本书离线内容'[\s\S]*?value: '取消'[\s\S]*?value: '清除'/, 'manga ordinary cache and novel offline content retain distinct truthful confirmation copy');
+assert.match(index,/message: session\.contentKind === 'manga' \? '清除可清理的普通漫画缓存；永久保留的下载及正在使用的内容会保留，书架、阅读进度与书签不会受影响。' : '将删除本书已下载的正文和图片，书架、阅读进度与书签不会受影响。'/, 'cache clearing preserves permanent manga downloads and active content; novel deletion preserves reader metadata');
 assert.match(index,/chapterStartBookmarkCreationEnabled: true/);
 assert.match(index,/host\.createChapterStart\(request\.chapterIndex, this\.directoryBinding\(owner, book\)\)/);
 assert.match(index,/host\.deleteBookmarks\(bookmarkTimes, this\.directoryBinding\(owner, book\)\)/);

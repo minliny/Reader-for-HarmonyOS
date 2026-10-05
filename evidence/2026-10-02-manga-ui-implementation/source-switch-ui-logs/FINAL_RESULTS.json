@@ -1,0 +1,37 @@
+[
+  {
+    "test": "tools/test-manga-ui-source-switch-discovery.mjs",
+    "exit": 0,
+    "timeout": false,
+    "elapsedSeconds": 0.122,
+    "log": "evidence/2026-10-02-manga-ui-implementation/source-switch-ui-logs/test-manga-ui-source-switch-discovery-final2.log"
+  },
+  {
+    "test": "tools/test-manga-ui-source-switch-window.mjs",
+    "exit": 0,
+    "timeout": false,
+    "elapsedSeconds": 0.323,
+    "log": "evidence/2026-10-02-manga-ui-implementation/source-switch-ui-logs/test-manga-ui-source-switch-window-final2.log"
+  },
+  {
+    "test": "tools/test-source-switch-gateway.mjs",
+    "exit": 1,
+    "timeout": false,
+    "elapsedSeconds": 0.414,
+    "log": "evidence/2026-10-02-manga-ui-implementation/source-switch-ui-logs/test-source-switch-gateway-final2.log"
+  },
+  {
+    "test": "tools/test-source-switch-transaction.mjs",
+    "exit": 0,
+    "timeout": false,
+    "elapsedSeconds": 0.061,
+    "log": "evidence/2026-10-02-manga-ui-implementation/source-switch-ui-logs/test-source-switch-transaction-final2.log"
+  },
+  {
+    "test": "tools/test-manga-source-switch.mjs",
+    "exit": 0,
+    "timeout": false,
+    "elapsedSeconds": 0.427,
+    "log": "evidence/2026-10-02-manga-ui-implementation/source-switch-ui-logs/test-manga-source-switch-final2.log"
+  }
+]

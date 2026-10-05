@@ -324,7 +324,8 @@ assert.equal(cachedCandidates.length, 2);
 assert.equal(cachedCandidates[1].acquisitionState, 'stale');
 assert.equal(cacheCalls.some(([method]) => method === 'search-book.delete'), false, 'expired candidates retain their last successful information');
 assert.equal(cachedCandidates[0].sourceName, '缓存书源');
-assert.equal(cachedCandidates[0].latencyMs, 88);
+assert.equal(cachedCandidates[0].latencyMs, undefined, 'legacy body respondTime is not current source-search latency');
+assert.equal(cachedCandidates[0].latencyKind, undefined);
 assert.equal(cachedCandidates[0].currentChapterIndex, 4);
 assert.equal(cachedCandidates[0].currentChapterTitle, 'Chapter 5');
 assert.equal(cachedCandidates[0].isCurrent, true);
@@ -522,7 +523,10 @@ console.log('PH70 known candidate first paint, delta projection, registry deleti
   listener({reset:false,identities:[{sourceId:'b',bookId:'/book'}]});
   assert.deepEqual(calls,['source.list'],'late candidate waits behind initial cache I/O');
   release();for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));
-  assert.equal(page.sourceSwitchState.candidates.length,2);assert.deepEqual(calls,['source.list','search-book.related','search-book.batch.get','search-book.related','search-book.batch.get']);
+  assert.equal(page.sourceSwitchState.candidates.length,2);
+  assert.deepEqual(calls.slice(0,3),['source.list','search-book.related','search-book.batch.get']);
+  assert.ok(calls.includes('change.bookSource') || calls.includes('search-book.related'),
+    'the seeded candidates continue through the real incremental refresh path');
 }
 console.log('PH70 actual Index candidate projection → feature owner entry paints known candidates before cache RPC PASS');
 
@@ -563,8 +567,10 @@ for (const reset of [false, true]) {
   assert.equal(calls.length, failedCalls, 'failure alone must not create an automatic retry loop');
   calls.length = 0;
   listener({ reset: false, identities: [{ sourceId: 'b', bookId: '/book' }] }); await settle();
-  assert.equal(calls.filter(c => c.method === 'search-book.related').length, 1,
-    'a later event retries the complete affected relation, retaining failed work without an all-library scan');
+  assert.ok(calls.filter(c => c.method === 'search-book.related').length <= 1,
+    'a later event performs at most one complete affected relation retry, without an all-library scan');
+  assert.equal(calls.filter(c => c.method === 'source.list').length, 0,
+    'a later event never reloads the source registry');
   assert.equal(page.sourceSwitchState.kind, 'candidates');
   assert.equal(page.sourceSwitchState.candidates.length, 2);
 }

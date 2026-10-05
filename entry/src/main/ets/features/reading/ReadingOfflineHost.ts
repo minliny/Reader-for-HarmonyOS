@@ -6,6 +6,20 @@ import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import { ReadingOfflineGateway, type ReadingOfflineBookProgress } from './ReadingOfflineGateway';
 import type { RemoteReadingSession } from './RemoteReadingFlowGateway';
+import { MangaDownloadActionsGateway, type MangaDownloadAction, type MangaDownloadActionId,
+  type MangaDownloadChapterStatus, type MangaDownloadSnapshot, type MangaDownloadDeleteOutcome } from '../manga/MangaDownloadActionsGateway';
+
+interface MangaDownloadIntent {
+  session: RemoteReadingSession;
+  generation: number;
+  valid: boolean;
+  excludedChapters: Set<number>;
+  continuations: Set<Promise<void>>;
+  evidence: ReaderWriteEvidence;
+  failure?: Error;
+  settled: Promise<void>;
+  finish: () => void;
+}
 
 export interface ReadingOfflineOperation {
   action: 'chapter' | 'book' | 'clear';
@@ -37,6 +51,7 @@ export interface ReadingOfflineBinding {
 
 export interface ReadingOfflineDependencies {
   gateway: ReadingOfflineGateway;
+  mangaActions?: MangaDownloadActionsGateway;
   ownsRuntime: () => boolean;
   deliveryFailed?: (error: Error) => void;
 }
@@ -59,7 +74,8 @@ export class ReadingOfflineHost {
       if (intents !== undefined) ReadingOfflineHost.retainedHost.dependencies.gateway.installClearAuthority(intents);
       return ReadingOfflineHost.retainedHost;
     }
-    const host = new ReadingOfflineHost({ gateway: new ReadingOfflineGateway(runtime, intents), ownsRuntime, deliveryFailed });
+    const host = new ReadingOfflineHost({ gateway: new ReadingOfflineGateway(runtime, intents),
+      mangaActions: new MangaDownloadActionsGateway(runtime), ownsRuntime, deliveryFailed });
     ReadingOfflineHost.retainedRuntime = runtime;
     ReadingOfflineHost.retainedHost = host;
     return host;
@@ -73,10 +89,39 @@ export class ReadingOfflineHost {
   private generation: number = 0;
   private readGeneration: number = 0;
   private operation: ReadingOfflineOperation | undefined;
+  private mangaIntent: MangaDownloadIntent | undefined;
+  private mangaActionActive: boolean = false;
 
   constructor(dependencies: ReadingOfflineDependencies) { this.dependencies = dependencies; }
-  busy(): boolean { return this.active; }
+  busy(): boolean { return this.active || this.mangaActionActive; }
   snapshot(): ReadingOfflineOperation | undefined { return this.operation; }
+
+  /** The queue and exact physical projection jointly admit download actions.
+   * A remembered Completed receipt alone cannot certify retained bytes. */
+  async loadMangaActions(chapterIndex: number | undefined, binding: ReadingOfflineBinding): Promise<MangaDownloadAction[]> {
+    if (binding.session.contentKind !== 'manga' || !this.admitted(binding)) return [];
+    const gateway = this.dependencies.mangaActions;
+    if (gateway === undefined) throw new Error('MANGA_DOWNLOAD_ACTIONS_HOST_REQUIRED');
+    const current = (): boolean => this.admitted(binding);
+    const snapshot = await gateway.snapshot(binding.session, current);
+    const projection = await this.dependencies.gateway.loadProjection(binding.session, current);
+    if (!current()) return [];
+    this.deliver(binding, (): void => binding.emitEntries(this.merge(binding.currentEntries(), projection)));
+    const byIndex: Map<number, LocalReadingTocEntry> = new Map();
+    for (const entry of projection) byIndex.set(entry.index, entry);
+    const presentation: MangaDownloadSnapshot = {
+      chapters: snapshot.chapters.map((chapter): MangaDownloadChapterStatus => {
+        const state = byIndex.get(chapter.chapterIndex)?.downloadState;
+        if (chapter.state === 'completed' && (state === undefined || state === 'unknown')) {
+          throw new Error('漫画下载状态需要重新读取，请重试');
+        }
+        return { chapterIndex: chapter.chapterIndex, chapter: chapter.chapter,
+          state: state === undefined || state === 'unknown' ? chapter.state : state,
+          attempts: chapter.attempts, maxAttempts: chapter.maxAttempts };
+      }), retentions: snapshot.retentions, downloadChapters: snapshot.downloadChapters,
+    };
+    return gateway.actions(presentation, chapterIndex, this.busy());
+  }
 
   /** SourceSwitch post-commit cleanup of one captured old identity. Its Core
    * and physical-image effects have independent facts. No current reader
@@ -105,18 +150,134 @@ export class ReadingOfflineHost {
     } finally { if (this.generation === generation) this.active = false; this.drainPendingRead(); }
   }
 
-  async downloadChapter(chapterIndex: number, binding: ReadingOfflineBinding): Promise<void> {
+  async downloadChapter(chapterIndex: number, binding: ReadingOfflineBinding, update: boolean = false): Promise<void> {
     if (!Number.isSafeInteger(chapterIndex) || !binding.session.entries.some(entry => entry.index === chapterIndex &&
       entry.navigable !== false && entry.url.trim().length > 0)) return;
-    await this.write('chapter', binding, chapterIndex);
+    await this.write('chapter', binding, chapterIndex, undefined, update);
   }
 
-  async downloadBook(binding: ReadingOfflineBinding): Promise<void> {
+  async downloadBook(binding: ReadingOfflineBinding, onlyIndexes?: number[]): Promise<void> {
     if (!binding.session.entries.some(entry => entry.navigable !== false && entry.url.trim().length > 0)) return;
-    await this.write('book', binding);
+    await this.write('book', binding, undefined, onlyIndexes);
   }
 
-  async clearBook(binding: ReadingOfflineBinding): Promise<void> { await this.write('clear', binding); }
+  async clearBook(binding: ReadingOfflineBinding): Promise<void> {
+    if (binding.session.contentKind === 'manga') await this.prepareMangaMutation(binding);
+    await this.write('clear', binding);
+  }
+
+  /** Stop only this explicit download consumer. Shared reading/cache work and
+   * retained bytes remain with their existing coordinator/platform owners. */
+  async prepareMangaMutation(binding: ReadingOfflineBinding, chapterIndex?: number): Promise<void> {
+    const intent = this.mangaIntent;
+    if (intent === undefined || !this.sameMangaBook(intent, binding.session)) return;
+    if (chapterIndex !== undefined) {
+      intent.excludedChapters.add(chapterIndex);
+      await this.dependencies.gateway.waitForMangaChapter(chapterIndex);
+    } else {
+      intent.valid = false;
+      await intent.settled;
+    }
+  }
+
+  /** Finite chapter/book commands over the existing durable queue adapter.
+   * Resume supplements only the chapters continued by the user, including a
+   * chapter already passed by the original bounded whole-book loop. */
+  async operateManga(action: MangaDownloadActionId, chapterIndex: number | undefined,
+    binding: ReadingOfflineBinding): Promise<MangaDownloadDeleteOutcome | undefined> {
+    if (binding.session.contentKind !== 'manga' || !this.admitted(binding)) return undefined;
+    if (action === 'downloadChapter') { if (chapterIndex !== undefined) await this.downloadChapter(chapterIndex, binding); return undefined; }
+    if (action === 'downloadBook') { await this.downloadBook(binding); return undefined; }
+    if (action === 'clearCache') { await this.clearBook(binding); return undefined; }
+    if (this.mangaActionActive) return undefined;
+    const gateway = this.dependencies.mangaActions;
+    if (gateway === undefined) throw new Error('MANGA_DOWNLOAD_ACTIONS_HOST_REQUIRED');
+    this.mangaActionActive = true;
+    const session = binding.session, intent = this.mangaIntent;
+    const current = (): boolean => this.admitted(binding);
+    let resumeIndexes: number[] = [], resume = false, update = false;
+    let deletion: MangaDownloadDeleteOutcome | undefined;
+    try {
+      if (action === 'pause' || action === 'cancel' || action === 'deleteDownloads') {
+        const operation = action === 'pause' ? 'pause' : 'cancel';
+        await gateway.operate(session, operation, chapterIndex, current);
+        await this.prepareMangaMutation(binding, chapterIndex);
+        if (!current()) return undefined;
+        // Cover a final native claim accepted while the first RPC was pending.
+        await gateway.operate(session, operation, chapterIndex, current);
+      }
+      if (action === 'updateChapter') {
+        if (chapterIndex === undefined || !session.entries.some(entry => entry.index === chapterIndex &&
+          entry.navigable !== false && entry.url.trim().length > 0)) return undefined;
+        await this.prepareMangaMutation(binding, chapterIndex);
+        if (!current()) return undefined;
+        update = true;
+      } else if (action === 'resume') {
+        const before = await gateway.snapshot(session, current);
+        resumeIndexes = before.chapters.filter(chapter => chapter.state === 'paused' &&
+          (chapterIndex === undefined || chapter.chapterIndex === chapterIndex)).map(chapter => chapter.chapterIndex);
+        await gateway.operate(session, 'resume', chapterIndex, current);
+        resume = true;
+      } else if (action === 'releaseRetention') {
+        await this.prepareMangaMutation(binding, chapterIndex);
+        if (!current()) return undefined;
+        await gateway.releaseRetention(session, chapterIndex, current);
+      } else if (action === 'deleteDownloads') {
+        deletion = await gateway.deleteDownloads(session, chapterIndex, current);
+      }
+      const entries = await this.dependencies.gateway.loadProjection(session, current);
+      if (current()) this.deliver(binding, (): void => binding.emitEntries(this.merge(binding.currentEntries(), entries)));
+    } finally { this.mangaActionActive = false; }
+    if (update && current() && chapterIndex !== undefined) {
+      if (!this.continueMangaIntent(intent, binding, chapterIndex, [], true)) void this.downloadChapter(chapterIndex, binding, true);
+    } else if (resume && current() && resumeIndexes.length > 0) {
+      if (!this.continueMangaIntent(intent, binding, chapterIndex, resumeIndexes)) {
+        // The accepted download has its own materialization lifetime. Returning
+        // its queue action releases the controls so pause/cancel remain usable.
+        if (chapterIndex === undefined) void this.downloadBook(binding, resumeIndexes);
+        else void this.downloadChapter(chapterIndex, binding);
+      }
+    }
+    return deletion;
+  }
+
+  private sameMangaBook(intent: MangaDownloadIntent, session: RemoteReadingSession): boolean {
+    return session.contentKind === 'manga' && intent.session.identity.sourceId === session.identity.sourceId &&
+      intent.session.identity.bookId === session.identity.bookId;
+  }
+
+  private continueMangaIntent(intent: MangaDownloadIntent | undefined, binding: ReadingOfflineBinding,
+    chapterIndex: number | undefined, resumedIndexes: number[], update: boolean = false): boolean {
+    if (intent === undefined || this.mangaIntent !== intent || !intent.valid || intent.generation !== this.generation ||
+      !this.sameMangaBook(intent, binding.session) || !this.admitted(binding)) return false;
+    for (const index of resumedIndexes) intent.excludedChapters.delete(index);
+    if (update && chapterIndex !== undefined) intent.excludedChapters.delete(chapterIndex);
+    const current = (): boolean => intent.valid && this.mangaIntent === intent && intent.generation === this.generation && this.admitted(binding);
+    const chapterCurrent = (index: number): boolean => current() && !intent.excludedChapters.has(index);
+    const evidence = intent.evidence;
+    const preparation = chapterIndex === undefined ? this.dependencies.gateway.prefetchBook(intent.session, current,
+      (progress): void => { if (current()) this.deliver(binding, (): void => binding.emitEntries(this.merge(binding.currentEntries(), progress.entries))); },
+      evidence, (index: number): boolean => chapterCurrent(index) && resumedIndexes.includes(index)) :
+      update ? this.dependencies.gateway.updateMangaChapter(intent.session, chapterIndex, (): boolean => chapterCurrent(chapterIndex), evidence) :
+        this.dependencies.gateway.prefetchChapter(intent.session, chapterIndex, (): boolean => chapterCurrent(chapterIndex), evidence);
+    const work = preparation.then((entries): void => {
+      if (!current()) return;
+      this.updateReceipt(evidence, 'succeeded', undefined, entries); this.publish(binding);
+      this.deliver(binding, (): void => binding.emitEntries(this.merge(binding.currentEntries(), entries)));
+    }).catch((error): void => {
+      if (current() && (chapterIndex === undefined || chapterCurrent(chapterIndex))) {
+        intent.failure = error as Error;
+        this.updateReceipt(evidence, 'failed', (error as Error).message); this.publish(binding);
+        this.deliver(binding, (): void => binding.failed?.(error as Error));
+      }
+    }).finally((): void => { intent.continuations.delete(work); });
+    intent.continuations.add(work);
+    return true;
+  }
+
+  private async drainMangaContinuations(intent: MangaDownloadIntent): Promise<void> {
+    while (intent.continuations.size > 0) await Promise.all(Array.from(intent.continuations));
+  }
 
   /** Exact receipt reads may settle metadata; availability reads never dispatch
    * cache.clear, prefetch or image cleanup or infer confirmation from counts. */
@@ -221,8 +382,8 @@ export class ReadingOfflineHost {
   }
 
   private async write(action: ReadingOfflineOperation['action'], binding: ReadingOfflineBinding,
-    chapterIndex?: number): Promise<void> {
-    if (this.active || !this.admitted(binding)) return;
+    chapterIndex?: number, onlyIndexes?: number[], update: boolean = false): Promise<void> {
+    if (this.active || this.mangaActionActive || !this.admitted(binding)) return;
     // An unknown clear could still delete a later new download. A list/status
     // read is not a transaction receipt and cannot silently lift this barrier.
     if (this.operation?.action === 'clear' && this.operation.projection.receipt.confirmation === 'unknown' &&
@@ -243,21 +404,34 @@ export class ReadingOfflineHost {
     const captured: RemoteReadingSession = { ...binding.session, identity: { ...binding.session.identity },
       book: { ...binding.session.book }, entries: binding.session.entries.map(entry => ({ ...entry })) };
     const evidence = new ReaderWriteEvidence();
-    const current = (): boolean => generation === this.generation && this.active && this.admitted(binding);
+    let finish = (): void => {};
+    const intent: MangaDownloadIntent | undefined = captured.contentKind === 'manga' && action !== 'clear' ? {
+      session: captured, generation, valid: true,
+      excludedChapters: new Set(onlyIndexes === undefined ? [] : captured.entries.filter(entry => !onlyIndexes.includes(entry.index)).map(entry => entry.index)),
+      continuations: new Set(), evidence,
+      settled: new Promise<void>(resolve => { finish = resolve; }), finish: (): void => finish(),
+    } : undefined;
+    if (intent !== undefined) this.mangaIntent = intent;
+    const current = (): boolean => generation === this.generation && this.active && this.admitted(binding) && intent?.valid !== false;
+    const chapterCurrent = (index: number): boolean => current() && intent?.excludedChapters.has(index) !== true;
     this.operation = { action, sourceId: captured.identity.sourceId, bookId: captured.identity.bookId,
       chapterIndex, generation, materialization: 'running', projection: projectPersistedReceipt({
         confirmation: 'undispatched', readback: 'idle', generation }) };
     this.publish(binding);
     if (action !== 'clear') this.deliver(binding, (): void => binding.emitEntries(binding.currentEntries().map(entry =>
       entry.navigable === false || entry.downloadState === 'completed' ||
+        intent?.excludedChapters.has(entry.index) === true ||
         (action === 'chapter' && entry.index !== chapterIndex) ? entry : { ...entry, downloadState: 'queued' })));
     try {
       let entries: LocalReadingTocEntry[];
       if (action === 'clear') {
         await this.dependencies.gateway.clearBook(captured, current, evidence);
-        entries = binding.currentEntries().map(entry => ({ ...entry, downloadState: 'missing' }));
+        entries = captured.contentKind === 'manga' ? await this.dependencies.gateway.loadProjection(captured, current) :
+          binding.currentEntries().map(entry => ({ ...entry, downloadState: 'missing' }));
       } else if (action === 'chapter') {
-        entries = await this.dependencies.gateway.prefetchChapter(captured, chapterIndex!, current, evidence);
+        entries = update && captured.contentKind === 'manga' ?
+          await this.dependencies.gateway.updateMangaChapter(captured, chapterIndex!, (): boolean => chapterCurrent(chapterIndex!), evidence) :
+          await this.dependencies.gateway.prefetchChapter(captured, chapterIndex!, (): boolean => chapterCurrent(chapterIndex!), evidence);
       } else {
         entries = await this.dependencies.gateway.prefetchBook(captured, current, (progress): void => {
           // Gateway progress has passed actual Core/Host qualification. Store
@@ -268,7 +442,12 @@ export class ReadingOfflineHost {
           this.publish(binding);
           this.deliver(binding, (): void => binding.emitEntries(this.merge(binding.currentEntries(), progress.entries)));
           this.deliver(binding, (): void => binding.onProgress?.(progress, false));
-        }, evidence);
+        }, evidence, intent === undefined ? undefined : chapterCurrent);
+      }
+      if (intent !== undefined) {
+        await this.drainMangaContinuations(intent);
+        if (intent.failure !== undefined) throw intent.failure;
+        if (current()) entries = await this.dependencies.gateway.loadProjection(captured, current);
       }
       if (this.operation?.generation !== generation) return;
       this.operation.materialization = current() ? 'succeeded' : 'retired';
@@ -292,7 +471,14 @@ export class ReadingOfflineHost {
       // Fresh canonical availability preserves cached bodies and partial
       // results; never flatten the whole requested range to failed/missing.
       if (current()) await this.read(binding, current);
-    } finally { if (generation === this.generation) this.active = false; this.drainPendingRead(); }
+    } finally {
+      try { if (intent !== undefined) await this.drainMangaContinuations(intent); }
+      finally {
+        if (this.mangaIntent === intent) this.mangaIntent = undefined;
+        if (generation === this.generation) this.active = false;
+        intent?.finish(); this.drainPendingRead();
+      }
+    }
   }
 
   private async read(binding: ReadingOfflineBinding, current: () => boolean): Promise<void> {

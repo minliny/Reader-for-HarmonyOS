@@ -1,0 +1,9 @@
+{
+  "file": "bookshelf/BookshelfShell.ets",
+  "name": "topBar",
+  "approvalEvidence": "evidence/2026-10-02-manga-ui-implementation/SCOPE.md",
+  "designSource": "paired Reader-UI/design/manga-ui-20261002; docs/MANGA_UI_DEMO_PARITY_AUDIT_20261003.md",
+  "scope": "approved floating centered AppTopBar, leading guarded Search, trailing bare More; no new layout design",
+  "source": "@Builder\n  private topBar() {\n    ForEach([this.navigationGeneration], (presentedGeneration: number) => {\n      AppTopBar({ title: '书架', floating: true, centered: true, showLeadingSearch: true,\n        onLeadingTap: (): void => {\n          if (this.mounted && this.navigationGeneration === presentedGeneration) this.onSearchRequested(presentedGeneration);\n        } }) {\n        ReaderIconButton({\n          icon: this.appThemeScheme === 'night' ? $r('app.media.rc_dots_theme_night') : $r('app.media.rc_dots'),\n          boxSize: 44, iconSize: 24, radius: 0,\n          onTap: this.moreOpenAction(this.temporaryBackIdentity),\n        })\n          .onAreaChange((_oldValue: Area, newValue: Area): void => {\n            this.moreAnchorRight = Number(newValue.globalPosition.x) + Number(newValue.width);\n            this.moreAnchorBottom = Number(newValue.globalPosition.y) + Number(newValue.height);\n          });\n      }\n    }, (generation: number): string => generation.toString());\n  }",
+  "sha256": "12170ee8c407dbaf744b878d2f2cb3b887357aafedde8c31f395ec50713c1ac1"
+}

@@ -5,6 +5,8 @@ import { ReaderNativeAlertOwner, type ReaderNativeAlertLease, type ReaderNativeA
 import { readerRecoveryView, type ReaderRecoveryView } from '../app/ReaderRecoveryProjection';
 import { ReaderRecoveryNotice } from '../features/common/ReaderRecoveryNotice';
 import { ReaderRecoveryAction } from '../features/common/ReaderRecoveryAction';
+import { MangaBookPresentation } from '../features/manga/MangaBookPresentation';
+import { readerDirectoryObserveMissingNavigation, readerDirectoryTakeMissingNavigation, backfillRetainedReaderDirectoryNavigation } from '../features/reading/ReaderDirectoryNavigation';
 import type { RemoteReadingPositionScope } from '../features/reading/RemoteReadingPositionMigration';
 import { FrameCallback } from '@kit.ArkUI';
 import { readerAppColor } from '../features/common/ReaderThemeRegistry';
@@ -18,7 +20,8 @@ import { BookshelfViewState } from '../features/bookshelf/BookshelfViewState';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
 import { ReaderStartupTrace } from '../app/ReaderStartupTrace';
 import { ReaderSystemFileOpenNavigationHost, type SystemFileOpenNavigationView, type SystemFileOpenReaderIdentity } from '../app/ReaderSystemFileOpenNavigationHost';
-import { errorMessageOf } from '../app/ErrorMessage';
+import { errorMessageOf, isDomainResolutionFailure, isNetworkEnvironmentFailure } from '../app/ErrorMessage';
+import { diagnosticCodeOf } from '../app/LogPrivacy';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
 import { readerContentSafeTop } from '../features/common/ReaderWindowMetrics';
 import type {
@@ -102,6 +105,12 @@ import { BookmarkOperationIntentStore, CacheClearOperationIntentStore } from '..
 import { readingDirectoryRecovery, EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../features/reading/ReadingDirectoryRecovery';
 import { ReadingPrefetchHost, type ReadingPrefetchLease } from '../features/reading/ReadingPrefetchHost';
 import type { ReadingOfflineBookProgress } from '../features/reading/ReadingOfflineGateway';
+import { MangaSourceSwitchGateway, MangaSwitchChapterSelectionRequired,
+  type MangaSwitchProposal } from '../features/manga/MangaSourceSwitchGateway';
+import type { MangaProgressToken } from '../features/manga/MangaContract';
+import { MangaSessionGateway } from '../features/manga/MangaSessionGateway';
+import type { MangaDownloadAction, MangaDownloadActionId } from '../features/manga/MangaDownloadActionsGateway';
+import { MangaAdmissionGateway } from '../features/manga/MangaAdmissionGateway';
 import {
   isRemoteSourceFailureKind,
   type RemoteContentVerdict,
@@ -249,6 +258,19 @@ interface TemporaryBackLease {
 }
 
 type BookshelfBackgroundSeeds = BookshelfCatalogSeeds;
+/** The target catalog is a temporary selection owner, never the active reader. */
+interface MangaSourceSwitchSelection {
+  original: ReadingBookDetail;
+  candidate: SourceSwitchCandidate;
+  target: RemoteReadingSession;
+  expectedFrom: MangaProgressToken;
+  entries: LocalReadingTocEntry[];
+  current: () => boolean;
+  commitStarted: boolean;
+}
+
+interface MangaDownloadDeleteRequest { session: RemoteReadingSession; chapterIndex: number | undefined; }
+
 
 /** Chinese one-liner for a book-source failure kind (user confirmation UI). */
 function remoteSourceFailureSummary(kind: RemoteReadingFailureKind): string {
@@ -279,6 +301,20 @@ class ReaderNavigationBackfillFrame extends FrameCallback {
 
 let sourceToolsIndexInstance: number = 0;
 let rssIndexInstance: number = 0;
+interface MangaPositionProjectionJob {
+  book: ShelfBook;
+  owner: ReaderRuntimeOwner;
+  generation: number;
+  navigationGeneration: number;
+  shelfGeneration: number;
+  route: ReaderRoute;
+  detailIdentity: string;
+}
+
+interface MangaBookIdentity {
+  sourceId: string;
+  bookId: string;
+}
 
 @Entry
 @Component
@@ -340,6 +376,7 @@ struct Index {
   private readingOriginRoute: 'bookshelf' | 'detail' = 'detail';
   @State private shelfReadingPreparation: boolean = false;
   @State private remoteReadingSession: RemoteReadingSession | undefined = undefined;
+  @State private readingContentKind: 'text' | 'manga' = 'text';
   @State private remoteReadingSeed: RemoteReadingBookSeed | undefined = undefined;
   /** Detail-area diagnostics; never a navigation admission gate. */
   @State private remoteContentVerdict: RemoteContentVerdict = 'readable';
@@ -348,9 +385,17 @@ struct Index {
   private remoteSessionGeneration: number = 0;
   private readingEntryHost: ReadingEntryHost | undefined;
   private readingEntryScopeId: number = -1;
+  private remoteReadableToc: RemoteReadingTocEntry[] | undefined = undefined;
+  private remoteReadableChapterIndexes: number[] = [];
+  private remoteReadableChapterPositions: Map<number, number> = new Map();
+  private remoteReadabilityProjectionRevision: number = -1;
   private pendingRemoteDirectoryProjection: (() => void) | undefined = undefined;
   private pendingLocalDirectoryProjection: (() => void) | undefined = undefined;
   @State private requestedChapterIndex: number | undefined = undefined;
+  @State private mangaChapterRequestGeneration: number = 0;
+  @State private mangaChapterStartRequestGeneration: number = -1;
+  @State private requestedMangaDirectoryTargetProof: JsonObject | undefined = undefined;
+  private mangaCommittedRequestGeneration: number = -1;
   // 书签 tab 精确锚点: 每次点击递增 requestId, 保证 @Prop @Watch 对连续点击的
   // 同值/等值请求都能重新触发 (deep-equal 相同的两个对象也会下发新实例)。
   @State private requestedBookmarkAnchor: ReaderBookmarkAnchorRequest | undefined = undefined;
@@ -418,6 +463,13 @@ struct Index {
   @State private sourceSwitchFailureMessage: string = '';
   @State private sourceSwitchScopeId: number = 0;
   private sourceSwitchHost: SourceSwitchHost | undefined;
+  @State private mangaSourceSwitchSelectionVisible: boolean = false;
+  @State private mangaSourceSwitchSelectionBusy: boolean = false;
+  @State private mangaSourceSwitchCommitGeneration: number = -1;
+  private mangaSourceSwitchPreparationGeneration: number = 0;
+  private mangaSourceSwitchSelection: MangaSourceSwitchSelection | undefined = undefined;
+  private failedSourceSwitchCandidate: SourceSwitchCandidate | undefined = undefined;
+  private failedSourceSwitchIdentity: string = '';
   private searchDetailCandidates: SearchBook[] = [];
   /** Retained until the target chapter's first measured progress commit. */
   private pendingSourceSwitch: SourceSwitchPendingTransaction | undefined = undefined;
@@ -429,6 +481,17 @@ struct Index {
   @State private offlineOperation: ReadingOfflineOperation | undefined = undefined;
   @State private offlineOperationActive: boolean = false;
   @State private directoryPresentationGeneration: number = 0;
+  private mangaShelfMutationAfterExit: string | undefined = undefined;
+  private shelfContentFilter: string = 'all';
+  private mangaProjectionQueue: MangaPositionProjectionJob[] = [];
+  private mangaProjectionWorkers: number = 0;
+  private mangaProjectionGeneration: number = 0;
+  private mangaProjectionSignature: string = '';
+  private mangaLoginTask: Promise<void> | undefined;
+  /** Presentation gate; ReadingOfflineHost owns accepted queue work. */
+  @State private mangaDownloadActionActiveKey: string = '';
+  private mangaDownloadActionGeneration: number = 0;
+  private mangaDownloadDeleteAfterExit: MangaDownloadDeleteRequest | undefined = undefined;
   /** Serializes the destructive detail-page removal for one exact book. */
   @State private detailShelfAdmissionMount: number = 0;
   @State private readableAdmissions: BookshelfReadableAdmissionSnapshot[] = [];
@@ -483,7 +546,8 @@ struct Index {
         this.invalidateBookshelfProjection();
       const presentImportResult = snapshot.action === 'import' && snapshot.importPresentation?.state === 'result' &&
         (this.shelfOperation.importPresentation?.state !== 'result' || this.shelfOperation.receipt !== snapshot.receipt) &&
-        this.route === 'bookshelf' && snapshot.filter.readingState === this.shelfReadingFilter && snapshot.filter.sourceKind === this.shelfSourceFilter;
+        this.route === 'bookshelf' && snapshot.filter.readingState === this.shelfReadingFilter && snapshot.filter.sourceKind === this.shelfSourceFilter &&
+        (snapshot.filter.contentKind ?? 'all') === this.shelfContentFilter;
       this.shelfOperationOwner = owner; this.shelfOperation = snapshot;
       if (presentImportResult && snapshot.receipt?.value !== undefined) this.applyBookshelfState(snapshot.receipt.value);
     },
@@ -657,6 +721,10 @@ struct Index {
   }
 
   onBackPress(): boolean {
+    if (this.mangaSourceSwitchSelectionVisible) {
+      this.cancelMangaSourceSwitchSelection();
+      return true;
+    }
     if (this.bookRemovalDialogOpen) {
       this.dismissBookRemovalDialog();
       return true;
@@ -797,9 +865,10 @@ struct Index {
         serverFiltered: this.shelfProjectionRevision.length > 0,
         onNextPageRequested: (presentedNavigation?: number): void => { if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) this.loadNextShelfPage(); },
         onPreviousPageRequested: (presentedNavigation?: number): void => { if (this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) this.loadPreviousShelfPage(); },
-        onFilterRequested: (readingState: string, sourceKind: string, presentedNavigation?: number): void => {
+        onFilterRequested: (readingState: string, sourceKind: string, contentKind?: string, presentedNavigation?: number): void => {
           if (!this.isCurrentBookshelfPresentation(presentedNavigation ?? generation, owner, mounting)) return;
           this.shelfReadingFilter = readingState; this.shelfSourceFilter = sourceKind;
+          this.shelfContentFilter = contentKind ?? 'all';
           this.bookshelfViewState.anchorKey = ''; this.bookshelfViewState.anchorOffset = 0;
           this.refreshBookshelf();
         },
@@ -1039,8 +1108,13 @@ struct Index {
       // keeps the business state and drives it through props + callbacks.
       if (this.readingSessionActive && this.detailBook !== undefined) {
         ReaderShell({
+          contentKind: this.readingContentKind,
+          inBookshelf: this.detailInBookshelf,
+          onToggleShelf: (): void => this.requestMangaShelfMutation(),
+          onMangaLogin: (): Promise<void> => this.loginMangaSource(),
           bookId: this.detailBook.bookId,
           bookTitle: this.detailBook.title,
+          bookAuthor: this.detailBook.author, bookCoverUrl: this.detailBook.coverUrl ?? '',
           sourceId: this.detailBook.sourceId,
           sourceName: this.detailBook.sourceName,
           bookKind: this.detailBook.kind,
@@ -1059,6 +1133,10 @@ struct Index {
           sourceSwitchTransactionId: this.currentSourceSwitchTransactionId(),
           totalChapters: this.detailToc.length,
           requestedChapterIndex: this.requestedChapterIndex,
+          mangaChapterRequestGeneration: this.mangaChapterRequestGeneration,
+          mangaStartAtChapterFirst: this.mangaChapterStartRequestGeneration >= 0 &&
+            this.mangaChapterStartRequestGeneration === this.mangaChapterRequestGeneration,
+          requestedMangaDirectoryTargetProof: this.requestedMangaDirectoryTargetProof,
           requestedBookmarkAnchor: this.requestedBookmarkAnchor,
           bookmarkIdentity: this.detailBookmarkIdentity(),
           isTablet: deviceInfo.deviceType === 'tablet',
@@ -1078,9 +1156,13 @@ struct Index {
           onContinueBookmarks: (generation: number, identity: string): void => this.reconcileDirectoryOperation(generation, identity, true),
           onReconcileOffline: (generation: number, identity: string): void => this.reconcileOfflineOperation(generation, identity),
           onContinueOffline: (generation: number, identity: string): void => this.reconcileOfflineOperation(generation, identity, true),
+          mangaDownloadEnabled: this.readingContentKind === 'manga' && ReaderRuntimeOwner.current().supportsCoreCapability('manga.offline.v1'),
+          onLoadMangaDownloadActions: (chapterIndex?: number): Promise<MangaDownloadAction[]> => this.loadMangaDownloadActions(chapterIndex),
+          onMangaDownloadAction: (action: MangaDownloadActionId, chapterIndex?: number): Promise<void> => this.performMangaDownloadAction(action, chapterIndex),
           chapterStartBookmarkCreationEnabled: true,
           sourceSwitchVisible: this.sourceSwitchVisible,
           sourceSwitchState: this.sourceSwitchState,
+          allowCancelSourceSwitchWhilePreparing: this.canCancelMangaSourcePreparation(),
           onExitRequestHandler: (requestExit: (intent?: 'navigation') => void): void => {
             this.readingExitRequest = requestExit;
             this.consumeSystemFileOpen();
@@ -1123,13 +1205,19 @@ struct Index {
           onCloseSourceSwitch: (scopeId?: number): void => this.closeSourceSwitch(scopeId),
           onRetrySourceSwitch: (scopeId?: number): void => this.retrySourceSwitch(scopeId),
           onRefreshSourceSwitch: (scopeId?: number): void => this.refreshSourceSwitch(scopeId),
+          onStopSourceSwitch: (scopeId?: number): void => this.stopSourceDiscovery(scopeId),
           onPickSource: (candidate: SourceSwitchCandidate, scopeId?: number): void => this.onPickSource(candidate, scopeId),
           onRollbackSourceSwitch: (scopeId?: number): void => this.onRollbackSourceSwitch(scopeId),
         });
       }
       if ((this.route === 'detail' || this.route === 'bookshelf') &&
-        !this.readingSessionActive && this.sourceSwitchVisible && this.detailBook !== undefined) {
+        !this.readingSessionActive && this.sourceSwitchVisible && !this.mangaSourceSwitchSelectionVisible && this.detailBook !== undefined) {
         this.sourceSwitchOverlayContent();
+      }
+      if (this.mangaSourceSwitchSelectionVisible && this.mangaSourceSwitchSelection !== undefined) {
+        // This sibling leaves the admitted reading/detail surface and its
+        // source/progress untouched until first-image validation and commit.
+        this.mangaSourceSwitchDirectory();
       }
       if (this.route === 'bookshelf' && this.editingShelfGroupBook !== undefined) {
         this.shelfGroupContent();
@@ -1151,8 +1239,11 @@ struct Index {
       // edge-to-edge background and resolves its content/control rects inside
       // ReaderLayoutGeometry, so it must not inherit this App-page padding.
       .padding({ top: this.readerOwnsWindowEdges() ? 0 : this.appContentTopInset() })
-      .expandSafeArea([SafeAreaType.SYSTEM], this.readerOwnsWindowEdges() ?
-        [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM] : [SafeAreaEdge.BOTTOM])
+      .expandSafeArea(this.mangaOwnsWindowEdges() ? [SafeAreaType.SYSTEM, SafeAreaType.CUTOUT] : [SafeAreaType.SYSTEM],
+        this.mangaOwnsWindowEdges() ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END] :
+          this.readerOwnsWindowEdges() ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM] : [SafeAreaEdge.BOTTOM])
+      .ignoreLayoutSafeArea(this.mangaOwnsWindowEdges() ? [LayoutSafeAreaType.SYSTEM] : [],
+        this.mangaOwnsWindowEdges() ? [LayoutSafeAreaEdge.ALL] : [])
   }
 
   @Builder
@@ -1434,6 +1525,11 @@ struct Index {
         sourceId: this.detailBook.sourceId,
         bookId: this.detailBook.bookId,
         bookKind: this.detailBook.kind ?? '',
+        contentKind: this.detailBook.contentKind === 'manga' ? 'manga' : 'text',
+        bookTitle: this.detailBook.title,
+        currentChapterIndex: this.detailBook.mangaPosition?.chapterIndex ?? this.directoryCurrentChapterIndex,
+        currentPageOrdinal: this.detailBook.mangaPosition?.pageOrdinal ?? -1,
+        currentPageTotal: this.detailBook.mangaPosition?.totalPages ?? -1,
         entries: this.detailToc,
         catalogMessage: this.detailLoadingMessage,
         directoryRecovery: this.directoryRecovery(),
@@ -1442,6 +1538,9 @@ struct Index {
         onReconcileOffline: (generation: number, identity: string): void => this.reconcileOfflineOperation(generation, identity),
         onContinueOffline: (generation: number, identity: string): void => this.reconcileOfflineOperation(generation, identity, true),
         chapterStartBookmarkCreationEnabled: true,
+        mangaDownloadEnabled: this.detailBook.contentKind === 'manga' && ReaderRuntimeOwner.current().supportsCoreCapability('manga.offline.v1'),
+        onLoadDownloadActions: (chapterIndex?: number): Promise<MangaDownloadAction[]> => this.loadMangaDownloadActions(chapterIndex),
+        onDownloadAction: (action: MangaDownloadActionId, chapterIndex?: number): Promise<void> => this.performMangaDownloadAction(action, chapterIndex),
         onSelectChapter: (index: number): void => this.onDirectoryChapterSelected(index),
         onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number,
           positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
@@ -1455,11 +1554,43 @@ struct Index {
     }
   }
 
+  @Builder
+  private mangaSourceSwitchDirectory() {
+    if (this.mangaSourceSwitchSelection !== undefined) {
+      BookDirectoryPage({
+        sourceId: this.mangaSourceSwitchSelection.target.identity.sourceId,
+        bookId: this.mangaSourceSwitchSelection.target.identity.bookId,
+        bookKind: this.mangaSourceSwitchSelection.target.book.kind ?? '',
+        contentKind: 'manga',
+        bookTitle: this.mangaSourceSwitchSelection.target.book.title,
+        currentChapterIndex: -1,
+        currentPageOrdinal: -1,
+        currentPageTotal: -1,
+        entries: this.mangaSourceSwitchSelection.entries,
+        catalogMessage: '请选择目标章节继续换源',
+        chapterStartBookmarkCreationEnabled: false,
+        onSelectChapter: this.mangaSourceSwitchDirectorySelection(this.mangaSourceSwitchSelection),
+        onSelectNavigationTarget: this.mangaSourceSwitchDirectorySelection(this.mangaSourceSwitchSelection),
+        onBack: this.mangaSourceSwitchDirectoryBack(this.mangaSourceSwitchSelection),
+      }).width('100%').height('100%');
+    }
+  }
+
   private readerOwnsWindowEdges(): boolean {
+    if (this.mangaSourceSwitchSelectionVisible) return true;
+    // New floating detail/catalog owns its single safe-top inset inside the
+    // full-viewport surface, exactly as the image reader does.
+    if (this.detailBook !== undefined && (this.route === 'detail' ||
+      (this.route === 'directory' && this.directoryReturnTarget === 'detail' && this.detailBook.contentKind === 'manga'))) return true;
     // Only a visible reader/control owns edge-to-edge geometry. Detail's
     // ordinary catalog inherits the same single App safe-top inset as Detail.
     return this.readingSessionActive && (this.route === 'reading' ||
       (this.route === 'directory' && this.directoryReturnTarget === 'readerControl'));
+  }
+
+  private mangaOwnsWindowEdges(): boolean {
+    if (this.mangaSourceSwitchSelectionVisible) return true;
+    return this.readingSessionActive && this.readingContentKind === 'manga' && this.readerOwnsWindowEdges();
   }
 
   private appContentTopInset(): number {
@@ -2422,6 +2553,33 @@ struct Index {
         this.isCurrentRssHostPresentation(generation, owner, mounting, rss, rssIdentity, 'rssSubscriptionManagement'));
   }
 
+  /** A reader-owned explicit login keeps the current manga and its anchor. */
+  private async loginMangaSource(): Promise<void> {
+    if (this.mangaLoginTask !== undefined) throw new Error('MANGA_LOGIN_IN_PROGRESS');
+    const book = this.detailBook;
+    if (book === undefined || this.readingContentKind !== 'manga' || !this.readingSessionActive) {
+      throw new Error('MANGA_SESSION_CANCELLED');
+    }
+    const owner = ReaderRuntimeOwner.current();
+    const generation = this.navigationGeneration;
+    const current = (): boolean => generation === this.navigationGeneration && owner === ReaderRuntimeOwner.current() &&
+      this.readingContentKind === 'manga' && this.readingSessionActive && this.detailBook?.sourceId === book.sourceId &&
+      this.detailBook?.bookId === book.bookId;
+    const task = (async (): Promise<void> => {
+      const sources = await this.sourceHost.loadSourcesForIds([book.sourceId], current);
+      if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
+      const source = sources.find((candidate: BookSource): boolean => candidate.sourceId === book.sourceId);
+      if (source === undefined || !source.enabled || source.loginUrl === undefined || source.loginUrl.trim().length === 0) {
+        throw new Error('MANGA_SOURCE_LOGIN_UNAVAILABLE');
+      }
+      await owner.openSourceLogin(source.sourceId, source.loginUrl, source.name);
+      if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
+    })();
+    this.mangaLoginTask = task;
+    try { await task; }
+    finally { if (this.mangaLoginTask === task) this.mangaLoginTask = undefined; }
+  }
+
   private openJsonImport(context: JsonImportContext): void {
     this.jsonImportGeneration += 1;
     this.jsonImportContext = context;
@@ -3370,6 +3528,7 @@ struct Index {
 
   private remoteSeedForSearchBook(candidate: SearchBook): RemoteReadingBookSeed {
     return {
+      contentKind: candidate.category === 'comic' ? 'manga' : 'text',
       sourceId: candidate.sourceId,
       sourceVersion: candidate.sourceRuleVersion,
       bookId: candidate.bookId,
@@ -3391,6 +3550,7 @@ struct Index {
 
   private onSearchResultSelected(book: SearchBook, variants: SearchBook[] = []): void {
     this.searchDetailCandidates = [book, ...variants.filter((candidate: SearchBook): boolean =>
+      candidate.category === book.category &&
       (candidate.sourceId !== book.sourceId || candidate.bookId !== book.bookId) &&
       (book.groupKey !== undefined && candidate.groupKey === book.groupKey ||
         candidate.title === book.title && candidate.author === book.author))];
@@ -3427,7 +3587,8 @@ struct Index {
     // The search badge describes a saved work, not just this source URL. Keep
     // its exact durable identity so changing source owns the existing row.
     const shelfMatch = resolveBookshelfBook(book.sourceId, book.bookId, book.title, book.author,
-      this.searchHost.publication.shelfAt(this.searchPublicationRevision).concat(this.shelfBooks),
+      this.searchHost.publication.shelfAt(this.searchPublicationRevision).concat(this.shelfBooks)
+        .filter((saved: ShelfBook): boolean => (saved.contentKind === 'manga') === (book.category === 'comic')),
       book.authorIdentity, book.sourceRuleVersion);
     if (shelfMatch.kind === 'ambiguous') {
       this.showReadingFailure('书架中有多个版本', '请从书架选择要阅读或换源的版本，已有书籍不会自动合并。');
@@ -3436,6 +3597,7 @@ struct Index {
     if (shelfMatch.kind === 'matched') {
       const saved = shelfMatch.book;
       const seed: RemoteReadingBookSeed = { sourceId: saved.sourceId, bookId: saved.bookId,
+        contentKind: saved.contentKind,
         detailUrl: saved.bookId, title: saved.title, author: saved.author, coverUrl: saved.coverUrl,
         intro: saved.intro, kind: saved.kind, lastChapter: saved.lastChapter };
       this.openRemoteBookDetail(seed, saved.sourceName ?? this.sourceDisplayName(saved.sourceId), saved);
@@ -3471,10 +3633,11 @@ struct Index {
   }
 
   private openShelfBook(selection: ShelfBook): void {
-    if (selection.contentKind === 'manga' || selection.contentKind === 'audio') {
-      this.showReadingFailure('暂不支持此类阅读', '当前版本未接入此类阅读器，书籍和已下载内容仍保留。');
+    if (selection.contentKind === 'audio') {
+      this.showReadingFailure('暂不支持此类阅读', '书籍和已下载内容仍保留。');
       return;
     }
+    ReaderRuntimeOwner.current().selectMangaOfflineProbe?.(selection.sourceId, selection.bookId, selection.contentKind === 'manga');
     if (this.route === 'bookshelf') {
       this.beginReadingStartupTrace?.();
       this.shelfEntryTraceAttempt += 1;
@@ -3487,8 +3650,10 @@ struct Index {
       this.openLocalBookDetail(selection, true);
       return;
     }
-    ReaderRuntimeOwner.current().noteReadingPreparationIntent(selection.sourceId, selection.bookId);
+    if (ReaderRuntimeOwner.current().mangaOfflineProbeFor?.(selection.sourceId, selection.bookId) !== true)
+      ReaderRuntimeOwner.current().noteReadingPreparationIntent(selection.sourceId, selection.bookId);
     this.openRemoteBookDetail({
+      contentKind: selection.contentKind,
       sourceId: selection.sourceId,
       bookId: selection.bookId,
       detailUrl: selection.bookId,
@@ -3536,6 +3701,7 @@ struct Index {
   private applyReadingEntrySnapshot(snapshot: ReadingEntrySnapshot): void {
     this.readingEntryScopeId = snapshot.scopeId;
     this.detailBook = snapshot.book;
+    this.readingContentKind = (snapshot.session?.contentKind ?? snapshot.book?.contentKind ?? snapshot.seed?.contentKind) === 'manga' ? 'manga' : 'text';
     this.remoteReadingSession = snapshot.session;
     this.remoteSessionGeneration = snapshot.sessionGeneration;
     this.remoteReadingSeed = snapshot.seed ?? (snapshot.book !== undefined && snapshot.book.sourceId !== LOCAL_SOURCE_ID ?
@@ -3591,7 +3757,94 @@ struct Index {
       this.sharedReadingPreparationSeeds(owner));
   }
 
+  private hydrateMangaPositions(books: ShelfBook[]): void {
+    if (this.readingSessionActive || this.sourceSwitchVisible ||
+      !['bookshelf', 'detail', 'directory'].includes(this.route)) return;
+    const owner = ReaderRuntimeOwner.current();
+    const before = MangaBookPresentation.revision;
+    MangaBookPresentation.useOwner(owner);
+    if (before !== MangaBookPresentation.revision) this.mangaProjectionSignature = '';
+    const retained: MangaBookIdentity[] = this.shelfBooks.slice(0, 144).map((book: ShelfBook): MangaBookIdentity =>
+      ({ sourceId: book.sourceId, bookId: book.bookId }));
+    if (this.continueReading?.contentKind === 'manga') retained.push({ sourceId: this.continueReading.sourceId,
+      bookId: this.continueReading.bookId });
+    if (this.detailBook?.contentKind === 'manga') retained.push({ sourceId: this.detailBook.sourceId,
+      bookId: this.detailBook.bookId });
+    MangaBookPresentation.retainIdentities(retained);
+    if (before !== MangaBookPresentation.revision) AppStorage.setOrCreate('readerMangaPresentationRevision',
+      MangaBookPresentation.revision);
+    this.refreshDetailMangaPosition();
+    const candidates = books.filter((book: ShelfBook): boolean => book.contentKind === 'manga').slice(0, 24);
+    const detailIdentity = this.detailBook === undefined ? '' : JSON.stringify([this.detailBook.sourceId, this.detailBook.bookId]);
+    const signature = JSON.stringify([this.navigationGeneration, this.bookshelfLoadGeneration, this.route,
+      detailIdentity, candidates.map((book: ShelfBook): string[] => [book.sourceId, book.bookId])]);
+    if (this.mangaProjectionSignature === signature) return;
+    this.mangaProjectionSignature = signature;
+    const generation = ++this.mangaProjectionGeneration;
+    this.mangaProjectionQueue = candidates.map((book: ShelfBook): MangaPositionProjectionJob => ({ book, owner,
+      generation, navigationGeneration: this.navigationGeneration, shelfGeneration: this.bookshelfLoadGeneration,
+      route: this.route, detailIdentity }));
+    this.pumpMangaPositionProjections();
+  }
+
+  private mangaPositionProjectionCurrent(job: MangaPositionProjectionJob): boolean {
+    return job.generation === this.mangaProjectionGeneration && job.owner === ReaderRuntimeOwner.current() &&
+      job.navigationGeneration === this.navigationGeneration && job.shelfGeneration === this.bookshelfLoadGeneration &&
+      job.route === this.route && !this.readingSessionActive && !this.sourceSwitchVisible &&
+      (job.route === 'bookshelf' || job.detailIdentity === (this.detailBook === undefined ? '' :
+        JSON.stringify([this.detailBook.sourceId, this.detailBook.bookId])));
+  }
+
+  private pumpMangaPositionProjections(): void {
+    while (this.mangaProjectionWorkers < 2 && this.mangaProjectionQueue.length > 0) {
+      const job = this.mangaProjectionQueue.shift();
+      if (job === undefined || !this.mangaPositionProjectionCurrent(job)) continue;
+      this.mangaProjectionWorkers += 1;
+      void this.projectMangaPosition(job).finally((): void => {
+        this.mangaProjectionWorkers -= 1;
+        this.pumpMangaPositionProjections();
+      });
+    }
+  }
+
+  private async projectMangaPosition(job: MangaPositionProjectionJob): Promise<void> {
+    const current = (): boolean => this.mangaPositionProjectionCurrent(job);
+    const book = job.book;
+    const gateway = new MangaSessionGateway(job.owner);
+    try {
+      const entry = await gateway.entry(book.sourceId, book.bookId, undefined, current);
+      if (!current()) return;
+      const before = MangaBookPresentation.revision;
+      const accepted = MangaBookPresentation.admitEntry(book.sourceId, book.bookId, entry);
+      if (!accepted) {
+        const progress = await gateway.progress(book.sourceId, book.bookId, current);
+        if (!current()) return;
+        MangaBookPresentation.admitProgress(book.sourceId, book.bookId, progress);
+      }
+      if (!current()) return;
+      if (before !== MangaBookPresentation.revision)
+        AppStorage.setOrCreate('readerMangaPresentationRevision', MangaBookPresentation.revision);
+      // Reader save may have already admitted these facts. The mounted detail
+      // owns a separate snapshot and still needs the confirmed position.
+      this.refreshDetailMangaPosition();
+    } catch (_error) { /* Optional display projection; unknown remains unknown. */ }
+  }
+
+  private refreshDetailMangaPosition(): void {
+    const book = this.detailBook;
+    if (book?.contentKind !== 'manga') return;
+    const position = MangaBookPresentation.get(book.sourceId, book.bookId);
+    if (book.mangaPosition !== position) {
+      this.detailBook = {
+        sourceId: book.sourceId, sourceName: book.sourceName, bookId: book.bookId,
+        title: book.title, author: book.author, kind: book.kind, contentKind: book.contentKind,
+        mangaPosition: position, coverUrl: book.coverUrl, intro: book.intro, lastChapter: book.lastChapter,
+      };
+    }
+  }
+
   private prepareVisibleReadingBooks(books: ShelfBook[]): void {
+    this.hydrateMangaPositions(books);
     const owner = this.mountedRuntimeOwner;
     if (owner === undefined || !this.isCurrentRuntime(owner) || this.shelfReceiptRetired) return;
     ReadingEntryHost.forRuntime(owner).prepareVisible(books, this.readingPreparationContext(owner),
@@ -3644,6 +3897,7 @@ struct Index {
   }
 
   private openLocalBookDetail(selection: ShelfBook, resumeImmediately: boolean = false): void {
+    this.readingContentKind = 'text';
     const owner = this.mountedRuntimeOwner;
     if (selection.sourceId !== LOCAL_SOURCE_ID || owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner)) return;
     const originRoute = this.route, generation = this.nextNavigationGeneration();
@@ -3657,6 +3911,8 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.requestedChapterIndex = undefined;
+    this.mangaChapterStartRequestGeneration = -1;
+    this.requestedMangaDirectoryTargetProof = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;
     this.directoryChapterTitle = '';
@@ -3682,7 +3938,7 @@ struct Index {
     const owner = this.mountedRuntimeOwner;
     if (owner === undefined || !this.isCurrentRuntime(owner) || this.shelfReceiptRetired) return;
     const contentKind = shelfSnapshot?.contentKind ?? seed.contentKind;
-    if (contentKind === 'manga' || contentKind === 'audio') {
+    if (contentKind === 'audio') {
       this.showReadingFailure('暂不支持此类阅读', '当前版本未接入此类阅读器，书籍和已下载内容仍保留。');
       return;
     }
@@ -3697,7 +3953,10 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.sourceSwitchFailureMessage = '';
+    this.readingContentKind = (shelfSnapshot?.contentKind ?? validatedSession?.contentKind ?? seed.contentKind) === 'manga' ? 'manga' : 'text';
     this.requestedChapterIndex = undefined;
+    this.mangaChapterStartRequestGeneration = -1;
+    this.requestedMangaDirectoryTargetProof = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;
     this.directoryChapterTitle = '';
@@ -3725,14 +3984,59 @@ struct Index {
     const owner = this.mountedRuntimeOwner;
     const session = this.remoteReadingSession;
     if (owner === undefined || session === undefined || !this.isKnownDetailChapter(chapterIndex)) return;
+    if (session.contentKind === 'manga' && !owner.supportsCoreCapability('manga.offline.v1')) {
+      this.showOfflineDownloadFeedback('漫画离线下载尚未开放'); return;
+    }
     const host = this.getReadingOfflineHost(owner);
     if (host !== undefined) void host.downloadChapter(chapterIndex, this.offlineBinding(owner, session));
+  }
+
+  private async loadMangaDownloadActions(chapterIndex?: number): Promise<MangaDownloadAction[]> {
+    const owner = this.mountedRuntimeOwner, session = this.remoteReadingSession;
+    if (owner === undefined || session?.contentKind !== 'manga') return [];
+    const host = this.getReadingOfflineHost(owner);
+    return host === undefined ? [] : host.loadMangaActions(chapterIndex, this.offlineBinding(owner, session));
+  }
+
+  private async performMangaDownloadAction(action: MangaDownloadActionId, chapterIndex?: number): Promise<void> {
+    const owner = this.mountedRuntimeOwner, session = this.remoteReadingSession;
+    if (owner === undefined || session?.contentKind !== 'manga') return;
+    const binding = this.offlineBinding(owner, session);
+    if (!binding.current()) return;
+    if (action === 'downloadChapter') { if (chapterIndex !== undefined) this.downloadDirectoryChapter(chapterIndex); return; }
+    if (action === 'downloadBook') { this.downloadDirectoryBook(); return; }
+    if (action === 'clearCache') { this.requestClearDirectoryBookOffline(); return; }
+    if (action === 'deleteDownloads' && this.readingSessionActive) {
+      if (this.readingExitRequest === undefined) { this.showOfflineDownloadFeedback('请先退出漫画阅读后再删除下载'); return; }
+      this.mangaDownloadDeleteAfterExit = { session, chapterIndex };
+      this.requestReaderBookInfo(); return;
+    }
+    const host = this.getReadingOfflineHost(owner);
+    if (host === undefined || this.mangaDownloadActionActiveKey.length > 0) return;
+    const generation = ++this.mangaDownloadActionGeneration;
+    this.mangaDownloadActionActiveKey = `${session.identity.sourceId}\u0000${session.identity.bookId}`;
+    try {
+      const outcome = await host.operateManga(action, chapterIndex, binding);
+      if (!binding.current() || generation !== this.mangaDownloadActionGeneration) return;
+      if (action === 'releaseRetention') this.showOfflineDownloadFeedback('已解除永久保留，现有阅读缓存仍可使用');
+      else if (action === 'pause') this.showOfflineDownloadFeedback('下载已暂停，已获取的内容保留');
+      else if (action === 'cancel') this.showOfflineDownloadFeedback('下载任务已取消，已获取的下载内容保留');
+      else if (action === 'deleteDownloads' && outcome !== undefined) this.showOfflineDownloadFeedback(outcome.protectedVersions > 0 ?
+        '部分内容仍在使用，已解除保留，退出使用后可清理普通缓存' :
+        outcome.removedVersions > 0 ? '下载内容已删除' : '没有可删除的下载内容');
+    } catch (error) {
+      if (binding.current() && generation === this.mangaDownloadActionGeneration) this.showOfflineDownloadFeedback('下载操作未完成，请重新读取状态后重试');
+      hilog.warn(DOMAIN, 'Reader', 'Manga download operation failed: %{private}s', errorMessageOf(error));
+    } finally { if (generation === this.mangaDownloadActionGeneration) this.mangaDownloadActionActiveKey = ''; }
   }
 
   private downloadDirectoryBook(): void {
     const owner = this.mountedRuntimeOwner;
     const session = this.remoteReadingSession;
     if (owner === undefined || session === undefined) return;
+    if (session.contentKind === 'manga' && !owner.supportsCoreCapability('manga.offline.v1')) {
+      this.showOfflineDownloadFeedback('漫画离线下载尚未开放'); return;
+    }
     const host = this.getReadingOfflineHost(owner);
     if (host === undefined) return;
     if (host.busy()) { this.showOfflineDownloadFeedback('章节下载正在进行，请在目录查看进度'); return; }
@@ -3800,8 +4104,8 @@ struct Index {
     const session = this.remoteReadingSession;
     const generation = this.remoteSessionGeneration;
     this.showIndexAlert('confirmation-cancelable', {
-      title: '清除本书离线内容',
-      message: '将删除本书已下载的正文和图片，书架、阅读进度与书签不会受影响。',
+      title: session.contentKind === 'manga' ? '清除本书普通阅读缓存' : '清除本书离线内容',
+      message: session.contentKind === 'manga' ? '清除可清理的普通漫画缓存；永久保留的下载及正在使用的内容会保留，书架、阅读进度与书签不会受影响。' : '将删除本书已下载的正文和图片，书架、阅读进度与书签不会受影响。',
       primaryButton: {
         value: '取消',
         action: (): void => {},
@@ -4153,7 +4457,7 @@ struct Index {
     }
   }
 
-  private openReading(chapterIndex: number | undefined): void {
+  private openReading(chapterIndex: number | undefined, mangaDirectoryTargetProof?: JsonObject): void {
     const book = this.detailBook;
     if (book === undefined || (chapterIndex !== undefined && !this.isKnownDetailChapter(chapterIndex)) ||
       this.shelfOperation.removalKey.length > 0) {
@@ -4168,6 +4472,7 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.requestedChapterIndex = chapterIndex;
+    this.requestedMangaDirectoryTargetProof = this.readingContentKind === 'manga' ? mangaDirectoryTargetProof : undefined;
     this.requestedBookmarkAnchor = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;
@@ -4181,7 +4486,7 @@ struct Index {
     if (traceShelfEntry) this.traceShelfEntryPhase?.('reader-mount-request');
   }
 
-  private onDirectoryChapterSelected(chapterIndex: number): void {
+  private onDirectoryChapterSelected(chapterIndex: number, directoryTargetProof?: JsonObject): void {
     // R-LOCAL-TOC-01: tapping a chapter in Full Directory returns the user
     // to that chapter's reading flow (the same path used by the Detail
     // chapter rows). The Reader Control Home top-bar target is still gated
@@ -4191,18 +4496,23 @@ struct Index {
     }
     this.requestedBookmarkAnchor = undefined;
     if (!this.readingSessionActive) {
-      this.openReading(chapterIndex);
+      this.openReading(chapterIndex, directoryTargetProof);
       return;
     }
-    if (chapterIndex === this.directoryCurrentChapterIndex) {
+    this.requestedMangaDirectoryTargetProof = this.readingContentKind === 'manga' ? directoryTargetProof : undefined;
+    if (directoryTargetProof === undefined && chapterIndex === this.directoryCurrentChapterIndex &&
+      (this.readingContentKind !== 'manga' || (this.mangaCommittedRequestGeneration === this.mangaChapterRequestGeneration &&
+        (this.requestedChapterIndex === undefined || this.requestedChapterIndex === chapterIndex)))) {
       // `directoryCurrentChapterIndex` is written only by the reader's
       // committed-first-page callback, never by a merely loaded chapter. It is
       // therefore safe to reveal the existing page without exposing a blank
-      // ReadingSurface.
+      // ReadingSurface, provided the manga child has not been replaced by
+      // another chapter that is still preparing.
       this.route = 'reading';
       return;
     }
     this.nextNavigationGeneration();
+    if (this.readingContentKind === 'manga') this.mangaChapterRequestGeneration += 1;
     this.requestedChapterIndex = chapterIndex;
     this.preparedReaderRoute = 'reading';
     this.bindReadingEntryReader();
@@ -4240,6 +4550,7 @@ struct Index {
       // The exact anchor below owns the initial chapter admission. Leaving
       // the chapter-start prop set would race its @Watch against the anchor.
       this.requestedChapterIndex = undefined;
+      this.requestedMangaDirectoryTargetProof = undefined;
     } else if (chapterIndex === this.directoryCurrentChapterIndex) {
       // 已提交章内的书签: 不重复准入, 只露出阅读区。精确偏移完全由下面的
       // requestedBookmarkAnchor 通道承载 (selectChapterAnchor 处理同章偏移跳转)。
@@ -4252,6 +4563,7 @@ struct Index {
       this.preparedReaderRoute = 'reading';
       this.requestedChapterIndex = undefined;
       this.bindReadingEntryReader();
+      this.requestedMangaDirectoryTargetProof = undefined;
     }
     this.bookmarkAnchorRequestId += 1;
     this.requestedBookmarkAnchor =
@@ -4267,6 +4579,15 @@ struct Index {
     if (directoryTargetProof !== undefined && (directoryTargetProof['sourceId'] !== book.sourceId ||
       directoryTargetProof['bookId'] !== book.bookId)) return;
     if (positionScope === undefined && directoryTargetProof === undefined) return;
+    if (this.readingContentKind === 'manga') {
+      // v2 resolves chapter starts for manga. A text scalar/position scope is
+      // never interpreted as an image anchor. Core revalidates this exact
+      // directory proof before either cached-entry or chapter acquisition.
+      if (chapterOffsetScalar !== 0 || positionScope !== undefined || directoryTargetProof === undefined ||
+        directoryTargetProof['chapterIndex'] !== chapterIndex) return;
+      this.onDirectoryChapterSelected(chapterIndex, directoryTargetProof);
+      return;
+    }
     this.onReaderBookmarkSelected('', chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
   }
 
@@ -4280,11 +4601,13 @@ struct Index {
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.requestedChapterIndex = undefined;
+    this.mangaChapterStartRequestGeneration = -1;
+    this.requestedMangaDirectoryTargetProof = undefined;
     this.requestedBookmarkAnchor = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryReturnTarget = 'detail';
-    this.directoryCurrentChapterIndex = -1;
-    this.directoryChapterTitle = '';
+    this.directoryCurrentChapterIndex = this.detailBook.mangaPosition?.chapterIndex ?? -1;
+    this.directoryChapterTitle = this.detailBook.mangaPosition?.chapterTitle ?? '';
     this.route = 'directory';
     this.directoryPresentationGeneration += 1;
     this.loadDirectoryOperationProjections();
@@ -4398,16 +4721,27 @@ struct Index {
     this.exitToDetailOriginAfterReader = false;
     this.readingSessionActive = false;
     this.requestedChapterIndex = undefined;
+    this.mangaChapterStartRequestGeneration = -1;
+    this.requestedMangaDirectoryTargetProof = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;
     this.directoryChapterTitle = '';
     // Keep the admitted identity for detail and ordinary back navigation.
     this.route = this.readingOriginRoute;
     this.bindReadingEntryReader();
+    if (this.detailBook.contentKind === 'manga') this.hydrateMangaPositions([{ sourceId: this.detailBook.sourceId,
+      bookId: this.detailBook.bookId, title: this.detailBook.title, author: this.detailBook.author,
+      contentKind: 'manga', addedAt: 0 }]);
     void this.refreshDetailAcquisitionProjection();
     if (this.route === 'bookshelf') {
       this.refreshBookshelf();
     }
+  }
+
+  private requestMangaShelfMutation(): void {
+    if (this.readingContentKind !== 'manga' || !this.readingSessionActive || this.detailBook === undefined) return;
+    this.mangaShelfMutationAfterExit = `${this.detailBook.sourceId}\u0000${this.detailBook.bookId}`;
+    this.requestReaderBookInfo();
   }
 
   private requestReaderBookInfo(): void {
@@ -4427,6 +4761,8 @@ struct Index {
       readerIdentity !== this.currentReaderPresentationIdentity()) return;
     this.systemFileOpenNavigation?.cancelExit(readerIdentity);
     this.bookInfoAfterReaderExit = undefined;
+    this.mangaShelfMutationAfterExit = undefined;
+    this.mangaDownloadDeleteAfterExit = undefined;
     this.openRulesManagementAfterReaderExit = false;
     this.exitToDetailOriginAfterReader = false;
   }
@@ -4437,6 +4773,7 @@ struct Index {
     this.readingExitRequest = undefined;
     if (this.systemFileOpenNavigation?.readerExited(readerIdentity) === true) {
       this.bookInfoAfterReaderExit = undefined;
+      this.mangaDownloadDeleteAfterExit = undefined;
       this.openRulesManagementAfterReaderExit = false;
       this.returnToBookshelf();
       this.consumeSystemFileOpen();
@@ -4450,8 +4787,18 @@ struct Index {
       // the visible-page commit; viewing information does not acquire a book.
       this.readingOriginRoute = 'detail';
       this.returnToReadingOrigin();
+      const shelfMutation = this.mangaShelfMutationAfterExit;
+      this.mangaShelfMutationAfterExit = undefined;
+      if (shelfMutation === bookInfoIdentity) this.requestDetailShelfMutation();
+      const deletion = this.mangaDownloadDeleteAfterExit;
+      this.mangaDownloadDeleteAfterExit = undefined;
+      if (deletion !== undefined && deletion.session.identity.sourceId === this.detailBook?.sourceId &&
+        deletion.session.identity.bookId === this.detailBook?.bookId) {
+        void this.performMangaDownloadAction('deleteDownloads', deletion.chapterIndex);
+      }
       return;
     }
+    this.mangaDownloadDeleteAfterExit = undefined;
     if (this.openRulesManagementAfterReaderExit) {
       this.openRulesManagementAfterReaderExit = false;
       this.presentRulesManagementFromReader();
@@ -4636,6 +4983,13 @@ struct Index {
           SourceSwitchPanel({
             state: this.sourceSwitchState,
             currentSourceId: this.detailBook?.sourceId ?? '',
+            bookTitle: this.detailBook?.title ?? '', author: this.detailBook?.author ?? '',
+            coverUrl: this.detailBook?.coverUrl ?? '', currentSourceName: this.detailBook?.sourceName ?? '',
+            currentChapterTitle: this.directoryChapterTitle || this.detailBook?.mangaPosition?.chapterTitle || '',
+            contentKind: this.detailBook?.contentKind ?? 'text',
+            allowCancelWhileSwitching: this.canCancelMangaSourcePreparation(),
+            reduceMotion: this.settingsSnapshot.reduceMotion, consumeTopInset: this.readerOwnsWindowEdges(),
+            onStop: (): void => this.stopSourceDiscovery(scopeId),
             onClose: (): void => this.closeSourceSwitch(scopeId),
             onRetry: (): void => this.retrySourceSwitch(scopeId),
             onRefresh: (): void => this.refreshSourceSwitch(scopeId),
@@ -4747,6 +5101,8 @@ struct Index {
     host.open(this.sourceSwitchContext(), this.sourceSwitchLease(host));
   }
 
+  private stopSourceDiscovery(scopeId?: number): void { if (scopeId !== undefined) this.sourceSwitchHost?.stop(scopeId); }
+
   private retrySourceSwitch(scopeId?: number): void { if (scopeId !== undefined) this.sourceSwitchHost?.retry(scopeId); }
   private refreshSourceSwitch(scopeId?: number): void { if (scopeId !== undefined) this.sourceSwitchHost?.refresh(scopeId); }
 
@@ -4756,7 +5112,7 @@ struct Index {
     const session = this.remoteReadingSession?.identity.sourceId === book.sourceId &&
       this.remoteReadingSession?.identity.bookId === book.bookId ? this.remoteReadingSession : undefined;
     if (this.detailToc.length === 0) {
-      return { sourceId: book.sourceId, bookId: book.bookId, bookName: book.title, author: book.author, authorIdentity: session?.book.authorIdentity, sourceVersion: session?.sourceVersion,
+      return { contentKind: (session?.contentKind ?? book.contentKind) === 'manga' ? 'manga' : 'text', sourceId: book.sourceId, bookId: book.bookId, bookName: book.title, author: book.author, authorIdentity: session?.book.authorIdentity, sourceVersion: session?.sourceVersion,
         currentChapterIndex: 0, currentChapterTitle: '' };
     }
     let anchor = this.detailToc[this.detailToc.length - 1];
@@ -4772,6 +5128,7 @@ struct Index {
       }
     }
     return {
+      contentKind: (session?.contentKind ?? book.contentKind) === 'manga' ? 'manga' : 'text',
       sourceId: book.sourceId,
       bookId: book.bookId,
       bookName: book.title,
@@ -4784,7 +5141,8 @@ struct Index {
 
   private knownSearchSourceCandidates(query: SourceSwitchProbeQuery): SourceSwitchCandidate[] {
     if (this.detailReturnRoute !== 'search') return [];
-    return this.searchDetailCandidates.map((book: SearchBook): SourceSwitchCandidate => {
+    return this.searchDetailCandidates.filter((book: SearchBook): boolean =>
+      (book.category === 'comic') === (query.contentKind === 'manga')).map((book: SearchBook): SourceSwitchCandidate => {
       const rank = searchCandidateRank(book);
       return { sourceId: book.sourceId, sourceName: book.sourceName, sourceVersion: book.sourceRuleVersion,
         searchVariables: book.variables, authorIdentity: book.authorIdentity,
@@ -4795,17 +5153,337 @@ struct Index {
     });
   }
 
+  private async switchMangaSource(candidate: SourceSwitchCandidate, isCurrent: () => boolean): Promise<void> {
+    const original = this.detailBook;
+    if (original === undefined) return;
+    const originRoute = this.route;
+    const current = (): boolean => isCurrent() && this.route === originRoute &&
+      this.detailBook?.sourceId === original.sourceId && this.detailBook?.bookId === original.bookId;
+    let previous = this.remoteReadingSession?.identity.sourceId === original.sourceId &&
+      this.remoteReadingSession?.identity.bookId === original.bookId ? this.remoteReadingSession : undefined;
+    const owner = ReaderRuntimeOwner.current();
+    let observedToken: MangaProgressToken | undefined = undefined;
+    try {
+      if (candidate.category !== 'comic') throw new Error('漫画只能切换至漫画书源');
+      if (!this.detailInBookshelf && !this.readingSessionActive) {
+        const host = this.getSourceSwitchHost();
+        if (host === undefined) throw new Error('MANGA_SESSION_CANCELLED');
+        const target = await host.prepareMangaPreview(candidate, current);
+        if (!current()) return;
+        const first = target.entries.find(row => row.navigable !== false && row.url.trim().length > 0);
+        if (first === undefined) throw new Error('漫画目标目录没有可读章节');
+        this.performMangaPreviewSourceSwitch(candidate, target, first.index);
+        return;
+      }
+      if (previous === undefined) {
+        previous = await new RemoteReadingFlowGateway(owner).openCachedCatalogSession({ contentKind: 'manga',
+          sourceId: original.sourceId, bookId: original.bookId, detailUrl: original.bookId,
+          title: original.title, author: original.author, coverUrl: original.coverUrl, intro: original.intro }, current);
+        if (!current()) return;
+      }
+      if (previous.contentKind !== 'manga' || previous.identity.sourceId !== original.sourceId ||
+        previous.identity.bookId !== original.bookId) throw new Error('当前漫画目录尚未就绪，请打开章节后重试');
+      const saved = await new MangaSessionGateway(owner).progress(original.sourceId, original.bookId, current);
+      observedToken = saved.token;
+      const entry = previous.entries.find(row => row.url === saved.location?.chapter.chapterId);
+      if (entry === undefined) throw new Error('当前漫画阅读位置尚未保存，请先打开对应章节后重试');
+      const toc = await this.getSourceSwitchGateway().fetchTargetToc(candidate.sourceId, candidate.bookUrl, current, candidate);
+      const target = toc.readingSession;
+      const gateway = new MangaSourceSwitchGateway(owner);
+      const proposal = await gateway.prepare(original.sourceId, original.bookId, target, entry.title, entry.index, current);
+      if (proposal.expectedFrom.epoch !== saved.token.epoch || proposal.expectedFrom.revision !== saved.token.revision) {
+        throw new Error('阅读位置已变化，请重新选择书源');
+      }
+      await this.commitMangaSourceSwitch(original, candidate, target, proposal, current);
+    } catch (error) {
+      if (!current()) return;
+      if (error instanceof MangaSwitchChapterSelectionRequired) {
+        if (observedToken?.epoch !== error.expectedFrom.epoch ||
+          observedToken?.revision !== error.expectedFrom.revision) {
+          this.presentMangaSourceSwitchAcquisitionFailure(original, candidate, '阅读位置已变化，请重新选择书源');
+        } else {
+          this.presentMangaSourceSwitchSelection(original, candidate, error, current);
+        }
+        return;
+      }
+      this.presentMangaSourceSwitchAcquisitionFailure(original, candidate, this.mangaSourceSwitchFailureMessage(error));
+    }
+  }
+
+  private presentMangaSourceSwitchSelection(original: ReadingBookDetail, candidate: SourceSwitchCandidate,
+    selection: MangaSwitchChapterSelectionRequired, current: () => boolean): void {
+    if (!current()) return;
+    const target = selection.targetSession;
+    if (selection.fromSourceId !== original.sourceId || selection.fromBookId !== original.bookId ||
+      this.detailBook?.sourceId !== original.sourceId || this.detailBook?.bookId !== original.bookId ||
+      target.contentKind !== 'manga' || target.identity.sourceId !== candidate.sourceId ||
+      target.identity.bookId !== candidate.bookUrl) {
+      this.presentMangaSourceSwitchAcquisitionFailure(original, candidate, '漫画目标目录已变化，请重新选择书源');
+      return;
+    }
+    // The target's Core-derived readability and volume levels remain separate
+    // from the original detail TOC, current chapter and active reading session.
+    this.mangaSourceSwitchSelection = {
+      original, candidate, target, expectedFrom: {
+        epoch: selection.expectedFrom.epoch, revision: selection.expectedFrom.revision,
+      },
+      entries: target.entries.map((entry: RemoteReadingTocEntry): LocalReadingTocEntry => ({
+        index: entry.index, title: entry.title, level: entry.level,
+        navigable: entry.navigable !== false && entry.url.trim().length > 0, downloadState: 'unknown',
+      })),
+      current, commitStarted: false,
+    };
+    this.mangaSourceSwitchSelectionBusy = false;
+    this.mangaSourceSwitchSelectionVisible = true;
+  }
+
+  private mangaSourceSwitchFailureMessage(error: Object): string {
+    const message = errorMessageOf(error);
+    switch (message) {
+      case 'MANGA_SWITCH_PROGRESS_CHANGED':
+        return '阅读位置已变化，请重新选择书源';
+      case 'MANGA_SWITCH_SELECTED_CHAPTER_INVALID':
+        return '目标章节不可用，请重新选择章节';
+      case 'MANGA_SWITCH_SOURCE_CHANGED':
+        return '目标书源已更新，请重新选择书源';
+      case 'MANGA_SWITCH_CATALOG_CHANGED':
+        return '目标目录已更新，请重新选择章节';
+      case 'MANGA_SWITCH_RECEIPT_INVALID':
+        return '换源结果需要重新读取，请重试';
+      case 'MANGA_SWITCH_LANDING_INVALID':
+        return '目标阅读位置不可用，请重新选择章节';
+      case 'MANGA_SWITCH_INVALID':
+        return '请选择漫画书源';
+      default:
+        return message.startsWith('MANGA_') ? '漫画换源失败，请重试' : message;
+    }
+  }
+
+  private isMangaSourceSwitchSelectionCurrent(selection: MangaSourceSwitchSelection): boolean {
+    return this.mangaSourceSwitchSelectionVisible && this.mangaSourceSwitchSelection === selection &&
+      selection.current() && this.detailBook?.sourceId === selection.original.sourceId &&
+      this.detailBook?.bookId === selection.original.bookId;
+  }
+
+  private mangaSourceSwitchDirectorySelection(selection: MangaSourceSwitchSelection):
+    (chapterIndex: number, chapterOffsetScalar?: number, positionScope?: RemoteReadingPositionScope,
+      directoryTargetProof?: JsonObject) => void {
+    // Bind to this exact target catalog owner, including legacy flat rows. A
+    // late event from an old directory cannot select a new target's same index.
+    return (chapterIndex: number, _chapterOffsetScalar?: number, _positionScope?: RemoteReadingPositionScope,
+      directoryTargetProof?: JsonObject): void => {
+      if (!this.isMangaSourceSwitchSelectionCurrent(selection)) return;
+      // A source change always starts at the chosen chapter's first image.
+      void this.selectMangaSourceSwitchChapter(chapterIndex, directoryTargetProof);
+    };
+  }
+
+  private mangaSourceSwitchDirectoryBack(selection: MangaSourceSwitchSelection): () => void {
+    return (): void => {
+      if (this.mangaSourceSwitchSelection === selection) this.cancelMangaSourceSwitchSelection();
+    };
+  }
+
+  private clearMangaSourceSwitchSelection(): void {
+    this.mangaSourceSwitchSelectionVisible = false;
+    this.mangaSourceSwitchSelectionBusy = false;
+    this.mangaSourceSwitchSelection = undefined;
+  }
+
+  private cancelMangaSourceSwitchSelection(): void {
+    const selection = this.mangaSourceSwitchSelection;
+    if (selection === undefined || selection.commitStarted) return;
+    const current = selection.current();
+    this.clearMangaSourceSwitchSelection();
+    // Cancel only this catalog choice, keeping the source picker and the
+    // original reading context. A late first-image load no longer owns it.
+    if (current) this.sourceSwitchState = { kind: 'candidates', candidates: [selection.candidate] };
+  }
+
+  private async selectMangaSourceSwitchChapter(chapterIndex: number, directoryTargetProof?: JsonObject): Promise<void> {
+    const selection = this.mangaSourceSwitchSelection;
+    if (selection === undefined || this.mangaSourceSwitchSelectionBusy ||
+      !this.isMangaSourceSwitchSelectionCurrent(selection)) return;
+    this.mangaSourceSwitchSelectionBusy = true;
+    const current = (): boolean => this.isMangaSourceSwitchSelectionCurrent(selection);
+    try {
+      const gateway = new MangaSourceSwitchGateway(ReaderRuntimeOwner.current());
+      const proposal = await gateway.prepareSelected(selection.original.sourceId, selection.original.bookId,
+        selection.target, chapterIndex, current, selection.expectedFrom, directoryTargetProof);
+      if (!current()) return;
+      await this.commitMangaSourceSwitch(selection.original, selection.candidate, selection.target,
+        proposal, current, selection);
+    } catch (error) {
+      if (current()) this.presentMangaSourceSwitchAcquisitionFailure(selection.original,
+        selection.candidate, this.mangaSourceSwitchFailureMessage(error));
+    } finally {
+      if (this.mangaSourceSwitchSelection === selection) {
+        this.mangaSourceSwitchSelectionBusy = false;
+        if (!selection.current()) this.clearMangaSourceSwitchSelection();
+      }
+    }
+  }
+
+  private async commitMangaSourceSwitch(original: ReadingBookDetail, candidate: SourceSwitchCandidate,
+    target: RemoteReadingSession, proposal: MangaSwitchProposal, current: () => boolean,
+    selection?: MangaSourceSwitchSelection): Promise<void> {
+    if (!current()) return;
+    if (!this.detailInBookshelf) {
+      // Preparation already validated the explicitly selected first image.
+      // Transfer a one-entry chapter-start intent. Progress is saved only by
+      // the reader after actual visibility, never speculatively in this switch.
+      this.performMangaPreviewSourceSwitch(candidate, target, proposal.firstImage.chapterIndex);
+      return;
+    }
+    const host = this.getSourceSwitchHost();
+    if (host === undefined) throw new Error('MANGA_SESSION_CANCELLED');
+    const chapterIndex = proposal.firstImage.chapterIndex;
+    // Candidate or explicit target chapter selection supplies the intent. Core
+    // verifies first-image evidence and both progress CAS tokens atomically.
+    if (selection !== undefined) selection.commitStarted = true;
+    const commitGeneration = this.navigationGeneration;
+    this.mangaSourceSwitchCommitGeneration = commitGeneration;
+    try {
+      await new MangaSourceSwitchGateway(ReaderRuntimeOwner.current()).commitPrepared(proposal, current);
+      this.refreshBookshelf();
+      if (!current()) return;
+      const committed = await host.readMangaShelf(candidate.sourceId, candidate.bookUrl, current);
+      if (!current()) return;
+      if (committed?.contentKind !== 'manga') throw new Error('漫画换源已提交，书架状态需要重新读取');
+      this.performSourceSwitchSeam(committed, target, chapterIndex);
+    } catch (error) {
+      // A missing response is not proof of rollback. Both automatic matching
+      // and manual selection reconcile the same durable shelf facts.
+      this.refreshBookshelf();
+      try {
+        const old = await host.readMangaShelf(original.sourceId, original.bookId, current);
+        const committed = await host.readMangaShelf(candidate.sourceId, candidate.bookUrl, current);
+        if (!current()) return;
+        if (old === undefined && committed?.contentKind === 'manga') {
+          this.performSourceSwitchSeam(committed, target, chapterIndex);
+          return;
+        }
+      } catch (_readError) { /* Keep explicit failure until the next shelf refresh. */ }
+      if (current()) this.presentMangaSourceSwitchAcquisitionFailure(original, candidate, this.mangaSourceSwitchFailureMessage(error));
+    } finally {
+      if (this.mangaSourceSwitchCommitGeneration === commitGeneration) {
+        this.mangaSourceSwitchCommitGeneration = -1;
+      }
+    }
+  }
+
+  private performMangaPreviewSourceSwitch(candidate: SourceSwitchCandidate,
+    session: RemoteReadingSession, chapterIndex: number): void {
+    const detailReturnRoute = this.detailReturnRoute;
+    const seed: RemoteReadingBookSeed = { contentKind: 'manga', sourceId: session.identity.sourceId,
+      bookId: session.identity.bookId, detailUrl: session.detailUrl, title: session.book.title,
+      author: session.book.author, coverUrl: session.book.coverUrl, intro: session.book.intro,
+      lastChapter: session.book.lastChapter, sourceVersion: session.sourceVersion,
+      searchVariables: session.continuationVariables };
+    this.clearMangaSourceSwitchSelection();
+    this.sourceSwitchHost?.retire();
+    this.sourceSwitchVisible = false;
+    this.sourceSwitchState = { kind: 'discovering' };
+    this.failedSourceSwitchCandidate = undefined;
+    this.openRemoteBookDetail(seed, candidate.sourceName ?? candidate.sourceId,
+      undefined, true, [], [], detailReturnRoute, session);
+    this.requestedChapterIndex = chapterIndex;
+    this.mangaChapterRequestGeneration += 1;
+    this.mangaChapterStartRequestGeneration = this.mangaChapterRequestGeneration;
+    this.requestedMangaDirectoryTargetProof = undefined;
+    this.requestedBookmarkAnchor = undefined;
+    try { this.getUIContext().getPromptAction().showToast({ message: '已从本章开头继续' }); }
+    catch (_) { /* Feedback never owns a prepared trial switch. */ }
+  }
+
+  private canCancelMangaSourcePreparation(): boolean {
+    return this.sourceSwitchState.kind === 'switching' && this.detailBook?.contentKind === 'manga' &&
+      this.mangaSourceSwitchCommitGeneration !== this.navigationGeneration;
+  }
+
+  private getSourceSwitchGateway(): SourceSwitchGateway {
+    const host = this.getSourceSwitchHost();
+    if (host === undefined) throw new Error('MANGA_SESSION_CANCELLED');
+    return host.mangaPreparationGateway();
+  }
+
+  private presentMangaSourceSwitchAcquisitionFailure(book: ReadingBookDetail,
+    candidate: SourceSwitchCandidate, message: string): void {
+    if (this.detailBook?.sourceId !== book.sourceId || this.detailBook?.bookId !== book.bookId) return;
+    if (book.contentKind === 'manga' && !this.readingSessionActive) {
+      // An unread detail must remain a detail on failed or cancelled target
+      // preparation. Reuse the picker error/row action rather than starting
+      // the old reader merely to display a source-switch failure.
+      this.clearMangaSourceSwitchSelection();
+      this.sourceSwitchHost?.retire();
+      this.sourceSwitchState = { kind: 'candidates', candidates: [candidate], stopped: true, refreshError: message };
+      return;
+    }
+    this.mangaSourceSwitchSelectionVisible = false;
+    this.mangaSourceSwitchSelectionBusy = false;
+    this.mangaSourceSwitchSelection = undefined;
+    this.sourceSwitchHost?.retire();
+    this.sourceSwitchVisible = false;
+    this.sourceSwitchState = { kind: 'discovering' };
+    this.failedSourceSwitchCandidate = candidate;
+    this.failedSourceSwitchIdentity = `${book.sourceId}\u0000${book.bookId}`;
+    if (!this.readingSessionActive) this.openReading(undefined);
+    this.route = 'reading';
+    this.sourceSwitchFailureMessage = message;
+  }
+
   private onPickSource(candidate: SourceSwitchCandidate, scopeId?: number): void {
+    if (scopeId !== undefined && scopeId !== this.sourceSwitchScopeId) return;
+    const book = this.detailBook, owner = this.mountedRuntimeOwner;
+    if (book?.contentKind === 'manga') {
+      if (owner === undefined || !this.isCurrentRuntime(owner) || !this.sourceSwitchVisible ||
+        this.sourceSwitchState.kind !== 'candidates' || this.mangaSourceSwitchSelectionVisible ||
+        sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl) === sourceSwitchCandidateKey(book.sourceId, book.bookId)) return;
+      const generation = this.navigationGeneration, preparation = ++this.mangaSourceSwitchPreparationGeneration;
+      this.sourceSwitchHost?.retire();
+      this.sourceSwitchState = { kind: 'switching', targetSourceId: candidate.sourceId };
+      const current = (): boolean => this.sourceSwitchVisible && !this.shelfReceiptRetired && this.isCurrentRuntime(owner) &&
+        this.navigationGeneration === generation && this.mangaSourceSwitchPreparationGeneration === preparation &&
+        this.detailBook?.sourceId === book.sourceId && this.detailBook?.bookId === book.bookId;
+      void this.switchMangaSource(candidate, current);
+      return;
+    }
     if (scopeId !== undefined) void this.sourceSwitchHost?.pick(candidate, scopeId);
   }
-  private retryFailedSourceSwitch(scopeId?: number): void { if (scopeId !== undefined) this.sourceSwitchHost?.retryFailed(scopeId); }
-  private dismissSourceSwitchFailure(scopeId?: number): void { if (scopeId !== undefined) this.sourceSwitchHost?.dismissFailure(scopeId); }
+  private retryFailedSourceSwitch(scopeId?: number): void {
+    const book = this.detailBook, candidate = this.failedSourceSwitchCandidate;
+    if (book?.contentKind === 'manga' && candidate !== undefined && !this.sourceSwitchVisible &&
+      this.failedSourceSwitchIdentity === `${book.sourceId}\u0000${book.bookId}`) {
+      this.sourceSwitchVisible = true;
+      this.sourceSwitchState = { kind: 'candidates', candidates: [candidate] };
+      this.onPickSource(candidate, this.sourceSwitchScopeId);
+    } else if (scopeId !== undefined) this.sourceSwitchHost?.retryFailed(scopeId);
+  }
+  private dismissSourceSwitchFailure(scopeId?: number): void {
+    if (this.detailBook?.contentKind === 'manga') {
+      this.sourceSwitchFailureMessage = ''; this.failedSourceSwitchCandidate = undefined; this.failedSourceSwitchIdentity = '';
+    } else if (scopeId !== undefined) this.sourceSwitchHost?.dismissFailure(scopeId);
+  }
   private onRollbackSourceSwitch(scopeId?: number): void { if (scopeId !== undefined) this.sourceSwitchHost?.rollback(scopeId); }
-  private closeSourceSwitch(scopeId?: number): void { if (scopeId !== undefined) this.sourceSwitchHost?.close(scopeId); }
+  private closeSourceSwitch(scopeId?: number): void {
+    if (scopeId !== undefined && scopeId !== this.sourceSwitchScopeId) return;
+    if (this.detailBook?.contentKind === 'manga') {
+      if (this.mangaSourceSwitchSelectionVisible) { this.cancelMangaSourceSwitchSelection(); return; }
+      if (!this.sourceSwitchVisible || (this.sourceSwitchState.kind === 'switching' && !this.canCancelMangaSourcePreparation())) return;
+      this.mangaSourceSwitchPreparationGeneration += 1;
+      this.sourceSwitchHost?.retire();
+      this.sourceSwitchVisible = false;
+      this.sourceSwitchState = { kind: 'discovering' };
+      this.consumeSystemFileOpen();
+      return;
+    }
+    if (scopeId !== undefined) this.sourceSwitchHost?.close(scopeId);
+  }
 
   private performSourceSwitchSeam(book: ShelfBook, session?: RemoteReadingSession,
     chapterIndex?: number): void {
     this.retireSourceSwitchPresentation();
+    this.clearMangaSourceSwitchSelection();
     this.sourceSwitchVisible = false;
     if (session === undefined || session.identity.sourceId !== book.sourceId ||
       session.identity.bookId !== book.bookId) {
@@ -4815,12 +5493,13 @@ struct Index {
     this.nextNavigationGeneration();
     this.readingExitRequest = undefined;
     this.detailBook = this.readingDetailForShelf(book);
-    this.remoteReadingSeed = { sourceId: book.sourceId, bookId: book.bookId, detailUrl: book.bookId,
+    this.remoteReadingSeed = { contentKind: session.contentKind, sourceId: book.sourceId, bookId: book.bookId, detailUrl: book.bookId,
       title: book.title, author: book.author, coverUrl: book.coverUrl, intro: book.intro,
       lastChapter: book.lastChapter, sourceVersion: session.sourceVersion };
+    this.readingContentKind = session.contentKind === 'manga' ? 'manga' : 'text';
     this.readingSessionActive = true;
     const committedSession: RemoteReadingSession = {
-      sourceVersion: session.sourceVersion, catalogAt: session.catalogAt,
+      contentKind: session.contentKind, sourceVersion: session.sourceVersion, catalogAt: session.catalogAt,
       catalogVersion: session.catalogVersion, contextVersion: session.contextVersion,
       preparedChapter: session.preparedChapter, acquisitionMode: session.acquisitionMode,
       identity: session.identity, detailUrl: session.detailUrl, tocUrl: session.tocUrl,
@@ -4838,9 +5517,14 @@ struct Index {
     this.onRemoteSessionReady(committedSession);
     this.detailInBookshelf = true;
     this.requestedChapterIndex = chapterIndex;
+    this.requestedMangaDirectoryTargetProof = undefined;
     this.requestedBookmarkAnchor = undefined;
     this.preparedReaderRoute = 'reading';
     this.route = 'reading';
+    if (session.contentKind === 'manga') {
+      try { this.getUIContext().getPromptAction().showToast({ message: '已从本章开头继续' }); }
+      catch (_) { /* Feedback never owns an already committed source switch. */ }
+    }
   }
 
   private onReadingFailure(sourceId: string, bookId: string, message: string,
@@ -5000,6 +5684,8 @@ struct Index {
     this.exitToDetailOriginAfterReader = false;
     this.readingSessionActive = false;
     this.requestedChapterIndex = undefined;
+    this.mangaChapterStartRequestGeneration = -1;
+    this.requestedMangaDirectoryTargetProof = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;
     this.directoryChapterTitle = '';
@@ -5027,6 +5713,8 @@ struct Index {
     this.exitToDetailOriginAfterReader = false;
     this.readingSessionActive = false;
     this.requestedChapterIndex = undefined;
+    this.mangaChapterStartRequestGeneration = -1;
+    this.requestedMangaDirectoryTargetProof = undefined;
     this.preparedReaderRoute = 'reading';
     this.directoryCurrentChapterIndex = -1;
     this.directoryChapterTitle = '';
@@ -5134,6 +5822,8 @@ struct Index {
       title: book.title,
       author: book.author,
       kind: book.kind,
+      contentKind: book.contentKind,
+      mangaPosition: book.contentKind === 'manga' ? MangaBookPresentation.get(book.sourceId, book.bookId) : undefined,
       coverUrl: book.coverUrl,
       intro: book.intro,
       lastChapter: book.lastChapter,
@@ -5154,6 +5844,8 @@ struct Index {
       title: seed.title,
       author: seed.author,
       kind: seed.kind,
+      contentKind: seed.contentKind ?? (this.readingContentKind === 'manga' ? 'manga' : 'text'),
+      mangaPosition: this.readingContentKind === 'manga' ? MangaBookPresentation.get(seed.sourceId, seed.bookId) : undefined,
       coverUrl: seed.coverUrl,
       intro: seed.intro,
       lastChapter: seed.lastChapter,
@@ -5161,11 +5853,16 @@ struct Index {
   }
 
   private applyDirectoryChapter(chapterIndex: number, chapterTitle: string): void {
-    if (!this.readingSessionActive || !this.isKnownDetailChapter(chapterIndex)) {
+    const mangaBeforeCatalog = this.readingContentKind === 'manga' && this.detailToc.length === 0 &&
+      Number.isSafeInteger(chapterIndex) && chapterIndex >= 0;
+    const mangaHistoricalResume = this.readingContentKind === 'manga' && this.requestedChapterIndex === undefined &&
+      this.remoteReadingSession?.entries.some(entry => entry.index === chapterIndex && entry.resumeOnly === true) === true;
+    if (!this.readingSessionActive || (!mangaBeforeCatalog && !mangaHistoricalResume && !this.isKnownDetailChapter(chapterIndex))) {
       return;
     }
     this.directoryCurrentChapterIndex = chapterIndex;
     this.directoryChapterTitle = chapterTitle;
+    if (this.readingContentKind === 'manga') this.mangaCommittedRequestGeneration = this.mangaChapterRequestGeneration;
   }
 
   private readingPrefetchLease(session: RemoteReadingSession, owner: ReaderRuntimeOwner,
@@ -5210,6 +5907,26 @@ struct Index {
       ReadingPrefetchHost.forRuntime(owner).nearEnd(session, chapterIndex);
   }
 
+  /** Rebuilt only when an admitted session supplies a different TOC array. */
+  private updateRemoteReadableChapterOrder(session: RemoteReadingSession | undefined): void {
+    if (this.remoteReadableToc === session?.entries) return;
+    this.remoteReadableToc = session?.entries;
+    this.remoteReadableChapterIndexes = [];
+    this.remoteReadableChapterPositions = new Map();
+    if (session === undefined) return;
+    for (const entry of session.entries) {
+      if (entry.navigable === false || entry.url.trim().length === 0) continue;
+      this.remoteReadableChapterPositions.set(entry.index, this.remoteReadableChapterIndexes.length);
+      this.remoteReadableChapterIndexes.push(entry.index);
+    }
+  }
+
+  private remoteReadableChapterPosition(session: RemoteReadingSession, chapterIndex: number): number | undefined {
+    // Narrow/unknown catalog positions cannot be clamped to an unrelated row.
+    if (this.remoteReadableToc !== session.entries) return undefined;
+    return this.remoteReadableChapterPositions.get(chapterIndex);
+  }
+
   private refreshRemoteCatalogNearEnd(session: RemoteReadingSession): void {
     const owner = this.mountedRuntimeOwner, detail = this.detailBook;
     if (owner === undefined || !this.isCurrentRuntime(owner) || !this.readingSessionActive || detail === undefined ||
@@ -5249,6 +5966,7 @@ struct Index {
       next.push({
         index: entry.index,
         title: titleProjection.title,
+        level: entry.level,
         navigable: entry.navigable,
         downloadState: entry.downloadState,
         bookmarks: entry.bookmarks,
@@ -5259,7 +5977,7 @@ struct Index {
   }
 
   private shelfFilter(): BookshelfFilter {
-    return { readingState: this.shelfReadingFilter, sourceKind: this.shelfSourceFilter };
+    return { readingState: this.shelfReadingFilter, sourceKind: this.shelfSourceFilter, contentKind: this.shelfContentFilter };
   }
 
   private isCurrentBookshelfPresentation(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number): boolean {
@@ -5327,7 +6045,8 @@ struct Index {
   }
 
   private applyBookshelfProjection(snapshot: BookshelfProjectionSnapshot, owner: ReaderRuntimeOwner, navigation: number): void {
-    if (snapshot.filter.readingState !== this.shelfReadingFilter || snapshot.filter.sourceKind !== this.shelfSourceFilter) return;
+    if (snapshot.filter.readingState !== this.shelfReadingFilter || snapshot.filter.sourceKind !== this.shelfSourceFilter ||
+      (snapshot.filter.contentKind ?? 'all') !== this.shelfContentFilter) return;
     const wasAdmitted = this.isBookshelfVisualAdmitted;
     this.bookshelfLoadGeneration = snapshot.generation;
     this.shelfBooks = snapshot.books; this.shelfProjectionRevision = snapshot.revision;

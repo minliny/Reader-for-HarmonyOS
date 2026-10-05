@@ -2,6 +2,7 @@ import {
   READER_FONT_INTER,
   READER_FONT_NOTO_SANS_SC,
   READER_FONT_NOTO_SANS_SC_UI_REGULAR,
+  READER_FONT_NOTO_SANS_SC_UI_BOLD,
   READER_FONT_NOTO_SERIF_SC_BOLD,
   READER_FONT_NOTO_SERIF_SC_REGULAR,
 } from './ReaderFontFamilies.ts';
@@ -93,7 +94,7 @@ export const TYPE_PAGE_TITLE = new ReaderTextStyle(
 export const TYPE_SECTION_HEADING = new ReaderTextStyle(
   READER_FONT_INTER, 900, 13, 15.6, undefined, 'system', 'figmaNode');
 export const TYPE_MAIN_TAB_LABEL = new ReaderTextStyle(
-  READER_FONT_NOTO_SANS_SC, 700, 11, 18, undefined, 'system', 'figmaNode');
+  READER_FONT_NOTO_SANS_SC_UI_BOLD, 700, 11, 18, undefined, 'system', 'figmaNode');
 
 // Shared-select variants. Similar controls retain independent roles whenever
 // their Figma nodes differ; sharing the component never implies identical text.
@@ -171,19 +172,25 @@ export const TYPE_READER_CONTROL_CHAPTER_TITLE = new ReaderTextStyle(
 // retained projection's opacity/translate transition from inheriting ArkUI's
 // variable-font auto baseline for small author/chapter labels.
 export const TYPE_SHELF_LIST_TITLE = new ReaderTextStyle(
-  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 15, 18.3, 0, 'system', 'figmaNode');
+  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 15, 18, 0, 'system', 'figmaNode');
 export const TYPE_SHELF_LIST_AUTHOR = new ReaderTextStyle(
-  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 12, 15, 0, 'system', 'figmaNode');
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 11, 14, 0, 'system', 'figmaNode');
 export const TYPE_SHELF_LIST_CHAPTER = new ReaderTextStyle(
-  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 11, 13.75, 0, 'system', 'figmaNode');
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 11, 14, 0, 'system', 'figmaNode');
 export const TYPE_SHELF_LIST_STATUS = new ReaderTextStyle(
-  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 10, 12, 0, 'system', 'figmaNode');
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 11, 14, 0, 'system', 'figmaNode');
+// Approved compact shelf design: content/origin tags remain independent of
+// chapter progress, with the same fixed face used by adjacent metadata.
+export const TYPE_SHELF_METADATA_TAG = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 9, 16, 0, 'system', 'figmaNode');
+export const TYPE_SHELF_CONTINUE_LABEL = new ReaderTextStyle(
+  READER_FONT_INTER, 500, 11, 18, 0, 'system', 'figmaNode');
 export const TYPE_SHELF_CONTINUE_TITLE = new ReaderTextStyle(
-  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 20, 24, 0, 'system', 'figmaNode');
+  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 16, 23, 0, 'system', 'figmaNode');
 export const TYPE_SHELF_CONTINUE_AUTHOR = new ReaderTextStyle(
-  READER_FONT_INTER, 400, 14, 16.8, 0, 'system', 'figmaNode');
+  READER_FONT_INTER, 400, 11, 15, 0, 'system', 'figmaNode');
 export const TYPE_SHELF_ACTION = new ReaderTextStyle(
-  READER_FONT_INTER, 800, 13, 15.6, 0, 'system', 'figmaNode');
+  READER_FONT_INTER, 700, 12, 16, 0, 'system', 'figmaNode');
 
 // Source-switch candidates keep their compact Figma text tuples separate so
 // the shared typography owner can change the row as one unit without changing

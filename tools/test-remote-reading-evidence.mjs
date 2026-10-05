@@ -125,7 +125,7 @@ for (const oldFailure of [false, true]) {
   const f=switchFixture({shared:true,open:false,preview:true}),x=makeSwitchIndex(f);
   x.index.detailReturnRoute='search';x.index.openDetailSourceSwitch();await settleSwitch();
   const before=f.calls.filter(c=>c[0]==='chapter.content').length;
-  x.mount();const row=x.rows().find(r=>r.sourceId==='new');assert.ok(row);row.onSelect();await settleSwitch();await settle();
+  x.mount();const row=x.rows().find(r=>r.candidate.sourceId==='new');assert.ok(row);row.onSelect();await settleSwitch();await settle();
   const opened=x.index.effects.find(e=>typeof e==='object'&&e.validated);assert.ok(opened);
   assert.equal(f.calls.filter(c=>c[0]==='chapter.content').length,before,'source selection transfers its catalog without a preliminary body probe');
   assert.equal(opened.resume,true);assert.equal(opened.parent,'search');
