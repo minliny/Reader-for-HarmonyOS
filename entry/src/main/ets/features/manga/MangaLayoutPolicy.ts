@@ -7,5 +7,5 @@ export function mangaUsesPersistentDirectory(width: number, height: number, devi
 }
 
 export function mangaDirectoryColumnWidth(width: number): number {
-  return Math.min(360, Math.max(320, width * 0.27));
+  return width <= 700 ? 168 : 258;
 }

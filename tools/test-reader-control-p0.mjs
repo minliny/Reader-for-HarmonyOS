@@ -2,9 +2,47 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { createRequire } from 'node:module';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => readFileSync(resolve(repo, path), 'utf8');
+
+// Parse the installed SDK's actual ETS call/object syntax. A file-wide count
+// cannot prove that each existing reading owner receives the setting.
+const require = createRequire(import.meta.url);
+const sdk = process.env.READER_ETS_LOADER_ROOT ??
+  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const ts = require(`${sdk}/node_modules/typescript`);
+const etsOptions = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
+const shellMotionOwners = ['ReadingExperience', 'ReaderFullDirectory', 'SourceSwitchPanel', 'MangaReadingSurface'];
+function assertShellReduceMotionWiring(source) {
+  const tree = ts.createSourceFile('/tmp/ReaderShellMotionWiring.ets', source,
+    ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, etsOptions);
+  assert.equal(tree.parseDiagnostics.length, 0, 'ReaderShell production ETS parses');
+  const owners = new Map(shellMotionOwners.map(name => [name, []]));
+  const visit = node => {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && owners.has(node.expression.text)) {
+      owners.get(node.expression.text).push(node);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(tree);
+  const wiring = [];
+  for (const [name, calls] of owners) {
+    assert.equal(calls.length, 1, `${name} retains its explicit ReaderShell entry`);
+    const params = calls[0].arguments[0];
+    assert.ok(params && ts.isObjectLiteralExpression(params), `${name} has explicit component parameters`);
+    const motion = params.properties.filter(property => ts.isPropertyAssignment(property) &&
+      ts.isIdentifier(property.name) && property.name.text === 'reduceMotion');
+    assert.equal(motion.length, 1, `${name} owns exactly one reduceMotion parameter`);
+    const value = motion[0].initializer;
+    assert.ok(ts.isPropertyAccessExpression(value) && value.expression.kind === ts.SyntaxKind.ThisKeyword &&
+      ts.isIdentifier(value.name) && value.name.text === 'reduceMotion',
+    `${name} receives the live ReaderShell reduceMotion setting`);
+    wiring.push({ name, start: value.getStart(tree), end: value.getEnd() });
+  }
+  return wiring;
+}
 
 // Execution reference v1.1 supersedes the old independent fades, 120ms handle
 // snap and Home->Directory / Replace->external expansion assumptions.
@@ -230,7 +268,16 @@ assert.match(shell, /controlObscured: this\.route === 'directory'/);
 assert.match(shell, /interactionBlocked: !this\.visible \|\| this\.route !== 'reading' \|\| this\.sourceSwitchVisible/,
   'hidden, directory, and source-switch layers must transfer pointer ownership away from reading');
 assert.match(shell, /onDeleteBookmarks: \(bookmarkTimes: number\[\]\): void => this\.onDeleteBookmarks\(bookmarkTimes\)/);
-assert.equal((shell.match(/reduceMotion: this\.reduceMotion/g) ?? []).length, 3);
+for (const owner of assertShellReduceMotionWiring(shell)) {
+  // Keep the old global count unchanged while breaking one real owner. The
+  // owner-scoped AST contract must still reject each of the four regressions.
+  const disconnected = shell.slice(0, owner.start) + 'false' + shell.slice(owner.end) +
+    '\nconst compensatedMotionCount = { reduceMotion: this.reduceMotion };\n';
+  assert.equal((disconnected.match(/reduceMotion: this\.reduceMotion/g) ?? []).length,
+    (shell.match(/reduceMotion: this\.reduceMotion/g) ?? []).length, 'negative control preserves the global count');
+  assert.throws(() => assertShellReduceMotionWiring(disconnected),
+    new RegExp(`${owner.name} receives the live ReaderShell reduceMotion setting`));
+}
 assert.match(shell, /\.opacity\(this\.visible \? 1 : 0\)/);
 
 const index = read('entry/src/main/ets/pages/Index.ets');

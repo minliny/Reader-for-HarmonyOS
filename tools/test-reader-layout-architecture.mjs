@@ -131,8 +131,11 @@ for (const type of ['TYPE_SYSTEM', 'TYPE_CUTOUT', 'TYPE_SYSTEM_GESTURE',
   assert.ok(coordinator.includes(type), `window metrics must include ${type}`);
 }
 assert.match(coordinator,
-  /statusBarColor: ReaderWindowCoordinator\.nativeStatusBarColor\(request\),[\s\S]*navigationBarColor: request\.style\.underlayColor,[\s\S]*statusBarContentColor: contentColor/,
+  /setWindowSystemBarProperties\(\{\s*statusBarColor: ReaderWindowCoordinator\.nativeStatusBarColor\(request\),\s*navigationBarColor: request\.style\.transparentSystemBars \? '#00000000' : request\.style\.underlayColor,\s*statusBarContentColor: contentColor,\s*navigationBarContentColor: contentColor,\s*\}\)/,
   'native status composition, navigation underlay and semantic content tone must change atomically from one style');
+assert.match(coordinator,
+  /constructor\(underlayColor: string, tone: ReaderWindowChromeTone, contentColor\?: string,\s*paperThemeId: string = '', transparentSystemBars: boolean = false\)/,
+  'novel and App callers retain opaque navigation by default; only an explicit manga flag selects transparency');
 assert.match(coordinator, /while \(ReaderWindowCoordinator\.mainWindow !== undefined[\s\S]*desiredChromeRevision/,
   'asynchronous chrome writes must use a last-write-wins revision loop');
 
@@ -142,8 +145,8 @@ assert.match(index, /readerContentSafeTop\(ReaderWindowCoordinator\.metrics\(\)\
 assert.doesNotMatch(shell, /\.padding\(\{ top:/,
   'ReaderShell must not add a second status-bar offset');
 assert.match(shell,
-  /expandSafeArea\(\[SafeAreaType\.SYSTEM\], \[SafeAreaEdge\.TOP, SafeAreaEdge\.BOTTOM\]\)/,
-  'the themed reader background must paint continuously behind both system bars');
+  /expandSafeArea\(this\.contentKind === 'manga' \? \[SafeAreaType\.SYSTEM, SafeAreaType\.CUTOUT\] : \[SafeAreaType\.SYSTEM\],\s*this\.contentKind === 'manga' \? \[SafeAreaEdge\.TOP, SafeAreaEdge\.BOTTOM, SafeAreaEdge\.START, SafeAreaEdge\.END\] :\s*\[SafeAreaEdge\.TOP, SafeAreaEdge\.BOTTOM\]\)/,
+  'manga draws through all physical edges while the themed novel background preserves system top/bottom expansion');
 assert.match(shell, /windowChromeOverlayActive:[\s\S]*this\.route === 'directory'[\s\S]*this\.sourceSwitchVisible/,
   'fixed-light reader overlays must explicitly own a dark system-content tone');
 

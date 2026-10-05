@@ -319,7 +319,11 @@ export struct ReaderShell {
     }
     .width('100%')
     .height('100%')
-    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+    .expandSafeArea(this.contentKind === 'manga' ? [SafeAreaType.SYSTEM, SafeAreaType.CUTOUT] : [SafeAreaType.SYSTEM],
+      this.contentKind === 'manga' ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END] :
+        [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+    .ignoreLayoutSafeArea(this.contentKind === 'manga' ? [LayoutSafeAreaType.SYSTEM] : [],
+      this.contentKind === 'manga' ? [LayoutSafeAreaEdge.ALL] : [])
     // Keep the route opaque while the reading owner measures and admits its
     // first physical page. Without a shell-owned underlay, the route switch
     // can expose the Index/window background for a few frames before
@@ -333,6 +337,10 @@ export struct ReaderShell {
   private mangaSurface() {
     ForEach([this.mangaIdentityKey()], (_identity: string) => {
       MangaReadingSurface({
+        windowChromeActive: this.visible,
+        windowChromeOverlayActive: this.visible && (this.route === 'directory' || this.sourceSwitchVisible),
+        isReaderIdentityCurrent: (): boolean => this.contentKind === 'manga' && _identity === this.mangaIdentityKey(),
+        reduceMotion: this.reduceMotion,
         offline: ReaderRuntimeOwner.current().mangaOfflineProbeFor?.(this.sourceId, this.bookId) === true || this.remoteSession?.acquisitionMode === 'offline',
         settingsGateway: this.mangaSettingsGateway,
         bookTitle: this.bookTitle, inBookshelf: this.inBookshelf,
@@ -342,8 +350,10 @@ export struct ReaderShell {
           const index = this.directoryCurrentChapterIndex;
           if (index >= 0) this.onDownloadChapter(index);
         },
-        onSelectDirectoryTarget: (chapterIndex: number, directoryTargetProof?: JsonObject): void =>
-          this.onSelectNavigationTarget(chapterIndex, 0, undefined, directoryTargetProof),
+        onSelectDirectoryTarget: (chapterIndex: number, directoryTargetProof?: JsonObject): void => {
+          if (directoryTargetProof === undefined) this.onSelectChapter(chapterIndex);
+          else this.onSelectNavigationTarget(chapterIndex, 0, undefined, directoryTargetProof);
+        },
         mangaBackgroundColor: readerAppColor('app.window.background', this.appThemeScheme),
         mangaForegroundColor: readerAppColor('app.window.foreground', this.appThemeScheme),
         errorColor: readerAppColor('TOK_DANGER', this.appThemeScheme),
@@ -402,7 +412,7 @@ export struct ReaderShell {
     // Sibling directory and source-switch surfaces can paint over the band's
     // child in ReadingExperience. Repaint above those surfaces with the same
     // owner-requested color; do not derive an independent application tone.
-    if (this.visible && (this.route === 'directory' || this.sourceSwitchVisible)) {
+    if (this.contentKind !== 'manga' && this.visible && (this.route === 'directory' || this.sourceSwitchVisible)) {
       ReaderStatusBarPaper({
         theme: this.chromePaperThemeId,
         fallbackColor: this.chromeUnderlayColor,

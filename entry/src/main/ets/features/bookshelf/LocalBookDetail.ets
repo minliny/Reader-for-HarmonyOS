@@ -248,7 +248,10 @@ export struct LocalBookDetail {
   @Builder
   private chapterRow(entry: LocalReadingTocEntry) {
     Row({ space: 8 }) {
-      Text(entry.title).layoutWeight(1).constraintSize({ minWidth: 0 })
+      Text(this.book.contentKind === 'manga' &&
+        (entry.title.trim().length === 0 || entry.title.trim() === '第话' || entry.title.trim() === '第 话') ?
+        `第${Math.max(1, entry.index + 1)}话` : entry.title)
+        .layoutWeight(1).constraintSize({ minWidth: 0 })
         .fontFamily('ReaderNotoSansSC').fontSize(14).lineHeight(22)
         .fontWeight(entry.navigable === false ? FontWeight.Medium : FontWeight.Regular)
         .fontColor(readerAppColor(entry.navigable === false ? 'TOK_MUTED' : 'TOK_INK', this.appThemeScheme));

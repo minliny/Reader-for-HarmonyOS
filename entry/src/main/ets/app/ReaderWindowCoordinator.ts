@@ -47,15 +47,18 @@ export class ReaderWindowChromeStyle {
   contentColor: string;
   /** Non-empty only when the reader paints the matching full paper below chrome. */
   paperThemeId: string;
+  /** Image readers paint through both system bands; their content background stays opaque. */
+  transparentSystemBars: boolean;
 
   constructor(underlayColor: string, tone: ReaderWindowChromeTone, contentColor?: string,
-    paperThemeId: string = '') {
+    paperThemeId: string = '', transparentSystemBars: boolean = false) {
     this.underlayColor = underlayColor;
     this.tone = tone;
     // Keep tone as a compatibility fallback while reader-owned chrome passes
     // the active theme's exact ink color.
     this.contentColor = contentColor ?? (tone === 'light' ? '#FFFFFFFF' : '#FF000000');
     this.paperThemeId = findReaderTheme(paperThemeId)?.id ?? '';
+    this.transparentSystemBars = transparentSystemBars;
   }
 }
 
@@ -577,6 +580,7 @@ export class ReaderWindowCoordinator {
       ReaderWindowCoordinator.desiredChrome.style.tone === request.style.tone &&
       ReaderWindowCoordinator.desiredChrome.style.contentColor === request.style.contentColor &&
       ReaderWindowCoordinator.desiredChrome.style.paperThemeId === request.style.paperThemeId &&
+      ReaderWindowCoordinator.desiredChrome.style.transparentSystemBars === request.style.transparentSystemBars &&
       ReaderWindowCoordinator.appliedChromeRevision === ReaderWindowCoordinator.desiredChromeRevision) {
       return;
     }
@@ -590,6 +594,7 @@ export class ReaderWindowCoordinator {
   }
 
   private static nativeStatusBarColor(request: ReaderWindowChromeRequest): string {
+    if (request.style.transparentSystemBars) return '#00000000';
     // An opaque native bar hides the authored paper texture even when its RGB
     // base matches. Only a validated reader paper owner supplies that backing;
     // application/legacy callers retain their original opaque status color.
@@ -617,7 +622,7 @@ export class ReaderWindowCoordinator {
         try {
           await win.setWindowSystemBarProperties({
             statusBarColor: ReaderWindowCoordinator.nativeStatusBarColor(request),
-            navigationBarColor: request.style.underlayColor,
+            navigationBarColor: request.style.transparentSystemBars ? '#00000000' : request.style.underlayColor,
             statusBarContentColor: contentColor,
             navigationBarContentColor: contentColor,
           });

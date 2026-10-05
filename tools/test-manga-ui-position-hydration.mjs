@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
 const file=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
 let runtime={},pending=[],writes=[],nullEntryBooks=new Set();
@@ -8,16 +11,20 @@ class Gateway {
   entry(sourceId,bookId,_index,current){return new Promise(resolve=>pending.push({owner:this.owner,sourceId,bookId,current,resolve,kind:'entry',entryNull:nullEntryBooks.has(bookId)}));}
   progress(sourceId,bookId,current){return new Promise(resolve=>pending.push({owner:this.owner,sourceId,bookId,current,resolve,kind:'progress'}));}
 }
-const Host=productionMotionMethods(file,['hydrateMangaPositions','mangaPositionProjectionCurrent','pumpMangaPositionProjections','projectMangaPosition'],{
+const Host=productionMotionMethods(file,['hydrateMangaPositions','mangaPositionProjectionCurrent','pumpMangaPositionProjections','projectMangaPosition',
+  'refreshDetailMangaPosition','refreshDetailAcquisitionProjection','returnToReadingOrigin','onReaderExited'],{
   ReaderRuntimeOwner:{current:()=>runtime},MangaSessionGateway:Gateway,MangaBookPresentation,
-  AppStorage:{setOrCreate:(_key,value)=>writes.push(value)} });
+  AppStorage:{setOrCreate:(_key,value)=>writes.push(value)},LOCAL_SOURCE_ID:'local',
+  copyRemoteReadingSession:session=>({...session}) });
 const books=Array.from({length:180},(_,i)=>({sourceId:'source',bookId:`book-${i}`,contentKind:'manga',title:`Book ${i}`,author:'',addedAt:1}));
 const tick=async()=>{for(let i=0;i<20;i++)await Promise.resolve();};
 const fixture=()=>{
   runtime={};pending=[];writes=[];nullEntryBooks=new Set();
   return Object.assign(new Host(),{route:'bookshelf',readingSessionActive:false,sourceSwitchVisible:false,
     shelfBooks:books,navigationGeneration:1,bookshelfLoadGeneration:1,detailBook:undefined,
-    mangaProjectionSignature:'',mangaProjectionGeneration:0,mangaProjectionQueue:[],mangaProjectionWorkers:0});
+    mangaProjectionSignature:'',mangaProjectionGeneration:0,mangaProjectionQueue:[],mangaProjectionWorkers:0,
+    readingOriginRoute:'detail',nextNavigationGeneration(){return ++this.navigationGeneration;},
+    refreshDetailAcquisitionProjection:async()=>{},refreshBookshelf(){this.shelfRefreshes=(this.shelfRefreshes??0)+1;}});
 };
 function entry(request,{revision=3,pageOrdinal=7,noProgress=false,epoch=1}={}) {
   const chapterIdentity={sourceId:request.sourceId,bookId:request.bookId,chapterId:'chapter-4'};
@@ -55,6 +62,41 @@ async function drain(){
   await drain();assert.equal(host.detailBook.mangaPosition.pageOrdinal,7);
 }
 {
+  // The reader already published CAS-confirmed chapter 02 before ordinary Back.
+  // Re-reading the same entry does not advance the shared revision; the retained
+  // detail snapshot still must receive the new chapter and page count.
+  for (const bookInfo of [false,true]) {
+    const host=fixture();host.route='detail';host.detailBook={...books[0],sourceName:'腾讯漫画',intro:'保留简介'};
+    host.hydrateMangaPositions([books[0]]);
+    const first=pending.shift(),initial=entry(first,{pageOrdinal:1});
+    initial.chapter.chapterTitle='01';initial.chapter.totalPages=36;first.resolve(initial);await tick();
+    const old=host.detailBook.mangaPosition;
+    assert.equal(old.chapterTitle,'01');assert.equal(old.totalPages,36);
+    host.route='reading';host.readingSessionActive=true;
+    const next=entry(books[0],{revision:4,pageOrdinal:1});
+    next.progress.location.chapter.chapterId='chapter-5';
+    next.chapter.chapterIndex=5;next.chapter.chapterTitle='02';next.chapter.totalPages=24;
+    MangaBookPresentation.admitEntry('source','book-0',next);
+    const before=MangaBookPresentation.revision;
+    assert.notEqual(MangaBookPresentation.get('source','book-0'),old);
+    if(bookInfo)host.bookInfoAfterReaderExit='source\u0000book-0';
+    host.onReaderExited();
+    assert.equal(host.route,'detail');assert.equal(host.readingSessionActive,false);
+    assert.equal(host.detailBook.mangaPosition.chapterTitle,'02','both ordinary and book-info exits refresh the retained detail immediately');
+    assert.equal(host.detailBook.mangaPosition.pageOrdinal,1);assert.equal(host.detailBook.mangaPosition.totalPages,24);
+    assert.equal(host.detailBook.sourceName,'腾讯漫画');assert.equal(host.detailBook.intro,'保留简介');
+    const pendingEntry=pending.shift();pendingEntry.resolve(next);await tick();
+    assert.equal(MangaBookPresentation.revision,before,'same Core facts keep the shared row revision stable');
+    assert.equal(host.detailBook.mangaPosition,MangaBookPresentation.get('source','book-0'));
+    // A still-mounted old snapshot must also refresh on unchanged entry facts.
+    host.detailBook={...host.detailBook,mangaPosition:old};host.bookshelfLoadGeneration++;
+    host.hydrateMangaPositions([books[0]]);
+    host.detailBook={...host.detailBook,mangaPosition:old};
+    pending.shift().resolve(next);await tick();
+    assert.equal(host.detailBook.mangaPosition.chapterTitle,'02','entry projection does not depend on a global revision change');
+  }
+}
+{
   const host=fixture();host.route='detail';host.detailBook={...books[0]};host.hydrateMangaPositions([books[0]]);await drain();
   const before=MangaBookPresentation.revision,displayWrites=writes.length;
   host.bookshelfLoadGeneration++;host.hydrateMangaPositions([books[0]]);await drain();
@@ -72,6 +114,48 @@ async function drain(){
   host.shelfBooks=[books[1]];host.hydrateMangaPositions([books[1]]);assert.equal(MangaBookPresentation.get('source','book-30'),undefined);
 }
 {
+  // The global card can be outside a filtered/paged shelf, even on a cold home
+  // without a detail. Repeated visible callbacks must not evict its known facts.
+  for(const reason of ['filtered','paged']) {
+    const host=fixture();host.shelfBooks=[books[1]];host.continueReading=books[0];
+    host.shelfContentFilter=reason==='filtered'?'text':'all';host.shelfWindowOffset=reason==='paged'?48:0;
+    host.hydrateMangaPositions([books[0]]);
+    const next=pending.shift();next.resolve(entry(next,{pageOrdinal:2}));await tick();
+    const known=MangaBookPresentation.get('source','book-0');
+    assert.equal(known.pageOrdinal,2);
+    host.hydrateMangaPositions([books[0]]);
+    assert.equal(MangaBookPresentation.get('source','book-0'),known,`${reason}: unchanged visible card retains its confirmed position`);
+    assert.equal(pending.length,0,'retention does not bypass the existing batch deduplication');
+    host.hydrateMangaPositions([]);
+    assert.equal(MangaBookPresentation.get('source','book-0'),known,'an offscreen card retains facts without acquiring resources');
+    assert.equal(pending.length,0,'adding a retained identity never adds a request candidate');
+    host.continueReading=undefined;host.hydrateMangaPositions([]);
+    assert.equal(MangaBookPresentation.get('source','book-0'),undefined,'removed global card outside shelf/detail is reclaimed');
+  }
+  {
+    const host=fixture();host.shelfBooks=[books[1]];host.continueReading=books[0];
+    host.hydrateMangaPositions([books[0]]);const next=pending.shift();next.resolve(entry(next));await tick();
+    const other={...books[0],sourceId:'other-source'};
+    MangaBookPresentation.admitEntry(other.sourceId,other.bookId,entry(other));
+    host.continueReading=other;
+    host.hydrateMangaPositions([]);
+    assert.equal(MangaBookPresentation.get('source','book-0'),undefined,'equal bookId on another source cannot retain the old manga identity');
+    assert.equal(MangaBookPresentation.get('other-source','book-0').pageOrdinal,7);
+    host.continueReading={...other,contentKind:'text'};host.hydrateMangaPositions([]);
+    assert.equal(MangaBookPresentation.get('other-source','book-0'),undefined,'a novel card cannot retain manga display facts');
+    assert.equal(pending.length,0);
+  }
+  {
+    const host=fixture();host.shelfBooks=[books[1]];host.continueReading=books[0];
+    host.hydrateMangaPositions([books[0]]);const first=pending.shift();first.resolve(entry(first));await tick();
+    assert.notEqual(MangaBookPresentation.get('source','book-0'),undefined);
+    host.bookshelfLoadGeneration++;host.hydrateMangaPositions([books[0]]);const old=pending.shift();
+    runtime={};host.hydrateMangaPositions([]);old.resolve(entry(old));await tick();
+    assert.equal(MangaBookPresentation.get('source','book-0'),undefined,'new Runtime owner cannot retain or revive the old card position');
+    assert.equal(host.mangaProjectionWorkers,0);assert.equal(pending.length,0);
+  }
+}
+{
   const host=fixture(); nullEntryBooks.add('book-0'); host.hydrateMangaPositions([books[0]]);
   const first=pending.shift(); first.resolve(null); await tick();
   assert.equal(pending.length,1,'missing prepared entry falls back to the existing Core progress read');
@@ -85,4 +169,118 @@ async function drain(){
   const host=fixture(); host.sourceSwitchVisible=true; host.hydrateMangaPositions([books[0]]);
   assert.equal(pending.length,0,'source-switch presentation owns the window and does not start shelf manga hydration');
 }
-console.log('PASS actual Index manga position projection: global 2-worker/latest24 budget, same-batch dedup, route/source/owner fencing, queue replacement, no-progress clearing and idempotent row revision');
+{
+  // Both requests belong to the same mounted detail. A late metadata result
+  // must preserve the newer confirmed entry facts, including explicit clearing.
+  const metadataFixture=()=>{
+    const host=fixture();
+    let resolveMetadata;
+    runtime={bookAcquisitions:()=>({readingProjectionRevision:()=>7}),
+      request:async method=>{
+        assert.equal(method,'search-book.get');
+        return await new Promise(resolve=>{resolveMetadata=resolve;});
+      }};
+    Object.assign(host,{route:'detail',detailBook:{...books[0],sourceName:'腾讯漫画',intro:'保留简介'},
+      remoteSessionGeneration:1,candidateAdmissionGeneration:-1,candidateAdmissionFailedGeneration:-1,
+      bookProjectionLoading:false,bookProjectionAgain:false,remoteContentVerdict:'readable',
+      remoteReadingSession:{sourceVersion:'v1',catalogVersion:'c1',contextVersion:'x1'},
+      installRemoteReadingSession(){this.installed=(this.installed??0)+1;}});
+    delete host.refreshDetailAcquisitionProjection;
+    return {host,finish:()=>resolveMetadata({data:{book:{name:'已更新标题',acquisition:{
+      sourceVersion:'v1',catalogVersion:'c1',contextVersion:'x1',schemaVersion:2,verificationCurrent:true}}}})};
+  };
+  for(const mode of ['cold','updated','cleared']) {
+    const {host,finish}=metadataFixture();
+    MangaBookPresentation.useOwner(runtime);
+    if(mode!=='cold') MangaBookPresentation.admitEntry('source','book-0',entry(books[0],{revision:3,pageOrdinal:0}));
+    host.hydrateMangaPositions([books[0]]);
+    const metadata=host.refreshDetailAcquisitionProjection();
+    const next=entry(books[0],{revision:4,pageOrdinal:1,noProgress:mode==='cleared'});
+    next.chapter.chapterTitle='02';next.chapter.totalPages=24;next.chapter.chapterIndex=5;
+    if(next.progress.location!==null) {
+      next.progress.location.chapter.chapterId='chapter-5';
+      next.chapter.manifest.chapter.chapterId='chapter-5';
+    }
+    pending.shift().resolve(next);await tick();
+    const confirmed=MangaBookPresentation.get('source','book-0');
+    assert.equal(host.detailBook.mangaPosition,confirmed);
+    if(mode==='cleared')assert.equal(confirmed,undefined);else assert.equal(confirmed.pageOrdinal,1);
+    finish();await metadata;
+    assert.equal(host.detailBook.mangaPosition,confirmed,`${mode}: late metadata cannot overwrite newer entry facts`);
+    assert.equal(host.detailBook.title,'已更新标题');assert.equal(host.detailBook.intro,'保留简介');
+    assert.equal(host.installed,1);assert.equal(host.bookProjectionLoading,false);
+  }
+  for(const revoke of ['source','route','navigation','reading']) {
+    const {host,finish}=metadataFixture();
+    const metadata=host.refreshDetailAcquisitionProjection();
+    if(revoke==='source')host.detailBook={...host.detailBook,sourceId:'other-source'};
+    else if(revoke==='route')host.route='bookshelf';
+    else if(revoke==='navigation')host.navigationGeneration++;
+    else host.readingSessionActive=true;
+    const retained=host.detailBook;
+    finish();await metadata;
+    assert.equal(host.detailBook,retained,`${revoke}: revoked metadata cannot replace the current detail`);
+    assert.equal(host.installed,undefined);
+  }
+  {
+    const {host,finish}=metadataFixture();
+    const textPosition={pageOrdinal:3};
+    host.detailBook={...host.detailBook,contentKind:'text',mangaPosition:textPosition};
+    const metadata=host.refreshDetailAcquisitionProjection();finish();await metadata;
+    assert.equal(host.detailBook.mangaPosition,textPosition,'novel metadata preserves its existing snapshot contract');
+  }
+}
+{
+  // Real installed SDK closures pass the replaced snapshot into the retained
+  // detail and external catalog, then render the existing detail facts Builder.
+  const require=createRequire(import.meta.url);
+  const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
+  const detailFile=new URL('../entry/src/main/ets/features/bookshelf/LocalBookDetail.ets',import.meta.url);
+  const detailSource=readFileSync(detailFile,'utf8');
+  const directorySource=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets',import.meta.url),'utf8');
+  for(const [name,source] of [['LocalBookDetail',detailSource],['BookDirectoryPage',directorySource]]) {
+    syntax.componentCollection.customComponents.add(name);
+    syntax.propCollection.set(name,new Set([...source.matchAll(/@Prop\s+(\w+)\s*:/g)].map(match=>match[1])));
+  }
+  class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
+  const f=fixture();f.route='detail';f.detailBook={...books[0],sourceName:'腾讯漫画'};
+  f.hydrateMangaPositions([books[0]]);
+  const first=pending.shift(),initial=entry(first,{pageOrdinal:1});
+  initial.chapter.chapterTitle='01';initial.chapter.totalPages=36;first.resolve(initial);await tick();
+  const {owner}=createReaderBuilderProbe(readFileSync(file,'utf8'),['detailContent','externalDirectory','detailBookKey',
+    'hydrateMangaPositions','mangaPositionProjectionCurrent','pumpMangaPositionProjections','projectMangaPosition',
+    'refreshDetailMangaPosition','returnToReadingOrigin','onReaderExited'],{
+      LocalBookDetail:Child,BookDirectoryPage:Child,LOCAL_SOURCE_ID:'local',MangaBookPresentation,
+      ReaderRuntimeOwner:{current:()=>runtime},MangaSessionGateway:Gateway,
+      AppStorage:{setOrCreate:(_key,value)=>writes.push(value)},
+    });
+  Object.assign(owner,f,{route:'directory',directoryReturnTarget:'detail',bookshelfRemovalActiveKey:'',
+    bookshelfAdditionActiveKey:'',bookshelfAdditionCancellingKey:'',bookshelfAdditionErrorKey:'',offlineMutationActiveKey:'',
+    detailToc:[{index:4,title:'01'},{index:5,title:'02'}],
+    remoteContentVerdict:'readable',remoteContentVerdictLabel:()=>'',appThemeScheme:'day'});
+  owner.detailContent();
+  const detail=[...owner.children.values()].find(child=>child.params.book);
+  const directory=[...owner.children.values()].find(child=>child.params.entries);
+  assert.ok(detail);assert.ok(directory);
+  const {owner:facts}=createReaderBuilderProbe(detailSource,['readingFacts']);
+  Object.assign(facts,{book:detail.params.book,appThemeScheme:'day'});facts.readingFacts();
+  const updated=entry(books[0],{revision:4,pageOrdinal:1});
+  updated.progress.location.chapter.chapterId='chapter-5';
+  updated.chapter.chapterIndex=5;updated.chapter.chapterTitle='02';updated.chapter.totalPages=24;
+  MangaBookPresentation.admitEntry('source','book-0',updated);
+  owner.route='reading';owner.readingSessionActive=true;owner.onReaderExited();
+  owner.replayOnly([detail.id,directory.id]);
+  assert.equal(owner.children.get(detail.id),detail,'confirmed return retains the actual detail child');
+  assert.equal(detail.params.book.mangaPosition.chapterTitle,'02');
+  assert.equal(directory.params.currentChapterIndex,5,'full catalog receives the saved chapter highlight');
+  assert.equal(directory.params.currentPageOrdinal,1);assert.equal(directory.params.currentPageTotal,24);
+  facts.book=detail.params.book;facts.replay();
+  const rendered=[...facts.nodes.values()].filter(node=>node.type==='Text').map(node=>node.create);
+  assert.ok(rendered.includes('02'));assert.ok(rendered.includes('2 / 24 页'),'existing reading facts render new page count');
+  const Detail=productionMotionMethods(detailFile,['isCurrentChapter']);
+  const mounted=Object.assign(new Detail(),{book:detail.params.book});
+  assert.equal(mounted.isCurrentChapter({index:4}),false);assert.equal(mounted.isCurrentChapter({index:5}),true);
+  pending.shift().resolve(updated);await tick();
+}
+console.log('PASS actual Index manga position projection: bounded queue, route/source/owner fencing, ordinary/Info return, unchanged revision detail refresh, clearing, concurrent metadata/hydration, filtered/paged global card retention; real SDK retained detail/catalog props and reading facts/highlight');

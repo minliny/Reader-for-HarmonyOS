@@ -266,9 +266,23 @@ export class MangaSessionController {
     if (generation === this.generation) this.requiresRecovery = false;
   }
 
-  async setVisible(ordinal: number): Promise<number> {
+  async setVisible(ordinal: number, retainedTiles: MangaTileRequest[] = []): Promise<number> {
     const chapter = this.chapterData;
     if (chapter === undefined || !Number.isSafeInteger(ordinal) || ordinal < 0 || ordinal >= this.totalPageCount) throw new Error('MANGA_PAGE_OUT_OF_RANGE');
+    if (retainedTiles.length > 8) throw new Error('MANGA_TILE_WINDOW_BUDGET');
+    // The first visible logical page is only the metadata window's anchor.
+    // A screen of short images can still display a third page. Keep precisely
+    // this caller's actual tile window, never an earlier wantedTiles snapshot.
+    // Explicit page navigation supplies no retention and keeps far retirement.
+    const retainedKeys = new Set<string>();
+    const retainedOrdinals = new Set<number>();
+    for (const item of retainedTiles) {
+      const geometry = this.geometry.get(item.ordinal);
+      if (geometry === undefined || !Number.isSafeInteger(item.ordinal) || item.ordinal < 0 || item.ordinal >= this.totalPageCount ||
+        !Number.isSafeInteger(item.tileIndex) || item.tileIndex < 0 || item.tileIndex * geometry.tileHeight >= geometry.height) continue;
+      retainedKeys.add(`${item.ordinal}:${item.tileIndex}`);
+      retainedOrdinals.add(item.ordinal);
+    }
     this.foregroundWindowWork++;
     try {
       if (this.displayOrdinal !== ordinal) this.selectionRevision++;
@@ -287,7 +301,10 @@ export class MangaSessionController {
       for (let i = Math.max(0, ordinal - 1); i <= Math.min(this.totalPageCount - 1, ordinal + 1); i++) wanted.add(i);
       this.wanted = wanted;
       for (const [index, page] of this.pages) {
-        if (!wanted.has(index)) {
+        // Retain ready metadata with its visible tile, but let an out-of-window
+        // header attempt retire: its current() still belongs to wanted. Keeping
+        // a cancelled pending marker would prevent a later page from retrying.
+        if (!wanted.has(index) && (!retainedOrdinals.has(index) || page.status !== 'ready')) {
           if (page.image !== undefined) this.resources.release(page.image);
           this.pages.delete(index);
         }
@@ -296,7 +313,7 @@ export class MangaSessionController {
       // callback (for example if the new image fails). Retire its leases now;
       // adjacent tiles remain available for normal continuous scrolling.
       for (const [key, tile] of this.tiles) {
-        if (wanted.has(tile.ordinal)) continue;
+        if (wanted.has(tile.ordinal) || retainedKeys.has(key)) continue;
         if (tile.image !== undefined) this.resources.release(tile.image);
         this.tiles.delete(key);
         this.tileLoads.delete(key);
@@ -392,6 +409,7 @@ export class MangaSessionController {
     const chapter = this.chapterData;
     if (chapter === undefined) return;
     if (requested.length > 8) throw new Error('MANGA_TILE_WINDOW_BUDGET');
+    let presentationChanged = !this.sliced;
     const wanted = new Set(requested.map(item => `${item.ordinal}:${item.tileIndex}`));
     this.wantedTiles = wanted;
     this.sliced = true;
@@ -400,6 +418,7 @@ export class MangaSessionController {
         if (tile.image !== undefined) this.resources.release(tile.image);
         this.tiles.delete(key);
         this.tileLoads.delete(key);
+        presentationChanged = true;
       }
     }
     // Promote the already decoded first region without a second decode or a
@@ -410,9 +429,10 @@ export class MangaSessionController {
       if (item.tileIndex === 0 && page?.image !== undefined && !this.tiles.has(key)) {
         this.tiles.set(key, { ordinal: item.ordinal, tileIndex: 0, image: page.image });
         page.image = undefined;
+        presentationChanged = true;
       }
     }
-    this.onChange?.();
+    if (presentationChanged) this.onChange?.();
     // Remaining metadata decode leases are no longer needed after switching to slices.
     for (const page of this.pages.values()) {
       if (page.image !== undefined) { this.resources.release(page.image); page.image = undefined; }
@@ -433,6 +453,9 @@ export class MangaSessionController {
       this.tiles.set(key, tile);
       const task = this.loadTileOwned(tile, chapter, geometry, fact, generation);
       this.tileLoads.set(key, task);
+      // Pending publication belongs to this new attempt, after its join owner
+      // exists. Repeated ready/pending windows need no presentation update.
+      this.onChange?.();
       const finish = (): void => {
         if (this.tileLoads.get(key) === task) this.tileLoads.delete(key);
       };

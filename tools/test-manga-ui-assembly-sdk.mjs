@@ -2,6 +2,7 @@
  * Register real production child metadata before checking assembly; no HAP,
  * compiler cache, signing or native/device actions. Not semantic typecheck. */
 import assert from 'node:assert/strict';
+import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve, extname } from 'node:path';
 import { createRequire } from 'node:module';
@@ -93,16 +94,22 @@ for (const background of ['paper', 'ink'])
             else if (property !== 'pop') {
                 current[property] = args[0];
             } }; } });
-        const { owner, output } = createReaderBuilderProbe(source, ['settingsPanel', 'option', 'inkColor', 'surfaceColor', 'paperColor', 'mutedColor', 'lineColor'], { Toggle, ToggleType: { Switch: 'switch' } });
+        const { owner } = createReaderBuilderProbe(source, ['settingsPanel', 'displayedBrightnessPercent', 'sheetChoice', 'sectionTitle', 'choiceIcon', 'isSheetChoiceSelected', 'inkColor', 'surfaceColor', 'paperColor', 'mutedColor', 'lineColor', 'greenColor', 'accentColor', 'softSurfaceColor'], { ...mangaSurfaceSdkDependencies, Toggle, ToggleType: { Switch: 'switch' } });
         Object.assign(owner, { backgroundPreference: background, automaticBrightness: enabled, showPageNumbers: enabled, brightnessPercent: 55,
-            setBrightness: (percent, automatic) => events.push(['brightness', percent, automatic]), setPageNumbers: value => events.push(['pageNumbers', value]) });
+            setBrightness: percent => events.push(['brightness', percent]), setPageNumbers: value => events.push(['pageNumbers', value]),
+            setBackground: value => events.push(['background', value]), resetMangaPreferences: async () => events.push(['reset']) });
         owner.settingsPanel();
-        assert.equal(toggles.length, 2);
-        assert.ok(toggles.every(toggle => toggle.create.type === 'switch' && toggle.create.isOn === enabled && toggle.selectedColor === '#1F3528'));
+        assert.equal(toggles.length, 1,'the approved demo has one page-number switch');
+        assert.ok(toggles.every(toggle => toggle.create.type === 'switch' && toggle.create.isOn === enabled && toggle.selectedColor === (background==='ink'?'#324C37':'#1F3528')));
+        assert.equal(toggles[0].width,38);assert.equal(toggles[0].height,23);
         toggles[0].onChange(!enabled);
-        toggles[1].onChange(!enabled);
-        assert.deepEqual(events, [['brightness', 55, !enabled], ['pageNumbers', !enabled]]);
-        assert.match(output, /Toggle\.selectedColor\('#1F3528'\)/);
+        const nodes=[...owner.nodes.values()];
+        nodes.find(node=>node.type==='Slider').onChange(72);
+        const choices=nodes.filter(node=>node.type==='Row'&&node.height===43&&node.layoutWeight===1);
+        assert.equal(choices.length,2);assert.ok(choices.every(node=>node.borderRadius===12&&node.border.width===1));
+        choices[0].onClick();choices[1].onClick();
+        nodes.find(node=>node.type==='Text'&&node.create==='恢复默认').onClick();
+        assert.deepEqual(events, [['pageNumbers', !enabled], ['brightness',72],['background','paper'],['background','ink'],['reset']]);
     }
-console.log('PASS actual SDK settings-panel native Toggle properties: paper/ink, on/off, explicit approved green and independent existing callbacks');
+console.log('PASS actual SDK demo settings: paper/ink selection colors, 38×23 native page switch, equal bottom-color choices, brightness/reset and preference callbacks');
 console.log('Boundary: SDK parsing/member lowering + exact initializer field names; no project-wide semantic typecheck, package, native layout or device proof.');

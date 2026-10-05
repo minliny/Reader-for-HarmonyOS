@@ -11,7 +11,7 @@ const MangaSessionGateway = load('MangaSessionGateway');
 const MangaResourceGateway = load('MangaResourceGateway');
 const Controller = load('MangaSessionController', { MangaSessionGateway, MangaResourceGateway });
 const Projection = load('MangaStripProjection');
-const Surface = productionMotionMethods(new URL('MangaReadingSurface.ets', root), ['updateViewport','requestedLast','onRowAppear']);
+const Surface = productionMotionMethods(new URL('MangaReadingSurface.ets', root), ['updateViewport','requestedLast','onRowAppear','displayChapterTitle']);
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
 const pageId = `mp1:${'a'.repeat(64)}`;
@@ -34,7 +34,7 @@ function fixture() {
   const f = fixture(); await f.controller.openPrepared(structuredClone(entry), true);
   const projection = new Projection(); projection.publish(f.controller.chapter.manifest, i => f.controller.pageGeometry(i), undefined, 1, i => f.controller.pageAt(i));
   const commits = [];
-  const surface = Object.assign(new Surface(), { controller: f.controller, data: { totalCount: () => projection.totalCount(), getData: i => projection.row(i) },
+  const surface = Object.assign(new Surface(), { controller: f.controller, data: { totalCount: () => projection.totalCount(), getData: i => projection.row(i), notify() {} },
     mounted: true, opened: true, first: 3, last: 3, viewportGeneration: 0, chapterCommitted: false, error: '', onChapterCommitted: (...args) => commits.push(args) });
   const first = surface.updateViewport(); await tick();
   let latestDone = false; const latest = surface.updateViewport().then(() => { latestDone = true; }); await tick();
@@ -52,7 +52,7 @@ console.log('PASS actual double Surface viewport joins one tile decode and lates
   const f = fixture(); await f.controller.openPrepared(structuredClone(entry), true);
   const projection = new Projection(); projection.publish(f.controller.chapter.manifest, i => f.controller.pageGeometry(i), undefined, 1, i => f.controller.pageAt(i));
   const surface = Object.assign(new Surface(), { controller: f.controller,
-    data: { totalCount: () => projection.totalCount(), getData: i => projection.row(i) },
+    data: { totalCount: () => projection.totalCount(), getData: i => projection.row(i), notify() {} },
     mounted: true, opened: true, first: 0, last: 0, viewportGeneration: 0, chapterCommitted: true, error: '' });
   const initial = surface.updateViewport(); await tick();
   assert.equal(f.pending.length, 1);

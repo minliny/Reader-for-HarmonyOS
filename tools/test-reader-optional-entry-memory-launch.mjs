@@ -69,7 +69,8 @@ for(const [debug,mode,value,disabled] of [[true,'debug',true,true],[true,'releas
   assert.equal(ability.runtimeOwner.optionalReadingEntryMemoryEnabled(),!disabled);
   assert.equal(ability.runtimeOwner.mangaOfflineProbe!==undefined,disabled,'actual cold Want exact debug flag controls scoped probe construction');
   if(disabled)assert.equal(ability.runtimeOwner.mangaOfflineProbe.ownsCommand('book.toc',{sourceId:'source',bookId:'book'}),true,'cold Want is armed before a shelf click');
-  assert.deepEqual(writes,[['readerAppForeground',true]],'diagnostic flag is not stored in settings or AppStorage');
+  assert.deepEqual(writes,[['readerMangaImageOriginProbe',false],['readerAppForeground',true]],
+    'optional entry-memory diagnostic remains absent from settings/AppStorage; only the exact geometry reset and foreground writes are allowed');
 }
 const warmWantBody=abilitySource.slice(abilitySource.indexOf('  onNewWant('),abilitySource.indexOf('  private async prepareSelectedReadingFont'));
 assert.match(warmWantBody,/ReaderSystemFileOpenHost\.receive\(want\)/);

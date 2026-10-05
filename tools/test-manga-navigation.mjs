@@ -40,16 +40,17 @@ function flushLayout(width,height) {
 let xOffset=250;let clipped=100;let nativeWidth=1000;let nativeHeight=1000;
 const Surface=productionMotionMethods(surfaceURL,
  ['effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop','rowDisplayLeft','visibleX','changeFit','loginRequired','loginAndRetry','imageError','refreshImages','publish','requestedLast','measureVisibleWindow','openDirectory','openSourceSwitch','handleBack','positionIdentity','rememberVisible','restore','finishLayout','onViewportScroll','resizeViewport','changeZoom','toggleDirection','turnPage','saveVisible'],
- {setTimeout:callback=>timers.push(callback),ScrollAlign:{START:'start'},MangaLayoutFrame});
+ {setTimeout:callback=>timers.push(callback),ScrollAlign:{START:'start'},MangaLayoutFrame,
+  inputMethod:{getController:()=>({hideTextInput:async()=>{}})},prepareReaderFontFamily:async()=>{}});
 const saved=[];const settings=[];
 const owner=Object.assign(new Surface(),{data:{totalCount:()=>p.totalCount(),getData:i=>p.row(i),projection:p,notify:()=>{}},
  first:150,last:150,viewportWidth:500,viewportHeight:900,zoom:2,scalePolicy:new PhotoViewScaleModel(),horizontal:false,horizontalPage:0,
- opened:true,mounted:true,panel:'',chapterEnd:false,exiting:false,layoutGeneration:0,appliedLayoutGeneration:-1,presentationGeneration:0,recovering:false,
+ opened:true,mounted:true,panel:'',reduceMotion:true,chapterEnd:false,exiting:false,layoutGeneration:0,appliedLayoutGeneration:-1,presentationGeneration:0,recovering:false,
  settingsGateway:{updateMangaDirection:async value=>settings.push(value)},
  horizontalScroller:{currentOffset:()=>({xOffset}),scrollTo:position=>{xOffset=position.xOffset;scrolls.push(['x',position.xOffset]);}},
- getUIContext:()=>({postFrameCallback:frame=>frames.push(frame)}),
+ getUIContext:()=>({postFrameCallback:frame=>frames.push(frame),getFocusController:()=>({clearFocus(){}})}),
  scroller:{getItemIndex:(x,y)=>{measurements.push([x,y]);return owner.first;},getItemRect:()=>({y:-clipped,width:nativeWidth,height:nativeHeight}),scrollToIndex:(...args)=>{clipped=0;scrolls.push(['index',...args]);},scrollBy:(...args)=>{clipped=args[1];scrolls.push(['y',...args]);}},
- controller:{chapter:{manifest},totalPages:3,pageAt:ordinal=>manifest.pages[ordinal],pageGeometry:geometry,savePosition:async(...args)=>saved.push(args)},updateViewport:()=>{},persistentDirectory:()=>false});
+ controller:{chapter:{manifest},totalPages:3,pageAt:ordinal=>manifest.pages[ordinal],pageGeometry:geometry,tile:()=>undefined,visiblePages:()=>[],savePosition:async(...args)=>saved.push(args)},updateViewport:()=>{},persistentDirectory:()=>false});
 owner.rememberVisible();assert.deepEqual(owner.visibleAnchor,{ordinal:1,y:0.501,x:0.25});
 owner.changeZoom(99);assert.equal(owner.zoom,3);flushLayout(1500,1500);
 assert.ok(scrolls.some(s=>s[0]==='x'&&s[1]===375));
@@ -84,13 +85,16 @@ console.log('PASS unified system/button back: first leaves zoom, second awaits a
 assert.match(mangaUserError('MANGA_REGION_ANIMATION_UNSUPPORTED'),/动画/);
 assert.match(mangaUserError('REMOTE_READING_IMAGE_NOT_DOWNLOADED'),/联网/);
 assert.equal(mangaUserError('READING_IMAGE_REPROCESS_REQUIRED'),'图片处理规则已更新，需联网重新下载');
+assert.match(mangaUserError('Internal error'),/图片服务暂时不可用/);
+assert.match(mangaUserError('manga.resource.prepare failed: Internal error'),/图片服务暂时不可用/);
 assert.equal(mangaUserError('UNEXPECTED_DIAGNOSTIC'), 'UNEXPECTED_DIAGNOSTIC','unknown failures must remain observable');
 console.log('PASS targeted manga error messages preserve unknown failures and explain animation/offline recovery');
 
 let finishSave;const actions=[];
 owner.saveVisible=()=>new Promise(resolve=>{finishSave=resolve;});
 owner.onDirectory=()=>actions.push('directory');owner.onSwitchSource=()=>actions.push('source');
-const directory=owner.openDirectory();assert.deepEqual(actions,[]);finishSave();await directory;assert.equal(owner.panel,'directory');assert.deepEqual(actions,[]);
+const directory=owner.openDirectory();assert.deepEqual(actions,[]);await directory;assert.equal(owner.panel,'directory');assert.deepEqual(actions,[]);
+finishSave(); // Visual admission does not wait for storage; navigation below still does.
 const switching=owner.openSourceSwitch();finishSave();await switching;assert.deepEqual(actions,['source']);
 const stale=owner.openDirectory();owner.mounted=false;finishSave();await stale;assert.deepEqual(actions,['source']);
 console.log('PASS manga catalog/download and source controls use existing shell routes after position capture; disposed actions cannot navigate');

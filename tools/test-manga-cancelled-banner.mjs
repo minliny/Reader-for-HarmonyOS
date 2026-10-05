@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const Surface = productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url),
-  ['saveVisible', 'positionIdentity', 'updateViewport']);
+  ['saveVisible', 'positionIdentity', 'updateViewport', 'displayChapterTitle']);
 const manifest = { chapter: { sourceId: 's', bookId: 'b', chapterId: '/second' }, manifestVersion: 'v1' };
 const facts = [0, 1, 2].map(ordinal => ({ ordinal, pageId: `page-${ordinal}` }));
 const failures = [];
@@ -12,11 +12,13 @@ const controller = {
   savePosition: () => new Promise((_resolve, reject) => { rejectSave = reject; }),
   setVisible: async () => {}, setTileWindow: async () => {},
   tile: () => ({ image: { fileUri: '/already-visible-third-image' } }),
+  visiblePages: () => [],
 };
 const surface = Object.assign(new Surface(), {
   mounted: true, opened: true, horizontal: true, horizontalPage: 1,
   presentationGeneration: 1, viewportGeneration: 0, restoringAnchor: true,
-  error: '', controller, data: { totalCount: () => 1, getData: () => ({ ordinal: 2, tileIndex: 0, known: true }) },
+  error: '', controller, data: { totalCount: () => 1,
+    getData: () => ({ key: 'page-2:0', ordinal: 2, tileIndex: 0, known: true, width: 600, height: 800, sourceY: 0, sourceHeight: 800 }), notify() {} },
   first: 0, last: 0, requestedLast: () => 0,
   onSaveFailure: message => failures.push(message),
 });
