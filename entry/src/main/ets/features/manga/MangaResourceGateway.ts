@@ -38,13 +38,14 @@ export class MangaResourceGateway {
 
   /** Optional next-chapter work uses the same Runtime owner as foreground and
    * explicit downloads, without a display lease or offline completion receipt. */
-  async prefetchPage(scope: MangaResourceScope, page: MangaResourcePage, isCurrent: () => boolean): Promise<void> {
+  async prefetchPage(scope: MangaResourceScope, page: MangaResourcePage, isCurrent: () => boolean,
+    allowNetwork: boolean = true, priority: 'foreground' | 'chapter' | 'background' | 'download' = 'background'): Promise<void> {
     if (this.runtime.prefetchReadingImage === undefined) return;
     this.assertCurrent(isCurrent);
     if (page.resourceRef === undefined || page.resourceRef.length === 0) throw new Error('MANGA_RESOURCE_IDENTITY_INVALID');
     await this.runtime.prefetchReadingImage({ sourceId: scope.sourceId, bookId: scope.bookId,
-      chapterIndex: scope.chapterIndex, contentVersion: scope.contentVersion, imageUrl: page.requestRule ?? page.url,
-      resourceRef: page.resourceRef, baseUrl: scope.chapterUrl, mangaDecodeRevision: scope.decodeRevision }, isCurrent, scope.sourceRuleVersion, true);
+      chapterId: scope.chapterUrl, chapterIndex: scope.chapterIndex, contentVersion: scope.contentVersion, imageUrl: page.requestRule ?? page.url,
+      resourceRef: page.resourceRef, baseUrl: scope.chapterUrl, mangaDecodeRevision: scope.decodeRevision }, isCurrent, scope.sourceRuleVersion, allowNetwork, priority);
     this.assertCurrent(isCurrent);
   }
 

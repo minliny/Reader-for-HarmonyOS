@@ -7,6 +7,8 @@ import cryptoFramework from '@ohos.security.cryptoFramework';
 import type { JsonObject } from '@reader/core-harmony';
 import { HttpExecuteHost } from './HttpExecuteHost';
 import { readingImageHttpError } from './ReadingImageHttpError';
+import { MangaDisplayRetention, type MangaDisplayInventoryFile } from './MangaDisplayRetention';
+import type { MangaStorageChapter, MangaStorageGrant } from './ReadingImageDiskCache';
 
 export interface MangaImageDecodeProfile {
   format: 'jpeg' | 'png' | 'webp'; encodedWidth?: number; encodedHeight?: number;
@@ -100,8 +102,11 @@ export class ReadingBodyImageHost {
 
   static readonly instance: ReadingBodyImageHost = new ReadingBodyImageHost();
   private displayCacheDir: string | undefined = undefined;
+  private mangaDisplayDir: string | undefined = undefined;
+  private mangaTemporaryRecoveryEnabled: boolean = false;
   private readonly displayFileReferences: Map<string, number> = new Map<string, number>();
   private readonly displayFileWrites: Map<string, Promise<void>> = new Map<string, Promise<void>>();
+  private readonly displayTemporaryFiles: Set<string> = new Set<string>();
   private readonly displayFileRemovals: Map<string, Promise<void>> = new Map<string, Promise<void>>();
   // These are aliases of live display-file references, not another cache:
   // the last session owner releases both the file and every resource alias.
@@ -110,6 +115,106 @@ export class ReadingBodyImageHost {
   private resourceGeneration: number = 0;
   private displayCacheCleanupGeneration: number = 0;
   private nextTemporaryFile: number = 0;
+  private mangaDisplay: MangaDisplayRetention | undefined;
+  private mangaDisplayReserve: ((chapter: MangaStorageChapter, bytes: number, priority: 'foreground' | 'chapter' | 'background' | 'download') => Promise<{ release(): void }>) | undefined;
+
+  setMangaDisplayReserve(reserve: (chapter: MangaStorageChapter, bytes: number,
+    priority: 'foreground' | 'chapter' | 'background' | 'download') => Promise<{ release(): void }>): void {
+    this.mangaDisplayReserve = reserve;
+  }
+
+  async mangaDisplayInventory(): Promise<MangaDisplayInventoryFile[]> {
+    await this.recoverMangaTemporaryFiles();
+    return this.mangaDisplay?.inventory() ?? [];
+  }
+
+  private async recoverMangaTemporaryFiles(): Promise<void> {
+    const directory = this.mangaDisplayDir;
+    const generation = this.resourceGeneration;
+    const retention = this.mangaDisplay;
+    const current = (): boolean => this.mangaTemporaryRecoveryEnabled && generation === this.resourceGeneration &&
+      directory === this.mangaDisplayDir && retention === this.mangaDisplay;
+    if (directory === undefined || !current() || !(await fs.access(directory))) return;
+    // In the dedicated filesDir namespace these exact names are created only
+    // by Body's disposable derived write path. Unknown payloads and sidecars
+    // are not inferred disposable from a missing ownership record.
+    for (const name of await fs.listFile(directory)) {
+      if (!/^\.reading-body-tmp-[0-9a-f]{64}-[1-9][0-9]*$/.test(name)) continue;
+      const path = `${directory}/${name}`;
+      if (!current() || this.displayTemporaryFiles.has(path) || this.displayFileReferences.has(path) || this.displayFileWrites.has(path)) continue;
+      await this.removeDisplayFile(path, current);
+    }
+  }
+
+  /** Manga persistent display files belong to the shared files budget. Novel
+   * transient display files continue to use the existing app cache folder. */
+  configureMangaDisplayCache(filesDir: string): void {
+    if (filesDir.trim().length === 0) throw new Error('MANGA_DISPLAY_DIRECTORY_REQUIRED');
+    const directory = `${filesDir}/reader-manga-display-v1`;
+    this.mangaDisplayDir = directory;
+    this.mangaTemporaryRecoveryEnabled = true;
+    this.mangaDisplay = new MangaDisplayRetention(directory, (bytes: Uint8Array): Promise<string> => this.sha256(bytes),
+      (path: string): boolean => this.displayFileReferences.has(path) || this.displayFileWrites.has(path) || this.displayTemporaryFiles.has(path));
+  }
+
+  async removeMangaDisplay(grant: MangaStorageGrant, files: MangaDisplayInventoryFile[]): Promise<boolean> {
+    return this.mangaDisplay?.remove(grant, files) ?? true;
+  }
+
+  async removeMangaDerived(chapter: MangaStorageChapter, files: MangaDisplayInventoryFile[],
+    current: () => Promise<boolean>): Promise<boolean> {
+    return this.mangaDisplay?.remove(chapter, files, current) ?? true;
+  }
+
+  async loadMangaBytes(bytes: Uint8Array, chapter: MangaStorageChapter, isCurrent?: () => boolean,
+    mangaPosition: number = 0, mangaPreview: boolean = false,
+    priority: 'foreground' | 'chapter' | 'background' | 'download' = 'foreground'): Promise<ReadingBodyImagePayload> {
+    const generation = this.resourceGeneration;
+    const current = (): boolean => generation === this.resourceGeneration && isCurrent?.() !== false;
+    this.assertCurrent(current);
+    if (bytes.length === 0 || bytes.length > MAX_READING_IMAGE_BYTES) throw new Error('READING_IMAGE_DECODE_BUDGET');
+    const retention = this.mangaDisplay;
+    if (retention === undefined) throw new Error('MANGA_DISPLAY_UNAVAILABLE');
+    const key = await retention.key(chapter, await this.sha256(bytes), mangaPosition, mangaPreview);
+    const cached = await retention.lookup(key, chapter, current, (payload: ReadingBodyImagePayload): void => {
+      const path = this.pathFromFileUri(payload.fileUri);
+      if (path === undefined) throw new Error('MANGA_DISPLAY_IDENTITY');
+      this.displayFileReferences.set(path, (this.displayFileReferences.get(path) ?? 0) + 1);
+    });
+    if (cached !== undefined) {
+      try { this.assertCurrent(current); }
+      catch (error) { this.release(cached.fileUri); throw error; }
+      return cached;
+    }
+    // An unscaled small image reuses its bounded encoded original; a tile
+    // packs at most the existing 1Mi-pixel output plus metadata overhead.
+    const reservation = await this.mangaDisplayReserve?.(chapter,
+      Math.max(MAX_READING_IMAGE_BYTES, MAX_MANGA_OUTPUT_BYTES) + 65536, priority);
+    let payload: ReadingBodyImagePayload | undefined;
+    try {
+      payload = await this.decodeBytes(bytes, current, mangaPosition, mangaPreview, key);
+      await retention.store(key, chapter, payload, current);
+      return payload;
+    } catch (error) {
+      if (payload !== undefined) this.release(payload.fileUri);
+      throw error;
+    } finally { reservation?.release(); }
+  }
+
+  /** Prepare bounded regions sequentially, then release their in-memory
+   * leases. Persistent display proofs remain under the shared disk budget. */
+  async prepareMangaDisplay(bytes: Uint8Array, chapter: MangaStorageChapter, current: () => boolean,
+    priority: 'foreground' | 'chapter' | 'background' | 'download'): Promise<void> {
+    const header = await this.loadMangaBytes(bytes, chapter, current, 0, false, priority);
+    const width = header.intrinsicWidth, height = header.intrinsicHeight;
+    this.release(header.fileUri);
+    const tileHeight = Math.min(height, 2048, Math.max(1, Math.floor(1024 * 1024 / width)));
+    for (let y = tileHeight; y < height; y += tileHeight) {
+      this.assertCurrent(current);
+      const tile = await this.loadMangaBytes(bytes, chapter, current, y / height, false, priority);
+      this.release(tile.fileUri);
+    }
+  }
 
   /** Configure and crash-clean the app-cache directory used for display files. */
   static setDisplayCacheDir(dir: string): void {
@@ -270,7 +375,7 @@ export class ReadingBodyImageHost {
     for (const [key, payload] of this.resourcePayloads) {
       if (payload.fileUri === fileUri) this.resourcePayloads.delete(key);
     }
-    this.removeDisplayFile(path);
+    if (!this.mangaDisplay?.isRetained(path)) this.removeDisplayFile(path);
   }
 
   /** Ability teardown fallback for resources whose UI owner was interrupted. */
@@ -281,7 +386,7 @@ export class ReadingBodyImageHost {
     this.resourcePayloads.clear();
     this.resourceReads.clear();
     for (const path of this.displayFileReferences.keys()) {
-      this.removeDisplayFile(path);
+      if (!this.mangaDisplay?.isRetained(path)) this.removeDisplayFile(path);
     }
     this.displayFileReferences.clear();
   }
@@ -291,6 +396,7 @@ export class ReadingBodyImageHost {
     isCurrent?: () => boolean,
     mangaPosition?: number,
     mangaPreview: boolean = false,
+    mangaDisplayKey?: string,
   ): Promise<ReadingBodyImagePayload> {
     const generation = this.resourceGeneration;
     const current = (): boolean => generation === this.resourceGeneration && isCurrent?.() !== false;
@@ -311,7 +417,7 @@ export class ReadingBodyImageHost {
     ): Promise<ReadingBodyImagePayload> => {
       const hash = mangaPreview ? `${byteHash}-preview` : regionY === undefined ? byteHash : `${byteHash}-region-${regionY}`;
       this.assertCurrent(current);
-      const fileUri = await this.materializeDisplayFile(bytes, pixelMap, width, height, hash, downsampled, generation);
+      const fileUri = await this.materializeDisplayFile(bytes, pixelMap, width, height, hash, downsampled, generation, mangaDisplayKey);
       try {
         this.assertCurrent(current);
       } catch (error) {
@@ -584,15 +690,17 @@ export class ReadingBodyImageHost {
     hash: string,
     downsampled: boolean,
     generation: number,
+    mangaDisplayKey?: string,
   ): Promise<string> {
-    const dir = this.displayCacheDir;
+    const dir = mangaDisplayKey === undefined ? this.displayCacheDir : this.mangaDisplayDir ?? this.displayCacheDir;
     if (dir === undefined || dir.trim().length === 0) {
       throw new Error('reading body image display cache is not configured');
     }
     const extension = downsampled ? '.png' : this.imageExtensionFor(bytes);
     // A late release from the previous ability/session generation must not
     // decrement the current owner's lease for identical image bytes.
-    const finalPath = `${dir}/reading-body-g${generation}-${width}x${height}-${hash}${extension}`;
+    const finalPath = mangaDisplayKey === undefined ? `${dir}/reading-body-g${generation}-${width}x${height}-${hash}${extension}` :
+      `${dir}/reading-body-manga-${mangaDisplayKey}-${width}x${height}${extension}`;
     const existing = this.displayFileWrites.get(finalPath);
     if (existing !== undefined) {
       await existing;
@@ -629,6 +737,14 @@ export class ReadingBodyImageHost {
     await this.ensureDirectory(dir);
     this.nextTemporaryFile += 1;
     const tmpPath = `${dir}/.reading-body-tmp-${hash}-${this.nextTemporaryFile}`;
+    // A cold counter may reuse a stale temporary basename. Join the existing
+    // file-removal fence before registering or opening the new write.
+    let removingTemporary = this.displayFileRemovals.get(tmpPath);
+    while (removingTemporary !== undefined) {
+      await removingTemporary;
+      removingTemporary = this.displayFileRemovals.get(tmpPath);
+    }
+    this.displayTemporaryFiles.add(tmpPath);
     try {
       const file = await fs.open(tmpPath, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
       try {
@@ -672,16 +788,20 @@ export class ReadingBodyImageHost {
     } catch (error) {
       await this.unlinkBestEffort(tmpPath);
       throw error;
+    } finally {
+      this.displayTemporaryFiles.delete(tmpPath);
     }
   }
 
-  private removeDisplayFile(path: string): Promise<void> {
+  private removeDisplayFile(path: string, isCurrent?: () => boolean): Promise<void> {
     const existing = this.displayFileRemovals.get(path);
     if (existing !== undefined) return existing;
     const writing = this.displayFileWrites.get(path);
     const removal = (async (): Promise<void> => {
       await writing;
-      if (!this.displayFileReferences.has(path)) await this.unlinkBestEffort(path);
+      if (isCurrent?.() === false || this.displayFileReferences.has(path) || this.displayTemporaryFiles.has(path)) return;
+      await this.unlinkBestEffort(path, (): boolean => isCurrent?.() !== false &&
+        !this.displayFileReferences.has(path) && !this.displayTemporaryFiles.has(path));
     })().catch((): void => {});
     this.displayFileRemovals.set(path, removal);
     void removal.finally((): void => {
@@ -723,6 +843,10 @@ export class ReadingBodyImageHost {
     const directory = `${cacheDir}/${DISPLAY_CACHE_DIRECTORY}`;
     this.releaseAllDisplayFiles();
     this.displayCacheDir = directory;
+    this.mangaDisplayDir = directory;
+    this.mangaTemporaryRecoveryEnabled = false;
+    this.mangaDisplay = new MangaDisplayRetention(directory, (bytes: Uint8Array): Promise<string> => this.sha256(bytes),
+      (path: string): boolean => this.displayFileReferences.has(path) || this.displayFileWrites.has(path) || this.displayTemporaryFiles.has(path));
     const generation = ++this.displayCacheCleanupGeneration;
     void this.cleanupDisplayCache(cacheDir, directory, generation);
   }
@@ -744,6 +868,7 @@ export class ReadingBodyImageHost {
       // Runtime installation happens before a reading session exists. Files
       // left by a process crash are therefore unreachable and can be reclaimed.
       for (const name of await fs.listFile(directory)) {
+        if (name.startsWith('reading-body-manga-') || name.startsWith('manga-display-')) continue;
         const path = `${directory}/${name}`;
         if (generation !== this.displayCacheCleanupGeneration || this.displayFileReferences.has(path)) {
           continue;
@@ -758,20 +883,21 @@ export class ReadingBodyImageHost {
   }
 
   private pathFromFileUri(fileUri: string): string | undefined {
-    const dir = this.displayCacheDir;
-    if (dir === undefined || !fileUri.startsWith('file://')) {
-      return undefined;
-    }
+    if (!fileUri.startsWith('file://')) return undefined;
     const path = fileUri.substring('file://'.length);
-    if (!path.startsWith(`${dir}/reading-body-`)) {
-      return undefined;
-    }
-    return path;
+    const novelPrefix = this.displayCacheDir === undefined ? undefined : `${this.displayCacheDir}/reading-body-`;
+    const mangaPrefix = this.mangaDisplayDir === undefined ? undefined : `${this.mangaDisplayDir}/reading-body-manga-`;
+    // Accept only a basename in its own namespace. Durable manga display
+    // leases must refer to the physical filesDir path, including cold reuse.
+    if (mangaPrefix !== undefined && path.startsWith(mangaPrefix) && !path.slice(mangaPrefix.length).includes('/')) return path;
+    if (novelPrefix !== undefined && path.startsWith(novelPrefix) && !path.slice(novelPrefix.length).includes('/')) return path;
+    return undefined;
   }
 
-  private async unlinkBestEffort(path: string): Promise<void> {
+  private async unlinkBestEffort(path: string, isCurrent?: () => boolean): Promise<void> {
     try {
       if (await fs.access(path)) {
+        if (isCurrent?.() === false) return;
         await fs.unlink(path);
       }
     } catch (_) {

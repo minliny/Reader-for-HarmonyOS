@@ -76,10 +76,10 @@ for(const fault of ['cancel','read','pack','animated','stride','output-format','
  };
  const result=await host.prepare({resourceRef:'page'},request,()=>true);
  assert.equal(result,validated);assert.deepEqual(result,jpeg);assert.notDeepEqual(result,encoded);
- const Owner=productionMotionMethods(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url),['prefetchReadingImage','prefetchReadingImageOwned','runMangaImageWork','prepareReadingImageBytes'],{
-  MangaImageDecodeHost:{instance:host},ReadingBodyImageHost:{instance:{async validateBytes(bytes){assert.deepEqual(bytes,jpeg)}}}
+ const Owner=productionMotionMethods(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url),['prefetchReadingImage','prefetchReadingImageOwned','runMangaImageWork','drainMangaImageWork','mangaStorageChapter','prepareReadingImageBytes'],{
+  MangaImageDecodeHost:{instance:host},ReadingBodyImageHost:{instance:{async prepareMangaDisplay(bytes,_chapter,current){return this.validateBytes(bytes,current)},async validateBytes(bytes){assert.deepEqual(bytes,jpeg)}}}
  });
- const owner=new Owner();owner.mangaImageTail=Promise.resolve();owner.mangaImagePending=0;let stored,requests=0;
+ const owner=new Owner();owner.mangaImageTail=Promise.resolve();owner.mangaImagePending=0;owner.mangaImageQueue=[];owner.mangaImageActive=false;owner.mangaImageUrgentStreak=0;let stored,requests=0;
  owner.assertReadingImageCurrent=()=>{};
  owner.request=async(method,params)=>{requests++;assert.equal(method,'manga.resource.prepare');return request(params)};
  owner.readingImageDiskCache={captureValidity:()=>()=>true,async loadResource(){return stored},async storeResource(identity,bytes){stored=bytes},async removeResource(){stored=undefined}};

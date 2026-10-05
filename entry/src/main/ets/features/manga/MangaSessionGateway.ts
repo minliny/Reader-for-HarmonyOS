@@ -1,8 +1,10 @@
-import type { JsonObject } from '@reader/core-harmony';
+import type { JsonObject, ReaderCoreResultEvent } from '@reader/core-harmony';
 import type { ReadingGatewayRuntime } from '../reading/ReadingGatewayRuntime';
-import type { MangaChapterWindow, MangaPreparedEntry, MangaChapterIdentity, MangaChapterResult, MangaLocation, MangaManifest, MangaProgressState, MangaProgressToken, MangaProgressMapping, MangaAnchorMapping, MangaChapterAnchor } from './MangaContract';
+import type { MangaChapterWindow, MangaPreparedEntry, MangaChapterIdentity, MangaChapterResult, MangaLocation, MangaManifest, MangaManifestPage, MangaResourceRequest, MangaProgressState, MangaProgressToken, MangaProgressMapping, MangaAnchorMapping, MangaChapterAnchor } from './MangaContract';
 
 export type { MangaChapterWindow, MangaPreparedEntry } from './MangaContract';
+
+export interface MangaMaterializationToken { token: string; chapter: MangaChapterIdentity; manifestVersion: string; intent: 'cache' | 'download'; }
 
 /** Same Runtime and source/network owner as novel reading. */
 export class MangaSessionGateway {
@@ -12,7 +14,7 @@ export class MangaSessionGateway {
   async chapter(sourceId: string, bookId: string, chapterIndex: number,
     policy: 'cacheOnly' | 'cacheFirst' | 'refresh', isCurrent: () => boolean,
     expectedManifestVersion?: string, preparationRevision?: number, anchor?: MangaChapterAnchor,
-    directoryTargetProof?: JsonObject): Promise<MangaChapterResult> {
+    directoryTargetProof?: JsonObject, priority: 'foreground' | 'background' = 'foreground'): Promise<MangaChapterResult> {
     this.current(isCurrent);
     if (this.runtime.supportsCoreCapability?.('manga.chapter.v1') !== true) throw new Error('MANGA_CORE_CAPABILITY_REQUIRED');
     const params: JsonObject = { sourceId, bookId, chapterIndex, policy };
@@ -20,7 +22,7 @@ export class MangaSessionGateway {
     if (preparationRevision !== undefined) params['preparationRevision'] = preparationRevision;
     if (anchor !== undefined) params['anchor'] = { pageId: anchor.pageId, ordinal: anchor.ordinal };
     if (directoryTargetProof !== undefined) params['directoryTargetProof'] = directoryTargetProof;
-    const result = await this.runtime.request('manga.chapter.get', params, { shouldCancel: (): boolean => !isCurrent() });
+    const result = await this.request('manga.chapter.get', params, isCurrent, priority);
     this.current(isCurrent);
     const data = result.data as unknown as MangaChapterResult;
     return this.validateChapter(data, sourceId, bookId, chapterIndex);
@@ -33,7 +35,7 @@ export class MangaSessionGateway {
     const params: JsonObject = { sourceId, bookId };
     if (chapterIndex !== undefined) params['chapterIndex'] = chapterIndex;
     if (directoryTargetProof !== undefined) params['directoryTargetProof'] = directoryTargetProof;
-    const result = await this.runtime.request('manga.entry.get', params, { shouldCancel: (): boolean => !isCurrent() });
+    const result = await this.request('manga.entry.get', params, isCurrent);
     this.current(isCurrent);
     if (result.data['entry'] === null) return null;
     const entry = result.data['entry'] as unknown as MangaPreparedEntry;
@@ -51,11 +53,12 @@ export class MangaSessionGateway {
     return entry;
   }
 
-  async window(chapter: MangaChapterResult, start: number, limit: number, isCurrent: () => boolean): Promise<MangaChapterWindow> {
+  async window(chapter: MangaChapterResult, start: number, limit: number, isCurrent: () => boolean,
+    priority: 'foreground' | 'background' = 'foreground'): Promise<MangaChapterWindow> {
     this.current(isCurrent);
     const identity = chapter.manifest.chapter;
-    const result = await this.runtime.request('manga.pages.window', { sourceId: identity.sourceId, bookId: identity.bookId,
-      chapterId: identity.chapterId, manifestVersion: chapter.manifest.manifestVersion, start, limit }, { shouldCancel: (): boolean => !isCurrent() });
+    const result = await this.request('manga.pages.window', { sourceId: identity.sourceId, bookId: identity.bookId,
+      chapterId: identity.chapterId, manifestVersion: chapter.manifest.manifestVersion, start, limit }, isCurrent, priority);
     this.current(isCurrent);
     const data = result.data as unknown as MangaChapterWindow;
     this.validateWindow(data, identity.sourceId, identity.bookId, chapter.chapterIndex);
@@ -63,6 +66,104 @@ export class MangaSessionGateway {
       data.manifest.sourceRuleVersion !== chapter.manifest.sourceRuleVersion || data.manifest.decodeRevision !== chapter.manifest.decodeRevision ||
       data.pageStart !== start || data.manifest.pages.length > limit) throw new Error('MANGA_WINDOW_IDENTITY_MISMATCH');
     return data;
+  }
+
+  /** Prepared entries deliberately carry at most 32 page facts. Background
+   * preparation obtains the remaining immutable windows from Core; it never
+   * reparses a chapter or treats the entry's window as a complete manifest. */
+  async fullChapter(chapter: MangaChapterResult, totalPages: number,
+    isCurrent: () => boolean, onWindow?: (window: MangaChapterWindow) => void): Promise<MangaChapterResult> {
+    this.current(isCurrent);
+    if (!Number.isSafeInteger(totalPages) || totalPages < 1 || totalPages > 10000) throw new Error('MANGA_WINDOW_INVALID');
+    const pages = new Map<number, MangaManifestPage>();
+    const resources = new Map<string, MangaResourceRequest>();
+    for (const page of chapter.manifest.pages) pages.set(page.ordinal, page);
+    for (const resource of chapter.resources) resources.set(resource.resourceRef, resource);
+    for (let start = 0; start < totalPages; start += 32) {
+      const limit = Math.min(32, totalPages - start);
+      const missing = Array.from({ length: limit }, (_value, index) => start + index).some(index => !pages.has(index));
+      if (!missing) continue;
+      const window = await this.window(chapter, start, limit, isCurrent, 'background');
+      this.current(isCurrent);
+      if (window.totalPages !== totalPages || window.manifest.pages.length !== limit) throw new Error('MANGA_WINDOW_INCOMPLETE');
+      for (const page of window.manifest.pages) pages.set(page.ordinal, page);
+      for (const resource of window.resources) resources.set(resource.resourceRef, resource);
+      onWindow?.(window);
+    }
+    this.current(isCurrent);
+    const complete: MangaChapterResult = { ...chapter,
+      manifest: { ...chapter.manifest, pages: Array.from(pages.values()).sort((a, b) => a.ordinal - b.ordinal) },
+      resources: Array.from(resources.values()) };
+    if (complete.manifest.pages.length !== totalPages) throw new Error('MANGA_WINDOW_INCOMPLETE');
+    return this.validateChapter(complete, chapter.manifest.chapter.sourceId, chapter.manifest.chapter.bookId, chapter.chapterIndex);
+  }
+
+  async sessionRuntime(isCurrent: () => boolean): Promise<number> {
+    const result = await this.request('manga.session.runtime', {}, isCurrent);
+    const epoch = result.data['runtimeEpoch'];
+    if (typeof epoch !== 'number' || !Number.isSafeInteger(epoch) || epoch < 1) throw new Error('MANGA_SESSION_RUNTIME_INVALID');
+    return Number(epoch);
+  }
+
+  async replaceProtection(chapters: MangaChapterIdentity[], sessionEpoch: number, runtimeEpoch: number,
+    isCurrent: () => boolean): Promise<void> {
+    if (chapters.length > 3 || new Set(chapters.map(chapter => JSON.stringify([chapter.sourceId, chapter.bookId, chapter.chapterId]))).size !== chapters.length) throw new Error('MANGA_SESSION_WINDOW_INVALID');
+    const result = await this.request('manga.session.replace', { chapters: chapters as unknown as JsonObject[],
+      sessionEpoch, expectedRuntimeEpoch: runtimeEpoch }, isCurrent);
+    if (result.data['protected'] !== chapters.length || result.data['runtimeEpoch'] !== runtimeEpoch) throw new Error('MANGA_SESSION_PROTECTION_INVALID');
+  }
+
+  async releaseProtection(sessionEpoch: number, runtimeEpoch: number): Promise<void> {
+    const result = await this.runtime.request('manga.session.release', { sessionEpoch, expectedRuntimeEpoch: runtimeEpoch });
+    if (typeof result.data['released'] !== 'boolean') throw new Error('MANGA_SESSION_RELEASE_INVALID');
+  }
+
+  async recordRead(chapter: MangaChapterResult, isCurrent: () => boolean): Promise<void> {
+    const result = await this.request('manga.cache.recordRead', { chapter: chapter.manifest.chapter as unknown as JsonObject,
+      manifestVersion: chapter.manifest.manifestVersion, readAt: Math.floor(Date.now() / 1000) }, isCurrent);
+    if (result.data['recorded'] !== true) throw new Error('MANGA_CACHE_READ_INVALID');
+  }
+
+  async prepareMaterialization(chapter: MangaChapterResult, intent: 'cache' | 'download',
+    isCurrent: () => boolean): Promise<MangaMaterializationToken> {
+    this.current(isCurrent);
+    const params: JsonObject = { chapter: chapter.manifest.chapter as unknown as JsonObject,
+      manifestVersion: chapter.manifest.manifestVersion, intent };
+    // This command acquires a lease. Drain its receipt even if the consumer
+    // becomes stale, so the caller can abort that exact token in finally.
+    const result = this.runtime.requestBook === undefined ? await this.runtime.request('manga.cache.materialization.prepare', params) :
+      await this.runtime.requestBook('manga.cache.materialization.prepare', params, {}, 'background');
+    const receipt = result.data as unknown as MangaMaterializationToken;
+    if (typeof receipt.token !== 'string' || receipt.token.trim().length === 0 || receipt.intent !== intent ||
+      receipt.manifestVersion !== chapter.manifest.manifestVersion || !this.sameChapter(receipt.chapter, chapter.manifest.chapter)) throw new Error('MANGA_MATERIALIZATION_TOKEN_INVALID');
+    return receipt;
+  }
+
+  async completeMaterialization(receipt: MangaMaterializationToken, resourceRefs: string[], isCurrent: () => boolean): Promise<void> {
+    const result = await this.request('manga.cache.materialization.complete', {
+      chapter: receipt.chapter as unknown as JsonObject, manifestVersion: receipt.manifestVersion,
+      token: receipt.token, resourceRefs }, isCurrent, 'background');
+    if (result.data['completed'] !== true || result.data['manifestVersion'] !== receipt.manifestVersion) throw new Error('MANGA_MATERIALIZATION_RECEIPT_INVALID');
+  }
+
+  async abortMaterialization(receipt: MangaMaterializationToken): Promise<void> {
+    // Release the preparation lease, preserving all successfully acquired bytes.
+    const result = await this.runtime.request('manga.cache.materialization.abort', { token: receipt.token });
+    if (typeof result.data['aborted'] !== 'boolean') throw new Error('MANGA_MATERIALIZATION_ABORT_INVALID');
+  }
+
+  private sameChapter(left: MangaChapterIdentity, right: MangaChapterIdentity): boolean {
+    return left !== undefined && left.sourceId === right.sourceId && left.bookId === right.bookId && left.chapterId === right.chapterId;
+  }
+
+  private async request(method: string, params: JsonObject, isCurrent: () => boolean,
+    priority: 'foreground' | 'background' = 'foreground'): Promise<ReaderCoreResultEvent> {
+    this.current(isCurrent);
+    const options = { shouldCancel: (): boolean => !isCurrent() };
+    const result = this.runtime.requestBook === undefined ? await this.runtime.request(method, params, options) :
+      await this.runtime.requestBook(method, params, options, priority);
+    this.current(isCurrent);
+    return result;
   }
 
   private validateWindow(data: MangaChapterWindow, sourceId: string, bookId: string, chapterIndex?: number): void {

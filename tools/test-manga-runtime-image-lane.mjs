@@ -5,7 +5,7 @@ import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const manifest = {chapter:{sourceId:'s',bookId:'b',chapterId:'chapter'},sourceRuleVersion:'rules',manifestVersion:'v',decodeRevision:'bytes-v1',pages:[{ordinal:0,pageId:'page',resourceRef:'page'}]};
 const file = new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url);
 const methods = ['loadReadingImage', 'loadReadingImageOwned', 'prefetchReadingImage',
-  'prefetchReadingImageOwned', 'runMangaImageWork', 'prepareReadingImageBytes',
+  'prefetchReadingImageOwned', 'runMangaImageWork', 'drainMangaImageWork', 'mangaStorageChapter', 'prepareReadingImageBytes',
   'assertReadingImageCurrent', 'admitReadingImage', 'releaseReadingImage',
   'markOfflineImageChapterComplete', 'isOfflineImageChapterComplete'];
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return {promise,resolve,reject}; };
@@ -20,6 +20,8 @@ function fixture() {
     async fetchRequestBytes(request,current) { if(!current()) throw Error('cancelled fetch'); events.push(['novel-fetch',request.bookId]); return new Uint8Array([99]); },
     release(uri) { released.push(uri); }
   };
+  body.loadMangaBytes=(bytes,_chapter,current,position)=>body.loadBytes(bytes,current,position);
+  body.prepareMangaDisplay=(bytes,_chapter,current)=>body.validateBytes(bytes,current,0);
   const Owner = productionMotionMethods(file, methods, {
     ReadingBodyImageHost:{instance:body},
     MangaImageDecodeHost:{instance:{async prepare(params,request,current) {
@@ -36,7 +38,7 @@ function fixture() {
     }}},
     hilog:{error(...args){failures.push(args.at(-1));}},LOG_DOMAIN:0
   });
-  const owner = new Owner(); owner.state='ready';owner.mangaImageTail=Promise.resolve();owner.mangaImagePending=0;
+  const owner = new Owner(); owner.state='ready';owner.mangaImageTail=Promise.resolve();owner.mangaImagePending=0;owner.mangaImageQueue=[];owner.mangaImageActive=false;owner.mangaImageUrgentStreak=0;
   owner.readingImageCacheIdentity=(sourceId,bookId,chapterIndex,contentVersion,imageUrl,baseUrl)=>({sourceId,bookId,chapterIndex,contentVersion,imageUrl,baseUrl});
   owner.resolveReadingImageRequest=async(_sourceId,imageUrl)=>({bookId:imageUrl});
   owner.readingImageDiskCache={
@@ -116,9 +118,11 @@ function fixture() {
 // capped burst neither fetches bytes nor leaves a permanently rejected tail.
 {
   const f=fixture(), gate=deferred();f.stores.set('b1',gate);await f.load('b1');let current=true;
-  const waiting=Array.from({length:15},(_,i)=>assert.rejects(f.prefetch(`q${i}`,()=>current),/cancelled/));
+  const waiting=Array.from({length:11},(_,i)=>assert.rejects(f.prefetch(`q${i}`,()=>current),/cancelled/));
   await assert.rejects(f.prefetch('over-capacity'),/CAPACITY/);assert.equal(f.events.filter(x=>x[0]==='read').length,1);
-  current=false;gate.resolve();await Promise.all(waiting);await f.owner.mangaImageTail;assert.equal(f.owner.mangaImagePending,0);await f.load('b2');await f.owner.mangaImageTail;
+  const foreground=Array.from({length:4},(_,i)=>f.load(`foreground${i}`));
+  await assert.rejects(f.load('foreground-over-capacity'),/CAPACITY/);
+  current=false;gate.resolve();await Promise.all([...waiting,...foreground]);await f.owner.mangaImageTail;assert.equal(f.owner.mangaImagePending,0);await f.load('b2');await f.owner.mangaImageTail;
 }
 // Execute the actual gateway against the actual Runtime methods; removing the
 // old outer region lock must not strand next-chapter prefetch behind itself.
@@ -173,3 +177,61 @@ for(const operation of ['seal','check']) {
   assert.ok(!f.events.some(x=>x[0]==='check-start'&&x[1]==='b5'));
 }
 console.log('PASS production manga Runtime lane: foreground/cache-only/adjacent/offline/seal/checksum serialization before I/O, nested validation, early first frame with owned store drain, unrelated novel writes, queue bounds, cancellation/generation/teardown fencing and failure recovery.');
+
+// Validated original bytes are durable content, even when native decoding,
+// packaging or display I/O fails. Only loadResource's explicit digest failure
+// can permit online corruption repair; a display failure is not that proof.
+for (const method of ['load', 'prefetch']) {
+  for (const allowNetwork of [false, true]) {
+    for (const message of ['native createPixelMap: allocation failed', 'image packer failed', 'display read EIO', 'MANGA_REGION_UNSUPPORTED']) {
+      const f = fixture(), failure = new Error(message);
+      f.cached.set('retained', new Uint8Array([7]));
+      f.body.loadMangaBytes = async () => { throw failure; };
+      f.body.prepareMangaDisplay = async () => { throw failure; };
+      const operation = method === 'load' ? f.load('retained', () => true, allowNetwork) :
+        f.owner.prefetchReadingImage({sourceId:'s',bookId:'retained',chapterIndex:0,contentVersion:'v',imageUrl:'image',baseUrl:'chapter',resourceRef:'page',mangaDecodeRevision:manifest.decodeRevision},()=>true,'rules',allowNetwork);
+      await assert.rejects(operation, error => error === failure, 'keep the actual native failure for a retry');
+      await f.owner.mangaImageTail;
+      assert.equal(f.events.filter(event => event[0] === 'remove').length, 0, 'native/display failure cannot delete permanent originals');
+      assert.equal(f.events.filter(event => event[0] === 'prepare').length, 0, 'native/display failure cannot refetch verified original bytes');
+    }
+  }
+}
+for (const method of ['load', 'prefetch']) {
+  for (const allowNetwork of [false, true]) {
+    const f = fixture();
+    f.owner.readingImageDiskCache.loadResource = async () => { throw Error('MANGA_CACHE_RESOURCE_CORRUPT'); };
+    const operation = method === 'load' ? f.load('corrupt', () => true, allowNetwork) :
+      f.owner.prefetchReadingImage({sourceId:'s',bookId:'corrupt',chapterIndex:0,contentVersion:'v',imageUrl:'image',baseUrl:'chapter',resourceRef:'page',mangaDecodeRevision:manifest.decodeRevision},()=>true,'rules',allowNetwork);
+    if (allowNetwork) await operation;
+    else await assert.rejects(operation, /MANGA_CACHE_RESOURCE_CORRUPT/);
+    await f.owner.mangaImageTail;
+    assert.equal(f.events.filter(event => event[0] === 'remove').length, allowNetwork ? 1 : 0);
+    assert.equal(f.events.filter(event => event[0] === 'prepare').length, allowNetwork ? 1 : 0);
+  }
+}
+{
+  const f = fixture(); f.cached.set('novel', new Uint8Array([7]));
+  f.body.loadBytes = async bytes => { if (bytes[0] === 7) throw Error('novel decode failed'); return {fileUri:'file://novel-repaired',width:20,height:30}; };
+  await f.owner.loadReadingImage('s','novel',0,'v','novel','chapter',true,()=>true);
+  assert.equal(f.events.filter(event => event[0] === 'remove').length, 1);
+  assert.equal(f.events.filter(event => event[0] === 'novel-fetch').length, 1);
+}
+console.log('PASS valid manga originals survive native/decode/packing/I/O errors online and offline; only proved digest corruption enables repair; novel repair behavior is unchanged.');
+
+// Current chapter fill precedes optional work while explicit downloads receive
+// a bounded turn; queued items continue to contain callbacks, not image bytes.
+{
+ const f=fixture(), hold=deferred(), order=[];
+ const first=f.owner.runMangaImageWork(()=>true, async()=>{await hold.promise;}, 'background');
+ const jobs=[];
+ jobs.push(f.owner.runMangaImageWork(()=>true, async()=>{order.push('optional');}, 'background'));
+ jobs.push(f.owner.runMangaImageWork(()=>true, async()=>{order.push('download');}, 'download'));
+ for(let i=0;i<6;i++)jobs.push(f.owner.runMangaImageWork(()=>true, async()=>{order.push('chapter');}, 'chapter'));
+ jobs.push(f.owner.runMangaImageWork(()=>true, async()=>{order.push('visible');}, 'foreground'));
+ hold.resolve();await Promise.all([first,...jobs]);await f.owner.mangaImageTail;
+ assert.equal(order[0], 'visible');assert.equal(order[1], 'chapter');
+ assert.ok(order.indexOf('download') <= 4, 'bounded urgent burst cannot starve an explicit download');
+ assert.equal(order.at(-1),'optional');assert.equal(f.maxReads(),0);
+}
+console.log('PASS manga business priorities: visible, current fill, bounded download turn, optional work');

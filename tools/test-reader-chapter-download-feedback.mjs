@@ -15,21 +15,24 @@ const ts=require(sdk+'/node_modules/typescript');
 const tree=ts.createSourceFile('/tmp/DownloadFeedbackProbe.ets',readFileSync(sourceFile,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
 assert.equal(tree.parseDiagnostics.length,0);
 const memberNames=new Set(tree.statements.find(n=>n.name?.getText(tree)==='Index').members.map(n=>n.name?.getText(tree)));
-const methods=['downloadDirectoryChapter','showChapterDownloadFailure','showOfflineDownloadFeedback'].filter(n=>memberNames.has(n));
+const methods=['downloadDirectoryChapter','drainMangaDownloadContinuations','showChapterDownloadFailure','showOfflineDownloadFeedback'].filter(n=>memberNames.has(n));
 const settle=()=>new Promise(r=>setImmediate(r));
 async function fixture(error,mutation,contentKind='manga'){
  let reject,resolve;const pending=new Promise((a,b)=>{resolve=a;reject=b;});
  const messages=[],states=[],logs=[],calls=[];
- class Gateway{prefetchChapter(session,index,current){calls.push({session,index,current});return pending;}}
+ class Gateway{
+  prefetchChapter(session,index,current){calls.push({session,index,current});return pending;}
+  async loadProjection(){return [{index:0,downloadState:'completed'}];}
+ }
  const Index=productionMotionMethods(sourceFile,methods,{ReadingOfflineGateway:Gateway,
   ReaderRuntimeOwner:{current:()=>({supportsCoreCapability:()=>true})},hilog:{error:(...args)=>logs.push(args)},DOMAIN:0,
   errorMessageOf,isDomainResolutionFailure,isNetworkEnvironmentFailure,diagnosticCodeOf,normalizeReadingOfflineMaterializationError});
  const session={contentKind,identity:{sourceId:'s',bookId:'b'},entries:[{index:0,url:'chapter'}]};
- const owner=Object.assign(new Index(),{remoteReadingSession:session,offlineMutationGeneration:0,offlineMutationActiveKey:'',detailToc:[{index:0,bookmarks:['kept']}],
+ const owner=Object.assign(new Index(),{remoteReadingSession:session,offlineMutationGeneration:0,offlineMutationActiveKey:'',mangaDownloadActionActiveKey:'',detailToc:[{index:0,downloadState:'completed',bookmarks:['kept']}],
   isKnownDetailChapter:index=>index===0,updateDirectoryChapterDownloadState:(...args)=>states.push(args),
   mergeDirectoryBookmarks:(entries,current)=>entries.map(e=>({...e,bookmarks:current[0].bookmarks})),
   getUIContext:()=>({getPromptAction:()=>({showToast:({message})=>{if(mutation==='ui-gone')throw new Error('context gone');messages.push(message);}})})});
- owner.downloadDirectoryChapter(0);assert.equal(calls.length,1);assert.equal(calls[0].current(),true);assert.deepEqual(states,[[0,'queued']]);
+ owner.downloadDirectoryChapter(0);assert.equal(calls.length,1);assert.equal(calls[0].current(),true);assert.deepEqual(states,contentKind==='manga'?[]:[[0,'queued']]);
  if(mutation==='book')owner.remoteReadingSession={...session,identity:{sourceId:'s',bookId:'other'}};
  if(mutation==='source')owner.remoteReadingSession={...session,identity:{sourceId:'other',bookId:'b'}};
  if(mutation==='superseded'){owner.offlineMutationGeneration++;owner.offlineMutationActiveKey='new-job';}
@@ -46,14 +49,15 @@ const dns=Object.assign(new Error(secret), {
  }}}
 });
 const current=await fixture(dns);
-assert.deepEqual(current.states,[[0,'queued'],[0,'failed']]);
+assert.deepEqual(current.states,[],'manga replacement failure does not relabel an existing downloaded chapter');
+assert.equal(current.owner.detailToc[0].downloadState,'completed','authoritative projection retains the previous completed download');
 assert.equal(current.messages.length,1,'current chapter failure must be visible, not only logged');
 assert.match(current.messages[0],/无法解析书源域名/);
 assert.doesNotMatch(current.messages[0],/PRIVATE|fixture|https|Cookie/);
 assert.equal(current.logs.length,1,'existing private diagnostic remains');
-const novel=await fixture(dns,undefined,'text');assert.deepEqual(novel.messages,current.messages,'the shared chapter action retains the same safe feedback for novels');
+const novel=await fixture(dns,undefined,'text');assert.deepEqual(novel.messages,current.messages,'the shared chapter action retains the same safe feedback for novels');assert.deepEqual(novel.states,[[0,'queued'],[0,'failed']]);
 for(const mutation of ['book','source','superseded','closed']){
- const stale=await fixture(dns,mutation);assert.deepEqual(stale.messages,[]);assert.deepEqual(stale.states,[[0,'queued']]);assert.equal(stale.logs.length,0);
+ const stale=await fixture(dns,mutation);assert.deepEqual(stale.messages,[]);assert.deepEqual(stale.states,[]);assert.equal(stale.logs.length,0);
 }
 for(const cancelled of [new ReadingOfflineMaterializationError('cancelled',secret),new Error('reading offline request was superseded'),new Error('Reader-Core request cancelled by caller: 7')]){
  const f=await fixture(cancelled);assert.deepEqual(f.messages,[],'current cancellation is not an error popup');
@@ -67,5 +71,5 @@ for(const [error,expected] of [
  const f=await fixture(error);assert.equal(f.messages.length,1);assert.match(f.messages[0],expected);assert.doesNotMatch(f.messages[0],/PRIVATE|fixture|https|Cookie/);
 }
 const ok=await fixture(undefined);assert.deepEqual(ok.messages,[]);assert.equal(ok.owner.detailToc[0].downloadState,'completed');assert.deepEqual(ok.owner.detailToc[0].bookmarks,['kept']);
-const gone=await fixture(dns,'ui-gone');assert.deepEqual(gone.messages,[]);assert.deepEqual(gone.states,[[0,'queued'],[0,'failed']]);
+const gone=await fixture(dns,'ui-gone');assert.deepEqual(gone.messages,[]);assert.deepEqual(gone.states,[]);assert.equal(gone.owner.detailToc[0].downloadState,'completed');
 console.log('PASS actual Index chapter download + production safe classifiers + existing Toast: current DNS visible; source/book/closed/generation stale silent; three cancellation shapes silent; fixed storage/timeout/unknown copy excludes secrets; success bookmarks and active-key fencing preserved; unavailable UI cannot reject download settlement');

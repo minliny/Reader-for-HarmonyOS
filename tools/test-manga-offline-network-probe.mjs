@@ -1,10 +1,17 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
-import { createRequire, registerHooks } from 'node:module';
-import { MangaOfflineNetworkProbe } from '../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts';
+import * as nodeFs from 'node:fs';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
+import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
+import { MangaOfflineNetworkProbe, MANGA_PROBE_REQUEST_LIMIT } from '../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts';
 import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
-import { readerMangaOfflineProbeScope } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
+import { readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode, readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
 import { MangaImageDecodeHost } from '../entry/src/main/ets/app/MangaImageDecodeHost.ts';
+import { createMangaAtomicPayloadReaderFixture, createMangaAtomicPayloadInstallerFixture } from './lib/manga-atomic-payload-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const url = name => new URL('../entry/src/main/ets/' + name, import.meta.url);
@@ -43,9 +50,67 @@ for(const [source,book,manga] of [['other','book-A',true],['source-A','other',tr
   const p=new MangaOfflineNetworkProbe(scope);p.select(source,book,manga);assert.equal(snap(p).state,'released');
 }
 const capacity=new MangaOfflineNetworkProbe(scope);
-for(let i=0;i<256;i++){capacity.assertCapacity();capacity.track(i);capacity.settle(i);}
-assert.throws(()=>capacity.assertCapacity(),/CAPACITY/);assert.equal(snap(capacity).claimedRequests,256);
+assert.equal(MANGA_PROBE_REQUEST_LIMIT,8192);
+for(let i=0;i<MANGA_PROBE_REQUEST_LIMIT;i++){capacity.assertCapacity();capacity.track(i);capacity.settle(i);}
+assert.throws(()=>capacity.assertCapacity(),/CAPACITY/);assert.equal(snap(capacity).claimedRequests,MANGA_PROBE_REQUEST_LIMIT);
+assert.equal(snap(capacity).requestLimit,MANGA_PROBE_REQUEST_LIMIT);
+assert.throws(()=>capacity.beforeCoreHttp(0),/HTTP_BLOCKED/,'the oldest settled offline id is retained at the full capacity boundary');
+assert.throws(()=>capacity.beforeImageHttp(MANGA_PROBE_REQUEST_LIMIT-1),/IMAGE_HTTP_BLOCKED/,'the newest settled offline id is retained at the full capacity boundary');
+{
+ const q=new MangaOfflineNetworkProbe(scope,()=>{},'reading');
+ q.track(1,'manga.cache.classify');q.track(1,'book.toc');q.settle(1);
+ for(let i=0;i<80;i++)q.track(i+2,`https://private.invalid/credential-${i}`);
+ assert.deepEqual(snap(q).requestMethods,{'manga.cache.classify':1,'other-owned':80});
+ assert.equal(snap(q).claimedRequests,81,'duplicate ids are not counted as new RPCs');
+ assert.equal(q.snapshot().includes('private.invalid'),false,'arbitrary method strings never enter reports');
+ assert.equal(Object.keys(snap(q).requestMethods).length,2,'all unknown methods share one fixed bucket');
+}
 console.log('PASS exact debug cold Want, arm-before-selection scope, immutable identity, wrong/text selection, bounded tombstones and actual nonzero denial counts');
+
+// The explicit selection flags arm no book and never infer one from a URL.
+for (const debug of [true,false,1,'true',new Boolean(true)])
+ for (const build of ['debug','release','debug '])
+ for (const flag of [true,false,undefined,'true',1,new Boolean(true)]) {
+  assert.equal(readerMangaProbeSelectionMode(debug,build,flag,undefined),debug===true&&build==='debug'&&flag===true?'offline':undefined);
+  assert.equal(readerMangaProbeSelectionMode(debug,build,undefined,flag),debug===true&&build==='debug'&&flag===true?'reading':undefined);
+ }
+assert.equal(readerMangaProbeSelectionMode(true,'debug',true,true),undefined);
+for(const conflict of [true])for(const mode of ['offline','reading']) {
+ assert.equal(readerMangaProbeSelectionMode(true,'debug',mode==='offline',mode==='reading',[conflict]),undefined);
+}
+for(const nonflag of [false,undefined,'true',1,new Boolean(true)])assert.equal(readerMangaProbeSelectionMode(true,'debug',true,undefined,[nonflag]),'offline');
+for(const mode of ['offline','reading']) {
+ const selected=new MangaOfflineNetworkProbe(undefined,()=>{},mode,true);
+ const armed=snap(selected);
+ assert.equal(armed.binding,'first-manga-selection');assert.equal(armed.bookCoverage,'selected-only');
+ assert.equal(armed.beforeSelectionBookCoverage,'not-covered');assert.equal(armed.identityBound,false);
+ assert.equal(armed.beforeSelectionProtected,false);
+ assert.equal(selected.ownsCommand('manga.resource.prepare',{chapter:scope}),false);
+ assert.equal(selected.protectsAutomaticCatalog(scope.sourceId,scope.bookId),false);
+ assert.equal(selected.matches(scope.sourceId,scope.bookId),false);
+ selected.track(77);assert.equal(snap(selected).claimedRequests,0,'unbound probe cannot accept a manual request claim either');
+ selected.beforeCoreHttp(77);selected.beforeImageHttp(77);
+ assert.equal(snap(selected).coreHttpAttempts,0);assert.equal(snap(selected).imageHttpAttempts,0,'unbound scope never claims pre-selection book HTTP');
+ selected.select(scope.sourceId,scope.bookId,true);
+ assert.equal(snap(selected).identityBound,true);assert.equal(snap(selected).state,'active');
+ assert.equal(selected.ownsCommand('manga.resource.prepare',{chapter:scope}),true);
+ assert.equal(selected.ownsCommand('manga.resource.prepare',{chapter:{...scope,bookId:'wrong-book'}}),false);
+ assert.equal(selected.matches(scope.sourceId,scope.bookId),mode==='offline');
+ assert.equal(selected.protectsAutomaticCatalog(scope.sourceId,scope.bookId),mode==='offline');
+ selected.select(scope.sourceId,'wrong-book',true);selected.select(scope.sourceId,'wrong-book',true);
+ assert.equal(snap(selected).state,'released');assert.equal(selected.ownsCommand('manga.resource.prepare',{chapter:{...scope,bookId:'wrong-book'}}),false,'selection-bound target cannot rebind');
+ assert.equal(snap(selected).beforeSelectionBookCoverage,'not-covered');
+ for(const terminal of ['ability-background','reader-left']) {
+  const p=new MangaOfflineNetworkProbe(undefined,()=>{},mode,true);p.release(terminal);p.select(scope.sourceId,scope.bookId,true);
+  assert.equal(snap(p).identityBound,false);assert.equal(snap(p).state,'released');
+ }
+ for(const [source,book,manga]of [['',scope.bookId,true],[scope.sourceId,'bad\n',true],[scope.sourceId,scope.bookId,false]]) {
+  const p=new MangaOfflineNetworkProbe(undefined,()=>{},mode,true);p.select(source,book,manga);p.select(scope.sourceId,scope.bookId,true);
+  assert.equal(snap(p).identityBound,false);assert.equal(snap(p).state,'released','invalid/nonmanga initial selection cannot later bind');
+ }
+ assert.equal(selected.snapshot().includes(scope.sourceId),false);assert.equal(selected.snapshot().includes(scope.bookId),false,'snapshot carries no source/book URLs or credentials');
+}
+console.log('PASS strict selection-only admission, explicit pre-selection coverage boundary, exact one-time Native identity binding and terminal no-rebind fences');
 
 let byteFetches=0,coreFetches=0,dataDecodes=0;
 const HttpExecuteHost={instance:{async execute(){coreFetches++;return {};},async executeForCore(){coreFetches++;return {};},cancel(){},
@@ -94,7 +159,7 @@ console.log('PASS actual Registry Core HTTP variants and Body fetch boundaries: 
 }
 console.log('PASS actual DecodeHost suspended fetch after cancellation/timeout cannot allocate an input asset or dispatch HTTP');
 
-const Owner=productionMotionMethods(url('app/ReaderRuntimeOwner.ts'),['requestDirect','mangaOfflineProbeProtectsAutomaticCatalog'],{
+const Owner=productionMotionMethods(url('app/ReaderRuntimeOwner.ts'),['requestDirect','mangaOfflineProbeProtectsAutomaticCatalog','selectMangaOfflineProbe','releaseMangaOfflineProbe','finishMangaOfflineProbe'],{
   DEFAULT_CORE_REQUEST_TIMEOUT_MS:30000,coreAdmissionFailureSummary:()=>undefined,httpResponseFailureSummary:()=>undefined,
 });
 function ownerFixture(p) {
@@ -134,6 +199,50 @@ function ownerFixture(p) {
   const {owner,calls}=ownerFixture(capacity);await assert.rejects(owner.requestDirect('book.toc',scope),/CAPACITY/);assert.equal(calls.length,0,'capacity fails before Core send');
 }
 console.log('PASS production Runtime send/wait binding, ordinary request isolation, timeout settlement, progress-save survival and capacity before dispatch');
+for(const mode of ['offline','reading']) {
+ const q=new MangaOfflineNetworkProbe(undefined,()=>{},mode,true),{owner,calls}=ownerFixture(q);
+ const options={timeoutMs:8765,pollMs:4,shouldCancel:()=>false,hostRequest:()=>{}};
+ let ordinaryOptions;
+ owner.runtime.request=async(method,params,value)=>{ordinaryOptions=value;calls.push(['ordinary',method]);return {data:{}};};
+ await owner.requestDirect('book.toc',scope,options);assert.equal(ordinaryOptions,options);
+ assert.equal(snap(q).claimedRequests,0);assert.equal(owner.mangaOfflineProbeProtectsAutomaticCatalog(scope.sourceId,scope.bookId),false);
+ q.select(scope.sourceId,scope.bookId,true);
+ owner.runtime.waitForResult=async(id,value)=>{
+  if(mode==='reading'){assert.equal(value,options);q.beforeCoreHttp(id);q.beforeImageHttp(id);return {requestId:id,data:{ok:true}};}
+  q.beforeCoreHttp(id);throw Error('unexpected network');
+ };
+ if(mode==='reading')assert.equal((await owner.requestDirect('manga.resource.prepare',{chapter:scope},options)).data.ok,true);
+ else await assert.rejects(owner.requestDirect('manga.resource.prepare',{chapter:scope},options),/HTTP_BLOCKED/);
+ assert.equal(snap(q).beforeSelectionCoreHttpAttempts,0);assert.equal(snap(q).beforeSelectionImageHttpAttempts,0);
+ assert.equal(snap(q).coreHttpAttempts,1);
+ await owner.requestDirect('manga.resource.prepare',{chapter:{...scope,bookId:'different'}},options);
+ assert.equal(calls.at(-1)[0],'ordinary','binding never claims another Native book identity');
+ const claimed=101;q.release('ability-background');q.settle(claimed);q.select(scope.sourceId,'different',true);
+ if(mode==='offline')assert.throws(()=>q.beforeCoreHttp(claimed),/HTTP_BLOCKED/,'old selected offline request cannot escape after release');
+ else assert.doesNotThrow(()=>q.beforeCoreHttp(claimed),'ordinary mode never denies late requests');
+ await owner.requestDirect('manga.resource.prepare',{chapter:scope},options);assert.equal(calls.at(-1)[0],'ordinary');
+}
+console.log('PASS production requestDirect selected-only identity ownership, unbound unchanged options/catalog/network, reading unchanged HTTP, offline post-selection denial and late tombstones');
+for(const mode of ['offline','reading']) {
+ for(const active of [false,true]) {
+  const q=new MangaOfflineNetworkProbe(undefined,()=>{},mode,true),{owner}=ownerFixture(q),contexts=[];
+  if(active)owner.selectMangaOfflineProbe(scope.sourceId,scope.bookId,true);
+  owner.setReadingPreparationContext=(...args)=>contexts.push(args);owner.flush=async()=>{};
+  const Ability=productionMotionMethods(url('entryability/EntryAbility.ets'),['onBackground','onForeground'],{
+   AppStorage:{setOrCreate(){}},ReaderWindowCoordinator:{reapplyChrome(){},reapplyWindowPolicy(){}},hilog:{error(){}},DOMAIN:0});
+  const ability=Object.assign(new Ability(),{runtimeOwner:owner});ability.onBackground();ability.onForeground();
+  owner.selectMangaOfflineProbe(scope.sourceId,scope.bookId,true);
+  assert.equal(snap(q).state,'released');assert.equal(snap(q).reason,'ability-background');assert.equal(snap(q).identityBound,active);
+  assert.deepEqual(contexts,[[false,false],[true,false]],'new diagnostics keep original foreground preparation wiring');
+ }
+ const q=new MangaOfflineNetworkProbe(undefined,()=>{},mode,true),{owner}=ownerFixture(q);
+ owner.selectMangaOfflineProbe(scope.sourceId,scope.bookId,true);owner.finishMangaOfflineProbe(scope.sourceId,scope.bookId);
+ owner.selectMangaOfflineProbe(scope.sourceId,scope.bookId,true);
+ assert.equal(snap(q).state,'released');assert.equal(snap(q).reason,'reader-left');
+}
+console.log('PASS actual Owner select/finish/release and Ability background/foreground prevent selected or unbound diagnostic rearm');
+
+
 
 // Execute the real Surface open/helper. Cached catalog access is its only
 // offline dependency, and a missing cached catalog never reaches acquireBook.
@@ -146,10 +255,10 @@ const Surface=productionMotionMethods(url('features/manga/MangaReadingSurface.et
 });
 const makeSurface=()=>{
   const s=new Surface(), events=[];
-  s.controller={async awaitPendingProgress(){},async setPreviewMode(){},async openPrepared(_entry,offline){assert.equal(offline,true);events.push('open');},savedLocation:null,displayedOrdinal:0,recoveryRequired:false,close(){events.push('close');}};
+  s.controller={async awaitPendingProgress(){},async setPreviewMode(){},async openPrepared(_entry,offline){assert.equal(offline,true);events.push('open');},savedLocation:null,displayedOrdinal:0,recoveryRequired:false,async close(){events.push('close');}};
   Object.assign(s,{...scope,offline:true,mounted:true,remoteBookSeed:{...scope,contentKind:'manga'},fitPreference:'width',
     runtime:{bookAcquisitions:()=>({acquireBook:async()=>{onlineAcquires++;throw Error('online');}}),finishMangaOfflineProbe(){events.push('finish');},subscribeMangaOfflineProbe(listener){listener('receipt');return()=>events.push('detach');}},
-    publish(){},restore(){},configureAdjacentChapter(){events.push('catalog');},onRemoteSessionReady(){},layoutGeneration:0,viewportGeneration:0,loginGeneration:0});
+    retainPreparationOnDisappear:()=>false,publish(){},restore(){},configureAdjacentChapter(){events.push('catalog');},onRemoteSessionReady(){},layoutGeneration:0,viewportGeneration:0,loginGeneration:0});
   return {s,events};
 };
 const {s,events}=makeSurface();await s.open(s.controller);await tick();assert.equal(s.opened,true);assert.equal(catalogReads,1);assert.equal(onlineAcquires,0);
@@ -188,10 +297,28 @@ const Index=productionMotionMethods(url('pages/Index.ets'),['openShelfBook'],{Re
 const index=Object.assign(new Index(),{route:'bookshelf',shelfEntryTraceAttempt:0,navigationGeneration:1,sourceDisplayName:()=>'',openRemoteBookDetail(seed,_name,_selection,resume){assert.deepEqual([seed.sourceId,seed.bookId],[scope.sourceId,scope.bookId]);assert.equal(seed.contentKind,'manga');assert.equal(resume,true);}});
 index.openShelfBook({...scope,contentKind:'manga',title:'漫画'});assert.equal(snap(q).state,'active');
 console.log('PASS actual ordinary shelf click claims exact manga and enters existing resume route without authorizing network preparation');
+for(const mode of ['offline','reading']) {
+ const target={sourceId:'native-source-selection',bookId:'native-book-selection'};
+ const q=new MangaOfflineNetworkProbe(undefined,()=>{},mode,true),intents=[],routes=[];
+ const owner={selectMangaOfflineProbe:(...args)=>q.select(...args),mangaOfflineProbeFor:(...args)=>q.matches(...args),
+  noteReadingPreparationIntent:(...args)=>intents.push(args)};
+ const Index=productionMotionMethods(url('pages/Index.ets'),['openShelfBook'],{ReaderRuntimeOwner:{current:()=>owner},LOCAL_SOURCE_ID:'local'});
+ const index=Object.assign(new Index(),{route:'bookshelf',shelfEntryTraceAttempt:0,navigationGeneration:1,sourceDisplayName:()=>'',
+  openRemoteBookDetail(seed,_name,_selection,resume){routes.push(seed);assert.equal(resume,true);}});
+ assert.equal(snap(q).identityBound,false);index.openShelfBook({...target,contentKind:'manga',title:'Native manga'});
+ assert.equal(snap(q).state,'active');assert.equal(snap(q).identityBound,true);assert.equal(routes[0].contentKind,'manga');
+ assert.deepEqual([routes[0].sourceId,routes[0].bookId],[target.sourceId,target.bookId]);
+ assert.deepEqual(intents,mode==='reading'?[[target.sourceId,target.bookId]]:[], 'normal online preparation is preserved only for reading mode');
+ index.openShelfBook({...target,bookId:'next-book',contentKind:'manga'});
+ assert.equal(snap(q).state,'released');assert.equal(q.matches(target.sourceId,'next-book'),false);
+ index.openShelfBook({...target,contentKind:'manga'});assert.equal(snap(q).state,'released','subsequent normal UI clicks cannot rearm the cold probe');
+}
+console.log('PASS actual normal Index shelf selection binds Native identity once; ordinary reading keeps preparation and offline blocks only selected target');
+
 
 // Installed official SDK and actual vendored Core SDK types validate the new
 // Want/parser + send/wait seam. This is not a substitute for an ArkTS/HAP gate.
-{
+if (process.env.READER_SKIP_PROBE_SDK_CHECK !== '1') {
   const require=createRequire(import.meta.url), sdk=process.env.READER_ETS_LOADER_ROOT??
     '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
   const ts=require(`${sdk}/node_modules/typescript`),sdkRoot=`${sdk}/../..`;
@@ -205,6 +332,7 @@ console.log('PASS actual ordinary shelf click claims exact manga and enters exis
   // isolated worktree remains reproducible; oh_modules is only a build output.
   const coreSdk=new URL('../entry/vendor/core-harmony/sdk/reader_core',import.meta.url).pathname;
   const text=`import type {JsonObject, ReaderCoreRuntime, ReaderCoreResultEvent, RequestOptions} from '${coreSdk}';
+import type {MangaPlatformObservation, MangaBodyDiagnosticState} from '${new URL('../entry/src/main/ets/app/MangaPlatformObservation',import.meta.url).pathname}';
 import Want from '@ohos.app.ability.Want';
 import {hilog} from '@kit.PerformanceAnalysisKit';
 ${readFileSync(url('app/MangaOfflineNetworkProbe.ts'),'utf8').replace(/^import .*?;\n/gm,'')}
@@ -214,7 +342,15 @@ declare function coreAdmissionFailureSummary(error:unknown,method:string):string
 declare function httpResponseFailureSummary(error:unknown):string|undefined;
 function coldWant(want:Want):MangaOfflineProbeScope|undefined{return readerMangaOfflineProbeScope(true,'debug',
 want.parameters?.readerMangaOfflineProbe,want.parameters?.readerMangaOfflineSourceId,want.parameters?.readerMangaOfflineBookId);}
+function selectedColdWant(want:Want):MangaProbeSelectionMode|undefined{return readerMangaProbeSelectionMode(true,'debug',
+want.parameters?.readerMangaOfflineProbeSelectManga,want.parameters?.readerMangaReadingProbeSelectManga,
+[want.parameters?.readerMangaOfflineProbe,want.parameters?.readerMangaReadingProbe,want.parameters?.readerControlMotionVerification,
+want.parameters?.readerOpenSourcePilot,want.parameters?.readerEventLoopProbe,want.parameters?.readerDisableOptionalEntryMemory]);}
+declare const MangaChapterPreparationCoordinator: {forRuntime(owner:object):{close():Promise<void>}};
 class RuntimeSeam {
+private mangaImageTail:Promise<void>=Promise.resolve();
+private readingImageDiskCache:{withMangaStorageRestore<T>(restore:()=>Promise<T>):Promise<T>;
+maintainMangaStorage(reason:'clear',scope?:{sourceId:string;bookId:string}):Promise<void>};
 private preparationIntentEpoch=0;private runtime:ReaderCoreRuntime|undefined;private mangaOfflineProbe:MangaOfflineNetworkProbe|undefined;
 private async start():Promise<void>{}private wakeReadingPreparations():void{}
 private readingEntryPreparations():{beginRequest(method:string,params:JsonObject):boolean;finishRequest(method:string,params:JsonObject):void}{throw Error();}
@@ -230,5 +366,297 @@ ${requestMethod}
   assert.deepEqual(errors(text),[],'actual cold Want and production request method match installed official and Core SDK types');
   assert.ok(errors(text.replace('runtime.waitForResult(requestId,','runtime.waitForResult("wrong-id",')).length>0,
     'SDK counterfactual rejects an invalid Host ownership id');
-}
 console.log('PASS installed SDK Want and actual Core SDK send/wait types, with invalid request-id counterfactual; no device/Native result claimed');
+  // The TS typechecker accepts a nested conditional object which the installed
+  // bytecode frontend rejects. Exercise that official frontend on the actual
+  // complete production module as well; parse-only neither links nor runs it.
+  const frontend=`${sdk}/bin/ark/build-mac/bin/es2abc`;
+  const parse=path=>spawnSync(frontend,['--target-api-version','23','--module','--parse-only',path],{encoding:'utf8'});
+  for(const path of ['app/ReaderRuntimeOwner.ts','app/MangaOfflineNetworkProbe.ts','app/ReaderControlVerificationLaunch.ts']) {
+    const actualParse=parse(url(path).pathname);
+    assert.equal(actualParse.status,0,actualParse.stderr||actualParse.stdout||String(actualParse.error));
+  }
+  const invalidDir=nodeFs.mkdtempSync(join(tmpdir(),'reader-manga-owner-frontend-'));
+  try {
+    const entryPath=url('entryability/EntryAbility.ets').pathname;
+    const etsOptions=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
+    const ui=require(`${sdk}/lib/process_ui_syntax.js`);
+    const entryTree=ts.createSourceFile(entryPath,readFileSync(entryPath,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,etsOptions);
+    assert.deepEqual(entryTree.parseDiagnostics,[],'actual Ability ETS parses with official SDK');
+    const transformed=ts.transform(entryTree,[ui.processUISyntax(null,true)],etsOptions);
+    const emitted=join(invalidDir,'ActualEntry.ts');nodeFs.writeFileSync(emitted,ts.createPrinter().printFile(transformed.transformed[0]));transformed.dispose();
+    assert.deepEqual(ui.transformLog.errors,[],'actual Ability ETS transform must have no diagnostics');
+    const abilityParse=parse(emitted);assert.equal(abilityParse.status,0,abilityParse.stderr||abilityParse.stdout||String(abilityParse.error));
+    const invalid=join(invalidDir,'invalid.ts');nodeFs.writeFileSync(invalid,'export const invalid = (;\n');
+    assert.notEqual(parse(invalid).status,0,'official frontend must reject invalid syntax');
+  } finally {nodeFs.rmSync(invalidDir,{recursive:true,force:true});}
+  console.log('PASS actual Owner/Probe/Launch and official transformed Entry es2abc parse-only frontend and invalid-syntax control; no HAP/runtime result claimed');
+}
+
+{
+ const q=new MangaOfflineNetworkProbe(scope,()=>{},'reading');q.track(400);
+ assert.doesNotThrow(()=>q.beforeCoreHttp(400),'online observer must allow real Core HTTP');
+ assert.doesNotThrow(()=>q.beforeImageHttp(400),'online observer must allow real image HTTP');
+ assert.equal(q.matches(scope.sourceId,scope.bookId),false,'observer cannot route normal reading into offline mode');
+ assert.equal(q.protectsAutomaticCatalog(scope.sourceId,scope.bookId),false,'observer cannot suppress normal catalogs');
+}
+console.log('PASS reading observer counts real HTTP without offline routing or catalog protection');
+
+for(const debug of [true,false,1,'true'])for(const mode of ['debug','release','debug '])for(const enabled of [true,false,undefined,'true',1]) {
+ assert.equal(readerMangaReadingProbeScope(debug,mode,enabled,scope.sourceId,scope.bookId)!==undefined,debug===true&&mode==='debug'&&enabled===true);
+}
+for(const bad of [undefined,{},'', ' x','x\n','x'.repeat(8193)])assert.equal(readerMangaReadingProbeScope(true,'debug',true,bad,scope.bookId),undefined);
+assert.equal(readerMangaReadingProbeScope(true,'debug',true,scope.sourceId,scope.bookId,true),undefined);
+assert.equal(readerMangaOfflineProbeScope(true,'debug',true,scope.sourceId,scope.bookId,true),undefined);
+for(const other of [false,undefined,'true',1])assert.notEqual(readerMangaReadingProbeScope(true,'debug',true,scope.sourceId,scope.bookId,other),undefined);
+{
+ const q=new MangaOfflineNetworkProbe(scope,()=>{},'reading'),{owner,calls}=ownerFixture(q);q.select(scope.sourceId,scope.bookId,true);
+ const cancelled=()=>false,options={timeoutMs:9876,pollMs:2,shouldCancel:cancelled,hostRequest:()=>{}};
+ owner.runtime.waitForResult=async(id,value)=>{assert.equal(value,options,'observer preserves the original SDK options object');q.release('background');assert.equal(value.shouldCancel(),false);q.beforeCoreHttp(id);q.beforeImageHttp(id);return {requestId:id,data:{ok:true}};};
+ assert.equal((await owner.requestDirect('manga.resource.prepare',{chapter:scope},options)).data.ok,true);
+ assert.equal(snap(q).coreHttpAttempts,0);assert.equal(snap(q).imageHttpAttempts,0);assert.equal(q.current(101),true);
+ await owner.requestDirect('manga.resource.prepare',{chapter:scope},options);assert.equal(calls.at(-1)[0],'ordinary');
+}
+{
+ const q=new MangaOfflineNetworkProbe(scope,()=>{},'reading'),{owner,calls}=ownerFixture(q);q.select(scope.sourceId,scope.bookId,true);
+ await owner.requestDirect('book.toc',{...scope,bookId:'different'});await owner.requestDirect('book.toc',{...scope,sourceId:'different'});
+ await owner.requestDirect('book.toc',{...scope,contentKind:'text'});assert.equal(calls.filter(call=>call[0]==='send').length,0);
+ let cancel=false;const original=()=>cancel;owner.runtime.waitForResult=async(_id,options)=>{assert.equal(options.shouldCancel,original);assert.equal(options.shouldCancel(),false);cancel=true;assert.equal(options.shouldCancel(),true);return {data:{}};};
+ await owner.requestDirect('book.toc',scope,{shouldCancel:original});
+}
+{
+ const q=new MangaOfflineNetworkProbe(scope,()=>{},'reading'),{owner}=ownerFixture(q);q.select(scope.sourceId,scope.bookId,true);let completed=0;
+ owner.runtime.waitForResult=async(id,options)=>{assert.equal(options.shouldCancel,undefined);q.beforeCoreHttp(id);completed++;return {requestId:id,data:{}};};
+ owner.runtime.request=async()=>{completed++;return {data:{}};};
+ for(let index=0;index<260;index++)await owner.requestDirect('manga.resource.prepare',{chapter:scope});
+ assert.equal(completed,260,'sampling capacity cannot reject normal Core business');assert.equal(snap(q).claimedRequests,260);
+ assert.equal(snap(q).coverageIncomplete,false,'the former 256-id limit must not truncate a full chapter observation');
+ assert.equal(snap(q).coreHttpAttempts,260);assert.equal(snap(q).capacityRejections,0);
+ assert.deepEqual(snap(q).requestMethods,{'manga.resource.prepare':260});
+ const attempts=snap(q).coreHttpAttempts;q.beforeCoreHttp(101);assert.equal(snap(q).coreHttpAttempts,attempts+1,'settled exact-id tombstones still count late HTTP within the active reading window');
+}
+for(const mode of ['reading','offline']) {
+ const q=new MangaOfflineNetworkProbe(scope,()=>{},mode),{owner,calls}=ownerFixture(q);q.select(scope.sourceId,scope.bookId,true);
+ owner.runtime.waitForResult=async(id)=>{
+  if(calls.at(-1)[1]==='manga.resource.prepare')q.beforeImageHttp(id);
+  return {requestId:id,data:{}};
+ };
+ for(const [phase,chapterId]of ['chapter-A','chapter-B','chapter-A'].entries()) {
+  await owner.requestDirect('manga.entry.get',{...scope,chapterIndex:phase===1?1:0});
+  for(let page=0;page<24;page++) {
+   const chapter={...scope,chapterId};
+   // A full 24-page cross-chapter window includes local admission/inventory,
+   // read clock and progress RPCs as well as any new original's transfer.
+   await owner.requestDirect('manga.cache.classify',{chapter});
+   await owner.requestDirect('manga.cache.classify',{chapter});
+   await owner.requestDirect('manga.cache.recordRead',{chapter});
+   await owner.requestDirect('reading.progress.update',{location:{kind:'manga',chapter}});
+   if(mode==='reading'&&phase===1)await owner.requestDirect('manga.resource.prepare',{chapter});
+  }
+ }
+ const expected=mode==='reading'?315:291,value=snap(q);
+ assert.equal(value.claimedRequests,expected);assert.equal(value.pendingRequests,0);assert.equal(value.coverageIncomplete,false);
+ assert.equal(value.requestLimit,MANGA_PROBE_REQUEST_LIMIT);assert.equal(value.coreHttpAttempts,0);
+ assert.equal(value.imageHttpAttempts,mode==='reading'?24:0);
+ assert.equal(value.requestMethods['manga.entry.get'],3);assert.equal(value.requestMethods['manga.cache.classify'],144);
+ assert.equal(value.requestMethods['manga.cache.recordRead'],72);assert.equal(value.requestMethods['reading.progress.update'],72);
+ assert.equal(Object.values(value.requestMethods).reduce((sum,count)=>sum+count,0),expected);
+ assert.equal(calls.filter(call=>call[0]==='ordinary').length,0,'all >256 owned RPCs retain exact-id coverage');
+ if(mode==='offline') {
+  assert.throws(()=>q.beforeCoreHttp(101),/HTTP_BLOCKED/);q.release('reader-left');
+  assert.throws(()=>q.beforeImageHttp(101),/IMAGE_HTTP_BLOCKED/,'old offline ids remain blocked after the cross-chapter window exits');
+ } else {
+  q.beforeImageHttp(101);assert.equal(snap(q).imageHttpAttempts,25,'the earliest settled id is still observed after >256 RPCs');
+  q.release('reader-left');q.beforeImageHttp(101);assert.equal(snap(q).imageHttpAttempts,25,'released online observation does not change or count late business');
+ }
+}
+{
+ const q=new MangaOfflineNetworkProbe(scope,()=>{},'reading'),{owner}=ownerFixture(q);q.select(scope.sourceId,scope.bookId,true);let completed=0;
+ owner.runtime.waitForResult=async(id)=>{q.beforeCoreHttp(id);completed++;return {requestId:id,data:{}};};
+ owner.runtime.request=async()=>{completed++;return {data:{}};};
+ for(let index=0;index<MANGA_PROBE_REQUEST_LIMIT+4;index++)await owner.requestDirect('manga.resource.prepare',{chapter:scope});
+ assert.equal(completed,MANGA_PROBE_REQUEST_LIMIT+4,'exhausting diagnostic capacity still cannot reject normal Core business');
+ assert.equal(snap(q).claimedRequests,MANGA_PROBE_REQUEST_LIMIT);assert.equal(snap(q).coverageIncomplete,true);
+ assert.equal(snap(q).reason,'sampling-capacity');assert.equal(snap(q).capacityRejections,0);
+ assert.deepEqual(snap(q).requestMethods,{'manga.resource.prepare':MANGA_PROBE_REQUEST_LIMIT});
+ const attempts=snap(q).coreHttpAttempts;q.beforeCoreHttp(101);assert.equal(snap(q).coreHttpAttempts,attempts,'sampling stops explicitly after the bounded capacity is exhausted');
+}
+console.log('PASS controlled 24-page A/B/A RPC windows beyond 256, exact bounded method counts without caller text, oldest/newest late-id fences and 8192-id capacity without reading business rejection');
+{
+ const q=new MangaOfflineNetworkProbe(scope,()=>{},'reading'),r=new Registry();r.mangaOfflineProbe=q;r.responseAssetBridge={};q.select(scope.sourceId,scope.bookId,true);q.track(700);
+ const owned=r.createCapabilityRouter(),coreBefore=coreFetches,imageBefore=byteFetches;
+ await owned.route({capability:'http.execute',requestId:700,params:{}});await owned.route({capability:'http.execute',requestId:700,params:{responseAsset:true}});
+ await owned.route({capability:'manga.resource.transfer',requestId:700,params:{request:{url:'https://fixture.invalid/actual-online'}}});
+ assert.equal(coreFetches-coreBefore,2);assert.equal(byteFetches-imageBefore,1);assert.equal(snap(q).coreHttpAttempts,2);assert.equal(snap(q).imageHttpAttempts,1);
+ const old=decodeTransport;q.release('reader-left');q.settle(700);await old.fetch({url:'https://fixture.invalid/actual-late'},()=>true,16777216);
+ assert.equal(byteFetches-imageBefore,2);assert.equal(snap(q).imageHttpAttempts,1,'released observer ids neither block nor count late business');
+}
+console.log('PASS reading cold/debug/conflict admission, unchanged SDK cancel/options, exact book/text exclusion, capacity coverage without rejection, actual Core/image HTTP and late release continuity');
+
+// Run the actual Body decode/retention and Runtime image lane together. Only
+// Harmony native codec and filesystem ports are replaced; no cached-hit,
+// source/pixel/packer ownership, diagnostic callback or observer algorithm is
+// copied into this fixture. This proves Host calls, not native/compositor cost.
+const readingDirectory=await mkdtemp(join(tmpdir(),'reader-manga-reading-observer-'));
+try {
+ const fs={OpenMode:{CREATE:1,READ_WRITE:2,TRUNC:4},
+  async access(path){return nodeFs.existsSync(path);},async stat(path){return nodeFs.statSync(path);},
+  async listFile(path){return nodeFs.readdirSync(path);},async mkdir(path){nodeFs.mkdirSync(path,{recursive:true});},
+  async open(path){return {fd:nodeFs.openSync(path,'w+')};},async write(fd,value){return nodeFs.writeSync(fd,new Uint8Array(value));},
+  async close(file){nodeFs.closeSync(file.fd);},async rename(a,b){nodeFs.renameSync(a,b);},async unlink(path){nodeFs.unlinkSync(path);},
+  AtomicFile:class{constructor(path){this.path=path;}readFully(){const b=nodeFs.readFileSync(this.path);return b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength);}}};
+ class LRUCache{constructor(capacity){this.capacity=capacity;this.data=new Map();}get(key){return this.data.get(key);}put(key,value){this.data.set(key,value);}remove(key){this.data.delete(key);}clear(){this.data.clear();}}
+ const util={LRUCache,TextEncoder:class{encodeInto(text){return new TextEncoder().encode(text);}},TextDecoder:class{decodeWithStream(bytes){return new TextDecoder().decode(bytes);}}};
+ const cryptoFramework={createMd(){const hash=createHash('sha256');return {async update({data}){hash.update(data);},async digest(){return {data:new Uint8Array(hash.digest())};}};}};
+ const encoded=new Uint8Array([0x89,0x50,0x4e,0x47,1,2,3,4]);let nativeSources=0,nativePixels=0,nativePackers=0;
+ const image={PixelMapFormat:{RGBA_8888:3},DecodingDynamicRange:{SDR:1},CropAndScaleStrategy:{CROP_FIRST:2},
+  createImageSource(){nativeSources++;return {async getFrameCount(){return 1;},async getImageInfo(){return {size:{width:3,height:2},mimeType:'image/png'};},
+   async createPixelMap(){nativePixels++;return {async getImageInfo(){return {size:{width:3,height:2},pixelFormat:3};},getBytesNumberPerRow(){return 12;},getPixelBytesNumber(){return 24;},async release(){}};},async release(){}};},
+  createImagePacker(){nativePackers++;return {async packToFile(_pixels,fd){nodeFs.writeSync(fd,encoded);},async release(){}};}};
+ const loadClass=(name,dependencies)=>new Function(...Object.keys(dependencies),
+  stripTypeScriptTypes(readFileSync(url(`app/${name}.ts`),'utf8').replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,''))+`;return ${name};`)(...Object.values(dependencies));
+ const readMangaAtomicPayload=createMangaAtomicPayloadReaderFixture(fs);
+ const Retention=loadClass('MangaDisplayRetention',{fs,util,readMangaAtomicPayload});
+ const FullBody=loadClass('ReadingBodyImageHost',{fs,util,cryptoFramework,image,MangaDisplayRetention:Retention,HttpExecuteHost,
+  hilog:{warn(){}},readingImageHttpError:()=>Error('HTTP failure')});
+ const makeBody=directory=>{const body=new FullBody();body.configureMangaDisplayCache(directory);body.setMangaDisplayReserve(async()=>({release(){}}));
+  body.setMangaMetadataInspector(async(bytes,sha256)=>({status:'absent',orientation:null,sha256,bytes:bytes.length,
+   decodeProfile:{format:'png',encodedWidth:3,encodedHeight:2,allocationClass:'scanline'}}));return body;};
+ const makeReadingOwner=(body,probe)=>{
+  const originals=new Map(),holds=new Map(),pending=new Map();let id=1000,httpCalls=0;
+  const BodyPort={instance:body};
+  const Registry=productionMotionMethods(url('app/ReaderHostRegistry.ts'),['createCapabilityRouter'],{
+   CapabilityRouter:Router,ReadingBodyImageHost:BodyPort,HttpExecuteHost,MangaImageGraphicsHost:{instance:{}},MangaImageMetadataHost:{instance:{handle:async()=>({}),cancel(){}}},
+   MangaImageDecodeHost:{instance:{handle(event,_bridge,transport){return transport.fetch(event.params.request,()=>true,16777216);},cancel(){}}}});
+  const registry=new Registry();registry.mangaOfflineProbe=probe;registry.responseAssetBridge={};const router=registry.createCapabilityRouter();
+  const Runtime=productionMotionMethods(url('app/ReaderRuntimeOwner.ts'),['requestDirect','loadReadingImage','loadReadingImageOwned','prefetchReadingImage',
+   'prefetchReadingImageOwned','runMangaImageWork','drainMangaImageWork','mangaStorageChapter','prepareReadingImageBytes','assertReadingImageCurrent','admitReadingImage','releaseReadingImage',
+   'bindMangaReadingProbe','detachMangaReadingProbe','observeMangaReadingImageWork'],{
+   ReadingBodyImageHost:BodyPort,DEFAULT_CORE_REQUEST_TIMEOUT_MS:30000,coreAdmissionFailureSummary:()=>undefined,httpResponseFailureSummary:()=>undefined,
+   MangaImageDecodeHost:{instance:{async prepare(params,request,current){assert.equal(current(),true);return (await request(params)).data.bytes;}}},hilog:{error(){}},LOG_DOMAIN:0});
+  const owner=new Runtime();Object.assign(owner,{state:'ready',mangaOfflineProbe:probe,mangaImageTail:Promise.resolve(),mangaImagePending:0,mangaImageQueue:[],mangaImageActive:false,mangaImageUrgentStreak:0,mangaReadingProbeForeignImages:0});
+  owner.start=async()=>{};owner.wakeReadingPreparations=()=>{};owner.readingEntryPreparations=()=>({beginRequest:()=>false,finishRequest(){}});
+  owner.readingImageCacheIdentity=(sourceId,bookId,chapterIndex,contentVersion,imageUrl,baseUrl)=>({sourceId,bookId,chapterIndex,contentVersion,imageUrl,baseUrl});
+  owner.request=(method,params,options)=>owner.requestDirect(method,params,options);
+  const key=identity=>`${identity.bookId}:${identity.baseUrl}:${identity.resourceRef}`;
+  owner.readingImageDiskCache={captureValidity(_s,_b,current){return ()=>owner.state==='ready'&&current?.()!==false;},
+   async loadResource(identity,current){assert.equal(current(),true);return originals.get(key(identity));},
+   async storeResource(identity,bytes,current){await holds.get(key(identity))?.promise;assert.equal(current(),true);originals.set(key(identity),new Uint8Array(bytes));},
+   async removeResource(identity){originals.delete(key(identity));}};
+  const transfer=async(requestId,params)=>{httpCalls++;const fetched=await router.route({capability:'manga.resource.transfer',requestId,params:{request:{url:'https://fixture.invalid/actual-image'}}});
+   assert.ok(fetched.length>0);return {requestId,data:{bytes:encoded}};};
+  owner.runtime={send(_method,params){pending.set(++id,params);return id;},async waitForResult(requestId){return transfer(requestId,pending.get(requestId));},async request(_method,params){return transfer(++id,params);}};
+  if(probe?.mode==='reading')owner.bindMangaReadingProbe();
+  const load=(chapter,ref,bookId=scope.bookId)=>owner.loadReadingImage(scope.sourceId,bookId,0,'v',`image-${ref}`,chapter,true,()=>true,ref,0,'rules',false,'bytes-v1');
+  const prefetch=(chapter,ref)=>owner.prefetchReadingImage({...scope,chapterIndex:0,contentVersion:'v',imageUrl:`image-${ref}`,baseUrl:chapter,resourceRef:ref,mangaDecodeRevision:'bytes-v1'},()=>true,'rules',true,'background');
+  return {owner,originals,holds,load,prefetch,key,http:()=>httpCalls};
+ };
+ {
+  const body=makeBody(`${readingDirectory}/reuse`),q=new MangaOfflineNetworkProbe(scope,()=>{},'reading');q.select(scope.sourceId,scope.bookId,true);
+  const f=makeReadingOwner(body,q);await f.prefetch('chapter-A','A-0');await f.prefetch('chapter-A','A-1');await f.prefetch('chapter-B','B-0');
+  assert.equal(f.http(),3,'first online preparation reaches the real image HTTP boundary');assert.equal(snap(q).imageHttpAttempts,3);
+  const prepared=snap(q),nativeBefore=[nativeSources,nativePixels,nativePackers];
+  for(const [chapter,ref]of [['chapter-A','A-0'],['chapter-A','A-1'],['chapter-B','B-0'],['chapter-A','A-0']]){const payload=await f.load(chapter,ref);f.owner.releaseReadingImage(payload.fileUri);}
+  await f.owner.mangaImageTail;
+  assert.equal(f.http(),3,'online A/B/A and page return use already prepared local bytes');
+  assert.deepEqual([nativeSources,nativePixels,nativePackers],nativeBefore,'valid local display proofs avoid repeated processing');
+  assert.equal(snap(q).bodySourceOpens,prepared.bodySourceOpens);assert.equal(snap(q).bodyPixelOpens,prepared.bodyPixelOpens);assert.equal(snap(q).bodyPackerOpens,prepared.bodyPackerOpens);
+  // The two identical original resources in A share its immutable display
+  // proof; the distinct B chapter owns another proof.
+  assert.equal(prepared.bodySourceOpens,2);assert.equal(prepared.bodyPixelOpens,2);assert.equal(prepared.bodyPackerOpens,2);
+  assert.equal(prepared.bodySourceReleases,2);assert.equal(prepared.bodyPixelReleases,2);assert.equal(prepared.bodyPackerReleases,2);
+  assert.equal(snap(q).coverageIncomplete,false);assert.equal(snap(q).bodyStateScope,'process-window');
+  assert.equal(snap(q).bodyProcessCurrent.leases,1,'last image-work snapshot precedes the caller releasing its returned display URI');assert.equal(snap(q).bodyObservation,'serial-target-manga-image-work');
+  q.release('reader-left');assert.equal(snap(q).bodyProcessCurrent.leases,0,'release captures the process window final state');assert.equal(body.diagnosticObserver,undefined,'normal probe detach frees the existing platform diagnostic slot');
+  let platformEvents=0;const platformDetach=body.attachDiagnosticObserver(()=>platformEvents++,true,'debug');f.owner.detachMangaReadingProbe();
+  const old=snap(q).bodySourceOpens;await body.validateBytes(encoded,()=>true,0);assert.ok(platformEvents>0);assert.equal(snap(q).bodySourceOpens,old);
+  platformDetach();body.releaseAllDisplayFiles();
+  // A cold Body reads real persisted sidecar/hash facts rather than the old
+  // process's retained metadata or pixels.
+  const cold=makeBody(`${readingDirectory}/reuse`),coldProbe=new MangaOfflineNetworkProbe(scope,()=>{},'reading');coldProbe.select(scope.sourceId,scope.bookId,true);
+  const coldOwner=makeReadingOwner(cold,coldProbe);coldOwner.originals.set(`${scope.bookId}:chapter-A:A-0`,encoded);
+  const restored=await coldOwner.load('chapter-A','A-0');coldOwner.owner.releaseReadingImage(restored.fileUri);await coldOwner.owner.mangaImageTail;
+  assert.equal(coldOwner.http(),0);assert.equal(snap(coldProbe).imageHttpAttempts,0);assert.equal(snap(coldProbe).bodySourceOpens,0);assert.equal(snap(coldProbe).bodyPixelOpens,0);assert.equal(snap(coldProbe).bodyPackerOpens,0);
+  coldProbe.release('end');cold.releaseAllDisplayFiles();
+ }
+ {
+  const body=makeBody(`${readingDirectory}/drain`),q=new MangaOfflineNetworkProbe(scope,()=>{},'reading');q.select(scope.sourceId,scope.bookId,true);const f=makeReadingOwner(body,q),first=deferred(),second=deferred();
+  f.holds.set(`${scope.bookId}:chapter-A:A-0`,first);f.holds.set(`${scope.bookId}:chapter-B:B-0`,second);
+  const a=await f.load('chapter-A','A-0');const priorScope=f.owner.mangaReadingProbeImageScope;
+  assert.notEqual(priorScope,undefined,'first frame publishes while its owned byte write and observation are still live');
+  const b=f.load('chapter-B','B-0');await tick();assert.equal(f.http(),1,'successor does not enter before existing owned drain');
+  first.resolve();const result=await b;const successorScope=f.owner.mangaReadingProbeImageScope;
+  assert.notEqual(successorScope,undefined);assert.notEqual(successorScope,priorScope,'successor receives a fresh attribution scope after the first drain');
+  await tick();assert.equal(f.owner.mangaReadingProbeImageScope,successorScope,'late prior cleanup cannot remove successor scope');
+  assert.equal(snap(q).coverageIncomplete,false);assert.equal(snap(q).bodySourceOpens,2);assert.equal(snap(q).bodySourceReleases,2);
+  second.resolve();await f.owner.mangaImageTail;await tick();assert.equal(f.owner.mangaReadingProbeImageScope,undefined);
+  f.owner.releaseReadingImage(a.fileUri);f.owner.releaseReadingImage(result.fileUri);q.release('end');body.releaseAllDisplayFiles();
+ }
+ {
+  const body=makeBody(`${readingDirectory}/scope`),q=new MangaOfflineNetworkProbe(scope,()=>{},'reading');q.select(scope.sourceId,scope.bookId,true);const f=makeReadingOwner(body,q);
+  const wrong=await f.load('chapter-other','other','wrong-book');f.owner.releaseReadingImage(wrong.fileUri);await f.owner.mangaImageTail;
+  assert.equal(snap(q).bodySourceOpens,0);assert.equal(snap(q).imageHttpAttempts,0,'wrong book work is not attributed to selected target');
+  const held=deferred();const work=f.owner.observeMangaReadingImageWork(scope.sourceId,scope.bookId,true,async()=>{await held.promise;return 'target';});
+  assert.equal(await f.owner.observeMangaReadingImageWork(scope.sourceId,'novel',false,async()=> 'novel'),'novel');
+  assert.equal(snap(q).coverageIncomplete,true);assert.equal(snap(q).reason,'body-scope-overlap');assert.equal(body.diagnosticObserver,undefined);
+  held.resolve();assert.equal(await work,'target','known overlapping foreign work only stops measurement, never business');
+  for(const probe of [undefined,new MangaOfflineNetworkProbe(scope),q]){f.owner.mangaOfflineProbe=probe;f.owner.mangaReadingProbeForeignImages=0;assert.equal(await f.owner.observeMangaReadingImageWork(scope.sourceId,'novel',false,async()=> 'normal'),'normal');assert.equal(f.owner.mangaReadingProbeForeignImages,0,'undefined/offline/released/incomplete probe takes the original direct path');}
+  const capacityBody=makeBody(`${readingDirectory}/capacity`),capacityProbe=new MangaOfflineNetworkProbe(scope,()=>{},'reading');
+  capacityProbe.select(scope.sourceId,scope.bookId,true);const capacityOwner=makeReadingOwner(capacityBody,capacityProbe);
+  for(let i=0;i<260;i++)capacityProbe.track(10000+i,'manga.cache.classify');
+  assert.notEqual(capacityBody.diagnosticObserver,undefined,'Body observation stays attached after the former 256-id boundary');
+  const afterOldCap=await capacityOwner.load('chapter-after-old-cap','cap-0');capacityOwner.owner.releaseReadingImage(afterOldCap.fileUri);await capacityOwner.owner.mangaImageTail;
+  assert.equal(snap(capacityProbe).coverageIncomplete,false);assert.equal(snap(capacityProbe).imageHttpAttempts,1);
+  assert.equal(snap(capacityProbe).bodySourceOpens,1,'actual Runtime/Body work remains attributed after >256 owned RPCs');
+  let syntheticId=20000;
+  while(snap(capacityProbe).claimedRequests<MANGA_PROBE_REQUEST_LIMIT)capacityProbe.track(syntheticId++);
+  assert.equal(capacityBody.diagnosticObserver,undefined,'coverage cap releases Body diagnostic slot without rejecting business');
+  assert.equal(await capacityOwner.owner.observeMangaReadingImageWork(scope.sourceId,scope.bookId,true,async()=> 'after-cap'),'after-cap');
+  capacityBody.releaseAllDisplayFiles();body.releaseAllDisplayFiles();
+ }
+ console.log('PASS actual Runtime/Body/persisted display proofs: online A/B/A and cold cache 0HTTP/0 repeated source-pixel-packer processing, balanced ownership, first-frame/drain scope ordering, wrong-book exclusion and observer detach/overlap/capacity without business changes');
+} finally {await rm(readingDirectory,{recursive:true,force:true});}
+
+// Execute actual cold Ability entry; warm Wants cannot rearm either probe.
+for(const [debug,buildMode,parameters,expectedOffline,expectedReading,expectedSelection]of [
+ [true,'debug',{readerMangaReadingProbe:true},false,true],
+ [true,'debug',{readerMangaOfflineProbe:true},true,false],
+ [true,'debug',{readerMangaOfflineProbe:true,readerMangaReadingProbe:true},false,false],
+ [true,'debug',{readerMangaReadingProbe:'true'},false,false],
+ [false,'debug',{readerMangaReadingProbe:true},false,false],
+ [true,'release',{readerMangaReadingProbe:true},false,false],
+ [true,'debug',{readerMangaReadingProbe:true,readerControlMotionVerification:true},false,false],
+ [true,'debug',{readerMangaReadingProbe:true,readerOpenSourcePilot:true},false,false],
+ [true,'debug',{readerMangaReadingProbeSelectManga:true},false,false,'reading'],
+ [true,'debug',{readerMangaOfflineProbeSelectManga:true},false,false,'offline'],
+ [true,'debug',{readerMangaReadingProbeSelectManga:true,readerMangaOfflineProbeSelectManga:true},false,false],
+ [true,'debug',{readerMangaReadingProbeSelectManga:'true'},false,false],
+ [true,'debug',{readerMangaOfflineProbeSelectManga:1},false,false],
+ [false,'debug',{readerMangaReadingProbeSelectManga:true},false,false],
+ [true,'release',{readerMangaOfflineProbeSelectManga:true},false,false],
+ ...['readerMangaOfflineProbe','readerMangaReadingProbe','readerControlMotionVerification','readerOpenSourcePilot','readerEventLoopProbe','readerDisableOptionalEntryMemory']
+  .flatMap(flag=>['readerMangaReadingProbeSelectManga','readerMangaOfflineProbeSelectManga'].map(select=>[true,'debug',{[select]:true,[flag]:true},false,false])),
+ ...['readerMangaOfflineProbe','readerMangaReadingProbe'].map(flag=>[true,'debug',{[flag]:true,readerMangaReadingProbeSelectManga:true,readerMangaOfflineProbeSelectManga:true},false,false]),
+
+]) {
+ const installs=[],receives=[],owner={start:async()=>{}};
+ const installAtomic=createMangaAtomicPayloadInstallerFixture({});let atomicInstalls=0;
+ const Ability=productionMotionMethods(url('entryability/EntryAbility.ets'),['onCreate','onNewWant'],{
+  DEBUG:debug,BUILD_MODE_NAME:buildMode,readerControlVerificationColdStartPage,readerDisableOptionalEntryMemory,readerMangaOfflineProbeScope,readerMangaReadingProbeScope,readerMangaProbeSelectionMode,
+  installMangaAtomicPayloadReader(){installAtomic();atomicInstalls++;},
+  ReaderMangaPlatformDiagnostic:{install:()=>undefined}, // Official adapter behavior has its focused production-module probe.
+  ReaderStartupTrace:{install:()=>({mark(){},measure:(_name,run)=>Promise.resolve().then(run)})},readerMotionNowMs:()=>0,
+  readerEventLoopProbeEnabled:()=>false,AppStorage:{setOrCreate(){}},WebDavCredentialStore:{instance:{attachContext(){},loadBookshelfViewMode:async()=>null}},prepareReaderShelfFonts:async()=>{},
+  ReaderRuntimeOwner:{install(...args){assert.equal(atomicInstalls,1,'production atomic reader binds synchronously before RuntimeOwner construction');installs.push(args);return owner;}},ReaderThemeHost:{install:async()=>{},setRecoveryBarrier(){}},
+  SyncGateway:class{recoverInterruptedRestore=async()=>false;},LocalConfigurationReset:{recover:async()=>false},ReaderSettingsGateway:class{loadAfterConfigurationRecovery=async()=>{};},
+  ReaderSystemFileOpenHost:{install(){},receive(want){receives.push(want);}},ConfigurationConstant:{ColorMode:{COLOR_MODE_DARK:1}},hilog:{info(){},error(){}},DOMAIN:0});
+ const ability=new Ability();ability.context={config:{colorMode:0}};ability.prepareSelectedReadingFont=async()=>{};
+ const selectionFlag=Object.keys(parameters).some(key=>key.endsWith('SelectManga'));
+ const want={parameters:selectionFlag?parameters:{...parameters,readerMangaOfflineSourceId:scope.sourceId,readerMangaOfflineBookId:scope.bookId}};
+ ability.onCreate(want,{});await ability.recoveryReady;
+ assert.equal(installs.length,1);assert.equal(installs[0][4],expectedSelection);assert.equal(installs[0][2]!==undefined,expectedOffline);assert.equal(installs[0][3]!==undefined,expectedReading);
+ if(expectedReading)assert.deepEqual(installs[0][3],scope);if(expectedOffline)assert.deepEqual(installs[0][2],scope);
+ ability.onNewWant({parameters:{readerMangaReadingProbe:true,readerMangaOfflineProbe:true,readerMangaReadingProbeSelectManga:true,readerMangaOfflineProbeSelectManga:true}},{});assert.equal(installs.length,1);assert.equal(receives.length,2);assert.equal(atomicInstalls,1,'warm Want never rebinds the atomic reader');
+ if(parameters.readerMangaOfflineProbe===true&&parameters.readerMangaReadingProbe===true)assert.equal(ability.coldStartPage,'pages/Index','conflicting true probes keep ordinary Index/online routing');
+}
+console.log('PASS actual EntryAbility cold debug/strict primitive/conflict admission and unchanged warm Want routing; diagnostic flags never persist or replace normal reader flow');

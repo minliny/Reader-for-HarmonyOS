@@ -32,7 +32,7 @@ const image = { createImageSource: () => ({
   getImageInfo: async () => ({ size: { width: 120, height: 180 } }),
   createPixelMap: async () => { stats.decodes++; return { getImageInfo: async () => ({ size: { width: 120, height: 180 } }), release() {} }; }, release() {},
 }) };
-const ImageHost = new Function('image', 'util', 'fs', 'cryptoFramework', `${source('ReadingBodyImageHost')}\nreturn ReadingBodyImageHost;`)(image, util, io, crypto);
+const ImageHost = new Function('image', 'util', 'fs', 'cryptoFramework', 'MangaDisplayRetention', `${source('ReadingBodyImageHost')}\nreturn ReadingBodyImageHost;`)(image, util, io, crypto, class { isRetained() { return false; } });
 const read = async () => { stats.archiveReads++; if (readGate) await readGate.promise; if (nextReadError) { const error=nextReadError;nextReadError=undefined;throw error; }
   return new Uint8Array([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a,1,2,3]); };
 const ResourceHost = new Function('fileIo', 'util', 'readLocalEpubEntryAsync', 'ReadingBodyImageHost', `${source('LocalEpubResourceHost')}\nreturn LocalEpubResourceHost;`)(io, util, read, ImageHost);

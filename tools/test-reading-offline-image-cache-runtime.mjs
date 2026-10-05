@@ -7,12 +7,20 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { createMangaAtomicPayloadReaderFixture, createMangaAtomicPayloadBindingFixture, checkMangaAtomicPayloadSdk } from './lib/manga-atomic-payload-probe.mjs';
+
+checkMangaAtomicPayloadSdk();
 
 // Execute the whole production class. Only Harmony's platform APIs are adapted
 // to a real temporary filesystem; this is not device or platform durability proof.
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const source = readFileSync(join(repo, 'entry/src/main/ets/app/ReadingImageDiskCache.ts'), 'utf8');
-const executable = stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
+let executable = stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
+// Focused RED control: replay the former synchronous payload call inside the
+// unchanged production class. It must fail the worker-wait regression below.
+if (process.env.READER_MANGA_ATOMIC_READ_MUTANT === 'host-sync') executable = executable.replace(
+  'await readMangaAtomicPayload(path, stat.size, MAX_READING_IMAGE_BYTES, isCurrent)',
+  'new Uint8Array(new fileIo.AtomicFile(path).readFully())');
 const handles = new Map();
 let failRename = () => false;
 let failUnlink = () => false;
@@ -70,11 +78,13 @@ const crypto = { createMd: () => {
   return { update: async ({ data }) => { hash.update(data); }, digest: async () => ({ data: hash.digest() }) };
 } };
 const canonicalBase = base => base?.trim().split('#')[0] || undefined;
+const atomicReadHooks = {};
+const readMangaAtomicPayload = createMangaAtomicPayloadReaderFixture(io, atomicReadHooks);
 class MaterializationError extends Error {}
 const Cache = new Function('fileIo', 'statfs', 'cryptoFramework', 'util', 'canonicalReadingImageBaseUrl',
-  'assertReadingOfflineWriteCapacity', 'ReadingOfflineMaterializationError', `${executable}\nreturn ReadingImageDiskCache;`)(
+  'assertReadingOfflineWriteCapacity', 'ReadingOfflineMaterializationError', 'readMangaAtomicPayload', `${executable}\nreturn ReadingImageDiskCache;`)(
   io, { getFreeSize: async () => 1e9 }, crypto, util, canonicalBase,
-  (free, bytes, reserve) => { if (free < bytes + reserve) throw new Error('storage_full'); }, MaterializationError,
+  (free, bytes, reserve) => { if (free < bytes + reserve) throw new Error('storage_full'); }, MaterializationError, readMangaAtomicPayload,
 );
 const root = await fs.mkdtemp(join(tmpdir(), 'reader-image-cache-'));
 const cache = new Cache({ filesDir: root });
@@ -121,12 +131,14 @@ try {
   }
   let prepareCalls = 0, current = true, prepareFailure = false;
   const Owner = productionMotionMethods(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url),
-    ['loadReadingImageOwned', 'prefetchReadingImageOwned', 'prepareReadingImageBytes'], {
+    ['loadReadingImageOwned', 'prefetchReadingImageOwned', 'prepareReadingImageBytes', 'mangaStorageChapter'], {
       MangaImageDecodeHost: { instance: { async prepare(params, request, valid) {
         prepareCalls++;if (prepareFailure) throw Error('injected prepare failure');
         assert.equal(valid(), true);await request(params);return corrected;
       } } },
       ReadingBodyImageHost: { instance: { async loadBytes(value) { assert.deepEqual(value, corrected);return { fileUri: 'file://prepared', width: 8, height: 103 }; },
+        async loadMangaBytes(value) { assert.deepEqual(value, corrected);return {fileUri:'file://prepared',width:8,height:103}; },
+        async prepareMangaDisplay(value) { assert.deepEqual(value, corrected); },
         async validateBytes(value) { assert.deepEqual(value, corrected); } } },
       hilog: { error() {} }, LOG_DOMAIN: 0,
     });
@@ -186,7 +198,7 @@ try {
   assert.deepEqual(new Uint8Array(await fs.readFile(stablePath)),expected);
   assert.equal(handles.size,0);assert.equal((await fs.readdir(dirname(stablePath))).some(name=>name.includes('.tmp-')),false);
   pass('1MiB partial-write windows preserve nonzero-view snapshots; cancellation and ENOSPC keep old bytes and close/delete partial output');
-  const manga = { ...image, contentVersion: 'manga-v1', mangaDecodeRevision: 'identity-v1', resourceRef: `manga:mp1:${'a'.repeat(64)}` };
+  const manga = { ...image, bookId: 'manga-proof-book', contentVersion: 'manga-v1', mangaDecodeRevision: 'identity-v1', resourceRef: `manga:mp1:${'a'.repeat(64)}` };
   await cache.storeResource(manga, bytes);
   const renewed = { ...manga, imageUrl: 'https://new-cdn/image?signature=renewed', baseUrl: 'https://new-cdn/' };
   assert.deepEqual(await cache.loadResource(renewed), bytes, 'signed transport changes do not change page identity');
@@ -211,12 +223,14 @@ try {
   assert.ok(resourceReads>=4,'coarse timestamp platforms retain complete digest verification');
   nanosecondStats=true;
   await cache.clearBook(manga.sourceId,manga.bookId);
-  assert.equal(await cache.isChapterComplete(manga),false,'clear cannot reuse an old digest proof');
+  assert.equal(await cache.isChapterComplete(manga),true,'ordinary clear preserves an old manga whose Core retention is unknown');
+  await fs.writeFile(mangaPath,new Uint8Array([9,2,3]));
+  assert.equal(await cache.isChapterComplete(manga),false,'a preserved file still cannot reuse a stale digest proof');
   await cache.storeResource(manga,bytes);await cache.storeResource(duplicate,new Uint8Array([8,9]));
   await cache.markChapterComplete(manga,[manga,duplicate]);
   const reopenedProofs=new Cache({filesDir:root});resourceReads=0;
   assert.equal(await reopenedProofs.isChapterComplete(manga),true);assert.ok(resourceReads>=2,'cold cache must verify bytes again');
-  pass('bounded native LRU skips repeated hash I/O only with nanosecond identity; same-size damage, coarse clocks, clear and restart remain verified');
+  pass('bounded native LRU skips repeated hash I/O only with nanosecond identity; same-size damage, coarse clocks, conservative manga clear and restart remain verified');
   await cache.storeResource(image, bytes);
   await cache.markChapterComplete(chapter, [image, image]);
   const second = { ...image, contentVersion: 'B' };
@@ -328,6 +342,93 @@ try {
   await assert.rejects(closing.storeResource(image, bytes, beforeClose), /superseded/);
   await assert.rejects(closing.loadResource(image), /superseded/);
   pass('runtime close invalidates queued and newly requested cache operations');
+
+  const foreground = { ...image, bookId:'worker-foreground', chapterId:'https://chapter/foreground',
+    resourceRef:`manga:mp1:${'7'.repeat(64)}`, mangaDecodeRevision:'identity-v1' };
+  const waiting = { ...foreground, bookId:'worker-waiting', chapterId:'https://chapter/waiting', resourceRef:`manga:mp1:${'8'.repeat(64)}` };
+  await cache.storeResource(foreground, bytes); await cache.storeResource(waiting, bytes);
+  const foregroundPath = await cache.resourcePath(foreground), waitingPath = await cache.resourcePath(waiting);
+  let entered, proceed, admitted;
+  const atWorker = new Promise(resolve => { entered = resolve; });
+  const heldWorker = new Promise(resolve => { proceed = resolve; });
+  const atWaiting = new Promise(resolve => { admitted = resolve; });
+  const jobs = []; let waitingCurrent = true, first = true;
+  atomicReadHooks.onAdmission = args => { if (args[0] === waitingPath) admitted(); };
+  atomicReadHooks.beforeExecute = async args => {
+    jobs.push(args[0]);
+    if (args[0] === foregroundPath && first) { first = false; entered(); await heldWorker; }
+  };
+  let foregroundRead, waitingRead;
+  try {
+    const beforeRead = resourceReads;
+    foregroundRead = cache.loadResource(foreground);
+    await Promise.race([atWorker, foregroundRead.then(() => { throw Error('payload returned before any SDK worker dispatch'); })]);
+    assert.equal(resourceReads, beforeRead, 'the held SDK dispatch must precede any original payload read');
+    assert.ok(cache.mangaBusy.size > 0, 'chapter pin spans queued/active platform work');
+    waitingRead = cache.loadResource(waiting, () => waitingCurrent);
+    const waitingRejected = assert.rejects(waitingRead, /MANGA_RESOURCE_CANCELLED/);
+    await atWaiting; waitingCurrent = false;
+    assert.equal(jobs.includes(waitingPath), false, 'a second book is only a descriptor while the native read is active');
+    proceed();
+    assert.deepEqual(await foregroundRead, bytes); await waitingRejected;
+    assert.equal(jobs.includes(waitingPath), false, 'invalidated queued content must not reach AtomicFile');
+    assert.equal(cache.mangaBusy.size, 0, 'both chapter pins release after their owned waits settle');
+    assert.deepEqual(new Uint8Array(await fs.readFile(waitingPath)), bytes, 'cancellation preserves valid original bytes');
+  } finally {
+    proceed(); await Promise.allSettled([foregroundRead, waitingRead]);
+    delete atomicReadHooks.onAdmission; delete atomicReadHooks.beforeExecute;
+  }
+  pass('SDK worker wait retains chapter pins; cross-book queued cancellation reads no original bytes and preserves downloads');
+
+  let readCompleted, settle, activeCurrent = true, activeFirst = true;
+  const atRead = new Promise(resolve => { readCompleted = resolve; });
+  const heldReceipt = new Promise(resolve => { settle = resolve; });
+  atomicReadHooks.afterExecute = async args => {
+    if (args[0] === waitingPath && activeFirst) { activeFirst = false; readCompleted(); await heldReceipt; }
+  };
+  let activeRead;
+  try {
+    const beforeRead = resourceReads;
+    activeRead = cache.loadResource(waiting, () => activeCurrent);
+    const rejected = assert.rejects(activeRead, /MANGA_RESOURCE_CANCELLED/);
+    await atRead;
+    assert.ok(resourceReads > beforeRead, 'the real AtomicFile port read has already executed');
+    activeCurrent = false;
+    assert.ok(cache.mangaBusy.size > 0, 'invalidation cannot release a pin before platform completion settles');
+    settle(); await rejected;
+    assert.equal(cache.mangaBusy.size, 0); assert.deepEqual(new Uint8Array(await fs.readFile(waitingPath)), bytes);
+  } finally { settle(); await Promise.allSettled([activeRead]); delete atomicReadHooks.afterExecute; }
+  pass('started read keeps its chapter pin until completion settles, then rejects stale bytes without deleting originals');
+
+  atomicReadHooks.beforeExecute = () => { throw Error('injected worker initialization failure'); };
+  try { await assert.rejects(cache.loadResource(waiting), /worker initialization failure/); }
+  finally { delete atomicReadHooks.beforeExecute; }
+  assert.deepEqual(new Uint8Array(await fs.readFile(waitingPath)), bytes);
+  assert.deepEqual(await cache.loadResource(waiting), bytes, 'a failed worker must not poison the admission lane');
+  await assert.rejects(readMangaAtomicPayload(waitingPath, 0, 16 * 1024 * 1024, () => true), /MANGA_ATOMIC_PAYLOAD_BUDGET/);
+  await assert.rejects(readMangaAtomicPayload(waitingPath, bytes.length + 1, 16 * 1024 * 1024, () => true), /MANGA_ATOMIC_PAYLOAD_CHANGED/);
+  pass('worker failure has no synchronous fallback/deletion; later reads recover and byte/extent budgets remain enforced');
+
+  // Native taskpool results may cross a realm boundary as a typed-array view.
+  // The production envelope must validate byte length without relying on
+  // `instanceof ArrayBuffer`, while still returning the same bytes.
+  atomicReadHooks.afterExecute = (_args, result) => new Uint8Array(result);
+  try {
+    assert.deepEqual(await readMangaAtomicPayload(waitingPath, bytes.length, 16 * 1024 * 1024, () => true), bytes,
+      'cross-thread typed-array payloads remain readable');
+  } finally { delete atomicReadHooks.afterExecute; }
+  pass('cross-thread binary result accepts a typed-array transport envelope');
+
+  const binding = createMangaAtomicPayloadBindingFixture(io), beforeBindingRead = resourceReads;
+  await assert.rejects(binding.readMangaAtomicPayload(waitingPath, bytes.length, 16 * 1024 * 1024, () => true), /MANGA_ATOMIC_READER_UNAVAILABLE/);
+  assert.equal(resourceReads, beforeBindingRead, 'missing ETS installation fails closed without a synchronous payload fallback');
+  assert.equal(binding.installMangaAtomicPayloadReader(), undefined);
+  assert.equal(binding.installMangaAtomicPayloadReader(), undefined, 'the same process worker installs idempotently');
+  assert.deepEqual(await binding.readMangaAtomicPayload(waitingPath, bytes.length, 16 * 1024 * 1024, () => true), bytes);
+  assert.throws(() => binding.bindMangaAtomicPayloadReader(async () => new Uint8Array([99])), /MANGA_ATOMIC_READER_ALREADY_INSTALLED/);
+  assert.deepEqual(await binding.readMangaAtomicPayload(waitingPath, bytes.length, 16 * 1024 * 1024, () => true), bytes,
+    'a conflicting late install cannot replace the stable worker binding');
+  pass('actual TS port fails closed before ETS install, installs idempotently and rejects conflicting rebinding');
 
   console.log(JSON.stringify({ status: 'PASS', productionSourceSha256: hash(source), checks }, null, 2));
 } finally {
