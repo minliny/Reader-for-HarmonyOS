@@ -77,7 +77,9 @@ assert.doesNotMatch(sourceOwner, /autoPickFirst|automaticSourceRecoveryKey/,
   'the unused explicit auto-pick path is retired; only a user candidate intent dispatches a source mutation');
 assert.match(index, /private onPickSource[\s\S]*this\.sourceSwitchHost\?\.pick\(candidate, scopeId\)/,
   'physical source choice delegates its captured scope to the original owner');
-assert.match(sourceOwner, /this\.gateway\.loadCachedCandidates\(context\.query,[\s\S]{0,150}context\.knownCandidates/,
+assert.match(sourceOwner, /const knownCandidates = \(\): SourceSwitchCandidate\[\] => context\.readKnownCandidates\?\.\(\) \?\? context\.knownCandidates/,
+  'late search publications are captured through the current known-candidate port');
+assert.match(sourceOwner, /this\.gateway\.loadCachedCandidates\(context\.query, current, knownCandidates\(\)/,
   'source owner reads the same durable candidates as search');
 assert.match(sourceOwner, /this\.gateway\.refreshCandidates\(context\.query,[\s\S]{0,200}context\.searchedSourceIds/,
   'an empty picker only discovers sources not already dispatched by its search');

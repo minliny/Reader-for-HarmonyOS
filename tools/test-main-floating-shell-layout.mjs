@@ -18,7 +18,8 @@ const floating = new Function('readerInteractiveSafeBottom', `${stripTypeScriptT
 let safeBottom = 15;
 let safeLeft = 0;
 let safeRight = 0;
-const metrics = () => ({ windowRect: { width: 390, height: 844 },
+let windowWidth = 390;
+const metrics = () => ({ windowRect: { width: windowWidth, height: 844 },
   systemInsets: { top: 39, left: safeLeft, right: safeRight, bottom: safeBottom },
   cutoutInsets: { top: 0, left: 0, right: 0, bottom: 0 },
   gestureInsets: { top: 0, left: 0, right: 0, bottom: 0 },
@@ -27,6 +28,7 @@ const metrics = () => ({ windowRect: { width: 390, height: 844 },
 });
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
 const deps = { ...floating, TOK_SPACE_XS: 8, TOK_SPACE_SM: 12, TOK_SPACE_MD: 16, TOK_SPACE_LG: 24,
+  BOOKSHELF_WIDE_BREAKPOINT: Number(read('bookshelf/BookshelfShell.ets').match(/export const BOOKSHELF_WIDE_BREAKPOINT = (\d+);/)[1]),
   ReaderWindowCoordinator: { metrics }, readerContentSafeTop, readerInteractiveSafeLeft, readerInteractiveSafeRight,
   MAIN_TABS: [], RSS_FLOATING_HEADER_HEIGHT: 148, RSS_TABLET_RAIL_WIDTH: 100,
   LazyForEach: { create() {}, pop() {} }, ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
@@ -74,7 +76,10 @@ for (const bottomNav of [false, true]) {
   assert.equal(nodes(shell, 'Column').length, 0, 'phone shell no longer has a normal-flow navigation row');
   assert.ok(nodes(shell, 'Stack').every(node => node.height === '100%'));
   if (bottomNav) {
-    const overlay = nodes(shell, 'Stack').find(node => node.create.alignContent === 'Alignment.Bottom');
+    const bottoms = nodes(shell, 'Stack').filter(node => node.create.alignContent === 'Alignment.Bottom');
+    assert.equal(bottoms.length, 2, 'opaque page root and separate native navigation overlay');
+    const overlay = bottoms[1];
+    assert.ok(bottoms[0].backgroundColor, 'page root retains the approved opaque paper');
     assert.equal(overlay.hitTestBehavior, 'HitTestMode.Transparent');
     assert.equal(overlay.backgroundColor, undefined);
   }
@@ -92,22 +97,27 @@ for (const bottom of [0, 15, 34, 50]) {
   assert.equal(surface.margin.bottom, Math.max(15, bottom));
 }
 
-const shelf = probe('bookshelf/BookshelfPage.ets', ['bookshelfList','shelfPageHandler','shelfScrollHandler','isShelfPresentationCurrent', 'shelfBottomContentInset'], {
+const shelf = probe('bookshelf/BookshelfPage.ets', ['bookshelfList','shelfPageHandler','shelfScrollHandler','isShelfPresentationCurrent', 'isWideViewport', 'effectiveViewportWidth'], {
   continueReading: undefined, filterRowVisible: false, viewModeError: '', visibleBookCount: 1,
-  rowDataSource: {}, shelfScroller: {}, shelfContentWidth: () => 352,
+  rowDataSource: {}, shelfScroller: {}, shelfContentWidth: () => 352, viewportWidth: 0,
 });
 shelf.bookshelfList(false);
 const list = nodes(shelf, 'List')[0];
 assert.equal(list.height, '100%');
 assert.equal(list.padding, undefined, 'List has no top/bottom viewport padding');
-assert.equal(list.contentStartOffset, 66);
+assert.equal(list.contentStartOffset, 74, 'shelf content clears the current floating header and its approved gap');
 assert.equal(list.maintainVisibleContentPosition, true);
 assert.equal(nodes(shelf, 'ListItem').length, 1, 'no spacer ListItem changes the stored item index');
 for (const bottom of [0, 34, 50]) {
   safeBottom = bottom; shelf.readerWindowMetricsRevision++; shelf.replay();
   assert.equal(list.contentEndOffset, 68 + Math.max(15, bottom) + 16);
 }
-assert.equal(shelf.shelfBottomContentInset(true), 50, 'tablet side rail clears the system bottom without reserving phone navigation');
+windowWidth = 800; shelf.readerWindowMetricsRevision++; shelf.replay();
+assert.equal(shelf.isWideViewport(), true, 'the actual live width selects the wide shelf surface');
+assert.equal(list.contentEndOffset, 24, 'wide shelf retains its content gap without reserving the phone tab overlay');
+windowWidth = 390; shelf.readerWindowMetricsRevision++; shelf.replay();
+assert.equal(shelf.isWideViewport(), false);
+assert.equal(list.contentEndOffset, 134, 'returning to phone width restores the live safe-bottom tab clearance');
 
 for (const width of [390, 800]) {
   safeBottom = 34;

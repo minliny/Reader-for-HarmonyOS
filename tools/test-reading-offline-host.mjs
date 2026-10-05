@@ -167,7 +167,8 @@ function mangaFixture(count=3){
  const update=f.host.operateManga('updateChapter',1,f.binding);await until(()=>f.calls.some(c=>c.method==='image'));
  assert.equal(f.retained.get(1),'version-1-0','old selected download remains owned while replacement files are incomplete');
  assert.ok(f.calls.findIndex(c=>c.method==='manga.chapter.get')<f.calls.findIndex(c=>c.method==='cache.book.prefetch'));
- gate.resolve();await update;assert.equal(f.retained.get(1),'version-1-1');assert.equal(f.entries()[1].downloadState,'completed');
+ gate.resolve();await update;await until(()=>!f.host.busy());
+ assert.equal(f.retained.get(1),'version-1-1');assert.equal(f.entries()[1].downloadState,'completed');
 }
 {
  const f=mangaFixture(),gate=defer();f.imageGates.set(0,gate);const work=f.host.downloadBook(f.binding);

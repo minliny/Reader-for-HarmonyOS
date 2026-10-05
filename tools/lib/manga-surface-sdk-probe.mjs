@@ -1,4 +1,4 @@
-import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { mangaUsesPersistentDirectory, mangaDirectoryColumnWidth } from '../../entry/src/main/ets/features/manga/MangaLayoutPolicy.ts';
 import { MangaBookPresentation } from '../../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
@@ -7,6 +7,14 @@ import { isReaderProductSurfaceEnabled, isReaderMainTabEnabled } from '../../ent
 import { readerWidthClass } from '../../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
 import { READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_550,
   READER_FONT_NOTO_SANS_SC_UI_600, READER_FONT_NOTO_SANS_SC_UI_900 } from '../../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+
+// SDK probes resolve the production extensionless TypeScript imports exactly
+// as the other Host Owner probes; no recovery projector is reconstructed.
+registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
+  if(error.code==='ERR_MODULE_NOT_FOUND'&&specifier.startsWith('.')&&!/\.[a-z]+$/i.test(specifier))return next(specifier+'.ts',context);
+  throw error;
+}}});
+const {readingDirectoryRecovery,EMPTY_READING_DIRECTORY_RECOVERY}=await import('../../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
 
 /** Register the same imported child names/Props as the SDK frontend. Child
  * native paint is outside the surface ownership/geometry probes. */
@@ -48,6 +56,7 @@ export const mangaSurfaceSdkDependencies = {
   MangaDownloadOperationsPanel: ImportedChildBoundary,
   MangaBookPresentation,
   ...readerWindowMetrics, isReaderProductSurfaceEnabled, isReaderMainTabEnabled, readerWidthClass,
+  readingDirectoryRecovery, EMPTY_READING_DIRECTORY_RECOVERY,
   // Native window observation is the controlled port; geometry functions are the unchanged production imports.
   ReaderWindowCoordinator: { metrics: () => readerWindowMetrics.createDefaultReaderWindowMetrics() },
   mangaUsesPersistentDirectory, mangaDirectoryColumnWidth, deviceInfo:{deviceType:'phone'},

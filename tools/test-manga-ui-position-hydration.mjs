@@ -4,6 +4,10 @@ import { createRequire } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
+import {ProductionHost:ReadingEntryHost,setRuntime:setEntryRuntime} from './lib/reading-entry-owner-probe.mjs';
+import {localBookDetailSdk} from './lib/local-book-detail-sdk-probe.mjs';
+import {EMPTY_READING_DIRECTORY_RECOVERY,readingDirectoryRecovery} from '../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts';
+const EMPTY_READABLE_ADMISSION={generation:0,adding:false,cancelling:false,confirmation:'none'};
 const file=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
 let runtime={},pending=[],writes=[],nullEntryBooks=new Set();
 class Gateway {
@@ -15,6 +19,7 @@ const Host=productionMotionMethods(file,['hydrateMangaPositions','mangaPositionP
   'refreshDetailMangaPosition','refreshDetailAcquisitionProjection','returnToReadingOrigin','onReaderExited','currentReaderPresentationIdentity'],{
   ReaderRuntimeOwner:{current:()=>runtime},MangaSessionGateway:Gateway,MangaBookPresentation,
   AppStorage:{setOrCreate:(_key,value)=>writes.push(value)},LOCAL_SOURCE_ID:'local',
+  ReadingEntryHost,EMPTY_READABLE_ADMISSION,hilog:{warn(){}},DOMAIN:0,
   copyRemoteReadingSession:session=>({...session}) });
 const books=Array.from({length:180},(_,i)=>({sourceId:'source',bookId:`book-${i}`,contentKind:'manga',title:`Book ${i}`,author:'',addedAt:1}));
 const tick=async()=>{for(let i=0;i<20;i++)await Promise.resolve();};
@@ -22,6 +27,7 @@ const fixture=()=>{
   runtime={};pending=[];writes=[];nullEntryBooks=new Set();
   return Object.assign(new Host(),{route:'bookshelf',readingSessionActive:false,sourceSwitchVisible:false,
     mountedRuntimeOwner:runtime,shelfReceiptRetired:false,readingReadyGeneration:0,bindReadingEntryReader(){},
+    detailShelfAdmissionMount:1,readingEntryScopeId:-1,readableAdmissions:[],shelfOperation:{generation:0,busy:false,removalKey:''},
     shelfBooks:books,navigationGeneration:1,bookshelfLoadGeneration:1,detailBook:undefined,
     mangaProjectionSignature:'',mangaProjectionGeneration:0,mangaProjectionQueue:[],mangaProjectionWorkers:0,
     readingOriginRoute:'detail',nextNavigationGeneration(){return ++this.navigationGeneration;},
@@ -176,19 +182,24 @@ async function drain(){
   const metadataFixture=()=>{
     const host=fixture();
     let resolveMetadata;
-    runtime={bookAcquisitions:()=>({readingProjectionRevision:()=>7}),
-      request:async method=>{
+    runtime={bookAcquisitions:()=>({readingProjectionRevision:()=>7,setPreparationVisible(){}}),
+      request:async(method,params,options)=>{
         assert.equal(method,'search-book.get');
+        assert.deepEqual(params,{origin:'source',bookUrl:'book-0'});assert.equal(options.canDispatch(),true);
         return await new Promise(resolve=>{resolveMetadata=resolve;});
       }};
+    setEntryRuntime(runtime);
     Object.assign(host,{route:'detail',detailBook:{...books[0],sourceName:'腾讯漫画',intro:'保留简介'},
+      mountedRuntimeOwner:runtime,readingEntryScopeId:-1,detailInBookshelf:true,
       remoteSessionGeneration:1,candidateAdmissionGeneration:-1,candidateAdmissionFailedGeneration:-1,
       bookProjectionLoading:false,bookProjectionAgain:false,remoteContentVerdict:'readable',
-      remoteReadingSession:{sourceVersion:'v1',catalogVersion:'c1',contextVersion:'x1'},
-      installRemoteReadingSession(){this.installed=(this.installed??0)+1;}});
+      remoteReadingSession:{contentKind:'manga',identity:{sourceId:'source',bookId:'book-0'},book:{title:'Book 0',author:''},
+        entries:[{index:4,title:'01',url:'/4',variables:[]}],continuationVariables:[],sourceVersion:'v1',catalogVersion:'c1',contextVersion:'x1'}});
     delete host.refreshDetailAcquisitionProjection;
-    return {host,finish:()=>resolveMetadata({data:{book:{name:'已更新标题',acquisition:{
-      sourceVersion:'v1',catalogVersion:'c1',contextVersion:'x1',schemaVersion:2,verificationCurrent:true}}}})};
+    delete host.bindReadingEntryReader;
+    return {host,finish:()=>{assert.equal(typeof resolveMetadata,'function','actual owner dispatched cached metadata IO');
+      resolveMetadata({data:{book:{origin:'source',bookUrl:'book-0',name:'已更新标题',acquisition:{
+      sourceVersion:'v1',catalogVersion:'c1',contextVersion:'x1',schemaVersion:2,verificationCurrent:true}}}});}};
   };
   for(const mode of ['cold','updated','cleared']) {
     const {host,finish}=metadataFixture();
@@ -209,26 +220,30 @@ async function drain(){
     finish();await metadata;
     assert.equal(host.detailBook.mangaPosition,confirmed,`${mode}: late metadata cannot overwrite newer entry facts`);
     assert.equal(host.detailBook.title,'已更新标题');assert.equal(host.detailBook.intro,'保留简介');
-    assert.equal(host.installed,1);assert.equal(host.bookProjectionLoading,false);
+    assert.equal(host.getReadingEntryHost().snapshot().book,host.detailBook);
+    assert.equal(host.remoteReadingSession.book.title,'已更新标题');
+    assert.equal(host.detailBook.contentKind,'manga','cache metadata preserves the admitted manga type');
   }
-  for(const revoke of ['source','route','navigation','reading']) {
+  for(const revoke of ['source','route','navigation','reading','unset','replacement']) {
     const {host,finish}=metadataFixture();
     const metadata=host.refreshDetailAcquisitionProjection();
     if(revoke==='source')host.detailBook={...host.detailBook,sourceId:'other-source'};
     else if(revoke==='route')host.route='bookshelf';
     else if(revoke==='navigation')host.navigationGeneration++;
-    else host.readingSessionActive=true;
+    else if(revoke==='reading')host.readingSessionActive=true;
+    else {runtime=revoke==='unset'?undefined:{};setEntryRuntime(runtime);}
     const retained=host.detailBook;
     finish();await metadata;
     assert.equal(host.detailBook,retained,`${revoke}: revoked metadata cannot replace the current detail`);
-    assert.equal(host.installed,undefined);
+    assert.notEqual(host.detailBook.title,'已更新标题');
   }
   {
     const {host,finish}=metadataFixture();
-    const textPosition={pageOrdinal:3};
-    host.detailBook={...host.detailBook,contentKind:'text',mangaPosition:textPosition};
+    host.detailBook={...host.detailBook,contentKind:'text',mangaPosition:undefined};
+    host.remoteReadingSession={...host.remoteReadingSession,contentKind:'text'};
     const metadata=host.refreshDetailAcquisitionProjection();finish();await metadata;
-    assert.equal(host.detailBook.mangaPosition,textPosition,'novel metadata preserves its existing snapshot contract');
+    assert.equal(host.detailBook.contentKind,'text','metadata cannot re-admit a novel as manga');
+    assert.equal(host.detailBook.mangaPosition,undefined,'novel metadata does not fabricate manga position');
   }
 }
 {
@@ -263,13 +278,14 @@ async function drain(){
   f.hydrateMangaPositions([books[0]]);
   const first=pending.shift(),initial=entry(first,{pageOrdinal:1});
   initial.chapter.chapterTitle='01';initial.chapter.totalPages=36;first.resolve(initial);await tick();
-  const {owner,output}=createReaderBuilderProbe(readFileSync(file,'utf8'),['detailContent','externalDirectory','detailBookKey',
+  const {owner,output}=createReaderBuilderProbe(readFileSync(file,'utf8'),['detailContent','detailSurface','externalDirectory','detailBookKey',
     'hydrateMangaPositions','mangaPositionProjectionCurrent','pumpMangaPositionProjections','projectMangaPosition',
-    'refreshDetailMangaPosition','returnToReadingOrigin','onReaderExited'],{
+    'refreshDetailMangaPosition','returnToReadingOrigin','onReaderExited','currentReaderPresentationIdentity','directoryRecovery'],{
       LocalBookDetail:Child,BookDirectoryPage:Child,LOCAL_SOURCE_ID:'local',MangaBookPresentation,
+      EMPTY_READABLE_ADMISSION,EMPTY_READING_DIRECTORY_RECOVERY,readingDirectoryRecovery,
       ReaderRuntimeOwner:{current:()=>runtime},MangaSessionGateway:Gateway,
       AppStorage:{setOrCreate:(_key,value)=>writes.push(value)},
-    });
+    },{childSources:{LocalBookDetail:detailSource,BookDirectoryPage:directorySource}});
   const emitted=ts.createSourceFile('/tmp/IndexPositionHydrationEmission.ts',output,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
   const updatePayloads=[];
   const inspect=node=>{
@@ -286,18 +302,22 @@ async function drain(){
   Object.assign(owner,f,{route:'directory',directoryReturnTarget:'detail',bookshelfRemovalActiveKey:'',
     bookshelfAdditionActiveKey:'',bookshelfAdditionCancellingKey:'',bookshelfAdditionErrorKey:'',offlineMutationActiveKey:'',
     detailToc:[{index:4,title:'01'},{index:5,title:'02'}],
+    detailInBookshelf:true,pendingSourceSwitch:undefined,offlineOperationActive:false,
+    hasUnknownShelfWrite:()=>false,directoryOperationPresentationId:()=>'',
+    detailReadableAdmission:()=>EMPTY_READABLE_ADMISSION,
+    detailShelfAdmissionIdentity:()=>JSON.stringify([owner.detailShelfAdmissionMount,owner.navigationGeneration,owner.detailBook.sourceId,owner.detailBook.bookId]),
     remoteContentVerdict:'readable',remoteContentVerdictLabel:()=>'',appThemeScheme:'day'});
   owner.detailContent();
   const detail=[...owner.children.values()].find(child=>child.params.book);
   const directory=[...owner.children.values()].find(child=>child.params.entries);
   assert.ok(detail);assert.ok(directory);
-  const {owner:facts}=createReaderBuilderProbe(detailSource,['readingFacts']);
+  const {owner:facts}=localBookDetailSdk({}, {initialParams:detail.params});
   Object.assign(facts,{book:detail.params.book,appThemeScheme:'day'});facts.readingFacts();
   const updated=entry(books[0],{revision:4,pageOrdinal:1});
   updated.progress.location.chapter.chapterId='chapter-5';
   updated.chapter.chapterIndex=5;updated.chapter.chapterTitle='02';updated.chapter.totalPages=24;
   MangaBookPresentation.admitEntry('source','book-0',updated);
-  owner.route='reading';owner.readingSessionActive=true;owner.onReaderExited();
+  owner.route='reading';owner.readingSessionActive=true;owner.onReaderExited(owner.currentReaderPresentationIdentity());
   owner.replayOnly([detail.id,directory.id]);
   assert.equal(owner.children.get(detail.id),detail,'confirmed return retains the actual detail child');
   assert.equal(detail.params.book.mangaPosition.chapterTitle,'02');

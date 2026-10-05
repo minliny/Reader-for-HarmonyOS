@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {readableAdmissionFixture,readableDeferred as deferred,readableTick as tick,readableSource as source,ReaderCoreRequestError} from './lib/bookshelf-readable-admission-probe.mjs';
-import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-probe.mjs';
+import {localBookDetailSdk} from './lib/local-book-detail-sdk-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 const {BookAcquisitionCoordinator}=await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
 const {BookRequestScheduler}=await import('../entry/src/main/ets/app/BookRequestScheduler.ts');
@@ -86,12 +86,14 @@ function detailSdk(f){
  Object.assign(parent,f.page,{detailToc:[],remoteContentVerdict:'readable',remoteContentVerdictLabel:()=>'',readingSessionActive:false,sourceSwitchVisible:false,pendingSourceSwitch:undefined,offlineMutationActiveKey:'',directoryReturnTarget:'detail',hasUnknownShelfWrite:()=>false,
   detailReadableAdmission:book=>f.page.detailReadableAdmission(book),detailShelfAdmissionIdentity:()=>f.page.detailShelfAdmissionIdentity(),isCurrentDetailShelfAdmission:id=>f.page.isCurrentDetailShelfAdmission(id),requestDetailShelfMutation:()=>f.page.requestDetailShelfMutation(),cancelDetailBookAddition:()=>f.page.cancelDetailBookAddition(),detailBookKey:book=>f.page.detailBookKey(book)});
  parent.detailContent();const child=[...parent.children.values()][0];
- const names=[...detailSource.matchAll(/(?:@Prop(?:\s+@Watch\([^)]*\))?\s+|  )(\w+)\s*:/g)].map(m=>m[1]).filter(n=>['book','toc','sourceSwitchEnabled','readingEnabled','readingBlockedReason','inBookshelf','removalEnabled','removing','adding','cancellingAdd','shelfMessage','admissionIdentity','loadingMessage','onContinue','onSelectChapter','onOpenDirectory','onSwitchSource','onRemove','onCancelAdd','onBack'].includes(n));
- const properties=createArkUIPropertyRuntimeProbe();
- const probe=createReaderBuilderProbe(detailSource,[...new Set(names),'actionArea','readingActionLabel','shelfActionLabel','actionButtonWidth'],{...properties.sdk,DETAIL_ACTION_AREA_HEIGHT:77,TOK_SPACE_CONTROL_INLINE:10},{...properties.hooks,allowEmptyBranchAdmission:true,initialParams:child.params});
- Object.assign(probe.owner,{appThemeScheme:'day',contentWidth:()=>352});probe.owner.actionArea();
- const stacks=[...probe.owner.nodes.values()].filter(n=>n.type==='Stack');assert.equal(stacks.length,2);assert.deepEqual(stacks.map(n=>n.margin),[{left:4,right:4},{left:4,right:4}]);assert.ok(stacks.every(n=>n.height===46&&n.borderRadius===999));
- return {parent,child,actor:probe.owner,hit:stacks[1].onClick};
+ const probe=localBookDetailSdk({}, {allowEmptyBranchAdmission:true,initialParams:child.params});
+ Object.assign(probe.owner,{appThemeScheme:'day',viewportWidth:390});probe.owner.actionArea();
+ const actions=[...probe.owner.nodes.values()].filter(n=>n.type==='Text'&&typeof n.onClick==='function');
+ assert.equal(actions.length,2);assert.ok(actions.every(n=>n.height===48&&n.borderRadius===16));
+ assert.equal(actions[1].width,94);assert.deepEqual(actions.map(n=>n.fontSize),[14,12]);
+ const dock=[...probe.owner.nodes.values()].find(n=>n.type==='Stack');
+ assert.equal(dock.height,68);assert.equal(dock.borderRadius,24);
+ return {parent,child,actor:probe.owner,hit:actions[1].onClick};
 }
 {
  const core=fixture(),body=deferred();core.gates.set('chapter.content:b',body);
@@ -129,9 +131,9 @@ function detailSdk(f){
 {
  const gate=deferred();const f=readableAdmissionFixture({add:()=>gate.promise});const sdk=detailSdk(f);const old=sdk.hit;
  f.page.detailBook=saved('next');f.page.navigationGeneration++;old();assert.equal(f.calls.length,0,'old physical actor cannot add the next book');
- const originalCount=sdk.actor.observers.length;sdk.actor.updateStateVars({...sdk.child.params,admissionIdentity:f.page.detailShelfAdmissionIdentity(),book:f.page.detailBook});sdk.actor.replay();assert.equal(sdk.actor.observers.length,originalCount+2,'only the small shelf actor and label are created');old();assert.equal(f.calls.length,0,'V1 Prop update cannot promote immutable old button identity');
+ const originalCount=sdk.actor.observers.length;sdk.actor.updateStateVars({...sdk.child.params,admissionIdentity:f.page.detailShelfAdmissionIdentity(),book:f.page.detailBook});sdk.actor.replay();assert.equal(sdk.actor.observers.length,originalCount+1,'only the keyed secondary Text actor is created');old();assert.equal(f.calls.length,0,'V1 Prop update cannot promote immutable old button identity');
  f.page.remoteReadingSession={identity:f.page.detailBook,book:f.page.detailBook};
- const current=[...sdk.actor.nodes.values()].filter(n=>n.type==='Stack').at(-1);current.onClick();assert.equal(f.calls.filter(c=>c[0]==='add').length,1);
+ const current=[...sdk.actor.nodes.values()].filter(n=>n.type==='Text'&&typeof n.onClick==='function').at(-1);current.onClick();assert.equal(f.calls.filter(c=>c[0]==='add').length,1);
  gate.resolve(ack('next'));await tick();
 }
 {

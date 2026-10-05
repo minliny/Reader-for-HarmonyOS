@@ -11,12 +11,15 @@ import * as geometry from '../../entry/src/main/ets/features/common/SurfaceHoriz
 import * as metricsApi from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import {ReaderNativeAlertOwner} from './reader-native-alert-sdk-probe.mjs';
 import {localBookDetailSdk} from './local-book-detail-sdk-probe.mjs';
+import {MangaBookPresentation} from '../../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
+import {MangaSessionGateway} from '../../entry/src/main/ets/features/manga/MangaSessionGateway.ts';
 const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript');
 const parsed=(source)=>ts.createSourceFile('/tmp/EntryConsumer.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
 const properties=source=>parsed(source).statements.find(n=>n.members&&n.members.some(m=>m.name?.getText()==='build')).members.filter(m=>ts.isPropertyDeclaration(m)&&ts.getAllDecorators(m).length>0).map(m=>m.name.getText());
 const methods=['getReadingEntryHost','readingEntryLease','applyReadingEntrySnapshot','bindReadingEntryReader','retireReadingEntryPresentation',
  'readingPreparationContext','sharedReadingPreparationSeeds','preparePersistedShelfBooks','prepareVisibleReadingBooks','onSearchVisibilityChanged',
+ 'hydrateMangaPositions','refreshDetailMangaPosition','pumpMangaPositionProjections','mangaPositionProjectionCurrent','projectMangaPosition',
  'openLocalBookDetail','openRemoteBookDetail','onRemoteSessionReady','installRemoteReadingSession','probeRemoteContentVerdict','refreshCachedChapterFromPrompt','chooseCachedChapterRefresh',
  'refreshDetailAcquisitionProjection','openReading','isKnownDetailChapter','presentPreparedReading','returnToReadingOrigin','applyReaderDirectoryProjection',
  'retireSettingsPresentation','retireSourceManagementPresentation','nextNavigationGeneration','retireSourceSwitchPresentation','retireRssPresentation','retireRssEditorPresentation','isCurrentRuntime','showIndexAlert','showReadingFailure',
@@ -31,17 +34,18 @@ export function makeIndex(f,{route='search',mount=1,indexSource=read('pages/Inde
   BookDirectoryPage:class {}};
  p.hooks.childSources.LocalBookDetail=src;
  p.hooks.childSources.BookDirectoryPage=read('features/bookshelf/BookDirectoryPage.ets');
- const leaf=localBookDetailSdk(leafDeps,p.hooks).Component;
+ const leaf=localBookDetailSdk(leafDeps,p.hooks,p.properties).Component;
  const idx=p.consumer(indexSource,[...properties(indexSource).filter(n=>[
   'detailBook','detailToc','detailInBookshelf','detailLoadingMessage','remoteReadingSession','remoteReadingSeed','remoteContentVerdict'].includes(n)),...methods,
   ...(indexSource.includes('private retireBookshelfCatalogPresentation(') ? ['retireBookshelfCatalogPresentation'] : [])],
   {...leafDeps,LocalBookDetail:leaf,ReadingEntryHost:ProductionHost,ReaderRuntimeOwner:{current:()=>{if(f.runtime.closed)throw Error('Runtime unavailable');return f.runtime;},isCurrent:owner=>owner===f.runtime&&!owner.closed},
-   ...evidence,ReaderNativeAlertOwner,EMPTY_READABLE_ADMISSION:emptyAdmission,LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{info(){},warn(){},error(){}}});
+   ...evidence,ReaderNativeAlertOwner,MangaBookPresentation,MangaSessionGateway,AppStorage:{setOrCreate(){}},EMPTY_READABLE_ADMISSION:emptyAdmission,LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{info(){},warn(){},error(){}}});
  Object.assign(idx,{mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:mount,navigationGeneration:0,
    route,readingOriginRoute:'detail',readingSessionActive:false,sourceSwitchVisible:false,sourceSwitchScopeId:0,
    readingEntryScopeId:-1,remoteSessionGeneration:0,offlineMutationGeneration:0,offlineMutationActiveKey:'',
    shelfOperation:{generation:0,removalKey:'',busy:false},readableAdmissions:[],shelfBooks:[],searchDetailCandidates:[],detailToc:[],detailInBookshelf:false,
    shelfReadingPreparation:false,shelfProjectionRevision:'r1',searchAppForeground:true,applicationSettingsSnapshot:{},
+   bookshelfLoadGeneration:0,mangaProjectionSignature:'',mangaProjectionGeneration:0,mangaProjectionWorkers:0,mangaProjectionQueue:[],
    bookshelfCatalogEpoch:0,bookshelfBackgroundEpoch:0,readingReadyGeneration:1,nativeAlertOwner:new ReaderNativeAlertOwner(),
    searchHost:{visibilityChanged(){},close(){},resume(){}},hasUnknownShelfWrite:()=>false,refreshBookshelf(){this.refreshCount=(this.refreshCount??0)+1;},
    consumeSystemFileOpen(){},isRemoteCatalogNearEnd:()=>false,refreshRemoteCatalogNearEnd(){},

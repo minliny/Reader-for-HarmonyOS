@@ -81,6 +81,7 @@ for(const layer of ['delete','json','source-switch','import','group','busy-group
   const second=x.index.temporaryBackLease;assert.equal(second.generation,2);assert.notEqual(second.identity,firstId);assert.equal(o.moreMenuVisible,false,'actual @Prop/@Watch retires old opening');assert.equal(first.handler(),false);
   assert.ok(children.filter(c=>!(c instanceof x.h.p.deps.ReaderIconButton)).every(c=>[...o.children.values()].includes(c)),'shell/content actors stay mounted through navigation generation');
   oldAction();assert.equal(o.moreMenuVisible,false,'old physical More trigger is retired');
+  o.topBar();const nextHeader=[...o.children.values()].filter(c=>c instanceof x.h.p.deps.AppTopBar).at(-1);nextHeader.params.trailing();
   const nextTrigger=[...o.children.values()].filter(c=>c instanceof x.h.p.deps.ReaderIconButton).at(-1);assert.notEqual(nextTrigger,oldTrigger);nextTrigger.params.onTap();assert.equal(o.moreMenuVisible,true,'new small trigger gets the current constructor callback');
   p.onTemporaryBackBridge(undefined,first.identity,first.generation);assert.equal(x.index.temporaryBackLease,second);assert.equal(x.index.onBackPress(),true);assert.equal(o.moreMenuVisible,false);
   o.aboutToDisappear();assert.equal(x.index.temporaryBackLease,undefined);o.aboutToAppear();assert.ok(x.index.temporaryBackLease);assert.equal(second.handler(),false);

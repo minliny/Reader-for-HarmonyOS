@@ -36,10 +36,10 @@ export function tailControls(options={}){
 }
 // Actual business methods are selected verbatim from the production component.
 // Only outer geometry/window metrics and the native empty data source are seams.
-export const searchActionMethods=['searchFailureTitle','searchFailureMessage','isStoppedEmpty','searchActionLeading','operation','retryOperation','isSweeping','canSubmit','submitSearch','scopeSourceIds','selectGroup','refreshVisibleResults','publishVisibleGroups','groupNames','groupScopeRow','groupScopeChip','searchHeaderHeight','searchBottomInset','partialSearchFailure','primaryPill','secondaryPill','suggestion'];
+export const searchActionMethods=['searchFailureTitle','searchFailureMessage','isStoppedEmpty','filteredEmptyMessage','searchActionLeading','operation','retryOperation','isSweeping','canSubmit','submitSearch','scopeSourceIds','selectGroup','refreshVisibleResults','publishVisibleGroups','groupNames','groupScopeRow','groupScopeChip','searchHeaderHeight','searchBottomInset','partialSearchFailure','primaryPill','secondaryPill','suggestion'];
 export function seedTailOwner(owner,{scheme='day',tablet=false,busy=false,kind='initial',history=['原历史'],operation}={}){
  const viewState=new SearchViewState();viewState.keywordDraft='原关键词';
- Object.assign(owner,{appThemeScheme:scheme,scheme,isTablet:tablet,reduceMotion:false,keyword:'原关键词',focusInputOnAppear:false,historyWidth:204,selectedGroupName:'在线',viewState,viewStateRevision:viewState.revision,spinnerRunKey:3,
+ Object.assign(owner,{appThemeScheme:scheme,scheme,isTablet:tablet,reduceMotion:false,keyword:'原关键词',focusInputOnAppear:false,historyWidth:204,selectedGroupName:'在线',selectedContentType:viewState.contentType,viewState,viewStateRevision:viewState.revision,spinnerRunKey:3,
   presentation:{kind,history,historyStatus:'ready',keyword:'原关键词',results:[],searching:busy,stopped:false,completedSourceCount:3,totalSourceCount:7,failedSourceCount:2,searchedSourceCount:7,localSearchFailed:true,sourceListFailed:false,localSearchError:'原本地失败',operation:operation??{canCancel:busy,canRetry:true}},
   visibleGroups:[],warmupGroups:[],visibleStart:0,visibleEnd:0,resultStatsHeight:28.5,resultDataSource:{totalCount:()=>0,registerDataChangeListener(){},replace(){return false;}},resultScroller:{scrollEdge(){}},pageEpoch:1,listEpoch:1,restoreEpoch:0,listMounted:false,scrollRestored:false,readerWindowMetricsRevision:0,
   snapshot:{busy,records:[],facts:{canMutate:!busy},restoreStatus:'idle'},

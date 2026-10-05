@@ -75,8 +75,9 @@ for (const scenario of scenarios) {
       `${site.file}/${site.expected.method}: exact real SDK native tuple including AUTO and secondary options`);
   }
 }
-const fontConsumers = sites.reduce((counts, site) => { const role = site.expected.changes.fontSize.match(/^(TYPE_\w+)\.fontSizeFp$/)?.[1]; if (role) counts.set(role, (counts.get(role) ?? 0)+1); return counts; }, new Map());
-const role = [...fontConsumers].sort((a,b) => b[1]-a[1])[0][0];
+const fontConsumers = sites.reduce((counts, site) => { const role = site.expected.changes.fontSize?.match(/^(TYPE_\w+)\.fontSizeFp$/)?.[1]; if (role) counts.set(role, (counts.get(role) ?? 0)+1); return counts; }, new Map());
+const role = [...fontConsumers].sort((a,b) => b[1]-a[1])[0]?.[0];
+assert.ok(role, 'actual public font-size role remains available beside AUTO carriers');
 const propagated = createReaderBuilderProbe(sourceFor(false), names, {
   ...dependencies, [role]: { ...readerTypographyRoles[role], fontSizeFp: readerTypographyRoles[role].fontSizeFp + 2 },
 }).Component;
@@ -85,7 +86,7 @@ for (const site of sites) {
   const owner = Object.assign(new propagated(undefined), scenarios[0]); owner[site.method]('当前');
   const node = [...owner.nodes.values()][0];
   const base = Object.assign(new after(undefined), scenarios[0]); base[site.method]('当前');
-  if (site.expected.changes.fontSize.includes(`${role}.fontSizeFp`)) {
+  if (site.expected.changes.fontSize?.includes(`${role}.fontSizeFp`)) {
     affected++; assert.equal(node.fontSize, [...base.nodes.values()][0].fontSize + 2);
   } else { unaffected++; assert.deepEqual(tuple(node), tuple([...base.nodes.values()][0])); }
 }

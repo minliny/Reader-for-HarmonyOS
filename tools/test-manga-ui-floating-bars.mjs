@@ -26,8 +26,8 @@ for(const count of [2,3,4]) for(const width of [320,390,800]) for(const scheme o
   metrics={...metrics,windowRect:{...metrics.windowRect,width},cutoutInsets:width===800?{left:50,right:0}:{}};
   const dep={...common,MAIN_TABS:tabs};
   const {owner}=createReaderBuilderProbe(tabsSource,['bottomBar','bottomTabItem','tabIcon','tabIconResource','bottomBarFrame','bottomBarTranslateX','bottomInset','liveWindowWidth'],dep);
-  const selected=[];
-  Object.assign(owner,{appThemeScheme:scheme,readerWindowMetricsRevision:1,current:'bookshelf',onSelect:key=>selected.push(key)});
+  const selected=[],currentTaps=[];
+  Object.assign(owner,{appThemeScheme:scheme,readerWindowMetricsRevision:1,current:'bookshelf',onSelect:key=>selected.push(key),onCurrentTap:key=>currentTaps.push(key)});
   owner.bottomBar();
   const nodes=[...owner.nodes.values()];
   const bar=nodes.find(n=>n.type==='Row');
@@ -44,7 +44,7 @@ for(const count of [2,3,4]) for(const width of [320,390,800]) for(const scheme o
   assert.equal(items[0].backgroundColor,readerAppColor('TOK_PRIMARY_DARK',scheme));
   assert.ok(items[0].accessibilityText.includes('已选中'));
   assert.equal(nodes.find(n=>n.type==='Image').create,'app.media.bookshelf_library_active','existing white outline resource remains the selected icon');
-  items[0].onClick();assert.deepEqual(selected,[],'selected tab does not navigate again');
+  items[0].onClick();assert.deepEqual(selected,[],'selected tab does not navigate again');assert.deepEqual(currentTaps,['bookshelf'],'current tab delegates to the existing current-tab action');
   items.at(-1).onClick();assert.deepEqual(selected,['settings']);
   assert.ok(readerFloatingTabContentInset(metrics)>=bar.height+bar.margin.bottom+16,'scroll-end clearance includes the actual bar plus margin');
 }

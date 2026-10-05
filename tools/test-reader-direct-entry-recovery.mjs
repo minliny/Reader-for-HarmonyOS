@@ -27,7 +27,8 @@ function fixture(options={}){
   hilog:{info(){},warn(){},error(){}},errorMessageOf:e=>e.message,ReadingEntryHost:reading,EMPTY_READABLE_ADMISSION:{generation:0,adding:false,cancelling:false,confirmation:'none'}});
  for(const [n,d] of Object.entries(Object.getOwnPropertyDescriptors(Methods.prototype)))if(n!=='constructor'&&typeof d.value==='function')h[n]=d.value;
  Object.assign(h,{route:'detail',readingOriginRoute:'detail',detailReturnRoute:'search',navigationGeneration:0,detailToc:[],readingEntryScopeId:-1,
-  sourceSwitchVisible:false,sourceSwitchState:{kind:'discovering'},searchPublicationRevision:0,searchHost:{searchedSourceIds:()=>[],publication:{shelfAt:()=>[]}},
+  sourceSwitchVisible:false,sourceSwitchState:{kind:'discovering'},searchPublicationRevision:0,
+  searchHost:{searchedSourceIds:()=>[],visibilityChanged(){},publication:{shelfAt:()=>[]}},
   remoteCatalogRefreshAt:new Map(),directoryBookmarkMutationGeneration:0,offlineMutationGeneration:0,
   showReadingFailure(){assert.fail('must not trap body failures in a modal');},showIndexAlert(){assert.fail('unexpected modal');},
   sourceDisplayName:(id,name)=>name??id,hasDeclaredCoverUrl:()=>true,readingDetailForShelf:b=>({...b})});

@@ -116,7 +116,8 @@ assert.match(probe, /contentKind: \(session\?\.contentKind \?\? book\.contentKin
 assert.match(probe, /contentKind: \(session\?\.contentKind \?\? book\.contentKind\) === 'manga' \? 'manga' : 'text'/,
   'a TOC-backed probe preserves the exact active session or book content kind');
 const mangaSwitchStart = index.indexOf('private async switchMangaSource(');
-const mangaSwitchEnd = index.indexOf('\n  private async switchPreviewSource', mangaSwitchStart);
+const mangaSwitchEnd = index.indexOf('\n  private mangaSourceSwitchFailureMessage', mangaSwitchStart);
+assert.ok(mangaSwitchEnd > mangaSwitchStart, 'bound the current production manga method');
 const mangaSwitch = index.slice(mangaSwitchStart, mangaSwitchEnd);
 assert.match(mangaSwitch, /this\.remoteReadingSession\?\.identity\.sourceId === original\.sourceId/,
   'manga source switch binds session identity to the displayed source/book');
@@ -124,18 +125,33 @@ assert.match(mangaSwitch, /openCachedCatalogSession\(\{ contentKind: 'manga'/,
   'missing in-memory session restores an exact manga catalog before prepare');
 assert.match(mangaSwitch, /previous\.contentKind !== 'manga'/);
 assert.match(mangaSwitch, /previous\.identity\.bookId !== original\.bookId/);
-assert.match(index, /refreshCandidates\(query, isCurrent, \[\], onProgress, gateway\.withoutSearchTiming\(previousCandidates\)\)/,
-  'force refresh retains prior candidate identities while replacing timing');
-assert.match(index, /refreshCandidates\(query, isCurrent,[\s\S]*onProgress, cached\)/,
-  'initial cached candidates seed incremental discovery');
+assert.match(sourceHost, /force && previous\.length > 0[\s\S]*?candidates: previous, refreshing: true/,
+  'actual captured owner retains prior candidate identities during force refresh');
+assert.match(sourceHost, /const cached = force \? \[\] : await this\.gateway\.loadCachedCandidates\(context\.query, current, knownCandidates\(\)\)/,
+  'initial discovery uses exact cached candidates through the typed gateway');
+assert.match(sourceHost, /refreshCandidates\(context\.query, current, force \? \[\] : context\.searchedSourceIds\)/,
+  'force refresh restarts timing/discovery rather than borrowing prior searched-source exclusions');
 
 console.log('source-switch post-commit transaction contract: PASS');
 
 // The owner/refactor source claims above are also exercised through the real
 // SDK-transformed Index -> finite Host -> Gateway -> candidate actor chain.
-const { fixture, settle: settleOwner } = await import('./lib/source-switch-owner-probe.mjs');
+const { fixture, settle: settleOwner, deferred } = await import('./lib/source-switch-owner-probe.mjs');
 const { makeIndex } = await import('./lib/source-switch-sdk-consumer.mjs');
 const settle = async () => { await settleOwner(); await new Promise(setImmediate); await settleOwner(); };
+{
+  const f=fixture({shared:true,open:false}),x=makeIndex(f);
+  x.index.openDetailSourceSwitch();await settle();
+  const before=f.host.current().state.candidates,gate=deferred();
+  assert.ok(before?.length>0);f.options.relatedGate=gate;
+  const cached=f.calls.filter(([method])=>method==='search-book.get').length;
+  x.index.refreshSourceSwitch(x.index.sourceSwitchScopeId);await settleOwner();
+  assert.equal(f.host.current().state.refreshing,true);
+  assert.equal(f.host.current().state.candidates,before,'retained rows stay visible while new source IO is pending');
+  assert.equal(f.calls.filter(([method])=>method==='search-book.get').length,cached,'force does not reopen the cached seed');
+  gate.resolve();await settle();assert.equal(f.host.current().state.refreshing,false);
+  assert.equal(f.host.current().state.candidates[0].sourceId,before[0].sourceId);
+}
 {
   const f = fixture({ shared: true, open: false, loseCommitAck: true, failExactQuery: true }), x = makeIndex(f);
   x.index.openDetailSourceSwitch(); await settle(); const panel = x.mount();

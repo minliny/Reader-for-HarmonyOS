@@ -82,7 +82,7 @@ async function fixture({runtime,stored='',reconstruct=false}={}) {
 
  const index=Object.assign(new Index(),{route:'bookshelf',settingsSnapshot:{reduceMotion:true},navigationGeneration:1,mountedRuntimeOwner:r,
  detailShelfAdmissionMount:1,rssInstanceIdentity:++indexInstance,bookshelfViewState:{anchorKey:'',anchorOffset:0},searchHost:{sources:()=>[],updateShelf(){}},sourceSources:[],sourceToolsSnapshot:{sources:[]},scheduleBookshelfBackgroundRefresh(){},preparePersistedShelfBooks(){},bookshelfLoadGeneration:0,shelfOperation:{...operationTypes.EMPTY_BOOKSHELF_OPERATION_SNAPSHOT},shelfReceiptRetired:false,
- storedImportPresentation:stored,shelfBooks:clone(r.rows),shelfProjectionRevision:'',isBookshelfVisualAdmitted:true,readingSessionActive:false,sourceSwitchVisible:false,pendingSourceSwitch:undefined,offlineMutationActiveKey:'',shelfReadingFilter:'all',shelfSourceFilter:'all',
+ storedImportPresentation:stored,shelfBooks:clone(r.rows),shelfProjectionRevision:'',isBookshelfVisualAdmitted:true,readingSessionActive:false,sourceSwitchVisible:false,pendingSourceSwitch:undefined,offlineMutationActiveKey:'',shelfReadingFilter:'all',shelfSourceFilter:'all',shelfContentFilter:'all',
  isSameDetailBook:b=>index.detailBook?.bookId===b.bookId,detailBookKey:b=>JSON.stringify([b.sourceId,b.bookId]),
  nextNavigationGeneration:()=>++index.navigationGeneration,
  returnFromDetail:()=>{index.nextNavigationGeneration();index.route='bookshelf';}});

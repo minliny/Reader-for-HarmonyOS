@@ -236,7 +236,7 @@ bound.stage.appearance = snapshot(22); bound.stage.replay(); assert.deepEqual(bo
 bound.pages.a = { fragments: ['22'], appearance: snapshot(22) }; bound.stage.replay(); assert.deepEqual(bound.fonts(), [22, 19]);
 for (const slot of bound.stage.children.values()) {
   const surface = createReaderBuilderProbe(stageSource, ['build'], { ReadingSurface: Child,
-    COVER_OCCLUSION_RADIUS_VP: 16, COVER_OCCLUSION_OFFSET_X_VP: 6 }).owner;
+    COVER_OCCLUSION_RADIUS_VP: 16, COVER_OCCLUSION_OFFSET_X_VP: 6 }, {componentName: 'ReaderPageTurnSurface'}).owner;
   Object.assign(surface, slot.params, { shadowColor: () => '#00000000' }); surface.initialRender();
   assert.equal([...surface.children.values()][0].params.appearance.fontSize, slot.params.appearance.fontSize);
 }

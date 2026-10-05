@@ -63,12 +63,12 @@ const deps = {
 };
 const nodes = owner => [...owner.nodes.values()];
 function fixture(key, names, values = {}) {
-  const selected = key === 'search' ? [...names, 'operation', 'retryOperation'] : key === 'source' ? [...names, 'recovery'] : names;
+  const selected = key === 'search' ? [...names, 'operation', 'retryOperation', 'filteredEmptyMessage'] : key === 'source' ? [...names, 'recovery'] : names;
   const { owner } = createReaderBuilderProbe(sources[key], selected, deps);
   for (const match of sources[key].matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g)) {
     if (typeof owner[match[1]] !== 'function') owner[match[1]] = () => {};
   }
-  Object.assign(owner, { appThemeScheme: 'day', readerWindowMetricsRevision: 1,
+  Object.assign(owner, { appThemeScheme: 'day', readerWindowMetricsRevision: 1, selectedGroupName:'全部', selectedContentType:'全部类型',
     contentFrame: () => ({ left: 42, right: 18, width: 330 }), numericAreaLength: value => Number(value),
     ...(key === 'source' ? { operation: { action: 'load', sourceId: '' } } : {}), ...values });
   return owner;
@@ -166,8 +166,9 @@ remove.onAreaChange({}, { height: 116 });
 multi.replayOnly([multiList.id]);
 assert.equal(multiList.contentEndOffset, 136, 'measured footer height updates clearance without shrinking the List');
 
-const directory = fixture('directory', ['build', 'flatList'], {
+const directory = fixture('directory', ['build', 'standardPage', 'flatList'], {
   sourceId: 'local', bookId: 'book', admittedIdentity: 'local\u0000book', rulesRevision: 0, toolsHeight: 51,
+  directoryRecovery: { offlineBlocked: false },
   supportsDirectoryRules: () => false, projectedEntries: [{ index: 7 }], admittedEntries: [{ index: 7 }],
   bottomInset: () => 34, searchDraft: '', searchQuery: '', ascending: true, navigationActive: false,
 });

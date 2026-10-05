@@ -57,7 +57,7 @@ function fragments(recipe, bodyKey = 'body') {
 }
 function slot(provider, revision = 1, params = {}) {
   const owner = createReaderBuilderProbe(stageSource, ['build'], { ReadingSurface: Child,
-    COVER_OCCLUSION_RADIUS_VP: 16, COVER_OCCLUSION_OFFSET_X_VP: 6 }).owner;
+    COVER_OCCLUSION_RADIUS_VP: 16, COVER_OCCLUSION_OFFSET_X_VP: 6 }, {componentName: 'ReaderPageTurnSurface'}).owner;
   Object.assign(owner, { chapterTitle: 'fallback title', showChapterTitle: true, pageFragments: [],
     pageFragmentsProvider: provider, renderRevision: revision, layout, appearance: { activeTheme: 'paper', paragraphSpacing: 16 },
     staticSnapshotId: '', slotIdentity: 'slot-a', pageIdentity: 'page', shadowColor: () => '#00000000', ...params });

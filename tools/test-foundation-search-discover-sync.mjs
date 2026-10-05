@@ -34,7 +34,16 @@ let cases=0;
 for(const scheme of['day','night'])for(const fileKey of['search','discover','sync'])for(const method of files[fileKey].names){
  const variants=method==='searchBar'?[{tablet:false,busy:false},{tablet:false,busy:true},{tablet:true,busy:false},{tablet:true,busy:true}]:method==='groupScopeChip'?[{selected:false},{selected:true}]:method==='resultsContent'?[{canRetry:false},{canRetry:true}]:method==='emptyState'?[{busy:false},{busy:true}]:[{}];
  for(const variation of variants){const p=setup(files[fileKey],method,{scheme,...variation});const args=method==='groupScopeChip'?['在线']:method==='emptyContent'?['原关键词',7]:method==='errorContent'?[7]:[];render(p,args);
-  const oldTexts=p.old.orderedNodes(p.owners.old).filter(n=>n.type==='Text'),currentTexts=p.current.orderedNodes(p.owners.current).filter(n=>n.type==='Text');assert.equal(currentTexts.length,oldTexts.length,method+': all original text nodes remain');
+  const oldTexts=p.old.orderedNodes(p.owners.old).filter(n=>n.type==='Text'),allCurrentTexts=p.current.orderedNodes(p.owners.current).filter(n=>n.type==='Text');
+  // Manga/text filtering adds one finite empty-result notice. Keep every
+  // original action/font/geometry comparison, and qualify only this new actor.
+  const addedNotice=method==='resultsContent'?allCurrentTexts.filter(n=>n.create==='已返回的结果中没有符合当前筛选（在线 · 全部类型）的书籍，可切换范围或内容类型。'):[];
+  if(method==='resultsContent'){
+   assert.equal(addedNotice.length,1,'one current content-filter empty notice is added');
+   assert.deepEqual([addedNotice[0].fontFamily,addedNotice[0].fontSize,addedNotice[0].lineHeight,addedNotice[0].padding,addedNotice[0].width],['ReaderInter',13,20,24,'100%']);
+   assert.equal(addedNotice[0].fontColor,readerAppColor('TOK_MUTED',scheme));assert.equal(addedNotice[0].textAlign,'TextAlign.Center');
+  }
+  const currentTexts=allCurrentTexts.filter(n=>!addedNotice.includes(n));assert.equal(currentTexts.length,oldTexts.length,method+': all original text nodes remain');
   for(let i=0;i<oldTexts.length;i++){assert.equal(currentTexts[i].create,oldTexts[i].create,method+': original label/order');assert.deepEqual(tuple(currentTexts[i]),tuple(oldTexts[i]),method+': exact five fonts/AUTO and geometry/colors');}
   if(method!=='searchBar'&&method!=='filterRow'&&method!=='emptyState'){
    for(const text of oldTexts.filter(n=>typeof n.onClick==='function')){const next=clickByLabel(p.current,p.owners.current,text.create);assert.ok(next,method+': real shared native action '+text.create);if(text.enabled!==false)text.onClick();next.onClick();}
@@ -60,6 +69,16 @@ for(const scheme of['day','night'])for(const fileKey of['search','discover','syn
   }
   cases++;
  }
+}
+for(const [searching,stopped,expected]of[
+ [true,false,'当前筛选（在线 · 全部类型）下暂无结果，搜索仍在继续。'],
+ [false,true,'搜索已停止，已返回的结果中没有符合当前筛选（在线 · 全部类型）的书籍。可切换范围或内容类型。'],
+ [false,false,'已返回的结果中没有符合当前筛选（在线 · 全部类型）的书籍，可切换范围或内容类型。'],
+]){
+ const p=setup(files.search,'resultsContent');p.owners.current.presentation={...p.owners.current.presentation,searching,stopped};
+ p.owners.current.resultsContent();
+ const notice=p.current.orderedNodes(p.owners.current).filter(n=>n.type==='Text'&&n.create===expected);
+ assert.equal(notice.length,1,'actual filtered empty notice distinguishes running, stopped and completed searches');
 }
 // True common/finite propagation: a single finite height change reaches both
 // phone and wide production consumers without affecting the other variant.

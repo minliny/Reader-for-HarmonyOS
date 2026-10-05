@@ -19,6 +19,7 @@ const target={contentKind:'manga',sourceVersion:'s',identity:{sourceId:'target',
 {const f=fixture();const p=await f.gateway.prepare('old','a',target,'C',3,f.current);f.cancel();await assert.rejects(f.gateway.commit(p,true,f.current),/CANCELLED/);}
 console.log('PASS manga switch directly selects after saved-position and chapter-first-image validation, retains old shelf on failed image, fences cancellation');
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
+const {fixture:sourceOwnerFixture,setCurrentRuntime,Runtime:SourceRuntime}=await import('./lib/source-switch-owner-probe.mjs');
 for(const mode of ['success','cancel','image-fail','lost-response','navigation-away']){
  let committed=false,refresh=0,installed=0,consent=mode!=='cancel',current=mode!=='cancel';
  const proposal={expectedFrom:{epoch:2,revision:1},firstImage:{chapterIndex:3},chapterTitle:'C',targetPageOrdinal:0};
@@ -139,7 +140,7 @@ const selectionMethods=['onPickSource','switchMangaSource','presentMangaSourceSw
  'mangaSourceSwitchDirectorySelection','mangaSourceSwitchDirectoryBack',
  'selectMangaSourceSwitchChapter','commitMangaSourceSwitch','presentMangaSourceSwitchAcquisitionFailure',
  'retryFailedSourceSwitch','performSourceSwitchSeam','performMangaPreviewSourceSwitch','onBackPress','closeSourceSwitch',
- 'canCancelMangaSourcePreparation','isSourceSwitchActive','nextNavigationGeneration','readerOwnsWindowEdges','mangaOwnsWindowEdges'];
+ 'canCancelMangaSourcePreparation','nextNavigationGeneration','readerOwnsWindowEdges','mangaOwnsWindowEdges'];
 function deferred(){let resolve;const promise=new Promise(yes=>{resolve=yes;});return {promise,resolve};}
 const selectionTarget={...target,book:{title:'Target Manga',author:'Target Author',kind:'comic'},entries:[
  {index:2,title:'Volume One',url:'/volume',navigable:false,level:1},
@@ -151,6 +152,10 @@ function selectionFixture(mode='success',catalog=selectionTarget){
  let committed=false,revision=1,oldReads=0,refresh=0;
  const imageGate=deferred(),commitGate=deferred(),imageStarted=deferred(),commitStarted=deferred();
  runtime.request=async(method,params)=>{
+  if(method==='bookshelf.get'){
+   const row=await new Shelf().loadShelfBook(params.sourceId);
+   return {data:{book:row===undefined?null:{...row,addedAt:1,sortIndex:0}}};
+  }
   if(method==='reading.progress.get'&&params.sourceId==='old'){
    oldReads++;const result=await request(method,params);
    result.data.token.revision=mode==='preparation-progress-race'&&oldReads>1?2:revision;
@@ -179,20 +184,30 @@ function selectionFixture(mode='success',catalog=selectionTarget){
  const installed=[],fetches=[],starts=[];
  class Shelf {async loadShelfBook(source){return source==='old'?(committed?undefined:original):
   (committed?{sourceId:'target',bookId:'b',title:'Target Manga',author:'Target Author',contentKind:'manga'}:undefined);}}
+ const {Constructor:SourceSwitchHost}=sourceOwnerFixture({open:false});
+ runtime.getUIAbilityContext=()=>({filesDir:'/private-files'});
+ catalog.continuationVariables??=[];catalog.entries.forEach(row=>row.variables??=[]);
+ runtime.bookAcquisitions=()=>({async acquireBook(seed,admission){
+  assert.deepEqual([seed.sourceId,seed.bookId],['target','b']);assert.equal(admission.isCurrent(),true);return catalog;
+ }});
+ setCurrentRuntime(runtime);
+ const switchHost=new SourceSwitchHost(runtime);
+ switchHost.snapshot={...switchHost.current(),scopeId:1,visible:true};
+ const preparation=switchHost.mangaPreparationGateway(),fetch=preparation.fetchTargetToc.bind(preparation);
+ preparation.fetchTargetToc=async(...args)=>{fetches.push(args);return fetch(...args);};
  const Index=productionMotionMethods(indexFile,selectionMethods,{MangaSessionGateway:ActualSessions,
   MangaSourceSwitchGateway,MangaSwitchChapterSelectionRequired,ReaderCoreGateway:Shelf,
-  ReaderRuntimeOwner:{current:()=>runtime},errorMessageOf:error=>error.message,
+  ReaderRuntimeOwner:SourceRuntime,errorMessageOf:error=>error.message,
   sourceSwitchCandidateKey:(source,book)=>JSON.stringify([source,book])});
- // Captured feature-owner ports supply durable shelf reads; the real Index
- // still owns navigation admission and the real manga Gateway owns dual CAS.
- const switchHost={retire(){},current:()=>({scopeId:1}),readMangaShelf:(...args)=>new Shelf().loadShelfBook(...args)};
+ // Actual captured SourceSwitchHost and typed gateways own preparation and
+ // durable shelf reads. Only native request/image/acquisition IO is controlled.
  const owner=Object.assign(new Index(),{detailBook:original,remoteReadingSession:originalSession,detailToc:originalToc,
   mountedRuntimeOwner:runtime,shelfReceiptRetired:false,sourceSwitchHost:switchHost,sourceSwitchScopeId:1,
   mangaSourceSwitchPreparationGeneration:0,mangaSourceSwitchCommitGeneration:-1,
   readingSessionActive:true,route:'reading',detailInBookshelf:true,sourceSwitchVisible:true,
   sourceSwitchState:{kind:'candidates',candidates:[candidate]},sourceSwitchFailureMessage:'',navigationGeneration:0,
   mangaSourceSwitchSelectionVisible:false,mangaSourceSwitchSelectionBusy:false,
-  getSourceSwitchGateway:()=>({fetchTargetToc:async(...args)=>{fetches.push(args);return {readingSession:catalog};}}),
+  getSourceSwitchGateway:()=>preparation,
   getSourceSwitchHost:()=>switchHost,
   refreshBookshelf:()=>refresh++,readingDetailForShelf:book=>book,
   onRemoteSessionReady:session=>{assert.equal(committed,true,'target session is installed only after durable commit');

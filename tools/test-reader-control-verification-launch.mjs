@@ -30,7 +30,7 @@ assert.match(ability, /private coldStartPage: string = 'pages\/Index'/);
 assert.match(ability, /const page = this\.coldStartPage;[\s\S]*windowStage\.loadContent\(page,/);
 assert.match(ability, /readerControlVerificationColdStartPage\(/);
 assert.match(ability, /want\.parameters\?\.readerOpenSourcePilot/);
-assert.equal([...ability.matchAll(/this\.coldStartPage\s*=/g)].length, 2,
+assert.equal([...ability.matchAll(/this\.coldStartPage\s*=(?!=)/g)].length, 2,
   'only onCreate admits a destination, with one exact missing-page consumption reset');
 assert.match(ability, /if \(page === 'pages\/__ReaderStartupMainLoadFailure'\) \{\s*this\.coldStartPage = 'pages\/Index';/);
 assert.match(ability, /onNewWant\(want: Want,[\s\S]*?ReaderSystemFileOpenHost\.receive\(want\);\s*\}/,

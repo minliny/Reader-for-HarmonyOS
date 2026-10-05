@@ -8,7 +8,7 @@ const capsule = read('ReaderSessionCapsule');
 for (const type of ['autoPage', 'tts']) {
   const { owner } = createReaderBuilderProbe(capsule, ['build', 'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor'], {
     TYPE_READER_SESSION_COUNTDOWN: {}, TYPE_READER_SESSION_LABEL: {}, readerSessionCapsuleMinimumWidth: () => 96,
-  });
+  }, {componentName:'ReaderSessionCapsuleLeading'});
   Object.assign(owner, { type, countdown: 8, capsuleWidth: 96, textColor: '', themeScheme: 'day',
     primaryColor: 'primary', onPrimaryColor: 'onPrimary' });
   owner.initialRender();

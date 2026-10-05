@@ -6,6 +6,7 @@ const {MangaDownloadActionsGateway}=await import('../entry/src/main/ets/features
 const {ReadingOfflineHost}=await import('../entry/src/main/ets/features/reading/ReadingOfflineHost.ts');
 const {runtimeOwnerIdentityProbe}=await import('./lib/reader-runtime-admission-probe.mjs');
 const {ReaderWriteEvidence}=await import('../entry/src/main/ets/app/ReaderWriteEvidence.ts');
+const {EMPTY_READING_DIRECTORY_RECOVERY,readingDirectoryRecovery}=await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
 const session={contentKind:'manga',identity:{sourceId:'source',bookId:'book'},entries:[]};
 const chapter=id=>({sourceId:'source',bookId:'book',chapterId:id});
 function fixture(){
@@ -426,10 +427,23 @@ for(const source of [bookSource,fallbackSource]){
  owner.entries=[{...group,title:'Different volume'}];disclosure.onClick();assert.deepEqual(owner.mangaCollapsedGroups,[],'stale volume callbacks cannot fold a new catalog');
 }
 {
- const owner=createReaderBuilderProbe(bookSource,['mangaDownloadMenuButton'],{Placement:{BottomLeft:'bottom-left'}}).owner;
- let opened=0;Object.assign(owner,{mangaDownloadEnabled:true,appThemeScheme:'day',downloadMenuVisible:false,openDownloadActions:async()=>opened++,downloadOperationsMenu(){}});
- owner.mangaDownloadMenuButton();const marker=[...owner.nodes.values()].find(row=>row.accessibilityText==='漫画下载管理');assert.ok(marker);
+ const {boundedSurfaceSdk,boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');
+ const {READER_MANGA_DOWNLOAD_POPUP}=await import('../entry/src/main/ets/features/common/ReaderMangaDownloadPopupSpec.ts');
+ const popupSource=component('ReaderMangaDownloadPopup','../entry/src/main/ets/features/common/ReaderMangaDownloadPopup.ets'),p=boundedSurfaceSdk();
+ Object.assign(p.deps,fonts,{READER_MANGA_DOWNLOAD_POPUP,Placement:{BottomLeft:'bottom-left'}});
+ p.hooks.childSources.MangaDownloadOperationsPanel=panelSource;p.hooks.childSources.ReaderMangaDownloadPopup=popupSource;
+ p.deps.MangaDownloadOperationsPanel=createReaderBuilderProbe(panelSource,boundedMembers(panelSource),p.deps,p.hooks).Component;
+ p.deps.ReaderMangaDownloadPopup=createReaderBuilderProbe(popupSource,boundedMembers(popupSource),p.deps,p.hooks).Component;
+ const owner=createReaderBuilderProbe(bookSource,['mangaDownloadMenuButton','identity'],p.deps,p.hooks).owner;
+ let opened=0;Object.assign(owner,{mounted:true,sourceId:'source',bookId:'book',mangaDownloadEnabled:true,appThemeScheme:'day',
+  downloadMenuVisible:false,downloadMenuGeneration:2,downloadActions:[],downloadActionsLoading:false,downloadActionsFailure:'',
+  contentFrame:()=>({width:180}),openDownloadActions:async()=>opened++});
+ owner.mangaDownloadMenuButton();const marker=p.nodes(owner).find(row=>row.accessibilityText==='漫画下载管理');assert.ok(marker);
  marker.onClick();await tick();assert.equal(opened,1);assert.equal(marker.bindPopup[1].enableArrow,false);assert.equal(marker.bindPopup[1].showArrow,undefined);
+ owner.downloadMenuVisible=true;owner.downloadMenuGeneration++;marker.bindPopup[1].onStateChange({isVisible:false});
+ assert.equal(owner.downloadMenuVisible,true,'old native closing generation cannot close the newer opening');
+ owner.bookId='successor';marker.onClick();await tick();assert.equal(opened,1,'old anchor captures the original parent book identity');
+ owner.bookId='book';owner.mounted=false;marker.onClick();await tick();assert.equal(opened,1,'unmounted parent cannot reopen the native popup');
 }
 console.log('PASS actual detail/fallback SDK chapter markers and book menu route to exact scoped management; stale catalog/identity, cancelled loads and failed promises cannot change a newer page');
 
@@ -467,9 +481,11 @@ const shellSource=readFileSync(new URL('../entry/src/main/ets/features/shell/Rea
  tree.onDownloadChapter(7);flat.onDownloadChapter(9);await tick();assert.deepEqual(calls,[7,9]);
 }
 {
- const owner=createReaderBuilderProbe(readFileSync(indexFile,'utf8'),['externalDirectory'],
-  {BookDirectoryPage:Child,ReaderRuntimeOwner:{current:()=>({supportsCoreCapability:()=>true})}}).owner;
+ const owner=createReaderBuilderProbe(readFileSync(indexFile,'utf8'),['externalDirectory','directoryRecovery'],
+  {BookDirectoryPage:Child,EMPTY_READING_DIRECTORY_RECOVERY,readingDirectoryRecovery,
+    ReaderRuntimeOwner:{current:()=>({supportsCoreCapability:()=>true})}}).owner;
  const calls=[];Object.assign(owner,{detailBook:{sourceId:'source',bookId:'book',title:'Title',contentKind:'manga'},detailToc:[],
+  directoryOperationPresentationId:()=>'',directoryOperation:undefined,offlineOperation:undefined,
   loadMangaDownloadActions:async index=>{calls.push(['load',index]);return [];},performMangaDownloadAction:async(...args)=>calls.push(['action',...args])});
  owner.externalDirectory();const props=[...owner.children.values()][0].params;
  assert.equal(props.mangaDownloadEnabled,true);await props.onLoadDownloadActions(7);await props.onDownloadAction('pause',7);

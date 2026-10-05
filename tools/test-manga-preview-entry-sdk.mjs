@@ -24,12 +24,12 @@ function indexOwner(overrides={}){
  const visit=node=>{if(ts.isCallExpression(node)&&ts.isIdentifier(node.expression)&&/^[A-Z]/.test(node.expression.text)&&!native.has(node.expression.text)){
   const name=node.expression.text;if(!syntax.componentCollection.customComponents.has(name))component(name,'');deps[name]=Child;
  }ts.forEachChild(node,visit);};visit(tree);
- const owner=createReaderBuilderProbe(index,['build','canCancelMangaSourcePreparation','nextNavigationGeneration','onDirectoryChapterSelected'],deps).owner;
+ const owner=createReaderBuilderProbe(index,['build','canCancelMangaSourcePreparation','nextNavigationGeneration','onDirectoryChapterSelected','directoryRecovery','directoryOperationBindingId','directoryOperationPresentationId'],deps).owner;
  Object.assign(owner,{route:'reading',readingSessionActive:true,readingContentKind:'manga',detailInBookshelf:false,
   detailBook:{sourceId:'source',bookId:'book',title:'Manga',author:'Author',contentKind:'manga'},detailToc:[{index:3,title:'First'},{index:7,title:'Next'}],
   requestedChapterIndex:3,mangaChapterRequestGeneration:4,mangaChapterStartRequestGeneration:4,navigationGeneration:2,
   mangaSourceSwitchCommitGeneration:-1,sourceSwitchVisible:false,sourceSwitchState:{kind:'switching'},mangaSourceSwitchSelectionVisible:false,
-  settingsSnapshot:{reduceMotion:false},offlineMutationActiveKey:'',directoryReturnTarget:'readerControl',jsonImportVisible:false,
+  directoryPresentationGeneration:0,detailShelfAdmissionMount:0,remoteSessionGeneration:0,directoryOperation:undefined,offlineOperation:undefined,settingsSnapshot:{reduceMotion:false},offlineMutationActiveKey:'',directoryReturnTarget:'readerControl',jsonImportVisible:false,
   currentSourceSwitchTransactionId:()=>undefined,detailBookmarkIdentity:()=>undefined,controlBookmarkProjectionMessage:()=>'',
   readerOwnsWindowEdges:()=>true,mangaOwnsWindowEdges:()=>true,appContentTopInset:()=>0,detailContent:noOp,
   isKnownDetailChapter:chapter=>[3,7].includes(chapter),directoryCurrentChapterIndex:3,mangaCommittedRequestGeneration:4,

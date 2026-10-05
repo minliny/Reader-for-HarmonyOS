@@ -15,17 +15,20 @@ assert.equal(normalizeReaderSettingsSnapshot({ ...initial, mangaPageNumbers: 'fa
 assert.equal('mangaPageNumbers' in initial, false, 'older snapshots do not fabricate an explicit manga preference');
 
 let value = '';
+let durableValue = '';
+const puts = [];
 let failNextFlush = false;
 let holdFlush;
 let enteredFlush;
 let flushes = 0;
 const store = {
   get: async (_key, fallback) => value || fallback,
-  put: async (_key, next) => { value = next; },
+  put: async (_key, next) => { puts.push(next); value = next; },
   flush: async () => {
     flushes++;
     if (failNextFlush) { failNextFlush = false; throw new Error('simulated preference failure'); }
     if (holdFlush !== undefined) { const pending = holdFlush; holdFlush = undefined; enteredFlush?.(); await pending; }
+    durableValue = value;
   },
 };
 const runtimeOwner = { getUIAbilityContext: () => ({}) };
@@ -45,11 +48,21 @@ assert.equal(gateway.current().mangaFit, 'contain');
 assert.equal(gateway.current().mangaBackground, 'ink');
 assert.equal(gateway.current().mangaPageNumbers, false, 'an older novel form must preserve a deliberate hidden-page setting');
 assert.equal(gateway.current().screenTimeout, 'alwaysOn');
-const beforeFailure = value;
+const beforeFailure = durableValue;
+const beforeFailurePuts = puts.length;
 failNextFlush = true;
 await assert.rejects(gateway.updateMangaPreferences({ mangaFit: 'width' }), /simulated preference failure/);
-assert.equal(value, beforeFailure, 'failed narrow preference write restores its previous durable payload');
-assert.equal(gateway.current().mangaFit, 'contain', 'failed flush does not publish unconfirmed settings');
+assert.equal(durableValue, beforeFailure, 'a failed flush does not certify a new durable payload');
+assert.equal(puts.length, beforeFailurePuts + 1, 'unknown flush never dispatches an old compensation write');
+assert.equal(JSON.parse(value).mangaFit, 'width');
+assert.equal(gateway.current().mangaFit, 'width', 'the accepted user choice survives an unknown flush');
+assert.equal(gateway.writeFacts().saved.mangaFit, 'contain');
+assert.equal(gateway.writeFacts().pendingReconciliation, true);
+assert.ok(gateway.writeFacts().acceptedRevision > gateway.writeFacts().savedRevision);
+await gateway.retryAccepted();
+assert.equal(gateway.writeFacts().pendingReconciliation, false);
+assert.equal(gateway.writeFacts().saved.mangaFit, 'width');
+assert.equal(JSON.parse(durableValue).mangaFit, 'width', 'finite retry confirms the same accepted choice');
 
 let release;
 holdFlush = new Promise(resolve => { release = resolve; });
@@ -108,7 +121,7 @@ owner.mounted = false;
 setVisible();
 await seeking;
 assert.equal(restores, 0, 'late page acquisition after disposal never moves a native viewport');
-console.log('PASS production manga preference migration, stale novel form preservation, write rollback/serialization, actual readable neighbors, confirmed chapter-end and disposed seek fencing');
+console.log('PASS production manga preference migration, stale novel form preservation, accepted/saved unknown-ACK reconciliation and serialization, actual readable neighbors, confirmed chapter-end and disposed seek fencing');
 
 assert.equal(mangaUsesPersistentDirectory(393,852,false),false);
 assert.equal(mangaUsesPersistentDirectory(820,420,false),false,'phone landscape keeps a floating directory');

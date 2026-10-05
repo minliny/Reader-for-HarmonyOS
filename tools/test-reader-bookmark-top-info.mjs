@@ -267,7 +267,7 @@ for (const pull of [0, 8, 32, 18, 0]) {
   for (const page of stage.children.values()) {
     assert.equal(page.params.chromeTopTranslateY + pull, 0);
     const slot = createReaderBuilderProbe(stageSource, ['build'], { ReadingSurface: Child,
-      COVER_OCCLUSION_RADIUS_VP: 1, COVER_OCCLUSION_OFFSET_X_VP: 1 }).owner;
+      COVER_OCCLUSION_RADIUS_VP: 1, COVER_OCCLUSION_OFFSET_X_VP: 1 }, {componentName:'ReaderPageTurnSurface'}).owner;
     Object.assign(slot, page.params, { staticSnapshotId: '', slotIdentity: 'a', shadowColor: () => '#00000000' });
     slot.initialRender();
     const readingParams = [...slot.children.values()][0].params;

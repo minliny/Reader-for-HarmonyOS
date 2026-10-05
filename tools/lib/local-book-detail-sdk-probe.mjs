@@ -3,6 +3,7 @@ import {stripTypeScriptTypes} from 'node:module';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
 import {boundedMembers} from './bounded-surface-sdk-probe.mjs';
 import {readerFoundationTokens} from './reader-foundation-control-probe.mjs';
+import {createArkUIPropertyRuntimeProbe} from './arkui-property-runtime-probe.mjs';
 import * as geometry from '../../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
 import * as metrics from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import * as fonts from '../../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
@@ -21,14 +22,14 @@ class Cover {constructor(owner, params, _storage, id) {Object.assign(this, {owne
 
 /** Actual approved detail/header Builders and geometry, with a window-facts
  * seam. Does not render native pixels, simulate layout or replace callbacks. */
-export function localBookDetailSdk(dependencies = {}, hooks = {}) {
-  const deps = {...readerFoundationTokens, ...geometry, ...metrics, ...fonts,
+export function localBookDetailSdk(dependencies = {}, hooks = {}, properties = createArkUIPropertyRuntimeProbe()) {
+  const deps = {...properties.sdk, ...readerFoundationTokens, ...geometry, ...metrics, ...fonts,
     ...author, ...intro, ...mangaDirectory, ...constants,
     ReaderWindowCoordinator: {metrics: metrics.createDefaultReaderWindowMetrics},
     ImageFit: {Cover: 'cover'}, NoCoverCover: Cover, ...dependencies};
-  const carrier = {...hooks, childSources: {...hooks.childSources,
+  const carrier = {...properties.hooks, ...hooks, childSources: {...hooks.childSources,
     PageBackBar: headerSource, NoCoverCover: coverSource}, mountChildren: true};
   deps.PageBackBar = createReaderBuilderProbe(headerSource, boundedMembers(headerSource), deps, carrier).Component;
   return {...createReaderBuilderProbe(localBookDetailSource, boundedMembers(localBookDetailSource), deps, carrier),
-    Header: deps.PageBackBar};
+    Header: deps.PageBackBar, properties};
 }
