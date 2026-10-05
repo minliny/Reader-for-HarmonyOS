@@ -27,7 +27,7 @@ assert.equal((shelf.match(/LazyForEach\(this\.rowDataSource/g) ?? []).length, 1,
 assert.match(shelf,
   /private phoneContent\(\)[\s\S]*\.padding\(\{ left: this\.phoneContentFrame\(\)\.left, right: this\.phoneContentFrame\(\)\.right \}\)/,
   'phone books must preserve the Figma gaps while honoring asymmetric safe edges');
-assert.match(shelf, /private continueReadingCard\(book: ShelfBook, isTablet: boolean\)[\s\S]*\.width\(this\.shelfContentWidth\(isTablet\)\)/,
+assert.match(shelf, /private continueReadingCard\(isTablet: boolean\)[\s\S]*\.width\(this\.shelfContentWidth\(isTablet\)\)/,
   'the continue-reading card must consume the reactive shelf width instead of a frozen Builder argument');
 assert.match(shelf,
   /private projectionBookTranslateX[\s\S]*this\.bookRowSpace\(this\.shelfContentWidth\(isTablet\), isTablet\)/,

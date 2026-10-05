@@ -68,6 +68,15 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const output = ts.createPrinter().printNode(ts.EmitHint.Unspecified, transformed, file);
   assert.match(output, /observeComponentCreation2/, 'exercise real SDK observer closures');
   let activeOwner, activeId;
+  // The SDK lowers a component .animation modifier to Context start/reset
+  // instructions surrounding its native attributes. Record those unmodified
+  // instructions on the active observer; never pretend to render their frames.
+  const nativeContext = { animation(value) {
+    if (activeOwner === undefined) return;
+    const record = activeOwner.nodes.get(activeId);
+    activeOwner.attributeCalls.push({ id: activeId, property: 'contextAnimation', args: [value] });
+    if (value !== null && value !== undefined) record.animation = value;
+  } };
   const native = name => { const instance = new Proxy({ name }, { get(target, property) {
     if (property === 'name') return name;
     return (...args) => {
@@ -101,9 +110,14 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     }
     runObserver(id, initial) {
       activeOwner = this; activeId = id;
+      const previousContext = globalThis.Context;
+      globalThis.Context = nativeContext;
       hooks.onObserverEnter?.(this, id);
       try { this.observers[id](id, initial); }
-      finally { hooks.onObserverExit?.(this, id); activeOwner = undefined; }
+      finally {
+        try { hooks.onObserverExit?.(this, id); }
+        finally { globalThis.Context = previousContext; activeOwner = undefined; }
+      }
     }
     replayOnly(ids) { for (const id of ids) this.runObserver(id, false); }
     replay() {
@@ -144,7 +158,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   // actual registrar has a separate demand/failure/retry test.
   const globals = { readerRegisteredFontFamily: (_font, family) => family,
     readerFontFamilyReady: () => true, readerAppColor, readerThemeDefinition, ViewPU, ReaderControlSwitchTrack: Child, $r: value => value,
-    ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Path', 'Text', 'TextInput', 'Span', 'Image', 'Slider', 'ForEach', 'If', '__Common__']
+    ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Path', 'Text', 'TextInput', 'Span', 'Image', 'Slider', 'Toggle', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
     ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment',
       'LineCapStyle', 'TextAlign', 'TextOverflow', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),

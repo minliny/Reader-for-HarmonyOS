@@ -199,7 +199,7 @@ await check('PH105: download feedback starts immediately, verifies completion an
     });
     const messages = [], errors = [];
     const p = Object.assign(new C(), { remoteReadingSession: { identity: { sourceId: 's', bookId: 'b' }, entries: [{ url: 'chapter' }] },
-      offlineMutationActiveKey: '', offlineMutationGeneration: 0, detailToc: [{ index: 0 }],
+      offlineMutationActiveKey: '', mangaDownloadActionActiveKey: '', offlineMutationGeneration: 0, detailToc: [{ index: 0 }],
       getUIContext: () => ({ getPromptAction: () => ({ showToast: ({ message }) => messages.push(message) }) }),
       mergeDirectoryBookmarks: entries => entries, showReadingFailure: (...args) => errors.push(args),
     });

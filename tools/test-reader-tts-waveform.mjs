@@ -1,11 +1,17 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { READER_TTS_WAVEFORM_HEIGHTS, ReaderTtsWaveformMotion, ReaderTtsWaveformClock } from '../entry/src/main/ets/features/reading/ReaderTtsWaveformModel.ts';
 import { readerAppearanceCubicBezierProgress as bezier } from '../entry/src/main/ets/features/reading/ReaderAppearanceMotionGeometry.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const ease = p => bezier(p, .25, .1, .25, 1), easeInOut = p => bezier(p, .42, 0, .58, 1);
 const curves = { ease, easeInOut };
-const reference = readFileSync(new URL('../evidence/2026-09-11-make-style-parity/tts-reference/src/PhoneScreen.tsx', import.meta.url), 'utf8');
+// Original Make V17 bytes, bound to the retained delivery copy inventory.
+// Evidence mirrors are not stable test inputs across isolated workspace refreshes.
+const referenceBytes = readFileSync(new URL('./fixtures/tts-reference/PhoneScreen.tsx', import.meta.url));
+assert.equal(createHash('sha256').update(referenceBytes).digest('hex'),
+  '731582c1ac493d48f1ebdaae1e5527de5dfe3f391d37d8c85a51643ce72b4a3c', 'original Make V17 reference bytes');
+const reference = referenceBytes.toString('utf8');
 const heights = reference.match(/function EqualiserBar[\s\S]*?const bars = \[([^\]]+)\]/)[1].split(',').map(Number);
 assert.deepEqual(READER_TTS_WAVEFORM_HEIGHTS, heights);
 assert.match(reference, /width: 2\.5/); assert.match(reference, /h-\[26px\]/);
