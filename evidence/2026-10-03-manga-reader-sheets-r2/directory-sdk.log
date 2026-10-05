@@ -1,0 +1,60 @@
+UTC 2026-10-03T09:59:29.534478+00:00
+Source frozen directory SDK regression. Compiler/property execution with instrumented native I/O; no VM, native compositor/layout/pixel acceptance.
+SOURCE_SHA256 {"entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts": "886f07c8ce81d9b3aa1d5a5a9290cf514bc8ef49f490acaec110ab0fa2166a78", "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets": "c25206f525e85528dcd0b9952387e749f818513772124ab2b1f2747e9fde01c3", "entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets": "2000df3605bd8658026a7d31bdb85bd715898892da034ca5dcf6730af0a5c8a4", "entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets": "b2a220f511ec341db7f208031addb9077859db31d33971174a0d69bd2ceeaa99", "tools/test-manga-directory-demo-parity-sdk.mjs": "dde9c59e46facce79c35a609a69296d96692130db572a59e8ddb97daa96f5d5b", "tools/test-manga-metadata-ui.mjs": "ccddc10253ef4cf2ce8d7b9cbbd0c9c5e1d4ab2646aadf5a22080284e13c0d99", "tools/test-manga-reading-directory-fallback.mjs": "cd78c0cb3e18b56ded6dc0ea60a373a547a126b321b9a598209916197f071c20", "tools/test-reader-directory-depth-contract.mjs": "bfbca3a23ef74d92a0cab364edac2d8b920002afe415d1a1588281561b216f33", "tools/lib/reader-control-builder-probe.mjs": "1d999903602771a428a1683d9fd0f67abb907223e5a62137da0dff6292b6b884"}
+COMMAND node tools/test-manga-directory-demo-parity-sdk.mjs
+EXIT 0
+PASS manga directory actual gateway -> SDK parity: VF axis, Radix SVG, one depth normalization, full-tree metadata, group spacing, 50/12 positioning and preserved native anchors; same native group Image receives 0/-90/0 with live title/count/second click and same-view page admission; ten old-implementation negative controls rejected. SDK animation requests verified, compositor frames require VM evidence
+
+(node:78516) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+COMMAND node tools/test-manga-metadata-ui.mjs
+EXIT 0
+PASS actual manga directory SDK Builder and Core locate: group/target/disabled, independent folds, current target and natural height
+PASS actual detail SDK Builder: full scroll viewport, 104×150 manga cover, centered floating header, two-line title, folded intro and floating dock
+
+(node:78762) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+COMMAND node tools/test-manga-reading-directory-fallback.mjs
+EXIT 0
+PASS actual manga reading flat fallback: v2 unavailable→681 rows, nested explicit folds, unchanged canonical targets, unknown/stale guards, full-catalog search/count, locate expansion and retained SDK List/arrow
+{"path":"/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib","classesSha256":"6140bfa5cf6705ddee40349c2e082083778a920f0ff870cc51dccb0f030ccbd5","layer":"actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels"}
+
+(node:79023) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+COMMAND node tools/test-reader-directory-depth-contract.mjs
+EXIT 0
+PASS actual SDK tree rows: v2 wire -> real gateway one-based admission, v1 compatibility, bounded indent and full accessibility actions
+
+(node:79273) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+COMMAND node tools/test-reader-directory-navigation.mjs
+EXIT 0
+PH42 directory navigation protocol, revision fencing and retained-source backfill: PASS
+reader directory v2 scope and target contracts passed
+directory selection uses independent immutable authority through deferred context
+PASS local/TXT alias dispatch and cancellation preserve TXT body/rules path; EPUB/MOBI-family retain archive path
+
+
+COMMAND node tools/test-reader-directory-navigation-ui.mjs
+EXIT 0
+PH42 tree bookmark, target validation, rank position and debounced query fencing: PASS
+PASS directory disclosure actual SDK Builder: fold/unfold arrow, accessibility and callback capture refresh only the changed row
+PASS directory search actual SDK State dispatch: submit/miss/clear update mounted tree parameters without sorting; plain-query negative control reproduces stale child
+PASS actual SDK directory empty-result presentation without replacing list lifecycle
+PASS directory diagnostics separate disposed query cancellation from active failure
+PASS tree download actual SDK Builder and Core target fencing: day/night states, group exclusion, queued/stale/source guards and download-state refresh
+PASS actual SDK Quick/Full/Surface download prop and callback propagation
+
+(node:79612) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+COMMAND node tools/test-reader-directory-viewport.mjs
+EXIT 0
+PH42 tree viewport continuity, ancestor accessibility and bounded page cache: PASS
+
+(node:79834) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

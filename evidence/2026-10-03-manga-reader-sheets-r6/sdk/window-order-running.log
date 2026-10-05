@@ -1,0 +1,44 @@
+(node:18485) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"name":"manga actual SDK State Watch + production mount/toggle false→true→false hides/shows all three bars","status":"PASS"}
+{"name":"manga actual forced error/retry/recovery and explicit interactive chapter end show then return to immersive","status":"PASS"}
+{"name":"manga plain controller auth facts → production publication/viewport refresh → real State Watch → bars","status":"PASS"}
+{"name":"manga internal panels and actual SDK outer-overlay Props show all bars; clearing returns immersive","status":"PASS"}
+{"name":"manga inactive Prop restores captured landscape/awake App owner; hidden state writes cannot reclaim it","status":"PASS"}
+{"name":"manga old identity State/dispose cannot overwrite a newer chapter reader owner","status":"PASS"}
+{"name":"manga late native status-hide completion after actual SDK inactive/exit converges to captured App","status":"PASS"}
+{"name":"manga actual background State synchronizes solid paired paper/white/ink chrome and tone","status":"PASS"}
+{"name":"ReaderShell actual SDK Prop→retained Manga child Watch→Coordinator and chapter identity handoff","status":"PASS"}
+{"name":"negative: frozen R5 production source fails immersive native three-bar assertion","status":"PASS"}
+{"name":"negative: frozen R5 Shell fails actual active-child propagation","status":"PASS"}
+{"name":"negative: missing control State Watch is rejected by actual production toggle","status":"FAIL","error":"AssertionError [ERR_ASSERTION]: The input did not match the regular expression /Expected values to be strictly deep-equal/. Input:\n\n'TypeError [ERR_INVALID_ARG_TYPE]: The \"message\" argument must be one of type string or function. Received undefined'\n\n    at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:248:69\n    at async check (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:59:36)\n    at async file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:244:1"}
+{"name":"negative: omitting manga navigation/indicator hiding is rejected by native three-bar assertion","status":"PASS"}
+{"name":"negative: stale identity dispose guard removal is rejected after new chapter owner mount","status":"PASS"}
+{"name":"eight real reading palettes survive hide/show and same/cross-scheme changes through actual Coordinator","status":"PASS"}
+{"name":"new theme is drained after the previous native color write rejects","status":"PASS"}
+{"name":"old window success cannot strand new window chrome","status":"PASS"}
+{"name":"old window reject cannot strand new window chrome","status":"PASS"}
+{"name":"failed latest request stays pending without an automatic retry loop and explicit reapply recovers","status":"PASS"}
+{"name":"showing controls retries a failed color even when visible-bar policy and geometry are unchanged","status":"PASS"}
+{"name":"actual cutout setting true to false preserves measured band across delayed show area and all eight themes","status":"PASS"}
+{"name":"pending status reveal never borrows another window geometry or replacement window measurement","status":"PASS"}
+{"name":"early positive event cannot end pending reveal before ACK; repeated show and app ownership preserve it","status":"PASS"}
+{"name":"show superseded by hide converges and same-size rotation does not reuse the pending band","status":"PASS"}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: production window chrome scenarios
+
+1 !== 0
+
+    at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-reader-window-chrome-order.mjs:371:8 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

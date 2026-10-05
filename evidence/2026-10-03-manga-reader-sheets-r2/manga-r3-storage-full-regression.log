@@ -1,0 +1,608 @@
+warning: function `migrate_retention_to_head` is never used
+   --> crates/reader-storage/src/sqlite_backend/manga_retention.rs:230:15
+    |
+230 | pub(super) fn migrate_retention_to_head(
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `reader-storage` (lib) generated 1 warning
+warning: `reader-storage` (lib test) generated 1 warning (1 duplicate)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.15s
+     Running unittests src/lib.rs (target/debug/deps/reader_storage-218c03832515b43d)
+
+running 268 tests
+test sqlite_backend::acquisition::tests::response_duplicate_identity_reads_its_prior_transaction_write_without_reentry ... ok
+test sqlite_backend::acquisition::tests::catalog_planner_reenters_storage_and_changed_snapshot_is_not_overwritten ... ok
+test sqlite_backend::acquisition::tests::whole_source_response_final_cancellation_rolls_back_every_item ... ok
+test sqlite_backend::acquisition::tests::catalog_progress_projection_is_atomic_lazy_and_uses_latest_progress ... ok
+test sqlite_backend::acquisition::tests::prepared_index_cancellation_rolls_back_toc_and_rows ... ok
+test sqlite_backend::acquisition::tests::legacy_fetch_capture_is_revoked_by_restoring_pre_intent_snapshot ... ok
+test sqlite_backend::acquisition::tests::whole_source_response_rolls_back_both_tables_on_late_write_failure ... ok
+test sqlite_backend::catalog_index::tests::background_catalog_distinguishes_missing_and_invalid_without_network_or_mutation ... ok
+test sqlite_backend::catalog_index::tests::hierarchy_migration_preserves_legacy_index_rows ... ok
+test sqlite_backend::catalog_index::tests::catalog_index_sparse_ids_navigation_and_no_payload_read ... ok
+test sqlite_backend::acquisition::tests::independent_clear_after_runtime_check_prevents_detail_and_catalog_publication ... ok
+test sqlite_backend::catalog_index::tests::catalog_index_backfill_restore_delete_and_local_empty_url ... ok
+test sqlite_backend::catalog_index::source_epoch_tests::legacy_source_replace_marks_known_facts_unreadable_with_recursive_triggers_off ... ok
+test sqlite_backend::acquisition::tests::response_without_identity_keeps_valid_siblings_in_the_same_transaction ... ok
+test sqlite_backend::acquisition::tests::catalog_publication_commits_context_toc_facts_and_remapped_position_together ... ok
+test sqlite_backend::catalog_index::tests::catalog_index_write_failure_rolls_back_authoritative_toc ... ok
+test sqlite_backend::catalog_index::tests::background_large_legacy_catalog_parses_unlocked_and_rejects_stale_publish ... ok
+test sqlite_backend::catalog_index::tests::progress_commit_does_not_rebuild_missing_catalog ... ok
+test sqlite_backend::catalog_index::tests::indexed_catalog_preserves_optional_hierarchy_and_legacy_absence ... ok
+test sqlite_backend::chapter_metrics::tests::automatic_retention_preserves_local_positions_and_downloads ... ok
+test sqlite_backend::chapter_metrics::tests::automatic_retention_preserves_unread_shelf_candidates_and_legacy_bodies ... ok
+test sqlite_backend::content_search::tests::content_search_scope_queries_use_indexes ... ok
+test sqlite_backend::content_search::tests::content_search_generation_covers_same_stamp_writes_clear_and_rollback ... ok
+test sqlite_backend::content_search::tests::content_search_v21_migration_is_atomic_and_preserves_old_body_positions ... ok
+test sqlite_backend::migration_backup::tests::bounded_copy_failure_keeps_four_recovery_slots_without_mutating_source ... ok
+test sqlite_backend::migration_backup::tests::consistent_backup_includes_uncheckpointed_wal_and_never_overwrites_recovery ... ok
+test sqlite_backend::chapter_metrics::tests::migration_backfills_and_rolls_back_without_changing_bodies ... ok
+test sqlite_backend::content_search::tests::content_search_snapshot_ignores_unrelated_metadata_and_unused_progress_clock ... ok
+test sqlite_backend::migration_backup::tests::page_copy_busy_and_cancellation_are_bounded ... ok
+test sqlite_backend::content_search::tests::content_search_snapshot_ignores_other_book_body_and_keeps_all_processing_inputs ... ok
+test sqlite_backend::migration_backup::tests::explicit_backup_rejects_cancelled_or_stale_baseline_without_reserving_slot ... ok
+test sqlite_backend::migration_backup::tests::explicit_backup_never_takes_primary_mutex_or_changes_source_schema ... ok
+test sqlite_backend::prepared_entry::tests::prepared_read_cannot_rebuild_missing_catalog_or_document ... ok
+test sqlite_backend::chapter_metrics::tests::accounting_matches_oracle_after_write_delete_snapshot_and_rollback ... ok
+test sqlite_backend::acquisition::tests::catalog_failure_at_every_publication_boundary_preserves_complete_snapshot ... ok
+test sqlite_backend::prepared_entry::tests::prepared_read_busy_and_memory_unsupported_are_immediate ... ok
+test sqlite_backend::prepared_entry::tests::prepared_read_large_switch_journal_never_parses_or_assumes_safe_identity ... ok
+test sqlite_backend::prepared_entry::tests::prepared_read_metadata_limits_and_corruption_fail_closed ... ok
+test sqlite_backend::content_search::tests::content_search_pages_are_bounded_ordered_scoped_and_do_not_materialize_tail ... ok
+test sqlite_backend::prepared_entry::tests::prepared_read_pending_switch_and_processing_invalidation_are_atomic ... ok
+test sqlite_backend::prepared_entry::tests::prepared_read_uses_persistent_parts_and_never_writer_mutex_or_raw_body ... ok
+test sqlite_backend::reading_documents::local_image_presentation_tests::local_image_marker_only_keeps_ready_document_continuously_available ... ok
+test sqlite_backend::content_search::tests::content_search_snapshot_binds_journal_evidence_without_body_generation_changes ... ok
+test sqlite_backend::prepared_entry::tests::prepared_read_wal_snapshot_does_not_see_partial_writer_or_old_restore ... ok
+test sqlite_backend::reading_documents::local_image_presentation_tests::local_image_publication_is_atomic_and_preserves_canonical_progress_and_other_books ... ok
+test sqlite_backend::chapter_metrics::tests::stats_metadata_and_window_do_not_authorize_body_reads ... ok
+test sqlite_backend::reading_documents::local_image_presentation_tests::local_image_publication_new_ready_race_keeps_old_document_and_namespace ... ok
+test sqlite_backend::reading_documents::local_image_presentation_tests::local_image_publication_rolls_back_namespace_documents_and_clock_on_insert_failure ... ok
+test sqlite_backend::reading_documents::local_image_presentation_tests::local_image_publication_rejects_stale_generation_and_removed_book_without_writes ... ok
+test sqlite_backend::reading_documents::local_image_presentation_tests::local_image_publication_counts_global_namespace_and_net_replacement_bytes ... ok
+test sqlite_backend::reading_documents::local_image_presentation_tests::local_image_replacement_document_budget_uses_net_bytes_and_rolls_back_overflow ... ok
+test sqlite_backend::reading_documents::local_image_presentation_tests::local_image_replacement_part_failure_restores_old_namespace_document_parts_and_clock ... ok
+test sqlite_backend::reading_documents::local_image_presentation_tests::local_image_replacements_validate_scope_original_and_layout_version_before_any_write ... ok
+test sqlite_backend::reading_documents::tests::derived_budget_does_not_count_or_evict_retained_original_text ... ok
+test sqlite_backend::reading_documents::tests::chapter_url_changes_keep_other_prepared_chapters_and_noop_keeps_generation ... ok
+test sqlite_backend::prepared_entry::tests::prepared_read_ignores_unbounded_catalog_url_and_rejects_large_title ... ok
+test sqlite_backend::reading_documents::tests::document_chunks_roundtrip_and_deep_window_are_real_bounded_rows ... ok
+test sqlite_backend::reading_documents::tests::background_budget_reclaims_only_unneeded_derivatives_and_rolls_back_if_still_full ... ok
+test sqlite_backend::reading_documents::tests::document_read_never_loads_authoritative_body_or_source_and_delete_revokes ... ok
+test sqlite_backend::reading_documents::tests::image_percentage_width_survives_storage_parts_and_windows_with_legacy_json ... ok
+test sqlite_backend::reading_documents::tests::document_generation_atomic_invalidation_budget_and_restore ... ok
+test sqlite_backend::reading_documents::tests::preparation_metadata_never_reads_body_parts_or_indexed_catalog_payload ... ok
+test sqlite_backend::reading_documents::local_image_presentation_tests::local_image_wal_reader_observes_complete_old_or_new_document_without_missing_window ... ok
+test sqlite_backend::reading_documents::tests::document_chunks_survive_database_reopen ... ok
+test sqlite_backend::reading_documents::tests::strict_admission_retains_valid_document_and_every_part ... ok
+test sqlite_backend::reading_documents::local_image_presentation_tests::local_image_presentations_clear_and_batch_delete_leave_no_orphans_or_stale_publisher ... ok
+test sqlite_backend::reading_documents::tests::prepared_progress_save_never_reads_or_hashes_body_and_stale_scope_is_rejected ... ok
+test sqlite_backend::reading_preparation::tests::imported_active_intent_is_paused_but_normal_reopen_keeps_authorization ... ok
+test sqlite_backend::reading_documents::tests::prepared_owned_chunks_keep_transactional_generation_protection ... ok
+test sqlite_backend::reading_preparation::tests::stale_enqueue_claim_capture_and_raw_commit_cannot_repopulate_clear ... ok
+test sqlite_backend::remote_content_positions::tests::directory_fact_change_fences_body_and_progress_commit_even_when_toc_is_unchanged ... ok
+test sqlite_backend::reading_preparation::tests::fifty_intents_survive_reopen_and_only_authorized_interrupted_queue_recovers ... ok
+test sqlite_backend::remote_content_positions::tests::remote_mark_fact_create_update_and_migration_roll_back_with_user_rows_on_fact_write_failure ... ok
+test sqlite_backend::remote_content_positions::tests::remote_mark_proof_is_in_complete_cas_and_stale_body_cannot_issue_new_fact ... ok
+test sqlite_backend::reading_documents::tests::strict_admission_accepts_source_correction_audit_fields_and_retains_exact_document ... ok
+test sqlite_backend::reading_documents::tests::strict_admission_accepts_valid_image_presentation_version_without_changing_position_scope ... ok
+test sqlite_backend::remote_content_positions::tests::remote_cache_clear_fact_and_body_deletion_are_one_transaction_and_compare_complete_state ... ok
+test sqlite_backend::remote_content_positions::tests::chapter_url_binding_commits_with_body_or_rolls_back_every_write ... ok
+test sqlite_backend::remote_content_positions::tests::remote_position_commit_preserves_notes_timestamps_and_history_membership ... ok
+test sqlite_backend::remote_content_positions::tests::remote_position_owner_queries_use_indexes_and_scope_reads_skip_all_position_rows ... ok
+test sqlite_backend::remote_content_positions::tests::remote_position_plan_cannot_change_non_coordinate_user_data ... ok
+test sqlite_backend::remote_content_positions::tests::txt_rule_structure_change_fences_progress_even_when_body_epoch_is_unchanged ... ok
+test sqlite_backend::rule_bundle::tests::rule_bundle_matches_both_full_snapshots_and_ignores_corrupt_unrelated_body ... ok
+test sqlite_backend::reading_documents::local_image_presentation_tests::local_image_publication_enforces_book_bytes_count_and_key_ownership ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_author_label_fixture_matches_derived_aliases ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_alias_closure_expands_splits_and_ignores_metadata_updates ... ok
+test sqlite_backend::remote_content_positions::tests::remote_position_download_completion_commits_with_body_and_rolls_back_on_queue_failure ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_alias_history_is_bounded_and_raw_facts_survive ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_author_history_requires_its_own_valid_proof_or_current_raw_match ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_author_labels_join_related_and_batch_without_rewriting_facts ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_author_policy_parses_sources_once_per_source_change ... ok
+test sqlite_backend::reading_documents::tests::strict_admission_rejects_corrupt_header_scope_and_missing_initial_parts_atomically ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_author_proof_has_one_identity_and_source_change_revokes_it ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_empty_author_identity_fallback_and_disabled_bridge_are_exact ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_normalization_matches_recorded_javascript_unicode_fixtures ... ok
+test sqlite_backend::remote_content_positions::tests::remote_position_cas_rejects_body_progress_new_bookmark_source_and_processing_changes ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_author_normalization_upgrade_rebuilds_only_derived_rows ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_legacy_author_proof_requires_current_rule_and_confirmed_field ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_normalizer_version_rebuild_preserves_facts_and_invalidates_snapshot ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_media_cannot_bridge_novel_aliases_or_merge_same_names ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_snapshot_restore_and_direct_sql_delete_keep_derived_rows_consistent ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_author_v21_migration_preserves_cache_and_reopens_without_rebuilding ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_source_delete_restore_reports_missing_and_invalidates_old_cursors ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_v19_migration_backfills_without_rewriting_facts_and_is_repeatable ... ok
+test sqlite_backend::reading_documents::tests::strict_admission_rejects_wrong_correction_types_and_unknown_fields_atomically ... ok
+test sqlite_backend::shelf_projection::projection_io_tests::row_and_membership_projection_never_read_intro_or_body ... ok
+test sqlite_backend::shelf_projection::tests::content_classification_revokes_pages_transactionally_and_migrates_v33 ... ok
+test sqlite_backend::shelf_projection::tests::shelf_clock_is_durable_transactional_and_ignores_body_work ... ok
+test sqlite_backend::shelf_projection::tests::shelf_filters_precede_paging_and_share_sparse_progress_projection ... ok
+test sqlite_backend::shelf_projection::tests::content_filter_precedes_count_page_and_anchor_and_combines_with_source ... ok
+test sqlite_backend::shelf_projection::tests::deep_anchor_uses_sql_rank_with_bounded_rows_and_exact_filter_identity ... ok
+test sqlite_backend::source_supply::tests::source_supply_delete_before_first_publication_wins ... ok
+test sqlite_backend::source_supply::tests::source_supply_atomic_receipt_edit_delete_and_restore ... ok
+test sqlite_backend::tests::current_schema_open_path_does_not_execute_index_ddl ... ok
+test sqlite_backend::remote_content_positions::tests::remote_position_write_faults_and_cancellation_roll_back_body_and_all_positions ... ok
+test sqlite_backend::tests::chinese_conversion_config_round_trips_as_singleton ... ok
+test sqlite_backend::tests::chapter_index_metadata_does_not_read_body_content ... ok
+test sqlite_backend::source_supply::tests::source_supply_unchanged_receipt_does_not_deserialize_rules ... ok
+test sqlite_backend::tests::exact_before_image_restore_removes_tentative_replace_journal ... ok
+test sqlite_backend::tests::narrow_config_snapshot_reads_only_allow_listed_tables ... ok
+test sqlite_backend::tests::open_in_memory_migrates_to_current_schema ... ok
+test sqlite_backend::tests::snapshot_export_preflight_rejects_oversized_sql_text_before_materialization ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_indexed_scope_does_not_scan_unrelated_library_growth ... ok
+test sqlite_backend::tests::shelf_source_name_projection_does_not_depend_on_full_source_list ... ok
+test sqlite_backend::tests::source_batch_delete_removes_only_source_and_derived_search_rows ... ok
+test sqlite_backend::tests::source_batch_delete_rolls_back_sources_and_search_books_together ... ok
+test sqlite_backend::tests::v12_migration_adds_book_highlights_table_and_book_url_index ... ok
+test sqlite_backend::tests::v14_migration_adds_author_without_losing_legacy_read_records ... ok
+test sqlite_backend::tests::v13_migration_adds_highlight_rules_and_unique_uuid_index ... ok
+test sqlite_backend::tests::v15_migration_adds_scope_source_without_changing_legacy_rules ... ok
+test sqlite_backend::tests::v1_to_v2_migration_adds_entity_tables ... ok
+test sqlite_backend::tests::v2_creates_bookmarks_and_replace_rules_indexes ... ok
+test sqlite_backend::tests::v2_creates_four_entity_tables ... ok
+test sqlite_backend::tests::v2_table_columns_match_domain_model ... ok
+test sqlite_backend::tests::v4_creates_four_entity_tables ... ok
+test tests::book_upsert_overwrites ... ok
+test tests::bookshelf_metadata_patch_is_atomic_and_preserves_shelf_only_state ... ok
+test tests::bookshelf_query_json_round_trips_and_denies_unknown_fields ... ok
+test tests::cache_put_then_get_round_trips ... ok
+test tests::chapter_cache_clear_removes_only_requested_book ... ok
+test tests::chapter_cache_coverage_and_prefetch_json_round_trip ... ok
+test tests::chapter_cache_coverage_and_prefetch_reject_invalid_inputs ... ok
+test tests::chapter_cache_coverage_marks_complete_books ... ok
+test tests::chapter_cache_coverage_reports_cached_missing_bytes_and_age ... ok
+test tests::chapter_cache_cross_source_and_book_do_not_collide ... ok
+test tests::chapter_cache_empty_returns_none_and_empty_list ... ok
+test tests::chapter_cache_entry_denies_unknown_fields ... ok
+test tests::chapter_cache_entry_json_round_trips ... ok
+test tests::chapter_cache_list_sorted_by_chapter_index ... ok
+test tests::chapter_cache_prefetch_plan_clamps_window_edges ... ok
+test tests::chapter_cache_prefetch_plan_returns_missing_indexes_in_anchor_window ... ok
+test sqlite_backend::tests::v3_creates_book_group_and_read_record_tables ... ok
+test tests::chapter_cache_prune_by_max_entries_evicts_oldest_first ... ok
+test tests::chapter_cache_prune_by_min_cached_at_removes_expired_entries ... ok
+test tests::chapter_cache_prune_by_total_bytes_evicts_until_under_limit ... ok
+test tests::chapter_cache_prune_combined_policy_does_not_double_count_removed ... ok
+test tests::chapter_cache_prune_default_policy_is_noop ... ok
+test tests::chapter_cache_put_then_get_round_trips ... ok
+test tests::chapter_cache_rejects_empty_keys ... ok
+test tests::chapter_cache_remove_is_idempotent ... ok
+test tests::chapter_cache_stats_reports_count_bytes_and_age_range ... ok
+test tests::chapter_cache_retention_policy_json_round_trips_and_denies_unknown_fields ... ok
+test tests::chapter_cache_upsert_overwrites_existing_body ... ok
+test tests::chapter_update_by_count_matches_legacy_suffix_slice ... ok
+test tests::chapter_update_cache_plan_dedupes_new_chapter_ids_like_legacy_queue ... ok
+test tests::chapter_update_cache_plan_matches_legacy_queue_and_availability ... ok
+test tests::chapter_update_detects_new_chapters_by_legacy_title_key ... ok
+test tests::chapter_update_json_shape_matches_legacy_candidate_and_rejects_drift ... ok
+test tests::commit_source_switch_normalizes_ms_updated_at ... ok
+test tests::chapter_update_cache_plan_reports_no_update_and_rejects_drift ... ok
+test tests::config_snapshot_is_an_explicit_allow_list_and_merge_preserves_local_state ... ok
+test tests::download_queue_claims_highest_priority_then_oldest_update ... ok
+test tests::download_queue_complete_cancel_and_clear_finished ... ok
+test tests::download_queue_cross_source_same_book_chapter_no_collision ... ok
+test tests::download_queue_enqueue_get_and_list_round_trip ... ok
+test tests::download_queue_failed_task_retries_until_max_attempts ... ok
+test tests::download_queue_mark_missing_returns_not_found ... ok
+test tests::download_queue_materialization_reopens_only_a_completed_body ... ok
+test tests::download_queue_rejects_invalid_keys_attempts_and_error ... ok
+test tests::download_queue_requeue_preserves_created_at_and_resets_retry_state ... ok
+test sqlite_backend::tests::v4_creates_search_books_origin_index ... ok
+test tests::download_task_json_round_trips_and_denies_unknown_fields ... ok
+test tests::migrate_storage_snapshot_rejects_future_schema_version ... ok
+test tests::migrate_storage_snapshot_rejects_non_object_root_and_malformed_shape ... ok
+test tests::migrate_storage_snapshot_preserves_v1_legacy_progress_when_v0_alias_absent ... ok
+test tests::migrate_storage_snapshot_passes_through_current_version_unchanged ... ok
+test tests::migrate_v10_snapshot_initializes_empty_highlight_rules ... ok
+test tests::migrate_v5_snapshot_initializes_replace_rule_generation ... ok
+test tests::migrate_v7_snapshot_keeps_only_locally_evidenced_legacy_books ... ok
+test tests::migrate_storage_snapshot_upgrades_legacy_v0_progress_to_v1 ... ok
+test tests::migrate_v9_snapshot_initializes_empty_book_highlights ... ok
+test tests::normalize_progress_updated_at_divides_ms_above_bound ... ok
+test tests::migrate_v6_snapshot_invalidates_ambiguous_remote_bodies_only ... ok
+test tests::offline_availability_counts_legacy_cache_statuses_by_source ... ok
+test tests::offline_availability_next_download_range_matches_legacy_one_indexed_plan ... ok
+test tests::progress_put_then_get_round_trips ... ok
+test tests::offline_availability_json_shape_and_validation_reject_drift ... ok
+test tests::save_reading_progress_heals_ms_polluted_current_row ... ok
+test tests::save_reading_progress_still_retains_older_seconds_below_polluted_row ... ok
+test tests::scheduled_update_json_shape_and_validation_reject_drift ... ok
+test tests::scheduled_update_detects_updates_limits_queue_and_never_uses_network ... ok
+test tests::scheduled_update_mock_auto_download_recomputes_offline_availability ... ok
+test tests::scheduled_update_policy_defaults_match_legacy_no_network_boundary ... ok
+test tests::scheduled_update_state_machine_skips_archived_and_cloudflare_items ... ok
+test tests::scoped_progress_entry_denies_unknown_fields ... ok
+test tests::scoped_progress_entry_json_round_trips ... ok
+test tests::scoped_progress_equal_timestamp_allows_latest_write ... ok
+test tests::scoped_progress_list_sorted_newest_first ... ok
+test tests::scoped_progress_put_then_get_round_trips ... ok
+test tests::scoped_progress_rejects_invalid_keys_and_fields ... ok
+test tests::scoped_progress_same_book_id_different_source_no_collision ... ok
+test tests::scoped_progress_stale_update_does_not_replace_current_but_keeps_history ... ok
+test tests::shelf_add_then_get_round_trips ... ok
+test tests::scoped_progress_updates_and_clears_shelf_last_read ... ok
+test tests::shelf_cross_source_same_book_id_no_collision ... ok
+test tests::shelf_empty_returns_empty_list_and_zero_count ... ok
+test tests::shelf_entry_denies_unknown_fields ... ok
+test tests::shelf_entry_json_round_trips ... ok
+test tests::shelf_get_and_remove_reject_empty_keys ... ok
+test tests::shelf_get_missing_returns_none ... ok
+test tests::shelf_group_assignment_preserves_sort_and_metadata ... ok
+test tests::shelf_list_by_group_filters_correctly ... ok
+test tests::shelf_list_sorted_by_sort_index_then_added_at_desc ... ok
+test tests::shelf_move_updates_group_and_manual_order ... ok
+test tests::shelf_query_and_move_reject_invalid_fields_or_missing_entry ... ok
+test tests::shelf_query_filters_by_source_group_keyword_and_progress ... ok
+test tests::shelf_query_sorts_and_paginates_deterministically ... ok
+test tests::shelf_rejects_empty_book_id ... ok
+test tests::shelf_rejects_empty_source_id ... ok
+test tests::shelf_remove_batch_removes_exact_set_and_reports_receipt_in_request_order ... ok
+test tests::shelf_remove_batch_validates_all_targets_before_any_mutation ... ok
+test tests::shelf_remove_is_idempotent ... ok
+test tests::shelf_update_last_read_missing_returns_not_found ... ok
+test tests::shelf_update_last_read_sets_timestamp ... ok
+test tests::shelf_upsert_preserves_added_at_and_updates_fields ... ok
+test tests::source_book_identity_prevents_cross_source_collision ... ok
+test tests::source_put_then_get_round_trips ... ok
+test tests::source_switch_match_empty_toc_and_json_shape_match_legacy_boundary ... ok
+test tests::source_switch_match_unknown_title_uses_index_even_when_target_titles_are_blank ... ok
+test tests::source_switch_match_prefers_title_before_stale_order ... ok
+test tests::source_switch_match_uses_fuzzy_normalization_then_fallback ... ok
+test tests::source_switch_progress_migration_fails_without_matched_chapter ... ok
+test tests::source_switch_progress_migration_resets_matched_chapter_position ... ok
+test tests::storage_snapshot_empty_replace_clears_existing_state ... ok
+test tests::source_switch_progress_migration_validates_storage_progress_boundary ... ok
+test tests::storage_snapshot_rejects_schema_duplicates_and_unknown_fields ... ok
+test tests::storage_snapshot_replace_is_atomic_on_validation_failure ... ok
+test tests::storage_snapshot_export_is_stable_and_json_round_trips ... ok
+test tests::unified_chapter_refresh_invalidates_changed_rows_and_remaps_progress ... ok
+test tests::storage_snapshot_replace_round_trips_all_state ... ok
+test tests::unified_chapter_refresh_reports_duplicate_merge_and_added_without_collision ... ok
+test tests::unified_chapter_refresh_reports_unchanged_stable_identity ... ok
+test tests::unified_download_task_coalesces_duplicate_task_and_rejects_drift ... ok
+test tests::unified_download_task_reports_partial_failed_and_request_limit_boundaries ... ok
+test tests::unified_download_task_skips_cached_chapters_and_preserves_requested_order ... ok
+test tests::unified_offline_cache_metadata_json_shape_and_validation_reject_drift ... ok
+test tests::unified_offline_cache_validation_matches_recovery33_state_order ... ok
+test tests::unified_progress_json_shape_matches_recovery33_and_rejects_drift ... ok
+test tests::unified_progress_restore_state_falls_back_through_ordinal_nearest_and_reset ... ok
+test tests::unified_progress_restores_by_alias_locator_without_cross_source_merge ... ok
+test sqlite_backend::tests::v5_migration_recovers_pre_release_v0_schema_that_already_has_columns ... ok
+test sqlite_backend::tests::v9_migration_scopes_remote_books_and_keeps_only_local_legacy_evidence ... ok
+test sqlite_backend::tests::v6_to_v7_migration_initializes_existing_replace_rule_generation ... ok
+test sqlite_backend::tests::v8_migration_invalidates_ambiguous_remote_cache_but_keeps_local ... ok
+test tests::narrow_config_snapshot_matches_allow_list_without_mutating_reader_state ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_pages_cover_beyond_128_and_invalidate_on_source_changes ... ok
+test sqlite_backend::scoped_search::tests::scoped_search_page_source_snapshot_is_bounded_to_the_page_and_requested_identity ... ok
+test sqlite_backend::chapter_metrics::tests::all_retention_limits_and_ties_match_existing_memory_semantics ... ok
+
+test result: ok. 268 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.61s
+
+     Running tests/bookshelf_admission.rs (target/debug/deps/bookshelf_admission-84f9f5bb30e22eda)
+
+running 6 tests
+test online_admission_memory_serializes_simultaneous_adds ... ok
+test online_admission_memory_preserves_legacy_and_user_data ... ok
+test online_admission_memory_binds_author_proof_to_current_source_and_exact_cache ... ok
+test sqlite::online_admission_disk_serializes_independent_connections ... ok
+test sqlite::online_admission_disk_preserves_user_data_and_survives_reopen ... ok
+test online_admission_sqlite_binds_author_proof_to_current_source_and_exact_cache ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+
+     Running tests/cache_maintenance.rs (target/debug/deps/cache_maintenance-16daffbabb5ce710)
+
+running 13 tests
+test cache_scope_removes_completed_rows_whose_bodies_were_cleared_and_allows_requeue ... ok
+test in_memory_cache_scope_preserves_queue_and_all_scope_removes_it ... ok
+test in_memory_cache_and_all_preserve_local_materialization_and_import_markers ... ok
+test in_memory_book_clear_is_exact_and_preserves_user_data ... ok
+test in_memory_batch_admission_and_atomic_completion_are_all_or_nothing ... ok
+test in_memory_snapshot_restore_recovers_interrupted_downloads_for_retry ... ok
+test in_memory_stale_prefetch_compensation_cannot_undo_clear_or_new_acquisition ... ok
+test sqlite_cache_status_metadata_and_global_stats_count_bytes_without_body_projection ... ok
+test sqlite_stale_prefetch_compensation_cannot_undo_clear_or_new_acquisition ... ok
+test sqlite_book_clear_uses_one_exact_source_book_scope ... ok
+test sqlite_batch_admission_and_atomic_completion_are_all_or_nothing ... ok
+test sqlite_prefetch_compensation_checks_independent_connection_clear_and_legacy_restore ... ok
+test sqlite_cache_clear_and_restart_match_in_memory_semantics ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.43s
+
+     Running tests/directory_facts.rs (target/debug/deps/directory_facts-af293b85bf2c25bf)
+
+running 18 tests
+test exact_zero_offset_requires_actual_body_proof_and_local_requires_original_identity ... ok
+test body_boundaries_invalidate_even_when_toc_bytes_and_body_length_are_unchanged ... ok
+test in_memory_known_facts_do_not_allow_download_after_source_edit_or_delete ... ok
+test exact_targets_are_scalar_bounded_and_shared_body_evidence_is_loaded_once ... ok
+test malformed_trees_and_group_targets_are_rejected ... ok
+test payload_budget_is_checked_before_json_decode ... ok
+test cancelled_admission_stops_before_processing_the_next_node_batch ... ok
+test source_scope_and_sparse_indices_are_preserved_without_touching_legacy_toc ... ok
+test unknown_entry_evidence_is_not_reported_as_verified ... ok
+test production_publication_rolls_back_facts_toc_and_index_on_checkpoint_failure ... ok
+test persistent_download_claims_cancel_linked_groups_without_retry_or_body_deletion ... ok
+test actual_catalog_index_skips_linked_groups_and_preserves_resume_identity ... ok
+test source_edit_and_delete_preserve_genuine_legacy_catalog_index ... ok
+test source_changes_during_background_catalog_preparation_are_fenced ... ok
+test legacy_sql_fact_key_rename_invalidates_both_scopes ... ok
+test legacy_sql_clear_invalidates_index_and_foreground_reads_never_rebuild_it ... ok
+test both_backends_clear_remote_companions_and_keep_local_companions_with_toc ... ok
+test current_source_edit_and_delete_cannot_republish_stale_business_facts ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.62s
+
+     Running tests/directory_rules_lifecycle.rs (target/debug/deps/directory_rules_lifecycle-2cba8a5e6c091afe)
+
+running 5 tests
+test cancelled_display_publication_rolls_back_every_key ... ok
+test bounded_body_query_limits_bytes_in_the_same_statement ... ok
+test bounded_evidence_rejects_replacement_that_outgrew_the_observed_body ... ok
+test source_identifiers_with_sql_like_metacharacters_do_not_invalidate_other_scopes ... ok
+test per_book_rules_survive_cache_clear_but_are_removed_with_local_book ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+
+     Running tests/import_transaction_storage.rs (target/debug/deps/import_transaction_storage-44b8b5d65590d718)
+
+running 18 tests
+test local_transaction_restores_only_target_rows_and_replay_is_rejected ... ok
+test navigation_backfill_during_pending_import_does_not_block_memory_rollback ... ok
+test legacy_local_rollback_token_without_navigation_fields_remains_decodable ... ok
+test navigation_is_atomic_with_local_import_and_restored_by_rollback ... ok
+test same_transaction_id_is_rejected_for_each_target_without_nested_marker_journal ... ok
+test exported_snapshot_can_rehydrate_then_consume_self_contained_journals ... ok
+test in_memory_position_migration_is_atomic_and_checks_concurrent_edits ... ok
+test in_memory_local_delete_purges_core_materialization ... ok
+test sqlite_executes_reader_ui_import_transactions_without_snapshot_mirroring ... ok
+test navigation_backfill_cas_rejects_source_toc_and_body_drift ... ok
+test navigation_backfill_during_pending_import_does_not_block_sqlite_rollback ... ok
+test sqlite_snapshot_round_trip_preserves_every_row_needed_by_external_journals ... ok
+test sqlite_local_delete_purges_core_materialization ... ok
+test sqlite_position_migration_is_atomic_and_checks_concurrent_edits ... ok
+test sqlite_navigation_reimport_and_snapshot_recovery_are_atomic ... ok
+test navigation_backfill_chunked_cas_rejects_external_write_and_cancellation ... ok
+test memory_oversized_optional_navigation_falls_back_to_flat_and_rolls_back ... ok
+test sqlite_oversized_optional_navigation_falls_back_to_flat_and_rolls_back ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 31.60s
+
+     Running tests/independent_entities_crud.rs (target/debug/deps/independent_entities_crud-ef847552be75e767)
+
+running 20 tests
+test inmemory_replace_rule_crud_and_ordering ... ok
+test inmemory_dict_rule_crud_and_name_validation ... ok
+test inmemory_highlight_rule_crud_scope_and_uuid_uniqueness ... ok
+test inmemory_book_highlight_crud_ordering_and_search ... ok
+test inmemory_bookmark_crud_by_book_and_search ... ok
+test inmemory_txt_toc_rule_crud_round_trip_and_enable_filter ... ok
+test inmemory_highlight_rule_import_move_and_replace_are_atomic ... ok
+test inmemory_read_record_merges_authors_accumulates_and_bulk_deletes ... ok
+test read_record_author_codec_accepts_legacy_plain_and_legado_set_values ... ok
+test sqlite_dict_rule_crud_and_name_validation ... ok
+test both_backends_reject_invalid_book_highlight_ranges ... ok
+test sqlite_bookmark_crud_by_book_and_search ... ok
+test sqlite_book_highlight_crud_ordering_and_search ... ok
+test sqlite_highlight_rule_crud_scope_and_uuid_uniqueness ... ok
+test sqlite_read_record_merges_authors_accumulates_and_bulk_deletes ... ok
+test sqlite_highlight_rule_import_move_and_replace_are_atomic ... ok
+test sqlite_replace_rule_crud_and_ordering ... ok
+test inmemory_and_sqlite_crud_produce_identical_snapshot_for_entities ... ok
+test sqlite_txt_toc_rule_crud_round_trip_and_enable_filter ... ok
+test both_backends_reject_invalid_highlight_rules ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.54s
+
+     Running tests/independent_entities_crud_v4.rs (target/debug/deps/independent_entities_crud_v4-780234d65c4be909)
+
+running 24 tests
+test inmemory_content_edit_crud_round_trip_and_idempotent_delete ... ok
+test inmemory_rule_sub_crud_round_trip_and_idempotent_delete ... ok
+test inmemory_http_tts_crud_round_trip_and_idempotent_delete ... ok
+test inmemory_rss_read_record_crud_round_trip_and_idempotent_delete ... ok
+test inmemory_tts_config_singleton_crud_round_trip ... ok
+test inmemory_search_keyword_crud_round_trip_and_word_sort ... ok
+test inmemory_search_book_crud_round_trip_and_origin_filter ... ok
+test inmemory_tts_config_update_not_found_error ... ok
+test search_book_empty_book_url_rejected_with_invalid_key ... ok
+test sqlite_http_tts_crud_round_trip_and_idempotent_delete ... ok
+test inmemory_and_sqlite_tts_config_parity ... ok
+test content_edit_empty_book_id_rejected_with_invalid_key ... ok
+test sqlite_rule_sub_crud_round_trip_and_idempotent_delete ... ok
+test sqlite_rss_read_record_crud_round_trip_and_idempotent_delete ... ok
+test sqlite_search_book_crud_round_trip_and_origin_filter ... ok
+test search_keyword_empty_word_rejected_with_invalid_key ... ok
+test inmemory_and_sqlite_crud_produce_identical_snapshot_for_v4_entities ... ok
+test sqlite_content_edit_crud_round_trip_and_idempotent_delete ... ok
+test sqlite_search_keyword_crud_round_trip_and_word_sort ... ok
+test sqlite_tts_config_update_not_found_error ... ok
+test sqlite_tts_config_singleton_crud_round_trip ... ok
+test tts_v17_migration_preserves_legacy_rows_and_is_repeatable ... ok
+test sqlite_rss_read_record_replace_with_snapshot_round_trip ... ok
+test tts_profile_and_precise_rate_survive_sqlite_reopen_and_snapshot ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.82s
+
+     Running tests/manga_store.rs (target/debug/deps/manga_store-cb76a929a3f2258c)
+
+running 33 tests
+test manga_epoch_child_process ... ok
+test manga_eviction_rules_in_memory ... ok
+test legacy_snapshot_migration_does_not_reinterpret_text_data ... ok
+test manga_retention_lifecycle_in_memory ... ok
+test manga_eviction_rules_sqlite ... ok
+test manga_shelf_progress_in_memory_preserves_failed_cas_and_snapshot_time ... ok
+test manga_retention_lifecycle_sqlite ... ok
+test manga_and_novel_with_identical_names_keep_distinct_shelf_identity ... ok
+test manga_shelf_progress_uses_seconds_and_later_novel_read_wins ... ok
+test manga_resource_bindings_are_atomic_restartable_and_not_restored_credentials ... ok
+test manga_retention_survives_snapshot_but_runtime_facts_do_not ... ok
+test manga_refresh_cold_entry_maps_global_ordinal_without_mutating_progress_and_survives_restore ... ok
+test memory_manga_transactions_and_restore_fence ... ok
+test manga_shelf_progress_reopens_existing_schema34_without_metadata_rewrite ... ok
+test manga_admission_consumes_intent_without_manufacturing_progress_or_offline_completion ... ok
+test manga_offline_failed_lease_settles_after_source_and_head_change ... ok
+test manga_shelf_progress_without_shelf_entry_never_adds_one ... ok
+test manga_directory_groups_are_not_new_targets_but_saved_group_resume_is_preserved ... ok
+test manga_shelf_progress_sqlite_updates_clock_only_for_committed_facts ... ok
+test manga_source_delete_revokes_requests_but_reads_and_reimport_preserve_facts ... ok
+test narrow_entry_rejects_duplicate_catalog_urls_for_default_and_explicit_chapters ... ok
+test narrow_entry_resolves_page_id_when_saved_fallback_ordinal_is_stale ... ok
+test narrow_entry_does_not_invent_reading_position_from_partial_cache_coverage ... ok
+test manga_switch_is_atomic_consent_bound_and_revokes_old_progress ... ok
+
+running 1 test
+test manga_epoch_child_process ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 32 filtered out; finished in 0.01s
+
+test sqlite_v33_ddl_failure_keeps_v32_and_rolls_back_all_new_indexes ... ok
+test sqlite_manga_cold_process_and_live_connection_share_restore_fence ... ok
+test sqlite_manga_transactions_snapshot_parity_and_reopen ... ok
+test narrow_entry_restart_restore_rebuild_and_source_change_strip_requests ... ok
+test sqlite_v34_upgrade_adds_retention_schema_and_preserves_rows ... ok
+test sqlite_v28_upgrade_preserves_existing_rows ... ok
+test sqlite_v32_upgrade_keeps_mixed_facts_and_verified_backup_restores_them ... ok
+test manga_admission_rejects_stale_or_invalid_receipts_atomically ... ok
+test narrow_entry_reads_three_of_ten_thousand_pages_and_fences_head ... ok
+
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.10s
+
+     Running tests/progress_compare_and_set.rs (target/debug/deps/progress_compare_and_set-c71d78db8ed9dde0)
+
+running 9 tests
+test ordinary_progress_and_unrelated_configuration_do_not_revoke_another_books_token ... ok
+test late_unknown_save_cannot_rewind_new_intent_and_aba_does_not_reuse_token ... ok
+test clear_revokes_missing_and_existing_tokens_without_revoking_an_empty_noop ... ok
+test foreground_cas_is_independent_of_wall_clock_and_restore_revokes_old_observers ... ok
+test cancelled_coordinate_commit_preserves_rows_and_observers ... ok
+test local_import_compensation_revokes_tokens_and_preserves_the_before_image ... ok
+test source_switch_rollback_and_recovery_revoke_tokens_even_when_rows_return_to_old_values ... ok
+test local_shelf_removal_revokes_missing_tokens_for_single_and_batch_deletion ... ok
+test coordinate_migration_round_trips_do_not_resurrect_observers ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.62s
+
+     Running tests/replace_rule_undo.rs (target/debug/deps/replace_rule_undo-e313043a017c32d9)
+
+running 3 tests
+test in_memory_replace_undo_enforces_cas_and_single_consumption ... ok
+test sqlite_reopen_preserves_journal_and_consumed_tombstone ... ok
+test sqlite_replace_undo_matches_memory_cas_and_concurrency ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.42s
+
+     Running tests/rss_favorite_storage.rs (target/debug/deps/rss_favorite_storage-53aa29b8bc0fc897)
+
+running 5 tests
+test in_memory_favorites_use_composite_identity_and_idempotent_delete ... ok
+test favorite_snapshot_and_crud_fail_closed_for_invalid_or_duplicate_rows ... ok
+test v4_snapshot_migrates_to_current_with_an_explicit_empty_favorite_collection ... ok
+test favorite_snapshot_replace_is_closed_for_both_backends ... ok
+test sqlite_favorites_round_trip_crud_and_process_restart ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+     Running tests/rss_subscription_create.rs (target/debug/deps/rss_subscription_create-e97f45ad50c6f7d1)
+
+running 4 tests
+test generated_id_collision_uses_a_salted_id_without_overwriting_legacy_row ... ok
+test legacy_duplicate_urls_return_stable_smallest_id_without_migration ... ok
+test both_backends_create_once_and_return_existing_without_overwrite ... ok
+test sqlite_begin_immediate_serializes_create_across_connections ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+     Running tests/rule_sub_storage.rs (target/debug/deps/rule_sub_storage-22ced507d5fe0bd2)
+
+running 3 tests
+test inmemory_rule_sub_crud_round_trip_and_idempotent_delete ... ok
+test sqlite_rule_sub_crud_round_trip_and_idempotent_delete ... ok
+test rule_sub_upsert_replaces_existing_row ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running tests/search_history_storage.rs (target/debug/deps/search_history_storage-b1f62e4b1dbd747c)
+
+running 7 tests
+test search_book_empty_book_url_is_rejected ... ok
+test inmemory_search_book_crud_round_trip_and_origin_filter ... ok
+test sqlite_search_book_crud_round_trip_and_origin_filter ... ok
+test search_keyword_crud_round_trip_on_both_backends ... ok
+test sqlite_v16_migration_keeps_legacy_candidate_payload_and_new_composite_key ... ok
+test search_keyword_empty_word_is_rejected ... ok
+test source_scoped_candidates_survive_cross_backend_snapshot_roundtrip ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+
+     Running tests/source_switch_transaction.rs (target/debug/deps/source_switch_transaction-1436bd2a4eb86f09)
+
+running 13 tests
+test memory_text_switch_rejects_manga_target_without_mutating_facts ... ok
+test failed_target_retry_compensates_before_committing_a_new_candidate ... ok
+test commit_uses_admitted_source_detail_not_candidate_alias_and_rollback_retains_original ... ok
+test snapshot_preserves_pending_journal_and_recovery_is_idempotent ... ok
+test unknown_current_title_does_not_select_an_empty_target_title ... ok
+test text_switch_rejects_manga_target_without_mutating_shelf_or_progress ... ok
+test text_switch_keeps_directory_group_guard_in_both_backends ... ok
+test sqlite::unknown_current_title_retains_durable_index_in_sqlite_commit ... ok
+test sqlite::canonical_detail_switch_and_journal_survive_reopen ... ok
+test sqlite::canonical_progress_and_finalize_are_atomic_across_reopen ... ok
+test sqlite::pending_retry_order_is_preserved_on_disk ... ok
+test sqlite::reopen_recovers_pending_once_and_retains_rolled_back_tombstone ... ok
+test sqlite::captured_catalog_revision_cannot_downgrade_to_legacy_after_index_loss ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.70s
+
+     Running tests/sqlite_backend.rs (target/debug/deps/sqlite_backend-6e2778ee64cb4bc4)
+
+running 34 tests
+test sqlite_canonical_snapshot_hash_changes_when_state_changes ... ok
+test save_reading_progress_without_location_revision_still_works ... ok
+test save_reading_progress_persists_location_revision ... ok
+test sqlite_canonical_snapshot_hash_is_deterministic_across_calls ... ok
+test sqlite_and_inmemory_produce_identical_canonical_snapshot_hash ... ok
+test sqlite_chapter_cache_coverage_and_stats ... ok
+test sqlite_chapter_download_lifecycle_complete_fail_cancel_clear ... ok
+test conditional_cache_write_cannot_replace_newer_or_equal_body ... ok
+test sqlite_chapter_download_priority_claim_order ... ok
+test sqlite_chapter_materialization_reopens_only_a_completed_body ... ok
+test fetch_clock_orders_same_millisecond_restart_and_restored_cache ... ok
+test sqlite_chapter_cache_round_trip ... ok
+test sqlite_open_in_memory_initializes_schema_v2 ... ok
+test sqlite_put_get_book_round_trips ... ok
+test sqlite_clear_reading_progress_clears_shelf_last_read_at ... ok
+test sqlite_prune_chapter_cache_evicts_oldest_first_by_cached_at ... ok
+test sqlite_reading_progress_history_and_cross_table_shelf_side_effect ... ok
+test sqlite_save_reading_progress_older_update_does_not_advance_current ... ok
+test sqlite_put_get_cache_round_trips ... ok
+test sqlite_export_snapshot_round_trip_then_replace_clears_state ... ok
+test sqlite_requeue_and_claim_keep_generation_time_monotonic ... ok
+test sqlite_put_get_source_round_trips ... ok
+test sqlite_replace_with_empty_snapshot_clears_all_state ... ok
+test sqlite_v2_entity_snapshot_rejects_duplicate_pk ... ok
+test sqlite_shelf_group_assignment_updates_only_group ... ok
+test remote_content_format_upgrade_keeps_old_body_and_adds_only_version_metadata ... ok
+test sqlite_shelf_remove_batch_has_in_memory_parity_and_validates_before_transaction ... ok
+test sqlite_shelf_round_trip_and_upsert ... ok
+test sqlite_v2_entity_snapshot_round_trips_through_replace_and_export ... ok
+test sqlite_shelf_query_sorts_by_manual_then_added_at_desc ... ok
+test sqlite_source_book_identity_prevents_cross_source_collision ... ok
+test sqlite_v2_entity_replace_clears_existing_rows ... ok
+test sqlite_shelf_query_page_is_bounded_and_reports_full_total ... ok
+test sqlite_batch_projection_reads_cache_and_progress_in_fixed_statement_batches ... ok
+
+test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.57s
+
+   Doc-tests reader_storage
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

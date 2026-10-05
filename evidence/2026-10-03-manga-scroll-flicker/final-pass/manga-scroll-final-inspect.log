@@ -1,0 +1,34 @@
+{
+  "status": "PASS",
+  "runId": "20261003T092724Z-568ec4e3-1f9ba943",
+  "targetKind": "vm",
+  "targetRef": "6460677a198b",
+  "artifact": {
+    "kind": "signed",
+    "sha256": "334cbc5ddd1c76857b949492869995d193fa5e02ab8a4c2c0d1cbf308a12b162",
+    "signature": {
+      "status": "signed",
+      "verified": true,
+      "profileType": "debug",
+      "appIdSha256": "ff8e00ed180524004dd842c160f410ac46644a7bba5bf7c4ce309876ce53bcd8",
+      "appIdentifierSha256": "8fb560b4b330d1b0b70f7ad9c7a9e410600e7c0177306f0eb0257ae9c26d2d01",
+      "certificateSha256": "3a563778e5bf17cd3ead0218e13b4a5030de3f5d7d4e21e0336d8eb37b676dc4"
+    }
+  },
+  "installed": {
+    "bundlePresent": true,
+    "bundleName": "io.reader.minliny",
+    "versionName": "1.0.0",
+    "versionCode": 1000000,
+    "appSignType": "none",
+    "appProvisionType": "debug",
+    "cpuAbi": "arm64-v8a",
+    "appIdSha256": "ff8e00ed180524004dd842c160f410ac46644a7bba5bf7c4ce309876ce53bcd8",
+    "appIdentifierSha256": "8fb560b4b330d1b0b70f7ad9c7a9e410600e7c0177306f0eb0257ae9c26d2d01"
+  },
+  "route": {
+    "allowed": true,
+    "reason": "matching-identity-signed-update-candidate",
+    "preservesData": true
+  }
+}

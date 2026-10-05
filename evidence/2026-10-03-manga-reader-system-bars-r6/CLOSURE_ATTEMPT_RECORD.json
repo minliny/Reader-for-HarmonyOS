@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "attempt": "First final evidence synchronization preflight",
+  "result": "FAILED_BEFORE_COPY",
+  "error": "Frozen production input drift assertion for MangaReadingSurface.ets",
+  "cause": "The closure preflight compared its five-field evidence record to a six-field source archive record without adding the type=file field. This was a verifier record-shape error, not a changed production hash.",
+  "correction": "Use type=file with the source byte/mode record when comparing to source-delta operations. Evidence inventory records retain their documented five-field shape.",
+  "copiedFilesBeforeFailure": 0,
+  "sourceOrEvidenceMutationBeforeFailure": false,
+  "priorR4R5EvidenceMutation": false,
+  "buildOrDeviceOperation": false
+}

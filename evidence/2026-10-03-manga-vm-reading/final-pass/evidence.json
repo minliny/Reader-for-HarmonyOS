@@ -1,0 +1,209 @@
+{
+  "status": "VM_FUNCTIONAL_PASS",
+  "recordedAt": "2026-10-03T07:56:54.566976+00:00",
+  "runId": "20261003T074818Z-568ec4e3-ae09e248",
+  "manifest": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/hap/20261003T074818Z-568ec4e3-ae09e248/manifest.json",
+  "manifestSha256": "b82b8bdd133013014b0cd2f6253ae9b0bb1d79625eef5adc4038f2e39e70b11f",
+  "signedHapSha256": "efb9de39eb25343365c3fc4d588e5f91f5453f4be181de45ae9b5f097ff18fc9",
+  "nativeInputSha256": "63f1690eb95f9a83dde42cb805adb14e822fea00bfc37b10193e5c997f1fcf27",
+  "nativePackagedSha256": "a93a5bbeded3d4b8faab37a24005cfb62daf715c0f9e32aec9e3676fb1c9c7dc",
+  "deployReceipt": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/hap/20261003T074818Z-568ec4e3-ae09e248/deploy-vm-6460677a198b-20261003T074908Z.json",
+  "deployReceiptSha256": "5bac3d56446f39cba81f2187c0a9df5e78ce49d9bbe564046b0eda5ce05d5383",
+  "bundleName": "io.reader.minliny",
+  "target": "127.0.0.1:5555",
+  "targetKind": "vm",
+  "device": "Mate 80 Pro",
+  "server": "127.0.0.1:8710",
+  "certificateSha256": "3A563778E5BF17CD3EAD0218E13B4A5030DE3F5D7D4E21E0336D8EB37B676DC4",
+  "dataPreserved": true,
+  "schemaVersion": 34,
+  "buildClass": "iteration",
+  "acceptanceEligible": false,
+  "source": {
+    "harmonyHead": "568ec4e32a2bdce01f62724cfb04a3f6b5a63a60",
+    "coreHead": "dfd729cffd79ed11da6d44be9e1ba10c4223247f",
+    "dirty": true,
+    "mainWorkspaceMerged": false
+  },
+  "sample": {
+    "sourceId": "corpus-6781cc801619",
+    "bookUrl": "https://ac.qq.com/Comic/comicInfo/id/531040",
+    "title": "斗破苍穹",
+    "source": "腾讯漫画",
+    "access": "public free early chapters"
+  },
+  "sameHapPassed": [
+    "Cold start continue card and shelf both restore chapter04 page3/24",
+    "Novel-only filter retains global manga card; its button opens manga04 page3/24",
+    "Actual comic pixels; header top and footer bottom",
+    "In-reader flat directory highlights04, then selects05; source yields32 pages",
+    "Vertical reading page1 to page2 with footer controls",
+    "Ordinary back immediately updates global continue card to05 page2/32 while manga remains filtered out",
+    "Novel open/back changes card author/title-position to novel fourth chapter",
+    "Manga-only row restores05 page2/32; back changes card to manga; all filter restored",
+    "Bookshelf manga chapter fraction0.73 percent for readable entry5/681, independent of page2/32",
+    "Force-stop/restart retains05 page2/32; cold continue-card button opens that exact manga position",
+    "More->manga detail shows05 page2/32 and681 readable entries; continue opens same position",
+    "No uninstallation, data clearing or schema migration; HDC lease released"
+  ],
+  "priorPasses": {
+    "firstPass": "../first-pass/evidence.json",
+    "secondPass": "../second-pass/evidence.json",
+    "boundary": "Previous-HAP results retained under their own identities; not relabeled as final-HAP captures. Horizontal mode, adjacent chapter-end navigation and ordinary detail return passed second-pass; final changes limited to continue-card retention, reactivity and corresponding checks."
+  },
+  "localChecks": {
+    "harmonyContracts": 429,
+    "coreMangaRuntime": 51,
+    "coreMangaStore": 27,
+    "coreShelfProjection": 6,
+    "sourceSupply": 8,
+    "bundleRecordFingerprints": 1046,
+    "arkTS": "PASS",
+    "signature": "PASS",
+    "preserveDataInstallLaunch": "PASS"
+  },
+  "remainingBoundaries": [
+    "User UI acceptance not assumed",
+    "Formal clean acceptance build not produced; iteration acceptanceEligible=false",
+    "Not merged into main workspace",
+    "Baozi upstream promotional image responses remain a source-side limitation; not counted as reading success",
+    "Does not certify every source, paid chapter, physical device or untested network condition"
+  ],
+  "handoff": {
+    "leaseReleased": true,
+    "architectureThreadNotified": true,
+    "leftAt": "Tencent manga05 page2/32, vertical mode; shelf filter All"
+  },
+  "assets": [
+    {
+      "path": "manga-final3-ch05-p2.jpeg",
+      "sha256": "5b47512c0be7416aba7ae4753acb62d58a7e31473c9484f7613bba17b680c760",
+      "bytes": 370505
+    },
+    {
+      "path": "manga-final3-ch05-p2.json",
+      "sha256": "997584efaafded0a1d52b9ddd94ce1f40de75c5e6149ed0e5f06f74216b9c344",
+      "bytes": 65949
+    },
+    {
+      "path": "manga-final3-ch05.json",
+      "sha256": "7f3b0b2e3d59b542373a696ff4ec602845be532406a88a6ced2e234c6cf5ed74",
+      "bytes": 64641
+    },
+    {
+      "path": "manga-final3-cold-card.jpeg",
+      "sha256": "15ee6ee2413e69b59624d1051ab0915d543983c299bd66d0dd1beed8ec28690e",
+      "bytes": 187568
+    },
+    {
+      "path": "manga-final3-cold-card.json",
+      "sha256": "35707da5eeaa9d925ef1645e1673129c165eda9b161ff96f74b8da85044b774a",
+      "bytes": 101720
+    },
+    {
+      "path": "manga-final3-cold-reader.jpeg",
+      "sha256": "719ed3623dca3538a899ee3e860a7382f317a1a54445f0601b6b92f9d78d6d15",
+      "bytes": 369927
+    },
+    {
+      "path": "manga-final3-cold-reader.json",
+      "sha256": "972125af1eb5f1c797cadeab435e212ae93f31c63d6eb4a6939007df89714bf8",
+      "bytes": 64639
+    },
+    {
+      "path": "manga-final3-detail.jpeg",
+      "sha256": "3ff61f4d35d12915e28b605b6406f3acc879dfd5a2ced9c81a868daa83abfdcc",
+      "bytes": 186641
+    },
+    {
+      "path": "manga-final3-detail.json",
+      "sha256": "57872ab90ead983f4ad1f84d42a08bacfcfc91bb9e41c7896855b6897c68e121",
+      "bytes": 61457
+    },
+    {
+      "path": "manga-final3-directory.json",
+      "sha256": "168dc64996558936b5284171e23b40c40aff46fbc72d34e5d1b02479b6d6bcdf",
+      "bytes": 90683
+    },
+    {
+      "path": "manga-final3-filter-card.json",
+      "sha256": "9be871f5b8f18084e929970ca1ad1b018ab8ef60784530b924cdc0bb5590427a",
+      "bytes": 85124
+    },
+    {
+      "path": "manga-final3-handoff.json",
+      "sha256": "887f8075e1353dfb05668e3070b8369dafd5510e9d8a0d9fb54206d56c7ef8dd",
+      "bytes": 64639
+    },
+    {
+      "path": "manga-final3-manga-card-again.jpeg",
+      "sha256": "15ee6ee2413e69b59624d1051ab0915d543983c299bd66d0dd1beed8ec28690e",
+      "bytes": 187568
+    },
+    {
+      "path": "manga-final3-manga-card-again.json",
+      "sha256": "39c98bbd78d9317448118a5a682502e5206ae15a6f338b69c311ec294f53d138",
+      "bytes": 102068
+    },
+    {
+      "path": "manga-final3-manga-filter.json",
+      "sha256": "7103d0fb057ed0ed644ca9c1c4185bc8cf2415ea36dab19e19d2aeb2c3a69f2a",
+      "bytes": 85380
+    },
+    {
+      "path": "manga-final3-more.json",
+      "sha256": "955d724aee6fe4b330847585c1ca0493e7a85fe443e1580194ea405cf990d5b1",
+      "bytes": 73724
+    },
+    {
+      "path": "manga-final3-novel-card.jpeg",
+      "sha256": "68c02dbf0ba0e03b0757502ced78610701cd9fd2b6fdbde177bf9cc6d21bf5c4",
+      "bytes": 157562
+    },
+    {
+      "path": "manga-final3-novel-card.json",
+      "sha256": "74a8801bccf9a38de683cd296dc3dd4249502dd6d4567fe9c853143ed88a364c",
+      "bytes": 85384
+    },
+    {
+      "path": "manga-final3-novel-reader.json",
+      "sha256": "1e35fb17a91b326f2fa162c399e9f4db6cd544b2ca920f19db0e501dc3ba3c1a",
+      "bytes": 85980
+    },
+    {
+      "path": "manga-final3-reader.jpeg",
+      "sha256": "5180e7e7aafca38c1ed5d6092d50324789f905d3d23b84ef709e7ec08d9b3a6f",
+      "bytes": 405954
+    },
+    {
+      "path": "manga-final3-reader.json",
+      "sha256": "3da736844877781dd20849854455115caecc4072fbae958b326c5ae311ca4363",
+      "bytes": 64639
+    },
+    {
+      "path": "manga-final3-shelf.jpeg",
+      "sha256": "6933eea89264fef59cc5ad708bcf9b497561f7a3db3afd1e1c14adb1c41c7d57",
+      "bytes": 187426
+    },
+    {
+      "path": "manga-final3-shelf.json",
+      "sha256": "6f1a4baa2c95fce9bb5cc0a8314853e378f0f1f93f34bb2ceaf75ca854203f6d",
+      "bytes": 101720
+    },
+    {
+      "path": "manga-final3-warm-card.jpeg",
+      "sha256": "de794715c545887db91288910b2ba6e59104672aa230b74296a5c59ac481027c",
+      "bytes": 161151
+    },
+    {
+      "path": "manga-final3-warm-card.json",
+      "sha256": "33c55fec2ae598b001ffc6d10d50bd64821de87bae1b59f755ae9bfda0b00d83",
+      "bytes": 85230
+    },
+    {
+      "path": "manga-final3-warm-restore.json",
+      "sha256": "90d180956d74d76329eb8cc54d6c459b41085178e0943ce8aee9ddedf6256f64",
+      "bytes": 64753
+    }
+  ]
+}

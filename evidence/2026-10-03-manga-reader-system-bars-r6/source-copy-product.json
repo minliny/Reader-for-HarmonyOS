@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03T13:05:16.071932+00:00",
+  "authorization": "Parent explicit product-source freeze; tests not yet frozen",
+  "source": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS",
+  "target": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS",
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "before": {
+        "bytes": 101068,
+        "mode": 420,
+        "sha256": "0f5e6d2654e8cc228b43b2ab2c9023e728db904193a147ce71da425113a6b897"
+      },
+      "after": {
+        "bytes": 104797,
+        "mode": 420,
+        "sha256": "f84e5289f30711f31b9c7df2999fdba30dc6af4d175d6100c0e0bfb801ee3448"
+      }
+    },
+    {
+      "path": "entry/src/main/ets/features/shell/ReaderShell.ets",
+      "before": {
+        "bytes": 24844,
+        "mode": 420,
+        "sha256": "ea6dddd9fcb6eecf76ea4871419d70e32c69a12cc5812c5aea34716c89cf85ba"
+      },
+      "after": {
+        "bytes": 25114,
+        "mode": 420,
+        "sha256": "edd9b4ade1b4f2ebe7953816742460b38263b1ae804b345f7f4dd4ebd906d560"
+      }
+    }
+  ],
+  "allSourceAndTargetByteModeChecksPassed": true,
+  "testsCopied": false,
+  "r4R5EvidenceMutation": false
+}

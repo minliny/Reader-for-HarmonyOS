@@ -1,0 +1,102 @@
+{
+  "oldFingerprint": "9e97919470b42d81d87082c2c257984778da5e5e5e55798273b3242c99608c4b",
+  "currentFingerprint": "db4e23b6260fc09271d11793aa3b60e6e7ee3651fbf5e2219d8a949cc9e6b85c",
+  "differences": [
+    {
+      "path": "crates/reader-storage/src/lib.rs",
+      "old": {
+        "path": "crates/reader-storage/src/lib.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 537620,
+        "sha256": "d4cdc3f3b06585e030418707c8f937788b2d7502a1d47eddf7db535d75185ca4"
+      },
+      "current": {
+        "path": "crates/reader-storage/src/lib.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 538055,
+        "sha256": "934c3b0b0945cb872f34f87b7a356b3fddd5b18af0f7b59f9bbd8134c226d380"
+      }
+    },
+    {
+      "path": "crates/reader-storage/src/manga.rs",
+      "old": {
+        "path": "crates/reader-storage/src/manga.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 10896,
+        "sha256": "907c9ef1af4d654c755ce0a29adbaa49f33eec04dc9a34dd4c5e449e2cd60308"
+      },
+      "current": {
+        "path": "crates/reader-storage/src/manga.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 21125,
+        "sha256": "fd2415ae4694451389789fb93dc58206a0778634477ce3478f14a24ee9d3b088"
+      }
+    },
+    {
+      "path": "crates/reader-storage/src/sqlite_backend.rs",
+      "old": {
+        "path": "crates/reader-storage/src/sqlite_backend.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 377250,
+        "sha256": "b19d426470b89c11ccf24ddd798bf945dc8717d8ff967874c46ea703f7fd0814"
+      },
+      "current": {
+        "path": "crates/reader-storage/src/sqlite_backend.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 377352,
+        "sha256": "a535523adca2b101da13991ef1e043adf96ea6e5a772f818bb644d121705bb64"
+      }
+    },
+    {
+      "path": "crates/reader-storage/src/sqlite_backend/manga.rs",
+      "old": {
+        "path": "crates/reader-storage/src/sqlite_backend/manga.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 24683,
+        "sha256": "0e152ed7a219781ce477c5e98b0a6c472c992465bfd2b5197a2ea1a9ede2d72a"
+      },
+      "current": {
+        "path": "crates/reader-storage/src/sqlite_backend/manga.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 26481,
+        "sha256": "88c1450c7c45f744d116cc4d85902b369b9e29afd16508ffde5f5963440dd5bf"
+      }
+    },
+    {
+      "path": "crates/reader-storage/src/sqlite_backend/manga_retention.rs",
+      "old": null,
+      "current": {
+        "path": "crates/reader-storage/src/sqlite_backend/manga_retention.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 11310,
+        "sha256": "c4332eb16c34744dae677fe27d0649e915d7e2cf1bf09ab17ddf37fa09cf8105"
+      }
+    },
+    {
+      "path": "crates/reader-storage/tests/manga_store.rs",
+      "old": {
+        "path": "crates/reader-storage/tests/manga_store.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 57104,
+        "sha256": "dd7b3eb2a36d76d854c7c671eeaa843f94793a54bd160be2252f81eaeff87afd"
+      },
+      "current": {
+        "path": "crates/reader-storage/tests/manga_store.rs",
+        "type": "file",
+        "mode": 420,
+        "bytes": 57169,
+        "sha256": "0bcfb313131727815e2ea68a255ed5bc13a52f7ba01d184b1d3335d5f1ddb149"
+      }
+    }
+  ]
+}

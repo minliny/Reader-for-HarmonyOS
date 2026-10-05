@@ -1,0 +1,54 @@
+Frozen at 2026-10-03 11:46:27 UTC
+Source SHA256: 0f5e6d2654e8cc228b43b2ab2c9023e728db904193a147ce71da425113a6b897
+Both isolated delivery and original manga Surface have exactly this byte hash.
+Product delta: moved existing border attribute immediately before borderRadius/clip; all arguments unchanged.
+
+test-manga-sheet-motion-sdk.mjs: exit=0
+PASS actual SDK-lowered manga sheet lifecycle: all four static faces before directory/mode/settings/more and persistent text admission, exact 400/600/900 family actors, demo reset preserving dark preference, reachable tablet right directory and left catalog choices in mode/settings via close/save/proof, two-frame callback-before-build, native springs and 160ms scrim, retained exit/block, drag/reduce-motion and late target/save/reopen/unmount; missing receipt/incorrect static face/old reset/unreachable or blocked catalog and lifecycle negative controls rejected
+Boundary: native scheduling, input/font I/O and animator are instrumented; compositor frames, physical font paint and VM motion still require separate continuous evidence.
+(node:60727) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+test-manga-sheet-selection-sdk.mjs: exit=0
+PASS actual SDK retained manga sheets: paper/ink and vertical/horizontal return trips, all fit check branches, icon/paint/accessibility updates, native SwitchStyle and whole-row single pointer owner, themed slider, legacy white/low brightness preserved; captured-parameter/fake selection/fake label/duplicate pointer negative controls rejected
+(node:60725) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+test-manga-surface-sdk.mjs: exit=0
+PASS actual SDK root padding + live window revision: portrait status/gesture, asymmetric landscape and cleared insets (native layout not tested)
+(node:60726) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual ArkUI SDK surface lowering; save waits for CAS; disposed layout cannot scroll (native paint not tested)
+PASS actual SDK tablet directory mounts while controls are hidden, bounded left column and independent right-panel geometry (native paint not tested)
+PASS actual SDK four demo sheets: paper/ink, natural phone height + per-panel caps, landscape bounds, grabber/close, paired mode choices and separated fit rows (native layout not tested)
+PASS actual SDK responsive catalog/header/search admission, stage 1180/922,920/662,800/542,650/482, wide negative margins and day/night progress accent (native layout/paint not tested)
+
+test-manga-ui-assembly-sdk.mjs: exit=0
+PASS installed SDK parses 356 production ETS/TS files, 118 custom components registered
+PASS 684 actual custom-component field bindings in Index/Shell/manga/bookshelf/detail/directory/source/Native directory assembly
+PASS SDK component transform pages/Index.ets
+PASS SDK component transform features/shell/ReaderShell.ets
+PASS SDK component transform features/manga/MangaReadingSurface.ets
+PASS SDK component transform features/bookshelf/BookshelfPage.ets
+PASS SDK component transform features/bookshelf/LocalBookDetail.ets
+PASS SDK component transform features/bookshelf/BookDirectoryPage.ets
+PASS SDK component transform features/reading/SourceSwitchPanel.ets
+PASS SDK component transform features/source/SourceSwitchWindow.ets
+PASS SDK component transform features/reading/ReaderDirectoryNavigationSurface.ets
+PASS SDK component transform features/reading/ReaderDirectoryNavigationList.ets
+PASS SDK component transform features/reading/ReaderDirectoryList.ets
+PASS actual SDK demo settings: paper/ink selection colors, 38×23 native page switch, equal bottom-color choices, brightness/reset and preference callbacks
+Boundary: SDK parsing/member lowering + exact initializer field names; no project-wide semantic typecheck, package, native layout or device proof.
+(node:60723) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+test-reader-control-p0.mjs: exit=0
+reader-control-p0 static contract: PASS
+
+Ad hoc /private/tmp/manga-border-order-sdk-probe.mjs: exit=0
+PASS actual SDK actor attribute order for directory/mode/settings/more phone and wide: border precedes radius; official non-object reset model retains22 phone/0 wide; prior-order negative controls reset0.
+Boundary: real SDK-emitted call order plus official JsBorder reset semantics, not physical clip/paint.
+
+git diff --check: isolated delivery PASS with existing GitHub Desktop git-lfs PATH; original manga worktree PASS.
+No product tests edited. No HAP build or VM operation by sheet agent. New HAP/VM corner paint acceptance remains pending.
+

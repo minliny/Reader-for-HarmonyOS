@@ -1,0 +1,15 @@
+(node:23700) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual Surface + Controller + Gateway: zoom before timer, after timer, early frame, matching native layout and serial manga-only CAS
+PASS actual touch cancellation and superseding restore: stale frames cannot clear the new anchor; user geometry can settle
+PASS delayed turn CAS: direction, A→B→A, zoom, chapter replacement, refresh intent and exit all fence obsolete publication
+PASS mounted decoded horizontal image is the saved return position even before native geometry settles
+PASS mounted spinner then decoded tile confirms the page; return awaits its CAS before closing
+PASS restore target is not a confirmed page; same-ID chapter replacement invalidates the old confirmed owner
+PASS actual preview cleanup + exit: old position is accepted before lease release and survives close through existing CAS lane
+PASS actual refresh lifecycle: same-manifest
+PASS actual refresh lifecycle: changed-exact
+PASS actual refresh lifecycle: changed-unresolved
+PASS actual refresh lifecycle: failure
+PASS actual refresh lifecycle: exit
+PASS real controller vertical seek retains explicit anchor through image publication and never persists an unpainted target

@@ -1,0 +1,382 @@
+[
+  {
+    "path": "FINAL_INPUTS.json",
+    "sha256": "87946896c17aad3edcfee490d13d321064ca74222acefcd9e6cbf77375d41ec9",
+    "bytes": 3800
+  },
+  {
+    "path": "REVIEW.md",
+    "sha256": "ef9c38828d72789b64249ea99255bd0438e71c1d74bff20afdb97ef584d503d3",
+    "bytes": 4925
+  },
+  {
+    "path": "baseline-manga-reading-surface.ets",
+    "sha256": "0f5e6d2654e8cc228b43b2ab2c9023e728db904193a147ce71da425113a6b897",
+    "bytes": 101068
+  },
+  {
+    "path": "baseline-reader-shell.ets",
+    "sha256": "ea6dddd9fcb6eecf76ea4871419d70e32c69a12cc5812c5aea34716c89cf85ba",
+    "bytes": 24844
+  },
+  {
+    "path": "baseline-source.json",
+    "sha256": "cb0702789e68b4e2b058e4b0717a3ce58f2544a3ce6bf517903b3b48a5a0d695",
+    "bytes": 873
+  },
+  {
+    "path": "manga-final-results.json",
+    "sha256": "a4776e3010a947f3879822abea3dbe943e7b8e9945d7a11f4a429dce2ef80b7e",
+    "bytes": 13197
+  },
+  {
+    "path": "test-manga-admission.final.log",
+    "sha256": "41f22b52b0e7750036d0f4a5251278ed476068d9a314cd9578cfacb46b0faaaa",
+    "bytes": 819
+  },
+  {
+    "path": "test-manga-auth-recovery.final.log",
+    "sha256": "f02e8f3619e786f7b0a034c557a3fbe3d764454d5ef5dae40fd0eaf50c13db88",
+    "bytes": 373
+  },
+  {
+    "path": "test-manga-book-presentation.final.log",
+    "sha256": "7200e2e2c3ee0527feafcfd98eb48760726918b7d0ead7dcfa8adbec741b2560",
+    "bytes": 122
+  },
+  {
+    "path": "test-manga-cancelled-banner.final.log",
+    "sha256": "ee29f4a4a92e2d2da4f11fe54297fb56d176b75026cd4cde759da2c40cb8a632",
+    "bytes": 317
+  },
+  {
+    "path": "test-manga-cancelled-banner.mjs.after.log",
+    "sha256": "704c19fa7e8935684eb5af3af7eeae1a21b1061617da7ce0ce83f184344a02db",
+    "bytes": 317
+  },
+  {
+    "path": "test-manga-cross-chapter-counter-sdk.final.log",
+    "sha256": "24eaa2439a0d862f7b479efa753ea1786efc068c8863d389422bbfe73b78af43",
+    "bytes": 285
+  },
+  {
+    "path": "test-manga-cross-chapter-counter-sdk.mjs.before.log",
+    "sha256": "b1513a51670b0f369393f87ff80e39e7a621eabf054b90b106a3f452cc64d170",
+    "bytes": 285
+  },
+  {
+    "path": "test-manga-directory-demo-parity-sdk.final.log",
+    "sha256": "84c04d6b5492927fbc7ee9baab1d9984230fb0e7bcfbbe1dd38bb9ffb7994fa1",
+    "bytes": 716
+  },
+  {
+    "path": "test-manga-directory-font-readiness-sdk.final.log",
+    "sha256": "97af23a5d07cb0f56abcb64fa637886b79746de51cc18abfcfb77e35700916df",
+    "bytes": 748
+  },
+  {
+    "path": "test-manga-directory-font-readiness-sdk.mjs.after.log",
+    "sha256": "7b0c23e22a0351c3d1f83c6f3445ba3f1ef06650b569240a1b2d09bf5a372aba",
+    "bytes": 748
+  },
+  {
+    "path": "test-manga-directory-route.final.log",
+    "sha256": "c70324bc9d52e08b4c3d89ccff4084336bd0bbf9a6112804af8f00d1d6f842a3",
+    "bytes": 539
+  },
+  {
+    "path": "test-manga-display-policy.final.log",
+    "sha256": "6eae0de14fe06ee31fad9b6a1bd21d7d0254c648dc8a14efd59f0537eeb9ba0f",
+    "bytes": 428
+  },
+  {
+    "path": "test-manga-error-recovery.final.log",
+    "sha256": "6dc82a08a67f9d1d0400a7f12cfb30299bd53f295f4317f29fadb66d55e07906",
+    "bytes": 869
+  },
+  {
+    "path": "test-manga-error-recovery.mjs.after.log",
+    "sha256": "e43f1bc424e8ebe38da58369030bb6a8246cd9ee6276ca0569f64011973e8d8c",
+    "bytes": 869
+  },
+  {
+    "path": "test-manga-far-page-tile-retirement.final.log",
+    "sha256": "8725823c9a178efbf411cc73249015a13914d4c0a92160aa221b3b23f42478fd",
+    "bytes": 264
+  },
+  {
+    "path": "test-manga-image-decode.final.log",
+    "sha256": "888ad314bcf588474170402830c7b2a932644457b4f5df93949206906cf13257",
+    "bytes": 1231
+  },
+  {
+    "path": "test-manga-image-graphics.final.log",
+    "sha256": "caf438ce2d5ac22b12e2315d05ae0af222b4d1bb5f3e3471249cc57c9a6b269c",
+    "bytes": 966
+  },
+  {
+    "path": "test-manga-image-metadata-transfer.final.log",
+    "sha256": "447651c8e0f045376863edd84955c41f2d040ca1fdec6d33094c5b3408f149fd",
+    "bytes": 247
+  },
+  {
+    "path": "test-manga-metadata-ui.final.log",
+    "sha256": "3c9544aab5c87b88a6d2c11d5c0b64c09a9b6606cf0c51d58fe96042e5e06d7e",
+    "bytes": 465
+  },
+  {
+    "path": "test-manga-motion-progress.final.log",
+    "sha256": "5062730a37f522847e4375892bffd6ee4338c0bca4aeb37ace2704550d30f38e",
+    "bytes": 1344
+  },
+  {
+    "path": "test-manga-motion-progress.mjs.after.log",
+    "sha256": "f01c2b84186a36084104d18af8a23f5fb1e98be34bb302dbb4b4954ca1a233e8",
+    "bytes": 1344
+  },
+  {
+    "path": "test-manga-motion-progress.mjs.before.log",
+    "sha256": "d2707aef686c36295b597be03b558072bcdaa30a831af768ae809a142b3ddda7",
+    "bytes": 866
+  },
+  {
+    "path": "test-manga-navigation.final.log",
+    "sha256": "01164bd5dd5c55f2ea30d5d3a870b2664dbae1412dfefed5b5c3ae1c9af6a3ea",
+    "bytes": 682
+  },
+  {
+    "path": "test-manga-navigation.mjs.after.log",
+    "sha256": "564428eaf3289dec03b45e77e84e3c130e6a0c66a3b878f5ed9371c69ab994c1",
+    "bytes": 682
+  },
+  {
+    "path": "test-manga-offline-network-probe.final.log",
+    "sha256": "0b3d906aff5921786c35f5d511708cde3192b14785aea580721a6d899f8a8675",
+    "bytes": 1304
+  },
+  {
+    "path": "test-manga-offline-network-probe.mjs.after.log",
+    "sha256": "d25e55cb9479b02ae89cd48ec698920fda5201f14bf02c99918e48bf17a015db",
+    "bytes": 1304
+  },
+  {
+    "path": "test-manga-offline.final.log",
+    "sha256": "b3b54e6ffaca36130c26a6de196517bce4a54051e9a86aa04fa1638846e94d46",
+    "bytes": 1081
+  },
+  {
+    "path": "test-manga-orientation.final.log",
+    "sha256": "7a5c79d68df1db82f76963b0d5d60c4eeee18403b3b79c87cb134d0b5b6588ca",
+    "bytes": 464
+  },
+  {
+    "path": "test-manga-platform-probe-sdk.final.log",
+    "sha256": "a55bf77597ef1ac5b700cf751e08d811285101b2d833107c0bc5e98bfd96f47f",
+    "bytes": 694
+  },
+  {
+    "path": "test-manga-platform-probe.final.log",
+    "sha256": "feb3738a0b69ce26cbc3d49f64c8c0f935fead5236a8e815b50446eaabe02427",
+    "bytes": 646
+  },
+  {
+    "path": "test-manga-reading-directory-fallback.final.log",
+    "sha256": "8ece480e8384b4a9444921a428432fed2ce989812236e61fa8d24775257a3401",
+    "bytes": 859
+  },
+  {
+    "path": "test-manga-region-decode.final.log",
+    "sha256": "1ce596d95efb578df63b4d3da4041dc1c28a2bf657bcbe8c84bc886d3fab2de6",
+    "bytes": 2241
+  },
+  {
+    "path": "test-manga-resource-gateway.final.log",
+    "sha256": "c7bdee136df4d620f499c2070e4d18625073fa7cdabff4a3ae9e9cce8867ede2",
+    "bytes": 480
+  },
+  {
+    "path": "test-manga-runtime-image-lane.final.log",
+    "sha256": "6fbfefe5d932564fea64473a4bb4a5ffe212c66a4e9d90597f1e7c4134f88cfc",
+    "bytes": 460
+  },
+  {
+    "path": "test-manga-scroll-stability-sdk.final.log",
+    "sha256": "b961eac9635599279e50e3d867506ac7b5e73d1f3d153ca1331b0ca81feee49c",
+    "bytes": 3118
+  },
+  {
+    "path": "test-manga-session.final.log",
+    "sha256": "e930a961b73f3e6736ea672930a19a4d64fe743aa532a11dd69ec18fcf5b066d",
+    "bytes": 2850
+  },
+  {
+    "path": "test-manga-session.mjs.after.log",
+    "sha256": "75282a9bde292f5ba658fe77d7b4b5e722500ebdadcf90ffea742a4cbf16157e",
+    "bytes": 3664
+  },
+  {
+    "path": "test-manga-session.mjs.final.log",
+    "sha256": "955157d514d1c5459227dab5da56b7dacdc2eee4b7e6937afb6249e709a65784",
+    "bytes": 2850
+  },
+  {
+    "path": "test-manga-sheet-motion-sdk.final.log",
+    "sha256": "abc496d0a194aeee40ede314921a6f9445cabf3cc5eda39923822a935a7d042e",
+    "bytes": 922
+  },
+  {
+    "path": "test-manga-sheet-motion-sdk.mjs.after.log",
+    "sha256": "6a5f54ed1baaa469ad2151e2c88d07c9c307ed55d3f3eb941958cd86158188f2",
+    "bytes": 922
+  },
+  {
+    "path": "test-manga-sheet-motion-sdk.mjs.before.log",
+    "sha256": "69b16c46a19af9325c1029211b5d3b3a120b57cc21e2224e2283af27afa5f5f7",
+    "bytes": 2865
+  },
+  {
+    "path": "test-manga-sheet-selection-sdk.final.log",
+    "sha256": "57bf9a6d84906154ab1680840afa1694c0773a7fbc4208703379bc67208f8690",
+    "bytes": 527
+  },
+  {
+    "path": "test-manga-sheet-selection-sdk.mjs.after.log",
+    "sha256": "bd989ab3f5ba6dcb8fee882385dc547647cd3d1b9c0a454f253be03d3fb20b82",
+    "bytes": 527
+  },
+  {
+    "path": "test-manga-sheet-selection-sdk.mjs.before.log",
+    "sha256": "da9af503d4228ccce79d2f0d70f713f304ba9bebeb93b7778a5f6c7a63203647",
+    "bytes": 1614
+  },
+  {
+    "path": "test-manga-source-switch.final.log",
+    "sha256": "6615ba79c974567899833daa56dc82b750488f9afa0b0f36b4d077513920b0c6",
+    "bytes": 614
+  },
+  {
+    "path": "test-manga-strip.final.log",
+    "sha256": "6de055dc531e168805526739fbeb6e24a6f5a850800bef4ab455faac04f4ecce",
+    "bytes": 431
+  },
+  {
+    "path": "test-manga-strip.mjs.after.log",
+    "sha256": "d080c34821231189673b2a97c17e670057e99c4c897da36a8316a1dfc184f8c1",
+    "bytes": 431
+  },
+  {
+    "path": "test-manga-surface-render-key-sdk.final.log",
+    "sha256": "376dddc7e9209c67f7cf1c1db9a052a1d37e11f98fe4587a5388cc123f764eb8",
+    "bytes": 804
+  },
+  {
+    "path": "test-manga-surface-render-key-sdk.mjs.before.log",
+    "sha256": "7aff5746322b3466718ebe292ce203df94f58887c73d00898aee5938f14523c6",
+    "bytes": 804
+  },
+  {
+    "path": "test-manga-surface-sdk.final.log",
+    "sha256": "d7370b24d1efbbdc272becf95551b001bd888ada8fbf8a2f1e1396bb1643734b",
+    "bytes": 966
+  },
+  {
+    "path": "test-manga-surface-sdk.mjs.after.log",
+    "sha256": "ab27b0b60a2cfcbfc10bcec13e2a68af33e4a1fc23484302ceb228d8fc859262",
+    "bytes": 966
+  },
+  {
+    "path": "test-manga-surface-sdk.mjs.before.log",
+    "sha256": "c8888f0a66ab943a208d4466c8c22c06d16a1284804c1d6a45c0012859727c03",
+    "bytes": 1027
+  },
+  {
+    "path": "test-manga-tile-window.final.log",
+    "sha256": "991c1838bafab143430cea62575d32079dc988f01194f867830492ebfd949321",
+    "bytes": 665
+  },
+  {
+    "path": "test-manga-tile-window.mjs.after.log",
+    "sha256": "3b980dd8c73e422ae6ed116888c9764550afac3129d7c23a1e6f77e41336680a",
+    "bytes": 665
+  },
+  {
+    "path": "test-manga-ui-assembly-sdk.final.log",
+    "sha256": "358e4046c8c1f75ade6115a595b195d5e9805833609eb80b9785ff58e4f43963",
+    "bytes": 1449
+  },
+  {
+    "path": "test-manga-ui-assembly-sdk.mjs.before.log",
+    "sha256": "977589e7586f15887a010452dad33b8b8983e2cad16874c6bb9ae6b56b3155ca",
+    "bytes": 1449
+  },
+  {
+    "path": "test-manga-ui-floating-bars.final.log",
+    "sha256": "e7d72d091752d506f3299202d228a47b942df980a82b14c14e16a93f44418d7a",
+    "bytes": 573
+  },
+  {
+    "path": "test-manga-ui-position-hydration.final.log",
+    "sha256": "43857eabf42bfd22319ad8d7e90b60f42fada1b123bbcf5393bd8eefb976bf7d",
+    "bytes": 474
+  },
+  {
+    "path": "test-manga-ui-source-switch-discovery.final.log",
+    "sha256": "4a7607cfbf7628b9b689230e09e6eae74802c87551259d7f9f7e64c595083cfa",
+    "bytes": 468
+  },
+  {
+    "path": "test-manga-ui-source-switch-window.final.log",
+    "sha256": "7b6a4ccbe0b910c9993b739b9addf62df8a55f0f461f3a5c50e8dc64fce019db",
+    "bytes": 332
+  },
+  {
+    "path": "test-manga-ui-state.final.log",
+    "sha256": "863281447a56d76a70f4aedea389f0c1c7c6db6a78978aade526bb8e07641638",
+    "bytes": 457
+  },
+  {
+    "path": "test-manga-ui-state.mjs.after.log",
+    "sha256": "509bbe9329d903f29bc06e4138b03aaf58db15e6c11817434c789b29cd8ec617",
+    "bytes": 457
+  },
+  {
+    "path": "test-manga-viewport-restore-sdk.final.log",
+    "sha256": "ea61e0de193a09abf9cf2d8f599b93026d89abd068c45969e62104dd1961f772",
+    "bytes": 865
+  },
+  {
+    "path": "test-manga-viewport-restore-sdk.mjs.before.log",
+    "sha256": "5db8177b8c6712109bca67b1ad040ac8e72ad12752514a94e4817e3a63c2df4b",
+    "bytes": 865
+  },
+  {
+    "path": "test-manga-visible-tile-retention.final.log",
+    "sha256": "baef8ad8258bacba0ede71f415762dff7a2247ed7389d8e978f99181f1627797",
+    "bytes": 527
+  },
+  {
+    "path": "test-manga-window-publication.final.log",
+    "sha256": "1f91d81b9ddac9ffba33c87833c60c53ffba3e833e60994dcfcc1470fcedcf71",
+    "bytes": 481
+  },
+  {
+    "path": "test-manga-window-publication.mjs.before.log",
+    "sha256": "cc86cb0d769264c65121863a5d1277c391630e4aa8a0f8ad34a8997bdbe4aa96",
+    "bytes": 481
+  },
+  {
+    "path": "window-order-final.log",
+    "sha256": "1d529f70c9b752da94715e25363375007a168b24cf507ae028fa286fb8e45f80",
+    "bytes": 4015
+  },
+  {
+    "path": "window-order-first-pass.log",
+    "sha256": "ec11080857d2afc5e04ce405b7280d6b4560277d6dd006f2dd1ab74fd524be57",
+    "bytes": 2448
+  },
+  {
+    "path": "window-order-running.log",
+    "sha256": "3fb2a681fff5617cb349e2313ed2015ca46c57b18d6c6dd82e0429423c010237",
+    "bytes": 4129
+  }
+]

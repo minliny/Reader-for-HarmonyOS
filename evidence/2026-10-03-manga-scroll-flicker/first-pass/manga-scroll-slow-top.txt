@@ -1,0 +1,189 @@
+Tasks: 184 total,   1 running, 183 sleeping,   0 stopped,   0 zombie
+  Mem:  4006880K total,  2643924K used,  1362956K free,    10740K buffers
+ Swap:  2097148K total,   192512K used,  1904636K free,   923868K cached
+400%cpu   0%user   0%nice   0%sys 400%idle   0%iow   0%irq   0%sirq   0%host
+   PID USER         PR  NI VIRT  RES  SHR S[%CPU] %MEM     TIME+ ARGS
+ 11640 shell        20   0  25M 5.2M 4.1M R  0.0   0.1   0:00.00 top -b -n 1
+ 11638 shell        20   0  21M 4.4M 3.6M S  0.0   0.1   0:00.00 sh -c top -b -n 1 > /data/local/tmp/manga-scroll-slow-top.txt
+  5365 root         -2 -20  36G  29M 1.0M S  0.0   0.7   0:00.00 apppool
+ 30340 root         20   0    0    0    0 I  0.0   0.0   0:00.00 [kworker/1:0-mm_percpu_wq]
+ 30196 20020074     10 -10  37G 367M 237M S  0.0   9.3   0:28.84 io.reader.minliny
+ 24682 root         20   0    0    0    0 I  0.0   0.0   0:00.30 [kworker/u8:2-flush-254:48]
+ 18734 root         20   0    0    0    0 I  0.0   0.0   0:00.00 [kworker/0:0-events]
+  5157 root         20   0    0    0    0 I  0.0   0.0   0:10.74 [kworker/0:2-events]
+ 32038 root         20   0    0    0    0 I  0.0   0.0   0:00.00 [kworker/3:1-events]
+ 28180 root         20   0    0    0    0 I  0.0   0.0   0:01.62 [kworker/u8:1-ext4-rsv-conversion]
+ 11374 root         20   0    0    0    0 I  0.0   0.0   0:00.00 [kworker/2:1]
+  7031 root         20   0    0    0    0 I  0.0   0.0   0:00.94 [kworker/1:3-mm_percpu_wq]
+  5851 root         20   0    0    0    0 I  0.0   0.0   0:00.70 [kworker/2:2-events]
+ 14903 root         20   0    0    0    0 I  0.0   0.0   0:00.55 [kworker/3:0-events]
+ 15881 20020012     10 -10  36G 150M  90M S  0.0   3.8   0:24.49 com.ohos.sceneboard:EngineServiceAbility:3
+ 15675 20020012     10 -10  37G 477M 167M S  0.0  12.2   4:59.73 com.ohos.sceneboard
+ 31284 20020014      0 -20  36G 155M  49M S  0.0   3.9   0:54.91 com.huawei.hmsapp.hiai.voice
+ 14653 20020073     10 -10  37G 377M 196M S  0.0   9.6   3:16.65 io.reader.harmonyos
+ 29719 deviceinfo   20   0  45M 7.8M 6.2M S  0.0   0.1   0:00.35 deviceinfoservice
+  9083 atomicservice_distribution 20 0 189M 58M 48M S 0.0 1.4 0:01.05 atomicservice_ecological_rule_manager
+  2913 20004         0 -20  36G 114M  53M S  0.0   2.9   0:54.58 com.huawei.hms.pushservice
+  2911 hidumper_service 20 0 176M 38M 36M S  0.0   0.9  18:17.40 hidumper_service
+  2480 root         -2   0    0    0    0 S  0.0   0.0   0:01.99 [psimon]
+  2436 file_system_service 20 0 61M 14M 11M S 0.0  0.3   0:00.38 file_system_service
+  2363 pasteboard   20   0 140M  24M  23M S  0.0   0.6   0:03.38 pasteboard_service
+  2318 root         20   0 136M  26M  21M S  0.0   0.6   0:00.04 QemuParams qemud-command
+  2317 root         20   0 136M  27M  21M S  0.0   0.6   0:00.09 QemuParams clipboard-content
+  2315 root         20   0 127M  26M  20M S  0.0   0.6   0:18.67 QemuParams boot-complete
+  2312 appgallery_service 20 0 160M 41M 34M S 0.0  1.0   0:00.47 appgallery_service
+  1781 20020048      0 -20  36G 114M  51M S  0.0   2.9   0:45.01 com.ohos.contactsdataability
+  1747 20020040      0 -20  36G  93M  45M S  0.0   2.3   1:00.61 com.ohos.medialibrary.medialibrarydata
+  1710 20020018      0 -20  36G  98M  49M S  0.0   2.5   0:47.29 com.huawei.hmsapp.intelligent
+  1667 20020019      0 -20  36G 103M  48M S  0.0   2.6   0:53.16 com.huawei.hms.adsservice
+  1577 device_cert_manager_server 20 0 66M 16M 13M S 0.0 0.4 0:00.29 dcm_service
+  1576 20006         0 -20  36G  51M  22M S  0.0   1.3   0:25.46 com.huawei.hmos.location
+  1521 nwebspawn    20   0 576M  14M  11M S  0.0   0.3   0:48.20 nwebspawn
+  1496 20002         0 -20  36G  71M  37M S  0.0   1.8   0:39.26 com.huawei.hmsapp.samplemanagement
+  1486 20005         0 -20  36G  94M  46M S  0.0   2.4   0:50.83 com.huawei.hms.pafservice
+  1385 asset_service 20  0  71M  20M  16M S  0.0   0.5   0:04.72 asset_service
+  1340 20001         0 -20 3.9G  59M  36M S  0.0   1.5   0:42.63 com.huawei.emulatormultiscreen
+  1297 wifi         20   0 2.0G  10M 7.8M S  0.0   0.2   0:09.24 wpa_host                -i 6 -n wpa_host
+  1269 wifi         20   0 114M  25M  19M S  0.0   0.6   1:41.98 wifi_manager_service
+  1217 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [dfs_srv_wb3]
+  1214 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [dfs_sb_wb3]
+  1213 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [dfs_ino_wb3]
+  1212 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [share_item_time]
+  1211 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [dfs_srv_wb2]
+  1210 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [dfs_sb_wb2]
+  1209 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [dfs_ino_wb2]
+  1208 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [share_item_time]
+  1205 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [dfs_srv_wb1]
+  1204 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [dfs_sb_wb1]
+  1202 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [dfs_ino_wb1]
+  1201 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [share_item_time]
+  1185 location_host 20  0 2.0G 6.8M 5.3M S  0.0   0.1   0:00.01 location_host           -i 23 -n location_host
+  1005 dms          20   0  88M  13M  12M S  0.0   0.3   0:40.51 deviceprofile
+   951 shell        20   0 205M 9.0M 5.0M S  0.0   0.2   9:37.79 hdcd
+   876 CollaborationFwk 20 0 183M 26M 24M S  0.0   0.6   0:42.36 CollaborationFwk
+   867 account      20   0  76M  16M  13M S  0.0   0.4   0:08.59 accountmgr
+   792 aps_manager  20   0  69M  15M  12M S  0.0   0.3   1:22.38 aps_manager
+   752 av_session   20   0 148M  28M  22M S  0.0   0.7   0:20.19 av_session
+   751 cameraserver 20   0 189M  37M  27M S  0.0   0.9   0:00.65 camera_service
+   750 cccs         20   0  60M  15M  12M S  0.0   0.3   0:01.26 client_cloud_cache_service
+   749 data_monitor_service 20 0 23M 4.0M 3.3M S 0.0 0.1 0:00.04 data_monitor_service
+   744 drmserver    20   0  61M  14M  11M S  0.0   0.3   0:28.22 drm_service
+   743 foundation    0 -20 441M 100M  62M S  0.0   2.5   4:44.86 foundation
+   736 graphics     -2  -8 512M 168M 105M S  0.0   4.2   5:59.69 render_service
+   735 hianalytics  20   0 170M  27M  27M S  0.0   0.6   0:00.39 hianalytics
+   734 huawei_id    20   0  96M  25M  22M S  0.0   0.6   0:09.99 huawei_id_svc
+   732 inputmethod  20   0 216M  33M  25M S  0.0   0.8   0:18.95 inputmethod_service
+   731 media_monitor 20  0  56M 8.1M 6.4M S  0.0   0.2   0:00.70 media_monitor
+   730 media        20   0 258M  48M  34M S  0.0   1.2   0:22.58 media_service
+   715 netsysnative 20   0  64M  10M 7.2M S  0.0   0.2   1:11.86 netsysnative
+   703 powermgr      0 -20 153M  23M  20M S  0.0   0.5   2:36.12 powermgr
+   691 access_token  0 -20  64M  13M  10M S  0.0   0.3   0:01.09 privacy_service
+   684 media        20   0  53M 9.4M 7.1M S  0.0   0.2   0:00.10 av_codec_service
+   670 pin_auth_host 20  0 2.0G 9.1M 7.0M S  0.0   0.2   0:00.04 pin_auth_host           -i 20 -n pin_auth_host
+   666 security_guard 20 0  84M  18M  14M S  0.0   0.4   0:57.93 security_guard
+   644 sensor       20   0  64M  11M 8.6M S  0.0   0.2   1:50.69 sensors
+   643 dsoftbus     20   0 140M  24M  22M S  0.0   0.6   1:45.51 softbus_server
+   637 uiserver     20   0  62M  14M  11M S  0.0   0.3   0:08.82 ui_service
+   633 useriam      20   0  76M  15M  11M S  0.0   0.3   0:43.51 useriam
+   623 composer_host 20  0  56M 8.5M 6.7M S  0.0   0.2   6:31.74 composer_host           -i 11 -n composer_host
+   615 allocator_host 20 0  47M 7.7M 6.2M S  0.0   0.1   0:05.76 allocator_host          -i 12 -n allocator_host
+   605 blue_host    20   0 2.0G 6.6M 5.3M S  0.0   0.1   0:00.02 blue_host               -i 1 -n blue_host
+   599 usb_host     20   0 2.0G 6.4M 5.1M S  0.0   0.1   0:00.01 usb_host                -i 3 -n usb_host
+   575 power_host   20   0  53M 8.8M 7.0M S  0.0   0.2   1:13.68 power_host              -i 4 -n power_host
+   571 wifi_host    20   0 2.0G 7.2M 5.7M S  0.0   0.1   0:12.40 wifi_host               -i 5 -n wifi_host
+   569 audio_host   20   0  36M 6.9M 5.3M S  0.0   0.1   0:00.24 audio_host              -i 8 -n audio_host
+   566 camera_host  20   0  76M 8.9M 6.6M S  0.0   0.2   0:00.38 camera_host             -i 9 -n camera_host
+   560 input_user_host 20 0 33M 6.4M 5.2M S  0.0   0.1   0:00.01 input_user_host         -i 10 -n input_user_host
+   556 sensor_host  20   0  47M 7.4M 5.8M S  0.0   0.1   5:21.72 sensor_host             -i 13 -n sensor_host
+   554 vibrator_host 20  0  33M 6.7M 5.4M S  0.0   0.1   0:00.00 vibrator_host           -i 14 -n vibrator_host
+   551 light_host   20   0  33M 6.6M 5.3M S  0.0   0.1   0:00.00 light_host              -i 15 -n light_host
+   523 device_manager 20 0  98M  15M  14M S  0.0   0.3   0:41.02 device_manager
+   518 gps          20   0 222M  33M  31M S  0.0   0.8   1:10.85 locationhub
+   497 ddms         20   0 122M  30M  23M S  0.0   0.7  13:20.85 distributeddata
+   471 codec_host   20   0  45M 7.6M 6.0M S  0.0   0.1   0:00.01 codec_host              -i 16 -n codec_host
+   468 face_auth_host 20 0 2.0G 6.7M 5.3M S  0.0   0.1   0:00.01 face_auth_host          -i 19 -n face_auth_host
+   465 user_auth_host 20 0 2.0G  10M 7.3M S  0.0   0.2   0:00.07 user_auth_host          -i 21 -n user_auth_host
+   464 fingerprint_auth_host 20 0 2.0G 6.7M 5.3M S 0.0 0.1 0:00.01 fingerprint_auth_host   -i 22 -n fingerprint_auth_host
+   449 time         20   0  63M  14M  11M S  0.0   0.3   0:30.29 time_service
+   431 push         20   0 180M  31M  28M S  0.0   0.8   0:22.99 push_manager_service
+   423 msdp         20   0 224M  30M  29M S  0.0   0.7   0:43.10 msdp
+   409 user_data_rw 20   0  77M  14M  14M S  0.0   0.3   1:35.34 file_monitor_service
+   332 wallpaper    20   0 138M  18M  18M S  0.0   0.4   0:00.35 wallpaper_service
+   325 radio        20   0 231M  36M  34M S  0.0   0.9   1:41.35 telephony
+   321 net_manager  20   0 212M  39M  29M S  0.0   0.9   0:59.10 netmanager
+   309 access_token  0 -20  71M  14M  10M S  0.0   0.3   0:30.71 accesstoken_service
+   288 ressched      0 -20 287M  43M  39M S  0.0   1.1   1:53.48 resource_schedule_service
+   267 root          0 -20  64M  11M 8.1M S  0.0   0.2   0:02.67 resource_schedule_executor
+   255 input        20   0 171M  32M  24M S  0.0   0.8   0:38.23 multimodalinput
+   240 memmgr       20   0  88M  18M  14M S  0.0   0.4   0:40.47 memmgrservice
+   224 huks_server  20   0  70M  18M  14M S  0.0   0.4   0:05.02 huks_service
+   222 healthsport  20   0  79M  21M  17M S  0.0   0.5   0:12.52 healthsport_services
+   207 dlp_credential 20 0  72M  13M  10M S  0.0   0.3   0:00.34 dlp_credential_service_sa
+   188 system        0 -20  45M 7.7M 6.2M S  0.0   0.1   0:00.33 concurrent_task_service
+   187 audio        20   0 178M  36M  27M S  0.0   0.9   0:23.76 audio_server
+   179 accessibility 0 -20 246M  31M  29M S  0.0   0.7   0:10.05 accessibility
+   138 root         20   0 136M  23M  17M S  0.0   0.5   0:00.04 QemuParams boot-params
+   133 root         -2 -20  36G  66M  38M S  0.0   1.6   1:03.09 appspawn
+   132 hdf_devmgr   20   0  37M 6.8M 5.3M S  0.0   0.1   0:01.72 hdf_devmgr
+   131 hiview       20   0 328M  46M  40M S  0.0   1.1   8:46.44 hiview
+   127 paramwatcher 20   0  61M 8.4M 6.8M S  0.0   0.2   0:01.36 param_watcher
+   126 samgr         0 -20  79M  13M 9.1M S  0.0   0.3   3:02.35 samgr
+   122 root         20   0  55M  10M 7.0M S  0.0   0.2   0:02.14 storage_daemon
+   121 storage_manager 20 0 70M  14M  11M S  0.0   0.3   0:05.73 storage_manager
+   106 logd         20   0  40M 7.9M 4.6M S  0.0   0.2   6:05.57 hilogd
+   105 faultloggerd  0 -20  29M 4.8M 3.9M S  0.0   0.1   0:01.57 faultloggerd
+    99 root          0 -20    0    0    0 I  0.0   0.0   0:07.86 [kworker/3:1H-kblockd]
+    97 watchdog     20   0  23M 4.0M 3.3M S  0.0   0.1   0:01.92 watchdog_service 10 20
+    96 ueventd      20   0  23M 4.8M 3.6M S  0.0   0.1   0:01.31 ueventd
+    94 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [ext4-rsv-conver]
+    93 root         20   0    0    0    0 S  0.0   0.0   0:26.67 [jbd2/vdd-8]
+    92 root          0 -20    0    0    0 I  0.0   0.0   0:06.55 [kworker/1:1H-kblockd]
+    90 root          0 -20    0    0    0 I  0.0   0.0   0:06.34 [kworker/2:1H-kblockd]
+    87 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [ext4-rsv-conver]
+    86 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [ext4-rsv-conver]
+    85 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [ext4-rsv-conver]
+    80 root         20   0    0    0    0 S  0.0   0.0   0:35.33 [cache_freed]
+    78 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [ipv6_addrconf]
+    75 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [nfsiod]
+    74 root         35  15    0    0    0 S  0.0   0.0   0:00.00 [zswapd0]
+    73 root         20   0    0    0    0 S  0.0   0.0   0:29.60 [snapshotd]
+    72 root         20   0    0    0    0 S  0.0   0.0   0:00.22 [kswapd0]
+    71 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [cfg80211]
+    70 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [xprtiod]
+    69 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [kworker/u9:0]
+    68 root          0 -20    0    0    0 I  0.0   0.0   0:08.35 [kworker/0:1H-kblockd]
+    67 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [rpciod]
+    65 root         RT   0    0    0    0 S  0.0   0.0   0:00.00 [watchdogd]
+    64 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [devfreq_wq]
+    63 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [ata_sff]
+    62 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [kblockd]
+    36 root         20   0    0    0    0 S  0.0   0.0   0:05.19 [kcompactd0]
+    35 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [writeback]
+    34 root         20   0    0    0    0 S  0.0   0.0   0:00.00 [oom_reaper]
+    33 root         20   0    0    0    0 S  0.0   0.0   0:00.00 [khungtaskd]
+    32 root         20   0    0    0    0 S  0.0   0.0  14:08.63 [kauditd]
+    31 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [netns]
+    30 root         20   0    0    0    0 S  0.0   0.0   0:00.00 [kdevtmpfs]
+    29 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [kworker/3:0H-kblockd]
+    27 root         20   0    0    0    0 S  0.0   0.0   0:15.34 [ksoftirqd/3]
+    26 root         RT   0    0    0    0 S  0.0   0.0   0:01.53 [migration/3]
+    25 root         20   0    0    0    0 S  0.0   0.0   0:00.00 [cpuhp/3]
+    24 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [kworker/2:0H-kblockd]
+    22 root         20   0    0    0    0 S  0.0   0.0   0:16.46 [ksoftirqd/2]
+    21 root         RT   0    0    0    0 S  0.0   0.0   0:01.74 [migration/2]
+    20 root         20   0    0    0    0 S  0.0   0.0   0:00.00 [cpuhp/2]
+    19 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [kworker/1:0H-kblockd]
+    17 root         20   0    0    0    0 S  0.0   0.0   0:16.42 [ksoftirqd/1]
+    16 root         RT   0    0    0    0 S  0.0   0.0   0:02.47 [migration/1]
+    15 root         20   0    0    0    0 S  0.0   0.0   0:00.00 [cpuhp/1]
+    14 root         20   0    0    0    0 S  0.0   0.0   0:00.00 [cpuhp/0]
+    12 root         RT   0    0    0    0 S  0.0   0.0   0:01.37 [migration/0]
+    11 root         20   0    0    0    0 I  0.0   0.0   0:51.19 [rcu_sched]
+    10 root         20   0    0    0    0 S  0.0   0.0   0:25.54 [ksoftirqd/0]
+     9 root         20   0    0    0    0 S  0.0   0.0   0:00.00 [rcu_tasks_rude_]
+     8 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [mm_percpu_wq]
+     6 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [kworker/0:0H-events_highpri]
+     4 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [rcu_par_gp]
+     3 root          0 -20    0    0    0 I  0.0   0.0   0:00.00 [rcu_gp]
+     2 root         20   0    0    0    0 S  0.0   0.0   0:00.04 [kthreadd]
+     1 root         20   0  49M 7.3M 4.8M S  0.0   0.1   0:37.70 init --second-stage 1433395

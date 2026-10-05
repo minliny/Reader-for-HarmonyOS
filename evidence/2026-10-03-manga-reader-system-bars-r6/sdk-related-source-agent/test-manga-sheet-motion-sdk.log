@@ -1,0 +1,76 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: real SDK Builder/member transform has no diagnostics
++ actual - expected
+
++ [
++   {
++     code: '10905301',
++     message: "'@Watch' cannot be used with 'onWindowChromeChanged'. Apply it only to parameters that correspond to existing methods.",
++     pos: 87,
++     type: 'ERROR'
++   },
++   {
++     code: '10905301',
++     message: "'@Watch' cannot be used with 'onWindowChromeChanged'. Apply it only to parameters that correspond to existing methods.",
++     pos: 665,
++     type: 'ERROR'
++   },
++   {
++     code: '10905301',
++     message: "'@Watch' cannot be used with 'onWindowChromeChanged'. Apply it only to parameters that correspond to existing methods.",
++     pos: 741,
++     type: 'ERROR'
++   },
++   {
++     code: '10905301',
++     message: "'@Watch' cannot be used with 'onWindowChromeChanged'. Apply it only to parameters that correspond to existing methods.",
++     pos: 822,
++     type: 'ERROR'
++   }
++ ]
+- []
+
+    at createReaderBuilderProbe (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:67:10)
+    at fixture (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-sheet-motion-sdk.mjs:35:17)
+    at verifyMotion (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-sheet-motion-sdk.mjs:95:15)
+    at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-sheet-motion-sdk.mjs:144:7
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [
+    {
+      type: 'ERROR',
+      message: "'@Watch' cannot be used with 'onWindowChromeChanged'. Apply it only to parameters that correspond to existing methods.",
+      pos: 87,
+      code: '10905301'
+    },
+    {
+      type: 'ERROR',
+      message: "'@Watch' cannot be used with 'onWindowChromeChanged'. Apply it only to parameters that correspond to existing methods.",
+      pos: 665,
+      code: '10905301'
+    },
+    {
+      type: 'ERROR',
+      message: "'@Watch' cannot be used with 'onWindowChromeChanged'. Apply it only to parameters that correspond to existing methods.",
+      pos: 741,
+      code: '10905301'
+    },
+    {
+      type: 'ERROR',
+      message: "'@Watch' cannot be used with 'onWindowChromeChanged'. Apply it only to parameters that correspond to existing methods.",
+      pos: 822,
+      code: '10905301'
+    }
+  ],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

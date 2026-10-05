@@ -1,0 +1,1158 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03T13:51:21.993713+00:00",
+  "scope": "Exact frozen R6 system-bars and sheets SDK evidence only; final inventory excludes itself",
+  "directories": [
+    "evidence/2026-10-03-manga-reader-system-bars-r6",
+    "evidence/2026-10-03-manga-reader-sheets-r6"
+  ],
+  "selfExcludedPath": "evidence/2026-10-03-manga-reader-system-bars-r6/FINAL_SHA256SUMS.json",
+  "fileCount": 189,
+  "bytes": 6726613,
+  "files": [
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/FINAL_INPUTS.json",
+      "bytes": 3800,
+      "mode": 420,
+      "sha256": "87946896c17aad3edcfee490d13d321064ca74222acefcd9e6cbf77375d41ec9"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/REVIEW.md",
+      "bytes": 4925,
+      "mode": 420,
+      "sha256": "ef9c38828d72789b64249ea99255bd0438e71c1d74bff20afdb97ef584d503d3"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/SHA256SUMS.json",
+      "bytes": 12236,
+      "mode": 420,
+      "sha256": "4c942c00d1d4d93682a8470bb52cf00471d67fcca70d9c63501c6782a8972f0e"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/baseline-manga-reading-surface.ets",
+      "bytes": 101068,
+      "mode": 420,
+      "sha256": "0f5e6d2654e8cc228b43b2ab2c9023e728db904193a147ce71da425113a6b897"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/baseline-reader-shell.ets",
+      "bytes": 24844,
+      "mode": 420,
+      "sha256": "ea6dddd9fcb6eecf76ea4871419d70e32c69a12cc5812c5aea34716c89cf85ba"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/baseline-source.json",
+      "bytes": 873,
+      "mode": 420,
+      "sha256": "cb0702789e68b4e2b058e4b0717a3ce58f2544a3ce6bf517903b3b48a5a0d695"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/manga-final-results.json",
+      "bytes": 13197,
+      "mode": 420,
+      "sha256": "a4776e3010a947f3879822abea3dbe943e7b8e9945d7a11f4a429dce2ef80b7e"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-admission.final.log",
+      "bytes": 819,
+      "mode": 420,
+      "sha256": "41f22b52b0e7750036d0f4a5251278ed476068d9a314cd9578cfacb46b0faaaa"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-auth-recovery.final.log",
+      "bytes": 373,
+      "mode": 420,
+      "sha256": "f02e8f3619e786f7b0a034c557a3fbe3d764454d5ef5dae40fd0eaf50c13db88"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-book-presentation.final.log",
+      "bytes": 122,
+      "mode": 420,
+      "sha256": "7200e2e2c3ee0527feafcfd98eb48760726918b7d0ead7dcfa8adbec741b2560"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-cancelled-banner.final.log",
+      "bytes": 317,
+      "mode": 420,
+      "sha256": "ee29f4a4a92e2d2da4f11fe54297fb56d176b75026cd4cde759da2c40cb8a632"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-cancelled-banner.mjs.after.log",
+      "bytes": 317,
+      "mode": 420,
+      "sha256": "704c19fa7e8935684eb5af3af7eeae1a21b1061617da7ce0ce83f184344a02db"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-cross-chapter-counter-sdk.final.log",
+      "bytes": 285,
+      "mode": 420,
+      "sha256": "24eaa2439a0d862f7b479efa753ea1786efc068c8863d389422bbfe73b78af43"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-cross-chapter-counter-sdk.mjs.before.log",
+      "bytes": 285,
+      "mode": 420,
+      "sha256": "b1513a51670b0f369393f87ff80e39e7a621eabf054b90b106a3f452cc64d170"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-directory-demo-parity-sdk.final.log",
+      "bytes": 716,
+      "mode": 420,
+      "sha256": "84c04d6b5492927fbc7ee9baab1d9984230fb0e7bcfbbe1dd38bb9ffb7994fa1"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-directory-font-readiness-sdk.final.log",
+      "bytes": 748,
+      "mode": 420,
+      "sha256": "97af23a5d07cb0f56abcb64fa637886b79746de51cc18abfcfb77e35700916df"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-directory-font-readiness-sdk.mjs.after.log",
+      "bytes": 748,
+      "mode": 420,
+      "sha256": "7b0c23e22a0351c3d1f83c6f3445ba3f1ef06650b569240a1b2d09bf5a372aba"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-directory-route.final.log",
+      "bytes": 539,
+      "mode": 420,
+      "sha256": "c70324bc9d52e08b4c3d89ccff4084336bd0bbf9a6112804af8f00d1d6f842a3"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-display-policy.final.log",
+      "bytes": 428,
+      "mode": 420,
+      "sha256": "6eae0de14fe06ee31fad9b6a1bd21d7d0254c648dc8a14efd59f0537eeb9ba0f"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-error-recovery.final.log",
+      "bytes": 869,
+      "mode": 420,
+      "sha256": "6dc82a08a67f9d1d0400a7f12cfb30299bd53f295f4317f29fadb66d55e07906"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-error-recovery.mjs.after.log",
+      "bytes": 869,
+      "mode": 420,
+      "sha256": "e43f1bc424e8ebe38da58369030bb6a8246cd9ee6276ca0569f64011973e8d8c"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-far-page-tile-retirement.final.log",
+      "bytes": 264,
+      "mode": 420,
+      "sha256": "8725823c9a178efbf411cc73249015a13914d4c0a92160aa221b3b23f42478fd"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-image-decode.final.log",
+      "bytes": 1231,
+      "mode": 420,
+      "sha256": "888ad314bcf588474170402830c7b2a932644457b4f5df93949206906cf13257"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-image-graphics.final.log",
+      "bytes": 966,
+      "mode": 420,
+      "sha256": "caf438ce2d5ac22b12e2315d05ae0af222b4d1bb5f3e3471249cc57c9a6b269c"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-image-metadata-transfer.final.log",
+      "bytes": 247,
+      "mode": 420,
+      "sha256": "447651c8e0f045376863edd84955c41f2d040ca1fdec6d33094c5b3408f149fd"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-metadata-ui.final.log",
+      "bytes": 465,
+      "mode": 420,
+      "sha256": "3c9544aab5c87b88a6d2c11d5c0b64c09a9b6606cf0c51d58fe96042e5e06d7e"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-motion-progress.final.log",
+      "bytes": 1344,
+      "mode": 420,
+      "sha256": "5062730a37f522847e4375892bffd6ee4338c0bca4aeb37ace2704550d30f38e"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-motion-progress.mjs.after.log",
+      "bytes": 1344,
+      "mode": 420,
+      "sha256": "f01c2b84186a36084104d18af8a23f5fb1e98be34bb302dbb4b4954ca1a233e8"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-motion-progress.mjs.before.log",
+      "bytes": 866,
+      "mode": 420,
+      "sha256": "d2707aef686c36295b597be03b558072bcdaa30a831af768ae809a142b3ddda7"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-navigation.final.log",
+      "bytes": 682,
+      "mode": 420,
+      "sha256": "01164bd5dd5c55f2ea30d5d3a870b2664dbae1412dfefed5b5c3ae1c9af6a3ea"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-navigation.mjs.after.log",
+      "bytes": 682,
+      "mode": 420,
+      "sha256": "564428eaf3289dec03b45e77e84e3c130e6a0c66a3b878f5ed9371c69ab994c1"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-offline-network-probe.final.log",
+      "bytes": 1304,
+      "mode": 420,
+      "sha256": "0b3d906aff5921786c35f5d511708cde3192b14785aea580721a6d899f8a8675"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-offline-network-probe.mjs.after.log",
+      "bytes": 1304,
+      "mode": 420,
+      "sha256": "d25e55cb9479b02ae89cd48ec698920fda5201f14bf02c99918e48bf17a015db"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-offline.final.log",
+      "bytes": 1081,
+      "mode": 420,
+      "sha256": "b3b54e6ffaca36130c26a6de196517bce4a54051e9a86aa04fa1638846e94d46"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-orientation.final.log",
+      "bytes": 464,
+      "mode": 420,
+      "sha256": "7a5c79d68df1db82f76963b0d5d60c4eeee18403b3b79c87cb134d0b5b6588ca"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-platform-probe-sdk.final.log",
+      "bytes": 694,
+      "mode": 420,
+      "sha256": "a55bf77597ef1ac5b700cf751e08d811285101b2d833107c0bc5e98bfd96f47f"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-platform-probe.final.log",
+      "bytes": 646,
+      "mode": 420,
+      "sha256": "feb3738a0b69ce26cbc3d49f64c8c0f935fead5236a8e815b50446eaabe02427"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-reading-directory-fallback.final.log",
+      "bytes": 859,
+      "mode": 420,
+      "sha256": "8ece480e8384b4a9444921a428432fed2ce989812236e61fa8d24775257a3401"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-region-decode.final.log",
+      "bytes": 2241,
+      "mode": 420,
+      "sha256": "1ce596d95efb578df63b4d3da4041dc1c28a2bf657bcbe8c84bc886d3fab2de6"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-resource-gateway.final.log",
+      "bytes": 480,
+      "mode": 420,
+      "sha256": "c7bdee136df4d620f499c2070e4d18625073fa7cdabff4a3ae9e9cce8867ede2"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-runtime-image-lane.final.log",
+      "bytes": 460,
+      "mode": 420,
+      "sha256": "6fbfefe5d932564fea64473a4bb4a5ffe212c66a4e9d90597f1e7c4134f88cfc"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-scroll-stability-sdk.final.log",
+      "bytes": 3118,
+      "mode": 420,
+      "sha256": "b961eac9635599279e50e3d867506ac7b5e73d1f3d153ca1331b0ca81feee49c"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-session.final.log",
+      "bytes": 2850,
+      "mode": 420,
+      "sha256": "e930a961b73f3e6736ea672930a19a4d64fe743aa532a11dd69ec18fcf5b066d"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-session.mjs.after.log",
+      "bytes": 3664,
+      "mode": 420,
+      "sha256": "75282a9bde292f5ba658fe77d7b4b5e722500ebdadcf90ffea742a4cbf16157e"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-session.mjs.final.log",
+      "bytes": 2850,
+      "mode": 420,
+      "sha256": "955157d514d1c5459227dab5da56b7dacdc2eee4b7e6937afb6249e709a65784"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-sheet-motion-sdk.final.log",
+      "bytes": 922,
+      "mode": 420,
+      "sha256": "abc496d0a194aeee40ede314921a6f9445cabf3cc5eda39923822a935a7d042e"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-sheet-motion-sdk.mjs.after.log",
+      "bytes": 922,
+      "mode": 420,
+      "sha256": "6a5f54ed1baaa469ad2151e2c88d07c9c307ed55d3f3eb941958cd86158188f2"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-sheet-motion-sdk.mjs.before.log",
+      "bytes": 2865,
+      "mode": 420,
+      "sha256": "69b16c46a19af9325c1029211b5d3b3a120b57cc21e2224e2283af27afa5f5f7"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-sheet-selection-sdk.final.log",
+      "bytes": 527,
+      "mode": 420,
+      "sha256": "57bf9a6d84906154ab1680840afa1694c0773a7fbc4208703379bc67208f8690"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-sheet-selection-sdk.mjs.after.log",
+      "bytes": 527,
+      "mode": 420,
+      "sha256": "bd989ab3f5ba6dcb8fee882385dc547647cd3d1b9c0a454f253be03d3fb20b82"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-sheet-selection-sdk.mjs.before.log",
+      "bytes": 1614,
+      "mode": 420,
+      "sha256": "da9af503d4228ccce79d2f0d70f713f304ba9bebeb93b7778a5f6c7a63203647"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-source-switch.final.log",
+      "bytes": 614,
+      "mode": 420,
+      "sha256": "6615ba79c974567899833daa56dc82b750488f9afa0b0f36b4d077513920b0c6"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-strip.final.log",
+      "bytes": 431,
+      "mode": 420,
+      "sha256": "6de055dc531e168805526739fbeb6e24a6f5a850800bef4ab455faac04f4ecce"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-strip.mjs.after.log",
+      "bytes": 431,
+      "mode": 420,
+      "sha256": "d080c34821231189673b2a97c17e670057e99c4c897da36a8316a1dfc184f8c1"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-surface-render-key-sdk.final.log",
+      "bytes": 804,
+      "mode": 420,
+      "sha256": "376dddc7e9209c67f7cf1c1db9a052a1d37e11f98fe4587a5388cc123f764eb8"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-surface-render-key-sdk.mjs.before.log",
+      "bytes": 804,
+      "mode": 420,
+      "sha256": "7aff5746322b3466718ebe292ce203df94f58887c73d00898aee5938f14523c6"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-surface-sdk.final.log",
+      "bytes": 966,
+      "mode": 420,
+      "sha256": "d7370b24d1efbbdc272becf95551b001bd888ada8fbf8a2f1e1396bb1643734b"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-surface-sdk.mjs.after.log",
+      "bytes": 966,
+      "mode": 420,
+      "sha256": "ab27b0b60a2cfcbfc10bcec13e2a68af33e4a1fc23484302ceb228d8fc859262"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-surface-sdk.mjs.before.log",
+      "bytes": 1027,
+      "mode": 420,
+      "sha256": "c8888f0a66ab943a208d4466c8c22c06d16a1284804c1d6a45c0012859727c03"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-tile-window.final.log",
+      "bytes": 665,
+      "mode": 420,
+      "sha256": "991c1838bafab143430cea62575d32079dc988f01194f867830492ebfd949321"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-tile-window.mjs.after.log",
+      "bytes": 665,
+      "mode": 420,
+      "sha256": "3b980dd8c73e422ae6ed116888c9764550afac3129d7c23a1e6f77e41336680a"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-ui-assembly-sdk.final.log",
+      "bytes": 1449,
+      "mode": 420,
+      "sha256": "358e4046c8c1f75ade6115a595b195d5e9805833609eb80b9785ff58e4f43963"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-ui-assembly-sdk.mjs.before.log",
+      "bytes": 1449,
+      "mode": 420,
+      "sha256": "977589e7586f15887a010452dad33b8b8983e2cad16874c6bb9ae6b56b3155ca"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-ui-floating-bars.final.log",
+      "bytes": 573,
+      "mode": 420,
+      "sha256": "e7d72d091752d506f3299202d228a47b942df980a82b14c14e16a93f44418d7a"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-ui-position-hydration.final.log",
+      "bytes": 474,
+      "mode": 420,
+      "sha256": "43857eabf42bfd22319ad8d7e90b60f42fada1b123bbcf5393bd8eefb976bf7d"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-ui-source-switch-discovery.final.log",
+      "bytes": 468,
+      "mode": 420,
+      "sha256": "4a7607cfbf7628b9b689230e09e6eae74802c87551259d7f9f7e64c595083cfa"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-ui-source-switch-window.final.log",
+      "bytes": 332,
+      "mode": 420,
+      "sha256": "7b6a4ccbe0b910c9993b739b9addf62df8a55f0f461f3a5c50e8dc64fce019db"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-ui-state.final.log",
+      "bytes": 457,
+      "mode": 420,
+      "sha256": "863281447a56d76a70f4aedea389f0c1c7c6db6a78978aade526bb8e07641638"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-ui-state.mjs.after.log",
+      "bytes": 457,
+      "mode": 420,
+      "sha256": "509bbe9329d903f29bc06e4138b03aaf58db15e6c11817434c789b29cd8ec617"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-viewport-restore-sdk.final.log",
+      "bytes": 865,
+      "mode": 420,
+      "sha256": "ea61e0de193a09abf9cf2d8f599b93026d89abd068c45969e62104dd1961f772"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-viewport-restore-sdk.mjs.before.log",
+      "bytes": 865,
+      "mode": 420,
+      "sha256": "5db8177b8c6712109bca67b1ad040ac8e72ad12752514a94e4817e3a63c2df4b"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-visible-tile-retention.final.log",
+      "bytes": 527,
+      "mode": 420,
+      "sha256": "baef8ad8258bacba0ede71f415762dff7a2247ed7389d8e978f99181f1627797"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-window-publication.final.log",
+      "bytes": 481,
+      "mode": 420,
+      "sha256": "1f91d81b9ddac9ffba33c87833c60c53ffba3e833e60994dcfcc1470fcedcf71"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/test-manga-window-publication.mjs.before.log",
+      "bytes": 481,
+      "mode": 420,
+      "sha256": "cc86cb0d769264c65121863a5d1277c391630e4aa8a0f8ad34a8997bdbe4aa96"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/window-order-final.log",
+      "bytes": 4015,
+      "mode": 420,
+      "sha256": "1d529f70c9b752da94715e25363375007a168b24cf507ae028fa286fb8e45f80"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/window-order-first-pass.log",
+      "bytes": 2448,
+      "mode": 420,
+      "sha256": "ec11080857d2afc5e04ce405b7280d6b4560277d6dd006f2dd1ab74fd524be57"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/window-order-running.log",
+      "bytes": 4129,
+      "mode": 420,
+      "sha256": "3fb2a681fff5617cb349e2313ed2015ca46c57b18d6c6dd82e0429423c010237"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/BUILD_RECORD.json",
+      "bytes": 13900,
+      "mode": 420,
+      "sha256": "870ab4f204f0fb43c45b14a094512229d1945eabc5c41202e5c901a30a3ef511"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/CLOSURE_ATTEMPT_RECORD.json",
+      "bytes": 758,
+      "mode": 420,
+      "sha256": "5ddf7f3c97c1a95729e1b1c255023ac67b3ccb1ecdbbfd542fa5bbb214106237"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/CLOSURE_REVIEW.md",
+      "bytes": 2162,
+      "mode": 420,
+      "sha256": "bcb18f6fcc8b50bec69fc2f70ce3cdceed868148a5a82f5add9fcdfc3eb52b3e"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/FINAL_COPY_RECEIPT.json",
+      "bytes": 16311,
+      "mode": 420,
+      "sha256": "3692652cd92643176d296bda3f3106075f31d2d28dbdc0e47144e4deef338e3a"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/ISSUE_RECORD.md",
+      "bytes": 3132,
+      "mode": 420,
+      "sha256": "6796c5f854b6391081a7b9ded909d16b3d332fdec42b3b74197039bf1ebc173b"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/PLAN.md",
+      "bytes": 2062,
+      "mode": 420,
+      "sha256": "ed9879ddbc4f39f9b5a692af995ba4e3720f243b4e42e949612312fb04e741e8"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/RESULT.md",
+      "bytes": 3013,
+      "mode": 420,
+      "sha256": "7d8c9450aa6242884877d3eafc761b47561bc6aacff117720ee4178d03fcad1c"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/VM_RECORD.json",
+      "bytes": 8429,
+      "mode": 420,
+      "sha256": "730c00f957b898ad57dcbdb0da0c0c80f3baa34be20ce838de4d4450faf7491d"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/VM_SCOPE.md",
+      "bytes": 1160,
+      "mode": 420,
+      "sha256": "2c0ffb42f234c9e1744f94ec87ef3a04ef5742bdf111d496d982a52a8f1bd157"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/canonical-delivery/build.log",
+      "bytes": 270844,
+      "mode": 420,
+      "sha256": "ad9313ea6320bced4b697596951e3a8af7699b470f7c3304e6889d132d737883"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/canonical-delivery/deploy-vm-6460677a198b-20261003T133542Z.json",
+      "bytes": 1751,
+      "mode": 420,
+      "sha256": "5231693cbd852212734fa555d009cbb1c8a2ec986b4fc4c38a0105e69f5a7210"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/canonical-delivery/inspect.log",
+      "bytes": 1171,
+      "mode": 420,
+      "sha256": "d7eccede1cdab560238679fda2884e42297538a5c4d2fd065c33bb12abc022d8"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/canonical-delivery/install-attempt-build-lock.log",
+      "bytes": 57,
+      "mode": 420,
+      "sha256": "e0f4b2bf4f515cbb32c3121ada87fee8b3f7c3a7e5a4f389eaab17c176d9adc0"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/canonical-delivery/install.log",
+      "bytes": 385,
+      "mode": 420,
+      "sha256": "e08eb0e192ca11e2479c5b90fb78a2a37d423312c107c0963b68cf1e3d760917"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/canonical-delivery/verify.log",
+      "bytes": 736,
+      "mode": 420,
+      "sha256": "b19c3c521657a78091bc8e7fef29b91e6196ec0e0586298d1b999cd034fa8f13"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-final-copy.json",
+      "bytes": 15118,
+      "mode": 420,
+      "sha256": "05c03040782325eb3c3c0e321b889b4094589b10b725c7fbbde013b2106388aa"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent-copy.json",
+      "bytes": 9252,
+      "mode": 420,
+      "sha256": "798f0e425f893663b39d27929339f294cb75d180f8031e0bac72ca68638c3138"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/FAIL_REVIEW.md",
+      "bytes": 3146,
+      "mode": 420,
+      "sha256": "2685e096886580e4b439c5925f3379765b87d875760430e274f3f27d7f0aab44"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/SUMMARY.md",
+      "bytes": 4212,
+      "mode": 420,
+      "sha256": "42353025a0d11eb2b0b5cb6b33ef7eba046b7f3109516ef66ba62cc4ac12f087"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/run-index.json",
+      "bytes": 23164,
+      "mode": 420,
+      "sha256": "ebac481b232f11fe702ea999be54fbc2f85d0f33dbd1372dc1cec012691786bd"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-admission.log",
+      "bytes": 819,
+      "mode": 420,
+      "sha256": "8eb5f30bedd9b815f146d72b05a3fc69449afef9af039e4501dd29a3eaaaa92c"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-auth-recovery.log",
+      "bytes": 373,
+      "mode": 420,
+      "sha256": "5134df3076b32cb79ce851e70b5a16904ded2a95fae54296499d5d3c4a2d6bd9"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-book-presentation.log",
+      "bytes": 122,
+      "mode": 420,
+      "sha256": "7200e2e2c3ee0527feafcfd98eb48760726918b7d0ead7dcfa8adbec741b2560"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-cancelled-banner.log",
+      "bytes": 735,
+      "mode": 420,
+      "sha256": "896755e7aac59f93d66a1830323954405264dc2f45c7b77e9fb3c13b8e5b0f58"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-cross-chapter-counter-sdk.log",
+      "bytes": 285,
+      "mode": 420,
+      "sha256": "8bdbb3bcfbe9291d48172b2081c91be1d8ceb8b58828849efe1e78cebaebc4ad"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-directory-demo-parity-sdk.log",
+      "bytes": 716,
+      "mode": 420,
+      "sha256": "472b867773e8411f11b19bf02b6f3852e8a3f1bda0ae2c5365d64958bea5e87c"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-directory-font-readiness-sdk.log",
+      "bytes": 1434,
+      "mode": 420,
+      "sha256": "732b063ebcbeb444534ffa64d3ef6a63bca0eb0dda4f667d4da5337737070e90"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-directory-route.log",
+      "bytes": 539,
+      "mode": 420,
+      "sha256": "4607dc9f445c574340e97d815ae2279a6b2fc61576310afeefadcd715a52a5ba"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-display-policy.log",
+      "bytes": 428,
+      "mode": 420,
+      "sha256": "c388ca2786725acc191fc28bd40c27c21d9154e2ec55736d1d0debe6e00ff52c"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-error-recovery.log",
+      "bytes": 12783,
+      "mode": 420,
+      "sha256": "bf4b7a45dba68fca0c4ed09ec013f6e17e7fe8f4aad1adbe8e971042ddb7bbdd"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-far-page-tile-retirement.log",
+      "bytes": 264,
+      "mode": 420,
+      "sha256": "075cd99fd8186ca78b5e05edf58753b15025c08d12af21085729186d51bc8d38"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-image-decode.log",
+      "bytes": 1231,
+      "mode": 420,
+      "sha256": "36bb38e2e0dfeb7894b634894e193e1500655d36ab222b76aadba5e7a44d69c7"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-image-graphics.log",
+      "bytes": 966,
+      "mode": 420,
+      "sha256": "46715f77282679c9e2ae5b5e3c7d5a0a8c6c1624ef2c542985dc87490eba6527"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-image-metadata-transfer.log",
+      "bytes": 247,
+      "mode": 420,
+      "sha256": "447651c8e0f045376863edd84955c41f2d040ca1fdec6d33094c5b3408f149fd"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-metadata-ui.log",
+      "bytes": 465,
+      "mode": 420,
+      "sha256": "39181fbfba05401dd6db275b10f8139aaec10eddd44e8ad52ce4f0540a5d17eb"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-motion-progress.log",
+      "bytes": 866,
+      "mode": 420,
+      "sha256": "d2707aef686c36295b597be03b558072bcdaa30a831af768ae809a142b3ddda7"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-navigation.log",
+      "bytes": 1099,
+      "mode": 420,
+      "sha256": "e382e104ff6e5ca69849c1997dfeb9da4fb578dcd6a5cd689daaf5601e88e2af"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-offline-network-probe.log",
+      "bytes": 1270,
+      "mode": 420,
+      "sha256": "2658821d237052331e22f91168fa40279a4fc3469acc55f136dfe4b965f8d234"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-offline.log",
+      "bytes": 1081,
+      "mode": 420,
+      "sha256": "92996f09e2fc20c6ee92fb9f703589f402cd87714c286cde6751c6d48f8ea65d"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-orientation.log",
+      "bytes": 464,
+      "mode": 420,
+      "sha256": "b7d4223ed93da5f891874a9a719553a82514c769d3b7016b7f4d82ef1fb7e81f"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-platform-probe-sdk.log",
+      "bytes": 694,
+      "mode": 420,
+      "sha256": "86b19b482e9dd5797c97bd3b23abf115ed434e4fe5731e95b514bc0c5abdcb14"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-platform-probe.log",
+      "bytes": 646,
+      "mode": 420,
+      "sha256": "eb09525e4b4cdfe06900546a8f4a063ace5ce57c4b05a55e5e84a5fcbccee72f"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-reading-directory-fallback.log",
+      "bytes": 859,
+      "mode": 420,
+      "sha256": "34d624817bd4c86d5518784c8d2ba96fb8a2595fdd482ff8cd944d6952218bcd"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-region-decode.log",
+      "bytes": 2241,
+      "mode": 420,
+      "sha256": "1d5de505a3cf0ffa87e9f36ea624090edec148ed0fecc583a01cfa667a119c92"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-resource-gateway.log",
+      "bytes": 480,
+      "mode": 420,
+      "sha256": "e2342c9c6be7b38fe66ee467ee8e03728349248074a1610f30e840f4b26a58fe"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-runtime-image-lane.log",
+      "bytes": 460,
+      "mode": 420,
+      "sha256": "738af3614d19e43391226a669a438953a20e76540ed7c7114935404e01946d7f"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-scroll-stability-sdk.log",
+      "bytes": 3118,
+      "mode": 420,
+      "sha256": "5c5657e1ff759a6ec1141005fed29946611895cf94564b135f824e8dbcc18767"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-session.log",
+      "bytes": 2048,
+      "mode": 420,
+      "sha256": "4737811e2ae58714cd1b6cb4a50b5e56f880582b218e9b9f1037f03a33759ec7"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-sheet-motion-sdk.log",
+      "bytes": 2865,
+      "mode": 420,
+      "sha256": "69b16c46a19af9325c1029211b5d3b3a120b57cc21e2224e2283af27afa5f5f7"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-sheet-selection-sdk.log",
+      "bytes": 1614,
+      "mode": 420,
+      "sha256": "da9af503d4228ccce79d2f0d70f713f304ba9bebeb93b7778a5f6c7a63203647"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-source-switch.log",
+      "bytes": 614,
+      "mode": 420,
+      "sha256": "6b898b6a8b40bc85b8b10964ea6c5ce2df4901ae511d9f702f7b86ef8d09c110"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-strip.log",
+      "bytes": 603,
+      "mode": 420,
+      "sha256": "ed7e108b7cb79065b44d2cefa892b8a66cb848388963840f489b10df8948f701"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-surface-render-key-sdk.log",
+      "bytes": 804,
+      "mode": 420,
+      "sha256": "859b7147e885ef3195b7f297f45c89206a2a3e0100a5dea752dea302ab8db0ef"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-surface-sdk.log",
+      "bytes": 1027,
+      "mode": 420,
+      "sha256": "e6912807286a8f9e70b2ccac26bd87765bd89fc597479d6b036edf539268dc68"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-tile-window.log",
+      "bytes": 913,
+      "mode": 420,
+      "sha256": "2bc5ab95009ea0e4aec81f20a25191800472ad44691e1c045c6e77ad25fc01c6"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-ui-assembly-sdk.log",
+      "bytes": 1449,
+      "mode": 420,
+      "sha256": "8da4ac2491d2e9e036308cf5684e963e3c8c777d056589f231035d4e7c7c7b47"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-ui-floating-bars.log",
+      "bytes": 573,
+      "mode": 420,
+      "sha256": "489bcf9d16cd8248993fdbd9936b8e9947e95b7419a7c70aa111c104b29cffd6"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-ui-position-hydration.log",
+      "bytes": 474,
+      "mode": 420,
+      "sha256": "b0dbb6c5bd16964a23ac304c35bf72c4ccb1bf3fab5e9433fa2d8ec1ecdf0b74"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-ui-source-switch-discovery.log",
+      "bytes": 468,
+      "mode": 420,
+      "sha256": "64b65c044054d8e8c743a9f7888f842fa7f36e3f857f6ec779e1a03437ca95d3"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-ui-source-switch-window.log",
+      "bytes": 332,
+      "mode": 420,
+      "sha256": "33b24edd4336c23f462431e6e361d6087e48f475667c96e1b9f39c9dbec88086"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-ui-state.log",
+      "bytes": 1042,
+      "mode": 420,
+      "sha256": "353d254696460e6e23397f113a1faa6218b9115d5915ff9c408334788f3ca7b8"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-viewport-restore-sdk.log",
+      "bytes": 865,
+      "mode": 420,
+      "sha256": "68f5d27bf1b619088484b51e2fe1e29d9a6a5c5f0d9e129bd2c1fa66a0addebf"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-visible-tile-retention.log",
+      "bytes": 527,
+      "mode": 420,
+      "sha256": "e66348301ef6c2097c1410ccd145b97ab282b70a4bfc96fcdde0dd9b1c70aee3"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/sdk-related-source-agent/test-manga-window-publication.log",
+      "bytes": 481,
+      "mode": 420,
+      "sha256": "e5db5ef9350430989a55f96302d41606af32431032cbd6a24c81ee72b3478da6"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-copy-product.json",
+      "bytes": 1274,
+      "mode": 420,
+      "sha256": "ef0c0c4096bdbc165360414ed3c760c75df73a599926165342dfc74f889f0e20"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-copy-tools.json",
+      "bytes": 4020,
+      "mode": 420,
+      "sha256": "1df9e00c6f196d9f801b715a17fed6aa816fba0b118d7c4d958ab934da5b6db0"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/README.md",
+      "bytes": 1542,
+      "mode": 420,
+      "sha256": "a6cfe5d5be32aab43c0bcb9cf0a777f1c17131a4685b6b810db7c105d82faa4b"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/README.md",
+      "bytes": 907,
+      "mode": 420,
+      "sha256": "af595ac93055bfdc7de83f717c436800307d9b417da2c158249c9833482d45d3"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/REVIEW.md",
+      "bytes": 2563,
+      "mode": 420,
+      "sha256": "a150351f9dd36167eb05b506c379f971514fa24c94caccdc6a72bb3f8032e9b7"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/bind_canonical.py",
+      "bytes": 10831,
+      "mode": 420,
+      "sha256": "1c0ac53533515cf6a0329fedb1cf826b2e1e7896f5b7fed6977fabaf1da292d7"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/binding-files.json",
+      "bytes": 2362,
+      "mode": 420,
+      "sha256": "69a54f645c971651c4703b5269dde6f8ac91e5517c4c44175718d2957f49267c"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/binding-result.json",
+      "bytes": 685,
+      "mode": 420,
+      "sha256": "bdb691c0397ed333f9e4e655e406a1d8eb5ca8d1e0d3fe8bb5fde2198252188b"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/binding.json",
+      "bytes": 21592,
+      "mode": 420,
+      "sha256": "e695ea1e399da1010ea8a9c09795a1f55f9d97c4c2f25197a218e0d2c55fd855"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/controller-snapshot.json",
+      "bytes": 128020,
+      "mode": 420,
+      "sha256": "fa68300de7bdf938cf69290d1c24d932e8dffdd25a86c01da6f2d468de9ae451"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/iteration-entry-default-signed-provenance.json",
+      "bytes": 21597,
+      "mode": 420,
+      "sha256": "99311f0705c52100ce891bd4b1847ba8c4f96d023b66a36551a6e9dde412fff6"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/iteration-entry-default-unsigned-provenance.json",
+      "bytes": 21603,
+      "mode": 420,
+      "sha256": "65c0c2504ba7ccb41508d3d0bff0bec1847d9255a1cdbb9925ec0d605f4fc05c"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/published-manifest.json",
+      "bytes": 14754,
+      "mode": 420,
+      "sha256": "ccca0d246ca3ed72727924dbea10cc62ede584934481e0576318eb2f6dc3d723"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/source-snapshot.json",
+      "bytes": 485626,
+      "mode": 420,
+      "sha256": "aed80f8b9b772e7c8ffcb9d00b63b836de3f6a1ec219597f729c5f8d959ec81b"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/verify_binding.py",
+      "bytes": 6173,
+      "mode": 420,
+      "sha256": "58699f3505dbefac63684402039817b11cec054e9dd6ba9dbf6c7f10aec917b4"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/canonical-binding/workspace-contract-snapshot.json",
+      "bytes": 4677,
+      "mode": 420,
+      "sha256": "a4f1591a3b0f9549d510ff12f91c06e4062ab743c2f8eb7a42fb122f1946e24f"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/comparison.json",
+      "bytes": 133146,
+      "mode": 420,
+      "sha256": "e153a778ef6432a85e2c3c24aaa78e346ee0d13a0c13d2656be03f4ac335dacc"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/delta-manifest.json",
+      "bytes": 9772,
+      "mode": 420,
+      "sha256": "02430e6d0880be8dd0c5178f742f62cbfacd1cd92f8a1b1b45cf2b0255b78d93"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/effective-source-inventory.json",
+      "bytes": 1854453,
+      "mode": 420,
+      "sha256": "b1faa2eb9df37ac6b16fc97f2efe93a159a5afbfb06ed1692774d9ad7a07a475"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/freeze-inputs.json",
+      "bytes": 3800,
+      "mode": 420,
+      "sha256": "87946896c17aad3edcfee490d13d321064ca74222acefcd9e6cbf77375d41ec9"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/preservation-result.json",
+      "bytes": 807,
+      "mode": 420,
+      "sha256": "64a8a9e035ea6d46949a820919bc5bd889a86e17562cbdebc33226b4095758e8"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/preserve_r6_delta.py",
+      "bytes": 10956,
+      "mode": 420,
+      "sha256": "6113f95495b064de39a03e29cfe4bb3379ac7cf478c98017e73dba94bf02d1cb"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/r6-core-build-snapshot.json",
+      "bytes": 318333,
+      "mode": 420,
+      "sha256": "8b77dfffbab2bdb2942ff085e03877d5079e3bc6c771afb5ac92e61a9889556a"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/r6-source-delta-inventory.json",
+      "bytes": 3487,
+      "mode": 420,
+      "sha256": "3e1d1d01dc57fc0195be8363eca0d60986682303aa78eef62875913fa0ebe2a2"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/r6-source-delta.tar.gz",
+      "bytes": 101374,
+      "mode": 420,
+      "sha256": "bcaad688874908ffb83bfb9d0de8a21497c1dce55f56887b4721a7c843132a55"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/source-delta/verify_delta.py",
+      "bytes": 6513,
+      "mode": 420,
+      "sha256": "9bb40306cd47c7ac292cc7618a606ba4736f003fad0fa27167810eca8a2609d5"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/verify_final_evidence.py",
+      "bytes": 2530,
+      "mode": 420,
+      "sha256": "9140851d0f63a0b8ae71aa1c42990f40ce040bf5a2d463b3d79a9facfced2312"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/INDEPENDENT_REVIEW.md",
+      "bytes": 7051,
+      "mode": 420,
+      "sha256": "dfa5e49b4585b9efc4905948ff9781a2fdb03ac57ece05055d727297607da0cf"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/controls-settled.jpeg",
+      "bytes": 365762,
+      "mode": 420,
+      "sha256": "b2b3dcc5d4aaba71105bf58b0cc6cb029a790c55e14eab58c1b7d0bcad64f61e"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/controls-settled.json",
+      "bytes": 70792,
+      "mode": 420,
+      "sha256": "96db27963f06ce51dd5d2d6320f7a7974fe32b16b238d087b22eb0e72c25711d"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/controls.jpeg",
+      "bytes": 380759,
+      "mode": 420,
+      "sha256": "9f5eef25cd686990af19d4ee52de0903927fc178559bc30d1002c12e34660a7a"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/controls.json",
+      "bytes": 70564,
+      "mode": 420,
+      "sha256": "5174092978209983ca7e82dc914b78e35108232f2c447221990d7fbd5d227072"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/directory-settled.jpeg",
+      "bytes": 156341,
+      "mode": 420,
+      "sha256": "1ddb1490c878787447f70ca69dea1b10dea05974583db1b9e98e3870dd9e875e"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/directory-settled.json",
+      "bytes": 114553,
+      "mode": 420,
+      "sha256": "1f4556b99a0eb694aedf86fe50240d54b99f2baa9c8fab0e0e965d76a0298969"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/directory.jpeg",
+      "bytes": 156431,
+      "mode": 420,
+      "sha256": "df33d29ffaf308132f7ed5e630dade44bbbaf9795d5c69fdd93551d4ad72c479"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/directory.json",
+      "bytes": 114181,
+      "mode": 420,
+      "sha256": "46d5aef82777f2d5cc7ad0e55a2faf6017a460756630e32abe61de2d1c4f15e0"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/hidden-settled.jpeg",
+      "bytes": 457571,
+      "mode": 420,
+      "sha256": "2887d62ba3127a5be87829694d6226058b79893c6292ed05acf052877606bb84"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/hidden-settled.json",
+      "bytes": 17567,
+      "mode": 420,
+      "sha256": "c804016af649754d176ef412ec880aa0ccca81a626ec2f0c0bb333435d9e0344"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/immersive.jpeg",
+      "bytes": 457571,
+      "mode": 420,
+      "sha256": "2887d62ba3127a5be87829694d6226058b79893c6292ed05acf052877606bb84"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/immersive.json",
+      "bytes": 17441,
+      "mode": 420,
+      "sha256": "da206b3d469ed28273d6ada933ef5a39476445b388b1a403e36165d9accec1a5"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/reader-log.txt",
+      "bytes": 0,
+      "mode": 420,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/reader-settled.txt",
+      "bytes": 15021,
+      "mode": 420,
+      "sha256": "2edbc20fd0424943d602fff984829dba7f650bf773938fb2b3807311f69bade8"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/restored-controls.json",
+      "bytes": 70564,
+      "mode": 420,
+      "sha256": "1e4dcd8c393f0877322a233ead9e85faef8458023b69ab8b6cbd4c3127a258ae"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/returned.jpeg",
+      "bytes": 187494,
+      "mode": 420,
+      "sha256": "b67f7f2409a979201da0a8c16d5565eaf0a867311f9cbcb8fbe5b2b993025072"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/returned.json",
+      "bytes": 114422,
+      "mode": 420,
+      "sha256": "bda359b1334829fca76dd5378db72fba4d11b8a97404de28a49e30e5e315441c"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/shelf.json",
+      "bytes": 114280,
+      "mode": 420,
+      "sha256": "08d802dbc69dc7bed368b77498f3140c3683269e8529782e3097b084de480a1d"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/window-directory.txt",
+      "bytes": 0,
+      "mode": 420,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-system-bars-r6/vm/window-settled.txt",
+      "bytes": 0,
+      "mode": 420,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "retainedZeroByteProbePaths": [
+    "evidence/2026-10-03-manga-reader-system-bars-r6/vm/reader-log.txt",
+    "evidence/2026-10-03-manga-reader-system-bars-r6/vm/window-directory.txt",
+    "evidence/2026-10-03-manga-reader-system-bars-r6/vm/window-settled.txt"
+  ],
+  "independentReviewSha256": "dfa5e49b4585b9efc4905948ff9781a2fdb03ac57ece05055d727297607da0cf",
+  "persistentAndTemporaryTreesEqual": true,
+  "sourceAndTestMutation": false,
+  "priorR4R5EvidenceMutation": false,
+  "buildOrDeviceOperation": false
+}

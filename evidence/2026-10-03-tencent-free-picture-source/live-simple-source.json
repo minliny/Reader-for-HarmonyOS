@@ -1,0 +1,84 @@
+{
+  "source_id": "corpus-f359be41c7fe",
+  "source_file": "reader-manga-tencent-fixed-source.json",
+  "source_name": "腾讯漫画",
+  "source_url": "https://ac.qq.com",
+  "book_source_type": "2",
+  "priority": null,
+  "rule_forms": [],
+  "has_js": false,
+  "has_multirule": false,
+  "has_regex": false,
+  "levels": {
+    "L1-import": {
+      "status": "pass"
+    },
+    "L2-search": {
+      "status": "pass"
+    },
+    "L3-detail": {
+      "status": "pass"
+    },
+    "L4-toc": {
+      "status": "pass"
+    },
+    "L5-content": {
+      "status": "pass"
+    }
+  },
+  "failure_reason": null,
+  "duration_ms": 6098,
+  "artifacts": {
+    "semantic": {
+      "schemaVersion": "reader-cli-semantic/1",
+      "runnerLimitations": [
+        "Reader CLI acts as Host for HTTP; this is not App/device proof.",
+        "Current Reader CLI selects one representative book and one representative chapter for L5 content proof."
+      ],
+      "selection": {
+        "book": "reader-representative-book",
+        "chapter": "reader-representative-chapter"
+      },
+      "search": {
+        "keyword": "斗破苍穹",
+        "resultCount": 27,
+        "selectedBook": {
+          "name": "斗破苍穹",
+          "author": null,
+          "bookUrl": "https://ac.qq.com/Comic/comicInfo/id/531040",
+          "origin": "https://ac.qq.com",
+          "originName": "腾讯漫画",
+          "kind": null,
+          "latestChapterTitle": "至681话",
+          "matchedSourceUrl": true,
+          "introNormalizedLength": 0,
+          "introNormalizedSha256": null
+        }
+      },
+      "toc": {
+        "tocCount": 681,
+        "selectedChapterIndex": 0,
+        "firstChapter": {
+          "index": 0,
+          "title": "01",
+          "url": "https://ac.qq.com/ComicView/index/id/531040/cid/1",
+          "baseUrl": null
+        },
+        "selectedChapter": {
+          "index": 0,
+          "title": "01",
+          "url": "https://ac.qq.com/ComicView/index/id/531040/cid/1",
+          "baseUrl": null
+        },
+        "latestChapter": {
+          "index": 680,
+          "title": "💲番外02血铸灵丹（下）",
+          "url": "https://ac.qq.com/ComicView/index/id/531040/cid/147883",
+          "baseUrl": null
+        },
+        "titleListSha256": "89569b9dc36956a63254c97a6743115851deb6bcec0282ef09079bc134080452"
+      },
+      "content": null
+    }
+  }
+}

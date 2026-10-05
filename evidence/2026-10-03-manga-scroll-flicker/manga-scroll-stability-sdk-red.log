@@ -1,0 +1,23 @@
+(node:81230) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS unchanged scroll notifications retain decoded visible Images and row geometry
+RED equal-value geometry reentry must not reload the list or restore during scrolling: fresh geometry identity is not a structural change
+
+1 !== 0
+
+{"case":"equal-value-reentry","before":{"keys":["[\"page-0:0\",true,600,600,0,1200,\"file://stable-0.png\",\"r0\",\"\",false]","[\"page-0:1\",true,600,600,600,1200,\"file://stable-1.png\",\"r1\",\"\",false]"],"actors":[8,11],"mounts":2,"reloads":0,"timers":0,"heights":[300,300]},"after":{"keys":["[\"page-0:0\",true,600,600,0,1200,\"file://stable-0.png\",\"r0\",\"\",false]","[\"page-0:1\",true,600,600,600,1200,\"file://stable-1.png\",\"r1\",\"\",false]"],"actors":[8,11],"mounts":2,"reloads":1,"timers":1,"heights":[300,300]}}
+RED offscreen neighbor geometry must not restore stable visible Images: neighbor completion must not interrupt user scrolling
+
+1 !== 0
+
+PASS same visible keys do retain Image actors in the strict-key SDK boundary
+{"case":"offscreen-neighbor","before":{"keys":["[\"page-0:0\",true,600,600,0,1200,\"file://stable-0.png\",\"r0\",\"\",false]","[\"page-0:1\",true,600,600,600,1200,\"file://stable-1.png\",\"r1\",\"\",false]"],"actors":[8,11],"mounts":2,"reloads":1,"timers":0,"heights":[300,300]},"after":{"keys":["[\"page-0:0\",true,600,600,0,1200,\"file://stable-0.png\",\"r0\",\"\",false]","[\"page-0:1\",true,600,600,600,1200,\"file://stable-1.png\",\"r1\",\"\",false]"],"actors":[8,11],"mounts":2,"reloads":2,"timers":1,"heights":[300,300]}}
+PASS real current-page geometry change must retain normalized anchor and request one restore
+PASS real layout change before the visible page must restore the shifted row index
+PASS error card ownership still transfers on viewport movement; tile eviction remains Controller-owned
+RED horizontal selected page ignores earlier neighbor geometry outside its list: Expected values to be strictly equal:
+
+7 !== 6
+
+PASS horizontal selected page still restores for its own real geometry change
+{"status":"RED","failures":[{"name":"equal-value geometry reentry must not reload the list or restore during scrolling","message":"fresh geometry identity is not a structural change\n\n1 !== 0\n"},{"name":"offscreen neighbor geometry must not restore stable visible Images","message":"neighbor completion must not interrupt user scrolling\n\n1 !== 0\n"},{"name":"horizontal selected page ignores earlier neighbor geometry outside its list","message":"Expected values to be strictly equal:\n\n7 !== 6\n"}],"evidenceBoundary":"production Surface/Projection + real SDK callbacks; no native Image reconstruction or painted flicker claim"}

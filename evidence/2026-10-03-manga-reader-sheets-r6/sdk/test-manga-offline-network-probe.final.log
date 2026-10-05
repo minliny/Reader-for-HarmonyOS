@@ -1,0 +1,10 @@
+PASS exact debug cold Want, arm-before-selection scope, immutable identity, wrong/text selection, bounded tombstones and actual nonzero denial counts
+PASS actual Registry Core HTTP variants and Body fetch boundaries: non-target preserved, data URI excluded, late callbacks blocked after release/settlement
+PASS actual DecodeHost suspended fetch after cancellation/timeout cannot allocate an input asset or dispatch HTTP
+PASS production Runtime send/wait binding, ordinary request isolation, timeout settlement, progress-save survival and capacity before dispatch
+(node:23727) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS production offline Surface uses only cached catalog, preserves downloaded entry on absent optional TOC, and fences controller before releasing probe
+PASS actual cached gateway returns fresh owned sessions; offline Surface manga tagging preserves frozen Core input, seed and other session owners
+PASS actual ordinary shelf click claims exact manga and enters existing resume route without authorizing network preparation
+PASS installed SDK Want and actual Core SDK send/wait types, with invalid request-id counterfactual; no device/Native result claimed

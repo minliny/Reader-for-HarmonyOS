@@ -1,0 +1,300 @@
+10-03 16:17:06.248  2911 12705 I C02699/graphic_memory: pid=4905, gl=0
+10-03 16:17:06.248  2911 12705 E C02699/file_helper: file[/proc/process_dmabuf_info] open failed.
+10-03 16:17:06.248  2911 12705 I C02699/graphic_memory: pid=4905, graph=0
+10-03 16:17:06.249  2911 12705 E C02517/hdf_memorytracker_impl: GetDevMem, dlopen libmemorytracker failed!
+10-03 16:17:06.249  2911 12705 I C02699/graphic_memory: pid=9083, gl=0
+10-03 16:17:06.249  2911 12705 E C02699/file_helper: file[/proc/process_dmabuf_info] open failed.
+10-03 16:17:06.249  2911 12705 I C02699/graphic_memory: pid=9083, graph=0
+10-03 16:17:06.252 15675 15675 W A01c06/ICON: AppIconWeatherModel --> initWeatherListener, retryTimes: 4
+10-03 16:17:06.254   497  1558 E C01707/CONCUR: [Interface] task 1558 apply qos failed, errno = 4
+10-03 16:17:06.254   497  1558 E C01611/QosManager: QosManager: Failed to set thread QoS to QOS_USER_INTERACTIVE, ret: -1
+10-03 16:17:06.254  2911 12705 E C02517/hdf_memorytracker_impl: GetDevMem, dlopen libmemorytracker failed!
+10-03 16:17:06.254   743  1080 W C01123/BMSCommon: bundle not exist -n com.huawei.hmsapp.totemweather -u 100 -i 0 -f 32
+10-03 16:17:06.254   743  1080 W C01121/BMSQuery: GetBundleInfo failed -n com.huawei.hmsapp.totemweather -u 100
+10-03 16:17:06.254  2911 12705 I C02699/graphic_memory: pid=14653, gl=0
+10-03 16:17:06.255   497  1558 E C01651/BundleMgrProxy: GetBundleInfoFromBMS: GetBundleInfo failed!bundleName is com.huawei.hmsapp.totemweather, userId is 100
+10-03 16:17:06.255   497  1558 E C01651/DataProviderConfig: GetFromProxyData: Get bundleInfo failed! bundleName:com.huawei.hmsapp.totemweather, userId:100, visitedId:100, uri:******icIconInfo
+10-03 16:17:06.255   497  1558 E C01651/DataShareServiceImpl: GetBMSAndMetaDataStatus: CalledInfo failed! token:0x2002a7c3,ret:1001,uri:******icIconInfo
+10-03 16:17:06.255   497  1558 E C01651/DataShareServiceImpl: GetSilentProxyStatus: BMS or metaData not ready to complete, token:0x2002a7c3, uri:******icIconInfo
+10-03 16:17:06.255  2911 12705 E C02699/file_helper: file[/proc/process_dmabuf_info] open failed.
+10-03 16:17:06.255  2911 12705 I C02699/graphic_memory: pid=14653, graph=0
+10-03 16:17:06.255 15675 15675 E A01c06/ICON: AppIconWeatherModel --> get weather info failed, code: 15700010, message: The DataShareHelper is not initialized successfully.
+10-03 16:17:06.260  2911 12705 E C02517/hdf_memorytracker_impl: GetDevMem, dlopen libmemorytracker failed!
+10-03 16:17:06.261  2911 12705 I C02699/graphic_memory: pid=15675, gl=0
+10-03 16:17:06.261  2911 12705 E C02699/file_helper: file[/proc/process_dmabuf_info] open failed.
+10-03 16:17:06.261  2911 12705 I C02699/graphic_memory: pid=15675, graph=0
+10-03 16:17:06.263  2911 12705 E C02517/hdf_memorytracker_impl: GetDevMem, dlopen libmemorytracker failed!
+10-03 16:17:06.263  2911 12705 I C02699/graphic_memory: pid=15881, gl=0
+10-03 16:17:06.263  2911 12705 E C02699/file_helper: file[/proc/process_dmabuf_info] open failed.
+10-03 16:17:06.264  2911 12705 I C02699/graphic_memory: pid=15881, graph=0
+10-03 16:17:06.264  2911 12705 E C02517/hdf_memorytracker_impl: GetDevMem, dlopen libmemorytracker failed!
+10-03 16:17:06.264  2911 12705 I C02699/graphic_memory: pid=22507, gl=0
+10-03 16:17:06.264  2911 12705 E C02699/file_helper: file[/proc/process_dmabuf_info] open failed.
+10-03 16:17:06.264  2911 12705 I C02699/graphic_memory: pid=22507, graph=0
+10-03 16:17:06.264  2911 12705 E C02517/hdf_memorytracker_impl: GetDevMem, dlopen libmemorytracker failed!
+10-03 16:17:06.265  2911 12705 I C02699/graphic_memory: pid=29719, gl=0
+10-03 16:17:06.265  2911 12705 E C02699/file_helper: file[/proc/process_dmabuf_info] open failed.
+10-03 16:17:06.265  2911 12705 I C02699/graphic_memory: pid=29719, graph=0
+10-03 16:17:06.268  2911 12705 E C02517/hdf_memorytracker_impl: GetDevMem, dlopen libmemorytracker failed!
+10-03 16:17:06.268  2911 12705 I C02699/graphic_memory: pid=31284, gl=0
+10-03 16:17:06.268  2911 12705 E C02699/file_helper: file[/proc/process_dmabuf_info] open failed.
+10-03 16:17:06.268  2911 12705 I C02699/graphic_memory: pid=31284, graph=0
+10-03 16:17:06.272  2911 12705 E C02517/hdf_memorytracker_impl: GetDevMem, dlopen libmemorytracker failed!
+10-03 16:17:06.272  2911 12705 I C02699/graphic_memory: pid=31952, gl=0
+10-03 16:17:06.272  2911 12705 E C02699/file_helper: file[/proc/process_dmabuf_info] open failed.
+10-03 16:17:06.272  2911 12705 I C02699/graphic_memory: pid=31952, graph=0
+10-03 16:17:06.318   126   676 I C01800/SAMGR: NF SA:65962,792_151548
+10-03 16:17:06.498 22516 22516 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22516 2000 2000] failed
+10-03 16:17:06.498 22516 22516 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22516 2000 2000] failed
+10-03 16:17:06.498 22516 22516 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:06.501 22518 22518 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22518 2000 2000] failed
+10-03 16:17:06.501 22518 22518 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22518 2000 2000] failed
+10-03 16:17:06.501 22518 22518 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:06.501 22519 22519 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22519 2000 2000] failed
+10-03 16:17:06.501 22519 22519 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22519 2000 2000] failed
+10-03 16:17:06.501 22519 22519 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:06.501 22520 22520 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22520 2000 2000] failed
+10-03 16:17:06.502 22520 22520 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22520 2000 2000] failed
+10-03 16:17:06.502 22520 22520 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:06.509 22521 22521 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22521 2000 2000] failed
+10-03 16:17:06.509 22521 22521 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22521 2000 2000] failed
+10-03 16:17:06.509 22521 22521 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:06.509 22522 22522 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22522 2000 2000] failed
+10-03 16:17:06.509 22522 22522 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22522 2000 2000] failed
+10-03 16:17:06.509 22522 22522 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:06.519   126   676 I C01800/SAMGR: NF SA:65962,792_151549
+10-03 16:17:06.557   133   133 E C02c11/APPSPAWN: [appspawn_kickdog.c:29]open /sys/kernel/hungtask/userlist fail,errno:2
+10-03 16:17:06.709 22524 22524 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22524 2000 2000] failed
+10-03 16:17:06.709 22524 22524 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22524 2000 2000] failed
+10-03 16:17:06.709 22524 22524 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:06.712 22526 22526 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22526 2000 2000] failed
+10-03 16:17:06.712 22526 22526 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22526 2000 2000] failed
+10-03 16:17:06.712 22526 22526 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:06.715 22527 22527 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22527 2000 2000] failed
+10-03 16:17:06.715 22527 22527 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22527 2000 2000] failed
+10-03 16:17:06.715 22527 22527 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:06.719   126   676 I C01800/SAMGR: NF SA:65962,792_151550
+10-03 16:17:06.719   792   866 E C01810/SA_CLIENT: GetSaWrap SA:65962 not start
+10-03 16:17:06.719   792   866 I C01409/APS_MANAGER: request system service object is not ready yet!
+10-03 16:17:06.736  2911 12705 E C02d20/DumperService: GetPurgTotal# fail to get purg info 
+10-03 16:17:06.736  2911 12705 I C02d20/DumperService: Execute# info|MemoryDumper Execute end
+10-03 16:17:06.736  2911 12705 W C057c3/IPCObjectStub: SendRequestInner: Stub(desc:*.IDumpBroker) code:0 cost:586ms
+10-03 16:17:07.233 22533 22533 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22533 2000 2000] failed
+10-03 16:17:07.233 22533 22533 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22533 2000 2000] failed
+10-03 16:17:07.233 22533 22533 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:07.236 22533 22533 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22533 2000 2000] failed
+10-03 16:17:07.236 22533 22533 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22533 2000 2000] failed
+10-03 16:17:07.236 22533 22533 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:07.255 15675 15675 W A01c06/ICON: AppIconWeatherModel --> initWeatherListener, retryTimes: 4
+10-03 16:17:07.257   497  1558 E C01707/CONCUR: [Interface] task 1558 apply qos failed, errno = 4
+10-03 16:17:07.257   497  1558 E C01611/QosManager: QosManager: Failed to set thread QoS to QOS_USER_INTERACTIVE, ret: -1
+10-03 16:17:07.257   743  1080 W C01123/BMSCommon: bundle not exist -n com.huawei.hmsapp.totemweather -u 100 -i 0 -f 32
+10-03 16:17:07.257   743  1080 W C01121/BMSQuery: GetBundleInfo failed -n com.huawei.hmsapp.totemweather -u 100
+10-03 16:17:07.257   497  1558 E C01651/BundleMgrProxy: GetBundleInfoFromBMS: GetBundleInfo failed!bundleName is com.huawei.hmsapp.totemweather, userId is 100
+10-03 16:17:07.257   497  1558 E C01651/DataProviderConfig: GetFromProxyData: Get bundleInfo failed! bundleName:com.huawei.hmsapp.totemweather, userId:100, visitedId:100, uri:******icIconInfo
+10-03 16:17:07.257   497  1558 E C01651/DataShareServiceImpl: GetBMSAndMetaDataStatus: CalledInfo failed! token:0x2002a7c3,ret:1001,uri:******icIconInfo
+10-03 16:17:07.257   497  1558 E C01651/DataShareServiceImpl: GetSilentProxyStatus: BMS or metaData not ready to complete, token:0x2002a7c3, uri:******icIconInfo
+10-03 16:17:07.257 15675 15675 E A01c06/ICON: AppIconWeatherModel --> get weather info failed, code: 15700010, message: The DataShareHelper is not initialized successfully.
+10-03 16:17:07.499 22536 22536 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22536 2000 2000] failed
+10-03 16:17:07.499 22536 22536 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22536 2000 2000] failed
+10-03 16:17:07.499 22536 22536 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:07.502 22540 22540 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22540 2000 2000] failed
+10-03 16:17:07.502 22540 22540 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22540 2000 2000] failed
+10-03 16:17:07.502 22540 22540 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:07.502 22539 22539 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22539 2000 2000] failed
+10-03 16:17:07.502 22539 22539 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22539 2000 2000] failed
+10-03 16:17:07.502 22539 22539 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:07.502 22538 22538 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22538 2000 2000] failed
+10-03 16:17:07.502 22538 22538 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22538 2000 2000] failed
+10-03 16:17:07.502 22538 22538 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:07.510 22541 22541 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22541 2000 2000] failed
+10-03 16:17:07.510 22541 22541 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22541 2000 2000] failed
+10-03 16:17:07.510 22541 22541 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:07.510 22542 22542 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22542 2000 2000] failed
+10-03 16:17:07.510 22542 22542 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22542 2000 2000] failed
+10-03 16:17:07.510 22542 22542 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:07.704 22544 22544 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22544 2000 2000] failed
+10-03 16:17:07.704 22544 22544 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22544 2000 2000] failed
+10-03 16:17:07.704 22544 22544 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:07.707 22546 22546 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22546 2000 2000] failed
+10-03 16:17:07.707 22546 22546 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22546 2000 2000] failed
+10-03 16:17:07.707 22546 22546 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:07.710 22547 22547 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22547 2000 2000] failed
+10-03 16:17:07.710 22547 22547 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22547 2000 2000] failed
+10-03 16:17:07.710 22547 22547 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:07.957   325 21610 W C01f04/MultiSimontroller: [GetSimAccountInfo-(multi_sim_controller.cpp:1141)] slotId 0 is invalid
+10-03 16:17:07.957   325 21610 E C01f04/TelephonySubsystem: GetSimAccountInfo fail!
+10-03 16:17:08.011 22550 22550 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22550 2000 2000] failed
+10-03 16:17:08.011 22550 22550 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22550 2000 2000] failed
+10-03 16:17:08.011 22550 22550 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:08.014 22552 22552 I C02d20/DumperService: SetCmdArgs# hidumper cmd:hidumper -s 1201 -a -p Faultlogger -LogSuffixWithMs , calllingUid=2000, calllingPid=22552, ppid:22550.
+10-03 16:17:08.015 22552 22553 W C057c1/IPCWorkThread: ThreadHandler: proto:0 policy:1 name:OS_IPC_0_22553 invoker:2904599936
+10-03 16:17:08.015 22552 22554 W C057c1/IPCWorkThread: ThreadHandler: proto:0 policy:0 name:OS_IPC_1_22554 invoker:2932172288
+10-03 16:17:08.015  2911 12705 I C02d20/DumperService: DelayUnloadTask# recieve new request, delay unload task begin, calllingPid=22552
+10-03 16:17:08.016   131 25723 I C02d11/Faultlogger: DumpByCommands: DumpRequest: detail:0, list:0, file:, name:, time:-1
+10-03 16:17:08.016  2911 12705 I C02d20/DumperService: GetData# SA name:1201 dump success, cmd:-p Faultlogger -LogSuffixWithMs , calllingPid=22552!
+10-03 16:17:08.220   518 21093 I C02300/FenceExtension: start connectAbility,userId:-1
+10-03 16:17:08.220   518 21093 I C02300/FenceExtension: ConnectAbility
+10-03 16:17:08.220   518 21093 I C01342/ServiceExt: [AMC590]name:com.huawei.hmos.location SAFeatureServiceExtensionAbility, userId:-1
+10-03 16:17:08.220   743  1080 I C01342/ServiceExt: [a92ab7ba0435d8e, 1b8a235, 0] [ABMS5452]element: com.huawei.hmos.location/SAFeatureServiceExtensionAbility
+10-03 16:17:08.221   743  1080 W C01123/BMSCommon: [a92ab7ba0435d8e, 1b8a235, 0] uid(1021) invalid
+10-03 16:17:08.221   743  1080 I C01336/AMS: [a92ab7ba0435d8e, 1b8a235, 0] [start_ability_utils.cpp54]appIndex:-1
+10-03 16:17:08.221   743  1080 I C01121/BMSQuery: [a92ab7ba0435d8e, 1b8a235, 0] ExplicitQueryAbility no match -n com.huawei.hmos.location -a SAFeatureServiceExtensionAbility -u 100 -i 0
+10-03 16:17:08.221   743  1080 W C01121/BMSQuery: [a92ab7ba0435d8e, 1b8a235, 0] bundle_data_mgr.cpp:ExplicitQueryExtensionInfo:7082 extensionAbility not found or disabled
+10-03 16:17:08.221   743  1080 I C01121/BMSQuery: [a92ab7ba0435d8e, 1b8a235, 0] ExplicitQueryExtension size:0 -n com.huawei.hmos.location -e SAFeatureServiceExtensionAbility -u 100 -i 0
+10-03 16:17:08.221   743  1080 W C01121/BMSQuery: [a92ab7ba0435d8e, 1b8a235, 0] bundle_mgr_host_impl.cpp:QueryExtensionAbilityInfos:3360 no valid extension info can be inquired
+10-03 16:17:08.221   743  1080 E C01336/AMS: [a92ab7ba0435d8e, 1b8a235, 0] [start_ability_utils.cpp290]extensionInfo empty
+10-03 16:17:08.221   743  1080 E C01342/ServiceExt: [a92ab7ba0435d8e, 1b8a235, 0] [ABMS5755]generate request error
+10-03 16:17:08.221   518 21093 E C02300/FenceExtension: [(DoConnect:153)]CONNECT_ABILITY_FAILED,ret:2097152
+10-03 16:17:08.221   518 21093 I C02300/FenceExtension: start connectAbility,userId:-1
+10-03 16:17:08.221   518 21093 I C02300/FenceExtension: ConnectAbility
+10-03 16:17:08.221   518 21093 I C01342/ServiceExt: [AMC590]name:com.huawei.hmos.location SAFeatureServiceExtensionAbility, userId:-1
+10-03 16:17:08.221   743  1080 I C01342/ServiceExt: [a92ab8ba04361e1, 381cf8c, 0] [ABMS5452]element: com.huawei.hmos.location/SAFeatureServiceExtensionAbility
+10-03 16:17:08.221   743  1080 W C01123/BMSCommon: [a92ab8ba04361e1, 381cf8c, 0] uid(1021) invalid
+10-03 16:17:08.222   743  1080 I C01336/AMS: [a92ab8ba04361e1, 381cf8c, 0] [start_ability_utils.cpp54]appIndex:-1
+10-03 16:17:08.222   743  1080 I C01121/BMSQuery: [a92ab8ba04361e1, 381cf8c, 0] ExplicitQueryAbility no match -n com.huawei.hmos.location -a SAFeatureServiceExtensionAbility -u 100 -i 0
+10-03 16:17:08.222   743  1080 W C01121/BMSQuery: [a92ab8ba04361e1, 381cf8c, 0] bundle_data_mgr.cpp:ExplicitQueryExtensionInfo:7082 extensionAbility not found or disabled
+10-03 16:17:08.222   743  1080 I C01121/BMSQuery: [a92ab8ba04361e1, 381cf8c, 0] ExplicitQueryExtension size:0 -n com.huawei.hmos.location -e SAFeatureServiceExtensionAbility -u 100 -i 0
+10-03 16:17:08.222   743  1080 W C01121/BMSQuery: [a92ab8ba04361e1, 381cf8c, 0] bundle_mgr_host_impl.cpp:QueryExtensionAbilityInfos:3360 no valid extension info can be inquired
+10-03 16:17:08.222   743  1080 E C01336/AMS: [a92ab8ba04361e1, 381cf8c, 0] [start_ability_utils.cpp290]extensionInfo empty
+10-03 16:17:08.222   743  1080 E C01342/ServiceExt: [a92ab8ba04361e1, 381cf8c, 0] [ABMS5755]generate request error
+10-03 16:17:08.222   518 21093 E C02300/FenceExtension: [(DoConnect:153)]CONNECT_ABILITY_FAILED,ret:2097152
+10-03 16:17:08.222   518 21093 W C02300/FenceExtension: connect failed,retry again
+10-03 16:17:08.233 22556 22556 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22556 2000 2000] failed
+10-03 16:17:08.233 22556 22556 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22556 2000 2000] failed
+10-03 16:17:08.233 22556 22556 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:08.235 22556 22556 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22556 2000 2000] failed
+10-03 16:17:08.235 22556 22556 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22556 2000 2000] failed
+10-03 16:17:08.236 22556 22556 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:08.259 15675 15675 W A01c06/ICON: AppIconWeatherModel --> initWeatherListener, retryTimes: 4
+10-03 16:17:08.259   575   821 W C02943/ThermalHdi: Read node failed, title = brightness
+10-03 16:17:08.259   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.259   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.259   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.259   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.259   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = 
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = ambient
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = ibat
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = vbat
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = cpu0_min_freq
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = cpu0_cur_freq
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = cpu0_max_freq
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = cpu4_min_freq
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = cpu4_cur_freq
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = cpu4_max_freq
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = cpu7_min_freq
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = cpu7_cur_freq
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = cpu7_max_freq
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = gpu_min_freq
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = gpu_cur_freq
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = gpu_max_freq
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = ddr_cur_freq
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = set_IPApower
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: Read node failed, title = cur_IPApower
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: get node failed
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: get node failed
+10-03 16:17:08.260   575   821 W C02943/ThermalHdi: get node failed
+10-03 16:17:08.260   497  1558 E C01707/CONCUR: [Interface] task 1558 apply qos failed, errno = 4
+10-03 16:17:08.260   497  1558 E C01611/QosManager: QosManager: Failed to set thread QoS to QOS_USER_INTERACTIVE, ret: -1
+10-03 16:17:08.261   743  1080 W C01123/BMSCommon: bundle not exist -n com.huawei.hmsapp.totemweather -u 100 -i 0 -f 32
+10-03 16:17:08.261   743  1080 W C01121/BMSQuery: GetBundleInfo failed -n com.huawei.hmsapp.totemweather -u 100
+10-03 16:17:08.261   497  1558 E C01651/BundleMgrProxy: GetBundleInfoFromBMS: GetBundleInfo failed!bundleName is com.huawei.hmsapp.totemweather, userId is 100
+10-03 16:17:08.261   497  1558 E C01651/DataProviderConfig: GetFromProxyData: Get bundleInfo failed! bundleName:com.huawei.hmsapp.totemweather, userId:100, visitedId:100, uri:******icIconInfo
+10-03 16:17:08.261   497  1558 E C01651/DataShareServiceImpl: GetBMSAndMetaDataStatus: CalledInfo failed! token:0x2002a7c3,ret:1001,uri:******icIconInfo
+10-03 16:17:08.261   497  1558 E C01651/DataShareServiceImpl: GetSilentProxyStatus: BMS or metaData not ready to complete, token:0x2002a7c3, uri:******icIconInfo
+10-03 16:17:08.261 15675 15675 E A01c06/ICON: AppIconWeatherModel --> get weather info failed, code: 15700010, message: The DataShareHelper is not initialized successfully.
+10-03 16:17:08.333   131 24944 I C02d10/CpuCollector: CalculateProcessCpuStatInfos: startTime=1791015418322, endTime=1791015428333, startBootTime=159129587, endBootTime=159139598, period=10011, isNeedUpdate=1
+10-03 16:17:08.497 22559 22559 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22559 2000 2000] failed
+10-03 16:17:08.497 22559 22559 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22559 2000 2000] failed
+10-03 16:17:08.497 22559 22559 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:08.500 22562 22562 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22562 2000 2000] failed
+10-03 16:17:08.500 22562 22562 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22562 2000 2000] failed
+10-03 16:17:08.500 22562 22562 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:08.500 22563 22563 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22563 2000 2000] failed
+10-03 16:17:08.500 22563 22563 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22563 2000 2000] failed
+10-03 16:17:08.500 22563 22563 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:08.500 22561 22561 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22561 2000 2000] failed
+10-03 16:17:08.500 22561 22561 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22561 2000 2000] failed
+10-03 16:17:08.500 22561 22561 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:08.507 22565 22565 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22565 2000 2000] failed
+10-03 16:17:08.507 22565 22565 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22565 2000 2000] failed
+10-03 16:17:08.507 22565 22565 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:08.507 22564 22564 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22564 2000 2000] failed
+10-03 16:17:08.507 22564 22564 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22564 2000 2000] failed
+10-03 16:17:08.507 22564 22564 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:08.698 22567 22567 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22567 2000 2000] failed
+10-03 16:17:08.698 22567 22567 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22567 2000 2000] failed
+10-03 16:17:08.698 22567 22567 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:08.701 22569 22569 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22569 2000 2000] failed
+10-03 16:17:08.701 22569 22569 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22569 2000 2000] failed
+10-03 16:17:08.701 22569 22569 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:08.704 22570 22570 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22570 2000 2000] failed
+10-03 16:17:08.704 22570 22570 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22570 2000 2000] failed
+10-03 16:17:08.704 22570 22570 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:08.721   126   676 I C01800/SAMGR: NF SA:65962,792_151551
+10-03 16:17:08.884  2315  2315 I C02500/Qemud: Guest heartbeat success.
+10-03 16:17:08.906   131 20725 E C02d66/XPerf: [InquiryOhImpl::ExtractStringValue] Canonical FilePath: /sys/class/ithermal/lpm/lpm_freq failed.
+10-03 16:17:08.906   131 20725 E C02d66/XPerf: [InquiryOhImpl::ExtractStringValue] Canonical FilePath: /sys/class/power_supply/Battery/status failed.
+10-03 16:17:08.921   126   676 I C01800/SAMGR: NF SA:65962,792_151552
+10-03 16:17:09.123   126   676 I C01800/SAMGR: NF SA:65962,792_151553
+10-03 16:17:09.224 22573 22573 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22573 2000 2000] failed
+10-03 16:17:09.224 22573 22573 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22573 2000 2000] failed
+10-03 16:17:09.224 22573 22573 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:09.227 22573 22573 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22573 2000 2000] failed
+10-03 16:17:09.227 22573 22573 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22573 2000 2000] failed
+10-03 16:17:09.227 22573 22573 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:09.263 15675 15675 W A01c06/ICON: AppIconWeatherModel --> initWeatherListener, retryTimes: 4
+10-03 16:17:09.266   497  1558 E C01707/CONCUR: [Interface] task 1558 apply qos failed, errno = 4
+10-03 16:17:09.266   497  1558 E C01611/QosManager: QosManager: Failed to set thread QoS to QOS_USER_INTERACTIVE, ret: -1
+10-03 16:17:09.266   743  1080 W C01123/BMSCommon: bundle not exist -n com.huawei.hmsapp.totemweather -u 100 -i 0 -f 32
+10-03 16:17:09.267   743  1080 W C01121/BMSQuery: GetBundleInfo failed -n com.huawei.hmsapp.totemweather -u 100
+10-03 16:17:09.267   497  1558 E C01651/BundleMgrProxy: GetBundleInfoFromBMS: GetBundleInfo failed!bundleName is com.huawei.hmsapp.totemweather, userId is 100
+10-03 16:17:09.267   497  1558 E C01651/DataProviderConfig: GetFromProxyData: Get bundleInfo failed! bundleName:com.huawei.hmsapp.totemweather, userId:100, visitedId:100, uri:******icIconInfo
+10-03 16:17:09.267   497  1558 E C01651/DataShareServiceImpl: GetBMSAndMetaDataStatus: CalledInfo failed! token:0x2002a7c3,ret:1001,uri:******icIconInfo
+10-03 16:17:09.267   497  1558 E C01651/DataShareServiceImpl: GetSilentProxyStatus: BMS or metaData not ready to complete, token:0x2002a7c3, uri:******icIconInfo
+10-03 16:17:09.267 15675 15675 E A01c06/ICON: AppIconWeatherModel --> get weather info failed, code: 15700010, message: The DataShareHelper is not initialized successfully.
+10-03 16:17:09.324   126   676 I C01800/SAMGR: NF SA:65962,792_151554
+10-03 16:17:09.366  1521  1521 E C02c11/APPSPAWN: [appspawn_kickdog.c:29]open /sys/kernel/hungtask/userlist fail,errno:2
+10-03 16:17:09.502 22576 22576 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22576 2000 2000] failed
+10-03 16:17:09.502 22576 22576 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22576 2000 2000] failed
+10-03 16:17:09.503 22576 22576 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:09.507 22578 22578 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22578 2000 2000] failed
+10-03 16:17:09.508 22580 22580 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22580 2000 2000] failed
+10-03 16:17:09.508 22580 22580 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22580 2000 2000] failed
+10-03 16:17:09.508 22578 22578 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22578 2000 2000] failed
+10-03 16:17:09.508 22580 22580 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:09.508 22578 22578 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:09.508 22579 22579 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22579 2000 2000] failed
+10-03 16:17:09.508 22579 22579 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22579 2000 2000] failed
+10-03 16:17:09.508 22579 22579 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:09.518 22581 22581 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22581 2000 2000] failed
+10-03 16:17:09.518 22581 22581 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22581 2000 2000] failed
+10-03 16:17:09.518 22582 22582 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22582 2000 2000] failed
+10-03 16:17:09.518 22581 22581 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:09.518 22582 22582 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22582 2000 2000] failed
+10-03 16:17:09.518 22582 22582 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:09.525   126   676 I C01800/SAMGR: NF SA:65962,792_151555
+10-03 16:17:09.609 22584 22584 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22584 2000 2000] failed
+10-03 16:17:09.609 22584 22584 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22584 2000 2000] failed
+10-03 16:17:09.609 22584 22584 W C02c02/PARAM: SystemReadParam failed!name is:persist.init.debug.loglevel,err:1002
+10-03 16:17:09.613 22586 22586 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22586 2000 2000] failed
+10-03 16:17:09.613 22586 22586 W C02c02/PARAM: Selinux check name persist.init.debug.loglevel in u:object_r:startup_init_param:s0 [22586 2000 2000] failed

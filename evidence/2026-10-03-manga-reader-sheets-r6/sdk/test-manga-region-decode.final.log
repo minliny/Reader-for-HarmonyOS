@@ -1,0 +1,14 @@
+PASS manga region decode: original resolution, bounded native region, exact crop receipt, separate file identity, native release, invalid region and novel compatibility
+PASS manga static JPEG/PNG/WebP metadata admission; eight valid directions normalize; animated, unknown format and unavailable metadata reject before pixel allocation
+PASS inspector injection and native EXIF ambiguity: absent metadata admitted, corruption rejects, exact-byte proof reused across crops, changed digest and cleared owner never reuse proof
+PASS inspector owner replacement discards late proof and closes the native image source
+PASS partial Uint8Array view: metadata, digest and native decode share exact bytes; full-span input remains zero-copy
+PASS shared real PNG/JPEG/WebP corpus: absent EXIF accepted, rotated images normalized/malformed proofs rejected, absent proof cannot replace successful native decode (platform codec mocked)
+PASS contain thumbnails request <=1Mi pixels and <=2048 dimensions before native decode, preserve original oriented geometry, use distinct display derivative, reject wrong dimensions and retain original input admission
+PASS asynchronous PixelMap release retains the crop slot until settled and handles rejection before ImageSource cleanup
+PASS allocation-profile dimensions, scanline/native sample ceiling, encoded-axis interlace, full-frame and absent-proof preflight, explicit SDR/RGBA, 1023-wide and post-rotation stride rejection, format/byte mismatch and release. No total codec/process peak assertion.
+PASS Tencent actual 1200x1906 contain uses 600x953; 4000x6000 uses 500x750; odd dimensions and EXIF transpose do not cross native sample bucket, sample8 over-budget rejects before decode.
+PASS odd-height JPEG threshold and width-one max(1) native-bucket fallback stay within preflight budget.
+PASS cjpeg-generated 1x65500 progressive 4x2/1x1/1x1 fixture: old 4192256B estimate undercounts 5240320B coefficient plane; 32x32 guard rejects region and contain before createPixelMap. Header/native boundaries mocked in this Host test.
+(node:23837) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

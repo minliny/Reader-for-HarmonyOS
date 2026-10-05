@@ -1,0 +1,1 @@
+scene=dir-open size=640 parallel=3 stagger_ms=30,80,150 coordinate_space=original_display

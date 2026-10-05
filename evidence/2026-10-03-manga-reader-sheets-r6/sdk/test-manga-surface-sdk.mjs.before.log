@@ -1,0 +1,23 @@
+PASS actual SDK root padding + live window revision: portrait status/gesture, asymmetric landscape and cleared insets (native layout not tested)
+(node:18799) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual ArkUI SDK surface lowering; save waits for CAS; disposed layout cannot scroll (native paint not tested)
+PASS actual SDK tablet directory mounts while controls are hidden, bounded left column and independent right-panel geometry (native paint not tested)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+11 !== 15
+
+    at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-surface-sdk.mjs:176:12 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 11,
+  expected: 15,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

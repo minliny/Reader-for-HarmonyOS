@@ -1,0 +1,38 @@
+PASS manga session: bounded window, stable resources, serialized CAS, invalid anchor, teardown, late release, explicit recovery, offline manifest, duplicate IDs
+PASS replaced tile windows discard old queued work; only decoded visible regions can save progress
+PASS first frame admits before neighbor and reuses first-region lease; failed explicit refresh retains old view
+PASS pending neighbor selection joins decode and admits a visible tile without a second scroll
+PASS narrow cold entry: 3 of 10000 real page facts, no full manifest/catalog/progress RPC, bounded end window, invalid ordinal and disposed request rejected
+PASS nonblocking disposal: pixel leases released immediately, admitted CAS survives owner close, rapid reopen waits, failed tail stays observable
+PASS actual surface first admits narrow pixels, then starts catalog; stale catalog cannot publish after disposal
+PASS removed-chapter cold resume retains old CAS position, rejects automatic/refresh save until confirmation, and preserves explicit chapter navigation
+PASS byte-decode entry, exact refreshed global page and xy/CAS, stale/ambiguous proof fencing, visible-only bounded expiration recovery
+PASS contain preview controller uses one image row, bounds neighbors, forwards preview mode, keeps original geometry/CAS and restores full-resolution region when width mode returns
+(node:18845) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
++ []
+- [
+-   [
+-     6,
+-     0,
+-     0
+-   ]
+- ]
+
+    at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-session.mjs:295:118 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [],
+  expected: [ [ 6, 0, 0 ] ],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

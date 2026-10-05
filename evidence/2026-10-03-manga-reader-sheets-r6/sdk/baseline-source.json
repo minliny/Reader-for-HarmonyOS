@@ -1,0 +1,16 @@
+[
+  {
+    "file": "baseline-manga-reading-surface.ets",
+    "source": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+    "bytes": 101068,
+    "sha256": "0f5e6d2654e8cc228b43b2ab2c9023e728db904193a147ce71da425113a6b897",
+    "boundary": "Exact R5 no-chrome-wiring source, captured before R6 owner edit; source was not modified by regression owner."
+  },
+  {
+    "file": "baseline-reader-shell.ets",
+    "source": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/entry/src/main/ets/features/shell/ReaderShell.ets",
+    "bytes": 24844,
+    "sha256": "ea6dddd9fcb6eecf76ea4871419d70e32c69a12cc5812c5aea34716c89cf85ba",
+    "boundary": "Exact R5 no-chrome-wiring source, captured before R6 owner edit; source was not modified by regression owner."
+  }
+]

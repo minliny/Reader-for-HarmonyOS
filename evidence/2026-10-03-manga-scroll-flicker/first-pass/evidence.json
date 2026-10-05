@@ -1,0 +1,60 @@
+{
+  "status": "FAILED_SAMPLE_NOT_ACCEPTED",
+  "runId": "20261003T085836Z-568ec4e3-3dcdb3db",
+  "hapSha256": "c987218631693c92c3f437f38785e391392fc8331676ca90a3c705d0817929aa",
+  "bundleUpdateTime": 1791017961092,
+  "scenario": "Tencent 531040 / chapter05 / page3 / vertical; sampled drag 700,2240 to 700,650 velocity500",
+  "failure": "drag timed out after30s; screenshots took3-9s; probe stopped, no automatic retry",
+  "observations": [
+    "sampled content advanced forward without whole-page backward jump",
+    "one sampled lower region was blank",
+    "finite captures are not FPS/video and do not establish smooth-scroll acceptance"
+  ],
+  "followup": "read-only resources and code probes identified redundant unchanged publication; fixing Controller and Surface then rebuilding before next VM gesture",
+  "files": [
+    {
+      "path": "reader-control-probe-1791018589659-ef2e13d7-ed8c-436f-9c17-23703da3103d.jsonl",
+      "sha256": "10d7c9b30186a59d8893ac3d0a633509134630885453c8e31cbaade87ec1250d"
+    },
+    {
+      "path": "reader-control-d2c0c929-d17e-44ac-bfaa-dacdab5eddf7-frame-0.png",
+      "sha256": "44b2b514aa5123f2a20a64e405521dc76124139eb5c2511cf8ddb06dce11a77e"
+    },
+    {
+      "path": "reader-control-d2c0c929-d17e-44ac-bfaa-dacdab5eddf7-frame-1.png",
+      "sha256": "81cf19d0411470877de367bf04cfb3f61b30c3e96164666b86c56ff24610ca83"
+    },
+    {
+      "path": "reader-control-d2c0c929-d17e-44ac-bfaa-dacdab5eddf7-frame-3.png",
+      "sha256": "2f84228987ee9b75ec27c07efb64d0fd5e97db8369011f23250d484df09312ce"
+    },
+    {
+      "path": "reader-control-d2c0c929-d17e-44ac-bfaa-dacdab5eddf7-frame-2.png",
+      "sha256": "3f1f211d09681cbddadf53d5f4a12e5f77f89b5a1f6e8496bdc41c0f51816f87"
+    },
+    {
+      "path": "reader-control-d2c0c929-d17e-44ac-bfaa-dacdab5eddf7-frame-4.png",
+      "sha256": "014b645011287ddbbf4fb25ddcab99accaf147d16a70fb75e248a0f8a5c7ff1a"
+    },
+    {
+      "path": "manga-scroll-after-start.jpeg",
+      "sha256": "9e9453197c50dad97c992b5445df02f5bdae4449623c0f05594815ee525c7ff3"
+    },
+    {
+      "path": "manga-scroll-after-start.json",
+      "sha256": "da474b114fa6e269a354faca656043efd5e68d91f510db38a15d68956252f8f6"
+    },
+    {
+      "path": "manga-scroll-after-readiness.log",
+      "sha256": "20949249f527d2aabb268a75693ab2ec535b035cef9f9c69a24e52174c683865"
+    },
+    {
+      "path": "manga-scroll-slow-top.txt",
+      "sha256": "991f86ba178936ef934c39090d86eafba48fd381fe9ec88845ae556b3fc33b3a"
+    },
+    {
+      "path": "manga-scroll-slow-hilog.txt",
+      "sha256": "0f89e0eecdbcf8c960ff286104a0a35a783a30434dc5dc7643d88ad8cb590392"
+    }
+  ]
+}

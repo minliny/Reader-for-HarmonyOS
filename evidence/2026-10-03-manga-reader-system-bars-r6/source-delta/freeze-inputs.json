@@ -1,0 +1,93 @@
+{
+  "frozenAtUtc": "2026-10-03T13:14:29.438753+00:00",
+  "workspace": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS",
+  "allowlist": [
+    {
+      "path": "tools/test-reader-window-chrome-order.mjs",
+      "sha256": "b578e446443037785e7c8d5aa093dbfbebb50d64d810cd5f5aaa71db4871879f"
+    },
+    {
+      "path": "tools/lib/reader-motion-method-probe.mjs",
+      "sha256": "09837d8a6713ff1e3294e7afd8b17c7a4a8f1f626c6fb9a36208276580bd81a8"
+    },
+    {
+      "path": "tools/test-manga-sheet-selection-sdk.mjs",
+      "sha256": "aefa1f1ca63110e7632d8d8be2a0f4b82bca02caa650f256ee3afd318cf62295"
+    },
+    {
+      "path": "tools/test-manga-sheet-motion-sdk.mjs",
+      "sha256": "035128ae8a2047edd40db48f85829624c0473fdc0aa6fe6a065f1e4bc59c61d5"
+    },
+    {
+      "path": "tools/test-manga-directory-font-readiness-sdk.mjs",
+      "sha256": "ab4379a6cba5955d40de5782bdbe54f7eead63b6c139430f4e9d920e5b710e60"
+    },
+    {
+      "path": "tools/test-manga-error-recovery.mjs",
+      "sha256": "537167dc61fe6a23df5541fa2207ebe89887ec8c9f189fefc5bb69916188b348"
+    },
+    {
+      "path": "tools/test-manga-surface-sdk.mjs",
+      "sha256": "b57e8880d5539a23c127a5b5210332d6662cd85b356570015f5919997f7efd05"
+    },
+    {
+      "path": "tools/test-manga-session.mjs",
+      "sha256": "09740a039630e368b30771e1778b0f544680fff8ced2144612bb2be5978f45ad"
+    },
+    {
+      "path": "tools/fixtures/manga-system-bars-r5/MangaReadingSurface.ets",
+      "sha256": "0f5e6d2654e8cc228b43b2ab2c9023e728db904193a147ce71da425113a6b897"
+    },
+    {
+      "path": "tools/fixtures/manga-system-bars-r5/ReaderShell.ets",
+      "sha256": "ea6dddd9fcb6eecf76ea4871419d70e32c69a12cc5812c5aea34716c89cf85ba"
+    }
+  ],
+  "sources": [
+    {
+      "path": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "sha256": "f84e5289f30711f31b9c7df2999fdba30dc6af4d175d6100c0e0bfb801ee3448"
+    },
+    {
+      "path": "entry/src/main/ets/features/shell/ReaderShell.ets",
+      "sha256": "edd9b4ade1b4f2ebe7953816742460b38263b1ae804b345f7f4dd4ebd906d560"
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets",
+      "sha256": "00087dbd1fc42a843b93242f4c450d17f7f70dde8bd7e1ea575431aebfce3685"
+    }
+  ],
+  "commands": [
+    "node --experimental-strip-types tools/test-reader-window-chrome-order.mjs",
+    "node tools/test-manga-*.mjs (each 44 files individually; max 3 parallel)"
+  ],
+  "order": {
+    "total": 24,
+    "passed": 24,
+    "productionCounterfactuals": 5,
+    "log": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/window-order-final.log",
+    "logSHA": "1d529f70c9b752da94715e25363375007a168b24cf507ae028fa286fb8e45f80"
+  },
+  "manga": {
+    "total": 44,
+    "passed": 44,
+    "failed": 0,
+    "index": "evidence/2026-10-03-manga-reader-sheets-r6/sdk/manga-final-results.json",
+    "indexSHA": "a4776e3010a947f3879822abea3dbe943e7b8e9945d7a11f4a429dce2ef80b7e"
+  },
+  "baseline": [
+    {
+      "path": "tools/fixtures/manga-system-bars-r5/MangaReadingSurface.ets",
+      "sha256": "0f5e6d2654e8cc228b43b2ab2c9023e728db904193a147ce71da425113a6b897"
+    },
+    {
+      "path": "tools/fixtures/manga-system-bars-r5/ReaderShell.ets",
+      "sha256": "ea6dddd9fcb6eecf76ea4871419d70e32c69a12cc5812c5aea34716c89cf85ba"
+    }
+  ],
+  "boundary": "Actual installed SDK component lowering/property proxy/Watch registration and production Manga/Shell/Coordinator methods. Native subscriber delivery, Window promises, controller resource facts and rendering are controlled boundaries. No HDC, HAP build or native pixels verified.",
+  "diffCheck": {
+    "limitedTextPaths": "PASS exit0",
+    "wholeWorkspace": "Not completed: git-lfs filter-process unavailable in this shell. This is an environment boundary, not a whitespace PASS."
+  }
+}

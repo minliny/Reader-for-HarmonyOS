@@ -1,0 +1,8 @@
+{
+  "status": "PASS",
+  "files": 109,
+  "originalBytes": 804416764,
+  "verifiedEachFileSha256": true,
+  "archiveBytes": 804624794,
+  "restore": "Extract archive and copy data/local/tmp/reader-control-*.ftrace to their original VM paths."
+}

@@ -1,0 +1,2 @@
+PASS metadata asset adapter: exact bytes/hash, owner, cancellation and no transport or imageDecode
+PASS exact Core decodeProfile transfer; valid scanline/interlace/full-frame, absent legacy proof, malformed types/geometry/class mismatch rejected.

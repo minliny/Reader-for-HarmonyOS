@@ -1,0 +1,120 @@
+{
+  "type": "result",
+  "protocolVersion": 1,
+  "requestId": 962,
+  "data": {
+    "bookId": "https://ac.qq.com/Comic/comicInfo/id/531040",
+    "chapterTitle": "01",
+    "pages": [
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_50_5fc8559355b7024515c70f0f586d7f8b_1733478617057.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_48_520e4ee037c280bc8ac19bc77e0f3056_1733478531499.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_49_def4e0e67da33e7190d6dc39a91ecc5e_1733478599291.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_54_27749c84695aa70bc7850288b542716f_1733478840813.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_54_91accc051cd7468a7bba15053aa09c1a_1733478862274.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_54_979c884dc29c3cf7f74a70b25077f8f1_1733478892499.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_53_c769185729ea4c4eb01bc5697385806b_1733478826306.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_43_7c02cce94fe4edc1444a54cf32cd23fd_1733478195705.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_51_c66e29bca587d77c53770558f947a8cc_1733478702371.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_48_eac43a10f7d417069ba587d41f246c30_1733478533938.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_52_4113be25f51cc3e4a7366de10192d0b0_1733478727093.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_42_11eb7cdbb7706ef63cd09e0a9987e9a1_1733478141382.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_54_4d722914ac1579013583fb2266b0a3d8_1733478851835.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_42_2e99ae5aa32e70f80e5a8de4772293db_1733478179778.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_54_f9a156373465800d2fbdb3617a415974_1733478869836.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_47_4b143d06844d3d4271b43a5fd102eeeb_1733478437747.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_52_7e6710b52d9efe6743f90ae37e8086f8_1733478732780.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_39_7937839b37217ad0c5acc9d824fcd56e_1733477995998.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_39_fe05b977507db5e666f5a0b57ce3afe2_1733477998303.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_45_b3254374fa48ce6345ad65c95ec67111_1733478328147.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_40_94bac98e3e7f22cb40bd26ebc48dc3d9_1733478018931.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_47_94201ee8d0e44323a50478ce117a98cc_1733478469844.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_54_8f261465852b4ec825f5779db7c9a184_1733478871869.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_48_0ecefe454efbbf6ab95da7bbee7c6a58_1733478511850.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_55_c50362d75e9967be9979563b78ff36ba_1733478931466.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_54_ee1d743882c3c9aeb94a55bcc5573bc5_1733478848086.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_43_113efaa559dd8353d3e7ae7446675bdb_1733478191825.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_51_ff84f003d81779b71d85c88d68dfe9e1_1733478682832.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_51_f04238a73b7836625135d018d9e6607d_1733478714904.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_53_b5df984f1bd5f740e773189458103cdc_1733478801662.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_52_57418e432a0c0c2300589d35b22a2a6b_1733478759138.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_40_7912e3f49443b4f8b8964bceff2126ee_1733478033602.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_43_f8bc38ed6d22be79944e4e6ce59c60e8_1733478203382.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_43_f9704bb58950e14df035b73e53321a05_1733478238314.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_53_4b5023e6d6cfc55569b042e60d00d0bc_1733478786832.jpg/0"
+      },
+      {
+        "url": "https://manhua.acimg.cn/manhua_detail/0/06_17_40_447f5b0ee53cd489dfc5bc66466b6907_1733478056060.jpg/0"
+      }
+    ],
+    "sourceId": "corpus-f359be41c7fe"
+  }
+}

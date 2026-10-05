@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03T13:15:10.785099+00:00",
+  "freezeSha256": "87946896c17aad3edcfee490d13d321064ca74222acefcd9e6cbf77375d41ec9",
+  "source": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS",
+  "target": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS",
+  "files": [
+    {
+      "path": "tools/test-reader-window-chrome-order.mjs",
+      "before": {
+        "bytes": 14682,
+        "mode": 420,
+        "sha256": "045e693c54d4e67339fe8fd4bf4c916262931ccb6c9acebab3c7e701c1daf6b8"
+      },
+      "after": {
+        "bytes": 33842,
+        "mode": 420,
+        "sha256": "b578e446443037785e7c8d5aa093dbfbebb50d64d810cd5f5aaa71db4871879f"
+      }
+    },
+    {
+      "path": "tools/lib/reader-motion-method-probe.mjs",
+      "before": {
+        "bytes": 4651,
+        "mode": 420,
+        "sha256": "2638db6589472362b0750bf89dd3ff65df2b8425d1a12b4929d013cac34d220b"
+      },
+      "after": {
+        "bytes": 5455,
+        "mode": 420,
+        "sha256": "09837d8a6713ff1e3294e7afd8b17c7a4a8f1f626c6fb9a36208276580bd81a8"
+      }
+    },
+    {
+      "path": "tools/test-manga-sheet-selection-sdk.mjs",
+      "before": {
+        "bytes": 12984,
+        "mode": 420,
+        "sha256": "581d6d7b8ca565b6c80d1a7e1458694b54bcbbd3571798ab41a342bb6e4a63bf"
+      },
+      "after": {
+        "bytes": 13009,
+        "mode": 420,
+        "sha256": "aefa1f1ca63110e7632d8d8be2a0f4b82bca02caa650f256ee3afd318cf62295"
+      }
+    },
+    {
+      "path": "tools/test-manga-sheet-motion-sdk.mjs",
+      "before": {
+        "bytes": 26556,
+        "mode": 420,
+        "sha256": "898d27ea8260860194ed697dc9ab13ebc892f32bb3bce5f0c4260d4aeb06d64d"
+      },
+      "after": {
+        "bytes": 26726,
+        "mode": 420,
+        "sha256": "035128ae8a2047edd40db48f85829624c0473fdc0aa6fe6a065f1e4bc59c61d5"
+      }
+    },
+    {
+      "path": "tools/test-manga-directory-font-readiness-sdk.mjs",
+      "before": {
+        "bytes": 24869,
+        "mode": 420,
+        "sha256": "d70ab1686040b7a45408b6b87b951966106c934ec8a417be9287ad6cc9e22f67"
+      },
+      "after": {
+        "bytes": 24932,
+        "mode": 420,
+        "sha256": "ab4379a6cba5955d40de5782bdbe54f7eead63b6c139430f4e9d920e5b710e60"
+      }
+    },
+    {
+      "path": "tools/test-manga-error-recovery.mjs",
+      "before": {
+        "bytes": 12353,
+        "mode": 420,
+        "sha256": "14b59c9fd3bedc4304fff9b01f66dc86cbc23cda209a710e2e4beae7bf00e892"
+      },
+      "after": {
+        "bytes": 12376,
+        "mode": 420,
+        "sha256": "537167dc61fe6a23df5541fa2207ebe89887ec8c9f189fefc5bb69916188b348"
+      }
+    },
+    {
+      "path": "tools/test-manga-surface-sdk.mjs",
+      "before": {
+        "bytes": 20584,
+        "mode": 420,
+        "sha256": "a6c031943dc0fd9c31f940273f23301fee73c17ed933bacc23bde366f5d1839f"
+      },
+      "after": {
+        "bytes": 20614,
+        "mode": 420,
+        "sha256": "b57e8880d5539a23c127a5b5210332d6662cd85b356570015f5919997f7efd05"
+      }
+    },
+    {
+      "path": "tools/test-manga-session.mjs",
+      "before": {
+        "bytes": 57588,
+        "mode": 420,
+        "sha256": "6f8513887361f6e18072882c7e5f039f3fe54446187c77ee256cc7899cc4e5d2"
+      },
+      "after": {
+        "bytes": 57713,
+        "mode": 420,
+        "sha256": "09740a039630e368b30771e1778b0f544680fff8ced2144612bb2be5978f45ad"
+      }
+    },
+    {
+      "path": "tools/fixtures/manga-system-bars-r5/MangaReadingSurface.ets",
+      "before": null,
+      "after": {
+        "bytes": 101068,
+        "mode": 420,
+        "sha256": "0f5e6d2654e8cc228b43b2ab2c9023e728db904193a147ce71da425113a6b897"
+      }
+    },
+    {
+      "path": "tools/fixtures/manga-system-bars-r5/ReaderShell.ets",
+      "before": null,
+      "after": {
+        "bytes": 24844,
+        "mode": 420,
+        "sha256": "ea6dddd9fcb6eecf76ea4871419d70e32c69a12cc5812c5aea34716c89cf85ba"
+      }
+    }
+  ],
+  "allSourceAndTargetByteModeChecksPassed": true,
+  "addedFixtures": 2
+}

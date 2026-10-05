@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "status": "PASS",
+  "runId": "20261003T132254Z-568ec4e3-d6c1d5d4",
+  "buildClass": "iteration",
+  "acceptanceEligible": false,
+  "signedArtifactSha256": "0c57c7221e3a7612bf764c471655d120f3d37fe63e7f003c8a93a7b5d837bff7",
+  "canonicalMatchedSourceRecords": 2428,
+  "canonicalCounterfactualFixturesBound": true,
+  "allCanonicalSourceRecordsReconstructible": true,
+  "actualArtifactFilesVerified": 2,
+  "actualEmbeddedNativeBytesVerified": true,
+  "privateSigningMaterialCopied": false,
+  "deviceOperation": false,
+  "frozenR4R5AndR6SourceDeltaUnchanged": true,
+  "originalTemporarySourceRequired": false,
+  "vmPhysicalInteractionOrUserAcceptanceClaim": false
+}

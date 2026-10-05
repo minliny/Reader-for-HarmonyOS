@@ -1,0 +1,5 @@
+(node:24301) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual multi-page viewport keeps exact display leases and ready metadata; far navigation/close retire once, budget stays eight
+PASS precise visible pending tiles join one decode; far selection fences and releases late pixels
+PASS retained visible tile survives cancelled header reentry without an orphan pending marker or widened prefetch

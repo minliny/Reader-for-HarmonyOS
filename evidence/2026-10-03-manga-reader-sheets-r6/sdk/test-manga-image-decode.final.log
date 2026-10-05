@@ -1,0 +1,10 @@
+PASS manga asset transfer: bound owner, validation before ack, exact chunks, cancellation, invalid output and release
+PASS production ReaderRuntimeOwner: cached manga stays offline, decoded bytes persist, exact chapter identity and regional offline validation
+PASS manga transfer preserves actionable HTTP failure identity across generic Core host rejection
+PASS decoded online-dependent bytes survive owner reopen with network explicitly disabled
+PASS nested online key/library typed HTTP status shares image login/retry classification; unrelated rule failures retain identity
+PASS Core advertised 8/16MiB binds fetch/input/graphics/output/receipt; oversize rejects before inspect/read/validate, invalid advertisements do not fetch, native budget classification never falls back to original bytes
+PASS actual Body transport applies Core limit to HTTP and before base64 decode; ordinary images retain 16MiB and invalid limits have no transport side effects
+PASS final prepared receipt cannot advertise bytes above its accepted input transfer limit
+(node:23659) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

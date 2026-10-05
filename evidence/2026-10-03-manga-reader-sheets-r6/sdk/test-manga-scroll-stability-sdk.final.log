@@ -1,0 +1,26 @@
+(node:23856) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS unchanged scroll notifications retain decoded visible Images and row geometry
+PASS same native range is idempotent after the first mounted callback
+PASS a changed native range still commits its exact tile window
+PASS first native callback still demands tiles even when its range equals the initial fields
+PASS same range during restore still measures and confirms its native anchor
+PASS retained Images and rows still resize through real SDK zoom dependencies without data notifications
+PASS retained Images still follow changed viewport width without row invalidation
+PASS a real tile replacement notifies only its changed row
+PASS repeated Controller publication with no row changes is silent
+PASS equal-value geometry reentry must not reload the list or restore during scrolling
+{"case":"equal-value-reentry","before":{"keys":["[\"page-0:0\",true,600,600,0,1200,\"file://stable-0-retry.png\",\"r0-new\",\"\",false]","[\"page-0:1\",true,600,600,600,1200,\"file://stable-1.png\",\"r1\",\"\",false]"],"actors":[20,11],"mounts":3,"reloads":0,"changes":3,"timers":0,"heights":[300,300]},"after":{"keys":["[\"page-0:0\",true,600,600,0,1200,\"file://stable-0-retry.png\",\"r0-new\",\"\",false]","[\"page-0:1\",true,600,600,600,1200,\"file://stable-1.png\",\"r1\",\"\",false]"],"actors":[20,11],"mounts":3,"reloads":0,"changes":3,"timers":0,"heights":[300,300]}}
+PASS offscreen neighbor geometry must not restore stable visible Images
+PASS same visible keys do retain Image actors in the strict-key SDK boundary
+{"case":"offscreen-neighbor","before":{"keys":["[\"page-0:0\",true,600,600,0,1200,\"file://stable-0-retry.png\",\"r0-new\",\"\",false]","[\"page-0:1\",true,600,600,600,1200,\"file://stable-1.png\",\"r1\",\"\",false]"],"actors":[20,11],"mounts":3,"reloads":0,"changes":3,"timers":0,"heights":[300,300]},"after":{"keys":["[\"page-0:0\",true,600,600,0,1200,\"file://stable-0-retry.png\",\"r0-new\",\"\",false]","[\"page-0:1\",true,600,600,600,1200,\"file://stable-1.png\",\"r1\",\"\",false]"],"actors":[20,11],"mounts":3,"reloads":1,"changes":3,"timers":0,"heights":[300,300]}}
+PASS real current-page geometry change must retain normalized anchor and request one restore
+PASS real layout change before the visible page must restore the shifted row index
+PASS retained failed text still updates its theme color through the real SDK dependency
+PASS error card ownership still transfers on viewport movement; tile eviction remains Controller-owned
+PASS a retried error row still publishes its ready Image
+PASS horizontal selected page ignores earlier neighbor geometry outside its list
+PASS horizontal selected page still restores for its own real geometry change
+PASS failed unknown-geometry viewport transfers retry ownership without a Controller publication
+PASS settled failed viewport remains silent on a repeated same-range callback
+PASS scroll stability regression; native motion/pixels require separate delivery evidence

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-03",
+  "status": "source-rule-fixed-local-verification-passed-vm-acceptance-open",
+  "sourceId": "https://cn.bzmanga.com",
+  "builtinId": "reader-builtin-corpus-bb44193bd3bd",
+  "builtinVersion": 7,
+  "sourceRule": {
+    "previousContent": "class.comic-contain@img@html##cdn##mh",
+    "content": "class.comic-contain@img@html",
+    "previousRuleFingerprint": "c110cc449625270b9a34481b5c2303b01c1af163e8a35d61909fcba8655ddc85",
+    "ruleFingerprint": "4391373a47c491d55c6c6f29b6227d454cb23daa1d35a4c6b58bf719b8fb817c"
+  },
+  "observedPublicChapter": {
+    "entryUrl": "https://cn.bzmanga.com/user/page_direct?comic_id=jiandieguojiajia-yuantengdazai&section_slot=0&chapter_slot=190",
+    "finalUrl": "https://cn.bzmanga.com/comic/chapter/jiandieguojiajia-yuantengdazai/0_190.html",
+    "httpStatus": 200,
+    "bytes": 70640,
+    "sha256": "08d3ff397de4cf70f33d73a5609b05ae879ab6c0ff1ff61c6e45892c3fa62f09",
+    "containedImageHost": "s1.bzcdn.net",
+    "imagePageCount": 6,
+    "capturePath": "/private/tmp/reader-baozi-live-chapter-20261003.html"
+  },
+  "transportControl": {
+    "originalUrl": "https://s1.bzcdn.net/scomic/meishaonianbangjiashijian-aojianyixi2/0/2-df6a/1.jpg",
+    "originalHttpStatus": 200,
+    "originalCurlExit": 0,
+    "originalContentType": "image/jpeg",
+    "originalBytes": 131918,
+    "originalDimensions": [
+      1200,
+      2133
+    ],
+    "originalSha256": "3d367847295aefc1525d27061517b61d4b9a50e8b5b41f0106cacd51d35ceaf8",
+    "rewrittenUrl": "https://s1.bzmh.net/scomic/meishaonianbangjiashijian-aojianyixi2/0/2-df6a/1.jpg",
+    "rewrittenHttpStatus": 0,
+    "rewrittenCurlExit": 35,
+    "rewrittenBytes": 0,
+    "rewrittenFailure": "TLS SSL_ERROR_SYSCALL before HTTP"
+  },
+  "distribution": {
+    "collectionRecords": 1046,
+    "preferredSourceIdentities": 919,
+    "changedBuiltinIds": [
+      "reader-builtin-corpus-bb44193bd3bd"
+    ],
+    "collectionSha256": "64ca74e152c90c7677723266b9a21551018abe5a76171d997f8e380c831f201b",
+    "indexSha256": "a769c0080fee6ec3032cbd8e3fbd28b3822a9decd2563d468461259d8179fd63",
+    "generator": "tools/baozi-image-source-correction.mjs --apply; tools/generate-bundled-source-index.mjs",
+    "fullRefreshBlocker": "Isolated workspace has no pinned admission evidence; current main-workspace same-path evidence does not match historical expected digest. No hash relaxation or unrelated source regeneration performed."
+  },
+  "protection": {
+    "unmodifiedBuiltin": "upgrades from v6 to v7 at same sourceId via existing source.supply",
+    "userImportedOrEditedRules": "not overwritten by existing source.supply managed/fingerprint guard",
+    "disabledChoice": "preserved by existing enabled/enabledExplore upgrade policy",
+    "exploreRules": "preserved via contentCorrection.preserveExploreRules=true",
+    "deletedSources": "suppressed and not resurrected by existing tombstone policy",
+    "history": "verifiedAt, capabilities and readerHistoricalTest unchanged"
+  },
+  "localTests": [
+    "tools/test-baozi-image-source-correction.mjs",
+    "tools/test-source-supply-chain.mjs",
+    "tools/test-bundled-test-book-sources.mjs",
+    "tools/test-incremental-bundled-source-supply.mjs",
+    "cargo test -p reader-content --test baozi_source_rule"
+  ],
+  "acceptanceBoundary": "These checks prove the old rule rewrites a currently valid image URL into a TLS-failing host. They do not certify source chapter identity, manga image authenticity, VM image painting, paging, chapter switching, progress recovery or source switching. Observed image path differs from requested title, so it cannot be used as normal manga reading acceptance."
+}

@@ -1,0 +1,4 @@
+PASS actual SDK-lowered manga sheet lifecycle: two-frame admission with callback-before-build, native springs and 160 ms scrim, retained exit and interaction block, phone/persistent input font admission, VF Text, drag thresholds/rollback, reduce motion, late target/save/reopen/unmount guards; immediate teardown/missing generation/wrong spring/single frame/missing input font gate negative controls rejected
+Boundary: native scheduling, input/font I/O and animator are instrumented; compositor frames, physical font paint and VM motion still require separate continuous evidence.
+(node:60393) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

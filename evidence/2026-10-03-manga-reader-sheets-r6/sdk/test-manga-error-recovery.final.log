@@ -1,0 +1,8 @@
+PASS actual manga row keys transfer one visible retry card after scrolling and prior-row recovery
+(node:23630) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS actual manga retry callbacks preserve new failures and fence navigation, refresh, replacement and disposal
+PASS actual recovery confirmation follows refreshed controller facts and fences late acknowledgement/failure
+PASS actual opening retry has one session owner and SDK-emitted disabled in-progress control
+PASS actual registered navigation exit bypasses back tiers, waits for one save, fences disposal and retains ordinary panel/end/zoom back behavior
+Boundary: production methods and SDK control lowering; VM pixels and native list scheduling require separate delivery evidence.

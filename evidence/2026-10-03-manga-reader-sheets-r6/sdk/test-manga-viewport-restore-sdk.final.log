@@ -1,0 +1,7 @@
+(node:24272) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS SDK restore preserves same-index 0..1 with/without synchronous callback; actual publish and tile requests include the same next row
+PASS actual post-frame Scroller samples three visible tiles, short-content rectangles and an eight-tile cap shared with publication
+PASS invalid indices, unavailable rectangles and unmeasured height retain the last valid range
+PASS native layout events preserve restore; supersession, real touch, later scroll and close fence obsolete timer/frame work
+Boundary: actual installed ETS-generated methods/callbacks and SDK property runtime; native Scroller geometry/frame delivery are controlled inputs, not platform layout, pixels or device proof.

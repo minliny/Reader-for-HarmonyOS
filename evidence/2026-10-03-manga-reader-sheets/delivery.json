@@ -1,0 +1,384 @@
+{
+  "runId": "20261003T085836Z-568ec4e3-3dcdb3db",
+  "manifest": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/hap/20261003T085836Z-568ec4e3-3dcdb3db/manifest.json",
+  "receipt": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-artifacts/hap/20261003T085836Z-568ec4e3-3dcdb3db/deploy-vm-6460677a198b-20261003T085922Z.json",
+  "target": "127.0.0.1:5555",
+  "targetRef": "6460677a198b",
+  "buildClass": "iteration",
+  "acceptanceEligible": false,
+  "source": {
+    "harmony": {
+      "commit": "568ec4e32a2bdce01f62724cfb04a3f6b5a63a60",
+      "dirty": true
+    },
+    "core": {
+      "commit": "dfd729cffd79ed11da6d44be9e1ba10c4223247f",
+      "dirty": true
+    }
+  },
+  "buildInputFingerprint": "3dcdb3db43da56a8413d84df9e555dd4c6b7bf15ae64481f30133d670fc69f54",
+  "signedArtifact": {
+    "kind": "signed",
+    "path": "entry-default-signed.hap",
+    "bytes": 183089458,
+    "sha256": "c987218631693c92c3f437f38785e391392fc8331676ca90a3c705d0817929aa",
+    "signature": {
+      "status": "signed",
+      "verified": true,
+      "profileType": "debug",
+      "appIdSha256": "ff8e00ed180524004dd842c160f410ac46644a7bba5bf7c4ce309876ce53bcd8",
+      "appIdentifierSha256": "8fb560b4b330d1b0b70f7ad9c7a9e410600e7c0177306f0eb0257ae9c26d2d01",
+      "certificateSha256": "3a563778e5bf17cd3ead0218e13b4a5030de3f5d7d4e21e0336d8eb37b676dc4"
+    },
+    "nativeEntries": [
+      "libs/arm64-v8a/libc++_shared.so",
+      "libs/arm64-v8a/libreader_bookturn_napi.so",
+      "libs/arm64-v8a/libreader_core_napi.so"
+    ],
+    "embeddedCoreNapi": {
+      "path": "libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 17904184,
+      "sha256": "a93a5bbeded3d4b8faab37a24005cfb62daf715c0f9e32aec9e3676fb1c9c7dc"
+    }
+  },
+  "dataPreserved": true,
+  "nativeSheetMeasurements": {
+    "manga-sheets-directory-paper": {
+      "pixelBounds": [
+        0,
+        782,
+        1280,
+        2734
+      ],
+      "sizeVp": [
+        365.7142857142857,
+        557.7142857142857
+      ]
+    },
+    "manga-sheets-mode-paper": {
+      "pixelBounds": [
+        0,
+        1458,
+        1280,
+        2735
+      ],
+      "sizeVp": [
+        365.7142857142857,
+        364.85714285714283
+      ]
+    },
+    "manga-sheets-settings-paper": {
+      "pixelBounds": [
+        0,
+        1493,
+        1280,
+        2735
+      ],
+      "sizeVp": [
+        365.7142857142857,
+        354.85714285714283
+      ]
+    },
+    "manga-sheets-directory-ink": {
+      "pixelBounds": [
+        0,
+        782,
+        1280,
+        2734
+      ],
+      "sizeVp": [
+        365.7142857142857,
+        557.7142857142857
+      ]
+    },
+    "manga-sheets-mode-ink": {
+      "pixelBounds": [
+        0,
+        1458,
+        1280,
+        2735
+      ],
+      "sizeVp": [
+        365.7142857142857,
+        364.85714285714283
+      ]
+    },
+    "manga-sheets-settings-ink": {
+      "pixelBounds": [
+        0,
+        1493,
+        1280,
+        2735
+      ],
+      "sizeVp": [
+        365.7142857142857,
+        354.85714285714283
+      ]
+    }
+  },
+  "observedJourney": {
+    "title": "斗破苍穹",
+    "source": "腾讯漫画",
+    "chapter": "05",
+    "page": "3 / 32",
+    "directionReturn": "vertical",
+    "fitReturn": "source",
+    "backgroundReturn": "paper",
+    "pageNumbersReturn": true,
+    "brightnessUnchanged": "50% visible; slider/reset not changed on VM"
+  },
+  "layers": {
+    "source": "PASS",
+    "sdk": "PASS including same-mount live selection and captured-parameter negative controls",
+    "signedBuild": "PASS",
+    "vmInstall": "PASS",
+    "vmThreeSheetsVisual": "PASS normal content/paper/ink; pixel equality not claimed",
+    "userAcceptance": "OPEN",
+    "wideNative": "OPEN; SDK bounds only",
+    "scrollMr19": "handoff to manga UI thread, separate acceptance"
+  },
+  "openItems": [
+    "native Slider inset differs from browser input range",
+    "dark reader topbar back/more icons low contrast, outside three sheets",
+    "demo empty directory fixed330 leaves whitespace; matches current design but optimization OPEN",
+    "volume-group 12vp inter-group margin withheld because shared virtual row positioning model; target data flat, no native group proof"
+  ],
+  "captureFailures": [
+    "snapshot_display .png rejected; tool requires .jpeg",
+    "two transient jpeg capture failures; df /data showed1.7G free, one bounded retry succeeded; page-off has JSON evidence only"
+  ],
+  "evidenceFiles": [
+    {
+      "path": "build-attempts.md",
+      "sha256": "2ef51fb5b3c69a2d6ac10e5e0ad1b6ee5eb83ed2ccd47a6fbb9f86b2698ef50a"
+    },
+    {
+      "path": "deploy-vm-6460677a198b-20261003T085922Z.json",
+      "sha256": "9a269894217749c2dbbc3174d2101dbb5f4f9ade479c8e481b424272f5b66c2e"
+    },
+    {
+      "path": "hap-attempt-dark-range-review-stop.log",
+      "sha256": "be027e530f00d3ba00f7518e32c5d509c4eb4e99791a845b0683855c52556508"
+    },
+    {
+      "path": "hap-attempt-directory-review-stop.log",
+      "sha256": "6d5cc85bbcfc2b6e87bc58fd7ff615b1191ce4baff951b7d9d4b49d9fc1b99fe"
+    },
+    {
+      "path": "hap-attempt-svg-registry-failure.log",
+      "sha256": "518ee72d708c8c6fee8c00e488ff76163b085704b1064044ae938647a554caa0"
+    },
+    {
+      "path": "manga-sheet-final-surface-sdk.log",
+      "sha256": "1b99e4cab226644b9d2e43f40271839e598c2460767fabeaa33517718ff7c0b9"
+    },
+    {
+      "path": "manga-sheet-sdk-replay-audit.json",
+      "sha256": "c0d5f40bb5c1a036f60101a353a9e9185fa6cc7ccac8698fb6405638b55cadfe"
+    },
+    {
+      "path": "manga-sheet-selection-sdk-final-green.log",
+      "sha256": "d9f2ca6e42d601676c28d8b6c79d63092661bd3500ff68dd8472ee426c3c3621"
+    },
+    {
+      "path": "manga-sheet-selection-sdk-green.log",
+      "sha256": "fc161f43c84610335a1799904e636455f498b358adcfbd866610bbbb2d2616cc"
+    },
+    {
+      "path": "manga-sheet-vm-hilog-20261003.log",
+      "sha256": "470da7e7e62a4cea83df615eba1ca3dd3e53ef44d562868b8ecc9ca8c7433cf5"
+    },
+    {
+      "path": "manga-sheet-vm-readiness-20261003.log",
+      "sha256": "a3724c464691ecac5bf5b7d9c8e6512e3e3bedd7c530d3efaf8cdd485f76cdc6"
+    },
+    {
+      "path": "manga-sheets-close-directory.json",
+      "sha256": "85b4e5a21b027797c9d8beacfc92a9c86e9f8deed56bfeb7fd1ce7b8b0c338c7"
+    },
+    {
+      "path": "manga-sheets-close-mode-night.json",
+      "sha256": "8fae0432fc35b8de987dd3b52b1b0e6877170e004e16834ecf0ff780d0537329"
+    },
+    {
+      "path": "manga-sheets-close-mode.json",
+      "sha256": "c1fc313fd4c76a341b966de68dbe0c85e308e24fb3bf721fe07bb59b4468de24"
+    },
+    {
+      "path": "manga-sheets-close-settings-return.json",
+      "sha256": "aa843a4c16034fe6d3d38882952de32ca367e50901778f7eb0a8858a2667b055"
+    },
+    {
+      "path": "manga-sheets-close-settings.json",
+      "sha256": "8fae0432fc35b8de987dd3b52b1b0e6877170e004e16834ecf0ff780d0537329"
+    },
+    {
+      "path": "manga-sheets-controls.json",
+      "sha256": "b879bfad168c1cdbc77802f981d5066e8782db0b50a863bca35b6cd0563e4832"
+    },
+    {
+      "path": "manga-sheets-delivery-hilog.log",
+      "sha256": "52f3fd92d2bd487a7e946c67efae372a4b52c17205b8b0dbf794031c55f67646"
+    },
+    {
+      "path": "manga-sheets-delivery-readiness.log",
+      "sha256": "b66963a0d174e1e78be848f22e9e7a61447dd12422adb2ee0d2a8bbb561c4f8b"
+    },
+    {
+      "path": "manga-sheets-directory-cleared.json",
+      "sha256": "07e46e6cf3b4ed7257a4195af074b54aab2c8fa06b9a284f4851da4022f82521"
+    },
+    {
+      "path": "manga-sheets-directory-empty-ink.jpeg",
+      "sha256": "e90a9dc9d12f3fed0d375ade5e829a28442f38fd6d957ec901ec84b2ff711112"
+    },
+    {
+      "path": "manga-sheets-directory-empty-ink.json",
+      "sha256": "518ac3ec0fa98202cae92ebccee6093c0284a8719433eab605ae3e5242447ad8"
+    },
+    {
+      "path": "manga-sheets-directory-empty-visible.jpeg",
+      "sha256": "c58970616a07fd12c24d8f6c49684c296763bd6df1f2994160611c44c6ff8518"
+    },
+    {
+      "path": "manga-sheets-directory-empty-visible.json",
+      "sha256": "2a16562a6a8dc40037ab6031944fc8dc4fb1a3593793946e5bd64c83ee007e9d"
+    },
+    {
+      "path": "manga-sheets-directory-ink.jpeg",
+      "sha256": "fa83d7359fb6b2c6d094889f2c51dec0967bae413658c94ba8c0369c98ae9b4b"
+    },
+    {
+      "path": "manga-sheets-directory-ink.json",
+      "sha256": "f082b3b1334c98538487c9f8b0cc368f883fd34ed88d9e9a0731dbe2e2961573"
+    },
+    {
+      "path": "manga-sheets-directory-paper.jpeg",
+      "sha256": "97ecbb3fa60cdff7856b5be4f116eb79f45cc5dedccf0f60d9a6be7d0fd6c26f"
+    },
+    {
+      "path": "manga-sheets-directory-paper.json",
+      "sha256": "d1a7c0af11975e4f26ad24ebaa3d146bdfbe9b621032856a932fbed8e34dae54"
+    },
+    {
+      "path": "manga-sheets-final-controls.jpeg",
+      "sha256": "8a6215596da62cd4332280d2492129adf2303a391b1da4458d9406d8a813a47f"
+    },
+    {
+      "path": "manga-sheets-final-controls.json",
+      "sha256": "15a3dc19d44aa384f752b24a9536f91e9bf5a7c04966256cd7d3a382ee7d78ee"
+    },
+    {
+      "path": "manga-sheets-hap-delivery-20261003.log",
+      "sha256": "668ae80e5f14a61539ab097ddc27b905b78ca4a448914150c27665a297579522"
+    },
+    {
+      "path": "manga-sheets-inspect-20261003.json",
+      "sha256": "c773be48412ade2bb585611e392600040e87e27005c24f55950d3e33933cf896"
+    },
+    {
+      "path": "manga-sheets-install-20261003.json",
+      "sha256": "29245886aa35e881634d2663b521a6883cd0fe4836f8a464bc71699f0df437ea"
+    },
+    {
+      "path": "manga-sheets-installed.jpeg",
+      "sha256": "dd0a597b0b3ba5e077379b9fd88ba368ae9168b59105e7aeb1492fb2fae78849"
+    },
+    {
+      "path": "manga-sheets-installed.json",
+      "sha256": "bcb24059c61f1baae4b8364b516990483da665e4b16544d2b07a33474f4edd36"
+    },
+    {
+      "path": "manga-sheets-mode-contain.jpeg",
+      "sha256": "c86b03cdff715a40a41fb4a05f3ce7fb54a3c22eb7aa8b4884b481f43d89f4ad"
+    },
+    {
+      "path": "manga-sheets-mode-contain.json",
+      "sha256": "a9eb318eb80c2db32577819c37fbb50bfe799bc57ec5efa7e0c13245deb423af"
+    },
+    {
+      "path": "manga-sheets-mode-horizontal.jpeg",
+      "sha256": "3a83936b0fc91b648ad92eebc23d1ca7d5a70dd6c03ecc2a49e86aae9070a935"
+    },
+    {
+      "path": "manga-sheets-mode-horizontal.json",
+      "sha256": "a876b03f225e1513a5dd0359a0398fa7d15b97dd8e20c11005a3c9a321d7d429"
+    },
+    {
+      "path": "manga-sheets-mode-ink.jpeg",
+      "sha256": "47123dacb5b9a7b80b00956fe52f70b6e451c0ddd29200b6ce7c006e93649962"
+    },
+    {
+      "path": "manga-sheets-mode-ink.json",
+      "sha256": "da9e794f92ecf77024813bde34aa337bab08071b5018ce7505cad145bea44417"
+    },
+    {
+      "path": "manga-sheets-mode-paper.jpeg",
+      "sha256": "2a03f12bf32d3eb263a4a422ffc8c2fdcd7b6bef276f35c05292561c3e8803c7"
+    },
+    {
+      "path": "manga-sheets-mode-paper.json",
+      "sha256": "262b6a1c4ea4075841813ee8e95d7fa0b7efaa348e41c73d70e830eb1959a809"
+    },
+    {
+      "path": "manga-sheets-mode-return.jpeg",
+      "sha256": "a5047d94049231e71bd8df72e135447c8673ab41eef0f451f3525b2863d8d0c3"
+    },
+    {
+      "path": "manga-sheets-mode-return.json",
+      "sha256": "b6c5883a0f4ae92ba5bd34bea6f856c01c7561ad499e6d7b628de5070cff1de4"
+    },
+    {
+      "path": "manga-sheets-mode-width.jpeg",
+      "sha256": "083310e2689918c3c6f7a9f6eaef202b6c42fac3568b9b75b5b19ff610a03a38"
+    },
+    {
+      "path": "manga-sheets-mode-width.json",
+      "sha256": "d20ce202e5036f18b5d52e8942ae367cd12361885781c599b86906e2b9bcdc4f"
+    },
+    {
+      "path": "manga-sheets-reader.jpeg",
+      "sha256": "109a12adaea4628e7b9a7adb799bff5ea24f809159e1861f162942de95017c72"
+    },
+    {
+      "path": "manga-sheets-reader.json",
+      "sha256": "a7ee03c24cfe4d96e02cb8fc24fd492ffa3f18ec461e32e50b36403ab9852838"
+    },
+    {
+      "path": "manga-sheets-settings-ink.jpeg",
+      "sha256": "a177db6f8cf69d98668b96af517a271d6959ef1eb932a44b012f29e59207be55"
+    },
+    {
+      "path": "manga-sheets-settings-ink.json",
+      "sha256": "6ffebb22838b6453f9adeb7dea5976cb888b1afd965ccbe07f553ae432d17da1"
+    },
+    {
+      "path": "manga-sheets-settings-page-off.json",
+      "sha256": "58d12c03426f55daf362db5ac77d2d2e81d741eb28f50c5cb91235ce6f0b3b15"
+    },
+    {
+      "path": "manga-sheets-settings-paper.jpeg",
+      "sha256": "f451845df525c8a62dd93ab287aa34cbc5d01ba03a0582cc69adaf097a0a9e80"
+    },
+    {
+      "path": "manga-sheets-settings-paper.json",
+      "sha256": "4c9e9f41fa9261dd47128d9c8050921a3bcfca1de8e692fd3aa044da2e7f2e38"
+    },
+    {
+      "path": "manga-sheets-settings-return-entry.json",
+      "sha256": "7a8f0a4c269fe143ed6e7f420743c9d510db3d1f59c660dbf69b27a2a8c98b47"
+    },
+    {
+      "path": "manga-sheets-settings-return.json",
+      "sha256": "34b7b4a9cdcd0551766c47e4b2e0380f84bf4b84723c6694663a5f9b1e0ae460"
+    },
+    {
+      "path": "vm-sheets-ink.png",
+      "sha256": "c1e43ce45e4f6bb57fe7c3414c22cfb1ad2c17a7d6d15a8e717f1c73fc5d20b6"
+    },
+    {
+      "path": "vm-sheets-paper.png",
+      "sha256": "5cfb87b5b9193856097c1b4895be5f428817db8e14006eb3aace9df920f27041"
+    }
+  ]
+}

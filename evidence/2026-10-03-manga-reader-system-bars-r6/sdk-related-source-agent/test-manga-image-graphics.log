@@ -1,0 +1,6 @@
+PASS manga graphics: real bundled-rule 14-strip golden coordinates, independent Pillow BGRA, explicit ImageKit source format, narrow dimensions/coverage, actual methods, cancellation/release, decoded-byte transfer (native ImageKit codec pixels remain target gate)
+PASS graphics rejects former 16Mip double-RGBA allocation before native pixels; padded native surface rechecks and releases; encoded/pack buffers enter independent working-set gate.
+PASS codec source release finishes after readback/input release and before RGB565/packer allocation; async drain, cancellation and native release errors call each owner once and preserve explicit failure receipts.
+PASS graphics coefficient working-set preflight includes maximum JPEG sampling-factor padding before any pixel allocation.
+(node:18719) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

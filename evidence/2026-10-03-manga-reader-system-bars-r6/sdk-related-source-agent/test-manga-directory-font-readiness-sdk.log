@@ -1,0 +1,37 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: real SDK Builder/member transform has no diagnostics
++ actual - expected
+
++ [
++   {
++     code: '10905301',
++     message: "'@Watch' cannot be used with 'onWindowChromeChanged'. Apply it only to parameters that correspond to existing methods.",
++     pos: 53,
++     type: 'ERROR'
++   }
++ ]
+- []
+
+    at createReaderBuilderProbe (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-control-builder-probe.mjs:67:10)
+    at nativeLifecycleFixture (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-directory-font-readiness-sdk.mjs:202:33)
+    at sameMountDisabledAdmission (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-directory-font-readiness-sdk.mjs:238:13)
+    at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-directory-font-readiness-sdk.mjs:258:7 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [
+    {
+      type: 'ERROR',
+      message: "'@Watch' cannot be used with 'onWindowChromeChanged'. Apply it only to parameters that correspond to existing methods.",
+      pos: 53,
+      code: '10905301'
+    }
+  ],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0

@@ -1,0 +1,8 @@
+PASS manga admission: exact intent/manifest/page/source scope, decode-before-add, no admission on failure, lease release and cancellation
+PASS manga preview and one bounded cached-resource renewal
+PASS actual Index manga detail gate follows image success/failure without novel body or shelf writes
+PASS manga detail rejects legacy text download actions before queue mutation
+PASS manga admission skips non-readable groups even with URLs and refuses group-only catalogs before side effects
+PASS actual BookAcquisitionCoordinator manga admission wrapper preserves both manifest decode revisions to owner argument 13 and admission receipt
+(node:23517) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

@@ -1,0 +1,10 @@
+PASS manga strip: last crop, unknown geometry, original-image position, stable anchors after geometry expansion
+<anonymous_script>:73
+      this.refreshLoginRequiredForControls();
+           ^
+
+TypeError: this.refreshLoginRequiredForControls is not a function
+    at eval (eval at productionMotionMethods (file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/lib/reader-motion-method-probe.mjs:50:10), <anonymous>:73:12)
+    at file:///private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-strip.mjs:43:15
+
+Node.js v26.0.0

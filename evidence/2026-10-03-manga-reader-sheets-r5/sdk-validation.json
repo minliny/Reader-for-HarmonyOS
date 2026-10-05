@@ -1,0 +1,64 @@
+{
+  "recordedAtUtc": "2026-10-03T12:31:53.875684+00:00",
+  "sourcePreSha256": "0cebb24ce4796a20da30e9f55952b7365a2380c1d0dbeec5d34120abf700578d",
+  "sourceFiles": [
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets",
+      "sha256": "00087dbd1fc42a843b93242f4c450d17f7f70dde8bd7e1ea575431aebfce3685"
+    },
+    {
+      "path": "/private/tmp/reader-manga-sheet-ui-delivery-20261003-1913/Reader-for-HarmonyOS/tools/test-manga-directory-font-readiness-sdk.mjs",
+      "sha256": "d70ab1686040b7a45408b6b87b951966106c934ec8a417be9287ad6cc9e22f67"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets",
+      "sha256": "00087dbd1fc42a843b93242f4c450d17f7f70dde8bd7e1ea575431aebfce3685"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/tools/test-manga-directory-font-readiness-sdk.mjs",
+      "sha256": "d70ab1686040b7a45408b6b87b951966106c934ec8a417be9287ad6cc9e22f67"
+    }
+  ],
+  "sourceDelta": {
+    "path": "source-r4-to-r5.diff",
+    "sha256": "24d8992d1b2f8e021d0b7e1ea90e03867123227fee08f2580273e2bd3370a28e",
+    "preSourceReconstructionMatchesFrozenSha256": true
+  },
+  "tests": [
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r5/font-readiness-sdk.log",
+      "sha256": "a9df31b4b7536f0925e317b082f38cb5fc24630128b899732cfee46bb04f42b3",
+      "command": "node tools/test-manga-directory-font-readiness-sdk.mjs",
+      "exitCode": 0
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r5/manga-sheet-motion-sdk.log",
+      "sha256": "d5aa6f56ae9c206b7e31b04f2af3ef80c2a8f3eb89fce086a74be82e26fdd08c",
+      "command": "node tools/test-manga-sheet-motion-sdk.mjs",
+      "exitCode": 0
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r5/manga-surface-sdk.log",
+      "sha256": "624e50d7bc58b46525c0af1cf580e5fa23897c16e1c962a0b363ed1f010b338a",
+      "command": "node tools/test-manga-surface-sdk.mjs",
+      "exitCode": 0
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r5/manga-ui-assembly-sdk.log",
+      "sha256": "1a06bff91dc9ee8c779961875f6af089f87bde03340f6dda195f0026adb7b446",
+      "command": "node tools/test-manga-ui-assembly-sdk.mjs",
+      "exitCode": 0
+    },
+    {
+      "path": "evidence/2026-10-03-manga-reader-sheets-r5/reader-directory-navigation-ui.log",
+      "sha256": "c70885db0fa76aadedb481db5d02d5f3e96977dea1aaec5ac4800482bae856d0",
+      "command": "node tools/test-reader-directory-navigation-ui.mjs",
+      "exitCode": 0
+    }
+  ],
+  "diffCheck": {
+    "delivery": 0,
+    "persistent": 0
+  },
+  "boundary": "Actual SDK property/proxy classes and lowered Builder observer production methods; native branch request instrumentation keeps historical actors. Not a renderer/native paint or frame-timing proof. Canonical new HAP and focused VM entry sample remain pending."
+}

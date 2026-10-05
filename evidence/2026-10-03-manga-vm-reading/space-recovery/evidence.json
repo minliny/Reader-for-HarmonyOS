@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "files": 109,
+  "originalBytes": 804416764,
+  "verifiedEachFileSha256": true,
+  "archiveBytes": 804624794,
+  "restore": "Extract archive and copy data/local/tmp/reader-control-*.ftrace to their original VM paths.",
+  "archiveLocation": "/Users/minliny/Documents/Reader/.reader-isolated/manga-ui-20261002/Reader-for-HarmonyOS/.reader-local/vm-temp-archive/20261003/manga-preserve-traces-20261003.tar.gz",
+  "targetKind": "vm",
+  "target": "127.0.0.1:5555",
+  "remoteOriginalsReverifiedBeforeRemoval": true,
+  "availableBefore": "0.9G",
+  "availableAfter": "1.7G",
+  "applicationDataTouched": false,
+  "reason": "9568288 insufficient disk memory on preserve-data HAP install",
+  "scope": "109 Reader temporary ftrace files older than five days, original names and per-file hashes retained"
+}
