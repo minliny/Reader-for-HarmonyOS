@@ -5,6 +5,57 @@ export const SVG_FIGMA_ICON_PAGE_NODE_ID = '259:4';
 export const SVG_TABLER_VERSION = '3.44.0';
 export const SVG_TABLER_LICENSE = 'MIT';
 
+// Only these ten components from the approved demo's pinned Radix dependency
+// may use this origin. Canonical SVG and license hashes are immutable inputs.
+export const SVG_RADIX_PACKAGE = Object.freeze({
+  name: '@radix-ui/react-icons', version: '1.3.2',
+  url: 'https://registry.npmjs.org/@radix-ui/react-icons/-/react-icons-1.3.2.tgz',
+  integrity: 'sha512-fyQIhGDhzfc9pK2kH6Pl9c4BDJGfMkPqkyIgYDthyNYoNg3wVhoJMMh19WS4Up/1KMPFVpNsT2q3WmXn2N1m6g==',
+  gitHead: 'bde33b13aa5848555f5512ac12155930fb4beb7d', license: 'MIT',
+  licenseSha256: '0e80a2d229d2fd4fc7e8636142ec5d0ff0bc031f14c15b682e2ac01dfd5b5138',
+  receiptSha256: '4f2ef451772ca4bf6f3112be0c8d6ccf2dfb8f67548bbae4e337c2ca24958b22',
+});
+export const SVG_RADIX_COMPONENT_SOURCES = Object.freeze({
+  ViewVerticalIcon: { sourceFile: 'ViewVerticalIcon.svg', sourceSha256: '8e684a111955015001600344eba570030dadac0211173dcf4fd474776c1c532a' },
+  ViewHorizontalIcon: { sourceFile: 'ViewHorizontalIcon.svg', sourceSha256: 'af807e15011aeec5f3d54ea141b21d475762892eb4d9c944a3a4b105a4a21712' },
+  SunIcon: { sourceFile: 'SunIcon.svg', sourceSha256: 'ca6f9d89aca760da8f97d3130a6f9afaf851b78e161869858e71aae357f65fbb' },
+  MoonIcon: { sourceFile: 'MoonIcon.svg', sourceSha256: '8f70f86ade7adcbc7eebc8248a9503c0c9982b88f3267363704497b8c6704b23' },
+  Cross2Icon: { sourceFile: 'Cross2Icon.svg', sourceSha256: '1186d1a7398e930f758dfbe2e3c79b6dc80adc82389050a147058cf7b8cfc445' },
+  MagnifyingGlassIcon: { sourceFile: 'MagnifyingGlassIcon.svg', sourceSha256: '0b0ebc14abcd66b557be65cffa893381db6bfcfa382fb7fbb0006aa58e678500' },
+  ReaderIcon: { sourceFile: 'ReaderIcon.svg', sourceSha256: 'f22fe12200f68f674c506f7557158e2df27c80af3e1304c3bf92e5e15621b613' },
+  CheckIcon: { sourceFile: 'CheckIcon.svg', sourceSha256: 'f63f6aa332d594e56bc30c76be129e1bbdd3caa53d62bffc74bb023cbead0daf' },
+  ChevronRightIcon: { sourceFile: 'ChevronRightIcon.svg', sourceSha256: '338fddda60c9c0fd042b1162be06373fe87d0f7414686e258a67a2c30dd9a34b' },
+  ChevronDownIcon: { sourceFile: 'ChevronDownIcon.svg', sourceSha256: '5a3b143885ce029882dc32d18350635b498d1b201bef641442902be27072a351' },
+});
+
+function radixSheetIcon(suffix, component, color, semanticRole) {
+  return { file: `manga_sheet_${suffix}`, semanticRole, originType: 'radix-component-derived',
+    component, ...SVG_RADIX_COMPONENT_SOURCES[component], color };
+}
+
+export const svgRadixSheetRecipes = [
+  ...[['vertical', 'ViewVerticalIcon'], ['horizontal', 'ViewHorizontalIcon'], ['sun', 'SunIcon'], ['moon', 'MoonIcon']]
+    .flatMap(([name, component]) => [
+      radixSheetIcon(name, component, '#756F69', `manga sheet ${name} inactive`),
+      radixSheetIcon(`${name}_theme_night`, component, '#ABA99F', `manga sheet ${name} night inactive`),
+      radixSheetIcon(`${name}_active`, component, '#FFFAF4', `manga sheet ${name} selected`),
+    ]),
+  ...[['close', 'Cross2Icon'], ['search', 'MagnifyingGlassIcon']].flatMap(([name, component]) => [
+    radixSheetIcon(name, component, '#756F69', `manga sheet ${name}`),
+    radixSheetIcon(`${name}_theme_night`, component, '#ABA99F', `manga sheet ${name} night`),
+  ]),
+  ...[['locate', 'ReaderIcon'], ['check', 'CheckIcon']].flatMap(([name, component]) => [
+    radixSheetIcon(name, component, '#425D45', `manga sheet ${name} accent`),
+    radixSheetIcon(`${name}_theme_night`, component, '#B9CEB1', `manga sheet ${name} night accent`),
+  ]),
+  radixSheetIcon('vertical_accent', 'ViewVerticalIcon', '#425D45', 'manga sheet ascending sort accent'),
+  radixSheetIcon('vertical_accent_theme_night', 'ViewVerticalIcon', '#B9CEB1', 'manga sheet ascending sort night accent'),
+  radixSheetIcon('chevron_right', 'ChevronRightIcon', '#A39C90', 'manga sheet chapter disclosure'),
+  radixSheetIcon('chevron_right_theme_night', 'ChevronRightIcon', '#767D71', 'manga sheet chapter disclosure night'),
+  radixSheetIcon('chevron_down', 'ChevronDownIcon', '#756F69', 'manga sheet volume group disclosure'),
+  radixSheetIcon('chevron_down_theme_night', 'ChevronDownIcon', '#ABA99F', 'manga sheet volume group disclosure night'),
+];
+
 function icon(file, component, color, semanticRole, options = {}) {
   return {
     file,
@@ -311,5 +362,5 @@ const paperPrimitives = [
 const themeVariants = JSON.parse(readFileSync(new URL('./theme-svg-variants.json', import.meta.url), 'utf8')).map(baseFile => ({
   file: `${baseFile}_theme_night`, baseFile, semanticRole: `${baseFile} night app palette`, originType: 'theme-palette-derived',
 }));
-export const svgAssetRecipes = [...icons, ...exactExports, ...makeExports, ...makeSourceExports, ...appearanceMakeExports, ...adaptedExports, ...paperPrimitives, ...themeVariants]
+export const svgAssetRecipes = [...icons, ...exactExports, ...makeExports, ...makeSourceExports, ...appearanceMakeExports, ...adaptedExports, ...paperPrimitives, ...themeVariants, ...svgRadixSheetRecipes]
   .sort((left, right) => left.file.localeCompare(right.file));
