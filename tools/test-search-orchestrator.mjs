@@ -73,6 +73,7 @@ function fakeOwner({ sources, resultsFor, failFor, delayForSource = () => 0 }) {
     failList: false, localBooks: [], historyKeywords: [] };
   return {
     state,
+    supportsCoreCapability: (capability) => capability === 'source.check.report.v2',
     request: async (command, params, options) => {
       if (command === 'bookshelf.list') return { data: { books: state.localBooks, total: state.localBooks.length } };
       if (command === 'source.list') {
@@ -349,6 +350,45 @@ console.log('history failure/retry, source independence, clear ordering, stale s
   assert.equal(
     present.results.filter((r) => r.bookId === '/cross').length, 2,
     'same bookId under different sourceIds is not merged');
+}
+
+// Fresh, current source-check failures are admitted out of a new sweep;
+// unknown sources remain eligible. Explicit retry bypasses both the health
+// admission and the one-minute transport failure cooldown.
+{
+  const now = Date.now();
+  const checkedFailure = (sourceVersion) => ({ checkedAtMs: now, stale: false, report: {
+    mode: 'search', ruleDigest: sourceVersion,
+    steps: [{ level: 'L1', requested: true, status: 'fail' }, { level: 'L2', requested: true, status: 'fail' }],
+  } });
+  const sources = [
+    { ...makeSources(1)[0], sourceId: 'known-failed', baseUrl: 'https://failed.example', sourceVersion: 'v-known', checkReports: [checkedFailure('v-known')] },
+    { ...makeSources(1)[0], sourceId: 'unknown', sourceVersion: 'v-unknown' },
+  ];
+  const owner = fakeOwner({ sources, resultsFor: (sourceId) => [{ bookId: `/${sourceId}`, title: '可用书', author: '作者' }] });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner); search.open(); search.search('健康筛选'); await settle(owner.state, 1);
+  assert.deepEqual(owner.state.calls.map((call) => call.sourceId), ['unknown']);
+  assert.equal(last(presentations).totalSourceCount, 2);
+  assert.equal(last(presentations).skippedSourceCount, 1);
+  assert.deepEqual(last(presentations).skippedSources, [{ sourceId: 'known-failed', baseUrl: 'https://failed.example', reason: 'healthFailed' }]);
+  search.retry(); await settle(owner.state, 2);
+  assert.deepEqual(owner.state.calls.map((call) => call.sourceId), ['unknown', 'known-failed'],
+    'explicit retry bypasses health admission');
+  search.close();
+}
+
+{
+  let shouldFail = true;
+  const owner = fakeOwner({ sources: makeSources(1), failFor: () => shouldFail, resultsFor: () => [] });
+  const { orchestrator, presentations } = capture();
+  const search = orchestrator(owner); search.open(); search.search('冷却一'); await settle(owner.state, 1);
+  shouldFail = false; search.search('冷却二'); await sleep(30);
+  assert.equal(owner.state.calls.length, 1, 'a failed source is cooled down for the next query');
+  assert.equal(last(presentations).skippedSourceCount, 1);
+  search.retry(); await settle(owner.state, 2);
+  assert.equal(owner.state.calls.length, 2, 'manual retry bypasses the cooldown');
+  search.close();
 }
 
 // 2. One broken source is isolated; healthy sources still finish and display.

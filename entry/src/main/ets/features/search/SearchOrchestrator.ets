@@ -5,12 +5,14 @@ import {
   type SearchResultDelta,
   type SearchHistory,
   type SearchSource,
+  searchSourceHealthState,
 } from './SearchGateway';
 import type {
   SearchPresentation,
 } from './SearchPage';
 import type { SearchBookPatch } from './SearchBookProjection';
 import type { SearchHistoryStatus } from './SearchPresentation';
+import type { SearchSourceSkip } from './SearchPresentation';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
 import { runBookSourceWorkers } from '../../app/BookRequestScheduler';
 import type { RemoteReadingIdentity } from '../reading/RemoteReadingContract';
@@ -29,6 +31,8 @@ const DOMAIN = 0x5244;
 const MAX_SEARCH_CONCURRENCY = 4;
 const SEARCH_PARTIAL_PUBLISH_INTERVAL_MS = 100;
 const SEARCH_PARTIAL_PUBLISH_MAX_MS = 200;
+/** A failed live request is cooled down for new queries; explicit retry bypasses it. */
+const SOURCE_FAILURE_COOLDOWN_MS = 60 * 1000;
 
 /** One isolated source failure; healthy sources continue in the same search. */
 interface WorkerFailure {
@@ -64,6 +68,9 @@ class SearchQueryRun {
   flattened: SearchBook[] = [];
   timer: number = -1;
   pendingSince: number = 0;
+  skippedSourceCount: number = 0;
+  skippedSources: SearchSourceSkip[] = [];
+  totalSourceCount: number = 0;
 
   constructor(keyword: string, requestId: string, scope?: string[]) {
     this.keyword = keyword;
@@ -161,6 +168,7 @@ export class SearchOrchestrator {
   private resultRevision: number = 0;
   private rawIdentityKeys: Set<string> = new Set();
   private run: SearchQueryRun | undefined = undefined;
+  private failedSourceCooldown: Map<string, number> = new Map();
 
   constructor(
     emitPresentation: (presentation: SearchPresentation) => void,
@@ -351,6 +359,8 @@ export class SearchOrchestrator {
         totalSourceCount: presentation.totalSourceCount,
         completedSourceCount: presentation.completedSourceCount,
         failedSourceCount: presentation.failedSourceCount,
+        skippedSourceCount: presentation.skippedSourceCount,
+        skippedSources: presentation.skippedSources,
         stopped: true,
         localSearchFailed: presentation.localSearchFailed, sourceListFailed: presentation.sourceListFailed,
         localFailureMessage: presentation.localFailureMessage, sourceListFailureMessage: presentation.sourceListFailureMessage,
@@ -364,7 +374,7 @@ export class SearchOrchestrator {
     if (run !== undefined) {
       const retryLocal = run.localStatus === 'failed' || (!this.sweepAlive && run.localStatus !== 'done');
       const retryOnline = (!this.sweepAlive || run.onlineStatus !== 'running') && (run.onlineStatus !== 'done' || run.failures.size > 0 ||
-        run.sources.some((source: SearchSource): boolean => !run.completed.has(source.sourceId)));
+        run.skippedSourceCount > 0 || run.sources.some((source: SearchSource): boolean => !run.completed.has(source.sourceId)));
       if (!retryLocal && !retryOnline) {
         // The empty surface labels this action as a new search, not failure recovery.
         if (this.presentation.kind === 'empty') this.search(run.keyword, run.scope);
@@ -382,7 +392,7 @@ export class SearchOrchestrator {
         this.sourceLoadSession = this.session;
       }
       this.publishRun(run);
-      void this.performSearch(this.work, this.session, run, retryLocal, retryOnline);
+      void this.performSearch(this.work, this.session, run, retryLocal, retryOnline, true);
       return;
     }
     if (this.presentation.kind === 'empty' || this.presentation.kind === 'error') {
@@ -464,6 +474,8 @@ export class SearchOrchestrator {
         this.present({ kind: 'results', keyword: latest.keyword, results: Array.from(this.resultIndex.values()), delta: resultDelta,
           searching: latest.searching, stopped: latest.stopped, totalSourceCount: latest.totalSourceCount,
           completedSourceCount: latest.completedSourceCount, failedSourceCount: latest.failedSourceCount,
+          skippedSourceCount: latest.skippedSourceCount,
+          skippedSources: latest.skippedSources,
           localSearchFailed: latest.localSearchFailed, sourceListFailed: latest.sourceListFailed,
           localFailureMessage: latest.localFailureMessage, sourceListFailureMessage: latest.sourceListFailureMessage }, false);
       } else {
@@ -501,7 +513,8 @@ export class SearchOrchestrator {
           localSearchFailed: latest.localSearchFailed, sourceListFailed: latest.sourceListFailed,
           localFailureMessage: latest.localFailureMessage, sourceListFailureMessage: latest.sourceListFailureMessage,
           searching: latest.searching, stopped: latest.stopped, totalSourceCount: latest.totalSourceCount,
-          completedSourceCount: latest.completedSourceCount, failedSourceCount: latest.failedSourceCount }, false);
+          completedSourceCount: latest.completedSourceCount, failedSourceCount: latest.failedSourceCount,
+          skippedSourceCount: latest.skippedSourceCount, skippedSources: latest.skippedSources }, false);
       }
       }
 
@@ -608,14 +621,18 @@ export class SearchOrchestrator {
     this.sweepCompletedSourceCount = run.completed.size;
     if (results.length > 0) {
       this.present({ kind: 'results', keyword: run.keyword, results, searching,
-        totalSourceCount: run.sources.length, completedSourceCount: run.completed.size,
+        totalSourceCount: run.totalSourceCount, completedSourceCount: run.completed.size,
         failedSourceCount: run.failures.size, localSearchFailed: run.localFailed,
+        skippedSourceCount: run.skippedSourceCount > 0 ? run.skippedSourceCount : undefined,
+        skippedSources: run.skippedSources.length > 0 ? run.skippedSources : undefined,
         sourceListFailed: run.sourceListFailed, localFailureMessage, sourceListFailureMessage, stopped: stopped || undefined });
     } else if (!searching) {
       const failed = run.localFailed || run.sourceListFailed ||
         (run.sources.length > 0 && run.failures.size === run.sources.length);
       this.present({ kind: failed && !stopped ? 'error' : 'empty', keyword: run.keyword,
         searchedSourceCount: run.completed.size, failedSourceCount: run.failures.size,
+        skippedSourceCount: run.skippedSourceCount > 0 ? run.skippedSourceCount : undefined,
+        skippedSources: run.skippedSources.length > 0 ? run.skippedSources : undefined,
         localSearchFailed: run.localFailed, sourceListFailed: run.sourceListFailed,
         localFailureMessage, sourceListFailureMessage,
         stopped: stopped || undefined });
@@ -649,7 +666,7 @@ export class SearchOrchestrator {
   }
 
   private async performSearch(work: number, session: number, run: SearchQueryRun,
-    searchLocal: boolean, searchOnline: boolean): Promise<void> {
+    searchLocal: boolean, searchOnline: boolean, forceSourceRetry: boolean = false): Promise<void> {
     if (!run.historyWritten) {
       run.historyWritten = true;
       void this.gateway.addHistory(run.keyword).catch((error: Error): void => {
@@ -685,7 +702,19 @@ export class SearchOrchestrator {
         const enabled = sources.filter((source: SearchSource): boolean => source.enabled &&
           source.name.trim().length > 0 && readerSourceCategoryIsReadable(source.category) &&
           (scope === undefined || scope.has(source.sourceId)));
-        run.sources = enabled;
+        const now = Date.now();
+        const admitted = enabled.filter((source: SearchSource): boolean => forceSourceRetry ||
+          (searchSourceHealthState(source, now) !== 'failed' && !this.sourceInCooldown(source, now)));
+        const admittedSet = new Set<SearchSource>(admitted);
+        run.totalSourceCount = enabled.length;
+        run.skippedSourceCount = enabled.length - admitted.length;
+        run.skippedSources = forceSourceRetry ? [] : enabled.filter((source: SearchSource): boolean =>
+          !admittedSet.has(source)).map((source: SearchSource): SearchSourceSkip => ({
+            sourceId: source.sourceId,
+            baseUrl: source.baseUrl,
+            reason: searchSourceHealthState(source, now) === 'failed' ? 'healthFailed' : 'cooldown',
+          }));
+        run.sources = admitted;
         run.sourceListFailed = false;
         run.sourceListFailureReason = undefined;
         // Keep successful source buckets on retry. Replaced/deleted sources
@@ -700,7 +729,7 @@ export class SearchOrchestrator {
           }
         }
         run.revision += 1;
-        const pending = enabled.filter((source: SearchSource): boolean =>
+        const pending = admitted.filter((source: SearchSource): boolean =>
           !run.completed.has(source.sourceId) || run.failures.has(source.sourceId));
         await runBookSourceWorkers(pending, MAX_SEARCH_CONCURRENCY, async (source: SearchSource): Promise<void> => {
             this.searchedSources.add(source.sourceId);
@@ -711,6 +740,7 @@ export class SearchOrchestrator {
             run.completedVersions.set(source.sourceId, source.sourceVersion);
             if (outcome.ok === false) {
               run.failures.set(source.sourceId, { source, error: outcome.error, diagnostic: outcome.diagnostic });
+              this.failedSourceCooldown.set(this.sourceCooldownKey(source), Date.now() + SOURCE_FAILURE_COOLDOWN_MS);
               hilog.warn(DOMAIN, 'Reader', 'Search source %{private}s failed: %{private}s transport=%{public}s',
                 this.sourceIdentityForLog(source), this.sanitizedLogText(outcome.error),
                 outcome.diagnostic === undefined ? 'none' : JSON.stringify(outcome.diagnostic));
@@ -720,6 +750,7 @@ export class SearchOrchestrator {
                 this.sourceIdentityForLog(source), outcome.discardedCount ?? 0,
                 (outcome.discardedReasons ?? []).join('; '));
               run.failures.delete(source.sourceId);
+              this.failedSourceCooldown.delete(this.sourceCooldownKey(source));
               run.sourceResults.set(source.sourceId, run.admit(outcome.results, run.sourceResults.get(source.sourceId) ?? []));
             }
             this.scheduleRunPublish(run, work, session);
@@ -768,6 +799,21 @@ export class SearchOrchestrator {
       return normalized;
     }
     return `${normalized.slice(0, 12)}…`;
+  }
+
+  private sourceCooldownKey(source: SearchSource): string {
+    return `${source.sourceId}\u0000${source.sourceVersion ?? ''}`;
+  }
+
+  private sourceInCooldown(source: SearchSource, now: number): boolean {
+    const key = this.sourceCooldownKey(source);
+    const until = this.failedSourceCooldown.get(key);
+    if (until === undefined) return false;
+    if (until <= now) {
+      this.failedSourceCooldown.delete(key);
+      return false;
+    }
+    return true;
   }
 
   /**

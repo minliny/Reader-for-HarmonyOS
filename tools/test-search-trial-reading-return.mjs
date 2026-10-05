@@ -23,6 +23,7 @@ const deferred = () => {
 };
 const methods = ['installRemoteReadingSession',
   'onSearchResultSelected', 'searchAcquisitionCandidate', 'remoteSeedForSearchBook', 'openRemoteBookDetail',
+  'searchJourneyActive', 'syncSearchDetailCandidates', 'knownSearchSourceCandidates',
   'openShelfBook', 'openShelfBookInfo', 'openDetailSourceSwitch', 'onPickSource', 'switchPreviewSource',
   'openReading', 'presentPreparedReading', 'onReaderExited', 'returnToReadingOrigin',
   'returnFromDetail', 'returnToSearch', 'returnToBookshelf', 'nextNavigationGeneration',
@@ -33,7 +34,8 @@ const methods = ['installRemoteReadingSession',
 function fixture({ firstFails = false, origin = 'search' } = {}) {
   const calls = [], notices = [], rows = new Map(), gates = new Map();
   const makeBook = (sourceId, bookId) => ({ sourceId, bookId, detailUrl: bookId,
-    title: '鸣龙', author: '关关公子', sourceName: `${sourceId} 名称`, variables: [] });
+    title: '鸣龙', author: '关关公子', sourceName: `${sourceId} 名称`, sourceRuleVersion: `${sourceId}-v1`,
+    variables: [] });
   const first = makeBook('first-source', 'first-book');
   const second = makeBook('second-source', 'second-book');
   const third = makeBook('third-source', 'third-book');
@@ -92,7 +94,7 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
     anchorIndex: 4, anchorOffset: 29, anchorItemY: 83 });
   view.rank('other'); view.rank('鸣龙\0关关公子');
   const presentation = { kind: 'results', keyword: '鸣龙', results: [first, second, third], searching: false };
-  const orchestrator = { resume: () => calls.push('search.resume'), close: () => calls.push('search.close'),
+  const orchestrator = { resume: () => calls.push('search.resume'), visibilityChanged: () => calls.push('search.visibility'), close: () => calls.push('search.close'),
     open: () => calls.push('UNEXPECTED.search.open'), search: () => calls.push('UNEXPECTED.search.search') };
   Object.assign(h, {
     currentSourceSwitchTransactionId:()=>undefined, readingDetailForShelf:book=>({...book}),
@@ -100,7 +102,7 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
     readingSessionActive: false, navigationGeneration: 0, shelfReadingPreparation: false,
     searchPublication:{shelfAt:()=>[]},searchPublicationRevision:0, detailToc: [], detailInBookshelf: false, shelfBooks: [], searchDetailCandidates: [], remoteCatalogRefreshAt: new Map(),
     bookshelfRemovalActiveKey: '', offlineMutationGeneration: 0,
-    sourceSwitchVisible: false, sourceSwitchState: { kind: 'discovering' },
+    sourceSwitchVisible: false, sourceSwitchState: { kind: 'discovering' }, searchAppForeground: true,
     searchViewState: view, searchPresentation: presentation, searchOrchestrator: orchestrator,
     getSearchOrchestrator: () => orchestrator,
     readingDetailForRemoteSeed: (seed, sourceName) => ({ ...seed, sourceName }),
@@ -135,6 +137,11 @@ function assertSearchRetained(t) {
   assert.equal(t.calls.filter(value => value === 'search.resume').length, 1);
   assert.equal(t.calls.includes('search.close'), false); noUnexpectedWrites(t);
 }
+function readableAcquisition(sourceRuleVersion) {
+  const now = Date.now();
+  return { schemaVersion: 2, sourceVersion: sourceRuleVersion, stale: false,
+    verificationCurrent: true, catalogCount: 1, catalogAt: now, readableAt: now };
+}
 async function readAndReturn(t) {
   const detail = t.h.detailBook, toc = t.h.detailToc, session = t.h.remoteReadingSession;
   if (!t.h.readingSessionActive) t.h.openReading(undefined); assert.equal(t.h.route, 'reading');
@@ -145,6 +152,64 @@ async function readAndReturn(t) {
   assert.equal(t.h.detailInBookshelf, false, 'reading without explicit add remains a preview');
   t.h.returnFromDetail(); assertSearchRetained(t);
 }
+
+await check('search journey keeps late candidates in detail and reading without restarting the session', async () => {
+  const t = fixture();
+  t.h.onSearchResultSelected(t.first); await settle();
+  assert.equal(t.h.route, 'detail');
+  assert.equal(t.h.detailReturnRoute, 'search');
+  assert.equal(t.calls.filter(value => value === 'search.visibility').length, 1,
+    'committing the detail route wakes the still-running search query');
+  const detailBook = t.h.detailBook;
+  const detailSession = t.h.remoteReadingSession;
+  const detailToc = t.h.detailToc;
+  const updatedFirst = { ...t.first, acquisition: readableAcquisition(t.first.sourceRuleVersion) };
+  const lateSecond = { ...t.second, acquisition: readableAcquisition(t.second.sourceRuleVersion) };
+  t.h.syncSearchDetailCandidates({ kind: 'results', keyword: '鸣龙', results: [updatedFirst, lateSecond], searching: true });
+  assert.deepEqual(t.h.searchDetailCandidates.map(book => `${book.sourceId}:${book.bookId}`),
+    ['first-source:first-book', 'second-source:second-book']);
+  assert.equal(t.h.detailBook, detailBook, 'late SearchBook replacement does not replace the admitted detail');
+  assert.equal(t.h.remoteReadingSession, detailSession, 'late SearchBook replacement does not replace the detail session');
+  assert.equal(t.h.detailToc, detailToc, 'late SearchBook replacement does not rebuild the detail catalog');
+  let known = t.h.knownSearchSourceCandidates({ sourceId: t.first.sourceId, bookId: t.first.bookId });
+  assert.deepEqual(known.map(candidate => `${candidate.sourceId}:${candidate.bookUrl}`),
+    ['first-source:first-book', 'second-source:second-book']);
+  assert.equal(known[0].acquisitionState, 'readable');
+
+  t.h.openReading(undefined); t.h.presentPreparedReading(0); await settle();
+  assert.equal(t.h.route, 'reading');
+  assert.equal(t.h.readingSessionActive, true);
+  const readerBook = t.h.detailBook;
+  const readerSession = t.h.remoteReadingSession;
+  const readerToc = t.h.detailToc;
+  const callsBeforeLateReaderPublication = [...t.calls];
+  const lateThird = { ...t.third, acquisition: readableAcquisition(t.third.sourceRuleVersion) };
+  t.h.syncSearchDetailCandidates({ kind: 'results', keyword: '鸣龙', results: [updatedFirst, lateSecond, lateThird], searching: true });
+  await settle();
+  assert.equal(t.h.route, 'reading');
+  assert.equal(t.h.readingSessionActive, true);
+  assert.equal(t.h.detailBook, readerBook, 'late results do not replace the active reader book');
+  assert.equal(t.h.remoteReadingSession, readerSession, 'late results do not replace the active reader session');
+  assert.equal(t.h.detailToc, readerToc, 'late results do not reset the active reader catalog/progress anchor');
+  assert.deepEqual(t.calls, callsBeforeLateReaderPublication,
+    'late result publication is a cache/projection merge, without a second search or body acquisition');
+  known = t.h.knownSearchSourceCandidates({ sourceId: t.first.sourceId, bookId: t.first.bookId });
+  assert.deepEqual(known.map(candidate => `${candidate.sourceId}:${candidate.bookUrl}`),
+    ['first-source:first-book', 'second-source:second-book', 'third-source:third-book']);
+  assert.equal(known[2].acquisitionState, 'readable');
+  noUnexpectedWrites(t);
+});
+
+await check('search journey route guard remains active through detail, reader and directory only', async () => {
+  const t = fixture();
+  t.h.detailReturnRoute = 'search';
+  for (const route of ['detail', 'reading', 'directory']) {
+    t.h.route = route; t.h.searchAppForeground = true;
+    assert.equal(t.h.searchJourneyActive(), true, `${route} continues the originating search journey`);
+  }
+  t.h.route = 'bookshelf'; assert.equal(t.h.searchJourneyActive(), false);
+  t.h.route = 'reading'; t.h.searchAppForeground = false; assert.equal(t.h.searchJourneyActive(), false);
+});
 
 await check('first source parses: search -> preview -> reading -> detail -> exact search state', async () => {
   const t = fixture(); t.h.onSearchResultSelected(t.first); await settle(); await readAndReturn(t);

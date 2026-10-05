@@ -39,7 +39,7 @@ const nodeSource = stripTypeScriptTypes(
     )).replace(/^import \{[^\n]+\} from ['"][^'"]*BookAuthorMetadata(?:\.ts)?['"];?\n/gm, ''),
 );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(nodeSource).toString('base64')}`;
-const { SearchGateway } = await import(moduleUrl);
+const { SearchGateway, searchSourceHealthState } = await import(moduleUrl);
 
 const source = {
   sourceId: 'source-a',
@@ -47,6 +47,26 @@ const source = {
   enabled: true,
   category: 'novel',
 };
+
+{
+  let timeout;
+  const outcome = await new SearchGateway({ request: async (_command, _params, options) => {
+    timeout = options?.timeoutMs;
+    return { data: { sourceId: source.sourceId, books: [{ bookId: '/bounded', title: '限时', author: '' }] } };
+  } }).searchBySource(source, '限时');
+  assert.equal(outcome.ok, true);
+  assert.equal(timeout, 15000, 'live source search uses a bounded request timeout');
+}
+{
+  let localTimeout = 'unset';
+  const gateway = new SearchGateway({ request: async (command, _params, options) => {
+    assert.equal(command, 'bookshelf.list');
+    localTimeout = options?.timeoutMs;
+    return { data: { books: [], total: 0 } };
+  } });
+  await gateway.searchLocalBooks('本地', 'local-timeout-check');
+  assert.equal(localTimeout, undefined, 'local bookshelf pagination keeps its existing timeout contract');
+}
 
 function gatewayReturning(book) {
   return new SearchGateway({
@@ -261,6 +281,39 @@ assert.equal(generated.results[0].sourceRuleVersion, '',
   calls[4].resolve({data:{sources:[source]}});await retried;
 }
 console.log('PH68 source metadata: open/submit share in-flight and fresh revision, mutation rejects stale, retry recovers without duplicate RPC PASS');
+
+// Source-check reports are optional admission evidence. Current search
+// failures are skipped, while stale/unknown reports stay eligible.
+{
+  let listParams;
+  const version = 'rule-v1';
+  const report = (status, checkedAtMs = Date.now()) => ({ checkedAtMs, stale: false, report: {
+    mode: 'search', ruleDigest: version, steps: [
+      { level: 'L1', requested: true, status }, { level: 'L2', requested: true, status },
+    ],
+  } });
+  const owner = {
+    supportsCoreCapability: (capability) => capability === 'source.check.report.v2',
+    request: async (method, params) => {
+      assert.equal(method, 'source.list'); listParams = params;
+      return { data: { sources: [
+        { ...source, sourceVersion: version, checkReports: [report('fail')] },
+        { ...source, sourceId: 'stale', sourceVersion: version, checkReports: [report('fail', Date.now() - 3 * 24 * 60 * 60 * 1000)] },
+        { ...source, sourceId: 'unknown', sourceVersion: version, checkReports: [{ ...report('blocked'), stale: true }] },
+        { ...source, sourceId: 'never', sourceVersion: version },
+      ] } };
+    },
+  };
+  const loaded = await new SearchGateway(owner).loadSources();
+  assert.equal(listParams.includeCheckReports, true);
+  assert.equal(listParams.checkReportVersion, 2);
+  assert.equal(loaded[0].health.state, 'failed');
+  assert.equal(searchSourceHealthState(loaded[0]), 'failed');
+  assert.equal(searchSourceHealthState(loaded[1]), 'stale');
+  assert.equal(searchSourceHealthState(loaded[2]), 'stale');
+  assert.equal(loaded[3].health, undefined, 'missing report remains unknown and dispatchable');
+}
+console.log('Search source health admission preserves explicit failures while retaining stale/unknown sources PASS');
 
 
 const keyOf = b => `${b.sourceId ?? b.origin}\u0000${b.bookId ?? b.bookUrl}`;

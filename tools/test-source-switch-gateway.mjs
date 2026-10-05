@@ -507,15 +507,23 @@ console.log('PH70 known candidate first paint, delta projection, registry deleti
     });
   const page=Object.assign(new Index(),{detailBook:{sourceId:'a',bookId:'/book'},detailReturnRoute:'search',
     navigationGeneration:1,sourceSwitchVisible:true,sourceSwitchState:{kind:'discovering'},
-    searchDetailCandidates:['a','b'].map(sourceId=>({sourceId,sourceName:sourceId,sourceRuleVersion:'v1',
+    searchDetailCandidates:['a'].map(sourceId=>({sourceId,sourceName:sourceId,sourceRuleVersion:'v1',
       bookId:'/book',title:'鸣龙',author:'关关公子',variables:[],category:'novel'})),
     sourceSwitchProbeQuery:()=>query,getSourceSwitchGateway:()=>gateway});
   page.startSourceDiscovery(1);
-  assert.equal(page.sourceSwitchState.kind,'candidates');assert.equal(page.sourceSwitchState.candidates.length,2,
+  assert.equal(page.sourceSwitchState.kind,'candidates');assert.equal(page.sourceSwitchState.candidates.length,1,
     'known Search group paints synchronously before registry/cache I/O completes');
-  listener({reset:false,identities:[]});assert.deepEqual(calls,['source.list'],'empty event does no work');
+  // A second source can arrive from the still-running Search query while the
+  // first relation read is in flight. The projection retry must use the live
+  // candidate closure rather than the click-time `known` snapshot.
+  page.searchDetailCandidates.push({sourceId:'b',sourceName:'b',sourceRuleVersion:'v1',
+    bookId:'/book',title:'鸣龙',author:'关关公子',variables:[],category:'novel'});
+  listener({reset:false,identities:[{sourceId:'b',bookId:'/book'}]});
+  assert.deepEqual(calls,['source.list'],'the first relation read is still waiting');
   release();for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));
-  assert.equal(page.sourceSwitchState.candidates.length,2);assert.deepEqual(calls,['source.list','search-book.related','search-book.batch.get']);
+  assert.equal(page.sourceSwitchState.candidates.length,2);
+  assert.deepEqual(calls,['source.list','search-book.related','search-book.batch.get',
+    'search-book.related','search-book.batch.get']);
 }
 console.log('PH70 real Index source-switch entry paints known candidates before cache RPC PASS');
 

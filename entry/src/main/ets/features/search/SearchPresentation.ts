@@ -1,5 +1,11 @@
 import type { SearchBook, SearchResultDelta } from './SearchGateway';
 
+export type SearchSourceSkip = {
+  sourceId: string;
+  baseUrl?: string;
+  reason: 'healthFailed' | 'cooldown';
+};
+
 export type SearchHistoryStatus = 'loading' | 'ready' | 'loadFailed' | 'clearFailed';
 
 /**
@@ -41,6 +47,9 @@ export interface SearchResultsPresentation {
   completedSourceCount: number;
   /** Enabled sources whose `book.search` failed so far. */
   failedSourceCount: number;
+  /** Enabled sources omitted by current health evidence or failure cooldown. */
+  skippedSourceCount?: number;
+  skippedSources?: SearchSourceSkip[];
   /** True when the user stopped the sweep early (ACQ-02); partial results stay. */
   stopped?: boolean;
 }
@@ -57,6 +66,9 @@ export interface SearchEmptyPresentation {
   searchedSourceCount: number;
   /** Enabled sources whose `book.search` failed before this verdict. */
   failedSourceCount?: number;
+  /** Enabled sources omitted by current health evidence or failure cooldown. */
+  skippedSourceCount?: number;
+  skippedSources?: SearchSourceSkip[];
   /** True when the sweep was stopped by the user before this verdict (ACQ-02). */
   stopped?: boolean;
 }
@@ -73,6 +85,9 @@ export interface SearchErrorPresentation {
   searchedSourceCount: number;
   /** Enabled sources whose `book.search` failed; every source failed here. */
   failedSourceCount?: number;
+  /** Enabled sources omitted by current health evidence or failure cooldown. */
+  skippedSourceCount?: number;
+  skippedSources?: SearchSourceSkip[];
 }
 
 /**
