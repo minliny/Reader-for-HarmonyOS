@@ -129,8 +129,8 @@ assert.match(sourceHost, /force && previous\.length > 0[\s\S]*?candidates: previ
   'actual captured owner retains prior candidate identities during force refresh');
 assert.match(sourceHost, /const cached = force \? \[\] : await this\.gateway\.loadCachedCandidates\(context\.query, current, knownCandidates\(\)\)/,
   'initial discovery uses exact cached candidates through the typed gateway');
-assert.match(sourceHost, /refreshCandidates\(context\.query, current, force \? \[\] : context\.searchedSourceIds\)/,
-  'force refresh restarts timing/discovery rather than borrowing prior searched-source exclusions');
+assert.match(sourceHost, /refreshCandidates\(context\.query, current, force \? \[\] : context\.searchedSourceIds,\s*publishProgress, force \? previous : initialKnown\)/,
+  'force refresh clears prior searched-source exclusions while passing progressive publication and retained identities');
 
 console.log('source-switch post-commit transaction contract: PASS');
 
@@ -147,7 +147,13 @@ const settle = async () => { await settleOwner(); await new Promise(setImmediate
   const cached=f.calls.filter(([method])=>method==='search-book.get').length;
   x.index.refreshSourceSwitch(x.index.sourceSwitchScopeId);await settleOwner();
   assert.equal(f.host.current().state.refreshing,true);
-  assert.equal(f.host.current().state.candidates,before,'retained rows stay visible while new source IO is pending');
+  const retained=f.host.current().state.candidates;
+  const withoutTiming=rows=>rows.map(({latencyMs,latencyKind,...row})=>row);
+  assert.notEqual(retained,before,'new sweep snapshots rows without modifying old observers');
+  assert.deepEqual(withoutTiming(retained),withoutTiming(before),
+    'all candidate identities and non-timing facts remain visible while new source IO is pending');
+  assert.ok(retained.every(row=>row.latencyMs===undefined&&row.latencyKind===undefined),
+    'force refresh cannot display measurements from the previous sweep');
   assert.equal(f.calls.filter(([method])=>method==='search-book.get').length,cached,'force does not reopen the cached seed');
   gate.resolve();await settle();assert.equal(f.host.current().state.refreshing,false);
   assert.equal(f.host.current().state.candidates[0].sourceId,before[0].sourceId);
