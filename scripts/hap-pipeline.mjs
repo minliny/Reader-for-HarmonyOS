@@ -22,6 +22,7 @@ import { homedir, tmpdir } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { readSigningAuthority, assertSigningMaterialAuthority, assertSigningCertificateAuthority } from '../tools/reader-signing-authority.mjs';
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const REPO_ROOT = resolve(dirname(SCRIPT_PATH), '..');
@@ -40,7 +41,7 @@ const DEFAULT_STRIP_TOOL =
   '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/llvm/bin/llvm-objcopy';
 const HDC_LEASE_SCRIPT = resolve(REPO_ROOT, 'tools/reader-hdc-lease.mjs');
 const HDC_SERVER = process.env.READER_HDC_SERVER_KEY ?? '::ffff:127.0.0.1:8710';
-const BUNDLE_NAME = 'io.reader.harmonyos';
+const BUNDLE_NAME = 'io.reader.minliny';
 const EXPECTED_NATIVE_ENTRIES = [
   'libs/arm64-v8a/libc++_shared.so',
   'libs/arm64-v8a/libreader_bookturn_napi.so',
@@ -461,8 +462,9 @@ function verifySignature(hapPath) {
     if (result.status === 0 && output.includes('verify-app success') &&
         output.includes('verify codesign success') && output.includes('Digest verify result: true')) {
       const profile = output.match(/profile type is:\s*([^\s]+)/i)?.[1]?.toLowerCase() ?? 'unknown';
-      return { status: 'signed', verified: true, profileType: profile,
-        ...verifiedProfileIdentity(resolve(verifyRoot, 'profile.p7b')) };
+      const identity = verifiedProfileIdentity(resolve(verifyRoot, 'profile.p7b'));
+      assertSigningCertificateAuthority(identity.certificateSha256);
+      return { status: 'signed', verified: true, profileType: profile, ...identity };
     }
     if (/signature not found|No Hap Signing Block/i.test(output)) {
       return { status: 'unsigned', verified: false, profileType: 'none' };
@@ -663,6 +665,7 @@ function syncSigning(options) {
   if (existsSync(destination)) validateLocalSigningProfile(destination);
   const before = fileRecord(source, 'signing-config').sha256;
   const composed = composeSigningProfile(parseBuildProfile(resolve(REPO_ROOT, 'build-profile.json5')), parseBuildProfile(source));
+  assertSigningMaterialAuthority(composed, verifiedProfileIdentity);
   // Keep an independent copy, so a later DevEco auto-generation cannot replace
   // the keystore underneath this configuration's matching password fields.
   const frozen = freezeSigningMaterial(composed, resolve(dirname(destination), 'materials'));
@@ -737,6 +740,7 @@ function build(options) {
   if (!['auto', 'local', 'unsigned'].includes(requestedSigning)) {
     fail('--signing must be auto, local, or unsigned', 2);
   }
+  if (requestedSigning !== 'unsigned') readSigningAuthority();
   const localProfile = resolve(process.env.READER_HARMONY_SIGNING_PROFILE || DEFAULT_SIGNING_PROFILE);
   const signingMode = resolveSigningMode(requestedSigning, existsSync(localProfile));
   if (signingMode === 'local' && !existsSync(localProfile)) {
@@ -748,6 +752,7 @@ function build(options) {
     validateLocalSigningProfile(localProfile);
     signingProfile = composeSigningProfile(parseBuildProfile(resolve(REPO_ROOT, 'build-profile.json5')),
       parseBuildProfile(localProfile));
+    assertSigningMaterialAuthority(signingProfile, verifiedProfileIdentity);
     signingBefore = { configuration: fileRecord(localProfile, 'local-signing-config'),
       material: signingMaterialSnapshot(signingProfile) };
   }
@@ -1093,7 +1098,7 @@ function bundleListConfirmsAbsence(output) {
 }
 
 export function parseBundleMetadata(output, bundleListOutput = '') {
-  if (/^error: bundle \[io\.reader\.harmonyos\] not found\.?$/i.test(output.trim()) ||
+  if (/^error: bundle \[io\.reader\.minliny\] not found\.?$/i.test(output.trim()) ||
       (output.trim() === BUNDLE_LOOKUP_UNAVAILABLE && bundleListConfirmsAbsence(bundleListOutput))) {
     return { bundlePresent: false, bundleName: '' };
   }
