@@ -87,7 +87,7 @@ flowchart TD
   Detail -->|"开始阅读"| Reader["阅读"]
   Detail -->|"完整目录"| Directory["完整目录"]
   Detail -->|"返回搜索旅程"| Search
-  Reader -->|"退出至原搜索旅程"| Search
+  Reader -->|"从详情开始阅读后退出"| Detail
   Search -->|"管理 / 添加书源"| Sources["书源管理"]
   Sources -->|"普通返回，保留原查询"| Search
   Sources -->|"导入结果的明确搜索动作"| Search
@@ -106,7 +106,7 @@ flowchart TD
 | 点击结果 | 进入书籍详情 | 详情显示封面、书名、作者、最新章节、来源及换源、默认分组、简介、最多 20 条目录预览和完整目录 |
 | 开始阅读 | 直接进入阅读页 | 读取正文的失败由阅读页承接；没有用户需要通过的预验证页面 |
 | 加入书架 | 详情按钮显示“加入书架 / 取消加入 / 正在取消…” | 取消与提交竞争时，以 Core 重新读取的事实为准；已经写入的书籍及阅读位置保留 |
-| 从详情 / 阅读返回搜索 | 恢复原查询与已发布结果 | 搜索旅程内允许后续有效结果继续发布；退出到书架后结束该旅程 |
+| 从详情 / 阅读返回搜索 | 阅读退出回进入来源；搜索旅程中的详情再返回搜索，恢复原查询与已发布结果 | 搜索旅程内允许后续有效结果继续发布；退出到书架后结束该旅程 |
 | 搜索页进入书源管理再返回 | 保留原搜索内容 | 普通返回不自动重新搜索；导入完成且已有关键词时，结果弹窗提供明确的“用新书源搜索”动作 |
 
 来源：[SearchPage.ets:398](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets:398)、[SearchPage.ets:580](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets:580)、[SearchOrchestrator.ets:318](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchOrchestrator.ets:318)、[LocalBookDetail.ets:99](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalBookDetail.ets:99)、[Index.ets:2813](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:2813)、[Index.ets:3810](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:3810)、[Index.ets:5846](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:5846)。
@@ -119,7 +119,8 @@ flowchart TD
   Reader -->|"打开控制层"| Controls["阅读控制首页"]
   Controls -->|"目录模块"| Quick["阅读内目录 Quick / Full"]
   Detail["书籍详情"] -->|"完整目录"| Directory["独立完整目录"]
-  Directory -.->|"选择其他章"| Prepare("内部：准备正文、测量、保存位置")
+  Directory -->|"首次开始阅读 / 选择当前已提交章"| Reader
+  Directory -.->|"已有阅读会话，选择其他章"| Prepare("内部：准备正文、测量、保存位置")
   Quick -.->|"选择其他章"| Prepare
   Prepare -.->|"失败，原位提示并保留原内容"| Keep("原位：目录与原阅读内容保留")
   Prepare -->|"成功后返回阅读"| Reader
@@ -127,8 +128,11 @@ flowchart TD
   Detail -->|"换源"| Switch
   Directory -->|"换源"| Switch
   Switch -.->|"选候选，直接调用切换"| Change("内部：切换 / 可用事务回退")
-  Change -.->|"失败，保留窗口"| Switch
-  Change -->|"成功关闭，回发起界面"| Caller["阅读 / 详情 / 完整目录"]
+  Change -.->|"提交或结果核对失败，保留窗口"| Switch
+  Change -->|"未入架预览切换成功，关闭窗口"| Detail
+  Change -->|"已入架切换成功，关闭窗口"| Reader
+  Change -->|"目标采集失败，关闭窗口"| AcquisitionFailure("阅读原位：换源未完成")
+  AcquisitionFailure -.->|"重试 / 继续当前书源"| Reader
   Reader -.->|"退出，保存阅读位置"| Exit("内部：停止会话并保存锚点")
   Exit -->|"成功"| Origin
   Exit -->|"保存失败"| Unsaved["进度未保存系统弹窗"]
@@ -142,10 +146,10 @@ flowchart TD
 | 打开阅读控制层 | 顶部返回、书名、章节、书源、换源、更多；底部换章、进度、搜索、自动翻页、替换、亮度及目录 / 朗读 / 界面 / 设置 | 模块使用现有 Quick / Full 层级；返回依当前键盘、弹出菜单、模块层级处理 |
 | 拖动阅读进度 | 拖动期间显示预览 | 拖动结束或明确点击才提交位置；优先整书位置，无法使用时回退到可确认的章节与章节比例 |
 | 快速目录 / 完整目录 | 使用已有目录结构；完整目录有搜索、到顶 / 到底、排序、当前章节位置和书签页 | 卷组按实际目录结构展开；不凭标题猜测卷 / 话身份 |
-| 从完整目录选择另一章 | 当前阅读页先保留原正文 | 新章完成首屏测量并保存位置后返回阅读；选当前章直接返回 |
+| 从完整目录选择章节 | 没有阅读会话时直接进入阅读，由阅读壳读取正文；选择当前已提交章直接返回阅读 | 已有阅读会话选择其他章时保留目录和原阅读内容，新章完成首屏测量并保存位置后返回阅读 |
 | 跳转书签 | 依据来源、书籍、章节及正文处理版本解析 | 不能确认位置时保留书签记录，提示并拒绝错误跳转 |
-| 选择目标书源 | 换源窗口直接开始现有切换调用 | 成功直接关闭窗口；不存在首图验证、换源已提交、成功后再确认步骤 |
-| 换源失败 | 原窗口显示失败；具备回退事务时提供撤销 | 切换或撤销尚未结束时阻止关闭；正文失败显示“换源未完成”及继续当前书源 |
+| 选择目标书源 | 换源窗口直接开始现有切换调用 | 未入架预览切换成功后关闭窗口并展示目标详情；已入架切换成功后关闭窗口并进入阅读。没有首图验证、换源已提交或成功后再确认步骤 |
+| 换源失败 | 目标采集失败关闭窗口，由阅读页“换源未完成”承接；Core 提交或结果核对失败留在换源窗口 | 切换中、撤销中及仍有待回退事务时阻止关闭。具备回退事务时提供撤销；阅读页提供重试和继续当前书源 |
 | 刷新本章 | 关闭更多菜单，在当前阅读身份和可操作条件下刷新 | 保留原正文直到新内容就绪；失败使用“刷新本章失败”系统对话框，重试或关闭 |
 | 正文读取失败 | 原阅读区域显示“正文暂时无法显示”、原因、重试和阅读设置；远程书另有换源 | 没有跳转独立错误页 |
 | 正文图片片段失败 | 清除该片段像素，已知几何保留 | 当前主工作区没有接通单图错误卡、单图重试或离线缺页页面。本稿不绘制这些未实现反馈 |
@@ -208,6 +212,7 @@ flowchart TD
   Login -->|"完成后检测 / 取消"| Sources
   Import -.->|"关闭弹窗后导入"| ImportWork("内部：系统选取或获取链接、导入并读回")
   ImportWork -->|"真实结果"| Result["结果系统弹窗"]
+  ImportWork -->|"系统文件选择取消，无结果弹窗"| Sources
   ImportWork -.->|"同步说明"| Rows
   Result -->|"关闭"| Sources
   Tools -->|"返回"| Sources
