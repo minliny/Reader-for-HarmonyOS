@@ -388,7 +388,50 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 ### 逐页尺寸、状态与适配
 
+| 路线索引 | 模块 |
+| --- | --- |
+| 书架与搜索 | [书架](#route-bookshelf) · [书架 · 筛选展开](#route-shelf-filter) · [搜索](#route-search) · [书籍详情](#route-detail) · [书架设置](#route-bookshelf-settings) · [批量管理](#route-multiselect) · [书架更多](#route-shelf-more) · [书籍操作](#route-book-actions) · [编辑分组](#route-group-select) · [导入本地书籍](#route-local-import) · [移除书架确认](#route-book-removal) |
+| 设置与书源 | [设置首页](#route-settings) · [通用设置](#route-general) · [书源管理](#route-sources) · [批量管理与书源工具](#route-source-tools) · [书源登录 / 验证](#route-source-login) · [导入书源](#route-json-import) · [恢复界面与阅读设置](#route-restore-defaults) · [书源导入结果](#route-source-result) · [书源导出确认](#route-source-export) · [删除书源确认](#route-source-delete) |
+| 阅读与离线 | [阅读正文](#route-reader) · [完整目录](#route-directory) · [阅读控制首页](#route-reader-controls) · [控制栏目录与书签](#route-reader-directory) · [朗读](#route-reader-tts) · [朗读配置选项](#route-reader-tts-config) · [第三方 TTS 配置](#route-reader-tts-manager) · [阅读界面](#route-reader-appearance) · [阅读设置](#route-reader-settings) · [内容搜索](#route-reader-search) · [自动翻页](#route-reader-autopage) · [替换规则](#route-reader-replace) · [换源窗口](#route-source-switch) · [阅读更多菜单](#route-reader-more) · [完整目录离线菜单](#route-directory-offline-menu) · [清除离线确认](#route-offline-clear) · [退出保存失败](#route-reader-exit-failure) · [刷新与跳转失败](#route-reader-refresh-failure) |
+
+<a id="route-bookshelf"></a>
+
 #### 书架（bookshelf）
+
+**入口与动作路线**
+
+书架是当前两项主导航的起点，加载、空态和失败由同一内容区承接，点书直接阅读，长按才打开书籍操作。
+
+```mermaid
+flowchart TD
+  Entry("入口：启动／书架导航")
+  Shelf["书架"]
+  Loaded{"书架读取成功？"}
+  Failure("原位：加载失败与重试")
+  Search["搜索"]
+  More["书架更多菜单"]
+  Filter["书架内筛选模块"]
+  Reader["阅读页"]
+  Actions["书籍操作窗"]
+  Settings["设置"]
+  Entry --> Shelf
+  Shelf -.->|"后台读取"| Loaded
+  Loaded -.->|"是：有书／空书架"| Shelf
+  Loaded -.->|"否：停留书架"| Failure
+  Failure -.->|"重试读取"| Loaded
+  Shelf -->|"搜索按钮／空态搜索"| Search
+  Search -->|"返回"| Shelf
+  Shelf -->|"右上更多"| More
+  More -->|"关闭菜单"| Shelf
+  Shelf -->|"展开筛选"| Filter
+  Filter -->|"收起筛选"| Shelf
+  Shelf -->|"点书／继续阅读"| Reader
+  Reader -->|"从书架发起阅读后返回"| Shelf
+  Shelf -->|"长按书／列表更多"| Actions
+  Actions -->|"关闭操作窗"| Shelf
+  Shelf -->|"设置导航"| Settings
+  Settings -->|"书架导航／返回"| Shelf
+```
 
 已有状态：封面、列表、空书架、加载中、加载失败、筛选无匹配。
 
@@ -425,7 +468,35 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[BookshelfShell.ets:53](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfShell.ets:53)、[BookshelfShell.ets:110](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfShell.ets:110)、[BookshelfPage.ets:61](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfPage.ets:61)、[BookshelfPage.ets:325](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfPage.ets:325)、[BookshelfPage.ets:406](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfPage.ets:406)、[BookshelfPage.ets:906](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfPage.ets:906)、[BookshelfPage.ets:1014](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfPage.ets:1014)、[BookshelfPage.ets:1056](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfPage.ets:1056)、[NoCoverCover.ets:19](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/NoCoverCover.ets:19)、[ShelfBookListDetails.ets:13](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/ShelfBookListDetails.ets:13)、[BookshelfStatusContent.ets:19](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfStatusContent.ets:19)、[BookshelfEmptyPage.ets:46](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfEmptyPage.ets:46)、[BookshelfEmptyCard.ets:33](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfEmptyCard.ets:33)、[MainTabBar.ets:72](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/shell/MainTabBar.ets:72)、[MainTabBar.ets:193](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/shell/MainTabBar.ets:193)、[SurfaceHorizontalGeometry.ts:54](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts:54)、[ReaderTypography.ets:56](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderTypography.ets:56)。
 
+<a id="route-shelf-filter"></a>
+
 #### 书架 · 筛选展开（shelf-filter）
+
+**入口与动作路线**
+
+筛选是在原书架展开的模块，阅读状态与本地／在线来源条件取交集，清除不改变分组，失败仍由书架内容区承接。
+
+```mermaid
+flowchart TD
+  Shelf["书架"]
+  Filter["同书架：筛选模块"]
+  Read("内部：读取筛选投影")
+  Match{"有匹配书籍？"}
+  List("原位：匹配列表")
+  Empty("原位：无匹配提示")
+  Failure("原位：书架加载失败")
+  Shelf -->|"筛选图标展开"| Filter
+  Filter -->|"再次点图标收起"| Shelf
+  Filter -.->|"阅读状态与本地／在线取交集"| Read
+  Read -.->|"读取成功"| Match
+  Match -.->|"有"| List
+  Match -.->|"无"| Empty
+  List -.->|"只更新原书架列表"| Shelf
+  Empty -.->|"清除全部条件"| Filter
+  Filter -.->|"清除：恢复两组全部"| Read
+  Read -.->|"失败；保留书架位置"| Failure
+  Failure -.->|"重试读取"| Read
+```
 
 已有状态：全部、在读 · 在线。
 
@@ -457,7 +528,45 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[BookshelfPage.ets:447](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfPage.ets:447)、[BookshelfPage.ets:565](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfPage.ets:565)、[BookshelfPage.ets:683](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfPage.ets:683)、[BookshelfPage.ets:906](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfPage.ets:906)。
 
+<a id="route-search"></a>
+
 #### 搜索（search）
+
+**入口与动作路线**
+
+本地和在线结果在原搜索页流式呈现，停止或部分失败保留已返回结果，详情和书源管理返回搜索上下文，历史失败单独原位重试。
+
+```mermaid
+flowchart TD
+  Shelf["书架"]
+  Search["搜索页"]
+  Work("内部：本地与在线并行检索")
+  HasResult{"已有有效结果？"}
+  Results("原位：流式结果列表")
+  Empty("原位：无结果／停止后无结果")
+  Failure("原位：搜索失败与重试")
+  History("原位：历史失败提示")
+  Detail["书籍详情"]
+  Sources["书源管理"]
+  Shelf -->|"搜索入口"| Search
+  Search -->|"返回"| Shelf
+  Search -.->|"关键词／历史词提交"| Work
+  Work -.->|"返回结果或结束"| HasResult
+  HasResult -.->|"有：继续流式更新"| Results
+  HasResult -.->|"无且正常结束／停止"| Empty
+  Work -.->|"失败且没有有效结果"| Failure
+  Work -.->|"停止：保留已返回结果"| Search
+  Results -.->|"部分失败：保留成功分支"| Results
+  Results -.->|"重试失败分支／类别过滤"| Search
+  Empty -.->|"重新搜索"| Work
+  Failure -.->|"重新搜索"| Work
+  Search -.->|"历史读取／清空失败"| History
+  History -.->|"重试对应动作；清空失败保留历史"| Search
+  Results -->|"点书"| Detail
+  Detail -->|"返回：恢复查询与列表位置"| Search
+  Search -->|"添加／管理／检查书源"| Sources
+  Sources -->|"返回原搜索入口"| Search
+```
 
 已有状态：最近搜索、搜索中、搜索结果、结果继续返回、部分失败、未添加书源、无可搜索书源、书源读取失败、无结果、停止后无结果、搜索失败、历史读取失败、历史清空失败。
 
@@ -495,7 +604,50 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[Index.ets:894](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:894)、[SearchPage.ets:399](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets:399)、[SearchPage.ets:501](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets:501)、[ReaderSearchField.ets:89](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderSearchField.ets:89)、[ReaderSearchField.ets:271](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderSearchField.ets:271)、[SearchPage.ets:619](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets:619)、[SearchPage.ets:709](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets:709)、[SearchPage.ets:801](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets:801)、[SearchPage.ets:1088](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets:1088)、[SearchPage.ets:1167](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets:1167)、[SearchPage.ets:1299](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets:1299)、[SearchPage.ets:1364](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets:1364)、[SearchPage.ets:1396](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets:1396)、[SearchPage.ets:1453](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets:1453)、[SearchPage.ets:1505](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets:1505)、[SearchGateway.ts:446](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchGateway.ts:446)、[SearchOrchestrator.ets:615](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchOrchestrator.ets:615)。
 
+<a id="route-detail"></a>
+
 #### 书籍详情（detail）
+
+**入口与动作路线**
+
+详情返回书架或搜索原入口；加入与取消原位读回；换源未入架成功回目标详情、已入架成功转目标阅读，采集失败关窗转原阅读反馈，提交失败留原窗。
+
+```mermaid
+flowchart TD
+  Shelf["书架"]
+  Search["搜索页"]
+  Detail["书籍详情"]
+  Reader["阅读页"]
+  Directory["完整目录"]
+  Switch["换源窗口"]
+  OnShelf{"已在书架？"}
+  Add("原位：加入／取消并读回")
+  Remove["移除书架确认窗"]
+  Feedback("原位：按钮结果／失败消息")
+  Origin{"详情原入口？"}
+  Shelf -->|"书籍操作中的书籍信息"| Detail
+  Search -->|"点搜索结果"| Detail
+  Detail -->|"开始／继续阅读；可读章节"| Reader
+  Reader -->|"详情发起阅读后返回"| Detail
+  Detail -->|"完整目录"| Directory
+  Directory -->|"返回"| Detail
+  Directory -->|"选择可读章节"| Reader
+  Detail -->|"在线书更换书源"| Switch
+  Switch -->|"未切换时关闭"| Detail
+  Switch -->|"未入架切换成功：目标详情"| Detail
+  Switch -->|"已入架切换成功：目标阅读"| Reader
+  Switch -.->|"采集失败：关窗，原阅读显示换源未完成"| Reader
+  Switch -.->|"提交失败：留原窗反馈，原书保留"| Switch
+  Detail -.->|"书架按钮"| OnShelf
+  OnShelf -->|"是：请求移除"| Remove
+  Remove -->|"取消"| Detail
+  OnShelf -.->|"否：加入；加入中可取消"| Add
+  Add -.->|"按实际读回事实更新"| Feedback
+  Feedback -.->|"仍在详情；失败可重试"| Detail
+  Detail -->|"返回"| Origin
+  Origin -->|"搜索"| Search
+  Origin -->|"书架"| Shelf
+```
 
 已有状态：在线 · 已在书架、本地书籍、在线 · 未在书架、目录读取中、正在加入、正在取消加入、加入未完成。
 
@@ -530,7 +682,37 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[LocalBookDetail.ets:47](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalBookDetail.ets:47)、[LocalBookDetail.ets:99](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalBookDetail.ets:99)、[LocalBookDetail.ets:126](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalBookDetail.ets:126)、[LocalBookDetail.ets:165](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalBookDetail.ets:165)、[LocalBookDetail.ets:278](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalBookDetail.ets:278)、[LocalBookDetail.ets:312](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalBookDetail.ets:312)、[LocalBookDetail.ets:405](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalBookDetail.ets:405)、[LocalBookDetail.ets:431](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalBookDetail.ets:431)、[LocalBookDetail.ets:503](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalBookDetail.ets:503)、[LocalBookDetail.ets:557](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalBookDetail.ets:557)、[PageBackBar.ets:28](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/PageBackBar.ets:28)、[Index.ets:1269](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:1269)。
 
+<a id="route-bookshelf-settings"></a>
+
 #### 书架设置（bookshelf-settings）
+
+**入口与动作路线**
+
+书架设置记住书架或设置来源，显示方式乐观切换并异步保存，失败回到已确认值且在同一卡片重试。
+
+```mermaid
+flowchart TD
+  Shelf["书架"]
+  Settings["设置"]
+  Page["书架设置"]
+  Save("内部：保存显示方式")
+  Auto("内部：保存自动更新偏好")
+  Saved{"显示方式保存成功？"}
+  Failure("同卡：回退已确认值与重试")
+  Origin{"进入来源？"}
+  Shelf -->|"更多菜单的书架设置"| Page
+  Settings -->|"书架与搜索入口"| Page
+  Page -.->|"封面／列表立即切换"| Save
+  Save -.-> Saved
+  Saved -.->|"是：确认当前方式"| Page
+  Saved -.->|"否：仍在同页"| Failure
+  Failure -.->|"点击错误重试请求值"| Save
+  Page -.->|"自动检查更新开关"| Auto
+  Auto -.->|"按原设置回调保存与反馈"| Page
+  Page -->|"返回"| Origin
+  Origin -->|"书架"| Shelf
+  Origin -->|"设置"| Settings
+```
 
 已有状态：封面、列表、显示方式保存失败。
 
@@ -558,7 +740,45 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[BookshelfSettingsPage.ets:38](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfSettingsPage.ets:38)、[BookshelfSettingsPage.ets:71](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfSettingsPage.ets:71)、[BookshelfSettingsPage.ets:85](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfSettingsPage.ets:85)、[BookshelfSettingsPage.ets:93](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfSettingsPage.ets:93)、[PageBackBar.ets:28](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/PageBackBar.ets:28)、[Index.ets:1427](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:1427)。
 
+<a id="route-multiselect"></a>
+
 #### 批量管理（multiselect）
+
+**入口与动作路线**
+
+批量管理先读入完整书架，确认后原位移除；失败读回成功则回书架提示未完全完成，读回也失败才留在批量管理。
+
+```mermaid
+flowchart TD
+  Shelf["书架"]
+  More["书架更多菜单"]
+  Actions["书籍操作窗"]
+  Multi["批量管理"]
+  Load("内部：读入完整书架")
+  Ready{"读入完成且有选中？"}
+  Confirm["批量移除确认窗"]
+  Remove("原位：正在移除")
+  Reload{"失败后书架读回成功？"}
+  Error["系统错误弹窗"]
+  More -->|"批量管理：无预选"| Multi
+  Actions -->|"多选：预选当前书"| Multi
+  Multi -.->|"进入时读取"| Load
+  Load -.->|"成功：允许选择／全选"| Multi
+  Load -.->|"失败：toast后回书架"| Shelf
+  Multi -.->|"移除按钮"| Ready
+  Ready -.->|"否：移除禁用"| Multi
+  Ready -->|"是"| Confirm
+  Confirm -->|"取消"| Multi
+  Confirm -.->|"确认一次"| Remove
+  Remove -->|"成功：回书架"| Shelf
+  Remove -.->|"失败：核对实际书架"| Reload
+  Reload -->|"是：回书架"| Shelf
+  Reload -.->|"是：提示未完全完成"| Error
+  Reload -.->|"否：留批量管理并提示失败"| Error
+  Error -->|"读回成功：知道了"| Shelf
+  Error -->|"读回失败：知道了"| Multi
+  Multi -->|"非移除中返回；可取消时取消"| Shelf
+```
 
 已有状态：已选一本、未选择、全选、列表、读取中、移除中。
 
@@ -588,7 +808,38 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[BookshelfMultiSelectPage.ets:10](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfMultiSelectPage.ets:10)、[BookshelfMultiSelectPage.ets:47](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfMultiSelectPage.ets:47)、[BookshelfMultiSelectPage.ets:54](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfMultiSelectPage.ets:54)、[BookshelfMultiSelectPage.ets:99](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfMultiSelectPage.ets:99)、[BookshelfMultiSelectPage.ets:147](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfMultiSelectPage.ets:147)、[BookshelfMultiSelectPage.ets:213](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfMultiSelectPage.ets:213)、[BookshelfMultiSelectPage.ets:249](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfMultiSelectPage.ets:249)、[BookshelfMultiSelectPage.ets:316](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfMultiSelectPage.ets:316)、[BookshelfMultiSelectPage.ets:366](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfMultiSelectPage.ets:366)、[Index.ets:1460](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:1460)、[Index.ets:3892](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:3892)。
 
+<a id="route-shelf-more"></a>
+
 #### 书架更多（shelf-more）
+
+**入口与动作路线**
+
+更多菜单先派发所选动作再收拢，检查更新在后台执行，重新打开时由原菜单项显示进度，没有单独更新结果页面。
+
+```mermaid
+flowchart TD
+  Shelf["书架"]
+  Menu["锚定更多菜单"]
+  Multi["批量管理"]
+  Import["本地导入窗"]
+  Settings["书架设置"]
+  Allowed{"有在线书且无检查任务？"}
+  Work("后台：检查在线章节")
+  Shelf -->|"右上更多"| Menu
+  Menu -->|"透明背景点击关闭"| Shelf
+  Menu -->|"进入批量管理；随后收拢"| Multi
+  Multi -->|"非移除中返回"| Shelf
+  Menu -->|"打开本地导入；随后收拢"| Import
+  Import -->|"取消／完成／系统返回"| Shelf
+  Menu -->|"进入书架设置；随后收拢"| Settings
+  Settings -->|"返回"| Shelf
+  Menu -.->|"检查更新"| Allowed
+  Allowed -.->|"否：原项禁用"| Menu
+  Allowed -.->|"是：提交检查"| Work
+  Work -->|"提交动作后收拢菜单"| Shelf
+  Work -.->|"重新打开时显示同项进度"| Menu
+  Work -.->|"完成：刷新投影；失败保留书架并记录"| Shelf
+```
 
 已有状态：菜单、手动检查中、自动检查中、没有在线书籍。
 
@@ -615,7 +866,37 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[BookshelfMoreMenu.ets:5](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets:5)、[BookshelfMoreMenu.ets:60](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets:60)、[BookshelfMoreMenu.ets:137](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets:137)、[BookshelfMoreMenu.ets:172](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets:172)、[BookshelfMoreMenu.ets:193](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets:193)、[BookshelfMoreMenu.ets:215](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets:215)、[BookshelfShell.ets:71](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfShell.ets:71)。
 
+<a id="route-book-actions"></a>
+
 #### 书籍操作（book-actions）
+
+**入口与动作路线**
+
+长按或列表更多打开当前书籍操作窗，选择动作先关闭此窗，再进入多选、详情、默认分组选择或移除确认。
+
+```mermaid
+flowchart TD
+  Shelf["书架"]
+  Panel["书籍操作窗"]
+  Close("内部：先关闭操作窗")
+  Choice{"所选操作？"}
+  Multi["批量管理"]
+  Detail["书籍详情"]
+  Group["编辑分组窗"]
+  Remove["移除书架确认窗"]
+  Shelf -->|"长按书／列表更多"| Panel
+  Panel -->|"关闭窗口：书架不变"| Shelf
+  Panel -.->|"点操作"| Close
+  Close -.-> Choice
+  Choice -->|"多选：预选当前书"| Multi
+  Choice -->|"书籍信息"| Detail
+  Choice -->|"编辑分组"| Group
+  Choice -->|"移除书架"| Remove
+  Multi -->|"非移除中返回"| Shelf
+  Detail -->|"返回"| Shelf
+  Group -->|"非保存中关闭"| Shelf
+  Remove -->|"取消"| Shelf
+```
 
 已有状态：操作面板。
 
@@ -640,7 +921,34 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[BookshelfPage.ets:279](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfPage.ets:279)、[BookshelfBookActionSheet.ets:11](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfBookActionSheet.ets:11)、[BookshelfBookActionSheet.ets:31](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfBookActionSheet.ets:31)、[BookshelfBookActionSheet.ets:69](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfBookActionSheet.ets:69)。
 
+<a id="route-group-select"></a>
+
 #### 编辑分组（group-select）
+
+**入口与动作路线**
+
+当前仅能选择默认分组，保存中阻止重复操作和关闭，成功关闭刷新书架，失败保留原窗并toast提示。
+
+```mermaid
+flowchart TD
+  Shelf["书架"]
+  Actions["书籍操作窗"]
+  Group["编辑分组窗"]
+  Busy{"正在保存？"}
+  Save("内部：保存默认分组")
+  Saved{"保存成功？"}
+  Toast("原窗：分组保存失败toast")
+  Shelf -->|"长按书／列表更多"| Actions
+  Actions -->|"关闭操作窗后编辑分组"| Group
+  Group -.->|"点默认；清除项禁用"| Save
+  Save -.-> Saved
+  Saved -->|"是：关闭并刷新书架"| Shelf
+  Saved -.->|"否：窗口保留"| Toast
+  Toast -.->|"仍可重试默认分组"| Group
+  Group -->|"背景点击／返回"| Busy
+  Busy -.->|"是：阻止关闭"| Group
+  Busy -->|"否：关闭"| Shelf
+```
 
 已有状态：默认分组、保存中。
 
@@ -666,7 +974,40 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[Index.ets:1211](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:1211)、[ReaderSurfaceSpecs.ets:147](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets:147)、[BookshelfGroupSelector.ets:16](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfGroupSelector.ets:16)。
 
+<a id="route-local-import"></a>
+
 #### 导入本地书籍（local-import）
+
+**入口与动作路线**
+
+系统多选返回后在同一导入窗执行并显示逐文件结果，取消选择回原窗，异常回选择状态且保留已保存书籍，背景没有关闭动作。
+
+```mermaid
+flowchart TD
+  Shelf["书架"]
+  More["书架更多菜单"]
+  Import["本地导入窗"]
+  Picker["系统文件选择器"]
+  Selected{"选到文件？"}
+  Work("同窗：正在导入")
+  Result("同窗：逐文件真实结果")
+  Failure("同窗：未完成提示；保留已保存书")
+  Shelf -->|"空态导入"| Import
+  Shelf -->|"更多"| More
+  More -->|"打开本地导入；随后收拢"| Import
+  Import -->|"选择区／选择文件"| Picker
+  Picker -->|"返回选择结果"| Selected
+  Selected -->|"无：取消选择"| Import
+  Selected -.->|"有"| Work
+  Work -.->|"有效批次：成功／部分／失败／待确认"| Result
+  Work -.->|"批次取消：回选择状态"| Import
+  Picker -.->|"选择异常"| Failure
+  Work -.->|"异常：回选择状态"| Failure
+  Failure -.->|"原窗可重新选文件"| Import
+  Import -->|"显式取消／系统返回；背景点击不关闭"| Shelf
+  Work -->|"系统返回只关窗，已提交事实保留"| Shelf
+  Result -->|"完成／系统返回"| Shelf
+```
 
 已有状态：选择文件、系统选择中、正在导入、全部完成、部分完成、全部未完成、待确认。
 
@@ -700,7 +1041,51 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[LocalImportDialog.ets:35](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalImportDialog.ets:35)、[LocalImportDialog.ets:90](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalImportDialog.ets:90)、[LocalImportDialog.ets:134](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalImportDialog.ets:134)、[LocalImportDialog.ets:267](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalImportDialog.ets:267)、[LocalImportDialog.ets:298](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalImportDialog.ets:298)、[LocalImportDialog.ets:352](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalImportDialog.ets:352)、[LocalImportDialog.ets:413](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalImportDialog.ets:413)、[LocalImportDialog.ets:488](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalImportDialog.ets:488)、[LocalImportDialog.ets:521](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalImportDialog.ets:521)、[LocalImportDialog.ets:552](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalImportDialog.ets:552)、[LocalImportDialog.ets:563](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalImportDialog.ets:563)、[LocalImportLayout.ts:13](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/LocalImportLayout.ts:13)、[BookshelfFlowGateway.ts:204](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfFlowGateway.ts:204)、[Index.ets:6799](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:6799)。
 
+<a id="route-book-removal"></a>
+
 #### 移除书架确认（book-removal）
+
+**入口与动作路线**
+
+移除确认只消费一次；取消回原底页，详情移除已确认后退回原入口，批量失败按读回结果决定回书架或保留批量管理。
+
+```mermaid
+flowchart TD
+  Shelf["书架"]
+  Search["搜索页"]
+  Detail["书籍详情"]
+  Multi["批量管理"]
+  Confirm["移除书架确认窗"]
+  Work("内部：单次移除并核对事实")
+  Mode{"单本／批量结果？"}
+  Reload{"批量书架读回成功？"}
+  Removed{"单本已确认移除？"}
+  Return("内部：详情退回原入口")
+  Error["系统错误弹窗"]
+  Shelf -->|"书籍操作中的移除"| Confirm
+  Detail -->|"移除书架"| Confirm
+  Multi -->|"有选中时移除"| Confirm
+  Confirm -->|"取消：书架发起"| Shelf
+  Confirm -->|"取消：详情发起"| Detail
+  Confirm -->|"取消：批量发起"| Multi
+  Confirm -.->|"移除：先关闭并消费一次确认"| Work
+  Work -.-> Mode
+  Mode -->|"批量成功"| Shelf
+  Mode -.->|"批量失败：先读回"| Reload
+  Reload -->|"是：回书架"| Shelf
+  Reload -.->|"是：提示未完全完成"| Error
+  Reload -.->|"否：底页保留批量管理"| Error
+  Mode -.->|"单本"| Removed
+  Removed -->|"是：从书架发起"| Shelf
+  Removed -.->|"是：从详情发起"| Return
+  Return -->|"原入口为书架"| Shelf
+  Return -->|"原入口为搜索"| Search
+  Removed -.->|"否／无法核对：原底页保留"| Error
+  Error -->|"书架发起／批量读回成功：知道了"| Shelf
+  Error -->|"单本未移除：知道了仍在详情"| Detail
+  Error -->|"批量读回失败：知道了仍在批量管理"| Multi
+  Error -->|"详情已移除且原入口搜索：知道了"| Search
+```
 
 已有状态：在线书籍、本地书籍、批量。
 
@@ -728,7 +1113,31 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[BookRemovalDialog.ets:23](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookRemovalDialog.ets:23)、[BookRemovalDialog.ets:45](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookRemovalDialog.ets:45)、[ReaderSurfaceSpecs.ets:112](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets:112)、[ReaderDialogSurface.ets:155](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderDialogSurface.ets:155)、[ReaderDialogSurface.ets:226](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderDialogSurface.ets:226)、[Index.ets:3862](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:3862)。
 
+<a id="route-settings"></a>
+
 #### 设置首页（settings）
+
+**入口与动作路线**
+
+设置首页当前仅通往通用设置、书源管理和书架设置，底栏可回书架。
+
+```mermaid
+flowchart TD
+  Shelf["书架"]
+  Settings["设置首页"]
+  General["通用设置"]
+  Sources["书源管理"]
+  ShelfSettings["书架设置"]
+  Shelf -->|"底栏：设置"| Settings
+  Settings -->|"底栏：书架"| Shelf
+  Settings -->|"通用设置"| General
+  General -->|"返回设置首页"| Settings
+  Settings -->|"书源管理"| Sources
+  Sources -->|"设置来源：返回"| Settings
+  Settings -->|"书架设置"| ShelfSettings
+  ShelfSettings -->|"返回设置来源"| Settings
+  classDef inline stroke-dasharray:5 5;
+```
 
 已有状态：当前入口。
 
@@ -761,7 +1170,41 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[SettingsPage.ets:134](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsPage.ets:134)、[SettingsShell.ets:55](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/shell/SettingsShell.ets:55)、[SettingsShell.ets:157](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/shell/SettingsShell.ets:157)、[CategorySection.ets:23](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/CategorySection.ets:23)、[CategoryRow.ets:26](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/CategoryRow.ets:26)、[ReaderTypography.ets:56](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderTypography.ets:56)、[ReaderFloatingBarMetrics.ts:6](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderFloatingBarMetrics.ts:6)、[ReaderFonts.ets:16](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderFonts.ets:16)、[ReaderProductScope.ts:17](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderProductScope.ts:17)、[Index.ets:1424](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:1424)。
 
+<a id="route-general"></a>
+
 #### 通用设置（general）
+
+**入口与动作路线**
+
+主题、开关、缓存和恢复结果均留在通用设置，只有恢复默认会先打开系统确认框。
+
+```mermaid
+flowchart TD
+  Settings["设置首页"]
+  General["通用设置"]
+  Prefs("内部：主题 / 开关保存"):::inline
+  Saved{"偏好保存成功？"}
+  Rollback("原位：回读 / 恢复配置<br/>主题失败另有系统 toast"):::inline
+  Cache("内部：清理文字缓存"):::inline
+  CacheState("原行：清理中 / 已清理 / 清理失败"):::inline
+  Restore["恢复默认系统确认框"]
+  RestoreState("原页：恢复时禁用设置壳<br/>恢复结果消息"):::inline
+  Settings -->|"进入通用设置"| General
+  General -->|"返回"| Settings
+  General -.->|"选择主题 / 切换开关"| Prefs
+  Prefs -.->|"持久化结果"| Saved
+  Saved -.->|"是：保留选定值"| General
+  Saved -.->|"否"| Rollback
+  Rollback -.->|"仍在通用设置"| General
+  General -.->|"缓存清理：在途去重"| Cache
+  Cache -.->|"替换原行文案"| CacheState
+  CacheState -.->|"结束后允许再次清理"| General
+  General -->|"恢复默认"| Restore
+  Restore -->|"取消：不执行"| General
+  Restore -.->|"确认后执行恢复"| RestoreState
+  RestoreState -.->|"成功 / 未完成均保留原页"| General
+  classDef inline stroke-dasharray:5 5;
+```
 
 已有状态：默认值、App 浅色选择、App 深色选择、减少动态效果开启、清理中：原行、已清理：原行、清理失败：原行、恢复时禁用原页、恢复成功：原页、恢复未完成：原页。
 
@@ -799,7 +1242,51 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[SettingsPage.ets:152](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsPage.ets:152)、[SettingsPage.ets:211](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsPage.ets:211)、[SettingsPage.ets:309](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsPage.ets:309)、[SettingsPage.ets:351](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsPage.ets:351)、[SettingsPage.ets:504](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsPage.ets:504)、[SettingsPage.ets:533](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsPage.ets:533)、[SettingsOrchestrator.ets:68](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsOrchestrator.ets:68)、[ReaderSegmentedControl.ets:6](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderSegmentedControl.ets:6)、[ReaderToggle.ets:19](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderToggle.ets:19)、[SettingsShell.ets:75](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/shell/SettingsShell.ets:75)、[Index.ets:1548](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:1548)。
 
+<a id="route-sources"></a>
+
 #### 书源管理（sources）
+
+**入口与动作路线**
+
+书源管理按入口返回设置或搜索，筛选、检测和启停原位处理，新增、登录及工具具有各自实际窗口或页面。
+
+```mermaid
+flowchart TD
+  Entry["设置首页 / 搜索页"]
+  Sources["书源管理"]
+  Load("内部：读取 Core 书源列表"):::inline
+  Banner("原页：读取失败与重试"):::inline
+  Filter("内部：名称 / 域名 / 分组 / 类型 / 状态筛选"):::inline
+  Projection("原位：筛选后的书源列表"):::inline
+  Tools["批量管理与书源工具"]
+  Import["导入书源弹层"]
+  Login["Host 登录 / 验证 Web 窗口"]
+  Check("内部：单源默认搜索检测"):::inline
+  CheckState("原行：检测结果 / 未检测"):::inline
+  Toggle("内部：启停更新与会话清理"):::inline
+  Entry -->|"管理书源；记录返回来源"| Sources
+  Sources -->|"普通返回原来源；不自动重搜"| Entry
+  Sources -.->|"进入 / 重读"| Load
+  Load -.->|"读取成功：替换列表"| Sources
+  Load -.->|"读取失败"| Banner
+  Banner -.->|"重试：只读列表"| Load
+  Sources -.->|"改变搜索与筛选值"| Filter
+  Filter -.->|"重建当前投影"| Projection
+  Projection -.->|"仍在同页"| Sources
+  Sources -->|"更多 / 批量管理"| Tools
+  Tools -->|"返回并重新读列表"| Load
+  Sources -->|"新增书源"| Import
+  Import -->|"明确关闭"| Sources
+  Sources -->|"有登录地址：登录"| Login
+  Login -.->|"完成后检测"| Check
+  Login -.->|"取消 / 异常：未检测"| CheckState
+  Sources -.->|"检测：同源在途去重"| Check
+  Check -.->|"通过 / 失败更新原行"| CheckState
+  CheckState -.->|"不打开结果页面"| Sources
+  Sources -.->|"切换启停"| Toggle
+  Toggle -.->|"确认后更新；失败保留原值"| Sources
+  classDef inline stroke-dasharray:5 5;
+```
 
 已有状态：未检测列表、原页读取中、读取失败与重试、没有书源、筛选后无匹配、实际分组下拉、单源检测中、单源检测通过、单源检测失败、原页导入中、原页导入结果、部分导入结果、原页导入失败。
 
@@ -845,7 +1332,56 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[SourceManagementPage.ets:126](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceManagementPage.ets:126)、[SourceManagementPage.ets:197](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceManagementPage.ets:197)、[SourceManagementPage.ets:232](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceManagementPage.ets:232)、[SourceManagementPage.ets:280](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceManagementPage.ets:280)、[SourceManagementPage.ets:308](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceManagementPage.ets:308)、[SourceManagementPage.ets:346](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceManagementPage.ets:346)、[SourceManagementPage.ets:382](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceManagementPage.ets:382)、[SourceManagementPage.ets:425](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceManagementPage.ets:425)、[SourceManagementPage.ets:540](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceManagementPage.ets:540)、[SourceManagementPage.ets:619](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceManagementPage.ets:619)、[SourceManagementPage.ets:677](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceManagementPage.ets:677)、[ReaderSearchField.ets:255](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderSearchField.ets:255)、[ReaderSelect.ets:165](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderSelect.ets:165)、[ReaderSelectPanel.ets:152](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderSelectPanel.ets:152)、[ReaderToggle.ets:19](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderToggle.ets:19)、[SourceOrchestrator.ets:84](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceOrchestrator.ets:84)、[SourceOrchestrator.ets:129](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceOrchestrator.ets:129)、[SourceOrchestrator.ets:214](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceOrchestrator.ets:214)、[SourceOrchestrator.ets:351](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceOrchestrator.ets:351)、[SourceGateway.ts:470](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceGateway.ts:470)、[Index.ets:1630](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:1630)。
 
+<a id="route-source-tools"></a>
+
 #### 批量管理与书源工具（source-tools）
+
+**入口与动作路线**
+
+工具页把选择、检测、编辑和调试保留在同页，导出与删除先系统确认，返回书源管理不新增退出页面。
+
+```mermaid
+flowchart TD
+  Sources["书源管理"]
+  Tools["批量管理与书源工具"]
+  Feedback("原页：读取 / 操作状态 / 真实错误 / 部分完成数量"):::inline
+  Scope("原位：全选 / 清空 / 行选择"):::inline
+  Batch("内部：逐源检测 / 启停更新"):::inline
+  Progress("原位：检测进度 / 已完成结果"):::inline
+  Editor("原位：BookSource JSON 编辑卡"):::inline
+  Save("内部：Core 校验保存与首次列表读回"):::inline
+  Reconcile("内部：仅重新读取已保存书源"):::inline
+  Debug("原位：当前源调试对象与日志"):::inline
+  Export["导出凭据系统确认框"]
+  Delete["删除书源系统确认框"]
+  Sources -->|"更多 / 批量管理"| Tools
+  Tools -->|"返回；不新增退出确认"| Sources
+  Tools -.->|"进入：已确认列表起帧，再读 Core；结果原位"| Feedback
+  Feedback -.->|"仍在工具页"| Tools
+  Tools -.->|"非忙碌：改变选择"| Scope
+  Scope -.->|"检测保留范围；启停消耗选择"| Batch
+  Batch -.->|"检测：逐项发布"| Progress
+  Progress -.->|"停止检测：原按钮停止中"| Batch
+  Batch -.->|"结束 / 停止保留已完成；启停失败记已完成数"| Feedback
+  Tools -.->|"行编辑：读取原始 JSON"| Editor
+  Editor -.->|"校验并保存"| Save
+  Save -.->|"保存失败 / 已保存读回失败：保留草稿"| Editor
+  Editor -.->|"已确认但读回失败：重新读取"| Reconcile
+  Reconcile -.->|"读回失败 / 未找到源：保留草稿"| Editor
+  Reconcile -.->|"确认源存在：关闭编辑卡"| Feedback
+  Save -.->|"保存且读回成功：关闭编辑卡"| Feedback
+  Editor -.->|"非忙碌取消：清草稿"| Tools
+  Tools -.->|"行调试：当前模式 / 深度 / 关键词"| Debug
+  Debug -.->|"结果与错误仍在本页"| Feedback
+  Tools -->|"导出全部"| Export
+  Scope -->|"导出所选：确认后消耗选择"| Export
+  Export -->|"取消：留在工具页"| Tools
+  Export -.->|"继续：生成与保存结果"| Feedback
+  Scope -->|"删除前消耗并清空选择"| Delete
+  Delete -->|"取消：选择保持清空"| Tools
+  Delete -.->|"确认删除：结果原位"| Feedback
+  classDef inline stroke-dasharray:5 5;
+```
 
 已有状态：已读取列表、读取工具数据、读取失败、已选范围、原页检测中、原按钮停止中、原页检测完成、原页保留已完成结果、原页检测中断、本页编辑卡、原页保存中、原页保存失败、已保存但读回失败、原页导出取消、原页导出失败、原页调试失败。
 
@@ -891,7 +1427,35 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[SourceToolsPage.ets:200](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsPage.ets:200)、[SourceToolsPage.ets:253](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsPage.ets:253)、[SourceToolsPage.ets:302](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsPage.ets:302)、[SourceToolsPage.ets:397](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsPage.ets:397)、[SourceToolsPage.ets:432](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsPage.ets:432)、[SourceToolsPage.ets:466](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsPage.ets:466)、[SourceToolsPage.ets:529](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsPage.ets:529)、[SourceToolsPage.ets:574](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsPage.ets:574)、[SourceToolsPage.ets:631](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsPage.ets:631)、[SourceToolsPage.ets:651](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsPage.ets:651)、[SourceToolsPage.ets:736](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsPage.ets:736)、[SourceToolsOrchestrator.ets:141](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsOrchestrator.ets:141)、[SourceToolsOrchestrator.ets:188](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsOrchestrator.ets:188)、[SourceToolsOrchestrator.ets:211](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsOrchestrator.ets:211)、[SourceToolsOrchestrator.ets:266](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsOrchestrator.ets:266)、[SourceToolsOrchestrator.ets:381](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsOrchestrator.ets:381)、[SourceToolsOrchestrator.ets:451](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsOrchestrator.ets:451)、[SourceToolsOrchestrator.ets:466](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsOrchestrator.ets:466)、[SourceToolsOrchestrator.ets:523](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsOrchestrator.ets:523)、[SourceToolsOrchestrator.ets:564](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsOrchestrator.ets:564)、[SourceGateway.ts:346](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceGateway.ts:346)。
 
+<a id="route-source-login"></a>
+
 #### 书源登录 / 验证（source-login）
+
+**入口与动作路线**
+
+登录使用 Host 内的交互 Web 窗口，完成后检测书源，取消或异常回原行未检测状态，没有登录成功页。
+
+```mermaid
+flowchart TD
+  Sources["书源管理"]
+  Allowed{"有登录地址且该源未检测中？"}
+  Waiting("原行：等待登录 / 验证"):::inline
+  Web["Host 交互 Web 窗口"]
+  Check("内部：默认搜索 L1 / L2 检测"):::inline
+  Result("原行：检测通过 / 未通过"):::inline
+  Cancelled("原行：未检测<br/>取消说明在该状态隐藏"):::inline
+  Sources -->|"点登录"| Allowed
+  Allowed -->|"否：忽略"| Sources
+  Allowed -.->|"是：加入串行任务"| Waiting
+  Waiting -->|"打开源的登录地址"| Web
+  Web -.->|"完成标记后，任务结束才检测"| Check
+  Web -.->|"取消 / 执行异常"| Cancelled
+  Check -.->|"返回真实检测结果"| Result
+  Check -.->|"执行异常"| Cancelled
+  Result -.->|"回到原书源行"| Sources
+  Cancelled -.->|"回到原书源行"| Sources
+  classDef inline stroke-dasharray:5 5;
+```
 
 已有状态：交互 Web 宿主。
 
@@ -921,7 +1485,41 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[ArkWebExecutionHost.ets:46](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebExecutionHost.ets:46)、[ArkWebExecutionHost.ets:60](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebExecutionHost.ets:60)、[ArkWebExecutionHost.ets:118](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebExecutionHost.ets:118)、[ArkWebExecutor.ts:515](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ArkWebExecutor.ts:515)、[ReaderRuntimeOwner.ts:354](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderRuntimeOwner.ts:354)、[SourceOrchestrator.ets:170](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceOrchestrator.ets:170)、[SourceManagementPage.ets:455](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceManagementPage.ets:455)。
 
+<a id="route-json-import"></a>
+
 #### 导入书源（json-import）
+
+**入口与动作路线**
+
+本地和非空在线提交都先关闭导入弹层再执行真实导入，空地址留框校验，选文件取消不会弹完成框。
+
+```mermaid
+flowchart TD
+  Sources["书源管理"]
+  Dialog["导入书源弹层"]
+  Url{"在线地址 trim 后非空？"}
+  Validation("原字段：请输入在线 JSON 地址"):::inline
+  Picker["系统本地文件选择器"]
+  Download("内部：Host 下载在线 JSON"):::inline
+  Import("内部：Core 导入校验与列表读回"):::inline
+  Status("原页：导入数量 / 部分失败 / 真实错误"):::inline
+  Result["书源导入系统结果框"]
+  Sources -->|"新增书源"| Dialog
+  Dialog -->|"明确关闭；遮罩不注册关闭"| Sources
+  Dialog -->|"本地 JSON：先关闭弹层"| Picker
+  Picker -->|"取消：无完成结果框"| Sources
+  Picker -.->|"选定文件"| Import
+  Dialog -->|"在线按钮 / 键盘提交"| Url
+  Url -.->|"否：保留弹层"| Validation
+  Validation -.->|"编辑即清旧验证消息"| Dialog
+  Url -.->|"是：先关闭弹层"| Download
+  Download -.->|"取得 JSON"| Import
+  Download -.->|"真实下载错误"| Status
+  Import -.->|"完成 / 部分成功 / 异常；已确认事实保留"| Status
+  Status -->|"仍在书源管理才显示"| Result
+  Result -->|"关闭后留在原页"| Sources
+  classDef inline stroke-dasharray:5 5;
+```
 
 已有状态：本地与在线入口、空在线链接。
 
@@ -954,7 +1552,36 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[JsonImportDialog.ets:46](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/JsonImportDialog.ets:46)、[JsonImportDialog.ets:73](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/JsonImportDialog.ets:73)、[JsonImportDialog.ets:138](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/JsonImportDialog.ets:138)、[JsonImportDialog.ets:152](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/JsonImportDialog.ets:152)、[ReaderSurfaceSpecs.ets:133](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets:133)、[ReaderDialogSurface.ets:106](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderDialogSurface.ets:106)、[ReaderDialogSurface.ets:155](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderDialogSurface.ets:155)、[ReaderDialogSurface.ets:226](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderDialogSurface.ets:226)、[Index.ets:1812](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:1812)。
 
+<a id="route-restore-defaults"></a>
+
 #### 恢复界面与阅读设置（restore-defaults）
+
+**入口与动作路线**
+
+恢复默认经系统确认后在原通用设置执行，成功与未完成均原页反馈，书库和凭据等保留项不删除。
+
+```mermaid
+flowchart TD
+  General["通用设置"]
+  Dialog["恢复界面与阅读设置系统确认框"]
+  Current{"页面仍有效且恢复未在途？"}
+  Ignore("内部：忽略旧请求，不改变当前页面"):::inline
+  Restore("内部：写恢复记录并协调设置恢复<br/>原设置壳禁用"):::inline
+  Done{"持久化恢复完成？"}
+  Success("原页：已恢复界面与阅读设置"):::inline
+  Failure("原页：恢复未完成，可重试<br/>异常保留恢复记录"):::inline
+  General -->|"恢复默认"| Dialog
+  Dialog -->|"取消：不执行"| General
+  Dialog -->|"恢复默认"| Current
+  Current -.->|"否"| Ignore
+  Current -.->|"是"| Restore
+  Restore -.->|"当前实例接收结果"| Done
+  Done -.->|"是"| Success
+  Done -.->|"否 / 异常"| Failure
+  Success -.->|"保留书籍 / 书源 / 进度 / 凭据"| General
+  Failure -.->|"原入口可再次确认恢复"| General
+  classDef inline stroke-dasharray:5 5;
+```
 
 已有状态：系统确认框结构。
 
@@ -982,7 +1609,37 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[SettingsPage.ets:504](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsPage.ets:504)、[SettingsPage.ets:516](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsPage.ets:516)、[SettingsPage.ets:108](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsPage.ets:108)、[LocalConfigurationReset.ts:66](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/LocalConfigurationReset.ts:66)、[SettingsOrchestrator.ets:103](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/settings/SettingsOrchestrator.ets:103)。
 
+<a id="route-source-result"></a>
+
 #### 书源导入结果（source-result）
+
+**入口与动作路线**
+
+导入结果只在当前源页弹出，成功且来自非空关键词搜索时才提供重搜按钮，失败不增加重试导入入口。
+
+```mermaid
+flowchart TD
+  Completion("内部：导入完成 / 部分成功 / 失败事实"):::inline
+  Current{"仍在书源管理？"}
+  SearchOrigin{"导入完成且来自搜索、关键词非空？"}
+  Ordinary["系统结果框：知道了"]
+  SearchDialog["系统结果框：继续管理 / 用新书源搜索"]
+  Sources["书源管理"]
+  Search["搜索页"]
+  Settings["设置首页"]
+  Ignore("内部：不弹已离开页面的旧结果"):::inline
+  Completion -.->|"展示前检查路由"| Current
+  Current -.->|"否"| Ignore
+  Current -->|"是"| SearchOrigin
+  SearchOrigin -->|"否：含真实导入失败"| Ordinary
+  SearchOrigin -->|"是：含部分成功"| SearchDialog
+  Ordinary -->|"知道了 / 关闭"| Sources
+  SearchDialog -->|"继续管理 / 关闭"| Sources
+  SearchDialog -->|"用新书源搜索：恢复关键词并重搜一次"| Search
+  Sources -->|"搜索来源普通返回：还原查询，不重搜"| Search
+  Sources -->|"设置来源返回"| Settings
+  classDef inline stroke-dasharray:5 5;
+```
 
 已有状态：普通导入完成、部分导入完成、导入失败、带原关键词的搜索入口。
 
@@ -1011,7 +1668,39 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[Index.ets:1824](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:1824)、[Index.ets:1871](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:1871)、[Index.ets:1891](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:1891)、[Index.ets:1756](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:1756)、[SourceOrchestrator.ets:264](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceOrchestrator.ets:264)、[SourceOrchestrator.ets:300](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceOrchestrator.ets:300)。
 
+<a id="route-source-export"></a>
+
 #### 书源导出确认（source-export）
+
+**入口与动作路线**
+
+每次导出先确认凭据提示，再由 Core 生成 JSON 并交系统保存，取消和失败只更新工具页状态。
+
+```mermaid
+flowchart TD
+  Tools["批量管理与书源工具"]
+  Allowed{"非忙碌且导出范围有效？"}
+  Dialog["导出文件含登录凭据系统确认框"]
+  Generate("内部：Core 生成 Legado JSON"):::inline
+  Picker["系统文件保存选择器"]
+  Saved{"返回文件名？"}
+  Result("原状态：已导出数量与文件名 / 已取消导出"):::inline
+  Error("原状态：书源导出失败"):::inline
+  Tools -->|"导出全部 / 所选"| Allowed
+  Allowed -->|"否：不触发"| Tools
+  Allowed -->|"是"| Dialog
+  Dialog -->|"取消 / 关闭：不导出"| Tools
+  Dialog -.->|"继续导出"| Generate
+  Generate -->|"真实 JSON，含原静态凭据"| Picker
+  Generate -.->|"生成失败"| Error
+  Picker -->|"保存返回"| Saved
+  Picker -.->|"保存异常"| Error
+  Saved -.->|"是：显示导出数与文件名"| Result
+  Saved -.->|"否：已取消导出"| Result
+  Result -.->|"仍在工具页"| Tools
+  Error -.->|"仍在工具页"| Tools
+  classDef inline stroke-dasharray:5 5;
+```
 
 已有状态：系统确认框结构。
 
@@ -1039,7 +1728,44 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[SourceToolsPage.ets:253](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsPage.ets:253)、[SourceToolsPage.ets:693](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsPage.ets:693)、[SourceToolsPage.ets:719](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsPage.ets:719)、[SourceToolsOrchestrator.ets:188](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsOrchestrator.ets:188)。
 
+<a id="route-source-delete"></a>
+
 #### 删除书源确认（source-delete）
+
+**入口与动作路线**
+
+删除前清空选择，取消不复选；确认后删除与会话清理分别记账，读回失败不会自动撤销已提交删除。
+
+```mermaid
+flowchart TD
+  Tools["批量管理与书源工具"]
+  Selected{"当前工具路由且有有效选择？"}
+  Consume("原位：消耗并清空有效选择"):::inline
+  Dialog["删除书源系统确认框"]
+  Current{"确认时仍在工具路由？"}
+  Ignore("内部：不执行旧删除请求"):::inline
+  Delete("内部：Core 删除确认"):::inline
+  Cleanup("内部：清理相关 Host 登录会话"):::inline
+  Read("内部：重新读取书源列表"):::inline
+  Result("原状态：删除数与会话清理失败数"):::inline
+  Error("原状态：删除失败<br/>已提交删除不自动撤销"):::inline
+  Tools -->|"删除所选"| Selected
+  Selected -->|"否：不弹框"| Tools
+  Selected -.->|"是"| Consume
+  Consume -->|"固定本次删除范围"| Dialog
+  Dialog -->|"取消 / 关闭：选择保持清空"| Tools
+  Dialog -->|"删除"| Current
+  Current -.->|"否"| Ignore
+  Current -.->|"是"| Delete
+  Delete -.->|"Core 确认删除"| Cleanup
+  Delete -.->|"真实删除异常"| Error
+  Cleanup -.->|"会话清理失败独立计数"| Read
+  Read -.->|"读回成功"| Result
+  Read -.->|"读回失败"| Error
+  Result -.->|"保留工具页"| Tools
+  Error -.->|"保留工具页"| Tools
+  classDef inline stroke-dasharray:5 5;
+```
 
 已有状态：系统确认框结构。
 
@@ -1067,7 +1793,39 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[Index.ets:1919](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:1919)、[SourceToolsOrchestrator.ets:404](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceToolsOrchestrator.ets:404)、[SourceGateway.ts:442](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceGateway.ts:442)。
 
+<a id="route-reader"></a>
+
 #### 阅读正文（reader）
+
+**入口与动作路线**
+
+打开书籍先进入阅读壳，正文加载和失败留在原正文区；控制层、换源与退出保存共用该阅读身份。
+
+```mermaid
+flowchart TD
+  Entry["书架／详情"] -->|"打开阅读"| Reader["阅读页：阅读壳与正文区"]
+  Reader -.->|"原位读取正文"| Load("内部：获取并准备正文")
+  Load -.-> Ready{"正文可用？"}
+  Ready -.->|"是：原位呈现正文"| Reader
+  Ready -.->|"否"| Fault("原位：正文失败")
+  Fault -.->|"重试"| Load
+  Fault -->|"阅读设置"| Controls["阅读控制层"]
+  Fault -->|"远程换源"| Switch["换源窗口"]
+  Reader -->|"中部点击"| Controls
+  Controls -->|"关闭控制层"| Reader
+  Reader -->|"远程换源"| Switch
+  Switch -->|"已入架成功／普通关闭"| Reader
+  Switch -->|"未入架预览成功"| Detail["书籍详情"]
+  Switch -->|"获取失败：换源未完成"| Reader
+  Reader -.->|"退出请求"| Save("内部：停止朗读并保存位置")
+  Save -.-> Saved{"退出保存成功？"}
+  Saved -->|"是"| Origin["原入口"]
+  Saved -->|"否"| ExitDialog["退出保存失败弹窗"]
+  ExitDialog -.->|"重试退出"| Save
+  ExitDialog -->|"继续／取消"| Reader
+  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;
+  class Load,Fault,Save internal;
+```
 
 已有状态：分页正文、连续正文、正文失败、换源未完成、图像 fragment 缺像素。
 
@@ -1100,7 +1858,41 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[ReadingSurface.ets:346](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReadingSurface.ets:346)、[ReadingSurface.ets:395](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReadingSurface.ets:395)、[ReaderLayoutGeometry.ts:238](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts:238)、[ReaderAppearanceState.ts:87](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderAppearanceState.ts:87)、[ReaderAppearanceState.ts:157](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderAppearanceState.ts:157)、[ReaderTypography.ets:102](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/common/ReaderTypography.ets:102)、[ReaderPageGestureState.ts:55](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderPageGestureState.ts:55)、[LocalReadingExperience.ets:13862](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/LocalReadingExperience.ets:13862)。
 
+<a id="route-directory"></a>
+
 #### 完整目录（directory）
+
+**入口与动作路线**
+
+完整目录首次选章或当前章直接进入阅读壳，已有会话跨章才保留目录待目标提交；无效书签与失败反馈留原目录。
+
+```mermaid
+flowchart TD
+  Detail["书籍详情"] -->|"完整目录"| Directory["完整目录：目录／书签"]
+  Directory -->|"收起／返回"| Detail
+  Directory -->|"选章：首次阅读／当前已提交章"| Reader["阅读页：原位读取或显示正文"]
+  Directory -.->|"已有会话：选择其他章／跨章锚点"| Target("内部：读取目标并保存位置")
+  Directory -->|"有效书签：首次／当前章定位"| Reader
+  Target -.-> Committed{"目标提交成功？"}
+  Committed -->|"是"| Reader
+  Committed -.->|"否"| Failure("原位：保留目录与原页")
+  Failure -.->|"重试／重选"| Directory
+  Directory -.->|"书签位置无效"| Failure
+  Directory -.->|"加载书签"| BookmarkState("原位：加载／空／失败")
+  BookmarkState -.->|"重试／切目录"| Directory
+  Directory -->|"换源"| Switch["换源窗口"]
+  Switch -->|"已入架提交成功"| Reader
+  Switch -->|"未入架预览成功"| Detail
+  Switch -->|"获取失败：换源未完成"| Reader
+  Switch -->|"普通关闭"| Directory
+  Directory -->|"更多"| Menu["离线菜单"]
+  Menu -->|"关闭"| Directory
+  Directory -.->|"章节下载／书签动作"| Mutation("内部：写入并回读事实")
+  Mutation -.-> Projection("原位：目录行更新")
+  Projection -.-> Directory
+  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;
+  class Target,Failure,BookmarkState,Mutation,Projection internal;
+```
 
 已有状态：章节、书签、层级目录、已下载行、书签为空。
 
@@ -1132,7 +1924,41 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[ReaderFullDirectory.ets:121](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderFullDirectory.ets:121)、[ReaderFullDirectory.ets:360](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderFullDirectory.ets:360)、[FullDirectoryPanel.ets:425](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/FullDirectoryPanel.ets:425)、[FullDirectoryPanel.ets:1401](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/FullDirectoryPanel.ets:1401)、[FullDirectoryPanel.ets:857](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/FullDirectoryPanel.ets:857)、[ReaderDirectoryChapterRow.ets:29](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderDirectoryChapterRow.ets:29)、[ReaderBookmarkRow.ets:41](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderBookmarkRow.ets:41)、[ReaderBookmarkEmptyState.ets:18](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderBookmarkEmptyState.ets:18)、[Index.ets:4196](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:4196)。
 
+<a id="route-reader-controls"></a>
+
 #### 阅读控制首页（reader-controls）
+
+**入口与动作路线**
+
+阅读控制首页承接七个阅读模块与更多、换源入口；模块返回和原位动作不建立新的主页面。
+
+```mermaid
+flowchart TD
+  Reader["阅读正文"] -->|"中部点击"| Home["阅读控制首页"]
+  Home -->|"返回／关闭"| Reader
+  Home -->|"目录"| Directory["目录模块"]
+  Home -->|"朗读"| Tts["朗读模块"]
+  Home -->|"界面"| Appearance["界面模块"]
+  Home -->|"设置"| Settings["阅读设置模块"]
+  Home -->|"搜索"| Search["正文搜索模块"]
+  Home -->|"自动翻页"| AutoPage["自动翻页模块"]
+  Home -->|"替换"| Replace["替换规则模块"]
+  Directory -->|"Quick返回／重复激活"| Home
+  Tts -->|"Quick返回／重复激活"| Home
+  Appearance -->|"Quick返回／重复激活"| Home
+  Settings -->|"Quick返回／重复激活"| Home
+  Search -->|"Quick返回"| Home
+  AutoPage -->|"Quick返回"| Home
+  Replace -->|"Quick返回"| Home
+  Home -->|"更多"| More["阅读更多菜单"]
+  More -->|"关闭"| Home
+  Home -->|"远程换源"| Switch["换源窗口"]
+  Switch -->|"普通关闭"| Home
+  Home -.->|"换章／进度／亮度"| LocalAction("内部：处理并原位回读")
+  LocalAction -.-> Home
+  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;
+  class LocalAction internal;
+```
 
 已有状态：首页、本地书：换源禁用。
 
@@ -1169,7 +1995,39 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[ReaderLayoutGeometry.ts:309](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts:309)、[ReaderControlMotionGeometry.ts:103](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts:103)、[ReaderControlPanel.ets:669](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:669)、[ReaderControlPanel.ets:834](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:834)、[ReaderControlPanel.ets:1460](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:1460)、[LocalReadingExperience.ets:6106](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/LocalReadingExperience.ets:6106)、[ReaderControlSessionState.ts:223](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlSessionState.ts:223)、[ReaderControlGeometry.ts:9](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlGeometry.ts:9)、[ReaderControlPanel.ets:1568](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:1568)、[ReaderControlPanel.ets:1867](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:1867)。
 
+<a id="route-reader-directory"></a>
+
 #### 控制栏目录与书签（reader-directory）
+
+**入口与动作路线**
+
+阅读目录的 Quick／Full 是同一模块，返回逐级收回，目标失败保留原形态与位置。
+
+```mermaid
+flowchart TD
+  Home["阅读控制首页"] -->|"目录"| Quick["目录模块 Quick"]
+  Quick -->|"展开"| Full["目录模块 Full"]
+  Full -->|"收起／返回"| Quick
+  Quick -->|"返回／重复激活"| Home
+  Quick -.->|"选章／书签"| Target("内部：读取目标并保存位置")
+  Full -.->|"选章／书签"| Target
+  Target -.-> Committed{"目标提交成功？"}
+  Committed -->|"是：关闭控制层"| Reader["阅读正文"]
+  Committed -.->|"否"| Failure["跳转失败弹窗"]
+  Failure -.->|"重试原目标"| Target
+  Failure -->|"关闭提示"| Form{"原形态 Full？"}
+  Form -->|"是"| Full
+  Form -->|"否"| Quick
+  Quick -.->|"书签加载"| BookmarkState("原位：加载／空／失败")
+  Full -.->|"书签加载"| BookmarkState
+  BookmarkState -.->|"反馈仍在原模块"| Form
+  Full -.->|"下载／书签写入"| Mutation
+  Quick -.->|"行下载／书签动作"| Mutation("内部：异步写入与回读")
+  Mutation -.-> RowState("原位：行状态")
+  RowState -.->|"保留原形态"| Form
+  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;
+  class Target,BookmarkState,Mutation,RowState internal;
+```
 
 已有状态：快捷目录、完整目录模块、完整书签、书签为空、书签失败。
 
@@ -1208,7 +2066,38 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[ReaderLayoutGeometry.ts:309](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts:309)、[ReaderControlMotionGeometry.ts:103](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts:103)、[ReaderControlPanel.ets:669](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:669)、[ReaderControlPanel.ets:834](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:834)、[ReaderControlPanel.ets:1460](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:1460)、[LocalReadingExperience.ets:6106](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/LocalReadingExperience.ets:6106)、[ReaderControlSessionState.ts:223](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlSessionState.ts:223)、[ReaderControlDirectoryContent.ets:276](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets:276)、[ReaderControlDirectoryContent.ets:390](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets:390)、[ReaderControlDirectoryContent.ets:437](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets:437)、[ReaderControlBookmarkGeometry.ts:22](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlBookmarkGeometry.ts:22)、[ReaderDirectoryChapterRow.ets:29](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderDirectoryChapterRow.ets:29)。
 
+<a id="route-reader-tts"></a>
+
 #### 朗读（reader-tts）
+
+**入口与动作路线**
+
+朗读在原模块配置与反馈，启动停止自动翻页并等待真实回调，成功收进阅读页会话胶囊。
+
+```mermaid
+flowchart TD
+  Home["阅读控制首页"] -->|"朗读"| Module["朗读模块 Quick／Full"]
+  Module -->|"展开／收起"| Module
+  Module -->|"Quick返回"| Home
+  Module -->|"Full配置行"| Choices["朗读配置选项"]
+  Choices -->|"选择成功／关闭"| Module
+  Module -->|"在线服务信息"| Manager["第三方 TTS 配置"]
+  Manager -->|"保存成功／取消"| Module
+  Module -->|"播放"| Available{"引擎与音色可用？"}
+  Available -.->|"未配置：播放禁用"| Feedback
+  Available -.->|"可用"| StopAuto("内部：停止自动翻页并准备朗读")
+  StopAuto -.-> Started{"真实朗读已开始？"}
+  Started -->|"是"| Capsule["阅读页会话胶囊"]
+  Started -.->|"失败"| Feedback("原位：朗读卡状态与错误")
+  Feedback -.->|"重试"| Module
+  Capsule -->|"打开控制层"| Module
+  Capsule -->|"暂停／继续"| Capsule
+  Capsule -->|"停止"| Reader["阅读正文"]
+  Module -.->|"停止：原模块回读"| Module
+  Module -->|"关闭控制层"| Reader
+  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;
+  class StopAuto,Feedback internal;
+```
 
 已有状态：快捷、完整、朗读中、已暂停、播放失败、在线 TTS 尚未配置、在线 TTS 已配置。
 
@@ -1252,7 +2141,31 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[ReaderLayoutGeometry.ts:309](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts:309)、[ReaderControlMotionGeometry.ts:103](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts:103)、[ReaderControlPanel.ets:669](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:669)、[ReaderControlPanel.ets:834](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:834)、[ReaderControlPanel.ets:1460](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:1460)、[LocalReadingExperience.ets:6106](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/LocalReadingExperience.ets:6106)、[ReaderControlSessionState.ts:223](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlSessionState.ts:223)、[ReaderControlPlaybackGeometry.ts:46](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts:46)、[ReaderControlTtsContent.ets:551](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlTtsContent.ets:551)、[ReaderControlTtsContent.ets:614](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlTtsContent.ets:614)、[ReaderControlTtsContent.ets:675](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlTtsContent.ets:675)、[ReaderControlTtsContent.ets:830](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlTtsContent.ets:830)、[ReaderControlTtsContent.ets:1097](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlTtsContent.ets:1097)、[ReaderTtsState.ts:5](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderTtsState.ts:5)、[ReaderTtsPreferencesState.ts:39](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts:39)、[LocalReadingExperience.ets:7879](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/LocalReadingExperience.ets:7879)。
 
+<a id="route-reader-tts-config"></a>
+
 #### 朗读配置选项（reader-tts-config）
+
+**入口与动作路线**
+
+配置选项是完整朗读模块的临时层，选择失败留层，关闭或进入管理都终止试听。
+
+```mermaid
+flowchart TD
+  Module["完整朗读模块"] -->|"配置行"| Choices["音色／引擎／语言／失败策略"]
+  Choices -.->|"试听"| Audition("内部：试听并核对当前身份")
+  Audition -.->|"停止／错误原位"| Choices
+  Choices -.->|"选择"| Choose("内部：停止试听并提交选项")
+  Choose -.-> Applied{"选项应用成功？"}
+  Applied -->|"是：关闭选择层"| Module
+  Applied -.->|"否"| Feedback("原位：选项层错误")
+  Feedback -.->|"保留并重选"| Choices
+  Choices -->|"管理在线 TTS"| Manager["第三方 TTS 配置"]
+  Manager -->|"保存／取消"| Module
+  Choices -.->|"关闭／返回"| Stop("内部：终止当前试听")
+  Stop -.-> Module
+  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;
+  class Audition,Choose,Feedback,Stop internal;
+```
 
 已有状态：系统音色、无系统音色、在线服务提供音色、语音引擎、朗读语言、不可用处理。
 
@@ -1280,7 +2193,31 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[ReaderControlTtsContent.ets:174](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlTtsContent.ets:174)、[ReaderControlTtsContent.ets:421](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlTtsContent.ets:421)、[ReaderTtsConfigOverlay.ets:75](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets:75)、[ReaderTtsConfigOverlay.ets:196](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets:196)、[ReaderTtsConfigOverlay.ets:242](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets:242)、[ReaderTtsConfigOptions.ts:23](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderTtsConfigOptions.ts:23)。
 
+<a id="route-reader-tts-manager"></a>
+
 #### 第三方 TTS 配置（reader-tts-manager）
+
+**入口与动作路线**
+
+在线 TTS 配置窗口由完整朗读或选项层打开，保存中禁止关闭，失败保留草稿，结束回完整朗读。
+
+```mermaid
+flowchart TD
+  Module["完整朗读模块"] -->|"服务信息"| Manager["第三方 TTS 配置窗口"]
+  Choices["朗读配置选项"] -->|"管理在线 TTS"| Manager
+  Manager -->|"保存"| Valid{"草稿有效？"}
+  Valid -.->|"否"| Feedback("原位：错误与草稿")
+  Feedback -.->|"修改／重试"| Manager
+  Valid -.->|"是"| Save("内部：提交配置：关闭受限")
+  Save -.-> Applied{"保存成功？"}
+  Applied -->|"是：关闭窗口"| Module
+  Applied -.->|"否"| Feedback
+  Manager -->|"取消／返回"| Busy{"正在保存？"}
+  Busy -->|"否"| Module
+  Busy -->|"是：留在窗口"| Manager
+  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;
+  class Save,Feedback internal;
+```
 
 已有状态：新增服务、编辑已有服务、原位保存错误、保存中。
 
@@ -1308,7 +2245,34 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[ReaderControlTtsContent.ets:430](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlTtsContent.ets:430)、[ReaderTtsConfigOverlay.ets:52](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets:52)、[ReaderTtsConfigOverlay.ets:75](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets:75)、[ReaderTtsConfigOverlay.ets:118](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets:118)、[ReaderTtsConfigOverlay.ets:271](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets:271)、[ReaderTtsConfigOverlay.ets:344](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets:344)。
 
+<a id="route-reader-appearance"></a>
+
 #### 阅读界面（reader-appearance）
+
+**入口与动作路线**
+
+界面模块即时应用主题、字体和排版，Full 提供导入与选择层；保存失败提示但保留已接受效果。
+
+```mermaid
+flowchart TD
+  Home["阅读控制首页"] -->|"界面"| Module["界面模块 Quick／Full"]
+  Module -->|"展开／收起"| Module
+  Module -->|"Quick返回／重复激活"| Home
+  Module -.->|"Quick：主题／字体"| Apply("内部：即时应用并保留阅读锚点")
+  Module -.->|"Full：主题／字体／排版"| Apply
+  Module -->|"Full：缩进／简繁"| Choice["临时选择层"]
+  Choice -->|"选择／关闭"| Module
+  Module -->|"Full：导入字体"| Picker["系统文件选择器"]
+  Picker -.->|"选文件"| Prepare("内部：验证并注册字体")
+  Picker -->|"取消"| Module
+  Prepare -.->|"成功／失败原位"| Module
+  Apply -.-> Save("内部：异步保存外观")
+  Save -.->|"失败"| Feedback("原位：提示：保留当前效果")
+  Save -.->|"确认"| Module
+  Feedback -.->|"继续设置"| Module
+  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;
+  class Apply,Prepare,Save,Feedback internal;
+```
 
 已有状态：快捷、完整。
 
@@ -1348,7 +2312,34 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[ReaderLayoutGeometry.ts:309](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts:309)、[ReaderControlMotionGeometry.ts:103](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts:103)、[ReaderControlPanel.ets:669](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:669)、[ReaderControlPanel.ets:834](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:834)、[ReaderControlPanel.ets:1460](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:1460)、[LocalReadingExperience.ets:6106](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/LocalReadingExperience.ets:6106)、[ReaderControlSessionState.ts:223](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlSessionState.ts:223)、[ReaderControlAppearanceGeometry.ts:60](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts:60)、[ReaderControlAppearanceGeometry.ts:115](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts:115)、[ReaderControlAppearanceContent.ets:356](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets:356)、[ReaderControlAppearanceContent.ets:434](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets:434)、[ReaderControlAppearanceContent.ets:583](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets:583)、[ReaderControlAppearanceContent.ets:729](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets:729)、[ReaderControlAppearanceContent.ets:913](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets:913)。
 
+<a id="route-reader-settings"></a>
+
 #### 阅读设置（reader-settings）
+
+**入口与动作路线**
+
+阅读设置保留模块形态，能力不足或进度预存失败拒绝切换，保存失败恢复已确认设置并原位提示。
+
+```mermaid
+flowchart TD
+  Home["阅读控制首页"] -->|"设置"| Module["阅读设置 Quick／Full"]
+  Module -->|"展开／收起"| Module
+  Module -->|"Quick返回／重复激活"| Home
+  Module -.->|"屏幕／翻页设置"| Guard{"目标能力与进度可用？"}
+  Module -.->|"Full：详细开关"| Guard
+  Guard -.->|"连续转分页"| Progress("内部：先保存当前锚点")
+  Progress -.->|"成功"| Save("内部：应用并保存设置")
+  Progress -.->|"失败"| Feedback("原位：提示：保留原设置")
+  Guard -.->|"可用／无需预存"| Save
+  Guard -.->|"能力不可用"| Feedback
+  Save -.-> Confirmed{"保存成功？"}
+  Confirmed -.->|"是：回读原模块"| Module
+  Confirmed -.->|"否"| Restore("内部：恢复已确认设置")
+  Restore -.-> Feedback
+  Feedback -.->|"重试／继续"| Module
+  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;
+  class Progress,Save,Feedback,Restore internal;
+```
 
 已有状态：快捷、完整。
 
@@ -1387,7 +2378,36 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[ReaderLayoutGeometry.ts:309](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts:309)、[ReaderControlMotionGeometry.ts:103](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts:103)、[ReaderControlPanel.ets:669](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:669)、[ReaderControlPanel.ets:834](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:834)、[ReaderControlPanel.ets:1460](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:1460)、[LocalReadingExperience.ets:6106](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/LocalReadingExperience.ets:6106)、[ReaderControlSessionState.ts:223](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlSessionState.ts:223)、[ReaderControlSettingsGeometry.ts:52](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlSettingsGeometry.ts:52)、[ReaderControlSettingsContent.ets:170](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets:170)、[ReaderControlSettingsContent.ets:245](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets:245)、[ReaderSettingsState.ts:123](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderSettingsState.ts:123)。
 
+<a id="route-reader-search"></a>
+
 #### 内容搜索（reader-search）
+
+**入口与动作路线**
+
+正文查询、结果与加载更多均留在搜索模块，结果定位提交成功才回阅读，失败保留原位置。
+
+```mermaid
+flowchart TD
+  Home["阅读控制首页"] -->|"搜索"| Quick["正文搜索 Quick"]
+  Quick -->|"展开"| Full["正文搜索 Full"]
+  Full -->|"收起／返回"| Quick
+  Quick -->|"返回"| Home
+  Quick -.->|"提交查询"| Query("内部：按阅读身份查询正文")
+  Full -.->|"提交查询"| Query
+  Query -.-> Results{"有可用结果？"}
+  Results -.->|"有"| Rows("原位：结果列表")
+  Results -.->|"空／失败"| Feedback("原位：空态或错误")
+  Feedback -.->|"新查询／重试"| Query
+  Rows -.->|"加载更多"| Query
+  Rows -.->|"选择结果"| Locate("内部：读取目标并保存锚点")
+  Locate -.-> Ready{"跳转提交成功？"}
+  Ready -->|"是：关闭控制层"| Reader["阅读正文"]
+  Ready -->|"否：保留原位置"| JumpDialog["跳转失败弹窗"]
+  JumpDialog -.->|"重试原目标"| Locate
+  JumpDialog -.->|"关闭提示：保留结果"| Rows
+  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;
+  class Query,Rows,Feedback,Locate internal;
+```
 
 已有状态：快捷、完整、结果、搜索中、无结果、搜索失败。
 
@@ -1426,7 +2446,37 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[ReaderLayoutGeometry.ts:309](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts:309)、[ReaderControlMotionGeometry.ts:103](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts:103)、[ReaderControlPanel.ets:669](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:669)、[ReaderControlPanel.ets:834](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:834)、[ReaderControlPanel.ets:1460](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:1460)、[LocalReadingExperience.ets:6106](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/LocalReadingExperience.ets:6106)、[ReaderControlSessionState.ts:223](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlSessionState.ts:223)、[ReaderControlSearchGeometry.ts:24](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlSearchGeometry.ts:24)、[ReaderControlSearchContent.ets:360](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlSearchContent.ets:360)、[ReaderControlSearchContent.ets:489](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlSearchContent.ets:489)、[ReaderControlSearchContent.ets:512](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlSearchContent.ets:512)、[LocalReadingExperience.ets:2233](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/LocalReadingExperience.ets:2233)。
 
+<a id="route-reader-autopage"></a>
+
 #### 自动翻页（reader-autopage）
+
+**入口与动作路线**
+
+自动翻页启动前确认朗读已停，运行留在阅读页胶囊，逐页提交，暂停保留剩余时间，停止回正文。
+
+```mermaid
+flowchart TD
+  Home["阅读控制首页"] -->|"自动翻页"| Module["自动翻页 Quick／Full"]
+  Module -->|"展开／收起"| Module
+  Module -->|"Quick返回"| Home
+  Module -.->|"配置定时／间隔"| Configure("内部：更新原有计时配置")
+  Configure -.-> Module
+  Module -.->|"开始／继续"| StopTts("内部：停止朗读并等待确认")
+  StopTts -.-> Stopped{"朗读已停止？"}
+  Stopped -.->|"否"| Feedback("原位：提示：不启动")
+  Feedback -.-> Module
+  Stopped -->|"是"| Capsule["阅读页自动翻页胶囊"]
+  Capsule -.->|"计时到期"| Turn("内部：提交一页并等待结果")
+  Turn -.->|"成功：继续计时"| Capsule
+  Turn -.->|"忙／准备：保留待翻页"| Turn
+  Turn -.->|"正文失败／末尾"| Stop("内部：取消计时与待提交")
+  Capsule -->|"暂停／继续"| Capsule
+  Capsule -.->|"停止"| Stop
+  Stop -.-> Reader["阅读正文"]
+  Capsule -->|"打开控制层"| Module
+  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;
+  class Configure,StopTts,Feedback,Turn,Stop internal;
+```
 
 已有状态：快捷、完整、运行中、已暂停。
 
@@ -1465,7 +2515,40 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[ReaderLayoutGeometry.ts:309](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts:309)、[ReaderControlMotionGeometry.ts:103](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts:103)、[ReaderControlPanel.ets:669](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:669)、[ReaderControlPanel.ets:834](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:834)、[ReaderControlPanel.ets:1460](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:1460)、[LocalReadingExperience.ets:6106](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/LocalReadingExperience.ets:6106)、[ReaderControlSessionState.ts:223](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlSessionState.ts:223)、[ReaderAutoPageFullState.ts:8](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderAutoPageFullState.ts:8)、[ReaderAutoPageMotionGeometry.ts:14](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderAutoPageMotionGeometry.ts:14)、[ReaderControlAutoPageContent.ets:303](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets:303)、[ReaderControlAutoPageContent.ets:428](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets:428)、[ReaderControlAutoPageContent.ets:512](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets:512)、[ReaderAutoPageCoordinator.ts:50](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderAutoPageCoordinator.ts:50)、[LocalReadingExperience.ets:8539](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/LocalReadingExperience.ets:8539)。
 
+<a id="route-reader-replace"></a>
+
 #### 替换规则（reader-replace）
+
+**入口与动作路线**
+
+替换规则的编辑、确认与预览都属于原模块，写入未知先回读，不跳独立规则管理页。
+
+```mermaid
+flowchart TD
+  Home["阅读控制首页"] -->|"替换"| Quick["替换规则 Quick"]
+  Quick -->|"展开"| Full["替换规则 Full"]
+  Full -->|"完成／返回"| Quick
+  Quick -->|"返回"| Home
+  Full -->|"新增／编辑"| Editor["规则编辑层"]
+  Editor -->|"取消"| Full
+  Full -->|"删除／导入"| Confirm["原模块确认层"]
+  Confirm -->|"取消"| Full
+  Editor -.->|"保存"| Mutation("内部：提交规则并核对结果")
+  Confirm -.->|"确认：导入需选文件"| Mutation
+  Quick -.->|"启用／停用"| Mutation
+  Mutation -.-> Known{"结果已确认？"}
+  Known -.->|"成功：回读规则"| Form{"原形态 Full？"}
+  Form -->|"是"| Full
+  Form -->|"否"| Quick
+  Known -.->|"失败／未知"| Feedback("原位：错误／回读核对")
+  Feedback -.->|"核对后保留形态"| Form
+  Full -->|"预览已保存规则"| Preview["当前章节预览层"]
+  Preview -->|"关闭"| Full
+  Full -->|"导出"| Export["系统保存位置"]
+  Export -->|"完成／取消"| Full
+  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;
+  class Mutation,Feedback internal;
+```
 
 已有状态：快捷、完整、新增编辑层、删除确认层、导入确认层、已保存规则预览、写入结果待核对。
 
@@ -1504,7 +2587,38 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[ReaderLayoutGeometry.ts:309](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts:309)、[ReaderControlMotionGeometry.ts:103](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts:103)、[ReaderControlPanel.ets:669](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:669)、[ReaderControlPanel.ets:834](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:834)、[ReaderControlPanel.ets:1460](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:1460)、[LocalReadingExperience.ets:6106](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/LocalReadingExperience.ets:6106)、[ReaderControlSessionState.ts:223](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlSessionState.ts:223)、[ReaderControlReplaceGeometry.ts:37](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts:37)、[ReaderControlReplaceContent.ets:283](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets:283)、[ReaderControlReplaceContent.ets:334](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets:334)、[ReaderControlReplaceContent.ets:459](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets:459)、[ReaderControlPanel.ets:1177](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:1177)、[LocalReadingExperience.ets:2246](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/LocalReadingExperience.ets:2246)。
 
+<a id="route-source-switch"></a>
+
 #### 换源窗口（source-switch）
+
+**入口与动作路线**
+
+未入架预览换源成功回详情，已入架提交成功回阅读；获取失败关窗到阅读原位，提交或事务核对失败留窗。
+
+```mermaid
+flowchart TD
+  Origin["详情／目录／阅读"] -->|"远程换源"| Window["换源窗口"]
+  Window -.->|"发现候选"| Discover("内部：查询启用书源")
+  Discover -.-> CandidateState("原位：候选／空／发现失败")
+  CandidateState -.->|"显示候选／重新选择"| Window
+  CandidateState -.->|"重试发现"| Discover
+  Window -->|"直接选目标"| Shelved{"已加入书架？"}
+  Shelved -.->|"否"| Preview("内部：获取候选详情")
+  Preview -->|"成功：关窗，保留返回来源"| Detail["书籍详情"]
+  Preview -->|"获取失败：关窗，换源未完成"| Reader["阅读页"]
+  Shelved -.->|"是"| Work("内部：取目录、匹配并提交")
+  Work -.-> Outcome{"获取／提交结果？"}
+  Outcome -->|"提交成功：直接关窗"| Reader
+  Outcome -->|"获取失败：关窗，换源未完成"| Reader
+  Outcome -.->|"提交／核对失败：留窗"| Failure("原位：提交失败与事务状态")
+  Failure -.->|"待撤销事务：关闭受限"| Rollback("内部：撤销或核对事务")
+  Rollback -->|"撤销完成：关窗恢复"| Reader
+  Rollback -.->|"失败：保留事务与窗口"| Failure
+  Failure -->|"无待撤销事务：普通关闭"| Origin
+  Window -->|"未切换：普通关闭"| Origin
+  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;
+  class Discover,CandidateState,Preview,Work,Failure,Rollback internal;
+```
 
 已有状态：候选列表、搜索中、正在切换、没有候选、搜索失败、获取失败、事务失败可撤销。
 
@@ -1532,7 +2646,36 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[SourceSwitchWindow.ets:92](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceSwitchWindow.ets:92)、[SourceSwitchWindow.ets:130](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceSwitchWindow.ets:130)、[SourceSwitchWindow.ets:243](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceSwitchWindow.ets:243)、[SourceSwitchWindow.ets:477](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/SourceSwitchWindow.ets:477)、[CandidateRow.ets:36](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/source/CandidateRow.ets:36)、[Index.ets:5136](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:5136)、[Index.ets:5451](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:5451)。
 
+<a id="route-reader-more"></a>
+
 #### 阅读更多菜单（reader-more）
+
+**入口与动作路线**
+
+更多动作先关菜单；书籍信息需串行保存退出后回详情，刷新与下载仍在原阅读身份下处理与反馈。
+
+```mermaid
+flowchart TD
+  Controls["阅读控制层"] -->|"更多"| Menu["阅读更多菜单"]
+  Menu -->|"关闭／返回"| Controls
+  Menu -.->|"书籍信息：先关菜单"| ExitSave("内部：停止朗读并保存退出位置")
+  ExitSave -.-> Exited{"退出保存成功？"}
+  Exited -->|"是：打开本书信息"| Detail["书籍详情"]
+  Exited -->|"否"| ExitFailure["阅读进度尚未保存"]
+  ExitFailure -.->|"重试退出"| ExitSave
+  ExitFailure -->|"继续／取消：撤销信息目标"| Reader["阅读正文"]
+  Menu -.->|"刷新本章：先关菜单"| Refresh("内部：保留原页并刷新")
+  Refresh -.-> Ready{"刷新成功？"}
+  Ready -->|"是：仍在原章"| Reader
+  Ready -->|"否"| Failure["刷新本章失败弹窗"]
+  Failure -.->|"重试"| Refresh
+  Failure -->|"关闭提示"| Reader
+  Menu -.->|"下载全部章节：先关菜单"| Download("内部：原整书下载队列")
+  Download -.-> Feedback("原位：Toast 与目录行状态")
+  Feedback -.->|"结果仍在阅读"| Reader
+  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;
+  class ExitSave,Refresh,Download,Feedback internal;
+```
 
 已有状态：可用动作、离线操作忙碌。
 
@@ -1557,7 +2700,30 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[ReaderControlPanel.ets:1021](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:1021)、[ReaderControlPanel.ets:1075](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:1075)、[ReaderControlPanel.ets:1531](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderControlPanel.ets:1531)。
 
+<a id="route-directory-offline-menu"></a>
+
 #### 完整目录离线菜单（directory-offline-menu）
+
+**入口与动作路线**
+
+离线菜单只连接整书下载与系统清除确认，反馈回原目录，没有下载中心或暂停、取消页面。
+
+```mermaid
+flowchart TD
+  Directory["完整目录"] -->|"更多"| Menu["目录离线菜单"]
+  Menu -->|"关闭／返回"| Directory
+  Menu -->|"操作"| Allowed{"远程且无冲突操作？"}
+  Allowed -->|"否：不提交"| Directory
+  Allowed -.->|"下载整书：先关菜单"| Download("内部：原整书下载队列")
+  Download -.-> Feedback("原位：Toast 与目录行回读")
+  Feedback -.->|"留在原目录"| Directory
+  Allowed -->|"清除离线：先关菜单"| Confirm["清除本书离线确认"]
+  Confirm -->|"取消"| Directory
+  Confirm -.->|"清除"| Clear("内部：清除并回读离线事实")
+  Clear -.->|"完成／失败反馈"| Directory
+  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;
+  class Download,Feedback,Clear internal;
+```
 
 已有状态：菜单。
 
@@ -1581,7 +2747,29 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[ReaderFullDirectory.ets:269](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderFullDirectory.ets:269)、[ReaderFullDirectory.ets:375](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ReaderFullDirectory.ets:375)、[Index.ets:3532](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:3532)、[Index.ets:3634](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:3634)。
 
+<a id="route-offline-clear"></a>
+
 #### 清除离线确认（offline-clear）
+
+**入口与动作路线**
+
+取消确认不写入，清除只处理本书离线内容，成功回读目录，失败留在原目录并提示。
+
+```mermaid
+flowchart TD
+  Directory["完整目录"] -->|"离线菜单清除"| Confirm["清除本书离线确认"]
+  Confirm -->|"取消／关闭"| Directory
+  Confirm -->|"清除"| Allowed{"远程且无进行中操作？"}
+  Allowed -->|"否：不写入"| Directory
+  Allowed -.->|"是"| Clear("内部：清除正文与图片缓存")
+  Clear -.-> Cleared{"清除成功？"}
+  Cleared -.->|"是"| Projection("原位：目录离线行改为未缓存")
+  Projection -.-> Directory
+  Cleared -.->|"否"| Failure["清除离线失败弹窗"]
+  Failure -.->|"留原目录"| Directory
+  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;
+  class Clear,Projection internal;
+```
 
 已有状态：确认。
 
@@ -1605,7 +2793,26 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[Index.ets:3634](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/Index.ets:3634)。
 
+<a id="route-reader-exit-failure"></a>
+
 #### 退出保存失败（reader-exit-failure）
+
+**入口与动作路线**
+
+退出保存失败弹窗保留原阅读位置，重试成功才退出，继续或取消同时撤销待返回目标。
+
+```mermaid
+flowchart TD
+  Reader["阅读正文与当前位置"] -.->|"退出请求"| Save("内部：停止朗读并保存进度")
+  Save -.-> Saved{"退出保存成功？"}
+  Saved -->|"是"| Origin["原入口"]
+  Saved -->|"否"| Dialog["阅读进度尚未保存"]
+  Dialog -.->|"重试保存并退出"| Save
+  Dialog -.->|"继续／取消"| Continue("内部：取消待退出目标并恢复计时")
+  Continue -.->|"保留原阅读位置"| Reader
+  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;
+  class Save,Continue internal;
+```
 
 已有状态：保存失败。
 
@@ -1629,7 +2836,27 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 来源：[LocalReadingExperience.ets:6209](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/LocalReadingExperience.ets:6209)。
 
+<a id="route-reader-refresh-failure"></a>
+
 #### 刷新与跳转失败（reader-refresh-failure）
+
+**入口与动作路线**
+
+刷新或跳转失败不改变原位置，重试核对原目标身份，关闭提示后可在原上下文重新选择。
+
+```mermaid
+flowchart TD
+  Context["原阅读／控制模块"] -.->|"刷新／跳转"| Target("内部：读取原目标并提交")
+  Target -.-> Committed{"目标提交成功？"}
+  Committed -->|"是"| Reader["阅读正文"]
+  Committed -->|"否：保留原位置"| Dialog["刷新／跳转失败弹窗"]
+  Dialog -->|"关闭提示"| Context
+  Dialog -->|"重试"| Current{"原目标身份仍有效？"}
+  Current -.->|"是：携原锚点"| Target
+  Current -->|"否：不执行过期请求"| Context
+  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;
+  class Target internal;
+```
 
 已有状态：刷新失败、跳转失败。
 
@@ -1939,6 +3166,6 @@ ReaderDialogSurface 统一的是弹窗框架，未成为所有加载、错误、
 
 系统弹窗与键盘比较动作、文案和恢复逻辑，自绘界面比较几何/资产/主题/排版。减少动态效果只取消非必要空间运动，不能跳过业务回执。字体回退及原生文字引擎导致的差异必须记录并校准；不能用浏览器截图通过代替两端“原样还原”验收。
 
-重新生成参数/逻辑稿/浏览器bundle：在 Host 执行 `node docs/ui-design/app-baseline/build.mjs`；生成参考图执行 `node docs/ui-design/app-baseline/render-references.mjs`，复用本机已有 Playwright。生成器会拒绝缺页规格和无效源码引用。
+重新生成参数/逻辑稿/浏览器bundle：在 Host 执行 `node docs/ui-design/app-baseline/build.mjs`；生成参考图执行 `node docs/ui-design/app-baseline/render-references.mjs`，复用本机已有 Playwright。生成器会拒绝缺页规格、无效源码引用及缺少或重复的模块路线图。只更新逻辑稿路线、保持已交付 UI 参数与 bundle 时，执行 `node docs/ui-design/app-baseline/generate-delivery.mjs --logic-only`。
 
 <!-- delivery:end -->
