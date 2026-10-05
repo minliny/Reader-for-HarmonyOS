@@ -6,7 +6,6 @@ import { readerRecoveryView, type ReaderRecoveryView } from '../app/ReaderRecove
 import { ReaderRecoveryNotice } from '../features/common/ReaderRecoveryNotice';
 import { ReaderRecoveryAction } from '../features/common/ReaderRecoveryAction';
 import { MangaBookPresentation } from '../features/manga/MangaBookPresentation';
-import { readerDirectoryObserveMissingNavigation, readerDirectoryTakeMissingNavigation, backfillRetainedReaderDirectoryNavigation } from '../features/reading/ReaderDirectoryNavigation';
 import type { RemoteReadingPositionScope } from '../features/reading/RemoteReadingPositionMigration';
 import { FrameCallback } from '@kit.ArkUI';
 import { readerAppColor } from '../features/common/ReaderThemeRegistry';
@@ -20,8 +19,8 @@ import { BookshelfViewState } from '../features/bookshelf/BookshelfViewState';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
 import { ReaderStartupTrace } from '../app/ReaderStartupTrace';
 import { ReaderSystemFileOpenNavigationHost, type SystemFileOpenNavigationView, type SystemFileOpenReaderIdentity } from '../app/ReaderSystemFileOpenNavigationHost';
-import { errorMessageOf, isDomainResolutionFailure, isNetworkEnvironmentFailure } from '../app/ErrorMessage';
-import { diagnosticCodeOf } from '../app/LogPrivacy';
+import { errorMessageOf } from '../app/ErrorMessage';
+import { readingOfflineFailureHint } from '../features/reading/ReadingOfflineFailurePresentation';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
 import { readerContentSafeTop } from '../features/common/ReaderWindowMetrics';
 import type {
@@ -736,7 +735,8 @@ struct Index {
     if (this.sourceSwitchVisible) {
       // The detail/reading overlay must win over the route-specific exit
       // branch so Back only closes the source-switch panel.
-      this.sourceSwitchHost?.consumeBack(this.sourceSwitchScopeId);
+      if (this.detailBook?.contentKind === 'manga') this.closeSourceSwitch(this.sourceSwitchScopeId);
+      else this.sourceSwitchHost?.consumeBack(this.sourceSwitchScopeId);
       return true;
     }
     if (this.hasVisibleImportDialog()) {
@@ -2560,9 +2560,10 @@ struct Index {
     if (book === undefined || this.readingContentKind !== 'manga' || !this.readingSessionActive) {
       throw new Error('MANGA_SESSION_CANCELLED');
     }
-    const owner = ReaderRuntimeOwner.current();
+    const owner = this.mountedRuntimeOwner;
+    if (owner === undefined || !this.isCurrentRuntime(owner)) throw new Error('MANGA_SESSION_CANCELLED');
     const generation = this.navigationGeneration;
-    const current = (): boolean => generation === this.navigationGeneration && owner === ReaderRuntimeOwner.current() &&
+    const current = (): boolean => generation === this.navigationGeneration && this.isCurrentRuntime(owner) &&
       this.readingContentKind === 'manga' && this.readingSessionActive && this.detailBook?.sourceId === book.sourceId &&
       this.detailBook?.bookId === book.bookId;
     const task = (async (): Promise<void> => {
@@ -3675,10 +3676,16 @@ struct Index {
 
   private readingEntryLease(owner: ReaderRuntimeOwner): ReadingEntryLease {
     const generation = this.navigationGeneration, mounting = this.detailShelfAdmissionMount;
+    const host = this.readingEntryHost;
     const current = (): boolean => !this.shelfReceiptRetired && this.mountedRuntimeOwner === owner &&
       this.isCurrentRuntime(owner) && generation === this.navigationGeneration && mounting === this.detailShelfAdmissionMount;
     return { isCurrent: current,
-      projectionAllowed: (): boolean => current() && this.route === 'detail' && !this.readingSessionActive && !this.sourceSwitchVisible,
+      projectionAllowed: (): boolean => {
+        const book = host?.snapshot().book, shown = this.detailBook;
+        return current() && host !== undefined && this.readingEntryHost === host && this.route === 'detail' &&
+          !this.readingSessionActive && !this.sourceSwitchVisible && book !== undefined && shown !== undefined &&
+          book.sourceId === shown.sourceId && book.bookId === shown.bookId;
+      },
       currentDirectory: (): LocalReadingTocEntry[] => this.detailToc,
       offlineGeneration: (): number => this.offlineOperation?.generation ?? 0,
       membership: () => {
@@ -3788,7 +3795,7 @@ struct Index {
   }
 
   private mangaPositionProjectionCurrent(job: MangaPositionProjectionJob): boolean {
-    return job.generation === this.mangaProjectionGeneration && job.owner === ReaderRuntimeOwner.current() &&
+    return job.generation === this.mangaProjectionGeneration && this.isCurrentRuntime(job.owner) &&
       job.navigationGeneration === this.navigationGeneration && job.shelfGeneration === this.bookshelfLoadGeneration &&
       job.route === this.route && !this.readingSessionActive && !this.sourceSwitchVisible &&
       (job.route === 'bookshelf' || job.detailIdentity === (this.detailBook === undefined ? '' :
@@ -4069,7 +4076,17 @@ struct Index {
           this.showOfflineDownloadFeedback(this.offlineDownloadFeedback(session, progress, finished));
         }
       },
-      failed: (error: Error): void => { hilog.error(DOMAIN, 'Reader', 'Offline operation/projection: %{private}s', error.message); } };
+      failed: (error: Error): void => {
+        if (!current()) return;
+        if (readingOfflineFailureHint(error).length === 0) return;
+        const operation = this.offlineOperation;
+        if (operation?.projection.receipt.confirmation === 'unknown') {
+          this.showOfflineDownloadFeedback(operation.action === 'clear' ? '缓存清理结果尚未确认，请重试核对' : '下载结果尚未确认，请在目录中重试核对');
+        } else if (operation?.action === 'clear') {
+          this.showOfflineDownloadFeedback(`缓存清理未完成：${readingOfflineFailureHint(error)}`);
+        } else this.showChapterDownloadFailure(error);
+        hilog.error(DOMAIN, 'Reader', 'Offline operation/projection: %{private}s', error.message);
+      } };
   }
 
   private offlineDownloadFeedback(session: RemoteReadingSession, progress: ReadingOfflineBookProgress, finished: boolean): string {
@@ -4087,6 +4104,12 @@ struct Index {
       }
     } else if (finished) message += '，其余章节尚未完成';
     return message;
+  }
+
+  private showChapterDownloadFailure(error: Error): void {
+    const hint = readingOfflineFailureHint(error);
+    if (hint.length === 0) return;
+    this.showOfflineDownloadFeedback(error.message === 'MANGA_DOWNLOAD_PAUSED_RESUME_REQUIRED' ? hint : `本章下载失败：${hint}`);
   }
 
   private showOfflineDownloadFeedback(message: string): void {

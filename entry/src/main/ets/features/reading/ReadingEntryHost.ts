@@ -393,7 +393,8 @@ export class ReadingEntryHost {
           sourceName: book.sourceName, shelfSnapshot: snapshot, retainAdmissionThroughProbe: true }, lease);
         return;
       }
-      const contentKind = row.contentKind ?? book.contentKind;
+      // Cached metadata cannot change the content type admitted by this owner.
+      const contentKind = book.contentKind;
       const detail: ReadingBookDetail = { ...book, title: row.name ?? book.title, author: row.author ?? book.author,
         intro: row.intro ?? book.intro, coverUrl: row.coverUrl ?? book.coverUrl, kind: row.kind ?? book.kind,
         lastChapter: row.latestChapterTitle ?? book.lastChapter, contentKind,
