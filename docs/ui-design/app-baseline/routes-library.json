@@ -1,0 +1,46 @@
+{
+  "bookshelf": {
+    "diagram": "flowchart TD\n  Entry[\"应用启动／底部书架\"]\n  Shelf[\"书架\"]\n  Loaded{\"书架读取成功？\"}\n  Failure(\"原位：加载失败与重试\")\n  Search[\"搜索\"]\n  More[\"书架更多菜单\"]\n  Filter[\"书架内筛选模块\"]\n  Reader[\"阅读页\"]\n  Actions[\"书籍操作窗\"]\n  Settings[\"设置\"]\n  Entry --> Shelf\n  Shelf -.->|\"后台读取\"| Loaded\n  Loaded -.->|\"是：有书／空书架\"| Shelf\n  Loaded -.->|\"否：停留书架\"| Failure\n  Failure -.->|\"重试读取\"| Loaded\n  Shelf -->|\"搜索按钮／空态搜索\"| Search\n  Search -->|\"返回\"| Shelf\n  Shelf -->|\"右上更多\"| More\n  More -->|\"关闭菜单\"| Shelf\n  Shelf -->|\"展开筛选\"| Filter\n  Filter -->|\"收起筛选\"| Shelf\n  Shelf -->|\"点书／继续阅读\"| Reader\n  Reader -->|\"从书架发起阅读后返回\"| Shelf\n  Shelf -->|\"长按书／列表更多\"| Actions\n  Actions -->|\"关闭操作窗\"| Shelf\n  Shelf -->|\"设置导航\"| Settings\n  Settings -->|\"书架导航／返回\"| Shelf",
+    "summary": "书架是当前两项主导航的起点，加载、空态和失败由同一内容区承接，点书直接阅读，长按才打开书籍操作。"
+  },
+  "shelf-filter": {
+    "diagram": "flowchart TD\n  Shelf[\"书架\"]\n  Filter[\"同书架：筛选模块\"]\n  Read(\"内部：读取筛选投影\")\n  Match{\"有匹配书籍？\"}\n  List(\"原位：匹配列表\")\n  Empty(\"原位：无匹配提示\")\n  Failure(\"原位：书架加载失败\")\n  Shelf -->|\"筛选图标展开\"| Filter\n  Filter -->|\"再次点图标收起\"| Shelf\n  Filter -.->|\"阅读状态与类型取交集\"| Read\n  Read -.->|\"读取成功\"| Match\n  Match -.->|\"有\"| List\n  Match -.->|\"无\"| Empty\n  List -.->|\"只更新原书架列表\"| Shelf\n  Empty -.->|\"清除全部条件\"| Filter\n  Filter -.->|\"清除：恢复两组全部\"| Read\n  Read -.->|\"失败；保留书架位置\"| Failure\n  Failure -.->|\"重试读取\"| Read",
+    "summary": "筛选是在原书架展开的模块，阅读状态和书籍类型独立取交集，清除不改变分组，失败仍由书架内容区承接。"
+  },
+  "search": {
+    "diagram": "flowchart TD\n  Shelf[\"书架\"]\n  Search[\"搜索页\"]\n  Work(\"内部：本地与在线并行检索\")\n  HasResult{\"已有有效结果？\"}\n  Results(\"原位：流式结果列表\")\n  Empty(\"原位：无结果／停止后无结果\")\n  Failure(\"原位：搜索失败与重试\")\n  History(\"原位：历史失败提示\")\n  Detail[\"书籍详情\"]\n  Sources[\"书源管理\"]\n  Shelf -->|\"搜索入口\"| Search\n  Search -->|\"返回\"| Shelf\n  Search -.->|\"关键词／历史词提交\"| Work\n  Work -.->|\"返回结果或结束\"| HasResult\n  HasResult -.->|\"有：继续流式更新\"| Results\n  HasResult -.->|\"无且正常结束／停止\"| Empty\n  Work -.->|\"失败且没有有效结果\"| Failure\n  Work -.->|\"停止：保留已返回结果\"| Search\n  Results -.->|\"部分失败：保留成功分支\"| Results\n  Results -.->|\"重试失败分支／类别过滤\"| Search\n  Empty -.->|\"重新搜索\"| Work\n  Failure -.->|\"重新搜索\"| Work\n  Search -.->|\"历史读取／清空失败\"| History\n  History -.->|\"重试对应动作；清空失败保留历史\"| Search\n  Results -->|\"点书\"| Detail\n  Detail -->|\"返回：恢复查询与列表位置\"| Search\n  Search -->|\"添加／管理／检查书源\"| Sources\n  Sources -->|\"返回原搜索入口\"| Search",
+    "summary": "本地和在线结果在原搜索页流式呈现，停止或部分失败保留已返回结果，详情和书源管理返回搜索上下文，历史失败单独原位重试。"
+  },
+  "detail": {
+    "diagram": "flowchart TD\n  Shelf[\"书架\"]\n  Search[\"搜索页\"]\n  Detail[\"书籍详情\"]\n  Reader[\"阅读页\"]\n  Directory[\"完整目录\"]\n  Switch[\"换源窗口\"]\n  OnShelf{\"已在书架？\"}\n  Add(\"原位：加入／取消并读回\")\n  Remove[\"移除书架确认窗\"]\n  Feedback(\"原位：按钮结果／失败消息\")\n  Origin{\"详情原入口？\"}\n  Shelf -->|\"书籍操作中的书籍信息\"| Detail\n  Search -->|\"点搜索结果\"| Detail\n  Detail -->|\"开始／继续阅读；可读章节\"| Reader\n  Reader -->|\"详情发起阅读后返回\"| Detail\n  Detail -->|\"完整目录\"| Directory\n  Directory -->|\"返回\"| Detail\n  Directory -->|\"选择可读章节\"| Reader\n  Detail -->|\"在线书更换书源\"| Switch\n  Switch -->|\"关闭\"| Detail\n  Switch -.->|\"切换失败：原窗反馈，原书保留\"| Switch\n  Detail -.->|\"书架按钮\"| OnShelf\n  OnShelf -->|\"是：请求移除\"| Remove\n  Remove -->|\"取消\"| Detail\n  OnShelf -.->|\"否：加入；加入中可取消\"| Add\n  Add -.->|\"按实际读回事实更新\"| Feedback\n  Feedback -.->|\"仍在详情；失败可重试\"| Detail\n  Detail -->|\"返回\"| Origin\n  Origin -->|\"搜索\"| Search\n  Origin -->|\"书架\"| Shelf",
+    "summary": "详情可从书架书籍信息或搜索结果进入并退回原入口，阅读不等待目录检查，加入与取消原位读回，在线换源失败保留原书。"
+  },
+  "bookshelf-settings": {
+    "diagram": "flowchart TD\n  Shelf[\"书架\"]\n  Settings[\"设置\"]\n  Page[\"书架设置\"]\n  Save(\"内部：保存显示方式\")\n  Auto(\"内部：保存自动更新偏好\")\n  Saved{\"显示方式保存成功？\"}\n  Failure(\"同卡：回退已确认值与重试\")\n  Origin{\"进入来源？\"}\n  Shelf -->|\"更多菜单的书架设置\"| Page\n  Settings -->|\"书架与搜索入口\"| Page\n  Page -.->|\"封面／列表立即切换\"| Save\n  Save -.-> Saved\n  Saved -.->|\"是：确认当前方式\"| Page\n  Saved -.->|\"否：仍在同页\"| Failure\n  Failure -.->|\"点击错误重试请求值\"| Save\n  Page -.->|\"自动检查更新开关\"| Auto\n  Auto -.->|\"按原设置回调保存与反馈\"| Page\n  Page -->|\"返回\"| Origin\n  Origin -->|\"书架\"| Shelf\n  Origin -->|\"设置\"| Settings",
+    "summary": "书架设置记住书架或设置来源，显示方式乐观切换并异步保存，失败回到已确认值且在同一卡片重试。"
+  },
+  "multiselect": {
+    "diagram": "flowchart TD\n  Shelf[\"书架\"]\n  More[\"书架更多菜单\"]\n  Actions[\"书籍操作窗\"]\n  Multi[\"批量管理\"]\n  Load(\"内部：读入完整书架\")\n  Ready{\"读入完成且有选中？\"}\n  Confirm[\"批量移除确认窗\"]\n  Remove(\"原位：正在移除\")\n  Reload{\"失败后书架读回成功？\"}\n  Error[\"共用错误窗\"]\n  More -->|\"批量管理：无预选\"| Multi\n  Actions -->|\"多选：预选当前书\"| Multi\n  Multi -.->|\"进入时读取\"| Load\n  Load -.->|\"成功：允许选择／全选\"| Multi\n  Load -.->|\"失败：toast后回书架\"| Shelf\n  Multi -.->|\"移除按钮\"| Ready\n  Ready -.->|\"否：移除禁用\"| Multi\n  Ready -->|\"是\"| Confirm\n  Confirm -->|\"取消\"| Multi\n  Confirm -.->|\"确认一次\"| Remove\n  Remove -->|\"成功：回书架\"| Shelf\n  Remove -.->|\"失败：核对实际书架\"| Reload\n  Reload -->|\"是：回书架\"| Shelf\n  Reload -.->|\"是：提示未完全完成\"| Error\n  Reload -.->|\"否：留批量管理并提示失败\"| Error\n  Error -->|\"读回成功：知道了\"| Shelf\n  Error -->|\"读回失败：知道了\"| Multi\n  Multi -->|\"非移除中返回；可取消时取消\"| Shelf",
+    "summary": "批量管理先读入完整书架，确认后原位移除；失败读回成功则回书架提示未完全完成，读回也失败才留在批量管理。"
+  },
+  "shelf-more": {
+    "diagram": "flowchart TD\n  Shelf[\"书架\"]\n  Menu[\"锚定更多菜单\"]\n  Multi[\"批量管理\"]\n  Import[\"本地导入窗\"]\n  Settings[\"书架设置\"]\n  Allowed{\"有在线书且无检查任务？\"}\n  Work(\"后台：检查在线章节\")\n  Shelf -->|\"右上更多\"| Menu\n  Menu -->|\"透明背景点击／返回关闭\"| Shelf\n  Menu -->|\"收拢后批量管理\"| Multi\n  Multi -->|\"非移除中返回\"| Shelf\n  Menu -->|\"收拢后本地导入\"| Import\n  Import -->|\"取消／完成／系统返回\"| Shelf\n  Menu -->|\"收拢后书架设置\"| Settings\n  Settings -->|\"返回\"| Shelf\n  Menu -.->|\"检查更新\"| Allowed\n  Allowed -.->|\"否：原项禁用\"| Menu\n  Allowed -.->|\"是：提交检查\"| Work\n  Allowed -->|\"是：收拢菜单\"| Shelf\n  Work -.->|\"重新打开时显示同项进度\"| Menu\n  Work -.->|\"完成：刷新投影；失败保留书架并记录\"| Shelf",
+    "summary": "更多菜单提交动作后收拢，检查更新在后台执行，重新打开时由原菜单项显示进度；没有单独更新结果页面。"
+  },
+  "book-actions": {
+    "diagram": "flowchart TD\n  Shelf[\"书架\"]\n  Panel[\"书籍操作窗\"]\n  Close(\"内部：先关闭操作窗\")\n  Choice{\"所选操作？\"}\n  Multi[\"批量管理\"]\n  Detail[\"书籍详情\"]\n  Group[\"编辑分组窗\"]\n  Remove[\"移除书架确认窗\"]\n  Shelf -->|\"长按书／列表更多\"| Panel\n  Panel -->|\"关闭窗口：书架不变\"| Shelf\n  Panel -.->|\"点操作\"| Close\n  Close -.-> Choice\n  Choice -->|\"多选：预选当前书\"| Multi\n  Choice -->|\"书籍信息\"| Detail\n  Choice -->|\"编辑分组\"| Group\n  Choice -->|\"移除书架\"| Remove\n  Multi -->|\"非移除中返回\"| Shelf\n  Detail -->|\"返回\"| Shelf\n  Group -->|\"非保存中关闭\"| Shelf\n  Remove -->|\"取消\"| Shelf",
+    "summary": "长按或列表更多打开当前书籍操作窗，选择动作先关闭此窗，再进入多选、详情、默认分组选择或移除确认。"
+  },
+  "group-select": {
+    "diagram": "flowchart TD\n  Shelf[\"书架\"]\n  Actions[\"书籍操作窗\"]\n  Group[\"编辑分组窗\"]\n  Busy{\"正在保存？\"}\n  Save(\"内部：保存默认分组\")\n  Saved{\"保存成功？\"}\n  Toast(\"原窗：分组保存失败toast\")\n  Shelf -->|\"长按书／列表更多\"| Actions\n  Actions -->|\"关闭操作窗后编辑分组\"| Group\n  Group -.->|\"默认：清除项始终禁用\"| Save\n  Save -.-> Saved\n  Saved -->|\"是：关闭并刷新书架\"| Shelf\n  Saved -.->|\"否：窗口保留\"| Toast\n  Toast -.->|\"仍可重试默认分组\"| Group\n  Group -->|\"背景点击／返回\"| Busy\n  Busy -.->|\"是：阻止关闭\"| Group\n  Busy -->|\"否：关闭\"| Shelf",
+    "summary": "当前仅能选择默认分组，保存中阻止重复操作和关闭，成功关闭刷新书架，失败保留原窗并toast提示。"
+  },
+  "local-import": {
+    "diagram": "flowchart TD\n  Shelf[\"书架\"]\n  More[\"书架更多菜单\"]\n  Import[\"本地导入窗\"]\n  Picker[\"系统文件选择器\"]\n  Selected{\"选到文件？\"}\n  Work(\"同窗：正在导入\")\n  Result(\"同窗：逐文件真实结果\")\n  Failure(\"同窗：未完成提示；保留已保存书\")\n  Shelf -->|\"空态导入\"| Import\n  Shelf -->|\"更多\"| More\n  More -->|\"本地导入；收拢菜单\"| Import\n  Import -->|\"选择区／选择文件\"| Picker\n  Picker -->|\"返回选择结果\"| Selected\n  Selected -->|\"无：取消选择\"| Import\n  Selected -.->|\"有\"| Work\n  Work -.->|\"有效批次：成功／部分／失败／待确认\"| Result\n  Work -.->|\"批次取消：回选择状态\"| Import\n  Picker -.->|\"选择异常\"| Failure\n  Work -.->|\"异常：回选择状态\"| Failure\n  Failure -.->|\"原窗可重新选文件\"| Import\n  Import -->|\"显式取消／系统返回；背景点击不关闭\"| Shelf\n  Work -->|\"系统返回只关窗，已提交事实保留\"| Shelf\n  Result -->|\"完成／系统返回\"| Shelf",
+    "summary": "系统多选返回后在同一导入窗执行并显示逐文件结果，取消选择回原窗，异常回选择状态且保留已保存书籍，背景没有关闭动作。"
+  },
+  "book-removal": {
+    "diagram": "flowchart TD\n  Shelf[\"书架\"]\n  Search[\"搜索页\"]\n  Detail[\"书籍详情\"]\n  Multi[\"批量管理\"]\n  Confirm[\"移除书架确认窗\"]\n  Work(\"内部：单次移除并核对事实\")\n  Mode{\"移除入口？\"}\n  Reload{\"批量书架读回成功？\"}\n  Removed{\"单本已确认移除？\"}\n  Return(\"内部：详情退回原入口\")\n  Error[\"原底页的共用错误窗\"]\n  Shelf -->|\"书籍操作中的移除\"| Confirm\n  Detail -->|\"移除书架\"| Confirm\n  Multi -->|\"有选中时移除\"| Confirm\n  Confirm -->|\"取消：书架发起\"| Shelf\n  Confirm -->|\"取消：详情发起\"| Detail\n  Confirm -->|\"取消：批量发起\"| Multi\n  Confirm -.->|\"移除：先关闭并消费一次确认\"| Work\n  Work -.-> Mode\n  Mode -->|\"批量成功\"| Shelf\n  Mode -.->|\"批量失败：先读回\"| Reload\n  Reload -->|\"是：回书架\"| Shelf\n  Reload -.->|\"是：提示未完全完成\"| Error\n  Reload -.->|\"否：底页保留批量管理\"| Error\n  Mode -.->|\"单本\"| Removed\n  Removed -->|\"是：从书架发起\"| Shelf\n  Removed -.->|\"是：从详情发起\"| Return\n  Return -->|\"原入口为书架\"| Shelf\n  Return -->|\"原入口为搜索\"| Search\n  Removed -.->|\"否／无法核对：原底页保留\"| Error\n  Error -->|\"取消提示：仍在原底页或已读回的书架\"| Shelf\n  Error -->|\"单本未移除：知道了仍在详情\"| Detail\n  Error -->|\"批量读回失败：知道了仍在批量管理\"| Multi",
+    "summary": "移除确认只消费一次；取消回原底页，详情移除已确认后退回原入口，批量失败按读回结果决定回书架或保留批量管理。"
+  }
+}

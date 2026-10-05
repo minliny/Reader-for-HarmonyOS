@@ -1,0 +1,75 @@
+{
+  "reader": {
+    "diagram": "flowchart TD\n  Entry[\"书架／详情\"] -. \"打开阅读\" .-> Load[\"读取正文\"]\n  Load -.-> Ready{\"正文可用？\"}\n  Ready -->|\"是\"| Body[\"阅读正文\"]\n  Ready -. \"否\" .-> Fault[\"原位正文失败\"]\n  Fault -. \"重试\" .-> Load\n  Fault -->|\"阅读设置\"| Controls[\"阅读控制层\"]\n  Fault -->|\"远程换源\"| Switch[\"换源窗口\"]\n  Body -->|\"中部点击\"| Controls\n  Controls -->|\"关闭控制层\"| Body\n  Body -->|\"远程换源\"| Switch\n  Switch -->|\"完成／关闭\"| Body\n  Body -. \"退出请求\" .-> Save[\"停止朗读并保存位置\"]\n  Save -.-> Saved{\"退出保存成功？\"}\n  Saved -->|\"是\"| Origin[\"原入口\"]\n  Saved -->|\"否\"| ExitDialog[\"退出保存失败弹窗\"]\n  ExitDialog -. \"重试退出\" .-> Save\n  ExitDialog -->|\"继续／取消\"| Body\n  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;\n  class Load,Fault,Save internal;",
+    "summary": "本地与远程内容共用阅读页，正文失败原位重试，退出保存成功才返回原入口。"
+  },
+  "directory": {
+    "diagram": "flowchart TD\n  Detail[\"书籍详情\"] -->|\"完整目录\"| Directory[\"完整目录：目录／书签\"]\n  Directory -->|\"收起／返回\"| Detail\n  Directory -. \"选章节／书签\" .-> Target[\"读取目标并保存位置\"]\n  Target -.-> Committed{\"首屏提交成功？\"}\n  Committed -->|\"是\"| Reader[\"阅读正文\"]\n  Committed -. \"否\" .-> Failure[\"保留目录与原页\"]\n  Failure -. \"重试／重选\" .-> Directory\n  Directory -. \"加载书签\" .-> BookmarkState[\"原位加载／空／失败\"]\n  BookmarkState -. \"重试／切目录\"| Directory\n  Directory -->|\"换源\"| Switch[\"换源窗口\"]\n  Switch -->|\"成功\"| Reader\n  Switch -->|\"普通关闭\"| Directory\n  Directory -->|\"更多\"| Menu[\"离线菜单\"]\n  Menu -->|\"关闭\"| Directory\n  Directory -. \"章节下载／书签动作\" .-> Mutation[\"写入并回读事实\"]\n  Mutation -.-> Projection[\"原位目录行更新\"]\n  Projection -.-> Directory\n  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;\n  class Target,Failure,BookmarkState,Mutation,Projection internal;",
+    "summary": "独立完整目录从详情进入，选目标提交成功后去阅读，失败、书签与下载反馈保留原目录。"
+  },
+  "reader-controls": {
+    "diagram": "flowchart TD\n  Reader[\"阅读正文\"] -->|\"中部点击\"| Home[\"阅读控制首页\"]\n  Home -->|\"返回／关闭\"| Reader\n  Home -->|\"目录\"| Directory[\"目录模块\"]\n  Home -->|\"朗读\"| Tts[\"朗读模块\"]\n  Home -->|\"界面\"| Appearance[\"界面模块\"]\n  Home -->|\"设置\"| Settings[\"阅读设置模块\"]\n  Home -->|\"搜索\"| Search[\"正文搜索模块\"]\n  Home -->|\"自动翻页\"| AutoPage[\"自动翻页模块\"]\n  Home -->|\"替换\"| Replace[\"替换规则模块\"]\n  Directory -->|\"Quick返回／重复激活\"| Home\n  Tts -->|\"Quick返回／重复激活\"| Home\n  Appearance -->|\"Quick返回／重复激活\"| Home\n  Settings -->|\"Quick返回／重复激活\"| Home\n  Search -->|\"Quick返回\"| Home\n  AutoPage -->|\"Quick返回\"| Home\n  Replace -->|\"Quick返回\"| Home\n  Home -->|\"更多\"| More[\"阅读更多菜单\"]\n  More -->|\"关闭\"| Home\n  Home -->|\"远程换源\"| Switch[\"换源窗口\"]\n  Switch -->|\"普通关闭\"| Home\n  Home -. \"换章／进度／亮度\" .-> LocalAction[\"处理并原位回读\"]\n  LocalAction -.-> Home\n  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;\n  class LocalAction internal;",
+    "summary": "阅读控制首页承接七个阅读模块与更多、换源入口；模块返回和原位动作不建立新的主页面。"
+  },
+  "reader-directory": {
+    "diagram": "flowchart TD\n  Home[\"阅读控制首页\"] -->|\"目录\"| Quick[\"目录模块 Quick\"]\n  Quick -->|\"展开\"| Full[\"目录模块 Full\"]\n  Full -->|\"收起／返回\"| Quick\n  Quick -->|\"返回／重复激活\"| Home\n  Quick -. \"选章／书签\"| Target[\"读取目标并保存位置\"]\n  Full -. \"选章／书签\"| Target\n  Target -.-> Committed{\"目标提交成功？\"}\n  Committed -->|\"是：关闭控制层\"| Reader[\"阅读正文\"]\n  Committed -. \"否\" .-> Failure[\"保留原模块与位置\"]\n  Failure -. \"重试／重选\" .-> Quick\n  Quick -. \"书签加载\" .-> BookmarkState[\"原位加载／空／失败\"]\n  Full -. \"书签加载\" .-> BookmarkState\n  BookmarkState -. \"重试／切页签\" .-> Full\n  Full -. \"下载／书签写入\" .-> Mutation[\"异步写入与回读\"]\n  Mutation -.-> RowState[\"原位行状态\"]\n  RowState -.-> Full\n  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;\n  class Target,Failure,BookmarkState,Mutation,RowState internal;",
+    "summary": "阅读目录的 Quick／Full 是同一模块，返回逐级收回，目标失败保留原形态与位置。"
+  },
+  "reader-tts": {
+    "diagram": "flowchart TD\n  Home[\"阅读控制首页\"] -->|\"朗读\"| Module[\"朗读模块 Quick／Full\"]\n  Module -->|\"展开／收起\"| Module\n  Module -->|\"Quick返回\"| Home\n  Module -->|\"Full配置行\"| Choices[\"朗读配置选项\"]\n  Choices -->|\"选择成功／关闭\"| Module\n  Module -->|\"在线服务信息\"| Manager[\"第三方 TTS 配置\"]\n  Manager -->|\"保存成功／取消\"| Module\n  Module -->|\"播放\"| Available{\"引擎与音色可用？\"}\n  Available -->|\"未配置在线服务\"| Manager\n  Available -. \"可用\" .-> StopAuto[\"停止自动翻页并准备朗读\"]\n  StopAuto -.-> Started{\"真实朗读已开始？\"}\n  Started -->|\"是\"| Capsule[\"阅读页会话胶囊\"]\n  Started -. \"失败\" .-> Feedback[\"朗读卡原位反馈\"]\n  Feedback -. \"重试\" .-> Module\n  Capsule -->|\"打开控制层\"| Module\n  Capsule -->|\"暂停／继续\"| Capsule\n  Capsule -->|\"停止\"| Reader[\"阅读正文\"]\n  Module -->|\"停止／关闭控制层\"| Reader\n  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;\n  class StopAuto,Feedback internal;",
+    "summary": "朗读在原模块配置与反馈，启动停止自动翻页并等待真实回调，成功收进阅读页会话胶囊。"
+  },
+  "reader-tts-config": {
+    "diagram": "flowchart TD\n  Module[\"完整朗读模块\"] -->|\"配置行\"| Choices[\"音色／引擎／语言／失败策略\"]\n  Choices -. \"试听\"| Audition[\"试听并核对当前身份\"]\n  Audition -. \"停止／错误原位\" .-> Choices\n  Choices -. \"选择\"| Choose[\"停止试听并提交选项\"]\n  Choose -.-> Applied{\"选项应用成功？\"}\n  Applied -->|\"是：关闭选择层\"| Module\n  Applied -. \"否\" .-> Feedback[\"选项层原位错误\"]\n  Feedback -. \"保留并重选\" .-> Choices\n  Choices -->|\"管理在线 TTS\"| Manager[\"第三方 TTS 配置\"]\n  Manager -->|\"保存／取消\"| Module\n  Choices -. \"关闭／返回\" .-> Stop[\"终止当前试听\"]\n  Stop -.-> Module\n  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;\n  class Audition,Choose,Feedback,Stop internal;",
+    "summary": "配置选项是完整朗读模块的临时层，选择失败留层，关闭或进入管理都终止试听。"
+  },
+  "reader-tts-manager": {
+    "diagram": "flowchart TD\n  Module[\"完整朗读模块\"] -->|\"服务信息\"| Manager[\"第三方 TTS 配置窗口\"]\n  Choices[\"朗读配置选项\"] -->|\"管理在线 TTS\"| Manager\n  Manager -->|\"保存\"| Valid{\"草稿有效？\"}\n  Valid -. \"否\" .-> Feedback[\"原位错误与草稿\"]\n  Feedback -. \"修改／重试\" .-> Manager\n  Valid -. \"是\" .-> Save[\"提交配置：关闭受限\"]\n  Save -.-> Applied{\"保存成功？\"}\n  Applied -->|\"是：关闭窗口\"| Module\n  Applied -. \"否\" .-> Feedback\n  Manager -->|\"取消／返回\"| Busy{\"正在保存？\"}\n  Busy -->|\"否\"| Module\n  Busy -->|\"是：留在窗口\"| Manager\n  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;\n  class Save,Feedback internal;",
+    "summary": "在线 TTS 配置窗口由完整朗读或选项层打开，保存中禁止关闭，失败保留草稿，结束回完整朗读。"
+  },
+  "reader-appearance": {
+    "diagram": "flowchart TD\n  Home[\"阅读控制首页\"] -->|\"界面\"| Quick[\"界面模块 Quick\"]\n  Quick -->|\"展开\"| Full[\"界面模块 Full\"]\n  Full -->|\"收起／返回\"| Quick\n  Quick -->|\"返回／重复激活\"| Home\n  Quick -. \"主题／字体\"| Apply[\"即时应用并保留阅读锚点\"]\n  Full -. \"主题／字体／排版\" .-> Apply\n  Full -->|\"缩进／简繁\"| Choice[\"临时选择层\"]\n  Choice -->|\"选择／关闭\"| Full\n  Full -->|\"导入字体\"| Picker[\"系统文件选择器\"]\n  Picker -. \"选文件\" .-> Prepare[\"验证并注册字体\"]\n  Picker -->|\"取消\"| Full\n  Prepare -. \"成功／失败原位\" .-> Full\n  Apply -.-> Save[\"异步保存外观\"]\n  Save -. \"失败\" .-> Feedback[\"原位提示：保留当前效果\"]\n  Save -. \"确认\" .-> Full\n  Feedback -. \"继续设置\" .-> Full\n  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;\n  class Apply,Prepare,Save,Feedback internal;",
+    "summary": "界面模块即时应用主题、字体和排版，Full 提供导入与选择层；保存失败提示但保留已接受效果。"
+  },
+  "reader-settings": {
+    "diagram": "flowchart TD\n  Home[\"阅读控制首页\"] -->|\"设置\"| Quick[\"阅读设置 Quick\"]\n  Quick -->|\"展开\"| Full[\"阅读设置 Full\"]\n  Full -->|\"收起／返回\"| Quick\n  Quick -->|\"返回／重复激活\"| Home\n  Quick -. \"屏幕／翻页设置\" .-> Guard{\"目标能力与进度可用？\"}\n  Full -. \"设置修改\" .-> Guard\n  Guard -. \"连续转分页\" .-> Progress[\"先保存当前锚点\"]\n  Progress -. \"成功\" .-> Save[\"应用并保存设置\"]\n  Progress -. \"失败\" .-> Feedback[\"原位提示：保留原设置\"]\n  Guard -. \"可用／无需预存\" .-> Save\n  Guard -. \"能力不可用\" .-> Feedback\n  Save -.-> Confirmed{\"保存成功？\"}\n  Confirmed -. \"是：回读原模块\" .-> Quick\n  Confirmed -. \"否\" .-> Restore[\"恢复已确认设置\"]\n  Restore -.-> Feedback\n  Feedback -. \"重试／继续\" .-> Full\n  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;\n  class Progress,Save,Feedback,Restore internal;",
+    "summary": "阅读设置保留模块形态，能力不足或进度预存失败拒绝切换，保存失败恢复已确认设置并原位提示。"
+  },
+  "reader-search": {
+    "diagram": "flowchart TD\n  Home[\"阅读控制首页\"] -->|\"搜索\"| Quick[\"正文搜索 Quick\"]\n  Quick -->|\"展开\"| Full[\"正文搜索 Full\"]\n  Full -->|\"收起／返回\"| Quick\n  Quick -->|\"返回\"| Home\n  Quick -. \"提交查询\" .-> Query[\"按阅读身份查询正文\"]\n  Full -. \"提交查询\" .-> Query\n  Query -.-> Results{\"有可用结果？\"}\n  Results -. \"有\" .-> Rows[\"原位结果列表\"]\n  Results -. \"空／失败\" .-> Feedback[\"原位空态或错误\"]\n  Feedback -. \"新查询／重试\" .-> Query\n  Rows -. \"加载更多\" .-> Query\n  Rows -. \"选择结果\" .-> Locate[\"读取目标并保存锚点\"]\n  Locate -.-> Ready{\"跳转提交成功？\"}\n  Ready -->|\"是：关闭控制层\"| Reader[\"阅读正文\"]\n  Ready -. \"否：保留原位置\" .-> Feedback\n  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;\n  class Query,Rows,Feedback,Locate internal;",
+    "summary": "正文查询、结果与加载更多均留在搜索模块，结果定位提交成功才回阅读，失败保留原位置。"
+  },
+  "reader-autopage": {
+    "diagram": "flowchart TD\n  Home[\"阅读控制首页\"] -->|\"自动翻页\"| Module[\"自动翻页 Quick／Full\"]\n  Module -->|\"展开／收起\"| Module\n  Module -->|\"Quick返回\"| Home\n  Module -. \"配置定时／间隔\" .-> Configure[\"更新原有计时配置\"]\n  Configure -.-> Module\n  Module -. \"开始／继续\" .-> StopTts[\"停止朗读并等待确认\"]\n  StopTts -.-> Stopped{\"朗读已停止？\"}\n  Stopped -. \"否\" .-> Feedback[\"原位提示：不启动\"]\n  Feedback -.-> Module\n  Stopped -->|\"是\"| Capsule[\"阅读页自动翻页胶囊\"]\n  Capsule -. \"计时到期\" .-> Turn[\"提交一页并等待结果\"]\n  Turn -. \"成功：继续计时\" .-> Capsule\n  Turn -. \"失败／末尾\" .-> Stop[\"取消计时与待提交\"]\n  Capsule -->|\"暂停／继续\"| Capsule\n  Capsule -. \"停止\" .-> Stop\n  Stop -.-> Reader[\"阅读正文\"]\n  Capsule -->|\"打开控制层\"| Module\n  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;\n  class Configure,StopTts,Feedback,Turn,Stop internal;",
+    "summary": "自动翻页启动前确认朗读已停，运行留在阅读页胶囊，逐页提交，暂停保留剩余时间，停止回正文。"
+  },
+  "reader-replace": {
+    "diagram": "flowchart TD\n  Home[\"阅读控制首页\"] -->|\"替换\"| Quick[\"替换规则 Quick\"]\n  Quick -->|\"展开\"| Full[\"替换规则 Full\"]\n  Full -->|\"完成／返回\"| Quick\n  Quick -->|\"返回\"| Home\n  Full -->|\"新增／编辑\"| Editor[\"规则编辑层\"]\n  Editor -->|\"取消\"| Full\n  Full -->|\"删除／导入\"| Confirm[\"原模块确认层\"]\n  Confirm -->|\"取消\"| Full\n  Editor -. \"保存\" .-> Mutation[\"提交规则并核对结果\"]\n  Confirm -. \"确认：导入需选文件\" .-> Mutation\n  Quick -. \"启用／停用\" .-> Mutation\n  Mutation -.-> Known{\"结果已确认？\"}\n  Known -. \"成功：回读规则\" .-> Full\n  Known -. \"失败／未知\" .-> Feedback[\"原位错误／回读核对\"]\n  Feedback -. \"核对后继续\" .-> Full\n  Full -->|\"预览已保存规则\"| Preview[\"当前章节预览层\"]\n  Preview -->|\"关闭\"| Full\n  Full -->|\"导出\"| Export[\"系统保存位置\"]\n  Export -->|\"完成／取消\"| Full\n  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;\n  class Mutation,Feedback internal;",
+    "summary": "替换规则的编辑、确认与预览都属于原模块，写入未知先回读，不跳独立规则管理页。"
+  },
+  "source-switch": {
+    "diagram": "flowchart TD\n  Origin[\"详情／目录／阅读\"] -->|\"远程换源\"| Window[\"换源窗口\"]\n  Window -. \"发现候选\" .-> Discover[\"查询现有启用书源\"]\n  Discover -.-> Candidates{\"有可用候选？\"}\n  Candidates -->|\"是：留原窗口\"| Window\n  Candidates -. \"空／失败\" .-> DiscoveryState[\"窗口原位说明与重试\"]\n  DiscoveryState -. \"重试\" .-> Discover\n  Window -. \"直接选择目标\" .-> Switch[\"切换并提交：关闭受限\"]\n  Switch -.-> Committed{\"切换提交成功？\"}\n  Committed -->|\"是：直接关窗\"| Reader[\"阅读正文\"]\n  Committed -. \"否\" .-> Transaction{\"仍有待回滚事务？\"}\n  Transaction -. \"无\" .-> Failure[\"窗口原位失败\"]\n  Failure -->|\"普通关闭\"| Origin\n  Failure -. \"重选候选\" .-> Window\n  Transaction -. \"有\" .-> Rollback[\"撤销切换：关闭受限\"]\n  Rollback -->|\"完成：关窗恢复\"| Reader\n  Rollback -. \"失败：保留事务\" .-> Failure\n  Window -->|\"普通关闭：无事务\"| Origin\n  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;\n  class Discover,DiscoveryState,Switch,Failure,Rollback internal;",
+    "summary": "候选直接切换，提交成功关窗回阅读；失败留原窗口，存在待回滚事务时必须撤销完成才可关闭。"
+  },
+  "reader-more": {
+    "diagram": "flowchart TD\n  Controls[\"阅读控制层\"] -->|\"更多\"| Menu[\"阅读更多菜单\"]\n  Menu -->|\"关闭／返回\"| Controls\n  Menu -->|\"书籍信息：先关菜单\"| Detail[\"书籍详情\"]\n  Menu -. \"刷新本章：先关菜单\" .-> Refresh[\"保留原页并刷新\"]\n  Refresh -.-> Ready{\"刷新成功？\"}\n  Ready -->|\"是：仍在原章\"| Reader[\"阅读正文\"]\n  Ready -->|\"否\"| Failure[\"刷新本章失败弹窗\"]\n  Failure -. \"重试\" .-> Refresh\n  Failure -->|\"关闭提示\"| Reader\n  Menu -. \"下载全部章节：先关菜单\" .-> Download[\"原整书下载队列\"]\n  Download -.-> Feedback[\"Toast 与目录行状态\"]\n  Feedback -. \"结果仍在阅读\" .-> Reader\n  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;\n  class Refresh,Download,Feedback internal;",
+    "summary": "更多菜单选择动作先关菜单，详情走页面路由，刷新和下载在原阅读身份下处理与反馈。"
+  },
+  "directory-offline-menu": {
+    "diagram": "flowchart TD\n  Directory[\"完整目录\"] -->|\"更多\"| Menu[\"目录离线菜单\"]\n  Menu -->|\"关闭／返回\"| Directory\n  Menu -->|\"操作\"| Allowed{\"远程且无冲突操作？\"}\n  Allowed -->|\"否：不提交\"| Directory\n  Allowed -. \"下载整书：先关菜单\" .-> Download[\"原整书下载队列\"]\n  Download -.-> Feedback[\"Toast 与目录行回读\"]\n  Feedback -. \"留在原目录\" .-> Directory\n  Allowed -->|\"清除离线：先关菜单\"| Confirm[\"清除本书离线确认\"]\n  Confirm -->|\"取消\"| Directory\n  Confirm -. \"清除\" .-> Clear[\"清除并回读离线事实\"]\n  Clear -. \"完成／失败反馈\" .-> Directory\n  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;\n  class Download,Feedback,Clear internal;",
+    "summary": "离线菜单只连接整书下载与系统清除确认，反馈回原目录，没有下载中心或暂停、取消页面。"
+  },
+  "offline-clear": {
+    "diagram": "flowchart TD\n  Directory[\"完整目录\"] -->|\"离线菜单清除\"| Confirm[\"清除本书离线确认\"]\n  Confirm -->|\"取消／关闭\"| Directory\n  Confirm -->|\"清除\"| Allowed{\"远程且无进行中操作？\"}\n  Allowed -->|\"否：不写入\"| Directory\n  Allowed -. \"是\" .-> Clear[\"清除正文与图片缓存\"]\n  Clear -.-> Cleared{\"清除成功？\"}\n  Cleared -. \"是\" .-> Projection[\"目录离线行改为未缓存\"]\n  Projection -.-> Directory\n  Cleared -. \"否\" .-> Failure[\"原位清除失败提示\"]\n  Failure -. \"留原目录\" .-> Directory\n  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;\n  class Clear,Projection,Failure internal;",
+    "summary": "取消确认不写入，清除只处理本书离线内容，成功回读目录，失败留在原目录并提示。"
+  },
+  "reader-exit-failure": {
+    "diagram": "flowchart TD\n  Reader[\"阅读正文与当前位置\"] -. \"退出请求\" .-> Save[\"停止朗读并保存进度\"]\n  Save -.-> Saved{\"退出保存成功？\"}\n  Saved -->|\"是\"| Origin[\"原入口\"]\n  Saved -->|\"否\"| Dialog[\"阅读进度尚未保存\"]\n  Dialog -. \"重试保存并退出\" .-> Save\n  Dialog -. \"继续／取消\" .-> Continue[\"取消待退出目标并恢复计时\"]\n  Continue -. \"保留原阅读位置\" .-> Reader\n  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;\n  class Save,Continue internal;",
+    "summary": "退出保存失败弹窗保留原阅读位置，重试成功才退出，继续或取消同时撤销待返回目标。"
+  },
+  "reader-refresh-failure": {
+    "diagram": "flowchart TD\n  Context[\"原阅读／控制模块\"] -. \"刷新／跳转\" .-> Target[\"读取原目标并提交\"]\n  Target -.-> Committed{\"目标提交成功？\"}\n  Committed -->|\"是\"| Reader[\"阅读正文\"]\n  Committed -->|\"否：保留原位置\"| Dialog[\"刷新／跳转失败弹窗\"]\n  Dialog -->|\"关闭提示\"| Context\n  Dialog -->|\"重试\"| Current{\"原目标身份仍有效？\"}\n  Current -. \"是：携原锚点\" .-> Target\n  Current -->|\"否：不执行过期请求\"| Context\n  classDef internal fill:#f6f8f6,stroke:#7a8b80,stroke-dasharray:5 4;\n  class Target internal;",
+    "summary": "刷新或跳转失败不改变原位置，重试核对原目标身份，关闭提示后可在原上下文重新选择。"
+  }
+}
+
