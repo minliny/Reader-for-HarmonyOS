@@ -338,7 +338,7 @@ export struct BookDirectoryPage {
       entries: this.mangaVisibleEntries(), rowHeight: 58, naturalRowHeight: true,
       listPaddingX: this.contentFrame().left, listPaddingY: 8,
       listPaddingRight: this.contentFrame().right,
-      listPaddingTop: this.topInset() + 200, listPaddingBottom: this.bottomInset() + 24,
+      listPaddingTop: this.topInset() + 200, listPaddingBottom: this.bottomInset() + 72,
       edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
       onFirstLayout: (): void => this.onListFirstLayout(identity),
       onUserScrollIntent: (): void => this.onListUserScroll(),

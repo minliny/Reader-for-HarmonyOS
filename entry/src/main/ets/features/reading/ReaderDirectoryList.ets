@@ -163,16 +163,16 @@ export struct ReaderDirectoryList {
     .width('100%')
     .height('100%')
     .childrenMainSize(this.naturalRowHeight ? undefined : this.itemSizes)
-    .contentStartOffset(this.contentStartInset)
-    .contentEndOffset(this.contentEndInset)
     .padding({
       left: this.listPaddingX,
       right: this.listPaddingRight >= 0 ? this.listPaddingRight : this.listPaddingX,
       top: this.naturalRowHeight ? 0 : this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY,
       bottom: this.naturalRowHeight ? 0 : this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY,
     })
-    .contentStartOffset(this.naturalRowHeight ? (this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY) : 0)
-    .contentEndOffset(this.naturalRowHeight ? (this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY) : 0)
+    // Publish one pair: text keeps the parent's overlay clearance, while
+    // natural manga rows carry their own padding inside the scroll content.
+    .contentStartOffset(this.naturalRowHeight ? (this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY) : this.contentStartInset)
+    .contentEndOffset(this.naturalRowHeight ? (this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY) : this.contentEndInset)
     .scrollBar(BarState.Off)
     .edgeEffect(this.edgeEffectMode)
     // API 21 drag ownership is reported even before a positive scroll delta.

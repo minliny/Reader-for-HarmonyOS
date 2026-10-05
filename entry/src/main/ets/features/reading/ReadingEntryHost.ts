@@ -419,7 +419,7 @@ export class ReadingEntryHost {
       this.state = { ...this.state, toc: this.catalog(merged), loadingMessage: '' }; this.publish(intent.scopeId, lease);
       void this.projectDirectory(intent.scopeId);
       if (this.state.verdict !== 'readable') await this.probe(intent.scopeId);
-    } catch (error) { if (this.current(intent.scopeId, lease)()) this.backgroundFailure(intent.scopeId, lease, 'detail-projection', error); }
+    } catch (error) { if (current()) this.backgroundFailure(intent.scopeId, lease, 'detail-projection', error); }
     finally {
       if (this.projectionActive === intent) {
         this.projectionActive = undefined; const pending = this.projectionPending; this.projectionPending = undefined;
