@@ -213,6 +213,7 @@ export class BookshelfProjectionOwner {
   private copyName(book: ShelfBook, sourceName: string): ShelfBook {
     const copy: ShelfBook = { sourceId: book.sourceId, sourceName, bookId: book.bookId, title: book.title, author: book.author, addedAt: book.addedAt };
     if (book.kind !== undefined) copy.kind = book.kind;
+    if (book.contentKind !== undefined) copy.contentKind = book.contentKind;
     if (book.coverUrl !== undefined) copy.coverUrl = book.coverUrl;
     if (book.intro !== undefined) copy.intro = book.intro;
     if (book.lastChapter !== undefined) copy.lastChapter = book.lastChapter;
