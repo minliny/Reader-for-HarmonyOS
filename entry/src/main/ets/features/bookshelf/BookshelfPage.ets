@@ -3,6 +3,7 @@ import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ShelfBookListDetails } from './ShelfBookListDetails';
 import { ShelfBookPresentation } from './ShelfBookPresentation';
+import { MangaBookPresentation } from '../manga/MangaBookPresentation';
 import { BookshelfViewState } from './BookshelfViewState';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import { FrameCallback } from '@kit.ArkUI';
@@ -138,6 +139,7 @@ export struct BookshelfPage {
   private viewportRestoreGeneration: number = 0;
   private firstVisibleItem: number = 0;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerMangaPresentationRevision') private mangaRevision: number = 0;
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   // The bookshelf page is rebuilt when leaving and returning from reading.
@@ -420,7 +422,7 @@ export struct BookshelfPage {
   }
 
   @Builder
-  private continueReadingCard(book: ShelfBook, isTablet: boolean) {
+  private continueReadingCard(isTablet: boolean) {
     Column({ space: 6 }) {
       Text('继续阅读')
         .width('100%')
@@ -433,8 +435,8 @@ export struct BookshelfPage {
         .textOverflow({ overflow: TextOverflow.Ellipsis });
 
       Row({ space: 12 }) {
-        if (this.hasCover(book)) {
-          Image(book.coverUrl as string)
+        if (this.continueReading !== undefined && this.hasCover(this.continueReading)) {
+          Image(this.continueReading?.coverUrl ?? '')
             .width(48)
             .height(72)
             .objectFit(ImageFit.Cover)
@@ -447,7 +449,7 @@ export struct BookshelfPage {
         }
 
         Column({ space: 2 }) {
-          Text(book.title)
+          Text(this.continueReading?.title ?? '')
           .width('100%')
           .fontFamily('ReaderNotoSerifSCBold')
           .fontWeight(FontWeight.Bold)
@@ -457,7 +459,7 @@ export struct BookshelfPage {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-          Text(book.author)
+          Text(this.continueReading?.author ?? '')
             .width('100%')
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Regular)
@@ -467,8 +469,9 @@ export struct BookshelfPage {
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
 
-          Text(book.contentKind === 'manga' ? this.mangaReadingPosition(book) : ShelfBookPresentation.readingPosition(book))
+          Text(this.continueReadingPosition())
             .width('100%')
+            .constraintSize({ minHeight: 15 })
             .fontFamily('ReaderInter')
             .fontWeight(FontWeight.Regular)
             .fontSize(11)
@@ -502,16 +505,30 @@ export struct BookshelfPage {
       .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
       .borderRadius(18)
-      .onClick((): void => this.onBookSelected(book));
+      .onClick((): void => {
+        const book = this.continueReading;
+        if (book !== undefined) this.onBookSelected(book);
+      });
     }
     .width(this.shelfContentWidth(isTablet));
   }
 
   private mangaReadingPosition(book: ShelfBook): string {
+    if (this.mangaRevision < 0) return '';
     // Keep the shared presentation contract intact while using the compact
     // page copy from the manga demo on the bookshelf card.
     const position = ShelfBookPresentation.readingPosition(book);
     return position.replace(' · 第 ', ' · ').replace(/^第 /, '');
+  }
+
+  private continueReadingPosition(): string {
+    const book = this.continueReading;
+    if (book === undefined) return '';
+    if (book.contentKind === 'manga') {
+      if (this.mangaRevision < 0 || MangaBookPresentation.get(book.sourceId, book.bookId) === undefined) return '';
+      return this.mangaReadingPosition(book);
+    }
+    return ShelfBookPresentation.readingPosition(book);
   }
 
   @Builder
@@ -519,7 +536,9 @@ export struct BookshelfPage {
     List({ space: TOK_SPACE_CONTROL_INLINE, scroller: this.shelfScroller }) {
       if (this.continueReading !== undefined) {
         ListItem() {
-          this.continueReadingCard(this.continueReading, isTablet);
+          // A retained ListItem keeps its Builder observer closures. Read the
+          // current Prop inside them instead of capturing the initial book.
+          this.continueReadingCard(isTablet);
         }
       }
       ListItem() {

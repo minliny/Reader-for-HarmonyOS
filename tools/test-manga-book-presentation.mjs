@@ -11,10 +11,25 @@ const book = { sourceId: identity.sourceId, bookId: identity.bookId, contentKind
   addedAt: 1, readProgress: 5700, currentChapterTitle: '错误文字章节' };
 assert.equal(ShelfBookPresentation.progress(book), '*%', 'text basis points cannot certify comic progress');
 assert.equal(ShelfBookPresentation.progressPercent(book), 0, 'unknown track stays empty');
+assert.equal(ShelfBookPresentation.progress({...book,chapterCount:36,readProgress:3333}), '已读 33%',
+  'Core readable chapter proportion replaces the unknown manga placeholder');
+assert.equal(ShelfBookPresentation.progressPercent({...book,chapterCount:36,readProgress:3333}), 33.33);
+assert.equal(ShelfBookPresentation.progress({...book,chapterCount:36,readProgress:0}), '已读 0%', 'known unread keeps zero chapter progress');
+assert.equal(ShelfBookPresentation.progress({...book,chapterCount:36,readProgress:10000}), '已读 100%');
+for (const chapterCount of [undefined,0,-1,NaN,2.5]) {
+  assert.equal(ShelfBookPresentation.progress({...book,chapterCount,readProgress:3333}), '*%', 'missing or invalid chapter denominator remains unknown');
+}
+for (const readProgress of [undefined,-1,NaN,Infinity,10001]) {
+  assert.equal(ShelfBookPresentation.progress({...book,chapterCount:36,readProgress}), '*%', 'missing or invalid Core chapter proportion remains unknown');
+}
+assert.equal(ShelfBookPresentation.progressPercent({...book,chapterCount:36,readProgress:3333,currentChapterIndex:999}),33.33,
+  'sparse source chapter identity is not a readable ordinal');
 assert.equal(MangaBookPresentation.admitEntry('source-b', identity.bookId, entry), false);
 assert.equal(MangaBookPresentation.get('source-b', identity.bookId), undefined, 'source identity cannot alias');
 assert.equal(MangaBookPresentation.admitEntry(identity.sourceId, identity.bookId, entry), true);
 assert.equal(ShelfBookPresentation.readingPosition(book), '原始可读卷名 · 第 8 页 / 24 页');
+assert.equal(ShelfBookPresentation.progress({...book,chapterCount:36,readProgress:3333}), '已读 33%',
+  'chapter page ordinal and page count do not enter the whole-book chapter percentage');
 assert.equal(ShelfBookPresentation.visible([book], '', 'reading').length, 1);
 assert.equal(ShelfBookPresentation.visible([book], '', 'finished').length, 0, 'chapter progress does not prove book completion');
 const confirmed = MangaBookPresentation.get(identity.sourceId, identity.bookId);

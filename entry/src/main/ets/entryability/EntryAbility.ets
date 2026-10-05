@@ -33,6 +33,10 @@ export default class EntryAbility extends UIAbility {
   private preparedReadingFontSnapshot: ReaderAppearanceSnapshot | undefined = undefined;
 
   onCreate(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
+    // Numeric geometry diagnostics require an explicit primitive cold-start
+    // Want. Warm Wants cannot arm them and every new ability resets the flag.
+    AppStorage.setOrCreate('readerMangaImageOriginProbe', DEBUG === true && BUILD_MODE_NAME === 'debug' &&
+      want.parameters?.readerMangaImageOriginProbe === true);
     const trace = ReaderStartupTrace.install(readerMotionNowMs, (sample: ReaderStartupSample): void => {
       hilog.info(DOMAIN, 'Reader', 'READER_STARTUP %{public}s', JSON.stringify(sample));
     }, DEBUG === true && BUILD_MODE_NAME === 'debug');
@@ -222,6 +226,7 @@ export default class EntryAbility extends UIAbility {
   }
 
   onDestroy(): void {
+    AppStorage.setOrCreate('readerMangaImageOriginProbe', false);
     this.eventLoopProbe?.stop('destroyed');
     ReaderThemeHost.detach();
     this.windowStageGeneration += 1;

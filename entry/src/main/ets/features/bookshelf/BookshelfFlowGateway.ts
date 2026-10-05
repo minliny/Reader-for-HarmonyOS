@@ -68,10 +68,13 @@ export class BookshelfFlowGateway {
       // Both Core projections use lastReadAt descending and the same
       // composite-key tie break. readingPosition proves a progress record;
       // currentChapterIndex alone can also come from legacy catalog metadata.
-      // An earlier ambiguous row must keep the global summary path. Keep a
+      // An earlier ambiguous row must keep the global summary path. A manga
+      // read time can outlive its catalog mapping; never skip that row merely
+      // because it has no text-shaped position or mapped chapter index. Keep a
       // proven card in this snapshot so no late header moves a book under a tap.
       const candidate = shelf.books.find((book: ShelfBook): boolean =>
-        book.currentChapterIndex !== undefined || book.readingPosition !== undefined);
+        book.currentChapterIndex !== undefined || book.readingPosition !== undefined ||
+        (book.contentKind === 'manga' && book.lastReadAt !== undefined));
       if (candidate?.readingPosition !== undefined) {
         return this.classify(shelf, candidate);
       }

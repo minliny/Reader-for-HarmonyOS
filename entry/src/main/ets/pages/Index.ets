@@ -1266,8 +1266,11 @@ struct Index {
       // edge-to-edge background and resolves its content/control rects inside
       // ReaderLayoutGeometry, so it must not inherit this App-page padding.
       .padding({ top: this.readerOwnsWindowEdges() ? 0 : this.appContentTopInset() })
-      .expandSafeArea([SafeAreaType.SYSTEM], this.readerOwnsWindowEdges() ?
-        [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM] : [SafeAreaEdge.BOTTOM])
+      .expandSafeArea(this.mangaOwnsWindowEdges() ? [SafeAreaType.SYSTEM, SafeAreaType.CUTOUT] : [SafeAreaType.SYSTEM],
+        this.mangaOwnsWindowEdges() ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END] :
+          this.readerOwnsWindowEdges() ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM] : [SafeAreaEdge.BOTTOM])
+      .ignoreLayoutSafeArea(this.mangaOwnsWindowEdges() ? [LayoutSafeAreaType.SYSTEM] : [],
+        this.mangaOwnsWindowEdges() ? [LayoutSafeAreaEdge.ALL] : [])
   }
 
   @Builder
@@ -1349,6 +1352,10 @@ struct Index {
     // ordinary catalog inherits the same single App safe-top inset as Detail.
     return this.readingSessionActive && (this.route === 'reading' ||
       (this.route === 'directory' && this.directoryReturnTarget === 'readerControl'));
+  }
+
+  private mangaOwnsWindowEdges(): boolean {
+    return this.readingSessionActive && this.readingContentKind === 'manga' && this.readerOwnsWindowEdges();
   }
 
   private appContentTopInset(): number {
@@ -2551,7 +2558,8 @@ struct Index {
       const title = typeof row['name'] === 'string' ? row['name'] as string : book.title;
       const author = typeof row['author'] === 'string' ? row['author'] as string : book.author;
       this.detailBook = { sourceId: book.sourceId, sourceName: book.sourceName, bookId: book.bookId, title, author,
-        contentKind: book.contentKind, mangaPosition: book.mangaPosition,
+        contentKind: book.contentKind, mangaPosition: book.contentKind === 'manga' ?
+          MangaBookPresentation.get(book.sourceId, book.bookId) : book.mangaPosition,
         intro: typeof row['intro'] === 'string' ? row['intro'] as string : book.intro,
         coverUrl: typeof row['coverUrl'] === 'string' ? row['coverUrl'] as string : book.coverUrl,
         kind: typeof row['kind'] === 'string' ? row['kind'] as string : book.kind,
@@ -2849,11 +2857,14 @@ struct Index {
     if (before !== MangaBookPresentation.revision) this.mangaProjectionSignature = '';
     const retained: MangaBookIdentity[] = this.shelfBooks.slice(0, 144).map((book: ShelfBook): MangaBookIdentity =>
       ({ sourceId: book.sourceId, bookId: book.bookId }));
+    if (this.continueReading?.contentKind === 'manga') retained.push({ sourceId: this.continueReading.sourceId,
+      bookId: this.continueReading.bookId });
     if (this.detailBook?.contentKind === 'manga') retained.push({ sourceId: this.detailBook.sourceId,
       bookId: this.detailBook.bookId });
     MangaBookPresentation.retainIdentities(retained);
     if (before !== MangaBookPresentation.revision) AppStorage.setOrCreate('readerMangaPresentationRevision',
       MangaBookPresentation.revision);
+    this.refreshDetailMangaPosition();
     const candidates = books.filter((book: ShelfBook): boolean => book.contentKind === 'manga').slice(0, 24);
     const detailIdentity = this.detailBook === undefined ? '' : JSON.stringify([this.detailBook.sourceId, this.detailBook.bookId]);
     const signature = JSON.stringify([this.navigationGeneration, this.bookshelfLoadGeneration, this.route,
@@ -2901,15 +2912,26 @@ struct Index {
         if (!current()) return;
         MangaBookPresentation.admitProgress(book.sourceId, book.bookId, progress);
       }
-      if (!current() || before === MangaBookPresentation.revision) return;
-      AppStorage.setOrCreate('readerMangaPresentationRevision', MangaBookPresentation.revision);
-      if (this.detailBook?.sourceId === book.sourceId && this.detailBook.bookId === book.bookId)
-        this.detailBook = { sourceId: this.detailBook.sourceId, sourceName: this.detailBook.sourceName,
-          bookId: this.detailBook.bookId, title: this.detailBook.title, author: this.detailBook.author,
-          kind: this.detailBook.kind, coverUrl: this.detailBook.coverUrl, intro: this.detailBook.intro,
-          lastChapter: this.detailBook.lastChapter, contentKind: 'manga',
-          mangaPosition: MangaBookPresentation.get(book.sourceId, book.bookId) };
+      if (!current()) return;
+      if (before !== MangaBookPresentation.revision)
+        AppStorage.setOrCreate('readerMangaPresentationRevision', MangaBookPresentation.revision);
+      // Reader save may have already admitted these facts. The mounted detail
+      // owns a separate snapshot and still needs the confirmed position.
+      this.refreshDetailMangaPosition();
     } catch (_error) { /* Optional display projection; unknown remains unknown. */ }
+  }
+
+  private refreshDetailMangaPosition(): void {
+    const book = this.detailBook;
+    if (book?.contentKind !== 'manga') return;
+    const position = MangaBookPresentation.get(book.sourceId, book.bookId);
+    if (book.mangaPosition !== position) {
+      this.detailBook = {
+        sourceId: book.sourceId, sourceName: book.sourceName, bookId: book.bookId,
+        title: book.title, author: book.author, kind: book.kind, contentKind: book.contentKind,
+        mangaPosition: position, coverUrl: book.coverUrl, intro: book.intro, lastChapter: book.lastChapter,
+      };
+    }
   }
 
   private prepareVisibleReadingBooks(books: ShelfBook[]): void {
@@ -4427,6 +4449,9 @@ struct Index {
     this.directoryChapterTitle = '';
     // Keep the admitted identity for detail and ordinary back navigation.
     this.route = this.readingOriginRoute;
+    if (this.detailBook.contentKind === 'manga') this.hydrateMangaPositions([{ sourceId: this.detailBook.sourceId,
+      bookId: this.detailBook.bookId, title: this.detailBook.title, author: this.detailBook.author,
+      contentKind: 'manga', addedAt: 0 }]);
     void this.refreshDetailAcquisitionProjection();
     if (this.route === 'bookshelf') {
       this.refreshBookshelf();
@@ -4477,8 +4502,6 @@ struct Index {
       const shelfMutation = this.mangaShelfMutationAfterExit;
       this.mangaShelfMutationAfterExit = undefined;
       if (shelfMutation === bookInfoIdentity) this.requestDetailShelfMutation();
-      if (this.detailBook?.contentKind === 'manga') this.hydrateMangaPositions([{ sourceId: this.detailBook.sourceId,
-        bookId: this.detailBook.bookId, title: this.detailBook.title, author: this.detailBook.author, contentKind: 'manga', addedAt: 0 }]);
       return;
     }
     if (this.openRulesManagementAfterReaderExit) {

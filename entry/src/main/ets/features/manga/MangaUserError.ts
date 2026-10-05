@@ -1,5 +1,14 @@
 /** Presentation only. Callers retain the original failure and receipt state. */
 export function mangaUserError(code: string): string {
+  // Core/Host transport failures may arrive as the native SDK's generic
+  // `Internal error` text (or as the corresponding `INTERNAL` code). Keep
+  // that implementation detail out of the page surface while retaining the
+  // original code for the diagnostic log in MangaReadingSurface.displayError.
+  const normalized = code.trim();
+  if (normalized === 'Internal error' || normalized === 'INTERNAL' ||
+    normalized.endsWith(': Internal error')) {
+    return '图片服务暂时不可用，请稍后重试。';
+  }
   switch (code) {
     case 'READING_IMAGE_AUTH_REQUIRED': return '书源需要登录或验证。请完成登录后重试图片。';
     case 'READING_IMAGE_ACCESS_DENIED': return '书源拒绝了图片请求。可尝试登录验证，或切换书源。';

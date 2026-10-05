@@ -287,11 +287,11 @@ for (const mappingStatus of ['exact','unresolved']) {
  else await assert.rejects(c.savePosition(target,0,0),/RECOVERY_REQUIRED/);
  // Execute the actual ArkUI publication method after the internal recovery.
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
- const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['publish','requestedLast']);
+ const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['publish','requestedLast','displayChapterTitle']);
  const Projection=load('MangaStripProjection');const projection=new Projection();
  projection.publish(old.manifest,()=>({width:600,height:800,tileHeight:800}),5);
  const restored=[];const surface=Object.assign(new Surface(),{controller:c,mounted:true,opened:true,horizontal:true,horizontalPage:5,publishedManifestVersion:'v',layoutGeneration:0,viewportGeneration:0,first:0,last:0,
-  visibleAnchor:{ordinal:5,x:0.9,y:0.9},data:{projection,totalCount:()=>projection.totalCount(),notify:()=>{}},rememberVisible:()=>{throw Error('old viewport geometry cannot anchor a new manifest');},restore:(...args)=>restored.push(args)});
+  visibleAnchor:{ordinal:5,x:0.9,y:0.9},data:{projection,totalCount:()=>projection.totalCount(),getData:index=>projection.row(index),notify:()=>{}},rememberVisible:()=>{throw Error('old viewport geometry cannot anchor a new manifest');},restore:(...args)=>restored.push(args)});
  surface.publish();assert.equal(surface.horizontalPage,target);assert.equal(projection.row(0).ordinal,target);assert.deepEqual(restored,[[target,0,0]]);assert.equal(surface.recovering,mappingStatus!=='exact');
  c.close();
 }
@@ -415,3 +415,188 @@ console.log('PASS optional adjacent work cannot survive session close or recaptu
  assert.deepEqual(controller.savedLocation,saved);controller.close();
 }
 console.log('PASS real manga surface/gateway/controller carries exact directory proof on cached and live paths, rejection admits no pixels/writes, implicit resume retains historical image xy/CAS');
+
+// Source-rule replacement cannot leave an online cold-entry cache miss using
+// an obsolete manifest forever. The real Surface renews only the failed,
+// descriptor-less target through one forced canonical catalog acquisition.
+for (const mode of ['missing', 'reprocess', 'same-exact', 'same-unresolved', 'same-refresh-failure', 'same-repeat-miss', 'same-exit', 'cached-pixels', 'offline-missing', 'offline-pixels', 'disabled', 'disabled-no-session', 'deleted', 'exit', 'live-failure']) {
+ const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
+ const old=structuredClone(chapter);old.cached=true;old.resources=[];
+ const durable={kind:'manga',chapter:old.manifest.chapter,manifestVersion:old.manifest.manifestVersion,
+   pageId:old.manifest.pages[3].pageId,pageOrdinalFallback:3,x:.24,y:.68,progressRevision:9};
+ const prepared={chapter:{...old,totalPages:8,pageStart:2,manifest:{...old.manifest,pages:old.manifest.pages.slice(2,5)}},
+   targetOrdinal:3,recoveryRequired:false,progress:{token:{epoch:92,revision:9},location:structuredClone(durable)}};
+ if(mode==='live-failure')prepared.chapter.resources=structuredClone(chapter.resources.slice(2,5));
+ const sameVersion=mode.startsWith('same');
+ const fresh=structuredClone(chapter);fresh.manifest.sourceRuleVersion=sameVersion?'r':'new-source';fresh.manifest.manifestVersion='new-manifest';
+ if(sameVersion)fresh.anchorMapping={status:mode==='same-unresolved'?'unresolved':'exact',reason:mode==='same-unresolved'?'ambiguousPageIdentity':'sourcePageIdentity',fromManifestVersion:'v',fromPageId:old.manifest.pages[3].pageId,
+   ...(mode==='same-unresolved'?{}:{targetPageId:fresh.manifest.pages[3].pageId,targetOrdinal:3})};
+ const catalog={contentKind:'manga',sourceVersion:fresh.manifest.sourceRuleVersion,identity:{sourceId:'s',bookId:'b'},entries:[{index:0,url:'/c',title:'chapter'}]};
+ const calls=[],images=[],catalogs=[],restored=[];let writes=0,finishCatalog,finishChapter;
+ const rt={supportsCoreCapability:()=>true,async request(method,params){
+   calls.push([method,params]);
+   if(method==='manga.entry.get')return {data:{entry:structuredClone(prepared)}};
+   if(method==='manga.chapter.get'){
+     assert.equal(params.policy,sameVersion?'refresh':'cacheFirst');
+     if(sameVersion){assert.equal(params.expectedManifestVersion,'v');assert.deepEqual(params.anchor,{pageId:old.manifest.pages[3].pageId,ordinal:3});}
+     if(mode==='same-refresh-failure')throw Error('source denied');
+     if(mode==='same-exit')await new Promise(resolve=>finishChapter=resolve);
+     return {data:structuredClone(fresh)};
+   };
+   if(method==='reading.progress.get')return {data:{token:{epoch:92,revision:9},location:structuredClone(durable)}};
+   writes++;throw Error('reentry cannot write durable progress');
+ },async loadReadingImage(...args){
+   images.push(args);
+   if((args[3]===old.manifest.manifestVersion && !['cached-pixels','offline-pixels'].includes(mode)) || mode==='same-repeat-miss')
+     throw Error(mode==='reprocess'?'READING_IMAGE_REPROCESS_REQUIRED':mode==='live-failure'?'READING_IMAGE_HTTP_FAILED':'REMOTE_READING_IMAGE_NOT_DOWNLOADED');
+   return {fileUri:'file://pixels',width:600,height:800,revision:'pixels'};
+ },releaseReadingImage(){},bookAcquisitions:()=>({async acquireBook(_seed,options){
+   catalogs.push(options);
+   if(options.forceRefresh && ['disabled','disabled-no-session','deleted'].includes(mode))throw Error('source is unavailable');
+   if(options.forceRefresh && mode==='exit')await new Promise(resolve=>finishCatalog=resolve);
+   return catalog;
+ }})};
+ const Surface=productionMotionMethods(new URL('MangaReadingSurface.ets',root),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],
+   {MangaSessionGateway,MangaBookPresentation,AppStorage:{setOrCreate(){}}});
+ const c=new Controller(rt),offlineMode=mode.startsWith('offline');
+ const surface=Object.assign(new Surface(),{mounted:true,controller:c,runtime:rt,sourceId:'s',bookId:'b',offline:offlineMode,
+   fitPreference:'width',horizontal:false,remoteSession:mode==='disabled-no-session'?undefined:catalog,remoteBookSeed:{sourceId:'s',bookId:'b',contentKind:'manga'},
+   opened:false,error:'',publish(){},restore:(...args)=>restored.push(args),updateViewport(){},onRemoteSessionReady(){}});
+ const opening=surface.open(c);
+ if(mode==='exit'){
+   while(finishCatalog===undefined)await new Promise(resolve=>setImmediate(resolve));
+   surface.mounted=false;c.close();finishCatalog();
+ } else if(mode==='same-exit'){
+   while(finishChapter===undefined)await new Promise(resolve=>setImmediate(resolve));
+   surface.mounted=false;c.close();finishChapter();
+ }
+ await opening;await new Promise(resolve=>setImmediate(resolve));
+ const forced=catalogs.filter(options=>options.forceRefresh===true);
+ assert.equal(writes,0);assert.deepEqual(durable,{kind:'manga',chapter:old.manifest.chapter,manifestVersion:'v',
+   pageId:old.manifest.pages[3].pageId,pageOrdinalFallback:3,x:.24,y:.68,progressRevision:9});
+ if(['missing','reprocess'].includes(mode)){
+   assert.equal(forced.length,1);assert.equal(c.chapter.manifest.manifestVersion,'new-manifest');
+   assert.ok(c.visiblePages().some(page=>page.status==='ready'));
+   assert.equal(surface.recovering,true);assert.equal(c.recoveryRequired,true,'changed source cannot silently map the old saved location');
+   assert.equal(c.savedLocation.x,.24);assert.equal(c.savedLocation.y,.68);
+   assert.equal(c.savedLocation.pageOrdinalFallback,3);assert.equal(calls.filter(([method])=>method==='manga.chapter.get').length,1);
+ } else if(['same-exact','same-unresolved','same-repeat-miss'].includes(mode)){
+   assert.equal(forced.length,1);assert.equal(c.chapter.manifest.manifestVersion,'new-manifest');
+   assert.equal(calls.filter(([method])=>method==='manga.chapter.get').length,1,'same-version missing descriptors refresh exactly once');
+   assert.equal(surface.recovering,mode==='same-unresolved');assert.equal(c.recoveryRequired,mode==='same-unresolved');
+   assert.equal(c.savedLocation.x,.24);assert.equal(c.savedLocation.y,.68);assert.equal(c.savedLocation.pageOrdinalFallback,3);
+   if(mode==='same-unresolved')assert.equal(c.savedLocation.manifestVersion,'v','unresolved anchor does not modify the old durable location');
+   else assert.equal(c.savedLocation.manifestVersion,'new-manifest','only exact Core anchor proof maps the display position');
+   if(mode==='same-repeat-miss')assert.equal(c.visiblePages().find(page=>page.ordinal===3).error,'REMOTE_READING_IMAGE_NOT_DOWNLOADED','fresh failure remains visible without an automatic loop');
+   else assert.ok(c.visiblePages().some(page=>page.status==='ready'));
+   if(mode==='same-exact')assert.deepEqual(restored.at(-1),[3,.68,.24],'exact anchor retains both coordinates');
+ } else if(['exit','same-exit'].includes(mode)){
+   assert.equal(forced.length,1);assert.equal(surface.opened,false);
+   assert.equal(calls.filter(([method])=>method==='manga.chapter.get').length,mode==='same-exit'?1:0,'disposed renewal admits no subsequent chapter');
+   assert.equal(c.chapter,undefined);assert.equal(surface.error,'','late disposed renewal does not write an error');
+ } else {
+   assert.equal(surface.opened,true);assert.equal(c.chapter.manifest.manifestVersion,'v');
+   assert.equal(forced.length,['disabled','disabled-no-session','deleted','same-refresh-failure'].includes(mode)?1:0);
+   assert.equal(calls.filter(([method])=>method==='manga.chapter.get').length,mode==='same-refresh-failure'?1:0,'failed refresh retains its old entry, other entries do not force a new manifest');
+   if(mode==='disabled-no-session')assert.equal(catalogs.length,1,'failed renewal does not start a second background catalog acquisition');
+   if(mode.includes('pixels')){
+     assert.deepEqual(restored.at(-1),[3,.68,.24],'exact cached pixels keep the saved image and both coordinates');
+   } else {
+     assert.equal(c.visiblePages().find(page=>page.ordinal===3).error,mode==='live-failure'?'READING_IMAGE_HTTP_FAILED':'REMOTE_READING_IMAGE_NOT_DOWNLOADED');
+     assert.equal(surface.error,'','unavailable renewal preserves the original specific row failure');
+   }
+   if(offlineMode){assert.equal(catalogs.length,0);assert.ok(images.every(args=>args[6]===false),'offline never enables image network');}
+ }
+ c.close();
+}
+console.log('PASS actual Surface/Gateway/Controller cached entry renewal: changed source opens fresh; same source refreshes once using exact/unresolved Core anchor proof; unchanged durable xy/CAS, explicit recovery, bounded failures, cached/offline/live-error exclusions and exit fences');
+
+// Cold shelf entry admits narrow cached pixels before its background catalog.
+// Exercise the real SDK parent payload, retained child updater and property
+// runtime so a later catalog cannot be lost in a plain initializer field.
+{
+ const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
+ const {createArkUIPropertyRuntimeProbe}=await import('./lib/arkui-property-runtime-probe.mjs');
+ const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
+ const {createRequire}=await import('node:module');
+ const surfaceSource=readFileSync(new URL('MangaReadingSurface.ets',root),'utf8');
+ const shellSource=readFileSync(new URL('../entry/src/main/ets/features/shell/ReaderShell.ets',import.meta.url),'utf8');
+ const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+ const syntax=createRequire(import.meta.url)(`${sdk}/lib/validate_ui_syntax.js`);
+ syntax.componentCollection.customComponents.add('MangaReadingSurface');
+ syntax.propCollection.set('MangaReadingSurface',new Set([...surfaceSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(match=>match[1])));
+ const properties=createArkUIPropertyRuntimeProbe();
+ const childSdk=createReaderBuilderProbe(surfaceSource,
+   ['remoteSession','onSelectDirectoryTarget','open','acquireCatalog','effectiveFit','configureAdjacentChapter','adjacentChapter','directoryEntries','selectDirectoryTarget',
+    'performPanelAction','closePanel','dismissPanelKeyboard','panelTravel','panelWidth','panelHeight','widePanel',
+    'panel','panelPhase','panelGeneration','panelActionGeneration','panelCloseTask','panelCloseResolve','panelOffset','panelScrimOpacity','reduceMotion',
+    'onWindowChromeChanged'],
+   {...properties.sdk,MangaSessionGateway,MangaBookPresentation,AppStorage:{setOrCreate(){}},
+    inputMethod:{getController:()=>({hideTextInput:async()=>{}})},
+    uiContext:{getFocusController:()=>({clearFocus(){}})}},properties.hooks);
+ const parentSdk=createReaderBuilderProbe(shellSource,['remoteSession','mangaSurface','mangaIdentityKey'],
+   {...properties.sdk,MangaReadingSurface:childSdk.Component,ReaderRuntimeOwner:{current:()=>({})}},properties.hooks);
+ const parent=parentSdk.owner;
+ Object.assign(parent,{sourceId:'s',bookId:'b',readingReadyGeneration:1,mangaChapterRequestGeneration:0});
+ parent.mangaSurface();
+ assert.equal(parent.children.size,1);
+ const surface=[...parent.children.values()][0];
+ surface.isReaderIdentityCurrent=()=>false; // Cold-catalog fixture has no system-window owner.
+ const next=structuredClone(chapter);next.chapterIndex=1;next.manifest.chapter.chapterId='/next';next.manifest.manifestVersion='next';
+ const catalog={contentKind:'manga',sourceVersion:'r',identity:{sourceId:'s',bookId:'b'},book:{title:'cold manga'},
+   entries:[{index:0,url:'/c',title:'chapter'},{index:1,url:'/next',title:'next chapter'}]};
+ let finishCatalog,writes=0;const catalogs=new Promise(resolve=>finishCatalog=resolve),requests=[];
+ const rt={supportsCoreCapability:()=>true,async request(method,params){
+   requests.push([method,params]);
+   if(method==='manga.entry.get')return {data:{entry:{chapter:{...structuredClone(chapter),cached:true,totalPages:8,pageStart:0},targetOrdinal:0,recoveryRequired:false,progress:{token:{epoch:93,revision:0},location:null}}}};
+   if(method==='manga.chapter.get'){assert.equal(params.chapterIndex,1,'only optional canonical next-chapter preparation may follow cached entry');return {data:structuredClone(next)}};
+   writes++;throw Error('cold catalog publication cannot write user data');
+ },async loadReadingImage(){return {fileUri:'file://cold-entry',width:600,height:800,revision:'pixels'}},releaseReadingImage(){},
+   bookAcquisitions:()=>({acquireBook:()=>catalogs})};
+ const controller=new Controller(rt);
+ parent.onRemoteSessionReady=session=>{parent.updateStateVars({remoteSession:session});properties.flush();};
+ Object.assign(surface,{mounted:true,controller,runtime:rt,sourceId:'s',bookId:'b',offline:false,
+   remoteBookSeed:{sourceId:'s',bookId:'b',contentKind:'manga'},fitPreference:'width',horizontal:false,
+   publish(){},restore(){},updateViewport(){},onRemoteSessionReady:session=>parent.onRemoteSessionReady(session)});
+ await surface.open(controller);
+ assert.equal(surface.opened,true);assert.equal(surface.remoteSession,undefined);
+ assert.equal(surface.adjacentChapter(1),undefined);
+ assert.equal(requests.filter(([method])=>method==='manga.entry.get').length,1);
+ finishCatalog(catalog);await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(parent.children.size,1);assert.equal([...parent.children.values()][0],surface,'late catalog updates retain the same reader child');
+ assert.equal(surface.controller,controller,'catalog publication cannot replace the active pixel/position owner');
+ assert.equal(surface.remoteSession.identity.bookId,'b');
+ assert.equal(surface.adjacentChapter(1).url,'/next','cold reading can continue after the catalog arrives');
+ assert.deepEqual(surface.directoryEntries().map(entry=>entry.index),[0,1]);
+ assert.ok(properties.updates.some(update=>update.child===surface&&update.params.remoteSession?.identity.bookId==='b'),
+   'actual SDK Shell emits the later session in its retained-child update payload');
+ // The emitted Shell adapter forwards flat fallback picks through Index's
+ // existing canonical chapter path, while proof-backed v2 targets keep their
+ // stricter identity path. No flat row can invent a v2 proof.
+ const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
+   ['onDirectoryChapterSelected','onDirectoryNavigationTargetSelected','isKnownDetailChapter'],{LOCAL_SOURCE_ID:'local'});
+ const indexOwner=Object.assign(new Index(),{detailBook:{sourceId:'s',bookId:'b'},readingContentKind:'manga',
+   readingSessionActive:true,remoteReadingSession:{...catalog,entries:[...catalog.entries,{index:9,url:'/group',navigable:false}]},
+   mangaChapterRequestGeneration:0,directoryCurrentChapterIndex:0,mangaCommittedRequestGeneration:0,route:'reading',
+   nextNavigationGeneration(){},onReaderBookmarkSelected(){throw Error('manga must not enter text bookmark navigation')}});
+ parent.onSelectChapter=index=>indexOwner.onDirectoryChapterSelected(index);
+ parent.onSelectNavigationTarget=(...args)=>indexOwner.onDirectoryNavigationTargetSelected(...args);
+ let saves=0;surface.saveVisible=async()=>{saves++;};surface.panel='directory';surface.panelPhase='open';surface.reduceMotion=true;surface.persistentDirectory=()=>false;
+ await surface.selectDirectoryTarget(1);
+ assert.equal(indexOwner.requestedChapterIndex,1,'proof-less fallback reaches the existing canonical chapter pick');
+ assert.equal(indexOwner.requestedMangaDirectoryTargetProof,undefined);
+ assert.equal(indexOwner.mangaChapterRequestGeneration,1);assert.equal(surface.panel,'');
+ const proof={sourceId:'s',bookId:'b',chapterIndex:0,url:'/c',nodeId:'node0',catalogRevision:'catalog'};
+ surface.panel='directory';surface.panelPhase='open'; // A second user pick starts in a newly opened directory.
+ await surface.selectDirectoryTarget(0,proof);
+ assert.equal(indexOwner.requestedChapterIndex,0);assert.equal(indexOwner.requestedMangaDirectoryTargetProof,proof,
+   'proof-backed v2 selection still reaches the exact Index path with the original proof');
+ assert.equal(indexOwner.mangaChapterRequestGeneration,2);
+ surface.panel='directory';surface.panelPhase='open';
+ await surface.selectDirectoryTarget(9);
+ assert.equal(indexOwner.requestedChapterIndex,0);assert.equal(indexOwner.mangaChapterRequestGeneration,2,
+   'Index canonical/navigable checks still reject a non-readable group on the fallback path');
+ assert.equal(saves,3,'both directory adapters retain Surface save-before-navigation');
+ assert.equal(writes,0);controller.close();
+}
+console.log('PASS actual SDK Shell/retained Surface/property runtime plus cold Controller entry: later catalog updates directory and next chapter; flat/proof-backed picks reach existing Index guards, preserve proof and save ordering; no remount or user-data writes');

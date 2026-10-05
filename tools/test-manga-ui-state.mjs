@@ -74,7 +74,7 @@ const chapter = { chapterIndex: 8, manifest: { chapter: { chapterId: '/8' } } };
 const owner = Object.assign(new Surface(), { sourceId: 's', bookId: 'b', mounted: true, opened: true,
   horizontal: false, displayedPage: 3, horizontalPageCount: 4,
   confirmedPosition: { anchor: { ordinal: 3 } },
-  controller: { chapter, totalPages: 4, setVisible: async () => {} },
+  controller: { chapter, totalPages: 4, tile: () => undefined, visiblePages: () => [], setVisible: async () => {} },
   remoteSession: { contentKind: 'manga', identity: { sourceId: 's', bookId: 'b' }, entries: [
     { index: 6, title: '上一可读卷', url: '/6', navigable: true },
     { index: 7, title: '卷组标题', url: '/7', navigable: false },
@@ -82,7 +82,9 @@ const owner = Object.assign(new Surface(), { sourceId: 's', bookId: 'b', mounted
     { index: 9, title: '下一卷分组', url: '/9', navigable: false },
     { index: 10, title: '下一可读话', url: '/10', navigable: true },
   ] },
-  data: {projection: {index: ordinal => ordinal}}, saveVisible: async () => {}, restore: () => {}, presentationGeneration: 0, layoutGeneration:0,
+  data: {projection: {index: ordinal => ordinal}, totalCount: () => 4,
+    getData: index => ({key: `fixture:${index}`, ordinal: index, tileIndex: 0, known: false, width: 600, height: 800, sourceY: 0, sourceHeight: 800}), notify() {}},
+  saveVisible: async () => {}, restore: () => {}, presentationGeneration: 0, layoutGeneration:0,
 });
 assert.equal(owner.adjacentChapter(-1).index, 6);
 assert.equal(owner.adjacentChapter(1).index, 10, 'chapter-end action skips non-readable groups');
@@ -112,6 +114,8 @@ assert.equal(mangaUsesPersistentDirectory(820,420,false),false,'phone landscape 
 assert.equal(mangaUsesPersistentDirectory(1180,820,true),true);
 assert.equal(mangaUsesPersistentDirectory(600,900,false),true);
 assert.equal(mangaUsesPersistentDirectory(820,420,true),true,'platform tablet identity wins over a short-height window');
-assert.equal(mangaDirectoryColumnWidth(1180),320);
-assert.equal(mangaDirectoryColumnWidth(1600),360);
+assert.equal(mangaDirectoryColumnWidth(700),168);
+assert.equal(mangaDirectoryColumnWidth(701),258);
+assert.equal(mangaDirectoryColumnWidth(1180),258);
+assert.equal(mangaDirectoryColumnWidth(1600),258);
 console.log('PASS phone portrait/landscape versus tablet directory ownership and bounded persistent column');

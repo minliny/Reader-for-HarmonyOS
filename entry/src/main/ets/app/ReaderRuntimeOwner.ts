@@ -67,7 +67,7 @@ const PENDING_LOCAL_IMPORT_FINALIZE_TIMEOUT_MS = 5000;
 const LOG_DOMAIN = 0x5244;
 const BUNDLED_BOOK_SOURCE_COLLECTION_RAW_FILE = 'reader-tested-book-source-collection.json';
 // BEGIN bundled-source-integrity (managed by tools/refresh-source-supply-manifest.mjs)
-const BUNDLED_RAW_FILE_SHA256 = 'e86ee703ba7892187445fdc62d0bf95f21b840d1fced9ce5d8a12206a343f13a';
+const BUNDLED_RAW_FILE_SHA256 = '865c2db9e615dda17f7da20f123ab033fc241c0a73cc06be3ee6ebb79c0a0523';
 // END bundled-source-integrity
 
 type CoreBuildIdentity = {
@@ -1124,7 +1124,7 @@ export class ReaderRuntimeOwner {
           continue;
         }
         const decision = decideBundledUpgrade(
-          bundledVersion, bundledFingerprint, existing, storedActualFingerprint);
+          bundledVersion, bundledFingerprint, existing, storedActualFingerprint, bundled);
         if (decision === 'userCopy') {
           ledger.remove(sourceId);
           processedCount += 1;

@@ -26,6 +26,7 @@ const boundary=new Proxy({}, {get:()=>()=>{}});
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function fixture({tiles=12,height=750}={}) {
   const timers=[],frames=[],scrolls=[],queries=[],windows=[],notifications=[];
+  const tileFacts=new Map();
   const properties=createArkUIPropertyRuntimeProbe();
   class ListScroller {
     getItemIndex(x,y){queries.push(['index',x,y]);return this.indexAt(x,y);}
@@ -54,12 +55,14 @@ function fixture({tiles=12,height=750}={}) {
     chapter:{manifest,chapterTitle:'c',chapterIndex:0},totalPages:1,displayedOrdinal:0,
     savedLocation:null,recoveryRequired:false,pageAt:()=>manifest.pages[0],pageGeometry:()=>geometry,
     setVisible:async()=>{},setTileWindow:async rows=>{windows.push(rows.map(row=>row.tileIndex));},
-    tile:()=>undefined,visiblePages:()=>[],close(){},
+    tile:(_ordinal,index)=>tileFacts.get(index),visiblePages:()=>[],close(){},
   };
   owner.mounted=true;owner.opened=true;owner.viewportWidth=300;owner.viewportHeight=height;
   owner.publishedManifestVersion='v1';owner.data.projection.publish(manifest,()=>geometry);
   owner.data.registerDataChangeListener({onDataReloaded:()=>notifications.push('reload'),onDataChange:i=>notifications.push(i)});
-  return {owner,list,timers,frames,scrolls,queries,windows,notifications,runTimer(){assert.ok(timers.length);timers.shift()();},runFrame(){assert.ok(frames.length,'restore must schedule a native-frame geometry reconciliation');frames.shift().onFrame(0);}};
+  return {owner,list,timers,frames,scrolls,queries,windows,notifications,
+    readyRows(indices){for(const index of indices)tileFacts.set(index,{image:{fileUri:`file://viewport-${index}.png`,revision:'ready'}});},
+    runTimer(){assert.ok(timers.length);timers.shift()();},runFrame(){assert.ok(frames.length,'restore must schedule a native-frame geometry reconciliation');frames.shift().onFrame(0);}};
 }
 
 // Same first index often has no new native callback; a callback during restore
@@ -71,7 +74,11 @@ for (const synchronous of [false,true]) {
   assert.deepEqual([f.owner.first,f.owner.last],[0,1],'restore must preserve the complete same-index visible range');
   assert.deepEqual(f.windows.at(-1),[0,1,2]);
   f.notifications.length=0;f.owner.publish();
+  assert.deepEqual(f.notifications,[],'unchanged restored window must not invalidate native rows');
+  f.readyRows([0,1,2]);f.owner.publish();
   assert.deepEqual(f.notifications,[0,1,2],'publish must notify the exact loaded bounded window, including its next row');
+  f.notifications.length=0;f.readyRows([3]);f.owner.publish();
+  assert.deepEqual(f.notifications,[],'offscreen tile completion does not invalidate the unchanged actual window');
 }
 console.log('PASS SDK restore preserves same-index 0..1 with/without synchronous callback; actual publish and tile requests include the same next row');
 
@@ -81,7 +88,7 @@ console.log('PASS SDK restore preserves same-index 0..1 with/without synchronous
   assert.deepEqual([f.owner.first,f.owner.last],[0,2],'actual top/bottom point measurements admit all three visible small tiles');
   assert.deepEqual(f.queries.filter(q=>q[0]==='index'),[['index',0.5,0.5],['index',0.5,749.5]]);
   assert.deepEqual(f.windows.at(-1),[0,1,2,3]);
-  f.notifications.length=0;f.owner.publish();assert.deepEqual(f.notifications,[0,1,2,3]);
+  f.notifications.length=0;f.readyRows([0,1,2,3]);f.owner.publish();assert.deepEqual(f.notifications,[0,1,2,3]);
 }
 {
   const f=fixture({tiles:3,height:1200});f.owner.scroller.indexAt=(_x,y)=>y<1?0:-1;
@@ -95,7 +102,7 @@ console.log('PASS SDK restore preserves same-index 0..1 with/without synchronous
   assert.deepEqual(f.windows.at(-1),[0,1,2,3,4,5,6,7],'long short-strip lists never expand a job beyond eight tiles');
   assert.ok(f.queries.filter(q=>q[0]==='rect').length<=8,'fallback measurement does not scan the full chapter');
   assert.ok(f.queries.filter(q=>q[0]==='rect').every(q=>q[1]<8));
-  f.notifications.length=0;f.owner.publish();assert.deepEqual(f.notifications,[0,1,2,3,4,5,6,7]);
+  f.notifications.length=0;f.readyRows([0,1,2,3,4,5,6,7]);f.owner.publish();assert.deepEqual(f.notifications,[0,1,2,3,4,5,6,7]);
 }
 console.log('PASS actual post-frame Scroller samples three visible tiles, short-content rectangles and an eight-tile cap shared with publication');
 

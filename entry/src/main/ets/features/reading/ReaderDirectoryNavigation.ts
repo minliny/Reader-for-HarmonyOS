@@ -14,6 +14,10 @@ export interface ReaderDirectoryNavigationNode {
   chapterOffsetScalar?: number;
   hasChildren: boolean;
   expanded: boolean;
+  /** Read-only Core projection of the authoritative parent, including search rows. */
+  parentTitle?: string;
+  /** Full-tree readable descendants; independent of fold, filter and page. */
+  readableDescendantCount?: number;
 }
 
 export interface ReaderDirectoryIdentity {
@@ -35,6 +39,9 @@ export interface ReaderDirectoryNavigationReady {
   preparedPages?: ReaderDirectoryNavigationPreparedPage[];
   /** Host-only intent: ignore a retained viewport once and center the actual target. */
   locateCurrent?: boolean;
+  /** Manga presentation only; other directory owners retain their alignment. */
+  currentDisplayInset?: number;
+  currentDisplaySmooth?: boolean;
 }
 
 export interface ReaderDirectoryNavigationUnavailable {
@@ -120,11 +127,20 @@ function node(value: unknown): ReaderDirectoryNavigationNode {
     throw new Error('directory node target is invalid');
   const parentId = raw['parentId'] === undefined || raw['parentId'] === null ? undefined :
     stringField(raw['parentId'], 'directory parent id');
+  const parentTitle = raw['parentTitle'] === undefined || raw['parentTitle'] === null ? undefined :
+    stringField(raw['parentTitle'], 'directory parent title');
+  if (parentTitle !== undefined && (parentTitle.trim().length === 0 || Array.from(parentTitle).length > 1024))
+    throw new Error('directory parent title is invalid');
+  const readableDescendantCount = optionalInteger(raw['readableDescendantCount'], 'directory readable descendants', MAX_VISIBLE_NODES);
+  if (readableDescendantCount !== undefined && kind !== 'group')
+    throw new Error('directory readable descendants require a group');
   return { nodeId: stringField(raw['nodeId'], 'directory node id'), parentId,
     depth: integerField(raw['depth'], 'directory depth', 256),
     title,
     kind, chapterIndex, chapterOffsetScalar,
-    hasChildren: raw['hasChildren'] as boolean, expanded: raw['expanded'] as boolean };
+    hasChildren: raw['hasChildren'] as boolean, expanded: raw['expanded'] as boolean,
+    ...(parentTitle === undefined ? {} : { parentTitle }),
+    ...(readableDescendantCount === undefined ? {} : { readableDescendantCount }) };
 }
 
 function nodes(value: unknown, total: number): ReaderDirectoryNavigationNode[] {
