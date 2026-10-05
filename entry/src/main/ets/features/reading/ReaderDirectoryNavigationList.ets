@@ -1,3 +1,4 @@
+import { TYPE_APP_INHERITED_HINT, TYPE_READER_DIRECTORY_DISCLOSURE, TYPE_READER_DIRECTORY_TITLE } from '../common/ReaderTypography';
 import type { JsonObject } from '@reader/core-harmony';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
@@ -458,7 +459,7 @@ export struct ReaderDirectoryNavigationList {
   private row(item: ReaderDirectoryNavigationItem) {
     Row() {
       if (item.node === undefined) {
-        Text('…').fontSize(11).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
+        Text('…').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       } else {
         if (this.isCurrentNode(item)) {
           Row().width(3).height(this.rowHeight).borderRadius(999)
@@ -467,7 +468,7 @@ export struct ReaderDirectoryNavigationList {
         Text(item.node.title)
           .layoutWeight(1)
           .padding({ left: 9 + Math.min(3, this.displayLevel(item.node) - 1) * 12, right: 9 })
-          .fontFamily('ReaderNotoSansSC').fontSize(11).fontWeight(500)
+          .fontFamily(TYPE_READER_DIRECTORY_TITLE.fontFamily).fontSize(TYPE_READER_DIRECTORY_TITLE.fontSizeFp).fontWeight(TYPE_READER_DIRECTORY_TITLE.fontWeight)
           .fontColor(readerAppColor(item.node.kind === 'disabled' ? 'TOK_READ_MUTED' : 'TOK_READ_INK', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .accessibilityText(item.node.kind === 'disabled' ? `${item.node.title}，目标不可用` : item.node.kind === 'group' ?
@@ -481,7 +482,7 @@ export struct ReaderDirectoryNavigationList {
           });
         if (item.node.hasChildren) {
           Text(item.node.expanded ? '⌄' : '›')
-            .width(34).height(this.rowHeight).fontSize(18)
+            .width(34).height(this.rowHeight).fontSize(TYPE_READER_DIRECTORY_DISCLOSURE.fontSizeFp)
             .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
             .textAlign(TextAlign.Center)
             .accessibilityText(`${item.node.expanded ? '折叠' : '展开'}${item.node.title}子目录`)

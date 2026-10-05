@@ -3,14 +3,15 @@ import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
 
 const indexSource = read('entry/src/main/ets/pages/Index.ets');
-assert.match(indexSource, /if \(outcome\.shelf !== undefined\) \{[\s\S]*this\.applyBookshelfState\(outcome\.shelf\);/,
+assert.match(indexSource, /if \(presentImportResult && snapshot\.receipt\?\.value !== undefined\) this\.applyBookshelfState\(snapshot\.receipt\.value\);/,
   'Index must guard the optional shelf read-back before applying it');
-assert.match(indexSource, /onReconcileEditor: \(\): void => this\.getSourceToolsOrchestrator\(\)\.reconcileEditor\(\)/,
+assert.match(indexSource, /onReconcileEditor:[^\n]*isCurrentSourceToolsPresentation[^\n]*host\?\.reconcileEditor\(\)/,
   'Index must expose the read-only editor reconciliation action');
 
 // ReaderOperationFacts is a pure mapping module with no IO and no platform
@@ -100,6 +101,9 @@ const sourceCategorySource = read('entry/src/main/ets/features/source/ReaderSour
   .replace(/^export /gm, '');
 const operationFactsSource = read('entry/src/main/ets/app/ReaderOperationFacts.ts')
   .replace(/^export /gm, '');
+const persistedReceiptProjectionSource = read('entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts')
+  .replace(/^import \{[\s\S]*?\} from ['"]\.\/ReaderOperationFacts['"];\n/m, '')
+  .replace(/^export /gm, '');
 const gatewaySource = read('entry/src/main/ets/features/source/SourceGateway.ts')
   .replace(/^import type \{ JsonObject \} from ['"]@reader\/core-harmony['"];\n/m, '')
   .replace(/^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage['"];\n/m, '')
@@ -110,12 +114,20 @@ const orchestratorSource = read('entry/src/main/ets/features/source/SourceToolsO
   .replace(/^import \{ hilog \} from ['"]@kit\.PerformanceAnalysisKit['"];\n/m, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '')
   .replace(/^import \{ projectCommitReadback \} from ['"][^'"]*ReaderOperationFacts['"];\n/m, '')
+  .replace(/^import \{ projectPersistedReceipt \} from ['"][^'"]*ReaderPersistedReceiptProjection['"];\n/m, '')
   .replace(/^import \{[\s\S]*?\} from ['"]\.\/SourceGateway['"];\n/m, '');
+assert.match(orchestratorSource,
+  /await this\.gateway\.saveEditableSource\(sourceId, text\);[\s\S]*?projectCommitReadback\('confirmed', 'reading'\)[\s\S]*?await this\.gateway\.loadSources\(undefined, true\)/,
+  'saveEditor must expose confirmed/refreshing before the read-only list refresh');
+const writeEvidenceSource = read('entry/src/main/ets/app/ReaderWriteEvidence.ts').replace(/^import[^\n]+\n/gm,'').replace(/^export /gm,'');
 const executable = stripTypeScriptTypes(
-  `${errorMessageSource}\n${transportPolicySource}\n${sourceCategorySource}\n${operationFactsSource}\n${gatewaySource}\n${orchestratorSource}`,
+  `${writeEvidenceSource}\n${errorMessageSource}\n${transportPolicySource}\n${sourceCategorySource}\n${operationFactsSource}\n${persistedReceiptProjectionSource}\n${gatewaySource.replace(/^import[^\n]+\n/gm,'')}\n${orchestratorSource.replace(/^import[^\n]+\n/gm,'')}`,
 );
 assert.doesNotMatch(executable, /^import /m, 'the Node harness must not retain platform imports');
 
+let currentOwner;
+globalThis.ReaderRuntimeOwner = runtimeOwnerIdentityProbe(() => currentOwner);
+globalThis.isReaderCoreTransactionPendingError = () => false;
 globalThis.hilog = { warn() {}, error() {}, info() {}, debug() {}, fatal() {} };
 
 const orchestratorModuleUrl = `data:text/javascript;base64,${Buffer.from(executable).toString('base64')}`;
@@ -162,6 +174,7 @@ function saveOwner({ failList = false } = {}) {
 }
 
 function captureOrchestrator(owner) {
+  currentOwner = owner;
   const snapshots = [];
   const orchestrator = new SourceToolsOrchestrator(
     (snapshot) => snapshots.push(snapshot),
@@ -195,6 +208,8 @@ async function openEditorFor(orchestrator, snapshots) {
   const done = latestSnapshot(snapshots);
   assert.equal(done.editorSourceId, '', 'saved editor must close');
   assert.equal(done.editorText, '', 'saved draft must clear');
+  assert.equal(done.editorOperation.fact, 'current');
+  assert.equal(done.editorOperation.hasValue, true);
   assert.ok(owner.calls.includes('source.import'));
 }
 
@@ -217,6 +232,10 @@ async function openEditorFor(orchestrator, snapshots) {
     'the draft stays open for reconciliation after a refresh failure');
   assert.equal(done.editorText, editableSourceJson,
     'the draft text is retained so the user can reconcile, not re-typed');
+  assert.equal(done.editorOperation.fact, 'refreshFailed');
+  assert.equal(done.editorOperation.stale, true);
+  assert.equal(done.editorOperation.canRetry, true);
+  assert.equal(done.editorOperation.hasValue, true);
   const writesAfter = owner.calls.filter((method) => method === 'source.import').length;
   assert.equal(writesAfter, writesBefore + 1, 'exactly one persist was dispatched');
   const listCalls = owner.calls.filter((method) => method === 'source.list').length;
@@ -231,6 +250,7 @@ async function openEditorFor(orchestrator, snapshots) {
   assert.equal(owner.calls.filter((method) => method === 'source.import').length, writesAfter,
     'read-only reconciliation must not dispatch source.import');
   assert.equal(latestSnapshot(snapshots).editorReadback.fact, 'confirmedCurrent');
+  assert.equal(latestSnapshot(snapshots).editorOperation.fact, 'current');
 }
 
 {
@@ -241,8 +261,10 @@ async function openEditorFor(orchestrator, snapshots) {
   const owner = {
     calls,
     supportsCoreCapability: () => false,
-    async request(method) {
+    async request(method, params, options) {
       calls.push(method);
+      if (options?.canDispatch?.() === false) throw new Error('fixture request retired before actual dispatch');
+      options?.onDispatch?.();
       if (method === 'source.list') return { data: { sources: [] } };
       if (method === 'source.export') {
         return { data: { data: `[${editableSourceJson}]`, count: 1, format: 'json' } };
@@ -256,11 +278,13 @@ async function openEditorFor(orchestrator, snapshots) {
   const listBefore = calls.filter((method) => method === 'source.list').length;
   orchestrator.saveEditor();
   await waitUntil(() => latestSnapshot(snapshots)?.busy === false &&
-    latestSnapshot(snapshots)?.statusMessage.includes('保存失败'), 'failed save to settle');
+    latestSnapshot(snapshots)?.statusMessage.includes('等待核对'), 'failed save to settle');
   const done = latestSnapshot(snapshots);
-  assert.match(done.statusMessage, /书源保存失败/);
+  assert.match(done.statusMessage, /等待核对/);
   assert.doesNotMatch(done.statusMessage, /刷新失败/,
     'a rejected save must not be dressed up as a refresh failure');
+  assert.equal(done.editorOperation.fact, 'pendingReconciliation',
+    'a dispatched write with a lost ACK remains unknown');
   assert.equal(done.editorSourceId, 'https://a.example', 'the draft survives a real save failure');
   assert.equal(calls.filter((method) => method === 'source.list').length, listBefore,
     'a failed save must not dispatch the follow-up refresh');
@@ -274,6 +298,7 @@ const flowSource = read('entry/src/main/ets/features/bookshelf/BookshelfFlowGate
   .replace(/^import \{[\s\S]*?\} from ['"][^'"]*ReaderCoreGateway['"];\n/m, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '')
   .replace(/^import \{[\s\S]*?\} from ['"][^'"]*ReaderOperationFacts['"];\n/m, '')
+  .replace(/^import \{ projectPersistedReceipt \} from ['"][^'"]*ReaderPersistedReceiptProjection['"];\n/m, '')
   .replace(/^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage['"];\n/m, '')
   .replace(/^import \{[\s\S]*?\} from ['"]\.\/LocalBookImportGateway['"];\n/m, '')
   .replace(/^import type \{ LocalBookPreparation \} from ['"][^'"]*ReaderHostRegistry['"];\n/m, '');
@@ -283,8 +308,8 @@ const flowSource = read('entry/src/main/ets/features/bookshelf/BookshelfFlowGate
 const flowExecutableSource = flowSource.replace(
   /constructor\(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner\.current\(\),\n\s*private readonly filter: BookshelfFilter = \{ readingState: 'all', sourceKind: 'all' \},\n\s*private readonly background: boolean = false\) \{/,
   "constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current(), filter: BookshelfFilter = { readingState: 'all', sourceKind: 'all' }, background: boolean = false) {\n    this.filter = filter;\n    this.background = background;",
-).replace(/^export /gm, '');
-const flowExecutable = stripTypeScriptTypes(`${operationFactsSource}\n${flowExecutableSource}`);
+).replace(/^import[^\n]+\n/gm, '').replace(/^export /gm, '');
+const flowExecutable = stripTypeScriptTypes(`${operationFactsSource}\n${persistedReceiptProjectionSource}\n${flowExecutableSource}`);
 assert.doesNotMatch(flowExecutable, /^import /m, 'flow harness must not retain platform imports');
 const flowFactory = new Function(
   'ReaderCoreGateway',
@@ -340,6 +365,7 @@ function flowFixture({ failLoad = false, batch: batchOverride } = {}) {
   const outcome = await new BookshelfFlowGateway({}).importPreparedSelections([]);
   assert.equal(outcome.batch, batch);
   assert.equal(outcome.readback.fact, 'notDispatched');
+  assert.equal(outcome.operation.fact, 'notDispatched');
   assert.ok(outcome.shelf !== undefined);
 }
 
@@ -353,6 +379,7 @@ function flowFixture({ failLoad = false, batch: batchOverride } = {}) {
   const outcome = await new BookshelfFlowGateway({}).importPreparedSelections([{ state: 'ready' }]);
   assert.equal(outcome.batch, batch);
   assert.equal(outcome.readback.fact, 'notDispatched');
+  assert.equal(outcome.operation.fact, 'notDispatched');
 }
 
 // A recovery-pending item is the one existing receipt that can say the write
@@ -366,6 +393,7 @@ function flowFixture({ failLoad = false, batch: batchOverride } = {}) {
   const outcome = await new BookshelfFlowGateway({}).importPreparedSelections([{ state: 'ready' }]);
   assert.equal(outcome.batch, batch);
   assert.equal(outcome.readback.fact, 'pendingReconciliation');
+  assert.equal(outcome.operation.fact, 'pendingReconciliation');
 }
 
 {
@@ -374,6 +402,8 @@ function flowFixture({ failLoad = false, batch: batchOverride } = {}) {
   const outcome = await gateway.importPreparedSelections([{ state: 'ready' }]);
   assert.equal(outcome.batch, batch, 'the committed batch is returned unchanged');
   assert.equal(outcome.readback.fact, 'confirmedCurrent');
+  assert.equal(outcome.operation.fact, 'current');
+  assert.equal(outcome.operation.hasValue, true);
   assert.equal(outcome.refreshWarning, undefined);
   assert.ok(outcome.shelf !== undefined);
   assert.equal(calls.imports, 1);
@@ -393,6 +423,9 @@ function flowFixture({ failLoad = false, batch: batchOverride } = {}) {
     'a failed refresh must not fabricate an empty or stale shelf');
   assert.equal(outcome.readback.fact, 'confirmedRefreshFailed');
   assert.equal(outcome.readback.message, '已确认，刷新失败');
+  assert.equal(outcome.operation.fact, 'refreshFailed');
+  assert.equal(outcome.operation.canRetry, true);
+  assert.equal(outcome.operation.hasValue, false);
   assert.match(outcome.refreshWarning, /导入已确认，书架刷新失败/);
   assert.match(outcome.refreshWarning, /bookshelf\.list transport exploded/);
   assert.equal(calls.imports, 1, 'the refresh failure must not re-dispatch the import');
@@ -414,6 +447,8 @@ function flowFixture({ failLoad = false, batch: batchOverride } = {}) {
   assert.notEqual(okOutcome.readback.fact, badOutcome.readback.fact);
   assert.equal(okOutcome.readback.fact, 'confirmedCurrent');
   assert.equal(badOutcome.readback.fact, 'confirmedRefreshFailed');
+  assert.equal(okOutcome.operation.fact, 'current');
+  assert.equal(badOutcome.operation.fact, 'refreshFailed');
 }
 
 console.log('commit/readback facts (ReaderOperationFacts, FS-021 saveEditor, LS-031 importPreparedSelections): PASS');

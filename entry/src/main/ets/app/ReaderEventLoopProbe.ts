@@ -72,9 +72,13 @@ export class ReaderEventLoopProbe {
   }
 
   private emit(at: number, reason: string): void {
-    this.record({ elapsedMs: at - this.startedAt, uptimeMs: at,
-      samples: this.samples, maxDelayMs: this.maxDelayMs,
-      delayedOver50Ms: this.delayedOver50Ms, reason: reason });
+    try {
+      this.record({ elapsedMs: at - this.startedAt, uptimeMs: at,
+        samples: this.samples, maxDelayMs: this.maxDelayMs,
+        delayedOver50Ms: this.delayedOver50Ms, reason: reason });
+    } catch (_) {
+      // Optional diagnostics cannot interrupt lifecycle or business work.
+    }
     this.emittedAt = at;
     this.samples = 0;
     this.maxDelayMs = 0;

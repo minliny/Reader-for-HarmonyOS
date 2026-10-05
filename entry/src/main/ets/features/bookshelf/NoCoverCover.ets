@@ -1,3 +1,4 @@
+import { TYPE_SHELF_COVER_PLACEHOLDER } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
   TOK_INK,
@@ -27,10 +28,10 @@ export struct NoCoverCover {
 
       Text('暂无封面')
         .width(this.labelWidth())
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(15 * this.coverWidth / 96.96)
-        .lineHeight(18.3 * this.coverWidth / 96.96)
+        .fontFamily(TYPE_SHELF_COVER_PLACEHOLDER.fontFamily)
+        .fontWeight(TYPE_SHELF_COVER_PLACEHOLDER.fontWeight)
+        .fontSize(TYPE_SHELF_COVER_PLACEHOLDER.fontSizeFp * this.coverWidth / 96.96)
+        .lineHeight((TYPE_SHELF_COVER_PLACEHOLDER.lineHeightFp as number) * this.coverWidth / 96.96)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .position({ x: (this.coverWidth - this.labelWidth()) / 2, y: 63.57 / 145.44 * this.coverHeight })

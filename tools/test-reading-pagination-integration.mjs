@@ -5,6 +5,7 @@ const source = readFileSync(
   new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
   'utf8',
 );
+const paginationOwner = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPhysicalPaginationOwner.ts', import.meta.url), 'utf8');
 const sessionGateway = readFileSync(
   new URL('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts', import.meta.url),
   'utf8',
@@ -146,25 +147,27 @@ const observation = source.match(
   /private observeMeasuredPhysicalPage\(page: PhysicalReadingPage\): void \{([\s\S]*?)\n  \}\n\n  private resetPaginationDraft/,
 );
 assert.ok(observation, 'the physical-page observation path must exist');
-assert.match(observation[1], /new ReadingPaginationPrefix\(key, observation\)/,
+assert.match(observation[1], /this\.physicalPagination\.observe\(page,/, 'the actual measured receipt must reach its owner');
+assert.match(observation[1], /this\.setMeasuringDraft\(result\.draft\)/, 'the speculative and visible lane consume the admitted owner result');
+assert.match(paginationOwner, /new ReadingPaginationPrefix\(key, observation\)/,
   'any real measured anchor may seed a continuous run for exact successor-to-predecessor lookup');
-assert.match(observation[1], /draft\.matches\(key\) && draft\.admit\(observation\)/,
-  'local page facts must admit only exact re-observations or a real adjoining page');
-assert.match(observation[1], /page\.endScalar <= this\.lastVisibleScalar/,
-  'a partial draft must not be admitted before the measured final page');
-assert.match(observation[1], /this\.paginationIndex\.recordChapter\(/,
-  'only the completed continuous draft may enter the pagination index');
-assert.match(observation[1], /activeDraft\.isCanonicalPrefixForChapterStart\(chapterStartRequest\)/,
-  'reaching chapter head by prepending must not promote a local grid to a canonical manifest');
-assert.doesNotMatch(observation[1], /if \(this\.paginationIndex\.has\(key\)\) \{\s*return/,
-  'an older full manifest must not prevent recording a newly measured local page');
+assert.match(paginationOwner, /draft\.matches\(key\).*draft\.admit\(observation\)/,
+  'local page facts admit only exact re-observations or a real adjoining page');
+assert.match(paginationOwner, /page\.endScalar <= input\.lastVisibleScalar/,
+  'a partial draft cannot be admitted before the measured final page');
+assert.match(paginationOwner, /this\.index\.recordChapter\(/,
+  'only the completed continuous draft can enter the pagination index');
+assert.match(paginationOwner, /draft\.isCanonicalPrefixForChapterStart\(input\.chapterStartRequest\)/,
+  'reaching chapter head by prepending cannot promote a local grid to a canonical manifest');
+assert.doesNotMatch(paginationOwner, /if \(this\.index\.has\(key\)\) \{\s*return/,
+  'an older full manifest cannot prevent recording a newly measured local page');
 
 const previousTurn = source.match(
   /private turnPreviousPage\(\): ReaderPageTurnOutcome \{([\s\S]*?)\n  \}\n\n  private turnToPreviousChapter/,
 );
 assert.ok(previousTurn, 'the previous-page production handler must exist');
-assert.match(previousTurn[1], /paginationIndex\.findContainingPage/);
-assert.match(previousTurn[1], /paginationIndex\.findPreviousPage/);
+assert.match(previousTurn[1], /physicalPagination\.index\.findContainingPage/);
+assert.match(previousTurn[1], /physicalPagination\.index\.findPreviousPage/);
 assert.doesNotMatch(previousTurn[1], /findPreviousPage\(key, page\.startScalar, null\)/,
   'a real TOC predecessor must no longer be erased at the chapter boundary');
 assert.match(previousTurn[1], /prefix\.matches\(key\)/);
@@ -211,8 +214,11 @@ assert.match(reverseBegin, /Math\.min\(pending\.originalChapterOffset, known\?\.
   'the seam must preserve both leading paragraph delimiters and the restored whole line');
 assert.match(reverseBegin, /pending\.endScalar < 0/,
   'expanding the paragraph window must not change the reverse destination');
-assert.match(productionMethod('preparePreviousMeasurementParagraph'), /content\.substring\(range\.startUtf16, range\.endUtf16\)/,
-  'reverse layout must shape the complete original paragraph context');
+assert.match(productionMethod('preparePreviousMeasurementParagraph'), /paragraphLayout\.preparePrevious\(/,
+  'reverse paragraph planning uses the same production owner as forward batches');
+assert.match(readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderParagraphLayoutOwner.ts', import.meta.url), 'utf8'),
+  /content\.substring\(range\.startUtf16, range\.endUtf16\)/,
+  'the reverse owner shapes the complete original paragraph context');
 const reverseLines = productionMethod('measuredReverseLines');
 assert.match(reverseLines, /manager\.getLineMetrics\(middle\)\.endIndex <= endUtf16/,
   'the reverse line lookup must use actual native UTF-16 boundaries');

@@ -1,3 +1,5 @@
+import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
+import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
@@ -69,17 +71,23 @@ assert.match(orchestrator, /selectedSourceIds: source\.selectedSourceIds\.slice\
 assert.match(orchestrator, /已选择 \$\{selection\.length\} 个书源/);
 assert.doesNotMatch(orchestrator, /RuleSubscription|rule-sub|putSubscription|deleteSubscription/);
 assert.match(orchestrator, /pendingOperations/);
-assert.match(orchestrator, /if \(!allowQueued && \(this\.snapshot\.busy \|\| this\.pendingOperations > 0\)\)/);
+assert.match(orchestrator, /if \(!this\.isCurrentSession\(this\.session\) \|\| \(!allowQueued && \(this\.snapshot\.busy \|\| this\.pendingOperations > 0\)\)\)/);
 
 assert.match(sourcePage, /onOpenTools/);
 assert.match(sourcePage, /ReaderSearchField\(\{[\s\S]*variant: 'sourceManagement'[\s\S]*mode: 'live'/);
 assert.match(sourcePage, /filteredSources\(\)/);
 assert.match(sourcePage, /source\.group === this\.groupValue/);
-assert.match(sourcePage, /Text\('批量管理'\)/);
+assert.match(sourcePage, /ReaderButton\(\{[^\n]*specId: 'source-management-manage'[^\n]*label: '批量管理'/,
+  'management action uses the actual finite shared Button; native tuples and callbacks are exercised by foundation consumer gates');
 assert.match(page, /Core 生成 Legado 兼容 JSON/);
 assert.match(page, /fullWidthActionButton\('导出全部书源'/,
   'standalone export action must not reuse the row-only layoutWeight button');
-assert.match(page, /private fullWidthActionButton[\s\S]*?\.width\('100%'\)[\s\S]*?\.height\(42\)/);
+assert.match(page, /private fullWidthActionButton[\s\S]*?ReaderButton\(\{[\s\S]*?specId: 'source-action'[\s\S]*?layout: 'full'/);
+const controls=foundationControls(),controlOwner=createReaderBuilderProbe(page,['fullWidthActionButton','smallButton'],controls.dependencies,controls.hooks).owner;
+let actions=0;Object.assign(controlOwner,{appThemeScheme:'day',snapshot:{busy:false}});
+controlOwner.fullWidthActionButton('导出全部书源',true,()=>actions++);const full=controls.nodes(controlOwner).find(n=>n.type==='Text');
+assert.equal(full.width,'100%');assert.equal(full.height,42);assert.equal(full.borderRadius,8);assert.equal(Object.hasOwn(full,'layoutWeight'),false,'standalone export retains full-width instead of row-only equal weight');
+full.onClick();assert.equal(actions,1);controlOwner.snapshot.busy=true;controls.flush(controlOwner);full.onClick();assert.equal(actions,1,'retained full-width callback honors current busy Prop');
 assert.match(page, /onCheckSelected/);
 assert.match(page, /onDeleteSelected/);
 assert.match(page, /onSelectAll/);
@@ -117,29 +125,32 @@ assert.match(page, /onStopCheck/);
 assert.match(page, /log\.sourceId[\s\S]*log\.traceId[\s\S]*log\.requestId/);
 assert.match(page, /private sourceCard\(\)/);
 assert.match(page, /private smallButton\(label: string, enabled: boolean/);
-assert.match(page, /if \(enabled\)[\s\S]*action\(\)/);
+assert.match(page, /private smallButton[\s\S]*?specId: 'source-compact'[\s\S]*?actionEnabled: enabled/);
+controlOwner.smallButton('不可用',false,()=>actions++);const small=controls.nodes(controlOwner).find(n=>n.type==='Text'&&n.create==='不可用');assert.equal(small.enabled,false);small.onClick();assert.equal(actions,1,'shared compact actor rejects a direct disabled physical callback');
 assert.doesNotMatch(page, /private takeSelection/);
 assert.doesNotMatch(page, /RuleSubscription|规则订阅|subscriptionCard/);
 assert.match(sourcePage, /statusKind/);
 assert.match(sourcePage, /onRetryLoad/);
 assert.match(rulesGateway, /request\('rule-sub\.list', \{\}\)/);
-assert.match(rulesGateway, /request\('rule-sub\.put'/);
-assert.match(rulesGateway, /request\('rule-sub\.delete'/);
+assert.match(rulesGateway, /requestMutation\('rule-sub\.put'/);
+assert.match(rulesGateway, /requestMutation\('rule-sub\.delete'/);
+assert.match(rulesGateway, /RulesMutationOwner\.forRuntime\(this\.owner\)\.run/,
+  'subscription writes retain original domain exact-receipt ownership rather than direct unguarded requests');
 assert.match(rulesPage, /subscriptions/);
 assert.match(index, /'sourceTools'/);
 assert.match(index, /SourceToolsPage\(/);
-assert.match(index, /onSelectAll: \(\): void => this\.selectAllSourceTools\(\)/);
-assert.match(index, /onToggleSelection: \(sourceId: string\): void => this\.toggleSourceToolsSelection\(sourceId\)/);
-assert.match(index, /onStopCheck: \(\): void => this\.getSourceToolsOrchestrator\(\)\.stopCheckSelected\(\)/);
-assert.match(index, /private consumeSourceToolsSelection/);
-assert.match(index, /private checkSelectedSources\(sourceIds: string\[\]\): void \{[^}]*checkSelected\(sourceIds\);[^}]*\}/);
-assert.doesNotMatch(index,
-  /private checkSelectedSources\(sourceIds: string\[\]\): void \{[^}]*consumeSourceToolsSelection/,
-  'starting a check must preserve the visible selected-source scope');
-assert.match(index, /getSourceToolsOrchestrator\(\)\.exportAll\(\)/);
-assert.match(index, /requestSourceDelete\(sourceIds\)/);
+assert.match(index, /onSelectAll:[^\n]*isCurrentSourceToolsPresentation[^\n]*host\?\.selectAll\(\)/);
+assert.match(index, /onToggleSelection:[^\n]*isCurrentSourceToolsPresentation[^\n]*host\?\.toggleSelection\(sourceId\)/);
+assert.match(index, /onStopCheck:[^\n]*isCurrentSourceToolsPresentation[^\n]*host\?\.stopCheckSelected\(\)/);
+assert.match(index, /onCheckSelected:[^\n]*host\?\.checkSelected\(sourceIds\)/);
+assert.doesNotMatch(index, /onCheckSelected:[^\n]*consumeSelection/,
+  'starting a check keeps the owner canonical selected scope visible');
+assert.match(index, /onExportAll:[^\n]*host\?\.exportAll\(\)/);
+assert.match(index, /onDeleteSelected:[^\n]*isCurrentSourceToolsPresentation\(generation, owner, mounting, host, identity\)[^\n]*this\.requestSourceDelete\(sourceIds, host, identity\)/,
+  'delete confirmation carries the exact Tools attachment; the production cold-consumer test exercises cancel, stale and live callbacks');
 assert.match(index, /getSourceToolsOrchestrator\(\)\.open\(this\.sourceSources\)/);
-assert.match(index, /showAlertDialog\([\s\S]*确定删除所选/);
+assert.doesNotMatch(index, /private (?:selectAllSourceTools|toggleSourceToolsSelection|consumeSourceToolsSelection)/);
+assert.match(index, /showIndexAlert\('confirmation-cancelable',[\s\S]*确定删除所选/);
 
 for (const forbidden of [
   'aes-128',

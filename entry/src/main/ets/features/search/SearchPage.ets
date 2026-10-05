@@ -1,3 +1,7 @@
+import { ReaderIconButton } from '../common/ReaderIconButton';
+import { ReaderButton } from '../common/ReaderButton';
+import type { SearchOperationFacts } from './SearchPresentation';
+import { TYPE_APP_BODY, TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_PRIMARY_ACTION, TYPE_APP_SECONDARY_ACTION, TYPE_SEARCH_FIELD_ACTION, TYPE_SEARCH_FIELD_ACTION_WIDE, TYPE_SEARCH_HISTORY_HEADING, TYPE_SEARCH_HISTORY_KEYWORD, TYPE_SEARCH_HISTORY_STATUS, TYPE_SEARCH_PROGRESS_META, TYPE_SEARCH_RESULT_COUNT, TYPE_SEARCH_RETRY_ACTION, TYPE_SEARCH_SCOPE_LABEL, TYPE_SEARCH_SCOPE_SELECTED, TYPE_SEARCH_STATE_DESCRIPTION, TYPE_SEARCH_STATE_TITLE, TYPE_SEARCH_SUGGESTION_BODY, TYPE_SEARCH_SUGGESTION_HEADING } from '../common/ReaderTypography';
 import { bookAuthorLabel, bookTitleAuthorKey } from '../common/BookAuthorMetadata';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { SearchResultProjection } from './SearchResultProjection';
@@ -16,6 +20,14 @@ import { readerSourceCategoryIsText } from '../source/ReaderSourceCategory';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { registerReaderFonts } from '../common/ReaderFonts';
+import {
+  TYPE_SEARCH_RESULT_AUTHOR,
+  TYPE_SEARCH_RESULT_CHAPTER,
+  TYPE_SEARCH_RESULT_COVER_TITLE,
+  TYPE_SEARCH_RESULT_INTRO,
+  TYPE_SEARCH_RESULT_TAG,
+  TYPE_SEARCH_RESULT_TITLE,
+} from '../common/ReaderTypography';
 import { ReaderSearchField } from '../common/ReaderSearchField';
 import {
   SurfaceHorizontalFrame,
@@ -56,6 +68,8 @@ export type {
   SearchErrorPresentation,
   SearchSourceRequiredPresentation,
   SearchSourceLoadErrorPresentation,
+  SearchOperationFacts,
+  SearchOperationValue,
   SearchPresentation,
 } from './SearchPresentation';
 
@@ -412,8 +426,8 @@ export struct SearchPage {
       Column({ space: 18 }) {
         SearchSpinner({ active: this.isSweeping(), runKey: this.spinnerRunKey,
           reduceMotion: this.reduceMotion, diameter: 36 });
-        Text('正在搜索本地与在线书籍…').fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular).fontSize(13).lineHeight(19.5).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+        Text('正在搜索本地与在线书籍…').fontFamily(TYPE_APP_BODY.fontFamily)
+          .fontWeight(TYPE_APP_BODY.fontWeight).fontSize(TYPE_APP_BODY.fontSizeFp).lineHeight(TYPE_APP_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center)
           .opacity(this.presentation.kind === 'loading' ? 1 : 0);
       }.width('100%').margin({ bottom: 48 })
@@ -435,7 +449,23 @@ export struct SearchPage {
     return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), minimum);
   }
 
+  private operation(): SearchOperationFacts | undefined {
+    const presentation = this.presentation;
+    if (presentation.kind === 'loading' || presentation.kind === 'results' || presentation.kind === 'empty' || presentation.kind === 'error') {
+      return presentation.operation;
+    }
+    return undefined;
+  }
+
+  private retryOperation(): void {
+    const operation = this.operation();
+    if (operation !== undefined && !operation.canRetry) return;
+    this.onRetry();
+  }
+
   private isSweeping(): boolean {
+    const operation = this.operation();
+    if (operation !== undefined) return operation.canCancel;
     return this.presentation.kind === 'loading' ||
       (this.presentation.kind === 'results' && this.presentation.searching);
   }
@@ -451,7 +481,7 @@ export struct SearchPage {
 
   /** Reads the presentation directly so minimal-update re-render tracks it. */
   private isStoppedEmpty(): boolean {
-    return this.presentation.kind === 'empty' && this.presentation.stopped === true;
+    return this.presentation.kind === 'empty' && (this.operation()?.fact === 'cancelled' || this.presentation.stopped === true);
   }
 
   private submitSearch(): void {
@@ -500,13 +530,8 @@ export struct SearchPage {
   @Builder
   private searchBar() {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-      Stack({ alignContent: Alignment.Center }) {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.search_back_theme_night') : $r('app.media.search_back'))).width(20).height(20);
-      }
-      .width(32)
-      .height(32)
-      .borderRadius(16)
-      .onClick((): void => this.onBack());
+      ReaderIconButton({ icon: (this.appThemeScheme === 'night' ? $r('app.media.search_back_theme_night') : $r('app.media.search_back')),
+        specId: 'navigation-back', accessibilityLabel: '返回', onTap: (): void => this.onBack() });
 
       Row() {
         ReaderSearchField({
@@ -534,46 +559,22 @@ export struct SearchPage {
       // is live the pill reads 停止 and stops the sweep; otherwise it submits.
       // Loading additionally inlines a 13px spinner and submitSearch prevents
       // re-entry.
-      Stack({ alignContent: Alignment.Center }) {
-        if (this.isSweeping()) {
-          Row({ space: 6 }) {
-            SearchSpinner({ active: this.isSweeping(), runKey: this.spinnerRunKey,
-              reduceMotion: this.reduceMotion, diameter: 13, light: true });
-            Text('停止')
-              .fontFamily('ReaderInter')
-              .fontWeight(800)
-              .fontSize(this.isTablet ? 14 : 13)
-              .lineHeight(this.isTablet ? 14 : 13)
-              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
-          }
-          .alignItems(VerticalAlign.Center);
-        } else {
-          Text('搜索')
-            .fontFamily('ReaderInter')
-            .fontWeight(800)
-            .fontSize(this.isTablet ? 14 : 13)
-            .lineHeight(this.isTablet ? 14 : 13)
-            .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
-        }
-      }
-      .height(this.isTablet ? 40 : 36)
-      .padding({ left: this.isTablet ? 18 : TOK_SPACE_CARD_PADDING, right: this.isTablet ? 18 : TOK_SPACE_CARD_PADDING })
-      .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
-      .opacity(this.canSubmit() ? 1 : 0.4)
-      .borderRadius(999)
-      .onClick((): void => {
-        if (this.isSweeping()) {
-          this.onStop();
-          return;
-        }
-        this.submitSearch();
-      });
+      ReaderButton({ scheme: this.appThemeScheme, specId: this.isTablet ? 'search-field-wide' : 'search-field-phone',
+        label: this.isSweeping() ? '停止' : '搜索', isBusy: this.isSweeping(), actionEnabled: this.canSubmit(),
+        leading: (): void => this.searchActionLeading(),
+        onAction: (): void => { if (this.isSweeping()) this.onStop(); else this.submitSearch(); } });
     }
     .width(this.contentFrame().width)
     .height(this.isTablet ? 56 : 52)
     .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: TOK_SPACE_XS })
     .alignItems(VerticalAlign.Center)
     .hitTestBehavior(HitTestMode.Transparent);
+  }
+
+  @Builder
+  private searchActionLeading() {
+    SearchSpinner({ active: this.isSweeping(), runKey: this.spinnerRunKey,
+      reduceMotion: this.reduceMotion, diameter: 13, light: true });
   }
 
   @Builder
@@ -622,12 +623,12 @@ export struct SearchPage {
         this.presentation.kind === 'sourceLoadError') {
         if (this.presentation.historyStatus === 'loading') {
           Text('正在读取搜索历史')
-            .fontFamily('ReaderInter').fontSize(13).lineHeight(20)
+            .fontFamily(TYPE_SEARCH_HISTORY_STATUS.fontFamily as string).fontSize(TYPE_SEARCH_HISTORY_STATUS.fontSizeFp).lineHeight(TYPE_SEARCH_HISTORY_STATUS.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
         } else if (this.presentation.historyStatus === 'loadFailed' || this.presentation.historyStatus === 'clearFailed') {
           Column({ space: TOK_SPACE_XS }) {
             Text(this.presentation.historyStatus === 'clearFailed' ? '搜索历史清空失败' : '搜索历史读取失败')
-              .fontFamily('ReaderInter').fontSize(13).lineHeight(20)
+              .fontFamily(TYPE_SEARCH_HISTORY_STATUS.fontFamily as string).fontSize(TYPE_SEARCH_HISTORY_STATUS.fontSizeFp).lineHeight(TYPE_SEARCH_HISTORY_STATUS.lineHeightFp as number)
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
             this.secondaryPill(this.presentation.historyStatus === 'clearFailed' ? '重试清空' : '重试读取',
               (): void => this.onRetryHistory());
@@ -638,20 +639,14 @@ export struct SearchPage {
         this.presentation.kind === 'sourceLoadError') && this.presentation.history.length > 0) {
         Row() {
           Text('最近搜索')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(13)
-            .lineHeight(19.5)
+            .fontFamily(TYPE_SEARCH_HISTORY_HEADING.fontFamily)
+            .fontWeight(TYPE_SEARCH_HISTORY_HEADING.fontWeight)
+            .fontSize(TYPE_SEARCH_HISTORY_HEADING.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_HISTORY_HEADING.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .layoutWeight(1);
-          Text('清空记录')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Medium)
-            .fontSize(12)
-            .lineHeight(18)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .enabled(this.presentation.historyStatus !== 'loading')
-            .onClick((): void => this.onClearHistory());
+          ReaderButton({ scheme: this.appThemeScheme, specId: 'search-history-clear', label: '清空记录',
+            actionEnabled: this.presentation.historyStatus !== 'loading', onAction: (): void => this.onClearHistory() });
         }
         .width('100%')
         .height(26)
@@ -660,23 +655,8 @@ export struct SearchPage {
         // All retained history is visible inside the existing page Scroll.
         Flex({ wrap: FlexWrap.Wrap, direction: FlexDirection.Row }) {
           ForEach(this.presentation.history, (keyword: string) => {
-            Text(keyword)
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Medium)
-              .fontSize(13)
-              .lineHeight(19.5)
-              .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-              .padding({ left: 14.5, right: 14.5, top: 7.5, bottom: 7.5 })
-              .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-              .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-              .borderRadius(999)
-              .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-              .constraintSize({ maxWidth: this.historyWidth > 0 ? Math.max(0, this.historyWidth - TOK_SPACE_XS) : '100%' })
-              .margin({ right: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
-              .onClick((): void => {
-                this.keyword = keyword;
-                this.submitSearch();
-              });
+            ReaderButton({ scheme: this.appThemeScheme, specId: 'search-history-keyword', label: keyword, availableWidth: this.historyWidth,
+              onAction: (): void => { this.keyword = keyword; this.submitSearch(); } });
           }, (keyword: string): string => `search-history-${keyword}`);
         }
         .width('100%')
@@ -728,21 +708,9 @@ export struct SearchPage {
 
   @Builder
   private groupScopeChip(label: string) {
-    Text(label)
-      .fontFamily('ReaderInter')
-      .fontWeight(this.selectedGroupName === label ? FontWeight.Bold : FontWeight.Medium)
-      .fontSize(12)
-      .lineHeight(12)
-      .fontColor(this.selectedGroupName === label ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
-      .padding({ left: 10, right: 10, top: 5.5, bottom: 5.5 })
-      .backgroundColor(this.selectedGroupName === label ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('TOK_PAPER', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: this.selectedGroupName === label ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(999)
-      .maxLines(1)
-      .textOverflow({ overflow: TextOverflow.Ellipsis })
-      .constraintSize({ maxWidth: 160 })
-      .onClick((): void => this.selectGroup(label))
-      .accessibilityText(this.selectedGroupName === label ? `当前搜索范围:${label}` : `筛选搜索结果:${label}`);
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'search-scope', label, primary: this.selectedGroupName === label,
+      actionAccessibilityLabel: this.selectedGroupName === label ? `当前搜索范围:${label}` : `筛选搜索结果:${label}`,
+      onAction: (): void => this.selectGroup(label) });
   }
 
   @Builder
@@ -803,63 +771,57 @@ export struct SearchPage {
       Stack({ alignContent: Alignment.TopStart }) {
         Row() {
           Text('找到 ')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(11)
-            .lineHeight(16.5)
+            .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
+            .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
+            .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
           Text(`${this.visibleGroups.length}`)
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(11)
-            .lineHeight(16.5)
+            .fontFamily(TYPE_SEARCH_RESULT_COUNT.fontFamily)
+            .fontWeight(TYPE_SEARCH_RESULT_COUNT.fontWeight)
+            .fontSize(TYPE_SEARCH_RESULT_COUNT.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_RESULT_COUNT.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
           Text(' 本相关书籍')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(11)
-            .lineHeight(16.5)
+            .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
+            .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
+            .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
           // Reads the presentation directly (not a builder param) so the
           // minimal-update re-render tracks it exactly like the search/stop
           // pill does: the sweep counter must update live per source landing.
           if (this.presentation.kind === 'results') {
             if (this.presentation.localSearchFailed || this.presentation.sourceListFailed) {
-              Text(this.partialSearchFailure()).fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-                .onClick((): void => this.onRetry());
+              ReaderButton({ scheme: this.appThemeScheme, specId: 'search-retry-status', label: this.partialSearchFailure(),
+                actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
             }
-            if (this.presentation.stopped === true) {
+            if (this.operation()?.fact === 'cancelled' || this.presentation.stopped === true) {
               // ACQ-02: a stopped sweep keeps its partial results; the header
               // states how far the interrupted sweep got so partials never read
               // as a complete verdict.
               Text(` · 已停止,已搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源`)
-                .fontFamily('ReaderInter')
-                .fontWeight(FontWeight.Regular)
-                .fontSize(11)
-                .lineHeight(16.5)
+                .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
+                .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
+                .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
+                .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
                 .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis });
-            } else if (this.presentation.searching) {
+            } else if (this.isSweeping()) {
               Text(` · 正在搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源,已返回 ${this.visibleGroups.length} 个`)
-                .fontFamily('ReaderInter')
-                .fontWeight(FontWeight.Regular)
-                .fontSize(11)
-                .lineHeight(16.5)
+                .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
+                .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
+                .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
+                .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
                 .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis });
             }
             if (this.presentation.failedSourceCount > 0) {
-              Text(` · 失败 ${this.presentation.failedSourceCount} 个书源${!this.presentation.searching || this.presentation.completedSourceCount === this.presentation.totalSourceCount ? '，重试' : ''}`)
-                .fontFamily('ReaderInter')
-                .fontWeight(FontWeight.Regular)
-                .fontSize(11)
-                .lineHeight(16.5)
-                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-                .onClick((): void => this.onRetry());
+              ReaderButton({ scheme: this.appThemeScheme, specId: 'search-retry-progress',
+                label: ` · 失败 ${this.presentation.failedSourceCount} 个书源${!this.presentation.searching || this.presentation.completedSourceCount === this.presentation.totalSourceCount ? '，重试' : ''}`,
+                actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
             }
             if ((this.presentation.skippedSourceCount ?? 0) > 0) {
               Text(` · 跳过 ${this.presentation.skippedSourceCount} 个近期不可用书源，重试`)
@@ -1091,10 +1053,10 @@ export struct SearchPage {
 
         Text('没有找到相关书籍')
           .margin({ top: 28 })
-          .fontFamily('ReaderNotoSerifSCBold')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(17)
-          .lineHeight(25.5)
+          .fontFamily(TYPE_SEARCH_STATE_TITLE.fontFamily)
+          .fontWeight(TYPE_SEARCH_STATE_TITLE.fontWeight)
+          .fontSize(TYPE_SEARCH_STATE_TITLE.fontSizeFp)
+          .lineHeight(TYPE_SEARCH_STATE_TITLE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .textAlign(TextAlign.Center);
 
@@ -1105,29 +1067,26 @@ export struct SearchPage {
           : `已搜索 ${searchedSourceCount} 个书源,未找到「${keyword}」的相关结果`)
           .margin({ top: TOK_SPACE_CONTROL_INLINE })
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(13)
-          .lineHeight(21.125)
+          .fontFamily(TYPE_SEARCH_STATE_DESCRIPTION.fontFamily)
+          .fontWeight(TYPE_SEARCH_STATE_DESCRIPTION.fontWeight)
+          .fontSize(TYPE_SEARCH_STATE_DESCRIPTION.fontSizeFp)
+          .lineHeight(TYPE_SEARCH_STATE_DESCRIPTION.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center)
           .maxLines(3);
 
         if (this.partialSearchFailure().length > 0) {
-          Text(this.partialSearchFailure())
-            .fontSize(12)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .margin({ top: TOK_SPACE_CONTROL_INLINE })
-            .onClick((): void => this.onRetry());
+          ReaderButton({ scheme: this.appThemeScheme, specId: 'search-retry-status-spaced', label: this.partialSearchFailure(),
+            actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
         }
 
         Column({ space: 0 }) {
           Text('搜索建议')
             .width('100%')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(12)
-            .lineHeight(18)
+            .fontFamily(TYPE_SEARCH_SUGGESTION_HEADING.fontFamily)
+            .fontWeight(TYPE_SEARCH_SUGGESTION_HEADING.fontWeight)
+            .fontSize(TYPE_SEARCH_SUGGESTION_HEADING.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_SUGGESTION_HEADING.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .maxLines(1);
           this.suggestion('检查书名拼写是否正确');
@@ -1145,7 +1104,7 @@ export struct SearchPage {
 
         Row({ space: TOK_SPACE_CONTROL_INLINE }) {
           this.primaryPill('添加更多书源', (): void => this.onManageSources());
-          this.secondaryPill('重新搜索', (): void => this.onRetry());
+          this.secondaryPill('重新搜索', (): void => this.retryOperation());
         }
         .margin({ top: 20 })
         .alignSelf(ItemAlign.Center);
@@ -1173,10 +1132,10 @@ export struct SearchPage {
 
       Text(reason === 'noSources' ? '还没有可用书源' : '没有可搜索书籍的书源')
         .margin({ top: 28 })
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(17)
-        .lineHeight(25.5)
+        .fontFamily(TYPE_SEARCH_STATE_TITLE.fontFamily)
+        .fontWeight(TYPE_SEARCH_STATE_TITLE.fontWeight)
+        .fontSize(TYPE_SEARCH_STATE_TITLE.fontSizeFp)
+        .lineHeight(TYPE_SEARCH_STATE_TITLE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center);
 
@@ -1184,10 +1143,10 @@ export struct SearchPage {
         '启用可搜索书籍的书源；本地导入的书仍可在上方搜索')
         .margin({ top: TOK_SPACE_CONTROL_INLINE })
         .width('100%')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(13)
-        .lineHeight(21.125)
+        .fontFamily(TYPE_SEARCH_STATE_DESCRIPTION.fontFamily)
+        .fontWeight(TYPE_SEARCH_STATE_DESCRIPTION.fontWeight)
+        .fontSize(TYPE_SEARCH_STATE_DESCRIPTION.fontSizeFp)
+        .lineHeight(TYPE_SEARCH_STATE_DESCRIPTION.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .maxLines(3);
@@ -1211,24 +1170,24 @@ export struct SearchPage {
 
       Text('书源列表加载失败')
         .margin({ top: 20 })
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(17)
-        .lineHeight(25.5)
+        .fontFamily(TYPE_SEARCH_STATE_TITLE.fontFamily)
+        .fontWeight(TYPE_SEARCH_STATE_TITLE.fontWeight)
+        .fontSize(TYPE_SEARCH_STATE_TITLE.fontSizeFp)
+        .lineHeight(TYPE_SEARCH_STATE_TITLE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center);
 
       Text('在线书源暂不可用；本地导入的书仍可在上方搜索')
         .margin({ top: TOK_SPACE_XS })
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(13)
-        .lineHeight(19.5)
+        .fontFamily(TYPE_APP_BODY.fontFamily)
+        .fontWeight(TYPE_APP_BODY.fontWeight)
+        .fontSize(TYPE_APP_BODY.fontSizeFp)
+        .lineHeight(TYPE_APP_BODY.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.Center);
 
       Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-        this.primaryPill('重试加载', (): void => this.onRetry());
+        this.primaryPill('重试加载', (): void => this.retryOperation());
         this.secondaryPill('返回书架', (): void => this.onBack());
       }
       .margin({ top: TOK_SPACE_LG })
@@ -1241,51 +1200,28 @@ export struct SearchPage {
 
   @Builder
   private primaryPill(label: string, onTap: () => void) {
-    Text(label)
-      .fontFamily('ReaderInter')
-      .fontWeight(800)
-      .fontSize(13)
-      .lineHeight(13)
-      .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-      .padding({ left: 18, right: 18, top: 11.5, bottom: 11.5 })
-      .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
-      .borderRadius(999)
-      .onClick((): void => onTap())
-      .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
-      .accessibilityText(label);
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'search-primary', label, primary: true, onAction: onTap });
   }
 
   @Builder
   private secondaryPill(label: string, onTap: () => void) {
-    Text(label)
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(13)
-      .lineHeight(13)
-      .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-      .padding({ left: 18.5, right: 18.5, top: 11.5, bottom: 11.5 })
-      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(999)
-      .onClick((): void => onTap())
-      .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
-      .accessibilityText(label);
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'search-secondary', label, onAction: onTap });
   }
 
   @Builder
   private suggestion(text: string) {
     Row({ space: 6 }) {
       Text('·')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(11)
-        .lineHeight(16.5)
+        .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
+        .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
+        .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
+        .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
       Text(text)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(12)
-        .lineHeight(19.5)
+        .fontFamily(TYPE_SEARCH_SUGGESTION_BODY.fontFamily)
+        .fontWeight(TYPE_SEARCH_SUGGESTION_BODY.fontWeight)
+        .fontSize(TYPE_SEARCH_SUGGESTION_BODY.fontSizeFp)
+        .lineHeight(TYPE_SEARCH_SUGGESTION_BODY.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -1306,54 +1242,26 @@ export struct SearchPage {
 
       Text(this.searchFailureTitle())
         .margin({ top: 20 })
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(17)
-        .lineHeight(25.5)
+        .fontFamily(TYPE_SEARCH_STATE_TITLE.fontFamily)
+        .fontWeight(TYPE_SEARCH_STATE_TITLE.fontWeight)
+        .fontSize(TYPE_SEARCH_STATE_TITLE.fontSizeFp)
+        .lineHeight(TYPE_SEARCH_STATE_TITLE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center);
 
       Text(this.searchFailureMessage())
         .margin({ top: TOK_SPACE_XS })
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(13)
-        .lineHeight(19.5)
+        .fontFamily(TYPE_APP_BODY.fontFamily)
+        .fontWeight(TYPE_APP_BODY.fontWeight)
+        .fontSize(TYPE_APP_BODY.fontSizeFp)
+        .lineHeight(TYPE_APP_BODY.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .maxLines(2);
 
-      Stack({ alignContent: Alignment.Center }) {
-        Text('重新搜索')
-          .fontFamily('ReaderInter')
-          .fontWeight(800)
-          .fontSize(14)
-          .lineHeight(14)
-          .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
-      }
-      .height(40)
-      .margin({ top: TOK_SPACE_LG })
-      .padding({ left: 28, right: 28 })
-      .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
-      .borderRadius(999)
-      .onClick((): void => this.onRetry())
-      .responseRegion({ x: 0, y: -4, width: '100%', height: 48 })
-      .accessibilityText('重新搜索');
-
-      Text('检查书源')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(13)
-        .lineHeight(13)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-        .padding({ left: 18.5, right: 18.5, top: 11.5, bottom: 11.5 })
-        .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-        .borderRadius(999)
-        .margin({ top: TOK_SPACE_CONTROL_INLINE })
-        .onClick((): void => this.onManageSources())
-        .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
-        .accessibilityText('检查书源');
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'search-error-retry', label: '重新搜索',
+        actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'search-error-source', label: '检查书源', onAction: (): void => this.onManageSources() });
     }
     .width('100%')
     .alignItems(HorizontalAlign.Center)
@@ -1427,10 +1335,10 @@ struct SearchResultCard {
           Stack({ alignContent: Alignment.Bottom }) {
             Text(this.group.book.title)
               .width('100%')
-              .fontFamily('ReaderNotoSerifSCBold')
-              .fontWeight(FontWeight.Bold)
-              .fontSize(9)
-              .lineHeight(11.7)
+              .fontFamily(TYPE_SEARCH_RESULT_COVER_TITLE.fontFamily)
+              .fontWeight(TYPE_SEARCH_RESULT_COVER_TITLE.fontWeight)
+              .fontSize(TYPE_SEARCH_RESULT_COVER_TITLE.fontSizeFp)
+              .lineHeight(TYPE_SEARCH_RESULT_COVER_TITLE.lineHeightFp as number)
               .fontColor(readerAppColor('app.SearchResultCard.build.fontColor.99FFFAF4', this.appThemeScheme))
               .textAlign(TextAlign.Center)
               .maxLines(1)
@@ -1454,20 +1362,20 @@ struct SearchResultCard {
         Column({ space: 5 }) {
           Text(this.group.book.title)
             .width('100%')
-            .fontFamily('ReaderNotoSerifSCBold')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(15)
-            .lineHeight(19.5)
+            .fontFamily(TYPE_SEARCH_RESULT_TITLE.fontFamily)
+            .fontWeight(TYPE_SEARCH_RESULT_TITLE.fontWeight)
+            .fontSize(TYPE_SEARCH_RESULT_TITLE.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_RESULT_TITLE.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
 
           Text(bookAuthorLabel(this.group.book.author, this.group.book.authorIdentity, this.group.book.sourceRuleVersion))
             .width('100%')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(12)
-            .lineHeight(12)
+            .fontFamily(TYPE_SEARCH_RESULT_AUTHOR.fontFamily)
+            .fontWeight(TYPE_SEARCH_RESULT_AUTHOR.fontWeight)
+            .fontSize(TYPE_SEARCH_RESULT_AUTHOR.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_RESULT_AUTHOR.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -1476,10 +1384,10 @@ struct SearchResultCard {
             Text(this.group.book.latestChapterTitle)
               .width('100%')
               .opacity(0.8)
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Regular)
-              .fontSize(11)
-              .lineHeight(11)
+              .fontFamily(TYPE_SEARCH_RESULT_CHAPTER.fontFamily)
+              .fontWeight(TYPE_SEARCH_RESULT_CHAPTER.fontWeight)
+              .fontSize(TYPE_SEARCH_RESULT_CHAPTER.fontSizeFp)
+              .lineHeight(TYPE_SEARCH_RESULT_CHAPTER.lineHeightFp as number)
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -1488,10 +1396,10 @@ struct SearchResultCard {
           if (this.displayIntro().length > 0) {
             Text(this.displayIntro())
               .width('100%')
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Regular)
-              .fontSize(12)
-              .lineHeight(18)
+              .fontFamily(TYPE_SEARCH_RESULT_INTRO.fontFamily)
+              .fontWeight(TYPE_SEARCH_RESULT_INTRO.fontWeight)
+              .fontSize(TYPE_SEARCH_RESULT_INTRO.fontSizeFp)
+              .lineHeight(TYPE_SEARCH_RESULT_INTRO.lineHeightFp as number)
               .fontColor(readerAppColor('app.SearchResultCard.build.fontColor.FF9A948E', this.appThemeScheme))
               .maxLines(2)
               .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -1503,21 +1411,30 @@ struct SearchResultCard {
         Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
           space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(2) } }) {
           Text(this.group.book.sourceName.length > 0 ? this.group.book.sourceName : this.group.book.sourceId)
-            .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
+            .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
+            .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
+            .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
             .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
             .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
           Text(this.group.book.sourceId === 'local' ? '本地书籍' : `已发现 ${this.group.sourceCount} 个书源`)
-            .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
+            .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
+            .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
+            .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
             .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
             .borderRadius(4).maxLines(1);
           if (this.group.inBookshelf) {
             Text('已在书架')
-              .fontFamily('ReaderInter').fontWeight(FontWeight.Bold).fontSize(10).lineHeight(15)
+              .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
+              .fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight)
+              .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
+              .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
               .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
               .padding({ left: 6, right: 6, top: 2, bottom: 2 })
               .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))

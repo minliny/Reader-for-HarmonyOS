@@ -1,5 +1,8 @@
 import { bookAuthorIdentity, readBookAuthorIdentity, type BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
+import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
+import type { BookRequestOptions } from '../../app/BookRequestScheduler';
+import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
 import { runBookSourceWorkers } from '../../app/BookRequestScheduler';
 import type { RemoteReadingVariable } from '../reading/RemoteReadingContract';
@@ -150,6 +153,8 @@ export type SourceSwitchTarget = {
 };
 
 export type SourceSwitchCommitParams = {
+  operationId?: string;
+  sequence?: number;
   from: { sourceId: string; bookId: string };
   target: SourceSwitchTarget;
   newToc: SourceSwitchNewTocEntry[];
@@ -158,17 +163,35 @@ export type SourceSwitchCommitParams = {
   updatedAt: number;
 };
 
+export interface SourceSwitchOperationHead { operationId: string; sequence: number; }
+export interface SourceSwitchTransactionProjection {
+  operationId: string;
+  sequence: number;
+  payloadFingerprint: string;
+  from: { sourceId: string; bookId: string };
+  target: { sourceId: string; bookId: string };
+  phase: 'pending' | 'finalized' | 'rolledBack';
+  commit: SourceSwitchCommittedOutcome;
+  restoredBook?: ShelfBook;
+}
+export interface SourceSwitchOperationQuery {
+  head?: SourceSwitchOperationHead;
+  transaction?: SourceSwitchTransactionProjection;
+}
+
 /** Core-owned durable transaction identity. Harmony never receives the journal. */
 export type SourceSwitchTransactionId = string;
 
 export type SourceSwitchCommitOutcome =
-  | {
+  | SourceSwitchCommittedOutcome
+  | { status: 'failed'; error: string; transactionId?: SourceSwitchTransactionId };
+
+export interface SourceSwitchCommittedOutcome {
     status: 'success';
     book: ShelfBook;
     matchedChapter: SourceSwitchNewTocEntry;
     transactionId: SourceSwitchTransactionId;
-  }
-  | { status: 'failed'; error: string; transactionId?: SourceSwitchTransactionId };
+}
 
 export type SourceSwitchRollbackResult = {
   transactionId: SourceSwitchTransactionId;
@@ -739,12 +762,18 @@ export class SourceSwitchGateway {
   async commitSwitch(
     params: SourceSwitchCommitParams,
     isCurrent: (() => boolean) | undefined = undefined,
+    evidence: ReaderWriteEvidence | undefined = undefined,
   ): Promise<SourceSwitchCommitOutcome> {
     this.assertNonBlankString(params.from.sourceId, 'from.sourceId');
     this.assertNonBlankString(params.from.bookId, 'from.bookId');
     this.assertNonBlankString(params.target.sourceId, 'target.sourceId');
     this.assertNonBlankString(params.target.bookId, 'target.bookId');
     this.assertNonBlankString(params.target.title, 'target.title');
+    if ((params.operationId === undefined) !== (params.sequence === undefined)) throw new Error('source switch caller identity must be complete');
+    if (params.operationId !== undefined && (params.operationId.trim().length === 0 ||
+      typeof params.sequence !== 'number' || !Number.isSafeInteger(params.sequence) || params.sequence <= 0)) {
+      throw new Error('source switch caller identity is invalid');
+    }
     // A durable chapter index remains usable when the old body's processing
     // context is stale and its title cannot be proven. Core owns index matching.
     if (typeof params.currentChapterTitle !== 'string') {
@@ -753,7 +782,7 @@ export class SourceSwitchGateway {
     if (params.newToc.length === 0) {
       throw new Error('source.switch.commit requires a non-empty newToc');
     }
-    if (!Number.isInteger(params.currentChapterIndex) || params.currentChapterIndex < 0) {
+    if (!Number.isSafeInteger(params.currentChapterIndex) || params.currentChapterIndex < 0) {
       throw new Error('source.switch.commit requires a non-negative currentChapterIndex');
     }
     let transactionId: string | undefined = undefined;
@@ -761,10 +790,11 @@ export class SourceSwitchGateway {
       const result = await this.runtimeOwner.request(
         'source.switch.commit',
         params as unknown as JsonObject,
-        this.requestOptions(isCurrent),
+        evidence === undefined ? this.requestOptions(isCurrent) : this.durableRequestOptions(isCurrent, evidence),
       );
       const rawBook = result.data['book'];
       transactionId = this.requireString(result.data, 'transactionId', 'source.switch.commit');
+      if (params.operationId !== undefined && transactionId !== params.operationId) throw new Error('source switch returned another caller identity');
       if (result.data['phase'] !== 'pending') {
         throw new Error('source.switch.commit returned an invalid phase');
       }
@@ -772,13 +802,23 @@ export class SourceSwitchGateway {
         throw new Error('source.switch.commit returned an invalid book');
       }
       const matchedChapter = this.decodeMatchedChapter(result.data['matchedChapter']);
-      return {
+      const book = this.decodeShelfBook(rawBook);
+      if (book.sourceId !== params.target.sourceId || book.bookId !== params.target.bookId ||
+        !params.newToc.some((entry): boolean => entry.chapterId === matchedChapter.chapterId &&
+          entry.chapterTitle === matchedChapter.chapterTitle && entry.chapterUrl === matchedChapter.chapterUrl &&
+          entry.order === matchedChapter.order)) {
+        throw new Error('source.switch.commit returned another book or an unadmitted chapter');
+      }
+      const outcome: SourceSwitchCommitOutcome = {
         status: 'success',
-        book: this.decodeShelfBook(rawBook),
+        book,
         matchedChapter,
         transactionId,
       };
+      evidence?.confirmed();
+      return outcome;
     } catch (error) {
+      if (isReaderCoreTransactionPendingError(error)) evidence?.rejectedBeforeExecution();
       const message = errorMessageOf(error);
       return transactionId === undefined
         ? { status: 'failed', error: message }
@@ -793,12 +833,13 @@ export class SourceSwitchGateway {
   async rollbackSwitch(
     transactionId: SourceSwitchTransactionId,
     isCurrent: (() => boolean) | undefined = undefined,
+    evidence: ReaderWriteEvidence | undefined = undefined,
   ): Promise<SourceSwitchRollbackResult> {
     this.assertNonBlankString(transactionId, 'transactionId');
     const result = await this.runtimeOwner.request(
       'source.switch.rollback',
       { transactionId },
-      this.requestOptions(isCurrent),
+      evidence === undefined ? this.requestOptions(isCurrent) : this.durableRequestOptions(isCurrent, evidence),
     );
     if (result.data['transactionId'] !== transactionId || result.data['phase'] !== 'rolledBack' ||
       typeof result.data['changed'] !== 'boolean') {
@@ -808,11 +849,13 @@ export class SourceSwitchGateway {
     if (typeof rawBook !== 'object' || rawBook === null || Array.isArray(rawBook)) {
       throw new Error('source.switch.rollback returned an invalid restored book');
     }
-    return {
+    const outcome: SourceSwitchRollbackResult = {
       transactionId,
       changed: result.data['changed'] as boolean,
       restoredBook: this.decodeShelfBook(rawBook),
     };
+    evidence?.confirmed();
+    return outcome;
   }
 
   /**
@@ -854,6 +897,62 @@ export class SourceSwitchGateway {
     return pending;
   }
 
+  /** Pure exact caller-lineage query. expected is the originally fixed full
+   * payload; Core owns its SHA-256 comparison and all durable phase proof. */
+  async queryTransaction(operationId: string, expected?: SourceSwitchCommitParams,
+    isCurrent?: () => boolean): Promise<SourceSwitchOperationQuery> {
+    this.assertNonBlankString(operationId, 'operationId');
+    const params: JsonObject = { operationId };
+    if (expected !== undefined) params['expected'] = expected as unknown as JsonObject;
+    const result = await this.runtimeOwner.request('source.switch.transaction.query', params, this.requestOptions(isCurrent));
+    const rawHead = result.data['head'];
+    const head: SourceSwitchOperationHead | undefined = rawHead === null ? undefined : {
+      operationId: this.requireString(this.requireObject(rawHead, 'source.switch.transaction.query head'), 'operationId', 'source.switch.transaction.query'),
+      sequence: this.requirePositiveSequence(this.requireObject(rawHead, 'source.switch.transaction.query head'), 'sequence'),
+    };
+    const raw = result.data['transaction'];
+    if (raw === null) return { head };
+    const row = this.requireObject(raw, 'source.switch.transaction.query transaction');
+    const sequence = this.requirePositiveSequence(row, 'sequence');
+    const from = this.requireObject(row['from'], 'source.switch.transaction.query from');
+    const target = this.requireObject(row['target'], 'source.switch.transaction.query target');
+    const phase = row['phase'];
+    const fingerprint = this.requireString(row, 'payloadFingerprint', 'source.switch.transaction.query');
+    if (row['operationId'] !== operationId || !/^[0-9a-f]{64}$/.test(fingerprint) ||
+      (phase !== 'pending' && phase !== 'finalized' && phase !== 'rolledBack') ||
+      head === undefined || head.sequence < sequence ||
+      (head.sequence === sequence && head.operationId !== operationId)) {
+      throw new Error('source.switch.transaction.query returned invalid exact lineage');
+    }
+    const commit = this.requireObject(row['commit'], 'source.switch.transaction.query commit');
+    const book = this.decodeShelfBook(commit['book']);
+    const matchedChapter = this.decodeMatchedChapter(commit['matchedChapter']);
+    const fromIdentity = { sourceId: this.requireString(from, 'sourceId', 'source.switch.transaction.query'),
+      bookId: this.requireString(from, 'bookId', 'source.switch.transaction.query') };
+    const targetIdentity = { sourceId: this.requireString(target, 'sourceId', 'source.switch.transaction.query'),
+      bookId: this.requireString(target, 'bookId', 'source.switch.transaction.query') };
+    if (commit['transactionId'] !== operationId || book.sourceId !== targetIdentity.sourceId || book.bookId !== targetIdentity.bookId ||
+      (expected !== undefined && (expected.operationId !== operationId || expected.sequence !== sequence ||
+        expected.from.sourceId !== fromIdentity.sourceId || expected.from.bookId !== fromIdentity.bookId ||
+        expected.target.sourceId !== targetIdentity.sourceId || expected.target.bookId !== targetIdentity.bookId ||
+        !expected.newToc.some((entry): boolean => entry.chapterId === matchedChapter.chapterId &&
+          entry.chapterTitle === matchedChapter.chapterTitle && entry.chapterUrl === matchedChapter.chapterUrl && entry.order === matchedChapter.order)))) {
+      throw new Error('source.switch.transaction.query returned mismatched exact payload');
+    }
+    const restoredBook = phase === 'rolledBack' ? this.decodeShelfBook(row['restoredBook']) : undefined;
+    if (restoredBook !== undefined && (restoredBook.sourceId !== fromIdentity.sourceId || restoredBook.bookId !== fromIdentity.bookId)) {
+      throw new Error('source.switch.transaction.query returned another restored identity');
+    }
+    return { head, transaction: { operationId, sequence, payloadFingerprint: fingerprint, from: fromIdentity,
+      target: targetIdentity, phase, commit: { status: 'success', transactionId: operationId, book, matchedChapter }, restoredBook } };
+  }
+
+  private requirePositiveSequence(row: JsonObject, key: string): number {
+    const value = row[key];
+    if (typeof value !== 'number' || !Number.isSafeInteger(value) || value <= 0) throw new Error('source switch sequence is invalid');
+    return value;
+  }
+
   private decodeMatchedChapter(value: unknown): SourceSwitchNewTocEntry {
     const chapter = this.requireObject(value, 'source.switch matchedChapter');
     return {
@@ -871,6 +970,15 @@ export class SourceSwitchGateway {
     return {
       shouldCancel: (): boolean => !isCurrent(),
     };
+  }
+
+  private durableRequestOptions(isCurrent: (() => boolean) | undefined,
+    evidence: ReaderWriteEvidence): BookRequestOptions {
+    // Runtime checks these after startup, immediately before the real SDK send.
+    // shouldCancel is deliberately absent: UI retirement cannot cancel an
+    // accepted storage transaction or discard its late exact ACK.
+    const admitted = (): boolean => ReaderRuntimeOwner.isCurrent(this.runtimeOwner) && isCurrent?.() !== false;
+    return { canContinue: admitted, canDispatch: admitted, onDispatch: (): void => evidence.dispatched() };
   }
 
   private decodeShelfBook(value: unknown): ShelfBook {

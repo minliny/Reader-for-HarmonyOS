@@ -12,7 +12,10 @@ for (const code of ['BUSY', 'RESOURCE_EXHAUSTED']) {
     ['requestDirect'], { coreAdmissionFailureSummary, httpResponseFailureSummary,
       LOG_DOMAIN: 0, DEFAULT_CORE_REQUEST_TIMEOUT_MS: 30000,
       hilog: { warn: (...args) => logs.push(args) } });
-  const owner = Object.assign(new Owner(), { start: async () => {},
+  // The extracted production method now checks its real Runtime ready state
+  // immediately before entering the SDK. This fixture exercises a Core
+  // rejection after that boundary, rather than an uninitialized local owner.
+  const owner = Object.assign(new Owner(), { state: 'ready', start: async () => {},
     readingEntryPreparations: () => ({ beginRequest: () => true, finishRequest: () => { finishes++; } }),
     runtime: { request: async () => { requests++; throw error; } } });
   await assert.rejects(owner.requestDirect('book.search', { keyword: 'private-secret' }), value => value === error);

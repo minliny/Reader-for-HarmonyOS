@@ -3,6 +3,7 @@ import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import {readFileSync} from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { compileHost, ReaderDirectoryHost } from './lib/reading-entry-owner-probe.mjs';
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
 // The shared production map uses a TypeScript constructor parameter property;
 // expand that one syntax node for Node's strip-only loader, preserving methods.
@@ -16,7 +17,7 @@ const CoreReadingAnchor=new Function(`${stripTypeScriptTypes(anchorSource)}; ret
 let captureContentEpoch=()=>()=>true;
 let waitContentIdle=async()=>{};
 const Reader=productionMotionMethods(file,['openChapter','loadSessionChapter','configureRestoredAnchor','lastVisibleScalar',
-  'positionContextForScope','selectBookmarkAnchor','commitTtsProgress','ttsChapterRef','notifyPreservedContentRefresh','reloadBookmarksAfterContentRefresh','requestCachedChapterRefresh'],{ReadingSurfaceLayoutMap,CoreReadingAnchor,RemoteChapterCacheRefreshError,LOCAL_READING_SOURCE_ID:'local',
+  'positionContextForScope','selectBookmarkAnchor','commitTtsProgress','progressProducerIntent','ttsChapterRef','notifyPreservedContentRefresh','reloadBookmarksAfterContentRefresh','requestCachedChapterRefresh'],{ReadingSurfaceLayoutMap,CoreReadingAnchor,RemoteChapterCacheRefreshError,LOCAL_READING_SOURCE_ID:'local',
   ReaderRuntimeOwner:{current:()=>({captureReadingContentValidity:(...args)=>captureContentEpoch(...args),
     waitForReadingContentIdle:(...args)=>waitContentIdle(...args)})}});
 const old={sourceId:'s',bookId:'b',chapterIndex:0,chapterTitle:'章',chapterUrl:'/0',bodyVersion:'old',processingVersion:'old-p',
@@ -27,7 +28,7 @@ const receipt=(id)=>({status:'committed',previousBodyVersion:'old',bodyVersion:'
 function page(load){
   const calls=[];
   const gateway={loadChapter:async(...args)=>{calls.push(args);return load(...args);}};
-  const p=Object.assign(new Reader(),{sourceId:'s',bookId:'b',tocEntries:[],chapterWindow:{get:()=>undefined,setCurrent(){},clear(){}},
+  const p=Object.assign(new Reader(),{mounted:true,lifecycleToken:1,chapterSelectionToken:1,sourceId:'s',bookId:'b',tocEntries:[],chapterWindow:{get:()=>undefined,setCurrent(){},clear(){}},
     controlBookmarkLoadGeneration:0,onLoadControlBookmarks:async()=>{},isSelectionActive:()=>true,activeGateway:()=>gateway,ensureCurrentContentMetrics:async()=>true,
     admitChapterContentVersion(){},retainCurrentChapterWindow(){},rebuildChapterImageIndexes(){},hasMeasuredViewport:()=>false,
     fail(error){this.failure=error;}});
@@ -91,8 +92,8 @@ for(const bad of ['body','anchor']){
 }
 {
  const {p,gateway}=page(async()=>old);p.chapter=upgraded;p.isSessionActive=()=>true;p.requireChapterLayoutMap=()=>new ReadingSurfaceLayoutMap(upgraded.content);
- p.coreLayout=()=>({});p.admitCommittedProgress=()=>{};p.logTtsFailure=()=>{};
- let saved;gateway.runProgressCommitSerial=async work=>work();gateway.resolveAndUpdateProgress=async(_book,_title,anchor)=>{saved=anchor;return anchor;};
+ p.coreLayout=()=>({});p.admitCommittedProgress=()=>{};p.logTtsFailure=(_label,error)=>{throw error;};
+ let saved;gateway.runProgressCommitSerial=async work=>work();gateway.persistPresentedProgress=async(bookId,_title,anchor,_layout,admitted)=>{assert.equal(admitted(),true);saved=anchor;return {bookId,...anchor,updatedAt:1};};
  await p.commitTtsProgress({chapter:p.ttsChapterRef(old),charEnd:6},1);assert.equal(saved,undefined,'old TTS callback cannot bind offsets to a new chapter body');
  await p.commitTtsProgress({chapter:p.ttsChapterRef(upgraded),charEnd:3},1);
  assert.equal(saved.bodyVersion,'new');assert.equal(saved.processingVersion,'new-p');assert.equal(saved.chapterOffset,3);
@@ -207,15 +208,23 @@ console.log('ML cache: offline readable old body, one-session notice, explicit p
    let active=true,revision=0;const calls=[],dialogs=[],failures=[];
    const ErrorKind=RemoteChapterCacheRefreshError;
    const error=new ErrorKind(session,0,position,scenario==='preserved');
+   const runtime={bookAcquisitions:()=>({readingProjectionRevision:()=>revision,setPreparationVisible(){}})};
+   const NativeGateway=class{async loadChapter(...args){calls.push(args);revision+=2;
+     if(scenario==='failure')throw Error('synthetic refresh failed');return upgraded;}};
+   const Entry=compileHost(undefined,{ReaderRuntimeOwner:{current:()=>runtime,isCurrent:owner=>owner===runtime},RemoteReadingFlowGateway:NativeGateway});
+   const emptyAdmission={generation:0,adding:false,cancelling:false,confirmation:'none'};
    const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-     ['refreshCachedChapterFromPrompt'],{...admission,withPreparedRemoteChapter,errorMessageOf:e=>e.message,
-       ReaderRuntimeOwner:{current:()=>({bookAcquisitions:()=>({readingProjectionRevision:()=>revision})})},
-       RemoteReadingFlowGateway:class{async loadChapter(...args){calls.push(args);revision+=2;
-         if(scenario==='failure')throw Error('synthetic refresh failed');return upgraded;}}});
-   const page=Object.assign(new Index(),{navigationGeneration:7,showReadingFailure:(...args)=>failures.push(args),
-     installRemoteReadingSession(value){this.remoteReadingSession=value;},getUIContext:()=>({showAlertDialog(row){
+     ['refreshCachedChapterFromPrompt','bindReadingEntryReader'],{...admission,withPreparedRemoteChapter,errorMessageOf:e=>e.message,
+       ReadingEntryHost:Entry,EMPTY_READABLE_ADMISSION:emptyAdmission,LOCAL_SOURCE_ID:'local',
+       ReaderRuntimeOwner:{current:()=>runtime},hilog:{warn(){}},DOMAIN:0,
+       RemoteReadingFlowGateway:NativeGateway});
+   const page=Object.assign(new Index(),{route:'reading',shelfReceiptRetired:false,remoteSessionGeneration:1,remoteReadingSession:session,navigationGeneration:7,showReadingFailure:(...args)=>failures.push(args),
+     mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,detailBook:{sourceId:'s',bookId:'b',title:'书',author:'作者'},detailToc:session.entries,
+     shelfOperation:{generation:0,removalKey:'',busy:false},detailReadableAdmission:()=>emptyAdmission,
+     getUIContext:()=>({showAlertDialog(row){
        dialogs.push(row);if(scenario==='stale')active=false;
        row[scenario==='decline'?'secondaryButton':'primaryButton'].action();}})});
+   page.bindReadingEntryReader();
    const result=await page.refreshCachedChapterFromPrompt(error,()=>active);
    assert.equal(calls.length,scenario==='refresh'||scenario==='failure'?1:0,scenario);
    if(calls.length){assert.equal(calls[0][0],session);assert.equal(calls[0][1],0);
@@ -319,15 +328,20 @@ console.log('PH93 actual reader fresh-body/fallback admission, refresh results, 
  for(const scenario of ['read-failed','new-mutation','new-navigation']){
   let reject;const gate=new Promise((_resolve,no)=>reject=no);
   const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-   ['loadControlBookmarks'],{loadReaderControlBookmarkProjection,ReaderRuntimeOwner:{current:()=>({})},
-    LocalReadingFlowGateway:class{async loadBookmarkProjection(){return gate;}}});
+   ['loadControlBookmarks','directoryBinding','directoryOperationBindingId','isCurrentDirectoryOperationBinding','applyOwnedDirectoryEntries'],
+   {ReaderRuntimeOwner:{current:()=>runtime}});
+  const {LocalReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
+  const runtime={request:()=>gate};
+  const host=new ReaderDirectoryHost({gateway:new LocalReadingFlowGateway(runtime),ownsRuntime:()=>true});
   const fresh=[{index:0,title:'章',bookmarks:[{time:2,chapterOffset:0}]}];
-  const p=Object.assign(new Index(),{detailBook:{sourceId:'s',bookId:'b',title:'书',author:'作者'},readingSessionActive:true,
+  const p=Object.assign(new Index(),{mounted:true,mountedRuntimeOwner:runtime,shelfReceiptRetired:false,route:'directory',
+   detailBook:{sourceId:'s',bookId:'b',title:'书',author:'作者'},readingSessionActive:true,
    navigationGeneration:1,directoryBookmarkMutationGeneration:1,directoryBookmarkMutationActiveKey:'',
    detailToc:[{index:0,title:'章',bookmarks:[]}],directoryBookmarkMutationKey:()=> 'book-key',
-   clearDirectoryBookmarkProjectionFailure(){}});
+   getReaderDirectoryHost:()=>host,getReadingEntryHost:()=>undefined,clearDirectoryBookmarkProjectionFailure(){}});
   const promise=p.loadControlBookmarks('s','b',()=>true);
-  if(scenario==='new-mutation'){p.directoryBookmarkMutationGeneration++;p.detailToc=fresh;}
+  await new Promise(resolve=>setImmediate(resolve));
+  if(scenario==='new-mutation'){host.generation++;p.detailToc=fresh;}
   if(scenario==='new-navigation')p.navigationGeneration++;
   reject(Error('bookmark read failed'));
   if(scenario==='read-failed')await assert.rejects(promise,/bookmark read failed/);

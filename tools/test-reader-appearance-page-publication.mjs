@@ -9,7 +9,7 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { copyReaderAppearanceSnapshot, createDefaultReaderAppearanceSnapshot } from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
 import * as appearanceStyle from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
 import { ReaderPageChromeSnapshot } from '../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts';
-import { ReadingSessionProgressOwner } from '../entry/src/main/ets/features/reading/ReadingSessionProgressOwner.ts';
+import { ReadingSessionProgressOwner } from './lib/reader-progress-owner-probe.mjs';
 
 // Execute production methods and SDK-emitted Builder closures. These assertions
 // concern publication inputs and async ownership, not native paint timing.
@@ -49,11 +49,13 @@ function fixture({ mode = 'paged', initial = true, queued = false, file = lreFil
   let activeTurn = false;
   const Serial=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts',import.meta.url),['runProgressCommitSerial']);
   const lane=Object.assign(new Serial(),{progressCommitTail:Promise.resolve()});
-  const persistence=new ReadingSessionProgressOwner({captureReadingContentValidity:()=>()=>true},'source','book',fn=>lane.runProgressCommitSerial(fn));
-  const gateway = { runProgressCommitSerial: async fn => { if (queued) await queueGate.promise; return persistence.runSerial(fn); },
+  const persistence=new ReadingSessionProgressOwner({captureReadingContentValidity:()=>()=>true},'source','book',async fn=>{
+    if (queued) await queueGate.promise; return lane.runProgressCommitSerial(fn);
+  });
+  const gateway = { hasPendingSourceSwitch:()=>false, runProgressCommitSerial: async fn => persistence.runSerial(fn),
     resolveAndUpdateProgress: (...args) => { const gate = deferred(); writes.push({ args, gate }); return gate.promise; } };
-  gateway.persistPresentedProgress=(_book,title,anchor,layout)=>persistence.persistPresented(title,anchor,layout,{
-    read:async()=>({kind:'missing'}), write:(title,anchor,layout,guard)=>gateway.resolveAndUpdateProgress('book',title,anchor,layout,guard)});
+  gateway.persistPresentedProgress=(_book,title,anchor,layout,admitted)=>persistence.persistPresented(title,anchor,layout,{
+    read:async()=>({kind:'missing'}), write:(title,anchor,layout,guard)=>gateway.resolveAndUpdateProgress('book',title,anchor,layout,guard)},admitted);
   gateway.awaitPresentedProgressPersistence=()=>persistence.awaitPersistence();
   Object.assign(owner, {
     mounted: true, exitRequested: false, lifecycleToken: 1, chapterSelectionToken: 2, materializedChapterSelectionToken: 2,

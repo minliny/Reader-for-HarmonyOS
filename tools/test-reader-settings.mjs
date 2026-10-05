@@ -208,8 +208,8 @@ assert.match(fullPanel, /与阅读样式同步/);
 assert.match(gateway, /ReaderRuntimeOwner/);
 assert.match(gateway, /getUIAbilityContext\(\)/);
 assert.match(gateway, /reader_reading_settings_v1/);
-assert.match(gateway, /decoded\.version !== 5[\s\S]*?store\.put\(READER_SETTINGS_SNAPSHOT_KEY, JSON\.stringify\(normalized\)\)/,
-  'legacy settings migration must be persisted so V4 owns subsequent explicit choices');
+assert.match(gateway, /decoded\.version !== 5[\s\S]*?this\.writeSnapshot\(store, normalized\)/,
+  'legacy settings migration shares the actual acknowledged snapshot writer');
 assert.doesNotMatch(gateway, /\.request\(/,
   'Reader Settings must not misuse Reader Core or invent a Host command');
 
@@ -241,7 +241,7 @@ assert.match(sharedContent, /this\.interactionEnabled && this\.p\(\) > 0 && isRe
 assert.match(sharedContent, /SETTINGS_PAGE_OPTIONS: string\[\] = \['cover', 'slide', 'simulation', 'scroll', 'none'\]/);
 assert.match(sharedContent, /group === 'pageTurn'[\s\S]*?return SETTINGS_PAGE_OPTIONS/);
 assert.match(experience, /void this\.loadReaderSettingsSnapshot\(lifecycleToken\)/);
-assert.match(experience, /this\.readerSettingsGateway\.update\(snapshot\)/);
+assert.match(experience, /this\.readerSettingsGateway\.update\(snapshot, false, current\)/);
 assert.match(experience, /settingsSnapshot: this\.readerSettingsSnapshot/);
 assert.match(controlPanel, /onScreenDirectionChange/);
 assert.match(controlPanel, /onScreenTimeoutChange/);

@@ -1,5 +1,6 @@
 import { themeDayDesignSource } from './lib/reader-theme-design-source.mjs';
 import assert from 'node:assert/strict';
+import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { readFile, stat } from 'node:fs/promises';
 
 import {
@@ -287,8 +288,10 @@ assert.match(fullPanel,
   /backgroundColor\(this\.isActiveFont\(fontId\) \? TOK_PRIMARY_SOFT : Color\.Transparent\)[\s\S]*color: this\.isActiveFont\(fontId\) \? TOK_READ_PRIMARY : TOK_LINE/,
   'full font cells must use transparent weak-border defaults and the green selected fill');
 assert.match(fullPanel,
-  /Text\('即时应用'\)[\s\S]*\.width\(70\)[\s\S]*\.fontWeight\(FontWeight\.Medium\)[\s\S]*\.fontSize\(10\)/,
+  /Text\('即时应用'\)[\s\S]*\.width\(70\)[\s\S]*\.fontWeight\(TYPE_READER_APPEARANCE_FULL_COMPAT_TYPOGRAPHY_LIBRARY_LABEL_SECONDARY\.fontWeight\)[\s\S]*\.fontSize\(TYPE_READER_APPEARANCE_FULL_COMPAT_TYPOGRAPHY_LIBRARY_LABEL_SECONDARY\.fontSizeFp\)/,
   'the typography helper must occupy the authored 70vp header column');
+assert.equal(readerTypographyRoles.TYPE_READER_APPEARANCE_FULL_COMPAT_TYPOGRAPHY_LIBRARY_LABEL_SECONDARY.fontWeight, 500);
+assert.equal(readerTypographyRoles.TYPE_READER_APPEARANCE_FULL_COMPAT_TYPOGRAPHY_LIBRARY_LABEL_SECONDARY.fontSizeFp, 10);
 assert.match(fullPanel,
   /\.width\(this\.stepperPanelWidth\(\)\)\s*\.height\(140\)\s*\.borderRadius\(8\)/,
   'the metric rows must not invent an enclosing fill or border absent from Figma');

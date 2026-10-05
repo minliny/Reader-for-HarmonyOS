@@ -6,11 +6,11 @@ import { createDefaultReaderAppearanceSnapshot, normalizeReaderAppearanceSnapsho
   setReaderAppearanceTheme } from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
 
 const Content = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets', import.meta.url),
-  ['selectOptions', 'selectValue', 'applySelect', 'commitSelect', 'toggleSelect', 'metricValue',
+  ['selectOptions', 'selectValue', 'applySelect', 'commitSelect', 'toggleSelect', 'metricValue', 'selectionActorIdentity',
     'themeIds', 'themeLabel', 'themeColor', 'themeSummary'], { ...style, appearanceSelectMenuPosition });
 const snapshot = createDefaultReaderAppearanceSnapshot();
 const content = Object.assign(new Content(), { snapshot, pageTurnSimulationAvailable: true,
-  chineseConversionMode: 'none', pageTurnStyle: 'slide', openSelect: '', selectGeneration: 0,
+  chineseConversionMode: 'none', chineseConversionIdentity: 'reader:make', pageTurnStyle: 'slide', openSelect: '', selectGeneration: 0,
   fullInput: () => true, frame: () => ({ layout: { x: 11, y: 367 }, sectionWidth: 316 }),
   availableWidth: 338, availableHeight: 666, scrollMotion: { nativeScrollOffset: 0 },
   onTemporaryLayerChange() {}, requestSelectClose() { this.selectClosing = true; },
@@ -27,7 +27,7 @@ for (const [kind, value, y] of [['indent', '1字符', 38], ['indent', '2字符',
   content.openSelect = '';
   content.toggleSelect(kind, y);
   assert.equal(content.selectClosing, false);
-  const id = content.selectIdentity;
+  const id = content.selectionActorIdentity();
   content.commitSelect(value, id);
   assert.equal(content.selectValue(kind), value);
   content.toggleSelect(kind, y);
@@ -36,7 +36,7 @@ for (const [kind, value, y] of [['indent', '1字符', 38], ['indent', '2字符',
   content.toggleSelect(kind, y);
   content.commitSelect('无', id);
   assert.equal(content.selectValue(kind), value, 'old menu cannot overwrite a later opening');
-  content.commitSelect('不存在', content.selectIdentity);
+  content.commitSelect('不存在', content.selectionActorIdentity());
   assert.equal(content.selectValue(kind), value, 'invalid options cannot reach Host callbacks');
 }
 content.pageTurnSimulationAvailable = false;

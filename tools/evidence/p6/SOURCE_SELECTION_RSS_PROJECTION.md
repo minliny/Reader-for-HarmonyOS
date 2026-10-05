@@ -1,0 +1,36 @@
+# Source tools canonical selection and RSS information projection
+
+Input baseline: `706d8af4`. Existing SourceToolsOrchestrator remains the only
+selection/business coordinator. `selectAll`, `toggleSelection` and
+`consumeSelection` now read/change its canonical selection and authoritative
+source list rather than making a page read-modify-write copy. Consumption uses
+the existing normalization and original busy/pending/runtime/session guard.
+Batch checking still preserves its selected scope. No second selection store,
+generic selector or source parsing/serialization implementation is introduced.
+
+RSS feed/subscriptions/unread and management row metadata now have one pure
+`RssPresentationProjection` over the existing full Core DTOs. It preserves the
+current app's exact sourceGroup/customOrder/rule marker/site-or-feed URL/local
+last-fetch date/disabled copy and ordering. It neither creates fake health nor
+opens hidden All/Favorites/Rules product modes; existing RSS owners retain IO,
+receipts, recovery, subscription/entry binding and lifetime.
+
+The original Index methods were actually compared against the new projection
+before they were removed. The continuing gate pins that characterized UI
+contract independently of old method locations, including all four existing
+presentation states and complete/empty optional metadata. Selection tests run
+the full actual Orchestrator and its actual constants; a stale UI copy, rapid
+toggle, duplicate/unknown IDs, busy/pending and retired consumption are covered.
+Existing full batch progress, source tools and RSS architecture tests pass.
+
+Integration still requires Index delegate consumption and deleting its old
+selection calculation/date/metadata body. The factory must capture Runtime and
+presentation lifetime: a route-only predicate/default Runtime is insufficient
+for publication after a retired page. Actual Index/SDK actors and final ArkTS,
+artifact, target and postponed visual/user evidence remain separate exits.
+
+## Actual RSS Index consumption
+
+Index's feed/subscriptions/recentUnread/managementItems methods now delegate to the real `RssPresentationProjection`. Its duplicate metadata, date and two-digit implementation is deleted. Gateway→Index→actual SDK management/feed/detail/editor consumer regressions preserve current strings, date formatting, empty/unavailable behavior and all existing recovery boundaries. SourceTools Index delivery is a separate following slice; a pure leaf projection alone does not close that consumer exit.
+
+The former bookshelf host wiring test's requirement for Index direct `upsertBook` was replaced with exact Index→BookshelfHost.readable→BookshelfReadableAdmissionOwner→actual captured ReaderCoreGateway assertions. The production write is not moved back into Index.

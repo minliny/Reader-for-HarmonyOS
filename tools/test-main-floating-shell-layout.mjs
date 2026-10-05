@@ -92,7 +92,7 @@ for (const bottom of [0, 15, 34, 50]) {
   assert.equal(surface.margin.bottom, Math.max(15, bottom));
 }
 
-const shelf = probe('bookshelf/BookshelfPage.ets', ['bookshelfList', 'shelfBottomContentInset'], {
+const shelf = probe('bookshelf/BookshelfPage.ets', ['bookshelfList','shelfPageHandler','shelfScrollHandler','isShelfPresentationCurrent', 'shelfBottomContentInset'], {
   continueReading: undefined, filterRowVisible: false, viewModeError: '', visibleBookCount: 1,
   rowDataSource: {}, shelfScroller: {}, shelfContentWidth: () => 352,
 });
@@ -168,7 +168,7 @@ for (const section of ['home', 'general']) {
 
 safeBottom = 34;
 const discover = probe('discover/DiscoverPage.ets', ['discoverTabContent', 'discoverContent', 'bottomContentInset'], {
-  homeTopBar() {}, currentSourceCard() {}, categoryChips() {}, filterRow() {}, rankingHeader() {}, resultList() {},
+  homeTopBar() {}, currentSourceCard() {}, categoryChips() {}, filterRow() {}, rankingHeader() {}, resultList() {}, operationFeedback() {},
   contentFrame: () => ({ left: 19, right: 19, width: 352 }),
 });
 discover.discoverTabContent();
@@ -180,7 +180,7 @@ for (const wide of [false, true]) for (const kind of ['feed', 'refreshing', 'emp
   const rss = probe('rss/RssPage.ets', ['build', 'feedScroll', 'emptyUnreadScroll', 'errorContent', 'bottomContentInset'], {
     presentation: { kind, subscriptions: [], recentUnread: [], failedSources: [] }, isWideViewport: () => wide,
     topBar() {}, searchBar() {}, statusTabs() {}, subscriptionSection() {}, recentUnreadSection() {},
-    refreshingRow() {}, emptyUnreadSection() {}, stateCard() {}, onMainTab() {},
+    refreshingRow() {}, emptyUnreadSection() {}, stateCard() {}, readFeedback() {}, onMainTab() {},
     contentFrame: () => ({ left: 19, right: 19, width: 352 }),
   });
   rss.initialRender();

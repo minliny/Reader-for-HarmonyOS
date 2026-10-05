@@ -11,8 +11,8 @@ const orchestrator = read('entry/src/main/ets/features/discover/DiscoverOrchestr
 const page = read('entry/src/main/ets/features/discover/DiscoverPage.ets');
 const index = read('entry/src/main/ets/pages/Index.ets');
 
-assert.match(gateway, /request\('source\.exploreKinds', \{ sourceId \}\)/);
-assert.match(gateway, /request\('source\.explore', \{ sourceId, url, page \}\)/);
+assert.match(gateway, /request\('source\.exploreKinds', \{ sourceId \}, \{ canDispatch: current, canContinue: current \}\)/);
+assert.match(gateway, /request\('source\.explore', \{ sourceId, url, page \}, \{ canDispatch: current, canContinue: current \}\)/);
 assert.match(gateway, /page must be a positive safe integer/);
 assert.match(gateway, /const name = this\.string\(obj, 'title'\)/,
   'Core source.explore books use the stable BookSearchBookData title field');
@@ -46,7 +46,7 @@ for (const alias of ['rss_refresh', 'rss_source', 'bookshelf_filter', 'reader_ch
   assert.ok(!page.includes(`app.media.${alias}`), `Discover must not reuse unrelated icon ${alias}`);
 }
 assert.match(index, /getDiscoverOrchestrator\(\)\.open\(\)/);
-assert.match(index, /getDiscoverOrchestrator\(\)\.selectKind\(index\)/);
+assert.match(index, /isCurrentDiscoverPresentation\(generation, owner, mounting, host\)\) host\?\.selectKind\(index\)/);
 assert.doesNotMatch(index, /private async loadDiscover/);
 
 console.log('discover source filter and pagination contract: PASS');

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { actualProjectionTypes, actualProjectionIndex } from './lib/bookshelf-projection-owner-probe.mjs';
 const file = new URL('../entry/src/main/ets/features/bookshelf/BookshelfFlowGateway.ts', import.meta.url);
 const Flow=productionMotionMethods(file,['load','loadPage','loadAll','loadAnchor','extendPage','classify'],{BOOKSHELF_PAGE_SIZE:48});
 const book=i=>({sourceId:'s',bookId:String(i),title:String(i),author:'a'});
@@ -44,44 +45,44 @@ function fixture(read){
 }
 console.log('PASS shelf pages: bounded first read, independent continue summary, filtered-empty distinction, complete membership, stale revision restart, cancellation and anchor extension');
 
-let resolvePage;
-const pendingPage=()=>new Promise(resolve=>{resolvePage=resolve;});
-let currentOwner={};let loads=0;
-class Gateway {loadPage(){loads++;return pendingPage();}}
-const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),['loadNextShelfPage','loadPreviousShelfPage','loadShelfWindowPage'],{
- ReaderRuntimeOwner:{current:()=>currentOwner},BookshelfFlowGateway:Gateway,hilog:{warn(){}},DOMAIN:0});
-for(const outcome of ['append','stale-generation','changed','duplicate','owner']){
- const first=page(0), host=Object.assign(new Index(),{route:'bookshelf',shelfBooks:first.books,shelfMatchedTotal:100,shelfWindowOffset:0,
-  shelfProjectionRevision:'r',shelfPageLoading:false,bookshelfLoadGeneration:1,shelfReadingFilter:'all',shelfSourceFilter:'all',
-  shelfBookKey:b=>JSON.stringify([b.sourceId,b.bookId]),refreshes:0,refreshBookshelf(){this.refreshes++;this.bookshelfLoadGeneration++;this.shelfPageLoading=false;}});
- loads=0;host.loadNextShelfPage();host.loadNextShelfPage();assert.equal(loads,1);
- if(outcome==='stale-generation')host.bookshelfLoadGeneration++;
- if(outcome==='owner')currentOwner={};
- const next=page(48);if(outcome==='changed'){next.changed=true;next.books=[];next.projectionRevision='new';}
- if(outcome==='duplicate')next.books=[book(0)];
- resolvePage(next);await new Promise(r=>setImmediate(r));
- assert.equal(host.shelfBooks.length,outcome==='append'?96:48,outcome);
- assert.equal(host.refreshes,outcome==='changed'?1:0,outcome);
+const pause=()=>new Promise(r=>setTimeout(r,1));
+async function until(p){for(let i=0;i<200;i++){if(p())return;await pause();}assert.fail('actual shelf page did not settle');}
+function windowFixture(total=100){let installed,resolvePage,defer=false,mode='append';const requests=[];
+ const runtime={supportsCoreCapability:c=>c==='bookshelf.pageProjection.v1',async request(method,params){
+  if(method==='source.list')return{data:{sources:[]}};
+  assert.equal(method,'bookshelf.list');requests.push(params.offset??0);
+  const result={...page(params.offset??0,total,mode==='changed'?'new':'r'),offset:params.offset??0,unfilteredOnlineTotal:total};
+  if(mode==='changed'&&(params.offset??0)>0){result.changed=true;result.books=[];}
+  if(mode==='duplicate'&&(params.offset??0)>0)result.books=[book(0)];
+  result.books=result.books.map(b=>({...b,sourceName:'Source',addedAt:1,sortIndex:Number(b.bookId)}));
+  if(defer){defer=false;await new Promise(r=>{resolvePage=r;});}return{data:result};
+ }};
+ installed=runtime;const types=actualProjectionTypes(()=>installed),actual=actualProjectionIndex(runtime,types,{initial:{kind:'populated',shelf:page(0,total),continueReading:undefined}});
+ return{...actual,requests,mode:m=>mode=m,changeOwner:o=>installed=o,pause(){defer=true;},release(){resolvePage();}};
 }
-console.log('PASS shelf page UI ownership: single request, append, stale generation/runtime rejection, changed revision refresh and duplicate-page rejection');
-
+for(const outcome of ['append','stale-generation','changed','duplicate','owner']){
+ const f=windowFixture(),host=f.idx;let refreshes=0;
+ const refresh=f.owner.refresh.bind(f.owner);f.owner.refresh=(...args)=>{refreshes++;return refresh(...args);};
+ f.idx.bookshelfProjectionBinding.failed=e=>f.faults.push(e.message);
+ f.pause();f.mode(outcome);host.loadNextShelfPage();host.loadNextShelfPage();assert.equal(f.requests.length,1);
+ if(outcome==='stale-generation')host.invalidateBookshelfProjection();
+ if(outcome==='owner')f.changeOwner({});
+ f.release();await until(()=>!f.owner.snapshot().pageLoading);await pause();
+ assert.equal(host.shelfBooks.length,outcome==='append'?96:48,outcome+' '+JSON.stringify(f.faults));
+ assert.equal(refreshes,outcome==='changed'?1:0,outcome);
+}
+console.log('PASS actual Flow→ProjectionOwner→Index paging: single request, append, stale generation/runtime rejection, changed revision refresh and duplicate-page rejection');
 // Exercise more than twenty native list windows, including an incomplete tail.
 {
- const total=1001;let requests=[];
- class WindowGateway {async loadPage(offset,revision){requests.push(offset);return {...page(offset,total,revision),offset};}}
- const WindowIndex=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
- ['loadNextShelfPage','loadPreviousShelfPage','loadShelfWindowPage'],{
- ReaderRuntimeOwner:{current:()=>currentOwner},BookshelfFlowGateway:WindowGateway,hilog:{warn(){throw new Error('unexpected window error');}},DOMAIN:0});
- const host=Object.assign(new WindowIndex(),{route:'bookshelf',shelfBooks:page(0,total).books,shelfMatchedTotal:total,
- shelfWindowOffset:0,shelfProjectionRevision:'r',shelfPageLoading:false,bookshelfLoadGeneration:1,
- shelfBookKey:b=>JSON.stringify([b.sourceId,b.bookId]),shelfFilter:()=>({readingState:'all',sourceKind:'all'})});
+ const total=1001,f=windowFixture(total),host=f.idx;
  const check=()=>{assert.ok(host.shelfBooks.length<=144);assert.equal(host.shelfWindowOffset%48,0);
  assert.deepEqual(host.shelfBooks.map(b=>Number(b.bookId)),Array.from({length:host.shelfBooks.length},(_,i)=>host.shelfWindowOffset+i));};
- while(host.shelfWindowOffset+host.shelfBooks.length<total){host.loadNextShelfPage();await new Promise(r=>setImmediate(r));check();}
+ while(host.shelfWindowOffset+host.shelfBooks.length<total){host.loadNextShelfPage();await until(()=>!f.owner.snapshot().pageLoading);check();}
  assert.equal(host.shelfBooks.at(-1).bookId,'1000');
- while(host.shelfWindowOffset>0){host.loadPreviousShelfPage();await new Promise(r=>setImmediate(r));check();}
- assert.equal(host.shelfBooks[0].bookId,'0');assert.ok(requests.length>35);
+ while(host.shelfWindowOffset>0){host.loadPreviousShelfPage();await until(()=>!f.owner.snapshot().pageLoading);check();}
+ assert.equal(host.shelfBooks[0].bookId,'0');assert.ok(f.requests.length>35);
 }
+
 {
  const f=fixture(p=>({...page(960,1001),offset:960,anchorFound:true}));
  f.owner.bookshelf.supportsShelfAnchorPages=()=>true;

@@ -49,7 +49,8 @@ function validate(owner) {
   assert.equal(s.colon.position.x, s.minute.wheelWidth + 8);
   assert.equal(s.placements[1].x, s.minute.wheelWidth + 24);
   assert.equal(s.placements[1].x + s.second.wheelWidth, s.group.width);
-  assert.equal(s.minute.selectedSize, 17); assert.equal(s.minute.neighbourSize, 11);
+  assert.equal(Object.hasOwn(s.minute, 'selectedSize'), false);
+  assert.equal(Object.hasOwn(s.minute, 'neighbourSize'), false, 'parent cannot override the shared wheel typography');
   assert.equal(s.minute.rowHeight, 34); assert.equal(s.group.height, 114); assert.equal(s.card.height, 138);
   return s;
 }
@@ -78,7 +79,7 @@ const wheelBuilderSource = wheelSource.replace('  build() {',
   '  build() { Column() {} }\n  @Builder private paintWheel() {');
 const wheel = createReaderBuilderProbe(wheelBuilderSource, ['offsets', 'valid', 'label', 'step', 'paintWheel']).owner;
 Object.assign(wheel, { value: 15, minimum: 0, maximum: 180, wheelWidth: 76, rowHeight: 34, neighbours: 1,
-  selectedSize: 17, neighbourSize: 11, unit: '分', interactionEnabled: true, appThemeScheme: 'day' });
+  unit: '分', interactionEnabled: true, appThemeScheme: 'day' });
 wheel.paintWheel();
 for (const s of samples) {
   wheel.wheelWidth = s.minute.wheelWidth; wheel.replay();

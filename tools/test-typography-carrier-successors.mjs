@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { sharedTypographyReplacement, typographyCarrierMethod } from './lib/reader-typography-shared-replacements.mjs';
+const read = p => readFileSync(new URL('../'+p,import.meta.url),'utf8');
+const baseline = JSON.parse(read('tools/fixtures/design/conventional-typography-baseline.json'));
+const file = tail => baseline.files.find(file => file.path.endsWith(tail));
+const rss = file('/RssSubscriptionEditorPage.ets');
+const save = rss.nodes.find(node => node.method === 'build' && node.text === "'保存'");
+const page = read(rss.path);
+const saveCarrier=sharedTypographyReplacement(rss.path,save,page);
+assert.equal(saveCarrier.producerPath,'entry/src/main/ets/features/common/ReaderButton.ets');
+assert.throws(()=>sharedTypographyReplacement(rss.path,save,page.replace('this.saveAction();','// this.saveAction();')),/actual AST call/,'comment cannot stand in for a real Builder edge');
+assert.throws(()=>sharedTypographyReplacement(rss.path,save,page.replace("specId: 'form-busy-action'","specId: 'rules-action'")),/real finite binding/);
+const button=read('entry/src/main/ets/features/common/ReaderButton.ets');
+assert.throws(()=>sharedTypographyReplacement(rss.path,save,page,button.replace('instance.fontSize(text.fontSizeFp)','instance.fontSize(19)')),/exact immutable original native tuple/);
+assert.equal(typographyCarrierMethod(rss.path,rss.nodes[0],page),'build','existing RSS status stays on its actual original carrier');
+const settings=file('/SettingsPage.ets'),reset=settings.nodes.find(node=>node.method==='buildGeneral'&&node.text==='this.resetMessage'),settingsPage=read(settings.path);
+assert.equal(typographyCarrierMethod(settings.path,reset,settingsPage),'operationFeedback');
+assert.throws(()=>typographyCarrierMethod(settings.path,reset,settingsPage.replaceAll('this.operationFeedback();','// this.operationFeedback();')),/actual AST call/);
+assert.throws(()=>typographyCarrierMethod(settings.path,reset,settingsPage.replace('Text(this.feedbackMessage())','Text(this.resetMessage)')),/exact authored successor carrier/);
+assert.throws(()=>typographyCarrierMethod(settings.path,reset,settingsPage.replace('Text(this.feedbackMessage()).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)','Text(this.feedbackMessage()).fontSize(19)')),/exact public successor tuple/);
+assert.throws(()=>typographyCarrierMethod(settings.path,reset,settingsPage.replace('Text(this.feedbackMessage()).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)','Text(this.feedbackMessage()).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).letterSpacing(0)')),/AUTO omissions/);
+const target = read('entry/src/main/ets/features/common/ReaderRecoveryNotice.ets');
+for(const [tail,text] of [['/BookshelfPage.ets','this.viewModeError'],['/BookshelfSettingsPage.ets','this.error']]){
+  const pageFile=file(tail), expected=pageFile.nodes.find(node=>node.text===text),source=read(pageFile.path);
+  const actual=sharedTypographyReplacement(pageFile.path,expected,source);assert.equal(actual.text,'this.view.message');
+  assert.deepEqual(Object.keys(actual.modifiers),Object.keys(expected.original));
+  assert.throws(()=>sharedTypographyReplacement(pageFile.path,expected,source.replaceAll('ReaderRecoveryNotice({','ReaderOtherNotice({')),/actual page consumes/);
+  assert.throws(()=>sharedTypographyReplacement(pageFile.path,expected,source.replace("import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';",'')),/actual shared implementation import/);
+  assert.throws(()=>sharedTypographyReplacement(pageFile.path,expected,source,target.replace('TYPE_APP_INHERITED_BODY.fontSizeFp','13')),/exact original shared role/);
+  assert.throws(()=>sharedTypographyReplacement(pageFile.path,expected,source,target.replace('.fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)','.fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontWeight(400)')),/AUTO omission/);
+  assert.equal(sharedTypographyReplacement('entry/src/main/ets/features/other/OtherPage.ets',expected,source),undefined,'no free-form whitelisting of new pages');
+}
+console.log('PASS precise Typography successors: RSS actual saveAction edge + Settings current feedbackMessage edge + two actual shared recovery carriers; literal/default/import/comment bypasses rejected.');

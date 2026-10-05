@@ -1,3 +1,7 @@
+import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
+import { labeledIconControls } from './lib/reader-labeled-icon-action-probe.mjs';
+import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { themeDayDesignSource } from './lib/reader-theme-design-source.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -8,6 +12,9 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => themeDayDesignSource(readFileSync(resolve(repo, path), 'utf8'));
 
 const rss = read('entry/src/main/ets/features/rss/RssPage.ets');
+const rssContract = read('entry/src/main/ets/features/rss/RssPresentationContract.ts');
+assert.match(rss, /import type \{[^\n]*RssPresentation[^\n]*\} from '\.\/RssPresentationContract'/);
+assert.doesNotMatch(rss, /export interface Rss(?:Feed|Refreshing|EmptyUnread|FatalError)Presentation/);
 const sourceFeed = read('entry/src/main/ets/features/rss/RssSourceFeedPage.ets');
 const entryDetail = read('entry/src/main/ets/features/rss/RssEntryDetailPage.ets');
 const management = read('entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets');
@@ -15,6 +22,7 @@ const editor = read('entry/src/main/ets/features/rss/RssSubscriptionEditorPage.e
 const editorOrchestrator = read('entry/src/main/ets/features/rss/RssSubscriptionEditorOrchestrator.ets');
 const gateway = read('entry/src/main/ets/features/rss/RssGateway.ts');
 const orchestrator = read('entry/src/main/ets/features/rss/RssOrchestrator.ets');
+const routeHost = read('entry/src/main/ets/features/rss/RssRouteOperationHost.ts');
 const index = read('entry/src/main/ets/pages/Index.ets');
 const mainTabBar = read('entry/src/main/ets/features/shell/MainTabBar.ets');
 const mainTabShell = read('entry/src/main/ets/features/shell/MainTabShell.ets');
@@ -24,13 +32,13 @@ const mainTabShell = read('entry/src/main/ets/features/shell/MainTabShell.ets');
 assert.equal((rss.match(/MainTabShell\(\{/g) ?? []).length, 1);
 assert.doesNotMatch(rss, /PageBackBar/);
 assert.doesNotMatch(rss, /private backBar\(/);
-assert.match(rss, /kind: 'feed'/);
-assert.match(rss, /kind: 'refreshing'/);
-assert.match(rss, /kind: 'emptyUnread'/);
-assert.match(rss, /kind: 'fatalError'/);
-assert.doesNotMatch(rss, /kind: 'empty';/);
-assert.doesNotMatch(rss, /kind: 'error';/);
-assert.match(rss, /interface RssEmptyUnreadPresentation \{\s*kind: 'emptyUnread';\s*subscriptions: RssSubscription\[\];/);
+assert.match(rssContract, /kind: 'feed'/);
+assert.match(rssContract, /kind: 'refreshing'/);
+assert.match(rssContract, /kind: 'emptyUnread'/);
+assert.match(rssContract, /kind: 'fatalError'/);
+assert.doesNotMatch(rssContract, /kind: 'empty';/);
+assert.doesNotMatch(rssContract, /kind: 'error';/);
+assert.match(rssContract, /interface RssEmptyUnreadPresentation \{\s*kind: 'emptyUnread';\s*subscriptions: RssSubscription\[\];/);
 assert.match(rss, /this\.emptyUnreadScroll\(this\.presentation\.subscriptions\)/);
 assert.match(rss, /private emptyUnreadScroll\(subscriptions: RssSubscription\[\]\)[\s\S]*this\.subscriptionSection\(subscriptions\);[\s\S]*this\.emptyUnreadSection\(\);/);
 assert.doesNotMatch(rss, /private emptyContent\(/);
@@ -63,12 +71,15 @@ assert.match(rss, /private refreshStatusText\(\): string/);
 
 // Empty/error actions share one 88x36 pill language; secondary is semantic
 // primary-soft rather than an unrelated outlined rectangle.
-assert.equal((rss.match(/\.width\(88\)\s*\.height\(36\)/g) ?? []).length, 2);
-assert.match(rss, /\.backgroundColor\(TOK_PRIMARY_SOFT\)/);
+const controls=foundationControls(),stateOwner=createReaderBuilderProbe(readFileSync(resolve(repo,'entry/src/main/ets/features/rss/RssPage.ets'),'utf8'),['stateButtons'],controls.dependencies,controls.hooks).owner;
+let actionCalls=0;Object.assign(stateOwner,{appThemeScheme:'day',onManage:()=>actionCalls++});stateOwner.stateButtons('重试',()=>actionCalls++);
+const stateActors=controls.nodes(stateOwner).filter(n=>n.type==='Stack'&&n.onClick);assert.equal(stateActors.length,2);
+for(const actor of stateActors)assert.deepEqual([actor.width,actor.height,actor.borderRadius,actor.responseRegion.height],[88,36,999,44]);
+assert.equal(stateActors[1].backgroundColor,readerAppColor('TOK_PRIMARY_SOFT','day'));for(const actor of stateActors)actor.onClick();assert.equal(actionCalls,2,'actual primary/management shared actors retain original callbacks');
 
 // Sources / All / Favorites / Rules are main-page content modes. Unsupported
 // modes emit an intent and remain on Sources; they are not added to ReaderRoute.
-assert.match(rss, /export type RssMode = 'sources' \| 'all' \| 'favorites' \| 'rules'/);
+assert.match(rssContract, /export type RssMode = 'sources' \| 'all' \| 'favorites' \| 'rules'/);
 assert.match(rss, /this\.statusTab\('源列表', 'sources'\)/);
 assert.match(rss, /this\.statusTab\('全部', 'all'\)/);
 assert.match(rss, /this\.statusTab\('收藏', 'favorites'\)/);
@@ -103,8 +114,8 @@ assert.doesNotMatch(entryDetail, /MainTabShell/);
 assert.doesNotMatch(entryDetail, /actionTarget\('已读'|actionTarget\('移除收藏'/);
 assert.doesNotMatch(entryDetail, /已解析正文|原文条目/);
 assert.doesNotMatch(entryDetail, /Text\(this\.item\.description\)/);
-assert.match(index, /onSelectSubscription: \(id: string\): void => this\.onRssSubscriptionSelected\(id\)/);
-assert.match(index, /onSelectItem: \(subscriptionId: string, guid: string\): void =>\s*this\.onRssItemSelected\(subscriptionId, guid\)/);
+assert.match(index, /onSelectSubscription: \(id: string\): void =>\s*(?:\{ if \(this\.isCurrentRssHostPresentation\([^;\n]+\)\) )?this\.onRssSubscriptionSelected\(id\)/);
+assert.match(index, /onSelectItem: \(subscriptionId: string, guid: string\): void =>\s*(?:\{ if \(this\.isCurrentRssHostPresentation\([^;\n]+\)\) )?this\.onRssItemSelected\(subscriptionId, guid\)/);
 assert.match(rss, /onSelectItem: \(subscriptionId: string, guid: string\) => void/);
 assert.match(rss, /rss-item-\$\{item\.subscriptionId\.length\}:\$\{item\.subscriptionId\}-\$\{item\.guid\.length\}:\$\{item\.guid\}/);
 assert.match(rss, /this\.onSelectItem\(item\.subscriptionId, item\.guid\)/);
@@ -120,33 +131,35 @@ assert.doesNotMatch(gateway, /category\?:|entries\?:|type\?:|rules\?:|authNeeded
 assert.doesNotMatch(gateway, /MAX_RECENT_UNREAD_SUBSCRIPTIONS|loadRecentUnread|slice\(0,\s*4\)/);
 assert.doesNotMatch(gateway, /Promise\.all/);
 assert.doesNotMatch(index, /\.loadRecentUnread\(/);
-assert.match(index, /rss\.entries\.query/);
+assert.match(index, /const host = this\.getRssOrchestrator\(\);[\s\S]*host\.loadFeed\(binding\.emit, binding\.emitRead, binding\.current, expectedGeneration, binding\.emitOriginal\)/);
+assert.doesNotMatch(index, /\.queryEntries\(/);
 
 // Management is reachable from the main RSS page. Toggle, per-feed refresh,
 // and confirmed delete enter one serial orchestrator chain; rows change only
 // after Core's authoritative list has reloaded.
-assert.match(index, /onManage: \(\): void => this\.onRssManage\(\)/);
+assert.match(index, /onManage: \(\): void =>\s*(?:\{ if \(this\.isCurrentRssHostPresentation\([^;\n]+\)\) )?this\.onRssManage\(\)/);
 assert.match(index, /private onRssManage\(\): void \{[\s\S]*this\.route = 'rssSubscriptionManagement';[\s\S]*this\.getRssOrchestrator\(\)\.open\(\);/);
 assert.doesNotMatch(index, /RSS subscription management has no admitted route/);
 assert.match(index, /onToggle: \(id: string, enabled: boolean\): void =>[\s\S]*toggleSubscription\(id, enabled\)/);
-assert.match(index, /onRefresh: \(id: string\): void => this\.getRssOrchestrator\(\)\.refreshSubscription\(id\)/);
-assert.match(index, /showAlertDialog\(\{[\s\S]*primaryButton:[\s\S]*value: '取消'[\s\S]*secondaryButton:[\s\S]*value: '删除'/);
-assert.match(index, /private confirmRssSubscriptionDelete\(subscriptionId: string\): void \{[\s\S]*removeSubscription\(subscriptionId\);/);
+assert.match(index, /onRefresh: \(id: string\): void =>\s*(?:\{ if \(this\.isCurrentRssHostPresentation\([^;\n]+\)\) )?host\?\.refreshSubscription\(id\)/);
+assert.match(index, /showIndexAlert\('confirmation-cancelable', \{[\s\S]*primaryButton:[\s\S]*value: '取消'[\s\S]*secondaryButton:[\s\S]*value: '删除'/);
+assert.match(index, /private confirmRssSubscriptionDelete\(subscriptionId: string,[\s\S]*this\.isCurrentRssHostPresentation\([\s\S]*host\?\.removeSubscription\(subscriptionId\);/);
 assert.match(index, /private onRssManagementViewArticles\(subscriptionId: string\): void \{\s*if \(!isReaderProductSurfaceEnabled\('rss'\)\) \{\s*return;\s*\}\s*this\.onRssSubscriptionSelected\(subscriptionId, 'rssSubscriptionManagement'\);/);
 assert.match(index, /private returnFromRssSourceFeed\(\): void \{[\s\S]*this\.route = 'rssSubscriptionManagement';/);
 assert.match(orchestrator, /private mutationChain: Promise<void> = Promise\.resolve\(\)/);
 assert.match(orchestrator, /this\.mutationChain = this\.mutationChain[\s\S]*this\.applyMutation/);
-assert.match(orchestrator, /await this\.runMutationWithRetry\(mutation\);[\s\S]*await this\.loadSubscriptionsWithRetry\(\)/);
-assert.match(orchestrator, /if \(this\.isCurrentSession\(session\)\) \{\s*this\.emit\(subscriptions\);/);
+assert.match(orchestrator, /await this\.runMutationWithRetry\(mutation,.*isCurrentSession\(session\)\);[\s\S]*await this\.loadSubscriptionsWithRetry\(\)/);
+assert.match(orchestrator, /const deliverySession = this\.presentationIdentity === undefined \? session : this\.session;\s*if \(this\.isCurrentSession\(deliverySession\)\) \{\s*this\.deliverRoute\(\(\): boolean => this\.isCurrentSession\(deliverySession\), \(\): void => this\.emit\(subscriptions\)/,
+  'canonical readback goes only to the admitted current presentation; accepted writes stay in their original owner');
 assert.match(orchestrator, /owner\.request\('runtime\.status', \{\}\)/);
 assert.match(orchestrator, /isReaderCoreTransactionPendingError\(error\)/);
 assert.doesNotMatch(orchestrator, /error\.message\.indexOf|error\.message\.includes/);
 assert.doesNotMatch(orchestrator, /mutationSeq|seq ===/);
 assert.doesNotMatch(orchestrator, /this\.emit\([^\n]*\.map\(/);
 assert.doesNotMatch(orchestrator, /private (subscriptions|items):/);
-assert.match(gateway, /request\('rss\.subscription\.persist', \{[\s\S]*operation: 'update'/);
-assert.match(gateway, /request\('rss\.subscription\.remove', \{/);
-assert.match(gateway, /request\('rss\.feed\.refresh', \{/);
+assert.match(gateway, /mutationRequest\('rss\.subscription\.persist', \{[\s\S]*operation: 'update'/);
+assert.match(gateway, /mutationRequest\('rss\.subscription\.remove', \{/);
+assert.match(gateway, /mutationRequest\('rss\.feed\.refresh', \{/);
 assert.match(gateway, /returned a mismatched updated subscription/);
 assert.match(gateway, /returned inconsistent unread counts/);
 assert.match(gateway, /count !== items\.length/);
@@ -161,52 +174,57 @@ assert.match(gateway, /inconsistent fetch flags/);
 // Scoped entry identity, read state, and favorite membership are Core truth.
 // Index forwards intents only; the existing orchestrator owns the sole serial
 // chain and publishes authoritative source/entry snapshots after mutations.
-assert.match(gateway, /request\('rss\.entry\.read', \{\s*subscriptionId,\s*guid,\s*read,/);
+assert.match(gateway, /mutationRequest\('rss\.entry\.read', \{\s*subscriptionId,\s*guid,\s*read,/);
 assert.match(gateway, /echoedSubscriptionId !== subscriptionId \|\| echoedGuid !== guid \|\| echoedRead !== read/);
 assert.match(gateway, /request\('rss\.favorite\.list', \{\s*subscriptionId,\s*\}\)/);
 assert.doesNotMatch(gateway, /request\('rss\.favorite\.list', \{[\s\S]{0,120}limit:/);
-assert.match(gateway, /request\('rss\.favorite\.persist', \{\s*subscriptionId,\s*guid,\s*addedAt,\s*\}\)/);
-assert.match(gateway, /request\('rss\.favorite\.remove', \{\s*subscriptionId,\s*guid,\s*\}\)/);
-assert.doesNotMatch(gateway, /request\('rss\.favorite\.persist', \{[\s\S]{0,220}(title|link|summary|feedUrl|firstSeenAt):/);
+assert.match(gateway, /mutationRequest\('rss\.favorite\.persist', \{\s*subscriptionId,\s*guid,\s*addedAt,\s*\}, evidence\)/);
+assert.match(gateway, /mutationRequest\('rss\.favorite\.remove', \{\s*subscriptionId,\s*guid,\s*\}, evidence\)/);
+assert.doesNotMatch(gateway, /mutationRequest\('rss\.favorite\.persist', \{[\s\S]{0,220}(title|link|summary|feedUrl|firstSeenAt):/);
 assert.match(orchestrator, /private mutationChain: Promise<void> = Promise\.resolve\(\)/);
 assert.equal((orchestrator.match(/private mutationChain:/g) ?? []).length, 1);
 assert.match(orchestrator, /private enqueueRouteTask\([\s\S]*this\.mutationChain = this\.mutationChain/);
-assert.match(orchestrator, /async \(\): Promise<void> => \{\s*await this\.gateway\.setEntryRead\(subscriptionId, guid, true\);\s*\}/);
-assert.match(orchestrator, /const snapshot = await this\.loadEntrySnapshotWithRetry\(subscriptionId, guid\)/);
-assert.match(orchestrator, /const current = await this\.loadFavoriteMembershipWithRetry\(subscriptionId, guid\);[\s\S]*if \(current !== favorite\)/);
-assert.match(orchestrator, /await this\.gateway\.persistFavorite\(subscriptionId, guid, addedAt\)/);
-assert.match(orchestrator, /await this\.gateway\.removeFavorite\(subscriptionId, guid\)/);
-assert.match(orchestrator, /await this\.gateway\.refreshSubscription\(subscriptionId\);[\s\S]*loadSourceSnapshotWithRetry\(subscriptionId\)/);
+assert.match(routeHost, /gateway\.setEntryRead\(subscriptionId, guid, true\)/);
+assert.match(orchestrator, /this\.routeOperations\.openEntry\(subscriptionId, guid/);
+assert.match(routeHost, /current = await this\.dependencies\.readMembership\(subscriptionId, guid\);[\s\S]*if \(current === favorite\)/);
+assert.match(routeHost, /await this\.dependencies\.gateway\.persistFavorite\(subscriptionId, guid, Date\.now\(\)\)/);
+assert.match(routeHost, /await this\.dependencies\.gateway\.removeFavorite\(subscriptionId, guid\)/);
+assert.match(routeHost, /await this\.dependencies\.gateway\.refreshSubscription\(subscriptionId\);[\s\S]*readSource\(subscriptionId\)/);
 assert.match(orchestrator, /const itemResult = await this\.loadItemsWithRetry\(subscriptionId\)/);
 assert.match(orchestrator, /candidate\.subscriptionId === subscriptionId \? itemResult\.subscription : candidate/);
 assert.match(orchestrator, /subscription: itemResult\.subscription/);
 assert.doesNotMatch(index, /private rssMutationChain|private rssMutationQueue/);
 assert.doesNotMatch(index, /new RssGateway\(ReaderRuntimeOwner\.current\(\)\)\.loadItems/);
-assert.match(index, /private openRssEntryDetail\([\s\S]*getRssOrchestrator\(\)\.openEntry\(/);
-assert.match(index, /private onRssEntryFavoriteRequested\([\s\S]*getRssOrchestrator\(\)\.setEntryFavorite\(/);
+assert.match(index, /private openRssEntryDetail\([\s\S]*const host = this\.getRssOrchestrator\(\);[\s\S]*host\.openEntry\(/);
+assert.match(index, /private onRssEntryFavoriteRequested\([\s\S]*const host = this\.getRssOrchestrator\(\);[\s\S]*host\.setEntryFavorite\(/);
 assert.match(index, /selectedRssFavoriteState = snapshot\.favorite \? 'favorited' : 'notFavorited'/);
-assert.match(index, /onRefresh: \(\): void => this\.refreshRssSourceFeed\(\)/);
-assert.match(index, /private refreshRssSourceFeed\(\): void \{[\s\S]*getRssOrchestrator\(\)\.refreshSourceFeed\(/);
+assert.match(index, /onRefresh: \(\): void =>\s*(?:\{ if \(this\.isCurrentRssHostPresentation\([^;\n]+\)\) )?this\.refreshRssSourceFeed\(\)/);
+assert.match(index, /private refreshRssSourceFeed\(\): void \{[\s\S]*const host = this\.getRssOrchestrator\(\);[\s\S]*host\.refreshSourceFeed\(/);
 assert.match(index, /private onRssSubscriptionSelected\([\s\S]*this\.selectedRssItems = \[\];[\s\S]*this\.loadRssSourceItems\(generation, subscriptionId\)/);
 assert.doesNotMatch(index, /this\.selectedRssItems = this\.rssRecentUnread\(\)\.filter/);
 assert.match(index, /focusedSubscriptionId: this\.rssManagementFocusSubscriptionId/);
-assert.match(index, /onEditSource: \(\): void =>\s*this\.openRssManagementForSubscription/);
-assert.match(index, /onSourceSettings: \(\): void =>\s*this\.openRssManagementForSubscription/);
+assert.match(index, /onEditSource: \(\): void =>\s*(?:\{ if \(this\.isCurrentRssHostPresentation\([^;\n]+\)\) )?this\.openRssManagementForSubscription/);
+assert.match(index, /onSourceSettings: \(\): void =>\s*(?:\{ if \(this\.isCurrentRssHostPresentation\([^;\n]+\)\) )?this\.openRssManagementForSubscription/);
 assert.match(index, /HOST_CAPABILITY_GAP: RSS original link requires webview\.open Host wiring/);
 assert.match(entryDetail, /export type RssFavoritePresentation = 'loading' \| 'favorited' \| 'notFavorited' \| 'unavailable'/);
 assert.match(entryDetail, /favoriteState === 'favorited' \? TOK_PRIMARY_SOFT/);
-assert.match(entryDetail, /enabled\(this\.favoriteState === 'favorited' \|\| this\.favoriteState === 'notFavorited'\)/);
+assert.match(entryDetail, /enabled\(this\.canRequestFavorite\(\)\)/);
 assert.match(entryDetail, /Text\('摘要'\)/);
 assert.match(entryDetail, /private summaryBodyCard\(\)/);
 assert.match(entryDetail, /private hasOriginalLink\(\): boolean/);
-assert.equal((entryDetail.match(/\.enabled\(this\.hasOriginalLink\(\)\)/g) ?? []).length, 2);
+assert.equal((entryDetail.match(/\.enabled\(this\.hasOriginalLink\(\)\)/g) ?? []).length, 1,'the original-link summary actor stays native');
+assert.match(entryDetail,/ReaderButton\(\{[^}]*specId: 'rss-detail-bottom'[^}]*label: '打开原文'[^}]*actionEnabled: this\.hasOriginalLink\(\)/,'the second original-link actor is the real finite common control');
+const bottom=createReaderBuilderProbe(entryDetail,['bottomActions','hasOriginalLink'],{...controls.dependencies,RSS_DETAIL_ACTION_AREA_HEIGHT:62},controls.hooks).owner;
+let bottomBack=0,bottomOpen=0;Object.assign(bottom,{appThemeScheme:'day',item:{link:'https://original.test'},contentFrame:()=>({width:354,left:18,right:18}),onBack:()=>bottomBack++,onOpenOriginal:()=>bottomOpen++});bottom.bottomActions();
+const bottomActors=controls.nodes(bottom).filter(n=>n.type==='Text'&&n.onClick);assert.equal(bottomActors.length,2);assert.deepEqual(bottomActors.map(n=>n.create),['返回列表','打开原文']);for(const n of bottomActors)n.onClick();assert.deepEqual([bottomBack,bottomOpen],[1,1]);
+bottom.item={link:''};controls.flush(bottom);bottomActors[1].onClick();assert.equal(bottomOpen,1,'retained common original-link actor updates real enabled Prop and rejects an unavailable link');
+
 assert.doesNotMatch(entryDetail, /private bodyCard\(|bodyParagraphs\(|已解析正文/);
 
 // Management rows are projections of full Core source truth. Add/edit and
 // document import/export use the full-source protocol without an ArkUI store.
-const managementMeta = index.match(
-  /private rssSubscriptionManagementMeta\(subscription: RssSubscription\): string \{[\s\S]*?\n  \}/,
-)?.[0] ?? '';
+assert.match(index, /return RssPresentationProjection\.managementItems\(this\.rssPresentation\)/);
+const managementMeta = readFileSync(resolve(repo, 'entry/src/main/ets/features/rss/RssPresentationProjection.ts'), 'utf8');
 assert.match(managementMeta, /subscription\.siteUrl/);
 assert.match(managementMeta, /subscription\.feedUrl/);
 assert.match(managementMeta, /subscription\.lastFetchAt/);
@@ -223,8 +241,8 @@ assert.match(editor, /constraintSize\(\{ minHeight: 60 \}\)/);
 assert.match(editorOrchestrator, /gateway\.createSubscription/);
 assert.match(editorOrchestrator, /gateway\.updateSubscription/);
 assert.match(gateway, /request\('rss-source\.list'/);
-assert.equal((gateway.match(/request\('rss-source\.put'/g) ?? []).length, 2);
-assert.match(gateway, /request\('rss-source\.import'/);
+assert.equal((gateway.match(/mutationRequest\('rss-source\.put'/g) ?? []).length, 2);
+assert.match(gateway, /mutationRequest\('rss-source\.import'/);
 assert.match(gateway, /request\('rss-source\.export'/);
 assert.match(gateway, /selectRssSourceJson\(\)/);
 assert.match(gateway, /saveRssSourceJson\(json, 'reader-rss-sources\.json'\)/);
@@ -242,7 +260,8 @@ assert.doesNotMatch(index, /RSS SourceFeed action %\{private\}s has no admitted 
 assert.doesNotMatch(index, /RSS EntryDetail action %\{private\}s has no admitted host transaction/);
 assert.match(index, /RSS refresh is placeholder-only until its admitted flow is supplied/);
 assert.match(index, /RSS mode %\{private\}s has no admitted data contract/);
-assert.match(index, /rss\.entries\.query/);
+assert.match(index, /const host = this\.getRssOrchestrator\(\);[\s\S]*host\.loadFeed\(binding\.emit, binding\.emitRead, binding\.current, expectedGeneration, binding\.emitOriginal\)/);
+assert.doesNotMatch(index, /\.queryEntries\(/);
 
 // Filter is an inline disclosure in normal layout flow, not a dropdown/select.
 assert.doesNotMatch(rss, /ReaderSelect/);
@@ -256,8 +275,16 @@ assert.doesNotMatch(rss, /this\.actionPill\('导入'|this\.actionPill\('新建'/
 // Compact visual pills keep their Figma dimensions, but standalone actions
 // expose a 44vp touch response region. Dense wrapping filter chips are
 // intentionally excluded because expanded regions would overlap siblings.
-assert.equal((rss.match(/\.responseRegion\(\{ x: 0, y: -\d+, width: '100%', height: 44 \}\)/g) ?? []).length, 7);
-assert.equal((sourceFeed.match(/\.responseRegion\(\{ x: 0, y: -\d+, width: '100%', height: 44 \}\)/g) ?? []).length, 1);
-assert.equal((entryDetail.match(/\.responseRegion\(\{ x: 0, y: -\d+, width: '100%', height: 44 \}\)/g) ?? []).length, 1);
+const modeOwner=createReaderBuilderProbe(readFileSync(resolve(repo,'entry/src/main/ets/features/rss/RssPage.ets'),'utf8'),['statusTab'],controls.dependencies,controls.hooks).owner;Object.assign(modeOwner,{appThemeScheme:'day',activeMode:'all'});modeOwner.statusTab('全部','all');
+const modeActors=controls.nodes(modeOwner).filter(n=>n.type==='Stack'&&n.onClick);assert.equal(modeActors.length,1);assert.equal(modeActors[0].responseRegion.height,44);
+const labeled=labeledIconControls(),labeledPage=createReaderBuilderProbe(readFileSync(resolve(repo,'entry/src/main/ets/features/rss/RssPage.ets'),'utf8'),['managePill','recentUnreadHeader'],labeled.dependencies,labeled.hooks).owner;Object.assign(labeledPage,{appThemeScheme:'day',onManage:()=>{},onModeRequested:()=>{}});labeledPage.managePill();labeledPage.recentUnreadHeader();
+const boundedMainActions=labeled.orderedNodes(labeledPage).filter(n=>n.onClick);assert.equal(boundedMainActions.length,2);assert.deepEqual(boundedMainActions.map(n=>n.responseRegion.height),[44,44],'both migrated main-page icon actions retain actual finite 44vp touch response');
+assert.equal((rss.match(/\.responseRegion\(\{ x: 0, y: -\d+, width: '100%', height: 44 \}\)/g) ?? []).length+stateActors.length+modeActors.length+boundedMainActions.length, 7,'all seven original visual action declarations retain actual shared/native 44vp regions');
+const feedOwner=createReaderBuilderProbe(readFileSync(resolve(repo,'entry/src/main/ets/features/rss/RssSourceFeedPage.ets'),'utf8'),['entrySectionHeader'],labeled.dependencies,labeled.hooks).owner;Object.assign(feedOwner,{appThemeScheme:'day',onSourceOperations:()=>{}});feedOwner.entrySectionHeader();const boundedFeedActions=labeled.orderedNodes(feedOwner).filter(n=>n.onClick);assert.equal(boundedFeedActions.length,1);assert.equal(boundedFeedActions[0].responseRegion.height,44,'original source operations action now delegates its exact bounded native response');
+assert.equal((sourceFeed.match(/\.responseRegion\(\{ x: 0, y: -\d+, width: '100%', height: 44 \}\)/g) ?? []).length+boundedFeedActions.length,1);
+const filterOwner=createReaderBuilderProbe(readFileSync(resolve(repo,'entry/src/main/ets/features/rss/RssPage.ets'),'utf8'),['filterPill'],controls.dependencies,controls.hooks).owner;Object.assign(filterOwner,{appThemeScheme:'day',filterValue:'全部'});filterOwner.filterPill('全部');assert.equal(controls.nodes(filterOwner).find(n=>n.onClick).responseRegion,undefined,'dense filter chip preserves native non-overlapping AUTO response');
+const entryOwner=createReaderBuilderProbe(readFileSync(resolve(repo,'entry/src/main/ets/features/rss/RssEntryDetailPage.ets'),'utf8'),['sourceCard','itemMeta'],controls.dependencies,controls.hooks).owner;Object.assign(entryOwner,{appThemeScheme:'day',subscription:{title:'订阅'},item:{}});entryOwner.sourceCard();
+const entryAction=controls.nodes(entryOwner).find(n=>n.type==='Text'&&n.create==='查看源');assert.ok(entryAction);assert.equal(entryAction.responseRegion.height,44);
+assert.equal((entryDetail.match(/\.responseRegion\(\{ x: 0, y: -\d+, width: '100%', height: 44 \}\)/g) ?? []).length+1, 1,'original entry source-link touch region is supplied by the actual common actor');
 
 console.log('rss page architecture contract: PASS');

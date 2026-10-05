@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { bookshelfCatalogHost, catalogIndexMethods } from './lib/bookshelf-catalog-host-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { ProductionHost as ReadingEntryHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
 
 const index = new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url);
 const pause = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -16,11 +18,12 @@ async function until(predicate) {
   assert.fail('background shelf scan did not settle');
 }
 
-function fixture({ autoCheckUpdate = true, fullRevision = 'rev-1', membershipRevision = 'rev-1', failFull = false,
+function fixture({ autoCheckUpdate = true, fullRevision = 'rev-1', durableProjectionRevision = 'rev-1', failFull = false,
   fullGates = [] } = {}) {
   const books = [
     { sourceId: 'local', bookId: 'visible', lastCheckAt: 1 },
     { sourceId: 'remote', bookId: 'offscreen', lastCheckAt: Date.now() / 1000 },
+    { sourceId: 'remote', bookId: 'manga', contentKind: 'manga', lastCheckAt: Date.now() / 1000 },
   ];
   const scans = [], admissions = [], refreshed = [];
   let owner, fullCount = 0;
@@ -32,11 +35,18 @@ function fixture({ autoCheckUpdate = true, fullRevision = 'rev-1', membershipRev
   owner = {
     setReadingPreparationContext() {},
     readingEntryPreparations: () => preparations,
+    bookAcquisitions: () => ({ acquireBook: async seed => { refreshed.push([seed]); return { identity: { sourceId: seed.sourceId, bookId: seed.bookId }, entries: [] }; } }),
   };
-  const Index = productionMotionMethods(index,
-    ['canRunBookshelfBackgroundRefresh', 'scheduleBookshelfBackgroundRefresh', 'preparePersistedShelfBooks'], {
-      ReaderRuntimeOwner: { current: () => owner },
-      BookshelfFlowGateway: class {
+  owner.supportsCoreCapability=c=>c==='bookshelf.pageProjection.v1';
+  owner.request=async(method,params,options)=>{assert.equal(method,'bookshelf.list');scans.push({membershipOnly:params.membershipOnly===true});await pause();
+    if(options?.shouldCancel?.())throw Error('cancelled exact read');
+    return{data:{books:books.map((b,i)=>({...b,title:b.bookId,author:'Writer',addedAt:1,sortIndex:i,sourceName:b.sourceId==='local'?'本地书籍':'Remote'})),
+      total:books.length,projectionRevision:durableProjectionRevision,changed:false,unfilteredTotal:books.length,unfilteredOnlineTotal:1}};
+  };
+  const exactRuntime=owner,acquisition=owner.bookAcquisitions();
+  owner.bookAcquisitions=()=>({...acquisition,request:(...args)=>exactRuntime.request(...args)});
+  setRuntime(owner);
+  class ScanFlow {
         async loadAll(current, membershipOnly = false) {
           scans.push({ membershipOnly });
           if (!membershipOnly) {
@@ -46,22 +56,26 @@ function fixture({ autoCheckUpdate = true, fullRevision = 'rev-1', membershipRev
           await pause();
           if (failFull && !membershipOnly) throw new Error('full scan failed');
           return current() ? { books, total: books.length,
-            projectionRevision: membershipOnly ? membershipRevision :
+            projectionRevision: membershipOnly ? durableProjectionRevision :
               (typeof fullRevision === 'function' ? fullRevision(fullCount) : fullRevision) } : undefined;
         }
-      },
+      }
+  const Index = productionMotionMethods(index,
+    [...catalogIndexMethods,'preparePersistedShelfBooks','readingPreparationContext','sharedReadingPreparationSeeds'], {
+      ReaderRuntimeOwner: { current: () => owner }, ReadingEntryHost,
+      BookshelfFlowGateway: ScanFlow,
       LOCAL_SOURCE_ID: 'local', CATALOG_REFRESH_INTERVAL_MS: 600000,
       DOMAIN: 0, hilog: { warn() {} },
     });
   const page = Object.assign(new Index(), {
-    route: 'bookshelf', shelfProjectionRevision: 'rev-1', shelfBooks: [books[0]],
+    mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,rssInstanceIdentity:1,shelfReadingFilter:'all',shelfSourceFilter:'all',bookshelfHost:bookshelfCatalogHost(ScanFlow,()=>owner),navigationGeneration:1,bookshelfBackgroundEpoch:0,route: 'bookshelf', shelfProjectionRevision: 'rev-1', shelfBooks: [books[0]],
     settingsSnapshot: { autoCheckUpdate }, applicationSettingsSnapshot: { autoCheckUpdate },
     readingSessionActive: false, searchAppForeground: true, bookshelfUpdateRunning: false,
     bookshelfBackgroundRefreshRunning: false,
-    async refreshBookshelfCatalogBatch(candidates) { refreshed.push(candidates); },
+    bookshelfLoadGeneration:0,
   });
   return { page, books, scans, admissions, refreshed, owner,
-    changeOwner(value) { owner = value; } };
+    changeOwner(value) { owner = value; setRuntime(value); } };
 }
 
 {
@@ -84,8 +98,9 @@ function fixture({ autoCheckUpdate = true, fullRevision = 'rev-1', membershipRev
   assert.deepEqual(await f.admissions[0].loadSeeds(f.admissions[0].allowed), [
     { sourceId: 'local', bookId: 'visible' }, { sourceId: 'remote', bookId: 'offscreen' },
   ]);
-  assert.deepEqual(f.scans, [{ membershipOnly: true }],
-    'disabled automatic updates still admit durable preparation');
+  assert.deepEqual(f.scans, [{ membershipOnly: false }],
+    'disabled automatic updates still require a typed durable projection for text admission');
+  assert.equal(f.books.length, 3, 'admission leaves all text and manga shelf records intact');
 }
 
 for (const options of [{ failFull: true }, { fullRevision: 'rev-2' }]) {
@@ -94,8 +109,8 @@ for (const options of [{ failFull: true }, { fullRevision: 'rev-2' }]) {
   f.page.preparePersistedShelfBooks();
   assert.equal((await f.admissions[0].loadSeeds(f.admissions[0].allowed)).length, 2);
   await until(() => !f.page.bookshelfBackgroundRefreshRunning);
-  assert.deepEqual(f.scans, [{ membershipOnly: false }, { membershipOnly: true }],
-    'failed or different-revision full scan falls back to a membership read');
+  assert.deepEqual(f.scans, [{ membershipOnly: false }, { membershipOnly: false }],
+    'failed or different-revision shared scan falls back to a typed full projection and still filters manga');
 }
 
 {
@@ -107,7 +122,7 @@ for (const options of [{ failFull: true }, { fullRevision: 'rev-2' }]) {
   assert.equal(await f.admissions[0].loadSeeds(f.admissions[0].allowed), undefined);
   await until(() => !f.page.bookshelfBackgroundRefreshRunning);
   assert.deepEqual(f.scans, [{ membershipOnly: false }, { membershipOnly: false }],
-    'old preparation cannot start a membership scan; automatic refresh retries the new revision once');
+    'old preparation cannot start a projection scan; automatic refresh retries the new revision once');
 }
 
 {
@@ -143,10 +158,10 @@ for (const options of [{ failFull: true }, { fullRevision: 'rev-2' }]) {
 }
 
 {
-  const f = fixture({ autoCheckUpdate: false, membershipRevision: 'rev-2' });
+  const f = fixture({ autoCheckUpdate: false, durableProjectionRevision: 'rev-2' });
   f.page.preparePersistedShelfBooks();
   assert.equal(await f.admissions[0].loadSeeds(f.admissions[0].allowed), undefined,
-    'a newer Core membership cannot be published under the old shelf revision');
+    'a newer Core projection cannot be published under the old shelf revision');
 }
 
 {
@@ -155,7 +170,7 @@ for (const options of [{ failFull: true }, { fullRevision: 'rev-2' }]) {
   f.changeOwner({ setReadingPreparationContext() {}, readingEntryPreparations() { throw new Error('stale owner'); } });
   assert.equal(f.admissions[0].allowed(), false, 'owner replacement revokes the old preparation');
   assert.equal(await f.admissions[0].loadSeeds(f.admissions[0].allowed), undefined);
-  assert.deepEqual(f.scans, [{ membershipOnly: true }], 'cancelled owner scan may return no seeds');
+  assert.deepEqual(f.scans, [], 'actual Core admission rejects a retired owner before any projection RPC');
 }
 
 console.log('bookshelf shared scan: PASS (single scan, fallback, revision fencing, bounded retry)');

@@ -1,3 +1,6 @@
+import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { MainTabShell } from '../shell/MainTabShell';
 import { AppTopBar } from '../common/AppTopBar';
 import { ReaderIconButton } from '../common/ReaderIconButton';
@@ -7,6 +10,7 @@ import { BookshelfMoreMenu } from './BookshelfMoreMenu';
 import { READER_FLOATING_TOP_BAR_HEIGHT } from '../common/ReaderFloatingBarMetrics';
 
 export const BOOKSHELF_WIDE_BREAKPOINT = 600;
+let bookshelfTemporaryGeneration: number = 0;
 
 // Index mounts this shell once for the bookshelf route. Core readiness only
 // changes the content slot, preserving the title, navigation and menu anchor.
@@ -14,6 +18,14 @@ export const BOOKSHELF_WIDE_BREAKPOINT = 600;
 export struct BookshelfShell {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @Prop recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  @Prop readRecovery: ReaderRecoveryView | undefined = undefined;
+  onRetryRead: (generation: number, navigation?: number) => void = (_generation: number): void => {};
+  onReconcile: (generation: number, navigation?: number) => void = (_generation: number): void => {};
+  @Prop canContinueRemoval: boolean = false;
+  @Prop removalActionLabel: string = '继续原删除操作';
+  onContinueRemoval: (generation: number, navigation: number) => void = (_generation: number, _navigation: number): void => {};
+  @Prop @Watch('onNavigationGenerationChanged') navigationGeneration: number = 0;
   @Prop populated: boolean = false;
   @Prop reduceMotion: boolean = false;
   @Prop canCheckUpdates: boolean = false;
@@ -21,7 +33,7 @@ export struct BookshelfShell {
   @Prop backgroundUpdateRunning: boolean = false;
   @Prop updateProgressDone: number = 0;
   @Prop updateProgressTotal: number = 0;
-  onSearchRequested: () => void = (): void => {};
+  onSearchRequested: (generation?: number) => void = (_generation?: number): void => {};
   onImportRequested: () => void = (): void => {};
   onBatchManageRequested: () => void = (): void => {};
   onBookshelfSettingsRequested: () => void = (): void => {};
@@ -30,13 +42,74 @@ export struct BookshelfShell {
   @BuilderParam content: () => void;
   @State private viewportWidth: number = 0;
   @State private moreMenuVisible: boolean = false;
+  private moreSelectionId: string = '';
+  private mounted: boolean = false;
+  private temporaryBackIdentity: string = '';
+  private temporaryBackGeneration: number = 0;
+  onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string, generation?: number) => void =
+    (_handler: (() => boolean) | undefined, _identity: string, _generation?: number): void => {};
   @State private moreAnchorRight: number = 0;
   @State private moreAnchorBottom: number = 0;
   @State private overlayOriginX: number = 0;
   @State private overlayOriginY: number = 0;
 
   aboutToAppear(): void {
+    this.mounted = true;
     registerReaderShelfFonts(this.getUIContext().getFont());
+    this.registerTemporaryBackGeneration();
+  }
+
+  aboutToDisappear(): void {
+    const identity = this.temporaryBackIdentity;
+    const generation = this.temporaryBackGeneration;
+    this.mounted = false;
+    this.temporaryBackIdentity = '';
+    this.dismissMoreMenu();
+    this.onTemporaryBackBridge(undefined, identity, generation);
+  }
+
+  private onNavigationGenerationChanged(): void {
+    if (!this.mounted) return;
+    this.dismissMoreMenu();
+    this.registerTemporaryBackGeneration();
+  }
+
+  private registerTemporaryBackGeneration(): void {
+    if (!this.mounted) return;
+    const previousIdentity = this.temporaryBackIdentity;
+    const previousGeneration = this.temporaryBackGeneration;
+    const identity = `bookshelf-back:${++bookshelfTemporaryGeneration}`;
+    const generation = this.navigationGeneration;
+    this.temporaryBackIdentity = identity;
+    this.temporaryBackGeneration = generation;
+    if (previousIdentity.length > 0) this.onTemporaryBackBridge(undefined, previousIdentity, previousGeneration);
+    this.onTemporaryBackBridge((): boolean => this.consumeTemporaryBack(identity), identity, generation);
+  }
+
+  private consumeTemporaryBack(identity: string): boolean {
+    if (!this.mounted || identity !== this.temporaryBackIdentity || !this.moreMenuVisible) return false;
+    this.dismissMoreMenu();
+    return true;
+  }
+
+  private dismissMoreMenu(): void {
+    this.moreMenuVisible = false;
+    this.moreSelectionId = '';
+  }
+
+  private moreOpenAction(identity: string): () => void {
+    return (): void => {
+      if (!this.mounted || identity !== this.temporaryBackIdentity || this.moreMenuVisible) return;
+      this.moreSelectionId = `bookshelf-more:${++bookshelfTemporaryGeneration}`;
+      this.moreMenuVisible = true;
+    };
+  }
+
+  private moreIntentAction(identity: string, action: () => void): () => void {
+    return (): void => {
+      if (!this.mounted || !this.moreMenuVisible || identity.length === 0 || identity !== this.moreSelectionId) return;
+      action();
+    };
   }
 
   build() {
@@ -53,7 +126,19 @@ export struct BookshelfShell {
   private shellContent() {
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.TopStart }) {
-        this.content();
+        if (this.recovery.visible) {
+          Column() {
+            this.recoveryNoticeContent(this.recovery, false);
+            Stack() { this.content(); }.width('100%').layoutWeight(1);
+          }.width('100%').height('100%').padding({ top: READER_FLOATING_TOP_BAR_HEIGHT });
+        } else if (this.readRecovery?.visible === true) {
+          Column() {
+            this.recoveryNoticeContent(this.readRecovery!, true);
+            Stack() { this.content(); }.width('100%').layoutWeight(1);
+          }.width('100%').height('100%').padding({ top: READER_FLOATING_TOP_BAR_HEIGHT });
+        } else {
+          this.content();
+        }
       }
       .width('100%')
       .height('100%');
@@ -75,22 +160,20 @@ export struct BookshelfShell {
           backgroundUpdateRunning: this.backgroundUpdateRunning,
           updateProgressDone: this.updateProgressDone,
           updateProgressTotal: this.updateProgressTotal,
-          onCheckUpdates: (): void => this.requestCheckUpdates(),
-          onBatchManage: (): void => {
-            this.moreMenuVisible = false;
+          onCheckUpdates: this.moreIntentAction(this.moreSelectionId, (): void => this.requestCheckUpdates()),
+          onBatchManage: this.moreIntentAction(this.moreSelectionId, (): void => {
+            this.dismissMoreMenu();
             this.onBatchManageRequested();
-          },
-          onLocalImport: (): void => {
-            this.moreMenuVisible = false;
+          }),
+          onLocalImport: this.moreIntentAction(this.moreSelectionId, (): void => {
+            this.dismissMoreMenu();
             this.onImportRequested();
-          },
-          onBookshelfSettings: (): void => {
-            this.moreMenuVisible = false;
+          }),
+          onBookshelfSettings: this.moreIntentAction(this.moreSelectionId, (): void => {
+            this.dismissMoreMenu();
             this.onBookshelfSettingsRequested();
-          },
-          onDismiss: (): void => {
-            this.moreMenuVisible = false;
-          },
+          }),
+          onDismiss: this.moreIntentAction(this.moreSelectionId, (): void => this.dismissMoreMenu()),
         });
       }
     }
@@ -107,38 +190,62 @@ export struct BookshelfShell {
   }
 
   @Builder
+  private recoveryNoticeContent(view: ReaderRecoveryView, read: boolean) {
+    // Only the compact feedback actor changes identity; content stays mounted.
+    ForEach([JSON.stringify([this.navigationGeneration, view.generation])], (identity: string): void => {
+      ReaderRecoveryNotice({ view, actionLabel: '刷新列表',
+        onReconcile: (generation: number): void => {
+          const tokens = JSON.parse(identity) as number[];
+          if (generation !== tokens[1] || this.navigationGeneration !== tokens[0]) return;
+          if (read) this.onRetryRead(tokens[1], tokens[0]);
+          else this.onReconcile(tokens[1], tokens[0]);
+        } });
+      if (!read && this.canContinueRemoval) {
+        ReaderRecoveryAction({ label: this.removalActionLabel, generation: (JSON.parse(identity) as number[])[1],
+          onReconcile: (generation: number): void => {
+            const tokens = JSON.parse(identity) as number[];
+            if (!this.mounted || generation !== tokens[1] || this.navigationGeneration !== tokens[0]) return;
+            this.onContinueRemoval(tokens[1], tokens[0]);
+          } });
+      }
+    }, (identity: string): string => identity);
+  }
+
+  @Builder
   private topBar() {
     AppTopBar({ title: '书架' }) {
       Row({ space: 18 }) {
-        ReaderIconButton({
-          icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_search_theme_night') : $r('app.media.bookshelf_search')),
-          boxSize: 44,
-          iconSize: 24,
-          radius: 22,
-          onTap: (): void => this.onSearchRequested(),
-        });
-
-        ReaderIconButton({
-          icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more')),
-          boxSize: 44,
-          iconSize: 44,
-          radius: 22,
-          onTap: (): void => {
-            this.moreMenuVisible = true;
-          },
-        })
-          .accessibilityText('更多')
-          .onAreaChange((_oldValue: Area, newValue: Area): void => {
-            this.moreAnchorRight = Number(newValue.globalPosition.x) + Number(newValue.width);
-            this.moreAnchorBottom = Number(newValue.globalPosition.y) + Number(newValue.height);
+        // Only this action actor changes; the bookshelf content stays mounted.
+        ForEach([this.navigationGeneration], (presentedGeneration: number): void => {
+          ReaderIconButton({
+            icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_search_theme_night') : $r('app.media.bookshelf_search')),
+            specId: 'toolbar-standard',
+            accessibilityLabel: '搜索',
+            onTap: (): void => this.onSearchRequested(presentedGeneration),
           });
+        }, (generation: number): string => generation.toString());
+
+        // V1 ordinary callbacks are constructor inputs. Only this temporary
+        // trigger gets a fresh identity; bookshelf content/scroll stay mounted.
+        ForEach([this.navigationGeneration], (_generation: number) => {
+          ReaderIconButton({
+            icon: (this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more')),
+            specId: 'toolbar-wide',
+            accessibilityLabel: '更多',
+            onTap: this.moreOpenAction(this.temporaryBackIdentity),
+          })
+            .onAreaChange((_oldValue: Area, newValue: Area): void => {
+              this.moreAnchorRight = Number(newValue.globalPosition.x) + Number(newValue.width);
+              this.moreAnchorBottom = Number(newValue.globalPosition.y) + Number(newValue.height);
+            });
+        }, (generation: number): string => generation.toString());
       }
     }
   }
 
   private requestCheckUpdates(): void {
     if (!this.canCheckUpdates || this.updateRunning || this.backgroundUpdateRunning) return;
-    this.moreMenuVisible = false;
+    this.dismissMoreMenu();
     this.onCheckUpdatesRequested();
   }
 

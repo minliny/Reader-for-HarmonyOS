@@ -29,6 +29,151 @@ export type CommitConfirmationKind = 'confirmed' | 'unknown' | 'undispatched';
 export type CommitReadbackPhase = 'idle' | 'reading' | 'failed' | 'succeeded';
 
 /**
+ * The request lifecycle known by a domain owner. This is deliberately a
+ * finite vocabulary instead of a page-level `loading/error/success` boolean
+ * pair. A domain adapter supplies the value and whether a recovery action is
+ * actually admitted; this module only maps those facts for consumers.
+ */
+export type OperationRequestPhase =
+  | 'idle'
+  | 'loading'
+  | 'refreshing'
+  | 'succeeded'
+  | 'empty'
+  | 'partial'
+  | 'failed'
+  | 'refreshFailed'
+  | 'cancelled'
+  | 'notDispatched'
+  | 'pendingReconciliation';
+
+/**
+ * Presentable operation facts shared by domain projections. `refreshFailed`
+ * means the retained value is still usable but the newer read failed; it must
+ * never be collapsed into `failed`. `blocked` is an explicit platform or
+ * capability gate supplied by the owner, not an inferred network error.
+ */
+export type OperationFactKind =
+  | 'idle'
+  | 'loading'
+  | 'refreshing'
+  | 'current'
+  | 'empty'
+  | 'partial'
+  | 'failed'
+  | 'refreshFailed'
+  | 'cancelled'
+  | 'notDispatched'
+  | 'stale'
+  | 'blocked'
+  | 'pendingReconciliation';
+
+export interface OperationFacts<T> {
+  fact: OperationFactKind;
+  value: T | undefined;
+  hasValue: boolean;
+  stale: boolean;
+  blocked: boolean;
+  canRetry: boolean;
+  canCancel: boolean;
+  generation: number;
+  message?: string;
+  blockedReason?: string;
+}
+
+export interface OperationFactsInput<T> {
+  phase: OperationRequestPhase;
+  value?: T;
+  stale?: boolean;
+  blockedReason?: string;
+  canRetry?: boolean;
+  canCancel?: boolean;
+  generation?: number;
+  message?: string;
+}
+
+/**
+ * Convert owner facts into the shared finite vocabulary. The owner remains
+ * responsible for identity, receipt confirmation, retry admission and
+ * cancellation. No IO, Promise, timer, storage or ArkUI dependency belongs
+ * here.
+ */
+export function projectOperationFacts<T>(input: OperationFactsInput<T>): OperationFacts<T> {
+  const hasValue = input.value !== undefined;
+  const blockedReason = input.blockedReason !== undefined && input.blockedReason.length > 0
+    ? input.blockedReason : undefined;
+  const canRetry = input.canRetry === true;
+  const canCancel = input.canCancel === true;
+  const generation = input.generation ?? 0;
+  let fact: OperationFactKind;
+  let stale = input.stale === true;
+  let blocked = false;
+
+  if (blockedReason !== undefined) {
+    fact = 'blocked';
+    blocked = true;
+  } else {
+    switch (input.phase) {
+      case 'loading':
+        fact = hasValue ? 'refreshing' : 'loading';
+        break;
+      case 'refreshing':
+        fact = 'refreshing';
+        break;
+      case 'succeeded':
+        fact = hasValue ? (stale ? 'stale' : 'current') : 'empty';
+        break;
+      case 'empty':
+        fact = 'empty';
+        break;
+      case 'partial':
+        fact = 'partial';
+        break;
+      case 'failed':
+        fact = hasValue ? 'refreshFailed' : 'failed';
+        stale = hasValue || stale;
+        break;
+      case 'refreshFailed':
+        // A confirmed write followed by a failed read-back is still a
+        // refresh failure even when this adapter has no retained payload.
+        fact = 'refreshFailed';
+        stale = hasValue || stale;
+        break;
+      case 'cancelled':
+        fact = 'cancelled';
+        stale = hasValue || stale;
+        break;
+      case 'notDispatched':
+        // A retained value may still be current, but it is not evidence that
+        // this mutation was sent or applied.
+        fact = 'notDispatched';
+        break;
+      case 'pendingReconciliation':
+        fact = 'pendingReconciliation';
+        stale = hasValue || stale;
+        break;
+      case 'idle':
+      default:
+        fact = hasValue ? (stale ? 'stale' : 'current') : 'idle';
+        break;
+    }
+  }
+
+  return {
+    fact,
+    value: input.value,
+    hasValue,
+    stale,
+    blocked,
+    canRetry,
+    canCancel,
+    generation,
+    message: input.message,
+    blockedReason,
+  };
+}
+
+/**
  * The single fact a page may present for a committed write plus its
  * read-back. The `message` strings are fixed by the shared contract so two
  * flows never phrase the same fact differently.

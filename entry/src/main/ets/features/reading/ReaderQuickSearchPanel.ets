@@ -1,3 +1,5 @@
+import { TYPE_READER_SNIPPET_NOTO_MATCH, TYPE_READER_SNIPPET_NOTO_REGULAR } from '../common/ReaderTypography';
+import { TYPE_READER_SEARCH_QUICK_COMPAT_RESULTS_BODY_STATUS, TYPE_READER_SEARCH_QUICK_COMPAT_RESULT_ROW_TITLE, TYPE_READER_SEARCH_QUICK_COMPAT_RESULT_SNIPPET_SNIPPET, TYPE_READER_SEARCH_QUICK_COMPAT_SEARCH_HEADER_BACK, TYPE_READER_SEARCH_QUICK_COMPAT_SEARCH_HEADER_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import type { ReadingContentSearchResult } from './ReadingSessionFlowGateway';
 import { splitReaderSearchSnippet } from './ReaderSearchHighlight';
@@ -101,9 +103,9 @@ export struct ReaderQuickSearchPanel {
           .width(11)
           .height(11);
         Text('返回')
-          .fontFamily('ReaderInter')
-          .fontWeight(600)
-          .fontSize(10)
+          .fontFamily(TYPE_READER_SEARCH_QUICK_COMPAT_SEARCH_HEADER_BACK.fontFamily)
+          .fontWeight(TYPE_READER_SEARCH_QUICK_COMPAT_SEARCH_HEADER_BACK.fontWeight)
+          .fontSize(TYPE_READER_SEARCH_QUICK_COMPAT_SEARCH_HEADER_BACK.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
       }
       .width(51)
@@ -130,9 +132,9 @@ export struct ReaderQuickSearchPanel {
 
       Stack({ alignContent: Alignment.Center }) {
         Text('搜索')
-          .fontFamily('ReaderInter')
-          .fontWeight(700)
-          .fontSize(10)
+          .fontFamily(TYPE_READER_SEARCH_QUICK_COMPAT_SEARCH_HEADER_LABEL.fontFamily)
+          .fontWeight(TYPE_READER_SEARCH_QUICK_COMPAT_SEARCH_HEADER_LABEL.fontWeight)
+          .fontSize(TYPE_READER_SEARCH_QUICK_COMPAT_SEARCH_HEADER_LABEL.fontSizeFp)
           .fontColor(readerAppColor('app.ReaderQuickSearchPanel.searchHeader.fontColor.FFFFFAF4', this.appThemeScheme));
       }
       .width(36)
@@ -171,9 +173,9 @@ export struct ReaderQuickSearchPanel {
         Stack({ alignContent: Alignment.Center }) {
           Text(this.statusText())
             .width('100%')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(10)
+            .fontFamily(TYPE_READER_SEARCH_QUICK_COMPAT_RESULTS_BODY_STATUS.fontFamily)
+            .fontWeight(TYPE_READER_SEARCH_QUICK_COMPAT_RESULTS_BODY_STATUS.fontWeight)
+            .fontSize(TYPE_READER_SEARCH_QUICK_COMPAT_RESULTS_BODY_STATUS.fontSizeFp)
             .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
             .textAlign(TextAlign.Center)
             .maxLines(2);
@@ -195,9 +197,9 @@ export struct ReaderQuickSearchPanel {
     Column({ space: 5 }) {
       Text(this.resultTitle(result))
         .width('100%')
-        .fontFamily('ReaderInter')
-        .fontWeight(700)
-        .fontSize(10)
+        .fontFamily(TYPE_READER_SEARCH_QUICK_COMPAT_RESULT_ROW_TITLE.fontFamily)
+        .fontWeight(TYPE_READER_SEARCH_QUICK_COMPAT_RESULT_ROW_TITLE.fontWeight)
+        .fontSize(TYPE_READER_SEARCH_QUICK_COMPAT_RESULT_ROW_TITLE.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -217,32 +219,32 @@ export struct ReaderQuickSearchPanel {
         result.chapterOffset, result.matchLength).prefix.length > 0) {
         Span(splitReaderSearchSnippet(result.snippet, result.snippetStart,
           result.chapterOffset, result.matchLength).prefix)
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Regular)
+          .fontFamily(TYPE_READER_SNIPPET_NOTO_REGULAR.fontFamily as string)
+          .fontWeight(TYPE_READER_SNIPPET_NOTO_REGULAR.fontWeight)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       }
       if (splitReaderSearchSnippet(result.snippet, result.snippetStart,
         result.chapterOffset, result.matchLength).match.length > 0) {
         Span(splitReaderSearchSnippet(result.snippet, result.snippetStart,
           result.chapterOffset, result.matchLength).match)
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
+          .fontFamily(TYPE_READER_SNIPPET_NOTO_MATCH.fontFamily as string)
+          .fontWeight(TYPE_READER_SNIPPET_NOTO_MATCH.fontWeight)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       }
       if (splitReaderSearchSnippet(result.snippet, result.snippetStart,
         result.chapterOffset, result.matchLength).suffix.length > 0) {
         Span(splitReaderSearchSnippet(result.snippet, result.snippetStart,
           result.chapterOffset, result.matchLength).suffix)
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Regular)
+          .fontFamily(TYPE_READER_SNIPPET_NOTO_REGULAR.fontFamily as string)
+          .fontWeight(TYPE_READER_SNIPPET_NOTO_REGULAR.fontWeight)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       }
     }
     .width('100%')
-    .fontFamily('ReaderNotoSansSC')
-    .fontWeight(FontWeight.Regular)
-    .fontSize(8)
-    .lineHeight(10)
+    .fontFamily(TYPE_READER_SEARCH_QUICK_COMPAT_RESULT_SNIPPET_SNIPPET.fontFamily)
+    .fontWeight(TYPE_READER_SEARCH_QUICK_COMPAT_RESULT_SNIPPET_SNIPPET.fontWeight)
+    .fontSize(TYPE_READER_SEARCH_QUICK_COMPAT_RESULT_SNIPPET_SNIPPET.fontSizeFp)
+    .lineHeight(TYPE_READER_SEARCH_QUICK_COMPAT_RESULT_SNIPPET_SNIPPET.lineHeightFp as number)
     .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
     .maxLines(2)
     .textOverflow({ overflow: TextOverflow.Ellipsis });

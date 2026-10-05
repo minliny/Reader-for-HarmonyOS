@@ -2,13 +2,15 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { readerContentSearchFieldProbe } from './lib/reader-content-search-field-probe.mjs';
 const read = name => readFileSync(new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url), 'utf8');
 const capsule = read('ReaderSessionCapsule');
 for (const type of ['autoPage', 'tts']) {
-  const { owner } = createReaderBuilderProbe(capsule, ['build'], {
+  const { owner } = createReaderBuilderProbe(capsule, ['build', 'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor'], {
     TYPE_READER_SESSION_COUNTDOWN: {}, TYPE_READER_SESSION_LABEL: {}, readerSessionCapsuleMinimumWidth: () => 96,
   });
-  Object.assign(owner, { type, countdown: 8, capsuleWidth: 96, primaryColor: 'primary', onPrimaryColor: 'onPrimary' });
+  Object.assign(owner, { type, countdown: 8, capsuleWidth: 96, textColor: '', themeScheme: 'day',
+    primaryColor: 'primary', onPrimaryColor: 'onPrimary' });
   owner.initialRender();
   const nodes = [...owner.nodes.values()];
   const row = nodes.find(n => n.type === 'Row');
@@ -26,18 +28,18 @@ for (const type of ['autoPage', 'tts']) {
   }
 }
 for (const scheme of ['day', 'night']) for (const size of [24, 32]) {
-  const { owner } = createReaderBuilderProbe(read('ReaderControlSearchContent'), ['searchField', 'searchAction'], {});
+  const { owner, nodes: nativeNodes } = readerContentSearchFieldProbe();
   Object.assign(owner, { appThemeScheme: scheme, query: '鸣龙', frame: () => ({
     field: { width: 240, height: size, x: 10, y: 9 }, action: { width: size, height: size, x: 260, y: 9 },
   }), presentation: () => ({ contentOpacity: 1, contentBlur: 0 }), canSearch: () => true });
   owner.searchField();
-  assert.equal([...owner.nodes.values()].filter(n => n.type === 'Image').length, 0, 'input has no redundant search icon');
-  assert.equal([...owner.nodes.values()].filter(n => n.type === 'TextInput').length, 1);
+  assert.equal(nativeNodes(owner).filter(n => n.type === 'Image').length, 0, 'input has no redundant search icon');
+  assert.equal(nativeNodes(owner).filter(n => n.type === 'TextInput').length, 1);
   owner.searchAction();
-  const icons = [...owner.nodes.values()].filter(n => n.type === 'Image');
+  const icons = nativeNodes(owner).filter(n => n.type === 'Image');
   assert.equal(icons.length, 1);
   assert.equal(icons[0].create, `app.media.reader_directory_search${scheme === 'night' ? '_theme_night' : ''}`);
-  const action = [...owner.nodes.values()].find(n => n.accessibilityText === '搜索正文');
+  const action = nativeNodes(owner).find(n => n.accessibilityText === '搜索正文');
   assert.equal(action.width, size); assert.equal(action.height, size);
   assert.equal(action.border.color, readerAppColor('TOK_LINE', scheme));
   assert.equal(action.backgroundColor, readerAppColor('TOK_SURFACE_PANEL_SOFT', scheme));

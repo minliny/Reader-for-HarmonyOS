@@ -130,7 +130,7 @@ assert.match(fullDirectory, /chapterStartBookmarkCreationEnabled: boolean = fals
 assert.match(fullDirectory, /onCreateChapterStartBookmark: \(request: ReaderDirectoryChapterStartBookmarkRequest\) => void/);
 assert.match(fullDirectory, /chapterStartBookmarkCreationEnabled: this\.chapterStartBookmarkCreationEnabled/);
 assert.match(fullDirectory, /chapterDownloadEnabled: this\.sourceId !== 'local'/);
-assert.match(fullDirectory, /onDownloadChapter: \(index: number\): void => this\.onDownloadChapter\(index\)/);
+assert.match(fullDirectory, /onDownloadChapter: \(index: number\): void => \{ if \(this\.directoryRecovery\.offlineBlocked !== true\) this\.onDownloadChapter\(index\); \}/);
 assert.match(fullDirectory, /onDownloadBook: \(\) => void/);
 assert.match(fullDirectory, /onClearBookOffline: \(\) => void/);
 assert.match(fullDirectory, /Text\('下载整书'\)/);
@@ -145,7 +145,7 @@ assert.match(fullDirectory,
 const gateway = read('entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
 assert.match(gateway, /async createChapterStartBookmark\(/);
 assert.match(gateway,
-  /const captured: LocalReadingPositionBookmarkInput = \{[\s\S]*?chapterOffset: 0, chapterTitle: input\.chapterTitle[\s\S]*?return this\.createPositionBookmark\(captured, isCurrent\)/,
+  /const captured: LocalReadingPositionBookmarkInput = \{[\s\S]*?chapterOffset: 0, chapterTitle: input\.chapterTitle[\s\S]*?return this\.createPositionBookmark\(captured, isCurrent, evidence, context\)/,
   'chapter markers must reuse the general exact-position Core bookmark path');
 assert.match(gateway, /async loadBookmarkProjection\(/,
   'bookmark projection must be source-independent');
@@ -153,42 +153,30 @@ assert.match(gateway, /async createPositionBookmark\(/);
 assert.match(gateway, /const params: JsonObject = \{\s*bookName: input\.bookName,\s*bookAuthor: input\.bookAuthor,\s*chapterIndex: input\.chapterIndex,\s*chapterPos: input\.chapterOffset,\s*chapterName: input\.chapterTitle,/);
 assert.match(gateway, /bookmark\.create returned a mismatched position bookmark/);
 assert.match(gateway, /async deleteBookmark\(\s*time: number,/);
-assert.match(gateway, /request\('bookmark\.delete', \{\s*time,/);
+assert.match(gateway,/bookmarkIntents\.execute\('bookmark.delete', \{ time \}, context/,'exact delete DTO stays the primary key and original entity scope');
+assert.match(gateway,/if \(isCurrent\?\.\(\) === false\) throw new Error\('bookmark deletion superseded before dispatch'\)/);
 assert.match(gateway, /bookmark\.delete returned a mismatched time/);
 assert.match(gateway, /typeof deleted !== 'boolean'/);
 assert.doesNotMatch(gateway, /request\('cache\.book\.prefetch'/);
 
 const index = read('entry/src/main/ets/pages/Index.ets');
-assert.match(index, /private directoryBookmarkMutationGeneration: number = 0/);
-assert.match(index, /private directoryBookmarkMutationActiveKey: string = ''/);
-assert.match(index, /new ReadingOfflineGateway\(ReaderRuntimeOwner\.current\(\)\)[\s\S]*\.prefetchChapter\(session, chapterIndex, isCurrent\)/);
-assert.match(index, /\.prefetchBook\(session, isCurrent/);
-assert.match(index, /\.clearBook\(session, isCurrent\)/);
-assert.match(index, /title: '清除本书离线内容'[\s\S]*?value: '取消'[\s\S]*?value: '清除'/,
-  'whole-book cache deletion must require confirmation');
-assert.match(index, /private beginDirectoryBookmarkMutation\(book: ReadingBookDetail\): number/,
-  'bookmark mutation identity must accept the shared detail model');
-assert.match(index, /chapterStartBookmarkCreationEnabled: true/,
-  'local and remote directory rows must both admit chapter-start bookmarks');
-assert.doesNotMatch(index, /book\.sourceId !== LOCAL_SOURCE_ID \|\| bookmarkTimes\.length/,
-  'bookmark deletion must not be local-source gated');
-assert.doesNotMatch(index, /book\.sourceId !== LOCAL_SOURCE_ID \|\|\s*!Number\.isSafeInteger\(request\.chapterIndex\)/,
-  'bookmark creation must not be local-source gated');
-assert.match(index, /loadRemoteDirectoryProjection\([\s\S]*loadBookmarkProjection/,
-  'remote offline and bookmark projections must be merged');
-assert.match(index, /if \(this\.directoryBookmarkMutationActiveKey === key \|\| this\.controlBookmarkProjectionMessage\(\)\.length > 0\) \{\s*return -1;/,
-  'same-book pending mutations and unverified outcomes must reject duplicate create/delete mutations');
-assert.match(index, /private toggleReaderPageBookmark\(request: ReaderPageBookmarkToggleRequest\): void/);
-assert.match(index, /gateway\.createPositionBookmark\(\{/,
-  'the pull-down gesture must mutate the same Core bookmark truth at the physical page anchor');
-assert.equal((index.match(/const mutationGeneration = this\.beginDirectoryBookmarkMutation\(book\)/g) ?? []).length, 3,
-  'directory create/delete and page toggle must acquire the same mutation guard');
-assert.equal((index.match(/this\.finishDirectoryBookmarkMutation\(mutationGeneration, mutationKey\)/g) ?? []).length, 3,
-  'all three async mutation paths must release their exact guard in finally');
-assert.match(index, /private isDirectoryBookmarkMutationCurrent\(generation: number, key: string\): boolean \{[\s\S]*generation === this\.directoryBookmarkMutationGeneration &&[\s\S]*key === this\.directoryBookmarkMutationActiveKey/,
-  'an old request must not clear the guard owned by a newer book mutation');
-assert.equal((index.match(/this\.isDirectoryBookmarkMutationCurrent\(mutationGeneration, mutationKey\)/g) ?? []).length, 3,
-  'all Core request guards must include the bookmark mutation generation');
+const owner=read('entry/src/main/ets/features/reading/ReaderDirectoryHost.ts');
+const offline=read('entry/src/main/ets/features/reading/ReadingOfflineHost.ts');
+assert.doesNotMatch(index,/private directoryBookmarkMutationGeneration|private directoryBookmarkMutationActiveKey/,'page does not own a second mutation algorithm');
+assert.match(index,/ReaderDirectoryHost\.forRuntime\(owner,[\s\S]*new BookmarkOperationIntentStore/);
+assert.match(index,/ReadingOfflineHost\.forRuntime\(owner,[\s\S]*new CacheClearOperationIntentStore/);
+assert.match(index,/host\.downloadChapter\(chapterIndex, this\.offlineBinding\(owner, session\)\)/);
+assert.match(index,/host\.downloadBook\(this\.offlineBinding\(owner, session\)\)/);assert.match(index,/host\.clearBook\(this\.offlineBinding\(owner, session\)\)/);
+assert.match(index,/title: '清除本书离线内容'[\s\S]*?value: '取消'[\s\S]*?value: '清除'/);
+assert.match(index,/chapterStartBookmarkCreationEnabled: true/);
+assert.match(index,/host\.createChapterStart\(request\.chapterIndex, this\.directoryBinding\(owner, book\)\)/);
+assert.match(index,/host\.deleteBookmarks\(bookmarkTimes, this\.directoryBinding\(owner, book\)\)/);
+assert.match(index,/private toggleReaderPageBookmark\(request: ReaderPageBookmarkToggleRequest\): void/);assert.match(index,/void host\.createPosition\(\{/);
+assert.doesNotMatch(index,/book\.sourceId !== LOCAL_SOURCE_ID \|\| bookmarkTimes\.length|book\.sourceId !== LOCAL_SOURCE_ID \|\|\s*!Number\.isSafeInteger\(request\.chapterIndex\)/);
+assert.match(owner,/if \(this\.bookmarkProjectionStale\)/,'one original owner guards concurrent writes and stale projections');
+assert.match(owner,/confirmation === 'unknown'/);assert.match(owner,/this\.admitted\(binding\)/);assert.match(owner,/generation === this\.generation/);
+assert.match(owner,/gateway\.createPositionBookmark/);assert.match(owner,/gateway\.deleteBookmark/);assert.match(owner,/gateway\.createChapterStartBookmark/);
+assert.doesNotMatch(offline,/loadBookmarkProjection/);assert.match(owner,/loadReaderControlBookmarkProjection/);
 
 const unknown = readerDirectoryBookmarkMarkerState({
   index: 7,

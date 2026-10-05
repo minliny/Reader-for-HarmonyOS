@@ -1,3 +1,4 @@
+import { TYPE_APP_SECTION_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 /**
  * Empty shelf, rebuilt 2026-08-06 against live Figma node `State/BookshelfEmpty`
@@ -78,10 +79,10 @@ export struct BookshelfEmptyPage {
   private sectionHeader() {
     Row() {
       Text('我的书架')
-        .fontFamily('ReaderInter')
-        .fontWeight(700)
-        .fontSize(15)
-        .lineHeight(18)
+        .fontFamily(TYPE_APP_SECTION_LABEL.fontFamily)
+        .fontWeight(TYPE_APP_SECTION_LABEL.fontWeight)
+        .fontSize(TYPE_APP_SECTION_LABEL.fontSizeFp)
+        .lineHeight(TYPE_APP_SECTION_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .layoutWeight(1);
 

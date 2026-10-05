@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { ReadingSessionProgressOwner } from '../entry/src/main/ets/features/reading/ReadingSessionProgressOwner.ts';
+import { ReadingSessionProgressOwner } from './lib/reader-progress-owner-probe.mjs';
 import { ReaderCoreRequestError } from '../entry/vendor/core-harmony/sdk/reader_core.ts';
 import { classifyRemoteReadingCommandFailure } from '../entry/src/main/ets/features/reading/RemoteReadingContract.ts';
 
@@ -182,10 +182,28 @@ for (const [transport, wrap] of [
     checks.push(`strong transaction recovers definite no-write rejection before crossing boundary/${transport}`);
   }
 }
+// These finite Core rejections occur before the original position transaction.
+// Keep the original POSITION_CONTEXT_STALE case, now with its exact no-write
+// contract, and also prove that a later rejection cannot erase prior unknown.
+for (const reason of ['POSITION_CONTEXT_STALE', 'DIRECTORY_TARGET_STALE']) {
+  const f = fixture(); f.effects.push(() => { f.change(80); throw casRejected('INVALID_PARAMS', reason); });
+  await assert.rejects(f.persist(20));
+  assert.equal((await f.owner.awaitPersistence()).chapterOffset, 20);
+  assert.deepEqual(f.writes.map(write => write.expected), ['op:1', 'op:2']);
+  checks.push(`exact Core no-write rejection allows fresh baseline/${reason}`);
+  const unknown = fixture(); unknown.effects.push('late'); await assert.rejects(unknown.persist(20));
+  unknown.effects.push(() => { throw casRejected('INVALID_PARAMS', reason); });
+  await assert.rejects(unknown.owner.awaitPersistence());
+  unknown.change(80);
+  await assert.rejects(unknown.owner.awaitPersistence(), /RETRY_CONFLICT/);
+  assert.equal(unknown.writes.length, 2);
+  assert.equal(unknown.owner.pendingProgress().progress.chapterOffset, 20);
+  checks.push(`later exact rejection preserves earlier dispatched unknown/${reason}`);
+}
 for (const [name, failure] of [
   ['message only', Error('READING_PROGRESS_CHANGED')],
   ['timeout with reason', casRejected('TIMEOUT')],
-  ['other invalid params', casRejected('INVALID_PARAMS', 'POSITION_CONTEXT_STALE')],
+  ['other invalid params', casRejected('INVALID_PARAMS', 'UNRELATED_REJECTION')],
   ['different remote command', classifyRemoteReadingCommandFailure('reading.progress.get', casRejected())],
 ]) {
   const f = fixture(); f.effects.push(() => { f.change(80); throw failure; });

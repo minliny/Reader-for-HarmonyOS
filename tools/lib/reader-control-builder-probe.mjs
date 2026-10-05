@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionReaderPressFeedback } from './reader-press-feedback-probe.mjs';
+import { readerTypographyRoles } from './reader-typography-probe.mjs';
+import { labeledIconControls } from './reader-labeled-icon-action-probe.mjs';
+import { foundationControls } from './reader-foundation-control-probe.mjs';
+import { switchControls } from './reader-switch-control-probe.mjs';
+import { iconButtonControls } from './reader-icon-button-probe.mjs';
 
 const sdkRoot = process.env.READER_ETS_LOADER_ROOT ??
   '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
@@ -22,6 +27,16 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const options = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
   const parse = text => ts.createSourceFile('/tmp/ReaderBuilderProbe.ets', text,
     ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  const childProps = definition => {
+    const tree = parse(definition);
+    assert.equal(tree.parseDiagnostics.length, 0, 'actual shared child ETS parses');
+    const declaration = tree.statements.find(node => node.members && node.members.some(member => member.name?.getText(tree) === 'build'));
+    return new Set((declaration?.members ?? []).filter(member => ts.isPropertyDeclaration(member) &&
+      ts.getAllDecorators(member).some(decorator => {
+        const expression = decorator.expression;
+        return (ts.isCallExpression(expression) ? expression.expression : expression).getText(tree) === 'Prop';
+      })).map(member => member.name.getText(tree)));
+  };
   const original = parse(source);
   assert.equal(original.parseDiagnostics.length, 0, 'production ETS parses');
   const struct = original.statements.find(n => n.members && n.name &&
@@ -34,6 +49,56 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     }
     return member.getText(original);
   });
+  // Legacy consumers now mount the same production controls as new callers.
+  // Resolve only actual calls in the selected production members, and keep an
+  // explicitly supplied component/property runtime authoritative. Foundation
+  // components themselves do not call either child, so this is not recursive.
+  const missingFoundation = ['ReaderButton', 'ReaderFormField', 'ReaderLabeledIconAction'].filter(name =>
+    dependencies[name] === undefined && new RegExp(`\\b${name}\\s*\\(`).test(members.join('\n')));
+  if (missingFoundation.length > 0) {
+    const foundation = missingFoundation.includes('ReaderLabeledIconAction') ? labeledIconControls() : foundationControls();
+    const originalHooks = hooks;
+    dependencies = { ...foundation.dependencies, ...dependencies };
+    hooks = { ...foundation.hooks, ...originalHooks,
+      childSources: { ...foundation.hooks.childSources, ...originalHooks.childSources },
+      mountChildren: true, lifecycleChildren: true,
+      onChildUpdated(child, params) {
+        foundation.properties.flush();
+        originalHooks.onChildUpdated?.(child, params);
+      },
+    };
+  }
+  // The two existing controlled switch families follow the same bounded
+  // actual-child resolution. Explicit components remain authoritative; the
+  // producer itself calls neither child, so it cannot recursively resolve.
+  const missingSwitch = ['ReaderToggle', 'ReaderSegmentedControl'].filter(name =>
+    dependencies[name] === undefined && new RegExp(`\\b${name}\\s*\\(`).test(members.join('\n')));
+  if (missingSwitch.length > 0) {
+    const controls = switchControls();
+    const originalHooks = hooks;
+    dependencies = { ...controls.dependencies, ...dependencies };
+    hooks = { ...controls.hooks, ...originalHooks,
+      childSources: { ...controls.hooks.childSources, ...originalHooks.childSources },
+      mountChildren: true, lifecycleChildren: true,
+      onChildUpdated(child, params) {
+        controls.properties.flush();
+        originalHooks.onChildUpdated?.(child, params);
+      },
+    };
+  }
+  if (dependencies.ReaderIconButton === undefined && /\bReaderIconButton\s*\(/.test(members.join('\n'))) {
+    const controls = iconButtonControls();
+    const originalHooks = hooks;
+    dependencies = { ...controls.dependencies, ...dependencies };
+    hooks = { ...controls.hooks, ...originalHooks,
+      childSources: { ...controls.hooks.childSources, ...originalHooks.childSources },
+      mountChildren: true, lifecycleChildren: true,
+      onChildUpdated(child, params) {
+        controls.properties.flush();
+        originalHooks.onChildUpdated?.(child, params);
+      },
+    };
+  }
   main.partialUpdateConfig.partialUpdateMode = true;
   utils.storedFileInfo.setCurrentArkTsFile();
   // Register the actual shared child Prop names so the SDK emits its real
@@ -41,7 +106,19 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const childName = 'ReaderControlSwitchTrack';
   const childSource = readFileSync(new URL('../../entry/src/main/ets/features/reading/ReaderControlSwitchTrack.ets', import.meta.url), 'utf8');
   syntax.componentCollection.customComponents.add(childName);
-  syntax.propCollection.set(childName, new Set([...childSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
+  syntax.propCollection.set(childName, childProps(childSource));
+  const recoveryChildren = ['ReaderRecoveryAction', 'ReaderRecoveryNotice'];
+  for (const name of recoveryChildren) {
+    const child = new URL(`../../entry/src/main/ets/features/common/${name}.ets`, import.meta.url);
+    if (!existsSync(child)) continue;
+    const definition = readFileSync(child, 'utf8');
+    syntax.componentCollection.customComponents.add(name);
+    syntax.propCollection.set(name, childProps(definition));
+  }
+  for (const [name, child] of Object.entries(hooks.childSources ?? {})) {
+    syntax.componentCollection.customComponents.add(name);
+    syntax.propCollection.set(name, childProps(child));
+  }
   const file = parse(`@Component struct ReaderBuilderProbe {\n${members.join('\n')}\n${names.includes('build') ? '' : 'build() { Column() {} }'}\n}`);
   // The full SDK frontend collects declared method names before transforming
   // @Watch. Preserve that prepass for fixtures that include real decorated fields.
@@ -78,7 +155,9 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       activeOwner.attributeCalls.push({ id: activeId, property, args });
       if (property === 'attributeModifier') { args[0].applyNormalAttribute(instance); return instance; }
       if (property === 'create') record.type = name;
-      record[property] = args.length === 1 ? args[0] : args;
+      // ArkUI TextInput.type() is an input attribute, not the native node kind.
+      // Keep the actual call in attributeCalls and preserve both identities.
+      record[property === 'type' ? 'nativeInputType' : property] = args.length === 1 ? args[0] : args;
       return instance;
     };
   } }); return instance; };
@@ -135,8 +214,13 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       hooks.onChildUpdate?.(record, params);
       if (typeof record.updateStateVars === 'function') record.updateStateVars(params);
       else Object.assign(record.params, params);
+      hooks.onChildUpdated?.(record, params);
     }
-    static create(child) { child.owner.children.set(child.id, child); }
+    static create(child) {
+      child.owner.children.set(child.id, child);
+      if (hooks.lifecycleChildren) child.aboutToAppear?.();
+      if (hooks.mountChildren && typeof child.initialRender === 'function') child.initialRender();
+    }
   }
   class Child {
     constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
@@ -144,12 +228,14 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   // Geometry/property probes do not register physical platform fonts. The
   // actual registrar has a separate demand/failure/retry test.
   const globals = { readerRegisteredFontFamily: (_font, family) => family,
-    readerFontFamilyReady: () => true, readerAppColor, readerThemeDefinition, ViewPU, ReaderControlSwitchTrack: Child, $r: value => value,
-    ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Path', 'Text', 'TextInput', 'Span', 'Image', 'Slider', 'ForEach', 'If', '__Common__']
+    readerFontFamilyReady: () => true, readerAppColor, readerThemeDefinition, ViewPU, ReaderControlSwitchTrack: Child,
+    ...Object.fromEntries(recoveryChildren.map(name => [name, Child])), $r: value => value,
+    ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Path', 'Text', 'TextInput', 'TextArea', 'Select', 'Span', 'Marquee', 'Image', 'Slider', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
-    ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment',
+    ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment', 'AccessibilityRoleType',
       'LineCapStyle', 'TextAlign', 'TextOverflow', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
+    ...readerTypographyRoles,
     ...dependencies };
   globals.ReaderPressFeedback ??= productionReaderPressFeedback({ Color: globals.Color });
   const Component = new Function(...Object.keys(globals), `${stripTypeScriptTypes(output)}; return ReaderBuilderProbe;`)(...Object.values(globals));

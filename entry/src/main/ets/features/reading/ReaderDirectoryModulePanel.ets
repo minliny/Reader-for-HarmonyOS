@@ -1,3 +1,4 @@
+import { TYPE_READER_DIRECTORY_TAB_LEGACY, TYPE_READER_DIRECTORY_TITLE_LEGACY } from '../common/ReaderTypography';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
@@ -175,9 +176,9 @@ export struct ReaderDirectoryModulePanel {
           Text('目录')
             .width('100%')
             .height(DIRECTORY_TAB_ROW_HEIGHT)
-            .fontFamily('ReaderInter')
-            .fontWeight(500)
-            .fontSize(10)
+            .fontFamily(TYPE_READER_DIRECTORY_TAB_LEGACY.fontFamily)
+            .fontWeight(TYPE_READER_DIRECTORY_TAB_LEGACY.fontWeight)
+            .fontSize(TYPE_READER_DIRECTORY_TAB_LEGACY.fontSizeFp)
             .fontColor(this.activeTab === 'directory' ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
             .textAlign(TextAlign.Center);
           if (this.activeTab === 'directory') {
@@ -199,9 +200,9 @@ export struct ReaderDirectoryModulePanel {
           Text('书签')
             .width('100%')
             .height(DIRECTORY_TAB_ROW_HEIGHT)
-            .fontFamily('ReaderInter')
-            .fontWeight(500)
-            .fontSize(10)
+            .fontFamily(TYPE_READER_DIRECTORY_TAB_LEGACY.fontFamily)
+            .fontWeight(TYPE_READER_DIRECTORY_TAB_LEGACY.fontWeight)
+            .fontSize(TYPE_READER_DIRECTORY_TAB_LEGACY.fontSizeFp)
             .fontColor(this.activeTab === 'bookmarks' ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
             .textAlign(TextAlign.Center);
           if (this.activeTab === 'bookmarks') {
@@ -246,10 +247,10 @@ export struct ReaderDirectoryModulePanel {
           Text(repeatItem.item.title)
             .width('100%')
             .padding({ left: (this.isCurrent(repeatItem.item) ? 5 : 8) + readerDirectoryIndentVp(repeatItem.item), right: 8 })
-            .fontFamily('ReaderInter')
-            .fontWeight(500)
-            .fontSize(11)
-            .lineHeight(12.32)
+            .fontFamily(TYPE_READER_DIRECTORY_TITLE_LEGACY.fontFamily)
+            .fontWeight(TYPE_READER_DIRECTORY_TITLE_LEGACY.fontWeight)
+            .fontSize(TYPE_READER_DIRECTORY_TITLE_LEGACY.fontSizeFp)
+            .lineHeight(TYPE_READER_DIRECTORY_TITLE_LEGACY.lineHeightFp as number)
             .fontColor(this.titleColor(repeatItem.item))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });

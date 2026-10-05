@@ -36,15 +36,17 @@ export class DiscoverGateway {
     this.runtimeOwner = runtimeOwner;
   }
 
-  async loadExploreKinds(sourceId: string): Promise<DiscoverKind[]> {
-    const result = await this.runtimeOwner.request('source.exploreKinds', { sourceId });
+  async loadExploreKinds(sourceId: string, onPartial?: (invalidCount: number) => void, current?: () => boolean): Promise<DiscoverKind[]> {
+    const result = await this.runtimeOwner.request('source.exploreKinds', { sourceId }, { canDispatch: current, canContinue: current });
     const raw = result.data['kinds'];
     if (!Array.isArray(raw)) {
       throw new Error('source.exploreKinds returned invalid data');
     }
     const kinds: DiscoverKind[] = [];
+    let invalidCount = 0;
     for (const item of raw) {
-      if (typeof item !== 'object' || item === null) {
+      if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+        invalidCount += 1;
         continue;
       }
       const obj = item as JsonObject;
@@ -54,27 +56,31 @@ export class DiscoverGateway {
       // intentionally blank. Core preserves those source semantics; this
       // executable-only product list must not dispatch a heading as
       // `source.explore`, which requires a concrete category URL.
-      if (title === undefined || url === undefined || url.trim().length === 0) {
-        continue;
-      }
+      if (title === undefined || url === undefined) { invalidCount += 1; continue; }
+      if (url.trim().length === 0) continue;
       kinds.push({ title, url });
     }
+    if (invalidCount > 0 && onPartial === undefined) throw new Error('source.exploreKinds returned malformed categories');
+    onPartial?.(invalidCount);
     return kinds;
   }
 
   async loadExplore(sourceId: string, url: string, page: number,
-    category: ReaderSourceCategory = 'novel'): Promise<DiscoverBook[]> {
+    category: ReaderSourceCategory = 'novel', onPartial?: (invalidCount: number) => void, current?: () => boolean): Promise<DiscoverBook[]> {
     if (!Number.isSafeInteger(page) || page < 1) {
       throw new Error('source.explore page must be a positive safe integer');
     }
-    const result = await this.runtimeOwner.request('source.explore', { sourceId, url, page });
+    const result = await this.runtimeOwner.request('source.explore', { sourceId, url, page }, { canDispatch: current, canContinue: current });
     const raw = result.data['books'];
     if (!Array.isArray(raw)) {
       throw new Error('source.explore returned invalid data');
     }
     const books: DiscoverBook[] = [];
+    const identities = new Set<string>();
+    let invalidCount = 0;
     for (const item of raw) {
-      if (typeof item !== 'object' || item === null) {
+      if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+        invalidCount += 1;
         continue;
       }
       const obj = item as JsonObject;
@@ -83,9 +89,15 @@ export class DiscoverGateway {
       // wire shape.  The stable title field is `title`; `name` is only a
       // presentation label inside this Harmony feature.
       const name = this.string(obj, 'title');
-      if (bookId === undefined || name === undefined) {
+      if (bookId === undefined || bookId.trim().length === 0 || name === undefined ||
+        (obj['sourceId'] !== undefined && obj['sourceId'] !== sourceId) ||
+        ['author', 'coverUrl', 'intro'].some((field: string): boolean =>
+          obj[field] !== undefined && typeof obj[field] !== 'string')) {
+        invalidCount += 1;
         continue;
       }
+      if (identities.has(bookId)) { invalidCount += 1; continue; }
+      identities.add(bookId);
       books.push({
         sourceId: this.string(obj, 'sourceId') ?? sourceId,
         bookId,
@@ -99,6 +111,8 @@ export class DiscoverGateway {
         category,
       });
     }
+    if (invalidCount > 0 && onPartial === undefined) throw new Error('source.explore returned malformed books');
+    onPartial?.(invalidCount);
     return books;
   }
 

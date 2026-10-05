@@ -1,15 +1,17 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
+import { ReaderTtsAudioSessionLease } from '../entry/src/main/ets/app/ReaderTtsAudioSessionLease.ts';
 const source=name=>stripTypeScriptTypes(readFileSync(new URL(`../entry/src/main/ets/app/${name}.ts`,import.meta.url),'utf8')
   .replace(/^import[\s\S]*?;\n/gm,'')).replace(/^export /gm,'');
 const deferred=()=>{let resolve;const promise=new Promise(yes=>resolve=yes);return{promise,resolve};};
 const bytes=new Uint8Array([1,2,3,4]),requests=[];
 let network=async()=>({status:200,bytes}),createPlayer;
 const HttpExecuteHost={instance:{executeBytes(...args){requests.push(args);return network();}}};
-const Tts=new Function('HttpExecuteHost','media','audio','hilog','ReaderHttpTtsGateway','isCrossOriginSensitiveHeader',
+const lease=new ReaderTtsAudioSessionLease({async activate(){assert.fail('binary-consumer test must not acquire audio');},async deactivate(){}});
+const Tts=new Function('HttpExecuteHost','media','audio','hilog','ReaderHttpTtsGateway','isCrossOriginSensitiveHeader','harmonyTtsAudioSessionLease',
   source('HarmonyHttpTtsHost')+';return HarmonyHttpTtsHost;')(HttpExecuteHost,{createAVPlayer:()=>createPlayer()},
-  {StreamUsage:{STREAM_USAGE_AUDIOBOOK:1}},{error(){}},class{},()=>false);
+  {StreamUsage:{STREAM_USAGE_AUDIOBOOK:1}},{error(){}},class{},()=>false,lease);
 const Image=new Function('HttpExecuteHost',source('ReadingBodyImageHost')+';return ReadingBodyImageHost;')(HttpExecuteHost);
 const tts=new Tts({}),image=Image.instance,descriptor={url:'https://audio.test/a',method:'GET',headers:{}};
 assert.equal(await tts.fetchAudio(descriptor,1),bytes);

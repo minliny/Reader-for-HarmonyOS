@@ -1,3 +1,4 @@
+import { TYPE_APP_INHERITED_BODY, TYPE_READER_DIRECTORY_CURRENT_TITLE, TYPE_READER_DIRECTORY_POSITION, TYPE_READER_DIRECTORY_TAB_COMPACT } from '../common/ReaderTypography';
 import { readerDirectoryScopeKey } from './ReaderDirectoryNavigation';
 import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
@@ -319,7 +320,7 @@ export struct ReaderControlDirectoryContent {
           Image(this.tab === tab ? (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') : $r('app.media.reader_directory_marker_bookmark_active')) :
             (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_theme_night') : $r('app.media.reader_directory_marker_bookmark'))).width(15).height(15);
         }
-        Text(title).fontFamily('ReaderNotoSansSC').fontWeight(500).fontSize(11).lineHeight(16)
+        Text(title).fontFamily(TYPE_READER_DIRECTORY_TAB_COMPACT.fontFamily).fontWeight(TYPE_READER_DIRECTORY_TAB_COMPACT.fontWeight).fontSize(TYPE_READER_DIRECTORY_TAB_COMPACT.fontSizeFp).lineHeight(TYPE_READER_DIRECTORY_TAB_COMPACT.lineHeightFp as number)
           .fontColor(this.tab === tab ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       }.width('100%').height(this.value(31, 36)).justifyContent(FlexAlign.Center)
         .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
@@ -398,7 +399,7 @@ export struct ReaderControlDirectoryContent {
       ReaderBookmarkEmptyState({ onReturnToDirectory: (): void => this.onTabChange('directory') });
     } else if (this.snapshot.rows.length === 0 && !this.navigationActive &&
       !(this.tab === 'directory' && this.bookmarkIdentity !== undefined)) {
-      Text('没有匹配的章节').fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).fontSize(12);
+      Text('没有匹配的章节').fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp);
     } else {
       if (this.tab === 'directory' && this.bookmarkIdentity !== undefined) {
         ReaderDirectoryNavigationSurface({
@@ -412,7 +413,7 @@ export struct ReaderControlDirectoryContent {
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           scroller: this.scroller, fallbackBuilder: (): void => {
             if (this.snapshot.rows.length === 0) {
-              Text('没有匹配的章节').fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).fontSize(12);
+              Text('没有匹配的章节').fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp);
             } else {
               this.flatList();
             }
@@ -459,12 +460,12 @@ export struct ReaderControlDirectoryContent {
         Column({ space: 0 }) {
           Row().width('100%').height(1).backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
           Row({ space: 10 }) {
-            Text('当前章节').fontFamily('ReaderNotoSansSC').fontSize(9).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
+            Text('当前章节').fontFamily(TYPE_READER_DIRECTORY_POSITION.fontFamily as string).fontSize(TYPE_READER_DIRECTORY_POSITION.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
               .flexShrink(0);
-            Text(this.snapshot.currentTitle).layoutWeight(1).fontFamily('ReaderNotoSansSC')
-              .fontWeight(FontWeight.Bold).fontSize(11).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
+            Text(this.snapshot.currentTitle).layoutWeight(1).fontFamily(TYPE_READER_DIRECTORY_CURRENT_TITLE.fontFamily)
+              .fontWeight(TYPE_READER_DIRECTORY_CURRENT_TITLE.fontWeight).fontSize(TYPE_READER_DIRECTORY_CURRENT_TITLE.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
               .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-            Text(this.snapshot.currentPosition).fontFamily('ReaderNotoSansSC').fontSize(9)
+            Text(this.snapshot.currentPosition).fontFamily(TYPE_READER_DIRECTORY_POSITION.fontFamily as string).fontSize(TYPE_READER_DIRECTORY_POSITION.fontSizeFp)
               .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).flexShrink(0).maxLines(1).textAlign(TextAlign.End);
           }.width('100%').height(47).padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: 1 })
             .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme));

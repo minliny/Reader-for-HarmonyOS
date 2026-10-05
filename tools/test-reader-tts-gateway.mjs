@@ -1,3 +1,4 @@
+import { withReaderProgressProducerFixture } from './lib/reader-progress-producer-fixture.mjs';
 import assert from 'node:assert/strict';
 
 import { ReaderTtsGateway } from '../entry/src/main/ets/features/reading/ReaderTtsGateway.ts';
@@ -114,13 +115,13 @@ console.log('reader TTS precise rate round trip: PASS');
 // unversioned hand-written fixtures never exercised that production boundary.
 const wireChapterKeys = Object.keys(JSON.parse(readFileSync(new URL(
   '../../Reader-Core-Native/protocol/reader-command.schema.json', import.meta.url), 'utf8')).$defs.TtsChapterRef.properties);
-const Page = productionMotionMethods(new URL(
+const Page = withReaderProgressProducerFixture(productionMotionMethods(new URL(
   '../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url).pathname,
 ['ttsChapterRef', 'commitTtsProgress'], {
   CoreReadingAnchor: class { constructor(chapterIndex, chapterOffset, chapterProgress, bodyVersion, processingVersion) {
     Object.assign(this, { chapterIndex, chapterOffset, chapterProgress, bodyVersion, processingVersion });
   } },
-});
+}));
 function versionedFixture(versions) {
   const page = new Page(), commits = [], wireCalls = [], core = new FakeGateway(), host = new FakeHost();
   Object.assign(page, { sourceId: fixtureChapter.sourceId, bookId: fixtureChapter.bookId,
@@ -128,7 +129,7 @@ function versionedFixture(versions) {
     isSessionActive: token => token === 1, requireChapterLayoutMap: () => ({ scalarCount: () => 13 }),
     coreLayout: () => ({}), admitCommittedProgress() {}, logTtsFailure: (_operation, error) => { throw error; },
     activeGateway: () => ({ runProgressCommitSerial: operation => operation(),
-      resolveAndUpdateProgress: async (_book, _title, anchor) => { commits.push(anchor); return {}; } }),
+      resolveAndUpdateProgress: async (_book, _title, anchor) => { commits.push(anchor); return { bookId: fixtureChapter.bookId, ...anchor }; } }),
   });
   const runtime = { async request(method, params = {}) {
     // The fake Core has the current Core field boundary, not a widened fake

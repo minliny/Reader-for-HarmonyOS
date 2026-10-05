@@ -1,9 +1,11 @@
+import {switchControls} from './lib/reader-switch-control-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { readerAppColor, READER_THEME_DEFINITIONS } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import * as style from '../entry/src/main/ets/features/reading/ReaderControlAppearanceStyle.ts';
@@ -22,6 +24,15 @@ function registerBuilders(source) { for (const m of source.matchAll(/@Builder\s+
 class NativeChild {
   constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
 }
+// BookshelfManagementPage now consumes named ReaderTypography roles. This
+// layout probe only exercises Scroll alignment, so provide stable style
+// objects for the imported roles without changing the production tuples.
+const shelfTypography = Object.fromEntries([
+  'NOTE', 'STATUS', 'BODY', 'BODY_MUTED', 'META', 'GROUP_TITLE', 'ROW_ACTION',
+  'BOOK_TITLE', 'HEADING', 'BUTTON', 'SMALL_ACTION',
+].map(name => [`TYPE_SHELF_MANAGEMENT_${name}`, {
+  fontFamily: 'ReaderNotoSansSC', fontWeight: 400, fontSizeFp: 12, lineHeightFp: 16,
+}]));
 for (const [name, file] of [['CategoryRow', 'features/settings/CategoryRow.ets'], ['PageBackBar', 'features/common/PageBackBar.ets'], ['MainTabBar', 'features/shell/MainTabBar.ets'], ['ReaderToggle', 'features/common/ReaderToggle.ets']]) {
   syntax.componentCollection.customComponents.add(name);
   syntax.propCollection.set(name, new Set([...read(file).matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
@@ -53,9 +64,9 @@ await check('PH24 native loading indicator preserves 13/36 sizes and responds wi
   }
 });
 await check('PH37 four Toggle states retain geometry, track role, click and thumb position', () => {
-  const { owner } = createReaderBuilderProbe(read('features/common/ReaderToggle.ets'), ['build']);
+  const shared = switchControls(), owner = shared.toggle.owner; owner.aboutToAppear();
   let taps = 0;
-  Object.assign(owner, { appThemeScheme: 'day', value: false, radius: 999, onToggle: () => taps++ });
+  Object.assign(owner, { appThemeScheme: 'day', value: false, inputIdentity: 'actual-physical-toggle', onToggle: () => taps++ });
   owner.initialRender();
   const track = [...owner.nodes.values()].find(n => n.type === 'Stack');
   const thumb = [...owner.nodes.values()].find(n => n.type === 'Text');
@@ -109,10 +120,15 @@ await check('PH67 SDK previews use four approved light bases and retain four ori
   });
 });
 await check('PH36 real Index Back returns General to Settings before Bookshelf and preserves overlay priority', () => {
-  const Index = productionMotionMethods(path('pages/Index.ets'), ['onBackPress']);
-  const owner = Object.assign(new Index(), { route: 'settings', settingsSection: 'general',
-    returnToBookshelf: () => { owner.route = 'bookshelf'; },
-    sourceSwitchVisible: true, closeSourceSwitch: () => { owner.sourceSwitchVisible = false; } });
+  const runtime={},Runtime=runtimeOwnerIdentityProbe(()=>runtime);
+  const Index = productionMotionMethods(path('pages/Index.ets'), ['consumeTemporaryBackBridge','isCurrentRuntime','onBackPress'],{ReaderRuntimeOwner:Runtime});
+  const SourceSwitch=productionMotionMethods(path('features/source/SourceSwitchHost.ts'),
+    ['consumeBack','close','currentScope','currentLease','identity','busyOrUnknown','stopDiscovery','publish','deliver'],{ReaderRuntimeOwner:Runtime});
+  const owner = Object.assign(new Index(), { hasVisibleImportDialog:()=>false, route: 'settings', settingsSection: 'general',
+    returnToBookshelf: () => { owner.route = 'bookshelf'; },sourceSwitchVisible: true,sourceSwitchScopeId:1 });
+  owner.sourceSwitchHost=Object.assign(new SourceSwitch(),{runtime,generation:0,
+    context:{query:{sourceId:'source',bookId:'book'}},snapshot:{scopeId:1,visible:true,state:{kind:'discovering'},rollbackInFlight:false},
+    lease:{isCurrent:identity=>identity.sourceId==='source'&&identity.bookId==='book',changed:snapshot=>{owner.sourceSwitchVisible=snapshot.visible;},effect:()=>{}}});
   assert.equal(owner.onBackPress(), true); assert.equal(owner.settingsSection, 'general');
   assert.equal(owner.onBackPress(), true); assert.equal(owner.route, 'settings'); assert.equal(owner.settingsSection, 'home');
   assert.equal(owner.onBackPress(), true); assert.equal(owner.route, 'bookshelf');
@@ -125,16 +141,17 @@ await check('PH34 actual General and Rules Scrolls align short contents at the t
     for (const m of source.matchAll(/@BuilderParam\s+(\w+)\s*:/g)) builders.add(m[1]);
     const { owner } = createReaderBuilderProbe(source, ['build'], {
       PageBackBar: NativeChild, ReaderToggle: NativeChild, READER_FLOATING_TOP_BAR_HEIGHT: 58,
+      ...shelfTypography,
     });
     Object.assign(owner, { activeSection: 'general', showOverlay: false, appThemeScheme: 'day',
       contentFrame: () => ({ left: 18, right: 18 }), generalBottomContentInset: () => 34,
       bottomContentInset: () => 34, generalContent() {},
-      statusCard() {}, bundleCard() {}, replaceCard() {}, txtTocCard() {}, dictCard() {}, subscriptionCard() {},
+      operationFeedback() {}, operationRecovery() {}, recoveryAction() {}, statusCard() {}, bundleCard() {}, replaceCard() {}, txtTocCard() {}, dictCard() {}, subscriptionCard() {},
       onSectionChange() {}, onBack() {}, snapshot: { mode: 'create', batchCheck: { phase: 'idle' }, editorSourceId: '' },
       batchControlsRenderKey: () => 'idle', batchCard() {}, exportCard() {}, sourceCard() {}, debugCard() {},
       statisticsCard() {}, groupEditorCard() {}, groupsCard() {}, assignmentCard() {}, recordsCard() {},
       backBar() {}, webdavSection() {}, manualActionsSection() {}, autoBackupSection() {}, historySection() {},
-      editorField() {}, sectionTitle() {} });
+      editorField() {}, sectionTitle() {}, saveAction() {} });
     owner.initialRender();
     const scroll = [...owner.nodes.values()].find(n => n.type === 'Scroll');
     assert.ok(scroll); assert.equal(scroll.align, 'Alignment.TopStart');
@@ -142,9 +159,10 @@ await check('PH34 actual General and Rules Scrolls align short contents at the t
 });
 await check('PH35 real cache action has intrinsic height, bounded width and retained pending/result label', async () => {
   const source = read('features/settings/SettingsPage.ets'); registerBuilders(source);
-  const { owner } = createReaderBuilderProbe(source, ['cacheActionRow', 'clearTextCache'], { CategoryRow: NativeChild });
+  const runtime={},ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>runtime);
+  const { owner } = createReaderBuilderProbe(source, ['cacheActionRow', 'clearTextCache','applyCacheCleanup'], { CategoryRow: NativeChild,ReaderRuntimeOwner });
   let resolveClear, calls = 0;
-  Object.assign(owner, { appThemeScheme: 'day', cacheActionLabel: '清理文字缓存', cacheCleanupInFlight: false,
+  Object.assign(owner, { mounted:true,themeOwner:runtime,temporaryBackIdentity:'settings-back:physical',appThemeScheme: 'day', cacheActionLabel: '清理文字缓存', cacheCleanupInFlight: false,
     onClearCache: () => { calls++; return new Promise(resolve => { resolveClear = resolve; }); } });
   owner.cacheActionRow();
   const row = [...owner.children.values()][0];
@@ -156,9 +174,9 @@ await check('PH35 real cache action has intrinsic height, bounded width and reta
   assert.equal(label.maxLines, 2); assert.equal(label.textAlign, 'TextAlign.Center');
   row.params.onRowClick(); row.params.onRowClick(); owner.replay();
   assert.equal(calls, 1); assert.equal(label.create, '清理中');
-  resolveClear(true); await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); owner.replay();
+  resolveClear({busy:false,confirmation:'confirmed',operation:{}}); await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); owner.replay();
   assert.equal(label.create, '已清理'); assert.equal(owner.cacheCleanupInFlight, false);
-  row.params.onRowClick(); resolveClear(false); await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); owner.replay();
+  row.params.onRowClick(); resolveClear({busy:false,confirmation:'undispatched',operation:{}}); await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); owner.replay();
   assert.equal(label.create, '清理失败');
 });
 for (const result of results) console.log(JSON.stringify(result));

@@ -1,11 +1,16 @@
+import { fixture as sourceOwnerFixture, setCurrentRuntime } from './lib/source-switch-owner-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { stripTypeScriptTypes } from 'node:module';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const siblingCore = resolve(repo, '../Reader-Core-Native');
+const core = process.env.READER_SOURCE_SWITCH_CORE_ROOT ?? (existsSync(resolve(siblingCore, 'bindings/harmony/sdk/reader_core.ts'))
+  ? siblingCore : resolve(repo, '../../Reader-Core-Native'));
+const coreSdkUrl = pathToFileURL(resolve(core, 'bindings/harmony/sdk/reader_core.ts')).href;
 const authorMetadataModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/common/BookAuthorMetadata.ts'), 'utf8');
 const factModule = stripTypeScriptTypes(readFileSync(resolve(repo, 'entry/src/main/ets/features/common/BookAcquisitionPresentation.ts'), 'utf8'));
 const { acquisitionCandidateRank } = await import(`data:text/javascript;base64,${Buffer.from(factModule).toString('base64')}`);
@@ -70,6 +75,8 @@ const executable = stripTypeScriptTypes(
     .replace(/^import \{ errorMessageOf, isDomainResolutionFailure, isNetworkEnvironmentFailure \} from ['"][^'"]*ErrorMessage(\.ts)?['"];$/m,
       () => errorMessageModule)
     .replace(/^import type \{ JsonObject, RequestOptions \} from ['"]@reader\/core-harmony['"];$/m, '')
+    .replace(/^import \{ isReaderCoreTransactionPendingError \} from ['"]@reader\/core-harmony['"];$/m,
+      `import { isReaderCoreTransactionPendingError } from '${coreSdkUrl}';`)
     .replace(/^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m, '')
     .replace(/^import type \{ ShelfBook \} from ['"]\.\.\/\.\.\/app\/ReaderCoreGateway['"];$/m, '')
     .replace(/^import \{\n(?:  [^\n]+\n)+\} from ['"]\.\/ReaderSourceCategory['"];$/m,
@@ -500,32 +507,24 @@ console.log('PH70 known candidate first paint, delta projection, registry deleti
   }};
   const gateway=new SourceSwitchGateway(owner);
   const query={sourceId:'a',bookId:'/book',bookName:'鸣龙',author:'关关公子',currentChapterIndex:0,currentChapterTitle:''};
-  const Index=productionMotionMethods(resolve(repo,'entry/src/main/ets/pages/Index.ets'),
-    ['startSourceDiscovery','knownSearchSourceCandidates','isSourceSwitchActive'],{
-      ReaderRuntimeOwner:{current:()=>owner},searchCandidateRank,sourceSwitchCandidateKey,
-      errorMessageOf:error=>error.message,DOMAIN:0,hilog:{warn(){}}
-    });
-  const page=Object.assign(new Index(),{detailBook:{sourceId:'a',bookId:'/book'},detailReturnRoute:'search',
-    navigationGeneration:1,sourceSwitchVisible:true,sourceSwitchState:{kind:'discovering'},
+  const Index=productionMotionMethods(resolve(repo,'entry/src/main/ets/pages/Index.ets'), ['knownSearchSourceCandidates'], {searchCandidateRank});
+  const page=Object.assign(new Index(),{detailReturnRoute:'search',sourceSwitchState:{kind:'discovering'},
     searchDetailCandidates:['a'].map(sourceId=>({sourceId,sourceName:sourceId,sourceRuleVersion:'v1',
-      bookId:'/book',title:'鸣龙',author:'关关公子',variables:[],category:'novel'})),
-    sourceSwitchProbeQuery:()=>query,getSourceSwitchGateway:()=>gateway});
-  page.startSourceDiscovery(1);
+      bookId:'/book',title:'鸣龙',author:'关关公子',variables:[],category:'novel'}))});
+  const f=sourceOwnerFixture({open:false});owner.getUIAbilityContext=f.runtime.getUIAbilityContext;setCurrentRuntime(owner);
+  const host=new f.Constructor(owner);host.open({query,inBookshelf:false,toc:[],knownCandidates:page.knownSearchSourceCandidates(query),readKnownCandidates:()=>page.knownSearchSourceCandidates(query),searchedSourceIds:[]},
+    {isCurrent:()=>true,changed:snapshot=>{page.sourceSwitchState=snapshot.state;},effect(){}});
+  // Intent authority admission happens first; known rows still paint before registry/cache RPC completes.
+  for(let i=0;i<4;i++)await new Promise(r=>setImmediate(r));
   assert.equal(page.sourceSwitchState.kind,'candidates');assert.equal(page.sourceSwitchState.candidates.length,1,
-    'known Search group paints synchronously before registry/cache I/O completes');
-  // A second source can arrive from the still-running Search query while the
-  // first relation read is in flight. The projection retry must use the live
-  // candidate closure rather than the click-time `known` snapshot.
-  page.searchDetailCandidates.push({sourceId:'b',sourceName:'b',sourceRuleVersion:'v1',
-    bookId:'/book',title:'鸣龙',author:'关关公子',variables:[],category:'novel'});
+    'known Search group paints before registry/cache I/O completes after intent authority admission');
+  page.searchDetailCandidates.push({sourceId:'b',sourceName:'b',sourceRuleVersion:'v1',bookId:'/book',title:'鸣龙',author:'关关公子',variables:[],category:'novel'});
   listener({reset:false,identities:[{sourceId:'b',bookId:'/book'}]});
-  assert.deepEqual(calls,['source.list'],'the first relation read is still waiting');
+  assert.deepEqual(calls,['source.list'],'late candidate waits behind initial cache I/O');
   release();for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));
-  assert.equal(page.sourceSwitchState.candidates.length,2);
-  assert.deepEqual(calls,['source.list','search-book.related','search-book.batch.get',
-    'search-book.related','search-book.batch.get']);
+  assert.equal(page.sourceSwitchState.candidates.length,2);assert.deepEqual(calls,['source.list','search-book.related','search-book.batch.get','search-book.related','search-book.batch.get']);
 }
-console.log('PH70 real Index source-switch entry paints known candidates before cache RPC PASS');
+console.log('PH70 actual Index candidate projection → feature owner entry paints known candidates before cache RPC PASS');
 
 // PH70 retry ownership: a failed consumed batch remains pending until a later
 // real event; it must be unioned with that event rather than silently lost.
@@ -550,17 +549,13 @@ for (const reset of [false, true]) {
   const gateway = new SourceSwitchGateway(owner);
   const query = { sourceId: 'a', bookId: '/book', bookName: '鸣龙', author: '关关公子',
     currentChapterIndex: 0, currentChapterTitle: '' };
-  const Index = productionMotionMethods(resolve(repo, 'entry/src/main/ets/pages/Index.ets'),
-    ['startSourceDiscovery', 'knownSearchSourceCandidates', 'isSourceSwitchActive'], {
-      ReaderRuntimeOwner: { current: () => owner }, searchCandidateRank, sourceSwitchCandidateKey,
-      errorMessageOf: error => error.message, DOMAIN: 0, hilog: { warn() {} },
-    });
-  const page = Object.assign(new Index(), { detailBook: { sourceId: 'a', bookId: '/book' },
-    detailReturnRoute: 'search', navigationGeneration: 1, sourceSwitchVisible: true,
-    sourceSwitchState: { kind: 'discovering' }, searchDetailCandidates: [],
-    sourceSwitchProbeQuery: () => query, getSourceSwitchGateway: () => gateway });
+  const page={sourceSwitchState:{kind:'discovering'}};
+  const f=sourceOwnerFixture({open:false});owner.getUIAbilityContext=f.runtime.getUIAbilityContext;setCurrentRuntime(owner);
+  const host=new f.Constructor(owner);
+  host.open({query,inBookshelf:false,toc:[],knownCandidates:[],searchedSourceIds:[]},
+    {isCurrent:()=>true,changed:snapshot=>{page.sourceSwitchState=snapshot.state;},effect(){}});
   const settle = async () => { for (let i = 0; i < 10; i++) await new Promise(r => setImmediate(r)); };
-  page.startSourceDiscovery(1); await settle(); calls.length = 0;
+  await settle(); calls.length = 0;
   fail = true;
   listener({ reset, identities: [{ sourceId: 'a', bookId: '/book' }] }); await settle();
   const failedCalls = calls.length;
@@ -573,7 +568,7 @@ for (const reset of [false, true]) {
   assert.equal(page.sourceSwitchState.kind, 'candidates');
   assert.equal(page.sourceSwitchState.candidates.length, 2);
 }
-console.log('PH70 actual Index/Gateway retain failed delta/reset without automatic retry loops PASS');
+console.log('PH70 actual SourceSwitchHost/Gateway retain failed delta/reset without automatic retry loops PASS');
 
 // Complete relation pages own membership; late/truncated/mixed snapshots never publish.
 {

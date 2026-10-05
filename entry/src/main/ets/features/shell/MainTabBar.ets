@@ -26,7 +26,8 @@ import { isReaderMainTabEnabled } from '../../app/ReaderProductScope';
 
 // 公共主导航 —— 数据驱动的 tab 栏。四个主页面（书架/发现/RSS/设置）复用。
 // tab 列表来自单一配置（MAIN_TABS）：增删 tab 只改配置，宽度按数量自适应平分。
-// 选中态由 current 驱动；点击非当前 tab 回调 onSelect(key)，由宿主页映射到各自回调。
+// 选中态由 current 驱动；点击非当前 tab 回调 onSelect(key)，由宿主页映射到各自回调；
+// 当前 tab 点击通过可选 onCurrentTap 交给当前页面 owner（例如回到列表顶部）。
 // Figma 重绘版：Phone 360×68、Tablet 82×332，r24 bg #E6FFFCF8 border #C1C7CD；
 // 选中 bg #1F3528 + 文字 #FFFAF4，未选中文字 #756F69；icon 24，标签 Noto Sans SC Bold 11。
 // 颜色直接使用 TOK_* 语义 token (无二次别名)。
@@ -55,6 +56,7 @@ export struct MainTabBar {
   @Prop current: string = 'bookshelf';
   @Prop vertical: boolean = false;
   onSelect: (key: string) => void = (_key: string): void => {};
+  onCurrentTap: (key: string) => void = (_key: string): void => {};
 
   aboutToAppear(): void {
     registerReaderShelfFonts(this.getUIContext().getFont());
@@ -130,6 +132,8 @@ export struct MainTabBar {
     .onClick((): void => {
       if (!active) {
         this.onSelect(tab.key);
+      } else {
+        this.onCurrentTap(tab.key);
       }
     });
   }
@@ -159,6 +163,8 @@ export struct MainTabBar {
     .onClick((): void => {
       if (!active) {
         this.onSelect(tab.key);
+      } else {
+        this.onCurrentTap(tab.key);
       }
     });
   }

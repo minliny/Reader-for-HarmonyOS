@@ -5,6 +5,10 @@ export const READER_FONT_INTER = 'ReaderInter';
 export const READER_FONT_NOTO_SERIF_SC_BOLD = 'ReaderNotoSerifSCBold';
 export const READER_FONT_NOTO_SERIF_SC_REGULAR = 'ReaderNotoSerifSCRegular';
 export const READER_FONT_NOTO_SANS_SC = 'ReaderNotoSansSC';
+// Fixed regular UI face used by compact metadata rows. Keep it distinct from
+// the variable family so ArkUI does not promote a small label's weight while
+// a retained shelf projection is translating or fading.
+export const READER_FONT_NOTO_SANS_SC_UI_REGULAR = 'ReaderNotoSansSCUIRegular';
 export const READER_FONT_LXGW_WENKAI_LITE = 'ReaderLXGWWenKaiLite';
 export const READER_FONT_LXGW_WENKAI_GB_LITE = 'ReaderLXGWWenKaiGBLite';
 export const READER_FONT_ZHUQUE_FANGSONG = 'ReaderZhuqueFangsong';

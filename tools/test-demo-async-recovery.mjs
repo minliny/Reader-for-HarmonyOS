@@ -1,3 +1,6 @@
+import { compileHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
+import {readableAdmissionFixture} from './lib/bookshelf-readable-admission-probe.mjs';
+import {ReaderStartupContentOwner} from '../entry/src/main/ets/app/ReaderStartupContentOwner.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { registerHooks, stripTypeScriptTypes } from 'node:module';
@@ -19,75 +22,45 @@ function method(source,name){
  const b=source.indexOf('\n  private ',a+1);return source.slice(a,b<0?source.length:b).replace(/\n  \/\*\*[\s\S]*$/,'');
 }
 const index=read('entry/src/main/ets/pages/Index.ets');
-const actions=stripTypeScriptTypes(`class Actions {${method(index,'addDetailBook()')} }`);
-let pending=deferred();
-const ActionClass=new Function('ReaderCoreRequestError','ReaderRuntimeOwner','ReaderCoreGateway','LOCAL_SOURCE_ID','hilog',actions+';return Actions')(
- ReaderCoreRequestError,{current:()=>({})},class{upsertBook(){return pending.promise;}},'local',{warn(){}});
 for(const fails of [false,true]){
- pending=deferred();const h=new ActionClass();const book={sourceId:'s',bookId:'b'};
- Object.assign(h,{detailBook:book,remoteReadingSession:{identity:book,book:{title:'b'}},bookshelfRemovalGeneration:0,
- bookshelfAdditionGeneration:0,bookshelfAdditionActiveKey:'',bookshelfAdditionError:'',
- bookshelfRemovalActiveKey:'',canRemoveDetailBook:()=>true,detailBookKey:()=> 's:b',
- isSameDetailBook:b=>h.detailBook===b,refreshBookshelf:()=>{h.refreshes++;},
- prefetchReadingWindow:async()=>{h.prefetches++;},showReadingFailure:()=>{h.failures++;},refreshes:0,prefetches:0,failures:0});
- h.addDetailBook();assert.equal(h.bookshelfRemovalActiveKey,'','pending add cannot block reading a different book');
- assert.equal(h.bookshelfAdditionActiveKey,'s:b');h.detailBook=undefined;
- if(fails)pending.reject(Error('synthetic'));else pending.resolve();
- await tick();assert.equal(h.bookshelfRemovalActiveKey,'');assert.equal(h.bookshelfAdditionActiveKey,'');
- assert.equal(h.refreshes,fails?0:1);assert.equal(h.prefetches,0,'durable preparation belongs to the application owner');
- assert.equal(h.failures,0,'a late add failure never opens a modal over another page');
- assert.equal(h.bookshelfAdditionError.includes('synthetic'),fails);
+ const pending=deferred();const f=readableAdmissionFixture({add:()=>pending.promise});
+ f.page.addDetailBook();assert.equal(f.page.shelfOperation.removalKey,'','pending add cannot block reading a different book');
+ assert.equal(f.snapshot().adding,true);f.page.detailBook=undefined;
+ if(fails)pending.reject(Error('synthetic'));else pending.resolve({data:{sourceId:'s',bookId:'b',created:true,addedAt:1}});
+ await tick();const snapshot=f.page.bookshelfHost.readable(f.runtime).find('s','b');
+ assert.equal(f.page.shelfOperation.removalKey,'');assert.equal(snapshot.adding,fails,'unknown admission stays cancellable without blind replay');
+ assert.equal(f.page.refreshes,0,'a stale add never refreshes a different page');assert.equal(f.notices.length,0);
+ assert.equal(snapshot.message.includes('synthetic'),fails);
 }
-// Cancel has its own exact-book owner. A strict add that commits first is
-// retained; cancellation failure remains retryable instead of claiming success.
-for (const outcome of ['cancelled', 'already-saved', 'failure', 'other-book']) {
- const cancellation=deferred(), lookup=deferred(); let calls=0;
- const Cancel=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-  ['cancelDetailBookAddition'],{
-   ReaderRuntimeOwner:{current:()=>({bookAcquisitions:()=>({cancelReadableBook:async(s,b)=>{
-    assert.deepEqual([s,b],['s','b']); calls++; return cancellation.promise;
-   }})})},ReaderCoreGateway:class{loadShelfBook(){return lookup.promise;}}
-  });
- const book={sourceId:'s',bookId:'b'};
- const h=Object.assign(new Cancel(),{detailBook:book,detailBookKey:()=> 's:b',
-  bookshelfAdditionActiveKey:'s:b',bookshelfAdditionCancellingKey:'',bookshelfAdditionGeneration:1,
-  bookshelfAdditionError:'',bookshelfAdditionErrorKey:'',detailInBookshelf:false,
-  isSameDetailBook:b=>h.detailBook===b,refreshBookshelf:()=>h.refreshes++,
-  refreshSearchShelfMembership:()=>h.memberships++,refreshes:0,memberships:0});
- h.cancelDetailBookAddition();h.cancelDetailBookAddition();assert.equal(calls,1);
- assert.equal(h.bookshelfAdditionGeneration,2,'old add callbacks lose UI ownership immediately');
- if(outcome==='other-book'){
-  h.detailBook={sourceId:'s',bookId:'next'};h.bookshelfAdditionActiveKey='s:next';
-  h.bookshelfAdditionCancellingKey='';h.bookshelfAdditionGeneration++;
- }
+for(const outcome of ['cancelled','already-saved','failure','other-book']){
+ const addition=deferred(),cancellation=deferred(),lookup=deferred();
+ const f=readableAdmissionFixture({add:()=>addition.promise,cancel:()=>cancellation.promise,lookup:()=>lookup.promise});
+ f.page.addDetailBook();f.page.cancelDetailBookAddition();f.page.cancelDetailBookAddition();
+ assert.equal(f.calls.filter(c=>c[0]==='cancel').length,1);
+ if(outcome==='other-book'){f.page.detailBook={sourceId:'s',bookId:'next'};f.page.navigationGeneration++;}
  if(outcome==='failure')cancellation.reject(Error('uncertain'));else cancellation.resolve();
- lookup.resolve(outcome==='already-saved'?book:undefined);await tick();
- if(outcome==='other-book')assert.equal(h.bookshelfAdditionActiveKey,'s:next');
- else if(outcome==='failure'){
-  assert.equal(h.bookshelfAdditionActiveKey,'s:b');assert.equal(h.bookshelfAdditionCancellingKey,'');
-  assert.match(h.bookshelfAdditionError,/取消状态未确认/);
- }else{
-  assert.equal(h.bookshelfAdditionActiveKey,'');assert.equal(h.detailInBookshelf,outcome==='already-saved');
-  assert.equal(h.refreshes,outcome==='already-saved'?1:0);
-  assert.equal(h.bookshelfAdditionError,outcome==='already-saved'?'':'已取消加入书架');
- }
+ lookup.resolve(outcome==='already-saved'?{sourceId:'s',bookId:'b',title:'书',author:'作者',addedAt:1,sortIndex:0}:null);
+ await tick();addition.reject(Error('cancelled admission'));await tick();
+ const snapshot=f.page.bookshelfHost.readable(f.runtime).find('s','b');
+ if(outcome==='other-book'){assert.equal(f.page.detailInBookshelf,false);assert.equal(f.page.refreshes,0);}
+ else if(outcome==='failure'){assert.equal(snapshot.adding,true);assert.equal(snapshot.cancelling,false);assert.match(snapshot.message,/取消状态未确认/);}
+ else{assert.equal(snapshot.adding,false);assert.equal(f.page.detailInBookshelf,outcome==='already-saved');assert.equal(f.page.refreshes,outcome==='already-saved'?1:0);assert.equal(snapshot.message,outcome==='already-saved'?'':'已取消加入书架');}
+ assert.equal(snapshot.receipt,undefined,'readback is membership, never this add ACK');
 }
 const entry=stripTypeScriptTypes(read('entry/src/main/ets/entryability/EntryAbility.ets').replace(/^import[\s\S]*?;\n/gm,''));
 let setups=[];const coordinator={install:()=>{const p=deferred();setups.push(p);return p.promise;},detach(){}};
-const Entry=new Function('UIAbility','ReaderWindowCoordinator','ReaderStartupTrace','hilog',entry.replace('export default class','return class'))(class{},coordinator,ReaderStartupTrace,{error(){}});
+const Entry=new Function('UIAbility','ReaderWindowCoordinator','ReaderStartupTrace','hilog','ReaderStartupContentOwner',entry.replace('export default class','return class'))(class{},coordinator,ReaderStartupTrace,{error(){}},ReaderStartupContentOwner);
 const stage=()=>({loads:0,getMainWindowSync:()=>({}),loadContent(){this.loads++;}});
 {
  const e=new Entry(),old=stage(),fresh=stage();e.onWindowStageCreate(old);e.onWindowStageDestroy();e.onWindowStageCreate(fresh);
  setups[0].reject(Error('old setup failed'));setups[1].resolve(true);await tick();assert.equal(old.loads,0);assert.equal(fresh.loads,1);
 }
 {
- const e=new Entry(),s=stage();e.onWindowStageCreate(s);setups[2].resolve(false);await tick();assert.equal(s.loads,0);
+ const e=new Entry(),s=stage();e.onWindowStageCreate(s);setups[2].resolve(false);await tick();assert.equal(s.loads,1,'failed geometry setup uses the existing zero-inset recovery instead of stranding startup');e.onWindowStageDestroy();
 }
 console.log('PASS: detail mutation settles after exit; stale window completion cannot load content');
 // Cache freshness/request joining live in the coordinator. Exercise the active
 // Index admission call and its generation guards, not the removed wrapper.
-const admission=index.slice(index.indexOf('class RemoteDetailAdmission {'),index.indexOf('\nclass RemoteSessionAttemptOutcome'));
-const RemoteDetailAdmission=new Function(stripTypeScriptTypes(admission)+';return RemoteDetailAdmission;')();
 for(const stale of [false,true]) for(const fails of [false,true]) {
  const shared=deferred(),background=deferred(),calls=[],failures=[],refreshes=[];
  const coordinator={readingProjectionRevision:()=>0,setPreparationVisible(value){assert.equal(value,false);},
@@ -98,21 +71,20 @@ for(const stale of [false,true]) for(const fails of [false,true]) {
      calls.push({seed:candidates[0].seed,options});return shared.promise;
    },
    recentFailures:()=>[]};
+ const owner={bookAcquisitions:()=>coordinator,request:async(method)=>{if(method==='bookmark.list')return {data:{bookmarks:[]}};if(method==='chapter.content')return {data:{sourceId:'s',bookId:'b',chapterTitle:'第一章',via:'rule',content:'完整的故事正文。'.repeat(20),bodyVersion:'body',processingVersion:'processing'}};throw Error('optional IO unavailable: '+method);}}; setRuntime(owner);
+ const EntryHost=compileHost(undefined,{ReaderCoreGateway:class{async loadShelfBook(){return undefined;}}});
+ const backgroundMethod=EntryHost.prototype.refreshInBackground; EntryHost.prototype.refreshInBackground=function(...args){refreshes.push(args);return backgroundMethod.apply(this,args);};
  const CacheClass=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
    ['openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','installRemoteReadingSession'],{
      ...readingEvidence,RemoteChapterCacheRefreshError,...readingAdmission,...readingContract,
-     ReaderRuntimeOwner:{current:()=>({bookAcquisitions:()=>coordinator})},RemoteDetailAdmission,
-     RemoteReadingFlowGateway:class{},ReadingOfflineGateway:class{},
-     ReaderCoreGateway:class{async loadShelfBook(){return undefined;}},
+     ReaderRuntimeOwner:{current:()=>owner},ReadingEntryHost:EntryHost,EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,generation:0},LOCAL_SOURCE_ID:'local',
      DOMAIN:0,hilog:{info(){},warn(){},error(){}},
    });
  const seed={sourceId:'s',bookId:'b',title:'预览',author:'作者'};
  const session={identity:{sourceId:'s',bookId:'b'},book:{title:'已准入',author:'作者'},entries:[{index:0,title:'第一章',url:'/1'}],acquisitionMode:'cache'};
- const h=Object.assign(new CacheClass(),{remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,searchDetailCandidates:[],shelfBooks:[],
-   remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,bookshelfRemovalActiveKey:'',
-   probeRemoteContentVerdict:async()=>0,loadRemoteDirectoryProjection:async()=>session.entries,
-   showReadingFailure:(...args)=>failures.push(args),
-   refreshCachedSearchDetailInBackground:(...args)=>refreshes.push(args)});
+ const h=Object.assign(new CacheClass(),{mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,searchDetailCandidates:[],shelfBooks:[],
+   remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,shelfOperation:{generation:0,removalKey:'',busy:false,batchRemovalBusy:false},
+   showReadingFailure:(...args)=>failures.push(args)});
  h.openRemoteBookDetail(seed,'书源名称');assert.equal(h.route,'detail');await tick();assert.equal(calls.length,1);assert.equal(calls[0].seed,seed);
  assert.equal(calls[0].options.isCurrent(),true);assert.equal(h.detailReturnRoute,'search');
  if(stale){h.nextNavigationGeneration();h.route='bookshelf';assert.equal(calls[0].options.isCurrent(),false);}
@@ -122,7 +94,7 @@ for(const stale of [false,true]) for(const fails of [false,true]) {
  assert.equal(failures.length,0,'detail failure stays in the page, with no modal blocking reading');
  if(!stale&&fails)assert.equal(h.detailLoadingMessage,'synthetic admission failure');
  assert.equal(refreshes.length,!stale&&!fails?1:0,'only the current admission hands off the existing background promise');
- if(!stale&&!fails){assert.equal(h.remoteReadingSession,session);assert.equal(refreshes[0][4],background.promise);}
+ if(!stale&&!fails){assert.deepEqual(h.remoteReadingSession,session);assert.equal(refreshes[0][5],background.promise);}
  else assert.equal(h.remoteReadingSession,undefined,'failure/late admission cannot mount a session');
  background.resolve(session);
 }
@@ -131,14 +103,16 @@ for (const scenario of ['offscreen-existing','not-on-shelf','stale-lookup']) {
  const coordinator={readingProjectionRevision:()=>0,setPreparationVisible(){},recentFailures:()=>[],
   acquireBookWithBackgroundRefresh(){calls.push('fixed');return new Promise(()=>{});},
   acquireCandidateGroup(){calls.push('group');return new Promise(()=>{});}};
+ const owner={bookAcquisitions:()=>coordinator,request:async(method)=>{if(method==='bookmark.list')return {data:{bookmarks:[]}};if(method==='chapter.content')return {data:{sourceId:'s',bookId:'b',chapterTitle:'第一章',via:'rule',content:'完整的故事正文。'.repeat(20),bodyVersion:'body',processingVersion:'processing'}};throw Error('optional IO unavailable: '+method);}}; setRuntime(owner);
+ const EntryHost=compileHost(undefined,{ReaderCoreGateway:class{loadShelfBook(){return lookup.promise;}}});
  const Host=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
   ['openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','installRemoteReadingSession'],{
    ...readingEvidence,RemoteChapterCacheRefreshError,...readingAdmission,...readingContract,
-   ReaderRuntimeOwner:{current:()=>({bookAcquisitions:()=>coordinator})},RemoteDetailAdmission,
-   RemoteReadingFlowGateway:class{},ReadingOfflineGateway:class{},ReaderCoreGateway:class{loadShelfBook(){return lookup.promise;}},
+   ReaderRuntimeOwner:{current:()=>owner},ReadingEntryHost:EntryHost,EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,generation:0},LOCAL_SOURCE_ID:'local',
    DOMAIN:0,hilog:{info(){},warn(){},error(){}}});
- const h=Object.assign(new Host(),{remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,
-  searchDetailCandidates:[],shelfBooks:[],remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,bookshelfRemovalActiveKey:''});
+ const h=Object.assign(new Host(),{mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,
+  searchDetailCandidates:[],shelfBooks:[],remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,shelfOperation:{generation:0,removalKey:'',busy:false,batchRemovalBusy:false},
+  });
  const selected={sourceId:'s',bookId:'offscreen',title:'书',author:'作者'};
  h.openRemoteBookDetail(selected,'书源');assert.equal(h.route,'detail');assert.deepEqual(calls,[]);
  if(scenario==='stale-lookup'){h.nextNavigationGeneration();h.route='bookshelf';}
@@ -191,7 +165,6 @@ const importSource=read('entry/src/main/ets/features/bookshelf/LocalBookImportGa
 const importMethods=[
  method(importSource,'async importPreparedSelection('),
  method(importSource,'async finalizeCommittedImport('),
- method(importSource,'async reconcileShelfAdd('),
  method(importSource,'isShelfMutationOutcomeUnknown('),
  method(importSource,'isDeterministicCoreRejection('),
 ].join('');
@@ -242,7 +215,8 @@ console.log('PASS: ambiguous persist reply preserves EPUB resources and asks to 
 }
 console.log('PASS: deterministic import.persist rejection discards staged input without recovery orphan');
 
-// A lost bookshelf.add reply is reconciled before any body/asset rollback.
+// A lost bookshelf.add reply cannot authorize compensation, even if a later
+// read would be matching, absent, or unavailable.
 for (const shelfVerdict of ['committed', 'absent', 'unknown']) {
  let coreRollbacks=0;let assetRollbacks=0;
  const h=new ImportProbe();
@@ -262,13 +236,13 @@ for (const shelfVerdict of ['committed', 'absent', 'unknown']) {
    async commitLocalBookInput(){return {bookId:'book',assetKind:'source',path:'/book',created:true};},
    async rollbackLocalBookAsset(){assetRollbacks++;},
   }});
+ h.bookshelf={upsertBook:params=>h.runtimeOwner.request('bookshelf.add',params)};
  const result=await h.importPreparedSelection({state:'ready',input:{fileName:'book.txt',bookId:'book'}});
- if(shelfVerdict==='committed')assert.equal(result.state,'success');
- else assert.equal(result.failure.code,shelfVerdict==='unknown'?'recoveryPending':'unknown');
- assert.equal(coreRollbacks,shelfVerdict==='absent'?1:0);
- assert.equal(assetRollbacks,shelfVerdict==='absent'?1:0);
+ assert.equal(result.failure.code,'recoveryPending');
+ assert.equal(coreRollbacks,0);
+ assert.equal(assetRollbacks,0);
 }
-console.log('PASS: lost bookshelf.add reply reconciles durable shelf truth before compensation');
+console.log('PASS: lost bookshelf.add reply remains pending without compensation or fabricated ACK');
 
 // A deterministic Core validation error must not be mistaken for a lost
 // reply merely because an older shelf row has the same identity.
@@ -288,6 +262,7 @@ console.log('PASS: lost bookshelf.add reply reconciles durable shelf truth befor
    async commitLocalBookInput(){return {bookId:'book',assetKind:'source',path:'/book',created:true};},
    async rollbackLocalBookAsset(){assetRollbacks++;},
   }});
+ h.bookshelf={upsertBook:params=>h.runtimeOwner.request('bookshelf.add',params)};
  const result=await h.importPreparedSelection({state:'ready',input:{fileName:'book.txt',bookId:'book'}});
  assert.equal(result.state,'failed');
  assert.equal(result.failure.code,'unknown');

@@ -1,7 +1,9 @@
+import { readingPrefetchOwnerProbe } from './lib/reading-prefetch-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
 
 const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
 const index = read('entry/src/main/ets/pages/Index.ets');
@@ -10,8 +12,10 @@ const shelf = read('entry/src/main/ets/features/bookshelf/BookshelfPage.ets');
 const shelfFlow = read('entry/src/main/ets/features/bookshelf/BookshelfFlowGateway.ts');
 const shelfMoreMenu = read('entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets');
 const remote = read('entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+const entryHost = read('entry/src/main/ets/features/reading/ReadingEntryHost.ts');
 const sourceSwitchGateway = read('entry/src/main/ets/features/source/SourceSwitchGateway.ts');
 const sourceSwitchWindow = read('entry/src/main/ets/features/source/SourceSwitchWindow.ets');
+const surfaceSpecs = read('entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets');
 const sourceSwitchRow = read('entry/src/main/ets/features/source/CandidateRow.ets');
 const reading = read('entry/src/main/ets/features/reading/LocalReadingExperience.ets');
 
@@ -21,12 +25,12 @@ for (const declaration of [
   /const CATALOG_REFRESH_NEAR_END = 3;/,
   /const CATALOG_REFRESH_INTERVAL_MS = 10 \* 60 \* 1000;/,
 ]) {
-  assert.match(index, declaration);
+  assert.match(read('entry/src/main/ets/features/reading/ReadingPrefetchHost.ts'), declaration);
 }
 
 assert.match(index, /private openShelfBook\([\s\S]*openRemoteBookDetail\([\s\S]*selection, true\);/,
   'a shelf tap must resume instead of stopping at detail');
-assert.match(index, /owner\.bookAcquisitions\(\)[\s\S]*\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/,
+assert.match(entryHost, /const coordinator = this\.runtime\.bookAcquisitions\(\);[\s\S]*coordinator\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent: current \}\)/,
   'a shelf cold start must admit the durable TOC before online recovery');
 assert.match(read('entry/src/main/ets/app/ReaderCoreGateway.ts'), /\.addReadableBook\(params\)/,
   'remote shelf success requires the selected-source durable readable admission');
@@ -34,9 +38,11 @@ assert.match(index, /private applyReadingCommit\([\s\S]*this\.prefetchReadingWin
   'each durable reading commit must maintain the rolling cache window');
 assert.match(index, /if \(this\.isRemoteCatalogNearEnd\(session, commit\.chapterIndex\)\) \{\s*this\.refreshRemoteCatalogNearEnd\(session\);/,
   'reading near the current end must trigger a throttled TOC refresh');
+const boundaryRuntime={};
+const boundaryProbe=readingPrefetchOwnerProbe(()=>boundaryRuntime);
 const CatalogBoundary = productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url),
-  ['isRemoteCatalogNearEnd'], { CATALOG_REFRESH_NEAR_END: 3 });
-const catalogBoundary = new CatalogBoundary();
+  ['isRemoteCatalogNearEnd'], boundaryProbe);
+const catalogBoundary = Object.assign(new CatalogBoundary(),{mountedRuntimeOwner:boundaryRuntime});
 const sparseCatalog = { entries: [10, 20, 30, 40, 50, 60, 70].map((chapterIndex, position) =>
   ({ index: chapterIndex, url: position < 5 ? `https://source.invalid/${chapterIndex}` : '' })) };
 assert.equal(catalogBoundary.isRemoteCatalogNearEnd(sparseCatalog, 10), false,
@@ -49,7 +55,7 @@ for (const chapterIndex of [60, 99]) assert.equal(catalogBoundary.isRemoteCatalo
 // Groups consume canonical indexes but never the readable-neighbour budget.
 // Execute the real refresh/prefetch and independent shelf-owner regressions.
 await import('./test-reader-directory-business-boundaries.mjs');
-assert.match(index, /for \(let start = 0; start < books\.length; start \+= 2\)[\s\S]*Promise\.all\(batch\.map/,
+assert.match(read('entry/src/main/ets/features/bookshelf/BookshelfCatalogUpdate.ts'), /for \(let start = 0; start < targets\.length; start \+= 2\)[\s\S]*Promise\.all\(batch\.map/,
   'bookshelf updates must use a bounded two-book batch');
 // PH116 explicitly keeps failures and recovery in the normal reading page.
 // Neither acquisition failure nor error presentation may auto-pick a source.
@@ -66,12 +72,14 @@ assert.doesNotMatch(failureBlock, /startSourceDiscovery/,
   'read failure must never auto-open or auto-pick source discovery');
 assert.doesNotMatch(failureBlock, /automaticSourceRecoveryKey/,
   'the automatic recovery latch is retired together with the auto-switch path');
-assert.match(index,
-  /if \(autoPickFirst\) \{[\s\S]*value\.isCurrent !== true[\s\S]*this\.onPickSource\(candidate\);/,
-  'the discovery auto-pick branch stays available only to explicit non-failure callers');
-assert.match(index, /gateway\.loadCachedCandidates\(query, isCurrent, known\)/,
-  'source picker reads the same durable candidates as search');
-assert.match(index, /gateway\.refreshCandidates\(query, isCurrent,[\s\S]{0,150}searchedSourceIds\(\)/,
+const sourceOwner=read('entry/src/main/ets/features/source/SourceSwitchHost.ts');
+assert.doesNotMatch(sourceOwner, /autoPickFirst|automaticSourceRecoveryKey/,
+  'the unused explicit auto-pick path is retired; only a user candidate intent dispatches a source mutation');
+assert.match(index, /private onPickSource[\s\S]*this\.sourceSwitchHost\?\.pick\(candidate, scopeId\)/,
+  'physical source choice delegates its captured scope to the original owner');
+assert.match(sourceOwner, /this\.gateway\.loadCachedCandidates\(context\.query,[\s\S]{0,150}context\.knownCandidates/,
+  'source owner reads the same durable candidates as search');
+assert.match(sourceOwner, /this\.gateway\.refreshCandidates\(context\.query,[\s\S]{0,200}context\.searchedSourceIds/,
   'an empty picker only discovers sources not already dispatched by its search');
 assert.match(sourceSwitchGateway, /const SOURCE_SWITCH_CACHE_TTL_MS = 24 \* 60 \* 60 \* 1000;/);
 assert.match(sourceSwitchGateway, /acquisitionState = stale/,
@@ -81,6 +89,18 @@ assert.doesNotMatch(sourceSwitchGateway, /bookAcquisitions\?\.\(\)\.prepare/,
 assert.match(sourceSwitchRow, /acquisitionState === 'catalogReady'/);
 assert.match(sourceSwitchRow, /acquisitionState === 'readable'/,
   'a discovered source must not be labeled readable');
+assert.match(surfaceSpecs, /'source-switch-window': new PopupSurfaceSpec\(\{[\s\S]*?height: 385/,
+  'source-switch outer frame height remains the shared finite popup variant');
+assert.match(surfaceSpecs, /'source-switch-window': new PopupSurfaceSpec\(\{[\s\S]*?width: 300/,
+  'source-switch phone/tablet content width remains the shared finite popup variant');
+assert.match(sourceSwitchWindow, /resolvePopupSpec\('source-switch-window'\)/,
+  'source-switch window reads the shared popup surface contract');
+assert.match(sourceSwitchWindow, /readerInteractiveSafeLeft\(metrics\)[\s\S]*readerInteractiveSafeRight\(metrics\)/,
+  'source-switch keeps asymmetric safe edges for both phone and tablet hosts');
+assert.match(sourceSwitchWindow, /Math\.min\(this\.surfaceSpec\(\)\.height, available\)/,
+  'source-switch retains the finite height cap while allowing smaller host windows');
+assert.doesNotMatch(sourceSwitchWindow, /new SurfaceWidthSpec\(300, 0, 0, 'center'\)/,
+  'source-switch consumer does not duplicate its outer width');
 
 assert.match(remote, /async openCachedCatalogSession\([\s\S]*acquisitionMode: contextIsCurrent && !cached\.requiresContextRefresh \? 'online' : 'offline'/,
   'only current continuation context enables online fallback; stale or deleted source remains offline-readable');
@@ -126,7 +146,7 @@ assert.match(shelfMoreMenu, /检查更新/,
 // SHF-03 moved with the persistent chrome. Execute the actual More -> Shell
 // guard -> Index callback instead of looking for an obsolete Page field.
 const shellFile = new URL('../entry/src/main/ets/features/bookshelf/BookshelfShell.ets', import.meta.url);
-const ShellUpdate = productionMotionMethods(shellFile, ['requestCheckUpdates']);
+const ShellUpdate = productionMotionMethods(shellFile, ['moreIntentAction','dismissMoreMenu','requestCheckUpdates']);
 const require = createRequire(import.meta.url);
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
@@ -144,7 +164,7 @@ function suppliedCallback(text, component, property, owner) {
   return new Function(`return ${stripTypeScriptTypes(value.initializer.getText(tree))};`).call(owner);
 }
 let updateIntents = 0;
-const shellUpdate = Object.assign(new ShellUpdate(), { canCheckUpdates: true, updateRunning: false,
+const shellUpdate = Object.assign(new ShellUpdate(), { mounted:true, moreSelectionId:'live-menu', canCheckUpdates: true, updateRunning: false,
   backgroundUpdateRunning: false, moreMenuVisible: true,
   onCheckUpdatesRequested: suppliedCallback(index, 'BookshelfShell', 'onCheckUpdatesRequested', {
     startManualBookshelfUpdate: () => { updateIntents++; },
@@ -159,11 +179,16 @@ for (const blocked of ['canCheckUpdates', 'updateRunning', 'backgroundUpdateRunn
 requestUpdate(); assert.equal(updateIntents, 1, 'More delegates the foreground sweep to the existing Index owner');
 assert.equal(shellUpdate.moreMenuVisible, false, 'accepted update closes the menu');
 assert.match(index, /private startManualBookshelfUpdate\(\)/,
-  'SHF-03: Index must own the foreground update queue');
-assert.match(index, /onProgress\(completed, books\.length\)/,
-  'SHF-03: the sweep must report chunk progress for the page');
-assert.match(index, /bookshelfBackgroundRefreshRunning \|\| this\.bookshelfUpdateRunning/,
+  'SHF-03: Index must dispatch the user foreground update intent');
+const catalogOwner = read('entry/src/main/ets/features/bookshelf/BookshelfCatalogOwner.ts');
+assert.match(index, /this\.bookshelfHost\.catalog\(owner\)/, 'SHF-03: existing BookshelfHost owns the exact Runtime sweep');
+assert.match(catalogOwner, /new BookshelfCatalogUpdate\(this\.owner\)\.run\(books, automatic/,
+  'SHF-03: original bounded sweep uses the exact owner');
+assert.match(catalogOwner, /done: value\.attempted/,
+  'SHF-03: the sweep reports attempted chunk progress, distinct from result success counts');
+assert.match(catalogOwner, /if \(this\.active !== undefined \|\| !this\.current\(binding\)\) return;/,
   'SHF-03: manual and background sweeps must stay mutually exclusive');
+await import('./test-bookshelf-manual-update.mjs');
 assert.match(shelf, /onBookGroupRequested/,
   'explicit per-book grouping is isolated from opening the shelf tool');
 assert.doesNotMatch(shelfMoreMenu, /分组管理/,
@@ -172,7 +197,10 @@ assert.doesNotMatch(shelfMoreMenu, /分组管理/,
 assert.match(shelf, /Text\(`更新 \$\{book\.unreadCount\} 章`\)/);
 assert.match(shelf, /Text\(this\.gridProgressLabel\(book\)\)/,
   'grid progress renders through the basis-point formatter');
-assert.match(shelf, /已读 <1%/,
+assert.match(shelf, /ShelfBookPresentation\.progress\(book, 'grid-caption'\)/,
+  'Grid delegates its sub-1% label to the same actual projection as List');
+for (const variant of ['list-status', 'grid-caption']) assert.equal(
+  ShelfBookPresentation.progress({ readProgress: 1 }, variant), '已读 <1%',
   'sub-1% progress stays visible instead of collapsing to 0%');
 
 console.log('Legado product behavior contract: PASS');

@@ -1,0 +1,396 @@
+{
+  "schema": 1,
+  "sourceHead": "641924106bfe76a5ae2f797c7dbcf9e781a04c7f",
+  "productProfile": "l0",
+  "policy": "Real native implementation stays shared upstream. Preserve system/AUTO/inherited rendering and current action ownership. Shared Reader wrappers are needed only if repeated structure/state/policy warrants one; registration is not wrapper-migration completion.",
+  "variants": {
+    "nativeLabelButton": {
+      "actualImplementation": "ArkUI Button(label)",
+      "finiteApplicability": "existing labelled directory/rule/reading-failure commands only",
+      "typography": "all five physical modifiers omitted; framework/system/default inheritance owns them",
+      "geometry": "all original framework sizing/padding/type/state effects omitted where currently omitted",
+      "sdkDeclaration": "openharmony/ets/component/button.d.ts"
+    },
+    "nativeShelfGroupInput": {
+      "actualImplementation": "ReaderFormField finite shelf-native/shelf-order → original ArkUI TextInput",
+      "finiteApplicability": "three BookshelfManagement group draft fields only",
+      "typography": "all five physical modifiers omitted; framework text/placeholder/caret rendering retained",
+      "geometry": "height44vp,width100% retained",
+      "sdkDeclaration": "openharmony/ets/component/text_input.d.ts"
+    },
+    "nativeDirectoryLevelInput": {
+      "actualImplementation": "ArkUI TextInput({text:rule.level})",
+      "finiteApplicability": "DirectoryRules level editor only",
+      "typography": "all five physical modifiers omitted; theme text/fill explicit unchanged",
+      "geometry": "height40vp,width64vp retained",
+      "sdkDeclaration": "openharmony/ets/component/text_input.d.ts"
+    }
+  },
+  "consumers": [
+    {
+      "id": "NATIVE-DEFAULT-01",
+      "file": "features/bookshelf/BookDirectoryPage.ets",
+      "component": "BookDirectoryPage",
+      "method": "build",
+      "kind": "Button",
+      "argument": "this.rulesExpanded ? '收起层级规则' : '本书目录层级规则'",
+      "variant": "nativeLabelButton",
+      "businessOwner": "BookDirectoryPage rulesExpanded local display state",
+      "nativeRenderingOwner": "ArkUI Button",
+      "consumerHost": "BookDirectoryPage.build",
+      "requiredAttributes": {},
+      "hasAction": true,
+      "typographyOmissions": [
+        "fontFamily",
+        "fontWeight",
+        "fontSize",
+        "lineHeight",
+        "letterSpacing"
+      ],
+      "status": "RETAINED_PLATFORM_DEFAULT_CONTRACT",
+      "reason": "Current application intentionally delegates the omitted physical attributes to the actual upstream native ArkUI component; no new Reader style/empty modifier is added.",
+      "sourceLineAtAudit": 83
+    },
+    {
+      "id": "NATIVE-DEFAULT-02",
+      "file": "features/bookshelf/BookshelfManagementPage.ets",
+      "component": "BookshelfManagementPage",
+      "method": "groupEditorCard",
+      "kind": "TextInput",
+      "argument": "{ text: this.snapshot.groupNameDraft, placeholder: '分组名' }",
+      "variant": "nativeShelfGroupInput",
+      "businessOwner": "BookshelfOrchestrator snapshot group draft; callbacks to Index/owner",
+      "nativeRenderingOwner": "ArkUI TextInput",
+      "consumerHost": "BookshelfManagementPage.groupEditorCard",
+      "requiredAttributes": {
+        "height": "44",
+        "width": "'100%'"
+      },
+      "hasAction": true,
+      "typographyOmissions": [
+        "fontFamily",
+        "fontWeight",
+        "fontSize",
+        "lineHeight",
+        "letterSpacing"
+      ],
+      "status": "SHARED_STRUCTURE_PLATFORM_DEFAULT_CONTRACT",
+      "reason": "Repeated group draft structure now delegates to one real ReaderFormField, retaining all five default fonts and native surfaces; only the existing order field selects numeric keyboard.",
+      "sourceLineAtAudit": 169,
+      "sharedReplacement": {
+        "component": "ReaderFormField",
+        "module": "../common/ReaderFormField",
+        "specId": "shelf-native",
+        "callback": "this.onGroupNameChanged",
+        "proof": "tools/test-foundation-shelf-field-consumers.mjs"
+      }
+    },
+    {
+      "id": "NATIVE-DEFAULT-03",
+      "file": "features/bookshelf/BookshelfManagementPage.ets",
+      "component": "BookshelfManagementPage",
+      "method": "groupEditorCard",
+      "kind": "TextInput",
+      "argument": "{ text: this.snapshot.groupOrderDraft, placeholder: '顺序整数' }",
+      "variant": "nativeShelfGroupInput",
+      "businessOwner": "BookshelfOrchestrator snapshot group draft; callbacks to Index/owner",
+      "nativeRenderingOwner": "ArkUI TextInput",
+      "consumerHost": "BookshelfManagementPage.groupEditorCard",
+      "requiredAttributes": {
+        "height": "44",
+        "width": "'100%'"
+      },
+      "hasAction": true,
+      "typographyOmissions": [
+        "fontFamily",
+        "fontWeight",
+        "fontSize",
+        "lineHeight",
+        "letterSpacing"
+      ],
+      "status": "SHARED_STRUCTURE_PLATFORM_DEFAULT_CONTRACT",
+      "reason": "Repeated group draft structure now delegates to one real ReaderFormField, retaining all five default fonts and native surfaces; only the existing order field selects numeric keyboard.",
+      "sourceLineAtAudit": 171,
+      "sharedReplacement": {
+        "component": "ReaderFormField",
+        "module": "../common/ReaderFormField",
+        "specId": "shelf-order",
+        "callback": "this.onGroupOrderChanged",
+        "proof": "tools/test-foundation-shelf-field-consumers.mjs"
+      }
+    },
+    {
+      "id": "NATIVE-DEFAULT-04",
+      "file": "features/bookshelf/BookshelfManagementPage.ets",
+      "component": "BookshelfManagementPage",
+      "method": "assignmentCard",
+      "kind": "TextInput",
+      "argument": "{ text: this.snapshot.assignmentGroupDraft, placeholder: '分组名；留空清除' }",
+      "variant": "nativeShelfGroupInput",
+      "businessOwner": "BookshelfOrchestrator snapshot group draft; callbacks to Index/owner",
+      "nativeRenderingOwner": "ArkUI TextInput",
+      "consumerHost": "BookshelfManagementPage.assignmentCard",
+      "requiredAttributes": {
+        "height": "44",
+        "width": "'100%'"
+      },
+      "hasAction": true,
+      "typographyOmissions": [
+        "fontFamily",
+        "fontWeight",
+        "fontSize",
+        "lineHeight",
+        "letterSpacing"
+      ],
+      "status": "SHARED_STRUCTURE_PLATFORM_DEFAULT_CONTRACT",
+      "reason": "Repeated group draft structure now delegates to one real ReaderFormField, retaining all five default fonts and native surfaces; only the existing order field selects numeric keyboard.",
+      "sourceLineAtAudit": 255,
+      "sharedReplacement": {
+        "component": "ReaderFormField",
+        "module": "../common/ReaderFormField",
+        "specId": "shelf-native",
+        "callback": "this.onAssignmentGroupChanged",
+        "proof": "tools/test-foundation-shelf-field-consumers.mjs"
+      }
+    },
+    {
+      "id": "NATIVE-DEFAULT-05",
+      "file": "features/reading/LocalReadingExperience.ets",
+      "component": "ReadingExperience",
+      "method": "readingFailureContent",
+      "kind": "Button",
+      "argument": "'重试'",
+      "variant": "nativeLabelButton",
+      "businessOwner": "ReadingExperience source-switch failure exact scope vs ordinary reading retry/session guard",
+      "nativeRenderingOwner": "ArkUI Button",
+      "consumerHost": "ReadingExperience.readingFailureContent",
+      "requiredAttributes": {},
+      "hasAction": true,
+      "typographyOmissions": [
+        "fontFamily",
+        "fontWeight",
+        "fontSize",
+        "lineHeight",
+        "letterSpacing"
+      ],
+      "status": "RETAINED_PLATFORM_DEFAULT_CONTRACT",
+      "reason": "One nativeLabelButton family has two mutually exclusive actual retry actors. The source-switch branch captures exact scope in a keyed ForEach; the ordinary reading branch owns its original retry. Both preserve all five platform-default typography omissions. AST checks require both exact branches/callbacks and reject extra copied actors.",
+      "sourceLineAtAudit": 13583,
+      "branchInstances": [
+        {
+          "guard": "this.sourceSwitchFailureMessage.length > 0",
+          "branch": "then",
+          "onClick": "(): void => this.onRetryFailedSourceSwitch(scopeId)",
+          "forEachInput": "[this.sourceSwitchScopeId]",
+          "forEachKey": "(scopeId: number): string => `${scopeId}`"
+        },
+        {
+          "guard": "this.sourceSwitchFailureMessage.length > 0",
+          "branch": "else",
+          "onClick": "(): void => this.retryReading()"
+        }
+      ]
+    },
+    {
+      "id": "NATIVE-DEFAULT-06",
+      "file": "features/reading/LocalReadingExperience.ets",
+      "component": "ReadingExperience",
+      "method": "readingFailureContent",
+      "kind": "Button",
+      "argument": "'阅读设置'",
+      "variant": "nativeLabelButton",
+      "businessOwner": "ReadingExperience source-switch failure/session guard",
+      "nativeRenderingOwner": "ArkUI Button",
+      "consumerHost": "ReadingExperience.readingFailureContent",
+      "requiredAttributes": {},
+      "hasAction": true,
+      "typographyOmissions": [
+        "fontFamily",
+        "fontWeight",
+        "fontSize",
+        "lineHeight",
+        "letterSpacing"
+      ],
+      "status": "RETAINED_PLATFORM_DEFAULT_CONTRACT",
+      "reason": "Current application intentionally delegates the omitted physical attributes to the actual upstream native ArkUI component; no new Reader style/empty modifier is added.",
+      "sourceLineAtAudit": 13588
+    },
+    {
+      "id": "NATIVE-DEFAULT-07",
+      "file": "features/reading/LocalReadingExperience.ets",
+      "component": "ReadingExperience",
+      "method": "readingFailureContent",
+      "kind": "Button",
+      "argument": "'继续当前书源'",
+      "variant": "nativeLabelButton",
+      "businessOwner": "ReadingExperience source-switch failure/session guard",
+      "nativeRenderingOwner": "ArkUI Button",
+      "consumerHost": "ReadingExperience.readingFailureContent",
+      "requiredAttributes": {},
+      "hasAction": true,
+      "typographyOmissions": [
+        "fontFamily",
+        "fontWeight",
+        "fontSize",
+        "lineHeight",
+        "letterSpacing"
+      ],
+      "status": "RETAINED_PLATFORM_DEFAULT_CONTRACT",
+      "reason": "Current application intentionally delegates the omitted physical attributes to the actual upstream native ArkUI component; no new Reader style/empty modifier is added.",
+      "sourceLineAtAudit": 13591
+    },
+    {
+      "id": "NATIVE-DEFAULT-08",
+      "file": "features/reading/LocalReadingExperience.ets",
+      "component": "ReadingExperience",
+      "method": "readingFailureContent",
+      "kind": "Button",
+      "argument": "'切换书源'",
+      "variant": "nativeLabelButton",
+      "businessOwner": "ReadingExperience source-switch failure/session guard",
+      "nativeRenderingOwner": "ArkUI Button",
+      "consumerHost": "ReadingExperience.readingFailureContent",
+      "requiredAttributes": {},
+      "hasAction": true,
+      "typographyOmissions": [
+        "fontFamily",
+        "fontWeight",
+        "fontSize",
+        "lineHeight",
+        "letterSpacing"
+      ],
+      "status": "RETAINED_PLATFORM_DEFAULT_CONTRACT",
+      "reason": "Current application intentionally delegates the omitted physical attributes to the actual upstream native ArkUI component; no new Reader style/empty modifier is added.",
+      "sourceLineAtAudit": 13595
+    },
+    {
+      "id": "NATIVE-DEFAULT-09",
+      "file": "features/reading/ReaderDirectoryRules.ets",
+      "component": "ReaderDirectoryRules",
+      "method": "build",
+      "kind": "TextInput",
+      "argument": "{ text: rule.level }",
+      "variant": "nativeDirectoryLevelInput",
+      "businessOwner": "ReaderDirectoryRules local rules draft and run() admission",
+      "nativeRenderingOwner": "ArkUI TextInput",
+      "consumerHost": "ReaderDirectoryRules.build",
+      "requiredAttributes": {
+        "height": "40",
+        "width": "64"
+      },
+      "hasAction": true,
+      "typographyOmissions": [
+        "fontFamily",
+        "fontWeight",
+        "fontSize",
+        "lineHeight",
+        "letterSpacing"
+      ],
+      "status": "SHARED_NATIVE_DEFAULT_CONTRACT",
+      "reason": "Actual ReaderFormField directory-rule-level variant owns the existing64x40 surface and delegates all native text/keyboard defaults to ArkUI; exact original consumer/callback and real SDK constructor are proved.",
+      "sourceLineAtAudit": 108,
+      "sharedReplacement": {
+        "component": "ReaderFormField",
+        "module": "../common/ReaderFormField",
+        "specId": "directory-rule-level",
+        "callback": "(value: string): void => this.edit(rule.id, 'level', value)"
+      }
+    },
+    {
+      "id": "NATIVE-DEFAULT-10",
+      "file": "features/reading/ReaderDirectoryRules.ets",
+      "component": "ReaderDirectoryRules",
+      "method": "build",
+      "kind": "Button",
+      "argument": "'删除'",
+      "variant": "nativeLabelButton",
+      "businessOwner": "ReaderDirectoryRules local draft/preview/run owner",
+      "nativeRenderingOwner": "ArkUI Button",
+      "consumerHost": "ReaderDirectoryRules.build",
+      "requiredAttributes": {},
+      "hasAction": true,
+      "typographyOmissions": [
+        "fontFamily",
+        "fontWeight",
+        "fontSize",
+        "lineHeight",
+        "letterSpacing"
+      ],
+      "status": "RETAINED_PLATFORM_DEFAULT_CONTRACT",
+      "reason": "Current application intentionally delegates the omitted physical attributes to the actual upstream native ArkUI component; no new Reader style/empty modifier is added.",
+      "sourceLineAtAudit": 114
+    },
+    {
+      "id": "NATIVE-DEFAULT-11",
+      "file": "features/reading/ReaderDirectoryRules.ets",
+      "component": "ReaderDirectoryRules",
+      "method": "build",
+      "kind": "Button",
+      "argument": "'添加规则'",
+      "variant": "nativeLabelButton",
+      "businessOwner": "ReaderDirectoryRules local draft/preview/run owner",
+      "nativeRenderingOwner": "ArkUI Button",
+      "consumerHost": "ReaderDirectoryRules.build",
+      "requiredAttributes": {},
+      "hasAction": true,
+      "typographyOmissions": [
+        "fontFamily",
+        "fontWeight",
+        "fontSize",
+        "lineHeight",
+        "letterSpacing"
+      ],
+      "status": "RETAINED_PLATFORM_DEFAULT_CONTRACT",
+      "reason": "Current application intentionally delegates the omitted physical attributes to the actual upstream native ArkUI component; no new Reader style/empty modifier is added.",
+      "sourceLineAtAudit": 121
+    },
+    {
+      "id": "NATIVE-DEFAULT-12",
+      "file": "features/reading/ReaderDirectoryRules.ets",
+      "component": "ReaderDirectoryRules",
+      "method": "build",
+      "kind": "Button",
+      "argument": "'预览'",
+      "variant": "nativeLabelButton",
+      "businessOwner": "ReaderDirectoryRules local draft/preview/run owner",
+      "nativeRenderingOwner": "ArkUI Button",
+      "consumerHost": "ReaderDirectoryRules.build",
+      "requiredAttributes": {},
+      "hasAction": true,
+      "typographyOmissions": [
+        "fontFamily",
+        "fontWeight",
+        "fontSize",
+        "lineHeight",
+        "letterSpacing"
+      ],
+      "status": "RETAINED_PLATFORM_DEFAULT_CONTRACT",
+      "reason": "Current application intentionally delegates the omitted physical attributes to the actual upstream native ArkUI component; no new Reader style/empty modifier is added.",
+      "sourceLineAtAudit": 124
+    },
+    {
+      "id": "NATIVE-DEFAULT-13",
+      "file": "features/reading/ReaderDirectoryRules.ets",
+      "component": "ReaderDirectoryRules",
+      "method": "build",
+      "kind": "Button",
+      "argument": "'应用'",
+      "variant": "nativeLabelButton",
+      "businessOwner": "ReaderDirectoryRules local draft/preview/run owner",
+      "nativeRenderingOwner": "ArkUI Button",
+      "consumerHost": "ReaderDirectoryRules.build",
+      "requiredAttributes": {},
+      "hasAction": true,
+      "typographyOmissions": [
+        "fontFamily",
+        "fontWeight",
+        "fontSize",
+        "lineHeight",
+        "letterSpacing"
+      ],
+      "status": "RETAINED_PLATFORM_DEFAULT_CONTRACT",
+      "reason": "Current application intentionally delegates the omitted physical attributes to the actual upstream native ArkUI component; no new Reader style/empty modifier is added.",
+      "sourceLineAtAudit": 125
+    }
+  ]
+}

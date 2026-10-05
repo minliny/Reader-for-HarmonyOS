@@ -1,0 +1,15 @@
+# A59: immutable parent dialog presentations
+
+Base `82a304aa83874e088a9dd3f9fdd038a0f51eedf5`. Fixed two real native callback hazards without changing the approved UI.
+
+- The original field-initialized native deletion Controller callback read `bookRemovalConfirmAction` at invocation. After closing A and reopening B on the same navigation, A's old physical confirmation could confirm B. Index now creates one native Controller and small CustomDialog subtree per opening. Its explicit Builder closure captures opening ID, Runtime, navigation, mount and message; cancellation, confirmation and native late close all carry that exact ID. The public `book-removal` surface, message measurement, AUTO/Center/customStyle/autoCancel, cancel-then-remove order and default focus remain unchanged. The second ID check at settlement independently rejects a wrong opening.
+- The shelf-group mask and Selector previously read the current mutable book. A named, keyed temporary surface/body captures the original book and opening. Its old mask/select cannot close or assign B. Accepted A's late success/failure/finally cannot clear B or show B a stale toast. The same public `shelf-group` surface, label, 0x52000000 mask, selector tuple and existing business Host remain.
+- Full Index contains only one real `new CustomDialogController`; there is no second fixed parent Controller. The native alert family uses the existing scoped native owner, and JSON import now has the prior captured opening contract.
+
+`test-bookshelf-dialog-presentation-sdk.mjs`: 11 actual SDK journey groups, complete decorated BookRemovalDialog and GroupSelector, actual native Controller options/Builder → public ReaderDialogSurface native Buttons, current once, A close→B reopen, A confirm/cancel/native late close, Runtime/nav/mount/unmount, old group mask/action, late A success/failure and two guard-removal counterexamples. No persistent Page or Reader tree is remounted.
+
+Original deletion 15 request/exit matrix plus exact book guards, long-message measurement, touch regions, focus/layout/finite-spec propagation remain in `test-book-removal-dialog.mjs` and passed. Its factory now compiles the production Controller/Builder and supplies only a native open/close transport. JSON's old synthetic group mirror was replaced by actual production Index/body/Selector while preserving original draft/validation/body order/close/spec propagation. Source `test-bookshelf-view-and-menu` and surface repair passed.
+
+Not device/visual acceptance. The parent will run full canonical SDK/HAP verification. A temporary test failure from nonexistent sibling Core was an IO fixture input issue and is rerun with explicit matching Core root. The style gate's lexical Controller type-reference count is separately reported to the integrator; budgets are not raised.
+
+Remaining semantic gap (separate next slice): `BookshelfHost.assignDefaultGroup` still bypasses the finite management receipt/mutex and can mislabel lost ACK as save failure. A59 corrects original presentation admission only and does not claim that persistence path closed.

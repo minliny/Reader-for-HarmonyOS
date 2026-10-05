@@ -1,3 +1,4 @@
+import { BookRequestNotDispatchedError, type BookRequestOptions } from '../../app/BookRequestScheduler';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import type { LocalReadingAnchor, LocalReadingLayout, LocalReadingProgress, LocalReadingProgressState } from './LocalReadingFlowGateway';
 import type { ReaderCoreErrorEvent } from '@reader/core-harmony';
@@ -9,10 +10,20 @@ interface ProgressWriteFailure {
   causeValue?: unknown;
 }
 
+/** Receipt truth can outlive the visible page; history is not current UI authority. */
+export interface ReadingSessionProgressReceipt extends LocalReadingProgress {
+  sourceSwitchTransactionId?: string;
+  sourceCanonicalHistorical?: boolean;
+  progressRevision?: string;
+}
+
 export interface ReadingSessionProgressAccess {
+  /** Source canonical ACK must be the exact immutable original write receipt. */
+  requireWriteReceipt?: boolean;
+  receiptIsCurrent?: (stored: LocalReadingProgress) => Promise<boolean>;
   read: (isCurrent: () => boolean) => Promise<LocalReadingProgressState>;
   write: (title: string | undefined, anchor: LocalReadingAnchor, layout: LocalReadingLayout,
-    isCurrent: () => boolean, expectedProgressRevision?: string) => Promise<LocalReadingProgress>;
+    isCurrent: () => boolean, expectedProgressRevision?: string, dispatch?: BookRequestOptions) => Promise<LocalReadingProgress>;
 }
 
 class PresentedProgressIntent {
@@ -21,6 +32,7 @@ class PresentedProgressIntent {
   anchor: LocalReadingAnchor;
   layout: LocalReadingLayout;
   valid: () => boolean;
+  admitted: () => boolean;
   access: ReadingSessionProgressAccess;
   baseline: LocalReadingProgressState | undefined = undefined;
   writeDispatched: boolean = false;
@@ -30,8 +42,9 @@ class PresentedProgressIntent {
   reject: (reason: Error) => void = (): void => {};
 
   constructor(sequence: number, title: string | undefined, anchor: LocalReadingAnchor,
-    layout: LocalReadingLayout, valid: () => boolean, access: ReadingSessionProgressAccess) {
-    this.sequence = sequence; this.title = title; this.anchor = { ...anchor }; this.layout = { ...layout }; this.valid = valid; this.access = access;
+    layout: LocalReadingLayout, valid: () => boolean, access: ReadingSessionProgressAccess,
+    admitted: () => boolean) {
+    this.sequence = sequence; this.title = title; this.anchor = { ...anchor }; this.layout = { ...layout }; this.valid = valid; this.access = access; this.admitted = admitted;
     this.completion = new Promise<LocalReadingProgress>((resolve, reject): void => {
       this.resolve = resolve; this.reject = reject;
     });
@@ -81,6 +94,7 @@ export class ReadingSessionProgressOwner {
   pendingProgress(): LocalReadingProgressState | undefined {
     const intent = this.latest;
     if (intent === undefined) return undefined;
+    if (!intent.writeDispatched && !intent.admitted()) { this.latest = undefined; return undefined; }
     if (!intent.valid()) { this.latest = undefined; return undefined; }
     return { kind: 'restored', presentationPending: true, progress: {
       bookId: this.bookId, chapterIndex: intent.anchor.chapterIndex, chapterOffset: intent.anchor.chapterOffset,
@@ -91,10 +105,11 @@ export class ReadingSessionProgressOwner {
   }
 
   persistPresented(title: string | undefined, anchor: LocalReadingAnchor, layout: LocalReadingLayout,
-    access: ReadingSessionProgressAccess): Promise<LocalReadingProgress> {
+    access: ReadingSessionProgressAccess, admitted: () => boolean = (): boolean => true): Promise<LocalReadingProgress> {
     if (this.serialBoundaries > 0) return Promise.reject(new Error('READING_PRESENTED_PROGRESS_TRANSACTION_PENDING'));
+    if (!admitted()) return Promise.reject(new Error('READING_PRESENTED_PROGRESS_SUPERSEDED'));
     const valid = this.runtime.captureReadingContentValidity?.(this.sourceId, this.bookId) ?? ((): boolean => true);
-    const intent = new PresentedProgressIntent(++this.sequence, title, anchor, layout, valid, access);
+    const intent = new PresentedProgressIntent(++this.sequence, title, anchor, layout, valid, access, admitted);
     this.tail?.reject(new Error('READING_PRESENTED_PROGRESS_SUPERSEDED'));
     this.tail = intent;
     this.latest = intent;
@@ -143,12 +158,12 @@ export class ReadingSessionProgressOwner {
       const intent = this.active as PresentedProgressIntent;
       // Unsent work can be coalesced. A dispatched/unknown write is retained
       // independently of the latest presentation and can never take this exit.
-      if (!intent.writeDispatched && this.latest !== intent) {
+      if (!intent.writeDispatched && (this.latest !== intent || !intent.admitted())) {
         intent.reject(new Error('READING_PRESENTED_PROGRESS_SUPERSEDED'));
         this.active = undefined;
         continue;
       }
-      if (!intent.valid()) {
+      if (!intent.valid() && !(intent.writeDispatched && intent.access.requireWriteReceipt === true)) {
         intent.reject(new Error('READING_PRESENTED_PROGRESS_INVALIDATED'));
         if (this.latest === intent) this.latest = undefined;
         this.active = undefined;
@@ -176,7 +191,7 @@ export class ReadingSessionProgressOwner {
       } catch (error) {
         intent.state = 'failed';
         intent.reject(error as Error);
-        if ((!intent.writeDispatched && this.latest !== intent) || !intent.valid()) {
+        if ((!intent.writeDispatched && (this.latest !== intent || !intent.admitted())) || (!intent.valid() && !(intent.writeDispatched && intent.access.requireWriteReceipt === true))) {
           if (this.latest === intent) this.latest = undefined;
           this.active = undefined;
           continue;
@@ -193,14 +208,19 @@ export class ReadingSessionProgressOwner {
   }
 
   private async execute(intent: PresentedProgressIntent, retry: boolean): Promise<LocalReadingProgress> {
-    const current = await intent.access.read(intent.valid);
-    if (!intent.valid()) throw new Error('READING_PRESENTED_PROGRESS_INVALIDATED');
+    if (!intent.writeDispatched && !intent.admitted()) throw new Error('READING_PRESENTED_PROGRESS_SUPERSEDED');
+    const exactReplay = intent.writeDispatched && intent.access.requireWriteReceipt === true;
+    const current = await intent.access.read(exactReplay ? (): boolean => true : intent.valid);
+    if (!intent.valid() && !exactReplay) throw new Error('READING_PRESENTED_PROGRESS_INVALIDATED');
     if (!intent.writeDispatched && this.latest !== intent) throw new Error('READING_PRESENTED_PROGRESS_SUPERSEDED');
+    // UI/selection admission applies only before the first dispatch. A later
+    // retirement never discards or cancels an already-dispatched/unknown write.
+    if (!intent.writeDispatched && !intent.admitted()) throw new Error('READING_PRESENTED_PROGRESS_SUPERSEDED');
     const hasCas = this.runtime.supportsCoreCapability?.('reading.progress.compareAndSet.v1') === true;
     if (hasCas && (current.progressRevision === undefined || current.progressRevision.length === 0)) {
       throw new Error('READING_PRESENTED_PROGRESS_REVISION_MISSING');
     }
-    if (retry && intent.writeDispatched) {
+    if (retry && intent.writeDispatched && intent.access.requireWriteReceipt !== true) {
       // An anchor alone is not an operation generation. Without CAS a read
       // cannot exclude an old submitted command writing after a later target.
       if (!hasCas) throw new Error('READING_PRESENTED_PROGRESS_CAS_REQUIRED');
@@ -209,30 +229,45 @@ export class ReadingSessionProgressOwner {
       if (intent.baseline === undefined || current.progressRevision !== intent.baseline.progressRevision) {
         throw new Error('READING_PRESENTED_PROGRESS_RETRY_CONFLICT');
       }
-    } else {
+    } else if (!intent.writeDispatched) {
       intent.baseline = current.kind === 'restored' ?
         { kind: 'restored', progress: { ...current.progress }, progressRevision: current.progressRevision } :
         { kind: 'missing', progressRevision: current.progressRevision };
     }
     const priorWriteUnknown = intent.writeDispatched;
-    intent.writeDispatched = true;
+    if (intent.access.requireWriteReceipt !== true) intent.writeDispatched = true;
     let stored: LocalReadingProgress;
     try {
-      stored = await intent.access.write(intent.title, intent.anchor, intent.layout, intent.valid,
-        hasCas ? intent.baseline?.progressRevision : undefined);
+      stored = await intent.access.write(intent.title, intent.anchor, intent.layout,
+        exactReplay ? (): boolean => true : intent.valid,
+        hasCas ? intent.baseline?.progressRevision : undefined, {
+          canDispatch: (): boolean => exactReplay || (intent.valid() && intent.admitted() && this.latest === intent),
+          onDispatch: (): void => { intent.writeDispatched = true; },
+        });
     } catch (error) {
       // Core rejected this CAS before changing either position or history. A
       // fresh attempt can read a new baseline, or yield to the newer tail.
       // A rejected retry must not erase an earlier request's unknown result.
-      if (!priorWriteUnknown && hasCas && this.isProgressCasRejected(error)) {
+      if (!priorWriteUnknown && (this.isNotDispatched(error) || (hasCas && this.isProgressCasRejected(error)))) {
         intent.writeDispatched = false;
         intent.baseline = undefined;
       }
       throw error;
     }
-    if (!intent.valid()) throw new Error('READING_PRESENTED_PROGRESS_INVALIDATED');
+    if (!intent.valid() && intent.access.requireWriteReceipt !== true) throw new Error('READING_PRESENTED_PROGRESS_INVALIDATED');
     if (!this.matchesTarget(stored, intent.anchor)) throw new Error('READING_INITIAL_PROGRESS_ANCHOR_MISMATCH');
+    if (exactReplay && intent.access.receiptIsCurrent !== undefined) {
+      let currentReceipt = false;
+      try { currentReceipt = await intent.access.receiptIsCurrent(stored); } catch (_) { /* ACK stays confirmed; current projection may remain unavailable. */ }
+      if (!currentReceipt) return { ...stored, sourceCanonicalHistorical: true } as ReadingSessionProgressReceipt;
+    }
     return stored;
+  }
+
+  private isNotDispatched(error: unknown): boolean {
+    if (error instanceof BookRequestNotDispatchedError) return true;
+    if (error === null || typeof error !== 'object') return false;
+    return (error as ProgressWriteFailure).causeValue instanceof BookRequestNotDispatchedError;
   }
 
   private isProgressCasRejected(error: unknown): boolean {
@@ -245,7 +280,7 @@ export class ReadingSessionProgressOwner {
     }
     const event = failure.event;
     return event?.type === 'error' && event.error?.code === 'INVALID_PARAMS' &&
-      event.error.details?.['reason'] === 'READING_PROGRESS_CHANGED';
+      ['READING_PROGRESS_CHANGED', 'POSITION_CONTEXT_STALE', 'DIRECTORY_TARGET_STALE'].includes(event.error.details?.['reason'] as string);
   }
 
   private matchesTarget(progress: LocalReadingProgress, anchor: LocalReadingAnchor): boolean {

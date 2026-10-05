@@ -39,7 +39,7 @@ assert.doesNotMatch(importGateway, /bytesBase64/,
   'the production gateway must not send whole local books through JSON Base64');
 
 const commitIndex = importGateway.indexOf('commitLocalBookInput(selection.input)');
-const shelfIndex = importGateway.indexOf("request('bookshelf.add'");
+const shelfIndex = importGateway.indexOf('this.bookshelf.upsertBook(shelfParams)');
 assert.ok(commitIndex >= 0 && shelfIndex > commitIndex,
   'Host asset commit must complete before the visible bookshelf commit');
 assert.match(importGateway, /rollbackLocalBookAsset\(assetCommit\)/);

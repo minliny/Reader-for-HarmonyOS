@@ -1,3 +1,4 @@
+import { readerRuleMutationEffects } from './ReaderRuleMutationEffects';
 import { readBookAuthorIdentity, bookAuthorIdentity, bookIdentityText } from '../features/common/BookAuthorMetadata';
 import { acquisitionFailureCategoryConfirmed } from '../features/common/BookAcquisitionPresentation';
 import type { JsonObject, ReaderCoreResultEvent, RequestOptions } from '@reader/core-harmony';
@@ -162,21 +163,22 @@ export class BookAcquisitionCoordinator {
   async request(method: string, params: JsonObject = {}, options: BookRequestOptions = {},
     priority?: BookRequestPriority): Promise<ReaderCoreResultEvent> {
     if (this.closed) throw new Error('书籍任务已关闭');
-    const changesSources = (method === 'source.supply' && (params['operation'] === 'apply' || params['operation'] === 'withdraw')) || method === 'source.import' || method === 'source.update' || method === 'source.delete' ||
-      method === 'runtime.storage.apply' || method === 'runtime.storage.restore';
+    const { method: effectMethod, params: effectParams } = readerRuleMutationEffects(method, params);
+    const changesSources = (effectMethod === 'source.supply' && (effectParams['operation'] === 'apply' || effectParams['operation'] === 'withdraw')) || effectMethod === 'source.import' || effectMethod === 'source.update' || effectMethod === 'source.delete' ||
+      effectMethod === 'runtime.storage.apply' || effectMethod === 'runtime.storage.restore';
     // Ordinary prefetch fills missing bodies and materializes assets without
     // replacing a cached body. It must not cancel another book's validated
     // chapter handoff or active body admission.
-    const changesProjection = changesSources || method === 'reader.chinese-conversion.put' ||
-      method === 'replace.persist' || method === 'replace-rule.put' || method === 'replace-rule.delete' ||
-      method === 'dict-rule.put' || method === 'dict-rule.delete' || method === 'rule-bundle.import' ||
-      method === 'cache.clear' ||
-      (method === 'chapter.content' && (params['forceRefresh'] === true || params['upgradeCachedContent'] === true));
+    const changesProjection = changesSources || effectMethod === 'reader.chinese-conversion.put' ||
+      effectMethod === 'replace.persist' || effectMethod === 'replace-rule.put' || effectMethod === 'replace-rule.delete' ||
+      effectMethod === 'dict-rule.put' || effectMethod === 'dict-rule.delete' || effectMethod === 'rule-bundle.import' ||
+      effectMethod === 'cache.clear' ||
+      (effectMethod === 'chapter.content' && (effectParams['forceRefresh'] === true || effectParams['upgradeCachedContent'] === true));
     // Cancellation happens before a destructive/configuration request begins.
     // A completed clear/remove must never restart this optional acquisition.
-    const changesAddedBook = changesProjection || method === 'replace.undo' || method === 'replace-rule.create' ||
-      method === 'replace-rule.update' || method === 'bookshelf.remove' || method === 'bookshelf.removeBatch' ||
-      (method.startsWith('source.switch.') && method !== 'source.switch.pending.list');
+    const changesAddedBook = changesProjection || effectMethod === 'replace.undo' || effectMethod === 'replace-rule.create' ||
+      effectMethod === 'replace-rule.update' || effectMethod === 'bookshelf.remove' || effectMethod === 'bookshelf.removeBatch' ||
+      (effectMethod.startsWith('source.switch.') && effectMethod !== 'source.switch.pending.list');
     if (changesAddedBook) {
       this.preparationMutations += 1;
       this.preparationGeneration += 1;

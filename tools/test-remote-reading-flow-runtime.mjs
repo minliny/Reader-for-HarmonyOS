@@ -70,7 +70,10 @@ class FakeRemoteReadingRuntime {
 
   async request(method, params = {}, options = {}) {
     calls.push({ method, params, options });
-    assert.equal(options.shouldCancel?.(), false,
+    if(method==='reading.progress.update') {
+      assert.equal(options.shouldCancel,undefined,'dispatched durable write must not be cancelled by a later retired route');
+      assert.equal(options.canDispatch?.(),true,'write retains original captured final dispatch admission');
+    } else assert.equal(options.shouldCancel?.(), false,
       `${method} must retain the current route/request guard`);
     switch (method) {
       case 'book.detail':
@@ -553,3 +556,19 @@ const failedRefreshGateway=new RemoteReadingFlowGateway({async request(method,pa
 await assert.rejects(failedRefreshGateway.loadChapter(session,0,isCurrent,true),/source transport failed/,
  'explicit refresh does not disguise source failure as a successful old-cache reload');
 console.log('PASS PH58 actual remote/reading-session adapters: optional force flag, offline refresh, identity and failure propagation');
+
+for (const contentKind of ['manga','audio']) {
+ const reached=[];
+ const mediaGateway=new RemoteReadingFlowGateway({async request(method){
+  reached.push(method);assert.equal(method,'book.detail');
+  return {data:{sourceId:SOURCE_ID,contentKind,book:{bookId:BOOK_ID,title:'Media',author:'Writer',contentKind:'text'},tocUrl:'/toc'}};
+ }});
+ const mediaSeed={sourceId:SOURCE_ID,bookId:BOOK_ID,detailUrl:BOOK_ID,title:'Media',author:'Writer'};
+ await assert.rejects(mediaGateway.openSession(mediaSeed),(error)=>error.code==='nonTextChapter'&&error.command==='book.detail');
+ assert.deepEqual(reached,['book.detail'],'outer Core media fact blocks TOC/body even if book object differs');
+ reached.length=0;
+ await assert.rejects(mediaGateway.openCachedSession({...mediaSeed,contentKind}),(error)=>error.code==='nonTextChapter');
+ await assert.rejects(mediaGateway.openSession({...mediaSeed,contentKind}),(error)=>error.code==='nonTextChapter');
+ assert.deepEqual(reached,[],'known non-text cached/fresh entry performs no request');
+}
+console.log('PASS production outer-detail/known-cache media guard without changing bookshelf display or data');

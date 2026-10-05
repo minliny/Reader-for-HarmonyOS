@@ -40,8 +40,8 @@ assert.equal(q.rowHeight, 28);
 assert.equal(f.rowHeight, 77);
 assert.equal(q.rowGap, 0);
 assert.equal(f.rowGap, 7);
-assert.equal(q.nameSize, 12, 'M-02 keeps the Full native rule-name font in Quick; no 9→12 text growth');
-assert.equal(f.nameSize, 12);
+assert.equal(Object.hasOwn(q, 'nameSize'), false, 'geometry no longer owns a duplicate physical font recipe');
+assert.equal(Object.hasOwn(f, 'nameSize'), false);
 assert.equal(q.toolbar.y, 60, '71px shell static top + 18px source translate - 29px Quick Stage slot');
 assert.equal(f.toolbar.y, 14, '71px shell static top - 57px Full Stage slot');
 assert.equal(q.list.height, q.rowHeight * 3, 'Quick clips exactly three shared rows');
@@ -64,7 +64,7 @@ if (motion) {
 }
 for (const p of [0, .01, .2, .49, .5, .83, 1]) {
   const pose = sample(p, 286 + 52 * p, 190 + 476 * p, 100);
-  assert.equal(pose.nameSize, 12, 'fixed native list text is independent of shared morph progress');
+  assert.equal(Object.hasOwn(pose, 'nameSize'), false, 'fixed typography belongs to the shared role and actual Text tests');
   close(pose.rowHeight, 28 + 49 * p);
   close(pose.rowGap, 7 * p);
   close(pose.rowPadding, 5 + 8 * p);
@@ -98,7 +98,19 @@ assert.equal((content.match(/ForEach\(this\.state\.rules,/g) || []).length, 1, '
 assert.doesNotMatch(content, /ForEach\([^\n]*slice|setInterval|setTimeout|animateTo|\.animation\(/);
 assert.match(content, /control-replace-rule-\$\{rule\.id\}/);
 assert.match(content, /ReaderControlSwitchTrack/);
-for (const action of ['新增规则', '导入', '导出', "Text('保存')", "Text('取消')", '确认删除', '重新加载核对']) assert.ok(content.includes(action));
+for (const action of ['新增规则', '导入', '导出', '确认删除']) assert.ok(content.includes(action));
+assert.match(content, /private originalRecoveryAction\(\)[^]*ForEach\(\[this\.state\.writeOperationId \|\| ''\],[^]*this\.textAction\(this\.state\.recoveryLabel \|\| '核对原规则操作'/, 'recovery remains available through the finite original-operation actor');
+assert.match(content, /this\.reload\(operationId \|\| undefined\)/, 'native recovery delegates the captured exact original operation, not a list-based unlock');
+assert.match(content, /ReaderBoundedSurfaceActions\(\{ specId: 'replace-editor'/);
+assert.match(content, /onAction: \(id: string\): void => \{ if \(id === 'cancel'\) this\.cancelTemporaryLayer\(\); else this\.saveEditor\(\); \}/);
+const actions = await readFile(new URL('../entry/src/main/ets/features/common/ReaderBoundedSurfaceActions.ets', import.meta.url), 'utf8');
+assert.ok(actions.includes("@Prop primaryLabel: string = '保存'") && actions.includes("Text(this.primaryLabel)") && actions.includes("Text('取消')"), 'retained canonical actions live in the actual shared producer');
 assert.match(content, /this\.presentationRevision/);
 assert.match(content, /key === this\.state\.sessionKey/);
+const { checkReaderReplaceRecoveryActor } = await import('./lib/reader-replace-legacy-sdk-probe.mjs');
+await checkReaderReplaceRecoveryActor(content);
+const identityGuard = 'if (operationId !== undefined && this.state.writeOperationId !== operationId) return;';
+assert.ok(content.includes(identityGuard));
+await assert.rejects(checkReaderReplaceRecoveryActor(content.replace(identityGuard, '')), /old physical actor/,
+  'removing only the real exact-operation guard breaks the original retained-callback scenario');
 console.log('PASS reader-control-replace-geometry: production endpoint/midpoint sampling, widths and one-tree wiring; NOT native pixel acceptance');

@@ -1,3 +1,6 @@
+import { ReaderDirectoryRecoverySurface } from '../reading/ReaderDirectoryRecoverySurface';
+import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../reading/ReadingDirectoryRecovery';
+import { TYPE_FORM_STATE_BODY } from '../common/ReaderTypography';
 import { ReaderDirectoryRules } from '../reading/ReaderDirectoryRules';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { readerDirectoryScopeKey } from '../reading/ReaderDirectoryNavigation';
@@ -30,6 +33,12 @@ export struct BookDirectoryPage {
   @Prop @Watch('onRulesKindChanged') bookKind: string = '';
   @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];
   @Prop catalogMessage: string = '';
+  @Prop directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
+  onReconcileBookmarks: (generation: number, identity: string) => void = (): void => {};
+  onContinueBookmarks: (generation: number, identity: string) => void = (): void => {};
+  onReconcileOffline: (generation: number, identity: string) => void = (): void => {};
+  onContinueOffline: (generation: number, identity: string) => void = (): void => {};
+
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   onBack: () => void = (): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
@@ -75,10 +84,25 @@ export struct BookDirectoryPage {
     this.pendingScrollUserIntent = false;
   }
 
+  private supportsCurrentDirectoryView(): boolean {
+    let owner: ReaderRuntimeOwner;
+    try { owner = ReaderRuntimeOwner.current(); } catch (_) { return false; }
+    return owner.supportsCoreCapability('reading.directory.view.v2');
+  }
+
+  @Builder
+  private recoveryContent() {
+    if (this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible) {
+      ReaderDirectoryRecoverySurface({ recovery: this.directoryRecovery,
+        onReconcileBookmarks: this.onReconcileBookmarks, onContinueBookmarks: this.onContinueBookmarks,
+        onReconcileOffline: this.onReconcileOffline, onContinueOffline: this.onContinueOffline });
+    }
+  }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       Column() {
-      if (this.supportsDirectoryRules() && ReaderRuntimeOwner.current().supportsCoreCapability('reading.directory.view.v2')) {
+      if (this.supportsDirectoryRules() && this.supportsCurrentDirectoryView()) {
         Button(this.rulesExpanded ? '收起层级规则' : '本书目录层级规则').onClick((): void => { this.rulesExpanded = !this.rulesExpanded; });
         if (this.rulesExpanded) { ReaderDirectoryRules({ bookId: this.bookId, onApplied: (): void => { this.rulesRevision += 1; } }); }
       }
@@ -93,6 +117,7 @@ export struct BookDirectoryPage {
           onBottom: (): void => this.scrollToEdge(Edge.Bottom),
           onToggleSort: (): void => this.toggleSort(),
         });
+        this.recoveryContent();
         Text('').width('100%').height(1)
           .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
       }
@@ -119,7 +144,7 @@ export struct BookDirectoryPage {
                 contentStartInset: 58 + this.toolsHeight + 5, contentEndInset: this.bottomInset() + 5,
                 edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
                 chapterEntries: this.admittedEntries,
-                chapterDownloadEnabled: this.sourceId !== 'local',
+                chapterDownloadEnabled: this.sourceId !== 'local' && this.directoryRecovery.offlineBlocked !== true,
                 chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
                 fallbackBuilder: (): void => { this.flatList(identity); },
                 onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void => {
@@ -135,7 +160,7 @@ export struct BookDirectoryPage {
                 onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
                 onDownloadChapter: (chapterIndex: number): void => {
                   if (this.mounted && identity === this.admittedIdentity && identity === this.identity())
-                    this.onDownloadChapter(chapterIndex);
+                    if (this.directoryRecovery.offlineBlocked !== true) this.onDownloadChapter(chapterIndex);
                 },
                 onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
                   this.onCreateChapterStartBookmark(request),
@@ -148,7 +173,7 @@ export struct BookDirectoryPage {
             Text(this.emptyMessage())
               .width('100%').height('100%')
               .padding({ left: 20, right: 20, top: 58 + this.toolsHeight + 20, bottom: this.bottomInset() + 20 })
-              .fontFamily('ReaderNotoSansSC').fontSize(14)
+              .fontFamily(TYPE_FORM_STATE_BODY.fontFamily as string).fontSize(TYPE_FORM_STATE_BODY.fontSizeFp)
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
               .textAlign(TextAlign.Center);
           }
@@ -189,13 +214,13 @@ export struct BookDirectoryPage {
     ReaderDirectoryChapterRow({
       entry: item.item,
       rowHeight: 40,
-      chapterDownloadEnabled: this.sourceId !== 'local',
+      chapterDownloadEnabled: this.sourceId !== 'local' && this.directoryRecovery.offlineBlocked !== true,
       chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
       onSelectChapter: (index: number): void => {
         if (this.rowIsCurrent(item.item, identity) && index === item.item.index) this.onSelectChapter(index);
       },
       onDownloadChapter: (index: number): void => {
-        if (this.rowIsCurrent(item.item, identity) && index === item.item.index) this.onDownloadChapter(index);
+        if (this.rowIsCurrent(item.item, identity) && index === item.item.index && this.directoryRecovery.offlineBlocked !== true) this.onDownloadChapter(index);
       },
       onDeleteBookmarks: (times: number[]): void => {
         if (this.rowIsCurrent(item.item, identity)) this.onDeleteBookmarks(times);

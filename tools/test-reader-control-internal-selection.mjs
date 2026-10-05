@@ -1,9 +1,11 @@
+import { ReaderNativeAlertOwner } from './lib/reader-native-alert-sdk-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import * as selectionPolicy from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
 import { wholeBookAnchorForPercent } from '../entry/src/main/ets/features/reading/LocalReadingWholeBookProgress.ts';
 import { ReaderTtsPageFollow, readerTtsFollowActive } from '../entry/src/main/ets/features/reading/ReaderTtsPageFollow.ts';
+import { installReaderLayoutOwners } from './lib/reader-measurement-owner-fixture.mjs';
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',
   import.meta.url), 'utf8');
@@ -29,14 +31,14 @@ const names = ['isUnknownCatalogEdge', 'entryChapterPosition', 'ttsFollowScope',
   'stepControlChapter', 'readingTocEntries', 'seekControlProgress', 'controlSelectionOwner', 'completeControlSelectionAfterCommit',
   'resumeDeferredPageTurnWork', 'clearDeferredPageTurnWork'];
 function Host(mutate = code => code) {
-  const deps = { ...selectionPolicy, wholeBookAnchorForPercent, readerTtsFollowActive, LOCAL_READING_SOURCE_ID: 'local' };
+  const deps = { ReaderNativeAlertOwner, ...selectionPolicy, wholeBookAnchorForPercent, readerTtsFollowActive, LOCAL_READING_SOURCE_ID: 'local' };
   const code = mutate(names.map(method).join('\n'));
   return new Function(...Object.keys(deps), stripTypeScriptTypes(deferredClass +
-    '\nclass InternalSelectionProbe {' + code + '}') + ';return InternalSelectionProbe;')(
+    '\nclass InternalSelectionProbe { nativeAlertOwner = new ReaderNativeAlertOwner();' + code + '}') + ';return InternalSelectionProbe;')(
       ...Object.values(deps));
 }
 function owner(Type = Host()) {
-  const host = new Type();
+  const host = installReaderLayoutOwners(new Type());
   Object.assign(host, { sourceId: 'source', bookId: 'book', lifecycleToken: 1, mounted: true,
     exitRequested: false, controlOpenRevision: 41, chapterSelectionToken: 10,
     materializedChapterSelectionToken: 10, visiblePageSelectionToken: 10,

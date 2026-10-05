@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { productionReaderPressFeedback } from './lib/reader-press-feedback-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 
@@ -35,4 +36,32 @@ for (const scheme of ['day', 'night']) {
   assert.doesNotThrow(() => new Modifier('inert-surface', 'day', 0, 14, false).applyPressedAttribute(attributes));
   assert.deepEqual([attributes.fill, attributes.radius], ['inert-surface', 0]);
 }
+// Every official composition stage can fail independently. Preserve the
+// complete original normal recipe, while the gradient-oriented public helper
+// still returns the original unblended surface without leaking an exception.
+const actualSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderPressFeedback.ets',import.meta.url),'utf8');
+function failedCompositionFallback(source=actualSource) {
+  for(const stage of ['accent','rgba','base','blend']) {
+    let requests=0;
+    const Modifier=productionReaderPressFeedback({source,ColorMetrics:{
+      resourceColor(){requests++;if((stage==='accent'&&requests===1)||(stage==='base'&&requests===2))throw Error('platform '+stage);
+        return {red:244,green:139,blue:19,blendColor(){if(stage==='blend')throw Error('platform blend');return{color:'pressed'};}};},
+      rgba(){if(stage==='rgba')throw Error('platform rgba');return{alpha:.12};},
+    }});
+    const attributes={backgroundColor(value){this.fill=value;return this;},borderRadius(value){this.radius=value;return this;}};
+    const modifier=new Modifier('current-surface','day',17,12);
+    modifier.applyPressedAttribute(attributes);
+    assert.deepEqual([attributes.fill,attributes.radius],['current-surface',17],stage+': complete normal fallback');
+    requests=0;assert.equal(modifier.pressedSurface(),'current-surface',stage+': finite gradient helper retains its fallback');
+    requests=0;new Modifier('disabled-surface','day',17,12,false).applyPressedAttribute(attributes);
+    assert.equal(requests,0,'disabled actor never requests a platform press color');
+    assert.deepEqual([attributes.fill,attributes.radius],['disabled-surface',17]);
+  }
+}
+failedCompositionFallback();
+const correctFallback='this.applyNormalAttribute(instance);\n    }\n  }\n\n  applyDisabledAttribute';
+assert.ok(actualSource.includes(correctFallback));
+assert.throws(()=>failedCompositionFallback(actualSource.replace(correctFallback,
+  'instance.backgroundColor(this.surface).borderRadius(this.pressedRadius);\n    }\n  }\n\n  applyDisabledAttribute')),
+  /complete normal fallback/,'the prior color-only failure regression remains detectable');
 console.log('reader press feedback: native tint delegation and normal/disabled restoration PASS');

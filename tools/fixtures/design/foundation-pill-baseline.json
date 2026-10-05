@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "beforeCommit": "78edc5f6",
+  "boundary": "Immutable selected production UI method snapshots; code/SDK only, no target scheduling or pixels.",
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/search/SearchPage.ets",
+      "sourceSha256": "5d0c73c069702d21b1dfaca9b50c85d40e5004d659b4d199b2f5d3b6242a2cb0",
+      "names": [
+        "primaryPill",
+        "secondaryPill"
+      ],
+      "methods": [
+        "@Builder\n  private primaryPill(label: string, onTap: () => void) {\n    Text(label)\n      .fontFamily(TYPE_APP_PRIMARY_ACTION.fontFamily)\n      .fontWeight(TYPE_APP_PRIMARY_ACTION.fontWeight)\n      .fontSize(TYPE_APP_PRIMARY_ACTION.fontSizeFp)\n      .lineHeight(TYPE_APP_PRIMARY_ACTION.lineHeightFp as number)\n      .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))\n      .padding({ left: 18, right: 18, top: 11.5, bottom: 11.5 })\n      .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))\n      .borderRadius(999)\n      .onClick((): void => onTap())\n      .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })\n      .accessibilityText(label);\n  }",
+        "@Builder\n  private secondaryPill(label: string, onTap: () => void) {\n    Text(label)\n      .fontFamily(TYPE_APP_SECONDARY_ACTION.fontFamily)\n      .fontWeight(TYPE_APP_SECONDARY_ACTION.fontWeight)\n      .fontSize(TYPE_APP_SECONDARY_ACTION.fontSizeFp)\n      .lineHeight(TYPE_APP_SECONDARY_ACTION.lineHeightFp as number)\n      .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))\n      .padding({ left: 18.5, right: 18.5, top: 11.5, bottom: 11.5 })\n      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))\n      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })\n      .borderRadius(999)\n      .onClick((): void => onTap())\n      .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })\n      .accessibilityText(label);\n  }"
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/discover/DiscoverPage.ets",
+      "sourceSha256": "bf25bb1e31a2d10fa3a4bd9eacad3cfbb4e4cd4ed2c5cf14c204acb1c7622b6d",
+      "names": [
+        "pageAction"
+      ],
+      "methods": [
+        "@Builder\n  private pageAction(label: string, enabled: boolean, action: () => void) {\n    Text(label)\n      .fontFamily(TYPE_APP_SMALL_LABEL.fontFamily)\n      .fontWeight(TYPE_APP_SMALL_LABEL.fontWeight)\n      .fontSize(TYPE_APP_SMALL_LABEL.fontSizeFp)\n      .fontColor(enabled ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))\n      .backgroundColor(enabled ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('app.DiscoverPage.CHIP_BG', this.appThemeScheme))\n      .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: 8, bottom: 8 })\n      .borderRadius(999)\n      .opacity(this.presentation.loading ? 0.6 : 1)\n      .onClick((): void => {\n        if (enabled && !this.presentation.loading) action();\n      });\n  }"
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/rss/RssPage.ets",
+      "sourceSha256": "29fc8afb3abd331c90344f11d69454bbfbf22fa27ca153694a50885a0794f713",
+      "names": [
+        "statusTab",
+        "stateButtons"
+      ],
+      "methods": [
+        "@Builder\n  private statusTab(label: string, mode: RssMode) {\n    Stack({ alignContent: Alignment.Center }) {\n      Text(label)\n        .fontFamily(TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily)\n        .fontWeight(TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight)\n        .fontSize(TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp)\n        .fontColor(this.activeMode === mode ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('app.RssPage.statusTab.fontColor.FF564D44', this.appThemeScheme))\n        .textAlign(TextAlign.Center)\n        .maxLines(1);\n    }\n    .height(30)\n    .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })\n    .backgroundColor(this.activeMode === mode ? readerAppColor('app.action.fill', this.appThemeScheme) : readerAppColor('app.RssPage.SOFT_PILL_BG', this.appThemeScheme))\n    .borderRadius(999)\n    .responseRegion({ x: 0, y: -7, width: '100%', height: 44 })\n    .onClick((): void => this.onModeRequested(mode));\n  }",
+        "@Builder\n  private stateButtons(primaryLabel: string, primaryAction: () => void) {\n    Row({ space: TOK_SPACE_CONTROL_INLINE }) {\n      Stack({ alignContent: Alignment.Center }) {\n        Text(primaryLabel)\n          .fontFamily(TYPE_RSS_STATE_ACTION.fontFamily)\n          .fontWeight(TYPE_RSS_STATE_ACTION.fontWeight)\n          .fontSize(TYPE_RSS_STATE_ACTION.fontSizeFp)\n          .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))\n          .maxLines(1);\n      }\n      .width(88)\n      .height(36)\n      .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))\n      .borderRadius(999)\n      .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })\n      .onClick((): void => primaryAction());\n\n      Stack({ alignContent: Alignment.Center }) {\n        Text('订阅管理')\n          .fontFamily(TYPE_RSS_STATE_ACTION.fontFamily)\n          .fontWeight(TYPE_RSS_STATE_ACTION.fontWeight)\n          .fontSize(TYPE_RSS_STATE_ACTION.fontSizeFp)\n          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))\n          .maxLines(1);\n      }\n      .width(88)\n      .height(36)\n      .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))\n      .borderRadius(999)\n      .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })\n      .onClick((): void => this.onManage());\n    }\n    .margin({ top: 20 })\n    .alignItems(VerticalAlign.Center);\n  }"
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/rss/RssEntryDetailPage.ets",
+      "sourceSha256": "e257585c1cbcb7d4a79ef91246c9d6f8ee9b25ab528122487a6b5036085bb24b",
+      "names": [
+        "sourceCard",
+        "itemMeta"
+      ],
+      "methods": [
+        "@Builder\n  private sourceCard() {\n    Row({ space: TOK_SPACE_XS }) {\n      Stack({ alignContent: Alignment.Center }) {\n        Image((this.appThemeScheme === 'night' ? $r('app.media.rss_source_theme_night') : $r('app.media.rss_source'))).width(20).height(20);\n      }\n      .width(32)\n      .height(32)\n      .backgroundColor(readerAppColor('TOK_PRIMARY_BG', this.appThemeScheme))\n      .borderRadius(16);\n\n      Column({ space: 3 }) {\n        Text(this.subscription.title)\n          .width('100%')\n          .fontFamily(TYPE_RSS_SOURCE_TITLE.fontFamily)\n          .fontWeight(TYPE_RSS_SOURCE_TITLE.fontWeight)\n          .fontSize(TYPE_RSS_SOURCE_TITLE.fontSizeFp)\n          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))\n          .maxLines(1)\n          .textOverflow({ overflow: TextOverflow.Ellipsis });\n        Text(this.itemMeta())\n          .width('100%')\n          .fontFamily(TYPE_RSS_META.fontFamily)\n          .fontWeight(TYPE_RSS_META.fontWeight)\n          .fontSize(TYPE_RSS_META.fontSizeFp)\n          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))\n          .maxLines(1)\n          .textOverflow({ overflow: TextOverflow.Ellipsis });\n      }\n      .layoutWeight(1)\n      .alignItems(HorizontalAlign.Start);\n\n      Text('查看源')\n        .height(28)\n        .padding({ left: 9, right: 9 })\n        .fontFamily(TYPE_RSS_LINK_ACTION.fontFamily)\n        .fontWeight(TYPE_RSS_LINK_ACTION.fontWeight)\n        .fontSize(TYPE_RSS_LINK_ACTION.fontSizeFp)\n        .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))\n        .textAlign(TextAlign.Center)\n        .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))\n        .borderRadius(999)\n        .responseRegion({ x: 0, y: -8, width: '100%', height: 44 })\n        .onClick((): void => this.onViewSource());\n    }\n    .width('100%')\n    .height(58)\n    .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })\n    .alignItems(VerticalAlign.Center)\n    .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))\n    .border({ width: TOK_BORDER_W, color: readerAppColor('app.RssEntryDetailPage.CARD_BORDER', this.appThemeScheme) })\n    .borderRadius(8);\n  }",
+        "private itemMeta(): string {\n    const parts: string[] = [];\n    if (this.item.pubDate !== undefined && this.item.pubDate !== '') {\n      parts.push(this.item.pubDate);\n    }\n    if (this.item.author !== undefined && this.item.author !== '') {\n      parts.push(this.item.author);\n    }\n    return parts.join(' · ');\n  }"
+      ]
+    }
+  ]
+}

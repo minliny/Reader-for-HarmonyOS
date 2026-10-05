@@ -1,3 +1,4 @@
+import { TYPE_READER_BOOKMARK_CHAPTER, TYPE_READER_BOOKMARK_EXCERPT, TYPE_READER_BOOKMARK_EXCERPT_LEGACY, TYPE_READER_BOOKMARK_META, TYPE_READER_BOOKMARK_PENDING, TYPE_READER_BOOKMARK_PENDING_LEGACY } from '../common/ReaderTypography';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { TOK_LINE, TOK_READ_INK, TOK_READ_MUTED } from '../common/ReaderTokens';
@@ -49,14 +50,14 @@ export struct ReaderBookmarkRow {
     Stack({ alignContent: Alignment.TopStart }) {
       Row({ space: 4 }) {
         Text(this.row.chapterTitle).layoutWeight(1).constraintSize({ minWidth: 0 })
-          .fontFamily('ReaderNotoSansSC').fontWeight(500).fontSize(11).lineHeight(14)
+          .fontFamily(TYPE_READER_BOOKMARK_CHAPTER.fontFamily).fontWeight(TYPE_READER_BOOKMARK_CHAPTER.fontWeight).fontSize(TYPE_READER_BOOKMARK_CHAPTER.fontSizeFp).lineHeight(TYPE_READER_BOOKMARK_CHAPTER.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         if (this.row.identityStatus === 'pendingConfirmation') {
-          Text(BOOKMARK_PENDING_LABEL).fontSize(8).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).flexShrink(0);
+          Text(BOOKMARK_PENDING_LABEL).fontSize(TYPE_READER_BOOKMARK_PENDING.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).flexShrink(0);
         }
-        Text(this.row.positionLabel).fontFamily('ReaderInter').fontSize(9).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
+        Text(this.row.positionLabel).fontFamily(TYPE_READER_BOOKMARK_META.fontFamily as string).fontSize(TYPE_READER_BOOKMARK_META.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .maxLines(1).constraintSize({ maxWidth: 50 }).textOverflow({ overflow: TextOverflow.Ellipsis });
-        Text(this.row.timeLabel).fontFamily('ReaderInter').fontSize(9).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
+        Text(this.row.timeLabel).fontFamily(TYPE_READER_BOOKMARK_META.fontFamily as string).fontSize(TYPE_READER_BOOKMARK_META.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .maxLines(1).constraintSize({ maxWidth: 64 }).textOverflow({ overflow: TextOverflow.Ellipsis });
       }.width(this.frame().title.width).height(this.frame().title.height)
         .position({ x: this.frame().title.x, y: this.frame().title.y });
@@ -64,8 +65,8 @@ export struct ReaderBookmarkRow {
         .backgroundColor(readerAppColor('app.ReaderBookmarkRow.BOOKMARK_EXCERPT_ACCENT', this.appThemeScheme)).borderRadius(1)
         .position({ x: this.frame().accent.x, y: this.frame().accent.y });
       Text(this.row.excerpt).width(this.frame().excerpt.width).height(this.frame().excerpt.height)
-        .fontFamily('ReaderNotoSerifSCRegular').fontWeight(FontWeight.Regular)
-        .fontSize(9).lineHeight(14).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(2)
+        .fontFamily(TYPE_READER_BOOKMARK_EXCERPT.fontFamily).fontWeight(TYPE_READER_BOOKMARK_EXCERPT.fontWeight)
+        .fontSize(TYPE_READER_BOOKMARK_EXCERPT.fontSizeFp).lineHeight(TYPE_READER_BOOKMARK_EXCERPT.lineHeightFp as number).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .position({ x: this.frame().excerpt.x, y: this.frame().excerpt.y });
       Text('').width(this.frame().divider.width).height(this.frame().divider.height)
@@ -87,30 +88,30 @@ export struct ReaderBookmarkRow {
         Text(this.row.chapterTitle)
           .layoutWeight(1)
           .constraintSize({ minWidth: 0 })
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(500)
-          .fontSize(11)
-          .lineHeight(14)
+          .fontFamily(TYPE_READER_BOOKMARK_CHAPTER.fontFamily)
+          .fontWeight(TYPE_READER_BOOKMARK_CHAPTER.fontWeight)
+          .fontSize(TYPE_READER_BOOKMARK_CHAPTER.fontSizeFp)
+          .lineHeight(TYPE_READER_BOOKMARK_CHAPTER.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         if (this.row.identityStatus === 'pendingConfirmation') {
           Text(BOOKMARK_PENDING_LABEL)
             .flexShrink(0)
-            .fontFamily('ReaderInter')
-            .fontSize(8)
+            .fontFamily(TYPE_READER_BOOKMARK_PENDING_LEGACY.fontFamily as string)
+            .fontSize(TYPE_READER_BOOKMARK_PENDING_LEGACY.fontSizeFp)
             .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
         }
         Text(this.row.positionLabel)
           .flexShrink(0)
-          .fontFamily('ReaderInter')
-          .fontSize(9)
+          .fontFamily(TYPE_READER_BOOKMARK_META.fontFamily as string)
+          .fontSize(TYPE_READER_BOOKMARK_META.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .maxLines(1);
         Text(this.row.timeLabel)
           .flexShrink(0)
-          .fontFamily('ReaderInter')
-          .fontSize(9)
+          .fontFamily(TYPE_READER_BOOKMARK_META.fontFamily as string)
+          .fontSize(TYPE_READER_BOOKMARK_META.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .maxLines(1);
       }
@@ -128,10 +129,10 @@ export struct ReaderBookmarkRow {
         Text(this.row.excerpt)
           .layoutWeight(1)
           .constraintSize({ minWidth: 0 })
-          .fontFamily('ReaderNotoSerifSCRegular')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(9)
-          .lineHeight(13)
+          .fontFamily(TYPE_READER_BOOKMARK_EXCERPT_LEGACY.fontFamily)
+          .fontWeight(TYPE_READER_BOOKMARK_EXCERPT_LEGACY.fontWeight)
+          .fontSize(TYPE_READER_BOOKMARK_EXCERPT_LEGACY.fontSizeFp)
+          .lineHeight(TYPE_READER_BOOKMARK_EXCERPT_LEGACY.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis });

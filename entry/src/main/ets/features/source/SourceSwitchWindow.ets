@@ -1,3 +1,6 @@
+import { ReaderBoundedSurface } from '../common/ReaderBoundedSurface';
+import { ReaderBoundedSurfaceHeader } from '../common/ReaderBoundedSurfaceHeader';
+import { TYPE_APP_LOADING_BODY, TYPE_SOURCE_STATE_TITLE, TYPE_SOURCE_SWITCH_COLUMN, TYPE_SOURCE_SWITCH_FOOTER, TYPE_SOURCE_SWITCH_HEADING, TYPE_SOURCE_SWITCH_MESSAGE, TYPE_SOURCE_SWITCH_RECOVERY, TYPE_SOURCE_SWITCH_SORT } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { CandidateRow } from './CandidateRow';
 import { sourceSwitchCandidateKey, sourceSwitchSourceCount } from './SourceSwitchGateway';
@@ -18,8 +21,6 @@ import {
   TOK_SS_FOOTER_TEXT,
   TOK_SS_MUTED,
   TOK_SS_SORT_PILL_BG,
-  TOK_SS_WINDOW_BG,
-  TOK_SS_WINDOW_BORDER,
 } from '../common/ReaderTokens';
 
 import { registerReaderFonts } from '../common/ReaderFonts';
@@ -35,58 +36,10 @@ import {
   SurfaceWidthSpec,
   resolveHorizontalFrame,
 } from '../common/SurfaceHorizontalGeometry';
+import { PopupSurfaceSpec, resolvePopupSpec } from '../common/ReaderSurfaceSpecs';
 
-/**
- * SourceSwitch overlay window state (Window State 7态, SS-SOURCE-SWITCH-01).
- * The seven states follow the Source Switch state contract. Candidate-state
- * geometry comes from SourceSwitch/Window (Phone 943:15215 / Tablet 943:15705,
- * both mounting 568:656). States without a dedicated visible Figma frame stay
- * fail-closed for visual acceptance; the owning Index still drives the real
- * gateway transitions.
- */
-export interface SourceSwitchDiscoveringState {
-  kind: 'discovering';
-}
-
-export interface SourceSwitchCandidatesState {
-  kind: 'candidates';
-  candidates: SourceSwitchCandidate[];
-  refreshing?: boolean;
-  refreshError?: string;
-}
-
-export interface SourceSwitchEmptyState {
-  kind: 'empty';
-}
-
-export interface SourceSwitchDiscoveryErrorState {
-  kind: 'discoveryError';
-  message: string;
-}
-
-export interface SourceSwitchSwitchingState {
-  kind: 'switching';
-  targetSourceId: string;
-}
-
-export interface SourceSwitchSuccessState {
-  kind: 'success';
-}
-
-export interface SourceSwitchFailureState {
-  kind: 'failure';
-  message: string;
-  transactionId?: string;
-}
-
-export type SourceSwitchPanelState =
-  | SourceSwitchDiscoveringState
-  | SourceSwitchCandidatesState
-  | SourceSwitchEmptyState
-  | SourceSwitchDiscoveryErrorState
-  | SourceSwitchSwitchingState
-  | SourceSwitchSuccessState
-  | SourceSwitchFailureState;
+import type { SourceSwitchPanelState } from './SourceSwitchPresentationState';
+export type { SourceSwitchDiscoveringState, SourceSwitchCandidatesState, SourceSwitchEmptyState, SourceSwitchDiscoveryErrorState, SourceSwitchSwitchingState, SourceSwitchSuccessState, SourceSwitchFailureState, SourceSwitchPanelState } from './SourceSwitchPresentationState';
 
 /**
  * Source-switch window (Figma `568:656`, 300×385 r20): 34px header, 20px column
@@ -108,77 +61,28 @@ export struct SourceSwitchWindow {
     (_candidate: SourceSwitchCandidate): void => {};
   onRollback: () => void = (): void => {};
 
+  private surfaceSpec(): PopupSurfaceSpec {
+    return resolvePopupSpec('source-switch-window');
+  }
+
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
   }
 
   build() {
-    Column({ space: 0 }) {
-      this.header();
-      this.columnHeader();
-      this.body();
-      this.footer();
-    }
-    .width(this.windowWidth())
-    .height(this.windowHeight())
-    .backgroundColor(readerAppColor('TOK_SS_WINDOW_BG', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_SS_WINDOW_BORDER', this.appThemeScheme) })
-    .borderRadius(20)
-    .translate({ x: this.windowTranslateX(), y: this.windowTranslateY() });
+    ReaderBoundedSurface({ specId: 'source-switch-window', surfaceWidth: this.windowWidth(), surfaceHeight: this.windowHeight(),
+      header: (): void => { this.header(); }, body: (): void => { this.windowBody(); }, actions: (): void => { this.footer(); } })
+      .translate({ x: this.windowTranslateX(), y: this.windowTranslateY() });
   }
 
   @Builder
   private header() {
-    Column({ space: 0 }) {
-      Row() {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_switch_theme_night') : $r('app.media.reader_directory_switch')))
-          .width(18)
-          .height(18)
-          .margin({ left: 9 });
-
-        Text('换源')
-          .layoutWeight(1)
-          .constraintSize({ minWidth: 0 })
-          .height(16)
-          .fontFamily('ReaderNotoSerifSCRegular')
-          .fontWeight(FontWeight.Medium)
-          .fontSize(11)
-          .lineHeight(12.32)
-          .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
-          .margin({ left: 7 });
-
-        this.sortPill();
-
-        // Figma SourceSwitch/CloseButton 568:40: 22×22 pill with the exact
-        // 20×20 Icon/Close asset, centered inside its 44×44 hit target.
-        Stack({ alignContent: Alignment.Center }) {
-          Stack({ alignContent: Alignment.Center }) {
-            Image((this.appThemeScheme === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close')))
-              .width(20)
-              .height(20);
-          }
-          .width(22)
-          .height(22)
-          .borderRadius(8)
-          .backgroundColor(readerAppColor('TOK_SS_CLOSE_BG', this.appThemeScheme));
-        }
-        .width(44)
-        .height(44)
-        .margin({ left: 1 })
-        .onClick((): void => this.onClose());
-      }
-      .width('100%')
-      .height(33)
-      .alignItems(VerticalAlign.Center);
-
-      Text('')
-        .width(Math.max(0, this.windowWidth() - 1))
-        .height(1)
-        .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
-    }
-    .width('100%')
-    .height(34);
+    ReaderBoundedSurfaceHeader({ specId: 'source-switch-window', title: '换源', surfaceWidth: this.windowWidth(),
+      accessory: (): void => { this.sortPill(); }, onClose: (): void => this.onClose() });
   }
+
+  @Builder
+  private windowBody() { this.columnHeader(); this.body(); }
 
   // Figma SortPillBg 60×20 rgba(155,132,102,0.10) r10 with centered 9px
   // label (text spans 50px, centered on the pill midpoint 225).
@@ -186,10 +90,10 @@ export struct SourceSwitchWindow {
   private sortPill() {
     Stack({ alignContent: Alignment.Center }) {
       Text('按延迟排序')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(9)
-        .lineHeight(12)
+        .fontFamily(TYPE_SOURCE_SWITCH_SORT.fontFamily)
+        .fontWeight(TYPE_SOURCE_SWITCH_SORT.fontWeight)
+        .fontSize(TYPE_SOURCE_SWITCH_SORT.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_SWITCH_SORT.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_SS_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.Center);
     }
@@ -206,26 +110,26 @@ export struct SourceSwitchWindow {
       Text('书源')
         .width(this.sourceHeaderWidth())
         .height(12)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(8)
+        .fontFamily(TYPE_SOURCE_SWITCH_COLUMN.fontFamily)
+        .fontWeight(TYPE_SOURCE_SWITCH_COLUMN.fontWeight)
+        .fontSize(TYPE_SOURCE_SWITCH_COLUMN.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_HANDLE', this.appThemeScheme))
         .margin({ left: 10 });
 
       Text('延迟')
         .width(72)
         .height(12)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(8)
+        .fontFamily(TYPE_SOURCE_SWITCH_COLUMN.fontFamily)
+        .fontWeight(TYPE_SOURCE_SWITCH_COLUMN.fontWeight)
+        .fontSize(TYPE_SOURCE_SWITCH_COLUMN.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_HANDLE', this.appThemeScheme));
 
       Text('当前章节')
         .width(100)
         .height(12)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(8)
+        .fontFamily(TYPE_SOURCE_SWITCH_COLUMN.fontFamily)
+        .fontWeight(TYPE_SOURCE_SWITCH_COLUMN.fontWeight)
+        .fontSize(TYPE_SOURCE_SWITCH_COLUMN.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_HANDLE', this.appThemeScheme))
         .textAlign(TextAlign.End);
     }
@@ -244,11 +148,16 @@ export struct SourceSwitchWindow {
     } else if (this.state.kind === 'empty') {
       this.messageBody('未找到其他书源', '可检查书源是否启用后重试');
     } else if (this.state.kind === 'discoveryError') {
-      this.errorBody(this.state.message);
+      this.errorBody((): string => this.state.kind === 'discoveryError' ? this.state.message : '');
     } else if (this.state.kind === 'success') {
       this.messageBody('已切换书源', '');
     } else if (this.state.kind === 'failure') {
-      this.failureBody(this.state.message, this.state.transactionId !== undefined);
+      this.failureBody((): string => this.state.kind === 'failure' ? this.state.message : '',
+        (): boolean => this.state.kind === 'failure' && this.state.transactionId !== undefined,
+        (): string => this.state.kind !== 'failure' || this.state.confirmation === undefined ? '换源失败'
+          : this.state.confirmation === 'confirmed' ? '换源已提交'
+          : this.state.confirmation === 'unknown' ? '换源结果未确认' : '换源尚未提交',
+        (): boolean => this.state.kind === 'failure' && this.state.reconcile === true);
     }
   }
 
@@ -263,10 +172,10 @@ export struct SourceSwitchWindow {
         .enableLoading(true);
       Text(isSwitching ? '正在切换书源…' : '正在搜索书源…')
         .margin({ top: 20 })
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(13)
-        .lineHeight(20)
+        .fontFamily(TYPE_APP_LOADING_BODY.fontFamily)
+        .fontWeight(TYPE_APP_LOADING_BODY.fontWeight)
+        .fontSize(TYPE_APP_LOADING_BODY.fontSizeFp)
+        .lineHeight(TYPE_APP_LOADING_BODY.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.Center);
       Blank().layoutWeight(1);
@@ -280,19 +189,19 @@ export struct SourceSwitchWindow {
     Column({ space: 0 }) {
       Blank().layoutWeight(1);
       Text(title)
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(15)
-        .lineHeight(22)
+        .fontFamily(TYPE_SOURCE_STATE_TITLE.fontFamily)
+        .fontWeight(TYPE_SOURCE_STATE_TITLE.fontWeight)
+        .fontSize(TYPE_SOURCE_STATE_TITLE.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_STATE_TITLE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center);
       if (subtitle.length > 0) {
         Text(subtitle)
           .margin({ top: TOK_SPACE_XS })
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(11)
-          .lineHeight(16)
+          .fontFamily(TYPE_SOURCE_SWITCH_MESSAGE.fontFamily)
+          .fontWeight(TYPE_SOURCE_SWITCH_MESSAGE.fontWeight)
+          .fontSize(TYPE_SOURCE_SWITCH_MESSAGE.fontSizeFp)
+          .lineHeight(TYPE_SOURCE_SWITCH_MESSAGE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center);
       }
@@ -303,33 +212,33 @@ export struct SourceSwitchWindow {
   }
 
   @Builder
-  private errorBody(message: string) {
+  private errorBody(message: () => string) {
     Column({ space: 0 }) {
       Blank().layoutWeight(1);
       Text('书源搜索失败')
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(15)
-        .lineHeight(22)
+        .fontFamily(TYPE_SOURCE_STATE_TITLE.fontFamily)
+        .fontWeight(TYPE_SOURCE_STATE_TITLE.fontWeight)
+        .fontSize(TYPE_SOURCE_STATE_TITLE.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_STATE_TITLE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center);
-      Text(message)
+      Text(message())
         .margin({ top: TOK_SPACE_XS })
         .width(this.messageWidth())
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(11)
-        .lineHeight(16)
+        .fontFamily(TYPE_SOURCE_SWITCH_MESSAGE.fontFamily)
+        .fontWeight(TYPE_SOURCE_SWITCH_MESSAGE.fontWeight)
+        .fontSize(TYPE_SOURCE_SWITCH_MESSAGE.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_SWITCH_MESSAGE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .textAlign(TextAlign.Center);
       Text('重试')
         .margin({ top: 18 })
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(12)
-        .lineHeight(12)
+        .fontFamily(TYPE_SOURCE_SWITCH_RECOVERY.fontFamily)
+        .fontWeight(TYPE_SOURCE_SWITCH_RECOVERY.fontWeight)
+        .fontSize(TYPE_SOURCE_SWITCH_RECOVERY.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_SWITCH_RECOVERY.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .padding({ left: 26, right: 26, top: TOK_SPACE_SM, bottom: TOK_SPACE_SM })
         .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
@@ -343,40 +252,40 @@ export struct SourceSwitchWindow {
   }
 
   @Builder
-  private failureBody(message: string, canRollback: boolean) {
+  private failureBody(message: () => string, canRollback: () => boolean, title: () => string, canReconcile: () => boolean) {
     Column({ space: 0 }) {
       Blank().layoutWeight(1);
-      Text('换源失败')
-        .fontFamily('ReaderNotoSerifSCBold')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(15)
-        .lineHeight(22)
+      Text(title())
+        .fontFamily(TYPE_SOURCE_STATE_TITLE.fontFamily)
+        .fontWeight(TYPE_SOURCE_STATE_TITLE.fontWeight)
+        .fontSize(TYPE_SOURCE_STATE_TITLE.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_STATE_TITLE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center);
-      Text(message)
+      Text(message())
         .margin({ top: TOK_SPACE_XS })
         .width(this.messageWidth())
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(11)
-        .lineHeight(16)
+        .fontFamily(TYPE_SOURCE_SWITCH_MESSAGE.fontFamily)
+        .fontWeight(TYPE_SOURCE_SWITCH_MESSAGE.fontWeight)
+        .fontSize(TYPE_SOURCE_SWITCH_MESSAGE.fontSizeFp)
+        .lineHeight(TYPE_SOURCE_SWITCH_MESSAGE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .textAlign(TextAlign.Center);
-      if (canRollback) {
-        Text('撤销切换')
+      if (canRollback() || canReconcile()) {
+        Text(canReconcile() ? '重试核对' : '撤销切换')
           .margin({ top: 18 })
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(12)
-          .lineHeight(12)
+          .fontFamily(TYPE_SOURCE_SWITCH_RECOVERY.fontFamily)
+          .fontWeight(TYPE_SOURCE_SWITCH_RECOVERY.fontWeight)
+          .fontSize(TYPE_SOURCE_SWITCH_RECOVERY.fontSizeFp)
+          .lineHeight(TYPE_SOURCE_SWITCH_RECOVERY.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .padding({ left: 26, right: 26, top: TOK_SPACE_SM, bottom: TOK_SPACE_SM })
           .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
           .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
           .borderRadius(999)
-          .onClick((): void => this.onRollback());
+          .onClick((): void => { if (canReconcile()) this.onRetry(); else this.onRollback(); });
       }
       Blank().layoutWeight(1);
     }
@@ -430,10 +339,10 @@ export struct SourceSwitchWindow {
     Text(this.footerText())
       .width('100%')
       .height(22)
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Regular)
-      .fontSize(8)
-      .lineHeight(12)
+      .fontFamily(TYPE_SOURCE_SWITCH_FOOTER.fontFamily)
+      .fontWeight(TYPE_SOURCE_SWITCH_FOOTER.fontWeight)
+      .fontSize(TYPE_SOURCE_SWITCH_FOOTER.fontSizeFp)
+      .lineHeight(TYPE_SOURCE_SWITCH_FOOTER.lineHeightFp as number)
       .fontColor(readerAppColor('TOK_SS_FOOTER_TEXT', this.appThemeScheme))
       .textAlign(TextAlign.Center);
   }
@@ -465,7 +374,7 @@ export struct SourceSwitchWindow {
       this.liveWindowWidth(),
       readerInteractiveSafeLeft(metrics),
       readerInteractiveSafeRight(metrics),
-      new SurfaceWidthSpec(300, 0, 0, 'center'),
+      new SurfaceWidthSpec(this.surfaceSpec().width, 0, 0, 'center'),
     );
   }
 
@@ -479,7 +388,7 @@ export struct SourceSwitchWindow {
       0,
       this.liveWindowHeight() - readerVisualSafeTop(metrics) - readerInteractiveSafeBottom(metrics, true),
     );
-    return Math.min(385, available);
+    return Math.min(this.surfaceSpec().height, available);
   }
 
   private windowTranslateX(): number {

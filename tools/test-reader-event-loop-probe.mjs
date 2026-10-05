@@ -65,6 +65,25 @@ try {
   assert.equal(clears, 3);
   callback();
   assert.equal(invalid.length, 1);
+  const failingRows = [];
+  at = 0;
+  const failing = new ReaderEventLoopProbe(() => at, row => {
+    failingRows.push(row); throw Error('diagnostic recorder unavailable');
+  });
+  failing.start(); at = 1200;
+  assert.doesNotThrow(() => callback());
+  at = 2200; assert.doesNotThrow(() => callback());
+  assert.equal(failingRows[0].maxDelayMs, 1150);
+  assert.equal(failingRows[1].maxDelayMs, 950, 'failed recorder still advances the window');
+  assert.equal(failingRows[1].samples, 1, 'failed recording does not accumulate prior samples');
+  assert.doesNotThrow(() => failing.stop('background'));
+  assert.equal(clears, 4); const failedCount = failingRows.length;
+  callback(); failing.start(); assert.equal(failingRows.length, failedCount);
+
+  at = 0;
+  const failingExpiry = new ReaderEventLoopProbe(() => at, () => { throw Error('recorder'); });
+  failingExpiry.start(); at = 120000; assert.doesNotThrow(() => callback());
+  assert.equal(clears, 5, 'duration expiry releases the timer even if recording fails');
 } finally {
   globalThis.setInterval = oldSet;
   globalThis.clearInterval = oldClear;

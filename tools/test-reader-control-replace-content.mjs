@@ -1,3 +1,4 @@
+import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import * as morphScroll from '../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts';
 import * as presentation from '../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
@@ -79,11 +80,20 @@ owner.motionProgress = 1;
 owner.openEditor();
 owner.state.writeUncertain = true;
 assert.equal(owner.readyInput(), false, 'uncertain write disables resubmit');
-let reloads = 0;
-owner.onReload = async () => { reloads++; };
-owner.reload();
+const retainedDraft = owner.draft;
+owner.draft.name = '保留的原草稿';
+owner.state.writeOperationId = 'original-rule-operation';
+let reloads = 0, reloadedId;
+owner.onReload = async operationId => { reloads++; reloadedId = operationId; };
+owner.reload('retired-rule-operation');
+assert.equal(reloads, 0, 'retired original operation cannot reconcile a new intent');
+owner.reload('original-rule-operation');
 await new Promise(resolve => setImmediate(resolve));
-assert.equal(owner.layer, '', 'reload leaves potentially committed create draft for explicit review');
+assert.equal(owner.layer, 'editor', 'original-write reconciliation retains the potentially committed editor for explicit review');
+assert.strictEqual(owner.draft, retainedDraft, 'query never replaces or clears the original draft');
+assert.equal(owner.draft.name, '保留的原草稿');
+assert.equal(owner.readyInput(), false, 'a completed query callback alone cannot settle unknown');
+assert.equal(reloadedId, 'original-rule-operation');
 assert.equal(reloads, 1);
 owner.state.writeUncertain = false;
 owner.openImport();
@@ -152,9 +162,10 @@ owner.state.writeUncertain = false;
 owner.state.canonicalReloadRequired = false;
 owner.localPending = false;
 for (const call of actionCalls(source)) {
-  new Function(stripTypeScriptTypes(`${call};`)).call(owner);
+  new Function('operationId', stripTypeScriptTypes(`${call};`)).call(owner, owner.state.writeOperationId || '');
 }
-assert.equal(predicates.size, 9, 'save now belongs to the fixed editor footer, whose actual SDK guards are checked below');
+assert.equal(predicates.size, 8, 'both former reload actions now consume one keyed original-operation Builder; save belongs to the fixed SDK-tested editor footer');
+assert.equal((source.match(/this\.originalRecoveryAction\(\);/g) || []).length, 2, 'status and retained editor both consume the same original recovery actor');
 assert.equal(predicates.get('预览当前章节已保存规则')(), false);
 assert.equal(predicates.get('预览效果')(), true);
 owner.motionProgress = 1;
@@ -166,12 +177,12 @@ assert.equal(predicates.get('完整管理')(), false);
 for (const pendingKind of ['mutationPending', 'localPending']) {
   if (pendingKind === 'mutationPending') owner.state.mutationPending = true;
   else owner.localPending = true;
-  for (const label of ['预览当前章节已保存规则', '确认删除', '选择文件并导入', '取消', '重新加载核对', '重试预览']) {
+  for (const label of ['预览当前章节已保存规则', '确认删除', '选择文件并导入', '取消', '核对原规则操作', '重试预览']) {
     assert.equal(predicates.get(label)(), false, `${label} disables immediately during ${pendingKind}`);
   }
   owner.state.mutationPending = false;
   owner.localPending = false;
-  for (const label of ['预览当前章节已保存规则', '确认删除', '选择文件并导入', '取消', '重新加载核对', '重试预览']) {
+  for (const label of ['预览当前章节已保存规则', '确认删除', '选择文件并导入', '取消', '核对原规则操作', '重试预览']) {
     assert.equal(predicates.get(label)(), true, `${label} recovers after ${pendingKind}`);
   }
 }
@@ -188,8 +199,8 @@ const textSink = label => {
   chain.onClick = callback => { rendered.click = callback; return chain; };
   return chain;
 };
-const BuilderProbe = new Function('readerAppColor', 'Text', 'TOK_READ_PRIMARY', 'TextAlign', 'TOK_READ_ACTIVE_SOFT',
-  `${stripTypeScriptTypes(`class BuilderProbe { ${actionMethod} }`)}\nreturn BuilderProbe;`)(readerAppColor, textSink, '', { Center: 0 }, '');
+const BuilderProbe = new Function(...Object.keys(readerTypographyRoles), 'readerAppColor', 'Text', 'TOK_READ_PRIMARY', 'TextAlign', 'TOK_READ_ACTIVE_SOFT',
+  `${stripTypeScriptTypes(`class BuilderProbe { ${actionMethod} }`)}\nreturn BuilderProbe;`)(...Object.values(readerTypographyRoles), readerAppColor, textSink, '', { Center: 0 }, '');
 const gate = predicates.get('预览当前章节已保存规则');
 let clicks = 0;
 owner.motionProgress = 0;
@@ -247,7 +258,7 @@ for (const [label, field] of fields) {
   field.change('42');
   assert.equal(field.value(), '42', `${label}: second edit remains live`);
 }
-assert.match(source, /TextInput\(\{ text: value\(\), placeholder: '' \}\)/,
+assert.match(source, /ReaderFormField\(\{ specId: 'reader-replace-text',[\s\S]*?text: value\(\), placeholder: ''/,
   'input keeps its live value getter while leaving the already-labelled placeholder empty');
 assert.match(source, /ReaderControlSwitchTrack\(\{ value: value\(\) \}\)/);
 assert.match(source, /\.onClick\(\(\): void => this\.changeEditorFlag\(value, change\)\)/);
@@ -344,7 +355,7 @@ function checkMountedRuleListClip(componentSource = source) {
     `  @Builder\n  private ruleListClipProbe() {\n${subtree}\n  }\n  build() {`);
   const { owner: listOwner } = createReaderBuilderProbe(probeSource,
     ['ruleListClipProbe', 'ruleRow', 'ruleIcon', 'scopeSummary', 'frame', 'fullInput', 'quickInput', 'readyInput',
-      'textAction', 'statusContent', 'emptyStateMessage', 'listContentMinHeight', 'onFullDidScroll', 'nativeScrollDelta', 'sharedScrollTranslation', 'fullOnlyScrollTranslation',
+      'textAction', 'statusContent', 'originalRecoveryAction', 'emptyStateMessage', 'listContentMinHeight', 'onFullDidScroll', 'nativeScrollDelta', 'sharedScrollTranslation', 'fullOnlyScrollTranslation',
       'currentRule', 'currentRuleIndex', 'refreshRuleLookup', 'presentation', 'rowClip'],
     { ...geometry, ...morphScroll, ...motionDeps, FlexAlign: { Center: 'FlexAlign.Center' } });
   const rule = { id: 12, name: '规则名称', pattern: '原文', replacement: '替换', scope: '本书',
@@ -377,11 +388,11 @@ if (readerBuilderSdkAvailable) {
     assert.ok(source.includes(before), `mutation must replace real production expression: ${before}`);
     return source.replace(before, after);
   };
-  assert.throws(() => checkMountedRuleTypography(mutate('.fontSize(this.frame().nameSize)',
+  assert.throws(() => checkMountedRuleTypography(mutate('.fontSize(TYPE_READER_REPLACE_RULE_NAME.fontSizeFp)',
     '.fontSize(9 + 3 * this.frame().progress)')), /actual mounted rule-name Text stays 12/,
     'actual SDK observers reject reintroduced 9→12 font growth');
-  assert.throws(() => checkMountedRuleTypography(mutate('.fontSize(this.frame().nameSize)',
-    '.fontSize(this.frame().nameSize).scale({ x: 0.75 + 0.25 * this.frame().progress, y: 0.75 + 0.25 * this.frame().progress })')),
+  assert.throws(() => checkMountedRuleTypography(mutate('.fontSize(TYPE_READER_REPLACE_RULE_NAME.fontSizeFp)',
+    '.fontSize(TYPE_READER_REPLACE_RULE_NAME.fontSizeFp).scale({ x: 0.75 + 0.25 * this.frame().progress, y: 0.75 + 0.25 * this.frame().progress })')),
     /text transform/, 'a parent-approved font cannot conceal a glyph scale regression');
   assert.throws(() => checkMountedRuleTypography(mutate('.height(this.frame().rowHeight).clip(false)',
     '.height(this.frame().rowHeight).clip(true)')), /no blanket layout clip/,

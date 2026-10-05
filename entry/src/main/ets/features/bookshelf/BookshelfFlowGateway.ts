@@ -5,11 +5,11 @@ import {
   type ShelfBook,
 } from '../../app/ReaderCoreGateway';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
-import {
-  projectCommitReadback,
-  type CommitReadbackSummary,
-} from '../../app/ReaderOperationFacts';
+import type { CommitReadbackSummary, OperationFacts } from '../../app/ReaderOperationFacts';
+import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../app/ReaderPersistedReceiptProjection';
+import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { errorMessageOf } from '../../app/ErrorMessage';
+import { BookshelfRemovalGateway } from './BookshelfRemovalGateway';
 import {
   type LocalImportBatch,
   LocalBookImportGateway,
@@ -40,6 +40,7 @@ export type BookshelfImportOutcome = {
   batch: LocalImportBatch;
   shelf: BookshelfDataState | undefined;
   readback: CommitReadbackSummary;
+  operation: OperationFacts<BookshelfDataState>;
   refreshWarning?: string;
 };
 
@@ -59,7 +60,10 @@ function importConfirmation(batch: LocalImportBatch): 'confirmed' | 'unknown' | 
 
 export type BookshelfRemoveOutcome = {
   removed: boolean;
-  shelf: BookshelfDataState;
+  shelf: BookshelfDataState | undefined;
+  receipt: PersistedReceiptProjection<BookshelfDataState>;
+  /** Core ACK and retained-file cleanup are independent facts. */
+  cleanupWarning?: string;
 };
 
 export interface BookshelfRemovalTarget {
@@ -69,7 +73,9 @@ export interface BookshelfRemovalTarget {
 
 export type BookshelfRemoveBatchOutcome = {
   removedCount: number;
-  shelf: BookshelfDataState;
+  shelf: BookshelfDataState | undefined;
+  receipt: PersistedReceiptProjection<BookshelfDataState>;
+  cleanupWarning?: string;
 };
 
 /**
@@ -77,23 +83,25 @@ export type BookshelfRemoveBatchOutcome = {
  * deliberately a feature-local gateway rather than a reusable page engine.
  */
 export class BookshelfFlowGateway {
+  private readonly owner: ReaderRuntimeOwner;
   private readonly bookshelf: ReaderCoreGateway;
   private readonly localImport: LocalBookImportGateway;
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current(),
     private readonly filter: BookshelfFilter = { readingState: 'all', sourceKind: 'all' },
     private readonly background: boolean = false) {
+    this.owner = runtimeOwner;
     this.bookshelf = new ReaderCoreGateway(runtimeOwner);
     this.localImport = new LocalBookImportGateway(runtimeOwner);
   }
 
-  async load(): Promise<BookshelfDataState> {
+  async load(isCurrent?: () => boolean): Promise<BookshelfDataState> {
     if (!this.bookshelf.supportsShelfPages()) {
-      const shelf = await this.bookshelf.loadBookshelf({ sortBy: 'lastReadAt', sortDirection: 'descending' });
+      const shelf = await this.bookshelf.loadBookshelf({ sortBy: 'lastReadAt', sortDirection: 'descending' }, isCurrent);
       return this.classify(shelf, shelf.books.find((book: ShelfBook): boolean => book.currentChapterIndex !== undefined));
     }
     if (this.filter.readingState === 'all' && this.filter.sourceKind === 'all') {
-      const shelf = await this.loadPage(0);
+      const shelf = await this.loadPage(0, undefined, false, isCurrent);
       // Both Core projections use lastReadAt descending and the same
       // composite-key tie break. readingPosition proves a progress record;
       // currentChapterIndex alone can also come from legacy catalog metadata.
@@ -109,11 +117,11 @@ export class BookshelfFlowGateway {
       }
       // A truncated prefix or ambiguous catalog-only position cannot establish
       // the global record. Retain its summary instead of silently dropping it.
-      return this.classify(shelf, await this.bookshelf.loadContinueReading());
+      return this.classify(shelf, await this.bookshelf.loadContinueReading(isCurrent));
     }
     // A filtered page cannot establish the global continue-reading book.
     // Keep both requests concurrent and publish their original stable header.
-    const results = await Promise.all([this.loadPage(0), this.bookshelf.loadContinueReading()]);
+    const results = await Promise.all([this.loadPage(0, undefined, false, isCurrent), this.bookshelf.loadContinueReading(isCurrent)]);
     return this.classify(results[0], results[1]);
   }
 
@@ -201,8 +209,8 @@ export class BookshelfFlowGateway {
     return this.localImport.releaseUnusedSelections(selections);
   }
 
-  async importPreparedSelections(selections: LocalBookPreparation[]): Promise<BookshelfImportOutcome> {
-    const batch = await this.localImport.importPreparedSelections(selections);
+  async importPreparedSelections(selections: LocalBookPreparation[], onDispatched?: () => void): Promise<BookshelfImportOutcome> {
+    const batch = await this.localImport.importPreparedSelections(selections, onDispatched);
     // Always re-read after the picker returns. A completed batch can upsert an
     // existing book, and a cancelled batch must still expose the restored
     // Core-owned shelf instead of retaining a UI-side copy.
@@ -216,17 +224,25 @@ export class BookshelfFlowGateway {
     const confirmation = importConfirmation(batch);
     try {
       const shelf = await this.load();
+      const projection = projectPersistedReceipt<BookshelfDataState>({
+        confirmation, readback: 'succeeded', value: shelf, canRetry: confirmation === 'unknown',
+      });
       return {
         batch,
         shelf,
-        readback: projectCommitReadback(confirmation, 'succeeded'),
+        readback: projection.receipt,
+        operation: projection.facts,
       };
     } catch (error) {
       const cause = errorMessageOf(error);
+      const projection = projectPersistedReceipt<BookshelfDataState>({
+        confirmation, readback: 'failed', refreshError: cause, canRetry: true,
+      });
       return {
         batch,
         shelf: undefined,
-        readback: projectCommitReadback(confirmation, 'failed'),
+        readback: projection.receipt,
+        operation: projection.facts,
         refreshWarning: confirmation === 'confirmed' ?
           `导入已确认，书架刷新失败：${cause}` :
           `导入结果${confirmation === 'unknown' ? '待核对' : '未执行'}，书架刷新失败：${cause}`,
@@ -235,15 +251,61 @@ export class BookshelfFlowGateway {
   }
 
   async remove(sourceId: string, bookId: string): Promise<BookshelfRemoveOutcome> {
-    const removed = await this.bookshelf.removeBook(sourceId, bookId);
-    return { removed, shelf: await this.load() };
+    const evidence = new ReaderWriteEvidence();
+    let removed = false;
+    let issue: string | undefined;
+    try {
+      await new BookshelfRemovalGateway(this.owner).remove([{ sourceId, bookId }], false, evidence,
+        (count: number): void => { removed = count > 0; });
+    } catch (error) { issue = errorMessageOf(error); }
+    const receipt = await this.readAfterRemoval(evidence, issue);
+    return { removed, shelf: receipt.value, receipt,
+      cleanupWarning: evidence.confirmation() === 'confirmed' ? issue : undefined };
   }
 
   async removeMany(targets: BookshelfRemovalTarget[]): Promise<BookshelfRemoveBatchOutcome> {
-    const receipt = await this.bookshelf.removeBooks(targets);
-    // Re-read once after the batch rather than after every item. Core remains
-    // the source of truth and the UI receives one coherent final shelf.
-    return { removedCount: receipt.removedTargets.length, shelf: await this.load() };
+    const evidence = new ReaderWriteEvidence();
+    let removedCount = 0;
+    let issue: string | undefined;
+    try {
+      await new BookshelfRemovalGateway(this.owner).remove(targets, true, evidence,
+        (count: number): void => { removedCount = count; });
+    } catch (error) { issue = errorMessageOf(error); }
+    const receipt = await this.readAfterRemoval(evidence, issue);
+    return { removedCount, shelf: receipt.value, receipt,
+      cleanupWarning: evidence.confirmation() === 'confirmed' ? issue : undefined };
+  }
+
+  /** Read only: absence in a later read cannot manufacture a missing ACK. */
+  async reconcile(receipt: PersistedReceiptProjection<BookshelfDataState>, generation: number, current?: () => boolean):
+    Promise<PersistedReceiptProjection<BookshelfDataState>> {
+    try {
+      const shelf = await this.load(current);
+      return projectPersistedReceipt({ confirmation: receipt.receipt.confirmation,
+        readback: 'succeeded', value: shelf, generation,
+        canRetry: receipt.receipt.confirmation === 'unknown' });
+    } catch (error) {
+      return projectPersistedReceipt({ confirmation: receipt.receipt.confirmation,
+        readback: 'failed', value: receipt.value, refreshError: errorMessageOf(error),
+        generation, canRetry: true });
+    }
+  }
+
+  private async readAfterRemoval(evidence: ReaderWriteEvidence, issue?: string):
+    Promise<PersistedReceiptProjection<BookshelfDataState>> {
+    const confirmation = evidence.confirmation();
+    try {
+      const shelf = await this.load();
+      return projectPersistedReceipt({ confirmation, readback: 'succeeded', value: shelf,
+        canRetry: confirmation === 'unknown',
+        message: confirmation === 'confirmed' || issue === undefined ? undefined :
+          `${confirmation === 'unknown' ? '等待核对' : '尚未执行'}：${issue}` });
+    } catch (error) {
+      return projectPersistedReceipt({ confirmation, readback: 'failed',
+        refreshError: errorMessageOf(error), canRetry: true,
+        message: confirmation === 'confirmed' || issue === undefined ? undefined :
+          `${confirmation === 'unknown' ? '等待核对' : '尚未执行'}：${issue}` });
+    }
   }
 
   private classify(shelf: BookshelfState, continueReading: ShelfBook | undefined): BookshelfDataState {

@@ -1,3 +1,4 @@
+import { withReaderProgressProducerFixture } from './lib/reader-progress-producer-fixture.mjs';
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { observeReaderProgressOperation, reconcileReaderControlSelectionProgress } from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
@@ -14,10 +15,10 @@ assert.equal(reads, 0, 'an expired queued query is inert without releasing or ov
 
 const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 const Page = productionMotionMethods(file, ['beginPreparedPageTurnPersistence', 'admitPageTurnPersistenceOutcome', 'canPresentOrdinaryPage'],
-  { observeReaderProgressOperation: observe });
+  { observeReaderProgressOperation: observe, hilog: {warn(){}} });
 let completeWrite, completed = 0, dialogs = 0, current = true;
 const write = new Promise(resolve => { completeWrite = resolve; });
-const page = Object.assign(new Page(), { pageTurnSettlementGeneration: 7, pageTurnCommitStarted: false,
+const page = Object.assign(new Page(), { mounted:true,lifecycleToken:1,chapterSelectionToken:1,pageTurnSettlementGeneration: 7, pageTurnCommitStarted: false,
   activeGateway:()=>({canPersistPresentedProgress:()=>false}),
   persistPreparedPageTurn: () => write, isPreparedPageTurnCommitCurrent: () => current,
   cancelPageTurnSettlementDeadline() {}, getUIContext: () => ({ showAlertDialog: () => dialogs++ }),
@@ -34,7 +35,7 @@ for (const kind of ['ordinary','unchanged-migration','source-switch','control','
   const calls=[];
   const chapter={chapterIndex:2,...(kind==='migrated'?{positionMigration:{status:'migrated'}}:
     kind==='unchanged-migration'?{positionMigration:{status:'unchanged'}}:{})};
-  const owner=Object.assign(new Page(),{pageTurnSettlementGeneration:8,pageTurnCommitStarted:false,
+  const owner=Object.assign(new Page(),{mounted:true,lifecycleToken:1,chapterSelectionToken:1,pageTurnSettlementGeneration:8,pageTurnCommitStarted:false,
     sourceSwitchTransactionId:kind==='source-switch'?'transaction':undefined,
     pendingControlSelection:kind==='control'?{selectionToken:1}:undefined,
     activeGateway:()=>({canPersistPresentedProgress:()=>kind!=='legacy'}),isPreparedPageTurnCommitCurrent:()=>true,
@@ -49,17 +50,19 @@ for (const kind of ['ordinary','unchanged-migration','source-switch','control','
 }
 
 class Anchor { constructor(chapterIndex, chapterOffset, chapterProgress) { Object.assign(this, { chapterIndex, chapterOffset, chapterProgress }); } }
-const Continuous = productionMotionMethods(file, ['commitContinuousProgress', 'drainContinuousProgress',
-  'persistContinuousProgress', 'reconcileContinuousUnknownProgress'],
-  { CoreReadingAnchor: Anchor, hilog: { error() {} }, observeReaderProgressOperation: observe, reconcileReaderControlSelectionProgress });
+const Continuous = withReaderProgressProducerFixture(productionMotionMethods(file, ['commitContinuousProgress'],
+  { CoreReadingAnchor: Anchor, hilog: { error() {} }, observeReaderProgressOperation: observe, reconcileReaderControlSelectionProgress }));
 function continuous(gateway) {
-  return Object.assign(new Continuous(), { phase: 'ready', chapter: { chapterIndex: 2, chapterTitle: 'two' },
+  const subject = Object.assign(new Continuous(), { phase: 'ready', chapter: { chapterIndex: 2, chapterTitle: 'two' },
     chapterLayoutMap: { scalarCount: () => 100 }, chapterSelectionToken: 1, materializedChapterSelectionToken: 1,
     sourceId: 's', bookId: 'b', readerSettingsSnapshot: { navigationMode: 'continuous' }, continuousFragments: [{}],
     continuousVisibleScalar: 10, continuousProgressRevision: 1, continuousCommitPending: false,
     isMountedToken: () => true, coreLayout: () => ({}), onAutoPagePageCommitted() {}, drainRapidPageTurn() {},
     admitCommittedProgress(value) { this.lastCommittedProgress = value; }, errorMessage: e => e.message,
     activeGateway: () => gateway });
+  const capture = subject.continuousProgressDependencies.bind(subject);
+  subject.continuousProgressDependencies = lifecycle => ({ ...capture(lifecycle), observationTimeoutMs: 5 });
+  return subject;
 }
 {
   let releaseWrite, writes = 0;
@@ -78,10 +81,13 @@ function continuous(gateway) {
 for (const mode of ['unavailable', 'foreign']) {
   let writes = 0, reads = 0;
   const c = continuous({ runProgressCommitSerial: op => op(), resolveAndUpdateProgress: async () => { writes++; throw Error('reply lost'); },
-    loadProgress: async () => { reads++; if (mode === 'unavailable') throw Error('read failed');
-      return { kind: 'restored', progress: { bookId: 'b', chapterIndex: 8, chapterOffset: 90, updatedAt: 2 } }; } });
+    loadProgress: async () => { reads++; if (reads === 1) return {kind:'missing'};
+      if (mode === 'unavailable') throw Error('read failed');
+      return { kind: 'restored', progressRevision: 'foreign-operation:2',
+        progress: { bookId: 'b', chapterIndex: 8, chapterOffset: 90, updatedAt: 2 } }; } });
   await assert.rejects(c.commitContinuousProgress(1), /UNKNOWN|FOREIGN/);
   await assert.rejects(c.commitContinuousProgress(1), /UNKNOWN|FOREIGN/);
-  assert.equal(writes, 1, 'retry reads authority instead of repeating the unknown write'); assert.equal(reads, 2);
+  assert.equal(writes, 1, 'retry reads authority instead of repeating the unknown write');
+  assert.ok(reads >= 3, 'the real owner reads a baseline and retries unknown authority without dispatching');
 }
 console.log('production finite unknown observation, queued query expiry, late durable and continuous single drain: PASS');

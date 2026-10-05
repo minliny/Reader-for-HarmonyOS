@@ -10,6 +10,7 @@ const fullPanel = await readFile(new URL('ReaderControlTtsContent.ets', readingD
 const quickPanel = await readFile(new URL('ReaderTtsModulePanel.ets', readingDir), 'utf8');
 const controls = await readFile(new URL('ReaderControlPanel.ets', readingDir), 'utf8');
 const experience = await readFile(new URL('LocalReadingExperience.ets', readingDir), 'utf8');
+const configurationHost = await readFile(new URL('ReaderTtsConfigurationHost.ts', readingDir), 'utf8');
 const manager = await readFile(new URL('ReaderTtsConfigOverlay.ets', readingDir), 'utf8');
 const moduleManifest = await readFile(
   new URL('../entry/src/main/module.json5', import.meta.url),
@@ -124,7 +125,7 @@ for (const callback of ['onTtsToggle', 'onTtsStop', 'onTtsPrevious', 'onTtsNext'
 assert.doesNotMatch(controls, /module === 'tts' && this\.ttsState\.status === 'unavailable'\) \{\s*return/);
 assert.match(experience, /new ReaderHttpTtsGateway\(owner\)/);
 assert.match(experience, /private async loadTtsPresentationMetadata\(/);
-assert.match(experience, /httpGateway\.list\(\)\.then\(/);
+assert.match(experience, /this\.requireTtsConfigurationHost\(\)\.refreshMetadata\(\)/);
 assert.match(experience,
   /const metadata = this\.loadTtsPresentationMetadata\([\s\S]{0,400}const initialization = coordinator\.probeAvailability\(\)/,
   'optional HTTP engine and voice discovery must not gate first-play admission');
@@ -136,21 +137,22 @@ assert.match(experience, /page === 'moduleTts' \|\| page === 'fullTts'/,
   'TTS entry must retain the single-flight fallback while deferred ready preparation is pending');
 assert.match(experience, /this\.scheduleTtsPresentationWarmup\(\)/,
   'TTS presentation is prepared after durable first-page readiness, before first module entry');
-assert.match(experience, /gateway\.putConfig\(\{/);
-assert.match(experience, /await coordinator\.probeAvailability\(\)/);
+assert.match(experience, /this\.requireTtsConfigurationHost\(\)\.changeEngine\(engine\)/);
+assert.match(configurationHost, /this\.deps\.config\.putConfig\(update,/);
+assert.match(experience, /coordinator\.probeConfigurationAvailability\(isAdmitted\)/);
 assert.match(experience, /coordinator\.seek\(sliceIndex\)/);
 assert.match(experience, /isBackgroundPlaybackActive\(\)/,
   'lifecycle fallback may pause TTS only when the audio continuous-task lease is inactive');
 assert.doesNotMatch(experience, /if \(coordinator !== undefined\) \{\s*void coordinator\.pauseForBackground/,
   'background playback must not be unconditionally paused');
-assert.match(experience, /const merged: ReaderHttpTtsConfig = \{/);
-assert.match(experience, /if \(existing\?\.contentType !== undefined\) merged\.contentType = existing\.contentType/);
-assert.match(experience, /if \(existing\?\.enabledCookieJar !== undefined\) merged\.enabledCookieJar = existing\.enabledCookieJar/);
-assert.match(experience, /gateway\.put\(merged\)/);
+assert.match(configurationHost, /const merged: ReaderHttpTtsConfig = \{/);
+assert.match(configurationHost, /if \(existing\?\.contentType !== undefined\) merged\.contentType = existing\.contentType/);
+assert.match(configurationHost, /if \(existing\?\.enabledCookieJar !== undefined\) merged\.enabledCookieJar = existing\.enabledCookieJar/);
+assert.match(configurationHost, /this\.deps\.http\.put\(merged,/);
 assert.doesNotMatch(experience, /gateway\.put\(\{ \.\.\./);
-assert.match(experience, /await httpGateway\.delete\(id\)/);
-assert.match(manager, /TextInput\(\{ placeholder: '例如 Azure 语音'/);
-assert.match(manager, /TextInput\(\{ placeholder: 'https:\/\/api\.example\.com\/tts'/);
+assert.match(configurationHost, /await this\.deps\.http\.delete\(id,/);
+assert.match(manager, /ReaderFormField\(\{ specId: 'tts-manager-name',[\s\S]*?placeholder: '例如 Azure 语音'/);
+assert.match(manager, /ReaderFormField\(\{ specId: 'tts-manager-value',[\s\S]*?placeholder: 'https:\/\/api\.example\.com\/tts'/);
 assert.match(manager, /Text\('API 密钥'\)/);
 assert.match(manager, /private managerFooter\(\)/,
   'the Make modal keeps Cancel and Save outside the scrolling form body');

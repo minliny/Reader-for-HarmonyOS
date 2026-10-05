@@ -19,6 +19,12 @@ for (const scheme of ['day', 'night']) {
     for (const [width, isTablet] of [[320, false], [390, false], [736, true]]) {
       const { owner } = createReaderBuilderProbe(card, ['resultBody', 'displayIntro', 'coverWidth', 'coverHeight', 'coverErrorHandler'], {
         bookIntroText, bookAuthorLabel, ImageFit: { Cover: 'Cover' }, LengthMetrics: { vp: value => value }, ...tokens,
+        TYPE_SEARCH_RESULT_COVER_TITLE:{fontFamily:'ReaderNotoSerifSCBold',fontWeight:700,fontSizeFp:15,lineHeightFp:18.3},
+        TYPE_SEARCH_RESULT_TITLE:{fontFamily:'ReaderNotoSerifSCBold',fontWeight:700,fontSizeFp:15,lineHeightFp:18.3},
+        TYPE_SEARCH_RESULT_AUTHOR:{fontFamily:'ReaderNotoSansSCUIRegular',fontWeight:400,fontSizeFp:12,lineHeightFp:15},
+        TYPE_SEARCH_RESULT_CHAPTER:{fontFamily:'ReaderNotoSansSCUIRegular',fontWeight:400,fontSizeFp:11,lineHeightFp:13.75},
+        TYPE_SEARCH_RESULT_INTRO:{fontFamily:'ReaderNotoSansSCUIRegular',fontWeight:400,fontSizeFp:10,lineHeightFp:12},
+        TYPE_SEARCH_RESULT_TAG:{fontFamily:'ReaderInter',fontWeight:700,fontSizeFp:10,lineHeightFp:15},
       });
       const book = { title: '终宋', author: '作者', sourceId: 'source', sourceName: '实际书源', coverUrl: 'https://example.test/cover', intro: '正文简介', latestChapterTitle: '  ' };
       Object.assign(owner, { group: { book, coverUrl: book.coverUrl, variants: [book], sourceCount: 2, inBookshelf },
@@ -28,7 +34,7 @@ for (const scheme of ['day', 'night']) {
       const tags = () => nodes().filter(n => n.type === 'Text' && n.borderRadius === 4);
       assert.equal(tags().length, inBookshelf ? 3 : 2);
       for (const tag of tags()) {
-        assert.deepEqual([tag.fontFamily, tag.fontWeight, tag.fontSize, tag.lineHeight], ['ReaderInter', 'FontWeight.Bold', 10, 15]);
+        assert.deepEqual([tag.fontFamily, tag.fontWeight, tag.fontSize, tag.lineHeight], ['ReaderInter', 700, 10, 15]);
         assert.deepEqual(tag.padding, { left: 6, right: 6, top: 2, bottom: 2 });
         assert.equal(tag.backgroundColor, readerAppColor('TOK_PRIMARY_SOFT', scheme));
         assert.equal(tag.maxLines, 1);

@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const ts=createRequire(import.meta.url)(sdk+'/node_modules/typescript');
+const options={noEmit:true,skipLibCheck:true,moduleResolution:ts.ModuleResolutionKind.NodeJs,target:ts.ScriptTarget.ESNext,module:ts.ModuleKind.ESNext,types:[],baseUrl:'/',paths:{'@ohos.*':[sdk+'/../../api/@ohos.*.d.ts'],'@kit.*':[sdk+'/../../kits/@kit.*.d.ts']}};
+const source=new URL('../entry/src/main/ets/features/sync/WebDavCredentialStore.ts',import.meta.url).pathname;
+const projection=new URL('../entry/src/main/ets/features/sync/SyncOperationProjection.ts',import.meta.url).pathname;
+const program=ts.createProgram([source,projection],options);
+const failures=ts.getPreEmitDiagnostics(program).filter(d=>d.category===ts.DiagnosticCategory.Error);
+assert.deepEqual(failures.map(d=>(d.file?.fileName??'')+':'+ts.flattenDiagnosticMessageText(d.messageText,'\n')),[]);
+console.log('PASS actual Store/receipt projection installed SDK semantic compile: UUID, atomic Asset map, decoder, Preferences migration/queues and all typed receipt fields. Complete app ArkTS/HAP remains a separate gate.');

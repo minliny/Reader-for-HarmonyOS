@@ -1,3 +1,4 @@
+import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -32,8 +33,8 @@ async function fixture(){
  const original=appearance.setReaderAppearanceTheme({...appearance.createDefaultReaderAppearanceSnapshot(),fontSize:24},'warmNight','night');
  let appearanceDisk=copy(original);
  const appearanceStore=new ReaderAppearanceStore({load:async()=>copy(appearanceDisk),save:async x=>{trace.push('appearance');if(fail==='appearance'){fail='';throw Error('flush:appearance');}appearanceDisk=copy(x);}});
- const owner={getUIAbilityContext:()=>context,getAppearanceStore:()=>appearanceStore,request(){throw Error('reset must not issue Core commands');}};current=owner;
- const Runtime={ReaderRuntimeOwner:{current:()=>current}};
+ const owner={waitForPredecessorClose:async()=>{},getUIAbilityContext:()=>context,getAppearanceStore:()=>appearanceStore,request(){throw Error('reset must not issue Core commands');}};current=owner;
+ const Runtime={ReaderRuntimeOwner:runtimeOwnerIdentityProbe(()=>current)};
  const themeModule=compile('app/ReaderThemeHost.ts',{
  './ReaderRuntimeOwner':Runtime,'./ReaderWindowCoordinator':{ReaderWindowCoordinator:{updateAppChromeStyle(){}},ReaderWindowChromeStyle:class{}},
  '../features/reading/ReaderAppearanceStore':{ReaderAppearanceStore},'../features/reading/ReaderAppearanceState':appearance,
@@ -44,7 +45,8 @@ async function fixture(){
  const readingModule=compile('features/reading/ReaderSettingsGateway.ts',{'@ohos.data.preferences':{default:preferences},'../../app/ReaderRuntimeOwner':Runtime,'../../app/ReaderThemeHost':themeModule,'./ReaderSettingsState':settings});
  const ttsModule=compile('features/reading/ReaderTtsPreferencesGateway.ts',{'@ohos.data.preferences':{default:preferences},'../../app/ReaderRuntimeOwner':Runtime,'../../app/ReaderThemeHost':themeModule,'./ReaderTtsPreferencesState':tts});
  const credentials={saveBookshelfViewMode:async v=>{trace.push('mode');if(fail==='mode'){fail='';throw Error('flush:mode');}mode=v;}};
- const modules={'@ohos.data.preferences':{default:preferences},'../../app/ReaderRuntimeOwner':Runtime,'../../app/ReaderThemeHost':themeModule,'./SettingsGateway':settingModule,
+ const evidenceModule=compile('app/ReaderWriteEvidence.ts',{});
+ const modules={'../../app/ReaderWriteEvidence':evidenceModule,'@ohos.data.preferences':{default:preferences},'../../app/ReaderRuntimeOwner':Runtime,'../../app/ReaderThemeHost':themeModule,'./SettingsGateway':settingModule,
  '../reading/ReaderSettingsGateway':readingModule,'../reading/ReaderSettingsState':settings,'../reading/ReaderTtsPreferencesGateway':ttsModule,'../reading/ReaderTtsPreferencesState':tts,
  '../sync/WebDavCredentialStore':{WebDavCredentialStore:{instance:credentials}}};
  let Reset=compile('features/settings/LocalConfigurationReset.ts',modules).LocalConfigurationReset;
@@ -85,7 +87,8 @@ for(const failure of ['reader_configuration_reset_v1','reader_settings_v1','read
  let done=false;const b=other.update({autoCheckUpdate:false,tapBottomScrollTop:true,reduceMotion:true,crashLog:true},true).then(()=>done=true);
  await new Promise(r=>setImmediate(r));assert.equal(done,false,'separate settings instances serialize whole flush');gate.resolve();await Promise.all([a,b]);
  f.fail('reader_settings_v1');await assert.rejects(other.update(f.settingModule.createDefaultSettingsSnapshot(),true),/flush/);
- assert.equal((await f.appGateway.load()).reduceMotion,true,'failed preferences write restores acknowledged cache');
+ assert.equal((await f.appGateway.load()).reduceMotion,false,'failed preferences write retains accepted choice without old compensation');
+ assert.equal(f.appGateway.writeFacts().pendingReconciliation,true,'cached load cannot settle unknown flush');
 }
 {
  const f=await fixture();assert.deepEqual(await f.raceProbe(),[false,true],'empty startup probe cannot swallow explicit reset');await f.assertDefaults();
@@ -116,6 +119,6 @@ for(const failure of ['reader_configuration_reset_v1','reader_settings_v1','read
 const Page=productionMotionMethods(new URL('features/settings/SettingsPage.ets',base),['requestRestoreDefaults','performRestoreDefaults']);
 let dialog,calls=0;const page=Object.assign(new Page(),{mounted:true,resetRevision:0,resetInFlight:false,appThemeScheme:'day',getUIContext:()=>({showAlertDialog:d=>dialog=d}),onRestoreDefaults:async()=>{calls++;return true;}});
 page.requestRestoreDefaults();dialog.primaryButton.action();assert.equal(calls,0);assert.match(dialog.message,/保留书籍、书源、进度、书签/);
-dialog.secondaryButton.action();await new Promise(r=>setImmediate(r));assert.equal(calls,1);assert.equal(page.resetMessage,'已恢复界面与阅读设置');
+page.requestRestoreDefaults();dialog.secondaryButton.action();await new Promise(r=>setImmediate(r));assert.equal(calls,1);assert.equal(page.resetMessage,'已恢复界面与阅读设置');
 page.requestRestoreDefaults();page.mounted=false;dialog.secondaryButton.action();await new Promise(r=>setImmediate(r));assert.equal(calls,1,'dismissed page cannot start reset from stale dialog');
-console.log('PASS production configuration reset: confirmed scope, durable intent, six failure points, restart continuation, newer user intent ordering, owner replacement, shared queues, failed-cache rollback and stale-dialog guard. No Core data/credential mutation.');
+console.log('PASS production configuration reset: confirmed scope, durable intent, six failure points, restart continuation, newer user intent ordering, owner replacement, shared queues, accepted-vs-confirmed cache and stale-dialog guard. No Core data/credential mutation.');

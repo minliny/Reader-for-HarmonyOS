@@ -12,9 +12,9 @@ assert.match(buildRouteBlock,
   /this\.detailBook !== undefined && \(this\.route === 'detail' \|\|[\s\S]*!this\.readingSessionActive && \(this\.route === 'reading' \|\| this\.route === 'directory'\)/,
   'P0: a stale reading/directory route without a live ReaderShell must still render controllable book detail');
 
-assert.match(index, /onExit: \(\): void => this\.onReaderExited\(\)/,
+assert.match(index, /onExit: \(readerIdentity: string\): void => this\.onReaderExited\(readerIdentity\)/,
   'the reader exit callback must retain the normal serialized exit route');
-const exitStart = index.indexOf('private onReaderExited(): void');
+const exitStart = index.indexOf('private onReaderExited(readerIdentity: string): void');
 const exitEnd = index.indexOf('private closeDirectory(): void', exitStart);
 const exitBlock = index.slice(exitStart, exitEnd);
 assert.doesNotMatch(exitBlock, /pendingReadingFailureAction|openDetailSourceSwitch\(/,
@@ -46,10 +46,13 @@ const probeStart = index.indexOf('private async probeRemoteContentVerdict(');
 const probeEnd = index.indexOf('private remoteContentVerdictLabel(', probeStart);
 const probeBlock = index.slice(probeStart, probeEnd);
 assert.match(probeBlock,
-  /preferredChapterIndex\?: number[\s\S]*entry\.index === preferredChapterIndex/,
-  'explicit detail probes must honor their requested chapter');
-assert.match(probeBlock,
-  /await gateway\.loadChapter[\s\S]*this\.remoteContentVerdict = 'readable'[\s\S]*return readableEntries\[attempt\]\.index/,
+  /host\.probe\(this\.readingEntryScopeId, preferredChapterIndex, positionContext\)/,
+  'actual Index transfers the requested chapter and original position to its entry owner');
+const owner = readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingEntryHost.ts', import.meta.url), 'utf8');
+assert.match(owner, /preferredChapterIndex\?: number[\s\S]*entry\.index === preferredChapterIndex/,
+  'explicit owner probes must honor their requested chapter');
+assert.match(owner.slice(owner.indexOf('async probe('), owner.indexOf('replaceDirectory(')),
+  /await new RemoteReadingFlowGateway[\s\S]*if \(!probeCurrent\(\)\)[\s\S]*this\.setVerdict\('readable', scope, lease\); return entries\[attempt\]\.index/,
   'only an admitted chapter body may mark a detail probe readable');
 const terminalFailure = reader.slice(reader.indexOf('private fail('), reader.indexOf('private retryReading('));
 assert.match(terminalFailure, /this\.onReadingFailure\(this\.sourceId, this\.bookId, this\.failureCode, failureKind\)/);

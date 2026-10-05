@@ -1,3 +1,12 @@
+import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
+import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from './RssMutationRecoveryContract';
+import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { readerRecoveryView } from '../../app/ReaderRecoveryProjection';
+import { projectOperationFacts, type OperationFacts } from '../../app/ReaderOperationFacts';
+import type { RssSourceSnapshot } from './RssOrchestrator';
+import type { RssRouteOperationProjection } from './RssRouteOperationHost';
+import { TYPE_APP_SMALL_ACTION, TYPE_RSS_ENTRY_DESCRIPTION, TYPE_RSS_ENTRY_TITLE, TYPE_RSS_LINK_ACTION, TYPE_RSS_META, TYPE_RSS_SECTION_HEADING, TYPE_RSS_SOURCE_TITLE } from '../common/ReaderTypography';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
@@ -48,6 +57,14 @@ export struct RssSourceFeedPage {
   @Prop subscription: RssSubscription;
   @Prop items: RssItem[];
   @Prop isTablet: boolean;
+  @Prop operation: RssRouteOperationProjection<RssSourceSnapshot> | undefined = undefined;
+  @Prop readFacts: OperationFacts<RssSourceSnapshot> = projectOperationFacts<RssSourceSnapshot>({ phase: 'idle' });
+  @Prop presentationIdentity: string = '';
+  @Prop original: RssOriginalMutationProjection | undefined = undefined;
+  onReconcileOriginal: (expected: RssOriginalMutationIdentity) => void = (_expected: RssOriginalMutationIdentity): void => {};
+  onContinueOriginal: (expected: RssOriginalMutationIdentity) => void = (_expected: RssOriginalMutationIdentity): void => {};
+  onReconcile: (operation: RssRouteOperationProjection<RssSourceSnapshot>) => void = (_operation: RssRouteOperationProjection<RssSourceSnapshot>): void => {};
+  onRetryRead: (facts: OperationFacts<RssSourceSnapshot>) => void = (_facts: OperationFacts<RssSourceSnapshot>): void => {};
   onBack: () => void = (): void => {};
   onSelectItem: (item: RssItem) => void = (_item: RssItem): void => {};
   onRefresh: () => void = (): void => {};
@@ -64,6 +81,7 @@ export struct RssSourceFeedPage {
 
       Scroll() {
         Column({ space: TOK_SPACE_XS }) {
+          this.operationFeedback();
           this.sourceCard();
           this.sourceActions();
           this.entrySectionHeader();
@@ -101,6 +119,26 @@ export struct RssSourceFeedPage {
     return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), TOK_SPACE_LG);
   }
   @Builder
+  private operationFeedback() {
+    RssOriginalRecoverySurface({ original: this.original, presentationIdentity: this.presentationIdentity, scope: 'feed',
+      onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => this.onReconcileOriginal(expected),
+      onContinueOriginal: (expected: RssOriginalMutationIdentity): void => this.onContinueOriginal(expected) });
+    if (this.original?.blocked !== true) {
+    ReaderRecoveryNotice({ view: readerRecoveryView(this.operation?.projection, this.readFacts),
+      actionLabel: '重新读取', onReconcile: (generation: number): void => this.retryFeedback(generation) });
+    }
+  }
+
+  private retryFeedback(generation: number): void {
+    const operation = this.operation;
+    if (operation !== undefined && operation.projection.facts.generation === generation && operation.projection.facts.canRetry) {
+      this.onReconcile(operation);
+    } else if (this.readFacts.generation === generation && this.readFacts.canRetry) {
+      this.onRetryRead(this.readFacts);
+    }
+  }
+
+  @Builder
   private sourceCard() {
     Row({ space: TOK_SPACE_XS }) {
       Stack({ alignContent: Alignment.Center }) {
@@ -114,17 +152,17 @@ export struct RssSourceFeedPage {
       Column({ space: 3 }) {
         Text(this.subscription.title)
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(13)
+          .fontFamily(TYPE_RSS_SOURCE_TITLE.fontFamily)
+          .fontWeight(TYPE_RSS_SOURCE_TITLE.fontWeight)
+          .fontSize(TYPE_RSS_SOURCE_TITLE.fontSizeFp)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         Text(this.sourceSubtitle())
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(10)
+          .fontFamily(TYPE_RSS_META.fontFamily)
+          .fontWeight(TYPE_RSS_META.fontWeight)
+          .fontSize(TYPE_RSS_META.fontSizeFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -148,10 +186,16 @@ export struct RssSourceFeedPage {
     .borderRadius(8);
   }
 
+  private canRefresh(): boolean {
+    return (this.readFacts.fact === 'idle' || this.readFacts.fact === 'current' || this.readFacts.fact === 'empty') &&
+      this.operation?.projection.receipt.confirmation !== 'unknown' && this.operation?.projection.receipt.readback !== 'reading' &&
+      this.operation?.projection.receipt.fact !== 'confirmedRefreshFailed';
+  }
+
   @Builder
   private sourceActions() {
     Row({ space: 2 }) {
-      this.actionTarget('刷新', (this.appThemeScheme === 'night' ? $r('app.media.rss_refresh_theme_night') : $r('app.media.rss_refresh')), (): void => this.onRefresh());
+      this.actionTarget('刷新', (this.appThemeScheme === 'night' ? $r('app.media.rss_refresh_theme_night') : $r('app.media.rss_refresh')), (): void => { if (this.canRefresh()) this.onRefresh(); });
       this.actionTarget('编辑源', (this.appThemeScheme === 'night' ? $r('app.media.rss_edit_theme_night') : $r('app.media.rss_edit')), (): void => this.onEditSource());
     }
     .width('100%')
@@ -161,24 +205,7 @@ export struct RssSourceFeedPage {
 
   @Builder
   private actionTarget(label: string, icon: Resource, action: () => void) {
-    Stack({ alignContent: Alignment.Center }) {
-      Row({ space: 5 }) {
-        Image(icon).width(18).height(18);
-        Text(label)
-          .fontFamily('ReaderInter')
-          .fontWeight(800)
-          .fontSize(11)
-          .fontColor(readerAppColor('app.RssSourceFeedPage.actionTarget.fontColor.FF3F372F', this.appThemeScheme))
-          .maxLines(1);
-      }
-      .height(32)
-      .padding({ left: 9, right: 9 })
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor(readerAppColor('app.RssSourceFeedPage.ACTION_BG', this.appThemeScheme))
-      .borderRadius(999);
-    }
-    .height(44)
-    .onClick((): void => action());
+    ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-feed', label, icon, onAction: action });
   }
 
   @Builder
@@ -186,27 +213,14 @@ export struct RssSourceFeedPage {
     Row() {
       Text('全部条目')
         .layoutWeight(1)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(15)
+        .fontFamily(TYPE_RSS_SECTION_HEADING.fontFamily)
+        .fontWeight(TYPE_RSS_SECTION_HEADING.fontWeight)
+        .fontSize(TYPE_RSS_SECTION_HEADING.fontSizeFp)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1);
-      Row({ space: 5 }) {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.rss_manage_theme_night') : $r('app.media.rss_manage'))).width(16).height(16);
-        Text('源操作')
-          .fontFamily('ReaderInter')
-          .fontWeight(900)
-          .fontSize(11)
-          .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
-          .maxLines(1);
-      }
-      .height(30)
-      .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-      .borderRadius(999)
-      .responseRegion({ x: 0, y: -7, width: '100%', height: 44 })
-      .onClick((): void => this.onSourceOperations());
+      ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'rss-source-operations', label: '源操作',
+        icon: this.appThemeScheme === 'night' ? $r('app.media.rss_manage_theme_night') : $r('app.media.rss_manage'),
+        onAction: (): void => this.onSourceOperations() });
     }
     .width('100%')
     .height(34)
@@ -248,28 +262,28 @@ export struct RssSourceFeedPage {
       Column({ space: 3 }) {
         Text(item.title)
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(13)
-          .lineHeight(16.25)
+          .fontFamily(TYPE_RSS_ENTRY_TITLE.fontFamily)
+          .fontWeight(TYPE_RSS_ENTRY_TITLE.fontWeight)
+          .fontSize(TYPE_RSS_ENTRY_TITLE.fontSizeFp)
+          .lineHeight(TYPE_RSS_ENTRY_TITLE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         Text(this.itemMeta(item))
           .width('100%')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(10)
+          .fontFamily(TYPE_RSS_META.fontFamily)
+          .fontWeight(TYPE_RSS_META.fontWeight)
+          .fontSize(TYPE_RSS_META.fontSizeFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
         if (item.description !== undefined && item.description.trim().length > 0) {
           Text(item.description)
             .width('100%')
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(11)
-            .lineHeight(15.95)
+            .fontFamily(TYPE_RSS_ENTRY_DESCRIPTION.fontFamily)
+            .fontWeight(TYPE_RSS_ENTRY_DESCRIPTION.fontWeight)
+            .fontSize(TYPE_RSS_ENTRY_DESCRIPTION.fontSizeFp)
+            .lineHeight(TYPE_RSS_ENTRY_DESCRIPTION.lineHeightFp as number)
             .fontColor(readerAppColor('app.RssSourceFeedPage.entryRow.fontColor.FF6F655D', this.appThemeScheme))
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis });

@@ -45,6 +45,12 @@ assert.doesNotMatch(cache, /writeSync|openSync|renameSync/);
 assert.doesNotMatch(cache, /pruneUnreferencedResources/,
   'publishing a manifest does not own reclamation of active or old-version resources');
 assert.match(cache, /captureValidity[\s\S]*bookClearGenerations[\s\S]*finishPendingClear/);
+assert.doesNotMatch(cache, /removeTree\(/,
+  'text cache clear must not retain a blanket directory deletion path');
+assert.match(cache, /text-identity\.json/,
+  'partial text writes require ownership distinct from offline completion');
+assert.match(cache, /manga-identity\.json[\s\S]*manifest-script-bgra-v2\.json/,
+  'clear must recognize the actual upstream manga storage formats');
 assert.match(owner, /this\.state = 'closing';\s*this\.readingImageDiskCache\.close\(\)/);
 assert.doesNotMatch(cache, /bodyBase64|PixelMap/,
   'persistent offline image storage must contain bounded bytes, not protocol Base64 or native handles');

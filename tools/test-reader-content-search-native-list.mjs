@@ -4,6 +4,7 @@ import { searchListFixture, searchListRows, searchListSources, searchListTouches
   searchListSource, searchListDependencies, assertSearchListBuilderGeometry } from './lib/reader-content-search-list-probe.mjs';
 import * as list from '../entry/src/main/ets/features/reading/ReaderControlSearchListProjection.ts';
 import * as scroll from '../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts';
+import { readerContentSearchFieldProbe } from './lib/reader-content-search-field-probe.mjs';
 const near = (a, b, why) => assert.ok(Math.abs(a - b) < 1e-6, `${why}: ${a} != ${b}`);
 const { ReaderContentSearchDataSource } = searchListDependencies;
 assertSearchListBuilderGeometry();
@@ -141,6 +142,18 @@ for (const count of [50, 2000, 10000]) {
   f.owner.onResultScrollDisappear();
 }
 const fontSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlSearchContent.ets', import.meta.url), 'utf8');
-assert.match(fontSource, /height\(14\)\.padding\(\{ left: 2, right: 2, top: 0, bottom: 0 \}\)\.borderRadius\(0\)/);
+const fieldProbe=readerContentSearchFieldProbe(fontSource),field=fieldProbe.owner;
+Object.assign(field,{query:'保留全文搜索',motionProgress:1,availableWidth:338,availableHeight:666});
+field.searchField();
+const nativeInput=fieldProbe.nodes(field).find(node=>node.type==='TextInput');
+assert.ok(nativeInput,'actual parent→shared field→native TextInput');
+assert.equal(nativeInput.height,14);assert.deepEqual(nativeInput.padding,{left:2,right:2,top:0,bottom:0});assert.equal(nativeInput.borderRadius,0);
+assert.equal(nativeInput.create.controller,field.inputController);
+assert.ok(fontSource.includes("specId: 'reader-content-search'"));
+assert.throws(()=>{
+  const wrong=readerContentSearchFieldProbe(fontSource.replace("specId: 'reader-content-search'","specId: 'rules-input'"));
+  Object.assign(wrong.owner,{query:'原全文搜索',motionProgress:1,availableWidth:338,availableHeight:666});wrong.owner.searchField();
+  assert.equal(wrong.nodes(wrong.owner).find(node=>node.type==='TextInput').height,14);
+},/strictly equal/,'a wrong shared input variant cannot satisfy the original native geometry');
 console.log(JSON.stringify({ contract: 'PH90 native List', reports, sdkLazyProviderVerified: true,
   boundary: 'SDK bindings, policy and paint equations passed; actual Ace range admission and pixel timing require VM validation' }));

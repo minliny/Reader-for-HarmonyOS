@@ -1,3 +1,4 @@
+import { harmonyTtsAudioSessionLease } from './HarmonyTtsAudioSessionLease';
 import { textToSpeech } from '@kit.CoreSpeechKit';
 import { audio } from '@kit.AudioKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -71,9 +72,11 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   private listenerOwner: string | undefined = undefined;
   private currentRequestId: string | undefined = undefined;
   private audioListenersInstalled: boolean = false;
-  private audioSessionActive: boolean = false;
-  private audioSessionAllowMixing: boolean | undefined = undefined;
+  private readonly audioSessionLease = harmonyTtsAudioSessionLease;
+  private readonly audioSessionOwner: string = this.audioSessionLease.createOwner('system');
   private closed: boolean = false;
+  private speakGeneration: number = 0;
+  private engineGeneration: number = 0;
 
   constructor() {
     this.audioSessionDeactivatedCallback = (_event: audio.AudioSessionDeactivatedEvent): void => {
@@ -129,38 +132,20 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
 
   async activateAudioSession(allowMixing: boolean): Promise<void> {
     this.assertOpen();
-    let audioSessionManager = this.audioSessionManager;
-    if (audioSessionManager === undefined) {
-      audioSessionManager = audio.getAudioManager().getSessionManager();
-      this.audioSessionManager = audioSessionManager;
-    }
     this.installAudioListeners();
-    if (!this.audioSessionActive || this.audioSessionAllowMixing !== allowMixing) {
-      audioSessionManager.setAudioSessionScene(audio.AudioSessionScene.AUDIO_SESSION_SCENE_MEDIA);
-      const concurrencyMode = allowMixing
-        ? audio.AudioConcurrencyMode.CONCURRENCY_MIX_WITH_OTHERS
-        : audio.AudioConcurrencyMode.CONCURRENCY_PAUSE_OTHERS;
-      await audioSessionManager.activateAudioSession({ concurrencyMode });
-      this.audioSessionActive = true;
-      this.audioSessionAllowMixing = allowMixing;
-    }
+    await this.audioSessionLease.activate(this.audioSessionOwner, allowMixing);
+    this.assertOpen();
   }
 
   async deactivateAudioSession(): Promise<void> {
-    if (!this.audioSessionActive) return;
-    const audioSessionManager = this.audioSessionManager;
-    if (audioSessionManager === undefined) return;
-    try {
-      await audioSessionManager.deactivateAudioSession();
-    } finally {
-      this.audioSessionActive = false;
-      this.audioSessionAllowMixing = undefined;
-    }
+    await this.audioSessionLease.deactivate(this.audioSessionOwner);
   }
 
   async speak(request: ReaderTtsHostSpeakRequest): Promise<void> {
     this.assertSpeakRequest(request);
+    const generation = ++this.speakGeneration;
     const engine = await this.ensureEngine(request.language, request.person);
+    if (this.closed || generation !== this.speakGeneration) return;
     this.currentRequestId = request.requestId;
     const params: textToSpeech.SpeakParams = {
       requestId: request.requestId,
@@ -215,6 +200,8 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   }
 
   async stop(): Promise<void> {
+    this.speakGeneration += 1;
+    this.engineGeneration += 1;
     const engine = this.engine;
     this.currentRequestId = undefined;
     if (engine === undefined) return;
@@ -230,6 +217,8 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
+    this.speakGeneration += 1;
+    this.engineGeneration += 1;
     this.currentRequestId = undefined;
     this.listener = undefined;
     const engine = this.engine;
@@ -264,6 +253,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
       this.engineRequestedPerson === person) {
       return this.engine;
     }
+    const generation = ++this.engineGeneration;
     const previous = this.engine;
     this.engine = undefined;
     this.engineRequestedLanguage = undefined;
@@ -289,17 +279,26 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
     try {
       engine = await this.createEngine(language, person);
     } catch (error) {
+      if (this.closed || generation !== this.engineGeneration) {
+        throw new Error('Reader system TTS engine initialization retired');
+      }
       if (language === DEFAULT_LANGUAGE && person === DEFAULT_PERSON) throw error;
       this.logError('requested system TTS voice failed; falling back to default', error);
       effectiveLanguage = DEFAULT_LANGUAGE;
       effectivePerson = DEFAULT_PERSON;
       engine = await this.createEngine(effectiveLanguage, effectivePerson);
     }
-    engine.setListener(new EngineSpeakListener((event: ReaderTtsHostEvent): void => this.emit(event)));
-    if (this.closed) {
-      engine.shutdown();
-      throw new Error('Reader system TTS Host closed during engine initialization');
+    // A stopped/retired creation must never replace or orphan a successor's
+    // active platform object. Shut down only the object this creation owns.
+    if (this.closed || generation !== this.engineGeneration) {
+      try { engine.shutdown(); } catch (error) {
+        this.logError('retired system TTS engine shutdown failed', error);
+      }
+      throw new Error('Reader system TTS engine initialization retired');
     }
+    engine.setListener(new EngineSpeakListener((event: ReaderTtsHostEvent): void => {
+      if (this.engine === engine) this.emit(event);
+    }));
     this.engine = engine;
     this.engineRequestedLanguage = language;
     this.engineRequestedPerson = person;

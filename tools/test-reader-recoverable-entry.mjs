@@ -260,7 +260,7 @@ for(const local of [false,true])for(const switchFailure of [false,true]) {
   for(const current of [false,true])for(const chromeActive of [false,true]) {
     const owner=Object.assign(new WindowReader(),{isReaderIdentityCurrent:()=>current,
       windowChromeActive:chromeActive,windowChromeOverlayActive:false,appearanceSnapshot:{activeTheme:'day'},
-      mounted:true,lifecycleToken:1,exitRequested:false,controlsPresentedForWindow:()=>false,
+      mounted:true,lifecycleToken:1,exitRequested:false,readingRecordHost:{retire(){}},controlsPresentedForWindow:()=>false,
       syncVolumeKeyPolicy:()=>calls.push('volume-policy'),windowPolicyFor:()=>({}),readerSettingsSnapshot:{},
       bookTurnSession:{setEventListener:()=>calls.push('dispose-turn')},chapterWindow:{clear:()=>calls.push('dispose-window')},
       quickSearchPublication:{cancel(){}},autoPageCoordinator:{dispose(){}},

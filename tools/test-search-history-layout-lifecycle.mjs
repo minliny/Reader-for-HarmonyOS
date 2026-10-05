@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
@@ -23,6 +24,7 @@ function check(name, fn) {
 function fixture(history, { width = 0, tablet = false, kind = 'initial', historyStatus,
   measureVp = text => text.length * 13 } = {}) {
   let owner;
+  const controls=foundationControls();
   const measurements = [];
   const actions = [];
   // Flex is only a native attribute recorder. The SDK transforms the actual
@@ -37,11 +39,11 @@ function fixture(history, { width = 0, tablet = false, kind = 'initial', history
   } });
   ({ owner } = createReaderBuilderProbe(source,
     ['stateContent', 'searchHeaderHeight', 'searchBottomInset', 'sourceRequiredReason', 'initialContent', 'sourceRequiredContent', 'sourceLoadErrorContent',
-      'primaryPill', 'secondaryPill', 'refreshVisibleResults', 'publishVisibleGroups'],
-    { Flex, FlexWrap: enumValues('FlexWrap'), FlexDirection: enumValues('FlexDirection'), readerFloatingBarBottomInset,
+      'operation', 'retryOperation', 'primaryPill', 'secondaryPill', 'refreshVisibleResults', 'publishVisibleGroups'],
+    { ...controls.dependencies, Flex, FlexWrap: enumValues('FlexWrap'), FlexDirection: enumValues('FlexDirection'), readerFloatingBarBottomInset,
       ReaderWindowCoordinator: { metrics: () => ({ systemInsets: {}, cutoutInsets: {}, gestureInsets: {}, navigationInsets: {} }) },
       FlexAlign: enumValues('FlexAlign'), TOK_BORDER_W: 1, TOK_SPACE_XS: 8,
-      TOK_SPACE_CARD_PADDING: 12, TOK_SPACE_ROW_BLOCK: 4 }));
+      TOK_SPACE_CARD_PADDING: 12, TOK_SPACE_ROW_BLOCK: 4 },controls.hooks));
   Object.assign(owner, {
     presentation: kind === 'sourceRequired' ? { kind, reason: 'noSources', history, historyStatus } : { kind, history, historyStatus },
     isTablet: tablet,
@@ -64,7 +66,7 @@ function fixture(history, { width = 0, tablet = false, kind = 'initial', history
   });
   owner.refreshVisibleResults();
   owner.stateContent();
-  return { owner, measurements, actions, nodes: () => [...owner.nodes.values()],
+  return { owner, measurements, actions, nodes: () => controls.nodes(owner),
     areas: () => [...owner.nodes.values()].filter(node => typeof node.onAreaChange === 'function') };
 }
 function dispatchArea(f, outerWidth) {
@@ -150,7 +152,7 @@ check('history loading, failure and retry render independently on every entry su
     assert.ok(!empty.nodes().some(node => /搜索历史.*失败|正在读取搜索历史/.test(String(node.create ?? ''))));
   }
   const index = readFileSync(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'utf8');
-  assert.match(index, /onRetryHistory:.*getSearchOrchestrator\(\)\.retryHistory\(\)/);
+  assert.match(index, /onRetryHistory:.*isCurrentSearchPresentation\(generation, owner, mounting, host\).*host\.retryHistory\(\)/);
 });
 check('native focus waits for layout and a removed or returning page never steals it',()=>{
   const path=new URL('../entry/src/main/ets/features/common/ReaderSearchField.ets',import.meta.url);

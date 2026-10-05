@@ -96,7 +96,8 @@ assert.match(sourceManagement,
 assert.match(sourceManagement,
   /return Math\.max\(0, \(this\.contentFrame\(\)\.width - 20\) \/ 2\)/,
   'tablet source filters must share the remaining row width');
-assert.match(sourceManagement, /\.width\(this\.statusChipWidth\(width\)\)/);
+assert.match(sourceManagement, /availableWidth: this\.filterControlWidth\(\)/, 'shared finite status buttons consume the original measured filter frame');
+assert.doesNotMatch(sourceManagement, /private statusChipWidth\(/, 'responsive button formula has one shared producer');
 
 assert.match(sync, /@State private viewportWidth: number = 0/);
 assert.match(sync,
@@ -107,10 +108,15 @@ assert.match(sync, /right: this\.contentFrame\(\)\.right/);
 
 assert.match(localImport, /@State private viewportWidth: number = 0/);
 assert.match(localImport,
-  /new SurfaceWidthSpec\([\s\S]*LOCAL_IMPORT_PANEL_MAX_WIDTH,[\s\S]*LOCAL_IMPORT_EDGE_GAP,[\s\S]*LOCAL_IMPORT_EDGE_GAP/,
-  'all local-import states must resolve their 350vp role with 20vp design gaps');
-assert.equal((localImport.match(/\.width\(this\.panelFrame\(\)\.width\)/g) ?? []).length, 4,
-  'selection, importing, result and retained shell must share the same clamp');
+  /this\.surfaceSpec\(\)\.maxWidth,[\s\S]*this\.surfaceSpec\(\)\.edgeGap,[\s\S]*this\.surfaceSpec\(\)\.edgeGap/,
+  'all local-import states must resolve their shared dialog frame role');
+assert.match(localImport, /resolveDialogSpec\('local-import'\)/,
+  'local import delegates its outer frame to the shared dialog registry');
+assert.equal((localImport.match(/(?:\.width\(this\.panelFrame\(\)\.width\)|(?:surfaceWidth|width): this\.panelFrame\(\)\.width)/g) ?? []).length, 4,
+  'selection, importing, result and retained shell pass the same original clamp through their actual bounded surface input');
+const boundedImportSurface=read('entry/src/main/ets/features/common/ReaderBoundedSurface.ets');
+assert.match(boundedImportSurface,/new ReaderBoundedFrameModifier\(this\.specId, this\.surfaceWidth, this\.surfaceHeight,/,'actual common frame consumes delegated width and height');
+assert.match(boundedImportSurface,/\.width\(this\.width\)/,'actual frame modifier applies delegated width to the native surface');
 assert.match(localImport,
   /padding\(\{ left: this\.panelFrame\(\)\.left, right: this\.panelFrame\(\)\.right \}\)/);
 
@@ -176,6 +182,9 @@ assert.match(dialogSurface, /return this\.resolvedFrame\(\)\.width/,
 assert.match(dialogSpecs, /'shelf-group': new DialogSurfaceSpec\(\{[\s\S]*?widthPercent: 75/);
 assert.match(dialogSpecs, /'shelf-group': new DialogSurfaceSpec\(\{[\s\S]*?padding: 20, borderRadius: 20/);
 assert.match(dialogSpecs, /'shelf-group': new DialogSurfaceSpec\(\{[\s\S]*?backgroundRole: 'TOK_SURFACE_SOLID'/);
+assert.match(dialogSpecs, /'local-import': new DialogSurfaceSpec\(\{[\s\S]*?maxWidth: 350/);
+assert.match(dialogSpecs, /'local-import': new DialogSurfaceSpec\(\{[\s\S]*?edgeGap: 20/);
+assert.match(dialogSpecs, /'local-import': new DialogSurfaceSpec\(\{[\s\S]*?borderRadius: 20/);
 assert.match(dialogSurface, /spec\.widthPercent > 0[\s\S]*?\$\{spec\.widthPercent\}%/,
   'the shared surface resolves a percentage-width spec directly');
 assert.match(indexPage, /ReaderDialogSurface\(\{\s*specId: 'shelf-group'/,

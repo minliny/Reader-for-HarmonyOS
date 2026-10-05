@@ -1,3 +1,4 @@
+import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
@@ -6,14 +7,14 @@ import * as registry from '../entry/src/main/ets/features/common/ReaderThemeRegi
 import * as appearance from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
 import {ReaderAppearanceStore} from '../entry/src/main/ets/features/reading/ReaderAppearanceStore.ts';
 const source=readFileSync(new URL('../entry/src/main/ets/app/ReaderThemeHost.ts',import.meta.url),'utf8');
-const storage=new Map(),chrome=[];
-const deps={...selection,...registry,...appearance,ReaderAppearanceStore,AppStorage:{setOrCreate:(k,v)=>storage.set(k,v)},
+const storage=new Map(),chrome=[];let currentOwner;
+const deps={ReaderRuntimeOwner:runtimeOwnerIdentityProbe(()=>currentOwner),...selection,...registry,...appearance,ReaderAppearanceStore,AppStorage:{setOrCreate:(k,v)=>storage.set(k,v)},
  ReaderWindowChromeStyle:class{constructor(...values){this.values=values}},ReaderWindowCoordinator:{updateAppChromeStyle:value=>chrome.push(value)}};
 const body=stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm,''));
 const Host=new Function(...Object.keys(deps),body.replace('export class','class')+';return ReaderThemeHost;')(...Object.values(deps));
 function owner(initial=appearance.createDefaultReaderAppearanceSnapshot()){
  const disk={value:initial};const store=new ReaderAppearanceStore({load:async()=>disk.value,save:async value=>{disk.value=value}});
- return {getAppearanceStore:()=>store,store,disk};
+ currentOwner={waitForPredecessorClose:async()=>{},getAppearanceStore:()=>store,store,disk};return currentOwner;
 }
 function deferred(){let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return {promise,resolve,reject};}
 const first=owner();await Host.install(first,'day');

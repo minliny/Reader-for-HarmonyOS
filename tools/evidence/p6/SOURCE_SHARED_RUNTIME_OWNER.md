@@ -1,0 +1,9 @@
+# Source management shared runtime owner
+
+Production candidate preserves the existing Source list, typed transient admission retry, cookie cleanup and per-item import admission. One finite SourceOrchestrator is retained per original ReaderRuntimeOwner. An Index presentation binds one explicit identity and current predicate; getters do not reattach. Matching detach cannot retire a newer presentation. Queued business writes remain owned by their original runtime, while picker/login/read entry and every UI publication remain scoped to the original presentation. Dispatch evidence is marked by the actual runtime onDispatch hook, after its readiness/current checks.
+
+Unknown original source writes block later management writes. Unknown first document item stops before another item; a later source.list cannot turn an unknown ACK into confirmed. A confirmed late toggle survives same-runtime page reconstruction and is reconciled through a new current read. UI callback exceptions cannot undo business ACKs.
+
+Validation: test-source-runtime-owner-closure executes the actual Host/Orchestrator/Gateway/fact methods with controlled runtime seams (six lifecycle/dispatch/unknown/import scenarios). Original book-source-import, source-host-wiring and source-settings-receipt-consumers pass, preserving original JSON/per-item/5000 entry admission and actual SDK receipt propagation. Earlier failures in these fixtures were recorded at /private/tmp/*-source-warm-before-20261003.log; migrated request seams now execute actual canDispatch/onDispatch options.
+
+Not closed by this candidate: Index physical callback capture is a separate consumer slice. Ordinary Source management still needs the finite Core typed update/delete variants and the existing Rules atomic intent/exact receipt recovery for cold restart. No SDK/HAP/VM or cold recovery acceptance is claimed here.

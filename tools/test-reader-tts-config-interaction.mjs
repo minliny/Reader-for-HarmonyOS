@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { ReaderTtsAudioSessionLease } from '../entry/src/main/ets/app/ReaderTtsAudioSessionLease.ts';
 import * as choices from '../entry/src/main/ets/features/reading/ReaderTtsConfigOptions.ts';
 import * as state from '../entry/src/main/ets/features/reading/ReaderTtsState.ts';
 import { readerControlUnit } from '../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts';
@@ -125,21 +126,25 @@ menu.aboutToAppear(); menu.aboutToDisappear();
 const Overlay=productionMotionMethods(file('reading/ReaderTtsConfigOverlay.ets'),
   ['stopPreview','choose','aboutToDisappear','onIdentityChanged']);
 let complete, closed=[];
+const busyChanges=[];
 const overlay=Object.assign(new Overlay(),{mounted:true,generation:0,previewGeneration:0,onPreviewStop(){},busy:false,selectionId:'engine:1',choices:[{id:'system',label:'系统'}],
-  onChoose:()=>new Promise(resolve=>complete=resolve),onClose:id=>closed.push(id)});
+  onChoose:()=>new Promise(resolve=>complete=resolve),onBusyChange:busy=>busyChanges.push(busy),onClose:id=>closed.push(id)});
 overlay.choose('system'); overlay.choose('system'); overlay.selectionId='voice:2'; overlay.onIdentityChanged();
+assert.deepEqual(busyChanges,[false],'replaced selection releases the parent content-cover gate');
 complete(); await tick(); assert.deepEqual(closed,[],'old completion cannot close a newer menu');
 overlay.onChoose=async()=>{throw new Error('切换失败');}; overlay.choose('system'); await tick();
 assert.equal(overlay.errorText,'切换失败'); assert.equal(overlay.busy,false);
+assert.deepEqual(busyChanges,[false],'choice transaction does not own the manager content-cover callback');
 
 // Real adapter methods must reapply changed audio strategy while avoiding
 // repeated activation for identical policy; this is not platform audio proof.
-const audio={AudioSessionScene:{AUDIO_SESSION_SCENE_MEDIA:1},AudioConcurrencyMode:{CONCURRENCY_MIX_WITH_OTHERS:1,CONCURRENCY_PAUSE_OTHERS:0}};
 for(const name of ['HarmonySystemTtsHost','HarmonyHttpTtsHost']) {
-  const Host=productionMotionMethods(new URL(`../entry/src/main/ets/app/${name}.ts`,import.meta.url),['activateAudioSession'],{audio});
-  const calls=[]; const host=Object.assign(new Host(),{audioSessionActive:false,assertOpen(){},installAudioListeners(){},
-    audioSessionManager:{setAudioSessionScene(){},async activateAudioSession(options){calls.push(options.concurrencyMode);}}});
+  const Host=productionMotionMethods(new URL(`../entry/src/main/ets/app/${name}.ts`,import.meta.url),['activateAudioSession']);
+  const calls=[];
+  const lease=new ReaderTtsAudioSessionLease({async activate(mix){calls.push(mix);},async deactivate(){}});
+  const host=Object.assign(new Host(),{assertOpen(){},installAudioListeners(){},audioSessionLease:lease,
+    audioSessionOwner:lease.createOwner(name)});
   await host.activateAudioSession(false); await host.activateAudioSession(false); await host.activateAudioSession(true);
-  assert.deepEqual(calls,[0,1]);
+  assert.deepEqual(calls,[false,true]);
 }
 console.log('PASS TTS config interaction: real Builder callbacks, choices, empty states, input gates, slider commits, draft races, stale overlays and audio strategy adapter methods; VM/native audio remain separate.');

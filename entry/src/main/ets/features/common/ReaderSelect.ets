@@ -1,3 +1,4 @@
+import { TYPE_SELECT_LIBRARY_VALUE } from './ReaderTypography';
 import { readerAppColor } from './ReaderThemeRegistry';
 import { registerReaderFonts } from './ReaderFonts';
 import {
@@ -88,8 +89,8 @@ export struct ReaderSelect {
   @Builder
   private appearanceLibraryTrigger() {
     Row({ space: 6 }) {
-      Text(this.value).layoutWeight(1).fontFamily('ReaderNotoSansSCUIRegular').fontSize(11).lineHeight(15)
-        .fontWeight(FontWeight.Regular).fontColor(readerAppColor('app.ReaderSelect.appearanceLibraryTrigger.fontColor.FF332C25', this.appThemeScheme)).maxLines(1)
+      Text(this.value).layoutWeight(1).fontFamily(TYPE_SELECT_LIBRARY_VALUE.fontFamily).fontSize(TYPE_SELECT_LIBRARY_VALUE.fontSizeFp).lineHeight(TYPE_SELECT_LIBRARY_VALUE.lineHeightFp as number)
+        .fontWeight(TYPE_SELECT_LIBRARY_VALUE.fontWeight).fontColor(readerAppColor('app.ReaderSelect.appearanceLibraryTrigger.fontColor.FF332C25', this.appThemeScheme)).maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       Image((this.appThemeScheme === 'night' ? $r('app.media.reader_appearance_make_chevron_theme_night') : $r('app.media.reader_appearance_make_chevron'))).width(12).height(12)
         .rotate({ angle: this.isOpen ? 90 : 0 }).animation(this.dropdownAnimation());

@@ -1,7 +1,14 @@
+import { ReaderBoundedSurface } from '../common/ReaderBoundedSurface';
+import { ReaderBoundedSurfaceHeader } from '../common/ReaderBoundedSurfaceHeader';
+import { ReaderBoundedSurfaceActions } from '../common/ReaderBoundedSurfaceActions';
+import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { TYPE_APP_INHERITED_HINT, TYPE_FILE_IMPORT_BADGE, TYPE_FILE_IMPORT_HINT, TYPE_FILE_IMPORT_LABEL, TYPE_FILE_IMPORT_NAME, TYPE_FILE_IMPORT_PROGRESS, TYPE_FILE_IMPORT_WAIT } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import curves from '@ohos.curves';
 import { readerMotionNowMs } from '../common/ReaderMotionClock';
 import { localImportResultLayout, LocalImportResultLayout } from './LocalImportLayout';
+import type { LocalImportDialogState } from './LocalImportPresentationOwner';
 import type { LocalImportBatch, LocalImportItem } from './LocalBookImportGateway';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
@@ -9,6 +16,7 @@ import {
   SurfaceWidthSpec,
   resolveHorizontalFrame,
 } from '../common/SurfaceHorizontalGeometry';
+import { DialogSurfaceSpec, resolveDialogSpec } from '../common/ReaderSurfaceSpecs';
 import {
   readerInteractiveSafeLeft,
   readerInteractiveSafeRight,
@@ -27,15 +35,11 @@ import {
   TOK_SPACE_SM,
   TOK_SPACE_XS,
   TOK_BORDER_W,
-  TOK_SURFACE_SOLID,
 } from '../common/ReaderTokens';
 
 import { registerReaderFonts } from '../common/ReaderFonts';
 
-const LOCAL_IMPORT_PANEL_MAX_WIDTH = 350;
-const LOCAL_IMPORT_EDGE_GAP = 20;
-
-export type LocalImportDialogState = 'fileSelection' | 'pickerOpening' | 'importing' | 'result';
+export type { LocalImportDialogState } from './LocalImportPresentationOwner';
 
 /**
  * Figma `Library/LocalImportDialog` (node 2657:918, 390×844), centered in
@@ -55,6 +59,8 @@ export struct LocalImportDialog {
   @Prop @Watch('onBatchChanged') batch: LocalImportBatch | undefined;
   @Prop @Watch('onPresentationChanged') reduceMotion: boolean = false;
   @Prop failureMessage: string = '';
+  @Prop recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  onReconcile: (generation: number) => void = (_generation: number): void => {};
   @StorageLink('readerAppForeground') @Watch('onPresentationChanged') private foreground: boolean = true;
   @State private viewportHeight: number = 0;
   @State private measuredItemsHeight: number = 0;
@@ -76,6 +82,10 @@ export struct LocalImportDialog {
   @State private viewportWidth: number = 0;
   onSelectFiles: () => void = (): void => {};
   onClose: () => void = (): void => {};
+
+  private surfaceSpec(): DialogSurfaceSpec {
+    return resolveDialogSpec('local-import');
+  }
 
   aboutToAppear(): void {
     this.mounted = true;
@@ -99,11 +109,8 @@ export struct LocalImportDialog {
           this.fileSelectionPanel();
         } else {
           // One persistent opaque shell owns the importing -> result handoff.
-          Row().width(this.panelFrame().width).height(this.shellHeight)
-            .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme)).borderRadius(20)
-            .shadow({ radius: 50, color: readerAppColor('app.LocalImportDialog.build.color.40000000', this.appThemeScheme), offsetX: 0, offsetY: 25 });
-          this.importingPanel();
-          if (this.batch !== undefined) this.resultPanel();
+          ReaderBoundedSurface({ specId: 'local-import-progress', surfaceWidth: this.panelFrame().width,
+            surfaceHeight: this.shellHeight, body: (): void => { this.progressLayers(); } });
         }
       }
       .width('100%')
@@ -127,23 +134,28 @@ export struct LocalImportDialog {
   }
 
   @Builder
+  private progressLayers() { this.importingPanel(); if (this.batch !== undefined) this.resultPanel(); }
+
+  @Builder
   private fileSelectionPanel() {
-    Column() {
-      Row() {
-        Text('导入本地书籍')
-          .fontFamily('ReaderNotoSerifSCBold')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(18)
-          .lineHeight(24.75)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-          .maxLines(1);
-      }
-      .width('100%')
-      .padding({ left: 20, right: 20, top: 20, bottom: 17 })
-      .alignItems(VerticalAlign.Center);
+    ReaderBoundedSurface({ specId: 'local-import-selection', surfaceWidth: this.panelFrame().width, surfaceHeight: 399.75,
+      header: (): void => { this.fileSelectionHeader(); }, body: (): void => { this.fileSelectionBody(); }, actions: (): void => { this.fileSelectionActions(); } });
+  }
 
-      Blank().width('100%').height(1).backgroundColor(readerAppColor('app.LocalImportDialog.fileSelectionPanel.backgroundColor.FFE8E2D9', this.appThemeScheme));
+  @Builder
+  private fileSelectionHeader() {
+    ReaderBoundedSurfaceHeader({ specId: 'local-import-selection', title: '导入本地书籍' });
+  }
 
+  @Builder
+  private fileSelectionActions() {
+    ReaderBoundedSurfaceActions({ specId: 'local-file-selection',
+      primaryLabel: this.state === 'pickerOpening' ? '正在选择…' : '选择文件', primaryEnabled: this.state !== 'pickerOpening',
+      onAction: (id: string): void => { if (id === 'primary') this.onSelectFiles(); else this.onClose(); } });
+  }
+
+  @Builder
+  private fileSelectionBody() {
       Column({ space: 0 }) {
         // Drop zone: 310 wide, dashed 2px #C1C7CD on #F8F4EC, radius 14.
         Column({ space: TOK_SPACE_SM }) {
@@ -157,18 +169,18 @@ export struct LocalImportDialog {
 
           Column({ space: 0 }) {
             Text('从系统文件中选择')
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Bold)
-              .fontSize(13)
-              .lineHeight(19.5)
-              .letterSpacing(-0.0762)
+              .fontFamily(TYPE_FILE_IMPORT_LABEL.fontFamily)
+              .fontWeight(TYPE_FILE_IMPORT_LABEL.fontWeight)
+              .fontSize(TYPE_FILE_IMPORT_LABEL.fontSizeFp)
+              .lineHeight(TYPE_FILE_IMPORT_LABEL.lineHeightFp as number)
+              .letterSpacing(TYPE_FILE_IMPORT_LABEL.letterSpacingFp as number)
               .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
             Text('支持多选 TXT、EPUB、MOBI、AZW3')
-              .fontFamily('ReaderInter')
-              .fontWeight(FontWeight.Regular)
-              .fontSize(11)
-              .lineHeight(16.5)
-              .letterSpacing(0.0645)
+              .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)
+              .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)
+              .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)
+              .lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)
+              .letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
               .margin({ top: 2 });
           }
@@ -200,64 +212,19 @@ export struct LocalImportDialog {
             .margin({ top: 2 });
           Text(this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。')
             .layoutWeight(1)
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(11)
-            .lineHeight(16.5)
-            .letterSpacing(0.0645)
+            .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)
+            .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)
+            .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)
+            .lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)
+            .letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
         }
         .width('100%')
         .padding({ top: TOK_SPACE_MD });
 
-        // Primary 211 / outlined cancel; row height 84 (20 top + 44 + 20 bottom).
-        Row({ space: TOK_SPACE_SM }) {
-          Row({ space: TOK_SPACE_XS }) {
-            Image($r('app.media.import_choose_file')).width(15).height(15);
-            Text(this.state === 'pickerOpening' ? '正在选择…' : '选择文件')
-              .fontFamily('ReaderInter')
-              .fontWeight(800)
-              .fontSize(13)
-              .lineHeight(19.5)
-              .letterSpacing(-0.0762)
-              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
-          }
-          .layoutWeight(1)
-          .height(44)
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
-          .borderRadius(22)
-          .enabled(this.state !== 'pickerOpening')
-        .onClick((): void => this.onSelectFiles());
-
-          Row({ space: 6 }) {
-            Image((this.appThemeScheme === 'night' ? $r('app.media.import_cancel_theme_night') : $r('app.media.import_cancel'))).width(13).height(13);
-            Text('取消')
-              .fontFamily('ReaderInter')
-              .fontWeight(600)
-              .fontSize(13)
-              .lineHeight(19.5)
-              .letterSpacing(-0.0762)
-              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-          }
-          .height(44)
-          .padding({ left: 21, right: 21 })
-          .justifyContent(FlexAlign.Center)
-          .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-          .borderRadius(22)
-          .onClick((): void => this.onClose());
-        }
-        .width('100%')
-        .padding({ top: 20, bottom: 20 });
       }
       .width('100%')
       .padding({ left: 20, right: 20, top: 20 });
-    }
-    .width(this.panelFrame().width)
-    .height(399.75)
-    .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
-    .borderRadius(20)
-    .shadow({ radius: 50, color: readerAppColor('app.LocalImportDialog.fileSelectionPanel.color.40000000', this.appThemeScheme), offsetX: 0, offsetY: 25 });
   }
 
   @Builder
@@ -274,18 +241,18 @@ export struct LocalImportDialog {
       .margin({ top: 35 });
 
       Text('正在导入')
-        .fontFamily('ReaderInter')
-        .fontWeight(600)
-        .fontSize(14)
-        .lineHeight(21)
+        .fontFamily(TYPE_FILE_IMPORT_PROGRESS.fontFamily)
+        .fontWeight(TYPE_FILE_IMPORT_PROGRESS.fontWeight)
+        .fontSize(TYPE_FILE_IMPORT_PROGRESS.fontSizeFp)
+        .lineHeight(TYPE_FILE_IMPORT_PROGRESS.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .margin({ top: 20 });
 
       Text('请稍候')
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(11)
-        .lineHeight(16.5)
+        .fontFamily(TYPE_FILE_IMPORT_WAIT.fontFamily)
+        .fontWeight(TYPE_FILE_IMPORT_WAIT.fontWeight)
+        .fontSize(TYPE_FILE_IMPORT_WAIT.fontSizeFp)
+        .lineHeight(TYPE_FILE_IMPORT_WAIT.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .margin({ top: 8 });
     }
@@ -298,7 +265,16 @@ export struct LocalImportDialog {
 
   @Builder
   private resultPanel() {
-    Column() {
+    ReaderBoundedSurface({ specId: 'local-import-result-content', surfaceWidth: this.panelFrame().width,
+      surfaceHeight: this.resultPanelHeight(), header: (): void => { this.resultBoundedHeader(); }, body: (): void => { this.resultBody(); }, actions: (): void => { this.resultFooter(); } })
+      .opacity(this.resultOpacity).hitTestBehavior(this.resultOpacity > 0 ? HitTestMode.Default : HitTestMode.None);
+  }
+
+  @Builder
+  private resultBoundedHeader() { if (!this.resultLayout().compact) this.resultHeader(); }
+
+  @Builder
+  private resultBody() {
       if (this.resultLayout().compact) {
         Scroll() {
           Column() { this.resultHeader(); this.resultSummary(); this.resultItemsNatural(); }
@@ -306,46 +282,33 @@ export struct LocalImportDialog {
         }.width('100%').height(Math.max(0, this.resultPanelHeight() - this.measuredFooterHeight))
           .scrollBar(BarState.Off);
       } else {
-        this.resultHeader();
         this.resultSummary();
         this.resultItemsPanel();
       }
-      this.resultFooter();
-    }
-    .width(this.panelFrame().width).height(this.resultPanelHeight())
-    .alignItems(HorizontalAlign.Start).opacity(this.resultOpacity)
-    .hitTestBehavior(this.resultOpacity > 0 ? HitTestMode.Default : HitTestMode.None);
   }
 
   @Builder
   private resultHeader() {
-    Column() {
-      Text('导入结果').fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold)
-        .fontSize(18).lineHeight(24.75).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1).width('100%')
-        .padding({ left: 20, right: 20, top: 20, bottom: 17 });
-      Blank().width('100%').height(1).backgroundColor(readerAppColor('app.LocalImportDialog.resultHeader.backgroundColor.FFE8E2D9', this.appThemeScheme));
-    }.width('100%').onAreaChange((_old: Area, next: Area): void => {
-      this.measuredHeaderHeight = this.numericAreaLength(next.height);
-      this.updateMeasuredResult();
-    });
+    ReaderBoundedSurfaceHeader({ specId: 'local-import-result-content', title: '导入结果',
+      onAreaChanged: (_old: Area, next: Area): void => {
+        this.measuredHeaderHeight = this.numericAreaLength(next.height); this.updateMeasuredResult();
+      } });
+  }
+
+  @Builder
+  private resultRecovery() {
+    ReaderRecoveryNotice({ view: this.recovery,
+      onReconcile: (generation: number): void => this.onReconcile(generation) });
   }
 
   @Builder
   private resultFooter() {
-    Column() {
-      Row({ space: 6 }) {
-        Image($r('app.media.import_done')).width(14).height(14);
-        Text('完成').fontFamily('ReaderInter').fontWeight(800).fontSize(13).lineHeight(19.5)
-          .letterSpacing(-0.0762).fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
-      }.width(this.resultButtonWidth()).height(40).justifyContent(FlexAlign.Center)
-        .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme)).borderRadius(20).onClick((): void => this.onClose());
-    }.width('100%').padding({ left: 16, right: 16,
-      top: Math.min(16, Math.max(0, (this.availableHeight() - 40) / 2)),
-      bottom: Math.min(20, Math.max(0, (this.availableHeight() - 40) / 2)) })
-      .onAreaChange((_old: Area, next: Area): void => {
-        this.measuredFooterHeight = this.numericAreaLength(next.height);
-        this.updateMeasuredResult();
-      });
+    ReaderBoundedSurfaceActions({ specId: 'local-import-result', primaryLabel: '完成',
+      actionWidth: this.resultButtonWidth(), availableHeight: this.availableHeight(), feedback: (): void => { this.resultRecovery(); },
+      onAction: (_id: string): void => this.onClose(),
+      onAreaChanged: (_old: Area, next: Area): void => {
+        this.measuredFooterHeight = this.numericAreaLength(next.height); this.updateMeasuredResult();
+      } });
   }
 
   @Builder
@@ -361,18 +324,18 @@ export struct LocalImportDialog {
         .borderRadius(18);
         Column({ space: 1 }) {
           Text(this.summaryTitle())
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Bold)
-            .fontSize(13)
-            .lineHeight(19.5)
-            .letterSpacing(-0.0762)
+            .fontFamily(TYPE_FILE_IMPORT_LABEL.fontFamily)
+            .fontWeight(TYPE_FILE_IMPORT_LABEL.fontWeight)
+            .fontSize(TYPE_FILE_IMPORT_LABEL.fontSizeFp)
+            .lineHeight(TYPE_FILE_IMPORT_LABEL.lineHeightFp as number)
+            .letterSpacing(TYPE_FILE_IMPORT_LABEL.letterSpacingFp as number)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
           Text(this.resultCountText())
-            .fontFamily('ReaderInter')
-            .fontWeight(FontWeight.Regular)
-            .fontSize(11)
-            .lineHeight(16.5)
-            .letterSpacing(0.0645)
+            .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)
+            .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)
+            .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)
+            .lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)
+            .letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
         }
         .layoutWeight(1)
@@ -425,7 +388,8 @@ export struct LocalImportDialog {
   private resultItemsNatural() {
     Column() {
       ForEach(this.resultItems(), (item: LocalImportItem, index: number): void => {
-        this.resultItem(item, index !== this.resultItems().length - 1);
+        this.resultItem((): LocalImportItem => this.currentResultItem(item, index),
+          (): boolean => index !== this.resultItems().length - 1);
       }, (item: LocalImportItem, index: number): string => `${item.fileName}-${item.state}-${index}`);
     }.width('100%').onAreaChange((_old: Area, next: Area): void => {
       this.measuredItemsHeight = this.numericAreaLength(next.height);
@@ -435,7 +399,7 @@ export struct LocalImportDialog {
   }
 
   @Builder
-  private resultItem(item: LocalImportItem, hasDivider: boolean) {
+  private resultItem(item: () => LocalImportItem, hasDivider: () => boolean) {
     Column({ space: 0 }) {
       Row({ space: TOK_SPACE_SM }) {
         Stack({ alignContent: Alignment.Center }) {
@@ -446,25 +410,25 @@ export struct LocalImportDialog {
         .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
         .borderRadius(8);
         Column({ space: 3 }) {
-          Text(item.fileName)
+          Text(item().fileName)
             .width('100%')
-            .fontFamily('ReaderInter')
-            .fontWeight(600)
-            .fontSize(12)
-            .lineHeight(18)
+            .fontFamily(TYPE_FILE_IMPORT_NAME.fontFamily)
+            .fontWeight(TYPE_FILE_IMPORT_NAME.fontWeight)
+            .fontSize(TYPE_FILE_IMPORT_NAME.fontSizeFp)
+            .lineHeight(TYPE_FILE_IMPORT_NAME.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
-          this.resultBadge(item.state === 'success' ?
-            (item.disposition === 'created' ? '新增成功' : item.disposition === 'existing' ? '已在书架' : '成功') :
-            (item.failure?.code === 'recoveryPending' ? '待确认' : '失败'), item.state === 'success' ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.LocalImportDialog.resultItem.resultBadge.FF5A4A2A', this.appThemeScheme));
-          if (item.failure !== undefined) {
-            Text(item.failure.message).fontSize(11).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(2).width('100%');
+          this.resultBadge((): string => item().state === 'success' ?
+            (item().disposition === 'created' ? '新增成功' : item().disposition === 'existing' ? '已在书架' : '成功') :
+            (item().failure?.code === 'recoveryPending' ? '待确认' : '失败'), (): string => item().state === 'success' ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.LocalImportDialog.resultItem.resultBadge.FF5A4A2A', this.appThemeScheme));
+          if (item().failure !== undefined) {
+            Text(item().failure?.message ?? '').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(2).width('100%');
           }
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start);
-        if (item.state === 'success') {
+        if (item().state === 'success') {
           Image((this.appThemeScheme === 'night' ? $r('app.media.import_success_theme_night') : $r('app.media.import_success'))).width(17).height(17);
         } else {
           Image($r('app.media.import_failure')).width(17).height(17);
@@ -474,7 +438,7 @@ export struct LocalImportDialog {
       .constraintSize({ minHeight: 61 })
       .padding({ left: TOK_SPACE_MD, right: TOK_SPACE_MD, top: TOK_SPACE_CONTROL_INLINE, bottom: 11 })
       .alignItems(VerticalAlign.Center);
-      if (hasDivider) {
+      if (hasDivider()) {
         Divider()
           .width('100%')
           .color(readerAppColor('app.LocalImportDialog.resultItem.color.FFE8E2D9', this.appThemeScheme))
@@ -485,27 +449,27 @@ export struct LocalImportDialog {
   }
 
   @Builder
-  private resultBadge(label: string, color: string) {
-    Text(label)
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(10)
-      .lineHeight(15)
-      .letterSpacing(0.3672)
+  private resultBadge(label: () => string, color: () => string) {
+    Text(label())
+      .fontFamily(TYPE_FILE_IMPORT_BADGE.fontFamily)
+      .fontWeight(TYPE_FILE_IMPORT_BADGE.fontWeight)
+      .fontSize(TYPE_FILE_IMPORT_BADGE.fontSizeFp)
+      .lineHeight(TYPE_FILE_IMPORT_BADGE.lineHeightFp as number)
+      .letterSpacing(TYPE_FILE_IMPORT_BADGE.letterSpacingFp as number)
       .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
       .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-      .backgroundColor(color)
+      .backgroundColor(color())
       .borderRadius(4);
   }
 
   @Builder
   private formatBadge(label: string, color: string) {
     Text(label)
-      .fontFamily('ReaderInter')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(10)
-      .lineHeight(15)
-      .letterSpacing(0.3672)
+      .fontFamily(TYPE_FILE_IMPORT_BADGE.fontFamily)
+      .fontWeight(TYPE_FILE_IMPORT_BADGE.fontWeight)
+      .fontSize(TYPE_FILE_IMPORT_BADGE.fontSizeFp)
+      .lineHeight(TYPE_FILE_IMPORT_BADGE.lineHeightFp as number)
+      .letterSpacing(TYPE_FILE_IMPORT_BADGE.letterSpacingFp as number)
       .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
       .padding({ left: 6, right: 6, top: 2, bottom: 2 })
       .backgroundColor(color)
@@ -514,6 +478,13 @@ export struct LocalImportDialog {
 
   private resultItems(): LocalImportItem[] {
     return this.batch === undefined ? [] : this.batch.items;
+  }
+
+  /** Stable ForEach identity keeps its current DTO, rather than the first
+   * same-name/state snapshot. Removed identities only finish their old paint. */
+  private currentResultItem(snapshot: LocalImportItem, index: number): LocalImportItem {
+    const current = this.resultItems()[index];
+    return current !== undefined && current.fileName === snapshot.fileName && current.state === snapshot.state ? current : snapshot;
   }
 
   private panelFrame(): SurfaceHorizontalFrame {
@@ -527,9 +498,9 @@ export struct LocalImportDialog {
       readerInteractiveSafeLeft(metrics),
       readerInteractiveSafeRight(metrics),
       new SurfaceWidthSpec(
-        LOCAL_IMPORT_PANEL_MAX_WIDTH,
-        LOCAL_IMPORT_EDGE_GAP,
-        LOCAL_IMPORT_EDGE_GAP,
+        this.surfaceSpec().maxWidth,
+        this.surfaceSpec().edgeGap,
+        this.surfaceSpec().edgeGap,
       ),
     );
   }

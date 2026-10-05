@@ -1,3 +1,4 @@
+import { ReaderCoreGateway, type ShelfBookUpsert } from '../../app/ReaderCoreGateway';
 import type { JsonObject, ReaderCoreResultEvent } from '@reader/core-harmony';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { errorMessageOf } from '../../app/ErrorMessage';
@@ -33,10 +34,12 @@ export type LocalImportBatch = {
  */
 export class LocalBookImportGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
+  private readonly bookshelf: ReaderCoreGateway;
   private transactionSequence: number = 0;
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.runtimeOwner = runtimeOwner;
+    this.bookshelf = new ReaderCoreGateway(runtimeOwner);
   }
 
   async selectLocalBookInputs(): Promise<LocalBookPreparation[]> {
@@ -49,14 +52,14 @@ export class LocalBookImportGateway {
     }
   }
 
-  async importPreparedSelections(selections: LocalBookPreparation[]): Promise<LocalImportBatch> {
+  async importPreparedSelections(selections: LocalBookPreparation[], onDispatched?: () => void): Promise<LocalImportBatch> {
     if (selections.length === 0) {
       return { state: 'cancelled', imported: 0, failed: 0, items: [] };
     }
     const items: LocalImportItem[] = [];
     let imported = 0;
     for (const selection of selections) {
-      const item = await this.importPreparedSelection(selection);
+      const item = await this.importPreparedSelection(selection, onDispatched);
       items.push(item);
       if (item.state === 'success') imported += 1;
     }
@@ -67,7 +70,7 @@ export class LocalBookImportGateway {
     return this.importPreparedSelections(await this.selectLocalBookInputs());
   }
 
-  private async importPreparedSelection(selection: LocalBookPreparation): Promise<LocalImportItem> {
+  private async importPreparedSelection(selection: LocalBookPreparation, onDispatched?: () => void): Promise<LocalImportItem> {
     if (selection.state === 'failed') {
       return { fileName: selection.fileName, state: 'failed', failure: selection.failure ?? localImportFailure('read') };
     }
@@ -76,7 +79,6 @@ export class LocalBookImportGateway {
     let assetCommit: LocalBookAssetCommit | undefined = undefined;
     let persistenceStarted = false;
     let shelfAddStarted = false;
-    let shelfParams: JsonObject | undefined = undefined;
     try {
       const parsed = await this.runtimeOwner.request('import.parse', {
         kind: 'localBook',
@@ -90,19 +92,21 @@ export class LocalBookImportGateway {
         throw new Error('local_book_not_readable: incomplete content');
       }
       persistenceStarted = true;
+      onDispatched?.();
       const persisted = await this.runtimeOwner.request('import.persist', {
         transactionId: this.nextTransactionId(selection.input.bookId),
         parsed: parsed.data,
       });
       rollbackToken = this.requiredObject(persisted.data, 'rollbackToken');
-      shelfParams = this.shelfAddParams(persisted);
+      const shelfParams = this.shelfAddParams(persisted);
       assetCommit = await this.runtimeOwner.commitLocalBookInput(selection.input);
       shelfAddStarted = true;
-      const added = await this.runtimeOwner.request('bookshelf.add', shelfParams);
+      // Reuse the existing full composite-key ACK decoder.
+      const added = await this.bookshelf.upsertBook(shelfParams);
       await this.finalizeCommittedImport(rollbackToken);
       const item: LocalImportItem = { fileName: selection.input.fileName, state: 'success' };
-      if (added.data['created'] === true) item.disposition = 'created';
-      else if (added.data['created'] === false) item.disposition = 'existing';
+      if (added.created === true) item.disposition = 'created';
+      else if (added.created === false) item.disposition = 'existing';
       return item;
     } catch (error) {
       const message = errorMessageOf(error);
@@ -113,28 +117,10 @@ export class LocalBookImportGateway {
       // be discarded immediately instead of leaking a recovery orphan.
       let recoveryPending = persistenceStarted && rollbackToken === undefined &&
         !this.isDeterministicCoreRejection(error);
-      // Only reconcile when the mutation outcome could have been lost.  A
-      // deterministic Core rejection (for example INVALID_PARAMS) proves
-      // that bookshelf.add did not commit; querying an old row for the same
-      // identity in that case could turn a failed import into a false
-      // success and leave the old row pointing at rolled-back content.
-      if (shelfAddStarted && shelfParams !== undefined && this.isShelfMutationOutcomeUnknown(error)) {
-        const shelfState = await this.reconcileShelfAdd(shelfParams);
-        if (shelfState === 'committed') {
-          // The write committed and only its response was lost. Report the
-          // durable truth instead of compensating a successful import. The
-          // same opaque token also consumes any large Core compensation
-          // journal now that both the asset and shelf reference are durable.
-          if (rollbackToken !== undefined) {
-            await this.finalizeCommittedImport(rollbackToken);
-          }
-          return { fileName: selection.input.fileName, state: 'success' };
-        }
-        if (shelfState === 'unknown') {
-          // Never roll body/assets back while a shelf reference may exist.
-          recoveryPending = true;
-        }
-      }
+      // A matching later shelf row is readable state, not this operation's
+      // ACK: the same metadata may predate the request. Keep the journal and
+      // assets while a dispatched upsert has no authoritative terminal reply.
+      if (shelfAddStarted && this.isShelfMutationOutcomeUnknown(error)) recoveryPending = true;
       hilog.error(DOMAIN, 'Reader', 'Local import failed: %{private}s', localImportFailure(message).code);
       if (!recoveryPending && rollbackToken !== undefined) {
         try {
@@ -184,28 +170,6 @@ export class LocalBookImportGateway {
       hilog.error(DOMAIN, 'Reader', 'Local import finalize recovery queue unavailable');
     }
     return false;
-  }
-
-  private async reconcileShelfAdd(params: JsonObject): Promise<'committed' | 'absent' | 'unknown'> {
-    const sourceId = this.requiredString(params, 'sourceId');
-    const bookId = this.requiredString(params, 'bookId');
-    try {
-      const result = await this.runtimeOwner.request('bookshelf.get', { sourceId, bookId });
-      const rawBook = result.data['book'];
-      if (rawBook === null || rawBook === undefined) {
-        return 'absent';
-      }
-      const book = this.requiredObject(result.data, 'book');
-      // An older row with the same identity does not prove this upsert landed.
-      // Keep the compensation journal if any submitted metadata still differs.
-      const submittedFields: string[] = ['sourceId', 'bookId', 'title', 'author', 'coverUrl', 'intro', 'kind', 'lastChapter'];
-      for (const field of submittedFields) {
-        if ((book[field] ?? null) !== (params[field] ?? null)) return 'unknown';
-      }
-      return 'committed';
-    } catch (_) {
-      return 'unknown';
-    }
   }
 
   private isShelfMutationOutcomeUnknown(error: unknown): boolean {
@@ -274,23 +238,23 @@ export class LocalBookImportGateway {
     };
   }
 
-  private shelfAddParams(result: ReaderCoreResultEvent): JsonObject {
+  private shelfAddParams(result: ReaderCoreResultEvent): ShelfBookUpsert {
     const persisted = this.requiredObject(result.data, 'persisted');
     if (persisted['kind'] !== 'localBook') {
       throw new Error('import.persist returned a non-local-book result');
     }
     const importData = this.requiredObject(persisted, 'data');
     const book = this.requiredObject(importData, 'book');
-    const params: JsonObject = {
+    const params: ShelfBookUpsert = {
       sourceId: 'local',
       bookId: this.requiredString(book, 'bookId'),
       title: this.requiredString(book, 'title'),
       author: this.requiredString(book, 'author'),
     };
-    this.copyOptionalString(book, params, 'coverUrl');
-    this.copyOptionalString(book, params, 'intro');
-    this.copyOptionalString(book, params, 'kind');
-    this.copyOptionalString(book, params, 'lastChapter');
+    params.coverUrl = this.optionalString(book, 'coverUrl');
+    params.intro = this.optionalString(book, 'intro');
+    params.kind = this.optionalString(book, 'kind');
+    params.lastChapter = this.optionalString(book, 'lastChapter');
     return params;
   }
 
@@ -310,15 +274,15 @@ export class LocalBookImportGateway {
     return candidate;
   }
 
-  private copyOptionalString(from: JsonObject, to: JsonObject, key: string): void {
+  private optionalString(from: JsonObject, key: string): string | undefined {
     const candidate = from[key];
     if (candidate === undefined || candidate === null) {
-      return;
+      return undefined;
     }
     if (typeof candidate !== 'string') {
       throw new Error(`Core result has invalid ${key}`);
     }
-    to[key] = candidate;
+    return candidate;
   }
 
   private nextTransactionId(bookId: string): string {

@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { createRequire, stripTypeScriptTypes, registerHooks } from 'node:module';
 import { fileURLToPath } from 'node:url';
+registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(s+'.ts',c);throw e;}}});
+const {readingDirectoryRecovery,EMPTY_READING_DIRECTORY_RECOVERY}=await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 const file=p=>fileURLToPath(new URL(`../entry/src/main/ets/${p}`,import.meta.url));
@@ -9,10 +11,10 @@ const source=readFileSync(file('pages/Index.ets'),'utf8');
 const experience=readFileSync(file('features/reading/LocalReadingExperience.ets'),'utf8');
 const anchor=experience.slice(experience.indexOf('export class ReaderBookmarkAnchorRequest {'),experience.indexOf('\nclass ReaderDeferredChapterSelection'));
 const Anchor=new Function(`${stripTypeScriptTypes(anchor.replace('export class','class'))}; return ReaderBookmarkAnchorRequest;`)();
-const Index=productionMotionMethods(file('pages/Index.ets'),['onBackPress','openFullDirectory','closeDirectory','onDirectoryChapterSelected','onDirectoryNavigationTargetSelected','onReaderBookmarkSelected','openReading','presentPreparedReading','openReaderControlDirectory','isKnownDetailChapter','readerOwnsWindowEdges'],{LOCAL_SOURCE_ID:'local',ReaderBookmarkAnchorRequest:Anchor});
+const Index=productionMotionMethods(file('pages/Index.ets'),['consumeTemporaryBackBridge','isCurrentRuntime','onBackPress','openFullDirectory','closeDirectory','onDirectoryChapterSelected','onDirectoryNavigationTargetSelected','onReaderBookmarkSelected','openReading','presentPreparedReading','openReaderControlDirectory','isKnownDetailChapter','readerOwnsWindowEdges'],{LOCAL_SOURCE_ID:'local',ReaderBookmarkAnchorRequest:Anchor});
 function index(sourceId='local'){
  const entries=Array.from({length:25},(_,i)=>({index:i,title:`Chapter ${i+1}`,url:`/${i}`,navigable:true,downloadState:'unknown'}));
- const host=Object.assign(new Index(),{route:'detail',readingSessionActive:false,detailBook:{sourceId,bookId:'book',title:'Book',author:'Author'},detailToc:entries,remoteReadingSession:sourceId==='local'?undefined:{identity:{sourceId,bookId:'book'},entries},bookshelfRemovalActiveKey:'',navigationGeneration:1,requestedChapterIndex:undefined,requestedBookmarkAnchor:undefined,directoryCurrentChapterIndex:-1,bookmarkAnchorRequestId:0,preparedReaderRoute:'reading',directoryReturnTarget:'detail',nextNavigationGeneration(){return ++this.navigationGeneration;},returnToReadingOrigin(){this.readingSessionActive=false;this.route='detail';},readingExitRequest:undefined});
+ const host=Object.assign(new Index(),{hasVisibleImportDialog:()=>false,route:'detail',readingSessionActive:false,detailBook:{sourceId,bookId:'book',title:'Book',author:'Author'},detailToc:entries,remoteReadingSession:sourceId==='local'?undefined:{identity:{sourceId,bookId:'book'},entries},shelfOperation:{removalKey:'',busy:false,batchRemovalBusy:false},navigationGeneration:1,requestedChapterIndex:undefined,requestedBookmarkAnchor:undefined,directoryCurrentChapterIndex:-1,bookmarkAnchorRequestId:0,preparedReaderRoute:'reading',directoryReturnTarget:'detail',nextNavigationGeneration(){return ++this.navigationGeneration;},returnToReadingOrigin(){this.readingSessionActive=false;this.route='detail';},readingExitRequest:undefined});
  return host;
 }
 for(const sourceId of ['local','remote']){
@@ -95,7 +97,7 @@ syntax.componentCollection.customComponents.add('LocalBookDetail');syntax.propCo
 class DirectoryChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
 const enums=Object.fromEntries(['SafeAreaType','SafeAreaEdge'].map(name=>[name,new Proxy({},{get:(_,key)=>`${name}.${String(key)}`})]));
 for(const sourceId of ['local','remote']){
- const {owner,output}=createReaderBuilderProbe(source,['externalDirectory'],{BookDirectoryPage:DirectoryChild,...enums});
+ const {owner,output}=createReaderBuilderProbe(source,['externalDirectory','directoryRecovery','directoryOperationPresentationId','directoryOperationBindingId'],{BookDirectoryPage:DirectoryChild,readingDirectoryRecovery,...enums});
  const host=index(sourceId);Object.assign(owner,host,{settingsSnapshot:{reduceMotion:false},offlineMutationActiveKey:'',detailBookmarkIdentity:()=>({sourceId,bookId:'book'}),appThemeScheme:'day'});
  owner.onDirectoryChapterSelected=host.onDirectoryChapterSelected.bind(host);owner.onDirectoryNavigationTargetSelected=host.onDirectoryNavigationTargetSelected.bind(host);owner.closeDirectory=host.closeDirectory.bind(host);
  owner.externalDirectory();assert.equal(owner.children.size,1);const props=[...owner.children.values()][0].params;
@@ -105,13 +107,13 @@ for(const sourceId of ['local','remote']){
   assert.equal(host.requestedBookmarkAnchor.chapterOffset,7,'detail directory target uses exact-position admission');
  }
  assert.equal(props.bookId,'book');assert.equal(props.onSwitchSource,undefined);assert.equal(props.onDownloadBook,undefined);assert.equal(props.entries,host.detailToc);assert.equal(props.sourceId,sourceId);assert.doesNotMatch(output,/new ReaderShell|new ReadingExperience/);
- assert.match(source,/this\.route === 'directory' && this\.directoryReturnTarget === 'detail'\) \{\s*this\.externalDirectory\(\)/,'detail content mounts the independent page');
+ assert.match(source,/if \(this\.route === 'directory' && this\.directoryReturnTarget === 'detail'\) (?:\{\s*)?this\.externalDirectory\(\)/,'detail content mounts the independent page');
  assert.match(source,/visible: this\.route === 'reading' \|\|\s*\(this\.route === 'directory' && this\.directoryReturnTarget === 'readerControl'\)/,'a preparing external selection cannot expose the reading control directory');
 }
 // The real retained detail observer keeps the same child ID through catalog/back.
 {
- const {owner}=createReaderBuilderProbe(source,['detailContent','externalDirectory','detailBookKey'],{BookDirectoryPage:DirectoryChild,LocalBookDetail:DirectoryChild,LOCAL_SOURCE_ID:'local',...enums});
- const host=index();host.openFullDirectory();Object.assign(owner,host,{offlineMutationActiveKey:'',remoteContentVerdict:'readable',remoteContentVerdictLabel:()=>'',appThemeScheme:'day'});
+ const {owner}=createReaderBuilderProbe(source,['detailContent','detailSurface','externalDirectory','detailBookKey','isCurrentRuntime','hasUnknownShelfWrite','detailReadableAdmission','detailShelfAdmissionIdentity','isCurrentDetailShelfAdmission','isCurrentDetailPresentation','directoryRecovery','directoryOperationPresentationId','directoryOperationBindingId'],{readingDirectoryRecovery,BookDirectoryPage:DirectoryChild,LocalBookDetail:DirectoryChild,ReaderRuntimeOwner:{current:()=>undefined},LOCAL_SOURCE_ID:'local',EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,message:''},...enums});
+ const host=index();host.openFullDirectory();Object.assign(owner,host,{readableAdmissions:[],detailShelfAdmissionMount:1,offlineMutationActiveKey:'',remoteContentVerdict:'readable',remoteContentVerdictLabel:()=>'',appThemeScheme:'day'});
  owner.detailContent();
  const detail=[...owner.children.values()].find(child=>child.params.book);
  const directory=[...owner.children.values()].find(child=>child.params.entries);
@@ -127,7 +129,7 @@ for(const sourceId of ['local','remote']){
 console.log('PH119 independent catalog routing, retained detail Builder and exact initial bookmark lifecycle: PASS');
 
 {
- const {owner}=createReaderBuilderProbe(source,['externalDirectory'],{BookDirectoryPage:DirectoryChild,...enums});
+ const {owner}=createReaderBuilderProbe(source,['externalDirectory','directoryRecovery','directoryOperationPresentationId','directoryOperationBindingId'],{BookDirectoryPage:DirectoryChild,readingDirectoryRecovery,...enums});
  const host=index('local');host.detailBook.kind='EPUB';Object.assign(owner,host);
  owner.externalDirectory();const child=[...owner.children.values()][0];
  assert.equal(child.params.bookKind,'EPUB','detail passes the existing Core format without a new fetch');

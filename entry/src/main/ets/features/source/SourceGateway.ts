@@ -1,8 +1,12 @@
+import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
 import type { JsonObject } from '@reader/core-harmony';
 import { errorMessageOf } from '../../app/ErrorMessage';
 import { httpUrlHostname, isPrivateNetworkTarget } from '../../app/HttpTransportPolicy';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { classifyReaderSource, type ReaderSourceCategory } from './ReaderSourceCategory';
+import { RulesMutationOwner, type RulesMutationSnapshot } from '../settings/RulesMutationOwner';
+import type { RuleSubscriptionStep } from '../settings/RulesMutationIntentStore';
 
 export type BookSource = {
   sourceId: string;
@@ -133,6 +137,9 @@ const MAX_BOOK_SOURCE_DOCUMENT_ENTRIES = 5000;
  */
 export class SourceGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
+  private writeEvidence: ReaderWriteEvidence | undefined;
+
+  observeWrites(evidence: ReaderWriteEvidence | undefined): void { this.writeEvidence = evidence; }
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
     this.runtimeOwner = runtimeOwner;
@@ -146,7 +153,7 @@ export class SourceGateway {
       if (!isCurrent()) return [];
       if (sourceId.trim().length === 0 || sourceId === 'local') continue;
       try {
-        const exact = await this.loadSources(sourceId);
+        const exact = await this.loadSources(sourceId, false, isCurrent);
         if (!isCurrent()) return [];
         for (const source of exact) if (source.sourceId === sourceId) sources.push(source);
       } catch (_) { /* A missing label never erases a valid shelf projection. */ }
@@ -154,7 +161,7 @@ export class SourceGateway {
     return sources;
   }
 
-  async loadSources(sourceId?: string, includeReports: boolean = false): Promise<BookSource[]> {
+  async loadSources(sourceId?: string, includeReports: boolean = false, current?: () => boolean): Promise<BookSource[]> {
     const params: JsonObject = sourceId === undefined ? {} : { sourceId };
     const reportVersion = !includeReports ? undefined :
       this.runtimeOwner.supportsCoreCapability('source.check.report.v2') ? 2 :
@@ -164,7 +171,7 @@ export class SourceGateway {
       params['includeCheckReports'] = true;
       if (reportVersion === 2) params['checkReportVersion'] = 2;
     }
-    const result = await this.runtimeOwner.request('source.list', params);
+    const result = await this.runtimeOwner.request('source.list', params, { canDispatch: current, canContinue: current });
     const rawSources = result.data['sources'];
     if (!Array.isArray(rawSources)) {
       throw new Error('source.list returned invalid data');
@@ -192,7 +199,7 @@ export class SourceGateway {
         bookSourceType = bookSource['bookSourceType'];
       }
       if (sourceId === undefined || name === undefined) {
-        continue;
+        throw new Error('source.list returned a source without its identity or name');
       }
       const checkReports = wantsReports ? this.readCheckHistory(source['checkReports'], this.optionalString(source, 'sourceVersion'), reportVersion as number) : undefined;
       const latest = checkReports !== undefined && checkReports.length > 0 ? checkReports[0] : undefined;
@@ -233,22 +240,8 @@ export class SourceGateway {
     text: string,
     shouldContinue: () => boolean = (): boolean => true,
   ): Promise<SourceImportSummary> {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(text) as unknown;
-    } catch (error) {
-      const message = errorMessageOf(error);
-      throw new Error(`Book-source document is not valid JSON: ${message}`);
-    }
-    const rawSources: unknown[] = Array.isArray(parsed) ? parsed : [parsed];
-    if (rawSources.length === 0) {
-      throw new Error('Book-source document contains no sources');
-    }
-    if (rawSources.length > MAX_BOOK_SOURCE_DOCUMENT_ENTRIES) {
-      throw new Error(
-        `Book-source document exceeds ${MAX_BOOK_SOURCE_DOCUMENT_ENTRIES} source limit`,
-      );
-    }
+    if (this.supportsOriginalSourceImport()) return this.importOriginalSourceDocument(text,shouldContinue);
+    const rawSources = this.parseBookSourceDocument(text);
 
     // Non-abort item admission: one invalid or failing source must never
     // prevent the remaining items from importing. Each item is validated and
@@ -272,7 +265,7 @@ export class SourceGateway {
         const result = await this.runtimeOwner.request('source.import', {
           sourceId,
           bookSource,
-        });
+        }, { canDispatch: shouldContinue, onDispatch: (): void => this.writeEvidence?.dispatched() });
         const imported = result.data['imported'];
         const echoedSourceId = this.optionalString(result.data, 'sourceId');
         const echoedName = this.optionalString(result.data, 'name');
@@ -281,7 +274,11 @@ export class SourceGateway {
           throw new Error('source.import returned invalid or mismatched data');
         }
         sourceIds.push(echoedSourceId);
+        this.writeEvidence?.confirmed();
       } catch (error) {
+        // An indeterminate dispatched item is a write barrier for this
+        // admitted document. Later rows must not hide or overtake that ACK.
+        if (this.writeEvidence?.confirmation() === 'unknown') throw error;
         const message = errorMessageOf(error);
         failures.push({ index, sourceId, message });
       }
@@ -292,6 +289,106 @@ export class SourceGateway {
       failedCount: failures.length,
       failures,
     };
+  }
+
+  originalMutationSnapshot(): RulesMutationSnapshot | undefined {
+    return this.supportsOriginalSourceImport() ? RulesMutationOwner.forRuntime(this.runtimeOwner).snapshot() : undefined;
+  }
+  async recoverOriginalSource(current: () => boolean, retryOriginal: boolean = false): Promise<RulesMutationSnapshot | undefined> {
+    if (!this.supportsOriginalSourceImport()) return undefined;
+    return RulesMutationOwner.forRuntime(this.runtimeOwner).recoverOriginal(current,
+      (method: string, params: JsonObject, data: JsonObject): void => this.qualifyOriginalSource(method,params,data),
+      retryOriginal,'source-management',
+      (method: string, params: JsonObject): Promise<boolean> => this.finishOriginalSourceCleanup(method,params));
+  }
+  handlesSourceCleanup(): boolean { return this.supportsOriginalSourceManagement(); }
+  private async finishOriginalSourceCleanup(method: string, params: JsonObject): Promise<boolean> {
+    const ids=method==='source.delete' ? params['sourceIds'] as string[] : [params['sourceId'] as string];
+    let complete=true;
+    for (const id of ids) {
+      if (!ReaderRuntimeOwner.isCurrent(this.runtimeOwner)) return false;
+      try { await this.runtimeOwner.clearSourceCookieSession(id); } catch (_) { complete=false; }
+    }
+    return complete;
+  }
+  private supportsOriginalSourceImport(): boolean {
+    return this.runtimeOwner.supportsCoreCapability?.('rules.mutation.exact.v1') === true;
+  }
+  private supportsOriginalSourceManagement(): boolean {
+    return this.supportsOriginalSourceImport() &&
+      this.runtimeOwner.supportsCoreCapability?.('rules.mutation.source-management.v1') === true;
+  }
+  private async importOriginalSourceDocument(text: string, current: () => boolean): Promise<SourceImportSummary> {
+    const prepared=this.prepareSubscriptionDocument(text),failures: SourceImportFailure[]=prepared.failures.slice();
+    const sourceIds: string[]=[];
+    if (prepared.items.length===0) return {importedCount:0,sourceIds,failedCount:failures.length,failures};
+    const steps: RuleSubscriptionStep[]=prepared.items.map((item): RuleSubscriptionStep => ({
+      method:'source.import',sourceIndex:item.index,params:{sourceId:item.sourceId,bookSource:item.bookSource} }));
+    const result=await RulesMutationOwner.forRuntime(this.runtimeOwner).runSubscription(3,steps,
+      prepared.failures.map((failure): {index:number;message:string} => ({index:failure.index,message:failure.message})),
+      current,(method: string, params: JsonObject, data: JsonObject): void => {
+        this.qualifyOriginalSource(method,params,data);sourceIds.push(data['sourceId'] as string);
+      },this.writeEvidence,(step: RuleSubscriptionStep, data: JsonObject): void => {
+        const error=data['error'] as JsonObject;
+        failures.push({index:step.sourceIndex ?? -1,sourceId:step.params['sourceId'] as string,
+          message:typeof error?.['message']==='string' ? error['message'] as string : 'Core 明确拒绝原书源条目'});
+      });
+    return {importedCount:result.subscription?.confirmedParts ?? 0,sourceIds,
+      failedCount:result.subscription?.failedParts ?? failures.length,failures};
+  }
+  private qualifyOriginalSource(method: string, params: JsonObject, data: JsonObject): void {
+    if (method==='source.import') {
+      if (data['imported']!==true || data['sourceId']!==params['sourceId'] ||
+        typeof data['name']!=='string' || (data['name'] as string).trim().length===0)
+        throw new Error('source.import original ACK does not match its fixed DTO');
+    } else if (method==='source.update') {
+      const source=data['source'] as JsonObject;
+      if (source===null || typeof source!=='object' || Array.isArray(source) ||
+        source['sourceId']!==params['sourceId'] || source['enabled']!==params['enabled'])
+        throw new Error('source.update original ACK does not match its fixed DTO');
+    } else if (method==='source.delete') {
+      const ids=params['sourceIds']; const deleted=data['deleted'];
+      if (!Array.isArray(ids) || typeof deleted!=='number' || !Number.isSafeInteger(deleted) || deleted<0 || deleted>ids.length)
+        throw new Error('source.delete original ACK does not match its fixed DTO');
+    } else throw new Error('不能用书源核定器确认另一家族的原操作');
+  }
+
+  /** Same original admission, without side effects; subscription freezes these
+   * exact DTOs before accepting its first durable operation. */
+  prepareSubscriptionDocument(text: string): {
+    items: { index: number; sourceId: string; bookSource: JsonObject }[];
+    failures: SourceImportFailure[];
+  } {
+    const rawSources = this.parseBookSourceDocument(text);
+    const items: { index: number; sourceId: string; bookSource: JsonObject }[] = [];
+    const failures: SourceImportFailure[] = [];
+    for (let index = 0; index < rawSources.length; index++) {
+      try { const bookSource = this.requireBookSourceObject(rawSources[index],index);
+        const sourceId = this.requireBookSourceUrl(bookSource,index);
+        items.push({index,sourceId,bookSource});
+      } catch (error) { failures.push({index,sourceId:'',message:errorMessageOf(error)}); }
+    }
+    return {items,failures};
+  }
+  private parseBookSourceDocument(text: string): unknown[] {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text) as unknown;
+    } catch (error) {
+      const message = errorMessageOf(error);
+      throw new Error(`Book-source document is not valid JSON: ${message}`);
+    }
+    const rawSources: unknown[] = Array.isArray(parsed) ? parsed : [parsed];
+    if (rawSources.length === 0) {
+      throw new Error('Book-source document contains no sources');
+    }
+    if (rawSources.length > MAX_BOOK_SOURCE_DOCUMENT_ENTRIES) {
+      throw new Error(
+        `Book-source document exceeds ${MAX_BOOK_SOURCE_DOCUMENT_ENTRIES} source limit`,
+      );
+    }
+
+    return rawSources;
   }
 
   /** Core serializes the exact persisted raw BookSource objects. */
@@ -339,8 +436,8 @@ export class SourceGateway {
    *
    * This compatibility API intentionally returns only after source.import has
    * returned a validated identity. It does not expose an ambiguous transport
-   * receipt; callers must therefore keep a rejected Promise in the existing
-   * save-failed bucket and must not invent a pending-commit fact here. The
+   * receipt; observed dispatch/ACK evidence therefore retains unknown writes
+   * while local parse/identity rejection remains undispatched. The
    * read-only source.list reconciliation belongs to SourceToolsOrchestrator.
    */
   async saveEditableSource(sourceId: string, text: string): Promise<void> {
@@ -417,13 +514,28 @@ export class SourceGateway {
    * or when Core echoes a mismatched state — the page keeps a non-optimistic
    * toggle and reloads the list only after a confirmed success.
    */
-  async updateSource(sourceId: string, patch: SourcePatch): Promise<void> {
+  async updateSource(sourceId: string, patch: SourcePatch, current?: () => boolean): Promise<void> {
     if (patch.enabled === undefined) {
       throw new Error('source.update requires an enabled flag');
+    }
+    if (this.supportsOriginalSourceManagement()) {
+      const params: JsonObject={sourceId,enabled:patch.enabled};
+      await RulesMutationOwner.forRuntime(this.runtimeOwner).run('书源开关',
+        current ?? ((): boolean => ReaderRuntimeOwner.isCurrent(this.runtimeOwner)),
+        async (request,confirmed): Promise<void> => {
+          const event=await request('source.update',params);this.qualifyOriginalSource('source.update',params,event.data);confirmed();
+        },this.writeEvidence,patch.enabled===false ?
+          (): Promise<boolean> => this.finishOriginalSourceCleanup('source.update',params) : undefined);
+      return;
     }
     const result = await this.runtimeOwner.request('source.update', {
       sourceId,
       enabled: patch.enabled,
+    }, { canDispatch: current, onDispatch: (): void => this.writeEvidence?.dispatched() }).catch((error: Error) => {
+      // Typed Core admission refusal happens before executing this command.
+      // Generic transport/echo errors retain the actual dispatched evidence.
+      if (isReaderCoreTransactionPendingError(error)) this.writeEvidence?.rejectedBeforeExecution();
+      throw error;
     });
     const updated = result.data['source'];
     if (typeof updated !== 'object' || updated === null || Array.isArray(updated)) {
@@ -436,6 +548,7 @@ export class SourceGateway {
           `got=${source['enabled']}`,
       );
     }
+    this.writeEvidence?.confirmed();
   }
 
   /** Delete sources in Core, then idempotently remove their Host sessions. */
@@ -443,14 +556,32 @@ export class SourceGateway {
     if (sourceIds.length === 0) {
       throw new Error('source.delete requires at least one sourceId');
     }
-    const result = await this.runtimeOwner.request('source.delete', { sourceIds });
-    const deleted = result.data['deleted'];
+    const params: JsonObject={sourceIds:sourceIds.slice()};
+    let data: JsonObject;
+    let cookieCleanupFailures = 0;
+    if (this.supportsOriginalSourceManagement()) {
+      data=await RulesMutationOwner.forRuntime(this.runtimeOwner).run('删除书源',
+        (): boolean => ReaderRuntimeOwner.isCurrent(this.runtimeOwner),async (request,confirmed): Promise<JsonObject> => {
+          const event=await request('source.delete',params);this.qualifyOriginalSource('source.delete',params,event.data);confirmed();return event.data;
+        },this.writeEvidence,async (): Promise<boolean> => {
+          for (const id of sourceIds) {
+            if (!ReaderRuntimeOwner.isCurrent(this.runtimeOwner)) { cookieCleanupFailures+=1;continue; }
+            try { await this.runtimeOwner.clearSourceCookieSession(id); } catch (_) { cookieCleanupFailures+=1; }
+          }
+          return cookieCleanupFailures===0;
+        });
+      if (this.originalMutationSnapshot()?.blocked && cookieCleanupFailures===0) cookieCleanupFailures=1;
+    } else {
+      const result=await this.runtimeOwner.request('source.delete',params,{onDispatch:(): void => this.writeEvidence?.dispatched()});
+      data=result.data;
+    }
+    const deleted = data['deleted'];
     if (typeof deleted !== 'number' || !Number.isInteger(deleted) || deleted < 0 ||
       deleted > sourceIds.length) {
       throw new Error('source.delete returned invalid deleted count');
     }
-    let cookieCleanupFailures = 0;
-    for (const sourceId of sourceIds) {
+    if (!this.supportsOriginalSourceManagement()) this.writeEvidence?.confirmed();
+    if (!this.supportsOriginalSourceManagement()) for (const sourceId of sourceIds) {
       try {
         await this.runtimeOwner.clearSourceCookieSession(sourceId);
       } catch (_) {

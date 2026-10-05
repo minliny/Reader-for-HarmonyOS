@@ -99,7 +99,7 @@ export class ReaderTtsGateway {
     return this.decodeConfig(raw, 'tts.config.get');
   }
 
-  async putConfig(update: ReaderTtsConfigUpdate): Promise<ReaderTtsConfig> {
+  async putConfig(update: ReaderTtsConfigUpdate, onDispatch?: () => void): Promise<ReaderTtsConfig> {
     this.assertConfigUpdate(update);
     const params: ReaderTtsJsonObject = {
       rate: update.rate,
@@ -110,6 +110,7 @@ export class ReaderTtsGateway {
     if (update.engine !== undefined) {
       params['engine'] = update.engine;
     }
+    onDispatch?.();
     const result = await this.runtime.request('tts.config.put', params);
     return this.decodeConfig(result.data['config'], 'tts.config.put');
   }

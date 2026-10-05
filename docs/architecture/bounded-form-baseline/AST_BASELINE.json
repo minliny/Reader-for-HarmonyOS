@@ -1,0 +1,2687 @@
+{
+  "schemaVersion": 1,
+  "baseline": "d6adb8833d530e19141dc3ff506dc055dc8feec7",
+  "layer": "actual installed SDK ETS AST of immutable baseline; physical rendering/target not run",
+  "facts": [
+    {
+      "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+      "sha256": "35d34857bcfa88d68b44259016df7292f70337339495f6141fb0061e4084510a",
+      "structs": [
+        {
+          "name": "LocalImportDialog",
+          "members": [
+            {
+              "name": "",
+              "decorators": [],
+              "kind": "Constructor"
+            },
+            {
+              "name": "appThemeScheme",
+              "decorators": [
+                "@StorageLink('readerAppScheme')"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "readerWindowMetricsRevision",
+              "decorators": [
+                "@StorageLink('readerWindowMetricsRevision')"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "state",
+              "decorators": [
+                "@Prop",
+                "@Watch('onPresentationChanged')"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "batch",
+              "decorators": [
+                "@Prop",
+                "@Watch('onBatchChanged')"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "reduceMotion",
+              "decorators": [
+                "@Prop",
+                "@Watch('onPresentationChanged')"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "failureMessage",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "recovery",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onReconcile",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "foreground",
+              "decorators": [
+                "@StorageLink('readerAppForeground')",
+                "@Watch('onPresentationChanged')"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "viewportHeight",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "measuredItemsHeight",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "measuredHeaderHeight",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "measuredSummaryHeight",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "measuredFooterHeight",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "shellHeight",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "importingOpacity",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "resultOpacity",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "spinnerAngle",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "spinnerStartedAt",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "spinnerRunning",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "mounted",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "motionGeneration",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "pendingHandoff",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "handoffEndsAt",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "resultMeasured",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "wasImporting",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "viewportWidth",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onSelectFiles",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onClose",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "surfaceSpec",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "aboutToAppear",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "aboutToDisappear",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "build",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "fileSelectionPanel",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "importingPanel",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "resultPanel",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "resultHeader",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "resultFooter",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "resultSummary",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "resultItemsPanel",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "resultItemsNatural",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "resultItem",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "resultBadge",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "formatBadge",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "resultItems",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "panelFrame",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "resultButtonWidth",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "resultItemsPanelHeight",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "resultPanelHeight",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "resultLayout",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "availableHeight",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "allSucceeded",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "summaryTitle",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "summaryIcon",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "onBatchChanged",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "onPresentationChanged",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "startSpinner",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "stopSpinner",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "updateMeasuredResult",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "numericAreaLength",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "resultCountText",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            }
+          ]
+        }
+      ],
+      "nativeNodes": [
+        {
+          "kind": "Stack",
+          "line": 97,
+          "text": "Stack({ alignContent: Alignment.Center }) {\n      Text('')\n        .width('100%')\n        .height('100%')\n        .backgroundColor(readerAppColor('app.LocalImportDialog.build.backgroundColor.661F1B17', this.appThemeScheme));\n\n      Stack({ alignContent: Alignment.Center }) {\n        if (this.state === 'fileSelection' || this.state === 'pickerOpening') {\n          this.fileSelectionPanel();\n        } else {\n          // One persistent opaque shell owns the importing -> result handoff.\n          Row().width(this.panelFrame().width).height(this.shellHeight)\n            .backgroundColor(readerAppColor(this.surfaceSpec().backgroundRole, this.appThemeScheme)).borderRadius(this.surfaceSpec().borderRadius)\n            .shadow({ radius: 50, color: readerAppColor('app.LocalImportDialog.build.color.40000000', this.appThemeScheme), offsetX: 0, offsetY: 25 });\n          this.importingPanel();\n          if (this.batch !== undefined) this.resultPanel();\n        }\n      }\n      .width('100%')\n      .height('100%')\n      .padding({ left: this.panelFrame().left, right: this.panelFrame().right });\n    }"
+        },
+        {
+          "kind": "Text",
+          "line": 98,
+          "text": "Text('')"
+        },
+        {
+          "kind": "Stack",
+          "line": 103,
+          "text": "Stack({ alignContent: Alignment.Center }) {\n        if (this.state === 'fileSelection' || this.state === 'pickerOpening') {\n          this.fileSelectionPanel();\n        } else {\n          // One persistent opaque shell owns the importing -> result handoff.\n          Row().width(this.panelFrame().width).height(this.shellHeight)\n            .backgroundColor(readerAppColor(this.surfaceSpec().backgroundRole, this.appThemeScheme)).borderRadius(this.surfaceSpec().borderRadius)\n            .shadow({ radius: 50, color: readerAppColor('app.LocalImportDialog.build.color.40000000', this.appThemeScheme), offsetX: 0, offsetY: 25 });\n          this.importingPanel();\n          if (this.batch !== undefined) this.resultPanel();\n        }\n      }"
+        },
+        {
+          "kind": "Row",
+          "line": 108,
+          "text": "Row()"
+        },
+        {
+          "kind": "Column",
+          "line": 137,
+          "text": "Column() {\n      Row() {\n        Text('导入本地书籍')\n          .fontFamily(TYPE_FILE_IMPORT_TITLE.fontFamily)\n          .fontWeight(TYPE_FILE_IMPORT_TITLE.fontWeight)\n          .fontSize(TYPE_FILE_IMPORT_TITLE.fontSizeFp)\n          .lineHeight(TYPE_FILE_IMPORT_TITLE.lineHeightFp as number)\n          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))\n          .maxLines(1);\n      }\n      .width('100%')\n      .padding({ left: 20, right: 20, top: 20, bottom: 17 })\n      .alignItems(VerticalAlign.Center);\n\n      Blank().width('100%').height(1).backgroundColor(readerAppColor('app.LocalImportDialog.fileSelectionPanel.backgroundColor.FFE8E2D9', this.appThemeScheme));\n\n      Column({ space: 0 }) {\n        // Drop zone: 310 wide, dashed 2px #C1C7CD on #F8F4EC, radius 14.\n        Column({ space: TOK_SPACE_SM }) {\n          Stack({ alignContent: Alignment.Center }) {\n            Image((this.appThemeScheme === 'night' ? $r('app.media.import_select_system_theme_night') : $r('app.media.import_select_system'))).width(20).height(20);\n          }\n          .width(44)\n          .height(44)\n          .backgroundColor(readerAppColor('app.LocalImportDialog.fileSelectionPanel.backgroundColor.FFD8E8E2', this.appThemeScheme))\n          .borderRadius(22);\n\n          Column({ space: 0 }) {\n            Text('从系统文件中选择')\n              .fontFamily(TYPE_FILE_IMPORT_LABEL.fontFamily)\n              .fontWeight(TYPE_FILE_IMPORT_LABEL.fontWeight)\n              .fontSize(TYPE_FILE_IMPORT_LABEL.fontSizeFp)\n              .lineHeight(TYPE_FILE_IMPORT_LABEL.lineHeightFp as number)\n              .letterSpacing(TYPE_FILE_IMPORT_LABEL.letterSpacingFp as number)\n              .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));\n            Text('支持多选 TXT、EPUB、MOBI、AZW3')\n              .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)\n              .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)\n              .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)\n              .lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)\n              .letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)\n              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))\n              .margin({ top: 2 });\n          }\n          .alignItems(HorizontalAlign.Center);\n\n          Row({ space: 6 }) {\n            this.formatBadge('TXT', readerAppColor('TOK_GREEN', this.appThemeScheme));\n            this.formatBadge('EPUB', readerAppColor('app.LocalImportDialog.fileSelectionPanel.formatBadge.FF5A4A2A', this.appThemeScheme));\n            this.formatBadge('MOBI', readerAppColor('app.LocalImportDialog.fileSelectionPanel.formatBadge.FF7A5A38', this.appThemeScheme));\n            this.formatBadge('AZW3', readerAppColor('app.LocalImportDialog.fileSelectionPanel.formatBadge.FF6A4F7A', this.appThemeScheme));\n          }\n        }\n        .width('100%')\n        .padding({ top: 30, bottom: 30, left: 2, right: 2 })\n        .justifyContent(FlexAlign.Center)\n        .alignItems(HorizontalAlign.Center)\n        .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))\n        .border({ width: 2, color: readerAppColor('TOK_BORDER', this.appThemeScheme), style: BorderStyle.Dashed })\n        .borderRadius(14)\n        // The illustrated drop zone is itself the primary picker affordance;\n        // keep it equivalent to the explicit bottom action for touch users.\n        .enabled(this.state !== 'pickerOpening')\n        .onClick((): void => this.onSelectFiles());\n\n        Row({ space: TOK_SPACE_XS }) {\n          Image((this.appThemeScheme === 'night' ? $r('app.media.import_info_theme_night') : $r('app.media.import_info')))\n            .width(13)\n            .height(13)\n            .margin({ top: 2 });\n          Text(this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。')\n            .layoutWeight(1)\n            .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)\n            .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)\n            .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)\n            .lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)\n            .letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)\n            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));\n        }\n        .width('100%')\n        .padding({ top: TOK_SPACE_MD });\n\n        // Primary 211 / outlined cancel; row height 84 (20 top + 44 + 20 bottom).\n        Row({ space: TOK_SPACE_SM }) {\n          Row({ space: TOK_SPACE_XS }) {\n            Image($r('app.media.import_choose_file')).width(15).height(15);\n            Text(this.state === 'pickerOpening' ? '正在选择…' : '选择文件')\n              .fontFamily(TYPE_FILE_IMPORT_ACTION.fontFamily)\n              .fontWeight(TYPE_FILE_IMPORT_ACTION.fontWeight)\n              .fontSize(TYPE_FILE_IMPORT_ACTION.fontSizeFp)\n              .lineHeight(TYPE_FILE_IMPORT_ACTION.lineHeightFp as number)\n              .letterSpacing(TYPE_FILE_IMPORT_ACTION.letterSpacingFp as number)\n              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));\n          }\n          .layoutWeight(1)\n          .height(44)\n          .justifyContent(FlexAlign.Center)\n          .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))\n          .borderRadius(22)\n          .enabled(this.state !== 'pickerOpening')\n        .onClick((): void => this.onSelectFiles());\n\n          Row({ space: 6 }) {\n            Image((this.appThemeScheme === 'night' ? $r('app.media.import_cancel_theme_night') : $r('app.media.import_cancel'))).width(13).height(13);\n            Text('取消')\n              .fontFamily(TYPE_FILE_IMPORT_CANCEL.fontFamily)\n              .fontWeight(TYPE_FILE_IMPORT_CANCEL.fontWeight)\n              .fontSize(TYPE_FILE_IMPORT_CANCEL.fontSizeFp)\n              .lineHeight(TYPE_FILE_IMPORT_CANCEL.lineHeightFp as number)\n              .letterSpacing(TYPE_FILE_IMPORT_CANCEL.letterSpacingFp as number)\n              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));\n          }\n          .height(44)\n          .padding({ left: 21, right: 21 })\n          .justifyContent(FlexAlign.Center)\n          .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })\n          .borderRadius(22)\n          .onClick((): void => this.onClose());\n        }\n        .width('100%')\n        .padding({ top: 20, bottom: 20 });\n      }\n      .width('100%')\n      .padding({ left: 20, right: 20, top: 20 });\n    }"
+        },
+        {
+          "kind": "Row",
+          "line": 138,
+          "text": "Row() {\n        Text('导入本地书籍')\n          .fontFamily(TYPE_FILE_IMPORT_TITLE.fontFamily)\n          .fontWeight(TYPE_FILE_IMPORT_TITLE.fontWeight)\n          .fontSize(TYPE_FILE_IMPORT_TITLE.fontSizeFp)\n          .lineHeight(TYPE_FILE_IMPORT_TITLE.lineHeightFp as number)\n          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))\n          .maxLines(1);\n      }"
+        },
+        {
+          "kind": "Text",
+          "line": 139,
+          "text": "Text('导入本地书籍')"
+        },
+        {
+          "kind": "Blank",
+          "line": 151,
+          "text": "Blank()"
+        },
+        {
+          "kind": "Column",
+          "line": 153,
+          "text": "Column({ space: 0 }) {\n        // Drop zone: 310 wide, dashed 2px #C1C7CD on #F8F4EC, radius 14.\n        Column({ space: TOK_SPACE_SM }) {\n          Stack({ alignContent: Alignment.Center }) {\n            Image((this.appThemeScheme === 'night' ? $r('app.media.import_select_system_theme_night') : $r('app.media.import_select_system'))).width(20).height(20);\n          }\n          .width(44)\n          .height(44)\n          .backgroundColor(readerAppColor('app.LocalImportDialog.fileSelectionPanel.backgroundColor.FFD8E8E2', this.appThemeScheme))\n          .borderRadius(22);\n\n          Column({ space: 0 }) {\n            Text('从系统文件中选择')\n              .fontFamily(TYPE_FILE_IMPORT_LABEL.fontFamily)\n              .fontWeight(TYPE_FILE_IMPORT_LABEL.fontWeight)\n              .fontSize(TYPE_FILE_IMPORT_LABEL.fontSizeFp)\n              .lineHeight(TYPE_FILE_IMPORT_LABEL.lineHeightFp as number)\n              .letterSpacing(TYPE_FILE_IMPORT_LABEL.letterSpacingFp as number)\n              .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));\n            Text('支持多选 TXT、EPUB、MOBI、AZW3')\n              .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)\n              .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)\n              .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)\n              .lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)\n              .letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)\n              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))\n              .margin({ top: 2 });\n          }\n          .alignItems(HorizontalAlign.Center);\n\n          Row({ space: 6 }) {\n            this.formatBadge('TXT', readerAppColor('TOK_GREEN', this.appThemeScheme));\n            this.formatBadge('EPUB', readerAppColor('app.LocalImportDialog.fileSelectionPanel.formatBadge.FF5A4A2A', this.appThemeScheme));\n            this.formatBadge('MOBI', readerAppColor('app.LocalImportDialog.fileSelectionPanel.formatBadge.FF7A5A38', this.appThemeScheme));\n            this.formatBadge('AZW3', readerAppColor('app.LocalImportDialog.fileSelectionPanel.formatBadge.FF6A4F7A', this.appThemeScheme));\n          }\n        }\n        .width('100%')\n        .padding({ top: 30, bottom: 30, left: 2, right: 2 })\n        .justifyContent(FlexAlign.Center)\n        .alignItems(HorizontalAlign.Center)\n        .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))\n        .border({ width: 2, color: readerAppColor('TOK_BORDER', this.appThemeScheme), style: BorderStyle.Dashed })\n        .borderRadius(14)\n        // The illustrated drop zone is itself the primary picker affordance;\n        // keep it equivalent to the explicit bottom action for touch users.\n        .enabled(this.state !== 'pickerOpening')\n        .onClick((): void => this.onSelectFiles());\n\n        Row({ space: TOK_SPACE_XS }) {\n          Image((this.appThemeScheme === 'night' ? $r('app.media.import_info_theme_night') : $r('app.media.import_info')))\n            .width(13)\n            .height(13)\n            .margin({ top: 2 });\n          Text(this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。')\n            .layoutWeight(1)\n            .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)\n            .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)\n            .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)\n            .lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)\n            .letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)\n            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));\n        }\n        .width('100%')\n        .padding({ top: TOK_SPACE_MD });\n\n        // Primary 211 / outlined cancel; row height 84 (20 top + 44 + 20 bottom).\n        Row({ space: TOK_SPACE_SM }) {\n          Row({ space: TOK_SPACE_XS }) {\n            Image($r('app.media.import_choose_file')).width(15).height(15);\n            Text(this.state === 'pickerOpening' ? '正在选择…' : '选择文件')\n              .fontFamily(TYPE_FILE_IMPORT_ACTION.fontFamily)\n              .fontWeight(TYPE_FILE_IMPORT_ACTION.fontWeight)\n              .fontSize(TYPE_FILE_IMPORT_ACTION.fontSizeFp)\n              .lineHeight(TYPE_FILE_IMPORT_ACTION.lineHeightFp as number)\n              .letterSpacing(TYPE_FILE_IMPORT_ACTION.letterSpacingFp as number)\n              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));\n          }\n          .layoutWeight(1)\n          .height(44)\n          .justifyContent(FlexAlign.Center)\n          .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))\n          .borderRadius(22)\n          .enabled(this.state !== 'pickerOpening')\n        .onClick((): void => this.onSelectFiles());\n\n          Row({ space: 6 }) {\n            Image((this.appThemeScheme === 'night' ? $r('app.media.import_cancel_theme_night') : $r('app.media.import_cancel'))).width(13).height(13);\n            Text('取消')\n              .fontFamily(TYPE_FILE_IMPORT_CANCEL.fontFamily)\n              .fontWeight(TYPE_FILE_IMPORT_CANCEL.fontWeight)\n              .fontSize(TYPE_FILE_IMPORT_CANCEL.fontSizeFp)\n              .lineHeight(TYPE_FILE_IMPORT_CANCEL.lineHeightFp as number)\n              .letterSpacing(TYPE_FILE_IMPORT_CANCEL.letterSpacingFp as number)\n              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));\n          }\n          .height(44)\n          .padding({ left: 21, right: 21 })\n          .justifyContent(FlexAlign.Center)\n          .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })\n          .borderRadius(22)\n          .onClick((): void => this.onClose());\n        }\n        .width('100%')\n        .padding({ top: 20, bottom: 20 });\n      }"
+        },
+        {
+          "kind": "Column",
+          "line": 155,
+          "text": "Column({ space: TOK_SPACE_SM }) {\n          Stack({ alignContent: Alignment.Center }) {\n            Image((this.appThemeScheme === 'night' ? $r('app.media.import_select_system_theme_night') : $r('app.media.import_select_system'))).width(20).height(20);\n          }\n          .width(44)\n          .height(44)\n          .backgroundColor(readerAppColor('app.LocalImportDialog.fileSelectionPanel.backgroundColor.FFD8E8E2', this.appThemeScheme))\n          .borderRadius(22);\n\n          Column({ space: 0 }) {\n            Text('从系统文件中选择')\n              .fontFamily(TYPE_FILE_IMPORT_LABEL.fontFamily)\n              .fontWeight(TYPE_FILE_IMPORT_LABEL.fontWeight)\n              .fontSize(TYPE_FILE_IMPORT_LABEL.fontSizeFp)\n              .lineHeight(TYPE_FILE_IMPORT_LABEL.lineHeightFp as number)\n              .letterSpacing(TYPE_FILE_IMPORT_LABEL.letterSpacingFp as number)\n              .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));\n            Text('支持多选 TXT、EPUB、MOBI、AZW3')\n              .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)\n              .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)\n              .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)\n              .lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)\n              .letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)\n              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))\n              .margin({ top: 2 });\n          }\n          .alignItems(HorizontalAlign.Center);\n\n          Row({ space: 6 }) {\n            this.formatBadge('TXT', readerAppColor('TOK_GREEN', this.appThemeScheme));\n            this.formatBadge('EPUB', readerAppColor('app.LocalImportDialog.fileSelectionPanel.formatBadge.FF5A4A2A', this.appThemeScheme));\n            this.formatBadge('MOBI', readerAppColor('app.LocalImportDialog.fileSelectionPanel.formatBadge.FF7A5A38', this.appThemeScheme));\n            this.formatBadge('AZW3', readerAppColor('app.LocalImportDialog.fileSelectionPanel.formatBadge.FF6A4F7A', this.appThemeScheme));\n          }\n        }"
+        },
+        {
+          "kind": "Stack",
+          "line": 156,
+          "text": "Stack({ alignContent: Alignment.Center }) {\n            Image((this.appThemeScheme === 'night' ? $r('app.media.import_select_system_theme_night') : $r('app.media.import_select_system'))).width(20).height(20);\n          }"
+        },
+        {
+          "kind": "Image",
+          "line": 157,
+          "text": "Image((this.appThemeScheme === 'night' ? $r('app.media.import_select_system_theme_night') : $r('app.media.import_select_system')))"
+        },
+        {
+          "kind": "Column",
+          "line": 164,
+          "text": "Column({ space: 0 }) {\n            Text('从系统文件中选择')\n              .fontFamily(TYPE_FILE_IMPORT_LABEL.fontFamily)\n              .fontWeight(TYPE_FILE_IMPORT_LABEL.fontWeight)\n              .fontSize(TYPE_FILE_IMPORT_LABEL.fontSizeFp)\n              .lineHeight(TYPE_FILE_IMPORT_LABEL.lineHeightFp as number)\n              .letterSpacing(TYPE_FILE_IMPORT_LABEL.letterSpacingFp as number)\n              .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));\n            Text('支持多选 TXT、EPUB、MOBI、AZW3')\n              .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)\n              .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)\n              .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)\n              .lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)\n              .letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)\n              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))\n              .margin({ top: 2 });\n          }"
+        },
+        {
+          "kind": "Text",
+          "line": 165,
+          "text": "Text('从系统文件中选择')"
+        },
+        {
+          "kind": "Text",
+          "line": 172,
+          "text": "Text('支持多选 TXT、EPUB、MOBI、AZW3')"
+        },
+        {
+          "kind": "Row",
+          "line": 183,
+          "text": "Row({ space: 6 }) {\n            this.formatBadge('TXT', readerAppColor('TOK_GREEN', this.appThemeScheme));\n            this.formatBadge('EPUB', readerAppColor('app.LocalImportDialog.fileSelectionPanel.formatBadge.FF5A4A2A', this.appThemeScheme));\n            this.formatBadge('MOBI', readerAppColor('app.LocalImportDialog.fileSelectionPanel.formatBadge.FF7A5A38', this.appThemeScheme));\n            this.formatBadge('AZW3', readerAppColor('app.LocalImportDialog.fileSelectionPanel.formatBadge.FF6A4F7A', this.appThemeScheme));\n          }"
+        },
+        {
+          "kind": "Row",
+          "line": 202,
+          "text": "Row({ space: TOK_SPACE_XS }) {\n          Image((this.appThemeScheme === 'night' ? $r('app.media.import_info_theme_night') : $r('app.media.import_info')))\n            .width(13)\n            .height(13)\n            .margin({ top: 2 });\n          Text(this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。')\n            .layoutWeight(1)\n            .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)\n            .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)\n            .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)\n            .lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)\n            .letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)\n            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));\n        }"
+        },
+        {
+          "kind": "Image",
+          "line": 203,
+          "text": "Image((this.appThemeScheme === 'night' ? $r('app.media.import_info_theme_night') : $r('app.media.import_info')))"
+        },
+        {
+          "kind": "Text",
+          "line": 207,
+          "text": "Text(this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。')"
+        },
+        {
+          "kind": "Row",
+          "line": 220,
+          "text": "Row({ space: TOK_SPACE_SM }) {\n          Row({ space: TOK_SPACE_XS }) {\n            Image($r('app.media.import_choose_file')).width(15).height(15);\n            Text(this.state === 'pickerOpening' ? '正在选择…' : '选择文件')\n              .fontFamily(TYPE_FILE_IMPORT_ACTION.fontFamily)\n              .fontWeight(TYPE_FILE_IMPORT_ACTION.fontWeight)\n              .fontSize(TYPE_FILE_IMPORT_ACTION.fontSizeFp)\n              .lineHeight(TYPE_FILE_IMPORT_ACTION.lineHeightFp as number)\n              .letterSpacing(TYPE_FILE_IMPORT_ACTION.letterSpacingFp as number)\n              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));\n          }\n          .layoutWeight(1)\n          .height(44)\n          .justifyContent(FlexAlign.Center)\n          .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))\n          .borderRadius(22)\n          .enabled(this.state !== 'pickerOpening')\n        .onClick((): void => this.onSelectFiles());\n\n          Row({ space: 6 }) {\n            Image((this.appThemeScheme === 'night' ? $r('app.media.import_cancel_theme_night') : $r('app.media.import_cancel'))).width(13).height(13);\n            Text('取消')\n              .fontFamily(TYPE_FILE_IMPORT_CANCEL.fontFamily)\n              .fontWeight(TYPE_FILE_IMPORT_CANCEL.fontWeight)\n              .fontSize(TYPE_FILE_IMPORT_CANCEL.fontSizeFp)\n              .lineHeight(TYPE_FILE_IMPORT_CANCEL.lineHeightFp as number)\n              .letterSpacing(TYPE_FILE_IMPORT_CANCEL.letterSpacingFp as number)\n              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));\n          }\n          .height(44)\n          .padding({ left: 21, right: 21 })\n          .justifyContent(FlexAlign.Center)\n          .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })\n          .borderRadius(22)\n          .onClick((): void => this.onClose());\n        }"
+        },
+        {
+          "kind": "Row",
+          "line": 221,
+          "text": "Row({ space: TOK_SPACE_XS }) {\n            Image($r('app.media.import_choose_file')).width(15).height(15);\n            Text(this.state === 'pickerOpening' ? '正在选择…' : '选择文件')\n              .fontFamily(TYPE_FILE_IMPORT_ACTION.fontFamily)\n              .fontWeight(TYPE_FILE_IMPORT_ACTION.fontWeight)\n              .fontSize(TYPE_FILE_IMPORT_ACTION.fontSizeFp)\n              .lineHeight(TYPE_FILE_IMPORT_ACTION.lineHeightFp as number)\n              .letterSpacing(TYPE_FILE_IMPORT_ACTION.letterSpacingFp as number)\n              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));\n          }"
+        },
+        {
+          "kind": "Image",
+          "line": 222,
+          "text": "Image($r('app.media.import_choose_file'))"
+        },
+        {
+          "kind": "Text",
+          "line": 223,
+          "text": "Text(this.state === 'pickerOpening' ? '正在选择…' : '选择文件')"
+        },
+        {
+          "kind": "Row",
+          "line": 239,
+          "text": "Row({ space: 6 }) {\n            Image((this.appThemeScheme === 'night' ? $r('app.media.import_cancel_theme_night') : $r('app.media.import_cancel'))).width(13).height(13);\n            Text('取消')\n              .fontFamily(TYPE_FILE_IMPORT_CANCEL.fontFamily)\n              .fontWeight(TYPE_FILE_IMPORT_CANCEL.fontWeight)\n              .fontSize(TYPE_FILE_IMPORT_CANCEL.fontSizeFp)\n              .lineHeight(TYPE_FILE_IMPORT_CANCEL.lineHeightFp as number)\n              .letterSpacing(TYPE_FILE_IMPORT_CANCEL.letterSpacingFp as number)\n              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));\n          }"
+        },
+        {
+          "kind": "Image",
+          "line": 240,
+          "text": "Image((this.appThemeScheme === 'night' ? $r('app.media.import_cancel_theme_night') : $r('app.media.import_cancel')))"
+        },
+        {
+          "kind": "Text",
+          "line": 241,
+          "text": "Text('取消')"
+        },
+        {
+          "kind": "Column",
+          "line": 271,
+          "text": "Column() {\n      Stack({ alignContent: Alignment.Center }) {\n        Image((this.appThemeScheme === 'night' ? $r('app.media.importing_halo_theme_night') : $r('app.media.importing_halo'))).width(56).height(56);\n        Image((this.appThemeScheme === 'night' ? $r('app.media.importing_spinner_track_theme_night') : $r('app.media.importing_spinner_track'))).width(32).height(32);\n        Image((this.appThemeScheme === 'night' ? $r('app.media.importing_spinner_arc_theme_night') : $r('app.media.importing_spinner_arc'))).width(32).height(32)\n          .rotate({ angle: this.spinnerAngle });\n      }\n      .width(56)\n      .height(56)\n      .margin({ top: 35 });\n\n      Text('正在导入')\n        .fontFamily(TYPE_FILE_IMPORT_PROGRESS.fontFamily)\n        .fontWeight(TYPE_FILE_IMPORT_PROGRESS.fontWeight)\n        .fontSize(TYPE_FILE_IMPORT_PROGRESS.fontSizeFp)\n        .lineHeight(TYPE_FILE_IMPORT_PROGRESS.lineHeightFp as number)\n        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))\n        .margin({ top: 20 });\n\n      Text('请稍候')\n        .fontFamily(TYPE_FILE_IMPORT_WAIT.fontFamily)\n        .fontWeight(TYPE_FILE_IMPORT_WAIT.fontWeight)\n        .fontSize(TYPE_FILE_IMPORT_WAIT.fontSizeFp)\n        .lineHeight(TYPE_FILE_IMPORT_WAIT.lineHeightFp as number)\n        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))\n        .margin({ top: 8 });\n    }"
+        },
+        {
+          "kind": "Stack",
+          "line": 272,
+          "text": "Stack({ alignContent: Alignment.Center }) {\n        Image((this.appThemeScheme === 'night' ? $r('app.media.importing_halo_theme_night') : $r('app.media.importing_halo'))).width(56).height(56);\n        Image((this.appThemeScheme === 'night' ? $r('app.media.importing_spinner_track_theme_night') : $r('app.media.importing_spinner_track'))).width(32).height(32);\n        Image((this.appThemeScheme === 'night' ? $r('app.media.importing_spinner_arc_theme_night') : $r('app.media.importing_spinner_arc'))).width(32).height(32)\n          .rotate({ angle: this.spinnerAngle });\n      }"
+        },
+        {
+          "kind": "Image",
+          "line": 273,
+          "text": "Image((this.appThemeScheme === 'night' ? $r('app.media.importing_halo_theme_night') : $r('app.media.importing_halo')))"
+        },
+        {
+          "kind": "Image",
+          "line": 274,
+          "text": "Image((this.appThemeScheme === 'night' ? $r('app.media.importing_spinner_track_theme_night') : $r('app.media.importing_spinner_track')))"
+        },
+        {
+          "kind": "Image",
+          "line": 275,
+          "text": "Image((this.appThemeScheme === 'night' ? $r('app.media.importing_spinner_arc_theme_night') : $r('app.media.importing_spinner_arc')))"
+        },
+        {
+          "kind": "Text",
+          "line": 282,
+          "text": "Text('正在导入')"
+        },
+        {
+          "kind": "Text",
+          "line": 290,
+          "text": "Text('请稍候')"
+        },
+        {
+          "kind": "Column",
+          "line": 307,
+          "text": "Column() {\n      if (this.resultLayout().compact) {\n        Scroll() {\n          Column() { this.resultHeader(); this.resultSummary(); this.resultItemsNatural(); }\n            .width('100%');\n        }.width('100%').height(Math.max(0, this.resultPanelHeight() - this.measuredFooterHeight))\n          .scrollBar(BarState.Off);\n      } else {\n        this.resultHeader();\n        this.resultSummary();\n        this.resultItemsPanel();\n      }\n      this.resultFooter();\n    }"
+        },
+        {
+          "kind": "Scroll",
+          "line": 309,
+          "text": "Scroll() {\n          Column() { this.resultHeader(); this.resultSummary(); this.resultItemsNatural(); }\n            .width('100%');\n        }"
+        },
+        {
+          "kind": "Column",
+          "line": 310,
+          "text": "Column() { this.resultHeader(); this.resultSummary(); this.resultItemsNatural(); }"
+        },
+        {
+          "kind": "Column",
+          "line": 328,
+          "text": "Column() {\n      Text('导入结果').fontFamily(TYPE_FILE_IMPORT_TITLE.fontFamily).fontWeight(TYPE_FILE_IMPORT_TITLE.fontWeight)\n        .fontSize(TYPE_FILE_IMPORT_TITLE.fontSizeFp).lineHeight(TYPE_FILE_IMPORT_TITLE.lineHeightFp as number).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1).width('100%')\n        .padding({ left: 20, right: 20, top: 20, bottom: 17 });\n      Blank().width('100%').height(1).backgroundColor(readerAppColor('app.LocalImportDialog.resultHeader.backgroundColor.FFE8E2D9', this.appThemeScheme));\n    }"
+        },
+        {
+          "kind": "Text",
+          "line": 329,
+          "text": "Text('导入结果')"
+        },
+        {
+          "kind": "Blank",
+          "line": 332,
+          "text": "Blank()"
+        },
+        {
+          "kind": "Column",
+          "line": 341,
+          "text": "Column() {\n      ReaderRecoveryNotice({ view: this.recovery,\n        onReconcile: (generation: number): void => this.onReconcile(generation) });\n      Row({ space: 6 }) {\n        Image($r('app.media.import_done')).width(14).height(14);\n        Text('完成').fontFamily(TYPE_FILE_IMPORT_ACTION.fontFamily).fontWeight(TYPE_FILE_IMPORT_ACTION.fontWeight).fontSize(TYPE_FILE_IMPORT_ACTION.fontSizeFp).lineHeight(TYPE_FILE_IMPORT_ACTION.lineHeightFp as number)\n          .letterSpacing(TYPE_FILE_IMPORT_ACTION.letterSpacingFp as number).fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));\n      }.width(this.resultButtonWidth()).height(40).justifyContent(FlexAlign.Center)\n        .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme)).borderRadius(20).onClick((): void => this.onClose());\n    }"
+        },
+        {
+          "kind": "Row",
+          "line": 344,
+          "text": "Row({ space: 6 }) {\n        Image($r('app.media.import_done')).width(14).height(14);\n        Text('完成').fontFamily(TYPE_FILE_IMPORT_ACTION.fontFamily).fontWeight(TYPE_FILE_IMPORT_ACTION.fontWeight).fontSize(TYPE_FILE_IMPORT_ACTION.fontSizeFp).lineHeight(TYPE_FILE_IMPORT_ACTION.lineHeightFp as number)\n          .letterSpacing(TYPE_FILE_IMPORT_ACTION.letterSpacingFp as number).fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));\n      }"
+        },
+        {
+          "kind": "Image",
+          "line": 345,
+          "text": "Image($r('app.media.import_done'))"
+        },
+        {
+          "kind": "Text",
+          "line": 346,
+          "text": "Text('完成')"
+        },
+        {
+          "kind": "Column",
+          "line": 361,
+          "text": "Column() {\n      Row({ space: TOK_SPACE_SM }) {\n        Stack({ alignContent: Alignment.Center }) {\n          Image(this.summaryIcon()).width(18).height(18);\n        }\n        .width(36)\n        .height(36)\n        .backgroundColor(this.allSucceeded() ? readerAppColor('app.LocalImportDialog.resultSummary.backgroundColor.FFE8F4ED', this.appThemeScheme) : readerAppColor('app.LocalImportDialog.resultSummary.backgroundColor.FFFDECEA', this.appThemeScheme))\n        .borderRadius(18);\n        Column({ space: 1 }) {\n          Text(this.summaryTitle())\n            .fontFamily(TYPE_FILE_IMPORT_LABEL.fontFamily)\n            .fontWeight(TYPE_FILE_IMPORT_LABEL.fontWeight)\n            .fontSize(TYPE_FILE_IMPORT_LABEL.fontSizeFp)\n            .lineHeight(TYPE_FILE_IMPORT_LABEL.lineHeightFp as number)\n            .letterSpacing(TYPE_FILE_IMPORT_LABEL.letterSpacingFp as number)\n            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));\n          Text(this.resultCountText())\n            .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)\n            .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)\n            .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)\n            .lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)\n            .letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)\n            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));\n        }\n        .layoutWeight(1)\n        .alignItems(HorizontalAlign.Start);\n        Stack({ alignContent: Alignment.Center }) {\n          // Figma 2657:818 keeps an 18vp slot; rotated Icon 2657:819 paints\n          // a 23.754vp bound. The 24px export already bakes in that rotation.\n          // Restore its paint scale without shrinking it twice or changing layout.\n          Image((this.appThemeScheme === 'night' ? $r('app.media.import_refresh_theme_night') : $r('app.media.import_refresh')))\n            .width(18)\n            .height(18)\n            .scale({ x: 23.754 / 18, y: 23.754 / 18 });\n        }\n        .width(18)\n        .height(18);\n      }\n      .width('100%')\n      .constraintSize({ minHeight: 52 })\n      .padding({ left: 17, right: 17, top: TOK_SPACE_XS, bottom: TOK_SPACE_XS })\n      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))\n      .border({ width: TOK_BORDER_W, color: readerAppColor('app.LocalImportDialog.resultSummary.color.FFE8E2D9', this.appThemeScheme) })\n      .borderRadius(12);\n    }"
+        },
+        {
+          "kind": "Row",
+          "line": 362,
+          "text": "Row({ space: TOK_SPACE_SM }) {\n        Stack({ alignContent: Alignment.Center }) {\n          Image(this.summaryIcon()).width(18).height(18);\n        }\n        .width(36)\n        .height(36)\n        .backgroundColor(this.allSucceeded() ? readerAppColor('app.LocalImportDialog.resultSummary.backgroundColor.FFE8F4ED', this.appThemeScheme) : readerAppColor('app.LocalImportDialog.resultSummary.backgroundColor.FFFDECEA', this.appThemeScheme))\n        .borderRadius(18);\n        Column({ space: 1 }) {\n          Text(this.summaryTitle())\n            .fontFamily(TYPE_FILE_IMPORT_LABEL.fontFamily)\n            .fontWeight(TYPE_FILE_IMPORT_LABEL.fontWeight)\n            .fontSize(TYPE_FILE_IMPORT_LABEL.fontSizeFp)\n            .lineHeight(TYPE_FILE_IMPORT_LABEL.lineHeightFp as number)\n            .letterSpacing(TYPE_FILE_IMPORT_LABEL.letterSpacingFp as number)\n            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));\n          Text(this.resultCountText())\n            .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)\n            .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)\n            .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)\n            .lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)\n            .letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)\n            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));\n        }\n        .layoutWeight(1)\n        .alignItems(HorizontalAlign.Start);\n        Stack({ alignContent: Alignment.Center }) {\n          // Figma 2657:818 keeps an 18vp slot; rotated Icon 2657:819 paints\n          // a 23.754vp bound. The 24px export already bakes in that rotation.\n          // Restore its paint scale without shrinking it twice or changing layout.\n          Image((this.appThemeScheme === 'night' ? $r('app.media.import_refresh_theme_night') : $r('app.media.import_refresh')))\n            .width(18)\n            .height(18)\n            .scale({ x: 23.754 / 18, y: 23.754 / 18 });\n        }\n        .width(18)\n        .height(18);\n      }"
+        },
+        {
+          "kind": "Stack",
+          "line": 363,
+          "text": "Stack({ alignContent: Alignment.Center }) {\n          Image(this.summaryIcon()).width(18).height(18);\n        }"
+        },
+        {
+          "kind": "Image",
+          "line": 364,
+          "text": "Image(this.summaryIcon())"
+        },
+        {
+          "kind": "Column",
+          "line": 370,
+          "text": "Column({ space: 1 }) {\n          Text(this.summaryTitle())\n            .fontFamily(TYPE_FILE_IMPORT_LABEL.fontFamily)\n            .fontWeight(TYPE_FILE_IMPORT_LABEL.fontWeight)\n            .fontSize(TYPE_FILE_IMPORT_LABEL.fontSizeFp)\n            .lineHeight(TYPE_FILE_IMPORT_LABEL.lineHeightFp as number)\n            .letterSpacing(TYPE_FILE_IMPORT_LABEL.letterSpacingFp as number)\n            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));\n          Text(this.resultCountText())\n            .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)\n            .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)\n            .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)\n            .lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)\n            .letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)\n            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));\n        }"
+        },
+        {
+          "kind": "Text",
+          "line": 371,
+          "text": "Text(this.summaryTitle())"
+        },
+        {
+          "kind": "Text",
+          "line": 378,
+          "text": "Text(this.resultCountText())"
+        },
+        {
+          "kind": "Stack",
+          "line": 388,
+          "text": "Stack({ alignContent: Alignment.Center }) {\n          // Figma 2657:818 keeps an 18vp slot; rotated Icon 2657:819 paints\n          // a 23.754vp bound. The 24px export already bakes in that rotation.\n          // Restore its paint scale without shrinking it twice or changing layout.\n          Image((this.appThemeScheme === 'night' ? $r('app.media.import_refresh_theme_night') : $r('app.media.import_refresh')))\n            .width(18)\n            .height(18)\n            .scale({ x: 23.754 / 18, y: 23.754 / 18 });\n        }"
+        },
+        {
+          "kind": "Image",
+          "line": 392,
+          "text": "Image((this.appThemeScheme === 'night' ? $r('app.media.import_refresh_theme_night') : $r('app.media.import_refresh')))"
+        },
+        {
+          "kind": "Column",
+          "line": 417,
+          "text": "Column() {\n      Scroll() {\n        this.resultItemsNatural();\n      }\n      .width('100%')\n      .height(this.resultItemsPanelHeight())\n      .padding(1)\n      .border({ width: TOK_BORDER_W, color: readerAppColor('app.LocalImportDialog.resultItemsPanel.color.FFE8E2D9', this.appThemeScheme) })\n      .borderRadius(12)\n      .scrollBar(BarState.Off);\n    }"
+        },
+        {
+          "kind": "Scroll",
+          "line": 418,
+          "text": "Scroll() {\n        this.resultItemsNatural();\n      }"
+        },
+        {
+          "kind": "Column",
+          "line": 434,
+          "text": "Column() {\n      ForEach(this.resultItems(), (item: LocalImportItem, index: number): void => {\n        this.resultItem(item, index !== this.resultItems().length - 1);\n      }, (item: LocalImportItem, index: number): string => `${item.fileName}-${item.state}-${index}`);\n    }"
+        },
+        {
+          "kind": "Column",
+          "line": 447,
+          "text": "Column({ space: 0 }) {\n      Row({ space: TOK_SPACE_SM }) {\n        Stack({ alignContent: Alignment.Center }) {\n          Image((this.appThemeScheme === 'night' ? $r('app.media.import_doc_theme_night') : $r('app.media.import_doc'))).width(16).height(16);\n        }\n        .width(32)\n        .height(32)\n        .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))\n        .borderRadius(8);\n        Column({ space: 3 }) {\n          Text(item.fileName)\n            .width('100%')\n            .fontFamily(TYPE_FILE_IMPORT_NAME.fontFamily)\n            .fontWeight(TYPE_FILE_IMPORT_NAME.fontWeight)\n            .fontSize(TYPE_FILE_IMPORT_NAME.fontSizeFp)\n            .lineHeight(TYPE_FILE_IMPORT_NAME.lineHeightFp as number)\n            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))\n            .maxLines(1)\n            .textOverflow({ overflow: TextOverflow.Ellipsis });\n          this.resultBadge(item.state === 'success' ?\n            (item.disposition === 'created' ? '新增成功' : item.disposition === 'existing' ? '已在书架' : '成功') :\n            (item.failure?.code === 'recoveryPending' ? '待确认' : '失败'), item.state === 'success' ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.LocalImportDialog.resultItem.resultBadge.FF5A4A2A', this.appThemeScheme));\n          if (item.failure !== undefined) {\n            Text(item.failure.message).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(2).width('100%');\n          }\n        }\n        .layoutWeight(1)\n        .alignItems(HorizontalAlign.Start);\n        if (item.state === 'success') {\n          Image((this.appThemeScheme === 'night' ? $r('app.media.import_success_theme_night') : $r('app.media.import_success'))).width(17).height(17);\n        } else {\n          Image($r('app.media.import_failure')).width(17).height(17);\n        }\n      }\n      .width('100%')\n      .constraintSize({ minHeight: 61 })\n      .padding({ left: TOK_SPACE_MD, right: TOK_SPACE_MD, top: TOK_SPACE_CONTROL_INLINE, bottom: 11 })\n      .alignItems(VerticalAlign.Center);\n      if (hasDivider) {\n        Divider()\n          .width('100%')\n          .color(readerAppColor('app.LocalImportDialog.resultItem.color.FFE8E2D9', this.appThemeScheme))\n          .strokeWidth(1);\n      }\n    }"
+        },
+        {
+          "kind": "Row",
+          "line": 448,
+          "text": "Row({ space: TOK_SPACE_SM }) {\n        Stack({ alignContent: Alignment.Center }) {\n          Image((this.appThemeScheme === 'night' ? $r('app.media.import_doc_theme_night') : $r('app.media.import_doc'))).width(16).height(16);\n        }\n        .width(32)\n        .height(32)\n        .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))\n        .borderRadius(8);\n        Column({ space: 3 }) {\n          Text(item.fileName)\n            .width('100%')\n            .fontFamily(TYPE_FILE_IMPORT_NAME.fontFamily)\n            .fontWeight(TYPE_FILE_IMPORT_NAME.fontWeight)\n            .fontSize(TYPE_FILE_IMPORT_NAME.fontSizeFp)\n            .lineHeight(TYPE_FILE_IMPORT_NAME.lineHeightFp as number)\n            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))\n            .maxLines(1)\n            .textOverflow({ overflow: TextOverflow.Ellipsis });\n          this.resultBadge(item.state === 'success' ?\n            (item.disposition === 'created' ? '新增成功' : item.disposition === 'existing' ? '已在书架' : '成功') :\n            (item.failure?.code === 'recoveryPending' ? '待确认' : '失败'), item.state === 'success' ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.LocalImportDialog.resultItem.resultBadge.FF5A4A2A', this.appThemeScheme));\n          if (item.failure !== undefined) {\n            Text(item.failure.message).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(2).width('100%');\n          }\n        }\n        .layoutWeight(1)\n        .alignItems(HorizontalAlign.Start);\n        if (item.state === 'success') {\n          Image((this.appThemeScheme === 'night' ? $r('app.media.import_success_theme_night') : $r('app.media.import_success'))).width(17).height(17);\n        } else {\n          Image($r('app.media.import_failure')).width(17).height(17);\n        }\n      }"
+        },
+        {
+          "kind": "Stack",
+          "line": 449,
+          "text": "Stack({ alignContent: Alignment.Center }) {\n          Image((this.appThemeScheme === 'night' ? $r('app.media.import_doc_theme_night') : $r('app.media.import_doc'))).width(16).height(16);\n        }"
+        },
+        {
+          "kind": "Image",
+          "line": 450,
+          "text": "Image((this.appThemeScheme === 'night' ? $r('app.media.import_doc_theme_night') : $r('app.media.import_doc')))"
+        },
+        {
+          "kind": "Column",
+          "line": 456,
+          "text": "Column({ space: 3 }) {\n          Text(item.fileName)\n            .width('100%')\n            .fontFamily(TYPE_FILE_IMPORT_NAME.fontFamily)\n            .fontWeight(TYPE_FILE_IMPORT_NAME.fontWeight)\n            .fontSize(TYPE_FILE_IMPORT_NAME.fontSizeFp)\n            .lineHeight(TYPE_FILE_IMPORT_NAME.lineHeightFp as number)\n            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))\n            .maxLines(1)\n            .textOverflow({ overflow: TextOverflow.Ellipsis });\n          this.resultBadge(item.state === 'success' ?\n            (item.disposition === 'created' ? '新增成功' : item.disposition === 'existing' ? '已在书架' : '成功') :\n            (item.failure?.code === 'recoveryPending' ? '待确认' : '失败'), item.state === 'success' ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.LocalImportDialog.resultItem.resultBadge.FF5A4A2A', this.appThemeScheme));\n          if (item.failure !== undefined) {\n            Text(item.failure.message).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(2).width('100%');\n          }\n        }"
+        },
+        {
+          "kind": "Text",
+          "line": 457,
+          "text": "Text(item.fileName)"
+        },
+        {
+          "kind": "Text",
+          "line": 470,
+          "text": "Text(item.failure.message)"
+        },
+        {
+          "kind": "Image",
+          "line": 476,
+          "text": "Image((this.appThemeScheme === 'night' ? $r('app.media.import_success_theme_night') : $r('app.media.import_success')))"
+        },
+        {
+          "kind": "Image",
+          "line": 478,
+          "text": "Image($r('app.media.import_failure'))"
+        },
+        {
+          "kind": "Text",
+          "line": 497,
+          "text": "Text(label)"
+        },
+        {
+          "kind": "Text",
+          "line": 511,
+          "text": "Text(label)"
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/source/SourceSwitchWindow.ets",
+      "sha256": "2835c2c661f60925bd3788ecd4da4ec10d855b4e0045d81d8b6d12a0b1c14eb3",
+      "structs": [
+        {
+          "name": "SourceSwitchDiscoveringState",
+          "members": [
+            {
+              "name": "kind",
+              "decorators": [],
+              "kind": "PropertySignature"
+            }
+          ]
+        },
+        {
+          "name": "SourceSwitchCandidatesState",
+          "members": [
+            {
+              "name": "kind",
+              "decorators": [],
+              "kind": "PropertySignature"
+            },
+            {
+              "name": "candidates",
+              "decorators": [],
+              "kind": "PropertySignature"
+            },
+            {
+              "name": "refreshing",
+              "decorators": [],
+              "kind": "PropertySignature"
+            },
+            {
+              "name": "refreshError",
+              "decorators": [],
+              "kind": "PropertySignature"
+            }
+          ]
+        },
+        {
+          "name": "SourceSwitchEmptyState",
+          "members": [
+            {
+              "name": "kind",
+              "decorators": [],
+              "kind": "PropertySignature"
+            }
+          ]
+        },
+        {
+          "name": "SourceSwitchDiscoveryErrorState",
+          "members": [
+            {
+              "name": "kind",
+              "decorators": [],
+              "kind": "PropertySignature"
+            },
+            {
+              "name": "message",
+              "decorators": [],
+              "kind": "PropertySignature"
+            }
+          ]
+        },
+        {
+          "name": "SourceSwitchSwitchingState",
+          "members": [
+            {
+              "name": "kind",
+              "decorators": [],
+              "kind": "PropertySignature"
+            },
+            {
+              "name": "targetSourceId",
+              "decorators": [],
+              "kind": "PropertySignature"
+            }
+          ]
+        },
+        {
+          "name": "SourceSwitchSuccessState",
+          "members": [
+            {
+              "name": "kind",
+              "decorators": [],
+              "kind": "PropertySignature"
+            }
+          ]
+        },
+        {
+          "name": "SourceSwitchFailureState",
+          "members": [
+            {
+              "name": "kind",
+              "decorators": [],
+              "kind": "PropertySignature"
+            },
+            {
+              "name": "message",
+              "decorators": [],
+              "kind": "PropertySignature"
+            },
+            {
+              "name": "transactionId",
+              "decorators": [],
+              "kind": "PropertySignature"
+            }
+          ]
+        },
+        {
+          "name": "SourceSwitchWindow",
+          "members": [
+            {
+              "name": "",
+              "decorators": [],
+              "kind": "Constructor"
+            },
+            {
+              "name": "appThemeScheme",
+              "decorators": [
+                "@StorageLink('readerAppScheme')"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "readerWindowMetricsRevision",
+              "decorators": [
+                "@StorageLink('readerWindowMetricsRevision')"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "state",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "currentSourceId",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onClose",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onRetry",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onRefresh",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onSelectCandidate",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onRollback",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "surfaceSpec",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "aboutToAppear",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "build",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "header",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "sortPill",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "columnHeader",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "body",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "loadingBody",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "messageBody",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "errorBody",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "failureBody",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "candidateList",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "footer",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "candidates",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "isRefreshing",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "footerText",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "horizontalFrame",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "windowWidth",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "windowHeight",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "windowTranslateX",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "windowTranslateY",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "messageWidth",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "sourceHeaderWidth",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "liveWindowWidth",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "liveWindowHeight",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            }
+          ]
+        }
+      ],
+      "nativeNodes": [
+        {
+          "kind": "Column",
+          "line": 120,
+          "text": "Column({ space: 0 }) {\n      this.header();\n      this.columnHeader();\n      this.body();\n      this.footer();\n    }"
+        },
+        {
+          "kind": "Column",
+          "line": 136,
+          "text": "Column({ space: 0 }) {\n      Row() {\n        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_switch_theme_night') : $r('app.media.reader_directory_switch')))\n          .width(18)\n          .height(18)\n          .margin({ left: 9 });\n\n        Text('换源')\n          .layoutWeight(1)\n          .constraintSize({ minWidth: 0 })\n          .height(16)\n          .fontFamily(TYPE_SOURCE_SWITCH_HEADING.fontFamily)\n          .fontWeight(TYPE_SOURCE_SWITCH_HEADING.fontWeight)\n          .fontSize(TYPE_SOURCE_SWITCH_HEADING.fontSizeFp)\n          .lineHeight(TYPE_SOURCE_SWITCH_HEADING.lineHeightFp as number)\n          .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))\n          .margin({ left: 7 });\n\n        this.sortPill();\n\n        // Figma SourceSwitch/CloseButton 568:40: 22×22 pill with the exact\n        // 20×20 Icon/Close asset, centered inside its 44×44 hit target.\n        Stack({ alignContent: Alignment.Center }) {\n          Stack({ alignContent: Alignment.Center }) {\n            Image((this.appThemeScheme === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close')))\n              .width(20)\n              .height(20);\n          }\n          .width(22)\n          .height(22)\n          .borderRadius(8)\n          .backgroundColor(readerAppColor('TOK_SS_CLOSE_BG', this.appThemeScheme));\n        }\n        .width(44)\n        .height(44)\n        .margin({ left: 1 })\n        .onClick((): void => this.onClose());\n      }\n      .width('100%')\n      .height(33)\n      .alignItems(VerticalAlign.Center);\n\n      Text('')\n        .width(Math.max(0, this.windowWidth() - 1))\n        .height(1)\n        .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));\n    }"
+        },
+        {
+          "kind": "Row",
+          "line": 137,
+          "text": "Row() {\n        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_switch_theme_night') : $r('app.media.reader_directory_switch')))\n          .width(18)\n          .height(18)\n          .margin({ left: 9 });\n\n        Text('换源')\n          .layoutWeight(1)\n          .constraintSize({ minWidth: 0 })\n          .height(16)\n          .fontFamily(TYPE_SOURCE_SWITCH_HEADING.fontFamily)\n          .fontWeight(TYPE_SOURCE_SWITCH_HEADING.fontWeight)\n          .fontSize(TYPE_SOURCE_SWITCH_HEADING.fontSizeFp)\n          .lineHeight(TYPE_SOURCE_SWITCH_HEADING.lineHeightFp as number)\n          .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))\n          .margin({ left: 7 });\n\n        this.sortPill();\n\n        // Figma SourceSwitch/CloseButton 568:40: 22×22 pill with the exact\n        // 20×20 Icon/Close asset, centered inside its 44×44 hit target.\n        Stack({ alignContent: Alignment.Center }) {\n          Stack({ alignContent: Alignment.Center }) {\n            Image((this.appThemeScheme === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close')))\n              .width(20)\n              .height(20);\n          }\n          .width(22)\n          .height(22)\n          .borderRadius(8)\n          .backgroundColor(readerAppColor('TOK_SS_CLOSE_BG', this.appThemeScheme));\n        }\n        .width(44)\n        .height(44)\n        .margin({ left: 1 })\n        .onClick((): void => this.onClose());\n      }"
+        },
+        {
+          "kind": "Image",
+          "line": 138,
+          "text": "Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_switch_theme_night') : $r('app.media.reader_directory_switch')))"
+        },
+        {
+          "kind": "Text",
+          "line": 143,
+          "text": "Text('换源')"
+        },
+        {
+          "kind": "Stack",
+          "line": 158,
+          "text": "Stack({ alignContent: Alignment.Center }) {\n          Stack({ alignContent: Alignment.Center }) {\n            Image((this.appThemeScheme === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close')))\n              .width(20)\n              .height(20);\n          }\n          .width(22)\n          .height(22)\n          .borderRadius(8)\n          .backgroundColor(readerAppColor('TOK_SS_CLOSE_BG', this.appThemeScheme));\n        }"
+        },
+        {
+          "kind": "Stack",
+          "line": 159,
+          "text": "Stack({ alignContent: Alignment.Center }) {\n            Image((this.appThemeScheme === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close')))\n              .width(20)\n              .height(20);\n          }"
+        },
+        {
+          "kind": "Image",
+          "line": 160,
+          "text": "Image((this.appThemeScheme === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close')))"
+        },
+        {
+          "kind": "Text",
+          "line": 178,
+          "text": "Text('')"
+        },
+        {
+          "kind": "Stack",
+          "line": 191,
+          "text": "Stack({ alignContent: Alignment.Center }) {\n      Text('按延迟排序')\n        .fontFamily(TYPE_SOURCE_SWITCH_SORT.fontFamily)\n        .fontWeight(TYPE_SOURCE_SWITCH_SORT.fontWeight)\n        .fontSize(TYPE_SOURCE_SWITCH_SORT.fontSizeFp)\n        .lineHeight(TYPE_SOURCE_SWITCH_SORT.lineHeightFp as number)\n        .fontColor(readerAppColor('TOK_SS_MUTED', this.appThemeScheme))\n        .textAlign(TextAlign.Center);\n    }"
+        },
+        {
+          "kind": "Text",
+          "line": 192,
+          "text": "Text('按延迟排序')"
+        },
+        {
+          "kind": "Row",
+          "line": 209,
+          "text": "Row() {\n      Text('书源')\n        .width(this.sourceHeaderWidth())\n        .height(12)\n        .fontFamily(TYPE_SOURCE_SWITCH_COLUMN.fontFamily)\n        .fontWeight(TYPE_SOURCE_SWITCH_COLUMN.fontWeight)\n        .fontSize(TYPE_SOURCE_SWITCH_COLUMN.fontSizeFp)\n        .fontColor(readerAppColor('TOK_READ_HANDLE', this.appThemeScheme))\n        .margin({ left: 10 });\n\n      Text('延迟')\n        .width(72)\n        .height(12)\n        .fontFamily(TYPE_SOURCE_SWITCH_COLUMN.fontFamily)\n        .fontWeight(TYPE_SOURCE_SWITCH_COLUMN.fontWeight)\n        .fontSize(TYPE_SOURCE_SWITCH_COLUMN.fontSizeFp)\n        .fontColor(readerAppColor('TOK_READ_HANDLE', this.appThemeScheme));\n\n      Text('当前章节')\n        .width(100)\n        .height(12)\n        .fontFamily(TYPE_SOURCE_SWITCH_COLUMN.fontFamily)\n        .fontWeight(TYPE_SOURCE_SWITCH_COLUMN.fontWeight)\n        .fontSize(TYPE_SOURCE_SWITCH_COLUMN.fontSizeFp)\n        .fontColor(readerAppColor('TOK_READ_HANDLE', this.appThemeScheme))\n        .textAlign(TextAlign.End);\n    }"
+        },
+        {
+          "kind": "Text",
+          "line": 210,
+          "text": "Text('书源')"
+        },
+        {
+          "kind": "Text",
+          "line": 219,
+          "text": "Text('延迟')"
+        },
+        {
+          "kind": "Text",
+          "line": 227,
+          "text": "Text('当前章节')"
+        },
+        {
+          "kind": "Column",
+          "line": 261,
+          "text": "Column({ space: 0 }) {\n      Blank().layoutWeight(1);\n      LoadingProgress()\n        .width(36)\n        .height(36)\n        .color(readerAppColor('TOK_READ_INK', this.appThemeScheme))\n        .enableLoading(true);\n      Text(isSwitching ? '正在切换书源…' : '正在搜索书源…')\n        .margin({ top: 20 })\n        .fontFamily(TYPE_APP_LOADING_BODY.fontFamily)\n        .fontWeight(TYPE_APP_LOADING_BODY.fontWeight)\n        .fontSize(TYPE_APP_LOADING_BODY.fontSizeFp)\n        .lineHeight(TYPE_APP_LOADING_BODY.lineHeightFp as number)\n        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))\n        .textAlign(TextAlign.Center);\n      Blank().layoutWeight(1);\n    }"
+        },
+        {
+          "kind": "Blank",
+          "line": 262,
+          "text": "Blank()"
+        },
+        {
+          "kind": "Text",
+          "line": 268,
+          "text": "Text(isSwitching ? '正在切换书源…' : '正在搜索书源…')"
+        },
+        {
+          "kind": "Blank",
+          "line": 276,
+          "text": "Blank()"
+        },
+        {
+          "kind": "Column",
+          "line": 284,
+          "text": "Column({ space: 0 }) {\n      Blank().layoutWeight(1);\n      Text(title)\n        .fontFamily(TYPE_SOURCE_STATE_TITLE.fontFamily)\n        .fontWeight(TYPE_SOURCE_STATE_TITLE.fontWeight)\n        .fontSize(TYPE_SOURCE_STATE_TITLE.fontSizeFp)\n        .lineHeight(TYPE_SOURCE_STATE_TITLE.lineHeightFp as number)\n        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))\n        .textAlign(TextAlign.Center);\n      if (subtitle.length > 0) {\n        Text(subtitle)\n          .margin({ top: TOK_SPACE_XS })\n          .fontFamily(TYPE_SOURCE_SWITCH_MESSAGE.fontFamily)\n          .fontWeight(TYPE_SOURCE_SWITCH_MESSAGE.fontWeight)\n          .fontSize(TYPE_SOURCE_SWITCH_MESSAGE.fontSizeFp)\n          .lineHeight(TYPE_SOURCE_SWITCH_MESSAGE.lineHeightFp as number)\n          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))\n          .textAlign(TextAlign.Center);\n      }\n      Blank().layoutWeight(1);\n    }"
+        },
+        {
+          "kind": "Blank",
+          "line": 285,
+          "text": "Blank()"
+        },
+        {
+          "kind": "Text",
+          "line": 286,
+          "text": "Text(title)"
+        },
+        {
+          "kind": "Text",
+          "line": 294,
+          "text": "Text(subtitle)"
+        },
+        {
+          "kind": "Blank",
+          "line": 303,
+          "text": "Blank()"
+        },
+        {
+          "kind": "Column",
+          "line": 311,
+          "text": "Column({ space: 0 }) {\n      Blank().layoutWeight(1);\n      Text('书源搜索失败')\n        .fontFamily(TYPE_SOURCE_STATE_TITLE.fontFamily)\n        .fontWeight(TYPE_SOURCE_STATE_TITLE.fontWeight)\n        .fontSize(TYPE_SOURCE_STATE_TITLE.fontSizeFp)\n        .lineHeight(TYPE_SOURCE_STATE_TITLE.lineHeightFp as number)\n        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))\n        .textAlign(TextAlign.Center);\n      Text(message)\n        .margin({ top: TOK_SPACE_XS })\n        .width(this.messageWidth())\n        .fontFamily(TYPE_SOURCE_SWITCH_MESSAGE.fontFamily)\n        .fontWeight(TYPE_SOURCE_SWITCH_MESSAGE.fontWeight)\n        .fontSize(TYPE_SOURCE_SWITCH_MESSAGE.fontSizeFp)\n        .lineHeight(TYPE_SOURCE_SWITCH_MESSAGE.lineHeightFp as number)\n        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))\n        .maxLines(2)\n        .textOverflow({ overflow: TextOverflow.Ellipsis })\n        .textAlign(TextAlign.Center);\n      Text('重试')\n        .margin({ top: 18 })\n        .fontFamily(TYPE_SOURCE_SWITCH_RECOVERY.fontFamily)\n        .fontWeight(TYPE_SOURCE_SWITCH_RECOVERY.fontWeight)\n        .fontSize(TYPE_SOURCE_SWITCH_RECOVERY.fontSizeFp)\n        .lineHeight(TYPE_SOURCE_SWITCH_RECOVERY.lineHeightFp as number)\n        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))\n        .padding({ left: 26, right: 26, top: TOK_SPACE_SM, bottom: TOK_SPACE_SM })\n        .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))\n        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })\n        .borderRadius(999)\n        .onClick((): void => this.onRetry());\n      Blank().layoutWeight(1);\n    }"
+        },
+        {
+          "kind": "Blank",
+          "line": 312,
+          "text": "Blank()"
+        },
+        {
+          "kind": "Text",
+          "line": 313,
+          "text": "Text('书源搜索失败')"
+        },
+        {
+          "kind": "Text",
+          "line": 320,
+          "text": "Text(message)"
+        },
+        {
+          "kind": "Text",
+          "line": 331,
+          "text": "Text('重试')"
+        },
+        {
+          "kind": "Blank",
+          "line": 343,
+          "text": "Blank()"
+        },
+        {
+          "kind": "Column",
+          "line": 351,
+          "text": "Column({ space: 0 }) {\n      Blank().layoutWeight(1);\n      Text('换源失败')\n        .fontFamily(TYPE_SOURCE_STATE_TITLE.fontFamily)\n        .fontWeight(TYPE_SOURCE_STATE_TITLE.fontWeight)\n        .fontSize(TYPE_SOURCE_STATE_TITLE.fontSizeFp)\n        .lineHeight(TYPE_SOURCE_STATE_TITLE.lineHeightFp as number)\n        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))\n        .textAlign(TextAlign.Center);\n      Text(message)\n        .margin({ top: TOK_SPACE_XS })\n        .width(this.messageWidth())\n        .fontFamily(TYPE_SOURCE_SWITCH_MESSAGE.fontFamily)\n        .fontWeight(TYPE_SOURCE_SWITCH_MESSAGE.fontWeight)\n        .fontSize(TYPE_SOURCE_SWITCH_MESSAGE.fontSizeFp)\n        .lineHeight(TYPE_SOURCE_SWITCH_MESSAGE.lineHeightFp as number)\n        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))\n        .maxLines(2)\n        .textOverflow({ overflow: TextOverflow.Ellipsis })\n        .textAlign(TextAlign.Center);\n      if (canRollback) {\n        Text('撤销切换')\n          .margin({ top: 18 })\n          .fontFamily(TYPE_SOURCE_SWITCH_RECOVERY.fontFamily)\n          .fontWeight(TYPE_SOURCE_SWITCH_RECOVERY.fontWeight)\n          .fontSize(TYPE_SOURCE_SWITCH_RECOVERY.fontSizeFp)\n          .lineHeight(TYPE_SOURCE_SWITCH_RECOVERY.lineHeightFp as number)\n          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))\n          .padding({ left: 26, right: 26, top: TOK_SPACE_SM, bottom: TOK_SPACE_SM })\n          .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))\n          .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })\n          .borderRadius(999)\n          .onClick((): void => this.onRollback());\n      }\n      Blank().layoutWeight(1);\n    }"
+        },
+        {
+          "kind": "Blank",
+          "line": 352,
+          "text": "Blank()"
+        },
+        {
+          "kind": "Text",
+          "line": 353,
+          "text": "Text('换源失败')"
+        },
+        {
+          "kind": "Text",
+          "line": 360,
+          "text": "Text(message)"
+        },
+        {
+          "kind": "Text",
+          "line": 372,
+          "text": "Text('撤销切换')"
+        },
+        {
+          "kind": "Blank",
+          "line": 385,
+          "text": "Blank()"
+        },
+        {
+          "kind": "Text",
+          "line": 434,
+          "text": "Text(this.footerText())"
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/SourceSwitchPanel.ets",
+      "sha256": "c3cfbc384db810032e0329894776c2662e805927d6de04011933647427a01fc6",
+      "structs": [
+        {
+          "name": "SourceSwitchPanel",
+          "members": [
+            {
+              "name": "",
+              "decorators": [],
+              "kind": "Constructor"
+            },
+            {
+              "name": "state",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "currentSourceId",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onClose",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onRetry",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onRefresh",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onSelectCandidate",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onRollback",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "build",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            }
+          ]
+        }
+      ],
+      "nativeNodes": []
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+      "sha256": "9fd7747ad57a485237fd5b0f84301c5fb2446e052eda88e313926167446744d7",
+      "structs": [
+        {
+          "name": "ReaderControlReplaceContent",
+          "members": [
+            {
+              "name": "",
+              "decorators": [],
+              "kind": "Constructor"
+            },
+            {
+              "name": "appThemeScheme",
+              "decorators": [
+                "@StorageLink('readerAppScheme')"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "state",
+              "decorators": [
+                "@Prop",
+                "@Watch('onSourceChanged')"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "motionProgress",
+              "decorators": [
+                "@Prop",
+                "@Watch('onMotionChanged')"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "availableWidth",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "availableHeight",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "fullContentHeight",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "quickContentHeight",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "interactionEnabled",
+              "decorators": [
+                "@Prop",
+                "@Watch('onMotionChanged')"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "dismissTemporaryRevision",
+              "decorators": [
+                "@Prop",
+                "@Watch('dismissTemporaryLayer')"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onBack",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onExpand",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onReload",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onToggle",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onSave",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onDelete",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onPreview",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onImport",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onExport",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onTemporaryLayerChange",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "layer",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "draft",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "deleteCandidate",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "previewResult",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "localError",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "localPending",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "scrollMotion",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "scroller",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "presentationRevision",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "lastSessionKey",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "cachedFrame",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "cachedProgress",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "cachedWidth",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "cachedHeight",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "cachedRuleSource",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "cachedRulesById",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "cachedRuleIndices",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "aboutToAppear",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "aboutToDisappear",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "onSourceChanged",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "onMotionChanged",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "frame",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "listContentMinHeight",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "presentation",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "rowClip",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "syncMorphScroll",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "onFullDidScroll",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "nativeScrollDelta",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "sharedScrollTranslation",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "fullOnlyScrollTranslation",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "fullInput",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "quickInput",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "readyInput",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "setLayer",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "dismissTemporaryLayer",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "openEditor",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "askDelete",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "openImport",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "confirmImport",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "perform",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "preview",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "reload",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "emptyStateMessage",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "refreshRuleLookup",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "currentRule",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "currentRuleIndex",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "changeEditorFlag",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "cancelTemporaryLayer",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "saveEditor",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "build",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "quickBack",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "toolbarButton",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "ruleToolbar",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "ruleRow",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "scopeSummary",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "ruleIcon",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "quickFooter",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "statusContent",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "textAction",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "temporaryOverlay",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "editorActions",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "editorFields",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "editorText",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "editorFlag",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "previewContent",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            }
+          ]
+        }
+      ],
+      "nativeNodes": [
+        {
+          "kind": "Stack",
+          "line": 286,
+          "text": "Stack({ alignContent: Alignment.TopStart }) {\n      Row().width(this.availableWidth).height(this.availableHeight).backgroundColor(readerAppColor('TOK_SURFACE_PANEL', this.appThemeScheme))\n        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) }).borderRadius(12).hitTestBehavior(HitTestMode.None);\n      this.quickBack();\n      this.ruleToolbar();\n      Scroll(this.scroller) {\n        Column({ space: this.frame().rowGap }) {\n          // Do not replace this with state.rules.slice(0, 3). Same row identity\n          // and same source collection must remain mounted throughout morph.\n          ForEach(this.state.rules, (rule: ReaderReplaceRule) => {\n            this.ruleRow((): ReaderReplaceRule => this.currentRule(rule), (): number => this.currentRuleIndex(rule.id));\n          }, (rule: ReaderReplaceRule): string => `control-replace-rule-${rule.id}`);\n          if (this.state.rules.length === 0 || this.state.errorMessage.length > 0 || this.localError.length > 0) {\n            this.statusContent();\n          }\n          // Complete preview business remains reachable without altering the\n          // recovered three-button Toolbar; this footer is a declared overlay.\n          Row() {\n            this.textAction('预览当前章节已保存规则', (): void => { this.preview(); }, (): boolean => this.readyInput() && this.fullInput());\n          }.width('100%').height(32).opacity(this.frame().progress)\n            .translate({ y: this.fullOnlyScrollTranslation() - this.sharedScrollTranslation() })\n            .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants');\n        }\n        .width(this.frame().list.width).alignItems(HorizontalAlign.Start)\n        .constraintSize({ minHeight: this.listContentMinHeight() })\n        .translate({ y: this.sharedScrollTranslation() });\n      }\n      .width(this.frame().list.width).height(this.frame().list.height)\n      .position({ x: this.frame().list.x, y: this.frame().list.y })\n      .scrollBar(BarState.Off).enableScrollInteraction(this.fullInput() && this.layer === '')\n      .edgeEffect(EdgeEffect.None)\n      .onAppear((): void => { this.onSourceChanged(); this.syncMorphScroll(); })\n      .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>\n        this.nativeScrollDelta(y, source))\n      .onDidScroll((): void => this.onFullDidScroll())\n      .clip(true);\n      if (this.state.rules.length > 0 && (this.state.errorMessage.length > 0 || this.localError.length > 0)) {\n        Column() { this.statusContent(); }\n          .width(this.frame().list.width).height(Math.min(84, this.frame().list.height))\n          .position({ x: this.frame().list.x, y: this.frame().list.y })\n          .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme)).borderRadius(8);\n      }\n      this.quickFooter();\n      if (this.layer !== '') {\n        this.temporaryOverlay();\n      }\n    }"
+        },
+        {
+          "kind": "Row",
+          "line": 287,
+          "text": "Row()"
+        },
+        {
+          "kind": "Scroll",
+          "line": 291,
+          "text": "Scroll(this.scroller) {\n        Column({ space: this.frame().rowGap }) {\n          // Do not replace this with state.rules.slice(0, 3). Same row identity\n          // and same source collection must remain mounted throughout morph.\n          ForEach(this.state.rules, (rule: ReaderReplaceRule) => {\n            this.ruleRow((): ReaderReplaceRule => this.currentRule(rule), (): number => this.currentRuleIndex(rule.id));\n          }, (rule: ReaderReplaceRule): string => `control-replace-rule-${rule.id}`);\n          if (this.state.rules.length === 0 || this.state.errorMessage.length > 0 || this.localError.length > 0) {\n            this.statusContent();\n          }\n          // Complete preview business remains reachable without altering the\n          // recovered three-button Toolbar; this footer is a declared overlay.\n          Row() {\n            this.textAction('预览当前章节已保存规则', (): void => { this.preview(); }, (): boolean => this.readyInput() && this.fullInput());\n          }.width('100%').height(32).opacity(this.frame().progress)\n            .translate({ y: this.fullOnlyScrollTranslation() - this.sharedScrollTranslation() })\n            .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants');\n        }\n        .width(this.frame().list.width).alignItems(HorizontalAlign.Start)\n        .constraintSize({ minHeight: this.listContentMinHeight() })\n        .translate({ y: this.sharedScrollTranslation() });\n      }"
+        },
+        {
+          "kind": "Column",
+          "line": 292,
+          "text": "Column({ space: this.frame().rowGap }) {\n          // Do not replace this with state.rules.slice(0, 3). Same row identity\n          // and same source collection must remain mounted throughout morph.\n          ForEach(this.state.rules, (rule: ReaderReplaceRule) => {\n            this.ruleRow((): ReaderReplaceRule => this.currentRule(rule), (): number => this.currentRuleIndex(rule.id));\n          }, (rule: ReaderReplaceRule): string => `control-replace-rule-${rule.id}`);\n          if (this.state.rules.length === 0 || this.state.errorMessage.length > 0 || this.localError.length > 0) {\n            this.statusContent();\n          }\n          // Complete preview business remains reachable without altering the\n          // recovered three-button Toolbar; this footer is a declared overlay.\n          Row() {\n            this.textAction('预览当前章节已保存规则', (): void => { this.preview(); }, (): boolean => this.readyInput() && this.fullInput());\n          }.width('100%').height(32).opacity(this.frame().progress)\n            .translate({ y: this.fullOnlyScrollTranslation() - this.sharedScrollTranslation() })\n            .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants');\n        }"
+        },
+        {
+          "kind": "Row",
+          "line": 303,
+          "text": "Row() {\n            this.textAction('预览当前章节已保存规则', (): void => { this.preview(); }, (): boolean => this.readyInput() && this.fullInput());\n          }"
+        },
+        {
+          "kind": "Column",
+          "line": 323,
+          "text": "Column() { this.statusContent(); }"
+        },
+        {
+          "kind": "Row",
+          "line": 337,
+          "text": "Row({ space: 5 }) {\n      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_control_replace_back_theme_night') : $r('app.media.reader_control_replace_back'))).width(11).height(11);\n      Text('返回').fontFamily(TYPE_READER_REPLACE_RETAINED_QUICK_BACK_BACK.fontFamily).fontSize(TYPE_READER_REPLACE_RETAINED_QUICK_BACK_BACK.fontSizeFp).fontWeight(TYPE_READER_REPLACE_RETAINED_QUICK_BACK_BACK.fontWeight).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));\n    }"
+        },
+        {
+          "kind": "Image",
+          "line": 338,
+          "text": "Image((this.appThemeScheme === 'night' ? $r('app.media.reader_control_replace_back_theme_night') : $r('app.media.reader_control_replace_back')))"
+        },
+        {
+          "kind": "Text",
+          "line": 339,
+          "text": "Text('返回')"
+        },
+        {
+          "kind": "Row",
+          "line": 349,
+          "text": "Row({ space: 6 }) {\n      Image(icon).width(20).height(20);\n      Text(label).fontFamily(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.fontFamily).fontSize(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.fontSizeFp).fontWeight(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.fontWeight)\n        .fontColor(add ? readerAppColor('app.ReaderControlReplaceContent.toolbarButton.fontColor.FFFFFFFF', this.appThemeScheme) : readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1);\n    }"
+        },
+        {
+          "kind": "Image",
+          "line": 350,
+          "text": "Image(icon)"
+        },
+        {
+          "kind": "Text",
+          "line": 351,
+          "text": "Text(label)"
+        },
+        {
+          "kind": "Row",
+          "line": 360,
+          "text": "Row({ space: 8 }) {\n      this.toolbarButton('新增规则', $r('app.media.reader_control_replace_add'), true, (): void => this.openEditor());\n      this.toolbarButton('导入', (this.appThemeScheme === 'night' ? $r('app.media.reader_control_replace_import_theme_night') : $r('app.media.reader_control_replace_import')), false, (): void => this.openImport());\n      this.toolbarButton('导出', (this.appThemeScheme === 'night' ? $r('app.media.reader_control_replace_export_theme_night') : $r('app.media.reader_control_replace_export')), false, (): void => { this.perform(this.onExport); });\n    }"
+        },
+        {
+          "kind": "Stack",
+          "line": 372,
+          "text": "Stack({ alignContent: Alignment.TopStart }) {\n      Stack({ alignContent: Alignment.TopStart }) {\n      Row() {\n        ReaderControlSwitchTrack({ value: rule().isEnabled, trackWidth: this.frame().toggleWidth,\n          trackHeight: this.frame().toggleHeight, thumbSize: this.frame().thumbSize,\n          thumbColor: readerAppColor('app.ReaderControlReplaceContent.ruleRow.paint.FFFFFFFF', this.appThemeScheme), inactiveColor: readerAppColor('app.ReaderControlReplaceContent.ruleRow.paint.FFC9C5BE', this.appThemeScheme) });\n      }.width(this.frame().toggleWidth).height(this.frame().rowHeight)\n        .position({ x: this.frame().rowPadding, y: 0 }).alignItems(VerticalAlign.Center)\n        .enabled(this.readyInput() && index() >= 0).accessibilityText(`${rule().name}，${rule().isEnabled ? '已开启' : '已关闭'}`)\n        .onClick((): void => {\n          if (this.readyInput() && index() >= 0) {\n            const current = rule();\n            this.perform(async (): Promise<void> => this.onToggle(current, !current.isEnabled));\n          }\n        });\n      // M-02: the shared rule-name role is fixed Full native typography, never morph-scaled.\n      // Keep the text box movement; the RuleList parent owns source clipping.\n      Text(rule().name).fontFamily(TYPE_READER_REPLACE_RULE_NAME.fontFamily).fontSize(TYPE_READER_REPLACE_RULE_NAME.fontSizeFp)\n        .fontWeight(TYPE_READER_REPLACE_RULE_NAME.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })\n        .width(Math.max(0, this.frame().list.width - this.frame().rowPadding * 2 - this.frame().toggleWidth -\n          10 - 75 * this.frame().progress))\n        .height(17).position({ x: this.frame().rowPadding + this.frame().toggleWidth + 10,\n          y: 5.5 + 5.5 * this.frame().progress });\n      Column({ space: 4 }) {\n        Text(`${rule().pattern} → ${rule().replacement}`).fontFamily(TYPE_READER_REPLACE_RETAINED_RULE_ROW_PATTERN.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_RULE_ROW_PATTERN.fontSizeFp)\n          .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });\n        Text(this.scopeSummary(rule())).fontFamily(TYPE_READER_REPLACE_RETAINED_RULE_ROW_META.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_RULE_ROW_META.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))\n          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });\n      }.width(Math.max(0, this.frame().list.width - 155)).height(34).alignItems(HorizontalAlign.Start)\n        .position({ x: this.frame().rowPadding + this.frame().toggleWidth + 10, y: 32 })\n        .opacity(this.frame().progress).hitTestBehavior(HitTestMode.None);\n      Row({ space: 5 }) {\n        this.ruleIcon((this.appThemeScheme === 'night' ? $r('app.media.reader_control_replace_edit_theme_night') : $r('app.media.reader_control_replace_edit')), (): string => `编辑${rule().name}`,\n          (): void => this.openEditor(rule()), (): boolean => index() >= 0);\n        this.ruleIcon((this.appThemeScheme === 'night' ? $r('app.media.reader_control_replace_delete_theme_night') : $r('app.media.reader_control_replace_delete')), (): string => `删除${rule().name}`,\n          (): void => this.askDelete(rule()), (): boolean => index() >= 0);\n      }.width(65).height(30).position({ x: Math.max(0, this.frame().list.width - 78), y: (this.frame().rowHeight - 30) / 2 })\n        .opacity(this.frame().progress).hitTestBehavior(this.fullInput() ? HitTestMode.Default : HitTestMode.None)\n        .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants');\n      }.width(this.frame().list.width).height(this.frame().rowHeight)\n        .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);\n    }"
+        },
+        {
+          "kind": "Stack",
+          "line": 373,
+          "text": "Stack({ alignContent: Alignment.TopStart }) {\n      Row() {\n        ReaderControlSwitchTrack({ value: rule().isEnabled, trackWidth: this.frame().toggleWidth,\n          trackHeight: this.frame().toggleHeight, thumbSize: this.frame().thumbSize,\n          thumbColor: readerAppColor('app.ReaderControlReplaceContent.ruleRow.paint.FFFFFFFF', this.appThemeScheme), inactiveColor: readerAppColor('app.ReaderControlReplaceContent.ruleRow.paint.FFC9C5BE', this.appThemeScheme) });\n      }.width(this.frame().toggleWidth).height(this.frame().rowHeight)\n        .position({ x: this.frame().rowPadding, y: 0 }).alignItems(VerticalAlign.Center)\n        .enabled(this.readyInput() && index() >= 0).accessibilityText(`${rule().name}，${rule().isEnabled ? '已开启' : '已关闭'}`)\n        .onClick((): void => {\n          if (this.readyInput() && index() >= 0) {\n            const current = rule();\n            this.perform(async (): Promise<void> => this.onToggle(current, !current.isEnabled));\n          }\n        });\n      // M-02: the shared rule-name role is fixed Full native typography, never morph-scaled.\n      // Keep the text box movement; the RuleList parent owns source clipping.\n      Text(rule().name).fontFamily(TYPE_READER_REPLACE_RULE_NAME.fontFamily).fontSize(TYPE_READER_REPLACE_RULE_NAME.fontSizeFp)\n        .fontWeight(TYPE_READER_REPLACE_RULE_NAME.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })\n        .width(Math.max(0, this.frame().list.width - this.frame().rowPadding * 2 - this.frame().toggleWidth -\n          10 - 75 * this.frame().progress))\n        .height(17).position({ x: this.frame().rowPadding + this.frame().toggleWidth + 10,\n          y: 5.5 + 5.5 * this.frame().progress });\n      Column({ space: 4 }) {\n        Text(`${rule().pattern} → ${rule().replacement}`).fontFamily(TYPE_READER_REPLACE_RETAINED_RULE_ROW_PATTERN.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_RULE_ROW_PATTERN.fontSizeFp)\n          .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });\n        Text(this.scopeSummary(rule())).fontFamily(TYPE_READER_REPLACE_RETAINED_RULE_ROW_META.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_RULE_ROW_META.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))\n          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });\n      }.width(Math.max(0, this.frame().list.width - 155)).height(34).alignItems(HorizontalAlign.Start)\n        .position({ x: this.frame().rowPadding + this.frame().toggleWidth + 10, y: 32 })\n        .opacity(this.frame().progress).hitTestBehavior(HitTestMode.None);\n      Row({ space: 5 }) {\n        this.ruleIcon((this.appThemeScheme === 'night' ? $r('app.media.reader_control_replace_edit_theme_night') : $r('app.media.reader_control_replace_edit')), (): string => `编辑${rule().name}`,\n          (): void => this.openEditor(rule()), (): boolean => index() >= 0);\n        this.ruleIcon((this.appThemeScheme === 'night' ? $r('app.media.reader_control_replace_delete_theme_night') : $r('app.media.reader_control_replace_delete')), (): string => `删除${rule().name}`,\n          (): void => this.askDelete(rule()), (): boolean => index() >= 0);\n      }.width(65).height(30).position({ x: Math.max(0, this.frame().list.width - 78), y: (this.frame().rowHeight - 30) / 2 })\n        .opacity(this.frame().progress).hitTestBehavior(this.fullInput() ? HitTestMode.Default : HitTestMode.None)\n        .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants');\n      }"
+        },
+        {
+          "kind": "Row",
+          "line": 374,
+          "text": "Row() {\n        ReaderControlSwitchTrack({ value: rule().isEnabled, trackWidth: this.frame().toggleWidth,\n          trackHeight: this.frame().toggleHeight, thumbSize: this.frame().thumbSize,\n          thumbColor: readerAppColor('app.ReaderControlReplaceContent.ruleRow.paint.FFFFFFFF', this.appThemeScheme), inactiveColor: readerAppColor('app.ReaderControlReplaceContent.ruleRow.paint.FFC9C5BE', this.appThemeScheme) });\n      }"
+        },
+        {
+          "kind": "Text",
+          "line": 389,
+          "text": "Text(rule().name)"
+        },
+        {
+          "kind": "Column",
+          "line": 395,
+          "text": "Column({ space: 4 }) {\n        Text(`${rule().pattern} → ${rule().replacement}`).fontFamily(TYPE_READER_REPLACE_RETAINED_RULE_ROW_PATTERN.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_RULE_ROW_PATTERN.fontSizeFp)\n          .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });\n        Text(this.scopeSummary(rule())).fontFamily(TYPE_READER_REPLACE_RETAINED_RULE_ROW_META.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_RULE_ROW_META.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))\n          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });\n      }"
+        },
+        {
+          "kind": "Text",
+          "line": 396,
+          "text": "Text(`${rule().pattern} → ${rule().replacement}`)"
+        },
+        {
+          "kind": "Text",
+          "line": 398,
+          "text": "Text(this.scopeSummary(rule()))"
+        },
+        {
+          "kind": "Row",
+          "line": 403,
+          "text": "Row({ space: 5 }) {\n        this.ruleIcon((this.appThemeScheme === 'night' ? $r('app.media.reader_control_replace_edit_theme_night') : $r('app.media.reader_control_replace_edit')), (): string => `编辑${rule().name}`,\n          (): void => this.openEditor(rule()), (): boolean => index() >= 0);\n        this.ruleIcon((this.appThemeScheme === 'night' ? $r('app.media.reader_control_replace_delete_theme_night') : $r('app.media.reader_control_replace_delete')), (): string => `删除${rule().name}`,\n          (): void => this.askDelete(rule()), (): boolean => index() >= 0);\n      }"
+        },
+        {
+          "kind": "Row",
+          "line": 423,
+          "text": "Row() { Image(icon).width(20).height(20); }"
+        },
+        {
+          "kind": "Image",
+          "line": 423,
+          "text": "Image(icon)"
+        },
+        {
+          "kind": "Row",
+          "line": 430,
+          "text": "Row({ space: 6 }) {\n      this.textAction('预览效果', (): void => { this.preview(); }, (): boolean => this.quickInput() && this.readyInput());\n      this.textAction('完整管理', (): void => this.onExpand(), (): boolean => this.quickInput() && !this.state.mutationPending);\n    }"
+        },
+        {
+          "kind": "Column",
+          "line": 441,
+          "text": "Column({ space: 4 }) {\n      Text(this.state.errorMessage || this.localError || (this.state.status === 'loading' || this.state.status === 'idle' ?\n        '规则载入中…' : this.emptyStateMessage()))\n        .fontFamily(TYPE_READER_REPLACE_RETAINED_STATUS_CONTENT_STATUS.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_STATUS_CONTENT_STATUS.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).maxLines(3);\n      if (this.state.errorMessage.length > 0 || this.localError.length > 0 || this.state.status === 'error') {\n        this.textAction('重新加载核对', (): void => this.reload(), (): boolean => !this.state.mutationPending && !this.localPending);\n      }\n    }"
+        },
+        {
+          "kind": "Text",
+          "line": 442,
+          "text": "Text(this.state.errorMessage || this.localError || (this.state.status === 'loading' || this.state.status === 'idle' ?\n        '规则载入中…' : this.emptyStateMessage()))"
+        },
+        {
+          "kind": "Text",
+          "line": 455,
+          "text": "Text(label)"
+        },
+        {
+          "kind": "Column",
+          "line": 462,
+          "text": "Column({ space: 8 }) {\n      Row({ space: 8 }) {\n        if (this.layer === 'editor') {\n          Text('返回').fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))\n            .width(38).height(28).textAlign(TextAlign.Center)\n            .enabled(!this.localPending && !this.state.mutationPending)\n            .onClick((): void => this.cancelTemporaryLayer());\n        }\n        Text(this.layer === 'editor' ? (this.draft.original === undefined ? '新增替换规则' : '编辑替换规则') :\n          this.layer === 'delete' ? '确认删除规则' : this.layer === 'import-confirm' ? '确认导入替换规则' : '当前章节预览')\n          .fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontFamily).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontSizeFp).fontWeight(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).layoutWeight(1);\n        if (this.layer !== 'editor') {\n          this.textAction('取消', (): void => this.cancelTemporaryLayer(), (): boolean => !this.localPending && !this.state.mutationPending);\n        }\n      }.width('100%').height(28);\n      Scroll() {\n        Column({ space: 8 }) {\n          if (this.layer === 'editor') {\n            this.editorFields();\n          } else if (this.layer === 'delete') {\n            Text(`删除“${this.deleteCandidate?.name ?? ''}”？此操作需要 Core 确认后才从列表移除。`)\n              .fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));\n            this.textAction('确认删除', (): void => {\n              const rule = this.deleteCandidate;\n              if (rule !== undefined && this.readyInput()) this.perform(async (): Promise<void> => this.onDelete(rule), true);\n            }, (): boolean => this.readyInput());\n          } else if (this.layer === 'import-confirm') {\n            Text('导入仅合并替换规则；相同ID会覆盖已有规则，其他规则集合不变。请保留导出备份。')\n              .fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));\n            this.textAction('选择文件并导入', (): void => { this.confirmImport(); }, (): boolean => this.readyInput());\n          } else {\n            this.previewContent();\n          }\n          if (this.localError.length > 0 || this.state.errorMessage.length > 0) {\n            Text(this.localError || this.state.errorMessage).fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));\n          }\n          if (this.state.writeUncertain) {\n            this.textAction('重新加载并核对，不重复提交', (): void => this.reload(), (): boolean => !this.localPending);\n          }\n          if (this.localPending || this.state.mutationPending) {\n            Text('正在等待确认…').fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));\n          }\n        }.width('100%').alignItems(HorizontalAlign.Start);\n      }.width('100%').layoutWeight(1).scrollBar(BarState.Auto).align(Alignment.TopStart);\n      if (this.layer === 'editor') {\n        this.editorActions();\n      }\n    }"
+        },
+        {
+          "kind": "Row",
+          "line": 463,
+          "text": "Row({ space: 8 }) {\n        if (this.layer === 'editor') {\n          Text('返回').fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_BACK.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))\n            .width(38).height(28).textAlign(TextAlign.Center)\n            .enabled(!this.localPending && !this.state.mutationPending)\n            .onClick((): void => this.cancelTemporaryLayer());\n        }\n        Text(this.layer === 'editor' ? (this.draft.original === undefined ? '新增替换规则' : '编辑替换规则') :\n          this.layer === 'delete' ? '确认删除规则' : this.layer === 'import-confirm' ? '确认导入替换规则' : '当前章节预览')\n          .fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontFamily).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontSizeFp).fontWeight(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE.fontWeight).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).layoutWeight(1);\n        if (this.layer !== 'editor') {\n          this.textAction('取消', (): void => this.cancelTemporaryLayer(), (): boolean => !this.localPending && !this.state.mutationPending);\n        }\n      }"
+        },
+        {
+          "kind": "Text",
+          "line": 465,
+          "text": "Text('返回')"
+        },
+        {
+          "kind": "Text",
+          "line": 470,
+          "text": "Text(this.layer === 'editor' ? (this.draft.original === undefined ? '新增替换规则' : '编辑替换规则') :\n          this.layer === 'delete' ? '确认删除规则' : this.layer === 'import-confirm' ? '确认导入替换规则' : '当前章节预览')"
+        },
+        {
+          "kind": "Scroll",
+          "line": 477,
+          "text": "Scroll() {\n        Column({ space: 8 }) {\n          if (this.layer === 'editor') {\n            this.editorFields();\n          } else if (this.layer === 'delete') {\n            Text(`删除“${this.deleteCandidate?.name ?? ''}”？此操作需要 Core 确认后才从列表移除。`)\n              .fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));\n            this.textAction('确认删除', (): void => {\n              const rule = this.deleteCandidate;\n              if (rule !== undefined && this.readyInput()) this.perform(async (): Promise<void> => this.onDelete(rule), true);\n            }, (): boolean => this.readyInput());\n          } else if (this.layer === 'import-confirm') {\n            Text('导入仅合并替换规则；相同ID会覆盖已有规则，其他规则集合不变。请保留导出备份。')\n              .fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));\n            this.textAction('选择文件并导入', (): void => { this.confirmImport(); }, (): boolean => this.readyInput());\n          } else {\n            this.previewContent();\n          }\n          if (this.localError.length > 0 || this.state.errorMessage.length > 0) {\n            Text(this.localError || this.state.errorMessage).fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));\n          }\n          if (this.state.writeUncertain) {\n            this.textAction('重新加载并核对，不重复提交', (): void => this.reload(), (): boolean => !this.localPending);\n          }\n          if (this.localPending || this.state.mutationPending) {\n            Text('正在等待确认…').fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));\n          }\n        }.width('100%').alignItems(HorizontalAlign.Start);\n      }"
+        },
+        {
+          "kind": "Column",
+          "line": 478,
+          "text": "Column({ space: 8 }) {\n          if (this.layer === 'editor') {\n            this.editorFields();\n          } else if (this.layer === 'delete') {\n            Text(`删除“${this.deleteCandidate?.name ?? ''}”？此操作需要 Core 确认后才从列表移除。`)\n              .fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_TITLE.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));\n            this.textAction('确认删除', (): void => {\n              const rule = this.deleteCandidate;\n              if (rule !== undefined && this.readyInput()) this.perform(async (): Promise<void> => this.onDelete(rule), true);\n            }, (): boolean => this.readyInput());\n          } else if (this.layer === 'import-confirm') {\n            Text('导入仅合并替换规则；相同ID会覆盖已有规则，其他规则集合不变。请保留导出备份。')\n              .fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));\n            this.textAction('选择文件并导入', (): void => { this.confirmImport(); }, (): boolean => this.readyInput());\n          } else {\n            this.previewContent();\n          }\n          if (this.localError.length > 0 || this.state.errorMessage.length > 0) {\n            Text(this.localError || this.state.errorMessage).fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_STATUS.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));\n          }\n          if (this.state.writeUncertain) {\n            this.textAction('重新加载并核对，不重复提交', (): void => this.reload(), (): boolean => !this.localPending);\n          }\n          if (this.localPending || this.state.mutationPending) {\n            Text('正在等待确认…').fontFamily(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_LABEL_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));\n          }\n        }"
+        },
+        {
+          "kind": "Text",
+          "line": 482,
+          "text": "Text(`删除“${this.deleteCandidate?.name ?? ''}”？此操作需要 Core 确认后才从列表移除。`)"
+        },
+        {
+          "kind": "Text",
+          "line": 489,
+          "text": "Text('导入仅合并替换规则；相同ID会覆盖已有规则，其他规则集合不变。请保留导出备份。')"
+        },
+        {
+          "kind": "Text",
+          "line": 496,
+          "text": "Text(this.localError || this.state.errorMessage)"
+        },
+        {
+          "kind": "Text",
+          "line": 502,
+          "text": "Text('正在等待确认…')"
+        },
+        {
+          "kind": "Row",
+          "line": 514,
+          "text": "Row({ space: 8 }) {\n      Text('取消').fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_CANCEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))\n        .layoutWeight(1).height(36).textAlign(TextAlign.Center).borderRadius(6)\n        .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))\n        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })\n        .enabled(!this.localPending && !this.state.mutationPending)\n        .onClick((): void => this.cancelTemporaryLayer());\n      Text('保存').fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_ACTIONS_SAVE.fontSizeFp)\n        .fontColor(readerAppColor('app.ReaderControlReplaceContent.toolbarButton.fontColor.FFFFFFFF', this.appThemeScheme))\n        .layoutWeight(1).height(36).textAlign(TextAlign.Center).borderRadius(6)\n        .backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))\n        .enabled(this.fullInput() && this.readyInput())\n        .onClick((): void => { this.saveEditor(); });\n    }"
+        },
+        {
+          "kind": "Text",
+          "line": 515,
+          "text": "Text('取消')"
+        },
+        {
+          "kind": "Text",
+          "line": 521,
+          "text": "Text('保存')"
+        },
+        {
+          "kind": "Text",
+          "line": 544,
+          "text": "Text('保存后规则生效；章节预览使用已保存规则。')"
+        },
+        {
+          "kind": "Column",
+          "line": 549,
+          "text": "Column({ space: 3 }) {\n      Text(label).fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));\n      TextInput({ text: value(), placeholder: '' }).width('100%').height(36)\n        .fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_INPUT.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_TEXT_INPUT.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))\n        .placeholderColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))\n        .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(6)\n        .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })\n        .enabled(this.fullInput() && !this.localPending && !this.state.mutationPending && !this.state.writeUncertain)\n        .onChange((text: string): void => change(text));\n    }"
+        },
+        {
+          "kind": "Text",
+          "line": 550,
+          "text": "Text(label)"
+        },
+        {
+          "kind": "TextInput",
+          "line": 551,
+          "text": "TextInput({ text: value(), placeholder: '' })"
+        },
+        {
+          "kind": "Row",
+          "line": 562,
+          "text": "Row({ space: 10 }) {\n      Text(label).fontFamily(TYPE_READER_REPLACE_RETAINED_EDITOR_FLAG_LABEL.fontFamily as string).fontSize(TYPE_READER_REPLACE_RETAINED_EDITOR_FLAG_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).layoutWeight(1);\n      ReaderControlSwitchTrack({ value: value() });\n    }"
+        },
+        {
+          "kind": "Text",
+          "line": 563,
+          "text": "Text(label)"
+        },
+        {
+          "kind": "Text",
+          "line": 571,
+          "text": "Text(this.previewResult.chapterTitle)"
+        },
+        {
+          "kind": "Text",
+          "line": 572,
+          "text": "Text(`已保存 ${this.previewResult.storedRuleCount} 条，启用 ${this.previewResult.enabledRuleCount} 条${this.previewResult.truncated ? '；仅展示截取片段' : ''}`)"
+        },
+        {
+          "kind": "Text",
+          "line": 574,
+          "text": "Text('替换前')"
+        },
+        {
+          "kind": "Text",
+          "line": 575,
+          "text": "Text(this.previewResult.before)"
+        },
+        {
+          "kind": "Text",
+          "line": 576,
+          "text": "Text('替换后')"
+        },
+        {
+          "kind": "Text",
+          "line": 577,
+          "text": "Text(this.previewResult.after)"
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets",
+      "sha256": "c40b30c5b8f82f2695b91d1616e3e02f09ff6ca3d1eab9aa5fd56ffe38d2e5f9",
+      "structs": [
+        {
+          "name": "ReaderTtsConfigOverlay",
+          "members": [
+            {
+              "name": "",
+              "decorators": [],
+              "kind": "Constructor"
+            },
+            {
+              "name": "appThemeScheme",
+              "decorators": [
+                "@StorageLink('readerAppScheme')"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "modalUsableHeight",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "previousKeyboardAvoidMode",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "title",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "choices",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "selectedId",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "message",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "manager",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "windowModal",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "voicePicker",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "anchorY",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "showManage",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "availableWidth",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "availableHeight",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "engines",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "engine",
+              "decorators": [
+                "@Prop"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "selectionId",
+              "decorators": [
+                "@Prop",
+                "@Watch('onIdentityChanged')"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onPreview",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onPreviewStop",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "previewId",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "previewGeneration",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onChoose",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onPut",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onDelete",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onClose",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onManage",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "onBusyChange",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "draftId",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "draftName",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "draftUrl",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "draftApiKey",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "draftVoice",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "draftFormat",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "draftClearApiKey",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "busy",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "errorText",
+              "decorators": [
+                "@State"
+              ],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "mounted",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "generation",
+              "decorators": [],
+              "kind": "PropertyDeclaration"
+            },
+            {
+              "name": "aboutToAppear",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "aboutToDisappear",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "onIdentityChanged",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "close",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "panelWidth",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "managerSurfaceSpec",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "compactManager",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "managerOuterPadding",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "panelHeight",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "panelY",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "configurationHeader",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "build",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "choiceRow",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "stopPreview",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "preview",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "choose",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "managerForm",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "managerFooter",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "current",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "setBusy",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "isSelected",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "beginEdit",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "canSubmit",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "submit",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "selectEngine",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "deleteEngine",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "clearDraft",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "resetDraft",
+              "decorators": [],
+              "kind": "MethodDeclaration"
+            },
+            {
+              "name": "formatChoice",
+              "decorators": [
+                "@Builder"
+              ],
+              "kind": "MethodDeclaration"
+            }
+          ]
+        }
+      ],
+      "nativeNodes": [
+        {
+          "kind": "Row",
+          "line": 121,
+          "text": "Row({ space: 8 }) {\n      if (this.manager) { Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_online_engine_theme_night') : $r('app.media.reader_tts_online_engine'))).width(20).height(20); }\n      Text(this.title).layoutWeight(1).fontFamily(this.manager ? TYPE_READER_TTS_MANAGER_TITLE.fontFamily : TYPE_READER_TTS_CONFIGURATION_TITLE.fontFamily)\n        .fontSize(this.manager ? TYPE_READER_TTS_MANAGER_TITLE.fontSizeFp : TYPE_READER_TTS_CONFIGURATION_TITLE.fontSizeFp).fontWeight(this.manager ? TYPE_READER_TTS_MANAGER_TITLE.fontWeight : TYPE_READER_TTS_CONFIGURATION_TITLE.fontWeight)\n        .fontColor(readerAppColor('TOK_TTS_INK', this.appThemeScheme));\n      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_make_close_theme_night') : $r('app.media.reader_tts_make_close'))).width(16).height(16)\n        .responseRegion({ x: -6, y: -6, width: 28, height: 28 }).enabled(!this.busy)\n        .accessibilityText('关闭 TTS 配置').onClick((): void => this.close());\n    }"
+        },
+        {
+          "kind": "Image",
+          "line": 122,
+          "text": "Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_online_engine_theme_night') : $r('app.media.reader_tts_online_engine')))"
+        },
+        {
+          "kind": "Text",
+          "line": 123,
+          "text": "Text(this.title)"
+        },
+        {
+          "kind": "Image",
+          "line": 126,
+          "text": "Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_make_close_theme_night') : $r('app.media.reader_tts_make_close')))"
+        },
+        {
+          "kind": "Stack",
+          "line": 134,
+          "text": "Stack({ alignContent: Alignment.TopStart }) {\n      Row().width('100%').height('100%')\n        .backgroundColor(this.manager ? readerAppColor('app.ReaderTtsConfigOverlay.build.backgroundColor.661F1B17', this.appThemeScheme) : Color.Transparent)\n        .onClick((): void => this.close());\n      Column() {\n      Column({ space: 0 }) {\n      if (this.compactManager()) {\n        // Below the fixed header/footer budget, the complete form becomes one\n        // scroll surface. Save/Cancel keep their 44vp targets and can be reached\n        // by scrolling; no fixed footer is cropped by an undersized parent.\n        Scroll() {\n          Column({ space: 0 }) {\n            this.configurationHeader();\n            this.managerForm();\n            this.managerFooter();\n          }.width('100%');\n        }.width('100%').height(this.panelHeight()).scrollBar(BarState.Off);\n      } else {\n        if (!this.voicePicker) {\n          this.configurationHeader();\n        }\n        Scroll() {\n          Column({ space: 0 }) {\n            if (this.manager) {\n              this.managerForm();\n            } else {\n              if (this.message.length > 0) {\n                Text(this.message).width('100%').fontFamily(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontSizeFp)\n                  .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontWeight)\n                  .fontColor(readerAppColor('TOK_TTS_MUTED', this.appThemeScheme)).padding(12);\n              }\n              ForEach(this.choices, (choice: ReaderTtsConfigChoice): void => {\n                this.choiceRow(choice);\n              }, (choice: ReaderTtsConfigChoice): string => choice.id);\n              if (this.showManage) {\n                Text('管理在线 TTS').width('100%').height(44).textAlign(TextAlign.Center)\n                  .fontFamily(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontSizeFp)\n                  .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontWeight).fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme))\n                  .border({ width: { top: .5 }, color: readerAppColor('app.ReaderTtsConfigOverlay.build.color.299B8466', this.appThemeScheme) }).enabled(!this.busy)\n                  .onClick((): void => this.onManage());\n              }\n              if (this.errorText.length > 0) {\n                Text(this.errorText).width('100%').fontFamily(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontSizeFp)\n                  .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontWeight).padding(12)\n                  .fontColor(readerAppColor('app.ReaderTtsConfigOverlay.build.fontColor.FFA8543A', this.appThemeScheme)).accessibilityText(`TTS 配置失败：${this.errorText}`);\n              }\n            }\n          }.width('100%').alignItems(HorizontalAlign.Start)\n            .constraintSize({ minHeight: this.manager ? 244 : 0 })\n            .id(this.manager ? 'reader-tts-manager-content' : 'reader-tts-choice-content');\n        }.width('100%').height(Math.max(0, this.panelHeight() - (this.voicePicker ? 0 : this.manager ? 58 + 76 : 40)))\n          .align(Alignment.TopStart).scrollBar(BarState.Off);\n        if (this.manager) {\n          this.managerFooter();\n        }\n      }\n      }.width(this.manager ? '100%' : this.panelWidth()).height(this.panelHeight())\n        .constraintSize({ maxWidth: this.manager ? this.managerSurfaceSpec().width : this.panelWidth(), maxHeight: '100%' })\n        .backgroundColor(readerAppColor(this.manager ? this.managerSurfaceSpec().surfaceBackgroundRole : 'app.ReaderTtsConfigOverlay.build.backgroundColor.FFFFFAF4', this.appThemeScheme))\n        .border({ width: this.manager ? this.managerSurfaceSpec().borderWidth : 0.5,\n          color: readerAppColor(this.manager ? this.managerSurfaceSpec().surfaceBorderRole : 'app.ReaderTtsConfigOverlay.build.color.66B4A697', this.appThemeScheme) })\n        .borderRadius(this.manager ? this.managerSurfaceSpec().borderRadius : 14)\n        .shadow({ radius: this.manager ? this.managerSurfaceSpec().shadowRadius : 36,\n          color: this.manager ? readerAppColor(this.managerSurfaceSpec().surfaceShadowRole, this.appThemeScheme) : readerAppColor('app.ReaderTtsConfigOverlay.build.color.381F1B17', this.appThemeScheme),\n          offsetY: this.manager ? this.managerSurfaceSpec().shadowOffsetY : 14 }).clip(true)\n      }.width(this.manager ? '100%' : this.panelWidth()).height(this.manager ? '100%' : this.panelHeight())\n        .justifyContent(FlexAlign.End).alignItems(HorizontalAlign.Center)\n        .padding(this.manager ? { left: 13, right: 13,\n          top: this.managerOuterPadding(), bottom: this.managerOuterPadding() } : 0)\n        .position(this.manager ? undefined : {\n          x: this.availableWidth - this.panelWidth() - (this.voicePicker ? 21 : 13),\n          y: this.panelY() }).hitTestBehavior(HitTestMode.Transparent);\n    }"
+        },
+        {
+          "kind": "Row",
+          "line": 135,
+          "text": "Row()"
+        },
+        {
+          "kind": "Column",
+          "line": 138,
+          "text": "Column() {\n      Column({ space: 0 }) {\n      if (this.compactManager()) {\n        // Below the fixed header/footer budget, the complete form becomes one\n        // scroll surface. Save/Cancel keep their 44vp targets and can be reached\n        // by scrolling; no fixed footer is cropped by an undersized parent.\n        Scroll() {\n          Column({ space: 0 }) {\n            this.configurationHeader();\n            this.managerForm();\n            this.managerFooter();\n          }.width('100%');\n        }.width('100%').height(this.panelHeight()).scrollBar(BarState.Off);\n      } else {\n        if (!this.voicePicker) {\n          this.configurationHeader();\n        }\n        Scroll() {\n          Column({ space: 0 }) {\n            if (this.manager) {\n              this.managerForm();\n            } else {\n              if (this.message.length > 0) {\n                Text(this.message).width('100%').fontFamily(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontSizeFp)\n                  .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontWeight)\n                  .fontColor(readerAppColor('TOK_TTS_MUTED', this.appThemeScheme)).padding(12);\n              }\n              ForEach(this.choices, (choice: ReaderTtsConfigChoice): void => {\n                this.choiceRow(choice);\n              }, (choice: ReaderTtsConfigChoice): string => choice.id);\n              if (this.showManage) {\n                Text('管理在线 TTS').width('100%').height(44).textAlign(TextAlign.Center)\n                  .fontFamily(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontSizeFp)\n                  .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontWeight).fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme))\n                  .border({ width: { top: .5 }, color: readerAppColor('app.ReaderTtsConfigOverlay.build.color.299B8466', this.appThemeScheme) }).enabled(!this.busy)\n                  .onClick((): void => this.onManage());\n              }\n              if (this.errorText.length > 0) {\n                Text(this.errorText).width('100%').fontFamily(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontSizeFp)\n                  .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontWeight).padding(12)\n                  .fontColor(readerAppColor('app.ReaderTtsConfigOverlay.build.fontColor.FFA8543A', this.appThemeScheme)).accessibilityText(`TTS 配置失败：${this.errorText}`);\n              }\n            }\n          }.width('100%').alignItems(HorizontalAlign.Start)\n            .constraintSize({ minHeight: this.manager ? 244 : 0 })\n            .id(this.manager ? 'reader-tts-manager-content' : 'reader-tts-choice-content');\n        }.width('100%').height(Math.max(0, this.panelHeight() - (this.voicePicker ? 0 : this.manager ? 58 + 76 : 40)))\n          .align(Alignment.TopStart).scrollBar(BarState.Off);\n        if (this.manager) {\n          this.managerFooter();\n        }\n      }\n      }.width(this.manager ? '100%' : this.panelWidth()).height(this.panelHeight())\n        .constraintSize({ maxWidth: this.manager ? this.managerSurfaceSpec().width : this.panelWidth(), maxHeight: '100%' })\n        .backgroundColor(readerAppColor(this.manager ? this.managerSurfaceSpec().surfaceBackgroundRole : 'app.ReaderTtsConfigOverlay.build.backgroundColor.FFFFFAF4', this.appThemeScheme))\n        .border({ width: this.manager ? this.managerSurfaceSpec().borderWidth : 0.5,\n          color: readerAppColor(this.manager ? this.managerSurfaceSpec().surfaceBorderRole : 'app.ReaderTtsConfigOverlay.build.color.66B4A697', this.appThemeScheme) })\n        .borderRadius(this.manager ? this.managerSurfaceSpec().borderRadius : 14)\n        .shadow({ radius: this.manager ? this.managerSurfaceSpec().shadowRadius : 36,\n          color: this.manager ? readerAppColor(this.managerSurfaceSpec().surfaceShadowRole, this.appThemeScheme) : readerAppColor('app.ReaderTtsConfigOverlay.build.color.381F1B17', this.appThemeScheme),\n          offsetY: this.manager ? this.managerSurfaceSpec().shadowOffsetY : 14 }).clip(true)\n      }"
+        },
+        {
+          "kind": "Column",
+          "line": 139,
+          "text": "Column({ space: 0 }) {\n      if (this.compactManager()) {\n        // Below the fixed header/footer budget, the complete form becomes one\n        // scroll surface. Save/Cancel keep their 44vp targets and can be reached\n        // by scrolling; no fixed footer is cropped by an undersized parent.\n        Scroll() {\n          Column({ space: 0 }) {\n            this.configurationHeader();\n            this.managerForm();\n            this.managerFooter();\n          }.width('100%');\n        }.width('100%').height(this.panelHeight()).scrollBar(BarState.Off);\n      } else {\n        if (!this.voicePicker) {\n          this.configurationHeader();\n        }\n        Scroll() {\n          Column({ space: 0 }) {\n            if (this.manager) {\n              this.managerForm();\n            } else {\n              if (this.message.length > 0) {\n                Text(this.message).width('100%').fontFamily(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontSizeFp)\n                  .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontWeight)\n                  .fontColor(readerAppColor('TOK_TTS_MUTED', this.appThemeScheme)).padding(12);\n              }\n              ForEach(this.choices, (choice: ReaderTtsConfigChoice): void => {\n                this.choiceRow(choice);\n              }, (choice: ReaderTtsConfigChoice): string => choice.id);\n              if (this.showManage) {\n                Text('管理在线 TTS').width('100%').height(44).textAlign(TextAlign.Center)\n                  .fontFamily(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontSizeFp)\n                  .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontWeight).fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme))\n                  .border({ width: { top: .5 }, color: readerAppColor('app.ReaderTtsConfigOverlay.build.color.299B8466', this.appThemeScheme) }).enabled(!this.busy)\n                  .onClick((): void => this.onManage());\n              }\n              if (this.errorText.length > 0) {\n                Text(this.errorText).width('100%').fontFamily(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontSizeFp)\n                  .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontWeight).padding(12)\n                  .fontColor(readerAppColor('app.ReaderTtsConfigOverlay.build.fontColor.FFA8543A', this.appThemeScheme)).accessibilityText(`TTS 配置失败：${this.errorText}`);\n              }\n            }\n          }.width('100%').alignItems(HorizontalAlign.Start)\n            .constraintSize({ minHeight: this.manager ? 244 : 0 })\n            .id(this.manager ? 'reader-tts-manager-content' : 'reader-tts-choice-content');\n        }.width('100%').height(Math.max(0, this.panelHeight() - (this.voicePicker ? 0 : this.manager ? 58 + 76 : 40)))\n          .align(Alignment.TopStart).scrollBar(BarState.Off);\n        if (this.manager) {\n          this.managerFooter();\n        }\n      }\n      }"
+        },
+        {
+          "kind": "Scroll",
+          "line": 144,
+          "text": "Scroll() {\n          Column({ space: 0 }) {\n            this.configurationHeader();\n            this.managerForm();\n            this.managerFooter();\n          }.width('100%');\n        }"
+        },
+        {
+          "kind": "Column",
+          "line": 145,
+          "text": "Column({ space: 0 }) {\n            this.configurationHeader();\n            this.managerForm();\n            this.managerFooter();\n          }"
+        },
+        {
+          "kind": "Scroll",
+          "line": 155,
+          "text": "Scroll() {\n          Column({ space: 0 }) {\n            if (this.manager) {\n              this.managerForm();\n            } else {\n              if (this.message.length > 0) {\n                Text(this.message).width('100%').fontFamily(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontSizeFp)\n                  .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontWeight)\n                  .fontColor(readerAppColor('TOK_TTS_MUTED', this.appThemeScheme)).padding(12);\n              }\n              ForEach(this.choices, (choice: ReaderTtsConfigChoice): void => {\n                this.choiceRow(choice);\n              }, (choice: ReaderTtsConfigChoice): string => choice.id);\n              if (this.showManage) {\n                Text('管理在线 TTS').width('100%').height(44).textAlign(TextAlign.Center)\n                  .fontFamily(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontSizeFp)\n                  .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontWeight).fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme))\n                  .border({ width: { top: .5 }, color: readerAppColor('app.ReaderTtsConfigOverlay.build.color.299B8466', this.appThemeScheme) }).enabled(!this.busy)\n                  .onClick((): void => this.onManage());\n              }\n              if (this.errorText.length > 0) {\n                Text(this.errorText).width('100%').fontFamily(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontSizeFp)\n                  .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontWeight).padding(12)\n                  .fontColor(readerAppColor('app.ReaderTtsConfigOverlay.build.fontColor.FFA8543A', this.appThemeScheme)).accessibilityText(`TTS 配置失败：${this.errorText}`);\n              }\n            }\n          }.width('100%').alignItems(HorizontalAlign.Start)\n            .constraintSize({ minHeight: this.manager ? 244 : 0 })\n            .id(this.manager ? 'reader-tts-manager-content' : 'reader-tts-choice-content');\n        }"
+        },
+        {
+          "kind": "Column",
+          "line": 156,
+          "text": "Column({ space: 0 }) {\n            if (this.manager) {\n              this.managerForm();\n            } else {\n              if (this.message.length > 0) {\n                Text(this.message).width('100%').fontFamily(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontSizeFp)\n                  .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontWeight)\n                  .fontColor(readerAppColor('TOK_TTS_MUTED', this.appThemeScheme)).padding(12);\n              }\n              ForEach(this.choices, (choice: ReaderTtsConfigChoice): void => {\n                this.choiceRow(choice);\n              }, (choice: ReaderTtsConfigChoice): string => choice.id);\n              if (this.showManage) {\n                Text('管理在线 TTS').width('100%').height(44).textAlign(TextAlign.Center)\n                  .fontFamily(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontSizeFp)\n                  .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontWeight).fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme))\n                  .border({ width: { top: .5 }, color: readerAppColor('app.ReaderTtsConfigOverlay.build.color.299B8466', this.appThemeScheme) }).enabled(!this.busy)\n                  .onClick((): void => this.onManage());\n              }\n              if (this.errorText.length > 0) {\n                Text(this.errorText).width('100%').fontFamily(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontSizeFp)\n                  .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontWeight).padding(12)\n                  .fontColor(readerAppColor('app.ReaderTtsConfigOverlay.build.fontColor.FFA8543A', this.appThemeScheme)).accessibilityText(`TTS 配置失败：${this.errorText}`);\n              }\n            }\n          }"
+        },
+        {
+          "kind": "Text",
+          "line": 161,
+          "text": "Text(this.message)"
+        },
+        {
+          "kind": "Text",
+          "line": 169,
+          "text": "Text('管理在线 TTS')"
+        },
+        {
+          "kind": "Text",
+          "line": 176,
+          "text": "Text(this.errorText)"
+        },
+        {
+          "kind": "Row",
+          "line": 217,
+          "text": "Row({ space: 10 }) {\n      if (this.voicePicker) {\n        Text(choice.label.includes('女') ? '女' : choice.label.includes('男') ? '男' : '声')\n          .width(34).height(34).textAlign(TextAlign.Center).fontFamily(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontFamily)\n          .fontWeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontSizeFp)\n          .fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme)).backgroundColor(readerAppColor('app.ReaderTtsConfigOverlay.choiceRow.backgroundColor.212F6373', this.appThemeScheme)).borderRadius(999);\n      }\n      Column({ space: 0 }) {\n        Text(this.voicePicker ? choice.label.split(' · ')[0] : choice.label).width('100%')\n          .fontFamily(this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.fontFamily : TYPE_READER_TTS_VOICE_REGULAR.fontFamily) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.fontFamily : TYPE_READER_TTS_CHOICE_REGULAR.fontFamily)).fontSize(this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.fontSizeFp : TYPE_READER_TTS_VOICE_REGULAR.fontSizeFp) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.fontSizeFp : TYPE_READER_TTS_CHOICE_REGULAR.fontSizeFp)).lineHeight((this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.lineHeightFp : TYPE_READER_TTS_VOICE_REGULAR.lineHeightFp) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.lineHeightFp : TYPE_READER_TTS_CHOICE_REGULAR.lineHeightFp)) as number)\n          .fontWeight(this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.fontWeight : TYPE_READER_TTS_VOICE_REGULAR.fontWeight) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.fontWeight : TYPE_READER_TTS_CHOICE_REGULAR.fontWeight),\n            { enableVariableFontWeight: true })\n          .fontColor(choice.id === this.selectedId ? readerAppColor('TOK_TTS_TEAL', this.appThemeScheme) : readerAppColor('TOK_TTS_INK', this.appThemeScheme))\n          .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });\n        if (this.voicePicker && choice.label.includes(' · ')) {\n          Text(choice.label.split(' · ').slice(1).join(' · ')).width('100%')\n            .fontFamily(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontFamily).fontWeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontWeight)\n            .fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontSizeFp).lineHeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.lineHeightFp as number).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.choiceRow.fontColor.FF8A7D6F', this.appThemeScheme)).maxLines(1);\n        }\n      }.layoutWeight(1).alignItems(HorizontalAlign.Start)\n        .onClick((): void => this.choose(choice.id));\n      if (this.voicePicker) {\n        Button(this.previewId === choice.id ? '停止' : '试听')\n          .width(44).height(36).fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY.fontSizeFp).borderRadius(18)\n          .fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme))\n          .backgroundColor(readerAppColor('TOK_TTS_TEAL_SOFT', this.appThemeScheme))\n          .accessibilityText(`${choice.label}，${this.previewId === choice.id ? '停止试听' : '试听'}`)\n          .onClick((): void => this.preview(choice.id));\n      }\n      Image((this.appThemeScheme === 'night' ? $r('app.media.reader_appearance_make_check_theme_night') : $r('app.media.reader_appearance_make_check'))).width(11).height(9)\n        .opacity(choice.id === this.selectedId ? 1 : 0);\n    }"
+        },
+        {
+          "kind": "Text",
+          "line": 219,
+          "text": "Text(choice.label.includes('女') ? '女' : choice.label.includes('男') ? '男' : '声')"
+        },
+        {
+          "kind": "Column",
+          "line": 224,
+          "text": "Column({ space: 0 }) {\n        Text(this.voicePicker ? choice.label.split(' · ')[0] : choice.label).width('100%')\n          .fontFamily(this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.fontFamily : TYPE_READER_TTS_VOICE_REGULAR.fontFamily) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.fontFamily : TYPE_READER_TTS_CHOICE_REGULAR.fontFamily)).fontSize(this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.fontSizeFp : TYPE_READER_TTS_VOICE_REGULAR.fontSizeFp) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.fontSizeFp : TYPE_READER_TTS_CHOICE_REGULAR.fontSizeFp)).lineHeight((this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.lineHeightFp : TYPE_READER_TTS_VOICE_REGULAR.lineHeightFp) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.lineHeightFp : TYPE_READER_TTS_CHOICE_REGULAR.lineHeightFp)) as number)\n          .fontWeight(this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED.fontWeight : TYPE_READER_TTS_VOICE_REGULAR.fontWeight) : (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED.fontWeight : TYPE_READER_TTS_CHOICE_REGULAR.fontWeight),\n            { enableVariableFontWeight: true })\n          .fontColor(choice.id === this.selectedId ? readerAppColor('TOK_TTS_TEAL', this.appThemeScheme) : readerAppColor('TOK_TTS_INK', this.appThemeScheme))\n          .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });\n        if (this.voicePicker && choice.label.includes(' · ')) {\n          Text(choice.label.split(' · ').slice(1).join(' · ')).width('100%')\n            .fontFamily(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontFamily).fontWeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontWeight)\n            .fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontSizeFp).lineHeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.lineHeightFp as number).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.choiceRow.fontColor.FF8A7D6F', this.appThemeScheme)).maxLines(1);\n        }\n      }"
+        },
+        {
+          "kind": "Text",
+          "line": 225,
+          "text": "Text(this.voicePicker ? choice.label.split(' · ')[0] : choice.label)"
+        },
+        {
+          "kind": "Text",
+          "line": 232,
+          "text": "Text(choice.label.split(' · ').slice(1).join(' · '))"
+        },
+        {
+          "kind": "Button",
+          "line": 239,
+          "text": "Button(this.previewId === choice.id ? '停止' : '试听')"
+        },
+        {
+          "kind": "Image",
+          "line": 246,
+          "text": "Image((this.appThemeScheme === 'night' ? $r('app.media.reader_appearance_make_check_theme_night') : $r('app.media.reader_appearance_make_check')))"
+        },
+        {
+          "kind": "Column",
+          "line": 291,
+          "text": "Column({ space: 14 }) {\n      Column({ space: 6 }) {\n        Text('服务名称').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)\n          .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF5B5046', this.appThemeScheme));\n        TextInput({ placeholder: '例如 Azure 语音', text: this.draftName })\n          .enabled(!this.busy).accessibilityText('在线 TTS 配置名称').width('100%').height(42)\n          .fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT.fontFamily).fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF332C25', this.appThemeScheme))\n          .placeholderColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.placeholderColor.FFB4A697', this.appThemeScheme)).padding({ left: 12, right: 12 })\n          .backgroundColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.backgroundColor.CCFFF8EF', this.appThemeScheme)).border({ width: .5, color: readerAppColor('app.ReaderTtsConfigOverlay.managerForm.color.66B4A697', this.appThemeScheme) }).borderRadius(10)\n          .onChange((value: string): void => { this.draftName = value; });\n      }.width('100%');\n      Column({ space: 6 }) {\n        Text('接口地址').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)\n          .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF5B5046', this.appThemeScheme));\n        TextInput({ placeholder: 'https://api.example.com/tts', text: this.draftUrl })\n          .enabled(!this.busy).accessibilityText('在线 TTS 请求 URL').width('100%').height(42)\n          .fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY.fontFamily as string).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF332C25', this.appThemeScheme)).placeholderColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.placeholderColor.FFB4A697', this.appThemeScheme))\n          .padding({ left: 12, right: 12 }).backgroundColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.backgroundColor.CCFFF8EF', this.appThemeScheme))\n          .border({ width: .5, color: readerAppColor('app.ReaderTtsConfigOverlay.managerForm.color.66B4A697', this.appThemeScheme) }).borderRadius(10)\n          .onChange((value: string): void => { this.draftUrl = value; });\n      }.width('100%');\n      Column({ space: 6 }) {\n        Text('API 密钥').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)\n          .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF5B5046', this.appThemeScheme));\n        TextInput({ placeholder: '填入访问密钥', text: this.draftApiKey })\n          .enabled(!this.busy).type(InputType.Password).accessibilityText('在线 TTS 访问密钥，不会显示或写入 Core')\n          .width('100%').height(42).fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY.fontFamily as string).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF332C25', this.appThemeScheme))\n          .placeholderColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.placeholderColor.FFB4A697', this.appThemeScheme)).padding({ left: 12, right: 12 }).backgroundColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.backgroundColor.CCFFF8EF', this.appThemeScheme))\n          .border({ width: .5, color: readerAppColor('app.ReaderTtsConfigOverlay.managerForm.color.66B4A697', this.appThemeScheme) }).borderRadius(10)\n          .onChange((value: string): void => {\n            this.draftApiKey = value;\n            if (value.length > 0) this.draftClearApiKey = false;\n          });\n        Text(this.draftClearApiKey ? '将清除已保存密钥' : '清除已保存密钥')\n          .width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE.fontFamily).fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE.fontWeight)\n          .fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE.fontSizeFp).fontColor(this.draftClearApiKey ? readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FFA8543A', this.appThemeScheme) : readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF8A7D6F', this.appThemeScheme))\n          .accessibilityText(this.draftClearApiKey ? '已选择清除已保存密钥' : '清除已保存密钥')\n          .enabled(!this.busy).onClick((): void => {\n            this.draftClearApiKey = !this.draftClearApiKey;\n            if (this.draftClearApiKey) this.draftApiKey = '';\n          });\n      }.width('100%');\n      Column({ space: 6 }) {\n        Text('发音人 / 音色').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)\n          .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF5B5046', this.appThemeScheme));\n        TextInput({ placeholder: '例如 xiaoxiao', text: this.draftVoice })\n          .enabled(!this.busy).accessibilityText('在线 TTS 音色')\n          .width('100%').height(42).fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY.fontFamily as string).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF332C25', this.appThemeScheme))\n          .placeholderColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.placeholderColor.FFB4A697', this.appThemeScheme)).padding({ left: 12, right: 12 }).backgroundColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.backgroundColor.CCFFF8EF', this.appThemeScheme))\n          .border({ width: .5, color: readerAppColor('app.ReaderTtsConfigOverlay.managerForm.color.66B4A697', this.appThemeScheme) }).borderRadius(10)\n          .onChange((value: string): void => { this.draftVoice = value; });\n      }.width('100%');\n      Column({ space: 6 }) {\n        Text('音频格式').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)\n          .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF5B5046', this.appThemeScheme));\n        Row({ space: 8 }) {\n          this.formatChoice('MP3', 'mp3');\n          this.formatChoice('WAV', 'wav');\n          this.formatChoice('PCM', 'pcm');\n        }.width('100%').height(36);\n      }.width('100%');\n      if (this.errorText.length > 0) {\n        Text(this.errorText).width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_STATUS.fontFamily)\n          .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_STATUS.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_STATUS.fontSizeFp)\n          .fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FFA8543A', this.appThemeScheme)).maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis })\n          .accessibilityText(`在线 TTS 操作失败：${this.errorText}`);\n      }\n    }"
+        },
+        {
+          "kind": "Column",
+          "line": 292,
+          "text": "Column({ space: 6 }) {\n        Text('服务名称').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)\n          .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF5B5046', this.appThemeScheme));\n        TextInput({ placeholder: '例如 Azure 语音', text: this.draftName })\n          .enabled(!this.busy).accessibilityText('在线 TTS 配置名称').width('100%').height(42)\n          .fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT.fontFamily).fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF332C25', this.appThemeScheme))\n          .placeholderColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.placeholderColor.FFB4A697', this.appThemeScheme)).padding({ left: 12, right: 12 })\n          .backgroundColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.backgroundColor.CCFFF8EF', this.appThemeScheme)).border({ width: .5, color: readerAppColor('app.ReaderTtsConfigOverlay.managerForm.color.66B4A697', this.appThemeScheme) }).borderRadius(10)\n          .onChange((value: string): void => { this.draftName = value; });\n      }"
+        },
+        {
+          "kind": "Text",
+          "line": 293,
+          "text": "Text('服务名称')"
+        },
+        {
+          "kind": "TextInput",
+          "line": 295,
+          "text": "TextInput({ placeholder: '例如 Azure 语音', text: this.draftName })"
+        },
+        {
+          "kind": "Column",
+          "line": 302,
+          "text": "Column({ space: 6 }) {\n        Text('接口地址').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)\n          .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF5B5046', this.appThemeScheme));\n        TextInput({ placeholder: 'https://api.example.com/tts', text: this.draftUrl })\n          .enabled(!this.busy).accessibilityText('在线 TTS 请求 URL').width('100%').height(42)\n          .fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY.fontFamily as string).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF332C25', this.appThemeScheme)).placeholderColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.placeholderColor.FFB4A697', this.appThemeScheme))\n          .padding({ left: 12, right: 12 }).backgroundColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.backgroundColor.CCFFF8EF', this.appThemeScheme))\n          .border({ width: .5, color: readerAppColor('app.ReaderTtsConfigOverlay.managerForm.color.66B4A697', this.appThemeScheme) }).borderRadius(10)\n          .onChange((value: string): void => { this.draftUrl = value; });\n      }"
+        },
+        {
+          "kind": "Text",
+          "line": 303,
+          "text": "Text('接口地址')"
+        },
+        {
+          "kind": "TextInput",
+          "line": 305,
+          "text": "TextInput({ placeholder: 'https://api.example.com/tts', text: this.draftUrl })"
+        },
+        {
+          "kind": "Column",
+          "line": 312,
+          "text": "Column({ space: 6 }) {\n        Text('API 密钥').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)\n          .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF5B5046', this.appThemeScheme));\n        TextInput({ placeholder: '填入访问密钥', text: this.draftApiKey })\n          .enabled(!this.busy).type(InputType.Password).accessibilityText('在线 TTS 访问密钥，不会显示或写入 Core')\n          .width('100%').height(42).fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY.fontFamily as string).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF332C25', this.appThemeScheme))\n          .placeholderColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.placeholderColor.FFB4A697', this.appThemeScheme)).padding({ left: 12, right: 12 }).backgroundColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.backgroundColor.CCFFF8EF', this.appThemeScheme))\n          .border({ width: .5, color: readerAppColor('app.ReaderTtsConfigOverlay.managerForm.color.66B4A697', this.appThemeScheme) }).borderRadius(10)\n          .onChange((value: string): void => {\n            this.draftApiKey = value;\n            if (value.length > 0) this.draftClearApiKey = false;\n          });\n        Text(this.draftClearApiKey ? '将清除已保存密钥' : '清除已保存密钥')\n          .width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE.fontFamily).fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE.fontWeight)\n          .fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE.fontSizeFp).fontColor(this.draftClearApiKey ? readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FFA8543A', this.appThemeScheme) : readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF8A7D6F', this.appThemeScheme))\n          .accessibilityText(this.draftClearApiKey ? '已选择清除已保存密钥' : '清除已保存密钥')\n          .enabled(!this.busy).onClick((): void => {\n            this.draftClearApiKey = !this.draftClearApiKey;\n            if (this.draftClearApiKey) this.draftApiKey = '';\n          });\n      }"
+        },
+        {
+          "kind": "Text",
+          "line": 313,
+          "text": "Text('API 密钥')"
+        },
+        {
+          "kind": "TextInput",
+          "line": 315,
+          "text": "TextInput({ placeholder: '填入访问密钥', text: this.draftApiKey })"
+        },
+        {
+          "kind": "Text",
+          "line": 324,
+          "text": "Text(this.draftClearApiKey ? '将清除已保存密钥' : '清除已保存密钥')"
+        },
+        {
+          "kind": "Column",
+          "line": 333,
+          "text": "Column({ space: 6 }) {\n        Text('发音人 / 音色').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)\n          .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF5B5046', this.appThemeScheme));\n        TextInput({ placeholder: '例如 xiaoxiao', text: this.draftVoice })\n          .enabled(!this.busy).accessibilityText('在线 TTS 音色')\n          .width('100%').height(42).fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY.fontFamily as string).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF332C25', this.appThemeScheme))\n          .placeholderColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.placeholderColor.FFB4A697', this.appThemeScheme)).padding({ left: 12, right: 12 }).backgroundColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.backgroundColor.CCFFF8EF', this.appThemeScheme))\n          .border({ width: .5, color: readerAppColor('app.ReaderTtsConfigOverlay.managerForm.color.66B4A697', this.appThemeScheme) }).borderRadius(10)\n          .onChange((value: string): void => { this.draftVoice = value; });\n      }"
+        },
+        {
+          "kind": "Text",
+          "line": 334,
+          "text": "Text('发音人 / 音色')"
+        },
+        {
+          "kind": "TextInput",
+          "line": 336,
+          "text": "TextInput({ placeholder: '例如 xiaoxiao', text: this.draftVoice })"
+        },
+        {
+          "kind": "Column",
+          "line": 343,
+          "text": "Column({ space: 6 }) {\n        Text('音频格式').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)\n          .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerForm.fontColor.FF5B5046', this.appThemeScheme));\n        Row({ space: 8 }) {\n          this.formatChoice('MP3', 'mp3');\n          this.formatChoice('WAV', 'wav');\n          this.formatChoice('PCM', 'pcm');\n        }.width('100%').height(36);\n      }"
+        },
+        {
+          "kind": "Text",
+          "line": 344,
+          "text": "Text('音频格式')"
+        },
+        {
+          "kind": "Row",
+          "line": 346,
+          "text": "Row({ space: 8 }) {\n          this.formatChoice('MP3', 'mp3');\n          this.formatChoice('WAV', 'wav');\n          this.formatChoice('PCM', 'pcm');\n        }"
+        },
+        {
+          "kind": "Text",
+          "line": 353,
+          "text": "Text(this.errorText)"
+        },
+        {
+          "kind": "Row",
+          "line": 364,
+          "text": "Row({ space: 10 }) {\n      Text('取消').layoutWeight(1).height(44).fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.fontFamily)\n        .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL.fontSizeFp)\n        .fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.fontColor.FF5B5046', this.appThemeScheme)).textAlign(TextAlign.Center).backgroundColor(readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.backgroundColor.29B4A697', this.appThemeScheme)).borderRadius(12)\n        .enabled(!this.busy).onClick((): void => this.close());\n      Text('保存').layoutWeight(1).height(44).fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.fontFamily)\n        .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.fontSizeFp)\n        .fontColor(readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.fontColor.FFFFFAF4', this.appThemeScheme)).textAlign(TextAlign.Center)\n        .linearGradient({ angle: 155, colors: [[readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.linearGradient.FF2F6373', this.appThemeScheme), 0], [readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.linearGradient.FF244F5C', this.appThemeScheme), 1]] }).borderRadius(12)\n        .shadow({ radius: 12, color: readerAppColor('app.ReaderTtsConfigOverlay.managerFooter.color.4D2F6373', this.appThemeScheme), offsetY: 4 })\n        .enabled(this.canSubmit() && !this.busy).opacity(this.canSubmit() && !this.busy ? 1 : 0.42)\n        .onClick((): void => this.submit());\n    }"
+        },
+        {
+          "kind": "Text",
+          "line": 365,
+          "text": "Text('取消')"
+        },
+        {
+          "kind": "Text",
+          "line": 369,
+          "text": "Text('保存')"
+        },
+        {
+          "kind": "Text",
+          "line": 486,
+          "text": "Text(label)"
+        }
+      ]
+    }
+  ]
+}

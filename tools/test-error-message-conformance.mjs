@@ -103,12 +103,15 @@ assert.ok(httpHostSource.includes("import { errorMessageOf } from './ErrorMessag
 
 // --- Bookshelf progress: basis-point semantics, sub-1% state visible. -------
 const bookshelfSource = read('entry/src/main/ets/features/bookshelf/BookshelfPage.ets');
-assert.ok(bookshelfSource.includes('已读 <1%'), 'sub-1% progress renders as <1%');
-assert.ok(bookshelfSource.includes('shelfProgressText(book.readProgress ?? 0)'),
-  'grid labels retain their basis-point formatter');
+assert.ok(bookshelfSource.includes("ShelfBookPresentation.progress(book, 'grid-caption')"),
+  'grid consumes the actual shared basis-point formatter and its finite caption variant');
+assert.ok(!bookshelfSource.includes('shelfProgressText('), 'the duplicate grid formatter is removed');
 assert.equal(ShelfBookPresentation.progress({ readProgress: 0 }), '未读',
   'shared ordinary and batch list projection keeps zero progress unread');
 assert.equal(ShelfBookPresentation.progress({ readProgress: 1 }), '已读 <1%');
+assert.equal(ShelfBookPresentation.progress({ readProgress: 1 }, 'grid-caption'), '已读 <1%');
+assert.equal(ShelfBookPresentation.progress({ readProgress: 0 }, 'grid-caption'), '',
+  'the grid still hides unread progress');
 assert.equal(ShelfBookPresentation.progress({ readProgress: 8765 }), '已读 87%');
 
 // --- Detail intro: HTML line breaks become real breaks, edges trimmed. ------

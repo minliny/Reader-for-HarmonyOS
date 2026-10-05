@@ -6,7 +6,7 @@ import type { ReaderAppColorRole } from './ReaderThemeRegistry';
  * consumer while a per-variant change stays scoped. Visual values are owned
  * here, not re-derived by callers.
  */
-export type DialogSpecId = 'book-removal' | 'json-import' | 'shelf-group';
+export type DialogSpecId = 'book-removal' | 'json-import' | 'shelf-group' | 'local-import';
 
 export type DialogHeaderFontFamily = 'ReaderNotoSansSC' | 'ReaderNotoSerifSCBold';
 
@@ -28,7 +28,38 @@ export type DialogFrameMode = 'cap' | 'inset' | 'card-inset';
  * primary actions stacked vertically. */
 export type DialogActionsLayout = 'row' | 'stack';
 
+/** Named ArkTS contract for registry entries. ArkTS rejects inline object
+ * literal type declarations in constructor parameters, while a named
+ * interface keeps the data-only registry readable and compiler-safe. */
+export interface DialogSurfaceSpecInit {
+  maxWidth: number;
+  edgeGap: number;
+  widthPercent: number;
+  frameMode: DialogFrameMode;
+  usesKeyboardSafeArea: boolean;
+  padding: number;
+  borderRadius: number;
+  backgroundRole: ReaderAppColorRole;
+  hasShadow: boolean;
+  hasBorder: boolean;
+  headerFontSize: number;
+  headerFontFamily: DialogHeaderFontFamily;
+  headerTextAlign: TextAlign;
+  headerLineHeight: number;
+  headerGap: number;
+  bodyActionsGap: number;
+  bodyActionsOwnMargin: number;
+  actionsLayout: DialogActionsLayout;
+  actionHeight: number;
+  actionBorderRadius: number;
+  actionUsesPressFeedback: boolean;
+  actionExtendsTouchRegion: boolean;
+  actionPrimarySurfaceRole: ReaderAppColorRole;
+  actionPrimaryLabelRole: ReaderAppColorRole;
+}
+
 export class DialogSurfaceSpec {
+  readonly headerFontWeight: number = 700;
   readonly maxWidth: number;
   readonly edgeGap: number;
   readonly widthPercent: number;
@@ -54,32 +85,7 @@ export class DialogSurfaceSpec {
   readonly actionPrimarySurfaceRole: ReaderAppColorRole;
   readonly actionPrimaryLabelRole: ReaderAppColorRole;
 
-  constructor(init: {
-    maxWidth: number;
-    edgeGap: number;
-    widthPercent: number;
-    frameMode: DialogFrameMode;
-    usesKeyboardSafeArea: boolean;
-    padding: number;
-    borderRadius: number;
-    backgroundRole: ReaderAppColorRole;
-    hasShadow: boolean;
-    hasBorder: boolean;
-    headerFontSize: number;
-    headerFontFamily: DialogHeaderFontFamily;
-    headerTextAlign: TextAlign;
-    headerLineHeight: number;
-    headerGap: number;
-    bodyActionsGap: number;
-    bodyActionsOwnMargin: number;
-    actionsLayout: DialogActionsLayout;
-    actionHeight: number;
-    actionBorderRadius: number;
-    actionUsesPressFeedback: boolean;
-    actionExtendsTouchRegion: boolean;
-    actionPrimarySurfaceRole: ReaderAppColorRole;
-    actionPrimaryLabelRole: ReaderAppColorRole;
-  }) {
+  constructor(init: DialogSurfaceSpecInit) {
     this.maxWidth = init.maxWidth;
     this.edgeGap = init.edgeGap;
     this.widthPercent = init.widthPercent;
@@ -157,8 +163,402 @@ const DIALOG_SPECS: Record<DialogSpecId, DialogSurfaceSpec> = {
     actionExtendsTouchRegion: false,
     actionPrimarySurfaceRole: 'TOK_SURFACE_PANEL_SOFT', actionPrimaryLabelRole: 'TOK_INK',
   }),
+  // Local file import keeps its measured state-specific heights and state
+  // machine. This entry owns only the outer frame and safe horizontal role.
+  'local-import': new DialogSurfaceSpec({
+    maxWidth: 350, edgeGap: 20, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,
+    padding: 20, borderRadius: 20,
+    backgroundRole: 'TOK_SURFACE_SOLID', hasShadow: true, hasBorder: false,
+    headerFontSize: 18, headerFontFamily: 'ReaderNotoSerifSCBold', headerTextAlign: TextAlign.Start,
+    headerLineHeight: 24.75,
+    headerGap: 17, bodyActionsGap: 16, bodyActionsOwnMargin: 0,
+    actionsLayout: 'stack', actionHeight: 44, actionBorderRadius: 22, actionUsesPressFeedback: false,
+    actionExtendsTouchRegion: false,
+    actionPrimarySurfaceRole: 'TOK_PRIMARY_DARK', actionPrimaryLabelRole: 'TOK_ON_PRIMARY',
+  }),
 };
 
 export function resolveDialogSpec(id: DialogSpecId): DialogSurfaceSpec {
   return DIALOG_SPECS[id];
+}
+
+/**
+ * Finite bottom-sheet surface specs. The host continues to own presentation
+ * and width; the sheet content reads one shared contract for its measured
+ * frame, handle, title and action rows.
+ */
+export type SheetSpecId = 'bookshelf-book-action';
+
+export interface SheetSurfaceSpecInit {
+  height: number;
+  horizontalInset: number;
+  handleWidth: number;
+  handleHeight: number;
+  handleTop: number;
+  titleTop: number;
+  titleInset: number;
+  titleFontFamily: string;
+  titleFontSize: number;
+  titleLineHeight: number;
+  actionStart: number;
+  actionStep: number;
+  actionCount: number;
+  actionHeight: number;
+  actionPaddingLeft: number;
+  actionBorderRadius: number;
+  borderWidth: number;
+  borderRadius: number;
+  shadowRadius: number;
+  shadowOffsetY: number;
+  actionLabelFontFamily: string;
+  actionLabelFontSize: number;
+  actionLabelLineHeight: number;
+  backgroundRole: ReaderAppColorRole;
+  borderRole: ReaderAppColorRole;
+  handleRole: ReaderAppColorRole;
+  titleRole: ReaderAppColorRole;
+  actionTextRole: ReaderAppColorRole;
+  dangerTextRole: ReaderAppColorRole;
+  actionBackgroundRole: ReaderAppColorRole;
+  dangerBackgroundRole: ReaderAppColorRole;
+  shadowRole: ReaderAppColorRole;
+  hostBackgroundRole: ReaderAppColorRole;
+  hostMaskRole: ReaderAppColorRole;
+}
+
+export class SheetSurfaceSpec {
+  readonly titleFontWeight: number = 700;
+  readonly actionLabelFontWeight: number = 700;
+  readonly height: number;
+  readonly horizontalInset: number;
+  readonly handleWidth: number;
+  readonly handleHeight: number;
+  readonly handleTop: number;
+  readonly titleTop: number;
+  readonly titleInset: number;
+  readonly titleFontFamily: string;
+  readonly titleFontSize: number;
+  readonly titleLineHeight: number;
+  readonly actionStart: number;
+  readonly actionStep: number;
+  readonly actionCount: number;
+  readonly actionHeight: number;
+  readonly actionPaddingLeft: number;
+  readonly actionBorderRadius: number;
+  readonly borderWidth: number;
+  readonly borderRadius: number;
+  readonly shadowRadius: number;
+  readonly shadowOffsetY: number;
+  readonly actionLabelFontFamily: string;
+  readonly actionLabelFontSize: number;
+  readonly actionLabelLineHeight: number;
+  readonly backgroundRole: ReaderAppColorRole;
+  readonly borderRole: ReaderAppColorRole;
+  readonly handleRole: ReaderAppColorRole;
+  readonly titleRole: ReaderAppColorRole;
+  readonly actionTextRole: ReaderAppColorRole;
+  readonly dangerTextRole: ReaderAppColorRole;
+  readonly actionBackgroundRole: ReaderAppColorRole;
+  readonly dangerBackgroundRole: ReaderAppColorRole;
+  readonly shadowRole: ReaderAppColorRole;
+  readonly hostBackgroundRole: ReaderAppColorRole;
+  readonly hostMaskRole: ReaderAppColorRole;
+
+  constructor(init: SheetSurfaceSpecInit) {
+    this.height = init.height;
+    this.horizontalInset = init.horizontalInset;
+    this.handleWidth = init.handleWidth;
+    this.handleHeight = init.handleHeight;
+    this.handleTop = init.handleTop;
+    this.titleTop = init.titleTop;
+    this.titleInset = init.titleInset;
+    this.titleFontFamily = init.titleFontFamily;
+    this.titleFontSize = init.titleFontSize;
+    this.titleLineHeight = init.titleLineHeight;
+    this.actionStart = init.actionStart;
+    this.actionStep = init.actionStep;
+    this.actionCount = init.actionCount;
+    this.actionHeight = init.actionHeight;
+    this.actionPaddingLeft = init.actionPaddingLeft;
+    this.actionBorderRadius = init.actionBorderRadius;
+    this.borderWidth = init.borderWidth;
+    this.borderRadius = init.borderRadius;
+    this.shadowRadius = init.shadowRadius;
+    this.shadowOffsetY = init.shadowOffsetY;
+    this.actionLabelFontFamily = init.actionLabelFontFamily;
+    this.actionLabelFontSize = init.actionLabelFontSize;
+    this.actionLabelLineHeight = init.actionLabelLineHeight;
+    this.backgroundRole = init.backgroundRole;
+    this.borderRole = init.borderRole;
+    this.handleRole = init.handleRole;
+    this.titleRole = init.titleRole;
+    this.actionTextRole = init.actionTextRole;
+    this.dangerTextRole = init.dangerTextRole;
+    this.actionBackgroundRole = init.actionBackgroundRole;
+    this.dangerBackgroundRole = init.dangerBackgroundRole;
+    this.shadowRole = init.shadowRole;
+    this.hostBackgroundRole = init.hostBackgroundRole;
+    this.hostMaskRole = init.hostMaskRole;
+  }
+
+  actionY(index: number): number {
+    return this.actionStart + (index * this.actionStep);
+  }
+}
+
+const SHEET_SPECS: Record<SheetSpecId, SheetSurfaceSpec> = {
+  // Figma book action surface; values preserve the current host-bound frame.
+  'bookshelf-book-action': new SheetSurfaceSpec({
+    height: 270, horizontalInset: 14,
+    handleWidth: 42, handleHeight: 4, handleTop: 9,
+    titleTop: 34, titleInset: 14,
+    titleFontFamily: 'ReaderNotoSansSC', titleFontSize: 17, titleLineHeight: 20.4,
+    actionStart: 70, actionStep: 46, actionCount: 4, actionHeight: 40,
+    actionPaddingLeft: 12, actionBorderRadius: 12,
+    borderWidth: 1, borderRadius: 24,
+    shadowRadius: 46, shadowOffsetY: 18,
+    actionLabelFontFamily: 'ReaderNotoSansSC', actionLabelFontSize: 13, actionLabelLineHeight: 15.6,
+    backgroundRole: 'TOK_CARD_BG_HI', borderRole: 'TOK_BORDER', handleRole: 'TOK_MUTED',
+    titleRole: 'TOK_INK', actionTextRole: 'TOK_GREEN',
+    dangerTextRole: 'app.BookshelfBookActionSheet.actionSlot.fontColor.FFD7473E',
+    actionBackgroundRole: 'TOK_PRIMARY_SOFT',
+    dangerBackgroundRole: 'app.BookshelfBookActionSheet.actionSlot.backgroundColor.1AD6473D',
+    shadowRole: 'app.BookshelfBookActionSheet.build.color.29594632',
+    hostBackgroundRole: 'app.BookshelfPage.bookshelfTabContent.bindSheet.FFFFFCF8',
+    hostMaskRole: 'app.BookshelfPage.bookshelfTabContent.bindSheet.52000000',
+  }),
+};
+
+export function resolveSheetSpec(id: SheetSpecId): SheetSurfaceSpec {
+  return SHEET_SPECS[id];
+}
+
+/**
+ * Menu/popup surfaces use the same data-only registry as dialogs. The
+ * consumer keeps labels, icons, enabled state and callbacks; this contract
+ * owns frame geometry, touch rows and visual roles.
+ */
+export type PopupSpecId = 'bookshelf-more-menu' | 'reader-more-menu' | 'source-switch-window' | 'tts-config-manager' | 'settings-select-tablet';
+
+export interface PopupSurfaceSpecInit {
+  actionMutesContent?: boolean;
+  height: number;
+  width: number;
+  pointerWidth: number;
+  pointerHeight: number;
+  actionHeight: number;
+  actionCount: number;
+  trailingExtension: number;
+  anchorOverlap: number;
+  borderWidth: number;
+  borderRadius: number;
+  shadowRadius: number;
+  shadowOffsetY: number;
+  actionPaddingLeft: number;
+  actionPaddingRight: number;
+  actionIconSize: number;
+  dividerInset: number;
+  dividerHeight: number;
+  pointerPoints: Array<Array<number>>;
+  surfaceBackgroundRole: ReaderAppColorRole;
+  surfaceBorderRole: ReaderAppColorRole;
+  surfaceShadowRole: ReaderAppColorRole;
+  pointerFillRole: ReaderAppColorRole;
+  pointerStrokeRole: ReaderAppColorRole;
+  actionTextRole: ReaderAppColorRole;
+  dividerRole: ReaderAppColorRole;
+  actionFontFamily: string;
+  actionFontSize: number;
+  actionLineHeight: number;
+}
+
+export class PopupSurfaceSpec {
+  readonly actionFontWeight: number = 500;
+  readonly actionMutesContent: boolean;
+  readonly height: number;
+  readonly width: number;
+  readonly pointerWidth: number;
+  readonly pointerHeight: number;
+  readonly actionHeight: number;
+  readonly actionCount: number;
+  readonly trailingExtension: number;
+  readonly anchorOverlap: number;
+  readonly borderWidth: number;
+  readonly borderRadius: number;
+  readonly shadowRadius: number;
+  readonly shadowOffsetY: number;
+  readonly actionPaddingLeft: number;
+  readonly actionPaddingRight: number;
+  readonly actionIconSize: number;
+  readonly dividerInset: number;
+  readonly dividerHeight: number;
+  readonly pointerPoints: Array<Array<number>>;
+  readonly surfaceBackgroundRole: ReaderAppColorRole;
+  readonly surfaceBorderRole: ReaderAppColorRole;
+  readonly surfaceShadowRole: ReaderAppColorRole;
+  readonly pointerFillRole: ReaderAppColorRole;
+  readonly pointerStrokeRole: ReaderAppColorRole;
+  readonly actionTextRole: ReaderAppColorRole;
+  readonly dividerRole: ReaderAppColorRole;
+  readonly actionFontFamily: string;
+  readonly actionFontSize: number;
+  readonly actionLineHeight: number;
+
+  constructor(init: PopupSurfaceSpecInit) {
+    this.actionMutesContent = init.actionMutesContent ?? false;
+    this.height = init.height;
+    this.width = init.width;
+    this.pointerWidth = init.pointerWidth;
+    this.pointerHeight = init.pointerHeight;
+    this.actionHeight = init.actionHeight;
+    this.actionCount = init.actionCount;
+    this.trailingExtension = init.trailingExtension;
+    this.anchorOverlap = init.anchorOverlap;
+    this.borderWidth = init.borderWidth;
+    this.borderRadius = init.borderRadius;
+    this.shadowRadius = init.shadowRadius;
+    this.shadowOffsetY = init.shadowOffsetY;
+    this.actionPaddingLeft = init.actionPaddingLeft;
+    this.actionPaddingRight = init.actionPaddingRight;
+    this.actionIconSize = init.actionIconSize;
+    this.dividerInset = init.dividerInset;
+    this.dividerHeight = init.dividerHeight;
+    this.pointerPoints = init.pointerPoints;
+    this.surfaceBackgroundRole = init.surfaceBackgroundRole;
+    this.surfaceBorderRole = init.surfaceBorderRole;
+    this.surfaceShadowRole = init.surfaceShadowRole;
+    this.pointerFillRole = init.pointerFillRole;
+    this.pointerStrokeRole = init.pointerStrokeRole;
+    this.actionTextRole = init.actionTextRole;
+    this.dividerRole = init.dividerRole;
+    this.actionFontFamily = init.actionFontFamily;
+    this.actionFontSize = init.actionFontSize;
+    this.actionLineHeight = init.actionLineHeight;
+  }
+
+  get actionsHeight(): number {
+    return this.actionHeight * this.actionCount;
+  }
+
+  get expandedHeight(): number {
+    return this.pointerHeight + this.actionsHeight;
+  }
+
+  get collapsedHeight(): number {
+    return this.pointerHeight + this.actionHeight;
+  }
+}
+
+const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
+  // Figma interaction registry 1982:313 / approved phone reference 4572:1796.
+  // These values mirror the existing menu until the popup family is migrated
+  // and the visual baseline is reviewed as a batch.
+  'bookshelf-more-menu': new PopupSurfaceSpec({
+    actionMutesContent: true,
+    height: 0,
+    width: 176, pointerWidth: 24, pointerHeight: 12,
+    actionHeight: 50, actionCount: 4,
+    trailingExtension: 11, anchorOverlap: 5,
+    borderWidth: 1, borderRadius: 16,
+    shadowRadius: 28, shadowOffsetY: 10,
+    actionPaddingLeft: 18, actionPaddingRight: 16,
+    actionIconSize: 24, dividerInset: 16, dividerHeight: 1,
+    pointerPoints: [[0, 12], [12, 0], [24, 12]],
+    surfaceBackgroundRole: 'app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8',
+    surfaceBorderRole: 'app.BookshelfMoreMenu.build.color.FFE3DED6',
+    surfaceShadowRole: 'app.BookshelfMoreMenu.build.color.292E261F',
+    pointerFillRole: 'app.BookshelfMoreMenu.build.fill.FFFFFCF8',
+    pointerStrokeRole: 'app.BookshelfMoreMenu.build.stroke.FFE3DED6',
+    actionTextRole: 'app.BookshelfMoreMenu.action.fontColor.FF1F1B17',
+    dividerRole: 'app.BookshelfMoreMenu.action.color.FFE8E2DA',
+    actionFontFamily: 'ReaderNotoSansSC', actionFontSize: 15, actionLineHeight: 22,
+  }),
+  // Reader control More menu. It shares the bookshelf More surface family,
+  // while keeping its audited three-row height and native popup dimensions.
+  // The action state and labels remain owned by ReaderControlPanel.
+  'reader-more-menu': new PopupSurfaceSpec({
+    height: 0,
+    width: 176, pointerWidth: 24, pointerHeight: 12,
+    actionHeight: 50, actionCount: 3,
+    trailingExtension: 11, anchorOverlap: 5,
+    borderWidth: 1, borderRadius: 16,
+    shadowRadius: 28, shadowOffsetY: 10,
+    actionPaddingLeft: 18, actionPaddingRight: 18,
+    actionIconSize: 0, dividerInset: 16, dividerHeight: 1,
+    pointerPoints: [[0, 12], [12, 0], [24, 12]],
+    surfaceBackgroundRole: 'app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8',
+    surfaceBorderRole: 'app.BookshelfMoreMenu.build.color.FFE3DED6',
+    surfaceShadowRole: 'app.BookshelfMoreMenu.build.color.292E261F',
+    pointerFillRole: 'app.BookshelfMoreMenu.build.fill.FFFFFCF8',
+    pointerStrokeRole: 'app.BookshelfMoreMenu.build.stroke.FFE3DED6',
+    actionTextRole: 'TOK_INK',
+    dividerRole: 'app.BookshelfMoreMenu.action.color.FFE8E2DA',
+    actionFontFamily: 'ReaderNotoSansSC', actionFontSize: 15, actionLineHeight: 22,
+  }),
+  // Source-switch window: the content state machine remains in the consumer;
+  // this entry owns the finite outer frame used by phone and tablet hosts.
+  'source-switch-window': new PopupSurfaceSpec({
+    height: 385,
+    width: 300, pointerWidth: 0, pointerHeight: 0,
+    actionHeight: 0, actionCount: 0,
+    trailingExtension: 0, anchorOverlap: 0,
+    borderWidth: 1, borderRadius: 20,
+    shadowRadius: 0, shadowOffsetY: 0,
+    actionPaddingLeft: 0, actionPaddingRight: 0,
+    actionIconSize: 0, dividerInset: 0, dividerHeight: 0,
+    pointerPoints: [],
+    surfaceBackgroundRole: 'TOK_SS_WINDOW_BG',
+    surfaceBorderRole: 'TOK_SS_WINDOW_BORDER',
+    surfaceShadowRole: 'TOK_SS_WINDOW_BORDER',
+    pointerFillRole: 'TOK_SS_WINDOW_BG',
+    pointerStrokeRole: 'TOK_SS_WINDOW_BORDER',
+    actionTextRole: 'TOK_SS_FOOTER_TEXT',
+    dividerRole: 'TOK_SS_WINDOW_BORDER',
+    actionFontFamily: 'ReaderInter', actionFontSize: 0, actionLineHeight: 0,
+  }),
+  // TTS manager content-cover card. The form remains owned by the TTS
+  // consumer; this finite entry owns only the existing modal frame geometry
+  // and visual roles so the host does not repeat its panel contract.
+  'tts-config-manager': new PopupSurfaceSpec({
+    height: 0, width: 364, pointerWidth: 0, pointerHeight: 0,
+    actionHeight: 0, actionCount: 0,
+    trailingExtension: 0, anchorOverlap: 0,
+    borderWidth: 0.5, borderRadius: 22,
+    shadowRadius: 48, shadowOffsetY: 18,
+    actionPaddingLeft: 0, actionPaddingRight: 0,
+    actionIconSize: 0, dividerInset: 0, dividerHeight: 0,
+    pointerPoints: [],
+    surfaceBackgroundRole: 'app.ReaderTtsConfigOverlay.build.backgroundColor.FFFFFAF4',
+    surfaceBorderRole: 'app.ReaderTtsConfigOverlay.build.color.66B4A697',
+    surfaceShadowRole: 'app.ReaderTtsConfigOverlay.build.color.471F1B17',
+    pointerFillRole: 'app.ReaderTtsConfigOverlay.build.backgroundColor.FFFFFAF4',
+    pointerStrokeRole: 'app.ReaderTtsConfigOverlay.build.color.66B4A697',
+    actionTextRole: 'TOK_TTS_INK', dividerRole: 'app.ReaderTtsConfigOverlay.build.color.66B4A697',
+    actionFontFamily: 'ReaderNotoSansSCUIRegular', actionFontSize: 0, actionLineHeight: 0,
+  }),
+  // Tablet settings selector popover.  The options and selection callbacks
+  // remain owned by SettingsSelectOverlay; this entry owns the finite panel
+  // frame and row geometry that used to be duplicated in that consumer.
+  'settings-select-tablet': new PopupSurfaceSpec({
+    height: 0, width: 160, pointerWidth: 0, pointerHeight: 0,
+    actionHeight: 42, actionCount: 0,
+    trailingExtension: 0, anchorOverlap: 6,
+    borderWidth: 1, borderRadius: 10,
+    shadowRadius: 24, shadowOffsetY: 8,
+    actionPaddingLeft: 14, actionPaddingRight: 14,
+    actionIconSize: 14, dividerInset: 14, dividerHeight: 1,
+    pointerPoints: [],
+    surfaceBackgroundRole: 'app.SettingsSelectOverlay.tabletPanel.backgroundColor.FFFAF7F2',
+    surfaceBorderRole: 'app.SettingsSelectOverlay.tabletPanel.color.FFC1C7CD',
+    surfaceShadowRole: 'app.SettingsSelectOverlay.tabletPanel.color.1F1B171F',
+    pointerFillRole: 'app.SettingsSelectOverlay.tabletPanel.backgroundColor.FFFAF7F2',
+    pointerStrokeRole: 'app.SettingsSelectOverlay.tabletPanel.color.FFC1C7CD',
+    actionTextRole: 'app.SettingsSelectOverlay.tabletOption.fontColor.FF1F1B17',
+    dividerRole: 'app.SettingsSelectOverlay.tabletOption.backgroundColor.FFC1C7CD',
+    actionFontFamily: 'ReaderNotoSansSCUIRegular', actionFontSize: 13, actionLineHeight: 16,
+  }),
+};
+
+export function resolvePopupSpec(id: PopupSpecId): PopupSurfaceSpec {
+  return POPUP_SPECS[id];
 }

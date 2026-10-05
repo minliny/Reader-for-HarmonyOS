@@ -1,0 +1,8 @@
+{
+  "commit": "d4ce59f6c43fca22a2c4bf659d97c379bd9aff7c",
+  "path": "entry/src/main/ets/pages/Index.ets",
+  "member": "bookshelfShellContent",
+  "originalMemberSha256": "557ee2224e4c6b9201c62be5e6d2e0abba0963bff53d12697dc448d3aa1768c8",
+  "fixtureSha256": "2497b8151e04fe60d5c6677fa44a51f7b267911a07aec9b914bc13b4ecdb335f",
+  "boundary": "Exact original member wrapped only in an SDK component carrier; business callback unchanged. Regression negative only, never a production alternate implementation."
+}

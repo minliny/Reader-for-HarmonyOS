@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
@@ -28,11 +29,17 @@ const orchestratorSource = read('entry/src/main/ets/features/source/SourceToolsO
   .replace(/^import \{ hilog \} from ['"]@kit\.PerformanceAnalysisKit['"];\n/m, '')
   .replace(/^import \{ ReaderRuntimeOwner \} from ['"][^'"]*ReaderRuntimeOwner['"];\n/m, '')
   .replace(/^import \{[\s\S]*?\} from ['"]\.\/SourceGateway['"];\n/m, '');
+const sharedFacts=read('entry/src/main/ets/app/ReaderOperationFacts.ts').replace(/^export /gm,'');
+const persistedFacts=read('entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,'');
+const writeEvidence=read('entry/src/main/ets/app/ReaderWriteEvidence.ts').replace(/^export /gm,'');
 const executable = stripTypeScriptTypes(
-  `${errorMessageSource}\n${transportPolicySource}\n${sourceCategorySource}\n${gatewaySource}\n${orchestratorSource}`,
+  `${sharedFacts}\n${persistedFacts}\n${writeEvidence}\n${errorMessageSource}\n${transportPolicySource}\n${sourceCategorySource}\n${gatewaySource.replace(/^import[^\n]+\n/gm,'')}\n${orchestratorSource.replace(/^import[^\n]+\n/gm,'')}`,
 );
 assert.doesNotMatch(executable, /^import /m, 'the Node harness must not retain platform imports');
 
+let currentOwner;
+globalThis.ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
+globalThis.isReaderCoreTransactionPendingError=()=>false;
 globalThis.hilog = {
   warn() {}, error() {}, info() {}, debug() {}, fatal() {},
 };
@@ -126,6 +133,7 @@ function controlledOwner(sources) {
 }
 
 function capture(owner) {
+  currentOwner=owner;
   const snapshots = [];
   const orchestrator = new SourceToolsOrchestrator(
     (snapshot) => snapshots.push(snapshot),
@@ -269,13 +277,12 @@ for (const mode of ['search', 'explore']) {
 // an ArkUI component and cannot be executed in plain Node.
 {
   const index = read('entry/src/main/ets/pages/Index.ets');
-  const start = index.indexOf('private checkSelectedSources(');
-  const end = index.indexOf('private setSelectedSourcesEnabled(', start);
-  assert.ok(start >= 0 && end > start, 'Index exposes the selected-source check adapter');
-  const adapter = index.slice(start, end);
-  assert.match(adapter, /checkSelected\(sourceIds\)/);
-  assert.doesNotMatch(adapter, /consumeSourceToolsSelection/,
-    'starting detection must not clear the visible selected scope');
+  const adapter = index.match(/onCheckSelected:[^\n]*/)?.[0];
+  assert.ok(adapter, 'Index exposes the guarded original owner selected-source intent');
+  assert.match(adapter, /isCurrentSourceToolsPresentation/);
+  assert.match(adapter, /host\?\.checkSelected\(sourceIds\)/);
+  assert.doesNotMatch(adapter, /consumeSelection/,
+    'starting detection must not clear the owner canonical visible selected scope');
 }
 
 // Scale contract for the actual imported-source cardinality seen by the

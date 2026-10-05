@@ -1,3 +1,6 @@
+import { ReaderButton } from './ReaderButton';
+import { ReaderFormField } from './ReaderFormField';
+import { TYPE_FORM_ACTION, TYPE_FORM_LABEL_ACTION, TYPE_FORM_NOTE, TYPE_FORM_URL_INPUT, TYPE_JSON_IMPORT_DESCRIPTION } from './ReaderTypography';
 import { readerAppColor } from './ReaderThemeRegistry';
 import { registerReaderFonts } from './ReaderFonts';
 import {
@@ -74,9 +77,9 @@ export struct JsonImportDialog {
     Column({ space: TOK_SPACE_MD }) {
       Text(this.description)
         .width('100%')
-        .fontFamily('ReaderNotoSansSC')
-        .fontSize(12)
-        .lineHeight(19)
+        .fontFamily(TYPE_JSON_IMPORT_DESCRIPTION.fontFamily as string)
+        .fontSize(TYPE_JSON_IMPORT_DESCRIPTION.fontSizeFp)
+        .lineHeight(TYPE_JSON_IMPORT_DESCRIPTION.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
 
       this.localButton();
@@ -84,43 +87,27 @@ export struct JsonImportDialog {
       Column({ space: TOK_SPACE_XS }) {
         Text('在线链接')
           .width('100%')
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(12)
+          .fontFamily(TYPE_FORM_ACTION.fontFamily)
+          .fontWeight(TYPE_FORM_ACTION.fontWeight)
+          .fontSize(TYPE_FORM_ACTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-        TextInput({
-          text: this.urlDraft,
-          placeholder: 'https://example.com/data.json',
-        })
-          .width('100%')
-          .height(44)
-          .fontFamily('ReaderInter')
-          .fontSize(12)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-          .placeholderColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-          .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
-          .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-          .borderRadius(8)
-          .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
-          .onChange((value: string): void => {
+        ReaderFormField({ scheme: this.appThemeScheme, specId: 'form-url', text: this.urlDraft, placeholder: 'https://example.com/data.json',
+          onTextChange: (value: string): void => {
             this.urlDraft = value;
-            if (this.validationMessage.length > 0) {
-              this.validationMessage = '';
-            }
-          })
-          .onSubmit((_enterKey: EnterKeyType): void => this.submitOnlineImport());
+            if (this.validationMessage.length > 0) this.validationMessage = '';
+          }, onSubmit: (): void => this.submitOnlineImport() });
         Text('GitHub 仓库文件请使用 Raw 链接；普通 blob 页面不是 JSON。')
           .width('100%')
-          .fontFamily('ReaderNotoSansSC')
-          .fontSize(10)
-          .lineHeight(16)
+          .fontFamily(TYPE_FORM_NOTE.fontFamily as string)
+          .fontSize(TYPE_FORM_NOTE.fontSizeFp)
+          .lineHeight(TYPE_FORM_NOTE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
         if (this.validationMessage.length > 0) {
           Text(this.validationMessage)
             .width('100%')
-            .fontFamily('ReaderNotoSansSC')
-            .fontSize(10)
-            .lineHeight(16)
+            .fontFamily(TYPE_FORM_NOTE.fontFamily as string)
+            .fontSize(TYPE_FORM_NOTE.fontSizeFp)
+            .lineHeight(TYPE_FORM_NOTE.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_DANGER', this.appThemeScheme));
         }
       }
@@ -136,17 +123,8 @@ export struct JsonImportDialog {
   // dialog action, so the body renders it in place.
   @Builder
   private localButton() {
-    Text('选择本地 JSON 文件')
-      .width('100%')
-      .height(44)
-      .textAlign(TextAlign.Center)
-      .fontFamily('ReaderNotoSansSC')
-      .fontWeight(FontWeight.Bold)
-      .fontSize(13)
-      .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-      .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
-      .borderRadius(8)
-      .onClick((): void => this.onSelectLocal());
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'form-action', label: '选择本地 JSON 文件', primary: true, layout: 'full',
+      onAction: (): void => this.onSelectLocal() });
   }
 
   private submitOnlineImport(): void {

@@ -7,7 +7,7 @@ import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import * as selection from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
 import { readerTextSelectionEnabled } from '../entry/src/main/ets/features/reading/ReaderTextSelectionPolicy.ts';
-import { ReadingSessionProgressOwner } from '../entry/src/main/ets/features/reading/ReadingSessionProgressOwner.ts';
+import { ReadingSessionProgressOwner } from './lib/reader-progress-owner-probe.mjs';
 
 const sourceFile=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
 const source=readFileSync(sourceFile,'utf8');
@@ -43,13 +43,16 @@ function fixture({file=sourceFile,mode='paged',storedIndex=0,storedOffset=0}={})
   const writeOwners=[];
   const runtime={captureReadingContentValidity:()=>()=>true};
   const persistence=new ReadingSessionProgressOwner(runtime,'s','b',operation=>serial.runProgressCommitSerial(operation));
-  const gateway={canPersistPresentedProgress:()=>true,runProgressCommitSerial:operation=>persistence.runSerial(operation),resolveAndUpdateProgress:async(...args)=>{
+  const gateway={hasPendingSourceSwitch:()=>owner.sourceSwitchTransactionId!==undefined,canPersistPresentedProgress:()=>true,runProgressCommitSerial:operation=>persistence.runSerial(operation),resolveAndUpdateProgress:async(...args)=>{
     writeOwners.push(args.at(-1));writes++;if(rejectWrite)throw Error('WRITE_REJECTED');if(hold)await gate.promise;return stored;
   },loadProgress:async()=>{reads++;return{kind:'restored',progress:stored};},
     prefetchChapter:(_book,index,isCurrent)=>{loads.push({index,isCurrent});return new Promise(()=>{});}};
-  gateway.persistPresentedProgress=(_book,title,anchor,layout)=>persistence.persistPresented(title,anchor,layout,{
-    read:guard=>gateway.loadProgress('b',guard),write:(title,anchor,layout,guard)=>gateway.resolveAndUpdateProgress('b',title,anchor,layout,guard)});
+  gateway.persistPresentedProgress=(_book,title,anchor,layout,admitted)=>persistence.persistPresented(title,anchor,layout,{
+    read:guard=>gateway.loadProgress('b',guard),write:(title,anchor,layout,guard)=>gateway.resolveAndUpdateProgress('b',title,anchor,layout,guard)},admitted);
   gateway.awaitPresentedProgressPersistence=()=>persistence.awaitPersistence();
+  // The source transaction path reaches its own canonical-write transport seam;
+  // this presentation test controls its ACK, not the Core receipt algorithm.
+  gateway.persistCanonicalProgress=(...args)=>gateway.resolveAndUpdateProgress(...args);
   Object.assign(owner,{mounted:true,exitRequested:false,lifecycleToken:1,sourceId:'s',bookId:'b',chapter,
     chapterSelectionToken:2,materializedChapterSelectionToken:2,visiblePageSelectionToken:2,
     measurementGeneration:3,measurementSelectionToken:2,measurementCompleting:true,phase:'measuring',visibleFragments:[],

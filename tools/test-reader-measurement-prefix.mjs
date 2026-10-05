@@ -53,6 +53,12 @@ assert.equal(full.pendingPageFragments[0].nativeParagraph,full.pendingPageFragme
 assert.deepEqual(full.pendingPageFragments.map(f=>f.nativeParagraphFirst),[true,false]);
 assert.equal(full.pendingPageFragments[0].nativeParagraph.lastLine,1,'overflow line cannot enter the displayed paragraph window');
 
+const missingPacking = owner([paragraph('a', [10,10,10])]);
+missingPacking.physicalPagination.appendFragment = () => {};
+missingPacking.captureMeasurementAfterLayout();
+assert.throws(() => assert.deepEqual(missingPacking.pendingPageFragments.map(fragment => fragment.text), ['a','a']),
+  'the real native consumer regression catches omitted physical-owner packing');
+
 const pending = paragraph('b', [10], false);
 const partial = owner([paragraph('a', [10]), pending]);
 partial.captureMeasurementAfterLayout();

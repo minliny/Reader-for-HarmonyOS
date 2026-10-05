@@ -40,6 +40,7 @@ export struct SettingsShell {
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop activeSection: 'home' | 'general' = 'home';
+  @Prop tapBottomScrollTop: boolean = true;
   @Prop showOverlay: boolean = false;
   onSectionChange: (section: 'home' | 'general') => void = (_section: 'home' | 'general'): void => {};
   onBack: () => void = (): void => {};
@@ -51,11 +52,12 @@ export struct SettingsShell {
   @BuilderParam homeContent: () => void;
   @BuilderParam generalContent: () => void;
   @BuilderParam overlayContent: () => void;
+  private readonly homeScroller: Scroller = new Scroller();
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       if (this.activeSection === 'home') {
-        Scroll() {
+        Scroll(this.homeScroller) {
           Column({ space: TOK_SPACE_SM }) {
             this.homeContent();
           }
@@ -106,7 +108,11 @@ export struct SettingsShell {
 
       if (this.activeSection === 'home') {
         Stack({ alignContent: Alignment.Bottom }) {
-          MainTabBar({ current: 'settings', onSelect: (key: string): void => this.onMainTab(key) });
+          MainTabBar({
+            current: 'settings',
+            onSelect: (key: string): void => this.onMainTab(key),
+            onCurrentTap: (_key: string): void => this.scrollHomeToTop(),
+          });
         }
         .width('100%')
         .height('100%')
@@ -152,6 +158,11 @@ export struct SettingsShell {
       this.onRssRequested();
     }
     // 'settings' is this page; MainTabBar suppresses the current tab.
+  }
+
+  private scrollHomeToTop(): void {
+    if (!this.tapBottomScrollTop || this.activeSection !== 'home') return;
+    this.homeScroller.scrollTo({ xOffset: 0, yOffset: 0, animation: true });
   }
 
   private contentFrame(): SurfaceHorizontalFrame {

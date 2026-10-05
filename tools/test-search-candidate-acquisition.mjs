@@ -1,3 +1,4 @@
+import { ProductionHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { registerHooks, stripTypeScriptTypes } from 'node:module';
@@ -6,6 +7,7 @@ registerHooks({resolve(s,c,n){try{return n(s,c)}catch(e){if(s.startsWith('.')&&!
 const {resolveBookshelfBook}=await import('../entry/src/main/ets/features/bookshelf/BookshelfBookIdentity.ts');
 const base=new URL('../entry/src/main/ets/',import.meta.url);
 const path=p=>new URL(p,base);
+const {BookAcquisitionProjectionGateway}=await import(path('app/BookAcquisitionProjectionGateway.ts'));
 const {BookAcquisitionCoordinator}=await import(path('app/BookAcquisitionCoordinator.ts'));
 const {RemoteReadingFlowGateway,RemoteChapterCacheRefreshError}=await import(path('features/reading/RemoteReadingFlowGateway.ts'));
 const {RemoteReadingGatewayError,remoteReadingFailureRecord}=await import(path('features/reading/RemoteReadingContract.ts'));
@@ -40,6 +42,8 @@ function fixture({cooperativeCancellation=false}={}){
   if(method==='source.delete'){enabled=false;return{data:{deleted:1}}}
   if(method==='search-book.get')return {data:{book:rows.get(id)??null}};
   if(method==='cache.book.status'){const toc=catalogs.get(id)??[];return {data:{sourceId,bookId,tocAvailable:toc.length>0,chapters:toc.map(e=>({chapterIndex:e.index,title:e.title,url:e.url,variables:{}})),continuationVariables:{}}}}
+  if(method==='bookshelf.get')return {data:{book:null}};
+  if(method==='bookmark.list')return {data:{bookmarks:[]}};
   if(method==='reading.progress.get')return {data:{found:false,progress:null}};
   if(method==='book.detail'){
    const mode=modes.get(id);if(mode instanceof Error)throw mode;
@@ -336,13 +340,12 @@ await check('change notification batches actual identities and source mutation r
 });
 // Extract the actual admission wrapper class as well as Index's ordinary methods.
 const indexSource=readFileSync(path('pages/Index.ets'),'utf8');
-const admissionSource=indexSource.slice(indexSource.indexOf('class RemoteDetailAdmission {'),indexSource.indexOf('class RemoteSessionAttemptOutcome {'));
-const RemoteDetailAdmission=new Function(stripTypeScriptTypes(admissionSource)+';return RemoteDetailAdmission;')();
 function indexFixture(f){
- const errors=[];const Index=productionMotionMethods(path('pages/Index.ets'),['refreshDetailAcquisitionProjection','installRemoteReadingSession','onSearchResultSelected','searchAcquisitionCandidate','remoteSeedForSearchBook','openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','probeRemoteContentVerdict','remoteContentVerdictLabel'],{ resolveBookshelfBook,
- sameRemoteSessionEvidence,preparedRemoteChapterMatches,preparedRemoteChapterPositionMatches,captureRemotePositionContext,withPreparedRemoteChapter,copyRemoteReadingSession,errorMessageOf,ReaderRuntimeOwner:{current:()=>f.owner},RemoteReadingFlowGateway,RemoteChapterCacheRefreshError,RemoteReadingGatewayError,remoteReadingFailureRecord,remoteReadingFailureKindOf,verdictForFailureKind,RemoteDetailAdmission,searchCandidateRank,
+ setRuntime(f.owner);
+ const errors=[];const Index=productionMotionMethods(path('pages/Index.ets'),['refreshDetailAcquisitionProjection','installRemoteReadingSession','onSearchResultSelected','searchAcquisitionCandidate','remoteSeedForSearchBook','openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','probeRemoteContentVerdict','remoteContentVerdictLabel'],{ resolveBookshelfBook,BookAcquisitionProjectionGateway,
+ sameRemoteSessionEvidence,preparedRemoteChapterMatches,preparedRemoteChapterPositionMatches,captureRemotePositionContext,withPreparedRemoteChapter,copyRemoteReadingSession,errorMessageOf,ReaderRuntimeOwner:{current:()=>f.owner},RemoteReadingFlowGateway,RemoteChapterCacheRefreshError,RemoteReadingGatewayError,remoteReadingFailureRecord,remoteReadingFailureKindOf,verdictForFailureKind,ReadingEntryHost:ProductionHost,searchCandidateRank,EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,generation:0},
  ReadingOfflineGateway:class{},ReaderCoreGateway:class{async loadShelfBook(){return undefined}},LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{warn(){},error(){},info(){}}});
- const page=Object.assign(new Index(),{route:'search',searchPublication:{shelfAt:()=>[]},searchPublicationRevision:0,shelfBooks:[],searchDetailCandidates:[],navigationGeneration:0,remoteSessionGeneration:0,remoteContentProbeGeneration:0,remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,bookshelfRemovalActiveKey:'',showReadingFailure:(...a)=>errors.push(a),loadRemoteDirectoryProjection:async(_a,_b,s)=>s.entries});return{page,errors};
+ const page=Object.assign(new Index(),{mountedRuntimeOwner:f.owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),route:'search',searchPublication:{shelfAt:()=>[]},searchHost:{publication:{shelfAt:()=>[]},updateShelf() {}},searchPublicationRevision:0,shelfBooks:[],searchDetailCandidates:[],navigationGeneration:0,remoteSessionGeneration:0,remoteContentProbeGeneration:0,remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,shelfOperation:{removalKey:'',busy:false,batchRemovalBusy:false},showReadingFailure:(...a)=>errors.push(a),loadRemoteDirectoryProjection:async(_a,_b,s)=>s.entries});return{page,errors};
 }
 await check('real selected search group primary empty TOC admits second and probes only selected body; no shelf write',async()=>{
  const f=fixture();try{f.modes.set(f.key('s1','/b0'),'empty');const {page,errors}=indexFixture(f);page.onSearchResultSelected(book(0),[book(0),book(0,'s2')]);

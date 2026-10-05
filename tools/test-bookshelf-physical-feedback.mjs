@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { bookIntroText } from '../entry/src/main/ets/features/common/BookIntroText.ts';
 import { bookAuthorLabel } from '../entry/src/main/ets/features/common/BookAuthorMetadata.ts';
 import { readerSourceCategoryLabel } from '../entry/src/main/ets/features/source/ReaderSourceCategory.ts';
+import {sourceSharedActionFixture} from './lib/source-shared-action-probe.mjs';
+import { iconButtonControls } from './lib/reader-icon-button-probe.mjs';
 
 const baseline = process.argv.includes('--baseline');
 const read = name => readFileSync(new URL(baseline
@@ -19,6 +23,12 @@ for (const name of ['NoCoverCover', 'StatusBadge', 'ReaderToggle']) syntax.compo
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
 class HeaderChild extends Child {}
 class IconButtonChild extends Child {}
+const shelfTypography = {
+  TYPE_SHELF_LIST_TITLE: { fontFamily: 'ReaderNotoSerifSCBold', fontWeight: 700, fontSizeFp: 15, lineHeightFp: 18.3, letterSpacingFp: 0 },
+  TYPE_SHELF_LIST_AUTHOR: { fontFamily: 'ReaderNotoSansSCUIRegular', fontWeight: 400, fontSizeFp: 12, lineHeightFp: 15, letterSpacingFp: 0 },
+  TYPE_SHELF_LIST_CHAPTER: { fontFamily: 'ReaderNotoSansSCUIRegular', fontWeight: 400, fontSizeFp: 11, lineHeightFp: 13.75, letterSpacingFp: 0 },
+  TYPE_SHELF_LIST_STATUS: { fontFamily: 'ReaderNotoSansSCUIRegular', fontWeight: 400, fontSizeFp: 10, lineHeightFp: 12, letterSpacingFp: 0 },
+};
 const builders = require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
 for (const [name, path, slot] of [
   ['AppTopBar', 'common/AppTopBar.ets', 'trailing'],
@@ -36,6 +46,8 @@ const check = (name, action) => {
   catch (error) { results.push({ name, passed: false, message: error.message }); }
 };
 const texts = owner => [...owner.nodes.values()].filter(node => node.type === 'Text');
+// Native FontWeight enums and public roles both denote physical numeric weights.
+const physicalWeight = weight => ({ 'FontWeight.Regular': 400, 'FontWeight.Medium': 500, 'FontWeight.Bold': 700 })[weight] ?? weight;
 const stub = name => new Proxy({ name }, { get: (target, key) => key === 'name' ? target.name : () => {} });
 const projectionSource = stripTypeScriptTypes(read('bookshelf/ShelfBookPresentation.ts'))
   .replace(/^import .*$/mg, '').replace('export class ', 'class ');
@@ -87,10 +99,11 @@ check('empty shelf uses the same right-aligned three-action header', () => {
 });
 for (const page of ['BookshelfShell']) {
   check(`${page}: actual shared text header keeps search and More hit targets live`, () => {
-    const { owner } = createReaderBuilderProbe(read(`bookshelf/${page}.ets`), ['topBar'], {
-      AppTopBar: HeaderChild, ReaderIconButton: IconButtonChild,
+    const { owner } = createReaderBuilderProbe(read(`bookshelf/${page}.ets`), ['mounted','temporaryBackIdentity','temporaryBackGeneration','moreSelectionId','onTemporaryBackBridge','navigationGeneration','onNavigationGenerationChanged','registerTemporaryBackGeneration','consumeTemporaryBack','dismissMoreMenu','moreOpenAction','aboutToAppear','topBar'], {
+      ...createArkUIPropertyRuntimeProbe().sdk,bookshelfTemporaryGeneration:0,registerReaderShelfFonts(){},AppTopBar: HeaderChild, ReaderIconButton: IconButtonChild,
       ImageFit: { Contain: 'ImageFit.Contain' },
-    });
+    },{initialParams:{navigationGeneration:1}});
+    owner.aboutToAppear();
     let searches = 0;
     Object.assign(owner, { appThemeScheme: 'day', moreMenuVisible: false,
       topBarLeftInset: () => 20, topBarRightInset: () => 20,
@@ -127,8 +140,10 @@ for (const page of ['BookshelfShell']) {
     assert.equal(buttons.length, 2);
     for (const [index, button] of buttons.entries()) {
       assert.equal(button.params.icon, `app.media.bookshelf_${index === 0 ? 'search' : 'more'}`);
-      const { owner: hitOwner } = createReaderBuilderProbe(read('common/ReaderIconButton.ets'), ['build']);
-      Object.assign(hitOwner, button.params, { appThemeScheme: 'day' });
+      const actual = iconButtonControls({ source: read('common/ReaderIconButton.ets') });
+      const hitOwner = new actual.icon.Component(undefined, button.params);
+      hitOwner.appThemeScheme = 'day';
+      hitOwner.aboutToAppear();
       hitOwner.initialRender();
       const hit = [...hitOwner.nodes.values()].find(node => node.type === 'Stack');
       assert.deepEqual([hit.width, hit.height], [44, 44]);
@@ -160,7 +175,7 @@ check('empty shelf actual Scroll pins short contents to the viewport top', () =>
 });
 const list = read('bookshelf/ShelfBookListDetails.ets').replace('  build() {', '  build() { Column() {} }\n  @Builder\n  shelfDetails() {');
 check('PH61 progress/source retain equal left/right slots and live progress after row reuse', () => {
-  const { owner } = createReaderBuilderProbe(list, ['shelfDetails', 'statusPill'], { ShelfBookPresentation: Projection, Blank: stub('Blank') });
+  const { owner } = createReaderBuilderProbe(list, ['shelfDetails', 'statusPill'], { ShelfBookPresentation: Projection, Blank: stub('Blank'), ...shelfTypography });
   owner.book = { title: '书名', author: '', sourceId: 'online', sourceName: '非常长的实际书源名称', lastChapter: '最新章节', readProgress: 8765 };
   owner.appThemeScheme = 'day'; owner.shelfDetails();
   const nodes = texts(owner), source = nodes.find(n => n.create === '非常长的实际书源名称'), progress = nodes.find(n => n.create === '已读 87%');
@@ -207,7 +222,7 @@ check('PH116 detail preview expands up to 20 rows in the outer detail scroll', (
     const chapterTexts = texts(owner).filter(node => /^第\d+章$/.test(node.create));
     assert.equal(chapterTexts.length, Math.min(count, 20));
     assert.deepEqual(owner.visibleToc(), toc.slice(0, 20), 'preview retains exact chapter identity/order');
-    for (const node of chapterTexts) assert.deepEqual([node.fontSize, node.fontWeight], [14, 'FontWeight.Regular']);
+    for (const node of chapterTexts) assert.deepEqual([node.fontSize, physicalWeight(node.fontWeight)], [14, 400]);
     assert.equal(nodes.filter(node => node.type === 'Scroll').length, 0,
       'chapter list must not hide its twenty rows behind a four-row inner scroll');
     assert.ok(nodes.some(node => node.type === 'Stack' &&
@@ -242,7 +257,7 @@ for (const scheme of ['day', 'night']) {
     assert.ok(nodes.some(n => n.create === '作者：作者名'));
     const metadata = ['最新：最新章节', '书源：短书源', '分组：默认'].map(label => nodes.find(n => n.create === label));
     assert.ok(metadata.every(Boolean));
-    for (const node of metadata) assert.deepEqual([node.fontFamily, node.fontWeight, node.fontSize, node.lineHeight, node.height], ['ReaderInter', 'FontWeight.Bold', 12, 15, 18]);
+    for (const node of metadata) assert.deepEqual([node.fontFamily, physicalWeight(node.fontWeight), node.fontSize, node.lineHeight, node.height], ['ReaderInter', 700, 12, 15, 18]);
     const source = metadata[1]; assert.equal(source.width, undefined); assert.equal(source.flexShrink, 1);
     assert.equal(source.textOverflow.overflow, 'TextOverflow.Ellipsis');
     const action = nodes.find(n => n.create === '更换书源');
@@ -276,8 +291,8 @@ check('PH46/47 original author typography and the entire five-line block align w
   assert.equal(column.justifyContent,'FlexAlign.SpaceBetween');
   const title=nodes.find(n=>n.type==='Text'&&n.create==='Title');
   const author=nodes.find(n=>n.type==='Text'&&String(n.create).endsWith('Author'));
-  assert.deepEqual([author.fontFamily,author.fontWeight,author.fontSize,author.lineHeight,author.height],
-    ['ReaderInter','FontWeight.Regular',13,17.55,17.55]);
+  assert.deepEqual([author.fontFamily,physicalWeight(author.fontWeight),author.fontSize,author.lineHeight,author.height],
+    ['ReaderInter',400,13,17.55,17.55]);
   assert.equal(author.fontColor,readerAppColor('TOK_MUTED','day'));
   assert.equal(author.margin,undefined);
   assert.equal(title.height,25.96);
@@ -310,24 +325,43 @@ const sourcePage = read('source/SourceManagementPage.ets');
 for (const loginUrl of [undefined, 'https://example.test/login']) {
   check(`source name/category/URL remain distinct and login precedes detect (${loginUrl ? 'login' : 'no login'})`, () => {
     const names = ['sourceRow', 'detectButton', 'loginButton', 'statusBadge', 'sourceSwitch'];
+    if (!baseline) names.push('operation', 'mounted', 'temporaryBackIdentity', 'sourceToggleBusy', 'sourceToggleEnabled');
     if (sourcePage.includes('private sourceMeta(')) names.push('sourceMeta');
-    const { owner } = createReaderBuilderProbe(sourcePage, names, { readerSourceCategoryLabel, StatusBadge: Child, ReaderToggle: Child });
-    Object.assign(owner, { appThemeScheme: 'day', contentFrame: () => ({ width: 326 }), statusBadgeBackground() {}, statusBadgeDot() {} });
+    const deps = {
+      readerSourceCategoryLabel,
+      TYPE_SOURCE_MANAGEMENT_META: {
+        fontFamily: 'ReaderNotoSansSC', fontWeight: 400, fontSizeFp: 10, lineHeightFp: 12.5,
+      },
+      StatusBadge: Child, ...(baseline ? { ReaderToggle: Child } : {}),
+    };
+    const ui = baseline ? {owner:createReaderBuilderProbe(sourcePage,names,deps).owner} : sourceSharedActionFixture(names,deps);
+    const { owner } = ui;
+    Object.assign(owner, { appThemeScheme: 'day', mounted: true, temporaryBackIdentity: 'source-metadata-visit',
+      contentFrame: () => ({ width: 326 }), statusBadgeBackground() {}, statusBadgeDot() {} });
     const source = { sourceId: 'source', name: '实际书源名称', baseUrl: 'https://example.test/very/long/path', category: 'novel', enabled: true, loginUrl, checkState: 'failed', checkMessage: '检测失败，请重试' };
     let logins = 0, detects = 0;
     owner.onLoginSource = id => { assert.equal(id, source.sourceId); logins++; };
     owner.onDetectSource = id => { assert.equal(id, source.sourceId); detects++; };
     owner.sourceRow(source);
-    const nodes = texts(owner), labels = nodes.map(n => n.create);
+    const allNodes = baseline ? [...owner.nodes.values()] : ui.controls.orderedNodes(owner);
+    if (!baseline) {
+      const toggle = allNodes.find(node => node.accessibilityRole === 'AccessibilityRoleType.SWITCH');
+      assert.ok(toggle, 'actual shared Toggle native actor mounts through the Root bounded resolver');
+      assert.deepEqual([toggle.width, toggle.height, toggle.accessibilityChecked, toggle.enabled], [44, 24, true, true]);
+    }
+    const nodes = allNodes.filter(n=>n.type==='Text'), labels = nodes.map(n => n.create);
     assert.ok(labels.includes(source.baseUrl)); assert.ok(labels.includes(readerSourceCategoryLabel('novel')));
     assert.ok(labels.includes(source.checkMessage));
     assert.ok(labels.indexOf(readerSourceCategoryLabel('novel')) < labels.indexOf(source.baseUrl));
     const name = nodes.find(n => n.create === source.name), category = nodes.find(n => n.create === readerSourceCategoryLabel('novel'));
     assert.equal(name.flexShrink, 1); assert.equal(category.flexShrink, 0);
     assert.equal(name.maxLines, 1); assert.equal(name.textOverflow.overflow, 'TextOverflow.Ellipsis');
-    const buttons = [...owner.nodes.values()].filter(n => n.type === 'Stack' && n.onClick);
-    if (loginUrl) { assert.ok(labels.indexOf('登录') < labels.indexOf('检测')); buttons[0].onClick(); buttons[1].onClick(); assert.deepEqual([logins, detects], [1, 1]); }
-    else { assert.ok(!labels.includes('登录')); buttons[0].onClick(); assert.deepEqual([logins, detects], [0, 1]); }
+    const buttons = baseline ? [...owner.nodes.values()].filter(n => n.type === 'Stack' && n.onClick).map(native=>({native,click:native.onClick})) :
+      [...(loginUrl ? [ui.action('source-management-login','登录')] : []),ui.action('source-management-detect','检测')];
+    if (loginUrl) { assert.ok(labels.indexOf('登录') < labels.indexOf('检测')); buttons[0].click(); buttons[1].click(); assert.deepEqual([logins, detects], [1, 1]); }
+    else { assert.ok(!labels.includes('登录')); buttons[0].click(); assert.deepEqual([logins, detects], [0, 1]); }
+    if(!baseline){for(const action of buttons){assert.deepEqual([action.native.width,action.native.height,action.native.borderRadius],[44,28,7],'shared native target preserves the original compact geometry');action.actor.aboutToDisappear();action.click();}assert.deepEqual([logins,detects],loginUrl?[1,1]:[0,1],'retired actual compact actors cannot dispatch');
+      owner.detectButton({...source,checkState:'checking'});const busy=ui.action('source-management-detect','检测中');assert.equal(busy.native.opacity,0.62,'busy native feedback preserves the original detect opacity');busy.click();assert.equal(detects,1,'actual Source checking guard prevents a second detection');}
   });
 }
 check('single-book sheet matches cover frame and both layers have straight lower corners', () => {
@@ -336,8 +370,18 @@ check('single-book sheet matches cover frame and both layers have straight lower
   const width = new Function('ReaderWindowCoordinator', 'readerVisualSafeLeft', 'readerVisualSafeRight', method);
   for (const available of [240, 326, 352, 630]) assert.equal(width.call({ shelfContentWidth: () => available, isWideViewport: () => available > 500,
     effectiveViewportWidth: () => available + 38 }, { metrics: () => ({}) }, () => 19, () => 19), available);
-  assert.match(shelf, /radius: \{ topLeft: 24, topRight: 24, bottomLeft: 0, bottomRight: 0 \}/);
-  assert.match(sheet, /borderRadius\(\{ topLeft: 24, topRight: 24, bottomLeft: 0, bottomRight: 0 \}\)/);
+  assert.match(shelf, /radius: \{ topLeft: this\.bookActionSheetSpec\(\)\.borderRadius, topRight: this\.bookActionSheetSpec\(\)\.borderRadius, bottomLeft: 0, bottomRight: 0 \}/);
+  if (baseline) assert.match(sheet, /borderRadius\(\{ topLeft: this\.surfaceSpec\(\)\.borderRadius, topRight: this\.surfaceSpec\(\)\.borderRadius, bottomLeft: 0, bottomRight: 0 \}\)/);
+  else {
+    assert.match(sheet, /ReaderBoundedSurface\(\{ specId: 'bookshelf-book-action'/);
+    const kit = boundedSurfaceSdk();
+    const frame = kit.consumer(read('common/ReaderBoundedSurface.ets'), undefined, {}, { specId: 'bookshelf-book-action' });
+    frame.initialRender();
+    const painted = [...frame.nodes.values()].find(node => node.backgroundColor);
+    assert.deepEqual(painted.borderRadius, { topLeft: 24, topRight: 24, bottomLeft: 0, bottomRight: 0 }, 'actual SDK shared frame retains both straight lower corners');
+  }
+  const surfaceSpecs = read('common/ReaderSurfaceSpecs.ets');
+  assert.match(surfaceSpecs, /bookshelf-book-action[\s\S]*borderRadius: 24/);
 });
 check('44vp source SVG stays 44vp in the single-book more action', () => {
   const shelf = read('bookshelf/BookshelfPage.ets');

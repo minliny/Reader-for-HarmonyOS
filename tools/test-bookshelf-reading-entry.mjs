@@ -1,7 +1,10 @@
+import { ReaderNativeAlertOwner } from './lib/reader-native-alert-sdk-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { compileHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
 import * as readerControlState from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
 import * as readerControlHost from '../entry/src/main/ets/features/reading/ReaderControlHostSession.ts';
 import * as readerControlKeyboard from '../entry/src/main/ets/features/reading/ReaderControlHostKeyboard.ts';
@@ -31,19 +34,19 @@ function method(signature) {
   assert.equal(ts.getAllDecorators(member).length, 0, 'ordinary reading harness excludes neighboring UI builders');
   return member.getText(indexTree);
 }
-const methods = [
-  'installRemoteReadingSession(', 'updateRemoteReadableChapterOrder(', 'onRemoteSessionReady(', 'openShelfBook(', 'openShelfBookInfo(', 'openLocalBookDetail(', 'openRemoteBookDetail(',
+const methodNames = [
+  'installRemoteReadingSession(', 'onRemoteSessionReady(', 'openShelfBook(', 'openShelfBookInfo(', 'openLocalBookDetail(', 'openRemoteBookDetail(',
   'openReading(', 'presentPreparedReading(', 'returnToReadingOrigin(', 'onReaderExited(',
   'returnFromDetail(', 'requestReaderBookInfo(', 'returnToBookshelf(', 'nextNavigationGeneration(', 'isKnownDetailChapter(',
-  'currentSourceSwitchTransactionId(',
-  'consumeSystemFileOpen(',
+  'currentSourceSwitchTransactionId(', 'consumeTemporaryBackBridge(', 'isCurrentRuntime(', 'currentReaderPresentationIdentity(',
+  'getReadingEntryHost(', 'readingEntryLease(', 'applyReadingEntrySnapshot(', 'bindReadingEntryReader(', 'retireReadingEntryPresentation(', 'chooseCachedChapterRefresh(', 'showIndexAlert(',
+  'consumeSystemFileOpen(', 'retireSourceSwitchPresentation(', 'retireRssPresentation(', 'retireRssEditorPresentation(', 'retireBookshelfCatalogPresentation(',
   'async probeRemoteContentVerdict(', 'remoteContentVerdictLabel(', 'onReadingFailure(',
   'openDetailSourceSwitch(',
   'onSearchResultSelected(', 'searchAcquisitionCandidate(', 'remoteSeedForSearchBook(',
   ...(source.includes('  private cancelReaderExitDestination(') ? ['cancelReaderExitDestination('] : []),
-].map(method).join('\n');
-const back = method('onBackPress(');
-const harnessCode = stripTypeScriptTypes(`class Harness { ${methods}\n${back} }`);
+];
+for (const signature of [...methodNames, 'onBackPress(']) method(signature);
 const deferred = () => {
   let resolve, reject;
   const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
@@ -60,45 +63,56 @@ function create(remote = false) {
   const entries = [...(remote ? [{ index: 5, title: '卷一', url: '' }] : []), { index: 7, title: 'Chapter seven', url: 'chapter-7' }];
   const session = { identity: book, book, entries, acquisitionMode: 'cache' };
   const probes = [], progressReads = [];
-  const Harness = new Function(
-    'resolveBookshelfBook', 'LOCAL_SOURCE_ID', 'ReaderRuntimeOwner', 'LocalReadingFlowGateway', 'RemoteReadingFlowGateway',
-    'ReadingOfflineGateway', 'ReaderCoreGateway', 'SourceGateway', 'RemoteDetailAdmission',
-    'hilog', 'DOMAIN', 'readerSourceCategoryIsText', 'readerSourceCategoryLabel',
-    'remoteReadingFailureKindOf', 'verdictForFailureKind', 'isRemoteSourceFailureKind',
-    'remoteSourceFailureSummary', 'RemoteReadingGatewayError', 'remoteReadingFailureRecord', 'searchCandidateRank',
-    'sameRemoteSessionEvidence','preparedRemoteChapterMatches','preparedRemoteChapterPositionMatches','captureRemotePositionContext','withPreparedRemoteChapter','copyRemoteReadingSession','RemoteChapterCacheRefreshError',
-    `${harnessCode}; return Harness;`,
-  )(
-    resolveBookshelfBook, 'local', { current: () => ({ noteReadingPreparationIntent(sourceId, bookId) {
+  const runtime = ({ current: () => ({ noteReadingPreparationIntent(sourceId, bookId) {
       assert.equal(sourceId, book.sourceId); assert.equal(bookId, book.bookId);
     }, bookAcquisitions: () => ({ readingProjectionRevision:()=>0, endSearch() {}, setPreparationVisible() {}, acquireBookWithBackgroundRefresh: (seed) => {
       assert.equal(seed.sourceId,book.sourceId,'a shelf preview or resume keeps its durable source identity');
       assert.equal(seed.bookId,book.bookId,'a shelf preview or resume keeps its durable book identity');
       return catalog.promise.then(session => ({ session }));
-    }, acquireCandidateGroup:()=>assert.fail('a shelf book must not enter automatic candidate substitution'), recentFailures: () => [] }) }) },
-    class { loadToc() { return toc.promise; } loadDirectoryProjection() { return Promise.resolve(entries); } },
-    class {
-      openCachedCatalogSession() { return catalog.promise; }
-      openSession() { return catalog.promise; }
-      async loadProgress() { progressReads.push(book.bookId); return {kind:'restored',progress:{...book,chapterIndex:book.currentChapterIndex,chapterOffset:10,chapterProgress:0,updatedAt:100}}; }
-      loadChapter(_session, index) { probes.push(index); return body.promise.then(() => ({sourceId:book.sourceId,bookId:book.bookId,chapterIndex:index,chapterUrl:`chapter-${index}`,contentVersion:`body-${index}`,content:'正文',images:[]})); }
-    },
-    class {}, class { loadShelfBook() { return Promise.resolve(book); } },
-    class { loadSources() { return Promise.resolve([{ sourceId: 'source', category: 'novel' }]); } },
-    class { constructor(value) { this.session = value; } },
-    { info() {}, warn() {}, error() {} }, 0, () => true, () => '小说',
-    error => error.kind ?? 'NETWORK_FAILED', () => 'networkFailed',
-    kind => kind === 'NETWORK_FAILED', () => '网络请求失败', class extends Error {}, () => ({}), searchCandidateRank,
-    readingEvidence.sameRemoteSessionEvidence, readingEvidence.preparedRemoteChapterMatches, readingEvidence.preparedRemoteChapterPositionMatches,captureRemotePositionContext,readingEvidence.withPreparedRemoteChapter, readingEvidence.copyRemoteReadingSession,RemoteChapterCacheRefreshError,
-  );
+    }, acquireCandidateGroup:()=>assert.fail('a shelf book must not enter automatic candidate substitution'), recentFailures: () => [] }) }) }).current();
+  const runtimeAuthority = runtimeOwnerIdentityProbe(() => runtime);
+  runtime.request=async(method)=>{
+    if(method==='bookmark.list')return{data:{bookmarks:[]}};
+    if(method==='source.list')return{data:{sources:[{sourceId:'source',name:'Test source',enabled:true}]}};
+    throw Error('unexpected shelf entry native request '+method);
+  };
+  setRuntime(runtime);
+  const LocalGateway=class { loadToc() { return toc.promise; } loadDirectoryProjection() { return Promise.resolve(entries); } };
+  const RemoteGateway=class {
+    openCachedCatalogSession() { return catalog.promise; }
+    openSession() { return catalog.promise; }
+    async loadProgress() { progressReads.push(book.bookId); return {kind:'restored',progress:{...book,chapterIndex:book.currentChapterIndex,chapterOffset:10,chapterProgress:0,updatedAt:100}}; }
+    loadChapter(_session,index) { probes.push(index);return body.promise.then(()=>({sourceId:book.sourceId,bookId:book.bookId,chapterIndex:index,chapterUrl:`chapter-${index}`,contentVersion:`body-${index}`,content:'正文',images:[]})); }
+  };
+  const Entry=compileHost(undefined,{ReaderRuntimeOwner:runtimeAuthority,LocalReadingFlowGateway:LocalGateway,RemoteReadingFlowGateway:RemoteGateway,
+    ReaderCoreGateway:class {loadShelfBook(){return Promise.resolve(book);}},SourceGateway:class {loadSources(){return Promise.resolve([{sourceId:'source',category:'novel'}]);}}});
+  const emptyAdmission={generation:0,adding:false,cancelling:false,confirmation:'none'};
+  const Harness = productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url),
+    [...methodNames.map(signature => signature.replace(/^async /, '').replace(/\($/, '')), 'onBackPress'], {
+      resolveBookshelfBook, LOCAL_SOURCE_ID: 'local', ReaderRuntimeOwner: runtimeAuthority,
+      LocalReadingFlowGateway: LocalGateway, RemoteReadingFlowGateway: RemoteGateway,
+      ReadingOfflineGateway: class {}, ReaderCoreGateway: class { loadShelfBook() { return Promise.resolve(book); } },
+      SourceGateway: class { loadSources() { return Promise.resolve([{ sourceId: 'source', category: 'novel' }]); } },
+      RemoteDetailAdmission: class { constructor(value) { this.session = value; } },
+      hilog: { info() {}, warn() {}, error() {} }, DOMAIN: 0,
+      readerSourceCategoryIsText: () => true, readerSourceCategoryLabel: () => '小说',
+      ReadingEntryHost: Entry, EMPTY_READABLE_ADMISSION: emptyAdmission,
+      remoteReadingFailureKindOf: error => error.kind ?? 'NETWORK_FAILED', verdictForFailureKind: () => 'networkFailed',
+      isRemoteSourceFailureKind: kind => kind === 'NETWORK_FAILED', remoteSourceFailureSummary: () => '网络请求失败',
+      RemoteReadingGatewayError: class extends Error {}, remoteReadingFailureRecord: () => ({}), searchCandidateRank,
+      ...readingEvidence, captureRemotePositionContext, RemoteChapterCacheRefreshError,
+    });
   const h = new Harness(), routes = [], alerts = [];
+  h.nativeAlertOwner = new ReaderNativeAlertOwner();
   let route = 'bookshelf';
   Object.defineProperty(h, 'route', { get: () => route, set: value => { routes.push(value); route = value; } });
   Object.assign(h, {
+    mountedRuntimeOwner: runtime, shelfReceiptRetired: false,
+    detailShelfAdmissionMount:1,detailReadableAdmission:()=>emptyAdmission,
     remoteSessionGeneration:0,remoteContentProbeGeneration:0,readingOriginRoute: 'detail', shelfReadingPreparation: false, navigationGeneration: 0,
     readingSessionActive: false, detailReturnRoute: 'bookshelf', detailToc: [], shelfBooks: [book],
-    searchDetailCandidates: [], searchPublication: {shelfAt:()=>[]}, searchPublicationRevision:0,
-    remoteCatalogRefreshAt: new Map(), offlineMutationGeneration: 0, bookshelfRemovalActiveKey: '',
+    searchDetailCandidates: [], searchPublication: {shelfAt:()=>[]}, searchHost: { publication: { shelfAt:()=>[] } }, searchPublicationRevision:0,
+    remoteCatalogRefreshAt: new Map(), offlineMutationGeneration: 0, shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false},
     bookshelfRemovalGeneration: 0, bookshelfLoadGeneration: 0,
     sourceSwitchVisible: false, remoteContentVerdict: 'readable',
     sourceDisplayName: () => 'Test source', readingDetailForShelf: value => ({ ...value }),
@@ -139,7 +153,7 @@ for (const remote of [false, true]) {
   h.presentPreparedReading(7);
   assert.equal(h.route, 'reading');
   if (remote) assert.equal(h.remoteContentVerdict, 'readable', 'real first-page admission also updates the retained detail verdict');
-  h.onReaderExited();
+  h.onReaderExited(JSON.stringify([h.detailBook?.sourceId,h.detailBook?.bookId,h.readingReadyGeneration]));
   assert.equal(h.route, 'bookshelf', 'reader back follows the shelf origin');
   assert.equal(h.readingSessionActive, false);
   assert.ok(!t.routes.includes('detail'), 'no transient detail route anywhere in the shelf journey');
@@ -156,7 +170,7 @@ for (const remote of [false, true]) {
   assert.equal(t.h.readingSessionActive, false, 'long-press info must not automatically read');
   t.h.openReading(undefined);
   t.h.presentPreparedReading(7);
-  t.h.onReaderExited();
+  t.h.onReaderExited(JSON.stringify([t.h.detailBook?.sourceId,t.h.detailBook?.bookId,t.h.readingReadyGeneration]));
   assert.equal(t.h.route, 'detail', 'explicit detail entry returns to detail');
 }
 
@@ -195,7 +209,7 @@ for (const remote of [false, true]) {
   t.h.presentPreparedReading(7);
   assert.equal(t.h.route, 'reading', 'Back waits for the mounted reader exit transaction');
   assert.equal(exits, 1);
-  t.h.onReaderExited();
+  t.h.onReaderExited(JSON.stringify([t.h.detailBook?.sourceId,t.h.detailBook?.bookId,t.h.readingReadyGeneration]));
   assert.equal(t.h.readingSessionActive, false);
 }
 
@@ -227,7 +241,7 @@ for (const remote of [false, true]) {
   assert.equal(h.route, 'reading');
   assert.equal(h.readingSessionActive, true);
   assert.deepEqual(t.alerts, [], 'source errors stay in the reader; no old exit/dialog action may own navigation');
-  h.onReaderExited();
+  h.onReaderExited(JSON.stringify([h.detailBook?.sourceId,h.detailBook?.bookId,h.readingReadyGeneration]));
   assert.equal(h.route, 'bookshelf');
   assert.equal(h.readingSessionActive, false);
 }
@@ -251,7 +265,7 @@ for (const snapshot of [undefined, true]) {
  const t=create(true),h=t.h;resumeAcquisition(h,t.book);t.catalog.resolve(t.session);t.body.resolve('body');await settle();
  const session=h.remoteReadingSession,toc=h.detailToc;let exits=0;h.readingExitRequest=()=>{exits++;};
  h.requestReaderBookInfo();assert.equal(exits,1);assert.equal(h.readingSessionActive,true,'information waits for normal serialized exit');
- h.onReaderExited();assert.equal(h.route,'detail');assert.equal(h.detailReturnRoute,'bookshelf');
+ h.onReaderExited(JSON.stringify([h.detailBook?.sourceId,h.detailBook?.bookId,h.readingReadyGeneration]));assert.equal(h.route,'detail');assert.equal(h.detailReturnRoute,'bookshelf');
  assert.equal(h.remoteReadingSession,session);assert.equal(h.detailToc,toc,'information reuses exact admitted directory');
 }
 
@@ -310,10 +324,10 @@ async function infoExitHarness(state) {
   index.route = 'reading';
   const calls = [], stop = deferred(), record = deferred(), progress = deferred();
   const onExited = index.onReaderExited.bind(index), onCancelled = index.cancelReaderExitDestination.bind(index);
-  index.onReaderExited = () => { calls.push('route'); onExited(); };
-  index.cancelReaderExitDestination = () => { calls.push('exit-cancelled'); onCancelled(); };
+  index.onReaderExited = identity => { calls.push('route'); onExited(identity); };
+  index.cancelReaderExitDestination = identity => { calls.push('exit-cancelled'); onCancelled(identity); };
   const shell = exitCallbacksAt(indexTree, shellTree, 'ReaderShell', index);
-  Object.assign(shell, { sourceId: index.detailBook.sourceId, bookId: index.detailBook.bookId,
+  Object.assign(shell, { sourceId: index.detailBook.sourceId, bookId: index.detailBook.bookId, readingReadyGeneration: index.readingReadyGeneration,
     readingIdentityKey: ShellIdentity.prototype.readingIdentityKey });
   const readingCallbacks = exitCallbacksAt(shellTree, readingTree, 'ReadingExperience', shell);
   const reading = Object.assign(new Reading(), {

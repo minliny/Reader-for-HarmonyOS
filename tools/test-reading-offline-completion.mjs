@@ -91,19 +91,20 @@ async function fixture(count = 45) {
   };
   return { owner, cache, session, state, states, bytes, calls, storedResources };
 }
+const {fixture:durableFixture}=await import('./lib/reading-operation-durable-probe.mjs');
+const {makeIndex:actualDirectoryIndex,settled}=await import('./lib/reading-directory-sdk-consumer.mjs');
 async function runIndex(f) {
-  const Index = productionMotionMethods(new URL('entry/src/main/ets/pages/Index.ets', root).pathname,
-    ['downloadDirectoryBook', 'showOfflineDownloadFeedback'], { ReadingOfflineGateway, ReaderRuntimeOwner: { current: () => f.owner }, hilog: { error() {} }, DOMAIN: 0 });
-  const messages = [], failures = [];
-  const p = Object.assign(new Index(), { remoteReadingSession: f.session, offlineMutationActiveKey: '', offlineMutationGeneration: 0,
-    detailToc: f.session.entries.map(e => ({ index: e.index, title: e.title, navigable: e.url.length > 0, downloadState: 'missing' })),
-    mergeDirectoryBookmarks: entries => entries, showReadingFailure: (...error) => failures.push(error),
-    getUIContext: () => ({ getPromptAction: () => ({ showToast: ({ message }) => messages.push(message) }) }) });
-  p.downloadDirectoryBook();
-  const deadline = performance.now() + 10000;
-  while (p.offlineMutationActiveKey !== '' && performance.now() < deadline) await new Promise(resolve => setTimeout(resolve, 1));
-  assert.equal(p.offlineMutationActiveKey, '');
-  return { messages, failures, p };
+ const a=await durableFixture(true);a.install(f.owner);f.owner.getUIAbilityContext=()=>({filesDir:a.files});
+ const rows=f.session.entries.map(e=>({index:e.index,title:e.title,navigable:e.url.length>0,downloadState:'missing'}));
+ const x=actualDirectoryIndex({...a,runtime:f.owner,entries:()=>rows},{remote:true}),p=x.idx;
+ const messages=[],failures=[];p.remoteReadingSession=f.session;
+ p.getUIContext=()=>({getPromptAction:()=>({showToast:({message})=>messages.push(message)})});
+ const originalFailure=p.offlineBinding.bind(p);p.offlineBinding=(...args)=>{const b=originalFailure(...args),failed=b.failed;b.failed=e=>{failures.push(e);failed?.(e);};return b;};
+ p.downloadDirectoryBook();
+ const deadline=performance.now()+10000;
+ while((p.offlineOperation===undefined||p.getReadingOfflineHost(f.owner).busy())&&performance.now()<deadline)await new Promise(resolve=>setTimeout(resolve,2));
+ assert.ok(p.offlineOperation,'actual owner emitted its operation');assert.equal(p.getReadingOfflineHost(f.owner).busy(),false);assert.equal(p.offlineOperationActive,false);
+ return{messages,failures,p};
 }
 try {
   const f = await fixture(), progress = [];
@@ -211,14 +212,18 @@ try {
         return [{ index: 0, navigable: true, downloadState: 'completed' }];
       }
     }
-    const Index = productionMotionMethods(new URL('entry/src/main/ets/pages/Index.ets', root).pathname,
-      ['downloadDirectoryBook', 'showOfflineDownloadFeedback'], { ReadingOfflineGateway: ProgressGateway,
-        ReaderRuntimeOwner: { current: () => ({}) }, hilog: { error() {} }, DOMAIN: 0 });
-    const p = Object.assign(new Index(), { remoteReadingSession: f.session, offlineMutationActiveKey: '', offlineMutationGeneration: 0,
-      detailToc: [], mergeDirectoryBookmarks: entries => entries, showReadingFailure: error => { throw error; },
-      getUIContext: () => ({ getPromptAction: () => ({ showToast: ({ message }) => messages.push(message) }) }) });
+    const actual=await durableFixture(true); actual.install(actual.runtime);
+    const host=actual.offline;
+    // Keep the original controlled progress transport seam; the actual Host,
+    // actual Index binding and existing feedback throttle execute unchanged.
+    const transport=new ProgressGateway(); transport.pendingClearOperation=async()=>undefined; transport.installClearAuthority=()=>{};
+    host.dependencies.gateway=transport;
+    const {idx:p}=actualDirectoryIndex(actual,{remote:true});
+    p.getUIContext=()=>({getPromptAction:()=>({showToast:({message})=>messages.push(message)})});
     p.downloadDirectoryBook();
-    for (let i = 0; i < 20 && p.offlineMutationActiveKey !== ''; i++) await new Promise(resolve => setImmediate(resolve));
+    for(let i=0;i<100;i++){await new Promise(resolve=>setImmediate(resolve));if(p.offlineOperation!==undefined&&!host.busy())break;}
+    assert.ok(p.offlineOperation,'actual Host published the captured operation');
+    assert.equal(host.busy(),false,'controlled progress transport completed');
     assert.equal(messages.filter(message => message.startsWith('正在下载')).length, 1);
     assert.ok(messages.some(message => message.startsWith('正在下载：已完成 1/45')));
   } finally { Date.now = realNow; }

@@ -92,8 +92,8 @@ assert.match(experience, /private requestPageTurn\(direction: ReaderPageTurnDire
 assert.match(experience, /private turnNextPage\(\): ReaderPageTurnOutcome/);
 assert.match(experience, /private turnPreviousPage\(\): ReaderPageTurnOutcome/);
 assert.match(experience, /this\.measureCommittedPageAt\(nextOffset\)/);
-assert.match(experience, /this\.paginationIndex\.findContainingPage\(key, page\.startScalar\)/);
-assert.match(experience, /this\.paginationIndex\.findPreviousPage\(key, page\.startScalar, previousChapterKey\)/);
+assert.match(experience, /this\.physicalPagination\.index\.findContainingPage\(key, page\.startScalar\)/);
+assert.match(experience, /this\.physicalPagination\.index\.findPreviousPage\(key, page\.startScalar, previousChapterKey\)/);
 assert.doesNotMatch(experience, /pageBackStack|ReadingPageHistoryAnchor/);
 assert.match(experience, /private seekControlProgress\(percent: number\): void/);
 assert.match(experience, /private stepControlChapter\(delta: number\): void/);
@@ -242,8 +242,9 @@ assert.match(index, /reduceMotion: this\.settingsSnapshot\.reduceMotion/);
 
 const settings = read('entry/src/main/ets/features/settings/SettingsPage.ets');
 assert.match(settings, /@Prop @Watch\('onSnapshotChanged'\) snapshot/);
-assert.match(settings, /onRowClick: \(\): void => this\.toggleSetting\(key, !this\.settingValue\(key\)\)/);
-assert.match(settings, /this\.reduceMotionValue = value/);
+assert.match(settings, /onRowClick: \(\): void => this\.toggleSetting\(key, !this\.settingValue\(key\), identity\)/);
+assert.match(settings, /this\.reduceMotionValue = this\.snapshot\.reduceMotion/);
+assert.doesNotMatch(settings, /this\.reduceMotionValue = value/, 'the page cannot preflip an unaccepted flag');
 
 const fullDirectory = read('entry/src/main/ets/features/reading/ReaderFullDirectory.ets');
 assert.match(fullDirectory,

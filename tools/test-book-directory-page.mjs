@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import { createRequire, registerHooks } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
+const {EMPTY_READING_DIRECTORY_RECOVERY}=await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
 import { projectReaderDirectoryEntries } from '../entry/src/main/ets/features/reading/ReaderDirectoryProjection.ts';
 import { snapshotReaderDirectoryData, sameReaderDirectoryData } from '../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts';
 import { SurfaceWidthSpec, resolveHorizontalFrame } from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
@@ -17,7 +19,7 @@ const completedScrolls = [];
 const Edge = { Top: 'top', Bottom: 'bottom' };
 let metrics = { windowRect: { width: 390 }, systemInsets: { left: 0, right: 0, top: 48, bottom: 34 },
   cutoutInsets: {}, gestureInsets: {}, navigationInsets: {}, keyboardInsets: {} };
-const deps = { projectReaderDirectoryEntries, snapshotReaderDirectoryData, sameReaderDirectoryData,
+const deps = { EMPTY_READING_DIRECTORY_RECOVERY, projectReaderDirectoryEntries, snapshotReaderDirectoryData, sameReaderDirectoryData,
   SurfaceWidthSpec, resolveHorizontalFrame, readerInteractiveSafeLeft, readerInteractiveSafeRight,
   readerInteractiveSafeBottom, ReaderWindowCoordinator: { metrics: () => metrics },
   TOK_CONTENT_MAX_W_TABLET: 720, registerReaderFonts() {}, Edge,
@@ -27,7 +29,7 @@ const deps = { projectReaderDirectoryEntries, snapshotReaderDirectoryData, sameR
   readerDirectorySignalScrollCommand: bookId => completedScrolls.push(bookId),
   setTimeout: action => { pending.push(action); } };
 const methods = ['aboutToAppear', 'aboutToDisappear', 'identity', 'rowIsCurrent', 'onIdentityChanged',
-  'supportsDirectoryRules', 'onRulesKindChanged',
+  'supportsDirectoryRules', 'supportsCurrentDirectoryView', 'onRulesKindChanged',
   'onEntriesChanged', 'admitEntries', 'applySearch', 'toggleSort', 'scheduleTopScroll', 'scrollToEdge',
   'emptyMessage', 'contentFrame', 'bottomInset', 'publishProjection', 'onListFirstLayout', 'onListUserScroll', 'flushPendingScroll'];
 const Page = productionMotionMethods(path, methods, deps);
@@ -36,7 +38,7 @@ const entries = Array.from({ length: 3000 }, (_, i) => ({ index: i * 2 + 1, titl
 function fixture() {
   const edges = [], selected = [], downloaded = [], deleted = [], created = [];
   const page = Object.assign(new Page(), { sourceId: 'source-a', bookId: 'book', bookKind: '', entries,
-    catalogMessage: '', searchDraft: '', searchQuery: '', ascending: true, projectedEntries: [],
+    directoryRecovery: EMPTY_READING_DIRECTORY_RECOVERY, catalogMessage: '', searchDraft: '', searchQuery: '', ascending: true, projectedEntries: [],
     admittedEntries: [], admittedIdentity: '', mounted: false, projectionGeneration: 0,
     scrollGeneration: 0, listReady: false, pendingScrollEdge: undefined, viewportWidth: 390, readerWindowMetricsRevision: 1, appThemeScheme: 'day',
     listScroller: { scrollEdge: edge => edges.push(edge) }, getUIContext: () => ({ getFont() {} }),
@@ -122,7 +124,7 @@ function flush() { while (pending.length) pending.shift()(); }
 const require = createRequire(import.meta.url);
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
-for (const [name, props] of Object.entries({ ReaderDirectoryRules: ['bookId'], PageBackBar: [], ReaderDirectoryToolbar: ['text', 'placeholder', 'ascending', 'showChapterTools'],
+for (const [name, props] of Object.entries({ ReaderDirectoryRecoverySurface: ['recovery'], ReaderDirectoryRules: ['bookId'], PageBackBar: [], ReaderDirectoryToolbar: ['text', 'placeholder', 'ascending', 'showChapterTools'],
   ReaderDirectoryList: ['entries', 'rowHeight', 'listPaddingX', 'listPaddingY', 'contentStartInset', 'contentEndInset', 'edgeEffectMode'],
   ReaderDirectoryNavigationSurface: ['sourceId', 'bookId', 'query', 'ascending', 'currentChapterIndex', 'openRevision',
     'interacted', 'rowHeight', 'listPaddingX', 'listPaddingY', 'contentStartInset', 'contentEndInset', 'edgeEffectMode', 'scroller'],
@@ -132,11 +134,11 @@ for (const [name, props] of Object.entries({ ReaderDirectoryRules: ['bookId'], P
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
 {
   const result = fixture(); result.page.aboutToAppear(); flush(); result.page.onListFirstLayout(result.page.identity());
-  const { owner, output } = createReaderBuilderProbe(source, ['build', 'flatList', 'chapterRow'], {
-    ...deps, ReaderDirectoryRules: Child, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
+  const { owner, output } = createReaderBuilderProbe(source, ['build', 'recoveryContent', 'flatList', 'chapterRow', 'supportsCurrentDirectoryView'], {
+    ...deps, ReaderDirectoryRecoverySurface: Child, ReaderDirectoryRules: Child, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
     ReaderDirectoryNavigationSurface: Child, ReaderDirectoryChapterRow: Child });
   Object.assign(owner, result.page);
-  for (const name of methods) owner[name] = Page.prototype[name].bind(owner);
+  for (const name of methods.filter(name=>name!=='supportsCurrentDirectoryView')) owner[name] = Page.prototype[name].bind(owner);
   owner.initialRender();
   const children = [...owner.children.values()];
   const bar = children.find(child => child.params.title === '目录'); assert.ok(bar);
@@ -182,6 +184,7 @@ class Child { constructor(owner, params, _storage, id) { Object.assign(this, { o
   assert.doesNotMatch(output, /ReaderFullDirectory|FullDirectoryPanel|ReaderShell|ReadingExperience/);
   assert.doesNotMatch(source, /Text\('(?:书签|当前章节|收起)'\)/);
 }
+{const p=fixture().page;const getter=deps.ReaderRuntimeOwner.current;deps.ReaderRuntimeOwner.current=()=>{throw Error('ReaderRuntimeOwner must be installed by EntryAbility');};assert.equal(p.supportsCurrentDirectoryView(),false);deps.ReaderRuntimeOwner.current=()=>({supportsCoreCapability(){throw Error('provider failure');}});assert.throws(()=>p.supportsCurrentDirectoryView(),/provider failure/,'identity adaptation cannot swallow platform/business failure');deps.ReaderRuntimeOwner.current=getter;}
 console.log('PH119 standalone BookDirectoryPage actual methods and SDK Builder: PASS');
 
 // Render the actual page branch with persisted Core format metadata. Filename
@@ -195,12 +198,12 @@ for (const [sourceId, bookKind, capability, expected] of [
   const result = fixture();
   Object.assign(result.page, { sourceId, bookKind, bookId: 'misleading.txt', rulesExpanded: true, rulesRevision: 0 });
   result.page.aboutToAppear(); flush();
-  const { owner } = createReaderBuilderProbe(source, ['build', 'flatList', 'chapterRow'], {
+  const { owner } = createReaderBuilderProbe(source, ['build', 'recoveryContent', 'flatList', 'chapterRow', 'supportsCurrentDirectoryView'], {
     ...deps, ReaderRuntimeOwner: { current: () => ({ supportsCoreCapability: () => capability }) },
     ReaderDirectoryRules: Child, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
     ReaderDirectoryNavigationSurface: Child, ReaderDirectoryChapterRow: Child });
   Object.assign(owner, result.page);
-  for (const name of methods) owner[name] = Page.prototype[name].bind(owner);
+  for (const name of methods.filter(name=>name!=='supportsCurrentDirectoryView')) owner[name] = Page.prototype[name].bind(owner);
   owner.initialRender();
   assert.equal([...owner.nodes.values()].some(node => node.createWithLabel === '收起层级规则'), expected,
     `directory rule control eligibility: ${sourceId}/${bookKind}/${capability}`);

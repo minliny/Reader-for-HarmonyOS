@@ -1,16 +1,17 @@
+import { withReaderProgressProducerFixture } from './lib/reader-progress-producer-fixture.mjs';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const readingFile = fileURLToPath(new URL(
   '../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url));
-const Reader = productionMotionMethods(readingFile, ['commitTtsProgress', 'finishExit'], {
+const Reader = withReaderProgressProducerFixture(productionMotionMethods(readingFile, ['commitTtsProgress', 'finishExit'], {
   CoreReadingAnchor: class {
     constructor(chapterIndex, chapterOffset, chapterProgress, bodyVersion, processingVersion) {
       Object.assign(this, { chapterIndex, chapterOffset, chapterProgress, bodyVersion, processingVersion });
     }
   },
-});
+}));
 
 const chapter = { sourceId: 'source', bookId: 'book', chapterIndex: 4,
   chapterTitle: '第四章', bodyVersion: 'body-v4', processingVersion: 'rules-v2' };
@@ -43,8 +44,9 @@ function fixture() {
       async resolveAndUpdateProgress(_bookId, _title, anchor, _layout, isCurrent) {
         assert.equal(isCurrent(), true);
         writes.push(anchor);
-        return { chapterIndex: anchor.chapterIndex, chapterOffset: anchor.chapterOffset,
-          chapterProgress: anchor.chapterProgress, updatedAt: 1 };
+        return { bookId: 'book', chapterIndex: anchor.chapterIndex, chapterOffset: anchor.chapterOffset,
+          chapterProgress: anchor.chapterProgress, bodyVersion: anchor.bodyVersion,
+          processingVersion: anchor.processingVersion, updatedAt: 1 };
       },
     }),
   });

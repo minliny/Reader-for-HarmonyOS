@@ -1,21 +1,13 @@
+import { ReaderActionMenuSurface, ReaderMenuActionView } from '../common/ReaderActionMenuSurface';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { motionAnimateParam } from '../common/MotionSpec';
 import { registerReaderFonts } from '../common/ReaderFonts';
+import { PopupSurfaceSpec, resolvePopupSpec } from '../common/ReaderSurfaceSpecs';
 
-const MENU_WIDTH = 176;
-const POINTER_HEIGHT = 12;
-const ACTION_HEIGHT = 50;
-const ACTION_COUNT = 4;
-const ACTIONS_HEIGHT = ACTION_HEIGHT * ACTION_COUNT;
-const MENU_HEIGHT = POINTER_HEIGHT + ACTIONS_HEIGHT;
-const MENU_COLLAPSED_HEIGHT = POINTER_HEIGHT + ACTION_HEIGHT;
-const MENU_TRAILING_EXTENSION = 11;
-const MENU_ANCHOR_OVERLAP = 5;
 const SURFACE_ASSET_WIDTH = 232;
 const SURFACE_ASSET_HEIGHT = 268;
 const SURFACE_SHADOW_INSET_X = 28;
 const SURFACE_SHADOW_INSET_TOP = 18;
-const POINTER_POINTS: Array<Array<number>> = [[0, 12], [12, 0], [24, 12]];
 
 /**
  * Bookshelf top-bar More overlay.
@@ -31,7 +23,7 @@ export struct BookshelfMoreMenu {
 
   @Prop anchorRight: number = 0;
   @Prop anchorBottom: number = 0;
-  @Prop reduceMotion: boolean = false;
+  @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
   onBatchManage: () => void = (): void => {};
   onLocalImport: () => void = (): void => {};
   onBookshelfSettings: () => void = (): void => {};
@@ -44,18 +36,41 @@ export struct BookshelfMoreMenu {
   @State private overlayWidth: number = 0;
   @State private overlayHeight: number = 0;
   onDismiss: () => void = (): void => {};
-  @State private panelHeight: number = MENU_COLLAPSED_HEIGHT;
+  @State private panelHeight: number = resolvePopupSpec('bookshelf-more-menu').collapsedHeight;
   @State private closeInFlight: boolean = false;
   private mounted: boolean = false;
   private generation: number = 0;
+  private closeFinish: (() => void) | undefined = undefined;
+
+  private surfaceSpec(): PopupSurfaceSpec {
+    return resolvePopupSpec('bookshelf-more-menu');
+  }
 
   aboutToAppear(): void {
     this.mounted = true;
     this.generation += 1;
+    this.closeInFlight = false;
+    this.closeFinish = undefined;
     registerReaderFonts(this.getUIContext().getFont());
   }
 
-  aboutToDisappear(): void { this.mounted = false; this.generation += 1; }
+  aboutToDisappear(): void { this.mounted = false; this.generation += 1; this.closeFinish = undefined; }
+
+  private onReduceMotionChanged(): void {
+    if (!this.mounted || !this.reduceMotion) return;
+    const generation = ++this.generation;
+    this.getUIContext().animateTo({ duration: 0 }, (): void => {
+      this.panelHeight = this.closeInFlight ? this.surfaceSpec().collapsedHeight : this.surfaceSpec().expandedHeight;
+    });
+    if (this.closeInFlight) this.finishCollapse(generation);
+  }
+
+  private finishCollapse(generation: number): void {
+    if (!this.mounted || generation !== this.generation || !this.closeInFlight) return;
+    const finish = this.closeFinish;
+    this.closeFinish = undefined;
+    finish?.();
+  }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -69,50 +84,36 @@ export struct BookshelfMoreMenu {
       Stack({ alignContent: Alignment.TopStart }) {
           Row()
             .width(this.menuWidth())
-            .height(Math.max(0, this.visiblePanelHeight() - POINTER_HEIGHT))
-            .backgroundColor(readerAppColor('app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8', this.appThemeScheme))
-            .border({ width: 1, color: readerAppColor('app.BookshelfMoreMenu.build.color.FFE3DED6', this.appThemeScheme) })
-            .borderRadius(16)
-            .shadow({ radius: 28, color: readerAppColor('app.BookshelfMoreMenu.build.color.292E261F', this.appThemeScheme), offsetX: 0, offsetY: 10 })
-            .position({ x: 0, y: POINTER_HEIGHT });
+            .height(Math.max(0, this.visiblePanelHeight() - this.surfaceSpec().pointerHeight))
+            .backgroundColor(readerAppColor(this.surfaceSpec().surfaceBackgroundRole, this.appThemeScheme))
+            .border({ width: this.surfaceSpec().borderWidth, color: readerAppColor(this.surfaceSpec().surfaceBorderRole, this.appThemeScheme) })
+            .borderRadius(this.surfaceSpec().borderRadius)
+            .shadow({ radius: this.surfaceSpec().shadowRadius, color: readerAppColor(this.surfaceSpec().surfaceShadowRole, this.appThemeScheme), offsetX: 0, offsetY: this.surfaceSpec().shadowOffsetY })
+            .position({ x: 0, y: this.surfaceSpec().pointerHeight });
 
-          Polygon({ width: 24, height: POINTER_HEIGHT + 1 })
-            .points(POINTER_POINTS)
-            .fill(readerAppColor('app.BookshelfMoreMenu.build.fill.FFFFFCF8', this.appThemeScheme))
+          Polygon({ width: this.surfaceSpec().pointerWidth, height: this.surfaceSpec().pointerHeight + 1 })
+            .points(this.surfaceSpec().pointerPoints)
+            .fill(readerAppColor(this.surfaceSpec().pointerFillRole, this.appThemeScheme))
             .stroke(Color.Transparent)
             .position({ x: this.pointerX(), y: 0.5 });
 
           // Cover the rounded body's top border beneath the pointer so the
           // pointer and body keep the reference asset's continuous outline.
           Row()
-            .width(24)
+            .width(this.surfaceSpec().pointerWidth)
             .height(2)
-            .backgroundColor(readerAppColor('app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8', this.appThemeScheme))
-            .position({ x: this.pointerX(), y: 11.5 });
+            .backgroundColor(readerAppColor(this.surfaceSpec().surfaceBackgroundRole, this.appThemeScheme))
+            .position({ x: this.pointerX(), y: this.surfaceSpec().pointerHeight - 0.5 });
 
-          Polyline({ width: 24, height: POINTER_HEIGHT + 1 })
-            .points(POINTER_POINTS)
+          Polyline({ width: this.surfaceSpec().pointerWidth, height: this.surfaceSpec().pointerHeight + 1 })
+            .points(this.surfaceSpec().pointerPoints)
             .fill(Color.Transparent)
-            .stroke(readerAppColor('app.BookshelfMoreMenu.build.stroke.FFE3DED6', this.appThemeScheme))
+            .stroke(readerAppColor(this.surfaceSpec().pointerStrokeRole, this.appThemeScheme))
             .strokeWidth(1)
             .strokeLineJoin(LineJoinStyle.Round)
             .position({ x: this.pointerX(), y: 0.5 });
 
-        Scroll() {
-          Column() {
-            this.action('batch', true, (): void => this.onBatchManage());
-            this.action('import', true, (): void => this.onLocalImport());
-            this.action('update', true, (): void => this.onCheckUpdates());
-            this.action('settings', false, (): void => this.onBookshelfSettings());
-          }
-          .width(this.menuWidth())
-          .height(ACTIONS_HEIGHT);
-        }
-        .width(this.menuWidth())
-        .height(Math.max(0, this.visiblePanelHeight() - POINTER_HEIGHT))
-        .clip(true)
-        .scrollBar(BarState.Auto)
-        .position({ x: 0, y: POINTER_HEIGHT });
+        this.menuContent();
       }
       .width(this.menuWidth())
       .height(this.visiblePanelHeight())
@@ -134,39 +135,27 @@ export struct BookshelfMoreMenu {
   }
 
   @Builder
-  private action(key: string, showDivider: boolean, action: () => void) {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Row({ space: 16 }) {
-        Image(this.actionIcon(key))
-          .width(24)
-          .height(24).opacity(this.actionEnabled(key) ? 1 : 0.45);
+  private menuContent() {
+    ReaderActionMenuSurface({
+      specId: 'bookshelf-more-menu', scheme: this.appThemeScheme,
+      actions: this.menuActions(), availableWidth: this.menuWidth(),
+      viewportHeight: Math.max(0, this.visiblePanelHeight() - this.surfaceSpec().pointerHeight),
+      onAction: (id: string): void => this.performMenuAction(id),
+    }).position({ x: 0, y: this.surfaceSpec().pointerHeight });
+  }
 
-        Text(this.actionLabel(key))
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Medium)
-          .fontSize(15)
-          .lineHeight(22)
-          .fontColor(this.actionEnabled(key) ? readerAppColor('app.BookshelfMoreMenu.action.fontColor.FF1F1B17', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
-          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1);
-      }
-      .width(this.menuWidth())
-      .height(ACTION_HEIGHT)
-      .padding({ left: 18, right: 16 });
+  private menuActions(): ReaderMenuActionView[] {
+    return ['batch', 'import', 'update', 'settings'].map((id: string): ReaderMenuActionView =>
+      new ReaderMenuActionView(id, this.actionLabel(id), this.actionEnabled(id), this.actionIcon(id),
+        id === 'update' && !this.canCheckUpdates ? '检查更新，没有在线书籍' : this.actionLabel(id)));
+  }
 
-      if (showDivider) {
-        Divider()
-          .width(Math.max(0, this.menuWidth() - 32))
-          .height(1)
-          .color(readerAppColor('app.BookshelfMoreMenu.action.color.FFE8E2DA', this.appThemeScheme))
-          .position({ x: 16, y: ACTION_HEIGHT - 1 });
-      }
-    }
-    .width(this.menuWidth())
-    .height(ACTION_HEIGHT)
-    .backgroundColor(Color.Transparent)
-    .enabled(this.actionEnabled(key))
-    .accessibilityText(key === 'update' && !this.canCheckUpdates ? '检查更新，没有在线书籍' : this.actionLabel(key))
-    .onClick((): void => { if (this.actionEnabled(key)) this.commitAction(action); });
+  private performMenuAction(id: string): void {
+    if (!this.actionEnabled(id)) return;
+    if (id === 'batch') this.commitAction(this.onBatchManage);
+    else if (id === 'import') this.commitAction(this.onLocalImport);
+    else if (id === 'update') this.commitAction(this.onCheckUpdates);
+    else if (id === 'settings') this.commitAction(this.onBookshelfSettings);
   }
 
   private actionEnabled(key: string): boolean {
@@ -191,17 +180,17 @@ export struct BookshelfMoreMenu {
   // The parent is already inside Index's safe area and MainTabShell's nav.
   // Clamp in its measured local frame; never add the system insets twice.
   private menuWidth(): number {
-    return this.overlayWidth > 0 ? Math.min(MENU_WIDTH, Math.max(0, this.overlayWidth - 16)) : MENU_WIDTH;
+    return this.overlayWidth > 0 ? Math.min(this.surfaceSpec().width, Math.max(0, this.overlayWidth - 16)) : this.surfaceSpec().width;
   }
 
   private menuX(): number {
-    const preferred = this.anchorRight + MENU_TRAILING_EXTENSION - this.menuWidth();
+    const preferred = this.anchorRight + this.surfaceSpec().trailingExtension - this.menuWidth();
     return Math.max(8, Math.min(preferred, this.overlayWidth - this.menuWidth() - 8));
   }
 
   private menuTop(): number {
-    return Math.max(0, Math.min(this.anchorBottom - MENU_ANCHOR_OVERLAP,
-      this.overlayHeight - MENU_COLLAPSED_HEIGHT - 8));
+    return Math.max(0, Math.min(this.anchorBottom - this.surfaceSpec().anchorOverlap,
+      this.overlayHeight - this.surfaceSpec().collapsedHeight - 8));
   }
 
   private visiblePanelHeight(): number {
@@ -209,17 +198,18 @@ export struct BookshelfMoreMenu {
   }
 
   private pointerX(): number {
-    return Math.max(0, Math.min(this.menuWidth() - 24, this.anchorRight - 22 - this.menuX() - 12));
+    return Math.max(0, Math.min(this.menuWidth() - this.surfaceSpec().pointerWidth,
+      this.anchorRight - 22 - this.menuX() - this.surfaceSpec().pointerWidth / 2));
   }
 
   private expandMenu(): void {
     if (!this.mounted || this.closeInFlight) return;
     if (this.reduceMotion) {
-      this.panelHeight = MENU_HEIGHT;
+      this.panelHeight = this.surfaceSpec().expandedHeight;
       return;
     }
     this.getUIContext().animateTo(motionAnimateParam('dropdown.menu.expand'), (): void => {
-      this.panelHeight = MENU_HEIGHT;
+      this.panelHeight = this.surfaceSpec().expandedHeight;
     });
   }
 
@@ -228,21 +218,21 @@ export struct BookshelfMoreMenu {
       return;
     }
     this.closeInFlight = true;
+    this.closeFinish = onFinish;
     const generation = ++this.generation;
     if (onCommit !== undefined) onCommit();
     if (!this.mounted || generation !== this.generation) return;
     if (this.reduceMotion) {
-      this.panelHeight = MENU_COLLAPSED_HEIGHT;
-      onFinish();
+      this.panelHeight = this.surfaceSpec().collapsedHeight;
+      this.finishCollapse(generation);
       return;
     }
     this.getUIContext().animateTo(
       motionAnimateParam('dropdown.menu.collapse', (): void => {
-        if (!this.mounted || generation !== this.generation) return;
-        onFinish();
+        this.finishCollapse(generation);
       }),
       (): void => {
-        this.panelHeight = MENU_COLLAPSED_HEIGHT;
+        this.panelHeight = this.surfaceSpec().collapsedHeight;
       },
     );
   }

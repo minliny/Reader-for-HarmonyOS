@@ -1,42 +1,51 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createRequire, registerHooks } from 'node:module';
+import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
+import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
   if((specifier.startsWith('./')||specifier.startsWith('../'))&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
 const state = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
-const { readerControlReplaceDraftParams } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGateway.ts');
+const { readerControlReplaceDraftParams } = await import('./lib/reader-replace-legacy-sdk-probe.mjs');
 const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts');
+const typographySource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
+const rulesTypography = new Function(...Object.keys(fontFamilies), `${stripTypeScriptTypes(typographySource)
+  .replace(/^import[^;]+;\s*/gm, '').replace(/^export /gm, '')}; return { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION };`)(
+    ...Object.values(fontFamilies));
 const file = new URL('../entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets',import.meta.url);
 const source = readFileSync(file,'utf8');
 const results=[];
 async function check(name,fn){try{await fn();results.push({name,status:'PASS'});}catch(e){results.push({name,status:'FAIL',message:e.message});}}
 const ready = () => ({...state.createReaderControlReplaceState('s:b:1','当前书名','https://source.example'),status:'ready'});
 await check('actual TextInput uses explicit compact geometry and live app-theme text without repeating label',()=>{
-  const {owner}=createReaderBuilderProbe(source,['editorText']);
-  Object.assign(owner,{appThemeScheme:'night',state:ready(),fullInput:()=>true,localPending:false});
+  const shared=foundationControls();
+  const {owner}=createReaderBuilderProbe(source,['editorText','fullInput'],{...shared.dependencies,readerControlReplaceEndpoint},shared.hooks);
+  Object.assign(owner,{appThemeScheme:'night',state:ready(),motionProgress:1,interactionEnabled:true,localPending:false});
   let value='';owner.editorText('替换为（可留空）',()=>value,x=>{value=x;});
-  const input=[...owner.nodes.values()].find(n=>n.type==='TextInput');
+  const input=shared.nodes(owner).find(n=>n.type==='TextInput');
   assert.equal(input.fontColor,readerAppColor('TOK_READ_INK','night'));
   assert.equal(input.placeholderColor,readerAppColor('TOK_READ_MUTED','night'));
   assert.equal(input.create.placeholder,'');assert.equal(input.borderRadius,6);assert.equal(input.fontSize,11);
-  input.onChange('新的输入');owner.replay();assert.equal(input.create.text,'新的输入');
-  owner.appThemeScheme='day';owner.replay();assert.equal(input.fontColor,readerAppColor('TOK_READ_INK','day'));
+  input.onChange('新的输入');shared.flush(owner);assert.equal(input.create.text,'新的输入');
+  owner.appThemeScheme='day';shared.flush(owner);assert.equal(input.fontColor,readerAppColor('TOK_READ_INK','day'));
 });
 await check('actual editor has distinct back and fixed bottom save/cancel outside scrolling fields',()=>{
-  const members=['temporaryOverlay','textAction','editorFields','editorText','editorFlag','previewContent',
+  const members=['temporaryOverlay','temporaryTitle','temporaryHeader','temporaryLeading','temporaryAccessory','temporaryActions','temporaryBody','originalRecoveryAction','textAction','editorFields','editorText','editorFlag','previewContent',
     ...(source.includes('private editorActions(')?['editorActions']:[])];
-  const {owner}=createReaderBuilderProbe(source,members);
+  const composition=boundedSurfaceSdk(),owner=composition.consumer(source,members);
   Object.assign(owner,{layer:'editor',draft:state.createReaderControlReplaceDraft(),state:ready(),appThemeScheme:'night',
     availableWidth:320,availableHeight:400,localError:'',localPending:false,fullInput:()=>true,quickInput:()=>false,
     readyInput:()=>true,editorFields(){},dismissTemporaryLayer(){},saveEditor(){},cancelTemporaryLayer(){}});
-  owner.temporaryOverlay();const labels=[...owner.nodes.values()].filter(n=>n.type==='Text').map(n=>n.create);
+  owner.temporaryOverlay();const labels=composition.nodes(owner).filter(n=>n.type==='Text').map(n=>n.create);
   assert.equal(labels.filter(x=>x==='返回').length,1);assert.equal(labels.filter(x=>x==='取消').length,1);
   assert.equal(labels.filter(x=>x==='保存').length,1);
-  assert.match(source,/\.layoutWeight\(1\)\.scrollBar\(BarState\.Auto\)\.align\(Alignment\.TopStart\);\s*if \(this\.layer === 'editor'\) \{\s*this\.editorActions\(\);/,
-    'actual Scroll ends before editor actions; footer cannot be hidden beneath all fields');
+  assert.match(source,/body: \(\): void => \{ this\.temporaryBody\(\); \}, actions: \(\): void => \{ this\.temporaryActions\(\); \}/,
+    'actual persistent frame puts footer in a separate slot after Scroll body');
+  assert.match(source,/private temporaryBody\(\)[^]*\.layoutWeight\(1\)\.scrollBar\(BarState\.Auto\)\.align\(Alignment\.TopStart\);/);
 });
 await check('actual reading draft uses real book/source defaults and editing/global creation remain independent',()=>{
   const scopeState=ready();assert.equal(scopeState.defaultScope,'当前书名;https://source.example');
@@ -65,17 +74,17 @@ await check('save failure retains draft, confirmed save closes, cancel performs 
   owner.cancelTemporaryLayer();assert.equal(owner.layer,'editor');resolve();await task;assert.equal(owner.layer,'');
 });
 await check('same mounted footer reacts to mutation, uncertain writes and endpoint input guards',()=>{
-  const {owner}=createReaderBuilderProbe(source,['editorActions','readyInput','fullInput','quickInput'],{readerControlReplaceEndpoint});
+  const composition=boundedSurfaceSdk(),owner=composition.consumer(source,['editorActions','readyInput','fullInput','quickInput'],{readerControlReplaceEndpoint});
   Object.assign(owner,{state:ready(),appThemeScheme:'night',motionProgress:1,interactionEnabled:true,localPending:false});
-  owner.editorActions();const nodes=[...owner.nodes.values()];const save=nodes.find(n=>n.create==='保存'),cancel=nodes.find(n=>n.create==='取消');
+  owner.editorActions();const nodes=composition.nodes(owner);const save=nodes.find(n=>n.create==='保存'),cancel=nodes.find(n=>n.create==='取消');
   assert.equal(save.enabled,true);assert.equal(cancel.enabled,true);
   for(const key of ['mutationPending','writeUncertain','canonicalReloadRequired']){
-    owner.state[key]=true;owner.replay();assert.equal(save.enabled,false,`${key} immediately disables save`);
+    owner.state[key]=true;owner.replay();composition.properties.flush();assert.equal(save.enabled,false,`${key} immediately disables save`);
     assert.equal(cancel.enabled,key!=='mutationPending');owner.state[key]=false;
   }
-  owner.localPending=true;owner.replay();assert.equal(save.enabled,false);assert.equal(cancel.enabled,false);
-  owner.localPending=false;owner.motionProgress=.5;owner.replay();assert.equal(save.enabled,false);
-  owner.motionProgress=1;owner.replay();assert.equal(save.enabled,true);
+  owner.localPending=true;owner.replay();composition.properties.flush();assert.equal(save.enabled,false);assert.equal(cancel.enabled,false);
+  owner.localPending=false;owner.motionProgress=.5;owner.replay();composition.properties.flush();assert.equal(save.enabled,false);
+  owner.motionProgress=1;owner.replay();composition.properties.flush();assert.equal(save.enabled,true);
 });
 await check('actual standalone settings Add action has no inherited reading scope',()=>{
   const settingsSource=readFileSync(new URL('../entry/src/main/ets/features/settings/RulesManagementPage.ets',import.meta.url),'utf8');
@@ -85,12 +94,13 @@ await check('actual standalone settings Add action has no inherited reading scop
   syntax.componentCollection.customComponents.add('ReaderToggle');
   syntax.propCollection.set('ReaderToggle',new Set([...toggleSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
   class NativeChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
-  const {owner}=createReaderBuilderProbe(settingsSource,['replaceCard','heading','input','booleanField','actionButton','entityRow','smallButton','integerOrZero'],{ReaderToggle:NativeChild});
+  const foundation=foundationControls();
+  const {owner}=createReaderBuilderProbe(settingsSource,['replaceCard','heading','input','booleanField','actionButton','entityRow','smallButton','integerOrZero'],{...foundation.dependencies,ReaderToggle:NativeChild,...rulesTypography},foundation.hooks);
   let saved;
   Object.assign(owner,{appThemeScheme:'day',snapshot:{replaceRules:[],busy:false},replaceId:-1,replaceName:'独立规则',
     replacePattern:'原文',replaceValue:'替换',replaceEnabled:true,replaceRegex:false,replaceOrder:'0',onSaveReplace:draft=>{saved=draft;},
     defaultScope:'不应污染设置页;https://reading.example'});
-  owner.replaceCard();const add=[...owner.nodes.values()].find(n=>n.type==='Text'&&n.create==='新增替换规则');
+  owner.replaceCard();const add=foundation.nodes(owner).find(n=>n.type==='Text'&&n.create==='新增替换规则');
   assert.ok(add);add.onClick();assert.equal(saved.name,'独立规则');assert.equal(Object.hasOwn(saved,'scope'),false);
   assert.equal(Object.hasOwn(saved,'sourceId'),false);assert.equal(Object.hasOwn(saved,'bookId'),false);
 });

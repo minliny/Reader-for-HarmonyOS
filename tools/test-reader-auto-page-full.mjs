@@ -1,5 +1,6 @@
 import { readerDayResourceBranches } from './lib/reader-resource-branch-probe.mjs';
 import assert from 'node:assert/strict';
+import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { readFile } from 'node:fs/promises';
 
@@ -118,9 +119,11 @@ assert.match(readerDayResourceBranches(panel), /Text\('跟随高亮'\)/);
 assert.match(readerDayResourceBranches(panel), /onFollowHighlightChange\(!this\.followHighlight\)/);
 assert.match(readerDayResourceBranches(panel), /\.enabled\(this\.interactionEnabled && this\.status === 'stopped'\)/,
   'follow highlight is editable only before an automatic-page session starts');
-assert.match(readerDayResourceBranches(panel), /\.fontFamily\('ReaderInter'\)/);
-assert.match(readerDayResourceBranches(panel), /collapsedBackActor\(\)[\s\S]*ReaderNotoSansSC/,
+assert.equal(readerTypographyRoles.TYPE_READER_AUTO_PAGE_FULL_COMPAT_SPEED_ROW_LABEL.fontFamily, 'ReaderInter');
+assert.match(readerDayResourceBranches(panel), /\.fontFamily\(TYPE_READER_AUTO_PAGE_FULL_COMPAT_SPEED_ROW_LABEL\.fontFamily\)/);
+assert.match(readerDayResourceBranches(panel), /collapsedBackActor\(\)[\s\S]*TYPE_READER_AUTO_PAGE_FULL_COMPAT_COLLAPSED_BACK_ACTOR_BACK\.fontFamily/,
   'the outgoing Quick Back actor retains the Quick endpoint font');
+assert.equal(readerTypographyRoles.TYPE_READER_AUTO_PAGE_FULL_COMPAT_COLLAPSED_BACK_ACTOR_BACK.fontFamily, 'ReaderNotoSansSC');
 assert.match(readerDayResourceBranches(panel), /min: READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS/);
 assert.match(readerDayResourceBranches(panel), /max: READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS/);
 assert.match(readerDayResourceBranches(panel), /\.opacity\(0\.001\)/,

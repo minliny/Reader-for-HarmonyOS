@@ -18,32 +18,28 @@ assert.match(fonts, /fontLoads.delete\(family\)/, 'failed load permits a real re
 assert.doesNotMatch(fonts, /font\.registerFont/, 'an unchecked submission cannot authorize layout');
 
 const index = read('entry/src/main/ets/pages/Index.ets');
+const entry = read('entry/src/main/ets/features/reading/ReadingEntryHost.ts');
 const localDetail = method(index, 'private openLocalBookDetail(', 'private openRemoteBookDetail(');
-assert.ok(localDetail.indexOf('this.route = entryRoute') < localDetail.indexOf('reading.loadToc(selection.bookId)'),
-  'local detail must be projected before the serialized TOC request');
-assert.doesNotMatch(localDetail, /loadShelfBook|new ReaderCoreGateway/,
-  'a Core-derived shelf card must not be read a second time on local detail admission');
-const remoteDetail = method(index, 'private openRemoteBookDetail(', 'private resolveRemoteDetailSourceName(');
+assert.ok(localDetail.indexOf('this.route = entryRoute') < localDetail.indexOf('host.openLocal('));
+const localOwner = method(entry, 'async openLocal(', 'async openRemote(');
+assert.ok(localOwner.indexOf('this.begin(') < localOwner.indexOf('.loadToc(selection.bookId)'),
+  'the original local DTO publishes before serialized TOC IO');
+assert.doesNotMatch(localOwner, /loadShelfBook|new ReaderCoreGateway/,
+  'a Core-derived shelf card is not read twice');
+const remoteDetail = method(index, 'private openRemoteBookDetail(', 'private downloadDirectoryChapter(');
 assert.match(remoteDetail, /shelfSnapshot: ShelfBook \| undefined = undefined/);
-assert.match(remoteDetail,
-  /const reusableRemoteSession = shelfSnapshot !== undefined &&[\s\S]*?identity\.sourceId === seed\.sourceId &&[\s\S]*?identity\.bookId === seed\.bookId/,
-  'only an exact shelf identity may reuse the already admitted remote session');
-assert.match(remoteDetail, /if \(suppliedSession !== undefined\) return new RemoteDetailAdmission\(suppliedSession\)/,
-  'admitted exact session remains reusable');
-assert.match(remoteDetail, /acquireBookWithBackgroundRefresh\(seed, \{ isCurrent \}\)/,
-  'fixed-source catalog admission retains cache-first background refresh');
-assert.ok(remoteDetail.indexOf('this.route = entryRoute') < remoteDetail.indexOf('.acquireBookWithBackgroundRefresh(seed, { isCurrent })'),
-  'remote detail must project its inert shell before network/session admission');
-assert.match(remoteDetail, /let suppliedShelfBook = shelfSnapshot\?\.sourceId === session\.identity\.sourceId/);
-assert.ok(remoteDetail.indexOf('this.route = entryRoute') < remoteDetail.indexOf('await bookshelf.loadShelfBook'),
-  'exact membership protects source choice after publishing the detail surface');
-assert.ok(remoteDetail.indexOf('this.detailToc = session.entries.map') <
-  remoteDetail.indexOf('void bookshelf.loadShelfBook'),
-  'the admitted session and TOC must publish before shelf membership reconciliation');
-assert.ok(remoteDetail.indexOf('this.route = entryRoute') < remoteDetail.indexOf('.acquireBookWithBackgroundRefresh(seed, { isCurrent })'),
-  'mandatory category admission must not delay the inert detail shell');
-assert.ok(remoteDetail.indexOf('this.detailToc = session.entries.map') < remoteDetail.indexOf('void this.resolveRemoteDetailSourceName'),
-  'optional source-name lookup remains after session publication');
+assert.ok(remoteDetail.indexOf('this.route = entryRoute') < remoteDetail.indexOf('host.openRemote('));
+const remoteOwner = method(entry, 'async openRemote(', '/** A real reader/source-switch admission');
+assert.match(remoteOwner, /input.shelfSnapshot !== undefined && this.sameBook\(input.retainedSession, seed\)/);
+assert.match(remoteOwner, /const supplied = this.sameBook\(input.validatedSession, seed\)/);
+assert.match(remoteOwner, /coordinator.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent: current \}\)/);
+assert.ok(remoteOwner.indexOf('this.begin(') < remoteOwner.indexOf('loadShelfBook(seed.sourceId, seed.bookId)'),
+  'mandatory exact membership never blocks the inert shell');
+assert.match(remoteOwner, /shelf\?\.sourceId === session.identity.sourceId && shelf.bookId === session.identity.bookId/);
+const projected = remoteOwner.indexOf('toc: this.catalog(session)');
+assert.ok(projected >= 0 && projected < remoteOwner.indexOf('void this.readMembership(session,'));
+assert.ok(projected < remoteOwner.indexOf('void this.resolveSourceName(session,'),
+  'optional source name follows catalog publication');
 const returnToShelf = method(index, 'private returnToBookshelf(', 'private applyReadingCommit(');
 assert.match(returnToShelf,
   /const retainedRemoteSession = this\.detailBook !== undefined &&[\s\S]*?this\.detailBook\.sourceId !== LOCAL_SOURCE_ID &&[\s\S]*?identity\.sourceId === this\.detailBook\.sourceId &&[\s\S]*?identity\.bookId === this\.detailBook\.bookId/,
@@ -71,7 +67,7 @@ const controlDirectory = method(reading, 'private controlDirectoryEntries(', 'pr
 assert.ok(controlDirectory.indexOf('this.tocEntries === this.directoryEntries') <
   controlDirectory.indexOf('new Map<number, LocalReadingTocEntry>()'),
   'an identical parent/session TOC must return before building the marker/title projection');
-assert.match(reading, /stored = await this\.activeGateway\(\)\.resolveAndUpdateProgress/,
+assert.match(reading, /return gateway\.persistPresentedProgress\(bookId, title, anchor, layout, isAdmitted\)/,
   'first-page canonical resolution and persistence must use one Core round trip');
 assert.doesNotMatch(reading, /const resolved = await this\.activeGateway\(\)\.resolveLocation/,
   'page completion must not serialize location.resolve before progress.update');

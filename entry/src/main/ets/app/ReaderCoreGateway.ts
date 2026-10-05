@@ -1,4 +1,5 @@
-import type { JsonObject } from '@reader/core-harmony';
+import type { JsonObject, ReaderCoreResultEvent } from '@reader/core-harmony';
+import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from './ReaderRuntimeOwner';
 
 export type ShelfBook = {
@@ -10,6 +11,8 @@ export type ShelfBook = {
   author: string;
   /** Core-owned book kind. Local imports use values such as `TXT` / `EPUB`. */
   kind?: string;
+  /** Core media type, independent of format/genre and preserved in shelf display. */
+  contentKind?: 'text' | 'manga' | 'audio';
   coverUrl?: string;
   intro?: string;
   lastChapter?: string;
@@ -72,6 +75,7 @@ export type BookshelfListParams = {
   projectionRevision?: string;
   readingState?: string;
   sourceKind?: string;
+  contentKind?: 'all' | 'text' | 'manga';
   offset?: number;
   hasReadingProgress?: boolean;
   sortBy?: 'manual' | 'addedAt' | 'lastReadAt' | 'title' | 'author';
@@ -91,6 +95,13 @@ export type BookshelfRemoveBatchReceipt = {
   missingTargets: BookshelfRemoveTarget[];
   duplicateTargets: BookshelfRemoveTarget[];
 };
+
+/** Actual Core dispatch/ACK observation, before any independent Host cleanup. */
+export interface BookshelfRemovalObservation<T> {
+  dispatched: () => void;
+  confirmed: (value: T) => void;
+  rejectedBeforeExecution: () => void;
+}
 
 /**
  * The page-facing boundary for this slice. It translates the Core protocol to
@@ -148,13 +159,13 @@ export class ReaderCoreGateway {
     return this.runtimeOwner.supportsCoreCapability?.('bookshelf.pageProjection.v1') === true;
   }
 
-  async loadContinueReading(): Promise<ShelfBook | undefined> {
+  async loadContinueReading(isCurrent?: () => boolean): Promise<ShelfBook | undefined> {
     const state = await this.loadBookshelf({
       hasReadingProgress: true,
       sortBy: 'lastReadAt',
       sortDirection: 'descending',
       limit: 1,
-    });
+    }, isCurrent);
     return state.books.length === 0 ? undefined : state.books[0];
   }
 
@@ -197,10 +208,13 @@ export class ReaderCoreGateway {
    * the Core composite identity intact instead of creating a second local
    * lookup protocol in ArkUI.
    */
-  async loadShelfBook(sourceId: string, bookId: string): Promise<ShelfBook | undefined> {
+  async loadShelfBook(sourceId: string, bookId: string, current?: () => boolean): Promise<ShelfBook | undefined> {
     this.assertNonBlankString(sourceId, 'sourceId');
     this.assertNonBlankString(bookId, 'bookId');
-    const result = await this.runtimeOwner.request('bookshelf.get', { sourceId, bookId });
+    if (current !== undefined && !current()) throw new Error('BOOKSHELF_READ_RETIRED');
+    const result = await this.runtimeOwner.request('bookshelf.get', { sourceId, bookId },
+      current === undefined ? undefined : { shouldCancel: (): boolean => !current() });
+    if (current !== undefined && !current()) throw new Error('BOOKSHELF_READ_RETIRED');
     const rawBook = result.data['book'];
     if (rawBook === null) {
       return undefined;
@@ -213,14 +227,19 @@ export class ReaderCoreGateway {
   }
 
   /** Core deletes local materialization first; Host releases the EPUB second. */
-  async removeBook(sourceId: string, bookId: string): Promise<boolean> {
+  async removeBook(sourceId: string, bookId: string, observation?: BookshelfRemovalObservation<boolean>): Promise<boolean> {
     this.assertNonBlankString(sourceId, 'sourceId');
     this.assertNonBlankString(bookId, 'bookId');
-    const result = await this.runtimeOwner.request('bookshelf.remove', { sourceId, bookId });
-    const removed = result.data['removed'];
-    if (typeof removed !== 'boolean') {
-      throw new Error('bookshelf.remove returned invalid data');
+    observation?.dispatched();
+    let result: ReaderCoreResultEvent;
+    try {
+      result = await this.runtimeOwner.request('bookshelf.remove', { sourceId, bookId });
+    } catch (error) {
+      if (isReaderCoreTransactionPendingError(error)) observation?.rejectedBeforeExecution();
+      throw error;
     }
+    const removed = this.qualifyBookRemoval(result.data);
+    observation?.confirmed(removed);
     if (sourceId === 'local') {
       // Run for both removed and idempotent-missing receipts so a repeated
       // delete can finish an earlier interrupted Host file cleanup.
@@ -229,7 +248,7 @@ export class ReaderCoreGateway {
     return removed;
   }
 
-  async removeBooks(targets: BookshelfRemoveTarget[]): Promise<BookshelfRemoveBatchReceipt> {
+  async removeBooks(targets: BookshelfRemoveTarget[], observation?: BookshelfRemovalObservation<BookshelfRemoveBatchReceipt>): Promise<BookshelfRemoveBatchReceipt> {
     if (targets.length === 0) {
       throw new Error('bookshelf.removeBatch requires at least one target');
     }
@@ -239,14 +258,16 @@ export class ReaderCoreGateway {
       this.assertNonBlankString(target.bookId, 'bookId');
       encoded.push({ sourceId: target.sourceId, bookId: target.bookId });
     }
-    const result = await this.runtimeOwner.request('bookshelf.removeBatch', { targets: encoded });
-    const receipt: BookshelfRemoveBatchReceipt = {
-      requestedCount: this.requiredNonNegativeInteger(result.data, 'requestedCount', 'bookshelf.removeBatch'),
-      uniqueCount: this.requiredNonNegativeInteger(result.data, 'uniqueCount', 'bookshelf.removeBatch'),
-      removedTargets: this.decodeRemoveTargets(result.data['removedTargets']),
-      missingTargets: this.decodeRemoveTargets(result.data['missingTargets']),
-      duplicateTargets: this.decodeRemoveTargets(result.data['duplicateTargets']),
-    };
+    observation?.dispatched();
+    let result: ReaderCoreResultEvent;
+    try {
+      result = await this.runtimeOwner.request('bookshelf.removeBatch', { targets: encoded });
+    } catch (error) {
+      if (isReaderCoreTransactionPendingError(error)) observation?.rejectedBeforeExecution();
+      throw error;
+    }
+    const receipt = this.qualifyBookBatchRemoval(targets, result.data);
+    observation?.confirmed(receipt);
     const released = new Set<string>();
     for (const target of targets) {
       if (target.sourceId === 'local') {
@@ -257,10 +278,59 @@ export class ReaderCoreGateway {
     return receipt;
   }
 
-  private async releaseLocalBookAssets(bookIds: string[]): Promise<void> {
+  /** The original Core ACK decoders are shared by legacy calls and exact
+   * durable receipts. No shelf membership snapshot can substitute for them. */
+  qualifyBookRemoval(data: JsonObject): boolean {
+    const removed = data['removed'];
+    if (typeof removed !== 'boolean') throw new Error('bookshelf.remove returned invalid data');
+    return removed;
+  }
+
+  qualifyBookBatchRemoval(targets: BookshelfRemoveTarget[], data: JsonObject): BookshelfRemoveBatchReceipt {
+    const receipt: BookshelfRemoveBatchReceipt = {
+      requestedCount: this.requiredNonNegativeInteger(data, 'requestedCount', 'bookshelf.removeBatch'),
+      uniqueCount: this.requiredNonNegativeInteger(data, 'uniqueCount', 'bookshelf.removeBatch'),
+      removedTargets: this.decodeRemoveTargets(data['removedTargets']),
+      missingTargets: this.decodeRemoveTargets(data['missingTargets']),
+      duplicateTargets: this.decodeRemoveTargets(data['duplicateTargets']),
+    };
+    // An unrelated/partial payload is not an ACK for this requested set.
+    const identity = (target: BookshelfRemoveTarget): string => JSON.stringify([target.sourceId, target.bookId]);
+    const expected = new Set(targets.map(identity));
+    const seenRequested: Set<string> = new Set();
+    const expectedDuplicates: string[] = [];
+    for (const target of targets) {
+      const key = identity(target);
+      if (seenRequested.has(key)) expectedDuplicates.push(key);
+      else seenRequested.add(key);
+    }
+    const acknowledged = receipt.removedTargets.concat(receipt.missingTargets).map(identity);
+    const acknowledgedSet = new Set(acknowledged);
+    if (receipt.requestedCount !== targets.length || receipt.uniqueCount !== expected.size ||
+      acknowledged.length !== expected.size || acknowledgedSet.size !== expected.size ||
+      acknowledged.some((key: string): boolean => !expected.has(key)) ||
+      receipt.duplicateTargets.length !== targets.length - expected.size ||
+      receipt.duplicateTargets.some((target: BookshelfRemoveTarget): boolean => !expected.has(identity(target))) ||
+      JSON.stringify(receipt.duplicateTargets.map(identity).sort()) !== JSON.stringify(expectedDuplicates.sort())) {
+      throw new Error('bookshelf.removeBatch returned a mismatched receipt');
+    }
+    return receipt;
+  }
+
+  async finishBookRemoval(targets: BookshelfRemoveTarget[], current: () => boolean): Promise<void> {
+    const local = new Set<string>();
+    for (const target of targets) {
+      this.assertNonBlankString(target.sourceId, 'sourceId'); this.assertNonBlankString(target.bookId, 'bookId');
+      if (target.sourceId === 'local') local.add(target.bookId);
+    }
+    await this.releaseLocalBookAssets(Array.from(local), current);
+  }
+
+  private async releaseLocalBookAssets(bookIds: string[], current?: () => boolean): Promise<void> {
     let nextIndex = 0;
     const worker = async (): Promise<void> => {
       while (nextIndex < bookIds.length) {
+        if (current !== undefined && !current()) throw new Error('BOOKSHELF_REMOVAL_CLEANUP_RETIRED');
         const index = nextIndex;
         nextIndex += 1;
         await this.runtimeOwner.releaseLocalBookAsset(bookIds[index]);
@@ -293,6 +363,10 @@ export class ReaderCoreGateway {
     const intro = this.optionalString(book, 'intro');
     const sourceName = this.optionalString(book, 'sourceName');
     const kind = this.optionalString(book, 'kind');
+    const contentKind = this.optionalString(book, 'contentKind');
+    if (contentKind !== undefined && contentKind !== 'text' && contentKind !== 'manga' && contentKind !== 'audio')
+      throw new Error('bookshelf returned an invalid contentKind');
+    if (contentKind !== undefined) decoded.contentKind = contentKind as 'text' | 'manga' | 'audio';
     const lastChapter = this.optionalString(book, 'lastChapter');
     const lastReadAt = this.optionalNumber(book, 'lastReadAt');
     const group = this.optionalString(book, 'group');

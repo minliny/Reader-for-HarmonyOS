@@ -82,7 +82,7 @@ assert.match(recovery, /this\.chapterSelectionToken \+= 1;/);
 assert.match(recovery, /this\.resetForChapterSelection\(\);/,
   'timeout recovery invalidates the failed load before restoring its committed origin');
 assert.match(recovery, /this\.phase = 'ready'/);
-assert.match(recovery, /showAlertDialog\(/, 'recoverable failure must remain visible to the user');
+assert.match(recovery, /this\.showReaderAlert\('confirmation'/, 'recoverable failure must remain visible to the user');
 assert.doesNotMatch(recovery, /this\.onReadingFailure\(|this\.beginExit\(|this\.hideControl\(|resolveAndUpdateProgress\(/,
   'recoverable failure restores the display without external exit, hiding, or rolling back Core');
 assert.match(host, /if \(this\.recoverControlSelectionFailure\(error, lifecycleToken\)\) return;/);

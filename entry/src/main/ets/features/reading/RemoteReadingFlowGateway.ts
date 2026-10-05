@@ -1,3 +1,4 @@
+import { BookRequestNotDispatchedError, type BookRequestOptions } from '../../app/BookRequestScheduler';
 import { readBookAuthorIdentity, type BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
 import { appendReadingSelectionContext, appendExpectedPositionVersions, captureRemotePositionContext, decodeRemotePositionMigration, encodeRemotePositionContext, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 import type {
@@ -32,6 +33,7 @@ import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
 import type { RemoteReadingPreparedChapter } from './RemoteReadingEvidence';
 
 export type RemoteReadingBookSeed = {
+  contentKind?: 'text' | 'manga' | 'audio';
   sourceVersion?: string;
   sourceId: string;
   bookId: string;
@@ -49,6 +51,7 @@ export type RemoteReadingBookSeed = {
 };
 
 export type RemoteReadingBookDetail = {
+  contentKind?: 'text' | 'manga' | 'audio';
   title: string;
   author: string;
   authorIdentity?: BookAuthorIdentityProof;
@@ -90,6 +93,7 @@ export type RemoteReadingSession = {
 };
 
 export type RemoteReadingProgress = {
+  progressRevision?: string;
   bodyVersion?: string;
   processingVersion?: string;
   sourceId: string;
@@ -207,6 +211,7 @@ export class RemoteReadingFlowGateway {
     seed: RemoteReadingBookSeed,
     options: RemoteReadingOpenOptions = {},
   ): Promise<RemoteReadingSession> {
+    this.assertTextContentKind(seed.contentKind, 'book.detail');
     const coordinator = this.runtimeOwner.bookAcquisitions?.();
     if (coordinator !== undefined) return coordinator.acquireBook(seed, options);
     const identity = createRemoteReadingIdentity(seed.sourceId, seed.bookId);
@@ -241,7 +246,9 @@ export class RemoteReadingFlowGateway {
         'book.detail',
       );
     }
+    this.assertTextContentKind(detailResult.data['contentKind'], 'book.detail');
     const book = this.decodeBookDetail(rawBook);
+    if (detailResult.data['contentKind'] === 'text') book.contentKind = 'text';
     book.authorIdentity = readBookAuthorIdentity(rawBook['authorIdentity'], book.author,
       this.optionalString(detailResult.data, 'sourceVersion', 'book.detail') ?? seed.sourceVersion);
     const tocUrl = this.optionalString(detailResult.data, 'tocUrl', 'book.detail');
@@ -336,6 +343,7 @@ export class RemoteReadingFlowGateway {
   }
 
   private async readCachedSession(seed: RemoteReadingBookSeed, isCurrent?: () => boolean): Promise<RemoteReadingSession> {
+    this.assertTextContentKind(seed.contentKind, 'cache.book.status');
     const identity = createRemoteReadingIdentity(seed.sourceId, seed.bookId);
     assertRemoteReadingNonBlankString(seed.detailUrl, 'detailUrl');
     assertRemoteReadingNonBlankString(seed.title, 'title');
@@ -864,6 +872,7 @@ export class RemoteReadingFlowGateway {
     isCurrent?: () => boolean,
     sourceSwitchTransactionId?: string,
     resolution?: RemoteReadingAtomicResolution,
+    dispatch?: BookRequestOptions,
   ): Promise<RemoteReadingProgress> {
     const identity = createRemoteReadingIdentity(identityValue.sourceId, identityValue.bookId);
     this.assertChapterIndex(update.chapterIndex, 'update.chapterIndex');
@@ -927,7 +936,15 @@ export class RemoteReadingFlowGateway {
     if (sourceSwitchTransactionId !== undefined) {
       params['transactionId'] = sourceSwitchTransactionId;
     }
-    const result = await this.request('reading.progress.update', params, isCurrent);
+    let result: ReaderCoreResultEvent;
+    try {
+      // Actual Runtime admission follows its startup barrier. After dispatch,
+      // presentation retirement must not cancel an accepted durable write.
+      if (isCurrent?.() === false || dispatch?.canDispatch?.() === false)
+        throw new BookRequestNotDispatchedError('reading progress owner retired before dispatch');
+      result = await this.runtimeOwner.request('reading.progress.update', params,
+        { ...dispatch, canContinue: isCurrent, canDispatch: dispatch?.canDispatch ?? isCurrent });
+    } catch (error) { throw classifyRemoteReadingCommandFailure('reading.progress.update', error); }
     if (result.data['stored'] !== true) {
       throw new RemoteReadingGatewayError(
         'invalidResponse',
@@ -946,6 +963,7 @@ export class RemoteReadingFlowGateway {
     if ((params['expectedBodyVersion'] !== undefined && stored.bodyVersion !== params['expectedBodyVersion']) ||
       (params['expectedProcessingVersion'] !== undefined && stored.processingVersion !== params['expectedProcessingVersion']) ||
       stored.chapterIndex !== update.chapterIndex || stored.chapterOffset !== update.chapterOffset ||
+      stored.chapterProgress !== update.chapterProgress ||
       (update.locationRevision !== undefined && stored.locationRevision !== update.locationRevision)) {
       throw new RemoteReadingGatewayError(
         'identityMismatch',
@@ -961,6 +979,10 @@ export class RemoteReadingFlowGateway {
         'reading.progress.update did not atomically finalize the source switch',
         'reading.progress.update',
       );
+    }
+    if (dispatch !== undefined && sourceSwitchTransactionId !== undefined &&
+      (stored.progressRevision === undefined || stored.progressRevision.trim().length === 0)) {
+      throw new RemoteReadingGatewayError('invalidResponse', 'source canonical ACK has no exact progress revision', 'reading.progress.update');
     }
     return stored;
   }
@@ -1010,6 +1032,13 @@ export class RemoteReadingFlowGateway {
       book['variables'] = encodeRemoteReadingVariables(variables);
     }
     return book;
+  }
+
+  private assertTextContentKind(value: unknown, command: RemoteReadingCommand): void {
+    if (value === undefined || value === null || value === 'text') return;
+    if (value === 'manga' || value === 'audio')
+      throw new RemoteReadingGatewayError('nonTextChapter', '当前版本未接入此类阅读器，书籍和已下载内容仍保留。', command);
+    throw new RemoteReadingGatewayError('invalidResponse', 'Core returned an invalid contentKind', command);
   }
 
   private decodeBookDetail(value: JsonObject): RemoteReadingBookDetail {
@@ -1085,6 +1114,8 @@ export class RemoteReadingFlowGateway {
     appendExpectedPositionVersions({}, bodyVersion, processingVersion);
     if (bodyVersion !== undefined) decoded.bodyVersion = bodyVersion;
     if (processingVersion !== undefined) decoded.processingVersion = processingVersion;
+    const progressRevision = this.optionalString(progress, 'progressRevision', command);
+    if (progressRevision !== undefined) decoded.progressRevision = progressRevision;
     const revision = this.optionalString(progress, 'locationRevision', command);
     if (revision !== undefined) {
       decoded.locationRevision = revision;

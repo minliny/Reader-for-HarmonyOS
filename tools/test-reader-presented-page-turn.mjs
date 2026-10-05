@@ -50,13 +50,14 @@ function fixture({ capability = true, sourceSwitch = false, gatewaySwitch = fals
       return observeReaderProgressOperation(operation, 5);
     }, hilog: { error: (...args) => calls.logs.push(args) } });
   const gateway = Object.assign(new Gateway(), {
-    sourceSwitchTransactionId: gatewaySwitch ? 'gateway-switch' : undefined,
+    sourceSwitchTransactionId: gatewaySwitch || sourceSwitch ? 'gateway-switch' : undefined,
     runtimeOwner: { supportsCoreCapability: name => {
       assert.equal(name, 'reading.progress.compareAndSet.v1'); return capability;
     } },
     persistPresentedProgress: (...args) => { calls.presented.push(args); return save.promise; },
     runProgressCommitSerial: async operation => operation(),
     resolveAndUpdateProgress: (...args) => { calls.strong.push(args); return save.promise; },
+    persistCanonicalProgress: (...args) => { calls.strong.push(args); return save.promise; },
     loadProgress: async () => ({ kind: 'restored', progress: stored }),
   });
   const chapter = { sourceId: 's', bookId: 'b', chapterIndex: 1, chapterTitle: '正文',
@@ -68,7 +69,7 @@ function fixture({ capability = true, sourceSwitch = false, gatewaySwitch = fals
   const key = { sourceId: 's', bookId: 'b', chapterIndex: 1, contentVersion: 'content-v1', layoutSignature: 'layout' };
   const prepared = new classes.PreparedReaderPageTurn('next', page, context, key, 1, 10, 3);
   const stored = { sourceId: 's', bookId: 'b', chapterIndex: 1, chapterOffset: 40,
-    chapterProgress: 0.4, locationRevision: 'r2', updatedAt: 2 };
+    chapterProgress: 0.4, locationRevision: 'r2', updatedAt: 2, bodyVersion: 'body-v1', processingVersion: 'rules-v1' };
   const owner = Object.assign(new Owner(), {
     mounted: true, exitRequested: false, lifecycleToken: 1, sourceId: 's', bookId: 'b', chapter,
     chapterSelectionToken: 2, materializedChapterSelectionToken: 2, visiblePageSelectionToken: 2,
@@ -213,14 +214,17 @@ for (const outcome of ['held-past-deadline', 'rejected', 'wrong-anchor', 'late-s
   assert.equal(f.owner.visiblePage, f.page, 'a rejected save never rolls the presented page back');
 }
 
-// Legacy capabilities and real mutations retain the original strong save gate.
+// Every strong presentation keeps its durable gate. Non-source writes now use
+// the same shared progress owner as ordinary writes; source finalize preserves
+// its atomic command pending its separately registered Core contract repair.
 for (const options of [{ capability: false }, { sourceSwitch: true }, { gatewaySwitch: true },
   { migration: 'committed' }, { controlSelection: true }]) {
   const f = fixture(options);
   f.endpoint();
   await settle();
-  assert.equal(f.calls.presented.length, 0);
-  assert.equal(f.calls.strong.length, 1);
+  const sourceTransaction = options.sourceSwitch === true || options.gatewaySwitch === true;
+  assert.equal(f.calls.presented.length, sourceTransaction ? 0 : 1);
+  assert.equal(f.calls.strong.length, sourceTransaction ? 1 : 0);
   assert.equal(f.owner.visiblePage, f.origin, 'strong transaction cannot promote before durable success');
   assert.equal(f.owner.pageTurnInputPhase(), 'settling');
   assert.equal(f.owner.commitInFlight, true);

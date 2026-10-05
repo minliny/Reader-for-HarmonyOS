@@ -1,3 +1,4 @@
+import { actionMenuProbe } from './lib/reader-action-menu-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
@@ -8,15 +9,29 @@ const file = new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.
 const source = readFileSync(file, 'utf8');
 const enums = name => new Proxy({}, { get: (_, key) => `${name}.${String(key)}` });
 const typography = { fontFamily: 'ReaderNotoSerifSC', fontWeight: 400, fontSizeFp: 12 };
+const readerMoreSurface = {
+  width: 176, pointerWidth: 24, pointerHeight: 12, borderRadius: 16,
+  borderWidth: 1, shadowRadius: 28, shadowOffsetY: 10,
+  actionHeight: 50, actionsHeight: 150, actionPaddingLeft: 18, actionPaddingRight: 18,
+  dividerInset: 16, dividerHeight: 1, actionFontFamily: 'ReaderNotoSansSC',
+  actionFontWeight: 500, actionFontSize: 15, actionLineHeight: 22, actionTextRole: 'TOK_INK',
+  dividerRole: 'app.BookshelfMoreMenu.action.color.FFE8E2DA',
+  surfaceBackgroundRole: 'app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8',
+  surfaceBorderRole: 'app.BookshelfMoreMenu.build.color.FFE3DED6',
+  surfaceShadowRole: 'app.BookshelfMoreMenu.build.color.292E261F',
+};
 const dependencies = {
   Placement: enums('Placement'), ArrowPointPosition: enums('ArrowPointPosition'), BlurStyle: enums('BlurStyle'),
   TYPE_READER_CONTROL_BOOK_TITLE: typography, TYPE_READER_CONTROL_CHAPTER_SOURCE: typography,
   TYPE_READER_CONTROL_SOURCE_ACTION: typography,
+  resolvePopupSpec: id => { assert.equal(id, 'reader-more-menu'); return readerMoreSurface; },
 };
-const methods = ['topBar', 'readerMoreMenu', 'readerMoreAction', 'readerMoreMenuWidth',
-  'readerMoreActionEnabled', 'setMoreMenuVisible', 'dismissMoreMenu', 'performMoreAction'];
+const methods = ['topBar', 'readerMoreMenu', 'readerMoreActions', 'readerMoreMenuWidth',
+  'readerMoreSurfaceSpec', 'readerMoreActionEnabled', 'setMoreMenuVisible', 'dismissMoreMenu', 'performMoreAction'];
 function fixture(scheme = 'day') {
-  const { owner } = createReaderBuilderProbe(source, methods, dependencies);
+  const shared = actionMenuProbe(dependencies.resolvePopupSpec);
+  const { owner } = createReaderBuilderProbe(source, methods, {...dependencies,...shared.dependencies}, shared.hooks);
+  const replay=owner.replay.bind(owner);owner.replay=()=>{replay();shared.properties.flush();};
   const actions = [], measurements = [], temporary = [];
   let textScale = 1;
   Object.assign(owner, {
@@ -38,7 +53,7 @@ function fixture(scheme = 'day') {
     }),
   });
   owner.topBar();
-  const nodes = () => [...owner.nodes.values()];
+  const nodes = () => shared.nodes(owner);
   const anchor = nodes().find(node => node.accessibilityText === '更多');
   return { owner, anchor, nodes, actions, measurements, temporary, setTextScale: scale => { textScale = scale; } };
 }
@@ -72,7 +87,7 @@ for (const scheme of ['day', 'night']) {
   const rowTexts = t.nodes().filter(node => menuLabels.includes(node.create));
   assert.deepEqual(rowTexts.map(node => node.create), menuLabels);
   for (const text of rowTexts) {
-    assert.deepEqual([text.fontSize, text.lineHeight, text.fontWeight], [15, 22, 'FontWeight.Medium']);
+    assert.deepEqual([text.fontSize, text.lineHeight, text.fontWeight], [15, 22, 500]);
     assert.equal(text.fontColor, readerAppColor('TOK_INK', scheme));
   }
   const scroll = t.nodes().find(node => node.type === 'Scroll');

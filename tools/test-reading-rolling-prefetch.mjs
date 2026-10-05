@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
-import { registerHooks } from 'node:module';
+import { registerHooks,createRequire } from 'node:module';
+import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import {ProductionHost,setRuntime} from './lib/reading-entry-owner-probe.mjs';
+import { readingPrefetchOwnerProbe } from './lib/reading-prefetch-owner-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
 const baseline=process.argv.includes('--baseline');
@@ -13,10 +16,36 @@ const { sameRemoteSessionEvidence }=await import(new URL('entry/src/main/ets/fea
 const { BookAcquisitionCoordinator }=await import(new URL('entry/src/main/ets/app/BookAcquisitionCoordinator.ts',root));
 const file=new URL('entry/src/main/ets/pages/Index.ets',root),checks=[],warnings=[];
 let currentOwner;
-const Index=productionMotionMethods(file,['applyReadingCommit','prefetchReadingWindow','mergeDirectoryBookmarks','isRemoteCatalogNearEnd','loadRemoteDirectoryProjection'],{
- ReadingOfflineGateway,RemoteReadingFlowGateway,LocalReadingFlowGateway,sameRemoteSessionEvidence,ReaderRuntimeOwner:{current:()=>currentOwner},READING_CACHE_BEFORE:2,READING_CACHE_AFTER:2,CATALOG_REFRESH_NEAR_END:3,CATALOG_REFRESH_RETRY_INTERVAL_MS:30000,DOMAIN:0,hilog:{warn(...v){warnings.push(v);},error(...v){assert.fail(`unexpected directory failure ${v}`);}},
+const ownerProbe=readingPrefetchOwnerProbe(()=>currentOwner);
+const Index=productionMotionMethods(file,['applyReadingCommit','prefetchReadingWindow','readingPrefetchLease','isRemoteCatalogNearEnd','bindReadingEntryReader'],{
+ ...ownerProbe,ReadingEntryHost:ProductionHost,EMPTY_READABLE_ADMISSION:{generation:0,adding:false,cancelling:false,confirmation:'none'},LOCAL_SOURCE_ID:'local',ReadingOfflineGateway,RemoteReadingFlowGateway,LocalReadingFlowGateway,sameRemoteSessionEvidence,READING_CACHE_BEFORE:2,READING_CACHE_AFTER:2,CATALOG_REFRESH_NEAR_END:3,CATALOG_REFRESH_RETRY_INTERVAL_MS:30000,DOMAIN:0,hilog:{warn(...v){warnings.push(v);},error(...v){assert.fail(`unexpected directory failure ${v}`);}},
 });
 const deferred=()=>{let resolve;const promise=new Promise(r=>{resolve=r;});return{promise,resolve};};
+// Exact registered Index attributes and exact retained ReaderShell ForEach;
+// generated SDK observers retain the same ReadingExperience child on TOC patch.
+function sdkReaderPayload(page){
+ const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+ const ts=require(sdk+'/node_modules/typescript'),indexSource=readFileSync(file,'utf8');
+ const tree=ts.createSourceFile('/tmp/ActualPrefetchPayload.ets',indexSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
+ let call;const visit=n=>{if(ts.isCallExpression(n)&&n.expression.getText(tree)==='ReaderShell')call=n;ts.forEachChild(n,visit);};visit(tree);
+ const names=new Set(['sourceId','bookId','readingReadyGeneration','remoteSession','tocEntries','onReadingCommitted']);
+ const props=call.arguments[0].properties.filter(p=>names.has(p.name?.getText(tree))).map(p=>p.getText(tree));assert.equal(props.length,6);
+ const shellSource=readFileSync(new URL('entry/src/main/ets/features/shell/ReaderShell.ets',root),'utf8'),readingSource=readFileSync(new URL('entry/src/main/ets/features/reading/LocalReadingExperience.ets',root),'utf8');
+ const readerConstructions=[];
+ class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});if(params.directoryEntries!==undefined)readerConstructions.push(id);}updateStateVars(params){Object.assign(this.params,params);}}
+ const carrier=createReaderBuilderProbe('@Component struct ActualPrefetchIndex {@Builder payload(){ReaderShell({'+props.join(',')+'});}build(){Column(){}}}',
+  ['payload'],{ReaderShell:Child},{childSources:{ReaderShell:shellSource}}).owner;
+ for(const name of ['detailBook','detailToc','remoteReadingSession','readingReadyGeneration'])Object.defineProperty(carrier,name,{get:()=>page[name]});
+ carrier.applyReadingCommit=commit=>page.applyReadingCommit(commit);carrier.payload();
+ const start=shellSource.indexOf('        ForEach([this.readingIdentityKey()]'),tail='        }, (identity: string): string => identity);',end=shellSource.indexOf(tail,start)+tail.length;
+ const retained=createReaderBuilderProbe('@Component struct ActualPrefetchReader {@Builder reading(){'+shellSource.slice(start,end)+'}build(){Column(){}}}',
+  ['reading'],{ReadingExperience:Child},{childSources:{ReadingExperience:readingSource}}).owner;
+ retained.readingIdentityKey=function(){return JSON.stringify([this.sourceId,this.bookId,this.readingReadyGeneration]);};
+ let mounted=false;
+ const render=()=>{carrier.replay();Object.assign(retained,[...carrier.children.values()][0].params,{route:'reading',visible:true});if(!mounted){retained.reading();mounted=true;}else retained.replay();return [...retained.children.values()][0];};
+ return{render,retained,readerConstructions};
+}
+
 async function until(predicate){const deadline=Date.now()+10000;while(!predicate()){assert.ok(Date.now()<deadline,'production boundary not reached');await new Promise(r=>setTimeout(r,1));}}
 function fixture(count=1370){
  const sourceId='source',bookId='book',calls=[],body='完整的离线小说正文。'.repeat(700);
@@ -34,14 +63,41 @@ function fixture(count=1370){
   throw Error('unexpected '+method);
  }
  const runtime={supportsCoreCapability:c=>c==='chapter.content.cacheOnly.v1',captureReadingContentValidity:()=>{const revision=state.contentRevision;return()=>revision===state.contentRevision;},isOfflineImageChapterComplete:async identity=>{state.manifest++;return !state.missingManifests.has(identity.chapterIndex);},markOfflineImageChapterComplete:async identity=>{state.materialized.push(identity);},request:execute};
- currentOwner=runtime;
- const page=Object.assign(new Index(),{detailBook:{sourceId,bookId},remoteReadingSession:session,readingSessionActive:true,navigationGeneration:1,consumeSystemFileOpen(){},refreshRemoteCatalogNearEnd(){assert.fail('fixture chapter not near tail');}});
+ currentOwner=runtime;setRuntime(runtime);
+ const page=Object.assign(new Index(),{readingEntryScopeId:-1,route:'reading',readingOriginRoute:'detail',readableAdmissions:[],shelfOperation:{removalKey:'',busy:false},mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,shelfReceiptRetired:false,remoteSessionGeneration:1,detailBook:{sourceId,bookId,...session.book},remoteReadingSession:session,readingSessionActive:true,navigationGeneration:1,readingReadyGeneration:1,consumeSystemFileOpen(){},refreshRemoteCatalogNearEnd(){assert.fail('fixture chapter not near tail');}});
  let publications=0,toc=session.entries.map(e=>({index:e.index,title:e.title,navigable:true,downloadState:'completed',bookmarks:[]}));
  Object.defineProperty(page,'detailToc',{get:()=>toc,set:v=>{publications++;toc=v;}});
  const active=[],prefetch=page.prefetchReadingWindow.bind(page);page.prefetchReadingWindow=(...a)=>{const work=prefetch(...a);active.push(work);return work;};
  const commit=(index=988,offset=0)=>page.applyReadingCommit({...page.remoteReadingSession.identity,chapterIndex:index,chapterOffset:offset});
  return{session,state,runtime,page,calls,body,execute,commit,publications:()=>publications,count:m=>calls.filter(c=>c.method===m).length,settle:()=>Promise.all(active),reads:()=>calls.filter(c=>c.method==='chapter.content').map(c=>c.p.chapterIndex)};
 }
+{
+ const f=fixture(),gate=deferred();f.state.beforePrefetch=async()=>gate.promise;
+ const original=ownerProbe.ReadingPrefetchHost.forRuntime(f.runtime),old=f.page.prefetchReadingWindow(f.session,988);
+ await until(()=>f.count('cache.book.prefetch')===1);
+ f.page.shelfReceiptRetired=true;
+ const successor=Object.assign(new Index(),{mountedRuntimeOwner:f.runtime,detailShelfAdmissionMount:2,shelfReceiptRetired:false,
+  remoteReadingSession:f.session,remoteSessionGeneration:2,readingSessionActive:true,navigationGeneration:2,detailBook:{...f.session.identity},detailToc:f.page.detailToc,
+  refreshBookshelf(){},onRemoteSessionReady(){},consumeSystemFileOpen(){}});
+ assert.equal(ownerProbe.ReadingPrefetchHost.forRuntime(f.runtime),original,'physical Index remount retains one original optional queue');
+ const next=successor.prefetchReadingWindow(f.session,988);gate.resolve();await Promise.all([old,next]);
+ assert.equal(f.count('cache.book.prefetch'),2);assert.equal(f.state.peakPrefetch,1,'same Runtime remount does not fork the accepted producer');
+ assert.equal(f.count('chapter.content'),5);assert.equal(f.publications(),0,'retired physical owner receives no late rows');
+ checks.push('same-Runtime physical Index successor shares actual accepted queue and native drain without forking');
+}
+
+{
+ const f=fixture(),sdk=sdkReaderPayload(f.page),oldActor=sdk.render(),oldRows=f.page.detailToc;
+ f.state.missingManifests.add(988);await f.page.prefetchReadingWindow(f.session,988);
+ const currentActor=sdk.render();assert.equal(currentActor.id,oldActor.id,'metadata patch retains actual reader identity');
+ assert.equal(new Set(sdk.readerConstructions).size,1,'actual SDK creates one retained reader child');assert.equal(currentActor.params.directoryEntries,f.page.detailToc);
+ assert.equal(currentActor.params.directoryEntries[988].downloadState,'cached');assert.equal(currentActor.params.directoryEntries[987],oldRows[987]);
+ const oldCommit=oldActor.params.onReadingCommitted,gate=deferred();f.state.beforePrefetch=async()=>gate.promise;
+ f.page.navigationGeneration++;f.page.shelfReceiptRetired=true;oldCommit({...f.session.identity,chapterIndex:995});
+ gate.resolve();await f.settle();assert.equal(f.count('cache.book.prefetch'),1,'retired actual physical commit cannot dispatch optional IO');
+ checks.push('actual Host-Gateway→Index→SDK retained ReaderShell/ReadingExperience metadata Prop patch and retired physical callback');
+}
+
 {
  const f=fixture(),started=performance.now();for(let i=0;i<4;i++)f.commit(988,i*100);await f.settle();
  const result={mode:baseline?'baseline':'regression',chapters:1370,pageCommits:4,prefetchCalls:f.count('cache.book.prefetch'),bodyReads:f.count('chapter.content'),manifestChecks:f.state.manifest,peakBodyRequests:f.state.peakBodies,peakPrefetchCommands:f.state.peakPrefetch,fullTocPublications:f.publications(),materializedBodyChars:f.count('chapter.content')*f.body.length,hostProbeElapsedMs:Number((performance.now()-started).toFixed(2)),indexSha256:createHash('sha256').update(readFileSync(file)).digest('hex')};
@@ -62,7 +118,7 @@ if(!baseline){
   assert.equal(f.page.detailToc[988].downloadState,'completed');assert.equal(f.publications(),0);assert.equal(f.count('cache.book.prefetch'),2);assert.equal(f.state.manifest,5);checks.push('late body results from old source cannot publish after navigation and session switch');
  }
  {
-  const f=fixture(),gate=deferred();f.state.beforePrefetch=async()=>gate.promise;const old=f.page.prefetchReadingWindow(f.session,988);await until(()=>f.count('cache.book.prefetch')===1);const replacement=fixture();const next=f.page.prefetchReadingWindow(f.session,988);gate.resolve();await Promise.all([old,next]);assert.equal(f.count('chapter.content'),0);assert.equal(replacement.count('chapter.content'),5);checks.push('runtime replacement executes queued work through its current owner');
+  const f=fixture(),gate=deferred();f.state.beforePrefetch=async()=>gate.promise;const old=f.page.prefetchReadingWindow(f.session,988);await until(()=>f.count('cache.book.prefetch')===1);const replacement=fixture();const next=replacement.page.prefetchReadingWindow(replacement.session,988);gate.resolve();await Promise.all([old,next]);assert.equal(f.count('chapter.content'),0);assert.equal(replacement.count('chapter.content'),5);checks.push('runtime replacement admits only its own mounted Index, not a retiring page factory');
  }
  {
   const f=fixture(),before=warnings.length,realNow=Date.now;let now=realNow();Date.now=()=>now;
@@ -97,7 +153,7 @@ if(!baseline){
   const f=fixture(12);f.state.leases=[4,5,6,7,8];f.state.failReport.add(4);await assert.rejects(new ReadingOfflineGateway(f.runtime).prefetchWindow(f.session,4,9));assert.deepEqual(new Set(f.state.reports.map(r=>r.chapterIndex)),new Set([4,5,6,7,8]));assert.equal(f.state.reports.filter(r=>r.chapterIndex===4).length,3);checks.push('one terminal report failure is surfaced without stranding other leases');
  }
  {
-  const f=fixture();const entries=await f.page.loadRemoteDirectoryProjection(new ReadingOfflineGateway(f.runtime),f.runtime,f.session,()=>true);assert.equal(entries.length,1370);assert.ok(entries.every(e=>e.downloadState==='cached'));assert.equal(f.count('cache.book.status'),1);assert.equal(f.count('chapter.content'),0);assert.equal(f.state.manifest,0);assert.equal(f.count('bookmark.list'),1);assert.equal(entries[988].bookmarks[0].content,'书签');checks.push('production Index 1370-entry directory preserves bookmarks with one metadata read and zero body or manifest work');
+  const f=fixture();f.runtime.bookAcquisitions=()=>({setPreparationVisible(){},readingProjectionRevision:()=>0});f.page.bindReadingEntryReader();const entry=f.page.getReadingEntryHost();await entry.projectDirectory(f.page.readingEntryScopeId);const entries=f.page.detailToc;assert.equal(entries.length,1370);assert.ok(entries.every(e=>e.downloadState==='cached'));assert.equal(f.count('cache.book.status'),1);assert.equal(f.count('chapter.content'),0);assert.equal(f.state.manifest,0);assert.equal(f.count('bookmark.list'),1);assert.equal(entries[988].bookmarks[0].content,'书签');checks.push('production Entry/Directory owners and Index 1370-entry directory preserve bookmarks with one metadata read and zero body or manifest work');
  }
  {
   const f=fixture(),gate=deferred();f.state.beforeStatus=async()=>gate.promise;const work=new ReadingOfflineGateway(f.runtime).loadDirectoryProjection(f.session);await until(()=>f.count('cache.book.status')===1);f.state.contentRevision++;gate.resolve();await assert.rejects(work);assert.equal(f.count('chapter.content'),0);checks.push('directory metadata projection rejects content mutation during status read');

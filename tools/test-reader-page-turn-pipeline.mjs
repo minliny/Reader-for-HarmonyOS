@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 
 const readingDir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const localReading = readFileSync(new URL('LocalReadingExperience.ets', readingDir), 'utf8');
+const sessionGateway = readFileSync(new URL('ReadingSessionFlowGateway.ts', readingDir), 'utf8');
+const progressOwner = readFileSync(new URL('ReadingSessionProgressOwner.ts', readingDir), 'utf8');
 const stage = readFileSync(new URL('ReaderPageTurnStage.ets', readingDir), 'utf8');
 const interaction = readFileSync(new URL('ReaderPageInteractionLayer.ets', readingDir), 'utf8');
 const rapidState = readFileSync(new URL('ReaderRapidPageTurnState.ts', readingDir), 'utf8');
@@ -84,8 +86,14 @@ contract('prepared slide preserves the visual handoff and the strong durable bar
   assert.doesNotMatch(start, /promotePreparedPageTurn|this\.visiblePage\s*=/,
     'starting an animation must not switch the pagination fact');
 
-  assert.match(persist, /runProgressCommitSerial/);
-  assert.match(persist, /resolveAndUpdateProgress/);
+  assert.match(persist, /persistMeasuredCanonicalProgress/);
+  const canonical = methodSection(localReading, 'persistMeasuredCanonicalProgress');
+  assert.match(canonical, /persistPresentedProgress/);
+  assert.match(canonical, /if \(\!gateway\.hasPendingSourceSwitch\(\)\) \{[\s\S]*?return gateway\.persistPresentedProgress\(bookId, title, anchor, layout, isAdmitted\);\s*\}[\s\S]*return gateway\.persistCanonicalProgress\(bookId, title, anchor, layout, isAdmitted\);/);
+  assert.match(sessionGateway, /async persistCanonicalProgress[\s\S]*this\.progressOwner\.awaitPersistence\(\)[\s\S]*expectedTransaction === recovered\.sourceSwitchTransactionId[\s\S]*sourceCanonicalHistorical === true[\s\S]*reading\.progress\.sourceFinalizeReceipt\.v1[\s\S]*reading\.progress\.compareAndSet\.v1[\s\S]*this\.progressOwner\.persistPresented/,
+    'source strong gate uses the original exact immutable receipt plus actual shared CAS owner');
+  assert.match(progressOwner, /async runSerial[\s\S]*await this\.drain\(\)[\s\S]*await operation\(\)/,
+    'the common progress ordering drains an earlier unknown write before a new strong transaction');
   assert.doesNotMatch(persist, /\.resolveLocation\(|\.updateProgress\(/,
     'page-turn persistence must resolve and store the canonical anchor atomically');
   assert.doesNotMatch(persist, /promotePreparedPageTurn|this\.visiblePage\s*=/,
@@ -119,7 +127,7 @@ contract('ordinary CAS pages present independently while strong transactions ret
   assert.match(begin, /void this\.persistPresentedPageTurn\(prepared, lifecycleToken\);\s*this\.finishPreparedPageTurnSettlement\(settlementGeneration, true\);\s*return;/,
     'eligible ordinary presentation releases only the durable gate, then rejoins the original visual handoff');
   assert.ok(begin.indexOf('persistPresentedPageTurn') < begin.indexOf('this.persistPreparedPageTurn('));
-  assert.match(receipt, /persistPresentedProgress[\s\S]*isOrdinaryFirstPagePresentationCurrent[\s\S]*admitCommittedProgress/);
+  assert.match(receipt, /isOrdinaryFirstPagePresentationCurrent[\s\S]*progressProducerIntent[\s\S]*admitCommittedProgress[\s\S]*progressProducers\.persistPresented/);
   assert.doesNotMatch(receipt, /this\.promotePreparedPageTurn\(|this\.finishPreparedPageTurnSettlement\(|this\.visiblePage\s*=/,
     'late ordinary receipts cannot rewind the display or finish another turn');
 });
@@ -323,17 +331,16 @@ contract('settings and Appearance share one ReaderSettings page-turn truth', () 
     /const next: ReaderPageTurnStyle = option === '仿真' \? 'simulation'[\s\S]*this\.onPageTurnStyleChange\(next\);/);
 });
 
-contract('page-turn style persistence failure rolls back the live session', () => {
+contract('page-turn style unknown save retains the current session and uses captured admission', () => {
   const style = methodSection(localReading, 'changeReaderPageTurnStyle');
   assert.match(style, /const previous = this\.readerSettingsSnapshot;/);
-  assert.match(style, /const previousBookTurnRuntimeFailed = this\.bookTurnRuntimeFailed;/);
-  assert.match(style, /readerSettingsGateway\.update\(snapshot\)\.catch\(\(error: Error\)/);
-  assert.match(style, /mutationGeneration !== this\.readerSettingsMutationGeneration/);
-  assert.match(style, /changeGeneration !== this\.pageStyleChangeGeneration/);
-  assert.match(style, /this\.readerSettingsSnapshot = previous;/);
-  assert.match(style, /this\.bookTurnRuntimeFailed = previousBookTurnRuntimeFailed;/);
+  assert.match(style, /readerSettingsGateway\.update\(snapshot, false, current\)\.catch\(\(error: Error\)/);
+  assert.match(style, /captureReaderSettingsAdmission\(lifecycleToken, mutationGeneration\)/);
+  assert.match(style, /changeGeneration === this\.pageStyleChangeGeneration/);
+  assert.doesNotMatch(style, /this\.readerSettingsSnapshot = previous;/);
+  assert.doesNotMatch(style, /previousBookTurnRuntimeFailed/);
   assert.match(style, /this\.invalidatePageTurnRuntime\(true\)/);
-  assert.match(style, /this\.showReaderSettingsFailure\('阅读设置保存失败，已恢复上次保存值', error\)/);
+  assert.match(style, /this\.notifyReaderSettingsSavePending\(error, current\)/);
 });
 
 contract('page-turn generations invalidate stale preparation and settlement owners', () => {

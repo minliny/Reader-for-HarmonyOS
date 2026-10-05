@@ -1,20 +1,11 @@
 import { readerAppColor } from './ReaderThemeRegistry';
-import {
-  TOK_BORDER,
-  TOK_BORDER_W,
-  TOK_CARD_BG,
-  TOK_CONTENT_MAX_W_TABLET,
-} from '../common/ReaderTokens';
-// 卡片容器: 统一 bg/border/radius, content 为卡片内容 builder。
-// 当前唯一使用方是 Settings/CategorySection。描边按平台校准(§八): Figma
-// 0.556px 在 ArkUI 栅格化后对比度消失, 提到 TOK_BORDER_W(1vp)。
+import { ReaderCardSpecId, resolveReaderCardSpec } from './ReaderCardSpecs';
+// 同规格只有一个实际外框；页面提供内容和测量宽度，外观由有限规格决定。
 @Component
 export struct ReaderCard {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @Prop bg: string = '';
-  @Prop cardBorder: string = '';
-  @Prop radius: number = 8;
+  @Prop specId: ReaderCardSpecId = 'settings-category';
   @Prop cardWidth: number = 0; // 0 = 撑满父宽
   @BuilderParam content: () => void;
 
@@ -23,10 +14,9 @@ export struct ReaderCard {
       this.content();
     }
     .width(this.cardWidth > 0 ? this.cardWidth : '100%')
-    // 内容最大宽约束 (Fill 相应, 宽屏不超 722): 页面两档 cardWidth 由此单点取代。
-    .constraintSize({ maxWidth: TOK_CONTENT_MAX_W_TABLET })
-    .backgroundColor((this.bg === '' ? readerAppColor('TOK_CARD_BG', this.appThemeScheme) : this.bg))
-    .border({ width: TOK_BORDER_W, color: (this.cardBorder === '' ? readerAppColor('TOK_BORDER', this.appThemeScheme) : this.cardBorder) })
-    .borderRadius(this.radius);
+    .constraintSize({ maxWidth: resolveReaderCardSpec(this.specId).maxWidth })
+    .backgroundColor(readerAppColor(resolveReaderCardSpec(this.specId).backgroundRole, this.appThemeScheme))
+    .border({ width: resolveReaderCardSpec(this.specId).borderWidth, color: readerAppColor(resolveReaderCardSpec(this.specId).borderRole, this.appThemeScheme) })
+    .borderRadius(resolveReaderCardSpec(this.specId).radius);
   }
 }

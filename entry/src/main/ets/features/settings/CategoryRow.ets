@@ -1,3 +1,4 @@
+import { TYPE_APP_ROW_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderPressFeedback } from '../common/ReaderPressFeedback';
 import {
@@ -35,10 +36,10 @@ export struct CategoryRow {
 
       Text(this.label)
         .layoutWeight(1)
-        .fontFamily('ReaderInter')
-        .fontWeight(800)
-        .fontSize(13)
-        .lineHeight(15.34)
+        .fontFamily(TYPE_APP_ROW_LABEL.fontFamily)
+        .fontWeight(TYPE_APP_ROW_LABEL.fontWeight)
+        .fontSize(TYPE_APP_ROW_LABEL.fontSizeFp)
+        .lineHeight(TYPE_APP_ROW_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });

@@ -1,3 +1,5 @@
+import {ProductionHost,setRuntime} from './lib/reading-entry-owner-probe.mjs';
+import { readingPrefetchOwnerProbe } from './lib/reading-prefetch-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
@@ -35,14 +37,16 @@ function fixture(size) {
     throw Error(`unexpected ${method}`);
   });
   const runtime = { bookAcquisitions: () => coordinator, request: (...args) => coordinator.request(...args) };
-  const Index = productionMotionMethods(file('pages/Index.ets'), ['performSourceSwitchSeam', 'onRemoteSessionReady',
-    'isRemoteCatalogNearEnd', 'refreshRemoteCatalogNearEnd', 'applyReadingCommit', 'applyDirectoryChapter'], {
-    RemoteReadingFlowGateway, ReaderRuntimeOwner: { current: () => runtime }, sameRemoteSessionEvidence,
+  setRuntime(runtime);
+  const ownerProbe=readingPrefetchOwnerProbe(()=>runtime);
+  const Index = productionMotionMethods(file('pages/Index.ets'), ['performSourceSwitchSeam', 'retireSourceSwitchPresentation', 'getSourceSwitchHost', 'onRemoteSessionReady',
+    'readingPrefetchLease', 'isRemoteCatalogNearEnd', 'refreshRemoteCatalogNearEnd', 'applyReadingCommit', 'applyDirectoryChapter'], {
+    ...ownerProbe,ReadingEntryHost:ProductionHost,EMPTY_READABLE_ADMISSION:{generation:0,adding:false,cancelling:false,confirmation:'none'},LOCAL_SOURCE_ID:'local',RemoteReadingFlowGateway, sameRemoteSessionEvidence,
     canAppendRemoteReadingCatalog, CATALOG_REFRESH_NEAR_END: 3, CATALOG_REFRESH_INTERVAL_MS: 600000,
     CATALOG_REFRESH_RETRY_INTERVAL_MS: 30000, DOMAIN: 0, hilog: { warn() {} },
   });
   const host = Object.assign(new Index(), {
-    directoryCurrentChapterIndex: 988, directoryChapterTitle: '第982章 国号', navigationGeneration: 1,
+    readingEntryScopeId:-1,route:'reading',readingOriginRoute:'detail',readingSessionActive:true,detailToc:[],readableAdmissions:[],shelfOperation:{removalKey:'',busy:false},mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,shelfReceiptRetired:false,directoryCurrentChapterIndex: 988, directoryChapterTitle: '第982章 国号', navigationGeneration: 1,
     remoteSessionGeneration: 1, remoteCatalogRefreshAt: new Map(), remoteCatalogRefreshAttemptAt: new Map(),
     remoteCatalogRefreshInFlight: new Map(), directoryBookmarkMutationGeneration: 0, offlineMutationGeneration: 0,
     readingDetailForShelf: book => ({ ...book, sourceName: 'new' }),
@@ -55,6 +59,8 @@ function fixture(size) {
     refreshBookshelf() {}, consumeSystemFileOpen() {}, async prefetchReadingWindow() {},
     reopenSwitchedBook() { assert.fail('the admitted target session must be reused'); },
   });
+  const authority=ownerProbe.ReadingPrefetchHost.forRuntime(runtime);
+  Object.defineProperty(host,'remoteCatalogRefreshInFlight',{get:()=>authority.refreshInFlight});
   return { coordinator, runtime, host, calls,
     source: Object.assign(new Source(), { runtimeOwner: runtime }),
     count: method => calls.filter(call => call.method === method).length };

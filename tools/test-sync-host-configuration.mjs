@@ -1,8 +1,11 @@
+import { configIntentFixture } from './lib/sync-config-intent-fixture.mjs';
 import { restoreReaderThemeSelection, migrateLegacyReaderThemeSelection } from '../entry/src/main/ets/features/common/ReaderThemeSelection.ts';
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const path=f=>new URL(`../entry/src/main/ets/${f}`,import.meta.url);
 const copy=x=>JSON.parse(JSON.stringify(x));
+const configGuards=[];
+const actualConfigGuard=()=>{const f=configIntentFixture(),x=f.fixture({empty:true});configGuards.push(f);return {f,store:x.store};};
 const selected={version:1,appMode:'day',reader:{id:'day',scheme:'day'},defaultDayReaderId:'day',defaultNightReaderId:'night'};
 let theme=copy(selected),mode='cover',failTheme=false,durableReads=0;
 const store={loadBookshelfViewMode:async()=>mode,saveBookshelfViewMode:async x=>{mode=x;}};
@@ -34,8 +37,8 @@ await credentials.clearRestoreJournal(journal.operationId);assert.equal(await cr
 const Gateway=productionMotionMethods(path('features/sync/SyncGateway.ts'),['recoverInterruptedRestore','recoverRestoreJournal','driveTransaction','assertTransactionIdentity'],{MAX_TRANSACTION_STEPS:30,SyncGateway:{restoreRecoveries:new Map()}});
 function gatewayFixture({receipt=false,hostConfig=true,failApplyResponse=false,failCommitResponse=false,failHost=false}={}){
  let applied=receipt,coreApplications=0,themeApplications=0,commits=0,queries=0,record;
- let pending=copy(journal);let hostFailed=failHost,commitFailed=failCommitResponse;
- const g=Object.assign(new Gateway(),{credentials:{loadRestoreJournal:async()=>pending,saveRestoreJournal:async x=>{pending=x;},clearRestoreJournal:async id=>{assert.equal(pending?.operationId,id);pending=undefined;}},
+ let pending=copy(journal);let hostFailed=failHost,commitFailed=failCommitResponse;const guard=actualConfigGuard();
+ const g=Object.assign(new Gateway(),{assertOwner:()=>{},assertAdmission:()=>{},credentials:{requireConfigSettled:()=>guard.store.requireConfigSettled(),loadRestoreJournal:async()=>pending,saveRestoreJournal:async x=>{pending=x;},clearRestoreJournal:async id=>{assert.equal(pending?.operationId,id);pending=undefined;}},
  hostConfiguration:{decode:x=>x,apply:async x=>{themeApplications++;if(hostFailed){hostFailed=false;throw Error('host flush');}assert.deepEqual(x,next);}},
  requireObject:x=>x,decodeTransaction:x=>x,abortBestEffort:async()=>true,
  runtimeOwner:{request:async(name,params)=>{
@@ -46,7 +49,7 @@ function gatewayFixture({receipt=false,hostConfig=true,failApplyResponse=false,f
    commits++;assert.ok(applied);assert.equal(params.hostConfigApplied,hostConfig);if(commitFailed){commitFailed=false;throw Error('lost commit response');}
    return{data:{transactionId:journal.operationId,status:'completed',phase:'restoreCompleted'}};
  }}});
- return {g,stats:()=>({applied,coreApplications,themeApplications,commits,queries,pending,record})};
+ return {g,guard,stats:()=>({applied,coreApplications,themeApplications,commits,queries,pending,record})};
 }
 {
  const t=gatewayFixture();assert.equal(await t.g.recoverInterruptedRestore(),false);assert.equal(t.stats().pending,undefined);assert.equal(t.stats().themeApplications,0,'no receipt proves no Core apply and causes no Host mutation');
@@ -86,14 +89,21 @@ console.log('PASS WebDAV Host production recovery: durable choices, allow-list, 
 }
 {
  const diagnostics=new Map();let params,barrier=0;
- const Start=productionMotionMethods(path('features/sync/SyncGateway.ts'),['startTransaction','decodeTransaction'],{
+ const Start=productionMotionMethods(path('features/sync/SyncGateway.ts'),['startTransaction','decodeTransaction','requireBackupSettled','reconcileBackupReceipt'],{
    MAX_TRANSACTION_REQUESTS:100,ReaderThemeHost:{prepareUserChange:async()=>{barrier++;},observedSystemScheme:()=> 'night'},
    AppStorage:{setOrCreate:(k,v)=>diagnostics.set(k,v)},
  });
- const start=Object.assign(new Start(),{recoverInterruptedRestore:async()=>false,authorization:()=>undefined,
+ const guard=actualConfigGuard();
+ const start=Object.assign(new Start(),{credentials:{requireConfigSettled:()=>guard.store.requireConfigSettled(),loadBackupJournal:async()=>undefined},assertOwner:()=>{},assertAdmission:()=>{},requireRestoreSettled:async()=>{},recoverInterruptedRestore:async()=>false,authorization:()=>undefined,
    hostConfiguration:{capture:async()=>prior,encode:x=>host.encode(x)},runtimeOwner:{request:async(_name,p)=>{params=p;return{data:{transactionId:'migrate-1',status:'conflict',phase:'restoreConflict',requests:[],themeMigrationReason:'legacy-unknown-reader:system:night'}};}}});
  await start.startTransaction('restore',{url:'https://example.invalid',directory:'/backup',backupPassword:'not-a-real-secret'},true);
  assert.equal(barrier,1);assert.equal(params.systemScheme,'night');assert.equal(params.hostConfig.themeSelection.reader.scheme,'day','system observation is independent from selected reading scheme');
  assert.ok(!('systemScheme' in params.hostConfig));assert.ok(!('themeMigrationReason' in params.hostConfig));
  assert.equal(diagnostics.get('readerThemeRestoreFallback'),'legacy-unknown-reader:system:night');
 }
+
+{
+ const t=gatewayFixture({receipt:true});t.guard.f.asset.failAdd=true;await assert.rejects(t.guard.store.save(t.guard.f.config),/cannot be written/);
+ await assert.rejects(t.g.recoverInterruptedRestore(),/original configuration intent/);assert.equal(t.stats().queries,0,'unconfirmed original config blocks even otherwise approved restore');assert.equal(t.stats().themeApplications,0);
+}
+for(const f of configGuards)f.cleanup();

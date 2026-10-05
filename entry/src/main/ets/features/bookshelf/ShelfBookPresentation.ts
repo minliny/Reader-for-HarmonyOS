@@ -1,5 +1,7 @@
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 
+export type ShelfProgressVariant = 'list-status' | 'grid-caption';
+
 /** Shared, display-only projection. It never changes Core metadata or order. */
 export class ShelfBookPresentation {
   static source(book: ShelfBook): string {
@@ -18,9 +20,11 @@ export class ShelfBookPresentation {
     return book.lastChapter?.trim() || '暂无最新章节';
   }
 
-  static progress(book: ShelfBook): string {
+  /** Whole-book basis points only. Missing/nonfinite progress retains the
+   * existing unread List / absent Grid baseline; it is not a page position. */
+  static progress(book: ShelfBook, variant: ShelfProgressVariant = 'list-status'): string {
     const value = this.progressPercent(book);
-    if (value <= 0) return '未读';
+    if (value <= 0) return variant === 'grid-caption' ? '' : '未读';
     return value < 1 ? '已读 <1%' : `已读 ${Math.floor(value)}%`;
   }
 

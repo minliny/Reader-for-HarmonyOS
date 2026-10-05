@@ -19,7 +19,7 @@ assert.match(store, /backupPassword:\s*string/);
 assert.match(store, /bookshelfViewMode\?:\s*'cover' \| 'list'/,
   'legacy Asset mode remains readable only for one-time migration');
 assert.match(store, /loadBookshelfViewMode\(\)/);
-assert.match(store, /saveBookshelfViewMode\(mode: 'cover' \| 'list', restoreOperationId\?: string\)/);
+assert.match(store, /saveBookshelfViewMode\(mode: 'cover' \| 'list', restoreOperationId\?: string,\s*observation\?: ReaderWriteEvidence, isCurrent: \(\) => boolean = \(\): boolean => true\)/);
 assert.match(store, /ensureLocalPreferences\(\)/,
   'bookshelf mode must have one durable local Preferences authority');
 assert.match(store, /localModeWriteTail[\s\S]*readOrMigrateViewMode\(\)/,
@@ -59,8 +59,8 @@ assert.match(gateway, /webdavPass:\s*''/);
 assert.match(gateway, /backupPass:\s*''/);
 assert.match(gateway, /params\['encryptionKey'\]\s*=\s*config\.backupPassword/);
 const restoreLatest = gateway.slice(
-  gateway.indexOf('async restoreLatest()'),
-  gateway.indexOf('async resolveRestore()', gateway.indexOf('async restoreLatest()')),
+  gateway.indexOf('async restoreLatest('),
+  gateway.indexOf('async resolveRestore(', gateway.indexOf('async restoreLatest(')),
 );
 assert.match(restoreLatest, /const stalePendingTransactionId = this\.pendingRestoreTransactionId/,
   'a new restore must account for a previously unresolved conflict');
@@ -111,7 +111,7 @@ assert.equal(classifier.isAlreadyClosedTransactionError(new Error('network timeo
 assert.doesNotMatch(orchestrator, /hilog|console\./,
   'orchestration statuses must be user-safe and must not log secrets');
 assert.match(orchestrator, /operationInFlight/);
-assert.match(orchestrator, /saveConfig\(url, user, pass, backupPass, directory\)/);
+assert.match(orchestrator, /saveConfig\(url, user, pass, backupPass, directory, observation, admitted\)/);
 
 assert.match(page, /onSaveConfig/);
 assert.match(page, /aboutToAppear\(\)[\s\S]*this\.appliedSnapshotIdentity\s*=\s*'';[\s\S]*this\.syncSnapshotInputs\(\)/,
@@ -145,7 +145,8 @@ assert.match(index, /this\.getSyncOrchestrator\(\)\.open\(\)/);
 assert.match(index, /onSyncSaveConfig/);
 assert.match(index, /onSyncRestoreLatest/);
 assert.match(index, /onSyncResolveRestore/);
-assert.match(index, /this\.shelfBooks = state\.shelf\.books\.map[\s\S]*copyShelfBookWithSourceName\(book, name\)/,
+const projection=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/BookshelfProjectionOwner.ts',import.meta.url),'utf8');
+assert.match(projection, /const books = state\.shelf\.books\.map[\s\S]*this\.copyName\(book, name\)/,
   'source display names must be an immutable projection of the Core shelf');
 assert.match(ability, /loadBookshelfViewMode\(\)[\s\S]*AppStorage\.setOrCreate\('readerBookshelfViewMode', mode\)/,
   'cold start must hydrate the projection before the first page is mounted');

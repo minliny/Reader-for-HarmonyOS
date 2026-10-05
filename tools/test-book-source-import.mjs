@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
+import { readFileSync,rmSync } from 'node:fs';
+import { fixture as sourceFixture } from './lib/source-management-durable-probe.mjs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {sourceSharedActionFixture,updateSourceAction} from './lib/source-shared-action-probe.mjs';
+import {sharedActionFeedbackReset} from './lib/shared-action-feedback-state-probe.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
@@ -13,40 +15,16 @@ const orchestrator = read('entry/src/main/ets/features/source/SourceOrchestrator
 const page = read('entry/src/main/ets/features/source/SourceManagementPage.ets');
 const index = read('entry/src/main/ets/pages/Index.ets');
 
-// Exercise the real gateway decoder/contract logic with an injected owner.
-// The helper modules are inlined because data-URL loads cannot resolve
-// relative specifiers like '../../app/ErrorMessage'.
-const errorMessageModule = stripTypeScriptTypes(read('entry/src/main/ets/app/ErrorMessage.ts'))
-  .replace('export function errorMessageOf', 'function errorMessageOf');
-const errorMessageImport =
-  /^import \{ errorMessageOf \} from ['"][^'"]*ErrorMessage(\.ts)?['"];$/m;
-const sourceCategoryModule = stripTypeScriptTypes(
-  read('entry/src/main/ets/features/source/ReaderSourceCategory.ts'),
-).replace(/^export /gm, '');
-const sourceCategoryImport =
-  /^import \{ classifyReaderSource, type ReaderSourceCategory \} from ['"]\.\/ReaderSourceCategory['"];$/m;
-// P1-5: the import-time URL gate lives in the shared HttpTransportPolicy;
-// inline the same production module so the harness exercises the real judge.
-const transportPolicyModule = stripTypeScriptTypes(
-  read('entry/src/main/ets/app/HttpTransportPolicy.ts'),
-).replace(/^export /gm, '');
-const transportPolicyImport =
-  /^import \{ httpUrlHostname, isPrivateNetworkTarget \} from ['"][^'"]*HttpTransportPolicy(\.ts)?['"];$/m;
-const executableGateway = stripTypeScriptTypes(
-  gatewaySource
-    .replace(errorMessageImport, () => errorMessageModule)
-    .replace(transportPolicyImport, () => transportPolicyModule)
-    .replace(sourceCategoryImport, () => sourceCategoryModule)
-    .replace(/^import url from ['"]@ohos\.url['"];$/m, 'const url = { URL };')
-    .replace(/^import type \{ JsonObject \} from ['"]@reader\/core-harmony['"];$/m, '')
-    .replace(/^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m, ''),
-);
-const gatewayUrl = `data:text/javascript;base64,${Buffer.from(executableGateway).toString('base64')}`;
-const { SourceGateway } = await import(gatewayUrl);
-
+// Load the complete production gateway and its genuine Rules owner/store with
+// the installed SDK. This historical decoder suite intentionally exercises
+// the explicitly unsupported-capability path; exact modern ACK/cold recovery
+// is separately covered by the source-management durable suites.
+const fixture = await sourceFixture();
+fixture.options.capability = false;
+const { SourceGateway } = fixture;
 const calls = [];
-const runtimeOwner = {
-  request: async (method, params) => {
+const runtimeOwner = fixture.runtime;
+runtimeOwner.request = async (method, params) => {
     calls.push({ method, params });
     assert.equal(method, 'source.import');
     return {
@@ -56,8 +34,7 @@ const runtimeOwner = {
         imported: true,
       },
     };
-  },
-};
+  };
 const gateway = new SourceGateway(runtimeOwner);
 const single = {
   bookSourceUrl: 'https://source-a.example#remark',
@@ -455,15 +432,25 @@ assert.match(owner, /async selectBookSourceJson\(\)[\s\S]*this\.host\.selectBook
 
 // UI/orchestration: real button intent, serialized mutation, refresh, real log.
 assert.match(page, /onAddSource: \(\) => void/);
-assert.match(page, /\.onClick\(\(\): void => this\.onAddSource\(\)\)/);
-assert.match(index, /onAddSource: \(\): void => this\.openJsonImport\('bookSource'\)/);
-assert.match(index, /this\.getSourceOrchestrator\(\)\.importBookSources\(/);
+{
+ let imports=0;
+ const ui=sourceSharedActionFixture(['bottomActionBar'],{},{onAddSource:()=>imports++,onOpenTools:()=>{}});
+ ui.owner.bottomActionBar();const add=ui.action('source-management-add','新增书源');
+ sharedActionFeedbackReset(add.actor,add.native);assert.equal(imports,0,'press and cancel-reset alone never open an import');
+ add.click();assert.equal(imports,1,'actual Page -> shared labeled Add -> native click preserves the source import intent');
+ updateSourceAction(ui,add.actor,{actionEnabled:false});assert.equal(add.native.enabled,false);add.click();assert.equal(imports,1,'disabled shared Add cannot open another import');
+ updateSourceAction(ui,add.actor,{actionEnabled:true});add.actor.aboutToDisappear();add.click();assert.equal(imports,1,'old physical Add is retired with its real shared component');
+}
+assert.match(index, /onAddSource: \(\): void => \{ if \(this\.isCurrentSourceManagement\(generation, owner, mounting, host, identity\)\) this\.openJsonImport\('bookSource'\); \}/,
+  'the real Add button keeps its import intent and captured original Source presentation admission');
+assert.match(index, /source\.importBookSources\([\s\S]*?sourceIdentity,\n/,
+  'JSON results target the original captured Source Host and presentation identity');
 assert.match(orchestrator, /this\.operationChain = this\.operationChain[\s\S]*applyBookSourceImport/);
 assert.match(orchestrator,
   /applyBookSourceImport\([\s\S]*session: number,[\s\S]*onlineUrl\?: string,[\s\S]*selectBookSourceJson\(\)[\s\S]*loadOnlineJsonDocument\(onlineUrl\)/);
 assert.match(orchestrator, /selection === undefined \|\| !this\.isCurrentSession\(session\)/,
   'a picker completion from an old page session must not begin Core imports');
-assert.match(orchestrator, /importBookSourceDocument\([\s\S]*this\.isCurrentSession\(session\)[\s\S]*gateway\.loadSources\(\)/);
+assert.match(orchestrator, /importBookSourceDocument\([\s\S]*this\.isCurrentSession\(session\)[\s\S]*gateway\.loadSources\(undefined, false, \(\): boolean => this\.isCurrentSession\(session\)\)/);
 assert.match(orchestrator, /Book-source import failed; page kept unchanged/);
 assert.match(orchestrator, /Core 已导入 \$\{importedCount\} 个书源，但列表刷新失败/);
 assert.match(orchestrator, /publishStatus\('error', `书源列表读取失败/);
@@ -471,4 +458,8 @@ assert.match(orchestrator, /isReaderCoreTransactionPendingError\(error\)/);
 assert.doesNotMatch(orchestrator, /error\.message\.indexOf|error\.message\.includes/);
 assert.doesNotMatch(orchestrator, /devSeed|fixture|mock|fake/i);
 
+// This decoder test creates and exclusively owns this temporary Core/files
+// fixture. All accepted calls above are awaited before retiring/removing it;
+// no shared CLI, workspace, artifact or evidence directory is touched.
+fixture.retire();rmSync(fixture.root,{recursive:true,force:true});
 console.log('book-source production import contract: PASS');

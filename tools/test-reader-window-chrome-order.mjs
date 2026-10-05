@@ -29,7 +29,7 @@ function fixture(){
  const module={exports:{}};new Function('require','module','exports',out)(id=>{assert.ok(id in deps,id);return deps[id];},module,module.exports);
  const {ReaderWindowCoordinator:C,ReaderWindowChromeStyle:S,ReaderWindowPolicy:P}=module.exports;
  const E=productionMotionMethods(new URL('features/reading/LocalReadingExperience.ets',base),
-   ['applyWindowChrome','commitReaderWindowSettings','applyReaderWindowPolicy','windowPolicyFor'],{
+   ['applyWindowChrome','commitReaderWindowSettings','applyReaderWindowPolicy','windowPolicyFor','captureReaderSettingsAdmission','notifyReaderSettingsSavePending'],{
    ReaderWindowCoordinator:C,ReaderWindowChromeStyle:S,ReaderWindowPolicy:P,readerAppearanceThemeStyle,readerAppearanceChromeTone});
  function windowPort(){
    const zero={left:0,top:0,width:0,height:0};

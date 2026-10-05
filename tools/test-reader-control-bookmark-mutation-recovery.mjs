@@ -5,124 +5,54 @@ import { loadReaderControlBookmarkProjection, mergeReaderControlBookmarkProjecti
   from '../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts';
 import * as sessionPolicy from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
 
-const indexSource = readFileSync(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'utf8');
-const methods = indexSource.slice(indexSource.indexOf('  private deleteDirectoryBookmarks('),
-  indexSource.indexOf('  private async loadRemoteDirectoryProjection('));
-let activeGateway;
-const IndexProbe = new Function('mergeReaderControlBookmarkProjection', 'loadReaderControlBookmarkProjection',
-  'LocalReadingFlowGateway', 'ReaderRuntimeOwner', 'LOCAL_SOURCE_ID', 'hilog', 'DOMAIN',
-  `${stripTypeScriptTypes(`class IndexProbe { ${methods} }`)}; return IndexProbe;`)(
-  mergeReaderControlBookmarkProjection, loadReaderControlBookmarkProjection,
-  function Gateway() { return activeGateway; }, { current() {} }, 'local', { error() {} }, 0);
-const book = { sourceId: 'remote-A', bookId: 'book-A', title: 'Book A', author: 'Author A' };
-const row = (bookmarks = [], title = 'Chapter A', downloadState = 'completed') =>
-  ({ index: 0, title, downloadState, bookmarks });
-const mark = time => ({ time, chapterIndex: 0, chapterOffset: 12, chapterTitle: 'Chapter A', content: 'saved' });
-function makeOwner() {
-  const owner = new IndexProbe();
-  Object.assign(owner, { detailBook: book, detailToc: [row()], readingSessionActive: true,
-    navigationGeneration: 7, directoryBookmarkMutationGeneration: 0,
-    directoryBookmarkMutationActiveKey: '', directoryBookmarkProjectionFailureMessage: '',
-    directoryBookmarkProjectionFailureKey: '', directoryBookmarkProjectionFailureGeneration: -1 });
-  return owner;
+const {fixture,bookmarkInput,deferred,until}=await import('./lib/reading-operation-durable-probe.mjs');
+const {makeIndex,settled}=await import('./lib/reading-directory-sdk-consumer.mjs');
+const book={sourceId:'local',bookId:'book',title:'Book',author:'Author'};
+const row=(bookmarks=[],title='Chapter',downloadState='completed')=>({index:0,title,downloadState,bookmarks});
+const mark=time=>({time,chapterIndex:0,chapterOffset:12,chapterTitle:'Chapter',content:'saved'});
+async function actual(mode){const f=await fixture(true),x=makeIndex(f),h=x.idx;await h.loadControlBookmarks(book.sourceId,book.bookId,()=>true);
+ const seed=async(offset)=>{const r=await f.command('bookmark.create',{bookName:book.title,bookAuthor:book.author,chapterIndex:0,chapterPos:offset,chapterName:'Chapter',content:'saved'});return r.data.bookmark.time;};
+ const times=mode==='delete'?[await seed(12)]:[];if(times.length)await h.loadControlBookmarks(book.sourceId,book.bookId,()=>true);
+ const mutate=()=>{if(mode==='chapter')h.createDirectoryChapterStartBookmark({chapterIndex:0,chapterTitle:'Chapter'});else if(mode==='delete')h.deleteDirectoryBookmarks(times);else h.toggleReaderPageBookmark({chapterIndex:0,chapterOffset:12,chapterTitle:'Chapter',bookText:'saved',bookmarkTimes:[]});};
+ return{f,x,h,mutate,seed};}
+for(const mode of ['chapter','position','delete']){
+ const t=await actual(mode),before=structuredClone(t.h.detailToc),native=t.f.runtime.request.bind(t.f.runtime);let reads=0;
+ t.f.runtime.request=async(m,p,o)=>{if(m==='bookmark.list'){reads++;throw Error('read failed after committed write');}return native(m,p,o);};
+ t.mutate();await settled(t.f);assert.equal(t.f.writes().length,1);assert.equal(reads,1);
+ assert.deepEqual(t.h.detailToc,before,'failed reload retains available history and marks it stale instead of inventing empty/unknown rows');
+ assert.equal(t.h.directoryOperation.projection.receipt.confirmation,'confirmed');assert.equal(t.h.directoryOperation.projection.facts.stale,true);assert.match(t.h.controlBookmarkProjectionMessage(),/已确认.*刷新失败/);
+ t.mutate();await settled(t.f);assert.equal(t.f.writes().length,1,'stale mutation projection cannot admit a second write');
+ t.f.runtime.request=native;await t.h.loadControlBookmarks(book.sourceId,book.bookId,()=>true);assert.equal(t.f.writes().length,1);
+ assert.equal(t.h.directoryOperation.projection.facts.stale,false);assert.equal(t.h.controlBookmarkProjectionMessage(),'');
+ assert.equal(t.h.detailToc[0].bookmarks.length,mode==='delete'?0:1);assert.equal(t.h.detailToc[0].downloadState,'completed');
 }
-function admission(owner) {
-  const generation = owner.beginDirectoryBookmarkMutation(book);
-  const key = owner.directoryBookmarkMutationKey(book);
-  return { generation, key, guard: () => owner.isDirectoryBookmarkMutationCurrent(generation, key) &&
-    owner.detailBook === book && owner.navigationGeneration === 7 };
-}
-const request = { chapterIndex: 0, chapterOffset: 12, chapterTitle: 'Chapter A', bookmarkTimes: [] };
-const deferred = () => { let resolve; let reject; const promise = new Promise((yes, no) => {
-  resolve = yes; reject = no; }); return { promise, resolve, reject }; };
-
-for (const mode of ['chapter', 'position', 'delete']) {
-  const owner = makeOwner();
-  let canonical = mode === 'delete' ? [mark(1)] : [];
-  if (mode === 'delete') owner.detailToc = [row(canonical)];
-  let writes = 0;
-  let reads = 0;
-  activeGateway = {
-    async createChapterStartBookmark() { writes++; canonical = [mark(2)]; },
-    async createPositionBookmark() { writes++; canonical = [mark(2)]; },
-    async deleteBookmark() { writes++; canonical = []; return true; },
-    async loadBookmarkProjection() { reads++; throw new Error('read failed after committed write'); },
-  };
-  const ticket = admission(owner);
-  const method = mode === 'chapter' ? 'performDirectoryChapterStartBookmarkCreation' :
-    mode === 'position' ? 'performReaderPageBookmarkCreation' : 'performDirectoryBookmarkDeletion';
-  await owner[method](activeGateway, book, mode === 'delete' ? [1] : request,
-    ticket.guard, ticket.generation, ticket.key);
-  assert.equal(writes, 1);
-  assert.equal(reads, 1);
-  assert.equal(owner.detailToc[0].bookmarks, undefined,
-    `${mode}: committed mutation plus failed reload must invalidate stale bookmark facts`);
-  assert.equal(owner.detailToc[0].title, 'Chapter A');
-  assert.equal(owner.detailToc[0].downloadState, 'completed');
-  assert.match(owner.controlBookmarkProjectionMessage(), /已更新.*重新载入/);
-  assert.equal(owner.directoryBookmarkMutationActiveKey, '', 'failure releases only its mutation lock');
-  assert.equal(owner.beginDirectoryBookmarkMutation(book), -1, 'unknown outcome cannot be blindly written again');
-  activeGateway.loadBookmarkProjection = async () => { reads++; return [row(canonical)]; };
-  await owner.loadControlBookmarks(book.sourceId, book.bookId, () => true);
-  assert.equal(writes, 1, 'retry only lists canonical bookmarks; it never replays mutation');
-  assert.equal(reads, 2);
-  assert.deepEqual(owner.detailToc[0].bookmarks, canonical, 'confirmed empty is allowed after a fresh read');
-  assert.equal(owner.controlBookmarkProjectionMessage(), '');
-  assert.ok(owner.beginDirectoryBookmarkMutation(book) > ticket.generation, 'confirmed read restores CRUD admission');
-}
-
-// A transport error can occur after Core applied the write; no rollback or false "not saved" claim.
 {
-  const owner = makeOwner(); let canonical = []; let writes = 0;
-  activeGateway = { async createPositionBookmark() { writes++; canonical = [mark(4)]; throw Error('lost reply'); },
-    async loadBookmarkProjection() { return [row(canonical)]; } };
-  const ticket = admission(owner);
-  await owner.performReaderPageBookmarkCreation(activeGateway, book, request,
-    ticket.guard, ticket.generation, ticket.key);
-  assert.match(owner.controlBookmarkProjectionMessage(), /结果未确认.*不要重复/);
-  assert.equal(owner.detailToc[0].bookmarks, undefined);
-  await owner.loadControlBookmarks(book.sourceId, book.bookId, () => true);
-  assert.equal(writes, 1); assert.equal(owner.detailToc[0].bookmarks[0].time, 4);
+ const t=await actual('position'),native=t.f.runtime.request.bind(t.f.runtime);t.f.options.afterMethod='bookmark.create';let allowQuery=false;
+ t.f.runtime.request=async(m,p,o)=>{if(m==='bookmark.operation.query'&&!allowQuery)throw Error('original exact query unavailable');return native(m,p,o);};
+ // Preserve preparation query, lose only queries after actual dispatch.
+ t.f.runtime.request=async(m,p,o)=>{if(m==='bookmark.operation.query'&&!allowQuery&&t.f.writes().length>0)throw Error('original exact query unavailable');return native(m,p,o);};
+ t.mutate();await settled(t.f);assert.equal(t.f.writes().length,1);assert.equal(t.h.directoryOperation.projection.receipt.confirmation,'unknown');
+ await t.h.loadControlBookmarks(book.sourceId,book.bookId,()=>true);assert.equal(t.h.directoryOperation.projection.receipt.confirmation,'unknown','matching list cannot settle original ACK');
+ t.mutate();await settled(t.f);assert.equal(t.f.writes().length,1);allowQuery=true;
+ const op=t.h.directoryOperation;t.h.reconcileDirectoryOperation(op.generation,t.h.directoryOperationPresentationId());await settled(t.f);
+ assert.equal(t.f.writes().length,1);assert.equal(t.h.directoryOperation.projection.receipt.confirmation,'confirmed');assert.equal(t.h.detailToc[0].bookmarks[0].chapterOffset,12);
 }
-// Multiple deletes are not one atomic write. Preserve confirmed progress, verify the uncertain remainder.
 {
-  const owner = makeOwner(); let canonical = [mark(1), mark(2)]; let calls = 0;
-  owner.detailToc = [row(canonical)];
-  activeGateway = { async deleteBookmark(time) { calls++;
-    if (calls === 2) throw Error('second reply unknown');
-    canonical = canonical.filter(entry => entry.time !== time); return true; },
-  async loadBookmarkProjection() { return [row(canonical)]; } };
-  const ticket = admission(owner);
-  await owner.performDirectoryBookmarkDeletion(activeGateway, book, [1, 2],
-    ticket.guard, ticket.generation, ticket.key);
-  assert.match(owner.controlBookmarkProjectionMessage(), /部分.*已更新.*不要重复/);
-  await owner.loadControlBookmarks(book.sourceId, book.bookId, () => true);
-  assert.equal(calls, 2); assert.deepEqual(owner.detailToc[0].bookmarks.map(entry => entry.time), [2]);
+ const t=await actual('delete'),second=await t.seed(24);await t.h.loadControlBookmarks(book.sourceId,book.bookId,()=>true);const times=t.h.detailToc[0].bookmarks.map(b=>b.time),native=t.f.runtime.request.bind(t.f.runtime);let deletes=0,allowQuery=false;
+ t.f.runtime.request=async(m,p,o)=>{if(m==='bookmark.delete'&&++deletes===2){t.f.calls.push({method:m,params:p});o.onDispatch?.();throw Error('second reply unknown before observed effect');}if(m==='bookmark.operation.query'&&deletes===2&&!allowQuery)throw Error('second exact query unavailable');return native(m,p,o);};
+ t.h.deleteDirectoryBookmarks(times);await settled(t.f);assert.equal(deletes,2);assert.equal(t.h.directoryOperation.projection.receipt.confirmation,'unknown');
+ await t.h.loadControlBookmarks(book.sourceId,book.bookId,()=>true);assert.equal(deletes,2);assert.equal(t.h.directoryOperation.projection.receipt.confirmation,'unknown');
+ const live=await t.f.command('bookmark.list',{bookName:book.title,bookAuthor:book.author});assert.deepEqual(live.data.bookmarks.map(b=>b.time),[second]);
 }
-// Late failure cannot mutate another book or clear a newer transaction owner.
 {
-  const owner = makeOwner(); const pending = deferred();
-  const ticket = admission(owner);
-  const run = owner.performReaderPageBookmarkCreation({ createPositionBookmark: () => pending.promise },
-    book, request, ticket.guard, ticket.generation, ticket.key);
-  owner.detailBook = { ...book, bookId: 'book-B' }; owner.detailToc = [row([mark(9)])];
-  owner.directoryBookmarkMutationGeneration++; owner.directoryBookmarkMutationActiveKey = 'new-owner';
-  pending.reject(Error('late failure')); await run;
-  assert.equal(owner.directoryBookmarkMutationActiveKey, 'new-owner');
-  assert.equal(owner.directoryBookmarkProjectionFailureMessage, '');
-  assert.equal(owner.detailToc[0].bookmarks[0].time, 9);
+ const t=await actual('position'),gate=deferred();t.f.options.pauseMethod='bookmark.create';t.f.options.pauseAfterDispatch=true;t.f.options.gate=gate;t.mutate();
+ await until(()=>t.f.writes().length===1);t.h.detailBook={...book,bookId:'successor'};t.h.navigationGeneration++;t.h.detailToc=[row([mark(9)])];gate.reject(Error('late write failure'));await settled(t.f);
+ assert.equal(t.h.detailBook.bookId,'successor');assert.equal(t.h.detailToc[0].bookmarks[0].time,9);assert.equal(t.f.directory.snapshot().projection.receipt.confirmation,'unknown');
 }
-// A download/title projection changes while the committed mutation is being re-read.
 {
-  const owner = makeOwner(); const pending = deferred(); const ticket = admission(owner);
-  activeGateway = { async createPositionBookmark() {}, loadBookmarkProjection: () => pending.promise };
-  const run = owner.performReaderPageBookmarkCreation(activeGateway, book, request,
-    ticket.guard, ticket.generation, ticket.key);
-  await Promise.resolve(); owner.detailToc = [row([], 'Latest title', 'queued')];
-  pending.resolve([row([mark(6)])]); await run;
-  assert.equal(owner.detailToc[0].title, 'Latest title');
-  assert.equal(owner.detailToc[0].downloadState, 'queued');
-  assert.equal(owner.detailToc[0].bookmarks[0].time, 6);
+ const t=await actual('position'),gate=deferred(),native=t.f.runtime.request.bind(t.f.runtime);t.f.runtime.request=async(m,p,o)=>{if(m==='bookmark.list')await gate.promise;return native(m,p,o);};t.mutate();
+ await until(()=>t.f.writes().length===1);t.h.detailToc=[row([],'Converted title','queued')];gate.resolve();await settled(t.f);
+ assert.equal(t.h.detailToc[0].title,'Converted title');assert.equal(t.h.detailToc[0].downloadState,'queued');assert.equal(t.h.detailToc[0].bookmarks[0].chapterOffset,12);
 }
 // Execute real Host watchers/loading, including either ArkUI prop delivery order.
 const hostSource = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url), 'utf8');

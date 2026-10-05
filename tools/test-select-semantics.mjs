@@ -1,3 +1,6 @@
+import { resolveReaderChoiceSpec, choiceRowProbe } from './lib/reader-choice-row-probe.mjs';
+import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
+import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { themeDayDesignSource } from './lib/reader-theme-design-source.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -49,6 +52,7 @@ assert.match(sync, /this\.gatedRow\('备份频率'/);
 
 const select = read('entry/src/main/ets/features/common/ReaderSelect.ets');
 const panel = read('entry/src/main/ets/features/common/ReaderSelectPanel.ets');
+const choices = read('entry/src/main/ets/features/common/ReaderChoiceSpecs.ets');
 const motion = read('entry/src/main/ets/features/common/MotionSpec.ets');
 assert.match(select, /@Prop controlWidth: number = 0/);
 assert.match(panel, /@Prop controlWidth: number = 0/);
@@ -60,7 +64,7 @@ assert.doesNotMatch(select, /@Prop (appearanceCompact|settingsPage|settingsTable
 assert.doesNotMatch(panel, /@Prop (appearanceCompact|settingsPage|settingsTablet|sourceGroup): boolean/,
   'the overlay must consume the same typed variant contract');
 assert.match(select, /@Prop reduceMotion: boolean = false/);
-assert.match(panel, /@Prop reduceMotion: boolean = false/);
+assert.match(panel, /@Prop @Watch\('onReduceMotionChanged'\) reduceMotion: boolean = false/);
 assert.match(select,
   /private settingsTrigger[\s\S]*?\.height\(34\)[\s\S]*?\.backgroundColor\(readerAppColor\('app\.ReaderSelect\.settingsTrigger\.backgroundColor\.0F2D4A3E', this\.appThemeScheme\)\)[\s\S]*?\.borderRadius\(7\)/,
   'Settings/SelectTrigger must use its page-specific Figma geometry and surface');
@@ -90,9 +94,21 @@ assert.match(panel,
   'the Figma motion must animate once and switch directly under reduced motion');
 assert.match(panel, /this\.chevronAngle = -180/,
   'the selected-row chevron must rotate around its fixed center while the panel expands');
-assert.match(panel,
-  /private sourceGroupSelectedRow[\s\S]*?TYPE_SELECT_SOURCE_GROUP_VALUE\.fontFamily[\s\S]*?app\.media\.source_group_chevron[\s\S]*?\.backgroundColor\(readerAppColor\('app\.ReaderSelectPanel\.sourceGroupSelectedRow\.backgroundColor\.FFFFFCF8', this\.appThemeScheme\)\)/,
-  'the expanded source-group selected row must preserve the trigger typography, icon, and surface');
+assert.match(panel, /ReaderChoiceRow\(\{[\s\S]*'source-group-selected'/,
+  'the expanded source-group row consumes the actual shared finite implementation');
+const sourceGroupSpec=resolveReaderChoiceSpec('source-group-selected');
+assert.deepEqual(sourceGroupSpec.text,readerTypographyRoles.TYPE_SELECT_SOURCE_GROUP_VALUE);
+assert.deepEqual(sourceGroupSpec.selectedText,readerTypographyRoles.TYPE_SELECT_SOURCE_GROUP_VALUE);
+assert.equal(sourceGroupSpec.selectedBackground,'app.ReaderSelectPanel.sourceGroupSelectedRow.backgroundColor.FFFFFCF8');
+assert.equal(sourceGroupSpec.iconDay,'app.media.source_group_chevron');assert.equal(sourceGroupSpec.iconNight,'app.media.source_group_chevron_theme_night');
+assert.deepEqual([sourceGroupSpec.height,sourceGroupSpec.layout,sourceGroupSpec.textLeft,sourceGroupSpec.textTop,sourceGroupSpec.iconRight,sourceGroupSpec.iconTop],[36,'positioned',14,10,21,12]);
+for(const scheme of ['day','night']){
+ const actual=choiceRowProbe(),owner=actual.owner;Object.assign(owner,{specId:'source-group-selected',label:'当前分组',selected:true,scheme,availableWidth:276,chevronAngle:-180,actionEnabled:true});owner.aboutToAppear();owner.initialRender();
+ const nodes=actual.nodes(owner),label=nodes.find(n=>n.type==='Text'),icon=nodes.find(n=>n.type==='Image');
+ assert.equal(label.fontSize,sourceGroupSpec.text.fontSizeFp);assert.equal(label.fontFamily,sourceGroupSpec.text.fontFamily);assert.equal(label.fontWeight,sourceGroupSpec.text.fontWeight);
+ assert.equal(label.fontColor,readerAppColor(sourceGroupSpec.selectedTextRole,scheme));assert.equal(icon.create,scheme==='night'?sourceGroupSpec.iconNight:sourceGroupSpec.iconDay);
+ assert.ok(nodes.some(n=>n.backgroundColor===readerAppColor(sourceGroupSpec.selectedBackground,scheme)));assert.deepEqual([icon.width,icon.height],[12,12]);
+}
 assert.match(panel,
   /private panelBorderColor[\s\S]*?this\.variant === 'sourceGroup'[\s\S]*?return readerAppColor\('app\.ReaderSelectPanel\.panelBorderColor\.paint\.85B4A697', this\.appThemeScheme\)/,
   'the expanded source-group panel must preserve the source-management field border');

@@ -1,0 +1,23 @@
+# Source switch: actual Index consumption and retirement
+
+The current Index delegates candidate discovery, dirty subscriptions, anchor selection, canonical progress serialization, commit evidence, fixed intent, exact recovery, pending transaction, rollback and failed-candidate state to the existing `SourceSwitchHost.forRuntime`. It retains page navigation, the reader seam and current presentation DTOs. Its copied pending field is written only by the Host snapshot emitter and is used only by the current page's availability projection. It does not dispatch source RPCs, own a transaction generation, or compensate an identity-only pending match.
+
+Actual UI paths:
+
+- Detail and reader-control entry use the same Host; SourceSwitchWindow receives the emitted state and current scope.
+- The detail overlay and ReaderShell overlay key only their small temporary surface by scope. Their physical close/retry/refresh/pick/rollback callbacks capture that scope. The persistent ReadingExperience remains keyed by its original book/ready identity.
+- The reader failure retry/dismiss action carries the original lexical scope through LRE → ReaderShell → Index → Host. When a failed detail acquisition mounts reading, the exact failed identity/candidate is rebound to that reader with a new lease and scope, without IO.
+- A successful target seam retains the acquired session, matched anchor and reader tree policy, then binds the new Runtime/mount/navigation/book lease to the pending domain journey. Cold transaction resolution is a pure Host read followed by the same reader bind.
+- Only `ReadingCommit.sourceSwitchTransactionId`, supplied by the actual canonical Gateway ACK, can call `targetCommitted`. Ordinary progress, another book or old transaction cannot release the current barrier. No callback reads a fresh pending ID to invent a finalization receipt.
+- After that exact finalization, Index delegates cleanup of the captured old source/book to `ReadingOfflineHost`. Its Core clear ACK/unknown and platform-image outcome are separate facts and cannot undo the source finalization. The callback cannot repeat cleanup on a later ordinary/copy notification.
+- System file open consumes `Host.blocksExit(book)`. Navigation/teardown retires only the Host scope owned by that physical Index; a late old teardown cannot retire a newer same-Runtime presentation. Accepted late writes remain in the feature owner and do not navigate an obsolete reader.
+
+Deleted old Index implementations: discovery subscription/dirty loop, commit DTO and canonical anchor election, per-book progress lane coordination, mutable failed candidate, rollback coordinator, identity-only lost-ACK compensation, pending startup/reader query algorithms and direct retired-source cache Gateway call. Existing UI styles, surface dimensions, candidate keys and reader identity scheme remain unchanged. Known Search candidates still paint before registry/cache RPC completion after the required local intent-authority admission.
+
+## Evidence and limits
+
+`test-source-switch-index-owner-sdk` executes the actual Host/Gateway/IntentStore, Index SourceSwitch methods and navigation seam, decorated SDK SourceSwitchWindow/CandidateRow/LatencyBar/shared bounded frame, and the actual OfflineHost/Gateway cleanup producer. It covers candidate → target seam, exact/wrong/ordinary finalization, old detail and reader physical callbacks, close/reopen, unknown title and read-only recovery, late accepted ACK, same-Runtime successor lease, unavailable Runtime, failure reader rebind, and cleanup confirmed/platform-failed/Core-unknown outcomes.
+
+The original presented-progress regression now executes that actual owner, with its unchanged 982/988 chapter cases, failed progress read, failed write, lost write ACK, canceled owner and serialized transaction barrier. The original Gateway dirty/reset retry tests execute the actual SourceSwitchHost discovery; they still assert no automatic failure retry loop, union of affected work and complete relation membership. Existing catalog sizes 20/990/1370 keep the acquired target without duplicate catalog requests.
+
+The fixture's runtime, Core envelopes, native file IO, Repeat/Refresh scheduling and UI removal are controlled boundaries. Installed SDK parse/emit/observer execution is evidence for the exercised source and callback contracts; full ArkTS application compilation, native focus/keyboard/layout/removal, HAP provenance and target behavior are separate exits. This is not a whole-P2 closure claim. Offline durable authority will be integrated through P4's shared exact clear contract; this slice consumes the real existing cleanup entry, not a second cache journal.

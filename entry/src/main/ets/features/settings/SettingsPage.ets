@@ -1,5 +1,11 @@
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
+import type { SettingsOperationProjection, SettingsCacheCleanupSnapshot } from './SettingsHost';
+import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '../../app/ReaderNativeAlertOwner';
+import { TYPE_APP_INHERITED_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_ACTION, TYPE_SETTINGS_CACHE_ACTION, TYPE_SETTINGS_DANGER_LABEL } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
+import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 // Settings General — rebuilt 2026-08-05 against live Figma nodes
 // 943:2897 (Phone 390×844) / 943:3369 (Tablet 760×960).
 // Batch 3: 设置/偏好/行为/权限四个区块收敛到 CategorySection(Card+Heading+rows)，
@@ -49,6 +55,8 @@ export interface SettingsSnapshot {
   crashLog: boolean;
 }
 
+let settingsSelectionGeneration: number = 0;
+
 @Component
 export struct SettingsPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
@@ -63,6 +71,12 @@ export struct SettingsPage {
     crashLog: true,
   };
   @Prop isTablet: boolean;
+  @Prop operation: SettingsOperationProjection = { action: 'load' };
+  @Prop @Watch('onCacheCleanupChanged') cacheCleanup: SettingsCacheCleanupSnapshot | undefined = undefined;
+  onReconcile: (generation: number) => void = (_generation: number): void => {};
+  onRetryAccepted: (generation: number) => void = (_generation: number): void => {};
+  onReconcileCache: (generation: number) => void = (_generation: number): void => {};
+  onContinueCache: (generation: number) => void = (_generation: number): void => {};
   @StorageLink('readerAppThemeMode') private appThemeMode: string = 'system';
   @State private languageValue: string = '简体中文';
   @State private startupValue: string = '书架';
@@ -75,9 +89,16 @@ export struct SettingsPage {
   @State private cacheCleanupInFlight: boolean = false;
   @State private resetInFlight: boolean = false;
   @State private resetMessage: string = '';
+  private readonly nativeAlertOwner: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
   private mounted: boolean = false;
+  private themeOwner: ReaderRuntimeOwner | undefined = undefined;
+  @State private temporaryBackIdentity: string = '';
+  onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string) => void =
+    (_handler: (() => boolean) | undefined, _identity: string): void => {};
   private resetRevision: number = 0;
   @State private openSelect: SettingsSelectField | '' = '';
+  @State private selectionId: string = '';
+  private selectionField: SettingsSelectField | '' = '';
   // 展开面板锚点: 触发条全局坐标减去宿主 Stack 原点, 得面板相对宿主 Stack 的位置。
   // selectAnchors 为普通 map(非 @State): 逐行 onAreaChange 写入, 打开时读入 anchorX/Y。
   @State private anchorRight: number = 0;
@@ -92,22 +113,44 @@ export struct SettingsPage {
   onOpenSync: () => void = (): void => {};
   onRssRequested: () => void = (): void => {};
   onDiscoverRequested: () => void = (): void => {};
-  onClearCache: () => Promise<boolean> = async (): Promise<boolean> => false;
+  onClearCache: () => Promise<SettingsCacheCleanupSnapshot | undefined> = async (): Promise<SettingsCacheCleanupSnapshot | undefined> => undefined;
   onRestoreDefaults: () => Promise<boolean> = async (): Promise<boolean> => false;
   onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog', value: boolean) => void =
     (_key: string, _value: boolean): void => {};
 
   aboutToAppear(): void {
     this.mounted = true;
+    try { this.themeOwner = ReaderRuntimeOwner.current(); }
+    catch (_unavailable) { this.themeOwner = undefined; }
     registerReaderFonts(this.getUIContext().getFont());
     this.syncSnapshotValues();
+    this.onCacheCleanupChanged();
+    const identity = `settings-back:${++settingsSelectionGeneration}`;
+    this.temporaryBackIdentity = identity;
+    this.onTemporaryBackBridge((): boolean => this.consumeTemporaryBack(identity), identity);
   }
 
-  aboutToDisappear(): void { this.mounted = false; this.resetRevision += 1; }
+  aboutToDisappear(): void {
+    const identity = this.temporaryBackIdentity;
+    this.mounted = false;
+    this.themeOwner = undefined;
+    this.temporaryBackIdentity = '';
+    this.nativeAlertOwner.retire();
+    this.resetRevision += 1;
+    this.retireSelection();
+    this.onTemporaryBackBridge(undefined, identity);
+  }
+
+  private consumeTemporaryBack(identity: string): boolean {
+    if (!this.mounted || identity !== this.temporaryBackIdentity || !this.ownsSelection(this.selectionId)) return false;
+    this.retireSelection();
+    return true;
+  }
 
   build() {
     SettingsShell({
       activeSection: this.activeSection,
+      tapBottomScrollTop: this.tapBottomScrollTopValue,
       onSectionChange: (section: 'home' | 'general'): void => {
         this.onSectionChange(section);
       },
@@ -133,6 +176,7 @@ export struct SettingsPage {
 
   @Builder
   private buildHome() {
+    this.operationFeedback();
     CategorySection({ title: '设置' }) {
       this.navRow('通用设置', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_general_theme_night') : $r('app.media.settings_row_general')), (): void => {
         this.onSectionChange('general');
@@ -156,10 +200,59 @@ export struct SettingsPage {
       this.permissionCard();
     }
     this.dangerRow();
-    if (this.resetMessage.length > 0) {
-      Text(this.resetMessage).fontSize(12).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+    this.operationFeedback();
+  }
+
+  private recovery(): ReaderRecoveryView { return readerRecoveryView(this.operation.receipt, this.operation.readFacts); }
+
+  private feedbackMessage(): string {
+    const messages: string[] = [];
+    if (this.recovery().visible) messages.push(this.recovery().message);
+    else if (this.resetMessage.length > 0) messages.push(this.resetMessage);
+    if (this.cacheCleanup?.operation.canRetry || this.cacheCleanup?.confirmation === 'unknown')
+      messages.push(this.cacheCleanup.operation.message ?? '原清理结果尚未确认，请核对；已有正文仍可使用');
+    return messages.join('\n');
+  }
+  private recoveryActionIdentities(): string[] {
+    const identities: string[] = [];
+    if (this.recovery().canRetry) identities.push(`${this.temporaryBackIdentity}\u0000read\u0000${this.recovery().generation}`);
+    if (this.operation.canRetryAccepted === true && this.operation.receipt !== undefined)
+      identities.push(`${this.temporaryBackIdentity}\u0000accepted\u0000${this.operation.receipt.facts.generation}`);
+    if (this.cacheCleanup !== undefined && !this.cacheCleanup.busy && this.cacheCleanup.operation.canRetry)
+      identities.push(`${this.temporaryBackIdentity}\u0000cache-read\u0000${this.cacheCleanup.operation.generation}`);
+    if (this.cacheCleanup?.canContinueOriginal === true && !this.cacheCleanup.busy)
+      identities.push(`${this.temporaryBackIdentity}\u0000cache-continue\u0000${this.cacheCleanup.operation.generation}`);
+    return identities;
+  }
+  private recoveryActionGeneration(identity: string): number { return Number(identity.slice(identity.lastIndexOf('\u0000') + 1)); }
+  private recoveryActionKind(identity: string): string { return identity.split('\u0000')[1]; }
+  private recoveryActionLabel(identity: string): string {
+    const kind = this.recoveryActionKind(identity);
+    return kind === 'read' ? '刷新设置' : kind === 'accepted' ? '重试保存当前设置' :
+      kind === 'cache-read' ? '核对清理结果' : '继续原操作';
+  }
+  private recoveryActionCurrent(identity: string): boolean {
+    return this.mounted && ReaderRuntimeOwner.isCurrent(this.themeOwner) && this.recoveryActionIdentities().includes(identity);
+  }
+  private dispatchRecoveryAction(identity: string): void {
+    if (!this.recoveryActionCurrent(identity)) return;
+    const generation = this.recoveryActionGeneration(identity), kind = this.recoveryActionKind(identity);
+    if (kind === 'read') this.onReconcile(generation);
+    else if (kind === 'accepted') this.onRetryAccepted(generation);
+    else if (kind === 'cache-read') this.onReconcileCache(generation);
+    else if (kind === 'cache-continue') this.onContinueCache(generation);
+  }
+
+  @Builder
+  private operationFeedback() {
+    if (this.feedbackMessage().length > 0) {
+      Text(this.feedbackMessage()).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .width('100%').padding(12);
     }
+    ForEach(this.recoveryActionIdentities(), (identity: string): void => {
+      ReaderRecoveryAction({ label: this.recoveryActionLabel(identity), generation: this.recoveryActionGeneration(identity),
+        actionEnabled: this.recoveryActionCurrent(identity), onReconcile: (): void => this.dispatchRecoveryAction(identity) });
+    }, (identity: string): string => identity);
   }
 
   @Builder
@@ -210,21 +303,17 @@ export struct SettingsPage {
   @Builder
   private switchRow(label: string, icon: () => Resource, key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
   ) {
-    CategoryRow({
-      icon: icon(),
-      label: label,
-      // The shared row already owns the topmost tap gesture. Wire the same
-      // idempotent target value here so both the row and the visual toggle are
-      // reachable on device and through accessibility focus.
-      onRowClick: (): void => this.toggleSetting(key, !this.settingValue(key)),
-    }) {
-      ReaderToggle({
-        value: this.settingValue(key),
-        radius: 999,
-        onToggle: (): void => this.toggleSetting(key, !this.settingValue(key)),
-      });
-    }
+    ForEach([this.temporaryBackIdentity], (identity: string): void => {
+      CategoryRow({ icon: icon(), label,
+        onRowClick: (): void => this.toggleSetting(key, !this.settingValue(key), identity) }) {
+        ReaderToggle({ value: this.settingValue(key), specId: 'standard-toggle',
+          inputIdentity: `${identity}:${key}`, accessibilityLabel: label,
+          actionEnabled: this.settingCanToggle(identity), isBusy: this.settingToggleBusy(),
+          onToggle: (next: boolean): void => this.toggleSetting(key, next, identity) });
+      }
+    }, (identity: string): string => identity);
   }
+
 
   private onSnapshotChanged(): void {
     this.syncSnapshotValues();
@@ -237,19 +326,23 @@ export struct SettingsPage {
     this.crashLogValue = this.snapshot.crashLog;
   }
 
+  private settingToggleBusy(): boolean {
+    return this.operation.receipt?.facts.fact === 'refreshing';
+  }
+
+  private settingCanToggle(identity: string): boolean {
+    return this.mounted && identity === this.temporaryBackIdentity && ReaderRuntimeOwner.isCurrent(this.themeOwner) &&
+      !this.resetInFlight && !this.settingToggleBusy() && this.operation.receipt?.receipt.confirmation !== 'unknown';
+  }
+
   private toggleSetting(
     key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
     value: boolean,
+    identity: string = this.temporaryBackIdentity,
   ): void {
-    if (key === 'autoCheckUpdate') {
-      this.autoCheckUpdateValue = value;
-    } else if (key === 'tapBottomScrollTop') {
-      this.tapBottomScrollTopValue = value;
-    } else if (key === 'reduceMotion') {
-      this.reduceMotionValue = value;
-    } else {
-      this.crashLogValue = value;
-    }
+    if (!this.settingCanToggle(identity)) return;
+    // The Settings owner publishes the accepted snapshot before/after its
+    // actual IO. The page never paints an unaccepted optimistic mirror.
     this.onToggle(key, value);
   }
 
@@ -282,7 +375,7 @@ export struct SettingsPage {
         variant: this.isTablet ? 'settingsTablet' : 'settingsPhone',
         reduceMotion: this.reduceMotionValue,
         onToggle: (): void => {
-          this.openSelect = this.openSelect === key ? '' : key;
+          this.toggleSelection(key);
           const a = this.selectAnchors[key];
           if (a !== undefined) {
             this.anchorRight = a.right;
@@ -312,20 +405,39 @@ export struct SettingsPage {
     Row({ space: 12 }) {
       this.labelColumn(label, icon);
 
-      ReaderSegmentedControl({
-        options: SEG_OPTIONS,
-        selectedIndex: this.themeIndex(),
-        onSelect: (index: number): void => {
-          void ReaderThemeHost.selectApp(index === 0 ? 'system' : index === 1 ? 'day' : 'night')
-            .catch((): void => { this.getUIContext().getPromptAction().showToast({ message: '主题保存失败，已恢复原配置' }); });
-        },
-      });
+      this.appThemeControl();
     }
     .width('100%')
     .constraintSize({ minHeight: SELECT_ROW_H })
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Center)
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) });
+  }
+
+  @Builder
+  private appThemeControl() {
+    ForEach([this.temporaryBackIdentity], (capturedIdentity: string): void => {
+      ReaderSegmentedControl({
+        specId: 'app-theme-segment', options: SEG_OPTIONS, optionIds: ['system', 'day', 'night'],
+        inputIdentity: capturedIdentity, accessibilityLabel: 'App主题',
+        actionEnabled: this.mounted && ReaderRuntimeOwner.isCurrent(this.themeOwner),
+        selectedIndex: this.themeIndex(),
+        onSelect: (index: number): void => this.selectAppTheme(index, capturedIdentity),
+      });
+    }, (capturedIdentity: string): string => capturedIdentity);
+  }
+
+  private selectAppTheme(index: number, identity: string): void {
+    const current = (): boolean => this.mounted && identity === this.temporaryBackIdentity &&
+      ReaderRuntimeOwner.isCurrent(this.themeOwner);
+    if (!current()) return;
+    void ReaderThemeHost.selectApp(index === 0 ? 'system' : index === 1 ? 'day' : 'night')
+      .catch((): void => {
+        if (!current()) return;
+        try { this.getUIContext().getPromptAction().showToast({
+          message: '主题保存尚未确认，当前选择已保留，请稍后重试',
+        }); } catch (_notice) { /* Native feedback cannot rewrite the accepted choice. */ }
+      });
   }
 
   // 行内左列: icon 盒 + label, 间距统一 12 (与 CategoryRow 同构)。
@@ -335,10 +447,10 @@ export struct SettingsPage {
       this.iconBox(icon);
       Text(label)
         .layoutWeight(1)
-        .fontFamily('ReaderInter')
-        .fontWeight(800)
-        .fontSize(13)
-        .lineHeight(15.34)
+        .fontFamily(TYPE_APP_ROW_LABEL.fontFamily)
+        .fontWeight(TYPE_APP_ROW_LABEL.fontWeight)
+        .fontSize(TYPE_APP_ROW_LABEL.fontSizeFp)
+        .lineHeight(TYPE_APP_ROW_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -350,45 +462,63 @@ export struct SettingsPage {
 
   @Builder
   private cacheActionRow() {
-    CategoryRow({
-      icon: (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_cache_theme_night') : $r('app.media.settings_gen_cache')),
-      label: '缓存清理',
-      onRowClick: (): void => this.clearTextCache(),
-    }) {
-      // Keep the reactive state read in the concrete component tree. ArkUI
-      // does not invalidate this slot when the value crosses a @Builder
-      // argument boundary.
-      Stack({ alignContent: Alignment.Center }) {
-        Text(this.cacheActionLabel)
-          .fontFamily('ReaderInter')
-          .fontWeight(800)
-          .fontSize(11).lineHeight(16).maxLines(2)
-          .textAlign(TextAlign.Center)
-          .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
+    ForEach([this.temporaryBackIdentity], (capturedIdentity: string): void => {
+      CategoryRow({
+        icon: (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_cache_theme_night') : $r('app.media.settings_gen_cache')),
+        label: '缓存清理',
+        onRowClick: (): void => this.clearTextCache(capturedIdentity),
+      }) {
+        // Keep the reactive state read in the concrete component tree. ArkUI
+        // does not invalidate this slot when the value crosses a @Builder
+        // argument boundary.
+        Stack({ alignContent: Alignment.Center }) {
+          Text(this.cacheActionLabel)
+            .fontFamily(TYPE_SETTINGS_CACHE_ACTION.fontFamily)
+            .fontWeight(TYPE_SETTINGS_CACHE_ACTION.fontWeight)
+            .fontSize(TYPE_SETTINGS_CACHE_ACTION.fontSizeFp).lineHeight(TYPE_SETTINGS_CACHE_ACTION.lineHeightFp as number).maxLines(2)
+            .textAlign(TextAlign.Center)
+            .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
+        }
+        .constraintSize({ minWidth: 66, maxWidth: '55%', minHeight: 34 })
+        .padding({ left: 10, right: 10, top: 8, bottom: 8 })
+        .borderRadius(6)
+        .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme));
       }
-      .constraintSize({ minWidth: 66, maxWidth: '55%', minHeight: 34 })
-      .padding({ left: 10, right: 10, top: 8, bottom: 8 })
-      .borderRadius(6)
-      .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme));
-    }
+    }, (capturedIdentity: string): string => capturedIdentity);
   }
 
-  private clearTextCache(): void {
-    if (this.cacheCleanupInFlight) {
+  private clearTextCache(identity: string = this.temporaryBackIdentity): void {
+    const current = (): boolean => this.mounted && identity === this.temporaryBackIdentity &&
+      ReaderRuntimeOwner.isCurrent(this.themeOwner);
+    if (!current() || this.cacheCleanupInFlight) return;
+    if (this.cacheCleanup?.confirmation === 'unknown') {
+      try { this.getUIContext().getPromptAction().showToast({ message: this.cacheCleanup.operation.message ?? '清理结果尚未确认' }); }
+      catch (_notice) { /* No native notice failure may dispatch a second clear. */ }
       return;
     }
     this.cacheCleanupInFlight = true;
     this.cacheActionLabel = '清理中';
     void this.onClearCache()
-      .then((cleared: boolean): void => {
-        this.cacheActionLabel = cleared ? '已清理' : '清理失败';
+      .then((snapshot: SettingsCacheCleanupSnapshot | undefined): void => {
+        if (!current() || snapshot === undefined) return;
+        this.applyCacheCleanup(snapshot);
       })
       .catch((): void => {
-        this.cacheActionLabel = '清理失败';
+        if (current()) this.cacheActionLabel = '结果未确认';
       })
       .finally((): void => {
-        this.cacheCleanupInFlight = false;
+        if (current()) this.cacheCleanupInFlight = false;
       });
+  }
+
+  private onCacheCleanupChanged(): void {
+    if (this.cacheCleanup !== undefined) this.applyCacheCleanup(this.cacheCleanup);
+  }
+
+  private applyCacheCleanup(snapshot: SettingsCacheCleanupSnapshot): void {
+    this.cacheCleanupInFlight = snapshot.busy;
+    this.cacheActionLabel = snapshot.busy ? '清理中' : snapshot.confirmation === 'confirmed' ? '已清理' :
+      snapshot.confirmation === 'unknown' ? '结果未确认' : snapshot.confirmation === 'undispatched' ? '清理失败' : '清理文字缓存';
   }
 
   @Builder
@@ -456,6 +586,31 @@ export struct SettingsPage {
 
   // 展开面板: SettingsShell 根 Stack 即全高 overlay 宿主, 面板相对位置 = 触发条全局坐标
   // - 宿主原点。面板落在宿主 bounds 内 → 所有选项可点。
+  private toggleSelection(field: SettingsSelectField): void {
+    if (this.openSelect === field) { this.retireSelection(); return; }
+    this.openSelect = field;
+    this.selectionField = field;
+    this.selectionId = `${field}:${++settingsSelectionGeneration}`;
+  }
+
+  private retireSelection(): void {
+    this.openSelect = ''; this.selectionField = ''; this.selectionId = '';
+  }
+
+  private ownsSelection(identity: string | undefined): boolean {
+    return this.mounted && identity !== undefined && identity.length > 0 && identity === this.selectionId &&
+      this.selectionField !== '' && this.selectionField === this.openSelect;
+  }
+
+  private commitSelection(option: string, identity: string | undefined): void {
+    if (!this.ownsSelection(identity) || this.openSelect === '' || !this.selectOptions(this.openSelect).includes(option)) return;
+    this.setSelectValue(this.openSelect, option); this.retireSelection();
+  }
+
+  private dismissSelection(identity: string | undefined): void {
+    if (this.ownsSelection(identity)) this.retireSelection();
+  }
+
   @Builder
   private buildOverlay() {
     if (this.openSelect !== '') {
@@ -466,16 +621,9 @@ export struct SettingsPage {
         options: this.selectOptions(this.openSelect),
         anchorRight: this.anchorRight - this.originX,
         anchorBottom: this.anchorBottom - this.originY,
-        onSelect: (opt: string): void => {
-          const field = this.openSelect;
-          if (field !== '') {
-            this.setSelectValue(field, opt);
-          }
-          this.openSelect = '';
-        },
-        onDismiss: (): void => {
-          this.openSelect = '';
-        },
+        selectionId: this.selectionId,
+        onSelect: (opt: string, identity?: string): void => this.commitSelection(opt, identity),
+        onDismiss: (identity?: string): void => this.dismissSelection(identity),
       });
     }
   }
@@ -484,9 +632,9 @@ export struct SettingsPage {
   private inlineAction(label: string, width: number) {
     Stack({ alignContent: Alignment.Center }) {
       Text(label)
-        .fontFamily('ReaderInter')
-        .fontWeight(800)
-        .fontSize(11)
+        .fontFamily(TYPE_APP_SMALL_ACTION.fontFamily)
+        .fontWeight(TYPE_APP_SMALL_ACTION.fontWeight)
+        .fontSize(TYPE_APP_SMALL_ACTION.fontSizeFp)
         .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
     }
     .width(width)
@@ -504,13 +652,13 @@ export struct SettingsPage {
   private requestRestoreDefaults(): void {
     if (this.resetInFlight) return;
     const revision = this.resetRevision;
-    this.getUIContext().showAlertDialog({
+    this.nativeAlertOwner.present((native: ReaderNativeAlertOptions): void => this.getUIContext().showAlertDialog(native), 'confirmation', {
       title: '恢复界面与阅读设置',
       message: '恢复通用偏好、书架封面模式、默认日夜阅读主题、跟随系统、阅读排版与朗读偏好。保留书籍、书源、进度、书签、导入字体文件及同步和朗读服务凭据。',
       primaryButton: { value: '取消', action: (): void => {} },
       secondaryButton: { value: '恢复默认', fontColor: readerAppColor('TOK_DANGER', this.appThemeScheme),
         action: (): void => { if (this.mounted && revision === this.resetRevision) void this.performRestoreDefaults(); } },
-    });
+    }, (): boolean => this.mounted && revision === this.resetRevision);
   }
 
   private async performRestoreDefaults(): Promise<void> {
@@ -542,10 +690,10 @@ export struct SettingsPage {
 
       Text('恢复默认')
         .layoutWeight(1)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Regular)
-        .fontSize(16)
-        .lineHeight(19.2)
+        .fontFamily(TYPE_SETTINGS_DANGER_LABEL.fontFamily)
+        .fontWeight(TYPE_SETTINGS_DANGER_LABEL.fontWeight)
+        .fontSize(TYPE_SETTINGS_DANGER_LABEL.fontSizeFp)
+        .lineHeight(TYPE_SETTINGS_DANGER_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_DANGER', this.appThemeScheme))
         .maxLines(1);
 

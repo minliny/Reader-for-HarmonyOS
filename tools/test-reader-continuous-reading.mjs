@@ -64,7 +64,7 @@ assert.match(stage,
 assert.match(surface, /export struct ReaderReadingTextFragment/);
 
 assert.match(experience,
-  /this\.readerSettingsSnapshot\.navigationMode === 'continuous'[\s\S]*?ReaderContinuousReadingStage\(\{/);
+  /readerRenderStageKind\(this\.readerSettingsSnapshot\.navigationMode, this\.hasContinuousRenderContent\(\)\) === 'continuous'[\s\S]*?ReaderContinuousReadingStage\(\{/);
 assert.match(experience,
   /fragmentsProvider: \(\): ReadingSurfacePageFragment\[\] => this\.continuousFragments/);
 assert.match(experience,
@@ -87,7 +87,8 @@ assert.match(experience,
 assert.match(experience,
   /interactionEnabled: this\.phase !== 'failed' && this\.sourceSwitchFailureMessage\.length === 0 &&\s*\(this\.readerSettingsSnapshot\.navigationMode === 'paged' \|\|\s*!this\.hasContinuousRenderContent\(\)\) && this\.isReaderPageInteractionEnabled\(\)/,
   'the paged pointer layer must leave recovery buttons and a live List exposed, while preserving centre-control access for a nonfailed empty projection');
-assert.match(experience, /navigationMode === 'continuous' &&\s*this\.hasContinuousRenderContent\(\)/,
+assert.match(experience,
+  /readerRenderStageKind\(this\.readerSettingsSnapshot\.navigationMode, this\.hasContinuousRenderContent\(\)\) === 'continuous'/,
   'the initial empty-to-ready mode branch must observe the same projection revision as the pointer layer');
 assert.match(experience, /if \(navigationChanged && this\.hasCurrentMaterializedChapter\(\)\)/,
   'mode switching during a background measurement must still build the current continuous projection');
@@ -127,7 +128,8 @@ assert.match(stage, /class ContinuousFragmentDataSource implements IDataSource/)
 assert.match(stage, /LazyForEach\(this\.fragmentDataSource/);
 assert.doesNotMatch(stage, /ForEach\(this\.renderFragments\(\)/,
   'long continuous chapters must not eagerly mount every fragment');
-assert.match(experience, /this\.activeGateway\(\)\.resolveAndUpdateProgress\(/);
+assert.match(experience, /this\.progressProducers\.commitContinuous\(/);
+assert.match(experience, /return gateway\.persistPresentedProgress\(bookId, title, anchor, layout, isAdmitted\)/);
 assert.match(experience, /if \(snapshot\.navigationMode === 'continuous'\)/,
   'mode switching must project the current canonical scalar instead of resetting the chapter');
 assert.match(experience, /if \(this\.readerSettingsSnapshot\.navigationMode === 'continuous'\) \{\s*return this\.performContinuousPageTurn\(direction\)/,

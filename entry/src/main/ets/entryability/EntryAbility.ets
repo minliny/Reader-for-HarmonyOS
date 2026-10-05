@@ -10,11 +10,16 @@ import { AbilityConstant, ConfigurationConstant, type Configuration, UIAbility, 
 import { window } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
+import { ReaderStartupContentOwner } from '../app/ReaderStartupContentOwner';
 import { ReaderSystemFileOpenHost } from '../app/ReaderSystemFileOpenHost';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
 import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory } from '../app/ReaderControlVerificationLaunch';
 import { ReaderEventLoopProbe, ReaderEventLoopSample, readerEventLoopProbeEnabled } from '../app/ReaderEventLoopProbe';
+import { probeReaderAtomicSnapshot, type ReaderAtomicSnapshotSample } from '../app/ReaderAtomicSnapshotProbe';
+import { probeReaderAssetInventory, type ReaderAssetInventorySample } from '../app/ReaderAssetInventoryProbe';
 import { ReaderStartupTrace, type ReaderStartupSample } from '../app/ReaderStartupTrace';
+import { ReaderCapacityProbe, type ReaderCapacityQueryOptions } from '../app/ReaderCapacityProbe';
+import type { JsonObject } from '@reader/core-harmony';
 import { readerMotionNowMs } from '../features/common/ReaderMotionClock';
 import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
 import { WebDavCredentialStore } from '../features/sync/WebDavCredentialStore';
@@ -22,6 +27,7 @@ const DOMAIN = 0x5244;
 
 export default class EntryAbility extends UIAbility {
   private windowStageGeneration: number = 0;
+  private startupContent: ReaderStartupContentOwner | undefined = undefined;
   private coldStartPage: string = 'pages/Index';
   private runtimeOwner: ReaderRuntimeOwner | undefined = undefined;
   private themeReady: Promise<void> = Promise.resolve();
@@ -29,13 +35,14 @@ export default class EntryAbility extends UIAbility {
   private bookshelfModeReady: Promise<void> = Promise.resolve();
   private shelfFontsReady: Promise<void> = Promise.resolve();
   private eventLoopProbe: ReaderEventLoopProbe | undefined = undefined;
+  private capacityProbe: ReaderCapacityProbe | undefined = undefined;
   private preparedReadingFontOwner: ReaderRuntimeOwner | undefined = undefined;
   private preparedReadingFontSnapshot: ReaderAppearanceSnapshot | undefined = undefined;
 
   onCreate(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
     const trace = ReaderStartupTrace.install(readerMotionNowMs, (sample: ReaderStartupSample): void => {
       hilog.info(DOMAIN, 'Reader', 'READER_STARTUP %{public}s', JSON.stringify(sample));
-    }, DEBUG === true && BUILD_MODE_NAME === 'debug');
+    }, DEBUG === true && BUILD_MODE_NAME === 'debug', want.parameters?.readerTtsTrace === true);
     trace.mark('ability.create');
     // Diagnostics require a cold start, debug build, and exact primitive
     // boolean parameters. Warm file Wants use the guarded import/exit queue.
@@ -44,6 +51,7 @@ export default class EntryAbility extends UIAbility {
       BUILD_MODE_NAME,
       want.parameters?.readerControlMotionVerification,
       want.parameters?.readerOpenSourcePilot,
+      want.parameters?.readerStartupMainLoadFailure,
     );
     if (readerEventLoopProbeEnabled(DEBUG, BUILD_MODE_NAME, want.parameters?.readerEventLoopProbe)) {
       this.eventLoopProbe = new ReaderEventLoopProbe(readerMotionNowMs,
@@ -67,6 +75,11 @@ export default class EntryAbility extends UIAbility {
     const owner = ReaderRuntimeOwner.install(this.context,
       readerDisableOptionalEntryMemory(DEBUG, BUILD_MODE_NAME, want.parameters?.readerDisableOptionalEntryMemory));
     this.runtimeOwner = owner;
+    if (DEBUG === true && BUILD_MODE_NAME === 'debug' && want.parameters?.readerCapacityTrace === true) {
+      this.capacityProbe = ReaderCapacityProbe.create(DEBUG, BUILD_MODE_NAME, want.parameters?.readerCapacityTrace,
+        async (method: string, params: JsonObject, options: ReaderCapacityQueryOptions): Promise<JsonObject> => (await owner.request(method, params, options)).data,
+        (): boolean => this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner));
+    }
     this.themeReady = trace.measure('startup.theme', (): Promise<void> => ReaderThemeHost.install(owner,
       this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'night' : 'day'))
       .catch((error: Error): void => {
@@ -105,6 +118,22 @@ export default class EntryAbility extends UIAbility {
       });
     ReaderSystemFileOpenHost.install(owner, this.recoveryReady);
     ReaderSystemFileOpenHost.receive(want);
+    // This diagnostic is an explicit cold debug Want only. Normal starts and
+    // warm external files perform no synthetic filesystem work.
+    if (DEBUG === true && BUILD_MODE_NAME === 'debug' && want.parameters?.readerAtomicSnapshotProbe === true) {
+      void this.recoveryReady.then((): Promise<void> => probeReaderAtomicSnapshot(DEBUG, BUILD_MODE_NAME,
+        true, this.context.filesDir, (): boolean => this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner),
+        readerMotionNowMs, (sample: ReaderAtomicSnapshotSample): void => {
+          hilog.info(DOMAIN, 'Reader', 'READER_ATOMIC_SNAPSHOT %{public}s', JSON.stringify(sample));
+        })).catch((): void => {});
+    }
+    if (DEBUG === true && BUILD_MODE_NAME === 'debug' && want.parameters?.readerAssetInventoryProbe === true) {
+      void this.recoveryReady.then((): Promise<void> => probeReaderAssetInventory(DEBUG, BUILD_MODE_NAME,
+        true, (): boolean => this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner), readerMotionNowMs,
+        (sample: ReaderAssetInventorySample): void => {
+          hilog.info(DOMAIN, 'Reader', 'READER_ASSET_INVENTORY %{public}s', JSON.stringify(sample));
+        })).catch((): void => {});
+    }
   }
 
   onNewWant(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
@@ -159,28 +188,45 @@ export default class EntryAbility extends UIAbility {
   onWindowStageCreate(windowStage: window.WindowStage): void {
     ReaderStartupTrace.current()?.mark('window.create');
     const generation = ++this.windowStageGeneration;
-    const win = windowStage.getMainWindowSync();
-    void ReaderStartupTrace.measure('startup.window', (): Promise<boolean> => ReaderWindowCoordinator.install(win))
-      .then((installed: boolean): void => {
-      if (installed && generation === this.windowStageGeneration) {
-        void Promise.all([this.recoveryReady, this.shelfFontsReady]).then((): void => {
-          if (generation === this.windowStageGeneration) this.loadMainContent(windowStage);
+    this.startupContent?.close();
+    let windowReady: Promise<boolean>;
+    try {
+      const win = windowStage.getMainWindowSync();
+      windowReady = ReaderStartupTrace.measure('startup.window', (): Promise<boolean> => ReaderWindowCoordinator.install(win))
+        .catch((error: Error): boolean => {
+          hilog.error(DOMAIN, 'Reader', 'Window metrics setup failed: %{private}s', error.message);
+          return false;
         });
-      }
-    }).catch((error: Error): void => {
-      hilog.error(DOMAIN, 'Reader', 'Window metrics setup failed: %{private}s', error.message);
-      // Window setup failure must not strand the application before its first
-      // page. The default zero-inset snapshot keeps the UI recoverable.
-      if (generation === this.windowStageGeneration) {
-        void Promise.all([this.recoveryReady, this.shelfFontsReady]).then((): void => {
-          if (generation === this.windowStageGeneration) this.loadMainContent(windowStage);
-        });
-      }
+    } catch (error) {
+      hilog.error(DOMAIN, 'Reader', 'Main window access failed: %{private}s', (error as Error).message);
+      windowReady = Promise.resolve(false);
+    }
+    // Window metrics can fall back to their existing zero-inset snapshot.
+    // A bounded admission failure is displayed outside the not-yet-mounted Index.
+    const admission = Promise.all([windowReady, this.recoveryReady, this.shelfFontsReady]).then((): void => {});
+    this.startupContent = new ReaderStartupContentOwner(admission, {
+      loadMain: (done: (code: number) => void): void => this.loadMainContent(windowStage, done),
+      loadRecovery: (done: (code: number) => void): void => {
+        windowStage.loadContent('pages/ReaderStartupRecovery', (error): void => done(error.code));
+      },
+      ready: (): void => { if (generation === this.windowStageGeneration) {
+        this.eventLoopProbe?.start();
+        this.capacityProbe?.start();
+      } },
+      unavailable: (): void => {
+        hilog.error(DOMAIN, 'Reader', 'Startup recovery content could not be mounted; platform recovery remains unavailable');
+      },
+      exit: (): Promise<void> => this.context.terminateSelf(),
+      observerFailed: (error: Error): void => hilog.warn(DOMAIN, 'Reader', 'Startup projection failed: %{private}s', error.message),
     });
+    this.startupContent.start();
   }
 
   onWindowStageDestroy(): void {
     this.eventLoopProbe?.stop('window-destroyed');
+    this.capacityProbe?.stop();
+    this.startupContent?.close();
+    this.startupContent = undefined;
     this.windowStageGeneration += 1;
     ReaderWindowCoordinator.detach();
   }
@@ -208,6 +254,7 @@ export default class EntryAbility extends UIAbility {
     AppStorage.setOrCreate('readerAppForeground', false);
     this.runtimeOwner?.setReadingPreparationContext(false, false);
     this.eventLoopProbe?.stop('background');
+    this.capacityProbe?.stop();
     this.runtimeOwner?.flush().catch((error: Error): void => {
       hilog.error(DOMAIN, 'Reader', 'Core storage flush failed: %{private}s', error.message);
     });
@@ -219,6 +266,9 @@ export default class EntryAbility extends UIAbility {
 
   onDestroy(): void {
     this.eventLoopProbe?.stop('destroyed');
+    this.capacityProbe?.stop();
+    this.startupContent?.close();
+    this.startupContent = undefined;
     ReaderThemeHost.detach();
     this.windowStageGeneration += 1;
     ReaderWindowCoordinator.detach();
@@ -231,18 +281,29 @@ export default class EntryAbility extends UIAbility {
     });
   }
 
-  private loadMainContent(windowStage: window.WindowStage): void {
+  private loadMainContent(windowStage: window.WindowStage, done?: (code: number) => void): void {
+    const generation = this.windowStageGeneration;
     const trace = ReaderStartupTrace.current();
     const startedAt = trace?.begin('startup.load-content') ?? -1;
     trace?.mark('startup.admission-settled');
-    windowStage.loadContent(this.coldStartPage, (error): void => {
+    const page = this.coldStartPage;
+    // A debug fault is one real dispatch, never a synthetic error callback.
+    // Consume before calling the platform so both callback failure and a
+    // synchronous dispatch throw retry the actual Index on the next request.
+    if (page === 'pages/__ReaderStartupMainLoadFailure') {
+      this.coldStartPage = 'pages/Index';
+      trace?.mark('startup.main-load-fault-request');
+    }
+    windowStage.loadContent(page, (error): void => {
+      if (generation !== this.windowStageGeneration) return;
       // This is a platform callback, never evidence of a displayed shelf frame.
       trace?.end('startup.load-content', startedAt, error.code ? 'failed' : 'callback');
       if (error.code) {
         hilog.error(DOMAIN, 'Reader', 'Failed to load main page: %{private}s', JSON.stringify(error));
-      } else {
+      } else if (done === undefined) {
         this.eventLoopProbe?.start();
       }
+      done?.(error.code);
     });
   }
 }

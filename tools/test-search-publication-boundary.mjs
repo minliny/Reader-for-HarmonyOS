@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
+import { actualProjectionTypes } from './lib/bookshelf-projection-owner-probe.mjs';
 
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
@@ -35,6 +36,8 @@ const boundaryDiagnostics = previousImport => {
     [presentationPath, read('features/search/SearchPresentation.ts')],
     [fileURLToPath(new URL('features/search/SearchGateway.ts', prefix)),
       'export interface SearchBook {} export interface SearchResultDelta {} export interface SearchSource {}'],
+    [fileURLToPath(new URL('app/ReaderOperationFacts.ts', prefix)),
+      'export interface OperationFacts<T> {}'],
     [fileURLToPath(new URL('app/ReaderCoreGateway.ts', prefix)), 'export interface ShelfBook {}'],
     [pagePath, 'export type { SearchPresentation } from "./SearchPresentation";'],
   ]);
@@ -69,13 +72,14 @@ const member = (struct, tree, name) => {
 };
 const runtime = createArkUIPropertyRuntimeProbe();
 const nativeRequests = [];
-globalThis.ReaderRuntimeOwner = { current: () => ({ setReadingPreparationContext() {}, request: async method => {
+const nativeRuntime = { setReadingPreparationContext() {}, request: async method => {
   nativeRequests.push(method); assert.fail(`This boundary test must not request Core/network: ${method}`);
-} }) };
+} };
+globalThis.ReaderRuntimeOwner = { current: () => nativeRuntime };
 globalThis.hilog = { warn() {}, error() {}, info() {}, debug() {} };
 const { SearchOrchestrator, SearchQueryRun } = await evaluate([
   'features/common/BookAuthorMetadata.ts',
-  'app/BookRequestScheduler.ts',
+  'app/BookRequestScheduler.ts', 'app/ReaderOperationFacts.ts',
   'features/source/ReaderSourceCategory.ts', 'app/ErrorMessage.ts', 'features/search/SearchBookProjection.ts',
   'features/search/SearchGateway.ts', 'features/search/SearchOrchestrator.ets',
 ].map(name => clean(read(name))).join('\n') + '\nexport { SearchQueryRun };');
@@ -100,7 +104,7 @@ const childMembers = ['publicationRevision', 'publication', 'presentation', 'she
   'resultProjection', 'projectedGroups', 'projectedGroupKeys', 'projectedGroupIndexes', 'changedGroupKeys',
   'warmupGroups', 'visibleStart', 'visibleEnd', 'viewStateRevision', 'listEpoch', 'restoreEpoch',
   'groupResults', 'acceptPublication', 'refreshVisibleResults', 'publishVisibleGroups', 'resultsContent',
-  'searchHeaderHeight', 'searchBottomInset', 'resultStatsHeight'];
+  'operation', 'retryOperation', 'isSweeping', 'searchHeaderHeight', 'searchBottomInset', 'resultStatsHeight'];
 const childProbe = createReaderBuilderProbe(pageSource, childMembers, {
   ...runtime.sdk, SearchPublication, SearchViewState, SearchResultProjection,
   SearchBookGroup: CountedGroup, SearchResultDataSource, List: nativeStub('List'), LazyForEach: nativeStub('LazyForEach'),
@@ -124,17 +128,47 @@ let initialParams;
 class ActualSearchPage extends childProbe.Component {
   constructor(...args) { initialParams = args[1]; super(...args); }
 }
-const indexMembers = ['searchPublication', 'searchPublicationRevision',
-  'searchOrchestrator', 'getSearchOrchestrator', 'searchJourneyActive', 'syncSearchDetailCandidates',
-  'preparePersistedShelfBooks', 'applyBookshelfState', 'copyShelfBookWithSourceName'];
+const indexMembers = ['searchJourneyActive', 'syncSearchDetailCandidates', 'searchHost', 'searchPublicationRevision', 'applyBookshelfState',
+  'getBookshelfProjection', 'applyBookshelfProjection', 'shelfFilter', 'isCurrentRuntime',
+  'searchPageContent', 'searchPageSurface', 'isCurrentSearchPresentation'];
 const parentSource = `@Component struct Index {\n${indexMembers.map(name => member(indexStruct, indexTree, name)).join('\n')}
-build() { ${searchEntry}; }\n}`;
+build() { this.searchPageContent(); }\n}`;
+class SearchHostProbe {
+  constructor(onPublicationChanged, isSearchVisible) {
+    this.viewState = new SearchViewState();
+    this.publication = new SearchPublication();
+    this.revision = 0;
+    this.onPublicationChanged = onPublicationChanged;
+    this.isSearchVisible = isSearchVisible;
+    this.orchestrator = undefined;
+  }
+  updateShelf(books) { this.publication.updateShelf(books); this.revision += 1; this.onPublicationChanged(); }
+  sources() { return this.publication.sourcesAt(this.revision); }
+  presentation() { return this.publication.presentationAt(this.revision); }
+  getOrchestrator() {
+    if (this.orchestrator === undefined) {
+      this.orchestrator = new SearchOrchestrator(
+        presentation => { this.publication.publish(presentation); this.revision += 1; this.onPublicationChanged(); },
+        sources => this.publication.updateSources(sources), this.isSearchVisible);
+    }
+    return this.orchestrator;
+  }
+}
+const projectionTypes = actualProjectionTypes(() => nativeRuntime);
 const { owner: host, output: parentOutput } = createReaderBuilderProbe(parentSource,
   [...indexMembers, 'build'], { ...runtime.sdk, SearchPage: ActualSearchPage, LOCAL_SOURCE_ID: 'local', SearchPublication,
-    SearchOrchestrator, deviceInfo: { deviceType: 'phone' } }, runtime.hooks);
+    SearchOrchestrator, SearchViewState, SearchHost: SearchHostProbe, ReaderRuntimeOwner: projectionTypes.ReaderRuntimeOwner,
+    hilog: globalThis.hilog, DOMAIN: 0, deviceInfo: { deviceType: 'phone' } }, runtime.hooks);
 Object.assign(host, { searchViewState: new SearchViewState(), settingsSnapshot: { reduceMotion: false },
   route: 'search', searchAppForeground: true, detailReturnRoute: 'search', searchDetailCandidates: [], shelfBooks: [], bookshelfLoadGeneration: 1,
-  hydrateShelfSourceNames() {}, scheduleBookshelfBackgroundRefresh() {}, sourceDisplayName: () => '源甲' });
+  mountedRuntimeOwner: nativeRuntime, shelfReceiptRetired: false, navigationGeneration: 1,
+  detailShelfAdmissionMount: 1, rssInstanceIdentity: 'search-publication', shelfReadingFilter: 'all', shelfSourceFilter: 'all',
+  bookshelfViewState: { anchorKey: '' }, sourceSources: [], sourceToolsSnapshot: { sources: [] },
+  // These preparation/diagnostic leaf notifications are outside this pure
+  // publication boundary. The complete original projection owner, Host and
+  // Index binding perform the shelf/identity/membership transformations.
+  scheduleBookshelfBackgroundRefresh() {}, preparePersistedShelfBooks() {}, traceStartupStage() {} });
+host.bookshelfHost = new projectionTypes.Host(() => {}, () => true, () => nativeRuntime);
 host.initialRender();
 const page = [...host.children.values()][0];
 assert.ok(page instanceof childProbe.Component, 'actual compiled child constructor ran');
@@ -143,11 +177,11 @@ Object.assign(page, { appThemeScheme: 'day', contentFrame: () => ({ width: 390 }
   onVisibleGroups() {}, listMounted: false, pageMounted: true, scrollRestored: true,
   resultScroller: {}, userInteracting: false, userScrolling: false });
 page.acceptPublication();
-assert.equal(page.publication, host.searchPublication);
+assert.equal(page.publication, host.searchHost.publication);
 assert.ok(!('presentation' in initialParams) && !('shelfBooks' in initialParams) && !('sources' in initialParams),
   'initial component arguments carry no full DTO/list payload');
 assert.equal(initialParams.publicationRevision, 0);
-const orchestrator = host.getSearchOrchestrator(); orchestrator.sessionOpen = true;
+const orchestrator = host.searchHost.getOrchestrator(); orchestrator.sessionOpen = true;
 function startRun(keyword, count, suffix) {
   const run = new SearchQueryRun(keyword, `request-${suffix}`);
   run.sources = ['source-a', 'empty-a', 'empty-b'].map(sourceId => ({ sourceId, name: sourceId, enabled: true }));
@@ -179,7 +213,7 @@ page.resultDataSource.registerDataChangeListener({ onDatasetChange: operations =
 constructedGroups = 0; const copiesBefore = runtime.copies.length, updatesBefore = runtime.updates.length;
 first.sourceResults.set('empty-a', first.admit([])); first.completed.add('empty-a');
 orchestrator.publishRun(first); runtime.flush();
-assert.equal(runtime.sdk.ObservedObject.GetRawObject(page.presentation), host.searchPublication.presentationAt(host.searchPublicationRevision));
+assert.equal(runtime.sdk.ObservedObject.GetRawObject(page.presentation), host.searchHost.publication.presentationAt(host.searchPublicationRevision));
 assert.equal(page.presentation.results, retained);
 assert.ok(page.presentation.results.every((book, index) => book === retained[index]));
 assert.ok(page.visibleGroups === retainedGroups, 'progress retains the existing State proxy and visible rows');
@@ -211,7 +245,7 @@ Object.keys = value => { const keys = originalKeys(value); copiedObjects++; copi
 try { copied = runtime.deepCopy(page.presentation); } finally { Object.keys = originalKeys; }
 assert.notEqual(copied.results, page.presentation.results);
 assert.ok(copiedObjects >= 3000); constructedGroups = 0;
-host.searchPublication.publish(copied); host.searchPublicationRevision += 1; runtime.flush();
+host.searchHost.publication.publish(copied); host.searchPublicationRevision += 1; runtime.flush();
 const legacyNewGroups = constructedGroups;
 assert.equal(legacyNewGroups, 1000); assert.equal(page.changedGroupKeys.size, 1000);
 
@@ -223,7 +257,7 @@ assert.ok(page.visibleGroups.every(group => group.book.bookId.startsWith('second
 // A real compiled child re-created with current parent arguments reads the
 // stable owner, not a payload captured by the old component constructor.
 const remounted = new childProbe.Component(host, { ...initialParams,
-  publicationRevision: host.searchPublicationRevision, publication: host.searchPublication, viewState: host.searchViewState });
+  publicationRevision: host.searchPublicationRevision, publication: host.searchHost.publication, viewState: host.searchHost.viewState });
 Object.assign(remounted, { onVisibleGroups() {}, listMounted: false, pageMounted: true });
 remounted.acceptPublication();
 assert.equal(runtime.sdk.ObservedObject.GetRawObject(remounted.presentation), orchestrator.presentation);

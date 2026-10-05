@@ -76,20 +76,20 @@ assert.match(coordinator,
 // Fix 2: a refresh-only shelf read that transiently reports empty must not
 // unmount the admitted bookshelf route. Genuine user mutations keep the
 // resetting semantics.
-const applyBody = index.match(
-  /private applyBookshelfState\(state: BookshelfDataState, refreshOnly: boolean = false, preserveAnchor: boolean = true\): void \{([\s\S]*?)\n  \}/);
-assert.ok(applyBody, 'applyBookshelfState must keep its refreshOnly escape hatch');
-assert.match(applyBody[1],
-  /if \(refreshOnly && state\.kind !== 'populated' && this\.isBookshelfVisualAdmitted\) \{[\s\S]*?return;/,
-  'the admitted tree must survive a refresh-only non-populated read');
-const assignmentIndex = applyBody[1].indexOf('this.isCoreShelfEmpty =');
-const hysteresisIndex = applyBody[1].indexOf('if (refreshOnly &&');
-assert.ok(hysteresisIndex >= 0 && assignmentIndex > hysteresisIndex,
-  'the hysteresis guard must run before any state assignment');
-const refreshCallerCount =
-  (index.match(/this\.applyBookshelfState\((?:state|shelf), true\)/g) ?? []).length;
-assert.equal(refreshCallerCount, 2,
-  'only the generic refresh and the background-sweep projection pass refreshOnly');
+const projection = await readFile(new URL('../entry/src/main/ets/features/bookshelf/BookshelfProjectionOwner.ts', import.meta.url), 'utf8');
+const acceptBody = projection.slice(projection.indexOf('  accept('), projection.indexOf('  async page('));
+assert.match(acceptBody, /if \(refreshOnly && state\.kind !== 'populated' && this\.value\.visualAdmitted\) return;/,
+  'the actual domain owner retains admitted rows for refresh-only empty/failure reads');
+assert.ok(acceptBody.indexOf('if (refreshOnly &&') < acceptBody.indexOf('const books = state.shelf.books.map'),
+  'hysteresis runs before domain rows or admission facts change');
+assert.match(index,/projection\.accept\(state, this\.shelfFilter\(\), binding, refreshOnly, preserveAnchor\)/,
+  'Index forwards the explicit UI admission policy to its real domain owner');
+assert.match(projection, /if \(this\.value\.visualAdmitted && facts\.value\.kind !== 'populated'\)/,
+  'generic pure reads retain the admitted tree');
+const catalog = await readFile(new URL('../entry/src/main/ets/features/bookshelf/BookshelfCatalogOwner.ts', import.meta.url),'utf8');
+assert.match(index, /this\.applyBookshelfState\(state, true\)/,
+  'catalog projection keeps refresh-only semantics through its captured binding');
+assert.match(catalog,/binding\.project\(state\)/,'catalog actual read result reaches the original adapter');
 assert.match(index, /this\.applyBookshelfState\(outcome\.shelf\);/,
   'mutation outcomes keep the admission-resetting single-arg call');
 assert.match(index, /this\.applyBookshelfState\(shelf\);/,

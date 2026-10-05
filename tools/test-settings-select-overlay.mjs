@@ -8,6 +8,9 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (path) => themeDayDesignSource(readFileSync(resolve(repo, path), 'utf8'));
 const page = read('entry/src/main/ets/features/settings/SettingsPage.ets');
 const overlay = read('entry/src/main/ets/features/settings/SettingsSelectOverlay.ets');
+const choices = read('entry/src/main/ets/features/common/ReaderChoiceSpecs.ets');
+const typography = read('entry/src/main/ets/features/common/ReaderTypography.ets');
+const surfaces = read('entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets');
 
 assert.match(page, /import \{ SettingsSelectOverlay, type SettingsSelectField \}/);
 assert.match(page, /\['简体中文', '繁體中文', 'English', '日本語', '한국어'\]/,
@@ -20,10 +23,25 @@ assert.match(page,
 
 assert.match(overlay, /Settings\/SelectPanel `4106:64687`/);
 assert.match(overlay, /Settings\/SelectOptionRow `4103:909`/);
+for (const role of [
+  'TYPE_SETTINGS_SELECT_TITLE',
+  'TYPE_SETTINGS_SELECT_PHONE_OPTION',
+  'TYPE_SETTINGS_SELECT_PHONE_CANCEL',
+  'TYPE_SETTINGS_SELECT_TABLET_OPTION',
+]) {
+  assert.match(overlay + choices, new RegExp(role), `${role} is consumed by the selector overlay`);
+  assert.match(typography, new RegExp(`export const ${role} = new ReaderTextStyle`),
+    `${role} is registered in the shared typography contract`);
+}
+assert.doesNotMatch(overlay, /\.fontFamily\('ReaderNotoSansSC'\)/,
+  'settings selector text no longer owns a private font-family tuple');
 assert.match(overlay, /const PHONE_OPTION_HEIGHT = 52/);
-assert.match(overlay, /const TABLET_PANEL_WIDTH = 160/);
-assert.match(overlay, /const TABLET_OPTION_HEIGHT = 42/);
-assert.match(overlay, /const TABLET_ANCHOR_GAP = 6/);
+assert.match(surfaces, /'settings-select-tablet': new PopupSurfaceSpec\(\{[\s\S]*?width: 160/,
+  'tablet selector width remains the existing 160vp contract');
+assert.match(surfaces, /'settings-select-tablet': new PopupSurfaceSpec\(\{[\s\S]*?actionHeight: 42/,
+  'tablet selector option rows remain the existing 42vp contract');
+assert.match(surfaces, /'settings-select-tablet': new PopupSurfaceSpec\(\{[\s\S]*?anchorOverlap: 6/,
+  'tablet selector anchor gap remains the existing 6vp contract');
 assert.match(overlay,
   /backgroundColor\(this\.isTablet \? Color\.Transparent : readerAppColor\('app\.SettingsSelectOverlay\.build\.backgroundColor\.521F1B17', this\.appThemeScheme\)\)/,
   'Phone must use the Figma 32% modal scrim while Tablet remains non-modal visually');
@@ -35,9 +53,17 @@ assert.match(overlay, /Blank\(\)[\s\S]*\.width\(36\)[\s\S]*\.height\(4\)/,
 assert.match(overlay, /Text\('取消'\)[\s\S]*\.height\(PHONE_OPTION_HEIGHT\)/,
   'Phone cancellation remains a separate 52vp card');
 assert.match(overlay,
-  /\.position\(\{[\s\S]*x: this\.anchorRight - TABLET_PANEL_WIDTH[\s\S]*y: this\.anchorBottom \+ TABLET_ANCHOR_GAP/,
+  /\.position\(\{[\s\S]*x: this\.anchorRight - this\.tabletSpec\(\)\.width[\s\S]*y: this\.anchorBottom \+ this\.tabletSpec\(\)\.anchorOverlap/,
   'Tablet popover must be trigger-right-aligned and placed 6vp below it');
-assert.match(overlay, /app\.media\.settings_select_check/,
+assert.match(overlay, /resolvePopupSpec\('settings-select-tablet'\)/,
+  'Tablet selector frame is resolved from the shared popup surface registry');
+assert.match(overlay, /\.onClick\(\(\): void => this\.dismiss\(identity\)\)/,
+  'backdrop and cancel card close through the owner callback');
+assert.match(overlay, /onChoose: \(value: string\): void => this\.choose\(value, identity\)/,
+  'shared production choice row submits through the overlay owner');
+assert.match(overlay, /if \(!this\.ownsOpening\(identity\) \|\| this\.options\.indexOf\(option\) < 0\) return;[\s\S]*this\.onSelect\(option, identity\)/,
+  'option selection is handed to the owner without local asynchronous state');
+assert.match(choices, /app\.media\.settings_select_check/,
   'selected options must expose the Figma check actor');
 
 console.log('settings responsive select overlay contract: PASS');

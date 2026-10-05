@@ -1,9 +1,15 @@
 import { themeDayDesignSource } from './lib/reader-theme-design-source.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import {searchSharedActionFixture,updateActualReaderButton} from './lib/search-shared-action-probe.mjs';
+import {projectOperationFacts} from '../entry/src/main/ets/app/ReaderOperationFacts.ts';
+import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import {sharedActionFeedbackReset} from './lib/shared-action-feedback-state-probe.mjs';
 
 const read = (relative) => themeDayDesignSource(readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8'));
 const tabs = read('entry/src/main/ets/features/shell/MainTabBar.ets');
+const settingsShell = read('entry/src/main/ets/features/shell/SettingsShell.ets');
+const settingsPage = read('entry/src/main/ets/features/settings/SettingsPage.ets');
 const shelf = read('entry/src/main/ets/features/bookshelf/BookshelfPage.ets');
 const search = read('entry/src/main/ets/features/search/SearchPage.ets');
 const searchField = read('entry/src/main/ets/features/common/ReaderSearchField.ets');
@@ -21,6 +27,23 @@ assert.match(tabs, /private railTabItem[\s\S]*\.width\(66\)[\s\S]*\.height\(58\)
   'Tablet tab items must keep the canonical 66x58 geometry');
 assert.equal((tabs.match(/\.fontFamily\(TYPE_MAIN_TAB_LABEL\.fontFamily\)/g) ?? []).length, 2,
   'both shared tab labels must consume one semantic role');
+assert.match(tabs, /onCurrentTap: \(key: string\) => void/,
+  'shared tab bar exposes an optional current-tab action for page-owned scroll-to-top');
+assert.match(tabs,
+  /if \(!active\) \{[\s\S]*?this\.onSelect\(tab\.key\);[\s\S]*?\} else \{[\s\S]*?this\.onCurrentTap\(tab\.key\);/,
+  'active bottom and rail tabs route the current-tab action without changing navigation');
+assert.match(settingsShell, /private readonly homeScroller: Scroller = new Scroller\(\);/,
+  'SettingsShell owns the home scroll controller');
+assert.match(settingsShell, /Scroll\(this\.homeScroller\)/,
+  'Settings home binds the scroll controller used by the current-tab action');
+assert.match(settingsShell,
+  /onCurrentTap: \(_key: string\): void => this\.scrollHomeToTop\(\)/,
+  'Settings home forwards the active-tab tap to its scroll owner');
+assert.match(settingsShell,
+  /private scrollHomeToTop\(\): void \{[\s\S]*?if \(!this\.tapBottomScrollTop \|\| this\.activeSection !== 'home'\) return;[\s\S]*?homeScroller\.scrollTo\(\{ xOffset: 0, yOffset: 0, animation: true \}\)/,
+  'current-tab scrolling is gated by the persisted setting and home section');
+assert.match(settingsPage, /tapBottomScrollTop: this\.tapBottomScrollTopValue,/,
+  'SettingsPage passes the confirmed tap-to-top setting to the shell');
 assert.match(shelf, /private tabletNavigation\(\)[\s\S]*\.width\(82\)\s*\.height\(332\)/,
   'Bookshelf tablet rail must match the shared Figma height');
 
@@ -33,9 +56,19 @@ assert.match(searchField, /\.enterKeyType\(EnterKeyType\.Search\)\s*\.onSubmit\(
 assert.match(search,
   /private canSubmit\(\): boolean \{[\s\S]*return scope === undefined \|\| scope\.length > 0;/,
   'the default all-source scope must keep the search action enabled before the first search');
-assert.match(search,
-  /\.backgroundColor\(readerAppColor\(\'app\.action\.fill\', this\.appThemeScheme\)\)\s*\.opacity\(this\.canSubmit\(\) \? 1 : 0\.4\)[\s\S]*?if \(this\.isSweeping\(\)\)[\s\S]*this\.onStop\(\);[\s\S]*this\.submitSearch\(\);/,
-  'the search action must stay dark and switch from submit to stop during a live sweep');
+for(const busy of[false,true]){
+ const f=searchSharedActionFixture(busy?{kind:'results',operation:projectOperationFacts({phase:'partial',canCancel:true,canRetry:false})}:{kind:'initial'});
+ f.page.searchBar();const action=f.action('search-field-phone',busy?'停止':'搜索');
+ assert.equal(action.native.backgroundColor,readerAppColor('app.action.fill','day'),'actual shared search action keeps the original dark fill');
+ assert.equal(action.native.opacity,1);assert.equal(action.native.enabled,true);
+ sharedActionFeedbackReset(action.actor,action.native);assert.equal(f.calls.filter(c=>c[0]===(busy?'stopSearch':'performSearch')).length,0,'press and cancel-reset alone never submit or stop');
+ action.click();assert.equal(f.calls.filter(c=>c[0]===(busy?'stopSearch':'performSearch')).length,1,'actual native search action submits or stops the live sweep');
+ if(busy){const spinner=[...f.page.children.values()].findLast(c=>c instanceof f.controls.dependencies.SearchSpinner&&c.diameter===13&&c.active);assert.ok(spinner,'busy action executes its actual lexical leading Builder and mounts the shared spinner');assert.ok(f.controls.nodes(spinner).some(n=>n.type==='LoadingProgress'&&n.enableLoading===true),'actual leading spinner enables native loading');}
+ updateActualReaderButton(f,action.actor,{actionEnabled:false});assert.equal(action.native.enabled,false);assert.equal(action.native.opacity,0.4);
+ action.click();assert.equal(f.calls.filter(c=>c[0]===(busy?'stopSearch':'performSearch')).length,1,'disabled real shared actor does not submit or stop');
+ updateActualReaderButton(f,action.actor,{actionEnabled:true});action.actor.aboutToDisappear();action.click();
+ assert.equal(f.calls.filter(c=>c[0]===(busy?'stopSearch':'performSearch')).length,1,'retired actual shared actor cannot dispatch');
+}
 assert.doesNotMatch(search, /SEARCH_BTN_BG/,
   'the initial search action must not fall back to the misleading pale disabled treatment');
 assert.equal((search.match(/SearchSpinner\(\{/g) ?? []).length, 2,

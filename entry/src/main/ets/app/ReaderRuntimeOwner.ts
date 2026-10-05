@@ -1,5 +1,8 @@
 import { supplyBundledSources } from './IncrementalBundledSourceSupply';
 import { BookAcquisitionCoordinator } from './BookAcquisitionCoordinator';
+import { readerRuleMutationEffects } from './ReaderRuleMutationEffects';
+import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError, type BookRequestOptions } from './BookRequestScheduler';
+export { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError } from './BookRequestScheduler';
 import common from '@ohos.app.ability.common';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import {
@@ -132,6 +135,7 @@ export class ReaderRuntimeOwner {
       new HarmonyHttpTtsHost(this),
       new HarmonyTtsMediaSession(context),
       new HarmonyTtsBackgroundSession(context),
+      (): boolean => AppStorage.get<boolean>('readerAppForeground') !== false,
     );
     this.localEpubResourceHost = new LocalEpubResourceHost(context);
     this.readingImageDiskCache = new ReadingImageDiskCache(context);
@@ -149,11 +153,27 @@ export class ReaderRuntimeOwner {
     return ReaderRuntimeOwner.instance;
   }
 
+  /** Identity-only admission for late callbacks. Teardown means false; callers
+   * that require an installed owner still use the throwing current() getter. */
+  static isCurrent(owner: ReaderRuntimeOwner): boolean {
+    return ReaderRuntimeOwner.instance === owner;
+  }
+
   static current(): ReaderRuntimeOwner {
     if (ReaderRuntimeOwner.instance === undefined) {
       throw new Error('ReaderRuntimeOwner must be installed by EntryAbility');
     }
     return ReaderRuntimeOwner.instance;
+  }
+
+  /** Theme preferences share platform storage with the previous Ability.
+   * Loading a successor snapshot is subject to the same close boundary as
+   * native startup; a rejected close never silently admits new writes. */
+  async waitForPredecessorClose(): Promise<void> {
+    await this.predecessorClose;
+    if (this.state === 'closing' || this.state === 'closed') {
+      throw new Error('Reader Host was closed before successor admission');
+    }
   }
 
   async start(): Promise<void> {
@@ -189,7 +209,7 @@ export class ReaderRuntimeOwner {
   bookAcquisitions(): BookAcquisitionCoordinator {
     if (this.bookCoordinator === undefined) {
       this.bookCoordinator = new BookAcquisitionCoordinator(
-        (method: string, params: JsonObject, options: RequestOptions): Promise<ReaderCoreResultEvent> =>
+        (method: string, params: JsonObject, options: BookRequestOptions): Promise<ReaderCoreResultEvent> =>
           this.requestDirect(method, params, options),
         (capability: string): boolean => this.supportsCoreCapability(capability),
       );
@@ -197,7 +217,7 @@ export class ReaderRuntimeOwner {
     return this.bookCoordinator;
   }
 
-  async request(method: string, params: JsonObject = {}, options: RequestOptions = {}): Promise<ReaderCoreResultEvent> {
+  async request(method: string, params: JsonObject = {}, options: BookRequestOptions = {}): Promise<ReaderCoreResultEvent> {
     return this.bookAcquisitions().request(method, params, options);
   }
 
@@ -297,10 +317,11 @@ export class ReaderRuntimeOwner {
     return this.readingEntryPreparations().waitForContentIdle(sourceId, bookId);
   }
 
-  private async requestDirect(method: string, params: JsonObject = {}, options: RequestOptions = {}): Promise<ReaderCoreResultEvent> {
-    if (method === 'cache.clear' || method === 'bookshelf.remove' || method === 'bookshelf.removeBatch' ||
-      method === 'source.delete' || method === 'source.switch.begin' || method === 'source.switch.commit' ||
-      method === 'source.switch.abort' || method === 'runtime.storage.apply' || method === 'runtime.storage.restore')
+  private async requestDirect(method: string, params: JsonObject = {}, options: BookRequestOptions = {}): Promise<ReaderCoreResultEvent> {
+    const preparationEffect=readerRuleMutationEffects(method,params).method;
+    if (preparationEffect === 'cache.clear' || preparationEffect === 'bookshelf.remove' || preparationEffect === 'bookshelf.removeBatch' ||
+      preparationEffect === 'source.delete' || preparationEffect === 'source.switch.begin' || preparationEffect === 'source.switch.commit' ||
+      preparationEffect === 'source.switch.abort' || preparationEffect === 'runtime.storage.apply' || preparationEffect === 'runtime.storage.restore')
       this.preparationIntentEpoch += 1;
     const preparations = this.readingEntryPreparations();
     const invalidatesPreparation = preparations.beginRequest(method, params);
@@ -310,6 +331,14 @@ export class ReaderRuntimeOwner {
       if (runtime === undefined) {
         throw new Error('Reader Core runtime did not become ready');
       }
+      // Non-scheduled writes can wait on startup/preparation fences. Recheck
+      // their captured authority at the last synchronous dispatch boundary.
+      // Scheduler requests already strip these hooks after their own admission.
+      if (this.state !== 'ready' ||
+        options.canContinue?.() === false || options.canDispatch?.() === false) {
+        throw new ReaderCoreNotDispatchedError('Reader Core request was not dispatched');
+      }
+      options.onDispatch?.();
       if (options.timeoutMs !== undefined) {
         return await runtime.request(method, params, options);
       }
@@ -331,9 +360,10 @@ export class ReaderRuntimeOwner {
       throw error;
     } finally {
       if (invalidatesPreparation) preparations.finishRequest(method, params);
-      if (method === 'reading.progress.update' || method === 'bookshelf.add' || method === 'source.update' ||
-        method === 'source.supply' || method === 'replace.persist' || method === 'replace.undo' ||
-        method === 'reader.chinese-conversion.put') this.wakeReadingPreparations();
+      const effectMethod = readerRuleMutationEffects(method, params).method;
+      if (effectMethod === 'reading.progress.update' || effectMethod === 'bookshelf.add' || effectMethod === 'source.update' ||
+        effectMethod === 'source.supply' || effectMethod === 'replace.persist' || effectMethod === 'replace.undo' ||
+        effectMethod === 'reader.chinese-conversion.put') this.wakeReadingPreparations();
     }
   }
 
@@ -704,6 +734,9 @@ export class ReaderRuntimeOwner {
 
   private async closeRuntime(): Promise<void> {
     try {
+      // An owner can retire before start() is called. Preserve the whole
+      // predecessor chain so a third Ability cannot overtake the first one.
+      await this.predecessorClose;
       if (this.startup !== undefined) {
         try {
           await this.startup;
@@ -725,15 +758,18 @@ export class ReaderRuntimeOwner {
       }
       // Host callbacks must be invalidated before Core is released, otherwise
       // a late platform completion could attempt to advance a closed queue.
-      await this.ttsHost.close();
-      const runtime = this.runtime;
-      this.runtime = undefined;
-      if (runtime !== undefined) {
-        try {
-          await runtime.request('runtime.storage.flush', {}, { timeoutMs: 30000 });
-        } finally {
-          this.host?.setResponseAssetBridge(undefined);
-          runtime.close();
+      try {
+        await this.ttsHost.close();
+      } finally {
+        const runtime = this.runtime;
+        this.runtime = undefined;
+        if (runtime !== undefined) {
+          try {
+            await runtime.request('runtime.storage.flush', {}, { timeoutMs: 30000 });
+          } finally {
+            this.host?.setResponseAssetBridge(undefined);
+            runtime.close();
+          }
         }
       }
     } finally {
@@ -750,7 +786,7 @@ export class ReaderRuntimeOwner {
   private async startAfterPredecessor(): Promise<void> {
     const trace = ReaderStartupTrace.current();
     const startedAt = trace?.begin('startup.predecessor-close') ?? -1;
-    await this.predecessorClose;
+    await this.waitForPredecessorClose();
     trace?.end('startup.predecessor-close', startedAt);
     if (this.state !== 'starting') {
       throw new Error('Reader Core runtime was closed before successor startup');

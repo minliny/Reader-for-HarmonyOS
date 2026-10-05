@@ -1,3 +1,4 @@
+import { TYPE_DIALOG_ACTION, TYPE_SELECT_OPTION } from './ReaderTypography';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from './ReaderWindowMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from './SurfaceHorizontalGeometry';
@@ -108,14 +109,14 @@ export struct ReaderDialogSurface {
       Row() {
         Text(this.title)
           .layoutWeight(1)
-          .fontFamily(this.spec().headerFontFamily).fontWeight(FontWeight.Bold)
+          .fontFamily(this.spec().headerFontFamily).fontWeight(this.spec().headerFontWeight)
           .fontSize(this.spec().headerFontSize).lineHeight(this.spec().headerLineHeight)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .textAlign(this.spec().headerTextAlign);
         Text('关闭')
           .width(52).height(36)
-          .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Regular).fontSize(12)
+          .fontFamily(TYPE_SELECT_OPTION.fontFamily).fontWeight(TYPE_SELECT_OPTION.fontWeight).fontSize(TYPE_SELECT_OPTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center)
           .onClick((): void => this.onClose());
@@ -125,7 +126,7 @@ export struct ReaderDialogSurface {
     } else {
       Text(this.title)
         .width('100%')
-        .fontFamily(this.spec().headerFontFamily).fontWeight(FontWeight.Bold)
+        .fontFamily(this.spec().headerFontFamily).fontWeight(this.spec().headerFontWeight)
         .fontSize(this.spec().headerFontSize).lineHeight(this.spec().headerLineHeight)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(this.spec().headerTextAlign);
@@ -155,7 +156,7 @@ export struct ReaderDialogSurface {
   private actionCell(action: DialogActionView) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Text(action.label)
-        .fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Bold).fontSize(13).lineHeight(16)
+        .fontFamily(TYPE_DIALOG_ACTION.fontFamily).fontWeight(TYPE_DIALOG_ACTION.fontWeight).fontSize(TYPE_DIALOG_ACTION.fontSizeFp).lineHeight(TYPE_DIALOG_ACTION.lineHeightFp as number)
         .fontColor(this.actionLabelColor(action));
     }
     .width(this.spec().actionsLayout === 'stack' ? '100%' : undefined)
@@ -175,7 +176,7 @@ export struct ReaderDialogSurface {
 
   // Specs that preserve the legacy extended touch contract return an expanded
   // region; others fall back to the component's own bounds (44vp min height).
-  private actionTouchRegion(): ResponseRegion {
+  private actionTouchRegion(): Rectangle {
     const spec = this.spec();
     if (spec.actionExtendsTouchRegion) {
       return { x: 0, y: -3, width: '100%', height: spec.actionHeight + 6 };
@@ -214,7 +215,7 @@ export struct ReaderDialogSurface {
   // In inset mode the resolved side gaps become horizontal padding so the card
   // centers within a full-bleed overlay; in cap/card-inset/percent modes padding
   // is uniform.
-  private framePadding(): Padding {
+  private framePadding(): number | Padding {
     const spec = this.spec();
     if (spec.widthPercent <= 0 && spec.frameMode === 'inset') {
       const frame = this.resolvedFrame();

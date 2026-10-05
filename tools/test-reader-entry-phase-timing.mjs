@@ -16,9 +16,11 @@ const logs = [];
 let failLogging = false;
 const hilog = { info(...args) { if (failLogging) throw Error('diagnostic sink unavailable'); logs.push(args); }, error() {} };
 class Page { constructor(fragments, startScalar, endScalar, contentHeight, bodyCapacity) { Object.assign(this, { fragments, startScalar, endScalar, contentHeight, bodyCapacity }); } }
-class Anchor {}
+class Anchor {constructor(chapterIndex,chapterOffset,chapterProgress,bodyVersion,processingVersion) {
+  Object.assign(this,{chapterIndex,chapterOffset,chapterProgress,bodyVersion,processingVersion});
+}}
 const Owner = productionMotionMethods(source, ['loadInitialReading', 'traceInitialReadingPhase',
-  'loadInitialChapter', 'openChapter', 'loadReaderSettingsSnapshot', 'applyInitialReaderWindowPolicy', 'beginFirstPageCommit',
+  'loadInitialChapter', 'openChapter', 'loadReaderSettingsSnapshot', 'captureReaderSettingsAdmission', 'retryPendingReaderSettings', 'applyInitialReaderWindowPolicy', 'beginFirstPageCommit',
   'completeFirstPage', 'publishMeasuredFirstPage', 'measuredPageEndLimit', 'retainMeasuredParagraphWindow', 'isOrdinaryPageMeasurement',
   'persistOrdinaryFirstPage', 'isOrdinaryFirstPagePresentationCurrent', 'awaitOrdinaryFirstPagePersistence',
   'notifyReadingPresentationReady', 'notifyControlSelectionReadingReady', 'isVisiblePageCurrent', 'resumeSupersededAppearanceMeasurement'], {
@@ -48,7 +50,8 @@ for (const throwingSink of [false, true]) {
     isSelectionActive: (token, selection) => token === 1 && selection === 1,
     ensureReadingSession: async () => {},
     isMeasurementCurrent: (generation, selection, token) => generation === 1 && selection === 1 && token === 1,
-    loadAppearanceSnapshot: async () => {}, readerSettingsGateway: { load: async () => ({ navigationMode: 'paged' }) },
+    loadAppearanceSnapshot: async () => {}, readerSettingsGateway: {
+      load: async () => ({ navigationMode: 'paged' }), writeFacts: () => ({ pendingReconciliation: false }) },
     configureReaderScreenAwakeLease() {}, applyReaderSystemEventPolicy() {},
     applyReaderWindowPolicy: () => window.promise,
     activeGateway: () => ({ loadProgress: () => progress.promise,
@@ -85,7 +88,7 @@ for (const throwingSink of [false, true]) {
   assert.deepEqual(events, ['body-request'], 'body I/O overlaps pending native window policy');
   body.resolve(chapter);
   await settle();
-  assert.equal(owner.chapter, chapter, 'available body must not wait for system window callbacks');
+  assert.equal(owner.chapter, chapter, `available body must not wait for system window callbacks: ${failures.join(', ')}`);
   assert.deepEqual(events, ['body-request', 'measured']);
   window.resolve();
   await loading;
@@ -101,7 +104,7 @@ for (const throwingSink of [false, true]) {
     assert.equal(logs.some(args => args[3] === 'body-presented'), false,
       'model publication cannot claim a compositor-presented frame');
   }
-  commit.resolve({ chapterIndex: 0, chapterOffset: 0 });
+  commit.resolve({ bookId: 'private-book', chapterIndex: 0, chapterOffset: 0 });
   await settle();
   assert.deepEqual(events, ['body-request', 'measured', 'ready', 'chapter-committed']);
   assert.deepEqual(failures, [], 'diagnostic exceptions cannot fail first-page preparation');
@@ -122,7 +125,7 @@ const Index = productionMotionMethods(new URL('../entry/src/main/ets/pages/Index
     ReaderRuntimeOwner: { current: () => ({ noteReadingPreparationIntent() {} }) } });
 const index = Object.assign(new Index(), {
   route: 'bookshelf', currentSourceSwitchTransactionId: () => 'recovering-transaction', navigationGeneration: 4, shelfEntryTraceAttempt: 0, shelfEntryTraceStartedAt: -1,
-  bookshelfRemovalActiveKey: '', isKnownDetailChapter: () => true, sourceDisplayName: () => 'private-source-name',
+  shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false}, isKnownDetailChapter: () => true, sourceDisplayName: () => 'private-source-name',
   openRemoteBookDetail() { this.shelfReadingPreparation = true; this.remoteReadingSession = {}; },
   nextNavigationGeneration() { return ++this.navigationGeneration; }, detailBook: { sourceId: 'remote', bookId: 'private-book' },
 });

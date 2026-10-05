@@ -24,18 +24,31 @@ export class ReaderPressFeedback implements AttributeModifier<CommonAttribute> {
     instance.backgroundColor(this.surface).borderRadius(this.radius);
   }
 
+  // Reuse official alpha composition for finite gradient stops as well as
+  // flat surfaces. Failure retains the exact original surface.
+  pressedSurface(): ResourceColor {
+    if (!this.enabled) return this.surface;
+    try {
+      return this.composePressedSurface();
+    } catch (_) { return this.surface; }
+  }
+
+  private composePressedSurface(): ResourceColor {
+    const accent = ColorMetrics.resourceColor(readerAppColor('TOK_ACCENT', this.scheme));
+    const overlay = ColorMetrics.rgba(accent.red, accent.green, accent.blue, 0.12);
+    return ColorMetrics.resourceColor(this.surface).blendColor(overlay).color;
+  }
+
   applyPressedAttribute(instance: CommonAttribute): void {
     if (!this.enabled) {
       this.applyNormalAttribute(instance);
       return;
     }
     try {
-      const accent = ColorMetrics.resourceColor(readerAppColor('TOK_ACCENT', this.scheme));
-      const overlay = ColorMetrics.rgba(accent.red, accent.green, accent.blue, 0.12);
-      instance.backgroundColor(ColorMetrics.resourceColor(this.surface).blendColor(overlay).color)
-        .borderRadius(this.pressedRadius);
+      instance.backgroundColor(this.composePressedSurface()).borderRadius(this.pressedRadius);
     } catch (_) {
-      // A missing platform color resource must not interrupt the button action.
+      // Keep the original complete fallback, including geometry, when the
+      // platform cannot produce the pressed surface.
       this.applyNormalAttribute(instance);
     }
   }

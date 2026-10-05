@@ -18,8 +18,12 @@ for (const method of [
   'rule-sub.list', 'rule-sub.put', 'rule-sub.delete',
   'rule-bundle.export', 'rule-bundle.import',
 ]) {
-  assert.ok(gateway.includes(`request('${method}'`), `rules gateway must use ${method}`);
+  const mutation = ['replace.persist','txt-toc-rule.create','txt-toc-rule.update','txt-toc-rule.delete',
+    'dict-rule.put','dict-rule.delete','rule-sub.put','rule-sub.delete','rule-bundle.import'].includes(method);
+  assert.ok(gateway.includes(`${mutation ? 'requestMutation' : 'request'}('${method}'`), `rules gateway must use ${method}`);
 }
+assert.match(gateway, /RulesMutationOwner\.forRuntime\(this\.owner\)\.run/,
+  'all rule mutations share the original Runtime rule domain and actual dispatch evidence');
 
 assert.match(orchestrator, /private operationTail: Promise<void>/,
   'mutating Core commands must remain serialized at the page coordinator');
@@ -31,12 +35,15 @@ assert.match(orchestrator, /new RssGateway\(owner\)/,
   'RSS subscriptions must reuse the RSS gateway');
 assert.match(orchestrator, /loadOnlineJsonDocument\(subscription\.url\)/,
   'manual subscription refresh must use the shared Host JSON transport');
-assert.match(orchestrator, /subscription\.type === 0[\s\S]*importBookSourceDocument/);
-assert.match(orchestrator, /subscription\.type === 1[\s\S]*importSourcesDocument/);
-assert.match(orchestrator, /importReplaceRuleDocument\(document\.text\)/);
-assert.match(orchestrator, /update: Date\.now\(\)/,
+assert.match(orchestrator, /subscription\.type === 0[\s\S]*prepareSubscriptionDocument\(document\.text\)/);
+assert.match(orchestrator, /gateway\.refreshSubscription\(subscription,document\.text,sourcePlan/);
+assert.match(gateway, /subscription\.type === 0[\s\S]*method:'source\.import'/,
+  'book-source subscriptions retain original per-item import semantics in exact durable steps');
+assert.match(gateway, /subscription\.type === 1[\s\S]*method:'rss-source\.import'/);
+assert.match(gateway, /replaceRuleDocumentBundle\(document\)/);
+assert.match(gateway, /update:\s*Date\.now\(\)/,
   'successful manual refresh must persist the last-update timestamp');
-assert.match(rssGateway, /async importSourcesDocument\([\s\S]*request\('rss-source\.import'/,
+assert.match(rssGateway, /async importSourcesDocument\([\s\S]*this\.mutationRequest\('rss-source\.import'/,
   'already-acquired RSS JSON must reuse the existing Core import command');
 assert.match(gateway, /type: draft\.type/,
   'rule-sub.put must preserve the selected Legado subscription type');
@@ -59,7 +66,7 @@ assert.match(experience, /this\.onOpenRulesManagement\(\)/,
   'rules management remains reachable from the designed reader replacement flow');
 assert.match(index, /route === 'rulesManagement'/);
 assert.match(index, /RulesManagementPage\(/);
-assert.match(index, /refreshRuleSubscription\(subscription\)/);
+assert.match(index, /refreshRuleSubscription\(subscription(?:,|\))/);
 assert.match(host, /selectBoundedJsonDocument\('Reader 规则包 JSON'\)/);
 assert.match(host, /saveBoundedJsonDocument\(text, suggestedFileName, 'Reader 规则包 JSON'/);
 

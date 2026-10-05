@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 1,
+  "baselineCommit": "5dbaba3a",
+  "path": "entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets",
+  "sha256": "0835e61b536b122ea82410262672bd256e64b0bba657396118fea1fd858c89b6",
+  "nodes": [
+    {
+      "method": "backBar",
+      "kind": "Text",
+      "text": "'添加'",
+      "original": {
+        "fontSize": "11",
+        "fontWeight": "FontWeight.Bold",
+        "fontFamily": "'ReaderNotoSansSC'"
+      },
+      "changes": {
+        "fontSize": "TYPE_FORM_COMPACT_ACTION.fontSizeFp",
+        "fontWeight": "TYPE_FORM_COMPACT_ACTION.fontWeight",
+        "fontFamily": "TYPE_FORM_COMPACT_ACTION.fontFamily"
+      },
+      "extra": {
+        "fontSize": [],
+        "fontWeight": [],
+        "fontFamily": []
+      }
+    },
+    {
+      "method": "operationFeedback",
+      "kind": "Text",
+      "text": "this.feedbackMessage()",
+      "original": {
+        "lineHeight": "12.5",
+        "fontSize": "10",
+        "fontWeight": "FontWeight.Regular",
+        "fontFamily": "'ReaderNotoSansSC'"
+      },
+      "changes": {
+        "lineHeight": "TYPE_SOURCE_MANAGEMENT_META.lineHeightFp as number",
+        "fontSize": "TYPE_SOURCE_MANAGEMENT_META.fontSizeFp",
+        "fontWeight": "TYPE_SOURCE_MANAGEMENT_META.fontWeight",
+        "fontFamily": "TYPE_SOURCE_MANAGEMENT_META.fontFamily"
+      },
+      "extra": {
+        "lineHeight": [],
+        "fontSize": [],
+        "fontWeight": [],
+        "fontFamily": []
+      }
+    },
+    {
+      "method": "operationFeedback",
+      "kind": "Text",
+      "text": "this.hasOperationFeedback() ? '刷新列表' : '重试'",
+      "original": {
+        "fontSize": "11",
+        "fontWeight": "FontWeight.Bold",
+        "fontFamily": "'ReaderNotoSansSC'"
+      },
+      "changes": {
+        "fontSize": "TYPE_FORM_COMPACT_ACTION.fontSizeFp",
+        "fontWeight": "TYPE_FORM_COMPACT_ACTION.fontWeight",
+        "fontFamily": "TYPE_FORM_COMPACT_ACTION.fontFamily"
+      },
+      "extra": {
+        "fontSize": [],
+        "fontWeight": [],
+        "fontFamily": []
+      }
+    },
+    {
+      "method": "stats",
+      "kind": "Text",
+      "text": "`${this.items.length} 个订阅源 · ${this.enabledCount()} 个启用 · ${this.disabledCount()} 个停用`",
+      "original": {
+        "lineHeight": "12.5",
+        "fontSize": "10",
+        "fontWeight": "FontWeight.Regular",
+        "fontFamily": "'ReaderNotoSansSC'"
+      },
+      "changes": {
+        "lineHeight": "TYPE_SOURCE_MANAGEMENT_META.lineHeightFp as number",
+        "fontSize": "TYPE_SOURCE_MANAGEMENT_META.fontSizeFp",
+        "fontWeight": "TYPE_SOURCE_MANAGEMENT_META.fontWeight",
+        "fontFamily": "TYPE_SOURCE_MANAGEMENT_META.fontFamily"
+      },
+      "extra": {
+        "lineHeight": [],
+        "fontSize": [],
+        "fontWeight": [],
+        "fontFamily": []
+      }
+    },
+    {
+      "method": "sourceDocumentAction",
+      "kind": "Text",
+      "text": "label",
+      "original": {
+        "fontSize": "11",
+        "fontWeight": "FontWeight.Bold",
+        "fontFamily": "'ReaderNotoSansSC'"
+      },
+      "changes": {
+        "fontSize": "TYPE_FORM_COMPACT_ACTION.fontSizeFp",
+        "fontWeight": "TYPE_FORM_COMPACT_ACTION.fontWeight",
+        "fontFamily": "TYPE_FORM_COMPACT_ACTION.fontFamily"
+      },
+      "extra": {
+        "fontSize": [],
+        "fontWeight": [],
+        "fontFamily": []
+      }
+    },
+    {
+      "method": "subscriptionItem",
+      "kind": "Text",
+      "text": "item.title",
+      "original": {
+        "lineHeight": "15.34",
+        "fontSize": "13",
+        "fontWeight": "FontWeight.Bold",
+        "fontFamily": "'ReaderNotoSansSC'"
+      },
+      "changes": {
+        "lineHeight": "TYPE_SOURCE_MANAGEMENT_TITLE.lineHeightFp as number",
+        "fontSize": "TYPE_SOURCE_MANAGEMENT_TITLE.fontSizeFp",
+        "fontWeight": "TYPE_SOURCE_MANAGEMENT_TITLE.fontWeight",
+        "fontFamily": "TYPE_SOURCE_MANAGEMENT_TITLE.fontFamily"
+      },
+      "extra": {
+        "lineHeight": [],
+        "fontSize": [],
+        "fontWeight": [],
+        "fontFamily": []
+      }
+    },
+    {
+      "method": "subscriptionItem",
+      "kind": "Text",
+      "text": "item.meta",
+      "original": {
+        "lineHeight": "12.5",
+        "fontSize": "10",
+        "fontWeight": "FontWeight.Regular",
+        "fontFamily": "'ReaderNotoSansSC'"
+      },
+      "changes": {
+        "lineHeight": "TYPE_SOURCE_MANAGEMENT_META.lineHeightFp as number",
+        "fontSize": "TYPE_SOURCE_MANAGEMENT_META.fontSizeFp",
+        "fontWeight": "TYPE_SOURCE_MANAGEMENT_META.fontWeight",
+        "fontFamily": "TYPE_SOURCE_MANAGEMENT_META.fontFamily"
+      },
+      "extra": {
+        "lineHeight": [],
+        "fontSize": [],
+        "fontWeight": [],
+        "fontFamily": []
+      }
+    },
+    {
+      "method": "actionTarget",
+      "kind": "Text",
+      "text": "label",
+      "original": {
+        "fontSize": "11",
+        "fontWeight": "FontWeight.Bold",
+        "fontFamily": "'ReaderNotoSansSC'"
+      },
+      "changes": {
+        "fontSize": "TYPE_FORM_COMPACT_ACTION.fontSizeFp",
+        "fontWeight": "TYPE_FORM_COMPACT_ACTION.fontWeight",
+        "fontFamily": "TYPE_FORM_COMPACT_ACTION.fontFamily"
+      },
+      "extra": {
+        "fontSize": [],
+        "fontWeight": [],
+        "fontFamily": []
+      }
+    }
+  ],
+  "roleImport": "import { TYPE_FORM_COMPACT_ACTION, TYPE_SOURCE_MANAGEMENT_META, TYPE_SOURCE_MANAGEMENT_TITLE } from '../common/ReaderTypography';\n"
+}

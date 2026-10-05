@@ -1,3 +1,4 @@
+import { TYPE_READER_TTS_FULL_COMPAT_HEADER_COLLAPSE, TYPE_READER_TTS_FULL_COMPAT_HEADER_LABEL, TYPE_READER_TTS_FULL_COMPAT_PLAYBACK_SECTION_LABEL, TYPE_READER_TTS_FULL_COMPAT_PLAYBACK_SECTION_STATUS, TYPE_READER_TTS_FULL_COMPAT_PLAYBACK_SECTION_STATUS_SECONDARY, TYPE_READER_TTS_FULL_COMPAT_RATE_SECTION_LABEL, TYPE_READER_TTS_FULL_COMPAT_RATE_SECTION_VALUE, TYPE_READER_TTS_FULL_COMPAT_RATE_SECTION_VALUE_SECONDARY, TYPE_READER_TTS_FULL_COMPAT_SECTION_HEADER_LABEL, TYPE_READER_TTS_FULL_COMPAT_SECTION_HEADER_META, TYPE_READER_TTS_FULL_COMPAT_SELECTOR_ROW_LABEL, TYPE_READER_TTS_FULL_COMPAT_TIMER_SECTION_LABEL, TYPE_READER_TTS_FULL_COMPAT_TIMER_SECTION_META, TYPE_READER_TTS_FULL_COMPAT_TIMER_SUMMARY_BLOCK_LABEL, TYPE_READER_TTS_FULL_COMPAT_TIMER_SUMMARY_BLOCK_META, TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEELS_LABEL, TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEEL_VALUE, TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEEL_VALUE_SECONDARY, TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEEL_VALUE_TERTIARY, TYPE_READER_TTS_FULL_COMPAT_TOGGLE_ROW_LABEL, TYPE_READER_TTS_FULL_COMPAT_TTS_CLOSED_CONFIG_ROW_LABEL, TYPE_READER_TTS_FULL_COMPAT_TTS_CONFIG_HEADER_LABEL, TYPE_READER_TTS_FULL_COMPAT_TTS_CONFIG_HEADER_LABEL_SECONDARY, TYPE_READER_TTS_FULL_COMPAT_TTS_SELECT_VALUE_FIELD_VALUE, TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE, TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
   READER_TTS_RATE_MAX,
@@ -163,10 +164,10 @@ export struct ReaderTtsFullPanel {
           .width(20)
           .height(20);
         Text('朗读')
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(14)
-          .lineHeight(17)
+          .fontFamily(TYPE_READER_TTS_FULL_COMPAT_HEADER_LABEL.fontFamily)
+          .fontWeight(TYPE_READER_TTS_FULL_COMPAT_HEADER_LABEL.fontWeight)
+          .fontSize(TYPE_READER_TTS_FULL_COMPAT_HEADER_LABEL.fontSizeFp)
+          .lineHeight(TYPE_READER_TTS_FULL_COMPAT_HEADER_LABEL.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       }
       .layoutWeight(1)
@@ -175,10 +176,10 @@ export struct ReaderTtsFullPanel {
       Text('收起')
         .width(40)
         .height(26)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(10)
-        .lineHeight(13)
+        .fontFamily(TYPE_READER_TTS_FULL_COMPAT_HEADER_COLLAPSE.fontFamily)
+        .fontWeight(TYPE_READER_TTS_FULL_COMPAT_HEADER_COLLAPSE.fontWeight)
+        .fontSize(TYPE_READER_TTS_FULL_COMPAT_HEADER_COLLAPSE.fontSizeFp)
+        .lineHeight(TYPE_READER_TTS_FULL_COMPAT_HEADER_COLLAPSE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
@@ -198,14 +199,14 @@ export struct ReaderTtsFullPanel {
       Row() {
         Text('播放控制区')
           .layoutWeight(1)
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(12)
+          .fontFamily(TYPE_READER_TTS_FULL_COMPAT_PLAYBACK_SECTION_LABEL.fontFamily)
+          .fontWeight(TYPE_READER_TTS_FULL_COMPAT_PLAYBACK_SECTION_LABEL.fontWeight)
+          .fontSize(TYPE_READER_TTS_FULL_COMPAT_PLAYBACK_SECTION_LABEL.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
         Text(this.statusText())
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Medium)
-          .fontSize(10)
+          .fontFamily(TYPE_READER_TTS_FULL_COMPAT_PLAYBACK_SECTION_STATUS.fontFamily)
+          .fontWeight(TYPE_READER_TTS_FULL_COMPAT_PLAYBACK_SECTION_STATUS.fontWeight)
+          .fontSize(TYPE_READER_TTS_FULL_COMPAT_PLAYBACK_SECTION_STATUS.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       }
       .width('100%');
@@ -224,8 +225,8 @@ export struct ReaderTtsFullPanel {
       if (this.state.errorMessage !== undefined && this.state.errorMessage.length > 0) {
         Text(this.state.errorMessage)
           .width('100%')
-          .fontFamily('ReaderNotoSansSC')
-          .fontSize(10)
+          .fontFamily(TYPE_READER_TTS_FULL_COMPAT_PLAYBACK_SECTION_STATUS_SECONDARY.fontFamily as string)
+          .fontSize(TYPE_READER_TTS_FULL_COMPAT_PLAYBACK_SECTION_STATUS_SECONDARY.fontSizeFp)
           .fontColor(readerAppColor('app.ReaderTtsFullPanel.playbackSection.fontColor.FFB93D35', this.appThemeScheme))
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -307,14 +308,14 @@ export struct ReaderTtsFullPanel {
       Row() {
         Text('定时')
           .layoutWeight(1)
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(12)
+          .fontFamily(TYPE_READER_TTS_FULL_COMPAT_TIMER_SECTION_LABEL.fontFamily)
+          .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TIMER_SECTION_LABEL.fontWeight)
+          .fontSize(TYPE_READER_TTS_FULL_COMPAT_TIMER_SECTION_LABEL.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
         Text(this.timerCaption())
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Medium)
-          .fontSize(10)
+          .fontFamily(TYPE_READER_TTS_FULL_COMPAT_TIMER_SECTION_META.fontFamily)
+          .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TIMER_SECTION_META.fontWeight)
+          .fontSize(TYPE_READER_TTS_FULL_COMPAT_TIMER_SECTION_META.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       }
       .width('100%');
@@ -363,14 +364,14 @@ export struct ReaderTtsFullPanel {
       .borderRadius(6);
       Column() {
         Text('朗读后停止')
-          .fontFamily('ReaderInter')
-          .fontSize(10)
+          .fontFamily(TYPE_READER_TTS_FULL_COMPAT_TIMER_SUMMARY_BLOCK_LABEL.fontFamily as string)
+          .fontSize(TYPE_READER_TTS_FULL_COMPAT_TIMER_SUMMARY_BLOCK_LABEL.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
         Text(this.timerCaption())
-          .fontFamily('ReaderInter')
-          .fontWeight(800)
-          .fontSize(20)
-          .lineHeight(22)
+          .fontFamily(TYPE_READER_TTS_FULL_COMPAT_TIMER_SUMMARY_BLOCK_META.fontFamily)
+          .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TIMER_SUMMARY_BLOCK_META.fontWeight)
+          .fontSize(TYPE_READER_TTS_FULL_COMPAT_TIMER_SUMMARY_BLOCK_META.fontSizeFp)
+          .lineHeight(TYPE_READER_TTS_FULL_COMPAT_TIMER_SUMMARY_BLOCK_META.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       }
       .alignItems(HorizontalAlign.Start);
@@ -386,9 +387,9 @@ export struct ReaderTtsFullPanel {
       this.timerWheel(true);
       Text(':')
         .width(8)
-        .fontFamily('ReaderInter')
-        .fontWeight(800)
-        .fontSize(18)
+        .fontFamily(TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEELS_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEELS_LABEL.fontWeight)
+        .fontSize(TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEELS_LABEL.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
         .textAlign(TextAlign.Center);
       this.timerWheel(false);
@@ -405,9 +406,9 @@ export struct ReaderTtsFullPanel {
       Text(this.wheelValue(minutes, minutes ? -5 : -1))
         .width(this.timerWheelWidth())
         .height(43)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Medium)
-        .fontSize(12)
+        .fontFamily(TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEEL_VALUE.fontFamily)
+        .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEEL_VALUE.fontWeight)
+        .fontSize(TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEEL_VALUE.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
         .opacity(0.56)
         .textAlign(TextAlign.Center)
@@ -415,27 +416,27 @@ export struct ReaderTtsFullPanel {
       Text(this.wheelValue(minutes, 0))
         .width(this.timerWheelWidth())
         .height(43)
-        .fontFamily('ReaderInter')
-        .fontWeight(800)
-        .fontSize(17)
+        .fontFamily(TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEEL_VALUE_SECONDARY.fontFamily)
+        .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEEL_VALUE_SECONDARY.fontWeight)
+        .fontSize(TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEEL_VALUE_SECONDARY.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .border({ width: { top: TOK_BORDER_W, bottom: TOK_BORDER_W }, color: readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) });
       Text(this.wheelValue(minutes, minutes ? 5 : 1))
         .width(this.timerWheelWidth())
         .height(43)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Medium)
-        .fontSize(12)
+        .fontFamily(TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEEL_VALUE.fontFamily)
+        .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEEL_VALUE.fontWeight)
+        .fontSize(TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEEL_VALUE.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
         .opacity(0.56)
         .textAlign(TextAlign.Center)
         .onClick((): void => this.stepTimer(minutes, minutes ? 5 : 1));
       Text(minutes ? '分' : '秒')
         .width(this.timerWheelWidth())
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(9)
+        .fontFamily(TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEEL_VALUE_TERTIARY.fontFamily)
+        .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEEL_VALUE_TERTIARY.fontWeight)
+        .fontSize(TYPE_READER_TTS_FULL_COMPAT_TIMER_WHEEL_VALUE_TERTIARY.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
         .textAlign(TextAlign.Center);
     }
@@ -452,13 +453,13 @@ export struct ReaderTtsFullPanel {
       Row() {
         Text('语速')
           .layoutWeight(1)
-          .fontFamily('ReaderInter')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(12)
+          .fontFamily(TYPE_READER_TTS_FULL_COMPAT_RATE_SECTION_LABEL.fontFamily)
+          .fontWeight(TYPE_READER_TTS_FULL_COMPAT_RATE_SECTION_LABEL.fontWeight)
+          .fontSize(TYPE_READER_TTS_FULL_COMPAT_RATE_SECTION_LABEL.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
         Text(`${this.effectiveRate().toFixed(2)}x`)
-          .fontFamily('ReaderInter')
-          .fontSize(10)
+          .fontFamily(TYPE_READER_TTS_FULL_COMPAT_RATE_SECTION_VALUE.fontFamily as string)
+          .fontSize(TYPE_READER_TTS_FULL_COMPAT_RATE_SECTION_VALUE.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       }
       .width('100%');
@@ -486,9 +487,9 @@ export struct ReaderTtsFullPanel {
         });
       Row() {
         Text(`${READER_TTS_RATE_MIN.toFixed(2)}x`)
-          .layoutWeight(1).fontFamily('ReaderInter').fontSize(9).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
+          .layoutWeight(1).fontFamily(TYPE_READER_TTS_FULL_COMPAT_RATE_SECTION_VALUE_SECONDARY.fontFamily as string).fontSize(TYPE_READER_TTS_FULL_COMPAT_RATE_SECTION_VALUE_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
         Text(`${READER_TTS_RATE_MAX.toFixed(2)}x`)
-          .fontFamily('ReaderInter').fontSize(9).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
+          .fontFamily(TYPE_READER_TTS_FULL_COMPAT_RATE_SECTION_VALUE_SECONDARY.fontFamily as string).fontSize(TYPE_READER_TTS_FULL_COMPAT_RATE_SECTION_VALUE_SECONDARY.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       }
       .width('100%');
     }
@@ -537,13 +538,13 @@ export struct ReaderTtsFullPanel {
     Row() {
       Text('TTS 配置')
         .layoutWeight(1)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(12)
+        .fontFamily(TYPE_READER_TTS_FULL_COMPAT_TTS_CONFIG_HEADER_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TTS_CONFIG_HEADER_LABEL.fontWeight)
+        .fontSize(TYPE_READER_TTS_FULL_COMPAT_TTS_CONFIG_HEADER_LABEL.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       Text('设备引擎')
-        .fontFamily('ReaderInter')
-        .fontSize(10)
+        .fontFamily(TYPE_READER_TTS_FULL_COMPAT_TTS_CONFIG_HEADER_LABEL_SECONDARY.fontFamily as string)
+        .fontSize(TYPE_READER_TTS_FULL_COMPAT_TTS_CONFIG_HEADER_LABEL_SECONDARY.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
     }
     .width('100%')
@@ -589,19 +590,19 @@ export struct ReaderTtsFullPanel {
         Text(http ? '在线 TTS' : '系统 TTS')
           .width('100%')
           .height(16)
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(900)
-          .fontSize(12)
-          .lineHeight(15.6)
+          .fontFamily(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE.fontFamily)
+          .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE.fontWeight)
+          .fontSize(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE.fontSizeFp)
+          .lineHeight(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE.lineHeightFp as number)
           .fontColor(this.isTtsServiceTabSelected(http) ? readerAppColor('app.ReaderTtsFullPanel.ttsServiceTypeTab.fontColor.FF1F3528', this.appThemeScheme) : readerAppColor('app.ReaderTtsFullPanel.ttsServiceTypeTab.fontColor.FF756F69', this.appThemeScheme))
           .maxLines(1);
         Text(http ? '第三方或自定义服务' : '使用设备内置语音')
           .width('100%')
           .height(13)
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Bold)
-          .fontSize(10)
-          .lineHeight(13)
+          .fontFamily(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY.fontFamily)
+          .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY.fontWeight)
+          .fontSize(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY.fontSizeFp)
+          .lineHeight(TYPE_READER_TTS_FULL_COMPAT_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY.lineHeightFp as number)
           .fontColor(readerAppColor('app.ReaderTtsFullPanel.ttsServiceTypeTab.fontColor.FF756F69', this.appThemeScheme))
           .maxLines(1);
       }
@@ -654,10 +655,10 @@ export struct ReaderTtsFullPanel {
     Row() {
       Text(label)
         .layoutWeight(1)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(12)
-        .lineHeight(15.6)
+        .fontFamily(TYPE_READER_TTS_FULL_COMPAT_TTS_CLOSED_CONFIG_ROW_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TTS_CLOSED_CONFIG_ROW_LABEL.fontWeight)
+        .fontSize(TYPE_READER_TTS_FULL_COMPAT_TTS_CLOSED_CONFIG_ROW_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_TTS_FULL_COMPAT_TTS_CLOSED_CONFIG_ROW_LABEL.lineHeightFp as number)
         .fontColor(readerAppColor('app.ReaderTtsFullPanel.ttsClosedConfigRow.fontColor.FF41484C', this.appThemeScheme))
         .maxLines(1);
       this.ttsSelectValueField(value, fieldWidth, `${label}：${value}，暂不可展开`);
@@ -674,13 +675,13 @@ export struct ReaderTtsFullPanel {
     Row() {
       Text(title)
         .layoutWeight(1)
-        .fontFamily('ReaderInter')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(12)
+        .fontFamily(TYPE_READER_TTS_FULL_COMPAT_SECTION_HEADER_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_TTS_FULL_COMPAT_SECTION_HEADER_LABEL.fontWeight)
+        .fontSize(TYPE_READER_TTS_FULL_COMPAT_SECTION_HEADER_LABEL.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       Text(meta)
-        .fontFamily('ReaderInter')
-        .fontSize(10)
+        .fontFamily(TYPE_READER_TTS_FULL_COMPAT_SECTION_HEADER_META.fontFamily as string)
+        .fontSize(TYPE_READER_TTS_FULL_COMPAT_SECTION_HEADER_META.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
     }
     .width('100%')
@@ -693,9 +694,9 @@ export struct ReaderTtsFullPanel {
     Row() {
       Text(label)
         .layoutWeight(1)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(12)
+        .fontFamily(TYPE_READER_TTS_FULL_COMPAT_SELECTOR_ROW_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_TTS_FULL_COMPAT_SELECTOR_ROW_LABEL.fontWeight)
+        .fontSize(TYPE_READER_TTS_FULL_COMPAT_SELECTOR_ROW_LABEL.fontSizeFp)
         .fontColor(readerAppColor('app.ReaderTtsFullPanel.selectorRow.fontColor.FF41484C', this.appThemeScheme));
       this.ttsSelectValueField(value, 70, `${label}：${value}`);
     }
@@ -714,10 +715,10 @@ export struct ReaderTtsFullPanel {
     Row({ space: 6 }) {
       Text(value)
         .layoutWeight(1)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(12)
-        .lineHeight(14.4)
+        .fontFamily(TYPE_READER_TTS_FULL_COMPAT_TTS_SELECT_VALUE_FIELD_VALUE.fontFamily)
+        .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TTS_SELECT_VALUE_FIELD_VALUE.fontWeight)
+        .fontSize(TYPE_READER_TTS_FULL_COMPAT_TTS_SELECT_VALUE_FIELD_VALUE.fontSizeFp)
+        .lineHeight(TYPE_READER_TTS_FULL_COMPAT_TTS_SELECT_VALUE_FIELD_VALUE.lineHeightFp as number)
         .fontColor(readerAppColor('app.ReaderTtsFullPanel.ttsSelectValueField.fontColor.FF1F3528', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -740,9 +741,9 @@ export struct ReaderTtsFullPanel {
     Row() {
       Text(label)
         .layoutWeight(1)
-        .fontFamily('ReaderNotoSansSC')
-        .fontWeight(FontWeight.Bold)
-        .fontSize(11)
+        .fontFamily(TYPE_READER_TTS_FULL_COMPAT_TOGGLE_ROW_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_TTS_FULL_COMPAT_TOGGLE_ROW_LABEL.fontWeight)
+        .fontSize(TYPE_READER_TTS_FULL_COMPAT_TOGGLE_ROW_LABEL.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       Stack({ alignContent: Alignment.TopStart }) {
         Row()

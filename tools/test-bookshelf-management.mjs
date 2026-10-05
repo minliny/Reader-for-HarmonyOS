@@ -21,7 +21,7 @@ for (const method of [
   'bookshelf.group.assign',
   'read-record.list',
 ]) {
-  assert.match(gateway, new RegExp(`request\\('${method.replaceAll('.', '\\.')}'`));
+  assert.match(gateway, new RegExp(`${method.includes('list')?'request':'write'}\\('${method.replaceAll('.', '\\.')}'`));
 }
 
 assert.match(shelfGateway, /group\?: string/);
@@ -45,7 +45,7 @@ assert.match(index,
   /onBookshelfSettingsRequested: \(\): void => this\.openBookshelfSettings\(\)/,
   'the more-menu shelf settings entry still enters the settings flow');
 assert.match(index, /'bookshelfManagement'/);
-assert.match(index, /this\.route = 'bookshelfManagement';[\s\S]*?getBookshelfManagementOrchestrator\(\)\.open\(\)/);
+assert.match(index, /this\.route = 'bookshelfManagement';[\s\S]*?bookshelfHost\.openManagement\(this\.bookshelfManagementPresentationIdentity\)/);
 assert.match(index, /BookshelfManagementPage\(\{/);
 
 console.log('bookshelf management Core ownership contract: PASS');
