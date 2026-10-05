@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { createMangaAtomicPayloadInstallerFixture } from './lib/manga-atomic-payload-probe.mjs';
 import { ReaderStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace.ts';
-import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerMangaOfflineProbeScope } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
+import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
 import { MangaOfflineNetworkProbe } from '../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts';
 import { ReadingEntryHandoff, estimateRetainedRemoteSessionBytes, registerReadingEntryMemoryRelease, releaseReadingEntryMemory } from '../entry/src/main/ets/features/reading/ReadingEntryHandoff.ts';
 import { ReadingPaginationPrefix } from '../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts';
@@ -28,11 +29,18 @@ function runtimeType() {
     ReaderHostRegistry:PlatformHost,HarmonyTtsHostRouter:PlatformHost,HarmonySystemTtsHost:PlatformHost,HarmonyHttpTtsHost:PlatformHost,
     HarmonyTtsMediaSession:PlatformHost,HarmonyTtsBackgroundSession:PlatformHost,LocalEpubResourceHost:PlatformHost,
     ReadingImageDiskCache:PlatformHost,ReadingBodyImageHost:{setDisplayCacheDir(){}}};
-  return new Function(...Object.keys(dependencies),stripTypeScriptTypes(`class ReaderRuntimeOwner { ${members} }`)+ '; return ReaderRuntimeOwner;')(...Object.values(dependencies));
+  const Runtime = new Function(...Object.keys(dependencies),stripTypeScriptTypes(`class ReaderRuntimeOwner { ${members} }`)+ '; return ReaderRuntimeOwner;')(...Object.values(dependencies));
+  // This fixture owns optional entry memory; physical manga policy binding is
+  // exercised by its production Owner/Disk probes with a real authority port.
+  Runtime.prototype.bindMangaStorage = () => {};
+  // Actual Body observer attach/detach is covered by the network probe suite.
+  Runtime.prototype.bindMangaReadingProbe = function () { this.readingProbeBindingRequested = true; };
+  return Runtime;
 }
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 async function until(predicate) { for(let i=0;i<40;i++){if(predicate())return;await tick();}assert.fail('optional preparation did not settle'); }
 const context={cacheDir:'/unused-native-context',config:{colorMode:0}};
+const installMangaAtomicPayloadReader=createMangaAtomicPayloadInstallerFixture({});
 
 for(const debug of [true,false,1,'true',new Boolean(true)])for(const mode of ['debug','release','DEBUG','debug ',''])
   for(const value of [true,false,undefined,null,1,'true','1',{},[true],new Boolean(true)]) {
@@ -43,8 +51,13 @@ for(const debug of [true,false,1,'true',new Boolean(true)])for(const mode of ['d
 
 // Execute the real onCreate body with controlled platform startup boundaries.
 // It alone decodes the Want, and passes the flag before optional producers exist.
-for(const [debug,mode,value,disabled] of [[true,'debug',true,true],[true,'release',true,false],
-  [false,'debug',true,false],[true,'debug','true',false],[true,'debug',1,false],[true,'debug',undefined,false]]) {
+for(const [debug,mode,value,disabled,selectionFlag,expectedSelection] of [[true,'debug',true,true],[true,'release',true,false],
+  [false,'debug',true,false],[true,'debug','true',false],[true,'debug',1,false],[true,'debug',undefined,false],
+  [true,'debug',undefined,false,'readerMangaReadingProbeSelectManga','reading'],
+  [true,'debug',undefined,false,'readerMangaOfflineProbeSelectManga','offline'],
+  [true,'release',undefined,false,'readerMangaOfflineProbeSelectManga'],
+  [false,'debug',undefined,false,'readerMangaReadingProbeSelectManga'],
+  [true,'debug',true,true,'readerMangaReadingProbeSelectManga']]) {
   const Runtime=runtimeType(), writes=[];
   Runtime.prototype.start=async()=>{};
   const Ability=productionMotionMethods(abilityFile,['onCreate'],{
@@ -52,7 +65,9 @@ for(const [debug,mode,value,disabled] of [[true,'debug',true,true],[true,'releas
       assert.equal(enabled,debug===true&&mode==='debug','only debug builds enable startup diagnostics');
       return ReaderStartupTrace.install(clock,record,enabled);
     }},readerMotionNowMs:()=>performance.now(),
-    DEBUG:debug,BUILD_MODE_NAME:mode,readerControlVerificationColdStartPage,readerDisableOptionalEntryMemory,readerMangaOfflineProbeScope,
+    DEBUG:debug,BUILD_MODE_NAME:mode,readerControlVerificationColdStartPage,readerDisableOptionalEntryMemory,readerMangaOfflineProbeScope,readerMangaReadingProbeScope,readerMangaProbeSelectionMode,
+    installMangaAtomicPayloadReader,
+    ReaderMangaPlatformDiagnostic:{install:()=>undefined}, // Separate focused production-module probe owns SDK diagnostics.
     readerEventLoopProbeEnabled:()=>false,ReaderRuntimeOwner:Runtime,
     ReaderSystemFileOpenHost:{install(){},receive(){}},
     AppStorage:{setOrCreate:(...args)=>writes.push(args)},WebDavCredentialStore:{instance:{attachContext(){},loadBookshelfViewMode:async()=>null}},
@@ -62,14 +77,35 @@ for(const [debug,mode,value,disabled] of [[true,'debug',true,true],[true,'releas
     DOMAIN:0x5244,hilog:{error(){}}});
   Runtime.prototype.getAppearanceStore=()=>({current:()=>({font:'serif'})});
   const ability=Object.assign(new Ability(),{context});
-  ability.onCreate({parameters:{readerDisableOptionalEntryMemory:value,readerMangaOfflineProbe:value,
-    readerMangaOfflineSourceId:'source',readerMangaOfflineBookId:'book'}},{});
+  const parameters={readerDisableOptionalEntryMemory:value,readerMangaOfflineProbe:value,
+    readerMangaOfflineSourceId:'source',readerMangaOfflineBookId:'book'};
+  if(selectionFlag!==undefined)parameters[selectionFlag]=true;
+  ability.onCreate({parameters},{});
   await ability.recoveryReady;
   assert.equal(ability.coldStartPage,'pages/Index','cold diagnostic does not divert normal Index/reader route');
   assert.equal(ability.runtimeOwner.optionalReadingEntryMemoryEnabled(),!disabled);
-  assert.equal(ability.runtimeOwner.mangaOfflineProbe!==undefined,disabled,'actual cold Want exact debug flag controls scoped probe construction');
-  if(disabled)assert.equal(ability.runtimeOwner.mangaOfflineProbe.ownsCommand('book.toc',{sourceId:'source',bookId:'book'}),true,'cold Want is armed before a shelf click');
+  const exactEnabled=disabled&&selectionFlag===undefined;
+  assert.equal(ability.runtimeOwner.mangaOfflineProbe!==undefined,exactEnabled||expectedSelection!==undefined,'actual cold Want strict flags control scoped probe construction');
+  if(exactEnabled)assert.equal(ability.runtimeOwner.mangaOfflineProbe.ownsCommand('book.toc',{sourceId:'source',bookId:'book'}),true,'cold Want is armed before a shelf click');
+  if(expectedSelection!==undefined) {
+    const probe=ability.runtimeOwner.mangaOfflineProbe,armed=JSON.parse(probe.snapshot());
+    assert.equal(probe.mode,expectedSelection);assert.equal(armed.identityBound,false);
+    assert.equal(armed.beforeSelectionBookCoverage,'not-covered');
+    assert.equal(probe.ownsCommand('book.toc',{sourceId:'source',bookId:'book'}),false,'exact Want identity fields do not arm a selection scope');
+    assert.equal(ability.runtimeOwner.readingProbeBindingRequested,expectedSelection==='reading'?true:undefined);
+    probe.select('native-source','native-book',true);
+    assert.equal(probe.ownsCommand('manga.resource.prepare',{chapter:{sourceId:'native-source',bookId:'native-book'}}),true);
+    assert.equal(probe.ownsCommand('manga.resource.prepare',{chapter:{sourceId:'source',bookId:'book'}}),false);
+    assert.equal(Runtime.install(context,false,undefined,undefined,expectedSelection),ability.runtimeOwner);
+    assert.equal(JSON.parse(probe.snapshot()).reason,'ability-reinstalled','warm owner reuse releases diagnostics instead of rearming');
+    probe.select('another-native-source','another-native-book',true);
+    assert.equal(probe.ownsCommand('manga.resource.prepare',{chapter:{sourceId:'another-native-source',bookId:'another-native-book'}}),false);
+  }
   assert.deepEqual(writes,[['readerAppForeground',true]],'diagnostic flag is not stored in settings or AppStorage');
+}
+for(const mode of ['offline','reading']) {
+ const Runtime=runtimeType(),owner=Runtime.install(context,false,{sourceId:'source',bookId:'book'},undefined,mode);
+ assert.equal(owner.mangaOfflineProbe,undefined,'constructor rejects a selection mode combined with an exact-ID scope');
 }
 const warmWantBody=abilitySource.slice(abilitySource.indexOf('  onNewWant('),abilitySource.indexOf('  private async prepareSelectedReadingFont'));
 assert.match(warmWantBody,/ReaderSystemFileOpenHost\.receive\(want\)/);

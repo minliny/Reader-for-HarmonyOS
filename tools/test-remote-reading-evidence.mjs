@@ -104,7 +104,7 @@ for (const oldFailure of [false, true]) {
 
 {
   selectedSession = session('switch'); const p = page(); const calls = [];
-  p.detailReturnRoute = 'search';
+  p.detailReturnRoute = 'search'; p.detailBook = { sourceId: 'source', bookId: 'book', contentKind: 'text' };
   load = async (value, index) => { calls.push(index); if (index === 0) throw { kind: 'SOURCE_CONTENT_EMPTY', message: 'empty' }; return chapter(value, index); };
   let opened;
   p.openRemoteBookDetail = (...args) => { opened = args; };
