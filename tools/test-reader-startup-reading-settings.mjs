@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
-import { readerMangaOfflineProbeScope } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
+import { readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { createMangaAtomicPayloadInstallerFixture } from './lib/manga-atomic-payload-probe.mjs';
 import { ReaderStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace.ts';
 import * as settings from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
 
 const base = new URL('../entry/src/main/ets/', import.meta.url);
+const installMangaAtomicPayloadReader = createMangaAtomicPayloadInstallerFixture({});
 const source = readFileSync(new URL('features/reading/ReaderSettingsGateway.ts', base), 'utf8');
 const stores = new WeakMap();
 let barrierCalls = 0;
@@ -121,7 +123,9 @@ for (const failRead of [false, true]) {
   const Ability = productionMotionMethods(abilityFile, ['onCreate', 'onWindowStageCreate'], {
     ReaderStartupTrace, readerMotionNowMs: () => performance.now(),
     DEBUG: true, BUILD_MODE_NAME: 'debug', DOMAIN: 0x5244,
-    readerControlVerificationColdStartPage: () => 'pages/Index', readerDisableOptionalEntryMemory: () => false, readerMangaOfflineProbeScope,
+    installMangaAtomicPayloadReader,
+    ReaderMangaPlatformDiagnostic: { install: () => undefined }, // Separate focused production-module probe owns SDK diagnostics.
+    readerControlVerificationColdStartPage: () => 'pages/Index', readerDisableOptionalEntryMemory: () => false, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode,
     readerEventLoopProbeEnabled: () => false, ReaderRuntimeOwner: { install: () => f.owner },
     ReaderSystemFileOpenHost: { install() {}, receive() {} },
     AppStorage: { setOrCreate() {} }, WebDavCredentialStore: { instance: { attachContext() {}, loadBookshelfViewMode: async () => null } },

@@ -10,10 +10,12 @@ import { AbilityConstant, ConfigurationConstant, type Configuration, UIAbility, 
 import { window } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
+import { installMangaAtomicPayloadReader } from '../app/MangaAtomicPayloadReader';
 import { ReaderSystemFileOpenHost } from '../app/ReaderSystemFileOpenHost';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
-import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerMangaOfflineProbeScope } from '../app/ReaderControlVerificationLaunch';
+import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } from '../app/ReaderControlVerificationLaunch';
 import { ReaderEventLoopProbe, ReaderEventLoopSample, readerEventLoopProbeEnabled } from '../app/ReaderEventLoopProbe';
+import { ReaderMangaPlatformDiagnostic } from '../app/ReaderMangaPlatformDiagnostic';
 import { ReaderStartupTrace, type ReaderStartupSample } from '../app/ReaderStartupTrace';
 import { readerMotionNowMs } from '../features/common/ReaderMotionClock';
 import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
@@ -29,10 +31,12 @@ export default class EntryAbility extends UIAbility {
   private bookshelfModeReady: Promise<void> = Promise.resolve();
   private shelfFontsReady: Promise<void> = Promise.resolve();
   private eventLoopProbe: ReaderEventLoopProbe | undefined = undefined;
+  private mangaPlatformDiagnostic: ReaderMangaPlatformDiagnostic | undefined = undefined;
   private preparedReadingFontOwner: ReaderRuntimeOwner | undefined = undefined;
   private preparedReadingFontSnapshot: ReaderAppearanceSnapshot | undefined = undefined;
 
   onCreate(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
+    installMangaAtomicPayloadReader();
     const trace = ReaderStartupTrace.install(readerMotionNowMs, (sample: ReaderStartupSample): void => {
       hilog.info(DOMAIN, 'Reader', 'READER_STARTUP %{public}s', JSON.stringify(sample));
     }, DEBUG === true && BUILD_MODE_NAME === 'debug');
@@ -64,11 +68,26 @@ export default class EntryAbility extends UIAbility {
       .catch((error: Error): void => {
         hilog.error(DOMAIN, 'Reader', 'Shelf font preparation failed: %{private}s', error.message);
       });
+    // Selection diagnostics have no inferred identity. Conflicting diagnostic
+    // flags reject both selection modes; exact Want scope semantics stay intact.
+    const mangaSelectFlag = want.parameters?.readerMangaOfflineProbeSelectManga === true ||
+      want.parameters?.readerMangaReadingProbeSelectManga === true;
+    const mangaSelectionMode = this.coldStartPage === 'pages/Index' ? readerMangaProbeSelectionMode(DEBUG, BUILD_MODE_NAME,
+      want.parameters?.readerMangaOfflineProbeSelectManga, want.parameters?.readerMangaReadingProbeSelectManga,
+      [want.parameters?.readerMangaOfflineProbe, want.parameters?.readerMangaReadingProbe,
+        want.parameters?.readerControlMotionVerification, want.parameters?.readerOpenSourcePilot,
+        want.parameters?.readerEventLoopProbe, want.parameters?.readerDisableOptionalEntryMemory]) : undefined;
+    this.mangaPlatformDiagnostic = ReaderMangaPlatformDiagnostic.install(mangaSelectionMode,
+      want.parameters?.readerMangaRecordedJankR31 === true);
     const owner = ReaderRuntimeOwner.install(this.context,
       readerDisableOptionalEntryMemory(DEBUG, BUILD_MODE_NAME, want.parameters?.readerDisableOptionalEntryMemory),
       this.coldStartPage === 'pages/Index' ? readerMangaOfflineProbeScope(DEBUG, BUILD_MODE_NAME,
         want.parameters?.readerMangaOfflineProbe, want.parameters?.readerMangaOfflineSourceId,
-        want.parameters?.readerMangaOfflineBookId) : undefined);
+        want.parameters?.readerMangaOfflineBookId, mangaSelectFlag ? true : want.parameters?.readerMangaReadingProbe) : undefined,
+      this.coldStartPage === 'pages/Index' ? readerMangaReadingProbeScope(DEBUG, BUILD_MODE_NAME,
+        want.parameters?.readerMangaReadingProbe, want.parameters?.readerMangaOfflineSourceId,
+        want.parameters?.readerMangaOfflineBookId, mangaSelectFlag ? true : want.parameters?.readerMangaOfflineProbe) : undefined,
+      mangaSelectionMode);
     this.runtimeOwner = owner;
     this.themeReady = trace.measure('startup.theme', (): Promise<void> => ReaderThemeHost.install(owner,
       this.context.config.colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK ? 'night' : 'day'))
@@ -222,6 +241,7 @@ export default class EntryAbility extends UIAbility {
   }
 
   onDestroy(): void {
+    this.mangaPlatformDiagnostic?.stop(); this.mangaPlatformDiagnostic = undefined;
     this.eventLoopProbe?.stop('destroyed');
     ReaderThemeHost.detach();
     this.windowStageGeneration += 1;

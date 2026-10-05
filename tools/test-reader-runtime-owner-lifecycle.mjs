@@ -18,13 +18,14 @@ const members=type.members.filter(n=>ts.isPropertyDeclaration(n)||ts.isConstruct
   .map(n=>n.getText(tree)).join('\n');
 let releasePlatform;const teardown=new Promise(resolve=>releasePlatform=resolve);const events=[];
 class PlatformHost {async close(){events.push('host-close');await teardown;}setResponseAssetBridge(){}}
-const dependencies={MangaOfflineNetworkProbe,LOG_DOMAIN:0x5244,hilog:{info(){},warn(){}},errorMessageOf:String,
+const dependencies={MangaOfflineNetworkProbe,MangaChapterPreparationCoordinator:{forRuntime:()=>({close:async()=>{}})},LOG_DOMAIN:0x5244,hilog:{info(){},warn(){}},errorMessageOf:String,
   ReaderStartupTrace:{current:()=>undefined},ReaderHostRegistry:PlatformHost,HarmonyTtsHostRouter:PlatformHost,
   HarmonySystemTtsHost:PlatformHost,HarmonyHttpTtsHost:PlatformHost,HarmonyTtsMediaSession:PlatformHost,
   HarmonyTtsBackgroundSession:PlatformHost,LocalEpubResourceHost:PlatformHost,ReadingImageDiskCache:class{close(){}},
   ReadingBodyImageHost:{setDisplayCacheDir(){},instance:{setMangaMetadataInspector(){},releaseAllDisplayFiles(){events.push('display-release');}}}};
 const Runtime=new Function(...Object.keys(dependencies),stripTypeScriptTypes(`class ReaderRuntimeOwner {${members}}`)+
   ';return ReaderRuntimeOwner;')(...Object.values(dependencies));
+Runtime.prototype.bindMangaStorage=()=>{}; // Physical policy binding has its own production Owner/Disk probe.
 Runtime.prototype.startRuntime=async function(){events.push(this===first?'first-start':'successor-start');this.state='ready';
   this.runtime={async request(){events.push('flush');return{};},close(){events.push('core-close');}};};
 const context={cacheDir:'/unused-context'},first=Runtime.install(context);

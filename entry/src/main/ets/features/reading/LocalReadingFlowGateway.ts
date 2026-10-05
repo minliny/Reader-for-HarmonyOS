@@ -22,7 +22,7 @@ export type LocalReadingTocEntry = {
 };
 
 export type LocalReadingDownloadState =
-  'unknown' | 'missing' | 'queued' | 'inProgress' | 'cached' | 'completed' | 'failed' | 'cancelled';
+  'unknown' | 'missing' | 'queued' | 'paused' | 'inProgress' | 'cached' | 'completed' | 'failed' | 'cancelled';
 
 export type LocalReadingBookmark = {
   positionScope?: RemoteReadingPositionScope;

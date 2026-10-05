@@ -22,6 +22,7 @@ export type ReadingGatewayImageCacheIdentity = {
   sourceId: string;
   bookId: string;
   chapterIndex: number;
+  chapterId?: string;
   contentVersion: string;
   mangaDecodeRevision?: string;
   imageUrl: string;
@@ -33,6 +34,7 @@ export type ReadingGatewayImageChapterIdentity = {
   sourceId: string;
   bookId: string;
   chapterIndex: number;
+  chapterId?: string;
   contentVersion: string;
   mangaDecodeRevision?: string;
 };
@@ -60,6 +62,11 @@ export interface ReadingGatewayRuntime {
     options?: RequestOptions,
   ): Promise<ReaderCoreResultEvent>;
 
+  requestBook?(method: string, params?: JsonObject, options?: RequestOptions,
+    priority?: 'foreground' | 'background'): Promise<ReaderCoreResultEvent>;
+  allowOptionalMangaPreparation?(): boolean;
+  isMangaPreparationForeground?(): boolean;
+
   /**
    * Optional in pure gateway tests; production ReaderRuntimeOwner implements
    * it with Core `source.imageRequest` plus the existing Host HTTP adapter.
@@ -85,6 +92,7 @@ export interface ReadingGatewayRuntime {
     isCurrent?: () => boolean,
     expectedSourceVersion?: string,
     allowNetwork?: boolean,
+    priority?: 'foreground' | 'chapter' | 'background' | 'download',
   ): Promise<void>;
 
   markOfflineImageChapterComplete?(
@@ -98,7 +106,15 @@ export interface ReadingGatewayRuntime {
 
   isOfflineImageChapterMaterialized?(sourceId: string, bookId: string, chapterIndex: number): Promise<boolean>;
 
-  clearOfflineBookImages?(sourceId: string, bookId: string): Promise<void>;
+  clearOfflineBookImages?(sourceId: string, bookId: string, manga?: boolean): Promise<void>;
+
+  listMangaDownloadChapters?(sourceId: string, bookId: string, isCurrent?: () => boolean):
+    Promise<Array<{ sourceId: string; bookId: string; chapterId: string; }>>;
+  listMangaDownloadVersions?(chapter: { sourceId: string; bookId: string; chapterId: string; },
+    isCurrent?: () => boolean): Promise<string[]>;
+  /** Called after retention release; false means the exact content is still protected. */
+  deleteMangaDownload?(chapter: { sourceId: string; bookId: string; chapterId: string; },
+    manifestVersion: string, isCurrent?: () => boolean): Promise<boolean>;
 
   /** Releases one display file/native fallback after the chapter window evicts it. */
   releaseReadingImage?(fileUri: string, pixelMap?: image.PixelMap): void;
