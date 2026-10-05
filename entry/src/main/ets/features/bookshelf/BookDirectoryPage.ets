@@ -22,7 +22,7 @@ import { ReaderDirectoryList } from '../reading/ReaderDirectoryList';
 import { ReaderDirectoryNavigationSurface } from '../reading/ReaderDirectoryNavigationSurface';
 import { readerDirectorySignalScrollCommand, readerDirectorySignalScrollIntent } from '../reading/ReaderDirectoryViewport';
 import type { RemoteReadingPositionScope } from '../reading/RemoteReadingPositionMigration';
-import { MangaDownloadOperationsPanel } from '../manga/MangaDownloadOperationsPanel';
+import { ReaderMangaDownloadPopup } from '../common/ReaderMangaDownloadPopup';
 import type { MangaDownloadAction, MangaDownloadActionId } from '../manga/MangaDownloadActionsGateway';
 import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries,
   type MangaDirectoryRowPresentation } from '../manga/MangaDirectoryPresentation';
@@ -414,26 +414,22 @@ export struct BookDirectoryPage {
   @Builder
   private mangaDownloadMenuButton() {
     if (this.mangaDownloadEnabled) {
-      Stack({ alignContent: Alignment.Center }) {
-        Image(this.appThemeScheme === 'night' ? $r('app.media.reader_directory_more_theme_night') : $r('app.media.reader_directory_more'))
-          .width(20).height(20);
-      }.width(44).height(44).accessibilityText('漫画下载管理')
-        .onClick((): void => { void this.openDownloadActions(); })
-        .bindPopup(this.downloadMenuVisible, { builder: (): void => { this.downloadOperationsMenu(); },
-          placement: Placement.BottomLeft, enableArrow: false,
-          popupColor: readerAppColor('TOK_CARD_BG', this.appThemeScheme),
-          onStateChange: (event: PopupStateChangeParam): void => { if (!event.isVisible) this.downloadMenuVisible = false; } });
+      ForEach([this.identity()], (identity: string): void => {
+        ReaderMangaDownloadPopup({ specId: 'manga-download', visible: this.downloadMenuVisible, generation: this.downloadMenuGeneration,
+          availableWidth: this.contentFrame().width, actions: this.downloadActions, loading: this.downloadActionsLoading,
+          failureMessage: this.downloadActionsFailure,
+          onOpen: (): void => { if (this.mounted && identity === this.identity()) void this.openDownloadActions(); },
+          onClosed: (generation: number): void => {
+            if (this.mounted && identity === this.identity() && generation === this.downloadMenuGeneration) this.downloadMenuVisible = false;
+          },
+          onAction: (action: MangaDownloadActionId, generation: number): void => {
+            if (this.mounted && identity === this.identity() && generation === this.downloadMenuGeneration) this.performDownloadAction(action);
+          },
+          onRetry: (generation: number): void => {
+            if (this.mounted && identity === this.identity() && generation === this.downloadMenuGeneration) void this.openDownloadActions(this.downloadMenuChapterIndex);
+          } });
+      }, (identity: string): string => identity);
     }
-  }
-
-  @Builder
-  private downloadOperationsMenu() {
-    Scroll() {
-      MangaDownloadOperationsPanel({ actions: this.downloadActions, loading: this.downloadActionsLoading,
-        failureMessage: this.downloadActionsFailure,
-        onAction: (action: MangaDownloadActionId): void => this.performDownloadAction(action),
-        onRetry: (): void => { void this.openDownloadActions(this.downloadMenuChapterIndex); } });
-    }.width(Math.min(240, this.contentFrame().width)).constraintSize({ maxHeight: 340 }).padding(8).scrollBar(BarState.Off);
   }
 
   private async openDownloadActions(chapterIndex?: number): Promise<void> {

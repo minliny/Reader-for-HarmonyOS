@@ -5,8 +5,8 @@ import { verifyArchitectureRegistration, registeredProducerTypographySlots } fro
 const root=process.cwd(),baseline=JSON.parse(readFileSync('tools/architecture-consumer-baseline.json','utf8')),contract=JSON.parse(readFileSync('tools/fixtures/architecture-shared-producers.json','utf8'));
 const inventory=JSON.parse(execFileSync(process.execPath,['tools/audit-architecture-consumers.mjs','--stdout=json'],{cwd:root,encoding:'utf8',maxBuffer:16*1024*1024,stdio:['ignore','pipe','ignore']}));
 const result=verifyArchitectureRegistration(inventory,baseline,contract,root);
-assert.equal(result.budgetRows,100,'legacy business private budgets are preserved');assert.equal(result.producers,13);
-assert.deepEqual(contract.producers.map(row=>row.component).sort(),['ReaderBoundedSurface','ReaderBoundedSurfaceActions','ReaderBoundedSurfaceHeader','ReaderButton','ReaderFormField','ReaderLabeledIconAction','ReaderSheetActionList','ReaderChoiceRow','RssOriginalRecoverySurface','ReaderCard','ReaderToggle','ReaderSegmentedControl','ReaderIconButton'].sort(),'only exact finite shared producers gain owner treatment');
+assert.equal(result.budgetRows,93,'original retained business budgets');assert.equal(result.transferredBudgetRows,7);assert.equal(result.historicalBudgetRows,100,'93 + seven exact reversible approved transfers preserve all original100');assert.equal(result.producers,14);
+assert.deepEqual(contract.producers.map(row=>row.component).sort(),['ReaderBoundedSurface','ReaderBoundedSurfaceActions','ReaderBoundedSurfaceHeader','ReaderButton','ReaderFormField','ReaderLabeledIconAction','ReaderSheetActionList','ReaderChoiceRow','RssOriginalRecoverySurface','ReaderCard','ReaderToggle','ReaderSegmentedControl','ReaderIconButton','ReaderMangaDownloadPopup'].sort(),'only exact finite shared producers gain owner treatment');
 const header='entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets',original=readFileSync(header,'utf8');
 const read=file=>file===header?original.replace('.fontSize(type.fontSizeFp)','.fontSize(99)'):readFileSync(file,'utf8');
 assert.notEqual(read(header),original);assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,contract,root,read),/finite shared physical inputs/,'same font call count cannot hide a private literal in a shared alias');
@@ -15,16 +15,34 @@ assert.equal(registeredProducerTypographySlots(original,header,contract).has('ap
 assert.equal(registeredProducerTypographySlots(original,'entry/src/main/ets/features/common/UnknownHeader.ets',contract).size,0,'common location is not a producer contract');
 const changedRole=original.replace('const type = this.id', 'const type = { fontFamily: "PrivateFont", fontSizeFp: 99, fontWeight: 700 }; const abandoned = this.id');
 assert.throws(()=>registeredProducerTypographySlots(changedRole,header,contract),/role bindings changed/,'same alias and call count cannot disguise a changed role binding');
-const raised=structuredClone(baseline);raised.rows[0].counts.fontSize++;assert.throws(()=>verifyArchitectureRegistration(inventory,raised,contract,root),/private budgets cannot be silently raised/);
+const raised=structuredClone(baseline);raised.rows[0].counts.fontSize++;assert.throws(()=>verifyArchitectureRegistration(inventory,raised,contract,root),/original business budget changed|private budgets cannot be silently raised/);
 const wildcard=structuredClone(baseline);wildcard.sharedOwners.push({file:'entry/src/main/ets/features/common/*',counts:{fontSize:999}});
 assert.throws(()=>verifyArchitectureRegistration(inventory,wildcard,contract,root),/exact legacy owner|no wildcard/);
 const arbitrary=structuredClone(baseline);arbitrary.sharedOwners.push({file:'entry/src/main/ets/features/common/UnknownHeader.ets',counts:{fontSize:999},reason:'new common exemption'});
 assert.throws(()=>verifyArchitectureRegistration(inventory,arbitrary,contract,root),/exact legacy owner/,'a concrete common path cannot obtain shared exemption without an exact contract');
 const missing=structuredClone(baseline);missing.uiPolicies=missing.uiPolicies.filter(r=>!r.file.endsWith('/CategorySection.ets'));
 assert.throws(()=>verifyArchitectureRegistration(inventory,missing,contract,root),/unregistered actual UI file/,'zero-style UI cannot disappear from registration');
-const illegal=structuredClone(inventory);const row=illegal.rows.find(r=>r.file==='features/source/SourceSwitchWindow.ets'),call=row.elements.find(e=>e.kind==='ReaderBoundedSurfaceHeader');
-call.args[0]=call.args[0].replace('{ specId:', '{ fontSize: 99, specId:');
+const illegal=structuredClone(inventory);const row=illegal.rows.find(r=>r.file==='features/reading/ReaderTtsConfigOverlay.ets'),call=row.elements.find(e=>e.kind==='ReaderBoundedSurfaceHeader');
+assert.ok(call,'actual retained TTS header remains a shared consumer');call.args[0]=call.args[0].replace(/\{\s*/, '{ fontSize: 99, ');
 assert.throws(()=>verifyArchitectureRegistration(illegal,baseline,contract,root),/illegal shared input/);
+for(const property of ['width','height','padding','maxHeight','radius']){
+ const bad=structuredClone(inventory),site=bad.rows.find(r=>r.file==='features/bookshelf/BookDirectoryPage.ets').elements.find(e=>e.kind==='ReaderMangaDownloadPopup');
+ assert.ok(site);site.args[0]=site.args[0].replace(/\{\s*/,'{ '+property+': 99, ');
+ assert.throws(()=>verifyArchitectureRegistration(bad,baseline,contract,root),/illegal shared input/,'download popup exposes only business state and measured width, no style bag '+property);
+}
+const popupPath='entry/src/main/ets/features/common/ReaderMangaDownloadPopup.ets',popupSource=readFileSync(popupPath,'utf8');
+assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,contract,root,file=>file===popupPath?popupSource.replace('.width(this.spec().anchorSize)','.width(99)'):readFileSync(file,'utf8')),/finite shared physical inputs/,'same-count popup geometry99 cannot bypass the fixed recipe');
+const popupSpecPath='entry/src/main/ets/features/common/ReaderMangaDownloadPopupSpec.ts',popupSpecSource=readFileSync(popupSpecPath,'utf8');
+assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,contract,root,file=>file===popupSpecPath?popupSpecSource.replace('= 240','= 99'):readFileSync(file,'utf8')),/finite shared spec source/,'fixed tuple source is part of the exact producer contract');
+const panelPath='entry/src/main/ets/features/manga/MangaDownloadOperationsPanel.ets',panelSource=readFileSync(panelPath,'utf8');
+assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,contract,root,file=>file===panelPath?panelSource.replace('.fontSize(13)','.fontSize(99)'):readFileSync(file,'utf8')),/actual shared delegate implementation changed/,'unchanged existing manga content font is a concrete delegation contract');
+const unknownPopup=structuredClone(inventory),popupCall=unknownPopup.rows.find(r=>r.file==='features/bookshelf/BookDirectoryPage.ets').elements.find(e=>e.kind==='ReaderMangaDownloadPopup');
+popupCall.args[0]=popupCall.args[0].replace("'manga-download'","'private99'");
+assert.throws(()=>verifyArchitectureRegistration(unknownPopup,baseline,contract,root),/producer\/consumer\/spec edges changed/,'unknown popup spec is rejected statically as well as at runtime');
+const outerPopup=structuredClone(inventory);outerPopup.rows.find(r=>r.file==='features/bookshelf/BookDirectoryPage.ets').elements.find(e=>e.kind==='ReaderMangaDownloadPopup').modifiers.push({property:'width',args:['99']});
+assert.throws(()=>verifyArchitectureRegistration(outerPopup,baseline,contract,root),/caller privately overrides shared appearance/,'caller cannot add a geometry override around the finite popup');
+const lostTransition=structuredClone(baseline);lostTransition.uiPolicies.find(r=>r.file.endsWith('/BookDirectoryPage.ets')).supersededLegacyCounts.fontSize++;
+assert.throws(()=>verifyArchitectureRegistration(inventory,lostTransition,contract,root),/exact original counts/,'policy transfer cannot erase or raise the historical budget');
 const missingRssDelegate=structuredClone(inventory),rssWrapper=missingRssDelegate.rows.find(row=>row.file==='features/rss/RssOriginalRecoverySurface.ets');
 assert.ok(rssWrapper);const actualAction=rssWrapper.elements.findIndex(element=>element.kind==='ReaderRecoveryAction');assert.ok(actualAction>=0);rssWrapper.elements.splice(actualAction,1);
 assert.throws(()=>verifyArchitectureRegistration(missingRssDelegate,baseline,contract,root),/actual shared delegate edges changed/,'five incoming Page rows cannot hide a missing shared action implementation');
@@ -63,7 +81,7 @@ const copiedMode=structuredClone(contract);copiedMode.producers.find(p=>p.compon
 assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,copiedMode,root),/only the exact existing Card budget/,'Card historical budget policy is not a common-path exemption');
 const cardSource=readFileSync('entry/src/main/ets/features/common/ReaderCard.ets','utf8');
 assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,contract,root,file=>file.endsWith('/ReaderCard.ets')?cardSource.replace('.borderRadius(resolveReaderCardSpec(this.specId).radius)', '.borderRadius(99)'):readFileSync(file,'utf8')),/finite shared physical inputs/,'same-count literal99 in actual Card implementation rejected');
-console.log('PASS P0 actual UI/finite shared producer gate: unchanged100 budgets, exact producer/spec/consumer/interface/physical-inputs, retained outside100 policy; literal-same-count, wildcard, absent zero-style UI and arbitrary consumer override rejected. SDK proof suites are separate.');
+console.log('PASS P0 actual UI/finite shared producer gate: 93 unchanged budgets + seven reversible approved transitions, exact producer/spec/consumer/interface/physical-inputs, retained outside100 policy; literal-same-count, wildcard, absent zero-style UI and arbitrary consumer override rejected. SDK proof suites are separate.');
 
 for (const component of ['ReaderToggle','ReaderSegmentedControl']) {
  const originalCall = inventory.rows.flatMap(row=>row.elements.map(element=>({row,element}))).find(x=>x.element.kind===component);

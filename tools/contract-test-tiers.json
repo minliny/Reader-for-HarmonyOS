@@ -305,6 +305,7 @@
     "test-manga-display-policy.mjs",
     "test-manga-display-retention.mjs",
     "test-manga-download-actions.mjs",
+    "test-manga-download-popup-sdk.mjs",
     "test-manga-error-recovery.mjs",
     "test-manga-far-page-tile-retirement.mjs",
     "test-manga-image-decode.mjs",

@@ -61,7 +61,29 @@ export function retainedSharedConsumerInputs(inventory,name,file){
   .filter(e=>e.kind===name&&e.customTarget?.endsWith('#'+name+'#build'))
   .map(e=>({...edge(e,row),input:canonicalArgument(e.args[0]??'{}')})));
 }
+function legacyBudgetOriginFacts(baseline,contract,readSource){
+ const origin=contract.legacyBusinessBudgetOrigins;
+ assert.equal(origin?.file,'tools/fixtures/architecture-legacy-business-budgets-20261005.json','exact historical budget origin witness');
+ const historical=JSON.parse(readSource(origin.file)).rows;
+ assert.equal(historical.length,100,'all original private budgets remain witnessed');
+ assert.equal(createHash('sha256').update(JSON.stringify(historical)).digest('hex'),origin.rowsSha256,'immutable original private budget witness');
+ const approvedFiles=['BookDirectoryPage.ets','LocalBookDetail.ets','PageBackBar.ets','ReaderDirectoryNavigationList.ets','ReaderDirectoryNavigationSurface.ets','SearchPage.ets','SourceSwitchWindow.ets'];
+ assert.deepEqual(origin.transferredPaths.map(file=>file.split('/').at(-1)).sort(),approvedFiles.sort(),'only seven explicitly approved policy migrations');
+ const current=new Map(baseline.rows.map(row=>[row.file,row]));
+ const migrated=new Map((baseline.uiPolicies??[]).filter(row=>origin.transferredPaths.includes(row.file)).map(row=>[row.file,row]));
+ assert.equal(migrated.size,7,'one exact reversible policy for every transfer');
+ for(const row of historical){
+  if(current.has(row.file)){assert.deepEqual(current.get(row.file),row,'original business budget changed: '+row.file);continue;}
+  const policy=migrated.get(row.file);assert.ok(policy,'historical budget lost: '+row.file);
+  assert.equal(policy.kind,'approved-existing-manga-variant','no arbitrary reclassification of private budgets');
+  assert.deepEqual(policy.supersededLegacyCounts,row.counts,'exact original counts survive the approved transfer');
+  assert.ok(policy.approvalEvidence&&policy.designSource,'explicit approved design source for transfer');
+ }
+ assert.equal(current.size+migrated.size,historical.length,'93 preserved plus 7 explicit transfers reversibly cover the original100');
+ return{historicalBudgetRows:historical.length,transferredBudgetRows:migrated.size};
+}
 export function verifyArchitectureRegistration(inventory,baseline,contract,root,readSource=file=>readFileSync(path.join(root,file),'utf8')){
+ const origins=legacyBudgetOriginFacts(baseline,contract,readSource);
  assert.equal(createHash('sha256').update(JSON.stringify(baseline.rows)).digest('hex'),contract.legacyBusinessRowsSha256,'legacy100 private budgets cannot be silently raised');
  const producerFiles=new Set(contract.producers.map(p=>p.file));
  const legacyOwners=baseline.sharedOwners.filter(r=>!producerFiles.has(r.file));
@@ -99,11 +121,12 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
   const edges=producerConsumerEdges(inventory,producer.component);assert.ok(edges.length>0,'shared producer must be consumed');
   assert.deepEqual(edges.map(({keys,...e})=>e),producer.consumers.map(({keys,...e})=>e),'actual producer/consumer/spec edges changed: '+producer.id);
   for(const e of edges)for(const key of e.keys)assert.ok(publicFields.has(key),'illegal shared input '+producer.id+':'+key);
-  for(const row of inventory.rows)for(const e of row.elements.filter(e=>e.kind===producer.component))assert.equal(e.modifiers.some(m=>(['ReaderCard','ReaderToggle','ReaderSegmentedControl','ReaderIconButton'].includes(producer.component)?physical:appearance).has(m.property)),false,'caller privately overrides shared appearance '+row.file+':'+e.line);
+  for(const row of inventory.rows)for(const e of row.elements.filter(e=>e.kind===producer.component))assert.equal(e.modifiers.some(m=>(['ReaderCard','ReaderToggle','ReaderSegmentedControl','ReaderIconButton','ReaderMangaDownloadPopup'].includes(producer.component)?physical:appearance).has(m.property)),false,'caller privately overrides shared appearance '+row.file+':'+e.line);
   // A finite domain wrapper must also prove its actual child delegation;
   // registering five incoming callers alone cannot prove shared rendering.
   for(const delegate of producer.delegates??[]){
-    assert.equal(delegate.file,'entry/src/main/ets/features/common/'+delegate.component+'.ets','exact shared primitive target');
+    const domainDelegate=producer.component==='ReaderMangaDownloadPopup'&&delegate.component==='MangaDownloadOperationsPanel';
+    assert.equal(delegate.file,domainDelegate?'entry/src/main/ets/features/manga/MangaDownloadOperationsPanel.ets':'entry/src/main/ets/features/common/'+delegate.component+'.ets','exact shared primitive or approved existing manga content target');
     const childShape=sharedProducerShape(readSource(delegate.file),delegate.file);
     assert.deepEqual(childShape,delegate.shape,'actual shared delegate implementation changed: '+delegate.component);
     const child=childShape.declarations.find(d=>d.name===delegate.component);assert.ok(child,'actual delegate struct');
@@ -137,5 +160,5 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
     for(const element of row.elements.filter(e=>e.kind===child.component))assert.equal(element.modifiers.some(m=>appearance.has(m.property)),false,'recovery caller cannot override common appearance');
   }
  }
- return{budgetRows:baseline.rows.length,sharedOwners:baseline.sharedOwners.length,outsideBudgetPolicies:baseline.uiPolicies.length,uiFiles:inventory.rows.filter(r=>r.elements.length).length,producers:contract.producers.length};
+ return{...origins,budgetRows:baseline.rows.length,sharedOwners:baseline.sharedOwners.length,outsideBudgetPolicies:baseline.uiPolicies.length,uiFiles:inventory.rows.filter(r=>r.elements.length).length,producers:contract.producers.length};
 }

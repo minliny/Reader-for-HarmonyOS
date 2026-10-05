@@ -757,6 +757,17 @@
       "status": "REGISTERED_FINITE_PRODUCER_NOT_DEVICE_ACCEPTANCE",
       "contractId": "shared-ReaderIconButton",
       "proof": "tools/test-icon-button-finite-specs.mjs"
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderMangaDownloadPopup.ets",
+      "kind": "finite-spec-actual-shared-producer",
+      "owner": "ReaderMangaDownloadPopup",
+      "reason": "Approved existing manga download native popup thin shared adapter; fixed recipe and exact actual content delegate, unchanged parent identity/generation admission. No private business overlay budget increase.",
+      "counts": {
+        "bindPopup": 1
+      },
+      "contractId": "shared-ReaderMangaDownloadPopup",
+      "proof": "tools/test-manga-download-popup-sdk.mjs"
     }
   ],
   "uiPolicies": [
