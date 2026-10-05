@@ -525,7 +525,8 @@ export class SourceSwitchHost {
     this.stopDiscovery();
     const knownCandidates = (): SourceSwitchCandidate[] => context.readKnownCandidates?.() ?? context.knownCandidates;
     const initialKnown = knownCandidates();
-    const previous = this.snapshot.state.kind === 'candidates' ? this.snapshot.state.candidates : [];
+    const previous = this.snapshot.state.kind === 'candidates' ?
+      this.gateway.withoutSearchTiming(this.snapshot.state.candidates) : [];
     if (!force && initialKnown.length > 0) this.snapshot = { ...this.snapshot,
       state: { kind: 'candidates', candidates: initialKnown, refreshing: false } };
     if (force && previous.length > 0) this.snapshot = { ...this.snapshot,
@@ -559,11 +560,17 @@ export class SourceSwitchHost {
       }).finally((): void => { projecting = false; if (again) refreshProjection({ reset: false, identities: [] }); });
     };
     this.unsubscribe = this.runtime.bookAcquisitions().subscribe(refreshProjection);
+    const publishProgress = (candidates: SourceSwitchCandidate[]): void => {
+      if (!current() || candidates.length === 0) return;
+      this.snapshot = { ...this.snapshot, state: { kind: 'candidates', candidates, refreshing: true } };
+      this.publish();
+    };
     try {
       const cached = force ? [] : await this.gateway.loadCachedCandidates(context.query, current, knownCandidates());
       if (!current()) return;
       const outcome = cached.length > 0 ? { kind: 'sources' as const, candidates: cached }
-        : await this.gateway.refreshCandidates(context.query, current, force ? [] : context.searchedSourceIds);
+        : await this.gateway.refreshCandidates(context.query, current, force ? [] : context.searchedSourceIds,
+          publishProgress, force ? previous : initialKnown);
       if (!current()) return;
       this.snapshot = { ...this.snapshot, state: outcome.kind === 'noSources' || outcome.candidates.length === 0
         ? { kind: 'empty' } : { kind: 'candidates', candidates: outcome.candidates, refreshing: false } };
@@ -571,8 +578,9 @@ export class SourceSwitchHost {
     } catch (error) {
       if (!current()) return;
       const message = errorMessageOf(error);
-      this.snapshot = { ...this.snapshot, state: force && previous.length > 0
-        ? { kind: 'candidates', candidates: previous, refreshing: false, refreshError: message }
+      const retained = this.snapshot.state.kind === 'candidates' ? this.snapshot.state.candidates : previous;
+      this.snapshot = { ...this.snapshot, state: retained.length > 0
+        ? { kind: 'candidates', candidates: retained, refreshing: false, refreshError: message }
         : { kind: 'discoveryError', message } }; this.publish();
     } finally { projecting = false; if (again) refreshProjection({ reset: false, identities: [] }); }
   }

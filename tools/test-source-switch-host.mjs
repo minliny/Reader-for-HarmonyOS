@@ -8,6 +8,71 @@ import {fixture,settle,deferred,origin,target,session,rawCandidate,hostSource,Ga
 const checks=[];
 const TX='00000000-0000-4000-8000-000000000001/1';
 {
+  const f=fixture({open:false}),baseRequest=f.runtime.request.bind(f.runtime),rows=[],started=[],progress=[];
+  const sources=['first','faster','slow'],gates=new Map(sources.map(id=>[id,deferred()]));
+  let now=1000;
+  const originalNow=Date.now;
+  const registry=[{sourceId:'old',name:'Old',enabled:true,sourceVersion:'v1'},
+    ...sources.map(sourceId=>({sourceId,name:sourceId,enabled:true,sourceVersion:'v1'}))];
+  f.runtime.request=async(method,params,options)=>{
+    if(method==='source.list')return{data:{sources:registry}};
+    if(method==='search-book.related')return{data:{books:rows.slice(),snapshotRevision:'stream',complete:true,
+      sourceVersions:registry.map(source=>({...source}))}};
+    if(method==='search-book.batch.get')return{data:{complete:true,books:[],missing:params.identities}};
+    if(method==='change.bookSource'){
+      const id=params.sourceIds[0];started.push(id);
+      if(id==='first')now=1500;if(id==='faster')now=1600;
+      await gates.get(id).promise;
+      rows.push({...rawCandidate,origin:id,bookUrl:`/${id}`,time:Math.floor(now/1000)});
+      return{data:{candidates:[{sourceId:id,bookUrl:`/${id}`,bookName:'Book',author:'Writer'}]}};
+    }
+    return baseRequest(method,params,options);
+  };
+  f.context.searchedSourceIds=['old'];
+  const refresh=f.host.gateway.refreshCandidates.bind(f.host.gateway);
+  f.host.gateway.refreshCandidates=(query,current,excluded,onProgress,initial)=>{
+    progress.push(onProgress);return refresh(query,current,excluded,onProgress,initial);
+  };
+  Date.now=()=>now;
+  try{
+    assert.equal(f.host.open(f.context,f.lease),true);await settle();
+    assert.equal(f.host.current().state.kind,'discovering');assert.deepEqual(started,sources);
+    now=1700;gates.get('first').resolve();await settle();
+    assert.deepEqual(f.host.current().state.candidates.map(row=>row.sourceId),['first'],
+      'first source is published while two real Gateway workers are still unresolved');
+    assert.equal(f.host.current().state.refreshing,true);assert.equal(f.candidate().latencyMs,700);
+    now=1800;gates.get('faster').resolve();await settle();
+    assert.deepEqual(f.host.current().state.candidates.map(row=>row.sourceId),['faster','first'],
+      'new source is sorted by its measured search latency before the last worker completes');
+    assert.equal(f.candidate().latencyMs,300);assert.equal(f.host.current().state.refreshing,true);
+    now=3000;gates.get('slow').resolve();await settle();
+    assert.equal(f.host.current().state.candidates.length,3);assert.equal(f.host.current().state.refreshing,false);
+    const originalCandidates=f.host.current().state.candidates;
+    const before=f.host.current().scopeId;
+    // Retain the real owner while the next Gateway invocation waits; direct
+    // captured callbacks below exercise Host admission independently of the
+    // Gateway's own cancellation, which also remains active.
+    const pending=deferred();f.host.gateway.refreshCandidates=(query,current,excluded,onProgress,initial)=>{
+      progress.push(onProgress);assert.ok(initial.every(row=>row.latencyMs===undefined&&row.latencyKind===undefined));
+      return pending.promise;
+    };
+    f.host.refresh(before);
+    assert.ok(f.host.current().state.candidates.every(row=>row.latencyMs===undefined&&row.latencyKind===undefined),
+      'the immediate refreshing frame cannot display search timing from the previous sweep');
+    assert.ok(originalCandidates.every(row=>row.latencyMs!==undefined),'old immutable rows are not modified');
+    await settle();const oldProgress=progress.at(-1);
+    f.host.stop(before);f.host.refresh(before);await settle();
+    const currentSnapshot=f.host.current();oldProgress([{...originalCandidates[0],sourceId:'obsolete'}]);
+    assert.equal(f.host.current(),currentSnapshot,'previous generation cannot publish into a new sweep');
+    const latestProgress=progress.at(-1);assert.equal(f.host.close(before),true);
+    const closed=f.host.current();latestProgress(originalCandidates);
+    pending.resolve({kind:'sources',candidates:originalCandidates});await settle();
+    assert.equal(f.host.current(),closed,'closed owner rejects late callbacks and final results');
+    assert.equal(f.subscriptions.size,0);
+  }finally{Date.now=originalNow;f.retire();for(const gate of gates.values())gate.resolve();}
+  checks.push('actual-owner-zero-to-streaming-latency-sort-refresh-clears-stale-time-and-generation-close-admission');
+}
+{
   const f=fixture({preview:true,failAcquire:true});await settle();
   const original=f.host.current().scopeId;await f.host.pick(f.candidate(),original);
   assert.equal(f.effects.at(-1).kind,'acquisitionFailed');assert.equal(f.host.current().visible,false);
