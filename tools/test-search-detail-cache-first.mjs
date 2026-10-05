@@ -24,7 +24,7 @@ assert.match(coordinator, /gateway\.openCachedCatalogSession/);
 assert.match(coordinator, /gateway\.openSession/);
 assert.match(entry, /this\.runtime\.bookAcquisitions\(\)\.acquireBook\(seed, \{ forceRefresh: true, isCurrent: current \}\)/,
   'background refresh has process ownership');
-assert.match(index, /this\.route === 'detail' && !this\.readingSessionActive/,
+assert.match(index, /this\.route === 'detail' &&\s*!this\.readingSessionActive/,
   'late catalog publication must not replace an active reader');
 console.log('search detail shared cache admission wiring: PASS');
 

@@ -4,6 +4,7 @@ import {fixture,deferred,until,book,session,bookmarkInput} from './reading-opera
 import {boundedSurfaceSdk,boundedMembers} from './bounded-surface-sdk-probe.mjs';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
 const {readingDirectoryRecovery,EMPTY_READING_DIRECTORY_RECOVERY}=await import('../../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
+const {readingOfflineFailureHint}=await import('../../entry/src/main/ets/features/reading/ReadingOfflineFailurePresentation.ts');
 // Reuse the real SDK-emitted atomic Store + cold Core authority in other Index consumers.
 export {fixture as actualCacheAuthorityFixture};
 export const read=p=>readFileSync(new URL('../../entry/src/main/ets/'+p,import.meta.url),'utf8');
@@ -11,7 +12,7 @@ export const indexSource=read('pages/Index.ets');
 const methods=['getReaderDirectoryHost','getReadingOfflineHost','directoryOperationPresentationId','isCurrentDirectoryOperationPresentation',
  'directoryOperationBindingId','isCurrentDirectoryOperationBinding','directoryBinding','offlineBinding','applyOwnedDirectoryEntries','deleteDirectoryBookmarks','createDirectoryChapterStartBookmark','toggleReaderPageBookmark',
  'controlBookmarkProjectionMessage','directoryRecovery','reconcileDirectoryOperation','reconcileOfflineOperation','loadControlBookmarks',
- 'downloadDirectoryChapter','downloadDirectoryBook','clearDirectoryBookOffline','offlineDownloadFeedback','showOfflineDownloadFeedback',
+ 'downloadDirectoryChapter','downloadDirectoryBook','clearDirectoryBookOffline','offlineDownloadFeedback','showOfflineDownloadFeedback','showChapterDownloadFailure',
  'isCurrentRuntime','externalDirectory','loadDirectoryOperationProjections'];
 const callbacks=['onReconcileBookmarks','onContinueBookmarks','onReconcileOffline','onContinueOffline'];
 export function makeIndex(f,{remote=false,mount=1,index=indexSource}={}){
@@ -29,7 +30,7 @@ export function makeIndex(f,{remote=false,mount=1,index=indexSource}={}){
  }
  const idx=p.consumer(index,['directoryOperation','offlineOperation','offlineOperationActive','directoryPresentationGeneration',...methods],{
   ReaderDirectoryHost:f.Directory,ReadingOfflineHost:f.Offline,...f.types,ReaderRuntimeOwner:f.Runtime,
-  readingDirectoryRecovery,EMPTY_READING_DIRECTORY_RECOVERY,DOMAIN:0,hilog:{warn(){},error(){}},...leaves});
+  readingDirectoryRecovery,EMPTY_READING_DIRECTORY_RECOVERY,readingOfflineFailureHint,DOMAIN:0,hilog:{warn(){},error(){}},...leaves});
  Object.assign(idx,{mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:mount,navigationGeneration:1,
   remoteSessionGeneration:1,readingEntryScopeId:0,readingSessionActive:true,route:'directory',detailBook:remote?{...book,sourceId:'source'}:{...book},
   remoteReadingSession:remote?session:undefined,detailToc:structuredClone(f.entries()),getReadingEntryHost:()=>undefined,

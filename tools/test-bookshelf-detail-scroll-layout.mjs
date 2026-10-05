@@ -9,7 +9,7 @@ for (const viewport of [320, 390, 800]) for (const count of [0, 1, 3, 20])
   for (const safeBottom of [0, 24, 48]) for (const safeTop of [0, 32]) {
   metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, viewport, 900), undefined,
     new ReaderInsetsVp(0, safeTop, 0, safeBottom));
-  const owner = new Component(); const calls = [];
+  const owner = new Component(undefined, {}); const calls = [];
   Object.assign(owner, {appThemeScheme: 'day', readerWindowMetricsRevision: 1, viewportWidth: 0,
     book: {sourceId: 'local', bookId: 'layout', title: 'Book', author: 'Author', contentKind: 'text'},
     toc: Array.from({length: count}, (_, index) => ({index, title: `第${index + 1}章`})),

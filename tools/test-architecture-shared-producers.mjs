@@ -43,6 +43,16 @@ const outerPopup=structuredClone(inventory);outerPopup.rows.find(r=>r.file==='fe
 assert.throws(()=>verifyArchitectureRegistration(outerPopup,baseline,contract,root),/caller privately overrides shared appearance/,'caller cannot add a geometry override around the finite popup');
 const lostTransition=structuredClone(baseline);lostTransition.uiPolicies.find(r=>r.file.endsWith('/BookDirectoryPage.ets')).supersededLegacyCounts.fontSize++;
 assert.throws(()=>verifyArchitectureRegistration(inventory,lostTransition,contract,root),/exact original counts/,'policy transfer cannot erase or raise the historical budget');
+for(const file of contract.legacyBusinessBudgetOrigins.transferredPaths){
+ const wrongKind=structuredClone(baseline),policy=wrongKind.uiPolicies.find(r=>r.file===file);
+ const otherKind=baseline.uiPolicies.find(r=>contract.legacyBusinessBudgetOrigins.transferredPaths.includes(r.file)&&r.kind!==policy.kind).kind;
+ policy.kind=otherKind;
+ assert.throws(()=>verifyArchitectureRegistration(inventory,wrongKind,contract,root),/no arbitrary reclassification/,'another approved kind cannot be reused for this exact path '+file);
+}
+const wrongTransferPath=structuredClone(contract);
+const directoryTransfer=wrongTransferPath.legacyBusinessBudgetOrigins.transferredPaths.indexOf('entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets');
+assert.ok(directoryTransfer>=0);wrongTransferPath.legacyBusinessBudgetOrigins.transferredPaths[directoryTransfer]='entry/src/main/ets/features/unknown/BookDirectoryPage.ets';
+assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,wrongTransferPath,root),/full-path policy migrations/,'same basename elsewhere cannot inherit the exact approved transfer');
 const missingRssDelegate=structuredClone(inventory),rssWrapper=missingRssDelegate.rows.find(row=>row.file==='features/rss/RssOriginalRecoverySurface.ets');
 assert.ok(rssWrapper);const actualAction=rssWrapper.elements.findIndex(element=>element.kind==='ReaderRecoveryAction');assert.ok(actualAction>=0);rssWrapper.elements.splice(actualAction,1);
 assert.throws(()=>verifyArchitectureRegistration(missingRssDelegate,baseline,contract,root),/actual shared delegate edges changed/,'five incoming Page rows cannot hide a missing shared action implementation');

@@ -222,7 +222,8 @@ if (!baseline) await check('PH105: real Gateway/Host feedback preserves verified
   const { deferred, until } = await import('./lib/reading-operation-durable-probe.mjs');
   for (const mode of ['complete', 'partial', 'failure', 'stale']) {
     const f = await actualCacheAuthorityFixture(true), pending = deferred(), messages = [];
-    const model = { state: 'missing', bytes: 0, manifest: false, lastError: undefined, queued: 0 };
+    const model = { state: mode==='failure'?'cached':'missing', bytes: mode==='failure'?64:0, manifest: false, lastError: undefined, queued: 0 };
+    const privateFailure='offline unavailable https://fixture.invalid/?token=PRIVATE_TEST_TOKEN Cookie=PRIVATE_TEST_COOKIE';
     f.runtime.supportsCoreCapability = capability => capability === 'chapter.content.cacheOnly.v1';
     f.runtime.markOfflineImageChapterComplete = async () => { model.manifest = mode !== 'partial'; };
     f.runtime.isOfflineImageChapterComplete = async () => model.manifest;
@@ -245,15 +246,15 @@ if (!baseline) await check('PH105: real Gateway/Host feedback preserves verified
       }
       throw Error('Unexpected offline boundary: ' + method);
     };
-    const { idx, render, p } = makeIndex(f, { remote: true });
-    idx.detailToc = [{ index: 0, title: 'Chapter', navigable: true, downloadState: 'missing' }];
+    const { idx, render, p, click } = makeIndex(f, { remote: true });
+    idx.detailToc = [{ index: 0, title: 'Chapter', navigable: true, downloadState: model.state }];
     idx.getUIContext = () => ({ getPromptAction: () => ({ showToast: ({ message }) => messages.push(message) }) });
     idx.downloadDirectoryBook();
     assert.ok(messages[0]?.includes('开始下载'), 'immediate accepted feedback precedes filesystem/RPC admission');
     await until(() => model.queued === 1);
     assert.equal(f.offline.busy(), true);
     if (mode === 'stale') idx.remoteReadingSession = undefined;
-    if (mode === 'failure') pending.reject(Error('offline unavailable'));
+    if (mode === 'failure') pending.reject(Error(privateFailure));
     else pending.resolve();
     await ownerSettled(f);
     assert.equal(model.queued, 1, 'one actual queue write');
@@ -268,10 +269,31 @@ if (!baseline) await check('PH105: real Gateway/Host feedback preserves verified
     if (mode === 'failure') {
       assert.equal(idx.offlineOperation.projection.receipt.confirmation, 'unknown');
       const leaf = render();
-      assert.equal(idx.offlineOperation.operationFailure, 'offline unavailable', 'actual failure cause retained independently of unknown write receipt');
-      assert.ok(p.walk(leaf).some(actor => actor.view?.visible === true && actor.view?.message === '等待核对'), 'actual shared recovery notice exposes unknown queue instead of claiming failure means unwritten');
-      assert.ok(p.walk(leaf).some(actor => actor.label === '核对离线结果'), 'actual read-only recovery action remains available');
-      assert.equal(idx.detailToc[0].downloadState, 'missing');
+      const generation=idx.offlineOperation.generation;
+      assert.equal(idx.offlineOperation.operationFailure,privateFailure,'actual private cause stays independent of the unknown write receipt');
+      const notice=p.walk(leaf).find(actor=>actor instanceof p.deps.ReaderRecoveryNotice&&actor.view?.generation===generation);
+      assert.ok(notice?.view.visible,'the actual notice represents this unknown queue operation');
+      assert.match(notice.view.message,/结果尚未确认/);assert.match(notice.view.message,/已有内容仍保留/);
+      assert.doesNotMatch(notice.view.message,/PRIVATE_TEST|fixture\.invalid|Cookie=|offline unavailable/);
+      assert.equal(notice.view.canRetry,false,'the notice itself does not dispatch recovery');
+      assert.equal(idx.directoryRecovery().offline.canRetry,true);
+      const action=p.walk(leaf).find(actor=>actor instanceof p.deps.ReaderRecoveryAction&&actor.label==='核对离线结果');
+      assert.ok(action);assert.equal(action.generation,generation);assert.equal(action.actionEnabled,true);
+      assert.equal(messages.length,2,'the actual Index shows one safe unknown-ACK feedback after its immediate acceptance');
+      assert.match(messages[1],/结果尚未确认/);assert.doesNotMatch(messages.join('\n'),/PRIVATE_TEST|fixture\.invalid|Cookie=|offline unavailable/);
+      assert.equal(idx.detailToc[0].downloadState,'cached');assert.equal(model.bytes,64,'unknown queue ACK preserves the previously cached body');
+      const reads=f.calls.filter(call=>call.method==='cache.book.status').length;
+      const oldNative=[...action.nodes.values()].find(node=>typeof node.onClick==='function').onClick;
+      click(leaf,'核对离线结果');await ownerSettled(f);
+      assert.ok(f.calls.filter(call=>call.method==='cache.book.status').length>reads,'actual reconciliation performs only a canonical read');
+      assert.equal(model.queued,1,'a recovery click cannot dispatch a second queue write');
+      assert.equal(f.calls.filter(call=>call.method==='cache.clear').length,0);
+      assert.equal(idx.offlineOperation.projection.receipt.confirmation,'unknown','availability is not an ACK of the original queue write');
+      assert.equal(idx.offlineOperation.operationFailure,privateFailure);assert.equal(idx.detailToc[0].downloadState,'cached');
+      const before=f.calls.length;
+      idx.directoryPresentationGeneration++;oldNative();await ownerSettled(f);assert.equal(f.calls.length,before,'obsolete physical recovery actor cannot consume the reopened directory');
+      idx.directoryPresentationGeneration--;f.unset();oldNative();await ownerSettled(f);assert.equal(f.calls.length,before,'unset Runtime rejects the old admitted actor');
+      f.install({...f.runtime});oldNative();await ownerSettled(f);assert.equal(f.calls.length,before,'replacement Runtime cannot lend authority to the old actor');
     }
     if (mode === 'stale') {
       assert.equal(messages.length, 1, 'retired UI gets no delayed toast');

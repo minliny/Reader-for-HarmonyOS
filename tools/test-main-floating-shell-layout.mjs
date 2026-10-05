@@ -90,7 +90,10 @@ const bar = probe('shell/MainTabBar.ets', ['bottomBar', 'bottomInset'], {
 });
 bar.bottomBar();
 const surface = nodes(bar, 'Row')[0];
-assert.deepEqual([surface.width, surface.height, surface.borderRadius, surface.clip], [360, 68, 24, true]);
+// a8819e0c adopts the approved 68vp translucent pill with a 34vp radius.
+// Width remains the explicit frame input; the actual 2/3/4-tab frame is covered
+// by test-manga-ui-floating-bars rather than inferred from this fixture's output.
+assert.deepEqual([surface.width, surface.height, surface.borderRadius, surface.clip], [360, 68, 34, true]);
 assert.equal(surface.hitTestBehavior, 'HitTestMode.Transparent');
 for (const bottom of [0, 15, 34, 50]) {
   safeBottom = bottom; bar.readerWindowMetricsRevision++; bar.replay();
@@ -120,6 +123,7 @@ assert.equal(shelf.isWideViewport(), false);
 assert.equal(list.contentEndOffset, 134, 'returning to phone width restores the live safe-bottom tab clearance');
 
 for (const width of [390, 800]) {
+  windowWidth = width;
   safeBottom = 34;
   const empty = probe('bookshelf/BookshelfEmptyPage.ets', ['build', 'bottomContentInset'], {
     sectionHeader() {}, contentFrame: () => ({ left: 19, right: 19, width: Math.min(352, width - 38) }),
@@ -129,6 +133,7 @@ for (const width of [390, 800]) {
   safeBottom = 50; empty.readerWindowMetricsRevision++; empty.replay();
   assert.equal(content.padding.bottom, 134, 'empty tablet fallback keeps the bottom tab clearance');
 }
+windowWidth = 390;
 
 for (const failed of [false, true]) {
   safeBottom = 34;

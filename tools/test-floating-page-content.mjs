@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { readerInteractiveSafeBottom } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import { readerInteractiveSafeBottom, readerInteractiveSafeTop } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { readerFloatingBarBottomInset } from './lib/reader-floating-bar-metrics-probe.mjs';
 
 const root = new URL('../entry/src/main/ets/', import.meta.url);
@@ -28,16 +28,23 @@ class Child {
 for (const [name, props] of Object.entries({
   SearchSpinner: ['active', 'runKey', 'reduceMotion', 'diameter'], SearchResultCard: ['group', 'isTablet', 'cardWidth'],
   ReaderSelectPanel: ['value', 'options', 'variant', 'controlWidth', 'reduceMotion', 'closing', 'selectionId', 'x', 'y'],
-  PageBackBar: ['title'], ReaderDirectoryRules: ['bookId'],
+  PageBackBar: ['title', 'floating', 'centered'], ReaderDirectoryRules: ['bookId'],
   ReaderDirectoryToolbar: ['text', 'placeholder', 'ascending', 'showChapterTools'],
-  ReaderDirectoryList: ['entries', 'rowHeight', 'listPaddingX', 'listPaddingY', 'contentStartInset', 'contentEndInset'],
+  ReaderDirectoryList: ['entries', 'rowHeight', 'naturalRowHeight', 'listPaddingX', 'listPaddingRight',
+    'listPaddingY', 'listPaddingTop', 'listPaddingBottom', 'contentStartInset', 'contentEndInset'],
   ReaderDirectoryNavigationSurface: ['sourceId', 'bookId', 'query', 'ascending', 'currentChapterIndex', 'openRevision',
-    'interacted', 'rowHeight', 'listPaddingX', 'listPaddingY', 'contentStartInset', 'contentEndInset'],
+    'interacted', 'rowHeight', 'mangaDisplay', 'listPaddingX', 'listPaddingRight', 'listPaddingY',
+    'listPaddingTop', 'listPaddingBottom', 'contentStartInset', 'contentEndInset'],
   ReaderDirectoryNavigationList: ['view', 'sourceId', 'bookId', 'rowHeight', 'listPaddingX', 'listPaddingY',
+    'mangaDisplay', 'mangaCatalogDisplay', 'listPaddingRight', 'listPaddingTop', 'listPaddingBottom',
     'contentStartInset', 'contentEndInset', 'interactionEnabled'],
 })) {
   syntax.componentCollection.customComponents.add(name);
   syntax.propCollection.set(name, new Set(props));
+}
+for (const [name, slots] of [['PageBackBar', ['trailing']], ['ReaderDirectoryList', ['rowBuilder']],
+  ['ReaderDirectoryNavigationSurface', ['fallbackBuilder']]]) {
+  syntax.builderParamObjectCollection.set(name, new Set(slots));
 }
 const tokens = Object.fromEntries([...read('features/common/ReaderTokens.ets')
   .matchAll(/export const (TOK_\w+)(?:\s*:\s*\w+)?\s*=\s*([\d.]+);/g)].map(m => [m[1], Number(m[2])]));
@@ -54,7 +61,8 @@ const deps = {
     each(generator) { this.generator = generator; return this; }, key() { return this; }, virtualScroll() { return this; },
     render() { items.forEach((item, index) => this.generator({ item, index })); },
   }; },
-  ReaderWindowCoordinator: { metrics: () => metrics }, readerFloatingBarBottomInset, readerInteractiveSafeBottom,
+  ReaderWindowCoordinator: { metrics: () => metrics }, readerFloatingBarBottomInset,
+  readerInteractiveSafeBottom, readerInteractiveSafeTop,
   SearchSpinner: Child, SearchResultCard: Child, PageBackBar: Child, ReaderDirectoryRules: Child,
   ReaderSelectPanel: Child,
   ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child, ReaderDirectoryNavigationSurface: Child,
@@ -192,18 +200,96 @@ assert.equal(flat.params.contentStartInset, 273, 'expanding tools updates both t
 tools.onAreaChange({}, { height: 0 });
 assert.equal(directory.toolsHeight, 210, 'a transient zero layout cannot erase the tool clearance');
 
-for (const key of ['flat', 'tree']) {
+function nativeDirectoryFixture(key, values = {}) {
   const owner = fixture(key, key === 'flat' ? ['build', 'rowBuilder'] : ['build'], {
     entries: [], dataSource: { totalCount: () => 0 }, rowHeight: 40, itemSizes: {},
-    contentStartInset: 273, contentEndInset: 39, listPaddingX: 10, listPaddingY: 0,
-    interactionEnabled: true,
-    __Repeat() { return { each() { return this; }, key() { return this; }, virtualScroll() { return this; }, render() {} }; },
+    contentStartInset: 273, contentEndInset: 39, listPaddingX: 10, listPaddingRight: -1,
+    listPaddingY: 0, listPaddingTop: -1, listPaddingBottom: -1,
+    naturalRowHeight: false, mangaDisplay: false, mangaCatalogDisplay: false,
+    interactionEnabled: true, ...values,
   });
   owner.initialRender();
   const list = fullList(owner);
+  return { owner, list };
+}
+function assertSingleOffsetPublication(owner, list, after = 0) {
+  const calls = owner.attributeCalls.slice(after).filter(call => call.id === list.id);
+  for (const property of ['contentStartOffset', 'contentEndOffset']) {
+    assert.equal(calls.filter(call => call.property === property).length, 1,
+      `${property} publishes once per native List update without a later reset`);
+  }
+}
+for (const key of ['flat', 'tree']) {
+  const { owner, list } = nativeDirectoryFixture(key);
   assert.equal(list.contentStartOffset, 273);
   assert.equal(list.contentEndOffset, 39);
+  assertSingleOffsetPublication(owner, list);
+  const before = owner.attributeCalls.length;
+  owner.contentStartInset = 114; owner.contentEndInset = 51;
+  owner.replayOnly([list.id]);
+  assert.equal(fullList(owner).id, list.id, 'text inset changes retain the original native List');
+  assert.equal(list.contentStartOffset, 114);
+  assert.equal(list.contentEndOffset, 51);
+  assertSingleOffsetPublication(owner, list, before);
 }
+for (const explicitPadding of [false, true]) {
+  const { owner, list } = nativeDirectoryFixture('flat', {
+    naturalRowHeight: true, listPaddingY: 8,
+    listPaddingTop: explicitPadding ? 248 : -1, listPaddingBottom: explicitPadding ? 106 : -1,
+  });
+  assert.equal(list.childrenMainSize, undefined, 'natural manga rows do not adopt fixed virtual text extents');
+  assert.equal(list.contentStartOffset, explicitPadding ? 248 : 8);
+  assert.equal(list.contentEndOffset, explicitPadding ? 106 : 8);
+  assertSingleOffsetPublication(owner, list);
+  const before = owner.attributeCalls.length;
+  owner.listPaddingTop = 280; owner.listPaddingBottom = 120;
+  owner.replayOnly([list.id]);
+  assert.equal(fullList(owner).id, list.id, 'manga padding changes retain the original native List');
+  assert.equal(list.contentStartOffset, 280);
+  assert.equal(list.contentEndOffset, 120);
+  assertSingleOffsetPublication(owner, list, before);
+}
+
+// The complete manga catalog owns both its overlay geometry and the payload
+// sent to the paged tree and its flat fallback. Exercise that producer before
+// mounting each actual native List, so a missing footer gap cannot be hidden by
+// a manually chosen child inset.
+for (const [safeTop, safeBottom] of [[0, 0], [48, 34], [10, 80]]) {
+  metrics = { ...metrics, systemInsets: { left: 0, right: 0, top: safeTop, bottom: safeBottom } };
+  const entries = [{ index: 7, title: '第七话', navigable: true }];
+  const catalog = fixture('directory', ['build', 'mangaPage', 'mangaFlatList', 'topInset', 'bottomInset'], {
+    contentKind: 'manga', sourceId: 'source', bookId: 'book', admittedIdentity: 'source\u0000book',
+    admittedEntries: entries, projectedEntries: entries, rulesRevision: 0, currentChapterIndex: 7,
+    locateCurrentRevision: 0, navigationInteracted: false, mangaDownloadEnabled: false,
+    bookTitle: '漫画', searchDraft: '', searchQuery: '', ascending: true,
+    mangaVisibleEntries: () => entries, mangaCurrentTitle: () => '第七话', mangaCurrentPosition: () => '1 / 20',
+  });
+  catalog.initialRender();
+  const treeChild = [...catalog.children.values()].find(child => child.params.chapterEntries);
+  assert.ok(treeChild, 'manga dispatch publishes the tree catalog');
+  treeChild.params.fallbackBuilder();
+  const flatChild = [...catalog.children.values()].find(child => child.params.entries);
+  assert.ok(flatChild, 'the actual manga fallback publishes its natural-row List');
+  const toolbar = nodes(catalog).find(node => node.type === 'Column' && node.height === 126);
+  const footer = nodes(catalog).find(node => node.type === 'Row' && node.height === 48 && node.margin?.bottom !== undefined);
+  assert.ok(toolbar); assert.ok(footer);
+  assert.equal(toolbar.margin.top, safeTop + 66);
+  assert.equal(footer.margin.bottom, Math.max(12, safeBottom) + 12);
+  const toolbarEnd = toolbar.margin.top + toolbar.height;
+  const footerClearance = footer.height + footer.margin.bottom + 12;
+  for (const [key, child] of [['tree', treeChild], ['flat', flatChild]]) {
+    assert.equal(child.params.listPaddingTop, safeTop + 200);
+    assert.equal(child.params.listPaddingTop, toolbarEnd + 8, `${key} first row clears the actual floating tools`);
+    assert.equal(child.params.listPaddingBottom, Math.max(12, safeBottom) + 72);
+    assert.equal(child.params.listPaddingBottom, footerClearance, `${key} final row clears the actual footer plus its 12vp gap`);
+    const { owner, list } = nativeDirectoryFixture(key, child.params);
+    assert.equal(list.contentStartOffset, child.params.listPaddingTop);
+    assert.equal(list.contentEndOffset, child.params.listPaddingBottom + (key === 'tree' ? 14 : 0),
+      'paged manga rows retain their extra row-end gap; the flat fallback preserves the complete footer clearance');
+    assertSingleOffsetPublication(owner, list);
+  }
+}
+metrics = { ...metrics, systemInsets: { left: 0, right: 0, bottom: 34 } };
 const surface = fixture('surface', ['build', 'fallbackBuilder'], { view: { visibleTotal: 1 }, contentStartInset: 273, contentEndInset: 39 });
 surface.initialRender();
 const nativeTree = [...surface.children.values()][0];

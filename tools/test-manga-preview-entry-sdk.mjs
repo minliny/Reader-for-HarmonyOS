@@ -3,6 +3,11 @@ import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {mangaSurfaceSdkDependencies} from './lib/manga-surface-sdk-probe.mjs';
+import {actualGeneralSettingsTypes,actualGeneralSettingsHostField} from './lib/general-settings-owner-probe.mjs';
+import {actualSourceManagementTypes,actualSourceManagementHostField} from './lib/source-management-owner-probe.mjs';
+import {actualBookshelfOperationTypes,actualBookshelfHostField} from './lib/bookshelf-operation-owner-probe.mjs';
+import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
+import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
 const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`),map=require(`${sdk}/lib/component_map.js`);
@@ -14,17 +19,27 @@ component('ReaderShell',shell);component('MangaReadingSurface',read('features/ma
 component('SourceSwitchPanel',panel);component('SourceSwitchWindow',window);component('ArkWebExecutionHost','');
 for(const name of ['ReadingExperience','ReaderFullDirectory','ReaderStatusBarPaper'])component(name,'');
 const noOp=()=>{};
+const runtimePort={supportsCoreCapability:()=>true},Runtime=runtimeOwnerIdentityProbe(()=>runtimePort);
+const settingsTypes=actualGeneralSettingsTypes({ReaderRuntimeOwner:Runtime});
+const sourceTypes=actualSourceManagementTypes({ReaderRuntimeOwner:Runtime});
+const shelfTypes=actualBookshelfOperationTypes({ReaderRuntimeOwner:Runtime});
+const retirementMembers=['retireSettingsPresentation','retireSourceManagementPresentation','retireSourceSwitchPresentation',
+ 'retireRssEditorPresentation','retireRssPresentation','retireReadingEntryPresentation','retireBookshelfCatalogPresentation',
+ 'bindReadingEntryReader','getReadingEntryHost','isCurrentRuntime','isKnownDetailChapter'];
 function indexOwner(overrides={}){
  map.resetComponentMap();
  const tree=ts.createSourceFile('/tmp/MangaEntryIndex.ets',index,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+ const localSource=tree.statements.filter(ts.isVariableStatement).flatMap(statement=>[...statement.declarationList.declarations])
+  .find(declaration=>declaration.name.getText(tree)==='LOCAL_SOURCE_ID')?.initializer;
+ assert.ok(localSource&&ts.isStringLiteral(localSource),'actual Index local-source constant');
  for(const statement of tree.statements)for(const member of statement.members??[])if(member.getText(tree).includes('@Builder'))map.CUSTOM_BUILDER_METHOD.add(member.name.getText(tree));
  const native=new Set(['Stack','Row','Column','Blank','Text','Button','Image','If','ForEach','Scroll']);
  const deps={...mangaSurfaceSdkDependencies,ReaderShell:Child,SourceSwitchPanel:Child,ArkWebExecutionHost:Child,
-  deviceInfo:{deviceType:'phone'},ReaderRuntimeOwner:{current:()=>({supportsCoreCapability:()=>true})}};
+  deviceInfo:{deviceType:'phone'},ReaderRuntimeOwner:Runtime,LOCAL_SOURCE_ID:localSource.text};
  const visit=node=>{if(ts.isCallExpression(node)&&ts.isIdentifier(node.expression)&&/^[A-Z]/.test(node.expression.text)&&!native.has(node.expression.text)){
   const name=node.expression.text;if(!syntax.componentCollection.customComponents.has(name))component(name,'');deps[name]=Child;
  }ts.forEachChild(node,visit);};visit(tree);
- const owner=createReaderBuilderProbe(index,['build','canCancelMangaSourcePreparation','nextNavigationGeneration','onDirectoryChapterSelected','directoryRecovery','directoryOperationBindingId','directoryOperationPresentationId'],deps).owner;
+ const owner=createReaderBuilderProbe(index,['build','canCancelMangaSourcePreparation','nextNavigationGeneration','onDirectoryChapterSelected','directoryRecovery','directoryOperationBindingId','directoryOperationPresentationId',...retirementMembers],deps).owner;
  Object.assign(owner,{route:'reading',readingSessionActive:true,readingContentKind:'manga',detailInBookshelf:false,
   detailBook:{sourceId:'source',bookId:'book',title:'Manga',author:'Author',contentKind:'manga'},detailToc:[{index:3,title:'First'},{index:7,title:'Next'}],
   requestedChapterIndex:3,mangaChapterRequestGeneration:4,mangaChapterStartRequestGeneration:4,navigationGeneration:2,
@@ -32,8 +47,17 @@ function indexOwner(overrides={}){
   directoryPresentationGeneration:0,detailShelfAdmissionMount:0,remoteSessionGeneration:0,directoryOperation:undefined,offlineOperation:undefined,settingsSnapshot:{reduceMotion:false},offlineMutationActiveKey:'',directoryReturnTarget:'readerControl',jsonImportVisible:false,
   currentSourceSwitchTransactionId:()=>undefined,detailBookmarkIdentity:()=>undefined,controlBookmarkProjectionMessage:()=>'',
   readerOwnsWindowEdges:()=>true,mangaOwnsWindowEdges:()=>true,appContentTopInset:()=>0,detailContent:noOp,
-  isKnownDetailChapter:chapter=>[3,7].includes(chapter),directoryCurrentChapterIndex:3,mangaCommittedRequestGeneration:4,
+  directoryCurrentChapterIndex:3,mangaCommittedRequestGeneration:4,
+  // This fixture proves SDK bindings without mounting a Runtime-owned reader.
+  // Execute the actual absent-owner admission rather than a fake bind method.
+  mountedRuntimeOwner:undefined,shelfReceiptRetired:false,settingsPresentationIdentity:'ui-settings',sourcePresentationIdentity:'ui-source',
+  bookshelfManagementPresentationIdentity:'ui-management',nativeAlertOwner:new ReaderNativeAlertOwner(),
+  sourceSwitchHost:undefined,readingEntryHost:undefined,bookshelfCatalogHost:undefined,bookshelfCatalogBinding:undefined,
+  rssEditorOrchestrator:undefined,rssOrchestrator:undefined,discoverOrchestrator:undefined,rulesManagementOrchestrator:undefined,syncOrchestrator:undefined,
   ...overrides});
+ owner.settingsHost=actualGeneralSettingsHostField(owner,settingsTypes.SettingsHost);
+ owner.sourceHost=actualSourceManagementHostField(owner,sourceTypes.SourceHost);
+ owner.bookshelfHost=actualBookshelfHostField(owner,shelfTypes.Host,{setOrCreate(){}});
  return owner;
 }
 function child(owner,name){return [...owner.children.values()].find(row=>row.constructor.name==='Child'&&row.params&&
@@ -44,7 +68,11 @@ function shellSurface(props){map.resetComponentMap();const owner=createReaderBui
 {
  const owner=indexOwner();owner.initialRender();const props=child(owner,'ReaderShell');assert.ok(props);assert.equal(props.mangaStartAtChapterFirst,true);
  const surface=shellSurface(props);assert.equal(surface.props.startAtChapterFirst,true);assert.equal(surface.props.chapterIndex,3);
+ owner.onDirectoryChapterSelected(999);assert.equal(owner.navigationGeneration,2);assert.equal(owner.mangaChapterRequestGeneration,4,'unknown chapter is rejected by the actual canonical admission');
+ owner.onDirectoryChapterSelected(3);assert.equal(owner.navigationGeneration,2);assert.equal(owner.mangaChapterRequestGeneration,4,'already committed first page retains its actual branch');
  owner.onDirectoryChapterSelected(7);assert.equal(owner.mangaChapterRequestGeneration,5);
+ assert.equal(owner.navigationGeneration,3);assert.equal(owner.settingsPresentationIdentity,'');assert.equal(owner.sourcePresentationIdentity,'');
+ assert.equal(owner.bookshelfManagementPresentationIdentity,'');assert.equal(owner.readingEntryScopeId,-1);
  const later=indexOwner({mangaChapterRequestGeneration:owner.mangaChapterRequestGeneration,mangaChapterStartRequestGeneration:owner.mangaChapterStartRequestGeneration,requestedChapterIndex:7});
  later.initialRender();assert.equal(child(later,'ReaderShell').mangaStartAtChapterFirst,false);
  assert.equal(shellSurface(child(later,'ReaderShell')).props.startAtChapterFirst,false);

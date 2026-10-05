@@ -67,15 +67,23 @@ function legacyBudgetOriginFacts(baseline,contract,readSource){
  const historical=JSON.parse(readSource(origin.file)).rows;
  assert.equal(historical.length,100,'all original private budgets remain witnessed');
  assert.equal(createHash('sha256').update(JSON.stringify(historical)).digest('hex'),origin.rowsSha256,'immutable original private budget witness');
- const approvedFiles=['BookDirectoryPage.ets','LocalBookDetail.ets','PageBackBar.ets','ReaderDirectoryNavigationList.ets','ReaderDirectoryNavigationSurface.ets','SearchPage.ets','SourceSwitchWindow.ets'];
- assert.deepEqual(origin.transferredPaths.map(file=>file.split('/').at(-1)).sort(),approvedFiles.sort(),'only seven explicitly approved policy migrations');
+ const approvedKinds={
+  'entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets':'approved-existing-manga-variant',
+  'entry/src/main/ets/features/bookshelf/LocalBookDetail.ets':'approved-existing-manga-variant',
+  'entry/src/main/ets/features/common/PageBackBar.ets':'approved-finite-header-variants',
+  'entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets':'approved-existing-manga-variant',
+  'entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets':'approved-existing-manga-variant',
+  'entry/src/main/ets/features/search/SearchPage.ets':'approved-existing-manga-variant',
+  'entry/src/main/ets/features/source/SourceSwitchWindow.ets':'approved-fullviewport-live-picker',
+ };
+ assert.deepEqual([...origin.transferredPaths].sort(),Object.keys(approvedKinds).sort(),'only seven explicitly approved full-path policy migrations');
  const current=new Map(baseline.rows.map(row=>[row.file,row]));
  const migrated=new Map((baseline.uiPolicies??[]).filter(row=>origin.transferredPaths.includes(row.file)).map(row=>[row.file,row]));
  assert.equal(migrated.size,7,'one exact reversible policy for every transfer');
  for(const row of historical){
   if(current.has(row.file)){assert.deepEqual(current.get(row.file),row,'original business budget changed: '+row.file);continue;}
   const policy=migrated.get(row.file);assert.ok(policy,'historical budget lost: '+row.file);
-  assert.equal(policy.kind,'approved-existing-manga-variant','no arbitrary reclassification of private budgets');
+  assert.equal(policy.kind,approvedKinds[row.file],'no arbitrary reclassification of private budgets: '+row.file);
   assert.deepEqual(policy.supersededLegacyCounts,row.counts,'exact original counts survive the approved transfer');
   assert.ok(policy.approvalEvidence&&policy.designSource,'explicit approved design source for transfer');
  }

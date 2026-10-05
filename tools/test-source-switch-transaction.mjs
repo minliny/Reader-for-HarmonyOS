@@ -159,11 +159,17 @@ const settle = async () => { await settleOwner(); await new Promise(setImmediate
   assert.equal(f.host.current().write.confirmation, 'unknown');
   panel.onClose(); assert.equal(f.host.current().visible, true);
   assert.equal(f.calls.filter(([method]) => method === 'source.switch.rollback').length, 0);
-  const current = x.mount(), retry = x.p.nodes(current).find(n => n.create === '重试核对'); assert.ok(retry?.onClick);
+  const current=x.mount();assert.equal(current.requiresReconciliation(),true);assert.equal(current.rollbackRequired(),false);
+  const retry=x.p.nodes(current).find(n=>n.type==='Button'&&Array.isArray(n.createWithLabel)&&n.createWithLabel[0]==='重试核对');
+  assert.ok(retry?.onClick,'actual SDK native Button carries the read-only reconciliation callback');
+  const originalTransaction=f.pending()[0]?.transactionId,originalWrite=f.calls.find(([method])=>method==='source.switch.commit')[1];
+  assert.ok(originalTransaction);assert.equal(f.host.current().write.confirmation,'unknown');
   f.options.failExactQuery = false; retry.onClick(); await settle();
   assert.equal(f.host.current().write.confirmation, 'confirmed'); assert.equal(x.index.detailBook.sourceId, 'new');
   assert.equal(f.calls.filter(([method]) => method === 'source.switch.commit').length, 1);
   assert.equal(f.calls.filter(([method]) => method === 'source.switch.rollback').length, 0);
+  assert.equal(f.host.current().pending.transactionId,originalTransaction,'pure reconciliation retains the original durable transaction');
+  assert.deepEqual(f.calls.find(([method])=>method==='source.switch.commit')[1],originalWrite,'recovery cannot substitute a new commit payload/CAS identity');
 }
 {
   const f = fixture({ shared: true, open: false }), x = makeIndex(f); x.index.openDetailSourceSwitch(); await settle();

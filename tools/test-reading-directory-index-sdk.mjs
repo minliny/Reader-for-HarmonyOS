@@ -64,7 +64,11 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,5));
 {
  const f=await fixture(true),x=makeIndex(f,{remote:true});f.options.status=true;f.options.imageFailure=true;
  x.idx.clearDirectoryBookOffline();await until(()=>f.writes().length===1);await settled(f);
- assert.equal(x.idx.offlineOperation.projection.receipt.confirmation,'confirmed');assert.match(x.idx.directoryRecovery().offline.message,/缓存操作已确认.*image cleanup failed/);
+ assert.equal(x.idx.offlineOperation.projection.receipt.confirmation,'confirmed');
+ assert.equal(x.idx.offlineOperation.materializationFailure,'image cleanup failed','physical failure remains a private owner fact after the Core ACK');
+ assert.match(x.idx.directoryRecovery().offline.message,/缓存操作已确认.*请稍后重试/);
+ assert.doesNotMatch(JSON.stringify(x.idx.directoryRecovery()),/image cleanup failed|https?:|Cookie|PRIVATE/,
+  'the public recovery excludes raw platform diagnostics while retaining confirmed receipt semantics');
  const leaf=x.render('ReaderFullDirectory');x.click(leaf,'核对离线结果');await settled(f);
  assert.equal(f.writes().length,1);assert.equal(f.calls.filter(c=>c.platform).length,1);assert.equal(x.idx.detailToc[0].level,2);
  checks.push('cache-Core-ACK-platform-image-failure-independent-native-pure-reconcile');

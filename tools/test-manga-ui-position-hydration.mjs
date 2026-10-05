@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
-import {ProductionHost:ReadingEntryHost,setRuntime:setEntryRuntime} from './lib/reading-entry-owner-probe.mjs';
+import {ProductionHost as ReadingEntryHost,setRuntime as setEntryRuntime} from './lib/reading-entry-owner-probe.mjs';
 import {localBookDetailSdk} from './lib/local-book-detail-sdk-probe.mjs';
 import {EMPTY_READING_DIRECTORY_RECOVERY,readingDirectoryRecovery} from '../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts';
 const EMPTY_READABLE_ADMISSION={generation:0,adding:false,cancelling:false,confirmation:'none'};
@@ -181,12 +181,12 @@ async function drain(){
   // must preserve the newer confirmed entry facts, including explicit clearing.
   const metadataFixture=()=>{
     const host=fixture();
-    let resolveMetadata;
+    let resolveMetadata,rejectMetadata;
     runtime={bookAcquisitions:()=>({readingProjectionRevision:()=>7,setPreparationVisible(){}}),
       request:async(method,params,options)=>{
         assert.equal(method,'search-book.get');
         assert.deepEqual(params,{origin:'source',bookUrl:'book-0'});assert.equal(options.canDispatch(),true);
-        return await new Promise(resolve=>{resolveMetadata=resolve;});
+        return await new Promise((resolve,reject)=>{resolveMetadata=resolve;rejectMetadata=reject;});
       }};
     setEntryRuntime(runtime);
     Object.assign(host,{route:'detail',detailBook:{...books[0],sourceName:'腾讯漫画',intro:'保留简介'},
@@ -197,7 +197,8 @@ async function drain(){
         entries:[{index:4,title:'01',url:'/4',variables:[]}],continuationVariables:[],sourceVersion:'v1',catalogVersion:'c1',contextVersion:'x1'}});
     delete host.refreshDetailAcquisitionProjection;
     delete host.bindReadingEntryReader;
-    return {host,finish:()=>{assert.equal(typeof resolveMetadata,'function','actual owner dispatched cached metadata IO');
+    return {host,finish:error=>{assert.equal(typeof resolveMetadata,'function','actual owner dispatched cached metadata IO');
+      if(error!==undefined){rejectMetadata(error);return;}
       resolveMetadata({data:{book:{origin:'source',bookUrl:'book-0',name:'已更新标题',acquisition:{
       sourceVersion:'v1',catalogVersion:'c1',contextVersion:'x1',schemaVersion:2,verificationCurrent:true}}}});}};
   };
@@ -224,7 +225,7 @@ async function drain(){
     assert.equal(host.remoteReadingSession.book.title,'已更新标题');
     assert.equal(host.detailBook.contentKind,'manga','cache metadata preserves the admitted manga type');
   }
-  for(const revoke of ['source','route','navigation','reading','unset','replacement']) {
+  for(const revoke of ['source','route','navigation','reading','unset','replacement']) for(const outcome of ['resolved','rejected']) {
     const {host,finish}=metadataFixture();
     const metadata=host.refreshDetailAcquisitionProjection();
     if(revoke==='source')host.detailBook={...host.detailBook,sourceId:'other-source'};
@@ -232,9 +233,15 @@ async function drain(){
     else if(revoke==='navigation')host.navigationGeneration++;
     else if(revoke==='reading')host.readingSessionActive=true;
     else {runtime=revoke==='unset'?undefined:{};setEntryRuntime(runtime);}
-    const retained=host.detailBook;
-    finish();await metadata;
-    assert.equal(host.detailBook,retained,`${revoke}: revoked metadata cannot replace the current detail`);
+    const retained=host.detailBook,retainedSession=host.remoteReadingSession,retainedMessage=host.detailLoadingMessage;
+    const entryOwner=host.readingEntryHost;
+    finish(outcome==='rejected'?Error('private metadata https://fixture.invalid/?token=PRIVATE_TEST_TOKEN Cookie=PRIVATE_TEST_COOKIE'):undefined);
+    await metadata;
+    assert.equal(host.detailBook,retained,`${revoke}/${outcome}: revoked metadata cannot replace the current detail`);
+    assert.equal(host.remoteReadingSession,retainedSession,`${revoke}/${outcome}: the old request cannot replace the admitted session`);
+    assert.equal(host.detailLoadingMessage,retainedMessage,`${revoke}/${outcome}: stale failure cannot publish a new public diagnostic`);
+    assert.equal(entryOwner.snapshot().backgroundError,undefined,'withdrawn projection does not become an admitted background failure');
+    assert.doesNotMatch(JSON.stringify({book:host.detailBook,message:host.detailLoadingMessage}),/PRIVATE_TEST|fixture\.invalid|Cookie=/);
     assert.notEqual(host.detailBook.title,'已更新标题');
   }
   {
