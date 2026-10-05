@@ -37,7 +37,7 @@ assert.equal(stopCallbacks.length, 2);
 function stop(owner, index) {
   new Function(`${stripTypeScriptTypes(`const callback = ${stopCallbacks[index]};`)}\nreturn callback;`).call(owner)();
 }
-const methods = ['publish', 'requestedLast', 'saveVisible', 'rememberVisible', 'positionIdentity', 'effectiveFit', 'rowDisplayWidth', 'rowDisplayHeight', 'rowDisplayTop', 'rowDisplayLeft', 'visibleX', 'changeZoom', 'restore', 'finishLayout', 'onViewportScroll', 'onViewportTouch', 'measureVisibleWindow', 'onRowAppear', 'confirmMountedTurn', 'changeFit', 'toggleDirection', 'turnPage', 'seekPage', 'handleBack', 'refreshImages', 'aboutToDisappear'];
+const methods = ['publish', 'requestedLast', 'saveVisible', 'rememberVisible', 'positionIdentity', 'effectiveFit', 'rowDisplayWidth', 'rowDisplayHeight', 'rowDisplayTop', 'rowDisplayLeft', 'visibleX', 'changeZoom', 'restore', 'finishLayout', 'onViewportScroll', 'flushViewportObservation', 'onViewportTouch', 'measureVisibleWindow', 'onRowAppear', 'confirmMountedTurn', 'displayChapterTitle', 'changeFit', 'toggleDirection', 'turnPage', 'seekPage', 'handleBack', 'refreshImages', 'aboutToDisappear'];
 const timers = [];
 // Optional baseline path executes the pre-fix methods against the same assertions.
 const Surface = productionMotionMethods(surfaceURL, methods.filter(name => memberNames.has(name)), {
@@ -80,7 +80,7 @@ async function fixture(horizontal = false, offline = true) {
     scroller: {getItemIndex: () => native.first, getItemRect: () => ({y: native.y, width: native.width, height: native.height}), scrollToIndex() {}, scrollBy() {}},
     horizontalScroller: {currentOffset: () => ({xOffset: native.xOffset}), scrollTo() {}},
     getUIContext: () => ({postFrameCallback: callback => frames.push(callback)}),
-    updateViewport() {}, onSaveFailure: message => failures.push(message)
+    retainPreparationOnDisappear: () => false, updateViewport() {}, onSaveFailure: message => failures.push(message)
   });
   return {surface, runtime, controller, projection, native, writes, failures,
     holdSave(promise) { saveHold = promise; }, holdImage(promise) { imageHold = promise; },
@@ -269,20 +269,26 @@ for (const scenario of ['same-manifest', 'changed-exact', 'changed-unresolved', 
     assert.equal(f.controller.chapter, undefined); assert.equal(timers.length, 0);
   } else {
     await refreshing;
-    assert.notEqual(f.controller.chapter, originalChapter, 'the real refresh replaces the chapter object');
-    if (scenario === 'same-manifest') {
+    if (scenario === 'changed-unresolved') {
+      assert.equal(f.controller.chapter, originalChapter, 'unresolved replacement stays staged until explicit first-page confirmation');
+      assert.equal(f.controller.replacementRecoveryRequired, true);
+      assert.ok(f.controller.tile(1, 5)?.image, 'staged replacement keeps the old displayed pixels');
+      assert.deepEqual(f.surface.visibleAnchor, latest, 'staged replacement preserves the latest old-version viewport');
+      assert.equal(f.surface.recovering, true);
+      const count = f.writes.length; await f.surface.saveVisible();
+      assert.equal(f.writes.length, count, 'unresolved mapping still forbids replacement progress');
+      assert.ok(f.writes.every(write => write.location.manifestVersion === 'v'));
+    } else if (scenario === 'same-manifest') {
+      assert.notEqual(f.controller.chapter, originalChapter, 'the exact refresh replaces the chapter object');
       assert.deepEqual(f.surface.visibleAnchor, latest, 'same manifest must preserve the newer confirmed touch position');
       const scrolls = []; f.surface.scroller.scrollBy = (_x, y) => scrolls.push(y);
       timers.splice(0).forEach(callback => callback());
       assert.ok(scrolls.length > 0);
       assert.ok(scrolls.every(y => y === 200), 'an uncanceled restore must not reissue the old 100vp offset');
     } else if (scenario === 'changed-exact') {
+      assert.notEqual(f.controller.chapter, originalChapter, 'the exact refresh replaces the chapter object');
       assert.deepEqual(f.surface.visibleAnchor, {ordinal: 1, y: 0.51, x: 0.1}, 'a new manifest uses exact Core mapping, never old unpersisted coordinates');
       assert.equal(f.surface.recovering, false);
-    } else {
-      assert.deepEqual(f.surface.visibleAnchor, {ordinal: 0, y: 0, x: 0}); assert.equal(f.surface.recovering, true);
-      const count = f.writes.length; await f.surface.saveVisible();
-      assert.equal(f.writes.length, count, 'unresolved mapping still forbids replacement progress');
     }
   }
   f.close();

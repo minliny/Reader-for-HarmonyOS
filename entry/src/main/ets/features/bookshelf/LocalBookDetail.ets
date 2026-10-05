@@ -11,6 +11,7 @@ import { NoCoverCover } from './NoCoverCover';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
 import { TOK_BORDER_W } from '../common/ReaderTokens';
+import { mangaDirectoryIsGroup, mangaDirectoryPresentation, mangaDirectoryVisibleEntries } from '../manga/MangaDirectoryPresentation';
 
 const CHAPTER_PREVIEW_LIMIT: number = 20;
 
@@ -19,8 +20,8 @@ const CHAPTER_PREVIEW_LIMIT: number = 20;
 export struct LocalBookDetail {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
-  @Prop book: ReadingBookDetail;
-  @Prop toc: LocalReadingTocEntry[] = [];
+  @Prop @Watch('onBookChanged') book: ReadingBookDetail;
+  @Prop @Watch('onTocChanged') toc: LocalReadingTocEntry[] = [];
   @Prop sourceSwitchEnabled: boolean = false;
   @Prop readingEnabled: boolean = true;
   @Prop readingBlockedReason: string = '';
@@ -41,9 +42,12 @@ export struct LocalBookDetail {
   @State private viewportWidth: number = 0;
   @State private introExpanded: boolean = false;
   @State private collapsedGroups: number[] = [];
+  private collapseIdentity: string = '';
+  private collapseEntries: LocalReadingTocEntry[] = [];
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
+    this.onBookChanged();
   }
 
   build() {
@@ -237,7 +241,8 @@ export struct LocalBookDetail {
       }.width('100%').constraintSize({ minHeight: 44 });
       ForEach(this.visibleToc(), (entry: LocalReadingTocEntry) => {
         this.chapterRow(entry);
-      }, (entry: LocalReadingTocEntry): string => `${this.book.sourceId}:${this.book.bookId}:${entry.index}`);
+      }, (entry: LocalReadingTocEntry): string => JSON.stringify([this.book.sourceId, this.book.bookId,
+        entry.index, entry.title, entry.level ?? null, entry.navigable ?? null]));
       if (this.toc.length === 0) {
         Text(this.chapterEmptyMessage()).width('100%').padding({ top: 16, bottom: 16 })
           .fontSize(13).lineHeight(22).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
@@ -248,11 +253,14 @@ export struct LocalBookDetail {
   @Builder
   private chapterRow(entry: LocalReadingTocEntry) {
     Row({ space: 8 }) {
-      Text(entry.title).layoutWeight(1).constraintSize({ minWidth: 0 })
+      Text(this.book.contentKind === 'manga' &&
+        (entry.title.trim().length === 0 || entry.title.trim() === '第话' || entry.title.trim() === '第 话') ?
+        `第${Math.max(1, entry.index + 1)}话` : entry.title)
+        .layoutWeight(1).constraintSize({ minWidth: 0 })
         .fontFamily('ReaderNotoSansSC').fontSize(14).lineHeight(22)
         .fontWeight(entry.navigable === false ? FontWeight.Medium : FontWeight.Regular)
         .fontColor(readerAppColor(entry.navigable === false ? 'TOK_MUTED' : 'TOK_INK', this.appThemeScheme));
-      if (entry.navigable === false) {
+      if (entry.navigable === false && (this.book.contentKind !== 'manga' || this.chapterIsGroup(entry))) {
         Text(this.collapsedGroups.includes(entry.index) ? '›' : '⌄').width(24).fontSize(18)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       } else if (this.isCurrentChapter(entry)) {
@@ -266,7 +274,11 @@ export struct LocalBookDetail {
       .borderRadius(this.isCurrentChapter(entry) || entry.navigable === false ? 8 : 0)
       .enabled(!this.removing).onClick((): void => {
         if (this.removing) return;
+        const current = this.toc.find((row: LocalReadingTocEntry): boolean => row.index === entry.index);
+        if (current === undefined || current.title !== entry.title || current.level !== entry.level ||
+          current.navigable !== entry.navigable) return;
         if (entry.navigable === false) {
+          if (this.book.contentKind === 'manga' && !this.chapterIsGroup(entry)) return;
           this.collapsedGroups = this.collapsedGroups.includes(entry.index) ?
             this.collapsedGroups.filter((index: number): boolean => index !== entry.index) : [...this.collapsedGroups, entry.index];
         } else this.onSelectChapter(entry.index);
@@ -335,17 +347,44 @@ export struct LocalBookDetail {
     return entry.navigable !== false && this.book.contentKind === 'manga' && this.book.mangaPosition?.chapterIndex === entry.index;
   }
   private chapterIndent(entry: LocalReadingTocEntry): number {
+    if (this.book.contentKind === 'manga') return 10 + Math.min(4, Math.max(0, (entry.level ?? 1) - 1)) * 16;
     if (entry.navigable === false) return 10;
     if ((entry.level ?? 1) > 1) return 26;
     const priorGroup = this.toc.slice(0, this.toc.indexOf(entry)).some((row: LocalReadingTocEntry): boolean => row.navigable === false);
     return priorGroup ? 26 : 10;
   }
   private visibleToc(): LocalReadingTocEntry[] {
+    if (this.book.contentKind === 'manga') {
+      const visible = mangaDirectoryVisibleEntries(this.toc, mangaDirectoryPresentation(this.toc), this.collapsedGroups);
+      return visible.slice(0, CHAPTER_PREVIEW_LIMIT);
+    }
     let collapsed: boolean = false;
     return this.toc.slice(0, CHAPTER_PREVIEW_LIMIT).filter((entry: LocalReadingTocEntry): boolean => {
       if (entry.navigable === false) { collapsed = this.collapsedGroups.includes(entry.index); return true; }
       return !collapsed;
     });
+  }
+  private chapterIsGroup(entry: LocalReadingTocEntry): boolean {
+    return mangaDirectoryIsGroup(this.toc, this.toc.findIndex((row: LocalReadingTocEntry): boolean => row.index === entry.index));
+  }
+  private onBookChanged(): void {
+    const identity = `${this.book.sourceId}\u0000${this.book.bookId}`;
+    if (identity === this.collapseIdentity) return;
+    this.collapseIdentity = identity;
+    this.collapsedGroups = [];
+    this.collapseEntries = this.toc.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => ({
+      index: entry.index, title: entry.title, level: entry.level, navigable: entry.navigable, downloadState: entry.downloadState }));
+  }
+  private onTocChanged(): void {
+    const previous = this.collapseEntries;
+    this.collapsedGroups = this.collapsedGroups.filter((index: number): boolean => {
+      const before = previous.find((entry: LocalReadingTocEntry): boolean => entry.index === index);
+      const after = this.toc.find((entry: LocalReadingTocEntry): boolean => entry.index === index);
+      return before !== undefined && after !== undefined && this.chapterIsGroup(after) &&
+        before.title === after.title && before.level === after.level && before.navigable === after.navigable;
+    });
+    this.collapseEntries = this.toc.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => ({
+      index: entry.index, title: entry.title, level: entry.level, navigable: entry.navigable, downloadState: entry.downloadState }));
   }
   private readingActionLabel(): string {
     if (this.book.contentKind === 'manga') return this.book.mangaPosition === undefined ? '开始阅读' : '继续阅读';

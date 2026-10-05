@@ -1,3 +1,4 @@
+import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup } from '../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -17,7 +18,7 @@ const completedScrolls = [];
 const Edge = { Top: 'top', Bottom: 'bottom' };
 let metrics = { windowRect: { width: 390 }, systemInsets: { left: 0, right: 0, top: 48, bottom: 34 },
   cutoutInsets: {}, gestureInsets: {}, navigationInsets: {}, keyboardInsets: {} };
-const deps = { projectReaderDirectoryEntries, snapshotReaderDirectoryData, sameReaderDirectoryData,
+const deps = { mangaDirectoryPresentation, mangaDirectoryVisibleEntries, projectReaderDirectoryEntries, snapshotReaderDirectoryData, sameReaderDirectoryData,
   SurfaceWidthSpec, resolveHorizontalFrame, readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop,
   readerInteractiveSafeBottom, ReaderWindowCoordinator: { metrics: () => metrics },
   TOK_CONTENT_MAX_W_TABLET: 720, registerReaderFonts() {}, Edge,
@@ -27,7 +28,7 @@ const deps = { projectReaderDirectoryEntries, snapshotReaderDirectoryData, sameR
   readerDirectorySignalScrollCommand: bookId => completedScrolls.push(bookId),
   setTimeout: action => { pending.push(action); } };
 const methods = ['aboutToAppear', 'aboutToDisappear', 'identity', 'rowIsCurrent', 'onIdentityChanged',
-  'supportsDirectoryRules', 'onRulesKindChanged',
+  'supportsDirectoryRules', 'onRulesKindChanged', 'mangaIsGroup',
   'onEntriesChanged', 'admitEntries', 'applySearch', 'toggleSort', 'scheduleTopScroll', 'scrollToEdge',
   'emptyMessage', 'contentFrame', 'topInset', 'bottomInset', 'mangaCurrentTitle', 'mangaCurrentPosition',
   'publishProjection', 'onListFirstLayout', 'onListUserScroll', 'flushPendingScroll'];
@@ -133,7 +134,7 @@ for (const [name, props] of Object.entries({ ReaderDirectoryRules: ['bookId'], P
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
 {
   const result = fixture(); result.page.aboutToAppear(); flush(); result.page.onListFirstLayout(result.page.identity());
-  const { owner, output } = createReaderBuilderProbe(source, ['build', 'standardPage', 'mangaPage', 'mangaFlatList', 'mangaFlatRow', 'flatList', 'chapterRow'], {
+  const { owner, output } = createReaderBuilderProbe(source, ['build', 'standardPage', 'mangaPage', 'mangaFlatList', 'mangaFlatRow', 'selectMangaEntry', 'flatList', 'chapterRow'], {
     ...deps, ReaderDirectoryRules: Child, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
     ReaderDirectoryNavigationSurface: Child, ReaderDirectoryChapterRow: Child });
   Object.assign(owner, result.page);
@@ -194,7 +195,7 @@ console.log('PH119 standalone BookDirectoryPage actual methods and SDK Builder: 
   const result = fixture();
   result.page.contentKind = 'manga';
   result.page.aboutToAppear(); flush();
-  const { owner } = createReaderBuilderProbe(source, ['build', 'standardPage', 'mangaPage', 'mangaFlatList', 'mangaFlatRow', 'flatList', 'chapterRow'], {
+  const { owner } = createReaderBuilderProbe(source, ['build', 'standardPage', 'mangaPage', 'mangaFlatList', 'mangaFlatRow', 'selectMangaEntry', 'flatList', 'chapterRow'], {
     ...deps, ReaderDirectoryRules: Child, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
     ReaderDirectoryNavigationSurface: Child, ReaderDirectoryChapterRow: Child });
   Object.assign(owner, result.page);
@@ -221,7 +222,7 @@ for (const [sourceId, bookKind, capability, expected] of [
   const result = fixture();
   Object.assign(result.page, { sourceId, bookKind, bookId: 'misleading.txt', rulesExpanded: true, rulesRevision: 0 });
   result.page.aboutToAppear(); flush();
-  const { owner } = createReaderBuilderProbe(source, ['build', 'standardPage', 'mangaPage', 'mangaFlatList', 'mangaFlatRow', 'flatList', 'chapterRow'], {
+  const { owner } = createReaderBuilderProbe(source, ['build', 'standardPage', 'mangaPage', 'mangaFlatList', 'mangaFlatRow', 'selectMangaEntry', 'flatList', 'chapterRow'], {
     ...deps, ReaderRuntimeOwner: { current: () => ({ supportsCoreCapability: () => capability }) },
     ReaderDirectoryRules: Child, PageBackBar: Child, ReaderDirectoryToolbar: Child, ReaderDirectoryList: Child,
     ReaderDirectoryNavigationSurface: Child, ReaderDirectoryChapterRow: Child });

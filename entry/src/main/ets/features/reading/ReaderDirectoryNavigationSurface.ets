@@ -1,6 +1,8 @@
 import { FrameCallback } from '@kit.ArkUI';
 import { ReaderDirectoryTrace } from './ReaderDirectoryTrace';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { prepareMangaSheetFonts } from '../common/ReaderFonts';
+import { READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../common/ReaderFontFamilies';
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { ReaderDirectoryNavigationGateway, readerDirectoryScopeKey, openReaderDirectoryNavigation,
@@ -35,6 +37,10 @@ export struct ReaderDirectoryNavigationSurface {
   @Prop interacted: boolean = false;
   @Prop rowHeight: number = 40;
   @Prop mangaDisplay: boolean = false;
+  @Prop mangaRowMinHeight: number = 58;
+  @Prop mangaCatalogDisplay: boolean = false;
+  @Prop mangaCatalogNarrow: boolean = false;
+  @Prop mangaCurrentOpenInset: number = 50;
   @Prop mangaScheme: string = '';
   @Prop listPaddingX: number = 10;
   @Prop listPaddingRight: number = -1;
@@ -45,6 +51,8 @@ export struct ReaderDirectoryNavigationSurface {
   @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
   @Prop chapterEntries: LocalReadingTocEntry[] = [];
   @Prop chapterDownloadEnabled: boolean = false;
+  /** Manga uses existing markers to manage active/retained downloads. */
+  @Prop chapterDownloadActionsEnabled: boolean = false;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   scroller: Scroller | undefined = undefined;
   onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
@@ -52,12 +60,16 @@ export struct ReaderDirectoryNavigationSurface {
   onUserScrollIntent: () => void = (): void => {};
   onFirstLayout: () => void = (): void => {};
   onTreeStateChange: (active: boolean) => void = (_active: boolean): void => {};
+  onClearSearch: () => void = (): void => {};
   onDeleteBookmarks: (times: number[]) => void = (_times: number[]): void => {};
   onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
   @BuilderParam fallbackBuilder: () => void;
   @State private view: ReaderDirectoryNavigationReady | undefined = undefined;
+  @State private mangaFontsReady: boolean = false;
+  private mangaFontGeneration: number = 0;
+  private mangaFontTask: Promise<boolean> | undefined = undefined;
   private gateway: ReaderDirectoryNavigationGateway | undefined = undefined;
   private mounted: boolean = false;
   private generation: number = 0;
@@ -75,6 +87,9 @@ export struct ReaderDirectoryNavigationSurface {
 
   aboutToAppear(): void {
     this.mounted = true;
+    if (this.mangaDisplay) {
+      void this.prepareMangaFonts();
+    }
     this.scrollIntentUnsubscribe = readerDirectoryObserveScrollIntent(readerDirectoryScopeKey(this.sourceId, this.bookId),
       (): void => this.onProgrammaticScrollIntent());
     this.lastQuery = this.query;
@@ -86,11 +101,33 @@ export struct ReaderDirectoryNavigationSurface {
 
   aboutToDisappear(): void {
     this.mounted = false;
+    this.mangaFontGeneration += 1;
+    this.mangaFontTask = undefined;
+    this.mangaFontsReady = false;
     this.cancelQueryTimer();
     this.generation += 1;
     this.openingGeneration = -1;
     this.scrollIntentUnsubscribe?.();
     this.scrollIntentUnsubscribe = undefined;
+  }
+
+  private prepareMangaFonts(): Promise<boolean> {
+    if (!this.mounted || !this.mangaDisplay) return Promise.resolve(false);
+    if (this.mangaFontsReady) return Promise.resolve(true);
+    if (this.mangaFontTask !== undefined) return this.mangaFontTask;
+    const generation = ++this.mangaFontGeneration;
+    const task = prepareMangaSheetFonts().then((ready: boolean): boolean => {
+      if (!this.mounted || generation !== this.mangaFontGeneration || !this.mangaDisplay) return false;
+      // Font registration belongs to this mounted display, independently of
+      // tree/query generations and the entering/retained-exit interaction gate.
+      this.mangaFontsReady = ready;
+      return ready;
+    }).catch((_error: Error): boolean => false);
+    this.mangaFontTask = task;
+    void task.then((): void => {
+      if (generation === this.mangaFontGeneration && this.mangaFontTask === task) this.mangaFontTask = undefined;
+    });
+    return task;
   }
 
   private onIdentityChanged(): void {
@@ -267,6 +304,7 @@ export struct ReaderDirectoryNavigationSurface {
   private openTree(first: boolean, reason: string = 'open', pendingTrace?: ReaderDirectoryTrace): void {
     const gateway = this.gateway;
     const bookId = this.bookId;
+    const sourceId = this.sourceId;
     if (gateway === undefined || bookId.length === 0) return;
     const generation = ++this.generation;
     if (!this.interactionEnabled) {
@@ -285,12 +323,29 @@ export struct ReaderDirectoryNavigationSurface {
     const locateCurrent = this.locateCurrentPending;
     const anchorNodeId = locateCurrent ? undefined : readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, bookId))?.nodeId;
     const chapterIndex = this.currentChapterIndex >= 0 ? this.currentChapterIndex : undefined;
-    void openReaderDirectoryNavigation(gateway, { sourceId: this.sourceId, bookId, query, descending, chapterIndex, anchorNodeId, limit: 256, locateCurrent },
-      (): boolean => this.mounted && generation === this.generation && this.bookId === bookId,
-      (reason: string): void => { if (this.sourceId === 'local') readerDirectoryNoteMissingNavigation(bookId, reason); })
+    const open = (): Promise<ReaderDirectoryNavigationReady | undefined> => openReaderDirectoryNavigation(gateway,
+      { sourceId, bookId, query, descending, chapterIndex, anchorNodeId, limit: 256, locateCurrent },
+      (): boolean => this.mounted && generation === this.generation && this.bookId === bookId && this.sourceId === sourceId,
+      (reason: string): void => { if (this.sourceId === 'local') readerDirectoryNoteMissingNavigation(bookId, reason); });
+    // The permanent tablet catalog can mount without a phone-sheet opening.
+    // Admit neither its tree nor its fallback text before the same receipts.
+    // Novel callers preserve their existing direct navigation task.
+    const opening = this.mangaDisplay ? this.prepareMangaFonts().then((ready: boolean): Promise<ReaderDirectoryNavigationReady | undefined> | undefined => {
+      if (!this.mounted || generation !== this.generation || this.bookId !== bookId || this.sourceId !== sourceId) return undefined;
+      if (!ready) throw new Error('manga directory fonts are unavailable');
+      if (!this.interactionEnabled) {
+        this.generation += 1;
+        this.openingGeneration = -1;
+        this.pendingRefresh = true;
+        this.pendingQueryRefresh = false;
+        return undefined;
+      }
+      return open();
+    }) : open();
+    void opening
       .then(async (ready: ReaderDirectoryNavigationReady | undefined): Promise<void> => {
         trace.step('response', ready === undefined ? 'unavailable' : 'ready');
-        if (!this.mounted || generation !== this.generation || this.bookId !== bookId) return;
+        if (!this.mounted || generation !== this.generation || this.bookId !== bookId || this.sourceId !== sourceId) return;
         if (ready === undefined) {
           this.openingGeneration = -1;
           if (first) {
@@ -312,7 +367,7 @@ export struct ReaderDirectoryNavigationSurface {
           return;
         }
         ready.preparedPages = await this.prepareVisiblePages(gateway, bookId, ready, generation);
-        if (!this.mounted || generation !== this.generation || this.bookId !== bookId) return;
+        if (!this.mounted || generation !== this.generation || this.bookId !== bookId || this.sourceId !== sourceId) return;
         this.openingGeneration = -1;
         if (this.settledFlat || (first && this.interacted)) {
           this.settledFlat = true;
@@ -322,6 +377,10 @@ export struct ReaderDirectoryNavigationSurface {
           this.pendingRefresh = true;
           this.pendingQueryRefresh = false;
           return;
+        }
+        if (this.mangaDisplay) {
+          ready.currentDisplayInset = locateCurrent ? 12 : this.mangaCurrentOpenInset;
+          ready.currentDisplaySmooth = locateCurrent;
         }
         this.view = ready;
         this.locateCurrentPending = false;
@@ -334,7 +393,7 @@ export struct ReaderDirectoryNavigationSurface {
           }));
         } catch (_error) { trace.step('frame-callback', 'unavailable'); }
       }).catch((_error: Error): void => {
-        const current = this.mounted && generation === this.generation && this.bookId === bookId;
+        const current = this.mounted && generation === this.generation && this.bookId === bookId && this.sourceId === sourceId;
         trace.step('response', current ? 'failed' : 'cancelled');
         if (!current) return;
         this.openingGeneration = -1;
@@ -361,13 +420,17 @@ export struct ReaderDirectoryNavigationSurface {
   }
 
   build() {
-    if (this.view === undefined) {
+    if (this.mangaDisplay && !this.mangaFontsReady) {
+      Blank().width('100%').height('100%');
+    } else if (this.view === undefined) {
       this.fallbackBuilder();
     } else {
-      Stack({ alignContent: Alignment.Center }) {
+      Stack({ alignContent: this.mangaDisplay ? Alignment.TopStart : Alignment.Center }) {
         ReaderDirectoryNavigationList({
           view: this.view, sourceId: this.sourceId, bookId: this.bookId, rowHeight: this.rowHeight,
-          mangaDisplay: this.mangaDisplay, mangaScheme: this.mangaScheme,
+          mangaDisplay: this.mangaDisplay, mangaRowMinHeight: this.mangaRowMinHeight, mangaScheme: this.mangaScheme,
+          mangaCatalogDisplay: this.mangaCatalogDisplay, mangaCatalogNarrow: this.mangaCatalogNarrow,
+          mangaSearchActive: this.mangaDisplay && this.query.trim().length > 0,
           currentChapterIndex: this.currentChapterIndex,
           listPaddingX: this.listPaddingX, listPaddingY: this.listPaddingY,
           listPaddingRight: this.listPaddingRight,
@@ -375,6 +438,7 @@ export struct ReaderDirectoryNavigationSurface {
           edgeEffectMode: this.edgeEffectMode, interactionEnabled: this.interactionEnabled,
           chapterEntries: this.chapterEntries,
           chapterDownloadEnabled: this.chapterDownloadEnabled,
+          chapterDownloadActionsEnabled: this.chapterDownloadActionsEnabled,
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           scroller: this.scroller,
           onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
@@ -390,10 +454,28 @@ export struct ReaderDirectoryNavigationSurface {
             this.onCreateChapterStartBookmark(request),
         });
         if (this.view.visibleTotal === 0) {
-          Text('没有匹配的目录项')
-            .fontColor(readerAppColor('TOK_READ_MUTED', this.mangaDisplay && this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme))
-            .fontSize(12)
-            .hitTestBehavior(HitTestMode.None);
+          if (this.mangaDisplay) {
+            Column({ space: 8 }) {
+              Text(this.query.trim().length > 0 ? '没有匹配的章节' : '暂无章节信息')
+                .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400)
+                .fontColor((this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme) === 'night' ? '#ABA99F' : '#756F69')
+                .fontSize(12);
+              if (this.query.trim().length > 0) {
+                Text('清除搜索').fontSize(12)
+                  .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400)
+                  .fontColor((this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme) === 'night' ? '#B9CEB1' : '#425D45')
+                  .height(36).onClick((): void => this.onClearSearch()).accessibilityText('清除目录搜索');
+              }
+            }.width('100%').constraintSize({ minHeight: 164 }).padding({ left: 12, right: 12, top: 36, bottom: 36 })
+              .border({ width: { top: this.mangaCatalogDisplay ? 0 : 1 }, color: { top:
+                (this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme) === 'night' ? '#3B4036' : '#E7E0D5' } })
+              .justifyContent(FlexAlign.Center);
+          } else {
+            Text('没有匹配的目录项')
+              .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
+              .fontSize(12)
+              .hitTestBehavior(HitTestMode.None);
+          }
         }
       }.width('100%').height('100%');
     }

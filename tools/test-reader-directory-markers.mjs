@@ -161,10 +161,11 @@ assert.doesNotMatch(gateway, /request\('cache\.book\.prefetch'/);
 const index = read('entry/src/main/ets/pages/Index.ets');
 assert.match(index, /private directoryBookmarkMutationGeneration: number = 0/);
 assert.match(index, /private directoryBookmarkMutationActiveKey: string = ''/);
-assert.match(index, /new ReadingOfflineGateway\(ReaderRuntimeOwner\.current\(\)\)[\s\S]*\.prefetchChapter\(session, chapterIndex, isCurrent\)/);
+assert.match(index, /new ReadingOfflineGateway\(ReaderRuntimeOwner\.current\(\)\)[\s\S]*\.prefetchChapter\(session, chapterIndex, chapterCurrent\)/);
+assert.match(index, /const chapterCurrent[\s\S]*?isCurrent\(\)[\s\S]*?excludedChapters\.has\(chapterIndex\)/);
 assert.match(index, /\.prefetchBook\(session, isCurrent/);
 assert.match(index, /\.clearBook\(session, isCurrent\)/);
-assert.match(index, /title: '清除本书离线内容'[\s\S]*?value: '取消'[\s\S]*?value: '清除'/,
+assert.match(index, /title: [^\n]*'清除本书离线内容'[\s\S]*?value: '取消'[\s\S]*?value: '清除'/,
   'whole-book cache deletion must require confirmation');
 assert.match(index, /private beginDirectoryBookmarkMutation\(book: ReadingBookDetail\): number/,
   'bookmark mutation identity must accept the shared detail model');

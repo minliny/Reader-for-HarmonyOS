@@ -129,5 +129,25 @@ assert.equal(secondReady.nodes.find(node=>node.type==='Image')?.create,'file://s
 assert.ok(!secondReady.nodes.some(node=>node.type==='LoadingProgress'));
 assert.equal(secondReady.businessKey,secondPending.businessKey);
 assert.equal(secondReady.nodes.find(node=>node.type==='Image').draggable,false,'newly published tiles keep the explicit drag policy');
+// Error ownership is a presentation transition even when each failed tile's
+// own error text/geometry are unchanged. Retain old branches strictly by key.
+tiles.set('0:0',{error:'READING_IMAGE_HTTP_FAILED'});
+tiles.set('0:1',{error:'READING_IMAGE_HTTP_FAILED'});
+owner.first=0;owner.last=0;owner.publish();
+const firstFailure=lazy.rows.get(0),secondaryFailure=lazy.rows.get(1);
+assert.ok(firstFailure.nodes.some(node=>node.type==='Button'),'one current error owns retry');
+assert.ok(!secondaryFailure.nodes.some(node=>node.type==='Button'),'neighbor failure initially retains only its measured slot');
+owner.first=1;owner.last=1;owner.publish();
+const scrolledFailure=lazy.rows.get(1);
+assert.notEqual(scrolledFailure.key,secondaryFailure.key,'moving a retained failure into the viewport transfers error ownership');
+assert.ok(scrolledFailure.nodes.some(node=>node.type==='Button'),'the scrolled error exposes its actual SDK retry button');
+owner.first=0;owner.last=0;owner.publish();
+const demotedFailure=lazy.rows.get(1);
+assert.ok(!demotedFailure.nodes.some(node=>node.type==='Button'));
+tiles.set('0:0',{image:{fileUri:'file://recovered-primary.png',revision:'recovered'}});owner.publish();
+const promotedFailure=lazy.rows.get(1);
+assert.notEqual(promotedFailure.key,demotedFailure.key,'recovered first image transfers the card without changing the next tile error');
+assert.ok(promotedFailure.nodes.some(node=>node.type==='Button'),'the next unresolved tile has a retry after its predecessor recovers');
 console.log('PASS actual SDK Image draggable=false on first/replacement tile; scrolling parents retain hit testing, enabled state and real touch/scroll callbacks (native gesture outcome not tested)');
 console.log('PASS actual SDK LazyForEach item/key callbacks with strict per-index retention: placeholder geometry, ready image, errors, retry, URI/revision changes, unchanged and nonvisible stability, logical identity and anchor preservation, actual publish to the next requested visible tile (native layout/pixels not tested)');
+console.log('PASS actual SDK retained failure rows transfer a visible retry card after viewport scrolling and preceding-image recovery');

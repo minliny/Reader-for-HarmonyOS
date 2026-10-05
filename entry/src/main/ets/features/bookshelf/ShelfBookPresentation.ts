@@ -20,18 +20,24 @@ export class ShelfBookPresentation {
   }
 
   static progress(book: ShelfBook): string {
-    // Manga's persisted location is a page identity, not the novel scalar
-    // basis-points field. No reliable whole-book manga denominator is exposed.
-    if (book.contentKind === 'manga') return '*%';
+    // Core projects manga progress from the readable catalog, separately from
+    // page identity. Unknown catalog mapping must not masquerade as unread.
+    if (book.contentKind === 'manga' && !this.hasMangaChapterProgress(book)) return '*%';
     const value = this.progressPercent(book);
-    if (value <= 0) return '未读';
+    if (value <= 0) return book.contentKind === 'manga' ? '已读 0%' : '未读';
     return value < 1 ? '已读 <1%' : `已读 ${Math.floor(value)}%`;
   }
 
   static progressPercent(book: ShelfBook): number {
-    if (book.contentKind === 'manga') return 0;
+    if (book.contentKind === 'manga' && !this.hasMangaChapterProgress(book)) return 0;
     const value = book.readProgress ?? 0;
     return Number.isFinite(value) ? Math.max(0, Math.min(10000, value)) / 100 : 0;
+  }
+
+  private static hasMangaChapterProgress(book: ShelfBook): boolean {
+    const count = book.chapterCount, progress = book.readProgress;
+    return count !== undefined && Number.isSafeInteger(count) && count > 0 &&
+      progress !== undefined && Number.isFinite(progress) && progress >= 0 && progress <= 10000;
   }
 
   static readingPosition(book: ShelfBook): string {

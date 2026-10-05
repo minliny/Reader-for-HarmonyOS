@@ -42,6 +42,7 @@ export struct SourceSwitchPanel {
   @Prop contentKind: string = 'text';
   @Prop reduceMotion: boolean = false;
   @Prop consumeTopInset: boolean = true;
+  @Prop allowCancelWhileSwitching: boolean = false;
   onStop: () => void = (): void => {};
   onClose: () => void = (): void => {};
   onRetry: () => void = (): void => {};
@@ -57,6 +58,7 @@ export struct SourceSwitchPanel {
       bookTitle: this.bookTitle, author: this.author, coverUrl: this.coverUrl,
       currentSourceName: this.currentSourceName, currentChapterTitle: this.currentChapterTitle,
       contentKind: this.contentKind,
+      allowCancelWhileSwitching: this.allowCancelWhileSwitching,
       reduceMotion: this.reduceMotion, consumeTopInset: this.consumeTopInset, onStop: this.onStop,
       onClose: this.onClose,
       onRetry: this.onRetry,

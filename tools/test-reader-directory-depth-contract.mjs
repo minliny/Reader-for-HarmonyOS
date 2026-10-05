@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { decodeReaderDirectoryOpen } from '../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts';
+import { decodeReaderDirectoryOpen, ReaderDirectoryNavigationGateway } from '../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts';
 import { readerDirectoryAccessibilityText, readerDirectoryIndentVp } from '../entry/src/main/ets/features/reading/ReaderDirectoryHierarchy.ts';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 
@@ -11,12 +11,13 @@ const members = ['row', ...(source.includes('private displayLevel(') ? ['display
 const identity = { sourceId: 'source', bookId: 'book', catalogRevision: 'catalog', structureRevision: 'structure' };
 const longTitle = '长标题'.repeat(30);
 
-function render(depth, kind, v2, hasChildren = false) {
+async function render(depth, kind, v2, hasChildren = false) {
   const node = { nodeId: `node-${depth}-${kind}`, depth, kind, title: longTitle,
     hasChildren, expanded: hasChildren, ...(kind === 'target' ? { chapterIndex: 42 } : {}) };
-  const view = decodeReaderDirectoryOpen({ status: 'ready', viewId: 'view', navigationRevision: 'navigation',
-    visibleTotal: 1, nodes: [node] });
-  if (v2) view.identity = identity;
+  const wire = { status: 'ready', viewId: 'view', navigationRevision: 'structure', visibleTotal: 1, nodes: [node] };
+  const view = v2 ? await new ReaderDirectoryNavigationGateway({ supportsCoreCapability: () => true,
+    request: async () => ({ data: { ...wire, ...identity } }) }).open({ sourceId: identity.sourceId, bookId: identity.bookId }) :
+    decodeReaderDirectoryOpen(wire);
   const actions = [];
   const owner = createReaderBuilderProbe(source, members).owner;
   Object.assign(owner, { appThemeScheme: 'day', rowHeight: 40, view,
@@ -30,7 +31,7 @@ function render(depth, kind, v2, hasChildren = false) {
 }
 
 for (const [depth, level, left] of [[0, 1, 9], [1, 2, 21], [2, 3, 33], [32, 33, 45]]) {
-  const row = render(depth, depth === 0 ? 'group' : 'target', true, depth === 0);
+  const row = await render(depth, depth === 0 ? 'group' : 'target', true, depth === 0);
   assert.equal(row.title.padding.left, left, `v2 depth ${depth} has its own bounded indent`);
   assert.equal(row.title.accessibilityText,
     depth === 0 ? `第${level}级分组：${longTitle}，已展开` : `第${level}级，打开${longTitle}`,
@@ -46,19 +47,19 @@ for (const [depth, level, left] of [[0, 1, 9], [1, 2, 21], [2, 3, 33], [32, 33, 
 }
 
 for (const [depth, left] of [[1, 9], [2, 21], [3, 33], [32, 45]]) {
-  const row = render(depth, 'target', false);
+  const row = await render(depth, 'target', false);
   assert.equal(row.title.padding.left, left, 'legacy v1 indentation is unchanged');
   assert.equal(row.title.accessibilityText, `第${depth}级，打开${longTitle}`,
     'legacy v1 depth already represents the display level');
 }
 
-const parent = render(1, 'target', true, true);
+const parent = await render(1, 'target', true, true);
 parent.title.onClick(); parent.arrow.onClick();
 assert.deepEqual(parent.actions, [['target', 42], ['toggle', parent.node.nodeId]],
   'linked parent keeps separately accessible chapter and disclosure actions');
 assert.equal(parent.arrow.accessibilityText, `折叠${longTitle}子目录`);
-assert.equal(render(1, 'disabled', true).title.accessibilityText, `${longTitle}，目标不可用`);
+assert.equal((await render(1, 'disabled', true)).title.accessibilityText, `${longTitle}，目标不可用`);
 assert.equal(readerDirectoryIndentVp({ level: 2, title: longTitle }), 12);
 assert.equal(readerDirectoryAccessibilityText({ level: 2, title: longTitle }), `第2级，打开章节：${longTitle}`,
   'legacy flat TOC level semantics are not changed');
-console.log('PASS actual SDK tree rows: v2 zero-based depth, v1 compatibility, bounded indent and full accessibility actions');
+console.log('PASS actual SDK tree rows: v2 wire -> real gateway one-based admission, v1 compatibility, bounded indent and full accessibility actions');

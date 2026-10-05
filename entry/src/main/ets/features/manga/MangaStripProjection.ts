@@ -14,12 +14,29 @@ export class MangaStripProjection {
   private pageAt: ((ordinal: number) => MangaManifestPage | undefined) | undefined;
   private selected: number | undefined;
   private ordinals: number[] = [];
+  private firstLayoutChange: number = 0;
+
+  /** Geometry behind the reading anchor cannot move its native row. */
+  affectsAnchor(ordinal: number): boolean { return ordinal >= this.firstLayoutChange; }
 
   publish(manifest: MangaManifest, geometry: (ordinal: number) => MangaPageGeometry | undefined, selected?: number, totalPages: number = manifest.pages.length, pageAt?: (ordinal: number) => MangaManifestPage | undefined): boolean {
     if (selected !== undefined && (!Number.isSafeInteger(selected) || selected < 0 || selected >= totalPages)) throw new Error('MANGA_PAGE_OUT_OF_RANGE');
     if (!Number.isSafeInteger(totalPages) || totalPages < 1 || totalPages > 10000) throw new Error('MANGA_PAGE_COUNT_INVALID');
     const sizes = Array.from({ length: totalPages }, (_value, ordinal) => geometry(ordinal));
-    const changed = this.manifest !== manifest || this.selected !== selected || sizes.length !== this.sizes.length || sizes.some((size, index) => size !== this.sizes[index]);
+    // Decode leases may be reacquired after a page leaves the bounded window.
+    // Their geometry objects are new, but equal dimensions are the same layout.
+    const firstChangedSize = sizes.findIndex((size, index) => {
+      if (selected !== undefined && index !== selected) return false;
+      const previous = this.sizes[index];
+      return size?.width !== previous?.width || size?.height !== previous?.height ||
+        size?.tileHeight !== previous?.tileHeight;
+    });
+    const identityChanged = this.manifest !== manifest || this.selected !== selected;
+    const lengthChanged = sizes.length !== this.sizes.length;
+    const changed = identityChanged || lengthChanged || firstChangedSize >= 0;
+    this.firstLayoutChange = identityChanged ? 0 : Math.min(
+      firstChangedSize >= 0 ? firstChangedSize : Number.POSITIVE_INFINITY,
+      lengthChanged ? Math.min(sizes.length, this.sizes.length) : Number.POSITIVE_INFINITY);
     this.pageAt = pageAt;
     if (!changed) return false;
     const starts: number[] = [];

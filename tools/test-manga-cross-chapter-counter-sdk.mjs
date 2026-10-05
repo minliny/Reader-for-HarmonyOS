@@ -32,7 +32,7 @@ const {owner}=createReaderBuilderProbe(source,names,{
 },properties.hooks);
 owner.horizontal=true;owner.controlsVisible=true;
 owner.mounted=true;
-owner.controller={chapter:undefined,totalPages:0};
+owner.controller={chapter:undefined,totalPages:0,tile:()=>undefined,visiblePages:()=>[]};
 owner.initialRender();
 const pager=()=>[...owner.nodes.values()].find(node=>node.type==='Text'&&/^1 \/ /.test(node.create))?.create;
 const button=label=>[...owner.nodes.values()].find(node=>node.type==='Button'&&node.createWithLabel===label);
@@ -42,7 +42,7 @@ const manifest={chapter:{sourceId:'s',bookId:'b',chapterId:'/second'},manifestVe
   pages:[{ordinal:0,pageId:'second-p0',resourceRef:'manga:second-p0'}]};
 owner.controller={chapter:{manifest,chapterTitle:'2.姐姐2'},totalPages:23,displayedOrdinal:0,
   savedLocation:null,recoveryRequired:false,pageAt:ordinal=>manifest.pages[ordinal],
-  pageGeometry:()=>undefined};
+  pageGeometry:()=>undefined,tile:()=>undefined,visiblePages:()=>[]};
 owner.restore=()=>{};owner.opened=true;owner.publish();
 properties.flush();
 assert.equal(pager(),'1 / 23','admitted second-chapter page count must update without turning page zero');

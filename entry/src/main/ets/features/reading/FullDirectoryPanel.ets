@@ -711,7 +711,8 @@ export struct FullDirectoryPanel {
             .borderRadius(999);
         }
         Stack({ alignContent: Alignment.Center }) {
-          Text(repeatItem.item.title)
+          Text(repeatItem.item.title.trim().length > 0 && repeatItem.item.title.trim() !== '第话' && repeatItem.item.title.trim() !== '第 话' ?
+            repeatItem.item.title : `第${Math.max(1, repeatItem.item.index + 1)}话`)
             .width('100%')
             .padding({ left: 9 + readerDirectoryIndentVp(repeatItem.item), right: 9 })
             .fontFamily('ReaderInter')
@@ -1641,7 +1642,9 @@ export struct FullDirectoryPanel {
 
   private currentTitle(): string {
     const entry = this.currentEntry();
-    return entry === undefined ? '尚未开始阅读' : entry.title;
+    if (entry === undefined) return '尚未开始阅读';
+    return entry.title.trim().length > 0 && entry.title.trim() !== '第话' && entry.title.trim() !== '第 话' ?
+      entry.title : `第${Math.max(1, entry.index + 1)}话`;
   }
 
   private currentPosition(): string {

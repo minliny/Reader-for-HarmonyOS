@@ -554,7 +554,7 @@ console.log('PASS directory diagnostics separate disposed query cancellation fro
   const Download = productionMotionMethods(listPath, ['canDownloadTarget', 'downloadTarget', 'onChapterEntriesChanged']);
   const target = { nodeId: 'target', kind: 'target', title: 'Chapter', depth: 1,
     chapterIndex: 7, hasChildren: false, expanded: false };
-  const markerStart = listSource.indexOf("        if (item.node.kind === 'target' && item.node.chapterIndex !== undefined && this.chapterDownloadEnabled");
+  const markerStart = listSource.indexOf("        if (item.node.kind === 'target' && item.node.chapterIndex !== undefined && this.chapterDownloadEnabled", listSource.indexOf("  private row("));
   const markerEnd = listSource.indexOf("        if (item.node.kind === 'target'", markerStart + 1);
   assert.ok(markerStart > 0 && markerEnd > markerStart);
   const baseline = listSource.slice(0, markerStart) + listSource.slice(markerEnd);

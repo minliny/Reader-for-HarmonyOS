@@ -34,3 +34,15 @@ fail='READING_IMAGE_AUTH_REQUIRED';owner.offline=true;assert.equal(owner.loginRe
 await owner.refreshImages();assert.equal(owner.horizontalPage,8);assert.deepEqual(restored.at(-1),[8,0.6,0.1]);
 owner.controller.recoveryRequired=true;await owner.refreshImages();assert.equal(owner.recovering,true);assert.deepEqual(restored.at(-1),[8,0,0],'ambiguous recovery preserves the displayed page without adopting old coordinates');
 console.log('PASS production imageStyle width/contain, explicit preference priority, whole-image crop geometry, both-axis anchor, height reflow, login one-retry/no-refresh/fences, exact refresh restores global ordinal and ambiguous recovery remains explicit');
+{
+ const anchor={ordinal:8,x:0.3,y:0.72},confirmed={anchor},before=restored.length;let previews=0,published=0;
+ Object.assign(owner,{visibleAnchor:anchor,confirmedPosition:confirmed,horizontalPage:8,first:3,last:5,restoringAnchor:false});
+ Object.assign(owner.controller,{replacementRecoveryRequired:true,recoveryRequired:true,setPreviewMode:async()=>{previews++;}});
+ owner.publish=()=>{published++;};await owner.refreshImages();
+ assert.equal(previews,0,'pending replacement cannot release old pixels through preview mode');
+ assert.equal(owner.visibleAnchor,anchor,'pending replacement keeps the old visible anchor');assert.equal(owner.confirmedPosition,confirmed);
+ assert.equal(owner.horizontalPage,8);assert.equal(owner.first,3);assert.equal(owner.last,5);
+ assert.equal(restored.length,before,'pending replacement does not restore the old chapter at page start');assert.equal(published,0);
+ assert.equal(owner.recovering,true);
+}
+console.log('PASS actual Surface pending replacement returns before preview, projection or restore and retains the old chapter viewport until explicit selection');

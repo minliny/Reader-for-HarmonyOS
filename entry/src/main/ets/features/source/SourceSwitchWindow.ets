@@ -124,6 +124,7 @@ export struct SourceSwitchWindow {
   @Prop contentKind: string = 'text';
   @Prop reduceMotion: boolean = false;
   @Prop consumeTopInset: boolean = true;
+  @Prop allowCancelWhileSwitching: boolean = false;
   onClose: () => void = (): void => {};
   onRetry: () => void = (): void => {};
   onRefresh: () => void = (): void => {};
@@ -361,7 +362,7 @@ export struct SourceSwitchWindow {
           Image(this.appThemeScheme === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close'))
             .width(20).height(20);
         }.width(44).height(44).backgroundColor(Color.Transparent)
-          .accessibilityText('返回').enabled(!this.busy() && !this.rollbackRequired()).onClick((): void => this.onClose());
+          .accessibilityText('返回').enabled((!this.busy() || this.allowCancelWhileSwitching) && !this.rollbackRequired()).onClick((): void => this.onClose());
         Blank().layoutWeight(1);
         Button(this.isSweeping() ? '停止' : '重查', { type: ButtonType.Normal })
           .width(44).height(44).fontSize(11).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))

@@ -19,6 +19,10 @@ import { ReaderDirectoryList } from '../reading/ReaderDirectoryList';
 import { ReaderDirectoryNavigationSurface } from '../reading/ReaderDirectoryNavigationSurface';
 import { readerDirectorySignalScrollCommand, readerDirectorySignalScrollIntent } from '../reading/ReaderDirectoryViewport';
 import type { RemoteReadingPositionScope } from '../reading/RemoteReadingPositionMigration';
+import { MangaDownloadOperationsPanel } from '../manga/MangaDownloadOperationsPanel';
+import type { MangaDownloadAction, MangaDownloadActionId } from '../manga/MangaDownloadActionsGateway';
+import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries,
+  type MangaDirectoryRowPresentation } from '../manga/MangaDirectoryPresentation';
 
 /** Detail-owned catalog. Reuses the control's toolbar/rows, never its sheet or reading session. */
 @Component
@@ -37,6 +41,16 @@ export struct BookDirectoryPage {
   @Prop currentPageOrdinal: number = -1;
   @Prop currentPageTotal: number = -1;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
+  @Prop mangaDownloadEnabled: boolean = false;
+  onLoadDownloadActions: (chapterIndex?: number) => Promise<MangaDownloadAction[]> = async (): Promise<MangaDownloadAction[]> => [];
+  onDownloadAction: (action: MangaDownloadActionId, chapterIndex?: number) => Promise<void> = async (): Promise<void> => {};
+  @State private downloadMenuVisible: boolean = false;
+  @State private downloadActions: MangaDownloadAction[] = [];
+  @State private downloadActionsLoading: boolean = false;
+  @State private downloadActionsFailure: string = '';
+  private downloadMenuChapterIndex: number | undefined = undefined;
+  private downloadMenuGeneration: number = 0;
+  private downloadMenuIdentity: string = '';
   onBack: () => void = (): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
   onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
@@ -56,6 +70,7 @@ export struct BookDirectoryPage {
   @State private navigationActive: boolean = false;
   @State private locateCurrentRevision: number = 0;
   @State private mangaCollapsedGroups: number[] = [];
+  @State private mangaPresentation: Map<number, MangaDirectoryRowPresentation> = new Map<number, MangaDirectoryRowPresentation>();
   private admittedEntries: LocalReadingTocEntry[] = [];
   @State private admittedIdentity: string = '';
   private mounted: boolean = false;
@@ -73,6 +88,8 @@ export struct BookDirectoryPage {
   }
 
   aboutToDisappear(): void {
+    this.downloadMenuGeneration += 1;
+    this.downloadMenuVisible = false;
     this.mounted = false;
     this.projectionGeneration += 1;
     this.scrollGeneration += 1;
@@ -188,6 +205,11 @@ export struct BookDirectoryPage {
           listPaddingBottom: this.bottomInset() + 72,
           edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
           chapterEntries: this.admittedEntries,
+          chapterDownloadEnabled: this.mangaDownloadEnabled,
+          chapterDownloadActionsEnabled: this.mangaDownloadEnabled,
+          onDownloadChapter: (index: number): void => {
+            if (this.mounted && identity === this.admittedIdentity && identity === this.identity()) void this.openDownloadActions(index);
+          },
           fallbackBuilder: (): void => { this.mangaFlatList(identity); },
           onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number,
             positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void => {
@@ -200,7 +222,8 @@ export struct BookDirectoryPage {
         }).width('100%').height('100%');
       }, (identity: string): string => identity);
       Row() {
-        PageBackBar({ title: '目录', floating: true, centered: true, onBack: (): void => this.onBack() });
+        PageBackBar({ title: '目录', floating: true, centered: true, onBack: (): void => this.onBack(),
+          trailing: (): void => { this.mangaDownloadMenuButton(); } });
       }.width('100%').padding({ left: this.contentFrame().left, right: this.contentFrame().right, top: this.topInset() + 8 })
         .align(Alignment.Top).hitTestBehavior(HitTestMode.Transparent);
       Column() {
@@ -302,36 +325,108 @@ export struct BookDirectoryPage {
           Text(this.mangaGroupFor(entry)?.title ?? '').width('100%').fontSize(11).lineHeight(16)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
         }
-      }.layoutWeight(1).alignItems(HorizontalAlign.Start);
-      if (entry.navigable === false) {
+      }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+        .onClick((): void => this.selectMangaEntry(entry, identity));
+      if (this.mangaDownloadEnabled && entry.navigable !== false && entry.downloadState !== 'unknown') {
+        Stack() {
+          Image(entry.downloadState === 'completed' ?
+            (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_check_theme_night') : $r('app.media.reader_directory_marker_check')) :
+            (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_download_theme_night') : $r('app.media.reader_directory_marker_download')))
+            .width(15).height(15);
+        }.width(26).height(58).accessibilityText('管理本章下载')
+          .onClick((): void => {
+            if (this.mounted && identity === this.admittedIdentity && identity === this.identity() &&
+              sameReaderDirectoryData(this.admittedEntries, this.entries)) void this.openDownloadActions(entry.index);
+          });
+      }
+      if (this.mangaIsGroup(entry)) {
         Text(this.mangaCollapsedGroups.includes(entry.index) ? '›' : '⌄').width(24).fontSize(18)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+          .onClick((): void => this.selectMangaEntry(entry, identity));
       } else if (entry.index === this.currentChapterIndex) {
-        Text('正在读').fontSize(11).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
+        Text('正在读').fontSize(11).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
+          .onClick((): void => this.selectMangaEntry(entry, identity));
       }
     }.width('100%').constraintSize({ minHeight: entry.navigable === false ? 44 : 58 })
       .padding({ left: this.mangaGroupFor(entry) === undefined ? 10 : 26, right: 10, top: 10, bottom: 10 })
       .backgroundColor(entry.navigable !== false && entry.index === this.currentChapterIndex ?
         readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) :
         entry.navigable === false ? readerAppColor('TOK_CARD_BG', this.appThemeScheme) : Color.Transparent)
-      .borderRadius(8).onClick((): void => {
-        if (!this.mounted || identity !== this.identity() || identity !== this.admittedIdentity ||
-          !sameReaderDirectoryData(this.admittedEntries, this.entries)) return;
-        if (entry.navigable === false) {
-          this.mangaCollapsedGroups = this.mangaCollapsedGroups.includes(entry.index) ?
-            this.mangaCollapsedGroups.filter((index: number): boolean => index !== entry.index) : [...this.mangaCollapsedGroups, entry.index];
-        } else if (this.rowIsCurrent(entry, identity)) this.onSelectChapter(entry.index);
-      });
+      .borderRadius(8);
+  }
+
+  private selectMangaEntry(entry: LocalReadingTocEntry, identity: string): void {
+    if (!this.mounted || identity !== this.identity() || identity !== this.admittedIdentity ||
+      !sameReaderDirectoryData(this.admittedEntries, this.entries)) return;
+    if (entry.navigable === false) {
+      if (!this.mangaIsGroup(entry)) return;
+      this.mangaCollapsedGroups = this.mangaCollapsedGroups.includes(entry.index) ?
+        this.mangaCollapsedGroups.filter((index: number): boolean => index !== entry.index) : [...this.mangaCollapsedGroups, entry.index];
+    } else if (this.rowIsCurrent(entry, identity)) this.onSelectChapter(entry.index);
   }
 
   private mangaGroupFor(entry: LocalReadingTocEntry): LocalReadingTocEntry | undefined {
-    if (entry.navigable === false) return undefined;
-    let group: LocalReadingTocEntry | undefined;
-    for (const row of this.admittedEntries) {
-      if (row.index === entry.index) return group;
-      if (row.navigable === false) group = row;
+    const ancestors = this.mangaPresentation.get(entry.index)?.ancestorGroupIndexes ?? [];
+    const index = ancestors[ancestors.length - 1];
+    return index === undefined ? undefined : this.admittedEntries.find((row: LocalReadingTocEntry): boolean => row.index === index);
+  }
+
+  private mangaIsGroup(entry: LocalReadingTocEntry): boolean {
+    return this.mangaPresentation.get(entry.index)?.group === true;
+  }
+
+  @Builder
+  private mangaDownloadMenuButton() {
+    if (this.mangaDownloadEnabled) {
+      Stack({ alignContent: Alignment.Center }) {
+        Image(this.appThemeScheme === 'night' ? $r('app.media.reader_directory_more_theme_night') : $r('app.media.reader_directory_more'))
+          .width(20).height(20);
+      }.width(44).height(44).accessibilityText('漫画下载管理')
+        .onClick((): void => { void this.openDownloadActions(); })
+        .bindPopup(this.downloadMenuVisible, { builder: (): void => { this.downloadOperationsMenu(); },
+          placement: Placement.BottomLeft, enableArrow: false,
+          popupColor: readerAppColor('TOK_CARD_BG', this.appThemeScheme),
+          onStateChange: (event: PopupStateChangeParam): void => { if (!event.isVisible) this.downloadMenuVisible = false; } });
     }
-    return undefined;
+  }
+
+  @Builder
+  private downloadOperationsMenu() {
+    Scroll() {
+      MangaDownloadOperationsPanel({ actions: this.downloadActions, loading: this.downloadActionsLoading,
+        failureMessage: this.downloadActionsFailure,
+        onAction: (action: MangaDownloadActionId): void => this.performDownloadAction(action),
+        onRetry: (): void => { void this.openDownloadActions(this.downloadMenuChapterIndex); } });
+    }.width(Math.min(240, this.contentFrame().width)).constraintSize({ maxHeight: 340 }).padding(8).scrollBar(BarState.Off);
+  }
+
+  private async openDownloadActions(chapterIndex?: number): Promise<void> {
+    if (!this.mounted || !this.mangaDownloadEnabled || this.contentKind !== 'manga') return;
+    const generation = ++this.downloadMenuGeneration, identity = this.identity();
+    this.downloadMenuIdentity = identity;
+    this.downloadMenuChapterIndex = chapterIndex; this.downloadMenuVisible = true;
+    this.downloadActions = []; this.downloadActionsFailure = ''; this.downloadActionsLoading = true;
+    const current = (): boolean => this.mounted && this.downloadMenuVisible && generation === this.downloadMenuGeneration && identity === this.identity();
+    try {
+      const actions = await this.onLoadDownloadActions(chapterIndex);
+      if (current()) this.downloadActions = actions;
+    } catch (_) {
+      if (current()) this.downloadActionsFailure = '下载状态暂时无法读取，请重试';
+    } finally {
+      if (current()) this.downloadActionsLoading = false;
+    }
+  }
+
+  private performDownloadAction(action: MangaDownloadActionId): void {
+    if (!this.mounted || !this.mangaDownloadEnabled || this.contentKind !== 'manga' ||
+      !this.downloadMenuVisible || this.downloadMenuIdentity !== this.identity() || this.downloadActionsLoading ||
+      !this.downloadActions.some(item => item.id === action)) return;
+    const chapterIndex = this.downloadMenuChapterIndex;
+    this.downloadMenuVisible = false;
+    void this.onDownloadAction(action, chapterIndex).catch((): void => {
+      // Index owns operation feedback. Do not turn a catalog action into a
+      // failed/unhandled reader lifecycle promise.
+    });
   }
 
   private mangaCurrentTitle(): string {
@@ -350,10 +445,7 @@ export struct BookDirectoryPage {
   private mangaVisibleEntries(): LocalReadingTocEntry[] {
     // Search reveals matches and their original volume path even when folded.
     if (this.searchQuery.length > 0) return this.projectedEntries;
-    return this.projectedEntries.filter((entry: LocalReadingTocEntry): boolean => {
-      const group = this.mangaGroupFor(entry);
-      return group === undefined || !this.mangaCollapsedGroups.includes(group.index);
-    });
+    return mangaDirectoryVisibleEntries(this.projectedEntries, this.mangaPresentation, this.mangaCollapsedGroups);
   }
 
   private topInset(): number {
@@ -366,8 +458,8 @@ export struct BookDirectoryPage {
     this.searchDraft = '';
     this.searchQuery = '';
     const currentEntry = this.admittedEntries.find((entry: LocalReadingTocEntry): boolean => entry.index === this.currentChapterIndex);
-    const group = currentEntry === undefined ? undefined : this.mangaGroupFor(currentEntry);
-    if (group !== undefined) this.mangaCollapsedGroups = this.mangaCollapsedGroups.filter((index: number): boolean => index !== group.index);
+    const ancestors = currentEntry === undefined ? [] : this.mangaPresentation.get(currentEntry.index)?.ancestorGroupIndexes ?? [];
+    this.mangaCollapsedGroups = this.mangaCollapsedGroups.filter((index: number): boolean => !ancestors.includes(index));
     this.publishProjection(projectReaderDirectoryEntries(this.admittedEntries, '', this.ascending));
     this.locateCurrentRevision += 1;
     const generation = ++this.scrollGeneration;
@@ -437,6 +529,9 @@ export struct BookDirectoryPage {
   }
 
   private onIdentityChanged(): void {
+    this.downloadMenuGeneration += 1;
+    this.downloadMenuVisible = false;
+    this.downloadMenuIdentity = '';
     this.rulesExpanded = false;
     this.rulesRevision = 0;
     this.mangaCollapsedGroups = [];
@@ -457,6 +552,8 @@ export struct BookDirectoryPage {
 
   private admitEntries(reset: boolean): void {
     const wasEmpty = this.projectedEntries.length === 0;
+    const previous = this.admittedEntries;
+    const previousIdentity = this.admittedIdentity;
     if (reset) {
       this.searchDraft = '';
       this.searchQuery = '';
@@ -467,6 +564,12 @@ export struct BookDirectoryPage {
     }
     this.admittedIdentity = this.identity();
     this.admittedEntries = snapshotReaderDirectoryData(this.entries);
+    this.mangaPresentation = mangaDirectoryPresentation(this.admittedEntries);
+    this.mangaCollapsedGroups = previousIdentity === this.admittedIdentity ? (this.mangaCollapsedGroups ?? []).filter((index: number): boolean => {
+      const before = previous.find((entry: LocalReadingTocEntry): boolean => entry.index === index);
+      const after = this.admittedEntries.find((entry: LocalReadingTocEntry): boolean => entry.index === index);
+      return before !== undefined && after !== undefined && this.mangaIsGroup(after) && sameReaderDirectoryData([before], [after]);
+    }) : [];
     this.publishProjection(projectReaderDirectoryEntries(this.admittedEntries,
       reset ? '' : this.searchQuery, reset ? true : this.ascending));
     if (reset || wasEmpty) this.scheduleTopScroll();
