@@ -2,6 +2,11 @@
 
 Reader 当前唯一完整产品 Host/UI，也是唯一实际消费 `Reader-Core-Native` 的应用。
 
+## UI 与逻辑稿
+
+工作区旧 UI 原型、状态稿与设计归档已按授权清理。新稿以本工作区已接通的应用逻辑为依据。
+入口为 [UI 稿](docs/ui-design/app-baseline/index.html) 与 [逻辑稿](docs/ui-design/app-baseline/LOGIC.md)。两者共用逐页参数，包含 iOS / Android 布局、排版、动效、平台适配与验收要求；逻辑稿为各业务章节及全部 39 个界面/组件提供入口、动作和返回路线图。预览可检查安全区、键盘和大字体，原生还原仍需逐端验收。
+
 ## 开发准入
 
 运行全部非服务型契约：
