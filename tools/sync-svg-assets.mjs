@@ -11,6 +11,9 @@ import {
   SVG_PROVENANCE_SCHEMA_VERSION,
   SVG_TABLER_LICENSE,
   SVG_TABLER_VERSION,
+  SVG_RADIX_PACKAGE,
+  SVG_RADIX_COMPONENT_SOURCES,
+  svgRadixSheetRecipes,
   svgAssetRecipes,
 } from './svg-provenance.config.mjs';
 
@@ -18,6 +21,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MEDIA_DIR = path.join(ROOT, 'entry/src/main/resources/base/media');
 const ICON_SOURCE_DIR = path.join(ROOT, 'docs/ui-design/svg-provenance/figma-icons');
 const PAGE_SOURCE_DIR = path.join(ROOT, 'docs/ui-design/svg-provenance/figma-page-assets');
+const RADIX_SOURCE_DIR = path.join(ROOT, 'docs/ui-design/svg-provenance/radix-icons');
 const MANIFEST_PATH = path.join(ROOT, 'docs/ui-design/SVG_PROVENANCE.json');
 const MAIN_SOURCE_DIR = path.join(ROOT, 'entry/src/main');
 const BANNED_PROVENANCE = /reference-only|readerseed|unknown|manual|approximation/i;
@@ -57,6 +61,35 @@ function renderPaperPrimitive(recipe) {
 }
 
 async function renderRecipe(recipe) {
+  if (recipe.originType === 'radix-component-derived') {
+    const pinnedRecipe = svgRadixSheetRecipes.find(value => value.file === recipe.file);
+    assert.deepEqual(recipe, pinnedRecipe, `${recipe.file}: only the pinned manga sheet Radix recipes are allowed`);
+    const input = SVG_RADIX_COMPONENT_SOURCES[recipe.component];
+    assert.ok(input, `${recipe.file}: Radix component is outside the pinned ten-icon input set`);
+    assert.equal(recipe.sourceFile, input.sourceFile);
+    assert.equal(recipe.sourceSha256, input.sourceSha256);
+    const sourcePath = path.join(RADIX_SOURCE_DIR, input.sourceFile);
+    const source = await readFile(sourcePath, 'utf8');
+    assert.equal(sha256(source), input.sourceSha256, `${recipe.sourceFile}: pinned Radix source hash drifted`);
+    assert.match(source, /viewBox="0 0 15 15"/, `${recipe.sourceFile}: upstream viewBox must remain unchanged`);
+    assert.deepEqual([...new Set(source.match(/#[0-9a-f]{6}\b/gi))], ['#756F69'],
+      `${recipe.sourceFile}: expected canonical Radix fill`);
+    const content = source.replaceAll('fill="#756F69"', `fill="${recipe.color}"`);
+    assert.equal(content.replaceAll(`fill="${recipe.color}"`, 'fill="#756F69"'), source,
+      `${recipe.file}: only fixed path recoloring is allowed`);
+    return { content, manifest: {
+      file: `${recipe.file}.svg`, semanticRole: recipe.semanticRole, originType: recipe.originType,
+      componentName: recipe.component, upstreamPackage: SVG_RADIX_PACKAGE.name,
+      upstreamVersion: SVG_RADIX_PACKAGE.version, upstreamUrl: SVG_RADIX_PACKAGE.url,
+      upstreamIntegrity: SVG_RADIX_PACKAGE.integrity, upstreamGitHead: SVG_RADIX_PACKAGE.gitHead,
+      license: SVG_RADIX_PACKAGE.license, licenseFile: path.relative(ROOT, path.join(RADIX_SOURCE_DIR, 'LICENSE')),
+      licenseSha256: SVG_RADIX_PACKAGE.licenseSha256,
+      sourceReceiptFile: path.relative(ROOT, path.join(RADIX_SOURCE_DIR, 'SOURCE.json')),
+      sourceReceiptSha256: SVG_RADIX_PACKAGE.receiptSha256,
+      sourceFile: path.relative(ROOT, sourcePath), sourceSha256: input.sourceSha256,
+      transform: { pathMutation: 'none', recolor: recipe.color, viewBox: 'preserved' },
+    } };
+  }
   if (recipe.originType === 'theme-palette-derived') {
     const base = svgAssetRecipes.find(value => value.file === recipe.baseFile);
     assert.ok(base && base.originType !== 'theme-palette-derived', 'night variant requires an original trusted design asset');
@@ -211,6 +244,30 @@ async function assertSourceCatalogue() {
   }
 }
 
+async function assertRadixSourceCatalogue() {
+  const files = (await readdir(RADIX_SOURCE_DIR)).filter(file => file.endsWith('.svg')).sort();
+  const expected = Object.values(SVG_RADIX_COMPONENT_SOURCES).map(input => input.sourceFile).sort();
+  assert.equal(expected.length, 10, 'Radix input set is limited to the approved ten manga sheet components');
+  assert.deepEqual(files, expected, 'Radix source catalogue must exactly match the pinned ten components');
+  const license = await readFile(path.join(RADIX_SOURCE_DIR, 'LICENSE'), 'utf8');
+  assert.equal(sha256(license), SVG_RADIX_PACKAGE.licenseSha256, 'pinned Radix MIT license hash drifted');
+  const receipt = await readFile(path.join(RADIX_SOURCE_DIR, 'SOURCE.json'), 'utf8');
+  assert.equal(sha256(receipt), SVG_RADIX_PACKAGE.receiptSha256, 'pinned Radix demo extraction receipt hash drifted');
+  const provenance = JSON.parse(receipt);
+  assert.equal(provenance.package, SVG_RADIX_PACKAGE.name);
+  assert.equal(provenance.version, SVG_RADIX_PACKAGE.version);
+  assert.equal(provenance.resolved, SVG_RADIX_PACKAGE.url);
+  assert.equal(provenance.integrity, SVG_RADIX_PACKAGE.integrity);
+  assert.equal(provenance.gitHead, SVG_RADIX_PACKAGE.gitHead);
+  assert.equal(provenance.license, SVG_RADIX_PACKAGE.license);
+  assert.equal(provenance.licenseSha256, SVG_RADIX_PACKAGE.licenseSha256);
+  assert.deepEqual(provenance.components, SVG_RADIX_COMPONENT_SOURCES);
+  for (const input of Object.values(SVG_RADIX_COMPONENT_SOURCES)) {
+    assert.equal(sha256(await readFile(path.join(RADIX_SOURCE_DIR, input.sourceFile))), input.sourceSha256,
+      `${input.sourceFile}: canonical upstream path/viewBox bytes changed`);
+  }
+}
+
 async function assertProductionReferences(expectedNames) {
   const sourceFiles = await collectFiles(MAIN_SOURCE_DIR, '.ets');
   sourceFiles.push(...await collectFiles(MAIN_SOURCE_DIR, '.ts'));
@@ -229,6 +286,7 @@ async function assertProductionReferences(expectedNames) {
 
 export async function syncSvgAssets({ check = false } = {}) {
   await assertSourceCatalogue();
+  await assertRadixSourceCatalogue();
   const recipeNames = svgAssetRecipes.map((recipe) => recipe.file);
   assert.equal(new Set(recipeNames).size, recipeNames.length, 'SVG provenance recipes must be unique');
   assert.doesNotMatch(JSON.stringify(svgAssetRecipes), BANNED_PROVENANCE,
@@ -262,7 +320,7 @@ export async function syncSvgAssets({ check = false } = {}) {
     schemaVersion: SVG_PROVENANCE_SCHEMA_VERSION,
     generatedBy: 'tools/sync-svg-assets.mjs',
     policy: {
-      allowedOrigins: ['figma-component-derived', 'figma-node-export', 'figma-make-dom-export', 'figma-make-source-export', 'figma-node-adapted', 'figma-css-primitive', 'figma-node-platform-adapted', 'theme-palette-derived'],
+      allowedOrigins: ['figma-component-derived', 'figma-node-export', 'figma-make-dom-export', 'figma-make-source-export', 'figma-node-adapted', 'figma-css-primitive', 'figma-node-platform-adapted', 'theme-palette-derived', 'radix-component-derived'],
       unknownAllowed: false,
       manualPathMutationAllowed: false,
     },
