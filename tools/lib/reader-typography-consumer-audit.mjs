@@ -113,6 +113,16 @@ export function isSharedTypographyExpression(expression, context, owner) {
     if (!node) return false;
     if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node)) return visit(node.expression);
     if (ts.isConditionalExpression(node)) return visit(node.whenTrue) && visit(node.whenFalse);
+    // A native symbol's fixed geometry uses a public size with an explicit
+    // platform unit. Only the exact no-argument numeric conversion is allowed;
+    // mixed arithmetic or private operands remain rejected.
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken &&
+        ts.isStringLiteral(node.right) && node.right.text === 'vp' &&
+        ts.isCallExpression(node.left) && node.left.arguments.length === 0 &&
+        ts.isPropertyAccessExpression(node.left.expression) && node.left.expression.name.text === 'toString') {
+      const size = node.left.expression.expression;
+      return ts.isPropertyAccessExpression(size) && size.name.text === 'fontSizeFp' && visit(size);
+    }
     if (ts.isCallExpression(node)) {
       if (ts.isIdentifier(node.expression) && node.expression.text === 'readerControlLerp' && node.arguments.length === 3) {
         const [from, to, progress] = node.arguments;
@@ -172,7 +182,12 @@ export function auditNativeTextElements(source, file = '/tmp/NativeTypography.et
   const walk = node => { if(ts.isEtsComponentExpression(node)&&ts.isIdentifier(node.expression)&&native.has(node.expression.text)){
     let parent=node;while(parent&&!ts.isMethodDeclaration(parent))parent=parent.parent;
     let textParent=node.parent;while(textParent&&!(ts.isEtsComponentExpression(textParent)&&textParent.expression.getText(parsed)==='Text'))textParent=textParent.parent;
-    result.push({kind:node.expression.text,inheritsTextStyle:!!textParent&&Object.keys(fonts.get(textParent.getStart(parsed))??{}).length>0,method:parent?.name?.getText(parsed)??'@module',text:node.arguments[0]?.getText(parsed),
+    const first = node.arguments[0];
+    const unlabelledNormalButton = node.expression.text === 'Button' && !!node.body && first !== undefined &&
+      ts.isObjectLiteralExpression(first) && first.properties.length === 1 &&
+      ts.isPropertyAssignment(first.properties[0]) && first.properties[0].name.getText(parsed) === 'type' &&
+      first.properties[0].initializer.getText(parsed) === 'ButtonType.Normal';
+    result.push({kind:node.expression.text,unlabelledNormalButton,inheritsTextStyle:!!textParent&&Object.keys(fonts.get(textParent.getStart(parsed))??{}).length>0,method:parent?.name?.getText(parsed)??'@module',text:node.arguments[0]?.getText(parsed),
       line:parsed.getLineAndCharacterOfPosition(node.getStart(parsed)).line+1,hasChildContent:!!node.body,
       modifiers:fonts.get(node.getStart(parsed))??{},attributes:attributes.get(node.pos)??{}});
   }ts.forEachChild(node,walk); };walk(parsed);return result;

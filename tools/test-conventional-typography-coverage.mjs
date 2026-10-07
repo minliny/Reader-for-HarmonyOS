@@ -65,3 +65,7 @@ const approvedSource=readFileSync(new URL(approvedFile,root),'utf8');
 assert.throws(()=>verifySource(approvedSource.replace('.fontSize(13)', '.fontSize(99)'),approvedFile), /exact approved typography carrier\/tuple changed/);
 assert.throws(()=>verifySource(approvedSource.replace('.fontSize(13)', '.fontSize(13).letterSpacing(99)'),approvedFile), /exact approved typography carrier\/tuple changed/);
 assert.throws(()=>verifySource(approvedSource.replace('Column({ space: 8 }) {', "Column({ space: 8 }) { Text('未经批准').fontSize(13);"),approvedFile), /exact approved typography carrier\/tuple changed/);
+
+assert.equal(isSharedTypographyExpression("TYPE_DOWNLOAD_CONTROL.fontSizeFp.toString() + 'vp'"), true);
+assert.equal(isSharedTypographyExpression("DOWNLOAD_VISUAL.controlFontSize.toString() + 'vp'"), false);
+assert.equal(isSharedTypographyExpression("(TYPE_DOWNLOAD_CONTROL.fontSizeFp + 1).toString() + 'vp'"), false);

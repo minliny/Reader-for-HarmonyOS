@@ -14,6 +14,17 @@ const producers=JSON.parse(readFileSync(new URL('./fixtures/architecture-shared-
 const featureRoot=new URL('../entry/src/main/ets/features/',import.meta.url),normalise=text=>(text??'').replace(/\s+/g,'');
 const contracts=new Map(fixture.consumers.map(row=>[JSON.stringify([row.file,row.method,row.kind,normalise(row.argument)]),{...row,count:0}]));
 assert.equal(contracts.size,13);
+// A real Normal-options constructor owns no native text. Its Text children
+// still require their own roles; a label overload or unknown options cannot
+// disguise an unregistered native label.
+const buttonOptionsProbe = auditNativeTextElements(`@Component struct ButtonOptionsProbe {
+ build() {
+  Button({ type: ButtonType.Normal }) { Text('child').fontSize(12); }
+  Button('label', { type: ButtonType.Normal });
+  Button({ label: 'hidden', type: ButtonType.Normal }) { Text('child').fontSize(12); }
+ }
+}`).filter(node=>node.kind==='Button');
+assert.deepEqual(buttonOptionsProbe.map(node=>node.unlabelledNormalButton),[true,false,false]);
 let controls=0,paint=0,a11y=0,delegated=0,inherited=0,approvedNative=0;
 for(const file of readdirSync(featureRoot,{recursive:true}).filter(file=>file.endsWith('.ets'))){
  const rel='features/'+file,source=readFileSync(new URL(file,featureRoot),'utf8');
@@ -22,7 +33,7 @@ for(const file of readdirSync(featureRoot,{recursive:true}).filter(file=>file.en
   if(Object.keys(node.modifiers).length)continue;
   if(node.kind==='Span'&&node.inheritsTextStyle){inherited++;continue;}
   // No visible glyph exists in a blank paint actor or unlabelled event host.
-  if(node.kind==='Text'&&["''",'""'].includes(node.text)||node.kind==='Button'&&node.text===undefined){paint++;continue;}
+  if(node.kind==='Text'&&["''",'""'].includes(node.text)||node.kind==='Button'&&(node.text===undefined||node.unlabelledNormalButton)){paint++;continue;}
   if(node.kind==='Text'&&node.attributes.width==='1'&&node.attributes.height==='1'&&node.attributes.accessibilityRole==='AccessibilityRoleType.BUTTON'&&
     node.method==='accessibleControlActions'&&['reading/ReaderControlPanel.ets','reading/ReaderControlMotionStage.ets'].includes(file)){a11y++;continue;}
   if(node.kind==='Button'&&file==='common/ReaderDialogSurface.ets'&&node.method==='actionCell'&&node.attributes.attributeModifier==='this.actionModifier(action)'){

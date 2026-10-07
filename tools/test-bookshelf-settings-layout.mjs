@@ -1,7 +1,7 @@
 import {actualModeHost,readerRecoveryView} from './lib/bookshelf-view-mode-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { createRequire } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
@@ -9,10 +9,9 @@ import { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp, readerVisual
   readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from './lib/reader-floating-bar-metrics-probe.mjs';
-import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import { loadReaderTypographyRoles } from './lib/reader-typography-probe.mjs';
 const typographySource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
-const TYPE_PAGE_TITLE = new Function(...Object.keys(fontFamilies),
-  `${stripTypeScriptTypes(typographySource.replace(/import[\s\S]*?from '[^']+';/g, '').replace(/\bexport /g, ''))}; return TYPE_PAGE_TITLE;`)(...Object.values(fontFamilies));
+const { TYPE_PAGE_TITLE } = loadReaderTypographyRoles(typographySource);
 const file = new URL('../entry/src/main/ets/features/bookshelf/BookshelfSettingsPage.ets', import.meta.url);
 const source = readFileSync(file, 'utf8');
 const headerSource = readFileSync(new URL('../entry/src/main/ets/features/common/PageBackBar.ets', import.meta.url), 'utf8');

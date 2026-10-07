@@ -109,6 +109,7 @@ export struct SettingsPage {
   onBack: () => void = (): void => {};
   onOpenSourceManagement: () => void = (): void => {};
   onOpenBookshelfSettings: () => void = (): void => {};
+  onOpenDownloads: () => void = (): void => {};
   onOpenRulesManagement: () => void = (): void => {};
   onOpenSync: () => void = (): void => {};
   onRssRequested: () => void = (): void => {};
@@ -186,6 +187,7 @@ export struct SettingsPage {
         this.navRow('同步与备份', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_sync_theme_night') : $r('app.media.settings_row_sync')), (): void => this.onOpenSync());
       }
       this.navRow('书架设置', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_shelf_search_theme_night') : $r('app.media.settings_row_shelf_search')), this.onOpenBookshelfSettings);
+      this.navRow('下载管理', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_download_theme_night') : $r('app.media.reader_directory_marker_download')), this.onOpenDownloads);
       if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
         this.navRow('关于与反馈', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_about_theme_night') : $r('app.media.settings_row_about')), (): void => {});
       }

@@ -1,9 +1,36 @@
 import { readFileSync } from 'node:fs';
+import { downloadVisualColor } from '../entry/src/main/ets/features/common/SharedDownloadVisualSpec.ts';
 export const SVG_PROVENANCE_SCHEMA_VERSION = 1;
 export const SVG_FIGMA_FILE_KEY = 'klhs2jMM4MncaJFqZMfqEK';
 export const SVG_FIGMA_ICON_PAGE_NODE_ID = '259:4';
 export const SVG_TABLER_VERSION = '3.44.0';
 export const SVG_TABLER_LICENSE = 'MIT';
+
+export const SVG_DOWNLOAD_LUCIDE_PACKAGE = Object.freeze({
+  name: 'lucide', version: '1.8.0', license: 'ISC',
+  url: 'https://www.npmjs.com/package/lucide/v/1.8.0',
+  licenseSha256: 'b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57',
+  receiptSha256: 'da2d58dfbf08c2e8ac12638508611020061e209a152b76af48b5a83eb649cc35',
+});
+const downloadLucideReceipt = JSON.parse(readFileSync(new URL('../docs/ui-design/svg-provenance/download-lucide/SOURCE.json', import.meta.url), 'utf8'));
+export const SVG_DOWNLOAD_LUCIDE_SOURCES = Object.freeze(downloadLucideReceipt.icons);
+export const svgDownloadLucideRecipes = [
+  ['back','ArrowLeft','ink'],['search','Search','muted'],['clear','X','ink'],
+  ['filter','SlidersHorizontal','ink'],['storage','Settings2','ink'],['more','Ellipsis','ink'],
+  ['close','X','ink'],['download','Download','muted'],['pause','Pause','green'],['play','Play','green'],
+  ['retry','RotateCw','danger'],['check','CircleCheck','green'],['chevron','ChevronRight','muted'],
+  ['empty','LibraryBig','muted'],
+  ['trash','Trash2','greenInk'],['trash_disabled','Trash2','muted'],
+  ['sort_asc','ChartNoAxesColumnIncreasing','ink'],['sort_desc','ChartNoAxesColumnIncreasing','ink'],
+].flatMap(([name,component,role]) => ['day','night'].map(scheme => ({
+  file: 'download_visual_' + name + (scheme === 'night' ? '_theme_night' : ''),
+  semanticRole: 'approved shared download demo ' + name + ' ' + scheme,
+  originType: 'lucide-component-derived', component,
+  ...SVG_DOWNLOAD_LUCIDE_SOURCES[component],
+  color: '#' + downloadVisualColor(role, scheme).slice(3),
+  rotation: name.startsWith('sort_') ? 90 : 0,
+  flipY: name === 'sort_desc',
+})));
 
 // Only these ten components from the approved demo's pinned Radix dependency
 // may use this origin. Canonical SVG and license hashes are immutable inputs.
@@ -362,5 +389,5 @@ const paperPrimitives = [
 const themeVariants = JSON.parse(readFileSync(new URL('./theme-svg-variants.json', import.meta.url), 'utf8')).map(baseFile => ({
   file: `${baseFile}_theme_night`, baseFile, semanticRole: `${baseFile} night app palette`, originType: 'theme-palette-derived',
 }));
-export const svgAssetRecipes = [...icons, ...exactExports, ...makeExports, ...makeSourceExports, ...appearanceMakeExports, ...adaptedExports, ...paperPrimitives, ...themeVariants, ...svgRadixSheetRecipes]
+export const svgAssetRecipes = [...icons, ...exactExports, ...makeExports, ...makeSourceExports, ...appearanceMakeExports, ...adaptedExports, ...paperPrimitives, ...themeVariants, ...svgRadixSheetRecipes, ...svgDownloadLucideRecipes]
   .sort((left, right) => left.file.localeCompare(right.file));

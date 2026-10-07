@@ -15,6 +15,9 @@ import {
   SVG_RADIX_COMPONENT_SOURCES,
   svgRadixSheetRecipes,
   svgAssetRecipes,
+  SVG_DOWNLOAD_LUCIDE_PACKAGE,
+  SVG_DOWNLOAD_LUCIDE_SOURCES,
+  svgDownloadLucideRecipes,
 } from './svg-provenance.config.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -22,6 +25,7 @@ const MEDIA_DIR = path.join(ROOT, 'entry/src/main/resources/base/media');
 const ICON_SOURCE_DIR = path.join(ROOT, 'docs/ui-design/svg-provenance/figma-icons');
 const PAGE_SOURCE_DIR = path.join(ROOT, 'docs/ui-design/svg-provenance/figma-page-assets');
 const RADIX_SOURCE_DIR = path.join(ROOT, 'docs/ui-design/svg-provenance/radix-icons');
+const DOWNLOAD_LUCIDE_SOURCE_DIR = path.join(ROOT, 'docs/ui-design/svg-provenance/download-lucide');
 const MANIFEST_PATH = path.join(ROOT, 'docs/ui-design/SVG_PROVENANCE.json');
 const MAIN_SOURCE_DIR = path.join(ROOT, 'entry/src/main');
 const BANNED_PROVENANCE = /reference-only|readerseed|unknown|manual|approximation/i;
@@ -61,6 +65,45 @@ function renderPaperPrimitive(recipe) {
 }
 
 async function renderRecipe(recipe) {
+  if (recipe.originType === 'lucide-component-derived') {
+    assert.deepEqual(recipe, svgDownloadLucideRecipes.find(value => value.file === recipe.file),
+      'only approved download demo Lucide recipes are admitted');
+    const input = SVG_DOWNLOAD_LUCIDE_SOURCES[recipe.component];
+    assert.ok(input, 'Lucide component outside pinned download input set');
+    const sourcePath = path.join(DOWNLOAD_LUCIDE_SOURCE_DIR, input.sourceFile);
+    const source = await readFile(sourcePath,'utf8');
+    assert.equal(sha256(source), input.sourceSha256, 'Lucide node source hash drifted');
+    assert.equal(sha256(await readFile(path.join(DOWNLOAD_LUCIDE_SOURCE_DIR,'SOURCE.json'),'utf8')),
+      SVG_DOWNLOAD_LUCIDE_PACKAGE.receiptSha256, 'Lucide source receipt drifted');
+    assert.equal(sha256(await readFile(path.join(DOWNLOAD_LUCIDE_SOURCE_DIR,'LICENSE'),'utf8')),
+      SVG_DOWNLOAD_LUCIDE_PACKAGE.licenseSha256, 'Lucide ISC license drifted');
+    const nodes = JSON.parse(source);
+    assert.ok(Array.isArray(nodes) && nodes.length > 0);
+    const shapes = nodes.map(([tag, attrs]) => {
+      assert.ok(['path','circle','rect','line','polyline','polygon','ellipse'].includes(tag));
+      assert.ok(Object.keys(attrs).every(key => /^(d|cx|cy|r|x|y|width|height|rx|ry|x1|x2|y1|y2|points)$/.test(key)));
+      const attributes = Object.entries(attrs).map(([key,val]) => {
+        assert.equal(typeof val,'string'); assert.ok(!/[<>&"]/.test(val));
+        return key + '="' + val + '"';
+      }).join(' ');
+      return '<' + tag + ' fill="none" ' + attributes + '/>';
+    }).join('');
+    const transform = recipe.flipY ? 'translate(12 12) scale(1 -1) rotate(90) translate(-12 -12)' :
+      recipe.rotation ? 'rotate(' + recipe.rotation + ' 12 12)' : '';
+    const content = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="' +
+      recipe.color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      (transform ? '<g transform="' + transform + '">' + shapes + '</g>' : shapes) + '</svg>\n';
+    return {content,manifest:{file:recipe.file+'.svg',semanticRole:recipe.semanticRole,
+      originType:recipe.originType,componentName:recipe.component,
+      upstreamPackage:SVG_DOWNLOAD_LUCIDE_PACKAGE.name,upstreamVersion:SVG_DOWNLOAD_LUCIDE_PACKAGE.version,
+      upstreamUrl:SVG_DOWNLOAD_LUCIDE_PACKAGE.url,license:SVG_DOWNLOAD_LUCIDE_PACKAGE.license,
+      licenseFile:path.relative(ROOT,path.join(DOWNLOAD_LUCIDE_SOURCE_DIR,'LICENSE')),
+      licenseSha256:SVG_DOWNLOAD_LUCIDE_PACKAGE.licenseSha256,
+      sourceReceiptFile:path.relative(ROOT,path.join(DOWNLOAD_LUCIDE_SOURCE_DIR,'SOURCE.json')),
+      sourceReceiptSha256:SVG_DOWNLOAD_LUCIDE_PACKAGE.receiptSha256,
+      sourceFile:path.relative(ROOT,sourcePath),sourceSha256:input.sourceSha256,
+      transform:{pathMutation:'none',viewBox:'preserved',recolor:recipe.color,rotationDegrees:recipe.rotation,flipY:recipe.flipY}}};
+  }
   if (recipe.originType === 'radix-component-derived') {
     const pinnedRecipe = svgRadixSheetRecipes.find(value => value.file === recipe.file);
     assert.deepEqual(recipe, pinnedRecipe, `${recipe.file}: only the pinned manga sheet Radix recipes are allowed`);
@@ -320,7 +363,7 @@ export async function syncSvgAssets({ check = false } = {}) {
     schemaVersion: SVG_PROVENANCE_SCHEMA_VERSION,
     generatedBy: 'tools/sync-svg-assets.mjs',
     policy: {
-      allowedOrigins: ['figma-component-derived', 'figma-node-export', 'figma-make-dom-export', 'figma-make-source-export', 'figma-node-adapted', 'figma-css-primitive', 'figma-node-platform-adapted', 'theme-palette-derived', 'radix-component-derived'],
+      allowedOrigins: ['figma-component-derived', 'figma-node-export', 'figma-make-dom-export', 'figma-make-source-export', 'figma-node-adapted', 'figma-css-primitive', 'figma-node-platform-adapted', 'theme-palette-derived', 'radix-component-derived', 'lucide-component-derived'],
       unknownAllowed: false,
       manualPathMutationAllowed: false,
     },

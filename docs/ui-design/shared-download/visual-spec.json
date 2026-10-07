@@ -1,0 +1,2429 @@
+{
+  "schemaVersion": 1,
+  "source": "demo.html",
+  "sourceSha256": "e0bb8def207486d73e6117a543c264c893d399a427745f5100bdb6e48df6517b",
+  "storageSource": "storage-demo.html",
+  "storageSourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+  "storageProvenance": {
+    "storageBodyTop": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".sheet-body",
+      "property": "padding-top",
+      "authored": "6px"
+    },
+    "storageBodySide": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".sheet-body",
+      "property": "padding-left",
+      "authored": "18px"
+    },
+    "storageBodyBottom": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".sheet-body",
+      "property": "padding-bottom",
+      "authored": "0px"
+    },
+    "storageSummaryGap": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".summary-top",
+      "property": "gap",
+      "authored": "8px"
+    },
+    "storageTotalFontSize": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".total",
+      "property": "font-size",
+      "authored": "22px"
+    },
+    "storageTotalLineHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".total",
+      "property": "line-height",
+      "authored": "30px"
+    },
+    "storageTotalWeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".total",
+      "property": "font-weight",
+      "authored": "500"
+    },
+    "storageTotalMinHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".total",
+      "property": "min-height",
+      "authored": "30px"
+    },
+    "storageValueFontSize": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown dd",
+      "property": "font-size",
+      "authored": "14px"
+    },
+    "storageValueLineHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown dd",
+      "property": "line-height",
+      "authored": "22px"
+    },
+    "storageValueWeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown dd",
+      "property": "font-weight",
+      "authored": "500"
+    },
+    "storageValueMinHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown dd",
+      "property": "min-height",
+      "authored": "22px"
+    },
+    "storageBreakdownTop": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown",
+      "property": "margin-top",
+      "authored": "14px"
+    },
+    "storageBreakdownGap": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown",
+      "property": "gap",
+      "authored": "12px"
+    },
+    "storageRowGap": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown > div",
+      "property": "gap",
+      "authored": "8px"
+    },
+    "storageCaptionGap": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown dt",
+      "property": "gap",
+      "authored": "2px"
+    },
+    "storageLabelFontSize": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown dt",
+      "property": "font-size",
+      "authored": "13px"
+    },
+    "storageLabelLineHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown dt",
+      "property": "line-height",
+      "authored": "21px"
+    },
+    "storageCaptionFontSize": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown dt small",
+      "property": "font-size",
+      "authored": "11px"
+    },
+    "storageCaptionLineHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown dt small",
+      "property": "line-height",
+      "authored": "18px"
+    },
+    "storageFreeTop": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".free-row",
+      "property": "margin-top",
+      "authored": "11px"
+    },
+    "storageFreeBottom": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".free-row",
+      "property": "margin-bottom",
+      "authored": "9px"
+    },
+    "storageFreeGap": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".free-row",
+      "property": "gap",
+      "authored": "8px"
+    },
+    "storageFreeFontSize": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".free-row",
+      "property": "font-size",
+      "authored": "11px"
+    },
+    "storageSettingsTitleTop": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".settings-title",
+      "property": "margin-top",
+      "authored": "9px"
+    },
+    "storageSettingsTitleFontSize": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".settings-title",
+      "property": "font-size",
+      "authored": "11px"
+    },
+    "storageSettingsTitleLineHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".settings-title",
+      "property": "line-height",
+      "authored": "18px"
+    },
+    "storageSettingsHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".settings-row",
+      "property": "min-height",
+      "authored": "50px"
+    },
+    "storageSettingsGap": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".settings-row",
+      "property": "gap",
+      "authored": "10px"
+    },
+    "storageSelectWidth": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".settings-row select",
+      "property": "width",
+      "authored": "88px"
+    },
+    "storageSelectHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".settings-row select",
+      "property": "min-height",
+      "authored": "31px"
+    },
+    "storageSelectPadding": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".settings-row select",
+      "property": "padding-top",
+      "authored": "5px"
+    },
+    "storageSelectRadius": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".settings-row select",
+      "property": "border-radius",
+      "authored": "6px"
+    },
+    "storageFooterTop": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".sheet-footer",
+      "property": "padding-top",
+      "authored": "14px"
+    },
+    "storageFooterSide": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".sheet-footer",
+      "property": "padding-left",
+      "authored": "18px"
+    },
+    "storageFooterBottom": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".sheet-footer",
+      "property": "padding-bottom",
+      "authored": "22px"
+    },
+    "storageActionGap": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".clean-button",
+      "property": "gap",
+      "authored": "7px"
+    },
+    "storageActionIconSize": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".clean-button svg",
+      "property": "width",
+      "authored": "16px"
+    },
+    "storageActionMinHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".clean-button",
+      "property": "min-height",
+      "authored": "44px"
+    },
+    "storageActionPaddingY": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".clean-button",
+      "property": "padding-top",
+      "authored": "9px"
+    },
+    "storageActionPaddingX": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".clean-button",
+      "property": "padding-left",
+      "authored": "10px"
+    },
+    "storageActionRadius": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".clean-button",
+      "property": "border-radius",
+      "authored": "12px"
+    },
+    "storageActionFontSize": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".clean-button",
+      "property": "font-size",
+      "authored": "12px"
+    },
+    "storageActionDisabledOpacity": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".clean-button:disabled",
+      "property": "opacity",
+      "measured": 0.5,
+      "derived": "Chromium computed style of approved disabled button with the complete CSS cascade"
+    },
+    "storageFeedbackTop": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".feedback",
+      "property": "margin-top",
+      "authored": "8px"
+    },
+    "storageFeedbackFontSize": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".feedback",
+      "property": "font-size",
+      "authored": "11px"
+    },
+    "storageFeedbackLineHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".feedback",
+      "property": "line-height",
+      "authored": "18px"
+    },
+    "storageFreeLineHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".phone",
+      "property": "line-height",
+      "authored": "21px",
+      "inherited": true
+    },
+    "storageUnknownSummaryMinHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".summary-top",
+      "property": "height",
+      "measured": 35,
+      "derived": "Chromium DOM with approved font and empty [data-ui=\"total\"]"
+    },
+    "storageUnknownSummaryLabelTop": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".summary-top",
+      "property": "labelTop",
+      "measured": 14,
+      "derived": "Chromium DOM with approved font and empty [data-ui=\"total\"]"
+    }
+  },
+  "storageStructure": {
+    ".summary-top": {
+      "display": "flex",
+      "align-items": "baseline",
+      "justify-content": "space-between",
+      "row-gap": "8px",
+      "column-gap": "8px"
+    },
+    ".total": {
+      "font-size": "22px",
+      "line-height": "30px",
+      "min-height": "30px",
+      "font-weight": "500",
+      "font-variant-numeric": "tabular-nums",
+      "white-space-collapse": "collapse",
+      "text-wrap-mode": "nowrap"
+    },
+    ".breakdown": {
+      "display": "flex",
+      "flex-direction": "column",
+      "row-gap": "12px",
+      "column-gap": "12px",
+      "margin-top": "14px",
+      "margin-right": "0px",
+      "margin-bottom": "0px",
+      "margin-left": "0px"
+    },
+    ".breakdown > div": {
+      "display": "grid",
+      "grid-template-columns": "minmax(0px, 1fr) auto",
+      "row-gap": "8px",
+      "column-gap": "8px",
+      "align-items": "start"
+    },
+    ".breakdown dt": {
+      "display": "flex",
+      "flex-direction": "column",
+      "row-gap": "2px",
+      "column-gap": "2px",
+      "color": "var(--ink)",
+      "font-size": "13px",
+      "line-height": "21px"
+    },
+    ".breakdown dd": {
+      "margin-top": "0px",
+      "margin-right": "0px",
+      "margin-bottom": "0px",
+      "margin-left": "0px",
+      "font-size": "14px",
+      "line-height": "22px",
+      "min-height": "22px",
+      "font-weight": "500",
+      "font-variant-numeric": "tabular-nums",
+      "white-space-collapse": "collapse",
+      "text-wrap-mode": "nowrap"
+    },
+    ".free-row": {
+      "display": "flex",
+      "align-items": "center",
+      "justify-content": "space-between",
+      "row-gap": "8px",
+      "column-gap": "8px",
+      "margin-top": "11px",
+      "margin-right": "0px",
+      "margin-bottom": "9px",
+      "margin-left": "0px",
+      "font-size": "11px",
+      "color": "var(--muted)"
+    },
+    ".settings-row": {
+      "display": "flex",
+      "align-items": "center",
+      "justify-content": "space-between",
+      "row-gap": "10px",
+      "column-gap": "10px",
+      "min-height": "50px",
+      "border-bottom-width": "",
+      "border-bottom-style": "",
+      "border-bottom-color": ""
+    },
+    ".settings-row select": {
+      "width": "88px",
+      "min-height": "31px",
+      "flex-shrink": "0",
+      "padding-top": "5px",
+      "padding-right": "5px",
+      "padding-bottom": "5px",
+      "padding-left": "5px",
+      "background-image": "",
+      "background-position-x": "",
+      "background-position-y": "",
+      "background-size": "",
+      "background-repeat": "",
+      "background-attachment": "",
+      "background-origin": "",
+      "background-clip": "",
+      "background-color": "",
+      "color": "var(--ink)",
+      "border-top-width": "0px",
+      "border-right-width": "0px",
+      "border-bottom-width": "0px",
+      "border-left-width": "0px",
+      "border-top-style": "none",
+      "border-right-style": "none",
+      "border-bottom-style": "none",
+      "border-left-style": "none",
+      "border-top-color": "currentcolor",
+      "border-right-color": "currentcolor",
+      "border-bottom-color": "currentcolor",
+      "border-left-color": "currentcolor",
+      "border-image-source": "none",
+      "border-image-slice": "100%",
+      "border-image-width": "1",
+      "border-image-outset": "0",
+      "border-image-repeat": "stretch",
+      "border-top-left-radius": "6px",
+      "border-top-right-radius": "6px",
+      "border-bottom-right-radius": "6px",
+      "border-bottom-left-radius": "6px"
+    },
+    ".clean-button": {
+      "display": "flex",
+      "align-items": "center",
+      "justify-content": "center",
+      "row-gap": "7px",
+      "column-gap": "7px",
+      "width": "100%",
+      "min-height": "44px",
+      "padding-top": "9px",
+      "padding-right": "10px",
+      "padding-bottom": "9px",
+      "padding-left": "10px",
+      "border-top-left-radius": "12px",
+      "border-top-right-radius": "12px",
+      "border-bottom-right-radius": "12px",
+      "border-bottom-left-radius": "12px",
+      "background-image": "",
+      "background-position-x": "",
+      "background-position-y": "",
+      "background-size": "",
+      "background-repeat": "",
+      "background-attachment": "",
+      "background-origin": "",
+      "background-clip": "",
+      "background-color": "",
+      "color": "var(--green-ink)",
+      "font-size": "12px"
+    },
+    ".clean-button:disabled": {
+      "opacity": "1",
+      "background-image": "",
+      "background-position-x": "",
+      "background-position-y": "",
+      "background-size": "",
+      "background-repeat": "",
+      "background-attachment": "",
+      "background-origin": "",
+      "background-clip": "",
+      "background-color": "",
+      "color": "var(--muted)"
+    },
+    ".feedback": {
+      "margin-top": "8px",
+      "margin-right": "0px",
+      "margin-bottom": "0px",
+      "margin-left": "0px",
+      "text-align": "center",
+      "font-size": "11px",
+      "line-height": "18px",
+      "color": "var(--muted)"
+    }
+  },
+  "extractor": "Chromium CSSOM via existing Playwright",
+  "fields": {
+    "settingsSelectHeight": 31,
+    "chapterQuickHeight": 28,
+    "chapterQuickLineHeight": 18,
+    "chapterQuickArrowSlot": 20,
+    "selectArrowSlot": 20,
+    "bodyFontSize": 13,
+    "bodyLineHeight": 21,
+    "fontRegularWeight": 400,
+    "fontMediumWeight": 500,
+    "fontSemiboldWeight": 600,
+    "fontBoldWeight": 700,
+    "controlFontSize": 12,
+    "metaFontSize": 11,
+    "tagFontSize": 10,
+    "tagLineHeight": 16,
+    "bookTitleFontSize": 16,
+    "bookTitleLineHeight": 24,
+    "headerTitleFontSize": 18,
+    "headerTitleLineHeight": 26,
+    "coverFontSize": 12,
+    "coverLineHeight": 18,
+    "sheetTitleFontSize": 18,
+    "sheetTitleLineHeight": 26,
+    "tabFontSize": 13,
+    "searchFontSize": 13,
+    "listToolsFontSize": 12,
+    "sourceFontSize": 11,
+    "sourceLineHeight": 18,
+    "storageFontSize": 11,
+    "storageLineHeight": 20,
+    "emptyTitleFontSize": 15,
+    "confirmTitleFontSize": 16,
+    "confirmTitleLineHeight": 25,
+    "confirmBodyFontSize": 12,
+    "confirmBodyLineHeight": 21,
+    "settingsHintFontSize": 11,
+    "settingsHintLineHeight": 19,
+    "rangeHintFontSize": 11,
+    "rangeHintLineHeight": 17,
+    "headerTop": 38,
+    "statusBarHeight": 28,
+    "headerSide": 16,
+    "headerHeight": 52,
+    "headerRadius": 18,
+    "headerPadding": 3,
+    "headerIconWidth": 40,
+    "headerIconHeight": 44,
+    "headerTextWidth": 40,
+    "contentTop": 78,
+    "contentSide": 18,
+    "contentBottom": 130,
+    "tabsGap": 4,
+    "tabsPadding": 4,
+    "tabsRadius": 13,
+    "tabsTop": 12,
+    "tabsBottom": 7,
+    "tabHeight": 36,
+    "tabRadius": 10,
+    "tabPaddingX": 8,
+    "tabPaddingY": 5,
+    "searchHeight": 44,
+    "searchRadius": 13,
+    "searchGap": 8,
+    "searchPaddingX": 11,
+    "searchIconSize": 16,
+    "searchClearWidth": 28,
+    "listToolsGap": 12,
+    "listToolsHeight": 39,
+    "listToolsBottom": 3,
+    "listToolHeight": 38,
+    "listToolIconSize": 14,
+    "listToolIconGap": 5,
+    "sortPairGap": 3,
+    "sortWidth": 24,
+    "sortIconSize": 18,
+    "bookPaddingY": 15,
+    "coverWidth": 54,
+    "coverHeight": 80,
+    "coverRadius": 5,
+    "coverPadding": 4,
+    "bookGap": 11,
+    "bookMinHeight": 80,
+    "bookTopHeight": 24,
+    "bookTopGap": 6,
+    "tagPaddingX": 5,
+    "tagRadius": 3,
+    "sourceTop": 1,
+    "progressTop": 2,
+    "progressGap": 6,
+    "statusWidth": 78,
+    "statusHeight": 28,
+    "statusRadius": 7,
+    "statusPaddingX": 6,
+    "statusIconSize": 14,
+    "statusGap": 4,
+    "moreWidth": 28,
+    "moreHeight": 24,
+    "moreIconSize": 18,
+    "progressHeight": 3,
+    "progressRadius": 3,
+    "chapterHeight": 53,
+    "chapterGap": 9,
+    "chapterTailGap": 2,
+    "chapterMoreWidth": 30,
+    "chapterMoreHeight": 44,
+    "chapterPaddingX": 3,
+    "chapterPaddingY": 9,
+    "chapterActionHeight": 32,
+    "chapterActionRadius": 9,
+    "chapterActionPaddingX": 9,
+    "chapterActionPaddingY": 4,
+    "chapterTitleFontSize": 12,
+    "chapterPanelTop": 12,
+    "chapterQuickFontSize": 11,
+    "chapterToolbarTop": 9,
+    "chapterToolbarBottom": 5,
+    "chapterToolbarGap": 6,
+    "chapterGroupHeight": 38,
+    "chapterGroupPadding": 8,
+    "chapterGroupTop": 8,
+    "chapterCheckSize": 17,
+    "dockSide": 16,
+    "dockBottom": 18,
+    "dockRadius": 18,
+    "dockPaddingX": 14,
+    "dockPaddingY": 11,
+    "dockGap": 8,
+    "dockIconWidth": 36,
+    "selectionPadding": 12,
+    "selectionSummaryGap": 8,
+    "selectionSummaryBottom": 8,
+    "actionGap": 8,
+    "buttonHeight": 44,
+    "buttonPaddingX": 10,
+    "buttonPaddingY": 9,
+    "buttonRadius": 12,
+    "disabledOpacity": 0.5,
+    "emptyTop": 85,
+    "emptyBottom": 30,
+    "emptySide": 8,
+    "emptyGap": 12,
+    "emptyIconSize": 32,
+    "sheetMaxPercent": 82,
+    "sheetRadius": 22,
+    "gripWidth": 42,
+    "gripHeight": 5,
+    "gripRadius": 4,
+    "gripTop": 10,
+    "gripBottom": 2,
+    "sheetTitleHeight": 48,
+    "sheetTitleLeft": 18,
+    "sheetTitleRight": 14,
+    "sheetBodySide": 18,
+    "sheetBodyBottom": 14,
+    "sheetFooterTop": 10,
+    "sheetFooterSide": 18,
+    "sheetFooterBottom": 22,
+    "rangeHeight": 45,
+    "rangePaddingY": 8,
+    "rangeGap": 10,
+    "settingsHeight": 50,
+    "settingsGap": 10,
+    "settingsHintMargin": 12,
+    "dialogOuterSide": 24,
+    "dialogRadius": 18,
+    "dialogTop": 22,
+    "dialogSide": 18,
+    "dialogBottom": 18,
+    "dialogTitleBottom": 10,
+    "dialogBodyBottom": 18,
+    "borderWidth": 1,
+    "titleChevronSize": 13,
+    "searchPaddingY": 9,
+    "toolPaddingY": 4,
+    "settingsSelectMaxWidth": 130,
+    "settingsSelectPadding": 5,
+    "settingsSelectRadius": 6,
+    "rangeSelectPadding": 8,
+    "rangeSelectRadius": 9,
+    "rangeBookBottom": 6,
+    "rangeSelectionTop": 10,
+    "touchTarget": 44,
+    "iconSize": 18,
+    "chapterMenuHeight": 46,
+    "chapterMenuPaddingY": 9,
+    "textActionHeight": 34,
+    "textActionPaddingY": 4,
+    "chapterToolbarSelectMaxWidth": 145,
+    "radioSize": 13,
+    "controlLineHeight": 21,
+    "metaLineHeight": 21,
+    "tabLineHeight": 21,
+    "searchLineHeight": 21,
+    "listToolsLineHeight": 21,
+    "emptyTitleLineHeight": 21,
+    "chapterTitleLineHeight": 21,
+    "headerTopGap": 10,
+    "headerSlotWidth": 80,
+    "headerShadowX": 0,
+    "headerShadowY": 2,
+    "headerShadowRadius": 10,
+    "tabShadowX": 0,
+    "tabShadowY": 1,
+    "tabShadowRadius": 4,
+    "sheetShadowX": 0,
+    "sheetShadowY": -4,
+    "sheetShadowRadius": 24,
+    "storageBodyTop": 6,
+    "storageBodySide": 18,
+    "storageBodyBottom": 0,
+    "storageSummaryGap": 8,
+    "storageTotalFontSize": 22,
+    "storageTotalLineHeight": 30,
+    "storageTotalWeight": 500,
+    "storageTotalMinHeight": 30,
+    "storageValueFontSize": 14,
+    "storageValueLineHeight": 22,
+    "storageValueWeight": 500,
+    "storageValueMinHeight": 22,
+    "storageBreakdownTop": 14,
+    "storageBreakdownGap": 12,
+    "storageRowGap": 8,
+    "storageCaptionGap": 2,
+    "storageLabelFontSize": 13,
+    "storageLabelLineHeight": 21,
+    "storageCaptionFontSize": 11,
+    "storageCaptionLineHeight": 18,
+    "storageFreeTop": 11,
+    "storageFreeBottom": 9,
+    "storageFreeGap": 8,
+    "storageFreeFontSize": 11,
+    "storageSettingsTitleTop": 9,
+    "storageSettingsTitleFontSize": 11,
+    "storageSettingsTitleLineHeight": 18,
+    "storageSettingsHeight": 50,
+    "storageSettingsGap": 10,
+    "storageSelectWidth": 88,
+    "storageSelectHeight": 31,
+    "storageSelectPadding": 5,
+    "storageSelectRadius": 6,
+    "storageFooterTop": 14,
+    "storageFooterSide": 18,
+    "storageFooterBottom": 22,
+    "storageActionGap": 7,
+    "storageActionIconSize": 16,
+    "storageActionMinHeight": 44,
+    "storageActionPaddingY": 9,
+    "storageActionPaddingX": 10,
+    "storageActionRadius": 12,
+    "storageActionFontSize": 12,
+    "storageActionDisabledOpacity": 0.5,
+    "storageFeedbackTop": 8,
+    "storageFeedbackFontSize": 11,
+    "storageFeedbackLineHeight": 18,
+    "storageFreeLineHeight": 21,
+    "storageUnknownSummaryMinHeight": 35,
+    "storageUnknownSummaryLabelTop": 14
+  },
+  "provenance": {
+    "settingsSelectHeight": {
+      "selector": ".settings-line select",
+      "property": "computed closed height",
+      "authored": "Chromium computed native Select with inherited .phone font and authored padding"
+    },
+    "chapterQuickHeight": {
+      "selector": ".chapter-toolbar select",
+      "property": "computed closed height",
+      "authored": "Chromium computed native Select with inherited .phone font and authored padding"
+    },
+    "chapterQuickLineHeight": {
+      "selector": ".chapter-toolbar select",
+      "property": "Chromium closed content line box excluding authored padding",
+      "authored": "Chromium computed native Select with inherited .phone font and authored padding"
+    },
+    "chapterQuickArrowSlot": {
+      "selector": ".chapter-toolbar select",
+      "property": "Chromium native empty-select slot excluding authored padding",
+      "authored": "Chromium computed native Select with inherited .phone font and authored padding"
+    },
+    "selectArrowSlot": {
+      "selector": ".settings-line select",
+      "property": "Chromium native empty-select slot excluding authored padding",
+      "authored": "Chromium computed native Select with inherited .phone font and authored padding"
+    },
+    "bodyFontSize": {
+      "selector": ".phone",
+      "property": "font-size",
+      "authored": "13px"
+    },
+    "bodyLineHeight": {
+      "selector": ".phone",
+      "property": "line-height",
+      "authored": "21px"
+    },
+    "fontRegularWeight": {
+      "selector": ".phone",
+      "property": "font-weight",
+      "authored": "400"
+    },
+    "fontMediumWeight": {
+      "selector": ".tabs button[aria-selected=\"true\"]",
+      "property": "font-weight",
+      "authored": "500"
+    },
+    "fontSemiboldWeight": {
+      "selector": ".dialog h3",
+      "property": "font-weight",
+      "authored": "600"
+    },
+    "fontBoldWeight": {
+      "selector": ".book-title",
+      "property": "font-weight",
+      "authored": "700"
+    },
+    "controlFontSize": {
+      "selector": ".app-button",
+      "property": "font-size",
+      "authored": "12px"
+    },
+    "metaFontSize": {
+      "selector": ".book-progress",
+      "property": "font-size",
+      "authored": "11px"
+    },
+    "tagFontSize": {
+      "selector": ".tags",
+      "property": "font-size",
+      "authored": "10px"
+    },
+    "tagLineHeight": {
+      "selector": ".tags",
+      "property": "line-height",
+      "authored": "16px"
+    },
+    "bookTitleFontSize": {
+      "selector": ".book-title",
+      "property": "font-size",
+      "authored": "16px"
+    },
+    "bookTitleLineHeight": {
+      "selector": ".book-title",
+      "property": "line-height",
+      "authored": "24px"
+    },
+    "headerTitleFontSize": {
+      "selector": ".header h2",
+      "property": "font-size",
+      "authored": "18px"
+    },
+    "headerTitleLineHeight": {
+      "selector": ".header h2",
+      "property": "line-height",
+      "authored": "26px"
+    },
+    "coverFontSize": {
+      "selector": ".cover",
+      "property": "font-size",
+      "authored": "12px"
+    },
+    "coverLineHeight": {
+      "selector": ".cover",
+      "property": "line-height",
+      "authored": "18px"
+    },
+    "sheetTitleFontSize": {
+      "selector": ".sheet-title strong",
+      "property": "font-size",
+      "authored": "18px"
+    },
+    "sheetTitleLineHeight": {
+      "selector": ".sheet-title strong",
+      "property": "line-height",
+      "authored": "26px"
+    },
+    "tabFontSize": {
+      "selector": ".tabs button",
+      "property": "font-size",
+      "authored": "13px"
+    },
+    "searchFontSize": {
+      "selector": ".phone",
+      "property": "font-size",
+      "authored": "13px"
+    },
+    "listToolsFontSize": {
+      "selector": ".list-tools button",
+      "property": "font-size",
+      "authored": "12px"
+    },
+    "sourceFontSize": {
+      "selector": ".source",
+      "property": "font-size",
+      "authored": "11px"
+    },
+    "sourceLineHeight": {
+      "selector": ".source",
+      "property": "line-height",
+      "authored": "18px"
+    },
+    "storageFontSize": {
+      "selector": ".storage-copy",
+      "property": "font-size",
+      "authored": "11px"
+    },
+    "storageLineHeight": {
+      "selector": ".storage-copy",
+      "property": "line-height",
+      "authored": "20px"
+    },
+    "emptyTitleFontSize": {
+      "selector": ".empty strong",
+      "property": "font-size",
+      "authored": "15px"
+    },
+    "confirmTitleFontSize": {
+      "selector": ".dialog h3",
+      "property": "font-size",
+      "authored": "16px"
+    },
+    "confirmTitleLineHeight": {
+      "selector": ".dialog h3",
+      "property": "line-height",
+      "authored": "25px"
+    },
+    "confirmBodyFontSize": {
+      "selector": ".dialog p",
+      "property": "font-size",
+      "authored": "12px"
+    },
+    "confirmBodyLineHeight": {
+      "selector": ".dialog p",
+      "property": "line-height",
+      "authored": "21px"
+    },
+    "settingsHintFontSize": {
+      "selector": ".settings-hint",
+      "property": "font-size",
+      "authored": "11px"
+    },
+    "settingsHintLineHeight": {
+      "selector": ".settings-hint",
+      "property": "line-height",
+      "authored": "19px"
+    },
+    "rangeHintFontSize": {
+      "selector": ".range-choice small",
+      "property": "font-size",
+      "authored": "11px"
+    },
+    "rangeHintLineHeight": {
+      "selector": ".range-choice small",
+      "property": "line-height",
+      "authored": "17px"
+    },
+    "headerTop": {
+      "selector": ".header",
+      "property": "top",
+      "authored": "38px"
+    },
+    "statusBarHeight": {
+      "selector": ".statusbar",
+      "property": "height",
+      "authored": "28px"
+    },
+    "headerSide": {
+      "selector": ".header",
+      "property": "left",
+      "authored": "16px"
+    },
+    "headerHeight": {
+      "selector": ".header",
+      "property": "height",
+      "authored": "52px"
+    },
+    "headerRadius": {
+      "selector": ".header",
+      "property": "border-radius",
+      "authored": "18px"
+    },
+    "headerPadding": {
+      "selector": ".header",
+      "property": "padding-top",
+      "authored": "3px"
+    },
+    "headerIconWidth": {
+      "selector": ".icon-action",
+      "property": "width",
+      "authored": "40px"
+    },
+    "headerIconHeight": {
+      "selector": ".icon-action",
+      "property": "height",
+      "authored": "44px"
+    },
+    "headerTextWidth": {
+      "selector": ".header-text",
+      "property": "width",
+      "authored": "40px"
+    },
+    "contentTop": {
+      "selector": ".scroll",
+      "property": "padding-top",
+      "authored": "78px"
+    },
+    "contentSide": {
+      "selector": ".scroll",
+      "property": "padding-left",
+      "authored": "18px"
+    },
+    "contentBottom": {
+      "selector": ".scroll",
+      "property": "padding-bottom",
+      "authored": "130px"
+    },
+    "tabsGap": {
+      "selector": ".tabs",
+      "property": "gap",
+      "authored": "4px"
+    },
+    "tabsPadding": {
+      "selector": ".tabs",
+      "property": "padding-top",
+      "authored": "4px"
+    },
+    "tabsRadius": {
+      "selector": ".tabs",
+      "property": "border-radius",
+      "authored": "13px"
+    },
+    "tabsTop": {
+      "selector": ".tabs",
+      "property": "margin-top",
+      "authored": "12px"
+    },
+    "tabsBottom": {
+      "selector": ".tabs",
+      "property": "margin-bottom",
+      "authored": "7px"
+    },
+    "tabHeight": {
+      "selector": ".tabs button",
+      "property": "min-height",
+      "authored": "36px"
+    },
+    "tabRadius": {
+      "selector": ".tabs button",
+      "property": "border-radius",
+      "authored": "10px"
+    },
+    "tabPaddingX": {
+      "selector": ".tabs button",
+      "property": "padding-left",
+      "authored": "8px"
+    },
+    "tabPaddingY": {
+      "selector": ".tabs button",
+      "property": "padding-top",
+      "authored": "5px"
+    },
+    "searchHeight": {
+      "selector": ".searchbar",
+      "property": "min-height",
+      "authored": "44px"
+    },
+    "searchRadius": {
+      "selector": ".searchbar",
+      "property": "border-radius",
+      "authored": "13px"
+    },
+    "searchGap": {
+      "selector": ".searchbar",
+      "property": "gap",
+      "authored": "8px"
+    },
+    "searchPaddingX": {
+      "selector": ".searchbar",
+      "property": "padding-left",
+      "authored": "11px"
+    },
+    "searchIconSize": {
+      "selector": ".searchbar > svg",
+      "property": "width",
+      "authored": "16px"
+    },
+    "searchClearWidth": {
+      "selector": ".searchbar .icon-action",
+      "property": "width",
+      "authored": "28px"
+    },
+    "listToolsGap": {
+      "selector": ".list-tools",
+      "property": "gap",
+      "authored": "12px"
+    },
+    "listToolsHeight": {
+      "selector": ".list-tools",
+      "property": "min-height",
+      "authored": "39px"
+    },
+    "listToolsBottom": {
+      "selector": ".list-tools",
+      "property": "margin-bottom",
+      "authored": "3px"
+    },
+    "listToolHeight": {
+      "selector": ".list-tools button",
+      "property": "min-height",
+      "authored": "38px"
+    },
+    "listToolIconSize": {
+      "selector": ".list-tools svg",
+      "property": "width",
+      "authored": "14px"
+    },
+    "listToolIconGap": {
+      "selector": ".list-tools button",
+      "property": "gap",
+      "authored": "5px"
+    },
+    "sortPairGap": {
+      "selector": ".sort-pair",
+      "property": "gap",
+      "authored": "3px"
+    },
+    "sortWidth": {
+      "selector": ".sort-pair .direction-toggle",
+      "property": "width",
+      "authored": "24px"
+    },
+    "sortIconSize": {
+      "selector": ".direction-toggle svg",
+      "property": "width",
+      "authored": "18px"
+    },
+    "bookPaddingY": {
+      "selector": ".book",
+      "property": "padding-top",
+      "authored": "15px"
+    },
+    "coverWidth": {
+      "selector": ".cover",
+      "property": "width",
+      "authored": "54px"
+    },
+    "coverHeight": {
+      "selector": ".cover",
+      "property": "min-height",
+      "authored": "80px"
+    },
+    "coverRadius": {
+      "selector": ".cover",
+      "property": "border-radius",
+      "authored": "5px"
+    },
+    "coverPadding": {
+      "selector": ".cover",
+      "property": "padding-top",
+      "authored": "4px"
+    },
+    "bookGap": {
+      "selector": ".book-summary",
+      "property": "gap",
+      "authored": "11px"
+    },
+    "bookMinHeight": {
+      "selector": ".book-summary",
+      "property": "min-height",
+      "authored": "80px"
+    },
+    "bookTopHeight": {
+      "selector": ".book-top",
+      "property": "min-height",
+      "authored": "24px"
+    },
+    "bookTopGap": {
+      "selector": ".book-top",
+      "property": "gap",
+      "authored": "6px"
+    },
+    "tagPaddingX": {
+      "selector": ".tags span",
+      "property": "padding-left",
+      "authored": "5px"
+    },
+    "tagRadius": {
+      "selector": ".tags span",
+      "property": "border-radius",
+      "authored": "3px"
+    },
+    "sourceTop": {
+      "selector": ".source",
+      "property": "margin-top",
+      "authored": "1px"
+    },
+    "progressTop": {
+      "selector": ".book-progress",
+      "property": "margin-top",
+      "authored": "2px"
+    },
+    "progressGap": {
+      "selector": ".book-progress",
+      "property": "gap",
+      "authored": "6px"
+    },
+    "statusWidth": {
+      "selector": ".status-action",
+      "property": "width",
+      "authored": "78px"
+    },
+    "statusHeight": {
+      "selector": ".status-action",
+      "property": "height",
+      "authored": "28px"
+    },
+    "statusRadius": {
+      "selector": ".status-action",
+      "property": "border-radius",
+      "authored": "7px"
+    },
+    "statusPaddingX": {
+      "selector": ".status-action",
+      "property": "padding-left",
+      "authored": "6px"
+    },
+    "statusIconSize": {
+      "selector": ".status-action svg",
+      "property": "width",
+      "authored": "14px"
+    },
+    "statusGap": {
+      "selector": ".status-action",
+      "property": "column-gap",
+      "authored": "4px"
+    },
+    "moreWidth": {
+      "selector": ".book-more",
+      "property": "width",
+      "authored": "28px"
+    },
+    "moreHeight": {
+      "selector": ".book-more",
+      "property": "height",
+      "authored": "24px"
+    },
+    "moreIconSize": {
+      "selector": ".book-more svg",
+      "property": "width",
+      "authored": "18px"
+    },
+    "progressHeight": {
+      "selector": ".progress-track",
+      "property": "height",
+      "authored": "3px"
+    },
+    "progressRadius": {
+      "selector": ".progress-track",
+      "property": "border-radius",
+      "authored": "3px"
+    },
+    "chapterHeight": {
+      "selector": ".chapter-row",
+      "property": "min-height",
+      "authored": "53px"
+    },
+    "chapterGap": {
+      "selector": ".chapter-row",
+      "property": "gap",
+      "authored": "9px"
+    },
+    "chapterTailGap": {
+      "selector": ".chapter-tail",
+      "property": "gap",
+      "authored": "2px"
+    },
+    "chapterMoreWidth": {
+      "selector": ".chapter-tail .icon-action",
+      "property": "width",
+      "authored": "30px"
+    },
+    "chapterMoreHeight": {
+      "selector": ".icon-action",
+      "property": "height",
+      "authored": "44px"
+    },
+    "chapterPaddingX": {
+      "selector": ".chapter-row",
+      "property": "padding-left",
+      "authored": "3px"
+    },
+    "chapterPaddingY": {
+      "selector": ".chapter-row",
+      "property": "padding-top",
+      "authored": "9px"
+    },
+    "chapterActionHeight": {
+      "selector": ".small-action",
+      "property": "min-height",
+      "authored": "32px"
+    },
+    "chapterActionRadius": {
+      "selector": ".small-action",
+      "property": "border-radius",
+      "authored": "9px"
+    },
+    "chapterActionPaddingX": {
+      "selector": ".small-action",
+      "property": "padding-left",
+      "authored": "9px"
+    },
+    "chapterActionPaddingY": {
+      "selector": ".small-action",
+      "property": "padding-top",
+      "authored": "4px"
+    },
+    "chapterTitleFontSize": {
+      "selector": ".chapter-title",
+      "property": "font-size",
+      "authored": "12px"
+    },
+    "chapterPanelTop": {
+      "selector": ".chapter-panel",
+      "property": "margin-top",
+      "authored": "12px"
+    },
+    "chapterQuickFontSize": {
+      "selector": ".chapter-toolbar",
+      "property": "font-size",
+      "authored": "11px"
+    },
+    "chapterToolbarTop": {
+      "selector": ".chapter-toolbar",
+      "property": "padding-top",
+      "authored": "9px"
+    },
+    "chapterToolbarBottom": {
+      "selector": ".chapter-toolbar",
+      "property": "padding-bottom",
+      "authored": "5px"
+    },
+    "chapterToolbarGap": {
+      "selector": ".chapter-toolbar",
+      "property": "gap",
+      "authored": "6px"
+    },
+    "chapterGroupHeight": {
+      "selector": ".group-title",
+      "property": "min-height",
+      "authored": "38px"
+    },
+    "chapterGroupPadding": {
+      "selector": ".group-title",
+      "property": "padding-top",
+      "authored": "8px"
+    },
+    "chapterGroupTop": {
+      "selector": ".group-title",
+      "property": "margin-top",
+      "authored": "8px"
+    },
+    "chapterCheckSize": {
+      "selector": ".chapter-row input, .book-check",
+      "property": "width",
+      "authored": "17px"
+    },
+    "dockSide": {
+      "selector": ".storage",
+      "property": "left",
+      "authored": "16px"
+    },
+    "dockBottom": {
+      "selector": ".storage",
+      "property": "bottom",
+      "authored": "18px"
+    },
+    "dockRadius": {
+      "selector": ".storage",
+      "property": "border-radius",
+      "authored": "18px"
+    },
+    "dockPaddingX": {
+      "selector": ".storage",
+      "property": "padding-left",
+      "authored": "14px"
+    },
+    "dockPaddingY": {
+      "selector": ".storage",
+      "property": "padding-top",
+      "authored": "11px"
+    },
+    "dockGap": {
+      "selector": ".storage",
+      "property": "gap",
+      "authored": "8px"
+    },
+    "dockIconWidth": {
+      "selector": ".storage .icon-action",
+      "property": "width",
+      "authored": "36px"
+    },
+    "selectionPadding": {
+      "selector": ".manage-dock",
+      "property": "padding-top",
+      "authored": "12px"
+    },
+    "selectionSummaryGap": {
+      "selector": ".manage-summary",
+      "property": "gap",
+      "authored": "8px"
+    },
+    "selectionSummaryBottom": {
+      "selector": ".manage-summary",
+      "property": "margin-bottom",
+      "authored": "8px"
+    },
+    "actionGap": {
+      "selector": ".action-row",
+      "property": "gap",
+      "authored": "8px"
+    },
+    "buttonHeight": {
+      "selector": ".app-button",
+      "property": "min-height",
+      "authored": "44px"
+    },
+    "buttonPaddingX": {
+      "selector": ".app-button",
+      "property": "padding-left",
+      "authored": "10px"
+    },
+    "buttonPaddingY": {
+      "selector": ".app-button",
+      "property": "padding-top",
+      "authored": "9px"
+    },
+    "buttonRadius": {
+      "selector": ".app-button",
+      "property": "border-radius",
+      "authored": "12px"
+    },
+    "disabledOpacity": {
+      "selector": ".phone button:disabled",
+      "property": "opacity",
+      "authored": "0.5"
+    },
+    "emptyTop": {
+      "selector": ".empty",
+      "property": "padding-top",
+      "authored": "85px"
+    },
+    "emptyBottom": {
+      "selector": ".empty",
+      "property": "padding-bottom",
+      "authored": "30px"
+    },
+    "emptySide": {
+      "selector": ".empty",
+      "property": "padding-left",
+      "authored": "8px"
+    },
+    "emptyGap": {
+      "selector": ".empty",
+      "property": "gap",
+      "authored": "12px"
+    },
+    "emptyIconSize": {
+      "selector": ".empty > svg",
+      "property": "width",
+      "authored": "32px"
+    },
+    "sheetMaxPercent": {
+      "selector": ".sheet",
+      "property": "max-height",
+      "authored": "82%"
+    },
+    "sheetRadius": {
+      "selector": ".sheet",
+      "property": "border-top-left-radius",
+      "authored": "22px"
+    },
+    "gripWidth": {
+      "selector": ".grip",
+      "property": "width",
+      "authored": "42px"
+    },
+    "gripHeight": {
+      "selector": ".grip",
+      "property": "height",
+      "authored": "5px"
+    },
+    "gripRadius": {
+      "selector": ".grip",
+      "property": "border-radius",
+      "authored": "4px"
+    },
+    "gripTop": {
+      "selector": ".grip",
+      "property": "margin-top",
+      "authored": "10px"
+    },
+    "gripBottom": {
+      "selector": ".grip",
+      "property": "margin-bottom",
+      "authored": "2px"
+    },
+    "sheetTitleHeight": {
+      "selector": ".sheet-title",
+      "property": "min-height",
+      "authored": "48px"
+    },
+    "sheetTitleLeft": {
+      "selector": ".sheet-title",
+      "property": "padding-left",
+      "authored": "18px"
+    },
+    "sheetTitleRight": {
+      "selector": ".sheet-title",
+      "property": "padding-right",
+      "authored": "14px"
+    },
+    "sheetBodySide": {
+      "selector": ".sheet-body",
+      "property": "padding-left",
+      "authored": "18px"
+    },
+    "sheetBodyBottom": {
+      "selector": ".sheet-body",
+      "property": "padding-bottom",
+      "authored": "14px"
+    },
+    "sheetFooterTop": {
+      "selector": ".sheet-footer",
+      "property": "padding-top",
+      "authored": "10px"
+    },
+    "sheetFooterSide": {
+      "selector": ".sheet-footer",
+      "property": "padding-left",
+      "authored": "18px"
+    },
+    "sheetFooterBottom": {
+      "selector": ".sheet-footer",
+      "property": "padding-bottom",
+      "authored": "22px"
+    },
+    "rangeHeight": {
+      "selector": ".range-choice",
+      "property": "min-height",
+      "authored": "45px"
+    },
+    "rangePaddingY": {
+      "selector": ".range-choice",
+      "property": "padding-top",
+      "authored": "8px"
+    },
+    "rangeGap": {
+      "selector": ".range-choice",
+      "property": "gap",
+      "authored": "10px"
+    },
+    "settingsHeight": {
+      "selector": ".settings-line",
+      "property": "min-height",
+      "authored": "50px"
+    },
+    "settingsGap": {
+      "selector": ".settings-line",
+      "property": "gap",
+      "authored": "10px"
+    },
+    "settingsHintMargin": {
+      "selector": ".settings-hint",
+      "property": "margin-top",
+      "authored": "12px"
+    },
+    "dialogOuterSide": {
+      "selector": ".dialog-layer",
+      "property": "padding-left",
+      "authored": "24px"
+    },
+    "dialogRadius": {
+      "selector": ".dialog",
+      "property": "border-radius",
+      "authored": "18px"
+    },
+    "dialogTop": {
+      "selector": ".dialog",
+      "property": "padding-top",
+      "authored": "22px"
+    },
+    "dialogSide": {
+      "selector": ".dialog",
+      "property": "padding-left",
+      "authored": "18px"
+    },
+    "dialogBottom": {
+      "selector": ".dialog",
+      "property": "padding-bottom",
+      "authored": "18px"
+    },
+    "dialogTitleBottom": {
+      "selector": ".dialog h3",
+      "property": "margin-bottom",
+      "authored": "10px"
+    },
+    "dialogBodyBottom": {
+      "selector": ".dialog p",
+      "property": "margin-bottom",
+      "authored": "18px"
+    },
+    "borderWidth": {
+      "selector": ".header",
+      "property": "border-top-width",
+      "authored": "1px"
+    },
+    "titleChevronSize": {
+      "selector": ".book-title svg",
+      "property": "width",
+      "authored": "13px"
+    },
+    "searchPaddingY": {
+      "selector": ".searchbar input",
+      "property": "padding-top",
+      "authored": "9px"
+    },
+    "toolPaddingY": {
+      "selector": ".list-tools button",
+      "property": "padding-top",
+      "authored": "4px"
+    },
+    "settingsSelectMaxWidth": {
+      "selector": ".settings-line select",
+      "property": "max-width",
+      "authored": "130px"
+    },
+    "settingsSelectPadding": {
+      "selector": ".settings-line select",
+      "property": "padding-top",
+      "authored": "5px"
+    },
+    "settingsSelectRadius": {
+      "selector": ".settings-line select",
+      "property": "border-radius",
+      "authored": "6px"
+    },
+    "rangeSelectPadding": {
+      "selector": ".range-book select",
+      "property": "padding-top",
+      "authored": "8px"
+    },
+    "rangeSelectRadius": {
+      "selector": ".range-book select",
+      "property": "border-radius",
+      "authored": "9px"
+    },
+    "rangeBookBottom": {
+      "selector": ".range-book",
+      "property": "margin-bottom",
+      "authored": "6px"
+    },
+    "rangeSelectionTop": {
+      "selector": ".range-selection",
+      "property": "margin-top",
+      "authored": "10px"
+    },
+    "touchTarget": {
+      "selector": ".status-action::after, .book-more::after",
+      "property": "height",
+      "media": "(pointer: coarse)",
+      "authored": "44px"
+    },
+    "iconSize": {
+      "selector": ".phone svg",
+      "property": "width",
+      "authored": "18px"
+    },
+    "chapterMenuHeight": {
+      "selector": ".chapter-menu button",
+      "property": "min-height",
+      "authored": "46px"
+    },
+    "chapterMenuPaddingY": {
+      "selector": ".chapter-menu button",
+      "property": "padding-top",
+      "authored": "9px"
+    },
+    "textActionHeight": {
+      "selector": ".text-action",
+      "property": "min-height",
+      "authored": "34px"
+    },
+    "textActionPaddingY": {
+      "selector": ".text-action",
+      "property": "padding-top",
+      "authored": "4px"
+    },
+    "chapterToolbarSelectMaxWidth": {
+      "selector": ".chapter-toolbar select",
+      "property": "max-width",
+      "authored": "145px"
+    },
+    "radioSize": {
+      "selector": ".range-choice input",
+      "property": "width",
+      "browserDefault": true,
+      "boundary": "Measured Chromium HTML radio box; native ring rasterization remains platform-specific."
+    },
+    "controlLineHeight": {
+      "selector": ".phone",
+      "property": "line-height",
+      "inherited": true
+    },
+    "metaLineHeight": {
+      "selector": ".phone",
+      "property": "line-height",
+      "inherited": true
+    },
+    "tabLineHeight": {
+      "selector": ".phone",
+      "property": "line-height",
+      "inherited": true
+    },
+    "searchLineHeight": {
+      "selector": ".phone",
+      "property": "line-height",
+      "inherited": true
+    },
+    "listToolsLineHeight": {
+      "selector": ".phone",
+      "property": "line-height",
+      "inherited": true
+    },
+    "emptyTitleLineHeight": {
+      "selector": ".phone",
+      "property": "line-height",
+      "inherited": true
+    },
+    "chapterTitleLineHeight": {
+      "selector": ".phone",
+      "property": "line-height",
+      "inherited": true
+    },
+    "headerTopGap": {
+      "derived": "headerTop - statusBarHeight"
+    },
+    "headerSlotWidth": {
+      "selector": ".header",
+      "property": "grid-template-columns"
+    },
+    "headerShadowX": {
+      "selector": ".header",
+      "property": "box-shadow",
+      "authored": "0 2px 10px var(--shadow)"
+    },
+    "headerShadowY": {
+      "selector": ".header",
+      "property": "box-shadow",
+      "authored": "0 2px 10px var(--shadow)"
+    },
+    "headerShadowRadius": {
+      "selector": ".header",
+      "property": "box-shadow",
+      "authored": "0 2px 10px var(--shadow)"
+    },
+    "tabShadowX": {
+      "selector": ".tabs button[aria-selected=\"true\"]",
+      "property": "box-shadow",
+      "authored": "0 1px 4px var(--shadow)"
+    },
+    "tabShadowY": {
+      "selector": ".tabs button[aria-selected=\"true\"]",
+      "property": "box-shadow",
+      "authored": "0 1px 4px var(--shadow)"
+    },
+    "tabShadowRadius": {
+      "selector": ".tabs button[aria-selected=\"true\"]",
+      "property": "box-shadow",
+      "authored": "0 1px 4px var(--shadow)"
+    },
+    "sheetShadowX": {
+      "selector": ".sheet",
+      "property": "box-shadow",
+      "authored": "0 -4px 24px var(--shadow)"
+    },
+    "sheetShadowY": {
+      "selector": ".sheet",
+      "property": "box-shadow",
+      "authored": "0 -4px 24px var(--shadow)"
+    },
+    "sheetShadowRadius": {
+      "selector": ".sheet",
+      "property": "box-shadow",
+      "authored": "0 -4px 24px var(--shadow)"
+    },
+    "storageBodyTop": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".sheet-body",
+      "property": "padding-top",
+      "authored": "6px"
+    },
+    "storageBodySide": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".sheet-body",
+      "property": "padding-left",
+      "authored": "18px"
+    },
+    "storageBodyBottom": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".sheet-body",
+      "property": "padding-bottom",
+      "authored": "0px"
+    },
+    "storageSummaryGap": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".summary-top",
+      "property": "gap",
+      "authored": "8px"
+    },
+    "storageTotalFontSize": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".total",
+      "property": "font-size",
+      "authored": "22px"
+    },
+    "storageTotalLineHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".total",
+      "property": "line-height",
+      "authored": "30px"
+    },
+    "storageTotalWeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".total",
+      "property": "font-weight",
+      "authored": "500"
+    },
+    "storageTotalMinHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".total",
+      "property": "min-height",
+      "authored": "30px"
+    },
+    "storageValueFontSize": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown dd",
+      "property": "font-size",
+      "authored": "14px"
+    },
+    "storageValueLineHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown dd",
+      "property": "line-height",
+      "authored": "22px"
+    },
+    "storageValueWeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown dd",
+      "property": "font-weight",
+      "authored": "500"
+    },
+    "storageValueMinHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown dd",
+      "property": "min-height",
+      "authored": "22px"
+    },
+    "storageBreakdownTop": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown",
+      "property": "margin-top",
+      "authored": "14px"
+    },
+    "storageBreakdownGap": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown",
+      "property": "gap",
+      "authored": "12px"
+    },
+    "storageRowGap": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown > div",
+      "property": "gap",
+      "authored": "8px"
+    },
+    "storageCaptionGap": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown dt",
+      "property": "gap",
+      "authored": "2px"
+    },
+    "storageLabelFontSize": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown dt",
+      "property": "font-size",
+      "authored": "13px"
+    },
+    "storageLabelLineHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown dt",
+      "property": "line-height",
+      "authored": "21px"
+    },
+    "storageCaptionFontSize": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown dt small",
+      "property": "font-size",
+      "authored": "11px"
+    },
+    "storageCaptionLineHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".breakdown dt small",
+      "property": "line-height",
+      "authored": "18px"
+    },
+    "storageFreeTop": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".free-row",
+      "property": "margin-top",
+      "authored": "11px"
+    },
+    "storageFreeBottom": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".free-row",
+      "property": "margin-bottom",
+      "authored": "9px"
+    },
+    "storageFreeGap": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".free-row",
+      "property": "gap",
+      "authored": "8px"
+    },
+    "storageFreeFontSize": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".free-row",
+      "property": "font-size",
+      "authored": "11px"
+    },
+    "storageSettingsTitleTop": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".settings-title",
+      "property": "margin-top",
+      "authored": "9px"
+    },
+    "storageSettingsTitleFontSize": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".settings-title",
+      "property": "font-size",
+      "authored": "11px"
+    },
+    "storageSettingsTitleLineHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".settings-title",
+      "property": "line-height",
+      "authored": "18px"
+    },
+    "storageSettingsHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".settings-row",
+      "property": "min-height",
+      "authored": "50px"
+    },
+    "storageSettingsGap": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".settings-row",
+      "property": "gap",
+      "authored": "10px"
+    },
+    "storageSelectWidth": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".settings-row select",
+      "property": "width",
+      "authored": "88px"
+    },
+    "storageSelectHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".settings-row select",
+      "property": "min-height",
+      "authored": "31px"
+    },
+    "storageSelectPadding": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".settings-row select",
+      "property": "padding-top",
+      "authored": "5px"
+    },
+    "storageSelectRadius": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".settings-row select",
+      "property": "border-radius",
+      "authored": "6px"
+    },
+    "storageFooterTop": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".sheet-footer",
+      "property": "padding-top",
+      "authored": "14px"
+    },
+    "storageFooterSide": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".sheet-footer",
+      "property": "padding-left",
+      "authored": "18px"
+    },
+    "storageFooterBottom": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".sheet-footer",
+      "property": "padding-bottom",
+      "authored": "22px"
+    },
+    "storageActionGap": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".clean-button",
+      "property": "gap",
+      "authored": "7px"
+    },
+    "storageActionIconSize": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".clean-button svg",
+      "property": "width",
+      "authored": "16px"
+    },
+    "storageActionMinHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".clean-button",
+      "property": "min-height",
+      "authored": "44px"
+    },
+    "storageActionPaddingY": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".clean-button",
+      "property": "padding-top",
+      "authored": "9px"
+    },
+    "storageActionPaddingX": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".clean-button",
+      "property": "padding-left",
+      "authored": "10px"
+    },
+    "storageActionRadius": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".clean-button",
+      "property": "border-radius",
+      "authored": "12px"
+    },
+    "storageActionFontSize": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".clean-button",
+      "property": "font-size",
+      "authored": "12px"
+    },
+    "storageActionDisabledOpacity": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".clean-button:disabled",
+      "property": "opacity",
+      "measured": 0.5,
+      "derived": "Chromium computed style of approved disabled button with the complete CSS cascade"
+    },
+    "storageFeedbackTop": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".feedback",
+      "property": "margin-top",
+      "authored": "8px"
+    },
+    "storageFeedbackFontSize": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".feedback",
+      "property": "font-size",
+      "authored": "11px"
+    },
+    "storageFeedbackLineHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".feedback",
+      "property": "line-height",
+      "authored": "18px"
+    },
+    "storageFreeLineHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".phone",
+      "property": "line-height",
+      "authored": "21px",
+      "inherited": true
+    },
+    "storageUnknownSummaryMinHeight": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".summary-top",
+      "property": "height",
+      "measured": 35,
+      "derived": "Chromium DOM with approved font and empty [data-ui=\"total\"]"
+    },
+    "storageUnknownSummaryLabelTop": {
+      "source": "storage-demo.html",
+      "sourceSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4",
+      "selector": ".summary-top",
+      "property": "labelTop",
+      "measured": 14,
+      "derived": "Chromium DOM with approved font and empty [data-ui=\"total\"]"
+    }
+  },
+  "palettes": {
+    "paper": {
+      "day": {
+        "r": 248,
+        "g": 244,
+        "b": 236,
+        "a": 1
+      },
+      "night": {
+        "r": 28,
+        "g": 30,
+        "b": 26,
+        "a": 1
+      },
+      "provenance": "user-approved shared download demo; SHA256 e0bb8def207486d73e6117a543c264c893d399a427745f5100bdb6e48df6517b; CSS --paper"
+    },
+    "surface": {
+      "day": {
+        "r": 255,
+        "g": 252,
+        "b": 248,
+        "a": 1
+      },
+      "night": {
+        "r": 40,
+        "g": 44,
+        "b": 37,
+        "a": 1
+      },
+      "provenance": "user-approved shared download demo; SHA256 e0bb8def207486d73e6117a543c264c893d399a427745f5100bdb6e48df6517b; CSS --surface"
+    },
+    "ink": {
+      "day": {
+        "r": 31,
+        "g": 27,
+        "b": 23,
+        "a": 1
+      },
+      "night": {
+        "r": 234,
+        "g": 231,
+        "b": 222,
+        "a": 1
+      },
+      "provenance": "user-approved shared download demo; SHA256 e0bb8def207486d73e6117a543c264c893d399a427745f5100bdb6e48df6517b; CSS --ink"
+    },
+    "muted": {
+      "day": {
+        "r": 117,
+        "g": 111,
+        "b": 105,
+        "a": 1
+      },
+      "night": {
+        "r": 171,
+        "g": 169,
+        "b": 159,
+        "a": 1
+      },
+      "provenance": "user-approved shared download demo; SHA256 e0bb8def207486d73e6117a543c264c893d399a427745f5100bdb6e48df6517b; CSS --muted"
+    },
+    "line": {
+      "day": {
+        "r": 231,
+        "g": 224,
+        "b": 213,
+        "a": 1
+      },
+      "night": {
+        "r": 59,
+        "g": 64,
+        "b": 54,
+        "a": 1
+      },
+      "provenance": "user-approved shared download demo; SHA256 e0bb8def207486d73e6117a543c264c893d399a427745f5100bdb6e48df6517b; CSS --line"
+    },
+    "soft": {
+      "day": {
+        "r": 240,
+        "g": 236,
+        "b": 227,
+        "a": 1
+      },
+      "night": {
+        "r": 48,
+        "g": 52,
+        "b": 45,
+        "a": 1
+      },
+      "provenance": "user-approved shared download demo; SHA256 e0bb8def207486d73e6117a543c264c893d399a427745f5100bdb6e48df6517b; CSS --soft"
+    },
+    "green": {
+      "day": {
+        "r": 31,
+        "g": 53,
+        "b": 40,
+        "a": 1
+      },
+      "night": {
+        "r": 185,
+        "g": 206,
+        "b": 177,
+        "a": 1
+      },
+      "provenance": "user-approved shared download demo; SHA256 e0bb8def207486d73e6117a543c264c893d399a427745f5100bdb6e48df6517b; CSS --green"
+    },
+    "greenInk": {
+      "day": {
+        "r": 255,
+        "g": 252,
+        "b": 248,
+        "a": 1
+      },
+      "night": {
+        "r": 28,
+        "g": 30,
+        "b": 26,
+        "a": 1
+      },
+      "provenance": "user-approved shared download demo; SHA256 e0bb8def207486d73e6117a543c264c893d399a427745f5100bdb6e48df6517b; CSS --green-ink"
+    },
+    "softGreen": {
+      "day": {
+        "r": 232,
+        "g": 237,
+        "b": 223,
+        "a": 1
+      },
+      "night": {
+        "r": 51,
+        "g": 63,
+        "b": 45,
+        "a": 1
+      },
+      "provenance": "user-approved shared download demo; SHA256 e0bb8def207486d73e6117a543c264c893d399a427745f5100bdb6e48df6517b; CSS --soft-green"
+    },
+    "danger": {
+      "day": {
+        "r": 165,
+        "g": 61,
+        "b": 50,
+        "a": 1
+      },
+      "night": {
+        "r": 239,
+        "g": 180,
+        "b": 168,
+        "a": 1
+      },
+      "provenance": "user-approved shared download demo; SHA256 e0bb8def207486d73e6117a543c264c893d399a427745f5100bdb6e48df6517b; CSS --danger"
+    },
+    "scrim": {
+      "day": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 0.3411764705882353
+      },
+      "night": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 0.5019607843137255
+      },
+      "provenance": "user-approved shared download demo; SHA256 e0bb8def207486d73e6117a543c264c893d399a427745f5100bdb6e48df6517b; CSS --scrim"
+    },
+    "shadow": {
+      "day": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 0.07058823529411765
+      },
+      "night": {
+        "r": 0,
+        "g": 0,
+        "b": 0,
+        "a": 0.19607843137254902
+      },
+      "provenance": "user-approved shared download demo; SHA256 e0bb8def207486d73e6117a543c264c893d399a427745f5100bdb6e48df6517b; CSS --shadow"
+    },
+    "overlayChrome": {
+      "day": {
+        "r": 163,
+        "g": 161,
+        "b": 155,
+        "a": 1
+      },
+      "night": {
+        "r": 14,
+        "g": 15,
+        "b": 13,
+        "a": 1
+      },
+      "provenance": "user-approved shared download demo; SHA256 e0bb8def207486d73e6117a543c264c893d399a427745f5100bdb6e48df6517b; Chromium Canvas2D --scrim over --paper"
+    },
+    "overlayChromeInk": {
+      "day": {
+        "r": 20,
+        "g": 17,
+        "b": 15,
+        "a": 1
+      },
+      "night": {
+        "r": 117,
+        "g": 115,
+        "b": 111,
+        "a": 1
+      },
+      "provenance": "user-approved shared download demo; SHA256 e0bb8def207486d73e6117a543c264c893d399a427745f5100bdb6e48df6517b; Chromium Canvas2D --scrim over --ink"
+    },
+    "overlayChromeDouble": {
+      "day": {
+        "r": 107,
+        "g": 106,
+        "b": 102,
+        "a": 1
+      },
+      "night": {
+        "r": 7,
+        "g": 7,
+        "b": 6,
+        "a": 1
+      },
+      "provenance": "user-approved storage management v2 demo; SHA256 20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4; Chromium Canvas2D .scrim and .dialog-layer over --paper"
+    },
+    "overlayChromeDoubleInk": {
+      "day": {
+        "r": 13,
+        "g": 11,
+        "b": 9,
+        "a": 1
+      },
+      "night": {
+        "r": 58,
+        "g": 57,
+        "b": 55,
+        "a": 1
+      },
+      "provenance": "user-approved storage management v2 demo; SHA256 20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4; Chromium Canvas2D .scrim and .dialog-layer over --ink"
+    }
+  },
+  "ruleBoundary": "Original authored CSS, including min/max and inherited line boxes; platform layout tree consumes named constraints.",
+  "nativeVisualVerification": "OPEN"
+}

@@ -83,7 +83,7 @@ assert.match(coordinator,
   /class ReaderWindowChromeStyle[\s\S]*underlayColor: string;[\s\S]*tone: ReaderWindowChromeTone;/,
   'system-bar underlay and icon tone must be one style value');
 assert.match(coordinator,
-  /statusBarColor: ReaderWindowCoordinator\.nativeStatusBarColor\(request\),[\s\S]*navigationBarColor: request\.style\.transparentSystemBars \? '#00000000' : request\.style\.underlayColor,[\s\S]*statusBarContentColor: contentColor/,
+  /statusBarColor: ReaderWindowCoordinator\.nativeStatusBarColor\(request\),[\s\S]*navigationBarColor: request\.style\.transparentSystemBars \? '#00000000' : \(request\.style\.navigationUnderlayColor \?\? request\.style\.underlayColor\),[\s\S]*statusBarContentColor: contentColor/,
   'one revision must expose the owned paper while preserving paired navigation base and content ink');
 assert.match(coordinator,
   /contentColor: string;[\s\S]*constructor\(underlayColor: string, tone: ReaderWindowChromeTone, contentColor\?: string,[\s\S]*paperThemeId: string = '', transparentSystemBars: boolean = false\)[\s\S]*this\.contentColor = contentColor \?\? /,

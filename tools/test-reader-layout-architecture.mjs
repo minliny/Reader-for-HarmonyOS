@@ -131,7 +131,7 @@ for (const type of ['TYPE_SYSTEM', 'TYPE_CUTOUT', 'TYPE_SYSTEM_GESTURE',
   assert.ok(coordinator.includes(type), `window metrics must include ${type}`);
 }
 assert.match(coordinator,
-  /setWindowSystemBarProperties\(\{\s*statusBarColor: ReaderWindowCoordinator\.nativeStatusBarColor\(request\),\s*navigationBarColor: request\.style\.transparentSystemBars \? '#00000000' : request\.style\.underlayColor,\s*statusBarContentColor: contentColor,\s*navigationBarContentColor: contentColor,\s*\}\)/,
+  /setWindowSystemBarProperties\(\{\s*statusBarColor: ReaderWindowCoordinator\.nativeStatusBarColor\(request\),\s*navigationBarColor: request\.style\.transparentSystemBars \? '#00000000' : \(request\.style\.navigationUnderlayColor \?\? request\.style\.underlayColor\),\s*statusBarContentColor: contentColor,\s*navigationBarContentColor: request\.style\.navigationContentColor \?\? contentColor,\s*\}\)/,
   'native status composition, navigation underlay and semantic content tone must change atomically from one style');
 assert.match(coordinator,
   /constructor\(underlayColor: string, tone: ReaderWindowChromeTone, contentColor\?: string,\s*paperThemeId: string = '', transparentSystemBars: boolean = false\)/,

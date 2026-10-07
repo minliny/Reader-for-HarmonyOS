@@ -1,9 +1,14 @@
 import assert from 'node:assert/strict';
+import {mock} from 'node:test';
 import {ReaderStartupContentOwner} from '../entry/src/main/ets/app/ReaderStartupContentOwner.ts';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 
 const deferred=()=>{let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return {promise,resolve,reject};};
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
+// Exercise the production timers at explicit boundaries. Real sleeps at
+// 8 + 8 ms race the native-recovery deadline under the bounded full gate.
+// Node owns timer scheduling; this fixture does not reimplement a clock.
+mock.timers.enable({apis:['setTimeout']});
 function fixture(admission=Promise.resolve(),deadline=1000) {
   const calls=[],callbacks={};
   const driver={loadMain(done){calls.push('main');callbacks.main=done;},loadRecovery(done){calls.push('recovery');callbacks.recovery=done;},
@@ -16,7 +21,8 @@ function fixture(admission=Promise.resolve(),deadline=1000) {
 }
 {
   const admission=deferred(),f=fixture(admission.promise,8);
-  await new Promise(resolve=>setTimeout(resolve,16));assert.deepEqual(f.calls,['recovery']);
+  mock.timers.tick(7);assert.deepEqual(f.calls,[]);
+  mock.timers.tick(1);await tick();assert.deepEqual(f.calls,['recovery']);
   f.callbacks.recovery(0);assert.equal(f.owner.snapshot().canRetry,true);
   admission.resolve();await tick();assert.deepEqual(f.calls,['recovery'],'a late barrier never changes the current recovery page without user retry');
   f.owner.retry();f.owner.retry();await tick();assert.deepEqual(f.calls,['recovery','main'],'retry observes the original task and rejects duplicate intent');
@@ -38,7 +44,7 @@ function fixture(admission=Promise.resolve(),deadline=1000) {
 }
 {
   const admission=deferred(),f=fixture(admission.promise,8);f.owner.close();admission.resolve();
-  await new Promise(resolve=>setTimeout(resolve,16));assert.deepEqual(f.calls,[],'retired stage clears timeout and promise callback');
+  mock.timers.tick(16);await tick();assert.deepEqual(f.calls,[],'retired stage clears timeout and promise callback');
 }
 {
   const old=fixture();await tick();const next=fixture();await tick();old.callbacks.main(0);next.callbacks.main(0);
@@ -77,7 +83,8 @@ for (const stage of ['main','recovery']) {
  const f=fixture(Promise.resolve(),8);await tick();
  if(stage==='recovery')f.callbacks.main(17);
  const old=f.callbacks[stage];
- await new Promise(resolve=>setTimeout(resolve,18));await tick();
+ mock.timers.tick(7);await tick();assert.equal(f.owner.snapshot().phase,stage==='main'?'loading':'recovery-loading');
+ mock.timers.tick(1);await tick();
  assert.equal(f.owner.snapshot().phase,'platform-unavailable');
  assert.equal(f.owner.snapshot().reason,stage==='main'?'main-load-pending':'recovery-load-pending');
  assert.equal(f.owner.snapshot().canRetry,false);
@@ -92,13 +99,13 @@ for (const stage of ['main','recovery']) {
  f.driver.unavailable=()=>{f.calls.push('unavailable');throw Error('logger failed');};
  f.driver.observerFailed=()=>{throw Error('diagnostic failed');};
  f.owner.subscribe(()=>{throw Error('observer failed');});await tick();
- await new Promise(resolve=>setTimeout(resolve,18));await tick();
+ mock.timers.tick(8);await tick();
  assert.equal(f.owner.snapshot().phase,'platform-unavailable');
  assert.deepEqual(f.calls,['main','unavailable','exit'],'diagnostics and terminal exit failure cannot start another load');f.owner.close();
 }
 {
  const f=fixture(Promise.resolve(),8);await tick();f.owner.close();
- await new Promise(resolve=>setTimeout(resolve,18));assert.deepEqual(f.calls,['main'],'close releases native deadline without terminating the next Ability');
+ mock.timers.tick(18);await tick();assert.deepEqual(f.calls,['main'],'close releases native deadline without terminating the next Ability');
 }
 console.log('PASS native startup settlement: missing main/recovery callbacks are bounded terminal attempts, no overlapping load, once-only exit, late ACK retirement and non-disruptive diagnostics');
 
@@ -107,3 +114,4 @@ console.log('PASS native startup settlement: missing main/recovery callbacks are
  f.callbacks.main(17);f.callbacks.recovery(24);f.owner.close();await tick();
  assert.deepEqual(f.calls,['main','recovery','unavailable'],'retirement before queued terminal exit cannot end the successor stage');
 }
+mock.timers.reset();

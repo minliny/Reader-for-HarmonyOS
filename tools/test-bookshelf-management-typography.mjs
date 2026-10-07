@@ -2,8 +2,7 @@ import assert from 'node:assert/strict';
 import { foundationControls, foundationSpecs } from './lib/reader-foundation-control-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import { loadReaderTypographyRoles } from './lib/reader-typography-probe.mjs';
 
 const read = relative => readFileSync(new URL(`../entry/src/main/ets/${relative}`, import.meta.url), 'utf8');
 const typographySource = read('features/common/ReaderTypography.ets');
@@ -20,11 +19,8 @@ const roles = [
   'TYPE_SHELF_MANAGEMENT_BUTTON',
   'TYPE_SHELF_MANAGEMENT_SMALL_ACTION',
 ];
-const evaluator = new Function(...Object.keys(fontFamilies),
-  `${stripTypeScriptTypes(typographySource)
-    .replace(/^import[^;]+;\s*/gm, '')
-    .replace(/^export /gm, '')}; return { ${roles.join(', ')} };`);
-const typography = evaluator(...Object.values(fontFamilies));
+const allTypography = loadReaderTypographyRoles(typographySource);
+const typography = Object.fromEntries(roles.map(role => [role, allTypography[role]]));
 const page = read('features/bookshelf/BookshelfManagementPage.ets');
 
 const expected = {

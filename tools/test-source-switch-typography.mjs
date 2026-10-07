@@ -1,15 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import { loadReaderTypographyRoles } from './lib/reader-typography-probe.mjs';
 
 const read = relative => readFileSync(new URL(`../entry/src/main/ets/${relative}`, import.meta.url), 'utf8');
 const typographySource = read('features/common/ReaderTypography.ets');
 const { TYPE_SOURCE_SWITCH_NAME, TYPE_SOURCE_SWITCH_LATENCY, TYPE_SOURCE_SWITCH_CHAPTER } =
-  new Function(...Object.keys(fontFamilies), `${stripTypeScriptTypes(typographySource)
-    .replace(/^import[^;]+;\s*/gm, '')
-    .replace(/^export /gm, '')}; return { TYPE_SOURCE_SWITCH_NAME, TYPE_SOURCE_SWITCH_LATENCY, TYPE_SOURCE_SWITCH_CHAPTER };`)(
-      ...Object.values(fontFamilies));
+  loadReaderTypographyRoles(typographySource);
 const row = read('features/source/CandidateRow.ets');
 
 assert.deepEqual(

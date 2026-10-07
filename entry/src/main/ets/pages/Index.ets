@@ -174,6 +174,9 @@ import {
 } from '../features/rss/RssPage';
 import { SettingsPage, type SettingsSnapshot } from '../features/settings/SettingsPage';
 import { SettingsHost } from '../features/settings/SettingsHost';
+import { SharedDownloadPage, type SharedDownloadUiIntent, type SharedDownloadViewState } from '../features/downloads/SharedDownloadPage';
+import { SharedDownloadHost, type SharedDownloadSnapshot } from '../features/downloads/SharedDownloadHost';
+import type { DownloadBookView } from '../features/downloads/SharedDownloadProjection';
 import type { SettingsOperationProjection, SettingsCacheCleanupSnapshot } from '../features/settings/SettingsHost';
 import { SettingsGateway } from '../features/settings/SettingsGateway';
 import { RulesManagementPage } from '../features/settings/RulesManagementPage';
@@ -233,7 +236,7 @@ const CATALOG_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 type ReaderRoute = 'bookshelf' | 'discover' | 'detail' | 'reading' | 'directory' | 'search' |
   'bookshelfManagement' | 'bookshelfMultiSelect' | 'bookshelfSettings' |
   'rss' | 'rssSubscriptionManagement' | 'rssSourceFeed' | 'rssEntryDetail' |
-  'rssSubscriptionEditor' | 'settings' | 'rulesManagement' | 'source' | 'sourceTools' | 'sync';
+  'rssSubscriptionEditor' | 'settings' | 'rulesManagement' | 'source' | 'sourceTools' | 'sync' | 'downloads';
 type PreparedReaderRoute = 'reading' | 'directory';
 type DirectoryReturnTarget = 'detail' | 'readerControl';
 type RssDetailReturnTarget = 'rss' | 'rssSourceFeed';
@@ -243,7 +246,7 @@ type RulesManagementReturnTarget = 'settings' | 'reader';
 type DetailReturnRoute = 'bookshelf' | 'search';
 type SourceManagementReturnTarget = 'settings' | 'search';
 
-type TemporaryBackScope = 'bookshelf' | 'settings' | 'source';
+type TemporaryBackScope = 'bookshelf' | 'settings' | 'source' | 'downloads';
 interface RssFeedPresentationBinding {
   current: () => boolean;
   emit: (subscriptions: RssSubscription[]) => void;
@@ -341,6 +344,14 @@ struct Index {
   @State private editingShelfGroupPresentation: number = 0;
   private bookshelfSettingsReturnRoute: 'bookshelf' | 'settings' = 'bookshelf';
   @State private shelfBooks: ShelfBook[] = [];
+  @State private downloadBooks: DownloadBookView[] = [];
+  @State private downloadLoading: boolean = false;
+  @State private downloadError: string = '';
+  @State private downloadPendingMessage: string = '';
+  private downloadHost: SharedDownloadHost | undefined = undefined;
+  private downloadPresentationIdentity: string = '';
+  private downloadViewState: SharedDownloadViewState = { query: '', type: 'all', state: 'all',
+    sourceId: 'all', sort: 'recent', direction: 'desc', listScroll: 0, detailKey: '' };
   @StorageLink('readerBookshelfReadingFilter') private shelfReadingFilter: string = 'all';
   @StorageLink('readerBookshelfSourceFilter') private shelfSourceFilter: string = 'all';
   @State private shelfProjectionRevision: string = '';
@@ -673,6 +684,9 @@ struct Index {
   }
 
   aboutToDisappear(): void {
+    this.downloadHost?.retire();
+    this.downloadHost = undefined;
+    this.downloadPresentationIdentity = '';
     this.retireSettingsPresentation();
     this.retireSourceManagementPresentation();
     this.temporaryBackLease = undefined;
@@ -819,6 +833,10 @@ struct Index {
       return true;
     }
     if (this.route === 'sync') {
+      this.returnToSettings();
+      return true;
+    }
+    if (this.route === 'downloads') {
       this.returnToSettings();
       return true;
     }
@@ -1083,6 +1101,8 @@ struct Index {
         this.discoverPageContent();
       } else if (this.route === 'settings') {
         this.settingsContent();
+      } else if (this.route === 'downloads') {
+        this.downloadsContent();
       } else if (this.route === 'rulesManagement') {
         this.rulesManagementContent();
       } else if (this.route === 'source') {
@@ -1709,6 +1729,82 @@ struct Index {
     }
   }
 
+  private openDownloads(): void {
+    const owner = this.mountedRuntimeOwner;
+    if (this.route !== 'settings' || this.readingSessionActive || owner === undefined || !this.isCurrentRuntime(owner)) return;
+    const generation = this.nextNavigationGeneration();
+    const identity = JSON.stringify([this.rssInstanceIdentity, this.detailShelfAdmissionMount, generation, 'downloads']);
+    this.route = 'downloads';
+    this.downloadPresentationIdentity = identity;
+    this.downloadBooks = [];
+    this.downloadLoading = true;
+    this.downloadError = '';
+    this.downloadPendingMessage = '';
+    const current = (): boolean => this.isCurrentDownloadPresentation(generation, owner, identity);
+    const host = new SharedDownloadHost(owner, (snapshot: SharedDownloadSnapshot): void => {
+      if (!current() || this.downloadHost !== host) return;
+      this.downloadBooks = snapshot.books;
+      this.downloadLoading = snapshot.loading;
+      this.downloadError = snapshot.error;
+    });
+    this.downloadHost = host;
+    void host.reload(current);
+  }
+
+  private isCurrentDownloadPresentation(generation: number, owner: ReaderRuntimeOwner | undefined, identity: string): boolean {
+    return owner !== undefined && !this.shelfReceiptRetired && this.mountedRuntimeOwner === owner &&
+      this.isCurrentRuntime(owner) && this.route === 'downloads' && generation === this.navigationGeneration &&
+      identity.length > 0 && identity === this.downloadPresentationIdentity;
+  }
+
+  @Builder
+  private downloadsContent() {
+    ForEach([this.navigationGeneration], (generation: number): void => {
+      this.downloadsSurface(generation, this.mountedRuntimeOwner, this.downloadPresentationIdentity);
+    }, (generation: number): string => generation.toString());
+  }
+
+  @Builder
+  private downloadsSurface(generation: number, owner: ReaderRuntimeOwner | undefined, identity: string) {
+    SharedDownloadPage({
+      books: this.downloadBooks, loading: this.downloadLoading, error: this.downloadError,
+      pendingMessage: this.downloadPendingMessage, presentationIdentity: identity, initialViewState: this.downloadViewState,
+      onTemporaryBackBridge: (handler: (() => boolean) | undefined, bridgeIdentity: string): void => {
+        if (this.isCurrentDownloadPresentation(generation, owner, identity))
+          this.registerTemporaryBackBridge('downloads', generation, owner, handler, bridgeIdentity);
+      },
+      onViewStateChanged: (state: SharedDownloadViewState): void => {
+        if (this.isCurrentDownloadPresentation(generation, owner, identity)) this.downloadViewState = state;
+      },
+      onBack: (): void => {
+        if (this.isCurrentDownloadPresentation(generation, owner, identity)) this.returnToSettings();
+      },
+      onRefresh: (): void => {
+        if (this.isCurrentDownloadPresentation(generation, owner, identity))
+          void this.downloadHost?.reload((): boolean => this.isCurrentDownloadPresentation(generation, owner, identity));
+      },
+      onOpenBook: (book: DownloadBookView): void => {
+        if (this.isCurrentDownloadPresentation(generation, owner, identity))
+          void this.downloadHost?.refreshBook(book, (): boolean => this.isCurrentDownloadPresentation(generation, owner, identity));
+      },
+      onIntent: (intent: SharedDownloadUiIntent): void => {
+        if (this.isCurrentDownloadPresentation(generation, owner, identity)) this.markDownloadIntentPending(intent);
+      },
+    });
+  }
+
+  /** This UI delivery intentionally has no mutation/reading-route wiring. */
+  private markDownloadIntentPending(intent: SharedDownloadUiIntent): void {
+    if (this.route !== 'downloads') return;
+    if (intent.books.some((target): boolean => !this.downloadBooks.some((book: DownloadBookView): boolean =>
+      book.sourceId === target.sourceId && book.bookId === target.bookId))) return;
+    const action = intent.action === 'download' ? '下载' : intent.action === 'pause' ? '暂停' :
+      intent.action === 'cancel' ? '取消下载任务' : intent.action === 'deleteLocal' ? '删除本地内容' :
+      intent.action === 'cleanup' ? '清理本地内容' : '存储设置';
+    const scope = intent.scope === 'chapters' ? '所选章节' : intent.scope === 'books' ? '所选书籍' : '';
+    this.getUIContext().getPromptAction().showToast({ message: `${scope}${action}：待接线，未执行操作` });
+  }
+
   private openBookshelfSettings(): void {
     this.bookshelfSettingsReturnRoute = this.route === 'settings' ? 'settings' : 'bookshelf';
     this.nextNavigationGeneration();
@@ -1907,6 +2003,7 @@ struct Index {
       onOpenRulesManagement: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.openRulesManagement(); },
       onOpenSync: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.openSync(); },
       onOpenBookshelfSettings: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.openBookshelfSettings(); },
+      onOpenDownloads: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.openDownloads(); },
       onRssRequested: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.openRss(); },
       onDiscoverRequested: (): void => { if (this.isCurrentSettingsPresentation(generation, owner, mounting, host, 'settings', identity)) this.openDiscover(); },
       onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
@@ -6111,6 +6208,9 @@ struct Index {
   }
 
   private nextNavigationGeneration(): number {
+    this.downloadHost?.retire();
+    this.downloadHost = undefined;
+    this.downloadPresentationIdentity = '';
     this.retireSettingsPresentation();
     this.retireSourceManagementPresentation();
     this.retireSourceSwitchPresentation();

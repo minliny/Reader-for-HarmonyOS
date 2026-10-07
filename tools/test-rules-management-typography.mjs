@@ -2,16 +2,12 @@ import assert from 'node:assert/strict';
 import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import { loadReaderTypographyRoles } from './lib/reader-typography-probe.mjs';
 
 const read = relative => readFileSync(new URL(`../entry/src/main/ets/${relative}`, import.meta.url), 'utf8');
 const typographySource = read('features/common/ReaderTypography.ets');
 const { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION } =
-  new Function(...Object.keys(fontFamilies), `${stripTypeScriptTypes(typographySource)
-    .replace(/^import[^;]+;\s*/gm, '')
-    .replace(/^export /gm, '')}; return { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION };`)(
-      ...Object.values(fontFamilies));
+  loadReaderTypographyRoles(typographySource);
 const page = read('features/settings/RulesManagementPage.ets');
 
 assert.deepEqual(

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
-import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import { createRequire, registerHooks } from 'node:module';
+import { loadReaderTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
@@ -13,9 +13,9 @@ const state = await import('../entry/src/main/ets/features/reading/ReaderControl
 const { readerControlReplaceDraftParams } = await import('./lib/reader-replace-legacy-sdk-probe.mjs');
 const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts');
 const typographySource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
-const rulesTypography = new Function(...Object.keys(fontFamilies), `${stripTypeScriptTypes(typographySource)
-  .replace(/^import[^;]+;\s*/gm, '').replace(/^export /gm, '')}; return { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION };`)(
-    ...Object.values(fontFamilies));
+const { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION } =
+  loadReaderTypographyRoles(typographySource);
+const rulesTypography = { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION };
 const file = new URL('../entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets',import.meta.url);
 const source = readFileSync(file,'utf8');
 const results=[];

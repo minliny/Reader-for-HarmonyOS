@@ -49,6 +49,9 @@ export class ReaderWindowChromeStyle {
   paperThemeId: string;
   /** Image readers paint through both system bands; their content background stays opaque. */
   transparentSystemBars: boolean;
+  /** A bottom sheet may paint a different navigation band from the top scrim. */
+  navigationUnderlayColor?: string;
+  navigationContentColor?: string;
 
   constructor(underlayColor: string, tone: ReaderWindowChromeTone, contentColor?: string,
     paperThemeId: string = '', transparentSystemBars: boolean = false) {
@@ -579,6 +582,10 @@ export class ReaderWindowCoordinator {
       ReaderWindowCoordinator.desiredChrome.style.underlayColor === request.style.underlayColor &&
       ReaderWindowCoordinator.desiredChrome.style.tone === request.style.tone &&
       ReaderWindowCoordinator.desiredChrome.style.contentColor === request.style.contentColor &&
+      (ReaderWindowCoordinator.desiredChrome.style.navigationUnderlayColor ?? ReaderWindowCoordinator.desiredChrome.style.underlayColor) ===
+        (request.style.navigationUnderlayColor ?? request.style.underlayColor) &&
+      (ReaderWindowCoordinator.desiredChrome.style.navigationContentColor ?? ReaderWindowCoordinator.desiredChrome.style.contentColor) ===
+        (request.style.navigationContentColor ?? request.style.contentColor) &&
       ReaderWindowCoordinator.desiredChrome.style.paperThemeId === request.style.paperThemeId &&
       ReaderWindowCoordinator.desiredChrome.style.transparentSystemBars === request.style.transparentSystemBars &&
       ReaderWindowCoordinator.appliedChromeRevision === ReaderWindowCoordinator.desiredChromeRevision) {
@@ -622,9 +629,9 @@ export class ReaderWindowCoordinator {
         try {
           await win.setWindowSystemBarProperties({
             statusBarColor: ReaderWindowCoordinator.nativeStatusBarColor(request),
-            navigationBarColor: request.style.transparentSystemBars ? '#00000000' : request.style.underlayColor,
+            navigationBarColor: request.style.transparentSystemBars ? '#00000000' : (request.style.navigationUnderlayColor ?? request.style.underlayColor),
             statusBarContentColor: contentColor,
-            navigationBarContentColor: contentColor,
+            navigationBarContentColor: request.style.navigationContentColor ?? contentColor,
           });
         } catch (error) {
           ReaderWindowCoordinator.reportChromeWrite(win, epoch, revision, request, metricsAtRequest,

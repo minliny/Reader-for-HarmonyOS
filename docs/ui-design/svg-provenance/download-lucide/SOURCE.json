@@ -1,0 +1,76 @@
+{
+  "package": "lucide",
+  "version": "1.8.0",
+  "license": "ISC",
+  "url": "https://www.npmjs.com/package/lucide/v/1.8.0",
+  "repository": "https://github.com/lucide-icons/lucide",
+  "input": "installed bundled dependency; unmodified upstream icon node arrays",
+  "licenseSha256": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57",
+  "packageJsonSha256": "f113a3fe562deecda04f56efdac0697f552ee91f4f80617e208ca8952073293d",
+  "icons": {
+    "ArrowLeft": {
+      "sourceFile": "ArrowLeft.json",
+      "sourceSha256": "b38e8d2c7412a5ae6ff3bc3091fea5f2c37c266cbf6ec53bd086b3b7e194878c"
+    },
+    "Search": {
+      "sourceFile": "Search.json",
+      "sourceSha256": "24a4af39543cfd86255727c31bdd991d0582f4a514a06e0e9c2c70f6ebacd8e4"
+    },
+    "X": {
+      "sourceFile": "X.json",
+      "sourceSha256": "313479e8bc7fc3997f1c5147c105d682143252815aebff8f4b2c03192f74ae16"
+    },
+    "SlidersHorizontal": {
+      "sourceFile": "SlidersHorizontal.json",
+      "sourceSha256": "403d06d471fef93e94a906fa6972ac780f33e764c3970d281d15baa93e836a1c"
+    },
+    "Settings2": {
+      "sourceFile": "Settings2.json",
+      "sourceSha256": "874aff1268a97de4119c9da66bb7ccb942598e0760ff4fbef96ee35014fc339e"
+    },
+    "Ellipsis": {
+      "sourceFile": "Ellipsis.json",
+      "sourceSha256": "f4ed82eafae5fb08cc67d962f9183989518328e911ca478fde9a4e0c51d5dad3"
+    },
+    "Download": {
+      "sourceFile": "Download.json",
+      "sourceSha256": "7d7defc25cdace40d573808fc4f352f4350329300a09c072a9ae9bb83d45c9ff"
+    },
+    "Pause": {
+      "sourceFile": "Pause.json",
+      "sourceSha256": "c80c134d5a6a5b10373bb4892a77dc59cc3e8b0ac54fc120cc7d08fb73c4342c"
+    },
+    "Play": {
+      "sourceFile": "Play.json",
+      "sourceSha256": "25cfde2dd0e80e28bf3cffa8cb2b575465d2c98194e5f53ea205a40e86339f73"
+    },
+    "RotateCw": {
+      "sourceFile": "RotateCw.json",
+      "sourceSha256": "a001ad9a3140b03bc8c6134c369b7402c1191d075b2242e2f3c8d81f43ddfd1e"
+    },
+    "CircleCheck": {
+      "sourceFile": "CircleCheck.json",
+      "sourceSha256": "03062d5976fa4f5bcbc490237be93a16b159f70dfee788c86705c42a527a21f0"
+    },
+    "ChevronRight": {
+      "sourceFile": "ChevronRight.json",
+      "sourceSha256": "563552b85e3a051d49d23c7c19601f8d4503dc5f80f07f5619a1cf48611ba010"
+    },
+    "ChevronDown": {
+      "sourceFile": "ChevronDown.json",
+      "sourceSha256": "43c20309119c627f9df50938c4622a30df993dd97845758ff8261c4d9604e025"
+    },
+    "LibraryBig": {
+      "sourceFile": "LibraryBig.json",
+      "sourceSha256": "c1eebc682f0fc8085e2ec66c72b08a0304ed27db26383d44e7205483b59a8dad"
+    },
+    "ChartNoAxesColumnIncreasing": {
+      "sourceFile": "ChartNoAxesColumnIncreasing.json",
+      "sourceSha256": "92579e6931cc9bb8da3862162f5ffb2752c397307afc6a48e6a6f2342f9c7bbf"
+    },
+    "Trash2": {
+      "sourceFile": "Trash2.json",
+      "sourceSha256": "0b22ae3921b85a61605f031161bf10b211c023f84a3d261a1ac861cc2d2e0308"
+    }
+  }
+}

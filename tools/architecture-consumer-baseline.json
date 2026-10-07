@@ -1118,6 +1118,22 @@
         "backgroundColor": 1
       },
       "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+      "kind": "approved-shared-download-business-page",
+      "owner": "SharedDownloadPage / SharedDownloadHost",
+      "reason": "Native layout follows the approved shared download and storage v2 demos through generated CSS-derived visual definitions; real structured storage values remain unknown when no storage owner provides them, cleanup requires verified candidates and confirmation, and all reading/mutation intents remain explicitly unwired. The storage cleanup visual Row owns the authored day/night surface; one additional transparent real Button owns native disabled semantics and accessibility without dimming those sibling pixels.",
+      "counts": {
+        "backgroundColor": 44
+      },
+      "approvalEvidence": "docs/evidence/shared-download-ui-20261006.md",
+      "designSource": "docs/ui-design/shared-download/demo.html",
+      "designSha256": "e0bb8def207486d73e6117a543c264c893d399a427745f5100bdb6e48df6517b",
+      "status": "REGISTERED_APPROVED_UI_DELIVERY_NOT_DEVICE_ACCEPTANCE",
+      "proof": "tools/test-shared-download-visual-contract.mjs, tools/test-shared-download-ui.mjs and tools/test-shared-download-ui-sdk.mjs",
+      "storageDesignSource": "docs/ui-design/shared-download/storage-demo.html",
+      "storageDesignSha256": "20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4"
     }
   ]
 }

@@ -4,6 +4,7 @@ import { createRequire, registerHooks } from 'node:module';
 import { ReaderBrightnessWriter } from '../entry/src/main/ets/app/ReaderBrightnessWriter.ts';
 import * as metrics from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { findReaderTheme, READER_THEME_DEFINITIONS } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { downloadOverlayChromeStyle } from '../entry/src/main/ets/features/common/SharedDownloadVisualSpec.ts';
 
 registerHooks({ resolve(specifier, context, next) {
   try { return next(specifier, context); } catch (error) {
@@ -271,6 +272,35 @@ await check('a different paper ID republishes even with equal colors while ident
   assert.ok(f.records.at(-1).revision > firstRevision);
   f.C.requestReaderChrome(new f.Style('#FFEEEEEE', 'dark', '#FF111111', 'paperNight'));
   await settle(); assert.equal(f.win.calls.length, firstWrites + 1);
+  f.C.detach();
+});
+
+await check('approved download scrim and bottom sheet use one writer, navigation-only changes publish, then app restores both bands', async () => {
+  const f = await ready();
+  const fromDemo = (sheet) => {
+    const visual = downloadOverlayChromeStyle('day', sheet);
+    const style = new f.Style(visual.underlayColor, visual.tone, visual.contentColor);
+    style.navigationUnderlayColor = visual.navigationUnderlayColor;
+    style.navigationContentColor = visual.navigationContentColor;
+    return style;
+  };
+  f.C.requestOverlayChrome(fromDemo(true)); await settle();
+  assert.equal(f.win.native.statusBarColor, '#FFA3A19B');
+  assert.equal(f.win.native.statusBarContentColor, '#FF14110F');
+  assert.equal(f.win.native.navigationBarColor, '#FFFFFCF8');
+  assert.equal(f.win.native.navigationBarContentColor, '#FF1F1B17');
+  const writes = f.win.calls.length;
+  f.C.requestOverlayChrome(fromDemo(false)); await settle();
+  assert.equal(f.win.calls.length, writes + 1, 'identical top band must not suppress changed bottom band');
+  assert.equal(f.win.native.navigationBarColor, '#FFA3A19B');
+  assert.equal(f.win.native.navigationBarContentColor, '#FF14110F');
+  const gate = deferred(); f.win.nextWrite = gate;
+  f.C.requestOverlayChrome(fromDemo(true));
+  f.C.requestAppChrome(); gate.resolve(); await settle();
+  assert.equal(f.win.native.statusBarColor, '#F8F4EC');
+  assert.equal(f.win.native.navigationBarColor, '#F8F4EC');
+  assert.equal(f.win.native.statusBarContentColor, '#FF2B241D');
+  assert.equal(f.win.native.navigationBarContentColor, '#FF2B241D');
   f.C.detach();
 });
 
