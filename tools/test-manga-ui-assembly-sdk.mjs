@@ -33,7 +33,9 @@ for (const file of files) {
         const name = n.name.getText(tree), properties = n.members.filter(ts.isPropertyDeclaration), members = new Set(properties.map(m => m.name?.getText(tree)).filter(Boolean));
         components.set(name, { file, tree, node: n, members });
         syntax.componentCollection.customComponents.add(name);
-        syntax.classMethodCollection.set(tree.fileName, new Map([[name, new Set(n.members.filter(ts.isMethodDeclaration).map(m => m.name.getText(tree)))]]));
+        const fileMethods = syntax.classMethodCollection.get(tree.fileName) ?? new Map();
+        fileMethods.set(name, new Set(n.members.filter(ts.isMethodDeclaration).map(m => m.name.getText(tree))));
+        syntax.classMethodCollection.set(tree.fileName, fileMethods);
         for (const [tag, collection] of [['BuilderParam', syntax.builderParamObjectCollection], ['Prop', syntax.propCollection], ['State', syntax.stateCollection], ['Link', syntax.linkCollection], ['ObjectLink', syntax.objectLinkCollection], ['StorageLink', syntax.storageLinkCollection], ['StorageProp', syntax.storagePropCollection], ['Consume', syntax.consumeCollection], ['Provide', syntax.provideCollection], ['LocalStorageLink', syntax.localStorageLinkCollection], ['LocalStorageProp', syntax.localStoragePropCollection]])
             collection.set(name, new Set(properties.filter(m => ts.getAllDecorators(m).some(d => (ts.isCallExpression(d.expression) ? d.expression.expression : d.expression).getText(tree) === tag)).map(m => m.name.getText(tree))));
         syntax.propertyCollection.set(name, members);
@@ -71,15 +73,18 @@ console.log(`PASS ${bindings} actual custom-component field bindings in Index/Sh
 main.partialUpdateConfig.partialUpdateMode = true;
 for (const relative of selected) {
     const tree = trees.get(resolve(root, relative));
-    const node = tree.statements.find(n => n.members && n.name && n.members.some(m => m.name?.getText(tree) === 'build'));
-    utils.storedFileInfo.setCurrentArkTsFile();
-    syntax.componentCollection.currentClassName = node.name.getText(tree);
-    ui.transformLog.sourceFile = tree;
-    const diagnostics = [];
-    const transformed = ts.transform(tree, [context => file => { ui.contextGlobal = context; compiler.processComponentClass(node, context, diagnostics, false); return file; }]);
-    transformed.dispose();
-    assert.deepEqual(diagnostics, [], `${relative}: real SDK component transform`);
-    console.log(`PASS SDK component transform ${relative}`);
+    const nodes = tree.statements.filter(n => n.members && n.name && n.members.some(m => m.name?.getText(tree) === 'build'));
+    assert.ok(nodes.length > 0, `${relative}: actual production components`);
+    for (const node of nodes) {
+        utils.storedFileInfo.setCurrentArkTsFile();
+        syntax.componentCollection.currentClassName = node.name.getText(tree);
+        ui.transformLog.sourceFile = tree;
+        const diagnostics = [];
+        const transformed = ts.transform(tree, [context => file => { ui.contextGlobal = context; compiler.processComponentClass(node, context, diagnostics, false); return file; }]);
+        transformed.dispose();
+        assert.deepEqual(diagnostics, [], `${relative}/${node.name.getText(tree)}: real SDK component transform`);
+        console.log(`PASS SDK component transform ${relative}/${node.name.getText(tree)}`);
+    }
 }
 const source = readFileSync('entry/src/main/ets/features/manga/MangaReadingSurface.ets', 'utf8');
 for (const background of ['paper', 'ink'])

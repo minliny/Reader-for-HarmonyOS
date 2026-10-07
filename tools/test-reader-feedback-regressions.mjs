@@ -1,12 +1,13 @@
 import { themeDayDesignSource } from './lib/reader-theme-design-source.mjs';
 import assert from 'node:assert/strict';
-import {createRequire, registerHooks} from 'node:module';
+import {createRequire, registerHooks, stripTypeScriptTypes} from 'node:module';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import { readFileSync } from 'node:fs';
 import {searchSharedActionFixture,updateActualReaderButton} from './lib/search-shared-action-probe.mjs';
 import {projectOperationFacts} from '../entry/src/main/ets/app/ReaderOperationFacts.ts';
 import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import {sharedActionFeedbackReset} from './lib/shared-action-feedback-state-probe.mjs';
+import {SOURCE_SWITCH_VISUAL} from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 registerHooks({resolve(specifier, context, next) {
@@ -168,16 +169,31 @@ assert.match(rss,
 // its SDK-emitted child update rather than asserting the removed loading body.
 const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
-syntax.componentCollection.customComponents.add('SearchSpinner');syntax.propCollection.set('SearchSpinner',new Set(['active','diameter','reduceMotion']));
+syntax.componentCollection.customComponents.add('SourceSwitchSpinner');syntax.propCollection.set('SourceSwitchSpinner',new Set(['active','diameter','strokeWidth','durationMs','reduceMotion']));
 class SpinnerChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
 const switchSource=readFileSync(new URL('../entry/src/main/ets/features/source/SourceSwitchWindow.ets',import.meta.url),'utf8');
 const windowStruct=switchSource.slice(switchSource.indexOf('@Component\nexport struct SourceSwitchWindow'));
-const {owner:status}=createReaderBuilderProbe(windowStruct,['discoveryStatus'],{SearchSpinner:SpinnerChild});
-let sweeping=true;Object.assign(status,{appThemeScheme:'day',foreground:true,reduceMotion:false,isSweeping:()=>sweeping,statusText:()=>''});status.discoveryStatus();
-const spinner=[...status.children.values()][0];assert.equal(spinner.params.active,true);assert.equal(spinner.params.diameter,13);
+const gatewaySource=readFileSync(new URL('../entry/src/main/ets/features/source/SourceSwitchGateway.ts',import.meta.url),'utf8');
+const countStart=gatewaySource.indexOf('export function sourceSwitchSourceCount'),countEnd=gatewaySource.indexOf('\nfunction deduplicateSourceSwitchCandidates',countStart);
+assert.ok(countStart>=0&&countEnd>countStart,'actual distinct-source count remains bound to production');
+const sourceSwitchSourceCount=new Function(stripTypeScriptTypes(gatewaySource.slice(countStart,countEnd)).replace(/^export /,'')+';return sourceSwitchSourceCount;')();
+const makeStatus=(sweeping=true)=>{
+ const {owner:status}=createReaderBuilderProbe(windowStruct,['novelDiscovery'],{SourceSwitchSpinner:SpinnerChild,SOURCE_SWITCH_VISUAL,sourceSwitchSourceCount,ButtonType:{Normal:'ButtonType.Normal'}});
+ Object.assign(status,{appThemeScheme:'day',foreground:true,reduceMotion:false,displayedCandidates:[],isSweeping:()=>sweeping,
+  statusText:()=>'',novelDiscoveryPhase:()=>sweeping?'正在查找':'已停止',narrowWindow:()=>false,discoveryPrefixVisible:()=>true,
+  compactDiscoveryAction:()=>false,discoveryActionVisibleHeight:()=>SOURCE_SWITCH_VISUAL.discoveryActionVisibleHeight,
+  discoveryActionBackgroundColor:()=>readerAppColor('TOK_PRIMARY_SOFT','day'),discoveryActionWidth:()=>SOURCE_SWITCH_VISUAL.discoveryActionWidth,
+  discoveryActionHitHeight:()=>SOURCE_SWITCH_VISUAL.discoveryActionMinHeight,discoveryToolbarHeight:()=>SOURCE_SWITCH_VISUAL.discoveryHeight,
+  busy:()=>false,rollbackRequired:()=>false,discoveryActionTouch:()=>{},requestRefresh:()=>{}});
+ status.novelDiscovery();return status;
+};
+const status=makeStatus();
+const spinner=[...status.children.values()][0];assert.equal(spinner.params.active,true);assert.equal(spinner.params.diameter,SOURCE_SWITCH_VISUAL.discoverySpinnerSize);
+assert.equal(spinner.params.strokeWidth,SOURCE_SWITCH_VISUAL.discoverySpinnerStrokeWidth);assert.equal(spinner.params.durationMs,SOURCE_SWITCH_VISUAL.discoverySpinnerDurationMs);
 status.foreground=false;status.replay();assert.equal(spinner.params.active,false,'background discovery does not animate');
-status.foreground=true;sweeping=false;status.replay();assert.equal(spinner.params.active,false,'stopped discovery keeps its results without a false spinner');
-status.reduceMotion=true;sweeping=true;status.replay();assert.equal(spinner.params.reduceMotion,true);
+status.foreground=true;status.reduceMotion=true;status.replay();assert.equal(spinner.params.active,true);assert.equal(spinner.params.reduceMotion,true);
+const stopped=makeStatus(false);assert.equal(stopped.children.size,0,'stopped discovery replaces the animation with its selected static search glyph');
+assert.ok([...stopped.nodes.values()].some(node=>node.type==='Image'&&node.create==='app.media.search_mag'));
 assert.doesNotMatch(switchWindow, /importing_spinner_(track|arc)/,
   'source-switch loading must not stack two spinner circles');
 

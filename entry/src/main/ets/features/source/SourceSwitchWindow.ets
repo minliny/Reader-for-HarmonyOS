@@ -1,6 +1,7 @@
 import { ColorMetrics, FrameCallback } from '@kit.ArkUI';
 import curves from '@ohos.curves';
 import { SOURCE_SWITCH_VISUAL } from './SourceSwitchVisual';
+import { SourceSwitchSpinner } from './SourceSwitchSpinner';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { TYPE_SOURCE_SWITCH_NOVEL_NAME, TYPE_SOURCE_SWITCH_NOVEL_CHAPTER, TYPE_SOURCE_SWITCH_NOVEL_LATENCY,
   TYPE_SOURCE_SWITCH_NOVEL_HEADING, TYPE_SOURCE_SWITCH_NOVEL_BOOK_TITLE, TYPE_SOURCE_SWITCH_NOVEL_METADATA,

@@ -90,16 +90,20 @@ assert.doesNotMatch(sourceSwitchGateway, /bookAcquisitions\?\.\(\)\.prepare/,
 assert.match(sourceSwitchRow, /acquisitionState === 'catalogReady'/);
 assert.match(sourceSwitchRow, /acquisitionState === 'readable'/,
   'a discovered source must not be labeled readable');
-assert.match(sourceSwitchWindow, /build\(\)\s*\{[\s\S]*?Stack\(\{ alignContent: Alignment\.Top \}\)[\s\S]*?\.width\('100%'\)\.height\('100%'\)\.backgroundColor\(readerAppColor\('TOK_PAPER'/,
-  'the approved live source picker fills the host viewport with themed paper');
+assert.match(sourceSwitchWindow, /build\(\)\s*\{\s*Stack\(\{ alignContent: Alignment\.Bottom \}\)/,
+  'both formats use the selected bottom-aligned live source drawer');
+assert.match(sourceSwitchWindow, /\.width\('100%'\)\.constraintSize\(\{ maxWidth: SOURCE_SWITCH_VISUAL\.drawerMaxWidth \}\)\.height\(this\.drawerHeight\(\)\)/,
+  'the shared source drawer derives its bounded extent from the actual host viewport');
+assert.match(sourceSwitchWindow, /backgroundColor\(readerAppColor\('TOK_SS_WINDOW_BG'/,
+  'both formats retain the selected themed source-drawer paper');
 assert.doesNotMatch(sourceSwitchWindow, /resolvePopupSpec\('source-switch-window'\)|this\.surfaceSpec\(\)\.height/,
   'the live picker is not clipped to the retired 300 by 385 popup');
 assert.match(sourceSwitchWindow, /readerInteractiveSafeLeft\(metrics\)[\s\S]*readerInteractiveSafeRight\(ReaderWindowCoordinator\.metrics\(\)\)/,
   'source-switch keeps asymmetric safe edges for both phone and tablet hosts');
-assert.match(sourceSwitchWindow, /padding\(\{ left: this\.safeLeft\(\) \+ 16, right: this\.safeRight\(\) \+ 16 \}\)[\s\S]*margin\(\{ top: this\.safeTop\(\) \+ 8 \}\)/,
-  'the floating header keeps the approved safe-edge geometry at any viewport size');
-assert.match(sourceSwitchWindow, /contentStartOffset\(this\.listStartInset\(\)\)\.contentEndOffset\(this\.contentKind === 'manga' \? this\.safeBottom\(\) \+ 20 : 0\)/,
-  'the manga list retains bottom clearance while the novel drawer owns its safe edge outside the candidate viewport');
+assert.match(sourceSwitchWindow, /padding\(\{ left: this\.novelSafeLeft\(\) \+ this\.sideInset\(\), right: this\.novelSafeRight\(\) \+ this\.sideInset\(\), bottom: this\.safeBottom\(\) \}\)/,
+  'both formats keep asymmetric safe edges and bottom clearance inside the responsive drawer');
+assert.match(sourceSwitchWindow, /contentStartOffset\(this\.listStartInset\(\)\)\.contentEndOffset\(0\)/,
+  'both result lists avoid duplicating the shared drawer safe-edge clearance');
 assert.doesNotMatch(sourceSwitchWindow, /new SurfaceWidthSpec\(300, 0, 0, 'center'\)/,
   'source-switch consumer does not duplicate its outer width');
 

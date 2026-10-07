@@ -8,6 +8,8 @@ import {actualGeneralSettingsTypes,actualGeneralSettingsHostField} from './lib/g
 import {actualSourceManagementTypes,actualSourceManagementHostField} from './lib/source-management-owner-probe.mjs';
 import {actualBookshelfOperationTypes,actualBookshelfHostField} from './lib/bookshelf-operation-owner-probe.mjs';
 import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
+import {SOURCE_SWITCH_VISUAL} from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
+import {sourceSwitchNovelScale,sourceSwitchNovelHeadingHeight} from '../entry/src/main/ets/features/source/SourceSwitchNovelPresentation.ts';
 import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
 const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
@@ -20,9 +22,19 @@ component('ReaderShell',shell);component('MangaReadingSurface',read('features/ma
 component('SourceSwitchPanel',panel);component('SourceSwitchWindow',window);component('ArkWebExecutionHost','');
 for(const name of ['ReadingExperience','ReaderFullDirectory','ReaderStatusBarPaper'])component(name,'');
 const noOp=()=>{};
-// This manga binding probe exercises the native identity branch only. Novel
-// opacity/easing and full Window font admission have their actual SDK suites.
+// Native timing is controlled here; record the actual shared overlay recipe
+// without substituting it for compositor/frame evidence.
 const transitionIdentity={kind:'identity'};
+const effect=(kind,parameters)=>({kind,parameters,animation(options){return{...this,options};}});
+const transitionEffects={IDENTITY:transitionIdentity,OPACITY:effect('opacity'),asymmetric:(appear,disappear)=>effect('asymmetric',{appear,disappear})};
+const sourceCurves={cubicBezierCurve:(...values)=>({kind:'cubic-bezier',values})};
+const assertSharedScrim=transition=>{
+ assert.equal(transition.kind,'asymmetric');
+ for(const [phase,duration] of [['appear',SOURCE_SWITCH_VISUAL.openDurationMs],['disappear',SOURCE_SWITCH_VISUAL.closeDurationMs]]){
+  const action=transition.parameters[phase];assert.equal(action.kind,'opacity');assert.equal(action.options.duration,duration);
+  assert.deepEqual(action.options.curve,{kind:'cubic-bezier',values:[SOURCE_SWITCH_VISUAL.easingX1,SOURCE_SWITCH_VISUAL.easingY1,SOURCE_SWITCH_VISUAL.easingX2,SOURCE_SWITCH_VISUAL.easingY2]});
+ }
+};
 const runtimePort={supportsCoreCapability:()=>true},Runtime=runtimeOwnerIdentityProbe(()=>runtimePort);
 const settingsTypes=actualGeneralSettingsTypes({ReaderRuntimeOwner:Runtime});
 const sourceTypes=actualSourceManagementTypes({ReaderRuntimeOwner:Runtime});
@@ -57,7 +69,7 @@ function indexOwner(overrides={}){
  const native=new Set(['Stack','Row','Column','Blank','Text','Button','Image','If','ForEach','Scroll']);
  const deps={...mangaSurfaceSdkDependencies,ReaderShell:Child,SourceSwitchPanel:Child,ArkWebExecutionHost:Child,
   deviceInfo:{deviceType:'phone'},ReaderRuntimeOwner:Runtime,LOCAL_SOURCE_ID:localSource.text,
-  TransitionEffect:{IDENTITY:transitionIdentity}};
+  TransitionEffect:transitionEffects,curves:sourceCurves,SOURCE_SWITCH_VISUAL};
  const visit=node=>{if(ts.isCallExpression(node)&&ts.isIdentifier(node.expression)&&/^[A-Z]/.test(node.expression.text)&&!native.has(node.expression.text)){
   const name=node.expression.text;if(!syntax.componentCollection.customComponents.has(name))component(name,'');deps[name]=Child;
  }ts.forEachChild(node,visit);};visit(tree);
@@ -109,10 +121,10 @@ for(const locked of [false,true]){
  // Execute the real reader Shell overlay to preserve the complete binding chain.
  assert.equal(props.sourceSwitchScopeId,owner.sourceSwitchScopeId,'Index forwards its actual initialized keyed-overlay scope');
  const shellOwner=reactiveBuilder(shell,[...shellConstructorFields,'build','mangaSurface','mangaIdentityKey','keepsMangaReadingSession','onMangaChapterReady','selectAdjacentMangaChapter','sourceSwitchOverlayContent','overlayStatusBarUnderlay','chromeMetrics'],{
-  ...mangaSurfaceSdkDependencies,MangaReadingSurface:Child,SourceSwitchPanel:Child,TransitionEffect:{IDENTITY:transitionIdentity},ReaderRuntimeOwner:{current:()=>({})}}, {initialParams:props});
+  ...mangaSurfaceSdkDependencies,MangaReadingSurface:Child,SourceSwitchPanel:Child,TransitionEffect:transitionEffects,curves:sourceCurves,SOURCE_SWITCH_VISUAL,ReaderRuntimeOwner:{current:()=>({})}}, {initialParams:props});
  shellOwner.initialRender();
  const scrim=[...shellOwner.nodes.values()].find(node=>node.transition!==undefined);
- assert.equal(scrim.transition,transitionIdentity,'the real manga Shell scrim retains native identity transition');
+ assertSharedScrim(scrim.transition);
  const panelProps=[...shellOwner.children.values()].find(row=>row.params.currentSourceId!==undefined).params;
  assert.equal(panelProps.contentKind,'manga');
  assert.equal(panelProps.allowCancelWhileSwitching,!locked);
@@ -121,12 +133,12 @@ for(const locked of [false,true]){
  const detailScrims=[...detail.nodes.values()].filter(node=>node.type==='Stack'&&typeof node.onClick==='function');
  assert.equal(detailScrims.length,1,'the actual manga Index overlay has one dismissing scrim');
  assert.equal(detailScrims[0].width,'100%');assert.equal(detailScrims[0].height,'100%');
- assert.equal(detailScrims[0].transition,transitionIdentity,'the real manga Index scrim preserves the same native identity transition');
- assert.equal(detailScrims[0].backgroundColor,'#40FFFFFF','the manga detail scrim retains its existing day palette');
+ assertSharedScrim(detailScrims[0].transition);
+ assert.equal(detailScrims[0].backgroundColor,'#731F1B17','manga detail uses the same selected day scrim as the novel drawer');
  // The SDK emits this outer frame immediately before its inner scrim. Bind
- // alignment to that frame so another centered Index stack cannot satisfy it.
+ // alignment to that frame so another bottom-aligned Index stack cannot satisfy it.
  const detailFrame=detail.nodes.get(detailScrims[0].id-1);
- assert.equal(detailFrame.type,'Stack');assert.equal(detailFrame.create.alignContent,'Alignment.Center');
+ assert.equal(detailFrame.type,'Stack');assert.equal(detailFrame.create.alignContent,'Alignment.Bottom');
  assert.equal(detailFrame.width,'100%');assert.equal(detailFrame.height,'100%');
  // Compile the real Panel wrapper to verify it forwards the parent decision.
  const wrapper=reactiveBuilder(panel,[...panelConstructorFields,'build'],{SourceSwitchWindow:Child},{initialParams:panelProps});
@@ -134,11 +146,13 @@ for(const locked of [false,true]){
  const final=[...wrapper.children.values()][0].params;assert.equal(final.allowCancelWhileSwitching,!locked);
  const visual=reactiveBuilder(window,['appThemeScheme','readerWindowMetricsRevision','selectionPending','allowCancelWhileSwitching','reduceMotion','consumeTopInset',
   'onStop','onClose','onRetry','onRefresh','onSelectCandidate','onRollback',
-  'header','busy','rollbackRequired','requiresReconciliation','isSweeping','requestRefresh','safeTop','safeLeft','safeRight'],
-  {...mangaSurfaceSdkDependencies,ButtonType:{Normal:'normal'}},{componentName:'SourceSwitchWindow',initialParams:final});
- Object.assign(visual,final,{state:{kind:'switching'},selectionPending:true,appThemeScheme:'day',onClose:noOp});visual.header();
- const back=[...visual.nodes.values()].find(node=>node.accessibilityText==='返回');assert.equal(back.enabled,!locked);
- const refresh=[...visual.nodes.values()].find(node=>node.type==='Button'&&node.createWithLabel);assert.equal(refresh.enabled,false);
+  'novelHeading','headingHeight','novelFontScale','busy','rollbackRequired','requiresReconciliation','isSweeping','requestRefresh','safeTop','safeLeft','safeRight'],
+  {...mangaSurfaceSdkDependencies,ButtonType:{Normal:'normal'},SOURCE_SWITCH_VISUAL,sourceSwitchNovelScale,sourceSwitchNovelHeadingHeight},{componentName:'SourceSwitchWindow',initialParams:final});
+ let cancelled=0,refreshes=0;
+ Object.assign(visual,final,{state:{kind:'switching'},selectionPending:true,appThemeScheme:'day',onClose:()=>cancelled++,onStop:()=>refreshes++,onRefresh:()=>refreshes++,onRetry:()=>refreshes++});visual.novelHeading();
+ const close=[...visual.nodes.values()].find(node=>node.accessibilityText==='关闭更换书源');assert.equal(close.enabled,!locked);
+ if(close.enabled)close.onClick();assert.equal(cancelled,locked?0:1,'the original preparation cancel callback follows the existing durable gate');
+ visual.requestRefresh();assert.equal(refreshes,0,'an actual switching owner still rejects every refresh/retry/stop action');
 }
-console.log('PASS SDK actual cancel readiness reaches Panel/Window return button; preparation is cancellable while durable commit and refresh stay locked');
+console.log('PASS SDK actual cancel readiness reaches Panel/Window shared close button; preparation is cancellable while durable commit and refresh stay locked');
 console.log('Boundary: actual production SDK Builder bindings and navigation methods; no native layout/HAP/VM evidence.');
