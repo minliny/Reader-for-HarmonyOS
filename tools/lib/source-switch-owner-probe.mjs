@@ -89,7 +89,7 @@ export function fixture(options={},productionSource=hostSource) {
         if(options.failRelated)throw Error('snapshot unavailable');
         return{data:{books:rows,snapshotRevision:'s1',complete:true,sourceVersions:[{sourceId:'new',sourceVersion:'v1',enabled:true}]}};
       }
-      if(method==='change.bookSource')return{data:{candidates:[]}};
+      if(method==='book.search')return{data:{sourceId:params.sourceId,sourceVersion:'v1',contentKind:'text',books:[]}};
       if(method==='source.switch.pending.list')return{data:{pending:pending.map(row=>({...row,phase:'pending',
         from:{sourceId:row.fromSourceId,bookId:row.fromBookId},target:{sourceId:row.targetSourceId,bookId:row.targetBookId}}))}};
       if(method==='source.switch.transaction.query') {

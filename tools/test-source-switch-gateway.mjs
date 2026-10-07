@@ -6,6 +6,13 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { stripTypeScriptTypes } from 'node:module';
 
+// Exact Core book.search DTO; the Core measurement excludes scheduler waiting.
+function searchData(sourceId, candidates, durationMs, contentKind = 'text') {
+  return { data: { sourceId, sourceVersion: 'v1', contentKind,
+    books: candidates.map(({bookUrl,bookName,...book}) => ({...book,bookId:bookUrl,title:bookName})),
+    ...(durationMs === undefined ? {} : {searchTiming:{kind:'search',durationMs,measuredAt:Date.now(),sourceVersion:'v1'}}) } };
+}
+
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const siblingCore = resolve(repo, '../Reader-Core-Native');
 const core = process.env.READER_SOURCE_SWITCH_CORE_ROOT ?? (existsSync(resolve(siblingCore, 'bindings/harmony/sdk/reader_core.ts'))
@@ -42,7 +49,7 @@ assert.doesNotMatch(fetchTargetToc, /'book\.toc',\s*\{\s*sourceId,\s*bookId\s*\}
 
 assert.match(gateway, /private requireStringMap\([\s\S]*typeof variableValue !== 'string'/);
 assert.match(gateway, /candidate\.trim\(\)\.length === 0/);
-assert.match(gateway, /'change\.bookSource',[\s\S]*sourceIds:\s*\[candidateSourceId\]/);
+assert.match(gateway, /'book\.search',[\s\S]*sourceId:\s*source\.sourceId, keyword, page: 1/);
 assert.match(gateway, /SOURCE_SWITCH_DISCOVERY_CONCURRENCY\s*=\s*8/);
 assert.match(gateway, /runBookSourceWorkers\(sources, SOURCE_SWITCH_DISCOVERY_CONCURRENCY/);
 assert.match(gateway, /sourceSwitchCandidateKey\(candidate\.sourceId, candidate\.bookUrl\)/);
@@ -110,13 +117,13 @@ const discoveryRuntime = {
         ],
       } };
     }
-    if (method === 'change.bookSource') {
-      assert.equal(params.sourceId, 'current-source');
-      assert.equal(params.bookId, 'current-book');
+    if (method === 'book.search') {
+      assert.match(params.sourceId, /^candidate-/);
+      assert.equal(params.page, 1);
       assert.equal(params.keyword, 'Current Book');
-      assert.equal(params.sourceIds.length, 1,
-        'each Core request must own exactly one source timeout/error boundary');
-      const candidateSourceId = params.sourceIds[0];
+      assert.equal(params.sourceIds, undefined,
+        'book.search must own exactly one source timeout/error boundary');
+      const candidateSourceId = params.sourceId;
       discoveryCalls.push(candidateSourceId);
       activeDiscoveries += 1;
       maxActiveDiscoveries = Math.max(maxActiveDiscoveries, activeDiscoveries);
@@ -126,11 +133,9 @@ const discoveryRuntime = {
         if (candidateSourceId === 'candidate-3') {
           throw new Error('one source timed out');
         }
-        return { data: { candidates: [{
-          sourceId: candidateSourceId,
-          bookUrl: `/book/${index}`,
-          bookName: 'Current Book',
-        }] } };
+        return searchData(candidateSourceId, [{
+          sourceId: candidateSourceId, bookUrl: `/book/${index}`, bookName: 'Current Book',
+        }]);
       } finally {
         activeDiscoveries -= 1;
       }
@@ -161,9 +166,9 @@ assert.deepEqual(
   const gateway = new SourceSwitchGateway({ request: async (method, params) => {
     if (method === 'source.list') return { data: { sources: Array.from({ length: 12 }, (_, i) =>
       ({ sourceId: `s${i}`, name: `s${i}`, enabled: true })) } };
-    const id = params.sourceIds[0]; started.push(id);
+    const id = params.sourceId; started.push(id);
     if (id === 's0') await slow;
-    return { data: { candidates: [{ sourceId: id, bookUrl: '/book', bookName: '鸣龙' }] } };
+    return searchData(id, [{ sourceId: id, bookUrl: '/book', bookName: '鸣龙' }]);
   } });
   const run = gateway.discoverCandidates('original', '/book', '鸣龙');
   for (let i = 0; i < 100 && !started.includes('s11'); i++) await new Promise(resolve => setTimeout(resolve, 0));
@@ -184,7 +189,7 @@ for (const envelope of ['host-diagnostics', 'native-cause']) {
   const gateway = new SourceSwitchGateway({ request: async (method, params) => {
     if (method === 'source.list') return { data: { sources: Array.from({ length: 20 }, (_, i) =>
       ({ sourceId: `proxy${i}`, name: `proxy${i}`, enabled: true })) } };
-    requests.push(params.sourceIds[0]); throw environment;
+    requests.push(params.sourceId); throw environment;
   } });
   await assert.rejects(gateway.discoverCandidates('original', '/book', '鸣龙'), error => error === environment);
   await new Promise(resolve => setTimeout(resolve, 0));
@@ -204,11 +209,11 @@ for (const scenario of ['one-dns', 'all-dns', 'dns-and-empty', 'late-dns']) {
         : {category:'NETWORK_ENVIRONMENT',host:{diagnostics:{details}}}}});
   const gateway=new SourceSwitchGateway({async request(method,params){
     if(method==='source.list') return {data:{sources:Array.from({length:12},(_,i)=>({sourceId:`dns-${i}`,enabled:true}))}};
-    assert.equal(params.sourceId,'unresolvable-old-source');assert.equal(params.keyword,'终宋');
-    const id=params.sourceIds[0];requests.push(id);
+    assert.match(params.sourceId,/^dns-/);assert.equal(params.keyword,'终宋');
+    const id=params.sourceId;requests.push(id);
     const fail=scenario==='all-dns'||id===(scenario==='late-dns'?'dns-10':'dns-0');
     if(fail)throw dns;
-    return {data:{candidates:scenario==='dns-and-empty'?[]:[{sourceId:id,bookUrl:'/book',bookName:'终宋'}]}};
+    return searchData(id,scenario==='dns-and-empty'?[]:[{sourceId:id,bookUrl:'/book',bookName:'终宋'}]);
   }});
   if(scenario==='all-dns'||scenario==='dns-and-empty'){
     await assert.rejects(gateway.discoverCandidates('unresolvable-old-source','/old','终宋'),error=>{
@@ -231,18 +236,18 @@ const identityRuntime = {
         { sourceId: 'other-source', enabled: true },
       ] } };
     }
-    if (method === 'change.bookSource') {
-      if (params.sourceIds[0] === 'current-source') {
-        return { data: { candidates: [
+    if (method === 'book.search') {
+      if (params.sourceId === 'current-source') {
+        return searchData('current-source', [
           { sourceId: 'current-source', bookUrl: 'current-book', bookName: 'Current Book' },
           { sourceId: 'current-source', bookUrl: 'current-book', bookName: 'Duplicate' },
           { sourceId: 'current-source', bookUrl: 'alternate-book', bookName: 'Alternate Book' },
-        ] } };
+        ]);
       }
-      return { data: { candidates: [
+      return searchData('other-source', [
         { sourceId: 'other-source', bookUrl: 'other-book', bookName: 'Other Book' },
         { sourceId: 'other-source', bookUrl: 'other-book', bookName: 'Duplicate Other' },
-      ] } };
+      ]);
     }
     throw new Error(`unexpected identity method: ${method}`);
   },
@@ -337,7 +342,7 @@ assert.equal(cachedCandidates[0].latencyKind, undefined);
 assert.equal(cachedCandidates[0].currentChapterIndex, 4);
 assert.equal(cachedCandidates[0].currentChapterTitle, 'Chapter 5');
 assert.equal(cachedCandidates[0].isCurrent, true);
-assert.equal(cacheCalls.some(([method]) => method === 'change.bookSource'), false,
+assert.equal(cacheCalls.some(([method]) => method === 'book.search'), false,
   'a valid local projection must not start source HTTP discovery');
 
 // Unrelated history never crosses this RPC boundary; aliases are indexed by Core.
@@ -371,11 +376,11 @@ const refreshRuntime = {
       { sourceId: 'fresh-source', name: '新书源', enabled: true },
       { sourceId: 'old-source', name: '已有书源', enabled: true },
     ] } };
-    if (method === 'change.bookSource') {
-      if (params.sourceIds[0] === 'old-source') throw new Error('old source currently offline');
+    if (method === 'book.search') {
+      if (params.sourceId === 'old-source') throw new Error('old source currently offline');
       // Core book.search publishes candidates before returning discovery.
       refreshRows.push({ bookUrl: 'fresh-book', origin: 'fresh-source', name: 'Current Book', author: 'Writer', time: cachedAt });
-      return { data: { candidates: [{ sourceId: 'fresh-source', bookUrl: 'fresh-book', bookName: 'Current Book', author: 'Writer' }] } };
+      return searchData('fresh-source', [{ sourceId: 'fresh-source', bookUrl: 'fresh-book', bookName: 'Current Book', author: 'Writer' }]);
     }
     throw new Error(`refresh must not delete successes or block on probing: ${method}`);
   },
@@ -408,14 +413,14 @@ assert.equal(refreshCalls.some(method => ['search-book.delete', 'book.detail', '
       ['old', 'new', 'fast', 'slow', 'empty', 'broken'].map(sourceId =>
         ({ sourceId, name: sourceId, enabled: true, sourceVersion: 'v1' })) } };
     if (method === 'search-book.related') return { data: relatedData(rows) };
-    if (method === 'change.bookSource') {
-      const sourceId = params.sourceIds[0];
+    if (method === 'book.search') {
+      const sourceId = params.sourceId;
       if (sourceId === 'new' || sourceId === 'broken') throw Error('source search failed');
-      if (sourceId === 'old' || sourceId === 'empty') return { data: { candidates: [] } };
+      if (sourceId === 'old' || sourceId === 'empty') return searchData(sourceId, []);
       await (sourceId === 'fast' ? fast : slow);
       const row = rawSourceRow(sourceId, `${sourceId}-book`);
       rows.push(row);
-      return { data: { candidates: [{ sourceId, bookUrl: row.bookUrl, bookName: row.name, author: row.author }] } };
+      return searchData(sourceId, [{ sourceId, bookUrl: row.bookUrl, bookName: row.name, author: row.author }]);
     }
     return original(method, params, options);
   };
@@ -430,7 +435,7 @@ assert.equal(refreshCalls.some(method => ['search-book.delete', 'book.detail', '
   assert.equal(f.host.current().state.candidates[0].latencyMs, undefined,
     'a cached successful result does not need a new search timing to enter the list');
   f.host.refresh(f.host.current().scopeId);
-  await waitUntil(() => requests.filter(row => row.method === 'change.bookSource').length === 6);
+  await waitUntil(() => requests.filter(row => row.method === 'book.search').length === 6);
   assert.equal(f.host.current().state.refreshing, true);
   assert.deepEqual(f.host.current().state.candidates.map(row => row.sourceId), ['new'],
     'pending, empty and failed searches do not create rows');
@@ -447,7 +452,7 @@ assert.equal(refreshCalls.some(method => ['search-book.delete', 'book.detail', '
     'finished searches without a successful same-book result remain absent');
   assert.equal(requests.some(row => ['book.detail', 'book.toc', 'chapter.content', 'search-book.delete'].includes(row.method)), false,
     'browsing progressive search results does not pre-acquire content or delete prior successes');
-  assert.equal(requests.filter(row => row.method === 'change.bookSource').length, 6,
+  assert.equal(requests.filter(row => row.method === 'book.search').length, 6,
     'one explicit refresh dispatches each enabled source once');
   f.host.retire();
 
@@ -567,7 +572,7 @@ console.log('source-switch gateway contract: PASS');
 {
   const searched=[];const owner={request:async(method,params)=>{
     if(method==='source.list')return{data:{sources:['a','b','c'].map(sourceId=>({sourceId,name:sourceId,enabled:true}))}};
-    assert.equal(method,'change.bookSource');searched.push(params.sourceIds[0]);return{data:{candidates:[]}};
+    assert.equal(method,'book.search');searched.push(params.sourceId);return searchData(params.sourceId, []);
   }};const gateway=new SourceSwitchGateway(owner);
   await gateway.discoverCandidates('a','/book','鸣龙',()=>true,['a','b']);assert.deepEqual(searched,['c']);
   searched.length=0;await gateway.discoverCandidates('a','/book','鸣龙',()=>true);assert.deepEqual(searched,['a','b','c']);
@@ -601,7 +606,7 @@ console.log('PH70 known candidate first paint, delta projection, registry deleti
   release();for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));
   assert.equal(page.sourceSwitchState.candidates.length,2);
   assert.deepEqual(calls.slice(0,3),['source.list','search-book.related','search-book.batch.get']);
-  assert.ok(calls.includes('change.bookSource') || calls.includes('search-book.related'),
+  assert.ok(calls.includes('book.search') || calls.includes('search-book.related'),
     'the seeded candidates continue through the real incremental refresh path');
 }
 console.log('PH70 actual Index candidate projection → feature owner entry paints known candidates before cache RPC PASS');
@@ -773,3 +778,56 @@ console.log('PASS: unpersisted selected source preserves exact version/variables
   }
 }
 console.log('PH116 every non-current source row permits a new attempt PASS');
+
+// A pane recreated after navigation restores only the exact-version Core
+// measurement. Neither legacy body timing nor malformed facts become latency.
+{
+  const query={sourceId:'saved',bookId:'/book',bookName:'Book',author:'Writer',currentChapterIndex:0,currentChapterTitle:''};
+  const valid={kind:'search',durationMs:87,measuredAt:1700000000000,sourceVersion:'v1'};
+  let timing=valid, version='v1';
+  const request=async(method,params)=>{
+    if(method==='source.list')return{data:{sources:[{sourceId:'saved',enabled:true,sourceVersion:version}]}};
+    assert.equal(method,'search-book.related');
+    return{data:relatedData([{origin:'saved',bookUrl:'/book',name:'Book',author:'Writer',time:Date.now(),respondTime:13,
+      acquisition:{sourceVersion:'v1',searchTiming:timing}}],{sourceVersions:[{sourceId:'saved',sourceVersion:version,enabled:true}]})};
+  };
+  const first=await new SourceSwitchGateway({request}).loadCachedCandidates(query);
+  assert.equal(first[0].latencyMs,87);assert.equal(first[0].latencyKind,'search');
+  assert.equal(first[0].latencyMeasuredAt,valid.measuredAt);
+  const recreated=await new SourceSwitchGateway({request}).loadCachedCandidates(query);
+  assert.deepEqual(recreated.map(c=>[c.latencyMs,c.latencyKind,c.latencyMeasuredAt]),[[87,'search',valid.measuredAt]]);
+  for(const invalid of [undefined,null,[],{...valid,kind:'body'},{...valid,sourceVersion:'v0'},
+    {...valid,durationMs:-1},{...valid,durationMs:NaN},{...valid,durationMs:Infinity},
+    {...valid,durationMs:1.5},{...valid,durationMs:Number.MAX_SAFE_INTEGER+1},
+    {...valid,measuredAt:0},{...valid,measuredAt:Infinity},{...valid,measuredAt:1.5}]){
+    timing=invalid;const rows=await new SourceSwitchGateway({request}).loadCachedCandidates(query);
+    assert.equal(rows[0].latencyMs,undefined);assert.equal(rows[0].latencyKind,undefined,
+      'legacy respondTime cannot fill a rejected source-search timing');
+  }
+  timing=valid;version='v2';
+  assert.equal((await new SourceSwitchGateway({request}).loadCachedCandidates(query))[0].latencyMs,undefined,
+    'updating the source rules invalidates the previous search measurement');
+  timing={...valid,durationMs:0};version='v1';
+  assert.equal((await new SourceSwitchGateway({request}).loadCachedCandidates(query))[0].latencyMs,0,
+    'a genuine measured sub-millisecond request remains valid; missing values never become zero');
+}
+console.log('PASS exact-version durable search timing survives new Gateway; legacy/invalid/future-source facts stay unknown');
+
+// Live single-source responses preserve the authoritative DTO and variables,
+// and reject a different source/version/media boundary before publication.
+{
+  const source={sourceId:'typed',sourceName:'Typed',sourceOrder:0,sourceVersion:'v1',category:'novel'};
+  const gateway=new SourceSwitchGateway({request(){assert.fail('pure DTO decoding must not request');}});
+  const proof={schemaVersion:1,sourceVersion:'v1',field:'search',raw:'@Writer',label:'Writer',rule:'author-nickname-at-v1'};
+  const data={sourceId:'typed',sourceVersion:'v1',contentKind:'text',
+    searchTiming:{kind:'search',durationMs:19,measuredAt:1700000000000,sourceVersion:'v1'},
+    books:[{bookId:'/book',title:'Book',author:'@Writer',authorIdentity:proof,lastChapter:'Chapter 20',variables:{token:' opaque & = '}}]};
+  const row=gateway.decodeDiscoveryCandidates(data,source)[0];
+  assert.equal(row.sourceVersion,'v1');assert.deepEqual(row.authorIdentity,proof);
+  assert.deepEqual(row.searchVariables,[{name:'token',value:' opaque & = '}]);
+  assert.equal(row.latestChapterTitle,'Chapter 20');assert.equal(row.latencyMs,19);
+  for(const patch of [{sourceId:'another'},{sourceVersion:'v2'},{sourceVersion:null},{sourceVersion:''},{contentKind:'manga'},{books:null}])
+    assert.throws(()=>gateway.decodeDiscoveryCandidates({...data,...patch},source),/book.search/);
+  assert.throws(()=>gateway.decodeDiscoveryCandidates({...data,books:[{...data.books[0],variables:{token:7}}]},source),/variables/);
+}
+console.log('PASS book.search source/version/media boundaries and exact author/variable continuation metadata');
