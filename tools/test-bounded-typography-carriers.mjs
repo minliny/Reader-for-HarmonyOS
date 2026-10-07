@@ -1,4 +1,5 @@
-import {approvedTypographyContract, approvedMangaTypography, novelSourceSwitchSuccessor, mangaDirectoryTypographySuccessor, mangaDirectoryTypographySuccessorPath, validateMangaDirectoryTypographySuccessor} from './lib/approved-manga-typography-carriers.mjs';
+import {approvedTypographyContract, approvedMangaTypography, novelSourceSwitchSuccessor, mangaDirectoryTypographySuccessor, mangaDirectoryTypographySuccessorPath, validateMangaDirectoryTypographySuccessor,
+ sharedSourceSwitchTypographySuccessor, sharedSourceSwitchTypographySuccessorPath, validateSharedSourceSwitchTypographySuccessor} from './lib/approved-manga-typography-carriers.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { sharedTypographyReplacement, typographyCarrierMethod } from './lib/reader-typography-shared-replacements.mjs';
@@ -25,20 +26,38 @@ for(const [from,to] of [
  const changed=completionSource.replace(from,to);assert.notEqual(changed,completionSource);
  assert.throws(()=>approvedTypographyContract(changed,completionPath),/exact approved typography carrier|exact completion text actor native attributes/,'actual completion private tuple or native geometry drift is rejected');
 }
-assert.ok(approvedMangaTypography.files.find(entry=>entry.path===approvedSource).carriers.length>0,'historical manga physical carriers remain separately witnessed');
+assert.ok(approvedMangaTypography.files.find(entry=>entry.path===approvedSource).carriers.length>0,'retired historical manga physical carriers remain separately witnessed');
+assert.equal(sharedSourceSwitchTypographySuccessorPath,'tools/fixtures/design/shared-source-switch-typography-successor-20261007.json');
+assert.equal(validateSharedSourceSwitchTypographySuccessor(sharedSourceSwitchTypographySuccessor),sharedSourceSwitchTypographySuccessor);
+assert.equal(approvedTypographyContract(novelWindow,approvedSource).count,21,'exact selected novel drawer carriers are shared, with the original two recovery tuples retained');
+assert.doesNotMatch(novelWindow,/struct SourceSwitchLiveRow\b/,'retired local manga row is not kept as a second production implementation');
+const sharedPreviousChanged=path=>path===sharedSourceSwitchTypographySuccessor.previousFixture?read(path)+'\n':read(path);
+assert.throws(()=>validateSharedSourceSwitchTypographySuccessor(sharedSourceSwitchTypographySuccessor,sharedPreviousChanged),/selected novel fixture stays byte immutable/,'the shared successor cannot recapture selected novel history');
+const alteredShared=structuredClone(sharedSourceSwitchTypographySuccessor);
+alteredShared.files[0].carriers.shift();
+assert.throws(()=>validateSharedSourceSwitchTypographySuccessor(alteredShared),/retains every selected novel and original recovery carrier/,'sharing cannot remove another selected carrier');
+const wildcardShared=structuredClone(sharedSourceSwitchTypographySuccessor);
+wildcardShared.files[0].path='entry/src/main/ets/features/source/*';
+assert.throws(()=>validateSharedSourceSwitchTypographySuccessor(wildcardShared),/only the two exact shared source actors/,'no source-folder exemption');
+const privateShared=structuredClone(sharedSourceSwitchTypographySuccessor);
+privateShared.files[0].roles.TYPE_SOURCE_SWITCH_NOVEL_NAME.fontSizeFp=99;
+assert.throws(()=>validateSharedSourceSwitchTypographySuccessor(privateShared),/retains exact selected public roles/,'existing selected role cannot change through a new shared successor');
 for(const [from,to] of [
   ['.fontSize(TYPE_SOURCE_SWITCH_NOVEL_NAME.fontSizeFp)','.fontSize(99)'],
   ['.fontSize(TYPE_SOURCE_SWITCH_NOVEL_METADATA.fontSizeFp)','.fontSize(TYPE_SOURCE_SWITCH_NOVEL_METADATA.fontSizeFp).letterSpacing(0)'],
-  ['.fontSize(15)','.fontSize(99)'],
+  ['.fontSize(12)','.fontSize(99)'],
 ]){
- const changed=novelWindow.replace(from,to);assert.notEqual(changed,novelWindow,'actual selected novel or retained manga carrier mutation');
- assert.throws(()=>approvedTypographyContract(changed,approvedSource),/exact approved typography carrier\/tuple changed/,'new private value, AUTO drift and retained manga edits are rejected');
+ const changed=novelWindow.replace(from,to);assert.notEqual(changed,novelWindow,'actual selected shared drawer or retained recovery carrier mutation');
+ assert.throws(()=>approvedTypographyContract(changed,approvedSource),/exact approved typography carrier\/tuple changed/,'new private value, AUTO drift and retained recovery edits are rejected');
 }
 const missingNovelImport=novelWindow.replace('TYPE_SOURCE_SWITCH_NOVEL_NAME,','');assert.notEqual(missingNovelImport,novelWindow);
 assert.throws(()=>approvedTypographyContract(missingNovelImport,approvedSource),/actual selected novel public role import/,'exact tuple must still import its real public role');
 const extraProgress=progressSource.replace("Text('正在切换书源')","Text('新插入').fontSize(TYPE_SOURCE_SWITCH_NOVEL_SWITCH_TITLE.fontSizeFp); Text('正在切换书源')");
 assert.notEqual(extraProgress,progressSource);
 assert.throws(()=>approvedTypographyContract(extraProgress,progressPath),/exact approved typography carrier\/tuple changed/,'a public role cannot admit a copied unregistered progress carrier');
+const extraCancel=progressSource.replace('.padding(0).backgroundColor(Color.Transparent)', '.padding(0).fontSize(99).backgroundColor(Color.Transparent)');
+assert.notEqual(extraCancel,progressSource);
+assert.throws(()=>approvedTypographyContract(extraCancel,progressPath),/exact approved typography carrier\/tuple changed/,'the preserved icon-only cancel control cannot acquire a private text tuple');
 for (const entry of entries.filter(entry=>entry.origin.path!==approvedSource)) {
   const file = baseline.files.find(file => file.path === entry.origin.path);
   const expected = file.nodes.find(node => node.method === entry.origin.method && node.kind === entry.origin.kind && node.text === entry.origin.text);

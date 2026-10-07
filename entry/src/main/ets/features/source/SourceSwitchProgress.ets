@@ -16,6 +16,8 @@ export struct SourceSwitchProgress {
   @Prop statusText: string = '正在准备新书源…';
   @Prop reduceMotion: boolean = false;
   @Prop active: boolean = true;
+  @Prop allowCancel: boolean = false;
+  onCancel: () => void = (): void => {};
   @Prop topInset: number = 0;
   @Prop bottomInset: number = 0;
   @State private viewportHeight: number = 0;
@@ -39,6 +41,7 @@ export struct SourceSwitchProgress {
   }
 
   build() {
+    Stack({ alignContent: Alignment.TopEnd }) {
     Scroll() {
       Column() {
         if (this.novelFontsReady) {
@@ -77,5 +80,15 @@ export struct SourceSwitchProgress {
         const height = Number(area.height) - this.topInset - this.bottomInset;
         if (Number.isFinite(height) && height > 0) this.viewportHeight = height;
       });
+      if (this.allowCancel) {
+        Button({ type: ButtonType.Normal }) {
+          Image(this.appThemeScheme === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close'))
+            .width(SOURCE_SWITCH_VISUAL.closeIconSize).height(SOURCE_SWITCH_VISUAL.closeIconSize);
+        }.width(44).height(44).padding(0).backgroundColor(Color.Transparent)
+          .borderRadius(SOURCE_SWITCH_VISUAL.closeRadius)
+          .margin({ top: this.topInset + SOURCE_SWITCH_VISUAL.switchPadding, right: SOURCE_SWITCH_VISUAL.switchPadding })
+          .accessibilityText('取消切换书源').onClick((): void => this.onCancel());
+      }
+    }.width('100%').height('100%');
   }
 }

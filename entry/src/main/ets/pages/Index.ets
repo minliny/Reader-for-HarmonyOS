@@ -5111,13 +5111,12 @@ struct Index {
   @Builder
   private sourceSwitchOverlayContent() {
         ForEach([this.sourceSwitchScopeId], (scopeId: number) => {
-        Stack({ alignContent: this.detailBook?.contentKind === 'manga' ? Alignment.Center : Alignment.Bottom }) {
+        Stack({ alignContent: Alignment.Bottom }) {
           Stack()
             .width('100%')
             .height('100%')
-            .backgroundColor(readerAppColor(this.detailBook?.contentKind === 'manga' ?
-              'app.Index.build.backgroundColor.40FFFFFF' : 'TOK_SS_DRAWER_SCRIM', this.appThemeScheme))
-            .transition(this.detailBook?.contentKind === 'manga' || this.settingsSnapshot.reduceMotion ? TransitionEffect.IDENTITY : TransitionEffect.asymmetric(
+            .backgroundColor(readerAppColor('TOK_SS_DRAWER_SCRIM', this.appThemeScheme))
+            .transition(this.settingsSnapshot.reduceMotion ? TransitionEffect.IDENTITY : TransitionEffect.asymmetric(
               TransitionEffect.OPACITY.animation({ duration: SOURCE_SWITCH_VISUAL.openDurationMs,
                 curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1, SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) }),
               TransitionEffect.OPACITY.animation({ duration: SOURCE_SWITCH_VISUAL.closeDurationMs,

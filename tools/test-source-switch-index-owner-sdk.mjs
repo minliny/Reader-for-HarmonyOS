@@ -263,12 +263,11 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
   const nodes=probe.p.nodes(probe.o).filter(n=>n.type==='Stack'&&typeof n.onClick==='function');
   assert.equal(nodes.length,1,'the real overlay has one dismissing scrim');
   const scrim=nodes[0];
-  const expectedColor=contentKind==='manga'?(scheme==='day'?'#40FFFFFF':'#402C2824'):
-    (scheme==='day'?'#731F1B17':'#52000000');
-  assert.equal(scrim.backgroundColor,expectedColor,'detail and retained reader share the selected novel scrim palette; manga preserves its palette');
+  const expectedColor=scheme==='day'?'#731F1B17':'#52000000';
+  assert.equal(scrim.backgroundColor,expectedColor,'detail and retained reader use the same selected scrim palette for both formats');
   assert.equal(scrim.width,'100%');assert.equal(scrim.height,'100%');
-  if(contentKind==='manga'||reduceMotion){
-   assert.equal(scrim.transition.kind,'identity','manga and reduced motion preserve a static scrim');
+  if(reduceMotion){
+   assert.equal(scrim.transition.kind,'identity','reduced motion preserves a static scrim for both formats');
   }else{
    assert.equal(scrim.transition.kind,'asymmetric');
    for(const [phase,duration] of [['appear',320],['disappear',280]]){
@@ -287,7 +286,7 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
   });
   i.o.sourceSwitchOverlayContent();assert.equal(i.child().params.latestChapterTitle,book.lastChapter);
   assert.equal(i.child().params.currentChapterTitle,'正在阅读 第 20 章','the current reading chapter never replaces latest metadata');
-  const expectedAlignment=contentKind==='manga'?'Alignment.Center':'Alignment.Bottom';
+  const expectedAlignment='Alignment.Bottom';
   assert.ok(i.p.nodes(i.o).some(n=>n.type==='Stack'&&n.create?.alignContent===expectedAlignment));
   assertScrim(i,contentKind,scheme,reduceMotion);
   const s=capture(shellSource,['sourceSwitchOverlayContent'],'SourceSwitchPanel',panelSource,{
@@ -314,6 +313,6 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
   ['payload'],'ReaderShell',shellSource,{detailBook:book,readingContentKind:'text'});
  carrier.o.payload();assert.equal(carrier.child().params.latestChapterTitle,book.lastChapter);
  carrier.o.detailBook={...book,lastChapter:undefined};carrier.o.replay();assert.equal(carrier.child().params.latestChapterTitle,'','missing latest metadata stays empty');
- checks.push('actual-Index-ReaderShell-Panel-latest-chapter-payload-and-novel-drawer-manga-host-isolation');
+ checks.push('actual-Index-ReaderShell-Panel-latest-chapter-payload-and-shared-drawer-both-content-hosts');
 }
-console.log(JSON.stringify({status:'PASS',checks,scope:'actual Host/Gateway/full durable intent + Index delegates/seam + SDK Window/LiveRow and metadata/drawer host builders; controlled runtime/native file boundary. Native layout/removal/focus/device remain separate.'}));
+console.log(JSON.stringify({status:'PASS',checks,scope:'actual Host/Gateway/full durable intent + Index delegates/seam + SDK Window/shared Row and metadata/drawer host builders; controlled runtime/native file boundary. Native layout/removal/focus/device remain separate.'}));

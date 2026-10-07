@@ -28,7 +28,6 @@ const Controller = productionMotionMethods(page,
     Curve: { EaseInOut: 'curve' }, ScrollAlign: { START: 'start' }, TouchType: { Down: 'down', Up: 'up', Cancel: 'cancel' },
     setTimeout: callback => { const id = ++nextTimer; timers.set(id, callback); return id; },
     clearTimeout: id => timers.delete(id) });
-const Candidate = productionMotionMethods(page, ['latencyText', 'chapterText']);
 const key = candidate => sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl);
 const item = (id, latencyMs = 300, bookUrl = `${id}-book`) => ({ sourceId: id, bookUrl, bookName: '书', category: 'novel',
   sourceName: id, latencyMs, latencyKind: 'search', acquisitionState: 'discovered' });
@@ -39,12 +38,12 @@ function owner(initial = [], contentKind = 'manga') {
     candidateDataSource: new SourceSwitchCandidateDataSource(),
     retestingKeys: [], pendingSearchKeys: new Set(), wasRefreshing: false, mounted: true, foreground: true,
     touching: false, scrolling: false, heldKey: '', selectedKey: '', selectionPending: false, listMounted: true,
-    firstVisibleIndex: 0, firstVisibleListIndex: 2, contextHeight: 0, statusHeight: 0, containerHeight:0, containerWidth:0, readerWindowMetricsRevision:-1, listStartInset: () => 0, reorderTimer: -1, presentationEpoch: 0, anchorEpoch: 0, restoringAnchor: false, reduceMotion: false,
+    firstVisibleIndex: 0, firstVisibleListIndex: 0, contextHeight: 0, statusHeight: 0, containerHeight:0, containerWidth:0, readerWindowMetricsRevision:-1, listStartInset: () => 0, reorderTimer: -1, presentationEpoch: 0, anchorEpoch: 0, restoringAnchor: false, reduceMotion: false,
     onSelectCandidate: candidate => selected.push(candidate), onStop: () => actions.push('stop'),
     onRetry: () => actions.push('retry'), onRefresh: () => actions.push('refresh'), onRollback: () => actions.push('rollback'),
     getUIContext: () => ({ animateTo: (_options, apply) => apply(), postFrameCallback: frame => frames.push(frame.action) }),
-    candidateScroller: { currentOffset: () => ({ yOffset: offset }), getItemRect: index => ({ y: (index - 2) * 80 - offset, height: 80 }),
-      scrollToIndex: index => { offset = (index - 2) * 80; }, scrollBy: (_x, delta) => { offset += delta; },
+    candidateScroller: { currentOffset: () => ({ yOffset: offset }), getItemRect: index => ({ y: index * page.rowHeight() - offset, height: page.rowHeight() }),
+      scrollToIndex: index => { offset = index * page.rowHeight(); }, scrollBy: (_x, delta) => { offset += delta; },
       scrollTo: options => { offset = options.yOffset; } } });
   page.acceptState();
   return { page, selected, frames, actions, setOffset: value => { offset = value; }, offset: () => offset };
@@ -110,29 +109,24 @@ refreshed.page.requestRefresh(); assert.deepEqual(refreshed.actions, ['stop']);
 refreshed.page.state = { kind: 'candidates', candidates: [a, b], stopped: true }; refreshed.page.acceptState();
 assert.equal(refreshed.page.isSweeping(), false); assert.equal(refreshed.page.statusText(), '已停止 · 已发现 2 个');
 
-const anchored = owner([a, b, c]); flush(); anchored.setOffset(83); anchored.page.firstVisibleIndex = 1;
+const anchored = owner([a, b, c]); flush(); anchored.setOffset(53); anchored.page.firstVisibleIndex = 1;
 anchored.page.state = { kind: 'candidates', candidates: [b, c, a] }; anchored.page.acceptState(); flush();
 assert.equal(anchored.frames.length, 1); anchored.frames.shift()(); anchored.frames.shift()();
 assert.equal(anchored.offset(), 3, 'visible source b keeps its -3vp partial-row offset at its new index');
-const cancelled = owner([a, b, c]); flush(); cancelled.setOffset(83); cancelled.page.firstVisibleIndex = 1;
+const cancelled = owner([a, b, c]); flush(); cancelled.setOffset(53); cancelled.page.firstVisibleIndex = 1;
 cancelled.page.state = { kind: 'candidates', candidates: [c, a, b] }; cancelled.page.acceptState(); flush();
-cancelled.page.listTouch({ type: 'down' }); cancelled.frames.shift()(); assert.equal(cancelled.offset(), 83, 'touch revokes delayed scroll restoration');
+cancelled.page.listTouch({ type: 'down' }); cancelled.frames.shift()(); assert.equal(cancelled.offset(), 53, 'touch revokes delayed scroll restoration');
 const departed = owner([a, b]); flush(); departed.page.state = { kind: 'candidates', candidates: [b, a] }; departed.page.acceptState();
 departed.page.mounted = false; departed.page.cancelPresentation(); flush(); assert.deepEqual(departed.page.displayedCandidates.map(key), [a, b].map(key));
 
-const row = new Candidate(); Object.assign(row, { candidate: item('source', 0), switching: false, pendingProbe: false, searching: true });
-assert.equal(row.latencyText(), '0 ms'); assert.equal(row.chapterText(), '已发现，等待解析');
-row.candidate = { ...row.candidate, latencyKind: undefined, latencyMs: 80 }; assert.equal(row.latencyText(), '待检测', 'legacy latency is not search timing');
-row.pendingProbe = true; assert.equal(row.latencyText(), '重测中'); row.searching = false; assert.equal(row.latencyText(), '待重测');
-row.candidate = { ...row.candidate, acquisitionState: 'catalogReady' }; assert.equal(row.chapterText(), '目录已就绪');
-assert.equal((source.match(/SearchSpinner\(\{/g) ?? []).length, 1, 'historical manga keeps its native spinner');
-assert.equal((source.match(/SourceSwitchSpinner\(\{/g) ?? []).length, 1, 'selected novel uses its SVG arc animator');
-assert.match(source, /Text\('搜索延迟'\)/); assert.doesNotMatch(source, /SourceSwitchDemo|sourceSwitchDemoEvents/);
+assert.equal((source.match(/SearchSpinner\(\{/g) ?? []).length, 0, 'both formats use the selected shared spinner');
+assert.equal((source.match(/SourceSwitchSpinner\(\{/g) ?? []).length, 1, 'one shared discovery spinner implementation');
+assert.match(source, /Text\('搜索耗时'\)/); assert.doesNotMatch(source, /SourceSwitchDemo|sourceSwitchDemoEvents/);
 assert.match(source, /duration: this\.reduceMotion \? 0 : 220/);
 console.log('source-switch live window: progressive state, stable touch identity, real callbacks, zero/failure/refresh, search latency, anchor and lifecycle PASS');
 
-// The novel drawer has fixed outside-list headers, compact rows and arrival
-// ordering, while the existing manga geometry/anchor checks above remain.
+// Both formats share the drawer geometry. Novel arrival ordering and manga
+// authoritative delayed ordering/anchors above retain their original policies.
 const novel = owner([a, b], 'text'); flush();
 assert.equal(novel.page.listHeaderCount(), 0);
 assert.equal(novel.page.listHeaderHeight(), 0);
@@ -175,5 +169,5 @@ const resultViewport=sourceSwitchNovelDrawerHeight(390,24)-44-42-28-35-24;
 assert.ok(resultViewport>=3*compact.page.rowHeight(),'short-window fixed chrome leaves at least three row heights to scroll after the book context');
 assert.equal(sourceSwitchNovelCompact(844),false);
 assert.equal(sourceSwitchNovelCompact(0),false);
-assert.match(source, /if \(this.contentKind !== 'manga' && this.scrollBook\(\)\) \{\s*ListItem\(\) \{ this.novelBookContext\(\);/);
+assert.match(source, /if \(this.scrollBook\(\)\) \{\s*ListItem\(\) \{ this.novelBookContext\(\);/);
 console.log('novel compact-window metadata scroll and usable candidate viewport PASS');

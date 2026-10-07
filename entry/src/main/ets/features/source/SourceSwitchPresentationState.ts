@@ -3,9 +3,8 @@ import type { SourceSwitchCandidate } from './SourceSwitchGateway';
 /**
  * SourceSwitch overlay window state (Window State 7态, SS-SOURCE-SWITCH-01).
  * The seven states follow the Source Switch state contract. Candidate-state
- * manga geometry comes from SourceSwitch/Window (Phone 943:15215 / Tablet
- * 943:15705, both mounting 568:656). Novel presentation follows the selected
- * 2026-10-06 demo drawer. The owning Host still drives real gateway transitions;
+ * geometry for both content kinds follows the selected 2026-10-06 demo
+ * drawer; content-specific discovery and switch operations remain unchanged. The owning Host still drives real gateway transitions;
  * native visual acceptance is recorded separately from the selected demo.
  */
 export interface SourceSwitchDiscoveringState {

@@ -24,20 +24,21 @@ const uiContext={getFont:()=>({}),animateTo(_options,action){action();},postFram
  animations.push(a);return a;
 }};
 const deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics},uiContext,setTimeout(){return 1;},clearTimeout(){}});
-function scene(width,height,scale,state={kind:'candidates',candidates:[candidate('a'),candidate('a','/alternate'),candidate('b')],refreshing:true}){
+function scene(width,height,scale,state={kind:'candidates',candidates:[candidate('a'),candidate('a','/alternate'),candidate('b')],refreshing:true},contentKind='text',scheme='day',extra={}){
  metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,width,height);
  metrics.systemFontScale=scale;metrics.systemInsets=new metricsApi.ReaderInsetsVp(0,24,0,24);
  const selected=[];
- const o=new deps.SourceSwitchPanel(undefined,{contentKind:'text',readerWindowMetricsRevision:1,bookTitle:'书名',author:'作者',coverUrl:'owned-cover',currentSourceName:'当前书源',latestChapterTitle:'第 20 章',
-  state,onSelectCandidate:c=>selected.push(c)},undefined,++serial);
- o.containerWidth=width;o.containerHeight=height;o.aboutToAppear();o.initialRender();
+ const o=new deps.SourceSwitchPanel(undefined,{contentKind,readerWindowMetricsRevision:1,bookTitle:'书名',author:'作者',coverUrl:'owned-cover',currentSourceName:'当前书源',latestChapterTitle:'第 20 章',
+  state,onSelectCandidate:c=>selected.push(c),...extra},undefined,++serial);
+ o.containerWidth=width;o.containerHeight=height;o.appThemeScheme=scheme;o.aboutToAppear();o.initialRender();
  // Request the real SDK-emitted static ListItem deep-render callbacks. This
  // is explicit range admission, not a replacement for Ace's viewport choice.
  const items=p.nodes(o).filter(n=>n.type==='ListItem');
  for(const header of items.slice(0,o.listHeaderCount()))header.create[0](header.id,true);
- if(o.flowChrome()){const footer=items.at(-1);footer.create[0](footer.id,true);}
+ if(o.flowChrome()&&items.length>0){const footer=items.at(-1);footer.create[0](footer.id,true);}
+ for(const child of p.walk(o))if('appThemeScheme' in child)child.appThemeScheme=scheme;
  p.properties.flush();
- return{o,selected,nodes:p.nodes(o),rows:p.walk(o).filter(child=>child instanceof deps.SourceSwitchNovelRow)};
+ return{o,selected,scheme,nodes:p.nodes(o),rows:p.walk(o).filter(child=>child instanceof deps.SourceSwitchNovelRow)};
 }
 function expected(width,height,s){
  // Formulas are the explicit design policy, independent of native helpers.
@@ -63,10 +64,10 @@ function expected(width,height,s){
  return{drawerWidth,narrow,short,drawer,row,heading,discovery,toolbar,compactAction,prefix,actionFont,actionWidth,actionVisible,actionHit,columns,footer,grip,flow,book,scrollBook,timing:(narrow?v.narrowTimingColumnWidth:v.timingColumnWidth)*Math.max(1,s)};
 }
 function assertScene(x,width,height,s){
- const e=expected(width,height,s),o=x.o;
+ const e=expected(width,height,s),o=x.o,scheme=x.scheme;
  for(const [method,value] of Object.entries({drawerWidth:e.drawerWidth,narrowWindow:e.narrow,compactWindow:e.short,drawerHeight:e.drawer,rowHeight:e.row,headingHeight:e.heading,discoveryHeight:e.discovery,discoveryToolbarHeight:e.toolbar,compactDiscoveryAction:e.compactAction,discoveryPrefixVisible:e.prefix,discoveryActionWidth:e.actionWidth,discoveryActionVisibleHeight:e.actionVisible,discoveryActionHitHeight:e.actionHit,columnsHeight:e.columns,footerHeight:e.footer,flowChrome:e.flow,bookHeight:e.book,scrollBook:e.scrollBook,timingWidth:e.timing}))assert.equal(o[method](),value,`${width}x${height}@${s} actual ${method}`);
  const list=x.nodes.find(n=>n.type==='List');assert.ok(list);assert.equal(list.height,'100%');assert.equal(list.scrollBar,'BarState.Auto');assert.equal(list.scrollBarWidth,v.scrollbarWidth);
- assert.equal(list.scrollBarColor,readerAppColor('TOK_SS_SCROLLBAR','day'));
+ assert.equal(list.scrollBarColor,readerAppColor('TOK_SS_SCROLLBAR',scheme));
  const drawer=x.nodes.find(n=>n.constraintSize?.maxWidth===v.drawerMaxWidth);assert.equal(drawer.height,e.drawer);assert.equal(drawer.clip,true);
  const chrome=[...o.nodes.values()].filter(n=>n.type==='Row'&&typeof n.create?.space==='number');
  assert.equal(chrome.length,5,'only one bounded action-content row joins the existing four chrome rows');
@@ -78,7 +79,7 @@ function assertScene(x,width,height,s){
  assert.equal(discovery.height,e.toolbar,'actual discovery row consumes its two-line toolbar height');
  assert.deepEqual(discovery.margin,{bottom:v.discoveryBottomGap});assert.equal(discovery.border,undefined,'selected toolbar has no outer card or divider');
  const actionChrome=chrome.find(n=>n.create.space===v.discoveryActionGap);
- assert.equal(actionChrome.height,e.actionVisible);assert.equal(actionChrome.backgroundColor,readerAppColor(design.strings.discoveryActionBackgroundRole,'day'));
+ assert.equal(actionChrome.height,e.actionVisible);assert.equal(actionChrome.backgroundColor,readerAppColor(design.strings.discoveryActionBackgroundRole,scheme));
  assert.equal(actionChrome.borderRadius,v.discoveryActionRadius);
  const actionButton=x.nodes.find(n=>n.type==='Button'&&n.width===e.actionWidth);
  assert.equal(actionButton.height,e.actionHit);assert.equal(actionButton.stateEffect,false);assert.equal(actionButton.backgroundColor,'Color.Transparent');
@@ -102,8 +103,8 @@ function assertScene(x,width,height,s){
   assert.equal(native.find(n=>n.create==='38').fontFeature,'"tnum" 1');
   assert.equal(native.find(n=>n.create===' ms').margin.left,v.timingUnitGap);
   assert.equal(native.find(n=>n.create===' ms').fontSize,v.timingUnitFontSize);
-  assert.equal(native.find(n=>n.create===' ms').fontColor,readerAppColor(design.strings.timingUnitInkRole,'day'));
-  const color=deps.ColorMetrics.resourceColor(readerAppColor('TOK_ROW_DIVIDER','day'));
+  assert.equal(native.find(n=>n.create===' ms').fontColor,readerAppColor(design.strings.timingUnitInkRole,scheme));
+  const color=deps.ColorMetrics.resourceColor(readerAppColor('TOK_ROW_DIVIDER',scheme));
   assert.equal(box.border.color,deps.ColorMetrics.rgba(color.red,color.green,color.blue,color.alpha/255*v.rowDividerOpacity).color,'only the existing divider alpha is reduced');
   assert.equal(box.opacity,undefined,'candidate content is never dimmed with its border');
  }
@@ -121,7 +122,7 @@ function assertScene(x,width,height,s){
  tuple(x.nodes.find(n=>n.create==='作者'),'author');
  tuple(x.nodes.find(n=>n.create==='最新章节：第 20 章'),'metadata');
  tuple(x.nodes.find(n=>n.create==='当前书源：当前书源'),'currentSource');
- assert.equal(x.nodes.find(n=>n.create==='当前书源：当前书源').fontColor,readerAppColor('TOK_GREEN','day'));
+ assert.equal(x.nodes.find(n=>n.create==='当前书源：当前书源').fontColor,readerAppColor('TOK_GREEN',scheme));
  tuple(x.nodes.find(n=>n.create==='停止'),'discoveryAction',design.strings.bodyFontFamilyCss,e.actionFont);
  tuple(x.nodes.find(n=>n.create==='个书源'),e.narrow?'narrowDiscoveryStatus':'discoveryStatus');
  if(e.prefix)tuple(x.nodes.find(n=>n.create==='已找到'),e.narrow?'narrowDiscoveryStatus':'discoveryStatus');
@@ -138,13 +139,14 @@ function assertScene(x,width,height,s){
  const latest={...candidate('a','/alternate'),latencyMs:1,latestChapterTitle:'更新章节'};
  o.state={kind:'candidates',candidates:[candidate('a'),latest,candidate('b')],refreshing:true};o.acceptState();
  const hit=p.nodes(x.rows[1]).find(n=>n.type==='Row');
- hit.onTouch({type:deps.TouchType.Down});p.properties.flush();assert.equal(hit.backgroundColor,readerAppColor(design.strings.selectedRowRole,'day'));
+ hit.onTouch({type:deps.TouchType.Down});p.properties.flush();assert.equal(hit.backgroundColor,readerAppColor(design.strings.selectedRowRole,scheme));
  hit.onTouch({type:deps.TouchType.Up});p.properties.flush();hit.onClick();
  assert.equal(x.selected[0],latest,'actual native row callbacks select the latest composite identity, including alternate URL');
  p.properties.flush();
  o.aboutToDisappear();
 }
-for(const width of [400,365,320,270])for(const height of [844,640,480])for(const scale of [.85,1,1.5,2])assertScene(scene(width,height,scale),width,height,scale);
+for(const contentKind of ['text','manga'])for(const width of [400,365,320,270])for(const height of [844,640,480])for(const scale of [.85,1,1.5,2])assertScene(scene(width,height,scale,undefined,contentKind),width,height,scale);
+for(const contentKind of ['text','manga'])for(const scheme of ['day','night'])for(const [w,h,s] of [[390,844,1],[320,480,2],[270,180,2]])assertScene(scene(w,h,s,undefined,contentKind,scheme),w,h,s);
 assertScene(scene(390,844,1),390,844,1);
 assertScene(scene(270,180,2),270,180,2);
 for(const width of [310,265])assertScene(scene(width,844,1),width,844,1);
@@ -180,10 +182,10 @@ for(const width of [310,265])assertScene(scene(width,844,1),width,844,1);
 }
 // Actual action hit callbacks retain the pressed recipe independently of
 // candidate enrichment, and restore it on pointer/cancellation/state changes.
-for(const scheme of ['day','night'])for(const running of [false,true]){
+for(const contentKind of ['text','manga'])for(const scheme of ['day','night'])for(const running of [false,true]){
  const rows=[candidate('a'),candidate('a','/alternate'),candidate('b')];
  const state={kind:'candidates',candidates:rows,refreshing:running};
- const x=scene(390,844,1,state),o=x.o;o.appThemeScheme=scheme;p.properties.flush();
+ const x=scene(390,844,1,state,contentKind,scheme),o=x.o;
  const button=()=>p.nodes(o).find(n=>n.type==='Button'&&typeof n.onTouch==='function');
  const fill=()=>p.nodes(o).find(n=>n.type==='Row'&&n.create?.space===v.discoveryActionGap);
  const normal=readerAppColor(design.strings.discoveryActionBackgroundRole,scheme);
@@ -225,8 +227,8 @@ for(const scheme of ['day','night'])for(const running of [false,true]){
 // Measured container bounds override the outer window, so narrow popovers
 // cannot take a wide timing column from a large parent window.
 const measured=scene(400,844,1);measured.o.containerWidth=320;assert.equal(measured.o.timingWidth(),v.narrowTimingColumnWidth);measured.o.aboutToDisappear();
-for(const [w,h,s] of [[390,844,1],[320,480,2],[270,180,2]]){
- const empty=scene(w,h,s,{kind:'discovering'}),items=p.nodes(empty.o).filter(n=>n.type==='ListItem');
+for(const contentKind of ['text','manga'])for(const [w,h,s] of [[390,844,1],[320,480,2],[270,180,2]]){
+ const empty=scene(w,h,s,{kind:'discovering'},contentKind),items=p.nodes(empty.o).filter(n=>n.type==='ListItem');
  if(empty.o.scrollBook()){
   const e=expected(w,h,s),fixed=e.flow?0:e.heading+e.discovery+e.columns+e.footer+e.grip;
   const header=e.flow?e.heading+e.book+e.discovery+e.columns:e.book;
@@ -235,6 +237,41 @@ for(const [w,h,s] of [[390,844,1],[320,480,2],[270,180,2]]){
  assert.equal(p.nodes(empty.o).filter(n=>n.create==='正在查找其他书源…').length,1,'one real empty status remains reachable');
  assert.equal(p.nodes(empty.o).filter(n=>n.create==='书名').length,1,'empty stream keeps its book context in the correct fixed or scroll header');
  empty.o.aboutToDisappear();
+}
+
+// Render the actual shared progress child through its Window parent. The
+// cancellation flag comes from the existing owner; the visual migration must
+// neither lose an allowed cancellation nor invent one during a durable commit.
+for(const contentKind of ['text','manga'])for(const allowCancel of [false,true])for(const scheme of ['day','night']){
+ let closes=0;
+ const x=scene(320,480,2,{kind:'switching',targetSourceId:'target'},contentKind,scheme,
+  {allowCancelWhileSwitching:allowCancel,onClose:()=>closes++});
+ const progress=p.walk(x.o).find(child=>child instanceof deps.SourceSwitchProgress);
+ assert.ok(progress,'both formats mount the selected shared preparation surface');
+ assert.equal(progress.allowCancel,allowCancel,'the unchanged owner gate reaches the real progress child');
+ const buttons=p.nodes(progress).filter(n=>n.type==='Button'&&n.accessibilityText==='取消切换书源');
+ assert.equal(buttons.length,allowCancel?1:0,'only an admitted cancellation emits a native hit target');
+ if(allowCancel){
+  const button=buttons[0];assert.deepEqual([button.width,button.height],[44,44]);
+  const icon=p.nodes(progress).find(n=>n.type==='Image'&&n.create===(scheme==='night'?'app.media.source_switch_close_theme_night':'app.media.source_switch_close'));
+  assert.deepEqual([icon.width,icon.height],[v.closeIconSize,v.closeIconSize]);
+  button.onClick();assert.equal(closes,1,'the actual emitted cancellation calls the original Window close owner');
+ }else assert.equal(closes,0);
+ assert.equal(x.rows.length,0,'switch preparation cannot leak candidate hit targets');
+ x.o.aboutToDisappear();
+}
+for(const contentKind of ['text','manga']){
+ let closes=0;
+ const x=scene(390,844,1,undefined,contentKind,'day',{onClose:()=>closes++});
+ const close=p.nodes(x.o).find(n=>n.type==='Button'&&n.accessibilityText==='关闭更换书源');
+ assert.equal(close.enabled,true);close.onClick();assert.equal(closes,1,'both drawers retain their original close callback');
+ x.o.selectionPending=true;p.properties.flush();assert.equal(close.enabled,false,'pending selection keeps the existing close gate');
+ x.o.allowCancelWhileSwitching=true;p.properties.flush();assert.equal(close.enabled,true,'the existing permitted preparation cancellation remains operable');
+ x.o.aboutToDisappear();
+ const rollback=scene(390,844,1,{kind:'failure',transactionId:'held',confirmation:'known',message:'回滚'},contentKind);
+ assert.equal(p.nodes(rollback.o).find(n=>n.type==='Button'&&n.accessibilityText==='关闭更换书源').enabled,false,
+  'an unresolved durable transaction keeps the original rollback close gate');
+ rollback.o.aboutToDisappear();
 }
 
 // The installed SDK permits currentOffset() to return void even when the
@@ -338,22 +375,21 @@ for(const outcome of ['ready','reject','retired']){
  const fonts=sourceSwitchFontSdk({ready:loader.readerFontLoadReady,load:loader.loadReaderFontChecked});
  const fp=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),fd=sourceSwitchLiveSdk(fp,{...fonts,ReaderWindowCoordinator:{metrics:()=>metrics},uiContext,setTimeout(){return 1;},clearTimeout(){}});
  const owner=new fd.SourceSwitchPanel(undefined,{contentKind:'text',state:{kind:'discovering'}},undefined,++serial);
+ const manga=new fd.SourceSwitchPanel(undefined,{contentKind:'manga',state:{kind:'discovering'}},undefined,++serial);
  const preparation=new fd.SourceSwitchProgress(undefined,{sourceName:'新书源'},undefined,++serial);
- owner.aboutToAppear();owner.initialRender();preparation.aboutToAppear();preparation.initialRender();
- assert.equal(fonts.sourceSwitchNovelFontsReady(),false);assert.equal(fp.nodes(owner).filter(n=>n.type==='Text').length,0);assert.equal(fp.nodes(preparation).filter(n=>n.type==='Text').length,0);
+ owner.aboutToAppear();owner.initialRender();manga.aboutToAppear();manga.initialRender();preparation.aboutToAppear();preparation.initialRender();
+ assert.equal(fonts.sourceSwitchNovelFontsReady(),false);assert.equal(fp.nodes(owner).filter(n=>n.type==='Text').length,0);assert.equal(fp.nodes(preparation).filter(n=>n.type==='Text').length,0);assert.equal(fp.nodes(manga).filter(n=>n.type==='Text').length,0,'manga shares pending checked-font admission');
  for(const asset of design.fontAssets)assert.ok(calls.some(call=>call.family===families[asset.nativeFamilyConstant]&&call.asset===asset.file),'actual registrar loads the exact selected physical asset');
- if(outcome==='retired'){owner.aboutToDisappear();preparation.aboutToDisappear();}
+ if(outcome==='retired'){owner.aboutToDisappear();manga.aboutToDisappear();preparation.aboutToDisappear();}
  const medium=families.READER_FONT_NOTO_SANS_SC_UI_MEDIUM;
  for(const [family,load] of pending)if(family!==medium)load.resolve();
- await tick();assert.equal(owner.novelFontsReady,false,'three ready selected faces cannot authorize the fourth');
+ await tick();assert.equal(owner.novelFontsReady,false,'three ready selected faces cannot authorize the fourth');assert.equal(manga.novelFontsReady,false);
  if(outcome==='reject')pending.get(medium).reject(Error('controlled checked face failure'));else pending.get(medium).resolve();
  await tick();fp.properties.flush();
- assert.equal(owner.novelFontsReady,outcome==='ready');assert.equal(preparation.novelFontsReady,outcome==='ready');
- assert.equal(fp.nodes(owner).some(n=>n.type==='Text'),outcome==='ready');assert.equal(fp.nodes(preparation).some(n=>n.type==='Text'),outcome==='ready');
- if(outcome!=='retired'){owner.aboutToDisappear();preparation.aboutToDisappear();}
+ assert.equal(owner.novelFontsReady,outcome==='ready');assert.equal(preparation.novelFontsReady,outcome==='ready');assert.equal(manga.novelFontsReady,outcome==='ready');
+ assert.equal(fp.nodes(owner).some(n=>n.type==='Text'),outcome==='ready');assert.equal(fp.nodes(preparation).some(n=>n.type==='Text'),outcome==='ready');assert.equal(fp.nodes(manga).some(n=>n.type==='Text'),outcome==='ready','manga shares checked ready/reject/retired font delivery');
+ if(outcome!=='retired'){owner.aboutToDisappear();manga.aboutToDisappear();preparation.aboutToDisappear();}
  assert.equal(expectedFaces.filter(loader.readerFontLoadReady).length,outcome==='reject'?3:4,'only actual checked-load receipts mark physical faces ready');
- // Historical manga remains operable without novel font admission.
- const manga=new fd.SourceSwitchPanel(undefined,{contentKind:'manga',state:{kind:'discovering'}},undefined,++serial);manga.initialRender();assert.ok(fp.nodes(manga).some(n=>n.type==='Text'));manga.aboutToDisappear();
 }
 // Actual-source negative controls prove these checks observe emitted native
 // attributes rather than merely agreeing with a duplicated test-side formula.
@@ -391,4 +427,4 @@ for(const [from,to,property,expectedValue] of [
  const paper=np.walk(no).find(c=>c instanceof nd.ReaderPaperBackground),background=np.nodes(paper).find(n=>n.backgroundColor!==undefined);
  assert.throws(()=>assert.equal(background.backgroundColor,readerAppearanceThemeStyle('day').paperStart),'actual paper theme drift is rejected');
 }
-console.log('PASS source-switch actual SDK: 48 adaptive profiles + baseline/extreme short +310/265 boundaries, count VF axis and static action glyph, independent click/visible geometry, exact day/night press cancellation, halfLeading, exact row identity, SVG animator lifecycle, and pending/reject/retired checked-font admission. Ace pixel layout and native frame timings remain VM evidence.');
+console.log('PASS source-switch actual SDK: 96 adaptive manga/text profiles + day/night short/large-font parity + baseline/extreme short +310/265 boundaries, count VF axis and static action glyph, independent click/visible geometry, exact day/night press cancellation, halfLeading, exact row identity, SVG animator lifecycle, actual permitted/blocked cancellation, and pending/reject/retired checked-font admission for both formats. Ace pixel layout and native frame timings remain VM evidence.');
