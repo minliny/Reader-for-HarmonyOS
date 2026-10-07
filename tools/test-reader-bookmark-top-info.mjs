@@ -6,6 +6,7 @@ import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import * as chromeLayout from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
 import { measureReaderPageChromeText, readerPageChromeTextMeasurements, readerPageChromeTopTextStyle } from './lib/reader-page-chrome-measurement-probe.mjs';
 import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import { MANGA_DIRECTORY_VISUAL } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
 import * as gesture from '../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
 import * as rapid from '../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts';
 import { mergeReaderControlBookmarkProjection } from '../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts';
@@ -17,8 +18,8 @@ const { ReaderRectVp: Rect, ReaderDisplayCornerVp: Corner, ReaderWindowMetricsSn
 const { resolveReaderReadingLayout } = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
 const file = name => new URL(`../entry/src/main/ets/features/reading/${name}`, import.meta.url);
 const typography = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
-const roles = new Function(...Object.keys(fonts), stripTypeScriptTypes(typography.replace(/import\s*\{[\s\S]*?\}\s*from[^;]*;/g, '')).replace(/\bexport /g, '') +
-  ';return {TYPE_READER_IMMERSIVE_TIME,TYPE_READER_IMMERSIVE_PROGRESS,TYPE_READER_IMMERSIVE_PAGE_ORDINAL};')(...Object.values(fonts));
+const roles = new Function('MANGA_DIRECTORY_VISUAL', ...Object.keys(fonts), stripTypeScriptTypes(typography.replace(/import\s*\{[\s\S]*?\}\s*from[^;]*;/g, '')).replace(/\bexport /g, '') +
+  ';return {TYPE_READER_IMMERSIVE_TIME,TYPE_READER_IMMERSIVE_PROGRESS,TYPE_READER_IMMERSIVE_PAGE_ORDINAL};')(MANGA_DIRECTORY_VISUAL, ...Object.values(fonts));
 const dependencies = { ...chromeLayout, ...roles, measureReaderPageChromeText, readerPageChromeTopTextStyle };
 const lreSource = readFileSync(file('LocalReadingExperience.ets'), 'utf8');
 const chromeSource = readFileSync(file('ReaderPageChrome.ets'), 'utf8');

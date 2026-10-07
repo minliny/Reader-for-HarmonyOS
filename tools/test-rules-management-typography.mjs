@@ -4,14 +4,15 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import { MANGA_DIRECTORY_VISUAL } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
 
 const read = relative => readFileSync(new URL(`../entry/src/main/ets/${relative}`, import.meta.url), 'utf8');
 const typographySource = read('features/common/ReaderTypography.ets');
 const { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION } =
-  new Function(...Object.keys(fontFamilies), `${stripTypeScriptTypes(typographySource)
+  new Function('MANGA_DIRECTORY_VISUAL', ...Object.keys(fontFamilies), `${stripTypeScriptTypes(typographySource)
     .replace(/^import[^;]+;\s*/gm, '')
     .replace(/^export /gm, '')}; return { TYPE_RULES_MANAGEMENT_HEADING, TYPE_RULES_MANAGEMENT_INPUT, TYPE_RULES_MANAGEMENT_ACTION };`)(
-      ...Object.values(fontFamilies));
+      MANGA_DIRECTORY_VISUAL, ...Object.values(fontFamilies));
 const page = read('features/settings/RulesManagementPage.ets');
 
 assert.deepEqual(

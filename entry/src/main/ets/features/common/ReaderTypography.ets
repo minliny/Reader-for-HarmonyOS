@@ -6,6 +6,7 @@ import {
   READER_FONT_NOTO_SERIF_SC_BOLD,
   READER_FONT_NOTO_SERIF_SC_REGULAR,
 } from './ReaderFontFamilies.ts';
+import { MANGA_DIRECTORY_VISUAL } from '../manga/MangaDirectoryVisual';
 
 /** The owner of a text size: app/system scaling or the reader appearance snapshot. */
 export type ReaderFontScalePolicy = 'system' | 'readerAppearance';
@@ -128,6 +129,10 @@ export const TYPE_SEARCH_SOURCE_INPUT = new ReaderTextStyle(
   READER_FONT_INTER, 400, 12, undefined, undefined, 'system', 'figmaNode');
 export const TYPE_SEARCH_DIRECTORY_INPUT = new ReaderTextStyle(
   READER_FONT_NOTO_SANS_SC, 400, 10, undefined, undefined, 'system', 'figmaNode');
+// The frozen complex-directory demo specifies an explicit 13/20 line box.
+export const TYPE_SEARCH_MANGA_DIRECTORY_INPUT = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, MANGA_DIRECTORY_VISUAL.searchFontSize,
+  MANGA_DIRECTORY_VISUAL.searchLineHeight, undefined, 'system', 'appBaseline');
 export const TYPE_SEARCH_READER_QUICK_INPUT = new ReaderTextStyle(
   READER_FONT_INTER, 400, 10, undefined, undefined, 'system', 'figmaNode');
 export const TYPE_SEARCH_RSS_HINT = new ReaderTextStyle(

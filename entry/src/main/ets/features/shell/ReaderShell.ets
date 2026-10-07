@@ -10,6 +10,7 @@ import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import type { ReaderWindowMetricsSnapshot } from '../common/ReaderWindowMetrics';
 import { ReadingExperience, ReadingCommit, ReaderBookmarkAnchorRequest, ReaderRetainedPresentation } from '../reading/LocalReadingExperience';
 import { ReaderFullDirectory } from '../reading/ReaderFullDirectory';
+import { BookDirectoryPage } from '../bookshelf/BookDirectoryPage';
 import { SourceSwitchPanel, SourceSwitchPanelState } from '../reading/SourceSwitchPanel';
 import type { SourceSwitchCandidate } from '../source/SourceSwitchGateway';
 import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';
@@ -89,6 +90,8 @@ export struct ReaderShell {
 
   @Prop bookmarkLoadMessage: string = '';
   @Prop directoryCurrentChapterIndex: number = -1;
+  @Prop directoryCurrentPageOrdinal: number = -1;
+  @Prop directoryCurrentPageTotal: number = -1;
   @Prop directoryChapterTitle: string = '';
   @Prop directoryOpenedFromControl: boolean = false;
   @Prop offlineBookOperationActive: boolean = false;
@@ -279,36 +282,57 @@ export struct ReaderShell {
       .hitTestBehavior(HitTestMode.Transparent);
 
       if (this.route === 'directory') {
-        ReaderFullDirectory({
-          bookTitle: this.bookTitle,
-          chapterTitle: this.directoryChapterTitle,
-          entries: this.tocEntries,
-          catalogMessage: this.catalogMessage,
-          directoryRecovery: this.directoryRecovery,
-          onReconcileBookmarks: this.onReconcileBookmarks,
-          onContinueBookmarks: this.onContinueBookmarks,
-          onReconcileOffline: this.onReconcileOffline,
-          onContinueOffline: this.onContinueOffline,
-          currentChapterIndex: this.directoryCurrentChapterIndex,
-          sourceId: this.sourceId,
-          animateFromControl: this.directoryOpenedFromControl,
-          reduceMotion: this.reduceMotion,
-          offlineBookOperationActive: this.offlineBookOperationActive,
-          onSelectChapter: (chapterIndex: number): void => this.onSelectChapter(chapterIndex),
-          onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
-            this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
-          onSelectBookmark: this.onSelectBookmark,
-          bookmarkIdentity: this.bookmarkIdentity,
-          onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
-          onDownloadBook: (): void => this.onDownloadBook(),
-          onClearBookOffline: (): void => this.onClearBookOffline(),
-          onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
-          chapterStartBookmarkCreationEnabled: this.contentKind !== 'manga' && this.chapterStartBookmarkCreationEnabled,
-          onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
-            this.onCreateChapterStartBookmark(request),
-          onSwitchSource: (): void => this.onSwitchSource(),
-          onExit: (): void => this.onCloseDirectory(),
-        });
+        if (this.contentKind === 'manga') {
+          BookDirectoryPage({
+            sourceId: this.sourceId, bookId: this.bookId, bookKind: this.bookKind ?? '', contentKind: 'manga',
+            bookTitle: this.bookTitle, entries: this.tocEntries, catalogMessage: this.catalogMessage,
+            currentChapterIndex: this.directoryCurrentChapterIndex,
+            currentPageOrdinal: this.directoryCurrentPageOrdinal, currentPageTotal: this.directoryCurrentPageTotal,
+            directoryRecovery: this.directoryRecovery,
+            onReconcileBookmarks: this.onReconcileBookmarks, onContinueBookmarks: this.onContinueBookmarks,
+            onReconcileOffline: this.onReconcileOffline, onContinueOffline: this.onContinueOffline,
+            mangaDownloadEnabled: this.mangaDownloadEnabled,
+            onLoadDownloadActions: this.onLoadMangaDownloadActions, onDownloadAction: this.onMangaDownloadAction,
+            onSelectChapter: (index: number): void => this.onSelectChapter(index),
+            onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+              this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
+            onDownloadChapter: (index: number): void => this.onDownloadChapter(index),
+            onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
+            chapterStartBookmarkCreationEnabled: false,
+            onBack: (): void => this.onCloseDirectory(),
+          }).width('100%').height('100%');
+        } else {
+          ReaderFullDirectory({
+            bookTitle: this.bookTitle,
+            chapterTitle: this.directoryChapterTitle,
+            entries: this.tocEntries,
+            catalogMessage: this.catalogMessage,
+            directoryRecovery: this.directoryRecovery,
+            onReconcileBookmarks: this.onReconcileBookmarks,
+            onContinueBookmarks: this.onContinueBookmarks,
+            onReconcileOffline: this.onReconcileOffline,
+            onContinueOffline: this.onContinueOffline,
+            currentChapterIndex: this.directoryCurrentChapterIndex,
+            sourceId: this.sourceId,
+            animateFromControl: this.directoryOpenedFromControl,
+            reduceMotion: this.reduceMotion,
+            offlineBookOperationActive: this.offlineBookOperationActive,
+            onSelectChapter: (chapterIndex: number): void => this.onSelectChapter(chapterIndex),
+            onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+              this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
+            onSelectBookmark: this.onSelectBookmark,
+            bookmarkIdentity: this.bookmarkIdentity,
+            onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
+            onDownloadBook: (): void => this.onDownloadBook(),
+            onClearBookOffline: (): void => this.onClearBookOffline(),
+            onDeleteBookmarks: (bookmarkTimes: number[]): void => this.onDeleteBookmarks(bookmarkTimes),
+            chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+            onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
+              this.onCreateChapterStartBookmark(request),
+            onSwitchSource: (): void => this.onSwitchSource(),
+            onExit: (): void => this.onCloseDirectory(),
+          });
+        }
       }
 
       if (this.sourceSwitchVisible) {
@@ -374,6 +398,7 @@ export struct ReaderShell {
         bookTitle: this.bookTitle, inBookshelf: this.inBookshelf,
         downloadEnabled: this.mangaDownloadEnabled,
         directoryProjection: this.tocEntries,
+        directoryCurrentChapterIndex: this.directoryCurrentChapterIndex,
         onLoadDownloadActions: (chapterIndex?: number): Promise<MangaDownloadAction[]> =>
           _identity === this.mangaIdentityKey() ? this.onLoadMangaDownloadActions(chapterIndex) : Promise.resolve([]),
         onDownloadAction: (action: MangaDownloadActionId, chapterIndex?: number): Promise<void> =>

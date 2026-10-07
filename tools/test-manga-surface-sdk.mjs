@@ -136,8 +136,10 @@ assert.equal(directoryChild.params.chapterStartBookmarkCreationEnabled,false);
 assert.equal(directoryChild.params.query,'','persistent catalog ignores the popup search');
 assert.equal(directoryChild.params.mangaCatalogDisplay,true);assert.equal(directoryChild.params.mangaCatalogNarrow,false);
 assert.equal(directoryChild.params.mangaCurrentOpenInset,50);assert.equal(directoryChild.params.listPaddingY,0);
-const catalogHeader=[...tablet.nodes.values()].find(node=>node.type==='Column'&&node.height===80);
-assert.ok(catalogHeader);assert.deepEqual(catalogHeader.padding,{top:20,left:19,right:19,bottom:16});
+const catalogHeader=[...tablet.nodes.values()].find(node=>node.type==='Column'&&node.constraintSize?.minHeight===80);
+assert.ok(catalogHeader);assert.deepEqual(catalogHeader.constraintSize,{minHeight:80});
+assert.equal(catalogHeader.height,undefined,'persistent header preserves its80vp minimum while allowing scaled text to grow');
+assert.deepEqual(catalogHeader.padding,{top:20,left:19,right:19,bottom:16});
 const bookHeading=[...tablet.nodes.values()].find(node=>node.type==='Text'&&node.create==='山海纪行');
 assert.equal(bookHeading.fontFamily,'ReaderNotoSerifSCBold');assert.equal(bookHeading.fontSize,18);assert.equal(bookHeading.lineHeight,26);assert.equal(bookHeading.fontWeight,700);
 assert.ok([...tablet.nodes.values()].some(node=>node.type==='Text'&&node.create==='章节目录'&&node.fontSize===10&&node.lineHeight===17&&node.fontFamily==='ReaderNotoSansSCUIRegular'));
@@ -162,7 +164,7 @@ function overlayFixture(values, candidate=source) {
     GesturePriority:{Parallel:0},GestureMode:{Exclusive:0},SwipeDirection:{Horizontal:0},
   },properties.hooks);
   Object.assign(probe.owner,{opened:true,showPageNumbers:true,controlsVisible:false,horizontalPageCount:36,
-    panelFontsReady:true,bookTitle:'山海纪行',directoryQuery:'第5',
+    panelFontsReady:true,bookTitle:'山海纪行',title:'当前第5话',directoryQuery:'第5',
     viewportWidth:390,viewportHeight:844,stageWidth:390,stageHeight:844,...values});
   probe.owner.initialRender();
   const nodes=[...probe.owner.nodes.values()];
@@ -202,10 +204,13 @@ for(const panel of ['directory','mode','settings','more']) for(const backgroundP
   assert.ok(nodes.some(node=>node.type==='Row'&&node.width===(landscape?34:36)&&node.height===(landscape?34:36)&&
     node.accessibilityText===(landscape?'关闭宽屏面板':'关闭面板')),'close cross has an explicit touch target');
   if(landscape){
-    const header=nodes.find(node=>node.type==='Row'&&node.height===66);
-    assert.ok(header);assert.equal(header.padding,undefined,'header border belongs inside its inset wrapper');
-    const headerInset=nodes.find(node=>node.type==='Column'&&node.height===66&&node.padding?.left===20);
+    const header=nodes.find(node=>node.type==='Row'&&(panel==='directory'?node.constraintSize?.minHeight===66:node.height===66));
+    assert.ok(header);assert.deepEqual(header.padding,{top:panel==='directory'?12:0,bottom:panel==='directory'?12:0},
+      'directory title grows with vertical padding while its line remains inside the horizontal inset wrapper');
+    if(panel==='directory') { assert.equal(header.height,undefined);assert.deepEqual(header.constraintSize,{minHeight:66}); }
+    const headerInset=nodes.find(node=>node.type==='Column'&&node.padding?.left===20&&node.margin?.bottom===17);
     assert.ok(headerInset);assert.deepEqual(headerInset.padding,{left:20,right:20});assert.deepEqual(headerInset.margin,{bottom:17});
+    assert.equal(headerInset.height,panel==='directory'?undefined:66);
     const title=nodes.slice(nodes.indexOf(sheet)+1).find(node=>node.type==='Text'&&node.create===({directory:'章节目录',mode:'阅读方式',settings:'漫画阅读设置',more:'更多'}[panel]));
     assert.equal(title.fontSize,15);assert.equal(title.lineHeight,24);assert.equal(title.fontWeight,600);
     assert.equal(title.fontFamily,'ReaderMangaSans600');
@@ -214,12 +219,21 @@ for(const panel of ['directory','mode','settings','more']) for(const backgroundP
     node.backgroundColor===(landscape?'Color.Transparent':'#57000000')&&typeof node.onClick==='function'),
     'phone dim / wide transparent outside dismissal');
   if(panel==='directory'){
-    assert.equal(nodes.some(node=>node.type==='TextInput'),!landscape,'search and tools belong to the phone sheet only');
+    assert.ok(!nodes.some(node=>node.type==='TextInput'),'quick directory follows the nearby-chapter demo toolbar');
+    assert.equal(nodes.filter(node=>['上一章节','完整目录','下一章节'].includes(node.accessibilityText)).length,3,
+      'phone and wide quick panels both expose chapter and full-directory navigation');
     const child=[...nodes.owner.children.values()].find(child=>child.params.mangaDisplay===true&&!child.params.mangaCatalogDisplay);
-    assert.ok(child);assert.equal(child.params.mangaRowMinHeight,landscape?50:58);
+    assert.ok(child);assert.equal(child.params.mangaRowMinHeight,58);assert.equal(child.params.mangaQuickDisplay,true);
     assert.equal(child.params.mangaCurrentOpenInset,landscape?7:50);
     const body=nodes.find(node=>node.type==='Column'&&node.padding?.bottom===(landscape?22:24)&&node.padding?.left===(landscape?12:18));
     assert.ok(body,'directory respects adaptive negative margins');
+    const footer=[...nodes.owner.children.values()].find(child=>typeof child.params?.onHeightChanged==='function'&&Object.hasOwn(child.params,'pagePosition'));
+    assert.ok(footer,'the SDK registers and constructs the real imported footer contract at the child boundary');
+    assert.equal(footer.params.title,'当前第5话');assert.equal(footer.params.pagePosition,'');
+    assert.equal(footer.params.scheme,backgroundPreference==='ink'?'night':'day');
+    assert.equal(footer.params.availableWidth,landscape?296:354,'footer receives the actual quick body width');
+    footer.params.onHeightChanged(79);assert.equal(nodes.owner.quickFooterMeasured,79,
+      'the imported child boundary delivers its actual measured-height callback to the parent state');
   }
   if(panel==='mode') {
     assert.ok(nodes.some(node=>node.type==='Text'&&node.create==='横向分页'));
@@ -237,10 +251,12 @@ function verifyStageWidths(candidate=source) {
   assert.equal(nodes.owner.persistentDirectory(),true);assert.equal(nodes.owner.widePanel(),true,'persistent catalog always uses a side panel');
   assert.equal(nodes.owner.panelWidth(),panelWidth,'panel width uses the complete stage');
   assert.ok(nodes.some(node=>node.type==='Column'&&node.width===columnWidth&&node.height==='100%'));
-  const header=nodes.find(node=>node.type==='Row'&&node.height===66);
-  assert.equal(header.padding,undefined,'line spans inset content width');
-  const headerInset=nodes.find(node=>node.type==='Column'&&node.height===66&&node.padding?.left===inset);
+  const header=nodes.find(node=>node.type==='Row'&&node.constraintSize?.minHeight===66);
+  assert.ok(header);assert.equal(header.height,undefined,'wide directory title grows naturally beyond its66vp minimum');
+  assert.deepEqual(header.padding,{top:12,bottom:12},'line spans the full horizontal inset content width');
+  const headerInset=nodes.find(node=>node.type==='Column'&&node.padding?.left===inset&&node.margin?.bottom===17);
   assert.deepEqual(headerInset.padding,{left:inset,right:inset});
+  assert.equal(headerInset.height,undefined);
   assert.ok(!nodes.some(node=>node.type==='Column'&&node.width===42&&node.height===5));
   assert.ok(!nodes.some(node=>node.type==='TextInput'),'wide directory has no phone search/tools');
   const child=[...nodes.owner.children.values()].find(child=>child.params.mangaCatalogDisplay===true);

@@ -9,10 +9,13 @@ export const READER_FONT_NOTO_SANS_SC = 'ReaderNotoSansSC';
 // interpolate variable-font weights reliably on every device.
 export const READER_FONT_NOTO_SANS_SC_UI_BOLD = 'ReaderNotoSansSCUIBold';
 export const READER_FONT_NOTO_SANS_SC_UI_REGULAR = 'ReaderNotoSansSCUIRegular';
+export const READER_FONT_NOTO_SANS_SC_UI_MEDIUM = 'ReaderNotoSansSCUIMedium';
 // Manga demo uses exact 550 / 600 / 900 outlines, loaded on demand as static
 // faces. Requests against the custom variable face failed the VM visual check.
 export const READER_FONT_NOTO_SANS_SC_UI_550 = 'ReaderMangaSans550';
 export const READER_FONT_NOTO_SANS_SC_UI_600 = 'ReaderMangaSans600';
+// Header 650 keeps the complete source cmap for arbitrary localized titles.
+export const READER_FONT_NOTO_SANS_SC_UI_650 = 'ReaderMangaSans650';
 export const READER_FONT_NOTO_SANS_SC_UI_900 = 'ReaderMangaSans900';
 export const READER_FONT_LXGW_WENKAI_LITE = 'ReaderLXGWWenKaiLite';
 export const READER_FONT_LXGW_WENKAI_GB_LITE = 'ReaderLXGWWenKaiGBLite';

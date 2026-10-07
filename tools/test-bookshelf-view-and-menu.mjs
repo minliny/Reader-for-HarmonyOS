@@ -4,6 +4,7 @@ import { stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
 import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import { MANGA_DIRECTORY_VISUAL } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
 import './test-surface-repair.mjs';
 const read=f=>readFileSync(new URL(`../entry/src/main/ets/${f}`,import.meta.url),'utf8');
 const shelf=read('features/bookshelf/BookshelfPage.ets');
@@ -20,8 +21,8 @@ const boundedFrame=read('features/common/ReaderBoundedSurface.ets');
 const dialog=read('features/bookshelf/LocalImportDialog.ets');
 const index=read('pages/Index.ets');
 const typographySource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets',import.meta.url),'utf8');
-const typographyRoles=new Function(...Object.keys(fontFamilies),
- `${stripTypeScriptTypes(typographySource.replace(/import[\s\S]*?from '[^']+';/g,'').replace(/\bexport /g,''))}; return {TYPE_SHELF_LIST_TITLE,TYPE_SHELF_LIST_AUTHOR,TYPE_SHELF_LIST_CHAPTER,TYPE_SHELF_LIST_STATUS};`)(...Object.values(fontFamilies));
+const typographyRoles=new Function('MANGA_DIRECTORY_VISUAL',...Object.keys(fontFamilies),
+ `${stripTypeScriptTypes(typographySource.replace(/import[\s\S]*?from '[^']+';/g,'').replace(/\bexport /g,''))}; return {TYPE_SHELF_LIST_TITLE,TYPE_SHELF_LIST_AUTHOR,TYPE_SHELF_LIST_CHAPTER,TYPE_SHELF_LIST_STATUS};`)(MANGA_DIRECTORY_VISUAL,...Object.values(fontFamilies));
 // The section gear is removed; the four semantic More actions remain.
 assert.doesNotMatch(shelf,/sectionAction\('bookshelf_settings'/);
 assert.doesNotMatch(shelf,/BookshelfGroupSelector\(/);

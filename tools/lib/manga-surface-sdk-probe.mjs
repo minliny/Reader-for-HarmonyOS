@@ -5,8 +5,9 @@ import { MangaBookPresentation } from '../../entry/src/main/ets/features/manga/M
 import * as readerWindowMetrics from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { isReaderProductSurfaceEnabled, isReaderMainTabEnabled } from '../../entry/src/main/ets/app/ReaderProductScope.ts';
 import { readerWidthClass } from '../../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
+import * as mangaDirectoryVisual from '../../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
 import { READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_550,
-  READER_FONT_NOTO_SANS_SC_UI_600, READER_FONT_NOTO_SANS_SC_UI_900 } from '../../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+  READER_FONT_NOTO_SANS_SC_UI_600, READER_FONT_NOTO_SANS_SC_UI_650, READER_FONT_NOTO_SANS_SC_UI_900 } from '../../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 
 // SDK probes resolve the production extensionless TypeScript imports exactly
 // as the other Host Owner probes; no recovery projector is reconstructed.
@@ -37,6 +38,7 @@ for (const [name, relative] of [
   ['ReaderDirectoryNavigationSurface', '../../entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets'],
   ['MangaReadingDirectoryFallback', '../../entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets'],
   ['MangaDownloadOperationsPanel', '../../entry/src/main/ets/features/manga/MangaDownloadOperationsPanel.ets'],
+  ['MangaDirectoryCurrentFooter', '../../entry/src/main/ets/features/manga/MangaDirectoryCurrentFooter.ets'],
 ]) {
   const source = readFileSync(new URL(relative, import.meta.url), 'utf8');
   syntax.componentCollection.customComponents.add(name);
@@ -46,7 +48,8 @@ export const mangaSurfaceSdkDependencies = {
   ...Object.fromEntries(['SafeAreaType', 'SafeAreaEdge', 'LayoutSafeAreaType', 'LayoutSafeAreaEdge', 'BarState']
     .map(name => [name, new Proxy({}, { get: (_target, key) => `${name}.${String(key)}` })])),
   READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_550,
-  READER_FONT_NOTO_SANS_SC_UI_600, READER_FONT_NOTO_SANS_SC_UI_900, MangaSheetFrame,
+  READER_FONT_NOTO_SANS_SC_UI_600, READER_FONT_NOTO_SANS_SC_UI_650, READER_FONT_NOTO_SANS_SC_UI_900, MangaSheetFrame,
+  ...mangaDirectoryVisual, visual: mangaDirectoryVisual.MANGA_DIRECTORY_VISUAL,
   PanGesture: nativeGesture, PanDirection: { Vertical: 'vertical' },
   GesturePriority: { Low: 'low' },
   globalThis: { Gesture: nativeGesture, PanGesture: nativeGesture },
@@ -54,6 +57,7 @@ export const mangaSurfaceSdkDependencies = {
   ReaderDirectoryNavigationSurface: ImportedChildBoundary,
   MangaReadingDirectoryFallback: ImportedChildBoundary,
   MangaDownloadOperationsPanel: ImportedChildBoundary,
+  MangaDirectoryCurrentFooter: ImportedChildBoundary,
   MangaBookPresentation,
   ...readerWindowMetrics, isReaderProductSurfaceEnabled, isReaderMainTabEnabled, readerWidthClass,
   readingDirectoryRecovery, EMPTY_READING_DIRECTORY_RECOVERY,

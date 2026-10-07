@@ -47,12 +47,17 @@ export struct ReaderDirectoryList {
   @Prop edgeEffectMode: EdgeEffect = EdgeEffect.None;
   scroller: Scroller | undefined = undefined;
   onFirstLayout: () => void = (): void => {};
+  onScrollOffset: (offset: number) => void = (_offset: number): void => {};
   onViewportChanged: (width: number, height: number) => void = (_width: number, _height: number): void => {};
   onUserScrollIntent: () => void = (): void => {};
   // Only the fixed DEBUG diagnostic page supplies a sink. No book data is logged.
   @Prop geometryProbeEnabled: boolean = false;
   onGeometryProbe: (event: string) => void = (_event: string): void => {};
   @BuilderParam rowBuilder: (repeatItem: RepeatItem<LocalReadingTocEntry>) => void;
+  @BuilderParam emptyBuilder: () => void = this.emptyContent;
+
+  @Builder
+  private emptyContent() {}
 
   private layoutReady: boolean = false;
   private measuredWidth: number = -1;
@@ -149,6 +154,9 @@ export struct ReaderDirectoryList {
 
   build() {
     List({ space: 0, scroller: this.scroller }) {
+      if (this.naturalRowHeight && this.entries.length === 0) {
+        ListItem() { this.emptyBuilder(); }.width('100%');
+      }
       // Repeat.virtualScroll retained an empty native range when the control
       // mounted hidden before its TOC arrived. Explicit data notifications
       // admit that empty -> populated transition without remounting the List.
@@ -173,7 +181,9 @@ export struct ReaderDirectoryList {
     // natural manga rows carry their own padding inside the scroll content.
     .contentStartOffset(this.naturalRowHeight ? (this.listPaddingTop >= 0 ? this.listPaddingTop : this.listPaddingY) : this.contentStartInset)
     .contentEndOffset(this.naturalRowHeight ? (this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY) : this.contentEndInset)
-    .scrollBar(BarState.Off)
+    .scrollBar(this.naturalRowHeight ? BarState.Auto : BarState.Off)
+    .scrollBarWidth(this.naturalRowHeight ? 4 : undefined)
+    .scrollBarColor(this.naturalRowHeight ? '#47000000' : undefined)
     .edgeEffect(this.edgeEffectMode)
     // API 21 drag ownership is reported even before a positive scroll delta.
     // A Scroller.scrollTo callback is not evidence of user scroll intent.
@@ -188,6 +198,8 @@ export struct ReaderDirectoryList {
     })
     .onDidScroll((offset: number, _state: ScrollState): void => {
       this.probeGeometry(`did delta=${offset}`);
+      const current = this.scroller?.currentOffset().yOffset;
+      if (current !== undefined && Number.isFinite(current)) this.onScrollOffset(current);
     })
     .onScrollIndex((start: number, _end: number, _center: number): void => {
       this.firstVisibleIndex = start;

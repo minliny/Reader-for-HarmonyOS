@@ -6,6 +6,10 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { readerInteractiveSafeBottom, readerInteractiveSafeTop } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { readerFloatingBarBottomInset } from './lib/reader-floating-bar-metrics-probe.mjs';
+import { mangaGridProbeDependencies, emptyMangaGridState } from './lib/manga-directory-grid-probe.mjs';
+import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
+import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 
 const root = new URL('../entry/src/main/ets/', import.meta.url);
 const read = path => readFileSync(new URL(path, root), 'utf8');
@@ -30,6 +34,7 @@ for (const [name, props] of Object.entries({
   ReaderSelectPanel: ['value', 'options', 'variant', 'controlWidth', 'reduceMotion', 'closing', 'selectionId', 'x', 'y'],
   PageBackBar: ['title', 'floating', 'centered'], ReaderDirectoryRules: ['bookId'],
   ReaderDirectoryToolbar: ['text', 'placeholder', 'ascending', 'showChapterTools'],
+  ReaderSearchField: ['variant', 'mode', 'text', 'placeholder', 'accessibilityLabel', 'clearable'],
   ReaderDirectoryList: ['entries', 'rowHeight', 'naturalRowHeight', 'listPaddingX', 'listPaddingRight',
     'listPaddingY', 'listPaddingTop', 'listPaddingBottom', 'contentStartInset', 'contentEndInset'],
   ReaderDirectoryNavigationSurface: ['sourceId', 'bookId', 'query', 'ascending', 'currentChapterIndex', 'openRevision',
@@ -42,13 +47,14 @@ for (const [name, props] of Object.entries({
   syntax.componentCollection.customComponents.add(name);
   syntax.propCollection.set(name, new Set(props));
 }
-for (const [name, slots] of [['PageBackBar', ['trailing']], ['ReaderDirectoryList', ['rowBuilder']],
+for (const [name, slots] of [['PageBackBar', ['trailing']], ['ReaderDirectoryList', ['rowBuilder', 'emptyBuilder']],
   ['ReaderDirectoryNavigationSurface', ['fallbackBuilder']]]) {
   syntax.builderParamObjectCollection.set(name, new Set(slots));
 }
 const tokens = Object.fromEntries([...read('features/common/ReaderTokens.ets')
   .matchAll(/export const (TOK_\w+)(?:\s*:\s*\w+)?\s*=\s*([\d.]+);/g)].map(m => [m[1], Number(m[2])]));
 let metrics = {
+  systemFontScale: 1, windowRect: { width: 390, height: 844 },
   systemInsets: { left: 0, right: 0, bottom: 34 }, cutoutInsets: {}, gestureInsets: {}, navigationInsets: {},
 };
 const lazy = { create(_id, _owner, data, generator) {
@@ -56,6 +62,7 @@ const lazy = { create(_id, _owner, data, generator) {
 }, pop() {} };
 const deps = {
   readerRecoveryView,
+  ...mangaGridProbeDependencies, ...fonts, ReaderSearchField: Child,
   ...tokens, LazyForEach: lazy, ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
   Repeat: function Repeat(items) { return {
     each(generator) { this.generator = generator; return this; }, key() { return this; }, virtualScroll() { return this; },
@@ -69,10 +76,18 @@ const deps = {
   ReaderDirectoryNavigationList: Child, ReaderRuntimeOwner: { current: () => ({ supportsCoreCapability: () => false }) },
   ListItemAlign: { Center: 'center' }, GRID_ROW_GAP: 12, GRID_COLUMN_GAP: 30,
 };
+const properties = createArkUIPropertyRuntimeProbe();
+Object.assign(deps, properties.sdk);
+const footerSource = read('features/manga/MangaDirectoryCurrentFooter.ets');
+const popupSource = read('features/common/ReaderMangaDownloadPopup.ets');
+deps.MangaDirectoryCurrentFooter = createReaderBuilderProbe(footerSource, boundedMembers(footerSource), deps, properties.hooks).Component;
+deps.ReaderMangaDownloadPopup = Child;
+const hooks = { ...properties.hooks, childSources: { MangaDirectoryCurrentFooter: footerSource,
+  ReaderMangaDownloadPopup: popupSource }, mountChildren: true };
 const nodes = owner => [...owner.nodes.values()];
 function fixture(key, names, values = {}) {
   const selected = key === 'search' ? [...names, 'operation', 'retryOperation', 'filteredEmptyMessage'] : key === 'source' ? [...names, 'recovery'] : names;
-  const { owner } = createReaderBuilderProbe(sources[key], selected, deps);
+  const { owner } = createReaderBuilderProbe(sources[key], selected, deps, hooks);
   for (const match of sources[key].matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g)) {
     if (typeof owner[match[1]] !== 'function') owner[match[1]] = () => {};
   }
@@ -201,15 +216,18 @@ tools.onAreaChange({}, { height: 0 });
 assert.equal(directory.toolsHeight, 210, 'a transient zero layout cannot erase the tool clearance');
 
 function nativeDirectoryFixture(key, values = {}) {
-  const owner = fixture(key, key === 'flat' ? ['build', 'rowBuilder'] : ['build'], {
-    entries: [], dataSource: { totalCount: () => 0 }, rowHeight: 40, itemSizes: {},
-    contentStartInset: 273, contentEndInset: 39, listPaddingX: 10, listPaddingRight: -1,
+  const empty = emptyMangaGridState();
+  const owner = fixture(key, key === 'flat' ? ['build', 'rowBuilder', 'emptyBuilder', 'emptyContent', 'probeGeometry'] :
+    ['build', 'mangaContentStartOffset', 'mangaContentEndOffset', 'mangaGridLayoutOptions', 'mangaGridNarrow', 'mangaLoadedRuns', 'mangaFontScale', 'mangaContentWidth', 'mangaEmptyState', 'mangaColor'], {
+    ...empty, mangaPresentationRevision: 0, entries: [], dataSource: { ...empty.dataSource, totalCount: () => 0 }, rowHeight: 40, itemSizes: {},
+    contentStartInset: values.mangaDisplay ? 0 : 273, contentEndInset: values.mangaDisplay ? 0 : 39, listPaddingX: 10, listPaddingRight: -1,
     listPaddingY: 0, listPaddingTop: -1, listPaddingBottom: -1,
     naturalRowHeight: false, mangaDisplay: false, mangaCatalogDisplay: false,
-    interactionEnabled: true, ...values,
+    interactionEnabled: true, mangaScheme: '', ...values,
   });
   owner.initialRender();
-  const list = fullList(owner);
+  const list = key === 'tree' && values.mangaDisplay ? nodes(owner).find(node => node.type === 'Grid') : fullList(owner);
+  assert.ok(list); assert.equal(list.height, '100%');
   return { owner, list };
 }
 function assertSingleOffsetPublication(owner, list, after = 0) {
@@ -257,37 +275,65 @@ for (const explicitPadding of [false, true]) {
 for (const [safeTop, safeBottom] of [[0, 0], [48, 34], [10, 80]]) {
   metrics = { ...metrics, systemInsets: { left: 0, right: 0, top: safeTop, bottom: safeBottom } };
   const entries = [{ index: 7, title: '第七话', navigable: true }];
-  const catalog = fixture('directory', ['build', 'mangaPage', 'mangaFlatList', 'topInset', 'bottomInset'], {
+  let rawMangaOffset = 0;
+  const nativeMangaScroller = { currentOffset: () => ({ xOffset: 0, yOffset: rawMangaOffset }) };
+  const catalog = fixture('directory', ['build', 'mangaPage', 'mangaToolbar', 'mangaFlatList', 'mangaEmptyState', 'mangaDownloadMenuButton',
+    'mangaCurrentFooter', 'mangaFlowFooter', 'mangaVisibleTopInset', 'mangaNarrow', 'mangaContentTopInset', 'mangaFontScale', 'mangaToolHeight', 'mangaFooterHeight', 'mangaBottomInset', 'mangaBottomClearance', 'headerFrame', 'onMangaScrollOffset', 'topInset', 'bottomInset'], {
     contentKind: 'manga', sourceId: 'source', bookId: 'book', admittedIdentity: 'source\u0000book',
     admittedEntries: entries, projectedEntries: entries, rulesRevision: 0, currentChapterIndex: 7,
     locateCurrentRevision: 0, navigationInteracted: false, mangaDownloadEnabled: false,
     bookTitle: '漫画', searchDraft: '', searchQuery: '', ascending: true,
-    mangaVisibleEntries: () => entries, mangaCurrentTitle: () => '第七话', mangaCurrentPosition: () => '1 / 20',
+    mangaToolsHeight: 175, mangaViewportHeight: 844, viewportWidth: 390, mangaFontsReady: true,
+    mangaScrollOffset: 0, mangaFooterMeasured: 0, listScroller: nativeMangaScroller,
+    mangaLayoutEntries: () => entries, mangaSummaryLabel: () => '1 个可读条目', mangaCurrentTitle: () => '第七话', mangaCurrentPosition: () => '1 / 20',
   });
   catalog.initialRender();
   const treeChild = [...catalog.children.values()].find(child => child.params.chapterEntries);
   assert.ok(treeChild, 'manga dispatch publishes the tree catalog');
   treeChild.params.fallbackBuilder();
-  const flatChild = [...catalog.children.values()].find(child => child.params.entries);
+  const flatChild = [...catalog.children.values()].find(child => child.params?.entries);
   assert.ok(flatChild, 'the actual manga fallback publishes its natural-row List');
-  const toolbar = nodes(catalog).find(node => node.type === 'Column' && node.height === 126);
-  const footer = nodes(catalog).find(node => node.type === 'Row' && node.height === 48 && node.margin?.bottom !== undefined);
+  const toolbar = nodes(catalog).find(node => node.type === 'Column' && node.position?.y === safeTop + 80 && typeof node.onAreaChange === 'function');
+  const footer = nodes(catalog).find(node => node.type === 'Row' && node.margin?.bottom !== undefined);
+  const actualFooter = [...catalog.children.values()].find(child => child.nodes && child.availableWidth === 330);
+  assert.ok(actualFooter, 'the real shared footer supplies the full catalog clearance contract');
+  assert.equal(nodes(actualFooter).find(node => node.accessibilityText === '当前阅读位置').constraintSize.minHeight, 48);
   assert.ok(toolbar); assert.ok(footer);
-  assert.equal(toolbar.margin.top, safeTop + 66);
-  assert.equal(footer.margin.bottom, Math.max(12, safeBottom) + 12);
-  const toolbarEnd = toolbar.margin.top + toolbar.height;
-  const footerClearance = footer.height + footer.margin.bottom + 12;
+  assert.equal(toolbar.position.y, safeTop + 80);
+  assert.equal(footer.margin.bottom, safeBottom + 12);
+  const toolbarEnd = toolbar.position.y + catalog.mangaToolsHeight;
+  const footerClearance = catalog.mangaFooterHeight() + footer.margin.bottom + 12;
   for (const [key, child] of [['tree', treeChild], ['flat', flatChild]]) {
-    assert.equal(child.params.listPaddingTop, safeTop + 200);
-    assert.equal(child.params.listPaddingTop, toolbarEnd + 8, `${key} first row clears the actual floating tools`);
-    assert.equal(child.params.listPaddingBottom, Math.max(12, safeBottom) + 72);
+    assert.equal(child.params.listPaddingTop, safeTop + 255);
+    assert.equal(child.params.listPaddingTop, toolbarEnd, `${key} first row clears the measured floating tools`);
+    assert.equal(child.params.listPaddingBottom, safeBottom + 72);
     assert.equal(child.params.listPaddingBottom, footerClearance, `${key} final row clears the actual footer plus its 12vp gap`);
     const { owner, list } = nativeDirectoryFixture(key, child.params);
-    assert.equal(list.contentStartOffset, child.params.listPaddingTop);
-    assert.equal(list.contentEndOffset, child.params.listPaddingBottom + (key === 'tree' ? 14 : 0),
-      'paged manga rows retain their extra row-end gap; the flat fallback preserves the complete footer clearance');
-    assertSingleOffsetPublication(owner, list);
+    if (key === 'tree') {
+      assert.equal(list.padding.top, 0);
+      assert.equal(list.contentStartOffset, child.params.listPaddingTop);
+      assert.equal(list.padding.bottom, 0);
+      assert.equal(list.contentEndOffset, child.params.listPaddingBottom,
+        'full catalog consumes exactly the parent footer clearance; the14vp scroll tail belongs only to quick display');
+      const calls = owner.attributeCalls.filter(call => call.id === list.id);
+      assert.equal(calls.filter(call => call.property === 'padding').length, 1, 'Grid publishes its supported padding once');
+      assert.equal(calls.filter(call => ['contentStartOffset', 'contentEndOffset'].includes(call.property)).length, 2);
+    } else {
+      assert.equal(list.contentStartOffset, child.params.listPaddingTop);
+      assert.equal(list.contentEndOffset, child.params.listPaddingBottom);
+      assertSingleOffsetPublication(owner, list);
+      assert.equal(list.create.scroller, nativeMangaScroller, 'actual native fallback List uses the unchanged BookPage Scroller');
+      for (const displacement of [0, -7, 93]) {
+        rawMangaOffset = -list.contentStartOffset + displacement;
+        list.onDidScroll(999, 'ScrollState.Scroll');
+        assert.equal(catalog.mangaScrollOffset, displacement, 'actual List did-scroll reads Scroller raw origin and reaches BookPage normalized chrome');
+      }
+    }
   }
+  toolbar.onAreaChange({}, { height: 209 });
+  catalog.replayOnly([treeChild.id, flatChild.id]);
+  assert.equal(treeChild.params.listPaddingTop, safeTop + 289);
+  assert.equal(flatChild.params.listPaddingTop, safeTop + 289, 'both native owners receive a wrapped title/font-size clearance update');
 }
 metrics = { ...metrics, systemInsets: { left: 0, right: 0, bottom: 34 } };
 const surface = fixture('surface', ['build', 'fallbackBuilder'], { view: { visibleTotal: 1 }, contentStartInset: 273, contentEndInset: 39 });

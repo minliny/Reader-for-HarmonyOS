@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { MANGA_DIRECTORY_VISUAL as visual } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
 
 const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
 const tokens = read('entry/src/main/ets/features/common/ReaderTokens.ets');
@@ -45,14 +46,30 @@ assert.match(shelf, /return Math\.min\(30,[\s\S]*Math\.max\(TOK_SPACE_XS,/,
 
 assert.match(detail, /@State private viewportWidth: number = 0;/,
   'book detail must observe its physical viewport');
-assert.match(detail,
-  /private contentFrame\(\): SurfaceHorizontalFrame[\s\S]*new SurfaceWidthSpec\(720, 20, 20, 'center'\)/,
-  'book detail must share one continuous Figma cap and per-edge safe-frame rule');
-assert.match(detail,
-  /private dockFrame\(\): SurfaceHorizontalFrame[\s\S]*new SurfaceWidthSpec\(680, 30, 30, 'center'\)/,
-  'detail action dock keeps the approved continuous 680vp cap and 30vp safe-frame gaps');
-assert.match(detail, /Text\(this\.shelfActionLabel\(\)\)\.width\(94\)/,
-  'detail secondary action keeps the compact approved 94vp control width');
+function checkDetailBranches(candidate) {
+  const content = candidate.slice(candidate.indexOf('private contentFrame('), candidate.indexOf('private dockFrame('));
+  const dock = candidate.slice(candidate.indexOf('private dockFrame('), candidate.indexOf('private liveWidth('));
+  assert.match(content,
+    /new SurfaceWidthSpec\(this\.book\.contentKind === 'manga' \? visual\.contentWidthMax : 720, 20, 20, 'center'\)/,
+    'novel detail preserves its 720vp Figma cap while only manga consumes the generated demo cap');
+  assert.match(dock,
+    /new SurfaceWidthSpec\(this\.book\.contentKind === 'manga' \? visual\.contentWidthMax - 2 \* \(visual\.detailDockInset - visual\.contentPaddingX\) : 680,\s*this\.book\.contentKind === 'manga' \? visual\.detailDockInset : 30, this\.book\.contentKind === 'manga' \? visual\.detailDockInset : 30, 'center'\)/,
+    'novel dock preserves its 680vp cap and independent 30vp safe gaps; manga alone follows its demo dock geometry');
+  assert.match(candidate, /Text\(this\.shelfActionLabel\(\)\)\.width\(this\.book\.contentKind === 'manga' \? visual\.detailSecondaryWidth : 94\)/,
+    'the novel secondary action retains 94vp independently of manga shared visual values');
+}
+checkDetailBranches(detail);
+assert.equal(visual.contentWidthMax, 540, 'the manga branch is bound to its own 540px demo, not the novel Figma cap');
+assert.equal(visual.detailDockInset, 30);
+assert.equal(visual.detailSecondaryWidth, 94);
+for (const [label, candidate] of [
+  ['manga cap leaks into novel', detail.replace('visual.contentWidthMax : 720', 'visual.contentWidthMax : 540')],
+  ['novel dock cap is changed', detail.replace('visual.contentPaddingX) : 680', 'visual.contentPaddingX) : 520')],
+  ['novel secondary width is changed', detail.replace('visual.detailSecondaryWidth : 94', 'visual.detailSecondaryWidth : 95')],
+]) {
+  assert.notEqual(candidate, detail, label);
+  assert.throws(() => checkDetailBranches(candidate), assert.AssertionError, `reject ${label}`);
+}
 assert.match(detail, /onAreaChange\([\s\S]*const width = Number\(area\.width\)/,
   'book detail must consume the live physical Area width');
 

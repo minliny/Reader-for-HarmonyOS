@@ -10,9 +10,10 @@ import { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp, readerVisual
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from './lib/reader-floating-bar-metrics-probe.mjs';
 import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import { MANGA_DIRECTORY_VISUAL } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
 const typographySource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
-const TYPE_PAGE_TITLE = new Function(...Object.keys(fontFamilies),
-  `${stripTypeScriptTypes(typographySource.replace(/import[\s\S]*?from '[^']+';/g, '').replace(/\bexport /g, ''))}; return TYPE_PAGE_TITLE;`)(...Object.values(fontFamilies));
+const TYPE_PAGE_TITLE = new Function('MANGA_DIRECTORY_VISUAL', ...Object.keys(fontFamilies),
+  `${stripTypeScriptTypes(typographySource.replace(/import[\s\S]*?from '[^']+';/g, '').replace(/\bexport /g, ''))}; return TYPE_PAGE_TITLE;`)(MANGA_DIRECTORY_VISUAL, ...Object.values(fontFamilies));
 const file = new URL('../entry/src/main/ets/features/bookshelf/BookshelfSettingsPage.ets', import.meta.url);
 const source = readFileSync(file, 'utf8');
 const headerSource = readFileSync(new URL('../entry/src/main/ets/features/common/PageBackBar.ets', import.meta.url), 'utf8');

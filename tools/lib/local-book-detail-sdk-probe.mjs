@@ -10,6 +10,8 @@ import * as fonts from '../../entry/src/main/ets/features/common/ReaderFontFamil
 import * as author from '../../entry/src/main/ets/features/common/BookAuthorMetadata.ts';
 import * as intro from '../../entry/src/main/ets/features/common/BookIntroText.ts';
 import * as mangaDirectory from '../../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';
+import * as mangaLayout from '../../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
+import {mangaDirectoryEntryRowSdk} from './manga-directory-entry-row-probe.mjs';
 
 const read = path => readFileSync(new URL('../../entry/src/main/ets/' + path, import.meta.url), 'utf8');
 export const localBookDetailSource = read('features/bookshelf/LocalBookDetail.ets');
@@ -23,13 +25,16 @@ class Cover {constructor(owner, params, _storage, id) {Object.assign(this, {owne
 /** Actual approved detail/header Builders and geometry, with a window-facts
  * seam. Does not render native pixels, simulate layout or replace callbacks. */
 export function localBookDetailSdk(dependencies = {}, hooks = {}, properties = createArkUIPropertyRuntimeProbe()) {
+  const source = hooks.source ?? localBookDetailSource;
+  const manga = mangaDirectoryEntryRowSdk({properties});
   const deps = {...properties.sdk, ...readerFoundationTokens, ...geometry, ...metrics, ...fonts,
-    ...author, ...intro, ...mangaDirectory, ...constants,
+    ...author, ...intro, ...mangaDirectory, ...mangaLayout, ...manga.deps, ...constants,
     ReaderWindowCoordinator: {metrics: metrics.createDefaultReaderWindowMetrics},
-    ImageFit: {Cover: 'cover'}, NoCoverCover: Cover, ...dependencies};
-  const carrier = {...properties.hooks, ...hooks, childSources: {...hooks.childSources,
+    ImageFit: {Cover: 'cover'}, NoCoverCover: Cover, registerReaderFonts() {},
+    prepareReaderFontFamily: async () => {}, prepareMangaSheetFonts: async () => true, ...dependencies};
+  const carrier = {...properties.hooks, ...hooks, childSources: {...manga.hooks.childSources, ...hooks.childSources,
     PageBackBar: headerSource, NoCoverCover: coverSource}, mountChildren: true};
   deps.PageBackBar = createReaderBuilderProbe(headerSource, boundedMembers(headerSource), deps, carrier).Component;
-  return {...createReaderBuilderProbe(localBookDetailSource, boundedMembers(localBookDetailSource), deps, carrier),
+  return {...createReaderBuilderProbe(source, boundedMembers(source), deps, carrier),
     Header: deps.PageBackBar, properties};
 }

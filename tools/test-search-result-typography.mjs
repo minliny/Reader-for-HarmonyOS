@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import { MANGA_DIRECTORY_VISUAL } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
 
 const read = relative => readFileSync(new URL(`../entry/src/main/ets/${relative}`, import.meta.url), 'utf8');
 const typographySource = read('features/common/ReaderTypography.ets');
@@ -14,10 +15,10 @@ const roles = [
   'TYPE_SEARCH_RESULT_INTRO',
   'TYPE_SEARCH_RESULT_TAG',
 ];
-const evaluator = new Function(...Object.keys(fontFamilies), `${stripTypeScriptTypes(typographySource)
+const evaluator = new Function('MANGA_DIRECTORY_VISUAL', ...Object.keys(fontFamilies), `${stripTypeScriptTypes(typographySource)
   .replace(/^import[^;]+;\s*/gm, '')
   .replace(/^export /gm, '')}; return { ${roles.join(', ')} };`);
-const typography = evaluator(...Object.values(fontFamilies));
+const typography = evaluator(MANGA_DIRECTORY_VISUAL, ...Object.values(fontFamilies));
 
 assert.deepEqual(
   roles.map(role => {

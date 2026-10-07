@@ -50,7 +50,7 @@ const getterPolicies = {
   'ReaderDialogSurface.ets': { owner: 'ReaderDialogSurface', getter: 'spec', resolver: 'resolveDialogSpec', module: 'ReaderSurfaceSpecs', argument: 'this.specId', fields: ['headerFontFamily','headerFontWeight','headerFontSize','headerLineHeight'] },
   'ReaderSheetActionList.ets': { owner: 'ReaderSheetActionList', getter: 'surfaceSpec', resolver: 'resolveSheetSpec', module: 'ReaderSurfaceSpecs', argument: "'bookshelf-book-action'", fields: ['actionLabelFontFamily','actionLabelFontWeight','actionLabelFontSize','actionLabelLineHeight'] },
   'ReaderChoiceRow.ets': { owner: 'ReaderChoiceRow', getter: 'spec', resolver: 'resolveReaderChoiceSpec', module: 'ReaderChoiceSpecs', argument: 'this.specId', fields: ['selectedWeight','text','selectedText'], textGetter: 'textStyle' },
-  'ReaderSearchField.ets': { owner: 'ReaderSearchField', getter: 'textStyle', roles: ['TYPE_SEARCH_SOURCE_INPUT','TYPE_SEARCH_DIRECTORY_INPUT','TYPE_SEARCH_READER_QUICK_INPUT'], fields: ['fontFamily','fontWeight','fontSizeFp','lineHeightFp','letterSpacingFp'] },
+  'ReaderSearchField.ets': { owner: 'ReaderSearchField', getter: 'textStyle', roles: ['TYPE_SEARCH_SOURCE_INPUT','TYPE_SEARCH_DIRECTORY_INPUT','TYPE_SEARCH_MANGA_DIRECTORY_INPUT','TYPE_SEARCH_READER_QUICK_INPUT'], fields: ['fontFamily','fontWeight','fontSizeFp','lineHeightFp','letterSpacingFp'] },
 };
 const roleFields = ['fontFamily','fontWeight','fontSizeFp','lineHeightFp','letterSpacingFp'];
 export function typographyExpressionContext(source, file) {
@@ -90,10 +90,10 @@ export function typographyExpressionContext(source, file) {
       if(ts.isReturnStatement(n)&&ts.isIdentifier(n.expression)){seen.push(n.expression.text);return policy.roles.includes(n.expression.text)&&
         imports.get(n.expression.text)?.exported===n.expression.text&&imports.get(n.expression.text)?.module==='./ReaderTypography';}
       if(ts.isBlock(n))return n.statements.length===1&&validStatement(n.statements[0]);
-      if(ts.isIfStatement(n))return !n.elseStatement&&/^(?:this\.variant === '(?:sourceManagement|readerDirectory)')$/.test(n.expression.getText(tree))&&validStatement(n.thenStatement);
+      if(ts.isIfStatement(n))return !n.elseStatement&&/^(?:this\.variant === '(?:sourceManagement|readerDirectory|mangaDirectory)')$/.test(n.expression.getText(tree))&&validStatement(n.thenStatement);
       return false;
     };
-    if(getter?.body?.statements.length===3&&getter.body.statements.every(validStatement)&&
+    if(getter?.body?.statements.length===4&&getter.body.statements.every(validStatement)&&
       new Set(seen).size===policy.roles.length)bind(policy.getter,policy.fields);
   }
   return { bindings };

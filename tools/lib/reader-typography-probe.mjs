@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import * as fontFamilies from '../../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import { MANGA_DIRECTORY_VISUAL } from '../../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
 
 /** Execute the real typography-only ETS module with its real physical-family
  * exports. Builder/layout probes no longer duplicate role names or tuples in
@@ -14,8 +15,8 @@ export function loadReaderTypographyRoles(source = readFileSync(new URL(
   const executable = stripTypeScriptTypes(source
     .replace(/^import[\s\S]*?;\s*/gm, '')
     .replace(/^export /gm, ''));
-  return new Function(...Object.keys(fontFamilies), `${executable}; return { ${names.join(', ')} };`)(
-    ...Object.values(fontFamilies));
+  return new Function(...Object.keys(fontFamilies), 'MANGA_DIRECTORY_VISUAL', `${executable}; return { ${names.join(', ')} };`)(
+    ...Object.values(fontFamilies), MANGA_DIRECTORY_VISUAL);
 }
 
 export const readerTypographyRoles = loadReaderTypographyRoles();

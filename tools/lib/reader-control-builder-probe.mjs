@@ -1,13 +1,17 @@
+import * as directoryVisual from '../../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
+import * as directoryGeometry from '../../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
 import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionReaderPressFeedback } from './reader-press-feedback-probe.mjs';
+import { productionMangaDirectoryPressFeedback } from './manga-directory-press-feedback-probe.mjs';
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
 import { labeledIconControls } from './reader-labeled-icon-action-probe.mjs';
 import { foundationControls } from './reader-foundation-control-probe.mjs';
 import { switchControls } from './reader-switch-control-probe.mjs';
 import { iconButtonControls } from './reader-icon-button-probe.mjs';
+import { mangaDirectoryEntryRowSdk } from './manga-directory-entry-row-probe.mjs';
 
 const sdkRoot = process.env.READER_ETS_LOADER_ROOT ??
   '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
@@ -59,6 +63,19 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     }
     return member.getText(original);
   });
+  if (dependencies.MangaDirectoryEntryRow === undefined && /\bMangaDirectoryEntryRow\s*\(/.test(members.join('\n'))) {
+    const controls = mangaDirectoryEntryRowSdk();
+    const originalHooks = hooks;
+    dependencies = { ...controls.deps, ...dependencies };
+    hooks = { ...controls.hooks, ...originalHooks,
+      childSources: { ...controls.hooks.childSources, ...originalHooks.childSources },
+      mountChildren: true,
+      onChildUpdated(child, params) {
+        controls.properties.flush();
+        originalHooks.onChildUpdated?.(child, params);
+      },
+    };
+  }
   // Legacy consumers now mount the same production controls as new callers.
   // Resolve only actual calls in the selected production members, and keep an
   // explicitly supplied component/property runtime authoritative. Foundation
@@ -252,16 +269,24 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   // Geometry/property probes do not register physical platform fonts. The
   // actual registrar has a separate demand/failure/retry test.
   const globals = { readerRegisteredFontFamily: (_font, family) => family,
-    readerFontFamilyReady: () => true, readerAppColor, readerThemeDefinition, ViewPU, ReaderControlSwitchTrack: Child,
+    readerFontFamilyReady: () => true, MangaDirectoryCurrentFooter: Child,
+    // Constructor arguments cross the platform seam unchanged; native color
+    // parsing and focus-box rasterization remain target evidence.
+    LengthMetrics: { vp: value => ({ value, unit: 'vp' }) }, ColorMetrics: { resourceColor: color => ({ color }) },
+    readerAppColor, readerThemeDefinition, ViewPU, ReaderControlSwitchTrack: Child,
     ...Object.fromEntries(recoveryChildren.map(name => [name, Child])), $r: value => value,
-    ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Path', 'Text', 'TextInput', 'TextArea', 'Select', 'Span', 'Marquee', 'Image', 'Slider', 'Toggle', 'ForEach', 'If', '__Common__']
+    ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Grid', 'GridItem', 'LazyForEach', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Path', 'Text', 'TextInput', 'TextArea', 'Select', 'Span', 'Marquee', 'Image', 'Slider', 'Toggle', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
     ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment', 'AccessibilityRoleType',
-      'LineCapStyle', 'TextAlign', 'TextOverflow', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
+      'LineCapStyle', 'TextAlign', 'TextOverflow', 'WordBreak', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
-    ...readerTypographyRoles,
+    ...readerTypographyRoles, ...directoryVisual, ...directoryGeometry, visual: directoryVisual.MANGA_DIRECTORY_VISUAL,
+    ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1, windowRect: {width: 393,height:852}, interactiveSafeInsets: {top:0,left:0,right:0,bottom:0} }) },
+    readerInteractiveSafeBottom: metrics => metrics.interactiveSafeInsets?.bottom ?? 0,
     ...dependencies };
   globals.ReaderPressFeedback ??= productionReaderPressFeedback({ Color: globals.Color });
+  globals.MangaDirectoryPressFeedback ??= productionMangaDirectoryPressFeedback(undefined,
+    { LengthMetrics: globals.LengthMetrics, ColorMetrics: globals.ColorMetrics });
   const Component = new Function(...Object.keys(globals), `${stripTypeScriptTypes(output)}; return ReaderBuilderProbe;`)(...Object.values(globals));
   return { owner: new Component(undefined, hooks.initialParams ?? {}), Component, output };
 }

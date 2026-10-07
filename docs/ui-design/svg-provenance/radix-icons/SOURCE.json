@@ -59,6 +59,18 @@
     "ChevronDownIcon": {
       "sourceFile": "ChevronDownIcon.svg",
       "sourceSha256": "5a3b143885ce029882dc32d18350635b498d1b201bef641442902be27072a351"
+    },
+    "ArrowLeftIcon": {
+      "sourceFile": "ArrowLeftIcon.svg",
+      "sourceSha256": "9b281d3aa0c46ddd0f23a0bcd760e396ff9dbd1e8707fc62f0c0f56690b31018",
+      "canonicalColor": "currentColor"
     }
+  },
+  "directoryArrow": {
+    "designSource": "Reader-UI/design/manga-directory/arrow-left.svg",
+    "designSourceSha256": "9b281d3aa0c46ddd0f23a0bcd760e396ff9dbd1e8707fc62f0c0f56690b31018",
+    "provenanceFile": "ArrowLeftIcon.PROVENANCE.json",
+    "provenanceSha256": "83261d9eacf9b684883ac342977b3b9a4fcd651624b5fd790ec848e7167fd3ef",
+    "exportMethod": "Byte-exact reviewed ArrowLeftIcon default-currentColor SVG; original package index.js remains the pinned upstream source."
   }
 }

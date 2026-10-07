@@ -1152,6 +1152,10 @@ struct Index {
           bookmarkLoadMessage: this.controlBookmarkProjectionMessage(),
           directoryCurrentChapterIndex: this.directoryCurrentChapterIndex,
           directoryChapterTitle: this.directoryChapterTitle,
+          directoryCurrentPageOrdinal: this.detailBook.mangaPosition?.chapterIndex === this.directoryCurrentChapterIndex ?
+            this.detailBook.mangaPosition?.pageOrdinal ?? -1 : -1,
+          directoryCurrentPageTotal: this.detailBook.mangaPosition?.chapterIndex === this.directoryCurrentChapterIndex ?
+            this.detailBook.mangaPosition?.totalPages ?? -1 : -1,
           directoryOpenedFromControl: this.directoryReturnTarget === 'readerControl',
           offlineBookOperationActive: this.offlineOperationActive,
           directoryRecovery: this.directoryRecovery(),
@@ -4644,6 +4648,7 @@ struct Index {
       this.route !== 'reading') {
       return;
     }
+    if (this.readingContentKind === 'manga') this.refreshDetailMangaPosition();
     this.directoryReturnTarget = 'readerControl';
     this.preparedReaderRoute = 'directory';
     this.route = 'directory';

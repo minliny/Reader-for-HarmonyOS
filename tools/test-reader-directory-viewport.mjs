@@ -3,6 +3,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { stripTypeScriptTypes } from 'node:module';
 import { readerDirectoryScopeKey } from '../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts';
+import { mangaGridProbeDependencies, mangaRowBuilderMembers, emptyMangaGridState } from './lib/manga-directory-grid-probe.mjs';
+import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { readerDirectoryClearViewportAnchors, readerDirectorySaveViewportAnchor,
   readerDirectoryViewportAnchor, readerDirectoryObserveScrollIntent,
@@ -115,11 +118,12 @@ readerDirectoryClearViewportAnchors();
   const { ReaderDirectoryPageWindow, cacheReaderDirectoryNavigationPage } = new Function('directoryPages', 'readerDirectoryScopeKey',
     `${pageCode}; return { ReaderDirectoryPageWindow, cacheReaderDirectoryNavigationPage };`)(sharedPages, readerDirectoryScopeKey);
   const DataSource = productionMotionMethods(path,
-    ['totalCount', 'getData', 'replace', 'admit', 'loadedNode', 'currentView'],
-    { DIRECTORY_PAGE_SIZE: 256, util: { LRUCache: FakePlatformLRUCache },
+    ['totalCount', 'getData', 'replace', 'admit', 'loadedNode', 'currentView', 'coreIndex', 'displayIndex',
+      'requestPage', 'notifyCoreChanged'],
+    { ...mangaGridProbeDependencies, DIRECTORY_PAGE_SIZE: 256, util: { LRUCache: FakePlatformLRUCache },
       setTimeout: action => notificationTimers.push(action) });
   const data = Object.assign(new DataSource(), { view: undefined, pages: new ReaderDirectoryPageWindow(),
-    pending: new Set(), listeners: [], load: offset => loads.push(offset) });
+    pending: new Set(), admittedPages: new Set(), listeners: [], load: offset => loads.push(offset) });
   const first = Array.from({ length: 256 }, (_, index) => node(`first-${index}`));
   data.replace({ viewId: 'large', visibleTotal: 50000, nodes: first });
   for (let page = 1; page <= 30; page += 1) {
@@ -145,7 +149,7 @@ readerDirectoryClearViewportAnchors();
   preparedTarget[5000 - 4864] = node('stable-visible');
   const preparedPhysical = Array.from({ length: 256 }, (_, index) => node(`physical-${index}`));
   const deep = Object.assign(new DataSource(), { view: undefined, pages: new ReaderDirectoryPageWindow(),
-    pending: new Set(), listeners: [], load: offset => loads.push(offset) });
+    pending: new Set(), admittedPages: new Set(), listeners: [], load: offset => loads.push(offset) });
   deep.replace({ viewId: 'old-deep', navigationRevision: 'rev', visibleTotal: 10001, nodes: first });
   deep.admit(5888, { viewId: 'old-deep', visibleTotal: 10001, nodes: oldPage });
   assert.equal(deep.getData(6000).key, 'stable-visible');
@@ -166,7 +170,7 @@ readerDirectoryClearViewportAnchors();
 
   const changed = [];
   const changing = Object.assign(new DataSource(), { view: undefined, pages: new ReaderDirectoryPageWindow(),
-    pending: new Set(), listeners: [{ onDataReloaded: () => changed.push('reload'),
+    pending: new Set(), admittedPages: new Set(), listeners: [{ onDataReloaded: () => changed.push('reload'),
       onDataChanged: index => changed.push(index) }], load: () => {} });
   const parent = node('parent'), unrelated = node('unrelated'), current = node('current');
   changing.replace({ viewId: 'expanded', navigationRevision: 'rev', visibleTotal: 3,
@@ -190,8 +194,31 @@ readerDirectoryClearViewportAnchors();
 }
 assert.match(source, /\.onScrollIndex\(\(start: number,[\s\S]*?this\.captureViewportAnchor\(\)/,
   'native visible index records stable node identity');
-assert.match(source, /\.onScrollStop\(\(\): void => \{ this\.captureViewportAnchor\(\); this\.onScrollSettled\(\); \}\)/,
-  'row offset is captured after an in-row drag stops');
+function stoppedNativeAnchor(candidate = source) {
+  const { owner } = createReaderBuilderProbe(candidate, ['build', 'row', 'rowKey', ...mangaRowBuilderMembers],
+    { ...mangaGridProbeDependencies, ...fontFamilies, LazyForEach: new Proxy({}, { get: () => () => {} }) });
+  const view = { viewId: 'sdk-stop', navigationRevision: 'sdk-rev', visibleTotal: 20 }, settled = [];
+  Object.assign(owner, { ...emptyMangaGridState(), view, bookId: 'sdk-stop-book', sourceId: 'source', mounted: true,
+    mangaDisplay: false, rowHeight: 40, initialPositionPending: true,
+    listPaddingX: 0, listPaddingRight: -1, listPaddingY: 0, listPaddingTop: -1, listPaddingBottom: -1,
+    dataSource: { currentView: () => view, loadedNode: index => index === 6 ? node('sixth-stable-node') : undefined },
+    scroller: { getItemRect: () => ({ y: -13, height: 40 }) },
+    captureViewportAnchor: List.prototype.captureViewportAnchor,
+    onScrollSettled: () => settled.push(readerDirectoryViewportAnchor('sdk-stop-book')) });
+  readerDirectoryClearViewportAnchors();
+  owner.initialRender();
+  const viewport = [...owner.nodes.values()].find(native => native.type === 'List');
+  viewport.onScrollIndex(6, 6, 6);
+  assert.equal(readerDirectoryViewportAnchor('sdk-stop-book'), undefined, 'initial positioning cannot publish an early drag anchor');
+  owner.initialPositionPending = false; viewport.onScrollStop();
+  assert.deepEqual(settled.map(anchor => [anchor?.nodeId, anchor?.visibleIndex, anchor?.rowFraction]),
+    [['sixth-stable-node', 6, .325]], 'actual SDK scroll-stop captures the latest stable node and in-row offset before settling');
+}
+stoppedNativeAnchor();
+const noStoppedAnchor = source.replace('this.publishMangaScrollOffset(); this.captureViewportAnchor(); this.onScrollSettled();',
+  'this.publishMangaScrollOffset(); this.onScrollSettled();');
+assert.notEqual(noStoppedAnchor, source);
+assert.throws(() => stoppedNativeAnchor(noStoppedAnchor), /captures the latest stable node/);
 assert.match(source, /当前章在此组/,
   'collapsed visible ancestor announces where the current chapter resides');
 assert.match(source, /new util\.LRUCache<string, ReaderDirectoryNavigationNode\[\]>\(DIRECTORY_RETAINED_PAGES\)/,

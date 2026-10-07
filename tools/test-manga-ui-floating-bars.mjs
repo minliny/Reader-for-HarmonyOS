@@ -8,13 +8,14 @@ import { readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiv
   readerVisualSafeTop } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import * as families from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import { MANGA_DIRECTORY_VISUAL } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
 import { isReaderMainTabEnabled } from '../entry/src/main/ets/app/ReaderProductScope.ts';
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
 const read = name => readFileSync(file(name),'utf8');
 const roleSource=read('features/common/ReaderTypography.ets').replace(/^import\s*[\s\S]*?;\s*/gm,'').replace(/\bexport /g,'');
 const floatingSource=read('features/common/ReaderFloatingBarMetrics.ts').replace(/^import\s*[\s\S]*?;\s*/gm,'').replace(/\bexport /g,'');
 const {readerFloatingTabBottomInset,readerFloatingTabContentInset}=new Function('readerInteractiveSafeBottom',`${stripTypeScriptTypes(floatingSource)};return {readerFloatingTabBottomInset,readerFloatingTabContentInset};`)(readerInteractiveSafeBottom);
-const roles=new Function(...Object.keys(families),`${stripTypeScriptTypes(roleSource)};return {TYPE_MAIN_TAB_LABEL,TYPE_PAGE_TITLE,TYPE_APP_HOME_TITLE};`)(...Object.values(families));
+const roles=new Function('MANGA_DIRECTORY_VISUAL',...Object.keys(families),`${stripTypeScriptTypes(roleSource)};return {TYPE_MAIN_TAB_LABEL,TYPE_PAGE_TITLE,TYPE_APP_HOME_TITLE};`)(MANGA_DIRECTORY_VISUAL,...Object.values(families));
 let metrics={windowRect:{width:390,height:844},systemInsets:{left:0,right:0,top:48,bottom:34},cutoutInsets:{},gestureInsets:{},navigationInsets:{}};
 const common={...roles,READER_FONT_NOTO_SANS_SC_UI_BOLD:families.READER_FONT_NOTO_SANS_SC_UI_BOLD,
   SurfaceWidthSpec,resolveHorizontalFrame,readerInteractiveSafeLeft,readerInteractiveSafeRight,

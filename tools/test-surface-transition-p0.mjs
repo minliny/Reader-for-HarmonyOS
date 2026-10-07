@@ -62,7 +62,10 @@ const sourceSwitch = read('entry/src/main/ets/features/source/SourceSwitchWindow
 const sourceSwitchPanel = read('entry/src/main/ets/features/reading/SourceSwitchPanel.ets');
 const index = read('entry/src/main/ets/pages/Index.ets');
 
-assert.match(detail, /new SurfaceWidthSpec\(720, 20, 20, 'center'\)/);
+assert.match(detail, /new SurfaceWidthSpec\(this\.book\.contentKind === 'manga' \? visual\.contentWidthMax : 720, 20, 20, 'center'\)/,
+  'the novel Detail keeps its720/20 Figma frame while manga alone consumes the shared demo cap');
+assert.match(detail, /new SurfaceWidthSpec\(this\.book\.contentKind === 'manga' \? visual\.contentWidthMax - 2 \* \(visual\.detailDockInset - visual\.contentPaddingX\) : 680,\s*this\.book\.contentKind === 'manga' \? visual\.detailDockInset : 30, this\.book\.contentKind === 'manga' \? visual\.detailDockInset : 30, 'center'\)/,
+  'the novel dock keeps its680/30 frame independently of manga dock tokens');
 assert.match(detail, /this\.viewportWidth > 0[\s\S]*ReaderWindowCoordinator\.metrics\(\)\.windowRect\.width/,
   'Detail must seed its first frame from measured Window metrics');
 assert.doesNotMatch(detail, /@Prop isTablet/,

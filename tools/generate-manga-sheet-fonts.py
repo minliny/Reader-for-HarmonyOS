@@ -2,8 +2,8 @@
 """Thin, pinned FontTools adapter for the approved manga demo's static faces.
 
 Run with fonttools==4.60.2. No outline/variation algorithm is implemented here.
-Keep every glyph for dynamic 550/600 chapter/group titles. The 900 face is only
-used for four fixed panel headings, subset via the same upstream FontTools.
+Keep every glyph for dynamic 550/600/650 chapter/group/header titles. The 900 face is only
+used for six fixed panel headings, subset via the same upstream FontTools.
 Only instantiate wght and name each face. Shelf startup does not load these.
 """
 import hashlib
@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / 'entry/src/main/resources/rawfile'
 SOURCE = RAW / 'NotoSansSC-VF.otf'
 SOURCE_SHA = 'd13ed01ec8aa45d6178999b648e96fb92150683e9f8e2a581f2acf208dcbe44b'
-TITLES = ['章节目录', '阅读方式', '漫画阅读设置', '更多']
+TITLES = ['章节目录', '阅读方式', '漫画阅读设置', '更多', '本书下载', '本话下载']
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -35,7 +35,7 @@ reference = TTFont(SOURCE, recalcTimestamp=False)
 assert [(a.axisTag, a.minValue, a.defaultValue, a.maxValue)
         for a in reference['fvar'].axes] == [('wght', 100.0, 100.0, 900.0)]
 outputs = []
-for weight in (550, 600, 900):
+for weight in (550, 600, 650, 900):
     font = instantiateVariableFont(TTFont(SOURCE, recalcTimestamp=False),
                                    {'wght': weight}, inplace=True,
                                    optimize=True, updateFontNames=False)
@@ -87,7 +87,7 @@ provenance = {'source': str(SOURCE.relative_to(ROOT)), 'sourceSha256': SOURCE_SH
               'license': 'entry/src/main/resources/rawfile/Noto-OFL.txt',
               'tool': 'fonttools 4.60.2 instantiateVariableFont',
               'generator': 'tools/generate-manga-sheet-fonts.py',
-              'metadataAdjustment': 'Unique family/full/PostScript/unique-ID names; upstream setRibbiBits for single-face Regular style; preserved copyright and OFL; full 550/600 CJK; upstream title subset for 900',
+              'metadataAdjustment': 'Unique family/full/PostScript/unique-ID names; upstream setRibbiBits for single-face Regular style; preserved copyright and OFL; full 550/600/650 CJK; upstream title subset for 900',
               'reused400': {'family': 'ReaderNotoSansSCUIRegular',
                             'output': 'entry/src/main/resources/rawfile/NotoSansSC-UIRegular.otf',
                             'sha256': digest(RAW / 'NotoSansSC-UIRegular.otf')},

@@ -40,7 +40,10 @@ export struct ReaderDirectoryNavigationSurface {
   @Prop mangaDisplay: boolean = false;
   @Prop mangaRowMinHeight: number = 58;
   @Prop mangaCatalogDisplay: boolean = false;
-  @Prop mangaCatalogNarrow: boolean = false;
+  @Prop mangaQuickDisplay: boolean = false;
+  @Prop mangaCatalogNarrow: boolean | undefined = undefined;
+  @Prop mangaInitialViewportWidth: number = 0;
+  @Prop mangaVisibleTopInset: number = 0;
   @Prop mangaCurrentOpenInset: number = 50;
   @Prop mangaScheme: string = '';
   @Prop listPaddingX: number = 10;
@@ -62,6 +65,7 @@ export struct ReaderDirectoryNavigationSurface {
     (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: JsonObject): void => {};
   onUserScrollIntent: () => void = (): void => {};
   onFirstLayout: () => void = (): void => {};
+  onScrollOffset: (offset: number) => void = (_offset: number): void => {};
   onTreeStateChange: (active: boolean) => void = (_active: boolean): void => {};
   onClearSearch: () => void = (): void => {};
   onDeleteBookmarks: (times: number[]) => void = (_times: number[]): void => {};
@@ -323,11 +327,16 @@ export struct ReaderDirectoryNavigationSurface {
     const trace = pendingTrace ?? new ReaderDirectoryTrace(reason);
     this.openingGeneration = generation;
     const query = this.query, descending = !this.ascending;
-    const locateCurrent = this.locateCurrentPending;
+    const explicitLocateCurrent = this.locateCurrentPending;
+    // A fresh Quick opening starts at the current chapter, even when Full left
+    // a different browsing anchor. Paging still prepares only its bounded window.
+    const locateCurrent = explicitLocateCurrent || first && this.mangaDisplay && this.mangaQuickDisplay &&
+      query.trim().length === 0 && this.currentChapterIndex >= 0;
     const anchorNodeId = locateCurrent ? undefined : readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, bookId))?.nodeId;
     const chapterIndex = this.currentChapterIndex >= 0 ? this.currentChapterIndex : undefined;
     const open = (): Promise<ReaderDirectoryNavigationReady | undefined> => openReaderDirectoryNavigation(gateway,
-      { sourceId, bookId, query, descending, chapterIndex, anchorNodeId, limit: 256, locateCurrent },
+      { sourceId, bookId, query, descending, chapterIndex, anchorNodeId, limit: 256, locateCurrent,
+        collapsedNodeIds: this.mangaDisplay && this.mangaQuickDisplay && query.trim().length === 0 ? [] : undefined },
       (): boolean => this.mounted && generation === this.generation && this.bookId === bookId && this.sourceId === sourceId,
       (reason: string): void => { if (this.sourceId === 'local') readerDirectoryNoteMissingNavigation(bookId, reason); });
     // The permanent tablet catalog can mount without a phone-sheet opening.
@@ -382,8 +391,8 @@ export struct ReaderDirectoryNavigationSurface {
           return;
         }
         if (this.mangaDisplay) {
-          ready.currentDisplayInset = locateCurrent ? 12 : this.mangaCurrentOpenInset;
-          ready.currentDisplaySmooth = locateCurrent;
+          ready.currentDisplayInset = explicitLocateCurrent ? 12 : this.mangaCurrentOpenInset;
+          ready.currentDisplaySmooth = explicitLocateCurrent;
         }
         this.view = ready;
         this.locateCurrentPending = false;
@@ -433,6 +442,9 @@ export struct ReaderDirectoryNavigationSurface {
           view: this.view, sourceId: this.sourceId, bookId: this.bookId, rowHeight: this.rowHeight,
           mangaDisplay: this.mangaDisplay, mangaRowMinHeight: this.mangaRowMinHeight, mangaScheme: this.mangaScheme,
           mangaCatalogDisplay: this.mangaCatalogDisplay, mangaCatalogNarrow: this.mangaCatalogNarrow,
+          mangaInitialViewportWidth: this.mangaInitialViewportWidth,
+          mangaVisibleTopInset: this.mangaVisibleTopInset,
+          mangaQuickDisplay: this.mangaQuickDisplay,
           mangaSearchActive: this.mangaDisplay && this.query.trim().length > 0,
           currentChapterIndex: this.currentChapterIndex,
           listPaddingX: this.listPaddingX, listPaddingY: this.listPaddingY,
@@ -451,35 +463,19 @@ export struct ReaderDirectoryNavigationSurface {
           onUserScrollIntent: (): void => this.onTreeUserScrollIntent(),
           onScrollSettled: (): void => this.onTreeScrollSettled(),
           onFirstLayout: (): void => this.onFirstLayout(),
+          onScrollOffset: (offset: number): void => this.onScrollOffset(offset),
+          onClearSearch: (): void => this.onClearSearch(),
           onInvalidated: (): void => this.invalidate(),
           onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
           onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
           onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
             this.onCreateChapterStartBookmark(request),
         });
-        if (this.view.visibleTotal === 0) {
-          if (this.mangaDisplay) {
-            Column({ space: 8 }) {
-              Text(this.query.trim().length > 0 ? '没有匹配的章节' : '暂无章节信息')
-                .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400)
-                .fontColor((this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme) === 'night' ? '#ABA99F' : '#756F69')
-                .fontSize(12);
-              if (this.query.trim().length > 0) {
-                Text('清除搜索').fontSize(12)
-                  .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400)
-                  .fontColor((this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme) === 'night' ? '#B9CEB1' : '#425D45')
-                  .height(36).onClick((): void => this.onClearSearch()).accessibilityText('清除目录搜索');
-              }
-            }.width('100%').constraintSize({ minHeight: 164 }).padding({ left: 12, right: 12, top: 36, bottom: 36 })
-              .border({ width: { top: this.mangaCatalogDisplay ? 0 : 1 }, color: { top:
-                (this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme) === 'night' ? '#3B4036' : '#E7E0D5' } })
-              .justifyContent(FlexAlign.Center);
-          } else {
-            Text('没有匹配的目录项')
-              .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
-              .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
-              .hitTestBehavior(HitTestMode.None);
-          }
+        if (this.view.visibleTotal === 0 && !this.mangaDisplay) {
+          Text('没有匹配的目录项')
+            .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
+            .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
+            .hitTestBehavior(HitTestMode.None);
         }
       }.width('100%').height('100%');
     }

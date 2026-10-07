@@ -1,3 +1,4 @@
+import { READER_FONT_NOTO_SERIF_SC_BOLD } from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import {mangaUserError} from '../entry/src/main/ets/features/manga/MangaUserError.ts';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -41,11 +42,13 @@ let xOffset=250;let clipped=100;let nativeWidth=1000;let nativeHeight=1000;
 const Surface=productionMotionMethods(surfaceURL,
  ['effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop','rowDisplayLeft','visibleX','changeFit','loginRequired','loginAndRetry','imageError','refreshImages','publish','requestedLast','measureVisibleWindow','openDirectory','openSourceSwitch','handleBack','positionIdentity','rememberVisible','restore','finishLayout','onViewportScroll','resizeViewport','changeZoom','toggleDirection','turnPage','saveVisible'],
  {setTimeout:callback=>timers.push(callback),ScrollAlign:{START:'start'},MangaLayoutFrame,
-  inputMethod:{getController:()=>({hideTextInput:async()=>{}})},prepareReaderFontFamily:async()=>{}});
+  inputMethod:{getController:()=>({hideTextInput:async()=>{}})}, READER_FONT_NOTO_SERIF_SC_BOLD,
+  prepareReaderFontFamily:async family=>{assert.equal(family,READER_FONT_NOTO_SERIF_SC_BOLD);},
+  prepareMangaSheetFonts:async()=>true});
 const saved=[];const settings=[];
 const owner=Object.assign(new Surface(),{data:{totalCount:()=>p.totalCount(),getData:i=>p.row(i),projection:p,notify:()=>{}},
  first:150,last:150,viewportWidth:500,viewportHeight:900,zoom:2,scalePolicy:new PhotoViewScaleModel(),horizontal:false,horizontalPage:0,
- opened:true,mounted:true,panel:'',panelPhase:'closed',panelGeneration:0,panelActionGeneration:0,reduceMotion:true,chapterEnd:false,exiting:false,layoutGeneration:0,appliedLayoutGeneration:-1,presentationGeneration:0,recovering:false,
+ opened:true,mounted:true,panel:'',panelPhase:'closed',panelGeneration:0,panelActionGeneration:0,panelFontGeneration:0,panelFontsReady:false,reduceMotion:true,chapterEnd:false,exiting:false,layoutGeneration:0,appliedLayoutGeneration:-1,presentationGeneration:0,recovering:false,
  settingsGateway:{updateMangaDirection:async value=>settings.push(value)},
  horizontalScroller:{currentOffset:()=>({xOffset}),scrollTo:position=>{xOffset=position.xOffset;scrolls.push(['x',position.xOffset]);}},
  getUIContext:()=>({postFrameCallback:frame=>frames.push(frame),getFocusController:()=>({clearFocus(){}})}),

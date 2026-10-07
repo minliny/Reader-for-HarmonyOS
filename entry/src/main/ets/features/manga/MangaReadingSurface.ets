@@ -1,3 +1,7 @@
+import { LengthMetrics } from '@kit.ArkUI';
+import { MangaDirectoryCurrentFooter } from './MangaDirectoryCurrentFooter';
+import { MangaDirectoryPressFeedback } from './MangaDirectoryPressFeedback';
+import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale, mangaDirectoryLineBox, mangaDirectoryFooterHeight, mangaDirectoryQuickFlowGaps, mangaDirectoryQuickMinimumListHeight } from './MangaDirectoryVisual';
 import deviceInfo from '@ohos.deviceInfo';
 import hilog from '@ohos.hilog';
 import curves from '@ohos.curves';
@@ -28,7 +32,7 @@ import { readerBrightnessControlPercent, readerBrightnessWindowValue } from '../
 import { TOK_BORDER_W } from '../common/ReaderTokens';
 import { READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_600,
   READER_FONT_NOTO_SANS_SC_UI_900 } from '../common/ReaderFontFamilies';
-import { prepareMangaSheetFonts } from '../common/ReaderFonts';
+import { prepareMangaSheetFonts, prepareReaderFontFamily } from '../common/ReaderFonts';
 
 interface MangaViewportAnchor { ordinal: number; y: number; x?: number; }
 interface MangaConfirmedPosition { controller: MangaSessionController; manifest: MangaManifest; identity: string; anchor: MangaViewportAnchor; }
@@ -68,7 +72,18 @@ class MangaStripDataSource implements IDataSource {
 /** Native virtual list; a tile is a temporary presentation of one logical page. */
 @Component
 export struct MangaReadingSurface {
-  @StorageLink('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
+  @StorageLink('readerWindowMetricsRevision') @Watch('onDirectoryMetricsChanged') private windowMetricsRevision: number = 0;
+  @State private quickHeaderMeasured: number = 0;
+  @State private quickToolsMeasured: number = 0;
+  @State private quickFooterMeasured: number = 0;
+  private readonly directoryOuterScroller: Scroller = new Scroller();
+  private quickOuterViewportHeight: number = 0;
+  private quickOuterContentHeight: number = 0;
+  private quickOuterListReady: boolean = false;
+  private quickOuterPositioned: boolean = false;
+  private quickOuterOverflow: boolean = false;
+  private quickOuterUserScrolled: boolean = false;
+  private quickOuterPositionRevision: number = 0;
   settingsGateway: ReaderSettingsGateway | undefined = undefined;
   runtime: ReadingGatewayRuntime | undefined = undefined;
   sourceId: string = '';
@@ -98,6 +113,7 @@ export struct MangaReadingSurface {
   onDownloadBook: () => void = (): void => {};
   @Prop downloadEnabled: boolean = false;
   @Prop directoryProjection: LocalReadingTocEntry[] = [];
+  @Prop directoryCurrentChapterIndex: number = -1;
   onLoadDownloadActions: (chapterIndex?: number) => Promise<MangaDownloadAction[]> = async (): Promise<MangaDownloadAction[]> => [];
   onDownloadAction: (action: MangaDownloadActionId, chapterIndex?: number) => Promise<void> = async (): Promise<void> => {};
   @State private downloadActions: MangaDownloadAction[] = [];
@@ -471,6 +487,7 @@ export struct MangaReadingSurface {
     // Use the logical coordinate captured while the previous width was active.
     const anchor = this.visibleAnchor;
     this.viewportWidth = width; this.viewportHeight = height;
+    this.onWindowChromeChanged();
     if (this.opened && anchor !== undefined) this.restore(anchor.ordinal, anchor.y, anchor.x ?? 0);
   }
   private restore(ordinal: number, y: number, x: number = 0): void {
@@ -963,12 +980,13 @@ export struct MangaReadingSurface {
     if (!this.mounted || this.isReaderIdentityCurrent?.() === false) return;
     if (!this.windowChromeActive) { this.restoreAppWindowChrome(); return; }
     this.windowChromeOwned = true;
-    // Keep the manga surface immersive while controls are hidden, but paint an
-    // opaque paper-colored native band whenever the controls/chapter-end or an
-    // overlay is presented. The content remains full-window in both states.
+    // A phone panel authors one animated scrim across the full window. Let
+    // that paint reach the system bands throughout opening, drag and closing;
+    // ordinary controls and the unmasked wide panel keep their opaque paper.
     const presented = this.controlsPresentedForWindow() || this.chapterEnd || this.windowChromeOverlayActive;
+    const authoredPhoneMask = !this.windowChromeOverlayActive && this.panel.length > 0 && !this.widePanel();
     const style = new ReaderWindowChromeStyle(this.paperColor(),
-      this.backgroundPreference === 'ink' ? 'light' : 'dark', this.inkColor(), '', !presented);
+      this.backgroundPreference === 'ink' ? 'light' : 'dark', this.inkColor(), '', !presented || authoredPhoneMask);
     if (this.windowChromeOverlayActive) ReaderWindowCoordinator.requestOverlayChrome(style);
     else ReaderWindowCoordinator.requestReaderChrome(style);
   }
@@ -1073,11 +1091,11 @@ export struct MangaReadingSurface {
     }
     if (!this.mounted || generation !== this.panelGeneration) return;
     this.controlsVisible = true; this.chapterEnd = false;
-    if (panel === 'directory') { this.directoryQuery = ''; this.directoryOpenRevision += 1; }
+    if (panel === 'directory') { this.directoryQuery = ''; this.directoryOpenRevision += 1; this.resetDirectoryOuterLayout(); }
     this.panel = panel;
     this.panelPhase = 'opening';
     this.panelOffset = this.panelTravel(); this.panelScrimOpacity = 0;
-    if (this.reduceMotion) { this.panelOffset = 0; this.panelScrimOpacity = 1; this.panelPhase = 'open'; return; }
+    if (this.reduceMotion) { this.panelOffset = 0; this.panelScrimOpacity = 1; this.panelPhase = 'open'; this.scheduleDirectoryOuterPosition(this.directoryOuterIdentity()); return; }
     this.getUIContext().postFrameCallback(new MangaSheetFrame((): void => {
       if (!this.mounted || generation !== this.panelGeneration || this.panelPhase !== 'opening') return;
       // onFrame runs before that frame's build/layout. Keep the screen-out
@@ -1112,6 +1130,7 @@ export struct MangaReadingSurface {
     if (this.panelFontsReady) return true;
     const generation = ++this.panelFontGeneration;
     try {
+      await prepareReaderFontFamily(READER_FONT_NOTO_SERIF_SC_BOLD);
       const ready = await prepareMangaSheetFonts();
       if (!this.mounted || generation !== this.panelFontGeneration) return false;
       this.panelFontsReady = ready;
@@ -1128,7 +1147,10 @@ export struct MangaReadingSurface {
   }
   private settlePanel(generation: number): void {
     this.getUIContext().animateTo({ curve: curves.interpolatingSpring(0, 0.9, 500, 43), onFinish: (): void => {
-      if (this.mounted && generation === this.panelGeneration && this.panelPhase === 'opening') this.panelPhase = 'open';
+      if (this.mounted && generation === this.panelGeneration && this.panelPhase === 'opening') {
+        this.panelPhase = 'open';
+        this.scheduleDirectoryOuterPosition(this.directoryOuterIdentity());
+      }
     } }, (): void => { this.panelOffset = 0; });
   }
   private closePanel(): Promise<boolean> {
@@ -1187,14 +1209,14 @@ export struct MangaReadingSurface {
   private paperColor(): string {
     return this.backgroundPreference === 'ink' ? '#1C1E1A' : this.backgroundPreference === 'white' ? '#FFFFFF' : '#F8F4EC';
   }
-  private surfaceColor(): string { return this.backgroundPreference === 'ink' ? '#282C25' : '#FFFCF8'; }
-  private inkColor(): string { return this.backgroundPreference === 'ink' ? '#EAE7DE' : '#1F1B17'; }
-  private mutedColor(): string { return this.backgroundPreference === 'ink' ? '#ABA99F' : '#756F69'; }
+  private surfaceColor(): string { return mangaDirectoryColor('surface', this.backgroundPreference === 'ink' ? 'night' : 'day'); }
+  private inkColor(): string { return mangaDirectoryColor('ink', this.backgroundPreference === 'ink' ? 'night' : 'day'); }
+  private mutedColor(): string { return mangaDirectoryColor('muted', this.backgroundPreference === 'ink' ? 'night' : 'day'); }
   private faintColor(): string { return this.backgroundPreference === 'ink' ? '#767D71' : '#A39C90'; }
-  private lineColor(): string { return this.backgroundPreference === 'ink' ? '#3B4036' : '#E7E0D5'; }
-  private softSurfaceColor(): string { return this.backgroundPreference === 'ink' ? '#30342D' : '#F0ECE3'; }
+  private lineColor(): string { return mangaDirectoryColor('line', this.backgroundPreference === 'ink' ? 'night' : 'day'); }
+  private softSurfaceColor(): string { return mangaDirectoryColor('soft', this.backgroundPreference === 'ink' ? 'night' : 'day'); }
   private greenColor(): string { return this.backgroundPreference === 'ink' ? '#324C37' : '#1F3528'; }
-  private accentColor(): string { return this.backgroundPreference === 'ink' ? '#B9CEB1' : '#425D45'; }
+  private accentColor(): string { return mangaDirectoryColor('accent', this.backgroundPreference === 'ink' ? 'night' : 'day'); }
   private isSheetChoiceSelected(kind: string): boolean {
     if (kind === 'vertical') return !this.horizontal;
     if (kind === 'horizontal') return this.horizontal;
@@ -1223,7 +1245,7 @@ export struct MangaReadingSurface {
   // The demo snap is a maximum, not a forced empty sheet height.
   private panelHeight(): number {
     const snap = this.panel === 'directory' ? 0.78 : this.panel === 'mode' || this.panel === 'settings' ? 0.67 : 0.5;
-    return this.widePanel() ? this.viewportHeight : Math.max(260, Math.round(this.viewportHeight * snap));
+    return this.widePanel() ? this.viewportHeight : Math.min(this.viewportHeight, Math.max(260, Math.round(this.viewportHeight * snap)));
   }
   private panelContentHeight(): number {
     const insets = this.panelInsets(this.windowMetricsRevision);
@@ -1385,6 +1407,7 @@ export struct MangaReadingSurface {
         const width = Number(area.width), height = Number(area.height);
         if (Number.isFinite(width) && width > 0) this.stageWidth = width;
         if (Number.isFinite(height) && height > 0) this.stageHeight = height;
+        this.onWindowChromeChanged();
       });
     }.width('100%').height('100%').backgroundColor(this.paperColor())
       // Both drawing and child layout fill the window. System-bar visibility
@@ -1397,13 +1420,17 @@ export struct MangaReadingSurface {
   private tabletDirectory() {
     Column() {
       if (this.panelFontsReady) {
-        Column({ space: 3 }) {
+        Column({ space: visual.sidebarHeaderGap }) {
           Text(this.bookTitle).fontFamily(READER_FONT_NOTO_SERIF_SC_BOLD).fontWeight(700)
-            .fontSize(this.stageWidth <= 700 ? 16 : 18).lineHeight(26).fontColor(this.inkColor());
+            .fontSize(this.stageWidth <= 700 ? visual.sidebarNarrowTitleFontSize : visual.sidebarTitleFontSize)
+            .lineHeight(visual.sidebarTitleLineHeight).halfLeading(true)
+            .minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale())).fontColor(this.inkColor());
           Text('章节目录').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400)
-            .fontSize(10).lineHeight(17).fontColor(this.mutedColor());
-        }.width('100%').height(80).alignItems(HorizontalAlign.Start)
-          .padding({ top: 20, left: this.stageWidth <= 700 ? 13 : 19, right: this.stageWidth <= 700 ? 13 : 19, bottom: 16 })
+            .fontSize(visual.sidebarCaptionFontSize).lineHeight(visual.sidebarCaptionLineHeight).halfLeading(true)
+            .minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale())).fontColor(this.mutedColor());
+        }.width('100%').constraintSize({ minHeight: visual.sidebarHeaderMinHeight }).alignItems(HorizontalAlign.Start)
+          .padding({ top: visual.sidebarPaddingTop, left: this.stageWidth <= 700 ? visual.sidebarNarrowPaddingX : visual.sidebarPaddingX,
+            right: this.stageWidth <= 700 ? visual.sidebarNarrowPaddingX : visual.sidebarPaddingX, bottom: visual.sidebarPaddingBottom })
           .border({ width: { bottom: 1 }, color: this.lineColor() });
         this.directoryBody(true);
       }
@@ -1565,9 +1592,9 @@ export struct MangaReadingSurface {
     }.layoutWeight(1).height(58).justifyContent(FlexAlign.Center).onClick((): void => { void this.openPanel(panel); }).accessibilityText(label);
   }
   @Builder
-  private panelOverlay() {
+  private panelOverlay(directoryIdentity: string = this.directoryOuterIdentity()) {
     Stack({ alignContent: this.widePanel() ? Alignment.End : Alignment.Bottom }) {
-      Column().width('100%').height('100%').backgroundColor(this.widePanel() ? Color.Transparent : '#57000000')
+      Column().width('100%').height('100%').backgroundColor(this.widePanel() ? Color.Transparent : this.panel === 'directory' ? mangaDirectoryColor('scrim', this.backgroundPreference === 'ink' ? 'night' : 'day') : '#57000000')
         .opacity(this.widePanel() ? 1 : this.panelScrimOpacity)
         .onClick((): void => { void this.closePanel(); });
       Stack({ alignContent: Alignment.TopEnd }) {
@@ -1575,29 +1602,55 @@ export struct MangaReadingSurface {
           if (this.widePanel()) {
             Column() {
             Row({ space: 12 }) {
-              Text(this.panelTitle()).fontSize(15).fontFamily(READER_FONT_NOTO_SANS_SC_UI_600).fontWeight(600)
-                .fontColor(this.inkColor()).lineHeight(24).layoutWeight(1);
+              Text(this.panelTitle()).fontSize(this.panel === 'directory' ? visual.wideHeaderFontSize : 15)
+                .fontFamily(READER_FONT_NOTO_SANS_SC_UI_600)
+                .fontWeight(this.panel === 'directory' ? visual.wideHeaderFontWeight : 600)
+                .fontColor(this.inkColor()).lineHeight(this.panel === 'directory' ? visual.wideHeaderLineHeight : 24)
+                .halfLeading(this.panel === 'directory').minFontScale(this.panel === 'directory' ? Math.min(1, this.directoryFontScale()) : 0)
+                .maxFontScale(this.panel === 'directory' ? Math.max(1, this.directoryFontScale()) : 2).layoutWeight(1);
               Row() {
                 Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_sheet_close_theme_night') : $r('app.media.manga_sheet_close')).width(18).height(18);
-              }.width(34).height(34).justifyContent(FlexAlign.Center)
+              }.width(this.panel === 'directory' ? visual.wideCloseSize : 34).height(this.panel === 'directory' ? visual.wideCloseSize : 34).justifyContent(FlexAlign.Center)
+                .attributeModifier(new MangaDirectoryPressFeedback(true, this.panel === 'directory', this.backgroundPreference === 'ink' ? 'night' : 'day'))
                 .onClick((): void => { void this.closePanel(); }).accessibilityText('关闭宽屏面板');
-            }.width('100%').height(66)
+            }.width('100%').height(this.panel === 'directory' ? undefined : 66)
+              .constraintSize({ minHeight: this.panel === 'directory' ? visual.wideHeaderMinHeight : 66 })
+              .padding({ top: this.panel === 'directory' ? visual.wideHeaderPaddingY : 0, bottom: this.panel === 'directory' ? visual.wideHeaderPaddingY : 0 })
+              .onAreaChange((_old: Area, area: Area): void => {
+                const next = Number(area.height);
+                if (this.panel === 'directory' && Number.isFinite(next) && next > 0 && Math.abs(next - this.quickHeaderMeasured) > .1) this.quickHeaderMeasured = next;
+              })
               .border({ width: { bottom: 1 }, color: this.lineColor() });
-            }.width('100%').height(66).padding({ left: this.panelContentInset(), right: this.panelContentInset() }).margin({ bottom: 17 });
+            }.width('100%').height(this.panel === 'directory' ? undefined : 66).padding({ left: this.panelContentInset(), right: this.panelContentInset() }).margin({ bottom: this.panel === 'directory' ? visual.wideHeaderBottom : 17 });
           } else {
             Row() {
-              Column().width(42).height(5).borderRadius(3)
-                .backgroundColor(this.backgroundPreference === 'ink' ? '#565E50' : '#C9C9C4');
-            }.width('100%').height(30).justifyContent(FlexAlign.Center)
+              Column().width(this.panel === 'directory' ? visual.handleWidth : 42).height(this.panel === 'directory' ? visual.handleHeight : 5).borderRadius(3)
+                .backgroundColor(mangaDirectoryColor('handle', this.backgroundPreference === 'ink' ? 'night' : 'day'));
+            }.width('100%').height(this.panel === 'directory' ? visual.handleZone : 30).justifyContent(FlexAlign.Center)
               .gesture(PanGesture({ fingers: 1, direction: PanDirection.Vertical, distance: 1 })
                 .onActionStart((): void => this.beginPanelDrag())
                 .onActionUpdate((event: GestureEvent): void => this.updatePanelDrag(event.offsetY))
                 .onActionEnd((event: GestureEvent): void => this.finishPanelDrag(event.offsetY, event.velocityY))
                 .onActionCancel((): void => this.finishPanelDrag(0, 0)));
-            Text(this.panelTitle()).fontSize(18).fontFamily(READER_FONT_NOTO_SANS_SC_UI_900).fontWeight(900).fontColor(this.inkColor())
-              .width('100%').padding({ left: 18, right: 52, bottom: 14 }).lineHeight(26);
+            Text(this.panelTitle()).fontSize(this.panel === 'directory' ? visual.quickHeaderFontSize : 18).fontFamily(READER_FONT_NOTO_SANS_SC_UI_900).fontWeight(900).fontColor(this.inkColor())
+              .width('100%').padding({ left: this.panel === 'directory' ? visual.quickPaddingX : 18,
+                right: this.panel === 'directory' ? visual.quickHeaderPaddingRight : 52,
+                bottom: this.panel === 'directory' ? visual.quickHeaderPaddingBottom : 14 })
+              .lineHeight(this.panel === 'directory' ? visual.quickHeaderLineHeight : 26).halfLeading(this.panel === 'directory')
+              .minFontScale(this.panel === 'directory' ? Math.min(1, this.directoryFontScale()) : 0)
+              .maxFontScale(this.panel === 'directory' ? Math.max(1, this.directoryFontScale()) : 2)
+              .onAreaChange((_old: Area, area: Area): void => {
+                const next = Number(area.height);
+                if (this.panel === 'directory' && Number.isFinite(next) && next > 0 && Math.abs(next - this.quickHeaderMeasured) > .1) this.quickHeaderMeasured = next;
+              });
           }
-          if (this.panel === 'directory') { this.directoryPanel(); }
+          if (this.panel === 'directory') {
+            Scroll(this.directoryOuterScroller) { this.directoryPanel(); }
+              .width('100%').constraintSize({ maxHeight: Math.max(1, this.panelContentHeight() - this.directoryHeaderChrome()) })
+              .scrollBar(BarState.Auto).scrollBarWidth(visual.scrollbarWidth).scrollBarColor(mangaDirectoryColor('scrollbar', this.backgroundPreference === 'ink' ? 'night' : 'day'))
+              .onAreaChange((_old: Area, area: Area): void => this.onDirectoryOuterArea(directoryIdentity, Number(area.height)))
+              .onWillStartDragging((): void => this.onDirectoryOuterUserScroll(directoryIdentity));
+          }
           else {
             Scroll() {
               Column({ space: 24 }) {
@@ -1619,9 +1672,10 @@ export struct MangaReadingSurface {
             maxHeight: this.panelContentHeight() });
         if (!this.widePanel()) {
           Row() {
-            Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_sheet_close_theme_night') : $r('app.media.manga_sheet_close')).width(18).height(18);
-          }.width(36).height(36).justifyContent(FlexAlign.Center).borderRadius(12)
-            .margin({ top: 24, right: 12 }).onClick((): void => { void this.closePanel(); }).accessibilityText('关闭面板');
+            Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_sheet_close_theme_night') : $r('app.media.manga_sheet_close')).width(this.panel === 'directory' ? visual.closeIcon : 18).height(this.panel === 'directory' ? visual.closeIcon : 18);
+          }.width(this.panel === 'directory' ? visual.closeSize : 36).height(this.panel === 'directory' ? visual.closeSize : 36).justifyContent(FlexAlign.Center).borderRadius(12)
+            .attributeModifier(new MangaDirectoryPressFeedback(true, this.panel === 'directory', this.backgroundPreference === 'ink' ? 'night' : 'day'))
+            .margin({ top: this.panel === 'directory' ? visual.closeTop : 24, right: this.panel === 'directory' ? visual.closeRight : 12 }).onClick((): void => { void this.closePanel(); }).accessibilityText('关闭面板');
         }
       }.width(this.panelWidth()).padding({
         left: this.panelInsets(this.windowMetricsRevision).left,
@@ -1630,7 +1684,7 @@ export struct MangaReadingSurface {
         bottom: this.panelInsets(this.windowMetricsRevision).bottom,
       }).backgroundColor(this.surfaceColor())
         .border(this.widePanel() ? { width: { left: 1 }, color: this.lineColor() } : undefined)
-        .borderRadius({ topLeft: this.widePanel() ? 0 : 22, topRight: this.widePanel() ? 0 : 22, bottomLeft: 0, bottomRight: 0 }).clip(true)
+        .borderRadius({ topLeft: this.widePanel() ? 0 : this.panel === 'directory' ? visual.quickSheetRadius : 22, topRight: this.widePanel() ? 0 : this.panel === 'directory' ? visual.quickSheetRadius : 22, bottomLeft: 0, bottomRight: 0 }).clip(true)
         .shadow({ radius: this.widePanel() ? 32 : 48,
           color: this.widePanel() ? '#11000000' : this.backgroundPreference === 'ink' ? '#66000000' : '#33000000',
           offsetX: this.widePanel() ? -14 : 0, offsetY: this.widePanel() ? 0 : -16 })
@@ -1639,74 +1693,240 @@ export struct MangaReadingSurface {
     }.width('100%').height('100%');
   }
   @Builder
-  private directoryPanel() {
-    Column() {
-      if (!this.widePanel()) { this.directoryTools(); }
+  private directoryPanel(directoryIdentity: string = this.directoryOuterIdentity()) {
+    Column({ space: visual.quickGap }) {
+      this.directoryTools();
       this.directoryBody(false);
+      this.directoryCurrentFooter();
     }.layoutWeight(this.widePanel() ? 1 : 0).width('100%')
-      .padding({ left: this.widePanel() ? this.panelContentInset() - 8 : 18,
-        right: this.widePanel() ? this.panelContentInset() - 8 : 18, bottom: this.widePanel() ? 22 : 24 });
+      .padding({ left: this.widePanel() ? this.panelContentInset() - 8 : visual.quickPaddingX,
+        right: this.widePanel() ? this.panelContentInset() - 8 : visual.quickPaddingX, bottom: this.widePanel() ? 22 : visual.quickPaddingBottom })
+      .onAreaChange((_old: Area, area: Area): void => this.onDirectoryOuterContentArea(directoryIdentity, Number(area.height)));
   }
   @Builder
-  private directoryTools() {
-      Row({ space: 9 }) {
-        Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_sheet_search_theme_night') : $r('app.media.manga_sheet_search')).width(17).height(17);
-        TextInput({ text: this.directoryQuery, placeholder: '搜索章名或序号' }).height(42).fontSize(13)
-            .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).defaultFocus(false).layoutWeight(1)
-            .padding(0).fontColor(this.inkColor()).placeholderColor(this.faintColor()).backgroundColor(Color.Transparent)
-            .onChange((text: string): void => { this.directoryQuery = text; });
-        if (this.directoryQuery.length > 0) {
-          Row() { Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_sheet_close_theme_night') : $r('app.media.manga_sheet_close')).width(18).height(18); }
-            .width(26).height(36).justifyContent(FlexAlign.Center).accessibilityText('清除目录搜索')
-            .onClick((): void => { this.directoryQuery = ''; });
+  private directoryTools(directoryIdentity: string = this.directoryOuterIdentity()) {
+      Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween, alignItems: ItemAlign.Center, space: { main: LengthMetrics.vp(visual.toolsGap), cross: LengthMetrics.vp(visual.toolsGap) } }) {
+        Row({ space: visual.toolGap }) {
+          Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_directory_previous_theme_night') : $r('app.media.manga_directory_previous')).width(visual.toolIcon).height(visual.toolIcon);
+          Text('上一章节').fontSize(visual.toolFontSize).lineHeight(visual.toolLineHeight).halfLeading(true).minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale())).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontColor(this.accentColor());
+        }.constraintSize({ minHeight: this.directoryToolHeight() }).enabled(this.adjacentChapter(-1) !== undefined)
+          .opacity(this.adjacentChapter(-1) === undefined ? 0.36 : 1)
+          .attributeModifier(new MangaDirectoryPressFeedback(this.adjacentChapter(-1) !== undefined, true, this.backgroundPreference === 'ink' ? 'night' : 'day'))
+          .onClick((): void => { void this.selectAdjacentChapter(-1); }).accessibilityText('上一章节');
+        Row({ space: visual.toolGap }) {
+          Text('完整目录').fontSize(visual.toolFontSize).lineHeight(visual.toolLineHeight).halfLeading(true).minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale())).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontColor(this.accentColor());
+          Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_directory_chevron_right_accent_theme_night') : $r('app.media.manga_directory_chevron_right_accent')).width(visual.toolIcon).height(visual.toolIcon);
+        }.constraintSize({ minHeight: this.directoryToolHeight() }).attributeModifier(new MangaDirectoryPressFeedback(true, true, this.backgroundPreference === 'ink' ? 'night' : 'day')).onClick((): void => { void this.performPanelAction((): void => this.onDirectory()); }).accessibilityText('完整目录');
+        Row({ space: visual.toolGap }) {
+          Text('下一章节').fontSize(visual.toolFontSize).lineHeight(visual.toolLineHeight).halfLeading(true).minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale())).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontColor(this.accentColor());
+          Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_directory_chevron_right_accent_theme_night') : $r('app.media.manga_directory_chevron_right_accent')).width(visual.toolIcon).height(visual.toolIcon);
+        }.constraintSize({ minHeight: this.directoryToolHeight() }).enabled(this.adjacentChapter(1) !== undefined)
+          .opacity(this.adjacentChapter(1) === undefined ? 0.36 : 1)
+          .attributeModifier(new MangaDirectoryPressFeedback(this.adjacentChapter(1) !== undefined, true, this.backgroundPreference === 'ink' ? 'night' : 'day'))
+          .onClick((): void => { void this.selectAdjacentChapter(1); }).accessibilityText('下一章节');
+      }.width('100%').margin({ top: visual.toolsTop, bottom: visual.toolsBottom })
+        .onAreaChange((_old: Area, area: Area): void => {
+          if (!this.mounted || directoryIdentity !== this.directoryOuterIdentity() || this.panel !== 'directory') return;
+          const next = Number(area.height) + visual.toolsTop + visual.toolsBottom;
+          if (Number.isFinite(next) && next > 0) {
+            if (Math.abs(next - this.quickToolsMeasured) > .1) this.quickToolsMeasured = next;
+            this.scheduleDirectoryOuterPosition(directoryIdentity);
+          }
+        });
+  }
+  private directoryCurrentIndex(): number {
+    const live = this.controller?.chapter?.chapterIndex;
+    if (live !== undefined && Number.isSafeInteger(live) && live >= 0) return live;
+    const confirmed = MangaBookPresentation.get(this.sourceId, this.bookId)?.chapterIndex;
+    if (confirmed !== undefined && Number.isSafeInteger(confirmed) && confirmed >= 0) return confirmed;
+    return this.directoryCurrentCatalogEntry(this.directoryCurrentChapterIndex)?.index ?? -1;
+  }
+  private directoryCurrentCatalogEntry(index: number): LocalReadingTocEntry | undefined {
+    if (!Number.isSafeInteger(index) || index < 0 || !this.isReaderIdentityCurrent()) return undefined;
+    const session = this.remoteSession;
+    if (session !== undefined) {
+      if (session.contentKind !== 'manga' || session.identity.sourceId !== this.sourceId ||
+        session.identity.bookId !== this.bookId || session.requiresContextRefresh === true) return undefined;
+      return this.directoryEntries().find((entry: LocalReadingTocEntry): boolean => entry.index === index && entry.navigable !== false);
+    }
+    // The Shell binds this projection to the same source/book reader identity.
+    // A missing canonical session does not certify any page count or position.
+    return this.directoryProjection?.find((entry: LocalReadingTocEntry): boolean => entry.index === index && entry.navigable !== false);
+  }
+  private directoryCurrentTitle(): string {
+    const session = this.remoteSession;
+    const index = this.directoryCurrentIndex();
+    if (session?.contentKind === 'manga' && session.identity.sourceId === this.sourceId &&
+      session.identity.bookId === this.bookId && session.requiresContextRefresh !== true) {
+      const title = session.entries.find((entry: RemoteReadingTocEntry): boolean => entry.index === index)?.title;
+      if (title !== undefined) return title;
+    }
+    if (this.controller?.chapter !== undefined || index < 0) return this.title;
+    const saved = MangaBookPresentation.get(this.sourceId, this.bookId);
+    if (saved?.chapterIndex === index && saved.chapterTitle !== undefined) return saved.chapterTitle;
+    return this.directoryCurrentCatalogEntry(index)?.title ?? this.title;
+  }
+  private directoryCurrentPagePosition(): string {
+    if (this.controller?.chapter !== undefined && (this.controller?.totalPages ?? 0) > 0)
+      return `${this.pageOrdinal() + 1} / ${this.controller?.totalPages ?? 0} 页`;
+    const saved = MangaBookPresentation.get(this.sourceId, this.bookId);
+    const index = this.directoryCurrentIndex();
+    if (index < 0 || saved === undefined || saved.chapterIndex !== index || !Number.isSafeInteger(saved.pageOrdinal) ||
+      saved.pageOrdinal < 0 || saved.totalPages === undefined || !Number.isSafeInteger(saved.totalPages) ||
+      saved.totalPages <= saved.pageOrdinal) return '';
+    return `${saved.pageOrdinal + 1} / ${saved.totalPages} 页`;
+  }
+  @Builder
+  private directoryCurrentFooter() {
+    Row() {
+    MangaDirectoryCurrentFooter({ title: this.directoryCurrentTitle(),
+      pagePosition: this.directoryCurrentPagePosition(),
+      scheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
+      availableWidth: this.directoryInitialWidth(false),
+      onHeightChanged: (height: number): void => { if (Math.abs(height - this.quickFooterMeasured) > .1) this.quickFooterMeasured = height; },
+    }).width('100%');
+    }.width('100%');
+  }
+
+  private onDirectoryMetricsChanged(): void {
+    this.quickHeaderMeasured = 0; this.quickToolsMeasured = 0; this.quickFooterMeasured = 0;
+    // Wait for the new physical viewport/content areas before using their
+    // scroll extent; old font measurements cannot reposition a retained Scroll.
+    this.quickOuterViewportHeight = 0; this.quickOuterContentHeight = 0;
+    this.quickOuterPositionRevision += 1;
+    this.onWindowChromeChanged();
+  }
+
+  private directoryOuterIdentity(): string {
+    return JSON.stringify([this.sourceId, this.bookId, this.directoryOpenRevision]);
+  }
+  private resetDirectoryOuterLayout(): void {
+    this.quickToolsMeasured = 0;
+    this.quickOuterViewportHeight = 0; this.quickOuterContentHeight = 0;
+    this.quickOuterListReady = false; this.quickOuterPositioned = false;
+    this.quickOuterOverflow = false; this.quickOuterUserScrolled = false;
+    this.quickOuterPositionRevision += 1;
+  }
+  private onDirectoryOuterArea(identity: string, height: number): void {
+    if (!this.mounted || identity !== this.directoryOuterIdentity() || this.panel !== 'directory' || !Number.isFinite(height) || height <= 0) return;
+    this.quickOuterViewportHeight = height;
+    this.scheduleDirectoryOuterPosition(identity);
+  }
+  private onDirectoryOuterContentArea(identity: string, height: number): void {
+    if (!this.mounted || identity !== this.directoryOuterIdentity() || this.panel !== 'directory' || !Number.isFinite(height) || height <= 0) return;
+    this.quickOuterContentHeight = height;
+    this.scheduleDirectoryOuterPosition(identity);
+  }
+  private onDirectoryListFirstLayout(identity: string): void {
+    if (!this.mounted || identity !== this.directoryOuterIdentity() || this.panel !== 'directory') return;
+    this.quickOuterListReady = true;
+    this.scheduleDirectoryOuterPosition(identity);
+  }
+  private onDirectoryOuterUserScroll(identity: string): void {
+    if (identity !== this.directoryOuterIdentity()) return;
+    this.quickOuterUserScrolled = true;
+    this.quickOuterPositionRevision += 1;
+  }
+  private scheduleDirectoryOuterPosition(identity: string): void {
+    if (!this.mounted || this.panel !== 'directory') return;
+    const revision = ++this.quickOuterPositionRevision;
+    setTimeout((): void => {
+      if (!this.mounted || !this.isReaderIdentityCurrent() || identity !== this.directoryOuterIdentity() ||
+        revision !== this.quickOuterPositionRevision || this.panel !== 'directory' || this.panelPhase !== 'open' ||
+        !this.quickOuterListReady || this.quickOuterViewportHeight <= 0 || this.quickOuterContentHeight <= 0) return;
+      const overflow = !this.widePanel() && this.quickOuterContentHeight - this.quickOuterViewportHeight > .1;
+      const wasOverflow = this.quickOuterOverflow;
+      this.quickOuterOverflow = overflow;
+      if (!overflow) {
+        if (wasOverflow || !this.quickOuterPositioned) {
+          this.directoryOuterScroller.scrollTo({ xOffset: 0, yOffset: 0, animation: false });
+          this.quickOuterPositioned = true;
         }
-      }.width('100%').height(44).padding({ left: 11, right: 11 }).borderRadius(12)
-        .border({ width: 1, color: this.lineColor() }).backgroundColor(this.surfaceColor()).margin({ bottom: 17 });
-      Row() {
-        Row({ space: 5 }) {
-          Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_sheet_locate_theme_night') : $r('app.media.manga_sheet_locate')).width(15).height(15);
-          Text('定位当前条目').fontSize(11).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontColor(this.accentColor());
-        }.height(38).onClick((): void => { this.directoryQuery = ''; this.directoryRevision += 1; }).accessibilityText('定位当前条目');
-        Blank();
-        Row({ space: 5 }) {
-          Text(this.directoryAscending ? '正序' : '倒序').fontSize(11).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontColor(this.accentColor());
-          Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_sheet_vertical_accent_theme_night') : $r('app.media.manga_sheet_vertical_accent')).width(15).height(15);
-        }.height(38).onClick((): void => { this.directoryAscending = !this.directoryAscending; }).accessibilityText('切换目录排序');
-      }.width('100%').margin({ top: 6, bottom: 29 });
+        return;
+      }
+      if (!wasOverflow) this.quickOuterPositioned = false;
+      if (this.quickOuterUserScrolled || this.quickOuterPositioned || this.quickToolsMeasured <= 0) return;
+      const offset = Math.min(this.directoryQuickToolsHeight() + visual.quickGap,
+        Math.max(0, this.quickOuterContentHeight - this.quickOuterViewportHeight));
+      this.directoryOuterScroller.scrollTo({ xOffset: 0, yOffset: offset, animation: false });
+      this.quickOuterPositioned = true;
+    }, 0);
   }
+
+  private directoryFontScale(): number {
+    const revision = this.windowMetricsRevision;
+    return mangaDirectoryScale(revision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale);
+  }
+  private directoryToolHeight(): number { return mangaDirectoryLineBox(visual.toolHeight, visual.toolLineHeight, visual.toolPaddingY * 2, this.directoryFontScale()); }
+  private directoryInitialWidth(catalog: boolean): number {
+    if (catalog) return Math.max(0, this.directoryColumnWidth() - this.windowInteractiveInsets(this.windowMetricsRevision).left);
+    const insets = this.panelInsets(this.windowMetricsRevision);
+    const horizontal = this.widePanel() ? this.panelContentInset() - 8 : visual.quickPaddingX;
+    return Math.max(0, (this.widePanel() ? Number(this.panelWidth()) : this.viewportWidth) - insets.left - insets.right - horizontal * 2);
+  }
+  private directoryHeaderChrome(): number {
+    if (this.widePanel()) return (this.quickHeaderMeasured > 0 ? this.quickHeaderMeasured :
+      Math.max(visual.wideHeaderMinHeight, visual.wideHeaderLineHeight * this.directoryFontScale() + visual.wideHeaderPaddingY * 2)) + visual.wideHeaderBottom;
+    return visual.handleZone + (this.quickHeaderMeasured > 0 ? this.quickHeaderMeasured : visual.quickHeaderLineHeight * this.directoryFontScale() + visual.quickHeaderPaddingBottom);
+  }
+  private directoryQuickToolsHeight(): number {
+    return this.quickToolsMeasured > 0 ? this.quickToolsMeasured : this.directoryToolHeight() + visual.toolsTop + visual.toolsBottom;
+  }
+  private directoryQuickRemainingHeight(): number {
+    const tools = this.directoryQuickToolsHeight();
+    const chrome = this.directoryHeaderChrome() + tools + (this.quickFooterMeasured > 0 ? this.quickFooterMeasured : mangaDirectoryFooterHeight(this.directoryFontScale(), this.directoryInitialWidth(false), this.directoryCurrentPagePosition())) + mangaDirectoryQuickFlowGaps() + (this.widePanel() ? 22 : visual.quickPaddingBottom);
+    return this.panelContentHeight() - chrome;
+  }
+  private directoryQuickHeight(): number {
+    return Math.min(visual.quickMaxListHeight, Math.max(mangaDirectoryQuickMinimumListHeight(this.directoryFontScale()), this.directoryQuickRemainingHeight()));
+  }
+  private directoryCurrentOpenInset(catalog: boolean): number {
+    if (!catalog && this.widePanel()) return 7;
+    if (catalog) return 50;
+    return this.directoryQuickHeight() < mangaDirectoryQuickMinimumListHeight(this.directoryFontScale()) + 50 ? 0 : 50;
+  }
+
   @Builder
-  private directoryBody(catalog: boolean) {
+  private directoryBody(catalog: boolean, directoryIdentity: string = this.directoryOuterIdentity()) {
     ReaderDirectoryNavigationSurface({
       sourceId: this.sourceId, bookId: this.bookId, query: catalog ? '' : this.directoryQuery, ascending: this.directoryAscending,
-      currentChapterIndex: this.controller?.chapter?.chapterIndex ?? -1,
+      currentChapterIndex: this.directoryCurrentIndex(),
       openRevision: catalog ? this.publishedManifestVersion : `${this.publishedManifestVersion}:${this.directoryOpenRevision}`,
       locateCurrentRevision: this.directoryRevision, mangaDisplay: true,
+      mangaInitialViewportWidth: this.directoryInitialWidth(catalog),
       mangaScheme: this.backgroundPreference === 'ink' ? 'night' : 'day', rowHeight: 58, listPaddingX: 0, listPaddingY: 0,
-      chapterEntries: this.directoryEntries(), mangaRowMinHeight: this.widePanel() ? 50 : 58,
-      mangaCurrentOpenInset: !catalog && this.widePanel() ? 7 : 50,
-      mangaCatalogDisplay: catalog, mangaCatalogNarrow: catalog && this.stageWidth <= 700,
+      chapterEntries: this.directoryEntries(), mangaRowMinHeight: 58,
+      mangaCurrentOpenInset: this.directoryCurrentOpenInset(catalog),
+      mangaCatalogDisplay: catalog, mangaCatalogNarrow: catalog ? this.stageWidth <= 700 :
+        this.widePanel() ? Number(this.panelWidth()) <= 340 : (this.stageWidth > 0 ? this.stageWidth : this.viewportWidth) <= visual.narrowWidth,
+      mangaQuickDisplay: !catalog,
       interactionEnabled: catalog ? this.panelPhase === 'closed' || this.panelPhase === 'open' : this.panelPhase === 'open',
       chapterStartBookmarkCreationEnabled: false, chapterDownloadEnabled: this.downloadEnabled,
       chapterDownloadActionsEnabled: this.downloadEnabled,
       onDownloadChapter: (index: number): void => { void this.openDownloadActions(index); },
       onClearSearch: (): void => { this.directoryQuery = ''; },
+      onFirstLayout: (): void => { if (!catalog) this.onDirectoryListFirstLayout(directoryIdentity); },
+      onUserScrollIntent: (): void => { if (!catalog) this.onDirectoryOuterUserScroll(directoryIdentity); },
       fallbackBuilder: (): void => { this.directoryFallback(catalog); },
       onSelectTarget: (chapterIndex: number, _offset: number, _scope?: RemoteReadingPositionScope, proof?: JsonObject): void => {
         void this.selectDirectoryTarget(chapterIndex, proof, catalog);
       },
-    }).width('100%').height(catalog || this.widePanel() ? undefined : Math.min(330, Math.max(0, this.panelContentHeight() - 228)))
+    }).width('100%').height(catalog || this.widePanel() ? undefined : this.directoryQuickHeight())
       .layoutWeight(catalog || this.widePanel() ? 1 : 0);
   }
   @Builder
-  private directoryFallback(catalog: boolean = false) {
+  private directoryFallback(catalog: boolean = false, directoryIdentity: string = this.directoryOuterIdentity()) {
     MangaReadingDirectoryFallback({
       sourceId: this.sourceId, bookId: this.bookId, entries: this.directoryEntries(),
       query: catalog ? '' : this.directoryQuery, ascending: this.directoryAscending,
-      currentChapterIndex: this.controller?.chapter?.chapterIndex ?? -1,
+      currentChapterIndex: this.directoryCurrentIndex(),
       locateCurrentRevision: this.directoryRevision,
       mangaScheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
-      rowHeight: this.widePanel() ? 50 : 58, mangaCatalogDisplay: catalog, mangaCatalogNarrow: catalog && this.stageWidth <= 700,
-      currentOpenInset: !catalog && this.widePanel() ? 7 : 50,
+      rowHeight: 58, mangaCatalogDisplay: catalog, mangaCatalogNarrow: catalog ? this.stageWidth <= 700 :
+        this.widePanel() ? Number(this.panelWidth()) <= 340 : (this.stageWidth > 0 ? this.stageWidth : this.viewportWidth) <= visual.narrowWidth,
+      currentOpenInset: this.directoryCurrentOpenInset(catalog),
+      onListFirstLayout: (): void => { if (!catalog) this.onDirectoryListFirstLayout(directoryIdentity); },
+      onListUserScroll: (): void => { if (!catalog) this.onDirectoryOuterUserScroll(directoryIdentity); },
       chapterDownloadEnabled: this.downloadEnabled,
       onDownloadChapter: (index: number): void => { void this.openDownloadActions(index); },
       onSelectChapter: (index: number): void => { void this.selectDirectoryTarget(index, undefined, catalog); },
