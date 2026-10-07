@@ -1,3 +1,6 @@
+import * as directorySnapshot from '../../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts';
+import * as directoryDisplay from '../../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
+import * as directoryState from '../../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
 import { mangaDirectoryAdaptiveFields, mangaDirectoryAdaptiveMembers, mangaDirectoryAdaptiveDependencies } from './manga-directory-adaptive-probe.mjs';
 import { ReadingRecordIntent, ReadingRecordRecoveryError } from '../../entry/src/main/ets/features/reading/ReaderReadingRecordState.ts';
 import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError } from '../../entry/src/main/ets/app/BookRequestScheduler.ts';
@@ -67,7 +70,7 @@ const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
  * This does not simulate ArkUI layout, reactive delivery, or compositor pixels. */
 export function productionMotionMethods(file, names, dependencies = {}) {
   const fixtureRuntime = { captureReadingContentValidity: () => () => true, waitForReadingContentIdle: async () => {} };
-  dependencies = { ...mangaDirectoryAdaptiveDependencies, bookshelfSourceDisplayName, ReaderCoreNotDispatchedError, readerAppColor, readerThemeDefinition, prepareMangaSheetFonts: async () => true, readingChapterLayoutMap, hasKnownReadingImageGeometry, errorMessageOf,
+  dependencies = { ...mangaDirectoryAdaptiveDependencies, ...directoryDisplay, ...directoryState, ...directorySnapshot, bookshelfSourceDisplayName, ReaderCoreNotDispatchedError, readerAppColor, readerThemeDefinition, prepareMangaSheetFonts: async () => true, readingChapterLayoutMap, hasKnownReadingImageGeometry, errorMessageOf,
     ...readerTypographyRoles, readerRuleMutationEffects, RssPresentationProjection, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner, ReaderStartupContentOwner, ReaderProgressProducerHost, ReaderNativeAlertOwner, ReaderNativeAlertLease, ReaderReadingImageResources, sameReaderReadingImageResource, ReaderReadingRecordHost, ReadingRecordRecoveryError,
     hilog: { error() {} }, ReaderRuntimeOwner: runtimeOwnerIdentityProbe(() => fixtureRuntime), ...dependencies };
   // Older fixtures inject current() as the instance-storage seam. Keep their

@@ -1,3 +1,4 @@
+import { mangaDirectoryDownloadStatusWidth } from '../manga/MangaDirectoryState';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryScale, mangaDirectoryColor, mangaDirectoryContentTop, mangaDirectoryPositionStacked } from '../manga/MangaDirectoryVisual';
 import { TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_APP_INHERITED_BODY, TYPE_APP_SECTION_LABEL, TYPE_BOOK_DETAIL_ACTION, TYPE_BOOK_DETAIL_AUTHOR, TYPE_BOOK_DETAIL_DESCRIPTION, TYPE_BOOK_DETAIL_EMPTY, TYPE_BOOK_DETAIL_META, TYPE_BOOK_DETAIL_SOURCE_ACTION, TYPE_BOOK_DETAIL_TITLE, TYPE_BOOK_DIRECTORY_ENTRY } from '../common/ReaderTypography';
 import { bookAuthorLabel } from '../common/BookAuthorMetadata';
@@ -734,7 +735,9 @@ export struct LocalBookDetail {
     this.collapsedGroups = this.collapsedGroups.filter((index: number): boolean => !ancestors.includes(index));
     const entries = mangaDirectoryNearbyEntries(this.toc, this.mangaPresentation, currentIndex, 3, Math.max(0, CHAPTER_PREVIEW_LIMIT - 4));
     this.mangaPreviewRows = mangaDirectoryEntryRows(entries, this.mangaPresentation, this.liveWidth() > 0 && this.liveWidth() <= visual.narrowWidth,
-      mangaDirectoryScale(ReaderWindowCoordinator.metrics().systemFontScale), this.contentFrame().width);
+      mangaDirectoryScale(ReaderWindowCoordinator.metrics().systemFontScale), this.contentFrame().width,
+      (entry: LocalReadingTocEntry): number => mangaDirectoryDownloadStatusWidth(entry.downloadState, false,
+        mangaDirectoryScale(ReaderWindowCoordinator.metrics().systemFontScale)));
   }
 
   private liveMangaPreviewRow(row: MangaDirectoryLayoutRow): MangaDirectoryLayoutRow {

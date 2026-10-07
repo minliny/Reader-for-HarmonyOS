@@ -572,3 +572,44 @@ for (const contentKind of ['manga','audio']) {
  assert.deepEqual(reached,[],'known non-text cached/fresh entry performs no request');
 }
 console.log('PASS production outer-detail/known-cache media guard without changing bookshelf display or data');
+
+// Directory display facts are a thin Core DTO projection, online and cached.
+{
+  const metadata = { displayTitle: '１００（上）', isVip: true, isPay: false, contextTitle: '第一部 / 第二卷' };
+  const raw = { index: 0, title: '✿·１００（上）', url: '/chapter/100', level: 1, ...metadata };
+  const decoded = gateway.decodeToc([raw])[0];
+  for (const [key, value] of Object.entries(metadata)) assert.equal(decoded[key], value);
+  assert.equal(decoded.title, raw.title); assert.equal(decoded.index, 0); assert.equal(decoded.url, raw.url);
+  assert.equal(gateway.decodeToc([{ ...raw, title: '' }])[0].title, '', 'raw missing titles reach the shared display fallback');
+  for (const malformed of [{ isVip: 1 }, { isPay: 'false' }, { displayTitle: 7 }, { contextTitle: [] }]) {
+    assert.throws(() => gateway.decodeToc([{ ...raw, ...malformed }]), error =>
+      error instanceof Error && error.code === 'invalidResponse' && error.command === 'book.toc' && /directory .* invalid/.test(error.message));
+  }
+  const Local = (await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts')).LocalReadingFlowGateway;
+  const local = new Local({ async request(method, params) {
+    assert.equal(method, 'local_book.toc'); assert.equal(params.bookId, 'metadata-local');
+    return { data: { sourceId: 'local', bookId: 'metadata-local', toc: [raw] } };
+  } });
+  const localEntry = (await local.loadToc('metadata-local')).entries[0];
+  for (const [key, value] of Object.entries(metadata)) assert.equal(localEntry[key], value);
+  assert.equal(localEntry.title, raw.title); assert.equal(localEntry.downloadState, 'unknown');
+  const cachedGateway = new RemoteReadingFlowGateway({ async request(method) {
+    assert.equal(method, 'cache.book.status');
+    return { data: { sourceId: SOURCE_ID, bookId: BOOK_ID, tocAvailable: true,
+      chapters: [{ ...raw, chapterIndex: 0, navigable: true }] } };
+  } });
+  const cached = await cachedGateway.openCachedSession({ sourceId: SOURCE_ID, bookId: BOOK_ID,
+    detailUrl: BOOK_ID, title: 'Cached metadata', author: 'Author' });
+  for (const [key, value] of Object.entries(metadata)) assert.equal(cached.entries[0][key], value);
+  assert.equal(cached.entries[0].title, raw.title);
+  const malformedCache = new RemoteReadingFlowGateway({ async request(method) {
+    assert.equal(method, 'cache.book.status');
+    return { data: { sourceId: SOURCE_ID, bookId: BOOK_ID, tocAvailable: true,
+      chapters: [{ ...raw, chapterIndex: 0, navigable: true, isVip: 'true' }] } };
+  } });
+  await assert.rejects(() => malformedCache.openCachedSession({ sourceId: SOURCE_ID, bookId: BOOK_ID,
+    detailUrl: BOOK_ID, title: 'Cached metadata', author: 'Author' }), error =>
+    error.code === 'cacheDerivedCorrupt' && error.command === 'cache.book.status' &&
+    error.causeValue?.code === 'invalidResponse' && /directory isVip is invalid/.test(error.message),
+  'malformed optional cached metadata reaches the existing derived-cache corruption classification');
+}

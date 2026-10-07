@@ -1,3 +1,5 @@
+import { mangaDirectoryDisplay } from '../manga/MangaDirectoryDisplay';
+import { mangaDirectoryDownloadStatusText, mangaDirectoryDownloadStatusWidth } from '../manga/MangaDirectoryState';
 import { TYPE_APP_INHERITED_HINT, TYPE_READER_DIRECTORY_DISCLOSURE, TYPE_READER_DIRECTORY_TITLE } from '../common/ReaderTypography';
 import type { JsonObject } from '@reader/core-harmony';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -16,7 +18,7 @@ import { LengthMetrics } from '@kit.ArkUI';
 import { util } from '@kit.ArkTS';
 import { readerDirectoryObserveScrollCommand, readerDirectorySaveViewportAnchor, readerDirectoryViewportAnchor,
   type ReaderDirectoryViewportAnchor } from './ReaderDirectoryViewport';
-import { mangaDirectoryNodePlacement, mangaDirectoryNodePlacements, mangaDirectorySameNodeRun,
+import { mangaDirectoryNodePlacements, mangaDirectorySameNodeRun,
   type MangaDirectoryNodePlacement } from '../manga/MangaDirectoryLayout';
 
 const DIRECTORY_PAGE_SIZE: number = 256;
@@ -186,6 +188,7 @@ class ReaderDirectoryNavigationDataSource implements IDataSource {
         const old = previousById.get(node.nodeId);
         if (old !== undefined && (old.expanded !== node.expanded || old.title !== node.title ||
           old.parentTitle !== node.parentTitle || old.readableDescendantCount !== node.readableDescendantCount ||
+          old.displayTitle !== node.displayTitle || old.isVip !== node.isVip || old.isPay !== node.isPay || old.contextTitle !== node.contextTitle ||
           old.depth !== node.depth || old.kind !== node.kind || highlighted.has(node.nodeId)))
           changed.add(offset + index);
       });
@@ -214,6 +217,7 @@ class ReaderDirectoryNavigationDataSource implements IDataSource {
       const previous = previousPage?.[index];
       if (previous?.nodeId === node.nodeId && previous.expanded === node.expanded && previous.title === node.title &&
         previous.parentTitle === node.parentTitle && previous.readableDescendantCount === node.readableDescendantCount &&
+        previous.displayTitle === node.displayTitle && previous.isVip === node.isVip && previous.isPay === node.isPay && previous.contextTitle === node.contextTitle &&
         previous.depth === node.depth && previous.kind === node.kind) return;
       this.notifyCoreChanged(position);
     });
@@ -299,6 +303,9 @@ export struct ReaderDirectoryNavigationList {
   // Numeric layout metadata only: chapter nodes remain solely in the shared
   // 12-page LRU, including while a different directory owns the viewport.
   private mangaGridSpans: Map<number, number> = new Map<number, number>();
+  private mangaLayoutByNode: Map<string, MangaDirectoryNodePlacement> = new Map<string, MangaDirectoryNodePlacement>();
+  private mangaLayoutSignature: string = '';
+  private mangaLayoutPageRefs: Map<number, ReaderDirectoryNavigationNode[]> = new Map<number, ReaderDirectoryNavigationNode[]>();
   private mangaDragging: boolean = false;
 
   aboutToAppear(): void {
@@ -322,6 +329,7 @@ export struct ReaderDirectoryNavigationList {
     this.scrollCommandUnsubscribe?.();
     this.scrollCommandUnsubscribe = undefined;
     this.mounted = false; this.generation += 1; this.selectionGeneration += 1; this.pendingPages = [];
+    this.mangaLayoutByNode.clear(); this.mangaGridSpans.clear(); this.mangaLayoutPageRefs.clear(); this.mangaLayoutSignature = '';
   }
 
   private onScrollCommand(): void {
@@ -437,7 +445,6 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private onChapterEntriesChanged(): void {
-    if (this.chapterSource === this.chapterEntries) return;
     this.chapterSource = this.chapterEntries;
     const previous = this.chapterSignatures;
     const next = new Map<number, string>();
@@ -445,8 +452,8 @@ export struct ReaderDirectoryNavigationList {
     this.chapterByIndex.clear();
     for (const chapter of this.chapterEntries) {
       this.chapterByIndex.set(chapter.index, chapter);
-      const signature = `${chapter.title}:${chapter.navigable}:${chapter.downloadState}:${chapter.bookmarks === undefined ? '?' :
-        chapter.bookmarks.map((bookmark): number => bookmark.time).join(',')}`;
+      const signature = JSON.stringify([chapter.title, chapter.displayTitle, chapter.isVip, chapter.isPay, chapter.contextTitle,
+        chapter.navigable, chapter.downloadState, chapter.bookmarks?.map((bookmark): number => bookmark.time)]);
       next.set(chapter.index, signature);
       if (previous.get(chapter.index) !== signature) changed.add(chapter.index);
     }
@@ -674,11 +681,69 @@ export struct ReaderDirectoryNavigationList {
       this.dataSource.displayIndex(current.index) === undefined);
   }
 
+  /** Node facts win; an admitted chapter may supply optional facts omitted by older navigation DTOs. */
+  private mangaDisplayNode(node: ReaderDirectoryNavigationNode, resident: boolean = false): ReaderDirectoryNavigationNode {
+    const current = resident ? node : this.mangaPaintNode(node);
+    const chapter = current.kind === 'target' && current.chapterIndex !== undefined ? this.chapterByIndex.get(current.chapterIndex) : undefined;
+    return { ...current, displayTitle: current.displayTitle ?? chapter?.displayTitle,
+      isVip: current.isVip ?? chapter?.isVip, isPay: current.isPay ?? chapter?.isPay,
+      contextTitle: current.contextTitle ?? chapter?.contextTitle };
+  }
+
+  private mangaTitle(node: ReaderDirectoryNavigationNode): string {
+    return mangaDirectoryDisplay(this.mangaDisplayNode(node)).title;
+  }
+
+  private mangaContextTitle(node: ReaderDirectoryNavigationNode): string {
+    const current = this.mangaDisplayNode(node);
+    if (current.contextTitle?.trim().length) return current.contextTitle;
+    const titles: string[] = [], seen: Set<string> = new Set<string>([current.nodeId]);
+    let parentId = current.parentId, depth = current.depth;
+    for (let steps = 0; steps < 64 && parentId !== undefined && !seen.has(parentId); steps += 1) {
+      seen.add(parentId);
+      const parent = this.dataSource.loadedItemById(parentId)?.node;
+      if (parent === undefined || parent.depth < 1 || parent.depth >= depth) {
+        if (titles.length === 0 && current.parentTitle !== undefined) titles.unshift(current.parentTitle);
+        break;
+      }
+      titles.unshift(this.mangaTitle(parent)); depth = parent.depth; parentId = parent.parentId;
+    }
+    return titles.join(' / ');
+  }
+
+  private mangaDownloadable(node: ReaderDirectoryNavigationNode, resident: boolean = false): boolean {
+    const current = resident ? node : this.mangaPaintNode(node);
+    const chapter = current.chapterIndex === undefined ? undefined : this.chapterByIndex.get(current.chapterIndex);
+    return current.kind === 'target' && this.chapterDownloadEnabled && chapter !== undefined &&
+      chapter.navigable !== false && chapter.downloadState !== 'unknown';
+  }
+
+  private mangaStatusText(node: ReaderDirectoryNavigationNode): string {
+    const current = this.mangaDisplayNode(node);
+    const chapter = current.chapterIndex === undefined ? undefined : this.chapterByIndex.get(current.chapterIndex);
+    return [mangaDirectoryDisplay(current).statusText,
+      mangaDirectoryDownloadStatusText(chapter?.downloadState, this.mangaDownloadable(current))]
+      .filter((text: string): boolean => text.length > 0).join(' · ');
+  }
+
+  private mangaAccessoryWidth(node: ReaderDirectoryNavigationNode, resident: boolean = false): number {
+    const current = resident ? node : this.mangaPaintNode(node);
+    const chapter = current.chapterIndex === undefined ? undefined : this.chapterByIndex.get(current.chapterIndex);
+    const glyph = this.mangaDownloadable(current, resident);
+    return (glyph ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 0) +
+      mangaDirectoryDownloadStatusWidth(chapter?.downloadState, glyph, this.mangaFontScale());
+  }
+
   private mangaRowAccessibility(item: ReaderDirectoryNavigationItem, context: boolean): string {
-    const node = item.node === undefined ? undefined : this.mangaPaintNode(item.node);
-    if (node === undefined) return '目录加载中';
-    if (node.kind === 'group') return `${node.title}，分组，${node.expanded ? '已展开' : '已折叠'}`;
-    return `${context && node.parentTitle !== undefined ? `${node.parentTitle}，` : ''}${node.title}${this.isCurrentMangaNode(item) ? '，正在读' : ''}`;
+    if (item.node === undefined) return '目录加载中';
+    const node = this.mangaDisplayNode(item.node);
+    const path = context || this.mangaQuickDisplay ? this.mangaContextTitle(node) : '';
+    const metadata = this.mangaStatusText(node);
+    const chapter = this.mangaChapter(item);
+    const state = node.kind === 'group' ? `，分组，${node.expanded ? '已展开' : '已折叠'}` :
+      node.kind === 'disabled' ? '，暂不可读' : '，打开章节';
+    return `${path ? `${path}，` : ''}${this.mangaTitle(node)}${state}${this.isCurrentMangaNode(item) ? '，正在读' : ''}` +
+      `${metadata ? `，${metadata}` : ''}${chapter?.downloadState === 'completed' && this.mangaDownloadable(node) ? '，已下载' : ''}`;
   }
 
   private displayLevel(node: ReaderDirectoryNavigationNode): number {
@@ -808,25 +873,23 @@ export struct ReaderDirectoryNavigationList {
   /** Join only adjacent resident Core pages. This transient projection never
    * fetches another page or owns a second catalog; missing predecessors keep
    * their explicit boundary instead of inventing a global run offset. */
-  private mangaLoadedRuns(): ReaderDirectoryLoadedPage[] {
-    const resident = this.dataSource.loadedPages().sort((left: ReaderDirectoryLoadedPage,
+  private mangaLoadedRuns(residentPages: ReaderDirectoryLoadedPage[] = this.dataSource.loadedPages()): ReaderDirectoryLoadedPage[] {
+    const resident = residentPages.sort((left: ReaderDirectoryLoadedPage,
       right: ReaderDirectoryLoadedPage): number => left.offset - right.offset);
     const runs: ReaderDirectoryLoadedPage[] = [];
     for (const page of resident) {
       const previous = runs[runs.length - 1];
       if (previous !== undefined && previous.offset + previous.nodes.length === page.offset)
-        previous.nodes = previous.nodes.concat(page.nodes);
-      else runs.push({ offset: page.offset, nodes: page.nodes });
+        previous.nodes = previous.nodes.concat(page.nodes.map((node: ReaderDirectoryNavigationNode): ReaderDirectoryNavigationNode => this.mangaDisplayNode(node, true)));
+      else runs.push({ offset: page.offset, nodes: page.nodes.map((node: ReaderDirectoryNavigationNode): ReaderDirectoryNavigationNode => this.mangaDisplayNode(node, true)) });
     }
     return runs;
   }
 
   private mangaCellPlacement(item: ReaderDirectoryNavigationItem): MangaDirectoryNodePlacement | undefined {
-    const index = this.mangaRowIndex(item);
-    if (index < 0) return undefined;
-    const page = this.mangaLoadedRuns().find((run: ReaderDirectoryLoadedPage): boolean =>
-      index >= run.offset && index < run.offset + run.nodes.length);
-    return page === undefined ? undefined : mangaDirectoryNodePlacement(page.nodes, index - page.offset, this.mangaGridNarrow(), page.offset, this.mangaFontScale(), this.mangaContentWidth(), this.chapterDownloadEnabled ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 0);
+    if (item.node === undefined || this.dataSource.currentView()?.viewId !== this.view.viewId) return undefined;
+    this.prepareMangaGridProjection();
+    return this.mangaLayoutByNode.get(item.node.nodeId);
   }
 
   private mangaCellOrdinal(item: ReaderDirectoryNavigationItem): number {
@@ -860,26 +923,39 @@ export struct ReaderDirectoryNavigationList {
     return next === undefined || last === undefined || !mangaDirectorySameNodeRun(last, next) ? MANGA_DIRECTORY_VISUAL.gridRunMargin : MANGA_DIRECTORY_VISUAL.gridGap;
   }
 
-  private mangaGridLayoutOptions(): GridLayoutOptions {
-    const revision = this.mangaPresentationRevision;
-    this.mangaGridSpans.clear();
-    const pages: ReaderDirectoryLoadedPage[] = this.mangaLoadedRuns();
-    if (revision >= 0) for (const page of pages) {
-      const placements = mangaDirectoryNodePlacements(page.nodes, this.mangaGridNarrow(), page.offset, this.mangaFontScale(), this.mangaContentWidth(), this.chapterDownloadEnabled ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 0);
+  /** Derived finite layout only. Each published revision is parsed once, never per native attribute. */
+  private prepareMangaGridProjection(): void {
+    const resident = this.dataSource.loadedPages();
+    const signature = JSON.stringify([this.view.viewId, this.generation, this.mangaPresentationRevision,
+      this.windowMetricsRevision, this.mangaContentWidth(), this.mangaFontScale(), this.mangaGridNarrow(),
+      this.mangaSearchActive, this.chapterDownloadEnabled,
+      resident.map((page: ReaderDirectoryLoadedPage): string => `${page.offset}:${page.nodes.length}`).sort()]);
+    const samePages = resident.length === this.mangaLayoutPageRefs.size &&
+      resident.every((page: ReaderDirectoryLoadedPage): boolean => this.mangaLayoutPageRefs.get(page.offset) === page.nodes);
+    if (signature === this.mangaLayoutSignature && samePages) return;
+    this.mangaLayoutSignature = signature;
+    this.mangaGridSpans.clear(); this.mangaLayoutByNode.clear(); this.mangaLayoutPageRefs.clear();
+    for (const page of resident) this.mangaLayoutPageRefs.set(page.offset, page.nodes);
+    const pages: ReaderDirectoryLoadedPage[] = this.mangaLoadedRuns(resident);
+    if (this.mangaPresentationRevision >= 0) for (const page of pages) {
+      const placements = mangaDirectoryNodePlacements(page.nodes, this.mangaGridNarrow(), page.offset,
+        this.mangaFontScale(), this.mangaContentWidth(),
+        (node: ReaderDirectoryNavigationNode): number => this.mangaAccessoryWidth(node, true), this.mangaSearchActive ? 'search' : '');
       placements.forEach((placement: MangaDirectoryNodePlacement, ordinal: number): void => {
+        const node = page.nodes[ordinal];
+        if (node !== undefined) this.mangaLayoutByNode.set(node.nodeId, placement);
         const position = page.offset + ordinal;
-        const index = position;
         const column = position - placement.startIndex;
-        // The final real target consumes unused lanes, while its visual cell
-        // keeps its ordinary width. A different kind/parent starts a new row
-        // without a fake chapter or a shift in Core visible indexes.
         const span = placement.kind === 'row' ? 12 :
           (column === placement.rowLength - 1 ? placement.columns - column : 1) * (12 / placement.columns);
-        this.mangaGridSpans.set(index, span);
+        this.mangaGridSpans.set(position, span);
       });
     }
-    // An empty presentation slot has no Core rank, target or data-source item.
     if (this.view.visibleTotal === 0) this.mangaGridSpans.set(0, 12);
+  }
+
+  private mangaGridLayoutOptions(): GridLayoutOptions {
+    this.prepareMangaGridProjection();
     return { regularSize: [1, 1], irregularIndexes: Array.from(this.mangaGridSpans.keys()),
       onGetIrregularSizeByIndex: (index: number): [number, number] => [1, this.mangaGridSpans.get(index) ?? 12] };
   }
@@ -910,22 +986,11 @@ export struct ReaderDirectoryNavigationList {
 
   private mangaQuickContextTitle(item: ReaderDirectoryNavigationItem): string {
     const revision = this.mangaPresentationRevision;
-    if (revision < 0 || this.dataSource.currentView()?.viewId !== this.view.viewId) return '';
-    const node = item.node === undefined ? undefined : this.dataSource.loadedItemById(item.node.nodeId)?.node;
+    if (revision < 0 || item.node === undefined || this.dataSource.currentView()?.viewId !== this.view.viewId) return '';
+    const node = this.dataSource.loadedItemById(item.node.nodeId)?.node;
     if (node === undefined) return '';
-    const titles: string[] = [node.title], seen: Set<string> = new Set<string>([node.nodeId]);
-    let parentId = node.parentId, depth = node.depth;
-    // Existing resident nodes only. Missing ancestry never causes a catalog scan.
-    for (let steps = 0; steps < 64 && parentId !== undefined && !seen.has(parentId); steps += 1) {
-      seen.add(parentId);
-      const parent = this.dataSource.loadedItemById(parentId)?.node;
-      if (parent === undefined || parent.depth < 1 || parent.depth >= depth) {
-        if (titles.length === 1 && node.parentTitle !== undefined) titles.unshift(node.parentTitle);
-        break;
-      }
-      titles.unshift(parent.title); depth = parent.depth; parentId = parent.parentId;
-    }
-    return titles.join(' / ');
+    const context = this.mangaContextTitle(node);
+    return context ? `${context} / ${this.mangaTitle(node)}` : this.mangaTitle(node);
   }
 
   @Builder
@@ -958,6 +1023,13 @@ export struct ReaderDirectoryNavigationList {
                 .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true).fontSize(MANGA_DIRECTORY_VISUAL.namedFontSize).lineHeight(MANGA_DIRECTORY_VISUAL.namedLineHeight).fontWeight(MANGA_DIRECTORY_VISUAL.bodyFontWeight)
                 .fontColor(this.mangaColor(this.isCurrentMangaNode(item) ? 'accent' : 'muted'));
             }
+            if (item.node !== undefined && this.mangaStatusText(item.node).length > 0) {
+              Text(this.mangaStatusText(item.node)).flexShrink(0).maxLines(1)
+                .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(MANGA_DIRECTORY_VISUAL.bodyFontWeight)
+                .minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true)
+                .fontSize(MANGA_DIRECTORY_VISUAL.metaFontSize).lineHeight(MANGA_DIRECTORY_VISUAL.metaLineHeight)
+                .fontColor(this.mangaColor('muted')).margin({ left: MANGA_DIRECTORY_VISUAL.contentGap });
+            }
           }.layoutWeight(1).constraintSize({ minWidth: 0 }).height(this.mangaCellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2).justifyContent(FlexAlign.Center);
           if (item.node?.kind === 'target' && item.node.chapterIndex !== undefined && this.chapterDownloadEnabled &&
             this.mangaChapter(item) !== undefined &&
@@ -972,7 +1044,7 @@ export struct ReaderDirectoryNavigationList {
                   $r('app.media.reader_directory_marker_download_theme_night') : $r('app.media.reader_directory_marker_download')))
                 .width(12).height(12);
             }.width(MANGA_DIRECTORY_VISUAL.downloadGridWidth).height(this.mangaCellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2).enabled(this.canDownloadTarget(this.mangaPaintNode(item.node)))
-              .accessibilityText(this.chapterDownloadActionsEnabled ? `管理${this.mangaPaintNode(item.node).title}下载` :
+              .accessibilityText(this.chapterDownloadActionsEnabled ? `管理${this.mangaTitle(item.node)}下载` :
                 this.mangaChapter(item)?.downloadState === 'completed' ? '已下载' : '下载章节')
               .onClick((): void => { if (item.node !== undefined) this.downloadTarget(this.mangaPaintNode(item.node)); });
             }.width(MANGA_DIRECTORY_VISUAL.downloadGridWidth).height(this.mangaCellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2)
@@ -1016,7 +1088,7 @@ export struct ReaderDirectoryNavigationList {
         }.width(32).height(32).margin({ left: 8, right: 8 })
           .enabled(this.interactionEnabled && !this.mangaSearchActive)
           .attributeModifier(new MangaDirectoryPressFeedback(this.interactionEnabled && !this.mangaSearchActive, true, this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme))
-          .accessibilityText(`${this.mangaPaintNode(item.node).title}，展开或收起子目录`)
+          .accessibilityText(`${this.mangaTitle(item.node)}，展开或收起子目录`)
           .onClick((): void => this.toggleMangaRow(item));
       }.width('100%').visibility(this.mangaRowAdmitted(item) ? Visibility.Visible : Visibility.Hidden).border({ width: { top: this.mangaFirstDisplayRow(item) ? MANGA_DIRECTORY_VISUAL.gridBorder : 0,
         bottom: MANGA_DIRECTORY_VISUAL.gridBorder }, color: this.mangaColor('line') });
@@ -1034,7 +1106,7 @@ export struct ReaderDirectoryNavigationList {
       } else {
         if (item.node.kind === 'group') {
           Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Baseline }) {
-            Text(this.mangaGroupNode(item.node).title).flexShrink(1).constraintSize({ minWidth: 0 })
+            Text(this.mangaTitle(item.node)).flexShrink(1).constraintSize({ minWidth: 0 })
               .fontFamily(READER_FONT_NOTO_SANS_SC_UI_600).minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true).fontSize(MANGA_DIRECTORY_VISUAL.groupFontSize).lineHeight(MANGA_DIRECTORY_VISUAL.groupLineHeight)
               .fontWeight(MANGA_DIRECTORY_VISUAL.groupFontWeight).fontColor(this.mangaColor('ink'));
             if (this.mangaGroupNode(item.node).readableDescendantCount !== undefined) {
@@ -1046,7 +1118,7 @@ export struct ReaderDirectoryNavigationList {
           }.layoutWeight(1).constraintSize({ minWidth: 0 });
         } else {
           Column({ space: MANGA_DIRECTORY_VISUAL.contentGap }) {
-            Text(this.mangaPaintNode(item.node).title).width('100%').wordBreak(WordBreak.BREAK_WORD)
+            Text(this.mangaTitle(item.node)).width('100%').wordBreak(WordBreak.BREAK_WORD)
               // The fixed 550 face supplies the outlines. API 12 admits the
               // matching non-hundred declaration without relying on a VF axis.
               .fontFamily(this.isCurrentMangaNode(item) ? READER_FONT_NOTO_SANS_SC_UI_550 : READER_FONT_NOTO_SANS_SC_UI_REGULAR)
@@ -1054,8 +1126,15 @@ export struct ReaderDirectoryNavigationList {
               .lineHeight(MANGA_DIRECTORY_VISUAL.namedLineHeight)
               .fontWeight(this.isCurrentMangaNode(item) ? MANGA_DIRECTORY_VISUAL.currentFontWeight : MANGA_DIRECTORY_VISUAL.bodyFontWeight, { enableVariableFontWeight: true })
               .fontColor(this.mangaColor(this.isCurrentMangaNode(item) ? 'accent' : 'ink'));
-            if (this.mangaSearchActive && this.mangaPaintNode(item.node).parentTitle !== undefined) {
-              Text(this.mangaPaintNode(item.node).parentTitle).width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+            if (this.mangaStatusText(item.node).length > 0) {
+              Text(this.mangaStatusText(item.node)).width('100%').wordBreak(WordBreak.BREAK_WORD)
+                .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(MANGA_DIRECTORY_VISUAL.bodyFontWeight)
+                .minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true)
+                .fontSize(MANGA_DIRECTORY_VISUAL.metaFontSize).lineHeight(MANGA_DIRECTORY_VISUAL.metaLineHeight)
+                .fontColor(this.mangaColor('muted'));
+            }
+            if (this.mangaSearchActive && this.mangaContextTitle(item.node).length > 0) {
+              Text(this.mangaContextTitle(item.node)).width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
                 .fontWeight(MANGA_DIRECTORY_VISUAL.bodyFontWeight).minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true).fontSize(MANGA_DIRECTORY_VISUAL.metaFontSize).lineHeight(MANGA_DIRECTORY_VISUAL.metaLineHeight)
                 .fontColor(this.mangaColor('muted'));
             }
@@ -1090,7 +1169,7 @@ export struct ReaderDirectoryNavigationList {
             $r('app.media.manga_sheet_chevron_down_theme_night') : $r('app.media.manga_sheet_chevron_down'))
             .width(16).height(16).rotate({ angle: this.mangaGroupNode(item.node).expanded ? 0 : -90 })
             .animation({ duration: MANGA_DIRECTORY_VISUAL.foldDuration, curve: 'ease' })
-            .accessibilityText(`${this.mangaGroupNode(item.node).expanded ? '折叠' : '展开'}${this.mangaGroupNode(item.node).title}子目录`)
+            .accessibilityText(`${this.mangaGroupNode(item.node).expanded ? '折叠' : '展开'}${this.mangaTitle(item.node)}子目录`)
             .onClick((): void => this.toggleMangaRow(item));
         } else if (item.node.kind === 'target' && this.isCurrentMangaNode(item)) {
           Text('正在读').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(MANGA_DIRECTORY_VISUAL.bodyFontWeight)

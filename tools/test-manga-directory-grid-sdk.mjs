@@ -1,7 +1,7 @@
+import { productionMangaDirectoryNavigationDataSource } from './lib/manga-directory-navigation-data-source-probe.mjs';
 import { mangaGridProbeDependencies, mangaGridBuilderMembers } from './lib/manga-directory-grid-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
@@ -10,17 +10,7 @@ import { readerDirectoryScopeKey } from '../entry/src/main/ets/features/reading/
 
 const path = new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets', import.meta.url);
 const source = readFileSync(path, 'utf8');
-class LRUCache {
-  constructor(limit) { this.limit = limit; this.data = new Map(); }
-  get(key) { const value = this.data.get(key); if (value !== undefined) { this.data.delete(key); this.data.set(key, value); } return value; }
-  put(key, value) { this.data.delete(key); this.data.set(key, value); while (this.data.size > this.limit) this.data.delete(this.data.keys().next().value); }
-  keys() { return [...this.data.keys()]; }
-}
-const header = source.slice(0, source.indexOf('/** Virtual, Core-paged'))
-  .replace(/^import[\s\S]*?;\n/gm, '').replace(/\bexport /g, '');
-const production = new Function('util', 'readerDirectoryScopeKey', ...Object.keys(layout),
-  `${stripTypeScriptTypes(header)}; return { ReaderDirectoryNavigationDataSource, directoryPages, cacheReaderDirectoryNavigationPage };`)
-  ({ LRUCache }, readerDirectoryScopeKey, ...Object.values(layout));
+const production = productionMangaDirectoryNavigationDataSource(source);
 const node = (index, title = String(index), extra = {}) => ({ nodeId: `n${index}`, title, kind: 'target', depth: 2,
   chapterIndex: 5000 + index, chapterOffsetScalar: 0, parentId: 'volume', parentTitle: '第一卷', hasChildren: false, expanded: false, ...extra });
 const nodes = Array.from({ length: 600 }, (_, index) => node(index));
@@ -82,7 +72,7 @@ const names = [...mangaGridBuilderMembers, 'build', 'row', 'mangaRow', 'mangaNum
   'selectMangaRow', 'toggleMangaRow', 'mangaColor', 'displayLevel', 'mangaGroupNode', 'mangaGroupSpacing',
   'mangaRowIndex', 'mangaRowPaddingLeft', 'isCurrentMangaNode', 'isCurrentNode', 'rowKey',
   'captureViewportAnchor', 'positionInitialCurrent', 'positionRowHeight', 'planPosition'];
-names.push('mangaCatalogNarrow', 'canDownloadTarget', 'downloadTarget', 'mangaViewportWidth', 'mangaInitialViewportWidth');
+names.push('onChapterEntriesChanged', 'chapterEntries', 'chapterSource', 'chapterSignatures', 'mangaCatalogNarrow', 'canDownloadTarget', 'downloadTarget', 'mangaViewportWidth', 'mangaInitialViewportWidth');
 const sdkGrid = [];
 const Grid = new Proxy({ name: 'Grid' }, { get(target, key) {
   if (key === 'name') return target.name;
@@ -182,7 +172,7 @@ function checkDownloadBudget(candidate = source) {
   const item = data.getData(0), placement = owner.mangaCellPlacement(item);
   assert.equal(placement.columns, 2, 'download accessory reserves its own 24vp before responsive column admission');
   const cellWidth = owner.mangaCellWidth(item);
-  const textBudget = 2 * 13 * .7 * 3.2;
+  const textBudget = 3 * 13 * .7 * 3.2;
   assert.ok(cellWidth - 24 - 12 >= textBudget, 'download sibling cannot consume the distinguishing numeric title lane');
   owner.mangaNumberCell(item);
   assert.ok([...owner.nodes.values()].some(native => native.type === 'Stack' && native.width === 24));
@@ -647,3 +637,59 @@ const lostExplicitFalse = source.replace('this.mangaCatalogNarrow !== undefined 
 assert.notEqual(lostExplicitFalse, source);
 assert.throws(() => checkParentWidthClass(lostExplicitFalse), assert.AssertionError, 'reject the original false-overridden-by-body class bug');
 console.log('PASS actual SDK optional parent width class false/true/undefined and real-content column budget; original OR negative rejected');
+
+// Once per published projection, with constant-time node lookup afterward.
+{
+  const chapter = { index: 5018, title: '✿・９９', displayTitle: '９９', level: 1, navigable: true,
+    isVip: true, isPay: false, contextTitle: '第一部 / 第一卷', downloadState: 'cached' };
+  const native = node(18, chapter.title, { chapterIndex: chapter.index });
+  const ready = { ...gridView, viewId: 'metadata-refresh', visibleTotal: 1, nodes: [native] };
+  const data = new production.ReaderDirectoryNavigationDataSource(() => assert.fail('metadata refresh uses resident Core nodes'));
+  data.replace(ready);
+  const f = probe('day', false, 390, 1);
+  Object.assign(f.owner, { dataSource: data, view: ready, chapterEntries: [chapter], mangaPresentationRevision: 0 });
+  f.owner.onChapterEntriesChanged();
+  let projections = 0;
+  const productionRuns = f.owner.mangaLoadedRuns.bind(f.owner);
+  f.owner.mangaLoadedRuns = (...args) => { projections += 1; return productionRuns(...args); };
+  const item = data.getData(0);
+  for (let i = 0; i < 20; i += 1) { f.owner.mangaCellPlacement(item); f.owner.mangaCellWidth(item); f.owner.mangaGridLayoutOptions(); }
+  assert.equal(projections, 1, 'attribute bindings share one finite parsed projection');
+  assert.equal(f.owner.mangaTitle(native), '９９');
+  assert.equal(f.owner.mangaStatusText(native), 'VIP · 已保存');
+  const revision = f.owner.mangaPresentationRevision;
+  Object.assign(chapter, { displayTitle: '１００', isPay: true, contextTitle: '第一部 / 第二卷', downloadState: 'paused' });
+  f.owner.onChapterEntriesChanged();
+  assert.ok(f.owner.mangaPresentationRevision > revision, 'same-array metadata edits invalidate the projection');
+  f.owner.mangaGridLayoutOptions(); assert.equal(projections, 2);
+  assert.equal(f.owner.mangaTitle(native), '１００');
+  assert.equal(f.owner.mangaStatusText(native), 'VIP · 已购 · 已暂停');
+  assert.ok(f.owner.mangaRowAccessibility(item, true).includes('第一部 / 第二卷'));
+  assert.ok(f.owner.mangaRowAccessibility(item, true).includes('已购'));
+  f.owner.mangaSearchActive = true;
+  assert.equal(f.owner.mangaCellPlacement(item).kind, 'row', 'search removes compact numeric cells');
+  assert.equal(projections, 3);
+  for (const apply of [
+    () => { f.owner.mangaViewportWidth = 280; },
+    () => { f.owner.windowMetricsRevision += 1; },
+    () => { f.owner.chapterDownloadEnabled = true; },
+  ]) { const count = projections; apply(); f.owner.mangaGridLayoutOptions(); assert.equal(projections, count + 1); }
+  f.owner.mangaSearchActive = false; f.owner.mangaGridLayoutOptions();
+  const beforeShared = projections, ownerRevision = f.owner.mangaPresentationRevision;
+  const peer = new production.ReaderDirectoryNavigationDataSource(() => assert.fail('peer updates a resident shared page'));
+  peer.replace({ ...data.currentView(), nodes: [] });
+  peer.admit(0, { viewId: data.currentView().viewId, visibleTotal: 1,
+    nodes: [{ ...native, displayTitle: '源更新后的真实副标题', isVip: false, isPay: false }] });
+  assert.equal(f.owner.mangaPresentationRevision, ownerRevision, 'another owner cannot increment this component revision');
+  const replacement = f.owner.mangaCellPlacement(item);
+  assert.equal(replacement.kind, 'row', 'same offset/count shared-page replacement invalidates previous numeric layout');
+  assert.equal(f.owner.mangaTitle(native), '源更新后的真实副标题');
+  assert.equal(f.owner.mangaStatusText(native), '已暂停', 'explicit false peer flags override earlier chapter fallback flags');
+  assert.equal(projections, beforeShared + 1);
+  f.owner.mangaCellPlacement(item); assert.equal(projections, beforeShared + 1, 'replacement is parsed once then reused');
+  const count = projections;
+  data.replace({ ...ready, viewId: 'metadata-new-view', nodes: [native] }); f.owner.view = data.currentView();
+  f.owner.mangaGridLayoutOptions(); assert.equal(projections, count + 1, 'new immutable view cannot reuse previous layout');
+  for (let index = 0; index < 12; index += 1) production.directoryPages.put(`other-window:${index}`, []);
+  assert.equal(f.owner.mangaCellPlacement(item), undefined, 'resident-window retirement removes stale derived node placement');
+}

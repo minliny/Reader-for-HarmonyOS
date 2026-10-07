@@ -55,7 +55,7 @@ const timers = [], scrolls = [];
 const Page = productionMotionMethods(new URL('features/bookshelf/BookDirectoryPage.ets', base),
   ['identity', 'admitEntries', 'mangaIsGroup', 'mangaVisibleEntries', 'locateCurrent', 'selectMangaEntry', 'rowIsCurrent',
     'toggleMangaBranch', 'prepareMangaLayout', 'publishProjection', 'onListUserScroll', 'mangaEntryIsDisplayed',
-    'contentFrame', 'mangaNarrow', 'mangaFontScale', 'scrollMangaCurrent', 'mangaContentTopInset', 'mangaVisibleTopInset', 'topInset'], {
+    'contentFrame', 'mangaNarrow', 'mangaFontScale', 'scrollMangaCurrent', 'mangaContentTopInset', 'mangaVisibleTopInset', 'topInset', 'mangaCurrentTitle'], {
     ...windowPorts,
     mangaDirectoryPresentation, mangaDirectoryVisibleEntries, snapshotReaderDirectoryData, sameReaderDirectoryData,
     mangaDirectoryEntryRows, projectReaderDirectoryEntries, ScrollAlign: { START: 'start' }, LengthMetrics: { vp: value => ({ value }) }, setTimeout: fn => timers.push(fn),
@@ -175,3 +175,33 @@ assert.equal(index.detailToc[2].downloadState, 'paused');
 assert.equal(index.detailToc[2].bookmarks[0].time, 7);
 assert.equal(host.snapshot().toc[2].title, '内卷的话新');
 console.log('PASS actual Owner offline recovery and Index owned-entry/reader-title publication retain chapter/volume hierarchy, sparse identities, canonical download state and bookmarks');
+
+// Full fallback query searches raw/display/entire explicit volume path, with
+// complete row paint; Quick keeps the same authoritative groups/disabled rows.
+{
+  const complete = [
+    { index: 10, title: '第一部', level: 1, navigable: false, downloadState: 'unknown' },
+    { index: 20, title: '第二卷', level: 2, navigable: false, downloadState: 'unknown' },
+    { index: 99, title: '✿·１００ 原始名字', displayTitle: '别名１００（上）', level: 3, navigable: true, downloadState: 'unknown' },
+    { index: 1001, title: '不可读', level: 3, navigable: false, downloadState: 'unknown' },
+  ];
+  const mangaPresentation = mangaDirectoryPresentation(complete);
+  const Fallback = productionMotionMethods(new URL('features/manga/MangaReadingDirectoryFallback.ets', base),
+    ['publishProjection', 'prepareLayout', 'fontScale'], { ...windowPorts, projectReaderDirectoryEntries, mangaDirectoryEntryRows });
+  const fallback = Object.assign(new Fallback(), { sourceId: 's', bookId: 'b', admittedEntries: complete,
+    presentation: mangaPresentation, query: '', ascending: true, mangaCatalogDisplay: false,
+    mangaCatalogNarrow: false, viewportWidth: 390, windowMetricsRevision: 0, chapterDownloadEnabled: false,
+    projectedEntries: [], layoutRows: [] });
+  fallback.publishProjection();
+  assert.deepEqual(fallback.projectedEntries.map(entry => entry.index), complete.map(entry => entry.index),
+    'Quick fallback preserves authoritative group/disabled/target identities');
+  for (const query of ['100', '别名', '✿', '第一部', '第二卷']) {
+    fallback.query = query; fallback.publishProjection();
+    const target = fallback.projectedEntries.find(entry => entry.index === 99);
+    assert.ok(target, query); assert.equal(target.title, complete[2].title);
+    assert.equal(target.contextTitle, '第一部 / 第二卷');
+    assert.ok(fallback.layoutRows.every(row => row.kind === 'row' && row.entries.length === 1), 'search uses complete rows only');
+  }
+  page.entries = complete; page.currentChapterIndex = 99; page.searchQuery = ''; page.admitEntries(false);
+  assert.equal(page.mangaCurrentTitle(), '别名１００（上）', 'Full footer uses the same authoritative display title');
+}

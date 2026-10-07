@@ -1,3 +1,4 @@
+import { decodeReaderDirectoryDisplayMetadata } from './ReaderDirectoryDisplayMetadata.ts';
 import type { BookmarkOperationIntentStore, ReadingOperationContext, ReadingOperationIntent, ReadingRecoveredOperation } from './ReadingOperationIntents';
 import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
 import { appendExpectedPositionVersions, decodeRemotePositionScope, encodeRemotePositionScope, type RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
@@ -13,6 +14,10 @@ import type { RemoteReadingIdentity } from './RemoteReadingContract';
 export type LocalReadingTocEntry = {
   index: number;
   title: string;
+  displayTitle?: string;
+  isVip?: boolean;
+  isPay?: boolean;
+  contextTitle?: string;
   /** 1-based navigation depth when the local book has a structured TOC. */
   level?: number;
   downloadState: LocalReadingDownloadState;
@@ -229,6 +234,7 @@ export class LocalReadingFlowGateway {
       entries.push({
         index,
         title: this.requireString(entry, 'title', 'local_book.toc entry'),
+        ...decodeReaderDirectoryDisplayMetadata(entry),
         level,
         downloadState: 'unknown',
       });
@@ -295,6 +301,7 @@ export class LocalReadingFlowGateway {
       projected.push({
         index: entry.index,
         title: entry.title,
+        displayTitle: entry.displayTitle, isVip: entry.isVip, isPay: entry.isPay, contextTitle: entry.contextTitle,
         level: entry.level,
         downloadState: stateByChapter.get(entry.index) ?? 'unknown',
         navigable: entry.navigable,
@@ -366,6 +373,7 @@ export class LocalReadingFlowGateway {
       projected.push({
         index: entry.index,
         title: entry.title,
+        displayTitle: entry.displayTitle, isVip: entry.isVip, isPay: entry.isPay, contextTitle: entry.contextTitle,
         level: entry.level,
         downloadState: entry.downloadState,
         navigable: entry.navigable,

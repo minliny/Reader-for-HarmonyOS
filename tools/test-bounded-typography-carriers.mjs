@@ -95,6 +95,17 @@ const retainedIndex = missingRetainedDirectory.files[0].carriers.findIndex(carri
 assert.ok(retainedIndex >= 0);
 missingRetainedDirectory.files[0].carriers.splice(retainedIndex, 1);
 assert.throws(() => validateMangaDirectoryTypographySuccessor(missingRetainedDirectory), /retained historical directory carriers missing or changed/, 'ordinary novel directory carrier cannot disappear into a manga successor');
+for (const mutation of ['binding', 'font', 'owner']) {
+  const altered = structuredClone(mangaDirectoryTypographySuccessor);
+  const header = altered.files.find(entry => entry.path === 'entry/src/main/ets/features/manga/MangaReadingSurface.ets')
+    .carriers.find(carrier => carrier.method === 'topControls' && carrier.text === 'this.directoryCurrentTitle()');
+  assert.ok(header, 'one exact authorized title display binding exists');
+  if (mutation === 'binding') header.text = 'this.unrelatedTitle()';
+  if (mutation === 'font') header.modifiers.fontSize.expression = '99';
+  if (mutation === 'owner') header.method = 'unrelatedControls';
+  assert.throws(() => validateMangaDirectoryTypographySuccessor(altered), /retained historical directory carriers missing or changed/,
+    'the single title projection change admits no different binding, physical tuple or owner: ' + mutation);
+}
 const wrongDirectoryVisualRead = path => path === mangaDirectoryTypographySuccessor.visualSpecSource ? read(path) + '\n' : read(path);
 assert.throws(() => validateMangaDirectoryTypographySuccessor(mangaDirectoryTypographySuccessor, wrongDirectoryVisualRead), /binds exact visual source/, 'directory witness keeps the independently frozen visual definition');
 const directoryPath = mangaDirectoryTypographySuccessor.files[0].path, directorySource = read(directoryPath);

@@ -90,7 +90,12 @@ export function validateMangaDirectoryTypographySuccessor(successor, readSource 
       for (const index of directoryRetainedHistorical[entry.path][field]) {
         const originalCarrier = original[field][index];
         assert.ok(originalCarrier, 'exact retained historical directory occurrence exists');
-        const found = remaining.indexOf(JSON.stringify(originalCarrier));
+        // The authorized directory-title repair changes only this one data
+        // binding. Retain its historical owner/method/kind and every physical
+        // modifier; no other reader carrier gains an exemption.
+        const expectedCarrier = entry.path === 'entry/src/main/ets/features/manga/MangaReadingSurface.ets' &&
+          field === 'carriers' && index === 4 ? { ...originalCarrier, text: 'this.directoryCurrentTitle()' } : originalCarrier;
+        const found = remaining.indexOf(JSON.stringify(expectedCarrier));
         assert.ok(found >= 0, 'retained historical directory ' + field + ' missing or changed: ' + entry.path);
         remaining.splice(found, 1);
       }

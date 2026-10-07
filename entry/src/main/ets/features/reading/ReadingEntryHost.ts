@@ -325,7 +325,7 @@ export class ReadingEntryHost {
     if (lease === undefined || !this.current(scope, lease)()) return;
     const seen = new Set<number>();
     for (const entry of entries) {
-      if (!Number.isSafeInteger(entry.index) || entry.index < 0 || entry.title.trim().length === 0 || seen.has(entry.index)) return;
+      if (!Number.isSafeInteger(entry.index) || entry.index < 0 || seen.has(entry.index)) return;
       seen.add(entry.index);
     }
     this.state = { ...this.state, toc: entries }; this.publish(scope, lease);
@@ -612,6 +612,7 @@ export class ReadingEntryHost {
   }
   private catalog(session: RemoteReadingSession): LocalReadingTocEntry[] {
     return session.entries.map(entry => ({ index: entry.index, title: entry.title, level: entry.level,
+      displayTitle: entry.displayTitle, isVip: entry.isVip, isPay: entry.isPay, contextTitle: entry.contextTitle,
       navigable: entry.navigable !== false && entry.url.trim().length > 0, downloadState: 'unknown' }));
   }
   private detail(seed: RemoteReadingBookSeed, name: string): ReadingBookDetail {

@@ -1,4 +1,6 @@
 import { LengthMetrics } from '@kit.ArkUI';
+import { mangaDirectoryDisplay } from './MangaDirectoryDisplay';
+import { snapshotReaderDirectoryData, sameReaderDirectoryData } from '../reading/ReaderDirectoryDataSnapshot';
 import { MangaDirectoryCurrentFooter } from './MangaDirectoryCurrentFooter';
 import { MangaDirectoryPressFeedback } from './MangaDirectoryPressFeedback';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale, mangaDirectoryLineBox, mangaDirectoryFooterHeight, mangaDirectoryQuickFlowGaps, mangaDirectoryQuickMinimumListHeight } from './MangaDirectoryVisual';
@@ -91,7 +93,7 @@ export struct MangaReadingSurface {
   chapterIndex: number | undefined = undefined;
   startAtChapterFirst: boolean = false;
   directoryTargetProof: JsonObject | undefined = undefined;
-  @Prop remoteSession: RemoteReadingSession | undefined = undefined;
+  @Prop @Watch('onDirectoryDataChanged') remoteSession: RemoteReadingSession | undefined = undefined;
   remoteBookSeed: RemoteReadingBookSeed | undefined = undefined;
   onRemoteSessionReady: (session: RemoteReadingSession) => void = (): void => {};
   onChapterCommitted: (index: number, title: string) => void = (): void => {};
@@ -112,7 +114,8 @@ export struct MangaReadingSurface {
   onDownloadChapter: () => void = (): void => {};
   onDownloadBook: () => void = (): void => {};
   @Prop downloadEnabled: boolean = false;
-  @Prop directoryProjection: LocalReadingTocEntry[] = [];
+  @Prop @Watch('onDirectoryDataChanged') directoryProjection: LocalReadingTocEntry[] = [];
+  private directoryDataSnapshot: LocalReadingTocEntry[] = [];
   @Prop directoryCurrentChapterIndex: number = -1;
   onLoadDownloadActions: (chapterIndex?: number) => Promise<MangaDownloadAction[]> = async (): Promise<MangaDownloadAction[]> => [];
   onDownloadAction: (action: MangaDownloadActionId, chapterIndex?: number) => Promise<void> = async (): Promise<void> => {};
@@ -1280,13 +1283,27 @@ export struct MangaReadingSurface {
     return entry === undefined || !entry.title.includes('卷') ? '继续阅读下一话' : '继续阅读下一卷';
   }
   private directoryEntries(): LocalReadingTocEntry[] {
+    const session = this.remoteSession;
+    if (session === undefined) return this.directoryProjection ?? [];
+    if (session.contentKind !== 'manga' || session.identity.sourceId !== this.sourceId ||
+      session.identity.bookId !== this.bookId || session.requiresContextRefresh === true) return [];
     const projection: Map<number, LocalReadingTocEntry> = new Map();
     for (const row of this.directoryProjection ?? []) projection.set(row.index, row);
-    return (this.remoteSession?.entries ?? []).map((entry: RemoteReadingTocEntry): LocalReadingTocEntry => {
+    return session.entries.map((entry: RemoteReadingTocEntry): LocalReadingTocEntry => {
       const row = projection.get(entry.index);
       return { index: entry.index, title: entry.title, level: entry.level, navigable: entry.navigable,
+        displayTitle: entry.displayTitle, isVip: entry.isVip, isPay: entry.isPay, contextTitle: entry.contextTitle,
         downloadState: row?.title === entry.title ? row.downloadState : 'unknown' };
     });
+  }
+
+  /** Directory-only metadata refresh; image identity and viewport publication are untouched. */
+  private onDirectoryDataChanged(): void {
+    const entries = this.directoryEntries();
+    if (sameReaderDirectoryData(this.directoryDataSnapshot, entries)) return;
+    this.directoryDataSnapshot = snapshotReaderDirectoryData(entries);
+    this.quickFooterMeasured = 0;
+    this.directoryRevision += 1;
   }
 
   private async openDownloadActions(chapterIndex?: number): Promise<void> {
@@ -1515,7 +1532,7 @@ export struct MangaReadingSurface {
           Text(this.bookTitle || this.remoteSession?.book.title || this.remoteBookSeed?.title || '漫画阅读')
             .fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold).fontSize(17).fontColor(this.inkColor())
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-          Text(this.title).fontSize(11).fontColor(this.mutedColor()).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+          Text(this.directoryCurrentTitle()).fontSize(11).fontColor(this.mutedColor()).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         }.layoutWeight(1).alignItems(HorizontalAlign.Center);
         Row() {
           Column({ space: 2 }) {
@@ -1758,13 +1775,17 @@ export struct MangaReadingSurface {
     const index = this.directoryCurrentIndex();
     if (session?.contentKind === 'manga' && session.identity.sourceId === this.sourceId &&
       session.identity.bookId === this.bookId && session.requiresContextRefresh !== true) {
-      const title = session.entries.find((entry: RemoteReadingTocEntry): boolean => entry.index === index)?.title;
-      if (title !== undefined) return title;
+      const entry = session.entries.find((entry: RemoteReadingTocEntry): boolean => entry.index === index);
+      if (entry !== undefined) return mangaDirectoryDisplay(entry).title;
     }
-    if (this.controller?.chapter !== undefined || index < 0) return this.title;
+    if (this.controller?.chapter !== undefined)
+      return mangaDirectoryDisplay({ title: this.controller.chapter.chapterTitle ?? this.title }).title;
+    if (index < 0) return this.title;
     const saved = MangaBookPresentation.get(this.sourceId, this.bookId);
-    if (saved?.chapterIndex === index && saved.chapterTitle !== undefined) return saved.chapterTitle;
-    return this.directoryCurrentCatalogEntry(index)?.title ?? this.title;
+    if (saved?.chapterIndex === index && saved.chapterTitle !== undefined)
+      return mangaDirectoryDisplay({ title: saved.chapterTitle }).title;
+    const entry = this.directoryCurrentCatalogEntry(index);
+    return entry === undefined ? this.title : mangaDirectoryDisplay(entry).title;
   }
   private directoryCurrentPagePosition(): string {
     if (this.controller?.chapter !== undefined && (this.controller?.totalPages ?? 0) > 0)

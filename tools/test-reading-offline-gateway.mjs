@@ -366,7 +366,7 @@ console.log('reading offline gateway deterministic runtime: PASS');
 for (const linkedHeadings of [false, true]) {
   const volumeSession = { ...session, entries: [
     { index: 0, title: 'volume', level: 1, url: linkedHeadings ? '/volume/0' : '', navigable: false, variables: [] },
-    { index: 1, title: 'chapter', level: 2, url: '/one', navigable: true, variables: [] },
+    { index: 1, title: '✿·chapter', displayTitle: 'chapter', isVip: true, isPay: false, contextTitle: 'volume / sub-volume', level: 2, url: '/one', navigable: true, variables: [] },
     { index: 2, title: 'volume 2', url: linkedHeadings ? '/volume/2' : '', navigable: false, variables: [] },
   ] };
   const requests = [], progress = [];
@@ -383,6 +383,8 @@ for (const linkedHeadings of [false, true]) {
   const projection = await gateway.loadProjection(volumeSession);
   assert.deepEqual(projection.map(e => [e.index, e.navigable, e.downloadState]), [[0, false, 'unknown'], [1, true, 'missing'], [2, false, 'unknown']]);
   assert.deepEqual(projection.map(entry => entry.level), [1, 2, undefined], 'offline state refresh preserves existing hierarchy levels');
+  assert.deepEqual([projection[1].title, projection[1].displayTitle, projection[1].isVip, projection[1].isPay, projection[1].contextTitle],
+    ['✿·chapter', 'chapter', true, false, 'volume / sub-volume'], 'offline/download state refresh preserves Core display metadata');
   await gateway.prefetchRange(volumeSession, 0, 1);
   assert.equal(requests.filter(r => r.method === 'cache.book.prefetch').length, 0);
   await gateway.prefetchBook(volumeSession, undefined, p => progress.push([p.processedChapters, p.completedChapters, p.totalChapters]));

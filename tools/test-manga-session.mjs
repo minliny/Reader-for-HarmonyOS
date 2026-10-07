@@ -561,7 +561,7 @@ console.log('PASS actual Surface/Gateway/Controller cached entry renewal: change
  const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
  const syntax=createRequire(import.meta.url)(`${sdk}/lib/validate_ui_syntax.js`);
  syntax.componentCollection.customComponents.add('MangaReadingSurface');
- syntax.propCollection.set('MangaReadingSurface',new Set([...surfaceSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(match=>match[1])));
+ syntax.propCollection.set('MangaReadingSurface',new Set([...surfaceSource.matchAll(/@Prop(?:\s+@Watch\([^)]*\))?\s+(\w+)\s*:/g)].map(match=>match[1])));
  const properties=createArkUIPropertyRuntimeProbe();
  const childSdk=createReaderBuilderProbe(surfaceSource,
    ['remoteSession','onSelectDirectoryTarget','open','acquireCatalog','effectiveFit','configureAdjacentChapter','adjacentChapter','directoryEntries','selectDirectoryTarget',

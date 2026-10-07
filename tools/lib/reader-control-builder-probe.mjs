@@ -1,3 +1,6 @@
+import * as directorySnapshot from '../../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts';
+import * as directoryDisplay from '../../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
+import * as directoryState from '../../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
 import * as directoryVisual from '../../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
 import * as directoryGeometry from '../../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
 import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
@@ -55,6 +58,16 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   assert.equal(original.parseDiagnostics.length, 0, 'production ETS parses');
   const struct = componentDeclaration(original, hooks.componentName);
   assert.ok(struct, 'production component declaration exists');
+  // New finite display helpers are actual production members. Keep the older
+  // selectively mounted row probes on that same closure instead of stubbing it.
+  if (source.includes('export struct MangaDirectoryEntryRow'))
+    names = [...new Set([...names, 'statusText', 'contextTitle'])];
+  if (source.includes('export struct ReaderDirectoryNavigationList'))
+    names = [...new Set([...names, 'mangaDisplayNode', 'mangaTitle', 'mangaContextTitle',
+      'mangaDownloadable', 'mangaStatusText', 'mangaAccessoryWidth', 'prepareMangaGridProjection',
+      'mangaLayoutByNode', 'mangaLayoutSignature', 'mangaLayoutPageRefs', 'chapterByIndex'])];
+  if (source.includes('export struct MangaReadingSurface'))
+    names = [...new Set([...names, 'onDirectoryDataChanged', 'directoryDataSnapshot', 'directoryEntries', 'isReaderIdentityCurrent', 'directoryRevision', 'quickFooterMeasured'])];
   const members = names.map(name => {
     const member = struct.members.find(n => n.name?.getText(original) === name);
     assert.ok(member, `production member ${name}`);
@@ -280,7 +293,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment', 'LayoutPolicy', 'AccessibilityRoleType',
       'LineCapStyle', 'TextAlign', 'TextOverflow', 'WordBreak', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
-    ...readerTypographyRoles, ...directoryVisual, ...directoryGeometry, visual: directoryVisual.MANGA_DIRECTORY_VISUAL,
+    ...readerTypographyRoles, ...directoryVisual, ...directoryGeometry, ...directoryDisplay, ...directoryState, ...directorySnapshot, visual: directoryVisual.MANGA_DIRECTORY_VISUAL,
     ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1, windowRect: {width: 393,height:852}, interactiveSafeInsets: {top:0,left:0,right:0,bottom:0} }) },
     readerInteractiveSafeBottom: metrics => metrics.interactiveSafeInsets?.bottom ?? 0,
     ...dependencies };

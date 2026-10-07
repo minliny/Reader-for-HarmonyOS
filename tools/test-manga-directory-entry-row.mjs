@@ -29,8 +29,8 @@ function mount(entries, options = {}, candidate = source) {
 }
 
 for (const scheme of ['day', 'night']) {
-  const entries = [{ index: 41, title: '48（上）', navigable: true, downloadState: 'unknown' },
-    { index: 67, title: '48（下）', navigable: true, downloadState: 'unknown' }];
+  const entries = [{ index: 41, title: '48（上）', level: 1, navigable: true, downloadState: 'unknown' },
+    { index: 67, title: '48（下）', level: 1, navigable: true, downloadState: 'unknown' }];
   const state = mount(entries, { scheme, currentChapterIndex: 67 });
   const labels = state.nodes().filter(node => node.type === 'Text');
   assert.deepEqual(labels.map(node => node.create), ['48', ' · 上', '48', ' · 下'], 'part labels remain on one line with no reserved status row');
@@ -79,7 +79,7 @@ assert.deepEqual(disabled.selected, []); assert.deepEqual(disabled.folded, []);
 assert.ok(disabled.nodes().some(node => node.create === '暂不可读'), 'a disabled leaf retains an explicit full-width state');
 
 function checkPressConnections(candidate = source) {
-  for (const [entries, expected] of [[[{ index: 3, title: '1', navigable: true }], .73],
+  for (const [entries, expected] of [[[{ index: 3, title: '1', level: 1, navigable: true }], .73],
     [[{ index: 3, title: '具名章节', navigable: true }], .73],
     [[{ index: 3, title: '不可读', navigable: false }], .36]]) {
     const actor = mount(entries, { scheme: 'night' }, candidate);
@@ -124,20 +124,20 @@ assert.throws(() => checkWholeRow(missingWholeRow), /complete named row owns/);
   assert.equal(row.create.space, 12);
   const title = ordinary.nodes().find(node => node.type === 'Text');
   assert.deepEqual([title.fontSize, title.lineHeight, title.halfLeading], [13, 22, true]);
-  const enlarged = mount([{ index: 3, title: '123', navigable: true }], { systemFontScale: 2 });
+  const enlarged = mount([{ index: 3, title: '123', level: 1, navigable: true }], { systemFontScale: 2 });
   const enlargedTitle = enlarged.nodes().find(node => node.type === 'Text');
   assert.deepEqual([enlargedTitle.fontSize, enlargedTitle.lineHeight, enlargedTitle.maxFontScale], [13, 22, 2]);
   assert.equal(enlargedTitle.textOverflow, undefined, 'numeric identifiers cannot be silently ellipsized');
   const outer = enlarged.nodes().find(node => node.type === 'Stack' && node.borderRadius === 8);
   assert.equal(outer.constraintSize.minHeight, 66, 'enlarged line box grows while retaining demo padding and border');
-  const ordinaryGrid = mount([{ index: 3, title: '123', navigable: true }]);
+  const ordinaryGrid = mount([{ index: 3, title: '123', level: 1, navigable: true }]);
   const wrapper = ordinaryGrid.nodes().find(node => node.type === 'Row' && node.create?.space === 8);
   assert.deepEqual(wrapper.padding, { top: 12, bottom: 12 });
   assert.equal(ordinaryGrid.nodes()[0].border.width.top, 1, 'tree border precedes first grid run margin');
 }
 
 function retainedCurrent(candidate) {
-  const entries = [{ index: 3, title: '1', navigable: true }, { index: 13, title: '2', navigable: true }];
+  const entries = [{ index: 3, title: '1', level: 1, navigable: true }, { index: 13, title: '2', level: 1, navigable: true }];
   const state = mount(entries, { currentChapterIndex: 13 }, candidate);
   const labels = state.nodes().filter(node => node.type === 'Text');
   state.owner.currentChapterIndex = 3; state.properties.flush();
@@ -164,7 +164,7 @@ function retainedContent(candidate = source) {
     const selected = [], downloaded = [];
     state.owner.onSelectEntry = entry => selected.push([entry.index, entry.title, entry.navigable]);
     state.owner.onDownloadEntry = entry => downloaded.push([entry.index, entry.title, entry.downloadState]);
-    const nodes = state.nodes(), texts = nodes.filter(node => node.type === 'Text');
+    const nodes = state.nodes(), texts = nodes.filter(node => node.type === 'Text' && !['已暂停', '已下载', '已保存'].includes(node.create));
     const actor = nodes.find(node => (node.type === 'Row' || node.type === 'Stack') && node.onClick && node.accessibilityText?.includes('打开章节'));
     const download = nodes.find(node => node.accessibilityText?.startsWith('管理'));
     const marker = nodes.find(node => node.type === 'Image' && String(node.create).includes('marker'));
@@ -212,7 +212,7 @@ for (const [label, candidate, failure] of [
   assert.deepEqual(state.selected, []); assert.deepEqual(state.downloaded, [], 'a retired canonical member has no old callback authority');
 }
 {
-  const entries = [{ index: 7, title: '01', navigable: true }, { index: 19, title: '02', navigable: true }];
+  const entries = [{ index: 7, title: '01', level: 1, navigable: true }, { index: 19, title: '02', level: 1, navigable: true }];
   const state = mount(entries);
   const text = state.nodes().filter(node => node.type === 'Text'), actors = state.nodes().filter(node => node.type === 'Stack' && node.accessibilityText);
   const next = [{ ...entries[1], title: '91' }, { ...entries[0], title: '92' }];
@@ -318,7 +318,7 @@ function checkIntrinsicBody(candidate = source, exhaustive = true) {
     }
     if (name === 'current') assert.ok(state.nodes().some(node => node.type === 'Text' && node.create === '正在读'));
   }
-  const numeric = mount([{ index: 7, title: '01', navigable: true }, { index: 19, title: '02', navigable: true }], {}, candidate);
+  const numeric = mount([{ index: 7, title: '01', level: 1, navigable: true }, { index: 19, title: '02', level: 1, navigable: true }], {}, candidate);
   const cells = numeric.nodes().filter(node => node.type === 'Stack' && node.accessibilityText);
   assert.ok(cells.every(node => node.layoutWeight === 1), 'numeric cells retain horizontal row weights');
   assert.equal(numeric.nodes().filter(node => node.type === 'Row' && node.height === 42 && node.layoutWeight === 1).length, 2,
@@ -337,3 +337,38 @@ for (const [label, candidate] of [
   assert.throws(() => checkIntrinsicBody(candidate, false), assert.AssertionError, `reject ${label}`);
 }
 console.log('PASS VP51 actual SDK intrinsic named/current/multiline/long/group/search/read-only Body roots, readable-parent sibling horizontal lane, original title/numeric weights and four negative controls; native resulting height remains a new-artifact gate');
+
+// Confirmed Core display metadata updates every retained native actor while
+// selection/download still receive the exact latest raw canonical entry.
+{
+  const original = { index: 107, title: '✿・99 原始源章名', displayTitle: '99', isVip: true, isPay: false,
+    contextTitle: '第一部 / 第一卷', level: 1, navigable: true, downloadState: 'cached' };
+  const initialPresentation = mangaDirectoryPresentation([original]);
+  const state = mount([original], { showContext: true, query: '99', chapterDownloadEnabled: false,
+    row: mangaDirectoryEntryRows([original], initialPresentation, false, 1, 540, 0, '99')[0] });
+  const actor = state.nodes().find(node => node.accessibilityText?.includes('打开章节'));
+  const title = state.nodes().find(node => node.type === 'Text' && node.create === '99');
+  const metadata = state.nodes().find(node => node.type === 'Text' && node.create === 'VIP · 已保存');
+  assert.ok(actor && title && metadata, 'display title and admitted metadata paint separately from raw source title');
+  const before = [...state.owner.observers], callbacks = [];
+  state.owner.onSelectEntry = entry => callbacks.push(entry);
+  const latest = { ...original, displayTitle: '100', isPay: true, contextTitle: '第一部 / 第二卷', downloadState: 'paused' };
+  const presentation = mangaDirectoryPresentation([latest]);
+  state.owner.row = mangaDirectoryEntryRows([latest], presentation, false, 1, 540, 0, '100')[0];
+  state.owner.presentation = presentation; state.properties.flush();
+  assert.equal(title.create, '100'); assert.equal(metadata.create, 'VIP · 已购 · 已暂停');
+  assert.ok(actor.accessibilityText.includes('第一部 / 第二卷'));
+  assert.ok(actor.accessibilityText.includes('VIP · 已购 · 已暂停'));
+  actor.onClick(); assert.equal(callbacks[0], latest); assert.equal(latest.title, original.title);
+  assert.deepEqual(state.owner.observers, before, 'metadata changes retain the named native actor and observers');
+}
+for (const title of ['', '  ', '第 话']) {
+  const entry = { index: 803, title, level: 1, navigable: true, downloadState: 'unknown' };
+  const state = mount([entry]);
+  assert.ok(state.nodes().some(node => node.type === 'Text' && node.create === '未命名章节'));
+  const actor = state.nodes().find(node => node.accessibilityText?.includes('打开章节'));
+  actor.onClick(); assert.deepEqual(state.selected, [803], 'missing title does not invent or change canonical identity');
+  assert.equal(entry.title, title);
+  assert.ok(!state.nodes().some(node => node.type === 'Text' && /免费|已下载|已保存/.test(String(node.create))),
+    'unknown download/payment facts do not invent a status');
+}

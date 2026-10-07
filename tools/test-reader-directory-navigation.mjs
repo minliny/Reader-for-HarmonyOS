@@ -209,3 +209,17 @@ for (const format of ['EPUB',' mobi ',' AZW3 ', 'kf8']) {
   assert.deepEqual(methods,['local_book.navigation.backfill.v1'],'archive formats never route to TXT rules');
 }
 console.log('PASS local/TXT alias dispatch and cancellation preserve TXT body/rules path; EPUB/MOBI-family retain archive path');
+
+{
+  const metadata = { displayTitle: '100（上）', isVip: true, isPay: false, contextTitle: '第一部 / 第二卷' };
+  const value = decodeReaderDirectoryPage({ viewId: 'view-a', visibleTotal: 10001,
+    nodes: [{ ...linked, title: '🔒100（上）', ...metadata }] }, 'view-a', 256).nodes[0];
+  for (const key of Object.keys(metadata)) assert.equal(value[key], metadata[key]);
+  assert.equal(value.title, '🔒100（上）'); assert.equal(value.chapterIndex, linked.chapterIndex);
+  for (const [field, invalid] of [['displayTitle', 7], ['isVip', 'true'], ['isPay', 1], ['contextTitle', []]])
+    assert.throws(() => decodeReaderDirectoryPage({ viewId: 'view-a', visibleTotal: 10001,
+      nodes: [{ ...linked, [field]: invalid }] }, 'view-a', 256), /directory/);
+  const absent = decodeReaderDirectoryPage({ viewId: 'view-a', visibleTotal: 10001,
+    nodes: [{ ...linked, displayTitle: null, isVip: null, isPay: null, contextTitle: null }] }, 'view-a', 256).nodes[0];
+  assert.equal(absent.isVip, undefined); assert.equal(absent.isPay, undefined);
+}

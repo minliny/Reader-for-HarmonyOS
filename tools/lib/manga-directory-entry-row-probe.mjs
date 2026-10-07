@@ -1,3 +1,5 @@
+import * as display from '../../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
+import * as state from '../../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
 import { readFileSync } from 'node:fs';
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
@@ -13,7 +15,7 @@ export const mangaDirectoryEntryRowSource = readFileSync(new URL('../../entry/sr
  * execute their production callbacks; no row geometry or identity is copied. */
 export function mangaDirectoryEntryRowSdk({ source = mangaDirectoryEntryRowSource,
   properties = createArkUIPropertyRuntimeProbe(), dependencies = {}, hooks = {} } = {}) {
-  const deps = { ...visual, WordBreak: { BREAK_WORD: 'WordBreak.BREAK_WORD' }, FlexWrap: { Wrap: 'FlexWrap.Wrap' }, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }) }, ...layout, ...presentation, ...fonts, ...properties.sdk, ...dependencies };
+  const deps = { ...visual, WordBreak: { BREAK_WORD: 'WordBreak.BREAK_WORD' }, FlexWrap: { Wrap: 'FlexWrap.Wrap' }, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }) }, ...layout, ...presentation, ...fonts, ...display, ...state, ...properties.sdk, ...dependencies };
   const carrier = { ...properties.hooks, ...hooks,
     childSources: { ...hooks.childSources, MangaDirectoryEntryRow: source }, mountChildren: true };
   deps.MangaDirectoryEntryRow = createReaderBuilderProbe(source, boundedMembers(source), deps, carrier).Component;

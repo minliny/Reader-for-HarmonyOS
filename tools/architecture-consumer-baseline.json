@@ -775,14 +775,14 @@
       "owner": "MangaDirectoryEntryRow",
       "reason": "One concrete manga directory content renderer replaces duplicated fallback/full/detail bodies, with finite generated demo variants and original owner admission/callbacks. Code and SDK facts are recorded; native layout and user acceptance remain open.",
       "counts": {
-        "fontSize": 10,
+        "fontSize": 12,
         "backgroundColor": 2
       },
       "contractId": "shared-MangaDirectoryEntryRow",
       "proof": "tools/test-manga-directory-entry-row.mjs",
       "successorFacts": {
         "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
-        "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "sourceHead": "c5dc6cbc8d706035ac5b2001f4ee5ee9b3c567eb",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
       }
     },
@@ -799,7 +799,7 @@
       "proof": "tools/test-manga-directory-quick-panel-sdk.mjs",
       "successorFacts": {
         "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
-        "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "sourceHead": "c5dc6cbc8d706035ac5b2001f4ee5ee9b3c567eb",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
       }
     }
@@ -979,7 +979,7 @@
       "owner": "ReaderDirectoryNavigationList / canonical navigation page and row Owner",
       "reason": "Approved manga hierarchy/current/metadata row variant adapts the existing canonical navigation list and finite Core depth. Standard text directory row geometry, prepared pages, ownership and bookmark/download targets remain retained; no general list or typography exemption.",
       "counts": {
-        "fontSize": 13,
+        "fontSize": 15,
         "backgroundColor": 4
       },
       "supersededLegacyCounts": {
@@ -992,7 +992,7 @@
       "status": "REGISTERED_APPROVED_MANGA_ADAPTATION_NOT_DEVICE_ACCEPTANCE",
       "successorFacts": {
         "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
-        "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "sourceHead": "c5dc6cbc8d706035ac5b2001f4ee5ee9b3c567eb",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
       }
     },

@@ -4,6 +4,7 @@ import type { LocalReadingTocEntry, LocalReadingBookmark } from './LocalReadingF
 export function snapshotReaderDirectoryData(entries: LocalReadingTocEntry[]): LocalReadingTocEntry[] {
   return entries.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => ({
     index: entry.index, title: entry.title, level: entry.level,
+    displayTitle: entry.displayTitle, isVip: entry.isVip, isPay: entry.isPay, contextTitle: entry.contextTitle,
     downloadState: entry.downloadState, navigable: entry.navigable,
     bookmarks: entry.bookmarks === undefined ? undefined :
       entry.bookmarks.map((bookmark: LocalReadingBookmark): LocalReadingBookmark => ({
@@ -25,6 +26,7 @@ export function sameReaderDirectoryData(previous: LocalReadingTocEntry[], next: 
     const a = previous[i];
     const b = next[i];
     if (a.index !== b.index || a.title !== b.title || a.level !== b.level ||
+      a.displayTitle !== b.displayTitle || a.isVip !== b.isVip || a.isPay !== b.isPay || a.contextTitle !== b.contextTitle ||
       a.downloadState !== b.downloadState || a.navigable !== b.navigable) return false;
     if (a.bookmarks === undefined || b.bookmarks === undefined) {
       if (a.bookmarks !== undefined || b.bookmarks !== undefined) return false;

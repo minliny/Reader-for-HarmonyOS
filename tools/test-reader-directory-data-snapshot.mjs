@@ -97,3 +97,14 @@ p.flushDeferredMutations();assert.equal(p.projectionScrollGeneration,1,'equal cl
 p.entries=excerptOnly;p.onEntriesChanged();p.flushDeferredMutations();
 assert.equal(p.projectedBookmarks[0].excerpt,'可靠映射后的原文');assert.deepEqual(p.projectedBookmarks[0].positionScope,excerptOnly[0].bookmarks[0].positionScope);
 console.log('PASS real FullDirectoryPanel deferred scope/quote-only update retains viewport, keeps morph tree stable, and updates exact click proof at the endpoint');
+
+// Optional display metadata remains independent of raw identity and download facts.
+for (const [field, value] of [['displayTitle', '100（上）'], ['isVip', true], ['isPay', false],
+  ['contextTitle', '第一部 / 第二卷']]) {
+  const updated = structuredClone(initial); updated[0][field] = value;
+  const frozen = copy(updated);
+  assert.ok(same(frozen, updated));
+  updated[0][field] = field === 'isVip' || field === 'isPay' ? undefined : 'changed';
+  assert.equal(same(frozen, updated), false, `${field} same-reference display refresh remains significant`);
+  assert.equal(frozen[0][field], value, `${field} snapshot is independent`);
+}

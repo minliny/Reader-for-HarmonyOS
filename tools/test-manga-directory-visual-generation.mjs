@@ -53,6 +53,10 @@ assert.ok(Math.abs(mangaDirectoryHeaderHeight(3.2)-97.6)<1e-9);
 assert.ok(Math.abs(mangaDirectoryContentTop(3.2)-125.6)<1e-9);
 assert.equal(mangaDirectoryColumns('numeric',false,false,1,353,[2,2,2,2]),4);
 assert.equal(mangaDirectoryColumns('parts',true,true,3.2,280,[2,2,2]),1);
+assert.equal(mangaDirectoryColumns('parts',false,false,1,330,[3,3,3,3],24),2,
+  'a three-lane raw capacity uses two complete upper/lower lanes');
+assert.equal(mangaDirectoryColumns('parts',true,false,1,240,[3,3,3]),1,
+  'a two-lane raw capacity uses one lane for upper/middle/lower rather than splitting the triplet');
 assert.equal(mangaDirectoryLabelsFit('numeric',3.2,240,[30]),false, 'overlong identifiers preserve full-row fallback');
 assert.equal(mangaDirectoryQuickFlowGaps(), 2 * Number.parseFloat(declaration(baseline,'.manga-sheet-body','gap')), 'three CSS body children own two flow gaps');
 assert.equal(mangaDirectoryFooterStacked(353,1,'8 / 24 页'),false);

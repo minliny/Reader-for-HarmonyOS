@@ -157,6 +157,7 @@ export class ReadingOfflineGateway {
       const tocEntry = session.entries[position];
       if (tocEntry.navigable === false || tocEntry.url.trim().length === 0) {
         entries.push({ index: tocEntry.index, title: tocEntry.title,
+          displayTitle: tocEntry.displayTitle, isVip: tocEntry.isVip, isPay: tocEntry.isPay, contextTitle: tocEntry.contextTitle,
           ...(tocEntry.level === undefined ? {} : { level: tocEntry.level }), downloadState: 'unknown', navigable: false });
         continue;
       }
@@ -173,6 +174,7 @@ export class ReadingOfflineGateway {
         state = 'cached';
       }
       entries.push({ index: tocEntry.index, title: tocEntry.title,
+          displayTitle: tocEntry.displayTitle, isVip: tocEntry.isVip, isPay: tocEntry.isPay, contextTitle: tocEntry.contextTitle,
         ...(tocEntry.level === undefined ? {} : { level: tocEntry.level }), downloadState: state, navigable: true });
     }
     await this.forEachConcurrent(manifestChecks, READER_OFFLINE_MANIFEST_CONCURRENCY,

@@ -141,6 +141,7 @@ assert.equal(requests[0].method, 'reading.directory.view.open.v2');
   const { owner, selected, scrolled } = fixture();
   owner.aboutToAppear(); flush();
   assert.equal(owner.projectedEntries.length, 681);
+  assert.ok(owner.layoutRows.every(row => row.kind === 'row'), 'missing structure facts stay conservative full rows');
   assert.deepEqual(scrolled, [], 'a timer is not evidence that the native List has mounted');
   owner.onFirstLayout(); flush();
   assert.deepEqual(scrolled.at(-1), [679, false, 'start', { extraOffset: { value: -50 } }], 'locate uses visible rank of the original chapter index');
@@ -372,10 +373,10 @@ for (const [label, candidate, listCandidate, failure] of [
   assert.equal(probe.list(), list); assert.equal(list.entries.length, 681, 'late canonical data keeps the same native List');
   owner.aboutToDisappear(); flush();
 }
-const responsiveParts = [{ index: 7, title: '41 上', navigable: true },
-  { index: 19, title: '41 中', navigable: true }, { index: 31, title: '41 下', navigable: true }];
+const responsiveParts = [{ index: 7, title: '41 上', level: 1, navigable: true },
+  { index: 19, title: '41 中', level: 1, navigable: true }, { index: 31, title: '41 下', level: 1, navigable: true }];
 function checkViewport(candidate = source) {
-  for (const [initial, next, expected] of [[360, 580, [2, 2]], [580, 360, [1, 1, 1]], [0, 353, [1, 1, 1]]]) {
+  for (const [initial, next, expected] of [[360, 580, [3]], [580, 360, [1, 1, 1]], [0, 353, [1, 1, 1]]]) {
     const probe = actualListProbe(candidate, 3.2), { owner } = probe;
     Object.assign(owner, fixture(responsiveParts).owner, { viewportWidth: initial, windowMetricsRevision: 0 });
     owner.aboutToAppear(); flush(); owner.initialRender();
@@ -487,23 +488,23 @@ assert.throws(() => checkRetainedGroupFold(source, disabledGroup), /proved canon
 {
   const { owner, selected, scrolled } = fixture(); Object.assign(owner, { mangaCatalogDisplay: false, currentChapterIndex: entries[345].index });
   owner.aboutToAppear(); owner.onFirstLayout(); flush();
-  assert.equal(owner.projectedEntries.length, entries.filter(entry => entry.navigable !== false).length, 'Quick exposes the complete canonical catalog within its compact viewport');
-  assert.equal(owner.projectedEntries[344].index, entries[345].index); assert.equal(scrolled.at(-1)[0], 344);
-  owner.selectEntry(owner.projectedEntries[344], owner.identity()); assert.deepEqual(selected, [entries[345].index]);
+  assert.equal(owner.projectedEntries.length, entries.length, 'Quick exposes the complete canonical catalog within its compact viewport');
+  assert.equal(owner.projectedEntries[345].index, entries[345].index); assert.equal(scrolled.at(-1)[0], 345);
+  owner.selectEntry(owner.projectedEntries[345], owner.identity()); assert.deepEqual(selected, [entries[345].index]);
   owner.query = '第681'; owner.onViewInputsChanged(); flush();
   assert.deepEqual(owner.projectedEntries.map(entry => entry.index), [1361], 'quick search still sees the complete canonical catalog');
-  owner.query = ''; owner.onViewInputsChanged(); owner.onLocateCurrent(); flush(); assert.equal(owner.projectedEntries.length, entries.filter(entry => entry.navigable !== false).length);
+  owner.query = ''; owner.onViewInputsChanged(); owner.onLocateCurrent(); flush(); assert.equal(owner.projectedEntries.length, entries.length);
   owner.aboutToDisappear(); flush();
 }
 {
-  const numeric = entries.map((entry, ordinal) => ({ ...entry, title: String(ordinal + 1) }));
+  const numeric = entries.map((entry, ordinal) => ({ ...entry, title: String(ordinal + 1), level: 1 }));
   const { owner, selected, scrolled } = fixture(numeric);
   Object.assign(owner, { mangaCatalogDisplay: false, currentChapterIndex: numeric[345].index });
   owner.aboutToAppear(); owner.onFirstLayout(); flush();
-  assert.equal(owner.projectedEntries.length, numeric.filter(entry => entry.navigable !== false).length, 'Quick numeric rows retain the entire admitted catalog');
-  assert.equal(owner.projectedEntries[344].index, numeric[345].index);
-  assert.equal(owner.layoutRows.length, Math.ceil(numeric.filter(entry => entry.navigable !== false).length / 4)); assert.equal(scrolled.at(-1)[0], 86, 'locate maps the current canonical index into the full numeric grid');
-  owner.selectEntry(owner.projectedEntries[344], owner.identity()); assert.deepEqual(selected, [numeric[345].index]);
+  assert.equal(owner.projectedEntries.length, numeric.length, 'Quick numeric rows retain the entire admitted catalog');
+  assert.equal(owner.projectedEntries[345].index, numeric[345].index);
+  assert.equal(owner.layoutRows.length, 173, 'disabled slot remains a row between absolute-phase numeric runs'); assert.equal(scrolled.at(-1)[0], 88, 'locate maps the current canonical index into the full numeric grid');
+  owner.selectEntry(owner.projectedEntries[345], owner.identity()); assert.deepEqual(selected, [numeric[345].index]);
   owner.aboutToDisappear(); flush();
 }
 {
@@ -528,8 +529,8 @@ console.log(JSON.stringify(propertyEvidence));
 
 function checkFallbackWidthClass(candidate = source) {
   const { owner, shared } = parentProbe(candidate);
-  const numeric = [{ index: 7, title: '01', navigable: true }, { index: 19, title: '02', navigable: true },
-    { index: 31, title: '03', navigable: true }, { index: 43, title: '04', navigable: true }];
+  const numeric = [{ index: 7, title: '01', level: 1, navigable: true }, { index: 19, title: '02', level: 1, navigable: true },
+    { index: 31, title: '03', level: 1, navigable: true }, { index: 43, title: '04', level: 1, navigable: true }];
   Object.assign(owner, fixture(numeric).owner, { mangaCatalogNarrow: undefined, viewportWidth: 329.7, windowMetricsRevision: 0 });
   owner.aboutToAppear(); flush(); owner.row(owner.layoutEntryRows()[0], owner.identity());
   assert.equal(owner.layoutRows[0].columns, 3, 'undefined generic fallback keeps its native measured-width class');

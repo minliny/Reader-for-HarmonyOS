@@ -34,4 +34,19 @@ assert.deepEqual(projectReaderDirectoryEntries(entries, '第 19 章', false).map
 // Bookmark-row projection (including excerpt search) moved to
 // test-reader-bookmark-projection.mjs against ReaderBookmarkProjection.ts.
 
+{
+  const original = [
+    { index: 7, title: '✿・１００（上）', displayTitle: '１００（上）', contextTitle: '第一部 / 第二卷' },
+    { index: 13, title: '100 · 真正副标题', contextTitle: '第三卷' },
+  ];
+  for (const query of ['100', '１００', '✿', '第二卷']) {
+    const actual = projectReaderDirectoryEntries(original, query, true, true);
+    assert.ok(actual.includes(original[0]), `${query} searches manga raw/display/path through platform Unicode normalization`);
+    assert.equal(actual[0], original[0], 'query projection retains exact canonical objects');
+  }
+  assert.deepEqual(projectReaderDirectoryEntries(original, '100', true).map(entry => entry.index), [13],
+    'legacy novel query semantics remain unchanged');
+  assert.equal(original[0].title, '✿・１００（上）');
+}
+
 console.log('reader directory projection behavior: PASS');

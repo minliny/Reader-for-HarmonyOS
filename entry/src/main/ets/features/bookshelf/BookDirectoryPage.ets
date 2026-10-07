@@ -1,3 +1,5 @@
+import { mangaDirectoryDisplay } from '../manga/MangaDirectoryDisplay';
+import { mangaDirectoryContextEntries, mangaDirectoryDownloadStatusWidth } from '../manga/MangaDirectoryState';
 import { LengthMetrics } from '@kit.ArkUI';
 import { MangaDirectoryCurrentFooter } from '../manga/MangaDirectoryCurrentFooter';
 import { MangaDirectoryPressFeedback } from '../manga/MangaDirectoryPressFeedback';
@@ -513,7 +515,10 @@ export struct BookDirectoryPage {
 
   private prepareMangaLayout(): void {
     this.mangaLayoutRows = mangaDirectoryEntryRows(this.mangaVisibleEntries(), this.mangaPresentation,
-      this.mangaNarrow(), this.mangaFontScale(), this.contentFrame().width, this.mangaDownloadEnabled ? visual.downloadGridWidth : 0);
+      this.mangaNarrow(), this.mangaFontScale(), this.contentFrame().width, (entry: LocalReadingTocEntry): number => {
+        const glyph = this.mangaDownloadEnabled && entry.navigable !== false && entry.downloadState !== 'unknown';
+        return (glyph ? visual.downloadGridWidth : 0) + mangaDirectoryDownloadStatusWidth(entry.downloadState, glyph, this.mangaFontScale());
+      }, this.searchQuery);
   }
 
   private mangaLayoutEntries(): LocalReadingTocEntry[] {
@@ -593,7 +598,7 @@ export struct BookDirectoryPage {
 
   private mangaCurrentTitle(): string {
     const entry = this.admittedEntries.find((row: LocalReadingTocEntry): boolean => row.index === this.currentChapterIndex);
-    return entry?.title ?? '尚未开始阅读';
+    return entry === undefined ? '尚未开始阅读' : mangaDirectoryDisplay(entry).title;
   }
 
   private mangaCurrentPosition(): string {
@@ -622,7 +627,7 @@ export struct BookDirectoryPage {
     const currentEntry = this.admittedEntries.find((entry: LocalReadingTocEntry): boolean => entry.index === this.currentChapterIndex);
     const ancestors = currentEntry === undefined ? [] : this.mangaPresentation.get(currentEntry.index)?.ancestorGroupIndexes ?? [];
     this.mangaCollapsedGroups = this.mangaCollapsedGroups.filter((index: number): boolean => !ancestors.includes(index));
-    this.publishProjection(projectReaderDirectoryEntries(this.admittedEntries, '', this.ascending));
+    this.publishProjection(projectReaderDirectoryEntries(this.contentKind === 'manga' ? mangaDirectoryContextEntries(this.admittedEntries, this.mangaPresentation) : this.admittedEntries, '', this.ascending, this.contentKind === 'manga'));
     this.locateCurrentRevision += 1;
     const generation = ++this.scrollGeneration;
     setTimeout((): void => {
@@ -735,8 +740,8 @@ export struct BookDirectoryPage {
       const after = this.admittedEntries.find((entry: LocalReadingTocEntry): boolean => entry.index === index);
       return before !== undefined && after !== undefined && this.mangaPresentation.get(after.index)?.hasChildren === true && sameReaderDirectoryData([before], [after]);
     }) : [];
-    this.publishProjection(projectReaderDirectoryEntries(this.admittedEntries,
-      reset ? '' : this.searchQuery, reset ? true : this.ascending));
+    this.publishProjection(projectReaderDirectoryEntries(this.contentKind === 'manga' ? mangaDirectoryContextEntries(this.admittedEntries, this.mangaPresentation) : this.admittedEntries,
+      reset ? '' : this.searchQuery, reset ? true : this.ascending, this.contentKind === 'manga'));
     if (reset || wasEmpty) {
       this.scheduleTopScroll();
       this.pendingMangaCurrentScroll = this.contentKind === 'manga' && this.currentChapterIndex >= 0;
@@ -746,14 +751,14 @@ export struct BookDirectoryPage {
   private applySearch(): void {
     const nextQuery = this.searchDraft.trim();
     this.searchQuery = nextQuery;
-    this.publishProjection(projectReaderDirectoryEntries(this.admittedEntries, nextQuery, this.ascending));
+    this.publishProjection(projectReaderDirectoryEntries(this.contentKind === 'manga' ? mangaDirectoryContextEntries(this.admittedEntries, this.mangaPresentation) : this.admittedEntries, nextQuery, this.ascending, this.contentKind === 'manga'));
     this.scheduleTopScroll();
   }
 
   private toggleSort(): void {
     const nextAscending = !this.ascending;
     this.ascending = nextAscending;
-    this.publishProjection(projectReaderDirectoryEntries(this.admittedEntries, this.searchQuery, nextAscending));
+    this.publishProjection(projectReaderDirectoryEntries(this.contentKind === 'manga' ? mangaDirectoryContextEntries(this.admittedEntries, this.mangaPresentation) : this.admittedEntries, this.searchQuery, nextAscending, this.contentKind === 'manga'));
     this.scheduleTopScroll();
   }
 

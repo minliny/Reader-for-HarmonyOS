@@ -1,3 +1,4 @@
+import { mangaDirectoryContextEntries, mangaDirectoryDownloadStatusWidth } from './MangaDirectoryState';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale } from './MangaDirectoryVisual';
 import { MangaDirectoryPressFeedback } from './MangaDirectoryPressFeedback';
@@ -94,11 +95,11 @@ export struct MangaReadingDirectoryFallback {
     // preference and never changes target indexes or full-tree presentation.
     const query = this.query.trim();
     const quick = query.length === 0 && !this.mangaCatalogDisplay;
-    const visible = quick ? this.admittedEntries.filter((entry: LocalReadingTocEntry): boolean => entry.navigable !== false) :
+    const visible = quick ? this.admittedEntries :
       query.length > 0 ? this.admittedEntries : mangaDirectoryVisibleEntries(this.admittedEntries, this.presentation, this.collapsedGroups);
     // The compact Quick viewport can browse the entire admitted catalog.
     // Core target indexes, disabled rows and full-tree metadata remain intact.
-    const projected = projectReaderDirectoryEntries(visible, query, this.ascending);
+    const projected = projectReaderDirectoryEntries(mangaDirectoryContextEntries(visible, this.presentation), query, this.ascending, true);
     if (!sameReaderDirectoryData(this.projectedEntries, projected)) this.projectedEntries = projected;
     this.prepareLayout();
   }
@@ -118,7 +119,10 @@ export struct MangaReadingDirectoryFallback {
   private prepareLayout(): void {
     this.layoutRows = mangaDirectoryEntryRows(this.projectedEntries, this.presentation,
       this.mangaCatalogNarrow !== undefined ? this.mangaCatalogNarrow : (this.viewportWidth > 0 && this.viewportWidth <= visual.narrowWidth),
-      this.fontScale(), this.viewportWidth, this.chapterDownloadEnabled ? visual.downloadGridWidth : 0);
+      this.fontScale(), this.viewportWidth, (entry: LocalReadingTocEntry): number => {
+        const glyph = this.chapterDownloadEnabled && entry.navigable !== false && entry.downloadState !== 'unknown';
+        return (glyph ? visual.downloadGridWidth : 0) + mangaDirectoryDownloadStatusWidth(entry.downloadState, glyph, this.fontScale());
+      }, this.query);
   }
 
   private fontScale(): number {

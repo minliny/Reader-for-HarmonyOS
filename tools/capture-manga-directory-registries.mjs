@@ -97,7 +97,7 @@ const producer = {
     'Finite generated current-position footer shared by full and quick manga directories. Only canonical title, page position, theme scheme, actual measured available width and height observation are inputs. The generated visual contract owns typography, minimum height and narrow or large-font stacked presentation; callers cannot override its paint or spacing.',
   successorFacts: facts, shape,
   specSources: (component === 'MangaDirectoryEntryRow' ?
-    ['MangaDirectoryLayout.ts', 'MangaDirectoryPresentation.ts', 'MangaDirectoryVisual.ts', 'MangaDirectoryPressFeedback.ets'] : ['MangaDirectoryVisual.ts']).map(name => {
+    ['MangaDirectoryLayout.ts', 'MangaDirectoryPresentation.ts', 'MangaDirectoryDisplay.ts', 'MangaDirectoryState.ts', 'MangaDirectoryVisual.ts', 'MangaDirectoryPressFeedback.ets'] : ['MangaDirectoryVisual.ts']).map(name => {
     const file = prefix + 'features/manga/' + name;
     return { file, shape: sharedProducerShape(readFileSync(file, 'utf8'), file) };
   }),

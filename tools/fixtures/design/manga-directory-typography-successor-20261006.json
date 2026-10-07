@@ -13,7 +13,7 @@
       "historicalPath": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
       "historicalEntrySha256": "1c225df5417fed2eccf3d7aac2a6f8118c7dd5efc8ed4d7ba87f893161650948",
       "path": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
-      "sourceSha256": "738fc6738d452034cd281b1f9ea3a3c56441e66c3976bf45a31b2cd2eb27fd58",
+      "sourceSha256": "3c47ae1c69273c61142477a9bab19cb2e07ee864d10996bb5a99ab2c9f7c65f0",
       "carriers": [
         {
           "owner": "BookDirectoryPage",
@@ -236,7 +236,7 @@
       ],
       "successorFacts": {
         "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
-        "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "sourceHead": "c5dc6cbc8d706035ac5b2001f4ee5ee9b3c567eb",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
       }
     },
@@ -244,7 +244,7 @@
       "historicalPath": "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
       "historicalEntrySha256": "5fb3a7ce0d56981c7f54b95a04e99326c21c15d64f6dcf2a302ebdd770bf2ad0",
       "path": "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
-      "sourceSha256": "723c905348bed382c847ac340262814894191fbb1c9164b04952e1195a43e6a7",
+      "sourceSha256": "d391a53991281420418d82356706464b206dadaea7e52d30b887301de0e4eb79",
       "carriers": [
         {
           "owner": "LocalBookDetail",
@@ -1105,7 +1105,7 @@
       ],
       "successorFacts": {
         "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
-        "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "sourceHead": "c5dc6cbc8d706035ac5b2001f4ee5ee9b3c567eb",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
       }
     },
@@ -1167,7 +1167,7 @@
       "historicalPath": "entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets",
       "historicalEntrySha256": "6b8f861842f3a188f08abf675dec00616f9ab75d5f75d66b9a3065d4747a90d9",
       "path": "entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets",
-      "sourceSha256": "ec2a25f8aed805ecdd42cc0f00570f6d7edaee0a25e5175a67520288fef04188",
+      "sourceSha256": "f59a888bcae5604d9eb275ca6dd1b060599f3a1f3f4963f7314aa17a8cccd6be",
       "carriers": [
         {
           "owner": "MangaReadingDirectoryFallback",
@@ -1237,7 +1237,7 @@
       ],
       "successorFacts": {
         "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
-        "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "sourceHead": "c5dc6cbc8d706035ac5b2001f4ee5ee9b3c567eb",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
       }
     },
@@ -1245,7 +1245,7 @@
       "historicalPath": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
       "historicalEntrySha256": "88d94d7ac330688bf2962f9f5fc377f89840232a59f42651559547d4bd5cafe8",
       "path": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
-      "sourceSha256": "c6c140bcfeb3b78b91deaa2b77c0121abf8331e1855e3e655b6f509aee957cae",
+      "sourceSha256": "433ffa22d2466c0aa9cf508a07e068d6ad51033687335e2260cac723c79135b9",
       "carriers": [
         {
           "owner": "MangaReadingSurface",
@@ -1331,7 +1331,7 @@
           "owner": "MangaReadingSurface",
           "method": "topControls",
           "kind": "Text",
-          "text": "this.title",
+          "text": "this.directoryCurrentTitle()",
           "modifiers": {
             "fontSize": {
               "expression": "11",
@@ -1956,7 +1956,7 @@
       ],
       "successorFacts": {
         "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
-        "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "sourceHead": "c5dc6cbc8d706035ac5b2001f4ee5ee9b3c567eb",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
       }
     },
@@ -1964,7 +1964,7 @@
       "historicalPath": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets",
       "historicalEntrySha256": "eb441eb6b4cf0b12ed29f5196cb40a5d55eac972aba2b5bfb47a0d5ad06ba8ed",
       "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets",
-      "sourceSha256": "c1c33358ba27d092bf95c129f8e3f1ed192096cbc16f1ee838b0c013a90be2ba",
+      "sourceSha256": "af46a978d89133ccd3b375b9116e963f0a60c2872af8324991856928ffa4b852",
       "carriers": [
         {
           "owner": "ReaderDirectoryNavigationList",
@@ -2090,6 +2090,30 @@
         },
         {
           "owner": "ReaderDirectoryNavigationList",
+          "method": "mangaNumberCell",
+          "kind": "Text",
+          "text": "this.mangaStatusText(item.node)",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "MANGA_DIRECTORY_VISUAL.metaLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "MANGA_DIRECTORY_VISUAL.metaFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "MANGA_DIRECTORY_VISUAL.bodyFontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "ReaderDirectoryNavigationList",
           "method": "mangaRowBody",
           "kind": "Text",
           "text": "'…'",
@@ -2112,7 +2136,7 @@
           "owner": "ReaderDirectoryNavigationList",
           "method": "mangaRowBody",
           "kind": "Text",
-          "text": "this.mangaGroupNode(item.node).title",
+          "text": "this.mangaTitle(item.node)",
           "modifiers": {
             "fontWeight": {
               "expression": "MANGA_DIRECTORY_VISUAL.groupFontWeight",
@@ -2160,7 +2184,7 @@
           "owner": "ReaderDirectoryNavigationList",
           "method": "mangaRowBody",
           "kind": "Text",
-          "text": "this.mangaPaintNode(item.node).title",
+          "text": "this.mangaTitle(item.node)",
           "modifiers": {
             "fontWeight": {
               "expression": "this.isCurrentMangaNode(item) ? MANGA_DIRECTORY_VISUAL.currentFontWeight : MANGA_DIRECTORY_VISUAL.bodyFontWeight",
@@ -2186,7 +2210,31 @@
           "owner": "ReaderDirectoryNavigationList",
           "method": "mangaRowBody",
           "kind": "Text",
-          "text": "this.mangaPaintNode(item.node).parentTitle",
+          "text": "this.mangaStatusText(item.node)",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "MANGA_DIRECTORY_VISUAL.metaLineHeight",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "MANGA_DIRECTORY_VISUAL.metaFontSize",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "MANGA_DIRECTORY_VISUAL.bodyFontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "ReaderDirectoryNavigationList",
+          "method": "mangaRowBody",
+          "kind": "Text",
+          "text": "this.mangaContextTitle(item.node)",
           "modifiers": {
             "lineHeight": {
               "expression": "MANGA_DIRECTORY_VISUAL.metaLineHeight",
@@ -2350,7 +2398,7 @@
       "nativeDefaults": [],
       "successorFacts": {
         "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
-        "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "sourceHead": "c5dc6cbc8d706035ac5b2001f4ee5ee9b3c567eb",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
       }
     },

@@ -198,3 +198,24 @@ assert.throws(() => catalogCurrent(omittedCurrent), /admitted readable catalog c
 presentation.clear('source', 'book');
 
 console.log('manga directory quick panel SDK: PASS; actual flow two17 gaps, one source budget, live/rich-confirmed/catalog current display after body failure, no guessed page total, same-book/obsolete/group guards, whole-window phone narrow class and retained business callbacks; five omitted-rule negatives rejected');
+
+{
+  const f = fixture(); delete f.owner.directoryEntries;
+  const current = f.owner.remoteSession.entries.find(entry => entry.index === 71);
+  Object.assign(current, { title: '✿·１００\n源装饰', displayTitle: '１００（上）',
+    isVip: true, isPay: false, contextTitle: '第一部 / 第二卷' });
+  const row = f.owner.directoryEntries().find(entry => entry.index === 71);
+  assert.deepEqual([row.title, row.displayTitle, row.isVip, row.isPay, row.contextTitle],
+    [current.title, '１００（上）', true, false, '第一部 / 第二卷']);
+  assert.equal(f.owner.directoryCurrentTitle(), '１００（上）', 'quick footer/header consume the same confirmed display title');
+  f.owner.onDirectoryDataChanged();
+  const revision = f.owner.directoryRevision; f.owner.quickFooterMeasured = 66;
+  current.displayTitle = '１００（下）'; current.isPay = true;
+  f.owner.onDirectoryDataChanged();
+  assert.equal(f.owner.directoryRevision, revision + 1, 'same-session metadata edit refreshes directory-only presentation');
+  assert.equal(f.owner.quickFooterMeasured, 0); assert.equal(f.owner.directoryCurrentTitle(), '１００（下）');
+  f.owner.onDirectoryDataChanged(); assert.equal(f.owner.directoryRevision, revision + 1, 'unchanged metadata does not rerun projection');
+  assert.equal(current.title, '✿·１００\n源装饰', 'footer formatting does not rewrite canonical raw title');
+  current.displayTitle = ''; current.title = '第 话';
+  assert.equal(f.owner.directoryCurrentTitle(), '未命名章节');
+}

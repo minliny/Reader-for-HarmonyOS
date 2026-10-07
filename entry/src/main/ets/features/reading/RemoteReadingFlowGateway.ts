@@ -1,3 +1,4 @@
+import { decodeReaderDirectoryDisplayMetadata, type ReaderDirectoryDisplayMetadata } from './ReaderDirectoryDisplayMetadata.ts';
 import { BookRequestNotDispatchedError, type BookRequestOptions } from '../../app/BookRequestScheduler';
 import { readBookAuthorIdentity, type BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
 import { appendReadingSelectionContext, appendExpectedPositionVersions, captureRemotePositionContext, decodeRemotePositionMigration, encodeRemotePositionContext, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
@@ -68,6 +69,10 @@ export type RemoteReadingTocEntry = {
   level?: number;
   index: number;
   title: string;
+  displayTitle?: string;
+  isVip?: boolean;
+  isPay?: boolean;
+  contextTitle?: string;
   url: string;
   variables: RemoteReadingVariable[];
 };
@@ -402,7 +407,8 @@ export class RemoteReadingFlowGateway {
       if (level !== undefined && (level < 1 || level > 32)) throw new Error('invalid directory level');
       entries.push({
         ...(level === undefined ? {} : { level }), index,
-        title: this.requireNonBlankString(raw, 'title', 'cache.book.status chapter'),
+        title: this.requireString(raw, 'title', 'cache.book.status chapter'),
+        ...this.decodeDirectoryDisplayMetadata(raw, 'cache.book.status'),
         url: this.requireString(raw, 'url', 'cache.book.status chapter'),
         ...(typeof raw['navigable'] === 'boolean' ? { navigable: raw['navigable'] as boolean } : {}),
         ...(typeof raw['proofState'] === 'string' ? { proofState: raw['proofState'] as string } : {}),
@@ -502,7 +508,8 @@ export class RemoteReadingFlowGateway {
       }
       return {
         index,
-        title: this.requireNonBlankString(raw, 'title', 'cache.book.status chapter'),
+        title: this.requireString(raw, 'title', 'cache.book.status chapter'),
+        ...this.decodeDirectoryDisplayMetadata(raw, 'cache.book.status'),
         url: this.requireString(raw, 'url', 'cache.book.status chapter'),
         variables: session.entries[position].variables,
         ...(session.entries[position].level === undefined ? {} : { level: session.entries[position].level }),
@@ -1093,7 +1100,8 @@ export class RemoteReadingFlowGateway {
       if (level !== undefined && (level < 1 || level > 32)) throw new Error('invalid directory level');
       entries.push({
         ...(level === undefined ? {} : { level }), index,
-        title: this.requireNonBlankString(raw, 'title', 'book.toc entry'),
+        title: this.requireString(raw, 'title', 'book.toc entry'),
+        ...this.decodeDirectoryDisplayMetadata(raw, 'book.toc'),
         url: this.requireString(raw, 'url', 'book.toc entry'),
         variables: decodeRemoteReadingVariables(raw['variables'], 'book.toc entry', true),
       });
@@ -1137,6 +1145,15 @@ export class RemoteReadingFlowGateway {
         `${command} returned a mismatched composite key`,
         command,
       );
+    }
+  }
+
+  /** Keep the shared domain decoder independent; classify failures at this RPC boundary. */
+  private decodeDirectoryDisplayMetadata(raw: JsonObject, command: RemoteReadingCommand): ReaderDirectoryDisplayMetadata {
+    try { return decodeReaderDirectoryDisplayMetadata(raw); }
+    catch (error) {
+      throw new RemoteReadingGatewayError('invalidResponse',
+        error instanceof Error ? error.message : 'directory metadata is invalid', command, undefined, undefined, error);
     }
   }
 

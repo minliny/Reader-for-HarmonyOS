@@ -1,3 +1,4 @@
+import { decodeReaderDirectoryDisplayMetadata } from './ReaderDirectoryDisplayMetadata.ts';
 import { readerDirectoryBookState, clearReaderDirectoryBookStates } from './ReaderDirectorySessionState.ts';
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
@@ -9,6 +10,10 @@ export interface ReaderDirectoryNavigationNode {
   parentId?: string;
   depth: number;
   title: string;
+  displayTitle?: string;
+  isVip?: boolean;
+  isPay?: boolean;
+  contextTitle?: string;
   kind: 'group' | 'target' | 'disabled';
   chapterIndex?: number;
   chapterOffsetScalar?: number;
@@ -140,7 +145,7 @@ function node(value: unknown): ReaderDirectoryNavigationNode {
     throw new Error('directory readable descendants require a group');
   return { nodeId: stringField(raw['nodeId'], 'directory node id'), parentId,
     depth: integerField(raw['depth'], 'directory depth', 256),
-    title,
+    title, ...decodeReaderDirectoryDisplayMetadata(raw),
     kind, chapterIndex, chapterOffsetScalar,
     hasChildren: raw['hasChildren'] as boolean, expanded: raw['expanded'] as boolean,
     ...(parentTitle === undefined ? {} : { parentTitle }),
@@ -258,7 +263,7 @@ export function decodeReaderDirectoryTargetV2(value: unknown, identity: ReaderDi
 }
 
 function normalizeV2DirectoryNodes(rows: ReaderDirectoryNavigationNode[]): ReaderDirectoryNavigationNode[] {
-  if (rows.some((item): boolean => item.depth > 32 || item.title.trim().length === 0 || Array.from(item.title).length > 1024))
+  if (rows.some((item): boolean => item.depth > 32 || Array.from(item.title).length > 1024))
     throw new Error('directory resource limit exceeded');
   return rows.map((item): ReaderDirectoryNavigationNode => ({ ...item, depth: item.depth + 1 }));
 }

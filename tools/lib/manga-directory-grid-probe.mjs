@@ -1,3 +1,5 @@
+import * as display from '../../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
+import * as state from '../../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
 import * as visual from '../../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
 import * as layout from '../../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
 
@@ -9,7 +11,7 @@ export const mangaGridBuilderMembers = ['mangaPaintNode', 'mangaChapter', 'manga
 /** Shared real row closure for metadata, font and download consumers. */
 export const mangaRowBuilderMembers = [...mangaGridBuilderMembers, 'mangaRow', 'selectMangaRow', 'mangaColor',
   'displayLevel', 'mangaGroupNode', 'mangaGroupSpacing', 'mangaRowIndex', 'mangaRowPaddingLeft', 'isCurrentMangaNode', 'isCurrentNode'];
-export const mangaGridProbeDependencies = { ...layout, ...visual, WordBreak: { BREAK_WORD: 'WordBreak.BREAK_WORD' }, FlexWrap: { Wrap: 'FlexWrap.Wrap' }, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }) } };
+export const mangaGridProbeDependencies = { ...layout, ...visual, ...display, ...state, WordBreak: { BREAK_WORD: 'WordBreak.BREAK_WORD' }, FlexWrap: { Wrap: 'FlexWrap.Wrap' }, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }) } };
 export function emptyMangaGridState() {
   return { view: { visibleTotal: 0 }, windowMetricsRevision: 0, mangaGridSpans: new Map(), mangaViewportWidth: 390, mangaInitialViewportWidth: 0, mangaQuickDisplay: false, mangaVisibleTopInset: 0, contentStartInset: 0, contentEndInset: 0,
     dataSource: { loadedPages: () => [], loadedPageAt: () => undefined, coreIndex: index => index, displayIndex: index => index } };

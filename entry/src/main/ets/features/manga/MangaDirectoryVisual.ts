@@ -539,5 +539,8 @@ export function mangaDirectoryColumns(kind: string, hasMiddle: boolean, narrow: 
   const longest = numberLengths.reduce((length: number, value: number): number => Math.max(length, value), 0);
   const text = (longest * MANGA_DIRECTORY_VISUAL.namedFontSize * MANGA_DIRECTORY_VISUAL.numericDigitWidthEm + (kind === 'parts' ? MANGA_DIRECTORY_VISUAL.namedFontSize * MANGA_DIRECTORY_VISUAL.partLabelWidthEm : 0)) * mangaDirectoryScale(fontScale);
   const minimum = Math.max(MANGA_DIRECTORY_VISUAL.gridHeight, text + MANGA_DIRECTORY_VISUAL.gridPaddingX * 2 + MANGA_DIRECTORY_VISUAL.gridBorder * 2 + Math.max(0, accessoryWidth));
-  return Math.max(1, Math.min(preferred, Math.floor((contentWidth + MANGA_DIRECTORY_VISUAL.gridGap) / (minimum + MANGA_DIRECTORY_VISUAL.gridGap))));
+  const capacity = Math.max(1, Math.min(preferred, Math.floor((contentWidth + MANGA_DIRECTORY_VISUAL.gridGap) / (minimum + MANGA_DIRECTORY_VISUAL.gridGap))));
+  // An upper/lower pair cannot be cut by three lanes; a three-part group
+  // cannot be cut by two. One lane remains available at large font sizes.
+  return kind === 'parts' ? (hasMiddle ? (capacity >= 3 ? 3 : 1) : capacity >= 4 ? 4 : capacity >= 2 ? 2 : 1) : capacity;
 }
