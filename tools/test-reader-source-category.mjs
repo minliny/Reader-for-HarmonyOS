@@ -71,7 +71,8 @@ assert.match(entry, /this\.runtime\.bookAcquisitions\(\)[\s\S]*coordinator\.acqu
 const coordinator = read('entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
 assert.match(coordinator, /if \(!isRemoteReadingCacheRecoveryEligible\(classified\)\) throw classified/,
   'only recoverable cache states may pass into live source admission; stopped sources remain offline-readable');
-assert.match(coordinator, /if \(version === undefined\)[\s\S]*gateway\.openSession\(actual, \{ isCurrent \}\)/);
+assert.match(coordinator, /if \(version === undefined\)[\s\S]*gateway\.openSession\(actual, \{ isCurrent(?:\s*,|\s*})/,
+  'unversioned sources retain normal Core catalog admission with the current consumer guard');
 
 const collection = JSON.parse(read('entry/src/main/resources/rawfile/reader-tested-book-source-collection.json'));
 const rows = Array.isArray(collection) ? collection : collection.sources;
