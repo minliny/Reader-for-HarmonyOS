@@ -55,6 +55,21 @@ function owner(initial = [], contentKind = 'manga') {
 }
 function flush() { const jobs = [...timers.values()]; timers.clear(); for (const job of jobs) job(); }
 const a = item('a', 600), b = item('b', 200), c = item('c', 100);
+// The production platform projection covers every domain field. Updating a
+// previously enriched candidate also clears absent optional metadata rather
+// than leaving stale timing, identity proof or acquisition feedback behind.
+const candidateContract=gateway.slice(gateway.indexOf('export type SourceSwitchCandidate = {'),gateway.indexOf('export type SourceSwitchProbeQuery'));
+const candidateFields=[...candidateContract.matchAll(/^  (\w+)\??:/gm)].map(match=>match[1]);
+assert.equal(candidateFields.length,25);
+const complete={...a,acquisitionState:'readable',acquisitionMessage:'ok',verifiedChapterUrl:'chapter',sourceVersion:'version',
+  searchVariables:[{name:'token',value:'value'}],sourceOrder:3,author:'@作者',authorIdentity:{schemaVersion:1,sourceVersion:'version',field:'search',raw:'@作者',label:'作者',rule:'author-nickname-at-v1'},coverUrl:'cover',
+  latestChapterTitle:'新章节',currentChapterTitle:'当前章节',currentChapterIndex:2,chapterWordCount:500,checkedAt:123,
+  latencyMeasuredAt:456,offline:true,timeout:true,isCurrent:true};
+const projected=new SourceSwitchCandidateRow(complete);
+for(const field of candidateFields){assert.ok(Object.hasOwn(projected,field),`projection owns ${field}`);assert.equal(projected[field],complete[field],`constructor retains ${field}`);}
+projected.update(item('replacement',0));
+for(const field of candidateFields)assert.equal(projected[field],item('replacement',0)[field],`update replaces or clears ${field}`);
+assert.doesNotMatch(source.slice(source.indexOf('struct SourceSwitchLiveRow'),source.indexOf('/** Real reading')),/get candidate\(/,'native struct uses the actual ObjectLink field, never a getter omitted by the SDK');
 // VM-SS-001: notifications must admit a mounted empty V1 lazy range, then
 // preserve native row identities during append and same-key metadata changes.
 const lazyData=new SourceSwitchCandidateDataSource(),notifications=[];
@@ -63,17 +78,17 @@ const listener={onDataAdd:index=>notifications.push(['add',index]),
 lazyData.registerDataChangeListener(listener);lazyData.registerDataChangeListener(listener);
 assert.equal(lazyData.totalCount(),0);
 lazyData.publish([a,b]);assert.deepEqual(notifications,[['add',0],['add',1]],'empty-prefix results enter the existing native range');
-assert.equal(lazyData.totalCount(),2);assert.equal(lazyData.getData(1).candidate,b);
+assert.equal(lazyData.totalCount(),2);assert.equal(lazyData.getData(1).sourceId,b.sourceId);assert.equal(lazyData.getData(1).latencyMs,b.latencyMs);
 notifications.length=0;lazyData.publish([a,b,c]);assert.deepEqual(notifications,[['add',2]],'stable-prefix append notifies only the appended position');
 const enrichedA={...a,latestChapterTitle:'新章节',latencyMs:50};
 const originalHolder=lazyData.getData(0);
 notifications.length=0;lazyData.publish([enrichedA,b,c]);assert.deepEqual(notifications,[],'same-key metadata uses ObjectLink without invalidating the native lazy child');
-assert.equal(lazyData.getData(0),originalHolder);assert.equal(originalHolder.candidate,enrichedA);
+assert.equal(lazyData.getData(0),originalHolder);assert.equal(originalHolder.latestChapterTitle,enrichedA.latestChapterTitle);assert.equal(originalHolder.latencyMs,enrichedA.latencyMs);
 notifications.length=0;lazyData.publish([b,c,enrichedA]);assert.deepEqual(notifications,[['reload']],'non-prefix authoritative order uses platform keyed reload');
 notifications.length=0;lazyData.publish([]);assert.deepEqual(notifications,[['reload']]);assert.equal(lazyData.totalCount(),0);
 lazyData.unregisterDataChangeListener(listener);notifications.length=0;
 lazyData.publish([a]);assert.deepEqual(notifications,[],'retired native listeners receive no later publication');
-assert.equal(lazyData.totalCount(),1);assert.equal(lazyData.getData(0).candidate,a);
+assert.equal(lazyData.totalCount(),1);assert.equal(lazyData.getData(0).sourceId,a.sourceId);assert.equal(lazyData.getData(0).latencyMs,a.latencyMs);
 assert.notEqual(lazyData.getData(0),originalHolder,'a deleted and re-added identity receives a new observer, not a retired holder');
 assert.doesNotMatch(source,/Repeat\([\s\S]*virtualScroll/,'V1 picker cannot reintroduce the unsupported renderer');
 assert.match(source,/LazyForEach\(this\.candidateDataSource/);
@@ -90,18 +105,18 @@ assert.equal((source.match(/this\.displayedCandidates =/g)??[]).length,1,'all ad
   data.registerDataChangeListener({onDataAdd:index=>events.push(['add',index]),onDataChange:index=>events.push(['change',index]),onDataReloaded:()=>events.push(['reload'])});
   const cached={...item('retained'),latencyMs:undefined,latencyKind:undefined,latestChapterTitle:'旧章节'};
   const unknownHolder=new deps.SourceSwitchCandidateRow(cached);
-  const unknownRow=new deps.SourceSwitchNovelRow(undefined,{row:unknownHolder,reduceMotion:true},undefined,7000);unknownRow.initialRender();
+  const unknownRow=new deps.SourceSwitchNovelRow(undefined,{candidate:unknownHolder,reduceMotion:true},undefined,7000);unknownRow.initialRender();
   assert.ok(native.nodes(unknownRow).some(node=>node.type==='Text'&&node.create==='—'));
   // The finite builder probe cannot remove a non-empty conditional branch.
   // Prove the unknown-to-measured value contract through the real ObjectLink
   // class separately; Ace's initial dash-to-number paint remains VM evidence.
   const valueHolder=new deps.SourceSwitchCandidateRow(cached);
   const valueLink=new native.properties.sdk.SynchedPropertyNestedObjectPU(valueHolder,unknownRow,'valueRow');
-  assert.equal(sourceSwitchNovelLatency(valueLink.get().candidate),'—');
-  valueHolder.candidate={...cached,latencyKind:'search',latencyMs:325};
-  assert.equal(sourceSwitchNovelLatency(valueLink.get().candidate),'325 ms');
+  assert.equal(sourceSwitchNovelLatency(valueLink.get()),'—');
+  valueHolder.update({...cached,latencyKind:'search',latencyMs:325});
+  assert.equal(sourceSwitchNovelLatency(valueLink.get()),'325 ms');
   data.publish([{...cached,latencyKind:'search',latencyMs:0}]);const holder=data.getData(0);events.length=0;
-  const linked=new deps.SourceSwitchNovelRow(undefined,{row:holder,reduceMotion:true},undefined,7001);linked.initialRender();
+  const linked=new deps.SourceSwitchNovelRow(undefined,{candidate:holder,reduceMotion:true},undefined,7001);linked.initialRender();
   const hit=native.nodes(linked).find(node=>node.type==='Row');
   assert.ok(native.nodes(linked).some(node=>node.type==='Text'&&node.create==='0'));
   // Negative control uses the actual SDK's old ordinary-prop deep copy plus
@@ -115,23 +130,23 @@ assert.equal((source.match(/this\.displayedCandidates =/g)??[]).length,1,'all ad
     const enriched={...cached,latencyKind:'search',latencyMs:duration,latestChapterTitle:`最新章节${duration}`};
     data.publish([enriched]);native.properties.flush();
     assert.equal(data.getData(0),holder,'metadata retains the same native observation owner');
-    assert.equal(linked.row,holder,'the real SDK ObjectLink keeps the original holder');
+    assert.equal(linked.candidate,holder,'the real SDK ObjectLink keeps the original holder');
     assert.equal(native.nodes(linked).find(node=>node.type==='Row'),hit,'same-key update does not remount/reset the hit target');
     assert.ok(native.nodes(linked).some(node=>node.type==='Text'&&node.create===String(duration)),
       'actual SDK observer updates the production latency text');
     assert.ok(native.nodes(linked).some(node=>node.type==='Text'&&node.create===`最新章节${duration}`));
     assert.deepEqual(events,[],'metadata creates no native replacement/add/reload operation');
   }
-  data.publish([holder.candidate,b]);assert.deepEqual(events,[['add',1]]);events.length=0;
-  const secondHolder=data.getData(1);data.publish([b,holder.candidate]);
+  data.publish([holder,b]);assert.deepEqual(events,[['add',1]]);events.length=0;
+  const secondHolder=data.getData(1);data.publish([b,holder]);
   assert.deepEqual(events,[['reload']]);assert.equal(data.getData(0),secondHolder);assert.equal(data.getData(1),holder);
   data.publish([]);data.publish([cached]);
   assert.notEqual(data.getData(0),holder,'deleted and re-added key cannot reuse an old observer');
-  assert.equal(holder.candidate.latencyMs,441,'retired holder no longer receives subsequent publications');
+  assert.equal(holder.latencyMs,441,'retired holder no longer receives subsequent publications');
   const anotherScope=new deps.SourceSwitchCandidateDataSource();anotherScope.publish([cached]);
   assert.notEqual(anotherScope.getData(0),data.getData(0),'a new picker scope has no previous holder ownership');
-  assert.match(source,/struct SourceSwitchLiveRow[\s\S]*?@ObjectLink row: SourceSwitchCandidateRow/);
-  assert.match(source,/struct SourceSwitchNovelRow[\s\S]*?@ObjectLink row: SourceSwitchCandidateRow/);
+  assert.match(source,/struct SourceSwitchLiveRow[\s\S]*?@ObjectLink candidate: SourceSwitchCandidateRow/);
+  assert.match(source,/struct SourceSwitchNovelRow[\s\S]*?@ObjectLink candidate: SourceSwitchCandidateRow/);
 }
 console.log('source-switch V1 native data admission: empty, append, metadata, reload and listener retirement PASS');
 const progressive = owner(); progressive.page.state = { kind: 'discovering' }; progressive.page.acceptState();
@@ -180,11 +195,11 @@ cancelled.page.listTouch({ type: 'down' }); cancelled.frames.shift()(); assert.e
 const departed = owner([a, b]); flush(); departed.page.state = { kind: 'candidates', candidates: [b, a] }; departed.page.acceptState();
 departed.page.mounted = false; departed.page.cancelPresentation(); flush(); assert.deepEqual(departed.page.displayedCandidates.map(key), [a, b].map(key));
 
-const row = new Candidate(); Object.assign(row, { row: new SourceSwitchCandidateRow(item('source', 0)), switching: false, pendingProbe: false, searching: true });
+const row = new Candidate(); Object.assign(row, { candidate: new SourceSwitchCandidateRow(item('source', 0)), switching: false, pendingProbe: false, searching: true });
 assert.equal(row.latencyText(), '0 ms'); assert.equal(row.chapterText(), '已发现，等待解析');
-row.row.candidate = { ...row.row.candidate, latencyKind: undefined, latencyMs: 80 }; assert.equal(row.latencyText(), '待检测', 'legacy latency is not search timing');
+row.candidate.update({ ...row.candidate, latencyKind: undefined, latencyMs: 80 }); assert.equal(row.latencyText(), '待检测', 'legacy latency is not search timing');
 row.pendingProbe = true; assert.equal(row.latencyText(), '重测中'); row.searching = false; assert.equal(row.latencyText(), '待重测');
-row.row.candidate = { ...row.row.candidate, acquisitionState: 'catalogReady' }; assert.equal(row.chapterText(), '目录已就绪');
+row.candidate.update({ ...row.candidate, acquisitionState: 'catalogReady' }); assert.equal(row.chapterText(), '目录已就绪');
 assert.equal((source.match(/SearchSpinner\(\{/g) ?? []).length, 1, 'historical manga keeps its native spinner');
 assert.equal((source.match(/SourceSwitchSpinner\(\{/g) ?? []).length, 1, 'selected novel uses its SVG arc animator');
 assert.match(source, /Text\('搜索延迟'\)/); assert.doesNotMatch(source, /SourceSwitchDemo|sourceSwitchDemoEvents/);
@@ -201,7 +216,7 @@ assert.equal(novel.page.statusText(), '查找结束 · 已找到 2 个书源');
 novel.page.state = { kind: 'candidates', candidates: [c, b, fasterA], refreshing: true };
 novel.page.acceptState(); flush();
 assert.deepEqual(novel.page.displayedCandidates.map(key), [a,b,c].map(key), 'successful additions append without re-sorting existing novel rows');
-assert.deepEqual(Array.from({length:novel.page.candidateDataSource.totalCount()},(_value,index)=>key(novel.page.candidateDataSource.getData(index).candidate)),[a,b,c].map(key),'native data receives the same held-order novel projection');
+assert.deepEqual(Array.from({length:novel.page.candidateDataSource.totalCount()},(_value,index)=>key(novel.page.candidateDataSource.getData(index))),[a,b,c].map(key),'native data receives the same held-order novel projection');
 assert.equal(novel.page.displayedCandidates[0].latencyMs, 50, 'metadata still updates in place');
 novel.page.listTouch({type:'down'}); novel.page.heldKey = key(b);
 novel.page.state = { kind: 'candidates', candidates: [c, b, { ...fasterA, latestChapterTitle: '新章节' }], refreshing: true };

@@ -68,10 +68,10 @@ export function sourceSwitchLiveSdk(p,extra={},sources={}) {
  const dataSource=tree.statements.find(node=>node.name?.getText(tree)==='SourceSwitchCandidateDataSource');
  assert.ok(dataSource,'the real V1 lazy data source is part of the production window');
  const rowHolder=tree.statements.find(node=>node.name?.getText(tree)==='SourceSwitchCandidateRow');
- assert.ok(rowHolder,'production observed source-switch holder is part of the window');
+ assert.ok(rowHolder,'production observed source-switch projection is part of the window');
  const SourceSwitchCandidateRowValue=new Function(stripTypeScriptTypes(rowHolder.getText(tree).replace(/^@Observed\s*/,''))+';return SourceSwitchCandidateRow;')();
  // The production decorator's proxy behavior is provided by the installed SDK,
- // never a test-written proxy. The actual holder constructor remains unchanged.
+ // never a test-written proxy. The actual projection constructor remains unchanged.
  function SourceSwitchCandidateRow(candidate){return p.properties.sdk.ObservedObject.createNew(new SourceSwitchCandidateRowValue(candidate),undefined);}
  require(sdk+'/lib/validate_ui_syntax.js').observedClassCollection.add('SourceSwitchCandidateRow');
  const SourceSwitchCandidateDataSource=new Function('sourceSwitchCandidateKey','SourceSwitchCandidateRow',stripTypeScriptTypes(dataSource.getText(tree))+';return SourceSwitchCandidateDataSource;')(gatewayExports.sourceSwitchCandidateKey,SourceSwitchCandidateRow);
@@ -99,10 +99,10 @@ export function sourceSwitchLiveSdk(p,extra={},sources={}) {
  p.hooks.childSources.SourceSwitchPanel=windowSource;
  // The existing bounded parent probe collects only @Prop inputs. Describe
  // these two retained row inputs as passable parent parameters so its emitted
- // child update keeps the holder. Child compilation below still consumes the
- // unmodified production @ObjectLink declaration and the actual SDK runtime.
+ // child update keeps the observed candidate. Child compilation below still
+ // consumes the unmodified production @ObjectLink and actual SDK runtime.
  // This finite parameter-metadata adapter does not model native lazy removal.
- const rowParameterMetadata=windowSource.replace(/@ObjectLink row: SourceSwitchCandidateRow;/g,'@Prop row: SourceSwitchCandidateRow;');
+ const rowParameterMetadata=windowSource.replace(/@ObjectLink candidate: SourceSwitchCandidateRow;/g,'@Prop candidate: SourceSwitchCandidateRow;');
  p.hooks.childSources.SourceSwitchLiveRow=rowParameterMetadata;
  p.hooks.childSources.SourceSwitchNovelRow=rowParameterMetadata;
  for(const [name,path] of [['NoCoverCover','features/bookshelf/NoCoverCover.ets'],['SearchSpinner','features/search/SearchSpinner.ets'],['SourceSwitchSpinner','features/source/SourceSwitchSpinner.ets'],['SourceSwitchProgress','features/source/SourceSwitchProgress.ets'],['ReaderPaperBackground','features/reading/ReaderPaperBackground.ets'],['SourceSwitchCompletionOverlay','features/source/SourceSwitchCompletionOverlay.ets']]){
