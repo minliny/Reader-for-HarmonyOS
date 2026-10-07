@@ -104,11 +104,61 @@ export function validateMangaDirectoryTypographySuccessor(successor, readSource 
   return successor;
 }
 validateMangaDirectoryTypographySuccessor(mangaDirectoryTypographySuccessor);
+
+export const sharedSourceSwitchTypographySuccessorPath = 'tools/fixtures/design/shared-source-switch-typography-successor-20261007.json';
+export const sharedSourceSwitchTypographySuccessor = JSON.parse(readFileSync(new URL('../fixtures/design/shared-source-switch-typography-successor-20261007.json', import.meta.url), 'utf8'));
+const sharedRetiredWindowCarriers = [0, 1, 2, 3, 4, 5, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
+const sharedRetiredWindowBackgrounds = [0, 2, 3, 4, 11];
+/** User-requested sharing retires exactly the former manga presentation actors.
+ * Every selected novel carrier and the two original recovery tuples remain;
+ * neither historical fixture is rewritten or converted into a wildcard. */
+export function validateSharedSourceSwitchTypographySuccessor(successor, readSource = directoryReadSource) {
+  assert.equal(successor.schema, 1);
+  assert.equal(successor.userAuthorization, '操作逻辑不变，把  换源UI 改成小说的 UI', 'exact shared source UI authorization');
+  assert.equal(successor.previousFixture, novelSourceSwitchSuccessorPath, 'only the exact selected novel drawer may be shared');
+  assert.equal(successor.previousFixtureSha256, 'af81bcb9f4da6c40c709a964dcbd9653426fc67c8156256090175d53d2047dff', 'selected novel fixture identity stays immutable');
+  const previousBytes = readSource(successor.previousFixture);
+  assert.equal(directoryDigest(previousBytes), successor.previousFixtureSha256, 'selected novel fixture stays byte immutable');
+  const previous = JSON.parse(previousBytes);
+  assert.equal(successor.historicalFixture, previous.historicalFixture, 'shared UI cannot replace historical manga approval');
+  assert.equal(successor.historicalFixtureSha256, previous.historicalFixtureSha256, 'shared UI cannot change historical manga identity');
+  assert.equal(directoryDigest(readSource(successor.historicalFixture)), successor.historicalFixtureSha256, 'historical manga typography fixture stays immutable');
+  assert.equal(successor.visualSpecSource, previous.visualSpecSource, 'shared UI uses the selected novel visual source');
+  assert.equal(successor.visualSpecSha256, previous.visualSpecSha256, 'shared UI cannot change selected visual identity');
+  assert.equal(directoryDigest(readSource(successor.visualSpecSource)), successor.visualSpecSha256, 'shared UI binds exact selected visual source');
+  assert.deepEqual(successor.files.map(entry => entry.path), novelPaths, 'only the two exact shared source actors');
+  assert.deepEqual(successor.retiredPreviousWindowCarrierIndices, sharedRetiredWindowCarriers, 'only exact retired manga text occurrences');
+  assert.deepEqual(successor.retiredPreviousWindowBackgroundIndices, sharedRetiredWindowBackgrounds, 'only exact retired manga background occurrences');
+  for (const [index, entry] of successor.files.entries()) {
+    const origin = previous.files[index];
+    assert.equal(entry.previousEntrySha256, directoryDigest(JSON.stringify(origin)), 'one shared actor cannot rewrite its selected origin');
+    for (const field of ['roles', 'fontFamilies']) assert.deepEqual(entry[field], origin[field], 'shared UI retains exact selected public roles and families');
+    if (index === 0) {
+      assert.deepEqual(entry.carriers, origin.carriers.filter((_, occurrence) => !sharedRetiredWindowCarriers.includes(occurrence)), 'shared drawer retains every selected novel and original recovery carrier');
+      const native = structuredClone(origin.nativeDefaults.slice(1));
+      // The old manga close authorization moves to the existing drawer close.
+      native[0].attributes.enabled = '(!this.busy() || this.allowCancelWhileSwitching) && !this.rollbackRequired()';
+      assert.deepEqual(entry.nativeDefaults, native, 'shared drawer changes only the retired old header and existing close authorization');
+      assert.deepEqual(entry.backgrounds, origin.backgrounds.filter((_, occurrence) => !sharedRetiredWindowBackgrounds.includes(occurrence)), 'shared drawer retains every exact selected background');
+      assert.deepEqual(entry.architectureCounts, { fontSize: 2, backgroundColor: 7 }, 'only the two retained recovery private fonts and seven selected backgrounds');
+    } else {
+      assert.deepEqual(entry.carriers, origin.carriers, 'shared preparation retains every selected public text occurrence');
+      assert.deepEqual(entry.nativeDefaults, [{ owner: 'SourceSwitchProgress', method: 'build', kind: 'Button', text: '{ type: ButtonType.Normal }', inheritsTextStyle: false,
+        attributes: { onClick: '(): void => this.onCancel()', accessibilityText: "'取消切换书源'",
+          margin: '{ top: this.topInset + SOURCE_SWITCH_VISUAL.switchPadding, right: SOURCE_SWITCH_VISUAL.switchPadding }',
+          borderRadius: 'SOURCE_SWITCH_VISUAL.closeRadius', backgroundColor: 'Color.Transparent', padding: '0', height: '44', width: '44' } }], 'one exact icon-only preparation cancel AUTO control, no typography budget');
+      assert.deepEqual(entry.backgrounds, [...origin.backgrounds, { owner: 'SourceSwitchProgress', method: 'build', property: 'backgroundColor', args: ['Color.Transparent'] }], 'only the retained preparation background plus its transparent cancel control');
+      assert.deepEqual(entry.architectureCounts, { backgroundColor: 2 }, 'shared preparation cannot acquire private typography');
+    }
+  }
+  return successor;
+}
+validateSharedSourceSwitchTypographySuccessor(sharedSourceSwitchTypographySuccessor);
 export const typographyCarrierShape = node => JSON.parse(JSON.stringify({ owner: node.owner, method: node.method, kind: node.kind, text: node.text,
   modifiers: Object.fromEntries(Object.entries(node.modifiers).map(([property, value]) => [property, { expression: value.expression, extra: value.extra }])) }));
 export const approvedTypographyFile = file => {
   const fullPath = file.startsWith('entry/') ? file : 'entry/src/main/ets/' + (file.startsWith('features/') || file.startsWith('pages/') ? file : 'features/' + file);
-  return mangaDirectoryTypographySuccessor.files.find(entry => entry.path === fullPath) ?? novelSourceSwitchSuccessor.files.find(entry => entry.path === fullPath) ?? (fullPath===completionPath?novelSourceSwitchSuccessor.completion:undefined) ?? approvedMangaTypography.files.find(entry => entry.path === fullPath);
+  return mangaDirectoryTypographySuccessor.files.find(entry => entry.path === fullPath) ?? sharedSourceSwitchTypographySuccessor.files.find(entry => entry.path === fullPath) ?? novelSourceSwitchSuccessor.files.find(entry => entry.path === fullPath) ?? (fullPath===completionPath?novelSourceSwitchSuccessor.completion:undefined) ?? approvedMangaTypography.files.find(entry => entry.path === fullPath);
 };
 /** A finite approved reference or selected demo contract, separate from shared roles.
  * Every concrete file/struct/method/native text carrier and all five authored
@@ -119,7 +169,8 @@ export const approvedTypographyFile = file => {
 export function approvedTypographyContract(source, file) {
   const entry = approvedTypographyFile(file);
   if (!entry) return { registered: false, has: () => false, count: 0 };
-  if (novelPaths.includes(entry.path)) retainsHistoricalCarriers(entry);
+  if (sharedSourceSwitchTypographySuccessor.files.includes(entry)) validateSharedSourceSwitchTypographySuccessor(sharedSourceSwitchTypographySuccessor);
+  else if (novelPaths.includes(entry.path)) retainsHistoricalCarriers(entry);
   const actual = auditTypographyConsumers(source, entry.path).map(typographyCarrierShape);
   assert.deepEqual(actual, entry.carriers, 'exact approved typography carrier/tuple changed: ' + entry.path);
   const imports = typographyRoleImports(source, entry.path);

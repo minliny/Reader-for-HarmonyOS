@@ -90,12 +90,10 @@ export function sourceSwitchLiveSdk(p,extra={},sources={}) {
     createAnimator(_options){return{onFrame(){},play(){},cancel(){}};}},...extra};
  p.hooks.lifecycleChildren=true;
  p.hooks.childSources.SourceSwitchPanel=windowSource;
- p.hooks.childSources.SourceSwitchLiveRow=windowSource;
  p.hooks.childSources.SourceSwitchNovelRow=windowSource;
  for(const [name,path] of [['NoCoverCover','features/bookshelf/NoCoverCover.ets'],['SearchSpinner','features/search/SearchSpinner.ets'],['SourceSwitchSpinner','features/source/SourceSwitchSpinner.ets'],['SourceSwitchProgress','features/source/SourceSwitchProgress.ets'],['ReaderPaperBackground','features/reading/ReaderPaperBackground.ets'],['SourceSwitchCompletionOverlay','features/source/SourceSwitchCompletionOverlay.ets']]){
    p.hooks.childSources[name]=sources[name]??read(path);deps[name]=createReaderBuilderProbe(p.hooks.childSources[name],boundedMembers(p.hooks.childSources[name]),deps,p.hooks).Component;
  }
- deps.SourceSwitchLiveRow=createReaderBuilderProbe(windowSource,boundedMembers(windowSource,'SourceSwitchLiveRow'),deps,{...p.hooks,componentName:'SourceSwitchLiveRow'}).Component;
  deps.SourceSwitchNovelRow=createReaderBuilderProbe(windowSource,boundedMembers(windowSource,'SourceSwitchNovelRow'),deps,{...p.hooks,componentName:'SourceSwitchNovelRow'}).Component;
  deps.SourceSwitchPanel=createReaderBuilderProbe(windowSource,boundedMembers(windowSource,'SourceSwitchWindow'),deps,{...p.hooks,componentName:'SourceSwitchWindow'}).Component;
  return deps;
@@ -130,7 +128,7 @@ export function makeIndex(f,{navigation=1,reading=false,cacheAuthority}={}){
  index.settingsHost=actualGeneralSettingsHostField(index,settingsTypes.SettingsHost);
  const acquire=f.runtime.bookAcquisitions;f.runtime.bookAcquisitions=()=>({...acquire(),readingProjectionRevision:()=>0,setPreparationVisible(){}});
  const mount=()=>{index.sourceSwitchOverlayContent();return p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchPanel).at(-1);};
- const rows=()=>p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchLiveRow||x instanceof leafDeps.SourceSwitchNovelRow);
+ const rows=()=>p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchNovelRow);
  return{p,index,mount,rows,leafDeps};
 }
 export function failureChain(x){

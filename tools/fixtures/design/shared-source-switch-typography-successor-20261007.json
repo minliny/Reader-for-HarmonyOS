@@ -1,0 +1,956 @@
+{
+  "schema": 1,
+  "boundary": "Exactly two source-switch actors. Retire only the old manga window local carriers; reuse all previously selected novel drawer public typography unchanged. Historical manga and novel fixtures stay byte-immutable. One existing manga preparation-cancel action is retained through an icon-only AUTO control. No other file, public role, family, occurrence or architecture budget is admitted. Source/SDK facts do not prove native visual or user acceptance.",
+  "userAuthorization": "操作逻辑不变，把  换源UI 改成小说的 UI",
+  "previousFixture": "tools/fixtures/design/novel-source-switch-successor-20261006.json",
+  "previousFixtureSha256": "af81bcb9f4da6c40c709a964dcbd9653426fc67c8156256090175d53d2047dff",
+  "historicalFixture": "tools/fixtures/design/approved-manga-typography-carriers-20261005.json",
+  "historicalFixtureSha256": "87f72cffa795b3565acd03e67cc8a9ae89517dc8975a1a2270f100ab9cf9ca82",
+  "visualSpecSource": "../Reader-UI/design/source-switch/source-switch.visual.json",
+  "visualSpecSha256": "205de7f89121243e6ef4490f4863c6f4874e928a7eb5a66f52b41f0275c8d977",
+  "retiredPreviousWindowCarrierIndices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21
+  ],
+  "retiredPreviousWindowBackgroundIndices": [
+    0,
+    2,
+    3,
+    4,
+    11
+  ],
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/source/SourceSwitchWindow.ets",
+      "carriers": [
+        {
+          "owner": "SourceSwitchNovelRow",
+          "method": "build",
+          "kind": "Text",
+          "text": "this.candidate.sourceName || this.candidate.sourceId",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_NAME.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_NAME.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_NAME.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_NAME.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchNovelRow",
+          "method": "build",
+          "kind": "Text",
+          "text": "sourceSwitchNovelChapter(this.candidate)",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_CHAPTER.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_CHAPTER.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_CHAPTER.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_CHAPTER.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchNovelRow",
+          "method": "build",
+          "kind": "Text",
+          "text": "`${Math.round(this.candidate.latencyMs)}`",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_LATENCY.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_LATENCY.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_LATENCY.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_LATENCY.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchNovelRow",
+          "method": "build",
+          "kind": "Text",
+          "text": "' ms'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_LATENCY_UNIT.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_LATENCY_UNIT.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_LATENCY_UNIT.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_LATENCY_UNIT.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchNovelRow",
+          "method": "build",
+          "kind": "Text",
+          "text": "'—'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_LATENCY.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_LATENCY.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_LATENCY.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_LATENCY.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelEmptyMessage",
+          "kind": "Text",
+          "text": "this.isSweeping() ? '正在查找其他书源…' : '未找到其他书源'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_EMPTY.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_EMPTY.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_EMPTY.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_EMPTY.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "recoveryNotice",
+          "kind": "Text",
+          "text": "this.errorText()",
+          "modifiers": {
+            "fontSize": {
+              "expression": "12",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "'ReaderNotoSansSC'",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "recoveryNotice",
+          "kind": "Button",
+          "text": "this.rollbackRequired() ? '撤销切换' : this.requiresReconciliation() ? '重试核对' : '重试'",
+          "modifiers": {
+            "fontSize": {
+              "expression": "13",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelHeading",
+          "kind": "Text",
+          "text": "'更换书源'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_HEADING.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_HEADING.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_HEADING.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_HEADING.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelBookContext",
+          "kind": "Text",
+          "text": "this.bookTitle || '当前书籍'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_BOOK_TITLE.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_BOOK_TITLE.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_BOOK_TITLE.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_BOOK_TITLE.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelBookContext",
+          "kind": "Text",
+          "text": "this.author || '未知作者'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_METADATA.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_METADATA.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_METADATA.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_METADATA.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelBookContext",
+          "kind": "Text",
+          "text": "this.latestChapterTitle.trim().length > 0 ? `最新章节：${this.latestChapterTitle}` : '最新章节暂无信息'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_CAPTION.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_CAPTION.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_CAPTION.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_CAPTION.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelBookContext",
+          "kind": "Text",
+          "text": "`当前书源：${this.currentSourceName || this.currentSourceId}`",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_CURRENT_SOURCE.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_CURRENT_SOURCE.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_CURRENT_SOURCE.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_CURRENT_SOURCE.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelDiscovery",
+          "kind": "Text",
+          "text": "'已找到'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "this.narrowWindow() ? TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS_NARROW.lineHeightFp : TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "this.narrowWindow() ? TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS_NARROW.fontSizeFp : TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelDiscovery",
+          "kind": "Text",
+          "text": "`${sourceSwitchSourceCount(this.displayedCandidates)}`",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontWeight",
+              "extra": [
+                "{ enableVariableFontWeight: true }"
+              ]
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelDiscovery",
+          "kind": "Text",
+          "text": "'个书源'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "this.narrowWindow() ? TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS_NARROW.lineHeightFp : TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "this.narrowWindow() ? TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS_NARROW.fontSizeFp : TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelDiscovery",
+          "kind": "Text",
+          "text": "this.novelDiscoveryPhase()",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_PHASE.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_PHASE.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_PHASE.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_PHASE.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelDiscovery",
+          "kind": "Text",
+          "text": "this.isSweeping() ? '停止' : '重新查找'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "this.compactDiscoveryAction() ? TYPE_SOURCE_SWITCH_NOVEL_ACTION_COMPACT.lineHeightFp : TYPE_SOURCE_SWITCH_NOVEL_ACTION.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "this.compactDiscoveryAction() ? TYPE_SOURCE_SWITCH_NOVEL_ACTION_COMPACT.fontSizeFp : TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "this.compactDiscoveryAction() ? TYPE_SOURCE_SWITCH_NOVEL_ACTION_COMPACT.fontWeight : TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "this.compactDiscoveryAction() ? TYPE_SOURCE_SWITCH_NOVEL_ACTION_COMPACT.fontFamily : TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelColumns",
+          "kind": "Text",
+          "text": "'书源 / 最新章节'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_COLUMN.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_COLUMN.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_COLUMN.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_COLUMN.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelColumns",
+          "kind": "Text",
+          "text": "'搜索耗时'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_COLUMN.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_COLUMN.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_COLUMN.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_COLUMN.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelFooter",
+          "kind": "Text",
+          "text": "'点击书源切换'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_FOOTER.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_FOOTER.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_FOOTER.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_FOOTER.fontFamily",
+              "extra": []
+            }
+          }
+        }
+      ],
+      "nativeDefaults": [
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelHeading",
+          "kind": "Button",
+          "text": "{ type: ButtonType.Normal }",
+          "inheritsTextStyle": false,
+          "attributes": {
+            "onClick": "(): void => this.onClose()",
+            "enabled": "(!this.busy() || this.allowCancelWhileSwitching) && !this.rollbackRequired()",
+            "accessibilityText": "'关闭更换书源'",
+            "borderRadius": "SOURCE_SWITCH_VISUAL.closeRadius",
+            "backgroundColor": "Color.Transparent",
+            "padding": "0",
+            "margin": "{ right: SOURCE_SWITCH_VISUAL.closeMarginRight - (44 - SOURCE_SWITCH_VISUAL.closeWidth) / 2 }",
+            "height": "44",
+            "width": "44"
+          }
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelDiscovery",
+          "kind": "Button",
+          "text": "{ type: ButtonType.Normal }",
+          "inheritsTextStyle": false,
+          "attributes": {
+            "onClick": "(): void => this.requestRefresh()",
+            "onTouch": "(event: TouchEvent): void => this.discoveryActionTouch(event)",
+            "enabled": "!this.busy() && !this.rollbackRequired()",
+            "accessibilityText": "this.isSweeping() ? '停止查找书源' : '重新查找书源'",
+            "stateEffect": "false",
+            "borderRadius": "SOURCE_SWITCH_VISUAL.discoveryActionRadius",
+            "backgroundColor": "Color.Transparent",
+            "padding": "0",
+            "height": "this.discoveryActionHitHeight()",
+            "width": "this.discoveryActionWidth()"
+          }
+        }
+      ],
+      "roles": {
+        "TYPE_SOURCE_SWITCH_NOVEL_ACTION": {
+          "fontFamily": "ReaderNotoSansSCUIMedium",
+          "fontWeight": 500,
+          "fontSizeFp": 13,
+          "lineHeightFp": 20,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_ACTION_COMPACT": {
+          "fontFamily": "ReaderNotoSansSCUIMedium",
+          "fontWeight": 500,
+          "fontSizeFp": 12,
+          "lineHeightFp": 20,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_BOOK_TITLE": {
+          "fontFamily": "ReaderNotoSerifSCBold",
+          "fontWeight": 700,
+          "fontSizeFp": 18,
+          "lineHeightFp": 25.2,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_CAPTION": {
+          "fontFamily": "ReaderNotoSansSCUIRegular",
+          "fontWeight": 400,
+          "fontSizeFp": 12,
+          "lineHeightFp": 19.2,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_CHAPTER": {
+          "fontFamily": "ReaderNotoSansSCUIRegular",
+          "fontWeight": 400,
+          "fontSizeFp": 12,
+          "lineHeightFp": 18,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_COLUMN": {
+          "fontFamily": "ReaderNotoSansSCUIRegular",
+          "fontWeight": 400,
+          "fontSizeFp": 11,
+          "lineHeightFp": 16.5,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_CURRENT_SOURCE": {
+          "fontFamily": "ReaderNotoSansSCUIMedium",
+          "fontWeight": 500,
+          "fontSizeFp": 12,
+          "lineHeightFp": 19.2,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT": {
+          "fontFamily": "ReaderInter",
+          "fontWeight": 500,
+          "fontSizeFp": 14,
+          "lineHeightFp": 20,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_PHASE": {
+          "fontFamily": "ReaderNotoSansSCUIRegular",
+          "fontWeight": 400,
+          "fontSizeFp": 11,
+          "lineHeightFp": 16.5,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS": {
+          "fontFamily": "ReaderNotoSansSCUIRegular",
+          "fontWeight": 400,
+          "fontSizeFp": 12,
+          "lineHeightFp": 20,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS_NARROW": {
+          "fontFamily": "ReaderNotoSansSCUIRegular",
+          "fontWeight": 400,
+          "fontSizeFp": 11,
+          "lineHeightFp": 20,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_EMPTY": {
+          "fontFamily": "ReaderNotoSansSCUIRegular",
+          "fontWeight": 400,
+          "fontSizeFp": 13,
+          "lineHeightFp": 22.1,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_FOOTER": {
+          "fontFamily": "ReaderNotoSansSCUIRegular",
+          "fontWeight": 400,
+          "fontSizeFp": 12,
+          "lineHeightFp": 18,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_HEADING": {
+          "fontFamily": "ReaderNotoSerifSCBold",
+          "fontWeight": 700,
+          "fontSizeFp": 24,
+          "lineHeightFp": 32.4,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_LATENCY": {
+          "fontFamily": "ReaderInter",
+          "fontWeight": 400,
+          "fontSizeFp": 13,
+          "lineHeightFp": 20,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_LATENCY_UNIT": {
+          "fontFamily": "ReaderInter",
+          "fontWeight": 400,
+          "fontSizeFp": 11,
+          "lineHeightFp": 20,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_METADATA": {
+          "fontFamily": "ReaderNotoSansSCUIRegular",
+          "fontWeight": 400,
+          "fontSizeFp": 13,
+          "lineHeightFp": 19.5,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_NAME": {
+          "fontFamily": "ReaderNotoSansSCUIMedium",
+          "fontWeight": 500,
+          "fontSizeFp": 14,
+          "lineHeightFp": 20,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        }
+      },
+      "fontFamilies": {},
+      "backgrounds": [
+        {
+          "owner": "SourceSwitchNovelRow",
+          "method": "build",
+          "property": "backgroundColor",
+          "args": [
+            "this.selected || this.pressed ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : Color.Transparent"
+          ]
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "recoveryNotice",
+          "property": "backgroundColor",
+          "args": [
+            "readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme)"
+          ]
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelHeading",
+          "property": "backgroundColor",
+          "args": [
+            "Color.Transparent"
+          ]
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelDiscovery",
+          "property": "backgroundColor",
+          "args": [
+            "Color.Transparent"
+          ]
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelDiscovery",
+          "property": "backgroundColor",
+          "args": [
+            "this.discoveryActionBackgroundColor()"
+          ]
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelDrawer",
+          "property": "backgroundColor",
+          "args": [
+            "readerAppColor('TOK_SS_WINDOW_BG', this.appThemeScheme)"
+          ]
+        },
+        {
+          "owner": "SourceSwitchWindow",
+          "method": "novelDrawer",
+          "property": "backgroundColor",
+          "args": [
+            "readerAppColor('TOK_SS_DRAWER_HANDLE', this.appThemeScheme)"
+          ]
+        }
+      ],
+      "architectureCounts": {
+        "fontSize": 2,
+        "backgroundColor": 7
+      },
+      "previousEntrySha256": "d9db00d41635b8bec5802937fe102882e9943dd293e4131e659fa24b902afa75"
+    },
+    {
+      "path": "entry/src/main/ets/features/source/SourceSwitchProgress.ets",
+      "carriers": [
+        {
+          "owner": "SourceSwitchProgress",
+          "method": "build",
+          "kind": "Text",
+          "text": "'正在切换书源'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_TITLE.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_TITLE.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_TITLE.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_TITLE.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchProgress",
+          "method": "build",
+          "kind": "Text",
+          "text": "this.sourceName",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_SOURCE.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_SOURCE.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_SOURCE.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_SOURCE.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchProgress",
+          "method": "build",
+          "kind": "Text",
+          "text": "this.statusText",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_STATUS.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_STATUS.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_STATUS.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_STATUS.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "SourceSwitchProgress",
+          "method": "build",
+          "kind": "Text",
+          "text": "this.chapterTitle.length > 0 ? `定位对应章节 · ${this.chapterTitle}` : '正在定位对应章节'",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_CAPTION.lineHeightFp",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_CAPTION.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_CAPTION.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_CAPTION.fontFamily",
+              "extra": []
+            }
+          }
+        }
+      ],
+      "nativeDefaults": [
+        {
+          "owner": "SourceSwitchProgress",
+          "method": "build",
+          "kind": "Button",
+          "text": "{ type: ButtonType.Normal }",
+          "inheritsTextStyle": false,
+          "attributes": {
+            "onClick": "(): void => this.onCancel()",
+            "accessibilityText": "'取消切换书源'",
+            "margin": "{ top: this.topInset + SOURCE_SWITCH_VISUAL.switchPadding, right: SOURCE_SWITCH_VISUAL.switchPadding }",
+            "borderRadius": "SOURCE_SWITCH_VISUAL.closeRadius",
+            "backgroundColor": "Color.Transparent",
+            "padding": "0",
+            "height": "44",
+            "width": "44"
+          }
+        }
+      ],
+      "roles": {
+        "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_CAPTION": {
+          "fontFamily": "ReaderNotoSansSCUIRegular",
+          "fontWeight": 400,
+          "fontSizeFp": 12,
+          "lineHeightFp": 20.4,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_SOURCE": {
+          "fontFamily": "ReaderNotoSansSCUIMedium",
+          "fontWeight": 500,
+          "fontSizeFp": 15,
+          "lineHeightFp": 24,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_STATUS": {
+          "fontFamily": "ReaderNotoSansSCUIRegular",
+          "fontWeight": 400,
+          "fontSizeFp": 13,
+          "lineHeightFp": 22.1,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_SOURCE_SWITCH_NOVEL_SWITCH_TITLE": {
+          "fontFamily": "ReaderNotoSerifSCBold",
+          "fontWeight": 700,
+          "fontSizeFp": 20,
+          "lineHeightFp": 30,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        }
+      },
+      "fontFamilies": {},
+      "backgrounds": [
+        {
+          "owner": "SourceSwitchProgress",
+          "method": "build",
+          "property": "backgroundColor",
+          "args": [
+            "readerAppColor('TOK_SS_PROGRESS_BG', this.appThemeScheme)"
+          ]
+        },
+        {
+          "owner": "SourceSwitchProgress",
+          "method": "build",
+          "property": "backgroundColor",
+          "args": [
+            "Color.Transparent"
+          ]
+        }
+      ],
+      "architectureCounts": {
+        "backgroundColor": 2
+      },
+      "previousEntrySha256": "e2c238b274e3dee211fb5213beff8394c4b276b981e6939016d356a9c5b11b21"
+    }
+  ]
+}

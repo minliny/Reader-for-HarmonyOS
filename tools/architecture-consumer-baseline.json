@@ -1085,10 +1085,10 @@
       "file": "entry/src/main/ets/features/source/SourceSwitchWindow.ets",
       "kind": "approved-fullviewport-live-picker",
       "owner": "SourceSwitchHost / presentation scope and discovery lifecycle",
-      "reason": "Retains the exact approved manga full viewport and original 80vp actors; the user-selected novel variant adds a fixed reading drawer with compact successful-result rows and shared real preparation feedback. Every added text and background actor has an exact selected-design successor witness; transaction ownership and native/device acceptance remain separate.",
+      "reason": "User explicitly requested the unchanged source-switch operations to share the selected novel drawer. The finite shared successor removes only the retired manga local actors, keeps every selected novel/public text tuple and retained recovery actor, and binds exact backgrounds plus the original legacy-budget witness. Native visual and acceptance remain separate.",
       "counts": {
-        "fontSize": 18,
-        "backgroundColor": 12
+        "fontSize": 2,
+        "backgroundColor": 7
       },
       "supersededLegacyCounts": {
         "fontSize": 15,
@@ -1099,7 +1099,7 @@
       "designSource": "paired Reader-UI/design/manga-ui-20261002/; docs/MANGA_UI_DEMO_PARITY_AUDIT_20261003.md",
       "approvedSourceHead": "19be89908333ee8074d2624e9d7fb938e0b011d3",
       "proof": "tools/test-source-switch-host.mjs",
-      "visualSuccessorContract": "tools/fixtures/design/novel-source-switch-successor-20261006.json"
+      "visualSuccessorContract": "tools/fixtures/design/shared-source-switch-typography-successor-20261007.json"
     },
     {
       "file": "entry/src/main/ets/pages/Index.ets",
@@ -1201,14 +1201,14 @@
       "file": "entry/src/main/ets/features/source/SourceSwitchProgress.ets",
       "kind": "selected-novel-source-switch-progress",
       "owner": "SourceSwitchHost / target reader first-page admission",
-      "reason": "One concrete shared novel source-switch progress actor spans the real transaction and target first-page preparation. Typography uses finite public roles and one exact themed paper background; no new dialog, style bag or native/device acceptance is implied.",
+      "reason": "One concrete shared source-switch progress actor retains all four selected public-role text carriers and the exact themed paper background. A single icon-only AUTO close control preserves the existing manga preparation cancellation authorization and callback without creating typography or a second transaction owner; native visual and acceptance remain separate.",
       "counts": {
-        "backgroundColor": 1
+        "backgroundColor": 2
       },
       "status": "REGISTERED_SELECTED_NOVEL_SOURCE_SWITCH_NOT_DEVICE_ACCEPTANCE",
       "approvalEvidence": "evidence/source-switch-native-20261006/intake.json",
       "designSource": "../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-concepts-20261006/page-alternatives-success-only/03-reading-drawer.png",
-      "visualSuccessorContract": "tools/fixtures/design/novel-source-switch-successor-20261006.json",
+      "visualSuccessorContract": "tools/fixtures/design/shared-source-switch-typography-successor-20261007.json",
       "proof": "tools/test-source-switch-index-owner-sdk.mjs"
     },
     {
