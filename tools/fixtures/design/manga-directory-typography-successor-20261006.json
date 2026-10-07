@@ -1964,7 +1964,7 @@
       "historicalPath": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets",
       "historicalEntrySha256": "eb441eb6b4cf0b12ed29f5196cb40a5d55eac972aba2b5bfb47a0d5ad06ba8ed",
       "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets",
-      "sourceSha256": "9572c46b693aaf8910c1ff6b3fee3c923d3d8b4aca70604b44547d9791932026",
+      "sourceSha256": "7bf4e8ce00cb343bf6e497f10053bb9c42956fd86dcfdfa47cedb73394c6242b",
       "carriers": [
         {
           "owner": "ReaderDirectoryNavigationList",
@@ -2398,7 +2398,7 @@
       "nativeDefaults": [],
       "successorFacts": {
         "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
-        "sourceHead": "f879d82465eb50a483e253d8898dc814d5c7442e",
+        "sourceHead": "26bde956470f6de36b24da9ff66e40d2c312a902",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
       }
     },

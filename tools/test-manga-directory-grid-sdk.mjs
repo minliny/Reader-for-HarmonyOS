@@ -655,7 +655,8 @@ console.log('PASS actual SDK optional parent width class false/true/undefined an
 {
   const chapter = { index: 5018, title: '✿・９９', displayTitle: '９９', level: 1, navigable: true,
     isVip: true, isPay: false, contextTitle: '第一部 / 第一卷', downloadState: 'cached' };
-  const native = node(18, chapter.title, { chapterIndex: chapter.index });
+  const native = node(18, chapter.title, { chapterIndex: chapter.index, displayTitle: chapter.displayTitle,
+    isVip: chapter.isVip, isPay: chapter.isPay, contextTitle: chapter.contextTitle });
   const ready = { ...gridView, viewId: 'metadata-refresh', visibleTotal: 1, nodes: [native] };
   const data = new production.ReaderDirectoryNavigationDataSource(() => assert.fail('metadata refresh uses resident Core nodes'));
   data.replace(ready);
@@ -675,13 +676,18 @@ console.log('PASS actual SDK optional parent width class false/true/undefined an
   f.owner.onChapterEntriesChanged();
   assert.ok(f.owner.mangaPresentationRevision > revision, 'same-array metadata edits invalidate the projection');
   f.owner.mangaGridLayoutOptions(); assert.equal(projections, 2);
+  assert.equal(f.owner.mangaTitle(native), '９９', 'unbound chapter metadata cannot replace the admitted node title');
+  assert.equal(f.owner.mangaStatusText(native), 'VIP · 已暂停', 'chapter download state updates without inventing purchased facts');
+  data.admit(0, { viewId: ready.viewId, visibleTotal: 1,
+    nodes: [{ ...native, displayTitle: '１００', isPay: true, contextTitle: '第一部 / 第二卷' }] });
+  f.owner.mangaGridLayoutOptions(); assert.equal(projections, 3, 'actual admitted node metadata refresh invalidates once');
   assert.equal(f.owner.mangaTitle(native), '１００');
   assert.equal(f.owner.mangaStatusText(native), 'VIP · 已购 · 已暂停');
   assert.ok(f.owner.mangaRowAccessibility(item, true).includes('第一部 / 第二卷'));
   assert.ok(f.owner.mangaRowAccessibility(item, true).includes('已购'));
   f.owner.mangaSearchActive = true;
   assert.equal(f.owner.mangaCellPlacement(item).kind, 'row', 'search removes compact numeric cells');
-  assert.equal(projections, 3);
+  assert.equal(projections, 4);
   for (const apply of [
     () => { f.owner.mangaViewportWidth = 280; },
     () => { f.owner.windowMetricsRevision += 1; },
@@ -703,6 +709,18 @@ console.log('PASS actual SDK optional parent width class false/true/undefined an
   const count = projections;
   data.replace({ ...ready, viewId: 'metadata-new-view', nodes: [native] }); f.owner.view = data.currentView();
   f.owner.mangaGridLayoutOptions(); assert.equal(projections, count + 1, 'new immutable view cannot reuse previous layout');
+  for (const [viewId, title, identity] of [
+    ['changed-title', '新目录中的章节', ready.identity],
+    ['same-title-new-source', native.title, { sourceId: 'another-source', bookId: 'book' }],
+  ]) {
+    const nextNode = node(18, title, { chapterIndex: chapter.index });
+    data.replace({ ...ready, viewId, identity, nodes: [nextNode] }); f.owner.view = data.currentView();
+    const projected = f.owner.mangaDisplayNode(nextNode);
+    assert.equal(projected.title, title); assert.equal(projected.chapterIndex, chapter.index);
+    for (const field of ['displayTitle', 'isVip', 'isPay', 'contextTitle']) assert.equal(projected[field], undefined,
+      `${viewId}: missing node ${field} remains unknown despite stale same-index chapter facts`);
+    assert.equal(f.owner.mangaTitle(nextNode), title, 'new source/catalog cannot inherit an old display alias');
+  }
   for (let index = 0; index < 12; index += 1) production.directoryPages.put(`other-window:${index}`, []);
   assert.equal(f.owner.mangaCellPlacement(item), undefined, 'resident-window retirement removes stale derived node placement');
 }

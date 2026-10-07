@@ -5827,7 +5827,7 @@
       "specPolicy": "Finite generated manga directory row/numeric/parts variants. Only canonical entries, exact hierarchy/presentation facts, current state and business callbacks are inputs; no physical typography/geometry overrides. The generated visual contract and shared layout adapter own minimum heights, line boxes, safe scale and columns.",
       "successorFacts": {
         "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
-        "sourceHead": "f879d82465eb50a483e253d8898dc814d5c7442e",
+        "sourceHead": "26bde956470f6de36b24da9ff66e40d2c312a902",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
       },
       "shape": {
@@ -6941,7 +6941,7 @@
       "specPolicy": "Finite generated current-position footer shared by full and quick manga directories. Only canonical title, page position, theme scheme, actual measured available width and height observation are inputs. The generated visual contract owns typography, minimum height and narrow or large-font stacked presentation; callers cannot override its paint or spacing.",
       "successorFacts": {
         "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
-        "sourceHead": "f879d82465eb50a483e253d8898dc814d5c7442e",
+        "sourceHead": "26bde956470f6de36b24da9ff66e40d2c312a902",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
       },
       "shape": {

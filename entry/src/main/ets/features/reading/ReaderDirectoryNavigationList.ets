@@ -681,18 +681,10 @@ export struct ReaderDirectoryNavigationList {
       this.dataSource.displayIndex(current.index) === undefined);
   }
 
-  /** Node facts win; an admitted chapter may supply optional facts omitted by older navigation DTOs. */
+  /** Only the admitted Core node owns display facts; an unbound chapter map cannot fill unknown metadata. */
   private mangaDisplayNode(node: ReaderDirectoryNavigationNode, resident: boolean = false): ReaderDirectoryNavigationNode {
     const current = resident ? node : this.mangaPaintNode(node);
-    const chapter = current.kind === 'target' && current.chapterIndex !== undefined ? this.chapterByIndex.get(current.chapterIndex) : undefined;
-    return { nodeId: current.nodeId, parentId: current.parentId, depth: current.depth,
-      title: current.title, kind: current.kind, chapterIndex: current.chapterIndex,
-      chapterOffsetScalar: current.chapterOffsetScalar, hasChildren: current.hasChildren,
-      expanded: current.expanded, parentTitle: current.parentTitle,
-      readableDescendantCount: current.readableDescendantCount,
-      displayTitle: current.displayTitle ?? chapter?.displayTitle,
-      isVip: current.isVip ?? chapter?.isVip, isPay: current.isPay ?? chapter?.isPay,
-      contextTitle: current.contextTitle ?? chapter?.contextTitle };
+    return current;
   }
 
   private mangaTitle(node: ReaderDirectoryNavigationNode): string {

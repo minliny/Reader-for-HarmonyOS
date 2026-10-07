@@ -782,7 +782,7 @@
       "proof": "tools/test-manga-directory-entry-row.mjs",
       "successorFacts": {
         "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
-        "sourceHead": "f879d82465eb50a483e253d8898dc814d5c7442e",
+        "sourceHead": "26bde956470f6de36b24da9ff66e40d2c312a902",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
       }
     },
@@ -799,7 +799,7 @@
       "proof": "tools/test-manga-directory-quick-panel-sdk.mjs",
       "successorFacts": {
         "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
-        "sourceHead": "f879d82465eb50a483e253d8898dc814d5c7442e",
+        "sourceHead": "26bde956470f6de36b24da9ff66e40d2c312a902",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
       }
     }
